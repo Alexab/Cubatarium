@@ -1,0 +1,6 @@
+{
+ "name" : "grass",
+ "id" : 2,
+ "class" : "SingleCube",
+ "cube_textures" : ["grass"]
+}

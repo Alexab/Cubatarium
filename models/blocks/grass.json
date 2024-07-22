@@ -1,0 +1,5 @@
+{
+ "name" : "grass",
+ "id" : 2,
+ "textures" : ["grass_side", "grass_side", "grass_side", "grass_side", "grass_top_green", "grass_top"]
+}

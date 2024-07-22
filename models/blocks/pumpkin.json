@@ -1,0 +1,5 @@
+{
+ "name" : "pumpkin",
+ "id" : 6,
+ "textures" : ["pumpkin_side", "pumpkin_face", "pumpkin_side", "pumpkin_jack", "pumpkin_top", "pumpkin_side"]
+}

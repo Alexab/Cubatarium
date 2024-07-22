@@ -1,0 +1,5 @@
+{
+ "name" : "tnt",
+ "id" : 9,
+ "textures" : ["tnt_side", "tnt_side", "tnt_side", "tnt_side", "tnt_top", "tnt_bottom"]
+}

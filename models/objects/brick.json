@@ -1,0 +1,6 @@
+{
+ "name" : "brick",
+ "id" : 5,
+ "class" : "SingleCube",
+ "cube_textures" : ["brick"]
+}

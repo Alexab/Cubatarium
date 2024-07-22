@@ -1,0 +1,5 @@
+{
+ "name" : "sandstone",
+ "id" : 7,
+ "textures" : ["sandstone_side", "sandstone_side", "sandstone_side", "sandstone_side", "sandstone_top", "sandstone_bottom"]
+}

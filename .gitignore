@@ -1,0 +1,23 @@
+/build/*
+**/SFML/**
+*.sdf
+*.exp
+*.opensdf
+**/3rdparty/**
+**/ipch/**
+**/*bckp*/**
+*- Copy
+*.ipdb*
+*.iobj*
+*.opendb
+*.zip
+*.pdb
+*.ilk
+*_u.spv
+.vs
+/bin/movies/*
+*.pro.user
+*.exe
+*.dll
+/installer/InstallSourcesQt
+/worlds

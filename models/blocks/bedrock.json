@@ -1,0 +1,5 @@
+{
+ "name" : "bedrock",
+ "id" : 10,
+ "textures" : ["bedrock", "bedrock", "bedrock", "bedrock", "bedrock", "bedrock"]
+}
