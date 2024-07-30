@@ -1,8 +1,15 @@
+#include <cmath>
 #include "Camera.h"
 #include "ViewEngine.h"
 #include "World.h"
 
+
 namespace cutum {
+
+float radians(float degrees)
+{
+ return static_cast<float>(degrees * 0.01745329251994329576923690768489);
+}
 
 Camera::Camera()
  : Position(QVector3D(0.0f, 0.0f, 0.0f))
@@ -190,7 +197,7 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
 
   if (direction == FORWARD)
   {
-   auto shift = QVector3D(glm::cos(glm::radians(Yaw)), 0, glm::sin(glm::radians(Yaw))) * velocity;
+   auto shift = QVector3D(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity;
    if(!world->CheckCollision(position+shift, ViewObjectSize))
    {
     position += shift;
@@ -199,7 +206,7 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
   }
   if (direction == BACKWARD)
   {
-   auto shift = QVector3D(glm::cos(glm::radians(Yaw)), 0, glm::sin(glm::radians(Yaw))) * velocity; //Y is not affected, Y is looking up
+   auto shift = QVector3D(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity; //Y is not affected, Y is looking up
    if(!world->CheckCollision(position-shift, ViewObjectSize))
    {
     position -= shift;
@@ -287,9 +294,9 @@ void Camera::ProcessMouseScroll(float yoffset)
  {
   // Calculate the new Front vector
   QVector3D front;
-  front.setX(cos(glm::radians(this->Yaw)) * cos(glm::radians(this->Pitch)));
-  front.setY(sin(glm::radians(this->Pitch)));
-  front.setZ(sin(glm::radians(this->Yaw)) * cos(glm::radians(this->Pitch)));
+  front.setX(std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch)));
+  front.setY(std::sin(radians(this->Pitch)));
+  front.setZ(std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch)));
   front.normalize();
   this->Front = front;
 
