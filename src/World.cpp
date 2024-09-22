@@ -583,10 +583,14 @@ void World::SaveWorldData(const std::string &file_name)
 
 void World::DoMovement()
 {
+ auto t_begin = std::chrono::high_resolution_clock::now();
+
  bool is_moved=GetCurrentUserCamera()->DoMovement(this);
 
  if(is_moved)
    UpdateIntersection(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
+ auto t_end = std::chrono::high_resolution_clock::now();
+ DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
 void World::UpdateIntersection(const QVector3D& position, const QVector3D& front)
@@ -608,5 +612,11 @@ size_t World::GetIntersectionCubeIndex() const
 {
  return IntersectionCubeIndex;
 }
+
+uint64_t World::GetDurationDoMovementMks() const
+{
+ return DurationDoMovementMks;
+}
+
 
 }

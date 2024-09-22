@@ -139,7 +139,7 @@ void MainWidget::Run()
  geometries->SetPainter(Painter);
 
  IsRunned = true;
- timer.start(12, this);
+ timer.start(16, this);
 }
 
 void MainWidget::resizeGL(int w, int h)
@@ -159,8 +159,10 @@ void MainWidget::paintGL()
  if(!IsRunned)
   return;
  views->UpdateFrameTime();
+
  WorldInstance->DoMovement();
- geometries->Paint(width(), height());
+
+ geometries->Paint(width(), height(), views->GetDurationUpdateMks());
 }
 
 }

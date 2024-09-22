@@ -24,10 +24,14 @@ public:
  void UpdateFrameTime();
  void ResetAllKeyStatus();
 
+ uint64_t GetDurationUpdateMks() const;
+
 private:
  std::map<size_t, std::shared_ptr<Camera>> Cameras;
 
  size_t ActiveViewIndex;
+
+ uint64_t DurationUpdateMks;
 };
 
 }

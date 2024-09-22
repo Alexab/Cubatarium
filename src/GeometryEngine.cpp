@@ -67,7 +67,7 @@ void GeometryEngine::SetPainter(std::shared_ptr<QPainter> painter)
  Painter = painter;
 }
 
-void GeometryEngine::Paint(int width_size, int height_size)
+void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
  Painter->beginNativePainting();
  DrawCubeGeometry();
@@ -85,6 +85,15 @@ void GeometryEngine::Paint(int width_size, int height_size)
  QString title = QString("Cubatarium version ")+ QCoreApplication::applicationVersion();
  Painter->drawText(QRect(30, 0, width_size, 30), Qt::AlignLeft, title);
 
+ QString perf1 = QString("Scene t=")+ QString::number(DurationDrawSceneMks/1000.0)+ " ms";
+ Painter->drawText(QRect(width_size-300, 0, width_size, 30), Qt::AlignLeft, perf1);
+ QString perf2 = QString("DoMovement t=")+ QString::number(WorldInstance->GetDurationDoMovementMks()/1000.0)+ " ms";
+ Painter->drawText(QRect(width_size-300, 35, width_size, 65), Qt::AlignLeft, perf2);
+
+ QString perf3 = QString("ViewUpdate t=")+ QString::number(view_duration/1000.0)+ " ms";
+ Painter->drawText(QRect(width_size-300, 70, width_size, 100), Qt::AlignLeft, perf3);
+
+
  std::string legend = std::string("Press [0-9] for object selection. Left click for put, long left click (or Del) for remove object. F12 - reset world");
  Painter->drawText(QRect(30, height_size-30, width_size, height_size), Qt::AlignHCenter, legend.c_str());
 
@@ -94,10 +103,13 @@ void GeometryEngine::Paint(int width_size, int height_size)
 
 void GeometryEngine::DrawCubeGeometry()
 {
+ auto t_begin = std::chrono::high_resolution_clock::now();
  DrawCubeGeometry(WorldInstance->GetObjects(), WorldInstance->GetCurrentUserCamera()->GetMvpMatrix(),
                               WorldInstance->GetIsIntersectionExists(),
                               WorldInstance->GetIntersectionObjectIndex(),
                               WorldInstance->GetIntersectionCubeIndex());
+ auto t_end = std::chrono::high_resolution_clock::now();
+ DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
 void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, std::shared_ptr<QOpenGLTexture> & texture)

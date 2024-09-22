@@ -27,7 +27,7 @@ public:
 
  void SetPainter(std::shared_ptr<QPainter> painter);
 
- void Paint(int width_size, int height_size);
+ void Paint(int width_size, int height_size, double view_duration);
 
 private:
  void DrawCubeGeometry();
@@ -48,6 +48,9 @@ private:
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
  std::shared_ptr<World> WorldInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
+
+ // performance data
+ double DurationDrawSceneMks;
 };
 
 }

@@ -77,14 +77,22 @@ bool ViewEngine::SetActiveCamera(size_t index)
 
 void ViewEngine::UpdateFrameTime()
 {
+ auto t_begin = std::chrono::high_resolution_clock::now();
  for(auto & camera_item : Cameras)
   camera_item.second->UpdateFrameTime();
+ auto t_view_end = std::chrono::high_resolution_clock::now();
+ DurationUpdateMks = std::chrono::duration<double, std::micro>(t_view_end-t_begin).count();
 }
 
 void ViewEngine::ResetAllKeyStatus()
 {
  for(auto & camera_item : Cameras)
   camera_item.second->ResetAllKeyStatus();
+}
+
+uint64_t ViewEngine::GetDurationUpdateMks() const
+{
+ return DurationUpdateMks;
 }
 
 

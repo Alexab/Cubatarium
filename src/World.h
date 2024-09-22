@@ -60,6 +60,8 @@ public:
  size_t GetIntersectionObjectIndex() const;
  size_t GetIntersectionCubeIndex() const;
 
+ uint64_t GetDurationDoMovementMks() const;
+
 private:
  bool CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>>& distance_map) const;
  bool CheckRayIntersection(const QVector3D& position, const QVector3D& front, QVector3D& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const;
@@ -105,6 +107,8 @@ private:
  size_t IntersectionCubeIndex;
  int IntersectionCubeSide;
  size_t IntersectionObjectIndex;
+
+ uint64_t DurationDoMovementMks;
 };
 
 }
