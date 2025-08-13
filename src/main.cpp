@@ -39,6 +39,13 @@ int main(int argc, char *argv[])
         auto world = std::make_shared<World>(object_storage, view_engine);
 
         auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance);
+        
+        // Инициализация GeometryEngine
+        if (!geometry_engine->InitEngine()) {
+            std::cerr << "Failed to initialize geometry engine" << std::endl;
+            return -1;
+        }
+        
         auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
                                           object_storage, world, geometry_engine, view_engine);
 

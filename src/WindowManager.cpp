@@ -69,11 +69,11 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
     // Настройка OpenGL
     InitializeOpenGL();
 
+    inputManager = std::make_shared<InputManager>();
     // Настройка callbacks
     SetupCallbacks();
 
     // Создание менеджера ввода
-    inputManager = std::make_shared<InputManager>();
     inputManager->Initialize(window);
 
     isInitialized = true;
