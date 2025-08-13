@@ -1,10 +1,11 @@
 #ifndef OCTREE_H
 #define OCTREE_H
 
-#include <QVector3D>
+//#include <QVector3D>
 #include <vector>
 #include <memory>
 #include <array>
+#include <glm/glm.hpp>
 #include "Object.h"
 
 namespace cutum {
@@ -12,21 +13,21 @@ namespace cutum {
 // Пространственное разбиение для оптимизации поиска
 class OctreeNode {
 public:
-    OctreeNode(const QVector3D& center, float size);
+    OctreeNode(const glm::vec3& center, float size);
     
     void Insert(std::shared_ptr<Object> object);
     void Remove(std::shared_ptr<Object> object);
-    void Query(const QVector3D& position, float radius, std::vector<std::shared_ptr<Object>>& result) const;
-    void QueryRay(const QVector3D& origin, const QVector3D& direction, std::vector<std::shared_ptr<Object>>& result) const;
+    void Query(const glm::vec3& position, float radius, std::vector<std::shared_ptr<Object>>& result) const;
+    void QueryRay(const glm::vec3& origin, const glm::vec3& direction, std::vector<std::shared_ptr<Object>>& result) const;
     void Clear();
     
 private:
     bool IsLeaf() const;
     void Subdivide();
-    bool Contains(const QVector3D& point) const;
-    bool IntersectsSphere(const QVector3D& center, float radius) const;
+    bool Contains(const glm::vec3& point) const;
+    bool IntersectsSphere(const glm::vec3& center, float radius) const;
     
-    QVector3D center;
+    glm::vec3 center;
     float size;
     std::vector<std::shared_ptr<Object>> objects;
     std::array<std::unique_ptr<OctreeNode>, 8> children;

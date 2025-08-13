@@ -4,9 +4,13 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <QVector3D>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <array>
+#include <map>
+#include <tuple>
 #include "Octree.h"
 
 namespace cutum {
@@ -29,8 +33,8 @@ public:
  std::string GetWorldName() const;
  void SetWorldName(const std::string& value);
 
- QVector3D GetSpawnPoint() const;
- void SetSpawnPoint(QVector3D value);
+ glm::vec3 GetSpawnPoint() const; // QVector3D -> glm::vec3
+ void SetSpawnPoint(glm::vec3 value); // QVector3D -> glm::vec3
 
  void Create(const std::string& world_name);
  void Load(const std::string& world_folder_path);
@@ -53,13 +57,13 @@ public:
  bool AddObjectByView();
  bool DelObjectByView();
 
- bool AddObject(const std::string type_id, const QVector3D &position);
+ bool AddObject(const std::string type_id, const glm::vec3 &position); // QVector3D -> glm::vec3
  void DelObject(std::shared_ptr<Object> object);
  void DelObject(size_t index);
 
- bool CheckCollision(const QVector3D& position, float size = 1.0) const;
+ bool CheckCollision(const glm::vec3& position, float size = 1.0) const; // QVector3D -> glm::vec3
  void DoMovement();
- void UpdateIntersection(const QVector3D& position, const QVector3D& front);
+ void UpdateIntersection(const glm::vec3& position, const glm::vec3& front); // QVector3D -> glm::vec3
 
  bool GetIsIntersectionExists() const;
  size_t GetIntersectionObjectIndex() const;
@@ -68,22 +72,22 @@ public:
  uint64_t GetDurationDoMovementMks() const;
 
 private:
- bool CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>>& distance_map) const;
- bool CheckRayIntersection(const QVector3D& position, const QVector3D& front, QVector3D& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const;
+ bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const; // QVector3D -> glm::vec3
+ bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const; // QVector3D -> glm::vec3
 
- std::shared_ptr<Object> FindObjectByView(const QVector3D& position, const QVector3D& front);
- bool CheckPositionFree(const QVector3D& position, float size=1.0) const;
- std::optional<QVector3D> FindNearestFreeCubePosition(const QVector3D& position, const QVector3D& front) const;
+ std::shared_ptr<Object> FindObjectByView(const glm::vec3& position, const glm::vec3& front); // QVector3D -> glm::vec3
+ bool CheckPositionFree(const glm::vec3& position, float size=1.0) const; // QVector3D -> glm::vec3
+ std::optional<glm::vec3> FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const; // QVector3D -> glm::vec3
 
  // Оптимизированные методы с использованием Octree
- std::vector<std::shared_ptr<Object>> GetObjectsInRadius(const QVector3D& position, float radius) const;
+ std::vector<std::shared_ptr<Object>> GetObjectsInRadius(const glm::vec3& position, float radius) const; // QVector3D -> glm::vec3
  void UpdateSpatialIndex();
  void RebuildOctree();
 
 private:
  void AddObject(std::shared_ptr<Object> object);
- bool AddObjectByView(const QVector3D& position, const QVector3D& front);
- bool DelObjectByView(const QVector3D& position, const QVector3D& front);
+ bool AddObjectByView(const glm::vec3& position, const glm::vec3& front); // QVector3D -> glm::vec3
+ bool DelObjectByView(const glm::vec3& position, const glm::vec3& front); // QVector3D -> glm::vec3
 
 private:
  void LoadUsers(const std::string &file_name);
@@ -98,7 +102,7 @@ private:
 private:
  std::string WorldName;
 
- QVector3D SpawnPoint;
+ glm::vec3 SpawnPoint; // QVector3D -> glm::vec3
 
  std::string CurrentUserName;
 
@@ -115,7 +119,7 @@ private:
  bool spatialIndexDirty;
 
  bool IsIntersectionExists;
- QVector3D Intersection;
+ glm::vec3 Intersection; // QVector3D -> glm::vec3
  float IntersectionDistance;
  size_t IntersectionCubeIndex;
  int IntersectionCubeSide;

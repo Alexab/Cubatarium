@@ -2,10 +2,14 @@
 #define CAMERA_H
 
 #include <vector>
+#include <map>
+#include <chrono>
+#include <memory>
 
-#include <QMatrix4x4>
-#include <QQuaternion>
-#include <QVector2D>
+// GLEW будет включен в .cpp файле после инициализации GLFW
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace cutum {
 
@@ -36,16 +40,16 @@ public:
  Camera();
  Camera(const Camera &) = default;
  // Constructor with vectors
- Camera(QVector3D position, QVector3D up = QVector3D(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
+ Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH); // QVector3D -> glm::vec3
  Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
- QVector3D GetPosition() const;
- QVector3D GetFront() const;
+ glm::vec3 GetPosition() const; // QVector3D -> glm::vec3
+ glm::vec3 GetFront() const; // QVector3D -> glm::vec3
 
- QMatrix4x4 GetPose() const;
- QMatrix4x4 GetProjection() const;
- QMatrix4x4 GetViewMatrix() const;
- QMatrix4x4 GetMvpMatrix() const;
+ glm::mat4 GetPose() const; // QMatrix4x4 -> glm::mat4
+ glm::mat4 GetProjection() const; // QMatrix4x4 -> glm::mat4
+ glm::mat4 GetViewMatrix() const; // QMatrix4x4 -> glm::mat4
+ glm::mat4 GetMvpMatrix() const; // QMatrix4x4 -> glm::mat4
 
  bool GetFreeMove() const;
  void SetFreeMove(bool value);
@@ -87,11 +91,11 @@ private:
 
 private:
  // Camera Attributes
- QVector3D Position;
- QVector3D Front;
- QVector3D Up;
- QVector3D Right;
- QVector3D WorldUp;
+ glm::vec3 Position; // QVector3D -> glm::vec3
+ glm::vec3 Front; // QVector3D -> glm::vec3
+ glm::vec3 Up; // QVector3D -> glm::vec3
+ glm::vec3 Right; // QVector3D -> glm::vec3
+ glm::vec3 WorldUp; // QVector3D -> glm::vec3
 
  bool FreeMove;
 
@@ -104,9 +108,9 @@ private:
  float MouseSensitivity;
  float Zoom;
 
- QMatrix4x4 Pose;
- QMatrix4x4 Projection;
- QMatrix4x4 MvpMatrix;
+ glm::mat4 Pose; // QMatrix4x4 -> glm::mat4
+ glm::mat4 Projection; // QMatrix4x4 -> glm::mat4
+ glm::mat4 MvpMatrix; // QMatrix4x4 -> glm::mat4
 
  ViewEngine* ViewEngineInstance;
 

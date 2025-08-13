@@ -1,10 +1,16 @@
 #ifndef CUBEGL_H
 #define CUBEGL_H
 
-#include <QOpenGLBuffer>
-#include <QOpenGLTexture>
-#include <QVector3D>
-#include <QVector2D>
+//#include <QOpenGLBuffer>
+//#include <QOpenGLTexture>
+//#include <QVector3D>
+//#include <QVector2D>
+#include <vector>
+#include <glm/glm.hpp>
+// GLEW будет включен в .cpp файле после инициализации GLFW
+// Forward declaration для OpenGL типов
+typedef unsigned int GLuint;
+typedef unsigned short GLushort;
 #include "Cube.h"
 
 
@@ -12,13 +18,13 @@ namespace cutum {
 
 struct VertexData
 {
- QVector3D position;
- QVector2D texCoord;
+ glm::vec3 position;
+ glm::vec2 texCoord;
 
  VertexData() = default;
  VertexData(const VertexData &) = default;
  VertexData& operator = (const VertexData &) = default;
- VertexData(QVector3D position, QVector2D texCoord);
+ VertexData(glm::vec3 position, glm::vec2 texCoord);
 };
 
 class CubeGL: public Cube
@@ -30,21 +36,21 @@ public:
 
  ~CubeGL();
 
- void Init(const QMatrix4x4 &initial_pose, float size=1.0);
+ void Init(const glm::mat4 &initial_pose, float size=1.0);
  void UpdateVertices();
 
  std::vector<VertexData> GetVertices() const;
  std::vector<VertexData> GetVerticesInitialPos() const;
  std::vector<GLushort> GetIndices() const;
- QOpenGLBuffer& GetArrayBuf();
- QOpenGLBuffer& GetIndexBuf();
+ GLuint GetArrayBuf();
+ GLuint GetIndexBuf();
 
 private:
  std::vector<VertexData> VerticesInitialPos;
  std::vector<VertexData> Vertices;
  std::vector<GLushort> Indices;
- QOpenGLBuffer arrayBuf;
- QOpenGLBuffer indexBuf;
+ GLuint arrayBuf;
+ GLuint indexBuf;
 };
 
 extern std::shared_ptr<Cube> NewCube();

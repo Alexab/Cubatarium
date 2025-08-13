@@ -5,7 +5,8 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
-#include <QVector3D>
+#include <glm/glm.hpp>
+//#include <QVector3D>
 
 namespace cutum {
 
@@ -25,11 +26,11 @@ public:
 
  std::shared_ptr<Object> GetActiveObject();
 
- const QVector3D& GetPosition() const;
- const QVector3D& GetViewDirection() const;
+ const glm::vec3& GetPosition() const;
+ const glm::vec3& GetViewDirection() const;
 
- void SetPosition(const QVector3D& value);
- void SetViewDirection(const QVector3D& value);
+ void SetPosition(const glm::vec3& value);
+ void SetViewDirection(const glm::vec3& value);
 
  size_t GetViewId() const;
  void SetViewId(size_t value);
@@ -41,9 +42,9 @@ private:
 
  std::string ActiveObjectTypeName;
 
- QVector3D Position;
+ glm::vec3 Position;
 
- QVector3D ViewDirection;
+ glm::vec3 ViewDirection;
 
  size_t ViewId;
 };

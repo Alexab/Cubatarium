@@ -1,15 +1,17 @@
 
-#include <QVector2D>
-#include <QVector3D>
-#include <QPainter>
-#include <QCoreApplication>
-#include <QDebug>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+#include <chrono>
+#include <GL/glew.h>
 #include "GeometryEngine.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
 #include "User.h"
 #include "ObjectStorage.h"
 #include "Camera.h"
+#include "ShaderManager.h"
 
 namespace cutum {
 
@@ -29,88 +31,46 @@ GeometryEngine::~GeometryEngine()
 
 bool GeometryEngine::InitEngine()
 {
- initializeOpenGLFunctions();
+ // Инициализируем ShaderManager
+ shaderManager = std::make_shared<ShaderManager>();
+ if (!shaderManager->Initialize()) {
+     std::cerr << "Failed to initialize ShaderManager" << std::endl;
+     return false;
+ }
+ 
  if(!InitShaders())
   return false;
- //this->setSceneRadius(10000.0);
- //this->camera()->setZNearCoefficient(0.00001);
- //this->camera()->setZClippingCoefficient(1000.0);
-
- //TextureCubeStorageInstance->GenerateCubeTextures();
 
  return true;
 }
 
 bool GeometryEngine::InitShaders()
 {
- // Compile vertex shader
- if (!program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vshader.glsl"))
-  return false;
+ // Создаем шейдеры через ShaderManager
+ defaultShader = shaderManager->CreateShader("default", "shaders/vshader.glsl", "shaders/fshader.glsl");
+ if (!defaultShader || !defaultShader->IsValid()) {
+     std::cerr << "Failed to create default shader" << std::endl;
+     return false;
+ }
 
- // Compile fragment shader
- if (!program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fshader.glsl"))
-  return false;
-
- //if (!program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fshader_mix_textures.glsl"))
- // return false;
-
- // Link shader pipeline
- if (!program.link())
-  return false;
-
- //if(!program.bind())
- // return false;
-
- // Инициализация шейдера для неба
- if (!skyProgram.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vshader.glsl"))
-  return false;
-
- if (!skyProgram.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fshader_sky.glsl"))
-  return false;
-
- if (!skyProgram.link())
-  return false;
+ skyShader = shaderManager->CreateShader("sky", "shaders/vshader.glsl", "shaders/fshader_sky.glsl");
+ if (!skyShader || !skyShader->IsValid()) {
+     std::cerr << "Failed to create sky shader" << std::endl;
+     return false;
+ }
 
  return true;
 }
 
-void GeometryEngine::SetPainter(std::shared_ptr<QPainter> painter)
-{
- Painter = painter;
-}
-
 void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
- Painter->beginNativePainting();
  DrawCubeGeometry();
- Painter->endNativePainting();
-
- Painter->setRenderHint(QPainter::Antialiasing);
- QPen pen;
- pen.setColor(Qt::yellow);
- pen.setWidth(2);
- Painter->setPen(pen);
- QFont textFont;
- textFont.setPixelSize(20);
- Painter->setFont(textFont);
- Painter->setBrush(QBrush(Qt::yellow));
- QString title = QString("Cubatarium version ")+ QCoreApplication::applicationVersion();
- Painter->drawText(QRect(30, 0, width_size, 30), Qt::AlignLeft, title);
-
- QString perf1 = QString("Scene t=")+ QString::number(DurationDrawSceneMks/1000.0)+ " ms";
- Painter->drawText(QRect(width_size-300, 0, width_size, 30), Qt::AlignLeft, perf1);
- QString perf2 = QString("DoMovement t=")+ QString::number(WorldInstance->GetDurationDoMovementMks()/1000.0)+ " ms";
- Painter->drawText(QRect(width_size-300, 35, width_size, 65), Qt::AlignLeft, perf2);
-
- QString perf3 = QString("ViewUpdate t=")+ QString::number(view_duration/1000.0)+ " ms";
- Painter->drawText(QRect(width_size-300, 70, width_size, 100), Qt::AlignLeft, perf3);
-
-
-   std::string legend = std::string("Press [0-9] for object selection. Left click for put, long left click (or Del) for remove object. F12 - reset world. F1-F4 - sky colors, F5-F8 - gradient sky");
- Painter->drawText(QRect(30, height_size-30, width_size, height_size), Qt::AlignHCenter, legend.c_str());
-
- Painter->drawLine(width_size/2-10, height_size/2, width_size/2+10, height_size/2);
- Painter->drawLine(width_size/2, height_size/2-10, width_size/2, height_size/2+10);
+ 
+ // Отрисовка UI текста (заменяем QPainter на OpenGL)
+ // TODO: Добавить систему отрисовки текста через OpenGL
+ std::cout << "Cubatarium version - Scene t=" << DurationDrawSceneMks/1000.0 << " ms" << std::endl;
+ std::cout << "DoMovement t=" << WorldInstance->GetDurationDoMovementMks()/1000.0 << " ms" << std::endl;
+ std::cout << "ViewUpdate t=" << view_duration/1000.0 << " ms" << std::endl;
 }
 
 void GeometryEngine::DrawCubeGeometry()
@@ -152,13 +112,12 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
    }
    
        auto& batch = batchMap[textureId];
-    if (!batch.texture) {
-        batch.texture = textures.at(textureId).GetTexture();
+    if (batch.textureID == 0) {
+        batch.textureID = textures.at(textureId).GetTextureId(); // Используем GLuint вместо QOpenGLTexture
     }
     
          // Использовать единичную матрицу, так как кубы уже имеют правильные локальные координаты
-     QMatrix4x4 modelMatrix;
-     modelMatrix.setToIdentity();
+     glm::mat4 modelMatrix = glm::mat4(1.0f);
      batch.modelMatrices.push_back(modelMatrix);
      batch.objects.push_back(object);
      batch.cubeIndices.push_back(i);
@@ -171,85 +130,86 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
  }
 }
 
-void GeometryEngine::RenderBatches(const QMatrix4x4& mvp_matrix)
+void GeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 {
  for (const auto& batch : renderBatches) {
      DrawBatch(batch, mvp_matrix);
  }
 }
 
-void GeometryEngine::DrawBatch(const RenderBatch& batch, const QMatrix4x4& mvp_matrix)
+void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
 {
  if (batch.modelMatrices.empty()) return;
  
- batch.texture->bind();
- program.setUniformValue("texture0", 0);
+ glBindTexture(GL_TEXTURE_2D, batch.textureID);
+ defaultShader->Use();
+ defaultShader->SetInt("texture0", 0);
  
  // Здесь можно добавить instanced rendering для еще большей оптимизации
  // Пока используем простой batch-рендеринг
  for (size_t i = 0; i < batch.modelMatrices.size(); ++i) {
      // Использовать MVP матрицу напрямую, так как кубы уже имеют правильные координаты
-     program.setUniformValue("mvp_matrix", mvp_matrix);
+     defaultShader->SetMat4("mvp_matrix", mvp_matrix);
      
      // Найти куб для отрисовки
      auto& object = batch.objects[i];
      auto& cube = object->GetCubes()[batch.cubeIndices[i]];
      
-     DrawCube(cube, batch.texture);
+     DrawCube(cube, batch.textureID);
  }
  
- batch.texture->release();
+ defaultShader->Unuse();
 }
 
-void GeometryEngine::UpdateFrustumCulling(const QMatrix4x4& view_projection)
+void GeometryEngine::UpdateFrustumCulling(const glm::mat4& view_projection)
 {
  // Извлечение плоскостей frustum из матрицы view-projection
- QMatrix4x4 m = view_projection.transposed();
+ glm::mat4 m = glm::transpose(view_projection);
  
  // Левая плоскость
- frustumPlanes[0].normal = QVector4D(m(3,0) + m(0,0), m(3,1) + m(0,1), m(3,2) + m(0,2), m(3,3) + m(0,3));
- frustumPlanes[0].distance = frustumPlanes[0].normal.w();
- frustumPlanes[0].normal.setW(0);
- frustumPlanes[0].normal.normalize();
+ frustumPlanes[0].normal = glm::vec4(m[3][0] + m[0][0], m[3][1] + m[0][1], m[3][2] + m[0][2], m[3][3] + m[0][3]);
+ frustumPlanes[0].distance = frustumPlanes[0].normal.w;
+ frustumPlanes[0].normal.w = 0.0f;
+ frustumPlanes[0].normal = glm::normalize(frustumPlanes[0].normal);
  
  // Правая плоскость
- frustumPlanes[1].normal = QVector4D(m(3,0) - m(0,0), m(3,1) - m(0,1), m(3,2) - m(0,2), m(3,3) - m(0,3));
- frustumPlanes[1].distance = frustumPlanes[1].normal.w();
- frustumPlanes[1].normal.setW(0);
- frustumPlanes[1].normal.normalize();
+ frustumPlanes[1].normal = glm::vec4(m[3][0] - m[0][0], m[3][1] - m[0][1], m[3][2] - m[0][2], m[3][3] - m[0][3]);
+ frustumPlanes[1].distance = frustumPlanes[1].normal.w;
+ frustumPlanes[1].normal.w = 0.0f;
+ frustumPlanes[1].normal = glm::normalize(frustumPlanes[1].normal);
  
  // Нижняя плоскость
- frustumPlanes[2].normal = QVector4D(m(3,0) + m(1,0), m(3,1) + m(1,1), m(3,2) + m(1,2), m(3,3) + m(1,3));
- frustumPlanes[2].distance = frustumPlanes[2].normal.w();
- frustumPlanes[2].normal.setW(0);
- frustumPlanes[2].normal.normalize();
+ frustumPlanes[2].normal = glm::vec4(m[3][0] + m[1][0], m[3][1] + m[1][1], m[3][2] + m[1][2], m[3][3] + m[1][3]);
+ frustumPlanes[2].distance = frustumPlanes[2].normal.w;
+ frustumPlanes[2].normal.w = 0.0f;
+ frustumPlanes[2].normal = glm::normalize(frustumPlanes[2].normal);
  
  // Верхняя плоскость
- frustumPlanes[3].normal = QVector4D(m(3,0) - m(1,0), m(3,1) - m(1,1), m(3,2) - m(1,2), m(3,3) - m(1,3));
- frustumPlanes[3].distance = frustumPlanes[3].normal.w();
- frustumPlanes[3].normal.setW(0);
- frustumPlanes[3].normal.normalize();
+ frustumPlanes[3].normal = glm::vec4(m[3][0] - m[1][0], m[3][1] - m[1][1], m[3][2] - m[1][2], m[3][3] - m[1][3]);
+ frustumPlanes[3].distance = frustumPlanes[3].normal.w;
+ frustumPlanes[3].normal.w = 0.0f;
+ frustumPlanes[3].normal = glm::normalize(frustumPlanes[3].normal);
  
  // Ближняя плоскость
- frustumPlanes[4].normal = QVector4D(m(3,0) + m(2,0), m(3,1) + m(2,1), m(3,2) + m(2,2), m(3,3) + m(2,3));
- frustumPlanes[4].distance = frustumPlanes[4].normal.w();
- frustumPlanes[4].normal.setW(0);
- frustumPlanes[4].normal.normalize();
+ frustumPlanes[4].normal = glm::vec4(m[3][0] + m[2][0], m[3][1] + m[2][1], m[3][2] + m[2][2], m[3][3] + m[2][3]);
+ frustumPlanes[4].distance = frustumPlanes[4].normal.w;
+ frustumPlanes[4].normal.w = 0.0f;
+ frustumPlanes[4].normal = glm::normalize(frustumPlanes[4].normal);
  
  // Дальняя плоскость
- frustumPlanes[5].normal = QVector4D(m(3,0) - m(2,0), m(3,1) - m(2,1), m(3,2) - m(2,2), m(3,3) - m(2,3));
- frustumPlanes[5].distance = frustumPlanes[5].normal.w();
- frustumPlanes[5].normal.setW(0);
- frustumPlanes[5].normal.normalize();
+ frustumPlanes[5].normal = glm::vec4(m[3][0] - m[2][0], m[3][1] - m[2][1], m[3][2] - m[2][2], m[3][3] - m[2][3]);
+ frustumPlanes[5].distance = frustumPlanes[5].normal.w;
+ frustumPlanes[5].normal.w = 0.0f;
+ frustumPlanes[5].normal = glm::normalize(frustumPlanes[5].normal);
 }
 
 bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
 {
- QVector3D objectPos(object->GetPose()(0,3), object->GetPose()(1,3), object->GetPose()(2,3));
+ glm::vec3 objectPos(object->GetPose()[0][3], object->GetPose()[1][3], object->GetPose()[2][3]);
  float radius = 1.0f; // Примерный радиус объекта
  
  for (const auto& plane : frustumPlanes) {
-     float distance = QVector3D::dotProduct(QVector3D(plane.normal), objectPos) + plane.distance;
+     float distance = glm::dot(glm::vec3(plane.normal), objectPos) + plane.distance;
      if (distance < -radius) {
          return false;
      }
@@ -257,42 +217,44 @@ bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
  return true;
 }
 
-void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, const std::shared_ptr<QOpenGLTexture> & texture)
+void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
 {
  auto cube = std::dynamic_pointer_cast<CubeGL>(icube);
  if(!cube)
   return;
 
- texture->bind();
- program.setUniformValue("texture0", 0);
+ glBindTexture(GL_TEXTURE_2D, texture);
+ defaultShader->Use();
+ defaultShader->SetInt("texture0", 0);
 
 
  // Tell OpenGL which VBOs to use
- cube->GetArrayBuf().bind();
- cube->GetIndexBuf().bind();
+ glBindBuffer(GL_ARRAY_BUFFER, cube->GetArrayBuf());
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube->GetIndexBuf());
 
  // Offset for position
- quintptr offset = 0;
+ size_t offset = 0;
 
  // Tell OpenGL programmable pipeline how to locate vertex position data
- int vertexLocation = program.attributeLocation("a_position");
- program.enableAttributeArray(vertexLocation);
- program.setAttributeBuffer(vertexLocation, GL_FLOAT, offset, 3, sizeof(VertexData));
+ int vertexLocation = glGetAttribLocation(defaultShader->GetProgramID(), "a_position");
+ glEnableVertexAttribArray(vertexLocation);
+ glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
 
  // Offset for texture coordinate
- offset += sizeof(QVector3D);
+ offset += sizeof(glm::vec3);
 
  // Tell OpenGL programmable pipeline how to locate vertex texture coordinate data
- int texcoordLocation = program.attributeLocation("a_texcoord");
- program.enableAttributeArray(texcoordLocation);
- program.setAttributeBuffer(texcoordLocation, GL_FLOAT, offset, 2, sizeof(VertexData));
+ int texcoordLocation = glGetAttribLocation(defaultShader->GetProgramID(), "a_texcoord");
+ glEnableVertexAttribArray(texcoordLocation);
+ glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
 
  // Draw cube geometry using indices from VBO 1
- glDrawElements(GL_TRIANGLE_STRIP,int(std::dynamic_pointer_cast<CubeGL>(cube)->GetIndices().size()), GL_UNSIGNED_SHORT, nullptr);
- cube->GetArrayBuf().release();
- cube->GetIndexBuf().release();
+ glDrawElements(GL_TRIANGLE_STRIP, int(std::dynamic_pointer_cast<CubeGL>(cube)->GetIndices().size()), GL_UNSIGNED_SHORT, nullptr);
+ 
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
- texture->release();
+ defaultShader->Unuse();
 }
 
 void GeometryEngine::DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
@@ -300,21 +262,21 @@ void GeometryEngine::DrawObject(std::shared_ptr<Object> object, size_t object_in
  for(size_t i=0; i<object->GetCubes().size(); i++)
  {
   auto & cube = object->GetCubes()[i];
-  std::shared_ptr<QOpenGLTexture> texture;
+  GLuint texture;
   if(is_intersection_exists && intersecion_object_index == object_index && intersecion_cube_index == i)
   {
-   texture = textures.at(TextureCubeStorageInstance->GetTypeIdByName("selection")).GetTexture();
+       texture = textures.at(TextureCubeStorageInstance->GetTypeIdByName("selection")).GetTextureId();
   }
   else
   {
-   texture = textures.at(cube->GetTypeId()).GetTexture();
+       texture = textures.at(cube->GetTypeId()).GetTextureId();
   }
   DrawCube(cube, texture);
  }
 
 }
 
-void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const QMatrix4x4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
+void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
 {
  // Enable depth buffer
  glEnable(GL_DEPTH_TEST);
@@ -331,23 +293,23 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  else
  {
   // Для простого неба устанавливаем цвет и очищаем оба буфера
-  glClearColor(skyColor.x(), skyColor.y(), skyColor.z(), skyColor.w());
+     glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  }
 
  // Отрисовываем градиентное небо ПОСЛЕ очистки буфера глубины
  if(useGradientSky)
  {
-  qDebug() << "Drawing gradient sky with color:" << skyColor;
+     std::cout << "Drawing gradient sky with color: (" << skyColor.x << ", " << skyColor.y << ", " << skyColor.z << ", " << skyColor.w << ")" << std::endl;
   DrawSkyGradient();
-  qDebug() << "Gradient sky drawn.";
+  std::cout << "Gradient sky drawn." << std::endl;
  }
 
  // Bind shader pipeline for use
- program.bind();
+ defaultShader->Use();
 
  // Set modelview-projection matrix
- program.setUniformValue("mvp_matrix", mvp_matrix);
+ defaultShader->SetMat4("mvp_matrix", mvp_matrix);
 
  //glUniform1f(alphaUniformLocation, alpha);
 
@@ -356,11 +318,11 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
 
   auto textures = TextureCubeStorageInstance->GetTextures();
  
- qDebug() << "Objects to render:" << objects.size();
+ std::cout << "Objects to render:" << objects.size() << std::endl;
   
  // Оптимизированный рендеринг с batch-обработкой
  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
- qDebug() << "Render batches prepared:" << renderBatches.size();
+ std::cout << "Render batches prepared:" << renderBatches.size() << std::endl;
  RenderBatches(mvp_matrix);
 
  auto user = WorldInstance->GetCurrentUser();
@@ -371,18 +333,16 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
   if(active_object)
   {
    // Set modelview-projection matrix for user plane
-   QMatrix4x4 pose;
-   pose.setToIdentity();
+   glm::mat4 pose = glm::mat4(1.0f);
    active_object->GetCubes()[0]->Init(pose, 0.2f);
 
-   pose(0,3) = 0.8f;
-   pose(1,3) = 0.8f;
-   pose(2,3) = 0.0f;
+   pose[0][3] = 0.8f;
+   pose[1][3] = 0.8f;
+   pose[2][3] = 0.0f;
    active_object->SetPose(pose);
 
-   QMatrix4x4 position;
-   position.setToIdentity();
-   program.setUniformValue("mvp_matrix", position);
+   glm::mat4 position = glm::mat4(1.0f);
+   defaultShader->SetMat4("mvp_matrix", position);
 
    DrawObject(active_object, 0, textures, false, 0, 0);
 
@@ -390,7 +350,7 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  //  DrawCube(active_cube, texture);
   }
  }
- program.release();
+ defaultShader->Unuse();
 
  glDisable(GL_CULL_FACE);
  glDisable(GL_DEPTH_TEST);
@@ -405,8 +365,8 @@ void GeometryEngine::DrawSkyGradient()
 void GeometryEngine::DrawSkyGradientSimple()
 {
  // Проверяем, что шейдер неба готов
- if (!skyProgram.isLinked()) {
-     qWarning("Sky shader is not linked!");
+ if (!skyShader->IsValid()) {
+     std::cerr << "Sky shader is not linked!" << std::endl;
      return;
  }
  
@@ -414,15 +374,14 @@ void GeometryEngine::DrawSkyGradientSimple()
  glDisable(GL_DEPTH_TEST);
  
  // Используем шейдер неба
- skyProgram.bind();
+ skyShader->Use();
  
  // Устанавливаем единичную матрицу для неба
- QMatrix4x4 skyMatrix;
- skyMatrix.setToIdentity();
- skyProgram.setUniformValue("mvp_matrix", skyMatrix);
+ glm::mat4 skyMatrix = glm::mat4(1.0f);
+ skyShader->SetMat4("mvp_matrix", skyMatrix);
  
  // Передаем цвет неба в шейдер
- skyProgram.setUniformValue("skyColor", skyColor);
+ skyShader->SetVec4("skyColor", skyColor);
  
  // Создаем простой прямоугольник для неба (полный экран)
  static const GLfloat skyVertices[] = {
@@ -434,28 +393,22 @@ void GeometryEngine::DrawSkyGradientSimple()
  };
  
  // Создаем временный VBO для отрисовки
- QOpenGLBuffer tempVBO(QOpenGLBuffer::VertexBuffer);
- if (!tempVBO.create()) {
-     qWarning("Failed to create sky VBO!");
-     return;
- }
- if (!tempVBO.bind()) {
-     qWarning("Failed to bind sky VBO!");
-     return;
- }
- tempVBO.allocate(skyVertices, sizeof(skyVertices));
+ GLuint tempVBO;
+ glGenBuffers(1, &tempVBO);
+ glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
+ glBufferData(GL_ARRAY_BUFFER, sizeof(skyVertices), skyVertices, GL_STATIC_DRAW);
  
  // Устанавливаем атрибуты
- int vertexLocation = skyProgram.attributeLocation("a_position");
+ int vertexLocation = glGetAttribLocation(skyShader->GetProgramID(), "a_position");
  if (vertexLocation != -1) {
-     skyProgram.enableAttributeArray(vertexLocation);
-     skyProgram.setAttributeBuffer(vertexLocation, GL_FLOAT, 0, 3, 5 * sizeof(GLfloat));
+     glEnableVertexAttribArray(vertexLocation);
+     glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
  }
  
- int texcoordLocation = skyProgram.attributeLocation("a_texcoord");
+ int texcoordLocation = glGetAttribLocation(skyShader->GetProgramID(), "a_texcoord");
  if (texcoordLocation != -1) {
-     skyProgram.enableAttributeArray(texcoordLocation);
-     skyProgram.setAttributeBuffer(texcoordLocation, GL_FLOAT, 3 * sizeof(GLfloat), 2, 5 * sizeof(GLfloat));
+     glEnableVertexAttribArray(texcoordLocation);
+     glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
  }
  
  // Отрисовываем небо как треугольники
@@ -464,13 +417,13 @@ void GeometryEngine::DrawSkyGradientSimple()
  // Проверяем ошибки OpenGL
  GLenum error = glGetError();
  if (error != GL_NO_ERROR) {
-     qWarning("OpenGL error after drawing sky: %d", error);
+     std::cerr << "OpenGL error after drawing sky: " << error << std::endl;
  }
  
  // Освобождаем ресурсы
- tempVBO.release();
- tempVBO.destroy();
- skyProgram.release();
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
+ glDeleteBuffers(1, &tempVBO);
+ skyShader->Unuse();
  
  // Включаем тест глубины обратно
  glEnable(GL_DEPTH_TEST);
@@ -479,15 +432,15 @@ void GeometryEngine::DrawSkyGradientSimple()
 // Методы для управления цветом неба
 void GeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
- skyColor = QVector4D(r, g, b, a);
+ skyColor = glm::vec4(r, g, b, a);
 }
 
-void GeometryEngine::SetSkyColor(const QVector4D& color)
+void GeometryEngine::SetSkyColor(const glm::vec4& color)
 {
  skyColor = color;
 }
 
-QVector4D GeometryEngine::GetSkyColor() const
+glm::vec4 GeometryEngine::GetSkyColor() const
 {
  return skyColor;
 }

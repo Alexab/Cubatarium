@@ -1,16 +1,21 @@
-#include <QPainter>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QJsonArray>
-#include <QFile>
+//#include <QPainter>
+//#include <QJsonDocument>
+//#include <QJsonObject>
+//#include <QJsonValue>
+//#include <QJsonArray>
+//#include <QFile>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
 #include "World.h"
 #include "Object.h"
 #include "ObjectStorage.h"
 #include "User.h"
 #include "ViewEngine.h"
+
+using json = nlohmann::json;
 
 namespace cutum {
 
@@ -38,12 +43,12 @@ void World::SetWorldName(const std::string& value)
  WorldName = value;
 }
 
-QVector3D World::GetSpawnPoint() const
+glm::vec3 World::GetSpawnPoint() const
 {
  return SpawnPoint;
 }
 
-void World::SetSpawnPoint(QVector3D value)
+void World::SetSpawnPoint(glm::vec3 value)
 {
  SpawnPoint = value;
 }
@@ -85,7 +90,7 @@ void World::Save(const std::string& world_folder_path)
  SaveWorldData(world_data_file_name);
 }
 
-bool World::AddObject(const std::string type_id, const QVector3D &position)
+bool World::AddObject(const std::string type_id, const glm::vec3 &position)
 {
  auto object = ObjectStorageInstance->TakeObject(type_id);
  if(object == nullptr)
@@ -216,7 +221,7 @@ void World::AddObject(std::shared_ptr<Object> object)
  }
 }
 
-bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>>& distance_map) const
+bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
 
@@ -231,7 +236,7 @@ bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& fro
 
  for(size_t i=0; i<candidateObjects.size(); i++)
  {
-  std::map<float, std::tuple<int, QVector3D, QVector3D, size_t>> object_distance_map;
+     std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> object_distance_map;
 
   if(candidateObjects[i]->CheckRayIntersection(position, front, object_distance_map))
   {
@@ -242,11 +247,11 @@ bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& fro
     auto it = std::find(Objects.begin(), Objects.end(), candidateObjects[i]);
     size_t objectIndex = (it != Objects.end()) ? std::distance(Objects.begin(), it) : i;
     
-    distance_map[distance] = std::tuple<int, QVector3D, QVector3D, size_t, size_t>(std::get<0>(I->second),
-                                                                                   std::get<1>(I->second),
-                                                                                   std::get<2>(I->second),
-                                                                                   std::get<3>(I->second),
-                                                                                   objectIndex);
+         distance_map[distance] = std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(std::get<0>(I->second),
+                                                                                    std::get<1>(I->second),
+                                                                                    std::get<2>(I->second),
+                                                                                    std::get<3>(I->second),
+                                                                                    objectIndex);
    }
   }
  }
@@ -257,9 +262,9 @@ bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& fro
  return true;
 }
 
-bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& front, QVector3D& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
+bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
 {
- std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>> distance_map;
+ std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
  bool result = CheckRayIntersection(position, front, distance_map);
  if(result)
@@ -275,9 +280,9 @@ bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& fro
  return result;
 }
 
-std::shared_ptr<Object> World::FindObjectByView(const QVector3D& position, const QVector3D& front)
+std::shared_ptr<Object> World::FindObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
- QVector3D intersecion;
+ glm::vec3 intersecion;
  float distance;
  size_t cube_index;
  size_t object_index;
@@ -290,7 +295,7 @@ std::shared_ptr<Object> World::FindObjectByView(const QVector3D& position, const
   return nullptr;
 }
 
-bool World::CheckPositionFree(const QVector3D& position, float size) const
+bool World::CheckPositionFree(const glm::vec3& position, float size) const
 {
  // Использовать Octree для оптимизации поиска
  std::vector<std::shared_ptr<Object>> nearbyObjects;
@@ -309,11 +314,11 @@ bool World::CheckPositionFree(const QVector3D& position, float size) const
  return true;
 }
 
-std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& position, const QVector3D& front) const
+std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
- std::optional<QVector3D> result;
+ std::optional<glm::vec3> result;
 
- std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>> distance_map;
+ std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
  if(!CheckRayIntersection(position, front, distance_map))
   return result;
@@ -323,9 +328,9 @@ std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& pos
 
  for(auto I = distance_map.begin(); I != distance_map.end(); ++I)
  {
-  QVector3D res_position;
+  glm::vec3 res_position;
 
-  QVector3D intersecion = std::get<2>(I->second);
+  glm::vec3 intersecion = std::get<2>(I->second);
   float distance = I->first;
   size_t cube_index = std::get<3>(I->second);
   size_t object_index = std::get<4>(I->second);
@@ -339,35 +344,35 @@ std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& pos
   // Получить размер куба для правильного вычисления смещения
   float cubeSize = cube->GetSize();
   
-  switch(cube_side)
-  {
-  case CubeSide::CUBE_SIDE_LEFT:
-    res_position = cube->GetCenterPosition()+QVector3D(-cubeSize, 0.0, 0.0);
-  break;
+     switch(cube_side)
+   {
+   case CubeSide::CUBE_SIDE_LEFT:
+     res_position = cube->GetCenterPosition()+glm::vec3(-cubeSize, 0.0, 0.0);
+   break;
 
-  case CubeSide::CUBE_SIDE_RIGHT:
-    res_position = cube->GetCenterPosition()+QVector3D(cubeSize, 0.0, 0.0);
-  break;
+   case CubeSide::CUBE_SIDE_RIGHT:
+     res_position = cube->GetCenterPosition()+glm::vec3(cubeSize, 0.0, 0.0);
+   break;
 
-  case CubeSide::CUBE_SIDE_FAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, -cubeSize);
-  break;
+   case CubeSide::CUBE_SIDE_FAR:
+     res_position = cube->GetCenterPosition()+glm::vec3(0.0, 0.0, -cubeSize);
+   break;
 
-  case CubeSide::CUBE_SIDE_NEAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, cubeSize);
-  break;
+   case CubeSide::CUBE_SIDE_NEAR:
+     res_position = cube->GetCenterPosition()+glm::vec3(0.0, 0.0, cubeSize);
+   break;
 
-  case CubeSide::CUBE_SIDE_TOP:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, cubeSize, 0.0);
-  break;
+   case CubeSide::CUBE_SIDE_TOP:
+     res_position = cube->GetCenterPosition()+glm::vec3(0.0, cubeSize, 0.0);
+   break;
 
-  case CubeSide::CUBE_SIDE_BOTTOM:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, -cubeSize, 0.0);
-  break;
+   case CubeSide::CUBE_SIDE_BOTTOM:
+     res_position = cube->GetCenterPosition()+glm::vec3(0.0, -cubeSize, 0.0);
+   break;
 
-  default:
-   res_position = cube->GetCenterPosition()+QVector3D(0.0, cubeSize, 0.0);
-  }
+   default:
+    res_position = cube->GetCenterPosition()+glm::vec3(0.0, cubeSize, 0.0);
+   }
   
   if(CheckPositionFree(res_position, cubeSize))
   {
@@ -382,7 +387,7 @@ std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& pos
  return result; // TODO
 }
 
-bool World::AddObjectByView(const QVector3D& position, const QVector3D& front)
+bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
  auto object_pos = FindNearestFreeCubePosition(position, front);
  if(object_pos.has_value())
@@ -391,7 +396,7 @@ bool World::AddObjectByView(const QVector3D& position, const QVector3D& front)
   if(!user)
    return false;
 
-  if(AddObject(user->GetActiveObjectTypeName(), QVector3D(object_pos.value())))
+     if(AddObject(user->GetActiveObjectTypeName(), object_pos.value()))
   {
    UpdateIntersection(position, front);
    return true;
@@ -400,9 +405,9 @@ bool World::AddObjectByView(const QVector3D& position, const QVector3D& front)
  return false;
 }
 
-bool World::DelObjectByView(const QVector3D& position, const QVector3D& front)
+bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
- QVector3D intersecion;
+ glm::vec3 intersecion;
  float distance;
  size_t cube_index;
  size_t object_index;
@@ -416,7 +421,7 @@ bool World::DelObjectByView(const QVector3D& position, const QVector3D& front)
 }
 
 
-bool World::CheckCollision(const QVector3D& position, float size) const
+bool World::CheckCollision(const glm::vec3& position, float size) const
 {
  // Использовать Octree для оптимизации поиска
  std::vector<std::shared_ptr<Object>> nearbyObjects;
@@ -437,210 +442,202 @@ bool World::CheckCollision(const QVector3D& position, float size) const
 
 void World::LoadUsers(const std::string &file_name)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+ } else {
+     std::cerr << "Failed to open users file: " << file_name << std::endl;
+     return;
+ }
 
- Users.clear();
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- for(auto I = sett2.begin() ; I != sett2.end(); ++I)
- {
-  auto user_name = std::string(I.key().toLocal8Bit());
-  auto user_data = I.value();
+ try {
+     Users.clear();
+     json d = json::parse(val);
+     for(auto I = d.begin() ; I != d.end(); ++I)
+     {
+      auto user_name = I.key();
+      auto user_data = I.value();
 
-  auto position_object=user_data.toObject();
-  auto position_value = position_object.value(QString("position"));
+      auto position_value = user_data.value("position", json::array());
 
-  if(position_value.isUndefined())
-    continue;
+      if(position_value.empty() || !position_value.is_array())
+       continue;
 
-  if(!position_value.isArray())
-   continue;
+      if(position_value.size() != 3)
+       continue;
 
-  auto position_array = position_value.toArray();
-  if(position_array.size() != 3)
-   continue;
+      glm::vec3 position(position_value[0].get<float>(),
+                         position_value[1].get<float>(),
+                         position_value[2].get<float>());
 
-  QVector3D position(position_array[0].toDouble(),
-                        position_array[1].toDouble(),
-                        position_array[2].toDouble());
-
-  AddUser(user_name);
-  //GetUser(user_name)->SetPosition();
+      AddUser(user_name);
+      //GetUser(user_name)->SetPosition();
+     }
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error in LoadUsers: " << e.what() << std::endl;
  }
 }
 
 void World::SaveUsers(const std::string &file_name)
 {
- QJsonObject objects;
+ json objects;
 
  for(auto I=Users.begin(); I!=Users.end(); ++I)
  {
   auto user_name = I->first;
   auto user_data = I->second;
 
-  QVector3D position(0.0f, 0.0f, 0.0f);
+  glm::vec3 position(0.0f, 0.0f, 0.0f);
 
-  QJsonArray arr;
-  arr.append(QJsonValue(position.x()));
-  arr.append(QJsonValue(position.y()));
-  arr.append(QJsonValue(position.z()));
+  json arr = json::array({position.x, position.y, position.z});
 
-  QJsonObject user;
-  user.insert("position", arr);
+  json user;
+  user["position"] = arr;
 
-  objects.insert(user_name.c_str(),user);
+  objects[user_name] = user;
  }
 
- QJsonDocument jsonDoc;
- jsonDoc.setObject(objects);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+     file << objects.dump(4);
+     file.close();
+ }
 }
 
 void World::LoadObjects(const std::string &file_name)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
-
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonArray objects = d.array();
-
- Objects.clear();
- for(int i =0; i<objects.size();i++)
- {
-  auto object_data = objects[i].toObject();
-
-  auto id_value=object_data.value("id");
-  auto type_name_value=object_data.value("type_name");
-  auto position_value = object_data.value(QString("position"));
-
-  if(id_value.isUndefined() || type_name_value.isUndefined() || position_value.isUndefined())
-   continue;
-
-  if(!position_value.isArray())
-   continue;
-
-  auto position_array = position_value.toArray();
-  if(position_array.size() != 3)
-   continue;
-
-  QVector3D position(position_array[0].toDouble(),
-                        position_array[1].toDouble(),
-                        position_array[2].toDouble());
-
-  std::string object_type_name = type_name_value.toString().toLocal8Bit();
-  AddObject(object_type_name, position);
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+ } else {
+     std::cerr << "Failed to open objects file: " << file_name << std::endl;
+     return;
  }
- 
- // Обновить пространственный индекс после загрузки всех объектов
- spatialIndexDirty = true;
+
+ try {
+     json d = json::parse(val);
+     json objects = d;
+
+     Objects.clear();
+     for(const auto& object_data : objects)
+     {
+      auto id_value = object_data.value("id", 0);
+      auto type_name_value = object_data.value("type_name", "");
+      auto position_value = object_data.value("position", json::array());
+
+      if(id_value == 0 || type_name_value.empty() || position_value.empty())
+       continue;
+
+      if(!position_value.is_array())
+       continue;
+
+      if(position_value.size() != 3)
+       continue;
+
+      glm::vec3 position(position_value[0].get<float>(),
+                         position_value[1].get<float>(),
+                         position_value[2].get<float>());
+
+      std::string object_type_name = type_name_value;
+      AddObject(object_type_name, position);
+     }
+     
+     // Обновить пространственный индекс после загрузки всех объектов
+     spatialIndexDirty = true;
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error in LoadObjects: " << e.what() << std::endl;
+ }
 }
 
 void World::SaveObjects(const std::string &file_name)
 {
- QJsonArray objects;
+ json objects = json::array();
 
  for(auto & object : Objects)
  {
 
   auto pose = object->GetPose();
-  QVector3D position(pose(0,3), pose(1,3), pose(2,3));
+  glm::vec3 position(pose[3][0], pose[3][1], pose[3][2]);
 
-  QJsonArray arr;
-  arr.append(QJsonValue(position.x()));
-  arr.append(QJsonValue(position.y()));
-  arr.append(QJsonValue(position.z()));
+  json arr = json::array({position.x, position.y, position.z});
 
-  QJsonObject obj;
-  obj.insert("id", QJsonValue(int(object->GetObjectId())));
-  obj.insert("type_name", QJsonValue(ObjectStorageInstance->GetObjectTypeName(object->GetObjectTypeId()).c_str()));
-  obj.insert("position", arr);
+  json obj;
+  obj["id"] = int(object->GetObjectId());
+  obj["type_name"] = ObjectStorageInstance->GetObjectTypeName(object->GetObjectTypeId());
+  obj["position"] = arr;
 
-  objects.append(obj);
+  objects.push_back(obj);
  }
 
- QJsonDocument jsonDoc;
- jsonDoc.setArray(objects);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+     file << objects.dump(4);
+     file.close();
+ }
 }
 
 void World::LoadWorldData(const std::string &file_name)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
- qWarning() << val;
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- QJsonValue world_name_value = sett2.value(QString("world_name"));
- QJsonValue spawn_point_value = sett2.value(QString("spawn_point"));
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+     std::cout << val << std::endl;
+ } else {
+     std::cerr << "Failed to open world data file: " << file_name << std::endl;
+     return;
+ }
 
- if(world_name_value.isUndefined() || spawn_point_value.isUndefined())
-  return;
+ try {
+     json d = json::parse(val);
+     std::string world_name_value = d.value("world_name", "");
+     json spawn_point_value = d.value("spawn_point", json::array());
 
- if(!world_name_value.isString())
-  return;
- std::string name = world_name_value.toString().toLocal8Bit();
+     if(world_name_value.empty() || spawn_point_value.empty())
+      return;
 
- if(!spawn_point_value.isArray())
-  return;
+     if(!spawn_point_value.is_array())
+      return;
 
- auto spawn_point_array = spawn_point_value.toArray();
- if(spawn_point_array.size() != 3)
-  return;
+     if(spawn_point_value.size() != 3)
+      return;
 
- QVector3D spawn_point(spawn_point_array[0].toDouble(),
-                       spawn_point_array[1].toDouble(),
-                       spawn_point_array[2].toDouble());
+     glm::vec3 spawn_point(spawn_point_value[0].get<float>(),
+                           spawn_point_value[1].get<float>(),
+                           spawn_point_value[2].get<float>());
 
- WorldName = name;
- SpawnPoint = spawn_point;
+     WorldName = world_name_value;
+     SpawnPoint = spawn_point;
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error in LoadWorldData: " << e.what() << std::endl;
+ }
 }
 
 void World::SaveWorldData(const std::string &file_name)
 {
- QJsonObject world_data;
+ json world_data;
 
- world_data.insert("world_name", QJsonValue(WorldName.c_str()));
+ world_data["world_name"] = WorldName;
 
- QJsonArray arr;
- arr.append(QJsonValue(SpawnPoint.x()));
- arr.append(QJsonValue(SpawnPoint.y()));
- arr.append(QJsonValue(SpawnPoint.z()));
- world_data.insert("spawn_point", arr);
+ json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
+ world_data["spawn_point"] = arr;
 
- QJsonDocument jsonDoc;
- jsonDoc.setObject(world_data);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+     file << world_data.dump(4);
+     file.close();
+ }
 }
 
 
@@ -660,7 +657,7 @@ void World::DoMovement()
  DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
-void World::UpdateIntersection(const QVector3D& position, const QVector3D& front)
+void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
 {
  IsIntersectionExists=CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
 }
@@ -685,7 +682,7 @@ uint64_t World::GetDurationDoMovementMks() const
  return DurationDoMovementMks;
 }
 
-std::vector<std::shared_ptr<Object>> World::GetObjectsInRadius(const QVector3D& position, float radius) const
+std::vector<std::shared_ptr<Object>> World::GetObjectsInRadius(const glm::vec3& position, float radius) const
 {
  std::vector<std::shared_ptr<Object>> result;
  if (spatialIndex) {
@@ -711,7 +708,7 @@ void World::RebuildOctree()
  
  // Создать новый Octree с подходящим размером
  float worldSize = 1000.0f; // Размер мира
- spatialIndex = std::make_unique<OctreeNode>(QVector3D(0, 0, 0), worldSize);
+   spatialIndex = std::make_unique<OctreeNode>(glm::vec3(0, 0, 0), worldSize);
  
  // Добавить все объекты в индекс
  for (const auto& object : Objects) {

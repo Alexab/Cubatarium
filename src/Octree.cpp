@@ -2,10 +2,11 @@
 #include "Object.h"
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 namespace cutum {
 
-OctreeNode::OctreeNode(const QVector3D& center, float size)
+OctreeNode::OctreeNode(const glm::vec3& center, float size)
     : center(center), size(size) {
 }
 
@@ -17,7 +18,7 @@ void OctreeNode::Insert(std::shared_ptr<Object> object) {
         }
     } else {
         // Найти подходящий дочерний узел
-        QVector3D objectPos(object->GetPose()(0,3), object->GetPose()(1,3), object->GetPose()(2,3));
+        glm::vec3 objectPos(object->GetPose()[3][0], object->GetPose()[3][1], object->GetPose()[3][2]);
         for (auto& child : children) {
             if (child && child->Contains(objectPos)) {
                 child->Insert(object);
@@ -34,7 +35,7 @@ void OctreeNode::Remove(std::shared_ptr<Object> object) {
             objects.erase(it);
         }
     } else {
-        QVector3D objectPos(object->GetPose()(0,3), object->GetPose()(1,3), object->GetPose()(2,3));
+        glm::vec3 objectPos(object->GetPose()[3][0], object->GetPose()[3][1], object->GetPose()[3][2]);
         for (auto& child : children) {
             if (child && child->Contains(objectPos)) {
                 child->Remove(object);
@@ -44,15 +45,15 @@ void OctreeNode::Remove(std::shared_ptr<Object> object) {
     }
 }
 
-void OctreeNode::Query(const QVector3D& position, float radius, std::vector<std::shared_ptr<Object>>& result) const {
+void OctreeNode::Query(const glm::vec3& position, float radius, std::vector<std::shared_ptr<Object>>& result) const {
     if (!IntersectsSphere(position, radius)) {
         return;
     }
     
     if (IsLeaf()) {
         for (const auto& obj : objects) {
-            QVector3D objPos(obj->GetPose()(0,3), obj->GetPose()(1,3), obj->GetPose()(2,3));
-            if ((objPos - position).length() <= radius) {
+            glm::vec3 objPos(obj->GetPose()[3][0], obj->GetPose()[3][1], obj->GetPose()[3][2]);
+            if (glm::length(objPos - position) <= radius) {
                 result.push_back(obj);
             }
         }
@@ -65,18 +66,18 @@ void OctreeNode::Query(const QVector3D& position, float radius, std::vector<std:
     }
 }
 
-void OctreeNode::QueryRay(const QVector3D& origin, const QVector3D& direction, std::vector<std::shared_ptr<Object>>& result) const {
+void OctreeNode::QueryRay(const glm::vec3& origin, const glm::vec3& direction, std::vector<std::shared_ptr<Object>>& result) const {
     // Простая проверка пересечения луча с bounding box узла
-    QVector3D min = center - QVector3D(size/2, size/2, size/2);
-    QVector3D max = center + QVector3D(size/2, size/2, size/2);
+    glm::vec3 min = center - glm::vec3(size/2, size/2, size/2);
+    glm::vec3 max = center + glm::vec3(size/2, size/2, size/2);
     
     // Простая проверка пересечения луча с AABB
-    float t1 = (min.x() - origin.x()) / direction.x();
-    float t2 = (max.x() - origin.x()) / direction.x();
-    float t3 = (min.y() - origin.y()) / direction.y();
-    float t4 = (max.y() - origin.y()) / direction.y();
-    float t5 = (min.z() - origin.z()) / direction.z();
-    float t6 = (max.z() - origin.z()) / direction.z();
+    float t1 = (min.x - origin.x) / direction.x;
+    float t2 = (max.x - origin.x) / direction.x;
+    float t3 = (min.y - origin.y) / direction.y;
+    float t4 = (max.y - origin.y) / direction.y;
+    float t5 = (min.z - origin.z) / direction.z;
+    float t6 = (max.z - origin.z) / direction.z;
     
     float tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
     float tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
@@ -116,18 +117,18 @@ void OctreeNode::Subdivide() {
     float quarterSize = size / 4.0f;
     
     // Создать 8 дочерних узлов
-    children[0] = std::make_unique<OctreeNode>(center + QVector3D(-quarterSize, -quarterSize, -quarterSize), halfSize);
-    children[1] = std::make_unique<OctreeNode>(center + QVector3D( quarterSize, -quarterSize, -quarterSize), halfSize);
-    children[2] = std::make_unique<OctreeNode>(center + QVector3D(-quarterSize, -quarterSize,  quarterSize), halfSize);
-    children[3] = std::make_unique<OctreeNode>(center + QVector3D( quarterSize, -quarterSize,  quarterSize), halfSize);
-    children[4] = std::make_unique<OctreeNode>(center + QVector3D(-quarterSize,  quarterSize, -quarterSize), halfSize);
-    children[5] = std::make_unique<OctreeNode>(center + QVector3D( quarterSize,  quarterSize, -quarterSize), halfSize);
-    children[6] = std::make_unique<OctreeNode>(center + QVector3D(-quarterSize,  quarterSize,  quarterSize), halfSize);
-    children[7] = std::make_unique<OctreeNode>(center + QVector3D( quarterSize,  quarterSize,  quarterSize), halfSize);
+    children[0] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize, -quarterSize, -quarterSize), halfSize);
+    children[1] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize, -quarterSize, -quarterSize), halfSize);
+    children[2] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize, -quarterSize,  quarterSize), halfSize);
+    children[3] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize, -quarterSize,  quarterSize), halfSize);
+    children[4] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize,  quarterSize, -quarterSize), halfSize);
+    children[5] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize,  quarterSize, -quarterSize), halfSize);
+    children[6] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize,  quarterSize,  quarterSize), halfSize);
+    children[7] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize,  quarterSize,  quarterSize), halfSize);
     
     // Перераспределить объекты по дочерним узлам
     for (const auto& obj : objects) {
-        QVector3D objPos(obj->GetPose()(0,3), obj->GetPose()(1,3), obj->GetPose()(2,3));
+        glm::vec3 objPos(obj->GetPose()[3][0], obj->GetPose()[3][1], obj->GetPose()[3][2]);
         for (auto& child : children) {
             if (child->Contains(objPos)) {
                 child->Insert(obj);
@@ -140,24 +141,24 @@ void OctreeNode::Subdivide() {
     objects.clear();
 }
 
-bool OctreeNode::Contains(const QVector3D& point) const {
-    QVector3D min = center - QVector3D(size/2, size/2, size/2);
-    QVector3D max = center + QVector3D(size/2, size/2, size/2);
-    return point.x() >= min.x() && point.x() <= max.x() &&
-           point.y() >= min.y() && point.y() <= max.y() &&
-           point.z() >= min.z() && point.z() <= max.z();
+bool OctreeNode::Contains(const glm::vec3& point) const {
+    glm::vec3 min = center - glm::vec3(size/2, size/2, size/2);
+    glm::vec3 max = center + glm::vec3(size/2, size/2, size/2);
+    return point.x >= min.x && point.x <= max.x &&
+           point.y >= min.y && point.y <= max.y &&
+           point.z >= min.z && point.z <= max.z;
 }
 
-bool OctreeNode::IntersectsSphere(const QVector3D& sphereCenter, float sphereRadius) const {
-    QVector3D min = center - QVector3D(size/2, size/2, size/2);
-    QVector3D max = center + QVector3D(size/2, size/2, size/2);
+bool OctreeNode::IntersectsSphere(const glm::vec3& sphereCenter, float sphereRadius) const {
+    glm::vec3 min = center - glm::vec3(size/2, size/2, size/2);
+    glm::vec3 max = center + glm::vec3(size/2, size/2, size/2);
     
-    float closestX = std::max(min.x(), std::min(sphereCenter.x(), max.x()));
-    float closestY = std::max(min.y(), std::min(sphereCenter.y(), max.y()));
-    float closestZ = std::max(min.z(), std::min(sphereCenter.z(), max.z()));
+    float closestX = std::max(min.x, std::min(sphereCenter.x, max.x));
+    float closestY = std::max(min.y, std::min(sphereCenter.y, max.y));
+    float closestZ = std::max(min.z, std::min(sphereCenter.z, max.z));
     
-    QVector3D closestPoint(closestX, closestY, closestZ);
-    return (closestPoint - sphereCenter).length() <= sphereRadius;
+    glm::vec3 closestPoint(closestX, closestY, closestZ);
+    return glm::length(closestPoint - sphereCenter) <= sphereRadius;
 }
 
 } // namespace cutum

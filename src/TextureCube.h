@@ -5,8 +5,11 @@
 #include <vector>
 #include <map>
 #include <memory>
+// GLEW будет включен в .cpp файле после инициализации GLFW
+// Forward declaration для OpenGL типов
+typedef unsigned int GLuint;
 #include "TextureBase.h"
-#include <QOpenGLTexture>
+//#include <QOpenGLTexture>
 
 namespace cutum {
 
@@ -27,8 +30,8 @@ public:
  const std::vector<std::string>& GetTextureNames() const;
  size_t GetNumTextureFrames() const;
 
- std::shared_ptr<QOpenGLTexture> GetTexture() const;
- void SetTexture(std::shared_ptr<QOpenGLTexture> value);
+ GLuint GetTexture() const;
+ void SetTexture(GLuint value);
 
 private:
  std::string Name;
@@ -37,7 +40,7 @@ private:
  std::vector<std::string> TextureNames;
  size_t NumTextureFrames;
 
- std::shared_ptr<QOpenGLTexture> Texture;
+ GLuint Texture;
 };
 
 class TextureCubeStorage
@@ -54,8 +57,7 @@ public:
 
 private:
  TextureCube CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id, const std::vector<std::string>& texture_names);
- std::shared_ptr<QOpenGLTexture> LoadTexture(const QImage &image);
- std::shared_ptr<QOpenGLTexture> LoadTexture(const std::string &texture_res_name);
+ GLuint LoadTexture(const std::string &image_path);
 
  bool LoadJson(const std::string& file_name, std::string &name, size_t &id, std::vector<std::string> &textures);
 

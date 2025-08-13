@@ -1,36 +1,36 @@
 #include "CubeGL.h"
+#include <GL/glew.h>
 
 namespace cutum {
 
-VertexData::VertexData(QVector3D position, QVector2D texCoord)
+VertexData::VertexData(glm::vec3 position, glm::vec2 texCoord)
  : position(position), texCoord(texCoord)
 {
 }
 
 CubeGL::CubeGL()
-: Cube(), indexBuf(QOpenGLBuffer::IndexBuffer)
+: Cube()
 {
- arrayBuf.create();
- indexBuf.create();
+ glGenBuffers(1, &arrayBuf);
+ glGenBuffers(1, &indexBuf);
 }
 
 CubeGL::CubeGL(const CubeGL &copy)
- : Cube(copy), indexBuf(QOpenGLBuffer::IndexBuffer)
+ : Cube(copy)
 {
- arrayBuf.create();
- indexBuf.create();
+ glGenBuffers(1, &arrayBuf);
+ glGenBuffers(1, &indexBuf);
 
  Vertices = copy.Vertices;
  Indices = copy.Indices;
 
- arrayBuf.bind();
- arrayBuf.allocate(Vertices.data(), int(Vertices.size() * sizeof(VertexData)));
- arrayBuf.release();
+ glBindBuffer(GL_ARRAY_BUFFER, arrayBuf);
+ glBufferData(GL_ARRAY_BUFFER, Vertices.size() * sizeof(VertexData), Vertices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
 
- // Transfer index data to VBO 1
- indexBuf.bind();
- indexBuf.allocate(Indices.data(), int(Indices.size() * sizeof(GLushort)));
- indexBuf.release();
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuf);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(GLushort), Indices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 CubeGL& CubeGL::operator = (const CubeGL &copy)
@@ -39,23 +39,23 @@ CubeGL& CubeGL::operator = (const CubeGL &copy)
  Vertices = copy.Vertices;
  Indices = copy.Indices;
 
- arrayBuf.bind();
- arrayBuf.allocate(Vertices.data(), int(Vertices.size() * sizeof(VertexData)));
- arrayBuf.release();
+ glBindBuffer(GL_ARRAY_BUFFER, arrayBuf);
+ glBufferData(GL_ARRAY_BUFFER, Vertices.size() * sizeof(VertexData), Vertices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
 
- indexBuf.bind();
- indexBuf.allocate(Indices.data(), int(Indices.size() * sizeof(GLushort)));
- indexBuf.release();
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuf);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(GLushort), Indices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
  return *this;
 }
 
 CubeGL::~CubeGL()
 {
- arrayBuf.destroy();
- indexBuf.destroy();
+ glDeleteBuffers(1, &arrayBuf);
+ glDeleteBuffers(1, &indexBuf);
 }
 
-void CubeGL::Init(const QMatrix4x4 &initial_pose, float size)
+void CubeGL::Init(const glm::mat4 &initial_pose, float size)
 {
  Cube::Init(initial_pose, size);
  float size2 = Size / 2.0;
@@ -64,44 +64,44 @@ void CubeGL::Init(const QMatrix4x4 &initial_pose, float size)
 
  // Vertex data for face 0 (CUBE_SIDE_NEAR)
  VerticesInitialPos.clear();
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2,  size2), QVector2D(0.0f, 0.0f)); // v0
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2,  size2), QVector2D(cube_shift*1.0f, 0.0f)); // v1
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2,  size2), QVector2D(0.0f, 1.0f)); // v2
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2,  size2), QVector2D(cube_shift*1.0f, 1.0f)); // v3
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(0.0f, 0.0f)); // v0
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v1
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(0.0f, 1.0f)); // v2
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v3
 
  // Vertex data for face 1 (CUBE_SIDE_RIGHT)
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2,  size2), QVector2D(cube_shift*1.0f, 0.0f)); // v4
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2, -size2), QVector2D(cube_shift*2.0f, 0.0f)); // v5
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2,  size2), QVector2D(cube_shift*1.0f, 1.0f)); // v6
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2, -size2), QVector2D(cube_shift*2.0f, 1.0f)); // v7
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v4
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v5
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v6
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v7
 
  // Vertex data for face 2 (CUBE_SIDE_FAR)
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2, -size2), QVector2D(cube_shift*2.0f, 0.0f)); // v8
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2, -size2), QVector2D(cube_shift*3.0f, 0.0f)); // v9
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2, -size2), QVector2D(cube_shift*2.0f, 1.0f)); // v10
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2, -size2), QVector2D(cube_shift*3.0f, 1.0f)); // v11
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v8
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v9
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v10
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v11
 
  // Vertex data for face 3 (CUBE_SIDE_LEFT)
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2, -size2), QVector2D(cube_shift*3.0f, 0.0f)); // v12
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2,  size2), QVector2D(cube_shift*4.0f, 0.0f)); // v13
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2, -size2), QVector2D(cube_shift*3.0f, 1.0f)); // v14
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2,  size2), QVector2D(cube_shift*4.0f, 1.0f)); // v15
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v12
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(cube_shift*4.0f, 0.0f)); // v13
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v14
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(cube_shift*4.0f, 1.0f)); // v15
 
  // Vertex data for face 4 (CUBE_SIDE_TOP)
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2,  size2), QVector2D(cube_shift*4.0f, 0.0f)); // v16
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2,  size2), QVector2D(cube_shift*5.0f, 0.0f)); // v17
- VerticesInitialPos.emplace_back(QVector3D(-size2,  size2, -size2), QVector2D(cube_shift*4.0f, 1.0f)); // v18
- VerticesInitialPos.emplace_back(QVector3D( size2,  size2, -size2), QVector2D(cube_shift*5.0f, 1.0f)); // v19
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(cube_shift*4.0f, 0.0f)); // v16
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*5.0f, 0.0f)); // v17
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*4.0f, 1.0f)); // v18
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*5.0f, 1.0f)); // v19
 
  // Vertex data for face 5 (CUBE_SIDE_BOTTOM)
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2, -size2), QVector2D(cube_shift*5.0f, 0.0f)); // v16
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2, -size2), QVector2D(1.0, 0.0f)); // v17
- VerticesInitialPos.emplace_back(QVector3D(-size2, -size2,  size2), QVector2D(cube_shift*5.0f, 1.0f)); // v18
- VerticesInitialPos.emplace_back(QVector3D( size2, -size2,  size2), QVector2D(1.0, 1.0f)); // v19
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*5.0f, 0.0f)); // v16
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(1.0, 0.0f)); // v17
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(cube_shift*5.0f, 1.0f)); // v18
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(1.0, 1.0f)); // v19
 
  for(auto & vert : VerticesInitialPos)
  {
-  vert.position = initial_pose*vert.position;
+  vert.position = initial_pose * glm::vec4(vert.position, 1.0f);
  }
 
  Indices = {
@@ -113,10 +113,9 @@ void CubeGL::Init(const QMatrix4x4 &initial_pose, float size)
  20, 20, 21, 22, 23      // Face 5 - triangle strip (v20, v21, v22, v23)
 };
 
- // Transfer index data to VBO 1
- indexBuf.bind();
- indexBuf.allocate(Indices.data(), int(Indices.size() * sizeof(GLushort)));
- indexBuf.release();
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuf);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(GLushort), Indices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
  UpdateVertices();
 }
@@ -126,13 +125,13 @@ void CubeGL::UpdateVertices()
  Vertices.resize(VerticesInitialPos.size());
  for(size_t i=0;i<Vertices.size();i++)
  {
-  Vertices[i].position = ObjectPose*VerticesInitialPos[i].position;
+  Vertices[i].position = ObjectPose * glm::vec4(VerticesInitialPos[i].position, 1.0f);
   Vertices[i].texCoord = VerticesInitialPos[i].texCoord;
  }
 
- arrayBuf.bind();
- arrayBuf.allocate(Vertices.data(), int(Vertices.size() * sizeof(VertexData)));
- arrayBuf.release();
+ glBindBuffer(GL_ARRAY_BUFFER, arrayBuf);
+ glBufferData(GL_ARRAY_BUFFER, Vertices.size() * sizeof(VertexData), Vertices.data(), GL_DYNAMIC_DRAW);
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 std::vector<VertexData> CubeGL::GetVertices() const
@@ -150,12 +149,12 @@ std::vector<GLushort> CubeGL::GetIndices() const
  return Indices;
 }
 
-QOpenGLBuffer& CubeGL::GetArrayBuf()
+GLuint CubeGL::GetArrayBuf()
 {
  return arrayBuf;
 }
 
-QOpenGLBuffer& CubeGL::GetIndexBuf()
+GLuint CubeGL::GetIndexBuf()
 {
  return indexBuf;
 }

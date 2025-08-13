@@ -62,22 +62,22 @@ std::shared_ptr<Object> User::GetActiveObject()
  return ActiveObject;
 }
 
-const QVector3D& User::GetPosition() const
+const glm::vec3& User::GetPosition() const
 {
  return Position;
 }
 
-const QVector3D& User::GetViewDirection() const
+const glm::vec3& User::GetViewDirection() const
 {
  return ViewDirection;
 }
 
-void User::SetPosition(const QVector3D& value)
+void User::SetPosition(const glm::vec3& value)
 {
  Position = value;
 }
 
-void User::SetViewDirection(const QVector3D& value)
+void User::SetViewDirection(const glm::vec3& value)
 {
  ViewDirection = value;
 }

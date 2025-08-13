@@ -4,9 +4,41 @@ project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network)
+# Удаляем Qt зависимости
+# find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network)
+
+# Добавляем GLFW, GLM и GLEW
+find_package(PkgConfig REQUIRED)
+find_package(OpenGL REQUIRED)
+
+# GLFW
+if(WIN32)
+    # Для Windows можно использовать vcpkg или скачать GLFW
+    find_package(glfw3 REQUIRED)
+else()
+    find_package(glfw3 REQUIRED)
+endif()
+
+# GLM
+find_package(glm REQUIRED)
+
+# GLEW
+find_package(GLEW REQUIRED)
+
+# nlohmann/json
+find_package(nlohmann_json REQUIRED)
+
+# stb_image для загрузки текстур
+set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/stb_image.h")
+if(NOT EXISTS ${STB_IMAGE_HEADER})
+    file(DOWNLOAD 
+        "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h"
+        ${STB_IMAGE_HEADER}
+    )
+endif()
 
 set(SOURCES
+    src/stb_image.cpp
     src/main.cpp
     src/Camera.cpp
     src/Core.cpp
@@ -20,9 +52,11 @@ set(SOURCES
     src/User.cpp
     src/ViewEngine.cpp
     src/World.cpp
-    src/MainWidget.cpp
+    src/WindowManager.cpp
     src/GeometryEngine.cpp
     src/Octree.cpp
+    src/InputManager.cpp
+    src/ShaderManager.cpp
 )
 
 set(HEADERS
@@ -38,14 +72,18 @@ set(HEADERS
     src/User.h
     src/ViewEngine.h
     src/World.h
-    src/MainWidget.h
+    src/WindowManager.h
     src/GeometryEngine.h
     src/Octree.h
+    src/InputManager.h
+    src/ShaderManager.h
+    src/stb_image.h
 )
 
-set(RESOURCES
-    resources/shaders.qrc
-)
+# Удаляем Qt ресурсы
+# set(RESOURCES
+#     resources/shaders.qrc
+# )
 
 if(WIN32)
     set(ICON_RESOURCE resources/Cubatarium.ico)
@@ -53,17 +91,25 @@ endif()
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
-qt5_add_resources(RESOURCE_FILES ${RESOURCES})
+# Удаляем Qt специфичные команды
+# qt5_add_resources(RESOURCE_FILES ${RESOURCES})
+# qt5_wrap_cpp(MOC_SOURCES src/MainWidget.h)
 
-qt5_wrap_cpp(MOC_SOURCES src/MainWidget.h)
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILES} ${MOC_SOURCES} ${ICON_RESOURCE})
-
-target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Network)
+# Заменяем Qt библиотеки на GLFW, OpenGL и GLEW
+target_link_libraries(${PROJECT_NAME} 
+    OpenGL::GL
+    glfw
+    glm::glm
+    GLEW::GLEW
+    nlohmann_json::nlohmann_json
+)
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32")
-    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+    # Убираем WIN32_EXECUTABLE для консольного приложения
+    # set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

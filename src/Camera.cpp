@@ -1,4 +1,10 @@
 #include <cmath>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "Camera.h"
 #include "ViewEngine.h"
 #include "World.h"
@@ -12,11 +18,11 @@ float radians(float degrees)
 }
 
 Camera::Camera()
- : Position(QVector3D(0.0f, 0.0f, 0.0f))
- , WorldUp(QVector3D(0.0f, -1.0f, 0.0f))
+ : Position(glm::vec3(0.0f, 0.0f, 0.0f))
+ , WorldUp(glm::vec3(0.0f, -1.0f, 0.0f))
  , Yaw(0.0)
  , Pitch(0.0)
- , Front(QVector3D(0.0f, 0.0f, -1.0f))
+ , Front(glm::vec3(0.0f, 0.0f, -1.0f))
  , MovementSpeed(SPEED)
  , MouseSensitivity(SENSITIVTY)
  , Zoom(ZOOM)
@@ -34,7 +40,7 @@ Camera::Camera()
 
  ViewObjectSize = 0.9f;
 
- Projection.setToIdentity();
+ Projection = glm::mat4(1.0f);
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
@@ -46,8 +52,8 @@ Camera::Camera()
 }
 
 // Constructor with vectors
-Camera::Camera(QVector3D position, QVector3D up, float yaw, float pitch)
- : Front(QVector3D(0.0f, 0.0f, -1.0f))
+Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+ : Front(glm::vec3(0.0f, 0.0f, -1.0f))
  , MovementSpeed(SPEED)
  , MouseSensitivity(SENSITIVTY)
  , Zoom(ZOOM)
@@ -61,7 +67,7 @@ Camera::Camera(QVector3D position, QVector3D up, float yaw, float pitch)
  NearPlane = 0.1f;
  FarPlane = 70.0f;
  Fov = 90.0f;
- Projection.setToIdentity();
+ Projection = glm::mat4(1.0f);
 
  FreeMove = false;
 
@@ -83,7 +89,7 @@ Camera::Camera(QVector3D position, QVector3D up, float yaw, float pitch)
 
 // Constructor with scalar values
 Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
- : Front(QVector3D(0.0f, 0.0f, -1.0f))
+ : Front(glm::vec3(0.0f, 0.0f, -1.0f))
  , MovementSpeed(SPEED)
  , MouseSensitivity(SENSITIVTY)
  , Zoom(ZOOM)
@@ -97,14 +103,14 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  NearPlane = 0.1f;
  FarPlane = 70.0f;
  Fov = 90.0f;
- Projection.setToIdentity();
+ Projection = glm::mat4(1.0f);
 
  FreeMove = false;
 
  ViewObjectSize = 0.9f;
 
- this->Position = QVector3D(posX, posY, posZ);
- this->WorldUp = QVector3D(upX, upY, upZ);
+ this->Position = glm::vec3(posX, posY, posZ);
+ this->WorldUp = glm::vec3(upX, upY, upZ);
  this->Yaw = yaw;
  this->Pitch = pitch;
 
@@ -117,32 +123,32 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  UpdateCameraVectors();
 }
 
-QMatrix4x4 Camera::GetPose() const
+glm::mat4 Camera::GetPose() const
 {
  return Pose;
 }
 
-QMatrix4x4 Camera::GetProjection() const
+glm::mat4 Camera::GetProjection() const
 {
  return Projection;
 }
 
-QMatrix4x4 Camera::GetViewMatrix() const
+glm::mat4 Camera::GetViewMatrix() const
 {
  return Pose;
 }
 
-QMatrix4x4 Camera::GetMvpMatrix() const
+glm::mat4 Camera::GetMvpMatrix() const
 {
  return MvpMatrix;
 }
 
-QVector3D Camera::GetPosition() const
+glm::vec3 Camera::GetPosition() const
 {
  return Position;
 }
 
-QVector3D Camera::GetFront() const
+glm::vec3 Camera::GetFront() const
 {
  return Front;
 }
@@ -192,12 +198,12 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
  else
  {
-  QVector3D position = Position;
-  QVector3D summary_shift(0.0f, 0.0f, 0.0f);
+  glm::vec3 position = Position;
+  glm::vec3 summary_shift(0.0f, 0.0f, 0.0f);
 
   if (direction == FORWARD)
   {
-   auto shift = QVector3D(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity;
+   auto shift = glm::vec3(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity;
    if(!world->CheckCollision(position+shift, ViewObjectSize))
    {
     position += shift;
@@ -206,7 +212,7 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
   }
   if (direction == BACKWARD)
   {
-   auto shift = QVector3D(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity; //Y is not affected, Y is looking up
+   auto shift = glm::vec3(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity; //Y is not affected, Y is looking up
    if(!world->CheckCollision(position-shift, ViewObjectSize))
    {
     position -= shift;
@@ -293,30 +299,30 @@ void Camera::ProcessMouseScroll(float yoffset)
  void Camera::UpdateCameraVectors()
  {
   // Calculate the new Front vector
-  QVector3D front;
-  front.setX(std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch)));
-  front.setY(std::sin(radians(this->Pitch)));
-  front.setZ(std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch)));
-  front.normalize();
+  glm::vec3 front;
+  front.x = std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch));
+  front.y = std::sin(radians(this->Pitch));
+  front.z = std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch));
+  front = glm::normalize(front);
   this->Front = front;
 
   // Also re-calculate the Right and Up vector
-  this->Right=QVector3D::crossProduct(Front, WorldUp).normalized();
+  this->Right=glm::cross(Front, WorldUp);
+  this->Right = glm::normalize(this->Right);
 
-  this->Up = QVector3D::crossProduct(this->Right, this->Front).normalized();
+  this->Up = glm::cross(this->Right, this->Front);
+  this->Up = glm::normalize(this->Up);
 
   UpdatePose();
  }
 
 void Camera::UpdatePose()
 {
- QMatrix4x4 pose;
- pose.lookAt(this->Position, this->Position + this->Front, this->Up);
+ glm::mat4 pose = glm::lookAt(this->Position, this->Position + this->Front, this->Up);
 
  Pose = pose;
 
- Projection.setToIdentity();
- Projection.perspective(Fov, AspectRatio, NearPlane, FarPlane);
+ Projection = glm::perspective(glm::radians(Fov), AspectRatio, NearPlane, FarPlane);
 
  MvpMatrix = Projection * Pose;
 }
@@ -383,32 +389,32 @@ bool Camera::DoMovement(const World* world)
 {
  // Camera controls
  bool is_moved(false);
- if(KeysStatus[Qt::Key_W])
+ if(KeysStatus[GLFW_KEY_W])
  {
   ProcessKeyboard(world, FORWARD, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[Qt::Key_S])
+ if(KeysStatus[GLFW_KEY_S])
  {
   ProcessKeyboard(world, BACKWARD, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[Qt::Key_A])
+ if(KeysStatus[GLFW_KEY_A])
  {
   ProcessKeyboard(world, LEFT, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[Qt::Key_D])
+ if(KeysStatus[GLFW_KEY_D])
  {
   ProcessKeyboard(world, RIGHT, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[Qt::Key_Q])
+ if(KeysStatus[GLFW_KEY_Q])
  {
   ProcessKeyboard(world, UP, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[Qt::Key_E])
+ if(KeysStatus[GLFW_KEY_E])
  {
   ProcessKeyboard(world, DOWN, DeltaTime);
   is_moved = true;

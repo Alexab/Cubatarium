@@ -1,13 +1,18 @@
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QJsonArray>
-#include <QFile>
+//#include <QJsonDocument>
+//#include <QJsonObject>
+//#include <QJsonValue>
+//#include <QJsonArray>
+//#include <QFile>
 #include <filesystem>
 #include <iostream>
 #include "ObjectStorage.h"
 #include "ObjectImplementation.h"
 #include "TextureCube.h"
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace cutum {
 
@@ -143,43 +148,45 @@ std::string ObjectStorage::GetObjectTypeName(uint64_t type_id) const
 
 bool ObjectStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::string &class_name, std::vector<std::string> &cube_textures)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
- qWarning() << val;
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- QJsonValue name_value = sett2.value(QString("name"));
- QJsonValue id_value = sett2.value(QString("id"));
- QJsonValue class_value = sett2.value(QString("class"));
- QJsonValue cube_textures_value = sett2.value(QString("cube_textures"));
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+     std::cout << val << std::endl;
+ } else {
+     std::cerr << "Failed to open file: " << file_name << std::endl;
+     return false;
+ }
 
- if(name_value.isUndefined() || id_value.isUndefined() || cube_textures_value.isUndefined() ||
-    class_value.isUndefined())
-  return false;
+ try {
+     json d = json::parse(val);
+     std::string name_value = d.value("name", "");
+     int id_value = d.value("id", 0);
+     std::string class_value = d.value("class", "");
+     json cube_textures_value = d.value("cube_textures", json::array());
 
- if(!name_value.isString())
-  return false;
- name = name_value.toString().toLocal8Bit();
+     if(name_value.empty() || id_value == 0 || cube_textures_value.empty() || class_value.empty())
+      return false;
 
- id = id_value.toInt();
+     name = name_value;
+     id = static_cast<size_t>(id_value);
+     class_name = class_value;
 
- if(!class_value.isString())
-  return false;
- class_name = class_value.toString().toLocal8Bit();
+     cube_textures.clear();
+     for(const auto& texture : cube_textures_value) {
+         if(texture.is_string()) {
+             cube_textures.push_back(texture.get<std::string>());
+         }
+     }
 
- if(!cube_textures_value.isArray())
-  return false;
-
- auto texture_array = cube_textures_value.toArray();
- cube_textures.resize(texture_array.size());
- for(int i=0; i<texture_array.size(); i++)
-  cube_textures[i] = texture_array[i].toString().toLocal8Bit();
-
- return true;
+     return true;
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+     return false;
+ }
 }
 
 }

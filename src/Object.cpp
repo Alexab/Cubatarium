@@ -1,7 +1,9 @@
 #include <iostream>
 #include <sstream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "Object.h"
-#include <QDebug>
 
 namespace cutum {
 
@@ -48,7 +50,7 @@ Object::Object()
 Object::Object(const Object &copy)
  : ObjectId(++LastObjectId)
  : Cubes;
-QMatrix4x4 Pose;
+glm::mat4 Pose;
 {
 
 }
@@ -106,7 +108,7 @@ bool Object::CheckCollision(Object &object)
  return false;
 }
 
-bool Object::CheckCollision(const QVector3D& position, float size)
+bool Object::CheckCollision(const glm::vec3& position, float size)
 {
  for(auto & cube : Cubes)
  {
@@ -116,20 +118,20 @@ bool Object::CheckCollision(const QVector3D& position, float size)
  return false;
 }
 
-bool Object::CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t>> &distance_map) const
+bool Object::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> &distance_map) const
 {
  distance_map.clear();
 
 
  for(size_t i=0; i<Cubes.size(); i++)
  {
-  std::map<float, std::tuple<int, QVector3D, QVector3D>> cube_intersection_results;
+  std::map<float, std::tuple<int, glm::vec3, glm::vec3>> cube_intersection_results;
   if(Cubes[i]->CheckRayIntersection(position, front, cube_intersection_results))
   {
    for(auto I = cube_intersection_results.begin();I != cube_intersection_results.end(); ++I)
    {
     float dist = I->first;
-    distance_map[dist] = std::tuple<int, QVector3D, QVector3D, size_t>(std::get<0>(I->second),
+    distance_map[dist] = std::tuple<int, glm::vec3, glm::vec3, size_t>(std::get<0>(I->second),
                                                                             std::get<1>(I->second),
                                                                             std::get<2>(I->second),
                                                                             i);
@@ -143,22 +145,21 @@ bool Object::CheckRayIntersection(const QVector3D& position, const QVector3D& fr
  return true;
 }
 
-QMatrix4x4 Object::GetPose() const
+glm::mat4 Object::GetPose() const
 {
  return Pose;
 }
 
-void Object::SetPose(const QMatrix4x4 &value)
+void Object::SetPose(const glm::mat4 &value)
 {
  Pose = value;
  UpdatePose();
 }
 
-void Object::SetPoseFromTranslation(const QVector3D &translation)
+void Object::SetPoseFromTranslation(const glm::vec3 &translation)
 {
- QMatrix4x4 pose;
- pose.setToIdentity();
- pose.translate(translation);
+ glm::mat4 pose = glm::mat4(1.0f);
+ pose = glm::translate(pose, translation);
  SetPose(pose);
 }
 
