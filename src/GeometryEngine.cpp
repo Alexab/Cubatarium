@@ -3,6 +3,7 @@
 #include <QVector3D>
 #include <QPainter>
 #include <QCoreApplication>
+#include <QDebug>
 #include "GeometryEngine.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
@@ -17,12 +18,13 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
  , WorldInstance(world)
  , TextureBaseStorageInstance(texture_base_storage)
  , TextureCubeStorageInstance(texture_cube_storage)
+ , skyColor(0.5f, 0.7f, 1.0f, 1.0f) // Инициализируем цвет неба (голубой)
+ , useGradientSky(false) // По умолчанию используем простой цвет
 {
 }
 
 GeometryEngine::~GeometryEngine()
 {
-
 }
 
 bool GeometryEngine::InitEngine()
@@ -59,6 +61,16 @@ bool GeometryEngine::InitShaders()
  //if(!program.bind())
  // return false;
 
+ // Инициализация шейдера для неба
+ if (!skyProgram.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vshader.glsl"))
+  return false;
+
+ if (!skyProgram.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fshader_sky.glsl"))
+  return false;
+
+ if (!skyProgram.link())
+  return false;
+
  return true;
 }
 
@@ -94,7 +106,7 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
  Painter->drawText(QRect(width_size-300, 70, width_size, 100), Qt::AlignLeft, perf3);
 
 
- std::string legend = std::string("Press [0-9] for object selection. Left click for put, long left click (or Del) for remove object. F12 - reset world");
+   std::string legend = std::string("Press [0-9] for object selection. Left click for put, long left click (or Del) for remove object. F12 - reset world. F1-F4 - sky colors, F5-F8 - gradient sky");
  Painter->drawText(QRect(30, height_size-30, width_size, height_size), Qt::AlignHCenter, legend.c_str());
 
  Painter->drawLine(width_size/2-10, height_size/2, width_size/2+10, height_size/2);
@@ -310,10 +322,29 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  // Enable back face culling
  glEnable(GL_CULL_FACE);
 
+ // Очищаем буферы
+ if(useGradientSky)
+ {
+  // Для градиентного неба очищаем только буфер глубины
+  glClear(GL_DEPTH_BUFFER_BIT);
+ }
+ else
+ {
+  // Для простого неба устанавливаем цвет и очищаем оба буфера
+  glClearColor(skyColor.x(), skyColor.y(), skyColor.z(), skyColor.w());
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+ }
+
+ // Отрисовываем градиентное небо ПОСЛЕ очистки буфера глубины
+ if(useGradientSky)
+ {
+  qDebug() << "Drawing gradient sky with color:" << skyColor;
+  DrawSkyGradient();
+  qDebug() << "Gradient sky drawn.";
+ }
+
  // Bind shader pipeline for use
  program.bind();
- // Clear color and depth buffer
- glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
  // Set modelview-projection matrix
  program.setUniformValue("mvp_matrix", mvp_matrix);
@@ -323,10 +354,13 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  //Get locations of fragment shader uniforms to be tied to UI
  //alphaUniformLocation = glGetUniformLocation(program.programId(), "alpha");
 
- auto textures = TextureCubeStorageInstance->GetTextures();
+  auto textures = TextureCubeStorageInstance->GetTextures();
  
+ qDebug() << "Objects to render:" << objects.size();
+  
  // Оптимизированный рендеринг с batch-обработкой
  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
+ qDebug() << "Render batches prepared:" << renderBatches.size();
  RenderBatches(mvp_matrix);
 
  auto user = WorldInstance->GetCurrentUser();
@@ -360,6 +394,112 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
 
  glDisable(GL_CULL_FACE);
  glDisable(GL_DEPTH_TEST);
+}
+
+void GeometryEngine::DrawSkyGradient()
+{
+ // Используем простую версию, которая более надежна
+ DrawSkyGradientSimple();
+}
+
+void GeometryEngine::DrawSkyGradientSimple()
+{
+ // Проверяем, что шейдер неба готов
+ if (!skyProgram.isLinked()) {
+     qWarning("Sky shader is not linked!");
+     return;
+ }
+ 
+ // Временно отключаем тест глубины для неба
+ glDisable(GL_DEPTH_TEST);
+ 
+ // Используем шейдер неба
+ skyProgram.bind();
+ 
+ // Устанавливаем единичную матрицу для неба
+ QMatrix4x4 skyMatrix;
+ skyMatrix.setToIdentity();
+ skyProgram.setUniformValue("mvp_matrix", skyMatrix);
+ 
+ // Передаем цвет неба в шейдер
+ skyProgram.setUniformValue("skyColor", skyColor);
+ 
+ // Создаем простой прямоугольник для неба (полный экран)
+ static const GLfloat skyVertices[] = {
+     // Позиции        // Текстурные координаты
+     -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+      1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+      1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+     -1.0f,  1.0f, 0.0f,  0.0f, 1.0f
+ };
+ 
+ // Создаем временный VBO для отрисовки
+ QOpenGLBuffer tempVBO(QOpenGLBuffer::VertexBuffer);
+ if (!tempVBO.create()) {
+     qWarning("Failed to create sky VBO!");
+     return;
+ }
+ if (!tempVBO.bind()) {
+     qWarning("Failed to bind sky VBO!");
+     return;
+ }
+ tempVBO.allocate(skyVertices, sizeof(skyVertices));
+ 
+ // Устанавливаем атрибуты
+ int vertexLocation = skyProgram.attributeLocation("a_position");
+ if (vertexLocation != -1) {
+     skyProgram.enableAttributeArray(vertexLocation);
+     skyProgram.setAttributeBuffer(vertexLocation, GL_FLOAT, 0, 3, 5 * sizeof(GLfloat));
+ }
+ 
+ int texcoordLocation = skyProgram.attributeLocation("a_texcoord");
+ if (texcoordLocation != -1) {
+     skyProgram.enableAttributeArray(texcoordLocation);
+     skyProgram.setAttributeBuffer(texcoordLocation, GL_FLOAT, 3 * sizeof(GLfloat), 2, 5 * sizeof(GLfloat));
+ }
+ 
+ // Отрисовываем небо как треугольники
+ glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+ 
+ // Проверяем ошибки OpenGL
+ GLenum error = glGetError();
+ if (error != GL_NO_ERROR) {
+     qWarning("OpenGL error after drawing sky: %d", error);
+ }
+ 
+ // Освобождаем ресурсы
+ tempVBO.release();
+ tempVBO.destroy();
+ skyProgram.release();
+ 
+ // Включаем тест глубины обратно
+ glEnable(GL_DEPTH_TEST);
+}
+
+// Методы для управления цветом неба
+void GeometryEngine::SetSkyColor(float r, float g, float b, float a)
+{
+ skyColor = QVector4D(r, g, b, a);
+}
+
+void GeometryEngine::SetSkyColor(const QVector4D& color)
+{
+ skyColor = color;
+}
+
+QVector4D GeometryEngine::GetSkyColor() const
+{
+ return skyColor;
+}
+
+void GeometryEngine::SetGradientSky(bool useGradient)
+{
+ useGradientSky = useGradient;
+}
+
+bool GeometryEngine::IsGradientSky() const
+{
+ return useGradientSky;
 }
 
 }

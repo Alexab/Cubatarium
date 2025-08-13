@@ -102,6 +102,65 @@ void MainWidget::keyPressEvent(QKeyEvent *event)
  {
   WorldInstance->DelObjectByView();
  }
+ else
+ if(event->key() == Qt::Key::Key_F1)
+ {
+  // Голубое небо (дневное)
+  SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f);
+ }
+ else
+ if(event->key() == Qt::Key::Key_F2)
+ {
+  // Оранжевое небо (закат)
+  SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
+ }
+ else
+ if(event->key() == Qt::Key::Key_F3)
+ {
+  // Темно-синее небо (ночное)
+  SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f);
+ }
+ else
+ if(event->key() == Qt::Key::Key_F4)
+ {
+  // Серое небо (пасмурное)
+  SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
+ }
+                else
+        if(event->key() == Qt::Key::Key_F5)
+        {
+         // Переключаем градиентное небо
+         bool currentState = IsGradientSky();
+         SetGradientSky(!currentState);
+         if (!currentState) {
+             // Включаем градиентное небо с текущим цветом
+             // Цвет уже установлен, просто переключаем режим
+         } else {
+             // Выключаем градиентное небо, возвращаемся к простому цвету
+             // Цвет уже установлен, просто переключаем режим
+         }
+        }
+               else
+        if(event->key() == Qt::Key::Key_F6)
+        {
+         // Градиентное небо - закат (оранжевый)
+         SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
+         SetGradientSky(true);
+        }
+        else
+        if(event->key() == Qt::Key::Key_F7)
+        {
+         // Градиентное небо - ночное (темно-синий)
+         SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f);
+         SetGradientSky(true);
+        }
+        else
+        if(event->key() == Qt::Key::Key_F8)
+        {
+         // Градиентное небо - пасмурное (серый)
+         SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
+         SetGradientSky(true);
+        }
 }
 
 void MainWidget::keyReleaseEvent(QKeyEvent *event)
@@ -123,7 +182,8 @@ void MainWidget::timerEvent(QTimerEvent *)
 void MainWidget::initializeGL()
 {
  initializeOpenGLFunctions();
- glClearColor(0, 0, 0, 1);
+ // Устанавливаем цвет неба (голубой)
+ glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
 
  if(!geometries->InitEngine())
   close();
@@ -163,6 +223,39 @@ void MainWidget::paintGL()
  WorldInstance->DoMovement();
 
  geometries->Paint(width(), height(), views->GetDurationUpdateMks());
+}
+
+// Методы для управления цветом неба
+void MainWidget::SetSkyColor(float r, float g, float b, float a)
+{
+ if(geometries)
+  geometries->SetSkyColor(r, g, b, a);
+}
+
+void MainWidget::SetSkyColor(const QVector4D& color)
+{
+ if(geometries)
+  geometries->SetSkyColor(color);
+}
+
+QVector4D MainWidget::GetSkyColor() const
+{
+ if(geometries)
+  return geometries->GetSkyColor();
+ return QVector4D(0.5f, 0.7f, 1.0f, 1.0f); // Значение по умолчанию
+}
+
+void MainWidget::SetGradientSky(bool useGradient)
+{
+ if(geometries)
+  geometries->SetGradientSky(useGradient);
+}
+
+bool MainWidget::IsGradientSky() const
+{
+ if(geometries)
+  return geometries->IsGradientSky();
+ return false;
 }
 
 }

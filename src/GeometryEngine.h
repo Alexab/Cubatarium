@@ -39,11 +39,20 @@ public:
 
  void Paint(int width_size, int height_size, double view_duration);
 
+ // Методы для управления цветом неба
+ void SetSkyColor(float r, float g, float b, float a = 1.0f);
+ void SetSkyColor(const QVector4D& color);
+ QVector4D GetSkyColor() const;
+ void SetGradientSky(bool useGradient);
+ bool IsGradientSky() const;
+
 private:
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, const std::shared_ptr<QOpenGLTexture>& texture);
  void DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
  void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const QMatrix4x4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
+ void DrawSkyGradient();
+ void DrawSkyGradientSimple(); // Простая версия без VBO
 
  // Новые оптимизированные методы
  void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
@@ -62,6 +71,7 @@ private:
  GLfloat alpha=0.5;
 
  QOpenGLShaderProgram program;
+ QOpenGLShaderProgram skyProgram; // Шейдер для неба
 
  std::shared_ptr<QPainter> Painter;
 
@@ -72,6 +82,10 @@ private:
 
  // performance data
  double DurationDrawSceneMks;
+ 
+   // Цвет неба
+  QVector4D skyColor;
+  bool useGradientSky; // Использовать градиентное небо
  
  // Оптимизация рендеринга
  std::vector<RenderBatch> renderBatches;

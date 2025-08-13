@@ -80,6 +80,13 @@ public:
     void Init(std::shared_ptr<Core> core_, std::shared_ptr<World> world_, std::shared_ptr<GeometryEngine> geometries_, std::shared_ptr<ViewEngine> views_);
     void Run();
 
+    // Методы для управления цветом неба
+    void SetSkyColor(float r, float g, float b, float a = 1.0f);
+    void SetSkyColor(const QVector4D& color);
+    QVector4D GetSkyColor() const;
+    void SetGradientSky(bool useGradient);
+    bool IsGradientSky() const;
+
 protected:
     void mousePressEvent(QMouseEvent *e) override;
     void mouseMoveEvent(QMouseEvent *e) override;
