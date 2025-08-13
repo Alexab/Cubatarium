@@ -22,6 +22,7 @@ set(SOURCES
     src/World.cpp
     src/MainWidget.cpp
     src/GeometryEngine.cpp
+    src/Octree.cpp
 )
 
 set(HEADERS
@@ -39,6 +40,7 @@ set(HEADERS
     src/World.h
     src/MainWidget.h
     src/GeometryEngine.h
+    src/Octree.h
 )
 
 set(RESOURCES

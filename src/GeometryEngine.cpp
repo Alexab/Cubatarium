@@ -112,7 +112,140 @@ void GeometryEngine::DrawCubeGeometry()
  DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
-void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, std::shared_ptr<QOpenGLTexture> & texture)
+void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
+                                         const std::map<size_t, TextureCube>& textures,
+                                         bool is_intersection_exists, 
+                                         size_t intersecion_object_index, 
+                                         size_t intersecion_cube_index)
+{
+ renderBatches.clear();
+ std::unordered_map<size_t, RenderBatch> batchMap;
+
+ for(size_t j = 0; j < objects.size(); j++)
+ {
+  auto& object = objects[j];
+  
+  for(size_t i = 0; i < object->GetCubes().size(); i++)
+  {
+   auto& cube = object->GetCubes()[i];
+   size_t textureId;
+   
+   if(is_intersection_exists && intersecion_object_index == j && intersecion_cube_index == i)
+   {
+    textureId = TextureCubeStorageInstance->GetTypeIdByName("selection");
+   }
+   else
+   {
+    textureId = cube->GetTypeId();
+   }
+   
+       auto& batch = batchMap[textureId];
+    if (!batch.texture) {
+        batch.texture = textures.at(textureId).GetTexture();
+    }
+    
+         // Использовать единичную матрицу, так как кубы уже имеют правильные локальные координаты
+     QMatrix4x4 modelMatrix;
+     modelMatrix.setToIdentity();
+     batch.modelMatrices.push_back(modelMatrix);
+     batch.objects.push_back(object);
+     batch.cubeIndices.push_back(i);
+  }
+ }
+
+ // Преобразовать map в vector
+ for (auto& pair : batchMap) {
+     renderBatches.push_back(std::move(pair.second));
+ }
+}
+
+void GeometryEngine::RenderBatches(const QMatrix4x4& mvp_matrix)
+{
+ for (const auto& batch : renderBatches) {
+     DrawBatch(batch, mvp_matrix);
+ }
+}
+
+void GeometryEngine::DrawBatch(const RenderBatch& batch, const QMatrix4x4& mvp_matrix)
+{
+ if (batch.modelMatrices.empty()) return;
+ 
+ batch.texture->bind();
+ program.setUniformValue("texture0", 0);
+ 
+ // Здесь можно добавить instanced rendering для еще большей оптимизации
+ // Пока используем простой batch-рендеринг
+ for (size_t i = 0; i < batch.modelMatrices.size(); ++i) {
+     // Использовать MVP матрицу напрямую, так как кубы уже имеют правильные координаты
+     program.setUniformValue("mvp_matrix", mvp_matrix);
+     
+     // Найти куб для отрисовки
+     auto& object = batch.objects[i];
+     auto& cube = object->GetCubes()[batch.cubeIndices[i]];
+     
+     DrawCube(cube, batch.texture);
+ }
+ 
+ batch.texture->release();
+}
+
+void GeometryEngine::UpdateFrustumCulling(const QMatrix4x4& view_projection)
+{
+ // Извлечение плоскостей frustum из матрицы view-projection
+ QMatrix4x4 m = view_projection.transposed();
+ 
+ // Левая плоскость
+ frustumPlanes[0].normal = QVector4D(m(3,0) + m(0,0), m(3,1) + m(0,1), m(3,2) + m(0,2), m(3,3) + m(0,3));
+ frustumPlanes[0].distance = frustumPlanes[0].normal.w();
+ frustumPlanes[0].normal.setW(0);
+ frustumPlanes[0].normal.normalize();
+ 
+ // Правая плоскость
+ frustumPlanes[1].normal = QVector4D(m(3,0) - m(0,0), m(3,1) - m(0,1), m(3,2) - m(0,2), m(3,3) - m(0,3));
+ frustumPlanes[1].distance = frustumPlanes[1].normal.w();
+ frustumPlanes[1].normal.setW(0);
+ frustumPlanes[1].normal.normalize();
+ 
+ // Нижняя плоскость
+ frustumPlanes[2].normal = QVector4D(m(3,0) + m(1,0), m(3,1) + m(1,1), m(3,2) + m(1,2), m(3,3) + m(1,3));
+ frustumPlanes[2].distance = frustumPlanes[2].normal.w();
+ frustumPlanes[2].normal.setW(0);
+ frustumPlanes[2].normal.normalize();
+ 
+ // Верхняя плоскость
+ frustumPlanes[3].normal = QVector4D(m(3,0) - m(1,0), m(3,1) - m(1,1), m(3,2) - m(1,2), m(3,3) - m(1,3));
+ frustumPlanes[3].distance = frustumPlanes[3].normal.w();
+ frustumPlanes[3].normal.setW(0);
+ frustumPlanes[3].normal.normalize();
+ 
+ // Ближняя плоскость
+ frustumPlanes[4].normal = QVector4D(m(3,0) + m(2,0), m(3,1) + m(2,1), m(3,2) + m(2,2), m(3,3) + m(2,3));
+ frustumPlanes[4].distance = frustumPlanes[4].normal.w();
+ frustumPlanes[4].normal.setW(0);
+ frustumPlanes[4].normal.normalize();
+ 
+ // Дальняя плоскость
+ frustumPlanes[5].normal = QVector4D(m(3,0) - m(2,0), m(3,1) - m(2,1), m(3,2) - m(2,2), m(3,3) - m(2,3));
+ frustumPlanes[5].distance = frustumPlanes[5].normal.w();
+ frustumPlanes[5].normal.setW(0);
+ frustumPlanes[5].normal.normalize();
+}
+
+bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
+{
+ QVector3D objectPos(object->GetPose()(0,3), object->GetPose()(1,3), object->GetPose()(2,3));
+ float radius = 1.0f; // Примерный радиус объекта
+ 
+ for (const auto& plane : frustumPlanes) {
+     float distance = QVector3D::dotProduct(QVector3D(plane.normal), objectPos) + plane.distance;
+     if (distance < -radius) {
+         return false;
+     }
+ }
+ return true;
+}
+
+void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, const std::shared_ptr<QOpenGLTexture> & texture)
 {
  auto cube = std::dynamic_pointer_cast<CubeGL>(icube);
  if(!cube)
@@ -191,12 +324,10 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  //alphaUniformLocation = glGetUniformLocation(program.programId(), "alpha");
 
  auto textures = TextureCubeStorageInstance->GetTextures();
-
- for(size_t j=0; j<objects.size(); j++)
- {
-  auto &object = objects[j];
-  DrawObject(object, j, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
- }
+ 
+ // Оптимизированный рендеринг с batch-обработкой
+ PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
+ RenderBatches(mvp_matrix);
 
  auto user = WorldInstance->GetCurrentUser();
  if(user)

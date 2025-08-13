@@ -17,6 +17,7 @@ namespace cutum {
 World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views)
  : ObjectStorageInstance(object_storage)
  , ViewInstance(views)
+ , spatialIndexDirty(false)
 {
  IsIntersectionExists = false;
 }
@@ -53,6 +54,9 @@ void World::Create(const std::string& world_name)
  auto plane = ObjectStorageInstance->TakeObject("terrain_plane");
  Objects.emplace_back(plane);
  WorldName = world_name;
+ 
+ // Инициализировать пространственный индекс
+ RebuildOctree();
 }
 
 void World::Load(const std::string& world_folder_path)
@@ -64,6 +68,9 @@ void World::Load(const std::string& world_folder_path)
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
  LoadObjects(objects_file_name);
+ 
+ // Инициализировать пространственный индекс после загрузки объектов
+ RebuildOctree();
 }
 
 void World::Save(const std::string& world_folder_path)
@@ -99,7 +106,17 @@ void World::DelObject(std::shared_ptr<Object> object)
 void World::DelObject(size_t index)
 {
  if(index < Objects.size())
+ {
+  auto object = Objects[index];
   Objects.erase(Objects.begin() + index);
+  
+  // Обновить пространственный индекс
+  if (spatialIndex) {
+      spatialIndex->Remove(object);
+  } else {
+      spatialIndexDirty = true;
+  }
+ }
 }
 
 bool World::AddUser(const std::string &name)
@@ -190,26 +207,46 @@ bool World::DelObjectByView()
 void World::AddObject(std::shared_ptr<Object> object)
 {
  Objects.emplace_back(object);
+ 
+ // Обновить пространственный индекс
+ if (spatialIndex) {
+     spatialIndex->Insert(object);
+ } else {
+     spatialIndexDirty = true;
+ }
 }
 
 bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
 
- for(size_t i=0; i<Objects.size(); i++)
+ // Использовать Octree для оптимизации поиска
+ std::vector<std::shared_ptr<Object>> candidateObjects;
+ if (spatialIndex) {
+     spatialIndex->QueryRay(position, front, candidateObjects);
+ } else {
+     // Fallback к полному перебору если Octree не инициализирован
+     candidateObjects = Objects;
+ }
+
+ for(size_t i=0; i<candidateObjects.size(); i++)
  {
   std::map<float, std::tuple<int, QVector3D, QVector3D, size_t>> object_distance_map;
 
-  if(Objects[i]->CheckRayIntersection(position, front, object_distance_map))
+  if(candidateObjects[i]->CheckRayIntersection(position, front, object_distance_map))
   {
    for(auto I = object_distance_map.begin(); I != object_distance_map.end(); ++I)
    {
     float distance = I->first;
+    // Найти индекс объекта в основном массиве
+    auto it = std::find(Objects.begin(), Objects.end(), candidateObjects[i]);
+    size_t objectIndex = (it != Objects.end()) ? std::distance(Objects.begin(), it) : i;
+    
     distance_map[distance] = std::tuple<int, QVector3D, QVector3D, size_t, size_t>(std::get<0>(I->second),
                                                                                    std::get<1>(I->second),
                                                                                    std::get<2>(I->second),
                                                                                    std::get<3>(I->second),
-                                                                                   i);
+                                                                                   objectIndex);
    }
   }
  }
@@ -255,9 +292,17 @@ std::shared_ptr<Object> World::FindObjectByView(const QVector3D& position, const
 
 bool World::CheckPositionFree(const QVector3D& position, float size) const
 {
- for(size_t j=0; j<Objects.size(); j++)
+ // Использовать Octree для оптимизации поиска
+ std::vector<std::shared_ptr<Object>> nearbyObjects;
+ if (spatialIndex) {
+     spatialIndex->Query(position, size, nearbyObjects);
+ } else {
+     // Fallback к полному перебору если Octree не инициализирован
+     nearbyObjects = Objects;
+ }
+
+ for(auto& object : nearbyObjects)
  {
-  auto& object = Objects[j];
   if(object->CheckCollision(position, size))
    return false;
  }
@@ -291,39 +336,42 @@ std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& pos
 
   auto & cube = Objects[object_index]->GetCubes()[cube_index];
 
+  // Получить размер куба для правильного вычисления смещения
+  float cubeSize = cube->GetSize();
+  
   switch(cube_side)
   {
   case CubeSide::CUBE_SIDE_LEFT:
-    res_position = cube->GetCenterPosition()+QVector3D(-1.0, 0.0, 0.0);
+    res_position = cube->GetCenterPosition()+QVector3D(-cubeSize, 0.0, 0.0);
   break;
 
   case CubeSide::CUBE_SIDE_RIGHT:
-    res_position = cube->GetCenterPosition()+QVector3D(1.0, 0.0, 0.0);
+    res_position = cube->GetCenterPosition()+QVector3D(cubeSize, 0.0, 0.0);
   break;
 
   case CubeSide::CUBE_SIDE_FAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, -1.0);
+    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, -cubeSize);
   break;
 
   case CubeSide::CUBE_SIDE_NEAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, 1.0);
+    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, cubeSize);
   break;
 
   case CubeSide::CUBE_SIDE_TOP:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 1.0, 0.0);
+    res_position = cube->GetCenterPosition()+QVector3D(0.0, cubeSize, 0.0);
   break;
 
   case CubeSide::CUBE_SIDE_BOTTOM:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, -1.0, 0.0);
+    res_position = cube->GetCenterPosition()+QVector3D(0.0, -cubeSize, 0.0);
   break;
 
   default:
-   res_position = cube->GetCenterPosition()+QVector3D(0.0, 1.0, 0.0);
+   res_position = cube->GetCenterPosition()+QVector3D(0.0, cubeSize, 0.0);
   }
-
-  if(CheckPositionFree(res_position, 1.0f))
+  
+  if(CheckPositionFree(res_position, cubeSize))
   {
-   if(!Cube::CheckCollision(res_position, 1.0f, position, 1.0f))
+   if(!Cube::CheckCollision(res_position, cubeSize, position, 1.0f))
    {
     result = res_position;
     break;
@@ -344,7 +392,10 @@ bool World::AddObjectByView(const QVector3D& position, const QVector3D& front)
    return false;
 
   if(AddObject(user->GetActiveObjectTypeName(), QVector3D(object_pos.value())))
+  {
    UpdateIntersection(position, front);
+   return true;
+  }
  }
  return false;
 }
@@ -367,7 +418,16 @@ bool World::DelObjectByView(const QVector3D& position, const QVector3D& front)
 
 bool World::CheckCollision(const QVector3D& position, float size) const
 {
- for(auto & object : Objects)
+ // Использовать Octree для оптимизации поиска
+ std::vector<std::shared_ptr<Object>> nearbyObjects;
+ if (spatialIndex) {
+     spatialIndex->Query(position, size, nearbyObjects);
+ } else {
+     // Fallback к полному перебору если Octree не инициализирован
+     nearbyObjects = Objects;
+ }
+
+ for(auto & object : nearbyObjects)
  {
   if(object->CheckCollision(position, size))
    return true;
@@ -485,6 +545,9 @@ void World::LoadObjects(const std::string &file_name)
   std::string object_type_name = type_name_value.toString().toLocal8Bit();
   AddObject(object_type_name, position);
  }
+ 
+ // Обновить пространственный индекс после загрузки всех объектов
+ spatialIndexDirty = true;
 }
 
 void World::SaveObjects(const std::string &file_name)
@@ -589,6 +652,10 @@ void World::DoMovement()
 
  if(is_moved)
    UpdateIntersection(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
+   
+ // Обновить пространственный индекс если он устарел
+ UpdateSpatialIndex();
+   
  auto t_end = std::chrono::high_resolution_clock::now();
  DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
@@ -618,5 +685,40 @@ uint64_t World::GetDurationDoMovementMks() const
  return DurationDoMovementMks;
 }
 
+std::vector<std::shared_ptr<Object>> World::GetObjectsInRadius(const QVector3D& position, float radius) const
+{
+ std::vector<std::shared_ptr<Object>> result;
+ if (spatialIndex) {
+     spatialIndex->Query(position, radius, result);
+ }
+ return result;
+}
+
+void World::UpdateSpatialIndex()
+{
+ if (spatialIndexDirty) {
+     RebuildOctree();
+     spatialIndexDirty = false;
+ }
+}
+
+void World::RebuildOctree()
+{
+ // Очистить существующий индекс
+ if (spatialIndex) {
+     spatialIndex->Clear();
+ }
+ 
+ // Создать новый Octree с подходящим размером
+ float worldSize = 1000.0f; // Размер мира
+ spatialIndex = std::make_unique<OctreeNode>(QVector3D(0, 0, 0), worldSize);
+ 
+ // Добавить все объекты в индекс
+ for (const auto& object : Objects) {
+     spatialIndex->Insert(object);
+ }
+ 
+ spatialIndexDirty = false;
+}
 
 }

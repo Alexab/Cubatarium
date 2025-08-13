@@ -5,6 +5,9 @@
 #include <optional>
 #include <string>
 #include <QVector3D>
+#include <vector>
+#include <array>
+#include "Octree.h"
 
 namespace cutum {
 
@@ -13,6 +16,8 @@ class ObjectStorage;
 class Object;
 class User;
 class Camera;
+
+
 
 class World
 {
@@ -70,6 +75,11 @@ private:
  bool CheckPositionFree(const QVector3D& position, float size=1.0) const;
  std::optional<QVector3D> FindNearestFreeCubePosition(const QVector3D& position, const QVector3D& front) const;
 
+ // Оптимизированные методы с использованием Octree
+ std::vector<std::shared_ptr<Object>> GetObjectsInRadius(const QVector3D& position, float radius) const;
+ void UpdateSpatialIndex();
+ void RebuildOctree();
+
 private:
  void AddObject(std::shared_ptr<Object> object);
  bool AddObjectByView(const QVector3D& position, const QVector3D& front);
@@ -100,6 +110,9 @@ private:
 
  std::shared_ptr<ViewEngine> ViewInstance;
 
+ // Пространственное разбиение
+ std::unique_ptr<OctreeNode> spatialIndex;
+ bool spatialIndexDirty;
 
  bool IsIntersectionExists;
  QVector3D Intersection;

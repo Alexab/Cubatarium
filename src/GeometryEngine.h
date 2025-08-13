@@ -11,10 +11,20 @@
 #include "World.h"
 #include "CubeGL.h"
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
 namespace cutum {
 
 class Core;
+
+// Структура для batch-рендеринга
+struct RenderBatch {
+    std::shared_ptr<QOpenGLTexture> texture;
+    std::vector<QMatrix4x4> modelMatrices;
+    std::vector<std::shared_ptr<Object>> objects;
+    std::vector<size_t> cubeIndices;
+};
 
 class GeometryEngine : protected QOpenGLFunctions
 {
@@ -31,9 +41,20 @@ public:
 
 private:
  void DrawCubeGeometry();
- void DrawCube(std::shared_ptr<Cube> icube, std::shared_ptr<QOpenGLTexture> & texture);
+ void DrawCube(std::shared_ptr<Cube> icube, const std::shared_ptr<QOpenGLTexture>& texture);
  void DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
  void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const QMatrix4x4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
+
+ // Новые оптимизированные методы
+ void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
+                          const std::map<size_t, TextureCube>& textures,
+                          bool is_intersection_exists, 
+                          size_t intersecion_object_index, 
+                          size_t intersecion_cube_index);
+ void RenderBatches(const QMatrix4x4& mvp_matrix);
+ void DrawBatch(const RenderBatch& batch, const QMatrix4x4& mvp_matrix);
+ void UpdateFrustumCulling(const QMatrix4x4& view_projection);
+ bool IsObjectInFrustum(const std::shared_ptr<Object>& object);
 
 private:
  //OpenGL uniform locations and values
@@ -51,6 +72,17 @@ private:
 
  // performance data
  double DurationDrawSceneMks;
+ 
+ // Оптимизация рендеринга
+ std::vector<RenderBatch> renderBatches;
+ std::vector<std::shared_ptr<Object>> visibleObjects;
+ 
+ // Frustum culling
+ struct FrustumPlane {
+     QVector4D normal;
+     float distance;
+ };
+ std::array<FrustumPlane, 6> frustumPlanes;
 };
 
 }
