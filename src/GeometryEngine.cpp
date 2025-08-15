@@ -66,6 +66,12 @@ bool GeometryEngine::InitShaders()
      return false;
  }
 
+ textShader = shaderManager->CreateShader("text", "shaders/vshader_text.glsl", "shaders/fshader_text.glsl");
+ if (!textShader || !textShader->IsValid()) {
+     std::cerr << "Failed to create text shader" << std::endl;
+     return false;
+ }
+
  return true;
 }
 
@@ -76,6 +82,9 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
  
  // Рендерим перекрестие
  RenderCrosshair(width_size, height_size);
+ 
+ // Рендерим простой текст
+ RenderSimpleText(width_size, height_size);
  
  // Отключаем отрисовку UI текста производительности
  // RenderPerformanceText(width_size, height_size, view_duration);
@@ -1178,7 +1187,30 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
         glEnable(GL_BLEND);
     } else {
         glDisable(GL_BLEND);
-    }
-}
+         }
+ }
+ 
+  void GeometryEngine::RenderSimpleText(int width_size, int height_size)
+ {
+     // Используем существующий TextRenderer если он доступен
+     if (textRenderer) {
+         // Обновляем размеры окна в TextRenderer
+         textRenderer->SetWindowSize(width_size, height_size);
+         
+         // Отображаем тестовый текст с помощью новых методов TextRenderer
+         textRenderer->RenderSimpleTextString("Hello World!", 50, height_size - 50, 1.5f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderSimpleTextString("Cubatarium Test", 50, height_size - 100, 1.5f, glm::vec3(1.0f, 0.0f, 0.0f));
+         textRenderer->RenderSimpleTextString("OpenGL 3.3", 50, height_size - 150, 1.2f, glm::vec3(1.0f, 1.0f, 0.0f));
+         
+         return;
+     }
+     
+     // Fallback: если TextRenderer недоступен, выводим сообщение об ошибке
+     std::cerr << "TextRenderer is not available" << std::endl;
+ }
+ 
+ 
 
-}
+
+ 
+ }

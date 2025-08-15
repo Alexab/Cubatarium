@@ -36,6 +36,14 @@ public:
     
     // Установка размеров окна
     void SetWindowSize(int width, int height);
+    
+    // Новые методы для отображения текста с битовыми картами
+    void RenderSimpleTextString(const std::string& text, int x, int y, float scale, const glm::vec3& color);
+    void RenderTextWithCharacters(const std::string& text, int x, int y, float scale, const glm::vec3& color);
+    
+    // Методы для создания текстур символов
+    GLuint CreateSimpleTextTexture();
+    GLuint CreateCharacterTexture(char character);
 
 private:
     GLuint textShader;

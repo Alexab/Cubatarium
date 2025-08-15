@@ -77,11 +77,14 @@ private:
  // Метод для отображения перекрестия
  void RenderCrosshair(int width_size, int height_size);
  
- // Метод для отображения тестового куба
- void RenderTestCube();
- 
- // Метод для отображения 3D куба с перспективной проекцией
- void Render3DCubeWithPerspective();
+   // Метод для отображения простого 2D текста
+  void RenderSimpleText(int width_size, int height_size);
+  
+       // Метод для отображения тестового куба
+  void RenderTestCube();
+  
+    // Метод для отображения 3D куба с перспективной проекцией
+   void Render3DCubeWithPerspective();
 
 private:
  //OpenGL uniform locations and values
@@ -92,6 +95,7 @@ private:
  std::shared_ptr<ShaderProgram> defaultShader;
  std::shared_ptr<ShaderProgram> skyShader; // Шейдер для неба
  std::shared_ptr<ShaderProgram> uiShader; // Шейдер для UI элементов
+ std::shared_ptr<ShaderProgram> textShader; // Шейдер для текста
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
