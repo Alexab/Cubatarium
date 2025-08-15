@@ -11,9 +11,9 @@ ViewEngine::ViewEngine()
 
 void ViewEngine::GenerateSimpleCamera()
 {
- // Создаем камеру, которая смотрит прямо вперед (в положительном направлении Z)
- std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.0f, 0.0f);
- view->SetFreeMove(true); // Включаем свободное движение камеры
+ // Создаем камеру в позиции (0, 0, 3) с отключенным FreeMove для коллизий
+ std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ view->SetFreeMove(false); // Отключаем свободное движение для включения коллизий
  AddCamera(view);
 }
 

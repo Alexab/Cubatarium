@@ -65,8 +65,6 @@ bool GeometryEngine::InitShaders()
 
 void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
- std::cout << "GeometryEngine::Paint called" << std::endl;
- 
  // Рендерим только объекты сцены
  DrawCubeGeometry();
  
@@ -79,18 +77,13 @@ void GeometryEngine::DrawCubeGeometry()
  auto t_begin = std::chrono::high_resolution_clock::now();
  
  const auto& objects = WorldInstance->GetObjects();
- std::cout << "DrawCubeGeometry: Found " << objects.size() << " objects" << std::endl;
  
  if (objects.empty()) {
-     std::cout << "No objects to render!" << std::endl;
      return;
  }
  
- std::cout << "DrawCubeGeometry: Rendering " << objects.size() << " objects with simplified approach" << std::endl;
- 
  auto camera = WorldInstance->GetCurrentUserCamera();
  if (!camera) {
-     std::cout << "DrawCubeGeometry: Camera is null!" << std::endl;
      return;
  }
  
@@ -170,7 +163,6 @@ void GeometryEngine::DrawCubeGeometry()
  
  // Получаем текстуры
  auto textures = TextureCubeStorageInstance->GetTextures();
- std::cout << "DrawCubeGeometry: Available textures: " << textures.size() << std::endl;
  
  // Используем наш шейдер
  glUseProgram(shaderProgram);
@@ -181,23 +173,16 @@ void GeometryEngine::DrawCubeGeometry()
      auto objectPos = object->GetPose();
      glm::vec3 position(objectPos[3][0], objectPos[3][1], objectPos[3][2]);
      
-     std::cout << "DrawCubeGeometry: Rendering object at position (" 
-               << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
-     
      // Рендерим каждый куб в объекте
      for (size_t i = 0; i < object->GetCubes().size(); i++) {
          auto& cube = object->GetCubes()[i];
          size_t textureId = cube->GetTypeId();
          
-         std::cout << "DrawCubeGeometry: Rendering cube " << i << " with texture ID " << textureId << std::endl;
-         
          // Получаем текстуру
          GLuint texture = 0;
          if (textures.find(textureId) != textures.end()) {
              texture = textures.at(textureId).GetTextureId();
-             std::cout << "DrawCubeGeometry: Found texture " << texture << " for ID " << textureId << std::endl;
          } else {
-             std::cout << "DrawCubeGeometry: Texture not found for ID " << textureId << std::endl;
              continue; // Пропускаем куб без текстуры
          }
          
@@ -286,6 +271,10 @@ void GeometryEngine::DrawCubeGeometry()
          glm::mat4 model = glm::mat4(1.0f);
          model = glm::translate(model, position);
          
+         // Добавляем отладочную информацию
+         auto cameraPos = camera->GetPosition();
+         auto cameraFront = camera->GetFront();
+         
          // Обновляем MVP матрицу для этого объекта
          glm::mat4 objectMVP = camera->GetProjection() * camera->GetViewMatrix() * model;
          glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(objectMVP));
@@ -327,8 +316,6 @@ void GeometryEngine::DrawCubeGeometry()
  
  auto t_end = std::chrono::high_resolution_clock::now();
  DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
- 
- std::cout << "DrawCubeGeometry: Simplified rendering completed!" << std::endl;
 }
 
 void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
