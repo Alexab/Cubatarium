@@ -67,14 +67,8 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
 {
  std::cout << "GeometryEngine::Paint called" << std::endl;
  
- // Включаем рендеринг обычных объектов сцены ПЕРВЫМ
+ // Рендерим только объекты сцены
  DrawCubeGeometry();
- 
- // Рендерим тестовый треугольник для отладки ПОСЛЕ объектов сцены
- RenderTestCube();
- 
- // Рендерим 3D куб с перспективной проекцией ПОСЛЕ объектов сцены
- Render3DCubeWithPerspective();
  
  // Отключаем отрисовку UI текста производительности
  // RenderPerformanceText(width_size, height_size, view_duration);
