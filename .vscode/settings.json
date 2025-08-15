@@ -1,0 +1,18 @@
+{
+    "cmake.configureArgs": [
+        "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "-DCMAKE_GENERATOR_PLATFORM=x64"
+    ],
+    "cmake.generator": "Visual Studio 17 2022",
+    "cmake.buildDirectory": "${workspaceFolder}/bin",
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
+    "cmake.preferredGenerators": [
+        "Visual Studio 17 2022",
+        "Visual Studio 16 2019"
+    ],
+    "cmake.configureOnOpen": true,
+    "cmake.configureOnEdit": false,
+    "cmake.buildDirectory": "${workspaceFolder}/bin",
+    "cmake.parallelJobs": 8
+}
