@@ -7,6 +7,7 @@
 #include "User.h"
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 namespace cutum {
 
@@ -70,6 +71,9 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
     InitializeOpenGL();
 
     inputManager = std::make_shared<InputManager>();
+    
+    // TextRenderer будет установлен позже через SetTextRenderer
+    
     // Настройка callbacks
     SetupCallbacks();
 
@@ -199,6 +203,9 @@ void WindowManager::Render() {
         views->UpdateFrameTime();
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
+    
+    // Отображение UI поверх 3D сцены
+    RenderUI();
 }
 
 void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
@@ -296,6 +303,10 @@ void WindowManager::HandleWindowResizeEvent(int width, int height) {
         float aspect = static_cast<float>(width) / static_cast<float>(height ? height : 1);
         views->GetActiveCamera()->SetAspectRatio(aspect);
     }
+    
+    if (textRenderer) {
+        textRenderer->SetWindowSize(width, height);
+    }
 }
 
 void WindowManager::Init(std::shared_ptr<Core> core_, 
@@ -306,6 +317,14 @@ void WindowManager::Init(std::shared_ptr<Core> core_,
     worldInstance = world_;
     geometries = geometries_;
     views = views_;
+}
+
+void WindowManager::SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer) {
+    textRenderer = text_renderer;
+    if (textRenderer) {
+        textRenderer->SetWindowSize(windowWidth, windowHeight);
+        std::cout << "TextRenderer set in WindowManager" << std::endl;
+    }
 }
 
 void WindowManager::Shutdown() {
@@ -321,6 +340,62 @@ void WindowManager::Shutdown() {
     glfwTerminate();
     isInitialized = false;
     isRunning = false;
+}
+
+void WindowManager::RenderUI() {
+    if (!textRenderer) {
+        std::cout << "WindowManager: textRenderer is null in RenderUI!" << std::endl;
+        return;
+    }
+    
+    std::cout << "WindowManager: Rendering UI..." << std::endl;
+    
+    // Сохраняем текущее состояние OpenGL
+    GLboolean depthTestEnabled;
+    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+    GLboolean blendEnabled;
+    glGetBooleanv(GL_BLEND, &blendEnabled);
+    
+    // Настройка OpenGL для 2D рендеринга
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Отображение подсказок
+    RenderHelpText();
+    
+    // Восстановление состояния OpenGL
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+    
+    if (blendEnabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
+}
+
+void WindowManager::RenderHelpText() {
+    if (!textRenderer) return;
+    
+    float y = windowHeight - 30.0f; // Отступ от верха экрана
+    float scale = 1.0f;
+    glm::vec3 textColor(1.0f, 1.0f, 1.0f); // Белый цвет
+    
+    // Основные подсказки по управлению на английском
+    std::vector<std::string> helpLines = {
+        "WASD - Movement, Space/Shift - Up/Down, Mouse - Camera rotation",
+        "LMB - Add block, RMB - Remove block, 0-9 - Block selection",
+        "F1-F4 - Sky color, F5 - Gradient sky, F12 - Reset world, Delete - Delete object"
+    };
+    
+    for (const auto& line : helpLines) {
+        textRenderer->RenderText(line, 10.0f, y, scale, textColor);
+        y -= 25.0f; // Отступ между строками
+    }
 }
 
 void WindowManager::SetWindowSize(int width, int height) {

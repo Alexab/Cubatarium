@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <chrono>
+#include "TextRenderer.h"
 
 namespace cutum {
 
@@ -38,6 +39,9 @@ public:
               std::shared_ptr<World> world_, 
               std::shared_ptr<GeometryEngine> geometries_,
               std::shared_ptr<ViewEngine> views_);
+    
+    // Установка TextRenderer
+    void SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer);
 
     // Управление окном
     void SetWindowSize(int width, int height);
@@ -79,6 +83,10 @@ private:
     void HandleMouseButtonEvent(MouseButton button, bool pressed, glm::vec2 pos);
     void HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta);
     void HandleWindowResizeEvent(int width, int height);
+    
+    // Методы для отображения UI
+    void RenderUI();
+    void RenderHelpText();
 
     // GLFW window
     GLFWwindow* window;
@@ -97,6 +105,7 @@ private:
     std::shared_ptr<ViewEngine> views;
     std::shared_ptr<World> worldInstance;
     std::shared_ptr<InputManager> inputManager;
+    std::shared_ptr<TextRenderer> textRenderer;
     
     // Время
     std::chrono::high_resolution_clock::time_point lastFrameTime;

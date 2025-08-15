@@ -38,8 +38,11 @@ void ObjectStorage::Generate()
 
 void ObjectStorage::Load(const std::string& objects_path)
 {
+ std::cout << "ObjectStorage::Load: Loading from " << objects_path << std::endl;
+ 
  try
  {
+  int loaded_count = 0;
   for (const auto & entry : fs::directory_iterator(objects_path))
   {
    auto ext = entry.path().extension();
@@ -62,6 +65,8 @@ void ObjectStorage::Load(const std::string& objects_path)
       }
       ObjectPrototype object_description(name, id, std::make_shared<SingleCube>(texture_cube_id));
       AddPrototype(object_description);
+      loaded_count++;
+      std::cout << "ObjectStorage::Load: Added SingleCube prototype '" << name << "'" << std::endl;
      }
      else
      if(class_name == "TerrainPlane" && cube_textures.size()>0)
@@ -76,10 +81,14 @@ void ObjectStorage::Load(const std::string& objects_path)
       ObjectPrototype object_description(name, id, std::make_shared<TerrainPlane>(30, 30));
       std::dynamic_pointer_cast<TerrainPlane>(object_description.GetSample())->Generate(texture_cube_id);
       AddPrototype(object_description);
+      loaded_count++;
+      std::cout << "ObjectStorage::Load: Added TerrainPlane prototype '" << name << "'" << std::endl;
      }
     }
    }
   }
+
+ std::cout << "ObjectStorage::Load: Total loaded prototypes: " << loaded_count << std::endl;
  }
  catch(std::filesystem::filesystem_error &ex)
  {
@@ -116,8 +125,17 @@ const ObjectPrototype& ObjectStorage::GetPrototype(const std::string& type_name)
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(const std::string& type_name)
 {
+ std::cout << "ObjectStorage::TakeObject: Looking for '" << type_name << "'" << std::endl;
+ std::cout << "ObjectStorage::TakeObject: Available prototypes: " << PrototypeNames.size() << std::endl;
+ 
  auto I = PrototypeNames.find(type_name);
- return (I != PrototypeNames.end())?TakeObject(I->second):nullptr;
+ if (I != PrototypeNames.end()) {
+     std::cout << "ObjectStorage::TakeObject: Found prototype with ID " << I->second << std::endl;
+     return TakeObject(I->second);
+ } else {
+     std::cout << "ObjectStorage::TakeObject: Prototype not found!" << std::endl;
+     return nullptr;
+ }
 }
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(uint64_t type_id)

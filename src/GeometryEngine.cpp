@@ -15,11 +15,12 @@
 
 namespace cutum {
 
-GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage)
+GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer)
  : ObjectStorageInstance(object_storage)
  , WorldInstance(world)
  , TextureBaseStorageInstance(texture_base_storage)
  , TextureCubeStorageInstance(texture_cube_storage)
+ , textRenderer(text_renderer)
  , skyColor(0.5f, 0.7f, 1.0f, 1.0f) // Инициализируем цвет неба (голубой)
  , useGradientSky(false) // По умолчанию используем простой цвет
 {
@@ -64,19 +65,43 @@ bool GeometryEngine::InitShaders()
 
 void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
+ std::cout << "GeometryEngine::Paint called" << std::endl;
+ 
  DrawCubeGeometry();
  
- // Отрисовка UI текста (заменяем QPainter на OpenGL)
- // TODO: Добавить систему отрисовки текста через OpenGL
- std::cout << "Cubatarium version - Scene t=" << DurationDrawSceneMks/1000.0 << " ms" << std::endl;
- std::cout << "DoMovement t=" << WorldInstance->GetDurationDoMovementMks()/1000.0 << " ms" << std::endl;
- std::cout << "ViewUpdate t=" << view_duration/1000.0 << " ms" << std::endl;
+ // Отрисовка UI текста производительности
+ RenderPerformanceText(width_size, height_size, view_duration);
 }
 
 void GeometryEngine::DrawCubeGeometry()
 {
  auto t_begin = std::chrono::high_resolution_clock::now();
- DrawCubeGeometry(WorldInstance->GetObjects(), WorldInstance->GetCurrentUserCamera()->GetMvpMatrix(),
+ 
+ const auto& objects = WorldInstance->GetObjects();
+ std::cout << "DrawCubeGeometry: Found " << objects.size() << " objects" << std::endl;
+ 
+ if (objects.empty()) {
+     std::cout << "No objects to render!" << std::endl;
+     return;
+ }
+ 
+ std::cout << "DrawCubeGeometry: Rendering " << objects.size() << " objects" << std::endl;
+ 
+ auto camera = WorldInstance->GetCurrentUserCamera();
+ if (!camera) {
+     std::cout << "DrawCubeGeometry: Camera is null!" << std::endl;
+     return;
+ }
+ 
+ std::cout << "DrawCubeGeometry: Camera found, getting MVP matrix..." << std::endl;
+ 
+ // Добавляем отладочную информацию о камере
+ auto cameraPos = camera->GetPosition();
+ auto cameraFront = camera->GetFront();
+ std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
+ std::cout << "Camera Front: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")" << std::endl;
+ 
+ DrawCubeGeometry(objects, camera->GetMvpMatrix(),
                               WorldInstance->GetIsIntersectionExists(),
                               WorldInstance->GetIntersectionObjectIndex(),
                               WorldInstance->GetIntersectionCubeIndex());
@@ -90,12 +115,19 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
                                          size_t intersecion_object_index, 
                                          size_t intersecion_cube_index)
 {
+ std::cout << "PrepareRenderBatches: " << objects.size() << " objects, " << textures.size() << " textures" << std::endl;
+ 
  renderBatches.clear();
  std::unordered_map<size_t, RenderBatch> batchMap;
+ 
+ std::cout << "PrepareRenderBatches: Processing objects..." << std::endl;
 
- for(size_t j = 0; j < objects.size(); j++)
+   for(size_t j = 0; j < objects.size(); j++)
  {
   auto& object = objects[j];
+  auto objectPos = object->GetPose();
+  std::cout << "PrepareRenderBatches: Processing object " << j << " with " << object->GetCubes().size() << " cubes at position (" 
+            << objectPos[3][0] << ", " << objectPos[3][1] << ", " << objectPos[3][2] << ")" << std::endl;
   
   for(size_t i = 0; i < object->GetCubes().size(); i++)
   {
@@ -139,7 +171,12 @@ void GeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 
 void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
 {
- if (batch.modelMatrices.empty()) return;
+ if (batch.modelMatrices.empty()) {
+     std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
+     return;
+ }
+ 
+ std::cout << "DrawBatch: Drawing " << batch.modelMatrices.size() << " objects" << std::endl;
  
  glBindTexture(GL_TEXTURE_2D, batch.textureID);
  defaultShader->Use();
@@ -220,8 +257,12 @@ bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
 void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
 {
  auto cube = std::dynamic_pointer_cast<CubeGL>(icube);
- if(!cube)
-  return;
+ if(!cube) {
+     std::cout << "DrawCube: Failed to cast to CubeGL" << std::endl;
+     return;
+ }
+ 
+ std::cout << "DrawCube: Drawing cube with texture " << texture << std::endl;
 
  glBindTexture(GL_TEXTURE_2D, texture);
  defaultShader->Use();
@@ -278,11 +319,33 @@ void GeometryEngine::DrawObject(std::shared_ptr<Object> object, size_t object_in
 
 void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
 {
+ std::cout << "DrawCubeGeometry: Starting render with " << objects.size() << " objects" << std::endl;
+ 
  // Enable depth buffer
  glEnable(GL_DEPTH_TEST);
 
  // Enable back face culling
  glEnable(GL_CULL_FACE);
+
+ // Добавляем отладочную информацию о состоянии OpenGL
+ std::cout << "=== OpenGL State Debug ===" << std::endl;
+ GLboolean depthTest;
+ glGetBooleanv(GL_DEPTH_TEST, &depthTest);
+ std::cout << "GL_DEPTH_TEST: " << (depthTest ? "ENABLED" : "DISABLED") << std::endl;
+ 
+ GLboolean blending;
+ glGetBooleanv(GL_BLEND, &blending);
+ std::cout << "GL_BLEND: " << (blending ? "ENABLED" : "DISABLED") << std::endl;
+ 
+ GLint depthFunc;
+ glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+ std::cout << "GL_DEPTH_FUNC: " << depthFunc << std::endl;
+ 
+ GLboolean cullFace;
+ glGetBooleanv(GL_CULL_FACE, &cullFace);
+ std::cout << "GL_CULL_FACE: " << (cullFace ? "ENABLED" : "DISABLED") << std::endl;
+ 
+ std::cout << "=== End OpenGL State Debug ===" << std::endl;
 
  // Очищаем буферы
  if(useGradientSky)
@@ -293,12 +356,14 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  else
  {
   // Для простого неба устанавливаем цвет и очищаем оба буфера
-     glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w);
+     // glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Временно отключаем цвет неба
+     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Черный фон для диагностики
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  }
 
+ // ВРЕМЕННО ОТКЛЮЧАЕМ НЕБО ДЛЯ ДИАГНОСТИКИ
  // Отрисовываем градиентное небо ПОСЛЕ очистки буфера глубины
- if(useGradientSky)
+ if(useGradientSky && false) // Временно отключаем
  {
      std::cout << "Drawing gradient sky with color: (" << skyColor.x << ", " << skyColor.y << ", " << skyColor.z << ", " << skyColor.w << ")" << std::endl;
   DrawSkyGradient();
@@ -306,23 +371,31 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  }
 
  // Bind shader pipeline for use
+ if (!defaultShader || !defaultShader->IsValid()) {
+     std::cerr << "DrawCubeGeometry: Default shader is not valid!" << std::endl;
+     return;
+ }
+ 
+ std::cout << "DrawCubeGeometry: Using default shader" << std::endl;
  defaultShader->Use();
 
  // Set modelview-projection matrix
+ std::cout << "DrawCubeGeometry: Setting MVP matrix" << std::endl;
  defaultShader->SetMat4("mvp_matrix", mvp_matrix);
 
  //glUniform1f(alphaUniformLocation, alpha);
 
- //Get locations of fragment shader uniforms to be tied to UI
- //alphaUniformLocation = glGetUniformLocation(program.programId(), "alpha");
-
-  auto textures = TextureCubeStorageInstance->GetTextures();
+     auto textures = TextureCubeStorageInstance->GetTextures();
  
  std::cout << "Objects to render:" << objects.size() << std::endl;
+ std::cout << "Textures available:" << textures.size() << std::endl;
   
  // Оптимизированный рендеринг с batch-обработкой
+ std::cout << "DrawCubeGeometry: Preparing render batches..." << std::endl;
  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
  std::cout << "Render batches prepared:" << renderBatches.size() << std::endl;
+ 
+ std::cout << "DrawCubeGeometry: Rendering batches..." << std::endl;
  RenderBatches(mvp_matrix);
 
  auto user = WorldInstance->GetCurrentUser();
@@ -345,9 +418,6 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
    defaultShader->SetMat4("mvp_matrix", position);
 
    DrawObject(active_object, 0, textures, false, 0, 0);
-
- //  std::shared_ptr<QOpenGLTexture> texture = textures[active_cube->GetTypeId()].GetTexture();
- //  DrawCube(active_cube, texture);
   }
  }
  defaultShader->Unuse();
@@ -453,6 +523,50 @@ void GeometryEngine::SetGradientSky(bool useGradient)
 bool GeometryEngine::IsGradientSky() const
 {
  return useGradientSky;
+}
+
+void GeometryEngine::RenderPerformanceText(int width_size, int height_size, double view_duration)
+{
+    if (!textRenderer) {
+        std::cout << "GeometryEngine: textRenderer is null!" << std::endl;
+        return;
+    }
+    
+    std::cout << "GeometryEngine: Rendering performance text..." << std::endl;
+    
+    // Настройка OpenGL для 2D рендеринга
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Обновляем размеры окна в TextRenderer
+    textRenderer->SetWindowSize(width_size, height_size);
+    
+    float scale = 0.8f;
+    glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Желтый цвет для производительности
+    
+    // Формируем строки с информацией о производительности
+    std::vector<std::string> performanceLines = {
+        "Cubatarium Performance:",
+        "Scene: " + std::to_string(DurationDrawSceneMks/1000.0).substr(0, 6) + " ms",
+        "Movement: " + std::to_string(WorldInstance->GetDurationDoMovementMks()/1000.0).substr(0, 6) + " ms",
+        "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
+    };
+    
+    // Отображаем текст в правом верхнем углу
+    float y = height_size - 30.0f;
+    for (const auto& line : performanceLines) {
+        // Вычисляем позицию для выравнивания по правому краю
+        glm::vec2 textSize = textRenderer->GetTextSize(line, scale);
+        float x = width_size - textSize.x - 10.0f; // Отступ 10 пикселей от правого края
+        
+        textRenderer->RenderText(line, x, y, scale, textColor);
+        y -= 20.0f; // Отступ между строками
+    }
+    
+    // Восстановление состояния OpenGL
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 }

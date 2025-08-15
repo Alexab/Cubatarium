@@ -16,6 +16,7 @@ typedef int GLint;
 #include "World.h"
 #include "CubeGL.h"
 #include "ShaderManager.h"
+#include "TextRenderer.h"
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -36,7 +37,7 @@ struct RenderBatch {
 class GeometryEngine
 {
 public:
- GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage);
+ GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer = nullptr);
  virtual ~GeometryEngine();
 
  bool InitEngine();
@@ -69,6 +70,9 @@ private:
  void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix); // QMatrix4x4 -> glm::mat4
  void UpdateFrustumCulling(const glm::mat4& view_projection); // QMatrix4x4 -> glm::mat4
  bool IsObjectInFrustum(const std::shared_ptr<Object>& object);
+ 
+ // Методы для отображения текста
+ void RenderPerformanceText(int width_size, int height_size, double view_duration);
 
 private:
  //OpenGL uniform locations and values
@@ -83,6 +87,7 @@ private:
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
  std::shared_ptr<World> WorldInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
+ std::shared_ptr<TextRenderer> textRenderer;
 
  // performance data
  double DurationDrawSceneMks;

@@ -55,13 +55,23 @@ void World::SetSpawnPoint(glm::vec3 value)
 
 void World::Create(const std::string& world_name)
 {
+ std::cout << "World::Create: Creating world '" << world_name << "'" << std::endl;
+ 
  Objects.clear();
  auto plane = ObjectStorageInstance->TakeObject("terrain_plane");
- Objects.emplace_back(plane);
+ if (plane) {
+     std::cout << "World::Create: Added terrain_plane object" << std::endl;
+     Objects.emplace_back(plane);
+ } else {
+     std::cout << "World::Create: Failed to get terrain_plane object!" << std::endl;
+ }
+ 
  WorldName = world_name;
  
  // Инициализировать пространственный индекс
  RebuildOctree();
+ 
+ std::cout << "World::Create: Total objects: " << Objects.size() << std::endl;
 }
 
 void World::Load(const std::string& world_folder_path)
@@ -92,12 +102,19 @@ void World::Save(const std::string& world_folder_path)
 
 bool World::AddObject(const std::string type_id, const glm::vec3 &position)
 {
+ std::cout << "World::AddObject: Adding object of type '" << type_id << "' at position (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+ 
  auto object = ObjectStorageInstance->TakeObject(type_id);
- if(object == nullptr)
-  return false;
+ if(object == nullptr) {
+     std::cout << "World::AddObject: Failed to get object of type '" << type_id << "'" << std::endl;
+     return false;
+ }
 
+ std::cout << "World::AddObject: Object created successfully" << std::endl;
  object->SetPoseFromTranslation(position);
  AddObject(object);
+ 
+ std::cout << "World::AddObject: Total objects: " << Objects.size() << std::endl;
  return true;
 }
 
@@ -510,6 +527,8 @@ void World::SaveUsers(const std::string &file_name)
 
 void World::LoadObjects(const std::string &file_name)
 {
+ std::cout << "World::LoadObjects: Loading from " << file_name << std::endl;
+ 
  std::string val;
  std::ifstream file(file_name);
  if (file.is_open()) {
@@ -517,6 +536,7 @@ void World::LoadObjects(const std::string &file_name)
      buffer << file.rdbuf();
      val = buffer.str();
      file.close();
+     std::cout << "World::LoadObjects: File content length: " << val.length() << std::endl;
  } else {
      std::cerr << "Failed to open objects file: " << file_name << std::endl;
      return;
@@ -527,11 +547,15 @@ void World::LoadObjects(const std::string &file_name)
      json objects = d;
 
      Objects.clear();
+     std::cout << "World::LoadObjects: Parsing " << objects.size() << " objects" << std::endl;
+     
      for(const auto& object_data : objects)
      {
       auto id_value = object_data.value("id", 0);
       auto type_name_value = object_data.value("type_name", "");
       auto position_value = object_data.value("position", json::array());
+      
+      std::cout << "World::LoadObjects: Object id=" << id_value << ", type=" << type_name_value << std::endl;
 
       if(id_value == 0 || type_name_value.empty() || position_value.empty())
        continue;

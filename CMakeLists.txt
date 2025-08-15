@@ -4,6 +4,15 @@ project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Настройки компилятора для отладки
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        add_compile_options(/Zi /Od)
+    else()
+        add_compile_options(-g -O0)
+    endif()
+endif()
+
 # Удаляем Qt зависимости
 # find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network)
 
@@ -57,6 +66,7 @@ set(SOURCES
     src/Octree.cpp
     src/InputManager.cpp
     src/ShaderManager.cpp
+    src/TextRenderer.cpp
 )
 
 set(HEADERS
@@ -77,6 +87,7 @@ set(HEADERS
     src/Octree.h
     src/InputManager.h
     src/ShaderManager.h
+    src/TextRenderer.h
     src/stb_image.h
 )
 
@@ -114,5 +125,9 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}
 )
 

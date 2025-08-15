@@ -15,6 +15,7 @@
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "ObjectStorage.h"
+#include "TextRenderer.h"
 
 int main(int argc, char *argv[])
 {
@@ -38,7 +39,16 @@ int main(int argc, char *argv[])
 
         auto world = std::make_shared<World>(object_storage, view_engine);
 
-        auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance);
+        // Создаем TextRenderer для GeometryEngine
+        auto text_renderer = std::make_shared<TextRenderer>();
+        if (!text_renderer->Initialize("", 16)) {
+            std::cerr << "Failed to initialize text renderer" << std::endl;
+            return -1;
+        }
+        text_renderer->SetWindowSize(1280, 720);
+        std::cout << "TextRenderer initialized successfully" << std::endl;
+
+        auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance, text_renderer);
         
         // Инициализация GeometryEngine
         if (!geometry_engine->InitEngine()) {
@@ -51,6 +61,9 @@ int main(int argc, char *argv[])
 
         // Инициализация WindowManager с компонентами
         windowManager->Init(core, world, geometry_engine, view_engine);
+        
+        // Передаем TextRenderer в WindowManager
+        windowManager->SetTextRenderer(text_renderer);
 
         // Загрузка системы
         core->LoadSystem("config.json");

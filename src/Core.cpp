@@ -38,10 +38,14 @@ Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
 
 void Core::LoadSystem(const std::string& config_file_name)
 {
+ std::cout << "Core::LoadSystem: Loading system from " << config_file_name << std::endl;
+ 
  WorkDir = std::filesystem::current_path();
+ std::cout << "Core::LoadSystem: Working directory: " << WorkDir.string() << std::endl;
 
  auto config_path = WorkDir;
  config_path.append(config_file_name);
+ std::cout << "Core::LoadSystem: Config path: " << config_path.string() << std::endl;
 
  std::string val;
  std::ifstream file(config_path.string());
@@ -67,23 +71,30 @@ void Core::LoadSystem(const std::string& config_file_name)
       is_need_autocreate = true;
      }
 
-     auto parent_dir = WorkDir.parent_path();
+     // Используем текущую директорию вместо родительской
+     auto project_dir = WorkDir;
 
      default_world_name = default_world_value;
      default_user_name = default_user_value;
 
-     texture_base_storage_file_name = parent_dir;
+     texture_base_storage_file_name = project_dir;
      texture_base_storage_file_name.append("textures").append("blocks");
-     texture_cube_storage_file_name = parent_dir;
+     texture_cube_storage_file_name = project_dir;
      texture_cube_storage_file_name.append("models").append("blocks");
-     object_storage_file_name = parent_dir;
+     object_storage_file_name = project_dir;
      object_storage_file_name.append("models").append("objects");
-     WorldPath = parent_dir;
+     WorldPath = project_dir;
      WorldPath.append("worlds");
 
+     std::cout << "Loading textures from: " << texture_base_storage_file_name.string() << std::endl;
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
+     
+     std::cout << "Loading cube textures from: " << texture_cube_storage_file_name.string() << std::endl;
      TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
+     
+     std::cout << "Loading objects from: " << object_storage_file_name.string() << std::endl;
      ObjectStorageInstance->Load(object_storage_file_name.string());
+     std::cout << "Core::LoadSystem: Objects loaded successfully" << std::endl;
 
      LoadWorldList(WorldPath.string());
      if(WorldList.empty() || std::find(WorldList.begin(), WorldList.end(), default_world_name) == WorldList.end())
@@ -91,13 +102,16 @@ void Core::LoadSystem(const std::string& config_file_name)
 
      if(is_need_autocreate)
      {
+      std::cout << "Creating new world: World" << std::endl;
       CreateWorld("World");
       SaveSystem(config_file_name);
      }
      else
      {
+      std::cout << "Loading existing world: " << default_world_name << std::endl;
       LoadWorld(default_world_name);
       WorldInstance->SetCurrentUserName(default_user_name);
+      std::cout << "Core::LoadSystem: World loaded successfully" << std::endl;
      }
      if(WorldInstance->GetCurrentUser()->GetActiveObject() == nullptr)
       WorldInstance->GetCurrentUser()->SetActiveObjectTypeName("grass");
@@ -136,8 +150,11 @@ void Core::CreateWorld(const std::string& world_name)
 
 void Core::LoadWorld(const std::string& world_name)
 {
+ std::cout << "Core::LoadWorld: Loading world '" << world_name << "'" << std::endl;
+ 
  std::filesystem::path world_path=WorldPath;
  world_path.append(world_name);
+ std::cout << "Core::LoadWorld: World path: " << world_path.string() << std::endl;
 
  WorldInstance->Load(world_path.string());
  if(WorldInstance->GetCurrentUser() == nullptr)

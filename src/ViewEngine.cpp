@@ -11,7 +11,7 @@ ViewEngine::ViewEngine()
 
 void ViewEngine::GenerateSimpleCamera()
 {
- std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 2.0f, 3.0f));
+ std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 2.0f, -5.0f));
  AddCamera(view);
 }
 

@@ -87,8 +87,11 @@ void TextureCubeStorage::GenerateCubeTextures()
 
 void TextureCubeStorage::Load(const std::string &textures_path)
 {
+ std::cout << "TextureCubeStorage::Load: Loading from " << textures_path << std::endl;
+ 
  try
  {
+  int loaded_count = 0;
   for (const auto & entry : fs::directory_iterator(textures_path))
   {
    auto ext = entry.path().extension();
@@ -97,19 +100,23 @@ void TextureCubeStorage::Load(const std::string &textures_path)
     std::string name;
     size_t id;
     std::vector<std::string> textures;
-    if(LoadJson(entry.path().string(), name, id, textures))
-    {
-     TextureCube descr=CreateCubeTexture(name, id, textures);
-     Textures[descr.GetTypeId()] = descr;
-    }
+         if(LoadJson(entry.path().string(), name, id, textures))
+     {
+      TextureCube descr=CreateCubeTexture(name, id, textures);
+      Textures[descr.GetTypeId()] = descr;
+      loaded_count++;
+      std::cout << "TextureCubeStorage::Load: Added texture '" << name << "'" << std::endl;
+     }
    }
   }
+
+  std::cout << "TextureCubeStorage::Load: Total loaded textures: " << loaded_count << std::endl;
+  }
+  catch(std::filesystem::filesystem_error &ex)
+  {
+   std::cerr << ex.what();
+  }
  }
- catch(std::filesystem::filesystem_error &ex)
- {
-  std::cerr << ex.what();
- }
-}
 
 const std::map<size_t, TextureCube>& TextureCubeStorage::GetTextures() const
 {

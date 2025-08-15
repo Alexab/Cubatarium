@@ -32,7 +32,7 @@ Camera::Camera()
  AspectRatio = 1.3f;
 
  // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
- NearPlane = 0.1f;
+ NearPlane = 20.0f;
  FarPlane = 70.0f;
  Fov = 90.0f;
 
@@ -100,7 +100,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  AspectRatio = 1.3f;
 
  // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
- NearPlane = 0.1f;
+ NearPlane = 20.0f;
  FarPlane = 70.0f;
  Fov = 90.0f;
  Projection = glm::mat4(1.0f);
