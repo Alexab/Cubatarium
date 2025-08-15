@@ -60,6 +60,12 @@ bool GeometryEngine::InitShaders()
      return false;
  }
 
+ uiShader = shaderManager->CreateShader("ui", "shaders/vshader_2d.glsl", "shaders/fshader_2d.glsl");
+ if (!uiShader || !uiShader->IsValid()) {
+     std::cerr << "Failed to create UI shader" << std::endl;
+     return false;
+ }
+
  return true;
 }
 
@@ -67,6 +73,9 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
 {
  // Рендерим только объекты сцены
  DrawCubeGeometry();
+ 
+ // Рендерим перекрестие
+ RenderCrosshair(width_size, height_size);
  
  // Отключаем отрисовку UI текста производительности
  // RenderPerformanceText(width_size, height_size, view_duration);
@@ -1068,6 +1077,108 @@ void GeometryEngine::Render3DCubeWithPerspective()
     }
     
     std::cout << "GeometryEngine: 3D cube with perspective rendered successfully!" << std::endl;
+}
+
+void GeometryEngine::RenderCrosshair(int width_size, int height_size)
+{
+    if (!uiShader || !uiShader->IsValid()) {
+        std::cerr << "UI shader is not valid" << std::endl;
+        return;
+    }
+    
+    // Сохраняем состояние OpenGL
+    GLboolean depthTestEnabled;
+    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+    GLboolean blendEnabled;
+    glGetBooleanv(GL_BLEND, &blendEnabled);
+    
+    // Отключаем тест глубины для 2D рендеринга
+    glDisable(GL_DEPTH_TEST);
+    
+    // Используем UI шейдер
+    uiShader->Use();
+    
+    // Устанавливаем размер экрана
+    uiShader->SetVec2("screenSize", glm::vec2(width_size, height_size));
+    
+    // Устанавливаем желтый цвет для перекрестия
+    uiShader->SetVec3("color", glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
+    
+    // Размеры перекрестия
+    int crosshairSize = 20; // Размер в пикселях
+    int lineThickness = 2;  // Толщина линий в пикселях
+    
+    // Центр экрана
+    int centerX = width_size / 2;
+    int centerY = height_size / 2;
+    
+    // Создаем данные для горизонтальной линии
+    float horizontalLine[] = {
+        centerX - crosshairSize, centerY - lineThickness/2,  // Левая точка
+        centerX + crosshairSize, centerY - lineThickness/2,  // Правая точка
+        centerX - crosshairSize, centerY + lineThickness/2,  // Левая точка (нижняя)
+        centerX + crosshairSize, centerY + lineThickness/2   // Правая точка (нижняя)
+    };
+    
+    // Создаем данные для вертикальной линии
+    float verticalLine[] = {
+        centerX - lineThickness/2, centerY - crosshairSize,  // Верхняя точка
+        centerX + lineThickness/2, centerY - crosshairSize,  // Верхняя точка (правая)
+        centerX - lineThickness/2, centerY + crosshairSize,  // Нижняя точка
+        centerX + lineThickness/2, centerY + crosshairSize   // Нижняя точка (правая)
+    };
+    
+    // Создаем VAO и VBO для горизонтальной линии
+    GLuint horizontalVAO, horizontalVBO;
+    glGenVertexArrays(1, &horizontalVAO);
+    glGenBuffers(1, &horizontalVBO);
+    
+    glBindVertexArray(horizontalVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, horizontalVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(horizontalLine), horizontalLine, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // Рисуем горизонтальную линию
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    // Создаем VAO и VBO для вертикальной линии
+    GLuint verticalVAO, verticalVBO;
+    glGenVertexArrays(1, &verticalVAO);
+    glGenBuffers(1, &verticalVBO);
+    
+    glBindVertexArray(verticalVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, verticalVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticalLine), verticalLine, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // Рисуем вертикальную линию
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    // Очищаем ресурсы
+    glDeleteVertexArrays(1, &horizontalVAO);
+    glDeleteBuffers(1, &horizontalVBO);
+    glDeleteVertexArrays(1, &verticalVAO);
+    glDeleteBuffers(1, &verticalVBO);
+    
+    // Отключаем шейдер
+    uiShader->Unuse();
+    
+    // Восстанавливаем состояние OpenGL
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+    
+    if (blendEnabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
 }
 
 }
