@@ -95,67 +95,10 @@ void GeometryEngine::DrawCubeGeometry()
  GLboolean cullFaceEnabled;
  glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
  
- // Создаем шейдер для упрощенного рендеринга объектов сцены
- const char* vertexShaderSource = R"(
-     #version 330 core
-     layout (location = 0) in vec3 aPos;
-     layout (location = 1) in vec2 aTexCoord;
-     out vec2 TexCoord;
-     uniform mat4 MVP;
-     void main()
-     {
-         gl_Position = MVP * vec4(aPos, 1.0);
-         TexCoord = aTexCoord;
-     }
- )";
- 
- const char* fragmentShaderSource = R"(
-     #version 330 core
-     in vec2 TexCoord;
-     out vec4 FragColor;
-     uniform sampler2D texture0;
-     void main()
-     {
-         FragColor = texture(texture0, TexCoord);
-     }
- )";
- 
- // Компилируем шейдеры
- GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
- glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
- glCompileShader(vertexShader);
- 
- GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
- glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
- glCompileShader(fragmentShader);
- 
- // Создаем программу
- GLuint shaderProgram = glCreateProgram();
- glAttachShader(shaderProgram, vertexShader);
- glAttachShader(shaderProgram, fragmentShader);
- glLinkProgram(shaderProgram);
- 
- // Проверяем ошибки компиляции
- GLint success;
- glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
- if (!success) {
-     GLchar infoLog[512];
-     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-     std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
- }
- 
- glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
- if (!success) {
-     GLchar infoLog[512];
-     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-     std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
- }
- 
- glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
- if (!success) {
-     GLchar infoLog[512];
-     glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-     std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+ // Используем загруженный шейдер из ShaderManager
+ if (!defaultShader || !defaultShader->IsValid()) {
+     std::cerr << "Default shader is not valid" << std::endl;
+     return;
  }
  
  // Получаем MVP матрицу
@@ -165,8 +108,8 @@ void GeometryEngine::DrawCubeGeometry()
  auto textures = TextureCubeStorageInstance->GetTextures();
  
  // Используем наш шейдер
- glUseProgram(shaderProgram);
- glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(mvp));
+ defaultShader->Use();
+ defaultShader->SetMat4("mvp_matrix", mvp);
  
  // Рендерим каждый объект как текстурированный куб
  for (const auto& object : objects) {
@@ -279,7 +222,7 @@ void GeometryEngine::DrawCubeGeometry()
          // Привязываем текстуру
          glActiveTexture(GL_TEXTURE0);
          glBindTexture(GL_TEXTURE_2D, texture);
-         glUniform1i(glGetUniformLocation(shaderProgram, "texture0"), 0);
+         defaultShader->SetInt("texture0", 0);
          
          // Создаем матрицу модели для позиционирования куба
          glm::mat4 model = glm::mat4(1.0f);
@@ -290,11 +233,15 @@ void GeometryEngine::DrawCubeGeometry()
          
          // Обновляем MVP матрицу для этого объекта
          glm::mat4 objectMVP = camera->GetProjection() * camera->GetViewMatrix() * model;
-         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(objectMVP));
+         defaultShader->SetMat4("mvp_matrix", objectMVP);
          
          // Рисуем куб
          glBindVertexArray(VAO);
          glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+         
+         // Отключаем атрибуты
+         glDisableVertexAttribArray(0);
+         glDisableVertexAttribArray(1);
          
          // Очищаем ресурсы
          glDeleteVertexArrays(1, &VAO);
@@ -303,10 +250,8 @@ void GeometryEngine::DrawCubeGeometry()
      }
  }
  
- // Очищаем ресурсы шейдеров
- glDeleteProgram(shaderProgram);
- glDeleteShader(vertexShader);
- glDeleteShader(fragmentShader);
+ // Отключаем шейдер
+ defaultShader->Unuse();
  
  // Восстанавливаем состояние OpenGL
  if (depthTestEnabled) {
