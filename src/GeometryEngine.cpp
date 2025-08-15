@@ -67,10 +67,17 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
 {
  std::cout << "GeometryEngine::Paint called" << std::endl;
  
+ // Включаем рендеринг обычных объектов сцены ПЕРВЫМ
  DrawCubeGeometry();
  
- // Отрисовка UI текста производительности
- RenderPerformanceText(width_size, height_size, view_duration);
+ // Рендерим тестовый треугольник для отладки ПОСЛЕ объектов сцены
+ RenderTestCube();
+ 
+ // Рендерим 3D куб с перспективной проекцией ПОСЛЕ объектов сцены
+ Render3DCubeWithPerspective();
+ 
+ // Отключаем отрисовку UI текста производительности
+ // RenderPerformanceText(width_size, height_size, view_duration);
 }
 
 void GeometryEngine::DrawCubeGeometry()
@@ -351,19 +358,18 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  if(useGradientSky)
  {
   // Для градиентного неба очищаем только буфер глубины
-  glClear(GL_DEPTH_BUFFER_BIT);
+  glClear(GL_DEPTH_BUFFER_BIT); // Возвращаем очистку буфера глубины
  }
  else
  {
   // Для простого неба устанавливаем цвет и очищаем оба буфера
-     // glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Временно отключаем цвет неба
-     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Черный фон для диагностики
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+     glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Возвращаем цвет неба
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Возвращаем очистку буферов
  }
 
- // ВРЕМЕННО ОТКЛЮЧАЕМ НЕБО ДЛЯ ДИАГНОСТИКИ
+ // Включаем рендеринг неба
  // Отрисовываем градиентное небо ПОСЛЕ очистки буфера глубины
- if(useGradientSky && false) // Временно отключаем
+ if(useGradientSky)
  {
      std::cout << "Drawing gradient sky with color: (" << skyColor.x << ", " << skyColor.y << ", " << skyColor.z << ", " << skyColor.w << ")" << std::endl;
   DrawSkyGradient();
@@ -567,6 +573,341 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
     // Восстановление состояния OpenGL
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
+}
+
+void GeometryEngine::RenderTestCube()
+{
+    std::cout << "GeometryEngine: Rendering minimal test triangle..." << std::endl;
+    
+    // Сохраняем состояние OpenGL
+    GLboolean depthTestEnabled;
+    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+    GLboolean blendEnabled;
+    glGetBooleanv(GL_BLEND, &blendEnabled);
+    GLboolean cullFaceEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+    
+    // Создаем простой шейдер для минимального теста
+    const char* vertexShaderSource = R"(
+        #version 330 core
+        layout (location = 0) in vec3 aPos;
+        layout (location = 1) in vec3 aColor;
+        out vec3 ourColor;
+        void main()
+        {
+            gl_Position = vec4(aPos, 1.0);
+            ourColor = aColor;
+        }
+    )";
+    
+    const char* fragmentShaderSource = R"(
+        #version 330 core
+        in vec3 ourColor;
+        out vec4 FragColor;
+        void main()
+        {
+            FragColor = vec4(ourColor, 1.0);
+        }
+    )";
+    
+    // Компилируем шейдеры
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    
+    // Создаем программу
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    
+    // Проверяем ошибки компиляции
+    GLint success;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
+    }
+    
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
+    }
+    
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+    }
+    
+    // Создаем данные треугольника (в нормализованных координатах экрана)
+    float vertices[] = {
+        // позиции        // цвета
+        -0.8f, -0.8f, 0.0f,  1.0f, 0.0f, 0.0f,  // красный (больше и левее)
+         0.8f, -0.8f, 0.0f,  0.0f, 1.0f, 0.0f,  // зеленый (больше и правее)
+         0.0f,  0.8f, 0.0f,  0.0f, 0.0f, 1.0f   // синий (выше)
+    };
+    
+    // Создаем VAO и VBO
+    GLuint VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    // Настраиваем атрибуты
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // Отключаем тест глубины для 2D рендеринга
+    glDisable(GL_DEPTH_TEST);
+    
+    // Используем наш шейдер
+    glUseProgram(shaderProgram);
+    
+    // Рисуем треугольник
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    
+    // Проверяем OpenGL ошибки
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "RenderTestTriangle: OpenGL error after drawing: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
+    }
+    
+    // Очищаем ресурсы
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    
+    // Восстанавливаем состояние OpenGL
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+    
+    if (blendEnabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
+    
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
+    
+    std::cout << "GeometryEngine: Minimal test triangle rendered successfully!" << std::endl;
+}
+
+void GeometryEngine::Render3DCubeWithPerspective()
+{
+    std::cout << "GeometryEngine: Rendering 3D cube with perspective..." << std::endl;
+    
+    // Сохраняем состояние OpenGL
+    GLboolean depthTestEnabled;
+    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+    GLboolean blendEnabled;
+    glGetBooleanv(GL_BLEND, &blendEnabled);
+    GLboolean cullFaceEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+    
+    // Получаем камеру
+    auto camera = WorldInstance->GetCurrentUserCamera();
+    if (!camera) {
+        std::cout << "Render3DCubeWithPerspective: Camera is null!" << std::endl;
+        return;
+    }
+    
+    // Создаем шейдер для 3D рендеринга
+    const char* vertexShaderSource = R"(
+        #version 330 core
+        layout (location = 0) in vec3 aPos;
+        layout (location = 1) in vec3 aColor;
+        out vec3 ourColor;
+        uniform mat4 MVP;
+        void main()
+        {
+            gl_Position = MVP * vec4(aPos, 1.0);
+            ourColor = aColor;
+        }
+    )";
+    
+    const char* fragmentShaderSource = R"(
+        #version 330 core
+        in vec3 ourColor;
+        out vec4 FragColor;
+        void main()
+        {
+            FragColor = vec4(ourColor, 1.0);
+        }
+    )";
+    
+    // Компилируем шейдеры
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    
+    // Создаем программу
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    
+    // Проверяем ошибки компиляции
+    GLint success;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
+    }
+    
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
+    }
+    
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+    }
+    
+    // Создаем данные куба (в мировых координатах)
+    float vertices[] = {
+        // позиции        // цвета
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  // красный
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  // зеленый
+         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // синий
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,  // желтый
+
+        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,  // пурпурный
+         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,  // голубой
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,  // белый
+        -0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.5f   // серый
+    };
+    
+    // Индексы для отрисовки граней куба
+    unsigned int indices[] = {
+        0, 1, 2, 2, 3, 0,   // передняя грань
+        1, 5, 6, 6, 2, 1,   // правая грань
+        5, 4, 7, 7, 6, 5,   // задняя грань
+        4, 0, 3, 3, 7, 4,   // левая грань
+        3, 2, 6, 6, 7, 3,   // верхняя грань
+        4, 5, 1, 1, 0, 4    // нижняя грань
+    };
+    
+    // Создаем VAO, VBO и EBO
+    GLuint VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    
+    // Настраиваем атрибуты
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // Включаем тест глубины для 3D рендеринга
+    glEnable(GL_DEPTH_TEST);
+    
+    // Используем наш шейдер
+    glUseProgram(shaderProgram);
+    
+    // Создаем MVP матрицу
+    glm::mat4 model = glm::mat4(1.0f);
+    // Размещаем куб в статической позиции перед камерой
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f)); // Фиксированная позиция перед камерой
+    model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Поворот на 45 градусов вокруг оси Y
+    
+    glm::mat4 view = camera->GetViewMatrix();
+    glm::mat4 projection = camera->GetProjection();
+    glm::mat4 mvp = projection * view * model;
+    
+    // Устанавливаем MVP матрицу
+    GLint mvpLocation = glGetUniformLocation(shaderProgram, "MVP");
+    if (mvpLocation != -1) {
+        glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+    }
+    
+    // Отладочная информация
+    auto cameraPos = camera->GetPosition();
+    auto cameraFront = camera->GetFront();
+    std::cout << "Render3DCubeWithPerspective: Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
+    std::cout << "Render3DCubeWithPerspective: Camera Front: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")" << std::endl;
+    std::cout << "Render3DCubeWithPerspective: Test cube position: (0, 0, -2) - STATIC" << std::endl;
+    std::cout << "Render3DCubeWithPerspective: Test cube rotation: 45° around Y axis" << std::endl;
+    
+    // Рисуем куб
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    
+    // Проверяем OpenGL ошибки
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "Render3DCubeWithPerspective: OpenGL error after drawing: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
+    }
+    
+    // Очищаем ресурсы
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteProgram(shaderProgram);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    
+    // Восстанавливаем состояние OpenGL
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+    
+    if (blendEnabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
+    
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
+    
+    std::cout << "GeometryEngine: 3D cube with perspective rendered successfully!" << std::endl;
 }
 
 }

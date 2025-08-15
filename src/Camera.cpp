@@ -19,7 +19,7 @@ float radians(float degrees)
 
 Camera::Camera()
  : Position(glm::vec3(0.0f, 0.0f, 0.0f))
- , WorldUp(glm::vec3(0.0f, -1.0f, 0.0f))
+ , WorldUp(glm::vec3(0.0f, 1.0f, 0.0f))
  , Yaw(0.0)
  , Pitch(0.0)
  , Front(glm::vec3(0.0f, 0.0f, -1.0f))

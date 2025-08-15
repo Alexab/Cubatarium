@@ -73,6 +73,12 @@ private:
  
  // Методы для отображения текста
  void RenderPerformanceText(int width_size, int height_size, double view_duration);
+ 
+ // Метод для отображения тестового куба
+ void RenderTestCube();
+ 
+ // Метод для отображения 3D куба с перспективной проекцией
+ void Render3DCubeWithPerspective();
 
 private:
  //OpenGL uniform locations and values

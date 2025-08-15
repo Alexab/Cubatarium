@@ -204,8 +204,8 @@ void WindowManager::Render() {
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
     
-    // Отображение UI поверх 3D сцены
-    RenderUI();
+    // Отключаем отображение UI поверх 3D сцены
+    // RenderUI();
 }
 
 void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
