@@ -92,7 +92,7 @@ void GeometryEngine::DrawCubeGeometry()
      return;
  }
  
- std::cout << "DrawCubeGeometry: Rendering " << objects.size() << " objects" << std::endl;
+ std::cout << "DrawCubeGeometry: Rendering " << objects.size() << " objects with simplified approach" << std::endl;
  
  auto camera = WorldInstance->GetCurrentUserCamera();
  if (!camera) {
@@ -100,20 +100,206 @@ void GeometryEngine::DrawCubeGeometry()
      return;
  }
  
- std::cout << "DrawCubeGeometry: Camera found, getting MVP matrix..." << std::endl;
+ // Сохраняем состояние OpenGL
+ GLboolean depthTestEnabled;
+ glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+ GLboolean blendEnabled;
+ glGetBooleanv(GL_BLEND, &blendEnabled);
+ GLboolean cullFaceEnabled;
+ glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
  
- // Добавляем отладочную информацию о камере
- auto cameraPos = camera->GetPosition();
- auto cameraFront = camera->GetFront();
- std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
- std::cout << "Camera Front: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")" << std::endl;
+ // Создаем шейдер для упрощенного рендеринга объектов сцены
+ const char* vertexShaderSource = R"(
+     #version 330 core
+     layout (location = 0) in vec3 aPos;
+     layout (location = 1) in vec2 aTexCoord;
+     out vec2 TexCoord;
+     uniform mat4 MVP;
+     void main()
+     {
+         gl_Position = MVP * vec4(aPos, 1.0);
+         TexCoord = aTexCoord;
+     }
+ )";
  
- DrawCubeGeometry(objects, camera->GetMvpMatrix(),
-                              WorldInstance->GetIsIntersectionExists(),
-                              WorldInstance->GetIntersectionObjectIndex(),
-                              WorldInstance->GetIntersectionCubeIndex());
+ const char* fragmentShaderSource = R"(
+     #version 330 core
+     in vec2 TexCoord;
+     out vec4 FragColor;
+     uniform sampler2D texture0;
+     void main()
+     {
+         FragColor = texture(texture0, TexCoord);
+     }
+ )";
+ 
+ // Компилируем шейдеры
+ GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+ glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+ glCompileShader(vertexShader);
+ 
+ GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+ glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+ glCompileShader(fragmentShader);
+ 
+ // Создаем программу
+ GLuint shaderProgram = glCreateProgram();
+ glAttachShader(shaderProgram, vertexShader);
+ glAttachShader(shaderProgram, fragmentShader);
+ glLinkProgram(shaderProgram);
+ 
+ // Проверяем ошибки компиляции
+ GLint success;
+ glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+ if (!success) {
+     GLchar infoLog[512];
+     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+     std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
+ }
+ 
+ glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+ if (!success) {
+     GLchar infoLog[512];
+     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+     std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
+ }
+ 
+ glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+ if (!success) {
+     GLchar infoLog[512];
+     glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+     std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+ }
+ 
+ // Получаем MVP матрицу
+ glm::mat4 mvp = camera->GetMvpMatrix();
+ 
+ // Получаем текстуры
+ auto textures = TextureCubeStorageInstance->GetTextures();
+ std::cout << "DrawCubeGeometry: Available textures: " << textures.size() << std::endl;
+ 
+ // Используем наш шейдер
+ glUseProgram(shaderProgram);
+ glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(mvp));
+ 
+ // Рендерим каждый объект как текстурированный куб
+ for (const auto& object : objects) {
+     auto objectPos = object->GetPose();
+     glm::vec3 position(objectPos[3][0], objectPos[3][1], objectPos[3][2]);
+     
+     std::cout << "DrawCubeGeometry: Rendering object at position (" 
+               << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+     
+     // Рендерим каждый куб в объекте
+     for (size_t i = 0; i < object->GetCubes().size(); i++) {
+         auto& cube = object->GetCubes()[i];
+         size_t textureId = cube->GetTypeId();
+         
+         std::cout << "DrawCubeGeometry: Rendering cube " << i << " with texture ID " << textureId << std::endl;
+         
+         // Получаем текстуру
+         GLuint texture = 0;
+         if (textures.find(textureId) != textures.end()) {
+             texture = textures.at(textureId).GetTextureId();
+             std::cout << "DrawCubeGeometry: Found texture " << texture << " for ID " << textureId << std::endl;
+         } else {
+             std::cout << "DrawCubeGeometry: Texture not found for ID " << textureId << std::endl;
+             continue; // Пропускаем куб без текстуры
+         }
+         
+         // Создаем простой куб с текстурными координатами
+         float vertices[] = {
+             // позиции                    // текстурные координаты
+             -0.5f, -0.5f, -0.5f,         0.0f, 0.0f,
+              0.5f, -0.5f, -0.5f,         1.0f, 0.0f,
+              0.5f,  0.5f, -0.5f,         1.0f, 1.0f,
+             -0.5f,  0.5f, -0.5f,         0.0f, 1.0f,
+             -0.5f, -0.5f,  0.5f,         0.0f, 0.0f,
+              0.5f, -0.5f,  0.5f,         1.0f, 0.0f,
+              0.5f,  0.5f,  0.5f,         1.0f, 1.0f,
+             -0.5f,  0.5f,  0.5f,         0.0f, 1.0f
+         };
+         
+         unsigned int indices[] = {
+             0, 1, 2, 2, 3, 0, // передняя грань
+             1, 5, 6, 6, 2, 1, // правая грань
+             5, 4, 7, 7, 6, 5, // задняя грань
+             4, 0, 3, 3, 7, 4, // левая грань
+             3, 2, 6, 6, 7, 3, // верхняя грань
+             4, 5, 1, 1, 0, 4  // нижняя грань
+         };
+         
+         // Создаем VAO и VBO
+         GLuint VAO, VBO, EBO;
+         glGenVertexArrays(1, &VAO);
+         glGenBuffers(1, &VBO);
+         glGenBuffers(1, &EBO);
+         
+         glBindVertexArray(VAO);
+         glBindBuffer(GL_ARRAY_BUFFER, VBO);
+         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+         
+         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+         
+         // Настраиваем атрибуты
+         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+         glEnableVertexAttribArray(0);
+         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+         glEnableVertexAttribArray(1);
+         
+         // Привязываем текстуру
+         glActiveTexture(GL_TEXTURE0);
+         glBindTexture(GL_TEXTURE_2D, texture);
+         glUniform1i(glGetUniformLocation(shaderProgram, "texture0"), 0);
+         
+         // Создаем матрицу модели для позиционирования куба
+         glm::mat4 model = glm::mat4(1.0f);
+         model = glm::translate(model, position);
+         
+         // Обновляем MVP матрицу для этого объекта
+         glm::mat4 objectMVP = camera->GetProjection() * camera->GetViewMatrix() * model;
+         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(objectMVP));
+         
+         // Рисуем куб
+         glBindVertexArray(VAO);
+         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+         
+         // Очищаем ресурсы
+         glDeleteVertexArrays(1, &VAO);
+         glDeleteBuffers(1, &VBO);
+         glDeleteBuffers(1, &EBO);
+     }
+ }
+ 
+ // Очищаем ресурсы шейдеров
+ glDeleteProgram(shaderProgram);
+ glDeleteShader(vertexShader);
+ glDeleteShader(fragmentShader);
+ 
+ // Восстанавливаем состояние OpenGL
+ if (depthTestEnabled) {
+     glEnable(GL_DEPTH_TEST);
+ } else {
+     glDisable(GL_DEPTH_TEST);
+ }
+ 
+ if (blendEnabled) {
+     glEnable(GL_BLEND);
+ } else {
+     glDisable(GL_BLEND);
+ }
+ 
+ if (cullFaceEnabled) {
+     glEnable(GL_CULL_FACE);
+ } else {
+     glDisable(GL_CULL_FACE);
+ }
+ 
  auto t_end = std::chrono::high_resolution_clock::now();
  DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+ 
+ std::cout << "DrawCubeGeometry: Simplified rendering completed!" << std::endl;
 }
 
 void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
