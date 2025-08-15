@@ -87,7 +87,7 @@ void GeometryEngine::Paint(int width_size, int height_size, double view_duration
  RenderSimpleText(width_size, height_size);
  
  // Отключаем отрисовку UI текста производительности
- // RenderPerformanceText(width_size, height_size, view_duration);
+     RenderPerformanceText(width_size, height_size, view_duration);
 }
 
 void GeometryEngine::DrawCubeGeometry()
@@ -712,26 +712,27 @@ bool GeometryEngine::IsGradientSky() const
 void GeometryEngine::RenderPerformanceText(int width_size, int height_size, double view_duration)
 {
     if (!textRenderer) {
-        std::cout << "GeometryEngine: textRenderer is null!" << std::endl;
         return;
     }
-    
-    std::cout << "GeometryEngine: Rendering performance text..." << std::endl;
-    
-    // Настройка OpenGL для 2D рендеринга
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // Обновляем размеры окна в TextRenderer
     textRenderer->SetWindowSize(width_size, height_size);
     
-    float scale = 0.8f;
+    float scale = 0.7f;
     glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Желтый цвет для производительности
+    
+    // Вычисляем FPS
+    double totalTime = DurationDrawSceneMks + WorldInstance->GetDurationDoMovementMks() + view_duration;
+    double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
+    
+    // Получаем количество объектов
+    size_t objectCount = WorldInstance->GetObjects().size();
     
     // Формируем строки с информацией о производительности
     std::vector<std::string> performanceLines = {
-        "Cubatarium Performance:",
+        "Performance:",
+        "FPS: " + std::to_string(fps).substr(0, 6),
+        "Objects: " + std::to_string(objectCount),
         "Scene: " + std::to_string(DurationDrawSceneMks/1000.0).substr(0, 6) + " ms",
         "Movement: " + std::to_string(WorldInstance->GetDurationDoMovementMks()/1000.0).substr(0, 6) + " ms",
         "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
@@ -745,12 +746,8 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
         float x = width_size - textSize.x - 10.0f; // Отступ 10 пикселей от правого края
         
         textRenderer->RenderText(line, x, y, scale, textColor);
-        y -= 20.0f; // Отступ между строками
+        y -= 18.0f; // Отступ между строками
     }
-    
-    // Восстановление состояния OpenGL
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
 }
 
 void GeometryEngine::RenderTestCube()
@@ -1197,10 +1194,22 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
          // Обновляем размеры окна в TextRenderer
          textRenderer->SetWindowSize(width_size, height_size);
          
-         // Отображаем тестовый текст с помощью FreeType рендеринга
-         textRenderer->RenderText("Hello World!", 50, height_size - 50, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Cubatarium Test", 50, height_size - 100, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-         textRenderer->RenderText("OpenGL 3.3", 50, height_size - 150, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f));
+         // Отображаем информацию о пользователе
+         std::string currentUser = WorldInstance->GetCurrentUserName();
+         textRenderer->RenderText("User: " + currentUser, 20, 140, 0.8f, glm::vec3(0.0f, 1.0f, 1.0f)); // Голубой цвет
+         
+         // Отображаем легенду с клавишами внизу экрана
+         textRenderer->RenderText("WASD - Movement", 20, 120, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Q/E - Up/Down", 20, 100, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Space - Jump", 20, 80, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Shift - Crouch", 20, 60, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("0-9 - Block selection", 20, 40, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Delete - Remove block", 20, 20, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("F1-F8 - Sky colors", 20, 5, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         
+         // Отображаем информацию о мыши
+         textRenderer->RenderText("Right Mouse - Camera control", 20, -15, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
+         textRenderer->RenderText("Left Mouse - Add/Remove blocks", 20, -35, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
          
          return;
      }
