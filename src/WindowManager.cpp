@@ -185,6 +185,13 @@ void WindowManager::ProcessInput() {
             if (inputManager->IsKeyPressed(KeyCode::Key_Shift)) {
                 camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Shift), true);
             }
+            // Q и E для движения вверх-вниз
+            if (inputManager->IsKeyPressed(KeyCode::Key_Q)) {
+                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Q), true);
+            }
+            if (inputManager->IsKeyPressed(KeyCode::Key_E)) {
+                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_E), true);
+            }
         }
     }
 }

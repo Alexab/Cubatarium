@@ -26,6 +26,8 @@ enum class KeyCode {
     Key_A = GLFW_KEY_A,
     Key_S = GLFW_KEY_S,
     Key_D = GLFW_KEY_D,
+    Key_Q = GLFW_KEY_Q,
+    Key_E = GLFW_KEY_E,
     Key_Space = GLFW_KEY_SPACE,
     Key_Shift = GLFW_KEY_LEFT_SHIFT,
     Key_Ctrl = GLFW_KEY_LEFT_CONTROL,

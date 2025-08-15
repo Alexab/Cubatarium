@@ -178,6 +178,20 @@ void GeometryEngine::DrawCubeGeometry()
          auto& cube = object->GetCubes()[i];
          size_t textureId = cube->GetTypeId();
          
+         // Проверяем, выделен ли этот куб
+         bool is_intersection_exists = WorldInstance->GetIsIntersectionExists();
+         size_t intersecion_object_index = WorldInstance->GetIntersectionObjectIndex();
+         size_t intersecion_cube_index = WorldInstance->GetIntersectionCubeIndex();
+         
+         // Находим индекс объекта в векторе objects
+         size_t object_index = std::find(objects.begin(), objects.end(), object) - objects.begin();
+         
+         // Если этот куб выделен, используем текстуру выделения
+         if(is_intersection_exists && intersecion_object_index == object_index && intersecion_cube_index == i)
+         {
+             textureId = TextureCubeStorageInstance->GetTypeIdByName("selection");
+         }
+         
          // Получаем текстуру
          GLuint texture = 0;
          if (textures.find(textureId) != textures.end()) {
@@ -271,9 +285,8 @@ void GeometryEngine::DrawCubeGeometry()
          glm::mat4 model = glm::mat4(1.0f);
          model = glm::translate(model, position);
          
-         // Добавляем отладочную информацию
-         auto cameraPos = camera->GetPosition();
-         auto cameraFront = camera->GetFront();
+         // Поворачиваем сцену на 180 градусов вокруг оси Y
+         //model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
          
          // Обновляем MVP матрицу для этого объекта
          glm::mat4 objectMVP = camera->GetProjection() * camera->GetViewMatrix() * model;
