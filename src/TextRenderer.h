@@ -6,14 +6,16 @@
 #include <GL/glew.h>
 #include <map>
 #include <memory>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 namespace cutum {
 
 struct Character {
     GLuint textureID;   // ID текстуры символа
-    glm::ivec2 size;    // Размер символа
-    glm::ivec2 bearing; // Смещение от базовой линии
-    GLuint advance;     // Расстояние до следующего символа
+    glm::ivec2 size;    // Размер символа (ширина, высота)
+    glm::ivec2 bearing; // Смещение от базовой линии (left, top)
+    GLuint advance;     // Расстояние до следующего символа (в 1/64 пикселя)
 };
 
 class TextRenderer {
@@ -51,12 +53,19 @@ private:
     std::map<GLchar, Character> characters;
     int windowWidth, windowHeight;
     
+    // FreeType
+    FT_Library ft;
+    FT_Face face;
+    bool ftInitialized;
+    
     // Кэшированные uniform locations для производительности
     GLint textColorLocation;
     GLint projectionLocation;
 
     bool CreateShader();
     bool LoadCharacters(const std::string& fontPath, int fontSize);
+    bool InitializeFreeType();
+    void CleanupFreeType();
 };
 
 } // namespace cutum

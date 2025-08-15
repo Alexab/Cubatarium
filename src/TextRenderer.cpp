@@ -11,6 +11,9 @@ TextRenderer::TextRenderer()
     , VBO(0)
     , windowWidth(1280)
     , windowHeight(720)
+    , ft(nullptr)
+    , face(nullptr)
+    , ftInitialized(false)
 {
 }
 
@@ -19,6 +22,12 @@ TextRenderer::~TextRenderer() {
 }
 
 bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
+    // Инициализация FreeType
+    if (!InitializeFreeType()) {
+        std::cerr << "Failed to initialize FreeType" << std::endl;
+        return false;
+    }
+
     // Создание шейдера
     if (!CreateShader()) {
         std::cerr << "Failed to create text shader" << std::endl;
@@ -40,8 +49,11 @@ bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    // Загрузка символов (пока используем простую реализацию без FreeType)
-    LoadCharacters(fontPath, fontSize);
+    // Загрузка символов с помощью FreeType
+    if (!LoadCharacters(fontPath, fontSize)) {
+        std::cerr << "Failed to load characters" << std::endl;
+        return false;
+    }
 
     return true;
 }
@@ -278,6 +290,33 @@ GLuint TextRenderer::CreateCharacterTexture(char character)
     return textureID;
 }
 
+bool TextRenderer::InitializeFreeType() {
+    if (ftInitialized) {
+        return true;
+    }
+    
+    // Инициализация FreeType
+    if (FT_Init_FreeType(&ft)) {
+        std::cerr << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
+        return false;
+    }
+    
+    ftInitialized = true;
+    return true;
+}
+
+void TextRenderer::CleanupFreeType() {
+    if (face) {
+        FT_Done_Face(face);
+        face = nullptr;
+    }
+    if (ftInitialized && ft) {
+        FT_Done_FreeType(ft);
+        ft = nullptr;
+        ftInitialized = false;
+    }
+}
+
 void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y, float scale, const glm::vec3& color)
 {
     if (!textShader) {
@@ -417,41 +456,39 @@ void TextRenderer::Shutdown() {
         glDeleteTextures(1, &ch.textureID);
     }
     characters.clear();
+    
+    // Очистка FreeType
+    CleanupFreeType();
 }
 
 bool TextRenderer::CreateShader() {
     const char* vertexShaderSource = R"(
 #version 330 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoord;
-out vec2 TexCoord;
+layout (location = 0) in vec4 vertex;
+out vec2 TexCoords;
 
-uniform vec2 screenSize;
+uniform mat4 projection;
 
 void main()
 {
-    // Преобразуем координаты из пикселей в нормализованные координаты (-1 до 1)
-    vec2 normalizedPos = (aPos / screenSize) * 2.0 - 1.0;
-    gl_Position = vec4(normalizedPos, 0.0, 1.0);
-    TexCoord = aTexCoord;
+    gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);
+    TexCoords = vertex.zw;
 }
 )";
 
     const char* fragmentShaderSource = R"(
 #version 330 core
-in vec2 TexCoord;
-out vec4 FragColor;
+out vec4 color;
 
-uniform sampler2D textTexture;
+in vec2 TexCoords;
+
+uniform sampler2D text;
 uniform vec3 textColor;
 
 void main()
-{
-    // Получаем значение из текстуры (R канал)
-    float alpha = texture(textTexture, TexCoord).r;
-    
-    // Применяем цвет текста с прозрачностью
-    FragColor = vec4(textColor, alpha);
+{    
+    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
+    color = vec4(textColor, 1.0) * sampled;
 }
 )";
 
@@ -505,65 +542,70 @@ void main()
 }
 
 bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
-    // Простая реализация без FreeType - создаем базовые символы
-    // В реальном проекте здесь должна быть загрузка через FreeType
+    if (!ftInitialized) {
+        std::cerr << "FreeType not initialized" << std::endl;
+        return false;
+    }
     
-    // Создаем простые текстуры для символов (белые квадраты)
-    // Расширяем диапазон для поддержки кириллицы и других символов
-    for (unsigned char c = 0; c < 255; c++) {
-        Character character;
-        
-        // Создаем простую текстуру 8x8 пикселей - ВСЕ пиксели белые
-        unsigned char data[8 * 8];
-        for (int i = 0; i < 8 * 8; i++) {
-            data[i] = 255; // Белый цвет для всех пикселей
+    // Загрузка шрифта
+    if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
+        std::cerr << "ERROR::FREETYPE: Failed to load font: " << fontPath << std::endl;
+        return false;
+    }
+    
+    // Установка размера шрифта
+    FT_Set_Pixel_Sizes(face, 0, fontSize);
+    
+    // Отключение выравнивания байтов
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    
+    // Загрузка первых 128 символов ASCII
+    for (unsigned char c = 0; c < 128; c++) {
+        // Загрузка глифа символа
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+            std::cerr << "ERROR::FREETYPE: Failed to load Glyph: " << c << std::endl;
+            continue;
         }
         
-        glGenTextures(1, &character.textureID);
-        glBindTexture(GL_TEXTURE_2D, character.textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 8, 8, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+        // Генерация текстуры
+        GLuint texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
         
+        // Загрузка данных глифа в текстуру
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RED,
+            face->glyph->bitmap.width,
+            face->glyph->bitmap.rows,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            face->glyph->bitmap.buffer
+        );
+        
+        // Настройка параметров текстуры
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
-        // Разные размеры для разных символов
-        if (c == ' ') {
-            // Пробел - маленький размер
-            character.size = glm::ivec2(4, 4);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 4;
-        } else if (c >= 'A' && c <= 'Z') {
-            // Заглавные буквы - больший размер
-            character.size = glm::ivec2(12, 12);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 12;
-        } else if (c >= 'a' && c <= 'z') {
-            // Строчные буквы - средний размер
-            character.size = glm::ivec2(10, 10);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 10;
-        } else if (c >= '0' && c <= '9') {
-            // Цифры - средний размер
-            character.size = glm::ivec2(10, 10);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 10;
-        } else if (c >= 128) {
-            // Кириллица и другие символы - средний размер
-            character.size = glm::ivec2(10, 10);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 10;
-        } else {
-            // Остальные символы - стандартный размер
-            character.size = glm::ivec2(8, 8);
-            character.bearing = glm::ivec2(0, 0);
-            character.advance = 8;
-        }
+        // Сохранение информации о символе
+        Character character = {
+            texture,
+            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            static_cast<GLuint>(face->glyph->advance.x)
+        };
         
-        characters[c] = character;
+        characters.insert(std::pair<char, Character>(c, character));
     }
     
+    // Восстановление выравнивания байтов
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    
+    std::cout << "Loaded " << characters.size() << " characters from font: " << fontPath << std::endl;
     return true;
 }
 
@@ -571,14 +613,6 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
     if (!textShader) {
         std::cerr << "TextRenderer: textShader is null!" << std::endl;
         return;
-    }
-    
-    // Проверяем OpenGL ошибки перед рендерингом
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "TextRenderer: OpenGL error before rendering: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
-        // Очищаем ошибки
-        while (glGetError() != GL_NO_ERROR);
     }
     
     // Убеждаемся, что blending включен для текста
@@ -606,6 +640,12 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
 
     std::string::const_iterator c;
     for (c = text.begin(); c != text.end(); c++) {
+        // Проверяем, есть ли символ в нашей карте
+        if (characters.find(*c) == characters.end()) {
+            std::cerr << "Character not found: " << *c << std::endl;
+            continue;
+        }
+        
         Character ch = characters[*c];
 
         float xpos = x + ch.bearing.x * scale;
@@ -614,7 +654,6 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
         float w = ch.size.x * scale;
         float h = ch.size.y * scale;
 
-        // Для отладки - рисуем простые цветные прямоугольники
         // Обновляем VBO для каждого символа
         float vertices[6][4] = {
             { xpos,     ypos + h,   0.0f, 0.0f },
@@ -626,21 +665,19 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
             { xpos + w, ypos + h,   1.0f, 0.0f }
         };
 
-        // Не используем текстуры вообще
+        // Привязываем текстуру символа
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, ch.textureID);
+        
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        x += (ch.advance >> 6) * scale; // Сдвигаем курсор для следующего символа
+        // Сдвигаем курсор для следующего символа (advance в 1/64 пикселя)
+        x += (ch.advance >> 6) * scale;
     }
     glBindVertexArray(0);
-    
-    // Проверяем OpenGL ошибки после рендеринга
-    error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "TextRenderer: OpenGL error after rendering: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
-    }
 }
 
 void TextRenderer::RenderTextCentered(const std::string& text, float y, float scale, const glm::vec3& color) {

@@ -34,6 +34,8 @@ find_package(glm REQUIRED)
 # GLEW
 find_package(GLEW REQUIRED)
 
+find_package(Freetype REQUIRED)
+
 # nlohmann/json
 find_package(nlohmann_json REQUIRED)
 
@@ -114,6 +116,7 @@ target_link_libraries(${PROJECT_NAME}
     glfw
     glm::glm
     GLEW::GLEW
+    Freetype::Freetype
     nlohmann_json::nlohmann_json
 )
 

@@ -1197,10 +1197,10 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
          // Обновляем размеры окна в TextRenderer
          textRenderer->SetWindowSize(width_size, height_size);
          
-         // Отображаем тестовый текст с помощью новых методов TextRenderer
-         textRenderer->RenderSimpleTextString("Hello World!", 50, height_size - 50, 1.5f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderSimpleTextString("Cubatarium Test", 50, height_size - 100, 1.5f, glm::vec3(1.0f, 0.0f, 0.0f));
-         textRenderer->RenderSimpleTextString("OpenGL 3.3", 50, height_size - 150, 1.2f, glm::vec3(1.0f, 1.0f, 0.0f));
+         // Отображаем тестовый текст с помощью FreeType рендеринга
+         textRenderer->RenderText("Hello World!", 50, height_size - 50, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Cubatarium Test", 50, height_size - 100, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+         textRenderer->RenderText("OpenGL 3.3", 50, height_size - 150, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f));
          
          return;
      }

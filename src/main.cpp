@@ -41,9 +41,18 @@ int main(int argc, char *argv[])
 
         // Создаем TextRenderer для GeometryEngine
         auto text_renderer = std::make_shared<TextRenderer>();
-        if (!text_renderer->Initialize("", 16)) {
-            std::cerr << "Failed to initialize text renderer" << std::endl;
-            return -1;
+        
+        // Путь к системному шрифту (для Windows)
+        std::string fontPath = "C:/Windows/Fonts/arial.ttf";
+        
+        if (!text_renderer->Initialize(fontPath, 16)) {
+            std::cerr << "Failed to initialize text renderer with font: " << fontPath << std::endl;
+            // Попробуем альтернативный шрифт
+            fontPath = "C:/Windows/Fonts/calibri.ttf";
+            if (!text_renderer->Initialize(fontPath, 16)) {
+                std::cerr << "Failed to initialize text renderer with alternative font: " << fontPath << std::endl;
+                return -1;
+            }
         }
         text_renderer->SetWindowSize(1280, 720);
         std::cout << "TextRenderer initialized successfully" << std::endl;
