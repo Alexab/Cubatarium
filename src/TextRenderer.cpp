@@ -21,6 +21,17 @@ TextRenderer::~TextRenderer() {
     Shutdown();
 }
 
+bool TextRenderer::Initialize(int fontSize) {
+    // Find available font automatically
+    std::string fontPath = FindAvailableFont();
+    if (fontPath.empty()) {
+        std::cerr << "No available fonts found" << std::endl;
+        return false;
+    }
+    
+    return Initialize(fontPath, fontSize);
+}
+
 bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
     // Initialize FreeType
     if (!InitializeFreeType()) {
@@ -51,243 +62,12 @@ bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
 
     // Load characters using FreeType
     if (!LoadCharacters(fontPath, fontSize)) {
-        std::cerr << "Failed to load characters" << std::endl;
+        std::cerr << "Failed to load characters from: " << fontPath << std::endl;
         return false;
     }
 
+    std::cout << "TextRenderer initialized successfully with font: " << fontPath << std::endl;
     return true;
-}
-
-GLuint TextRenderer::CreateSimpleTextTexture()
-{
-    // Create a simple 16x16 pixel texture for the character
-// This will be a simple white square with a black border
-    unsigned char textureData[16 * 16] = {
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // Top row - black
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Second row - white with black edges
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Third row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fourth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fifth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Sixth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Seventh row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Eighth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Ninth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Tenth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Eleventh row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Twelfth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Thirteenth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fourteenth row - white with black edges
-0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fifteenth row - white with black edges
-0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   // Bottom row - black
-    };
-    
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 16, 16, 0, GL_RED, GL_UNSIGNED_BYTE, textureData);
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    return textureID;
-}
-
-GLuint TextRenderer::CreateCharacterTexture(char character)
-{
-    // Create 16x16 pixel texture for the character
-    unsigned char textureData[16 * 16];
-    
-    // Fill texture based on character
-for (int i = 0; i < 16 * 16; i++) {
-    textureData[i] = 0; // Default black
-}
-    
-    // Simple implementation for some characters
-    switch (character) {
-        case 'H':
-    // Letter H
-    for (int y = 2; y < 14; y++) {
-        textureData[y * 16 + 2] = 255; // Left vertical line
-        textureData[y * 16 + 13] = 255; // Right vertical line
-    }
-    for (int x = 4; x < 12; x++) {
-        textureData[8 * 16 + x] = 255; // Horizontal line
-    }
-    break;
-        case 'e':
-    // Letter e
-    for (int x = 4; x < 12; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[8 * 16 + x] = 255; // Middle line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-    }
-    break;
-        case 'l':
-    // Letter l
-    for (int y = 2; y < 14; y++) {
-        textureData[y * 16 + 4] = 255; // Vertical line
-    }
-    break;
-case 'o':
-    // Letter o
-    for (int x = 4; x < 12; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    break;
-        case 'W':
-    // Letter W
-    for (int y = 2; y < 14; y++) {
-        textureData[y * 16 + 2] = 255; // Left vertical line
-        textureData[y * 16 + 13] = 255; // Right vertical line
-    }
-    for (int i = 0; i < 6; i++) {
-        textureData[(10 - i) * 16 + (4 + i)] = 255; // Diagonal line
-        textureData[(10 - i) * 16 + (11 - i)] = 255; // Diagonal line
-    }
-    break;
-        case 'r':
-    // Letter r
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Vertical line
-    }
-    textureData[6 * 16 + 6] = 255;
-    textureData[6 * 16 + 8] = 255;
-    break;
-case 'd':
-    // Letter d
-    for (int y = 2; y < 14; y++) {
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    for (int x = 4; x < 11; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-    }
-    break;
-        case '!':
-    // Exclamation mark
-    for (int y = 2; y < 10; y++) {
-        textureData[y * 16 + 6] = 255; // Vertical line
-    }
-    textureData[12 * 16 + 6] = 255; // Dot
-    break;
-case 'C':
-    // Letter C
-    for (int x = 4; x < 12; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-    }
-    break;
-        case 'u':
-    // Letter u
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    for (int x = 4; x < 11; x++) {
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    break;
-case 'b':
-    // Letter b
-    for (int y = 2; y < 14; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-    }
-    for (int x = 4; x < 11; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[8 * 16 + x] = 255; // Middle line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 8; y++) {
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    for (int y = 10; y < 12; y++) {
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    break;
-        case 'a':
-    // Letter a
-    for (int x = 4; x < 11; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-        textureData[8 * 16 + x] = 255; // Middle line
-        textureData[12 * 16 + x] = 255; // Bottom line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 11] = 255; // Right vertical line
-    }
-    textureData[6 * 16 + 4] = 255; // Left dot
-    break;
-case 't':
-    // Letter t
-    for (int x = 4; x < 12; x++) {
-        textureData[4 * 16 + x] = 255; // Top line
-    }
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 6] = 255; // Vertical line
-    }
-    break;
-        case 'i':
-    // Letter i
-    textureData[4 * 16 + 6] = 255; // Dot
-    for (int y = 8; y < 14; y++) {
-        textureData[y * 16 + 6] = 255; // Vertical line
-    }
-    break;
-case 'm':
-    // Letter m
-    for (int y = 6; y < 12; y++) {
-        textureData[y * 16 + 4] = 255; // Left vertical line
-        textureData[y * 16 + 8] = 255; // Middle vertical line
-        textureData[y * 16 + 12] = 255; // Right vertical line
-    }
-    for (int x = 4; x < 8; x++) {
-        textureData[6 * 16 + x] = 255; // Top line
-    }
-    for (int x = 8; x < 12; x++) {
-        textureData[6 * 16 + x] = 255; // Top line
-    }
-    break;
-        case ' ':
-    // Space - empty texture
-    break;
-default:
-    // For unknown characters create a simple square
-    for (int y = 2; y < 14; y++) {
-        for (int x = 2; x < 14; x++) {
-            textureData[y * 16 + x] = 255;
-        }
-    }
-    break;
-    }
-    
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 16, 16, 0, GL_RED, GL_UNSIGNED_BYTE, textureData);
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    return textureID;
 }
 
 bool TextRenderer::InitializeFreeType() {
@@ -315,126 +95,6 @@ void TextRenderer::CleanupFreeType() {
         ft = nullptr;
         ftInitialized = false;
     }
-}
-
-void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y, float scale, const glm::vec3& color)
-{
-    if (!textShader) {
-        std::cerr << "Text shader is not valid" << std::endl;
-        return;
-    }
-    
-    // Save OpenGL state
-    GLboolean depthTestEnabled;
-    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-    GLboolean blendEnabled;
-    glGetBooleanv(GL_BLEND, &blendEnabled);
-    
-    // Disable depth test for 2D rendering
-    glDisable(GL_DEPTH_TEST);
-    
-    // Enable blending for transparency
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    // Use text shader
-    glUseProgram(textShader);
-    
-    // Set screen size
-    GLint screenSizeLocation = glGetUniformLocation(textShader, "screenSize");
-    if (screenSizeLocation != -1) {
-        glUniform2f(screenSizeLocation, windowWidth, windowHeight);
-    }
-    
-    // Set text color
-    GLint textColorLocation = glGetUniformLocation(textShader, "textColor");
-    if (textColorLocation != -1) {
-        glUniform3f(textColorLocation, color.x, color.y, color.z);
-    }
-    
-    // Character size in pixels
-    int charWidth = 12 * scale;
-    int charHeight = 16 * scale;
-    
-    // Create VAO and VBO for characters
-    GLuint charVAO, charVBO;
-    glGenVertexArrays(1, &charVAO);
-    glGenBuffers(1, &charVBO);
-    
-    glBindVertexArray(charVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, charVBO);
-    
-    // Configure attributes
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // Bind texture
-    glActiveTexture(GL_TEXTURE0);
-    GLint textTextureLocation = glGetUniformLocation(textShader, "textTexture");
-    if (textTextureLocation != -1) {
-        glUniform1i(textTextureLocation, 0);
-    }
-    
-    // Render each character as a simple rectangle
-    int currentX = x;
-    for (char c : text) {
-        // Create texture for specific character
-        GLuint charTexture = CreateCharacterTexture(c);
-        glBindTexture(GL_TEXTURE_2D, charTexture);
-        
-        // Create data for character rectangle
-float charRect[] = {
-    // positions (x, y)      // texture coordinates (u, v)
-    currentX, y,             0.0f, 0.0f,  // Top left point
-    currentX + charWidth, y, 1.0f, 0.0f,  // Top right point
-    currentX, y - charHeight, 0.0f, 1.0f, // Bottom left point
-    currentX + charWidth, y - charHeight, 1.0f, 1.0f  // Bottom right point
-};
-        
-        // Update VBO
-        glBufferData(GL_ARRAY_BUFFER, sizeof(charRect), charRect, GL_STATIC_DRAW);
-        
-        // Draw character
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        
-        // Delete character texture
-        glDeleteTextures(1, &charTexture);
-        
-        // Move position for next character (spaces are smaller)
-        if (c == ' ') {
-            currentX += charWidth / 2;
-        } else {
-            currentX += charWidth;
-        }
-    }
-    
-    // Clean up resources
-    glDeleteVertexArrays(1, &charVAO);
-    glDeleteBuffers(1, &charVBO);
-    
-    // Disable shader
-    glUseProgram(0);
-    
-    // Restore OpenGL state
-    if (depthTestEnabled) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
-    
-    if (blendEnabled) {
-        glEnable(GL_BLEND);
-    } else {
-        glDisable(GL_BLEND);
-    }
-}
-
-void TextRenderer::RenderTextWithCharacters(const std::string& text, int x, int y, float scale, const glm::vec3& color)
-{
-    // This method uses the same logic as RenderSimpleTextString
-    RenderSimpleTextString(text, x, y, scale, color);
 }
 
 void TextRenderer::Shutdown() {
@@ -703,6 +363,57 @@ glm::vec2 TextRenderer::GetTextSize(const std::string& text, float scale) {
 void TextRenderer::SetWindowSize(int width, int height) {
     windowWidth = width;
     windowHeight = height;
+}
+
+std::string TextRenderer::FindAvailableFont() {
+    // First try to find fonts in local fonts directory
+    std::vector<std::string> localFonts = ScanFontsDirectory();
+    for (const auto& font : localFonts) {
+        if (std::filesystem::exists(font)) {
+            return font;
+        }
+    }
+    
+    // Fallback to system font
+    return GetSystemFontPath();
+}
+
+std::vector<std::string> TextRenderer::ScanFontsDirectory() {
+    std::vector<std::string> fonts;
+    std::string fontsDir = "fonts";
+    
+    if (!std::filesystem::exists(fontsDir)) {
+        return fonts;
+    }
+    
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(fontsDir)) {
+            if (entry.is_regular_file()) {
+                std::string extension = entry.path().extension().string();
+                // Check for common font extensions
+                if (extension == ".ttf" || extension == ".TTF" || 
+                    extension == ".otf" || extension == ".OTF") {
+                    fonts.push_back(entry.path().string());
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error scanning fonts directory: " << e.what() << std::endl;
+    }
+    
+    return fonts;
+}
+
+std::string TextRenderer::GetSystemFontPath() {
+#ifdef _WIN32
+    return "C:/Windows/Fonts/arial.ttf";
+#elif defined(__linux__)
+    return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+#elif defined(__APPLE__)
+    return "/System/Library/Fonts/Arial.ttf";
+#else
+    return "fonts/arial.ttf"; // Default fallback
+#endif
 }
 
 } // namespace cutum

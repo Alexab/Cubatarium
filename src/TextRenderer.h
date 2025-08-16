@@ -2,6 +2,8 @@
 #define TEXTRENDERER_H
 
 #include <string>
+#include <vector>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <map>
@@ -24,6 +26,7 @@ public:
     ~TextRenderer();
 
     // Initialize text rendering system
+    bool Initialize(int fontSize = 16);
     bool Initialize(const std::string& fontPath, int fontSize);
     void Shutdown();
 
@@ -38,14 +41,6 @@ public:
     
     // Set window size
     void SetWindowSize(int width, int height);
-    
-    // New methods for bitmap text rendering
-    void RenderSimpleTextString(const std::string& text, int x, int y, float scale, const glm::vec3& color);
-    void RenderTextWithCharacters(const std::string& text, int x, int y, float scale, const glm::vec3& color);
-    
-    // Methods for creating character textures
-    GLuint CreateSimpleTextTexture();
-    GLuint CreateCharacterTexture(char character);
 
 private:
     GLuint textShader;
@@ -66,6 +61,11 @@ private:
     bool LoadCharacters(const std::string& fontPath, int fontSize);
     bool InitializeFreeType();
     void CleanupFreeType();
+    
+    // Font management methods
+    std::string FindAvailableFont();
+    std::vector<std::string> ScanFontsDirectory();
+    std::string GetSystemFontPath();
 };
 
 } // namespace cutum

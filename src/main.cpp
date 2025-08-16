@@ -42,20 +42,13 @@ int main(int argc, char *argv[])
         // Create TextRenderer for GeometryEngine
         auto text_renderer = std::make_shared<TextRenderer>();
         
-        // Path to system font (for Windows)
-        std::string fontPath = "C:/Windows/Fonts/arial.ttf";
-        
-        if (!text_renderer->Initialize(fontPath, 16)) {
-            std::cerr << "Failed to initialize text renderer with font: " << fontPath << std::endl;
-            // Try alternative font
-            fontPath = "C:/Windows/Fonts/calibri.ttf";
-            if (!text_renderer->Initialize(fontPath, 16)) {
-                std::cerr << "Failed to initialize text renderer with alternative font: " << fontPath << std::endl;
-                return -1;
-            }
+        // Initialize TextRenderer with automatic font detection
+        if (!text_renderer->Initialize(16)) {
+            std::cerr << "Failed to initialize text renderer" << std::endl;
+            return -1;
         }
+        
         text_renderer->SetWindowSize(1280, 720);
-        std::cout << "TextRenderer initialized successfully" << std::endl;
 
         auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance, text_renderer);
         
