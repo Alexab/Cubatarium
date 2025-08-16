@@ -21,8 +21,8 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
  , TextureBaseStorageInstance(texture_base_storage)
  , TextureCubeStorageInstance(texture_cube_storage)
  , textRenderer(text_renderer)
- , skyColor(0.5f, 0.7f, 1.0f, 1.0f) // Инициализируем цвет неба (голубой)
- , useGradientSky(false) // По умолчанию используем простой цвет
+ , skyColor(0.5f, 0.7f, 1.0f, 1.0f) // Initialize sky color (blue)
+, useGradientSky(false) // Use simple color by default
 {
 }
 
@@ -32,7 +32,7 @@ GeometryEngine::~GeometryEngine()
 
 bool GeometryEngine::InitEngine()
 {
- // Инициализируем ShaderManager
+     // Initialize ShaderManager
  shaderManager = std::make_shared<ShaderManager>();
  if (!shaderManager->Initialize()) {
      std::cerr << "Failed to initialize ShaderManager" << std::endl;
@@ -47,7 +47,7 @@ bool GeometryEngine::InitEngine()
 
 bool GeometryEngine::InitShaders()
 {
- // Создаем шейдеры через ShaderManager
+     // Create shaders through ShaderManager
  defaultShader = shaderManager->CreateShader("default", "shaders/vshader.glsl", "shaders/fshader.glsl");
  if (!defaultShader || !defaultShader->IsValid()) {
      std::cerr << "Failed to create default shader" << std::endl;
@@ -77,16 +77,16 @@ bool GeometryEngine::InitShaders()
 
 void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
- // Рендерим только объекты сцены
+     // Render only scene objects
  DrawCubeGeometry();
  
- // Рендерим перекрестие
+     // Render crosshair
  RenderCrosshair(width_size, height_size);
  
- // Рендерим простой текст
+     // Render simple text
  RenderSimpleText(width_size, height_size);
  
- // Отключаем отрисовку UI текста производительности
+     // Disable performance UI text rendering
      RenderPerformanceText(width_size, height_size, view_duration);
 }
 
@@ -101,120 +101,120 @@ void GeometryEngine::DrawCubeGeometry()
  }
  
  auto camera = WorldInstance->GetCurrentUserCamera();
- if (!camera) {
-     return;
- }
+if (!camera) {
+    return;
+}
+
+// Save OpenGL state
+GLboolean depthTestEnabled;
+glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+GLboolean blendEnabled;
+glGetBooleanv(GL_BLEND, &blendEnabled);
+GLboolean cullFaceEnabled;
+glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
  
- // Сохраняем состояние OpenGL
- GLboolean depthTestEnabled;
- glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
- GLboolean blendEnabled;
- glGetBooleanv(GL_BLEND, &blendEnabled);
- GLboolean cullFaceEnabled;
- glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
- 
- // Используем загруженный шейдер из ShaderManager
+ // Use loaded shader from ShaderManager
  if (!defaultShader || !defaultShader->IsValid()) {
      std::cerr << "Default shader is not valid" << std::endl;
      return;
  }
  
- // Получаем MVP матрицу
+ // Get MVP matrix
  glm::mat4 mvp = camera->GetMvpMatrix();
  
- // Получаем текстуры
+ // Get textures
  auto textures = TextureCubeStorageInstance->GetTextures();
  
  // Используем наш шейдер
  defaultShader->Use();
  defaultShader->SetMat4("mvp_matrix", mvp);
  
- // Рендерим каждый объект как текстурированный куб
+ // Render each object as a textured cube
  for (const auto& object : objects) {
      auto objectPos = object->GetPose();
      glm::vec3 position(objectPos[3][0], objectPos[3][1], objectPos[3][2]);
      
-     // Рендерим каждый куб в объекте
+     // Render each cube in the object
      for (size_t i = 0; i < object->GetCubes().size(); i++) {
          auto& cube = object->GetCubes()[i];
          size_t textureId = cube->GetTypeId();
          
-         // Проверяем, выделен ли этот куб
+         // Check if this cube is selected
          bool is_intersection_exists = WorldInstance->GetIsIntersectionExists();
          size_t intersecion_object_index = WorldInstance->GetIntersectionObjectIndex();
          size_t intersecion_cube_index = WorldInstance->GetIntersectionCubeIndex();
          
-         // Находим индекс объекта в векторе objects
+         // Find object index in the objects vector
          size_t object_index = std::find(objects.begin(), objects.end(), object) - objects.begin();
          
-         // Если этот куб выделен, используем текстуру выделения
+         // If this cube is selected, use selection texture
          if(is_intersection_exists && intersecion_object_index == object_index && intersecion_cube_index == i)
          {
              textureId = TextureCubeStorageInstance->GetTypeIdByName("selection");
          }
          
-         // Получаем текстуру
+         // Get texture
          GLuint texture = 0;
          if (textures.find(textureId) != textures.end()) {
              texture = textures.at(textureId).GetTextureId();
          } else {
-             continue; // Пропускаем куб без текстуры
+             continue; // Skip cube without texture
          }
          
-         // Создаем простой куб с правильными текстурными координатами для разных граней
-         float cube_shift = 1.0f/6.0f;
-         float vertices[] = {
-             // позиции                    // текстурные координаты (как в CubeGL)
-             // Грань 0 (NEAR) - координаты 0.0 - 1/6
+         // Create a simple cube with correct texture coordinates for different faces
+float cube_shift = 1.0f/6.0f;
+float vertices[] = {
+    // positions                   // texture coordinates (like in CubeGL)
+    // Face 0 (NEAR) - coordinates 0.0 - 1/6
              -0.5f, -0.5f,  0.5f,         0.0f, 0.0f,
               0.5f, -0.5f,  0.5f,         cube_shift*1.0f, 0.0f,
              -0.5f,  0.5f,  0.5f,         0.0f, 1.0f,
               0.5f,  0.5f,  0.5f,         cube_shift*1.0f, 1.0f,
              
-             // Грань 1 (RIGHT) - координаты 1/6 - 2/6
+             // Face 1 (RIGHT) - coordinates 1/6 - 2/6
               0.5f, -0.5f,  0.5f,         cube_shift*1.0f, 0.0f,
               0.5f, -0.5f, -0.5f,         cube_shift*2.0f, 0.0f,
               0.5f,  0.5f,  0.5f,         cube_shift*1.0f, 1.0f,
               0.5f,  0.5f, -0.5f,         cube_shift*2.0f, 1.0f,
                
-             // Грань 2 (FAR) - координаты 2/6 - 3/6
+             // Face 2 (FAR) - coordinates 2/6 - 3/6
               0.5f, -0.5f, -0.5f,         cube_shift*2.0f, 0.0f,
              -0.5f, -0.5f, -0.5f,         cube_shift*3.0f, 0.0f,
               0.5f,  0.5f, -0.5f,         cube_shift*2.0f, 1.0f,
              -0.5f,  0.5f, -0.5f,         cube_shift*3.0f, 1.0f,
                
-             // Грань 3 (LEFT) - координаты 3/6 - 4/6
+             // Face 3 (LEFT) - coordinates 3/6 - 4/6
              -0.5f, -0.5f, -0.5f,         cube_shift*3.0f, 0.0f,
              -0.5f, -0.5f,  0.5f,         cube_shift*4.0f, 0.0f,
              -0.5f,  0.5f, -0.5f,         cube_shift*3.0f, 1.0f,
              -0.5f,  0.5f,  0.5f,         cube_shift*4.0f, 1.0f,
                
-             // Грань 4 (TOP) - координаты 4/6 - 5/6
+             // Face 4 (TOP) - coordinates 4/6 - 5/6
              -0.5f,  0.5f,  0.5f,         cube_shift*4.0f, 0.0f,
               0.5f,  0.5f,  0.5f,         cube_shift*5.0f, 0.0f,
              -0.5f,  0.5f, -0.5f,         cube_shift*4.0f, 1.0f,
               0.5f,  0.5f, -0.5f,         cube_shift*5.0f, 1.0f,
                
-             // Грань 5 (BOTTOM) - координаты 5/6 - 1.0
+             // Face 5 (BOTTOM) - coordinates 5/6 - 1.0
              -0.5f, -0.5f, -0.5f,         cube_shift*5.0f, 0.0f,
               0.5f, -0.5f, -0.5f,         1.0f, 0.0f,
              -0.5f, -0.5f,  0.5f,         cube_shift*5.0f, 1.0f,
               0.5f, -0.5f,  0.5f,         1.0f, 1.0f
          };
          
-         // Индексы для рендеринга граней как треугольники
-         unsigned int indices[] = {
-             // Грань 0 (NEAR)
+         // Indices for rendering faces as triangles
+unsigned int indices[] = {
+    // Face 0 (NEAR)
              0, 1, 2, 2, 1, 3,
-             // Грань 1 (RIGHT)  
+             // Face 1 (RIGHT)  
              4, 5, 6, 6, 5, 7,
-             // Грань 2 (FAR)
+             // Face 2 (FAR)
              8, 9, 10, 10, 9, 11,
-             // Грань 3 (LEFT)
+             // Face 3 (LEFT)
              12, 13, 14, 14, 13, 15,
-             // Грань 4 (TOP)
+             // Face 4 (TOP)
              16, 17, 18, 18, 17, 19,
-             // Грань 5 (BOTTOM)
+             // Face 5 (BOTTOM)
              20, 21, 22, 22, 21, 23
          };
          
@@ -237,19 +237,19 @@ void GeometryEngine::DrawCubeGeometry()
          glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
          glEnableVertexAttribArray(1);
          
-         // Привязываем текстуру
+         // Bind texture
          glActiveTexture(GL_TEXTURE0);
          glBindTexture(GL_TEXTURE_2D, texture);
          defaultShader->SetInt("texture0", 0);
          
-         // Создаем матрицу модели для позиционирования куба
+         // Create model matrix for cube positioning
          glm::mat4 model = glm::mat4(1.0f);
          model = glm::translate(model, position);
          
-         // Поворачиваем сцену на 180 градусов вокруг оси Y
+         // Rotate scene 180 degrees around Y axis
          //model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
          
-         // Обновляем MVP матрицу для этого объекта
+         // Update MVP matrix for this object
          glm::mat4 objectMVP = camera->GetProjection() * camera->GetViewMatrix() * model;
          defaultShader->SetMat4("mvp_matrix", objectMVP);
          
@@ -257,7 +257,7 @@ void GeometryEngine::DrawCubeGeometry()
          glBindVertexArray(VAO);
          glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
          
-         // Отключаем атрибуты
+         // Disable attributes
          glDisableVertexAttribArray(0);
          glDisableVertexAttribArray(1);
          
@@ -330,10 +330,10 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
    
        auto& batch = batchMap[textureId];
     if (batch.textureID == 0) {
-        batch.textureID = textures.at(textureId).GetTextureId(); // Используем GLuint вместо QOpenGLTexture
+        batch.textureID = textures.at(textureId).GetTextureId(); // Use GLuint instead of QOpenGLTexture
     }
     
-         // Использовать единичную матрицу, так как кубы уже имеют правильные локальные координаты
+         // Use identity matrix since cubes already have correct local coordinates
      glm::mat4 modelMatrix = glm::mat4(1.0f);
      batch.modelMatrices.push_back(modelMatrix);
      batch.objects.push_back(object);
@@ -341,7 +341,7 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
   }
  }
 
- // Преобразовать map в vector
+ // Convert map to vector
  for (auto& pair : batchMap) {
      renderBatches.push_back(std::move(pair.second));
  }
@@ -367,13 +367,13 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  defaultShader->Use();
  defaultShader->SetInt("texture0", 0);
  
- // Здесь можно добавить instanced rendering для еще большей оптимизации
- // Пока используем простой batch-рендеринг
+ // Here we can add instanced rendering for even greater optimization
+// For now use simple batch rendering
  for (size_t i = 0; i < batch.modelMatrices.size(); ++i) {
-     // Использовать MVP матрицу напрямую, так как кубы уже имеют правильные координаты
+     // Use MVP matrix directly since cubes already have correct coordinates
      defaultShader->SetMat4("mvp_matrix", mvp_matrix);
      
-     // Найти куб для отрисовки
+     // Find cube for rendering
      auto& object = batch.objects[i];
      auto& cube = object->GetCubes()[batch.cubeIndices[i]];
      
@@ -385,40 +385,40 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
 
 void GeometryEngine::UpdateFrustumCulling(const glm::mat4& view_projection)
 {
- // Извлечение плоскостей frustum из матрицы view-projection
+ // Extract frustum planes from view-projection matrix
  glm::mat4 m = glm::transpose(view_projection);
  
- // Левая плоскость
+ // Left plane
  frustumPlanes[0].normal = glm::vec4(m[3][0] + m[0][0], m[3][1] + m[0][1], m[3][2] + m[0][2], m[3][3] + m[0][3]);
  frustumPlanes[0].distance = frustumPlanes[0].normal.w;
  frustumPlanes[0].normal.w = 0.0f;
  frustumPlanes[0].normal = glm::normalize(frustumPlanes[0].normal);
  
- // Правая плоскость
+ // Right plane
  frustumPlanes[1].normal = glm::vec4(m[3][0] - m[0][0], m[3][1] - m[0][1], m[3][2] - m[0][2], m[3][3] - m[0][3]);
  frustumPlanes[1].distance = frustumPlanes[1].normal.w;
  frustumPlanes[1].normal.w = 0.0f;
  frustumPlanes[1].normal = glm::normalize(frustumPlanes[1].normal);
  
- // Нижняя плоскость
+ // Bottom plane
  frustumPlanes[2].normal = glm::vec4(m[3][0] + m[1][0], m[3][1] + m[1][1], m[3][2] + m[1][2], m[3][3] + m[1][3]);
  frustumPlanes[2].distance = frustumPlanes[2].normal.w;
  frustumPlanes[2].normal.w = 0.0f;
  frustumPlanes[2].normal = glm::normalize(frustumPlanes[2].normal);
  
- // Верхняя плоскость
+ // Top plane
  frustumPlanes[3].normal = glm::vec4(m[3][0] - m[1][0], m[3][1] - m[1][1], m[3][2] - m[1][2], m[3][3] - m[1][3]);
  frustumPlanes[3].distance = frustumPlanes[3].normal.w;
  frustumPlanes[3].normal.w = 0.0f;
  frustumPlanes[3].normal = glm::normalize(frustumPlanes[3].normal);
  
- // Ближняя плоскость
+ // Near plane
  frustumPlanes[4].normal = glm::vec4(m[3][0] + m[2][0], m[3][1] + m[2][1], m[3][2] + m[2][2], m[3][3] + m[2][3]);
  frustumPlanes[4].distance = frustumPlanes[4].normal.w;
  frustumPlanes[4].normal.w = 0.0f;
  frustumPlanes[4].normal = glm::normalize(frustumPlanes[4].normal);
  
- // Дальняя плоскость
+ // Far plane
  frustumPlanes[5].normal = glm::vec4(m[3][0] - m[2][0], m[3][1] - m[2][1], m[3][2] - m[2][2], m[3][3] - m[2][3]);
  frustumPlanes[5].distance = frustumPlanes[5].normal.w;
  frustumPlanes[5].normal.w = 0.0f;
@@ -428,7 +428,7 @@ void GeometryEngine::UpdateFrustumCulling(const glm::mat4& view_projection)
 bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
 {
  glm::vec3 objectPos(object->GetPose()[0][3], object->GetPose()[1][3], object->GetPose()[2][3]);
- float radius = 1.0f; // Примерный радиус объекта
+ float radius = 1.0f; // Approximate object radius
  
  for (const auto& plane : frustumPlanes) {
      float distance = glm::dot(glm::vec3(plane.normal), objectPos) + plane.distance;
@@ -512,7 +512,7 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  // Enable back face culling
  glEnable(GL_CULL_FACE);
 
- // Добавляем отладочную информацию о состоянии OpenGL
+ // Add debug information about OpenGL state
  std::cout << "=== OpenGL State Debug ===" << std::endl;
  GLboolean depthTest;
  glGetBooleanv(GL_DEPTH_TEST, &depthTest);
@@ -532,21 +532,21 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  
  std::cout << "=== End OpenGL State Debug ===" << std::endl;
 
- // Очищаем буферы
+ // Clear buffers
  if(useGradientSky)
  {
-  // Для градиентного неба очищаем только буфер глубины
-  glClear(GL_DEPTH_BUFFER_BIT); // Возвращаем очистку буфера глубины
+  // For gradient sky clear only depth buffer
+glClear(GL_DEPTH_BUFFER_BIT); // Return depth buffer clearing
  }
  else
  {
-  // Для простого неба устанавливаем цвет и очищаем оба буфера
-     glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Возвращаем цвет неба
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Возвращаем очистку буферов
+  // For simple sky set color and clear both buffers
+glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Return sky color
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Return buffer clearing
  }
 
- // Включаем рендеринг неба
- // Отрисовываем градиентное небо ПОСЛЕ очистки буфера глубины
+ // Enable sky rendering
+// Render gradient sky AFTER clearing depth buffer
  if(useGradientSky)
  {
      std::cout << "Drawing gradient sky with color: (" << skyColor.x << ", " << skyColor.y << ", " << skyColor.z << ", " << skyColor.w << ")" << std::endl;
@@ -574,7 +574,7 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
  std::cout << "Objects to render:" << objects.size() << std::endl;
  std::cout << "Textures available:" << textures.size() << std::endl;
   
- // Оптимизированный рендеринг с batch-обработкой
+ // Optimized rendering with batch processing
  std::cout << "DrawCubeGeometry: Preparing render batches..." << std::endl;
  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
  std::cout << "Render batches prepared:" << renderBatches.size() << std::endl;
@@ -612,47 +612,47 @@ void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>
 
 void GeometryEngine::DrawSkyGradient()
 {
- // Используем простую версию, которая более надежна
+ // Use simple version which is more reliable
  DrawSkyGradientSimple();
 }
 
 void GeometryEngine::DrawSkyGradientSimple()
 {
- // Проверяем, что шейдер неба готов
+ // Check that sky shader is ready
  if (!skyShader->IsValid()) {
      std::cerr << "Sky shader is not linked!" << std::endl;
      return;
  }
  
- // Временно отключаем тест глубины для неба
+ // Temporarily disable depth test for sky
  glDisable(GL_DEPTH_TEST);
  
- // Используем шейдер неба
+ // Use sky shader
  skyShader->Use();
  
- // Устанавливаем единичную матрицу для неба
+ // Set identity matrix for sky
  glm::mat4 skyMatrix = glm::mat4(1.0f);
  skyShader->SetMat4("mvp_matrix", skyMatrix);
  
- // Передаем цвет неба в шейдер
+ // Pass sky color to shader
  skyShader->SetVec4("skyColor", skyColor);
  
- // Создаем простой прямоугольник для неба (полный экран)
- static const GLfloat skyVertices[] = {
-     // Позиции        // Текстурные координаты
+ // Create simple rectangle for sky (full screen)
+static const GLfloat skyVertices[] = {
+    // Positions      // Texture coordinates
      -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
       1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
       1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
      -1.0f,  1.0f, 0.0f,  0.0f, 1.0f
  };
  
- // Создаем временный VBO для отрисовки
+ // Create temporary VBO for rendering
  GLuint tempVBO;
  glGenBuffers(1, &tempVBO);
  glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
  glBufferData(GL_ARRAY_BUFFER, sizeof(skyVertices), skyVertices, GL_STATIC_DRAW);
  
- // Устанавливаем атрибуты
+ // Set attributes
  int vertexLocation = glGetAttribLocation(skyShader->GetProgramID(), "a_position");
  if (vertexLocation != -1) {
      glEnableVertexAttribArray(vertexLocation);
@@ -665,25 +665,25 @@ void GeometryEngine::DrawSkyGradientSimple()
      glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
  }
  
- // Отрисовываем небо как треугольники
+ // Render sky as triangles
  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
  
- // Проверяем ошибки OpenGL
+ // Check OpenGL errors
  GLenum error = glGetError();
  if (error != GL_NO_ERROR) {
      std::cerr << "OpenGL error after drawing sky: " << error << std::endl;
  }
  
- // Освобождаем ресурсы
+ // Free resources
  glBindBuffer(GL_ARRAY_BUFFER, 0);
  glDeleteBuffers(1, &tempVBO);
  skyShader->Unuse();
  
- // Включаем тест глубины обратно
+ // Enable depth test back
  glEnable(GL_DEPTH_TEST);
 }
 
-// Методы для управления цветом неба
+// Methods for sky color management
 void GeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
  skyColor = glm::vec4(r, g, b, a);
@@ -719,16 +719,16 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
     textRenderer->SetWindowSize(width_size, height_size);
     
     float scale = 0.7f;
-    glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Желтый цвет для производительности
+    glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Yellow color for performance
     
-    // Вычисляем FPS
+    // Calculate FPS
     double totalTime = DurationDrawSceneMks + WorldInstance->GetDurationDoMovementMks() + view_duration;
     double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
     
-    // Получаем количество объектов
+    // Get object count
     size_t objectCount = WorldInstance->GetObjects().size();
     
-    // Формируем строки с информацией о производительности
+    // Form performance information strings
     std::vector<std::string> performanceLines = {
         "Performance:",
         "FPS: " + std::to_string(fps).substr(0, 6),
@@ -738,15 +738,15 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
         "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
     };
     
-    // Отображаем текст в правом верхнем углу
+    // Display text in top right corner
     float y = height_size - 30.0f;
     for (const auto& line : performanceLines) {
-        // Вычисляем позицию для выравнивания по правому краю
+        // Calculate position for right alignment
         glm::vec2 textSize = textRenderer->GetTextSize(line, scale);
-        float x = width_size - textSize.x - 10.0f; // Отступ 10 пикселей от правого края
+        float x = width_size - textSize.x - 10.0f; // 10 pixel margin from right edge
         
         textRenderer->RenderText(line, x, y, scale, textColor);
-        y -= 18.0f; // Отступ между строками
+        y -= 18.0f; // Margin between lines
     }
 }
 
@@ -762,7 +762,7 @@ void GeometryEngine::RenderTestCube()
     GLboolean cullFaceEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
     
-    // Создаем простой шейдер для минимального теста
+    // Create simple shader for minimal test
     const char* vertexShaderSource = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
@@ -823,12 +823,12 @@ void GeometryEngine::RenderTestCube()
         std::cerr << "Shader program linking failed: " << infoLog << std::endl;
     }
     
-    // Создаем данные треугольника (в нормализованных координатах экрана)
+    // Create triangle data (in normalized screen coordinates)
     float vertices[] = {
         // позиции        // цвета
-        -0.8f, -0.8f, 0.0f,  1.0f, 0.0f, 0.0f,  // красный (больше и левее)
-         0.8f, -0.8f, 0.0f,  0.0f, 1.0f, 0.0f,  // зеленый (больше и правее)
-         0.0f,  0.8f, 0.0f,  0.0f, 0.0f, 1.0f   // синий (выше)
+        -0.8f, -0.8f, 0.0f,  1.0f, 0.0f, 0.0f,  // red (larger and to the left)
+         0.8f, -0.8f, 0.0f,  0.0f, 1.0f, 0.0f,  // green (larger and to the right)
+         0.0f,  0.8f, 0.0f,  0.0f, 0.0f, 1.0f   // blue (higher)
     };
     
     // Создаем VAO и VBO
@@ -903,14 +903,14 @@ void GeometryEngine::Render3DCubeWithPerspective()
     GLboolean cullFaceEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
     
-    // Получаем камеру
+    // Get camera
     auto camera = WorldInstance->GetCurrentUserCamera();
     if (!camera) {
         std::cout << "Render3DCubeWithPerspective: Camera is null!" << std::endl;
         return;
     }
     
-    // Создаем шейдер для 3D рендеринга
+    // Create shader for 3D rendering
     const char* vertexShaderSource = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
@@ -972,31 +972,31 @@ void GeometryEngine::Render3DCubeWithPerspective()
         std::cerr << "Shader program linking failed: " << infoLog << std::endl;
     }
     
-    // Создаем данные куба (в мировых координатах)
+    // Create cube data (in world coordinates)
     float vertices[] = {
         // позиции        // цвета
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  // красный
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  // зеленый
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // синий
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,  // желтый
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  // red
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  // green
+         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // blue
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,  // yellow
 
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,  // пурпурный
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,  // голубой
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,  // белый
-        -0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.5f   // серый
+        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,  // magenta
+         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,  // cyan
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,  // white
+        -0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.5f   // gray
     };
     
-    // Индексы для отрисовки граней куба
+    // Indices for drawing cube faces
     unsigned int indices[] = {
-        0, 1, 2, 2, 3, 0,   // передняя грань
-        1, 5, 6, 6, 2, 1,   // правая грань
-        5, 4, 7, 7, 6, 5,   // задняя грань
-        4, 0, 3, 3, 7, 4,   // левая грань
-        3, 2, 6, 6, 7, 3,   // верхняя грань
-        4, 5, 1, 1, 0, 4    // нижняя грань
+        0, 1, 2, 2, 3, 0,   // front face
+        1, 5, 6, 6, 2, 1,   // right face
+        5, 4, 7, 7, 6, 5,   // back face
+        4, 0, 3, 3, 7, 4,   // left face
+        3, 2, 6, 6, 7, 3,   // top face
+        4, 5, 1, 1, 0, 4    // bottom face
     };
     
-    // Создаем VAO, VBO и EBO
+    // Create VAO, VBO and EBO
     GLuint VAO, VBO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -1021,23 +1021,23 @@ void GeometryEngine::Render3DCubeWithPerspective()
     // Используем наш шейдер
     glUseProgram(shaderProgram);
     
-    // Создаем MVP матрицу
+    // Create MVP matrix
     glm::mat4 model = glm::mat4(1.0f);
-    // Размещаем куб в статической позиции перед камерой
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f)); // Фиксированная позиция перед камерой
-    model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Поворот на 45 градусов вокруг оси Y
+    // Place cube in static position in front of camera
+model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f)); // Fixed position in front of camera
+model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate 45 degrees around Y axis
     
     glm::mat4 view = camera->GetViewMatrix();
     glm::mat4 projection = camera->GetProjection();
     glm::mat4 mvp = projection * view * model;
     
-    // Устанавливаем MVP матрицу
+    // Set MVP matrix
     GLint mvpLocation = glGetUniformLocation(shaderProgram, "MVP");
     if (mvpLocation != -1) {
         glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
     }
     
-    // Отладочная информация
+    // Debug information
     auto cameraPos = camera->GetPosition();
     auto cameraFront = camera->GetFront();
     std::cout << "Render3DCubeWithPerspective: Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
@@ -1104,37 +1104,37 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     // Используем UI шейдер
     uiShader->Use();
     
-    // Устанавливаем размер экрана
+    // Set screen size
     uiShader->SetVec2("screenSize", glm::vec2(width_size, height_size));
     
-    // Устанавливаем желтый цвет для перекрестия
-    uiShader->SetVec3("color", glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
+    // Set yellow color for crosshair
+uiShader->SetVec3("color", glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
     
-    // Размеры перекрестия
-    int crosshairSize = 20; // Размер в пикселях
-    int lineThickness = 2;  // Толщина линий в пикселях
+    // Crosshair dimensions
+int crosshairSize = 20; // Size in pixels
+int lineThickness = 2;  // Line thickness in pixels
     
-    // Центр экрана
+    // Screen center
     int centerX = width_size / 2;
     int centerY = height_size / 2;
     
-    // Создаем данные для горизонтальной линии
+    // Create data for horizontal line
     float horizontalLine[] = {
-        centerX - crosshairSize, centerY - lineThickness/2,  // Левая точка
-        centerX + crosshairSize, centerY - lineThickness/2,  // Правая точка
-        centerX - crosshairSize, centerY + lineThickness/2,  // Левая точка (нижняя)
-        centerX + crosshairSize, centerY + lineThickness/2   // Правая точка (нижняя)
+        centerX - crosshairSize, centerY - lineThickness/2,  // Left point
+centerX + crosshairSize, centerY - lineThickness/2,  // Right point
+centerX - crosshairSize, centerY + lineThickness/2,  // Left point (bottom)
+centerX + crosshairSize, centerY + lineThickness/2   // Right point (bottom)
     };
     
-    // Создаем данные для вертикальной линии
+    // Create data for vertical line
     float verticalLine[] = {
-        centerX - lineThickness/2, centerY - crosshairSize,  // Верхняя точка
-        centerX + lineThickness/2, centerY - crosshairSize,  // Верхняя точка (правая)
-        centerX - lineThickness/2, centerY + crosshairSize,  // Нижняя точка
-        centerX + lineThickness/2, centerY + crosshairSize   // Нижняя точка (правая)
+        centerX - lineThickness/2, centerY - crosshairSize,  // Top point
+centerX + lineThickness/2, centerY - crosshairSize,  // Top point (right)
+centerX - lineThickness/2, centerY + crosshairSize,  // Bottom point
+centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
     };
     
-    // Создаем VAO и VBO для горизонтальной линии
+    // Create VAO and VBO for horizontal line
     GLuint horizontalVAO, horizontalVBO;
     glGenVertexArrays(1, &horizontalVAO);
     glGenBuffers(1, &horizontalVBO);
@@ -1146,10 +1146,10 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    // Рисуем горизонтальную линию
+    // Draw horizontal line
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     
-    // Создаем VAO и VBO для вертикальной линии
+    // Create VAO and VBO for vertical line
     GLuint verticalVAO, verticalVBO;
     glGenVertexArrays(1, &verticalVAO);
     glGenBuffers(1, &verticalVBO);
@@ -1161,7 +1161,7 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    // Рисуем вертикальную линию
+    // Draw vertical line
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     
     // Очищаем ресурсы
@@ -1189,16 +1189,16 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
  
   void GeometryEngine::RenderSimpleText(int width_size, int height_size)
  {
-     // Используем существующий TextRenderer если он доступен
+     // Use existing TextRenderer if available
      if (textRenderer) {
          // Обновляем размеры окна в TextRenderer
          textRenderer->SetWindowSize(width_size, height_size);
          
-         // Отображаем информацию о пользователе
+         // Display user information
          std::string currentUser = WorldInstance->GetCurrentUserName();
-         textRenderer->RenderText("User: " + currentUser, 20, 140, 0.8f, glm::vec3(0.0f, 1.0f, 1.0f)); // Голубой цвет
+         textRenderer->RenderText("User: " + currentUser, 20, 140, 0.8f, glm::vec3(0.0f, 1.0f, 1.0f)); // Cyan color
          
-         // Отображаем легенду с клавишами внизу экрана
+         // Display key legend at bottom of screen
          textRenderer->RenderText("WASD - Movement", 20, 120, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("Q/E - Up/Down", 20, 100, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("Space - Jump", 20, 80, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
@@ -1207,14 +1207,14 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
          textRenderer->RenderText("Delete - Remove block", 20, 20, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("F1-F8 - Sky colors", 20, 5, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          
-         // Отображаем информацию о мыши
-         textRenderer->RenderText("Right Mouse - Camera control", 20, -15, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
-         textRenderer->RenderText("Left Mouse - Add/Remove blocks", 20, -35, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Желтый цвет
+         // Display mouse information
+         textRenderer->RenderText("Right Mouse - Camera control", 20, -15, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
+textRenderer->RenderText("Left Mouse - Add/Remove blocks", 20, -35, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
          
          return;
      }
      
-     // Fallback: если TextRenderer недоступен, выводим сообщение об ошибке
+     // Fallback: if TextRenderer is unavailable, output error message
      std::cerr << "TextRenderer is not available" << std::endl;
  }
  

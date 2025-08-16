@@ -27,18 +27,18 @@ public:
     Cube(const Cube &copy);
     Cube& operator = (const Cube &copy);
     
-    // Заменяем QMatrix4x4 на glm::mat4
+    // Replace QMatrix4x4 with glm::mat4
     virtual void Init(const glm::mat4& initial_pose, float size=1.0);
     virtual void SetObjectPose(const glm::mat4 &pose);
     virtual bool CheckCollision(Cube &cube);
     
-    // Заменяем QVector3D на glm::vec3
+    // Replace QVector3D with glm::vec3
     virtual bool CheckCollision(const glm::vec3& position, float size=1.0);
 
     static bool CheckCollision(const glm::vec3& position1, float size1, 
                               const glm::vec3& position2, float size2);
 
-    // Заменяем QVector3D на glm::vec3 в методах пересечения
+    // Replace QVector3D with glm::vec3 in intersection methods
     bool IsIntersectionCube(const glm::vec3& originRay, const glm::vec3& dirRay, 
                            float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const;
     bool IsIntersectionCube(const glm::vec3& originRay, const glm::vec3& dirRay, 
@@ -47,7 +47,7 @@ public:
     virtual bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, 
                                      std::map<float, std::tuple<int, glm::vec3, glm::vec3>> &intersection_results) const;
 
-    // Заменяем возвращаемые типы
+    // Replace return types
     const glm::mat4& GetObjectPose() const;
     const glm::mat4& GetInitialPose() const;
     glm::vec3 GetCenterPosition() const;
@@ -63,7 +63,7 @@ protected:
     virtual void UpdateVertices()=0;
 
 protected:
-    // Заменяем Qt типы на GLM
+    // Replace Qt types with GLM
     glm::mat4 ObjectPose;
     glm::mat4 InitialPose;
     float Size;

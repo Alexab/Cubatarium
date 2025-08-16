@@ -135,12 +135,12 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
  TextureCube result(cube_type_name, cube_type_id, texture_names);
  int num_texture_frames = int(result.GetNumTextureFrames());
  
- // Создаем OpenGL текстуру
+     // Create OpenGL texture
  GLuint textureId;
  glGenTextures(1, &textureId);
  glBindTexture(GL_TEXTURE_2D, textureId);
  
- // Загружаем первую текстуру для получения размеров
+     // Load first texture to get dimensions
  std::string first_texture_path = base_texture_descriptions.at(texture_names[0]).GetFileName();
  int width, height, channels;
  unsigned char* data = stbi_load(first_texture_path.c_str(), &width, &height, &channels, 4);
@@ -149,12 +149,12 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
      return result;
  }
  
- // Создаем буфер для объединенной текстуры
+     // Create buffer for combined texture
  int total_width = width * 6;
  int total_height = height * num_texture_frames;
  std::vector<unsigned char> combined_data(total_width * total_height * 4);
  
- // Загружаем и объединяем все текстуры
+     // Load and combine all textures
  size_t k = 0;
  for(size_t j = 0; j < num_texture_frames; j++)
  {
@@ -165,7 +165,7 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
        int tex_width, tex_height, tex_channels;
        unsigned char* tex_data = stbi_load(texture_path.c_str(), &tex_width, &tex_height, &tex_channels, 4);
        if (tex_data) {
-           // Копируем данные текстуры в нужную позицию
+           // Copy texture data to the required position
            for (int y = 0; y < height; y++) {
                for (int x = 0; x < width; x++) {
                    int src_idx = (y * width + x) * 4;
@@ -183,10 +183,10 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
   }
  }
  
- // Загружаем объединенную текстуру в OpenGL
+     // Load combined texture into OpenGL
  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, total_width, total_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, combined_data.data());
  
- // Устанавливаем параметры текстуры
+     // Set texture parameters
  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

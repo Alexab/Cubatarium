@@ -10,7 +10,7 @@
 
 namespace cutum {
 
-// Пространственное разбиение для оптимизации поиска
+// Spatial partitioning for search optimization
 class OctreeNode {
 public:
     OctreeNode(const glm::vec3& center, float size);

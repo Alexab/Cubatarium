@@ -5,8 +5,8 @@
 #include <vector>
 #include <map>
 #include <memory>
-// GLEW будет включен в .cpp файле после инициализации GLFW
-// Forward declaration для OpenGL типов
+// GLEW will be included in .cpp file after GLFW initialization
+// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 #include "TextureBase.h"
 //#include <QOpenGLTexture>

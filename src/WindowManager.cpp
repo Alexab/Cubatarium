@@ -31,13 +31,13 @@ WindowManager::~WindowManager() {
 }
 
 bool WindowManager::Initialize(int width, int height, const char* title) {
-    // Инициализация GLFW
+    // GLFW initialization
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return false;
     }
 
-    // Настройка GLFW
+    // GLFW configuration
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -47,7 +47,7 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    // Создание окна
+    // Window creation
     window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -58,10 +58,10 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
     windowWidth = width;
     windowHeight = height;
 
-    // Создание контекста OpenGL
+    // OpenGL context creation
     glfwMakeContextCurrent(window);
 
-    // Инициализация GLEW (должна быть после создания контекста)
+    // GLEW initialization (must be after context creation)
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
         return false;
@@ -72,12 +72,12 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
 
     inputManager = std::make_shared<InputManager>();
     
-    // TextRenderer будет установлен позже через SetTextRenderer
+    // TextRenderer will be set later via SetTextRenderer
     
     // Настройка callbacks
     SetupCallbacks();
 
-    // Создание менеджера ввода
+    // Input manager creation
     inputManager->Initialize(window);
 
     isInitialized = true;
@@ -85,26 +85,26 @@ bool WindowManager::Initialize(int width, int height, const char* title) {
 }
 
 void WindowManager::InitializeOpenGL() {
-    // Включение тестирования глубины
+    // Enable depth testing
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    // Включение MSAA
+    // Enable MSAA
     glEnable(GL_MULTISAMPLE);
 
-    // Включение смешивания для прозрачности
+    // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Установка цвета очистки (небо)
+    // Set clear color (sky)
     glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
 
-    // Настройка viewport
+    // Viewport configuration
     glViewport(0, 0, windowWidth, windowHeight);
 }
 
 void WindowManager::SetupCallbacks() {
-    // Установка callback функций
+    // Set callback functions
     glfwSetFramebufferSizeCallback(window, InputManager::GLFWFramebufferSizeCallback);
     glfwSetKeyCallback(window, InputManager::GLFWKeyCallback);
     glfwSetMouseButtonCallback(window, InputManager::GLFWMouseButtonCallback);
@@ -112,7 +112,7 @@ void WindowManager::SetupCallbacks() {
     glfwSetScrollCallback(window, InputManager::GLFWScrollCallback);
     glfwSetErrorCallback(ErrorCallback);
 
-    // Настройка callbacks для InputManager
+    // Configure callbacks for InputManager
     inputManager->SetKeyCallback([this](KeyCode key, KeyState state, int mods) {
         HandleKeyEvent(key, state, mods);
     });
@@ -139,21 +139,21 @@ void WindowManager::Run() {
     isRunning = true;
 
     while (!glfwWindowShouldClose(window) && isRunning) {
-        // Обновление времени
+        // Time update
         auto currentTime = std::chrono::high_resolution_clock::now();
         deltaTime = std::chrono::duration<double>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
 
-        // Обработка ввода
+        // Input processing
         ProcessInput();
 
-        // Обновление логики
+        // Logic update
         Update();
 
-        // Рендеринг
+        // Rendering
         Render();
 
-        // Обмен буферов и обработка событий
+        // Buffer swap and event processing
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -162,11 +162,11 @@ void WindowManager::Run() {
 void WindowManager::ProcessInput() {
     inputManager->Update();
 
-    // Обработка клавиш для управления камерой
+    // Camera control key processing
     if (worldInstance) {
         auto camera = worldInstance->GetCurrentUserCamera();
         if (camera) {
-            // WASD движение
+            // WASD movement
             if (inputManager->IsKeyPressed(KeyCode::Key_W)) {
                 camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W), true);
             }
@@ -185,7 +185,7 @@ void WindowManager::ProcessInput() {
             if (inputManager->IsKeyPressed(KeyCode::Key_Shift)) {
                 camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Shift), true);
             }
-            // Q и E для движения вверх-вниз
+            // Q and E for up-down movement
             if (inputManager->IsKeyPressed(KeyCode::Key_Q)) {
                 camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Q), true);
             }
@@ -203,7 +203,7 @@ void WindowManager::Update() {
 }
 
 void WindowManager::Render() {
-    // Очистка буферов
+    // Buffer clearing
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (geometries && views) {
@@ -211,7 +211,7 @@ void WindowManager::Render() {
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
     
-    // Отключаем отображение UI поверх 3D сцены
+    // Disable UI display over 3D scene
     // RenderUI();
 }
 
@@ -220,33 +220,33 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
 
     bool pressed = (state == KeyState::Pressed);
     
-    // Обновление состояния клавиш в камере
+    // Update key states in camera
     worldInstance->GetCurrentUserCamera()->UpdateKeyStatus(static_cast<int>(key), pressed);
 
-    // Обработка специальных клавиш
+    // Special key processing
     if (pressed) {
         if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
             int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
             worldInstance->GetCurrentUser()->SetActiveObjectTypeNameByIndex(static_cast<size_t>(index));
         }
         else if (key == KeyCode::Key_F12) {
-            // Сброс мира (упрощенная версия без диалога)
+            // World reset (simplified version without dialog)
             worldInstance->Create(worldInstance->GetWorldName());
         }
         else if (key == KeyCode::Key_Delete) {
             worldInstance->DelObjectByView();
         }
         else if (key == KeyCode::Key_F1) {
-            SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Голубое небо
+            SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Blue sky
         }
         else if (key == KeyCode::Key_F2) {
-            SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f); // Оранжевое небо
+            SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f); // Orange sky
         }
         else if (key == KeyCode::Key_F3) {
-            SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f); // Темно-синее небо
+            SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f); // Dark blue sky
         }
         else if (key == KeyCode::Key_F4) {
-            SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Серое небо
+            SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Gray sky
         }
         else if (key == KeyCode::Key_F5) {
             SetGradientSky(!IsGradientSky());
@@ -357,21 +357,21 @@ void WindowManager::RenderUI() {
     
     std::cout << "WindowManager: Rendering UI..." << std::endl;
     
-    // Сохраняем текущее состояние OpenGL
+    // Save current OpenGL state
     GLboolean depthTestEnabled;
     glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
     GLboolean blendEnabled;
     glGetBooleanv(GL_BLEND, &blendEnabled);
     
-    // Настройка OpenGL для 2D рендеринга
+    // Configure OpenGL for 2D rendering
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // Отображение подсказок
+    // Display hints
     RenderHelpText();
     
-    // Восстановление состояния OpenGL
+    // Restore OpenGL state
     if (depthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
     } else {
@@ -388,11 +388,11 @@ void WindowManager::RenderUI() {
 void WindowManager::RenderHelpText() {
     if (!textRenderer) return;
     
-    float y = windowHeight - 30.0f; // Отступ от верха экрана
+    float y = windowHeight - 30.0f; // Margin from top of screen
     float scale = 1.0f;
-    glm::vec3 textColor(1.0f, 1.0f, 1.0f); // Белый цвет
+    glm::vec3 textColor(1.0f, 1.0f, 1.0f); // White color
     
-    // Основные подсказки по управлению на английском
+    // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space/Shift - Up/Down, Mouse - Camera rotation",
         "LMB - Add block, RMB - Remove block, 0-9 - Block selection",
@@ -401,7 +401,7 @@ void WindowManager::RenderHelpText() {
     
     for (const auto& line : helpLines) {
         textRenderer->RenderText(line, 10.0f, y, scale, textColor);
-        y -= 25.0f; // Отступ между строками
+        y -= 25.0f; // Margin between lines
     }
 }
 
@@ -428,7 +428,7 @@ bool WindowManager::ShouldClose() const {
     return glfwWindowShouldClose(window);
 }
 
-// Методы для управления цветом неба
+// Methods for sky color management
 void WindowManager::SetSkyColor(float r, float g, float b, float a) {
     skyColor = glm::vec4(r, g, b, a);
     glClearColor(r, g, b, a);
@@ -460,7 +460,7 @@ bool WindowManager::IsGradientSky() const {
     return useGradientSky;
 }
 
-// GLFW callback функции
+// GLFW callback functions
 void WindowManager::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
     InputManager::GLFWFramebufferSizeCallback(window, width, height);
 }

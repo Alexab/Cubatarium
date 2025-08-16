@@ -33,30 +33,30 @@ bool ShaderProgram::CreateFromFiles(const std::string& vertexPath, const std::st
 bool ShaderProgram::CreateFromStrings(const std::string& vertexSource, const std::string& fragmentSource) {
     GLuint vertexShader, fragmentShader;
     
-    // Компиляция vertex shader
+    // Vertex shader compilation
     if (!CompileShader(vertexShader, GL_VERTEX_SHADER, vertexSource)) {
         return false;
     }
     
-    // Компиляция fragment shader
+    // Fragment shader compilation
     if (!CompileShader(fragmentShader, GL_FRAGMENT_SHADER, fragmentSource)) {
         glDeleteShader(vertexShader);
         return false;
     }
     
-    // Создание программы
+    // Program creation
     programID = glCreateProgram();
     glAttachShader(programID, vertexShader);
     glAttachShader(programID, fragmentShader);
     
-    // Линковка программы
+    // Program linking
     if (!LinkProgram()) {
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
         return false;
     }
     
-    // Удаление шейдеров после линковки
+    // Delete shaders after linking
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     
@@ -186,7 +186,7 @@ std::string ShaderProgram::ReadFile(const std::string& filepath) {
     return buffer.str();
 }
 
-// ShaderManager реализация
+// ShaderManager implementation
 ShaderManager::ShaderManager() {
 }
 
@@ -258,13 +258,13 @@ std::shared_ptr<ShaderProgram> ShaderManager::GetTextureShader() {
 }
 
 void ShaderManager::CreateDefaultShaders() {
-    // Создание шейдера по умолчанию
+    // Create default shader
     CreateShaderFromStrings("default", GetDefaultVertexShader(), GetDefaultFragmentShader());
     
-    // Создание шейдера для неба
+    // Create sky shader
     CreateShaderFromStrings("sky", GetSkyVertexShader(), GetSkyFragmentShader());
     
-    // Создание шейдера для текстур
+    // Create texture shader
     CreateShaderFromStrings("texture", GetTextureVertexShader(), GetTextureFragmentShader());
 }
 
@@ -340,7 +340,7 @@ uniform bool useGradient;
 void main()
 {
     if (useGradient) {
-        // Простой градиент от верха к низу
+        // Simple gradient from top to bottom
         float gradient = 1.0 - TexCoord.y;
         vec3 gradientColor = mix(skyColor.rgb * 0.5, skyColor.rgb, gradient);
         FragColor = vec4(gradientColor, 1.0);

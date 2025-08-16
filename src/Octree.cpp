@@ -17,7 +17,7 @@ void OctreeNode::Insert(std::shared_ptr<Object> object) {
             Subdivide();
         }
     } else {
-        // Найти подходящий дочерний узел
+        // Find suitable child node
         glm::vec3 objectPos(object->GetPose()[3][0], object->GetPose()[3][1], object->GetPose()[3][2]);
         for (auto& child : children) {
             if (child && child->Contains(objectPos)) {
@@ -67,11 +67,11 @@ void OctreeNode::Query(const glm::vec3& position, float radius, std::vector<std:
 }
 
 void OctreeNode::QueryRay(const glm::vec3& origin, const glm::vec3& direction, std::vector<std::shared_ptr<Object>>& result) const {
-    // Простая проверка пересечения луча с bounding box узла
+    // Simple ray-bounding box intersection check
     glm::vec3 min = center - glm::vec3(size/2, size/2, size/2);
     glm::vec3 max = center + glm::vec3(size/2, size/2, size/2);
     
-    // Простая проверка пересечения луча с AABB
+    // Simple ray-AABB intersection check
     float t1 = (min.x - origin.x) / direction.x;
     float t2 = (max.x - origin.x) / direction.x;
     float t3 = (min.y - origin.y) / direction.y;
@@ -116,7 +116,7 @@ void OctreeNode::Subdivide() {
     float halfSize = size / 2.0f;
     float quarterSize = size / 4.0f;
     
-    // Создать 8 дочерних узлов
+    // Create 8 child nodes
     children[0] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize, -quarterSize, -quarterSize), halfSize);
     children[1] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize, -quarterSize, -quarterSize), halfSize);
     children[2] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize, -quarterSize,  quarterSize), halfSize);
@@ -126,7 +126,7 @@ void OctreeNode::Subdivide() {
     children[6] = std::make_unique<OctreeNode>(center + glm::vec3(-quarterSize,  quarterSize,  quarterSize), halfSize);
     children[7] = std::make_unique<OctreeNode>(center + glm::vec3( quarterSize,  quarterSize,  quarterSize), halfSize);
     
-    // Перераспределить объекты по дочерним узлам
+    // Redistribute objects to child nodes
     for (const auto& obj : objects) {
         glm::vec3 objPos(obj->GetPose()[3][0], obj->GetPose()[3][1], obj->GetPose()[3][2]);
         for (auto& child : children) {
@@ -137,7 +137,7 @@ void OctreeNode::Subdivide() {
         }
     }
     
-    // Очистить список объектов в текущем узле
+    // Clear object list in current node
     objects.clear();
 }
 

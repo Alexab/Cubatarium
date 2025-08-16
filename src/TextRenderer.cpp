@@ -22,23 +22,23 @@ TextRenderer::~TextRenderer() {
 }
 
 bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
-    // Инициализация FreeType
+    // Initialize FreeType
     if (!InitializeFreeType()) {
         std::cerr << "Failed to initialize FreeType" << std::endl;
         return false;
     }
 
-    // Создание шейдера
+    // Create shader
     if (!CreateShader()) {
         std::cerr << "Failed to create text shader" << std::endl;
         return false;
     }
 
-    // Настройка OpenGL для отображения текста
+    // Configure OpenGL for text rendering
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Создание VAO и VBO для отображения символов
+    // Create VAO and VBO for character rendering
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
@@ -49,7 +49,7 @@ bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    // Загрузка символов с помощью FreeType
+    // Load characters using FreeType
     if (!LoadCharacters(fontPath, fontSize)) {
         std::cerr << "Failed to load characters" << std::endl;
         return false;
@@ -60,25 +60,25 @@ bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
 
 GLuint TextRenderer::CreateSimpleTextTexture()
 {
-    // Создаем простую текстуру 16x16 пикселей для символа
-    // Это будет простой белый квадрат с черной рамкой
+    // Create a simple 16x16 pixel texture for the character
+// This will be a simple white square with a black border
     unsigned char textureData[16 * 16] = {
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // Верхняя строка - черная
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Вторая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Третья строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Четвертая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Пятая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Шестая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Седьмая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Восьмая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Девятая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Десятая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Одиннадцатая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Двенадцатая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Тринадцатая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Четырнадцатая строка - белая с черными краями
-        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Пятнадцатая строка - белая с черными краями
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   // Нижняя строка - черная
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // Top row - black
+        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Second row - white with black edges
+        0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Third row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fourth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fifth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Sixth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Seventh row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Eighth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Ninth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Tenth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Eleventh row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Twelfth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Thirteenth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fourteenth row - white with black edges
+0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0,  // Fifteenth row - white with black edges
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   // Bottom row - black
     };
     
     GLuint textureID;
@@ -97,183 +97,183 @@ GLuint TextRenderer::CreateSimpleTextTexture()
 
 GLuint TextRenderer::CreateCharacterTexture(char character)
 {
-    // Создаем текстуру 16x16 пикселей для символа
+    // Create 16x16 pixel texture for the character
     unsigned char textureData[16 * 16];
     
-    // Заполняем текстуру в зависимости от символа
-    for (int i = 0; i < 16 * 16; i++) {
-        textureData[i] = 0; // По умолчанию черный
-    }
+    // Fill texture based on character
+for (int i = 0; i < 16 * 16; i++) {
+    textureData[i] = 0; // Default black
+}
     
-    // Простая реализация для некоторых символов
+    // Simple implementation for some characters
     switch (character) {
         case 'H':
-            // Буква H
-            for (int y = 2; y < 14; y++) {
-                textureData[y * 16 + 2] = 255; // Левая вертикальная линия
-                textureData[y * 16 + 13] = 255; // Правая вертикальная линия
-            }
-            for (int x = 4; x < 12; x++) {
-                textureData[8 * 16 + x] = 255; // Горизонтальная линия
-            }
-            break;
+    // Letter H
+    for (int y = 2; y < 14; y++) {
+        textureData[y * 16 + 2] = 255; // Left vertical line
+        textureData[y * 16 + 13] = 255; // Right vertical line
+    }
+    for (int x = 4; x < 12; x++) {
+        textureData[8 * 16 + x] = 255; // Horizontal line
+    }
+    break;
         case 'e':
-            // Буква e
-            for (int x = 4; x < 12; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[8 * 16 + x] = 255; // Средняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-            }
-            break;
+    // Letter e
+    for (int x = 4; x < 12; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[8 * 16 + x] = 255; // Middle line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+    }
+    break;
         case 'l':
-            // Буква l
-            for (int y = 2; y < 14; y++) {
-                textureData[y * 16 + 4] = 255; // Вертикальная линия
-            }
-            break;
-        case 'o':
-            // Буква o
-            for (int x = 4; x < 12; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            break;
+    // Letter l
+    for (int y = 2; y < 14; y++) {
+        textureData[y * 16 + 4] = 255; // Vertical line
+    }
+    break;
+case 'o':
+    // Letter o
+    for (int x = 4; x < 12; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    break;
         case 'W':
-            // Буква W
-            for (int y = 2; y < 14; y++) {
-                textureData[y * 16 + 2] = 255; // Левая вертикальная линия
-                textureData[y * 16 + 13] = 255; // Правая вертикальная линия
-            }
-            for (int i = 0; i < 6; i++) {
-                textureData[(10 - i) * 16 + (4 + i)] = 255; // Диагональная линия
-                textureData[(10 - i) * 16 + (11 - i)] = 255; // Диагональная линия
-            }
-            break;
+    // Letter W
+    for (int y = 2; y < 14; y++) {
+        textureData[y * 16 + 2] = 255; // Left vertical line
+        textureData[y * 16 + 13] = 255; // Right vertical line
+    }
+    for (int i = 0; i < 6; i++) {
+        textureData[(10 - i) * 16 + (4 + i)] = 255; // Diagonal line
+        textureData[(10 - i) * 16 + (11 - i)] = 255; // Diagonal line
+    }
+    break;
         case 'r':
-            // Буква r
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Вертикальная линия
-            }
-            textureData[6 * 16 + 6] = 255;
-            textureData[6 * 16 + 8] = 255;
-            break;
-        case 'd':
-            // Буква d
-            for (int y = 2; y < 14; y++) {
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            for (int x = 4; x < 11; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-            }
-            break;
+    // Letter r
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Vertical line
+    }
+    textureData[6 * 16 + 6] = 255;
+    textureData[6 * 16 + 8] = 255;
+    break;
+case 'd':
+    // Letter d
+    for (int y = 2; y < 14; y++) {
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    for (int x = 4; x < 11; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+    }
+    break;
         case '!':
-            // Восклицательный знак
-            for (int y = 2; y < 10; y++) {
-                textureData[y * 16 + 6] = 255; // Вертикальная линия
-            }
-            textureData[12 * 16 + 6] = 255; // Точка
-            break;
-        case 'C':
-            // Буква C
-            for (int x = 4; x < 12; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-            }
-            break;
+    // Exclamation mark
+    for (int y = 2; y < 10; y++) {
+        textureData[y * 16 + 6] = 255; // Vertical line
+    }
+    textureData[12 * 16 + 6] = 255; // Dot
+    break;
+case 'C':
+    // Letter C
+    for (int x = 4; x < 12; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+    }
+    break;
         case 'u':
-            // Буква u
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            for (int x = 4; x < 11; x++) {
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            break;
-        case 'b':
-            // Буква b
-            for (int y = 2; y < 14; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-            }
-            for (int x = 4; x < 11; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[8 * 16 + x] = 255; // Средняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 8; y++) {
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            for (int y = 10; y < 12; y++) {
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            break;
+    // Letter u
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    for (int x = 4; x < 11; x++) {
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    break;
+case 'b':
+    // Letter b
+    for (int y = 2; y < 14; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+    }
+    for (int x = 4; x < 11; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[8 * 16 + x] = 255; // Middle line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 8; y++) {
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    for (int y = 10; y < 12; y++) {
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    break;
         case 'a':
-            // Буква a
-            for (int x = 4; x < 11; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-                textureData[8 * 16 + x] = 255; // Средняя линия
-                textureData[12 * 16 + x] = 255; // Нижняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 11] = 255; // Правая вертикальная линия
-            }
-            textureData[6 * 16 + 4] = 255; // Левая точка
-            break;
-        case 't':
-            // Буква t
-            for (int x = 4; x < 12; x++) {
-                textureData[4 * 16 + x] = 255; // Верхняя линия
-            }
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 6] = 255; // Вертикальная линия
-            }
-            break;
+    // Letter a
+    for (int x = 4; x < 11; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+        textureData[8 * 16 + x] = 255; // Middle line
+        textureData[12 * 16 + x] = 255; // Bottom line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 11] = 255; // Right vertical line
+    }
+    textureData[6 * 16 + 4] = 255; // Left dot
+    break;
+case 't':
+    // Letter t
+    for (int x = 4; x < 12; x++) {
+        textureData[4 * 16 + x] = 255; // Top line
+    }
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 6] = 255; // Vertical line
+    }
+    break;
         case 'i':
-            // Буква i
-            textureData[4 * 16 + 6] = 255; // Точка
-            for (int y = 8; y < 14; y++) {
-                textureData[y * 16 + 6] = 255; // Вертикальная линия
-            }
-            break;
-        case 'm':
-            // Буква m
-            for (int y = 6; y < 12; y++) {
-                textureData[y * 16 + 4] = 255; // Левая вертикальная линия
-                textureData[y * 16 + 8] = 255; // Средняя вертикальная линия
-                textureData[y * 16 + 12] = 255; // Правая вертикальная линия
-            }
-            for (int x = 4; x < 8; x++) {
-                textureData[6 * 16 + x] = 255; // Верхняя линия
-            }
-            for (int x = 8; x < 12; x++) {
-                textureData[6 * 16 + x] = 255; // Верхняя линия
-            }
-            break;
+    // Letter i
+    textureData[4 * 16 + 6] = 255; // Dot
+    for (int y = 8; y < 14; y++) {
+        textureData[y * 16 + 6] = 255; // Vertical line
+    }
+    break;
+case 'm':
+    // Letter m
+    for (int y = 6; y < 12; y++) {
+        textureData[y * 16 + 4] = 255; // Left vertical line
+        textureData[y * 16 + 8] = 255; // Middle vertical line
+        textureData[y * 16 + 12] = 255; // Right vertical line
+    }
+    for (int x = 4; x < 8; x++) {
+        textureData[6 * 16 + x] = 255; // Top line
+    }
+    for (int x = 8; x < 12; x++) {
+        textureData[6 * 16 + x] = 255; // Top line
+    }
+    break;
         case ' ':
-            // Пробел - пустая текстура
-            break;
-        default:
-            // Для неизвестных символов создаем простой квадрат
-            for (int y = 2; y < 14; y++) {
-                for (int x = 2; x < 14; x++) {
-                    textureData[y * 16 + x] = 255;
-                }
-            }
-            break;
+    // Space - empty texture
+    break;
+default:
+    // For unknown characters create a simple square
+    for (int y = 2; y < 14; y++) {
+        for (int x = 2; x < 14; x++) {
+            textureData[y * 16 + x] = 255;
+        }
+    }
+    break;
     }
     
     GLuint textureID;
@@ -295,7 +295,7 @@ bool TextRenderer::InitializeFreeType() {
         return true;
     }
     
-    // Инициализация FreeType
+    // FreeType initialization
     if (FT_Init_FreeType(&ft)) {
         std::cerr << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
         return false;
@@ -324,39 +324,39 @@ void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y,
         return;
     }
     
-    // Сохраняем состояние OpenGL
+    // Save OpenGL state
     GLboolean depthTestEnabled;
     glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
     GLboolean blendEnabled;
     glGetBooleanv(GL_BLEND, &blendEnabled);
     
-    // Отключаем тест глубины для 2D рендеринга
+    // Disable depth test for 2D rendering
     glDisable(GL_DEPTH_TEST);
     
-    // Включаем blending для прозрачности
+    // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // Используем text шейдер
+    // Use text shader
     glUseProgram(textShader);
     
-    // Устанавливаем размер экрана
+    // Set screen size
     GLint screenSizeLocation = glGetUniformLocation(textShader, "screenSize");
     if (screenSizeLocation != -1) {
         glUniform2f(screenSizeLocation, windowWidth, windowHeight);
     }
     
-    // Устанавливаем цвет текста
+    // Set text color
     GLint textColorLocation = glGetUniformLocation(textShader, "textColor");
     if (textColorLocation != -1) {
         glUniform3f(textColorLocation, color.x, color.y, color.z);
     }
     
-    // Размер символа в пикселях
+    // Character size in pixels
     int charWidth = 12 * scale;
     int charHeight = 16 * scale;
     
-    // Создаем VAO и VBO для символов
+    // Create VAO and VBO for characters
     GLuint charVAO, charVBO;
     glGenVertexArrays(1, &charVAO);
     glGenBuffers(1, &charVBO);
@@ -364,45 +364,45 @@ void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y,
     glBindVertexArray(charVAO);
     glBindBuffer(GL_ARRAY_BUFFER, charVBO);
     
-    // Настраиваем атрибуты
+    // Configure attributes
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
-    // Привязываем текстуру
+    // Bind texture
     glActiveTexture(GL_TEXTURE0);
     GLint textTextureLocation = glGetUniformLocation(textShader, "textTexture");
     if (textTextureLocation != -1) {
         glUniform1i(textTextureLocation, 0);
     }
     
-    // Отрисовываем каждый символ как простой прямоугольник
+    // Render each character as a simple rectangle
     int currentX = x;
     for (char c : text) {
-        // Создаем текстуру для конкретного символа
+        // Create texture for specific character
         GLuint charTexture = CreateCharacterTexture(c);
         glBindTexture(GL_TEXTURE_2D, charTexture);
         
-        // Создаем данные для прямоугольника символа
-        float charRect[] = {
-            // позиции (x, y)        // текстурные координаты (u, v)
-            currentX, y,             0.0f, 0.0f,  // Левая верхняя точка
-            currentX + charWidth, y, 1.0f, 0.0f,  // Правая верхняя точка
-            currentX, y - charHeight, 0.0f, 1.0f, // Левая нижняя точка
-            currentX + charWidth, y - charHeight, 1.0f, 1.0f  // Правая нижняя точка
-        };
+        // Create data for character rectangle
+float charRect[] = {
+    // positions (x, y)      // texture coordinates (u, v)
+    currentX, y,             0.0f, 0.0f,  // Top left point
+    currentX + charWidth, y, 1.0f, 0.0f,  // Top right point
+    currentX, y - charHeight, 0.0f, 1.0f, // Bottom left point
+    currentX + charWidth, y - charHeight, 1.0f, 1.0f  // Bottom right point
+};
         
-        // Обновляем VBO
+        // Update VBO
         glBufferData(GL_ARRAY_BUFFER, sizeof(charRect), charRect, GL_STATIC_DRAW);
         
-        // Рисуем символ
+        // Draw character
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         
-        // Удаляем текстуру символа
+        // Delete character texture
         glDeleteTextures(1, &charTexture);
         
-        // Сдвигаем позицию для следующего символа (пробелы меньше)
+        // Move position for next character (spaces are smaller)
         if (c == ' ') {
             currentX += charWidth / 2;
         } else {
@@ -410,14 +410,14 @@ void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y,
         }
     }
     
-    // Очищаем ресурсы
+    // Clean up resources
     glDeleteVertexArrays(1, &charVAO);
     glDeleteBuffers(1, &charVBO);
     
-    // Отключаем шейдер
+    // Disable shader
     glUseProgram(0);
     
-    // Восстанавливаем состояние OpenGL
+    // Restore OpenGL state
     if (depthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
     } else {
@@ -433,7 +433,7 @@ void TextRenderer::RenderSimpleTextString(const std::string& text, int x, int y,
 
 void TextRenderer::RenderTextWithCharacters(const std::string& text, int x, int y, float scale, const glm::vec3& color)
 {
-    // Этот метод использует ту же логику, что и RenderSimpleTextString
+    // This method uses the same logic as RenderSimpleTextString
     RenderSimpleTextString(text, x, y, scale, color);
 }
 
@@ -451,13 +451,13 @@ void TextRenderer::Shutdown() {
         textShader = 0;
     }
     
-    // Удаление текстур символов
+    // Delete character textures
     for (auto& [c, ch] : characters) {
         glDeleteTextures(1, &ch.textureID);
     }
     characters.clear();
     
-    // Очистка FreeType
+    // Cleanup FreeType
     CleanupFreeType();
 }
 
@@ -496,7 +496,7 @@ void main()
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
-    // Проверка компиляции vertex shader
+    // Vertex shader compilation check
     GLint success;
     GLchar infoLog[512];
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
@@ -510,7 +510,7 @@ void main()
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
-    // Проверка компиляции fragment shader
+    // Fragment shader compilation check
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
@@ -523,7 +523,7 @@ void main()
     glAttachShader(textShader, fragmentShader);
     glLinkProgram(textShader);
 
-    // Проверка линковки программы
+    // Program linking check
     glGetProgramiv(textShader, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(textShader, 512, NULL, infoLog);
@@ -534,7 +534,7 @@ void main()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Кэширование uniform locations
+    // Cache uniform locations
     textColorLocation = glGetUniformLocation(textShader, "textColor");
     projectionLocation = glGetUniformLocation(textShader, "projection");
 
@@ -547,32 +547,32 @@ bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
         return false;
     }
     
-    // Загрузка шрифта
+    // Load font
     if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
         std::cerr << "ERROR::FREETYPE: Failed to load font: " << fontPath << std::endl;
         return false;
     }
     
-    // Установка размера шрифта
+    // Set font size
     FT_Set_Pixel_Sizes(face, 0, fontSize);
     
-    // Отключение выравнивания байтов
+    // Disable byte alignment
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     
-    // Загрузка первых 128 символов ASCII
+    // Load first 128 ASCII characters
     for (unsigned char c = 0; c < 128; c++) {
-        // Загрузка глифа символа
+        // Load character glyph
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             std::cerr << "ERROR::FREETYPE: Failed to load Glyph: " << c << std::endl;
             continue;
         }
         
-        // Генерация текстуры
+        // Generate texture
         GLuint texture;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
         
-        // Загрузка данных глифа в текстуру
+        // Load glyph data into texture
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -585,13 +585,13 @@ bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
             face->glyph->bitmap.buffer
         );
         
-        // Настройка параметров текстуры
+        // Configure texture parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
-        // Сохранение информации о символе
+        // Save character information
         Character character = {
             texture,
             glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
@@ -602,7 +602,7 @@ bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
         characters.insert(std::pair<char, Character>(c, character));
     }
     
-    // Восстановление выравнивания байтов
+    // Restore byte alignment
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     
     std::cout << "Loaded " << characters.size() << " characters from font: " << fontPath << std::endl;
@@ -615,13 +615,13 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
         return;
     }
     
-    // Убеждаемся, что blending включен для текста
+    // Ensure blending is enabled for text
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     glUseProgram(textShader);
     
-    // Проверяем uniform locations
+    // Check uniform locations
     if (textColorLocation == -1) {
         std::cerr << "TextRenderer: textColorLocation is invalid!" << std::endl;
         return;
@@ -634,13 +634,13 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
     glUniform3f(textColorLocation, color.x, color.y, color.z);
     glBindVertexArray(VAO);
 
-    // Ортографическая проекция для 2D текста
+    // Orthographic projection for 2D text
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(windowWidth), 0.0f, static_cast<float>(windowHeight));
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
 
     std::string::const_iterator c;
     for (c = text.begin(); c != text.end(); c++) {
-        // Проверяем, есть ли символ в нашей карте
+        // Check if character exists in our map
         if (characters.find(*c) == characters.end()) {
             std::cerr << "Character not found: " << *c << std::endl;
             continue;
@@ -654,7 +654,7 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
         float w = ch.size.x * scale;
         float h = ch.size.y * scale;
 
-        // Обновляем VBO для каждого символа
+        // Update VBO for each character
         float vertices[6][4] = {
             { xpos,     ypos + h,   0.0f, 0.0f },
             { xpos,     ypos,       0.0f, 1.0f },
@@ -665,7 +665,7 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
             { xpos + w, ypos + h,   1.0f, 0.0f }
         };
 
-        // Привязываем текстуру символа
+        // Bind character texture
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ch.textureID);
         
@@ -674,7 +674,7 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        // Сдвигаем курсор для следующего символа (advance в 1/64 пикселя)
+        // Move cursor for next character (advance in 1/64 pixels)
         x += (ch.advance >> 6) * scale;
     }
     glBindVertexArray(0);

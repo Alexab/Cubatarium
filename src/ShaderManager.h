@@ -1,8 +1,8 @@
 #ifndef SHADERMANAGER_H
 #define SHADERMANAGER_H
 
-// GLEW будет включен в .cpp файле после инициализации GLFW
-// Forward declaration для OpenGL типов
+// GLEW will be included in .cpp file after GLFW initialization
+// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 typedef unsigned int GLenum;
 typedef int GLint;
@@ -20,19 +20,19 @@ public:
     ShaderProgram();
     ~ShaderProgram();
 
-    // Создание и компиляция шейдеров
+    // Create and compile shaders
     bool CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
     bool CreateFromStrings(const std::string& vertexSource, const std::string& fragmentSource);
     
-    // Использование программы
+    // Use program
     void Use();
     void Unuse();
     
-    // Проверка валидности
+    // Check validity
     bool IsValid() const { return programID != 0; }
     GLuint GetProgramID() const { return programID; }
     
-    // Установка uniform переменных
+    // Set uniform variables
     void SetBool(const std::string& name, bool value);
     void SetInt(const std::string& name, int value);
     void SetFloat(const std::string& name, float value);
@@ -42,14 +42,14 @@ public:
     void SetMat3(const std::string& name, const glm::mat3& value);
     void SetMat4(const std::string& name, const glm::mat4& value);
     
-    // Получение location uniform переменных
+    // Get uniform variable locations
     GLint GetUniformLocation(const std::string& name);
 
 private:
     GLuint programID;
     std::unordered_map<std::string, GLint> uniformLocations;
     
-    // Вспомогательные методы
+    // Helper methods
     bool CompileShader(GLuint& shaderID, GLenum shaderType, const std::string& source);
     bool LinkProgram();
     void CheckCompileErrors(GLuint shader, const std::string& type);
@@ -61,11 +61,11 @@ public:
     ShaderManager();
     ~ShaderManager();
 
-    // Инициализация
+    // Initialization
     bool Initialize();
     void Shutdown();
 
-    // Создание и управление шейдерами
+    // Create and manage shaders
     std::shared_ptr<ShaderProgram> CreateShader(const std::string& name, 
                                                const std::string& vertexPath, 
                                                const std::string& fragmentPath);
@@ -74,15 +74,15 @@ public:
                                                           const std::string& vertexSource,
                                                           const std::string& fragmentSource);
 
-    // Получение шейдеров
+    // Get shaders
     std::shared_ptr<ShaderProgram> GetShader(const std::string& name);
     bool HasShader(const std::string& name) const;
 
-    // Удаление шейдеров
+    // Delete shaders
     void RemoveShader(const std::string& name);
     void ClearAllShaders();
 
-    // Предустановленные шейдеры
+    // Preset shaders
     std::shared_ptr<ShaderProgram> GetDefaultShader();
     std::shared_ptr<ShaderProgram> GetSkyShader();
     std::shared_ptr<ShaderProgram> GetTextureShader();
@@ -90,10 +90,10 @@ public:
 private:
     std::unordered_map<std::string, std::shared_ptr<ShaderProgram>> shaders;
     
-    // Создание предустановленных шейдеров
+    // Create preset shaders
     void CreateDefaultShaders();
     
-    // Исходный код шейдеров по умолчанию
+    // Default shader source code
     std::string GetDefaultVertexShader();
     std::string GetDefaultFragmentShader();
     std::string GetSkyVertexShader();

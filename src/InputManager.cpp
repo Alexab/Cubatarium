@@ -3,7 +3,7 @@
 
 namespace cutum {
 
-// Статический указатель на экземпляр для GLFW callbacks
+// Static pointer to instance for GLFW callbacks
 InputManager* InputManager::instance = nullptr;
 
 InputManager::InputManager()
@@ -28,7 +28,7 @@ InputManager::~InputManager() {
 void InputManager::Initialize(GLFWwindow* window) {
     glfwWindow = window;
     
-    // Получение начальной позиции мыши
+    // Get initial mouse position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
@@ -48,21 +48,21 @@ void InputManager::Shutdown() {
 }
 
 void InputManager::Update() {
-    // Обновление состояния клавиш
+    // Update key states
     for (auto& [key, pressed] : keyStates) {
         previousKeyStates[key] = pressed;
         keyJustPressed[key] = false;
         keyJustReleased[key] = false;
     }
 
-    // Обновление состояния кнопок мыши
+    // Update mouse button states
     for (auto& [button, pressed] : mouseButtonStates) {
         previousMouseButtonStates[button] = pressed;
         mouseButtonJustPressed[button] = false;
         mouseButtonJustReleased[button] = false;
     }
 
-    // Обновление позиции мыши
+    // Update mouse position
     previousMousePosition = mousePosition;
     mouseDelta = mousePosition - previousMousePosition;
 }
@@ -140,7 +140,7 @@ void InputManager::ResetAllKeyStatus() {
     mouseButtonJustReleased.clear();
 }
 
-// GLFW callback функции
+    // GLFW callback functions
 void InputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (!instance) {
         std::cerr << "InputManager::GLFWKeyCallback: instance is null" << std::endl;
@@ -150,7 +150,7 @@ void InputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, in
     KeyState state = static_cast<KeyState>(action);
     KeyCode keyCode = static_cast<KeyCode>(key);
 
-    // Обновление состояния клавиши
+            // Update key state
     if (action == GLFW_PRESS) {
         instance->keyStates[key] = true;
         instance->keyJustPressed[key] = true;
@@ -159,7 +159,7 @@ void InputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, in
         instance->keyJustReleased[key] = true;
     }
 
-    // Вызов пользовательского callback
+    // Call user callback
     if (instance->keyCallback) {
         try {
             instance->keyCallback(keyCode, state, mods);
@@ -177,7 +177,7 @@ void InputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int a
     MouseButton mouseButton = static_cast<MouseButton>(button);
     bool pressed = (action == GLFW_PRESS);
 
-    // Обновление состояния кнопки мыши
+    // Update mouse button state
     if (pressed) {
         instance->mouseButtonStates[button] = true;
         instance->mouseButtonJustPressed[button] = true;
@@ -186,7 +186,7 @@ void InputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int a
         instance->mouseButtonJustReleased[button] = true;
     }
 
-    // Вызов пользовательского callback
+    // Call user callback
     if (instance->mouseButtonCallback) {
         instance->mouseButtonCallback(mouseButton, pressed, instance->mousePosition);
     }
@@ -200,7 +200,7 @@ void InputManager::GLFWCursorPosCallback(GLFWwindow* window, double xpos, double
     
     instance->mousePosition = newPosition;
 
-    // Вызов пользовательского callback
+    // Call user callback
     if (instance->mouseMoveCallback) {
         instance->mouseMoveCallback(newPosition, delta);
     }

@@ -6,7 +6,7 @@
 #include <chrono>
 #include <memory>
 
-// GLEW будет включен в .cpp файле после инициализации GLFW
+// GLEW will be included in .cpp file after GLFW initialization
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

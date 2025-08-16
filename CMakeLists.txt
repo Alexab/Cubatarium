@@ -4,7 +4,6 @@ project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Настройки компилятора для отладки
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(MSVC)
         add_compile_options(/Zi /Od)
@@ -13,16 +12,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 endif()
 
-# Удаляем Qt зависимости
-# find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network)
-
-# Добавляем GLFW, GLM и GLEW
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # GLFW
 if(WIN32)
-    # Для Windows можно использовать vcpkg или скачать GLFW
     find_package(glfw3 REQUIRED)
 else()
     find_package(glfw3 REQUIRED)
@@ -39,7 +33,6 @@ find_package(Freetype REQUIRED)
 # nlohmann/json
 find_package(nlohmann_json REQUIRED)
 
-# stb_image для загрузки текстур
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/stb_image.h")
 if(NOT EXISTS ${STB_IMAGE_HEADER})
     file(DOWNLOAD 
@@ -93,24 +86,14 @@ set(HEADERS
     src/stb_image.h
 )
 
-# Удаляем Qt ресурсы
-# set(RESOURCES
-#     resources/shaders.qrc
-# )
-
 if(WIN32)
     set(ICON_RESOURCE resources/Cubatarium.ico)
 endif()
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
-# Удаляем Qt специфичные команды
-# qt5_add_resources(RESOURCE_FILES ${RESOURCES})
-# qt5_wrap_cpp(MOC_SOURCES src/MainWidget.h)
-
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
 
-# Заменяем Qt библиотеки на GLFW, OpenGL и GLEW
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL
     glfw
@@ -122,8 +105,6 @@ target_link_libraries(${PROJECT_NAME}
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32")
-    # Убираем WIN32_EXECUTABLE для консольного приложения
-    # set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

@@ -1,8 +1,8 @@
 #ifndef GEOMETRYENGINE_GLM_H
 #define GEOMETRYENGINE_GLM_H
 
-// GLEW будет включен в .cpp файле после инициализации GLFW
-// Forward declaration для OpenGL типов
+// GLEW will be included in .cpp file after GLFW initialization
+// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 
 #include <glm/glm.hpp>
@@ -23,10 +23,10 @@ namespace cutum {
 
 class Core;
 
-// Структура для batch-рендеринга (обновленная для нативных OpenGL)
+// Structure for batch rendering (updated for native OpenGL)
 struct RenderBatch {
-    GLuint textureID; // Заменяем QOpenGLTexture на GLuint
-    std::vector<glm::mat4> modelMatrices; // Заменяем QMatrix4x4 на glm::mat4
+    GLuint textureID; // Replace QOpenGLTexture with GLuint
+    std::vector<glm::mat4> modelMatrices; // Replace QMatrix4x4 with glm::mat4
     std::vector<std::shared_ptr<Object>> objects;
     std::vector<size_t> cubeIndices;
 };
@@ -43,41 +43,41 @@ public:
     bool InitEngine();
     bool InitShaders();
 
-    // Удаляем Qt Painter
+    // Remove Qt Painter
     // void SetPainter(std::shared_ptr<QPainter> painter);
 
     void Paint(int width_size, int height_size, double view_duration);
 
-    // Методы для управления цветом неба (обновленные для GLM)
+    // Methods for sky color management (updated for GLM)
     void SetSkyColor(float r, float g, float b, float a = 1.0f);
-    void SetSkyColor(const glm::vec4& color); // Заменяем QVector4D на glm::vec4
-    glm::vec4 GetSkyColor() const; // Заменяем QVector4D на glm::vec4
+    void SetSkyColor(const glm::vec4& color); // Replace QVector4D with glm::vec4
+    glm::vec4 GetSkyColor() const; // Replace QVector4D with glm::vec4
     void SetGradientSky(bool useGradient);
     bool IsGradientSky() const;
 
 private:
     void DrawCubeGeometry();
-    void DrawCube(std::shared_ptr<Cube> icube, GLuint textureID); // Заменяем QOpenGLTexture на GLuint
+    void DrawCube(std::shared_ptr<Cube> icube, GLuint textureID); // Replace QOpenGLTexture with GLuint
     void DrawObject(std::shared_ptr<Object> object, size_t object_index, 
                    const std::map<size_t, TextureCube>& textures, 
                    bool is_intersection_exists, size_t intersecion_object_index, 
                    size_t intersecion_cube_index);
     void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, 
-                         const glm::mat4& mvp_matrix, // Заменяем QMatrix4x4 на glm::mat4
+                         const glm::mat4& mvp_matrix, // Replace QMatrix4x4 with glm::mat4
                          bool is_intersection_exists, size_t intersecion_object_index, 
                          size_t intersecion_cube_index);
     void DrawSkyGradient();
     void DrawSkyGradientSimple();
 
-    // Новые оптимизированные методы
+    // New optimized methods
     void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
                              const std::map<size_t, TextureCube>& textures,
                              bool is_intersection_exists, 
                              size_t intersecion_object_index, 
                              size_t intersecion_cube_index);
-    void RenderBatches(const glm::mat4& mvp_matrix); // Заменяем QMatrix4x4 на glm::mat4
+    void RenderBatches(const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
     void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix);
-    void UpdateFrustumCulling(const glm::mat4& view_projection); // Заменяем QMatrix4x4 на glm::mat4
+    void UpdateFrustumCulling(const glm::mat4& view_projection); // Replace QMatrix4x4 with glm::mat4
     bool IsObjectInFrustum(const std::shared_ptr<Object>& object);
 
 private:
@@ -85,12 +85,12 @@ private:
     GLint alphaUniformLocation;
     GLfloat alpha = 0.5f;
 
-    // Заменяем Qt шейдеры на наш ShaderManager
+    // Replace Qt shaders with our ShaderManager
     std::shared_ptr<ShaderManager> shaderManager;
     std::shared_ptr<ShaderProgram> defaultShader;
     std::shared_ptr<ShaderProgram> skyShader;
 
-    // Удаляем Qt Painter
+    // Remove Qt Painter
     // std::shared_ptr<QPainter> Painter;
 
     std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
@@ -101,17 +101,17 @@ private:
     // performance data
     double DurationDrawSceneMks;
     
-    // Цвет неба (заменяем QVector4D на glm::vec4)
+    // Sky color (replace QVector4D with glm::vec4)
     glm::vec4 skyColor;
     bool useGradientSky;
     
-    // Оптимизация рендеринга
+    // Rendering optimization
     std::vector<RenderBatch> renderBatches;
     std::vector<std::shared_ptr<Object>> visibleObjects;
     
-    // Frustum culling (заменяем QVector4D на glm::vec4)
+    // Frustum culling (replace QVector4D with glm::vec4)
     struct FrustumPlane {
-        glm::vec4 normal; // Заменяем QVector4D на glm::vec4
+        glm::vec4 normal; // Replace QVector4D with glm::vec4
         float distance;
     };
     std::array<FrustumPlane, 6> frustumPlanes;

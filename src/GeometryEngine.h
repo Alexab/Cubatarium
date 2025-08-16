@@ -1,8 +1,8 @@
 #ifndef GEOMETRYENGINE_H
 #define GEOMETRYENGINE_H
 
-// GLEW будет включен в .cpp файле после инициализации GLFW
-// Forward declaration для OpenGL типов
+// GLEW will be included in .cpp file after GLFW initialization
+// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 typedef float GLfloat;
 typedef int GLint;
@@ -26,10 +26,10 @@ namespace cutum {
 
 class Core;
 
-// Структура для batch-рендеринга
+// Structure for batch rendering
 struct RenderBatch {
-    GLuint textureID; // Заменяем QOpenGLTexture на GLuint
-    std::vector<glm::mat4> modelMatrices; // QMatrix4x4 -> glm::mat4
+    GLuint textureID; // Replace QOpenGLTexture with GLuint
+    std::vector<glm::mat4> modelMatrices; // Replace QMatrix4x4 with glm::mat4
     std::vector<std::shared_ptr<Object>> objects;
     std::vector<size_t> cubeIndices;
 };
@@ -45,45 +45,45 @@ public:
 
  void Paint(int width_size, int height_size, double view_duration);
 
- // Методы для управления цветом неба
+ // Methods for sky color management
  void SetSkyColor(float r, float g, float b, float a = 1.0f);
- void SetSkyColor(const glm::vec4& color); // QVector4D -> glm::vec4
- glm::vec4 GetSkyColor() const; // QVector4D -> glm::vec4
+ void SetSkyColor(const glm::vec4& color); // Replace QVector4D with glm::vec4
+ glm::vec4 GetSkyColor() const; // Replace QVector4D with glm::vec4
  void SetGradientSky(bool useGradient);
  bool IsGradientSky() const;
 
 private:
  void DrawCubeGeometry();
- void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // QOpenGLTexture -> GLuint
+ void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint
  void DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
- void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index); // QMatrix4x4 -> glm::mat4
+ void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index); // Replace QMatrix4x4 with glm::mat4
  void DrawSkyGradient();
- void DrawSkyGradientSimple(); // Простая версия без VBO
+ void DrawSkyGradientSimple(); // Simple version without VBO
 
- // Новые оптимизированные методы
+ // New optimized methods
  void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
                           const std::map<size_t, TextureCube>& textures,
                           bool is_intersection_exists, 
                           size_t intersecion_object_index, 
                           size_t intersecion_cube_index);
- void RenderBatches(const glm::mat4& mvp_matrix); // QMatrix4x4 -> glm::mat4
- void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix); // QMatrix4x4 -> glm::mat4
- void UpdateFrustumCulling(const glm::mat4& view_projection); // QMatrix4x4 -> glm::mat4
+ void RenderBatches(const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
+ void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
+ void UpdateFrustumCulling(const glm::mat4& view_projection); // Replace QMatrix4x4 with glm::mat4
  bool IsObjectInFrustum(const std::shared_ptr<Object>& object);
  
- // Методы для отображения текста
+ // Methods for text rendering
  void RenderPerformanceText(int width_size, int height_size, double view_duration);
  
- // Метод для отображения перекрестия
+ // Method for crosshair rendering
  void RenderCrosshair(int width_size, int height_size);
  
-   // Метод для отображения простого 2D текста
+   // Method for simple 2D text rendering
   void RenderSimpleText(int width_size, int height_size);
   
-       // Метод для отображения тестового куба
+       // Method for test cube rendering
   void RenderTestCube();
   
-    // Метод для отображения 3D куба с перспективной проекцией
+    // Method for 3D cube rendering with perspective projection
    void Render3DCubeWithPerspective();
 
 private:
@@ -91,11 +91,11 @@ private:
  GLint alphaUniformLocation;
  GLfloat alpha;
 
- std::shared_ptr<ShaderManager> shaderManager; // Заменяем QOpenGLShaderProgram
+ std::shared_ptr<ShaderManager> shaderManager; // Replace QOpenGLShaderProgram
  std::shared_ptr<ShaderProgram> defaultShader;
- std::shared_ptr<ShaderProgram> skyShader; // Шейдер для неба
- std::shared_ptr<ShaderProgram> uiShader; // Шейдер для UI элементов
- std::shared_ptr<ShaderProgram> textShader; // Шейдер для текста
+ std::shared_ptr<ShaderProgram> skyShader; // Shader for sky
+std::shared_ptr<ShaderProgram> uiShader; // Shader for UI elements
+std::shared_ptr<ShaderProgram> textShader; // Shader for text
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
@@ -106,11 +106,11 @@ private:
  // performance data
  double DurationDrawSceneMks;
  
-   // Цвет неба
-  glm::vec4 skyColor; // QVector4D -> glm::vec4
-  bool useGradientSky; // Использовать градиентное небо
+   // Sky color
+  glm::vec4 skyColor; // Replace QVector4D with glm::vec4
+  bool useGradientSky; // Use gradient sky
  
- // Оптимизация рендеринга
+ // Rendering optimization
  std::vector<RenderBatch> renderBatches;
  std::vector<std::shared_ptr<Object>> visibleObjects;
  

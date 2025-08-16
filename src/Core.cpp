@@ -71,7 +71,7 @@ void Core::LoadSystem(const std::string& config_file_name)
       is_need_autocreate = true;
      }
 
-     // Используем текущую директорию вместо родительской
+     // Use current directory instead of parent directory
      auto project_dir = WorkDir;
 
      default_world_name = default_world_value;

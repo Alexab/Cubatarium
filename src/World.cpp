@@ -84,7 +84,7 @@ void World::Load(const std::string& world_folder_path)
  LoadUsers(users_file_name);
  LoadObjects(objects_file_name);
  
- // Инициализировать пространственный индекс после загрузки объектов
+ // Initialize spatial index after loading objects
  RebuildOctree();
 }
 
@@ -260,7 +260,7 @@ bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fro
    for(auto I = object_distance_map.begin(); I != object_distance_map.end(); ++I)
    {
     float distance = I->first;
-    // Найти индекс объекта в основном массиве
+    // Find object index in main array
     auto it = std::find(Objects.begin(), Objects.end(), candidateObjects[i]);
     size_t objectIndex = (it != Objects.end()) ? std::distance(Objects.begin(), it) : i;
     
@@ -358,7 +358,7 @@ std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& pos
 
   auto & cube = Objects[object_index]->GetCubes()[cube_index];
 
-  // Получить размер куба для правильного вычисления смещения
+  // Get cube size for correct offset calculation
   float cubeSize = cube->GetSize();
   
      switch(cube_side)
@@ -574,7 +574,7 @@ void World::LoadObjects(const std::string &file_name)
       AddObject(object_type_name, position);
      }
      
-     // Обновить пространственный индекс после загрузки всех объектов
+     // Update spatial index after loading all objects
      spatialIndexDirty = true;
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error in LoadObjects: " << e.what() << std::endl;
@@ -674,7 +674,7 @@ void World::DoMovement()
  if(is_moved)
    UpdateIntersection(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
    
- // Обновить пространственный индекс если он устарел
+ // Update spatial index if it's outdated
  UpdateSpatialIndex();
    
  auto t_end = std::chrono::high_resolution_clock::now();
@@ -725,16 +725,16 @@ void World::UpdateSpatialIndex()
 
 void World::RebuildOctree()
 {
- // Очистить существующий индекс
+ // Clear existing index
  if (spatialIndex) {
      spatialIndex->Clear();
  }
  
- // Создать новый Octree с подходящим размером
- float worldSize = 1000.0f; // Размер мира
+ // Create new Octree with appropriate size
+float worldSize = 1000.0f; // World size
    spatialIndex = std::make_unique<OctreeNode>(glm::vec3(0, 0, 0), worldSize);
  
- // Добавить все объекты в индекс
+ // Add all objects to index
  for (const auto& object : Objects) {
      spatialIndex->Insert(object);
  }

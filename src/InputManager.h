@@ -10,7 +10,7 @@
 
 namespace cutum {
 
-// Коды клавиш (аналоги Qt::Key)
+// Key codes (similar to Qt::Key)
 enum class KeyCode {
     Key_0 = GLFW_KEY_0,
     Key_1 = GLFW_KEY_1,
@@ -60,21 +60,21 @@ enum class KeyCode {
     Key_Right = GLFW_KEY_RIGHT
 };
 
-// Коды кнопок мыши
+// Mouse button codes
 enum class MouseButton {
     Left = GLFW_MOUSE_BUTTON_LEFT,
     Right = GLFW_MOUSE_BUTTON_RIGHT,
     Middle = GLFW_MOUSE_BUTTON_MIDDLE
 };
 
-// Состояние клавиши
+// Key state
 enum class KeyState {
     Released = GLFW_RELEASE,
     Pressed = GLFW_PRESS,
     Repeated = GLFW_REPEAT
 };
 
-// Типы событий
+// Event types
 enum class EventType {
     KeyPress,
     KeyRelease,
@@ -88,7 +88,7 @@ enum class EventType {
     WindowClose
 };
 
-// Структура события
+// Event structure
 struct InputEvent {
     EventType type;
     KeyCode key;
@@ -102,7 +102,7 @@ struct InputEvent {
     int modifiers;
 };
 
-// Callback функции
+// Callback functions
 using KeyCallback = std::function<void(KeyCode, KeyState, int)>;
 using MouseButtonCallback = std::function<void(MouseButton, bool, glm::vec2)>;
 using MouseMoveCallback = std::function<void(glm::vec2, glm::vec2)>;

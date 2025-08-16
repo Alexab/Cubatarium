@@ -34,28 +34,28 @@ public:
     void Run();
     void Shutdown();
 
-    // Инициализация компонентов
+    // Initialize components
     void Init(std::shared_ptr<Core> core_, 
               std::shared_ptr<World> world_, 
               std::shared_ptr<GeometryEngine> geometries_,
               std::shared_ptr<ViewEngine> views_);
     
-    // Установка TextRenderer
+    // Set TextRenderer
     void SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer);
 
-    // Управление окном
+    // Window management
     void SetWindowSize(int width, int height);
     void SetFullscreen(bool fullscreen);
     bool ShouldClose() const;
     
-    // Получение размеров окна
+    // Get window dimensions
     int GetWidth() const { return windowWidth; }
     int GetHeight() const { return windowHeight; }
     
-    // Получение GLFW окна для передачи в другие системы
+    // Get GLFW window for passing to other systems
     GLFWwindow* GetWindow() const { return window; }
 
-    // Методы для управления цветом неба (перенесены из MainWidget)
+    // Methods for sky color management (moved from MainWidget)
     void SetSkyColor(float r, float g, float b, float a = 1.0f);
     void SetSkyColor(const glm::vec4& color);
     glm::vec4 GetSkyColor() const;
@@ -71,7 +71,7 @@ private:
     static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
     static void ErrorCallback(int error, const char* description);
 
-    // Внутренние методы
+    // Internal methods
     void ProcessInput();
     void Render();
     void Update();
@@ -84,22 +84,22 @@ private:
     void HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta);
     void HandleWindowResizeEvent(int width, int height);
     
-    // Методы для отображения UI
+    // Methods for UI rendering
     void RenderUI();
     void RenderHelpText();
 
     // GLFW window
     GLFWwindow* window;
     
-    // Размеры окна
+    // Window dimensions
     int windowWidth;
     int windowHeight;
     
-    // Состояние приложения
+    // Application state
     bool isRunning;
     bool isInitialized;
     
-    // Компоненты системы
+    // System components
     std::shared_ptr<Core> core;
     std::shared_ptr<GeometryEngine> geometries;
     std::shared_ptr<ViewEngine> views;
@@ -107,17 +107,17 @@ private:
     std::shared_ptr<InputManager> inputManager;
     std::shared_ptr<TextRenderer> textRenderer;
     
-    // Время
+    // Time
     std::chrono::high_resolution_clock::time_point lastFrameTime;
     double deltaTime;
     
-    // Состояние мыши
+    // Mouse state
     glm::vec2 mousePressPosition;
     bool isMousePressed;
     bool isLeftMouseButtonPressed;
     std::chrono::steady_clock::time_point leftMousePressed;
     
-    // Цвет неба
+    // Sky color
     glm::vec4 skyColor;
     bool useGradientSky;
 };

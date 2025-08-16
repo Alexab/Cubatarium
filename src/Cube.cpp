@@ -134,7 +134,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
 
     intersected_sides.clear();
 
-    // Верхняя грань куба
+    // Top face of the cube
     x = originRay.x + dirRay.x * ( d - originRay.y ) / dirRay.y;
     z = originRay.z + dirRay.z * ( d - originRay.y ) / dirRay.y;
     if( ( x < d ) && ( x > -d ) && ( z < d ) && ( z > -d ) )
@@ -144,7 +144,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
      intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_TOP, normal_to_side_local);
     }
 
-    // Нижняя грань куба
+    // Bottom face of the cube
     x = originRay.x + dirRay.x * ( -d - originRay.y ) / dirRay.y;
     z = originRay.z + dirRay.z * ( -d - originRay.y ) / dirRay.y;
     if( ( x < d ) && ( x > -d ) && ( z < d ) && ( z > -d ) )
@@ -154,7 +154,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
      intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_BOTTOM, normal_to_side_local);
     }
 
-    // Правая грань куба
+    // Right face of the cube
     z = originRay.z + dirRay.z * ( d - originRay.x ) / dirRay.x;
     y = originRay.y + dirRay.y * ( d - originRay.x ) / dirRay.x;
     if( ( z < d ) && ( z > -d ) && ( y < d ) && ( y > -d ) )
@@ -164,7 +164,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
      intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_RIGHT, normal_to_side_local);
     }
 
-    // Левая грань куба
+    // Left face of the cube
     z = originRay.z + dirRay.z * ( -d - originRay.x ) / dirRay.x;
     y = originRay.y + dirRay.y * ( -d - originRay.x ) / dirRay.x;
     if( ( z < d ) && ( z > -d ) && ( y < d ) && ( y > -d ) )
@@ -174,7 +174,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
      intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_LEFT, normal_to_side_local);
     }
 
-    // Дальняя грань
+    // Far face
     x = originRay.x + dirRay.x * ( d - originRay.z ) / dirRay.z;
     y = originRay.y + dirRay.y * ( d - originRay.z ) / dirRay.z;
     if( ( x < d ) && ( x > -d ) && ( y < d ) && ( y > -d ) )
@@ -184,7 +184,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
      intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_FAR, normal_to_side_local);
     }
 
-    // Ближняя грань
+    // Near face
     x = originRay.x + dirRay.x * ( -d - originRay.z ) / dirRay.z;
     y = originRay.y + dirRay.y * ( -d - originRay.z ) / dirRay.z;
     if( ( x < d ) && ( x > -d ) && ( y < d ) && ( y > -d ) )

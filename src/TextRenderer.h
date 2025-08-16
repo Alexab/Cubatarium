@@ -12,10 +12,10 @@
 namespace cutum {
 
 struct Character {
-    GLuint textureID;   // ID текстуры символа
-    glm::ivec2 size;    // Размер символа (ширина, высота)
-    glm::ivec2 bearing; // Смещение от базовой линии (left, top)
-    GLuint advance;     // Расстояние до следующего символа (в 1/64 пикселя)
+    GLuint textureID;   // Symbol texture ID
+    glm::ivec2 size;    // Symbol size (width, height)
+    glm::ivec2 bearing; // Offset from baseline (left, top)
+    GLuint advance;     // Distance to next symbol (in 1/64 pixels)
 };
 
 class TextRenderer {
@@ -23,27 +23,27 @@ public:
     TextRenderer();
     ~TextRenderer();
 
-    // Инициализация системы отображения текста
+    // Initialize text rendering system
     bool Initialize(const std::string& fontPath, int fontSize);
     void Shutdown();
 
-    // Отрисовка текста
+    // Render text
     void RenderText(const std::string& text, float x, float y, float scale, const glm::vec3& color = glm::vec3(1.0f));
     
-    // Отрисовка текста с центрированием
+    // Render centered text
     void RenderTextCentered(const std::string& text, float y, float scale, const glm::vec3& color = glm::vec3(1.0f));
     
-    // Получение размеров текста
+    // Get text size
     glm::vec2 GetTextSize(const std::string& text, float scale);
     
-    // Установка размеров окна
+    // Set window size
     void SetWindowSize(int width, int height);
     
-    // Новые методы для отображения текста с битовыми картами
+    // New methods for bitmap text rendering
     void RenderSimpleTextString(const std::string& text, int x, int y, float scale, const glm::vec3& color);
     void RenderTextWithCharacters(const std::string& text, int x, int y, float scale, const glm::vec3& color);
     
-    // Методы для создания текстур символов
+    // Methods for creating character textures
     GLuint CreateSimpleTextTexture();
     GLuint CreateCharacterTexture(char character);
 
@@ -58,7 +58,7 @@ private:
     FT_Face face;
     bool ftInitialized;
     
-    // Кэшированные uniform locations для производительности
+    // Cached uniform locations for performance
     GLint textColorLocation;
     GLint projectionLocation;
 

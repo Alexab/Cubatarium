@@ -79,7 +79,7 @@ private:
  bool CheckPositionFree(const glm::vec3& position, float size=1.0) const; // QVector3D -> glm::vec3
  std::optional<glm::vec3> FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const; // QVector3D -> glm::vec3
 
- // Оптимизированные методы с использованием Octree
+     // Optimized methods using Octree
  std::vector<std::shared_ptr<Object>> GetObjectsInRadius(const glm::vec3& position, float radius) const; // QVector3D -> glm::vec3
  void UpdateSpatialIndex();
  void RebuildOctree();
@@ -114,7 +114,7 @@ private:
 
  std::shared_ptr<ViewEngine> ViewInstance;
 
- // Пространственное разбиение
+     // Spatial partitioning
  std::unique_ptr<OctreeNode> spatialIndex;
  bool spatialIndexDirty;
 

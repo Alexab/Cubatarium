@@ -7,8 +7,8 @@
 //#include <QVector2D>
 #include <vector>
 #include <glm/glm.hpp>
-// GLEW будет включен в .cpp файле после инициализации GLFW
-// Forward declaration для OpenGL типов
+// GLEW will be included in .cpp file after GLFW initialization
+// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 typedef unsigned short GLushort;
 #include "Cube.h"
