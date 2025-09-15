@@ -150,114 +150,59 @@ void GeometryEngine::DrawCubeGeometry()
 if (!camera) {
     return;
 }
-
-// Save OpenGL state
-GLboolean depthTestEnabled;
-glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-GLboolean blendEnabled;
-glGetBooleanv(GL_BLEND, &blendEnabled);
-GLboolean cullFaceEnabled;
-glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
  
- // Use loaded shader from ShaderManager
- if (!defaultShader || !defaultShader->IsValid()) {
-     std::cerr << "Default shader is not valid" << std::endl;
-     return;
- }
+ // Save OpenGL state
+ GLboolean depthTestEnabled;
+ glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+ GLboolean blendEnabled;
+ glGetBooleanv(GL_BLEND, &blendEnabled);
+ GLboolean cullFaceEnabled;
+ glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+  
+  // Ensure instanced resources are ready
+  if (cubeVAO == 0) {
+      if (!InitCubeBuffers()) {
+          std::cerr << "DrawCubeGeometry: cube buffers not initialized" << std::endl;
+          return;
+      }
+  }
  
- // Get MVP matrix
- glm::mat4 mvp = camera->GetMvpMatrix();
+  // Get textures
+  auto textures = TextureCubeStorageInstance->GetTextures();
  
- // Get textures
- auto textures = TextureCubeStorageInstance->GetTextures();
+  // Selection info
+  bool is_intersection_exists = WorldInstance->GetIsIntersectionExists();
+  size_t intersecion_object_index = WorldInstance->GetIntersectionObjectIndex();
+  size_t intersecion_cube_index = WorldInstance->GetIntersectionCubeIndex();
  
- // Используем наш шейдер
- defaultShader->Use();
- defaultShader->SetInt("texture0", 0);
+  // Prepare batches per texture
+  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
  
- // Cache selection type id once
- const size_t selectionTypeId = TextureCubeStorageInstance->GetTypeIdByName("selection");
-
- // Ensure static cube buffers are ready
- if (cubeVAO == 0) {
-     if (!InitCubeBuffers()) {
-         std::cerr << "DrawCubeGeometry: cube buffers not initialized" << std::endl;
-         return;
-     }
- }
-
- // Render each object as a textured cube
- for (const auto& object : objects) {
-     auto objectPos = object->GetPose();
-     glm::vec3 position(objectPos[3][0], objectPos[3][1], objectPos[3][2]);
-     
-     // Render each cube in the object
-     for (size_t i = 0; i < object->GetCubes().size(); i++) {
-         auto& cube = object->GetCubes()[i];
-         size_t textureId = cube->GetTypeId();
-         
-         // Check if this cube is selected
-         bool is_intersection_exists = WorldInstance->GetIsIntersectionExists();
-         size_t intersecion_object_index = WorldInstance->GetIntersectionObjectIndex();
-         size_t intersecion_cube_index = WorldInstance->GetIntersectionCubeIndex();
-         
-         // Find object index in the objects vector
-         size_t object_index = std::find(objects.begin(), objects.end(), object) - objects.begin();
-         
-         // If this cube is selected, use selection texture
-         if(is_intersection_exists && intersecion_object_index == object_index && intersecion_cube_index == i)
-         {
-             textureId = selectionTypeId;
-         }
-         
-         // Get texture
-         GLuint texture = 0;
-         if (textures.find(textureId) != textures.end()) {
-             texture = textures.at(textureId).GetTextureId();
-         } else {
-             continue; // Skip cube without texture
-         }
-         
-         // Bind texture
-         glActiveTexture(GL_TEXTURE0);
-         glBindTexture(GL_TEXTURE_2D, texture);
-         defaultShader->SetInt("texture0", 0);
-         
-         // Update cube's ObjectPose from object's world transform
-         cube->SetObjectPose(object->GetPose());
-         // Vertices will be updated in world space inside CubeGL; use only view-projection
-         glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-         defaultShader->SetMat4("mvp_matrix", vp);
-         
-         // Draw using cube-specific VBOs (guaranteed correct UVs)
-         DrawCube(cube, texture);
-     }
- }
+  // Render all batches instanced
+  glm::mat4 dummy_mvp = camera->GetMvpMatrix();
+  RenderBatches(dummy_mvp);
  
- // Отключаем шейдер
- defaultShader->Unuse();
+  // Active object preview disabled to avoid per-frame resource churn
  
- // Восстанавливаем состояние OpenGL
- if (depthTestEnabled) {
-     glEnable(GL_DEPTH_TEST);
- } else {
-     glDisable(GL_DEPTH_TEST);
- }
+  // Restore state
+  if (cullFaceEnabled) {
+      glEnable(GL_CULL_FACE);
+  } else {
+      glDisable(GL_CULL_FACE);
+  }
+  if (depthTestEnabled) {
+      glEnable(GL_DEPTH_TEST);
+  } else {
+      glDisable(GL_DEPTH_TEST);
+  }
+  if (blendEnabled) {
+      glEnable(GL_BLEND);
+  } else {
+      glDisable(GL_BLEND);
+  }
  
- if (blendEnabled) {
-     glEnable(GL_BLEND);
- } else {
-     glDisable(GL_BLEND);
- }
- 
- if (cullFaceEnabled) {
-     glEnable(GL_CULL_FACE);
- } else {
-     glDisable(GL_CULL_FACE);
- }
- 
- auto t_end = std::chrono::high_resolution_clock::now();
- DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+  auto t_end = std::chrono::high_resolution_clock::now();
+  DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
 void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
@@ -347,11 +292,15 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  // Upload instance data
  glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
  glBufferData(GL_ARRAY_BUFFER, instanceMVPs.size() * sizeof(glm::mat4), instanceMVPs.data(), GL_DYNAMIC_DRAW);
-
+ 
  // Draw instanced
  glBindVertexArray(cubeVAO);
- glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
- 
+ if (!instanceMVPs.empty()) {
+    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
+}
+glBindVertexArray(0);
+glBindBuffer(GL_ARRAY_BUFFER, 0);
+  
  instancedShader->Unuse();
 }
 
@@ -439,16 +388,29 @@ void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
 
  // Tell OpenGL programmable pipeline how to locate vertex position data
  int vertexLocation = glGetAttribLocation(defaultShader->GetProgramID(), "aPos");
- glEnableVertexAttribArray(vertexLocation);
- glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
+ if (vertexLocation >= 0) {
+     glEnableVertexAttribArray(vertexLocation);
+     glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
+ } else {
+     defaultShader->Unuse();
+     glBindVertexArray(0);
+     return;
+ }
 
  // Offset for texture coordinate
  offset += sizeof(glm::vec3);
 
  // Tell OpenGL programmable pipeline how to locate vertex texture coordinate data
  int texcoordLocation = glGetAttribLocation(defaultShader->GetProgramID(), "aTexCoord");
- glEnableVertexAttribArray(texcoordLocation);
- glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
+ if (texcoordLocation >= 0) {
+     glEnableVertexAttribArray(texcoordLocation);
+     glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offset);
+ } else {
+     // still draw without UVs would be pointless; abort safe
+     defaultShader->Unuse();
+     glBindVertexArray(0);
+     return;
+ }
 
  // Draw cube geometry using indices from VBO 1
  glDrawElements(GL_TRIANGLE_STRIP, int(std::dynamic_pointer_cast<CubeGL>(cube)->GetIndices().size()), GL_UNSIGNED_SHORT, nullptr);
