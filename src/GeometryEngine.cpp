@@ -29,6 +29,7 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
 GeometryEngine::~GeometryEngine()
 {
     DestroyCubeBuffers();
+    DestroyPreviewBuffers();
 }
 
 bool GeometryEngine::InitEngine()
@@ -48,6 +49,9 @@ bool GeometryEngine::InitEngine()
      std::cerr << "Failed to initialize cube buffers" << std::endl;
      return false;
  }
+ 
+ // Initialize preview buffers
+ InitPreviewBuffers();
  
  return true;
 }
@@ -128,6 +132,7 @@ if (showCrosshair) {
      // Render simple text
 if (showHud) {
     RenderSimpleText(width_size, height_size);
+    RenderActiveObjectPreview(width_size, height_size);
 }
  
      // Disable performance UI text rendering
@@ -1155,6 +1160,188 @@ textRenderer->RenderText("Left Mouse - Add/Remove blocks", 20, -35, 0.8f, glm::v
      // Fallback: if TextRenderer is unavailable, output error message
      std::cerr << "TextRenderer is not available" << std::endl;
  }
+ 
+void GeometryEngine::InitPreviewBuffers()
+{
+    // Create a simple cube for preview (smaller scale)
+    float scale = 0.3f; // Smaller cube for preview
+    float cube_shift = 1.0f/6.0f;
+    float vertices[] = {
+        // positions                   // texture coordinates
+        // Face 0 (NEAR) - coordinates 0.0 - 1/6
+        -scale, -scale,  scale,         0.0f, 0.0f,
+         scale, -scale,  scale,         cube_shift*1.0f, 0.0f,
+        -scale,  scale,  scale,         0.0f, 1.0f,
+         scale,  scale,  scale,         cube_shift*1.0f, 1.0f,
+        
+        // Face 1 (RIGHT) - coordinates 1/6 - 2/6
+         scale, -scale,  scale,         cube_shift*1.0f, 0.0f,
+         scale, -scale, -scale,         cube_shift*2.0f, 0.0f,
+         scale,  scale,  scale,         cube_shift*1.0f, 1.0f,
+         scale,  scale, -scale,         cube_shift*2.0f, 1.0f,
+          
+        // Face 2 (FAR) - coordinates 2/6 - 3/6
+         scale, -scale, -scale,         cube_shift*2.0f, 0.0f,
+        -scale, -scale, -scale,         cube_shift*3.0f, 0.0f,
+         scale,  scale, -scale,         cube_shift*2.0f, 1.0f,
+        -scale,  scale, -scale,         cube_shift*3.0f, 1.0f,
+          
+        // Face 3 (LEFT) - coordinates 3/6 - 4/6
+        -scale, -scale, -scale,         cube_shift*3.0f, 0.0f,
+        -scale, -scale,  scale,         cube_shift*4.0f, 0.0f,
+        -scale,  scale, -scale,         cube_shift*3.0f, 1.0f,
+        -scale,  scale,  scale,         cube_shift*4.0f, 1.0f,
+          
+        // Face 4 (TOP) - coordinates 4/6 - 5/6
+        -scale,  scale,  scale,         cube_shift*4.0f, 0.0f,
+         scale,  scale,  scale,         cube_shift*5.0f, 0.0f,
+        -scale,  scale, -scale,         cube_shift*4.0f, 1.0f,
+         scale,  scale, -scale,         cube_shift*5.0f, 1.0f,
+          
+        // Face 5 (BOTTOM) - coordinates 5/6 - 1.0
+        -scale, -scale, -scale,         cube_shift*5.0f, 0.0f,
+         scale, -scale, -scale,         1.0f, 0.0f,
+        -scale, -scale,  scale,         cube_shift*5.0f, 1.0f,
+         scale, -scale,  scale,         1.0f, 1.0f
+    };
+    
+    unsigned int indices[] = {
+        0, 1, 2, 2, 1, 3,
+        4, 5, 6, 6, 5, 7,
+        8, 9, 10, 10, 9, 11,
+        12, 13, 14, 14, 13, 15,
+        16, 17, 18, 18, 17, 19,
+        20, 21, 22, 22, 21, 23
+    };
+    
+    glGenVertexArrays(1, &previewVAO);
+    glGenBuffers(1, &previewVBO);
+    glGenBuffers(1, &previewEBO);
+    
+    glBindVertexArray(previewVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, previewVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, previewEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    
+    // Vertex attributes
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    
+    // Load a default texture for preview (prefer "stone", else first available)
+    if (TextureCubeStorageInstance) {
+        const auto &texMap = TextureCubeStorageInstance->GetTextures();
+        GLuint texId = 0;
+        for (const auto &kv : texMap) {
+            const TextureCube &tc = kv.second;
+            if (tc.GetName() == std::string("stone")) {
+                texId = tc.GetTexture();
+                break;
+            }
+        }
+        if (texId == 0 && !texMap.empty()) {
+            texId = texMap.begin()->second.GetTexture();
+        }
+        previewTexture = texId;
+    }
+}
+
+void GeometryEngine::DestroyPreviewBuffers()
+{
+    if (previewVAO) {
+        glDeleteVertexArrays(1, &previewVAO);
+        previewVAO = 0;
+    }
+    if (previewVBO) {
+        glDeleteBuffers(1, &previewVBO);
+        previewVBO = 0;
+    }
+    if (previewEBO) {
+        glDeleteBuffers(1, &previewEBO);
+        previewEBO = 0;
+    }
+    // Note: previewTexture is managed by TextureCubeStorage, don't delete it
+}
+
+void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
+{
+    if (!defaultShader || !defaultShader->IsValid() || !previewVAO) return;
+    
+    // Save current state
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
+    
+    // Set viewport for preview (top-right corner)
+    int previewSize = 80; // 80x80 pixels
+    int x = 10;
+    int y = height_size - previewSize - 10;
+    glViewport(x, y, previewSize, previewSize);
+    
+    // Enable depth testing for 3D effect
+    glEnable(GL_DEPTH_TEST);
+    
+    // Create orthographic projection for preview
+    glm::mat4 projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 10.0f);
+    
+    // Create view matrix (look at cube from slightly above and to the side)
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(2.0f, 2.0f, 2.0f), // eye position
+        glm::vec3(0.0f, 0.0f, 0.0f), // center
+        glm::vec3(0.0f, 1.0f, 0.0f)  // up
+    );
+    
+    // Model matrix (identity for centered cube)
+    glm::mat4 model = glm::mat4(1.0f);
+    
+    // Combine matrices
+    glm::mat4 mvp = projection * view * model;
+    
+    // Use shader
+    defaultShader->Use();
+    defaultShader->SetMat4("mvp_matrix", mvp);
+    defaultShader->SetInt("texture0", 0);
+    
+    // Pick texture by active block name if available
+    GLuint texId = previewTexture;
+    if (WorldInstance && TextureCubeStorageInstance) {
+        auto user = WorldInstance->GetCurrentUser();
+        if (user) {
+            const std::string &activeName = user->GetActiveObjectTypeName();
+            if (!activeName.empty()) {
+                const auto &texMap = TextureCubeStorageInstance->GetTextures();
+                for (const auto &kv : texMap) {
+                    const TextureCube &tc = kv.second;
+                    if (tc.GetName() == activeName) {
+                        texId = tc.GetTexture();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Bind chosen texture (fallback to previewTexture if not found)
+    if (texId) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texId);
+    }
+    
+    // Draw preview cube
+    glBindVertexArray(previewVAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    
+    // Restore viewport
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+    
+    defaultShader->Unuse();
+}
  
 // Initialize static cube geometry buffers
 bool GeometryEngine::InitCubeBuffers()

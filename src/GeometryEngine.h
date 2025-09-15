@@ -67,11 +67,13 @@ private:
  // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
  bool InitCubeBuffers();
  void DestroyCubeBuffers();
- GLuint cubeVAO = 0;
- GLuint cubeVBO = 0;
- GLuint cubeEBO = 0;
- GLuint instanceVBO = 0; // instance buffer for per-instance MVP
- GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
+GLuint cubeVAO = 0;
+GLuint cubeVBO = 0;
+GLuint cubeEBO = 0;
+GLuint instanceVBO = 0; // instance buffer for per-instance MVP
+GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
+GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
+GLuint previewTexture = 0; // Preview texture
  bool EnsureCubeDrawVAO();
  
  void DrawCubeGeometry();
@@ -106,11 +108,16 @@ private:
   
     // Method for 3D cube rendering with perspective projection
    void Render3DCubeWithPerspective();
-
-private:
+ 
+ private:
  //OpenGL uniform locations and values
  GLint alphaUniformLocation;
  GLfloat alpha;
+
+    // UI helpers
+    void RenderActiveObjectPreview(int width_size, int height_size);
+    void InitPreviewBuffers();
+    void DestroyPreviewBuffers();
 
  std::shared_ptr<ShaderManager> shaderManager; // Replace QOpenGLShaderProgram
  std::shared_ptr<ShaderProgram> defaultShader;
