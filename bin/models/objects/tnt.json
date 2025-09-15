@@ -1,0 +1,6 @@
+{
+ "name" : "tnt",
+ "id" : 9,
+ "class" : "SingleCube",
+ "cube_textures" : ["tnt"]
+}

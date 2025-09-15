@@ -14,5 +14,8 @@
     "cmake.configureOnOpen": true,
     "cmake.configureOnEdit": false,
     "cmake.buildDirectory": "${workspaceFolder}/bin",
-    "cmake.parallelJobs": 8
+    "cmake.parallelJobs": 8,
+    "files.associations": {
+        "chrono": "cpp"
+    }
 }

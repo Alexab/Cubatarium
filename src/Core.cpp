@@ -38,15 +38,12 @@ Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
 
 void Core::LoadSystem(const std::string& config_file_name)
 {
- std::cout << "Core::LoadSystem: Loading system from " << config_file_name << std::endl;
  
  WorkDir = std::filesystem::current_path();
- std::cout << "Core::LoadSystem: Working directory: " << WorkDir.string() << std::endl;
-
+ 
  auto config_path = WorkDir;
  config_path.append(config_file_name);
- std::cout << "Core::LoadSystem: Config path: " << config_path.string() << std::endl;
-
+ 
  std::string val;
  std::ifstream file(config_path.string());
  if (file.is_open()) {
@@ -54,10 +51,29 @@ void Core::LoadSystem(const std::string& config_file_name)
      buffer << file.rdbuf();
      val = buffer.str();
      file.close();
-     std::cout << val << std::endl;
+     
  } else {
-     std::cerr << "Failed to open config file: " << config_path.string() << std::endl;
-     return;
+     // Try parent directory for config.json
+     auto parent_config = WorkDir;
+     if (parent_config.has_parent_path()) {
+         parent_config = parent_config.parent_path();
+         parent_config.append(config_file_name);
+         
+         std::ifstream pfile(parent_config.string());
+         if (pfile.is_open()) {
+             std::stringstream buffer;
+             buffer << pfile.rdbuf();
+             val = buffer.str();
+             pfile.close();
+             
+         } else {
+             std::cerr << "Failed to open config file: " << config_path.string() << " and parent: " << parent_config.string() << std::endl;
+             return;
+         }
+     } else {
+         std::cerr << "Failed to open config file: " << config_path.string() << std::endl;
+         return;
+     }
  }
 
  try {
@@ -71,8 +87,21 @@ void Core::LoadSystem(const std::string& config_file_name)
       is_need_autocreate = true;
      }
 
-     // Use current directory instead of parent directory
+     // Use current directory; if resources are not here, try parent directory
      auto project_dir = WorkDir;
+     auto textures_test = project_dir; textures_test.append("textures").append("blocks");
+     if (!std::filesystem::exists(textures_test)) {
+         if (project_dir.has_parent_path()) {
+             auto parent_dir = project_dir.parent_path();
+             auto parent_textures = parent_dir; parent_textures.append("textures").append("blocks");
+             if (std::filesystem::exists(parent_textures)) {
+                 
+                 project_dir = parent_dir;
+             } else {
+                 
+             }
+         }
+     }
 
      default_world_name = default_world_value;
      default_user_name = default_user_value;
@@ -86,15 +115,12 @@ void Core::LoadSystem(const std::string& config_file_name)
      WorldPath = project_dir;
      WorldPath.append("worlds");
 
-     std::cout << "Loading textures from: " << texture_base_storage_file_name.string() << std::endl;
-     TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
+      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
+      
+      TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
+      
+      ObjectStorageInstance->Load(object_storage_file_name.string());
      
-     std::cout << "Loading cube textures from: " << texture_cube_storage_file_name.string() << std::endl;
-     TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
-     
-     std::cout << "Loading objects from: " << object_storage_file_name.string() << std::endl;
-     ObjectStorageInstance->Load(object_storage_file_name.string());
-     std::cout << "Core::LoadSystem: Objects loaded successfully" << std::endl;
 
      LoadWorldList(WorldPath.string());
      if(WorldList.empty() || std::find(WorldList.begin(), WorldList.end(), default_world_name) == WorldList.end())
@@ -102,16 +128,14 @@ void Core::LoadSystem(const std::string& config_file_name)
 
      if(is_need_autocreate)
      {
-      std::cout << "Creating new world: World" << std::endl;
-      CreateWorld("World");
-      SaveSystem(config_file_name);
+       CreateWorld("World");
+       SaveSystem(config_file_name);
      }
      else
      {
-      std::cout << "Loading existing world: " << default_world_name << std::endl;
       LoadWorld(default_world_name);
       WorldInstance->SetCurrentUserName(default_user_name);
-      std::cout << "Core::LoadSystem: World loaded successfully" << std::endl;
+      
      }
      if(WorldInstance->GetCurrentUser()->GetActiveObject() == nullptr)
       WorldInstance->GetCurrentUser()->SetActiveObjectTypeName("grass");
@@ -150,12 +174,9 @@ void Core::CreateWorld(const std::string& world_name)
 
 void Core::LoadWorld(const std::string& world_name)
 {
- std::cout << "Core::LoadWorld: Loading world '" << world_name << "'" << std::endl;
+  std::filesystem::path world_path=WorldPath;
+  world_path.append(world_name);
  
- std::filesystem::path world_path=WorldPath;
- world_path.append(world_name);
- std::cout << "Core::LoadWorld: World path: " << world_path.string() << std::endl;
-
  WorldInstance->Load(world_path.string());
  if(WorldInstance->GetCurrentUser() == nullptr)
  {

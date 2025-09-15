@@ -29,7 +29,7 @@ class Core;
 // Structure for batch rendering
 struct RenderBatch {
     GLuint textureID; // Replace QOpenGLTexture with GLuint
-    std::vector<glm::mat4> modelMatrices; // Replace QMatrix4x4 with glm::mat4
+    std::vector<glm::mat4> modelMatrices; // Per-instance MVP matrices
     std::vector<std::shared_ptr<Object>> objects;
     std::vector<size_t> cubeIndices;
 };
@@ -51,8 +51,29 @@ public:
  glm::vec4 GetSkyColor() const; // Replace QVector4D with glm::vec4
  void SetGradientSky(bool useGradient);
  bool IsGradientSky() const;
-
+ 
+ // Debug/Logging
+ void SetVerboseLogging(bool enabled) { verboseLogging = enabled; }
+ 
+ // HUD toggles
+ void SetShowHud(bool enabled) { showHud = enabled; }
+ void SetShowCrosshair(bool enabled) { showCrosshair = enabled; }
+ void SetShowPerformance(bool enabled) { showPerformance = enabled; }
+ bool GetShowHud() const { return showHud; }
+ bool GetShowCrosshair() const { return showCrosshair; }
+ bool GetShowPerformance() const { return showPerformance; }
+ 
 private:
+ // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
+ bool InitCubeBuffers();
+ void DestroyCubeBuffers();
+ GLuint cubeVAO = 0;
+ GLuint cubeVBO = 0;
+ GLuint cubeEBO = 0;
+ GLuint instanceVBO = 0; // instance buffer for per-instance MVP
+ GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
+ bool EnsureCubeDrawVAO();
+ 
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint
  void DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
@@ -96,6 +117,7 @@ private:
  std::shared_ptr<ShaderProgram> skyShader; // Shader for sky
 std::shared_ptr<ShaderProgram> uiShader; // Shader for UI elements
 std::shared_ptr<ShaderProgram> textShader; // Shader for text
+std::shared_ptr<ShaderProgram> instancedShader; // Shader for instanced rendering
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
@@ -109,6 +131,14 @@ std::shared_ptr<ShaderProgram> textShader; // Shader for text
    // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   bool useGradientSky; // Use gradient sky
+ 
+ // Logging
+ bool verboseLogging = false;
+ 
+ // HUD toggles
+ bool showHud = true;
+ bool showCrosshair = true;
+ bool showPerformance = true;
  
  // Rendering optimization
  std::vector<RenderBatch> renderBatches;

@@ -1,0 +1,6 @@
+{
+ "name" : "tree_birch",
+ "id" : 4,
+ "class" : "SingleCube",
+ "cube_textures" : ["tree_birch"]
+}

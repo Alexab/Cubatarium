@@ -1,0 +1,5 @@
+{
+ "name" : "stone",
+ "id" : 3,
+ "textures" : ["stone", "stone", "stone", "stone", "stone", "stone"]
+}

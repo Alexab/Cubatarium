@@ -263,6 +263,15 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
             SetGradientSky(true);
         }
+        else if (key == KeyCode::Key_F9) {
+            if (geometries) geometries->SetShowHud(!geometries->GetShowHud());
+        }
+        else if (key == KeyCode::Key_F10) {
+            if (geometries) geometries->SetShowPerformance(!geometries->GetShowPerformance());
+        }
+        else if (key == KeyCode::Key_F11) {
+            if (geometries) geometries->SetShowCrosshair(!geometries->GetShowCrosshair());
+        }
     }
 }
 
@@ -330,7 +339,6 @@ void WindowManager::SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer)
     textRenderer = text_renderer;
     if (textRenderer) {
         textRenderer->SetWindowSize(windowWidth, windowHeight);
-        std::cout << "TextRenderer set in WindowManager" << std::endl;
     }
 }
 
@@ -351,11 +359,8 @@ void WindowManager::Shutdown() {
 
 void WindowManager::RenderUI() {
     if (!textRenderer) {
-        std::cout << "WindowManager: textRenderer is null in RenderUI!" << std::endl;
         return;
     }
-    
-    std::cout << "WindowManager: Rendering UI..." << std::endl;
     
     // Save current OpenGL state
     GLboolean depthTestEnabled;

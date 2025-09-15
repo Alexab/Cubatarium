@@ -163,13 +163,13 @@ void ShaderProgram::CheckCompileErrors(GLuint shader, const std::string& type) {
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success) {
             glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-            std::cerr << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << std::endl;
+            std::cerr << "Shader compile error [" << type << "]: " << infoLog << std::endl;
         }
     } else {
         glGetProgramiv(shader, GL_LINK_STATUS, &success);
         if (!success) {
             glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
-            std::cerr << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << std::endl;
+            std::cerr << "Shader program link error: " << infoLog << std::endl;
         }
     }
 }
@@ -177,7 +177,7 @@ void ShaderProgram::CheckCompileErrors(GLuint shader, const std::string& type) {
 std::string ShaderProgram::ReadFile(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        std::cerr << "Failed to open shader file: " << filepath << std::endl;
+        std::cerr << "Shader file open error: " << filepath << std::endl;
         return "";
     }
     

@@ -1,0 +1,6 @@
+{
+ "name" : "bedrock",
+ "id" : 10,
+ "class" : "SingleCube",
+ "cube_textures" : ["bedrock"]
+}

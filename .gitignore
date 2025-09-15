@@ -21,3 +21,8 @@
 *.dll
 /installer/InstallSourcesQt
 /worlds
+CMakeFiles
+Debug
+.cmake
+
+
