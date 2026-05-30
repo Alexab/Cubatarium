@@ -21,6 +21,19 @@
 *.dll
 /installer/InstallSourcesQt
 /worlds
+/bin/worlds/
+
+# CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
+/bin/Cubatarium.dir/
+/bin/x64/
+/bin/CMakeCache.txt
+/bin/cmake_install.cmake
+/bin/CMakeFiles/
+/bin/*.vcxproj
+/bin/*.vcxproj.filters
+/bin/*.sln
+/bin/*.vcxproj.user
+
 CMakeFiles
 Debug
 .cmake
