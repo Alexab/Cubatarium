@@ -1130,11 +1130,13 @@ const std::vector<FaceInstance>& World::GetBlockRenderInstances()
    cachedBlockCount_ = blockWorld_.CountNonAir();
   }
  }
- if (auto camera = GetCurrentUserCamera()) {
-  const glm::mat4 view = camera->GetViewMatrix();
-  const glm::mat4 proj = camera->GetProjection();
-  const glm::mat4 vp = proj * view;
-  meshCache_.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp);
+ if (renderSettings_.frustumCulling) {
+  if (auto camera = GetCurrentUserCamera()) {
+   const glm::mat4 view = camera->GetViewMatrix();
+   const glm::mat4 proj = camera->GetProjection();
+   const glm::mat4 vp = proj * view;
+   meshCache_.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp);
+  }
  }
  return meshCache_.GetFaceInstances();
 }

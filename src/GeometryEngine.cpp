@@ -30,6 +30,7 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
 GeometryEngine::~GeometryEngine()
 {
     DestroyCubeBuffers();
+    DestroyFaceQuadBuffers();
     DestroyPreviewBuffers();
     DestroyOutlineBuffers();
 }
@@ -52,10 +53,6 @@ bool GeometryEngine::InitEngine()
      return false;
  }
 
- if (!InitFaceQuadBuffers()) {
-     std::cerr << "Failed to initialize face quad buffers" << std::endl;
-     return false;
- }
  blockBatchesValid_ = false;
  
  // Initialize preview buffers
@@ -96,11 +93,44 @@ bool GeometryEngine::InitShaders()
      return false;
  }
  
- // Instanced shader with mat4 per-instance
+ // Instanced cube shader (legacy block path — passthrough UV from cube VAO)
  instancedShader = shaderManager->CreateShader("instanced", "shaders/vshader_instanced.glsl", "shaders/fshader.glsl");
  if (!instancedShader || !instancedShader->IsValid()) {
      std::cerr << "Failed to create instanced shader from files, trying inline sources" << std::endl;
      const char* instancedVS = R"(
+ #version 330 core
+ layout (location = 0) in vec3 aPos;
+ layout (location = 1) in vec2 aTexCoord;
+ layout (location = 2) in mat4 instanceMVP;
+ out vec2 TexCoord;
+ void main()
+ {
+     gl_Position = instanceMVP * vec4(aPos, 1.0);
+     TexCoord = aTexCoord;
+ }
+ )";
+     const char* commonFS = R"(
+ #version 330 core
+ in vec2 TexCoord;
+ out vec4 FragColor;
+ uniform sampler2D texture0;
+ void main()
+ {
+     FragColor = texture(texture0, TexCoord);
+ }
+ )";
+     instancedShader = shaderManager->CreateShaderFromStrings("instanced", instancedVS, commonFS);
+     if (!instancedShader || !instancedShader->IsValid()) {
+         std::cerr << "Failed to create instanced shader" << std::endl;
+         return false;
+     }
+ }
+
+ instancedFaceShader = shaderManager->CreateShader(
+     "instanced_face", "shaders/vshader_instanced_face.glsl", "shaders/fshader.glsl");
+ if (!instancedFaceShader || !instancedFaceShader->IsValid()) {
+     std::cerr << "Failed to create instanced face shader from files, trying inline sources" << std::endl;
+     const char* instancedFaceVS = R"(
  #version 330 core
  layout (location = 0) in vec3 aPos;
  layout (location = 1) in vec2 aTexCoord;
@@ -126,9 +156,9 @@ bool GeometryEngine::InitShaders()
      FragColor = texture(texture0, TexCoord);
  }
  )";
-     instancedShader = shaderManager->CreateShaderFromStrings("instanced", instancedVS, commonFS);
-     if (!instancedShader || !instancedShader->IsValid()) {
-         std::cerr << "Failed to create instanced shader" << std::endl;
+     instancedFaceShader = shaderManager->CreateShaderFromStrings("instanced_face", instancedFaceVS, commonFS);
+     if (!instancedFaceShader || !instancedFaceShader->IsValid()) {
+         std::cerr << "Failed to create instanced face shader" << std::endl;
          return false;
      }
  }
@@ -185,12 +215,6 @@ if (!camera) {
   if (cubeVAO == 0) {
       if (!InitCubeBuffers()) {
           std::cerr << "DrawCubeGeometry: cube buffers not initialized" << std::endl;
-          return;
-      }
-  }
-  if (faceVAO == 0) {
-      if (!InitFaceQuadBuffers()) {
-          std::cerr << "DrawCubeGeometry: face quad buffers not initialized" << std::endl;
           return;
       }
   }
@@ -293,9 +317,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  if (verboseLogging) std::cout << "DrawBatch: Drawing " << batch.modelMatrices.size() << " objects" << std::endl;
  
  glBindTexture(GL_TEXTURE_2D, batch.textureID);
- instancedShader->Use();
- instancedShader->SetInt("texture0", 0);
- 
+
  std::vector<glm::mat4> instanceMVPs;
  auto camera = WorldInstance->GetCurrentUserCamera();
  if (!camera) return;
@@ -325,12 +347,24 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
      && batch.quadSizes.size() == batch.modelMatrices.size();
  const GLsizei indexCount = drawFaceQuads ? 6 : 36;
  GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
- if (drawFaceQuads && faceVAO == 0) {
-  if (!InitFaceQuadBuffers()) {
+
+ std::shared_ptr<ShaderProgram> activeShader = instancedShader;
+ if (drawFaceQuads) {
+  if (faceVAO == 0 && !InitFaceQuadBuffers()) {
    return;
   }
   vao = faceVAO;
+  activeShader = instancedFaceShader;
+ } else if (!instancedShader) {
+  return;
  }
+
+ if (!activeShader || !activeShader->IsValid()) {
+  return;
+ }
+
+ activeShader->Use();
+ activeShader->SetInt("texture0", 0);
 
  if (drawFaceQuads) {
   struct BlockDrawInstance {
@@ -366,7 +400,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  glBindVertexArray(0);
  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
- instancedShader->Unuse();
+ activeShader->Unuse();
 }
 
 void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
@@ -993,7 +1027,7 @@ bool GeometryEngine::InitCubeBuffers()
 bool GeometryEngine::InitFaceQuadBuffers()
 {
     if (faceVAO != 0) {
-        DestroyFaceQuadBuffers();
+        return true;
     }
 
     const float vertices[] = {

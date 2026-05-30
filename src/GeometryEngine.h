@@ -130,7 +130,8 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
  std::shared_ptr<ShaderProgram> skyShader; // Shader for sky
 std::shared_ptr<ShaderProgram> uiShader; // Shader for UI elements
 std::shared_ptr<ShaderProgram> textShader; // Shader for text
-std::shared_ptr<ShaderProgram> instancedShader; // Shader for instanced rendering
+std::shared_ptr<ShaderProgram> instancedShader; // Instanced cubes (legacy blocks)
+std::shared_ptr<ShaderProgram> instancedFaceShader; // Instanced greedy face quads
 std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outline
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
