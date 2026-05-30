@@ -183,6 +183,12 @@ if (!camera) {
           return;
       }
   }
+  if (faceVAO == 0) {
+      if (!InitFaceQuadBuffers()) {
+          std::cerr << "DrawCubeGeometry: face quad buffers not initialized" << std::endl;
+          return;
+      }
+  }
  
   auto textures = TextureCubeStorageInstance->GetTextures();
   const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
@@ -291,16 +297,26 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
   }
  }
 
+ const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty();
+ const GLsizei indexCount = isBlockBatch ? 6 : 36;
+ GLuint vao = isBlockBatch ? faceVAO : cubeVAO;
+ if (isBlockBatch && faceVAO == 0) {
+  if (!InitFaceQuadBuffers()) {
+   return;
+  }
+  vao = faceVAO;
+ }
+
  // Upload instance data
  glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
  glBufferData(GL_ARRAY_BUFFER, instanceMVPs.size() * sizeof(glm::mat4), instanceMVPs.data(), GL_DYNAMIC_DRAW);
- 
- glBindVertexArray(cubeVAO);
+
+ glBindVertexArray(vao);
  if (!instanceMVPs.empty()) {
-    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
-}
-glBindVertexArray(0);
-glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
+ }
+ glBindVertexArray(0);
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
   
  instancedShader->Unuse();
 }
