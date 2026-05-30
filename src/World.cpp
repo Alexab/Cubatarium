@@ -150,7 +150,7 @@ bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
  if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) {
   return false;
  }
- if (position.y < kMinReasonablePlayerY || position.y > kMaxReasonablePlayerY) {
+ if (position.y <= kMinReasonablePlayerY || position.y > kMaxReasonablePlayerY) {
   return false;
  }
  if (std::abs(position.x) > 100000.0f || std::abs(position.z) > 100000.0f) {
@@ -197,6 +197,91 @@ void World::ApplySpawnToCamera()
  }
 }
 
+std::optional<int> World::FindHighestSolidY(int x, int z) const
+{
+ if (!blockRegistry_) {
+  return std::nullopt;
+ }
+ for (int y = 255; y >= 0; --y) {
+  if (blockRegistry_->IsSolid(blockWorld_.GetBlock(glm::ivec3(x, y, z)))) {
+   return y;
+  }
+ }
+ return std::nullopt;
+}
+
+void World::EnsurePlayerOnGround()
+{
+ auto user = GetCurrentUser();
+ if (!user || !blockRegistry_) {
+  return;
+ }
+
+ std::string userName = CurrentUserName;
+ for (const auto& entry : Users) {
+  if (entry.second == user) {
+   userName = entry.first;
+   break;
+  }
+ }
+ auto camera = GetUserCamera(userName);
+ if (!camera) {
+  return;
+ }
+
+ constexpr float kPlayerSize = 0.9f;
+ glm::vec3 pos = user->GetPosition();
+ const glm::ivec3 column = WorldPosToBlock(pos);
+ int x = column.x;
+ int z = column.z;
+
+ std::optional<int> topY = FindHighestSolidY(x, z);
+ if (!topY) {
+  const glm::ivec3 spawnColumn = WorldPosToBlock(SpawnPoint);
+  x = spawnColumn.x;
+  z = spawnColumn.z;
+  topY = FindHighestSolidY(x, z);
+ }
+ if (!topY) {
+  ApplySpawnToCamera();
+  if (auto cam = GetUserCamera(userName)) {
+   cam->ResetVerticalPhysics();
+  }
+  return;
+ }
+
+ pos = BlockCenter(glm::ivec3(x, *topY, z));
+ pos.y += 0.5f + kPlayerSize * 0.5f;
+ while (CheckCollision(pos, kPlayerSize)) {
+  pos.y += 0.1f;
+ }
+
+ user->SetPosition(pos);
+ camera->SetPosition(pos);
+ camera->ResetVerticalPhysics();
+}
+
+void World::FinalizePlayerAfterWorldLoad()
+{
+ blockWorldReady_ = cachedBlockCount_ > 0;
+ physicsSuspendFrames_ = 3;
+
+ if (auto user = GetCurrentUser()) {
+  SanitizeUserPosition(user);
+  if (blockWorldReady_) {
+   EnsurePlayerOnGround();
+  } else {
+   ApplySpawnToCamera();
+  }
+ } else {
+  ApplySpawnToCamera();
+ }
+
+ if (auto camera = GetCurrentUserCamera()) {
+  camera->ResetVerticalPhysics();
+ }
+}
+
 void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
 {
  if (!user) {
@@ -219,13 +304,14 @@ void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
 
 void World::Create(const std::string& world_name)
 {
+ blockWorldReady_ = false;
  RefreshBlockRegistry();
  blockWorld_.Clear();
  modifiedChunks_.clear();
  GenerateWorldBlocks();
  WorldName = world_name;
- ApplySpawnToCamera();
  RebuildBlockMesh();
+ FinalizePlayerAfterWorldLoad();
 }
 
 void World::Load(const std::string& world_folder_path)
@@ -238,6 +324,7 @@ void World::Load(const std::string& world_folder_path)
  const std::string chunks_dir = world_folder_path + "/chunks";
 
  worldFolderPath_ = world_folder_path;
+ blockWorldReady_ = false;
  blockWorld_.Clear();
  modifiedChunks_.clear();
 
@@ -277,13 +364,7 @@ void World::Load(const std::string& world_folder_path)
  }
 
  RebuildBlockMesh();
-
- if (auto user = GetCurrentUser()) {
-  SanitizeUserPosition(user);
-  ApplyUserToCamera(user);
- } else {
-  ApplySpawnToCamera();
- }
+ FinalizePlayerAfterWorldLoad();
 }
 
 void World::Save(const std::string& world_folder_path)
@@ -777,6 +858,14 @@ void World::SaveWorldData(const std::string &file_name)
 
 void World::DoMovement()
 {
+ if (!blockWorldReady_) {
+  return;
+ }
+ if (physicsSuspendFrames_ > 0) {
+  --physicsSuspendFrames_;
+  return;
+ }
+
  auto t_begin = std::chrono::high_resolution_clock::now();
 
  auto camera = GetCurrentUserCamera();

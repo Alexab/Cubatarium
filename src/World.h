@@ -66,6 +66,8 @@ public:
 
  void RefreshBlockRegistry();
  void ApplySpawnToCamera();
+ void FinalizePlayerAfterWorldLoad();
+ bool IsBlockWorldReady() const { return blockWorldReady_; }
  void InvalidateBlockMesh();
  const std::vector<FaceInstance>& GetBlockRenderInstances();
 
@@ -132,6 +134,8 @@ private:
  void ApplyUserToCamera(const std::shared_ptr<User>& user);
  bool IsReasonablePlayerPosition(const glm::vec3& position) const;
  void SanitizeUserPosition(const std::shared_ptr<User>& user);
+ void EnsurePlayerOnGround();
+ std::optional<int> FindHighestSolidY(int x, int z) const;
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
 
  std::string WorldName;
@@ -140,6 +144,8 @@ private:
  uint32_t worldSeed_{12345};
  std::string terrainType_{"heightmap"};
  size_t cachedBlockCount_{0};
+ bool blockWorldReady_{false};
+ int physicsSuspendFrames_{0};
 
  std::map<std::string, std::shared_ptr<User>> Users;
 

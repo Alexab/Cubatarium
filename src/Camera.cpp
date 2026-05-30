@@ -433,6 +433,15 @@ void Camera::UpdateFrameTime()
  LastFrame = current_frame;
 }
 
+void Camera::ResetVerticalPhysics()
+{
+ verticalVelocity_ = 0.0f;
+ onGround_ = true;
+ suppressNextJump_ = false;
+ spaceWasPressed_ = KeysStatus[GLFW_KEY_SPACE];
+ UpdatePose();
+}
+
 bool Camera::DoMovement(const World* world)
 {
  // Camera controls

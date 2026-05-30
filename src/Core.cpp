@@ -165,6 +165,7 @@ void Core::LoadSystem(const std::string& config_file_name)
      {
       LoadWorld(default_world_name);
       WorldInstance->SetCurrentUserName(default_user_name);
+      WorldInstance->FinalizePlayerAfterWorldLoad();
      }
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
@@ -209,7 +210,6 @@ void Core::CreateWorld(const std::string& world_name)
  }
  WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
  WorldInstance->Create(world_name);
- WorldInstance->ApplySpawnToCamera();
  SaveWorld(world_name);
 }
 

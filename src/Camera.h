@@ -69,6 +69,8 @@ public:
 public:
  bool DoMovement(const World* world);
 
+ void ResetVerticalPhysics();
+
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
  void UpdateFrameTime();
