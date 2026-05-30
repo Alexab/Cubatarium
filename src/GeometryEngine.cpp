@@ -6,6 +6,7 @@
 #include <chrono>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
+#include "GridMath.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
 #include "User.h"
@@ -157,12 +158,6 @@ void GeometryEngine::DrawCubeGeometry()
 {
  auto t_begin = std::chrono::high_resolution_clock::now();
  
- const auto& objects = WorldInstance->GetObjects();
- 
- if (objects.empty()) {
-     return;
- }
- 
  auto camera = WorldInstance->GetCurrentUserCamera();
 if (!camera) {
     return;
@@ -184,11 +179,9 @@ if (!camera) {
       }
   }
  
-  // Get textures
   auto textures = TextureCubeStorageInstance->GetTextures();
- 
-  // Prepare batches per texture
-  PrepareRenderBatches(objects, textures);
+  const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
+  PrepareRenderBatchesFromBlocks(blockInstances, textures);
  
   // Render all batches instanced
   glm::mat4 dummy_mvp = camera->GetMvpMatrix();
@@ -254,6 +247,30 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
  }
 }
 
+void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
+                                                    const std::map<size_t, TextureCube>& textures)
+{
+ renderBatches.clear();
+ std::unordered_map<size_t, RenderBatch> batchMap;
+
+ for (const auto& instance : instances) {
+  const size_t textureId = static_cast<size_t>(instance.id);
+  auto& batch = batchMap[textureId];
+  if (batch.textureID == 0) {
+   const auto texIt = textures.find(textureId);
+   if (texIt == textures.end()) {
+    continue;
+   }
+   batch.textureID = texIt->second.GetTextureId();
+  }
+  batch.modelMatrices.push_back(instance.model);
+ }
+
+ for (auto& pair : batchMap) {
+  renderBatches.push_back(std::move(pair.second));
+ }
+}
+
 void GeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 {
  for (const auto& batch : renderBatches) {
@@ -263,7 +280,7 @@ void GeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 
 void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
 {
- if (batch.modelMatrices.empty()) {
+ if (batch.modelMatrices.empty() && batch.objects.empty()) {
      if (verboseLogging) std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
      return;
  }
@@ -274,20 +291,27 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  instancedShader->Use();
  instancedShader->SetInt("texture0", 0);
  
- // Build per-instance MVP buffer
  std::vector<glm::mat4> instanceMVPs;
- instanceMVPs.reserve(batch.objects.size());
  auto camera = WorldInstance->GetCurrentUserCamera();
  if (!camera) return;
- for (size_t i = 0; i < batch.cubeIndices.size(); ++i) {
-     auto& object = batch.objects[i];
-     if (!object) continue;
-     size_t cubeIdx = batch.cubeIndices[i];
-     if (cubeIdx >= object->GetCubes().size()) continue;
-     auto& cube = object->GetCubes()[cubeIdx];
-     glm::mat4 model = object->GetPose() * cube->GetInitialPose();
-     glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
-     instanceMVPs.push_back(mvp);
+
+ if (!batch.objects.empty()) {
+  instanceMVPs.reserve(batch.objects.size());
+  for (size_t i = 0; i < batch.cubeIndices.size(); ++i) {
+   auto& object = batch.objects[i];
+   if (!object) continue;
+   size_t cubeIdx = batch.cubeIndices[i];
+   if (cubeIdx >= object->GetCubes().size()) continue;
+   auto& cube = object->GetCubes()[cubeIdx];
+   glm::mat4 model = object->GetPose() * cube->GetInitialPose();
+   glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
+   instanceMVPs.push_back(mvp);
+  }
+ } else {
+  instanceMVPs.reserve(batch.modelMatrices.size());
+  for (const auto& model : batch.modelMatrices) {
+   instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() * model);
+  }
  }
 
  // Upload instance data
@@ -303,62 +327,6 @@ glBindVertexArray(0);
 glBindBuffer(GL_ARRAY_BUFFER, 0);
   
  instancedShader->Unuse();
-}
-
-void GeometryEngine::UpdateFrustumCulling(const glm::mat4& view_projection)
-{
- // Extract frustum planes from view-projection matrix
- glm::mat4 m = glm::transpose(view_projection);
- 
- // Left plane
- frustumPlanes[0].normal = glm::vec4(m[3][0] + m[0][0], m[3][1] + m[0][1], m[3][2] + m[0][2], m[3][3] + m[0][3]);
- frustumPlanes[0].distance = frustumPlanes[0].normal.w;
- frustumPlanes[0].normal.w = 0.0f;
- frustumPlanes[0].normal = glm::normalize(frustumPlanes[0].normal);
- 
- // Right plane
- frustumPlanes[1].normal = glm::vec4(m[3][0] - m[0][0], m[3][1] - m[0][1], m[3][2] - m[0][2], m[3][3] - m[0][3]);
- frustumPlanes[1].distance = frustumPlanes[1].normal.w;
- frustumPlanes[1].normal.w = 0.0f;
- frustumPlanes[1].normal = glm::normalize(frustumPlanes[1].normal);
- 
- // Bottom plane
- frustumPlanes[2].normal = glm::vec4(m[3][0] + m[1][0], m[3][1] + m[1][1], m[3][2] + m[1][2], m[3][3] + m[1][3]);
- frustumPlanes[2].distance = frustumPlanes[2].normal.w;
- frustumPlanes[2].normal.w = 0.0f;
- frustumPlanes[2].normal = glm::normalize(frustumPlanes[2].normal);
- 
- // Top plane
- frustumPlanes[3].normal = glm::vec4(m[3][0] - m[1][0], m[3][1] - m[1][1], m[3][2] - m[1][2], m[3][3] - m[1][3]);
- frustumPlanes[3].distance = frustumPlanes[3].normal.w;
- frustumPlanes[3].normal.w = 0.0f;
- frustumPlanes[3].normal = glm::normalize(frustumPlanes[3].normal);
- 
- // Near plane
- frustumPlanes[4].normal = glm::vec4(m[3][0] + m[2][0], m[3][1] + m[2][1], m[3][2] + m[2][2], m[3][3] + m[2][3]);
- frustumPlanes[4].distance = frustumPlanes[4].normal.w;
- frustumPlanes[4].normal.w = 0.0f;
- frustumPlanes[4].normal = glm::normalize(frustumPlanes[4].normal);
- 
- // Far plane
- frustumPlanes[5].normal = glm::vec4(m[3][0] - m[2][0], m[3][1] - m[2][1], m[3][2] - m[2][2], m[3][3] - m[2][3]);
- frustumPlanes[5].distance = frustumPlanes[5].normal.w;
- frustumPlanes[5].normal.w = 0.0f;
- frustumPlanes[5].normal = glm::normalize(frustumPlanes[5].normal);
-}
-
-bool GeometryEngine::IsObjectInFrustum(const std::shared_ptr<Object>& object)
-{
- glm::vec3 objectPos(object->GetPose()[0][3], object->GetPose()[1][3], object->GetPose()[2][3]);
- float radius = 1.0f; // Approximate object radius
- 
- for (const auto& plane : frustumPlanes) {
-     float distance = glm::dot(glm::vec3(plane.normal), objectPos) + plane.distance;
-     if (distance < -radius) {
-         return false;
-     }
- }
- return true;
 }
 
 void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
@@ -432,113 +400,6 @@ void GeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<s
   DrawCube(cube, texture);
  }
 
-}
-
-void GeometryEngine::DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
-{
- 
- // Enable depth buffer
- glEnable(GL_DEPTH_TEST);
-
- // Enable back face culling
- glEnable(GL_CULL_FACE);
-
- // Add debug information about OpenGL state
- std::cout << "=== OpenGL State Debug ===" << std::endl;
- GLboolean depthTest;
- glGetBooleanv(GL_DEPTH_TEST, &depthTest);
- std::cout << "GL_DEPTH_TEST: " << (depthTest ? "ENABLED" : "DISABLED") << std::endl;
- 
- GLboolean blending;
- glGetBooleanv(GL_BLEND, &blending);
- std::cout << "GL_BLEND: " << (blending ? "ENABLED" : "DISABLED") << std::endl;
- 
- GLint depthFunc;
- glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
- std::cout << "GL_DEPTH_FUNC: " << depthFunc << std::endl;
- 
- GLboolean cullFace;
- glGetBooleanv(GL_CULL_FACE, &cullFace);
- std::cout << "GL_CULL_FACE: " << (cullFace ? "ENABLED" : "DISABLED") << std::endl;
- 
- std::cout << "=== End OpenGL State Debug ===" << std::endl;
-
- // Clear buffers
- if(useGradientSky)
- {
-  // For gradient sky clear only depth buffer
-glClear(GL_DEPTH_BUFFER_BIT); // Return depth buffer clearing
- }
- else
- {
-  // For simple sky set color and clear both buffers
-glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.w); // Return sky color
-glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Return buffer clearing
- }
-
- // Enable sky rendering
-// Render gradient sky AFTER clearing depth buffer
- if(useGradientSky)
- {
-     std::cout << "Drawing gradient sky with color: (" << skyColor.x << ", " << skyColor.y << ", " << skyColor.z << ", " << skyColor.w << ")" << std::endl;
-  DrawSkyGradient();
-  std::cout << "Gradient sky drawn." << std::endl;
- }
-
- // Bind shader pipeline for use
- if (!defaultShader || !defaultShader->IsValid()) {
-     std::cerr << "DrawCubeGeometry: Default shader is not valid!" << std::endl;
-     return;
- }
- 
- // debug removed
- defaultShader->Use();
-
- // Set modelview-projection matrix
- std::cout << "DrawCubeGeometry: Setting MVP matrix" << std::endl;
- defaultShader->SetMat4("mvp_matrix", mvp_matrix);
-
- //glUniform1f(alphaUniformLocation, alpha);
-
-     auto textures = TextureCubeStorageInstance->GetTextures();
- 
- std::cout << "Objects to render:" << objects.size() << std::endl;
- std::cout << "Textures available:" << textures.size() << std::endl;
-  
- // Optimized rendering with batch processing
- std::cout << "DrawCubeGeometry: Preparing render batches..." << std::endl;
- PrepareRenderBatches(objects, textures);
- std::cout << "Render batches prepared:" << renderBatches.size() << std::endl;
- 
- std::cout << "DrawCubeGeometry: Rendering batches..." << std::endl;
- RenderBatches(mvp_matrix);
-
- auto user = WorldInstance->GetCurrentUser();
- if(user)
- {
-  auto active_object_type_name = user->GetActiveObjectTypeName();
-  auto active_object = ObjectStorageInstance->TakeObject(active_object_type_name);//GetPrototype(active_object_type_name).GetSample();
-  if(active_object)
-  {
-   // Set modelview-projection matrix for user plane
-   glm::mat4 pose = glm::mat4(1.0f);
-   active_object->GetCubes()[0]->Init(pose, 0.2f);
-
-   pose[0][3] = 0.8f;
-   pose[1][3] = 0.8f;
-   pose[2][3] = 0.0f;
-   active_object->SetPose(pose);
-
-   glm::mat4 position = glm::mat4(1.0f);
-   defaultShader->SetMat4("mvp_matrix", position);
-
-   DrawObject(active_object, textures);
-  }
- }
- defaultShader->Unuse();
-
- glDisable(GL_CULL_FACE);
- glDisable(GL_DEPTH_TEST);
 }
 
 void GeometryEngine::DrawSkyGradient()
@@ -656,14 +517,13 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
     double totalTime = DurationDrawSceneMks + WorldInstance->GetDurationDoMovementMks() + view_duration;
     double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
     
-    // Get object count
-    size_t objectCount = WorldInstance->GetObjects().size();
+    size_t blockCount = WorldInstance->GetBlockWorld().CountNonAir();
     
     // Form performance information strings
     std::vector<std::string> performanceLines = {
         "Performance:",
         "FPS: " + std::to_string(fps).substr(0, 6),
-        "Objects: " + std::to_string(objectCount),
+        "Blocks: " + std::to_string(blockCount),
         "Scene: " + std::to_string(DurationDrawSceneMks/1000.0).substr(0, 6) + " ms",
         "Movement: " + std::to_string(WorldInstance->GetDurationDoMovementMks()/1000.0).substr(0, 6) + " ms",
         "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
@@ -679,341 +539,6 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
         textRenderer->RenderText(line, x, y, scale, textColor);
         y -= 18.0f; // Margin between lines
     }
-}
-
-void GeometryEngine::RenderTestCube()
-{
-    std::cout << "GeometryEngine: Rendering minimal test triangle..." << std::endl;
-    
-    // Сохраняем состояние OpenGL
-    GLboolean depthTestEnabled;
-    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-    GLboolean blendEnabled;
-    glGetBooleanv(GL_BLEND, &blendEnabled);
-    GLboolean cullFaceEnabled;
-    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
-    
-    // Create simple shader for minimal test
-    const char* vertexShaderSource = R"(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aColor;
-        out vec3 ourColor;
-        void main()
-        {
-            gl_Position = vec4(aPos, 1.0);
-            ourColor = aColor;
-        }
-    )";
-    
-    const char* fragmentShaderSource = R"(
-        #version 330 core
-        in vec3 ourColor;
-        out vec4 FragColor;
-        void main()
-        {
-            FragColor = vec4(ourColor, 1.0);
-        }
-    )";
-    
-    // Компилируем шейдеры
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    
-    // Создаем программу
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    
-    // Проверяем ошибки компиляции
-    GLint success;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
-    }
-    
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
-    }
-    
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "Shader program linking failed: " << infoLog << std::endl;
-    }
-    
-    // Create triangle data (in normalized screen coordinates)
-    float vertices[] = {
-        // позиции        // цвета
-        -0.8f, -0.8f, 0.0f,  1.0f, 0.0f, 0.0f,  // red (larger and to the left)
-         0.8f, -0.8f, 0.0f,  0.0f, 1.0f, 0.0f,  // green (larger and to the right)
-         0.0f,  0.8f, 0.0f,  0.0f, 0.0f, 1.0f   // blue (higher)
-    };
-    
-    // Создаем VAO и VBO
-    GLuint VAO, VBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    // Настраиваем атрибуты
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // Отключаем тест глубины для 2D рендеринга
-    glDisable(GL_DEPTH_TEST);
-    
-    // Используем наш шейдер
-    glUseProgram(shaderProgram);
-    
-    // Рисуем треугольник
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    
-    // Проверяем OpenGL ошибки
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "RenderTestTriangle: OpenGL error after drawing: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
-    }
-    
-    // Очищаем ресурсы
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    // Восстанавливаем состояние OpenGL
-    if (depthTestEnabled) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
-    
-    if (blendEnabled) {
-        glEnable(GL_BLEND);
-    } else {
-        glDisable(GL_BLEND);
-    }
-    
-    if (cullFaceEnabled) {
-        glEnable(GL_CULL_FACE);
-    } else {
-        glDisable(GL_CULL_FACE);
-    }
-    
-    std::cout << "GeometryEngine: Minimal test triangle rendered successfully!" << std::endl;
-}
-
-void GeometryEngine::Render3DCubeWithPerspective()
-{
-    std::cout << "GeometryEngine: Rendering 3D cube with perspective..." << std::endl;
-    
-    // Сохраняем состояние OpenGL
-    GLboolean depthTestEnabled;
-    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-    GLboolean blendEnabled;
-    glGetBooleanv(GL_BLEND, &blendEnabled);
-    GLboolean cullFaceEnabled;
-    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
-    
-    // Get camera
-    auto camera = WorldInstance->GetCurrentUserCamera();
-    if (!camera) {
-        std::cout << "Render3DCubeWithPerspective: Camera is null!" << std::endl;
-        return;
-    }
-    
-    // Create shader for 3D rendering
-    const char* vertexShaderSource = R"(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aColor;
-        out vec3 ourColor;
-        uniform mat4 MVP;
-        void main()
-        {
-            gl_Position = MVP * vec4(aPos, 1.0);
-            ourColor = aColor;
-        }
-    )";
-    
-    const char* fragmentShaderSource = R"(
-        #version 330 core
-        in vec3 ourColor;
-        out vec4 FragColor;
-        void main()
-        {
-            FragColor = vec4(ourColor, 1.0);
-        }
-    )";
-    
-    // Компилируем шейдеры
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    
-    // Создаем программу
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    
-    // Проверяем ошибки компиляции
-    GLint success;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
-    }
-    
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
-    }
-    
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "Shader program linking failed: " << infoLog << std::endl;
-    }
-    
-    // Create cube data (in world coordinates)
-    float vertices[] = {
-        // позиции        // цвета
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  // red
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  // green
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // blue
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,  // yellow
-
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,  // magenta
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,  // cyan
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,  // white
-        -0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.5f   // gray
-    };
-    
-    // Indices for drawing cube faces
-    unsigned int indices[] = {
-        0, 1, 2, 2, 3, 0,   // front face
-        1, 5, 6, 6, 2, 1,   // right face
-        5, 4, 7, 7, 6, 5,   // back face
-        4, 0, 3, 3, 7, 4,   // left face
-        3, 2, 6, 6, 7, 3,   // top face
-        4, 5, 1, 1, 0, 4    // bottom face
-    };
-    
-    // Create VAO, VBO and EBO
-    GLuint VAO, VBO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    
-    // Настраиваем атрибуты
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // Включаем тест глубины для 3D рендеринга
-    glEnable(GL_DEPTH_TEST);
-    
-    // Используем наш шейдер
-    glUseProgram(shaderProgram);
-    
-    // Create MVP matrix
-    glm::mat4 model = glm::mat4(1.0f);
-    // Place cube in static position in front of camera
-model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f)); // Fixed position in front of camera
-model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate 45 degrees around Y axis
-    
-    glm::mat4 view = camera->GetViewMatrix();
-    glm::mat4 projection = camera->GetProjection();
-    glm::mat4 mvp = projection * view * model;
-    
-    // Set MVP matrix
-    GLint mvpLocation = glGetUniformLocation(shaderProgram, "MVP");
-    if (mvpLocation != -1) {
-        glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
-    }
-    
-    // Debug information
-    auto cameraPos = camera->GetPosition();
-    auto cameraFront = camera->GetFront();
-    std::cout << "Render3DCubeWithPerspective: Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
-    std::cout << "Render3DCubeWithPerspective: Camera Front: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")" << std::endl;
-    std::cout << "Render3DCubeWithPerspective: Test cube position: (0, 0, -2) - STATIC" << std::endl;
-    std::cout << "Render3DCubeWithPerspective: Test cube rotation: 45° around Y axis" << std::endl;
-    
-    // Рисуем куб
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    
-    // Проверяем OpenGL ошибки
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "Render3DCubeWithPerspective: OpenGL error after drawing: " << error << " (0x" << std::hex << error << std::dec << ")" << std::endl;
-    }
-    
-    // Очищаем ресурсы
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    // Восстанавливаем состояние OpenGL
-    if (depthTestEnabled) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
-    
-    if (blendEnabled) {
-        glEnable(GL_BLEND);
-    } else {
-        glDisable(GL_BLEND);
-    }
-    
-    if (cullFaceEnabled) {
-        glEnable(GL_CULL_FACE);
-    } else {
-        glDisable(GL_CULL_FACE);
-    }
-    
-    std::cout << "GeometryEngine: 3D cube with perspective rendered successfully!" << std::endl;
 }
 
 void GeometryEngine::RenderCrosshair(int width_size, int height_size)
@@ -1475,23 +1000,11 @@ void GeometryEngine::DestroyOutlineBuffers()
 
 void GeometryEngine::RenderSelectionOutline()
 {
-    if (!WorldInstance->GetIsIntersectionExists()) {
+    if (!WorldInstance->GetIsBlockIntersectionExists()) {
         return;
     }
 
     if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
-        return;
-    }
-
-    const auto& objects = WorldInstance->GetObjects();
-    const size_t objectIndex = WorldInstance->GetIntersectionObjectIndex();
-    const size_t cubeIndex = WorldInstance->GetIntersectionCubeIndex();
-    if (objectIndex >= objects.size()) {
-        return;
-    }
-
-    const auto& object = objects[objectIndex];
-    if (!object || cubeIndex >= object->GetCubes().size()) {
         return;
     }
 
@@ -1500,8 +1013,8 @@ void GeometryEngine::RenderSelectionOutline()
         return;
     }
 
-    const auto& cube = object->GetCubes()[cubeIndex];
-    const glm::mat4 model = object->GetPose() * cube->GetInitialPose();
+    const glm::ivec3 blockPos = WorldInstance->GetIntersectionBlockPos();
+    const glm::mat4 model = glm::translate(glm::mat4(1.0f), BlockCenter(blockPos));
     const glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
 
     GLboolean cullFaceEnabled;

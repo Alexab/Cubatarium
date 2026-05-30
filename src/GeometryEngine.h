@@ -14,6 +14,7 @@ typedef int GLint;
 #include "TextureBase.h"
 #include "TextureCube.h"
 #include "World.h"
+#include "ChunkMeshCache.h"
 #include "CubeGL.h"
 #include "ShaderManager.h"
 #include "TextRenderer.h"
@@ -83,18 +84,16 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint
  void DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures);
- void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index); // Replace QMatrix4x4 with glm::mat4
  void DrawSkyGradient();
  void DrawSkyGradientSimple(); // Simple version without VBO
 
  // New optimized methods
  void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects,
                           const std::map<size_t, TextureCube>& textures);
+ void PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
+                                     const std::map<size_t, TextureCube>& textures);
  void RenderBatches(const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
  void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
- void UpdateFrustumCulling(const glm::mat4& view_projection); // Replace QMatrix4x4 with glm::mat4
- bool IsObjectInFrustum(const std::shared_ptr<Object>& object);
- 
  // Methods for text rendering
  void RenderPerformanceText(int width_size, int height_size, double view_duration);
  
@@ -104,12 +103,6 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
    // Method for simple 2D text rendering
   void RenderSimpleText(int width_size, int height_size);
   
-       // Method for test cube rendering
-  void RenderTestCube();
-  
-    // Method for 3D cube rendering with perspective projection
-   void Render3DCubeWithPerspective();
- 
  private:
  //OpenGL uniform locations and values
  GLint alphaUniformLocation;
@@ -151,14 +144,6 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  
  // Rendering optimization
  std::vector<RenderBatch> renderBatches;
- std::vector<std::shared_ptr<Object>> visibleObjects;
- 
- // Frustum culling
- struct FrustumPlane {
-     glm::vec4 normal; // QVector4D -> glm::vec4
-     float distance;
- };
- std::array<FrustumPlane, 6> frustumPlanes;
 };
 
 }

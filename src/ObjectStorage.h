@@ -26,6 +26,8 @@ public:
  uint64_t GetObjectTypeId(const std::string& type_name) const;
  std::string GetObjectTypeName(uint64_t type_id) const;
 
+ std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const { return TextureCubeInstance; }
+
 private:
  bool LoadJson(const std::string& file_name, std::string &name, size_t &id, std::string &class_name, std::vector<std::string> &cube_textures);
 

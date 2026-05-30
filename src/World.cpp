@@ -14,6 +14,12 @@
 #include "ObjectStorage.h"
 #include "User.h"
 #include "ViewEngine.h"
+#include "BlockRaycast.h"
+#include "GridMath.h"
+#include "WorldGenerator.h"
+#include "ChunkManager.h"
+#include "Chunk.h"
+#include <map>
 
 using json = nlohmann::json;
 
@@ -24,7 +30,11 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
  , ViewInstance(views)
  , spatialIndexDirty(false)
 {
+ if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
+  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage());
+ }
  IsIntersectionExists = false;
+ hasIntersectionBlock_ = false;
 }
 
 void World::GenerateUsers()
@@ -55,60 +65,76 @@ void World::SetSpawnPoint(glm::vec3 value)
 
 void World::Create(const std::string& world_name)
 {
- 
  Objects.clear();
- auto plane = ObjectStorageInstance->TakeObject("terrain_plane");
- if (plane) {
-     Objects.emplace_back(plane);
- } else {
-     std::cerr << "World::Create: Failed to get terrain_plane object!" << std::endl;
+ blockWorld_.Clear();
+ if (blockRegistry_) {
+  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
  }
- 
  WorldName = world_name;
- 
- // Инициализировать пространственный индекс
- RebuildOctree();
- 
+ meshCache_.MarkAllDirty();
+ meshInstancesReady_ = false;
+ spatialIndexDirty = true;
 }
 
 void World::Load(const std::string& world_folder_path)
 {
- std::string objects_file_name = world_folder_path+"/objects.json";
- std::string users_file_name = world_folder_path+"/users.json";
- std::string world_data_file_name = world_folder_path+"/world_data.json";
+ const std::string users_file_name = world_folder_path + "/users.json";
+ const std::string world_data_file_name = world_folder_path + "/world_data.json";
+ const std::string chunks_file_name = world_folder_path + "/chunks.json";
+ const std::string blocks_file_name = world_folder_path + "/blocks.json";
+ const std::string objects_file_name = world_folder_path + "/objects.json";
+
+ Objects.clear();
+ blockWorld_.Clear();
 
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
- LoadObjects(objects_file_name);
- 
- // Initialize spatial index after loading objects
- RebuildOctree();
+
+ if (std::filesystem::exists(chunks_file_name)) {
+  LoadChunks(chunks_file_name);
+ } else if (std::filesystem::exists(blocks_file_name)) {
+  LoadBlocks(blocks_file_name);
+ } else if (std::filesystem::exists(objects_file_name)) {
+  MigrateObjectsFromJson(objects_file_name);
+ }
+
+ meshCache_.MarkAllDirty();
+ meshInstancesReady_ = false;
+ spatialIndexDirty = true;
+
+ if (auto camera = GetCurrentUserCamera()) {
+  camera->SetPosition(SpawnPoint);
+ }
 }
 
 void World::Save(const std::string& world_folder_path)
 {
  std::filesystem::create_directories(world_folder_path);
- std::string objects_file_name = world_folder_path+"/objects.json";
- std::string users_file_name = world_folder_path+"/users.json";
- std::string world_data_file_name = world_folder_path+"/world_data.json";
+ const std::string users_file_name = world_folder_path + "/users.json";
+ const std::string world_data_file_name = world_folder_path + "/world_data.json";
+ const std::string chunks_file_name = world_folder_path + "/chunks.json";
 
- SaveObjects(objects_file_name);
+ SaveChunks(chunks_file_name);
  SaveUsers(users_file_name);
  SaveWorldData(world_data_file_name);
 }
 
 bool World::AddObject(const std::string type_id, const glm::vec3 &position)
 {
- 
- auto object = ObjectStorageInstance->TakeObject(type_id);
- if(object == nullptr) {
-     std::cerr << "World::AddObject: Failed to get object of type '" << type_id << "'" << std::endl;
-     return false;
+ if (!blockRegistry_) {
+  return false;
  }
- 
- object->SetPoseFromTranslation(position);
- AddObject(object);
- 
+ const BlockId id = blockRegistry_->GetIdByTypeName(type_id);
+ if (id == BLOCK_AIR) {
+  std::cerr << "World::AddObject: Unknown block type '" << type_id << "'" << std::endl;
+  return false;
+ }
+ const glm::ivec3 blockPos = WorldPosToBlock(position);
+ if (!blockWorld_.IsAir(blockPos)) {
+  return false;
+ }
+ blockWorld_.SetBlock(blockPos, id);
+ MarkBlockChunkDirty(blockPos);
  return true;
 }
 
@@ -235,41 +261,17 @@ void World::AddObject(std::shared_ptr<Object> object)
 bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
-
- // Использовать Octree для оптимизации поиска
- std::vector<std::shared_ptr<Object>> candidateObjects;
- if (spatialIndex) {
-     spatialIndex->QueryRay(position, front, candidateObjects);
- } else {
-     // Fallback к полному перебору если Octree не инициализирован
-     candidateObjects = Objects;
- }
-
- for(size_t i=0; i<candidateObjects.size(); i++)
- {
-     std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> object_distance_map;
-
-  if(candidateObjects[i]->CheckRayIntersection(position, front, object_distance_map))
-  {
-   for(auto I = object_distance_map.begin(); I != object_distance_map.end(); ++I)
-   {
-    float distance = I->first;
-    // Find object index in main array
-    auto it = std::find(Objects.begin(), Objects.end(), candidateObjects[i]);
-    size_t objectIndex = (it != Objects.end()) ? std::distance(Objects.begin(), it) : i;
-    
-         distance_map[distance] = std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(std::get<0>(I->second),
-                                                                                    std::get<1>(I->second),
-                                                                                    std::get<2>(I->second),
-                                                                                    std::get<3>(I->second),
-                                                                                    objectIndex);
-   }
-  }
- }
-
- if(distance_map.empty())
+ const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ if (!hit) {
   return false;
-
+ }
+ const glm::vec3 hitCenter = BlockCenter(hit->blockPos);
+ distance_map[hit->distance] = std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(
+     0,
+     glm::vec3(hit->faceNormal),
+     hitCenter,
+     0,
+     0);
  return true;
 }
 
@@ -277,17 +279,14 @@ bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fro
 {
  std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
- bool result = CheckRayIntersection(position, front, distance_map);
- if(result)
- {
+ const bool result = CheckRayIntersection(position, front, distance_map);
+ if (result) {
   cube_side = std::get<0>(distance_map.begin()->second);
   intersecion = std::get<2>(distance_map.begin()->second);
   distance = distance_map.begin()->first;
-  cube_index = std::get<3>(distance_map.begin()->second);
-  object_index = std::get<4>(distance_map.begin()->second);
-
+  cube_index = 0;
+  object_index = 0;
  }
-
  return result;
 }
 
@@ -306,71 +305,42 @@ std::shared_ptr<Object> World::FindObjectByView(const glm::vec3& position, const
   return nullptr;
 }
 
-bool World::CheckPositionFree(const glm::vec3& position, float size) const
+bool World::CheckPositionFree(const glm::vec3& position, float /*size*/) const
 {
- // Использовать Octree для оптимизации поиска
- std::vector<std::shared_ptr<Object>> nearbyObjects;
- if (spatialIndex) {
-     spatialIndex->Query(position, size, nearbyObjects);
- } else {
-     // Fallback к полному перебору если Octree не инициализирован
-     nearbyObjects = Objects;
- }
-
- for(auto& object : nearbyObjects)
- {
-  if(object->CheckCollision(position, size))
-   return false;
- }
- return true;
+ return blockWorld_.IsAir(WorldPosToBlock(position));
 }
 
 std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
- std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
-
- if(!CheckRayIntersection(position, front, distance_map))
-  return std::nullopt;
-
- const auto& hit = distance_map.begin()->second;
- const size_t object_index = std::get<4>(hit);
- const size_t cube_index = std::get<3>(hit);
- const glm::vec3 localNormal = std::get<1>(hit);
-
- if (object_index >= Objects.size()) {
+ const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ if (!hit) {
   return std::nullopt;
  }
 
- const auto& object = Objects[object_index];
- if (!object || cube_index >= object->GetCubes().size()) {
+ glm::ivec3 normal = hit->faceNormal;
+ if (normal == glm::ivec3(0)) {
+  const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+  if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+   normal.x = toCamera.x > 0.0f ? 1 : -1;
+  } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+   normal.y = toCamera.y > 0.0f ? 1 : -1;
+  } else {
+   normal.z = toCamera.z > 0.0f ? 1 : -1;
+  }
+ }
+
+ const glm::ivec3 placePos = hit->blockPos + normal;
+ if (!blockWorld_.IsAir(placePos)) {
   return std::nullopt;
  }
 
- const auto& cube = object->GetCubes()[cube_index];
- const float cubeSize = cube->GetSize();
- const glm::vec3 cubeCenter = cube->GetCenterPosition();
-
- const glm::mat4 pose = cube->GetObjectPose() * cube->GetInitialPose();
- glm::vec3 worldNormal = glm::vec3(pose * glm::vec4(glm::normalize(localNormal), 0.0f));
- if (glm::length(worldNormal) > 1e-6f) {
-  worldNormal = glm::normalize(worldNormal);
- } else {
-  return std::nullopt;
- }
-
- const glm::vec3 toCamera = position - cubeCenter;
- if (glm::dot(worldNormal, toCamera) < 0.0f) {
-  worldNormal = -worldNormal;
- }
-
- const glm::vec3 res_position = cubeCenter + worldNormal * cubeSize;
-
- if (!CheckPositionFree(res_position, cubeSize)) {
+ const glm::vec3 res_position = BlockCenter(placePos);
+ if (!CheckPositionFree(res_position, 1.0f)) {
   return std::nullopt;
  }
 
  constexpr float kCameraRadius = 0.3f;
- if (Cube::CheckCollision(res_position, cubeSize, position, kCameraRadius * 2.0f)) {
+ if (Cube::CheckCollision(res_position, 1.0f, position, kCameraRadius * 2.0f)) {
   return std::nullopt;
  }
 
@@ -397,15 +367,12 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
 
 bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
- glm::vec3 intersecion;
- float distance;
- size_t cube_index;
- size_t object_index;
- int cube_side;
- if(!CheckRayIntersection(position, front, intersecion, distance, cube_index, cube_side, object_index))
+ const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ if (!hit) {
   return false;
-
- DelObject(object_index);
+ }
+ blockWorld_.SetBlock(hit->blockPos, BLOCK_AIR);
+ MarkBlockChunkDirty(hit->blockPos);
  UpdateIntersection(position, front);
  return true;
 }
@@ -413,19 +380,20 @@ bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 
 bool World::CheckCollision(const glm::vec3& position, float size) const
 {
- // Использовать Octree для оптимизации поиска
- std::vector<std::shared_ptr<Object>> nearbyObjects;
- if (spatialIndex) {
-     spatialIndex->Query(position, size, nearbyObjects);
- } else {
-     // Fallback к полному перебору если Octree не инициализирован
-     nearbyObjects = Objects;
- }
-
- for(auto & object : nearbyObjects)
- {
-  if(object->CheckCollision(position, size))
-   return true;
+ const glm::ivec3 center = WorldPosToBlock(position);
+ const int radius = static_cast<int>(std::ceil(size * 0.5f));
+ for (int dx = -radius; dx <= radius; ++dx) {
+  for (int dy = -radius; dy <= radius; ++dy) {
+   for (int dz = -radius; dz <= radius; ++dz) {
+    const glm::ivec3 blockPos = center + glm::ivec3(dx, dy, dz);
+    if (!blockWorld_.IsAir(blockPos)) {
+     const glm::vec3 blockCenter = BlockCenter(blockPos);
+     if (Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
+      return true;
+     }
+    }
+   }
+  }
  }
  return false;
 }
@@ -465,7 +433,9 @@ void World::LoadUsers(const std::string &file_name)
                          position_value[2].get<float>());
 
       AddUser(user_name);
-      //GetUser(user_name)->SetPosition();
+      if (auto camera = GetUserCamera(user_name)) {
+       camera->SetPosition(position);
+      }
      }
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error in LoadUsers: " << e.what() << std::endl;
@@ -482,6 +452,9 @@ void World::SaveUsers(const std::string &file_name)
   auto user_data = I->second;
 
   glm::vec3 position(0.0f, 0.0f, 0.0f);
+  if (auto camera = GetUserCamera(user_name)) {
+   position = camera->GetPosition();
+  }
 
   json arr = json::array({position.x, position.y, position.z});
 
@@ -654,7 +627,15 @@ void World::DoMovement()
 
 void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
 {
- IsIntersectionExists=CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
+ IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
+ const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ hasIntersectionBlock_ = hit.has_value();
+ if (hit) {
+  intersectionBlockPos_ = hit->blockPos;
+ } else {
+  intersectionBlockPos_ = glm::ivec3(0);
+ }
+ meshInstancesReady_ = false;
 }
 
 bool World::GetIsIntersectionExists() const
@@ -711,6 +692,197 @@ float worldSize = 1000.0f; // World size
  }
  
  spatialIndexDirty = false;
+}
+
+void World::InvalidateBlockMesh()
+{
+ meshCache_.MarkAllDirty();
+ meshInstancesReady_ = false;
+}
+
+const std::vector<BlockInstance>& World::GetBlockRenderInstances()
+{
+ if (!meshInstancesReady_) {
+  if (blockRegistry_) {
+   meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 64);
+  }
+  meshInstancesReady_ = true;
+ }
+ return meshCache_.GetInstances();
+}
+
+void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
+{
+ meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos));
+ meshInstancesReady_ = false;
+}
+
+void World::LoadBlocks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json data = json::parse(file);
+  const json& blocks = data.at("blocks");
+  for (const auto& entry : blocks) {
+   const int x = entry.at("x").get<int>();
+   const int y = entry.at("y").get<int>();
+   const int z = entry.at("z").get<int>();
+   const std::string type = entry.at("type").get<std::string>();
+   const BlockId id = blockRegistry_->GetIdByTypeName(type);
+   if (id != BLOCK_AIR) {
+    blockWorld_.SetBlock(glm::ivec3(x, y, z), id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadBlocks: " << e.what() << std::endl;
+ }
+}
+
+void World::SaveBlocks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ json data;
+ data["format_version"] = 1;
+ json blocks = json::array();
+ blockWorld_.ForEachBlock([&](glm::ivec3 pos, BlockId id) {
+  const std::string& type = blockRegistry_->GetTypeNameById(id);
+  if (type.empty()) {
+   return;
+  }
+  blocks.push_back({
+      {"x", pos.x},
+      {"y", pos.y},
+      {"z", pos.z},
+      {"type", type},
+  });
+ });
+ data["blocks"] = blocks;
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+void World::LoadChunks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json data = json::parse(file);
+  for (const auto& chunkEntry : data.at("chunks")) {
+   const int cx = chunkEntry.at("cx").get<int>();
+   const int cy = chunkEntry.at("cy").get<int>();
+   const int cz = chunkEntry.at("cz").get<int>();
+   const glm::ivec3 chunkCoord(cx, cy, cz);
+   for (const auto& voxel : chunkEntry.at("voxels")) {
+    const int lx = voxel.at("lx").get<int>();
+    const int ly = voxel.at("ly").get<int>();
+    const int lz = voxel.at("lz").get<int>();
+    const std::string type = voxel.at("type").get<std::string>();
+    const BlockId id = blockRegistry_->GetIdByTypeName(type);
+    if (id == BLOCK_AIR) {
+     continue;
+    }
+    const glm::ivec3 worldPos(
+        cx * CHUNK_SIZE + lx,
+        cy * CHUNK_SIZE + ly,
+        cz * CHUNK_SIZE + lz);
+    blockWorld_.SetBlock(worldPos, id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadChunks: " << e.what() << std::endl;
+ }
+}
+
+void World::SaveChunks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ json data;
+ data["format_version"] = 2;
+ data["chunk_size"] = CHUNK_SIZE;
+ json chunks = json::array();
+
+ std::map<std::string, json> chunkMap;
+ blockWorld_.ForEachBlock([&](glm::ivec3 worldPos, BlockId id) {
+  const std::string& type = blockRegistry_->GetTypeNameById(id);
+  if (type.empty()) {
+   return;
+  }
+  const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(worldPos);
+  const glm::ivec3 local = ChunkManager::WorldToLocal(worldPos);
+  const std::string key = std::to_string(chunkCoord.x) + "," + std::to_string(chunkCoord.y) + "," + std::to_string(chunkCoord.z);
+  if (chunkMap.find(key) == chunkMap.end()) {
+   chunkMap[key] = json::object({
+       {"cx", chunkCoord.x},
+       {"cy", chunkCoord.y},
+       {"cz", chunkCoord.z},
+       {"voxels", json::array()},
+   });
+  }
+  chunkMap[key]["voxels"].push_back({
+      {"lx", local.x},
+      {"ly", local.y},
+      {"lz", local.z},
+      {"type", type},
+  });
+ });
+
+ for (auto& entry : chunkMap) {
+  chunks.push_back(std::move(entry.second));
+ }
+ data["chunks"] = chunks;
+
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+void World::MigrateObjectsFromJson(const std::string& file_name)
+{
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json objects = json::parse(file);
+  for (const auto& object_data : objects) {
+   const std::string type_name = object_data.value("type_name", "");
+   if (type_name == "terrain_plane" || type_name.empty()) {
+    continue;
+   }
+   const auto position_value = object_data.value("position", json::array());
+   if (!position_value.is_array() || position_value.size() != 3) {
+    continue;
+   }
+   const glm::ivec3 blockPos(
+       static_cast<int>(std::round(position_value[0].get<float>())),
+       static_cast<int>(std::round(position_value[1].get<float>())),
+       static_cast<int>(std::round(position_value[2].get<float>())));
+   const BlockId id = blockRegistry_->GetIdByTypeName(type_name);
+   if (id != BLOCK_AIR) {
+    blockWorld_.SetBlock(blockPos, id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in MigrateObjectsFromJson: " << e.what() << std::endl;
+ }
 }
 
 }

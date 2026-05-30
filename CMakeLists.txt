@@ -59,6 +59,14 @@ set(SOURCES
     src/WindowManager.cpp
     src/GeometryEngine.cpp
     src/Octree.cpp
+    src/GridMath.cpp
+    src/BlockRegistry.cpp
+    src/BlockWorld.cpp
+    src/WorldGenerator.cpp
+    src/BlockRaycast.cpp
+    src/Chunk.cpp
+    src/ChunkManager.cpp
+    src/ChunkMeshCache.cpp
     src/InputManager.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
@@ -80,6 +88,15 @@ set(HEADERS
     src/WindowManager.h
     src/GeometryEngine.h
     src/Octree.h
+    src/BlockTypes.h
+    src/GridMath.h
+    src/BlockRegistry.h
+    src/BlockWorld.h
+    src/WorldGenerator.h
+    src/BlockRaycast.h
+    src/Chunk.h
+    src/ChunkManager.h
+    src/ChunkMeshCache.h
     src/InputManager.h
     src/ShaderManager.h
     src/TextRenderer.h
