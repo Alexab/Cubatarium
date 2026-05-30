@@ -6,7 +6,13 @@
 BlockWorld → ChunkManager → ChunkMeshCache (GreedyMesher) → FaceInstance[] → GeometryEngine::PrepareRenderBatchesFromBlocks → instanced face quads
 ```
 
-World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds visible faces per chunk using greedy meshing. `GeometryEngine` batches by block texture and draws instanced unit quads.
+World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds visible faces per chunk using greedy meshing (`GreedyMesher` + `GreedyMeshMath`). Each merged face is one instanced unit quad (`faceVAO`, 6 indices), not a full cube.
+
+**Per frame (blocks):**
+
+1. Dirty chunks are meshed (up to 32/frame in `GetBlockRenderInstances`).
+2. `UpdateVisibleInstances` filters chunk caches with a view frustum (`Frustum.h`) so off-screen chunks are not in `FaceInstance[]`.
+3. `GeometryEngine` rebuilds texture batches only when `GetMeshRevision()` or instance count changes; MVP matrices are still computed each frame while the camera moves.
 
 ## Runtime paths (next to executable)
 
