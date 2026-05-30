@@ -197,6 +197,10 @@ void Core::LoadSystem(const std::string& config_file_name)
        renderSettings_.faceQuads = r.value("face_quads", false);
        renderSettings_.frustumCulling = r.value("frustum_culling", false);
        renderSettings_.batchCache = r.value("batch_cache", false);
+       if (renderSettings_.greedyMeshing && !renderSettings_.faceQuads) {
+        std::cout << "Render: greedy_meshing enabled — auto-enabling face_quads" << std::endl;
+        renderSettings_.faceQuads = true;
+       }
       } else {
        renderSettings_ = RenderSettings::Legacy();
       }

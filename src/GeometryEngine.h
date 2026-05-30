@@ -15,6 +15,7 @@ typedef int GLint;
 #include "TextureCube.h"
 #include "World.h"
 #include "ChunkMeshCache.h"
+#include "GreedyMeshVertex.h"
 #include "RenderSettings.h"
 #include "CubeGL.h"
 #include "ShaderManager.h"
@@ -78,14 +79,21 @@ private:
  void DestroyCubeBuffers();
  bool InitFaceQuadBuffers();
  void DestroyFaceQuadBuffers();
+ bool InitGreedyMeshBuffers();
+ void DestroyGreedyMeshBuffers();
+ void DrawGreedyMeshBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
+                            const std::map<size_t, TextureCube>& textures);
 GLuint cubeVAO = 0;
 GLuint cubeVBO = 0;
 GLuint cubeEBO = 0;
 GLuint faceVAO = 0;
 GLuint faceVBO = 0;
 GLuint faceEBO = 0;
+GLuint greedyMeshVAO = 0;
+GLuint greedyMeshVBO = 0;
+GLuint greedyMeshEBO = 0;
 GLuint instanceVBO = 0; // instance buffer for per-instance MVP (cubes)
-GLuint instanceBlockVBO = 0; // interleaved MVP + quadSize + faceIndex (blocks)
+GLuint instanceBlockVBO = 0; // interleaved model + faceIndex (blocks)
 GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
 GLuint previewTexture = 0; // Preview texture
@@ -132,6 +140,7 @@ std::shared_ptr<ShaderProgram> uiShader; // Shader for UI elements
 std::shared_ptr<ShaderProgram> textShader; // Shader for text
 std::shared_ptr<ShaderProgram> instancedShader; // Instanced cubes (legacy blocks)
 std::shared_ptr<ShaderProgram> instancedFaceShader; // Instanced greedy face quads
+std::shared_ptr<ShaderProgram> greedyShader; // Greedy world mesh (UV in fragment shader)
 std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outline
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;

@@ -3,9 +3,10 @@
 #include "BlockWorld.h"
 #include "Frustum.h"
 #include "GreedyMesher.h"
-#include "GreedyMeshMath.h"
+#include "GreedyMeshEmitter.h"
 #include "GridMath.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <unordered_map>
 
 namespace cutum {
 
@@ -21,6 +22,19 @@ bool IsFullyEnclosed(const BlockWorld& world, glm::ivec3 pos)
  return true;
 }
 
+void MergeGreedyBatch(GreedyMeshBatch& dst, const GreedyMeshBatch& src)
+{
+ if (src.vertices.empty()) {
+  return;
+ }
+ const uint32_t base = static_cast<uint32_t>(dst.vertices.size());
+ dst.vertices.insert(dst.vertices.end(), src.vertices.begin(), src.vertices.end());
+ dst.indices.reserve(dst.indices.size() + src.indices.size());
+ for (uint32_t index : src.indices) {
+  dst.indices.push_back(base + index);
+ }
+}
+
 } // namespace
 
 void ChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
@@ -31,7 +45,11 @@ void ChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
   for (const auto& entry : cache_) {
    dirtyChunks_.push_back(entry.first);
   }
+  for (const auto& entry : greedyCache_) {
+   dirtyChunks_.push_back(entry.first);
+  }
   instancesDirty_ = true;
+  greedyBatchesDirty_ = true;
   visibleListValid_ = false;
   ++meshRevision_;
  }
@@ -41,9 +59,12 @@ void ChunkMeshCache::MarkAllDirty()
 {
  dirtyChunks_.clear();
  cache_.clear();
+ greedyCache_.clear();
  instances_.clear();
+ greedyBatches_.clear();
  ++meshRevision_;
  instancesDirty_ = true;
+ greedyBatchesDirty_ = true;
  visibleListValid_ = false;
 }
 
@@ -66,15 +87,27 @@ void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
  dirtyChunks_.push_back(chunkCoord);
  ++meshRevision_;
  instancesDirty_ = true;
+ greedyBatchesDirty_ = true;
  visibleListValid_ = false;
 }
 
 void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
  cache_.erase(chunkCoord);
+ greedyCache_.erase(chunkCoord);
  ++meshRevision_;
  instancesDirty_ = true;
+ greedyBatchesDirty_ = true;
  visibleListValid_ = false;
+}
+
+size_t ChunkMeshCache::GetGreedyVertexCount() const
+{
+ size_t count = 0;
+ for (const GreedyMeshBatch& batch : greedyBatches_) {
+  count += batch.vertices.size();
+ }
+ return count;
 }
 
 void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos)
@@ -93,15 +126,56 @@ void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::
  visibleListValid_ = true;
 }
 
+void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm::vec3* cameraPos)
+{
+ greedyBatches_.clear();
+ std::unordered_map<BlockId, GreedyMeshBatch> merged;
+
+ for (const auto& entry : greedyCache_) {
+  if (frustum && cameraPos) {
+   if (!frustum->IntersectsChunkAABB(
+           ChunkAABBMin(entry.first), ChunkAABBMax(entry.first), *cameraPos)) {
+    continue;
+   }
+  }
+  for (const GreedyMeshBatch& chunkBatch : entry.second.batches) {
+   if (chunkBatch.vertices.empty()) {
+    continue;
+   }
+   GreedyMeshBatch& batch = merged[chunkBatch.blockId];
+   if (batch.blockId == BLOCK_AIR) {
+    batch.blockId = chunkBatch.blockId;
+   }
+   MergeGreedyBatch(batch, chunkBatch);
+  }
+ }
+
+ greedyBatches_.reserve(merged.size());
+ for (auto& pair : merged) {
+  pair.second.blockId = pair.first;
+  greedyBatches_.push_back(std::move(pair.second));
+ }
+ greedyBatchesDirty_ = false;
+ visibleListValid_ = true;
+}
+
 void ChunkMeshCache::UpdateVisibleInstances(
     const Frustum& frustum, const glm::mat4& viewProj, const glm::vec3& cameraPos)
 {
  (void)viewProj;
  (void)lastCullVP_;
- if (renderSettings_.frustumCulling) {
-  RebuildFlatInstanceList(&frustum, &cameraPos);
+ if (renderSettings_.greedyMeshing) {
+  if (renderSettings_.frustumCulling) {
+   RebuildFlatGreedyBatches(&frustum, &cameraPos);
+  } else {
+   RebuildFlatGreedyBatches(nullptr, nullptr);
+  }
  } else {
-  RebuildFlatInstanceList(nullptr, nullptr);
+  if (renderSettings_.frustumCulling) {
+   RebuildFlatInstanceList(&frustum, &cameraPos);
+  } else {
+   RebuildFlatInstanceList(nullptr, nullptr);
+  }
  }
 }
 
@@ -113,8 +187,12 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
   it = dirtyChunks_.erase(it);
   ++rebuilt;
  }
- if (instancesDirty_) {
-  RebuildFlatInstanceList(nullptr, nullptr);
+ if (instancesDirty_ || greedyBatchesDirty_) {
+  if (renderSettings_.greedyMeshing) {
+   RebuildFlatGreedyBatches(nullptr, nullptr);
+  } else {
+   RebuildFlatInstanceList(nullptr, nullptr);
+  }
  }
 }
 
@@ -152,29 +230,43 @@ void ChunkMeshCache::RebuildChunkLegacy(
 
 void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord)
 {
- std::vector<FaceInstance> chunkInstances;
  const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
-  cache_[chunkCoord] = std::move(chunkInstances);
+  cache_.erase(chunkCoord);
+  greedyCache_.erase(chunkCoord);
   ++meshRevision_;
   instancesDirty_ = true;
+  greedyBatchesDirty_ = true;
   visibleListValid_ = false;
   return;
  }
 
  if (renderSettings_.greedyMeshing) {
+  cache_.erase(chunkCoord);
+  std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
   const auto quads = GreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
-  chunkInstances.reserve(quads.size());
   for (const GreedyQuad& q : quads) {
-   chunkInstances.push_back(MakeFaceInstanceFromQuad(q, chunkCoord));
+   GreedyMeshBatch& batch = byBlockId[q.id];
+   batch.blockId = q.id;
+   AppendGreedyQuad(q, chunkCoord, batch.vertices, batch.indices);
+  }
+  ChunkGreedyMesh& chunkMesh = greedyCache_[chunkCoord];
+  chunkMesh.batches.clear();
+  chunkMesh.batches.reserve(byBlockId.size());
+  for (auto& pair : byBlockId) {
+   pair.second.blockId = pair.first;
+   chunkMesh.batches.push_back(std::move(pair.second));
   }
  } else {
+  greedyCache_.erase(chunkCoord);
+  std::vector<FaceInstance> chunkInstances;
   RebuildChunkLegacy(world, registry, chunkCoord, chunkInstances);
+  cache_[chunkCoord] = std::move(chunkInstances);
  }
 
- cache_[chunkCoord] = std::move(chunkInstances);
  ++meshRevision_;
  instancesDirty_ = true;
+ greedyBatchesDirty_ = true;
  visibleListValid_ = false;
 }
 

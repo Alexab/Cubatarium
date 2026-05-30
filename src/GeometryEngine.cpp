@@ -31,6 +31,7 @@ GeometryEngine::~GeometryEngine()
 {
     DestroyCubeBuffers();
     DestroyFaceQuadBuffers();
+    DestroyGreedyMeshBuffers();
     DestroyPreviewBuffers();
     DestroyOutlineBuffers();
 }
@@ -134,25 +135,30 @@ bool GeometryEngine::InitShaders()
  #version 330 core
  layout (location = 0) in vec3 aPos;
  layout (location = 1) in vec2 aTexCoord;
- layout (location = 2) in mat4 instanceMVP;
+ layout (location = 2) in mat4 instanceModel;
  layout (location = 6) in float instanceFaceIndex;
- layout (location = 7) in vec2 instanceQuadSize;
+ uniform mat4 uVP;
  out vec2 TexCoord;
- void main()
- {
-     gl_Position = instanceMVP * vec4(aPos, 1.0);
-     int face = int(instanceFaceIndex + 0.5);
+ float voxelTile(float w) { return w - floor(w - 0.5) - 0.5; }
+ vec2 atlasUVFromWorldPos(int face, vec3 wp) {
      float cubeShift = 1.0 / 6.0;
      float u0 = float(face) * cubeShift;
      float u1 = float(face + 1) * cubeShift;
-     vec2 tiled = fract(aTexCoord * max(instanceQuadSize, vec2(1.0)));
-     if (face == 4) {
-         TexCoord = vec2(mix(u0, u1, tiled.y), mix(0.0, 1.0, tiled.x));
-     } else if (face == 5) {
-         TexCoord = vec2(mix(u0, u1, tiled.x), mix(0.0, 1.0, tiled.y));
-     } else {
-         TexCoord = vec2(mix(u0, u1, tiled.x), mix(1.0, 0.0, tiled.y));
-     }
+     float tx = voxelTile(wp.x);
+     float ty = voxelTile(wp.y);
+     float tz = voxelTile(wp.z);
+     if (face == 0) return vec2(mix(u0, u1, tx), mix(1.0, 0.0, ty));
+     if (face == 1) return vec2(mix(u0, u1, 1.0 - tz), mix(1.0, 0.0, ty));
+     if (face == 2) return vec2(mix(u0, u1, 1.0 - tx), mix(1.0, 0.0, ty));
+     if (face == 3) return vec2(mix(u0, u1, tz), mix(1.0, 0.0, ty));
+     if (face == 4) return vec2(mix(u0, u1, tx), mix(0.0, 1.0, 1.0 - tz));
+     return vec2(mix(u0, u1, tx), mix(0.0, 1.0, tz));
+ }
+ void main() {
+     vec4 worldPos = instanceModel * vec4(aPos, 1.0);
+     gl_Position = uVP * worldPos;
+     int face = int(instanceFaceIndex + 0.5);
+     TexCoord = atlasUVFromWorldPos(face, worldPos.xyz);
  }
  )";
      const char* commonFS = R"(
@@ -170,6 +176,12 @@ bool GeometryEngine::InitShaders()
          std::cerr << "Failed to create instanced face shader" << std::endl;
          return false;
      }
+ }
+
+ greedyShader = shaderManager->CreateShader("greedy", "shaders/vshader_greedy.glsl", "shaders/fshader_greedy.glsl");
+ if (!greedyShader || !greedyShader->IsValid()) {
+     std::cerr << "Failed to create greedy mesh shader" << std::endl;
+     return false;
  }
 
  outlineShader = shaderManager->CreateShader("outline", "shaders/vshader.glsl", "shaders/fshader_2d.glsl");
@@ -229,21 +241,35 @@ if (!camera) {
   }
 
   auto textures = TextureCubeStorageInstance->GetTextures();
-  const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
-  const size_t instanceCount = blockInstances.size();
   const uint64_t meshRevision = WorldInstance->GetMeshRevision();
-  const bool useBatchCache = renderSettings_.batchCache;
-  if (!useBatchCache || !blockBatchesValid_ || instanceCount != cachedInstanceCount_
-      || meshRevision != cachedMeshRevision_) {
-   PrepareRenderBatchesFromBlocks(blockInstances, textures);
-   cachedInstanceCount_ = instanceCount;
-   cachedMeshRevision_ = meshRevision;
-   blockBatchesValid_ = true;
+  const bool useGreedyMesh = renderSettings_.UseFaceQuadDraw();
+  const size_t renderCount = useGreedyMesh
+      ? WorldInstance->GetGreedyVertexCount()
+      : WorldInstance->GetBlockRenderInstances().size();
+  const bool useBatchCache = renderSettings_.batchCache && !useGreedyMesh;
+
+  if (useGreedyMesh) {
+   WorldInstance->GetGreedyRenderBatches();
+   if (!useBatchCache || !blockBatchesValid_ || renderCount != cachedInstanceCount_
+       || meshRevision != cachedMeshRevision_) {
+    cachedInstanceCount_ = renderCount;
+    cachedMeshRevision_ = meshRevision;
+    blockBatchesValid_ = true;
+   }
+   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+   DrawGreedyMeshBatches(WorldInstance->GetGreedyRenderBatches(), vp, textures);
+  } else {
+   const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
+   if (!useBatchCache || !blockBatchesValid_ || renderCount != cachedInstanceCount_
+       || meshRevision != cachedMeshRevision_) {
+    PrepareRenderBatchesFromBlocks(blockInstances, textures);
+    cachedInstanceCount_ = renderCount;
+    cachedMeshRevision_ = meshRevision;
+    blockBatchesValid_ = true;
+   }
+   glm::mat4 dummy_mvp = camera->GetMvpMatrix();
+   RenderBatches(dummy_mvp);
   }
- 
-  // Render all batches instanced
-  glm::mat4 dummy_mvp = camera->GetMvpMatrix();
-  RenderBatches(dummy_mvp);
 
   RenderSelectionOutline();
  
@@ -281,6 +307,7 @@ void GeometryEngine::SetRenderSettings(const RenderSettings& settings)
 {
  renderSettings_ = settings;
  blockBatchesValid_ = false;
+ DestroyFaceQuadBuffers();
 }
 
 void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
@@ -352,8 +379,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
 
  const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty();
  const bool drawFaceQuads = isBlockBatch && renderSettings_.UseFaceQuadDraw()
-     && batch.faceIndices.size() == batch.modelMatrices.size()
-     && batch.quadSizes.size() == batch.modelMatrices.size();
+     && batch.faceIndices.size() == batch.modelMatrices.size();
  const GLsizei indexCount = drawFaceQuads ? 6 : 36;
  GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
 
@@ -377,20 +403,19 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
 
  if (drawFaceQuads) {
   struct BlockDrawInstance {
-   glm::mat4 mvp;
-   glm::vec2 quadSize;
+   glm::mat4 model;
    float faceIndex;
-   float pad;
+   float pad[3];
   };
   std::vector<BlockDrawInstance> blockInstances;
   blockInstances.reserve(batch.modelMatrices.size());
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+  activeShader->SetMat4("uVP", vp);
   for (size_t i = 0; i < batch.modelMatrices.size(); ++i) {
    BlockDrawInstance inst;
-   inst.mvp = vp * batch.modelMatrices[i];
-   inst.quadSize = batch.quadSizes[i];
+   inst.model = batch.modelMatrices[i];
    inst.faceIndex = batch.faceIndices[i];
-   inst.pad = 0.0f;
+   inst.pad[0] = inst.pad[1] = inst.pad[2] = 0.0f;
    blockInstances.push_back(inst);
   }
   glBindBuffer(GL_ARRAY_BUFFER, instanceBlockVBO);
@@ -412,6 +437,91 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
  activeShader->Unuse();
+}
+
+void GeometryEngine::DrawGreedyMeshBatches(
+    const std::vector<GreedyMeshBatch>& batches,
+    const glm::mat4& vp,
+    const std::map<size_t, TextureCube>& textures)
+{
+ if (batches.empty()) {
+  return;
+ }
+ if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers()) {
+  return;
+ }
+ if (!greedyShader || !greedyShader->IsValid()) {
+  return;
+ }
+
+ greedyShader->Use();
+ greedyShader->SetMat4("mvp_matrix", vp);
+ greedyShader->SetInt("texture0", 0);
+ glActiveTexture(GL_TEXTURE0);
+
+ for (const GreedyMeshBatch& batch : batches) {
+  if (batch.vertices.empty() || batch.indices.empty()) {
+   continue;
+  }
+  const auto texIt = textures.find(static_cast<size_t>(batch.blockId));
+  if (texIt == textures.end()) {
+   continue;
+  }
+  const GLuint textureId = texIt->second.GetTextureId();
+  if (textureId == 0) {
+   continue;
+  }
+  glBindTexture(GL_TEXTURE_2D, textureId);
+
+  glBindVertexArray(greedyMeshVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, greedyMeshVBO);
+  glBufferData(GL_ARRAY_BUFFER,
+               batch.vertices.size() * sizeof(GreedyMeshVertex),
+               batch.vertices.data(),
+               GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, greedyMeshEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               batch.indices.size() * sizeof(uint32_t),
+               batch.indices.data(),
+               GL_DYNAMIC_DRAW);
+  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(batch.indices.size()), GL_UNSIGNED_INT, nullptr);
+ }
+
+ glBindVertexArray(0);
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+ greedyShader->Unuse();
+}
+
+bool GeometryEngine::InitGreedyMeshBuffers()
+{
+ if (greedyMeshVAO != 0) {
+  return true;
+ }
+
+ glGenVertexArrays(1, &greedyMeshVAO);
+ glGenBuffers(1, &greedyMeshVBO);
+ glGenBuffers(1, &greedyMeshEBO);
+
+ glBindVertexArray(greedyMeshVAO);
+ glBindBuffer(GL_ARRAY_BUFFER, greedyMeshVBO);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, greedyMeshEBO);
+
+ constexpr GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
+ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void*)0);
+ glEnableVertexAttribArray(0);
+ glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, kStride, (void*)(3 * sizeof(float)));
+ glEnableVertexAttribArray(1);
+
+ glBindVertexArray(0);
+ return greedyMeshVAO != 0;
+}
+
+void GeometryEngine::DestroyGreedyMeshBuffers()
+{
+ if (greedyMeshEBO) { glDeleteBuffers(1, &greedyMeshEBO); greedyMeshEBO = 0; }
+ if (greedyMeshVBO) { glDeleteBuffers(1, &greedyMeshVBO); greedyMeshVBO = 0; }
+ if (greedyMeshVAO) { glDeleteVertexArrays(1, &greedyMeshVAO); greedyMeshVAO = 0; }
 }
 
 void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
@@ -1038,14 +1148,14 @@ bool GeometryEngine::InitCubeBuffers()
 bool GeometryEngine::InitFaceQuadBuffers()
 {
     if (faceVAO != 0) {
-        return true;
+        DestroyFaceQuadBuffers();
     }
 
     const float vertices[] = {
-        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,
-         0.5f, -0.5f, 0.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, 0.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f, 0.0f,  0.0f, 1.0f,
+        0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
+        1.0f, 1.0f, 0.0f,  1.0f, 1.0f,
+        0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
     };
     const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
 
@@ -1065,7 +1175,7 @@ bool GeometryEngine::InitFaceQuadBuffers()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    constexpr std::size_t kStride = sizeof(glm::mat4) + sizeof(glm::vec2) + sizeof(float) * 2;
+    constexpr std::size_t kStride = sizeof(glm::mat4) + sizeof(float) * 4;
     glBindBuffer(GL_ARRAY_BUFFER, instanceBlockVBO);
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
     std::size_t vec4Size = sizeof(glm::vec4);
@@ -1074,11 +1184,7 @@ bool GeometryEngine::InitFaceQuadBuffers()
         glEnableVertexAttribArray(2 + i);
         glVertexAttribDivisor(2 + i, 1);
     }
-    glVertexAttribPointer(7, 2, GL_FLOAT, GL_FALSE, kStride, (void*)sizeof(glm::mat4));
-    glEnableVertexAttribArray(7);
-    glVertexAttribDivisor(7, 1);
-    glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, kStride,
-                          (void*)(sizeof(glm::mat4) + sizeof(glm::vec2)));
+    glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, kStride, (void*)sizeof(glm::mat4));
     glEnableVertexAttribArray(6);
     glVertexAttribDivisor(6, 1);
 

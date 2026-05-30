@@ -3,19 +3,21 @@
 ## Render data flow
 
 ```
-BlockWorld → ChunkManager → ChunkMeshCache (GreedyMesher) → FaceInstance[] → GeometryEngine::PrepareRenderBatchesFromBlocks → instanced face quads
+BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] (world verts + baked UV) → GeometryEngine::DrawGreedyMeshBatches → vshader.glsl
 ```
+
+Legacy path (`greedy_meshing: false`): instanced cubes via `vshader_instanced.glsl`.
 
 World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below). Default in `config.json.example` is legacy (all `false`).
 
 | Flag | Effect |
 |------|--------|
 | `greedy_meshing` | `false`: one instanced **cube** per exposed solid block (old). `true`: GreedyMesher merged quads. |
-| `face_quads` | **Requires `greedy_meshing: true`.** Draw unit quads via `vshader_instanced_face.glsl`. Alone has no effect. |
+| `face_quads` | **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
+| `frustum_culling` | Skip off-screen chunks in the instance list. Skips near plane; chunk AABB expanded by 2 blocks. |
+| `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged (legacy instanced path only). |
 
-**Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy face quads use `vshader_instanced_face.glsl` (cube face index 0–5 + atlas tiling). Frustum culling skips the near plane and expands chunk AABB by 2 blocks to avoid holes when the camera is inside a chunk.
-| `frustum_culling` | Skip off-screen chunks in the instance list. |
-| `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged. |
+**Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy mesh uses `vshader.glsl` with vertices in world space and atlas UV baked on the CPU (`BlockAtlasUV.h`, same layout as `CubeGL`).
 
 Bisect: start with all `false`, enable one flag at a time, restart game. Console prints `Render: greedy=...` on startup.
 

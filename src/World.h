@@ -71,6 +71,8 @@ public:
  bool IsBlockWorldReady() const { return blockWorldReady_; }
  void InvalidateBlockMesh();
  const std::vector<FaceInstance>& GetBlockRenderInstances();
+ const std::vector<GreedyMeshBatch>& GetGreedyRenderBatches();
+ size_t GetGreedyVertexCount() const;
 
  bool AddObjectByView();
  bool DelObjectByView();

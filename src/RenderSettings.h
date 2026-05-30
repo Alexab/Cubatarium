@@ -12,7 +12,7 @@ struct RenderSettings {
 
  static RenderSettings Legacy() { return RenderSettings{}; }
 
- /// Greedy merged quads + instanced face draw (requires both greedyMeshing and faceQuads).
+ /// Greedy merged quads drawn as world-space mesh with baked atlas UV (requires greedyMeshing and faceQuads).
  bool UseFaceQuadDraw() const { return greedyMeshing && faceQuads; }
 };
 

@@ -1067,6 +1067,9 @@ void World::UpdateStreaming()
 
 size_t World::GetRenderInstanceCount() const
 {
+ if (renderSettings_.greedyMeshing) {
+  return meshCache_.GetGreedyVertexCount();
+ }
  return meshCache_.GetInstanceCount();
 }
 
@@ -1140,6 +1143,17 @@ const std::vector<FaceInstance>& World::GetBlockRenderInstances()
   }
  }
  return meshCache_.GetFaceInstances();
+}
+
+const std::vector<GreedyMeshBatch>& World::GetGreedyRenderBatches()
+{
+ GetBlockRenderInstances();
+ return meshCache_.GetGreedyBatches();
+}
+
+size_t World::GetGreedyVertexCount() const
+{
+ return meshCache_.GetGreedyVertexCount();
 }
 
 uint64_t World::GetMeshRevision() const

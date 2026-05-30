@@ -1,14 +1,14 @@
 {
     "default_user": "Username",
-    "default_world": "World_007",
+    "default_world": "World_004",
     "render": {
         "batch_cache": true,
-        "face_quads": false,
+        "face_quads": true,
         "frustum_culling": true,
-        "greedy_meshing": false
+        "greedy_meshing": true
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "terrain": "flat",
-    "world_seed": 12352
+    "world_seed": 12354
 }
