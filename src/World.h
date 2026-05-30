@@ -89,6 +89,7 @@ public:
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);
  void UpdateStreaming();
  size_t GetRenderInstanceCount() const;
+ uint64_t GetMeshRevision() const;
  size_t GetCachedBlockCount() const { return cachedBlockCount_; }
 
  bool GetIsIntersectionExists() const;

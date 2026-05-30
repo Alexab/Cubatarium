@@ -24,6 +24,7 @@
 #include "Chunk.h"
 #include "Prefab.h"
 #include "ChunkStreamer.h"
+#include "Frustum.h"
 #include <map>
 #include <unordered_set>
 
@@ -1122,7 +1123,18 @@ const std::vector<FaceInstance>& World::GetBlockRenderInstances()
    cachedBlockCount_ = blockWorld_.CountNonAir();
   }
  }
+ if (auto camera = GetCurrentUserCamera()) {
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 vp = proj * view;
+  meshCache_.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp);
+ }
  return meshCache_.GetFaceInstances();
+}
+
+uint64_t World::GetMeshRevision() const
+{
+ return meshCache_.GetMeshRevision();
 }
 
 void World::MarkBlockChunkDirty(glm::ivec3 blockPos)

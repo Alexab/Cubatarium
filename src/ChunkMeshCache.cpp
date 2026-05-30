@@ -1,6 +1,7 @@
 #include "ChunkMeshCache.h"
 #include "BlockRegistry.h"
 #include "BlockWorld.h"
+#include "Frustum.h"
 #include "GreedyMesher.h"
 #include "GreedyMeshMath.h"
 
@@ -11,7 +12,9 @@ void ChunkMeshCache::MarkAllDirty()
  dirtyChunks_.clear();
  cache_.clear();
  instances_.clear();
+ ++meshRevision_;
  instancesDirty_ = true;
+ visibleListValid_ = false;
 }
 
 void ChunkMeshCache::MarkAllDirtyFromWorld(const BlockWorld& world)
@@ -31,13 +34,41 @@ void ChunkMeshCache::RebuildAll(BlockWorld& world, BlockRegistry& registry)
 void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
  dirtyChunks_.push_back(chunkCoord);
+ ++meshRevision_;
  instancesDirty_ = true;
+ visibleListValid_ = false;
 }
 
 void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
  cache_.erase(chunkCoord);
+ ++meshRevision_;
  instancesDirty_ = true;
+ visibleListValid_ = false;
+}
+
+void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum)
+{
+ instances_.clear();
+ for (const auto& entry : cache_) {
+  if (frustum) {
+   if (!frustum->IntersectsAABB(ChunkAABBMin(entry.first), ChunkAABBMax(entry.first))) {
+    continue;
+   }
+  }
+  instances_.insert(instances_.end(), entry.second.begin(), entry.second.end());
+ }
+ instancesDirty_ = false;
+ visibleListValid_ = true;
+}
+
+void ChunkMeshCache::UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj)
+{
+ if (visibleListValid_ && viewProj == lastCullVP_) {
+  return;
+ }
+ lastCullVP_ = viewProj;
+ RebuildFlatInstanceList(&frustum);
 }
 
 void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame)
@@ -49,11 +80,7 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
   ++rebuilt;
  }
  if (instancesDirty_) {
-  instances_.clear();
-  for (const auto& entry : cache_) {
-   instances_.insert(instances_.end(), entry.second.begin(), entry.second.end());
-  }
-  instancesDirty_ = false;
+  RebuildFlatInstanceList(nullptr);
  }
 }
 
@@ -63,7 +90,9 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
  const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
   cache_[chunkCoord] = std::move(chunkInstances);
+  ++meshRevision_;
   instancesDirty_ = true;
+  visibleListValid_ = false;
   return;
  }
 
@@ -73,7 +102,9 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
   chunkInstances.push_back(MakeFaceInstanceFromQuad(q, chunkCoord));
  }
  cache_[chunkCoord] = std::move(chunkInstances);
+ ++meshRevision_;
  instancesDirty_ = true;
+ visibleListValid_ = false;
 }
 
 }
