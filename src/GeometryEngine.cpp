@@ -192,7 +192,15 @@ if (!camera) {
  
   auto textures = TextureCubeStorageInstance->GetTextures();
   const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
-  PrepareRenderBatchesFromBlocks(blockInstances, textures);
+  const size_t instanceCount = blockInstances.size();
+  const uint64_t meshRevision = WorldInstance->GetMeshRevision();
+  if (!blockBatchesValid_ || instanceCount != cachedInstanceCount_
+      || meshRevision != cachedMeshRevision_) {
+   PrepareRenderBatchesFromBlocks(blockInstances, textures);
+   cachedInstanceCount_ = instanceCount;
+   cachedMeshRevision_ = meshRevision;
+   blockBatchesValid_ = true;
+  }
  
   // Render all batches instanced
   glm::mat4 dummy_mvp = camera->GetMvpMatrix();

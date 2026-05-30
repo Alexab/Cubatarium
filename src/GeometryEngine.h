@@ -149,6 +149,9 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  
  // Rendering optimization
  std::vector<RenderBatch> renderBatches;
+ size_t cachedInstanceCount_{0};
+ uint64_t cachedMeshRevision_{0};
+ bool blockBatchesValid_{false};
 
  std::string transientMessage_;
  double transientMessageUntil_{0.0};
