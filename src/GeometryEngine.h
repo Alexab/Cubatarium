@@ -30,7 +30,9 @@ class Core;
 // Structure for batch rendering
 struct RenderBatch {
     GLuint textureID; // Replace QOpenGLTexture with GLuint
-    std::vector<glm::mat4> modelMatrices; // Per-instance MVP matrices
+    std::vector<glm::mat4> modelMatrices; // Per-instance model (blocks) or unused for objects
+    std::vector<glm::vec4> atlasUVs;
+    std::vector<glm::vec2> quadSizes;
     std::vector<std::shared_ptr<Object>> objects;
     std::vector<size_t> cubeIndices;
 };
@@ -79,6 +81,8 @@ GLuint faceVAO = 0;
 GLuint faceVBO = 0;
 GLuint faceEBO = 0;
 GLuint instanceVBO = 0; // instance buffer for per-instance MVP
+GLuint instanceAtlasVBO = 0;
+GLuint instanceQuadSizeVBO = 0;
 GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
 GLuint previewTexture = 0; // Preview texture

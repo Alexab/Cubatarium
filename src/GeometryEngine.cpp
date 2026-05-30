@@ -104,11 +104,14 @@ bool GeometryEngine::InitShaders()
  layout (location = 0) in vec3 aPos;
  layout (location = 1) in vec2 aTexCoord;
  layout (location = 2) in mat4 instanceMVP;
+ layout (location = 6) in vec4 instanceAtlasUV;
+ layout (location = 7) in vec2 instanceQuadSize;
  out vec2 TexCoord;
  void main()
  {
      gl_Position = instanceMVP * vec4(aPos, 1.0);
-     TexCoord = aTexCoord;
+     vec2 tiled = fract(aTexCoord * instanceQuadSize);
+     TexCoord = mix(instanceAtlasUV.xy, instanceAtlasUV.zw, tiled);
  }
  )";
      const char* commonFS = R"(
@@ -189,6 +192,9 @@ if (!camera) {
           return;
       }
   }
+
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
  
   auto textures = TextureCubeStorageInstance->GetTextures();
   const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
@@ -255,6 +261,8 @@ void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInsta
    batch.textureID = texIt->second.GetTextureId();
   }
   batch.modelMatrices.push_back(instance.model);
+  batch.atlasUVs.push_back(instance.atlasUV);
+  batch.quadSizes.push_back(instance.quadSize);
  }
 
  for (auto& pair : batchMap) {
@@ -319,13 +327,20 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
  glBufferData(GL_ARRAY_BUFFER, instanceMVPs.size() * sizeof(glm::mat4), instanceMVPs.data(), GL_DYNAMIC_DRAW);
 
+ if (isBlockBatch) {
+  glBindBuffer(GL_ARRAY_BUFFER, instanceAtlasVBO);
+  glBufferData(GL_ARRAY_BUFFER, batch.atlasUVs.size() * sizeof(glm::vec4), batch.atlasUVs.data(), GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, instanceQuadSizeVBO);
+  glBufferData(GL_ARRAY_BUFFER, batch.quadSizes.size() * sizeof(glm::vec2), batch.quadSizes.data(), GL_DYNAMIC_DRAW);
+ }
+
  glBindVertexArray(vao);
  if (!instanceMVPs.empty()) {
   glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
  }
  glBindVertexArray(0);
  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  
+
  instancedShader->Unuse();
 }
 
@@ -965,6 +980,12 @@ bool GeometryEngine::InitFaceQuadBuffers()
     glGenVertexArrays(1, &faceVAO);
     glGenBuffers(1, &faceVBO);
     glGenBuffers(1, &faceEBO);
+    if (instanceAtlasVBO == 0) {
+        glGenBuffers(1, &instanceAtlasVBO);
+    }
+    if (instanceQuadSizeVBO == 0) {
+        glGenBuffers(1, &instanceQuadSizeVBO);
+    }
 
     glBindVertexArray(faceVAO);
     glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
@@ -985,12 +1006,26 @@ bool GeometryEngine::InitFaceQuadBuffers()
         glVertexAttribDivisor(2 + i, 1);
     }
 
+    glBindBuffer(GL_ARRAY_BUFFER, instanceAtlasVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0);
+    glEnableVertexAttribArray(6);
+    glVertexAttribDivisor(6, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceQuadSizeVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(7, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+    glEnableVertexAttribArray(7);
+    glVertexAttribDivisor(7, 1);
+
     glBindVertexArray(0);
     return faceVAO != 0;
 }
 
 void GeometryEngine::DestroyFaceQuadBuffers()
 {
+    if (instanceAtlasVBO) { glDeleteBuffers(1, &instanceAtlasVBO); instanceAtlasVBO = 0; }
+    if (instanceQuadSizeVBO) { glDeleteBuffers(1, &instanceQuadSizeVBO); instanceQuadSizeVBO = 0; }
     if (faceEBO) { glDeleteBuffers(1, &faceEBO); faceEBO = 0; }
     if (faceVBO) { glDeleteBuffers(1, &faceVBO); faceVBO = 0; }
     if (faceVAO) { glDeleteVertexArrays(1, &faceVAO); faceVAO = 0; }

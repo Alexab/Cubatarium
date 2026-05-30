@@ -14,6 +14,8 @@ struct Frustum;
 struct FaceInstance {
  glm::mat4 model{1.0f};
  BlockId id{BLOCK_AIR};
+ glm::vec4 atlasUV{0.0f, 0.0f, 1.0f / 6.0f, 1.0f};
+ glm::vec2 quadSize{1.0f, 1.0f};
 };
 
 using BlockInstance = FaceInstance;
