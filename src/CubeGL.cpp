@@ -62,30 +62,30 @@ void CubeGL::Init(const glm::mat4 &initial_pose, float size)
 
  float cube_shift = 1.0f/6.0f;
 
- // Vertex data for face 0 (CUBE_SIDE_NEAR)
+ // Vertex data for face 0 (CUBE_SIDE_NEAR) — V flipped for side faces
  VerticesInitialPos.clear();
- VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(0.0f, 0.0f)); // v0
- VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v1
- VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(0.0f, 1.0f)); // v2
- VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v3
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(0.0f, 1.0f)); // v0
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v1
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(0.0f, 0.0f)); // v2
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v3
 
  // Vertex data for face 1 (CUBE_SIDE_RIGHT)
- VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v4
- VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v5
- VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v6
- VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v7
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2,  size2), glm::vec2(cube_shift*1.0f, 1.0f)); // v4
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v5
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2,  size2), glm::vec2(cube_shift*1.0f, 0.0f)); // v6
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v7
 
  // Vertex data for face 2 (CUBE_SIDE_FAR)
- VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v8
- VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v9
- VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v10
- VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v11
+ VerticesInitialPos.emplace_back(glm::vec3( size2, -size2, -size2), glm::vec2(cube_shift*2.0f, 1.0f)); // v8
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v9
+ VerticesInitialPos.emplace_back(glm::vec3( size2,  size2, -size2), glm::vec2(cube_shift*2.0f, 0.0f)); // v10
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v11
 
  // Vertex data for face 3 (CUBE_SIDE_LEFT)
- VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v12
- VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(cube_shift*4.0f, 0.0f)); // v13
- VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v14
- VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(cube_shift*4.0f, 1.0f)); // v15
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2, -size2), glm::vec2(cube_shift*3.0f, 1.0f)); // v12
+ VerticesInitialPos.emplace_back(glm::vec3(-size2, -size2,  size2), glm::vec2(cube_shift*4.0f, 1.0f)); // v13
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2, -size2), glm::vec2(cube_shift*3.0f, 0.0f)); // v14
+ VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(cube_shift*4.0f, 0.0f)); // v15
 
  // Vertex data for face 4 (CUBE_SIDE_TOP)
  VerticesInitialPos.emplace_back(glm::vec3(-size2,  size2,  size2), glm::vec2(cube_shift*4.0f, 0.0f)); // v16

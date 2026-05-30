@@ -1168,29 +1168,29 @@ void GeometryEngine::InitPreviewBuffers()
     float cube_shift = 1.0f/6.0f;
     float vertices[] = {
         // positions                   // texture coordinates
-        // Face 0 (NEAR) - coordinates 0.0 - 1/6
-        -scale, -scale,  scale,         0.0f, 0.0f,
-         scale, -scale,  scale,         cube_shift*1.0f, 0.0f,
-        -scale,  scale,  scale,         0.0f, 1.0f,
-         scale,  scale,  scale,         cube_shift*1.0f, 1.0f,
+        // Face 0 (NEAR) - coordinates 0.0 - 1/6, V flipped for sides
+        -scale, -scale,  scale,         0.0f, 1.0f,
+         scale, -scale,  scale,         cube_shift*1.0f, 1.0f,
+        -scale,  scale,  scale,         0.0f, 0.0f,
+         scale,  scale,  scale,         cube_shift*1.0f, 0.0f,
         
         // Face 1 (RIGHT) - coordinates 1/6 - 2/6
-         scale, -scale,  scale,         cube_shift*1.0f, 0.0f,
-         scale, -scale, -scale,         cube_shift*2.0f, 0.0f,
-         scale,  scale,  scale,         cube_shift*1.0f, 1.0f,
-         scale,  scale, -scale,         cube_shift*2.0f, 1.0f,
+         scale, -scale,  scale,         cube_shift*1.0f, 1.0f,
+         scale, -scale, -scale,         cube_shift*2.0f, 1.0f,
+         scale,  scale,  scale,         cube_shift*1.0f, 0.0f,
+         scale,  scale, -scale,         cube_shift*2.0f, 0.0f,
           
         // Face 2 (FAR) - coordinates 2/6 - 3/6
-         scale, -scale, -scale,         cube_shift*2.0f, 0.0f,
-        -scale, -scale, -scale,         cube_shift*3.0f, 0.0f,
-         scale,  scale, -scale,         cube_shift*2.0f, 1.0f,
-        -scale,  scale, -scale,         cube_shift*3.0f, 1.0f,
+         scale, -scale, -scale,         cube_shift*2.0f, 1.0f,
+        -scale, -scale, -scale,         cube_shift*3.0f, 1.0f,
+         scale,  scale, -scale,         cube_shift*2.0f, 0.0f,
+        -scale,  scale, -scale,         cube_shift*3.0f, 0.0f,
           
         // Face 3 (LEFT) - coordinates 3/6 - 4/6
-        -scale, -scale, -scale,         cube_shift*3.0f, 0.0f,
-        -scale, -scale,  scale,         cube_shift*4.0f, 0.0f,
-        -scale,  scale, -scale,         cube_shift*3.0f, 1.0f,
-        -scale,  scale,  scale,         cube_shift*4.0f, 1.0f,
+        -scale, -scale, -scale,         cube_shift*3.0f, 1.0f,
+        -scale, -scale,  scale,         cube_shift*4.0f, 1.0f,
+        -scale,  scale, -scale,         cube_shift*3.0f, 0.0f,
+        -scale,  scale,  scale,         cube_shift*4.0f, 0.0f,
           
         // Face 4 (TOP) - coordinates 4/6 - 5/6
         -scale,  scale,  scale,         cube_shift*4.0f, 0.0f,
@@ -1351,29 +1351,29 @@ bool GeometryEngine::InitCubeBuffers()
     float cube_shift = 1.0f/6.0f;
     const float vertices[] = {
         // positions              // texcoords
-        // Face 0 (NEAR)
-        -0.5f, -0.5f,  0.5f,     0.0f,              0.0f,
-         0.5f, -0.5f,  0.5f,     cube_shift*1.0f,   0.0f,
-        -0.5f,  0.5f,  0.5f,     0.0f,              1.0f,
-         0.5f,  0.5f,  0.5f,     cube_shift*1.0f,   1.0f,
+        // Face 0 (NEAR) — V flipped for side faces (Y maps to texture V)
+        -0.5f, -0.5f,  0.5f,     0.0f,              1.0f,
+         0.5f, -0.5f,  0.5f,     cube_shift*1.0f,   1.0f,
+        -0.5f,  0.5f,  0.5f,     0.0f,              0.0f,
+         0.5f,  0.5f,  0.5f,     cube_shift*1.0f,   0.0f,
 
         // Face 1 (RIGHT)
-         0.5f, -0.5f,  0.5f,     cube_shift*1.0f,   0.0f,
-         0.5f, -0.5f, -0.5f,     cube_shift*2.0f,   0.0f,
-         0.5f,  0.5f,  0.5f,     cube_shift*1.0f,   1.0f,
-         0.5f,  0.5f, -0.5f,     cube_shift*2.0f,   1.0f,
+         0.5f, -0.5f,  0.5f,     cube_shift*1.0f,   1.0f,
+         0.5f, -0.5f, -0.5f,     cube_shift*2.0f,   1.0f,
+         0.5f,  0.5f,  0.5f,     cube_shift*1.0f,   0.0f,
+         0.5f,  0.5f, -0.5f,     cube_shift*2.0f,   0.0f,
 
         // Face 2 (FAR)
-         0.5f, -0.5f, -0.5f,     cube_shift*2.0f,   0.0f,
-        -0.5f, -0.5f, -0.5f,     cube_shift*3.0f,   0.0f,
-         0.5f,  0.5f, -0.5f,     cube_shift*2.0f,   1.0f,
-        -0.5f,  0.5f, -0.5f,     cube_shift*3.0f,   1.0f,
+         0.5f, -0.5f, -0.5f,     cube_shift*2.0f,   1.0f,
+        -0.5f, -0.5f, -0.5f,     cube_shift*3.0f,   1.0f,
+         0.5f,  0.5f, -0.5f,     cube_shift*2.0f,   0.0f,
+        -0.5f,  0.5f, -0.5f,     cube_shift*3.0f,   0.0f,
 
         // Face 3 (LEFT)
-        -0.5f, -0.5f, -0.5f,     cube_shift*3.0f,   0.0f,
-        -0.5f, -0.5f,  0.5f,     cube_shift*4.0f,   0.0f,
-        -0.5f,  0.5f, -0.5f,     cube_shift*3.0f,   1.0f,
-        -0.5f,  0.5f,  0.5f,     cube_shift*4.0f,   1.0f,
+        -0.5f, -0.5f, -0.5f,     cube_shift*3.0f,   1.0f,
+        -0.5f, -0.5f,  0.5f,     cube_shift*4.0f,   1.0f,
+        -0.5f,  0.5f, -0.5f,     cube_shift*3.0f,   0.0f,
+        -0.5f,  0.5f,  0.5f,     cube_shift*4.0f,   0.0f,
 
         // Face 4 (TOP)
         -0.5f,  0.5f,  0.5f,     cube_shift*4.0f,   0.0f,
