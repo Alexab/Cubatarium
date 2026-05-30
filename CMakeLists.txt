@@ -57,6 +57,8 @@ set(SOURCES
     src/BlockWorld.cpp
     src/WorldGenerator.cpp
     src/Noise.cpp
+    src/ProceduralSettings.cpp
+    src/ProceduralConfigIO.cpp
     src/BlockRaycast.cpp
     src/Chunk.cpp
     src/ChunkManager.cpp
@@ -90,6 +92,8 @@ set(HEADERS
     src/BlockWorld.h
     src/WorldGenerator.h
     src/Noise.h
+    src/ProceduralSettings.h
+    src/ProceduralConfigIO.h
     src/BlockRaycast.h
     src/Chunk.h
     src/ChunkManager.h
