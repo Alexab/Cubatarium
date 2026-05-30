@@ -73,23 +73,39 @@ glm::vec3 WorldGenerator::DefaultSpawnPosition(int x, int z, uint32_t seed,
                   static_cast<float>(z));
 }
 
-void WorldGenerator::GenerateFlat(BlockWorld& world, BlockRegistry& registry, int halfExtent, int surfaceY)
+void WorldGenerator::GenerateFlatColumn(BlockWorld& world, BlockRegistry& registry, int x, int z,
+    int surfaceY)
 {
  const BlockId bedrock = registry.GetIdByTypeName("bedrock");
  const BlockId stone = registry.GetIdByTypeName("stone");
  const BlockId grass = registry.GetIdByTypeName("grass");
 
  if (bedrock == BLOCK_AIR || stone == BLOCK_AIR || grass == BLOCK_AIR) {
-  std::cerr << "WorldGenerator::GenerateFlat: missing block types (bedrock/stone/grass)" << std::endl;
   return;
  }
 
+ world.SetBlock(glm::ivec3(x, 0, z), bedrock);
+ world.SetBlock(glm::ivec3(x, 1, z), stone);
+ world.SetBlock(glm::ivec3(x, 2, z), stone);
+ world.SetBlock(glm::ivec3(x, surfaceY, z), grass);
+}
+
+void WorldGenerator::GenerateFlatArea(BlockWorld& world, BlockRegistry& registry, int centerX,
+    int centerZ, int radiusChunks, int surfaceY)
+{
+ const int halfBlocks = radiusChunks * CHUNK_SIZE;
+ for (int x = centerX - halfBlocks; x <= centerX + halfBlocks; ++x) {
+  for (int z = centerZ - halfBlocks; z <= centerZ + halfBlocks; ++z) {
+   GenerateFlatColumn(world, registry, x, z, surfaceY);
+  }
+ }
+}
+
+void WorldGenerator::GenerateFlat(BlockWorld& world, BlockRegistry& registry, int halfExtent, int surfaceY)
+{
  for (int x = -halfExtent; x <= halfExtent; ++x) {
   for (int z = -halfExtent; z <= halfExtent; ++z) {
-   world.SetBlock(glm::ivec3(x, 0, z), bedrock);
-   world.SetBlock(glm::ivec3(x, 1, z), stone);
-   world.SetBlock(glm::ivec3(x, 2, z), stone);
-   world.SetBlock(glm::ivec3(x, surfaceY, z), grass);
+   GenerateFlatColumn(world, registry, x, z, surfaceY);
   }
  }
 }

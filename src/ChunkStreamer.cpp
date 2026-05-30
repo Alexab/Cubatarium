@@ -34,7 +34,8 @@ void ChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn, MarkDir
 
 void ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
 {
- if (world_.GetChunkManager().GetChunk(chunkCoord) != nullptr) {
+ const Chunk* existing = world_.GetChunkManager().GetChunk(chunkCoord);
+ if (existing != nullptr) {
   return;
  }
 
@@ -46,6 +47,11 @@ void ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
  }
 
  if (!generateColumnFn_) {
+  return;
+ }
+
+ // Terrain columns are generated at world Y=0..surface; only fill ground layer chunks.
+ if (chunkCoord.y != 0) {
   return;
  }
 

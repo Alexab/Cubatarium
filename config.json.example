@@ -4,5 +4,5 @@
     "world_seed": 12345,
     "terrain": "heightmap",
     "render_distance_chunks": 4,
-    "streaming_enabled": false
+    "streaming_enabled": true
 }

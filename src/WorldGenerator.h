@@ -13,6 +13,12 @@ class WorldGenerator {
 public:
  static void GenerateFlat(BlockWorld& world, BlockRegistry& registry, int halfExtent = 16, int surfaceY = 3);
 
+ static void GenerateFlatColumn(BlockWorld& world, BlockRegistry& registry, int x, int z,
+     int surfaceY = 3);
+
+ static void GenerateFlatArea(BlockWorld& world, BlockRegistry& registry, int centerX, int centerZ,
+     int radiusChunks, int surfaceY = 3);
+
  static void GenerateHeightmap(BlockWorld& world, BlockRegistry& registry,
      int halfExtent, uint32_t seed, int baseY = 0, int maxHeight = 8);
 

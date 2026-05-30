@@ -56,7 +56,21 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 ## Streaming
 
-When `streaming_enabled` is true in `config.json`, `ChunkStreamer` loads/saves chunks around the camera and generates missing columns procedurally. `render_distance_chunks` controls radius (default 4).
+Default: `streaming_enabled: true` in `config.json`.
+
+`ChunkStreamer` around the camera each frame:
+
+1. For each chunk in render radius — try `chunks/cx_cy_cz.json` on disk.
+2. If missing — generate columns for that chunk using the world's **terrain** mode:
+   - `heightmap` — noise height column (`GenerateColumn`)
+   - `flat` — bedrock / stone / grass at fixed height (`GenerateFlatColumn`)
+3. Unload distant chunks (save to disk, drop from memory).
+
+Initial area on new world: 2 chunk radius (`GenerateSpawnArea` or `GenerateFlatArea`). Without streaming, a fixed 33×33 region is generated at once.
+
+`terrain` and `world_seed` are stored in `world_data.json` per world so reload uses the same generator as creation.
+
+`render_distance_chunks` — radius in chunks (default 4).
 
 ## Config (`<exe_dir>/config.json`)
 

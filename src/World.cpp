@@ -153,10 +153,17 @@ void World::InitStreamerCallbacks()
      [this](glm::ivec3 coord) { SaveChunkToFile(coord, worldFolderPath_); },
      [this](glm::ivec3 coord) { meshCache_.MarkDirty(coord); },
      [this](int x, int z) {
-      if (loadedFromChunkSave_ || !allowProceduralFill_) {
+      if (!allowProceduralFill_) {
        return;
       }
-      WorldGenerator::GenerateColumn(blockWorld_, *blockRegistry_, x, z, worldSeed_, 0, 8);
+      if (terrainType_ == "flat") {
+       WorldGenerator::GenerateFlatColumn(blockWorld_, *blockRegistry_, x, z, 3);
+      } else {
+       WorldGenerator::GenerateColumn(blockWorld_, *blockRegistry_, x, z, worldSeed_, 0, 8);
+      }
+      // Columns always write into the ground chunk (cy=0); mark it even when
+      // EnsureChunkLoaded was invoked for a different Y slice.
+      meshCache_.MarkDirty(ChunkManager::WorldToChunk(glm::ivec3(x, 0, z)));
      },
      [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
 }
@@ -170,9 +177,14 @@ void World::GenerateWorldBlocks()
   std::cerr << "GenerateWorldBlocks: skipped (persisted world on disk)" << std::endl;
   return;
  }
+ constexpr int kFlatSurfaceY = 3;
  if (terrainType_ == "flat") {
-  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
-  SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
+  if (streamingEnabled_) {
+   WorldGenerator::GenerateFlatArea(blockWorld_, *blockRegistry_, 0, 0, 2, kFlatSurfaceY);
+  } else {
+   WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, kFlatSurfaceY);
+  }
+  SpawnPoint = glm::vec3(0.0f, static_cast<float>(kFlatSurfaceY) + 3.0f, 5.0f);
  } else if (streamingEnabled_) {
   WorldGenerator::GenerateSpawnArea(blockWorld_, *blockRegistry_, 0, 0, 2, worldSeed_, 0, 8);
   SpawnPoint = WorldGenerator::DefaultSpawnPosition(0, 0, worldSeed_, 0, 8);
@@ -366,6 +378,7 @@ void World::Create(const std::string& world_name)
  modifiedChunks_.clear();
  GenerateWorldBlocks();
  WorldName = world_name;
+ allowProceduralFill_ = streamingEnabled_;
  InitStreamerCallbacks();
  RebuildBlockMesh();
  FinalizePlayerAfterWorldLoad();
@@ -437,7 +450,7 @@ void World::Load(const std::string& world_folder_path)
  const size_t blocksInWorld = blockWorld_.CountNonAir();
  loadedFromChunkSave_ = hasPersistedSave_ || chunkFilesRead > 0 || voxelsFromChunkFiles > 0
      || blocksInWorld > 0;
- allowProceduralFill_ = !loadedFromChunkSave_;
+ allowProceduralFill_ = streamingEnabled_;
 
  std::cout << "World::Load: folder=" << worldFolderPath_ << std::endl;
  std::cout << "World::Load: chunk files=" << chunkFilesRead
@@ -976,6 +989,13 @@ void World::LoadWorldData(const std::string &file_name)
 
      WorldName = world_name_value;
      SpawnPoint = spawn_point;
+
+     if (d.contains("terrain") && d["terrain"].is_string()) {
+      terrainType_ = d["terrain"].get<std::string>();
+     }
+     if (d.contains("world_seed")) {
+      worldSeed_ = d["world_seed"].get<uint32_t>();
+     }
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error in LoadWorldData: " << e.what() << std::endl;
  }
@@ -986,6 +1006,8 @@ void World::SaveWorldData(const std::string &file_name)
  json world_data;
 
  world_data["world_name"] = WorldName;
+ world_data["terrain"] = terrainType_;
+ world_data["world_seed"] = worldSeed_;
 
  json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
  world_data["spawn_point"] = arr;
@@ -1015,6 +1037,7 @@ void World::DoMovement()
 
  if (camera && is_moved) {
   UpdateStreaming();
+  blockWorldReady_ = true;
  }
 
  if(is_moved && camera)
@@ -1036,11 +1059,6 @@ void World::UpdateStreaming()
   return;
  }
  if (auto camera = GetCurrentUserCamera()) {
-  const glm::ivec3 centerChunk = ChunkManager::WorldToChunk(WorldPosToBlock(camera->GetPosition()));
-  if (centerChunk == lastStreamCenterChunk_) {
-   return;
-  }
-  lastStreamCenterChunk_ = centerChunk;
   streamer_->Update(WorldPosToBlock(camera->GetPosition()));
  }
 }
@@ -1099,7 +1117,7 @@ void World::InvalidateBlockMesh()
 const std::vector<FaceInstance>& World::GetBlockRenderInstances()
 {
  if (blockRegistry_ && meshCache_.HasPendingDirty()) {
-  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 4);
+  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 32);
   if (!meshCache_.HasPendingDirty()) {
    cachedBlockCount_ = blockWorld_.CountNonAir();
   }

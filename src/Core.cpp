@@ -190,14 +190,14 @@ void Core::LoadSystem(const std::string& config_file_name)
       worldSeed_ = d.value("world_seed", 12345u);
       terrainType_ = d.value("terrain", "heightmap");
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
-      streamingEnabled_ = d.value("streaming_enabled", false);
+      streamingEnabled_ = d.value("streaming_enabled", true);
      } else {
       default_world_name.clear();
       default_user_name = "Username";
       worldSeed_ = 12345u;
       terrainType_ = "heightmap";
       renderDistanceChunks_ = 4;
-      streamingEnabled_ = false;
+      streamingEnabled_ = true;
      }
 
      texture_base_storage_file_name = project_dir / "textures" / "blocks";

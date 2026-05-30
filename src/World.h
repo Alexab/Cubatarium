@@ -165,12 +165,10 @@ private:
  BlockWorld blockWorld_;
  ChunkMeshCache meshCache_;
  std::unique_ptr<ChunkStreamer> streamer_;
- bool streamingEnabled_{false};
+ bool streamingEnabled_{true};
  int renderDistanceChunks_{4};
  std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;
  std::string worldFolderPath_;
- glm::ivec3 lastStreamCenterChunk_{std::numeric_limits<int>::max()};
-
  bool IsIntersectionExists;
  glm::vec3 Intersection;
  float IntersectionDistance;

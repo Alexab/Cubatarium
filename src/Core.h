@@ -62,7 +62,7 @@ private:
  uint32_t worldSeed_{12345};
  std::string terrainType_{"heightmap"};
  int renderDistanceChunks_{4};
- bool streamingEnabled_{false};
+ bool streamingEnabled_{true};
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
