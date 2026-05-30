@@ -11,4 +11,3 @@ void main()
     gl_Position = instanceMVP * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
 }
-

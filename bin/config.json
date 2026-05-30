@@ -1,8 +1,14 @@
 {
     "default_user": "Username",
-    "default_world": "World",
-    "world_seed": 12345,
-    "terrain": "heightmap",
+    "default_world": "World_007",
+    "render": {
+        "batch_cache": true,
+        "face_quads": false,
+        "frustum_culling": true,
+        "greedy_meshing": false
+    },
     "render_distance_chunks": 4,
-    "streaming_enabled": false
+    "streaming_enabled": true,
+    "terrain": "flat",
+    "world_seed": 12352
 }
