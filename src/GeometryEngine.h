@@ -74,21 +74,22 @@ GLuint instanceVBO = 0; // instance buffer for per-instance MVP
 GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
 GLuint previewTexture = 0; // Preview texture
+GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
  bool EnsureCubeDrawVAO();
+ bool InitOutlineBuffers();
+ void DestroyOutlineBuffers();
+ void RenderSelectionOutline();
  
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint
- void DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index);
+ void DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures);
  void DrawCubeGeometry(const std::vector<std::shared_ptr<Object>>& objects, const glm::mat4& mvp_matrix, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index); // Replace QMatrix4x4 with glm::mat4
  void DrawSkyGradient();
  void DrawSkyGradientSimple(); // Simple version without VBO
 
  // New optimized methods
- void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
-                          const std::map<size_t, TextureCube>& textures,
-                          bool is_intersection_exists, 
-                          size_t intersecion_object_index, 
-                          size_t intersecion_cube_index);
+ void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects,
+                          const std::map<size_t, TextureCube>& textures);
  void RenderBatches(const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
  void DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
  void UpdateFrustumCulling(const glm::mat4& view_projection); // Replace QMatrix4x4 with glm::mat4
@@ -125,6 +126,7 @@ GLuint previewTexture = 0; // Preview texture
 std::shared_ptr<ShaderProgram> uiShader; // Shader for UI elements
 std::shared_ptr<ShaderProgram> textShader; // Shader for text
 std::shared_ptr<ShaderProgram> instancedShader; // Shader for instanced rendering
+std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outline
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;

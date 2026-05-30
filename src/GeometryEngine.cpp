@@ -30,6 +30,7 @@ GeometryEngine::~GeometryEngine()
 {
     DestroyCubeBuffers();
     DestroyPreviewBuffers();
+    DestroyOutlineBuffers();
 }
 
 bool GeometryEngine::InitEngine()
@@ -52,6 +53,11 @@ bool GeometryEngine::InitEngine()
  
  // Initialize preview buffers
  InitPreviewBuffers();
+
+ if (!InitOutlineBuffers()) {
+     std::cerr << "Failed to initialize outline buffers" << std::endl;
+     return false;
+ }
  
  return true;
 }
@@ -115,6 +121,12 @@ bool GeometryEngine::InitShaders()
          return false;
      }
  }
+
+ outlineShader = shaderManager->CreateShader("outline", "shaders/vshader.glsl", "shaders/fshader_2d.glsl");
+ if (!outlineShader || !outlineShader->IsValid()) {
+     std::cerr << "Failed to create outline shader" << std::endl;
+     return false;
+ }
  
  return true;
 }
@@ -175,17 +187,14 @@ if (!camera) {
   // Get textures
   auto textures = TextureCubeStorageInstance->GetTextures();
  
-  // Selection info
-  bool is_intersection_exists = WorldInstance->GetIsIntersectionExists();
-  size_t intersecion_object_index = WorldInstance->GetIntersectionObjectIndex();
-  size_t intersecion_cube_index = WorldInstance->GetIntersectionCubeIndex();
- 
   // Prepare batches per texture
-  PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
+  PrepareRenderBatches(objects, textures);
  
   // Render all batches instanced
   glm::mat4 dummy_mvp = camera->GetMvpMatrix();
   RenderBatches(dummy_mvp);
+
+  RenderSelectionOutline();
  
   // Active object preview disabled to avoid per-frame resource churn
  
@@ -210,11 +219,8 @@ if (!camera) {
   DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
-void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects, 
-                                         const std::map<size_t, TextureCube>& textures,
-                                         bool is_intersection_exists, 
-                                         size_t intersecion_object_index, 
-                                         size_t intersecion_cube_index)
+void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects,
+                                         const std::map<size_t, TextureCube>& textures)
 {
  
  renderBatches.clear();
@@ -224,21 +230,11 @@ void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Obje
    for(size_t j = 0; j < objects.size(); j++)
  {
   auto& object = objects[j];
-  auto objectPos = object->GetPose();
   
   for(size_t i = 0; i < object->GetCubes().size(); i++)
   {
    auto& cube = object->GetCubes()[i];
-   size_t textureId;
-   
-   if(is_intersection_exists && intersecion_object_index == j && intersecion_cube_index == i)
-   {
-    textureId = TextureCubeStorageInstance->GetTypeIdByName("selection");
-   }
-   else
-   {
-    textureId = cube->GetTypeId();
-   }
+   size_t textureId = cube->GetTypeId();
    
        auto& batch = batchMap[textureId];
     if (batch.textureID == 0) {
@@ -427,20 +423,12 @@ void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
  defaultShader->Unuse();
 }
 
-void GeometryEngine::DrawObject(std::shared_ptr<Object> object, size_t object_index, const std::map<size_t, TextureCube>& textures, bool is_intersection_exists, size_t intersecion_object_index, size_t intersecion_cube_index)
+void GeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures)
 {
  for(size_t i=0; i<object->GetCubes().size(); i++)
  {
   auto & cube = object->GetCubes()[i];
-  GLuint texture;
-  if(is_intersection_exists && intersecion_object_index == object_index && intersecion_cube_index == i)
-  {
-       texture = textures.at(TextureCubeStorageInstance->GetTypeIdByName("selection")).GetTextureId();
-  }
-  else
-  {
-       texture = textures.at(cube->GetTypeId()).GetTextureId();
-  }
+  GLuint texture = textures.at(cube->GetTypeId()).GetTextureId();
   DrawCube(cube, texture);
  }
 
@@ -519,7 +507,7 @@ glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Return buffer clearing
   
  // Optimized rendering with batch processing
  std::cout << "DrawCubeGeometry: Preparing render batches..." << std::endl;
- PrepareRenderBatches(objects, textures, is_intersection_exists, intersecion_object_index, intersecion_cube_index);
+ PrepareRenderBatches(objects, textures);
  std::cout << "Render batches prepared:" << renderBatches.size() << std::endl;
  
  std::cout << "DrawCubeGeometry: Rendering batches..." << std::endl;
@@ -544,7 +532,7 @@ glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Return buffer clearing
    glm::mat4 position = glm::mat4(1.0f);
    defaultShader->SetMat4("mvp_matrix", position);
 
-   DrawObject(active_object, 0, textures, false, 0, 0);
+   DrawObject(active_object, textures);
   }
  }
  defaultShader->Unuse();
@@ -1435,6 +1423,111 @@ void GeometryEngine::DestroyCubeBuffers()
     if (cubeVBO) { glDeleteBuffers(1, &cubeVBO); cubeVBO = 0; }
     if (instanceVBO) { glDeleteBuffers(1, &instanceVBO); instanceVBO = 0; }
     if (cubeVAO) { glDeleteVertexArrays(1, &cubeVAO); cubeVAO = 0; }
+}
+
+bool GeometryEngine::InitOutlineBuffers()
+{
+    if (outlineVAO != 0) {
+        return true;
+    }
+
+    constexpr float half = 0.5f + 0.005f;
+    const float vertices[] = {
+        -half, -half,  half,
+         half, -half,  half,
+        -half,  half,  half,
+         half,  half,  half,
+        -half, -half, -half,
+         half, -half, -half,
+        -half,  half, -half,
+         half,  half, -half,
+    };
+
+    const unsigned int indices[] = {
+        0, 1, 1, 3, 3, 2, 2, 0,
+        4, 5, 5, 7, 7, 6, 6, 4,
+        0, 4, 1, 5, 2, 6, 3, 7,
+    };
+
+    glGenVertexArrays(1, &outlineVAO);
+    glGenBuffers(1, &outlineVBO);
+    glGenBuffers(1, &outlineEBO);
+
+    glBindVertexArray(outlineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, outlineVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outlineEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+    return outlineVAO != 0;
+}
+
+void GeometryEngine::DestroyOutlineBuffers()
+{
+    if (outlineEBO) { glDeleteBuffers(1, &outlineEBO); outlineEBO = 0; }
+    if (outlineVBO) { glDeleteBuffers(1, &outlineVBO); outlineVBO = 0; }
+    if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
+}
+
+void GeometryEngine::RenderSelectionOutline()
+{
+    if (!WorldInstance->GetIsIntersectionExists()) {
+        return;
+    }
+
+    if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
+        return;
+    }
+
+    const auto& objects = WorldInstance->GetObjects();
+    const size_t objectIndex = WorldInstance->GetIntersectionObjectIndex();
+    const size_t cubeIndex = WorldInstance->GetIntersectionCubeIndex();
+    if (objectIndex >= objects.size()) {
+        return;
+    }
+
+    const auto& object = objects[objectIndex];
+    if (!object || cubeIndex >= object->GetCubes().size()) {
+        return;
+    }
+
+    auto camera = WorldInstance->GetCurrentUserCamera();
+    if (!camera) {
+        return;
+    }
+
+    const auto& cube = object->GetCubes()[cubeIndex];
+    const glm::mat4 model = object->GetPose() * cube->GetInitialPose();
+    const glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
+
+    GLboolean cullFaceEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+    GLfloat previousLineWidth = 1.0f;
+    glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+
+    glDisable(GL_CULL_FACE);
+    glLineWidth(2.0f);
+
+    outlineShader->Use();
+    outlineShader->SetMat4("mvp_matrix", mvp);
+    outlineShader->SetVec3("color", glm::vec3(0.0f, 0.0f, 0.0f));
+
+    glBindVertexArray(outlineVAO);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    outlineShader->Unuse();
+
+    glLineWidth(previousLineWidth);
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
 }
 
 }
