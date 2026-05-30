@@ -19,19 +19,28 @@ void ViewEngine::GenerateSimpleCamera()
 
 bool ViewEngine::AddCamera(std::shared_ptr<Camera> camera)
 {
+ AddCameraReturnId(camera);
+ return camera != nullptr;
+}
+
+size_t ViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
+{
  if(camera == nullptr)
-  return false;
+  return 0;
 
  camera->SetViewEngine(this);
+ size_t newId = 0;
  if(Cameras.empty())
  {
+  newId = 0;
   Cameras[0] = camera;
  }
  else
  {
-  Cameras[Cameras.cbegin()->first+1] = camera;
+  newId = Cameras.crbegin()->first + 1;
+  Cameras[newId] = camera;
  }
- return true;
+ return newId;
 }
 
 bool ViewEngine::DelCamera(size_t index)

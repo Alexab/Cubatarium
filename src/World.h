@@ -8,19 +8,22 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
+#include <limits>
+#include <unordered_set>
 #include <array>
 #include <map>
 #include <tuple>
 #include "BlockWorld.h"
 #include "BlockRegistry.h"
 #include "ChunkMeshCache.h"
-#include "Octree.h"
+#include "ChunkStreamer.h"
+#include "ChunkManager.h"
 
 namespace cutum {
 
 class ViewEngine;
 class ObjectStorage;
-class Object;
+class PrefabLibrary;
 class User;
 class Camera;
 
@@ -37,6 +40,10 @@ public:
  glm::vec3 GetSpawnPoint() const;
  void SetSpawnPoint(glm::vec3 value);
 
+ void SetTerrainParams(uint32_t seed, const std::string& terrainType);
+ uint32_t GetWorldSeed() const { return worldSeed_; }
+ const std::string& GetTerrainType() const { return terrainType_; }
+
  void Create(const std::string& world_name);
  void Load(const std::string& world_folder_path);
  void Save(const std::string& world_folder_path);
@@ -52,9 +59,6 @@ public:
  std::shared_ptr<Camera> GetUserCamera(const std::string& name);
  std::shared_ptr<Camera> GetCurrentUserCamera();
 
- const std::vector<std::shared_ptr<Object>>& GetObjects() const;
- std::vector<std::shared_ptr<Object>>& GetObjects();
-
  const BlockWorld& GetBlockWorld() const { return blockWorld_; }
  BlockWorld& GetBlockWorld() { return blockWorld_; }
  BlockRegistry& GetBlockRegistry() { return *blockRegistry_; }
@@ -63,18 +67,25 @@ public:
  void RefreshBlockRegistry();
  void ApplySpawnToCamera();
  void InvalidateBlockMesh();
- const std::vector<BlockInstance>& GetBlockRenderInstances();
+ const std::vector<FaceInstance>& GetBlockRenderInstances();
 
  bool AddObjectByView();
  bool DelObjectByView();
 
  bool AddObject(const std::string type_id, const glm::vec3 &position);
- void DelObject(std::shared_ptr<Object> object);
- void DelObject(size_t index);
+
+ bool PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos);
+ bool CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const;
+ std::optional<glm::ivec3> FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const;
+
+ void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
  bool CheckCollision(const glm::vec3& position, float size = 1.0) const;
  void DoMovement();
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);
+ void UpdateStreaming();
+ size_t GetRenderInstanceCount() const;
+ size_t GetCachedBlockCount() const { return cachedBlockCount_; }
 
  bool GetIsIntersectionExists() const;
  size_t GetIntersectionObjectIndex() const;
@@ -85,62 +96,66 @@ public:
 
  uint64_t GetDurationDoMovementMks() const;
 
+ void SetStreamingEnabled(bool enabled) { streamingEnabled_ = enabled; }
+ void SetRenderDistanceChunks(int distance);
+ bool IsStreamingEnabled() const { return streamingEnabled_; }
+
 private:
  bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const;
  bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const;
 
- std::shared_ptr<Object> FindObjectByView(const glm::vec3& position, const glm::vec3& front);
  bool CheckPositionFree(const glm::vec3& position, float size=1.0) const;
  std::optional<glm::vec3> FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const;
 
- std::vector<std::shared_ptr<Object>> GetObjectsInRadius(const glm::vec3& position, float radius) const;
- void UpdateSpatialIndex();
- void RebuildOctree();
-
- void AddObject(std::shared_ptr<Object> object);
  bool AddObjectByView(const glm::vec3& position, const glm::vec3& front);
  bool DelObjectByView(const glm::vec3& position, const glm::vec3& front);
 
  void LoadUsers(const std::string &file_name);
  void SaveUsers(const std::string &file_name);
 
- void LoadObjects(const std::string &file_name);
- void SaveObjects(const std::string &file_name);
  void MigrateObjectsFromJson(const std::string &file_name);
 
  void LoadBlocks(const std::string &file_name);
  void SaveBlocks(const std::string &file_name);
  void LoadChunks(const std::string &file_name);
  void SaveChunks(const std::string &file_name);
+ void SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder);
+ bool LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder);
+ void MigrateMonolithicChunksJson(const std::string& chunks_file, const std::string& world_folder);
 
  void LoadWorldData(const std::string &file_name);
  void SaveWorldData(const std::string &file_name);
 
+ void GenerateWorldBlocks();
  void RebuildBlockMesh();
+ void InitStreamerCallbacks();
  void ApplyUserToCamera(const std::shared_ptr<User>& user);
+ bool IsReasonablePlayerPosition(const glm::vec3& position) const;
+ void SanitizeUserPosition(const std::shared_ptr<User>& user);
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
 
  std::string WorldName;
-
  glm::vec3 SpawnPoint;
-
  std::string CurrentUserName;
+ uint32_t worldSeed_{12345};
+ std::string terrainType_{"heightmap"};
+ size_t cachedBlockCount_{0};
 
  std::map<std::string, std::shared_ptr<User>> Users;
 
- std::vector<std::shared_ptr<Object>> Objects;
-
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
-
  std::shared_ptr<ViewEngine> ViewInstance;
+ PrefabLibrary* prefabLibrary_{nullptr};
 
  std::unique_ptr<BlockRegistry> blockRegistry_;
  BlockWorld blockWorld_;
  ChunkMeshCache meshCache_;
- bool meshInstancesReady_{false};
-
- std::unique_ptr<OctreeNode> spatialIndex;
- bool spatialIndexDirty;
+ std::unique_ptr<ChunkStreamer> streamer_;
+ bool streamingEnabled_{false};
+ int renderDistanceChunks_{4};
+ std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;
+ std::string worldFolderPath_;
+ glm::ivec3 lastStreamCenterChunk_{std::numeric_limits<int>::max()};
 
  bool IsIntersectionExists;
  glm::vec3 Intersection;

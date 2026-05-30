@@ -51,6 +51,11 @@ bool GeometryEngine::InitEngine()
      std::cerr << "Failed to initialize cube buffers" << std::endl;
      return false;
  }
+
+ if (!InitFaceQuadBuffers()) {
+     std::cerr << "Failed to initialize face quad buffers" << std::endl;
+     return false;
+ }
  
  // Initialize preview buffers
  InitPreviewBuffers();
@@ -212,39 +217,11 @@ if (!camera) {
   DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
-void GeometryEngine::PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects,
-                                         const std::map<size_t, TextureCube>& textures)
+void GeometryEngine::ShowTransientMessage(const std::string& msg, double seconds)
 {
- 
- renderBatches.clear();
- std::unordered_map<size_t, RenderBatch> batchMap;
- 
- 
-   for(size_t j = 0; j < objects.size(); j++)
- {
-  auto& object = objects[j];
-  
-  for(size_t i = 0; i < object->GetCubes().size(); i++)
-  {
-   auto& cube = object->GetCubes()[i];
-   size_t textureId = cube->GetTypeId();
-   
-       auto& batch = batchMap[textureId];
-    if (batch.textureID == 0) {
-        batch.textureID = textures.at(textureId).GetTextureId(); // Use GLuint instead of QOpenGLTexture
-    }
-    
-         // We'll store per-instance MVP here (filled later in DrawBatch)
-     batch.modelMatrices.emplace_back(1.0f);
-     batch.objects.push_back(object);
-     batch.cubeIndices.push_back(i);
-  }
- }
-
- // Convert map to vector
- for (auto& pair : batchMap) {
-     renderBatches.push_back(std::move(pair.second));
- }
+ transientMessage_ = msg;
+ transientMessageUntil_ = std::chrono::duration<double>(
+     std::chrono::steady_clock::now().time_since_epoch()).count() + seconds;
 }
 
 void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
@@ -318,7 +295,6 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
  glBufferData(GL_ARRAY_BUFFER, instanceMVPs.size() * sizeof(glm::mat4), instanceMVPs.data(), GL_DYNAMIC_DRAW);
  
- // Draw instanced
  glBindVertexArray(cubeVAO);
  if (!instanceMVPs.empty()) {
     glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, (GLsizei)instanceMVPs.size());
@@ -517,13 +493,14 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
     double totalTime = DurationDrawSceneMks + WorldInstance->GetDurationDoMovementMks() + view_duration;
     double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
     
-    size_t blockCount = WorldInstance->GetBlockWorld().CountNonAir();
+    size_t blockCount = WorldInstance->GetCachedBlockCount();
+    size_t drawCount = WorldInstance->GetRenderInstanceCount();
     
     // Form performance information strings
     std::vector<std::string> performanceLines = {
         "Performance:",
         "FPS: " + std::to_string(fps).substr(0, 6),
-        "Blocks: " + std::to_string(blockCount),
+        "Blocks: " + std::to_string(blockCount) + " draw: " + std::to_string(drawCount),
         "Scene: " + std::to_string(DurationDrawSceneMks/1000.0).substr(0, 6) + " ms",
         "Movement: " + std::to_string(WorldInstance->GetDurationDoMovementMks()/1000.0).substr(0, 6) + " ms",
         "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
@@ -657,11 +634,18 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
          // Display key legend at bottom of screen
          textRenderer->RenderText("WASD - Movement", 20, 120, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("Q/E - Up/Down", 20, 100, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Space - Jump", 20, 80, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+         textRenderer->RenderText("Space - Jump, 2xSpace - Flight", 20, 80, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("Shift - Crouch", 20, 60, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("0-9 - Block selection", 20, 40, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("Delete - Remove block", 20, 20, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
          textRenderer->RenderText("F1-F8 - Sky colors", 20, 5, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
+
+         const double now = std::chrono::duration<double>(
+             std::chrono::steady_clock::now().time_since_epoch()).count();
+         if (!transientMessage_.empty() && now < transientMessageUntil_) {
+             textRenderer->RenderText(transientMessage_, 20.0f, static_cast<float>(height_size) - 60.0f,
+                                      1.0f, glm::vec3(1.0f, 0.85f, 0.2f));
+         }
          
          // Display mouse information
          textRenderer->RenderText("Right Mouse - Camera control", 20, -15, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
@@ -940,6 +924,52 @@ bool GeometryEngine::InitCubeBuffers()
 
     glBindVertexArray(0);
     return cubeVAO != 0;
+}
+
+bool GeometryEngine::InitFaceQuadBuffers()
+{
+    if (faceVAO != 0) return true;
+
+    const float vertices[] = {
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, 0.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, 0.0f,  0.0f, 1.0f,
+    };
+    const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
+
+    glGenVertexArrays(1, &faceVAO);
+    glGenBuffers(1, &faceVBO);
+    glGenBuffers(1, &faceEBO);
+
+    glBindVertexArray(faceVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    std::size_t vec4Size = sizeof(glm::vec4);
+    for (int i = 0; i < 4; ++i) {
+        glVertexAttribPointer(2 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(i * vec4Size));
+        glEnableVertexAttribArray(2 + i);
+        glVertexAttribDivisor(2 + i, 1);
+    }
+
+    glBindVertexArray(0);
+    return faceVAO != 0;
+}
+
+void GeometryEngine::DestroyFaceQuadBuffers()
+{
+    if (faceEBO) { glDeleteBuffers(1, &faceEBO); faceEBO = 0; }
+    if (faceVBO) { glDeleteBuffers(1, &faceVBO); faceVBO = 0; }
+    if (faceVAO) { glDeleteVertexArrays(1, &faceVAO); faceVAO = 0; }
 }
 
 void GeometryEngine::DestroyCubeBuffers()

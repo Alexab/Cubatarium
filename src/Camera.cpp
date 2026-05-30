@@ -31,9 +31,8 @@ Camera::Camera()
  // Calculate aspect ratio
  AspectRatio = 1.3f;
 
- // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
- NearPlane = 20.0f;
- FarPlane = 70.0f;
+ NearPlane = 0.1f;
+ FarPlane = 512.0f;
  Fov = 90.0f;
 
  FreeMove = false;
@@ -65,7 +64,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 
  // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
  NearPlane = 0.1f;
- FarPlane = 70.0f;
+ FarPlane = 512.0f;
  Fov = 90.0f;
  Projection = glm::mat4(1.0f);
 
@@ -99,9 +98,8 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  // Calculate aspect ratio
  AspectRatio = 1.3f;
 
- // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
- NearPlane = 20.0f;
- FarPlane = 70.0f;
+ NearPlane = 0.1f;
+ FarPlane = 512.0f;
  Fov = 90.0f;
  Projection = glm::mat4(1.0f);
 
@@ -197,7 +195,27 @@ bool Camera::GetFreeMove() const
 void Camera::SetFreeMove(bool value)
 {
  FreeMove = value;
+ if (!FreeMove) {
+  verticalVelocity_ = 0.0f;
+ }
  UpdatePose();
+}
+
+bool Camera::TryToggleFlightOnDoubleSpace()
+{
+ const auto now = std::chrono::steady_clock::now();
+ if (lastSpacePressTime_.time_since_epoch().count() != 0) {
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      now - lastSpacePressTime_).count();
+  if (ms >= 0 && ms < kDoubleSpaceTapMs) {
+   SetFreeMove(!FreeMove);
+   suppressNextJump_ = true;
+   lastSpacePressTime_ = {};
+   return true;
+  }
+ }
+ lastSpacePressTime_ = now;
+ return false;
 }
 
 void Camera::SetViewEngine(ViewEngine* view_engine)
@@ -439,8 +457,7 @@ bool Camera::DoMovement(const World* world)
   ProcessKeyboard(world, RIGHT, DeltaTime);
   is_moved = true;
  }
- if(KeysStatus[GLFW_KEY_Q])
- {
+ if (KeysStatus[GLFW_KEY_Q] || (FreeMove && KeysStatus[GLFW_KEY_SPACE])) {
   ProcessKeyboard(world, UP, DeltaTime);
   is_moved = true;
  }
@@ -448,6 +465,43 @@ bool Camera::DoMovement(const World* world)
  {
   ProcessKeyboard(world, DOWN, DeltaTime);
   is_moved = true;
+ }
+
+ if (!FreeMove && world)
+ {
+  if (Position.y < kMinReasonablePlayerY) {
+   verticalVelocity_ = 0.0f;
+   onGround_ = false;
+   return is_moved;
+  }
+  verticalVelocity_ += kGravity * static_cast<float>(DeltaTime);
+  glm::vec3 pos = Position;
+  pos.y += verticalVelocity_ * static_cast<float>(DeltaTime);
+  if (world->CheckCollision(pos, ViewObjectSize)) {
+   if (verticalVelocity_ < 0.0f) {
+    onGround_ = true;
+   }
+   verticalVelocity_ = 0.0f;
+   while (world->CheckCollision(Position, ViewObjectSize)) {
+    Position.y += 0.05f;
+   }
+  } else {
+   onGround_ = false;
+   Position.y = pos.y;
+   is_moved = true;
+  }
+
+  const bool spacePressed = KeysStatus[GLFW_KEY_SPACE];
+  if (!spacePressed) {
+   suppressNextJump_ = false;
+  }
+  if (onGround_ && spacePressed && !spaceWasPressed_ && !suppressNextJump_) {
+   verticalVelocity_ = kJumpSpeed;
+   onGround_ = false;
+   is_moved = true;
+  }
+  spaceWasPressed_ = spacePressed;
+  UpdatePose();
  }
 
  return is_moved;

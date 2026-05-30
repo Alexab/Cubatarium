@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <filesystem>
+#include <cstdint>
 
 namespace cutum {
 
@@ -12,7 +13,7 @@ class World;
 class TextureBaseStorage;
 class TextureCubeStorage;
 class ObjectStorage;
-class World;
+class PrefabLibrary;
 class GeometryEngine;
 class ViewEngine;
 
@@ -22,6 +23,7 @@ public:
  Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
       std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
       std::shared_ptr<ObjectStorage> object_storage_,
+      std::shared_ptr<PrefabLibrary> prefab_library_,
       std::shared_ptr<World> world_,
       std::shared_ptr<GeometryEngine>
       geometries_,
@@ -37,6 +39,8 @@ public:
 
  void LoadWorldList(const std::string& world_path);
 
+ uint32_t GetWorldSeed() const { return worldSeed_; }
+
 private:
  std::vector<std::string> WorldList;
 
@@ -45,14 +49,21 @@ private:
  std::filesystem::path texture_base_storage_file_name;
  std::filesystem::path texture_cube_storage_file_name;
  std::filesystem::path object_storage_file_name;
+ std::filesystem::path prefabs_path_;
  std::filesystem::path WorldPath;
 
  std::string default_world_name;
  std::string default_user_name;
 
+ uint32_t worldSeed_{12345};
+ std::string terrainType_{"heightmap"};
+ int renderDistanceChunks_{4};
+ bool streamingEnabled_{true};
+
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
+ std::shared_ptr<PrefabLibrary> PrefabLibraryInstance;
  std::shared_ptr<GeometryEngine> GeometryEngineInstance;
  std::shared_ptr<ViewEngine> ViewEngineInstance;
  std::shared_ptr<World> WorldInstance;

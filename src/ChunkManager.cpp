@@ -89,6 +89,11 @@ void ChunkManager::ForEachChunk(const std::function<void(const Chunk&)>& fn) con
  }
 }
 
+void ChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
+{
+ chunks_.erase(chunkCoord);
+}
+
 Chunk& ChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
 {
  auto it = chunks_.find(chunkCoord);

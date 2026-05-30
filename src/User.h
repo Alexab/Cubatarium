@@ -4,13 +4,22 @@
 #include <map>
 #include <string>
 #include <memory>
-#include <unordered_map>
+#include <vector>
 #include <glm/glm.hpp>
-//#include <QVector3D>
 
 namespace cutum {
 
 class Object;
+
+enum class HotbarItemKind {
+ Block,
+ Prefab
+};
+
+struct HotbarSlot {
+ HotbarItemKind kind{HotbarItemKind::Block};
+ std::string id;
+};
 
 class User
 {
@@ -23,6 +32,9 @@ public:
  const std::string& GetActiveObjectTypeName() const;
  void SetActiveObjectTypeName(const std::string& cube_type);
  void SetActiveObjectTypeNameByIndex(size_t index);
+
+ const HotbarSlot& GetActiveHotbarSlot() const;
+ const std::vector<HotbarSlot>& GetHotbar() const;
 
  std::shared_ptr<Object> GetActiveObject();
 
@@ -40,19 +52,18 @@ public:
  void SetViewId(size_t value);
 
 private:
+ void InitDefaultHotbar();
+
  std::map<std::string, int> Inventory;
+ std::vector<HotbarSlot> hotbar_;
+ size_t activeHotbarIndex_{0};
 
  std::shared_ptr<Object> ActiveObject;
-
  std::string ActiveObjectTypeName;
-
  glm::vec3 Position;
-
  glm::vec3 ViewDirection;
-
  float CameraYaw{-90.0f};
  float CameraPitch{0.0f};
-
  size_t ViewId;
 };
 

@@ -13,6 +13,7 @@
 #include "TextureCube.h"
 #include "TextureBase.h"
 #include "ObjectStorage.h"
+#include "Prefab.h"
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
@@ -27,10 +28,15 @@ constexpr int kMaxProjectRootSearchDepth = 8;
 
 std::filesystem::path FindProjectRoot(std::filesystem::path start)
 {
+ const auto startPath = start;
  for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth) {
-  auto textures_dir = start;
-  textures_dir.append("textures").append("blocks");
-  if (std::filesystem::exists(textures_dir)) {
+  const auto textures_dir = start / "textures" / "blocks";
+  const auto models_blocks_dir = start / "models" / "blocks";
+  const auto prefabs_dir = start / "prefabs";
+  const bool hasTextures = std::filesystem::exists(textures_dir);
+  const bool hasModels = std::filesystem::exists(models_blocks_dir);
+  const bool hasPrefabs = std::filesystem::exists(prefabs_dir);
+  if (hasTextures && hasModels && hasPrefabs) {
    return start;
   }
   if (!start.has_parent_path()) {
@@ -38,7 +44,7 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
   }
   start = start.parent_path();
  }
- return start;
+ return startPath;
 }
 
 } // namespace
@@ -46,12 +52,14 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
 Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
            std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
            std::shared_ptr<ObjectStorage> object_storage_,
+           std::shared_ptr<PrefabLibrary> prefab_library_,
            std::shared_ptr<World> world_,
            std::shared_ptr<GeometryEngine> geometries_,
            std::shared_ptr<ViewEngine> views_)
  : TextureBaseStorageInstance(texture_base_storage_)
  , TextureCubeStorageInstance(texture_cube_storage_)
  , ObjectStorageInstance(object_storage_)
+ , PrefabLibraryInstance(prefab_library_)
  , WorldInstance(world_)
  , GeometryEngineInstance(geometries_)
  , ViewEngineInstance(views_)
@@ -99,6 +107,10 @@ void Core::LoadSystem(const std::string& config_file_name)
      json d = json::parse(val);
      std::string default_world_value = d.value("default_world", "");
      std::string default_user_value = d.value("default_user", "");
+     worldSeed_ = d.value("world_seed", 12345u);
+     terrainType_ = d.value("terrain", "heightmap");
+     renderDistanceChunks_ = d.value("render_distance_chunks", 4);
+     streamingEnabled_ = d.value("streaming_enabled", false);
 
      bool is_need_autocreate = false;
      if(default_world_value.empty() || default_user_value.empty())
@@ -118,6 +130,8 @@ void Core::LoadSystem(const std::string& config_file_name)
      texture_cube_storage_file_name.append("models").append("blocks");
      object_storage_file_name = project_dir;
      object_storage_file_name.append("models").append("objects");
+     prefabs_path_ = project_dir;
+     prefabs_path_.append("prefabs");
      WorldPath = project_dir;
      WorldPath.append("worlds");
 
@@ -128,6 +142,15 @@ void Core::LoadSystem(const std::string& config_file_name)
      ObjectStorageInstance->Load(object_storage_file_name.string());
 
      WorldInstance->RefreshBlockRegistry();
+
+     if (PrefabLibraryInstance) {
+      PrefabLibraryInstance->Load(prefabs_path_.string(), WorldInstance->GetBlockRegistry());
+      WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+     }
+
+     WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
+     WorldInstance->SetStreamingEnabled(streamingEnabled_);
+     WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
 
      LoadWorldList(WorldPath.string());
      if(WorldList.empty() || std::find(WorldList.begin(), WorldList.end(), default_world_name) == WorldList.end())
@@ -143,8 +166,11 @@ void Core::LoadSystem(const std::string& config_file_name)
       LoadWorld(default_world_name);
       WorldInstance->SetCurrentUserName(default_user_name);
      }
-     if(WorldInstance->GetCurrentUser()->GetActiveObject() == nullptr)
-      WorldInstance->GetCurrentUser()->SetActiveObjectTypeName("grass");
+     if (auto user = WorldInstance->GetCurrentUser()) {
+      if (user->GetActiveObject() == nullptr) {
+       user->SetActiveObjectTypeName("grass");
+      }
+     }
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error: " << e.what() << std::endl;
      CreateWorld("World");
@@ -158,6 +184,10 @@ void Core::SaveSystem(const std::string& config_file_name)
 
  system_data["default_world"] = WorldInstance->GetWorldName();
  system_data["default_user"] = WorldInstance->GetCurrentUserName();
+ system_data["world_seed"] = worldSeed_;
+ system_data["terrain"] = terrainType_;
+ system_data["render_distance_chunks"] = renderDistanceChunks_;
+ system_data["streaming_enabled"] = streamingEnabled_;
 
  auto config_path = WorkDir;
  config_path.append(config_file_name);
@@ -172,10 +202,12 @@ void Core::SaveSystem(const std::string& config_file_name)
 
 void Core::CreateWorld(const std::string& world_name)
 {
+ worldSeed_ += 1;
  if(WorldInstance->GetCurrentUser() == nullptr)
  {
   WorldInstance->GenerateUsers();
  }
+ WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
  WorldInstance->Create(world_name);
  WorldInstance->ApplySpawnToCamera();
  SaveWorld(world_name);

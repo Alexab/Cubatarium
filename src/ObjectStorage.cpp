@@ -44,7 +44,9 @@ void ObjectStorage::Generate()
 
 void ObjectStorage::Load(const std::string& objects_path)
 {
+#ifdef CUBATARIUM_DEBUG
  std::cout << "ObjectStorage::Load: Loading from " << objects_path << std::endl;
+#endif
  
  try
  {
@@ -72,7 +74,9 @@ void ObjectStorage::Load(const std::string& objects_path)
       ObjectPrototype object_description(name, id, std::make_shared<SingleCube>(texture_cube_id));
       AddPrototype(object_description);
       loaded_count++;
+#ifdef CUBATARIUM_DEBUG
       std::cout << "ObjectStorage::Load: Added SingleCube prototype '" << name << "'" << std::endl;
+#endif
      }
      else
      if(class_name == "TerrainPlane" && cube_textures.size()>0)
@@ -88,13 +92,17 @@ void ObjectStorage::Load(const std::string& objects_path)
       std::dynamic_pointer_cast<TerrainPlane>(object_description.GetSample())->Generate(texture_cube_id);
       AddPrototype(object_description);
       loaded_count++;
+#ifdef CUBATARIUM_DEBUG
       std::cout << "ObjectStorage::Load: Added TerrainPlane prototype '" << name << "'" << std::endl;
+#endif
      }
     }
    }
   }
 
+#ifdef CUBATARIUM_DEBUG
  std::cout << "ObjectStorage::Load: Total loaded prototypes: " << loaded_count << std::endl;
+#endif
  }
  catch(std::filesystem::filesystem_error &ex)
  {

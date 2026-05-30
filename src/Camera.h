@@ -58,6 +58,9 @@ public:
  bool GetFreeMove() const;
  void SetFreeMove(bool value);
 
+ /// Double-tap Space: toggles flight (FreeMove). Returns true if toggled.
+ bool TryToggleFlightOnDoubleSpace();
+
  void SetViewEngine(ViewEngine* view_engine);
 
 public:
@@ -128,6 +131,16 @@ private:
  float LastMouseX;
  float LastMouseY;
  bool FirstMouseCoords;
+
+ float verticalVelocity_{0.0f};
+ bool onGround_{false};
+ bool spaceWasPressed_{false};
+ bool suppressNextJump_{false};
+ std::chrono::steady_clock::time_point lastSpacePressTime_{};
+ static constexpr int kDoubleSpaceTapMs = 350;
+ static constexpr float kGravity = -20.0f;
+ static constexpr float kJumpSpeed = 8.0f;
+ static constexpr float kMinReasonablePlayerY = -32.0f;
 };
 
 }

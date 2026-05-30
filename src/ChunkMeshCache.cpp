@@ -48,6 +48,12 @@ void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
  instancesDirty_ = true;
 }
 
+void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
+{
+ cache_.erase(chunkCoord);
+ instancesDirty_ = true;
+}
+
 void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame)
 {
  int rebuilt = 0;
@@ -67,10 +73,11 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
 
 void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord)
 {
- std::vector<BlockInstance> chunkInstances;
+ std::vector<FaceInstance> chunkInstances;
  const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
   cache_[chunkCoord] = std::move(chunkInstances);
+  instancesDirty_ = true;
   return;
  }
 
@@ -89,7 +96,7 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
     if (IsFullyEnclosed(world, worldPos)) {
      continue;
     }
-    BlockInstance instance;
+    FaceInstance instance;
     instance.id = id;
     instance.model = glm::translate(glm::mat4(1.0f), BlockCenter(worldPos));
     chunkInstances.push_back(instance);

@@ -87,7 +87,9 @@ void TextureCubeStorage::GenerateCubeTextures()
 
 void TextureCubeStorage::Load(const std::string &textures_path)
 {
+#ifdef CUBATARIUM_DEBUG
  std::cout << "TextureCubeStorage::Load: Loading from " << textures_path << std::endl;
+#endif
  
  try
  {
@@ -105,12 +107,16 @@ void TextureCubeStorage::Load(const std::string &textures_path)
       TextureCube descr=CreateCubeTexture(name, id, textures);
       Textures[descr.GetTypeId()] = descr;
       loaded_count++;
+#ifdef CUBATARIUM_DEBUG
       std::cout << "TextureCubeStorage::Load: Added texture '" << name << "'" << std::endl;
+#endif
      }
    }
   }
 
+#ifdef CUBATARIUM_DEBUG
   std::cout << "TextureCubeStorage::Load: Total loaded textures: " << loaded_count << std::endl;
+#endif
   }
   catch(std::filesystem::filesystem_error &ex)
   {
@@ -125,7 +131,11 @@ const std::map<size_t, TextureCube>& TextureCubeStorage::GetTextures() const
 
 size_t TextureCubeStorage::GetTypeIdByName(const std::string& name) const
 {
- return TexturesNames.at(name);
+ const auto it = TexturesNames.find(name);
+ if (it != TexturesNames.end()) {
+  return it->second;
+ }
+ return 0;
 }
 
 
@@ -141,7 +151,13 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
  glBindTexture(GL_TEXTURE_2D, textureId);
  
      // Load first texture to get dimensions
- std::string first_texture_path = base_texture_descriptions.at(texture_names[0]).GetFileName();
+ const auto firstTexIt = base_texture_descriptions.find(texture_names[0]);
+ if (firstTexIt == base_texture_descriptions.end()) {
+  std::cerr << "TextureCubeStorage::CreateCubeTexture: unknown base texture '"
+            << texture_names[0] << "' for " << cube_type_name << std::endl;
+  return result;
+ }
+ std::string first_texture_path = firstTexIt->second.GetFileName();
  int width, height, channels;
  unsigned char* data = stbi_load(first_texture_path.c_str(), &width, &height, &channels, 4);
  if (!data) {
@@ -161,7 +177,14 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
   for(size_t i = 0; i < 6; i++)
   {
    if (k < texture_names.size()) {
-       std::string texture_path = base_texture_descriptions.at(texture_names[k]).GetFileName();
+       const auto texIt = base_texture_descriptions.find(texture_names[k]);
+       if (texIt == base_texture_descriptions.end()) {
+        std::cerr << "TextureCubeStorage::CreateCubeTexture: unknown base texture '"
+                  << texture_names[k] << "'" << std::endl;
+        ++k;
+        continue;
+       }
+       std::string texture_path = texIt->second.GetFileName();
        int tex_width, tex_height, tex_channels;
        unsigned char* tex_data = stbi_load(texture_path.c_str(), &tex_width, &tex_height, &tex_channels, 4);
        if (tex_data) {

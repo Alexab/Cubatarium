@@ -9,7 +9,6 @@ User::User()
  Inventory["grass"] = -1;
  Inventory["stone"] = -1;
  Inventory["tree_birch"] = -1;
-
  Inventory["pumpkin"] = -1;
  Inventory["sandstone"] = -1;
  Inventory["stonebrick"] = -1;
@@ -18,6 +17,25 @@ User::User()
  Inventory["bedrock"] = -1;
 
  ViewId = 0;
+ InitDefaultHotbar();
+}
+
+void User::InitDefaultHotbar()
+{
+ hotbar_ = {
+     {HotbarItemKind::Block, "wood"},
+     {HotbarItemKind::Block, "grass"},
+     {HotbarItemKind::Block, "stone"},
+     {HotbarItemKind::Block, "tree_birch"},
+     {HotbarItemKind::Block, "pumpkin"},
+     {HotbarItemKind::Block, "sandstone"},
+     {HotbarItemKind::Block, "stonebrick"},
+     {HotbarItemKind::Block, "tnt"},
+     {HotbarItemKind::Block, "brick"},
+     {HotbarItemKind::Prefab, "tree_small"},
+ };
+ activeHotbarIndex_ = 1;
+ ActiveObjectTypeName = hotbar_[activeHotbarIndex_].id;
 }
 
 const std::map<std::string, int>& User::GetInventory() const
@@ -41,10 +59,22 @@ const std::string& User::GetActiveObjectTypeName() const
 void User::SetActiveObjectTypeName(const std::string& object_type)
 {
  ActiveObjectTypeName = object_type;
+ for (size_t i = 0; i < hotbar_.size(); ++i) {
+  if (hotbar_[i].id == object_type) {
+   activeHotbarIndex_ = i;
+   break;
+  }
+ }
 }
 
 void User::SetActiveObjectTypeNameByIndex(size_t index)
 {
+ if (index < hotbar_.size()) {
+  activeHotbarIndex_ = index;
+  ActiveObjectTypeName = hotbar_[index].id;
+  return;
+ }
+
  size_t i = 0;
  for(auto I = Inventory.begin(); I != Inventory.end(); ++I)
  {
@@ -55,6 +85,16 @@ void User::SetActiveObjectTypeNameByIndex(size_t index)
   }
   ++i;
  }
+}
+
+const HotbarSlot& User::GetActiveHotbarSlot() const
+{
+ return hotbar_[activeHotbarIndex_];
+}
+
+const std::vector<HotbarSlot>& User::GetHotbar() const
+{
+ return hotbar_;
 }
 
 std::shared_ptr<Object> User::GetActiveObject()
@@ -107,7 +147,5 @@ void User::SetViewId(size_t value)
 {
  ViewId = value;
 }
-
-
 
 }

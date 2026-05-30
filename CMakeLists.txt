@@ -15,22 +15,15 @@ endif()
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
 
-# GLFW
 if(WIN32)
     find_package(glfw3 REQUIRED)
 else()
     find_package(glfw3 REQUIRED)
 endif()
 
-# GLM
 find_package(glm REQUIRED)
-
-# GLEW
 find_package(GLEW REQUIRED)
-
 find_package(Freetype REQUIRED)
-
-# nlohmann/json
 find_package(nlohmann_json REQUIRED)
 
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/stb_image.h")
@@ -51,6 +44,7 @@ set(SOURCES
     src/Object.cpp
     src/ObjectImplementation.cpp
     src/ObjectStorage.cpp
+    src/Prefab.cpp
     src/TextureBase.cpp
     src/TextureCube.cpp
     src/User.cpp
@@ -58,15 +52,17 @@ set(SOURCES
     src/World.cpp
     src/WindowManager.cpp
     src/GeometryEngine.cpp
-    src/Octree.cpp
     src/GridMath.cpp
     src/BlockRegistry.cpp
     src/BlockWorld.cpp
     src/WorldGenerator.cpp
+    src/Noise.cpp
     src/BlockRaycast.cpp
     src/Chunk.cpp
     src/ChunkManager.cpp
     src/ChunkMeshCache.cpp
+    src/ChunkStreamer.cpp
+    src/GreedyMesher.cpp
     src/InputManager.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
@@ -80,6 +76,7 @@ set(HEADERS
     src/Object.h
     src/ObjectImplementation.h
     src/ObjectStorage.h
+    src/Prefab.h
     src/TextureBase.h
     src/TextureCube.h
     src/User.h
@@ -87,16 +84,18 @@ set(HEADERS
     src/World.h
     src/WindowManager.h
     src/GeometryEngine.h
-    src/Octree.h
     src/BlockTypes.h
     src/GridMath.h
     src/BlockRegistry.h
     src/BlockWorld.h
     src/WorldGenerator.h
+    src/Noise.h
     src/BlockRaycast.h
     src/Chunk.h
     src/ChunkManager.h
     src/ChunkMeshCache.h
+    src/ChunkStreamer.h
+    src/GreedyMesher.h
     src/InputManager.h
     src/ShaderManager.h
     src/TextRenderer.h
@@ -124,6 +123,10 @@ if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32")
 endif()
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:CUBATARIUM_DEBUG>
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}
@@ -132,7 +135,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}
 )
 
-# Deploy runtime assets next to the executable (bin/)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/shaders"
@@ -146,5 +148,23 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/config.json")
             "${CMAKE_SOURCE_DIR}/config.json"
             "${CMAKE_BINARY_DIR}/config.json"
         COMMENT "Copying config.json to output directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/prefabs")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/prefabs"
+            "${CMAKE_BINARY_DIR}/prefabs"
+        COMMENT "Copying prefabs to output directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/models")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/models"
+            "${CMAKE_BINARY_DIR}/models"
+        COMMENT "Copying models to output directory"
     )
 endif()

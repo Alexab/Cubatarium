@@ -1,0 +1,13 @@
+{
+  "name": "tree_small",
+  "version": 1,
+  "anchor": [0, 0, 0],
+  "blocks": [
+    { "dx": 0, "dy": 0, "dz": 0, "type": "wood" },
+    { "dx": 0, "dy": 1, "dz": 0, "type": "wood" },
+    { "dx": 0, "dy": 2, "dz": 0, "type": "wood" },
+    { "dx": -1, "dy": 3, "dz": 0, "type": "grass" },
+    { "dx": 0, "dy": 3, "dz": 0, "type": "grass" },
+    { "dx": 1, "dy": 3, "dz": 0, "type": "grass" }
+  ]
+}

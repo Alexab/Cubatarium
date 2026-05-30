@@ -24,6 +24,7 @@ WindowManager::WindowManager()
     , useGradientSky(false)
 {
     lastFrameTime = std::chrono::high_resolution_clock::now();
+    lastAutosaveTime_ = std::chrono::steady_clock::now();
 }
 
 WindowManager::~WindowManager() {
@@ -111,6 +112,8 @@ void WindowManager::SetupCallbacks() {
     glfwSetCursorPosCallback(window, InputManager::GLFWCursorPosCallback);
     glfwSetScrollCallback(window, InputManager::GLFWScrollCallback);
     glfwSetErrorCallback(ErrorCallback);
+    glfwSetWindowCloseCallback(window, WindowCloseCallback);
+    glfwSetWindowUserPointer(window, this);
 
     // Configure callbacks for InputManager
     inputManager->SetKeyCallback([this](KeyCode key, KeyState state, int mods) {
@@ -200,6 +203,15 @@ void WindowManager::Update() {
     if (worldInstance) {
         worldInstance->DoMovement();
     }
+
+    if (core && worldInstance) {
+        const auto now = std::chrono::steady_clock::now();
+        const double elapsed = std::chrono::duration<double>(now - lastAutosaveTime_).count();
+        if (elapsed >= kAutosaveIntervalSec) {
+            core->SaveWorld(worldInstance->GetWorldName());
+            lastAutosaveTime_ = now;
+        }
+    }
 }
 
 void WindowManager::Render() {
@@ -225,15 +237,26 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
 
     // Special key processing
     if (pressed) {
-        if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
+        if (key == KeyCode::Key_Space) {
+            if (auto camera = worldInstance->GetCurrentUserCamera()) {
+                if (camera->TryToggleFlightOnDoubleSpace() && geometries) {
+                    const std::string msg = camera->GetFreeMove()
+                        ? "Flight mode ON (Space/Q up, E down, double Space to exit)"
+                        : "Flight mode OFF";
+                    geometries->ShowTransientMessage(msg, 2.5);
+                }
+            }
+        }
+        else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
             int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
             worldInstance->GetCurrentUser()->SetActiveObjectTypeNameByIndex(static_cast<size_t>(index));
         }
         else if (key == KeyCode::Key_F12) {
-            if (core) {
+            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+            if (shift && core) {
                 core->CreateWorld(worldInstance->GetWorldName());
-            } else {
-                worldInstance->Create(worldInstance->GetWorldName());
+            } else if (geometries) {
+                geometries->ShowTransientMessage("Hold Shift+F12 to create a new world", 3.0);
             }
         }
         else if (key == KeyCode::Key_Delete) {
@@ -259,8 +282,11 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             SetGradientSky(true);
         }
         else if (key == KeyCode::Key_F7) {
-            SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f);
-            SetGradientSky(true);
+            if (auto anchor = worldInstance->FindPrefabAnchorFromView(
+                    worldInstance->GetCurrentUserCamera()->GetPosition(),
+                    worldInstance->GetCurrentUserCamera()->GetFront())) {
+                worldInstance->PlacePrefab("tree_small", anchor.value());
+            }
         }
         else if (key == KeyCode::Key_F8) {
             SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
@@ -402,10 +428,10 @@ void WindowManager::RenderHelpText() {
     
     // Main control hints in English
     std::vector<std::string> helpLines = {
-        "WASD - Movement, Space/Shift - Up/Down, Mouse - Camera rotation",
-        "LMB (short) - Place block, LMB (hold) - Remove block, 0-9 - Block type",
-        "F12 - New flat world (save), Delete - Remove targeted block",
-        "F1-F4 - Sky color, F5 - Toggle gradient sky, F9 - Toggle HUD"
+        "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
+        "LMB (short) - Place, LMB (hold) - Remove, 0-9 - Hotbar (slot 9 = prefab)",
+        "Shift+F12 - New world (save), F12 - Show hint, F7 - Place test tree prefab",
+        "Delete - Remove targeted block, F9/F10/F11 - HUD/perf/crosshair"
     };
     
     for (const auto& line : helpLines) {
@@ -492,6 +518,13 @@ void WindowManager::ScrollCallback(GLFWwindow* window, double xoffset, double yo
 
 void WindowManager::ErrorCallback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+}
+
+void WindowManager::WindowCloseCallback(GLFWwindow* w) {
+    auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(w));
+    if (self && self->core) {
+        self->core->SaveSystem("config.json");
+    }
 }
 
 } // namespace cutum

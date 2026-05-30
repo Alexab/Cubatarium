@@ -63,14 +63,21 @@ public:
  bool GetShowHud() const { return showHud; }
  bool GetShowCrosshair() const { return showCrosshair; }
  bool GetShowPerformance() const { return showPerformance; }
+
+ void ShowTransientMessage(const std::string& msg, double seconds);
  
 private:
  // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
  bool InitCubeBuffers();
  void DestroyCubeBuffers();
+ bool InitFaceQuadBuffers();
+ void DestroyFaceQuadBuffers();
 GLuint cubeVAO = 0;
 GLuint cubeVBO = 0;
 GLuint cubeEBO = 0;
+GLuint faceVAO = 0;
+GLuint faceVBO = 0;
+GLuint faceEBO = 0;
 GLuint instanceVBO = 0; // instance buffer for per-instance MVP
 GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
@@ -88,8 +95,6 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
  void DrawSkyGradientSimple(); // Simple version without VBO
 
  // New optimized methods
- void PrepareRenderBatches(const std::vector<std::shared_ptr<Object>>& objects,
-                          const std::map<size_t, TextureCube>& textures);
  void PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
                                      const std::map<size_t, TextureCube>& textures);
  void RenderBatches(const glm::mat4& mvp_matrix); // Replace QMatrix4x4 with glm::mat4
@@ -144,6 +149,9 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  
  // Rendering optimization
  std::vector<RenderBatch> renderBatches;
+
+ std::string transientMessage_;
+ double transientMessageUntil_{0.0};
 };
 
 }

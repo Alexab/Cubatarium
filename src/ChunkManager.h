@@ -29,6 +29,7 @@ public:
 
  Chunk* GetChunk(glm::ivec3 chunkCoord);
  const Chunk* GetChunk(glm::ivec3 chunkCoord) const;
+ void RemoveChunk(glm::ivec3 chunkCoord);
  void ForEachChunk(const std::function<void(const Chunk&)>& fn) const;
 
  static glm::ivec3 WorldToChunk(glm::ivec3 worldPos);

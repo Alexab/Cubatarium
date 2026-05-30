@@ -4,6 +4,7 @@
 //#include <QJsonValue>
 //#include <QJsonArray>
 //#include <QFile>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <fstream>
@@ -13,22 +14,33 @@
 #include "Object.h"
 #include "ObjectStorage.h"
 #include "User.h"
+#include "Prefab.h"
 #include "ViewEngine.h"
+#include "Camera.h"
 #include "BlockRaycast.h"
 #include "GridMath.h"
 #include "WorldGenerator.h"
 #include "ChunkManager.h"
 #include "Chunk.h"
+#include "Prefab.h"
+#include "ChunkStreamer.h"
 #include <map>
+#include <unordered_set>
 
 using json = nlohmann::json;
 
 namespace cutum {
 
+namespace {
+
+constexpr float kMaxReasonablePlayerY = 512.0f;
+constexpr float kMinReasonablePlayerY = -32.0f;
+
+} // namespace
+
 World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views)
  : ObjectStorageInstance(object_storage)
  , ViewInstance(views)
- , spatialIndexDirty(false)
 {
  if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
   blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage());
@@ -64,6 +76,59 @@ void World::SetSpawnPoint(glm::vec3 value)
  SpawnPoint = value;
 }
 
+void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
+{
+ worldSeed_ = seed;
+ terrainType_ = terrainType;
+ if (blockRegistry_) {
+  streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
+  InitStreamerCallbacks();
+ }
+}
+
+void World::SetRenderDistanceChunks(int distance)
+{
+ renderDistanceChunks_ = distance;
+ if (streamer_) {
+  streamer_->SetRenderDistance(distance);
+ }
+}
+
+void World::InitStreamerCallbacks()
+{
+ if (!streamer_ || !blockRegistry_) {
+  return;
+ }
+ streamer_->SetRenderDistance(renderDistanceChunks_);
+ streamer_->SetEnabled(streamingEnabled_);
+ streamer_->SetWorldFolder(worldFolderPath_);
+ streamer_->SetCallbacks(
+     [this](glm::ivec3 coord) { return LoadChunkFromFile(coord, worldFolderPath_); },
+     [this](glm::ivec3 coord) { SaveChunkToFile(coord, worldFolderPath_); },
+     [this](glm::ivec3 coord) { meshCache_.MarkDirty(coord); },
+     [this](int x, int z) {
+      WorldGenerator::GenerateColumn(blockWorld_, *blockRegistry_, x, z, worldSeed_, 0, 8);
+     },
+     [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
+}
+
+void World::GenerateWorldBlocks()
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ if (terrainType_ == "flat") {
+  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
+  SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
+ } else if (streamingEnabled_) {
+  WorldGenerator::GenerateSpawnArea(blockWorld_, *blockRegistry_, 0, 0, 2, worldSeed_, 0, 8);
+  SpawnPoint = WorldGenerator::DefaultSpawnPosition(0, 0, worldSeed_, 0, 8);
+ } else {
+  WorldGenerator::GenerateHeightmap(blockWorld_, *blockRegistry_, 16, worldSeed_, 0, 8);
+  SpawnPoint = WorldGenerator::DefaultSpawnPosition(0, 0, worldSeed_, 0, 8);
+ }
+}
+
 void World::RefreshBlockRegistry()
 {
  if (blockRegistry_) {
@@ -77,11 +142,46 @@ void World::RebuildBlockMesh()
   return;
  }
  meshCache_.RebuildAll(blockWorld_, *blockRegistry_);
- meshInstancesReady_ = true;
+ cachedBlockCount_ = blockWorld_.CountNonAir();
+}
+
+bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
+{
+ if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) {
+  return false;
+ }
+ if (position.y < kMinReasonablePlayerY || position.y > kMaxReasonablePlayerY) {
+  return false;
+ }
+ if (std::abs(position.x) > 100000.0f || std::abs(position.z) > 100000.0f) {
+  return false;
+ }
+ return true;
+}
+
+void World::SanitizeUserPosition(const std::shared_ptr<User>& user)
+{
+ if (!user) {
+  return;
+ }
+ if (!IsReasonablePlayerPosition(user->GetPosition())) {
+  user->SetPosition(SpawnPoint);
+  user->SetCameraOrientation(-90.0f, 0.0f);
+ }
+ if (std::abs(user->GetCameraPitch()) > 89.0f) {
+  user->SetCameraOrientation(user->GetCameraYaw(), 0.0f);
+ }
 }
 
 void World::ApplySpawnToCamera()
 {
+ glm::vec3 spawn = SpawnPoint;
+ constexpr float kPlayerSize = 0.9f;
+ while (CheckCollision(spawn, kPlayerSize)) {
+  spawn.y += 0.1f;
+ }
+ SpawnPoint = spawn;
+
  if (auto user = GetCurrentUser()) {
   user->SetPosition(SpawnPoint);
   user->SetCameraOrientation(-90.0f, 0.0f);
@@ -102,7 +202,16 @@ void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
  if (!user) {
   return;
  }
- if (auto camera = GetUserCamera(CurrentUserName)) {
+ SanitizeUserPosition(user);
+
+ std::string userName = CurrentUserName;
+ for (const auto& entry : Users) {
+  if (entry.second == user) {
+   userName = entry.first;
+   break;
+  }
+ }
+ if (auto camera = GetUserCamera(userName)) {
   camera->SetPosition(user->GetPosition());
   camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
  }
@@ -111,16 +220,12 @@ void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
 void World::Create(const std::string& world_name)
 {
  RefreshBlockRegistry();
- Objects.clear();
  blockWorld_.Clear();
- if (blockRegistry_) {
-  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
- }
+ modifiedChunks_.clear();
+ GenerateWorldBlocks();
  WorldName = world_name;
- SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
  ApplySpawnToCamera();
  RebuildBlockMesh();
- spatialIndexDirty = true;
 }
 
 void World::Load(const std::string& world_folder_path)
@@ -130,18 +235,37 @@ void World::Load(const std::string& world_folder_path)
  const std::string chunks_file_name = world_folder_path + "/chunks.json";
  const std::string blocks_file_name = world_folder_path + "/blocks.json";
  const std::string objects_file_name = world_folder_path + "/objects.json";
+ const std::string chunks_dir = world_folder_path + "/chunks";
 
- Objects.clear();
+ worldFolderPath_ = world_folder_path;
  blockWorld_.Clear();
+ modifiedChunks_.clear();
 
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
 
  RefreshBlockRegistry();
+ InitStreamerCallbacks();
 
- if (std::filesystem::exists(chunks_file_name)) {
+ if (std::filesystem::exists(chunks_dir)) {
+  for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
+   if (entry.path().extension() == ".json") {
+    const std::string stem = entry.path().stem().string();
+    const size_t u1 = stem.find('_');
+    const size_t u2 = stem.find('_', u1 + 1);
+    if (u1 != std::string::npos && u2 != std::string::npos) {
+     const int cx = std::stoi(stem.substr(0, u1));
+     const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
+     const int cz = std::stoi(stem.substr(u2 + 1));
+     LoadChunkFromFile(glm::ivec3(cx, cy, cz), world_folder_path);
+    }
+   }
+  }
+ } else if (std::filesystem::exists(chunks_file_name)) {
   LoadChunks(chunks_file_name);
+  MigrateMonolithicChunksJson(chunks_file_name, world_folder_path);
  }
+
  if (blockWorld_.CountNonAir() == 0 && std::filesystem::exists(blocks_file_name)) {
   LoadBlocks(blocks_file_name);
  }
@@ -149,25 +273,45 @@ void World::Load(const std::string& world_folder_path)
   MigrateObjectsFromJson(objects_file_name);
  }
  if (blockWorld_.CountNonAir() == 0 && blockRegistry_) {
-  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
-  SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
+  GenerateWorldBlocks();
  }
 
  RebuildBlockMesh();
- spatialIndexDirty = true;
+
+ if (auto user = GetCurrentUser()) {
+  SanitizeUserPosition(user);
+  ApplyUserToCamera(user);
+ } else {
+  ApplySpawnToCamera();
+ }
 }
 
 void World::Save(const std::string& world_folder_path)
 {
  RefreshBlockRegistry();
  std::filesystem::create_directories(world_folder_path);
+ worldFolderPath_ = world_folder_path;
  const std::string users_file_name = world_folder_path + "/users.json";
  const std::string world_data_file_name = world_folder_path + "/world_data.json";
  const std::string chunks_file_name = world_folder_path + "/chunks.json";
+ const std::string chunks_dir = world_folder_path + "/chunks";
 
- SaveChunks(chunks_file_name);
+ std::filesystem::create_directories(chunks_dir);
+ blockWorld_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
+  SaveChunkToFile(chunk.GetCoord(), world_folder_path);
+ });
+
+ json marker;
+ marker["format_version"] = 3;
+ marker["storage"] = "per_file";
+ std::ofstream markerFile(chunks_file_name);
+ if (markerFile.is_open()) {
+  markerFile << marker.dump(4);
+ }
+
  SaveUsers(users_file_name);
  SaveWorldData(world_data_file_name);
+ modifiedChunks_.clear();
 }
 
 bool World::AddObject(const std::string type_id, const glm::vec3 &position)
@@ -185,31 +329,70 @@ bool World::AddObject(const std::string type_id, const glm::vec3 &position)
   return false;
  }
  blockWorld_.SetBlock(blockPos, id);
+ ++cachedBlockCount_;
  MarkBlockChunkDirty(blockPos);
  return true;
 }
 
-void World::DelObject(std::shared_ptr<Object> object)
+bool World::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos)
 {
- auto I = std::find(Objects.begin(),Objects.end(), object);
- if(I != Objects.end())
-  Objects.erase(I);
+ if (!prefabLibrary_ || !blockRegistry_) {
+  return false;
+ }
+ const Prefab* prefab = prefabLibrary_->Get(prefab_name);
+ if (!prefab) {
+  return false;
+ }
+
+ int placed = 0;
+ for (const auto& voxel : prefab->voxels) {
+  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
+  if (!blockWorld_.IsAir(worldPos)) {
+   continue;
+  }
+  blockWorld_.SetBlock(worldPos, voxel.id);
+  MarkBlockChunkDirty(worldPos);
+  ++placed;
+ }
+ return placed > 0;
 }
 
-void World::DelObject(size_t index)
+bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const
 {
- if(index < Objects.size())
- {
-  auto object = Objects[index];
-  Objects.erase(Objects.begin() + index);
-  
-  // Обновить пространственный индекс
-  if (spatialIndex) {
-      spatialIndex->Remove(object);
-  } else {
-      spatialIndexDirty = true;
+ if (!prefabLibrary_ || !blockRegistry_) {
+  return false;
+ }
+ const Prefab* prefab = prefabLibrary_->Get(prefab_name);
+ if (!prefab) {
+  return false;
+ }
+ for (const auto& voxel : prefab->voxels) {
+  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
+  if (!blockWorld_.IsAir(worldPos)) {
+   return false;
   }
  }
+ return !prefab->voxels.empty();
+}
+
+std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const
+{
+ const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ if (!hit) {
+  return std::nullopt;
+ }
+ glm::ivec3 normal = hit->faceNormal;
+ if (normal == glm::ivec3(0)) {
+  const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+  if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+   normal.x = toCamera.x > 0.0f ? 1 : -1;
+  } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+   normal.y = toCamera.y > 0.0f ? 1 : -1;
+  } else {
+   normal.z = toCamera.z > 0.0f ? 1 : -1;
+  }
+ }
+ return hit->blockPos + normal;
 }
 
 bool World::AddUser(const std::string &name)
@@ -221,8 +404,15 @@ bool World::AddUser(const std::string &name)
   return false;
 
  Users[name] = std::make_shared<User>();
- if(Users.size() == 1)
+ auto user = Users[name];
+ auto camera = std::make_shared<Camera>(SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ camera->SetFreeMove(false);
+ const size_t viewId = ViewInstance->AddCameraReturnId(camera);
+ user->SetViewId(viewId);
+ if(Users.size() == 1) {
   SetCurrentUserName(name);
+  ViewInstance->SetActiveCamera(viewId);
+ }
 
  return true;
 }
@@ -257,6 +447,9 @@ bool World::SetCurrentUserName(const std::string& name)
   return false;
  CurrentUserName = name;
  ApplyUserToCamera(GetCurrentUser());
+ if (auto user = GetCurrentUser()) {
+  ViewInstance->SetActiveCamera(user->GetViewId());
+ }
  return true;
 }
 
@@ -278,16 +471,6 @@ std::shared_ptr<Camera> World::GetCurrentUserCamera()
  return ViewInstance->GetCamera(user->GetViewId());
 }
 
-const std::vector<std::shared_ptr<Object>>& World::GetObjects() const
-{
- return Objects;
-}
-
-std::vector<std::shared_ptr<Object>>& World::GetObjects()
-{
- return Objects;
-}
-
 bool World::AddObjectByView()
 {
  return AddObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
@@ -296,18 +479,6 @@ bool World::AddObjectByView()
 bool World::DelObjectByView()
 {
  return DelObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
-}
-
-void World::AddObject(std::shared_ptr<Object> object)
-{
- Objects.emplace_back(object);
- 
- // Обновить пространственный индекс
- if (spatialIndex) {
-     spatialIndex->Insert(object);
- } else {
-     spatialIndexDirty = true;
- }
 }
 
 bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
@@ -340,21 +511,6 @@ bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fro
   object_index = 0;
  }
  return result;
-}
-
-std::shared_ptr<Object> World::FindObjectByView(const glm::vec3& position, const glm::vec3& front)
-{
- glm::vec3 intersecion;
- float distance;
- size_t cube_index;
- size_t object_index;
- int cube_side;
- if(CheckRayIntersection(position, front, intersecion, distance, cube_index, cube_side, object_index))
- {
-  return Objects[object_index];
- }
- else
-  return nullptr;
 }
 
 bool World::CheckPositionFree(const glm::vec3& position, float /*size*/) const
@@ -401,13 +557,27 @@ std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& pos
 
 bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
+ auto user = GetCurrentUser();
+ if (!user) {
+  return false;
+ }
+
+ const HotbarSlot& slot = user->GetActiveHotbarSlot();
+ if (slot.kind == HotbarItemKind::Prefab) {
+  const auto anchor = FindPrefabAnchorFromView(position, front);
+  if (!anchor.has_value()) {
+   return false;
+  }
+  if (PlacePrefab(slot.id, anchor.value())) {
+   UpdateIntersection(position, front);
+   return true;
+  }
+  return false;
+ }
+
  auto object_pos = FindNearestFreeCubePosition(position, front);
  if(object_pos.has_value())
  {
-  auto user = GetCurrentUser();
-  if(!user)
-   return false;
-
      if(AddObject(user->GetActiveObjectTypeName(), object_pos.value()))
   {
    UpdateIntersection(position, front);
@@ -424,6 +594,9 @@ bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
   return false;
  }
  blockWorld_.SetBlock(hit->blockPos, BLOCK_AIR);
+ if (cachedBlockCount_ > 0) {
+  --cachedBlockCount_;
+ }
  MarkBlockChunkDirty(hit->blockPos);
  UpdateIntersection(position, front);
  return true;
@@ -486,6 +659,7 @@ void World::LoadUsers(const std::string &file_name)
                             position_value[2].get<float>());
       }
       user->SetPosition(position);
+      SanitizeUserPosition(user);
 
       float yaw = -90.0f;
       float pitch = 0.0f;
@@ -535,87 +709,6 @@ void World::SaveUsers(const std::string &file_name)
   user_json["pitch"] = pitch;
 
   objects[user_name] = user_json;
- }
-
- std::ofstream file(file_name);
- if (file.is_open()) {
-     file << objects.dump(4);
-     file.close();
- }
-}
-
-void World::LoadObjects(const std::string &file_name)
-{
- 
- std::string val;
- std::ifstream file(file_name);
- if (file.is_open()) {
-     std::stringstream buffer;
-     buffer << file.rdbuf();
-     val = buffer.str();
-     file.close();
-     
- } else {
-     std::cerr << "Failed to open objects file: " << file_name << std::endl;
-     return;
- }
-
- try {
-     json d = json::parse(val);
-     json objects = d;
-
-     Objects.clear();
-     
-     for(const auto& object_data : objects)
-     {
-      auto id_value = object_data.value("id", 0);
-      auto type_name_value = object_data.value("type_name", "");
-      auto position_value = object_data.value("position", json::array());
-      
-      
-
-      if(id_value == 0 || type_name_value.empty() || position_value.empty())
-       continue;
-
-      if(!position_value.is_array())
-       continue;
-
-      if(position_value.size() != 3)
-       continue;
-
-      glm::vec3 position(position_value[0].get<float>(),
-                         position_value[1].get<float>(),
-                         position_value[2].get<float>());
-
-      std::string object_type_name = type_name_value;
-      AddObject(object_type_name, position);
-     }
-     
-     // Update spatial index after loading all objects
-     spatialIndexDirty = true;
- } catch (const json::exception& e) {
-     std::cerr << "JSON parsing error in LoadObjects: " << e.what() << std::endl;
- }
-}
-
-void World::SaveObjects(const std::string &file_name)
-{
- json objects = json::array();
-
- for(auto & object : Objects)
- {
-
-  auto pose = object->GetPose();
-  glm::vec3 position(pose[3][0], pose[3][1], pose[3][2]);
-
-  json arr = json::array({position.x, position.y, position.z});
-
-  json obj;
-  obj["id"] = int(object->GetObjectId());
-  obj["type_name"] = ObjectStorageInstance->GetObjectTypeName(object->GetObjectTypeId());
-  obj["position"] = arr;
-
-  objects.push_back(obj);
  }
 
  std::ofstream file(file_name);
@@ -689,6 +782,10 @@ void World::DoMovement()
  auto camera = GetCurrentUserCamera();
  bool is_moved = camera && camera->DoMovement(this);
 
+ if (camera && is_moved) {
+  UpdateStreaming();
+ }
+
  if(is_moved && camera)
  {
   if (auto user = GetCurrentUser()) {
@@ -698,11 +795,28 @@ void World::DoMovement()
   UpdateIntersection(camera->GetPosition(), camera->GetFront());
  }
    
- // Update spatial index if it's outdated
- UpdateSpatialIndex();
-   
  auto t_end = std::chrono::high_resolution_clock::now();
  DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+}
+
+void World::UpdateStreaming()
+{
+ if (!streamer_ || !streamingEnabled_) {
+  return;
+ }
+ if (auto camera = GetCurrentUserCamera()) {
+  const glm::ivec3 centerChunk = ChunkManager::WorldToChunk(WorldPosToBlock(camera->GetPosition()));
+  if (centerChunk == lastStreamCenterChunk_) {
+   return;
+  }
+  lastStreamCenterChunk_ = centerChunk;
+  streamer_->Update(WorldPosToBlock(camera->GetPosition()));
+ }
+}
+
+size_t World::GetRenderInstanceCount() const
+{
+ return meshCache_.GetInstanceCount();
 }
 
 void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
@@ -714,6 +828,13 @@ void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front
   intersectionBlockPos_ = hit->blockPos;
  } else {
   intersectionBlockPos_ = glm::ivec3(0);
+ }
+
+ if (auto user = GetCurrentUser()) {
+  if (auto camera = GetCurrentUserCamera()) {
+   user->SetPosition(camera->GetPosition());
+   user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
+  }
  }
 }
 
@@ -737,65 +858,33 @@ uint64_t World::GetDurationDoMovementMks() const
  return DurationDoMovementMks;
 }
 
-std::vector<std::shared_ptr<Object>> World::GetObjectsInRadius(const glm::vec3& position, float radius) const
-{
- std::vector<std::shared_ptr<Object>> result;
- if (spatialIndex) {
-     spatialIndex->Query(position, radius, result);
- }
- return result;
-}
-
-void World::UpdateSpatialIndex()
-{
- if (spatialIndexDirty) {
-     RebuildOctree();
-     spatialIndexDirty = false;
- }
-}
-
-void World::RebuildOctree()
-{
- // Clear existing index
- if (spatialIndex) {
-     spatialIndex->Clear();
- }
- 
- // Create new Octree with appropriate size
-float worldSize = 1000.0f; // World size
-   spatialIndex = std::make_unique<OctreeNode>(glm::vec3(0, 0, 0), worldSize);
- 
- // Add all objects to index
- for (const auto& object : Objects) {
-     spatialIndex->Insert(object);
- }
- 
- spatialIndexDirty = false;
-}
-
 void World::InvalidateBlockMesh()
 {
  if (blockRegistry_) {
   meshCache_.MarkAllDirtyFromWorld(blockWorld_);
  }
- meshInstancesReady_ = false;
 }
 
-const std::vector<BlockInstance>& World::GetBlockRenderInstances()
+const std::vector<FaceInstance>& World::GetBlockRenderInstances()
 {
- if (!meshInstancesReady_ && blockRegistry_) {
-  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 256);
+ if (blockRegistry_ && meshCache_.HasPendingDirty()) {
+  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 4);
   if (!meshCache_.HasPendingDirty()) {
-   meshInstancesReady_ = true;
+   cachedBlockCount_ = blockWorld_.CountNonAir();
   }
  }
- return meshCache_.GetInstances();
+ return meshCache_.GetFaceInstances();
 }
 
 void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
- meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos));
- meshInstancesReady_ = false;
+ const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(blockPos);
+ meshCache_.MarkDirty(chunkCoord);
+ modifiedChunks_.insert(chunkCoord);
+
+ for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+  meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos + offset));
+ }
 }
 
 void World::LoadBlocks(const std::string& file_name)
@@ -863,7 +952,13 @@ void World::LoadChunks(const std::string& file_name)
  }
  try {
   json data = json::parse(file);
-  for (const auto& chunkEntry : data.at("chunks")) {
+  if (data.value("storage", "") == "per_file") {
+   return;
+  }
+  if (!data.contains("chunks") || !data["chunks"].is_array()) {
+   return;
+  }
+  for (const auto& chunkEntry : data["chunks"]) {
    const int cx = chunkEntry.at("cx").get<int>();
    const int cy = chunkEntry.at("cy").get<int>();
    const int cz = chunkEntry.at("cz").get<int>();
@@ -933,6 +1028,103 @@ void World::SaveChunks(const std::string& file_name)
  if (file.is_open()) {
   file << data.dump(4);
  }
+}
+
+void World::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ const Chunk* chunk = blockWorld_.GetChunkManager().GetChunk(chunkCoord);
+ if (!chunk) {
+  return;
+ }
+
+ json data;
+ data["format_version"] = 2;
+ data["cx"] = chunkCoord.x;
+ data["cy"] = chunkCoord.y;
+ data["cz"] = chunkCoord.z;
+ json voxels = json::array();
+
+ for (int z = 0; z < CHUNK_SIZE; ++z) {
+  for (int y = 0; y < CHUNK_SIZE; ++y) {
+   for (int x = 0; x < CHUNK_SIZE; ++x) {
+    const glm::ivec3 local(x, y, z);
+    const BlockId id = chunk->GetBlockLocal(local);
+    if (id == BLOCK_AIR) {
+     continue;
+    }
+    const std::string& type = blockRegistry_->GetTypeNameById(id);
+    if (type.empty()) {
+     continue;
+    }
+    voxels.push_back({
+        {"lx", x},
+        {"ly", y},
+        {"lz", z},
+        {"type", type},
+    });
+   }
+  }
+ }
+
+ data["voxels"] = voxels;
+ const std::string chunks_dir = world_folder + "/chunks";
+ std::filesystem::create_directories(chunks_dir);
+ const std::string file_name = chunks_dir + "/" +
+     std::to_string(chunkCoord.x) + "_" +
+     std::to_string(chunkCoord.y) + "_" +
+     std::to_string(chunkCoord.z) + ".json";
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+bool World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const std::string file_name = world_folder + "/chunks/" +
+     std::to_string(chunkCoord.x) + "_" +
+     std::to_string(chunkCoord.y) + "_" +
+     std::to_string(chunkCoord.z) + ".json";
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return false;
+ }
+
+ try {
+  json data = json::parse(file);
+  for (const auto& voxel : data.at("voxels")) {
+   const int lx = voxel.at("lx").get<int>();
+   const int ly = voxel.at("ly").get<int>();
+   const int lz = voxel.at("lz").get<int>();
+   const std::string type = voxel.at("type").get<std::string>();
+   const BlockId id = blockRegistry_->GetIdByTypeName(type);
+   if (id == BLOCK_AIR) {
+    continue;
+   }
+   const glm::ivec3 worldPos(
+       chunkCoord.x * CHUNK_SIZE + lx,
+       chunkCoord.y * CHUNK_SIZE + ly,
+       chunkCoord.z * CHUNK_SIZE + lz);
+   blockWorld_.SetBlock(worldPos, id);
+  }
+  return true;
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadChunkFromFile: " << e.what() << std::endl;
+  return false;
+ }
+}
+
+void World::MigrateMonolithicChunksJson(const std::string& /*chunks_file*/, const std::string& world_folder)
+{
+ blockWorld_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
+  SaveChunkToFile(chunk.GetCoord(), world_folder);
+ });
 }
 
 void World::MigrateObjectsFromJson(const std::string& file_name)
