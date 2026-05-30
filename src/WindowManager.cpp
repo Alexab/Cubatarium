@@ -1,6 +1,7 @@
 #include "WindowManager.h"
 #include "InputManager.h"
 #include "Core.h"
+#include "ProceduralSettings.h"
 #include "World.h"
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
@@ -304,7 +305,21 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             if (geometries) geometries->SetShowHud(!geometries->GetShowHud());
         }
         else if (key == KeyCode::Key_F10) {
-            if (geometries) geometries->SetShowPerformance(!geometries->GetShowPerformance());
+            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+            if (shift && core) {
+                core->CreateWorldFromProceduralConfig();
+                core->SaveSystem("config.json");
+                if (geometries) {
+                    const auto& proc = core->GetProceduralSettings();
+                    const std::string msg = std::string("New world (") +
+                        ProceduralGeneratorToString(proc.generator) + " " +
+                        VerticalModeToString(proc.vertical) + "): " +
+                        worldInstance->GetWorldName();
+                    geometries->ShowTransientMessage(msg, 3.0);
+                }
+            } else if (geometries) {
+                geometries->SetShowPerformance(!geometries->GetShowPerformance());
+            }
         }
         else if (key == KeyCode::Key_F11) {
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
@@ -448,7 +463,7 @@ void WindowManager::RenderHelpText() {
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
         "LMB (short) - Place, LMB (hold) - Remove, 0-9 - Hotbar (slot 9 = prefab)",
-        "Shift+F12 - Heightmap world, Shift+F11 - Flat world (save), F12 - Hints",
+        "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };
     

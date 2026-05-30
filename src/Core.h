@@ -37,6 +37,7 @@ public:
  void SaveSystem(const std::string& config_file_name);
 
  void CreateWorld(const std::string& terrain_type = "");
+ void CreateWorldFromProceduralConfig();
  void LoadWorld(const std::string& world_name);
  void LoadLastWorld();
  void SaveWorld(const std::string& world_name);
@@ -44,6 +45,7 @@ public:
  void LoadWorldList(const std::string& world_path);
 
  uint32_t GetWorldSeed() const { return worldSeed_; }
+ const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
 
 private:
  std::vector<std::string> WorldList;
@@ -80,6 +82,7 @@ private:
  bool ShouldCreateWorldOnStartup() const;
  std::filesystem::path WorldFolderPath(const std::string& world_name) const;
  std::string AllocateNextWorldName() const;
+ void CreateNewWorldWithCurrentSettings();
 };
 
 }

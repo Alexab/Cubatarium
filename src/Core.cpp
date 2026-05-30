@@ -331,6 +331,41 @@ void Core::CreateWorld(const std::string& terrain_type)
  ResolveProceduralDefaults(proceduralSettings_);
  ApplyGeneratorTierDefaults(proceduralSettings_);
  terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+ CreateNewWorldWithCurrentSettings();
+}
+
+void Core::CreateWorldFromProceduralConfig()
+{
+ if (!configFilePath_.empty() && std::filesystem::exists(configFilePath_)) {
+  std::ifstream file(configFilePath_.string());
+  if (file.is_open()) {
+   std::stringstream buffer;
+   buffer << file.rdbuf();
+   try {
+    const json d = json::parse(buffer.str());
+    proceduralSettings_ = ParseProceduralSettings(d);
+    worldSeed_ = proceduralSettings_.seed;
+   } catch (const json::exception& e) {
+    std::cerr << "CreateWorldFromProceduralConfig: config parse error: " << e.what() << std::endl;
+   }
+  }
+ }
+
+ worldSeed_ += 1;
+ proceduralSettings_.seed = worldSeed_;
+ ResolveProceduralDefaults(proceduralSettings_);
+ ApplyGeneratorTierDefaults(proceduralSettings_);
+ terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+
+ std::cout << "Core::CreateWorldFromProceduralConfig: " << terrainType_
+           << " (" << VerticalModeToString(proceduralSettings_.vertical)
+           << ", seed=" << proceduralSettings_.seed << ")" << std::endl;
+
+ CreateNewWorldWithCurrentSettings();
+}
+
+void Core::CreateNewWorldWithCurrentSettings()
+{
  if (WorldInstance->GetCurrentUser() == nullptr) {
   WorldInstance->GenerateUsers();
  }
