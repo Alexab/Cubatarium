@@ -21,6 +21,11 @@
 #include <windows.h>
 #endif
 #include "Core.h"
+#include "ProceduralConfigIO.h"
+#include "ProceduralSettings.h"
+#include "World.h"
+#include "ProceduralConfigIO.h"
+#include "ProceduralSettings.h"
 #include "World.h"
 #include "TextureCube.h"
 #include "TextureBase.h"
@@ -189,6 +194,9 @@ void Core::LoadSystem(const std::string& config_file_name)
       default_user_name = d.value("default_user", "");
       worldSeed_ = d.value("world_seed", 12345u);
       terrainType_ = d.value("terrain", "heightmap");
+      proceduralSettings_ = ParseProceduralSettings(d);
+      worldSeed_ = proceduralSettings_.seed;
+      terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
       streamingEnabled_ = d.value("streaming_enabled", true);
       if (d.contains("render") && d["render"].is_object()) {
@@ -209,6 +217,8 @@ void Core::LoadSystem(const std::string& config_file_name)
       default_user_name = "Username";
       worldSeed_ = 12345u;
       terrainType_ = "heightmap";
+      proceduralSettings_ = ProceduralSettings{};
+      proceduralSettings_.seed = worldSeed_;
       renderDistanceChunks_ = 4;
       streamingEnabled_ = true;
       renderSettings_ = RenderSettings::Legacy();
@@ -232,7 +242,14 @@ void Core::LoadSystem(const std::string& config_file_name)
       WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
      }
 
-     WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
+     WorldInstance->SetProceduralSettings(proceduralSettings_);
+     std::cout << "Procedural: " << ProceduralGeneratorToString(proceduralSettings_.generator)
+               << " (" << VerticalModeToString(proceduralSettings_.vertical)
+               << ", seed=" << proceduralSettings_.seed
+               << ", sea=" << proceduralSettings_.seaLevel
+               << ", maxY=" << proceduralSettings_.maxHeight
+               << ", caves=" << (proceduralSettings_.enableCaves ? "1" : "0")
+               << ", trees=" << (proceduralSettings_.enableTrees ? "1" : "0") << ")" << std::endl;
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
      WorldInstance->SetRenderSettings(renderSettings_);
@@ -278,7 +295,7 @@ void Core::SaveSystem(const std::string& config_file_name)
  system_data["default_world"] = WorldInstance->GetWorldName();
  system_data["default_user"] = WorldInstance->GetCurrentUserName();
  system_data["world_seed"] = worldSeed_;
- system_data["terrain"] = terrainType_;
+ WriteProceduralSettings(system_data, proceduralSettings_);
  system_data["render_distance_chunks"] = renderDistanceChunks_;
  system_data["streaming_enabled"] = streamingEnabled_;
  json render;
@@ -308,7 +325,12 @@ void Core::CreateWorld(const std::string& terrain_type)
  worldSeed_ += 1;
  if (!terrain_type.empty()) {
   terrainType_ = terrain_type;
+  proceduralSettings_.generator = ProceduralGeneratorFromString(terrain_type);
  }
+ proceduralSettings_.seed = worldSeed_;
+ ResolveProceduralDefaults(proceduralSettings_);
+ ApplyGeneratorTierDefaults(proceduralSettings_);
+ terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
  if (WorldInstance->GetCurrentUser() == nullptr) {
   WorldInstance->GenerateUsers();
  }
@@ -321,7 +343,7 @@ void Core::CreateWorld(const std::string& terrain_type)
  std::cout << "Core::CreateWorld: new world '" << new_world_name << "' at "
            << activeWorldFolder_.string() << std::endl;
 
- WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
+ WorldInstance->SetProceduralSettings(proceduralSettings_);
  WorldInstance->Create(new_world_name);
  SaveWorld(new_world_name);
  LoadWorldList(WorldPath.string());

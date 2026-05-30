@@ -19,6 +19,9 @@
 #include "ChunkStreamer.h"
 #include "ChunkManager.h"
 #include "RenderSettings.h"
+#include "ProceduralSettings.h"
+#include "worldgen/IWorldGenPipeline.h"
+#include "worldgen/WorldGenContext.h"
 
 namespace cutum {
 
@@ -42,6 +45,8 @@ public:
  void SetSpawnPoint(glm::vec3 value);
 
  void SetTerrainParams(uint32_t seed, const std::string& terrainType);
+ void SetProceduralSettings(const ProceduralSettings& settings);
+ const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const std::string& GetTerrainType() const { return terrainType_; }
 
@@ -168,12 +173,15 @@ private:
  std::optional<int> FindHighestSolidY(int x, int z) const;
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
  void UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY);
+ void RebuildWorldGenPipeline();
 
  std::string WorldName;
  glm::vec3 SpawnPoint;
  std::string CurrentUserName;
  uint32_t worldSeed_{12345};
  std::string terrainType_{"heightmap"};
+ ProceduralSettings proceduralSettings_;
+ std::unique_ptr<IWorldGenPipeline> worldGen_;
  size_t cachedBlockCount_{0};
  bool blockWorldReady_{false};
  int physicsSuspendFrames_{0};

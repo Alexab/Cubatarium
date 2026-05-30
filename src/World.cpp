@@ -19,7 +19,9 @@
 #include "Camera.h"
 #include "BlockRaycast.h"
 #include "GridMath.h"
-#include "WorldGenerator.h"
+#include "ProceduralConfigIO.h"
+#include "ProceduralSettings.h"
+#include "worldgen/IWorldGenPipeline.h"
 #include "ChunkManager.h"
 #include "Chunk.h"
 #include "Prefab.h"
@@ -127,9 +129,41 @@ void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
 {
  worldSeed_ = seed;
  terrainType_ = terrainType;
+ ProceduralSettings settings;
+ settings.seed = seed;
+ settings.generator = ProceduralGeneratorFromString(terrainType);
+ ResolveProceduralDefaults(settings);
+ ApplyGeneratorTierDefaults(settings);
+ SetProceduralSettings(settings);
  if (blockRegistry_ && !streamer_) {
   streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
  }
+}
+
+void World::SetProceduralSettings(const ProceduralSettings& settings)
+{
+ proceduralSettings_ = settings;
+ worldSeed_ = settings.seed;
+ terrainType_ = ProceduralGeneratorToString(settings.generator);
+ if (blockRegistry_ && !streamer_) {
+  streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
+ }
+ RebuildWorldGenPipeline();
+}
+
+void World::RebuildWorldGenPipeline()
+{
+ if (!blockRegistry_) {
+  worldGen_.reset();
+  return;
+ }
+ WorldGenContext ctx{
+     blockWorld_,
+     *blockRegistry_,
+     proceduralSettings_,
+     prefabLibrary_,
+     &meshCache_};
+ worldGen_ = ProceduralWorldGenFactory::Create(ctx);
 }
 
 void World::SetRenderDistanceChunks(int distance)
@@ -156,17 +190,10 @@ void World::InitStreamerCallbacks()
      [this](glm::ivec3 coord) { SaveChunkToFile(coord, worldFolderPath_); },
      [this](glm::ivec3 coord) { meshCache_.MarkDirty(coord); },
      [this](int x, int z) {
-      if (!allowProceduralFill_) {
+      if (!allowProceduralFill_ || !worldGen_) {
        return;
       }
-      if (terrainType_ == "flat") {
-       WorldGenerator::GenerateFlatColumn(blockWorld_, *blockRegistry_, x, z, 3);
-      } else {
-       WorldGenerator::GenerateColumn(blockWorld_, *blockRegistry_, x, z, worldSeed_, 0, 8);
-      }
-      // Columns always write into the ground chunk (cy=0); mark it even when
-      // EnsureChunkLoaded was invoked for a different Y slice.
-      meshCache_.MarkDirty(ChunkManager::WorldToChunk(glm::ivec3(x, 0, z)));
+      worldGen_->GenerateColumn(x, z);
      },
      [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
 }
@@ -180,21 +207,20 @@ void World::GenerateWorldBlocks()
   std::cerr << "GenerateWorldBlocks: skipped (persisted world on disk)" << std::endl;
   return;
  }
- constexpr int kFlatSurfaceY = 3;
- if (terrainType_ == "flat") {
-  if (streamingEnabled_) {
-   WorldGenerator::GenerateFlatArea(blockWorld_, *blockRegistry_, 0, 0, 2, kFlatSurfaceY);
-  } else {
-   WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, kFlatSurfaceY);
-  }
-  SpawnPoint = glm::vec3(0.0f, static_cast<float>(kFlatSurfaceY) + 3.0f, 5.0f);
- } else if (streamingEnabled_) {
-  WorldGenerator::GenerateSpawnArea(blockWorld_, *blockRegistry_, 0, 0, 2, worldSeed_, 0, 8);
-  SpawnPoint = WorldGenerator::DefaultSpawnPosition(0, 0, worldSeed_, 0, 8);
- } else {
-  WorldGenerator::GenerateHeightmap(blockWorld_, *blockRegistry_, 16, worldSeed_, 0, 8);
-  SpawnPoint = WorldGenerator::DefaultSpawnPosition(0, 0, worldSeed_, 0, 8);
+ if (!worldGen_) {
+  RebuildWorldGenPipeline();
  }
+ if (!worldGen_) {
+  return;
+ }
+
+ constexpr int kSpawnRadiusChunks = 2;
+ if (streamingEnabled_) {
+  worldGen_->GenerateSpawnPatch(0, 0, kSpawnRadiusChunks * CHUNK_SIZE);
+ } else {
+  worldGen_->GenerateFullPatch(0, 0, 16);
+ }
+ SpawnPoint = worldGen_->DefaultSpawnPosition(0, 0);
 }
 
 void World::RefreshBlockRegistry()
@@ -999,6 +1025,17 @@ void World::LoadWorldData(const std::string &file_name)
      if (d.contains("world_seed")) {
       worldSeed_ = d["world_seed"].get<uint32_t>();
      }
+     if (d.contains("procedural") && d["procedural"].is_object()) {
+      proceduralSettings_ = ParseProceduralSettings(d);
+      terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+      worldSeed_ = proceduralSettings_.seed;
+     } else {
+      proceduralSettings_.seed = worldSeed_;
+      proceduralSettings_.generator = ProceduralGeneratorFromString(terrainType_);
+      ResolveProceduralDefaults(proceduralSettings_);
+      ApplyGeneratorTierDefaults(proceduralSettings_);
+     }
+     RebuildWorldGenPipeline();
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error in LoadWorldData: " << e.what() << std::endl;
  }
@@ -1011,6 +1048,7 @@ void World::SaveWorldData(const std::string &file_name)
  world_data["world_name"] = WorldName;
  world_data["terrain"] = terrainType_;
  world_data["world_seed"] = worldSeed_;
+ WriteProceduralSettings(world_data, proceduralSettings_);
 
  json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
  world_data["spawn_point"] = arr;

@@ -59,6 +59,18 @@ set(SOURCES
     src/Noise.cpp
     src/ProceduralSettings.cpp
     src/ProceduralConfigIO.cpp
+    src/worldgen/WorldGenContext.cpp
+    src/worldgen/IWorldGenPipeline.cpp
+    src/worldgen/WorldGenStages.cpp
+    src/worldgen/FlatPipeline.cpp
+    src/worldgen/OverworldHeightSampler.cpp
+    src/worldgen/OverworldPipeline.cpp
+    src/worldgen/BiomeSampler.cpp
+    src/worldgen/OverworldBiomesPipeline.cpp
+    src/worldgen/CaveCarver.cpp
+    src/worldgen/PrefabFeaturePlacer.cpp
+    src/worldgen/OverworldFullPipeline.cpp
+    src/worldgen/ProceduralWorldGenFactory.cpp
     src/BlockRaycast.cpp
     src/Chunk.cpp
     src/ChunkManager.cpp
@@ -113,6 +125,8 @@ endif()
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL

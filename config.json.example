@@ -3,6 +3,15 @@
     "default_world": "World_001",
     "world_seed": 12345,
     "terrain": "heightmap",
+    "procedural": {
+        "generator": "overworld_biomes",
+        "vertical": "compact",
+        "sea_level": 4,
+        "max_height": 12,
+        "caves": false,
+        "trees": false,
+        "flat_surface_y": 3
+    },
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "render": {

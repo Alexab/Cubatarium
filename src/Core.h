@@ -8,6 +8,7 @@
 #include <cstdint>
 
 #include "RenderSettings.h"
+#include "ProceduralSettings.h"
 
 namespace cutum {
 
@@ -63,6 +64,7 @@ private:
 
  uint32_t worldSeed_{12345};
  std::string terrainType_{"heightmap"};
+ ProceduralSettings proceduralSettings_;
  int renderDistanceChunks_{4};
  bool streamingEnabled_{true};
  RenderSettings renderSettings_;
