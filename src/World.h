@@ -93,6 +93,7 @@ public:
  void UpdateStreaming();
  size_t GetRenderInstanceCount() const;
  uint64_t GetMeshRevision() const;
+ uint64_t GetCullRevision() const;
  size_t GetCachedBlockCount() const { return cachedBlockCount_; }
 
  bool GetIsIntersectionExists() const;

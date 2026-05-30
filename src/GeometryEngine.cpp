@@ -249,15 +249,17 @@ if (!camera) {
   const bool useBatchCache = renderSettings_.batchCache && !useGreedyMesh;
 
   if (useGreedyMesh) {
-   WorldInstance->GetGreedyRenderBatches();
-   if (!useBatchCache || !blockBatchesValid_ || renderCount != cachedInstanceCount_
+   const auto& greedyBatches = WorldInstance->GetGreedyRenderBatches();
+   if (!useBatchCache || !blockBatchesValid_ || greedyBatches.size() != cachedInstanceCount_
        || meshRevision != cachedMeshRevision_) {
-    cachedInstanceCount_ = renderCount;
+    cachedInstanceCount_ = greedyBatches.size();
     cachedMeshRevision_ = meshRevision;
     blockBatchesValid_ = true;
    }
    const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-   DrawGreedyMeshBatches(WorldInstance->GetGreedyRenderBatches(), vp, textures);
+   DrawGreedyMeshBatches(
+       greedyBatches, vp, textures,
+       meshRevision, WorldInstance->GetCullRevision());
   } else {
    const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
    if (!useBatchCache || !blockBatchesValid_ || renderCount != cachedInstanceCount_
@@ -307,6 +309,7 @@ void GeometryEngine::SetRenderSettings(const RenderSettings& settings)
 {
  renderSettings_ = settings;
  blockBatchesValid_ = false;
+ DestroyGreedyGpuBatches();
  DestroyFaceQuadBuffers();
 }
 
@@ -439,10 +442,69 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  activeShader->Unuse();
 }
 
+void GeometryEngine::DestroyGreedyGpuBatches()
+{
+ for (GreedyGpuBatch& batch : greedyGpuBatches_) {
+  if (batch.ebo) {
+   glDeleteBuffers(1, &batch.ebo);
+   batch.ebo = 0;
+  }
+  if (batch.vbo) {
+   glDeleteBuffers(1, &batch.vbo);
+   batch.vbo = 0;
+  }
+ }
+ greedyGpuBatches_.clear();
+ cachedGreedyMeshRevision_ = 0;
+ cachedGreedyCullRevision_ = 0;
+}
+
+void GeometryEngine::RefreshGreedyGpuBatches(
+    const std::vector<GreedyMeshBatch>& batches,
+    uint64_t meshRevision,
+    uint64_t cullRevision)
+{
+ if (meshRevision == cachedGreedyMeshRevision_ && cullRevision == cachedGreedyCullRevision_) {
+  return;
+ }
+
+ DestroyGreedyGpuBatches();
+ greedyGpuBatches_.reserve(batches.size());
+
+ for (const GreedyMeshBatch& batch : batches) {
+  if (batch.vertices.empty() || batch.indices.empty()) {
+   continue;
+  }
+  GreedyGpuBatch gpu;
+  gpu.blockId = batch.blockId;
+  gpu.indexCount = static_cast<GLsizei>(batch.indices.size());
+  glGenBuffers(1, &gpu.vbo);
+  glGenBuffers(1, &gpu.ebo);
+  glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+  glBufferData(GL_ARRAY_BUFFER,
+               batch.vertices.size() * sizeof(GreedyMeshVertex),
+               batch.vertices.data(),
+               GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               batch.indices.size() * sizeof(uint32_t),
+               batch.indices.data(),
+               GL_STATIC_DRAW);
+  greedyGpuBatches_.push_back(gpu);
+ }
+
+ glBindBuffer(GL_ARRAY_BUFFER, 0);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+ cachedGreedyMeshRevision_ = meshRevision;
+ cachedGreedyCullRevision_ = cullRevision;
+}
+
 void GeometryEngine::DrawGreedyMeshBatches(
     const std::vector<GreedyMeshBatch>& batches,
     const glm::mat4& vp,
-    const std::map<size_t, TextureCube>& textures)
+    const std::map<size_t, TextureCube>& textures,
+    uint64_t meshRevision,
+    uint64_t cullRevision)
 {
  if (batches.empty()) {
   return;
@@ -454,16 +516,23 @@ void GeometryEngine::DrawGreedyMeshBatches(
   return;
  }
 
+ RefreshGreedyGpuBatches(batches, meshRevision, cullRevision);
+ if (greedyGpuBatches_.empty()) {
+  return;
+ }
+
  greedyShader->Use();
  greedyShader->SetMat4("mvp_matrix", vp);
  greedyShader->SetInt("texture0", 0);
  glActiveTexture(GL_TEXTURE0);
 
- for (const GreedyMeshBatch& batch : batches) {
-  if (batch.vertices.empty() || batch.indices.empty()) {
+ glBindVertexArray(greedyMeshVAO);
+ const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
+ for (const GreedyGpuBatch& gpu : greedyGpuBatches_) {
+  if (gpu.indexCount <= 0) {
    continue;
   }
-  const auto texIt = textures.find(static_cast<size_t>(batch.blockId));
+  const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
   if (texIt == textures.end()) {
    continue;
   }
@@ -472,19 +541,13 @@ void GeometryEngine::DrawGreedyMeshBatches(
    continue;
   }
   glBindTexture(GL_TEXTURE_2D, textureId);
-
-  glBindVertexArray(greedyMeshVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, greedyMeshVBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               batch.vertices.size() * sizeof(GreedyMeshVertex),
-               batch.vertices.data(),
-               GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, greedyMeshEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               batch.indices.size() * sizeof(uint32_t),
-               batch.indices.data(),
-               GL_DYNAMIC_DRAW);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(batch.indices.size()), GL_UNSIGNED_INT, nullptr);
+  glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, kStride, (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
  }
 
  glBindVertexArray(0);
@@ -519,6 +582,7 @@ bool GeometryEngine::InitGreedyMeshBuffers()
 
 void GeometryEngine::DestroyGreedyMeshBuffers()
 {
+ DestroyGreedyGpuBatches();
  if (greedyMeshEBO) { glDeleteBuffers(1, &greedyMeshEBO); greedyMeshEBO = 0; }
  if (greedyMeshVBO) { glDeleteBuffers(1, &greedyMeshVBO); greedyMeshVBO = 0; }
  if (greedyMeshVAO) { glDeleteVertexArrays(1, &greedyMeshVAO); greedyMeshVAO = 0; }

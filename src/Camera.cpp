@@ -299,15 +299,35 @@ void Camera::ProcessMouseScroll(float yoffset)
   front.x = std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch));
   front.y = std::sin(radians(this->Pitch));
   front.z = std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch));
-  front = glm::normalize(front);
+  const float frontLen = glm::length(front);
+  if (frontLen > 1.0e-6f) {
+   front /= frontLen;
+  } else {
+   front = glm::vec3(0.0f, 0.0f, -1.0f);
+  }
   this->Front = front;
 
-  // Also re-calculate the Right and Up vector
-  this->Right=glm::cross(Front, WorldUp);
-  this->Right = glm::normalize(this->Right);
+  // Avoid gimbal lock when looking near straight up/down (cross(Front, Up) -> NaN).
+  glm::vec3 worldUp = WorldUp;
+  if (std::abs(glm::dot(Front, worldUp)) > 0.98f) {
+   worldUp = glm::vec3(0.0f, 0.0f, Front.y > 0.0f ? -1.0f : 1.0f);
+  }
 
-  this->Up = glm::cross(this->Right, this->Front);
-  this->Up = glm::normalize(this->Up);
+  this->Right = glm::cross(Front, worldUp);
+  const float rightLen = glm::length(Right);
+  if (rightLen > 1.0e-6f) {
+   this->Right /= rightLen;
+  } else {
+   this->Right = glm::vec3(1.0f, 0.0f, 0.0f);
+  }
+
+  this->Up = glm::cross(Right, Front);
+  const float upLen = glm::length(Up);
+  if (upLen > 1.0e-6f) {
+   this->Up /= upLen;
+  } else {
+   this->Up = WorldUp;
+  }
 
   UpdatePose();
  }

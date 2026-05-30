@@ -28,8 +28,9 @@ struct Frustum {
   return f;
  }
 
- /// Conservative chunk culling. Skips near plane (false negatives when camera is inside/near chunk).
- bool IntersectsChunkAABB(const glm::vec3& bmin, const glm::vec3& bmax, const glm::vec3& cameraPos) const
+ /// Conservative chunk culling. Skips near/top/bottom planes; uses distance fallback near camera.
+ bool IntersectsChunkAABB(const glm::vec3& bmin, const glm::vec3& bmax, const glm::vec3& cameraPos,
+                          float maxDistance = 0.0f) const
  {
   if (cameraPos.x >= bmin.x && cameraPos.x <= bmax.x
       && cameraPos.y >= bmin.y && cameraPos.y <= bmax.y
@@ -37,8 +38,17 @@ struct Frustum {
    return true;
   }
 
+  if (maxDistance > 0.0f) {
+   const glm::vec3 center = (bmin + bmax) * 0.5f;
+   if (glm::length(center - cameraPos) <= maxDistance) {
+    return true;
+   }
+  }
+
   for (size_t i = 0; i < planes.size(); ++i) {
-   if (i == 4) {
+   // Skip near, top, and bottom planes — they cause false negatives when
+   // the camera is inside a chunk or looking steeply up/down.
+   if (i == 2 || i == 3 || i == 4) {
     continue;
    }
    const glm::vec4& plane = planes[i];

@@ -82,7 +82,8 @@ private:
  bool InitGreedyMeshBuffers();
  void DestroyGreedyMeshBuffers();
  void DrawGreedyMeshBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
-                            const std::map<size_t, TextureCube>& textures);
+                            const std::map<size_t, TextureCube>& textures,
+                            uint64_t meshRevision, uint64_t cullRevision);
 GLuint cubeVAO = 0;
 GLuint cubeVBO = 0;
 GLuint cubeEBO = 0;
@@ -170,6 +171,19 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  uint64_t cachedMeshRevision_{0};
  bool blockBatchesValid_{false};
  RenderSettings renderSettings_;
+
+ struct GreedyGpuBatch {
+  BlockId blockId{BLOCK_AIR};
+  GLuint vbo{0};
+  GLuint ebo{0};
+  GLsizei indexCount{0};
+ };
+ std::vector<GreedyGpuBatch> greedyGpuBatches_;
+ uint64_t cachedGreedyMeshRevision_{0};
+ uint64_t cachedGreedyCullRevision_{0};
+ void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch>& batches,
+                              uint64_t meshRevision, uint64_t cullRevision);
+ void DestroyGreedyGpuBatches();
 
  std::string transientMessage_;
  double transientMessageUntil_{0.0};

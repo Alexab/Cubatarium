@@ -138,6 +138,7 @@ void World::SetRenderDistanceChunks(int distance)
  if (streamer_) {
   streamer_->SetRenderDistance(distance);
  }
+ meshCache_.SetRenderDistanceChunks(distance);
 }
 
 void World::InitStreamerCallbacks()
@@ -1128,19 +1129,18 @@ void World::SetRenderSettings(const RenderSettings& settings)
 const std::vector<FaceInstance>& World::GetBlockRenderInstances()
 {
  if (blockRegistry_ && meshCache_.HasPendingDirty()) {
-  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 32);
+  const int rebuildBudget = renderSettings_.greedyMeshing ? 128 : 32;
+  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, rebuildBudget);
   if (!meshCache_.HasPendingDirty()) {
    cachedBlockCount_ = blockWorld_.CountNonAir();
   }
  }
- if (renderSettings_.frustumCulling) {
-  if (auto camera = GetCurrentUserCamera()) {
-   const glm::mat4 view = camera->GetViewMatrix();
-   const glm::mat4 proj = camera->GetProjection();
-   const glm::mat4 vp = proj * view;
-   meshCache_.UpdateVisibleInstances(
-       Frustum::FromViewProjection(vp), vp, camera->GetPosition());
-  }
+ if (auto camera = GetCurrentUserCamera()) {
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 vp = proj * view;
+  meshCache_.UpdateVisibleInstances(
+      Frustum::FromViewProjection(vp), vp, camera->GetPosition());
  }
  return meshCache_.GetFaceInstances();
 }
@@ -1161,14 +1161,27 @@ uint64_t World::GetMeshRevision() const
  return meshCache_.GetMeshRevision();
 }
 
+uint64_t World::GetCullRevision() const
+{
+ return meshCache_.GetCullRevision();
+}
+
 void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
  const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(blockPos);
- meshCache_.MarkDirty(chunkCoord);
  modifiedChunks_.insert(chunkCoord);
 
- for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
-  meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos + offset));
+ if (blockRegistry_) {
+  meshCache_.RebuildChunkImmediate(blockWorld_, *blockRegistry_, chunkCoord);
+  for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+   meshCache_.RebuildChunkImmediate(
+       blockWorld_, *blockRegistry_, ChunkManager::WorldToChunk(blockPos + offset));
+  }
+ } else {
+  meshCache_.MarkDirty(chunkCoord);
+  for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+   meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos + offset));
+  }
  }
 }
 
