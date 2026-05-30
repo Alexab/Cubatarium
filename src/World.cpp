@@ -36,7 +36,52 @@ namespace {
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 
+bool HasChunkJsonFiles(const std::string& chunks_dir)
+{
+ if (!std::filesystem::exists(chunks_dir) || !std::filesystem::is_directory(chunks_dir)) {
+  return false;
+ }
+ for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
+  if (entry.path().extension() == ".json") {
+   return true;
+  }
+ }
+ return false;
+}
+
 } // namespace
+
+bool World::HasPersistedTerrainOnDisk(const std::string& world_folder_path)
+{
+ const std::string blocks_file = world_folder_path + "/blocks.json";
+ if (std::filesystem::exists(blocks_file) && std::filesystem::file_size(blocks_file) > 2) {
+  return true;
+ }
+
+ const std::string chunks_dir = world_folder_path + "/chunks";
+ if (HasChunkJsonFiles(chunks_dir)) {
+  return true;
+ }
+
+ const std::string chunks_file = world_folder_path + "/chunks.json";
+ if (!std::filesystem::exists(chunks_file)) {
+  return false;
+ }
+
+ try {
+  std::ifstream file(chunks_file);
+  if (!file.is_open()) {
+   return false;
+  }
+  const json data = json::parse(file);
+  if (data.value("storage", "") == "per_file") {
+   return false;
+  }
+  return data.contains("chunks") && data["chunks"].is_array() && !data["chunks"].empty();
+ } catch (const json::exception&) {
+  return false;
+ }
+}
 
 World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views)
  : ObjectStorageInstance(object_storage)
@@ -80,9 +125,8 @@ void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
 {
  worldSeed_ = seed;
  terrainType_ = terrainType;
- if (blockRegistry_) {
+ if (blockRegistry_ && !streamer_) {
   streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
-  InitStreamerCallbacks();
  }
 }
 
@@ -103,10 +147,15 @@ void World::InitStreamerCallbacks()
  streamer_->SetEnabled(streamingEnabled_);
  streamer_->SetWorldFolder(worldFolderPath_);
  streamer_->SetCallbacks(
-     [this](glm::ivec3 coord) { return LoadChunkFromFile(coord, worldFolderPath_); },
+     [this](glm::ivec3 coord) {
+      return LoadChunkFromFile(coord, worldFolderPath_) >= 0;
+     },
      [this](glm::ivec3 coord) { SaveChunkToFile(coord, worldFolderPath_); },
      [this](glm::ivec3 coord) { meshCache_.MarkDirty(coord); },
      [this](int x, int z) {
+      if (loadedFromChunkSave_ || !allowProceduralFill_) {
+       return;
+      }
       WorldGenerator::GenerateColumn(blockWorld_, *blockRegistry_, x, z, worldSeed_, 0, 8);
      },
      [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
@@ -115,6 +164,10 @@ void World::InitStreamerCallbacks()
 void World::GenerateWorldBlocks()
 {
  if (!blockRegistry_) {
+  return;
+ }
+ if (hasPersistedSave_ || loadedFromChunkSave_) {
+  std::cerr << "GenerateWorldBlocks: skipped (persisted world on disk)" << std::endl;
   return;
  }
  if (terrainType_ == "flat") {
@@ -305,63 +358,121 @@ void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
 void World::Create(const std::string& world_name)
 {
  blockWorldReady_ = false;
+ hasPersistedSave_ = false;
+ loadedFromChunkSave_ = false;
+ allowProceduralFill_ = true;
  RefreshBlockRegistry();
  blockWorld_.Clear();
  modifiedChunks_.clear();
  GenerateWorldBlocks();
  WorldName = world_name;
+ InitStreamerCallbacks();
  RebuildBlockMesh();
  FinalizePlayerAfterWorldLoad();
 }
 
 void World::Load(const std::string& world_folder_path)
 {
- const std::string users_file_name = world_folder_path + "/users.json";
- const std::string world_data_file_name = world_folder_path + "/world_data.json";
- const std::string chunks_file_name = world_folder_path + "/chunks.json";
- const std::string blocks_file_name = world_folder_path + "/blocks.json";
- const std::string objects_file_name = world_folder_path + "/objects.json";
- const std::string chunks_dir = world_folder_path + "/chunks";
+ std::string load_folder = world_folder_path;
+ if (!HasPersistedTerrainOnDisk(load_folder)) {
+  const std::filesystem::path folderPath(load_folder);
+  const auto worldsDir = folderPath.parent_path();
+  std::filesystem::path alt;
+  if (worldsDir.filename() == "worlds") {
+   const auto root = worldsDir.parent_path();
+   if (worldsDir.parent_path().filename() == "bin") {
+    alt = root.parent_path() / "worlds" / folderPath.filename();
+   } else {
+    alt = root / "bin" / "worlds" / folderPath.filename();
+   }
+  }
+  if (!alt.empty() && HasPersistedTerrainOnDisk(alt.string())) {
+   load_folder = alt.string();
+   std::cout << "World::Load: using alternate save folder " << load_folder << std::endl;
+  }
+ }
 
- worldFolderPath_ = world_folder_path;
+ worldFolderPath_ = load_folder;
  blockWorldReady_ = false;
+ loadedFromChunkSave_ = false;
  blockWorld_.Clear();
  modifiedChunks_.clear();
+
+ const std::string users_file_name = worldFolderPath_ + "/users.json";
+ const std::string world_data_file_name = worldFolderPath_ + "/world_data.json";
+ const std::string chunks_file_name = worldFolderPath_ + "/chunks.json";
+ const std::string blocks_file_name = worldFolderPath_ + "/blocks.json";
+ const std::string objects_file_name = worldFolderPath_ + "/objects.json";
+ const std::string chunks_dir = worldFolderPath_ + "/chunks";
+
+ hasPersistedSave_ = HasPersistedTerrainOnDisk(worldFolderPath_);
+ allowProceduralFill_ = !hasPersistedSave_;
 
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
 
  RefreshBlockRegistry();
- InitStreamerCallbacks();
 
+ int chunkFilesRead = 0;
+ size_t voxelsFromChunkFiles = 0;
  if (std::filesystem::exists(chunks_dir)) {
   for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
-   if (entry.path().extension() == ".json") {
-    const std::string stem = entry.path().stem().string();
-    const size_t u1 = stem.find('_');
-    const size_t u2 = stem.find('_', u1 + 1);
-    if (u1 != std::string::npos && u2 != std::string::npos) {
-     const int cx = std::stoi(stem.substr(0, u1));
-     const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
-     const int cz = std::stoi(stem.substr(u2 + 1));
-     LoadChunkFromFile(glm::ivec3(cx, cy, cz), world_folder_path);
+   if (entry.path().extension() != ".json") {
+    continue;
+   }
+   const std::string stem = entry.path().stem().string();
+   const size_t u1 = stem.find('_');
+   const size_t u2 = stem.find('_', u1 + 1);
+   if (u1 == std::string::npos || u2 == std::string::npos) {
+    continue;
+   }
+   try {
+    const int cx = std::stoi(stem.substr(0, u1));
+    const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
+    const int cz = std::stoi(stem.substr(u2 + 1));
+    const int placed = LoadChunkFromFile(glm::ivec3(cx, cy, cz), worldFolderPath_);
+    if (placed >= 0) {
+     ++chunkFilesRead;
+     voxelsFromChunkFiles += static_cast<size_t>(placed);
     }
+   } catch (const std::exception& e) {
+    std::cerr << "Skipping chunk file " << entry.path().string() << ": " << e.what() << std::endl;
    }
   }
  } else if (std::filesystem::exists(chunks_file_name)) {
   LoadChunks(chunks_file_name);
-  MigrateMonolithicChunksJson(chunks_file_name, world_folder_path);
+  MigrateMonolithicChunksJson(chunks_file_name, worldFolderPath_);
+  chunkFilesRead = 1;
+  voxelsFromChunkFiles = blockWorld_.CountNonAir();
  }
 
- if (blockWorld_.CountNonAir() == 0 && std::filesystem::exists(blocks_file_name)) {
+ if (!hasPersistedSave_ && blockWorld_.CountNonAir() == 0 && std::filesystem::exists(blocks_file_name)) {
   LoadBlocks(blocks_file_name);
  }
- if (blockWorld_.CountNonAir() == 0 && std::filesystem::exists(objects_file_name)) {
+ if (!hasPersistedSave_ && blockWorld_.CountNonAir() == 0 && std::filesystem::exists(objects_file_name)) {
   MigrateObjectsFromJson(objects_file_name);
  }
- if (blockWorld_.CountNonAir() == 0 && blockRegistry_) {
+
+ const size_t blocksInWorld = blockWorld_.CountNonAir();
+ loadedFromChunkSave_ = hasPersistedSave_ || chunkFilesRead > 0 || voxelsFromChunkFiles > 0
+     || blocksInWorld > 0;
+ allowProceduralFill_ = !loadedFromChunkSave_;
+
+ std::cout << "World::Load: folder=" << worldFolderPath_ << std::endl;
+ std::cout << "World::Load: chunk files=" << chunkFilesRead
+           << " voxels from chunks=" << voxelsFromChunkFiles
+           << " blocks in world=" << blocksInWorld
+           << " loadedFromChunkSave=" << (loadedFromChunkSave_ ? "yes" : "no") << std::endl;
+
+ if (blocksInWorld == 0 && !loadedFromChunkSave_ && blockRegistry_) {
+  std::cout << "World::Load: empty world folder, generating procedural terrain." << std::endl;
   GenerateWorldBlocks();
+ } else if (blocksInWorld == 0 && loadedFromChunkSave_) {
+  std::cerr << "World::Load: chunk save on disk but 0 blocks loaded — no procedural fill. "
+            << "Check models/blocks match chunk type names." << std::endl;
  }
+
+ InitStreamerCallbacks();
 
  RebuildBlockMesh();
  FinalizePlayerAfterWorldLoad();
@@ -702,6 +813,56 @@ bool World::CheckCollision(const glm::vec3& position, float size) const
   }
  }
  return false;
+}
+
+glm::vec3 World::ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const
+{
+ const float deltaLenSq = glm::dot(delta, delta);
+ if (deltaLenSq < 1e-10f) {
+  return from;
+ }
+
+ constexpr float kMaxStep = 0.25f;
+ constexpr int kMaxIterations = 64;
+
+ const float totalLen = std::sqrt(deltaLenSq);
+ const glm::vec3 dir = delta / totalLen;
+
+ glm::vec3 pos = from;
+ float remaining = totalLen;
+ int iterations = 0;
+
+ while (remaining > 1e-6f && iterations < kMaxIterations) {
+  const float stepLen = std::min(remaining, kMaxStep);
+  const glm::vec3 next = pos + dir * stepLen;
+  if (CheckCollision(next, size)) {
+   break;
+  }
+  pos = next;
+  remaining -= stepLen;
+  ++iterations;
+ }
+
+ if (remaining > 1e-4f) {
+  const glm::vec3 target = pos + dir * remaining;
+  if (CheckCollision(target, size)) {
+   glm::vec3 lo = pos;
+   glm::vec3 hi = target;
+   for (int i = 0; i < 8; ++i) {
+    const glm::vec3 mid = (lo + hi) * 0.5f;
+    if (CheckCollision(mid, size)) {
+     hi = mid;
+    } else {
+     lo = mid;
+    }
+   }
+   pos = lo;
+  } else {
+   pos = target;
+  }
+ }
+
+ return pos;
 }
 
 void World::LoadUsers(const std::string &file_name)
@@ -1171,10 +1332,10 @@ void World::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_fold
  }
 }
 
-bool World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
 {
  if (!blockRegistry_) {
-  return false;
+  return -1;
  }
  const std::string file_name = world_folder + "/chunks/" +
      std::to_string(chunkCoord.x) + "_" +
@@ -1182,11 +1343,12 @@ bool World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_fo
      std::to_string(chunkCoord.z) + ".json";
  std::ifstream file(file_name);
  if (!file.is_open()) {
-  return false;
+  return -1;
  }
 
  try {
   json data = json::parse(file);
+  int placed = 0;
   for (const auto& voxel : data.at("voxels")) {
    const int lx = voxel.at("lx").get<int>();
    const int ly = voxel.at("ly").get<int>();
@@ -1201,11 +1363,13 @@ bool World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_fo
        chunkCoord.y * CHUNK_SIZE + ly,
        chunkCoord.z * CHUNK_SIZE + lz);
    blockWorld_.SetBlock(worldPos, id);
+   ++placed;
   }
-  return true;
+  return placed;
  } catch (const json::exception& e) {
-  std::cerr << "JSON parsing error in LoadChunkFromFile: " << e.what() << std::endl;
-  return false;
+  std::cerr << "JSON parsing error in LoadChunkFromFile " << file_name << ": " << e.what()
+            << std::endl;
+  return -1;
  }
 }
 

@@ -1,8 +1,8 @@
 {
     "default_user": "Username",
     "default_world": "World",
-    "render_distance_chunks": 4,
-    "streaming_enabled": false,
+    "world_seed": 12345,
     "terrain": "heightmap",
-    "world_seed": 12346
+    "render_distance_chunks": 4,
+    "streaming_enabled": false
 }

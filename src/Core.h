@@ -33,8 +33,9 @@ public:
  void LoadSystem(const std::string& config_file_name);
  void SaveSystem(const std::string& config_file_name);
 
- void CreateWorld(const std::string& world_name);
+ void CreateWorld(const std::string& world_name, const std::string& terrain_type = "");
  void LoadWorld(const std::string& world_name);
+ void LoadLastWorld();
  void SaveWorld(const std::string& world_name);
 
  void LoadWorldList(const std::string& world_path);
@@ -51,6 +52,8 @@ private:
  std::filesystem::path object_storage_file_name;
  std::filesystem::path prefabs_path_;
  std::filesystem::path WorldPath;
+ std::filesystem::path activeWorldFolder_;
+ std::filesystem::path configFilePath_;
 
  std::string default_world_name;
  std::string default_user_name;
@@ -58,7 +61,7 @@ private:
  uint32_t worldSeed_{12345};
  std::string terrainType_{"heightmap"};
  int renderDistanceChunks_{4};
- bool streamingEnabled_{true};
+ bool streamingEnabled_{false};
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;

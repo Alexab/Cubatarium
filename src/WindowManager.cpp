@@ -254,9 +254,12 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key == KeyCode::Key_F12) {
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
             if (shift && core) {
-                core->CreateWorld(worldInstance->GetWorldName());
+                core->CreateWorld(worldInstance->GetWorldName(), "heightmap");
+                if (geometries) {
+                    geometries->ShowTransientMessage("New heightmap world created", 2.5);
+                }
             } else if (geometries) {
-                geometries->ShowTransientMessage("Hold Shift+F12 to create a new world", 3.0);
+                geometries->ShowTransientMessage("Shift+F12 heightmap, Shift+F11 flat world", 3.0);
             }
         }
         else if (key == KeyCode::Key_Delete) {
@@ -299,7 +302,15 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             if (geometries) geometries->SetShowPerformance(!geometries->GetShowPerformance());
         }
         else if (key == KeyCode::Key_F11) {
-            if (geometries) geometries->SetShowCrosshair(!geometries->GetShowCrosshair());
+            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+            if (shift && core) {
+                core->CreateWorld(worldInstance->GetWorldName(), "flat");
+                if (geometries) {
+                    geometries->ShowTransientMessage("New flat world created", 2.5);
+                }
+            } else if (geometries) {
+                geometries->SetShowCrosshair(!geometries->GetShowCrosshair());
+            }
         }
     }
 }
@@ -430,8 +441,8 @@ void WindowManager::RenderHelpText() {
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
         "LMB (short) - Place, LMB (hold) - Remove, 0-9 - Hotbar (slot 9 = prefab)",
-        "Shift+F12 - New world (save), F12 - Show hint, F7 - Place test tree prefab",
-        "Delete - Remove targeted block, F9/F10/F11 - HUD/perf/crosshair"
+        "Shift+F12 - Heightmap world, Shift+F11 - Flat world (save), F12 - Hints",
+        "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };
     
     for (const auto& line : helpLines) {

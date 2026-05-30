@@ -83,6 +83,8 @@ public:
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
  bool CheckCollision(const glm::vec3& position, float size = 1.0) const;
+ /// Moves from `from` toward `from + delta` in small steps to avoid tunneling through blocks.
+ glm::vec3 ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const;
  void DoMovement();
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);
  void UpdateStreaming();
@@ -101,6 +103,8 @@ public:
  void SetStreamingEnabled(bool enabled) { streamingEnabled_ = enabled; }
  void SetRenderDistanceChunks(int distance);
  bool IsStreamingEnabled() const { return streamingEnabled_; }
+
+ static bool HasPersistedTerrainOnDisk(const std::string& world_folder_path);
 
 private:
  bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const;
@@ -122,7 +126,8 @@ private:
  void LoadChunks(const std::string &file_name);
  void SaveChunks(const std::string &file_name);
  void SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder);
- bool LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder);
+ /// Returns voxels placed (>=0), or -1 if the file could not be read/parsed.
+ int LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder);
  void MigrateMonolithicChunksJson(const std::string& chunks_file, const std::string& world_folder);
 
  void LoadWorldData(const std::string &file_name);
@@ -146,6 +151,9 @@ private:
  size_t cachedBlockCount_{0};
  bool blockWorldReady_{false};
  int physicsSuspendFrames_{0};
+ bool allowProceduralFill_{true};
+ bool hasPersistedSave_{false};
+ bool loadedFromChunkSave_{false};
 
  std::map<std::string, std::shared_ptr<User>> Users;
 

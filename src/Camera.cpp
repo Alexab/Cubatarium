@@ -227,85 +227,33 @@ void Camera::SetViewEngine(ViewEngine* view_engine)
 // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime)
 {
- float velocity = this->MovementSpeed * deltaTime;
+ const float velocity = MovementSpeed * deltaTime;
+ glm::vec3 shift(0.0f);
 
- if(FreeMove)
- {
-  if (direction == FORWARD)
-   this->Position += this->Front * velocity;
-  if (direction == BACKWARD)
-   this->Position -= this->Front * velocity;
-  if (direction == LEFT)
-   this->Position -= this->Right * velocity;
-  if (direction == RIGHT)
-   this->Position += this->Right * velocity;
-  if (direction == UP)
-   this->Position += this->Up * velocity;
-  if (direction == DOWN)
-   this->Position -= this->Up * velocity;
+ if (direction == FORWARD) {
+  shift += FreeMove ? Front * velocity
+                    : glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
+ } else if (direction == BACKWARD) {
+  shift -= FreeMove ? Front * velocity
+                    : glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
+ } else if (direction == LEFT) {
+  shift -= Right * velocity;
+ } else if (direction == RIGHT) {
+  shift += Right * velocity;
+ } else if (direction == UP) {
+  shift += Up * velocity;
+ } else if (direction == DOWN) {
+  shift -= Up * velocity;
  }
- else
- {
-  glm::vec3 position = Position;
-  glm::vec3 summary_shift(0.0f, 0.0f, 0.0f);
 
-  if (direction == FORWARD)
-  {
-   auto shift = glm::vec3(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity;
-   if(!world->CheckCollision(position+shift, ViewObjectSize))
-   {
-    position += shift;
-    summary_shift += shift;
-   }
-  }
-  if (direction == BACKWARD)
-  {
-   auto shift = glm::vec3(std::cos(radians(Yaw)), 0, std::sin(radians(Yaw))) * velocity; //Y is not affected, Y is looking up
-   if(!world->CheckCollision(position-shift, ViewObjectSize))
-   {
-    position -= shift;
-    summary_shift -= shift;
-   }
-  }
-  if (direction == LEFT)
-  {
-   auto shift = this->Right * velocity;
-   if(!world->CheckCollision(position-shift, ViewObjectSize))
-   {
-    position -= shift;
-    summary_shift -= shift;
-   }
-  }
-  if (direction == RIGHT)
-  {
-   auto shift = this->Right * velocity;
-   if(!world->CheckCollision(position+shift, ViewObjectSize))
-   {
-    position += shift;
-    summary_shift += shift;
-   }
-  }
-  if (direction == UP)
-  {
-   auto shift = this->Up * velocity;
-   if(!world->CheckCollision(position+shift, ViewObjectSize))
-   {
-    position += shift;
-    summary_shift += shift;
-   }
-  }
-  if (direction == DOWN)
-  {
-   auto shift = this->Up * velocity;
-   if(!world->CheckCollision(position-shift, ViewObjectSize))
-   {
-    position -= shift;
-    summary_shift -= shift;
-   }
-  }
+ if (glm::dot(shift, shift) < 1e-10f) {
+  return;
+ }
 
-  if(!world->CheckCollision(Position, ViewObjectSize))
-   Position = position;
+ if (world) {
+  Position = world->ResolveMovement(Position, shift, ViewObjectSize);
+ } else {
+  Position += shift;
  }
  UpdatePose();
 }
@@ -484,21 +432,20 @@ bool Camera::DoMovement(const World* world)
    return is_moved;
   }
   verticalVelocity_ += kGravity * static_cast<float>(DeltaTime);
-  glm::vec3 pos = Position;
-  pos.y += verticalVelocity_ * static_cast<float>(DeltaTime);
-  if (world->CheckCollision(pos, ViewObjectSize)) {
-   if (verticalVelocity_ < 0.0f) {
+  const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * static_cast<float>(DeltaTime), 0.0f);
+  const glm::vec3 resolved = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
+  const float movedY = resolved.y - Position.y;
+  const float requestedY = verticalDelta.y;
+  if (std::abs(movedY - requestedY) > 1e-4f) {
+   if (requestedY < 0.0f) {
     onGround_ = true;
    }
    verticalVelocity_ = 0.0f;
-   while (world->CheckCollision(Position, ViewObjectSize)) {
-    Position.y += 0.05f;
-   }
   } else {
    onGround_ = false;
-   Position.y = pos.y;
-   is_moved = true;
   }
+  Position = resolved;
+  is_moved = true;
 
   const bool spacePressed = KeysStatus[GLFW_KEY_SPACE];
   if (!spacePressed) {
