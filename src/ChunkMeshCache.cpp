@@ -64,10 +64,8 @@ void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum)
 
 void ChunkMeshCache::UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj)
 {
- if (visibleListValid_ && viewProj == lastCullVP_) {
-  return;
- }
- lastCullVP_ = viewProj;
+ (void)viewProj;
+ (void)lastCullVP_;
  RebuildFlatInstanceList(&frustum);
 }
 

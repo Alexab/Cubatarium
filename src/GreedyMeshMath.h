@@ -85,7 +85,7 @@ inline FaceInstance MakeFaceInstanceFromQuad(const GreedyQuad& q, glm::ivec3 chu
  fi.id = q.id;
  fi.model = model;
  fi.atlasUV = AtlasUVForFace(q.axis, q.faceSign);
- fi.quadSize = glm::vec2(static_cast<float>(q.width), static_cast<float>(q.height));
+ fi.quadSize = glm::vec2(static_cast<float>(quadWidth), static_cast<float>(quadHeight));
  return fi;
 }
 

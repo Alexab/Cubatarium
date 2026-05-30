@@ -11,6 +11,7 @@ out vec2 TexCoord;
 void main()
 {
     gl_Position = instanceMVP * vec4(aPos, 1.0);
-    vec2 tiled = fract(aTexCoord * instanceQuadSize);
+    vec2 quadSize = max(instanceQuadSize, vec2(1.0));
+    vec2 tiled = fract(aTexCoord * quadSize);
     TexCoord = mix(instanceAtlasUV.xy, instanceAtlasUV.zw, tiled);
 }

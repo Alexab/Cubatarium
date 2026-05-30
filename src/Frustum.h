@@ -13,13 +13,13 @@ struct Frustum {
  static Frustum FromViewProjection(const glm::mat4& m)
  {
   Frustum f;
-  const glm::mat4 t = glm::transpose(m);
-  f.planes[0] = t[3] + t[0];
-  f.planes[1] = t[3] - t[0];
-  f.planes[2] = t[3] + t[1];
-  f.planes[3] = t[3] - t[1];
-  f.planes[4] = t[3] + t[2];
-  f.planes[5] = t[3] - t[2];
+  // Column-major glm: combine columns of clip matrix (LearnOpenGL style)
+  f.planes[0] = m[3] + m[0];
+  f.planes[1] = m[3] - m[0];
+  f.planes[2] = m[3] + m[1];
+  f.planes[3] = m[3] - m[1];
+  f.planes[4] = m[3] + m[2];
+  f.planes[5] = m[3] - m[2];
   for (glm::vec4& p : f.planes) {
    const float len = glm::length(glm::vec3(p));
    if (len > 0.0f) {
