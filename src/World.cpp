@@ -327,75 +327,54 @@ bool World::CheckPositionFree(const glm::vec3& position, float size) const
 
 std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
- std::optional<glm::vec3> result;
-
  std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
  if(!CheckRayIntersection(position, front, distance_map))
-  return result;
+  return std::nullopt;
 
- size_t selected_object = std::get<4>(distance_map.begin()->second);
- size_t selected_cube = std::get<3>(distance_map.begin()->second);
+ const auto& hit = distance_map.begin()->second;
+ const size_t object_index = std::get<4>(hit);
+ const size_t cube_index = std::get<3>(hit);
+ const glm::vec3 localNormal = std::get<1>(hit);
 
- for(auto I = distance_map.begin(); I != distance_map.end(); ++I)
- {
-  glm::vec3 res_position;
-
-  glm::vec3 intersecion = std::get<2>(I->second);
-  float distance = I->first;
-  size_t cube_index = std::get<3>(I->second);
-  size_t object_index = std::get<4>(I->second);
-  int cube_side = std::get<0>(I->second);
-
-  if(cube_index != selected_cube || object_index != selected_object)
-   continue;
-
-  auto & cube = Objects[object_index]->GetCubes()[cube_index];
-
-  // Get cube size for correct offset calculation
-  float cubeSize = cube->GetSize();
-  
-     switch(cube_side)
-   {
-   case CubeSide::CUBE_SIDE_LEFT:
-     res_position = cube->GetCenterPosition()+glm::vec3(-cubeSize, 0.0, 0.0);
-   break;
-
-   case CubeSide::CUBE_SIDE_RIGHT:
-     res_position = cube->GetCenterPosition()+glm::vec3(cubeSize, 0.0, 0.0);
-   break;
-
-   case CubeSide::CUBE_SIDE_FAR:
-     res_position = cube->GetCenterPosition()+glm::vec3(0.0, 0.0, -cubeSize);
-   break;
-
-   case CubeSide::CUBE_SIDE_NEAR:
-     res_position = cube->GetCenterPosition()+glm::vec3(0.0, 0.0, cubeSize);
-   break;
-
-   case CubeSide::CUBE_SIDE_TOP:
-     res_position = cube->GetCenterPosition()+glm::vec3(0.0, cubeSize, 0.0);
-   break;
-
-   case CubeSide::CUBE_SIDE_BOTTOM:
-     res_position = cube->GetCenterPosition()+glm::vec3(0.0, -cubeSize, 0.0);
-   break;
-
-   default:
-    res_position = cube->GetCenterPosition()+glm::vec3(0.0, cubeSize, 0.0);
-   }
-  
-  if(CheckPositionFree(res_position, cubeSize))
-  {
-   if(!Cube::CheckCollision(res_position, cubeSize, position, 1.0f))
-   {
-    result = res_position;
-    break;
-   }
-  }
+ if (object_index >= Objects.size()) {
+  return std::nullopt;
  }
 
- return result; // TODO
+ const auto& object = Objects[object_index];
+ if (!object || cube_index >= object->GetCubes().size()) {
+  return std::nullopt;
+ }
+
+ const auto& cube = object->GetCubes()[cube_index];
+ const float cubeSize = cube->GetSize();
+ const glm::vec3 cubeCenter = cube->GetCenterPosition();
+
+ const glm::mat4 pose = cube->GetObjectPose() * cube->GetInitialPose();
+ glm::vec3 worldNormal = glm::vec3(pose * glm::vec4(glm::normalize(localNormal), 0.0f));
+ if (glm::length(worldNormal) > 1e-6f) {
+  worldNormal = glm::normalize(worldNormal);
+ } else {
+  return std::nullopt;
+ }
+
+ const glm::vec3 toCamera = position - cubeCenter;
+ if (glm::dot(worldNormal, toCamera) < 0.0f) {
+  worldNormal = -worldNormal;
+ }
+
+ const glm::vec3 res_position = cubeCenter + worldNormal * cubeSize;
+
+ if (!CheckPositionFree(res_position, cubeSize)) {
+  return std::nullopt;
+ }
+
+ constexpr float kCameraRadius = 0.3f;
+ if (Cube::CheckCollision(res_position, cubeSize, position, kCameraRadius * 2.0f)) {
+  return std::nullopt;
+ }
+
+ return res_position;
 }
 
 bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)

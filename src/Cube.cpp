@@ -1,12 +1,37 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <limits>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Cube.h"
 
 namespace cutum {
+
+namespace {
+
+constexpr float kRayEpsilon = 1e-6f;
+
+glm::vec3 LocalFaceNormal(int axis, int sign, float halfExtent)
+{
+ switch (axis) {
+ case 0: return sign < 0 ? glm::vec3(halfExtent, 0.0f, 0.0f) : glm::vec3(-halfExtent, 0.0f, 0.0f);
+ case 1: return sign < 0 ? glm::vec3(0.0f, halfExtent, 0.0f) : glm::vec3(0.0f, -halfExtent, 0.0f);
+ default: return sign < 0 ? glm::vec3(0.0f, 0.0f, halfExtent) : glm::vec3(0.0f, 0.0f, -halfExtent);
+ }
+}
+
+int LocalFaceSide(int axis, int sign)
+{
+ switch (axis) {
+ case 0: return sign < 0 ? CubeSide::CUBE_SIDE_LEFT : CubeSide::CUBE_SIDE_RIGHT;
+ case 1: return sign < 0 ? CubeSide::CUBE_SIDE_TOP : CubeSide::CUBE_SIDE_BOTTOM;
+ default: return sign < 0 ? CubeSide::CUBE_SIDE_FAR : CubeSide::CUBE_SIDE_NEAR;
+ }
+}
+
+} // namespace
 
 Cube::Cube()
 {
@@ -129,75 +154,84 @@ bool Cube::CheckCollision(const glm::vec3& position1, float size1, const glm::ve
 
 bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const
 {
-    float d = sizeOfSide / 2;
-    float x, z, y;
+ intersected_sides.clear();
 
-    intersected_sides.clear();
+ const float halfExtent = sizeOfSide * 0.5f;
+ const glm::vec3 boxMin(-halfExtent);
+ const glm::vec3 boxMax(halfExtent);
 
-    // Top face of the cube
-    x = originRay.x + dirRay.x * ( d - originRay.y ) / dirRay.y;
-    z = originRay.z + dirRay.z * ( d - originRay.y ) / dirRay.y;
-    if( ( x < d ) && ( x > -d ) && ( z < d ) && ( z > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(0.0f, d, 0.0f);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_TOP, normal_to_side_local);
-    }
+ float tMin = -std::numeric_limits<float>::infinity();
+ float tMax = std::numeric_limits<float>::infinity();
+ int entryAxis = -1;
+ int entrySign = 0;
 
-    // Bottom face of the cube
-    x = originRay.x + dirRay.x * ( -d - originRay.y ) / dirRay.y;
-    z = originRay.z + dirRay.z * ( -d - originRay.y ) / dirRay.y;
-    if( ( x < d ) && ( x > -d ) && ( z < d ) && ( z > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(0.0f, -d, 0.0f);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_BOTTOM, normal_to_side_local);
-    }
+ for (int axis = 0; axis < 3; ++axis) {
+  if (std::abs(dirRay[axis]) < kRayEpsilon) {
+   if (originRay[axis] < boxMin[axis] || originRay[axis] > boxMax[axis]) {
+    return false;
+   }
+   continue;
+  }
 
-    // Right face of the cube
-    z = originRay.z + dirRay.z * ( d - originRay.x ) / dirRay.x;
-    y = originRay.y + dirRay.y * ( d - originRay.x ) / dirRay.x;
-    if( ( z < d ) && ( z > -d ) && ( y < d ) && ( y > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(-d, 0.0f, 0.0f);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_RIGHT, normal_to_side_local);
-    }
+  const float invDir = 1.0f / dirRay[axis];
+  float t1 = (boxMin[axis] - originRay[axis]) * invDir;
+  float t2 = (boxMax[axis] - originRay[axis]) * invDir;
+  int sign1 = -1;
+  int sign2 = 1;
+  if (t1 > t2) {
+   std::swap(t1, t2);
+   std::swap(sign1, sign2);
+  }
 
-    // Left face of the cube
-    z = originRay.z + dirRay.z * ( -d - originRay.x ) / dirRay.x;
-    y = originRay.y + dirRay.y * ( -d - originRay.x ) / dirRay.x;
-    if( ( z < d ) && ( z > -d ) && ( y < d ) && ( y > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(d, 0.0f, 0.0f);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_LEFT, normal_to_side_local);
-    }
+  if (t1 > tMin) {
+   tMin = t1;
+   entryAxis = axis;
+   entrySign = sign1;
+  }
+  tMax = std::min(tMax, t2);
+  if (tMax < tMin) {
+   return false;
+  }
+ }
 
-    // Far face
-    x = originRay.x + dirRay.x * ( d - originRay.z ) / dirRay.z;
-    y = originRay.y + dirRay.y * ( d - originRay.z ) / dirRay.z;
-    if( ( x < d ) && ( x > -d ) && ( y < d ) && ( y > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(0.0f, 0.0f, d);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_FAR, normal_to_side_local);
-    }
+ if (tMax < 0.0f) {
+  return false;
+ }
 
-    // Near face
-    x = originRay.x + dirRay.x * ( -d - originRay.z ) / dirRay.z;
-    y = originRay.y + dirRay.y * ( -d - originRay.z ) / dirRay.z;
-    if( ( x < d ) && ( x > -d ) && ( y < d ) && ( y > -d ) )
-    {
-     glm::vec3 normal_to_side_local = glm::vec3(0.0f, 0.0f, -d);
-     float length = glm::length(originRay + normal_to_side_local);
-     intersected_sides[length] = std::pair<int, glm::vec3>(CubeSide::CUBE_SIDE_NEAR, normal_to_side_local);
-    }
+ const float tEntry = tMin >= 0.0f ? tMin : tMax;
+ if (tEntry < 0.0f) {
+  return false;
+ }
 
-    if(intersected_sides.empty())
-     return false;
+ if (entryAxis < 0) {
+  for (int axis = 0; axis < 3; ++axis) {
+   if (std::abs(dirRay[axis]) < kRayEpsilon) {
+    continue;
+   }
+   const float invDir = 1.0f / dirRay[axis];
+   const float tNear = (boxMin[axis] - originRay[axis]) * invDir;
+   const float tFar = (boxMax[axis] - originRay[axis]) * invDir;
+   if (std::abs(tEntry - tNear) <= kRayEpsilon) {
+    entryAxis = axis;
+    entrySign = -1;
+    break;
+   }
+   if (std::abs(tEntry - tFar) <= kRayEpsilon) {
+    entryAxis = axis;
+    entrySign = 1;
+    break;
+   }
+  }
+ }
 
-    return true;
+ if (entryAxis < 0) {
+  return false;
+ }
+
+ const int side = LocalFaceSide(entryAxis, entrySign);
+ const glm::vec3 localNormal = LocalFaceNormal(entryAxis, entrySign, halfExtent);
+ intersected_sides[tEntry] = std::pair<int, glm::vec3>(side, localNormal);
+ return true;
 }
 
 bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, int &side, glm::vec3& normal, float &distance) const
@@ -222,21 +256,32 @@ bool Cube::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fron
 
  std::map<float, std::pair<int,glm::vec3>> intersected_sides;
  glm::mat4 pose = ObjectPose * InitialPose;
- glm::vec3 center(pose[3][0], pose[3][1], pose[3][2]);
  double size = Size;
 
  glm::mat4 invPose = glm::inverse(pose);
  glm::vec4 rel_position_vec4 = invPose * glm::vec4(position, 1.0f);
  glm::vec3 rel_position(rel_position_vec4.x, rel_position_vec4.y, rel_position_vec4.z);
- 
- bool is_intersected = IsIntersectionCube(rel_position, front, size, intersected_sides);
 
- for(auto I = intersected_sides.begin(); I != intersected_sides.end(); ++I)
- {
-  intersection_results[I->first + glm::length(rel_position)] = std::tuple<int, glm::vec3, glm::vec3>(I->second.first, I->second.second, I->second.second + center);
+ glm::vec3 localDir = glm::vec3(invPose * glm::vec4(front, 0.0f));
+ const float localDirLen = glm::length(localDir);
+ if (localDirLen < kRayEpsilon) {
+  return false;
+ }
+ localDir /= localDirLen;
+
+ bool is_intersected = IsIntersectionCube(rel_position, localDir, static_cast<float>(size), intersected_sides);
+
+ if (is_intersected && !intersected_sides.empty()) {
+  const float t = intersected_sides.begin()->first;
+  const auto& hit = intersected_sides.begin()->second;
+  const glm::vec3 hitLocal = rel_position + localDir * t;
+  const glm::vec3 hitWorld = glm::vec3(pose * glm::vec4(hitLocal, 1.0f));
+  const float worldDistance = glm::length(hitWorld - position);
+  intersection_results[worldDistance] = std::tuple<int, glm::vec3, glm::vec3>(
+      hit.first, hit.second, hitWorld);
  }
 
- return is_intersected;
+ return is_intersected && !intersection_results.empty();
 }
 
 size_t Cube::GetTypeId() const
