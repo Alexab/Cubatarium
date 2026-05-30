@@ -82,6 +82,22 @@ void User::SetViewDirection(const glm::vec3& value)
  ViewDirection = value;
 }
 
+float User::GetCameraYaw() const
+{
+ return CameraYaw;
+}
+
+float User::GetCameraPitch() const
+{
+ return CameraPitch;
+}
+
+void User::SetCameraOrientation(float yaw, float pitch)
+{
+ CameraYaw = yaw;
+ CameraPitch = pitch;
+}
+
 size_t User::GetViewId() const
 {
  return ViewId;

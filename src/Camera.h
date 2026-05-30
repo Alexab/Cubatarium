@@ -45,6 +45,9 @@ public:
 
  glm::vec3 GetPosition() const; // QVector3D -> glm::vec3
  void SetPosition(const glm::vec3& value);
+ float GetYaw() const;
+ float GetPitch() const;
+ void SetOrientation(float yaw, float pitch);
  glm::vec3 GetFront() const; // QVector3D -> glm::vec3
 
  glm::mat4 GetPose() const; // QMatrix4x4 -> glm::mat4

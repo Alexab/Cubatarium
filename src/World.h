@@ -117,6 +117,7 @@ private:
  void SaveWorldData(const std::string &file_name);
 
  void RebuildBlockMesh();
+ void ApplyUserToCamera(const std::shared_ptr<User>& user);
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
 
  std::string WorldName;

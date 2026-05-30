@@ -41,6 +41,7 @@ void World::GenerateUsers()
 {
  AddUser("Username");
  GetUser("Username")->SetActiveObjectTypeName("grass");
+ ApplySpawnToCamera();
 }
 
 std::string World::GetWorldName() const
@@ -81,12 +82,29 @@ void World::RebuildBlockMesh()
 
 void World::ApplySpawnToCamera()
 {
+ if (auto user = GetCurrentUser()) {
+  user->SetPosition(SpawnPoint);
+  user->SetCameraOrientation(-90.0f, 0.0f);
+ }
  if (auto camera = GetCurrentUserCamera()) {
   camera->SetPosition(SpawnPoint);
+  camera->SetOrientation(-90.0f, 0.0f);
   return;
  }
  if (ViewInstance && ViewInstance->GetActiveCamera()) {
   ViewInstance->GetActiveCamera()->SetPosition(SpawnPoint);
+  ViewInstance->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
+ }
+}
+
+void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
+{
+ if (!user) {
+  return;
+ }
+ if (auto camera = GetUserCamera(CurrentUserName)) {
+  camera->SetPosition(user->GetPosition());
+  camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
  }
 }
 
@@ -137,7 +155,6 @@ void World::Load(const std::string& world_folder_path)
 
  RebuildBlockMesh();
  spatialIndexDirty = true;
- ApplySpawnToCamera();
 }
 
 void World::Save(const std::string& world_folder_path)
@@ -239,6 +256,7 @@ bool World::SetCurrentUserName(const std::string& name)
  if(Users.find(name) == Users.end())
   return false;
  CurrentUserName = name;
+ ApplyUserToCamera(GetCurrentUser());
  return true;
 }
 
@@ -451,24 +469,37 @@ void World::LoadUsers(const std::string &file_name)
      json d = json::parse(val);
      for(auto I = d.begin() ; I != d.end(); ++I)
      {
-      auto user_name = I.key();
-      auto user_data = I.value();
-
-      auto position_value = user_data.value("position", json::array());
-
-      if(position_value.empty() || !position_value.is_array())
-       continue;
-
-      if(position_value.size() != 3)
-       continue;
-
-      glm::vec3 position(position_value[0].get<float>(),
-                         position_value[1].get<float>(),
-                         position_value[2].get<float>());
+      const auto user_name = I.key();
+      const auto user_data = I.value();
 
       AddUser(user_name);
+      auto user = GetUser(user_name);
+      if (!user) {
+       continue;
+      }
+
+      glm::vec3 position = SpawnPoint;
+      const auto position_value = user_data.value("position", json::array());
+      if (position_value.is_array() && position_value.size() == 3) {
+       position = glm::vec3(position_value[0].get<float>(),
+                            position_value[1].get<float>(),
+                            position_value[2].get<float>());
+      }
+      user->SetPosition(position);
+
+      float yaw = -90.0f;
+      float pitch = 0.0f;
+      if (user_data.contains("yaw")) {
+       yaw = user_data["yaw"].get<float>();
+      }
+      if (user_data.contains("pitch")) {
+       pitch = user_data["pitch"].get<float>();
+      }
+      user->SetCameraOrientation(yaw, pitch);
+
       if (auto camera = GetUserCamera(user_name)) {
        camera->SetPosition(position);
+       camera->SetOrientation(yaw, pitch);
       }
      }
  } catch (const json::exception& e) {
@@ -482,20 +513,28 @@ void World::SaveUsers(const std::string &file_name)
 
  for(auto I=Users.begin(); I!=Users.end(); ++I)
  {
-  auto user_name = I->first;
-  auto user_data = I->second;
+  const auto& user_name = I->first;
+  auto user = I->second;
 
-  glm::vec3 position(0.0f, 0.0f, 0.0f);
-  if (auto camera = GetUserCamera(user_name)) {
-   position = camera->GetPosition();
+  glm::vec3 position = user->GetPosition();
+  float yaw = user->GetCameraYaw();
+  float pitch = user->GetCameraPitch();
+  if (user_name == CurrentUserName) {
+   if (auto camera = GetUserCamera(user_name)) {
+    position = camera->GetPosition();
+    yaw = camera->GetYaw();
+    pitch = camera->GetPitch();
+    user->SetPosition(position);
+    user->SetCameraOrientation(yaw, pitch);
+   }
   }
 
-  json arr = json::array({position.x, position.y, position.z});
+  json user_json;
+  user_json["position"] = json::array({position.x, position.y, position.z});
+  user_json["yaw"] = yaw;
+  user_json["pitch"] = pitch;
 
-  json user;
-  user["position"] = arr;
-
-  objects[user_name] = user;
+  objects[user_name] = user_json;
  }
 
  std::ofstream file(file_name);
@@ -647,10 +686,17 @@ void World::DoMovement()
 {
  auto t_begin = std::chrono::high_resolution_clock::now();
 
- bool is_moved=GetCurrentUserCamera()->DoMovement(this);
+ auto camera = GetCurrentUserCamera();
+ bool is_moved = camera && camera->DoMovement(this);
 
- if(is_moved)
-   UpdateIntersection(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
+ if(is_moved && camera)
+ {
+  if (auto user = GetCurrentUser()) {
+   user->SetPosition(camera->GetPosition());
+   user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
+  }
+  UpdateIntersection(camera->GetPosition(), camera->GetFront());
+ }
    
  // Update spatial index if it's outdated
  UpdateSpatialIndex();

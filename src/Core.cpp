@@ -191,7 +191,6 @@ void Core::LoadWorld(const std::string& world_name)
  {
   WorldInstance->GenerateUsers();
  }
- WorldInstance->ApplySpawnToCamera();
 }
 
 void Core::SaveWorld(const std::string& world_name)

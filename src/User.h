@@ -32,6 +32,10 @@ public:
  void SetPosition(const glm::vec3& value);
  void SetViewDirection(const glm::vec3& value);
 
+ float GetCameraYaw() const;
+ float GetCameraPitch() const;
+ void SetCameraOrientation(float yaw, float pitch);
+
  size_t GetViewId() const;
  void SetViewId(size_t value);
 
@@ -45,6 +49,9 @@ private:
  glm::vec3 Position;
 
  glm::vec3 ViewDirection;
+
+ float CameraYaw{-90.0f};
+ float CameraPitch{0.0f};
 
  size_t ViewId;
 };

@@ -154,6 +154,30 @@ void Camera::SetPosition(const glm::vec3& value)
  UpdatePose();
 }
 
+float Camera::GetYaw() const
+{
+ return Yaw;
+}
+
+float Camera::GetPitch() const
+{
+ return Pitch;
+}
+
+void Camera::SetOrientation(float yaw, float pitch)
+{
+ Yaw = yaw;
+ Pitch = pitch;
+ if (Pitch > 89.0f) {
+  Pitch = 89.0f;
+ }
+ if (Pitch < -89.0f) {
+  Pitch = -89.0f;
+ }
+ UpdateCameraVectors();
+ UpdatePose();
+}
+
 glm::vec3 Camera::GetFront() const
 {
  return Front;
