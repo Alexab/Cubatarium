@@ -11,9 +11,9 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 | Flag | Effect |
 |------|--------|
 | `greedy_meshing` | `false`: one instanced **cube** per exposed solid block (old). `true`: GreedyMesher merged quads. |
-| `face_quads` | Only with greedy: draw unit quads (6 idx) + atlas UV via `vshader_instanced_face.glsl`. Ignored when greedy is off. |
+| `face_quads` | **Requires `greedy_meshing: true`.** Draw unit quads via `vshader_instanced_face.glsl`. Alone has no effect. |
 
-**Shaders:** legacy blocks use `vshader_instanced.glsl` (passthrough cube UV). Greedy face quads use `vshader_instanced_face.glsl` (atlas slice + tiling). Same `fshader.glsl` for both.
+**Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy face quads use `vshader_instanced_face.glsl` (cube face index 0–5 + atlas tiling). Frustum culling skips the near plane and expands chunk AABB by 2 blocks to avoid holes when the camera is inside a chunk.
 | `frustum_culling` | Skip off-screen chunks in the instance list. |
 | `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged. |
 

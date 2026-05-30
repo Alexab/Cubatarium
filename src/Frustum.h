@@ -13,7 +13,6 @@ struct Frustum {
  static Frustum FromViewProjection(const glm::mat4& m)
  {
   Frustum f;
-  // Column-major glm: combine columns of clip matrix (LearnOpenGL style)
   f.planes[0] = m[3] + m[0];
   f.planes[1] = m[3] - m[0];
   f.planes[2] = m[3] + m[1];
@@ -29,9 +28,20 @@ struct Frustum {
   return f;
  }
 
- bool IntersectsAABB(const glm::vec3& bmin, const glm::vec3& bmax) const
+ /// Conservative chunk culling. Skips near plane (false negatives when camera is inside/near chunk).
+ bool IntersectsChunkAABB(const glm::vec3& bmin, const glm::vec3& bmax, const glm::vec3& cameraPos) const
  {
-  for (const glm::vec4& plane : planes) {
+  if (cameraPos.x >= bmin.x && cameraPos.x <= bmax.x
+      && cameraPos.y >= bmin.y && cameraPos.y <= bmax.y
+      && cameraPos.z >= bmin.z && cameraPos.z <= bmax.z) {
+   return true;
+  }
+
+  for (size_t i = 0; i < planes.size(); ++i) {
+   if (i == 4) {
+    continue;
+   }
+   const glm::vec4& plane = planes[i];
    const glm::vec3 n(plane);
    glm::vec3 p = bmin;
    if (n.x >= 0.0f) {
@@ -51,17 +61,20 @@ struct Frustum {
  }
 };
 
-inline glm::vec3 ChunkAABBMin(glm::ivec3 chunkCoord)
+inline glm::vec3 ChunkAABBMin(glm::ivec3 chunkCoord, float margin = 2.0f)
 {
  return glm::vec3(
-     chunkCoord.x * CHUNK_SIZE,
-     chunkCoord.y * CHUNK_SIZE,
-     chunkCoord.z * CHUNK_SIZE);
+     chunkCoord.x * CHUNK_SIZE - margin,
+     chunkCoord.y * CHUNK_SIZE - margin,
+     chunkCoord.z * CHUNK_SIZE - margin);
 }
 
-inline glm::vec3 ChunkAABBMax(glm::ivec3 chunkCoord)
+inline glm::vec3 ChunkAABBMax(glm::ivec3 chunkCoord, float margin = 2.0f)
 {
- return ChunkAABBMin(chunkCoord) + glm::vec3(CHUNK_SIZE);
+ return glm::vec3(
+     chunkCoord.x * CHUNK_SIZE + CHUNK_SIZE + margin,
+     chunkCoord.y * CHUNK_SIZE + CHUNK_SIZE + margin,
+     chunkCoord.z * CHUNK_SIZE + CHUNK_SIZE + margin);
 }
 
 }

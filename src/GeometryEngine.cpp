@@ -135,15 +135,24 @@ bool GeometryEngine::InitShaders()
  layout (location = 0) in vec3 aPos;
  layout (location = 1) in vec2 aTexCoord;
  layout (location = 2) in mat4 instanceMVP;
- layout (location = 6) in vec4 instanceAtlasUV;
+ layout (location = 6) in float instanceFaceIndex;
  layout (location = 7) in vec2 instanceQuadSize;
  out vec2 TexCoord;
  void main()
  {
      gl_Position = instanceMVP * vec4(aPos, 1.0);
-     vec2 quadSize = max(instanceQuadSize, vec2(1.0));
-     vec2 tiled = fract(aTexCoord * quadSize);
-     TexCoord = mix(instanceAtlasUV.xy, instanceAtlasUV.zw, tiled);
+     int face = int(instanceFaceIndex + 0.5);
+     float cubeShift = 1.0 / 6.0;
+     float u0 = float(face) * cubeShift;
+     float u1 = float(face + 1) * cubeShift;
+     vec2 tiled = fract(aTexCoord * max(instanceQuadSize, vec2(1.0)));
+     if (face == 4) {
+         TexCoord = vec2(mix(u0, u1, tiled.y), mix(0.0, 1.0, tiled.x));
+     } else if (face == 5) {
+         TexCoord = vec2(mix(u0, u1, tiled.x), mix(0.0, 1.0, tiled.y));
+     } else {
+         TexCoord = vec2(mix(u0, u1, tiled.x), mix(1.0, 0.0, tiled.y));
+     }
  }
  )";
      const char* commonFS = R"(
@@ -291,7 +300,7 @@ void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInsta
    batch.textureID = texIt->second.GetTextureId();
   }
   batch.modelMatrices.push_back(instance.model);
-  batch.atlasUVs.push_back(instance.atlasUV);
+  batch.faceIndices.push_back(static_cast<float>(instance.faceIndex));
   batch.quadSizes.push_back(instance.quadSize);
  }
 
@@ -343,7 +352,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
 
  const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty();
  const bool drawFaceQuads = isBlockBatch && renderSettings_.UseFaceQuadDraw()
-     && batch.atlasUVs.size() == batch.modelMatrices.size()
+     && batch.faceIndices.size() == batch.modelMatrices.size()
      && batch.quadSizes.size() == batch.modelMatrices.size();
  const GLsizei indexCount = drawFaceQuads ? 6 : 36;
  GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
@@ -369,8 +378,9 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  if (drawFaceQuads) {
   struct BlockDrawInstance {
    glm::mat4 mvp;
-   glm::vec4 atlasUV;
    glm::vec2 quadSize;
+   float faceIndex;
+   float pad;
   };
   std::vector<BlockDrawInstance> blockInstances;
   blockInstances.reserve(batch.modelMatrices.size());
@@ -378,8 +388,9 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
   for (size_t i = 0; i < batch.modelMatrices.size(); ++i) {
    BlockDrawInstance inst;
    inst.mvp = vp * batch.modelMatrices[i];
-   inst.atlasUV = batch.atlasUVs[i];
    inst.quadSize = batch.quadSizes[i];
+   inst.faceIndex = batch.faceIndices[i];
+   inst.pad = 0.0f;
    blockInstances.push_back(inst);
   }
   glBindBuffer(GL_ARRAY_BUFFER, instanceBlockVBO);
@@ -1054,7 +1065,7 @@ bool GeometryEngine::InitFaceQuadBuffers()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    constexpr std::size_t kStride = sizeof(glm::mat4) + sizeof(glm::vec4) + sizeof(glm::vec2);
+    constexpr std::size_t kStride = sizeof(glm::mat4) + sizeof(glm::vec2) + sizeof(float) * 2;
     glBindBuffer(GL_ARRAY_BUFFER, instanceBlockVBO);
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
     std::size_t vec4Size = sizeof(glm::vec4);
@@ -1063,13 +1074,13 @@ bool GeometryEngine::InitFaceQuadBuffers()
         glEnableVertexAttribArray(2 + i);
         glVertexAttribDivisor(2 + i, 1);
     }
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, kStride, (void*)sizeof(glm::mat4));
-    glEnableVertexAttribArray(6);
-    glVertexAttribDivisor(6, 1);
-    glVertexAttribPointer(7, 2, GL_FLOAT, GL_FALSE, kStride,
-                          (void*)(sizeof(glm::mat4) + sizeof(glm::vec4)));
+    glVertexAttribPointer(7, 2, GL_FLOAT, GL_FALSE, kStride, (void*)sizeof(glm::mat4));
     glEnableVertexAttribArray(7);
     glVertexAttribDivisor(7, 1);
+    glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, kStride,
+                          (void*)(sizeof(glm::mat4) + sizeof(glm::vec2)));
+    glEnableVertexAttribArray(6);
+    glVertexAttribDivisor(6, 1);
 
     glBindVertexArray(0);
     return faceVAO != 0;

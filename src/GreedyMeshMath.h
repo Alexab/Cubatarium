@@ -12,25 +12,15 @@ namespace {
 
 constexpr float kFaceEpsilon = 0.002f;
 
-inline glm::vec4 AtlasUVForFace(int axis, int faceSign)
+inline int FaceIndexFromGreedy(int axis, int faceSign)
 {
- const float s = 1.0f / 6.0f;
- int faceIndex = 0;
- bool flipV = true;
  if (axis == 2) {
-  faceIndex = faceSign > 0 ? 0 : 2;
- } else if (axis == 0) {
-  faceIndex = faceSign > 0 ? 1 : 3;
- } else {
-  faceIndex = faceSign > 0 ? 4 : 5;
-  flipV = false;
+  return faceSign > 0 ? 0 : 2;
  }
- const float u0 = static_cast<float>(faceIndex) * s;
- const float u1 = static_cast<float>(faceIndex + 1) * s;
- if (flipV) {
-  return glm::vec4(u0, 1.0f, u1, 0.0f);
+ if (axis == 0) {
+  return faceSign > 0 ? 1 : 3;
  }
- return glm::vec4(u0, 0.0f, u1, 1.0f);
+ return faceSign > 0 ? 4 : 5;
 }
 
 } // namespace
@@ -84,7 +74,7 @@ inline FaceInstance MakeFaceInstanceFromQuad(const GreedyQuad& q, glm::ivec3 chu
  FaceInstance fi;
  fi.id = q.id;
  fi.model = model;
- fi.atlasUV = AtlasUVForFace(q.axis, q.faceSign);
+ fi.faceIndex = FaceIndexFromGreedy(q.axis, q.faceSign);
  fi.quadSize = glm::vec2(static_cast<float>(quadWidth), static_cast<float>(quadHeight));
  return fi;
 }

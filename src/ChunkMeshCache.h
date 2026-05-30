@@ -15,7 +15,7 @@ struct Frustum;
 struct FaceInstance {
  glm::mat4 model{1.0f};
  BlockId id{BLOCK_AIR};
- glm::vec4 atlasUV{0.0f, 0.0f, 1.0f / 6.0f, 1.0f};
+ int faceIndex{0};
  glm::vec2 quadSize{1.0f, 1.0f};
 };
 
@@ -36,7 +36,7 @@ public:
  size_t GetInstanceCount() const { return instances_.size(); }
  uint64_t GetMeshRevision() const { return meshRevision_; }
 
- void UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj);
+ void UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj, const glm::vec3& cameraPos);
  void SetRenderSettings(const RenderSettings& settings);
 
  const std::vector<FaceInstance>& GetFaceInstances() const { return instances_; }
@@ -46,7 +46,7 @@ private:
  void RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord);
  void RebuildChunkLegacy(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord,
                          std::vector<FaceInstance>& chunkInstances);
- void RebuildFlatInstanceList(const Frustum* frustum);
+ void RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos);
 
  std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> cache_;
  std::vector<glm::ivec3> dirtyChunks_;

@@ -77,12 +77,13 @@ void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
  visibleListValid_ = false;
 }
 
-void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum)
+void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos)
 {
  instances_.clear();
  for (const auto& entry : cache_) {
-  if (frustum) {
-   if (!frustum->IntersectsAABB(ChunkAABBMin(entry.first), ChunkAABBMax(entry.first))) {
+  if (frustum && cameraPos) {
+   if (!frustum->IntersectsChunkAABB(
+           ChunkAABBMin(entry.first), ChunkAABBMax(entry.first), *cameraPos)) {
     continue;
    }
   }
@@ -92,14 +93,15 @@ void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum)
  visibleListValid_ = true;
 }
 
-void ChunkMeshCache::UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj)
+void ChunkMeshCache::UpdateVisibleInstances(
+    const Frustum& frustum, const glm::mat4& viewProj, const glm::vec3& cameraPos)
 {
  (void)viewProj;
  (void)lastCullVP_;
  if (renderSettings_.frustumCulling) {
-  RebuildFlatInstanceList(&frustum);
+  RebuildFlatInstanceList(&frustum, &cameraPos);
  } else {
-  RebuildFlatInstanceList(nullptr);
+  RebuildFlatInstanceList(nullptr, nullptr);
  }
 }
 
@@ -112,7 +114,7 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
   ++rebuilt;
  }
  if (instancesDirty_) {
-  RebuildFlatInstanceList(nullptr);
+  RebuildFlatInstanceList(nullptr, nullptr);
  }
 }
 

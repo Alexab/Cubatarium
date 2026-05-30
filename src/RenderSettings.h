@@ -10,9 +10,7 @@ struct RenderSettings {
  bool frustumCulling{false};
  bool batchCache{false};
 
- /// Closest to pre-optimization behavior (naive cubes, no cull/cache).
- static RenderSettings Legacy() { return RenderSettings{}; }
-
+ /// Greedy merged quads + instanced face draw (requires both greedyMeshing and faceQuads).
  bool UseFaceQuadDraw() const { return greedyMeshing && faceQuads; }
 };
 
