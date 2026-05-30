@@ -6,6 +6,7 @@
 #include <vector>
 #include "BlockTypes.h"
 #include "ChunkManager.h"
+#include "RenderSettings.h"
 
 namespace cutum {
 
@@ -36,12 +37,15 @@ public:
  uint64_t GetMeshRevision() const { return meshRevision_; }
 
  void UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj);
+ void SetRenderSettings(const RenderSettings& settings);
 
  const std::vector<FaceInstance>& GetFaceInstances() const { return instances_; }
  const std::vector<FaceInstance>& GetInstances() const { return instances_; }
 
 private:
  void RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord);
+ void RebuildChunkLegacy(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord,
+                         std::vector<FaceInstance>& chunkInstances);
  void RebuildFlatInstanceList(const Frustum* frustum);
 
  std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> cache_;
@@ -51,6 +55,7 @@ private:
  uint64_t meshRevision_{0};
  glm::mat4 lastCullVP_{1.0f};
  bool visibleListValid_{false};
+ RenderSettings renderSettings_;
 };
 
 }

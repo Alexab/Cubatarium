@@ -15,6 +15,7 @@ typedef int GLint;
 #include "TextureCube.h"
 #include "World.h"
 #include "ChunkMeshCache.h"
+#include "RenderSettings.h"
 #include "CubeGL.h"
 #include "ShaderManager.h"
 #include "TextRenderer.h"
@@ -67,6 +68,9 @@ public:
  bool GetShowPerformance() const { return showPerformance; }
 
  void ShowTransientMessage(const std::string& msg, double seconds);
+
+ void SetRenderSettings(const RenderSettings& settings);
+ const RenderSettings& GetRenderSettings() const { return renderSettings_; }
  
 private:
  // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
@@ -155,6 +159,7 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  size_t cachedInstanceCount_{0};
  uint64_t cachedMeshRevision_{0};
  bool blockBatchesValid_{false};
+ RenderSettings renderSettings_;
 
  std::string transientMessage_;
  double transientMessageUntil_{0.0};

@@ -6,13 +6,16 @@
 BlockWorld → ChunkManager → ChunkMeshCache (GreedyMesher) → FaceInstance[] → GeometryEngine::PrepareRenderBatchesFromBlocks → instanced face quads
 ```
 
-World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds visible faces per chunk using greedy meshing (`GreedyMesher` + `GreedyMeshMath`). Each merged face is one instanced unit quad (`faceVAO`, 6 indices), not a full cube.
+World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below). Default in `config.json.example` is legacy (all `false`).
 
-**Per frame (blocks):**
+| Flag | Effect |
+|------|--------|
+| `greedy_meshing` | `false`: one instanced **cube** per exposed solid block (old). `true`: GreedyMesher merged quads. |
+| `face_quads` | Only with greedy: draw unit quads (6 idx) + atlas UV. Ignored when greedy is off. |
+| `frustum_culling` | Skip off-screen chunks in the instance list. |
+| `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged. |
 
-1. Dirty chunks are meshed (up to 32/frame in `GetBlockRenderInstances`).
-2. `UpdateVisibleInstances` filters chunk caches with a view frustum (`Frustum.h`) so off-screen chunks are not in `FaceInstance[]`.
-3. `GeometryEngine` rebuilds texture batches only when `GetMeshRevision()` or instance count changes; MVP matrices are still computed each frame while the camera moves.
+Bisect: start with all `false`, enable one flag at a time, restart game. Console prints `Render: greedy=...` on startup.
 
 ## Runtime paths (next to executable)
 

@@ -199,7 +199,8 @@ if (!camera) {
   const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
   const size_t instanceCount = blockInstances.size();
   const uint64_t meshRevision = WorldInstance->GetMeshRevision();
-  if (!blockBatchesValid_ || instanceCount != cachedInstanceCount_
+  const bool useBatchCache = renderSettings_.batchCache;
+  if (!useBatchCache || !blockBatchesValid_ || instanceCount != cachedInstanceCount_
       || meshRevision != cachedMeshRevision_) {
    PrepareRenderBatchesFromBlocks(blockInstances, textures);
    cachedInstanceCount_ = instanceCount;
@@ -241,6 +242,12 @@ void GeometryEngine::ShowTransientMessage(const std::string& msg, double seconds
  transientMessage_ = msg;
  transientMessageUntil_ = std::chrono::duration<double>(
      std::chrono::steady_clock::now().time_since_epoch()).count() + seconds;
+}
+
+void GeometryEngine::SetRenderSettings(const RenderSettings& settings)
+{
+ renderSettings_ = settings;
+ blockBatchesValid_ = false;
 }
 
 void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
@@ -312,19 +319,20 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
   }
  }
 
- const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty()
+ const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty();
+ const bool drawFaceQuads = isBlockBatch && renderSettings_.UseFaceQuadDraw()
      && batch.atlasUVs.size() == batch.modelMatrices.size()
      && batch.quadSizes.size() == batch.modelMatrices.size();
- const GLsizei indexCount = isBlockBatch ? 6 : 36;
- GLuint vao = isBlockBatch ? faceVAO : cubeVAO;
- if (isBlockBatch && faceVAO == 0) {
+ const GLsizei indexCount = drawFaceQuads ? 6 : 36;
+ GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
+ if (drawFaceQuads && faceVAO == 0) {
   if (!InitFaceQuadBuffers()) {
    return;
   }
   vao = faceVAO;
  }
 
- if (isBlockBatch) {
+ if (drawFaceQuads) {
   struct BlockDrawInstance {
    glm::mat4 mvp;
    glm::vec4 atlasUV;
@@ -349,7 +357,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  }
 
  glBindVertexArray(vao);
- const GLsizei instanceCount = isBlockBatch
+ const GLsizei instanceCount = drawFaceQuads
      ? static_cast<GLsizei>(batch.modelMatrices.size())
      : static_cast<GLsizei>(instanceMVPs.size());
  if (instanceCount > 0) {

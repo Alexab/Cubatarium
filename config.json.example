@@ -4,5 +4,11 @@
     "world_seed": 12345,
     "terrain": "heightmap",
     "render_distance_chunks": 4,
-    "streaming_enabled": true
+    "streaming_enabled": true,
+    "render": {
+        "greedy_meshing": false,
+        "face_quads": false,
+        "frustum_culling": false,
+        "batch_cache": false
+    }
 }

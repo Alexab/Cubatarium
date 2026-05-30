@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <cstdint>
 
+#include "RenderSettings.h"
+
 namespace cutum {
 
 class World;
@@ -63,6 +65,7 @@ private:
  std::string terrainType_{"heightmap"};
  int renderDistanceChunks_{4};
  bool streamingEnabled_{true};
+ RenderSettings renderSettings_;
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;

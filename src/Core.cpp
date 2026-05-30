@@ -191,6 +191,15 @@ void Core::LoadSystem(const std::string& config_file_name)
       terrainType_ = d.value("terrain", "heightmap");
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
       streamingEnabled_ = d.value("streaming_enabled", true);
+      if (d.contains("render") && d["render"].is_object()) {
+       const json& r = d["render"];
+       renderSettings_.greedyMeshing = r.value("greedy_meshing", false);
+       renderSettings_.faceQuads = r.value("face_quads", false);
+       renderSettings_.frustumCulling = r.value("frustum_culling", false);
+       renderSettings_.batchCache = r.value("batch_cache", false);
+      } else {
+       renderSettings_ = RenderSettings::Legacy();
+      }
      } else {
       default_world_name.clear();
       default_user_name = "Username";
@@ -198,6 +207,7 @@ void Core::LoadSystem(const std::string& config_file_name)
       terrainType_ = "heightmap";
       renderDistanceChunks_ = 4;
       streamingEnabled_ = true;
+      renderSettings_ = RenderSettings::Legacy();
      }
 
      texture_base_storage_file_name = project_dir / "textures" / "blocks";
@@ -221,6 +231,12 @@ void Core::LoadSystem(const std::string& config_file_name)
      WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
+     WorldInstance->SetRenderSettings(renderSettings_);
+     GeometryEngineInstance->SetRenderSettings(renderSettings_);
+     std::cout << "Render: greedy=" << renderSettings_.greedyMeshing
+               << " face_quads=" << renderSettings_.faceQuads
+               << " frustum=" << renderSettings_.frustumCulling
+               << " batch_cache=" << renderSettings_.batchCache << std::endl;
 
      std::filesystem::create_directories(WorldPath);
      LoadWorldList(WorldPath.string());
@@ -261,6 +277,12 @@ void Core::SaveSystem(const std::string& config_file_name)
  system_data["terrain"] = terrainType_;
  system_data["render_distance_chunks"] = renderDistanceChunks_;
  system_data["streaming_enabled"] = streamingEnabled_;
+ json render;
+ render["greedy_meshing"] = renderSettings_.greedyMeshing;
+ render["face_quads"] = renderSettings_.faceQuads;
+ render["frustum_culling"] = renderSettings_.frustumCulling;
+ render["batch_cache"] = renderSettings_.batchCache;
+ system_data["render"] = render;
 
  if (configFilePath_.empty()) {
   configFilePath_ = exeDir_ / config_file_name;

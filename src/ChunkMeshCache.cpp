@@ -4,8 +4,38 @@
 #include "Frustum.h"
 #include "GreedyMesher.h"
 #include "GreedyMeshMath.h"
+#include "GridMath.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace cutum {
+
+namespace {
+
+bool IsFullyEnclosed(const BlockWorld& world, glm::ivec3 pos)
+{
+ for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+  if (world.IsAir(pos + offset)) {
+   return false;
+  }
+ }
+ return true;
+}
+
+} // namespace
+
+void ChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
+{
+ const bool meshPathChanged = settings.greedyMeshing != renderSettings_.greedyMeshing;
+ renderSettings_ = settings;
+ if (meshPathChanged) {
+  for (const auto& entry : cache_) {
+   dirtyChunks_.push_back(entry.first);
+  }
+  instancesDirty_ = true;
+  visibleListValid_ = false;
+  ++meshRevision_;
+ }
+}
 
 void ChunkMeshCache::MarkAllDirty()
 {
@@ -66,7 +96,11 @@ void ChunkMeshCache::UpdateVisibleInstances(const Frustum& frustum, const glm::m
 {
  (void)viewProj;
  (void)lastCullVP_;
- RebuildFlatInstanceList(&frustum);
+ if (renderSettings_.frustumCulling) {
+  RebuildFlatInstanceList(&frustum);
+ } else {
+  RebuildFlatInstanceList(nullptr);
+ }
 }
 
 void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame)
@@ -82,6 +116,38 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
  }
 }
 
+void ChunkMeshCache::RebuildChunkLegacy(
+    const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord,
+    std::vector<FaceInstance>& chunkInstances)
+{
+ const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
+ if (!chunk) {
+  return;
+ }
+ for (int z = 0; z < CHUNK_SIZE; ++z) {
+  for (int y = 0; y < CHUNK_SIZE; ++y) {
+   for (int x = 0; x < CHUNK_SIZE; ++x) {
+    const glm::ivec3 local(x, y, z);
+    const BlockId id = chunk->GetBlockLocal(local);
+    if (!registry.IsSolid(id)) {
+     continue;
+    }
+    const glm::ivec3 worldPos(
+        chunkCoord.x * CHUNK_SIZE + x,
+        chunkCoord.y * CHUNK_SIZE + y,
+        chunkCoord.z * CHUNK_SIZE + z);
+    if (IsFullyEnclosed(world, worldPos)) {
+     continue;
+    }
+    FaceInstance instance;
+    instance.id = id;
+    instance.model = glm::translate(glm::mat4(1.0f), BlockCenter(worldPos));
+    chunkInstances.push_back(instance);
+   }
+  }
+ }
+}
+
 void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord)
 {
  std::vector<FaceInstance> chunkInstances;
@@ -94,11 +160,16 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
   return;
  }
 
- const auto quads = GreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
- chunkInstances.reserve(quads.size());
- for (const GreedyQuad& q : quads) {
-  chunkInstances.push_back(MakeFaceInstanceFromQuad(q, chunkCoord));
+ if (renderSettings_.greedyMeshing) {
+  const auto quads = GreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
+  chunkInstances.reserve(quads.size());
+  for (const GreedyQuad& q : quads) {
+   chunkInstances.push_back(MakeFaceInstanceFromQuad(q, chunkCoord));
+  }
+ } else {
+  RebuildChunkLegacy(world, registry, chunkCoord, chunkInstances);
  }
+
  cache_[chunkCoord] = std::move(chunkInstances);
  ++meshRevision_;
  instancesDirty_ = true;

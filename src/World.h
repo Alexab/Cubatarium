@@ -18,6 +18,7 @@
 #include "ChunkMeshCache.h"
 #include "ChunkStreamer.h"
 #include "ChunkManager.h"
+#include "RenderSettings.h"
 
 namespace cutum {
 
@@ -105,6 +106,9 @@ public:
  void SetRenderDistanceChunks(int distance);
  bool IsStreamingEnabled() const { return streamingEnabled_; }
 
+ void SetRenderSettings(const RenderSettings& settings);
+ const RenderSettings& GetRenderSettings() const { return renderSettings_; }
+
  static bool HasPersistedTerrainOnDisk(const std::string& world_folder_path);
 
 private:
@@ -167,6 +171,7 @@ private:
  ChunkMeshCache meshCache_;
  std::unique_ptr<ChunkStreamer> streamer_;
  bool streamingEnabled_{true};
+ RenderSettings renderSettings_;
  int renderDistanceChunks_{4};
  std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;
  std::string worldFolderPath_;

@@ -25,6 +25,7 @@
 #include "Prefab.h"
 #include "ChunkStreamer.h"
 #include "Frustum.h"
+#include "RenderSettings.h"
 #include <map>
 #include <unordered_set>
 
@@ -1113,6 +1114,12 @@ void World::InvalidateBlockMesh()
  if (blockRegistry_) {
   meshCache_.MarkAllDirtyFromWorld(blockWorld_);
  }
+}
+
+void World::SetRenderSettings(const RenderSettings& settings)
+{
+ renderSettings_ = settings;
+ meshCache_.SetRenderSettings(settings);
 }
 
 const std::vector<FaceInstance>& World::GetBlockRenderInstances()
