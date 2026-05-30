@@ -1,10 +1,27 @@
 #include "BlockRaycast.h"
 #include "BlockWorld.h"
-#include <algorithm>
+#include "GridMath.h"
 #include <cmath>
 #include <limits>
 
 namespace cutum {
+
+namespace {
+
+constexpr float kHalfBlock = 0.5f;
+
+float NextBoundaryT(const glm::vec3& origin, const glm::vec3& direction, int blockCoord, int axis)
+{
+ if (direction[axis] > 0.0f) {
+  return (static_cast<float>(blockCoord) + kHalfBlock - origin[axis]) / direction[axis];
+ }
+ if (direction[axis] < 0.0f) {
+  return (static_cast<float>(blockCoord) - kHalfBlock - origin[axis]) / direction[axis];
+ }
+ return std::numeric_limits<float>::max();
+}
+
+} // namespace
 
 std::optional<BlockRayHit> RaycastSolidBlocks(
     const BlockWorld& world,
@@ -18,85 +35,66 @@ std::optional<BlockRayHit> RaycastSolidBlocks(
  }
  direction /= len;
 
- glm::ivec3 voxel = glm::ivec3(
-     static_cast<int>(std::floor(origin.x)),
-     static_cast<int>(std::floor(origin.y)),
-     static_cast<int>(std::floor(origin.z)));
+ const float eps = 1e-4f;
+ glm::ivec3 current = WorldPosToBlock(origin);
 
- const glm::ivec3 step(
-     direction.x > 0.0f ? 1 : (direction.x < 0.0f ? -1 : 0),
-     direction.y > 0.0f ? 1 : (direction.y < 0.0f ? -1 : 0),
-     direction.z > 0.0f ? 1 : (direction.z < 0.0f ? -1 : 0));
-
- glm::vec3 tDelta(
-     step.x != 0 ? std::abs(1.0f / direction.x) : std::numeric_limits<float>::max(),
-     step.y != 0 ? std::abs(1.0f / direction.y) : std::numeric_limits<float>::max(),
-     step.z != 0 ? std::abs(1.0f / direction.z) : std::numeric_limits<float>::max());
-
- glm::vec3 tMax;
- if (step.x > 0) {
-  tMax.x = (static_cast<float>(voxel.x + 1) - origin.x) * tDelta.x;
- } else if (step.x < 0) {
-  tMax.x = (static_cast<float>(voxel.x) - origin.x) * tDelta.x;
- } else {
-  tMax.x = std::numeric_limits<float>::max();
- }
- if (step.y > 0) {
-  tMax.y = (static_cast<float>(voxel.y + 1) - origin.y) * tDelta.y;
- } else if (step.y < 0) {
-  tMax.y = (static_cast<float>(voxel.y) - origin.y) * tDelta.y;
- } else {
-  tMax.y = std::numeric_limits<float>::max();
- }
- if (step.z > 0) {
-  tMax.z = (static_cast<float>(voxel.z + 1) - origin.z) * tDelta.z;
- } else if (step.z < 0) {
-  tMax.z = (static_cast<float>(voxel.z) - origin.z) * tDelta.z;
- } else {
-  tMax.z = std::numeric_limits<float>::max();
+ if (!world.IsAir(current)) {
+  BlockRayHit hit;
+  hit.blockPos = current;
+  hit.faceNormal = glm::ivec3(
+      direction.x > 0.0f ? -1 : (direction.x < 0.0f ? 1 : 0),
+      direction.y > 0.0f ? -1 : (direction.y < 0.0f ? 1 : 0),
+      direction.z > 0.0f ? -1 : (direction.z < 0.0f ? 1 : 0));
+  hit.distance = 0.0f;
+  return hit;
  }
 
- glm::ivec3 lastNormal(0);
- float traveled = 0.0f;
+ float t = 0.0f;
+ while (t < maxDistance) {
+  const glm::vec3 pos = origin + direction * t;
 
- for (int i = 0; i < 512 && traveled <= maxDistance; ++i) {
-  const glm::ivec3 checkPos = voxel;
-  if (!world.IsAir(checkPos)) {
+  float tNext = maxDistance;
+  int stepAxis = -1;
+  const float tx = NextBoundaryT(origin, direction, current.x, 0);
+  const float ty = NextBoundaryT(origin, direction, current.y, 1);
+  const float tz = NextBoundaryT(origin, direction, current.z, 2);
+
+  if (tx < tNext) {
+   tNext = tx;
+   stepAxis = 0;
+  }
+  if (ty < tNext) {
+   tNext = ty;
+   stepAxis = 1;
+  }
+  if (tz < tNext) {
+   tNext = tz;
+   stepAxis = 2;
+  }
+
+  if (tNext >= maxDistance) {
+   break;
+  }
+
+  t = tNext + eps;
+  glm::ivec3 next = current;
+  if (stepAxis == 0) {
+   next.x += (direction.x > 0.0f) ? 1 : -1;
+  } else if (stepAxis == 1) {
+   next.y += (direction.y > 0.0f) ? 1 : -1;
+  } else if (stepAxis == 2) {
+   next.z += (direction.z > 0.0f) ? 1 : -1;
+  }
+
+  if (!world.IsAir(next)) {
    BlockRayHit hit;
-   hit.blockPos = checkPos;
-   hit.faceNormal = lastNormal;
-   if (hit.faceNormal == glm::ivec3(0)) {
-    hit.faceNormal = glm::ivec3(-step.x, -step.y, -step.z);
-   }
-   hit.distance = traveled;
+   hit.blockPos = next;
+   hit.distance = t;
+   hit.faceNormal = current - next;
    return hit;
   }
 
-  if (tMax.x < tMax.y) {
-   if (tMax.x < tMax.z) {
-    lastNormal = glm::ivec3(-step.x, 0, 0);
-    voxel.x += step.x;
-    traveled = tMax.x;
-    tMax.x += tDelta.x;
-   } else {
-    lastNormal = glm::ivec3(0, 0, -step.z);
-    voxel.z += step.z;
-    traveled = tMax.z;
-    tMax.z += tDelta.z;
-   }
-  } else {
-   if (tMax.y < tMax.z) {
-    lastNormal = glm::ivec3(0, -step.y, 0);
-    voxel.y += step.y;
-    traveled = tMax.y;
-    tMax.y += tDelta.y;
-   } else {
-    lastNormal = glm::ivec3(0, 0, -step.z);
-    voxel.z += step.z;
-    traveled = tMax.z;
-    tMax.z += tDelta.z;
-   }
-  }
+  current = next;
  }
 
  return std::nullopt;

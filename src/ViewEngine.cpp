@@ -11,8 +11,8 @@ ViewEngine::ViewEngine()
 
 void ViewEngine::GenerateSimpleCamera()
 {
- // Create camera at position (0, 0, 3) with FreeMove disabled for collisions
- std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ // Above default flat terrain (top layer y=3)
+ std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
  view->SetFreeMove(false); // Disable free movement to enable collisions
  AddCamera(view);
 }

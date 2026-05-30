@@ -20,8 +20,11 @@ class BlockWorld;
 class ChunkMeshCache {
 public:
  void MarkAllDirty();
+ void MarkAllDirtyFromWorld(const BlockWorld& world);
  void MarkDirty(glm::ivec3 chunkCoord);
  void RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame = 8);
+ void RebuildAll(BlockWorld& world, BlockRegistry& registry);
+ bool HasPendingDirty() const { return !dirtyChunks_.empty(); }
 
  const std::vector<BlockInstance>& GetInstances() const { return instances_; }
 

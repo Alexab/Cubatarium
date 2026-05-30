@@ -6,6 +6,18 @@ namespace cutum {
 BlockRegistry::BlockRegistry(std::shared_ptr<TextureCubeStorage> textures)
  : textures_(std::move(textures))
 {
+ RebuildMaps();
+}
+
+void BlockRegistry::Reload()
+{
+ RebuildMaps();
+}
+
+void BlockRegistry::RebuildMaps()
+{
+ nameToId_.clear();
+ idToName_.clear();
  if (!textures_) {
   return;
  }
@@ -41,6 +53,12 @@ const std::string& BlockRegistry::GetTypeNameById(BlockId id) const
  auto it = idToName_.find(id);
  if (it != idToName_.end()) {
   return it->second;
+ }
+ if (textures_) {
+  const auto texIt = textures_->GetTextures().find(static_cast<size_t>(id));
+  if (texIt != textures_->GetTextures().end()) {
+   return texIt->second.GetName();
+  }
  }
  return empty;
 }

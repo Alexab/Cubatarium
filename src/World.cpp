@@ -63,16 +63,45 @@ void World::SetSpawnPoint(glm::vec3 value)
  SpawnPoint = value;
 }
 
+void World::RefreshBlockRegistry()
+{
+ if (blockRegistry_) {
+  blockRegistry_->Reload();
+ }
+}
+
+void World::RebuildBlockMesh()
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ meshCache_.RebuildAll(blockWorld_, *blockRegistry_);
+ meshInstancesReady_ = true;
+}
+
+void World::ApplySpawnToCamera()
+{
+ if (auto camera = GetCurrentUserCamera()) {
+  camera->SetPosition(SpawnPoint);
+  return;
+ }
+ if (ViewInstance && ViewInstance->GetActiveCamera()) {
+  ViewInstance->GetActiveCamera()->SetPosition(SpawnPoint);
+ }
+}
+
 void World::Create(const std::string& world_name)
 {
+ RefreshBlockRegistry();
  Objects.clear();
  blockWorld_.Clear();
  if (blockRegistry_) {
   WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
  }
  WorldName = world_name;
- meshCache_.MarkAllDirty();
- meshInstancesReady_ = false;
+ SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
+ ApplySpawnToCamera();
+ RebuildBlockMesh();
  spatialIndexDirty = true;
 }
 
@@ -90,25 +119,30 @@ void World::Load(const std::string& world_folder_path)
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
 
+ RefreshBlockRegistry();
+
  if (std::filesystem::exists(chunks_file_name)) {
   LoadChunks(chunks_file_name);
- } else if (std::filesystem::exists(blocks_file_name)) {
+ }
+ if (blockWorld_.CountNonAir() == 0 && std::filesystem::exists(blocks_file_name)) {
   LoadBlocks(blocks_file_name);
- } else if (std::filesystem::exists(objects_file_name)) {
+ }
+ if (blockWorld_.CountNonAir() == 0 && std::filesystem::exists(objects_file_name)) {
   MigrateObjectsFromJson(objects_file_name);
  }
-
- meshCache_.MarkAllDirty();
- meshInstancesReady_ = false;
- spatialIndexDirty = true;
-
- if (auto camera = GetCurrentUserCamera()) {
-  camera->SetPosition(SpawnPoint);
+ if (blockWorld_.CountNonAir() == 0 && blockRegistry_) {
+  WorldGenerator::GenerateFlat(blockWorld_, *blockRegistry_, 16, 3);
+  SpawnPoint = glm::vec3(0.0f, 6.0f, 5.0f);
  }
+
+ RebuildBlockMesh();
+ spatialIndexDirty = true;
+ ApplySpawnToCamera();
 }
 
 void World::Save(const std::string& world_folder_path)
 {
+ RefreshBlockRegistry();
  std::filesystem::create_directories(world_folder_path);
  const std::string users_file_name = world_folder_path + "/users.json";
  const std::string world_data_file_name = world_folder_path + "/world_data.json";
@@ -635,7 +669,6 @@ void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front
  } else {
   intersectionBlockPos_ = glm::ivec3(0);
  }
- meshInstancesReady_ = false;
 }
 
 bool World::GetIsIntersectionExists() const
@@ -696,17 +729,19 @@ float worldSize = 1000.0f; // World size
 
 void World::InvalidateBlockMesh()
 {
- meshCache_.MarkAllDirty();
+ if (blockRegistry_) {
+  meshCache_.MarkAllDirtyFromWorld(blockWorld_);
+ }
  meshInstancesReady_ = false;
 }
 
 const std::vector<BlockInstance>& World::GetBlockRenderInstances()
 {
- if (!meshInstancesReady_) {
-  if (blockRegistry_) {
-   meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 64);
+ if (!meshInstancesReady_ && blockRegistry_) {
+  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, 256);
+  if (!meshCache_.HasPendingDirty()) {
+   meshInstancesReady_ = true;
   }
-  meshInstancesReady_ = true;
  }
  return meshCache_.GetInstances();
 }

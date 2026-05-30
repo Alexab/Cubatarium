@@ -127,6 +127,8 @@ void Core::LoadSystem(const std::string& config_file_name)
 
      ObjectStorageInstance->Load(object_storage_file_name.string());
 
+     WorldInstance->RefreshBlockRegistry();
+
      LoadWorldList(WorldPath.string());
      if(WorldList.empty() || std::find(WorldList.begin(), WorldList.end(), default_world_name) == WorldList.end())
       is_need_autocreate = true;
@@ -170,11 +172,12 @@ void Core::SaveSystem(const std::string& config_file_name)
 
 void Core::CreateWorld(const std::string& world_name)
 {
- WorldInstance->Create(world_name);
  if(WorldInstance->GetCurrentUser() == nullptr)
  {
   WorldInstance->GenerateUsers();
  }
+ WorldInstance->Create(world_name);
+ WorldInstance->ApplySpawnToCamera();
  SaveWorld(world_name);
 }
 
@@ -188,6 +191,7 @@ void Core::LoadWorld(const std::string& world_name)
  {
   WorldInstance->GenerateUsers();
  }
+ WorldInstance->ApplySpawnToCamera();
 }
 
 void Core::SaveWorld(const std::string& world_name)

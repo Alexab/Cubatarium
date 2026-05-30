@@ -82,6 +82,13 @@ const Chunk* ChunkManager::GetChunk(glm::ivec3 chunkCoord) const
  return it->second.get();
 }
 
+void ChunkManager::ForEachChunk(const std::function<void(const Chunk&)>& fn) const
+{
+ for (const auto& entry : chunks_) {
+  fn(*entry.second);
+ }
+}
+
 Chunk& ChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
 {
  auto it = chunks_.find(chunkCoord);

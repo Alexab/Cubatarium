@@ -1,6 +1,7 @@
 #include "WorldGenerator.h"
 #include "BlockRegistry.h"
 #include "BlockWorld.h"
+#include <iostream>
 
 namespace cutum {
 
@@ -11,6 +12,7 @@ void WorldGenerator::GenerateFlat(BlockWorld& world, BlockRegistry& registry, in
  const BlockId grass = registry.GetIdByTypeName("grass");
 
  if (bedrock == BLOCK_AIR || stone == BLOCK_AIR || grass == BLOCK_AIR) {
+  std::cerr << "WorldGenerator::GenerateFlat: missing block types (bedrock/stone/grass)" << std::endl;
   return;
  }
 

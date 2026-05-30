@@ -60,6 +60,8 @@ public:
  BlockRegistry& GetBlockRegistry() { return *blockRegistry_; }
  const BlockRegistry& GetBlockRegistry() const { return *blockRegistry_; }
 
+ void RefreshBlockRegistry();
+ void ApplySpawnToCamera();
  void InvalidateBlockMesh();
  const std::vector<BlockInstance>& GetBlockRenderInstances();
 
@@ -114,9 +116,9 @@ private:
  void LoadWorldData(const std::string &file_name);
  void SaveWorldData(const std::string &file_name);
 
+ void RebuildBlockMesh();
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
 
-private:
  std::string WorldName;
 
  glm::vec3 SpawnPoint;

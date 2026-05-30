@@ -14,12 +14,14 @@ class BlockRegistry {
 public:
  explicit BlockRegistry(std::shared_ptr<TextureCubeStorage> textures);
 
+ void Reload();
  BlockId GetIdByTypeName(const std::string& name) const;
  const std::string& GetTypeNameById(BlockId id) const;
  bool IsSolid(BlockId id) const;
  size_t GetTextureId(BlockId id) const;
 
 private:
+ void RebuildMaps();
  std::shared_ptr<TextureCubeStorage> textures_;
  std::unordered_map<std::string, BlockId> nameToId_;
  std::unordered_map<BlockId, std::string> idToName_;

@@ -23,7 +23,23 @@ bool IsFullyEnclosed(const BlockWorld& world, glm::ivec3 pos)
 void ChunkMeshCache::MarkAllDirty()
 {
  dirtyChunks_.clear();
+ cache_.clear();
+ instances_.clear();
  instancesDirty_ = true;
+}
+
+void ChunkMeshCache::MarkAllDirtyFromWorld(const BlockWorld& world)
+{
+ MarkAllDirty();
+ world.GetChunkManager().ForEachChunk([this](const Chunk& chunk) {
+  dirtyChunks_.push_back(chunk.GetCoord());
+ });
+}
+
+void ChunkMeshCache::RebuildAll(BlockWorld& world, BlockRegistry& registry)
+{
+ MarkAllDirtyFromWorld(world);
+ RebuildDirtyChunks(world, registry, 10000);
 }
 
 void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)

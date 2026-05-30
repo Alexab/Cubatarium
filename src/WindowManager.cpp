@@ -230,8 +230,11 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             worldInstance->GetCurrentUser()->SetActiveObjectTypeNameByIndex(static_cast<size_t>(index));
         }
         else if (key == KeyCode::Key_F12) {
-            // World reset (simplified version without dialog)
-            worldInstance->Create(worldInstance->GetWorldName());
+            if (core) {
+                core->CreateWorld(worldInstance->GetWorldName());
+            } else {
+                worldInstance->Create(worldInstance->GetWorldName());
+            }
         }
         else if (key == KeyCode::Key_Delete) {
             worldInstance->DelObjectByView();
@@ -400,8 +403,9 @@ void WindowManager::RenderHelpText() {
     // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space/Shift - Up/Down, Mouse - Camera rotation",
-        "LMB - Add block, RMB - Remove block, 0-9 - Block selection",
-        "F1-F4 - Sky color, F5 - Gradient sky, F12 - Reset world, Delete - Delete object"
+        "LMB (short) - Place block, LMB (hold) - Remove block, 0-9 - Block type",
+        "F12 - New flat world (save), Delete - Remove targeted block",
+        "F1-F4 - Sky color, F5 - Toggle gradient sky, F9 - Toggle HUD"
     };
     
     for (const auto& line : helpLines) {
