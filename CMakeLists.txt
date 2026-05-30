@@ -115,3 +115,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}
 )
 
+# Deploy runtime assets next to the executable (bin/)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/shaders"
+        "${CMAKE_BINARY_DIR}/shaders"
+    COMMENT "Copying shaders to output directory"
+)
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/config.json")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/config.json"
+            "${CMAKE_BINARY_DIR}/config.json"
+        COMMENT "Copying config.json to output directory"
+    )
+endif()

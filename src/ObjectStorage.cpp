@@ -18,6 +18,12 @@ namespace cutum {
 
 namespace fs = std::filesystem;
 
+const ObjectPrototype& UnknownPrototype()
+{
+ static ObjectPrototype prototype;
+ return prototype;
+}
+
 ObjectStorage::ObjectStorage(std::shared_ptr<TextureCubeStorage> texture_cube)
  : TextureCubeInstance(texture_cube)
 {
@@ -117,9 +123,16 @@ bool ObjectStorage::AddPrototype(const ObjectPrototype& prototype)
 const ObjectPrototype& ObjectStorage::GetPrototype(const std::string& type_name) const
 {
  auto type_id = GetObjectTypeId(type_name);
- if(type_id == 0)
-  throw 1; // TODO
- return Prototypes.at(type_id);
+ if(type_id == 0) {
+  std::cerr << "ObjectStorage::GetPrototype: unknown type '" << type_name << "'" << std::endl;
+  return UnknownPrototype();
+ }
+ auto it = Prototypes.find(type_id);
+ if (it == Prototypes.end()) {
+  std::cerr << "ObjectStorage::GetPrototype: missing prototype id " << type_id << std::endl;
+  return UnknownPrototype();
+ }
+ return it->second;
 }
 
 

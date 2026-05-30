@@ -21,6 +21,28 @@ using json = nlohmann::json;
 
 namespace cutum {
 
+namespace {
+
+constexpr int kMaxProjectRootSearchDepth = 8;
+
+std::filesystem::path FindProjectRoot(std::filesystem::path start)
+{
+ for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth) {
+  auto textures_dir = start;
+  textures_dir.append("textures").append("blocks");
+  if (std::filesystem::exists(textures_dir)) {
+   return start;
+  }
+  if (!start.has_parent_path()) {
+   break;
+  }
+  start = start.parent_path();
+ }
+ return start;
+}
+
+} // namespace
+
 Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
            std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
            std::shared_ptr<ObjectStorage> object_storage_,
@@ -38,12 +60,11 @@ Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
 
 void Core::LoadSystem(const std::string& config_file_name)
 {
- 
  WorkDir = std::filesystem::current_path();
- 
+
  auto config_path = WorkDir;
  config_path.append(config_file_name);
- 
+
  std::string val;
  std::ifstream file(config_path.string());
  if (file.is_open()) {
@@ -51,23 +72,21 @@ void Core::LoadSystem(const std::string& config_file_name)
      buffer << file.rdbuf();
      val = buffer.str();
      file.close();
-     
  } else {
-     // Try parent directory for config.json
      auto parent_config = WorkDir;
      if (parent_config.has_parent_path()) {
          parent_config = parent_config.parent_path();
          parent_config.append(config_file_name);
-         
+
          std::ifstream pfile(parent_config.string());
          if (pfile.is_open()) {
              std::stringstream buffer;
              buffer << pfile.rdbuf();
              val = buffer.str();
              pfile.close();
-             
          } else {
-             std::cerr << "Failed to open config file: " << config_path.string() << " and parent: " << parent_config.string() << std::endl;
+             std::cerr << "Failed to open config file: " << config_path.string()
+                       << " and parent: " << parent_config.string() << std::endl;
              return;
          }
      } else {
@@ -87,21 +106,8 @@ void Core::LoadSystem(const std::string& config_file_name)
       is_need_autocreate = true;
      }
 
-     // Use current directory; if resources are not here, try parent directory
-     auto project_dir = WorkDir;
-     auto textures_test = project_dir; textures_test.append("textures").append("blocks");
-     if (!std::filesystem::exists(textures_test)) {
-         if (project_dir.has_parent_path()) {
-             auto parent_dir = project_dir.parent_path();
-             auto parent_textures = parent_dir; parent_textures.append("textures").append("blocks");
-             if (std::filesystem::exists(parent_textures)) {
-                 
-                 project_dir = parent_dir;
-             } else {
-                 
-             }
-         }
-     }
+     auto project_dir = FindProjectRoot(WorkDir);
+     WorkDir = project_dir;
 
      default_world_name = default_world_value;
      default_user_name = default_user_value;
@@ -115,12 +121,11 @@ void Core::LoadSystem(const std::string& config_file_name)
      WorldPath = project_dir;
      WorldPath.append("worlds");
 
-      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
-      
-      TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
-      
-      ObjectStorageInstance->Load(object_storage_file_name.string());
-     
+     TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
+
+     TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
+
+     ObjectStorageInstance->Load(object_storage_file_name.string());
 
      LoadWorldList(WorldPath.string());
      if(WorldList.empty() || std::find(WorldList.begin(), WorldList.end(), default_world_name) == WorldList.end())
@@ -135,7 +140,6 @@ void Core::LoadSystem(const std::string& config_file_name)
      {
       LoadWorld(default_world_name);
       WorldInstance->SetCurrentUserName(default_user_name);
-      
      }
      if(WorldInstance->GetCurrentUser()->GetActiveObject() == nullptr)
       WorldInstance->GetCurrentUser()->SetActiveObjectTypeName("grass");
@@ -153,7 +157,9 @@ void Core::SaveSystem(const std::string& config_file_name)
  system_data["default_world"] = WorldInstance->GetWorldName();
  system_data["default_user"] = WorldInstance->GetCurrentUserName();
 
- std::ofstream file(config_file_name);
+ auto config_path = WorkDir;
+ config_path.append(config_file_name);
+ std::ofstream file(config_path.string());
  if (file.is_open()) {
      file << system_data.dump(4);
      file.close();
@@ -174,9 +180,9 @@ void Core::CreateWorld(const std::string& world_name)
 
 void Core::LoadWorld(const std::string& world_name)
 {
-  std::filesystem::path world_path=WorldPath;
-  world_path.append(world_name);
- 
+ std::filesystem::path world_path=WorldPath;
+ world_path.append(world_name);
+
  WorldInstance->Load(world_path.string());
  if(WorldInstance->GetCurrentUser() == nullptr)
  {
