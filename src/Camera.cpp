@@ -148,6 +148,12 @@ glm::vec3 Camera::GetPosition() const
  return Position;
 }
 
+void Camera::SetPosition(const glm::vec3& value)
+{
+ Position = value;
+ UpdatePose();
+}
+
 glm::vec3 Camera::GetFront() const
 {
  return Front;

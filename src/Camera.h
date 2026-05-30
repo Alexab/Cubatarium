@@ -44,6 +44,7 @@ public:
  Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
  glm::vec3 GetPosition() const; // QVector3D -> glm::vec3
+ void SetPosition(const glm::vec3& value);
  glm::vec3 GetFront() const; // QVector3D -> glm::vec3
 
  glm::mat4 GetPose() const; // QMatrix4x4 -> glm::mat4

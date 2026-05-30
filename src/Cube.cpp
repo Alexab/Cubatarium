@@ -141,9 +141,6 @@ bool Cube::CheckCollision(const glm::vec3& position1, float size1, const glm::ve
    //check the Z axis
    if(fabs(a.z - b.z) < size1/2.0 + size2/2.0)
    {
-    std::stringstream s;
-    s << "Cube collision: (" << a.x << "," << a.y << "," << a.z << ")" << " vs (" << b.x << "," << b.y << "," << b.z << ")" <<std::endl;
-    std::cout << s.str() << std::endl;
     return true;
    }
   }

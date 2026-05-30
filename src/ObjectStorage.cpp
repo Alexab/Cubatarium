@@ -138,17 +138,11 @@ const ObjectPrototype& ObjectStorage::GetPrototype(const std::string& type_name)
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(const std::string& type_name)
 {
- std::cout << "ObjectStorage::TakeObject: Looking for '" << type_name << "'" << std::endl;
- std::cout << "ObjectStorage::TakeObject: Available prototypes: " << PrototypeNames.size() << std::endl;
- 
  auto I = PrototypeNames.find(type_name);
  if (I != PrototypeNames.end()) {
-     std::cout << "ObjectStorage::TakeObject: Found prototype with ID " << I->second << std::endl;
      return TakeObject(I->second);
- } else {
-     std::cout << "ObjectStorage::TakeObject: Prototype not found!" << std::endl;
-     return nullptr;
  }
+ return nullptr;
 }
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(uint64_t type_id)
