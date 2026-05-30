@@ -1,4 +1,4 @@
 {
  "name": "sand",
- "textures": ["sand_top", "sand_top", "sand_top", "sand_top", "sand_top", "sand_top"]
+ "textures": ["sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top"]
 }
