@@ -1036,9 +1036,18 @@ void World::DoMovement()
  auto t_begin = std::chrono::high_resolution_clock::now();
 
  auto camera = GetCurrentUserCamera();
+ const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
+
+ if (camera && streamer_ && streamingEnabled_) {
+  const glm::vec3 playerPos = camera->GetPosition();
+  const glm::ivec3 feetBlock = WorldPosToBlock(
+      playerPos - glm::vec3(0.0f, camera->GetCollisionSize() * 0.5f + 0.25f, 0.0f));
+  streamer_->EnsureCollisionChunks(feetBlock);
+ }
+
  bool is_moved = camera && camera->DoMovement(this);
 
- if (camera && is_moved) {
+ if (camera) {
   UpdateStreaming();
   blockWorldReady_ = true;
  }
@@ -1051,9 +1060,71 @@ void World::DoMovement()
   }
   UpdateIntersection(camera->GetPosition(), camera->GetFront());
  }
-   
+
  auto t_end = std::chrono::high_resolution_clock::now();
  DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+ UpdateMovementDiagnostics(camera, prevPlayerY);
+}
+
+void World::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY)
+{
+ movementDiagnostics_ = MovementDiagnostics{};
+ if (!camera) {
+  return;
+ }
+
+ const glm::vec3 playerPos = camera->GetPosition();
+ const float collisionSize = camera->GetCollisionSize();
+ movementDiagnostics_.feetBlock = WorldPosToBlock(
+     playerPos - glm::vec3(0.0f, collisionSize * 0.5f + 0.25f, 0.0f));
+ movementDiagnostics_.feetChunk = ChunkManager::WorldToChunk(movementDiagnostics_.feetBlock);
+ movementDiagnostics_.feetChunkLoaded = blockWorld_.GetChunkManager().HasChunk(movementDiagnostics_.feetChunk);
+ movementDiagnostics_.feetIsAir = blockWorld_.IsAir(movementDiagnostics_.feetBlock);
+ movementDiagnostics_.meshDrawCount = GetRenderInstanceCount();
+ movementDiagnostics_.deltaTime = camera->GetDeltaTime();
+
+ if (hasLastPlayerY_) {
+  movementDiagnostics_.playerYDrop = prevPlayerY - playerPos.y;
+ } else {
+  movementDiagnostics_.playerYDrop = 0.0f;
+ }
+ hasLastPlayerY_ = true;
+ lastPlayerY_ = playerPos.y;
+
+ if (streamer_) {
+  const auto& stats = streamer_->GetLastFrameStats();
+  movementDiagnostics_.streamingLoads = stats.loadsThisFrame;
+  movementDiagnostics_.streamingUnloads = stats.unloadsThisFrame;
+  for (const glm::ivec3& coord : stats.unloadedCoords) {
+   if (coord == movementDiagnostics_.feetChunk) {
+    movementDiagnostics_.feetInUnloadList = true;
+    break;
+   }
+  }
+ }
+
+ const double frameMs = (DurationDoMovementMks + (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) / 1000.0;
+ movementDiagnostics_.hitchDetected = frameMs > 50.0 || movementDiagnostics_.deltaTime > 0.1f;
+ movementDiagnostics_.fallThroughSuspected =
+     movementDiagnostics_.playerYDrop > 2.0f &&
+     (movementDiagnostics_.feetIsAir || !movementDiagnostics_.feetChunkLoaded) &&
+     movementDiagnostics_.meshDrawCount > 0;
+
+ if (movementDiagnostics_.hitchDetected || movementDiagnostics_.fallThroughSuspected ||
+     movementDiagnostics_.playerYDrop > 2.0f) {
+  std::cerr << "[movement-debug] cameraDt=" << movementDiagnostics_.deltaTime
+            << " frameMs=" << frameMs
+            << " yDrop=" << movementDiagnostics_.playerYDrop
+            << " feetChunk=(" << movementDiagnostics_.feetChunk.x << ","
+            << movementDiagnostics_.feetChunk.y << "," << movementDiagnostics_.feetChunk.z << ")"
+            << " hasChunk=" << movementDiagnostics_.feetChunkLoaded
+            << " feetAir=" << movementDiagnostics_.feetIsAir
+            << " meshDraw=" << movementDiagnostics_.meshDrawCount
+            << " loads=" << movementDiagnostics_.streamingLoads
+            << " unloads=" << movementDiagnostics_.streamingUnloads
+            << " feetUnloaded=" << movementDiagnostics_.feetInUnloadList
+            << std::endl;
+ }
 }
 
 void World::UpdateStreaming()
@@ -1062,7 +1133,10 @@ void World::UpdateStreaming()
   return;
  }
  if (auto camera = GetCurrentUserCamera()) {
-  streamer_->Update(WorldPosToBlock(camera->GetPosition()));
+  streamer_->Update(
+      WorldPosToBlock(camera->GetPosition()),
+      camera->GetPosition(),
+      camera->GetCollisionSize());
  }
 }
 

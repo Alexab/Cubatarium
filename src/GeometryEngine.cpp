@@ -788,6 +788,20 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
         "Movement: " + std::to_string(WorldInstance->GetDurationDoMovementMks()/1000.0).substr(0, 6) + " ms",
         "View: " + std::to_string(view_duration/1000.0).substr(0, 6) + " ms"
     };
+
+    const auto& md = WorldInstance->GetMovementDiagnostics();
+    if (md.hitchDetected || md.fallThroughSuspected || md.streamingUnloads > 0) {
+        performanceLines.push_back(
+            "Dt: " + std::to_string(md.deltaTime).substr(0, 5) +
+            " yDrop: " + std::to_string(md.playerYDrop).substr(0, 5));
+        performanceLines.push_back(
+            std::string("Feet chunk: ") + (md.feetChunkLoaded ? "OK" : "MISSING") +
+            (md.feetIsAir ? " AIR" : " SOLID") +
+            " unloads: " + std::to_string(md.streamingUnloads));
+        if (md.fallThroughSuspected) {
+            performanceLines.emplace_back("!! fall-through suspected !!");
+        }
+    }
     
     // Display text in top right corner
     float y = height_size - 30.0f;

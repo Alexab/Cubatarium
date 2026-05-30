@@ -105,6 +105,23 @@ public:
 
  uint64_t GetDurationDoMovementMks() const;
 
+ struct MovementDiagnostics {
+  float deltaTime{0.0f};
+  float playerYDrop{0.0f};
+  bool feetChunkLoaded{false};
+  bool feetIsAir{false};
+  bool feetInUnloadList{false};
+  glm::ivec3 feetBlock{0};
+  glm::ivec3 feetChunk{0};
+  int streamingLoads{0};
+  int streamingUnloads{0};
+  bool hitchDetected{false};
+  bool fallThroughSuspected{false};
+  size_t meshDrawCount{0};
+ };
+
+ const MovementDiagnostics& GetMovementDiagnostics() const { return movementDiagnostics_; }
+
  void SetStreamingEnabled(bool enabled) { streamingEnabled_ = enabled; }
  void SetRenderDistanceChunks(int distance);
  bool IsStreamingEnabled() const { return streamingEnabled_; }
@@ -150,6 +167,7 @@ private:
  void EnsurePlayerOnGround();
  std::optional<int> FindHighestSolidY(int x, int z) const;
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
+ void UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY);
 
  std::string WorldName;
  glm::vec3 SpawnPoint;
@@ -189,6 +207,9 @@ private:
  glm::ivec3 intersectionBlockPos_{0};
 
  uint64_t DurationDoMovementMks;
+ MovementDiagnostics movementDiagnostics_;
+ float lastPlayerY_{0.0f};
+ bool hasLastPlayerY_{false};
 };
 
 }

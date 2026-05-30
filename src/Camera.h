@@ -71,6 +71,9 @@ public:
 
  void ResetVerticalPhysics();
 
+ float GetCollisionSize() const { return ViewObjectSize; }
+ float GetDeltaTime() const { return DeltaTime; }
+
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
  void UpdateFrameTime();
@@ -143,6 +146,7 @@ private:
  static constexpr float kGravity = -20.0f;
  static constexpr float kJumpSpeed = 8.0f;
  static constexpr float kMinReasonablePlayerY = -32.0f;
+ static constexpr float kMaxPhysicsDelta = 1.0f / 30.0f;
 };
 
 }

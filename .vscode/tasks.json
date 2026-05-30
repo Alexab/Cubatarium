@@ -4,10 +4,14 @@
         {
             "label": "build-debug",
             "type": "shell",
-            "command": "cmake",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin"
+                "${workspaceFolder}/bin",
+                "--config",
+                "Debug",
+                "--parallel",
+                "8"
             ],
             "group": {
                 "kind": "build",
@@ -29,7 +33,11 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin"
+                "${workspaceFolder}/bin",
+                "--config",
+                "Debug",
+                "--parallel",
+                "8"
             ],
             "group": "build",
             "presentation": {
@@ -48,7 +56,11 @@
             "command": "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin"
+                "${workspaceFolder}/bin",
+                "--config",
+                "Debug",
+                "--parallel",
+                "8"
             ],
             "group": "build",
             "presentation": {
@@ -64,10 +76,14 @@
         {
             "label": "build-release",
             "type": "shell",
-            "command": "cmake",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin"
+                "${workspaceFolder}/bin",
+                "--config",
+                "Release",
+                "--parallel",
+                "8"
             ],
             "group": "build",
             "presentation": {

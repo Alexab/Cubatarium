@@ -1,4 +1,5 @@
 #include <cmath>
+#include <algorithm>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <GL/glew.h>
@@ -412,35 +413,37 @@ void Camera::ResetVerticalPhysics()
 
 bool Camera::DoMovement(const World* world)
 {
+ const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
+
  // Camera controls
  bool is_moved(false);
  if(KeysStatus[GLFW_KEY_W])
  {
-  ProcessKeyboard(world, FORWARD, DeltaTime);
+  ProcessKeyboard(world, FORWARD, dt);
   is_moved = true;
  }
  if(KeysStatus[GLFW_KEY_S])
  {
-  ProcessKeyboard(world, BACKWARD, DeltaTime);
+  ProcessKeyboard(world, BACKWARD, dt);
   is_moved = true;
  }
  if(KeysStatus[GLFW_KEY_A])
  {
-  ProcessKeyboard(world, LEFT, DeltaTime);
+  ProcessKeyboard(world, LEFT, dt);
   is_moved = true;
  }
  if(KeysStatus[GLFW_KEY_D])
  {
-  ProcessKeyboard(world, RIGHT, DeltaTime);
+  ProcessKeyboard(world, RIGHT, dt);
   is_moved = true;
  }
  if (KeysStatus[GLFW_KEY_Q] || (FreeMove && KeysStatus[GLFW_KEY_SPACE])) {
-  ProcessKeyboard(world, UP, DeltaTime);
+  ProcessKeyboard(world, UP, dt);
   is_moved = true;
  }
  if(KeysStatus[GLFW_KEY_E])
  {
-  ProcessKeyboard(world, DOWN, DeltaTime);
+  ProcessKeyboard(world, DOWN, dt);
   is_moved = true;
  }
 
@@ -451,8 +454,8 @@ bool Camera::DoMovement(const World* world)
    onGround_ = false;
    return is_moved;
   }
-  verticalVelocity_ += kGravity * static_cast<float>(DeltaTime);
-  const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * static_cast<float>(DeltaTime), 0.0f);
+  verticalVelocity_ += kGravity * dt;
+  const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
   const glm::vec3 resolved = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
   const float movedY = resolved.y - Position.y;
   const float requestedY = verticalDelta.y;

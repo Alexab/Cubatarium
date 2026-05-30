@@ -200,6 +200,10 @@ void WindowManager::ProcessInput() {
 }
 
 void WindowManager::Update() {
+    if (views) {
+        views->UpdateFrameTime();
+    }
+
     if (worldInstance) {
         worldInstance->DoMovement();
     }
@@ -219,7 +223,6 @@ void WindowManager::Render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (geometries && views) {
-        views->UpdateFrameTime();
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
     
