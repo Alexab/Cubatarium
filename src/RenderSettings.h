@@ -10,6 +10,8 @@ struct RenderSettings {
  bool frustumCulling{false};
  bool batchCache{false};
 
+ static RenderSettings Legacy() { return RenderSettings{}; }
+
  /// Greedy merged quads + instanced face draw (requires both greedyMeshing and faceQuads).
  bool UseFaceQuadDraw() const { return greedyMeshing && faceQuads; }
 };
