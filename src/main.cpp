@@ -1,12 +1,14 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #include "WindowManager.h"
 #include "TextureBase.h"

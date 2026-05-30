@@ -254,9 +254,11 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key == KeyCode::Key_F12) {
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
             if (shift && core) {
-                core->CreateWorld(worldInstance->GetWorldName(), "heightmap");
+                core->CreateWorld("heightmap");
+                core->SaveSystem("config.json");
                 if (geometries) {
-                    geometries->ShowTransientMessage("New heightmap world created", 2.5);
+                    geometries->ShowTransientMessage(
+                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
                 }
             } else if (geometries) {
                 geometries->ShowTransientMessage("Shift+F12 heightmap, Shift+F11 flat world", 3.0);
@@ -304,9 +306,11 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key == KeyCode::Key_F11) {
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
             if (shift && core) {
-                core->CreateWorld(worldInstance->GetWorldName(), "flat");
+                core->CreateWorld("flat");
+                core->SaveSystem("config.json");
                 if (geometries) {
-                    geometries->ShowTransientMessage("New flat world created", 2.5);
+                    geometries->ShowTransientMessage(
+                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
                 }
             } else if (geometries) {
                 geometries->SetShowCrosshair(!geometries->GetShowCrosshair());

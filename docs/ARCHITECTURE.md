@@ -8,7 +8,16 @@ BlockWorld → ChunkManager → ChunkMeshCache (GreedyMesher) → FaceInstance[]
 
 World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds visible faces per chunk using greedy meshing. `GeometryEngine` batches by block texture and draws instanced unit quads.
 
-## Save files (`worlds/<name>/`)
+## Runtime paths (next to executable)
+
+| Path | Role |
+|------|------|
+| `<exe_dir>/config.json` | Only config read/written at runtime (`default_world`, `default_user`, terrain settings) |
+| `<exe_dir>/worlds/World_NNN/` | Saved worlds (`World_001`, `World_002`, …) |
+
+Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo / project directory.
+
+## Save files (`worlds/World_NNN/`)
 
 | File | Content |
 |------|---------|
@@ -49,10 +58,17 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 When `streaming_enabled` is true in `config.json`, `ChunkStreamer` loads/saves chunks around the camera and generates missing columns procedurally. `render_distance_chunks` controls radius (default 4).
 
-## Config (`config.json`)
+## Config (`<exe_dir>/config.json`)
 
-- `world_seed`, `terrain` (`heightmap` | `flat`)
+- `default_world` — folder name under `worlds/` (e.g. `World_001`)
+- `default_user`, `world_seed`, `terrain` (`heightmap` | `flat`)
 - `render_distance_chunks`, `streaming_enabled`
 - Autosave every 60s; exit saves world + config
 
-Executable in `bin/` saves to project root `worlds/` (via `FindProjectRoot`), not `bin/worlds/`.
+## Startup (`Core::LoadSystem`)
+
+1. Read config next to the executable.
+2. If `worlds/` is missing, empty, or `default_world` folder does not exist → `CreateWorld()` (next `World_NNN` + procedural terrain) and write config.
+3. Otherwise → `LoadLastWorld()` from `default_world`.
+
+Shift+F11 / Shift+F12 create the next `World_NNN`, save immediately, and set `default_world` so the next launch opens that world.

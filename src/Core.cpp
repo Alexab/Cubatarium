@@ -5,11 +5,21 @@
 //#include <QJsonArray>
 //#include <QFile>
 #include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <chrono>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <nlohmann/json.hpp>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 #include "Core.h"
 #include "World.h"
 #include "TextureCube.h"
@@ -49,80 +59,36 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
  return startPath;
 }
 
-size_t CountChunkJsonFiles(const std::filesystem::path& world_folder)
+std::filesystem::path GetExecutableDirectory()
 {
- const auto chunks_dir = world_folder / "chunks";
- if (!std::filesystem::exists(chunks_dir) || !std::filesystem::is_directory(chunks_dir)) {
-  return 0;
+#ifdef _WIN32
+ wchar_t buffer[MAX_PATH];
+ const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+ if (length == 0 || length >= MAX_PATH) {
+  return std::filesystem::current_path();
  }
- size_t count = 0;
- for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
-  if (entry.path().extension() == ".json") {
-   ++count;
-  }
- }
- return count;
+ return std::filesystem::path(buffer).parent_path();
+#else
+ return std::filesystem::current_path();
+#endif
 }
 
-std::filesystem::path ResolveWorldFolder(const std::filesystem::path& worlds_root,
-                                         const std::string& world_name)
+bool ParseWorldNumberSuffix(const std::string& name, int& outNumber)
 {
- std::vector<std::filesystem::path> candidates;
- candidates.push_back(worlds_root / world_name);
-
- const auto worldsParent = worlds_root.parent_path();
- if (!worldsParent.empty()) {
-  candidates.push_back(worldsParent / "bin" / "worlds" / world_name);
-  if (worlds_root.filename() == "worlds") {
-   const auto projectRoot = worldsParent;
-   candidates.push_back(projectRoot / "worlds" / world_name);
-  }
- }
-
- std::filesystem::path best = candidates.front();
- size_t bestChunks = 0;
- for (const auto& candidate : candidates) {
-  if (!std::filesystem::exists(candidate)) {
-   continue;
-  }
-  const size_t chunkCount = CountChunkJsonFiles(candidate);
-  if (chunkCount > bestChunks) {
-   bestChunks = chunkCount;
-   best = candidate;
-  }
- }
-
- if (bestChunks > 0) {
-  std::cout << "Using world folder: " << best.string()
-            << " (" << bestChunks << " chunk files)" << std::endl;
- }
- return best;
-}
-
-bool HasPersistedWorld(const std::filesystem::path& worlds_root, const std::string& world_name)
-{
- const auto folder = ResolveWorldFolder(worlds_root, world_name);
- if (!std::filesystem::exists(folder)) {
+ constexpr const char* kPrefix = "World_";
+ if (name.size() != 9) {
   return false;
  }
- return World::HasPersistedTerrainOnDisk(folder.string());
-}
-
-std::filesystem::path FindConfigPath(const std::filesystem::path& project_dir,
-                                     const std::filesystem::path& cwd,
-                                     const std::string& config_file_name)
-{
- const std::filesystem::path candidates[] = {
-     project_dir / config_file_name,
-     cwd / config_file_name,
-     project_dir / "bin" / config_file_name,
- };
- for (const auto& path : candidates) {
-  if (std::filesystem::exists(path)) {
-   return path;
+ if (name.compare(0, 6, kPrefix) != 0) {
+  return false;
+ }
+ for (size_t i = 6; i < name.size(); ++i) {
+  if (!std::isdigit(static_cast<unsigned char>(name[i]))) {
+   return false;
   }
  }
- return project_dir / config_file_name;
+ outNumber = std::stoi(name.substr(6));
+ return true;
 }
 
 } // namespace
@@ -144,49 +110,100 @@ Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
 {
 }
 
+std::filesystem::path Core::WorldFolderPath(const std::string& world_name) const
+{
+ return WorldPath / world_name;
+}
+
+std::string Core::AllocateNextWorldName() const
+{
+ int maxNumber = 0;
+ if (std::filesystem::exists(WorldPath) && std::filesystem::is_directory(WorldPath)) {
+  for (const auto& entry : std::filesystem::directory_iterator(WorldPath)) {
+   if (!entry.is_directory()) {
+    continue;
+   }
+   int number = 0;
+   if (ParseWorldNumberSuffix(entry.path().filename().string(), number)) {
+    maxNumber = std::max(maxNumber, number);
+   }
+  }
+ }
+
+ char nameBuffer[16];
+ std::snprintf(nameBuffer, sizeof(nameBuffer), "World_%03d", maxNumber + 1);
+ return nameBuffer;
+}
+
+bool Core::ShouldCreateWorldOnStartup() const
+{
+ if (default_world_name.empty()) {
+  return true;
+ }
+ if (!std::filesystem::exists(WorldPath) || !std::filesystem::is_directory(WorldPath)) {
+  return true;
+ }
+
+ bool hasWorldFolder = false;
+ for (const auto& entry : std::filesystem::directory_iterator(WorldPath)) {
+  if (entry.is_directory()) {
+   hasWorldFolder = true;
+   break;
+  }
+ }
+ if (!hasWorldFolder) {
+  return true;
+ }
+
+ const auto worldFolder = WorldFolderPath(default_world_name);
+ return !std::filesystem::exists(worldFolder);
+}
+
 void Core::LoadSystem(const std::string& config_file_name)
 {
  const auto cwd = std::filesystem::current_path();
- WorkDir = cwd;
-
  const auto project_dir = FindProjectRoot(cwd);
- configFilePath_ = FindConfigPath(project_dir, cwd, config_file_name);
+
+ exeDir_ = GetExecutableDirectory();
+ configFilePath_ = exeDir_ / config_file_name;
+ WorldPath = exeDir_ / "worlds";
+ WorkDir = project_dir;
 
  std::string val;
+ bool configRead = false;
  std::ifstream file(configFilePath_.string());
- if (!file.is_open()) {
-  std::cerr << "Failed to open config file: " << configFilePath_.string() << std::endl;
-  return;
+ if (file.is_open()) {
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  val = buffer.str();
+  file.close();
+  configRead = true;
+ } else {
+  std::cout << "Config not found, will create: " << configFilePath_.string() << std::endl;
  }
- std::stringstream buffer;
- buffer << file.rdbuf();
- val = buffer.str();
- file.close();
 
  try {
-     json d = json::parse(val);
-     std::string default_world_value = d.value("default_world", "");
-     std::string default_user_value = d.value("default_user", "");
-     worldSeed_ = d.value("world_seed", 12345u);
-     terrainType_ = d.value("terrain", "heightmap");
-     renderDistanceChunks_ = d.value("render_distance_chunks", 4);
-     streamingEnabled_ = d.value("streaming_enabled", false);
+     if (configRead) {
+      json d = json::parse(val);
+      default_world_name = d.value("default_world", "");
+      default_user_name = d.value("default_user", "");
+      worldSeed_ = d.value("world_seed", 12345u);
+      terrainType_ = d.value("terrain", "heightmap");
+      renderDistanceChunks_ = d.value("render_distance_chunks", 4);
+      streamingEnabled_ = d.value("streaming_enabled", false);
+     } else {
+      default_world_name.clear();
+      default_user_name = "Username";
+      worldSeed_ = 12345u;
+      terrainType_ = "heightmap";
+      renderDistanceChunks_ = 4;
+      streamingEnabled_ = false;
+     }
 
-     WorkDir = project_dir;
-
-     default_world_name = default_world_value;
-     default_user_name = default_user_value;
-
-     texture_base_storage_file_name = project_dir;
-     texture_base_storage_file_name.append("textures").append("blocks");
-     texture_cube_storage_file_name = project_dir;
-     texture_cube_storage_file_name.append("models").append("blocks");
-     object_storage_file_name = project_dir;
-     object_storage_file_name.append("models").append("objects");
-     prefabs_path_ = project_dir;
-     prefabs_path_.append("prefabs");
-     WorldPath = project_dir;
-     WorldPath.append("worlds");
+     texture_base_storage_file_name = project_dir / "textures" / "blocks";
+     texture_cube_storage_file_name = project_dir / "models" / "blocks";
+     object_storage_file_name = project_dir / "models" / "objects";
+     prefabs_path_ = project_dir / "prefabs";
 
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
 
@@ -205,41 +222,22 @@ void Core::LoadSystem(const std::string& config_file_name)
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
 
+     std::filesystem::create_directories(WorldPath);
      LoadWorldList(WorldPath.string());
 
-     const bool hasLastWorldConfig = !default_world_value.empty() && !default_user_value.empty();
-     const bool lastWorldExists = hasLastWorldConfig
-         && HasPersistedWorld(WorldPath, default_world_value);
-
-     bool is_need_autocreate = false;
-     if (!hasLastWorldConfig) {
-      is_need_autocreate = true;
-     } else if (lastWorldExists) {
-      is_need_autocreate = false;
-     } else if (WorldList.empty()) {
-      is_need_autocreate = true;
-     } else {
-      std::cerr << "Last world '" << default_world_value
-                << "' not found on disk, creating a new one." << std::endl;
-      is_need_autocreate = true;
-     }
-
-     if (is_need_autocreate) {
-      const std::string new_world_name =
-          default_world_value.empty() ? "World" : default_world_value;
-      const auto existing_folder = ResolveWorldFolder(WorldPath, new_world_name);
-      if (World::HasPersistedTerrainOnDisk(existing_folder.string())) {
-       std::cout << "Core::LoadSystem: found saved terrain at "
-                 << existing_folder.string() << ", loading instead of creating."
-                 << std::endl;
-       LoadLastWorld();
-      } else {
-       activeWorldFolder_ = WorldPath / new_world_name;
-       CreateWorld(new_world_name);
-       SaveSystem(config_file_name);
+     if (ShouldCreateWorldOnStartup()) {
+      if (!default_world_name.empty()) {
+       std::cout << "Core::LoadSystem: world '" << default_world_name
+                 << "' not found, creating a new one." << std::endl;
       }
+      CreateWorld();
+      SaveSystem(config_file_name);
      } else {
       LoadLastWorld();
+     }
+
+     if (default_user_name.empty()) {
+      default_user_name = WorldInstance->GetCurrentUserName();
      }
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
@@ -248,7 +246,7 @@ void Core::LoadSystem(const std::string& config_file_name)
      }
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error: " << e.what() << std::endl;
-     CreateWorld("World");
+     CreateWorld();
      SaveSystem(config_file_name);
  }
 }
@@ -265,49 +263,49 @@ void Core::SaveSystem(const std::string& config_file_name)
  system_data["streaming_enabled"] = streamingEnabled_;
 
  if (configFilePath_.empty()) {
-  configFilePath_ = WorkDir / config_file_name;
+  configFilePath_ = exeDir_ / config_file_name;
  }
 
  std::ofstream file(configFilePath_.string());
  if (file.is_open()) {
   file << system_data.dump(4);
   file.close();
- }
-
- const auto bin_config = WorkDir / "bin" / config_file_name;
- if (bin_config != configFilePath_) {
-  std::ofstream binFile(bin_config.string());
-  if (binFile.is_open()) {
-   binFile << system_data.dump(4);
-   binFile.close();
-  }
+ } else {
+  std::cerr << "Failed to write config: " << configFilePath_.string() << std::endl;
  }
 
  SaveWorld(WorldInstance->GetWorldName());
 }
 
-void Core::CreateWorld(const std::string& world_name, const std::string& terrain_type)
+void Core::CreateWorld(const std::string& terrain_type)
 {
  worldSeed_ += 1;
  if (!terrain_type.empty()) {
   terrainType_ = terrain_type;
  }
- if(WorldInstance->GetCurrentUser() == nullptr)
- {
+ if (WorldInstance->GetCurrentUser() == nullptr) {
   WorldInstance->GenerateUsers();
  }
- activeWorldFolder_ = ResolveWorldFolder(WorldPath, world_name);
+
+ const std::string new_world_name = AllocateNextWorldName();
+ default_world_name = new_world_name;
+ activeWorldFolder_ = WorldFolderPath(new_world_name);
+ std::filesystem::create_directories(activeWorldFolder_ / "chunks");
+
+ std::cout << "Core::CreateWorld: new world '" << new_world_name << "' at "
+           << activeWorldFolder_.string() << std::endl;
+
  WorldInstance->SetTerrainParams(worldSeed_, terrainType_);
- WorldInstance->Create(world_name);
- SaveWorld(world_name);
+ WorldInstance->Create(new_world_name);
+ SaveWorld(new_world_name);
+ LoadWorldList(WorldPath.string());
 }
 
 void Core::LoadWorld(const std::string& world_name)
 {
- activeWorldFolder_ = ResolveWorldFolder(WorldPath, world_name);
+ activeWorldFolder_ = WorldFolderPath(world_name);
  WorldInstance->Load(activeWorldFolder_.string());
- if(WorldInstance->GetCurrentUser() == nullptr)
- {
+ if (WorldInstance->GetCurrentUser() == nullptr) {
   WorldInstance->GenerateUsers();
  }
 }
@@ -337,7 +335,7 @@ void Core::LoadLastWorld()
 void Core::SaveWorld(const std::string& world_name)
 {
  if (activeWorldFolder_.empty()) {
-  activeWorldFolder_ = ResolveWorldFolder(WorldPath, world_name);
+  activeWorldFolder_ = WorldFolderPath(world_name);
  }
  WorldInstance->Save(activeWorldFolder_.string());
 }
@@ -346,29 +344,22 @@ void Core::LoadWorldList(const std::string& world_path)
 {
  WorldList.clear();
 
- const auto addWorldsFrom = [this](const std::filesystem::path& root) {
-  if (!std::filesystem::exists(root) || !std::filesystem::is_directory(root)) {
-   return;
-  }
-  try {
-   for (const auto& entry : std::filesystem::directory_iterator(root)) {
-    if (!entry.is_directory()) {
-     continue;
-    }
-    const std::string name = entry.path().filename().string();
-    if (std::find(WorldList.begin(), WorldList.end(), name) == WorldList.end()) {
-     WorldList.push_back(name);
-    }
-   }
-  } catch (const std::filesystem::filesystem_error& ex) {
-   std::cerr << ex.what() << std::endl;
-  }
- };
+ if (!std::filesystem::exists(world_path) || !std::filesystem::is_directory(world_path)) {
+  return;
+ }
 
- const std::filesystem::path worlds_root(world_path);
- addWorldsFrom(worlds_root);
- if (worlds_root.filename() == "worlds") {
-  addWorldsFrom(worlds_root.parent_path() / "bin" / "worlds");
+ try {
+  for (const auto& entry : std::filesystem::directory_iterator(world_path)) {
+   if (!entry.is_directory()) {
+    continue;
+   }
+   const std::string name = entry.path().filename().string();
+   if (std::find(WorldList.begin(), WorldList.end(), name) == WorldList.end()) {
+    WorldList.push_back(name);
+   }
+  }
+ } catch (const std::filesystem::filesystem_error& ex) {
+  std::cerr << ex.what() << std::endl;
  }
 }
 

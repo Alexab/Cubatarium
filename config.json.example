@@ -1,6 +1,6 @@
 {
     "default_user": "Username",
-    "default_world": "World",
+    "default_world": "World_001",
     "world_seed": 12345,
     "terrain": "heightmap",
     "render_distance_chunks": 4,

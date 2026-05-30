@@ -373,26 +373,7 @@ void World::Create(const std::string& world_name)
 
 void World::Load(const std::string& world_folder_path)
 {
- std::string load_folder = world_folder_path;
- if (!HasPersistedTerrainOnDisk(load_folder)) {
-  const std::filesystem::path folderPath(load_folder);
-  const auto worldsDir = folderPath.parent_path();
-  std::filesystem::path alt;
-  if (worldsDir.filename() == "worlds") {
-   const auto root = worldsDir.parent_path();
-   if (worldsDir.parent_path().filename() == "bin") {
-    alt = root.parent_path() / "worlds" / folderPath.filename();
-   } else {
-    alt = root / "bin" / "worlds" / folderPath.filename();
-   }
-  }
-  if (!alt.empty() && HasPersistedTerrainOnDisk(alt.string())) {
-   load_folder = alt.string();
-   std::cout << "World::Load: using alternate save folder " << load_folder << std::endl;
-  }
- }
-
- worldFolderPath_ = load_folder;
+ worldFolderPath_ = world_folder_path;
  blockWorldReady_ = false;
  loadedFromChunkSave_ = false;
  blockWorld_.Clear();

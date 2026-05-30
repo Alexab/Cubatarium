@@ -142,12 +142,14 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying shaders to output directory"
 )
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/config.json")
+# Seed bin/config.json from template only on first run (never overwrite runtime config).
+if(EXISTS "${CMAKE_SOURCE_DIR}/config.json.example")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/config.json"
-            "${CMAKE_BINARY_DIR}/config.json"
-        COMMENT "Copying config.json to output directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DCONFIG_SRC="${CMAKE_SOURCE_DIR}/config.json.example"
+            -DCONFIG_DST="${CMAKE_BINARY_DIR}/config.json"
+            -P "${CMAKE_SOURCE_DIR}/cmake/copy_config_if_missing.cmake"
+        COMMENT "Seeding config.json next to executable if missing"
     )
 endif()
 

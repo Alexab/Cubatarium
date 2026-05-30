@@ -33,7 +33,7 @@ public:
  void LoadSystem(const std::string& config_file_name);
  void SaveSystem(const std::string& config_file_name);
 
- void CreateWorld(const std::string& world_name, const std::string& terrain_type = "");
+ void CreateWorld(const std::string& terrain_type = "");
  void LoadWorld(const std::string& world_name);
  void LoadLastWorld();
  void SaveWorld(const std::string& world_name);
@@ -46,6 +46,7 @@ private:
  std::vector<std::string> WorldList;
 
  std::filesystem::path WorkDir;
+ std::filesystem::path exeDir_;
 
  std::filesystem::path texture_base_storage_file_name;
  std::filesystem::path texture_cube_storage_file_name;
@@ -70,6 +71,10 @@ private:
  std::shared_ptr<GeometryEngine> GeometryEngineInstance;
  std::shared_ptr<ViewEngine> ViewEngineInstance;
  std::shared_ptr<World> WorldInstance;
+
+ bool ShouldCreateWorldOnStartup() const;
+ std::filesystem::path WorldFolderPath(const std::string& world_name) const;
+ std::string AllocateNextWorldName() const;
 };
 
 }
