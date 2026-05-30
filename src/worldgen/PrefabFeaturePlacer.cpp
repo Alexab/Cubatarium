@@ -1,8 +1,8 @@
 #include "PrefabFeaturePlacer.h"
+#include "PrefabUtil.h"
 #include "Prefab.h"
 #include "BlockWorld.h"
 #include "ChunkManager.h"
-#include <algorithm>
 #include <cstdint>
 
 namespace cutum {
@@ -25,30 +25,23 @@ bool CanPlacePrefabAt(const WorldGenContext& ctx, const std::string& prefabName,
  if (!prefab) {
   return false;
  }
- for (const auto& voxel : prefab->voxels) {
-  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-  if (!ctx.world.IsAir(worldPos)) {
-   return false;
-  }
- }
- return !prefab->voxels.empty();
+ return CanPlacePrefabAt(ctx.world, *prefab, anchorWorldPos);
 }
 
 bool PlacePrefabAt(WorldGenContext& ctx, const std::string& prefabName, glm::ivec3 anchorWorldPos)
 {
- if (!CanPlacePrefabAt(ctx, prefabName, anchorWorldPos)) {
+ if (!ctx.prefabs) {
   return false;
  }
  const Prefab* prefab = ctx.prefabs->Get(prefabName);
- int minY = anchorWorldPos.y;
- int maxY = anchorWorldPos.y;
- for (const auto& voxel : prefab->voxels) {
-  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-  ctx.world.SetBlock(worldPos, voxel.id);
-  minY = std::min(minY, worldPos.y);
-  maxY = std::max(maxY, worldPos.y);
+ if (!prefab || !CanPlacePrefabAt(ctx, prefabName, anchorWorldPos)) {
+  return false;
  }
- ctx.MarkDirtyColumn(anchorWorldPos.x, anchorWorldPos.z, minY, maxY);
+ const PrefabPlacementStats stats = PlacePrefabAt(ctx.world, *prefab, anchorWorldPos, false);
+ if (stats.placedCount == 0) {
+  return false;
+ }
+ ctx.MarkDirtyColumn(anchorWorldPos.x, anchorWorldPos.z, stats.minY, stats.maxY);
  return true;
 }
 

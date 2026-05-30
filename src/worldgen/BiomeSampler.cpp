@@ -45,8 +45,8 @@ BiomeSurfaceRule BiomeSampler::SurfaceRule(BiomeId biome, const WorldGenContext&
   rule.subsurface = ctx.sandstone != BLOCK_AIR ? ctx.sandstone : ctx.sand;
   break;
  case BiomeId::Hills:
-  rule.surface = ctx.grass;
-  rule.subsurface = ctx.dirt;
+  rule.surface = ctx.stone;
+  rule.subsurface = ctx.stone;
   break;
  case BiomeId::Forest:
  case BiomeId::Plains:

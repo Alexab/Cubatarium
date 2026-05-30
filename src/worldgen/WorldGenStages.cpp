@@ -31,9 +31,12 @@ void FillTerrainColumn(WorldGenContext& ctx, int x, int z, int surfaceY, const C
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings& settings)
 {
- constexpr int baseY = 0;
- constexpr int legacyMaxHeight = 8;
- return LegacyHeightAt(x, z, settings.seed, baseY, legacyMaxHeight);
+ if (settings.vertical == VerticalMode::Compact) {
+  return LegacyHeightAt(x, z, settings.seed, 0, 8);
+ }
+ const int range = std::max(1, settings.maxHeight - settings.seaLevel);
+ const int surfaceY = LegacyHeightAt(x, z, settings.seed, settings.seaLevel, range);
+ return std::clamp(surfaceY, 1, settings.maxHeight);
 }
 
 void FillLegacyHashColumn(WorldGenContext& ctx, int x, int z)

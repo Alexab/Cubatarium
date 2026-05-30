@@ -15,6 +15,7 @@
 #include "ObjectStorage.h"
 #include "User.h"
 #include "Prefab.h"
+#include "PrefabUtil.h"
 #include "ViewEngine.h"
 #include "Camera.h"
 #include "BlockRaycast.h"
@@ -559,17 +560,17 @@ bool World::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPo
   return false;
  }
 
- int placed = 0;
+ const PrefabPlacementStats stats = PlacePrefabAt(blockWorld_, *prefab, anchorWorldPos, true);
+ if (stats.placedCount == 0) {
+  return false;
+ }
  for (const auto& voxel : prefab->voxels) {
   const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-  if (!blockWorld_.IsAir(worldPos)) {
-   continue;
+  if (blockWorld_.GetBlock(worldPos) == voxel.id) {
+   MarkBlockChunkDirty(worldPos);
   }
-  blockWorld_.SetBlock(worldPos, voxel.id);
-  MarkBlockChunkDirty(worldPos);
-  ++placed;
  }
- return placed > 0;
+ return true;
 }
 
 bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const
@@ -581,13 +582,7 @@ bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorl
  if (!prefab) {
   return false;
  }
- for (const auto& voxel : prefab->voxels) {
-  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-  if (!blockWorld_.IsAir(worldPos)) {
-   return false;
-  }
- }
- return !prefab->voxels.empty();
+ return CanPlacePrefabAt(blockWorld_, *prefab, anchorWorldPos);
 }
 
 std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const

@@ -22,10 +22,6 @@ void OverworldBiomesPipeline::GenerateColumn(int worldX, int worldZ)
  rule.subsurfaceBlock = biomeRule.subsurface;
  rule.fillerBlock = ctx_.stone;
 
- if (biome == BiomeId::Hills && surfaceY > ctx_.settings.seaLevel + 4) {
-  rule.subsurfaceBlock = ctx_.stone;
- }
-
  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
 }
 

@@ -53,7 +53,7 @@ int OverworldHeightSampler::SurfaceYAt(int x, int z) const
  const float h = FBM2D(sx, sz, seed_, params_.octavesBase, params_.persistence, params_.lacunarity);
  const float detail = FBM2D(sx * params_.detailScale, sz * params_.detailScale,
      seed_ + 1, 2, params_.persistence, params_.lacunarity) * params_.detailWeight;
- int surfaceY = seaLevel_ + static_cast<int>((h + detail) * params_.amplitudeBlocks);
+ int surfaceY = seaLevel_ + static_cast<int>((h + detail - 0.5f) * params_.amplitudeBlocks);
  surfaceY = std::clamp(surfaceY, 1, maxHeight_);
  return surfaceY;
 }

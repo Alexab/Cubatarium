@@ -59,6 +59,7 @@ set(SOURCES
     src/Noise.cpp
     src/ProceduralSettings.cpp
     src/ProceduralConfigIO.cpp
+    src/PrefabUtil.cpp
     src/worldgen/WorldGenContext.cpp
     src/worldgen/IWorldGenPipeline.cpp
     src/worldgen/WorldGenStages.cpp
