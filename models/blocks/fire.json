@@ -2,18 +2,12 @@
     "name":  "fire",
     "id":  172,
     "textures":  [
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_1",
-                     "fire_1",
-                     "fire_1",
-                     "fire_1",
-                     "fire_1",
-                     "fire_1"
+                     "fire",
+                     "fire",
+                     "fire",
+                     "fire",
+                     "fire",
+                     "fire"
                  ],
     "physics":  {
                     "preset":  "fire"

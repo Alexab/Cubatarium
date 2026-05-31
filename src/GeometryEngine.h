@@ -205,13 +205,18 @@ GLuint overlayVBO{0};
   GLuint ebo{0};
   GLsizei indexCount{0};
  };
- std::vector<GreedyGpuBatch> greedyGpuBatches_;
- uint64_t cachedGreedyMeshRevision_{0};
- uint64_t cachedGreedyCullRevision_{0};
- bool cachedGreedyTransparentPass_{false};
+ struct GreedyGpuPassCache {
+  std::vector<GreedyGpuBatch> batches;
+  uint64_t meshRevision{0};
+  uint64_t cullRevision{0};
+  uint64_t sortRevision{0};
+ };
+ GreedyGpuPassCache greedyGpuOpaque_;
+ GreedyGpuPassCache greedyGpuTransparent_;
  void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch>& batches,
                               uint64_t meshRevision, uint64_t cullRevision,
-                              bool transparentPass);
+                              GreedyGpuPassCache& cache, uint64_t sortRevision);
+ void DestroyGreedyGpuPassCache(GreedyGpuPassCache& cache);
  void DestroyGreedyGpuBatches();
 
  std::string transientMessage_;

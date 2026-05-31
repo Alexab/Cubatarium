@@ -1,6 +1,7 @@
 #version 330 core
 
 in vec3 vWorldPos;
+in vec2 vUV;
 flat in int vFaceIndex;
 
 out vec4 FragColor;
@@ -15,6 +16,8 @@ uniform float uFogStart;
 uniform float uFogEnd;
 uniform float uFogMinBlend;
 uniform float uFogEnabled;
+
+const int kCrossFaceIndex = 127;
 
 float blockTileCoord(float axis)
 {
@@ -51,9 +54,22 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
                 mix(0.0, 1.0, blockTileCoord(worldPos.z)));
 }
 
+vec2 crossAtlasUV(vec2 meshUV)
+{
+    const float kCubeShift = 1.0 / 6.0;
+    float u0 = 0.0;
+    float u1 = kCubeShift;
+    return vec2(mix(u0, u1, meshUV.x), mix(1.0, 0.0, meshUV.y));
+}
+
 void main()
 {
-    vec2 uv = atlasUVFromWorldPos(vFaceIndex, vWorldPos);
+    vec2 uv;
+    if (vFaceIndex == kCrossFaceIndex) {
+        uv = crossAtlasUV(vUV);
+    } else {
+        uv = atlasUVFromWorldPos(vFaceIndex, vWorldPos);
+    }
     if (uAnimFrameCount > 1) {
         float frameH = 1.0 / float(uAnimFrameCount);
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;

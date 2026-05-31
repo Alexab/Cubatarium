@@ -84,6 +84,8 @@ public:
   float riseSpeed{0.0f};
  };
  SampledFluidState SampleFluidPhysics(const glm::vec3& position, float size) const;
+ /// Eye inside fluid block AABB (visual fog); does not use player collision capsule.
+ bool IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid = nullptr) const;
  void ApplySpawnToCamera();
  void FinalizePlayerAfterWorldLoad();
  bool IsBlockWorldReady() const { return blockWorldReady_; }

@@ -30,6 +30,8 @@ inline GreedyMeshVertex MakeVertex(const glm::vec3& pos, int faceIndex)
  v.py = pos.y;
  v.pz = pos.z;
  v.faceIndex = static_cast<float>(faceIndex);
+ v.u = 0.0f;
+ v.v = 0.0f;
  return v;
 }
 

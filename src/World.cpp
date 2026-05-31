@@ -864,6 +864,27 @@ bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 }
 
 
+bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const glm::ivec3 cell = WorldPosToBlock(eye);
+ const BlockId id = blockWorld_.GetBlock(cell);
+ if (id == BLOCK_AIR || blockRegistry_->BlocksMovement(id)) {
+  return false;
+ }
+ const glm::vec3 center = BlockCenter(cell);
+ const glm::vec3 rel = eye - center;
+ if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f || std::abs(rel.z) > 0.5f) {
+  return false;
+ }
+ if (outFluid) {
+  *outFluid = id;
+ }
+ return true;
+}
+
 World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& position, float size) const
 {
  SampledFluidState state;

@@ -8,14 +8,16 @@
 
 namespace cutum {
 
-inline GreedyMeshVertex CrossVertex(const glm::vec3& pos)
+inline GreedyMeshVertex CrossVertex(const glm::vec3& pos, float u, float v)
 {
- GreedyMeshVertex v;
- v.px = pos.x;
- v.py = pos.y;
- v.pz = pos.z;
- v.faceIndex = 4.0f;
- return v;
+ GreedyMeshVertex vtx;
+ vtx.px = pos.x;
+ vtx.py = pos.y;
+ vtx.pz = pos.z;
+ vtx.faceIndex = kGreedyCrossFaceIndex;
+ vtx.u = u;
+ vtx.v = v;
+ return vtx;
 }
 
 /// Two diagonal quads (X-shaped billboard) centered on block center.
@@ -36,10 +38,10 @@ inline void AppendCrossSprite(const glm::vec3& center,
  const glm::vec3 q3(center.x - hx, center.y + hy, center.z + hx);
 
  const uint32_t base = static_cast<uint32_t>(vertices.size());
- vertices.push_back(CrossVertex(p0));
- vertices.push_back(CrossVertex(p1));
- vertices.push_back(CrossVertex(p2));
- vertices.push_back(CrossVertex(p3));
+ vertices.push_back(CrossVertex(p0, 0.0f, 0.0f));
+ vertices.push_back(CrossVertex(p1, 1.0f, 0.0f));
+ vertices.push_back(CrossVertex(p2, 1.0f, 1.0f));
+ vertices.push_back(CrossVertex(p3, 0.0f, 1.0f));
  indices.push_back(base + 0);
  indices.push_back(base + 1);
  indices.push_back(base + 2);
@@ -48,10 +50,10 @@ inline void AppendCrossSprite(const glm::vec3& center,
  indices.push_back(base + 3);
 
  const uint32_t base2 = static_cast<uint32_t>(vertices.size());
- vertices.push_back(CrossVertex(q0));
- vertices.push_back(CrossVertex(q1));
- vertices.push_back(CrossVertex(q2));
- vertices.push_back(CrossVertex(q3));
+ vertices.push_back(CrossVertex(q0, 0.0f, 0.0f));
+ vertices.push_back(CrossVertex(q1, 1.0f, 0.0f));
+ vertices.push_back(CrossVertex(q2, 1.0f, 1.0f));
+ vertices.push_back(CrossVertex(q3, 0.0f, 1.0f));
  indices.push_back(base2 + 0);
  indices.push_back(base2 + 1);
  indices.push_back(base2 + 2);

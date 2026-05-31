@@ -136,7 +136,6 @@ void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm:
                                               float maxCullDistance)
 {
  greedyBatches_.clear();
- std::unordered_map<BlockId, GreedyMeshBatch> merged;
  for (const auto& entry : greedyCache_) {
   if (frustum && cameraPos) {
    if (!frustum->IntersectsChunkAABB(
@@ -148,18 +147,8 @@ void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm:
    if (chunkBatch.vertices.empty()) {
     continue;
    }
-   GreedyMeshBatch& batch = merged[chunkBatch.blockId];
-   if (batch.blockId == BLOCK_AIR) {
-    batch.blockId = chunkBatch.blockId;
-    batch.transparent = chunkBatch.transparent;
-   }
-   MergeGreedyBatch(batch, chunkBatch);
+   greedyBatches_.push_back(chunkBatch);
   }
- }
- greedyBatches_.reserve(merged.size());
- for (auto& pair : merged) {
-  pair.second.blockId = pair.first;
-  greedyBatches_.push_back(std::move(pair.second));
  }
  // Safety: never drop all geometry when cache has data (bad frustum state).
  if (frustum && cameraPos && greedyBatches_.empty() && !greedyCache_.empty()) {

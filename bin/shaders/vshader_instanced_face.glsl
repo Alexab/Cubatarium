@@ -6,6 +6,8 @@ layout (location = 2) in mat4 instanceModel;
 layout (location = 6) in float instanceFaceIndex;
 
 uniform mat4 uVP;
+uniform int uAnimFrame;
+uniform int uAnimFrameCount;
 
 out vec2 TexCoord;
 
@@ -47,5 +49,10 @@ void main()
     vec4 worldPos = instanceModel * vec4(aPos, 1.0);
     gl_Position = uVP * worldPos;
     int face = int(instanceFaceIndex + 0.5);
-    TexCoord = atlasUVFromWorldPos(face, worldPos.xyz);
+    vec2 uv = atlasUVFromWorldPos(face, worldPos.xyz);
+    if (uAnimFrameCount > 1) {
+        float frameH = 1.0 / float(uAnimFrameCount);
+        uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
+    }
+    TexCoord = uv;
 }
