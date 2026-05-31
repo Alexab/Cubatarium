@@ -1,0 +1,12 @@
+﻿{
+    "name":  "quartz_block",
+    "id":  90,
+    "textures":  [
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_top",
+                     "quartzblock_bottom"
+                 ]
+}

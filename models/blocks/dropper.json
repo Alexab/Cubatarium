@@ -1,0 +1,12 @@
+﻿{
+    "name":  "dropper",
+    "id":  100,
+    "textures":  [
+                     "dropper_front",
+                     "furnace_side",
+                     "furnace_side",
+                     "furnace_side",
+                     "furnace_top",
+                     "furnace_top"
+                 ]
+}

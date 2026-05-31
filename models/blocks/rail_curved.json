@@ -1,0 +1,12 @@
+﻿{
+    "name":  "rail_curved",
+    "id":  120,
+    "textures":  [
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn"
+                 ]
+}

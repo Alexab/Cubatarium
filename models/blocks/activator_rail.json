@@ -1,0 +1,12 @@
+﻿{
+    "name":  "activator_rail",
+    "id":  125,
+    "textures":  [
+                     "activatorRail",
+                     "activatorRail",
+                     "activatorRail",
+                     "activatorRail",
+                     "activatorRail",
+                     "activatorRail"
+                 ]
+}

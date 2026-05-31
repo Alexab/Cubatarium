@@ -1,17 +1,28 @@
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QJsonArray>
-#include <QFile>
+//#include <QJsonDocument>
+//#include <QJsonObject>
+//#include <QJsonValue>
+//#include <QJsonArray>
+//#include <QFile>
 #include <filesystem>
 #include <iostream>
 #include "ObjectStorage.h"
 #include "ObjectImplementation.h"
 #include "TextureCube.h"
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace cutum {
 
 namespace fs = std::filesystem;
+
+const ObjectPrototype& UnknownPrototype()
+{
+ static ObjectPrototype prototype;
+ return prototype;
+}
 
 ObjectStorage::ObjectStorage(std::shared_ptr<TextureCubeStorage> texture_cube)
  : TextureCubeInstance(texture_cube)
@@ -33,8 +44,13 @@ void ObjectStorage::Generate()
 
 void ObjectStorage::Load(const std::string& objects_path)
 {
+#ifdef CUBATARIUM_DEBUG
+ std::cout << "ObjectStorage::Load: Loading from " << objects_path << std::endl;
+#endif
+ 
  try
  {
+  int loaded_count = 0;
   for (const auto & entry : fs::directory_iterator(objects_path))
   {
    auto ext = entry.path().extension();
@@ -57,6 +73,10 @@ void ObjectStorage::Load(const std::string& objects_path)
       }
       ObjectPrototype object_description(name, id, std::make_shared<SingleCube>(texture_cube_id));
       AddPrototype(object_description);
+      loaded_count++;
+#ifdef CUBATARIUM_DEBUG
+      std::cout << "ObjectStorage::Load: Added SingleCube prototype '" << name << "'" << std::endl;
+#endif
      }
      else
      if(class_name == "TerrainPlane" && cube_textures.size()>0)
@@ -71,10 +91,18 @@ void ObjectStorage::Load(const std::string& objects_path)
       ObjectPrototype object_description(name, id, std::make_shared<TerrainPlane>(30, 30));
       std::dynamic_pointer_cast<TerrainPlane>(object_description.GetSample())->Generate(texture_cube_id);
       AddPrototype(object_description);
+      loaded_count++;
+#ifdef CUBATARIUM_DEBUG
+      std::cout << "ObjectStorage::Load: Added TerrainPlane prototype '" << name << "'" << std::endl;
+#endif
      }
     }
    }
   }
+
+#ifdef CUBATARIUM_DEBUG
+ std::cout << "ObjectStorage::Load: Total loaded prototypes: " << loaded_count << std::endl;
+#endif
  }
  catch(std::filesystem::filesystem_error &ex)
  {
@@ -103,16 +131,26 @@ bool ObjectStorage::AddPrototype(const ObjectPrototype& prototype)
 const ObjectPrototype& ObjectStorage::GetPrototype(const std::string& type_name) const
 {
  auto type_id = GetObjectTypeId(type_name);
- if(type_id == 0)
-  throw 1; // TODO
- return Prototypes.at(type_id);
+ if(type_id == 0) {
+  std::cerr << "ObjectStorage::GetPrototype: unknown type '" << type_name << "'" << std::endl;
+  return UnknownPrototype();
+ }
+ auto it = Prototypes.find(type_id);
+ if (it == Prototypes.end()) {
+  std::cerr << "ObjectStorage::GetPrototype: missing prototype id " << type_id << std::endl;
+  return UnknownPrototype();
+ }
+ return it->second;
 }
 
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(const std::string& type_name)
 {
  auto I = PrototypeNames.find(type_name);
- return (I != PrototypeNames.end())?TakeObject(I->second):nullptr;
+ if (I != PrototypeNames.end()) {
+     return TakeObject(I->second);
+ }
+ return nullptr;
 }
 
 std::shared_ptr<Object> ObjectStorage::TakeObject(uint64_t type_id)
@@ -143,43 +181,45 @@ std::string ObjectStorage::GetObjectTypeName(uint64_t type_id) const
 
 bool ObjectStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::string &class_name, std::vector<std::string> &cube_textures)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
- qWarning() << val;
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- QJsonValue name_value = sett2.value(QString("name"));
- QJsonValue id_value = sett2.value(QString("id"));
- QJsonValue class_value = sett2.value(QString("class"));
- QJsonValue cube_textures_value = sett2.value(QString("cube_textures"));
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+     std::cout << val << std::endl;
+ } else {
+     std::cerr << "Failed to open file: " << file_name << std::endl;
+     return false;
+ }
 
- if(name_value.isUndefined() || id_value.isUndefined() || cube_textures_value.isUndefined() ||
-    class_value.isUndefined())
-  return false;
+ try {
+     json d = json::parse(val);
+     std::string name_value = d.value("name", "");
+     int id_value = d.value("id", 0);
+     std::string class_value = d.value("class", "");
+     json cube_textures_value = d.value("cube_textures", json::array());
 
- if(!name_value.isString())
-  return false;
- name = name_value.toString().toLocal8Bit();
+     if(name_value.empty() || id_value == 0 || cube_textures_value.empty() || class_value.empty())
+      return false;
 
- id = id_value.toInt();
+     name = name_value;
+     id = static_cast<size_t>(id_value);
+     class_name = class_value;
 
- if(!class_value.isString())
-  return false;
- class_name = class_value.toString().toLocal8Bit();
+     cube_textures.clear();
+     for(const auto& texture : cube_textures_value) {
+         if(texture.is_string()) {
+             cube_textures.push_back(texture.get<std::string>());
+         }
+     }
 
- if(!cube_textures_value.isArray())
-  return false;
-
- auto texture_array = cube_textures_value.toArray();
- cube_textures.resize(texture_array.size());
- for(int i=0; i<texture_array.size(); i++)
-  cube_textures[i] = texture_array[i].toString().toLocal8Bit();
-
- return true;
+     return true;
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+     return false;
+ }
 }
 
 }

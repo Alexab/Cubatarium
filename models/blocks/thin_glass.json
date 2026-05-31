@@ -1,0 +1,12 @@
+﻿{
+    "name":  "thin_glass",
+    "id":  159,
+    "textures":  [
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top"
+                 ]
+}

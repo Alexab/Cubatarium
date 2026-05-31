@@ -1,0 +1,12 @@
+﻿{
+    "name":  "cactus",
+    "id":  42,
+    "textures":  [
+                     "cactus_side",
+                     "cactus_side",
+                     "cactus_side",
+                     "cactus_side",
+                     "cactus_top",
+                     "cactus_bottom"
+                 ]
+}

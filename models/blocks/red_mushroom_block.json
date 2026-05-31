@@ -1,0 +1,12 @@
+﻿{
+    "name":  "red_mushroom_block",
+    "id":  151,
+    "textures":  [
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red"
+                 ]
+}

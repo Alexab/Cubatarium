@@ -1,0 +1,12 @@
+﻿{
+    "name":  "jack_o_lantern",
+    "id":  104,
+    "textures":  [
+                     "pumpkin_side",
+                     "pumpkin_jack",
+                     "pumpkin_side",
+                     "pumpkin_jack",
+                     "pumpkin_top",
+                     "pumpkin_side"
+                 ]
+}

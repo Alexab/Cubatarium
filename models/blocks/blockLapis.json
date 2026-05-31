@@ -1,0 +1,12 @@
+﻿{
+    "name":  "blockLapis",
+    "id":  35,
+    "textures":  [
+                     "blockLapis",
+                     "blockLapis",
+                     "blockLapis",
+                     "blockLapis",
+                     "blockLapis",
+                     "blockLapis"
+                 ]
+}

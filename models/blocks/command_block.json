@@ -1,0 +1,12 @@
+﻿{
+    "name":  "command_block",
+    "id":  76,
+    "textures":  [
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock"
+                 ]
+}

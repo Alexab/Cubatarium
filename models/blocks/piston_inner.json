@@ -1,0 +1,12 @@
+﻿{
+    "name":  "piston_inner",
+    "id":  166,
+    "textures":  [
+                     "piston_inner_top",
+                     "piston_inner_top",
+                     "piston_inner_top",
+                     "piston_inner_top",
+                     "piston_inner_top",
+                     "piston_inner_top"
+                 ]
+}

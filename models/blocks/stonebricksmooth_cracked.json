@@ -1,0 +1,12 @@
+﻿{
+    "name":  "stonebricksmooth_cracked",
+    "id":  40,
+    "textures":  [
+                     "stonebricksmooth_cracked",
+                     "stonebricksmooth_cracked",
+                     "stonebricksmooth_cracked",
+                     "stonebricksmooth_cracked",
+                     "stonebricksmooth_cracked",
+                     "stonebricksmooth_cracked"
+                 ]
+}

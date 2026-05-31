@@ -1,0 +1,12 @@
+﻿{
+    "name":  "tree_leaves",
+    "id":  61,
+    "textures":  [
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque"
+                 ]
+}

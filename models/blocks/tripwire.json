@@ -1,0 +1,12 @@
+﻿{
+    "name":  "tripwire",
+    "id":  141,
+    "textures":  [
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire"
+                 ]
+}

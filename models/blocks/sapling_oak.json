@@ -1,0 +1,12 @@
+﻿{
+    "name":  "sapling_oak",
+    "id":  107,
+    "textures":  [
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling"
+                 ]
+}

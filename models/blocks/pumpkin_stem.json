@@ -1,0 +1,12 @@
+﻿{
+    "name":  "pumpkin_stem",
+    "id":  106,
+    "textures":  [
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent"
+                 ]
+}

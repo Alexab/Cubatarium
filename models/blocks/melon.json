@@ -1,0 +1,12 @@
+﻿{
+    "name":  "melon",
+    "id":  43,
+    "textures":  [
+                     "melon_side",
+                     "melon_side",
+                     "melon_side",
+                     "melon_side",
+                     "melon_top",
+                     "melon_side"
+                 ]
+}

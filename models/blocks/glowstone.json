@@ -1,0 +1,12 @@
+﻿{
+    "name":  "glowstone",
+    "id":  73,
+    "textures":  [
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem"
+                 ]
+}

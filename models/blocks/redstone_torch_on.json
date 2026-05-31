@@ -1,0 +1,12 @@
+﻿{
+    "name":  "redstone_torch_on",
+    "id":  129,
+    "textures":  [
+                     "redtorch_lit",
+                     "redtorch_lit",
+                     "redtorch_lit",
+                     "redtorch_lit",
+                     "redtorch_lit",
+                     "redtorch_lit"
+                 ]
+}

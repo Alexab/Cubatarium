@@ -1,0 +1,12 @@
+﻿{
+    "name":  "wheat",
+    "id":  146,
+    "textures":  [
+                     "crops_7",
+                     "crops_7",
+                     "crops_7",
+                     "crops_7",
+                     "crops_7",
+                     "crops_7"
+                 ]
+}

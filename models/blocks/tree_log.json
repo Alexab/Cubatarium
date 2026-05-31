@@ -1,0 +1,12 @@
+﻿{
+    "name":  "tree_log",
+    "id":  60,
+    "textures":  [
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_top",
+                     "tree_top"
+                 ]
+}

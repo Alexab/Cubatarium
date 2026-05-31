@@ -1,0 +1,12 @@
+﻿{
+    "name":  "wool_10",
+    "id":  54,
+    "textures":  [
+                     "cloth_10",
+                     "cloth_10",
+                     "cloth_10",
+                     "cloth_10",
+                     "cloth_10",
+                     "cloth_10"
+                 ]
+}

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "repeater",
+    "id":  136,
+    "textures":  [
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater"
+                 ]
+}

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "daylight_sensor",
+    "id":  103,
+    "textures":  [
+                     "daylightDetector_side",
+                     "daylightDetector_side",
+                     "daylightDetector_side",
+                     "daylightDetector_side",
+                     "daylightDetector_top",
+                     "daylightDetector_side"
+                 ]
+}

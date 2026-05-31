@@ -1,0 +1,12 @@
+﻿{
+    "name":  "note_block",
+    "id":  79,
+    "textures":  [
+                     "musicBlock",
+                     "musicBlock",
+                     "musicBlock",
+                     "musicBlock",
+                     "musicBlock",
+                     "musicBlock"
+                 ]
+}

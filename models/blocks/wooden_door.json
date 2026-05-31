@@ -1,0 +1,12 @@
+﻿{
+    "name":  "wooden_door",
+    "id":  143,
+    "textures":  [
+                     "doorWood_lower",
+                     "doorWood_lower",
+                     "doorWood_lower",
+                     "doorWood_lower",
+                     "doorWood_lower",
+                     "doorWood_lower"
+                 ]
+}

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "detector_rail",
+    "id":  123,
+    "textures":  [
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail"
+                 ]
+}

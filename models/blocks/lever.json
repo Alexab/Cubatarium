@@ -1,0 +1,12 @@
+﻿{
+    "name":  "lever",
+    "id":  131,
+    "textures":  [
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever"
+                 ]
+}

@@ -1,0 +1,25 @@
+﻿{
+    "name":  "water",
+    "id":  170,
+    "textures":  [
+                     "water",
+                     "water",
+                     "water",
+                     "water",
+                     "water",
+                     "water"
+                 ],
+    "physics":  {
+                    "preset":  "water"
+                },
+    "render":  {
+                   "transparent":  true,
+                   "style":  "fluid",
+                   "fog_end":  9,
+                   "fog_start":  0
+               },
+    "animation":  {
+                      "frame_count":  32,
+                      "frametime":  2
+                  }
+}

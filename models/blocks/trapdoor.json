@@ -1,0 +1,12 @@
+﻿{
+    "name":  "trapdoor",
+    "id":  132,
+    "textures":  [
+                     "trapdoor",
+                     "trapdoor",
+                     "trapdoor",
+                     "trapdoor",
+                     "trapdoor",
+                     "trapdoor"
+                 ]
+}

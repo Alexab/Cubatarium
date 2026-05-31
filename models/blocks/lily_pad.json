@@ -1,0 +1,12 @@
+﻿{
+    "name":  "lily_pad",
+    "id":  118,
+    "textures":  [
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily"
+                 ]
+}

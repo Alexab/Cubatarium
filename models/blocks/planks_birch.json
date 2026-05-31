@@ -1,0 +1,12 @@
+﻿{
+    "name":  "planks_birch",
+    "id":  62,
+    "textures":  [
+                     "wood_birch",
+                     "wood_birch",
+                     "wood_birch",
+                     "wood_birch",
+                     "wood_birch",
+                     "wood_birch"
+                 ]
+}

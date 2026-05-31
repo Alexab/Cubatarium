@@ -1,0 +1,12 @@
+﻿{
+    "name":  "farmland_wet",
+    "id":  84,
+    "textures":  [
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "farmland_wet",
+                     "dirt"
+                 ]
+}

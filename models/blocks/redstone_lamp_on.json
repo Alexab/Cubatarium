@@ -1,0 +1,12 @@
+﻿{
+    "name":  "redstone_lamp_on",
+    "id":  135,
+    "textures":  [
+                     "redstoneLight_lit",
+                     "redstoneLight_lit",
+                     "redstoneLight_lit",
+                     "redstoneLight_lit",
+                     "redstoneLight_lit",
+                     "redstoneLight_lit"
+                 ]
+}

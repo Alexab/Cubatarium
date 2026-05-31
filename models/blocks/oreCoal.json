@@ -1,0 +1,12 @@
+﻿{
+    "name":  "oreCoal",
+    "id":  24,
+    "textures":  [
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal"
+                 ]
+}

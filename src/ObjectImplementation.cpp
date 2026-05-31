@@ -28,9 +28,8 @@ void TerrainPlane::Generate(size_t type_id)
  {
   for(int j=-Height/2; j<Height/2; j++)
   {
-   QMatrix4x4 pose;
-   pose.setToIdentity();
-   pose.translate(QVector3D(i*1.0, 0.0, j*1.0));
+   glm::mat4 pose = glm::mat4(1.0f);
+   pose = glm::translate(pose, glm::vec3(i*1.0f, 0.0f, j*1.0f));
    Cubes[k]=NewCube();
    Cubes[k]->Init(pose);
    Cubes[k]->SetTypeId(type_id);
@@ -38,8 +37,7 @@ void TerrainPlane::Generate(size_t type_id)
   }
  }
 
- QMatrix4x4 pose;
- pose.setToIdentity();
+ glm::mat4 pose = glm::mat4(1.0f);
  SetPose(pose);
 }
 
@@ -53,17 +51,15 @@ void Person::Generate()
  Cubes.resize(2);
  for(int i=0;i<2;i++)
  {
-  QMatrix4x4 pose;
-  pose.setToIdentity();
-  pose.translate(QVector3D(0.0, i*1.0, 0.0));
+  glm::mat4 pose = glm::mat4(1.0f);
+  pose = glm::translate(pose, glm::vec3(0.0f, i*1.0f, 0.0f));
   Cubes[i]=NewCube();
   Cubes[i]->SetTypeId(1);
   Cubes[i]->Init(pose);
  }
 
- QMatrix4x4 pose;
- pose.setToIdentity();
- pose.translate(QVector3D(0.0f, 1.0f, 0.0f));
+ glm::mat4 pose = glm::mat4(1.0f);
+ pose = glm::translate(pose, glm::vec3(0.0f, 1.0f, 0.0f));
  SetPose(pose);
 }
 
@@ -88,9 +84,8 @@ void Rect::Generate()
   {
    for(int j=-Height/2; j<Height/2; j++)
    {
-    QMatrix4x4 pose;
-    pose.setToIdentity();
-    pose.translate(QVector3D(i*1.0, n*1.0, j*1.0));
+    glm::mat4 pose = glm::mat4(1.0f);
+    pose = glm::translate(pose, glm::vec3(i*1.0f, n*1.0f, j*1.0f));
     Cubes[k]=NewCube();
     Cubes[k]->Init(pose);
     Cubes[k]->SetTypeId(3);
@@ -99,9 +94,8 @@ void Rect::Generate()
   }
  }
 
- QMatrix4x4 pose;
- pose.setToIdentity();
- pose.translate(QVector3D(0.0f, 1.0f, 0.0f));
+ glm::mat4 pose = glm::mat4(1.0f);
+ pose = glm::translate(pose, glm::vec3(0.0f, 1.0f, 0.0f));
  SetPose(pose);
 }
 
@@ -113,8 +107,7 @@ std::shared_ptr<Object> Rect::New()
 SingleCube::SingleCube()
 {
  Cubes.resize(1);
- QMatrix4x4 pose;
- pose.setToIdentity();
+ glm::mat4 pose = glm::mat4(1.0f);
  Cubes[0]=NewCube();
  Cubes[0]->Init(pose);
  Cubes[0]->SetTypeId(3);
@@ -123,8 +116,7 @@ SingleCube::SingleCube()
 SingleCube::SingleCube(uint64_t object_type)
 {
  Cubes.resize(1);
- QMatrix4x4 pose;
- pose.setToIdentity();
+ glm::mat4 pose = glm::mat4(1.0f);
  Cubes[0]=NewCube();
  Cubes[0]->Init(pose);
  Cubes[0]->SetTypeId(object_type);
@@ -133,8 +125,7 @@ SingleCube::SingleCube(uint64_t object_type)
 void SingleCube::Generate()
 {
  Cubes.resize(1);
- QMatrix4x4 pose;
- pose.setToIdentity();
+ glm::mat4 pose = glm::mat4(1.0f);
  Cubes[0]=NewCube();
  Cubes[0]->Init(pose);
  Cubes[0]->SetTypeId(3);

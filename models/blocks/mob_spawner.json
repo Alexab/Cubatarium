@@ -1,0 +1,12 @@
+﻿{
+    "name":  "mob_spawner",
+    "id":  75,
+    "textures":  [
+                     "mobSpawner",
+                     "mobSpawner",
+                     "mobSpawner",
+                     "mobSpawner",
+                     "mobSpawner",
+                     "mobSpawner"
+                 ]
+}

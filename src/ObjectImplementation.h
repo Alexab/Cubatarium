@@ -1,6 +1,8 @@
 #ifndef OBJECTIMPLEMENTATION_H
 #define OBJECTIMPLEMENTATION_H
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "Object.h"
 
 namespace cutum {
