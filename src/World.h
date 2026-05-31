@@ -105,10 +105,22 @@ public:
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
  bool CheckCollision(const glm::vec3& position, float size = 1.0f) const;
+ /// Solid block directly under the player capsule (for step-up / grounded checks).
+ bool HasGroundSupport(const glm::vec3& position, float size) const;
  /// Moves from `from` along delta with axis-separated resolution (Y, then X, then Z).
  glm::vec3 ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const;
- /// Step up one block when walking into a 1-block ledge (optional, simple).
- bool TryStepUp(glm::vec3& pos, const glm::vec3& horizontalDelta, float size) const;
+
+ struct StepUpProbe {
+  bool valid{false};
+  float distanceToLedge{0.0f};
+  glm::vec3 targetPos{0.0f};
+  glm::vec3 moveDir{0.0f};
+ };
+ StepUpProbe ProbeStepUp(const glm::vec3& position, const glm::vec3& horiz, float size,
+                         float maxTriggerDistance) const;
+ /// Snap onto a 1-block ledge when within `maxTriggerDistance` of its riser (instant, one frame).
+ bool TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
+                float maxTriggerDistance) const;
  void DoMovement();
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);
  void UpdateStreaming();

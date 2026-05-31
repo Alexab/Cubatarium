@@ -932,6 +932,20 @@ bool World::CheckCollision(const glm::vec3& position, float size) const
  return false;
 }
 
+bool World::HasGroundSupport(const glm::vec3& position, float size) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const float feetY = position.y - size * 0.5f;
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const glm::ivec3 standCell(
+     static_cast<int>(std::floor(position.x)),
+     supportY,
+     static_cast<int>(std::floor(position.z)));
+ return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
+}
+
 namespace {
 
 constexpr float kCollisionMaxStep = 0.25f;
@@ -996,68 +1010,121 @@ glm::vec3 World::ResolveMovement(const glm::vec3& from, const glm::vec3& delta, 
 
 namespace {
 
-bool HasSteppableObstacleAhead(const BlockWorld& blockWorld, const BlockRegistry& registry,
-                               const glm::vec3& position, const glm::vec3& horiz, float size)
+bool FindSteppableLedge(const BlockWorld& blockWorld, const BlockRegistry& registry,
+                        const glm::vec3& position, const glm::vec3& dir, float size,
+                        glm::ivec3& outStepCell)
 {
- const float horizLen = glm::length(horiz);
- if (horizLen < 1e-6f) {
+ const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
+ const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
+ if (dx == 0 && dz == 0) {
   return false;
  }
- const glm::vec3 dir = horiz / horizLen;
  const float feetY = position.y - size * 0.5f;
- const int supportY = static_cast<int>(std::floor(feetY - 0.06f));
- const glm::ivec3 footCell(
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const glm::ivec3 standCell(
      static_cast<int>(std::floor(position.x)),
      supportY,
      static_cast<int>(std::floor(position.z)));
- if (!registry.BlocksMovement(blockWorld.GetBlock(footCell))) {
+ if (!registry.BlocksMovement(blockWorld.GetBlock(standCell))) {
   return false;
  }
- const glm::ivec3 aheadCell(
-     static_cast<int>(std::floor(position.x + dir.x * 0.55f)),
-     supportY,
-     static_cast<int>(std::floor(position.z + dir.z * 0.55f)));
- if (aheadCell == footCell) {
-  return false;
- }
- if (!registry.BlocksMovement(blockWorld.GetBlock(aheadCell))) {
+ const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
+ if (!registry.BlocksMovement(blockWorld.GetBlock(stepCell))) {
   return false;
  }
  if (registry.BlocksMovement(blockWorld.GetBlock(
-         glm::ivec3(aheadCell.x, supportY + 1, aheadCell.z)))) {
+         glm::ivec3(stepCell.x, stepCell.y + 1, stepCell.z)))) {
   return false;
  }
  if (registry.BlocksMovement(blockWorld.GetBlock(
-         glm::ivec3(footCell.x, supportY + 1, footCell.z)))) {
+         glm::ivec3(standCell.x, supportY + 1, standCell.z)))) {
   return false;
  }
+ outStepCell = stepCell;
  return true;
+}
+
+float DistanceToStepRiser(const glm::vec3& position, const glm::ivec3& stepCell,
+                          const glm::vec3& dir, float size)
+{
+ const glm::vec3 blockCenter(static_cast<float>(stepCell.x), static_cast<float>(stepCell.y),
+                             static_cast<float>(stepCell.z));
+ const glm::vec3 facePoint = blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
+ const glm::vec3 playerLead =
+     position + glm::vec3(dir.x * size * 0.5f, 0.0f, dir.z * size * 0.5f);
+ return glm::dot(facePoint - playerLead, dir);
+}
+
+glm::vec3 StepStandPosition(const glm::ivec3& stepCell, float size)
+{
+ return glm::vec3(static_cast<float>(stepCell.x),
+                  static_cast<float>(stepCell.y) + 0.5f + size * 0.5f,
+                  static_cast<float>(stepCell.z));
 }
 
 } // namespace
 
-bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horizontalDelta, float size) const
+World::StepUpProbe World::ProbeStepUp(const glm::vec3& position, const glm::vec3& horiz,
+                                      float size, float maxTriggerDistance) const
 {
+ StepUpProbe probe{};
  if (!blockRegistry_) {
+  return probe;
+ }
+ const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
+ const float horizLen = glm::length(horizFlat);
+ if (horizLen < 1e-6f) {
+  return probe;
+ }
+ const glm::vec3 dir = horizFlat / horizLen;
+ glm::ivec3 stepCell(0);
+ if (!FindSteppableLedge(blockWorld_, *blockRegistry_, position, dir, size, stepCell)) {
+  return probe;
+ }
+ const float dist = DistanceToStepRiser(position, stepCell, dir, size);
+ if (dist < -0.02f || dist > maxTriggerDistance) {
+  return probe;
+ }
+ probe.valid = true;
+ probe.distanceToLedge = dist;
+ probe.moveDir = dir;
+ probe.targetPos = StepStandPosition(stepCell, size);
+ return probe;
+}
+
+bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
+                      float maxTriggerDistance) const
+{
+ const StepUpProbe probe = ProbeStepUp(pos, horiz, size, maxTriggerDistance);
+ if (!probe.valid) {
   return false;
  }
- const glm::vec3 horiz(horizontalDelta.x, 0.0f, horizontalDelta.z);
- const float wanted = glm::length(glm::vec2(horiz.x, horiz.z));
- if (wanted < 1e-6f) {
+ glm::ivec3 stepCell(0);
+ const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
+ const float horizLen = glm::length(horizFlat);
+ if (horizLen < 1e-6f) {
   return false;
  }
- if (!HasSteppableObstacleAhead(blockWorld_, *blockRegistry_, pos, horiz, size)) {
+ const glm::vec3 dir = horizFlat / horizLen;
+ if (!FindSteppableLedge(blockWorld_, *blockRegistry_, pos, dir, size, stepCell)) {
   return false;
  }
- constexpr float kStepHeight = 1.02f;
- const glm::vec3 raised = pos + glm::vec3(0.0f, kStepHeight, 0.0f);
- if (CheckCollision(raised, size)) {
+ const glm::ivec3 feetCell = WorldPosToBlock(
+     pos - glm::vec3(0.0f, size * 0.5f + 0.25f, 0.0f));
+ if (feetCell.x == stepCell.x && feetCell.z == stepCell.z && feetCell.y >= stepCell.y) {
   return false;
  }
- const glm::vec3 stepped = ResolveMovement(raised, horiz, size);
- const float steppedMoved =
-     glm::length(glm::vec2(stepped.x - raised.x, stepped.z - raised.z));
- if (steppedMoved < wanted * 0.5f) {
+
+ glm::vec3 target = probe.targetPos - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
+ if (!CheckCollision(target, size)) {
+  pos = target;
+  return true;
+ }
+
+ const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
+ const glm::vec3 stepped = ResolveMovement(pos, stepDelta, size);
+ const float movedH = glm::length(glm::vec2(stepped.x - pos.x, stepped.z - pos.z));
+ if (movedH < 0.08f) {
   return false;
  }
  pos = stepped;

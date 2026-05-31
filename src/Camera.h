@@ -83,7 +83,10 @@ public:
  void UpdateMouseScroll(double xoffset, double yoffset);
 
 private:
- // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
+ glm::vec3 ComputeHorizontalShift(float deltaTime);
+ void UpdateMoveIntentFromKeys();
+ glm::vec3 GetMoveIntentDir() const;
+ bool ApplyHorizontalMovement(const World* world, float deltaTime);
  void ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime);
 
  // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -140,6 +143,11 @@ private:
 
  float verticalVelocity_{0.0f};
  bool onGround_{false};
+ glm::vec3 lastMoveIntentDir_{0.0f, 0.0f, -1.0f};
+ bool lastMoveIntentValid_{false};
+ std::chrono::steady_clock::time_point lastMoveIntentTime_{};
+ static constexpr float kStepUpTriggerDistance = 0.36f;
+ static constexpr float kStepUpIntentRetainSec = 0.3f;
  bool spaceWasPressed_{false};
  bool suppressNextJump_{false};
  std::chrono::steady_clock::time_point lastSpacePressTime_{};

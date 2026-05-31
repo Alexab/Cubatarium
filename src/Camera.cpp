@@ -224,6 +224,116 @@ void Camera::SetViewEngine(ViewEngine* view_engine)
  ViewEngineInstance = view_engine;
 }
 
+glm::vec3 Camera::ComputeHorizontalShift(float deltaTime)
+{
+ const float velocity = MovementSpeed * deltaTime;
+ glm::vec3 shift(0.0f);
+ if (KeysStatus[GLFW_KEY_W]) {
+  shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
+ }
+ if (KeysStatus[GLFW_KEY_S]) {
+  shift -= glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
+ }
+ if (KeysStatus[GLFW_KEY_A]) {
+  shift -= Right * velocity;
+ }
+ if (KeysStatus[GLFW_KEY_D]) {
+  shift += Right * velocity;
+ }
+ return shift;
+}
+
+void Camera::UpdateMoveIntentFromKeys()
+{
+ glm::vec3 shift = ComputeHorizontalShift(1.0f);
+ shift.y = 0.0f;
+ if (glm::dot(shift, shift) < 1e-10f) {
+  return;
+ }
+ lastMoveIntentDir_ = shift / std::sqrt(glm::dot(shift, shift));
+ lastMoveIntentValid_ = true;
+ lastMoveIntentTime_ = std::chrono::steady_clock::now();
+}
+
+glm::vec3 Camera::GetMoveIntentDir() const
+{
+ auto keyDown = [this](size_t key) {
+  const auto it = KeysStatus.find(key);
+  return it != KeysStatus.end() && it->second;
+ };
+ glm::vec3 shift = glm::vec3(0.0f);
+ if (keyDown(GLFW_KEY_W)) {
+  shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw)));
+ }
+ if (keyDown(GLFW_KEY_S)) {
+  shift -= glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw)));
+ }
+ if (keyDown(GLFW_KEY_A)) {
+  shift -= Right;
+ }
+ if (keyDown(GLFW_KEY_D)) {
+  shift += Right;
+ }
+ shift.y = 0.0f;
+ if (glm::dot(shift, shift) > 1e-10f) {
+  return shift / std::sqrt(glm::dot(shift, shift));
+ }
+ if (lastMoveIntentValid_) {
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - lastMoveIntentTime_).count();
+  if (ms >= 0 && ms < static_cast<long long>(kStepUpIntentRetainSec * 1000.0f)) {
+   return lastMoveIntentDir_;
+  }
+ }
+ return glm::vec3(0.0f);
+}
+
+bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
+{
+ UpdateMoveIntentFromKeys();
+
+ glm::vec3 shift = ComputeHorizontalShift(deltaTime);
+ const bool hasShift = glm::dot(shift, shift) > 1e-10f;
+
+ const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
+ if (hasShift && fluid.inFluid) {
+  const float drag = 1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
+  shift.x *= drag;
+  shift.z *= drag;
+ }
+
+ glm::vec3 newPos = Position;
+ if (hasShift) {
+  newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
+ }
+
+ const float movedH =
+     glm::length(glm::vec2(newPos.x - Position.x, newPos.z - Position.z));
+ const float wantH = glm::length(glm::vec2(shift.x, shift.z));
+ const bool grounded =
+     world->HasGroundSupport(Position, ViewObjectSize) || onGround_;
+ const glm::vec3 intent = GetMoveIntentDir();
+
+ bool stepped = false;
+ if (world->IsStepUpEnabled() && !fluid.inFluid && grounded
+     && verticalVelocity_ <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
+  const World::StepUpProbe probe = world->ProbeStepUp(
+      Position, intent, ViewObjectSize, kStepUpTriggerDistance);
+  if (probe.valid) {
+   glm::vec3 stepPos = newPos;
+   if (world->TryStepUp(stepPos, intent, ViewObjectSize, kStepUpTriggerDistance)) {
+    newPos = stepPos;
+    verticalVelocity_ = 0.0f;
+    onGround_ = true;
+    stepped = true;
+   }
+  }
+ }
+
+ Position = newPos;
+ UpdatePose();
+ return hasShift || stepped;
+}
 
 // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime)
@@ -252,20 +362,7 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
 
  if (world) {
-  const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
-  if (fluid.inFluid && !FreeMove) {
-   const float drag = 1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
-   shift.x *= drag;
-   shift.z *= drag;
-  }
   glm::vec3 newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
-  const float movedH =
-      glm::length(glm::vec2(newPos.x - Position.x, newPos.z - Position.z));
-  const float wantH = glm::length(glm::vec2(shift.x, shift.z));
-  if (world->IsStepUpEnabled() && !FreeMove && !fluid.inFluid && onGround_
-      && verticalVelocity_ <= 0.05f && wantH > 1e-4f && movedH < wantH * 0.5f) {
-   world->TryStepUp(newPos, shift, ViewObjectSize);
-  }
   Position = newPos;
  } else {
   Position += shift;
@@ -429,36 +526,61 @@ bool Camera::DoMovement(const World* world)
 {
  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
 
- // Camera controls
  bool is_moved(false);
- if(KeysStatus[GLFW_KEY_W])
- {
-  ProcessKeyboard(world, FORWARD, dt);
-  is_moved = true;
- }
- if(KeysStatus[GLFW_KEY_S])
- {
-  ProcessKeyboard(world, BACKWARD, dt);
-  is_moved = true;
- }
- if(KeysStatus[GLFW_KEY_A])
- {
-  ProcessKeyboard(world, LEFT, dt);
-  is_moved = true;
- }
- if(KeysStatus[GLFW_KEY_D])
- {
-  ProcessKeyboard(world, RIGHT, dt);
-  is_moved = true;
- }
- if (KeysStatus[GLFW_KEY_Q] || (FreeMove && KeysStatus[GLFW_KEY_SPACE])) {
-  ProcessKeyboard(world, UP, dt);
-  is_moved = true;
- }
- if(KeysStatus[GLFW_KEY_E])
- {
-  ProcessKeyboard(world, DOWN, dt);
-  is_moved = true;
+ if (FreeMove) {
+  if (KeysStatus[GLFW_KEY_W]) {
+   ProcessKeyboard(world, FORWARD, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_S]) {
+   ProcessKeyboard(world, BACKWARD, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_A]) {
+   ProcessKeyboard(world, LEFT, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_D]) {
+   ProcessKeyboard(world, RIGHT, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_Q] || KeysStatus[GLFW_KEY_SPACE]) {
+   ProcessKeyboard(world, UP, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_E]) {
+   ProcessKeyboard(world, DOWN, dt);
+   is_moved = true;
+  }
+ } else if (world) {
+  if (ApplyHorizontalMovement(world, dt)) {
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_Q]) {
+   ProcessKeyboard(world, UP, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_E]) {
+   ProcessKeyboard(world, DOWN, dt);
+   is_moved = true;
+  }
+ } else {
+  if (KeysStatus[GLFW_KEY_W]) {
+   ProcessKeyboard(world, FORWARD, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_S]) {
+   ProcessKeyboard(world, BACKWARD, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_A]) {
+   ProcessKeyboard(world, LEFT, dt);
+   is_moved = true;
+  }
+  if (KeysStatus[GLFW_KEY_D]) {
+   ProcessKeyboard(world, RIGHT, dt);
+   is_moved = true;
+  }
  }
 
  if (!FreeMove && world)
