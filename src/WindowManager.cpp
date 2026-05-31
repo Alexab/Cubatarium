@@ -252,8 +252,14 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             }
         }
         else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
-            int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
-            worldInstance->GetCurrentUser()->SetActiveObjectTypeNameByIndex(static_cast<size_t>(index));
+            const int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
+            if (auto user = worldInstance->GetCurrentUser()) {
+                if ((mods & GLFW_MOD_ALT) != 0) {
+                    user->SetActivePrefabIndex(static_cast<size_t>(index));
+                } else {
+                    user->SetActiveBlockIndex(static_cast<size_t>(index));
+                }
+            }
         }
         else if (key == KeyCode::Key_F12) {
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
@@ -357,8 +363,16 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
             double delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - leftMousePressed).count() / 1000.0;
             
+            const bool altDown = window &&
+                (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+                 glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
+
             if (delta_time < 0.5) {
-                worldInstance->AddObjectByView();
+                if (altDown) {
+                    worldInstance->PlaceActivePrefabByView();
+                } else {
+                    worldInstance->AddObjectByView();
+                }
             } else {
                 worldInstance->DelObjectByView();
             }

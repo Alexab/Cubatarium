@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <chrono>
+#include <vector>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
 #include "GridMath.h"
@@ -207,6 +208,7 @@ if (showCrosshair) {
 if (showHud) {
     RenderSimpleText(width_size, height_size);
     RenderActiveObjectPreview(width_size, height_size);
+    RenderHotbarLabels(width_size, height_size);
 }
  
      // Disable performance UI text rendering
@@ -919,41 +921,78 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
  
   void GeometryEngine::RenderSimpleText(int width_size, int height_size)
  {
-     // Use existing TextRenderer if available
-     if (textRenderer) {
-         // Обновляем размеры окна в TextRenderer
-         textRenderer->SetWindowSize(width_size, height_size);
-         
-         // Display user information
-         std::string currentUser = WorldInstance->GetCurrentUserName();
-         textRenderer->RenderText("User: " + currentUser, 20, 140, 0.8f, glm::vec3(0.0f, 1.0f, 1.0f)); // Cyan color
-         
-         // Display key legend at bottom of screen
-         textRenderer->RenderText("WASD - Movement", 20, 120, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Q/E - Up/Down", 20, 100, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Space - Jump, 2xSpace - Flight", 20, 80, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Shift - Crouch", 20, 60, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("0-9 - Block selection", 20, 40, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("Delete - Remove block", 20, 20, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-         textRenderer->RenderText("F1-F8 - Sky colors", 20, 5, 0.8f, glm::vec3(1.0f, 1.0f, 1.0f));
-
-         const double now = std::chrono::duration<double>(
-             std::chrono::steady_clock::now().time_since_epoch()).count();
-         if (!transientMessage_.empty() && now < transientMessageUntil_) {
-             textRenderer->RenderText(transientMessage_, 20.0f, static_cast<float>(height_size) - 60.0f,
-                                      1.0f, glm::vec3(1.0f, 0.85f, 0.2f));
+     if (!textRenderer || !WorldInstance) {
+         if (!textRenderer) {
+             std::cerr << "TextRenderer is not available" << std::endl;
          }
-         
-         // Display mouse information
-         textRenderer->RenderText("Right Mouse - Camera control", 20, -15, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
-textRenderer->RenderText("Left Mouse - Add/Remove blocks", 20, -35, 0.8f, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
-         
          return;
      }
-     
-     // Fallback: if TextRenderer is unavailable, output error message
-     std::cerr << "TextRenderer is not available" << std::endl;
+
+     textRenderer->SetWindowSize(width_size, height_size);
+
+     const float scale = 0.8f;
+     const glm::vec3 helpColor(1.0f, 1.0f, 1.0f);
+     const glm::vec3 statusColor(1.0f, 0.85f, 0.2f);
+     const glm::vec3 headerColor(0.0f, 1.0f, 1.0f);
+
+     const std::string header = WorldInstance->GetCurrentUserName() + " [" +
+                                WorldInstance->GetWorldName() + "]";
+     textRenderer->RenderTextCentered(header, static_cast<float>(height_size) - 28.0f, scale,
+                                      headerColor);
+
+     const std::vector<std::string> helpLines = {
+         "WASD - Movement",
+         "Q/E - Up/Down",
+         "Space - Jump, 2xSpace - Flight",
+         "Shift - Crouch",
+         "0-9 - Block, Alt+0-9 - Object",
+         "LMB - Place block, Alt+LMB - Place object",
+         "Hold LMB - Remove block, Delete - Remove",
+         "Right Mouse - Camera, F1-F8 - Sky",
+     };
+
+     constexpr float helpX = 20.0f;
+     float y = 20.0f;
+     for (const std::string& line : helpLines) {
+         textRenderer->RenderText(line, helpX, y, scale, helpColor);
+         y += 20.0f;
+     }
+
+     const double now = std::chrono::duration<double>(
+         std::chrono::steady_clock::now().time_since_epoch()).count();
+     if (!transientMessage_.empty() && now < transientMessageUntil_) {
+         textRenderer->RenderTextCentered(transientMessage_, 8.0f, 1.0f, statusColor);
+     }
  }
+
+void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
+{
+    if (!textRenderer || !WorldInstance) {
+        return;
+    }
+
+    textRenderer->SetWindowSize(width_size, height_size);
+    auto user = WorldInstance->GetCurrentUser();
+    if (!user) {
+        return;
+    }
+
+    constexpr int kPreviewSize = 80;
+    constexpr int kPreviewMargin = 10;
+    const float labelX = static_cast<float>(kPreviewMargin + kPreviewSize + 8);
+    const float previewBottom = static_cast<float>(height_size - kPreviewSize - kPreviewMargin);
+    const float labelScale = 0.75f;
+
+    const float blockY = previewBottom + static_cast<float>(kPreviewSize) * 0.5f - 6.0f;
+    textRenderer->RenderText(user->GetActiveBlockTypeName(), labelX, blockY, labelScale,
+                             glm::vec3(1.0f, 1.0f, 1.0f));
+
+    const std::string& prefabName = user->GetActivePrefabName();
+    if (!prefabName.empty()) {
+        textRenderer->RenderText("Object: " + prefabName, static_cast<float>(kPreviewMargin),
+                                 previewBottom - 18.0f, labelScale, glm::vec3(0.85f, 1.0f, 0.85f));
+    }
+}
  
 void GeometryEngine::InitPreviewBuffers()
 {
@@ -1106,7 +1145,7 @@ void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
     if (WorldInstance && TextureCubeStorageInstance) {
         auto user = WorldInstance->GetCurrentUser();
         if (user) {
-            const std::string &activeName = user->GetActiveObjectTypeName();
+            const std::string &activeName = user->GetActiveBlockTypeName();
             if (!activeName.empty()) {
                 const auto &texMap = TextureCubeStorageInstance->GetTextures();
                 for (const auto &kv : texMap) {

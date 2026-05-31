@@ -1,5 +1,6 @@
 #include "User.h"
 #include "Object.h"
+#include <algorithm>
 
 namespace cutum {
 
@@ -22,20 +23,39 @@ User::User()
 
 void User::InitDefaultHotbar()
 {
- hotbar_ = {
-     {HotbarItemKind::Block, "wood"},
-     {HotbarItemKind::Block, "grass"},
-     {HotbarItemKind::Block, "stone"},
-     {HotbarItemKind::Block, "tree_birch"},
-     {HotbarItemKind::Block, "pumpkin"},
-     {HotbarItemKind::Block, "sandstone"},
-     {HotbarItemKind::Block, "stonebrick"},
-     {HotbarItemKind::Block, "tnt"},
-     {HotbarItemKind::Block, "brick"},
-     {HotbarItemKind::Prefab, "tree_small"},
+ blockHotbar_ = {
+     "wood",
+     "grass",
+     "stone",
+     "tree_birch",
+     "pumpkin",
+     "sandstone",
+     "stonebrick",
+     "tnt",
+     "brick",
+     "bedrock",
  };
- activeHotbarIndex_ = 1;
- ActiveObjectTypeName = hotbar_[activeHotbarIndex_].id;
+ prefabHotbar_ = {"tree_small"};
+ activeBlockIndex_ = 1;
+ activePrefabIndex_ = 0;
+}
+
+void User::SetPrefabHotbar(const std::vector<std::string>& prefab_names)
+{
+ prefabHotbar_.clear();
+ constexpr size_t kMaxPrefabSlots = 10;
+ for (const std::string& name : prefab_names) {
+  if (prefabHotbar_.size() >= kMaxPrefabSlots) {
+   break;
+  }
+  prefabHotbar_.push_back(name);
+ }
+ if (prefabHotbar_.empty()) {
+  prefabHotbar_.push_back("tree_small");
+ }
+ if (activePrefabIndex_ >= prefabHotbar_.size()) {
+  activePrefabIndex_ = 0;
+ }
 }
 
 const std::map<std::string, int>& User::GetInventory() const
@@ -51,50 +71,57 @@ void User::AddToInventory(const std::string &object_type)
  Inventory[object_type]++;
 }
 
+const std::string& User::GetActiveBlockTypeName() const
+{
+ return blockHotbar_[activeBlockIndex_];
+}
+
 const std::string& User::GetActiveObjectTypeName() const
 {
- return ActiveObjectTypeName;
+ return GetActiveBlockTypeName();
 }
 
-void User::SetActiveObjectTypeName(const std::string& object_type)
+const std::string& User::GetActivePrefabName() const
 {
- ActiveObjectTypeName = object_type;
- for (size_t i = 0; i < hotbar_.size(); ++i) {
-  if (hotbar_[i].id == object_type) {
-   activeHotbarIndex_ = i;
+ if (prefabHotbar_.empty()) {
+  static const std::string kEmpty;
+  return kEmpty;
+ }
+ return prefabHotbar_[activePrefabIndex_];
+}
+
+void User::SetActiveBlockIndex(size_t index)
+{
+ if (index < blockHotbar_.size()) {
+  activeBlockIndex_ = index;
+ }
+}
+
+void User::SetActivePrefabIndex(size_t index)
+{
+ if (index < prefabHotbar_.size()) {
+  activePrefabIndex_ = index;
+ }
+}
+
+void User::SetActiveObjectTypeName(const std::string& block_type)
+{
+ for (size_t i = 0; i < blockHotbar_.size(); ++i) {
+  if (blockHotbar_[i] == block_type) {
+   activeBlockIndex_ = i;
    break;
   }
  }
 }
 
-void User::SetActiveObjectTypeNameByIndex(size_t index)
+const std::vector<std::string>& User::GetBlockHotbar() const
 {
- if (index < hotbar_.size()) {
-  activeHotbarIndex_ = index;
-  ActiveObjectTypeName = hotbar_[index].id;
-  return;
- }
-
- size_t i = 0;
- for(auto I = Inventory.begin(); I != Inventory.end(); ++I)
- {
-  if(i == index)
-  {
-   SetActiveObjectTypeName(I->first);
-   break;
-  }
-  ++i;
- }
+ return blockHotbar_;
 }
 
-const HotbarSlot& User::GetActiveHotbarSlot() const
+const std::vector<std::string>& User::GetPrefabHotbar() const
 {
- return hotbar_[activeHotbarIndex_];
-}
-
-const std::vector<HotbarSlot>& User::GetHotbar() const
-{
- return hotbar_;
+ return prefabHotbar_;
 }
 
 std::shared_ptr<Object> User::GetActiveObject()

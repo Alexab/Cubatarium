@@ -2,6 +2,7 @@
 
 #include "OverworldPipeline.h"
 #include "BiomeSampler.h"
+#include "PrefabFeaturePlacer.h"
 
 namespace cutum {
 
@@ -15,6 +16,7 @@ public:
 private:
  OverworldHeightSampler heightSampler_;
  BiomeSampler biomeSampler_;
+ FeatureParams featureParams_;
 };
 
 } // namespace cutum

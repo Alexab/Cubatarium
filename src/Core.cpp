@@ -240,6 +240,9 @@ void Core::LoadSystem(const std::string& config_file_name)
      if (PrefabLibraryInstance) {
       PrefabLibraryInstance->Load(prefabs_path_.string(), WorldInstance->GetBlockRegistry());
       WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+      if (auto user = WorldInstance->GetCurrentUser()) {
+       user->SetPrefabHotbar(PrefabLibraryInstance->ListNames());
+      }
      }
 
      WorldInstance->SetProceduralSettings(proceduralSettings_);
@@ -278,7 +281,7 @@ void Core::LoadSystem(const std::string& config_file_name)
      }
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
-       user->SetActiveObjectTypeName("grass");
+       user->SetActiveBlockIndex(1);
       }
      }
  } catch (const json::exception& e) {

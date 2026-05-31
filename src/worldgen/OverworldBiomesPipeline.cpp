@@ -1,5 +1,6 @@
 #include "OverworldBiomesPipeline.h"
 #include "WorldGenStages.h"
+#include "PrefabFeaturePlacer.h"
 
 namespace cutum {
 
@@ -23,6 +24,10 @@ void OverworldBiomesPipeline::GenerateColumn(int worldX, int worldZ)
  rule.fillerBlock = ctx_.stone;
 
  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
+
+ if (ctx_.settings.enableTrees) {
+  TryPlaceTree(ctx_, worldX, worldZ, surfaceY, biome, featureParams_);
+ }
 }
 
 int OverworldBiomesPipeline::SurfaceYAt(int worldX, int worldZ) const

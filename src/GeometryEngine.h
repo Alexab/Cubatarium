@@ -131,6 +131,7 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
 
     // UI helpers
     void RenderActiveObjectPreview(int width_size, int height_size);
+    void RenderHotbarLabels(int width_size, int height_size);
     void InitPreviewBuffers();
     void DestroyPreviewBuffers();
 

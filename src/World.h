@@ -80,6 +80,7 @@ public:
  size_t GetGreedyVertexCount() const;
 
  bool AddObjectByView();
+ bool PlaceActivePrefabByView();
  bool DelObjectByView();
 
  bool AddObject(const std::string type_id, const glm::vec3 &position);
@@ -144,6 +145,7 @@ private:
  std::optional<glm::vec3> FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const;
 
  bool AddObjectByView(const glm::vec3& position, const glm::vec3& front);
+ bool PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& front);
  bool DelObjectByView(const glm::vec3& position, const glm::vec3& front);
 
  void LoadUsers(const std::string &file_name);

@@ -91,14 +91,9 @@ void ResolveProceduralDefaults(ProceduralSettings& s)
 
 void ApplyGeneratorTierDefaults(ProceduralSettings& s)
 {
- switch (s.generator) {
- case ProceduralGenerator::OverworldFull:
-  break;
- default:
-  s.enableCaves = false;
-  s.enableTrees = false;
-  return;
- }
+ (void)s;
+ // procedural.trees / procedural.caves from config are preserved; pipelines that
+ // support features read ProceduralSettings directly.
 }
 
 } // namespace cutum

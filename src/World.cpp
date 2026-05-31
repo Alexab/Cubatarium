@@ -102,7 +102,7 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
 void World::GenerateUsers()
 {
  AddUser("Username");
- GetUser("Username")->SetActiveObjectTypeName("grass");
+ GetUser("Username")->SetActiveBlockIndex(1);
  ApplySpawnToCamera();
 }
 
@@ -772,27 +772,41 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
   return false;
  }
 
- const HotbarSlot& slot = user->GetActiveHotbarSlot();
- if (slot.kind == HotbarItemKind::Prefab) {
-  const auto anchor = FindPrefabAnchorFromView(position, front);
-  if (!anchor.has_value()) {
-   return false;
-  }
-  if (PlacePrefab(slot.id, anchor.value())) {
+ auto object_pos = FindNearestFreeCubePosition(position, front);
+ if (object_pos.has_value()) {
+  if (AddObject(user->GetActiveBlockTypeName(), object_pos.value())) {
    UpdateIntersection(position, front);
    return true;
   }
+ }
+ return false;
+}
+
+bool World::PlaceActivePrefabByView()
+{
+ return PlaceActivePrefabByView(GetCurrentUserCamera()->GetPosition(),
+                                GetCurrentUserCamera()->GetFront());
+}
+
+bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& front)
+{
+ auto user = GetCurrentUser();
+ if (!user) {
   return false;
  }
 
- auto object_pos = FindNearestFreeCubePosition(position, front);
- if(object_pos.has_value())
- {
-     if(AddObject(user->GetActiveObjectTypeName(), object_pos.value()))
-  {
-   UpdateIntersection(position, front);
-   return true;
-  }
+ const std::string& prefabName = user->GetActivePrefabName();
+ if (prefabName.empty()) {
+  return false;
+ }
+
+ const auto anchor = FindPrefabAnchorFromView(position, front);
+ if (!anchor.has_value()) {
+  return false;
+ }
+ if (PlacePrefab(prefabName, anchor.value())) {
+  UpdateIntersection(position, front);
+  return true;
  }
  return false;
 }

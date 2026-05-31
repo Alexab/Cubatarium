@@ -1,6 +1,15 @@
 {
     "default_user": "Username",
-    "default_world": "World_006",
+    "default_world": "World_011",
+    "procedural": {
+        "caves": false,
+        "flat_surface_y": 3,
+        "generator": "overworld_biomes",
+        "max_height": 12,
+        "sea_level": 4,
+        "trees": true,
+        "vertical": "compact"
+    },
     "render": {
         "batch_cache": true,
         "face_quads": true,
@@ -9,6 +18,6 @@
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,
-    "terrain": "flat",
-    "world_seed": 12356
+    "terrain": "overworld_biomes",
+    "world_seed": 125673074
 }

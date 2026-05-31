@@ -11,16 +11,6 @@ namespace cutum {
 
 class Object;
 
-enum class HotbarItemKind {
- Block,
- Prefab
-};
-
-struct HotbarSlot {
- HotbarItemKind kind{HotbarItemKind::Block};
- std::string id;
-};
-
 class User
 {
 public:
@@ -29,12 +19,17 @@ public:
  const std::map<std::string, int>& GetInventory() const;
  void AddToInventory(const std::string &cube_type);
 
+ const std::string& GetActiveBlockTypeName() const;
  const std::string& GetActiveObjectTypeName() const;
- void SetActiveObjectTypeName(const std::string& cube_type);
- void SetActiveObjectTypeNameByIndex(size_t index);
+ const std::string& GetActivePrefabName() const;
 
- const HotbarSlot& GetActiveHotbarSlot() const;
- const std::vector<HotbarSlot>& GetHotbar() const;
+ void SetActiveBlockIndex(size_t index);
+ void SetActivePrefabIndex(size_t index);
+ void SetActiveObjectTypeName(const std::string& block_type);
+ void SetPrefabHotbar(const std::vector<std::string>& prefab_names);
+
+ const std::vector<std::string>& GetBlockHotbar() const;
+ const std::vector<std::string>& GetPrefabHotbar() const;
 
  std::shared_ptr<Object> GetActiveObject();
 
@@ -55,11 +50,12 @@ private:
  void InitDefaultHotbar();
 
  std::map<std::string, int> Inventory;
- std::vector<HotbarSlot> hotbar_;
- size_t activeHotbarIndex_{0};
+ std::vector<std::string> blockHotbar_;
+ std::vector<std::string> prefabHotbar_;
+ size_t activeBlockIndex_{0};
+ size_t activePrefabIndex_{0};
 
  std::shared_ptr<Object> ActiveObject;
- std::string ActiveObjectTypeName;
  glm::vec3 Position;
  glm::vec3 ViewDirection;
  float CameraYaw{-90.0f};
