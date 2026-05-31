@@ -16,6 +16,9 @@ User::User()
  Inventory["tnt"] = -1;
  Inventory["brick"] = -1;
  Inventory["bedrock"] = -1;
+ Inventory["water"] = -1;
+ Inventory["lava"] = -1;
+ Inventory["fire"] = -1;
 
  ViewId = 0;
  InitDefaultHotbar();
@@ -24,7 +27,7 @@ User::User()
 void User::InitDefaultHotbar()
 {
  blockHotbar_ = {
-     "wood",
+     "lava",
      "grass",
      "dirt",
      "stone",
@@ -32,8 +35,8 @@ void User::InitDefaultHotbar()
      "pumpkin",
      "sandstone",
      "stonebrick",
-     "tnt",
-     "brick",
+     "water",
+     "fire",
      "bedrock",
  };
  prefabHotbar_ = {"tree_small"};
