@@ -262,8 +262,8 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
   const float movedH =
       glm::length(glm::vec2(newPos.x - Position.x, newPos.z - Position.z));
   const float wantH = glm::length(glm::vec2(shift.x, shift.z));
-  if (!FreeMove && !fluid.inFluid && onGround_ && verticalVelocity_ <= 0.05f
-      && wantH > 1e-4f && movedH < wantH * 0.5f) {
+  if (world->IsStepUpEnabled() && !FreeMove && !fluid.inFluid && onGround_
+      && verticalVelocity_ <= 0.05f && wantH > 1e-4f && movedH < wantH * 0.5f) {
    world->TryStepUp(newPos, shift, ViewObjectSize);
   }
   Position = newPos;

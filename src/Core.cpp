@@ -200,6 +200,11 @@ void Core::LoadSystem(const std::string& config_file_name)
       terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
       streamingEnabled_ = d.value("streaming_enabled", true);
+      if (d.contains("gameplay") && d["gameplay"].is_object()) {
+       stepUpEnabled_ = d["gameplay"].value("step_up", true);
+      } else {
+       stepUpEnabled_ = true;
+      }
       if (d.contains("render") && d["render"].is_object()) {
        const json& r = d["render"];
        renderSettings_.greedyMeshing = r.value("greedy_meshing", false);
@@ -261,6 +266,7 @@ void Core::LoadSystem(const std::string& config_file_name)
                << ", trees=" << (proceduralSettings_.enableTrees ? "1" : "0") << ")" << std::endl;
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
+     WorldInstance->SetStepUpEnabled(stepUpEnabled_);
      WorldInstance->SetRenderSettings(renderSettings_);
      if (GeometryEngineInstance) {
       GeometryEngineInstance->SetRenderSettings(renderSettings_);
@@ -269,6 +275,7 @@ void Core::LoadSystem(const std::string& config_file_name)
                << " face_quads=" << renderSettings_.faceQuads
                << " frustum=" << renderSettings_.frustumCulling
                << " batch_cache=" << renderSettings_.batchCache << std::endl;
+     std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0") << std::endl;
 
      std::filesystem::create_directories(WorldPath);
      LoadWorldList(WorldPath.string());
@@ -309,6 +316,9 @@ void Core::SaveSystem(const std::string& config_file_name)
  WriteProceduralSettings(system_data, proceduralSettings_);
  system_data["render_distance_chunks"] = renderDistanceChunks_;
  system_data["streaming_enabled"] = streamingEnabled_;
+ json gameplay;
+ gameplay["step_up"] = stepUpEnabled_;
+ system_data["gameplay"] = gameplay;
  json render;
  render["greedy_meshing"] = renderSettings_.greedyMeshing;
  render["face_quads"] = renderSettings_.faceQuads;

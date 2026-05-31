@@ -150,6 +150,9 @@ public:
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
 
+ void SetStepUpEnabled(bool enabled) { stepUpEnabled_ = enabled; }
+ bool IsStepUpEnabled() const { return stepUpEnabled_; }
+
  static bool HasPersistedTerrainOnDisk(const std::string& world_folder_path);
 
 private:
@@ -218,6 +221,7 @@ private:
  ChunkMeshCache meshCache_;
  std::unique_ptr<ChunkStreamer> streamer_;
  bool streamingEnabled_{true};
+ bool stepUpEnabled_{true};
  RenderSettings renderSettings_;
  int renderDistanceChunks_{4};
  std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;

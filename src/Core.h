@@ -46,6 +46,7 @@ public:
 
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
+ bool IsStepUpEnabled() const { return stepUpEnabled_; }
 
 private:
  std::vector<std::string> WorldList;
@@ -69,6 +70,7 @@ private:
  ProceduralSettings proceduralSettings_;
  int renderDistanceChunks_{4};
  bool streamingEnabled_{true};
+ bool stepUpEnabled_{true};
  RenderSettings renderSettings_;
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;

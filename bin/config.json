@@ -1,14 +1,20 @@
 {
     "default_user": "Username",
-    "default_world": "World_020",
+    "default_world": "World_022",
     "procedural": {
         "caves": true,
+        "fill_fire": true,
+        "fill_lava": false,
+        "fill_water": true,
         "flat_surface_y": 3,
         "generator": "overworld_biomes",
         "max_height": 12,
         "sea_level": 4,
         "trees": true,
         "vertical": "compact"
+    },
+    "gameplay": {
+        "step_up": true
     },
     "render": {
         "batch_cache": true,
@@ -19,5 +25,5 @@
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "terrain": "overworld_biomes",
-    "world_seed": 125673083
+    "world_seed": 125673085
 }
