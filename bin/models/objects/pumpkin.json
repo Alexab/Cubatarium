@@ -1,6 +1,0 @@
-{
- "name" : "pumpkin",
- "id" : 6,
- "class" : "SingleCube",
- "cube_textures" : ["pumpkin"]
-}

@@ -23,16 +23,26 @@
 /worlds
 /bin/worlds/
 
+# Post-build copies into CMAKE_BINARY_DIR (bin/) — sources live in repo root
+/bin/shaders/
+/bin/models/
+/bin/textures/
+/bin/prefabs/
+/bin/resources/
+/bin/config.json
+
 # CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
 /bin/Cubatarium.dir/
 /bin/x64/
 /bin/CMakeCache.txt
 /bin/cmake_install.cmake
 /bin/CMakeFiles/
+/bin/.cmake/
 /bin/*.vcxproj
 /bin/*.vcxproj.filters
 /bin/*.sln
 /bin/*.vcxproj.user
+/bin/*.rsp
 
 CMakeFiles
 Debug
