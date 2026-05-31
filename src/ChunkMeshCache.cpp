@@ -4,6 +4,7 @@
 #include "Frustum.h"
 #include "GreedyMesher.h"
 #include "GreedyMeshEmitter.h"
+#include "CrossMeshEmitter.h"
 #include "GridMath.h"
 #include <algorithm>
 #include <cmath>
@@ -150,6 +151,7 @@ void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm:
    GreedyMeshBatch& batch = merged[chunkBatch.blockId];
    if (batch.blockId == BLOCK_AIR) {
     batch.blockId = chunkBatch.blockId;
+    batch.transparent = chunkBatch.transparent;
    }
    MergeGreedyBatch(batch, chunkBatch);
   }
@@ -274,7 +276,27 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
   for (const GreedyQuad& q : quads) {
    GreedyMeshBatch& batch = byBlockId[q.id];
    batch.blockId = q.id;
+   batch.transparent = registry.IsTransparent(q.id);
    AppendGreedyQuad(q, chunkCoord, batch.vertices, batch.indices);
+  }
+  for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
+   for (int ly = 0; ly < CHUNK_SIZE; ++ly) {
+    for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
+     const glm::ivec3 local(lx, ly, lz);
+     const BlockId id = chunk->GetBlockLocal(local);
+     if (id == BLOCK_AIR || registry.GetRenderStyle(id) != BlockRenderStyle::Cross) {
+      continue;
+     }
+     const glm::ivec3 worldPos(
+         chunkCoord.x * CHUNK_SIZE + lx,
+         chunkCoord.y * CHUNK_SIZE + ly,
+         chunkCoord.z * CHUNK_SIZE + lz);
+     GreedyMeshBatch& batch = byBlockId[id];
+     batch.blockId = id;
+     batch.transparent = true;
+     AppendCrossSprite(BlockCenter(worldPos), batch.vertices, batch.indices);
+    }
+   }
   }
   ChunkGreedyMesh& chunkMesh = greedyCache_[chunkCoord];
   chunkMesh.batches.clear();

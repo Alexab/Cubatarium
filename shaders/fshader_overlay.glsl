@@ -6,6 +6,8 @@ out vec4 FragColor;
 uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
+uniform vec3 uTintColor;
+uniform float uTintAlpha;
 
 void main()
 {
@@ -14,6 +16,6 @@ void main()
         float frameH = 1.0 / float(uAnimFrameCount);
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
-    FragColor = texture(texture0, uv);
+    vec4 tex = texture(texture0, uv);
+    FragColor = vec4(mix(tex.rgb, uTintColor, uTintAlpha), tex.a * uTintAlpha);
 }
-

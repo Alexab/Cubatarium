@@ -6,6 +6,7 @@
 //#include <QFile>
 #include <cmath>
 #include <filesystem>
+#include <unordered_map>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -23,6 +24,8 @@
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "worldgen/IWorldGenPipeline.h"
+#include "worldgen/WorldGenContext.h"
+#include "worldgen/PrefabFeaturePlacer.h"
 #include "ChunkManager.h"
 #include "Chunk.h"
 #include "Prefab.h"
@@ -93,7 +96,8 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
  , ViewInstance(views)
 {
  if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
-  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage());
+  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage(),
+                                                   blockDefinitions_);
  }
  IsIntersectionExists = false;
  hasIntersectionBlock_ = false;
@@ -222,6 +226,25 @@ void World::GenerateWorldBlocks()
   worldGen_->GenerateFullPatch(0, 0, 16);
  }
  SpawnPoint = worldGen_->DefaultSpawnPosition(0, 0);
+
+ if (proceduralSettings_.fillFire && prefabLibrary_ && blockRegistry_) {
+  WorldGenContext ctx{blockWorld_, *blockRegistry_, proceduralSettings_, prefabLibrary_,
+                      &meshCache_};
+  ctx.ResolveBlockIds();
+  const int surfaceY = worldGen_->SurfaceYAt(8, 8);
+  PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
+ }
+}
+
+void World::SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> definitions)
+{
+ blockDefinitions_ = std::move(definitions);
+ if (blockRegistry_) {
+  blockRegistry_->SetDefinitions(blockDefinitions_);
+ } else if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
+  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage(),
+                                                   blockDefinitions_);
+ }
 }
 
 void World::RefreshBlockRegistry()
@@ -238,6 +261,7 @@ void World::RebuildBlockMesh()
  }
  meshCache_.RebuildAll(blockWorld_, *blockRegistry_);
  cachedBlockCount_ = blockWorld_.CountNonAir();
+ blockWorldReady_ = cachedBlockCount_ > 0;
 }
 
 bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
@@ -373,6 +397,15 @@ void World::FinalizePlayerAfterWorldLoad()
  }
 
  if (auto camera = GetCurrentUserCamera()) {
+  const SampledFluidState fluid = SampleFluidPhysics(camera->GetPosition(), 1.0f);
+  if (fluid.inFluid) {
+   glm::vec3 pos = camera->GetPosition();
+   pos.y = static_cast<float>(proceduralSettings_.seaLevel) + 2.5f;
+   camera->SetPosition(pos);
+   if (auto user = GetCurrentUser()) {
+    user->SetPosition(pos);
+   }
+  }
   camera->ResetVerticalPhysics();
  }
 }
@@ -545,7 +578,11 @@ bool World::AddObject(const std::string type_id, const glm::vec3 &position)
   return false;
  }
  blockWorld_.SetBlock(blockPos, id);
+ if (blockWorld_.GetBlock(blockPos) != id) {
+  return false;
+ }
  ++cachedBlockCount_;
+ blockWorldReady_ = true;
  MarkBlockChunkDirty(blockPos);
  return true;
 }
@@ -587,7 +624,7 @@ bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorl
 
 std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const
 {
- const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return std::nullopt;
  }
@@ -694,7 +731,7 @@ bool World::DelObjectByView()
 bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
- const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return false;
  }
@@ -730,7 +767,7 @@ bool World::CheckPositionFree(const glm::vec3& position, float /*size*/) const
 
 std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
- const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return std::nullopt;
  }
@@ -813,7 +850,7 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
 
 bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
- const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return false;
  }
@@ -827,19 +864,67 @@ bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 }
 
 
-bool World::CheckCollision(const glm::vec3& position, float size) const
+World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& position, float size) const
 {
+ SampledFluidState state;
+ if (!blockRegistry_) {
+  return state;
+ }
+ std::unordered_map<BlockId, int> fluidWeights;
  const glm::ivec3 center = WorldPosToBlock(position);
  const int radius = static_cast<int>(std::ceil(size * 0.5f));
  for (int dx = -radius; dx <= radius; ++dx) {
   for (int dy = -radius; dy <= radius; ++dy) {
    for (int dz = -radius; dz <= radius; ++dz) {
     const glm::ivec3 blockPos = center + glm::ivec3(dx, dy, dz);
-    if (!blockWorld_.IsAir(blockPos)) {
-     const glm::vec3 blockCenter = BlockCenter(blockPos);
-     if (Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
-      return true;
-     }
+    const BlockId id = blockWorld_.GetBlock(blockPos);
+    if (id == BLOCK_AIR || blockRegistry_->BlocksMovement(id)) {
+     continue;
+    }
+    const glm::vec3 blockCenter = BlockCenter(blockPos);
+    if (!Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
+     continue;
+    }
+    const auto& mov = blockRegistry_->Physics(id).movement;
+    state.inFluid = true;
+    fluidWeights[id] += 1;
+    state.dragHorizontal = std::max(state.dragHorizontal, mov.dragHorizontal);
+    state.sinkSpeed = std::max(state.sinkSpeed, mov.sinkSpeed);
+    state.riseSpeed = std::max(state.riseSpeed, mov.riseSpeed);
+   }
+  }
+ }
+ if (state.inFluid) {
+  state.blendWeight = 1.0f;
+  int bestWeight = 0;
+  for (const auto& entry : fluidWeights) {
+   if (entry.second > bestWeight) {
+    bestWeight = entry.second;
+    state.dominantFluid = entry.first;
+   }
+  }
+ }
+ return state;
+}
+
+bool World::CheckCollision(const glm::vec3& position, float size) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const glm::ivec3 center = WorldPosToBlock(position);
+ const int radius = static_cast<int>(std::ceil(size * 0.5f));
+ for (int dx = -radius; dx <= radius; ++dx) {
+  for (int dy = -radius; dy <= radius; ++dy) {
+   for (int dz = -radius; dz <= radius; ++dz) {
+    const glm::ivec3 blockPos = center + glm::ivec3(dx, dy, dz);
+    const BlockId id = blockWorld_.GetBlock(blockPos);
+    if (!blockRegistry_->BlocksMovement(id)) {
+     continue;
+    }
+    const glm::vec3 blockCenter = BlockCenter(blockPos);
+    if (Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
+     return true;
     }
    }
   }
@@ -847,54 +932,136 @@ bool World::CheckCollision(const glm::vec3& position, float size) const
  return false;
 }
 
-glm::vec3 World::ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const
+namespace {
+
+constexpr float kCollisionMaxStep = 0.25f;
+constexpr float kCollisionEpsilon = 0.01f;
+constexpr int kCollisionMaxIterations = 64;
+
+glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float axisDelta,
+                              int axis, float size)
 {
- const float deltaLenSq = glm::dot(delta, delta);
- if (deltaLenSq < 1e-10f) {
+ if (std::abs(axisDelta) < 1e-8f) {
   return from;
  }
-
- constexpr float kMaxStep = 0.25f;
- constexpr int kMaxIterations = 64;
-
- const float totalLen = std::sqrt(deltaLenSq);
- const glm::vec3 dir = delta / totalLen;
-
+ const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
+ float remaining = std::abs(axisDelta);
  glm::vec3 pos = from;
- float remaining = totalLen;
+ glm::vec3 axisUnit(0.0f);
+ axisUnit[axis] = 1.0f;
+
  int iterations = 0;
-
- while (remaining > 1e-6f && iterations < kMaxIterations) {
-  const float stepLen = std::min(remaining, kMaxStep);
-  const glm::vec3 next = pos + dir * stepLen;
-  if (CheckCollision(next, size)) {
-   break;
-  }
-  pos = next;
-  remaining -= stepLen;
-  ++iterations;
- }
-
- if (remaining > 1e-4f) {
-  const glm::vec3 target = pos + dir * remaining;
-  if (CheckCollision(target, size)) {
+ while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
+  const float step = std::min(remaining, kCollisionMaxStep);
+  const glm::vec3 next = pos + axisUnit * step * sign;
+  if (world.CheckCollision(next, size)) {
    glm::vec3 lo = pos;
-   glm::vec3 hi = target;
+   glm::vec3 hi = next;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (CheckCollision(mid, size)) {
+    if (world.CheckCollision(mid, size)) {
      hi = mid;
     } else {
      lo = mid;
     }
    }
-   pos = lo;
-  } else {
-   pos = target;
+   // Do not push upward when landing — that caused float above floor and Y jitter.
+   if (axis == 1 && sign < 0.0f) {
+    pos = lo;
+   } else {
+    pos = lo - axisUnit * kCollisionEpsilon * sign;
+   }
+   break;
   }
+  pos = next;
+  remaining -= step;
+  ++iterations;
  }
-
  return pos;
+}
+
+} // namespace
+
+glm::vec3 World::ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const
+{
+ if (glm::dot(delta, delta) < 1e-10f) {
+  return from;
+ }
+ glm::vec3 pos = from;
+ pos = ResolveMovementAxis(*this, pos, delta.y, 1, size);
+ pos = ResolveMovementAxis(*this, pos, delta.x, 0, size);
+ pos = ResolveMovementAxis(*this, pos, delta.z, 2, size);
+ return pos;
+}
+
+namespace {
+
+bool HasSteppableObstacleAhead(const BlockWorld& blockWorld, const BlockRegistry& registry,
+                               const glm::vec3& position, const glm::vec3& horiz, float size)
+{
+ const float horizLen = glm::length(horiz);
+ if (horizLen < 1e-6f) {
+  return false;
+ }
+ const glm::vec3 dir = horiz / horizLen;
+ const float feetY = position.y - size * 0.5f;
+ const int supportY = static_cast<int>(std::floor(feetY - 0.06f));
+ const glm::ivec3 footCell(
+     static_cast<int>(std::floor(position.x)),
+     supportY,
+     static_cast<int>(std::floor(position.z)));
+ if (!registry.BlocksMovement(blockWorld.GetBlock(footCell))) {
+  return false;
+ }
+ const glm::ivec3 aheadCell(
+     static_cast<int>(std::floor(position.x + dir.x * 0.55f)),
+     supportY,
+     static_cast<int>(std::floor(position.z + dir.z * 0.55f)));
+ if (aheadCell == footCell) {
+  return false;
+ }
+ if (!registry.BlocksMovement(blockWorld.GetBlock(aheadCell))) {
+  return false;
+ }
+ if (registry.BlocksMovement(blockWorld.GetBlock(
+         glm::ivec3(aheadCell.x, supportY + 1, aheadCell.z)))) {
+  return false;
+ }
+ if (registry.BlocksMovement(blockWorld.GetBlock(
+         glm::ivec3(footCell.x, supportY + 1, footCell.z)))) {
+  return false;
+ }
+ return true;
+}
+
+} // namespace
+
+bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horizontalDelta, float size) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const glm::vec3 horiz(horizontalDelta.x, 0.0f, horizontalDelta.z);
+ const float wanted = glm::length(glm::vec2(horiz.x, horiz.z));
+ if (wanted < 1e-6f) {
+  return false;
+ }
+ if (!HasSteppableObstacleAhead(blockWorld_, *blockRegistry_, pos, horiz, size)) {
+  return false;
+ }
+ constexpr float kStepHeight = 1.02f;
+ const glm::vec3 raised = pos + glm::vec3(0.0f, kStepHeight, 0.0f);
+ if (CheckCollision(raised, size)) {
+  return false;
+ }
+ const glm::vec3 stepped = ResolveMovement(raised, horiz, size);
+ const float steppedMoved =
+     glm::length(glm::vec2(stepped.x - raised.x, stepped.z - raised.z));
+ if (steppedMoved < wanted * 0.5f) {
+  return false;
+ }
+ pos = stepped;
+ return true;
 }
 
 void World::LoadUsers(const std::string &file_name)
@@ -1198,7 +1365,7 @@ size_t World::GetRenderInstanceCount() const
 void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
 {
  IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
- const auto hit = RaycastSolidBlocks(blockWorld_, position, front);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  hasIntersectionBlock_ = hit.has_value();
  if (hit) {
   intersectionBlockPos_ = hit->blockPos;

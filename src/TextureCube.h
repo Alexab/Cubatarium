@@ -5,13 +5,12 @@
 #include <vector>
 #include <map>
 #include <memory>
-// GLEW will be included in .cpp file after GLFW initialization
-// Forward declaration for OpenGL types
 typedef unsigned int GLuint;
 #include "TextureBase.h"
-//#include <QOpenGLTexture>
 
 namespace cutum {
+
+class BlockDefinitionStorage;
 
 class TextureCube
 {
@@ -29,6 +28,7 @@ public:
 
  const std::vector<std::string>& GetTextureNames() const;
  size_t GetNumTextureFrames() const;
+ void SetNumTextureFrames(size_t count);
 
  GLuint GetTexture() const;
  void SetTexture(GLuint value);
@@ -48,21 +48,22 @@ class TextureCubeStorage
 public:
  TextureCubeStorage(std::shared_ptr<TextureBaseStorage> base_textures);
 
+ void SetBlockDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions);
  void GenerateCubeTextures();
  void Load(const std::string &textures_path);
-// void CreateCubeTextures();
 
  const std::map<size_t, TextureCube>& GetTextures() const;
  size_t GetTypeIdByName(const std::string& name) const;
 
 private:
- TextureCube CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id, const std::vector<std::string>& texture_names);
+ TextureCube CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id,
+                               const std::vector<std::string>& texture_names, int stripFrameCount);
  GLuint LoadTexture(const std::string &image_path);
 
  bool LoadJson(const std::string& file_name, std::string &name, size_t &id, std::vector<std::string> &textures);
 
-private:
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
+ std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;
 
  std::map<size_t, TextureCube> Textures;
  std::map<std::string, size_t> TexturesNames;

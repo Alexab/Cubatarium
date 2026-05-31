@@ -20,6 +20,7 @@ struct FaceInstance {
 using BlockInstance = FaceInstance;
 struct GreedyMeshBatch {
  BlockId blockId{BLOCK_AIR};
+ bool transparent{false};
  std::vector<GreedyMeshVertex> vertices;
  std::vector<uint32_t> indices;
 };

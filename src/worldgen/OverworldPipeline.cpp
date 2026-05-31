@@ -26,6 +26,7 @@ void OverworldPipeline::GenerateColumn(int worldX, int worldZ)
  }
 
  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
+ FillFluidColumn(ctx_, worldX, worldZ, surfaceY);
 }
 
 int OverworldPipeline::SurfaceYAt(int worldX, int worldZ) const

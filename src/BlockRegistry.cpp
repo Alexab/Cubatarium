@@ -1,12 +1,21 @@
 #include "BlockRegistry.h"
+#include "BlockDefinitionStorage.h"
 #include "TextureCube.h"
 
 namespace cutum {
 
-BlockRegistry::BlockRegistry(std::shared_ptr<TextureCubeStorage> textures)
+BlockRegistry::BlockRegistry(std::shared_ptr<TextureCubeStorage> textures,
+                             std::shared_ptr<BlockDefinitionStorage> definitions)
  : textures_(std::move(textures))
+ , definitions_(std::move(definitions))
+ , solidDefault_(BlockPhysicsProfile::Solid())
 {
  RebuildMaps();
+}
+
+void BlockRegistry::SetDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions)
+{
+ definitions_ = std::move(definitions);
 }
 
 void BlockRegistry::Reload()
@@ -63,9 +72,67 @@ const std::string& BlockRegistry::GetTypeNameById(BlockId id) const
  return empty;
 }
 
+const BlockPhysicsProfile& BlockRegistry::Physics(BlockId id) const
+{
+ if (id == BLOCK_AIR) {
+  return solidDefault_;
+ }
+ if (definitions_) {
+  if (const BlockDefinition* def = definitions_->GetById(id)) {
+   return def->physics;
+  }
+ }
+ return solidDefault_;
+}
+
+bool BlockRegistry::BlocksMovement(BlockId id) const
+{
+ if (id == BLOCK_AIR) {
+  return false;
+ }
+ return Physics(id).movement.occupancy >= 1.0f;
+}
+
 bool BlockRegistry::IsSolid(BlockId id) const
 {
- return id != BLOCK_AIR;
+ return BlocksMovement(id);
+}
+
+bool BlockRegistry::IsTransparent(BlockId id) const
+{
+ if (id == BLOCK_AIR) {
+  return true;
+ }
+ if (definitions_) {
+  if (const BlockDefinition* def = definitions_->GetById(id)) {
+   return def->render.transparent;
+  }
+ }
+ return false;
+}
+
+BlockRenderStyle BlockRegistry::GetRenderStyle(BlockId id) const
+{
+ if (definitions_) {
+  if (const BlockDefinition* def = definitions_->GetById(id)) {
+   return def->render.style;
+  }
+ }
+ return BlockRenderStyle::Cube;
+}
+
+const FluidViewProfile* BlockRegistry::GetFluidView(BlockId id) const
+{
+ if (definitions_) {
+  if (const BlockDefinition* def = definitions_->GetById(id)) {
+   if (def->render.style == BlockRenderStyle::Fluid
+       || def->render.style == BlockRenderStyle::Cross
+       || def->render.fluidView.overlayAlpha > 0.0f) {
+    return &def->render.fluidView;
+   }
+  }
+ }
+ return nullptr;
 }
 
 size_t BlockRegistry::GetTextureId(BlockId id) const

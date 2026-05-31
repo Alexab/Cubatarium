@@ -24,10 +24,13 @@ void OverworldBiomesPipeline::GenerateColumn(int worldX, int worldZ)
  rule.fillerBlock = ctx_.stone;
 
  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
+ FillFluidColumn(ctx_, worldX, worldZ, surfaceY);
 
  if (ctx_.settings.enableTrees) {
   TryPlaceTree(ctx_, worldX, worldZ, surfaceY, biome, featureParams_);
  }
+ TryPlaceLavaPool(ctx_, worldX, worldZ, surfaceY, biome);
+ TryPlaceFirePatch(ctx_, worldX, worldZ, surfaceY, biome, ctx_.grass);
 }
 
 int OverworldBiomesPipeline::SurfaceYAt(int worldX, int worldZ) const

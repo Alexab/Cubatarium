@@ -14,6 +14,7 @@ struct ColumnLayerRule {
 };
 
 void FillTerrainColumn(WorldGenContext& ctx, int x, int z, int surfaceY, const ColumnLayerRule& rule);
+void FillFluidColumn(WorldGenContext& ctx, int x, int z, int surfaceY);
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings& settings);
 void FillLegacyHashColumn(WorldGenContext& ctx, int x, int z);

@@ -220,7 +220,11 @@ void WindowManager::Update() {
 }
 
 void WindowManager::Render() {
-    // Buffer clearing
+    if (geometries) {
+        geometries->PrepareFrameRendering();
+        const glm::vec4 clearColor = geometries->GetSkyColor();
+        glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+    }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (geometries && views) {

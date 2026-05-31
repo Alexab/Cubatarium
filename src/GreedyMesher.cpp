@@ -9,9 +9,21 @@ namespace cutum {
 
 namespace {
 
-bool IsSolid(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 pos)
+bool NeighborHidesFace(const BlockWorld& world, BlockRegistry& registry, BlockId faceId,
+                       glm::ivec3 neighborPos)
 {
- return registry.IsSolid(world.GetBlock(pos));
+ const BlockId neighbor = world.GetBlock(neighborPos);
+ if (neighbor == BLOCK_AIR) {
+  return false;
+ }
+ // Hide shared faces between identical fluid blocks (avoids hollow water/fire volumes).
+ if (neighbor == faceId && !registry.BlocksMovement(faceId)) {
+  return true;
+ }
+ if (registry.BlocksMovement(neighbor)) {
+  return true;
+ }
+ return false;
 }
 
 } // namespace
@@ -48,13 +60,16 @@ std::vector<GreedyQuad> GreedyMesher::BuildChunkMesh(
           chunkCoord.z * CHUNK_SIZE + local.z);
 
       const BlockId id = chunk->GetBlockLocal(local);
-      if (!registry.IsSolid(id)) {
+      if (id == BLOCK_AIR) {
+       continue;
+      }
+      if (registry.GetRenderStyle(id) == BlockRenderStyle::Cross) {
        continue;
       }
 
       glm::ivec3 neighborPos = worldPos;
       neighborPos[axis] += sign;
-      if (IsSolid(world, registry, neighborPos)) {
+      if (NeighborHidesFace(world, registry, id, neighborPos)) {
        continue;
       }
 

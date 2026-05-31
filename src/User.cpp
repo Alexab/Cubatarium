@@ -26,6 +26,7 @@ void User::InitDefaultHotbar()
  blockHotbar_ = {
      "wood",
      "grass",
+     "dirt",
      "stone",
      "tree_birch",
      "pumpkin",

@@ -30,6 +30,9 @@ struct ProceduralSettings {
  bool enableCaves{false};
  bool enableTrees{false};
  int flatSurfaceY{3};
+ bool fillWater{false};
+ bool fillLava{false};
+ bool fillFire{false};
 };
 
 ProceduralGenerator ProceduralGeneratorFromString(const std::string& s);

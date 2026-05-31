@@ -21,6 +21,7 @@
 #include <windows.h>
 #endif
 #include "Core.h"
+#include "BlockDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "World.h"
@@ -229,6 +230,11 @@ void Core::LoadSystem(const std::string& config_file_name)
      object_storage_file_name = project_dir / "models" / "objects";
      prefabs_path_ = project_dir / "prefabs";
 
+     auto blockDefinitions = std::make_shared<BlockDefinitionStorage>();
+     blockDefinitions->Load(texture_cube_storage_file_name.string());
+     TextureCubeStorageInstance->SetBlockDefinitions(blockDefinitions);
+     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
+
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
 
      TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
@@ -256,7 +262,9 @@ void Core::LoadSystem(const std::string& config_file_name)
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
      WorldInstance->SetRenderSettings(renderSettings_);
-     GeometryEngineInstance->SetRenderSettings(renderSettings_);
+     if (GeometryEngineInstance) {
+      GeometryEngineInstance->SetRenderSettings(renderSettings_);
+     }
      std::cout << "Render: greedy=" << renderSettings_.greedyMeshing
                << " face_quads=" << renderSettings_.faceQuads
                << " frustum=" << renderSettings_.frustumCulling

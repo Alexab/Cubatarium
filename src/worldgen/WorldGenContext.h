@@ -32,6 +32,9 @@ struct WorldGenContext {
  BlockId clay{BLOCK_AIR};
  BlockId ice{BLOCK_AIR};
  BlockId hellrock{BLOCK_AIR};
+ BlockId water{BLOCK_AIR};
+ BlockId lava{BLOCK_AIR};
+ BlockId fire{BLOCK_AIR};
 
  void ResolveBlockIds();
  void MarkDirtyColumn(int worldX, int worldZ, int minY, int maxY) const;

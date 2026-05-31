@@ -20,6 +20,7 @@ typedef int GLint;
 #include "CubeGL.h"
 #include "ShaderManager.h"
 #include "TextRenderer.h"
+#include "AnimationClock.h"
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -32,6 +33,7 @@ class Core;
 // Structure for batch rendering
 struct RenderBatch {
     GLuint textureID; // Replace QOpenGLTexture with GLuint
+    size_t blockTypeId{0};
     std::vector<glm::mat4> modelMatrices; // Per-instance model (blocks) or unused for objects
     std::vector<float> faceIndices;
     std::vector<glm::vec2> quadSizes;
@@ -72,7 +74,10 @@ public:
 
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
- 
+
+ /// Updates sky tint and fluid fog state from the camera; call before glClear.
+ void PrepareFrameRendering();
+
 private:
  // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
  bool InitCubeBuffers();
@@ -83,7 +88,14 @@ private:
  void DestroyGreedyMeshBuffers();
  void DrawGreedyMeshBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
                             const std::map<size_t, TextureCube>& textures,
-                            uint64_t meshRevision, uint64_t cullRevision);
+                            uint64_t meshRevision, uint64_t cullRevision, bool transparentPass);
+ void SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader, BlockId blockId,
+                           const std::map<size_t, TextureCube>& textures);
+ void ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
+                            const glm::vec3& cameraPos);
+ void RenderFluidOverlay(int width, int height);
+ bool InitOverlayBuffers();
+ void DestroyOverlayBuffers();
 GLuint cubeVAO = 0;
 GLuint cubeVBO = 0;
 GLuint cubeEBO = 0;
@@ -143,7 +155,10 @@ std::shared_ptr<ShaderProgram> textShader; // Shader for text
 std::shared_ptr<ShaderProgram> instancedShader; // Instanced cubes (legacy blocks)
 std::shared_ptr<ShaderProgram> instancedFaceShader; // Instanced greedy face quads
 std::shared_ptr<ShaderProgram> greedyShader; // Greedy world mesh (UV in fragment shader)
+std::shared_ptr<ShaderProgram> overlayShader;
 std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outline
+GLuint overlayVAO{0};
+GLuint overlayVBO{0};
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
@@ -156,6 +171,16 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  
    // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
+  glm::vec3 baseSkyColor_{0.5f, 0.7f, 1.0f};
+  glm::vec3 smoothedSkyTint_{0.5f, 0.7f, 1.0f};
+  glm::vec3 smoothedFogColor_{0.05f, 0.15f, 0.35f};
+  float fogStart_{0.0f};
+  float fogEnd_{1000.0f};
+  float fogMinBlend_{0.0f};
+  float fogEnabled_{0.0f};
+  glm::vec3 overlayTintColor_{0.0f};
+  float overlayTintAlpha_{0.0f};
+  BlockId overlayBlockId_{BLOCK_AIR};
   bool useGradientSky; // Use gradient sky
  
  // Logging
@@ -172,6 +197,7 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  uint64_t cachedMeshRevision_{0};
  bool blockBatchesValid_{false};
  RenderSettings renderSettings_;
+ AnimationClock animationClock_;
 
  struct GreedyGpuBatch {
   BlockId blockId{BLOCK_AIR};
@@ -182,8 +208,10 @@ std::shared_ptr<ShaderProgram> outlineShader; // Shader for block selection outl
  std::vector<GreedyGpuBatch> greedyGpuBatches_;
  uint64_t cachedGreedyMeshRevision_{0};
  uint64_t cachedGreedyCullRevision_{0};
+ bool cachedGreedyTransparentPass_{false};
  void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch>& batches,
-                              uint64_t meshRevision, uint64_t cullRevision);
+                              uint64_t meshRevision, uint64_t cullRevision,
+                              bool transparentPass);
  void DestroyGreedyGpuBatches();
 
  std::string transientMessage_;

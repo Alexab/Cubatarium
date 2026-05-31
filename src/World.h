@@ -14,6 +14,8 @@
 #include <map>
 #include <tuple>
 #include "BlockWorld.h"
+#include "BlockDefinition.h"
+#include "BlockDefinitionStorage.h"
 #include "BlockRegistry.h"
 #include "ChunkMeshCache.h"
 #include "ChunkStreamer.h"
@@ -71,6 +73,17 @@ public:
  const BlockRegistry& GetBlockRegistry() const { return *blockRegistry_; }
 
  void RefreshBlockRegistry();
+ void SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> definitions);
+
+ struct SampledFluidState {
+  bool inFluid{false};
+  BlockId dominantFluid{BLOCK_AIR};
+  float blendWeight{0.0f};
+  float dragHorizontal{0.0f};
+  float sinkSpeed{0.0f};
+  float riseSpeed{0.0f};
+ };
+ SampledFluidState SampleFluidPhysics(const glm::vec3& position, float size) const;
  void ApplySpawnToCamera();
  void FinalizePlayerAfterWorldLoad();
  bool IsBlockWorldReady() const { return blockWorldReady_; }
@@ -91,9 +104,11 @@ public:
 
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
- bool CheckCollision(const glm::vec3& position, float size = 1.0) const;
- /// Moves from `from` toward `from + delta` in small steps to avoid tunneling through blocks.
+ bool CheckCollision(const glm::vec3& position, float size = 1.0f) const;
+ /// Moves from `from` along delta with axis-separated resolution (Y, then X, then Z).
  glm::vec3 ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const;
+ /// Step up one block when walking into a 1-block ledge (optional, simple).
+ bool TryStepUp(glm::vec3& pos, const glm::vec3& horizontalDelta, float size) const;
  void DoMovement();
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);
  void UpdateStreaming();
@@ -197,6 +212,7 @@ private:
  std::shared_ptr<ViewEngine> ViewInstance;
  PrefabLibrary* prefabLibrary_{nullptr};
 
+ std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;
  std::unique_ptr<BlockRegistry> blockRegistry_;
  BlockWorld blockWorld_;
  ChunkMeshCache meshCache_;

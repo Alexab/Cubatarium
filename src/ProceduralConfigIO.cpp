@@ -33,6 +33,15 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json& root)
   if (p.contains("flat_surface_y")) {
    settings.flatSurfaceY = p["flat_surface_y"].get<int>();
   }
+  if (p.contains("fill_water")) {
+   settings.fillWater = p["fill_water"].get<bool>();
+  }
+  if (p.contains("fill_lava")) {
+   settings.fillLava = p["fill_lava"].get<bool>();
+  }
+  if (p.contains("fill_fire")) {
+   settings.fillFire = p["fill_fire"].get<bool>();
+  }
  } else if (root.contains("terrain") && root["terrain"].is_string()) {
   const std::string terrain = root["terrain"].get<std::string>();
   if (terrain == "flat") {
@@ -86,6 +95,9 @@ void WriteProceduralSettings(nlohmann::json& root, const ProceduralSettings& set
  procedural["caves"] = settings.enableCaves;
  procedural["trees"] = settings.enableTrees;
  procedural["flat_surface_y"] = settings.flatSurfaceY;
+ procedural["fill_water"] = settings.fillWater;
+ procedural["fill_lava"] = settings.fillLava;
+ procedural["fill_fire"] = settings.fillFire;
  root["procedural"] = procedural;
  root["terrain"] = ProceduralGeneratorToString(settings.generator);
  root["world_seed"] = settings.seed;

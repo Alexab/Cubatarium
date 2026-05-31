@@ -1,4 +1,5 @@
 #include "BlockRaycast.h"
+#include "BlockRegistry.h"
 #include "BlockWorld.h"
 #include "GridMath.h"
 #include <cmath>
@@ -21,10 +22,17 @@ float NextBoundaryT(const glm::vec3& origin, const glm::vec3& direction, int blo
  return std::numeric_limits<float>::max();
 }
 
+bool IsRaycastTarget(const BlockWorld& world, const BlockRegistry& registry, glm::ivec3 pos)
+{
+ const BlockId id = world.GetBlock(pos);
+ return registry.BlocksMovement(id);
+}
+
 } // namespace
 
 std::optional<BlockRayHit> RaycastSolidBlocks(
     const BlockWorld& world,
+    const BlockRegistry& registry,
     glm::vec3 origin,
     glm::vec3 direction,
     float maxDistance)
@@ -38,7 +46,7 @@ std::optional<BlockRayHit> RaycastSolidBlocks(
  const float eps = 1e-4f;
  glm::ivec3 current = WorldPosToBlock(origin);
 
- if (!world.IsAir(current)) {
+ if (IsRaycastTarget(world, registry, current)) {
   BlockRayHit hit;
   hit.blockPos = current;
   hit.faceNormal = glm::ivec3(
@@ -86,7 +94,7 @@ std::optional<BlockRayHit> RaycastSolidBlocks(
    next.z += (direction.z > 0.0f) ? 1 : -1;
   }
 
-  if (!world.IsAir(next)) {
+  if (IsRaycastTarget(world, registry, next)) {
    BlockRayHit hit;
    hit.blockPos = next;
    hit.distance = t;

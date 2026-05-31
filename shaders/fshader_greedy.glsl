@@ -6,6 +6,15 @@ flat in int vFaceIndex;
 out vec4 FragColor;
 
 uniform sampler2D texture0;
+uniform int uAnimFrame;
+uniform int uAnimFrameCount;
+uniform int uAlphaCutout;
+uniform vec3 uCameraPos;
+uniform vec3 uFogColor;
+uniform float uFogStart;
+uniform float uFogEnd;
+uniform float uFogMinBlend;
+uniform float uFogEnabled;
 
 float blockTileCoord(float axis)
 {
@@ -44,5 +53,20 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
 
 void main()
 {
-    FragColor = texture(texture0, atlasUVFromWorldPos(vFaceIndex, vWorldPos));
+    vec2 uv = atlasUVFromWorldPos(vFaceIndex, vWorldPos);
+    if (uAnimFrameCount > 1) {
+        float frameH = 1.0 / float(uAnimFrameCount);
+        uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
+    }
+    FragColor = texture(texture0, uv);
+    if (uAlphaCutout != 0 && FragColor.a < 0.1) {
+        discard;
+    }
+    if (uFogEnabled > 0.5) {
+        float dist = length(vWorldPos - uCameraPos);
+        float fogRange = max(uFogEnd - uFogStart, 0.001);
+        float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
+        fogFactor = max(fogFactor, uFogMinBlend);
+        FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
+    }
 }

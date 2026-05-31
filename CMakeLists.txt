@@ -54,6 +54,9 @@ set(SOURCES
     src/GeometryEngine.cpp
     src/GridMath.cpp
     src/BlockRegistry.cpp
+    src/BlockDefinition.cpp
+    src/BlockDefinitionStorage.cpp
+    src/AnimationClock.cpp
     src/BlockWorld.cpp
     src/WorldGenerator.cpp
     src/Noise.cpp
@@ -102,6 +105,9 @@ set(HEADERS
     src/BlockTypes.h
     src/GridMath.h
     src/BlockRegistry.h
+    src/BlockDefinition.h
+    src/BlockDefinitionStorage.h
+    src/AnimationClock.h
     src/BlockWorld.h
     src/WorldGenerator.h
     src/Noise.h

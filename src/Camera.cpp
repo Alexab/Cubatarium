@@ -252,7 +252,21 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
 
  if (world) {
-  Position = world->ResolveMovement(Position, shift, ViewObjectSize);
+  const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
+  if (fluid.inFluid && !FreeMove) {
+   const float drag = 1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
+   shift.x *= drag;
+   shift.z *= drag;
+  }
+  glm::vec3 newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
+  const float movedH =
+      glm::length(glm::vec2(newPos.x - Position.x, newPos.z - Position.z));
+  const float wantH = glm::length(glm::vec2(shift.x, shift.z));
+  if (!FreeMove && !fluid.inFluid && onGround_ && verticalVelocity_ <= 0.05f
+      && wantH > 1e-4f && movedH < wantH * 0.5f) {
+   world->TryStepUp(newPos, shift, ViewObjectSize);
+  }
+  Position = newPos;
  } else {
   Position += shift;
  }
@@ -454,32 +468,53 @@ bool Camera::DoMovement(const World* world)
    onGround_ = false;
    return is_moved;
   }
-  verticalVelocity_ += kGravity * dt;
-  const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
-  const glm::vec3 resolved = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
-  const float movedY = resolved.y - Position.y;
-  const float requestedY = verticalDelta.y;
-  if (std::abs(movedY - requestedY) > 1e-4f) {
-   if (requestedY < 0.0f) {
-    onGround_ = true;
-   }
-   verticalVelocity_ = 0.0f;
-  } else {
-   onGround_ = false;
-  }
-  Position = resolved;
-  is_moved = true;
-
+  const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
   const bool spacePressed = KeysStatus[GLFW_KEY_SPACE];
   if (!spacePressed) {
    suppressNextJump_ = false;
   }
-  if (onGround_ && spacePressed && !spaceWasPressed_ && !suppressNextJump_) {
-   verticalVelocity_ = kJumpSpeed;
+
+  if (fluid.inFluid) {
+   if (spacePressed && !spaceWasPressed_) {
+    verticalVelocity_ = std::max(verticalVelocity_, 6.5f);
+   }
+   if (spacePressed) {
+    verticalVelocity_ += fluid.riseSpeed * 5.0f * dt;
+   }
+   verticalVelocity_ *= 1.0f - std::min(0.9f, fluid.dragHorizontal * dt * 6.0f);
+   if (!spacePressed) {
+    verticalVelocity_ -= fluid.sinkSpeed * dt;
+   }
+   verticalVelocity_ += kGravity * 0.15f * dt;
    onGround_ = false;
-   is_moved = true;
+
+   const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
+   Position = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
+  } else {
+   verticalVelocity_ += kGravity * dt;
+   const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
+   const glm::vec3 resolved = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
+   const float movedY = resolved.y - Position.y;
+   const float requestedY = verticalDelta.y;
+   if (std::abs(movedY - requestedY) > 1e-4f) {
+    if (requestedY < 0.0f) {
+     onGround_ = true;
+    }
+    verticalVelocity_ = 0.0f;
+   } else {
+    onGround_ = false;
+   }
+   Position = resolved;
+
+   if (onGround_ && verticalVelocity_ <= 0.05f && spacePressed && !spaceWasPressed_
+       && !suppressNextJump_) {
+    verticalVelocity_ = kJumpSpeed;
+    onGround_ = false;
+    is_moved = true;
+   }
   }
   spaceWasPressed_ = spacePressed;
+  is_moved = true;
   UpdatePose();
  }
 

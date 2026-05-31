@@ -73,6 +73,7 @@ public:
 
  float GetCollisionSize() const { return ViewObjectSize; }
  float GetDeltaTime() const { return DeltaTime; }
+ bool IsOnGround() const { return onGround_; }
 
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();

@@ -14,6 +14,7 @@
 #include "ObjectStorage.h"
 #include "Camera.h"
 #include "ShaderManager.h"
+#include "BlockRegistry.h"
 
 namespace cutum {
 
@@ -23,7 +24,9 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
  , TextureBaseStorageInstance(texture_base_storage)
  , TextureCubeStorageInstance(texture_cube_storage)
  , textRenderer(text_renderer)
- , skyColor(0.5f, 0.7f, 1.0f, 1.0f) // Initialize sky color (blue)
+ , skyColor(0.5f, 0.7f, 1.0f, 1.0f)
+ , baseSkyColor_(0.5f, 0.7f, 1.0f)
+ , smoothedSkyTint_(0.5f, 0.7f, 1.0f)
 , useGradientSky(false) // Use simple color by default
 {
 }
@@ -35,6 +38,7 @@ GeometryEngine::~GeometryEngine()
     DestroyGreedyMeshBuffers();
     DestroyPreviewBuffers();
     DestroyOutlineBuffers();
+    DestroyOverlayBuffers();
 }
 
 bool GeometryEngine::InitEngine()
@@ -190,14 +194,27 @@ bool GeometryEngine::InitShaders()
      std::cerr << "Failed to create outline shader" << std::endl;
      return false;
  }
+
+ overlayShader = shaderManager->CreateShader("overlay", "shaders/vshader_overlay.glsl",
+                                             "shaders/fshader_overlay.glsl");
+ if (!overlayShader || !overlayShader->IsValid()) {
+     std::cerr << "Failed to create overlay shader" << std::endl;
+     return false;
+ }
  
  return true;
 }
 
 void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
-     // Render only scene objects
+ if (auto camera = WorldInstance->GetCurrentUserCamera()) {
+  animationClock_.Tick(static_cast<float>(camera->GetDeltaTime()));
+ }
+ (void)view_duration;
  DrawCubeGeometry();
+ if (overlayTintAlpha_ > 0.01f) {
+  RenderFluidOverlay(width_size, height_size);
+ }
  
      // Render crosshair
 if (showCrosshair) {
@@ -259,9 +276,29 @@ if (!camera) {
     blockBatchesValid_ = true;
    }
    const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-   DrawGreedyMeshBatches(
-       greedyBatches, vp, textures,
-       meshRevision, WorldInstance->GetCullRevision());
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
+                         WorldInstance->GetCullRevision(), false);
+   GLboolean blendWasEnabled;
+   glGetBooleanv(GL_BLEND, &blendWasEnabled);
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   GLboolean depthMask;
+   glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
+   glDepthMask(GL_FALSE);
+   GLboolean cullWasEnabled;
+   glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+   glDisable(GL_CULL_FACE);
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
+                         WorldInstance->GetCullRevision(), true);
+   if (cullWasEnabled) {
+    glEnable(GL_CULL_FACE);
+   } else {
+    glDisable(GL_CULL_FACE);
+   }
+   glDepthMask(depthMask ? GL_TRUE : GL_FALSE);
+   if (!blendWasEnabled) {
+    glDisable(GL_BLEND);
+   }
   } else {
    const auto& blockInstances = WorldInstance->GetBlockRenderInstances();
    if (!useBatchCache || !blockBatchesValid_ || renderCount != cachedInstanceCount_
@@ -324,6 +361,7 @@ void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInsta
  for (const auto& instance : instances) {
   const size_t textureId = static_cast<size_t>(instance.id);
   auto& batch = batchMap[textureId];
+  batch.blockTypeId = textureId;
   if (batch.textureID == 0) {
    const auto texIt = textures.find(textureId);
    if (texIt == textures.end()) {
@@ -405,6 +443,10 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
 
  activeShader->Use();
  activeShader->SetInt("texture0", 0);
+ if (drawFaceQuads && batch.blockTypeId != 0 && TextureCubeStorageInstance) {
+  SetBlockAnimUniforms(activeShader, static_cast<BlockId>(batch.blockTypeId),
+                      TextureCubeStorageInstance->GetTextures());
+ }
 
  if (drawFaceQuads) {
   struct BlockDrawInstance {
@@ -459,14 +501,17 @@ void GeometryEngine::DestroyGreedyGpuBatches()
  greedyGpuBatches_.clear();
  cachedGreedyMeshRevision_ = 0;
  cachedGreedyCullRevision_ = 0;
+ cachedGreedyTransparentPass_ = false;
 }
 
 void GeometryEngine::RefreshGreedyGpuBatches(
     const std::vector<GreedyMeshBatch>& batches,
     uint64_t meshRevision,
-    uint64_t cullRevision)
+    uint64_t cullRevision,
+    bool transparentPass)
 {
- if (meshRevision == cachedGreedyMeshRevision_ && cullRevision == cachedGreedyCullRevision_) {
+ if (meshRevision == cachedGreedyMeshRevision_ && cullRevision == cachedGreedyCullRevision_
+     && transparentPass == cachedGreedyTransparentPass_) {
   return;
  }
 
@@ -499,6 +544,73 @@ void GeometryEngine::RefreshGreedyGpuBatches(
  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
  cachedGreedyMeshRevision_ = meshRevision;
  cachedGreedyCullRevision_ = cullRevision;
+ cachedGreedyTransparentPass_ = transparentPass;
+}
+
+void GeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader,
+                                          BlockId blockId,
+                                          const std::map<size_t, TextureCube>& textures)
+{
+ int frameCount = 1;
+ const auto texIt = textures.find(static_cast<size_t>(blockId));
+ if (texIt != textures.end()) {
+  frameCount = static_cast<int>(texIt->second.GetNumTextureFrames());
+ }
+ if (frameCount < 1) {
+  frameCount = 1;
+ }
+ const int frame = animationClock_.CurrentFrame() % frameCount;
+ shader->SetInt("uAnimFrame", frame);
+ shader->SetInt("uAnimFrameCount", frameCount);
+}
+
+void GeometryEngine::PrepareFrameRendering()
+{
+ auto camera = WorldInstance->GetCurrentUserCamera();
+ if (!camera) {
+  return;
+ }
+ const World::SampledFluidState fluid =
+     WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetCollisionSize());
+
+ glm::vec3 targetSky = baseSkyColor_;
+ fogEnabled_ = 0.0f;
+ overlayTintAlpha_ = 0.0f;
+ overlayBlockId_ = BLOCK_AIR;
+
+ if (fluid.inFluid) {
+  const BlockRegistry& registry = WorldInstance->GetBlockRegistry();
+  if (const FluidViewProfile* fv = registry.GetFluidView(fluid.dominantFluid)) {
+   if (registry.GetRenderStyle(fluid.dominantFluid) == BlockRenderStyle::Fluid) {
+    fogEnabled_ = 1.0f;
+    fogStart_ = fv->fogStart;
+    fogEnd_ = fv->fogEnd;
+    fogMinBlend_ = fv->fogMinBlend;
+    smoothedFogColor_ = glm::mix(smoothedFogColor_, fv->fogColor, 0.15f);
+    targetSky = fv->fogColor;
+   }
+   if (fv->overlayAlpha > 0.01f
+       && registry.GetRenderStyle(fluid.dominantFluid) == BlockRenderStyle::Cross) {
+    overlayTintAlpha_ = fv->overlayAlpha;
+    overlayTintColor_ = fv->overlayColor;
+    overlayBlockId_ = fluid.dominantFluid;
+   }
+  }
+ }
+
+ smoothedSkyTint_ = glm::mix(smoothedSkyTint_, targetSky, 0.15f);
+ skyColor = glm::vec4(smoothedSkyTint_, 1.0f);
+}
+
+void GeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
+                                         const glm::vec3& cameraPos)
+{
+ shader->SetVec3("uCameraPos", cameraPos);
+ shader->SetVec3("uFogColor", smoothedFogColor_);
+ shader->SetFloat("uFogStart", fogStart_);
+ shader->SetFloat("uFogEnd", fogEnd_);
+ shader->SetFloat("uFogMinBlend", fogMinBlend_);
+ shader->SetFloat("uFogEnabled", fogEnabled_);
 }
 
 void GeometryEngine::DrawGreedyMeshBatches(
@@ -506,9 +618,17 @@ void GeometryEngine::DrawGreedyMeshBatches(
     const glm::mat4& vp,
     const std::map<size_t, TextureCube>& textures,
     uint64_t meshRevision,
-    uint64_t cullRevision)
+    uint64_t cullRevision,
+    bool transparentPass)
 {
- if (batches.empty()) {
+ std::vector<GreedyMeshBatch> filtered;
+ filtered.reserve(batches.size());
+ for (const GreedyMeshBatch& batch : batches) {
+  if (batch.transparent == transparentPass) {
+   filtered.push_back(batch);
+  }
+ }
+ if (filtered.empty()) {
   return;
  }
  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers()) {
@@ -518,7 +638,7 @@ void GeometryEngine::DrawGreedyMeshBatches(
   return;
  }
 
- RefreshGreedyGpuBatches(batches, meshRevision, cullRevision);
+ RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, transparentPass);
  if (greedyGpuBatches_.empty()) {
   return;
  }
@@ -526,11 +646,16 @@ void GeometryEngine::DrawGreedyMeshBatches(
  greedyShader->Use();
  greedyShader->SetMat4("mvp_matrix", vp);
  greedyShader->SetInt("texture0", 0);
+ greedyShader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+ if (auto camera = WorldInstance->GetCurrentUserCamera()) {
+  ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
+ }
  glActiveTexture(GL_TEXTURE0);
 
  glBindVertexArray(greedyMeshVAO);
  const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
  for (const GreedyGpuBatch& gpu : greedyGpuBatches_) {
+  SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
   if (gpu.indexCount <= 0) {
    continue;
   }
@@ -736,14 +861,106 @@ static const GLfloat skyVertices[] = {
  glEnable(GL_DEPTH_TEST);
 }
 
+bool GeometryEngine::InitOverlayBuffers()
+{
+ if (overlayVAO != 0) {
+  return true;
+ }
+ const float quad[] = {
+     -1.0f, -1.0f, 0.0f, 0.0f,
+      1.0f, -1.0f, 1.0f, 0.0f,
+      1.0f,  1.0f, 1.0f, 1.0f,
+     -1.0f,  1.0f, 0.0f, 1.0f,
+ };
+ const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
+ GLuint ebo = 0;
+ glGenVertexArrays(1, &overlayVAO);
+ glGenBuffers(1, &overlayVBO);
+ glGenBuffers(1, &ebo);
+ glBindVertexArray(overlayVAO);
+ glBindBuffer(GL_ARRAY_BUFFER, overlayVBO);
+ glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+ glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+ glEnableVertexAttribArray(0);
+ glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+ glEnableVertexAttribArray(1);
+ glBindVertexArray(0);
+ return true;
+}
+
+void GeometryEngine::DestroyOverlayBuffers()
+{
+ if (overlayVBO) {
+  glDeleteBuffers(1, &overlayVBO);
+  overlayVBO = 0;
+ }
+ if (overlayVAO) {
+  glDeleteVertexArrays(1, &overlayVAO);
+  overlayVAO = 0;
+ }
+}
+
+void GeometryEngine::RenderFluidOverlay(int width, int height)
+{
+ (void)width;
+ (void)height;
+ if (!overlayShader || overlayBlockId_ == BLOCK_AIR || !TextureCubeStorageInstance) {
+  return;
+ }
+ if (!InitOverlayBuffers()) {
+  return;
+ }
+ const auto textures = TextureCubeStorageInstance->GetTextures();
+ const auto texIt = textures.find(static_cast<size_t>(overlayBlockId_));
+ if (texIt == textures.end() || texIt->second.GetTextureId() == 0) {
+  return;
+ }
+
+ GLboolean depthTestEnabled;
+ glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+ GLboolean blendEnabled;
+ glGetBooleanv(GL_BLEND, &blendEnabled);
+
+ glDisable(GL_DEPTH_TEST);
+ glEnable(GL_BLEND);
+ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+ overlayShader->Use();
+ overlayShader->SetInt("texture0", 0);
+ SetBlockAnimUniforms(overlayShader, overlayBlockId_, textures);
+ overlayShader->SetVec3("uTintColor", overlayTintColor_);
+ overlayShader->SetFloat("uTintAlpha", overlayTintAlpha_);
+ glActiveTexture(GL_TEXTURE0);
+ glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+ glBindVertexArray(overlayVAO);
+ glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+ glBindVertexArray(0);
+ overlayShader->Unuse();
+
+ if (depthTestEnabled) {
+  glEnable(GL_DEPTH_TEST);
+ } else {
+  glDisable(GL_DEPTH_TEST);
+ }
+ if (!blendEnabled) {
+  glDisable(GL_BLEND);
+ }
+}
+
 // Methods for sky color management
 void GeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
+ baseSkyColor_ = glm::vec3(r, g, b);
+ smoothedSkyTint_ = baseSkyColor_;
  skyColor = glm::vec4(r, g, b, a);
 }
 
 void GeometryEngine::SetSkyColor(const glm::vec4& color)
 {
+ baseSkyColor_ = glm::vec3(color);
+ smoothedSkyTint_ = baseSkyColor_;
  skyColor = color;
 }
 

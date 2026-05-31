@@ -1,0 +1,28 @@
+{
+  "blocks": [
+    {
+      "id": 170,
+      "name": "water",
+      "uniform": "water",
+      "physics_preset": "water",
+      "render_transparent": true
+    },
+    {
+      "id": 171,
+      "name": "lava",
+      "uniform": "lava",
+      "physics_preset": "lava",
+      "render_transparent": true
+    },
+    {
+      "id": 172,
+      "name": "fire",
+      "faces": [
+        "fire_0", "fire_0", "fire_0", "fire_0", "fire_0", "fire_0",
+        "fire_1", "fire_1", "fire_1", "fire_1", "fire_1", "fire_1"
+      ],
+      "physics_preset": "fire",
+      "render_transparent": true
+    }
+  ]
+}

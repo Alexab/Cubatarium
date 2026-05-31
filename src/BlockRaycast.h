@@ -7,6 +7,7 @@
 namespace cutum {
 
 class BlockWorld;
+class BlockRegistry;
 
 struct BlockRayHit {
  glm::ivec3 blockPos;
@@ -16,6 +17,7 @@ struct BlockRayHit {
 
 std::optional<BlockRayHit> RaycastSolidBlocks(
     const BlockWorld& world,
+    const BlockRegistry& registry,
     glm::vec3 origin,
     glm::vec3 direction,
     float maxDistance = 128.0f);

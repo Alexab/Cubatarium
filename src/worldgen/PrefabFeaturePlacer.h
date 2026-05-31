@@ -21,4 +21,7 @@ bool PlacePrefabAt(WorldGenContext& ctx, const std::string& prefabName, glm::ive
 
 bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome, const FeatureParams& params);
 
+bool TryPlaceLavaPool(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome);
+bool TryPlaceFirePatch(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome, BlockId grassId);
+
 } // namespace cutum

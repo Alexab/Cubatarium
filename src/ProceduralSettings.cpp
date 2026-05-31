@@ -91,9 +91,12 @@ void ResolveProceduralDefaults(ProceduralSettings& s)
 
 void ApplyGeneratorTierDefaults(ProceduralSettings& s)
 {
- (void)s;
- // procedural.trees / procedural.caves from config are preserved; pipelines that
- // support features read ProceduralSettings directly.
+ if (s.generator == ProceduralGenerator::OverworldBiomes
+     || s.generator == ProceduralGenerator::OverworldFull
+     || s.generator == ProceduralGenerator::Overworld) {
+  s.fillWater = true;
+  s.fillFire = true;
+ }
 }
 
 } // namespace cutum

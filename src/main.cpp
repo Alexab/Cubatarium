@@ -21,6 +21,7 @@
 #include "ObjectStorage.h"
 #include "Prefab.h"
 #include "TextRenderer.h"
+#include "BlockDefinitionStorage.h"
 
 namespace cutum {
 
@@ -50,6 +51,7 @@ static int RunValidateLoad()
 
     auto texture_base_instance = std::make_shared<TextureBaseStorage>();
     auto texture_cube_instance = std::make_shared<TextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<BlockDefinitionStorage>();
     auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
     auto prefab_library = std::make_shared<PrefabLibrary>();
     auto view_engine = std::make_shared<ViewEngine>();
@@ -57,6 +59,9 @@ static int RunValidateLoad()
     auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
                                          object_storage, prefab_library, world, nullptr, view_engine);
 
+    block_definitions->Load("models/blocks");
+    texture_cube_instance->SetBlockDefinitions(block_definitions);
+    world->SetBlockDefinitionStorage(block_definitions);
     core->LoadSystem("config.json");
     std::cout << "validate-load: blocks=" << world->GetCachedBlockCount()
               << " instances=" << world->GetRenderInstanceCount() << std::endl;
@@ -88,6 +93,7 @@ int main(int argc, char *argv[])
 
         auto texture_base_instance = std::make_shared<TextureBaseStorage>();
         auto texture_cube_instance = std::make_shared<TextureCubeStorage>(texture_base_instance);
+        auto block_definitions = std::make_shared<BlockDefinitionStorage>();
 
         auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
         auto prefab_library = std::make_shared<PrefabLibrary>();
@@ -113,6 +119,10 @@ int main(int argc, char *argv[])
         
         auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
                                           object_storage, prefab_library, world, geometry_engine, view_engine);
+
+        block_definitions->Load("models/blocks");
+        texture_cube_instance->SetBlockDefinitions(block_definitions);
+        world->SetBlockDefinitionStorage(block_definitions);
 
         windowManager->Init(core, world, geometry_engine, view_engine);
         

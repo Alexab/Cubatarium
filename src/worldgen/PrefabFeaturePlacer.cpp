@@ -79,4 +79,53 @@ bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biom
  return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
 }
 
+bool TryPlaceLavaPool(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome)
+{
+ if (!ctx.settings.fillLava || ctx.lava == BLOCK_AIR || biome != BiomeId::Hills) {
+  return false;
+ }
+ const uint32_t seed = ctx.settings.seed;
+ if (FeatureHash(x, z, seed + 9001) % 400 != 0) {
+  return false;
+ }
+ for (int dx = -1; dx <= 1; ++dx) {
+  for (int dz = -1; dz <= 1; ++dz) {
+   const glm::ivec3 pos(x + dx, surfaceY + 1, z + dz);
+   const BlockId below = ctx.world.GetBlock(glm::ivec3(x + dx, surfaceY, z + dz));
+   if (below != ctx.stone && below != ctx.gravel) {
+    return false;
+   }
+   if (!ctx.world.IsAir(pos)) {
+    return false;
+   }
+   ctx.world.SetBlock(pos, ctx.lava);
+  }
+ }
+ ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
+ return true;
+}
+
+bool TryPlaceFirePatch(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome, BlockId grassId)
+{
+ if (!ctx.settings.fillFire || ctx.fire == BLOCK_AIR) {
+  return false;
+ }
+ (void)biome;
+ const BlockId surface = ctx.world.GetBlock(glm::ivec3(x, surfaceY, z));
+ if (surface != grassId) {
+  return false;
+ }
+ const glm::ivec3 firePos(x, surfaceY + 1, z);
+ if (!ctx.world.IsAir(firePos)) {
+  return false;
+ }
+ const uint32_t seed = ctx.settings.seed;
+ if (FeatureHash(x, z, seed + 12007) % 512 != 0) {
+  return false;
+ }
+ ctx.world.SetBlock(firePos, ctx.fire);
+ ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
+ return true;
+}
+
 } // namespace cutum

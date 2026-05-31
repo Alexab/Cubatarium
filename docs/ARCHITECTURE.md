@@ -78,9 +78,19 @@ Manifest: `tools/block_manifest.json` (+ optional `tools/block_manifest_suppleme
 
 Trees: prefabs `tree_small` / `tree_large` use block types `tree_log` (bark `tree_side`, rings `tree_top`) and `tree_leaves` (`leaves_opaque`). Requires `procedural.trees: true` in config.
 
-### Animated blocks (not implemented)
+### Animated blocks and fluids
 
-Deferred: `water`, `water_flow`, `lava`, `lava_flow`, `fire_0`, `fire_1`, `portal` (+ `.txt` frame metadata in MC packs). No fluid collision or UV animation tick yet.
+Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`) parsed by `BlockDefinitionStorage`. Flipbook atlases are built in `TextureCubeStorage::CreateCubeTexture` (vertical strip for uniform six-face blocks like `water`/`lava`; multi-face rows for `fire`).
+
+| Module | Role |
+|--------|------|
+| `AnimationClock` | Global 20 TPS tick; `uAnimFrame` / `uAnimFrameCount` in greedy and instanced shaders |
+| `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
+| `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
+| Greedy mesh | Opaque pass then transparent (`render.transparent`); fluid–fluid faces kept |
+| Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level` |
+
+Import animated types: `tools/block_manifest_animated.json` (ids 170–172) via `tools/import_blocks.ps1`. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
 
 ## Asset paths
 

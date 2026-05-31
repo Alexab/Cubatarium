@@ -26,7 +26,26 @@ void FillTerrainColumn(WorldGenContext& ctx, int x, int z, int surfaceY, const C
   }
   ctx.world.SetBlock(glm::ivec3(x, y, z), id);
  }
- ctx.MarkDirtyColumn(x, z, 0, surfaceY);
+ const int maxY = std::max(surfaceY, ctx.settings.seaLevel);
+ ctx.MarkDirtyColumn(x, z, 0, maxY);
+}
+
+void FillFluidColumn(WorldGenContext& ctx, int x, int z, int surfaceY)
+{
+ if (!ctx.settings.fillWater || ctx.water == BLOCK_AIR) {
+  return;
+ }
+ const int sea = ctx.settings.seaLevel;
+ if (surfaceY >= sea) {
+  return;
+ }
+ for (int y = surfaceY + 1; y <= sea; ++y) {
+  const glm::ivec3 pos(x, y, z);
+  if (ctx.world.GetBlock(pos) == BLOCK_AIR) {
+   ctx.world.SetBlock(pos, ctx.water);
+  }
+ }
+ ctx.MarkDirtyColumn(x, z, surfaceY, sea);
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings& settings)
@@ -64,7 +83,7 @@ void FillLegacyHashColumn(WorldGenContext& ctx, int x, int z)
   }
   ctx.world.SetBlock(glm::ivec3(x, y, z), id);
  }
- ctx.MarkDirtyColumn(x, z, 0, surfaceY);
+ FillFluidColumn(ctx, x, z, surfaceY);
 }
 
 void FillFlatColumn(WorldGenContext& ctx, int x, int z)

@@ -27,6 +27,13 @@ void WorldGenContext::ResolveBlockIds()
  resolve("clay", clay);
  resolve("ice", ice);
  resolve("hellrock", hellrock);
+ resolve("water", water);
+ resolve("lava", lava);
+ resolve("fire", fire);
+ if (settings.fillWater && water == BLOCK_AIR) {
+  std::cerr << "WorldGen: block type 'water' not loaded — fill_water will have no effect"
+            << std::endl;
+ }
  if (gravel == BLOCK_AIR) {
   gravel = stone;
  }
