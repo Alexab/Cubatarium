@@ -1,0 +1,12 @@
+﻿{
+    "name":  "blockDiamond",
+    "id":  33,
+    "textures":  [
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond"
+                 ]
+}

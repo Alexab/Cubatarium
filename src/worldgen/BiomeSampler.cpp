@@ -9,6 +9,9 @@ BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm)
  if (temperature > 0.65f && moisture < 0.35f) {
   return BiomeId::Desert;
  }
+ if (temperature < 0.25f && moisture < 0.6f) {
+  return BiomeId::Tundra;
+ }
  if (localHeightNorm > 0.7f) {
   return BiomeId::Hills;
  }
@@ -44,9 +47,13 @@ BiomeSurfaceRule BiomeSampler::SurfaceRule(BiomeId biome, const WorldGenContext&
   rule.surface = ctx.sand;
   rule.subsurface = ctx.sandstone != BLOCK_AIR ? ctx.sandstone : ctx.sand;
   break;
+ case BiomeId::Tundra:
+  rule.surface = ctx.snow != BLOCK_AIR ? ctx.snow : ctx.stone;
+  rule.subsurface = ctx.dirt;
+  break;
  case BiomeId::Hills:
   rule.surface = ctx.stone;
-  rule.subsurface = ctx.stone;
+  rule.subsurface = ctx.gravel != BLOCK_AIR ? ctx.gravel : ctx.stone;
   break;
  case BiomeId::Forest:
  case BiomeId::Plains:

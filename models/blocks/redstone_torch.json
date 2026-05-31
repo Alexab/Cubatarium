@@ -1,0 +1,12 @@
+﻿{
+    "name":  "redstone_torch",
+    "id":  128,
+    "textures":  [
+                     "redtorch",
+                     "redtorch",
+                     "redtorch",
+                     "redtorch",
+                     "redtorch",
+                     "redtorch"
+                 ]
+}

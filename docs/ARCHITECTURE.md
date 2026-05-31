@@ -50,11 +50,44 @@ Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo
 5. If still empty: procedural terrain (`GenerateHeightmap` or `GenerateFlat`)
 6. `RebuildBlockMesh`; camera restored from user data (not spawn reset)
 
+## Blocks
+
+| Path | Role |
+|------|------|
+| `textures/blocks/*.png` | Base face textures (`TextureBaseStorage`; stem = filename without `.png`) |
+| `models/blocks/*.json` | Block types → `TextureCubeStorage` → `BlockRegistry` |
+
+Each block JSON requires `name`, `id` (non-zero), and `textures`: six strings in face order **[+Z, +X, −Z, −X, +Y, −Y]**.
+
+Import or refresh blocks from an external pack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/import_blocks.ps1
+```
+
+Manifest: `tools/block_manifest.json` (+ optional `tools/block_manifest_supplement.json` for extended blocks). Run `tools/import_blocks.ps1` to copy static PNGs from the external pack and regenerate `models/blocks/*.json`. CMake copies `textures/` to `bin/textures` on build (like `models/`).
+
+### Worldgen surface blocks (biomes)
+
+| Biome | Surface | Subsurface |
+|-------|---------|------------|
+| Plains / Forest | grass | dirt |
+| Desert | sand | sandstone (fallback sand) |
+| Hills | stone | gravel (fallback stone) |
+| Tundra | snow (fallback stone) | dirt |
+
+Trees: prefabs `tree_small` / `tree_large` use block types `tree_log` (bark `tree_side`, rings `tree_top`) and `tree_leaves` (`leaves_opaque`). Requires `procedural.trees: true` in config.
+
+### Animated blocks (not implemented)
+
+Deferred: `water`, `water_flow`, `lava`, `lava_flow`, `fire_0`, `fire_1`, `portal` (+ `.txt` frame metadata in MC packs). No fluid collision or UV animation tick yet.
+
 ## Asset paths
 
 | Path | Role |
 |------|------|
 | `models/blocks/` | Block types → `BlockRegistry` |
+| `textures/blocks/` | Per-face PNG atlases for blocks |
 | `models/objects/` | Legacy brush prototypes (`SingleCube` only) |
 | `prefabs/` | Multi-block templates → `PrefabLibrary` |
 | `prefabs/user/` | Drop-in user prefabs (optional) |
@@ -65,7 +98,7 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 - **ObjectStorage** — legacy single-block brush catalog (`TakeObject` deprecated).
 - **PrefabLibrary** — JSON templates with sparse `blocks[]` and `anchor`; placement via `World::PlacePrefab`.
-- **Hotbar** — `User` slots `{ kind: block|prefab, id }`; slot 9 defaults to prefab `tree_small`.
+- **Hotbar** — `0–9` block hotbar; `Alt+0–9` prefab hotbar (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
 
 ## Streaming
 

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "log_jungle",
+    "id":  67,
+    "textures":  [
+                     "tree_jungle",
+                     "tree_jungle",
+                     "tree_jungle",
+                     "tree_jungle",
+                     "wood_jungle",
+                     "wood_jungle"
+                 ]
+}

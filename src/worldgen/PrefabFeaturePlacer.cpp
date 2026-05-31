@@ -53,15 +53,30 @@ bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biom
  if (biome != BiomeId::Forest && biome != BiomeId::Plains) {
   return false;
  }
- if (FeatureHash(x, z, ctx.settings.seed + params.treeSeedOffset) % static_cast<uint32_t>(params.treeSpacingMod) != 0) {
-  return false;
- }
- if (biome == BiomeId::Plains &&
-     (FeatureHash(x, z, ctx.settings.seed + params.treeSeedOffset + 7) % 5) != 0) {
-  return false;
- }
+
  const glm::ivec3 anchor(x, surfaceY + 1, z);
- return PlacePrefabAt(ctx, params.treePrefabName, anchor);
+ const uint32_t seed = ctx.settings.seed;
+
+ if (biome == BiomeId::Forest) {
+  if (FeatureHash(x, z, seed + params.treeLargeSeedOffset) %
+          static_cast<uint32_t>(params.treeLargeSpacingModForest) == 0) {
+   return PlacePrefabAt(ctx, params.treeLargePrefabName, anchor);
+  }
+  if (FeatureHash(x, z, seed + params.treeSeedOffset) %
+          static_cast<uint32_t>(params.treeSmallSpacingModForest) == 0) {
+   return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
+  }
+  return false;
+ }
+
+ if (FeatureHash(x, z, seed + params.treeSeedOffset) %
+         static_cast<uint32_t>(params.treeSmallSpacingModPlains) != 0) {
+  return false;
+ }
+ if (FeatureHash(x, z, seed + params.treeSeedOffset + 7) % 5 != 0) {
+  return false;
+ }
+ return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
 }
 
 } // namespace cutum

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "oreEmerald",
+    "id":  28,
+    "textures":  [
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald"
+                 ]
+}

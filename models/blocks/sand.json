@@ -1,4 +1,12 @@
-{
- "name": "sand",
- "textures": ["sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top", "sandstone_top"]
+﻿{
+    "name":  "sand",
+    "id":  11,
+    "textures":  [
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand"
+                 ]
 }

@@ -189,3 +189,12 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/models")
         COMMENT "Copying models to output directory"
     )
 endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/textures"
+            "${CMAKE_BINARY_DIR}/textures"
+        COMMENT "Copying textures to output directory"
+    )
+endif()

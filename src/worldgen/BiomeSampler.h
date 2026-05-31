@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-enum class BiomeId { Plains, Forest, Desert, Hills };
+enum class BiomeId { Plains, Forest, Desert, Hills, Tundra };
 
 struct BiomeSurfaceRule {
  BlockId surface{BLOCK_AIR};

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "obsidian",
+    "id":  16,
+    "textures":  [
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian"
+                 ]
+}

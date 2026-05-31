@@ -1,0 +1,12 @@
+﻿{
+    "name":  "flower_pot",
+    "id":  167,
+    "textures":  [
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot"
+                 ]
+}

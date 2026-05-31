@@ -22,6 +22,17 @@ void WorldGenContext::ResolveBlockIds()
  resolve("sand", sand);
  resolve("sandstone", sandstone);
  resolve("wood", wood);
+ resolve("gravel", gravel);
+ resolve("snow", snow);
+ resolve("clay", clay);
+ resolve("ice", ice);
+ resolve("hellrock", hellrock);
+ if (gravel == BLOCK_AIR) {
+  gravel = stone;
+ }
+ if (snow == BLOCK_AIR) {
+  snow = stone;
+ }
  if (sand == BLOCK_AIR) {
   sand = sandstone != BLOCK_AIR ? sandstone : stone;
  }

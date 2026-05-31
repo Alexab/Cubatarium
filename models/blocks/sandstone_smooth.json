@@ -1,0 +1,12 @@
+﻿{
+    "name":  "sandstone_smooth",
+    "id":  81,
+    "textures":  [
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth"
+                 ]
+}

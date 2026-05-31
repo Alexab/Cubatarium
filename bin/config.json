@@ -1,8 +1,8 @@
 {
     "default_user": "Username",
-    "default_world": "World_011",
+    "default_world": "World_020",
     "procedural": {
-        "caves": false,
+        "caves": true,
         "flat_surface_y": 3,
         "generator": "overworld_biomes",
         "max_height": 12,
@@ -19,5 +19,5 @@
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "terrain": "overworld_biomes",
-    "world_seed": 125673074
+    "world_seed": 125673083
 }

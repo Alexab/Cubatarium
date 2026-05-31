@@ -1,0 +1,12 @@
+﻿{
+    "name":  "brown_mushroom",
+    "id":  153,
+    "textures":  [
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown"
+                 ]
+}

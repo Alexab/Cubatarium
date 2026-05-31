@@ -1,0 +1,12 @@
+﻿{
+    "name":  "leaves_transparent",
+    "id":  68,
+    "textures":  [
+                     "leaves",
+                     "leaves",
+                     "leaves",
+                     "leaves",
+                     "leaves",
+                     "leaves"
+                 ]
+}

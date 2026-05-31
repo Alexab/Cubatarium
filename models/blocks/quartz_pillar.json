@@ -1,0 +1,12 @@
+﻿{
+    "name":  "quartz_pillar",
+    "id":  92,
+    "textures":  [
+                     "quartzblock_lines",
+                     "quartzblock_lines",
+                     "quartzblock_lines",
+                     "quartzblock_lines",
+                     "quartzblock_lines_top",
+                     "quartzblock_lines_top"
+                 ]
+}

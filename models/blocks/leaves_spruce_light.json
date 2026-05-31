@@ -1,0 +1,12 @@
+﻿{
+    "name":  "leaves_spruce_light",
+    "id":  168,
+    "textures":  [
+                     "leaves_spruce",
+                     "leaves_spruce",
+                     "leaves_spruce",
+                     "leaves_spruce",
+                     "leaves_spruce",
+                     "leaves_spruce"
+                 ]
+}

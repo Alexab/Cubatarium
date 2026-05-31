@@ -1,0 +1,12 @@
+﻿{
+    "name":  "carrots",
+    "id":  147,
+    "textures":  [
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3"
+                 ]
+}

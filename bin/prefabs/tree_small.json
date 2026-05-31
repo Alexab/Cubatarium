@@ -3,11 +3,14 @@
   "version": 1,
   "anchor": [0, 0, 0],
   "blocks": [
-    { "dx": 0, "dy": 0, "dz": 0, "type": "wood" },
-    { "dx": 0, "dy": 1, "dz": 0, "type": "wood" },
-    { "dx": 0, "dy": 2, "dz": 0, "type": "wood" },
-    { "dx": -1, "dy": 3, "dz": 0, "type": "grass" },
-    { "dx": 0, "dy": 3, "dz": 0, "type": "grass" },
-    { "dx": 1, "dy": 3, "dz": 0, "type": "grass" }
+    { "dx": 0, "dy": 0, "dz": 0, "type": "tree_log" },
+    { "dx": 0, "dy": 1, "dz": 0, "type": "tree_log" },
+    { "dx": 0, "dy": 2, "dz": 0, "type": "tree_log" },
+    { "dx": 0, "dy": 3, "dz": 0, "type": "tree_log" },
+    { "dx": -1, "dy": 4, "dz": 0, "type": "tree_leaves" },
+    { "dx": 0, "dy": 4, "dz": 0, "type": "tree_leaves" },
+    { "dx": 1, "dy": 4, "dz": 0, "type": "tree_leaves" },
+    { "dx": 0, "dy": 4, "dz": -1, "type": "tree_leaves" },
+    { "dx": 0, "dy": 4, "dz": 1, "type": "tree_leaves" }
   ]
 }

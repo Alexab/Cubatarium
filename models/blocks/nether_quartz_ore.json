@@ -1,0 +1,12 @@
+﻿{
+    "name":  "nether_quartz_ore",
+    "id":  74,
+    "textures":  [
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz"
+                 ]
+}

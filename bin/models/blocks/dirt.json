@@ -1,5 +1,12 @@
-{
-  "name": "dirt",
-  "id": 12,
-  "textures": ["stone", "stone", "stone", "stone", "stone", "stone"]
+﻿{
+    "name":  "dirt",
+    "id":  12,
+    "textures":  [
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt"
+                 ]
 }
