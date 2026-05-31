@@ -118,6 +118,9 @@ public:
  };
  StepUpProbe ProbeStepUp(const glm::vec3& position, const glm::vec3& horiz, float size,
                          float maxTriggerDistance) const;
+ /// Landing position on a step when within range; false if already on the step or blocked.
+ bool GetStepUpLanding(const glm::vec3& pos, const glm::vec3& horiz, float size,
+                       float maxTriggerDistance, glm::vec3& outLanding) const;
  /// Snap onto a 1-block ledge when within `maxTriggerDistance` of its riser (instant, one frame).
  bool TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
                 float maxTriggerDistance) const;

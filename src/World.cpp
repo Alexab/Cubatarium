@@ -1092,8 +1092,8 @@ World::StepUpProbe World::ProbeStepUp(const glm::vec3& position, const glm::vec3
  return probe;
 }
 
-bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
-                      float maxTriggerDistance) const
+bool World::GetStepUpLanding(const glm::vec3& pos, const glm::vec3& horiz, float size,
+                             float maxTriggerDistance, glm::vec3& outLanding) const
 {
  const StepUpProbe probe = ProbeStepUp(pos, horiz, size, maxTriggerDistance);
  if (!probe.valid) {
@@ -1115,19 +1115,31 @@ bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
   return false;
  }
 
- glm::vec3 target = probe.targetPos - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
- if (!CheckCollision(target, size)) {
-  pos = target;
+ outLanding = probe.targetPos
+              - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
+ if (!CheckCollision(outLanding, size)) {
   return true;
  }
 
+ glm::vec3 resolved = pos;
  const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
- const glm::vec3 stepped = ResolveMovement(pos, stepDelta, size);
- const float movedH = glm::length(glm::vec2(stepped.x - pos.x, stepped.z - pos.z));
- if (movedH < 0.08f) {
+ resolved = ResolveMovement(pos, stepDelta, size);
+ const float movedH = glm::length(glm::vec2(resolved.x - pos.x, resolved.z - pos.z));
+ if (movedH < 0.08f || CheckCollision(resolved, size)) {
   return false;
  }
- pos = stepped;
+ outLanding = resolved;
+ return true;
+}
+
+bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
+                      float maxTriggerDistance) const
+{
+ glm::vec3 landing = pos;
+ if (!GetStepUpLanding(pos, horiz, size, maxTriggerDistance, landing)) {
+  return false;
+ }
+ pos = landing;
  return true;
 }
 

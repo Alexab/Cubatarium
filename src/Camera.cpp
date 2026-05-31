@@ -288,8 +288,39 @@ glm::vec3 Camera::GetMoveIntentDir() const
  return glm::vec3(0.0f);
 }
 
+bool Camera::TickStepUpAnimation(const World* /*world*/, float dt)
+{
+ if (!stepUpAnim_.active) {
+  return false;
+ }
+
+ stepUpAnim_.elapsed += dt;
+ float t = stepUpAnim_.elapsed / kStepUpAnimDuration;
+ if (t >= 1.0f) {
+  Position = stepUpAnim_.targetPos;
+  stepUpAnim_.active = false;
+  verticalVelocity_ = 0.0f;
+  onGround_ = true;
+  UpdatePose();
+  return true;
+ }
+
+ t = std::min(1.0f, t);
+ const float ease = 1.0f - (1.0f - t) * (1.0f - t);
+ const float arc = std::sin(t * 3.14159265f) * 0.14f;
+ glm::vec3 desired = stepUpAnim_.startPos + (stepUpAnim_.targetPos - stepUpAnim_.startPos) * ease;
+ desired.y += arc;
+ Position = desired;
+ UpdatePose();
+ return true;
+}
+
 bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 {
+ if (TickStepUpAnimation(world, deltaTime)) {
+  return true;
+ }
+
  UpdateMoveIntentFromKeys();
 
  glm::vec3 shift = ComputeHorizontalShift(deltaTime);
@@ -307,9 +338,6 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
   newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
  }
 
- const float movedH =
-     glm::length(glm::vec2(newPos.x - Position.x, newPos.z - Position.z));
- const float wantH = glm::length(glm::vec2(shift.x, shift.z));
  const bool grounded =
      world->HasGroundSupport(Position, ViewObjectSize) || onGround_;
  const glm::vec3 intent = GetMoveIntentDir();
@@ -318,19 +346,29 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
  if (world->IsStepUpEnabled() && !fluid.inFluid && grounded
      && verticalVelocity_ <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
   const World::StepUpProbe probe = world->ProbeStepUp(
-      Position, intent, ViewObjectSize, kStepUpTriggerDistance);
+      newPos, intent, ViewObjectSize, kStepUpTriggerDistance);
   if (probe.valid) {
-   glm::vec3 stepPos = newPos;
-   if (world->TryStepUp(stepPos, intent, ViewObjectSize, kStepUpTriggerDistance)) {
-    newPos = stepPos;
-    verticalVelocity_ = 0.0f;
-    onGround_ = true;
-    stepped = true;
+   glm::vec3 landing = newPos;
+   if (!world->GetStepUpLanding(newPos, intent, ViewObjectSize, kStepUpTriggerDistance,
+                               landing)) {
+    landing = probe.targetPos
+              - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
    }
+   stepUpAnim_.active = true;
+   stepUpAnim_.startPos = newPos;
+   stepUpAnim_.targetPos = landing;
+   stepUpAnim_.elapsed = 0.0f;
+   verticalVelocity_ = 0.0f;
+   onGround_ = false;
+   stepped = true;
   }
  }
 
- Position = newPos;
+ if (!stepped) {
+  Position = newPos;
+ } else {
+  TickStepUpAnimation(world, deltaTime);
+ }
  UpdatePose();
  return hasShift || stepped;
 }
@@ -518,6 +556,7 @@ void Camera::ResetVerticalPhysics()
  verticalVelocity_ = 0.0f;
  onGround_ = true;
  suppressNextJump_ = false;
+ stepUpAnim_.active = false;
  spaceWasPressed_ = KeysStatus[GLFW_KEY_SPACE];
  UpdatePose();
 }
@@ -585,6 +624,12 @@ bool Camera::DoMovement(const World* world)
 
  if (!FreeMove && world)
  {
+  if (IsStepUpAnimationActive()) {
+   spaceWasPressed_ = KeysStatus[GLFW_KEY_SPACE];
+   is_moved = true;
+   UpdatePose();
+   return is_moved;
+  }
   if (Position.y < kMinReasonablePlayerY) {
    verticalVelocity_ = 0.0f;
    onGround_ = false;

@@ -74,6 +74,7 @@ public:
  float GetCollisionSize() const { return ViewObjectSize; }
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const { return onGround_; }
+ bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
 
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
@@ -87,6 +88,7 @@ private:
  void UpdateMoveIntentFromKeys();
  glm::vec3 GetMoveIntentDir() const;
  bool ApplyHorizontalMovement(const World* world, float deltaTime);
+ bool TickStepUpAnimation(const World* world, float dt);
  void ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime);
 
  // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -148,6 +150,14 @@ private:
  std::chrono::steady_clock::time_point lastMoveIntentTime_{};
  static constexpr float kStepUpTriggerDistance = 0.36f;
  static constexpr float kStepUpIntentRetainSec = 0.3f;
+ static constexpr float kStepUpAnimDuration = 0.14f;
+ struct StepUpAnimation {
+  bool active{false};
+  glm::vec3 startPos{0.0f};
+  glm::vec3 targetPos{0.0f};
+  float elapsed{0.0f};
+ };
+ StepUpAnimation stepUpAnim_;
  bool spaceWasPressed_{false};
  bool suppressNextJump_{false};
  std::chrono::steady_clock::time_point lastSpacePressTime_{};
