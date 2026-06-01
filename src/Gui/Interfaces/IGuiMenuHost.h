@@ -15,8 +15,8 @@ public:
     virtual ~IGuiMenuHost() = default;
 
     virtual void ReturnToMainMenu() = 0;
-    virtual void RequestConfirmSaveAndProceed(const std::string& message,
-                                              std::function<void()> proceed) = 0;
+    /// Saves the active world if a session is running, then runs @p proceed next frame.
+    virtual void SaveIfNeededAndProceed(std::function<void()> proceed) = 0;
 
     virtual AppSettingsSnapshot LoadAppSettingsSnapshot() const = 0;
     virtual ProceduralSettings LoadProceduralTemplate() const = 0;

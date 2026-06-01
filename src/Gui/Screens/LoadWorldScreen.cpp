@@ -64,10 +64,7 @@ void LoadWorldScreen::OnLoad()
 
     const std::string worldName = names[static_cast<size_t>(idx)];
 
-    host_->RequestConfirmSaveAndProceed(
-
-        "Save the current world and load '" + worldName + "'?",
-
+    host_->SaveIfNeededAndProceed(
         [this, worldName]() { host_->LoadSelectedWorld(worldName); });
 
 }

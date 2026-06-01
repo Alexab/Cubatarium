@@ -23,7 +23,7 @@ void NewWorldScreen::OnCreate()
     }
     const ProceduralSettings settings = worldForm_->ReadSettings();
     auto create = [this, settings]() { host_->CreateNewWorldWithSettings(settings); };
-    host_->RequestConfirmSaveAndProceed("Save the current world and create a new one?", create);
+    host_->SaveIfNeededAndProceed(create);
 }
 
 void NewWorldScreen::Build(GuiContext& ctx)

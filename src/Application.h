@@ -71,8 +71,7 @@ public:
     const UiSettings& GetUiSettings() const { return uiSettings_; }
 
     void ReturnToMainMenu() override;
-    void RequestConfirmSaveAndProceed(const std::string& message,
-                                      std::function<void()> proceed) override;
+    void SaveIfNeededAndProceed(std::function<void()> proceed) override;
     AppSettingsSnapshot LoadAppSettingsSnapshot() const override;
     ProceduralSettings LoadProceduralTemplate() const override;
     void SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
@@ -89,6 +88,7 @@ public:
 private:
     void ShowMainMenu();
     void SaveActiveWorldIfNeeded();
+    void ScheduleDeferredMenuAction(std::function<void()> action);
     void EnterGameAfterWorldChange();
     void ShowInGameHud();
     void SyncCursorVisibility();
@@ -120,6 +120,7 @@ private:
     bool worldSessionActive_{false};
     bool pendingEnterGame_{false};
     bool pendingQuit_{false};
+    std::function<void()> pendingMenuAction_;
     bool quitRequested_{false};
 
     std::unique_ptr<GuiIconSource> iconSource_;

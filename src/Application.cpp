@@ -12,7 +12,6 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/GuiIconSource.h"
 #include "Gui/PrefabIconCache.h"
-#include "Gui/Screens/ConfirmDialogScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/NewWorldScreen.h"
@@ -236,24 +235,18 @@ void Application::EnterGameAfterWorldChange()
     EnterInGameInputState();
 }
 
-void Application::RequestConfirmSaveAndProceed(const std::string& message,
-                                               std::function<void()> proceed)
+void Application::ScheduleDeferredMenuAction(std::function<void()> action)
+{
+    pendingMenuAction_ = std::move(action);
+}
+
+void Application::SaveIfNeededAndProceed(std::function<void()> proceed)
 {
     if (!proceed) {
         return;
     }
-    if (!worldSessionActive_) {
-        proceed();
-        return;
-    }
-    guiContext_->SetScreen(std::make_unique<ConfirmDialogScreen>(
-        this, message,
-        [this, proceed]() {
-            SaveActiveWorldIfNeeded();
-            proceed();
-        },
-        [this]() { ShowMainMenu(); }));
-    SyncCursorVisibility();
+    SaveActiveWorldIfNeeded();
+    ScheduleDeferredMenuAction(std::move(proceed));
 }
 
 AppSettingsSnapshot Application::LoadAppSettingsSnapshot() const
@@ -434,6 +427,11 @@ void Application::Update(double dt)
     if (pendingQuit_) {
         pendingQuit_ = false;
         RequestQuit();
+    }
+    if (pendingMenuAction_) {
+        auto action = std::move(pendingMenuAction_);
+        pendingMenuAction_ = nullptr;
+        action();
     }
 
     if (state_ == AppState::MainMenu) {

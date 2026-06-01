@@ -122,7 +122,6 @@ set(SOURCES
     src/Gui/Screens/SettingsScreen.cpp
     src/Gui/Screens/NewWorldScreen.cpp
     src/Gui/Screens/LoadWorldScreen.cpp
-    src/Gui/Screens/ConfirmDialogScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
@@ -208,7 +207,6 @@ set(HEADERS
     src/Gui/Screens/SettingsScreen.h
     src/Gui/Screens/NewWorldScreen.h
     src/Gui/Screens/LoadWorldScreen.h
-    src/Gui/Screens/ConfirmDialogScreen.h
     src/Gui/Screens/InGameHudScreen.h
     src/Gui/Screens/ConsoleScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
