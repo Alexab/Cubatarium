@@ -15,9 +15,9 @@
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "render": {
-        "greedy_meshing": false,
-        "face_quads": false,
-        "frustum_culling": false,
-        "batch_cache": false
+        "greedy_meshing": true,
+        "face_quads": true,
+        "frustum_culling": true,
+        "batch_cache": true
     }
 }

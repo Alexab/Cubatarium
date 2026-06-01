@@ -12,8 +12,10 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 
 | Flag | Effect |
 |------|--------|
-| `greedy_meshing` | `false`: one instanced **cube** per exposed solid block (old). `true`: GreedyMesher merged quads. |
-| `face_quads` | **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
+| `greedy_meshing` | `true` (default): GreedyMesher merged quads; **required** for water, lava, fire. `false`: legacy instanced cubes (solids only). |
+| `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
+| `frustum_culling` | `true` (default): skip chunks outside view frustum. |
+| `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged. |
 | `frustum_culling` | Skip off-screen chunks in the instance list. Skips near plane; chunk AABB expanded by 2 blocks. |
 | `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged (legacy instanced path only). |
 

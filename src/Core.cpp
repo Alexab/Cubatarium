@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <optional>
+#include <system_error>
 #include <chrono>
 #include <iostream>
 #include <fstream>
@@ -44,17 +46,18 @@ namespace {
 
 constexpr int kMaxProjectRootSearchDepth = 8;
 
-std::filesystem::path FindProjectRoot(std::filesystem::path start)
+std::optional<std::filesystem::path> TryFindProjectRoot(std::filesystem::path start)
 {
- const auto startPath = start;
  for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth) {
   const auto textures_dir = start / "textures" / "blocks";
   const auto models_blocks_dir = start / "models" / "blocks";
   const auto prefabs_dir = start / "prefabs";
+  const auto shaders_dir = start / "shaders";
   const bool hasTextures = std::filesystem::exists(textures_dir);
   const bool hasModels = std::filesystem::exists(models_blocks_dir);
   const bool hasPrefabs = std::filesystem::exists(prefabs_dir);
-  if (hasTextures && hasModels && hasPrefabs) {
+  const bool hasShaders = std::filesystem::exists(shaders_dir / "vshader_greedy.glsl");
+  if (hasTextures && hasModels && hasPrefabs && hasShaders) {
    return start;
   }
   if (!start.has_parent_path()) {
@@ -62,7 +65,15 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
   }
   start = start.parent_path();
  }
- return startPath;
+ return std::nullopt;
+}
+
+std::filesystem::path FindProjectRoot(std::filesystem::path start)
+{
+ if (auto root = TryFindProjectRoot(start)) {
+  return *root;
+ }
+ return start;
 }
 
 std::filesystem::path GetExecutableDirectory()
@@ -167,10 +178,19 @@ bool Core::ShouldCreateWorldOnStartup() const
 
 void Core::LoadSystem(const std::string& config_file_name)
 {
- const auto cwd = std::filesystem::current_path();
- const auto project_dir = FindProjectRoot(cwd);
-
  exeDir_ = GetExecutableDirectory();
+ const auto cwd = std::filesystem::current_path();
+ std::filesystem::path project_dir = cwd;
+ if (auto fromExe = TryFindProjectRoot(exeDir_)) {
+  project_dir = *fromExe;
+ } else if (auto fromCwd = TryFindProjectRoot(cwd)) {
+  project_dir = *fromCwd;
+ } else {
+  project_dir = FindProjectRoot(cwd);
+ }
+ std::error_code pathEc;
+ std::filesystem::current_path(project_dir, pathEc);
+
  configFilePath_ = exeDir_ / config_file_name;
  WorldPath = exeDir_ / "worlds";
  WorkDir = project_dir;
@@ -207,16 +227,16 @@ void Core::LoadSystem(const std::string& config_file_name)
       }
       if (d.contains("render") && d["render"].is_object()) {
        const json& r = d["render"];
-       renderSettings_.greedyMeshing = r.value("greedy_meshing", false);
-       renderSettings_.faceQuads = r.value("face_quads", false);
-       renderSettings_.frustumCulling = r.value("frustum_culling", false);
-       renderSettings_.batchCache = r.value("batch_cache", false);
+       renderSettings_.greedyMeshing = r.value("greedy_meshing", true);
+       renderSettings_.faceQuads = r.value("face_quads", true);
+       renderSettings_.frustumCulling = r.value("frustum_culling", true);
+       renderSettings_.batchCache = r.value("batch_cache", true);
        if (renderSettings_.greedyMeshing && !renderSettings_.faceQuads) {
         std::cout << "Render: greedy_meshing enabled — auto-enabling face_quads" << std::endl;
         renderSettings_.faceQuads = true;
        }
       } else {
-       renderSettings_ = RenderSettings::Legacy();
+       renderSettings_ = RenderSettings::Default();
       }
      } else {
       default_world_name.clear();
@@ -227,7 +247,7 @@ void Core::LoadSystem(const std::string& config_file_name)
       proceduralSettings_.seed = worldSeed_;
       renderDistanceChunks_ = 4;
       streamingEnabled_ = true;
-      renderSettings_ = RenderSettings::Legacy();
+      renderSettings_ = RenderSettings::Default();
      }
 
      texture_base_storage_file_name = project_dir / "textures" / "blocks";
