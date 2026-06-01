@@ -29,6 +29,7 @@
 /bin/textures/
 /bin/prefabs/
 /bin/resources/
+/bin/content/
 /bin/config.json
 
 # CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
