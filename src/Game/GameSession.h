@@ -34,6 +34,7 @@ public:
     void StartGame() override;
     void QuitApplication() override;
     void OpenSettings() override;
+    bool HasPausedSession() const override;
 
     std::array<HotbarSlotView, 10> GetBlockSlots() const override;
     std::array<HotbarSlotView, 10> GetPrefabSlots() const override;

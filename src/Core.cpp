@@ -327,6 +327,9 @@ void Core::EnterGame()
      if (default_user_name.empty()) {
       default_user_name = WorldInstance->GetCurrentUserName();
      }
+     if (WorldInstance->GetCurrentUser() == nullptr) {
+      WorldInstance->GenerateUsers();
+     }
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
        user->SetActiveBlockIndex(1);
@@ -425,10 +428,6 @@ void Core::CreateWorldFromProceduralConfig()
 
 void Core::CreateNewWorldWithCurrentSettings()
 {
- if (WorldInstance->GetCurrentUser() == nullptr) {
-  WorldInstance->GenerateUsers();
- }
-
  const std::string new_world_name = AllocateNextWorldName();
  default_world_name = new_world_name;
  activeWorldFolder_ = WorldFolderPath(new_world_name);
@@ -439,6 +438,9 @@ void Core::CreateNewWorldWithCurrentSettings()
 
  WorldInstance->SetProceduralSettings(proceduralSettings_);
  WorldInstance->Create(new_world_name);
+ if (WorldInstance->GetCurrentUser() == nullptr) {
+  WorldInstance->GenerateUsers();
+ }
  SaveWorld(new_world_name);
  LoadWorldList(WorldPath.string());
 }

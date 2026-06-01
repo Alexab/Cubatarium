@@ -40,12 +40,7 @@ void GuiButton::Draw(GuiRenderer& renderer)
     }
     renderer.DrawFilledRect(bounds_, StateColor());
     renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
-    const float scale = static_cast<float>(theme_->fontSizeBody);
-    const auto size = glm::vec2(0.0f); // approximate center
-    (void)size;
-    renderer.DrawText(label_, bounds_.x + theme_->padding,
-                      bounds_.y + (bounds_.h - theme_->fontSizeBody) / 2, scale,
-                      theme_->textPrimary);
+    renderer.DrawTextCenteredInRect(bounds_, label_, theme_->textPrimary);
 }
 
 bool GuiButton::OnMouseDown(const GuiMouseEvent& event)
@@ -67,12 +62,13 @@ bool GuiButton::OnMouseUp(const GuiMouseEvent& event)
         return false;
     }
     const bool inside = bounds_.Contains(event.x, event.y);
-    if (pressedInside_ && inside && event.button == GuiMouseButton::Left && onClick_) {
+    const bool wasPressed = pressedInside_;
+    if (wasPressed && inside && event.button == GuiMouseButton::Left && onClick_) {
         onClick_();
     }
     pressedInside_ = false;
     state_ = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
-    return inside;
+    return wasPressed || inside;
 }
 
 bool GuiButton::OnMouseMove(const GuiMouseEvent& event)

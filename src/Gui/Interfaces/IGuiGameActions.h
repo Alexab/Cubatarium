@@ -9,6 +9,8 @@ public:
     virtual void StartGame() = 0;
     virtual void QuitApplication() = 0;
     virtual void OpenSettings() = 0;
+  /// true после выхода в меню по Esc — мир уже загружен, кнопка Play = Resume.
+    virtual bool HasPausedSession() const { return false; }
 };
 
 } // namespace cutum

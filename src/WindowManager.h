@@ -52,6 +52,9 @@ public:
     
     GLFWwindow* GetWindow() const { return window; }
 
+    /// Сброс ПКМ-обзора (например при Esc → меню).
+    void ResetGameplayMouseCapture();
+
     void SetSkyColor(float r, float g, float b, float a = 1.0f);
     void SetSkyColor(const glm::vec4& color);
     glm::vec4 GetSkyColor() const;

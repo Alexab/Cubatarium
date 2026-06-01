@@ -85,6 +85,7 @@ set(SOURCES
     src/ShaderManager.cpp
     src/TextRenderer.cpp
     src/Application.cpp
+    src/CursorCapture.cpp
     src/Game/GameSession.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
@@ -149,6 +150,7 @@ set(HEADERS
     src/TextRenderer.h
     src/stb_image.h
     src/Application.h
+    src/CursorCapture.h
     src/Game/GameSession.h
     src/Content/ContentType.h
     src/Content/ContentTypeRegistry.h

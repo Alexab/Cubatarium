@@ -79,6 +79,16 @@ void UiQuadBatch::End()
     }
 }
 
+void UiQuadBatch::GuiRectToShaderCoords(const GuiRect& rect, float& x0, float& y0, float& x1,
+                                        float& y1) const
+{
+    x0 = static_cast<float>(rect.x);
+    x1 = static_cast<float>(rect.x + rect.w);
+    const float h = static_cast<float>(windowHeight_);
+    y0 = h - static_cast<float>(rect.y + rect.h);
+    y1 = h - static_cast<float>(rect.y);
+}
+
 void UiQuadBatch::AddQuad(float x0, float y0, float x1, float y1, const glm::vec4& color)
 {
     if (color != currentColor_ && !vertices_.empty()) {
@@ -120,10 +130,11 @@ void UiQuadBatch::DrawFilledRect(const GuiRect& rect, const glm::vec4& color)
     if (rect.w <= 0 || rect.h <= 0) {
         return;
     }
-    const float x0 = static_cast<float>(rect.x);
-    const float y0 = static_cast<float>(rect.y);
-    const float x1 = static_cast<float>(rect.x + rect.w);
-    const float y1 = static_cast<float>(rect.y + rect.h);
+    float x0 = 0.0f;
+    float y0 = 0.0f;
+    float x1 = 0.0f;
+    float y1 = 0.0f;
+    GuiRectToShaderCoords(rect, x0, y0, x1, y1);
     AddQuad(x0, y0, x1, y1, color);
 }
 

@@ -17,6 +17,7 @@ void InGameHudScreen::Build(GuiContext& ctx)
 {
     (void)ctx;
     auto panel = std::make_unique<GuiPanel>(theme_);
+    panel->SetDrawBackground(false);
     rootPanel_ = panel.get();
     root_ = std::move(panel);
     RebuildHotbar();
@@ -35,13 +36,23 @@ void InGameHudScreen::RebuildHotbar()
     // Simpler: build slots each update on existing panel
 }
 
+void InGameHudScreen::SetViewportSize(int width, int height)
+{
+    if (width > 0) {
+        viewportW_ = width;
+    }
+    if (height > 0) {
+        viewportH_ = height;
+    }
+}
+
 void InGameHudScreen::Update(double /*dt*/)
 {
     if (!rootPanel_ || !hotbar_ || !theme_) {
         return;
     }
-    const int w = 1280;
-    const int h = 720;
+    const int w = viewportW_;
+    const int h = viewportH_;
     rootPanel_->SetBounds({0, 0, w, h});
 
     if (blockSlots_.empty()) {

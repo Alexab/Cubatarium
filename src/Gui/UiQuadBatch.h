@@ -30,6 +30,8 @@ public:
 
 private:
     void AddQuad(float x0, float y0, float x1, float y1, const glm::vec4& color);
+    /// GuiRect — top-left origin; shader expects bottom-left pixel Y.
+    void GuiRectToShaderCoords(const GuiRect& rect, float& x0, float& y0, float& x1, float& y1) const;
 
     std::shared_ptr<ShaderProgram> shader_;
     GLuint vao_{0};

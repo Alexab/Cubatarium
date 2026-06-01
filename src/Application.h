@@ -2,6 +2,7 @@
 #define APPLICATION_H
 
 #include "AppState.h"
+#include "CursorCapture.h"
 #include "UiSettings.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
@@ -37,8 +38,12 @@ public:
 
     void Startup(const std::string& configPath);
     void RequestEnterGame();
+    /// Вход в игру на следующем кадре (безопасно из onClick кнопки меню).
+    void ScheduleEnterGame();
+    void ScheduleQuit();
     void RequestQuit();
     void SetWindow(GLFWwindow* window) { window_ = window; }
+    void HandleWindowFocus(bool focused);
 
     void Update(double dt);
     void ProcessInput();
@@ -51,6 +56,7 @@ public:
     bool RouteScroll(double xoffset, double yoffset);
 
     AppState GetState() const { return state_; }
+    bool HasWorldSession() const { return worldSessionActive_; }
     GuiContext& GetGui() { return *guiContext_; }
     GameSession& GetGameSession() { return *gameSession_; }
     bool WantsCaptureMouse() const;
@@ -60,7 +66,15 @@ public:
 private:
     void ShowMainMenu();
     void ShowInGameHud();
-    void SetCursorForUi(bool uiMode);
+    void ReturnToMainMenu();
+    void SyncCursorVisibility();
+    AppCursorPolicy GetCursorPolicy() const;
+    void EnterInGameInputState();
+    /// Выход из UI-only (Right Alt): обзор снова только по зажатой ПКМ.
+    void RecaptureMouseForLook();
+    bool UsesUiPointer() const;
+    bool BlocksGameMouseLook() const;
+    bool TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed);
 
     std::shared_ptr<Core> core_;
     std::shared_ptr<World> world_;
@@ -78,6 +92,10 @@ private:
     GLFWwindow* window_{nullptr};
     bool consoleOpen_{false};
     bool paletteOpen_{false};
+    bool freeCursor_{false};
+    bool worldSessionActive_{false};
+    bool pendingEnterGame_{false};
+    bool pendingQuit_{false};
     bool quitRequested_{false};
 
     std::unique_ptr<InGameHudScreen> hudScreen_;

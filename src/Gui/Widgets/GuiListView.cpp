@@ -45,8 +45,7 @@ void GuiListView::Draw(GuiRenderer& renderer)
         if (static_cast<int>(i) == selectedIndex_) {
             renderer.DrawFilledRect(row, theme_->buttonHover);
         }
-        renderer.DrawText(items_[i], row.x + theme_->padding, row.y + 2,
-                          static_cast<float>(theme_->fontSizeBody), theme_->textPrimary);
+        renderer.DrawText(items_[i], row.x + theme_->padding, row.y + 2, theme_->textPrimary);
         y += rowHeight_;
     }
     renderer.PopClipRect();

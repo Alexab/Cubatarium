@@ -87,20 +87,25 @@ void GameSession::RegisterCommands()
 void GameSession::StartGame()
 {
     if (application_) {
-        application_->RequestEnterGame();
+        application_->ScheduleEnterGame();
     }
 }
 
 void GameSession::QuitApplication()
 {
     if (application_) {
-        application_->RequestQuit();
+        application_->ScheduleQuit();
     }
 }
 
 void GameSession::OpenSettings()
 {
     AddChatLine("Settings UI is not implemented yet.");
+}
+
+bool GameSession::HasPausedSession() const
+{
+    return application_ && application_->HasWorldSession();
 }
 
 std::array<HotbarSlotView, 10> GameSession::GetBlockSlots() const

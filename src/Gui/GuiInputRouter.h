@@ -24,6 +24,8 @@ public:
     bool WantsCaptureKeyboard() const;
 
     void SetModalKeyboard(bool modal) { modalKeyboard_ = modal; }
+    /// Сброс фокуса/захвата (обязательно при смене экрана — виджеты уничтожаются).
+    void ClearInteractionState();
 
 private:
     GuiWidget* root_{nullptr};

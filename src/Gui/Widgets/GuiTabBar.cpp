@@ -46,7 +46,7 @@ void GuiTabBar::Draw(GuiRenderer& renderer)
                                                                  : theme_->buttonNormal;
         renderer.DrawFilledRect(tabRect, color);
         renderer.DrawText(labels_[i], tabRect.x + theme_->padding, tabRect.y + theme_->padding,
-                          static_cast<float>(theme_->fontSizeBody), theme_->textPrimary);
+                          theme_->textPrimary);
     }
 }
 

@@ -99,14 +99,35 @@ void GuiRenderer::DrawBorderRect(const GuiRect& rect, const glm::vec4& color, in
     quadBatch_.DrawBorderRect(rect, color, thicknessPx);
 }
 
-void GuiRenderer::DrawText(const std::string& text, int x, int y, float scale,
-                           const glm::vec3& color)
+void GuiRenderer::DrawTextCenteredInRect(const GuiRect& rect, const std::string& text,
+                                         const glm::vec3& color)
 {
     if (!textRenderer_ || text.empty()) {
         return;
     }
+    constexpr float kScale = 1.0f;
+    const glm::vec2 size = textRenderer_->GetTextSize(text, kScale);
+    const int x = rect.x + (rect.w - static_cast<int>(size.x)) / 2;
+    const int yTop = rect.y + (rect.h - static_cast<int>(size.y)) / 2;
+    DrawText(text, x, yTop, color);
+}
+
+void GuiRenderer::DrawText(const std::string& text, int x, int yTop, const glm::vec3& color)
+{
+    if (!textRenderer_ || text.empty() || windowHeight_ <= 0) {
+        return;
+    }
     quadBatch_.Flush();
-    textRenderer_->RenderText(text, static_cast<float>(x), static_cast<float>(y), scale, color);
+
+    // FreeType atlas is built at TextRenderer init size; scale is a glyph multiplier (0.7–1.0), not px size.
+    constexpr float kScale = 1.0f;
+    const glm::vec2 size = textRenderer_->GetTextSize(text, kScale);
+    const float baselineY =
+        static_cast<float>(windowHeight_) - static_cast<float>(yTop) - size.y;
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    textRenderer_->RenderText(text, static_cast<float>(x), baselineY, kScale, color);
 }
 
 } // namespace cutum

@@ -42,6 +42,9 @@ void GuiContext::Shutdown()
 
 void GuiContext::SetScreen(std::unique_ptr<GuiScreenBase> screen)
 {
+    if (inputRouter_) {
+        inputRouter_->ClearInteractionState();
+    }
     if (activeScreen_) {
         activeScreen_->OnDetach();
     }
@@ -75,15 +78,20 @@ void GuiContext::Render(int windowWidth, int windowHeight)
     RenderOverlay(*activeScreen_->GetRoot(), windowWidth, windowHeight);
 }
 
-void GuiContext::RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight)
+void GuiContext::RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight,
+                               bool expandRootToViewport)
 {
     if (!renderer_) {
         return;
     }
     renderer_->BeginFrame(windowWidth, windowHeight);
-    GuiRect full{0, 0, windowWidth, windowHeight};
-    root.SetBounds(full);
-    root.UpdateLayout(full);
+    if (expandRootToViewport) {
+        const GuiRect full{0, 0, windowWidth, windowHeight};
+        root.SetBounds(full);
+        root.UpdateLayout(full);
+    } else {
+        root.UpdateLayout(root.GetBounds());
+    }
     root.Draw(*renderer_);
     renderer_->EndFrame();
 }
@@ -97,5 +105,12 @@ bool GuiContext::RouteScroll(const GuiScrollEvent& event) { return inputRouter_ 
 
 bool GuiContext::WantsCaptureMouse() const { return inputRouter_ && inputRouter_->WantsCaptureMouse(); }
 bool GuiContext::WantsCaptureKeyboard() const { return inputRouter_ && inputRouter_->WantsCaptureKeyboard(); }
+
+void GuiContext::ClearInputState()
+{
+    if (inputRouter_) {
+        inputRouter_->ClearInteractionState();
+    }
+}
 
 } // namespace cutum

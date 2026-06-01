@@ -28,7 +28,7 @@ void GuiSlot::Draw(GuiRenderer& renderer)
     }
     if (!label_.empty()) {
         renderer.DrawText(label_, bounds_.x + 2, bounds_.y + bounds_.h - theme_->fontSizeBody - 2,
-                          static_cast<float>(theme_->fontSizeBody - 4), theme_->textSecondary);
+                          theme_->textSecondary);
     }
 }
 

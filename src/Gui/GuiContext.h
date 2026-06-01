@@ -28,7 +28,8 @@ public:
 
     void Update(double dt);
     void Render(int windowWidth, int windowHeight);
-    void RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight);
+    void RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight,
+                       bool expandRootToViewport = true);
 
     bool RouteKey(const GuiKeyEvent& event);
     bool RouteChar(const GuiCharEvent& event);
@@ -39,6 +40,7 @@ public:
 
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
+    void ClearInputState();
 
     GuiRenderer& GetRenderer() { return *renderer_; }
     const GuiTheme& GetTheme() const { return theme_; }

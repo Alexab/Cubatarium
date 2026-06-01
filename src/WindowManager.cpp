@@ -14,6 +14,29 @@
 
 namespace cutum {
 
+namespace {
+
+glm::ivec2 CursorToFramebufferPixels(GLFWwindow* window, float x, float y)
+{
+    if (!window) {
+        return {static_cast<int>(x), static_cast<int>(y)};
+    }
+    int fbW = 0;
+    int fbH = 0;
+    int winW = 0;
+    int winH = 0;
+    glfwGetFramebufferSize(window, &fbW, &fbH);
+    glfwGetWindowSize(window, &winW, &winH);
+    if (winW <= 0 || winH <= 0 || fbW <= 0 || fbH <= 0) {
+        return {static_cast<int>(x), static_cast<int>(y)};
+    }
+    const float sx = static_cast<float>(fbW) / static_cast<float>(winW);
+    const float sy = static_cast<float>(fbH) / static_cast<float>(winH);
+    return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
+}
+
+} // namespace
+
 WindowManager::WindowManager()
     : window(nullptr)
     , windowWidth(1280)
@@ -117,6 +140,13 @@ void WindowManager::SetupCallbacks() {
     glfwSetErrorCallback(ErrorCallback);
     glfwSetWindowCloseCallback(window, WindowCloseCallback);
     glfwSetWindowUserPointer(window, this);
+
+    glfwSetWindowFocusCallback(window, [](GLFWwindow* win, int focused) {
+        auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(win));
+        if (self && self->application_) {
+            self->application_->HandleWindowFocus(focused == GLFW_TRUE);
+        }
+    });
 
     // Configure callbacks for InputManager
     inputManager->SetKeyCallback([this](KeyCode key, KeyState state, int mods) {
@@ -245,8 +275,16 @@ void WindowManager::Update() {
 void WindowManager::Render() {
     if (application_) {
         application_->SetWindow(window);
-        application_->RenderFrame(windowWidth, windowHeight,
-                                  views ? views->GetDurationUpdateMks() : 0.0);
+        int fbW = windowWidth;
+        int fbH = windowHeight;
+        if (window) {
+            glfwGetFramebufferSize(window, &fbW, &fbH);
+            if (fbW > 0 && fbH > 0) {
+                windowWidth = fbW;
+                windowHeight = fbH;
+            }
+        }
+        application_->RenderFrame(fbW, fbH, views ? views->GetDurationUpdateMks() : 0.0);
         return;
     }
 
@@ -390,13 +428,32 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
     }
 }
 
+void WindowManager::ResetGameplayMouseCapture()
+{
+    isMousePressed = false;
+    isLeftMouseButtonPressed = false;
+    if (worldInstance && window) {
+        double x = 0.0;
+        double y = 0.0;
+        glfwGetCursorPos(window, &x, &y);
+        if (auto camera = worldInstance->GetCurrentUserCamera()) {
+            camera->ResetMouseMove(x, y);
+        }
+    }
+}
+
 void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm::vec2 pos) {
+    const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
     const int glfwButton = button == MouseButton::Left   ? GLFW_MOUSE_BUTTON_LEFT
                          : button == MouseButton::Right  ? GLFW_MOUSE_BUTTON_RIGHT
                                                          : GLFW_MOUSE_BUTTON_MIDDLE;
+
+    if (button == MouseButton::Right && !pressed) {
+        isMousePressed = false;
+    }
+
     if (application_ &&
-        application_->RouteMouseButton(glfwButton, pressed,
-                                     static_cast<int>(pos.x), static_cast<int>(pos.y))) {
+        application_->RouteMouseButton(glfwButton, pressed, fbPos.x, fbPos.y)) {
         return;
     }
 
@@ -406,15 +463,18 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
     }
 
     if (application_ && application_->WantsCaptureMouse()) {
+        if (button == MouseButton::Right && !pressed) {
+            isMousePressed = false;
+        }
         return;
     }
 
     if (button == MouseButton::Right) {
         if (pressed) {
-            worldInstance->GetCurrentUserCamera()->ResetMouseMove(pos.x, pos.y);
+            if (auto camera = worldInstance->GetCurrentUserCamera()) {
+                camera->ResetMouseMove(pos.x, pos.y);
+            }
             isMousePressed = true;
-        } else {
-            isMousePressed = false;
         }
     }
     else if (button == MouseButton::Left) {
@@ -445,17 +505,28 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
 
 void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
     (void)delta;
-    if (application_ &&
-        application_->RouteMouseMove(static_cast<int>(pos.x), static_cast<int>(pos.y))) {
+    const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
+    if (application_ && application_->RouteMouseMove(fbPos.x, fbPos.y)) {
         return;
     }
 
-    if (!worldInstance || !isMousePressed) return;
+    if (!worldInstance) {
+        return;
+    }
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
     if (application_ && application_->WantsCaptureMouse()) {
         return;
     }
-    
-    worldInstance->GetCurrentUserCamera()->UpdateMouseMove(worldInstance, pos.x, pos.y);
+
+    if (!isMousePressed) {
+        return;
+    }
+
+    if (auto camera = worldInstance->GetCurrentUserCamera()) {
+        camera->UpdateMouseMove(worldInstance, pos.x, pos.y);
+    }
 }
 
 void WindowManager::HandleWindowResizeEvent(int width, int height) {
@@ -463,9 +534,16 @@ void WindowManager::HandleWindowResizeEvent(int width, int height) {
     windowHeight = height;
     glViewport(0, 0, width, height);
     
+    const float aspect = static_cast<float>(width) / static_cast<float>(height ? height : 1);
     if (views) {
-        float aspect = static_cast<float>(width) / static_cast<float>(height ? height : 1);
-        views->GetActiveCamera()->SetAspectRatio(aspect);
+        if (auto camera = views->GetActiveCamera()) {
+            camera->SetAspectRatio(aspect);
+        }
+    }
+    if (worldInstance) {
+        if (auto camera = worldInstance->GetCurrentUserCamera()) {
+            camera->SetAspectRatio(aspect);
+        }
     }
     
     if (textRenderer) {

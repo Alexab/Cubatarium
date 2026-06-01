@@ -27,8 +27,7 @@ void GuiWindow::Draw(GuiRenderer& renderer)
     }
     GuiRect titleBar{bounds_.x, bounds_.y, bounds_.w, kTitleBarHeight};
     renderer.DrawFilledRect(titleBar, theme_->buttonPressed);
-    renderer.DrawText(title_, titleBar.x + theme_->padding, titleBar.y + 4,
-                      static_cast<float>(theme_->fontSizeBody), theme_->textPrimary);
+    renderer.DrawText(title_, titleBar.x + theme_->padding, titleBar.y + 4, theme_->textPrimary);
     GuiWidget::Draw(renderer);
 }
 

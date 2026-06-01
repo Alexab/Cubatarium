@@ -35,9 +35,8 @@ void GuiTextInput::Draw(GuiRenderer& renderer)
     if (focused_) {
         display += '|';
     }
-    renderer.DrawText(display, bounds_.x + theme_->padding,
-                    bounds_.y + theme_->padding, static_cast<float>(theme_->fontSizeBody),
-                    theme_->textPrimary);
+    renderer.DrawText(display, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
+                      theme_->textPrimary);
 }
 
 bool GuiTextInput::OnMouseDown(const GuiMouseEvent& event)

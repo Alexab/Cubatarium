@@ -15,6 +15,14 @@ void GuiInputRouter::SetActiveScreen(GuiScreenBase* screen)
     screen_ = screen;
 }
 
+void GuiInputRouter::ClearInteractionState()
+{
+    focusedWidget_ = nullptr;
+    hoveredWidget_ = nullptr;
+    captureMouse_ = false;
+    modalKeyboard_ = false;
+}
+
 bool GuiInputRouter::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!root_) {
@@ -44,6 +52,7 @@ bool GuiInputRouter::OnMouseUp(const GuiMouseEvent& event)
         }
     }
     captureMouse_ = false;
+    focusedWidget_ = nullptr;
     return consumed;
 }
 

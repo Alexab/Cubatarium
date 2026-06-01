@@ -525,18 +525,9 @@ void Camera::UpdateMouseMove(std::shared_ptr<World> world, double xpos, double y
 
 void Camera::ResetMouseMove(double xpos, double ypos)
 {
- if(FirstMouseCoords)
- {
-     LastMouseX = xpos;
-     LastMouseY = ypos;
-     FirstMouseCoords = false;
- }
-
-// float xoffset = xpos - LastMouseX;
-// float yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
-
  LastMouseX = xpos;
  LastMouseY = ypos;
+ FirstMouseCoords = true;
 }
 
 void Camera::UpdateMouseScroll(double xoffset, double yoffset)

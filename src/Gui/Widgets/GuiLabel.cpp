@@ -16,7 +16,7 @@ void GuiLabel::Draw(GuiRenderer& renderer)
         return;
     }
     renderer.DrawText(text_, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
-                      static_cast<float>(theme_->fontSizeBody), theme_->textPrimary);
+                      theme_->textPrimary);
 }
 
 } // namespace cutum

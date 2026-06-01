@@ -14,8 +14,12 @@ public:
 
     void Draw(GuiRenderer& renderer) override;
 
+    void SetDrawBackground(bool draw) { drawBackground_ = draw; }
+    bool GetDrawBackground() const { return drawBackground_; }
+
 protected:
     const GuiTheme* theme_;
+    bool drawBackground_{true};
 };
 
 } // namespace cutum

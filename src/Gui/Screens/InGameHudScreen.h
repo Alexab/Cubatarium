@@ -19,6 +19,7 @@ public:
 
     void Update(double dt) override;
     void Build(GuiContext& ctx) override;
+    void SetViewportSize(int width, int height);
 
 private:
     void RebuildHotbar();
@@ -29,6 +30,8 @@ private:
     std::vector<GuiSlot*> blockSlots_;
     std::vector<GuiSlot*> prefabSlots_;
     GuiLabel* activeLabel_{nullptr};
+    int viewportW_{1280};
+    int viewportH_{720};
 };
 
 } // namespace cutum

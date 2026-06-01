@@ -14,8 +14,10 @@ void GuiPanel::Draw(GuiRenderer& renderer)
     if (!visible_ || !theme_) {
         return;
     }
-    renderer.DrawFilledRect(bounds_, theme_->panelBackground);
-    renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
+    if (drawBackground_) {
+        renderer.DrawFilledRect(bounds_, theme_->panelBackground);
+        renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
+    }
     GuiWidget::Draw(renderer);
 }
 
