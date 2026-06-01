@@ -137,10 +137,28 @@ Initial area on new world: 2 chunk radius (`GenerateSpawnArea` or `GenerateFlatA
 - `render_distance_chunks`, `streaming_enabled`
 - Autosave every 60s; exit saves world + config
 
-## Startup (`Core::LoadSystem`)
+## Startup (`Core::LoadConfig` / `Core::EnterGame`)
 
-1. Read config next to the executable.
-2. If `worlds/` is missing, empty, or `default_world` folder does not exist → `CreateWorld()` (next `World_NNN` + procedural terrain) and write config.
-3. Otherwise → `LoadLastWorld()` from `default_world`.
+1. **`LoadConfig`** — read `config.json`, load assets (textures, block models, objects, prefabs). Does **not** load the world.
+2. **Main menu** — `Application` shows GUI until the user clicks Play.
+3. **`EnterGame`** — if `worlds/` is missing, empty, or `default_world` folder does not exist → `CreateWorld()`; otherwise → `LoadLastWorld()`.
+
+`LoadSystem` = `LoadConfig` + `EnterGame` (used by `--validate-load`).
 
 Shift+F11 / Shift+F12 create the next `World_NNN`, save immediately, and set `default_world` so the next launch opens that world.
+
+## GUI (`src/Gui/`)
+
+Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game code talks to screens through interfaces in `src/Gui/Interfaces/`; `GameSession` implements them. `WindowManager` delegates input/render to `Application`.
+
+| Layer | Role |
+|-------|------|
+| `GuiWidget` / layout / primitives | Panels, buttons, text input, lists, tabs, scroll, slots |
+| `GuiContext` | Active screen, input router, render pass |
+| `Application` | `AppState`, main menu vs in-game, console/palette overlays |
+| `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
+| `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
+
+**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`).
+
+**Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` / `Alt+0–9` remain in `WindowManager`.

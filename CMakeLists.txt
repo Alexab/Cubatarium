@@ -84,6 +84,31 @@ set(SOURCES
     src/InputManager.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
+    src/Application.cpp
+    src/Game/GameSession.cpp
+    src/Content/ContentTypeRegistry.cpp
+    src/Commands/CommandRegistry.cpp
+    src/Gui/GuiTheme.cpp
+    src/Gui/GuiRenderer.cpp
+    src/Gui/UiQuadBatch.cpp
+    src/Gui/GuiInputRouter.cpp
+    src/Gui/GuiContext.cpp
+    src/Gui/GuiScreenBase.cpp
+    src/Gui/Layout/GuiLayout.cpp
+    src/Gui/Widgets/GuiWidget.cpp
+    src/Gui/Widgets/GuiPanel.cpp
+    src/Gui/Widgets/GuiButton.cpp
+    src/Gui/Widgets/GuiLabel.cpp
+    src/Gui/Widgets/GuiTextInput.cpp
+    src/Gui/Widgets/GuiListView.cpp
+    src/Gui/Widgets/GuiTabBar.cpp
+    src/Gui/Widgets/GuiScrollView.cpp
+    src/Gui/Widgets/GuiWindow.cpp
+    src/Gui/Widgets/GuiSlot.cpp
+    src/Gui/Screens/MainMenuScreen.cpp
+    src/Gui/Screens/InGameHudScreen.cpp
+    src/Gui/Screens/ConsoleScreen.cpp
+    src/Gui/Screens/CreativePaletteScreen.cpp
 )
 
 set(HEADERS
@@ -123,6 +148,38 @@ set(HEADERS
     src/ShaderManager.h
     src/TextRenderer.h
     src/stb_image.h
+    src/Application.h
+    src/Game/GameSession.h
+    src/Content/ContentType.h
+    src/Content/ContentTypeRegistry.h
+    src/Commands/CommandRegistry.h
+    src/Commands/CommandResult.h
+    src/Gui/GuiTypes.h
+    src/Gui/GuiTheme.h
+    src/Gui/GuiRenderer.h
+    src/Gui/UiQuadBatch.h
+    src/Gui/GuiInputRouter.h
+    src/Gui/GuiContext.h
+    src/Gui/GuiScreenBase.h
+    src/Gui/Layout/GuiLayout.h
+    src/Gui/Widgets/GuiWidget.h
+    src/Gui/Widgets/GuiPanel.h
+    src/Gui/Widgets/GuiButton.h
+    src/Gui/Widgets/GuiLabel.h
+    src/Gui/Widgets/GuiTextInput.h
+    src/Gui/Widgets/GuiListView.h
+    src/Gui/Widgets/GuiTabBar.h
+    src/Gui/Widgets/GuiScrollView.h
+    src/Gui/Widgets/GuiWindow.h
+    src/Gui/Widgets/GuiSlot.h
+    src/Gui/Interfaces/IGuiGameActions.h
+    src/Gui/Interfaces/IHotbarViewModel.h
+    src/Gui/Interfaces/IContentCatalog.h
+    src/Gui/Interfaces/IGameCommandContext.h
+    src/Gui/Screens/MainMenuScreen.h
+    src/Gui/Screens/InGameHudScreen.h
+    src/Gui/Screens/ConsoleScreen.h
+    src/Gui/Screens/CreativePaletteScreen.h
 )
 
 if(WIN32)
@@ -202,5 +259,14 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
             "${CMAKE_SOURCE_DIR}/textures"
             "${CMAKE_BINARY_DIR}/textures"
         COMMENT "Copying textures to output directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/content")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/content"
+            "${CMAKE_BINARY_DIR}/content"
+        COMMENT "Copying content data to output directory"
     )
 endif()

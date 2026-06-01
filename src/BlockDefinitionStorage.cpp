@@ -50,6 +50,13 @@ void BlockDefinitionStorage::Load(const std::string& modelsPath)
    if (d.contains("render")) {
     def.render = ParseRenderFromJson(d["render"]);
    }
+   if (d.contains("types") && d["types"].is_array()) {
+    for (const auto& t : d["types"]) {
+     if (t.is_string()) {
+      def.types.push_back(t.get<std::string>());
+     }
+    }
+   }
    if (d.contains("physics") && d["physics"].is_object() && d["physics"].contains("preset")
        && d["physics"]["preset"].is_string()) {
     ApplyRenderPresetDefaults(def.render, d["physics"]["preset"].get<std::string>());

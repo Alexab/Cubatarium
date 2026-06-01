@@ -1,4 +1,5 @@
 #include "WindowManager.h"
+#include "Application.h"
 #include "InputManager.h"
 #include "Core.h"
 #include "ProceduralSettings.h"
@@ -6,6 +7,7 @@
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
+#include "AppState.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -132,6 +134,20 @@ void WindowManager::SetupCallbacks() {
     inputManager->SetWindowResizeCallback([this](int width, int height) {
         HandleWindowResizeEvent(width, height);
     });
+
+    inputManager->SetMouseScrollCallback([this](double xoffset, double yoffset) {
+        if (application_ &&
+            application_->RouteScroll(xoffset, yoffset)) {
+            return;
+        }
+    });
+
+    glfwSetCharCallback(window, [](GLFWwindow* win, unsigned int codepoint) {
+        auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(win));
+        if (self && self->application_) {
+            self->application_->RouteChar(codepoint);
+        }
+    });
 }
 
 void WindowManager::Run() {
@@ -150,6 +166,9 @@ void WindowManager::Run() {
 
         // Input processing
         ProcessInput();
+        if (application_) {
+            application_->Update(deltaTime);
+        }
 
         // Logic update
         Update();
@@ -166,8 +185,12 @@ void WindowManager::Run() {
 void WindowManager::ProcessInput() {
     inputManager->Update();
 
+    if (application_ && application_->WantsCaptureKeyboard()) {
+        return;
+    }
+
     // Camera control key processing
-    if (worldInstance) {
+    if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         auto camera = worldInstance->GetCurrentUserCamera();
         if (camera) {
             // WASD movement
@@ -205,11 +228,11 @@ void WindowManager::Update() {
         views->UpdateFrameTime();
     }
 
-    if (worldInstance) {
+    if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         worldInstance->DoMovement();
     }
 
-    if (core && worldInstance) {
+    if (core && worldInstance && application_ && application_->GetState() == AppState::InGame) {
         const auto now = std::chrono::steady_clock::now();
         const double elapsed = std::chrono::duration<double>(now - lastAutosaveTime_).count();
         if (elapsed >= kAutosaveIntervalSec) {
@@ -220,6 +243,13 @@ void WindowManager::Update() {
 }
 
 void WindowManager::Render() {
+    if (application_) {
+        application_->SetWindow(window);
+        application_->RenderFrame(windowWidth, windowHeight,
+                                  views ? views->GetDurationUpdateMks() : 0.0);
+        return;
+    }
+
     if (geometries) {
         geometries->PrepareFrameRendering();
         const glm::vec4 clearColor = geometries->GetSkyColor();
@@ -230,18 +260,31 @@ void WindowManager::Render() {
     if (geometries && views) {
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
-    
-    // Disable UI display over 3D scene
-    // RenderUI();
 }
 
 void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
+    const int glfwKey = static_cast<int>(key);
+    int glfwAction = GLFW_RELEASE;
+    if (state == KeyState::Pressed) {
+        glfwAction = GLFW_PRESS;
+    } else if (state == KeyState::Repeated) {
+        glfwAction = GLFW_REPEAT;
+    }
+    if (application_ && application_->RouteKey(glfwKey, glfwAction, mods)) {
+        return;
+    }
+
     if (!worldInstance) return;
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
 
     bool pressed = (state == KeyState::Pressed);
     
     // Update key states in camera
-    worldInstance->GetCurrentUserCamera()->UpdateKeyStatus(static_cast<int>(key), pressed);
+    if (auto camera = worldInstance->GetCurrentUserCamera()) {
+        camera->UpdateKeyStatus(static_cast<int>(key), pressed);
+    }
 
     // Special key processing
     if (pressed) {
@@ -348,7 +391,23 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
 }
 
 void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm::vec2 pos) {
+    const int glfwButton = button == MouseButton::Left   ? GLFW_MOUSE_BUTTON_LEFT
+                         : button == MouseButton::Right  ? GLFW_MOUSE_BUTTON_RIGHT
+                                                         : GLFW_MOUSE_BUTTON_MIDDLE;
+    if (application_ &&
+        application_->RouteMouseButton(glfwButton, pressed,
+                                     static_cast<int>(pos.x), static_cast<int>(pos.y))) {
+        return;
+    }
+
     if (!worldInstance) return;
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
+
+    if (application_ && application_->WantsCaptureMouse()) {
+        return;
+    }
 
     if (button == MouseButton::Right) {
         if (pressed) {
@@ -385,7 +444,16 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
 }
 
 void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
+    (void)delta;
+    if (application_ &&
+        application_->RouteMouseMove(static_cast<int>(pos.x), static_cast<int>(pos.y))) {
+        return;
+    }
+
     if (!worldInstance || !isMousePressed) return;
+    if (application_ && application_->WantsCaptureMouse()) {
+        return;
+    }
     
     worldInstance->GetCurrentUserCamera()->UpdateMouseMove(worldInstance, pos.x, pos.y);
 }
@@ -413,6 +481,11 @@ void WindowManager::Init(std::shared_ptr<Core> core_,
     worldInstance = world_;
     geometries = geometries_;
     views = views_;
+}
+
+void WindowManager::SetApplication(std::shared_ptr<Application> application)
+{
+    application_ = std::move(application);
 }
 
 void WindowManager::SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer) {

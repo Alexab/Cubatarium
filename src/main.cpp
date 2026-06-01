@@ -10,6 +10,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include "Application.h"
 #include "WindowManager.h"
 #include "TextureBase.h"
 #include "TextureCube.h"
@@ -128,7 +129,13 @@ int main(int argc, char *argv[])
         
         windowManager->SetTextRenderer(text_renderer);
 
-        core->LoadSystem("config.json");
+        auto application = std::make_shared<Application>(
+            core, world, geometry_engine, view_engine, text_renderer,
+            geometry_engine->GetShaderManager(), block_definitions);
+        windowManager->SetApplication(application);
+        application->SetWindow(windowManager->GetWindow());
+
+        application->Startup("config.json");
 
         windowManager->Run();
 

@@ -74,6 +74,7 @@ public:
 
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
+ std::shared_ptr<ShaderManager> GetShaderManager() const { return shaderManager; }
 
  /// Updates sky tint and fluid fog state from the camera; call before glClear.
  void PrepareFrameRendering();

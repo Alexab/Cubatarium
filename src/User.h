@@ -25,6 +25,8 @@ public:
 
  void SetActiveBlockIndex(size_t index);
  void SetActivePrefabIndex(size_t index);
+ size_t GetActiveBlockIndex() const { return activeBlockIndex_; }
+ size_t GetActivePrefabIndex() const { return activePrefabIndex_; }
  void SetActiveObjectTypeName(const std::string& block_type);
  void SetPrefabHotbar(const std::vector<std::string>& prefab_names);
 

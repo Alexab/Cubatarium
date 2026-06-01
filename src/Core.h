@@ -9,6 +9,7 @@
 
 #include "RenderSettings.h"
 #include "ProceduralSettings.h"
+#include "UiSettings.h"
 
 namespace cutum {
 
@@ -33,8 +34,12 @@ public:
       std::shared_ptr<ViewEngine> views_);
 
 public:
+ void LoadConfig(const std::string& config_file_name);
+ void EnterGame();
  void LoadSystem(const std::string& config_file_name);
  void SaveSystem(const std::string& config_file_name);
+
+ const UiSettings& GetUiSettings() const { return uiSettings_; }
 
  void CreateWorld(const std::string& terrain_type = "");
  void CreateWorldFromProceduralConfig();
@@ -47,6 +52,7 @@ public:
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
+ std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
 
 private:
  std::vector<std::string> WorldList;
@@ -72,6 +78,7 @@ private:
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
  RenderSettings renderSettings_;
+ UiSettings uiSettings_;
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;

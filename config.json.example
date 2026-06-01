@@ -19,5 +19,10 @@
         "face_quads": true,
         "frustum_culling": true,
         "batch_cache": true
+    },
+    "ui": {
+        "legacy_hud": false,
+        "console_key": "grave",
+        "palette_key": "b"
     }
 }

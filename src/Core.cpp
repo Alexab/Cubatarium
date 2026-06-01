@@ -176,7 +176,7 @@ bool Core::ShouldCreateWorldOnStartup() const
  return !std::filesystem::exists(worldFolder);
 }
 
-void Core::LoadSystem(const std::string& config_file_name)
+void Core::LoadConfig(const std::string& config_file_name)
 {
  exeDir_ = GetExecutableDirectory();
  const auto cwd = std::filesystem::current_path();
@@ -238,6 +238,12 @@ void Core::LoadSystem(const std::string& config_file_name)
       } else {
        renderSettings_ = RenderSettings::Default();
       }
+      if (d.contains("ui") && d["ui"].is_object()) {
+       const json& u = d["ui"];
+       uiSettings_.legacyHud = u.value("legacy_hud", false);
+       uiSettings_.consoleKey = u.value("console_key", "grave");
+       uiSettings_.paletteKey = u.value("palette_key", "b");
+      }
      } else {
       default_world_name.clear();
       default_user_name = "Username";
@@ -296,17 +302,24 @@ void Core::LoadSystem(const std::string& config_file_name)
                << " frustum=" << renderSettings_.frustumCulling
                << " batch_cache=" << renderSettings_.batchCache << std::endl;
      std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0") << std::endl;
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+ }
+}
 
+void Core::EnterGame()
+{
+ try {
      std::filesystem::create_directories(WorldPath);
      LoadWorldList(WorldPath.string());
 
      if (ShouldCreateWorldOnStartup()) {
       if (!default_world_name.empty()) {
-       std::cout << "Core::LoadSystem: world '" << default_world_name
+       std::cout << "Core::EnterGame: world '" << default_world_name
                  << "' not found, creating a new one." << std::endl;
       }
       CreateWorld();
-      SaveSystem(config_file_name);
+      SaveSystem(configFilePath_.filename().string());
      } else {
       LoadLastWorld();
      }
@@ -319,11 +332,16 @@ void Core::LoadSystem(const std::string& config_file_name)
        user->SetActiveBlockIndex(1);
       }
      }
- } catch (const json::exception& e) {
-     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+ } catch (const std::exception& e) {
+     std::cerr << "Core::EnterGame error: " << e.what() << std::endl;
      CreateWorld();
-     SaveSystem(config_file_name);
  }
+}
+
+void Core::LoadSystem(const std::string& config_file_name)
+{
+ LoadConfig(config_file_name);
+ EnterGame();
 }
 
 void Core::SaveSystem(const std::string& config_file_name)
