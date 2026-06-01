@@ -10,6 +10,8 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
+uniform int uTransparentSubPass;
+uniform float uShellAlphaThreshold;
 uniform vec3 uCameraPos;
 uniform vec3 uFogColor;
 uniform float uFogStart;
@@ -76,6 +78,12 @@ void main()
     }
     FragColor = texture(texture0, uv);
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
+        discard;
+    }
+    if (uTransparentSubPass == 1 && FragColor.a < uShellAlphaThreshold) {
+        discard;
+    }
+    if (uTransparentSubPass == 2 && FragColor.a >= uShellAlphaThreshold) {
         discard;
     }
     if (uFogEnabled > 0.5) {

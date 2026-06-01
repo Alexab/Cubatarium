@@ -55,6 +55,9 @@ void GuiLayout::AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int m
     case GuiAnchorKind::Fill:
         bounds = clientArea.Inset(margin);
         break;
+    case GuiAnchorKind::TopCenter:
+        bounds = {clientArea.x + (clientArea.w - pw) / 2, clientArea.y + margin, pw, ph};
+        break;
     case GuiAnchorKind::Center:
         bounds = {clientArea.x + (clientArea.w - pw) / 2,
                   clientArea.y + (clientArea.h - ph) / 2, pw, ph};
@@ -69,6 +72,17 @@ void GuiLayout::AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int m
         break;
     }
     child->SetBounds(bounds);
+}
+
+HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize, int gap,
+                                    int marginBottom)
+{
+    HotbarLayoutResult result;
+    result.totalW = 10 * slotSize + 9 * gap;
+    result.startX = (viewportW - result.totalW) / 2;
+    result.prefabRowY = viewportH - marginBottom - slotSize;
+    result.blockRowY = result.prefabRowY - gap - slotSize;
+    return result;
 }
 
 } // namespace cutum

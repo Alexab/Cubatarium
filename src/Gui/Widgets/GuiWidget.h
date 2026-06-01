@@ -36,6 +36,7 @@ public:
     const std::vector<std::unique_ptr<GuiWidget>>& GetChildren() const { return children_; }
 
     GuiWidget* AddChild(std::unique_ptr<GuiWidget> child);
+    void ClearChildren();
 
     virtual bool OnMouseDown(const GuiMouseEvent& event);
     virtual bool OnMouseUp(const GuiMouseEvent& event);

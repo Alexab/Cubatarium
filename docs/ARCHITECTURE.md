@@ -154,11 +154,20 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 | Layer | Role |
 |-------|------|
 | `GuiWidget` / layout / primitives | Panels, buttons, text input, lists, tabs, scroll, slots |
-| `GuiContext` | Active screen, input router, render pass |
+| `GuiLayout` | Anchors (`TopCenter`, `BottomCenter`, …), `LayoutHotbarRows` for dual hotbar |
+| `GuiContext` | Active screen, input router, render pass; `OnViewportChanged` on resize |
+| `GuiRenderer` | Solid quads (`UiQuadBatch`) + textured quads (`UiTexturedQuadBatch`) + FreeType text |
+| `GuiIconSource` / `PrefabIconCache` | Block icons from `TextureCubeStorage`; prefab icons via FBO voxel preview (cached) |
 | `Application` | `AppState`, main menu vs in-game, console/palette overlays |
 | `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
 | `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
 
+**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`. Main menu title uses `TopCenter` + centered label text; in-game HUD places the **block** row above the **prefab** row, both bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+
+**Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
+
 **Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`).
 
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` / `Alt+0–9` remain in `WindowManager`.
+
+**Manual check (GUI):** resize main menu and in-game window; verify hotbar centering and row order; block/prefab icons and tooltips on hover and slot selection; F9 palette and console panel edges on resize.

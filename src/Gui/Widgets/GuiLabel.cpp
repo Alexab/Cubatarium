@@ -12,11 +12,18 @@ GuiLabel::GuiLabel(const GuiTheme* theme, std::string text)
 
 void GuiLabel::Draw(GuiRenderer& renderer)
 {
-    if (!visible_ || !theme_) {
+    if (!visible_ || !theme_ || text_.empty()) {
         return;
     }
-    renderer.DrawText(text_, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
-                      theme_->textPrimary);
+    if (drawBackground_) {
+        renderer.DrawFilledRect(bounds_, {0.05f, 0.05f, 0.08f, 0.75f});
+    }
+    if (textAlign_ == GuiTextAlign::Center) {
+        renderer.DrawTextCenteredInRect(bounds_, text_, theme_->textPrimary);
+    } else {
+        renderer.DrawText(text_, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
+                          theme_->textPrimary);
+    }
 }
 
 } // namespace cutum

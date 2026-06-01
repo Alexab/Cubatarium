@@ -70,11 +70,19 @@ void GuiContext::Update(double dt)
     }
 }
 
+void GuiContext::NotifyViewport(int windowWidth, int windowHeight)
+{
+    if (activeScreen_) {
+        activeScreen_->OnViewportChanged(windowWidth, windowHeight);
+    }
+}
+
 void GuiContext::Render(int windowWidth, int windowHeight)
 {
     if (!renderer_ || !activeScreen_ || !activeScreen_->GetRoot()) {
         return;
     }
+    NotifyViewport(windowWidth, windowHeight);
     RenderOverlay(*activeScreen_->GetRoot(), windowWidth, windowHeight);
 }
 
@@ -86,6 +94,7 @@ void GuiContext::RenderOverlay(GuiWidget& root, int windowWidth, int windowHeigh
     }
     renderer_->BeginFrame(windowWidth, windowHeight);
     if (expandRootToViewport) {
+        NotifyViewport(windowWidth, windowHeight);
         const GuiRect full{0, 0, windowWidth, windowHeight};
         root.SetBounds(full);
         root.UpdateLayout(full);

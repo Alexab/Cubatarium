@@ -26,11 +26,20 @@ bool GuiRenderer::Initialize(std::shared_ptr<ShaderManager> shaderManager,
     if (!uiShader || !uiShader->IsValid()) {
         return false;
     }
-    return quadBatch_.Initialize(uiShader);
+    if (!quadBatch_.Initialize(uiShader)) {
+        return false;
+    }
+    auto texShader = shaderManager->CreateShader("gui_textured", "shaders/gui_textured_v.glsl",
+                                                 "shaders/gui_textured_f.glsl");
+    if (!texShader || !texShader->IsValid()) {
+        return false;
+    }
+    return texturedQuadBatch_.Initialize(texShader);
 }
 
 void GuiRenderer::Shutdown()
 {
+    texturedQuadBatch_.Shutdown();
     quadBatch_.Shutdown();
     textRenderer_.reset();
     clipStack_.clear();
@@ -44,12 +53,15 @@ void GuiRenderer::BeginFrame(int windowWidth, int windowHeight)
         textRenderer_->SetWindowSize(windowWidth, windowHeight);
     }
     quadBatch_.Begin(windowWidth, windowHeight);
+    texturedQuadBatch_.Begin(windowWidth, windowHeight);
     clipStack_.clear();
 }
 
 void GuiRenderer::EndFrame()
 {
     quadBatch_.End();
+    texturedQuadBatch_.End();
+    glDisable(GL_SCISSOR_TEST);
 }
 
 void GuiRenderer::ApplyClipStack()
@@ -97,6 +109,15 @@ void GuiRenderer::DrawFilledRect(const GuiRect& rect, const glm::vec4& color)
 void GuiRenderer::DrawBorderRect(const GuiRect& rect, const glm::vec4& color, int thicknessPx)
 {
     quadBatch_.DrawBorderRect(rect, color, thicknessPx);
+}
+
+void GuiRenderer::DrawTexturedRect(const GuiRect& rect, GLuint texture, const glm::vec4& tint)
+{
+    if (texture == 0) {
+        return;
+    }
+    quadBatch_.Flush();
+    texturedQuadBatch_.DrawTexturedRect(rect, texture, tint);
 }
 
 void GuiRenderer::DrawTextCenteredInRect(const GuiRect& rect, const std::string& text,

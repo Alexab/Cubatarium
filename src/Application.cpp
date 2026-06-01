@@ -10,8 +10,12 @@
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/GuiIconSource.h"
+#include "Gui/PrefabIconCache.h"
 #include "Gui/Screens/MainMenuScreen.h"
+#include "TextureCube.h"
 #include "Gui/GuiTypes.h"
+#include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Prefab.h"
 #include "ShaderManager.h"
@@ -70,6 +74,8 @@ Application::Application(std::shared_ptr<Core> core,
     gameSession_ = std::make_unique<GameSession>(this, world_);
 }
 
+Application::~Application() = default;
+
 void Application::Startup(const std::string& configPath)
 {
     if (core_) {
@@ -97,6 +103,16 @@ void Application::Startup(const std::string& configPath)
                                       *core_->GetPrefabLibrary());
     }
     gameSession_->RegisterCommands();
+
+    if (core_ && blockDefinitions_ && shaderManager_) {
+        auto textures = core_->GetTextureCubeStorage();
+        auto prefabCache = std::make_unique<PrefabIconCache>(
+            core_->GetPrefabLibrary(), textures, blockDefinitions_, shaderManager_);
+        if (prefabCache->Initialize()) {
+            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache));
+        }
+    }
+
     state_ = AppState::MainMenu;
     ShowMainMenu();
 }
@@ -165,7 +181,8 @@ void Application::ReturnToMainMenu()
 
 void Application::ShowInGameHud()
 {
-    auto hud = std::make_unique<InGameHudScreen>(gameSession_.get(), &guiContext_->GetTheme());
+    IGuiIconSource* icons = iconSource_.get();
+    auto hud = std::make_unique<InGameHudScreen>(gameSession_.get(), &guiContext_->GetTheme(), icons);
     hud->Build(*guiContext_);
     hudScreen_ = std::move(hud);
 
@@ -173,8 +190,8 @@ void Application::ShowInGameHud()
     consoleScreen_->Build(*guiContext_);
     consoleScreen_->SetVisible(false);
 
-    paletteScreen_ =
-        std::make_unique<CreativePaletteScreen>(&gameSession_->GetContentCatalog(), gameSession_.get());
+    paletteScreen_ = std::make_unique<CreativePaletteScreen>(
+        &gameSession_->GetContentCatalog(), gameSession_.get(), icons);
     paletteScreen_->Build(*guiContext_);
     paletteScreen_->SetVisible(false);
 
@@ -291,7 +308,7 @@ void Application::Update(double dt)
             int fbH = 0;
             glfwGetFramebufferSize(window_, &fbW, &fbH);
             if (fbW > 0 && fbH > 0) {
-                hudScreen_->SetViewportSize(fbW, fbH);
+                hudScreen_->OnViewportChanged(fbW, fbH);
             }
             hudScreen_->Update(dt);
         }
@@ -314,13 +331,17 @@ void Application::RenderFrame(int width, int height, double viewDuration)
 {
     if (state_ == AppState::MainMenu) {
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         guiContext_->Render(width, height);
         return;
     }
 
     if (state_ == AppState::InGame && geometry_ && world_) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, width, height);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
         if (auto camera = world_->GetCurrentUserCamera()) {
             const float aspect =
                 static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
@@ -329,18 +350,28 @@ void Application::RenderFrame(int width, int height, double viewDuration)
         geometry_->PrepareFrameRendering();
         const glm::vec4 clearColor = geometry_->GetSkyColor();
         glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         geometry_->Paint(width, height, viewDuration);
     }
 
+    if (state_ == AppState::InGame && iconSource_) {
+        iconSource_->WarmupPrefabIcons(2);
+        if (paletteOpen_ && paletteScreen_) {
+            paletteScreen_->InvalidateGrid();
+        }
+    }
+
     if (hudScreen_ && hudScreen_->GetRoot()) {
-        hudScreen_->SetViewportSize(width, height);
+        hudScreen_->SyncSlotIcons();
+        hudScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*hudScreen_->GetRoot(), width, height, false);
     }
     if (consoleOpen_ && consoleScreen_ && consoleScreen_->GetRoot()) {
+        consoleScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height);
     }
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
+        paletteScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height);
     }
 }
@@ -473,6 +504,9 @@ bool Application::RouteMouseMove(int x, int y)
     GuiMouseEvent event;
     event.x = x;
     event.y = y;
+    if (state_ == AppState::InGame && hudScreen_) {
+        hudScreen_->SetPointerPosition(x, y);
+    }
     if (state_ == AppState::InGame) {
         auto routeMove = [&](GuiWidget* root) -> bool {
             return root && root->HitTest(x, y) && root->OnMouseMove(event);

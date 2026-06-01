@@ -22,13 +22,22 @@ void GuiSlot::Draw(GuiRenderer& renderer)
     }
     renderer.DrawFilledRect(bounds_, theme_->slotBackground);
     if (selected_) {
-        renderer.DrawBorderRect(bounds_, theme_->slotSelected, 2);
+        renderer.DrawFilledRect(bounds_, theme_->slotSelectedFill);
+    }
+
+    if (iconTexture_ != 0) {
+        const int inset = 4;
+        const GuiRect iconRect{bounds_.x + inset, bounds_.y + inset, bounds_.w - inset * 2,
+                               bounds_.h - inset * 2};
+        renderer.DrawTexturedRect(iconRect, iconTexture_);
+    }
+
+    if (selected_) {
+        renderer.DrawBorderRect(bounds_, theme_->slotSelected, theme_->slotSelectedBorderThickness);
+        const GuiRect inner = bounds_.Inset(2);
+        renderer.DrawBorderRect(inner, theme_->slotSelectedInner, 1);
     } else {
         renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
-    }
-    if (!label_.empty()) {
-        renderer.DrawText(label_, bounds_.x + 2, bounds_.y + bounds_.h - theme_->fontSizeBody - 2,
-                          theme_->textSecondary);
     }
 }
 

@@ -1,15 +1,26 @@
 #include "InGameHudScreen.h"
 #include "Gui/GuiContext.h"
+#include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
+#include "Gui/Widgets/GuiWidget.h"
 
 namespace cutum {
 
-InGameHudScreen::InGameHudScreen(IHotbarViewModel* hotbar, const GuiTheme* theme)
+namespace {
+
+constexpr int kHotbarMarginBottom = 24;
+constexpr int kTooltipHeight = 22;
+
+} // namespace
+
+InGameHudScreen::InGameHudScreen(IHotbarViewModel* hotbar, const GuiTheme* theme, IGuiIconSource* icons)
     : hotbar_(hotbar)
     , theme_(theme)
+    , icons_(icons)
 {
 }
 
@@ -20,75 +31,104 @@ void InGameHudScreen::Build(GuiContext& ctx)
     panel->SetDrawBackground(false);
     rootPanel_ = panel.get();
     root_ = std::move(panel);
-    RebuildHotbar();
+    hotbarBuilt_ = false;
 }
 
-void InGameHudScreen::RebuildHotbar()
+void InGameHudScreen::OnViewportChanged(int width, int height)
 {
-    if (!rootPanel_ || !hotbar_ || !theme_) {
+    GuiScreenBase::OnViewportChanged(width, height);
+    LayoutHotbar();
+}
+
+void InGameHudScreen::SetPointerPosition(int x, int y)
+{
+    pointerX_ = x;
+    pointerY_ = y;
+}
+
+void InGameHudScreen::EnsureHotbarWidgets()
+{
+    if (hotbarBuilt_ || !rootPanel_ || !hotbar_ || !theme_) {
         return;
     }
-    blockSlots_.clear();
-    prefabSlots_.clear();
-    while (!rootPanel_->GetChildren().empty()) {
-        // children owned by panel - rebuild by recreating root
+
+    const int slotSize = theme_->hotbarSlotSize;
+
+    for (size_t i = 0; i < 10; ++i) {
+        auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
+        const size_t index = i;
+        slot->SetOnClick([this, index]() { hotbar_->SelectBlockSlot(index); });
+        GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
+        blockSlots_.push_back(ptr);
     }
-    // Simpler: build slots each update on existing panel
+    for (size_t i = 0; i < 10; ++i) {
+        auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
+        const size_t index = i;
+        slot->SetOnClick([this, index]() { hotbar_->SelectPrefabSlot(index); });
+        GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
+        prefabSlots_.push_back(ptr);
+    }
+
+    auto blockTip = std::make_unique<GuiLabel>(theme_, "");
+    blockTip->SetTextAlign(GuiTextAlign::Center);
+    blockTip->SetDrawBackground(true);
+    blockTip->SetVisible(false);
+    blockTooltip_ = blockTip.get();
+    rootPanel_->AddChild(std::move(blockTip));
+
+    auto prefabTip = std::make_unique<GuiLabel>(theme_, "");
+    prefabTip->SetTextAlign(GuiTextAlign::Center);
+    prefabTip->SetDrawBackground(true);
+    prefabTip->SetVisible(false);
+    prefabTooltip_ = prefabTip.get();
+    rootPanel_->AddChild(std::move(prefabTip));
+
+    hotbarBuilt_ = true;
+    LayoutHotbar();
 }
 
-void InGameHudScreen::SetViewportSize(int width, int height)
+void InGameHudScreen::LayoutHotbar()
 {
-    if (width > 0) {
-        viewportW_ = width;
-    }
-    if (height > 0) {
-        viewportH_ = height;
-    }
-}
-
-void InGameHudScreen::Update(double /*dt*/)
-{
-    if (!rootPanel_ || !hotbar_ || !theme_) {
+    if (!hotbarBuilt_ || !theme_) {
         return;
     }
-    const int w = viewportW_;
-    const int h = viewportH_;
-    rootPanel_->SetBounds({0, 0, w, h});
+    rootPanel_->SetBounds({0, 0, viewportW_, viewportH_});
 
-    if (blockSlots_.empty()) {
-        const int slotSize = theme_->hotbarSlotSize;
-        const int gap = theme_->hotbarSlotGap;
-        const int totalW = 10 * slotSize + 9 * gap;
-        int x = (w - totalW) / 2;
-        const int y = h - slotSize - 24;
-        const auto slots = hotbar_->GetBlockSlots();
-        for (size_t i = 0; i < 10; ++i) {
-            auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
-            slot->SetBounds({x, y, slotSize, slotSize});
-            const size_t index = i;
-            slot->SetOnClick([this, index]() { hotbar_->SelectBlockSlot(index); });
-            GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
-            blockSlots_.push_back(ptr);
+    const int slotSize = theme_->hotbarSlotSize;
+    const int gap = theme_->hotbarSlotGap;
+    const auto layout = LayoutHotbarRows(viewportW_, viewportH_, slotSize, gap, kHotbarMarginBottom);
+
+    int x = layout.startX;
+    for (GuiSlot* slot : blockSlots_) {
+        if (slot) {
+            slot->SetBounds({x, layout.blockRowY, slotSize, slotSize});
             x += slotSize + gap;
         }
-        const int prefabY = y - slotSize - gap;
-        x = (w - totalW) / 2;
-        const auto prefabs = hotbar_->GetPrefabSlots();
-        for (size_t i = 0; i < 10; ++i) {
-            auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
-            slot->SetBounds({x, prefabY, slotSize, slotSize});
-            const size_t index = i;
-            slot->SetOnClick([this, index]() { hotbar_->SelectPrefabSlot(index); });
-            GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
-            prefabSlots_.push_back(ptr);
-            x += slotSize + gap;
-        }
-        auto label = std::make_unique<GuiLabel>(theme_, "");
-        label->SetBounds({w / 2 - 200, prefabY - 28, 400, 24});
-        activeLabel_ = label.get();
-        rootPanel_->AddChild(std::move(label));
     }
 
+    x = layout.startX;
+    for (GuiSlot* slot : prefabSlots_) {
+        if (slot) {
+            slot->SetBounds({x, layout.prefabRowY, slotSize, slotSize});
+            x += slotSize + gap;
+        }
+    }
+
+    if (blockTooltip_) {
+        blockTooltip_->SetBounds({layout.startX, layout.blockRowY - gap - kTooltipHeight, layout.totalW,
+                                  kTooltipHeight});
+    }
+    if (prefabTooltip_) {
+        prefabTooltip_->SetBounds(
+            {layout.startX, layout.prefabRowY + slotSize + gap, layout.totalW, kTooltipHeight});
+    }
+}
+
+void InGameHudScreen::UpdateSlotData()
+{
+    if (!hotbar_) {
+        return;
+    }
     const auto blockSlots = hotbar_->GetBlockSlots();
     for (size_t i = 0; i < blockSlots_.size() && i < blockSlots.size(); ++i) {
         blockSlots_[i]->SetLabel(blockSlots[i].label);
@@ -99,14 +139,89 @@ void InGameHudScreen::Update(double /*dt*/)
         prefabSlots_[i]->SetLabel(prefabSlots[i].label);
         prefabSlots_[i]->SetSelected(prefabSlots[i].selected);
     }
-    if (activeLabel_) {
-        const size_t bi = hotbar_->GetActiveBlockIndex();
-        std::string text = "Block: ";
-        if (bi < blockSlots.size()) {
-            text += blockSlots[bi].label;
-        }
-        activeLabel_->SetText(text);
+}
+
+void InGameHudScreen::SyncSlotIcons()
+{
+    if (!hotbar_ || !icons_) {
+        return;
     }
+    const auto blockSlots = hotbar_->GetBlockSlots();
+    for (size_t i = 0; i < blockSlots_.size() && i < blockSlots.size(); ++i) {
+        const GLuint tex =
+            blockSlots[i].id.empty() ? 0 : icons_->GetBlockIconTexture(blockSlots[i].id);
+        blockSlots_[i]->SetIconTexture(tex);
+    }
+    const auto prefabSlots = hotbar_->GetPrefabSlots();
+    for (size_t i = 0; i < prefabSlots_.size() && i < prefabSlots.size(); ++i) {
+        const GLuint tex =
+            prefabSlots[i].id.empty() ? 0 : icons_->GetPrefabIconTexture(prefabSlots[i].id);
+        prefabSlots_[i]->SetIconTexture(tex);
+    }
+}
+
+void InGameHudScreen::UpdateTooltips()
+{
+    if (!hotbar_) {
+        return;
+    }
+
+    const auto blockSlots = hotbar_->GetBlockSlots();
+    const auto prefabSlots = hotbar_->GetPrefabSlots();
+
+    auto showBlockTip = [&](const std::string& text) {
+        if (blockTooltip_) {
+            blockTooltip_->SetText(text);
+            blockTooltip_->SetVisible(!text.empty());
+        }
+    };
+    auto showPrefabTip = [&](const std::string& text) {
+        if (prefabTooltip_) {
+            prefabTooltip_->SetText(text);
+            prefabTooltip_->SetVisible(!text.empty());
+        }
+    };
+
+    showBlockTip("");
+    showPrefabTip("");
+
+    if (pointerX_ >= 0 && pointerY_ >= 0 && rootPanel_) {
+        if (GuiWidget* hit = rootPanel_->HitTest(pointerX_, pointerY_)) {
+            for (size_t i = 0; i < blockSlots_.size(); ++i) {
+                if (hit == blockSlots_[i] && i < blockSlots.size() && !blockSlots[i].label.empty()) {
+                    showBlockTip(blockSlots[i].label);
+                    return;
+                }
+            }
+            for (size_t i = 0; i < prefabSlots_.size(); ++i) {
+                if (hit == prefabSlots_[i] && i < prefabSlots.size() &&
+                    !prefabSlots[i].label.empty()) {
+                    showPrefabTip(prefabSlots[i].label);
+                    return;
+                }
+            }
+        }
+    }
+
+    const size_t activeBlock = hotbar_->GetActiveBlockIndex();
+    if (activeBlock < blockSlots.size() && !blockSlots[activeBlock].label.empty()) {
+        showBlockTip(blockSlots[activeBlock].label);
+    }
+    const size_t activePrefab = hotbar_->GetActivePrefabIndex();
+    if (activePrefab < prefabSlots.size() && !prefabSlots[activePrefab].label.empty()) {
+        showPrefabTip(prefabSlots[activePrefab].label);
+    }
+}
+
+void InGameHudScreen::Update(double /*dt*/)
+{
+    if (!rootPanel_ || !hotbar_ || !theme_) {
+        return;
+    }
+    EnsureHotbarWidgets();
+    LayoutHotbar();
+    UpdateSlotData();
+    UpdateTooltips();
 }
 
 } // namespace cutum

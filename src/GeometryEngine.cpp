@@ -345,12 +345,61 @@ if (!camera) {
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    GLboolean depthMask;
    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
-   glDepthMask(GL_FALSE);
    GLboolean cullWasEnabled;
    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+   GLint depthFuncWas = GL_LESS;
+   glGetIntegerv(GL_DEPTH_FUNC, &depthFuncWas);
+   GLboolean stencilWasEnabled = GL_FALSE;
+   glGetBooleanv(GL_STENCIL_TEST, &stencilWasEnabled);
+   GLint stencilFuncWas = GL_ALWAYS;
+   GLint stencilRefWas = 0;
+   GLint stencilMaskWas = 0xFF;
+   GLint stencilWriteMaskWas = 0xFF;
+   GLint stencilFailWas = GL_KEEP;
+   GLint stencilZFailWas = GL_KEEP;
+   GLint stencilZPassWas = GL_KEEP;
+   glGetIntegerv(GL_STENCIL_FUNC, &stencilFuncWas);
+   glGetIntegerv(GL_STENCIL_REF, &stencilRefWas);
+   glGetIntegerv(GL_STENCIL_VALUE_MASK, &stencilMaskWas);
+   glGetIntegerv(GL_STENCIL_WRITEMASK, &stencilWriteMaskWas);
+   glGetIntegerv(GL_STENCIL_FAIL, &stencilFailWas);
+   glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL, &stencilZFailWas);
+   glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS, &stencilZPassWas);
    glDisable(GL_CULL_FACE);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
-                         WorldInstance->GetCullRevision(), true);
+   // Transparent: shell depth prepass marks stencil; color only at shell pixels may use
+   // GREATER/LEQUAL (avoids drawing through solid blocks where stencil stayed 0).
+   constexpr float kShellAlpha = 0.35f;
+   const uint64_t cullRev = WorldInstance->GetCullRevision();
+   glEnable(GL_STENCIL_TEST);
+   glStencilMask(0xFF);
+   glStencilFunc(GL_ALWAYS, 1, 0xFF);
+   glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+   glDepthMask(GL_TRUE);
+   glDepthFunc(GL_LESS);
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true,
+                         GreedyTransparentSubPass::DepthPrepass, kShellAlpha);
+   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+   glDepthMask(GL_FALSE);
+   glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+   glStencilFunc(GL_EQUAL, 1, 0xFF);
+   glDepthFunc(GL_GREATER);
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true);
+   glDepthFunc(GL_LEQUAL);
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true);
+   glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+   glDepthFunc(GL_LESS);
+   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true,
+                         GreedyTransparentSubPass::FuzzyWisps, kShellAlpha);
+   glDepthFunc(depthFuncWas);
+   glStencilFunc(stencilFuncWas, stencilRefWas, stencilMaskWas);
+   glStencilOp(stencilFailWas, stencilZFailWas, stencilZPassWas);
+   glStencilMask(stencilWriteMaskWas);
+   if (stencilWasEnabled) {
+    glEnable(GL_STENCIL_TEST);
+   } else {
+    glDisable(GL_STENCIL_TEST);
+   }
    if (cullWasEnabled) {
     glEnable(GL_CULL_FACE);
    } else {
@@ -694,7 +743,9 @@ void GeometryEngine::DrawGreedyMeshBatches(
     const std::map<size_t, TextureCube>& textures,
     uint64_t meshRevision,
     uint64_t cullRevision,
-    bool transparentPass)
+    bool transparentPass,
+    GreedyTransparentSubPass subPass,
+    float shellAlphaThreshold)
 {
  std::vector<GreedyMeshBatch> filtered;
  filtered.reserve(batches.size());
@@ -733,6 +784,19 @@ void GeometryEngine::DrawGreedyMeshBatches(
  greedyShader->SetMat4("mvp_matrix", vp);
  greedyShader->SetInt("texture0", 0);
  greedyShader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+ if (transparentPass) {
+  int subPassMode = 0;
+  if (subPass == GreedyTransparentSubPass::DepthPrepass) {
+   subPassMode = 1;
+  } else if (subPass == GreedyTransparentSubPass::FuzzyWisps) {
+   subPassMode = 2;
+  }
+  greedyShader->SetInt("uTransparentSubPass", subPassMode);
+  greedyShader->SetFloat("uShellAlphaThreshold", shellAlphaThreshold);
+ } else {
+  greedyShader->SetInt("uTransparentSubPass", 0);
+  greedyShader->SetFloat("uShellAlphaThreshold", 0.0f);
+ }
  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
   ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
  }

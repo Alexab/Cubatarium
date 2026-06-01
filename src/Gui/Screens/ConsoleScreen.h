@@ -16,6 +16,7 @@ public:
 
     void Build(GuiContext& ctx) override;
     void Update(double dt) override;
+    void OnViewportChanged(int width, int height) override;
     bool BlocksGameInput() const override { return visible_; }
 
     void SetVisible(bool visible);
@@ -24,6 +25,7 @@ public:
     void SubmitCommand();
 
 private:
+    void Relayout();
 
     GameSession* session_{nullptr};
     GuiListView* logView_{nullptr};

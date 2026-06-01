@@ -25,6 +25,7 @@ class ShaderManager;
 class GuiContext;
 class GameSession;
 class BlockDefinitionStorage;
+class GuiIconSource;
 
 class Application {
 public:
@@ -35,6 +36,7 @@ public:
                 std::shared_ptr<TextRenderer> textRenderer,
                 std::shared_ptr<ShaderManager> shaderManager,
                 std::shared_ptr<BlockDefinitionStorage> blockDefinitions);
+    ~Application();
 
     void Startup(const std::string& configPath);
     void RequestEnterGame();
@@ -98,6 +100,7 @@ private:
     bool pendingQuit_{false};
     bool quitRequested_{false};
 
+    std::unique_ptr<GuiIconSource> iconSource_;
     std::unique_ptr<InGameHudScreen> hudScreen_;
     std::unique_ptr<ConsoleScreen> consoleScreen_;
     std::unique_ptr<CreativePaletteScreen> paletteScreen_;

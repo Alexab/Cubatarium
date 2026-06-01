@@ -30,6 +30,7 @@ public:
     void Render(int windowWidth, int windowHeight);
     void RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight,
                        bool expandRootToViewport = true);
+    void NotifyViewport(int windowWidth, int windowHeight);
 
     bool RouteKey(const GuiKeyEvent& event);
     bool RouteChar(const GuiCharEvent& event);

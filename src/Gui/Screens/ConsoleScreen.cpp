@@ -42,22 +42,34 @@ void ConsoleScreen::Build(GuiContext& ctx)
     panel->AddChild(std::move(log));
     panel->AddChild(std::move(input));
     root_ = std::move(panel);
+    Relayout();
+}
+
+void ConsoleScreen::OnViewportChanged(int width, int height)
+{
+    GuiScreenBase::OnViewportChanged(width, height);
+    Relayout();
+}
+
+void ConsoleScreen::Relayout()
+{
+    if (!root_) {
+        return;
+    }
+    const int panelH = viewportH_ * 40 / 100;
+    root_->SetBounds({0, viewportH_ - panelH, viewportW_, panelH});
+    if (logView_) {
+        logView_->SetBounds({8, 8, viewportW_ - 16, panelH - 48});
+    }
+    if (input_) {
+        input_->SetBounds({8, panelH - 40, viewportW_ - 16, 32});
+    }
 }
 
 void ConsoleScreen::Update(double /*dt*/)
 {
     if (!root_ || !visible_) {
         return;
-    }
-    const int w = 1280;
-    const int h = 720;
-    const int panelH = h * 40 / 100;
-    root_->SetBounds({0, h - panelH, w, panelH});
-    if (logView_) {
-        logView_->SetBounds({8, 8, w - 16, panelH - 48});
-    }
-    if (input_) {
-        input_->SetBounds({8, panelH - 40, w - 16, 32});
     }
     if (session_ && logView_) {
         logView_->SetItems(session_->GetChatLog());

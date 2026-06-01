@@ -87,9 +87,16 @@ private:
  void DestroyFaceQuadBuffers();
  bool InitGreedyMeshBuffers();
  void DestroyGreedyMeshBuffers();
+ enum class GreedyTransparentSubPass {
+  Normal,
+  DepthPrepass,
+  FuzzyWisps,
+ };
  void DrawGreedyMeshBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
                             const std::map<size_t, TextureCube>& textures,
-                            uint64_t meshRevision, uint64_t cullRevision, bool transparentPass);
+                            uint64_t meshRevision, uint64_t cullRevision, bool transparentPass,
+                            GreedyTransparentSubPass subPass = GreedyTransparentSubPass::Normal,
+                            float shellAlphaThreshold = 0.35f);
  void SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader, BlockId blockId,
                            const std::map<size_t, TextureCube>& textures);
  void ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,

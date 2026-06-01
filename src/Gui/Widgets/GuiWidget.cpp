@@ -47,6 +47,11 @@ GuiWidget* GuiWidget::AddChild(std::unique_ptr<GuiWidget> child)
     return children_.back().get();
 }
 
+void GuiWidget::ClearChildren()
+{
+    children_.clear();
+}
+
 GuiWidget* GuiWidget::HitTest(int x, int y)
 {
     if (!visible_ || !bounds_.Contains(x, y)) {

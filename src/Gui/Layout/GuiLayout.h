@@ -10,10 +10,22 @@ class GuiWidget;
 
 enum class GuiAnchorKind {
     TopLeft,
+    TopCenter,
     Center,
     BottomCenter,
     Fill
 };
+
+struct HotbarLayoutResult {
+    int startX{0};
+    int blockRowY{0};
+    int prefabRowY{0};
+    int totalW{0};
+};
+
+/// Prefab row at bottom; block row above prefab.
+HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize, int gap,
+                                    int marginBottom);
 
 class GuiLayout {
 public:

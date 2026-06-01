@@ -16,7 +16,9 @@ public:
 
     void SetSelected(bool selected) { selected_ = selected; }
     void SetLabel(const std::string& label) { label_ = label; }
+    void SetIconTexture(unsigned int texture) { iconTexture_ = texture; }
     void SetOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
+    const std::string& GetLabel() const { return label_; }
 
     void Draw(GuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
@@ -30,6 +32,7 @@ private:
     int slotSize_;
     bool selected_{false};
     std::string label_;
+    unsigned int iconTexture_{0};
     bool pressed_{false};
     std::function<void()> onClick_;
 };

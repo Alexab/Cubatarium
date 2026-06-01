@@ -92,6 +92,9 @@ set(SOURCES
     src/Gui/GuiTheme.cpp
     src/Gui/GuiRenderer.cpp
     src/Gui/UiQuadBatch.cpp
+    src/Gui/UiTexturedQuadBatch.cpp
+    src/Gui/GuiIconSource.cpp
+    src/Gui/PrefabIconCache.cpp
     src/Gui/GuiInputRouter.cpp
     src/Gui/GuiContext.cpp
     src/Gui/GuiScreenBase.cpp
@@ -160,6 +163,10 @@ set(HEADERS
     src/Gui/GuiTheme.h
     src/Gui/GuiRenderer.h
     src/Gui/UiQuadBatch.h
+    src/Gui/UiTexturedQuadBatch.h
+    src/Gui/GuiIconSource.h
+    src/Gui/PrefabIconCache.h
+    src/Gui/Interfaces/IGuiIconSource.h
     src/Gui/GuiInputRouter.h
     src/Gui/GuiContext.h
     src/Gui/GuiScreenBase.h

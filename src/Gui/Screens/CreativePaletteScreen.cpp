@@ -1,6 +1,7 @@
 #include "CreativePaletteScreen.h"
 #include "Gui/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
@@ -9,9 +10,11 @@
 
 namespace cutum {
 
-CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar)
+CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar,
+                                             IGuiIconSource* icons)
     : catalog_(catalog)
     , hotbar_(hotbar)
+    , icons_(icons)
 {
 }
 
@@ -71,21 +74,39 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
     built_ = false;
 }
 
-void CreativePaletteScreen::Update(double /*dt*/)
+void CreativePaletteScreen::OnViewportChanged(int width, int height)
 {
-    if (!visible_ || !panel_ || !catalog_ || !theme_) {
+    GuiScreenBase::OnViewportChanged(width, height);
+    RelayoutPanel();
+}
+
+void CreativePaletteScreen::RelayoutPanel()
+{
+    if (!panel_) {
         return;
     }
-    const int w = 1280;
-    const int h = 720;
-    const int panelW = w * 35 / 100;
-    panel_->SetBounds({w - panelW, 0, panelW, h});
+    const int panelW = viewportW_ * 35 / 100;
+    panel_->SetBounds({viewportW_ - panelW, 0, panelW, viewportH_});
 
     if (mainTabs_) {
         mainTabs_->SetBounds({8, 8, panelW - 16, 28});
     }
     if (subTabs_) {
         subTabs_->SetBounds({8, 40, panelW - 16, 28});
+    }
+    if (scroll_) {
+        scroll_->SetBounds({8, 76, panelW - 16, viewportH_ - 84});
+    }
+}
+
+void CreativePaletteScreen::Update(double /*dt*/)
+{
+    if (!visible_ || !panel_ || !catalog_ || !theme_) {
+        return;
+    }
+    RelayoutPanel();
+
+    if (subTabs_) {
         const auto types = catalog_->GetTypeIds(kind_);
         std::vector<std::string> labels;
         for (const auto& id : types) {
@@ -99,9 +120,6 @@ void CreativePaletteScreen::Update(double /*dt*/)
             activeTypeId_ = types.front();
         }
     }
-    if (scroll_) {
-        scroll_->SetBounds({8, 76, panelW - 16, h - 84});
-    }
 
     if (!built_) {
         RebuildGrid();
@@ -113,10 +131,9 @@ void CreativePaletteScreen::RebuildGrid()
     if (!scroll_ || !catalog_ || !hotbar_ || !theme_) {
         return;
     }
-    while (!scroll_->GetChildren().empty()) {
-        // remove old grid by rebuilding scroll content - not supported, skip
-        break;
-    }
+    scroll_->ClearChildren();
+    scroll_->SetContent(nullptr);
+
     auto grid = std::make_unique<GuiPanel>(theme_);
     const auto entries =
         catalog_->GetEntries(kind_, activeTypeId_.empty() ? "misc" : activeTypeId_);
@@ -128,7 +145,13 @@ void CreativePaletteScreen::RebuildGrid()
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
         slot->SetBounds({x, y, slotSize, slotSize});
         const std::string entryId = entries[i].id;
-        slot->SetLabel(entries[i].displayName);
+        if (icons_) {
+            const GLuint tex =
+                kind_ == ContentKind::Block
+                    ? icons_->GetBlockIconTexture(entryId)
+                    : icons_->GetPrefabIconTextureIfCached(entryId);
+            slot->SetIconTexture(tex);
+        }
         slot->SetOnClick([this, entryId]() {
             if (!hotbar_) {
                 return;

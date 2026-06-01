@@ -293,7 +293,7 @@ void WindowManager::Render() {
         const glm::vec4 clearColor = geometries->GetSkyColor();
         glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     }
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (geometries && views) {
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());

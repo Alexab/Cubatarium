@@ -10,6 +10,7 @@ namespace cutum {
 
 class IContentCatalog;
 class IHotbarViewModel;
+class IGuiIconSource;
 class GuiTabBar;
 class GuiScrollView;
 class GuiPanel;
@@ -17,7 +18,10 @@ struct GuiTheme;
 
 class CreativePaletteScreen : public GuiScreenBase {
 public:
-    CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar);
+    CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar,
+                          IGuiIconSource* icons);
+
+    void OnViewportChanged(int width, int height) override;
 
     void Build(GuiContext& ctx) override;
     void Update(double dt) override;
@@ -25,12 +29,15 @@ public:
 
     void SetVisible(bool visible);
     void Toggle();
+    void InvalidateGrid() { built_ = false; }
 
 private:
     void RebuildGrid();
+    void RelayoutPanel();
 
     IContentCatalog* catalog_{nullptr};
     IHotbarViewModel* hotbar_{nullptr};
+    IGuiIconSource* icons_{nullptr};
     GuiPanel* panel_{nullptr};
     GuiTabBar* mainTabs_{nullptr};
     GuiTabBar* subTabs_{nullptr};

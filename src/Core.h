@@ -53,6 +53,9 @@ public:
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
  std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
+ std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
+  return TextureCubeStorageInstance;
+ }
 
 private:
  std::vector<std::string> WorldList;
