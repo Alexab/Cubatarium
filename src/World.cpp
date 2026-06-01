@@ -4,6 +4,7 @@
 //#include <QJsonValue>
 //#include <QJsonArray>
 //#include <QFile>
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <unordered_map>
@@ -219,11 +220,11 @@ void World::GenerateWorldBlocks()
   return;
  }
 
- constexpr int kSpawnRadiusChunks = 2;
+ const int patchRadiusBlocks = std::max(1, renderDistanceChunks_) * CHUNK_SIZE;
  if (streamingEnabled_) {
-  worldGen_->GenerateSpawnPatch(0, 0, kSpawnRadiusChunks * CHUNK_SIZE);
+  worldGen_->GenerateSpawnPatch(0, 0, patchRadiusBlocks);
  } else {
-  worldGen_->GenerateFullPatch(0, 0, 16);
+  worldGen_->GenerateFullPatch(0, 0, patchRadiusBlocks);
  }
  SpawnPoint = worldGen_->DefaultSpawnPosition(0, 0);
 
@@ -1800,6 +1801,9 @@ int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_fol
        chunkCoord.z * CHUNK_SIZE + lz);
    blockWorld_.SetBlock(worldPos, id);
    ++placed;
+  }
+  if (placed == 0) {
+   return -1;
   }
   return placed;
  } catch (const json::exception& e) {

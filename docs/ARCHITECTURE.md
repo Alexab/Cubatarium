@@ -135,7 +135,7 @@ Default: `streaming_enabled: true` in `config.json`.
    - `flat` — bedrock / stone / grass at fixed height (`GenerateFlatColumn`)
 3. Unload distant chunks (save to disk, drop from memory).
 
-Initial area on new world: 2 chunk radius (`GenerateSpawnArea` or `GenerateFlatArea`). Without streaming, a fixed 33×33 region is generated at once.
+Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
 
 `terrain` and `world_seed` are stored in `world_data.json` per world so reload uses the same generator as creation.
 

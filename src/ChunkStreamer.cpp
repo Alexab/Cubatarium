@@ -32,6 +32,11 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3& playerPos
         pz0 <= cz1 && pz1 >= cz0;
 }
 
+bool TerrainColumnIsEmpty(const BlockWorld& world, int worldX, int worldZ)
+{
+ return world.GetBlock(glm::ivec3(worldX, 0, worldZ)) == BLOCK_AIR;
+}
+
 } // namespace
 
 ChunkStreamer::ChunkStreamer(BlockWorld& world, BlockRegistry& registry, uint32_t seed,
@@ -61,33 +66,42 @@ void ChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn, MarkDir
 
 bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
 {
- const Chunk* existing = world_.GetChunkManager().GetChunk(chunkCoord);
- if (existing != nullptr) {
-  return false;
- }
-
- if (loadChunkFn_ && loadChunkFn_(chunkCoord)) {
-  if (markDirtyFn_) {
-   markDirtyFn_(chunkCoord);
-  }
-  return true;
- }
-
- if (!generateColumnFn_) {
-  return false;
- }
-
  // Terrain columns are generated at world Y=0..surface; only fill ground layer chunks.
  if (chunkCoord.y != 0) {
   return false;
  }
 
+ const Chunk* existing = world_.GetChunkManager().GetChunk(chunkCoord);
+ if (existing == nullptr) {
+  if (loadChunkFn_ && loadChunkFn_(chunkCoord)) {
+   if (markDirtyFn_) {
+    markDirtyFn_(chunkCoord);
+   }
+   return true;
+  }
+  if (!generateColumnFn_) {
+   return false;
+  }
+ } else if (!generateColumnFn_) {
+  return false;
+ }
+
+ bool generated = false;
+ const bool onlyEmptyColumns = existing != nullptr;
  for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
   for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
    const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
    const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
+   if (onlyEmptyColumns && !TerrainColumnIsEmpty(world_, worldX, worldZ)) {
+    continue;
+   }
    generateColumnFn_(worldX, worldZ);
+   generated = true;
   }
+ }
+
+ if (!generated) {
+  return false;
  }
 
  if (markDirtyFn_) {
