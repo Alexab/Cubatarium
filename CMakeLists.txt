@@ -52,6 +52,11 @@ set(SOURCES
     src/World.cpp
     src/WindowManager.cpp
     src/GeometryEngine.cpp
+    src/render/GlStateScope.cpp
+    src/render/GreedyShaderMode.cpp
+    src/render/GreedyTransparentSort.cpp
+    src/render/TransparentPass.cpp
+    src/render/GreedyTransparentPipeline.cpp
     src/GridMath.cpp
     src/BlockRegistry.cpp
     src/BlockDefinition.cpp

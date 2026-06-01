@@ -18,66 +18,11 @@
 #include "Camera.h"
 #include "ShaderManager.h"
 #include "BlockRegistry.h"
+#include "render/GreedyShaderMode.h"
+#include "render/GreedyTransparentPipeline.h"
+#include "render/GreedyTransparentSort.h"
 
 namespace cutum {
-
-namespace {
-
-uint64_t GreedyTransparentSortRevision(const glm::vec3& cameraPos)
-{
- const int qx = static_cast<int>(std::floor(cameraPos.x * 4.0f));
- const int qy = static_cast<int>(std::floor(cameraPos.y * 4.0f));
- const int qz = static_cast<int>(std::floor(cameraPos.z * 4.0f));
- return (static_cast<uint64_t>(static_cast<uint32_t>(qx)) << 42)
-        ^ (static_cast<uint64_t>(static_cast<uint32_t>(qy)) << 21)
-        ^ static_cast<uint64_t>(static_cast<uint32_t>(qz));
-}
-
-float GreedyBatchViewDistance(const GreedyMeshBatch& batch, const glm::vec3& cameraPos)
-{
- if (batch.vertices.empty()) {
-  return 0.0f;
- }
- glm::vec3 centroid(0.0f);
- for (const GreedyMeshVertex& v : batch.vertices) {
-  centroid += glm::vec3(v.px, v.py, v.pz);
- }
- centroid /= static_cast<float>(batch.vertices.size());
- return glm::length(centroid - cameraPos);
-}
-
-int TransparentBatchLayer(BlockRenderStyle style)
-{
- switch (style) {
-  case BlockRenderStyle::Fluid:
-   return 0;
-  case BlockRenderStyle::Cross:
-   return 2;
-  default:
-   return 1;
- }
-}
-
-void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch>& batches,
-                                  const glm::vec3& cameraPos,
-                                  const BlockRegistry& registry)
-{
- std::sort(batches.begin(), batches.end(),
-           [&](const GreedyMeshBatch& a, const GreedyMeshBatch& b) {
-            const float distA = GreedyBatchViewDistance(a, cameraPos);
-            const float distB = GreedyBatchViewDistance(b, cameraPos);
-            if (std::abs(distA - distB) > 0.25f) {
-             return distA > distB;
-            }
-            const int layerA =
-                TransparentBatchLayer(registry.GetRenderStyle(a.blockId));
-            const int layerB =
-                TransparentBatchLayer(registry.GetRenderStyle(b.blockId));
-            return layerA < layerB;
-           });
-}
-
-} // namespace
 
 GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer)
  : ObjectStorageInstance(object_storage)
@@ -337,75 +282,21 @@ if (!camera) {
     blockBatchesValid_ = true;
    }
    const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
-                         WorldInstance->GetCullRevision(), false);
+   const uint64_t cullRev = WorldInstance->GetCullRevision();
+   DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
    GLboolean blendWasEnabled;
    glGetBooleanv(GL_BLEND, &blendWasEnabled);
-   glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   GLboolean depthMask;
-   glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
    GLboolean cullWasEnabled;
    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-   GLint depthFuncWas = GL_LESS;
-   glGetIntegerv(GL_DEPTH_FUNC, &depthFuncWas);
-   GLboolean stencilWasEnabled = GL_FALSE;
-   glGetBooleanv(GL_STENCIL_TEST, &stencilWasEnabled);
-   GLint stencilFuncWas = GL_ALWAYS;
-   GLint stencilRefWas = 0;
-   GLint stencilMaskWas = 0xFF;
-   GLint stencilWriteMaskWas = 0xFF;
-   GLint stencilFailWas = GL_KEEP;
-   GLint stencilZFailWas = GL_KEEP;
-   GLint stencilZPassWas = GL_KEEP;
-   glGetIntegerv(GL_STENCIL_FUNC, &stencilFuncWas);
-   glGetIntegerv(GL_STENCIL_REF, &stencilRefWas);
-   glGetIntegerv(GL_STENCIL_VALUE_MASK, &stencilMaskWas);
-   glGetIntegerv(GL_STENCIL_WRITEMASK, &stencilWriteMaskWas);
-   glGetIntegerv(GL_STENCIL_FAIL, &stencilFailWas);
-   glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL, &stencilZFailWas);
-   glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS, &stencilZPassWas);
-   glDisable(GL_CULL_FACE);
-   // Transparent: shell depth prepass marks stencil; color only at shell pixels may use
-   // GREATER/LEQUAL (avoids drawing through solid blocks where stencil stayed 0).
-   constexpr float kShellAlpha = 0.35f;
-   const uint64_t cullRev = WorldInstance->GetCullRevision();
-   glEnable(GL_STENCIL_TEST);
-   glStencilMask(0xFF);
-   glStencilFunc(GL_ALWAYS, 1, 0xFF);
-   glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-   glDepthMask(GL_TRUE);
-   glDepthFunc(GL_LESS);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true,
-                         GreedyTransparentSubPass::DepthPrepass, kShellAlpha);
-   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-   glDepthMask(GL_FALSE);
-   glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-   glStencilFunc(GL_EQUAL, 1, 0xFF);
-   glDepthFunc(GL_GREATER);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true);
-   glDepthFunc(GL_LEQUAL);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true);
-   glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-   glDepthFunc(GL_LESS);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision, cullRev, true,
-                         GreedyTransparentSubPass::FuzzyWisps, kShellAlpha);
-   glDepthFunc(depthFuncWas);
-   glStencilFunc(stencilFuncWas, stencilRefWas, stencilMaskWas);
-   glStencilOp(stencilFailWas, stencilZFailWas, stencilZPassWas);
-   glStencilMask(stencilWriteMaskWas);
-   if (stencilWasEnabled) {
-    glEnable(GL_STENCIL_TEST);
-   } else {
-    glDisable(GL_STENCIL_TEST);
-   }
+   GreedyTransparentDrawContext tctx{greedyBatches, vp, meshRevision, cullRev,
+                                     camera->GetPosition(),
+                                     WorldInstance->GetBlockRegistry(), textures};
+   GreedyTransparentPipeline::Draw(*this, tctx);
    if (cullWasEnabled) {
     glEnable(GL_CULL_FACE);
    } else {
     glDisable(GL_CULL_FACE);
    }
-   glDepthMask(depthMask ? GL_TRUE : GL_FALSE);
    if (!blendWasEnabled) {
     glDisable(GL_BLEND);
    }
@@ -737,24 +628,30 @@ void GeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>&
  shader->SetFloat("uFogEnabled", fogEnabled_);
 }
 
-void GeometryEngine::DrawGreedyMeshBatches(
-    const std::vector<GreedyMeshBatch>& batches,
+void GeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader,
+                                         bool transparentPass,
+                                         GreedyShaderMode mode,
+                                         float shellAlphaThreshold)
+{
+ shader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+ if (transparentPass) {
+  shader->SetInt("uGreedyShaderMode", GreedyShaderModeToUniform(mode));
+  shader->SetFloat("uShellAlphaThreshold", shellAlphaThreshold);
+ } else {
+  shader->SetInt("uGreedyShaderMode", 0);
+  shader->SetFloat("uShellAlphaThreshold", 0.0f);
+ }
+}
+
+void GeometryEngine::DrawGreedyGpuBatches(
+    const GreedyGpuPassCache& cache,
     const glm::mat4& vp,
     const std::map<size_t, TextureCube>& textures,
-    uint64_t meshRevision,
-    uint64_t cullRevision,
     bool transparentPass,
-    GreedyTransparentSubPass subPass,
+    GreedyShaderMode mode,
     float shellAlphaThreshold)
 {
- std::vector<GreedyMeshBatch> filtered;
- filtered.reserve(batches.size());
- for (const GreedyMeshBatch& batch : batches) {
-  if (batch.transparent == transparentPass) {
-   filtered.push_back(batch);
-  }
- }
- if (filtered.empty()) {
+ if (cache.batches.empty()) {
   return;
  }
  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers()) {
@@ -764,39 +661,10 @@ void GeometryEngine::DrawGreedyMeshBatches(
   return;
  }
 
- uint64_t sortRevision = 0;
- if (transparentPass) {
-  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
-   sortRevision = GreedyTransparentSortRevision(camera->GetPosition());
-   SortTransparentGreedyBatches(filtered, camera->GetPosition(),
-                                WorldInstance->GetBlockRegistry());
-  }
- }
-
- GreedyGpuPassCache& gpuCache =
-     transparentPass ? greedyGpuTransparent_ : greedyGpuOpaque_;
- RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, gpuCache, sortRevision);
- if (gpuCache.batches.empty()) {
-  return;
- }
-
  greedyShader->Use();
  greedyShader->SetMat4("mvp_matrix", vp);
  greedyShader->SetInt("texture0", 0);
- greedyShader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
- if (transparentPass) {
-  int subPassMode = 0;
-  if (subPass == GreedyTransparentSubPass::DepthPrepass) {
-   subPassMode = 1;
-  } else if (subPass == GreedyTransparentSubPass::FuzzyWisps) {
-   subPassMode = 2;
-  }
-  greedyShader->SetInt("uTransparentSubPass", subPassMode);
-  greedyShader->SetFloat("uShellAlphaThreshold", shellAlphaThreshold);
- } else {
-  greedyShader->SetInt("uTransparentSubPass", 0);
-  greedyShader->SetFloat("uShellAlphaThreshold", 0.0f);
- }
+ SetGreedyShaderMode(greedyShader, transparentPass, mode, shellAlphaThreshold);
  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
   ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
  }
@@ -804,7 +672,7 @@ void GeometryEngine::DrawGreedyMeshBatches(
 
  glBindVertexArray(greedyMeshVAO);
  const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
- for (const GreedyGpuBatch& gpu : gpuCache.batches) {
+ for (const GreedyGpuBatch& gpu : cache.batches) {
   SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
   if (gpu.indexCount <= 0) {
    continue;
@@ -835,6 +703,59 @@ void GeometryEngine::DrawGreedyMeshBatches(
  glBindBuffer(GL_ARRAY_BUFFER, 0);
  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
  greedyShader->Unuse();
+}
+
+void GeometryEngine::DrawGreedyOpaqueBatches(
+    const std::vector<GreedyMeshBatch>& batches,
+    const glm::mat4& vp,
+    const std::map<size_t, TextureCube>& textures,
+    uint64_t meshRevision,
+    uint64_t cullRevision)
+{
+ std::vector<GreedyMeshBatch> filtered;
+ filtered.reserve(batches.size());
+ for (const GreedyMeshBatch& batch : batches) {
+  if (!batch.transparent) {
+   filtered.push_back(batch);
+  }
+ }
+ if (filtered.empty()) {
+  return;
+ }
+ RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, greedyGpuOpaque_, 0);
+ DrawGreedyGpuBatches(greedyGpuOpaque_, vp, textures, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
+}
+
+void GeometryEngine::PrepareTransparent(const GreedyTransparentDrawContext& ctx)
+{
+ std::vector<GreedyMeshBatch> filtered;
+ filtered.reserve(ctx.allBatches.size());
+ for (const GreedyMeshBatch& batch : ctx.allBatches) {
+  if (batch.transparent) {
+   filtered.push_back(batch);
+  }
+ }
+ if (filtered.empty()) {
+  greedyGpuTransparent_.batches.clear();
+  preparedTransparentTextures_ = nullptr;
+  return;
+ }
+ SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
+ const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
+ RefreshGreedyGpuBatches(filtered, ctx.meshRevision, ctx.cullRevision,
+                         greedyGpuTransparent_, sortRevision);
+ preparedTransparentVp_ = ctx.viewProjection;
+ preparedTransparentTextures_ = &ctx.textures;
+}
+
+void GeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode, float shellAlpha)
+{
+ if (!preparedTransparentTextures_ || greedyGpuTransparent_.batches.empty()) {
+  return;
+ }
+ DrawGreedyGpuBatches(greedyGpuTransparent_, preparedTransparentVp_,
+                      *preparedTransparentTextures_, true, mode, shellAlpha);
 }
 
 bool GeometryEngine::InitGreedyMeshBuffers()

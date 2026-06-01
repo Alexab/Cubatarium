@@ -2,10 +2,6 @@
 
 #include <GLFW/glfw3.h>
 
-#ifndef GLFW_CURSOR_CAPTURED
-#define GLFW_CURSOR_CAPTURED 0x00034006
-#endif
-
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -14,6 +10,20 @@
 namespace cutum {
 
 namespace {
+
+/// GLFW_CURSOR_CAPTURED was added in GLFW 3.4; older linked libraries reject the value.
+bool GlfwSupportsCursorCapturedMode()
+{
+#ifdef GLFW_CURSOR_CAPTURED
+    int major = 0;
+    int minor = 0;
+    int rev = 0;
+    glfwGetVersion(&major, &minor, &rev);
+    return major > 3 || (major == 3 && minor >= 4);
+#else
+    return false;
+#endif
+}
 
 #ifdef _WIN32
 bool ConfineCursorWin32(GLFWwindow* window)
@@ -38,8 +48,18 @@ bool ConfineCursorWin32(GLFWwindow* window)
 
 bool TryGlfwCapturedCursor(GLFWwindow* window)
 {
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+#ifdef GLFW_CURSOR_CAPTURED
+    if (!GlfwSupportsCursorCapturedMode()) {
+        return false;
+    }
+    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_CAPTURED) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+    }
     return glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_CAPTURED;
+#else
+    (void)window;
+    return false;
+#endif
 }
 
 } // namespace
@@ -58,7 +78,9 @@ void ApplyCursorPolicy(GLFWwindow* window, AppCursorPolicy policy)
     }
 
     if (policy == AppCursorPolicy::Free) {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
         ReleasePlatformCursorClip();
         return;
     }
@@ -68,7 +90,9 @@ void ApplyCursorPolicy(GLFWwindow* window, AppCursorPolicy policy)
         return;
     }
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 #ifdef _WIN32
     ConfineCursorWin32(window);
 #else

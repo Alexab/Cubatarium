@@ -6,67 +6,15 @@
 #include "ShaderManager.h"
 #include "TextureCube.h"
 
+#include "render/GlStateMask.h"
+#include "render/GlStateScope.h"
+
 #include <GL/glew.h>
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
 namespace cutum {
-
-namespace {
-
-struct ScopedGlState {
-    GLint framebuffer{0};
-    GLint viewport[4]{};
-    GLboolean depthTest{GL_FALSE};
-    GLboolean blend{GL_FALSE};
-    GLboolean cullFace{GL_FALSE};
-    GLint activeTexture{0};
-    GLint boundTexture{0};
-    GLint program{0};
-    GLint vao{0};
-
-    ScopedGlState()
-    {
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        glGetBooleanv(GL_DEPTH_TEST, &depthTest);
-        glGetBooleanv(GL_BLEND, &blend);
-        glGetBooleanv(GL_CULL_FACE, &cullFace);
-        glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
-        glActiveTexture(GL_TEXTURE0);
-        glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
-        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
-    }
-
-    ~ScopedGlState()
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(framebuffer));
-        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-        if (depthTest) {
-            glEnable(GL_DEPTH_TEST);
-        } else {
-            glDisable(GL_DEPTH_TEST);
-        }
-        if (blend) {
-            glEnable(GL_BLEND);
-        } else {
-            glDisable(GL_BLEND);
-        }
-        if (cullFace) {
-            glEnable(GL_CULL_FACE);
-        } else {
-            glDisable(GL_CULL_FACE);
-        }
-        glActiveTexture(static_cast<GLenum>(activeTexture));
-        glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
-        glUseProgram(static_cast<GLuint>(program));
-        glBindVertexArray(static_cast<GLuint>(vao));
-    }
-};
-
-} // namespace
 
 PrefabIconCache::PrefabIconCache(std::shared_ptr<PrefabLibrary> prefabs,
                                  std::shared_ptr<TextureCubeStorage> textures,
@@ -232,7 +180,7 @@ GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    ScopedGlState glState;
+    GlStateScope glState(kGlMaskIconFbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex, 0);

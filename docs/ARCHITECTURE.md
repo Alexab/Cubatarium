@@ -3,7 +3,7 @@
 ## Render data flow
 
 ```
-BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] (world verts + baked UV) → GeometryEngine::DrawGreedyMeshBatches → vshader.glsl
+BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] → GeometryEngine (opaque + `GreedyTransparentPipeline`) → `vshader_greedy.glsl`
 ```
 
 Legacy path (`greedy_meshing: false`): instanced cubes via `vshader_instanced.glsl`.
@@ -89,8 +89,19 @@ Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`
 | `AnimationClock` | Global 20 TPS tick; `uAnimFrame` / `uAnimFrameCount` in greedy and instanced shaders |
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
-| Greedy mesh | Opaque pass then transparent (`render.transparent`); fluid–fluid faces kept |
+| Greedy mesh | Opaque pass, then multi-pass transparent (see below); fluid–fluid faces kept |
 | Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level` |
+
+### Greedy transparent passes
+
+Documented in [`src/render/README.md`](../src/render/README.md). Implementation: [`GreedyTransparentPipeline.cpp`](../src/render/GreedyTransparentPipeline.cpp).
+
+1. **ShellDepth** — depth prepass (α ≥ `shellAlpha`, default 0.35) + stencil mark.
+2. **BehindShell** — color, `GL_GREATER`, stencil == 1 (layers behind the shell; not through solid blocks).
+3. **ShellSurface** — color, `GL_LEQUAL`, stencil == 1.
+4. **FuzzyEdges** — color, `GL_LESS`, stencil != 1 (soft edges only).
+
+Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
 Import animated types: `tools/block_manifest_animated.json` (ids 170–172) via `tools/import_blocks.ps1`. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
 

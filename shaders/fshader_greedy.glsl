@@ -10,8 +10,13 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
-uniform int uTransparentSubPass;
+// uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
+uniform int uGreedyShaderMode;
 uniform float uShellAlphaThreshold;
+
+const int kGreedyModeColor = 0;
+const int kGreedyModeShellDepth = 1;
+const int kGreedyModeFuzzyOnly = 2;
 uniform vec3 uCameraPos;
 uniform vec3 uFogColor;
 uniform float uFogStart;
@@ -80,10 +85,10 @@ void main()
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }
-    if (uTransparentSubPass == 1 && FragColor.a < uShellAlphaThreshold) {
+    if (uGreedyShaderMode == kGreedyModeShellDepth && FragColor.a < uShellAlphaThreshold) {
         discard;
     }
-    if (uTransparentSubPass == 2 && FragColor.a >= uShellAlphaThreshold) {
+    if (uGreedyShaderMode == kGreedyModeFuzzyOnly && FragColor.a >= uShellAlphaThreshold) {
         discard;
     }
     if (uFogEnabled > 0.5) {
