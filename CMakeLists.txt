@@ -101,6 +101,7 @@ set(SOURCES
     src/Gui/GuiIconSource.cpp
     src/Gui/PrefabIconCache.cpp
     src/Gui/GuiInputRouter.cpp
+    src/Gui/GuiFocus.cpp
     src/Gui/GuiContext.cpp
     src/Gui/GuiScreenBase.cpp
     src/Gui/Layout/GuiLayout.cpp
@@ -112,9 +113,16 @@ set(SOURCES
     src/Gui/Widgets/GuiListView.cpp
     src/Gui/Widgets/GuiTabBar.cpp
     src/Gui/Widgets/GuiScrollView.cpp
+    src/Gui/Widgets/GuiDialogFrame.cpp
     src/Gui/Widgets/GuiWindow.cpp
     src/Gui/Widgets/GuiSlot.cpp
+    src/Gui/Widgets/GuiCheckbox.cpp
+    src/Gui/Widgets/WorldGenSettingsForm.cpp
     src/Gui/Screens/MainMenuScreen.cpp
+    src/Gui/Screens/SettingsScreen.cpp
+    src/Gui/Screens/NewWorldScreen.cpp
+    src/Gui/Screens/LoadWorldScreen.cpp
+    src/Gui/Screens/ConfirmDialogScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
@@ -122,6 +130,7 @@ set(SOURCES
 
 set(HEADERS
     src/Camera.h
+    src/AppSettingsSnapshot.h
     src/Core.h
     src/Cube.h
     src/CubeGL.h
@@ -173,6 +182,7 @@ set(HEADERS
     src/Gui/PrefabIconCache.h
     src/Gui/Interfaces/IGuiIconSource.h
     src/Gui/GuiInputRouter.h
+    src/Gui/GuiFocus.h
     src/Gui/GuiContext.h
     src/Gui/GuiScreenBase.h
     src/Gui/Layout/GuiLayout.h
@@ -184,13 +194,21 @@ set(HEADERS
     src/Gui/Widgets/GuiListView.h
     src/Gui/Widgets/GuiTabBar.h
     src/Gui/Widgets/GuiScrollView.h
+    src/Gui/Widgets/GuiDialogFrame.h
     src/Gui/Widgets/GuiWindow.h
     src/Gui/Widgets/GuiSlot.h
+    src/Gui/Widgets/GuiCheckbox.h
+    src/Gui/Widgets/WorldGenSettingsForm.h
+    src/Gui/Interfaces/IGuiMenuHost.h
     src/Gui/Interfaces/IGuiGameActions.h
     src/Gui/Interfaces/IHotbarViewModel.h
     src/Gui/Interfaces/IContentCatalog.h
     src/Gui/Interfaces/IGameCommandContext.h
     src/Gui/Screens/MainMenuScreen.h
+    src/Gui/Screens/SettingsScreen.h
+    src/Gui/Screens/NewWorldScreen.h
+    src/Gui/Screens/LoadWorldScreen.h
+    src/Gui/Screens/ConfirmDialogScreen.h
     src/Gui/Screens/InGameHudScreen.h
     src/Gui/Screens/ConsoleScreen.h
     src/Gui/Screens/CreativePaletteScreen.h

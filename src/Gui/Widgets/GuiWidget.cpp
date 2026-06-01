@@ -52,6 +52,25 @@ void GuiWidget::ClearChildren()
     children_.clear();
 }
 
+bool GuiWidget::Activate()
+{
+    return false;
+}
+
+void GuiWidget::CollectFocusables(std::vector<GuiWidget*>& out)
+{
+    if (!visible_ || !enabled_) {
+        return;
+    }
+    if (CanFocus()) {
+        out.push_back(this);
+        return;
+    }
+    for (auto& child : children_) {
+        child->CollectFocusables(out);
+    }
+}
+
 GuiWidget* GuiWidget::HitTest(int x, int y)
 {
     if (!visible_ || !bounds_.Contains(x, y)) {
@@ -69,6 +88,23 @@ GuiWidget* GuiWidget::HitTest(int x, int y)
         }
     }
     return this;
+}
+
+GuiWidget* GuiWidget::HitTestFocusable(int x, int y)
+{
+    if (!visible_ || !enabled_ || !bounds_.Contains(x, y)) {
+        return nullptr;
+    }
+    GuiWidget* found = nullptr;
+    for (auto& child : children_) {
+        if (GuiWidget* hit = child->HitTestFocusable(x, y)) {
+            found = hit;
+        }
+    }
+    if (found) {
+        return found;
+    }
+    return CanFocus() ? this : nullptr;
 }
 
 bool GuiWidget::OnMouseDown(const GuiMouseEvent& event)
@@ -129,6 +165,19 @@ bool GuiWidget::OnScroll(const GuiScrollEvent& event)
         }
     }
     return false;
+}
+
+bool GuiWidget::ScrollAtPoint(int x, int y, const GuiScrollEvent& event)
+{
+    if (!visible_ || !bounds_.Contains(x, y)) {
+        return false;
+    }
+    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
+        if ((*it)->ScrollAtPoint(x, y, event)) {
+            return true;
+        }
+    }
+    return OnScroll(event);
 }
 
 } // namespace cutum

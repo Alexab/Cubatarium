@@ -84,10 +84,31 @@ void GameSession::RegisterCommands()
     });
 }
 
-void GameSession::StartGame()
+void GameSession::LoadLastWorld()
 {
     if (application_) {
         application_->ScheduleEnterGame();
+    }
+}
+
+void GameSession::ResumeGame()
+{
+    if (application_) {
+        application_->RequestEnterGame();
+    }
+}
+
+void GameSession::OpenLoadWorld()
+{
+    if (application_) {
+        application_->ShowLoadWorld();
+    }
+}
+
+void GameSession::OpenNewWorld()
+{
+    if (application_) {
+        application_->ShowNewWorld();
     }
 }
 
@@ -100,7 +121,9 @@ void GameSession::QuitApplication()
 
 void GameSession::OpenSettings()
 {
-    AddChatLine("Settings UI is not implemented yet.");
+    if (application_) {
+        application_->ShowSettings();
+    }
 }
 
 bool GameSession::HasPausedSession() const

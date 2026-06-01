@@ -17,6 +17,8 @@ public:
     void SetFocused(bool focused) { focused_ = focused; }
     bool IsFocused() const { return focused_; }
 
+    bool CanFocus() const override;
+
     void Draw(GuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnKey(const GuiKeyEvent& event) override;

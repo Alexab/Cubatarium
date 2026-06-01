@@ -33,10 +33,29 @@ void MainMenuScreen::Build(GuiContext& ctx)
     title_ = title.get();
 
     const bool resume = actions_ && actions_->HasPausedSession();
-    auto play = std::make_unique<GuiButton>(&theme, resume ? "Resume" : "Play");
-    play->SetOnClick([this]() {
+    auto primary = std::make_unique<GuiButton>(&theme, resume ? "Resume" : "Load Last World");
+    primary->SetOnClick([this, resume]() {
+        if (!actions_) {
+            return;
+        }
+        if (resume) {
+            actions_->ResumeGame();
+        } else {
+            actions_->LoadLastWorld();
+        }
+    });
+
+    auto loadWorld = std::make_unique<GuiButton>(&theme, "Load World");
+    loadWorld->SetOnClick([this]() {
         if (actions_) {
-            actions_->StartGame();
+            actions_->OpenLoadWorld();
+        }
+    });
+
+    auto newWorld = std::make_unique<GuiButton>(&theme, "New World");
+    newWorld->SetOnClick([this]() {
+        if (actions_) {
+            actions_->OpenNewWorld();
         }
     });
 
@@ -55,12 +74,16 @@ void MainMenuScreen::Build(GuiContext& ctx)
     });
 
     buttons_.clear();
-    buttons_.push_back(play.get());
+    buttons_.push_back(primary.get());
+    buttons_.push_back(loadWorld.get());
+    buttons_.push_back(newWorld.get());
     buttons_.push_back(settings.get());
     buttons_.push_back(quit.get());
 
     panel->AddChild(std::move(title));
-    panel->AddChild(std::move(play));
+    panel->AddChild(std::move(primary));
+    panel->AddChild(std::move(loadWorld));
+    panel->AddChild(std::move(newWorld));
     panel->AddChild(std::move(settings));
     panel->AddChild(std::move(quit));
     root_ = std::move(panel);

@@ -32,8 +32,21 @@ public:
     virtual void Update(double dt);
     virtual void Draw(GuiRenderer& renderer);
 
-    GuiWidget* HitTest(int x, int y);
+    /// Tab-stop widget (buttons, inputs, checkboxes, lists, …).
+    virtual bool CanFocus() const { return false; }
+    /// Enter / Space on focused widget.
+    virtual bool Activate();
+    void SetFocusHighlight(bool on) { focusHighlight_ = on; }
+    bool HasFocusHighlight() const { return focusHighlight_; }
+    virtual void CollectFocusables(std::vector<GuiWidget*>& out);
+
+    virtual GuiWidget* HitTest(int x, int y);
+    /// Deepest focusable widget at point (for mouse focus).
+    virtual GuiWidget* HitTestFocusable(int x, int y);
     const std::vector<std::unique_ptr<GuiWidget>>& GetChildren() const { return children_; }
+
+    /// Route mouse wheel to widget under cursor (depth-first).
+    virtual bool ScrollAtPoint(int x, int y, const GuiScrollEvent& event);
 
     GuiWidget* AddChild(std::unique_ptr<GuiWidget> child);
     void ClearChildren();
@@ -49,6 +62,7 @@ protected:
     GuiRect bounds_{0, 0, 100, 32};
     bool visible_{true};
     bool enabled_{true};
+    bool focusHighlight_{false};
     int zOrder_{0};
     std::vector<std::unique_ptr<GuiWidget>> children_;
 };

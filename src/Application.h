@@ -8,9 +8,14 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/GuiContext.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "AppSettingsSnapshot.h"
 #include "Game/GameSession.h"
+#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "ProceduralSettings.h"
+#include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -27,7 +32,7 @@ class GameSession;
 class BlockDefinitionStorage;
 class GuiIconSource;
 
-class Application {
+class Application : public IGuiMenuHost {
 public:
     Application(std::shared_ptr<Core> core,
                 std::shared_ptr<World> world,
@@ -55,7 +60,7 @@ public:
     bool RouteChar(unsigned int codepoint);
     bool RouteMouseButton(int button, bool pressed, int x, int y);
     bool RouteMouseMove(int x, int y);
-    bool RouteScroll(double xoffset, double yoffset);
+    bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
 
     AppState GetState() const { return state_; }
     bool HasWorldSession() const { return worldSessionActive_; }
@@ -65,10 +70,27 @@ public:
     bool WantsCaptureKeyboard() const;
     const UiSettings& GetUiSettings() const { return uiSettings_; }
 
+    void ReturnToMainMenu() override;
+    void RequestConfirmSaveAndProceed(const std::string& message,
+                                      std::function<void()> proceed) override;
+    AppSettingsSnapshot LoadAppSettingsSnapshot() const override;
+    ProceduralSettings LoadProceduralTemplate() const override;
+    void SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
+                                    const ProceduralSettings& procedural) override;
+    void CreateNewWorldWithSettings(const ProceduralSettings& settings) override;
+    void LoadSelectedWorld(const std::string& worldName) override;
+    void RefreshWorldList() override;
+    const std::vector<std::string>& GetWorldNames() const override;
+
+    void ShowSettings();
+    void ShowNewWorld();
+    void ShowLoadWorld();
+
 private:
     void ShowMainMenu();
+    void SaveActiveWorldIfNeeded();
+    void EnterGameAfterWorldChange();
     void ShowInGameHud();
-    void ReturnToMainMenu();
     void SyncCursorVisibility();
     AppCursorPolicy GetCursorPolicy() const;
     void EnterInGameInputState();

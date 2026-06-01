@@ -166,8 +166,12 @@ void WindowManager::SetupCallbacks() {
     });
 
     inputManager->SetMouseScrollCallback([this](double xoffset, double yoffset) {
-        if (application_ &&
-            application_->RouteScroll(xoffset, yoffset)) {
+        if (!application_) {
+            return;
+        }
+        const glm::vec2 pos = inputManager->GetMousePosition();
+        const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
+        if (application_->RouteScroll(xoffset, yoffset, fbPos.x, fbPos.y)) {
             return;
         }
     });

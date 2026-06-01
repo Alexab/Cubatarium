@@ -24,6 +24,9 @@ public:
     void SetOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
     void SetLabel(const std::string& label) { label_ = label; }
 
+    bool CanFocus() const override;
+    bool Activate() override;
+
     void Draw(GuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnMouseUp(const GuiMouseEvent& event) override;

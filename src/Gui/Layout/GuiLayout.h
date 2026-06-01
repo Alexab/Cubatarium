@@ -1,5 +1,4 @@
-#ifndef GUI_LAYOUT_H
-#define GUI_LAYOUT_H
+#pragma once
 
 #include "Gui/GuiTypes.h"
 #include <vector>
@@ -23,7 +22,6 @@ struct HotbarLayoutResult {
     int totalW{0};
 };
 
-/// Prefab row at bottom; block row above prefab.
 HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize, int gap,
                                     int marginBottom);
 
@@ -31,6 +29,9 @@ class GuiLayout {
 public:
     static void StackVertical(const GuiRect& clientArea, int spacing, int padding,
                               const std::vector<GuiWidget*>& children);
+    /// Returns total height used (including padding).
+    static int StackVerticalMeasure(const GuiRect& clientArea, int spacing, int padding,
+                                    const std::vector<GuiWidget*>& children);
     static void StackHorizontal(const GuiRect& clientArea, int spacing, int padding,
                                 const std::vector<GuiWidget*>& children);
     static void AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int margin,
@@ -38,5 +39,3 @@ public:
 };
 
 } // namespace cutum
-
-#endif

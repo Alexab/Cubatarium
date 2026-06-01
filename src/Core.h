@@ -7,9 +7,11 @@
 #include <filesystem>
 #include <cstdint>
 
+#include "AppSettingsSnapshot.h"
 #include "RenderSettings.h"
 #include "ProceduralSettings.h"
 #include "UiSettings.h"
+#include <vector>
 
 namespace cutum {
 
@@ -38,8 +40,22 @@ public:
  void EnterGame();
  void LoadSystem(const std::string& config_file_name);
  void SaveSystem(const std::string& config_file_name);
+ void SaveConfigFile();
+
+ AppSettingsSnapshot GetAppSettings() const;
+ void ApplyAppSettings(const AppSettingsSnapshot& settings);
+
+ ProceduralSettings GetProceduralTemplate() const { return proceduralSettings_; }
+ void SetProceduralTemplate(const ProceduralSettings& settings);
+
+ void CreateNewWorldFromTemplate();
+
+ const std::vector<std::string>& GetWorldList() const { return WorldList; }
+ void RefreshWorldList();
+ void LoadWorldByName(const std::string& world_name);
 
  const UiSettings& GetUiSettings() const { return uiSettings_; }
+ RenderSettings GetRenderSettings() const { return renderSettings_; }
 
  void CreateWorld(const std::string& terrain_type = "");
  void CreateWorldFromProceduralConfig();

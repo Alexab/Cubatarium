@@ -151,8 +151,9 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 ## Startup (`Core::LoadConfig` / `Core::EnterGame`)
 
 1. **`LoadConfig`** — read `config.json`, load assets (textures, block models, objects, prefabs). Does **not** load the world.
-2. **Main menu** — `Application` shows GUI until the user clicks Play.
-3. **`EnterGame`** — if `worlds/` is missing, empty, or `default_world` folder does not exist → `CreateWorld()`; otherwise → `LoadLastWorld()`.
+2. **Main menu** — `Application` shows GUI until the user loads or creates a world.
+3. **`Load Last World`** — `EnterGame()`: if `default_world` is missing → `CreateWorld()`; otherwise → `LoadLastWorld()`.
+4. **`Load World` / `New World`** — pick a save or create `World_NNN` from the procedural template; optional save prompt if a session is already in memory.
 
 `LoadSystem` = `LoadConfig` + `EnterGame` (used by `--validate-load`).
 
@@ -177,7 +178,11 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 
 **Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
 
-**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`).
+**Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
+
+**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
+
+**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`). Saved from Settings together with other app keys.
 
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` / `Alt+0–9` remain in `WindowManager`.
 

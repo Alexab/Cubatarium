@@ -1,4 +1,5 @@
 #include "ProceduralConfigIO.h"
+#include "UiSettings.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -101,6 +102,15 @@ void WriteProceduralSettings(nlohmann::json& root, const ProceduralSettings& set
  root["procedural"] = procedural;
  root["terrain"] = ProceduralGeneratorToString(settings.generator);
  root["world_seed"] = settings.seed;
+}
+
+void WriteUiSettings(nlohmann::json& root, const UiSettings& settings)
+{
+ nlohmann::json ui;
+ ui["legacy_hud"] = settings.legacyHud;
+ ui["console_key"] = settings.consoleKey;
+ ui["palette_key"] = settings.paletteKey;
+ root["ui"] = ui;
 }
 
 } // namespace cutum

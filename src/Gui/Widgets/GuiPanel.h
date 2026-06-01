@@ -17,9 +17,14 @@ public:
     void SetDrawBackground(bool draw) { drawBackground_ = draw; }
     bool GetDrawBackground() const { return drawBackground_; }
 
+    void SetStackLayout(int spacing, int padding);
+    int GetPreferredHeight() const override;
+
 protected:
     const GuiTheme* theme_;
     bool drawBackground_{true};
+    int stackSpacing_{6};
+    int stackPadding_{0};
 };
 
 } // namespace cutum

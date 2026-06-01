@@ -31,7 +31,10 @@ public:
     ContentTypeRegistry& GetContentCatalog() { return contentCatalog_; }
     IContentCatalog& AsContentCatalog() { return contentCatalog_; }
 
-    void StartGame() override;
+    void LoadLastWorld() override;
+    void ResumeGame() override;
+    void OpenLoadWorld() override;
+    void OpenNewWorld() override;
     void QuitApplication() override;
     void OpenSettings() override;
     bool HasPausedSession() const override;

@@ -14,6 +14,24 @@ GuiRect ClientWithPadding(const GuiRect& area, int padding)
 
 } // namespace
 
+int GuiLayout::StackVerticalMeasure(const GuiRect& clientArea, int spacing, int padding,
+                                    const std::vector<GuiWidget*>& children)
+{
+    int total = padding * 2;
+    bool first = true;
+    for (GuiWidget* child : children) {
+        if (!child || !child->IsVisible()) {
+            continue;
+        }
+        if (!first) {
+            total += spacing;
+        }
+        first = false;
+        total += child->GetPreferredHeight();
+    }
+    return total;
+}
+
 void GuiLayout::StackVertical(const GuiRect& clientArea, int spacing, int padding,
                              const std::vector<GuiWidget*>& children)
 {

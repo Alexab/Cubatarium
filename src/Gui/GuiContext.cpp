@@ -26,6 +26,10 @@ bool GuiContext::Initialize(std::shared_ptr<ShaderManager> shaderManager,
 
 void GuiContext::Shutdown()
 {
+    if (inputRouter_) {
+        inputRouter_->ClearInteractionState();
+        inputRouter_->SetActiveScreen(nullptr);
+    }
     if (activeScreen_) {
         activeScreen_->OnDetach();
         activeScreen_.reset();
@@ -35,8 +39,8 @@ void GuiContext::Shutdown()
         renderer_.reset();
     }
     if (inputRouter_) {
+        inputRouter_->ReleaseFocusWithoutNotify();
         inputRouter_->SetRoot(nullptr);
-        inputRouter_->SetActiveScreen(nullptr);
     }
 }
 
@@ -110,7 +114,10 @@ bool GuiContext::RouteChar(const GuiCharEvent& event) { return inputRouter_ && i
 bool GuiContext::RouteMouseDown(const GuiMouseEvent& event) { return inputRouter_ && inputRouter_->OnMouseDown(event); }
 bool GuiContext::RouteMouseUp(const GuiMouseEvent& event) { return inputRouter_ && inputRouter_->OnMouseUp(event); }
 bool GuiContext::RouteMouseMove(const GuiMouseEvent& event) { return inputRouter_ && inputRouter_->OnMouseMove(event); }
-bool GuiContext::RouteScroll(const GuiScrollEvent& event) { return inputRouter_ && inputRouter_->OnScroll(event); }
+bool GuiContext::RouteScroll(const GuiScrollEvent& event, int mouseX, int mouseY)
+{
+    return inputRouter_ && inputRouter_->OnScroll(event, mouseX, mouseY);
+}
 
 bool GuiContext::WantsCaptureMouse() const { return inputRouter_ && inputRouter_->WantsCaptureMouse(); }
 bool GuiContext::WantsCaptureKeyboard() const { return inputRouter_ && inputRouter_->WantsCaptureKeyboard(); }

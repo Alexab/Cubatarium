@@ -1,4 +1,5 @@
 #include "GuiTextInput.h"
+#include "Gui/GuiFocus.h"
 #include "Gui/GuiRenderer.h"
 #include "Gui/GuiTheme.h"
 
@@ -15,6 +16,11 @@ GuiTextInput::GuiTextInput(const GuiTheme* theme)
 int GuiTextInput::GetPreferredHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
+}
+
+bool GuiTextInput::CanFocus() const
+{
+    return enabled_ && visible_;
 }
 
 void GuiTextInput::SetText(const std::string& text)
@@ -37,12 +43,14 @@ void GuiTextInput::Draw(GuiRenderer& renderer)
     }
     renderer.DrawText(display, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
                       theme_->textPrimary);
+    if (HasFocusHighlight()) {
+        DrawWidgetFocusRing(renderer, *theme_, bounds_);
+    }
 }
 
 bool GuiTextInput::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!visible_ || !bounds_.Contains(event.x, event.y)) {
-        focused_ = false;
         return false;
     }
     focused_ = true;
@@ -64,8 +72,16 @@ bool GuiTextInput::OnChar(const GuiCharEvent& event)
 
 bool GuiTextInput::OnKey(const GuiKeyEvent& event)
 {
-    if (!focused_ || !enabled_ || event.action != GuiKeyAction::Press) {
+    if (!focused_ || !enabled_) {
         return false;
+    }
+    if (event.action != GuiKeyAction::Press && event.action != GuiKeyAction::Repeat) {
+        return false;
+    }
+    if (event.keyCode == GLFW_KEY_SPACE) {
+        buffer_.insert(caretPos_, " ");
+        ++caretPos_;
+        return true;
     }
     if (event.keyCode == GLFW_KEY_BACKSPACE) {
         if (caretPos_ > 0) {

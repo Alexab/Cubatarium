@@ -96,6 +96,9 @@ void CreativePaletteScreen::RelayoutPanel()
     }
     if (scroll_) {
         scroll_->SetBounds({8, 76, panelW - 16, viewportH_ - 84});
+        if (built_) {
+            scroll_->LayoutContent();
+        }
     }
 }
 
@@ -131,8 +134,7 @@ void CreativePaletteScreen::RebuildGrid()
     if (!scroll_ || !catalog_ || !hotbar_ || !theme_) {
         return;
     }
-    scroll_->ClearChildren();
-    scroll_->SetContent(nullptr);
+    scroll_->Content().ClearChildren();
 
     auto grid = std::make_unique<GuiPanel>(theme_);
     const auto entries =
@@ -181,9 +183,10 @@ void CreativePaletteScreen::RebuildGrid()
             y += slotSize + theme_->hotbarSlotGap;
         }
     }
-    grid->SetBounds({0, 0, scroll_->GetBounds().w, y + slotSize + 8});
-    scroll_->SetContent(grid.get());
-    scroll_->AddChild(std::move(grid));
+    const int contentW = std::max(1, scroll_->GetBounds().w);
+    grid->SetBounds({0, 0, contentW, y + slotSize + 8});
+    scroll_->Content().AddChild(std::move(grid));
+    scroll_->LayoutContent();
     built_ = true;
 }
 

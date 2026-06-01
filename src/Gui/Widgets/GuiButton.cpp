@@ -1,4 +1,5 @@
 #include "GuiButton.h"
+#include "Gui/GuiFocus.h"
 #include "Gui/GuiRenderer.h"
 #include "Gui/GuiTheme.h"
 
@@ -13,6 +14,20 @@ GuiButton::GuiButton(const GuiTheme* theme, std::string label)
 int GuiButton::GetPreferredHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 32;
+}
+
+bool GuiButton::CanFocus() const
+{
+    return enabled_ && visible_;
+}
+
+bool GuiButton::Activate()
+{
+    if (!CanFocus() || !onClick_) {
+        return false;
+    }
+    onClick_();
+    return true;
 }
 
 glm::vec4 GuiButton::StateColor() const
@@ -41,6 +56,9 @@ void GuiButton::Draw(GuiRenderer& renderer)
     renderer.DrawFilledRect(bounds_, StateColor());
     renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
     renderer.DrawTextCenteredInRect(bounds_, label_, theme_->textPrimary);
+    if (HasFocusHighlight()) {
+        DrawWidgetFocusRing(renderer, *theme_, bounds_);
+    }
 }
 
 bool GuiButton::OnMouseDown(const GuiMouseEvent& event)

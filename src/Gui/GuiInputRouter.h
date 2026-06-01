@@ -2,6 +2,7 @@
 #define GUI_INPUT_ROUTER_H
 
 #include "GuiTypes.h"
+#include <vector>
 
 namespace cutum {
 
@@ -18,7 +19,7 @@ public:
     bool OnMouseMove(const GuiMouseEvent& event);
     bool OnKey(const GuiKeyEvent& event);
     bool OnChar(const GuiCharEvent& event);
-    bool OnScroll(const GuiScrollEvent& event);
+    bool OnScroll(const GuiScrollEvent& event, int mouseX, int mouseY);
 
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
@@ -26,14 +27,24 @@ public:
     void SetModalKeyboard(bool modal) { modalKeyboard_ = modal; }
     /// Сброс фокуса/захвата (обязательно при смене экрана — виджеты уничтожаются).
     void ClearInteractionState();
+    /// Только обнулить указатели (после уничтожения виджетов при shutdown).
+    void ReleaseFocusWithoutNotify();
 
 private:
+    void SetKeyboardFocus(GuiWidget* widget);
+    void CollectFocusOrder();
+    void FocusNext(bool reverse);
+
     GuiWidget* root_{nullptr};
     GuiScreenBase* screen_{nullptr};
-    GuiWidget* focusedWidget_{nullptr};
+    GuiWidget* keyboardFocus_{nullptr};
+    GuiWidget* mousePressedWidget_{nullptr};
     GuiWidget* hoveredWidget_{nullptr};
+    std::vector<GuiWidget*> focusOrder_;
     bool captureMouse_{false};
     bool modalKeyboard_{false};
+    int lastMouseX_{-1};
+    int lastMouseY_{-1};
 };
 
 } // namespace cutum

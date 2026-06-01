@@ -37,7 +37,7 @@ public:
     bool RouteMouseDown(const GuiMouseEvent& event);
     bool RouteMouseUp(const GuiMouseEvent& event);
     bool RouteMouseMove(const GuiMouseEvent& event);
-    bool RouteScroll(const GuiScrollEvent& event);
+    bool RouteScroll(const GuiScrollEvent& event, int mouseX, int mouseY);
 
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;

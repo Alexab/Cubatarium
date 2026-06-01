@@ -12,7 +12,11 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/GuiIconSource.h"
 #include "Gui/PrefabIconCache.h"
+#include "Gui/Screens/ConfirmDialogScreen.h"
+#include "Gui/Screens/LoadWorldScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
+#include "Gui/Screens/NewWorldScreen.h"
+#include "Gui/Screens/SettingsScreen.h"
 #include "TextureCube.h"
 #include "Gui/GuiTypes.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
@@ -167,16 +171,148 @@ void Application::ShowMainMenu()
 
 void Application::ReturnToMainMenu()
 {
-    if (state_ != AppState::InGame) {
-        return;
+    if (state_ == AppState::InGame) {
+        if (auto* wm = GetWindowManager(window_)) {
+            wm->ResetGameplayMouseCapture();
+        }
+        guiContext_->ClearInputState();
+        ReleasePlatformCursorClip();
     }
-    if (auto* wm = GetWindowManager(window_)) {
-        wm->ResetGameplayMouseCapture();
-    }
-    guiContext_->ClearInputState();
-    ReleasePlatformCursorClip();
+    consoleOpen_ = false;
+    paletteOpen_ = false;
+    freeCursor_ = false;
     state_ = AppState::MainMenu;
     ShowMainMenu();
+}
+
+void Application::ShowSettings()
+{
+    consoleOpen_ = false;
+    paletteOpen_ = false;
+    freeCursor_ = false;
+    guiContext_->SetScreen(std::make_unique<SettingsScreen>(this));
+    SyncCursorVisibility();
+}
+
+void Application::ShowNewWorld()
+{
+    consoleOpen_ = false;
+    paletteOpen_ = false;
+    freeCursor_ = false;
+    guiContext_->SetScreen(std::make_unique<NewWorldScreen>(this));
+    SyncCursorVisibility();
+}
+
+void Application::ShowLoadWorld()
+{
+    consoleOpen_ = false;
+    paletteOpen_ = false;
+    freeCursor_ = false;
+    guiContext_->SetScreen(std::make_unique<LoadWorldScreen>(this));
+    SyncCursorVisibility();
+}
+
+void Application::SaveActiveWorldIfNeeded()
+{
+    if (!worldSessionActive_ || !core_) {
+        return;
+    }
+    core_->SaveWorld(world_->GetWorldName());
+    core_->SaveConfigFile();
+}
+
+void Application::EnterGameAfterWorldChange()
+{
+    worldSessionActive_ = true;
+    if (core_ && world_) {
+        uiSettings_ = core_->GetUiSettings();
+        if (geometry_) {
+            geometry_->SetShowHud(uiSettings_.legacyHud);
+        }
+        world_->FinalizePlayerAfterWorldLoad();
+    }
+    ShowInGameHud();
+    state_ = AppState::InGame;
+    EnterInGameInputState();
+}
+
+void Application::RequestConfirmSaveAndProceed(const std::string& message,
+                                               std::function<void()> proceed)
+{
+    if (!proceed) {
+        return;
+    }
+    if (!worldSessionActive_) {
+        proceed();
+        return;
+    }
+    guiContext_->SetScreen(std::make_unique<ConfirmDialogScreen>(
+        this, message,
+        [this, proceed]() {
+            SaveActiveWorldIfNeeded();
+            proceed();
+        },
+        [this]() { ShowMainMenu(); }));
+    SyncCursorVisibility();
+}
+
+AppSettingsSnapshot Application::LoadAppSettingsSnapshot() const
+{
+    return core_ ? core_->GetAppSettings() : AppSettingsSnapshot{};
+}
+
+ProceduralSettings Application::LoadProceduralTemplate() const
+{
+    return core_ ? core_->GetProceduralTemplate() : ProceduralSettings{};
+}
+
+void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
+                                             const ProceduralSettings& procedural)
+{
+    if (!core_) {
+        return;
+    }
+    core_->ApplyAppSettings(app);
+    core_->SetProceduralTemplate(procedural);
+    core_->SaveConfigFile();
+    uiSettings_ = core_->GetUiSettings();
+    if (geometry_) {
+        geometry_->SetShowHud(uiSettings_.legacyHud);
+    }
+}
+
+void Application::CreateNewWorldWithSettings(const ProceduralSettings& settings)
+{
+    if (!core_) {
+        return;
+    }
+    core_->SetProceduralTemplate(settings);
+    core_->CreateNewWorldFromTemplate();
+    core_->SaveConfigFile();
+    EnterGameAfterWorldChange();
+}
+
+void Application::LoadSelectedWorld(const std::string& worldName)
+{
+    if (!core_) {
+        return;
+    }
+    core_->LoadWorldByName(worldName);
+    core_->SaveConfigFile();
+    EnterGameAfterWorldChange();
+}
+
+void Application::RefreshWorldList()
+{
+    if (core_) {
+        core_->RefreshWorldList();
+    }
+}
+
+const std::vector<std::string>& Application::GetWorldNames() const
+{
+    static const std::vector<std::string> kEmpty;
+    return core_ ? core_->GetWorldList() : kEmpty;
 }
 
 void Application::ShowInGameHud()
@@ -525,9 +661,9 @@ bool Application::RouteMouseMove(int x, int y)
     return guiContext_->RouteMouseMove(event);
 }
 
-bool Application::RouteScroll(double xoffset, double yoffset)
+bool Application::RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY)
 {
-    return guiContext_->RouteScroll(GuiScrollEvent{xoffset, yoffset});
+    return guiContext_->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouseX, mouseY);
 }
 
 } // namespace cutum

@@ -347,12 +347,15 @@ void Core::LoadSystem(const std::string& config_file_name)
  EnterGame();
 }
 
-void Core::SaveSystem(const std::string& config_file_name)
+void Core::SaveConfigFile()
 {
- json system_data;
+ if (configFilePath_.empty()) {
+  configFilePath_ = exeDir_ / "config.json";
+ }
 
- system_data["default_world"] = WorldInstance->GetWorldName();
- system_data["default_user"] = WorldInstance->GetCurrentUserName();
+ json system_data;
+ system_data["default_world"] = default_world_name;
+ system_data["default_user"] = default_user_name;
  system_data["world_seed"] = worldSeed_;
  WriteProceduralSettings(system_data, proceduralSettings_);
  system_data["render_distance_chunks"] = renderDistanceChunks_;
@@ -366,10 +369,7 @@ void Core::SaveSystem(const std::string& config_file_name)
  render["frustum_culling"] = renderSettings_.frustumCulling;
  render["batch_cache"] = renderSettings_.batchCache;
  system_data["render"] = render;
-
- if (configFilePath_.empty()) {
-  configFilePath_ = exeDir_ / config_file_name;
- }
+ WriteUiSettings(system_data, uiSettings_);
 
  std::ofstream file(configFilePath_.string());
  if (file.is_open()) {
@@ -378,8 +378,87 @@ void Core::SaveSystem(const std::string& config_file_name)
  } else {
   std::cerr << "Failed to write config: " << configFilePath_.string() << std::endl;
  }
+}
 
+void Core::SaveSystem(const std::string& config_file_name)
+{
+ if (!WorldInstance->GetWorldName().empty()) {
+  default_world_name = WorldInstance->GetWorldName();
+ }
+ if (!WorldInstance->GetCurrentUserName().empty()) {
+  default_user_name = WorldInstance->GetCurrentUserName();
+ }
+ worldSeed_ = proceduralSettings_.seed;
+
+ if (configFilePath_.empty()) {
+  configFilePath_ = exeDir_ / config_file_name;
+ }
+
+ SaveConfigFile();
  SaveWorld(WorldInstance->GetWorldName());
+}
+
+AppSettingsSnapshot Core::GetAppSettings() const
+{
+ AppSettingsSnapshot snapshot;
+ snapshot.defaultUser = default_user_name;
+ snapshot.defaultWorld = default_world_name;
+ snapshot.renderDistanceChunks = renderDistanceChunks_;
+ snapshot.streamingEnabled = streamingEnabled_;
+ snapshot.stepUpEnabled = stepUpEnabled_;
+ snapshot.render = renderSettings_;
+ snapshot.ui = uiSettings_;
+ return snapshot;
+}
+
+void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
+{
+ default_user_name = settings.defaultUser;
+ default_world_name = settings.defaultWorld;
+ renderDistanceChunks_ = settings.renderDistanceChunks;
+ streamingEnabled_ = settings.streamingEnabled;
+ stepUpEnabled_ = settings.stepUpEnabled;
+ renderSettings_ = settings.render;
+ uiSettings_ = settings.ui;
+
+ WorldInstance->SetStreamingEnabled(streamingEnabled_);
+ WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
+ WorldInstance->SetStepUpEnabled(stepUpEnabled_);
+ WorldInstance->SetRenderSettings(renderSettings_);
+ if (GeometryEngineInstance) {
+  GeometryEngineInstance->SetRenderSettings(renderSettings_);
+ }
+}
+
+void Core::SetProceduralTemplate(const ProceduralSettings& settings)
+{
+ proceduralSettings_ = settings;
+ worldSeed_ = settings.seed;
+ terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+ ResolveProceduralDefaults(proceduralSettings_);
+ ApplyGeneratorTierDefaults(proceduralSettings_);
+}
+
+void Core::CreateNewWorldFromTemplate()
+{
+ worldSeed_ += 1;
+ proceduralSettings_.seed = worldSeed_;
+ ResolveProceduralDefaults(proceduralSettings_);
+ ApplyGeneratorTierDefaults(proceduralSettings_);
+ terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+ CreateNewWorldWithCurrentSettings();
+}
+
+void Core::RefreshWorldList()
+{
+ std::filesystem::create_directories(WorldPath);
+ LoadWorldList(WorldPath.string());
+}
+
+void Core::LoadWorldByName(const std::string& world_name)
+{
+ default_world_name = world_name;
+ LoadWorld(world_name);
 }
 
 void Core::CreateWorld(const std::string& terrain_type)
