@@ -7,6 +7,7 @@
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiWidget.h"
+#include "Version.h"
 
 namespace cutum {
 
@@ -80,7 +81,13 @@ void MainMenuScreen::Build(GuiContext& ctx)
     buttons_.push_back(settings.get());
     buttons_.push_back(quit.get());
 
+    auto version = std::make_unique<GuiLabel>(&theme, kCubatariumVersion);
+    version->SetTextAlign(GuiTextAlign::Left);
+    version->SetUseSecondaryColor(true);
+    versionLabel_ = version.get();
+
     panel->AddChild(std::move(title));
+    panel->AddChild(std::move(version));
     panel->AddChild(std::move(primary));
     panel->AddChild(std::move(loadWorld));
     panel->AddChild(std::move(newWorld));
@@ -106,6 +113,14 @@ void MainMenuScreen::Relayout()
 
     if (title_) {
         GuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, 20, title_);
+    }
+
+    if (versionLabel_) {
+        constexpr int margin = 8;
+        constexpr int labelH = 24;
+        constexpr int labelW = 360;
+        versionLabel_->SetBounds(
+            {margin, viewportH_ - labelH - margin, labelW, labelH});
     }
 
     if (!buttons_.empty()) {

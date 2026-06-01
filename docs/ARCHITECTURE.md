@@ -90,7 +90,7 @@ Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
 | Greedy mesh | Opaque pass, then multi-pass transparent (see below); fluid–fluid faces kept |
-| Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level` |
+| Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level`; with `fill_water`, `AdjustSurfaceYForSpawnIsland` raises terrain in a ~48-block-radius disk (+16-block blend) around spawn (0,0) so the player starts on dry land |
 
 ### Greedy transparent passes
 

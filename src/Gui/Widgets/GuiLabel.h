@@ -21,6 +21,7 @@ public:
     const std::string& GetText() const { return text_; }
     void SetTextAlign(GuiTextAlign align) { textAlign_ = align; }
     void SetDrawBackground(bool draw) { drawBackground_ = draw; }
+    void SetUseSecondaryColor(bool use) { useSecondaryColor_ = use; }
 
     void Draw(GuiRenderer& renderer) override;
 
@@ -29,6 +30,7 @@ private:
     std::string text_;
     GuiTextAlign textAlign_{GuiTextAlign::Left};
     bool drawBackground_{false};
+    bool useSecondaryColor_{false};
 };
 
 } // namespace cutum

@@ -18,11 +18,12 @@ void GuiLabel::Draw(GuiRenderer& renderer)
     if (drawBackground_) {
         renderer.DrawFilledRect(bounds_, {0.05f, 0.05f, 0.08f, 0.75f});
     }
+    const glm::vec3& color =
+        useSecondaryColor_ ? theme_->textSecondary : theme_->textPrimary;
     if (textAlign_ == GuiTextAlign::Center) {
-        renderer.DrawTextCenteredInRect(bounds_, text_, theme_->textPrimary);
+        renderer.DrawTextCenteredInRect(bounds_, text_, color);
     } else {
-        renderer.DrawText(text_, bounds_.x + theme_->padding, bounds_.y + theme_->padding,
-                          theme_->textPrimary);
+        renderer.DrawText(text_, bounds_.x + theme_->padding, bounds_.y + theme_->padding, color);
     }
 }
 

@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
+include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
+cubatarium_resolve_version(CUBATARIUM_VERSION_STRING)
+set(CUBATARIUM_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${CUBATARIUM_GENERATED_DIR}")
+configure_file(
+    "${CMAKE_SOURCE_DIR}/src/Version.h.in"
+    "${CUBATARIUM_GENERATED_DIR}/Version.h"
+    @ONLY
+)
+
 set(CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -220,7 +230,10 @@ set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CUBATARIUM_GENERATED_DIR}
+)
 
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL

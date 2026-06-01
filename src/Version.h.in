@@ -1,0 +1,7 @@
+#pragma once
+
+namespace cutum {
+
+inline constexpr const char* kCubatariumVersion = "@CUBATARIUM_VERSION_STRING@";
+
+} // namespace cutum

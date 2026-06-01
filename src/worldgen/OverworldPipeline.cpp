@@ -12,7 +12,8 @@ OverworldPipeline::OverworldPipeline(WorldGenContext ctx, HeightPreset preset)
 
 void OverworldPipeline::GenerateColumn(int worldX, int worldZ)
 {
- const int surfaceY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int surfaceY = AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
  ColumnLayerRule rule;
  rule.surfaceBlock = ctx_.grass;
  rule.subsurfaceBlock = ctx_.dirt;
@@ -31,7 +32,8 @@ void OverworldPipeline::GenerateColumn(int worldX, int worldZ)
 
 int OverworldPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- return heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
 }
 
 } // namespace cutum

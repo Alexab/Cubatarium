@@ -32,7 +32,8 @@ void LegacyHashPipeline::GenerateColumn(int worldX, int worldZ)
 
 int LegacyHashPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- return LegacyHashSurfaceY(worldX, worldZ, ctx_.settings);
+ const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.settings);
+ return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
 }
 
 } // namespace cutum

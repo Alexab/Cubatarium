@@ -398,15 +398,6 @@ void World::FinalizePlayerAfterWorldLoad()
  }
 
  if (auto camera = GetCurrentUserCamera()) {
-  const SampledFluidState fluid = SampleFluidPhysics(camera->GetPosition(), 1.0f);
-  if (fluid.inFluid) {
-   glm::vec3 pos = camera->GetPosition();
-   pos.y = static_cast<float>(proceduralSettings_.seaLevel) + 2.5f;
-   camera->SetPosition(pos);
-   if (auto user = GetCurrentUser()) {
-    user->SetPosition(pos);
-   }
-  }
   camera->ResetVerticalPhysics();
  }
 }
