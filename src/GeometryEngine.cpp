@@ -592,7 +592,7 @@ void GeometryEngine::PrepareFrameRendering()
   return;
  }
  const World::SampledFluidState fluid =
-     WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetCollisionSize());
+     WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetPlayerCapsule());
  BlockId eyeFluid = BLOCK_AIR;
  const bool cameraInFluid =
      WorldInstance->IsCameraInsideFluid(camera->GetPosition(), &eyeFluid);
@@ -1251,9 +1251,9 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
 
      const std::vector<std::string> helpLines = {
          "WASD - Movement",
-         "Q/E - Up/Down",
-         "Space - Jump, 2xSpace - Flight",
-         "Shift - Crouch",
+         "Space - Jump / Fly up",
+         "Shift - Crouch / Fly down",
+         "2xSpace - Toggle flight",
          "0-9 - Block, Alt+0-9 - Object",
          "LMB - Place block, Alt+LMB - Place object",
          "Hold LMB - Remove block, Delete - Remove",

@@ -28,7 +28,7 @@ public:
  static int SurfaceYAt(int x, int z, uint32_t seed, int baseY, int maxHeight);
 
  static glm::vec3 DefaultSpawnPosition(int x, int z, uint32_t seed,
-     int baseY, int maxHeight, float eyeHeight = 1.6f);
+     int baseY, int maxHeight, float eyeHeight = 1.62f);
 
  static void GenerateSpawnArea(BlockWorld& world, BlockRegistry& registry,
      int centerX, int centerZ, int radiusChunks, uint32_t seed, int baseY, int maxHeight);

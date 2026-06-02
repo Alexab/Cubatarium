@@ -24,6 +24,7 @@
 #include "ProceduralSettings.h"
 #include "worldgen/IWorldGenPipeline.h"
 #include "worldgen/WorldGenContext.h"
+#include "PlayerCapsule.h"
 
 namespace cutum {
 
@@ -83,7 +84,7 @@ public:
   float sinkSpeed{0.0f};
   float riseSpeed{0.0f};
  };
- SampledFluidState SampleFluidPhysics(const glm::vec3& position, float size) const;
+ SampledFluidState SampleFluidPhysics(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
  /// Eye inside fluid block AABB (visual fog); does not use player collision capsule.
  bool IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid = nullptr) const;
  void ApplySpawnToCamera();
@@ -106,11 +107,13 @@ public:
 
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
- bool CheckCollision(const glm::vec3& position, float size = 1.0f) const;
- /// Solid block directly under the player capsule (for step-up / grounded checks).
- bool HasGroundSupport(const glm::vec3& position, float size) const;
- /// Moves from `from` along delta with axis-separated resolution (Y, then X, then Z).
- glm::vec3 ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const;
+ /// `eyePos` is camera/eye position; collision AABB derived from `cap`.
+ bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
+ /// Solid block directly under the player feet (for step-up / grounded checks).
+ bool HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
+ /// Moves from eye position along delta with axis-separated resolution (Y, then X, then Z).
+ glm::vec3 ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
+                           const PlayerCapsule& cap) const;
 
  struct StepUpProbe {
   bool valid{false};
@@ -118,13 +121,13 @@ public:
   glm::vec3 targetPos{0.0f};
   glm::vec3 moveDir{0.0f};
  };
- StepUpProbe ProbeStepUp(const glm::vec3& position, const glm::vec3& horiz, float size,
+ StepUpProbe ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
                          float maxTriggerDistance) const;
- /// Landing position on a step when within range; false if already on the step or blocked.
- bool GetStepUpLanding(const glm::vec3& pos, const glm::vec3& horiz, float size,
+ /// Landing eye position on a step when within range; false if already on the step or blocked.
+ bool GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
                        float maxTriggerDistance, glm::vec3& outLanding) const;
  /// Snap onto a 1-block ledge when within `maxTriggerDistance` of its riser (instant, one frame).
- bool TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
+ bool TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
                 float maxTriggerDistance) const;
  void DoMovement();
  void UpdateIntersection(const glm::vec3& position, const glm::vec3& front);

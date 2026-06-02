@@ -209,6 +209,8 @@ void WindowManager::Run() {
         deltaTime = std::chrono::duration<double>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
 
+        glfwPollEvents();
+
         // Input processing
         ProcessInput();
         if (application_) {
@@ -221,9 +223,7 @@ void WindowManager::Run() {
         // Rendering
         Render();
 
-        // Buffer swap and event processing
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 }
 
@@ -238,32 +238,20 @@ void WindowManager::ProcessInput() {
     if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         auto camera = worldInstance->GetCurrentUserCamera();
         if (camera) {
-            // WASD movement
-            if (inputManager->IsKeyPressed(KeyCode::Key_W)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_S)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_A)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_D)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_Space)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_Shift)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Shift), true);
-            }
-            // Q and E for up-down movement
-            if (inputManager->IsKeyPressed(KeyCode::Key_Q)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Q), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_E)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_E), true);
-            }
+            const bool shiftDown = inputManager->IsKeyPressed(KeyCode::Key_Shift)
+                || (window && glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
+                                  inputManager->IsKeyPressed(KeyCode::Key_W));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
+                                  inputManager->IsKeyPressed(KeyCode::Key_S));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A),
+                                  inputManager->IsKeyPressed(KeyCode::Key_A));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D),
+                                  inputManager->IsKeyPressed(KeyCode::Key_D));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
+                                  inputManager->IsKeyPressed(KeyCode::Key_Space));
+            camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shiftDown);
+            camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
         }
     }
 }
@@ -332,20 +320,23 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         return;
     }
 
-    bool pressed = (state == KeyState::Pressed);
-    
+    const bool keyDown = (state == KeyState::Pressed || state == KeyState::Repeated);
+
     // Update key states in camera
     if (auto camera = worldInstance->GetCurrentUserCamera()) {
-        camera->UpdateKeyStatus(static_cast<int>(key), pressed);
+        camera->UpdateKeyStatus(static_cast<int>(key), keyDown);
+        if (static_cast<int>(key) == GLFW_KEY_RIGHT_SHIFT) {
+            camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, keyDown);
+        }
     }
 
     // Special key processing
-    if (pressed) {
+    if (state == KeyState::Pressed) {
         if (key == KeyCode::Key_Space) {
             if (auto camera = worldInstance->GetCurrentUserCamera()) {
                 if (camera->TryToggleFlightOnDoubleSpace() && geometries) {
                     const std::string msg = camera->GetFreeMove()
-                        ? "Flight mode ON (Space/Q up, E down, double Space to exit)"
+                        ? "Flight ON (Space up, Shift down, 2xSpace off)"
                         : "Flight mode OFF";
                     geometries->ShowTransientMessage(msg, 2.5);
                 }
@@ -360,17 +351,7 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             }
         }
         else if (key == KeyCode::Key_F12) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorld("heightmap");
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    geometries->ShowTransientMessage(
-                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
-                }
-            } else if (geometries) {
-                geometries->ShowTransientMessage("Shift+F12 heightmap, Shift+F11 flat world", 3.0);
-            }
+            // reserved
         }
         else if (key == KeyCode::Key_Delete) {
             worldInstance->DelObjectByView();
@@ -409,32 +390,12 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             if (geometries) geometries->SetShowHud(!geometries->GetShowHud());
         }
         else if (key == KeyCode::Key_F10) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorldFromProceduralConfig();
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    const auto& proc = core->GetProceduralSettings();
-                    const std::string msg = std::string("New world (") +
-                        ProceduralGeneratorToString(proc.generator) + " " +
-                        VerticalModeToString(proc.vertical) + "): " +
-                        worldInstance->GetWorldName();
-                    geometries->ShowTransientMessage(msg, 3.0);
-                }
-            } else if (geometries) {
+            if (geometries) {
                 geometries->SetShowPerformance(!geometries->GetShowPerformance());
             }
         }
         else if (key == KeyCode::Key_F11) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorld("flat");
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    geometries->ShowTransientMessage(
-                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
-                }
-            } else if (geometries) {
+            if (geometries) {
                 geometries->SetShowCrosshair(!geometries->GetShowCrosshair());
             }
         }

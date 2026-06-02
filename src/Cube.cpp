@@ -129,24 +129,17 @@ bool Cube::CheckCollision(const glm::vec3& position, float size)
 
 bool Cube::CheckCollision(const glm::vec3& position1, float size1, const glm::vec3& position2, float size2)
 {
- glm::vec3 a(position1);
- glm::vec3 b(position2);
+ const glm::vec3 h1(size1 * 0.5f);
+ const glm::vec3 h2(size2 * 0.5f);
+ return CheckAabbCollision(position1, h1, position2, h2);
+}
 
- //check the X axis
- if(fabs(a.x - b.x) < size1/2.0 + size2/2.0)
- {
-  //check the Y axis
-  if(fabs(a.y - b.y) < size1/2.0 + size2/2.0)
-  {
-   //check the Z axis
-   if(fabs(a.z - b.z) < size1/2.0 + size2/2.0)
-   {
-    return true;
-   }
-  }
- }
-
- return false;
+bool Cube::CheckAabbCollision(const glm::vec3& c1, const glm::vec3& h1,
+                              const glm::vec3& c2, const glm::vec3& h2)
+{
+ return std::abs(c1.x - c2.x) < h1.x + h2.x
+     && std::abs(c1.y - c2.y) < h1.y + h2.y
+     && std::abs(c1.z - c2.z) < h1.z + h2.z;
 }
 
 bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const

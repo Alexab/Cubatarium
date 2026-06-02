@@ -10,15 +10,16 @@ namespace cutum {
 
 namespace {
 
-bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3& playerPos, float playerSize)
+bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3& eyePos,
+                               const PlayerCapsule& cap)
 {
- const float half = playerSize * 0.5f;
- const float px0 = playerPos.x - half;
- const float px1 = playerPos.x + half;
- const float py0 = playerPos.y - half;
- const float py1 = playerPos.y + half;
- const float pz0 = playerPos.z - half;
- const float pz1 = playerPos.z + half;
+ const float feetY = cap.feetY(eyePos);
+ const float px0 = eyePos.x - cap.halfWidth;
+ const float px1 = eyePos.x + cap.halfWidth;
+ const float py0 = feetY;
+ const float py1 = eyePos.y;
+ const float pz0 = eyePos.z - cap.halfWidth;
+ const float pz1 = eyePos.z + cap.halfWidth;
 
  const float cx0 = static_cast<float>(chunkCoord.x * CHUNK_SIZE) - 0.5f;
  const float cx1 = static_cast<float>((chunkCoord.x + 1) * CHUNK_SIZE) - 0.5f;
@@ -119,7 +120,7 @@ bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
 }
 
 bool ChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
-    const glm::vec3& playerWorldPos, float playerSize) const
+    const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
  const glm::ivec3 feetChunk = ChunkManager::WorldToChunk(feetBlockPos);
 
@@ -142,7 +143,7 @@ bool ChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feet
   return true;
  }
 
- if (ChunkAabbIntersectsPlayer(chunkCoord, playerWorldPos, playerSize)) {
+ if (ChunkAabbIntersectsPlayer(chunkCoord, eyePos, cap)) {
   return true;
  }
 
@@ -167,7 +168,7 @@ void ChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
 }
 
 void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
-    const glm::vec3& playerWorldPos, float playerSize)
+    const glm::vec3& eyePos, const PlayerCapsule& cap)
 {
  std::vector<glm::ivec3> toUnload;
  const int limit = renderDistance_ + unloadMargin_;
@@ -188,7 +189,7 @@ void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetB
   if (unloadOps >= maxUnloadOpsPerFrame_) {
    break;
   }
-  if (ShouldKeepChunkLoaded(coord, feetBlockPos, playerWorldPos, playerSize)) {
+  if (ShouldKeepChunkLoaded(coord, feetBlockPos, eyePos, cap)) {
    continue;
   }
   if (saveChunkFn_) {
@@ -206,7 +207,8 @@ void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetB
  }
 }
 
-void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& playerWorldPos, float playerSize)
+void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos,
+                         const PlayerCapsule& cap)
 {
  if (!enabled_) {
   return;
@@ -216,7 +218,7 @@ void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& playerWor
 
  const glm::ivec3 centerChunk = ChunkManager::WorldToChunk(cameraBlockPos);
  const glm::ivec3 feetBlockPos = WorldPosToBlock(
-     playerWorldPos - glm::vec3(0.0f, playerSize * 0.5f + 0.25f, 0.0f));
+     glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
 
  int loadOps = 0;
  for (int cx = centerChunk.x - renderDistance_; cx <= centerChunk.x + renderDistance_; ++cx) {
@@ -239,7 +241,7 @@ void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& playerWor
  }
 finish_loads:
 
- UnloadDistantChunks(centerChunk, feetBlockPos, playerWorldPos, playerSize);
+ UnloadDistantChunks(centerChunk, feetBlockPos, eyePos, cap);
 }
 
 }
