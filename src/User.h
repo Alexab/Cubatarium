@@ -26,8 +26,8 @@ public:
 
  void SetActiveBlockIndex(size_t index);
  void SetActivePrefabIndex(size_t index);
- size_t GetActiveBlockIndex() const { return activePrimarySlotIndex_; }
- size_t GetActivePrefabIndex() const { return activeSecondarySlotIndex_; }
+ size_t GetActiveBlockIndex() const { return activeSlotIndex_; }
+ size_t GetActivePrefabIndex() const { return activeSlotIndex_; }
  void SetActiveObjectTypeName(const std::string& block_type);
  void SetPrefabHotbar(const std::vector<std::string>& prefab_names);
 
@@ -65,9 +65,8 @@ private:
 
  std::map<std::string, int> Inventory;
  std::vector<HotbarBar> hotbars_;
- size_t activePrimarySlotIndex_{0};
- size_t activeSecondarySlotIndex_{0};
  size_t activeBarIndex_{0};
+ size_t activeSlotIndex_{0};
 
  std::shared_ptr<Object> ActiveObject;
  glm::vec3 Position;

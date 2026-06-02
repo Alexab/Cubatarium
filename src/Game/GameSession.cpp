@@ -8,6 +8,7 @@
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 
 namespace cutum {
@@ -158,6 +159,7 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
         return slots;
     }
     const HotbarBar& bar = user->GetHotbar(barIndex);
+    const size_t activeBar = user->GetActiveBarIndex();
     const size_t activeIndex = user->GetActiveSlotIndex(barIndex);
     for (size_t i = 0; i < slots.size(); ++i) {
         const HotbarSlot& slot = bar.slots[i];
@@ -166,7 +168,7 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
             slots[i].label = slot.entry.id;
             slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
         }
-        slots[i].selected = (i == activeIndex);
+        slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
         if (barIndex == 0) {
             slots[i].hotkey = static_cast<int>(i);
         }
@@ -177,7 +179,7 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
 size_t GameSession::GetSelectedSlot(size_t barIndex) const
 {
     auto user = world_->GetCurrentUser();
-    return user ? user->GetActiveSlotIndex(barIndex) : 0;
+    return user ? user->GetActiveSlotIndex(barIndex) : 10;
 }
 
 void GameSession::SelectSlot(size_t barIndex, size_t slotIndex)
@@ -210,6 +212,11 @@ bool GameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
     if (!pendingAssignment_.has_value()) {
         return false;
     }
+    std::cerr << "[hotbar] apply pending kind="
+              << (pendingAssignment_->kind == InventoryEntryKind::Block ? "block" : "object")
+              << " id=" << pendingAssignment_->id
+              << " bar=" << barIndex
+              << " slot=" << slotIndex << std::endl;
     if (!CanAssignToHotbar(*pendingAssignment_, barIndex, slotIndex)) {
         return false;
     }
@@ -281,15 +288,15 @@ bool GameSession::CanAssignToHotbar(const InventoryEntryRef& entry,
                                     size_t barIndex,
                                     size_t slotIndex) const
 {
-    if (entry.empty || barIndex >= 2 || slotIndex >= 10) {
+    if (entry.empty || slotIndex >= 10) {
+        return false;
+    }
+    auto user = world_ ? world_->GetCurrentUser() : nullptr;
+    if (!user || barIndex >= user->GetHotbarCount()) {
         return false;
     }
     if (inventoryMode_ == InventoryMode::Creative) {
         return true;
-    }
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user) {
-        return false;
     }
     const auto& inv = user->GetInventory();
     const auto it = inv.find(entry.id);

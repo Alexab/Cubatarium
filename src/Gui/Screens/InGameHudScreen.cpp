@@ -218,6 +218,11 @@ void InGameHudScreen::UpdateTooltips()
     const size_t activePrimary = hotbar_->GetSelectedSlot(0);
     if (activePrimary < primary.size() && !primary[activePrimary].label.empty()) {
         showTip(primary[activePrimary].label);
+        return;
+    }
+    const size_t activeSecondary = hotbar_->GetSelectedSlot(1);
+    if (activeSecondary < secondary.size() && !secondary[activeSecondary].label.empty()) {
+        showTip(secondary[activeSecondary].label);
     }
 }
 

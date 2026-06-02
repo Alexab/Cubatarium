@@ -1,6 +1,7 @@
 #include "User.h"
 #include "Object.h"
 #include <algorithm>
+#include <iostream>
 
 namespace cutum {
 
@@ -35,9 +36,8 @@ void User::InitDefaultHotbar()
 {
  hotbars_.clear();
  hotbars_.resize(1);
- activePrimarySlotIndex_ = 0;
- activeSecondarySlotIndex_ = 0;
  activeBarIndex_ = 0;
+ activeSlotIndex_ = 0;
 }
 
 void User::SetPrefabHotbar(const std::vector<std::string>& prefab_names)
@@ -98,13 +98,7 @@ void User::SetActiveBlockIndex(size_t index)
  if (index >= kHotbarSlots || hotbars_.empty()) {
   return;
  }
- activePrimarySlotIndex_ = index;
- activeBarIndex_ = 0;
- if (!hotbars_[0].slots[index].empty
-     && hotbars_[0].slots[index].entry.kind == InventoryEntryKind::Object
-     && hotbars_.size() > 1) {
-  activeSecondarySlotIndex_ = index;
- }
+ SetActiveSlot(0, index);
 }
 
 void User::SetActivePrefabIndex(size_t index)
@@ -112,13 +106,7 @@ void User::SetActivePrefabIndex(size_t index)
  if (index >= kHotbarSlots || hotbars_.empty()) {
   return;
  }
- activeBarIndex_ = hotbars_.size() > 1 ? 1 : 0;
- if (hotbars_.size() > 1) {
-  activeSecondarySlotIndex_ = index;
- }
- if (hotbars_[activeBarIndex_].slots[index].empty) {
-  return;
- }
+ SetActiveSlot(hotbars_.size() > 1 ? 1 : 0, index);
 }
 
 void User::SetActiveObjectTypeName(const std::string& block_type)
@@ -210,21 +198,18 @@ bool User::SetActiveSlot(size_t bar, size_t slot)
  if (bar >= hotbars_.size() || slot >= kHotbarSlots) {
   return false;
  }
+ std::cerr << "[hotbar] set active bar=" << bar << " slot=" << slot << std::endl;
  activeBarIndex_ = bar;
- if (bar == 0) {
-  activePrimarySlotIndex_ = slot;
- } else {
-  activeSecondarySlotIndex_ = slot;
- }
+ activeSlotIndex_ = slot;
  return true;
 }
 
 size_t User::GetActiveSlotIndex(size_t bar) const
 {
- if (bar == 0) {
-  return activePrimarySlotIndex_;
+ if (bar == activeBarIndex_) {
+  return activeSlotIndex_;
  }
- return activeSecondarySlotIndex_;
+ return kHotbarSlots;
 }
 
 const std::string& User::EmptyString()
@@ -255,11 +240,8 @@ void User::ClampActiveIndices()
  if (hotbars_.empty()) {
   hotbars_.resize(1);
  }
- if (activePrimarySlotIndex_ >= kHotbarSlots) {
-  activePrimarySlotIndex_ = 0;
- }
- if (activeSecondarySlotIndex_ >= kHotbarSlots) {
-  activeSecondarySlotIndex_ = 0;
+ if (activeSlotIndex_ >= kHotbarSlots) {
+  activeSlotIndex_ = 0;
  }
  if (activeBarIndex_ >= hotbars_.size()) {
   activeBarIndex_ = 0;
