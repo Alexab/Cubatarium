@@ -44,6 +44,8 @@
 /bin/*.sln
 /bin/*.vcxproj.user
 /bin/*.rsp
+/bin/generated/
+/validate_log.txt
 
 CMakeFiles
 Debug
