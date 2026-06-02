@@ -35,10 +35,9 @@ private:
     IGuiIconSource* icons_{nullptr};
     const GuiTheme* theme_;
     GuiPanel* rootPanel_{nullptr};
-    std::vector<GuiSlot*> blockSlots_;
-    std::vector<GuiSlot*> prefabSlots_;
-    GuiLabel* blockTooltip_{nullptr};
-    GuiLabel* prefabTooltip_{nullptr};
+    std::vector<GuiSlot*> primarySlots_;
+    std::vector<GuiSlot*> secondarySlots_;
+    GuiLabel* tooltip_{nullptr};
     int pointerX_{-1};
     int pointerY_{-1};
     bool hotbarBuilt_{false};

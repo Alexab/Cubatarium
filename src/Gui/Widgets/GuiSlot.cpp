@@ -39,6 +39,11 @@ void GuiSlot::Draw(GuiRenderer& renderer)
     } else {
         renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
     }
+
+    if (!cornerHint_.empty()) {
+        const glm::vec3 textColor = selected_ ? glm::vec3(0.95f, 0.95f, 0.95f) : theme_->textSecondary;
+        renderer.DrawText(cornerHint_, bounds_.x + 4, bounds_.y + 2, textColor);
+    }
 }
 
 bool GuiSlot::OnMouseDown(const GuiMouseEvent& event)

@@ -14,6 +14,8 @@ namespace {
 
 constexpr int kHotbarMarginBottom = 24;
 constexpr int kTooltipHeight = 22;
+constexpr int kSecondaryMarginRight = 16;
+constexpr int kSecondaryMarginBottom = 24;
 
 } // namespace
 
@@ -57,31 +59,25 @@ void InGameHudScreen::EnsureHotbarWidgets()
     for (size_t i = 0; i < 10; ++i) {
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
         const size_t index = i;
-        slot->SetOnClick([this, index]() { hotbar_->SelectBlockSlot(index); });
+        slot->SetOnClick([this, index]() { hotbar_->SelectSlot(0, index); });
+        slot->SetCornerHint(index == 0 ? "0" : std::to_string(index));
         GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
-        blockSlots_.push_back(ptr);
+        primarySlots_.push_back(ptr);
     }
     for (size_t i = 0; i < 10; ++i) {
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
         const size_t index = i;
-        slot->SetOnClick([this, index]() { hotbar_->SelectPrefabSlot(index); });
+        slot->SetOnClick([this, index]() { hotbar_->SelectSlot(1, index); });
         GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
-        prefabSlots_.push_back(ptr);
+        secondarySlots_.push_back(ptr);
     }
 
-    auto blockTip = std::make_unique<GuiLabel>(theme_, "");
-    blockTip->SetTextAlign(GuiTextAlign::Center);
-    blockTip->SetDrawBackground(true);
-    blockTip->SetVisible(false);
-    blockTooltip_ = blockTip.get();
-    rootPanel_->AddChild(std::move(blockTip));
-
-    auto prefabTip = std::make_unique<GuiLabel>(theme_, "");
-    prefabTip->SetTextAlign(GuiTextAlign::Center);
-    prefabTip->SetDrawBackground(true);
-    prefabTip->SetVisible(false);
-    prefabTooltip_ = prefabTip.get();
-    rootPanel_->AddChild(std::move(prefabTip));
+    auto tip = std::make_unique<GuiLabel>(theme_, "");
+    tip->SetTextAlign(GuiTextAlign::Center);
+    tip->SetDrawBackground(true);
+    tip->SetVisible(false);
+    tooltip_ = tip.get();
+    rootPanel_->AddChild(std::move(tip));
 
     hotbarBuilt_ = true;
     LayoutHotbar();
@@ -96,31 +92,38 @@ void InGameHudScreen::LayoutHotbar()
 
     const int slotSize = theme_->hotbarSlotSize;
     const int gap = theme_->hotbarSlotGap;
-    const auto layout = LayoutHotbarRows(viewportW_, viewportH_, slotSize, gap, kHotbarMarginBottom);
+    const int totalW = static_cast<int>(primarySlots_.size()) * slotSize
+        + (static_cast<int>(primarySlots_.size()) - 1) * gap;
+    const int startX = (viewportW_ - totalW) / 2;
+    const int rowY = viewportH_ - kHotbarMarginBottom - slotSize;
 
-    int x = layout.startX;
-    for (GuiSlot* slot : blockSlots_) {
+    int x = startX;
+    for (GuiSlot* slot : primarySlots_) {
         if (slot) {
-            slot->SetBounds({x, layout.blockRowY, slotSize, slotSize});
+            slot->SetBounds({x, rowY, slotSize, slotSize});
             x += slotSize + gap;
         }
     }
 
-    x = layout.startX;
-    for (GuiSlot* slot : prefabSlots_) {
-        if (slot) {
-            slot->SetBounds({x, layout.prefabRowY, slotSize, slotSize});
-            x += slotSize + gap;
+    const bool showSecondary = hotbar_->GetBarCount() > 1;
+    const int secX = viewportW_ - kSecondaryMarginRight - slotSize;
+    int secY = viewportH_ - kSecondaryMarginBottom - slotSize;
+    for (GuiSlot* slot : secondarySlots_) {
+        if (!slot) {
+            continue;
+        }
+        if (showSecondary) {
+            slot->SetVisible(true);
+            slot->SetBounds({secX, secY, slotSize, slotSize});
+            secY -= slotSize + gap;
+        } else {
+            slot->SetVisible(false);
         }
     }
 
-    if (blockTooltip_) {
-        blockTooltip_->SetBounds({layout.startX, layout.blockRowY - gap - kTooltipHeight, layout.totalW,
+    if (tooltip_) {
+        tooltip_->SetBounds({startX, rowY - gap - kTooltipHeight, totalW,
                                   kTooltipHeight});
-    }
-    if (prefabTooltip_) {
-        prefabTooltip_->SetBounds(
-            {layout.startX, layout.prefabRowY + slotSize + gap, layout.totalW, kTooltipHeight});
     }
 }
 
@@ -129,15 +132,15 @@ void InGameHudScreen::UpdateSlotData()
     if (!hotbar_) {
         return;
     }
-    const auto blockSlots = hotbar_->GetBlockSlots();
-    for (size_t i = 0; i < blockSlots_.size() && i < blockSlots.size(); ++i) {
-        blockSlots_[i]->SetLabel(blockSlots[i].label);
-        blockSlots_[i]->SetSelected(blockSlots[i].selected);
+    const auto primary = hotbar_->GetBarSlots(0);
+    for (size_t i = 0; i < primarySlots_.size() && i < primary.size(); ++i) {
+        primarySlots_[i]->SetLabel(primary[i].label);
+        primarySlots_[i]->SetSelected(primary[i].selected);
     }
-    const auto prefabSlots = hotbar_->GetPrefabSlots();
-    for (size_t i = 0; i < prefabSlots_.size() && i < prefabSlots.size(); ++i) {
-        prefabSlots_[i]->SetLabel(prefabSlots[i].label);
-        prefabSlots_[i]->SetSelected(prefabSlots[i].selected);
+    const auto secondary = hotbar_->GetBarSlots(1);
+    for (size_t i = 0; i < secondarySlots_.size() && i < secondary.size(); ++i) {
+        secondarySlots_[i]->SetLabel(secondary[i].label);
+        secondarySlots_[i]->SetSelected(secondary[i].selected);
     }
 }
 
@@ -146,17 +149,25 @@ void InGameHudScreen::SyncSlotIcons()
     if (!hotbar_ || !icons_) {
         return;
     }
-    const auto blockSlots = hotbar_->GetBlockSlots();
-    for (size_t i = 0; i < blockSlots_.size() && i < blockSlots.size(); ++i) {
+    const auto primary = hotbar_->GetBarSlots(0);
+    for (size_t i = 0; i < primarySlots_.size() && i < primary.size(); ++i) {
         const GLuint tex =
-            blockSlots[i].id.empty() ? 0 : icons_->GetBlockIconTexture(blockSlots[i].id);
-        blockSlots_[i]->SetIconTexture(tex);
+            primary[i].id.empty()
+                ? 0
+                : (primary[i].isBlock
+                    ? icons_->GetBlockIconTexture(primary[i].id)
+                    : icons_->GetPrefabIconTexture(primary[i].id));
+        primarySlots_[i]->SetIconTexture(tex);
     }
-    const auto prefabSlots = hotbar_->GetPrefabSlots();
-    for (size_t i = 0; i < prefabSlots_.size() && i < prefabSlots.size(); ++i) {
+    const auto secondary = hotbar_->GetBarSlots(1);
+    for (size_t i = 0; i < secondarySlots_.size() && i < secondary.size(); ++i) {
         const GLuint tex =
-            prefabSlots[i].id.empty() ? 0 : icons_->GetPrefabIconTexture(prefabSlots[i].id);
-        prefabSlots_[i]->SetIconTexture(tex);
+            secondary[i].id.empty()
+                ? 0
+                : (secondary[i].isBlock
+                    ? icons_->GetBlockIconTexture(secondary[i].id)
+                    : icons_->GetPrefabIconTexture(secondary[i].id));
+        secondarySlots_[i]->SetIconTexture(tex);
     }
 }
 
@@ -166,50 +177,39 @@ void InGameHudScreen::UpdateTooltips()
         return;
     }
 
-    const auto blockSlots = hotbar_->GetBlockSlots();
-    const auto prefabSlots = hotbar_->GetPrefabSlots();
+    const auto primary = hotbar_->GetBarSlots(0);
+    const auto secondary = hotbar_->GetBarSlots(1);
 
-    auto showBlockTip = [&](const std::string& text) {
-        if (blockTooltip_) {
-            blockTooltip_->SetText(text);
-            blockTooltip_->SetVisible(!text.empty());
-        }
-    };
-    auto showPrefabTip = [&](const std::string& text) {
-        if (prefabTooltip_) {
-            prefabTooltip_->SetText(text);
-            prefabTooltip_->SetVisible(!text.empty());
+    auto showTip = [&](const std::string& text) {
+        if (tooltip_) {
+            tooltip_->SetText(text);
+            tooltip_->SetVisible(!text.empty());
         }
     };
 
-    showBlockTip("");
-    showPrefabTip("");
+    showTip("");
 
     if (pointerX_ >= 0 && pointerY_ >= 0 && rootPanel_) {
         if (GuiWidget* hit = rootPanel_->HitTest(pointerX_, pointerY_)) {
-            for (size_t i = 0; i < blockSlots_.size(); ++i) {
-                if (hit == blockSlots_[i] && i < blockSlots.size() && !blockSlots[i].label.empty()) {
-                    showBlockTip(blockSlots[i].label);
+            for (size_t i = 0; i < primarySlots_.size(); ++i) {
+                if (hit == primarySlots_[i] && i < primary.size() && !primary[i].label.empty()) {
+                    showTip(primary[i].label);
                     return;
                 }
             }
-            for (size_t i = 0; i < prefabSlots_.size(); ++i) {
-                if (hit == prefabSlots_[i] && i < prefabSlots.size() &&
-                    !prefabSlots[i].label.empty()) {
-                    showPrefabTip(prefabSlots[i].label);
+            for (size_t i = 0; i < secondarySlots_.size(); ++i) {
+                if (hit == secondarySlots_[i] && i < secondary.size() &&
+                    !secondary[i].label.empty()) {
+                    showTip(secondary[i].label);
                     return;
                 }
             }
         }
     }
 
-    const size_t activeBlock = hotbar_->GetActiveBlockIndex();
-    if (activeBlock < blockSlots.size() && !blockSlots[activeBlock].label.empty()) {
-        showBlockTip(blockSlots[activeBlock].label);
-    }
-    const size_t activePrefab = hotbar_->GetActivePrefabIndex();
-    if (activePrefab < prefabSlots.size() && !prefabSlots[activePrefab].label.empty()) {
-        showPrefabTip(prefabSlots[activePrefab].label);
+    const size_t activePrimary = hotbar_->GetSelectedSlot(0);
+    if (activePrimary < primary.size() && !primary[activePrimary].label.empty()) {
+        showTip(primary[activePrimary].label);
     }
 }
 

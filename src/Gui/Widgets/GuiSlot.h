@@ -17,6 +17,7 @@ public:
     void SetSelected(bool selected) { selected_ = selected; }
     void SetLabel(const std::string& label) { label_ = label; }
     void SetIconTexture(unsigned int texture) { iconTexture_ = texture; }
+    void SetCornerHint(const std::string& hint) { cornerHint_ = hint; }
     void SetOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
     const std::string& GetLabel() const { return label_; }
 
@@ -32,6 +33,7 @@ private:
     int slotSize_;
     bool selected_{false};
     std::string label_;
+    std::string cornerHint_;
     unsigned int iconTexture_{0};
     bool pressed_{false};
     std::function<void()> onClick_;

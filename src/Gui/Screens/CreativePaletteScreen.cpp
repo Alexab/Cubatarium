@@ -158,21 +158,26 @@ void CreativePaletteScreen::RebuildGrid()
             if (!hotbar_) {
                 return;
             }
-            if (kind_ == ContentKind::Block) {
-                const auto slots = hotbar_->GetBlockSlots();
-                for (size_t si = 0; si < slots.size(); ++si) {
-                    if (slots[si].id == entryId) {
-                        hotbar_->SelectBlockSlot(si);
-                        return;
-                    }
+            const size_t preferredBar = kind_ == ContentKind::Block ? 0 : 1;
+            const size_t bar = preferredBar < hotbar_->GetBarCount() ? preferredBar : 0;
+            const auto slots = hotbar_->GetBarSlots(bar);
+            for (size_t si = 0; si < slots.size(); ++si) {
+                if (slots[si].id == entryId) {
+                    hotbar_->SelectSlot(bar, si);
+                    return;
                 }
-            } else {
-                const auto slots = hotbar_->GetPrefabSlots();
-                for (size_t si = 0; si < slots.size(); ++si) {
-                    if (slots[si].id == entryId) {
-                        hotbar_->SelectPrefabSlot(si);
-                        return;
+            }
+            InventoryEntryRef entry;
+            entry.empty = false;
+            entry.id = entryId;
+            entry.kind = kind_ == ContentKind::Block ? InventoryEntryKind::Block
+                                                     : InventoryEntryKind::Object;
+            for (size_t si = 0; si < slots.size(); ++si) {
+                if (slots[si].id.empty()) {
+                    if (hotbar_->AssignSlot(bar, si, entry)) {
+                        hotbar_->SelectSlot(bar, si);
                     }
+                    return;
                 }
             }
         });
