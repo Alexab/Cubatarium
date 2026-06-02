@@ -133,6 +133,17 @@ void GuiDialogFrame::LayoutScrollPages(const GuiRect& bodyArea)
 
 void GuiDialogFrame::RelayoutVisiblePageContents()
 {
+    if (scroll_) {
+        const GuiRect contentBounds = scroll_->Content().GetBounds();
+        for (GuiPanel* page : scrollPages_) {
+            if (!page || !page->IsVisible()) {
+                continue;
+            }
+            const GuiRect pageBounds = page->GetBounds();
+            page->SetBounds({contentBounds.x, contentBounds.y, pageBounds.w, pageBounds.h});
+        }
+    }
+
     for (GuiPanel* page : scrollPages_) {
         if (!page || !page->IsVisible()) {
             continue;
@@ -148,7 +159,7 @@ void GuiDialogFrame::RelayoutVisiblePageContents()
         for (const auto& child : page->GetChildren()) {
             inner.push_back(child.get());
         }
-        GuiLayout::StackVertical({pageBounds.x, pageBounds.y, pageBounds.w, 100000}, 6, 0, inner);
+        GuiLayout::StackVertical(pageBounds, 6, 0, inner);
     }
 }
 
