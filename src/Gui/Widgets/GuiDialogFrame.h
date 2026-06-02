@@ -4,6 +4,7 @@
 #include "GuiWidget.h"
 #include "GuiScrollView.h"
 #include <functional>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,6 +19,9 @@ class GuiButton;
 /// Modal dialog body: optional tabs, scrollable or fixed body, footer buttons.
 class GuiDialogFrame : public GuiWidget {
 public:
+    using PageMeasureFn = std::function<int(const GuiRect&)>;
+    using PageLayoutFn = std::function<void(const GuiRect&)>;
+
     static constexpr int kFooterHeight = 44;
     static constexpr int kTabGap = 4;
 
@@ -30,6 +34,9 @@ public:
     GuiButton& AddFooterButton(std::unique_ptr<GuiButton> button);
 
     void SetActivePage(int index);
+    void SetScrollPageLayout(size_t pageIndex, PageMeasureFn measureFn, PageLayoutFn layoutFn);
+    void SetScrollbarMode(GuiScrollbarMode mode);
+    void SetDrawScrollbar(bool draw);
     void LayoutFrame();
 
     void CollectFocusables(std::vector<GuiWidget*>& out) override;
@@ -45,8 +52,11 @@ private:
     GuiScrollView* scroll_{nullptr};
     GuiWidget* fixedBody_{nullptr};
     std::vector<GuiPanel*> scrollPages_;
+    std::vector<PageMeasureFn> scrollPageMeasureFns_;
+    std::vector<PageLayoutFn> scrollPageLayoutFns_;
     std::vector<GuiButton*> footerButtons_;
     int activePage_{0};
+    GuiScrollbarMode scrollbarMode_{GuiScrollbarMode::Auto};
 };
 
 } // namespace cutum

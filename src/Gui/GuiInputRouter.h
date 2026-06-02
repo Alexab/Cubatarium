@@ -31,7 +31,7 @@ public:
     void ReleaseFocusWithoutNotify();
 
 private:
-    void SetKeyboardFocus(GuiWidget* widget);
+    void SetKeyboardFocus(GuiWidget* widget, bool reveal);
     void CollectFocusOrder();
     void FocusNext(bool reverse);
 

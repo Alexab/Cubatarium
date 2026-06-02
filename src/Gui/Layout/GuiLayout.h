@@ -22,6 +22,29 @@ struct HotbarLayoutResult {
     int totalW{0};
 };
 
+struct GuiGridSpec {
+    int columns{1};
+    int hGap{8};
+    int vGap{6};
+    int padding{0};
+    std::vector<int> columnWeights;
+};
+
+struct GuiGridItem {
+    GuiWidget* widget{nullptr};
+    int row{0};
+    int col{0};
+    int rowSpan{1};
+    int colSpan{1};
+    int minH{0};
+
+    GuiGridItem() = default;
+    GuiGridItem(GuiWidget* w, int r, int c, int rs = 1, int cs = 1, int mh = 0)
+        : widget(w), row(r), col(c), rowSpan(rs), colSpan(cs), minH(mh)
+    {
+    }
+};
+
 HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize, int gap,
                                     int marginBottom);
 
@@ -36,6 +59,10 @@ public:
                                 const std::vector<GuiWidget*>& children);
     static void AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int margin,
                             GuiWidget* child);
+    static int GridMeasure(const GuiRect& clientArea, const GuiGridSpec& spec,
+                           const std::vector<GuiGridItem>& items);
+    static void GridPlace(const GuiRect& clientArea, const GuiGridSpec& spec,
+                          const std::vector<GuiGridItem>& items);
 };
 
 } // namespace cutum

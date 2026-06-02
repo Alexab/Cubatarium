@@ -35,6 +35,7 @@ GuiPanel& GuiDialogFrame::AddScrollPage()
     if (!scroll_) {
         auto scroll = std::make_unique<GuiScrollView>(theme_);
         scroll_ = scroll.get();
+        scroll_->SetScrollbarMode(scrollbarMode_);
         scroll_->SetAfterScrollLayout([this](GuiScrollView&) { RelayoutVisiblePageContents(); });
         AddChild(std::move(scroll));
     }
@@ -43,6 +44,8 @@ GuiPanel& GuiDialogFrame::AddScrollPage()
     page->SetStackLayout(6, 0);
     GuiPanel* raw = page.get();
     scrollPages_.push_back(raw);
+    scrollPageMeasureFns_.push_back({});
+    scrollPageLayoutFns_.push_back({});
     scroll_->Content().AddChild(std::move(page));
     return *raw;
 }
@@ -74,6 +77,31 @@ void GuiDialogFrame::SetActivePage(int index)
     LayoutFrame();
 }
 
+void GuiDialogFrame::SetScrollPageLayout(size_t pageIndex, PageMeasureFn measureFn, PageLayoutFn layoutFn)
+{
+    if (pageIndex >= scrollPageMeasureFns_.size() || pageIndex >= scrollPageLayoutFns_.size()) {
+        return;
+    }
+    scrollPageMeasureFns_[pageIndex] = std::move(measureFn);
+    scrollPageLayoutFns_[pageIndex] = std::move(layoutFn);
+}
+
+void GuiDialogFrame::SetDrawScrollbar(bool draw)
+{
+    scrollbarMode_ = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
+    if (scroll_) {
+        scroll_->SetScrollbarMode(scrollbarMode_);
+    }
+}
+
+void GuiDialogFrame::SetScrollbarMode(GuiScrollbarMode mode)
+{
+    scrollbarMode_ = mode;
+    if (scroll_) {
+        scroll_->SetScrollbarMode(mode);
+    }
+}
+
 void GuiDialogFrame::LayoutScrollPages(const GuiRect& bodyArea)
 {
     if (!scroll_) {
@@ -84,12 +112,19 @@ void GuiDialogFrame::LayoutScrollPages(const GuiRect& bodyArea)
         if (!page || !page->IsVisible()) {
             continue;
         }
-        std::vector<GuiWidget*> inner;
-        for (const auto& child : page->GetChildren()) {
-            inner.push_back(child.get());
+        const auto it = std::find(scrollPages_.begin(), scrollPages_.end(), page);
+        const size_t idx = it == scrollPages_.end() ? 0 : static_cast<size_t>(it - scrollPages_.begin());
+        int pageH = 0;
+        if (idx < scrollPageMeasureFns_.size() && scrollPageMeasureFns_[idx]) {
+            pageH = std::max(0, scrollPageMeasureFns_[idx]({0, 0, bodyArea.w, bodyArea.h}));
+        } else {
+            std::vector<GuiWidget*> inner;
+            for (const auto& child : page->GetChildren()) {
+                inner.push_back(child.get());
+            }
+            const GuiRect measureArea{0, 0, bodyArea.w, 100000};
+            pageH = GuiLayout::StackVerticalMeasure(measureArea, 6, 0, inner);
         }
-        const GuiRect measureArea{0, 0, bodyArea.w, 100000};
-        const int pageH = GuiLayout::StackVerticalMeasure(measureArea, 6, 0, inner);
         page->SetBounds({0, 0, bodyArea.w, pageH});
     }
     scroll_->LayoutContent(6, 4);
@@ -102,11 +137,17 @@ void GuiDialogFrame::RelayoutVisiblePageContents()
         if (!page || !page->IsVisible()) {
             continue;
         }
+        const auto it = std::find(scrollPages_.begin(), scrollPages_.end(), page);
+        const size_t idx = it == scrollPages_.end() ? 0 : static_cast<size_t>(it - scrollPages_.begin());
+        const GuiRect& pageBounds = page->GetBounds();
+        if (idx < scrollPageLayoutFns_.size() && scrollPageLayoutFns_[idx]) {
+            scrollPageLayoutFns_[idx](pageBounds);
+            continue;
+        }
         std::vector<GuiWidget*> inner;
         for (const auto& child : page->GetChildren()) {
             inner.push_back(child.get());
         }
-        const GuiRect& pageBounds = page->GetBounds();
         GuiLayout::StackVertical({pageBounds.x, pageBounds.y, pageBounds.w, 100000}, 6, 0, inner);
     }
 }

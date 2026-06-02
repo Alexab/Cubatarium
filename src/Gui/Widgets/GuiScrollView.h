@@ -8,6 +8,12 @@ namespace cutum {
 
 struct GuiTheme;
 
+enum class GuiScrollbarMode {
+    Auto,
+    Always,
+    Hidden
+};
+
 /// Scrollable viewport with clipped content, scrollbar, wheel and keyboard scrolling.
 class GuiScrollView : public GuiWidget {
 public:
@@ -27,6 +33,12 @@ public:
     void EnsureWidgetVisible(const GuiWidget& widget);
     using AfterScrollLayoutFn = std::function<void(GuiScrollView&)>;
     void SetAfterScrollLayout(AfterScrollLayoutFn callback);
+    void SetScrollbarMode(GuiScrollbarMode mode) { scrollbarMode_ = mode; }
+    GuiScrollbarMode GetScrollbarMode() const { return scrollbarMode_; }
+    void SetDrawScrollbar(bool draw)
+    {
+        scrollbarMode_ = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
+    }
 
     void Draw(GuiRenderer& renderer) override;
     GuiWidget* HitTest(int x, int y) override;
@@ -54,6 +66,7 @@ private:
     int contentHeight_{0};
     int layoutSpacing_{6};
     int layoutPadding_{4};
+    GuiScrollbarMode scrollbarMode_{GuiScrollbarMode::Auto};
     AfterScrollLayoutFn afterScrollLayout_;
     static constexpr int kScrollbarWidth = 10;
 };

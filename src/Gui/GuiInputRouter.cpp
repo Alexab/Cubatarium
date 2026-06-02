@@ -48,14 +48,14 @@ void GuiInputRouter::SetActiveScreen(GuiScreenBase* screen)
 
 void GuiInputRouter::ClearInteractionState()
 {
-    SetKeyboardFocus(nullptr);
+    SetKeyboardFocus(nullptr, false);
     mousePressedWidget_ = nullptr;
     hoveredWidget_ = nullptr;
     captureMouse_ = false;
     modalKeyboard_ = false;
 }
 
-void GuiInputRouter::SetKeyboardFocus(GuiWidget* widget)
+void GuiInputRouter::SetKeyboardFocus(GuiWidget* widget, bool reveal)
 {
     if (keyboardFocus_ != nullptr && keyboardFocus_ != widget) {
         keyboardFocus_->SetFocusHighlight(false);
@@ -69,7 +69,9 @@ void GuiInputRouter::SetKeyboardFocus(GuiWidget* widget)
         if (auto* text = dynamic_cast<GuiTextInput*>(keyboardFocus_)) {
             text->SetFocused(true);
         }
-        RevealWidgetForKeyboardFocus(root_, keyboardFocus_);
+        if (reveal) {
+            RevealWidgetForKeyboardFocus(root_, keyboardFocus_);
+        }
         modalKeyboard_ = dynamic_cast<GuiTextInput*>(keyboardFocus_) != nullptr;
     } else {
         modalKeyboard_ = false;
@@ -88,28 +90,28 @@ void GuiInputRouter::FocusNext(bool reverse)
 {
     CollectFocusOrder();
     if (focusOrder_.empty()) {
-        SetKeyboardFocus(nullptr);
+        SetKeyboardFocus(nullptr, false);
         return;
     }
     if (!keyboardFocus_) {
-        SetKeyboardFocus(reverse ? focusOrder_.back() : focusOrder_.front());
+        SetKeyboardFocus(reverse ? focusOrder_.back() : focusOrder_.front(), true);
         return;
     }
     auto it = std::find(focusOrder_.begin(), focusOrder_.end(), keyboardFocus_);
     if (it == focusOrder_.end()) {
-        SetKeyboardFocus(focusOrder_.front());
+        SetKeyboardFocus(focusOrder_.front(), true);
         return;
     }
     if (reverse) {
         if (it == focusOrder_.begin()) {
-            SetKeyboardFocus(focusOrder_.back());
+            SetKeyboardFocus(focusOrder_.back(), true);
         } else {
-            SetKeyboardFocus(*(--it));
+            SetKeyboardFocus(*(--it), true);
         }
     } else if (it + 1 == focusOrder_.end()) {
-        SetKeyboardFocus(focusOrder_.front());
+        SetKeyboardFocus(focusOrder_.front(), true);
     } else {
-        SetKeyboardFocus(*(it + 1));
+        SetKeyboardFocus(*(it + 1), true);
     }
 }
 
@@ -121,9 +123,9 @@ bool GuiInputRouter::OnMouseDown(const GuiMouseEvent& event)
     GuiWidget* hit = root_->HitTest(event.x, event.y);
     GuiWidget* focusHit = root_->HitTestFocusable(event.x, event.y);
     if (focusHit) {
-        SetKeyboardFocus(focusHit);
+        SetKeyboardFocus(focusHit, false);
     } else if (!hit) {
-        SetKeyboardFocus(nullptr);
+        SetKeyboardFocus(nullptr, false);
     }
     if (hit) {
         captureMouse_ = true;

@@ -11,6 +11,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Layout/GuiLayout.h"
 #include <algorithm>
 
 namespace cutum {
@@ -24,6 +25,17 @@ int ParseIntOr(const std::string& text, int fallback)
     } catch (...) {
         return fallback;
     }
+}
+
+GuiGridSpec BuildTwoColumnSpec(int width)
+{
+    GuiGridSpec spec;
+    spec.columns = width < 720 ? 1 : 2;
+    spec.hGap = 12;
+    spec.vGap = 8;
+    spec.padding = 4;
+    spec.columnWeights = {1, 1};
+    return spec;
 }
 
 } // namespace
@@ -107,29 +119,36 @@ void SettingsScreen::Build(GuiContext& ctx)
     auto backdrop = std::make_unique<GuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
 
-    const int winW = std::min(520, viewportW_ - 40);
-    const int winH = std::min(560, viewportH_ - 40);
+    const int winW = std::min(860, viewportW_ - 32);
+    const int winH = std::min(540, viewportH_ - 32);
     auto window = std::make_unique<GuiWindow>(&theme, "Settings");
     window_ = window.get();
     window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
 
     auto frame = std::make_unique<GuiDialogFrame>(&theme);
     dialogFrame_ = frame.get();
+    frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
     frame->CreateTabBar({"Application", "World defaults"}, [this](int tab) { ShowTab(tab); });
 
     GuiPanel& app = frame->AddScrollPage();
     appPanel_ = &app;
-    app.AddChild(std::make_unique<GuiLabel>(&theme, "Default user:"));
+    auto defaultUserLbl = std::make_unique<GuiLabel>(&theme, "Default user:");
+    defaultUserLabel_ = defaultUserLbl.get();
+    app.AddChild(std::move(defaultUserLbl));
     auto userIn = std::make_unique<GuiTextInput>(&theme);
     defaultUserInput_ = userIn.get();
     userIn->SetText(appSnap.defaultUser);
     app.AddChild(std::move(userIn));
-    app.AddChild(std::make_unique<GuiLabel>(&theme, "Default world folder:"));
+    auto defaultWorldLbl = std::make_unique<GuiLabel>(&theme, "Default world folder:");
+    defaultWorldLabel_ = defaultWorldLbl.get();
+    app.AddChild(std::move(defaultWorldLbl));
     auto worldIn = std::make_unique<GuiTextInput>(&theme);
     defaultWorldInput_ = worldIn.get();
     worldIn->SetText(appSnap.defaultWorld);
     app.AddChild(std::move(worldIn));
-    app.AddChild(std::make_unique<GuiLabel>(&theme, "Render distance (chunks):"));
+    auto renderDistLbl = std::make_unique<GuiLabel>(&theme, "Render distance (chunks):");
+    renderDistLabel_ = renderDistLbl.get();
+    app.AddChild(std::move(renderDistLbl));
     auto distIn = std::make_unique<GuiTextInput>(&theme);
     renderDistInput_ = distIn.get();
     distIn->SetText(std::to_string(appSnap.renderDistanceChunks));
@@ -162,12 +181,16 @@ void SettingsScreen::Build(GuiContext& ctx)
     legacyHudBox_ = hud.get();
     hud->SetChecked(appSnap.ui.legacyHud);
     app.AddChild(std::move(hud));
-    app.AddChild(std::make_unique<GuiLabel>(&theme, "Console key:"));
+    auto consoleLbl = std::make_unique<GuiLabel>(&theme, "Console key:");
+    consoleKeyLabel_ = consoleLbl.get();
+    app.AddChild(std::move(consoleLbl));
     auto ckIn = std::make_unique<GuiTextInput>(&theme);
     consoleKeyInput_ = ckIn.get();
     ckIn->SetText(appSnap.ui.consoleKey);
     app.AddChild(std::move(ckIn));
-    app.AddChild(std::make_unique<GuiLabel>(&theme, "Palette key:"));
+    auto paletteLbl = std::make_unique<GuiLabel>(&theme, "Palette key:");
+    paletteKeyLabel_ = paletteLbl.get();
+    app.AddChild(std::move(paletteLbl));
     auto pkIn = std::make_unique<GuiTextInput>(&theme);
     paletteKeyInput_ = pkIn.get();
     pkIn->SetText(appSnap.ui.paletteKey);
@@ -178,6 +201,14 @@ void SettingsScreen::Build(GuiContext& ctx)
     worldForm_ = std::make_unique<WorldGenSettingsForm>(&theme);
     worldForm_->SetSettings(procSnap);
     worldForm_->BuildInto(world);
+    frame->SetScrollPageLayout(
+        0,
+        [this](const GuiRect& area) { return MeasureAppPageHeight(area); },
+        [this](const GuiRect& area) { LayoutAppPage(area); });
+    frame->SetScrollPageLayout(
+        1,
+        [this](const GuiRect& area) { return MeasureWorldPageHeight(area); },
+        [this](const GuiRect& area) { LayoutWorldPage(area); });
 
     auto saveBtn = std::make_unique<GuiButton>(&theme, "Save");
     saveBtn->SetOnClick([this]() { OnSave(); });
@@ -209,11 +240,77 @@ void SettingsScreen::Relayout()
     if (!window_ || !dialogFrame_) {
         return;
     }
-    const int winW = std::min(520, viewportW_ - 40);
-    const int winH = std::min(560, viewportH_ - 40);
+    const int winW = std::min(860, viewportW_ - 32);
+    const int winH = std::min(540, viewportH_ - 32);
     window_->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
     dialogFrame_->SetBounds(window_->GetClientArea());
     dialogFrame_->LayoutFrame();
+}
+
+int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
+{
+    const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
+    std::vector<GuiGridItem> items{
+        {defaultUserLabel_, 0, 0, 1, 1, 28},
+        {defaultUserInput_, 0, 1, 1, 1, 32},
+        {defaultWorldLabel_, 1, 0, 1, 1, 28},
+        {defaultWorldInput_, 1, 1, 1, 1, 32},
+        {renderDistLabel_, 2, 0, 1, 1, 28},
+        {renderDistInput_, 2, 1, 1, 1, 32},
+        {streamingBox_, 3, 0, 1, 1, 30},
+        {stepUpBox_, 3, 1, 1, 1, 30},
+        {greedyBox_, 4, 0, 1, 1, 30},
+        {faceQuadsBox_, 4, 1, 1, 1, 30},
+        {frustumBox_, 5, 0, 1, 1, 30},
+        {batchCacheBox_, 5, 1, 1, 1, 30},
+        {legacyHudBox_, 6, 0, 1, 2, 30},
+        {consoleKeyLabel_, 7, 0, 1, 1, 28},
+        {consoleKeyInput_, 7, 1, 1, 1, 32},
+        {paletteKeyLabel_, 8, 0, 1, 1, 28},
+        {paletteKeyInput_, 8, 1, 1, 1, 32},
+    };
+    return GuiLayout::GridMeasure(area, spec, items);
+}
+
+void SettingsScreen::LayoutAppPage(const GuiRect& area) const
+{
+    const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
+    std::vector<GuiGridItem> items{
+        {defaultUserLabel_, 0, 0, 1, 1, 28},
+        {defaultUserInput_, 0, 1, 1, 1, 32},
+        {defaultWorldLabel_, 1, 0, 1, 1, 28},
+        {defaultWorldInput_, 1, 1, 1, 1, 32},
+        {renderDistLabel_, 2, 0, 1, 1, 28},
+        {renderDistInput_, 2, 1, 1, 1, 32},
+        {streamingBox_, 3, 0, 1, 1, 30},
+        {stepUpBox_, 3, 1, 1, 1, 30},
+        {greedyBox_, 4, 0, 1, 1, 30},
+        {faceQuadsBox_, 4, 1, 1, 1, 30},
+        {frustumBox_, 5, 0, 1, 1, 30},
+        {batchCacheBox_, 5, 1, 1, 1, 30},
+        {legacyHudBox_, 6, 0, 1, 2, 30},
+        {consoleKeyLabel_, 7, 0, 1, 1, 28},
+        {consoleKeyInput_, 7, 1, 1, 1, 32},
+        {paletteKeyLabel_, 8, 0, 1, 1, 28},
+        {paletteKeyInput_, 8, 1, 1, 1, 32},
+    };
+    GuiLayout::GridPlace(area, spec, items);
+}
+
+int SettingsScreen::MeasureWorldPageHeight(const GuiRect& area) const
+{
+    if (!worldForm_) {
+        return 0;
+    }
+    return worldForm_->MeasureGridHeight(area, BuildTwoColumnSpec(area.w));
+}
+
+void SettingsScreen::LayoutWorldPage(const GuiRect& area) const
+{
+    if (!worldForm_) {
+        return;
+    }
+    worldForm_->LayoutGrid(area, BuildTwoColumnSpec(area.w));
 }
 
 } // namespace cutum

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/GuiScreenBase.h"
+#include "Gui/GuiTypes.h"
 #include <memory>
 
 namespace cutum {
@@ -12,6 +13,7 @@ class GuiDialogFrame;
 class WorldGenSettingsForm;
 class GuiTextInput;
 class GuiCheckbox;
+class GuiLabel;
 
 class SettingsScreen : public GuiScreenBase {
 public:
@@ -24,6 +26,10 @@ private:
     void Relayout();
     void ShowTab(int tab);
     void OnSave();
+    int MeasureAppPageHeight(const GuiRect& area) const;
+    void LayoutAppPage(const GuiRect& area) const;
+    int MeasureWorldPageHeight(const GuiRect& area) const;
+    void LayoutWorldPage(const GuiRect& area) const;
 
     IGuiMenuHost* host_{nullptr};
     GuiWindow* window_{nullptr};
@@ -31,6 +37,12 @@ private:
     GuiPanel* appPanel_{nullptr};
     GuiPanel* worldPanel_{nullptr};
     std::unique_ptr<WorldGenSettingsForm> worldForm_;
+
+    GuiLabel* defaultUserLabel_{nullptr};
+    GuiLabel* defaultWorldLabel_{nullptr};
+    GuiLabel* renderDistLabel_{nullptr};
+    GuiLabel* consoleKeyLabel_{nullptr};
+    GuiLabel* paletteKeyLabel_{nullptr};
 
     GuiTextInput* defaultUserInput_{nullptr};
     GuiTextInput* defaultWorldInput_{nullptr};

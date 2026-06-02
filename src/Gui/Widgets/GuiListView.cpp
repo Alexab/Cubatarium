@@ -46,8 +46,8 @@ void GuiListView::RevealFocused()
 {
     if (selectedIndex_ < 0 && !items_.empty()) {
         selectedIndex_ = 0;
+        EnsureSelectedVisible();
     }
-    EnsureSelectedVisible();
 }
 
 int GuiListView::ContentHeight() const

@@ -26,6 +26,24 @@ bool IsDescendantOf(const GuiWidget* root, const GuiWidget* target)
     return false;
 }
 
+bool ShouldShowScrollbar(GuiScrollbarMode mode, int maxScrollY)
+{
+    switch (mode) {
+    case GuiScrollbarMode::Always:
+        return true;
+    case GuiScrollbarMode::Hidden:
+        return false;
+    case GuiScrollbarMode::Auto:
+    default:
+        return maxScrollY > 0;
+    }
+}
+
+bool IsScrollInteractionEnabled(GuiScrollbarMode mode)
+{
+    return mode != GuiScrollbarMode::Hidden;
+}
+
 } // namespace
 
 GuiScrollView::GuiScrollView(const GuiTheme* theme)
@@ -47,13 +65,13 @@ const GuiPanel& GuiScrollView::Content() const
 
 GuiRect GuiScrollView::ViewportRect() const
 {
-    const int bar = MaxScrollY() > 0 ? kScrollbarWidth : 0;
+    const int bar = ShouldShowScrollbar(scrollbarMode_, MaxScrollY()) ? kScrollbarWidth : 0;
     return {bounds_.x, bounds_.y, std::max(0, bounds_.w - bar), bounds_.h};
 }
 
 GuiRect GuiScrollView::ScrollbarTrackRect() const
 {
-    if (MaxScrollY() <= 0) {
+    if (!ShouldShowScrollbar(scrollbarMode_, MaxScrollY())) {
         return {0, 0, 0, 0};
     }
     return {bounds_.x + bounds_.w - kScrollbarWidth, bounds_.y, kScrollbarWidth, bounds_.h};
@@ -103,6 +121,9 @@ bool GuiScrollView::ContainsWidget(const GuiWidget* widget) const
 
 void GuiScrollView::EnsureWidgetVisible(const GuiWidget& widget)
 {
+    if (!IsScrollInteractionEnabled(scrollbarMode_)) {
+        return;
+    }
     const GuiRect& b = widget.GetBounds();
     const GuiRect vp = ViewportRect();
     if (b.h <= 0 || vp.h <= 0) {
@@ -214,7 +235,7 @@ bool GuiScrollView::OnChar(const GuiCharEvent& event)
 
 bool GuiScrollView::HandleKeyScroll(const GuiKeyEvent& event)
 {
-    if (!visible_) {
+    if (!visible_ || !IsScrollInteractionEnabled(scrollbarMode_)) {
         return false;
     }
     if (event.action != GuiKeyAction::Press && event.action != GuiKeyAction::Repeat) {
@@ -250,7 +271,7 @@ bool GuiScrollView::HandleKeyScroll(const GuiKeyEvent& event)
 
 bool GuiScrollView::OnScroll(const GuiScrollEvent& event)
 {
-    if (!visible_ || bounds_.h <= 0) {
+    if (!visible_ || bounds_.h <= 0 || !IsScrollInteractionEnabled(scrollbarMode_)) {
         return false;
     }
     scrollY_ -= static_cast<int>(event.yoffset * 24);
@@ -261,7 +282,7 @@ bool GuiScrollView::OnScroll(const GuiScrollEvent& event)
 
 bool GuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent& event)
 {
-    if (!visible_ || !bounds_.Contains(x, y)) {
+    if (!visible_ || !bounds_.Contains(x, y) || !IsScrollInteractionEnabled(scrollbarMode_)) {
         return false;
     }
     return OnScroll(event);

@@ -166,6 +166,16 @@ void WorldGenSettingsForm::BuildInto(GuiPanel& panel)
     SetSettings(settings_);
 }
 
+int WorldGenSettingsForm::MeasureGridHeight(const GuiRect& area, const GuiGridSpec& spec) const
+{
+    return GuiLayout::GridMeasure(area, spec, BuildGridItems());
+}
+
+void WorldGenSettingsForm::LayoutGrid(const GuiRect& area, const GuiGridSpec& spec) const
+{
+    GuiLayout::GridPlace(area, spec, BuildGridItems());
+}
+
 void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
 {
     auto hint = std::make_unique<GuiLabel>(theme_, "Defaults for the next new worlds.");
@@ -173,6 +183,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(hint));
 
     auto genLabel = std::make_unique<GuiLabel>(theme_, "Generator:");
+    generatorLabel_ = genLabel.get();
     panel.AddChild(std::move(genLabel));
     auto genBtn = std::make_unique<GuiButton>(theme_, GeneratorLabel(settings_.generator));
     generatorBtn_ = genBtn.get();
@@ -180,6 +191,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(genBtn));
 
     auto vertLabel = std::make_unique<GuiLabel>(theme_, "Vertical:");
+    verticalLabel_ = vertLabel.get();
     panel.AddChild(std::move(vertLabel));
     auto vertBtn = std::make_unique<GuiButton>(theme_, VerticalLabel(settings_.vertical));
     verticalBtn_ = vertBtn.get();
@@ -187,6 +199,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(vertBtn));
 
     auto seedLabel = std::make_unique<GuiLabel>(theme_, "World seed:");
+    seedLabel_ = seedLabel.get();
     panel.AddChild(std::move(seedLabel));
     auto seedIn = std::make_unique<GuiTextInput>(theme_);
     seedInput_ = seedIn.get();
@@ -194,6 +207,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(seedIn));
 
     auto seaLabel = std::make_unique<GuiLabel>(theme_, "Sea level:");
+    seaLevelLabel_ = seaLabel.get();
     panel.AddChild(std::move(seaLabel));
     auto seaIn = std::make_unique<GuiTextInput>(theme_);
     seaLevelInput_ = seaIn.get();
@@ -201,6 +215,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(seaIn));
 
     auto maxLabel = std::make_unique<GuiLabel>(theme_, "Max height:");
+    maxHeightLabel_ = maxLabel.get();
     panel.AddChild(std::move(maxLabel));
     auto maxIn = std::make_unique<GuiTextInput>(theme_);
     maxHeightInput_ = maxIn.get();
@@ -208,6 +223,7 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     panel.AddChild(std::move(maxIn));
 
     auto flatLabel = std::make_unique<GuiLabel>(theme_, "Flat surface Y:");
+    flatYLabel_ = flatLabel.get();
     panel.AddChild(std::move(flatLabel));
     auto flatIn = std::make_unique<GuiTextInput>(theme_);
     flatYInput_ = flatIn.get();
@@ -243,6 +259,32 @@ void WorldGenSettingsForm::AddWidgetsTo(GuiPanel& panel)
     fire->SetChecked(settings_.fillFire);
     fire->SetOnChanged([this](bool v) { settings_.fillFire = v; });
     panel.AddChild(std::move(fire));
+}
+
+std::vector<GuiGridItem> WorldGenSettingsForm::BuildGridItems() const
+{
+    std::vector<GuiGridItem> items;
+    items.push_back({hintLabel_, 0, 0, 1, 2, 28});
+
+    items.push_back({generatorLabel_, 1, 0, 1, 1, 28});
+    items.push_back({generatorBtn_, 1, 1, 1, 1, 32});
+    items.push_back({verticalLabel_, 2, 0, 1, 1, 28});
+    items.push_back({verticalBtn_, 2, 1, 1, 1, 32});
+    items.push_back({seedLabel_, 3, 0, 1, 1, 28});
+    items.push_back({seedInput_, 3, 1, 1, 1, 32});
+    items.push_back({seaLevelLabel_, 4, 0, 1, 1, 28});
+    items.push_back({seaLevelInput_, 4, 1, 1, 1, 32});
+    items.push_back({maxHeightLabel_, 5, 0, 1, 1, 28});
+    items.push_back({maxHeightInput_, 5, 1, 1, 1, 32});
+    items.push_back({flatYLabel_, 6, 0, 1, 1, 28});
+    items.push_back({flatYInput_, 6, 1, 1, 1, 32});
+
+    items.push_back({cavesBox_, 7, 0, 1, 1, 30});
+    items.push_back({treesBox_, 7, 1, 1, 1, 30});
+    items.push_back({waterBox_, 8, 0, 1, 1, 30});
+    items.push_back({lavaBox_, 8, 1, 1, 1, 30});
+    items.push_back({fireBox_, 9, 0, 1, 2, 30});
+    return items;
 }
 
 } // namespace cutum
