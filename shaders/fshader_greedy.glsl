@@ -40,8 +40,10 @@ vec2 atlasHalfTexelInset()
 
 float insetMix(float a, float b, float t, float inset)
 {
-    float minInset = min(inset, (b - a) * 0.25);
-    return mix(a + minInset, b - minInset, t);
+    float span = b - a;
+    float dir = sign(span);
+    float safeInset = min(inset, abs(span) * 0.25);
+    return mix(a + dir * safeInset, b - dir * safeInset, t);
 }
 
 vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
