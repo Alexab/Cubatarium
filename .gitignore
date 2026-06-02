@@ -29,6 +29,7 @@
 /bin/textures/
 /bin/prefabs/
 /bin/resources/
+/bin/content/
 /bin/config.json
 
 # CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
@@ -43,6 +44,8 @@
 /bin/*.sln
 /bin/*.vcxproj.user
 /bin/*.rsp
+/bin/generated/
+/validate_log.txt
 
 CMakeFiles
 Debug

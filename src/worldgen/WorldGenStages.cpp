@@ -2,9 +2,47 @@
 #include "BlockWorld.h"
 #include "Noise.h"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace cutum {
+
+namespace {
+
+constexpr int kSpawnIslandFlatRadius = 48;
+constexpr int kSpawnIslandBlendRadius = 16;
+
+float Smoothstep(float edge0, float edge1, float x)
+{
+ const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+ return t * t * (3.0f - 2.0f * t);
+}
+
+} // namespace
+
+int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
+    const ProceduralSettings& settings, int centerX, int centerZ)
+{
+ if (!settings.fillWater) {
+  return naturalSurfaceY;
+ }
+ const float dx = static_cast<float>(worldX - centerX);
+ const float dz = static_cast<float>(worldZ - centerZ);
+ const float dist = std::sqrt(dx * dx + dz * dz);
+ const int minLandY = settings.seaLevel + 1;
+
+ int adjusted = naturalSurfaceY;
+ if (dist <= static_cast<float>(kSpawnIslandFlatRadius)) {
+  adjusted = std::max(naturalSurfaceY, minLandY);
+ } else if (dist < static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius)) {
+  const float u = Smoothstep(static_cast<float>(kSpawnIslandFlatRadius),
+      static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius), dist);
+  const float minFloor = static_cast<float>(minLandY) * (1.0f - u)
+      + static_cast<float>(naturalSurfaceY) * u;
+  adjusted = std::max(naturalSurfaceY, static_cast<int>(std::lround(minFloor)));
+ }
+ return std::clamp(adjusted, 1, settings.maxHeight);
+}
 
 void FillTerrainColumn(WorldGenContext& ctx, int x, int z, int surfaceY, const ColumnLayerRule& rule)
 {
@@ -68,7 +106,8 @@ void FillLegacyHashColumn(WorldGenContext& ctx, int x, int z)
   return;
  }
  const BlockId dirtOrStone = ctx.dirt != BLOCK_AIR ? ctx.dirt : stone;
- const int surfaceY = LegacyHashSurfaceY(x, z, ctx.settings);
+ const int naturalY = LegacyHashSurfaceY(x, z, ctx.settings);
+ const int surfaceY = AdjustSurfaceYForSpawnIsland(x, z, naturalY, ctx.settings);
 
  for (int y = 0; y <= surfaceY; ++y) {
   BlockId id = stone;

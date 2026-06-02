@@ -31,6 +31,8 @@ public:
  virtual bool CheckCollision(const glm::vec3& position, float size=1.0);
 
  static bool CheckCollision(const glm::vec3& position1, float size1, const glm::vec3& position2, float size2);
+ static bool CheckAabbCollision(const glm::vec3& c1, const glm::vec3& h1,
+                              const glm::vec3& c2, const glm::vec3& h2);
 
  bool IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const;
  bool IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, const float sizeOfSide, int &side, glm::vec3& normal, float &distance) const;

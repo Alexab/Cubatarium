@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include "BlockTypes.h"
 #include "ChunkManager.h"
+#include "PlayerCapsule.h"
 
 namespace cutum {
 
@@ -54,16 +55,16 @@ public:
  void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
 
  /// Full streaming pass after movement: load/unload with per-frame budget.
- void Update(glm::ivec3 cameraBlockPos, const glm::vec3& playerWorldPos, float playerSize);
+ void Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos, const PlayerCapsule& cap);
 
  const StreamingFrameStats& GetLastFrameStats() const { return lastFrameStats_; }
 
 private:
  bool EnsureChunkLoaded(glm::ivec3 chunkCoord);
  void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
-     const glm::vec3& playerWorldPos, float playerSize);
+     const glm::vec3& eyePos, const PlayerCapsule& cap);
  bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
-     const glm::vec3& playerWorldPos, float playerSize) const;
+     const glm::vec3& eyePos, const PlayerCapsule& cap) const;
 
  BlockWorld& world_;
  BlockRegistry& registry_;

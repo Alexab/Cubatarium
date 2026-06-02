@@ -4,6 +4,7 @@
 //#include <QJsonValue>
 //#include <QJsonArray>
 //#include <QFile>
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <unordered_map>
@@ -27,6 +28,8 @@
 #include "worldgen/WorldGenContext.h"
 #include "worldgen/PrefabFeaturePlacer.h"
 #include "ChunkManager.h"
+#include "PlayerCapsule.h"
+#include "Cube.h"
 #include "Chunk.h"
 #include "Prefab.h"
 #include "ChunkStreamer.h"
@@ -219,11 +222,11 @@ void World::GenerateWorldBlocks()
   return;
  }
 
- constexpr int kSpawnRadiusChunks = 2;
+ const int patchRadiusBlocks = std::max(1, renderDistanceChunks_) * CHUNK_SIZE;
  if (streamingEnabled_) {
-  worldGen_->GenerateSpawnPatch(0, 0, kSpawnRadiusChunks * CHUNK_SIZE);
+  worldGen_->GenerateSpawnPatch(0, 0, patchRadiusBlocks);
  } else {
-  worldGen_->GenerateFullPatch(0, 0, 16);
+  worldGen_->GenerateFullPatch(0, 0, patchRadiusBlocks);
  }
  SpawnPoint = worldGen_->DefaultSpawnPosition(0, 0);
 
@@ -295,8 +298,8 @@ void World::SanitizeUserPosition(const std::shared_ptr<User>& user)
 void World::ApplySpawnToCamera()
 {
  glm::vec3 spawn = SpawnPoint;
- constexpr float kPlayerSize = 0.9f;
- while (CheckCollision(spawn, kPlayerSize)) {
+ const PlayerCapsule cap = PlayerCapsule::Standing();
+ while (CheckCollision(spawn, cap)) {
   spawn.y += 0.1f;
  }
  SpawnPoint = spawn;
@@ -348,7 +351,7 @@ void World::EnsurePlayerOnGround()
   return;
  }
 
- constexpr float kPlayerSize = 0.9f;
+ const PlayerCapsule cap = PlayerCapsule::Standing();
  glm::vec3 pos = user->GetPosition();
  const glm::ivec3 column = WorldPosToBlock(pos);
  int x = column.x;
@@ -370,8 +373,8 @@ void World::EnsurePlayerOnGround()
  }
 
  pos = BlockCenter(glm::ivec3(x, *topY, z));
- pos.y += 0.5f + kPlayerSize * 0.5f;
- while (CheckCollision(pos, kPlayerSize)) {
+ pos.y = static_cast<float>(*topY) + 1.0f + cap.eyeHeight;
+ while (CheckCollision(pos, cap)) {
   pos.y += 0.1f;
  }
 
@@ -397,15 +400,6 @@ void World::FinalizePlayerAfterWorldLoad()
  }
 
  if (auto camera = GetCurrentUserCamera()) {
-  const SampledFluidState fluid = SampleFluidPhysics(camera->GetPosition(), 1.0f);
-  if (fluid.inFluid) {
-   glm::vec3 pos = camera->GetPosition();
-   pos.y = static_cast<float>(proceduralSettings_.seaLevel) + 2.5f;
-   camera->SetPosition(pos);
-   if (auto user = GetCurrentUser()) {
-    user->SetPosition(pos);
-   }
-  }
   camera->ResetVerticalPhysics();
  }
 }
@@ -885,25 +879,29 @@ bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
  return true;
 }
 
-World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& position, float size) const
+World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
+                                                   const PlayerCapsule& cap) const
 {
  SampledFluidState state;
  if (!blockRegistry_) {
   return state;
  }
  std::unordered_map<BlockId, int> fluidWeights;
- const glm::ivec3 center = WorldPosToBlock(position);
- const int radius = static_cast<int>(std::ceil(size * 0.5f));
+ const glm::vec3 center = cap.centerFromEye(eyePos);
+ const glm::vec3 half = cap.halfExtents();
+ const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
+ const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
+ const glm::vec3 blockHalf(0.5f);
  for (int dx = -radius; dx <= radius; ++dx) {
   for (int dy = -radius; dy <= radius; ++dy) {
    for (int dz = -radius; dz <= radius; ++dz) {
-    const glm::ivec3 blockPos = center + glm::ivec3(dx, dy, dz);
+    const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
     const BlockId id = blockWorld_.GetBlock(blockPos);
     if (id == BLOCK_AIR || blockRegistry_->BlocksMovement(id)) {
      continue;
     }
     const glm::vec3 blockCenter = BlockCenter(blockPos);
-    if (!Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
+    if (!Cube::CheckAabbCollision(center, half, blockCenter, blockHalf)) {
      continue;
     }
     const auto& mov = blockRegistry_->Physics(id).movement;
@@ -928,23 +926,26 @@ World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& position, fl
  return state;
 }
 
-bool World::CheckCollision(const glm::vec3& position, float size) const
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const glm::ivec3 center = WorldPosToBlock(position);
- const int radius = static_cast<int>(std::ceil(size * 0.5f));
+ const glm::vec3 center = cap.centerFromEye(eyePos);
+ const glm::vec3 half = cap.halfExtents();
+ const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
+ const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
+ const glm::vec3 blockHalf(0.5f);
  for (int dx = -radius; dx <= radius; ++dx) {
   for (int dy = -radius; dy <= radius; ++dy) {
    for (int dz = -radius; dz <= radius; ++dz) {
-    const glm::ivec3 blockPos = center + glm::ivec3(dx, dy, dz);
+    const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
     const BlockId id = blockWorld_.GetBlock(blockPos);
     if (!blockRegistry_->BlocksMovement(id)) {
      continue;
     }
     const glm::vec3 blockCenter = BlockCenter(blockPos);
-    if (Cube::CheckCollision(blockCenter, 1.0f, position, size)) {
+    if (Cube::CheckAabbCollision(center, half, blockCenter, blockHalf)) {
      return true;
     }
    }
@@ -953,17 +954,17 @@ bool World::CheckCollision(const glm::vec3& position, float size) const
  return false;
 }
 
-bool World::HasGroundSupport(const glm::vec3& position, float size) const
+bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const float feetY = position.y - size * 0.5f;
+ const float feetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
  const glm::ivec3 standCell(
-     static_cast<int>(std::floor(position.x)),
+     static_cast<int>(std::floor(eyePos.x)),
      supportY,
-     static_cast<int>(std::floor(position.z)));
+     static_cast<int>(std::floor(eyePos.z)));
  return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
 }
 
@@ -974,7 +975,7 @@ constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
 glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float axisDelta,
-                              int axis, float size)
+                              int axis, const PlayerCapsule& cap)
 {
  if (std::abs(axisDelta) < 1e-8f) {
   return from;
@@ -989,12 +990,12 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
  while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
   const float step = std::min(remaining, kCollisionMaxStep);
   const glm::vec3 next = pos + axisUnit * step * sign;
-  if (world.CheckCollision(next, size)) {
+  if (world.CheckCollision(next, cap)) {
    glm::vec3 lo = pos;
    glm::vec3 hi = next;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (world.CheckCollision(mid, size)) {
+    if (world.CheckCollision(mid, cap)) {
      hi = mid;
     } else {
      lo = mid;
@@ -1017,35 +1018,43 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
 
 } // namespace
 
-glm::vec3 World::ResolveMovement(const glm::vec3& from, const glm::vec3& delta, float size) const
+glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
+                                 const PlayerCapsule& cap) const
 {
  if (glm::dot(delta, delta) < 1e-10f) {
-  return from;
+  return eyePos;
  }
- glm::vec3 pos = from;
- pos = ResolveMovementAxis(*this, pos, delta.y, 1, size);
- pos = ResolveMovementAxis(*this, pos, delta.x, 0, size);
- pos = ResolveMovementAxis(*this, pos, delta.z, 2, size);
+ glm::vec3 pos = eyePos;
+ pos = ResolveMovementAxis(*this, pos, delta.y, 1, cap);
+ pos = ResolveMovementAxis(*this, pos, delta.x, 0, cap);
+ pos = ResolveMovementAxis(*this, pos, delta.z, 2, cap);
  return pos;
 }
 
 namespace {
 
-bool FindSteppableLedge(const BlockWorld& blockWorld, const BlockRegistry& registry,
-                        const glm::vec3& position, const glm::vec3& dir, float size,
-                        glm::ivec3& outStepCell)
+glm::vec3 StepStandPosition(const glm::ivec3& stepCell, const PlayerCapsule& cap)
+{
+ const float feetY = static_cast<float>(stepCell.y) + 1.0f;
+ return glm::vec3(static_cast<float>(stepCell.x), feetY + cap.eyeHeight,
+                  static_cast<float>(stepCell.z));
+}
+
+bool FindSteppableLedge(const World& world, const BlockWorld& blockWorld,
+                        const BlockRegistry& registry, const glm::vec3& eyePos,
+                        const glm::vec3& dir, const PlayerCapsule& cap, glm::ivec3& outStepCell)
 {
  const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
  const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
  if (dx == 0 && dz == 0) {
   return false;
  }
- const float feetY = position.y - size * 0.5f;
+ const float feetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
  const glm::ivec3 standCell(
-     static_cast<int>(std::floor(position.x)),
+     static_cast<int>(std::floor(eyePos.x)),
      supportY,
-     static_cast<int>(std::floor(position.z)));
+     static_cast<int>(std::floor(eyePos.z)));
  if (!registry.BlocksMovement(blockWorld.GetBlock(standCell))) {
   return false;
  }
@@ -1053,40 +1062,30 @@ bool FindSteppableLedge(const BlockWorld& blockWorld, const BlockRegistry& regis
  if (!registry.BlocksMovement(blockWorld.GetBlock(stepCell))) {
   return false;
  }
- if (registry.BlocksMovement(blockWorld.GetBlock(
-         glm::ivec3(stepCell.x, stepCell.y + 1, stepCell.z)))) {
-  return false;
- }
- if (registry.BlocksMovement(blockWorld.GetBlock(
-         glm::ivec3(standCell.x, supportY + 1, standCell.z)))) {
+ const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
+ if (world.CheckCollision(landingEye, cap)) {
   return false;
  }
  outStepCell = stepCell;
  return true;
 }
 
-float DistanceToStepRiser(const glm::vec3& position, const glm::ivec3& stepCell,
-                          const glm::vec3& dir, float size)
+float DistanceToStepRiser(const glm::vec3& eyePos, const glm::ivec3& stepCell,
+                          const glm::vec3& dir, const PlayerCapsule& cap)
 {
  const glm::vec3 blockCenter(static_cast<float>(stepCell.x), static_cast<float>(stepCell.y),
                              static_cast<float>(stepCell.z));
  const glm::vec3 facePoint = blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
  const glm::vec3 playerLead =
-     position + glm::vec3(dir.x * size * 0.5f, 0.0f, dir.z * size * 0.5f);
+     eyePos + glm::vec3(dir.x * cap.halfWidth, 0.0f, dir.z * cap.halfWidth);
  return glm::dot(facePoint - playerLead, dir);
-}
-
-glm::vec3 StepStandPosition(const glm::ivec3& stepCell, float size)
-{
- return glm::vec3(static_cast<float>(stepCell.x),
-                  static_cast<float>(stepCell.y) + 0.5f + size * 0.5f,
-                  static_cast<float>(stepCell.z));
 }
 
 } // namespace
 
-World::StepUpProbe World::ProbeStepUp(const glm::vec3& position, const glm::vec3& horiz,
-                                      float size, float maxTriggerDistance) const
+World::StepUpProbe World::ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& horiz,
+                                      const PlayerCapsule& cap,
+                                      float maxTriggerDistance) const
 {
  StepUpProbe probe{};
  if (!blockRegistry_) {
@@ -1099,24 +1098,25 @@ World::StepUpProbe World::ProbeStepUp(const glm::vec3& position, const glm::vec3
  }
  const glm::vec3 dir = horizFlat / horizLen;
  glm::ivec3 stepCell(0);
- if (!FindSteppableLedge(blockWorld_, *blockRegistry_, position, dir, size, stepCell)) {
+ if (!FindSteppableLedge(*this, blockWorld_, *blockRegistry_, eyePos, dir, cap, stepCell)) {
   return probe;
  }
- const float dist = DistanceToStepRiser(position, stepCell, dir, size);
+ const float dist = DistanceToStepRiser(eyePos, stepCell, dir, cap);
  if (dist < -0.02f || dist > maxTriggerDistance) {
   return probe;
  }
  probe.valid = true;
  probe.distanceToLedge = dist;
  probe.moveDir = dir;
- probe.targetPos = StepStandPosition(stepCell, size);
+ probe.targetPos = StepStandPosition(stepCell, cap);
  return probe;
 }
 
-bool World::GetStepUpLanding(const glm::vec3& pos, const glm::vec3& horiz, float size,
-                             float maxTriggerDistance, glm::vec3& outLanding) const
+bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
+                             const PlayerCapsule& cap, float maxTriggerDistance,
+                             glm::vec3& outLanding) const
 {
- const StepUpProbe probe = ProbeStepUp(pos, horiz, size, maxTriggerDistance);
+ const StepUpProbe probe = ProbeStepUp(eyePos, horiz, cap, maxTriggerDistance);
  if (!probe.valid) {
   return false;
  }
@@ -1127,40 +1127,40 @@ bool World::GetStepUpLanding(const glm::vec3& pos, const glm::vec3& horiz, float
   return false;
  }
  const glm::vec3 dir = horizFlat / horizLen;
- if (!FindSteppableLedge(blockWorld_, *blockRegistry_, pos, dir, size, stepCell)) {
+ if (!FindSteppableLedge(*this, blockWorld_, *blockRegistry_, eyePos, dir, cap, stepCell)) {
   return false;
  }
  const glm::ivec3 feetCell = WorldPosToBlock(
-     pos - glm::vec3(0.0f, size * 0.5f + 0.25f, 0.0f));
+     glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
  if (feetCell.x == stepCell.x && feetCell.z == stepCell.z && feetCell.y >= stepCell.y) {
   return false;
  }
 
  outLanding = probe.targetPos
               - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
- if (!CheckCollision(outLanding, size)) {
+ if (!CheckCollision(outLanding, cap)) {
   return true;
  }
 
- glm::vec3 resolved = pos;
+ glm::vec3 resolved = eyePos;
  const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
- resolved = ResolveMovement(pos, stepDelta, size);
- const float movedH = glm::length(glm::vec2(resolved.x - pos.x, resolved.z - pos.z));
- if (movedH < 0.08f || CheckCollision(resolved, size)) {
+ resolved = ResolveMovement(eyePos, stepDelta, cap);
+ const float movedH = glm::length(glm::vec2(resolved.x - eyePos.x, resolved.z - eyePos.z));
+ if (movedH < 0.08f || CheckCollision(resolved, cap)) {
   return false;
  }
  outLanding = resolved;
  return true;
 }
 
-bool World::TryStepUp(glm::vec3& pos, const glm::vec3& horiz, float size,
+bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
                       float maxTriggerDistance) const
 {
- glm::vec3 landing = pos;
- if (!GetStepUpLanding(pos, horiz, size, maxTriggerDistance, landing)) {
+ glm::vec3 landing = eyePos;
+ if (!GetStepUpLanding(eyePos, horiz, cap, maxTriggerDistance, landing)) {
   return false;
  }
- pos = landing;
+ eyePos = landing;
  return true;
 }
 
@@ -1354,8 +1354,9 @@ void World::DoMovement()
 
  if (camera && streamer_ && streamingEnabled_) {
   const glm::vec3 playerPos = camera->GetPosition();
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
   const glm::ivec3 feetBlock = WorldPosToBlock(
-      playerPos - glm::vec3(0.0f, camera->GetCollisionSize() * 0.5f + 0.25f, 0.0f));
+      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
   streamer_->EnsureCollisionChunks(feetBlock);
  }
 
@@ -1388,9 +1389,9 @@ void World::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, flo
  }
 
  const glm::vec3 playerPos = camera->GetPosition();
- const float collisionSize = camera->GetCollisionSize();
+ const PlayerCapsule cap = camera->GetPlayerCapsule();
  movementDiagnostics_.feetBlock = WorldPosToBlock(
-     playerPos - glm::vec3(0.0f, collisionSize * 0.5f + 0.25f, 0.0f));
+     glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
  movementDiagnostics_.feetChunk = ChunkManager::WorldToChunk(movementDiagnostics_.feetBlock);
  movementDiagnostics_.feetChunkLoaded = blockWorld_.GetChunkManager().HasChunk(movementDiagnostics_.feetChunk);
  movementDiagnostics_.feetIsAir = blockWorld_.IsAir(movementDiagnostics_.feetBlock);
@@ -1447,10 +1448,11 @@ void World::UpdateStreaming()
   return;
  }
  if (auto camera = GetCurrentUserCamera()) {
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
   streamer_->Update(
       WorldPosToBlock(camera->GetPosition()),
       camera->GetPosition(),
-      camera->GetCollisionSize());
+      cap);
  }
 }
 
@@ -1800,6 +1802,9 @@ int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_fol
        chunkCoord.z * CHUNK_SIZE + lz);
    blockWorld_.SetBlock(worldPos, id);
    ++placed;
+  }
+  if (placed == 0) {
+   return -1;
   }
   return placed;
  } catch (const json::exception& e) {

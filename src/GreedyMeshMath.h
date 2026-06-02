@@ -10,8 +10,6 @@ namespace cutum {
 
 namespace {
 
-constexpr float kFaceEpsilon = 0.002f;
-
 inline int FaceIndexFromGreedy(int axis, int faceSign)
 {
  if (axis == 2) {
@@ -56,8 +54,6 @@ inline FaceInstance MakeFaceInstanceFromQuad(const GreedyQuad& q, glm::ivec3 chu
      + (q.faceSign > 0 ? 0.5f : -0.5f);
  corner[uAxis] = static_cast<float>(q.u) - 0.5f;
  corner[vAxis] = static_cast<float>(q.v) - 0.5f;
- corner += nDir * kFaceEpsilon;
-
  glm::mat4 basis(1.0f);
  basis[0] = glm::vec4(uDir, 0.0f);
  basis[1] = glm::vec4(vDir, 0.0f);

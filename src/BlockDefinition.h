@@ -6,6 +6,7 @@
 #include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace cutum {
 
@@ -58,6 +59,7 @@ struct BlockDefinition {
  BlockAnimationSpec animation;
  BlockPhysicsProfile physics;
  BlockRenderProfile render;
+ std::vector<std::string> types;
 };
 
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json& j);

@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
+#include "InventoryTypes.h"
 
 namespace cutum {
 
@@ -25,11 +26,21 @@ public:
 
  void SetActiveBlockIndex(size_t index);
  void SetActivePrefabIndex(size_t index);
+ size_t GetActiveBlockIndex() const { return activeSlotIndex_; }
+ size_t GetActivePrefabIndex() const { return activeSlotIndex_; }
  void SetActiveObjectTypeName(const std::string& block_type);
  void SetPrefabHotbar(const std::vector<std::string>& prefab_names);
 
- const std::vector<std::string>& GetBlockHotbar() const;
- const std::vector<std::string>& GetPrefabHotbar() const;
+ std::vector<std::string> GetBlockHotbar() const;
+ std::vector<std::string> GetPrefabHotbar() const;
+ void EnsureHotbarCount(size_t count);
+ size_t GetHotbarCount() const;
+ const HotbarBar& GetHotbar(size_t bar) const;
+ bool AssignToHotbar(size_t bar, size_t slot, const InventoryEntryRef& entry);
+ void ClearHotbarSlot(size_t bar, size_t slot);
+ bool SetActiveSlot(size_t bar, size_t slot);
+ size_t GetActiveSlotIndex(size_t bar) const;
+ size_t GetActiveBarIndex() const { return activeBarIndex_; }
 
  std::shared_ptr<Object> GetActiveObject();
 
@@ -48,12 +59,14 @@ public:
 
 private:
  void InitDefaultHotbar();
+ static const std::string& EmptyString();
+ const InventoryEntryRef* GetActiveEntryRef() const;
+ void ClampActiveIndices();
 
  std::map<std::string, int> Inventory;
- std::vector<std::string> blockHotbar_;
- std::vector<std::string> prefabHotbar_;
- size_t activeBlockIndex_{0};
- size_t activePrefabIndex_{0};
+ std::vector<HotbarBar> hotbars_;
+ size_t activeBarIndex_{0};
+ size_t activeSlotIndex_{0};
 
  std::shared_ptr<Object> ActiveObject;
  glm::vec3 Position;

@@ -1,0 +1,8 @@
+{
+  "types": [
+    { "id": "building", "displayName": "Building", "sortOrder": 10 },
+    { "id": "natural", "displayName": "Natural", "sortOrder": 20 },
+    { "id": "fluid", "displayName": "Fluids", "sortOrder": 30 },
+    { "id": "misc", "displayName": "Misc", "sortOrder": 999 }
+  ]
+}

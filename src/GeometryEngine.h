@@ -21,6 +21,8 @@ typedef int GLint;
 #include "ShaderManager.h"
 #include "TextRenderer.h"
 #include "AnimationClock.h"
+#include "render/GreedyShaderMode.h"
+#include "render/IGreedyTransparentBackend.h"
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -41,7 +43,7 @@ struct RenderBatch {
     std::vector<size_t> cubeIndices;
 };
 
-class GeometryEngine
+class GeometryEngine : public IGreedyTransparentBackend
 {
 public:
  GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer = nullptr);
@@ -74,9 +76,13 @@ public:
 
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
+ std::shared_ptr<ShaderManager> GetShaderManager() const { return shaderManager; }
 
  /// Updates sky tint and fluid fog state from the camera; call before glClear.
  void PrepareFrameRendering();
+
+ void PrepareTransparent(const GreedyTransparentDrawContext& ctx) override;
+ void DrawPreparedTransparent(GreedyShaderMode mode, float shellAlpha) override;
 
 private:
  // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
@@ -86,9 +92,7 @@ private:
  void DestroyFaceQuadBuffers();
  bool InitGreedyMeshBuffers();
  void DestroyGreedyMeshBuffers();
- void DrawGreedyMeshBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
-                            const std::map<size_t, TextureCube>& textures,
-                            uint64_t meshRevision, uint64_t cullRevision, bool transparentPass);
+ struct GreedyGpuPassCache;
  void SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader, BlockId blockId,
                            const std::map<size_t, TextureCube>& textures);
  void ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
@@ -213,6 +217,16 @@ GLuint overlayVBO{0};
  };
  GreedyGpuPassCache greedyGpuOpaque_;
  GreedyGpuPassCache greedyGpuTransparent_;
+ glm::mat4 preparedTransparentVp_{};
+ const std::map<size_t, TextureCube>* preparedTransparentTextures_{nullptr};
+ void DrawGreedyOpaqueBatches(const std::vector<GreedyMeshBatch>& batches, const glm::mat4& vp,
+                              const std::map<size_t, TextureCube>& textures,
+                              uint64_t meshRevision, uint64_t cullRevision);
+ void SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader, bool transparentPass,
+                          GreedyShaderMode mode, float shellAlphaThreshold);
+ void DrawGreedyGpuBatches(const GreedyGpuPassCache& cache, const glm::mat4& vp,
+                           const std::map<size_t, TextureCube>& textures, bool transparentPass,
+                           GreedyShaderMode mode, float shellAlphaThreshold);
  void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch>& batches,
                               uint64_t meshRevision, uint64_t cullRevision,
                               GreedyGpuPassCache& cache, uint64_t sortRevision);

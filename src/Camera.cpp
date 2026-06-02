@@ -38,8 +38,6 @@ Camera::Camera()
 
  FreeMove = false;
 
- ViewObjectSize = 0.9f;
-
  Projection = glm::mat4(1.0f);
 
  DeltaTime = 0.0f;
@@ -70,8 +68,6 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
  Projection = glm::mat4(1.0f);
 
  FreeMove = false;
-
- ViewObjectSize = 0.9f;
 
  this->Position = position;
  this->WorldUp = up;
@@ -105,8 +101,6 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  Projection = glm::mat4(1.0f);
 
  FreeMove = false;
-
- ViewObjectSize = 0.9f;
 
  this->Position = glm::vec3(posX, posY, posZ);
  this->WorldUp = glm::vec3(upX, upY, upZ);
@@ -190,33 +184,78 @@ void Camera::SetAspectRatio(float value)
 
 bool Camera::GetFreeMove() const
 {
- return FreeMove;
+ return locomotion_.GetMode() == PlayerMovementMode::Flying;
+}
+
+void Camera::SyncFreeMoveFromController()
+{
+ FreeMove = GetFreeMove();
 }
 
 void Camera::SetFreeMove(bool value)
 {
- FreeMove = value;
- if (!FreeMove) {
-  verticalVelocity_ = 0.0f;
- }
+ locomotion_.SetMode(value ? PlayerMovementMode::Flying : PlayerMovementMode::Walking);
+ SyncFreeMoveFromController();
  UpdatePose();
+}
+
+PlayerCapsule Camera::GetPlayerCapsule() const
+{
+ return locomotion_.GetCapsule();
+}
+
+bool Camera::IsCrouching() const
+{
+ return locomotion_.GetStanceBlend() > 0.5f;
+}
+
+bool Camera::IsOnGround() const
+{
+ return locomotion_.IsOnGround();
+}
+
+bool Camera::IsShiftDown() const
+{
+ const auto pressed = [](const std::map<size_t, bool>& keys, size_t code) {
+  const auto it = keys.find(code);
+  return it != keys.end() && it->second;
+ };
+ return pressed(KeysStatus, GLFW_KEY_LEFT_SHIFT) || pressed(KeysStatus, GLFW_KEY_RIGHT_SHIFT);
+}
+
+void Camera::ClearShiftKeyState()
+{
+ KeysStatus[GLFW_KEY_LEFT_SHIFT] = false;
+ KeysStatus[GLFW_KEY_RIGHT_SHIFT] = false;
+}
+
+bool Camera::OnSpacePressed()
+{
+ const bool toggled = locomotion_.OnSpacePressed();
+ SyncFreeMoveFromController();
+ return toggled;
 }
 
 bool Camera::TryToggleFlightOnDoubleSpace()
 {
- const auto now = std::chrono::steady_clock::now();
- if (lastSpacePressTime_.time_since_epoch().count() != 0) {
-  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-      now - lastSpacePressTime_).count();
-  if (ms >= 0 && ms < kDoubleSpaceTapMs) {
-   SetFreeMove(!FreeMove);
-   suppressNextJump_ = true;
-   lastSpacePressTime_ = {};
-   return true;
-  }
- }
- lastSpacePressTime_ = now;
- return false;
+ return OnSpacePressed();
+}
+
+PlayerInput Camera::BuildPlayerInput(bool spaceJustPressed) const
+{
+ PlayerInput input;
+ const auto keyDown = [this](size_t key) {
+  const auto it = KeysStatus.find(key);
+  return it != KeysStatus.end() && it->second;
+ };
+ input.moveForward = keyDown(GLFW_KEY_W);
+ input.moveBack = keyDown(GLFW_KEY_S);
+ input.moveLeft = keyDown(GLFW_KEY_A);
+ input.moveRight = keyDown(GLFW_KEY_D);
+ input.jumpHeld = keyDown(GLFW_KEY_SPACE);
+ input.jumpPressed = spaceJustPressed;
+ input.crouchHeld = IsShiftDown();
+ return input;
 }
 
 void Camera::SetViewEngine(ViewEngine* view_engine)
@@ -288,7 +327,7 @@ glm::vec3 Camera::GetMoveIntentDir() const
  return glm::vec3(0.0f);
 }
 
-bool Camera::TickStepUpAnimation(const World* /*world*/, float dt)
+bool Camera::TickStepUpAnimation(const World* world, float dt)
 {
  if (!stepUpAnim_.active) {
   return false;
@@ -299,8 +338,7 @@ bool Camera::TickStepUpAnimation(const World* /*world*/, float dt)
  if (t >= 1.0f) {
   Position = stepUpAnim_.targetPos;
   stepUpAnim_.active = false;
-  verticalVelocity_ = 0.0f;
-  onGround_ = true;
+  locomotion_.SyncAfterStepLanding(Position, world);
   UpdatePose();
   return true;
  }
@@ -326,7 +364,8 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
  glm::vec3 shift = ComputeHorizontalShift(deltaTime);
  const bool hasShift = glm::dot(shift, shift) > 1e-10f;
 
- const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
+ const PlayerCapsule cap = GetPlayerCapsule();
+ const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
  if (hasShift && fluid.inFluid) {
   const float drag = 1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
   shift.x *= drag;
@@ -335,21 +374,21 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 
  glm::vec3 newPos = Position;
  if (hasShift) {
-  newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
+  newPos = world->ResolveMovement(Position, shift, cap);
  }
 
  const bool grounded =
-     world->HasGroundSupport(Position, ViewObjectSize) || onGround_;
+     world->HasGroundSupport(Position, cap) || locomotion_.IsOnGround();
  const glm::vec3 intent = GetMoveIntentDir();
 
  bool stepped = false;
  if (world->IsStepUpEnabled() && !fluid.inFluid && grounded
-     && verticalVelocity_ <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
+     && locomotion_.GetVerticalVelocity() <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
   const World::StepUpProbe probe = world->ProbeStepUp(
-      newPos, intent, ViewObjectSize, kStepUpTriggerDistance);
+      newPos, intent, cap, kStepUpTriggerDistance);
   if (probe.valid) {
    glm::vec3 landing = newPos;
-   if (!world->GetStepUpLanding(newPos, intent, ViewObjectSize, kStepUpTriggerDistance,
+   if (!world->GetStepUpLanding(newPos, intent, cap, kStepUpTriggerDistance,
                                landing)) {
     landing = probe.targetPos
               - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
@@ -358,8 +397,6 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
    stepUpAnim_.startPos = newPos;
    stepUpAnim_.targetPos = landing;
    stepUpAnim_.elapsed = 0.0f;
-   verticalVelocity_ = 0.0f;
-   onGround_ = false;
    stepped = true;
   }
  }
@@ -374,7 +411,8 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 }
 
 // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime)
+void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
+                             const PlayerCapsule& collisionCap)
 {
  const float velocity = MovementSpeed * deltaTime;
  glm::vec3 shift(0.0f);
@@ -400,7 +438,7 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
 
  if (world) {
-  glm::vec3 newPos = world->ResolveMovement(Position, shift, ViewObjectSize);
+  glm::vec3 newPos = world->ResolveMovement(Position, shift, collisionCap);
   Position = newPos;
  } else {
   Position += shift;
@@ -525,18 +563,9 @@ void Camera::UpdateMouseMove(std::shared_ptr<World> world, double xpos, double y
 
 void Camera::ResetMouseMove(double xpos, double ypos)
 {
- if(FirstMouseCoords)
- {
-     LastMouseX = xpos;
-     LastMouseY = ypos;
-     FirstMouseCoords = false;
- }
-
-// float xoffset = xpos - LastMouseX;
-// float yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
-
  LastMouseX = xpos;
  LastMouseY = ypos;
+ FirstMouseCoords = true;
 }
 
 void Camera::UpdateMouseScroll(double xoffset, double yoffset)
@@ -553,134 +582,79 @@ void Camera::UpdateFrameTime()
 
 void Camera::ResetVerticalPhysics()
 {
- verticalVelocity_ = 0.0f;
- onGround_ = true;
- suppressNextJump_ = false;
+ locomotion_.Reset();
  stepUpAnim_.active = false;
- spaceWasPressed_ = KeysStatus[GLFW_KEY_SPACE];
+ SyncFreeMoveFromController();
  UpdatePose();
 }
 
 bool Camera::DoMovement(const World* world)
 {
  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
+ const PlayerCapsule flightCap = PlayerCapsule::Standing();
+ const PlayerInput input = BuildPlayerInput(false);
 
  bool is_moved(false);
- if (FreeMove) {
-  if (KeysStatus[GLFW_KEY_W]) {
-   ProcessKeyboard(world, FORWARD, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_S]) {
-   ProcessKeyboard(world, BACKWARD, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_A]) {
-   ProcessKeyboard(world, LEFT, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_D]) {
-   ProcessKeyboard(world, RIGHT, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_Q] || KeysStatus[GLFW_KEY_SPACE]) {
-   ProcessKeyboard(world, UP, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_E]) {
-   ProcessKeyboard(world, DOWN, dt);
-   is_moved = true;
+ SyncFreeMoveFromController();
+
+ if (GetFreeMove()) {
+  const bool groundedInFlight =
+      world && world->HasGroundSupport(Position, flightCap);
+  if (groundedInFlight) {
+   if (IsShiftDown()) {
+    ClearShiftKeyState();
+   }
+   locomotion_.OnLandedFromFlight(world, Position, false);
+   SyncFreeMoveFromController();
+  } else {
+   if (KeysStatus[GLFW_KEY_W]) {
+    ProcessKeyboard(world, FORWARD, dt, flightCap);
+    is_moved = true;
+   }
+   if (KeysStatus[GLFW_KEY_S]) {
+    ProcessKeyboard(world, BACKWARD, dt, flightCap);
+    is_moved = true;
+   }
+   if (KeysStatus[GLFW_KEY_A]) {
+    ProcessKeyboard(world, LEFT, dt, flightCap);
+    is_moved = true;
+   }
+   if (KeysStatus[GLFW_KEY_D]) {
+    ProcessKeyboard(world, RIGHT, dt, flightCap);
+    is_moved = true;
+   }
+   if (KeysStatus[GLFW_KEY_SPACE]) {
+    ProcessKeyboard(world, UP, dt, flightCap);
+    is_moved = true;
+   }
+   if (IsShiftDown() && world && !world->HasGroundSupport(Position, flightCap)) {
+    ProcessKeyboard(world, DOWN, dt, flightCap);
+    is_moved = true;
+   }
+   if (!input.jumpHeld) {
+    locomotion_.NotifySpaceReleased();
+   }
   }
  } else if (world) {
   if (ApplyHorizontalMovement(world, dt)) {
    is_moved = true;
   }
-  if (KeysStatus[GLFW_KEY_Q]) {
-   ProcessKeyboard(world, UP, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_E]) {
-   ProcessKeyboard(world, DOWN, dt);
-   is_moved = true;
-  }
- } else {
-  if (KeysStatus[GLFW_KEY_W]) {
-   ProcessKeyboard(world, FORWARD, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_S]) {
-   ProcessKeyboard(world, BACKWARD, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_A]) {
-   ProcessKeyboard(world, LEFT, dt);
-   is_moved = true;
-  }
-  if (KeysStatus[GLFW_KEY_D]) {
-   ProcessKeyboard(world, RIGHT, dt);
-   is_moved = true;
-  }
  }
 
- if (!FreeMove && world)
- {
+ if (!GetFreeMove() && world) {
   if (IsStepUpAnimationActive()) {
-   spaceWasPressed_ = KeysStatus[GLFW_KEY_SPACE];
    is_moved = true;
    UpdatePose();
    return is_moved;
   }
   if (Position.y < kMinReasonablePlayerY) {
-   verticalVelocity_ = 0.0f;
-   onGround_ = false;
    return is_moved;
   }
-  const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, ViewObjectSize);
-  const bool spacePressed = KeysStatus[GLFW_KEY_SPACE];
-  if (!spacePressed) {
-   suppressNextJump_ = false;
+
+  locomotion_.UpdateLocomotion(world, Position, input, dt);
+  if (locomotion_.ConsumeClearShiftRequest()) {
+   ClearShiftKeyState();
   }
-
-  if (fluid.inFluid) {
-   if (spacePressed && !spaceWasPressed_) {
-    verticalVelocity_ = std::max(verticalVelocity_, 6.5f);
-   }
-   if (spacePressed) {
-    verticalVelocity_ += fluid.riseSpeed * 5.0f * dt;
-   }
-   verticalVelocity_ *= 1.0f - std::min(0.9f, fluid.dragHorizontal * dt * 6.0f);
-   if (!spacePressed) {
-    verticalVelocity_ -= fluid.sinkSpeed * dt;
-   }
-   verticalVelocity_ += kGravity * 0.15f * dt;
-   onGround_ = false;
-
-   const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
-   Position = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
-  } else {
-   verticalVelocity_ += kGravity * dt;
-   const glm::vec3 verticalDelta(0.0f, verticalVelocity_ * dt, 0.0f);
-   const glm::vec3 resolved = world->ResolveMovement(Position, verticalDelta, ViewObjectSize);
-   const float movedY = resolved.y - Position.y;
-   const float requestedY = verticalDelta.y;
-   if (std::abs(movedY - requestedY) > 1e-4f) {
-    if (requestedY < 0.0f) {
-     onGround_ = true;
-    }
-    verticalVelocity_ = 0.0f;
-   } else {
-    onGround_ = false;
-   }
-   Position = resolved;
-
-   if (onGround_ && verticalVelocity_ <= 0.05f && spacePressed && !spaceWasPressed_
-       && !suppressNextJump_) {
-    verticalVelocity_ = kJumpSpeed;
-    onGround_ = false;
-    is_moved = true;
-   }
-  }
-  spaceWasPressed_ = spacePressed;
   is_moved = true;
   UpdatePose();
  }

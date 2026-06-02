@@ -19,6 +19,7 @@ class World;
 class GeometryEngine;
 class ViewEngine;
 class InputManager;
+class Application;
 
 enum class KeyCode;
 enum class KeyState;
@@ -37,6 +38,8 @@ public:
               std::shared_ptr<World> world_, 
               std::shared_ptr<GeometryEngine> geometries_,
               std::shared_ptr<ViewEngine> views_);
+
+    void SetApplication(std::shared_ptr<Application> application);
     
     void SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer);
 
@@ -48,6 +51,9 @@ public:
     int GetHeight() const { return windowHeight; }
     
     GLFWwindow* GetWindow() const { return window; }
+
+    /// Сброс ПКМ-обзора (например при Esc → меню).
+    void ResetGameplayMouseCapture();
 
     void SetSkyColor(float r, float g, float b, float a = 1.0f);
     void SetSkyColor(const glm::vec4& color);
@@ -92,6 +98,7 @@ private:
     std::shared_ptr<World> worldInstance;
     std::shared_ptr<InputManager> inputManager;
     std::shared_ptr<TextRenderer> textRenderer;
+    std::shared_ptr<Application> application_;
     
     std::chrono::high_resolution_clock::time_point lastFrameTime;
     std::chrono::steady_clock::time_point lastAutosaveTime_;

@@ -10,6 +10,13 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
+// uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
+uniform int uGreedyShaderMode;
+uniform float uShellAlphaThreshold;
+
+const int kGreedyModeColor = 0;
+const int kGreedyModeShellDepth = 1;
+const int kGreedyModeFuzzyOnly = 2;
 uniform vec3 uCameraPos;
 uniform vec3 uFogColor;
 uniform float uFogStart;
@@ -24,34 +31,50 @@ float blockTileCoord(float axis)
     return fract(axis + 0.5);
 }
 
+vec2 atlasHalfTexelInset()
+{
+    ivec2 atlasSize = textureSize(texture0, 0);
+    vec2 safeSize = vec2(max(atlasSize.x, 1), max(atlasSize.y, 1));
+    return 0.5 / safeSize;
+}
+
+float insetMix(float a, float b, float t, float inset)
+{
+    float span = b - a;
+    float dir = sign(span);
+    float safeInset = min(inset, abs(span) * 0.25);
+    return mix(a + dir * safeInset, b - dir * safeInset, t);
+}
+
 vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
 {
     const float kCubeShift = 1.0 / 6.0;
     float u0 = float(faceIndex) * kCubeShift;
     float u1 = float(faceIndex + 1) * kCubeShift;
+    vec2 inset = atlasHalfTexelInset();
 
     if (faceIndex == 0) {
-        return vec2(mix(u0, u1, blockTileCoord(worldPos.x)),
-                    mix(1.0, 0.0, blockTileCoord(worldPos.y)));
+        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
+                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
     }
     if (faceIndex == 1) {
-        return vec2(mix(u0, u1, 1.0 - blockTileCoord(worldPos.z)),
-                    mix(1.0, 0.0, blockTileCoord(worldPos.y)));
+        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.z), inset.x),
+                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
     }
     if (faceIndex == 2) {
-        return vec2(mix(u0, u1, 1.0 - blockTileCoord(worldPos.x)),
-                    mix(1.0, 0.0, blockTileCoord(worldPos.y)));
+        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.x), inset.x),
+                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
     }
     if (faceIndex == 3) {
-        return vec2(mix(u0, u1, blockTileCoord(worldPos.z)),
-                    mix(1.0, 0.0, blockTileCoord(worldPos.y)));
+        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.z), inset.x),
+                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
     }
     if (faceIndex == 4) {
-        return vec2(mix(u0, u1, blockTileCoord(worldPos.x)),
-                    mix(0.0, 1.0, 1.0 - blockTileCoord(worldPos.z)));
+        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
+                    insetMix(0.0, 1.0, 1.0 - blockTileCoord(worldPos.z), inset.y));
     }
-    return vec2(mix(u0, u1, blockTileCoord(worldPos.x)),
-                mix(0.0, 1.0, blockTileCoord(worldPos.z)));
+    return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
+                insetMix(0.0, 1.0, blockTileCoord(worldPos.z), inset.y));
 }
 
 vec2 crossAtlasUV(vec2 meshUV)
@@ -59,7 +82,8 @@ vec2 crossAtlasUV(vec2 meshUV)
     const float kCubeShift = 1.0 / 6.0;
     float u0 = 0.0;
     float u1 = kCubeShift;
-    return vec2(mix(u0, u1, meshUV.x), mix(1.0, 0.0, meshUV.y));
+    vec2 inset = atlasHalfTexelInset();
+    return vec2(insetMix(u0, u1, meshUV.x, inset.x), insetMix(1.0, 0.0, meshUV.y, inset.y));
 }
 
 void main()
@@ -76,6 +100,12 @@ void main()
     }
     FragColor = texture(texture0, uv);
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
+        discard;
+    }
+    if (uGreedyShaderMode == kGreedyModeShellDepth && FragColor.a < uShellAlphaThreshold) {
+        discard;
+    }
+    if (uGreedyShaderMode == kGreedyModeFuzzyOnly && FragColor.a >= uShellAlphaThreshold) {
         discard;
     }
     if (uFogEnabled > 0.5) {

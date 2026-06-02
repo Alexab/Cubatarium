@@ -1,4 +1,5 @@
 #include "WindowManager.h"
+#include "Application.h"
 #include "InputManager.h"
 #include "Core.h"
 #include "ProceduralSettings.h"
@@ -6,11 +7,46 @@
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
+#include "AppState.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
 
 namespace cutum {
+
+namespace {
+
+glm::ivec2 CursorToFramebufferPixels(GLFWwindow* window, float x, float y)
+{
+    if (!window) {
+        return {static_cast<int>(x), static_cast<int>(y)};
+    }
+    int fbW = 0;
+    int fbH = 0;
+    int winW = 0;
+    int winH = 0;
+    glfwGetFramebufferSize(window, &fbW, &fbH);
+    glfwGetWindowSize(window, &winW, &winH);
+    if (winW <= 0 || winH <= 0 || fbW <= 0 || fbH <= 0) {
+        return {static_cast<int>(x), static_cast<int>(y)};
+    }
+    const float sx = static_cast<float>(fbW) / static_cast<float>(winW);
+    const float sy = static_cast<float>(fbH) / static_cast<float>(winH);
+    return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
+}
+
+int PrimaryHotbarIndexFromNumericKey(KeyCode key)
+{
+    if (key >= KeyCode::Key_1 && key <= KeyCode::Key_9) {
+        return static_cast<int>(key) - static_cast<int>(KeyCode::Key_1);
+    }
+    if (key == KeyCode::Key_0) {
+        return 9;
+    }
+    return -1;
+}
+
+} // namespace
 
 WindowManager::WindowManager()
     : window(nullptr)
@@ -116,6 +152,13 @@ void WindowManager::SetupCallbacks() {
     glfwSetWindowCloseCallback(window, WindowCloseCallback);
     glfwSetWindowUserPointer(window, this);
 
+    glfwSetWindowFocusCallback(window, [](GLFWwindow* win, int focused) {
+        auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(win));
+        if (self && self->application_) {
+            self->application_->HandleWindowFocus(focused == GLFW_TRUE);
+        }
+    });
+
     // Configure callbacks for InputManager
     inputManager->SetKeyCallback([this](KeyCode key, KeyState state, int mods) {
         HandleKeyEvent(key, state, mods);
@@ -131,6 +174,24 @@ void WindowManager::SetupCallbacks() {
 
     inputManager->SetWindowResizeCallback([this](int width, int height) {
         HandleWindowResizeEvent(width, height);
+    });
+
+    inputManager->SetMouseScrollCallback([this](double xoffset, double yoffset) {
+        if (!application_) {
+            return;
+        }
+        const glm::vec2 pos = inputManager->GetMousePosition();
+        const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
+        if (application_->RouteScroll(xoffset, yoffset, fbPos.x, fbPos.y)) {
+            return;
+        }
+    });
+
+    glfwSetCharCallback(window, [](GLFWwindow* win, unsigned int codepoint) {
+        auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(win));
+        if (self && self->application_) {
+            self->application_->RouteChar(codepoint);
+        }
     });
 }
 
@@ -148,8 +209,13 @@ void WindowManager::Run() {
         deltaTime = std::chrono::duration<double>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
 
+        glfwPollEvents();
+
         // Input processing
         ProcessInput();
+        if (application_) {
+            application_->Update(deltaTime);
+        }
 
         // Logic update
         Update();
@@ -157,45 +223,35 @@ void WindowManager::Run() {
         // Rendering
         Render();
 
-        // Buffer swap and event processing
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 }
 
 void WindowManager::ProcessInput() {
     inputManager->Update();
 
+    if (application_ && application_->WantsCaptureKeyboard()) {
+        return;
+    }
+
     // Camera control key processing
-    if (worldInstance) {
+    if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         auto camera = worldInstance->GetCurrentUserCamera();
         if (camera) {
-            // WASD movement
-            if (inputManager->IsKeyPressed(KeyCode::Key_W)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_S)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_A)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_D)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_Space)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_Shift)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Shift), true);
-            }
-            // Q and E for up-down movement
-            if (inputManager->IsKeyPressed(KeyCode::Key_Q)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Q), true);
-            }
-            if (inputManager->IsKeyPressed(KeyCode::Key_E)) {
-                camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_E), true);
-            }
+            const bool shiftDown = inputManager->IsKeyPressed(KeyCode::Key_Shift)
+                || (window && glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
+                                  inputManager->IsKeyPressed(KeyCode::Key_W));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
+                                  inputManager->IsKeyPressed(KeyCode::Key_S));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A),
+                                  inputManager->IsKeyPressed(KeyCode::Key_A));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D),
+                                  inputManager->IsKeyPressed(KeyCode::Key_D));
+            camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
+                                  inputManager->IsKeyPressed(KeyCode::Key_Space));
+            camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shiftDown);
+            camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
         }
     }
 }
@@ -205,11 +261,11 @@ void WindowManager::Update() {
         views->UpdateFrameTime();
     }
 
-    if (worldInstance) {
+    if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         worldInstance->DoMovement();
     }
 
-    if (core && worldInstance) {
+    if (core && worldInstance && application_ && application_->GetState() == AppState::InGame) {
         const auto now = std::chrono::steady_clock::now();
         const double elapsed = std::chrono::duration<double>(now - lastAutosaveTime_).count();
         if (elapsed >= kAutosaveIntervalSec) {
@@ -220,63 +276,82 @@ void WindowManager::Update() {
 }
 
 void WindowManager::Render() {
+    if (application_) {
+        application_->SetWindow(window);
+        int fbW = windowWidth;
+        int fbH = windowHeight;
+        if (window) {
+            glfwGetFramebufferSize(window, &fbW, &fbH);
+            if (fbW > 0 && fbH > 0) {
+                windowWidth = fbW;
+                windowHeight = fbH;
+            }
+        }
+        application_->RenderFrame(fbW, fbH, views ? views->GetDurationUpdateMks() : 0.0);
+        return;
+    }
+
     if (geometries) {
         geometries->PrepareFrameRendering();
         const glm::vec4 clearColor = geometries->GetSkyColor();
         glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     }
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (geometries && views) {
         geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
     }
-    
-    // Disable UI display over 3D scene
-    // RenderUI();
 }
 
 void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
-    if (!worldInstance) return;
+    const int glfwKey = static_cast<int>(key);
+    int glfwAction = GLFW_RELEASE;
+    if (state == KeyState::Pressed) {
+        glfwAction = GLFW_PRESS;
+    } else if (state == KeyState::Repeated) {
+        glfwAction = GLFW_REPEAT;
+    }
+    if (application_ && application_->RouteKey(glfwKey, glfwAction, mods)) {
+        return;
+    }
 
-    bool pressed = (state == KeyState::Pressed);
-    
+    if (!worldInstance) return;
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
+
+    const bool keyDown = (state == KeyState::Pressed || state == KeyState::Repeated);
+
     // Update key states in camera
-    worldInstance->GetCurrentUserCamera()->UpdateKeyStatus(static_cast<int>(key), pressed);
+    if (auto camera = worldInstance->GetCurrentUserCamera()) {
+        camera->UpdateKeyStatus(static_cast<int>(key), keyDown);
+        if (static_cast<int>(key) == GLFW_KEY_RIGHT_SHIFT) {
+            camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, keyDown);
+        }
+    }
 
     // Special key processing
-    if (pressed) {
+    if (state == KeyState::Pressed) {
         if (key == KeyCode::Key_Space) {
             if (auto camera = worldInstance->GetCurrentUserCamera()) {
                 if (camera->TryToggleFlightOnDoubleSpace() && geometries) {
                     const std::string msg = camera->GetFreeMove()
-                        ? "Flight mode ON (Space/Q up, E down, double Space to exit)"
+                        ? "Flight ON (Space up, Shift down, 2xSpace off)"
                         : "Flight mode OFF";
                     geometries->ShowTransientMessage(msg, 2.5);
                 }
             }
         }
         else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
-            const int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
+            const int index = PrimaryHotbarIndexFromNumericKey(key);
             if (auto user = worldInstance->GetCurrentUser()) {
-                if ((mods & GLFW_MOD_ALT) != 0) {
-                    user->SetActivePrefabIndex(static_cast<size_t>(index));
-                } else {
-                    user->SetActiveBlockIndex(static_cast<size_t>(index));
+                if (index >= 0) {
+                    user->SetActiveSlot(0, static_cast<size_t>(index));
                 }
             }
         }
         else if (key == KeyCode::Key_F12) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorld("heightmap");
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    geometries->ShowTransientMessage(
-                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
-                }
-            } else if (geometries) {
-                geometries->ShowTransientMessage("Shift+F12 heightmap, Shift+F11 flat world", 3.0);
-            }
+            // reserved
         }
         else if (key == KeyCode::Key_Delete) {
             worldInstance->DelObjectByView();
@@ -315,47 +390,65 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             if (geometries) geometries->SetShowHud(!geometries->GetShowHud());
         }
         else if (key == KeyCode::Key_F10) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorldFromProceduralConfig();
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    const auto& proc = core->GetProceduralSettings();
-                    const std::string msg = std::string("New world (") +
-                        ProceduralGeneratorToString(proc.generator) + " " +
-                        VerticalModeToString(proc.vertical) + "): " +
-                        worldInstance->GetWorldName();
-                    geometries->ShowTransientMessage(msg, 3.0);
-                }
-            } else if (geometries) {
+            if (geometries) {
                 geometries->SetShowPerformance(!geometries->GetShowPerformance());
             }
         }
         else if (key == KeyCode::Key_F11) {
-            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
-            if (shift && core) {
-                core->CreateWorld("flat");
-                core->SaveSystem("config.json");
-                if (geometries) {
-                    geometries->ShowTransientMessage(
-                        std::string("New world: ") + worldInstance->GetWorldName(), 2.5);
-                }
-            } else if (geometries) {
+            if (geometries) {
                 geometries->SetShowCrosshair(!geometries->GetShowCrosshair());
             }
         }
     }
 }
 
+void WindowManager::ResetGameplayMouseCapture()
+{
+    isMousePressed = false;
+    isLeftMouseButtonPressed = false;
+    if (worldInstance && window) {
+        double x = 0.0;
+        double y = 0.0;
+        glfwGetCursorPos(window, &x, &y);
+        if (auto camera = worldInstance->GetCurrentUserCamera()) {
+            camera->ResetMouseMove(x, y);
+        }
+    }
+}
+
 void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm::vec2 pos) {
+    const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
+    const int glfwButton = button == MouseButton::Left   ? GLFW_MOUSE_BUTTON_LEFT
+                         : button == MouseButton::Right  ? GLFW_MOUSE_BUTTON_RIGHT
+                                                         : GLFW_MOUSE_BUTTON_MIDDLE;
+
+    if (button == MouseButton::Right && !pressed) {
+        isMousePressed = false;
+    }
+
+    if (application_ &&
+        application_->RouteMouseButton(glfwButton, pressed, fbPos.x, fbPos.y)) {
+        return;
+    }
+
     if (!worldInstance) return;
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
+
+    if (application_ && application_->WantsCaptureMouse()) {
+        if (button == MouseButton::Right && !pressed) {
+            isMousePressed = false;
+        }
+        return;
+    }
 
     if (button == MouseButton::Right) {
         if (pressed) {
-            worldInstance->GetCurrentUserCamera()->ResetMouseMove(pos.x, pos.y);
+            if (auto camera = worldInstance->GetCurrentUserCamera()) {
+                camera->ResetMouseMove(pos.x, pos.y);
+            }
             isMousePressed = true;
-        } else {
-            isMousePressed = false;
         }
     }
     else if (button == MouseButton::Left) {
@@ -372,7 +465,9 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                  glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
 
             if (delta_time < 0.5) {
-                if (altDown) {
+                auto user = worldInstance->GetCurrentUser();
+                const bool hasActiveObject = user && !user->GetActivePrefabName().empty();
+                if (altDown || hasActiveObject) {
                     worldInstance->PlaceActivePrefabByView();
                 } else {
                     worldInstance->AddObjectByView();
@@ -385,9 +480,29 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
 }
 
 void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
-    if (!worldInstance || !isMousePressed) return;
-    
-    worldInstance->GetCurrentUserCamera()->UpdateMouseMove(worldInstance, pos.x, pos.y);
+    (void)delta;
+    const glm::ivec2 fbPos = CursorToFramebufferPixels(window, pos.x, pos.y);
+    if (application_ && application_->RouteMouseMove(fbPos.x, fbPos.y)) {
+        return;
+    }
+
+    if (!worldInstance) {
+        return;
+    }
+    if (application_ && application_->GetState() != AppState::InGame) {
+        return;
+    }
+    if (application_ && application_->WantsCaptureMouse()) {
+        return;
+    }
+
+    if (!isMousePressed) {
+        return;
+    }
+
+    if (auto camera = worldInstance->GetCurrentUserCamera()) {
+        camera->UpdateMouseMove(worldInstance, pos.x, pos.y);
+    }
 }
 
 void WindowManager::HandleWindowResizeEvent(int width, int height) {
@@ -395,9 +510,16 @@ void WindowManager::HandleWindowResizeEvent(int width, int height) {
     windowHeight = height;
     glViewport(0, 0, width, height);
     
+    const float aspect = static_cast<float>(width) / static_cast<float>(height ? height : 1);
     if (views) {
-        float aspect = static_cast<float>(width) / static_cast<float>(height ? height : 1);
-        views->GetActiveCamera()->SetAspectRatio(aspect);
+        if (auto camera = views->GetActiveCamera()) {
+            camera->SetAspectRatio(aspect);
+        }
+    }
+    if (worldInstance) {
+        if (auto camera = worldInstance->GetCurrentUserCamera()) {
+            camera->SetAspectRatio(aspect);
+        }
     }
     
     if (textRenderer) {
@@ -413,6 +535,11 @@ void WindowManager::Init(std::shared_ptr<Core> core_,
     worldInstance = world_;
     geometries = geometries_;
     views = views_;
+}
+
+void WindowManager::SetApplication(std::shared_ptr<Application> application)
+{
+    application_ = std::move(application);
 }
 
 void WindowManager::SetTextRenderer(std::shared_ptr<TextRenderer> text_renderer) {
@@ -480,7 +607,7 @@ void WindowManager::RenderHelpText() {
     // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
-        "LMB - Place/remove, 0-9 hotbar (0=lava, 8=water, 9=fire), Alt+0-9 prefab",
+        "LMB - Place/remove, 0-9 primary hotbar, E inventory",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };

@@ -18,66 +18,11 @@
 #include "Camera.h"
 #include "ShaderManager.h"
 #include "BlockRegistry.h"
+#include "render/GreedyShaderMode.h"
+#include "render/GreedyTransparentPipeline.h"
+#include "render/GreedyTransparentSort.h"
 
 namespace cutum {
-
-namespace {
-
-uint64_t GreedyTransparentSortRevision(const glm::vec3& cameraPos)
-{
- const int qx = static_cast<int>(std::floor(cameraPos.x * 4.0f));
- const int qy = static_cast<int>(std::floor(cameraPos.y * 4.0f));
- const int qz = static_cast<int>(std::floor(cameraPos.z * 4.0f));
- return (static_cast<uint64_t>(static_cast<uint32_t>(qx)) << 42)
-        ^ (static_cast<uint64_t>(static_cast<uint32_t>(qy)) << 21)
-        ^ static_cast<uint64_t>(static_cast<uint32_t>(qz));
-}
-
-float GreedyBatchViewDistance(const GreedyMeshBatch& batch, const glm::vec3& cameraPos)
-{
- if (batch.vertices.empty()) {
-  return 0.0f;
- }
- glm::vec3 centroid(0.0f);
- for (const GreedyMeshVertex& v : batch.vertices) {
-  centroid += glm::vec3(v.px, v.py, v.pz);
- }
- centroid /= static_cast<float>(batch.vertices.size());
- return glm::length(centroid - cameraPos);
-}
-
-int TransparentBatchLayer(BlockRenderStyle style)
-{
- switch (style) {
-  case BlockRenderStyle::Fluid:
-   return 0;
-  case BlockRenderStyle::Cross:
-   return 2;
-  default:
-   return 1;
- }
-}
-
-void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch>& batches,
-                                  const glm::vec3& cameraPos,
-                                  const BlockRegistry& registry)
-{
- std::sort(batches.begin(), batches.end(),
-           [&](const GreedyMeshBatch& a, const GreedyMeshBatch& b) {
-            const float distA = GreedyBatchViewDistance(a, cameraPos);
-            const float distB = GreedyBatchViewDistance(b, cameraPos);
-            if (std::abs(distA - distB) > 0.25f) {
-             return distA > distB;
-            }
-            const int layerA =
-                TransparentBatchLayer(registry.GetRenderStyle(a.blockId));
-            const int layerB =
-                TransparentBatchLayer(registry.GetRenderStyle(b.blockId));
-            return layerA < layerB;
-           });
-}
-
-} // namespace
 
 GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer)
  : ObjectStorageInstance(object_storage)
@@ -204,21 +149,34 @@ bool GeometryEngine::InitShaders()
  layout (location = 2) in mat4 instanceModel;
  layout (location = 6) in float instanceFaceIndex;
  uniform mat4 uVP;
+uniform sampler2D texture0;
  out vec2 TexCoord;
  float voxelTile(float w) { return w - floor(w - 0.5) - 0.5; }
+vec2 atlasHalfTexelInset() {
+    ivec2 atlasSize = textureSize(texture0, 0);
+    vec2 safeSize = vec2(max(atlasSize.x, 1), max(atlasSize.y, 1));
+    return 0.5 / safeSize;
+}
+float insetMix(float a, float b, float t, float inset) {
+    float span = b - a;
+    float dir = sign(span);
+    float safeInset = min(inset, abs(span) * 0.25);
+    return mix(a + dir * safeInset, b - dir * safeInset, t);
+}
  vec2 atlasUVFromWorldPos(int face, vec3 wp) {
      float cubeShift = 1.0 / 6.0;
      float u0 = float(face) * cubeShift;
      float u1 = float(face + 1) * cubeShift;
+    vec2 inset = atlasHalfTexelInset();
      float tx = voxelTile(wp.x);
      float ty = voxelTile(wp.y);
      float tz = voxelTile(wp.z);
-     if (face == 0) return vec2(mix(u0, u1, tx), mix(1.0, 0.0, ty));
-     if (face == 1) return vec2(mix(u0, u1, 1.0 - tz), mix(1.0, 0.0, ty));
-     if (face == 2) return vec2(mix(u0, u1, 1.0 - tx), mix(1.0, 0.0, ty));
-     if (face == 3) return vec2(mix(u0, u1, tz), mix(1.0, 0.0, ty));
-     if (face == 4) return vec2(mix(u0, u1, tx), mix(0.0, 1.0, 1.0 - tz));
-     return vec2(mix(u0, u1, tx), mix(0.0, 1.0, tz));
+    if (face == 0) return vec2(insetMix(u0, u1, tx, inset.x), insetMix(1.0, 0.0, ty, inset.y));
+    if (face == 1) return vec2(insetMix(u0, u1, 1.0 - tz, inset.x), insetMix(1.0, 0.0, ty, inset.y));
+    if (face == 2) return vec2(insetMix(u0, u1, 1.0 - tx, inset.x), insetMix(1.0, 0.0, ty, inset.y));
+    if (face == 3) return vec2(insetMix(u0, u1, tz, inset.x), insetMix(1.0, 0.0, ty, inset.y));
+    if (face == 4) return vec2(insetMix(u0, u1, tx, inset.x), insetMix(0.0, 1.0, 1.0 - tz, inset.y));
+    return vec2(insetMix(u0, u1, tx, inset.x), insetMix(0.0, 1.0, tz, inset.y));
  }
  void main() {
      vec4 worldPos = instanceModel * vec4(aPos, 1.0);
@@ -337,26 +295,21 @@ if (!camera) {
     blockBatchesValid_ = true;
    }
    const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
-                         WorldInstance->GetCullRevision(), false);
+   const uint64_t cullRev = WorldInstance->GetCullRevision();
+   DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
    GLboolean blendWasEnabled;
    glGetBooleanv(GL_BLEND, &blendWasEnabled);
-   glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   GLboolean depthMask;
-   glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
-   glDepthMask(GL_FALSE);
    GLboolean cullWasEnabled;
    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-   glDisable(GL_CULL_FACE);
-   DrawGreedyMeshBatches(greedyBatches, vp, textures, meshRevision,
-                         WorldInstance->GetCullRevision(), true);
+   GreedyTransparentDrawContext tctx{greedyBatches, vp, meshRevision, cullRev,
+                                     camera->GetPosition(),
+                                     WorldInstance->GetBlockRegistry(), textures};
+   GreedyTransparentPipeline::Draw(*this, tctx);
    if (cullWasEnabled) {
     glEnable(GL_CULL_FACE);
    } else {
     glDisable(GL_CULL_FACE);
    }
-   glDepthMask(depthMask ? GL_TRUE : GL_FALSE);
    if (!blendWasEnabled) {
     glDisable(GL_BLEND);
    }
@@ -639,7 +592,7 @@ void GeometryEngine::PrepareFrameRendering()
   return;
  }
  const World::SampledFluidState fluid =
-     WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetCollisionSize());
+     WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetPlayerCapsule());
  BlockId eyeFluid = BLOCK_AIR;
  const bool cameraInFluid =
      WorldInstance->IsCameraInsideFluid(camera->GetPosition(), &eyeFluid);
@@ -688,22 +641,30 @@ void GeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>&
  shader->SetFloat("uFogEnabled", fogEnabled_);
 }
 
-void GeometryEngine::DrawGreedyMeshBatches(
-    const std::vector<GreedyMeshBatch>& batches,
+void GeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader,
+                                         bool transparentPass,
+                                         GreedyShaderMode mode,
+                                         float shellAlphaThreshold)
+{
+ shader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+ if (transparentPass) {
+  shader->SetInt("uGreedyShaderMode", GreedyShaderModeToUniform(mode));
+  shader->SetFloat("uShellAlphaThreshold", shellAlphaThreshold);
+ } else {
+  shader->SetInt("uGreedyShaderMode", 0);
+  shader->SetFloat("uShellAlphaThreshold", 0.0f);
+ }
+}
+
+void GeometryEngine::DrawGreedyGpuBatches(
+    const GreedyGpuPassCache& cache,
     const glm::mat4& vp,
     const std::map<size_t, TextureCube>& textures,
-    uint64_t meshRevision,
-    uint64_t cullRevision,
-    bool transparentPass)
+    bool transparentPass,
+    GreedyShaderMode mode,
+    float shellAlphaThreshold)
 {
- std::vector<GreedyMeshBatch> filtered;
- filtered.reserve(batches.size());
- for (const GreedyMeshBatch& batch : batches) {
-  if (batch.transparent == transparentPass) {
-   filtered.push_back(batch);
-  }
- }
- if (filtered.empty()) {
+ if (cache.batches.empty()) {
   return;
  }
  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers()) {
@@ -713,26 +674,10 @@ void GeometryEngine::DrawGreedyMeshBatches(
   return;
  }
 
- uint64_t sortRevision = 0;
- if (transparentPass) {
-  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
-   sortRevision = GreedyTransparentSortRevision(camera->GetPosition());
-   SortTransparentGreedyBatches(filtered, camera->GetPosition(),
-                                WorldInstance->GetBlockRegistry());
-  }
- }
-
- GreedyGpuPassCache& gpuCache =
-     transparentPass ? greedyGpuTransparent_ : greedyGpuOpaque_;
- RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, gpuCache, sortRevision);
- if (gpuCache.batches.empty()) {
-  return;
- }
-
  greedyShader->Use();
  greedyShader->SetMat4("mvp_matrix", vp);
  greedyShader->SetInt("texture0", 0);
- greedyShader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+ SetGreedyShaderMode(greedyShader, transparentPass, mode, shellAlphaThreshold);
  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
   ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
  }
@@ -740,7 +685,7 @@ void GeometryEngine::DrawGreedyMeshBatches(
 
  glBindVertexArray(greedyMeshVAO);
  const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
- for (const GreedyGpuBatch& gpu : gpuCache.batches) {
+ for (const GreedyGpuBatch& gpu : cache.batches) {
   SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
   if (gpu.indexCount <= 0) {
    continue;
@@ -771,6 +716,59 @@ void GeometryEngine::DrawGreedyMeshBatches(
  glBindBuffer(GL_ARRAY_BUFFER, 0);
  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
  greedyShader->Unuse();
+}
+
+void GeometryEngine::DrawGreedyOpaqueBatches(
+    const std::vector<GreedyMeshBatch>& batches,
+    const glm::mat4& vp,
+    const std::map<size_t, TextureCube>& textures,
+    uint64_t meshRevision,
+    uint64_t cullRevision)
+{
+ std::vector<GreedyMeshBatch> filtered;
+ filtered.reserve(batches.size());
+ for (const GreedyMeshBatch& batch : batches) {
+  if (!batch.transparent) {
+   filtered.push_back(batch);
+  }
+ }
+ if (filtered.empty()) {
+  return;
+ }
+ RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, greedyGpuOpaque_, 0);
+ DrawGreedyGpuBatches(greedyGpuOpaque_, vp, textures, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
+}
+
+void GeometryEngine::PrepareTransparent(const GreedyTransparentDrawContext& ctx)
+{
+ std::vector<GreedyMeshBatch> filtered;
+ filtered.reserve(ctx.allBatches.size());
+ for (const GreedyMeshBatch& batch : ctx.allBatches) {
+  if (batch.transparent) {
+   filtered.push_back(batch);
+  }
+ }
+ if (filtered.empty()) {
+  greedyGpuTransparent_.batches.clear();
+  preparedTransparentTextures_ = nullptr;
+  return;
+ }
+ SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
+ const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
+ RefreshGreedyGpuBatches(filtered, ctx.meshRevision, ctx.cullRevision,
+                         greedyGpuTransparent_, sortRevision);
+ preparedTransparentVp_ = ctx.viewProjection;
+ preparedTransparentTextures_ = &ctx.textures;
+}
+
+void GeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode, float shellAlpha)
+{
+ if (!preparedTransparentTextures_ || greedyGpuTransparent_.batches.empty()) {
+  return;
+ }
+ DrawGreedyGpuBatches(greedyGpuTransparent_, preparedTransparentVp_,
+                      *preparedTransparentTextures_, true, mode, shellAlpha);
 }
 
 bool GeometryEngine::InitGreedyMeshBuffers()
@@ -1253,9 +1251,9 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
 
      const std::vector<std::string> helpLines = {
          "WASD - Movement",
-         "Q/E - Up/Down",
-         "Space - Jump, 2xSpace - Flight",
-         "Shift - Crouch",
+         "Space - Jump / Fly up",
+         "Shift - Crouch / Fly down",
+         "2xSpace - Toggle flight",
          "0-9 - Block, Alt+0-9 - Object",
          "LMB - Place block, Alt+LMB - Place object",
          "Hold LMB - Remove block, Delete - Remove",

@@ -10,14 +10,25 @@
         "max_height": 12,
         "caves": false,
         "trees": false,
-        "flat_surface_y": 3
+        "flat_surface_y": 3,
+        "fill_water": true,
+        "fill_lava": false,
+        "fill_fire": true
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,
+    "gameplay": {
+        "step_up": true
+    },
     "render": {
         "greedy_meshing": true,
         "face_quads": true,
         "frustum_culling": true,
         "batch_cache": true
+    },
+    "ui": {
+        "legacy_hud": false,
+        "console_key": "grave",
+        "palette_key": "b"
     }
 }

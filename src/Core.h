@@ -7,8 +7,11 @@
 #include <filesystem>
 #include <cstdint>
 
+#include "AppSettingsSnapshot.h"
 #include "RenderSettings.h"
 #include "ProceduralSettings.h"
+#include "UiSettings.h"
+#include <vector>
 
 namespace cutum {
 
@@ -33,8 +36,26 @@ public:
       std::shared_ptr<ViewEngine> views_);
 
 public:
+ void LoadConfig(const std::string& config_file_name);
+ void EnterGame();
  void LoadSystem(const std::string& config_file_name);
  void SaveSystem(const std::string& config_file_name);
+ void SaveConfigFile();
+
+ AppSettingsSnapshot GetAppSettings() const;
+ void ApplyAppSettings(const AppSettingsSnapshot& settings);
+
+ ProceduralSettings GetProceduralTemplate() const { return proceduralSettings_; }
+ void SetProceduralTemplate(const ProceduralSettings& settings);
+
+ void CreateNewWorldFromTemplate();
+
+ const std::vector<std::string>& GetWorldList() const { return WorldList; }
+ void RefreshWorldList();
+ void LoadWorldByName(const std::string& world_name);
+
+ const UiSettings& GetUiSettings() const { return uiSettings_; }
+ RenderSettings GetRenderSettings() const { return renderSettings_; }
 
  void CreateWorld(const std::string& terrain_type = "");
  void CreateWorldFromProceduralConfig();
@@ -47,6 +68,10 @@ public:
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
+ std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
+ std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
+  return TextureCubeStorageInstance;
+ }
 
 private:
  std::vector<std::string> WorldList;
@@ -72,6 +97,7 @@ private:
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
  RenderSettings renderSettings_;
+ UiSettings uiSettings_;
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;

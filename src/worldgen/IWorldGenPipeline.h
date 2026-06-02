@@ -13,7 +13,7 @@ public:
  virtual void GenerateColumn(int worldX, int worldZ) = 0;
  virtual int SurfaceYAt(int worldX, int worldZ) const = 0;
 
- virtual glm::vec3 DefaultSpawnPosition(int worldX, int worldZ, float eyeHeight = 1.6f) const;
+ virtual glm::vec3 DefaultSpawnPosition(int worldX, int worldZ, float eyeHeight = 1.62f) const;
  virtual void GenerateSpawnPatch(int centerX, int centerZ, int radiusBlocks);
  virtual void GenerateFullPatch(int centerX, int centerZ, int halfExtent);
 

@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
+include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
+cubatarium_resolve_version(CUBATARIUM_VERSION_STRING)
+set(CUBATARIUM_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${CUBATARIUM_GENERATED_DIR}")
+configure_file(
+    "${CMAKE_SOURCE_DIR}/src/Version.h.in"
+    "${CUBATARIUM_GENERATED_DIR}/Version.h"
+    @ONLY
+)
+
 set(CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -38,6 +48,7 @@ set(SOURCES
     src/stb_image.cpp
     src/main.cpp
     src/Camera.cpp
+    src/PlayerController.cpp
     src/Core.cpp
     src/Cube.cpp
     src/CubeGL.cpp
@@ -52,6 +63,11 @@ set(SOURCES
     src/World.cpp
     src/WindowManager.cpp
     src/GeometryEngine.cpp
+    src/render/GlStateScope.cpp
+    src/render/GreedyShaderMode.cpp
+    src/render/GreedyTransparentSort.cpp
+    src/render/TransparentPass.cpp
+    src/render/GreedyTransparentPipeline.cpp
     src/GridMath.cpp
     src/BlockRegistry.cpp
     src/BlockDefinition.cpp
@@ -84,10 +100,47 @@ set(SOURCES
     src/InputManager.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
+    src/Application.cpp
+    src/CursorCapture.cpp
+    src/Game/GameSession.cpp
+    src/Content/ContentTypeRegistry.cpp
+    src/Commands/CommandRegistry.cpp
+    src/Gui/GuiTheme.cpp
+    src/Gui/GuiRenderer.cpp
+    src/Gui/UiQuadBatch.cpp
+    src/Gui/UiTexturedQuadBatch.cpp
+    src/Gui/GuiIconSource.cpp
+    src/Gui/PrefabIconCache.cpp
+    src/Gui/GuiInputRouter.cpp
+    src/Gui/GuiFocus.cpp
+    src/Gui/GuiContext.cpp
+    src/Gui/GuiScreenBase.cpp
+    src/Gui/Layout/GuiLayout.cpp
+    src/Gui/Widgets/GuiWidget.cpp
+    src/Gui/Widgets/GuiPanel.cpp
+    src/Gui/Widgets/GuiButton.cpp
+    src/Gui/Widgets/GuiLabel.cpp
+    src/Gui/Widgets/GuiTextInput.cpp
+    src/Gui/Widgets/GuiListView.cpp
+    src/Gui/Widgets/GuiTabBar.cpp
+    src/Gui/Widgets/GuiScrollView.cpp
+    src/Gui/Widgets/GuiDialogFrame.cpp
+    src/Gui/Widgets/GuiWindow.cpp
+    src/Gui/Widgets/GuiSlot.cpp
+    src/Gui/Widgets/GuiCheckbox.cpp
+    src/Gui/Widgets/WorldGenSettingsForm.cpp
+    src/Gui/Screens/MainMenuScreen.cpp
+    src/Gui/Screens/SettingsScreen.cpp
+    src/Gui/Screens/NewWorldScreen.cpp
+    src/Gui/Screens/LoadWorldScreen.cpp
+    src/Gui/Screens/InGameHudScreen.cpp
+    src/Gui/Screens/ConsoleScreen.cpp
+    src/Gui/Screens/CreativePaletteScreen.cpp
 )
 
 set(HEADERS
     src/Camera.h
+    src/AppSettingsSnapshot.h
     src/Core.h
     src/Cube.h
     src/CubeGL.h
@@ -123,6 +176,51 @@ set(HEADERS
     src/ShaderManager.h
     src/TextRenderer.h
     src/stb_image.h
+    src/Application.h
+    src/CursorCapture.h
+    src/Game/GameSession.h
+    src/Content/ContentType.h
+    src/Content/ContentTypeRegistry.h
+    src/Commands/CommandRegistry.h
+    src/Commands/CommandResult.h
+    src/Gui/GuiTypes.h
+    src/Gui/GuiTheme.h
+    src/Gui/GuiRenderer.h
+    src/Gui/UiQuadBatch.h
+    src/Gui/UiTexturedQuadBatch.h
+    src/Gui/GuiIconSource.h
+    src/Gui/PrefabIconCache.h
+    src/Gui/Interfaces/IGuiIconSource.h
+    src/Gui/GuiInputRouter.h
+    src/Gui/GuiFocus.h
+    src/Gui/GuiContext.h
+    src/Gui/GuiScreenBase.h
+    src/Gui/Layout/GuiLayout.h
+    src/Gui/Widgets/GuiWidget.h
+    src/Gui/Widgets/GuiPanel.h
+    src/Gui/Widgets/GuiButton.h
+    src/Gui/Widgets/GuiLabel.h
+    src/Gui/Widgets/GuiTextInput.h
+    src/Gui/Widgets/GuiListView.h
+    src/Gui/Widgets/GuiTabBar.h
+    src/Gui/Widgets/GuiScrollView.h
+    src/Gui/Widgets/GuiDialogFrame.h
+    src/Gui/Widgets/GuiWindow.h
+    src/Gui/Widgets/GuiSlot.h
+    src/Gui/Widgets/GuiCheckbox.h
+    src/Gui/Widgets/WorldGenSettingsForm.h
+    src/Gui/Interfaces/IGuiMenuHost.h
+    src/Gui/Interfaces/IGuiGameActions.h
+    src/Gui/Interfaces/IHotbarViewModel.h
+    src/Gui/Interfaces/IContentCatalog.h
+    src/Gui/Interfaces/IGameCommandContext.h
+    src/Gui/Screens/MainMenuScreen.h
+    src/Gui/Screens/SettingsScreen.h
+    src/Gui/Screens/NewWorldScreen.h
+    src/Gui/Screens/LoadWorldScreen.h
+    src/Gui/Screens/InGameHudScreen.h
+    src/Gui/Screens/ConsoleScreen.h
+    src/Gui/Screens/CreativePaletteScreen.h
 )
 
 if(WIN32)
@@ -133,7 +231,10 @@ set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CUBATARIUM_GENERATED_DIR}
+)
 
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL
@@ -202,5 +303,14 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
             "${CMAKE_SOURCE_DIR}/textures"
             "${CMAKE_BINARY_DIR}/textures"
         COMMENT "Copying textures to output directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/content")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/content"
+            "${CMAKE_BINARY_DIR}/content"
+        COMMENT "Copying content data to output directory"
     )
 endif()

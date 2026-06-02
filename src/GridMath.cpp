@@ -41,9 +41,9 @@ glm::vec3 BlockCenter(const glm::ivec3& blockPos)
 glm::ivec3 WorldPosToBlock(const glm::vec3& worldPos)
 {
  return glm::ivec3(
-     static_cast<int>(std::round(worldPos.x)),
-     static_cast<int>(std::round(worldPos.y)),
-     static_cast<int>(std::round(worldPos.z)));
+     static_cast<int>(std::floor(worldPos.x + 0.5f)),
+     static_cast<int>(std::floor(worldPos.y + 0.5f)),
+     static_cast<int>(std::floor(worldPos.z + 0.5f)));
 }
 
 }

@@ -3,7 +3,7 @@
 ## Render data flow
 
 ```
-BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] (world verts + baked UV) → GeometryEngine::DrawGreedyMeshBatches → vshader.glsl
+BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] → GeometryEngine (opaque + `GreedyTransparentPipeline`) → `vshader_greedy.glsl`
 ```
 
 Legacy path (`greedy_meshing: false`): instanced cubes via `vshader_instanced.glsl`.
@@ -89,8 +89,19 @@ Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`
 | `AnimationClock` | Global 20 TPS tick; `uAnimFrame` / `uAnimFrameCount` in greedy and instanced shaders |
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
-| Greedy mesh | Opaque pass then transparent (`render.transparent`); fluid–fluid faces kept |
-| Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level` |
+| Greedy mesh | Opaque pass, then multi-pass transparent (see below); fluid–fluid faces kept |
+| Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level`; with `fill_water`, `AdjustSurfaceYForSpawnIsland` raises terrain in a ~48-block-radius disk (+16-block blend) around spawn (0,0) so the player starts on dry land |
+
+### Greedy transparent passes
+
+Documented in [`src/render/README.md`](../src/render/README.md). Implementation: [`GreedyTransparentPipeline.cpp`](../src/render/GreedyTransparentPipeline.cpp).
+
+1. **ShellDepth** — depth prepass (α ≥ `shellAlpha`, default 0.35) + stencil mark.
+2. **BehindShell** — color, `GL_GREATER`, stencil == 1 (layers behind the shell; not through solid blocks).
+3. **ShellSurface** — color, `GL_LEQUAL`, stencil == 1.
+4. **FuzzyEdges** — color, `GL_LESS`, stencil != 1 (soft edges only).
+
+Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
 Import animated types: `tools/block_manifest_animated.json` (ids 170–172) via `tools/import_blocks.ps1`. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
 
@@ -124,7 +135,7 @@ Default: `streaming_enabled: true` in `config.json`.
    - `flat` — bedrock / stone / grass at fixed height (`GenerateFlatColumn`)
 3. Unload distant chunks (save to disk, drop from memory).
 
-Initial area on new world: 2 chunk radius (`GenerateSpawnArea` or `GenerateFlatArea`). Without streaming, a fixed 33×33 region is generated at once.
+Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
 
 `terrain` and `world_seed` are stored in `world_data.json` per world so reload uses the same generator as creation.
 
@@ -137,10 +148,42 @@ Initial area on new world: 2 chunk radius (`GenerateSpawnArea` or `GenerateFlatA
 - `render_distance_chunks`, `streaming_enabled`
 - Autosave every 60s; exit saves world + config
 
-## Startup (`Core::LoadSystem`)
+## Startup (`Core::LoadConfig` / `Core::EnterGame`)
 
-1. Read config next to the executable.
-2. If `worlds/` is missing, empty, or `default_world` folder does not exist → `CreateWorld()` (next `World_NNN` + procedural terrain) and write config.
-3. Otherwise → `LoadLastWorld()` from `default_world`.
+1. **`LoadConfig`** — read `config.json`, load assets (textures, block models, objects, prefabs). Does **not** load the world.
+2. **Main menu** — `Application` shows GUI until the user loads or creates a world.
+3. **`Load Last World`** — `EnterGame()`: if `default_world` is missing → `CreateWorld()`; otherwise → `LoadLastWorld()`.
+4. **`Load World` / `New World`** — pick a save or create `World_NNN` from the procedural template; optional save prompt if a session is already in memory.
+
+`LoadSystem` = `LoadConfig` + `EnterGame` (used by `--validate-load`).
 
 Shift+F11 / Shift+F12 create the next `World_NNN`, save immediately, and set `default_world` so the next launch opens that world.
+
+## GUI (`src/Gui/`)
+
+Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game code talks to screens through interfaces in `src/Gui/Interfaces/`; `GameSession` implements them. `WindowManager` delegates input/render to `Application`.
+
+| Layer | Role |
+|-------|------|
+| `GuiWidget` / layout / primitives | Panels, buttons, text input, lists, tabs, scroll, slots |
+| `GuiLayout` | Anchors (`TopCenter`, `BottomCenter`, …), `LayoutHotbarRows` for dual hotbar |
+| `GuiContext` | Active screen, input router, render pass; `OnViewportChanged` on resize |
+| `GuiRenderer` | Solid quads (`UiQuadBatch`) + textured quads (`UiTexturedQuadBatch`) + FreeType text |
+| `GuiIconSource` / `PrefabIconCache` | Block icons from `TextureCubeStorage`; prefab icons via FBO voxel preview (cached) |
+| `Application` | `AppState`, main menu vs in-game, console/palette overlays |
+| `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
+| `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
+
+**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`. Main menu title uses `TopCenter` + centered label text; in-game HUD places the **block** row above the **prefab** row, both bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+
+**Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
+
+**Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
+
+**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
+
+**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`). Saved from Settings together with other app keys.
+
+**Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` / `Alt+0–9` remain in `WindowManager`.
+
+**Manual check (GUI):** resize main menu and in-game window; verify hotbar centering and row order; block/prefab icons and tooltips on hover and slot selection; F9 palette and console panel edges on resize.

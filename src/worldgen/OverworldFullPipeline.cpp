@@ -14,7 +14,8 @@ OverworldFullPipeline::OverworldFullPipeline(WorldGenContext ctx)
 
 void OverworldFullPipeline::GenerateColumn(int worldX, int worldZ)
 {
- const int surfaceY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int surfaceY = AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
  const BiomeId biome = biomeSampler_.At(worldX, worldZ, surfaceY,
      ctx_.settings.seaLevel, ctx_.settings.maxHeight);
  const BiomeSurfaceRule biomeRule = biomeSampler_.SurfaceRule(biome, ctx_);
@@ -40,7 +41,8 @@ void OverworldFullPipeline::GenerateColumn(int worldX, int worldZ)
 
 int OverworldFullPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- return heightSampler_.SurfaceYAt(worldX, worldZ);
+ const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+ return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
 }
 
 } // namespace cutum
