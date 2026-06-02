@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
+#include <nlohmann/json.hpp>
 #include "InventoryTypes.h"
 
 namespace cutum {
@@ -56,6 +57,9 @@ public:
 
  size_t GetViewId() const;
  void SetViewId(size_t value);
+
+ nlohmann::json SerializeHotbars() const;
+ void DeserializeHotbars(const nlohmann::json& userData, size_t maxBarCount);
 
 private:
  void InitDefaultHotbar();

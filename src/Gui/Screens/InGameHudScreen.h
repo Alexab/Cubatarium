@@ -2,12 +2,13 @@
 #define IN_GAME_HUD_SCREEN_H
 
 #include "Gui/GuiScreenBase.h"
+#include "SlotInteraction.h"
 #include <memory>
 #include <vector>
 
 namespace cutum {
 
-class IHotbarViewModel;
+class GameSession;
 class IGuiIconSource;
 class GuiSlot;
 class GuiPanel;
@@ -16,7 +17,9 @@ struct GuiTheme;
 
 class InGameHudScreen : public GuiScreenBase {
 public:
-    InGameHudScreen(IHotbarViewModel* hotbar, const GuiTheme* theme, IGuiIconSource* icons);
+    InGameHudScreen(GameSession* session, const GuiTheme* theme, IGuiIconSource* icons);
+
+    bool PickSlot(int x, int y, SlotAddress& out);
 
     void Update(double dt) override;
     void Build(GuiContext& ctx) override;
@@ -31,7 +34,7 @@ private:
     void UpdateSlotData();
     void UpdateTooltips();
 
-    IHotbarViewModel* hotbar_{nullptr};
+    GameSession* session_{nullptr};
     IGuiIconSource* icons_{nullptr};
     const GuiTheme* theme_;
     GuiPanel* rootPanel_{nullptr};

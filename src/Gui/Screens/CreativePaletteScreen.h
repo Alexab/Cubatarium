@@ -3,13 +3,14 @@
 
 #include "Gui/GuiScreenBase.h"
 #include "Gui/Interfaces/IContentCatalog.h"
+#include "SlotInteraction.h"
 #include <memory>
 #include <string>
 
 namespace cutum {
 
 class IContentCatalog;
-class IHotbarViewModel;
+class GameSession;
 class IGuiIconSource;
 class GuiTabBar;
 class GuiScrollView;
@@ -19,8 +20,10 @@ struct GuiTheme;
 
 class CreativePaletteScreen : public GuiScreenBase {
 public:
-    CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar,
+    CreativePaletteScreen(IContentCatalog* catalog, GameSession* session,
                           IGuiIconSource* icons);
+
+    bool PickSlot(int x, int y, SlotAddress& out) const;
 
     void OnViewportChanged(int width, int height) override;
 
@@ -38,8 +41,9 @@ private:
     void LayoutGridInScroll();
 
     IContentCatalog* catalog_{nullptr};
-    IHotbarViewModel* hotbar_{nullptr};
+    GameSession* session_{nullptr};
     IGuiIconSource* icons_{nullptr};
+    std::vector<std::string> gridEntryIds_;
     GuiPanel* panel_{nullptr};
     GuiTabBar* mainTabs_{nullptr};
     GuiTabBar* subTabs_{nullptr};

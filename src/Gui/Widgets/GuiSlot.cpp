@@ -2,7 +2,13 @@
 #include "Gui/GuiRenderer.h"
 #include "Gui/GuiTheme.h"
 
+#include <cmath>
+
 namespace cutum {
+
+namespace {
+constexpr int kDragThresholdPx = 8;
+}
 
 GuiSlot::GuiSlot(const GuiTheme* theme, int size)
     : theme_(theme)
@@ -52,9 +58,9 @@ bool GuiSlot::OnMouseDown(const GuiMouseEvent& event)
         return false;
     }
     pressed_ = true;
-    if (onClick_) {
-        onClick_();
-    }
+    dragStarted_ = false;
+    pressX_ = event.x;
+    pressY_ = event.y;
     return true;
 }
 
@@ -63,8 +69,32 @@ bool GuiSlot::OnMouseUp(const GuiMouseEvent& event)
     if (!enabled_ || !pressed_) {
         return false;
     }
+    const int dx = event.x - pressX_;
+    const int dy = event.y - pressY_;
+    const bool isClickGesture =
+        (dx * dx + dy * dy) <= (kDragThresholdPx * kDragThresholdPx);
+    if (isClickGesture && onClick_) {
+        onClick_();
+    }
     pressed_ = false;
-    return bounds_.Contains(event.x, event.y);
+    dragStarted_ = false;
+    return true;
+}
+
+bool GuiSlot::OnMouseMove(const GuiMouseEvent& event)
+{
+    if (!pressed_ || dragStarted_) {
+        return pressed_;
+    }
+    const int dx = event.x - pressX_;
+    const int dy = event.y - pressY_;
+    if ((dx * dx + dy * dy) > (kDragThresholdPx * kDragThresholdPx)) {
+        dragStarted_ = true;
+        if (onBeginDrag_) {
+            onBeginDrag_();
+        }
+    }
+    return true;
 }
 
 } // namespace cutum

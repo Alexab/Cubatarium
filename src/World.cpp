@@ -1212,6 +1212,9 @@ void World::LoadUsers(const std::string &file_name)
       }
       user->SetCameraOrientation(yaw, pitch);
 
+      const size_t hotbarCount = 2;
+      user->DeserializeHotbars(user_data, hotbarCount);
+
       if (auto camera = GetUserCamera(user_name)) {
        camera->SetPosition(position);
        camera->SetOrientation(yaw, pitch);
@@ -1248,6 +1251,17 @@ void World::SaveUsers(const std::string &file_name)
   user_json["position"] = json::array({position.x, position.y, position.z});
   user_json["yaw"] = yaw;
   user_json["pitch"] = pitch;
+
+  const json hotbarState = user->SerializeHotbars();
+  if (hotbarState.contains("hotbars")) {
+   user_json["hotbars"] = hotbarState["hotbars"];
+  }
+  if (hotbarState.contains("active_bar")) {
+   user_json["active_bar"] = hotbarState["active_bar"];
+  }
+  if (hotbarState.contains("active_slot")) {
+   user_json["active_slot"] = hotbarState["active_slot"];
+  }
 
   objects[user_name] = user_json;
  }

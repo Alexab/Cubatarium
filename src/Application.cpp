@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "HotbarInput.h"
+#include "SlotInteraction.h"
 
 #include "CursorCapture.h"
 #include "WindowManager.h"
@@ -7,6 +9,7 @@
 #include "Game/GameSession.h"
 #include "GeometryEngine.h"
 #include "Gui/GuiContext.h"
+#include "Gui/GuiRenderer.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -436,25 +439,85 @@ void Application::RecaptureMouseForLook()
 
 bool Application::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed)
 {
-    auto routeRoot = [&](GuiWidget* root) -> bool {
+    auto routeRoot = [&](GuiWidget* root, bool requireHitTest) -> bool {
         if (!root) {
             return false;
         }
-        if (!root->HitTest(event.x, event.y)) {
+        if (requireHitTest && !root->HitTest(event.x, event.y)) {
             return false;
         }
         return pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
     };
-    if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot())) {
+
+    if (pressed) {
+        overlayPointerCapture_ = OverlayPointerCapture::None;
+        if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Palette;
+            return true;
+        }
+        if (consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Console;
+            return true;
+        }
+        if (routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Hud;
+            return true;
+        }
+        return false;
+    }
+
+    const OverlayPointerCapture capture = overlayPointerCapture_;
+    overlayPointerCapture_ = OverlayPointerCapture::None;
+    if (capture == OverlayPointerCapture::None) {
+        return false;
+    }
+
+    switch (capture) {
+    case OverlayPointerCapture::Palette:
+        return paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), false);
+    case OverlayPointerCapture::Console:
+        return consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), false);
+    case OverlayPointerCapture::Hud:
+        return routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, false);
+    default:
+        return false;
+    }
+}
+
+bool Application::ResolveSlotAt(int x, int y, SlotAddress& out)
+{
+    // Хотбар под палитрой: при drop сначала проверяем HUD, иначе палитра «съедает» цель.
+    if (hudScreen_ && hudScreen_->PickSlot(x, y, out)) {
         return true;
     }
-    if (consoleOpen_ && routeRoot(consoleScreen_->GetRoot())) {
-        return true;
-    }
-    if (routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
+    if (paletteOpen_ && paletteScreen_ && paletteScreen_->PickSlot(x, y, out)) {
         return true;
     }
     return false;
+}
+
+void Application::DrawDragGhost(int width, int height)
+{
+    if (!gameSession_ || !gameSession_->IsDragging() || !iconSource_ || !guiContext_) {
+        return;
+    }
+    const DragState& drag = gameSession_->GetDrag();
+    if (drag.entry.empty) {
+        return;
+    }
+    const GLuint tex =
+        drag.entry.kind == InventoryEntryKind::Block
+            ? iconSource_->GetBlockIconTexture(drag.entry.id)
+            : iconSource_->GetPrefabIconTexture(drag.entry.id);
+    if (tex == 0) {
+        return;
+    }
+    const int size = guiContext_->GetTheme().hotbarSlotSize;
+    const GuiRect rect{dragCursorX_ - size / 2, dragCursorY_ - size / 2, size, size};
+    GuiRenderer& renderer = guiContext_->GetRenderer();
+    renderer.BeginFrame(width, height);
+    renderer.DrawTexturedRect(rect, tex);
+    renderer.EndFrame();
 }
 
 void Application::Update(double dt)
@@ -529,9 +592,6 @@ void Application::RenderFrame(int width, int height, double viewDuration)
 
     if (state_ == AppState::InGame && iconSource_) {
         iconSource_->WarmupPrefabIcons(2);
-        if (paletteOpen_ && paletteScreen_) {
-            paletteScreen_->InvalidateGrid();
-        }
     }
 
     if (hudScreen_ && hudScreen_->GetRoot()) {
@@ -546,6 +606,9 @@ void Application::RenderFrame(int width, int height, double viewDuration)
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
         paletteScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height, false);
+    }
+    if (state_ == AppState::InGame) {
+        DrawDragGhost(width, height);
     }
 }
 
@@ -640,6 +703,11 @@ bool Application::RouteKey(int key, int action, int mods)
       consoleScreen_->SubmitCommand();
       return true;
     }
+    const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
+    if (hotbarSlot >= 0 && gameSession_) {
+      gameSession_->OnPrimaryHotbarKey(hotbarSlot);
+      return true;
+    }
   }
 
   if (action == GLFW_PRESS && state_ == AppState::MainMenu && key == GLFW_KEY_ESCAPE) {
@@ -683,7 +751,24 @@ bool Application::RouteMouseButton(int button, bool pressed, int x, int y)
     event.pressed = pressed;
 
     if (state_ == AppState::InGame) {
+        dragCursorX_ = x;
+        dragCursorY_ = y;
         if (event.button == GuiMouseButton::Left) {
+            if (!pressed && gameSession_ && gameSession_->IsDragging()) {
+                SlotAddress target;
+                const bool hasTarget = ResolveSlotAt(x, y, target);
+                if (hasTarget) {
+                    if (!gameSession_->DropOnSlot(target)) {
+                        gameSession_->CancelDrag();
+                    }
+                } else {
+                    gameSession_->CancelDrag();
+                }
+                if (overlayPointerCapture_ != OverlayPointerCapture::None) {
+                    TryRouteInGameOverlay(event, false);
+                }
+                return true;
+            }
             if (TryRouteInGameOverlay(event, pressed)) {
                 return true;
             }
@@ -707,19 +792,23 @@ bool Application::RouteMouseMove(int x, int y)
         hudScreen_->SetPointerPosition(x, y);
     }
     if (state_ == AppState::InGame) {
+        dragCursorX_ = x;
+        dragCursorY_ = y;
+        if (gameSession_ && gameSession_->IsDragging()) {
+            return true;
+        }
         auto routeMove = [&](GuiWidget* root) -> bool {
-            return root && root->HitTest(x, y) && root->OnMouseMove(event);
+            return root && root->OnMouseMove(event);
         };
-        if (paletteOpen_ && routeMove(paletteScreen_->GetRoot())) {
-            return true;
+        bool handled = false;
+        if (paletteOpen_) {
+            handled |= routeMove(paletteScreen_->GetRoot());
         }
-        if (consoleOpen_ && routeMove(consoleScreen_->GetRoot())) {
-            return true;
+        if (consoleOpen_) {
+            handled |= routeMove(consoleScreen_->GetRoot());
         }
-        if (routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
-            return true;
-        }
-        return false;
+        handled |= routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr);
+        return handled;
     }
     return guiContext_->RouteMouseMove(event);
 }

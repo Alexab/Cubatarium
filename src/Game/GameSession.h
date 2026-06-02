@@ -8,6 +8,7 @@
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
 #include "Gui/Interfaces/IInventoryViewModel.h"
+#include "SlotInteraction.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -54,6 +55,14 @@ public:
     bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) override;
     void ClearPendingAssignment() override;
 
+    bool OnPrimaryHotbarKey(int slotIndex);
+    void BeginDragFromSlot(const SlotAddress& source, const InventoryEntryRef& entry);
+    bool IsDragging() const;
+    const DragState& GetDrag() const { return drag_; }
+    bool DropOnSlot(const SlotAddress& target);
+    void CancelDrag();
+    InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
+
     std::vector<InventoryGroupView> GetGroups(ContentKind tab, InventoryMode mode) const override;
     std::vector<InventoryEntryView> GetEntries(ContentKind tab,
                                                const std::string& groupId,
@@ -79,6 +88,7 @@ private:
     std::vector<std::string> chatLog_;
     InventoryMode inventoryMode_{InventoryMode::Creative};
     std::optional<InventoryEntryRef> pendingAssignment_;
+    DragState drag_;
 };
 
 } // namespace cutum

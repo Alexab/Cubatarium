@@ -212,11 +212,6 @@ bool GameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
     if (!pendingAssignment_.has_value()) {
         return false;
     }
-    std::cerr << "[hotbar] apply pending kind="
-              << (pendingAssignment_->kind == InventoryEntryKind::Block ? "block" : "object")
-              << " id=" << pendingAssignment_->id
-              << " bar=" << barIndex
-              << " slot=" << slotIndex << std::endl;
     if (!CanAssignToHotbar(*pendingAssignment_, barIndex, slotIndex)) {
         return false;
     }
@@ -231,6 +226,112 @@ bool GameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
 void GameSession::ClearPendingAssignment()
 {
     pendingAssignment_.reset();
+}
+
+namespace {
+
+bool SameSlotAddress(const SlotAddress& a, const SlotAddress& b)
+{
+    if (a.surface != b.surface) {
+        return false;
+    }
+    if (a.surface == SlotSurface::Hotbar) {
+        return a.bar == b.bar && a.slot == b.slot;
+    }
+    if (a.surface == SlotSurface::PaletteGrid) {
+        return a.paletteKind == b.paletteKind && a.entryId == b.entryId;
+    }
+    return true;
+}
+
+} // namespace
+
+bool GameSession::OnPrimaryHotbarKey(int slotIndex)
+{
+    if (slotIndex < 0 || slotIndex >= 10) {
+        return false;
+    }
+    if (HasPendingAssignment()) {
+        return ApplyPendingAssignment(0, static_cast<size_t>(slotIndex));
+    }
+    SelectSlot(0, static_cast<size_t>(slotIndex));
+    return true;
+}
+
+InventoryEntryRef GameSession::GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const
+{
+    InventoryEntryRef entry;
+    auto user = world_ ? world_->GetCurrentUser() : nullptr;
+    if (!user || barIndex >= user->GetHotbarCount() || slotIndex >= 10) {
+        return entry;
+    }
+    const HotbarSlot& slot = user->GetHotbar(barIndex).slots[slotIndex];
+    if (slot.empty || slot.entry.empty) {
+        return entry;
+    }
+    return slot.entry;
+}
+
+void GameSession::BeginDragFromSlot(const SlotAddress& source, const InventoryEntryRef& entry)
+{
+    if (entry.empty) {
+        return;
+    }
+    drag_.active = true;
+    drag_.entry = entry;
+    drag_.source = source;
+}
+
+bool GameSession::IsDragging() const
+{
+    return drag_.active;
+}
+
+void GameSession::CancelDrag()
+{
+    drag_ = DragState{};
+}
+
+bool GameSession::DropOnSlot(const SlotAddress& target)
+{
+    if (!drag_.active || target.surface == SlotSurface::None) {
+        return false;
+    }
+    if (SameSlotAddress(target, drag_.source)) {
+        CancelDrag();
+        return true;
+    }
+
+    const SlotAddress source = drag_.source;
+    const InventoryEntryRef entry = drag_.entry;
+
+    if (target.surface == SlotSurface::Hotbar) {
+        if (!CanAssignToHotbar(entry, target.bar, target.slot)) {
+            return false;
+        }
+        if (!AssignSlot(target.bar, target.slot, entry)) {
+            return false;
+        }
+        if (source.surface == SlotSurface::Hotbar
+            && (source.bar != target.bar || source.slot != target.slot)) {
+            if (auto user = world_->GetCurrentUser()) {
+                user->ClearHotbarSlot(source.bar, source.slot);
+            }
+        }
+        SelectSlot(target.bar, target.slot);
+        CancelDrag();
+        return true;
+    }
+
+    if (target.surface == SlotSurface::PaletteGrid && source.surface == SlotSurface::Hotbar) {
+        if (auto user = world_->GetCurrentUser()) {
+            user->ClearHotbarSlot(source.bar, source.slot);
+        }
+        CancelDrag();
+        return true;
+    }
+
+    return false;
 }
 
 std::vector<InventoryGroupView> GameSession::GetGroups(ContentKind tab, InventoryMode mode) const

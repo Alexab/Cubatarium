@@ -2,6 +2,7 @@
 #include "Object.h"
 #include <algorithm>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 namespace cutum {
 
@@ -297,6 +298,82 @@ size_t User::GetViewId() const
 void User::SetViewId(size_t value)
 {
  ViewId = value;
+}
+
+nlohmann::json User::SerializeHotbars() const
+{
+ using json = nlohmann::json;
+ json bars = json::array();
+ for (const HotbarBar& bar : hotbars_) {
+  json slots = json::array();
+  for (const HotbarSlot& slot : bar.slots) {
+   if (slot.empty || slot.entry.empty) {
+    slots.push_back(json{{"empty", true}});
+   } else {
+    slots.push_back(json{{"empty", false},
+                         {"kind", slot.entry.kind == InventoryEntryKind::Block ? "block" : "object"},
+                         {"id", slot.entry.id}});
+   }
+  }
+  bars.push_back(json{{"slots", slots}});
+ }
+ json result;
+ result["hotbars"] = bars;
+ result["active_bar"] = activeBarIndex_;
+ result["active_slot"] = activeSlotIndex_;
+ return result;
+}
+
+void User::DeserializeHotbars(const nlohmann::json& userData, size_t maxBarCount)
+{
+ using json = nlohmann::json;
+ if (!userData.contains("hotbars") || !userData["hotbars"].is_array()) {
+  return;
+ }
+
+ const json& barsJson = userData["hotbars"];
+ hotbars_.clear();
+ hotbars_.resize(barsJson.size());
+
+ for (size_t b = 0; b < barsJson.size() && b < hotbars_.size(); ++b) {
+  const json& barJson = barsJson[b];
+  if (!barJson.contains("slots") || !barJson["slots"].is_array()) {
+   continue;
+  }
+  const json& slotsJson = barJson["slots"];
+  for (size_t s = 0; s < kHotbarSlots && s < slotsJson.size(); ++s) {
+   const json& slotJson = slotsJson[s];
+   HotbarSlot& slot = hotbars_[b].slots[s];
+   slot = HotbarSlot{};
+   if (slotJson.value("empty", true)) {
+    continue;
+   }
+   const std::string kind = slotJson.value("kind", "block");
+   slot.entry.kind = (kind == "object") ? InventoryEntryKind::Object : InventoryEntryKind::Block;
+   slot.entry.id = slotJson.value("id", "");
+   slot.entry.empty = slot.entry.id.empty();
+   slot.empty = slot.entry.empty;
+   if (!slot.empty) {
+    slot.entry.count = 0;
+   }
+  }
+ }
+
+ if (userData.contains("active_bar")) {
+  activeBarIndex_ = userData["active_bar"].get<size_t>();
+ }
+ if (userData.contains("active_slot")) {
+  activeSlotIndex_ = userData["active_slot"].get<size_t>();
+ }
+
+ const size_t clampedMax = std::max<size_t>(1, std::min(maxBarCount, kMaxHotbars));
+ if (hotbars_.size() > clampedMax) {
+  hotbars_.resize(clampedMax);
+ }
+ if (hotbars_.empty()) {
+  hotbars_.resize(1);
+ }
+ ClampActiveIndices();
 }
 
 }

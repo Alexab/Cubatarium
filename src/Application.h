@@ -10,6 +10,7 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "AppSettingsSnapshot.h"
 #include "Game/GameSession.h"
+#include "SlotInteraction.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "ProceduralSettings.h"
 #include <functional>
@@ -104,6 +105,8 @@ private:
     bool UsesUiPointer() const;
     bool BlocksGameMouseLook() const;
     bool TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed);
+    bool ResolveSlotAt(int x, int y, SlotAddress& out);
+    void DrawDragGhost(int width, int height);
 
     std::shared_ptr<Core> core_;
     std::shared_ptr<World> world_;
@@ -122,6 +125,10 @@ private:
     bool consoleOpen_{false};
     bool paletteOpen_{false};
     bool freeCursor_{false};
+    enum class OverlayPointerCapture { None, Palette, Console, Hud };
+    OverlayPointerCapture overlayPointerCapture_{OverlayPointerCapture::None};
+    int dragCursorX_{0};
+    int dragCursorY_{0};
     bool worldSessionActive_{false};
     bool pendingEnterGame_{false};
     bool pendingQuit_{false};
