@@ -15,6 +15,7 @@ struct GuiTheme {
     glm::vec3 textPrimary{1.0f, 1.0f, 1.0f};
     glm::vec3 textSecondary{0.75f, 0.75f, 0.8f};
     glm::vec4 slotBackground{0.2f, 0.2f, 0.22f, 0.9f};
+    glm::vec4 tooltipBackground{0.05f, 0.05f, 0.08f, 0.55f};
     glm::vec4 slotSelected{0.75f, 0.88f, 0.28f, 1.0f};
     glm::vec4 slotSelectedFill{0.45f, 0.55f, 0.15f, 0.45f};
     glm::vec4 slotSelectedInner{0.9f, 0.95f, 0.5f, 0.9f};

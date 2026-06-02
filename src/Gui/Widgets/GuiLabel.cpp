@@ -16,7 +16,7 @@ void GuiLabel::Draw(GuiRenderer& renderer)
         return;
     }
     if (drawBackground_) {
-        renderer.DrawFilledRect(bounds_, {0.05f, 0.05f, 0.08f, 0.75f});
+        renderer.DrawFilledRect(bounds_, theme_->tooltipBackground);
     }
     const glm::vec3& color =
         useSecondaryColor_ ? theme_->textSecondary : theme_->textPrimary;
