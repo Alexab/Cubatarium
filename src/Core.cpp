@@ -243,6 +243,8 @@ void Core::LoadConfig(const std::string& config_file_name)
        uiSettings_.legacyHud = u.value("legacy_hud", false);
        uiSettings_.consoleKey = u.value("console_key", "grave");
        uiSettings_.paletteKey = u.value("palette_key", "b");
+       uiSettings_.inventoryKey = u.value("inventory_key", "e");
+       uiSettings_.hotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
       }
      } else {
       default_world_name.clear();
@@ -278,7 +280,7 @@ void Core::LoadConfig(const std::string& config_file_name)
       PrefabLibraryInstance->Load(prefabs_path_.string(), WorldInstance->GetBlockRegistry());
       WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
       if (auto user = WorldInstance->GetCurrentUser()) {
-       user->SetPrefabHotbar(PrefabLibraryInstance->ListNames());
+       user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
       }
      }
 
@@ -332,7 +334,7 @@ void Core::EnterGame()
      }
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
-       user->SetActiveBlockIndex(1);
+       user->SetActiveBlockIndex(0);
       }
      }
  } catch (const std::exception& e) {

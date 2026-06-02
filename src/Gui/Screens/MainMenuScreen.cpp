@@ -8,8 +8,16 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Version.h"
+#include <algorithm>
 
 namespace cutum {
+
+namespace {
+std::string HotbarCountText(int count)
+{
+    return "Hotbars: " + std::to_string(count);
+}
+}
 
 MainMenuScreen::MainMenuScreen(IGuiGameActions* actions)
     : actions_(actions)
@@ -81,6 +89,36 @@ void MainMenuScreen::Build(GuiContext& ctx)
     buttons_.push_back(settings.get());
     buttons_.push_back(quit.get());
 
+    auto hotbarMinus = std::make_unique<GuiButton>(&theme, "-");
+    hotbarMinus->SetOnClick([this]() {
+        if (!actions_) {
+            return;
+        }
+        const int next = std::max(1, actions_->GetHotbarCountSetting() - 1);
+        actions_->SetHotbarCountSetting(next);
+        if (hotbarCountLabel_) {
+            hotbarCountLabel_->SetText(HotbarCountText(next));
+        }
+    });
+    hotbarMinusButton_ = hotbarMinus.get();
+
+    auto hotbarPlus = std::make_unique<GuiButton>(&theme, "+");
+    hotbarPlus->SetOnClick([this]() {
+        if (!actions_) {
+            return;
+        }
+        const int next = std::min(2, actions_->GetHotbarCountSetting() + 1);
+        actions_->SetHotbarCountSetting(next);
+        if (hotbarCountLabel_) {
+            hotbarCountLabel_->SetText(HotbarCountText(next));
+        }
+    });
+    hotbarPlusButton_ = hotbarPlus.get();
+
+    auto hotbarLabel = std::make_unique<GuiLabel>(&theme, HotbarCountText(actions_ ? actions_->GetHotbarCountSetting() : 1));
+    hotbarLabel->SetTextAlign(GuiTextAlign::Center);
+    hotbarCountLabel_ = hotbarLabel.get();
+
     auto version = std::make_unique<GuiLabel>(&theme, kCubatariumVersion);
     version->SetTextAlign(GuiTextAlign::Left);
     version->SetUseSecondaryColor(true);
@@ -93,6 +131,9 @@ void MainMenuScreen::Build(GuiContext& ctx)
     panel->AddChild(std::move(newWorld));
     panel->AddChild(std::move(settings));
     panel->AddChild(std::move(quit));
+    panel->AddChild(std::move(hotbarMinus));
+    panel->AddChild(std::move(hotbarPlus));
+    panel->AddChild(std::move(hotbarLabel));
     root_ = std::move(panel);
     Relayout();
 }
@@ -135,6 +176,21 @@ void MainMenuScreen::Relayout()
             children.push_back(btn);
         }
         GuiLayout::StackVertical(stackArea, spacing, 0, children);
+
+        const int controlsY = stackArea.y + stackArea.h + 16;
+        const int controlW = 42;
+        const int labelW = 180;
+        const int totalW = controlW + 8 + labelW + 8 + controlW;
+        const int startX = (viewportW_ - totalW) / 2;
+        if (hotbarMinusButton_) {
+            hotbarMinusButton_->SetBounds({startX, controlsY, controlW, btnH});
+        }
+        if (hotbarCountLabel_) {
+            hotbarCountLabel_->SetBounds({startX + controlW + 8, controlsY + 8, labelW, btnH - 16});
+        }
+        if (hotbarPlusButton_) {
+            hotbarPlusButton_->SetBounds({startX + controlW + 8 + labelW + 8, controlsY, controlW, btnH});
+        }
     }
 }
 

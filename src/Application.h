@@ -69,6 +69,8 @@ public:
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
     const UiSettings& GetUiSettings() const { return uiSettings_; }
+    int GetHotbarCountSetting() const { return uiSettings_.hotbarCount; }
+    void SetHotbarCountSetting(int count);
 
     void ReturnToMainMenu() override;
     void SaveIfNeededAndProceed(std::function<void()> proceed) override;

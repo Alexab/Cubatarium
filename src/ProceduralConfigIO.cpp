@@ -110,6 +110,8 @@ void WriteUiSettings(nlohmann::json& root, const UiSettings& settings)
  ui["legacy_hud"] = settings.legacyHud;
  ui["console_key"] = settings.consoleKey;
  ui["palette_key"] = settings.paletteKey;
+ ui["inventory_key"] = settings.inventoryKey;
+ ui["hotbar_count"] = settings.hotbarCount;
  root["ui"] = ui;
 }
 

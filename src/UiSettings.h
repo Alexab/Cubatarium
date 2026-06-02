@@ -9,6 +9,8 @@ struct UiSettings {
     bool legacyHud{false};
     std::string consoleKey{"grave"};
     std::string paletteKey{"b"};
+    std::string inventoryKey{"e"};
+    int hotbarCount{1};
 };
 
 } // namespace cutum

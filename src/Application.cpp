@@ -23,10 +23,12 @@
 #include "Prefab.h"
 #include "ShaderManager.h"
 #include "TextRenderer.h"
+#include "User.h"
 #include "ViewEngine.h"
 #include "World.h"
 
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 
@@ -168,6 +170,22 @@ void Application::ShowMainMenu()
     SyncCursorVisibility();
 }
 
+void Application::SetHotbarCountSetting(int count)
+{
+    uiSettings_.hotbarCount = std::clamp(count, 1, 2);
+    if (core_) {
+        AppSettingsSnapshot app = core_->GetAppSettings();
+        app.ui = uiSettings_;
+        core_->ApplyAppSettings(app);
+        core_->SaveConfigFile();
+    }
+    if (world_) {
+        if (auto user = world_->GetCurrentUser()) {
+            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+        }
+    }
+}
+
 void Application::ReturnToMainMenu()
 {
     if (state_ == AppState::InGame) {
@@ -225,6 +243,9 @@ void Application::EnterGameAfterWorldChange()
     worldSessionActive_ = true;
     if (core_ && world_) {
         uiSettings_ = core_->GetUiSettings();
+        if (auto user = world_->GetCurrentUser()) {
+            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+        }
         if (geometry_) {
             geometry_->SetShowHud(uiSettings_.legacyHud);
         }
@@ -584,6 +605,13 @@ bool Application::RouteKey(int key, int action, int mods)
       return true;
     }
     if (KeyNameIs(uiSettings_.paletteKey, key)) {
+      paletteOpen_ = !paletteOpen_;
+      if (paletteScreen_) {
+        paletteScreen_->SetVisible(paletteOpen_);
+      }
+      return true;
+    }
+    if (KeyNameIs(uiSettings_.inventoryKey, key)) {
       paletteOpen_ = !paletteOpen_;
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);

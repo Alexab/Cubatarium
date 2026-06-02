@@ -343,11 +343,7 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
             const int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
             if (auto user = worldInstance->GetCurrentUser()) {
-                if ((mods & GLFW_MOD_ALT) != 0) {
-                    user->SetActivePrefabIndex(static_cast<size_t>(index));
-                } else {
-                    user->SetActiveBlockIndex(static_cast<size_t>(index));
-                }
+                user->SetActiveSlot(0, static_cast<size_t>(index));
             }
         }
         else if (key == KeyCode::Key_F12) {
@@ -635,7 +631,7 @@ void WindowManager::RenderHelpText() {
     // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
-        "LMB - Place/remove, 0-9 hotbar (0=lava, 8=water, 9=fire), Alt+0-9 prefab",
+        "LMB - Place/remove, 0-9 primary hotbar, E inventory",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };

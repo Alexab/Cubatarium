@@ -26,6 +26,9 @@ private:
     IGuiGameActions* actions_{nullptr};
     GuiLabel* title_{nullptr};
     GuiLabel* versionLabel_{nullptr};
+    GuiLabel* hotbarCountLabel_{nullptr};
+    GuiButton* hotbarMinusButton_{nullptr};
+    GuiButton* hotbarPlusButton_{nullptr};
     std::vector<GuiButton*> buttons_;
 };
 
