@@ -7,6 +7,7 @@
 #include "Gui/Interfaces/IGameCommandContext.h"
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
+#include "Gui/Interfaces/IInventoryViewModel.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -18,6 +19,7 @@ class World;
 
 class GameSession : public IGuiGameActions,
                     public IHotbarViewModel,
+                    public IInventoryViewModel,
                     public IGameCommandContext {
 public:
     GameSession(Application* application, std::shared_ptr<World> world);
@@ -38,13 +40,27 @@ public:
     void QuitApplication() override;
     void OpenSettings() override;
     bool HasPausedSession() const override;
+    int GetHotbarCountSetting() const override;
+    void SetHotbarCountSetting(int count) override;
 
-    std::array<HotbarSlotView, 10> GetBlockSlots() const override;
-    std::array<HotbarSlotView, 10> GetPrefabSlots() const override;
-    size_t GetActiveBlockIndex() const override;
-    size_t GetActivePrefabIndex() const override;
-    void SelectBlockSlot(size_t index) override;
-    void SelectPrefabSlot(size_t index) override;
+    size_t GetBarCount() const override;
+    std::array<HotbarSlotView, 10> GetBarSlots(size_t barIndex) const override;
+    size_t GetSelectedSlot(size_t barIndex) const override;
+    void SelectSlot(size_t barIndex, size_t slotIndex) override;
+    bool AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry) override;
+
+    std::vector<InventoryGroupView> GetGroups(ContentKind tab, InventoryMode mode) const override;
+    std::vector<InventoryEntryView> GetEntries(ContentKind tab,
+                                               const std::string& groupId,
+                                               InventoryMode mode) const override;
+    bool CanAssignToHotbar(const InventoryEntryRef& entry,
+                           size_t barIndex,
+                           size_t slotIndex) const override;
+    bool AssignToHotbar(const InventoryEntryRef& entry,
+                        size_t barIndex,
+                        size_t slotIndex) override;
+    InventoryMode GetInventoryMode() const override;
+    void SetInventoryMode(InventoryMode mode) override;
 
     CommandResult Execute(const std::vector<std::string>& args) override;
     void AddChatLine(const std::string& line) override;
@@ -56,6 +72,7 @@ private:
     CommandRegistry commandRegistry_;
     ContentTypeRegistry contentCatalog_;
     std::vector<std::string> chatLog_;
+    InventoryMode inventoryMode_{InventoryMode::Creative};
 };
 
 } // namespace cutum

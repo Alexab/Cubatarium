@@ -4,6 +4,8 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <vector>
+#include "InventoryTypes.h"
 
 namespace cutum {
 
@@ -12,17 +14,17 @@ struct HotbarSlotView {
     std::string label;
     bool isBlock{true};
     bool selected{false};
+    int hotkey{-1};
 };
 
 class IHotbarViewModel {
 public:
     virtual ~IHotbarViewModel() = default;
-    virtual std::array<HotbarSlotView, 10> GetBlockSlots() const = 0;
-    virtual std::array<HotbarSlotView, 10> GetPrefabSlots() const = 0;
-    virtual size_t GetActiveBlockIndex() const = 0;
-    virtual size_t GetActivePrefabIndex() const = 0;
-    virtual void SelectBlockSlot(size_t index) = 0;
-    virtual void SelectPrefabSlot(size_t index) = 0;
+    virtual size_t GetBarCount() const = 0;
+    virtual std::array<HotbarSlotView, 10> GetBarSlots(size_t barIndex) const = 0;
+    virtual size_t GetSelectedSlot(size_t barIndex) const = 0;
+    virtual void SelectSlot(size_t barIndex, size_t slotIndex) = 0;
+    virtual bool AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry) = 0;
 };
 
 } // namespace cutum

@@ -7,6 +7,7 @@
 #include "World.h"
 
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <sstream>
 
 namespace cutum {
@@ -131,66 +132,157 @@ bool GameSession::HasPausedSession() const
     return application_ && application_->HasWorldSession();
 }
 
-std::array<HotbarSlotView, 10> GameSession::GetBlockSlots() const
+int GameSession::GetHotbarCountSetting() const
+{
+    return application_ ? application_->GetHotbarCountSetting() : 1;
+}
+
+void GameSession::SetHotbarCountSetting(int count)
+{
+    if (application_) {
+        application_->SetHotbarCountSetting(count);
+    }
+}
+
+size_t GameSession::GetBarCount() const
+{
+    auto user = world_ ? world_->GetCurrentUser() : nullptr;
+    return user ? user->GetHotbarCount() : 0;
+}
+
+std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
 {
     std::array<HotbarSlotView, 10> slots{};
     auto user = world_ ? world_->GetCurrentUser() : nullptr;
     if (!user) {
         return slots;
     }
-    const auto& hotbar = user->GetBlockHotbar();
-    const size_t activeIndex = user->GetActiveBlockIndex();
-    for (size_t i = 0; i < slots.size() && i < hotbar.size(); ++i) {
-        slots[i].id = hotbar[i];
-        slots[i].label = hotbar[i];
-        slots[i].isBlock = true;
+    const HotbarBar& bar = user->GetHotbar(barIndex);
+    const size_t activeIndex = user->GetActiveSlotIndex(barIndex);
+    for (size_t i = 0; i < slots.size(); ++i) {
+        const HotbarSlot& slot = bar.slots[i];
+        if (!slot.empty && !slot.entry.empty) {
+            slots[i].id = slot.entry.id;
+            slots[i].label = slot.entry.id;
+            slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
+        }
         slots[i].selected = (i == activeIndex);
+        if (barIndex == 0) {
+            slots[i].hotkey = static_cast<int>(i);
+        }
     }
     return slots;
 }
 
-std::array<HotbarSlotView, 10> GameSession::GetPrefabSlots() const
+size_t GameSession::GetSelectedSlot(size_t barIndex) const
 {
-    std::array<HotbarSlotView, 10> slots{};
+    auto user = world_->GetCurrentUser();
+    return user ? user->GetActiveSlotIndex(barIndex) : 0;
+}
+
+void GameSession::SelectSlot(size_t barIndex, size_t slotIndex)
+{
+    if (auto user = world_->GetCurrentUser()) {
+        user->SetActiveSlot(barIndex, slotIndex);
+    }
+}
+
+bool GameSession::AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry)
+{
+    if (auto user = world_->GetCurrentUser()) {
+        return user->AssignToHotbar(barIndex, slotIndex, entry);
+    }
+    return false;
+}
+
+std::vector<InventoryGroupView> GameSession::GetGroups(ContentKind tab, InventoryMode mode) const
+{
+    std::vector<InventoryGroupView> groups;
+    const auto ids = contentCatalog_.GetTypeIds(tab);
+    for (const std::string& id : ids) {
+        const auto entries = contentCatalog_.GetEntries(tab, id);
+        if (mode == InventoryMode::Owned && entries.empty()) {
+            continue;
+        }
+        groups.push_back({id, contentCatalog_.GetTypeDisplayName(id), 0});
+    }
+    std::stable_sort(groups.begin(), groups.end(), [](const InventoryGroupView& a, const InventoryGroupView& b) {
+        if (a.id == "misc") return false;
+        if (b.id == "misc") return true;
+        return a.label < b.label;
+    });
+    return groups;
+}
+
+std::vector<InventoryEntryView> GameSession::GetEntries(ContentKind tab,
+                                                        const std::string& groupId,
+                                                        InventoryMode mode) const
+{
+    std::vector<InventoryEntryView> result;
+    auto entries = contentCatalog_.GetEntries(tab, groupId);
+    auto user = world_ ? world_->GetCurrentUser() : nullptr;
+    const auto* inv = user ? &user->GetInventory() : nullptr;
+    for (const auto& e : entries) {
+        InventoryEntryRef ref;
+        ref.kind = (tab == ContentKind::Block) ? InventoryEntryKind::Block : InventoryEntryKind::Object;
+        ref.id = e.id;
+        ref.empty = false;
+        ref.count = 0;
+        if (inv) {
+            const auto it = inv->find(e.id);
+            if (it != inv->end()) {
+                ref.count = it->second;
+            }
+        }
+        if (mode == InventoryMode::Owned && ref.count <= 0) {
+            continue;
+        }
+        result.push_back({ref, e.displayName});
+    }
+    std::sort(result.begin(), result.end(), [](const InventoryEntryView& a, const InventoryEntryView& b) {
+        if (a.label == b.label) return a.ref.id < b.ref.id;
+        return a.label < b.label;
+    });
+    return result;
+}
+
+bool GameSession::CanAssignToHotbar(const InventoryEntryRef& entry,
+                                    size_t barIndex,
+                                    size_t slotIndex) const
+{
+    if (entry.empty || barIndex >= 2 || slotIndex >= 10) {
+        return false;
+    }
+    if (inventoryMode_ == InventoryMode::Creative) {
+        return true;
+    }
     auto user = world_ ? world_->GetCurrentUser() : nullptr;
     if (!user) {
-        return slots;
+        return false;
     }
-    const auto& hotbar = user->GetPrefabHotbar();
-    const size_t activeIndex = user->GetActivePrefabIndex();
-    for (size_t i = 0; i < slots.size() && i < hotbar.size(); ++i) {
-        slots[i].id = hotbar[i];
-        slots[i].label = hotbar[i];
-        slots[i].isBlock = false;
-        slots[i].selected = (i == activeIndex);
-    }
-    return slots;
+    const auto& inv = user->GetInventory();
+    const auto it = inv.find(entry.id);
+    return it != inv.end() && it->second > 0;
 }
 
-size_t GameSession::GetActiveBlockIndex() const
+bool GameSession::AssignToHotbar(const InventoryEntryRef& entry,
+                                 size_t barIndex,
+                                 size_t slotIndex)
 {
-    auto user = world_->GetCurrentUser();
-    return user ? user->GetActiveBlockIndex() : 0;
-}
-
-size_t GameSession::GetActivePrefabIndex() const
-{
-    auto user = world_->GetCurrentUser();
-    return user ? user->GetActivePrefabIndex() : 0;
-}
-
-void GameSession::SelectBlockSlot(size_t index)
-{
-    if (auto user = world_->GetCurrentUser()) {
-        user->SetActiveBlockIndex(index);
+    if (!CanAssignToHotbar(entry, barIndex, slotIndex)) {
+        return false;
     }
+    return AssignSlot(barIndex, slotIndex, entry);
 }
 
-void GameSession::SelectPrefabSlot(size_t index)
+InventoryMode GameSession::GetInventoryMode() const
 {
-    if (auto user = world_->GetCurrentUser()) {
-        user->SetActivePrefabIndex(index);
-    }
+    return inventoryMode_;
+}
+
+void GameSession::SetInventoryMode(InventoryMode mode)
+{
+    inventoryMode_ = mode;
 }
 
 CommandResult GameSession::Execute(const std::vector<std::string>& args)
