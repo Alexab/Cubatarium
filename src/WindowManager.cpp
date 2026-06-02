@@ -35,6 +35,17 @@ glm::ivec2 CursorToFramebufferPixels(GLFWwindow* window, float x, float y)
     return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
 }
 
+int PrimaryHotbarIndexFromNumericKey(KeyCode key)
+{
+    if (key >= KeyCode::Key_1 && key <= KeyCode::Key_9) {
+        return static_cast<int>(key) - static_cast<int>(KeyCode::Key_1);
+    }
+    if (key == KeyCode::Key_0) {
+        return 9;
+    }
+    return -1;
+}
+
 } // namespace
 
 WindowManager::WindowManager()
@@ -341,9 +352,11 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             }
         }
         else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
-            const int index = static_cast<int>(key) - static_cast<int>(KeyCode::Key_0);
+            const int index = PrimaryHotbarIndexFromNumericKey(key);
             if (auto user = worldInstance->GetCurrentUser()) {
-                user->SetActiveSlot(0, static_cast<size_t>(index));
+                if (index >= 0) {
+                    user->SetActiveSlot(0, static_cast<size_t>(index));
+                }
             }
         }
         else if (key == KeyCode::Key_F12) {
