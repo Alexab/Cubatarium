@@ -31,8 +31,11 @@ public:
     GLuint GetIconIfCached(const std::string& prefabName) const;
     void WarmupNext(size_t count);
 
+    GLuint GetBlockIconTexture(const std::string& blockName);
+
 private:
     GLuint RenderPrefabIcon(const std::string& prefabName);
+    GLuint RenderBlockIcon(BlockId blockId);
     GLuint GetBlockTexture(BlockId blockId) const;
     bool InitCubeMesh();
 
@@ -43,6 +46,7 @@ private:
     std::shared_ptr<class ShaderProgram> shader_;
 
     std::unordered_map<std::string, GLuint> cache_;
+    std::unordered_map<BlockId, GLuint> blockCache_;
     std::vector<std::string> warmupQueue_;
     size_t warmupIndex_{0};
 

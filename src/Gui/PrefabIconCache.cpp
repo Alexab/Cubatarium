@@ -76,7 +76,13 @@ void PrefabIconCache::Shutdown()
             glDeleteTextures(1, &entry.second);
         }
     }
+    for (const auto& entry : blockCache_) {
+        if (entry.second != 0 && entry.second != colorTex_) {
+            glDeleteTextures(1, &entry.second);
+        }
+    }
     cache_.clear();
+    blockCache_.clear();
 
     if (depthRbo_ != 0) {
         glDeleteRenderbuffers(1, &depthRbo_);
@@ -165,6 +171,27 @@ GLuint PrefabIconCache::GetBlockTexture(BlockId blockId) const
     return 0;
 }
 
+GLuint PrefabIconCache::GetBlockIconTexture(const std::string& blockName)
+{
+    if (!blockDefs_ || !textures_ || !shader_ || blockName.empty()) {
+        return 0;
+    }
+    const BlockDefinition* def = blockDefs_->GetByName(blockName);
+    if (!def || def->id == BLOCK_AIR) {
+        return 0;
+    }
+    const BlockId id = def->id;
+    if (auto it = blockCache_.find(id); it != blockCache_.end()) {
+        return it->second;
+    }
+
+    const GLuint tex = RenderBlockIcon(id);
+    if (tex != 0) {
+        blockCache_[id] = tex;
+    }
+    return tex;
+}
+
 GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
 {
     const Prefab* prefab = prefabs_ ? prefabs_->Get(prefabName) : nullptr;
@@ -237,6 +264,57 @@ GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
     glBindVertexArray(0);
     shader_->Unuse();
 
+    return iconTex;
+}
+
+GLuint PrefabIconCache::RenderBlockIcon(BlockId blockId)
+{
+    const GLuint tex = GetBlockTexture(blockId);
+    if (tex == 0 || !shader_ || fbo_ == 0) {
+        return 0;
+    }
+
+    GLuint iconTex = 0;
+    glGenTextures(1, &iconTex);
+    glBindTexture(GL_TEXTURE_2D, iconTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GlStateScope glState(kGlMaskIconFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex,
+                           0);
+    glViewport(0, 0, kIconSize, kIconSize);
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glm::mat4 projection =
+        glm::perspective(glm::radians(35.0f), 1.0f, 0.1f, 50.0f);
+    glm::mat4 view =
+        glm::lookAt(glm::vec3(2.2f, 2.0f, 2.2f), glm::vec3(0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+
+    shader_->Use();
+    shader_->SetInt("texture0", 0);
+    shader_->SetInt("uAnimFrame", 0);
+    shader_->SetInt("uAnimFrameCount", 1);
+    glBindVertexArray(cubeVao_);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    const glm::mat4 model =
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)) *
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.88f));
+    const glm::mat4 mvp = projection * view * model;
+    shader_->SetMat4("mvp_matrix", mvp);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+
+    glBindVertexArray(0);
+    shader_->Unuse();
     return iconTex;
 }
 

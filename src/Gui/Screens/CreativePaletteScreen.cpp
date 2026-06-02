@@ -8,6 +8,8 @@
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
 
+#include <algorithm>
+
 namespace cutum {
 
 CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar,
@@ -85,8 +87,11 @@ void CreativePaletteScreen::RelayoutPanel()
     if (!panel_) {
         return;
     }
-    const int panelW = viewportW_ * 35 / 100;
-    panel_->SetBounds({viewportW_ - panelW, 0, panelW, viewportH_});
+    const int panelW = viewportW_ * 60 / 100;
+    const int panelH = viewportH_ * 70 / 100;
+    const int panelX = (viewportW_ - panelW) / 2;
+    const int panelY = (viewportH_ - panelH) / 2;
+    panel_->SetBounds({panelX, panelY, panelW, panelH});
 
     if (mainTabs_) {
         mainTabs_->SetBounds({8, 8, panelW - 16, 28});
@@ -95,7 +100,8 @@ void CreativePaletteScreen::RelayoutPanel()
         subTabs_->SetBounds({8, 40, panelW - 16, 28});
     }
     if (scroll_) {
-        scroll_->SetBounds({8, 76, panelW - 16, viewportH_ - 84});
+        const int scrollH = std::max(0, panelH - 84);
+        scroll_->SetBounds({8, 76, panelW - 16, scrollH});
         if (built_) {
             scroll_->LayoutContent();
         }
@@ -151,7 +157,7 @@ void CreativePaletteScreen::RebuildGrid()
             const GLuint tex =
                 kind_ == ContentKind::Block
                     ? icons_->GetBlockIconTexture(entryId)
-                    : icons_->GetPrefabIconTextureIfCached(entryId);
+                    : icons_->GetPrefabIconTexture(entryId);
             slot->SetIconTexture(tex);
         }
         slot->SetOnClick([this, entryId]() {

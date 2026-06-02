@@ -14,7 +14,7 @@ public:
     GuiIconSource(std::shared_ptr<TextureCubeStorage> textures,
                   std::unique_ptr<PrefabIconCache> prefabCache);
 
-    GLuint GetBlockIconTexture(const std::string& blockName) const override;
+    GLuint GetBlockIconTexture(const std::string& blockName) override;
     GLuint GetPrefabIconTexture(const std::string& prefabName) override;
     GLuint GetPrefabIconTextureIfCached(const std::string& prefabName) const override;
 

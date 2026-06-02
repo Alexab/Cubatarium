@@ -10,18 +10,21 @@ GuiIconSource::GuiIconSource(std::shared_ptr<TextureCubeStorage> textures,
 {
 }
 
-GLuint GuiIconSource::GetBlockIconTexture(const std::string& blockName) const
+GLuint GuiIconSource::GetBlockIconTexture(const std::string& blockName)
 {
-    if (!textures_ || blockName.empty()) {
+    if (!prefabCache_) {
+        if (!textures_ || blockName.empty()) {
+            return 0;
+        }
+        const auto& texMap = textures_->GetTextures();
+        for (const auto& kv : texMap) {
+            if (kv.second.GetName() == blockName) {
+                return kv.second.GetTexture();
+            }
+        }
         return 0;
     }
-    const auto& texMap = textures_->GetTextures();
-    for (const auto& kv : texMap) {
-        if (kv.second.GetName() == blockName) {
-            return kv.second.GetTexture();
-        }
-    }
-    return 0;
+    return prefabCache_->GetBlockIconTexture(blockName);
 }
 
 GLuint GuiIconSource::GetPrefabIconTexture(const std::string& prefabName)
