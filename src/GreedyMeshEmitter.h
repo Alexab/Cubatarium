@@ -65,8 +65,6 @@ inline void AppendGreedyQuad(
  corner[q.axis] += static_cast<float>(q.slice) + (q.faceSign > 0 ? 0.5f : -0.5f);
  corner[uAxis] += static_cast<float>(q.u) - 0.5f;
  corner[vAxis] += static_cast<float>(q.v) - 0.5f;
- corner += nDir * 1.0e-3f;
-
  const glm::vec3 p0 = corner;
  const glm::vec3 p1 = corner + uDir * width;
  const glm::vec3 p2 = corner + uDir * width + vDir * height;

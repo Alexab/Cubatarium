@@ -37,6 +37,17 @@ bool TerrainColumnIsEmpty(const BlockWorld& world, int worldX, int worldZ)
  return world.GetBlock(glm::ivec3(worldX, 0, worldZ)) == BLOCK_AIR;
 }
 
+void MarkChunkAndNeighborsDirty(const ChunkStreamer::MarkDirtyFn& markDirtyFn, glm::ivec3 chunkCoord)
+{
+ if (!markDirtyFn) {
+  return;
+ }
+ markDirtyFn(chunkCoord);
+ for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+  markDirtyFn(chunkCoord + offset);
+ }
+}
+
 } // namespace
 
 ChunkStreamer::ChunkStreamer(BlockWorld& world, BlockRegistry& registry, uint32_t seed,
@@ -74,9 +85,7 @@ bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
  const Chunk* existing = world_.GetChunkManager().GetChunk(chunkCoord);
  if (existing == nullptr) {
   if (loadChunkFn_ && loadChunkFn_(chunkCoord)) {
-   if (markDirtyFn_) {
-    markDirtyFn_(chunkCoord);
-   }
+   MarkChunkAndNeighborsDirty(markDirtyFn_, chunkCoord);
    return true;
   }
   if (!generateColumnFn_) {
@@ -104,9 +113,7 @@ bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   return false;
  }
 
- if (markDirtyFn_) {
-  markDirtyFn_(chunkCoord);
- }
+ MarkChunkAndNeighborsDirty(markDirtyFn_, chunkCoord);
  procedurallyGenerated_.insert(chunkCoord);
  return true;
 }
