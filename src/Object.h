@@ -1,6 +1,15 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <map>
+#include <tuple>
+#include <memory>
+#include <atomic>
+#include <string>
 #include "Cube.h"
 
 namespace cutum {
@@ -43,19 +52,19 @@ public:
 
  virtual std::vector<std::shared_ptr<Cube>>& GetCubes();
  virtual bool CheckCollision(Object &object);
- virtual bool CheckCollision(const QVector3D& position, float size = 1.0);
- virtual bool CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t>> &distance_map) const;
+ virtual bool CheckCollision(const glm::vec3& position, float size = 1.0); // QVector3D -> glm::vec3
+ virtual bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> &distance_map) const; // QVector3D -> glm::vec3
 
- QMatrix4x4 GetPose() const;
- void SetPose(const QMatrix4x4 &value);
- void SetPoseFromTranslation(const QVector3D &translation);
+ glm::mat4 GetPose() const; // QMatrix4x4 -> glm::mat4
+ void SetPose(const glm::mat4 &value); // QMatrix4x4 -> glm::mat4
+ void SetPoseFromTranslation(const glm::vec3 &translation); // QVector3D -> glm::vec3
 
 protected:
  void UpdatePose();
  void SetObjectTypeId(uint64_t value);
 protected:
  std::vector<std::shared_ptr<Cube>> Cubes;
- QMatrix4x4 Pose;
+ glm::mat4 Pose; // QMatrix4x4 -> glm::mat4
  uint64_t ObjectId;
  uint64_t ObjectTypeId;
 

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "deadbush",
+    "id":  113,
+    "textures":  [
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush"
+                 ]
+}

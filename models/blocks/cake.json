@@ -1,0 +1,12 @@
+﻿{
+    "name":  "cake",
+    "id":  98,
+    "textures":  [
+                     "cake_side",
+                     "cake_side",
+                     "cake_side",
+                     "cake_side",
+                     "cake_top",
+                     "cake_bottom"
+                 ]
+}

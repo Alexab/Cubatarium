@@ -1,0 +1,12 @@
+﻿{
+    "name":  "brewing_stand",
+    "id":  155,
+    "textures":  [
+                     "wood",
+                     "wood",
+                     "wood",
+                     "wood",
+                     "brewingStand",
+                     "brewingStand_base"
+                 ]
+}

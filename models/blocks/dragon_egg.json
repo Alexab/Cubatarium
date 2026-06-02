@@ -1,0 +1,12 @@
+﻿{
+    "name":  "dragon_egg",
+    "id":  78,
+    "textures":  [
+                     "dragonEgg",
+                     "dragonEgg",
+                     "dragonEgg",
+                     "dragonEgg",
+                     "dragonEgg",
+                     "dragonEgg"
+                 ]
+}

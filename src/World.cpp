@@ -1,30 +1,116 @@
-#include <QPainter>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QJsonArray>
-#include <QFile>
+//#include <QPainter>
+//#include <QJsonDocument>
+//#include <QJsonObject>
+//#include <QJsonValue>
+//#include <QJsonArray>
+//#include <QFile>
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
+#include <unordered_map>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
 #include "World.h"
 #include "Object.h"
 #include "ObjectStorage.h"
 #include "User.h"
+#include "Prefab.h"
+#include "PrefabUtil.h"
 #include "ViewEngine.h"
+#include "Camera.h"
+#include "BlockRaycast.h"
+#include "GridMath.h"
+#include "ProceduralConfigIO.h"
+#include "ProceduralSettings.h"
+#include "worldgen/IWorldGenPipeline.h"
+#include "worldgen/WorldGenContext.h"
+#include "worldgen/PrefabFeaturePlacer.h"
+#include "ChunkManager.h"
+#include "PlayerCapsule.h"
+#include "Cube.h"
+#include "Chunk.h"
+#include "Prefab.h"
+#include "ChunkStreamer.h"
+#include "Frustum.h"
+#include "RenderSettings.h"
+#include <map>
+#include <unordered_set>
+
+using json = nlohmann::json;
 
 namespace cutum {
+
+namespace {
+
+constexpr float kMaxReasonablePlayerY = 512.0f;
+constexpr float kMinReasonablePlayerY = -32.0f;
+
+bool HasChunkJsonFiles(const std::string& chunks_dir)
+{
+ if (!std::filesystem::exists(chunks_dir) || !std::filesystem::is_directory(chunks_dir)) {
+  return false;
+ }
+ for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
+  if (entry.path().extension() == ".json") {
+   return true;
+  }
+ }
+ return false;
+}
+
+} // namespace
+
+bool World::HasPersistedTerrainOnDisk(const std::string& world_folder_path)
+{
+ const std::string blocks_file = world_folder_path + "/blocks.json";
+ if (std::filesystem::exists(blocks_file) && std::filesystem::file_size(blocks_file) > 2) {
+  return true;
+ }
+
+ const std::string chunks_dir = world_folder_path + "/chunks";
+ if (HasChunkJsonFiles(chunks_dir)) {
+  return true;
+ }
+
+ const std::string chunks_file = world_folder_path + "/chunks.json";
+ if (!std::filesystem::exists(chunks_file)) {
+  return false;
+ }
+
+ try {
+  std::ifstream file(chunks_file);
+  if (!file.is_open()) {
+   return false;
+  }
+  const json data = json::parse(file);
+  if (data.value("storage", "") == "per_file") {
+   return false;
+  }
+  return data.contains("chunks") && data["chunks"].is_array() && !data["chunks"].empty();
+ } catch (const json::exception&) {
+  return false;
+ }
+}
 
 World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views)
  : ObjectStorageInstance(object_storage)
  , ViewInstance(views)
 {
+ if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
+  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage(),
+                                                   blockDefinitions_);
+ }
  IsIntersectionExists = false;
+ hasIntersectionBlock_ = false;
 }
 
 void World::GenerateUsers()
 {
  AddUser("Username");
- GetUser("Username")->SetActiveObjectTypeName("grass");
+ GetUser("Username")->SetActiveBlockIndex(1);
+ ApplySpawnToCamera();
 }
 
 std::string World::GetWorldName() const
@@ -37,69 +123,517 @@ void World::SetWorldName(const std::string& value)
  WorldName = value;
 }
 
-QVector3D World::GetSpawnPoint() const
+glm::vec3 World::GetSpawnPoint() const
 {
  return SpawnPoint;
 }
 
-void World::SetSpawnPoint(QVector3D value)
+void World::SetSpawnPoint(glm::vec3 value)
 {
  SpawnPoint = value;
 }
 
+void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
+{
+ worldSeed_ = seed;
+ terrainType_ = terrainType;
+ ProceduralSettings settings;
+ settings.seed = seed;
+ settings.generator = ProceduralGeneratorFromString(terrainType);
+ ResolveProceduralDefaults(settings);
+ ApplyGeneratorTierDefaults(settings);
+ SetProceduralSettings(settings);
+ if (blockRegistry_ && !streamer_) {
+  streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
+ }
+}
+
+void World::SetProceduralSettings(const ProceduralSettings& settings)
+{
+ proceduralSettings_ = settings;
+ worldSeed_ = settings.seed;
+ terrainType_ = ProceduralGeneratorToString(settings.generator);
+ if (blockRegistry_ && !streamer_) {
+  streamer_ = std::make_unique<ChunkStreamer>(blockWorld_, *blockRegistry_, worldSeed_, 0, 8);
+ }
+ RebuildWorldGenPipeline();
+}
+
+void World::RebuildWorldGenPipeline()
+{
+ if (!blockRegistry_) {
+  worldGen_.reset();
+  return;
+ }
+ WorldGenContext ctx{
+     blockWorld_,
+     *blockRegistry_,
+     proceduralSettings_,
+     prefabLibrary_,
+     &meshCache_};
+ worldGen_ = ProceduralWorldGenFactory::Create(ctx);
+}
+
+void World::SetRenderDistanceChunks(int distance)
+{
+ renderDistanceChunks_ = distance;
+ if (streamer_) {
+  streamer_->SetRenderDistance(distance);
+ }
+ meshCache_.SetRenderDistanceChunks(distance);
+}
+
+void World::InitStreamerCallbacks()
+{
+ if (!streamer_ || !blockRegistry_) {
+  return;
+ }
+ streamer_->SetRenderDistance(renderDistanceChunks_);
+ streamer_->SetEnabled(streamingEnabled_);
+ streamer_->SetWorldFolder(worldFolderPath_);
+ streamer_->SetCallbacks(
+     [this](glm::ivec3 coord) {
+      return LoadChunkFromFile(coord, worldFolderPath_) >= 0;
+     },
+     [this](glm::ivec3 coord) { SaveChunkToFile(coord, worldFolderPath_); },
+     [this](glm::ivec3 coord) { meshCache_.MarkDirty(coord); },
+     [this](int x, int z) {
+      if (!allowProceduralFill_ || !worldGen_) {
+       return;
+      }
+      worldGen_->GenerateColumn(x, z);
+     },
+     [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
+}
+
+void World::GenerateWorldBlocks()
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ if (hasPersistedSave_ || loadedFromChunkSave_) {
+  std::cerr << "GenerateWorldBlocks: skipped (persisted world on disk)" << std::endl;
+  return;
+ }
+ if (!worldGen_) {
+  RebuildWorldGenPipeline();
+ }
+ if (!worldGen_) {
+  return;
+ }
+
+ const int patchRadiusBlocks = std::max(1, renderDistanceChunks_) * CHUNK_SIZE;
+ if (streamingEnabled_) {
+  worldGen_->GenerateSpawnPatch(0, 0, patchRadiusBlocks);
+ } else {
+  worldGen_->GenerateFullPatch(0, 0, patchRadiusBlocks);
+ }
+ SpawnPoint = worldGen_->DefaultSpawnPosition(0, 0);
+
+ if (proceduralSettings_.fillFire && prefabLibrary_ && blockRegistry_) {
+  WorldGenContext ctx{blockWorld_, *blockRegistry_, proceduralSettings_, prefabLibrary_,
+                      &meshCache_};
+  ctx.ResolveBlockIds();
+  const int surfaceY = worldGen_->SurfaceYAt(8, 8);
+  PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
+ }
+}
+
+void World::SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> definitions)
+{
+ blockDefinitions_ = std::move(definitions);
+ if (blockRegistry_) {
+  blockRegistry_->SetDefinitions(blockDefinitions_);
+ } else if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage()) {
+  blockRegistry_ = std::make_unique<BlockRegistry>(ObjectStorageInstance->GetTextureCubeStorage(),
+                                                   blockDefinitions_);
+ }
+}
+
+void World::RefreshBlockRegistry()
+{
+ if (blockRegistry_) {
+  blockRegistry_->Reload();
+ }
+}
+
+void World::RebuildBlockMesh()
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ meshCache_.RebuildAll(blockWorld_, *blockRegistry_);
+ cachedBlockCount_ = blockWorld_.CountNonAir();
+ blockWorldReady_ = cachedBlockCount_ > 0;
+}
+
+bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
+{
+ if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) {
+  return false;
+ }
+ if (position.y <= kMinReasonablePlayerY || position.y > kMaxReasonablePlayerY) {
+  return false;
+ }
+ if (std::abs(position.x) > 100000.0f || std::abs(position.z) > 100000.0f) {
+  return false;
+ }
+ return true;
+}
+
+void World::SanitizeUserPosition(const std::shared_ptr<User>& user)
+{
+ if (!user) {
+  return;
+ }
+ if (!IsReasonablePlayerPosition(user->GetPosition())) {
+  user->SetPosition(SpawnPoint);
+  user->SetCameraOrientation(-90.0f, 0.0f);
+ }
+ if (std::abs(user->GetCameraPitch()) > 89.0f) {
+  user->SetCameraOrientation(user->GetCameraYaw(), 0.0f);
+ }
+}
+
+void World::ApplySpawnToCamera()
+{
+ glm::vec3 spawn = SpawnPoint;
+ const PlayerCapsule cap = PlayerCapsule::Standing();
+ while (CheckCollision(spawn, cap)) {
+  spawn.y += 0.1f;
+ }
+ SpawnPoint = spawn;
+
+ if (auto user = GetCurrentUser()) {
+  user->SetPosition(SpawnPoint);
+  user->SetCameraOrientation(-90.0f, 0.0f);
+ }
+ if (auto camera = GetCurrentUserCamera()) {
+  camera->SetPosition(SpawnPoint);
+  camera->SetOrientation(-90.0f, 0.0f);
+  return;
+ }
+ if (ViewInstance && ViewInstance->GetActiveCamera()) {
+  ViewInstance->GetActiveCamera()->SetPosition(SpawnPoint);
+  ViewInstance->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
+ }
+}
+
+std::optional<int> World::FindHighestSolidY(int x, int z) const
+{
+ if (!blockRegistry_) {
+  return std::nullopt;
+ }
+ for (int y = 255; y >= 0; --y) {
+  if (blockRegistry_->IsSolid(blockWorld_.GetBlock(glm::ivec3(x, y, z)))) {
+   return y;
+  }
+ }
+ return std::nullopt;
+}
+
+void World::EnsurePlayerOnGround()
+{
+ auto user = GetCurrentUser();
+ if (!user || !blockRegistry_) {
+  return;
+ }
+
+ std::string userName = CurrentUserName;
+ for (const auto& entry : Users) {
+  if (entry.second == user) {
+   userName = entry.first;
+   break;
+  }
+ }
+ auto camera = GetUserCamera(userName);
+ if (!camera) {
+  return;
+ }
+
+ const PlayerCapsule cap = PlayerCapsule::Standing();
+ glm::vec3 pos = user->GetPosition();
+ const glm::ivec3 column = WorldPosToBlock(pos);
+ int x = column.x;
+ int z = column.z;
+
+ std::optional<int> topY = FindHighestSolidY(x, z);
+ if (!topY) {
+  const glm::ivec3 spawnColumn = WorldPosToBlock(SpawnPoint);
+  x = spawnColumn.x;
+  z = spawnColumn.z;
+  topY = FindHighestSolidY(x, z);
+ }
+ if (!topY) {
+  ApplySpawnToCamera();
+  if (auto cam = GetUserCamera(userName)) {
+   cam->ResetVerticalPhysics();
+  }
+  return;
+ }
+
+ pos = BlockCenter(glm::ivec3(x, *topY, z));
+ pos.y = static_cast<float>(*topY) + 1.0f + cap.eyeHeight;
+ while (CheckCollision(pos, cap)) {
+  pos.y += 0.1f;
+ }
+
+ user->SetPosition(pos);
+ camera->SetPosition(pos);
+ camera->ResetVerticalPhysics();
+}
+
+void World::FinalizePlayerAfterWorldLoad()
+{
+ blockWorldReady_ = cachedBlockCount_ > 0;
+ physicsSuspendFrames_ = 3;
+
+ if (auto user = GetCurrentUser()) {
+  SanitizeUserPosition(user);
+  if (blockWorldReady_) {
+   EnsurePlayerOnGround();
+  } else {
+   ApplySpawnToCamera();
+  }
+ } else {
+  ApplySpawnToCamera();
+ }
+
+ if (auto camera = GetCurrentUserCamera()) {
+  camera->ResetVerticalPhysics();
+ }
+}
+
+void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
+{
+ if (!user) {
+  return;
+ }
+ SanitizeUserPosition(user);
+
+ std::string userName = CurrentUserName;
+ for (const auto& entry : Users) {
+  if (entry.second == user) {
+   userName = entry.first;
+   break;
+  }
+ }
+ if (auto camera = GetUserCamera(userName)) {
+  camera->SetPosition(user->GetPosition());
+  camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+ }
+}
+
 void World::Create(const std::string& world_name)
 {
- Objects.clear();
- auto plane = ObjectStorageInstance->TakeObject("terrain_plane");
- Objects.emplace_back(plane);
+ blockWorldReady_ = false;
+ hasPersistedSave_ = false;
+ loadedFromChunkSave_ = false;
+ allowProceduralFill_ = true;
+ RefreshBlockRegistry();
+ blockWorld_.Clear();
+ modifiedChunks_.clear();
+ GenerateWorldBlocks();
  WorldName = world_name;
+ allowProceduralFill_ = streamingEnabled_;
+ InitStreamerCallbacks();
+ RebuildBlockMesh();
+ FinalizePlayerAfterWorldLoad();
 }
 
 void World::Load(const std::string& world_folder_path)
 {
- std::string objects_file_name = world_folder_path+"/objects.json";
- std::string users_file_name = world_folder_path+"/users.json";
- std::string world_data_file_name = world_folder_path+"/world_data.json";
+ worldFolderPath_ = world_folder_path;
+ blockWorldReady_ = false;
+ loadedFromChunkSave_ = false;
+ blockWorld_.Clear();
+ modifiedChunks_.clear();
+
+ const std::string users_file_name = worldFolderPath_ + "/users.json";
+ const std::string world_data_file_name = worldFolderPath_ + "/world_data.json";
+ const std::string chunks_file_name = worldFolderPath_ + "/chunks.json";
+ const std::string blocks_file_name = worldFolderPath_ + "/blocks.json";
+ const std::string objects_file_name = worldFolderPath_ + "/objects.json";
+ const std::string chunks_dir = worldFolderPath_ + "/chunks";
+
+ hasPersistedSave_ = HasPersistedTerrainOnDisk(worldFolderPath_);
+ allowProceduralFill_ = !hasPersistedSave_;
 
  LoadWorldData(world_data_file_name);
  LoadUsers(users_file_name);
- LoadObjects(objects_file_name);
+
+ RefreshBlockRegistry();
+
+ int chunkFilesRead = 0;
+ size_t voxelsFromChunkFiles = 0;
+ if (std::filesystem::exists(chunks_dir)) {
+  for (const auto& entry : std::filesystem::directory_iterator(chunks_dir)) {
+   if (entry.path().extension() != ".json") {
+    continue;
+   }
+   const std::string stem = entry.path().stem().string();
+   const size_t u1 = stem.find('_');
+   const size_t u2 = stem.find('_', u1 + 1);
+   if (u1 == std::string::npos || u2 == std::string::npos) {
+    continue;
+   }
+   try {
+    const int cx = std::stoi(stem.substr(0, u1));
+    const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
+    const int cz = std::stoi(stem.substr(u2 + 1));
+    const int placed = LoadChunkFromFile(glm::ivec3(cx, cy, cz), worldFolderPath_);
+    if (placed >= 0) {
+     ++chunkFilesRead;
+     voxelsFromChunkFiles += static_cast<size_t>(placed);
+    }
+   } catch (const std::exception& e) {
+    std::cerr << "Skipping chunk file " << entry.path().string() << ": " << e.what() << std::endl;
+   }
+  }
+ } else if (std::filesystem::exists(chunks_file_name)) {
+  LoadChunks(chunks_file_name);
+  MigrateMonolithicChunksJson(chunks_file_name, worldFolderPath_);
+  chunkFilesRead = 1;
+  voxelsFromChunkFiles = blockWorld_.CountNonAir();
+ }
+
+ if (!hasPersistedSave_ && blockWorld_.CountNonAir() == 0 && std::filesystem::exists(blocks_file_name)) {
+  LoadBlocks(blocks_file_name);
+ }
+ if (!hasPersistedSave_ && blockWorld_.CountNonAir() == 0 && std::filesystem::exists(objects_file_name)) {
+  MigrateObjectsFromJson(objects_file_name);
+ }
+
+ const size_t blocksInWorld = blockWorld_.CountNonAir();
+ loadedFromChunkSave_ = hasPersistedSave_ || chunkFilesRead > 0 || voxelsFromChunkFiles > 0
+     || blocksInWorld > 0;
+ allowProceduralFill_ = streamingEnabled_;
+
+ std::cout << "World::Load: folder=" << worldFolderPath_ << std::endl;
+ std::cout << "World::Load: chunk files=" << chunkFilesRead
+           << " voxels from chunks=" << voxelsFromChunkFiles
+           << " blocks in world=" << blocksInWorld
+           << " loadedFromChunkSave=" << (loadedFromChunkSave_ ? "yes" : "no") << std::endl;
+
+ if (blocksInWorld == 0 && !loadedFromChunkSave_ && blockRegistry_) {
+  std::cout << "World::Load: empty world folder, generating procedural terrain." << std::endl;
+  GenerateWorldBlocks();
+ } else if (blocksInWorld == 0 && loadedFromChunkSave_) {
+  std::cerr << "World::Load: chunk save on disk but 0 blocks loaded — no procedural fill. "
+            << "Check models/blocks match chunk type names." << std::endl;
+ }
+
+ InitStreamerCallbacks();
+
+ RebuildBlockMesh();
+ FinalizePlayerAfterWorldLoad();
 }
 
 void World::Save(const std::string& world_folder_path)
 {
+ RefreshBlockRegistry();
  std::filesystem::create_directories(world_folder_path);
- std::string objects_file_name = world_folder_path+"/objects.json";
- std::string users_file_name = world_folder_path+"/users.json";
- std::string world_data_file_name = world_folder_path+"/world_data.json";
+ worldFolderPath_ = world_folder_path;
+ const std::string users_file_name = world_folder_path + "/users.json";
+ const std::string world_data_file_name = world_folder_path + "/world_data.json";
+ const std::string chunks_file_name = world_folder_path + "/chunks.json";
+ const std::string chunks_dir = world_folder_path + "/chunks";
 
- SaveObjects(objects_file_name);
+ std::filesystem::create_directories(chunks_dir);
+ blockWorld_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
+  SaveChunkToFile(chunk.GetCoord(), world_folder_path);
+ });
+
+ json marker;
+ marker["format_version"] = 3;
+ marker["storage"] = "per_file";
+ std::ofstream markerFile(chunks_file_name);
+ if (markerFile.is_open()) {
+  markerFile << marker.dump(4);
+ }
+
  SaveUsers(users_file_name);
  SaveWorldData(world_data_file_name);
+ modifiedChunks_.clear();
 }
 
-bool World::AddObject(const std::string type_id, const QVector3D &position)
+bool World::AddObject(const std::string type_id, const glm::vec3 &position)
 {
- auto object = ObjectStorageInstance->TakeObject(type_id);
- if(object == nullptr)
+ if (!blockRegistry_) {
   return false;
-
- object->SetPoseFromTranslation(position);
- AddObject(object);
+ }
+ const BlockId id = blockRegistry_->GetIdByTypeName(type_id);
+ if (id == BLOCK_AIR) {
+  std::cerr << "World::AddObject: Unknown block type '" << type_id << "'" << std::endl;
+  return false;
+ }
+ const glm::ivec3 blockPos = WorldPosToBlock(position);
+ if (!blockWorld_.IsAir(blockPos)) {
+  return false;
+ }
+ blockWorld_.SetBlock(blockPos, id);
+ if (blockWorld_.GetBlock(blockPos) != id) {
+  return false;
+ }
+ ++cachedBlockCount_;
+ blockWorldReady_ = true;
+ MarkBlockChunkDirty(blockPos);
  return true;
 }
 
-void World::DelObject(std::shared_ptr<Object> object)
+bool World::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos)
 {
- auto I = std::find(Objects.begin(),Objects.end(), object);
- if(I != Objects.end())
-  Objects.erase(I);
+ if (!prefabLibrary_ || !blockRegistry_) {
+  return false;
+ }
+ const Prefab* prefab = prefabLibrary_->Get(prefab_name);
+ if (!prefab) {
+  return false;
+ }
+
+ const PrefabPlacementStats stats = PlacePrefabAt(blockWorld_, *prefab, anchorWorldPos, true);
+ if (stats.placedCount == 0) {
+  return false;
+ }
+ for (const auto& voxel : prefab->voxels) {
+  const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
+  if (blockWorld_.GetBlock(worldPos) == voxel.id) {
+   MarkBlockChunkDirty(worldPos);
+  }
+ }
+ return true;
 }
 
-void World::DelObject(size_t index)
+bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const
 {
- if(index < Objects.size())
-  Objects.erase(Objects.begin() + index);
+ if (!prefabLibrary_ || !blockRegistry_) {
+  return false;
+ }
+ const Prefab* prefab = prefabLibrary_->Get(prefab_name);
+ if (!prefab) {
+  return false;
+ }
+ return CanPlacePrefabAt(blockWorld_, *prefab, anchorWorldPos);
+}
+
+std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const
+{
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
+ if (!hit) {
+  return std::nullopt;
+ }
+ glm::ivec3 normal = hit->faceNormal;
+ if (normal == glm::ivec3(0)) {
+  const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+  if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+   normal.x = toCamera.x > 0.0f ? 1 : -1;
+  } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+   normal.y = toCamera.y > 0.0f ? 1 : -1;
+  } else {
+   normal.z = toCamera.z > 0.0f ? 1 : -1;
+  }
+ }
+ return hit->blockPos + normal;
 }
 
 bool World::AddUser(const std::string &name)
@@ -111,8 +645,15 @@ bool World::AddUser(const std::string &name)
   return false;
 
  Users[name] = std::make_shared<User>();
- if(Users.size() == 1)
+ auto user = Users[name];
+ auto camera = std::make_shared<Camera>(SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ camera->SetFreeMove(false);
+ const size_t viewId = ViewInstance->AddCameraReturnId(camera);
+ user->SetViewId(viewId);
+ if(Users.size() == 1) {
   SetCurrentUserName(name);
+  ViewInstance->SetActiveCamera(viewId);
+ }
 
  return true;
 }
@@ -146,6 +687,10 @@ bool World::SetCurrentUserName(const std::string& name)
  if(Users.find(name) == Users.end())
   return false;
  CurrentUserName = name;
+ ApplyUserToCamera(GetCurrentUser());
+ if (auto user = GetCurrentUser()) {
+  ViewInstance->SetActiveCamera(user->GetViewId());
+ }
  return true;
 }
 
@@ -167,16 +712,6 @@ std::shared_ptr<Camera> World::GetCurrentUserCamera()
  return ViewInstance->GetCamera(user->GetViewId());
 }
 
-const std::vector<std::shared_ptr<Object>>& World::GetObjects() const
-{
- return Objects;
-}
-
-std::vector<std::shared_ptr<Object>>& World::GetObjects()
-{
- return Objects;
-}
-
 bool World::AddObjectByView()
 {
  return AddObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
@@ -187,411 +722,765 @@ bool World::DelObjectByView()
  return DelObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
 }
 
-void World::AddObject(std::shared_ptr<Object> object)
-{
- Objects.emplace_back(object);
-}
-
-bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& front, std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>>& distance_map) const
+bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
-
- for(size_t i=0; i<Objects.size(); i++)
- {
-  std::map<float, std::tuple<int, QVector3D, QVector3D, size_t>> object_distance_map;
-
-  if(Objects[i]->CheckRayIntersection(position, front, object_distance_map))
-  {
-   for(auto I = object_distance_map.begin(); I != object_distance_map.end(); ++I)
-   {
-    float distance = I->first;
-    distance_map[distance] = std::tuple<int, QVector3D, QVector3D, size_t, size_t>(std::get<0>(I->second),
-                                                                                   std::get<1>(I->second),
-                                                                                   std::get<2>(I->second),
-                                                                                   std::get<3>(I->second),
-                                                                                   i);
-   }
-  }
- }
-
- if(distance_map.empty())
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
+ if (!hit) {
   return false;
-
+ }
+ const glm::vec3 hitCenter = BlockCenter(hit->blockPos);
+ distance_map[hit->distance] = std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(
+     0,
+     glm::vec3(hit->faceNormal),
+     hitCenter,
+     0,
+     0);
  return true;
 }
 
-bool World::CheckRayIntersection(const QVector3D& position, const QVector3D& front, QVector3D& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
+bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
 {
- std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>> distance_map;
+ std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
- bool result = CheckRayIntersection(position, front, distance_map);
- if(result)
- {
+ const bool result = CheckRayIntersection(position, front, distance_map);
+ if (result) {
   cube_side = std::get<0>(distance_map.begin()->second);
   intersecion = std::get<2>(distance_map.begin()->second);
   distance = distance_map.begin()->first;
-  cube_index = std::get<3>(distance_map.begin()->second);
-  object_index = std::get<4>(distance_map.begin()->second);
-
+  cube_index = 0;
+  object_index = 0;
  }
-
  return result;
 }
 
-std::shared_ptr<Object> World::FindObjectByView(const QVector3D& position, const QVector3D& front)
+bool World::CheckPositionFree(const glm::vec3& position, float /*size*/) const
 {
- QVector3D intersecion;
- float distance;
- size_t cube_index;
- size_t object_index;
- int cube_side;
- if(CheckRayIntersection(position, front, intersecion, distance, cube_index, cube_side, object_index))
- {
-  return Objects[object_index];
- }
- else
-  return nullptr;
+ return blockWorld_.IsAir(WorldPosToBlock(position));
 }
 
-bool World::CheckPositionFree(const QVector3D& position, float size) const
+std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
- for(size_t j=0; j<Objects.size(); j++)
- {
-  auto& object = Objects[j];
-  if(object->CheckCollision(position, size))
-   return false;
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
+ if (!hit) {
+  return std::nullopt;
  }
- return true;
-}
 
-std::optional<QVector3D> World::FindNearestFreeCubePosition(const QVector3D& position, const QVector3D& front) const
-{
- std::optional<QVector3D> result;
-
- std::map<float, std::tuple<int, QVector3D, QVector3D, size_t, size_t>> distance_map;
-
- if(!CheckRayIntersection(position, front, distance_map))
-  return result;
-
- size_t selected_object = std::get<4>(distance_map.begin()->second);
- size_t selected_cube = std::get<3>(distance_map.begin()->second);
-
- for(auto I = distance_map.begin(); I != distance_map.end(); ++I)
- {
-  QVector3D res_position;
-
-  QVector3D intersecion = std::get<2>(I->second);
-  float distance = I->first;
-  size_t cube_index = std::get<3>(I->second);
-  size_t object_index = std::get<4>(I->second);
-  int cube_side = std::get<0>(I->second);
-
-  if(cube_index != selected_cube || object_index != selected_object)
-   continue;
-
-  auto & cube = Objects[object_index]->GetCubes()[cube_index];
-
-  switch(cube_side)
-  {
-  case CubeSide::CUBE_SIDE_LEFT:
-    res_position = cube->GetCenterPosition()+QVector3D(-1.0, 0.0, 0.0);
-  break;
-
-  case CubeSide::CUBE_SIDE_RIGHT:
-    res_position = cube->GetCenterPosition()+QVector3D(1.0, 0.0, 0.0);
-  break;
-
-  case CubeSide::CUBE_SIDE_FAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, -1.0);
-  break;
-
-  case CubeSide::CUBE_SIDE_NEAR:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 0.0, 1.0);
-  break;
-
-  case CubeSide::CUBE_SIDE_TOP:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, 1.0, 0.0);
-  break;
-
-  case CubeSide::CUBE_SIDE_BOTTOM:
-    res_position = cube->GetCenterPosition()+QVector3D(0.0, -1.0, 0.0);
-  break;
-
-  default:
-   res_position = cube->GetCenterPosition()+QVector3D(0.0, 1.0, 0.0);
-  }
-
-  if(CheckPositionFree(res_position, 1.0f))
-  {
-   if(!Cube::CheckCollision(res_position, 1.0f, position, 1.0f))
-   {
-    result = res_position;
-    break;
-   }
+ glm::ivec3 normal = hit->faceNormal;
+ if (normal == glm::ivec3(0)) {
+  const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+  if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+   normal.x = toCamera.x > 0.0f ? 1 : -1;
+  } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+   normal.y = toCamera.y > 0.0f ? 1 : -1;
+  } else {
+   normal.z = toCamera.z > 0.0f ? 1 : -1;
   }
  }
 
- return result; // TODO
+ const glm::ivec3 placePos = hit->blockPos + normal;
+ if (!blockWorld_.IsAir(placePos)) {
+  return std::nullopt;
+ }
+
+ const glm::vec3 res_position = BlockCenter(placePos);
+ if (!CheckPositionFree(res_position, 1.0f)) {
+  return std::nullopt;
+ }
+
+ constexpr float kCameraRadius = 0.3f;
+ if (Cube::CheckCollision(res_position, 1.0f, position, kCameraRadius * 2.0f)) {
+  return std::nullopt;
+ }
+
+ return res_position;
 }
 
-bool World::AddObjectByView(const QVector3D& position, const QVector3D& front)
+bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
+ auto user = GetCurrentUser();
+ if (!user) {
+  return false;
+ }
+
  auto object_pos = FindNearestFreeCubePosition(position, front);
- if(object_pos.has_value())
- {
-  auto user = GetCurrentUser();
-  if(!user)
-   return false;
-
-  if(AddObject(user->GetActiveObjectTypeName(), QVector3D(object_pos.value())))
+ if (object_pos.has_value()) {
+  if (AddObject(user->GetActiveBlockTypeName(), object_pos.value())) {
    UpdateIntersection(position, front);
+   return true;
+  }
  }
  return false;
 }
 
-bool World::DelObjectByView(const QVector3D& position, const QVector3D& front)
+bool World::PlaceActivePrefabByView()
 {
- QVector3D intersecion;
- float distance;
- size_t cube_index;
- size_t object_index;
- int cube_side;
- if(!CheckRayIntersection(position, front, intersecion, distance, cube_index, cube_side, object_index))
-  return false;
+ return PlaceActivePrefabByView(GetCurrentUserCamera()->GetPosition(),
+                                GetCurrentUserCamera()->GetFront());
+}
 
- DelObject(object_index);
+bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& front)
+{
+ auto user = GetCurrentUser();
+ if (!user) {
+  return false;
+ }
+
+ const std::string& prefabName = user->GetActivePrefabName();
+ if (prefabName.empty()) {
+  return false;
+ }
+
+ const auto anchor = FindPrefabAnchorFromView(position, front);
+ if (!anchor.has_value()) {
+  return false;
+ }
+ if (PlacePrefab(prefabName, anchor.value())) {
+  UpdateIntersection(position, front);
+  return true;
+ }
+ return false;
+}
+
+bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
+{
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
+ if (!hit) {
+  return false;
+ }
+ blockWorld_.SetBlock(hit->blockPos, BLOCK_AIR);
+ if (cachedBlockCount_ > 0) {
+  --cachedBlockCount_;
+ }
+ MarkBlockChunkDirty(hit->blockPos);
  UpdateIntersection(position, front);
  return true;
 }
 
 
-bool World::CheckCollision(const QVector3D& position, float size) const
+bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
 {
- for(auto & object : Objects)
- {
-  if(object->CheckCollision(position, size))
-   return true;
+ if (!blockRegistry_) {
+  return false;
+ }
+ const glm::ivec3 cell = WorldPosToBlock(eye);
+ const BlockId id = blockWorld_.GetBlock(cell);
+ if (id == BLOCK_AIR || blockRegistry_->BlocksMovement(id)) {
+  return false;
+ }
+ const glm::vec3 center = BlockCenter(cell);
+ const glm::vec3 rel = eye - center;
+ if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f || std::abs(rel.z) > 0.5f) {
+  return false;
+ }
+ if (outFluid) {
+  *outFluid = id;
+ }
+ return true;
+}
+
+World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
+                                                   const PlayerCapsule& cap) const
+{
+ SampledFluidState state;
+ if (!blockRegistry_) {
+  return state;
+ }
+ std::unordered_map<BlockId, int> fluidWeights;
+ const glm::vec3 center = cap.centerFromEye(eyePos);
+ const glm::vec3 half = cap.halfExtents();
+ const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
+ const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
+ const glm::vec3 blockHalf(0.5f);
+ for (int dx = -radius; dx <= radius; ++dx) {
+  for (int dy = -radius; dy <= radius; ++dy) {
+   for (int dz = -radius; dz <= radius; ++dz) {
+    const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
+    const BlockId id = blockWorld_.GetBlock(blockPos);
+    if (id == BLOCK_AIR || blockRegistry_->BlocksMovement(id)) {
+     continue;
+    }
+    const glm::vec3 blockCenter = BlockCenter(blockPos);
+    if (!Cube::CheckAabbCollision(center, half, blockCenter, blockHalf)) {
+     continue;
+    }
+    const auto& mov = blockRegistry_->Physics(id).movement;
+    state.inFluid = true;
+    fluidWeights[id] += 1;
+    state.dragHorizontal = std::max(state.dragHorizontal, mov.dragHorizontal);
+    state.sinkSpeed = std::max(state.sinkSpeed, mov.sinkSpeed);
+    state.riseSpeed = std::max(state.riseSpeed, mov.riseSpeed);
+   }
+  }
+ }
+ if (state.inFluid) {
+  state.blendWeight = 1.0f;
+  int bestWeight = 0;
+  for (const auto& entry : fluidWeights) {
+   if (entry.second > bestWeight) {
+    bestWeight = entry.second;
+    state.dominantFluid = entry.first;
+   }
+  }
+ }
+ return state;
+}
+
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const glm::vec3 center = cap.centerFromEye(eyePos);
+ const glm::vec3 half = cap.halfExtents();
+ const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
+ const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
+ const glm::vec3 blockHalf(0.5f);
+ for (int dx = -radius; dx <= radius; ++dx) {
+  for (int dy = -radius; dy <= radius; ++dy) {
+   for (int dz = -radius; dz <= radius; ++dz) {
+    const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
+    const BlockId id = blockWorld_.GetBlock(blockPos);
+    if (!blockRegistry_->BlocksMovement(id)) {
+     continue;
+    }
+    const glm::vec3 blockCenter = BlockCenter(blockPos);
+    if (Cube::CheckAabbCollision(center, half, blockCenter, blockHalf)) {
+     return true;
+    }
+   }
+  }
  }
  return false;
 }
 
+bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const float feetY = cap.feetY(eyePos);
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const glm::ivec3 standCell(
+     static_cast<int>(std::floor(eyePos.x)),
+     supportY,
+     static_cast<int>(std::floor(eyePos.z)));
+ return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
+}
+
+namespace {
+
+constexpr float kCollisionMaxStep = 0.25f;
+constexpr float kCollisionEpsilon = 0.01f;
+constexpr int kCollisionMaxIterations = 64;
+
+glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float axisDelta,
+                              int axis, const PlayerCapsule& cap)
+{
+ if (std::abs(axisDelta) < 1e-8f) {
+  return from;
+ }
+ const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
+ float remaining = std::abs(axisDelta);
+ glm::vec3 pos = from;
+ glm::vec3 axisUnit(0.0f);
+ axisUnit[axis] = 1.0f;
+
+ int iterations = 0;
+ while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
+  const float step = std::min(remaining, kCollisionMaxStep);
+  const glm::vec3 next = pos + axisUnit * step * sign;
+  if (world.CheckCollision(next, cap)) {
+   glm::vec3 lo = pos;
+   glm::vec3 hi = next;
+   for (int i = 0; i < 8; ++i) {
+    const glm::vec3 mid = (lo + hi) * 0.5f;
+    if (world.CheckCollision(mid, cap)) {
+     hi = mid;
+    } else {
+     lo = mid;
+    }
+   }
+   // Do not push upward when landing — that caused float above floor and Y jitter.
+   if (axis == 1 && sign < 0.0f) {
+    pos = lo;
+   } else {
+    pos = lo - axisUnit * kCollisionEpsilon * sign;
+   }
+   break;
+  }
+  pos = next;
+  remaining -= step;
+  ++iterations;
+ }
+ return pos;
+}
+
+} // namespace
+
+glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
+                                 const PlayerCapsule& cap) const
+{
+ if (glm::dot(delta, delta) < 1e-10f) {
+  return eyePos;
+ }
+ glm::vec3 pos = eyePos;
+ pos = ResolveMovementAxis(*this, pos, delta.y, 1, cap);
+ pos = ResolveMovementAxis(*this, pos, delta.x, 0, cap);
+ pos = ResolveMovementAxis(*this, pos, delta.z, 2, cap);
+ return pos;
+}
+
+namespace {
+
+glm::vec3 StepStandPosition(const glm::ivec3& stepCell, const PlayerCapsule& cap)
+{
+ const float feetY = static_cast<float>(stepCell.y) + 1.0f;
+ return glm::vec3(static_cast<float>(stepCell.x), feetY + cap.eyeHeight,
+                  static_cast<float>(stepCell.z));
+}
+
+bool FindSteppableLedge(const World& world, const BlockWorld& blockWorld,
+                        const BlockRegistry& registry, const glm::vec3& eyePos,
+                        const glm::vec3& dir, const PlayerCapsule& cap, glm::ivec3& outStepCell)
+{
+ const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
+ const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
+ if (dx == 0 && dz == 0) {
+  return false;
+ }
+ const float feetY = cap.feetY(eyePos);
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const glm::ivec3 standCell(
+     static_cast<int>(std::floor(eyePos.x)),
+     supportY,
+     static_cast<int>(std::floor(eyePos.z)));
+ if (!registry.BlocksMovement(blockWorld.GetBlock(standCell))) {
+  return false;
+ }
+ const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
+ if (!registry.BlocksMovement(blockWorld.GetBlock(stepCell))) {
+  return false;
+ }
+ const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
+ if (world.CheckCollision(landingEye, cap)) {
+  return false;
+ }
+ outStepCell = stepCell;
+ return true;
+}
+
+float DistanceToStepRiser(const glm::vec3& eyePos, const glm::ivec3& stepCell,
+                          const glm::vec3& dir, const PlayerCapsule& cap)
+{
+ const glm::vec3 blockCenter(static_cast<float>(stepCell.x), static_cast<float>(stepCell.y),
+                             static_cast<float>(stepCell.z));
+ const glm::vec3 facePoint = blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
+ const glm::vec3 playerLead =
+     eyePos + glm::vec3(dir.x * cap.halfWidth, 0.0f, dir.z * cap.halfWidth);
+ return glm::dot(facePoint - playerLead, dir);
+}
+
+} // namespace
+
+World::StepUpProbe World::ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& horiz,
+                                      const PlayerCapsule& cap,
+                                      float maxTriggerDistance) const
+{
+ StepUpProbe probe{};
+ if (!blockRegistry_) {
+  return probe;
+ }
+ const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
+ const float horizLen = glm::length(horizFlat);
+ if (horizLen < 1e-6f) {
+  return probe;
+ }
+ const glm::vec3 dir = horizFlat / horizLen;
+ glm::ivec3 stepCell(0);
+ if (!FindSteppableLedge(*this, blockWorld_, *blockRegistry_, eyePos, dir, cap, stepCell)) {
+  return probe;
+ }
+ const float dist = DistanceToStepRiser(eyePos, stepCell, dir, cap);
+ if (dist < -0.02f || dist > maxTriggerDistance) {
+  return probe;
+ }
+ probe.valid = true;
+ probe.distanceToLedge = dist;
+ probe.moveDir = dir;
+ probe.targetPos = StepStandPosition(stepCell, cap);
+ return probe;
+}
+
+bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
+                             const PlayerCapsule& cap, float maxTriggerDistance,
+                             glm::vec3& outLanding) const
+{
+ const StepUpProbe probe = ProbeStepUp(eyePos, horiz, cap, maxTriggerDistance);
+ if (!probe.valid) {
+  return false;
+ }
+ glm::ivec3 stepCell(0);
+ const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
+ const float horizLen = glm::length(horizFlat);
+ if (horizLen < 1e-6f) {
+  return false;
+ }
+ const glm::vec3 dir = horizFlat / horizLen;
+ if (!FindSteppableLedge(*this, blockWorld_, *blockRegistry_, eyePos, dir, cap, stepCell)) {
+  return false;
+ }
+ const glm::ivec3 feetCell = WorldPosToBlock(
+     glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
+ if (feetCell.x == stepCell.x && feetCell.z == stepCell.z && feetCell.y >= stepCell.y) {
+  return false;
+ }
+
+ outLanding = probe.targetPos
+              - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
+ if (!CheckCollision(outLanding, cap)) {
+  return true;
+ }
+
+ glm::vec3 resolved = eyePos;
+ const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
+ resolved = ResolveMovement(eyePos, stepDelta, cap);
+ const float movedH = glm::length(glm::vec2(resolved.x - eyePos.x, resolved.z - eyePos.z));
+ if (movedH < 0.08f || CheckCollision(resolved, cap)) {
+  return false;
+ }
+ outLanding = resolved;
+ return true;
+}
+
+bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
+                      float maxTriggerDistance) const
+{
+ glm::vec3 landing = eyePos;
+ if (!GetStepUpLanding(eyePos, horiz, cap, maxTriggerDistance, landing)) {
+  return false;
+ }
+ eyePos = landing;
+ return true;
+}
+
 void World::LoadUsers(const std::string &file_name)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+ } else {
+     std::cerr << "Failed to open users file: " << file_name << std::endl;
+     return;
+ }
 
- Users.clear();
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- for(auto I = sett2.begin() ; I != sett2.end(); ++I)
- {
-  auto user_name = std::string(I.key().toLocal8Bit());
-  auto user_data = I.value();
+ try {
+     Users.clear();
+     json d = json::parse(val);
+     for(auto I = d.begin() ; I != d.end(); ++I)
+     {
+      const auto user_name = I.key();
+      const auto user_data = I.value();
 
-  auto position_object=user_data.toObject();
-  auto position_value = position_object.value(QString("position"));
+      AddUser(user_name);
+      auto user = GetUser(user_name);
+      if (!user) {
+       continue;
+      }
 
-  if(position_value.isUndefined())
-    continue;
+      glm::vec3 position = SpawnPoint;
+      const auto position_value = user_data.value("position", json::array());
+      if (position_value.is_array() && position_value.size() == 3) {
+       position = glm::vec3(position_value[0].get<float>(),
+                            position_value[1].get<float>(),
+                            position_value[2].get<float>());
+      }
+      user->SetPosition(position);
+      SanitizeUserPosition(user);
 
-  if(!position_value.isArray())
-   continue;
+      float yaw = -90.0f;
+      float pitch = 0.0f;
+      if (user_data.contains("yaw")) {
+       yaw = user_data["yaw"].get<float>();
+      }
+      if (user_data.contains("pitch")) {
+       pitch = user_data["pitch"].get<float>();
+      }
+      user->SetCameraOrientation(yaw, pitch);
 
-  auto position_array = position_value.toArray();
-  if(position_array.size() != 3)
-   continue;
-
-  QVector3D position(position_array[0].toDouble(),
-                        position_array[1].toDouble(),
-                        position_array[2].toDouble());
-
-  AddUser(user_name);
-  //GetUser(user_name)->SetPosition();
+      if (auto camera = GetUserCamera(user_name)) {
+       camera->SetPosition(position);
+       camera->SetOrientation(yaw, pitch);
+      }
+     }
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error in LoadUsers: " << e.what() << std::endl;
  }
 }
 
 void World::SaveUsers(const std::string &file_name)
 {
- QJsonObject objects;
+ json objects;
 
  for(auto I=Users.begin(); I!=Users.end(); ++I)
  {
-  auto user_name = I->first;
-  auto user_data = I->second;
+  const auto& user_name = I->first;
+  auto user = I->second;
 
-  QVector3D position(0.0f, 0.0f, 0.0f);
+  glm::vec3 position = user->GetPosition();
+  float yaw = user->GetCameraYaw();
+  float pitch = user->GetCameraPitch();
+  if (user_name == CurrentUserName) {
+   if (auto camera = GetUserCamera(user_name)) {
+    position = camera->GetPosition();
+    yaw = camera->GetYaw();
+    pitch = camera->GetPitch();
+    user->SetPosition(position);
+    user->SetCameraOrientation(yaw, pitch);
+   }
+  }
 
-  QJsonArray arr;
-  arr.append(QJsonValue(position.x()));
-  arr.append(QJsonValue(position.y()));
-  arr.append(QJsonValue(position.z()));
+  json user_json;
+  user_json["position"] = json::array({position.x, position.y, position.z});
+  user_json["yaw"] = yaw;
+  user_json["pitch"] = pitch;
 
-  QJsonObject user;
-  user.insert("position", arr);
-
-  objects.insert(user_name.c_str(),user);
+  objects[user_name] = user_json;
  }
 
- QJsonDocument jsonDoc;
- jsonDoc.setObject(objects);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
-}
-
-void World::LoadObjects(const std::string &file_name)
-{
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
-
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonArray objects = d.array();
-
- Objects.clear();
- for(int i =0; i<objects.size();i++)
- {
-  auto object_data = objects[i].toObject();
-
-  auto id_value=object_data.value("id");
-  auto type_name_value=object_data.value("type_name");
-  auto position_value = object_data.value(QString("position"));
-
-  if(id_value.isUndefined() || type_name_value.isUndefined() || position_value.isUndefined())
-   continue;
-
-  if(!position_value.isArray())
-   continue;
-
-  auto position_array = position_value.toArray();
-  if(position_array.size() != 3)
-   continue;
-
-  QVector3D position(position_array[0].toDouble(),
-                        position_array[1].toDouble(),
-                        position_array[2].toDouble());
-
-  std::string object_type_name = type_name_value.toString().toLocal8Bit();
-  AddObject(object_type_name, position);
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+     file << objects.dump(4);
+     file.close();
  }
-}
-
-void World::SaveObjects(const std::string &file_name)
-{
- QJsonArray objects;
-
- for(auto & object : Objects)
- {
-
-  auto pose = object->GetPose();
-  QVector3D position(pose(0,3), pose(1,3), pose(2,3));
-
-  QJsonArray arr;
-  arr.append(QJsonValue(position.x()));
-  arr.append(QJsonValue(position.y()));
-  arr.append(QJsonValue(position.z()));
-
-  QJsonObject obj;
-  obj.insert("id", QJsonValue(int(object->GetObjectId())));
-  obj.insert("type_name", QJsonValue(ObjectStorageInstance->GetObjectTypeName(object->GetObjectTypeId()).c_str()));
-  obj.insert("position", arr);
-
-  objects.append(obj);
- }
-
- QJsonDocument jsonDoc;
- jsonDoc.setArray(objects);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
 }
 
 void World::LoadWorldData(const std::string &file_name)
 {
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::ReadOnly | QIODevice::Text);
- val = file.readAll();
- file.close();
- qWarning() << val;
- QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
- QJsonObject sett2 = d.object();
- QJsonValue world_name_value = sett2.value(QString("world_name"));
- QJsonValue spawn_point_value = sett2.value(QString("spawn_point"));
+ std::string val;
+ std::ifstream file(file_name);
+ if (file.is_open()) {
+     std::stringstream buffer;
+     buffer << file.rdbuf();
+     val = buffer.str();
+     file.close();
+     
+ } else {
+     std::cerr << "Failed to open world data file: " << file_name << std::endl;
+     return;
+ }
 
- if(world_name_value.isUndefined() || spawn_point_value.isUndefined())
-  return;
+ try {
+     json d = json::parse(val);
+     std::string world_name_value = d.value("world_name", "");
+     json spawn_point_value = d.value("spawn_point", json::array());
 
- if(!world_name_value.isString())
-  return;
- std::string name = world_name_value.toString().toLocal8Bit();
+     if(world_name_value.empty() || spawn_point_value.empty())
+      return;
 
- if(!spawn_point_value.isArray())
-  return;
+     if(!spawn_point_value.is_array())
+      return;
 
- auto spawn_point_array = spawn_point_value.toArray();
- if(spawn_point_array.size() != 3)
-  return;
+     if(spawn_point_value.size() != 3)
+      return;
 
- QVector3D spawn_point(spawn_point_array[0].toDouble(),
-                       spawn_point_array[1].toDouble(),
-                       spawn_point_array[2].toDouble());
+     glm::vec3 spawn_point(spawn_point_value[0].get<float>(),
+                           spawn_point_value[1].get<float>(),
+                           spawn_point_value[2].get<float>());
 
- WorldName = name;
- SpawnPoint = spawn_point;
+     WorldName = world_name_value;
+     SpawnPoint = spawn_point;
+
+     if (d.contains("terrain") && d["terrain"].is_string()) {
+      terrainType_ = d["terrain"].get<std::string>();
+     }
+     if (d.contains("world_seed")) {
+      worldSeed_ = d["world_seed"].get<uint32_t>();
+     }
+     if (d.contains("procedural") && d["procedural"].is_object()) {
+      proceduralSettings_ = ParseProceduralSettings(d);
+      terrainType_ = ProceduralGeneratorToString(proceduralSettings_.generator);
+      worldSeed_ = proceduralSettings_.seed;
+     } else {
+      proceduralSettings_.seed = worldSeed_;
+      proceduralSettings_.generator = ProceduralGeneratorFromString(terrainType_);
+      ResolveProceduralDefaults(proceduralSettings_);
+      ApplyGeneratorTierDefaults(proceduralSettings_);
+     }
+     RebuildWorldGenPipeline();
+ } catch (const json::exception& e) {
+     std::cerr << "JSON parsing error in LoadWorldData: " << e.what() << std::endl;
+ }
 }
 
 void World::SaveWorldData(const std::string &file_name)
 {
- QJsonObject world_data;
+ json world_data;
 
- world_data.insert("world_name", QJsonValue(WorldName.c_str()));
+ world_data["world_name"] = WorldName;
+ world_data["terrain"] = terrainType_;
+ world_data["world_seed"] = worldSeed_;
+ WriteProceduralSettings(world_data, proceduralSettings_);
 
- QJsonArray arr;
- arr.append(QJsonValue(SpawnPoint.x()));
- arr.append(QJsonValue(SpawnPoint.y()));
- arr.append(QJsonValue(SpawnPoint.z()));
- world_data.insert("spawn_point", arr);
+ json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
+ world_data["spawn_point"] = arr;
 
- QJsonDocument jsonDoc;
- jsonDoc.setObject(world_data);
- QString val;
- QFile file;
- file.setFileName(file_name.c_str());
- file.open(QIODevice::WriteOnly | QIODevice::Text);
- file.resize(0);
- val = file.write(jsonDoc.toJson());
- file.close();
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+     file << world_data.dump(4);
+     file.close();
+ }
 }
 
 
 void World::DoMovement()
 {
- bool is_moved=GetCurrentUserCamera()->DoMovement(this);
+ if (!blockWorldReady_) {
+  return;
+ }
+ if (physicsSuspendFrames_ > 0) {
+  --physicsSuspendFrames_;
+  return;
+ }
 
- if(is_moved)
-   UpdateIntersection(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
+ auto t_begin = std::chrono::high_resolution_clock::now();
+
+ auto camera = GetCurrentUserCamera();
+ const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
+
+ if (camera && streamer_ && streamingEnabled_) {
+  const glm::vec3 playerPos = camera->GetPosition();
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
+  const glm::ivec3 feetBlock = WorldPosToBlock(
+      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
+  streamer_->EnsureCollisionChunks(feetBlock);
+ }
+
+ bool is_moved = camera && camera->DoMovement(this);
+
+ if (camera) {
+  UpdateStreaming();
+  blockWorldReady_ = true;
+ }
+
+ if(is_moved && camera)
+ {
+  if (auto user = GetCurrentUser()) {
+   user->SetPosition(camera->GetPosition());
+   user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
+  }
+  UpdateIntersection(camera->GetPosition(), camera->GetFront());
+ }
+
+ auto t_end = std::chrono::high_resolution_clock::now();
+ DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+ UpdateMovementDiagnostics(camera, prevPlayerY);
 }
 
-void World::UpdateIntersection(const QVector3D& position, const QVector3D& front)
+void World::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY)
 {
- IsIntersectionExists=CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
+ movementDiagnostics_ = MovementDiagnostics{};
+ if (!camera) {
+  return;
+ }
+
+ const glm::vec3 playerPos = camera->GetPosition();
+ const PlayerCapsule cap = camera->GetPlayerCapsule();
+ movementDiagnostics_.feetBlock = WorldPosToBlock(
+     glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
+ movementDiagnostics_.feetChunk = ChunkManager::WorldToChunk(movementDiagnostics_.feetBlock);
+ movementDiagnostics_.feetChunkLoaded = blockWorld_.GetChunkManager().HasChunk(movementDiagnostics_.feetChunk);
+ movementDiagnostics_.feetIsAir = blockWorld_.IsAir(movementDiagnostics_.feetBlock);
+ movementDiagnostics_.meshDrawCount = GetRenderInstanceCount();
+ movementDiagnostics_.deltaTime = camera->GetDeltaTime();
+
+ if (hasLastPlayerY_) {
+  movementDiagnostics_.playerYDrop = prevPlayerY - playerPos.y;
+ } else {
+  movementDiagnostics_.playerYDrop = 0.0f;
+ }
+ hasLastPlayerY_ = true;
+ lastPlayerY_ = playerPos.y;
+
+ if (streamer_) {
+  const auto& stats = streamer_->GetLastFrameStats();
+  movementDiagnostics_.streamingLoads = stats.loadsThisFrame;
+  movementDiagnostics_.streamingUnloads = stats.unloadsThisFrame;
+  for (const glm::ivec3& coord : stats.unloadedCoords) {
+   if (coord == movementDiagnostics_.feetChunk) {
+    movementDiagnostics_.feetInUnloadList = true;
+    break;
+   }
+  }
+ }
+
+ const double frameMs = (DurationDoMovementMks + (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) / 1000.0;
+ movementDiagnostics_.hitchDetected = frameMs > 50.0 || movementDiagnostics_.deltaTime > 0.1f;
+ movementDiagnostics_.fallThroughSuspected =
+     movementDiagnostics_.playerYDrop > 2.0f &&
+     (movementDiagnostics_.feetIsAir || !movementDiagnostics_.feetChunkLoaded) &&
+     movementDiagnostics_.meshDrawCount > 0;
+
+ if (movementDiagnostics_.hitchDetected || movementDiagnostics_.fallThroughSuspected ||
+     movementDiagnostics_.playerYDrop > 2.0f) {
+  std::cerr << "[movement-debug] cameraDt=" << movementDiagnostics_.deltaTime
+            << " frameMs=" << frameMs
+            << " yDrop=" << movementDiagnostics_.playerYDrop
+            << " feetChunk=(" << movementDiagnostics_.feetChunk.x << ","
+            << movementDiagnostics_.feetChunk.y << "," << movementDiagnostics_.feetChunk.z << ")"
+            << " hasChunk=" << movementDiagnostics_.feetChunkLoaded
+            << " feetAir=" << movementDiagnostics_.feetIsAir
+            << " meshDraw=" << movementDiagnostics_.meshDrawCount
+            << " loads=" << movementDiagnostics_.streamingLoads
+            << " unloads=" << movementDiagnostics_.streamingUnloads
+            << " feetUnloaded=" << movementDiagnostics_.feetInUnloadList
+            << std::endl;
+ }
+}
+
+void World::UpdateStreaming()
+{
+ if (!streamer_ || !streamingEnabled_) {
+  return;
+ }
+ if (auto camera = GetCurrentUserCamera()) {
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
+  streamer_->Update(
+      WorldPosToBlock(camera->GetPosition()),
+      camera->GetPosition(),
+      cap);
+ }
+}
+
+size_t World::GetRenderInstanceCount() const
+{
+ if (renderSettings_.greedyMeshing) {
+  return meshCache_.GetGreedyVertexCount();
+ }
+ return meshCache_.GetInstanceCount();
+}
+
+void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
+{
+ IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
+ const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
+ hasIntersectionBlock_ = hit.has_value();
+ if (hit) {
+  intersectionBlockPos_ = hit->blockPos;
+ } else {
+  intersectionBlockPos_ = glm::ivec3(0);
+ }
+
+ if (auto user = GetCurrentUser()) {
+  if (auto camera = GetCurrentUserCamera()) {
+   user->SetPosition(camera->GetPosition());
+   user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
+  }
+ }
 }
 
 bool World::GetIsIntersectionExists() const
@@ -607,6 +1496,360 @@ size_t World::GetIntersectionObjectIndex() const
 size_t World::GetIntersectionCubeIndex() const
 {
  return IntersectionCubeIndex;
+}
+
+uint64_t World::GetDurationDoMovementMks() const
+{
+ return DurationDoMovementMks;
+}
+
+void World::InvalidateBlockMesh()
+{
+ if (blockRegistry_) {
+  meshCache_.MarkAllDirtyFromWorld(blockWorld_);
+ }
+}
+
+void World::SetRenderSettings(const RenderSettings& settings)
+{
+ renderSettings_ = settings;
+ meshCache_.SetRenderSettings(settings);
+}
+
+const std::vector<FaceInstance>& World::GetBlockRenderInstances()
+{
+ if (blockRegistry_ && meshCache_.HasPendingDirty()) {
+  const int rebuildBudget = renderSettings_.greedyMeshing ? 128 : 32;
+  meshCache_.RebuildDirtyChunks(blockWorld_, *blockRegistry_, rebuildBudget);
+  if (!meshCache_.HasPendingDirty()) {
+   cachedBlockCount_ = blockWorld_.CountNonAir();
+  }
+ }
+ if (auto camera = GetCurrentUserCamera()) {
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 vp = proj * view;
+  meshCache_.UpdateVisibleInstances(
+      Frustum::FromViewProjection(vp), vp, camera->GetPosition());
+ }
+ return meshCache_.GetFaceInstances();
+}
+
+const std::vector<GreedyMeshBatch>& World::GetGreedyRenderBatches()
+{
+ GetBlockRenderInstances();
+ return meshCache_.GetGreedyBatches();
+}
+
+size_t World::GetGreedyVertexCount() const
+{
+ return meshCache_.GetGreedyVertexCount();
+}
+
+uint64_t World::GetMeshRevision() const
+{
+ return meshCache_.GetMeshRevision();
+}
+
+uint64_t World::GetCullRevision() const
+{
+ return meshCache_.GetCullRevision();
+}
+
+void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
+{
+ const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(blockPos);
+ modifiedChunks_.insert(chunkCoord);
+
+ if (blockRegistry_) {
+  meshCache_.RebuildChunkImmediate(blockWorld_, *blockRegistry_, chunkCoord);
+  for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+   meshCache_.RebuildChunkImmediate(
+       blockWorld_, *blockRegistry_, ChunkManager::WorldToChunk(blockPos + offset));
+  }
+ } else {
+  meshCache_.MarkDirty(chunkCoord);
+  for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
+   meshCache_.MarkDirty(ChunkManager::WorldToChunk(blockPos + offset));
+  }
+ }
+}
+
+void World::LoadBlocks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json data = json::parse(file);
+  const json& blocks = data.at("blocks");
+  for (const auto& entry : blocks) {
+   const int x = entry.at("x").get<int>();
+   const int y = entry.at("y").get<int>();
+   const int z = entry.at("z").get<int>();
+   const std::string type = entry.at("type").get<std::string>();
+   const BlockId id = blockRegistry_->GetIdByTypeName(type);
+   if (id != BLOCK_AIR) {
+    blockWorld_.SetBlock(glm::ivec3(x, y, z), id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadBlocks: " << e.what() << std::endl;
+ }
+}
+
+void World::SaveBlocks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ json data;
+ data["format_version"] = 1;
+ json blocks = json::array();
+ blockWorld_.ForEachBlock([&](glm::ivec3 pos, BlockId id) {
+  const std::string& type = blockRegistry_->GetTypeNameById(id);
+  if (type.empty()) {
+   return;
+  }
+  blocks.push_back({
+      {"x", pos.x},
+      {"y", pos.y},
+      {"z", pos.z},
+      {"type", type},
+  });
+ });
+ data["blocks"] = blocks;
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+void World::LoadChunks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json data = json::parse(file);
+  if (data.value("storage", "") == "per_file") {
+   return;
+  }
+  if (!data.contains("chunks") || !data["chunks"].is_array()) {
+   return;
+  }
+  for (const auto& chunkEntry : data["chunks"]) {
+   const int cx = chunkEntry.at("cx").get<int>();
+   const int cy = chunkEntry.at("cy").get<int>();
+   const int cz = chunkEntry.at("cz").get<int>();
+   const glm::ivec3 chunkCoord(cx, cy, cz);
+   for (const auto& voxel : chunkEntry.at("voxels")) {
+    const int lx = voxel.at("lx").get<int>();
+    const int ly = voxel.at("ly").get<int>();
+    const int lz = voxel.at("lz").get<int>();
+    const std::string type = voxel.at("type").get<std::string>();
+    const BlockId id = blockRegistry_->GetIdByTypeName(type);
+    if (id == BLOCK_AIR) {
+     continue;
+    }
+    const glm::ivec3 worldPos(
+        cx * CHUNK_SIZE + lx,
+        cy * CHUNK_SIZE + ly,
+        cz * CHUNK_SIZE + lz);
+    blockWorld_.SetBlock(worldPos, id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadChunks: " << e.what() << std::endl;
+ }
+}
+
+void World::SaveChunks(const std::string& file_name)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ json data;
+ data["format_version"] = 2;
+ data["chunk_size"] = CHUNK_SIZE;
+ json chunks = json::array();
+
+ std::map<std::string, json> chunkMap;
+ blockWorld_.ForEachBlock([&](glm::ivec3 worldPos, BlockId id) {
+  const std::string& type = blockRegistry_->GetTypeNameById(id);
+  if (type.empty()) {
+   return;
+  }
+  const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(worldPos);
+  const glm::ivec3 local = ChunkManager::WorldToLocal(worldPos);
+  const std::string key = std::to_string(chunkCoord.x) + "," + std::to_string(chunkCoord.y) + "," + std::to_string(chunkCoord.z);
+  if (chunkMap.find(key) == chunkMap.end()) {
+   chunkMap[key] = json::object({
+       {"cx", chunkCoord.x},
+       {"cy", chunkCoord.y},
+       {"cz", chunkCoord.z},
+       {"voxels", json::array()},
+   });
+  }
+  chunkMap[key]["voxels"].push_back({
+      {"lx", local.x},
+      {"ly", local.y},
+      {"lz", local.z},
+      {"type", type},
+  });
+ });
+
+ for (auto& entry : chunkMap) {
+  chunks.push_back(std::move(entry.second));
+ }
+ data["chunks"] = chunks;
+
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+void World::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ const Chunk* chunk = blockWorld_.GetChunkManager().GetChunk(chunkCoord);
+ if (!chunk) {
+  return;
+ }
+
+ json data;
+ data["format_version"] = 2;
+ data["cx"] = chunkCoord.x;
+ data["cy"] = chunkCoord.y;
+ data["cz"] = chunkCoord.z;
+ json voxels = json::array();
+
+ for (int z = 0; z < CHUNK_SIZE; ++z) {
+  for (int y = 0; y < CHUNK_SIZE; ++y) {
+   for (int x = 0; x < CHUNK_SIZE; ++x) {
+    const glm::ivec3 local(x, y, z);
+    const BlockId id = chunk->GetBlockLocal(local);
+    if (id == BLOCK_AIR) {
+     continue;
+    }
+    const std::string& type = blockRegistry_->GetTypeNameById(id);
+    if (type.empty()) {
+     continue;
+    }
+    voxels.push_back({
+        {"lx", x},
+        {"ly", y},
+        {"lz", z},
+        {"type", type},
+    });
+   }
+  }
+ }
+
+ data["voxels"] = voxels;
+ const std::string chunks_dir = world_folder + "/chunks";
+ std::filesystem::create_directories(chunks_dir);
+ const std::string file_name = chunks_dir + "/" +
+     std::to_string(chunkCoord.x) + "_" +
+     std::to_string(chunkCoord.y) + "_" +
+     std::to_string(chunkCoord.z) + ".json";
+ std::ofstream file(file_name);
+ if (file.is_open()) {
+  file << data.dump(4);
+ }
+}
+
+int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+{
+ if (!blockRegistry_) {
+  return -1;
+ }
+ const std::string file_name = world_folder + "/chunks/" +
+     std::to_string(chunkCoord.x) + "_" +
+     std::to_string(chunkCoord.y) + "_" +
+     std::to_string(chunkCoord.z) + ".json";
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return -1;
+ }
+
+ try {
+  json data = json::parse(file);
+  int placed = 0;
+  for (const auto& voxel : data.at("voxels")) {
+   const int lx = voxel.at("lx").get<int>();
+   const int ly = voxel.at("ly").get<int>();
+   const int lz = voxel.at("lz").get<int>();
+   const std::string type = voxel.at("type").get<std::string>();
+   const BlockId id = blockRegistry_->GetIdByTypeName(type);
+   if (id == BLOCK_AIR) {
+    continue;
+   }
+   const glm::ivec3 worldPos(
+       chunkCoord.x * CHUNK_SIZE + lx,
+       chunkCoord.y * CHUNK_SIZE + ly,
+       chunkCoord.z * CHUNK_SIZE + lz);
+   blockWorld_.SetBlock(worldPos, id);
+   ++placed;
+  }
+  if (placed == 0) {
+   return -1;
+  }
+  return placed;
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in LoadChunkFromFile " << file_name << ": " << e.what()
+            << std::endl;
+  return -1;
+ }
+}
+
+void World::MigrateMonolithicChunksJson(const std::string& /*chunks_file*/, const std::string& world_folder)
+{
+ blockWorld_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
+  SaveChunkToFile(chunk.GetCoord(), world_folder);
+ });
+}
+
+void World::MigrateObjectsFromJson(const std::string& file_name)
+{
+ std::ifstream file(file_name);
+ if (!file.is_open()) {
+  return;
+ }
+ try {
+  json objects = json::parse(file);
+  for (const auto& object_data : objects) {
+   const std::string type_name = object_data.value("type_name", "");
+   if (type_name == "terrain_plane" || type_name.empty()) {
+    continue;
+   }
+   const auto position_value = object_data.value("position", json::array());
+   if (!position_value.is_array() || position_value.size() != 3) {
+    continue;
+   }
+   const glm::ivec3 blockPos(
+       static_cast<int>(std::round(position_value[0].get<float>())),
+       static_cast<int>(std::round(position_value[1].get<float>())),
+       static_cast<int>(std::round(position_value[2].get<float>())));
+   const BlockId id = blockRegistry_->GetIdByTypeName(type_name);
+   if (id != BLOCK_AIR) {
+    blockWorld_.SetBlock(blockPos, id);
+   }
+  }
+ } catch (const json::exception& e) {
+  std::cerr << "JSON parsing error in MigrateObjectsFromJson: " << e.what() << std::endl;
+ }
 }
 
 }

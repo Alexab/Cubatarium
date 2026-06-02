@@ -1,0 +1,12 @@
+﻿{
+    "name":  "cauldron",
+    "id":  97,
+    "textures":  [
+                     "cauldron_side",
+                     "cauldron_side",
+                     "cauldron_side",
+                     "cauldron_side",
+                     "cauldron_top",
+                     "cauldron_bottom"
+                 ]
+}

@@ -2,25 +2,27 @@
 #define CAMERA_H
 
 #include <vector>
+#include <map>
+#include <chrono>
+#include <memory>
 
-#include <QMatrix4x4>
-#include <QQuaternion>
-#include <QVector2D>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "PlayerCapsule.h"
+#include "PlayerController.h"
 
 namespace cutum {
 
 class ViewEngine;
 class World;
 
-// Default camera values
 const float YAW        = -90.0f;
 const float PITCH      =  0.0f;
 const float SPEED      =  3.0f;
 const float SENSITIVTY =  0.25f;
 const float ZOOM       =  45.0f;
 
-
-// Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
     FORWARD,
     BACKWARD,
@@ -35,28 +37,38 @@ class Camera
 public:
  Camera();
  Camera(const Camera &) = default;
- // Constructor with vectors
- Camera(QVector3D position, QVector3D up = QVector3D(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
+ Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
  Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
- QVector3D GetPosition() const;
- QVector3D GetFront() const;
+ glm::vec3 GetPosition() const;
+ void SetPosition(const glm::vec3& value);
+ float GetYaw() const;
+ float GetPitch() const;
+ void SetOrientation(float yaw, float pitch);
+ glm::vec3 GetFront() const;
 
- QMatrix4x4 GetPose() const;
- QMatrix4x4 GetProjection() const;
- QMatrix4x4 GetViewMatrix() const;
- QMatrix4x4 GetMvpMatrix() const;
+ glm::mat4 GetPose() const;
+ glm::mat4 GetProjection() const;
+ glm::mat4 GetViewMatrix() const;
+ glm::mat4 GetMvpMatrix() const;
 
  bool GetFreeMove() const;
  void SetFreeMove(bool value);
 
- void SetViewEngine(ViewEngine* view_engine);
+ bool TryToggleFlightOnDoubleSpace();
+ bool OnSpacePressed();
 
-public:
+ void SetViewEngine(ViewEngine* view_engine);
  void SetAspectRatio(float value);
 
-public:
  bool DoMovement(const World* world);
+ void ResetVerticalPhysics();
+
+ PlayerCapsule GetPlayerCapsule() const;
+ bool IsCrouching() const;
+ float GetDeltaTime() const { return DeltaTime; }
+ bool IsOnGround() const;
+ bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
 
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
@@ -65,53 +77,50 @@ public:
  void ResetMouseMove(double xpos, double ypos);
  void UpdateMouseScroll(double xoffset, double yoffset);
 
-private:
- // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
- void ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime);
+ void ClearShiftKeyState();
 
- // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
+private:
+ glm::vec3 ComputeHorizontalShift(float deltaTime);
+ void UpdateMoveIntentFromKeys();
+ glm::vec3 GetMoveIntentDir() const;
+ bool ApplyHorizontalMovement(const World* world, float deltaTime);
+ bool TickStepUpAnimation(const World* world, float dt);
+ void ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
+                      const PlayerCapsule& collisionCap);
+ PlayerInput BuildPlayerInput(bool spaceJustPressed) const;
+ bool IsShiftDown() const;
+
  void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true);
-
- // Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
  void ProcessMouseScroll(float yoffset);
-
-private:
  void UpdatePose();
  void UpdateCameraVectors();
+ void SyncFreeMoveFromController();
 
-private:
  float Fov;
  float AspectRatio;
  float NearPlane;
  float FarPlane;
 
-private:
- // Camera Attributes
- QVector3D Position;
- QVector3D Front;
- QVector3D Up;
- QVector3D Right;
- QVector3D WorldUp;
+ glm::vec3 Position;
+ glm::vec3 Front;
+ glm::vec3 Up;
+ glm::vec3 Right;
+ glm::vec3 WorldUp;
 
  bool FreeMove;
 
- // Eular Angles
  float Yaw;
  float Pitch;
-
- // Camera options
  float MovementSpeed;
  float MouseSensitivity;
  float Zoom;
 
- QMatrix4x4 Pose;
- QMatrix4x4 Projection;
- QMatrix4x4 MvpMatrix;
+ glm::mat4 Pose;
+ glm::mat4 Projection;
+ glm::mat4 MvpMatrix;
 
  ViewEngine* ViewEngineInstance;
-
- float ViewObjectSize;
-
+ PlayerController locomotion_;
 
  std::map<size_t, bool> KeysStatus;
  float DeltaTime;
@@ -120,7 +129,24 @@ private:
  float LastMouseX;
  float LastMouseY;
  bool FirstMouseCoords;
+
+ glm::vec3 lastMoveIntentDir_{0.0f, 0.0f, -1.0f};
+ bool lastMoveIntentValid_{false};
+ std::chrono::steady_clock::time_point lastMoveIntentTime_{};
+ static constexpr float kStepUpTriggerDistance = 0.36f;
+ static constexpr float kStepUpIntentRetainSec = 0.3f;
+ static constexpr float kStepUpAnimDuration = 0.14f;
+ struct StepUpAnimation {
+  bool active{false};
+  glm::vec3 startPos{0.0f};
+  glm::vec3 targetPos{0.0f};
+  float elapsed{0.0f};
+ };
+ StepUpAnimation stepUpAnim_;
+
+ static constexpr float kMinReasonablePlayerY = -32.0f;
+ static constexpr float kMaxPhysicsDelta = 1.0f / 30.0f;
 };
 
 }
-#endif // CAMERA_H
+#endif

@@ -1,4 +1,5 @@
 #include "ViewEngine.h"
+#include <glm/glm.hpp>
 
 namespace cutum {
 
@@ -10,25 +11,36 @@ ViewEngine::ViewEngine()
 
 void ViewEngine::GenerateSimpleCamera()
 {
- std::shared_ptr<Camera> view = std::make_shared<Camera>(QVector3D(0.0f, 2.0f, 3.0f));
+ // Above default flat terrain (top layer y=3)
+ std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ view->SetFreeMove(false); // Disable free movement to enable collisions
  AddCamera(view);
 }
 
 bool ViewEngine::AddCamera(std::shared_ptr<Camera> camera)
 {
+ AddCameraReturnId(camera);
+ return camera != nullptr;
+}
+
+size_t ViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
+{
  if(camera == nullptr)
-  return false;
+  return 0;
 
  camera->SetViewEngine(this);
+ size_t newId = 0;
  if(Cameras.empty())
  {
+  newId = 0;
   Cameras[0] = camera;
  }
  else
  {
-  Cameras[Cameras.cbegin()->first+1] = camera;
+  newId = Cameras.crbegin()->first + 1;
+  Cameras[newId] = camera;
  }
- return true;
+ return newId;
 }
 
 bool ViewEngine::DelCamera(size_t index)
@@ -77,14 +89,22 @@ bool ViewEngine::SetActiveCamera(size_t index)
 
 void ViewEngine::UpdateFrameTime()
 {
+ auto t_begin = std::chrono::high_resolution_clock::now();
  for(auto & camera_item : Cameras)
   camera_item.second->UpdateFrameTime();
+ auto t_view_end = std::chrono::high_resolution_clock::now();
+ DurationUpdateMks = std::chrono::duration<double, std::micro>(t_view_end-t_begin).count();
 }
 
 void ViewEngine::ResetAllKeyStatus()
 {
  for(auto & camera_item : Cameras)
   camera_item.second->ResetAllKeyStatus();
+}
+
+uint64_t ViewEngine::GetDurationUpdateMks() const
+{
+ return DurationUpdateMks;
 }
 
 

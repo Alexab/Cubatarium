@@ -1,0 +1,12 @@
+﻿{
+    "name":  "nether_brick",
+    "id":  71,
+    "textures":  [
+                     "netherBrick",
+                     "netherBrick",
+                     "netherBrick",
+                     "netherBrick",
+                     "netherBrick",
+                     "netherBrick"
+                 ]
+}

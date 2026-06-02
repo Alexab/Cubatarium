@@ -1,0 +1,12 @@
+﻿{
+    "name":  "rail",
+    "id":  119,
+    "textures":  [
+                     "rail",
+                     "rail",
+                     "rail",
+                     "rail",
+                     "rail",
+                     "rail"
+                 ]
+}

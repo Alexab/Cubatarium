@@ -1,0 +1,12 @@
+﻿{
+    "name":  "web",
+    "id":  22,
+    "textures":  [
+                     "web",
+                     "web",
+                     "web",
+                     "web",
+                     "web",
+                     "web"
+                 ]
+}

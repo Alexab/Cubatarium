@@ -1,0 +1,12 @@
+﻿{
+    "name":  "mycelium",
+    "id":  82,
+    "textures":  [
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_top",
+                     "dirt"
+                 ]
+}

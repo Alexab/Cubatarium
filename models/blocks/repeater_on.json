@@ -1,0 +1,12 @@
+﻿{
+    "name":  "repeater_on",
+    "id":  137,
+    "textures":  [
+                     "repeater_lit",
+                     "repeater_lit",
+                     "repeater_lit",
+                     "repeater_lit",
+                     "repeater_lit",
+                     "repeater_lit"
+                 ]
+}

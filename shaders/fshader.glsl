@@ -1,16 +1,19 @@
-#ifdef GL_ES
-// Set default precision to medium
-precision mediump int;
-precision mediump float;
-#endif
+#version 330 core
 
-uniform sampler2D texture;
+in vec2 TexCoord;
+out vec4 FragColor;
 
-varying vec2 v_texcoord;
+uniform sampler2D texture0;
+uniform int uAnimFrame;
+uniform int uAnimFrameCount;
 
 void main()
 {
-    // Set fragment color from texture
-    gl_FragColor = texture2D(texture, v_texcoord);
+    vec2 uv = TexCoord;
+    if (uAnimFrameCount > 1) {
+        float frameH = 1.0 / float(uAnimFrameCount);
+        uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
+    }
+    FragColor = texture(texture0, uv);
 }
 

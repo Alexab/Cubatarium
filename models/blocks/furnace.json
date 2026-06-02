@@ -1,0 +1,12 @@
+﻿{
+    "name":  "furnace",
+    "id":  85,
+    "textures":  [
+                     "furnace_front",
+                     "furnace_side",
+                     "furnace_side",
+                     "furnace_side",
+                     "furnace_top",
+                     "furnace_top"
+                 ]
+}

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "tripwire_hook",
+    "id":  142,
+    "textures":  [
+                     "tripWireSource",
+                     "tripWireSource",
+                     "tripWireSource",
+                     "tripWireSource",
+                     "tripWireSource",
+                     "tripWireSource"
+                 ]
+}

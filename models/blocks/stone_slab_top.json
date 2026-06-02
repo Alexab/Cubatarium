@@ -1,0 +1,12 @@
+﻿{
+    "name":  "stone_slab_top",
+    "id":  158,
+    "textures":  [
+                     "stoneslab_top",
+                     "stoneslab_top",
+                     "stoneslab_top",
+                     "stoneslab_top",
+                     "stoneslab_top",
+                     "stoneslab_top"
+                 ]
+}

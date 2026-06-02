@@ -1,0 +1,12 @@
+﻿{
+    "name":  "log_spruce",
+    "id":  66,
+    "textures":  [
+                     "tree_spruce",
+                     "tree_spruce",
+                     "tree_spruce",
+                     "tree_spruce",
+                     "wood_spruce",
+                     "wood_spruce"
+                 ]
+}

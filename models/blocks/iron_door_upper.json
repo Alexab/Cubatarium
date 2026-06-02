@@ -1,0 +1,12 @@
+﻿{
+    "name":  "iron_door_upper",
+    "id":  164,
+    "textures":  [
+                     "doorIron_upper",
+                     "doorIron_upper",
+                     "doorIron_upper",
+                     "doorIron_upper",
+                     "doorIron_upper",
+                     "doorIron_upper"
+                 ]
+}

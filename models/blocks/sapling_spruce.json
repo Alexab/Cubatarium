@@ -1,0 +1,12 @@
+﻿{
+    "name":  "sapling_spruce",
+    "id":  109,
+    "textures":  [
+                     "sapling_spruce",
+                     "sapling_spruce",
+                     "sapling_spruce",
+                     "sapling_spruce",
+                     "sapling_spruce",
+                     "sapling_spruce"
+                 ]
+}

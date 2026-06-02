@@ -1,0 +1,12 @@
+﻿{
+    "name":  "melon_stem",
+    "id":  105,
+    "textures":  [
+                     "stem_straight",
+                     "stem_straight",
+                     "stem_straight",
+                     "stem_straight",
+                     "stem_straight",
+                     "stem_straight"
+                 ]
+}

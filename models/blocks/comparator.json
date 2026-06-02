@@ -1,0 +1,12 @@
+﻿{
+    "name":  "comparator",
+    "id":  138,
+    "textures":  [
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator"
+                 ]
+}

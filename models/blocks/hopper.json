@@ -1,0 +1,12 @@
+﻿{
+    "name":  "hopper",
+    "id":  95,
+    "textures":  [
+                     "hopper",
+                     "hopper",
+                     "hopper",
+                     "hopper",
+                     "hopper_top",
+                     "hopper_inside"
+                 ]
+}

@@ -1,0 +1,34 @@
+{
+    "default_user": "Username",
+    "default_world": "World_001",
+    "world_seed": 12345,
+    "terrain": "heightmap",
+    "procedural": {
+        "generator": "overworld_biomes",
+        "vertical": "compact",
+        "sea_level": 4,
+        "max_height": 12,
+        "caves": false,
+        "trees": false,
+        "flat_surface_y": 3,
+        "fill_water": true,
+        "fill_lava": false,
+        "fill_fire": true
+    },
+    "render_distance_chunks": 4,
+    "streaming_enabled": true,
+    "gameplay": {
+        "step_up": true
+    },
+    "render": {
+        "greedy_meshing": true,
+        "face_quads": true,
+        "frustum_culling": true,
+        "batch_cache": true
+    },
+    "ui": {
+        "legacy_hud": false,
+        "console_key": "grave",
+        "palette_key": "b"
+    }
+}

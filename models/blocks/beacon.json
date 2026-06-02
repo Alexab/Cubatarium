@@ -1,0 +1,12 @@
+﻿{
+    "name":  "beacon",
+    "id":  77,
+    "textures":  [
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon"
+                 ]
+}

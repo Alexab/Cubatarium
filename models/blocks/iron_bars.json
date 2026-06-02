@@ -1,0 +1,12 @@
+﻿{
+    "name":  "iron_bars",
+    "id":  133,
+    "textures":  [
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron"
+                 ]
+}

@@ -1,0 +1,12 @@
+﻿{
+    "name":  "tall_grass",
+    "id":  111,
+    "textures":  [
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass"
+                 ]
+}

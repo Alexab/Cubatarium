@@ -1,0 +1,228 @@
+{
+  "blocks": [
+    { "name": "planks_birch", "id": 62, "uniform": "wood_birch" },
+    { "name": "planks_spruce", "id": 63, "uniform": "wood_spruce" },
+    { "name": "planks_jungle", "id": 64, "uniform": "wood_jungle" },
+    {
+      "name": "log_birch",
+      "id": 65,
+      "faces": ["tree_birch", "tree_birch", "tree_birch", "tree_birch", "wood_birch", "wood_birch"]
+    },
+    {
+      "name": "log_spruce",
+      "id": 66,
+      "faces": ["tree_spruce", "tree_spruce", "tree_spruce", "tree_spruce", "wood_spruce", "wood_spruce"]
+    },
+    {
+      "name": "log_jungle",
+      "id": 67,
+      "faces": ["tree_jungle", "tree_jungle", "tree_jungle", "tree_jungle", "wood_jungle", "wood_jungle"]
+    },
+    { "name": "leaves_transparent", "id": 68, "uniform": "leaves" },
+    { "name": "leaves_spruce", "id": 69, "uniform": "leaves_spruce_opaque" },
+    { "name": "leaves_jungle", "id": 70, "uniform": "leaves_jungle_opaque" },
+    { "name": "nether_brick", "id": 71, "uniform": "netherBrick" },
+    { "name": "sponge", "id": 72, "uniform": "sponge" },
+    { "name": "glowstone", "id": 73, "uniform": "lightgem" },
+    { "name": "nether_quartz_ore", "id": 74, "uniform": "netherquartz" },
+    { "name": "mob_spawner", "id": 75, "uniform": "mobSpawner" },
+    { "name": "command_block", "id": 76, "uniform": "commandBlock" },
+    { "name": "beacon", "id": 77, "uniform": "beacon" },
+    { "name": "dragon_egg", "id": 78, "uniform": "dragonEgg" },
+    { "name": "note_block", "id": 79, "uniform": "musicBlock" },
+    { "name": "sandstone_carved", "id": 80, "uniform": "sandstone_carved" },
+    { "name": "sandstone_smooth", "id": 81, "uniform": "sandstone_smooth" },
+    {
+      "name": "mycelium",
+      "id": 82,
+      "faces": ["mycel_side", "mycel_side", "mycel_side", "mycel_side", "mycel_top", "dirt"]
+    },
+    {
+      "name": "farmland_dry",
+      "id": 83,
+      "faces": ["dirt", "dirt", "dirt", "dirt", "farmland_dry", "dirt"]
+    },
+    {
+      "name": "farmland_wet",
+      "id": 84,
+      "faces": ["dirt", "dirt", "dirt", "dirt", "farmland_wet", "dirt"]
+    },
+    {
+      "name": "furnace",
+      "id": 85,
+      "faces": ["furnace_front", "furnace_side", "furnace_side", "furnace_side", "furnace_top", "furnace_top"]
+    },
+    {
+      "name": "furnace_lit",
+      "id": 86,
+      "faces": ["furnace_front_lit", "furnace_side", "furnace_side", "furnace_side", "furnace_top", "furnace_top"]
+    },
+    {
+      "name": "crafting_table",
+      "id": 87,
+      "faces": ["workbench_front", "workbench_side", "workbench_side", "workbench_side", "workbench_top", "workbench_side"]
+    },
+    {
+      "name": "enchantment_table",
+      "id": 88,
+      "faces": ["enchantment_side", "enchantment_side", "enchantment_side", "enchantment_side", "enchantment_top", "enchantment_bottom"]
+    },
+    {
+      "name": "jukebox",
+      "id": 89,
+      "faces": ["wood", "wood", "wood", "wood", "jukebox_top", "wood"]
+    },
+    {
+      "name": "quartz_block",
+      "id": 90,
+      "faces": ["quartzblock_side", "quartzblock_side", "quartzblock_side", "quartzblock_side", "quartzblock_top", "quartzblock_bottom"]
+    },
+    {
+      "name": "quartz_chiseled",
+      "id": 91,
+      "faces": ["quartzblock_chiseled", "quartzblock_chiseled", "quartzblock_chiseled", "quartzblock_chiseled", "quartzblock_chiseled_top", "quartzblock_bottom"]
+    },
+    {
+      "name": "quartz_pillar",
+      "id": 92,
+      "faces": ["quartzblock_lines", "quartzblock_lines", "quartzblock_lines", "quartzblock_lines", "quartzblock_lines_top", "quartzblock_lines_top"]
+    },
+    {
+      "name": "piston",
+      "id": 93,
+      "faces": ["piston_side", "piston_side", "piston_side", "piston_side", "piston_top", "piston_bottom"]
+    },
+    {
+      "name": "sticky_piston",
+      "id": 94,
+      "faces": ["piston_side", "piston_side", "piston_side", "piston_side", "piston_top_sticky", "piston_bottom"]
+    },
+    {
+      "name": "hopper",
+      "id": 95,
+      "faces": ["hopper", "hopper", "hopper", "hopper", "hopper_top", "hopper_inside"]
+    },
+    {
+      "name": "anvil",
+      "id": 96,
+      "faces": ["anvil_base", "anvil_base", "anvil_base", "anvil_base", "anvil_top", "anvil_base"]
+    },
+    {
+      "name": "cauldron",
+      "id": 97,
+      "faces": ["cauldron_side", "cauldron_side", "cauldron_side", "cauldron_side", "cauldron_top", "cauldron_bottom"]
+    },
+    {
+      "name": "cake",
+      "id": 98,
+      "faces": ["cake_side", "cake_side", "cake_side", "cake_side", "cake_top", "cake_bottom"]
+    },
+    {
+      "name": "dispenser",
+      "id": 99,
+      "faces": ["dispenser_front", "furnace_side", "furnace_side", "furnace_side", "furnace_top", "furnace_top"]
+    },
+    {
+      "name": "dropper",
+      "id": 100,
+      "faces": ["dropper_front", "furnace_side", "furnace_side", "furnace_side", "furnace_top", "furnace_top"]
+    },
+    {
+      "name": "end_portal_frame",
+      "id": 101,
+      "faces": ["endframe_side", "endframe_side", "endframe_side", "endframe_side", "endframe_top", "endframe_side"]
+    },
+    {
+      "name": "end_portal_frame_eye",
+      "id": 102,
+      "faces": ["endframe_side", "endframe_side", "endframe_side", "endframe_side", "endframe_eye", "endframe_side"]
+    },
+    {
+      "name": "daylight_sensor",
+      "id": 103,
+      "faces": ["daylightDetector_side", "daylightDetector_side", "daylightDetector_side", "daylightDetector_side", "daylightDetector_top", "daylightDetector_side"]
+    },
+    {
+      "name": "jack_o_lantern",
+      "id": 104,
+      "faces": ["pumpkin_side", "pumpkin_jack", "pumpkin_side", "pumpkin_jack", "pumpkin_top", "pumpkin_side"]
+    },
+    { "name": "melon_stem", "id": 105, "uniform": "stem_straight" },
+    { "name": "pumpkin_stem", "id": 106, "uniform": "stem_bent" },
+    { "name": "sapling_oak", "id": 107, "uniform": "sapling" },
+    { "name": "sapling_birch", "id": 108, "uniform": "sapling_birch" },
+    { "name": "sapling_spruce", "id": 109, "uniform": "sapling_spruce" },
+    { "name": "sapling_jungle", "id": 110, "uniform": "sapling_jungle" },
+    { "name": "tall_grass", "id": 111, "uniform": "tallgrass" },
+    { "name": "fern", "id": 112, "uniform": "fern" },
+    { "name": "deadbush", "id": 113, "uniform": "deadbush" },
+    { "name": "flower", "id": 114, "uniform": "flower" },
+    { "name": "rose", "id": 115, "uniform": "rose" },
+    { "name": "reeds", "id": 116, "uniform": "reeds" },
+    { "name": "vines", "id": 117, "uniform": "vine" },
+    { "name": "lily_pad", "id": 118, "uniform": "waterlily" },
+    { "name": "rail", "id": 119, "uniform": "rail" },
+    { "name": "rail_curved", "id": 120, "uniform": "rail_turn" },
+    { "name": "golden_rail", "id": 121, "uniform": "goldenRail" },
+    { "name": "golden_rail_powered", "id": 122, "uniform": "goldenRail_powered" },
+    { "name": "detector_rail", "id": 123, "uniform": "detectorRail" },
+    { "name": "detector_rail_on", "id": 124, "uniform": "detectorRail_on" },
+    { "name": "activator_rail", "id": 125, "uniform": "activatorRail" },
+    { "name": "activator_rail_on", "id": 126, "uniform": "activatorRail_powered" },
+    { "name": "torch", "id": 127, "uniform": "torch" },
+    { "name": "redstone_torch", "id": 128, "uniform": "redtorch" },
+    { "name": "redstone_torch_on", "id": 129, "uniform": "redtorch_lit" },
+    { "name": "ladder", "id": 130, "uniform": "ladder" },
+    { "name": "lever", "id": 131, "uniform": "lever" },
+    { "name": "trapdoor", "id": 132, "uniform": "trapdoor" },
+    { "name": "iron_bars", "id": 133, "uniform": "fenceIron" },
+    { "name": "redstone_lamp", "id": 134, "uniform": "redstoneLight" },
+    { "name": "redstone_lamp_on", "id": 135, "uniform": "redstoneLight_lit" },
+    { "name": "repeater", "id": 136, "uniform": "repeater" },
+    { "name": "repeater_on", "id": 137, "uniform": "repeater_lit" },
+    { "name": "comparator", "id": 138, "uniform": "comparator" },
+    { "name": "comparator_on", "id": 139, "uniform": "comparator_lit" },
+    { "name": "redstone_dust", "id": 140, "uniform": "redstoneDust_cross" },
+    { "name": "tripwire", "id": 141, "uniform": "tripWire" },
+    { "name": "tripwire_hook", "id": 142, "uniform": "tripWireSource" },
+    { "name": "wooden_door", "id": 143, "uniform": "doorWood_lower" },
+    { "name": "iron_door", "id": 144, "uniform": "doorIron_lower" },
+    { "name": "cocoa", "id": 145, "uniform": "cocoa_2" },
+    { "name": "wheat", "id": 146, "uniform": "crops_7" },
+    { "name": "carrots", "id": 147, "uniform": "carrots_3" },
+    { "name": "potatoes", "id": 148, "uniform": "potatoes_3" },
+    { "name": "nether_wart", "id": 149, "uniform": "netherStalk_2" },
+    { "name": "brown_mushroom_block", "id": 150, "uniform": "mushroom_skin_brown" },
+    { "name": "red_mushroom_block", "id": 151, "uniform": "mushroom_skin_red" },
+    { "name": "mushroom_stem", "id": 152, "uniform": "mushroom_skin_stem" },
+    { "name": "brown_mushroom", "id": 153, "uniform": "mushroom_brown" },
+    { "name": "red_mushroom", "id": 154, "uniform": "mushroom_red" },
+    {
+      "name": "brewing_stand",
+      "id": 155,
+      "faces": ["wood", "wood", "wood", "wood", "brewingStand", "brewingStand_base"]
+    },
+    { "name": "snow_layer", "id": 156, "uniform": "snow_side" },
+    { "name": "stone_slab", "id": 157, "uniform": "stoneslab_side" },
+    { "name": "stone_slab_top", "id": 158, "uniform": "stoneslab_top" },
+    { "name": "thin_glass", "id": 159, "uniform": "thinglass_top" },
+    { "name": "item_frame", "id": 160, "uniform": "itemframe_back" },
+    {
+      "name": "anvil_slightly_damaged",
+      "id": 161,
+      "faces": ["anvil_base", "anvil_base", "anvil_base", "anvil_base", "anvil_top_damaged_1", "anvil_base"]
+    },
+    {
+      "name": "anvil_very_damaged",
+      "id": 162,
+      "faces": ["anvil_base", "anvil_base", "anvil_base", "anvil_base", "anvil_top_damaged_2", "anvil_base"]
+    },
+    { "name": "wooden_door_upper", "id": 163, "uniform": "doorWood_upper" },
+    { "name": "iron_door_upper", "id": 164, "uniform": "doorIron_upper" },
+    { "name": "redstone_dust_line", "id": 165, "uniform": "redstoneDust_line" },
+    { "name": "piston_inner", "id": 166, "uniform": "piston_inner_top" },
+    { "name": "flower_pot", "id": 167, "uniform": "flowerPot" },
+    { "name": "leaves_spruce_light", "id": 168, "uniform": "leaves_spruce" },
+    { "name": "leaves_jungle_light", "id": 169, "uniform": "leaves_jungle" }
+  ]
+}

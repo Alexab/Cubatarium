@@ -1,0 +1,12 @@
+﻿{
+    "name":  "stonebricksmooth_mossy",
+    "id":  41,
+    "textures":  [
+                     "stonebricksmooth_mossy",
+                     "stonebricksmooth_mossy",
+                     "stonebricksmooth_mossy",
+                     "stonebricksmooth_mossy",
+                     "stonebricksmooth_mossy",
+                     "stonebricksmooth_mossy"
+                 ]
+}

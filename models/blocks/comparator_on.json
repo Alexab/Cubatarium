@@ -1,0 +1,12 @@
+﻿{
+    "name":  "comparator_on",
+    "id":  139,
+    "textures":  [
+                     "comparator_lit",
+                     "comparator_lit",
+                     "comparator_lit",
+                     "comparator_lit",
+                     "comparator_lit",
+                     "comparator_lit"
+                 ]
+}

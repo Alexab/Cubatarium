@@ -1,0 +1,12 @@
+﻿{
+    "name":  "sticky_piston",
+    "id":  94,
+    "textures":  [
+                     "piston_side",
+                     "piston_side",
+                     "piston_side",
+                     "piston_side",
+                     "piston_top_sticky",
+                     "piston_bottom"
+                 ]
+}

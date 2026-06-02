@@ -1,0 +1,12 @@
+﻿{
+    "name":  "blockRedstone",
+    "id":  36,
+    "textures":  [
+                     "blockRedstone",
+                     "blockRedstone",
+                     "blockRedstone",
+                     "blockRedstone",
+                     "blockRedstone",
+                     "blockRedstone"
+                 ]
+}

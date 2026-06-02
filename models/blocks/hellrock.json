@@ -1,0 +1,12 @@
+﻿{
+    "name":  "hellrock",
+    "id":  19,
+    "textures":  [
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock"
+                 ]
+}
