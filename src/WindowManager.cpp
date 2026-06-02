@@ -504,7 +504,9 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                  glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
 
             if (delta_time < 0.5) {
-                if (altDown) {
+                auto user = worldInstance->GetCurrentUser();
+                const bool hasActiveObject = user && !user->GetActivePrefabName().empty();
+                if (altDown || hasActiveObject) {
                     worldInstance->PlaceActivePrefabByView();
                 } else {
                     worldInstance->AddObjectByView();
