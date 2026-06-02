@@ -55,7 +55,15 @@ void GuiButton::Draw(GuiRenderer& renderer)
     }
     renderer.DrawFilledRect(bounds_, StateColor());
     renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
-    renderer.DrawTextCenteredInRect(bounds_, label_, theme_->textPrimary);
+    GuiRect textRect = bounds_;
+    if (label_.size() == 1) {
+        if (label_[0] == '+') {
+            textRect.y += 2;
+        } else if (label_[0] == '-') {
+            textRect.y += 3;
+        }
+    }
+    renderer.DrawTextCenteredInRect(textRect, label_, theme_->textPrimary);
     if (HasFocusHighlight()) {
         DrawWidgetFocusRing(renderer, *theme_, bounds_);
     }

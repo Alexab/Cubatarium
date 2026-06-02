@@ -274,10 +274,11 @@ void SettingsScreen::Relayout()
     dialogFrame_->LayoutFrame();
 }
 
-int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
+std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& spec) const
 {
-    const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
-    std::vector<GuiGridItem> items{
+    const int hotbarValueRow = spec.columns > 1 ? 9 : 10;
+    const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
+    return {
         {defaultUserLabel_, 0, 0, 1, 1, 28},
         {defaultUserInput_, 0, 1, 1, 1, 32},
         {defaultWorldLabel_, 1, 0, 1, 1, 28},
@@ -296,40 +297,49 @@ int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
         {paletteKeyLabel_, 8, 0, 1, 1, 28},
         {paletteKeyInput_, 8, 1, 1, 1, 32},
         {hotbarCountLabel_, 9, 0, 1, 1, 28},
-        {hotbarCountValueLabel_, 9, 1, 1, 1, 32},
-        {hotbarMinusButton_, 10, 0, 1, 1, 32},
-        {hotbarPlusButton_, 10, 1, 1, 1, 32},
+        {hotbarCountValueLabel_, hotbarValueRow, hotbarValueCol, 1, 1, 32},
     };
-    return GuiLayout::GridMeasure(area, spec, items);
+}
+
+void SettingsScreen::LayoutHotbarCountControls(const GuiGridSpec& spec) const
+{
+    if (!hotbarCountValueLabel_ || !hotbarMinusButton_ || !hotbarPlusButton_) {
+        return;
+    }
+
+    constexpr int btnSize = 32;
+    constexpr int valueW = 28;
+    constexpr int gap = 6;
+
+    if (spec.columns <= 1) {
+        const GuiRect anchor = hotbarCountValueLabel_->GetBounds();
+        const int y = anchor.y + (anchor.h - btnSize) / 2;
+        const int x = anchor.x;
+        hotbarCountValueLabel_->SetBounds({x, y, valueW, btnSize});
+        hotbarPlusButton_->SetBounds({x + valueW + gap, y, btnSize, btnSize});
+        hotbarMinusButton_->SetBounds({x + valueW + gap + btnSize + gap, y, btnSize, btnSize});
+        return;
+    }
+
+    const GuiRect cell = hotbarCountValueLabel_->GetBounds();
+    const int y = cell.y + (cell.h - btnSize) / 2;
+    const int startX = cell.x;
+    hotbarCountValueLabel_->SetBounds({startX, y, valueW, btnSize});
+    hotbarPlusButton_->SetBounds({startX + valueW + gap, y, btnSize, btnSize});
+    hotbarMinusButton_->SetBounds({startX + valueW + gap + btnSize + gap, y, btnSize, btnSize});
+}
+
+int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
+{
+    const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
+    return GuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
 }
 
 void SettingsScreen::LayoutAppPage(const GuiRect& area) const
 {
     const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
-    std::vector<GuiGridItem> items{
-        {defaultUserLabel_, 0, 0, 1, 1, 28},
-        {defaultUserInput_, 0, 1, 1, 1, 32},
-        {defaultWorldLabel_, 1, 0, 1, 1, 28},
-        {defaultWorldInput_, 1, 1, 1, 1, 32},
-        {renderDistLabel_, 2, 0, 1, 1, 28},
-        {renderDistInput_, 2, 1, 1, 1, 32},
-        {streamingBox_, 3, 0, 1, 1, 30},
-        {stepUpBox_, 3, 1, 1, 1, 30},
-        {greedyBox_, 4, 0, 1, 1, 30},
-        {faceQuadsBox_, 4, 1, 1, 1, 30},
-        {frustumBox_, 5, 0, 1, 1, 30},
-        {batchCacheBox_, 5, 1, 1, 1, 30},
-        {legacyHudBox_, 6, 0, 1, 2, 30},
-        {consoleKeyLabel_, 7, 0, 1, 1, 28},
-        {consoleKeyInput_, 7, 1, 1, 1, 32},
-        {paletteKeyLabel_, 8, 0, 1, 1, 28},
-        {paletteKeyInput_, 8, 1, 1, 1, 32},
-        {hotbarCountLabel_, 9, 0, 1, 1, 28},
-        {hotbarCountValueLabel_, 9, 1, 1, 1, 32},
-        {hotbarMinusButton_, 10, 0, 1, 1, 32},
-        {hotbarPlusButton_, 10, 1, 1, 1, 32},
-    };
-    GuiLayout::GridPlace(area, spec, items);
+    GuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
+    LayoutHotbarCountControls(spec);
 }
 
 int SettingsScreen::MeasureWorldPageHeight(const GuiRect& area) const

@@ -2,7 +2,9 @@
 
 #include "Gui/GuiScreenBase.h"
 #include "Gui/GuiTypes.h"
+#include "Gui/Layout/GuiLayout.h"
 #include <memory>
+#include <vector>
 
 namespace cutum {
 
@@ -29,6 +31,8 @@ private:
     void OnSave();
     int MeasureAppPageHeight(const GuiRect& area) const;
     void LayoutAppPage(const GuiRect& area) const;
+    void LayoutHotbarCountControls(const GuiGridSpec& spec) const;
+    std::vector<GuiGridItem> BuildAppGridItems(const GuiGridSpec& spec) const;
     int MeasureWorldPageHeight(const GuiRect& area) const;
     void LayoutWorldPage(const GuiRect& area) const;
 
