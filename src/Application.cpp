@@ -143,6 +143,11 @@ void Application::RequestEnterGame()
         if (core_) {
             core_->EnterGame();
         }
+        if (world_) {
+            if (auto user = world_->GetCurrentUser()) {
+                user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            }
+        }
         worldSessionActive_ = true;
         ShowInGameHud();
     } else {

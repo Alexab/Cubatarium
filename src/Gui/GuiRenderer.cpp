@@ -49,6 +49,8 @@ void GuiRenderer::BeginFrame(int windowWidth, int windowHeight)
 {
     windowWidth_ = windowWidth;
     windowHeight_ = windowHeight;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     if (textRenderer_) {
         textRenderer_->SetWindowSize(windowWidth, windowHeight);
     }

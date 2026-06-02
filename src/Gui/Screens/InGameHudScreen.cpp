@@ -64,7 +64,8 @@ void InGameHudScreen::EnsureHotbarWidgets()
                 hotbar_->SelectSlot(0, index);
             }
         });
-        slot->SetCornerHint(index == 0 ? "0" : std::to_string(index));
+        const int hotkeyNumber = (index < 9) ? static_cast<int>(index + 1) : 0;
+        slot->SetCornerHint(std::to_string(hotkeyNumber));
         GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
         primarySlots_.push_back(ptr);
     }
