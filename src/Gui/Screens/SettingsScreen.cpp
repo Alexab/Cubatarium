@@ -87,6 +87,7 @@ void SettingsScreen::OnSave()
     if (paletteKeyInput_) {
         app.ui.paletteKey = paletteKeyInput_->GetText();
     }
+    app.ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
     if (app.render.greedyMeshing && !app.render.faceQuads) {
         app.render.faceQuads = true;
     }
@@ -115,6 +116,7 @@ void SettingsScreen::Build(GuiContext& ctx)
     const GuiTheme& theme = ctx.GetTheme();
     const AppSettingsSnapshot appSnap = host_ ? host_->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
+    hotbarCount_ = std::clamp(appSnap.ui.hotbarCount, 1, 2);
 
     auto backdrop = std::make_unique<GuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
@@ -195,6 +197,31 @@ void SettingsScreen::Build(GuiContext& ctx)
     paletteKeyInput_ = pkIn.get();
     pkIn->SetText(appSnap.ui.paletteKey);
     app.AddChild(std::move(pkIn));
+    auto hotbarLbl = std::make_unique<GuiLabel>(&theme, "Hotbar count:");
+    hotbarCountLabel_ = hotbarLbl.get();
+    app.AddChild(std::move(hotbarLbl));
+    auto hotbarValue = std::make_unique<GuiLabel>(&theme, std::to_string(hotbarCount_));
+    hotbarValue->SetTextAlign(GuiTextAlign::Center);
+    hotbarCountValueLabel_ = hotbarValue.get();
+    app.AddChild(std::move(hotbarValue));
+    auto hotbarMinus = std::make_unique<GuiButton>(&theme, "-");
+    hotbarMinus->SetOnClick([this]() {
+        hotbarCount_ = std::max(1, hotbarCount_ - 1);
+        if (hotbarCountValueLabel_) {
+            hotbarCountValueLabel_->SetText(std::to_string(hotbarCount_));
+        }
+    });
+    hotbarMinusButton_ = hotbarMinus.get();
+    app.AddChild(std::move(hotbarMinus));
+    auto hotbarPlus = std::make_unique<GuiButton>(&theme, "+");
+    hotbarPlus->SetOnClick([this]() {
+        hotbarCount_ = std::min(2, hotbarCount_ + 1);
+        if (hotbarCountValueLabel_) {
+            hotbarCountValueLabel_->SetText(std::to_string(hotbarCount_));
+        }
+    });
+    hotbarPlusButton_ = hotbarPlus.get();
+    app.AddChild(std::move(hotbarPlus));
 
     GuiPanel& world = frame->AddScrollPage();
     worldPanel_ = &world;
@@ -268,6 +295,10 @@ int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
         {consoleKeyInput_, 7, 1, 1, 1, 32},
         {paletteKeyLabel_, 8, 0, 1, 1, 28},
         {paletteKeyInput_, 8, 1, 1, 1, 32},
+        {hotbarCountLabel_, 9, 0, 1, 1, 28},
+        {hotbarCountValueLabel_, 9, 1, 1, 1, 32},
+        {hotbarMinusButton_, 10, 0, 1, 1, 32},
+        {hotbarPlusButton_, 10, 1, 1, 1, 32},
     };
     return GuiLayout::GridMeasure(area, spec, items);
 }
@@ -293,6 +324,10 @@ void SettingsScreen::LayoutAppPage(const GuiRect& area) const
         {consoleKeyInput_, 7, 1, 1, 1, 32},
         {paletteKeyLabel_, 8, 0, 1, 1, 28},
         {paletteKeyInput_, 8, 1, 1, 1, 32},
+        {hotbarCountLabel_, 9, 0, 1, 1, 28},
+        {hotbarCountValueLabel_, 9, 1, 1, 1, 32},
+        {hotbarMinusButton_, 10, 0, 1, 1, 32},
+        {hotbarPlusButton_, 10, 1, 1, 1, 32},
     };
     GuiLayout::GridPlace(area, spec, items);
 }

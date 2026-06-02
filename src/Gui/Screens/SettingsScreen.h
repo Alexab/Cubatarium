@@ -14,6 +14,7 @@ class WorldGenSettingsForm;
 class GuiTextInput;
 class GuiCheckbox;
 class GuiLabel;
+class GuiButton;
 
 class SettingsScreen : public GuiScreenBase {
 public:
@@ -43,6 +44,8 @@ private:
     GuiLabel* renderDistLabel_{nullptr};
     GuiLabel* consoleKeyLabel_{nullptr};
     GuiLabel* paletteKeyLabel_{nullptr};
+    GuiLabel* hotbarCountLabel_{nullptr};
+    GuiLabel* hotbarCountValueLabel_{nullptr};
 
     GuiTextInput* defaultUserInput_{nullptr};
     GuiTextInput* defaultWorldInput_{nullptr};
@@ -56,6 +59,9 @@ private:
     GuiCheckbox* legacyHudBox_{nullptr};
     GuiTextInput* consoleKeyInput_{nullptr};
     GuiTextInput* paletteKeyInput_{nullptr};
+    GuiButton* hotbarMinusButton_{nullptr};
+    GuiButton* hotbarPlusButton_{nullptr};
+    int hotbarCount_{1};
 };
 
 } // namespace cutum
