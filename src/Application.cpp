@@ -171,7 +171,10 @@ void Application::ShowMainMenu()
     consoleOpen_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
-    guiContext_->SetScreen(std::make_unique<MainMenuScreen>(gameSession_.get()));
+    auto menu = std::make_unique<MainMenuScreen>(gameSession_.get());
+    mainMenuScreen_ = menu.get();
+    menuSubview_ = MenuSubview::Main;
+    guiContext_->SetScreen(std::move(menu));
     SyncCursorVisibility();
 }
 
@@ -212,6 +215,8 @@ void Application::ShowSettings()
     consoleOpen_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
+    mainMenuScreen_ = nullptr;
+    menuSubview_ = MenuSubview::Settings;
     guiContext_->SetScreen(std::make_unique<SettingsScreen>(this));
     SyncCursorVisibility();
 }
@@ -221,6 +226,8 @@ void Application::ShowNewWorld()
     consoleOpen_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
+    mainMenuScreen_ = nullptr;
+    menuSubview_ = MenuSubview::NewWorld;
     guiContext_->SetScreen(std::make_unique<NewWorldScreen>(this));
     SyncCursorVisibility();
 }
@@ -230,6 +237,8 @@ void Application::ShowLoadWorld()
     consoleOpen_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
+    mainMenuScreen_ = nullptr;
+    menuSubview_ = MenuSubview::LoadWorld;
     guiContext_->SetScreen(std::make_unique<LoadWorldScreen>(this));
     SyncCursorVisibility();
 }
@@ -297,6 +306,11 @@ void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
     uiSettings_ = core_->GetUiSettings();
     if (geometry_) {
         geometry_->SetShowHud(uiSettings_.legacyHud);
+    }
+    if (world_) {
+        if (auto user = world_->GetCurrentUser()) {
+            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+        }
     }
 }
 
@@ -624,6 +638,25 @@ bool Application::RouteKey(int key, int action, int mods)
     }
     if (consoleOpen_ && key == GLFW_KEY_ENTER && consoleScreen_) {
       consoleScreen_->SubmitCommand();
+      return true;
+    }
+  }
+
+  if (action == GLFW_PRESS && state_ == AppState::MainMenu && key == GLFW_KEY_ESCAPE) {
+    if (mainMenuScreen_ && mainMenuScreen_->IsQuitConfirmationVisible()) {
+      mainMenuScreen_->ShowQuitConfirmation(false);
+      return true;
+    }
+    if (menuSubview_ != MenuSubview::Main) {
+      ShowMainMenu();
+      return true;
+    }
+    if (HasWorldSession() && gameSession_) {
+      gameSession_->ResumeGame();
+      return true;
+    }
+    if (mainMenuScreen_) {
+      mainMenuScreen_->ShowQuitConfirmation(true);
       return true;
     }
   }

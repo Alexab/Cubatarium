@@ -8,20 +8,35 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Version.h"
-#include <algorithm>
 
 namespace cutum {
-
-namespace {
-std::string HotbarCountText(int count)
-{
-    return "Hotbars: " + std::to_string(count);
-}
-}
 
 MainMenuScreen::MainMenuScreen(IGuiGameActions* actions)
     : actions_(actions)
 {
+}
+
+void MainMenuScreen::ShowQuitConfirmation(bool visible)
+{
+    quitDialogVisible_ = visible;
+    if (quitBackdrop_) {
+        quitBackdrop_->SetVisible(visible);
+    }
+    if (quitDialog_) {
+        quitDialog_->SetVisible(visible);
+    }
+    if (quitMessage_) {
+        quitMessage_->SetVisible(visible);
+    }
+    if (quitYesButton_) {
+        quitYesButton_->SetVisible(visible);
+    }
+    if (quitNoButton_) {
+        quitNoButton_->SetVisible(visible);
+    }
+    if (visible) {
+        RelayoutQuitDialog();
+    }
 }
 
 void MainMenuScreen::Build(GuiContext& ctx)
@@ -77,9 +92,7 @@ void MainMenuScreen::Build(GuiContext& ctx)
 
     auto quit = std::make_unique<GuiButton>(&theme, "Quit");
     quit->SetOnClick([this]() {
-        if (actions_) {
-            actions_->QuitApplication();
-        }
+        ShowQuitConfirmation(true);
     });
 
     buttons_.clear();
@@ -89,40 +102,42 @@ void MainMenuScreen::Build(GuiContext& ctx)
     buttons_.push_back(settings.get());
     buttons_.push_back(quit.get());
 
-    auto hotbarMinus = std::make_unique<GuiButton>(&theme, "-");
-    hotbarMinus->SetOnClick([this]() {
-        if (!actions_) {
-            return;
-        }
-        const int next = std::max(1, actions_->GetHotbarCountSetting() - 1);
-        actions_->SetHotbarCountSetting(next);
-        if (hotbarCountLabel_) {
-            hotbarCountLabel_->SetText(HotbarCountText(next));
-        }
-    });
-    hotbarMinusButton_ = hotbarMinus.get();
-
-    auto hotbarPlus = std::make_unique<GuiButton>(&theme, "+");
-    hotbarPlus->SetOnClick([this]() {
-        if (!actions_) {
-            return;
-        }
-        const int next = std::min(2, actions_->GetHotbarCountSetting() + 1);
-        actions_->SetHotbarCountSetting(next);
-        if (hotbarCountLabel_) {
-            hotbarCountLabel_->SetText(HotbarCountText(next));
-        }
-    });
-    hotbarPlusButton_ = hotbarPlus.get();
-
-    auto hotbarLabel = std::make_unique<GuiLabel>(&theme, HotbarCountText(actions_ ? actions_->GetHotbarCountSetting() : 1));
-    hotbarLabel->SetTextAlign(GuiTextAlign::Center);
-    hotbarCountLabel_ = hotbarLabel.get();
-
     auto version = std::make_unique<GuiLabel>(&theme, kCubatariumVersion);
     version->SetTextAlign(GuiTextAlign::Left);
     version->SetUseSecondaryColor(true);
     versionLabel_ = version.get();
+
+    auto quitBackdrop = std::make_unique<GuiPanel>(&theme);
+    quitBackdrop->SetVisible(false);
+    quitBackdrop_ = quitBackdrop.get();
+
+    auto quitDialog = std::make_unique<GuiPanel>(&theme);
+    quitDialog->SetVisible(false);
+    quitDialog_ = quitDialog.get();
+
+    auto quitMessage = std::make_unique<GuiLabel>(&theme, "Exit the application?");
+    quitMessage->SetTextAlign(GuiTextAlign::Center);
+    quitMessage->SetVisible(false);
+    quitMessage_ = quitMessage.get();
+
+    auto quitYes = std::make_unique<GuiButton>(&theme, "Yes");
+    quitYes->SetVisible(false);
+    quitYes->SetOnClick([this]() {
+        if (actions_) {
+            actions_->QuitApplication();
+        }
+    });
+    quitYesButton_ = quitYes.get();
+
+    auto quitNo = std::make_unique<GuiButton>(&theme, "No");
+    quitNo->SetVisible(false);
+    quitNo->SetOnClick([this]() { ShowQuitConfirmation(false); });
+    quitNoButton_ = quitNo.get();
+
+    quitDialog->AddChild(std::move(quitMessage));
+    quitDialog->AddChild(std::move(quitYes));
+    quitDialog->AddChild(std::move(quitNo));
+    quitBackdrop->AddChild(std::move(quitDialog));
 
     panel->AddChild(std::move(title));
     panel->AddChild(std::move(version));
@@ -131,9 +146,7 @@ void MainMenuScreen::Build(GuiContext& ctx)
     panel->AddChild(std::move(newWorld));
     panel->AddChild(std::move(settings));
     panel->AddChild(std::move(quit));
-    panel->AddChild(std::move(hotbarMinus));
-    panel->AddChild(std::move(hotbarPlus));
-    panel->AddChild(std::move(hotbarLabel));
+    panel->AddChild(std::move(quitBackdrop));
     root_ = std::move(panel);
     Relayout();
 }
@@ -142,6 +155,31 @@ void MainMenuScreen::OnViewportChanged(int width, int height)
 {
     GuiScreenBase::OnViewportChanged(width, height);
     Relayout();
+}
+
+void MainMenuScreen::RelayoutQuitDialog()
+{
+    if (!quitBackdrop_ || !quitDialog_ || !quitMessage_ || !quitYesButton_ || !quitNoButton_) {
+        return;
+    }
+    quitBackdrop_->SetBounds({0, 0, viewportW_, viewportH_});
+
+    constexpr int dialogW = 360;
+    constexpr int dialogH = 160;
+    const int dialogX = (viewportW_ - dialogW) / 2;
+    const int dialogY = (viewportH_ - dialogH) / 2;
+    quitDialog_->SetBounds({dialogX, dialogY, dialogW, dialogH});
+
+    quitMessage_->SetBounds({dialogX + 16, dialogY + 16, dialogW - 32, 40});
+
+    constexpr int btnW = 120;
+    constexpr int btnH = 40;
+    constexpr int btnGap = 16;
+    const int btnY = dialogY + dialogH - btnH - 20;
+    const int totalBtnW = btnW * 2 + btnGap;
+    const int btnStartX = dialogX + (dialogW - totalBtnW) / 2;
+    quitYesButton_->SetBounds({btnStartX, btnY, btnW, btnH});
+    quitNoButton_->SetBounds({btnStartX + btnW + btnGap, btnY, btnW, btnH});
 }
 
 void MainMenuScreen::Relayout()
@@ -176,21 +214,10 @@ void MainMenuScreen::Relayout()
             children.push_back(btn);
         }
         GuiLayout::StackVertical(stackArea, spacing, 0, children);
+    }
 
-        const int controlsY = stackArea.y + stackArea.h + 16;
-        const int controlW = 42;
-        const int labelW = 180;
-        const int totalW = controlW + 8 + labelW + 8 + controlW;
-        const int startX = (viewportW_ - totalW) / 2;
-        if (hotbarMinusButton_) {
-            hotbarMinusButton_->SetBounds({startX, controlsY, controlW, btnH});
-        }
-        if (hotbarCountLabel_) {
-            hotbarCountLabel_->SetBounds({startX + controlW + 8, controlsY + 8, labelW, btnH - 16});
-        }
-        if (hotbarPlusButton_) {
-            hotbarPlusButton_->SetBounds({startX + controlW + 8 + labelW + 8, controlsY, controlW, btnH});
-        }
+    if (quitDialogVisible_) {
+        RelayoutQuitDialog();
     }
 }
 

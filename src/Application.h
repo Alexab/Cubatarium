@@ -31,6 +31,9 @@ class GuiContext;
 class GameSession;
 class BlockDefinitionStorage;
 class GuiIconSource;
+class MainMenuScreen;
+
+enum class MenuSubview { Main, Settings, LoadWorld, NewWorld };
 
 class Application : public IGuiMenuHost {
 public:
@@ -129,6 +132,9 @@ private:
     std::unique_ptr<InGameHudScreen> hudScreen_;
     std::unique_ptr<ConsoleScreen> consoleScreen_;
     std::unique_ptr<CreativePaletteScreen> paletteScreen_;
+
+    MenuSubview menuSubview_{MenuSubview::Main};
+    MainMenuScreen* mainMenuScreen_{nullptr};
 };
 
 } // namespace cutum
