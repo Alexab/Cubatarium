@@ -14,6 +14,7 @@ class IGuiIconSource;
 class GuiTabBar;
 class GuiScrollView;
 class GuiPanel;
+class GuiSlot;
 struct GuiTheme;
 
 class CreativePaletteScreen : public GuiScreenBase {
@@ -34,6 +35,7 @@ public:
 private:
     void RebuildGrid();
     void RelayoutPanel();
+    void LayoutGridInScroll();
 
     IContentCatalog* catalog_{nullptr};
     IHotbarViewModel* hotbar_{nullptr};
@@ -42,6 +44,8 @@ private:
     GuiTabBar* mainTabs_{nullptr};
     GuiTabBar* subTabs_{nullptr};
     GuiScrollView* scroll_{nullptr};
+    std::vector<GuiSlot*> gridSlots_;
+    std::string selectedEntryId_;
     ContentKind kind_{ContentKind::Block};
     std::string activeTypeId_;
     const GuiTheme* theme_{nullptr};

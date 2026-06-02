@@ -142,12 +142,26 @@ void GuiScrollView::LayoutContent(int spacing, int padding)
 {
     layoutSpacing_ = spacing;
     layoutPadding_ = padding;
+    const GuiRect vp = ViewportRect();
+    const int vpW = std::max(1, vp.w);
+
+    if (afterScrollLayout_) {
+        if (contentHeight_ <= 0) {
+            contentHeight_ = std::max(1, vp.h);
+        }
+        content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
+        afterScrollLayout_(*this);
+        contentHeight_ = std::max(vp.h, content_.GetBounds().h);
+        ClampScroll();
+        content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
+        afterScrollLayout_(*this);
+        return;
+    }
+
     std::vector<GuiWidget*> kids;
     for (const auto& child : content_.GetChildren()) {
         kids.push_back(child.get());
     }
-    const GuiRect vp = ViewportRect();
-    const int vpW = std::max(1, vp.w);
     contentHeight_ = GuiLayout::StackVerticalMeasure({0, 0, vpW, 100000}, spacing, padding, kids);
 
     content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});

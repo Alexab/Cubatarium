@@ -421,11 +421,10 @@ bool Application::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed
         if (!root) {
             return false;
         }
-        GuiWidget* hit = root->HitTest(event.x, event.y);
-        if (!hit) {
+        if (!root->HitTest(event.x, event.y)) {
             return false;
         }
-        return pressed ? hit->OnMouseDown(event) : hit->OnMouseUp(event);
+        return pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
     };
     if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot())) {
         return true;
@@ -527,7 +526,7 @@ void Application::RenderFrame(int width, int height, double viewDuration)
     }
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
         paletteScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height);
+        guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height, false);
     }
 }
 
@@ -689,6 +688,22 @@ bool Application::RouteMouseMove(int x, int y)
 
 bool Application::RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY)
 {
+    if (state_ == AppState::InGame) {
+        GuiScrollEvent event{xoffset, yoffset};
+        auto routeScroll = [&](GuiWidget* root) -> bool {
+            return root && root->ScrollAtPoint(mouseX, mouseY, event);
+        };
+        if (paletteOpen_ && routeScroll(paletteScreen_ ? paletteScreen_->GetRoot() : nullptr)) {
+            return true;
+        }
+        if (consoleOpen_ && routeScroll(consoleScreen_ ? consoleScreen_->GetRoot() : nullptr)) {
+            return true;
+        }
+        if (routeScroll(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
+            return true;
+        }
+        return false;
+    }
     return guiContext_->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouseX, mouseY);
 }
 

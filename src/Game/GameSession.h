@@ -10,6 +10,7 @@
 #include "Gui/Interfaces/IInventoryViewModel.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace cutum {
@@ -48,6 +49,10 @@ public:
     size_t GetSelectedSlot(size_t barIndex) const override;
     void SelectSlot(size_t barIndex, size_t slotIndex) override;
     bool AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry) override;
+    void BeginPendingAssignment(const InventoryEntryRef& entry) override;
+    bool HasPendingAssignment() const override;
+    bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) override;
+    void ClearPendingAssignment() override;
 
     std::vector<InventoryGroupView> GetGroups(ContentKind tab, InventoryMode mode) const override;
     std::vector<InventoryEntryView> GetEntries(ContentKind tab,
@@ -73,6 +78,7 @@ private:
     ContentTypeRegistry contentCatalog_;
     std::vector<std::string> chatLog_;
     InventoryMode inventoryMode_{InventoryMode::Creative};
+    std::optional<InventoryEntryRef> pendingAssignment_;
 };
 
 } // namespace cutum

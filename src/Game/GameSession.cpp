@@ -195,6 +195,37 @@ bool GameSession::AssignSlot(size_t barIndex, size_t slotIndex, const InventoryE
     return false;
 }
 
+void GameSession::BeginPendingAssignment(const InventoryEntryRef& entry)
+{
+    pendingAssignment_ = entry;
+}
+
+bool GameSession::HasPendingAssignment() const
+{
+    return pendingAssignment_.has_value() && !pendingAssignment_->empty;
+}
+
+bool GameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
+{
+    if (!pendingAssignment_.has_value()) {
+        return false;
+    }
+    if (!CanAssignToHotbar(*pendingAssignment_, barIndex, slotIndex)) {
+        return false;
+    }
+    const bool ok = AssignSlot(barIndex, slotIndex, *pendingAssignment_);
+    if (ok) {
+        SelectSlot(barIndex, slotIndex);
+        pendingAssignment_.reset();
+    }
+    return ok;
+}
+
+void GameSession::ClearPendingAssignment()
+{
+    pendingAssignment_.reset();
+}
+
 std::vector<InventoryGroupView> GameSession::GetGroups(ContentKind tab, InventoryMode mode) const
 {
     std::vector<InventoryGroupView> groups;

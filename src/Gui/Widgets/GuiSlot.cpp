@@ -52,6 +52,9 @@ bool GuiSlot::OnMouseDown(const GuiMouseEvent& event)
         return false;
     }
     pressed_ = true;
+    if (onClick_) {
+        onClick_();
+    }
     return true;
 }
 
@@ -61,11 +64,7 @@ bool GuiSlot::OnMouseUp(const GuiMouseEvent& event)
         return false;
     }
     pressed_ = false;
-    if (bounds_.Contains(event.x, event.y) && onClick_) {
-        onClick_();
-        return true;
-    }
-    return false;
+    return bounds_.Contains(event.x, event.y);
 }
 
 } // namespace cutum

@@ -49,6 +49,7 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
             const auto types = catalog_->GetTypeIds(kind_);
             activeTypeId_ = types.empty() ? "misc" : types.front();
         }
+        selectedEntryId_.clear();
         built_ = false;
     });
 
@@ -61,6 +62,7 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
                 activeTypeId_ = types[static_cast<size_t>(tab)];
             }
         }
+        selectedEntryId_.clear();
         built_ = false;
     });
 
@@ -94,16 +96,17 @@ void CreativePaletteScreen::RelayoutPanel()
     panel_->SetBounds({panelX, panelY, panelW, panelH});
 
     if (mainTabs_) {
-        mainTabs_->SetBounds({8, 8, panelW - 16, 28});
+        mainTabs_->SetBounds({panelX + 8, panelY + 8, panelW - 16, 28});
     }
     if (subTabs_) {
-        subTabs_->SetBounds({8, 40, panelW - 16, 28});
+        subTabs_->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
     }
     if (scroll_) {
         const int scrollH = std::max(0, panelH - 84);
-        scroll_->SetBounds({8, 76, panelW - 16, scrollH});
+        scroll_->SetBounds({panelX + 8, panelY + 76, panelW - 16, scrollH});
         if (built_) {
             scroll_->LayoutContent();
+            LayoutGridInScroll();
         }
     }
 }
@@ -125,8 +128,17 @@ void CreativePaletteScreen::Update(double /*dt*/)
             labels.push_back("Misc");
         }
         subTabs_->SetTabs(labels);
-        if (activeTypeId_.empty() && !types.empty()) {
-            activeTypeId_ = types.front();
+        if (!types.empty()) {
+            auto it = std::find(types.begin(), types.end(), activeTypeId_);
+            if (it == types.end()) {
+                activeTypeId_ = types.front();
+                subTabs_->SetActiveTab(0);
+            } else {
+                subTabs_->SetActiveTab(static_cast<int>(std::distance(types.begin(), it)));
+            }
+        } else {
+            activeTypeId_.clear();
+            subTabs_->SetActiveTab(0);
         }
     }
 
@@ -141,18 +153,16 @@ void CreativePaletteScreen::RebuildGrid()
         return;
     }
     scroll_->Content().ClearChildren();
+    gridSlots_.clear();
 
-    auto grid = std::make_unique<GuiPanel>(theme_);
     const auto entries =
         catalog_->GetEntries(kind_, activeTypeId_.empty() ? "misc" : activeTypeId_);
     const int slotSize = theme_->hotbarSlotSize;
-    const int cols = 4;
-    int x = 0;
-    int y = 0;
     for (size_t i = 0; i < entries.size(); ++i) {
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
-        slot->SetBounds({x, y, slotSize, slotSize});
+        slot->SetBounds({0, 0, slotSize, slotSize});
         const std::string entryId = entries[i].id;
+        slot->SetSelected(entryId == selectedEntryId_);
         if (icons_) {
             const GLuint tex =
                 kind_ == ContentKind::Block
@@ -164,41 +174,60 @@ void CreativePaletteScreen::RebuildGrid()
             if (!hotbar_) {
                 return;
             }
-            const size_t preferredBar = kind_ == ContentKind::Block ? 0 : 1;
-            const size_t bar = preferredBar < hotbar_->GetBarCount() ? preferredBar : 0;
-            const auto slots = hotbar_->GetBarSlots(bar);
-            for (size_t si = 0; si < slots.size(); ++si) {
-                if (slots[si].id == entryId) {
-                    hotbar_->SelectSlot(bar, si);
-                    return;
-                }
-            }
+            selectedEntryId_ = entryId;
             InventoryEntryRef entry;
             entry.empty = false;
             entry.id = entryId;
             entry.kind = kind_ == ContentKind::Block ? InventoryEntryKind::Block
                                                      : InventoryEntryKind::Object;
-            for (size_t si = 0; si < slots.size(); ++si) {
-                if (slots[si].id.empty()) {
-                    if (hotbar_->AssignSlot(bar, si, entry)) {
-                        hotbar_->SelectSlot(bar, si);
-                    }
-                    return;
-                }
-            }
+            hotbar_->BeginPendingAssignment(entry);
+            built_ = false;
         });
-        grid->AddChild(std::move(slot));
-        x += slotSize + theme_->hotbarSlotGap;
+        GuiSlot* ptr = static_cast<GuiSlot*>(scroll_->Content().AddChild(std::move(slot)));
+        gridSlots_.push_back(ptr);
+    }
+
+    scroll_->SetAfterScrollLayout([this](GuiScrollView&) {
+        LayoutGridInScroll();
+    });
+    scroll_->LayoutContent();
+    LayoutGridInScroll();
+    built_ = true;
+}
+
+void CreativePaletteScreen::LayoutGridInScroll()
+{
+    if (!scroll_ || !theme_) {
+        return;
+    }
+    const GuiRect contentRect = scroll_->Content().GetBounds();
+    const int slotSize = theme_->hotbarSlotSize;
+    const int gap = theme_->hotbarSlotGap;
+    const int viewportW = contentRect.w;
+    const int viewportH = std::max(1, scroll_->GetBounds().h);
+    const int denom = std::max(1, slotSize + gap);
+    const int cols = std::max(1, (viewportW + gap) / denom);
+    const int contentTop = contentRect.y;
+
+    int x = contentRect.x;
+    int y = contentTop;
+    for (size_t i = 0; i < gridSlots_.size(); ++i) {
+        GuiSlot* slot = gridSlots_[i];
+        if (!slot) {
+            continue;
+        }
+        slot->SetBounds({x, y, slotSize, slotSize});
         if ((i + 1) % static_cast<size_t>(cols) == 0) {
-            x = 0;
-            y += slotSize + theme_->hotbarSlotGap;
+            x = contentRect.x;
+            y += slotSize + gap;
+        } else {
+            x += slotSize + gap;
         }
     }
-    const int contentW = std::max(1, scroll_->GetBounds().w);
-    grid->SetBounds({0, 0, contentW, y + slotSize + 8});
-    scroll_->Content().AddChild(std::move(grid));
-    scroll_->LayoutContent();
-    built_ = true;
+
+    const int rows = gridSlots_.empty() ? 0 : static_cast<int>((gridSlots_.size() + cols - 1) / cols);
+    const int contentHeight = std::max(viewportH, rows * (slotSize + gap) - (rows > 0 ? gap : 0) + 8);
+    scroll_->Content().SetBounds({contentRect.x, contentTop, viewportW, contentHeight});
 }
 
 } // namespace cutum

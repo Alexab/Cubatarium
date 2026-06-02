@@ -25,6 +25,10 @@ public:
     virtual size_t GetSelectedSlot(size_t barIndex) const = 0;
     virtual void SelectSlot(size_t barIndex, size_t slotIndex) = 0;
     virtual bool AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry) = 0;
+    virtual void BeginPendingAssignment(const InventoryEntryRef& entry) = 0;
+    virtual bool HasPendingAssignment() const = 0;
+    virtual bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) = 0;
+    virtual void ClearPendingAssignment() = 0;
 };
 
 } // namespace cutum

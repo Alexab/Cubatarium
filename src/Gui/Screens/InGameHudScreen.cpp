@@ -59,7 +59,11 @@ void InGameHudScreen::EnsureHotbarWidgets()
     for (size_t i = 0; i < 10; ++i) {
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
         const size_t index = i;
-        slot->SetOnClick([this, index]() { hotbar_->SelectSlot(0, index); });
+        slot->SetOnClick([this, index]() {
+            if (!hotbar_->ApplyPendingAssignment(0, index)) {
+                hotbar_->SelectSlot(0, index);
+            }
+        });
         slot->SetCornerHint(index == 0 ? "0" : std::to_string(index));
         GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
         primarySlots_.push_back(ptr);
@@ -67,7 +71,11 @@ void InGameHudScreen::EnsureHotbarWidgets()
     for (size_t i = 0; i < 10; ++i) {
         auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
         const size_t index = i;
-        slot->SetOnClick([this, index]() { hotbar_->SelectSlot(1, index); });
+        slot->SetOnClick([this, index]() {
+            if (!hotbar_->ApplyPendingAssignment(1, index)) {
+                hotbar_->SelectSlot(1, index);
+            }
+        });
         GuiSlot* ptr = static_cast<GuiSlot*>(rootPanel_->AddChild(std::move(slot)));
         secondarySlots_.push_back(ptr);
     }
