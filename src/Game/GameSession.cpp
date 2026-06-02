@@ -163,7 +163,7 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
     const size_t activeIndex = user->GetActiveSlotIndex(barIndex);
     for (size_t i = 0; i < slots.size(); ++i) {
         const HotbarSlot& slot = bar.slots[i];
-        if (!slot.empty && !slot.entry.empty) {
+        if (!slot.entry.id.empty()) {
             slots[i].id = slot.entry.id;
             slots[i].label = slot.entry.id;
             slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);

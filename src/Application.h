@@ -72,6 +72,8 @@ public:
     GameSession& GetGameSession() { return *gameSession_; }
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
+    /// ЛКМ в мир (постановка блока/префаба) при закрытых палитре и консоли, в т.ч. с видимым курсором (Right Alt).
+    bool AllowsWorldMousePlacement() const;
     const UiSettings& GetUiSettings() const { return uiSettings_; }
     int GetHotbarCountSetting() const { return uiSettings_.hotbarCount; }
     void SetHotbarCountSetting(int count);

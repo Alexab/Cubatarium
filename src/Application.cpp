@@ -631,6 +631,11 @@ bool Application::WantsCaptureKeyboard() const
     return consoleOpen_ || paletteOpen_ || guiContext_->WantsCaptureKeyboard();
 }
 
+bool Application::AllowsWorldMousePlacement() const
+{
+    return state_ == AppState::InGame && !paletteOpen_ && !consoleOpen_;
+}
+
 bool Application::RouteKey(int key, int action, int mods)
 {
   GuiKeyEvent event;

@@ -24,6 +24,8 @@ public:
  const std::string& GetActiveBlockTypeName() const;
  const std::string& GetActiveObjectTypeName() const;
  const std::string& GetActivePrefabName() const;
+ /// Активная ячейка хотбара (bar + slot), или nullptr если пусто.
+ const InventoryEntryRef* GetActiveHotbarEntry() const;
 
  void SetActiveBlockIndex(size_t index);
  void SetActivePrefabIndex(size_t index);

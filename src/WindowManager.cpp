@@ -7,6 +7,7 @@
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
+#include "InventoryTypes.h"
 #include "AppState.h"
 #include <iostream>
 #include <stdexcept>
@@ -418,10 +419,14 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
     }
 
     if (application_ && application_->WantsCaptureMouse()) {
-        if (button == MouseButton::Right && !pressed) {
-            isMousePressed = false;
+        const bool allowPlace =
+            button == MouseButton::Left && !pressed && application_->AllowsWorldMousePlacement();
+        if (!allowPlace) {
+            if (button == MouseButton::Right && !pressed) {
+                isMousePressed = false;
+            }
+            return;
         }
-        return;
     }
 
     if (button == MouseButton::Right) {
@@ -447,8 +452,12 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
 
             if (delta_time < 0.5) {
                 auto user = worldInstance->GetCurrentUser();
-                const bool hasActiveObject = user && !user->GetActivePrefabName().empty();
-                if (altDown || hasActiveObject) {
+                const InventoryEntryRef* active =
+                    user ? user->GetActiveHotbarEntry() : nullptr;
+                const bool placePrefab =
+                    altDown
+                    || (active && active->kind == InventoryEntryKind::Object && !active->id.empty());
+                if (placePrefab) {
                     worldInstance->PlaceActivePrefabByView();
                 } else {
                     worldInstance->AddObjectByView();

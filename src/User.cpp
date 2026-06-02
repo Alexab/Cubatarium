@@ -94,6 +94,11 @@ const std::string& User::GetActivePrefabName() const
  return EmptyString();
 }
 
+const InventoryEntryRef* User::GetActiveHotbarEntry() const
+{
+ return GetActiveEntryRef();
+}
+
 void User::SetActiveBlockIndex(size_t index)
 {
  if (index >= kHotbarSlots || hotbars_.empty()) {
@@ -115,7 +120,7 @@ void User::SetActiveObjectTypeName(const std::string& block_type)
  for (size_t b = 0; b < hotbars_.size(); ++b) {
   for (size_t i = 0; i < kHotbarSlots; ++i) {
    const HotbarSlot& slot = hotbars_[b].slots[i];
-   if (!slot.empty && slot.entry.id == block_type) {
+   if (!slot.entry.id.empty() && slot.entry.id == block_type) {
     SetActiveSlot(b, i);
     return;
    }
@@ -180,9 +185,11 @@ bool User::AssignToHotbar(size_t bar, size_t slot, const InventoryEntryRef& entr
  if (bar >= hotbars_.size() || slot >= kHotbarSlots) {
   return false;
  }
- hotbars_[bar].slots[slot].empty = entry.empty;
- hotbars_[bar].slots[slot].entry = entry;
- hotbars_[bar].slots[slot].entry.empty = entry.empty;
+ HotbarSlot& slotRef = hotbars_[bar].slots[slot];
+ slotRef.entry = entry;
+ const bool hasItem = !entry.id.empty();
+ slotRef.entry.empty = !hasItem;
+ slotRef.empty = !hasItem;
  return true;
 }
 
@@ -230,7 +237,7 @@ const InventoryEntryRef* User::GetActiveEntryRef() const
   return nullptr;
  }
  const HotbarSlot& s = hotbars_[bar].slots[slot];
- if (s.empty || s.entry.empty) {
+ if (s.entry.id.empty()) {
   return nullptr;
  }
  return &s.entry;
