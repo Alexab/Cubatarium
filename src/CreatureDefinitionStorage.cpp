@@ -1,4 +1,6 @@
 #include "CreatureDefinitionStorage.h"
+#include <glm/glm.hpp>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -16,6 +18,15 @@ glm::vec3 ReadVec3(const nlohmann::json& arr, const glm::vec3& fallback)
  return glm::vec3(arr[0].get<float>(), arr[1].get<float>(), arr[2].get<float>());
 }
 
+glm::vec4 ReadVec4(const nlohmann::json& arr, const glm::vec4& fallback)
+{
+ if (!arr.is_array() || arr.size() < 4) {
+  return fallback;
+ }
+ return glm::vec4(arr[0].get<float>(), arr[1].get<float>(), arr[2].get<float>(),
+                  arr[3].get<float>());
+}
+
 } // namespace
 
 void CreatureDefinitionStorage::Load(const std::string& folder)
@@ -25,11 +36,16 @@ void CreatureDefinitionStorage::Load(const std::string& folder)
   return;
  }
  for (const auto& entry : std::filesystem::directory_iterator(folder)) {
-  if (entry.path().extension() == ".json") {
-   LoadFile(entry.path().string());
+  if (!entry.is_directory()) {
+   continue;
+  }
+  const std::filesystem::path jsonPath = entry.path() / "creature.json";
+  if (std::filesystem::exists(jsonPath)) {
+   LoadFile(jsonPath.string());
   }
  }
- std::cout << "CreatureDefinitionStorage: loaded " << definitions_.size() << " definitions" << std::endl;
+ std::cout << "CreatureDefinitionStorage: loaded " << definitions_.size() << " definitions"
+           << std::endl;
 }
 
 bool CreatureDefinitionStorage::LoadFile(const std::string& path)
@@ -46,11 +62,28 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
   if (def.id.empty()) {
    return false;
   }
+  def.displayName = data.value("display_name", def.id);
+  if (data.contains("catalog") && data["catalog"].is_object()) {
+   const auto& catalog = data["catalog"];
+   if (catalog.contains("tags") && catalog["tags"].is_array()) {
+    for (const auto& tag : catalog["tags"]) {
+     if (tag.is_string()) {
+      def.catalog.tags.push_back(tag.get<std::string>());
+     }
+    }
+   }
+   def.catalog.spawnable = catalog.value("spawnable", false);
+   def.catalog.sortOrder = catalog.value("sort_order", 0);
+  }
+  def.role = ParseCreatureRole(data.value("role", ""));
   if (data.contains("bounds")) {
    const auto& b = data["bounds"];
-   def.bounds.restSizeBlocks = ReadVec3(b.value("rest", nlohmann::json::array()), def.bounds.restSizeBlocks);
-   def.bounds.maxSizeBlocks = ReadVec3(b.value("max", nlohmann::json::array()), def.bounds.maxSizeBlocks);
-   def.bounds.minSizeBlocks = ReadVec3(b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
+   def.bounds.restSizeBlocks =
+       ReadVec3(b.value("rest", nlohmann::json::array()), def.bounds.restSizeBlocks);
+   def.bounds.maxSizeBlocks =
+       ReadVec3(b.value("max", nlohmann::json::array()), def.bounds.maxSizeBlocks);
+   def.bounds.minSizeBlocks =
+       ReadVec3(b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
   }
   def.eyeHeight = data.value("eye_height", def.eyeHeight);
   if (data.contains("locomotion")) {
@@ -59,8 +92,23 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
    def.locomotion.canCrouch = loc.value("can_crouch", true);
    def.locomotion.canJump = loc.value("can_jump", true);
   }
+  def.behavior.id = data.value("behavior", def.behavior.id);
+  if (data.contains("behavior_params") && data["behavior_params"].is_object()) {
+   const auto& bp = data["behavior_params"];
+   def.behavior.moveSpeed = bp.value("move_speed", def.behavior.moveSpeed);
+   def.behavior.wanderIntervalMin = bp.value("wander_interval_min", def.behavior.wanderIntervalMin);
+   def.behavior.wanderIntervalMax = bp.value("wander_interval_max", def.behavior.wanderIntervalMax);
+  }
   if (data.contains("visual") && data["visual"].is_object()) {
-   def.visualBackend = data["visual"].value("backend", def.visualBackend);
+   const auto& vis = data["visual"];
+   def.visual.backend = vis.value("backend", def.visual.backend);
+   def.visual.defaultTextureKey = vis.value("default_texture", def.visual.defaultTextureKey);
+   if (vis.contains("icon") && vis["icon"].is_object()) {
+    const auto& icon = vis["icon"];
+    def.visual.iconMode = icon.value("mode", def.visual.iconMode);
+    def.visual.wireframeColor =
+        ReadVec4(icon.value("color", nlohmann::json::array()), def.visual.wireframeColor);
+   }
   }
   definitions_[def.id] = def;
   return true;
@@ -77,6 +125,58 @@ const CreatureDefinition* CreatureDefinitionStorage::Get(const std::string& id) 
   return nullptr;
  }
  return &it->second;
+}
+
+std::vector<std::string> CreatureDefinitionStorage::ListAllIds() const
+{
+ std::vector<std::string> ids;
+ ids.reserve(definitions_.size());
+ for (const auto& [id, def] : definitions_) {
+  (void)def;
+  ids.push_back(id);
+ }
+ std::sort(ids.begin(), ids.end(), [this](const std::string& a, const std::string& b) {
+  const auto* defA = Get(a);
+  const auto* defB = Get(b);
+  const int orderA = defA ? defA->catalog.sortOrder : 0;
+  const int orderB = defB ? defB->catalog.sortOrder : 0;
+  if (orderA != orderB) {
+   return orderA < orderB;
+  }
+  return a < b;
+ });
+ return ids;
+}
+
+std::vector<std::string> CreatureDefinitionStorage::ListSpawnable() const
+{
+ std::vector<std::string> ids;
+ for (const auto& [id, def] : definitions_) {
+  if (def.catalog.spawnable) {
+   ids.push_back(id);
+  }
+ }
+ std::sort(ids.begin(), ids.end(), [this](const std::string& a, const std::string& b) {
+  const auto* defA = Get(a);
+  const auto* defB = Get(b);
+  const int orderA = defA ? defA->catalog.sortOrder : 0;
+  const int orderB = defB ? defB->catalog.sortOrder : 0;
+  if (orderA != orderB) {
+   return orderA < orderB;
+  }
+  return a < b;
+ });
+ return ids;
+}
+
+std::string CreatureDefinitionStorage::GetControlledDefaultSpeciesId() const
+{
+ for (const auto& [id, def] : definitions_) {
+  if (def.role == CreatureRole::ControlledDefault) {
+   return id;
+  }
+ }
+ return {};
 }
 
 } // namespace cutum

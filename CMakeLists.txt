@@ -57,6 +57,7 @@ set(SOURCES
     src/MobController.cpp
     src/WorldCreatures.cpp
     src/CreatureDefinitionStorage.cpp
+    src/CreatureTextureStorage.cpp
     src/CreatureVisualRigid.cpp
     src/CreatureVisualGltf.cpp
     src/CreatureVisualFactory.cpp

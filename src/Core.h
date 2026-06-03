@@ -20,6 +20,7 @@ std::filesystem::path GetExecutableDirectory();
 class World;
 class TextureBaseStorage;
 class TextureCubeStorage;
+class CreatureTextureStorage;
 class ObjectStorage;
 class PrefabLibrary;
 class GeometryEngine;
@@ -75,6 +76,9 @@ public:
  std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
   return TextureCubeStorageInstance;
  }
+ std::shared_ptr<CreatureTextureStorage> GetCreatureTextureStorage() const {
+  return CreatureTextureStorageInstance;
+ }
 
 private:
  std::vector<std::string> WorldList;
@@ -105,6 +109,7 @@ private:
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
+ std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<PrefabLibrary> PrefabLibraryInstance;
  std::shared_ptr<GeometryEngine> GeometryEngineInstance;

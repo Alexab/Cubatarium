@@ -29,6 +29,7 @@
 #include "World.h"
 #include "Creature.h"
 #include "CreatureDefinitionStorage.h"
+#include "CreatureTextureStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "TextureCube.h"
@@ -276,6 +277,11 @@ void Core::LoadConfig(const std::string& config_file_name)
      auto creatureDefinitions = std::make_shared<CreatureDefinitionStorage>();
      creatureDefinitions->Load((project_dir / "models" / "creatures").string());
      WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
+
+     CreatureTextureStorageInstance = std::make_shared<CreatureTextureStorage>();
+     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
+         (project_dir / "models" / "creatures").string(),
+         (project_dir / "models" / "skins").string());
 
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
 

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "CreatureDefinition.h"
 
 namespace cutum {
@@ -12,6 +13,10 @@ public:
  void Load(const std::string& folder);
  const CreatureDefinition* Get(const std::string& id) const;
  size_t Count() const { return definitions_.size(); }
+
+ std::vector<std::string> ListAllIds() const;
+ std::vector<std::string> ListSpawnable() const;
+ std::string GetControlledDefaultSpeciesId() const;
 
 private:
  bool LoadFile(const std::string& path);

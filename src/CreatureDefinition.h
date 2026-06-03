@@ -3,16 +3,21 @@
 
 #include <string>
 #include "CreatureBounds.h"
+#include "CreatureCatalogTypes.h"
 #include "LocomotionTypes.h"
 
 namespace cutum {
 
 struct CreatureDefinition {
  std::string id;
+ std::string displayName;
+ CreatureCatalogInfo catalog;
+ CreatureRole role{CreatureRole::Unknown};
  CreatureBoundsProfile bounds;
  float eyeHeight{1.62f};
  CreatureLocomotionCapabilities locomotion;
- std::string visualBackend{"rigid_voxels"};
+ CreatureBehaviorParams behavior;
+ CreatureVisualSpec visual;
 };
 
 } // namespace cutum
