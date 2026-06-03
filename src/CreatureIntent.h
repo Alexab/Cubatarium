@@ -1,0 +1,19 @@
+#ifndef CREATUREINTENT_H
+#define CREATUREINTENT_H
+
+#include <glm/glm.hpp>
+#include "LocomotionTypes.h"
+
+namespace cutum {
+
+struct CreatureIntent {
+ glm::vec3 moveDirWorld{0.0f};
+ float moveSpeed{0.0f};
+ bool wantJump{false};
+ bool clearOnApply{true};
+ LocomotionState suggestedAnim{LocomotionState::Idle};
+};
+
+} // namespace cutum
+
+#endif
