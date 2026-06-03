@@ -49,6 +49,7 @@ set(SOURCES
     src/main.cpp
     src/Camera.cpp
     src/CreatureBounds.cpp
+    src/CreatureLocomotionController.cpp
     src/PlayerController.cpp
     src/Core.cpp
     src/Cube.cpp
