@@ -36,6 +36,7 @@ public:
  const CreatureBoundsState& GetBounds() const { return bounds_; }
  CreatureBoundsState& GetBoundsMutable() { return bounds_; }
  void SyncBoundsFromStance();
+ void SyncBodyOriginFromEye(const glm::vec3& eye);
 
  CollisionVolume GetCollisionVolume() const;
  CreatureLocomotionController& GetLocomotion() { return locomotion_; }

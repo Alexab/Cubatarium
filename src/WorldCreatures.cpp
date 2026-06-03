@@ -269,7 +269,7 @@ std::optional<CreatureId> World::PickCreatureByView(const glm::vec3& eye, const 
  float bestT = std::numeric_limits<float>::max();
  CreatureId bestId = 0;
  ForEachCreature([&](const Creature& creature) {
-  const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
+  const glm::vec3 size = creature.GetBounds().profile.restSizeBlocks;
   const glm::vec3 center = BoundsCollisionCenter(creature.GetBodyOrigin(), size);
   const glm::vec3 half = size * 0.5f;
   const glm::vec3 boxMin = center - half;
@@ -369,6 +369,8 @@ void World::LoadCreatures(const std::string& file_name)
    creature->GetBoundsMutable().profile = def->bounds;
    creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
    creature->SetCapabilities(def->locomotion);
+   creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
+                                                def->eyeHeight);
    if (!skin.empty()) {
     creature->SetSkinId(skin);
    }

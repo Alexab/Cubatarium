@@ -30,6 +30,8 @@ CreatureBoundsState StateFromPlayerCapsule(const PlayerCapsule& cap, float stanc
 CollisionVolume CollisionVolumeFromBody(const glm::vec3& bodyOrigin, const glm::vec3& currentSizeBlocks);
 CollisionVolume CollisionVolumeFromEye(const glm::vec3& eyePos, const PlayerCapsule& cap);
 glm::vec3 BodyOriginFromEye(const glm::vec3& eyePos, const glm::vec3& eyeOffset);
+glm::vec3 BodyOriginFromEyeAndFeet(const glm::vec3& eyePos, const glm::vec3& eyeOffset,
+                                   float feetY, bool feetAnchored);
 
 } // namespace cutum
 

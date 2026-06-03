@@ -27,6 +27,8 @@ public:
  float GetVerticalVelocity() const { return verticalVelocity_; }
  LocomotionState GetLocomotionState() const { return locomotionState_; }
  PlayerCapsule GetCapsule() const;
+ float GetFeetY() const { return feetY_; }
+ bool IsFeetAnchored() const { return feetAnchored_; }
 
  bool OnSpacePressed();
  void OnLandedFromFlight(const World* world, glm::vec3& eyePos, bool clearShiftKeys);
@@ -42,6 +44,7 @@ private:
  void updateLocomotionState(const CreatureInput& input);
  bool anchorFeetFromStandingEye(const World* world, const glm::vec3& eyePos);
  void applyCrouchEyeFromFeet(glm::vec3& eyePos) const;
+ float viewEyeHeight() const;
  void landStanding(const World* world, glm::vec3& eyePos, CreatureId skipCreatureId);
  bool canStandUpAt(const World* world, const glm::vec3& eyePos, CreatureId skipCreatureId) const;
  void updateStanceBlend(const World* world, const glm::vec3& eyePos, const CreatureInput& input,

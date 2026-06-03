@@ -1619,7 +1619,10 @@ void World::DoMovement()
  bool is_moved = camera && camera->DoMovement(this);
 
  if (controlled && camera) {
-  controlled->SetBodyOrigin(BodyOriginFromEye(camera->GetPosition(), controlled->GetEyeOffset()));
+  const glm::vec3 eye = camera->GetPosition();
+  controlled->SetBodyOrigin(BodyOriginFromEyeAndFeet(eye, controlled->GetEyeOffset(),
+                                                    camera->GetAnchoredFeetY(),
+                                                    camera->HasAnchoredFeet()));
   controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()), camera->GetPitch());
   controlled->SyncBoundsFromStance();
   controlled->GetLocomotion().SetMode(

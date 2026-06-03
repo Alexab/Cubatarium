@@ -47,6 +47,7 @@ Camera::Camera()
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 // Constructor with vectors
@@ -81,6 +82,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 // Constructor with scalar values
@@ -114,6 +116,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 glm::mat4 Camera::GetPose() const
@@ -202,6 +205,16 @@ void Camera::SetFreeMove(bool value)
 PlayerCapsule Camera::GetPlayerCapsule() const
 {
  return locomotion_.GetCapsule();
+}
+
+float Camera::GetAnchoredFeetY() const
+{
+ return locomotion_.GetFeetY();
+}
+
+bool Camera::HasAnchoredFeet() const
+{
+ return locomotion_.IsFeetAnchored();
 }
 
 bool Camera::IsCrouching() const
@@ -599,9 +612,17 @@ void Camera::UpdateFrameTime()
  LastFrame = current_frame;
 }
 
+void Camera::InitLocomotionCollisionProfile()
+{
+ const PlayerCapsule stand = PlayerCapsule::Standing();
+ locomotion_.SetCollisionProfile(
+     glm::vec3(stand.halfWidth * 2.0f, stand.height, stand.halfWidth * 2.0f), stand.eyeHeight);
+}
+
 void Camera::ResetVerticalPhysics()
 {
  locomotion_.Reset();
+ InitLocomotionCollisionProfile();
  stepUpAnim_.active = false;
  SyncFreeMoveFromController();
  UpdatePose();

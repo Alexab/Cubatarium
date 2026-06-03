@@ -67,6 +67,8 @@ public:
  void ResetVerticalPhysics();
 
  PlayerCapsule GetPlayerCapsule() const;
+ float GetAnchoredFeetY() const;
+ bool HasAnchoredFeet() const;
  bool IsCrouching() const;
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const;
@@ -101,6 +103,7 @@ private:
  glm::vec3 ComputeCameraWorldPosition() const;
  void UpdateCameraVectors();
  void SyncFreeMoveFromController();
+ void InitLocomotionCollisionProfile();
 
  float Fov;
  float AspectRatio;

@@ -43,12 +43,18 @@ void Creature::SetOrientation(float yaw, float pitch)
 void Creature::SyncBoundsFromStance()
 {
  bounds_ = LerpBoundsStance(bounds_, locomotion_.GetStanceBlend());
- locomotion_.SetCollisionProfile(bounds_.currentSizeBlocks, eyeOffset_.y);
+ locomotion_.SetCollisionProfile(bounds_.profile.restSizeBlocks, eyeOffset_.y);
 }
 
 CollisionVolume Creature::GetCollisionVolume() const
 {
- return CollisionVolumeFromBody(bodyOrigin_, bounds_.currentSizeBlocks);
+ return CollisionVolumeFromBody(bodyOrigin_, bounds_.profile.restSizeBlocks);
+}
+
+void Creature::SyncBodyOriginFromEye(const glm::vec3& eye)
+{
+ bodyOrigin_ = BodyOriginFromEyeAndFeet(eye, eyeOffset_, locomotion_.GetFeetY(),
+                                        locomotion_.IsFeetAnchored());
 }
 
 void Creature::TickWanderTimer(float dt, float /*intervalMin*/, float /*intervalMax*/)
@@ -82,7 +88,7 @@ void Creature::ApplyIntent(World& world, float dt)
   glm::vec3 eye = GetEyePosition();
   CreatureInput emptyInput;
   locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
-  bodyOrigin_ = BodyOriginFromEye(eye, eyeOffset_);
+  SyncBodyOriginFromEye(eye);
   SyncBoundsFromStance();
  }
 
@@ -96,7 +102,7 @@ void Creature::ApplyIntent(World& world, float dt)
  if (intent_.moveDirWorld != glm::vec3(0.0f)) {
   glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
   delta.y = 0.0f;
-  bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.currentSizeBlocks, id_);
+  bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.profile.restSizeBlocks, id_);
  }
 
  if (intent_.clearOnApply) {
@@ -109,7 +115,7 @@ void Creature::UpdateControlled(World& world, const CreatureInput& input, float 
  ClearIntent();
  glm::vec3 eye = GetEyePosition();
  locomotion_.UpdateLocomotion(&world, eye, input, dt, id_);
- bodyOrigin_ = BodyOriginFromEye(eye, eyeOffset_);
+ SyncBodyOriginFromEye(eye);
  SyncBoundsFromStance();
 }
 
