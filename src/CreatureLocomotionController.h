@@ -4,9 +4,12 @@
 #include <chrono>
 #include <glm/glm.hpp>
 #include "LocomotionTypes.h"
+#include <cstdint>
 #include "PlayerCapsule.h"
 
 namespace cutum {
+
+using CreatureId = uint64_t;
 
 class World;
 
@@ -26,7 +29,8 @@ public:
 
  bool OnSpacePressed();
  void OnLandedFromFlight(const World* world, glm::vec3& eyePos, bool clearShiftKeys);
- void UpdateLocomotion(const World* world, glm::vec3& eyePos, const CreatureInput& input, float dt);
+ void UpdateLocomotion(const World* world, glm::vec3& eyePos, const CreatureInput& input, float dt,
+                       CreatureId skipCreatureId = 0);
 
  bool ShouldBlockJump() const { return suppressNextJump_; }
  void NotifySpaceReleased() { suppressNextJump_ = false; }
@@ -37,14 +41,15 @@ private:
  void updateLocomotionState(const CreatureInput& input);
  bool anchorFeetFromStandingEye(const World* world, const glm::vec3& eyePos);
  void applyCrouchEyeFromFeet(glm::vec3& eyePos) const;
- void landStanding(const World* world, glm::vec3& eyePos);
- bool canStandUpAt(const World* world, const glm::vec3& eyePos) const;
+ void landStanding(const World* world, glm::vec3& eyePos, CreatureId skipCreatureId);
+ bool canStandUpAt(const World* world, const glm::vec3& eyePos, CreatureId skipCreatureId) const;
  void updateStanceBlend(const World* world, const glm::vec3& eyePos, const CreatureInput& input,
-                        float dt);
+                        float dt, CreatureId skipCreatureId);
  bool tryJump(const CreatureInput& input);
- bool tryStandFromCrouch(const World* world, glm::vec3& eyePos, const CreatureInput& input);
+ bool tryStandFromCrouch(const World* world, glm::vec3& eyePos, const CreatureInput& input,
+                         CreatureId skipCreatureId);
  void syncGroundedPose(const World* world, glm::vec3& eyePos, const CreatureInput& input,
-                       float dt);
+                       float dt, CreatureId skipCreatureId);
 
  CreatureMovementMode mode_{CreatureMovementMode::Walking};
  LocomotionState locomotionState_{LocomotionState::Idle};

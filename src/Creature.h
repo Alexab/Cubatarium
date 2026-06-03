@@ -16,8 +16,6 @@ namespace cutum {
 class World;
 class ICreatureVisual;
 
-using CreatureId = uint64_t;
-
 class Creature {
 public:
  Creature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm::vec3 eyeOffset);

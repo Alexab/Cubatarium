@@ -12,6 +12,7 @@
 #include "GeometryEngine.h"
 #include "Creature.h"
 #include "CreatureBounds.h"
+#include "CameraPerspective.h"
 #include "CreatureDefinition.h"
 #include "CreatureVisual.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -1743,8 +1744,13 @@ void GeometryEngine::RenderCreatures()
  }
  const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
  const float dt = static_cast<float>(camera->GetDeltaTime());
+ const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
  WorldInstance->ForEachCreature([&](Creature& creature) {
-  if (creature.IsPlayerCharacter()) {
+  if (creature.GetId() == controlledId) {
+   if (camera->GetPerspective() == CameraPerspective::FirstPerson) {
+    return;
+   }
+  } else if (creature.IsPlayerCharacter()) {
    return;
   }
   const std::string animType = WorldInstance->ResolveAnimationTypeId(creature);

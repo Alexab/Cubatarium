@@ -374,7 +374,7 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 
  glm::vec3 newPos = Position;
  if (hasShift) {
-  newPos = world->ResolveMovement(Position, shift, cap);
+  newPos = world->ResolveMovement(Position, shift, cap, world->GetMovementCollisionSkipId());
  }
 
  const bool grounded =
@@ -438,7 +438,8 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
 
  if (world) {
-  glm::vec3 newPos = world->ResolveMovement(Position, shift, collisionCap);
+  glm::vec3 newPos = world->ResolveMovement(Position, shift, collisionCap,
+                                            world->GetMovementCollisionSkipId());
   Position = newPos;
  } else {
   Position += shift;
@@ -520,11 +521,29 @@ void Camera::ProcessMouseScroll(float yoffset)
   UpdatePose();
  }
 
+glm::vec3 Camera::ComputeCameraWorldPosition() const
+{
+ if (perspective_ == CameraPerspective::FirstPerson) {
+  return Position;
+ }
+ if (perspective_ == CameraPerspective::ThirdPersonBack) {
+  return Position - Front * thirdPersonDistance_ + Up * thirdPersonHeight_;
+ }
+ return Position + Front * thirdPersonDistance_;
+}
+
+void Camera::CyclePerspective()
+{
+ perspective_ = CycleCameraPerspective(perspective_);
+ UpdatePose();
+}
+
 void Camera::UpdatePose()
 {
- glm::mat4 pose = glm::lookAt(this->Position, this->Position + this->Front, this->Up);
-
- Pose = pose;
+ const glm::vec3 eye = Position;
+ const glm::vec3 camWorld = ComputeCameraWorldPosition();
+ const glm::vec3 target = eye + Front;
+ Pose = glm::lookAt(camWorld, target, Up);
 
  Projection = glm::perspective(glm::radians(Fov), AspectRatio, NearPlane, FarPlane);
 
@@ -651,7 +670,7 @@ bool Camera::DoMovement(const World* world)
    return is_moved;
   }
 
-  locomotion_.UpdateLocomotion(world, Position, input, dt);
+  locomotion_.UpdateLocomotion(world, Position, input, dt, world->GetMovementCollisionSkipId());
   if (locomotion_.ConsumeClearShiftRequest()) {
    ClearShiftKeyState();
   }

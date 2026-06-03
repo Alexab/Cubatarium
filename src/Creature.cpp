@@ -52,12 +52,12 @@ void Creature::ApplyIntent(World& world, float dt)
  }
  glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
  delta.y = 0.0f;
- bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.currentSizeBlocks);
+ bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.currentSizeBlocks, id_);
 
  if (locomotion_.GetMode() == CreatureMovementMode::Walking) {
   glm::vec3 eye = GetEyePosition();
   CreatureInput emptyInput;
-  locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt);
+  locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
   bodyOrigin_ = BodyOriginFromEye(eye, eyeOffset_);
   SyncBoundsFromStance();
  }
@@ -71,7 +71,7 @@ void Creature::UpdateControlled(World& world, const CreatureInput& input, float 
 {
  ClearIntent();
  glm::vec3 eye = GetEyePosition();
- locomotion_.UpdateLocomotion(&world, eye, input, dt);
+ locomotion_.UpdateLocomotion(&world, eye, input, dt, id_);
  bodyOrigin_ = BodyOriginFromEye(eye, eyeOffset_);
  SyncBoundsFromStance();
 }

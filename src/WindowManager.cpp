@@ -361,9 +361,6 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key == KeyCode::Key_F4) {
             SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Gray sky
         }
-        else if (key == KeyCode::Key_F5) {
-            SetGradientSky(!IsGradientSky());
-        }
         else if (key == KeyCode::Key_F6) {
             SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
             SetGradientSky(true);
@@ -608,7 +605,7 @@ void WindowManager::RenderHelpText() {
     
     // Main control hints in English
     std::vector<std::string> helpLines = {
-        "WASD - Move, Space - Jump, dbl Space - Fly, RMB hold - Look, ` - Console",
+        "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, RMB hold - Look, ` - Console",
         "LMB - Place/remove, 0-9 primary hotbar, E inventory",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"

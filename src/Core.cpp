@@ -222,9 +222,12 @@ void Core::LoadConfig(const std::string& config_file_name)
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
       streamingEnabled_ = d.value("streaming_enabled", true);
       if (d.contains("gameplay") && d["gameplay"].is_object()) {
-       stepUpEnabled_ = d["gameplay"].value("step_up", true);
+       const json& gameplay = d["gameplay"];
+       stepUpEnabled_ = gameplay.value("step_up", true);
+       entityCollisionEnabled_ = gameplay.value("entity_collision", true);
       } else {
        stepUpEnabled_ = true;
+       entityCollisionEnabled_ = true;
       }
       if (d.contains("render") && d["render"].is_object()) {
        const json& r = d["render"];
@@ -301,6 +304,7 @@ void Core::LoadConfig(const std::string& config_file_name)
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
      WorldInstance->SetStepUpEnabled(stepUpEnabled_);
+     WorldInstance->SetEntityCollisionEnabled(entityCollisionEnabled_);
      WorldInstance->SetRenderSettings(renderSettings_);
      if (GeometryEngineInstance) {
       GeometryEngineInstance->SetRenderSettings(renderSettings_);
@@ -309,7 +313,8 @@ void Core::LoadConfig(const std::string& config_file_name)
                << " face_quads=" << renderSettings_.faceQuads
                << " frustum=" << renderSettings_.frustumCulling
                << " batch_cache=" << renderSettings_.batchCache << std::endl;
-     std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0") << std::endl;
+     std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0")
+               << " entity_collision=" << (entityCollisionEnabled_ ? "1" : "0") << std::endl;
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error: " << e.what() << std::endl;
  }
@@ -370,6 +375,7 @@ void Core::SaveConfigFile()
  system_data["streaming_enabled"] = streamingEnabled_;
  json gameplay;
  gameplay["step_up"] = stepUpEnabled_;
+ gameplay["entity_collision"] = entityCollisionEnabled_;
  system_data["gameplay"] = gameplay;
  json render;
  render["greedy_meshing"] = renderSettings_.greedyMeshing;
@@ -415,6 +421,7 @@ AppSettingsSnapshot Core::GetAppSettings() const
  snapshot.renderDistanceChunks = renderDistanceChunks_;
  snapshot.streamingEnabled = streamingEnabled_;
  snapshot.stepUpEnabled = stepUpEnabled_;
+ snapshot.entityCollisionEnabled = entityCollisionEnabled_;
  snapshot.render = renderSettings_;
  snapshot.ui = uiSettings_;
  return snapshot;
@@ -427,12 +434,14 @@ void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
  renderDistanceChunks_ = settings.renderDistanceChunks;
  streamingEnabled_ = settings.streamingEnabled;
  stepUpEnabled_ = settings.stepUpEnabled;
+ entityCollisionEnabled_ = settings.entityCollisionEnabled;
  renderSettings_ = settings.render;
  uiSettings_ = settings.ui;
 
  WorldInstance->SetStreamingEnabled(streamingEnabled_);
  WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
  WorldInstance->SetStepUpEnabled(stepUpEnabled_);
+ WorldInstance->SetEntityCollisionEnabled(entityCollisionEnabled_);
  WorldInstance->SetRenderSettings(renderSettings_);
  if (GeometryEngineInstance) {
   GeometryEngineInstance->SetRenderSettings(renderSettings_);

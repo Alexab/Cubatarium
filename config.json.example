@@ -18,7 +18,8 @@
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "gameplay": {
-        "step_up": true
+        "step_up": true,
+        "entity_collision": true
     },
     "render": {
         "greedy_meshing": true,

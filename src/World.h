@@ -140,20 +140,30 @@ public:
  void LoadCreatures(const std::string& file_name);
  void SaveCreatures(const std::string& file_name);
 
- bool CheckCollisionVolume(const CollisionVolume& vol) const;
+ bool CheckBlockCollisionVolume(const CollisionVolume& vol) const;
+ bool CheckCreatureCollisionVolume(const CollisionVolume& vol,
+                                   CreatureId skipCreatureId) const;
+ bool CheckCollisionVolume(const CollisionVolume& vol,
+                           CreatureId skipCreatureId = 0) const;
  bool HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const;
  /// Moves from body origin along delta (Y, X, Z axis order).
  glm::vec3 ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
-                               const glm::vec3& currentSizeBlocks) const;
+                               const glm::vec3& currentSizeBlocks,
+                               CreatureId skipCreatureId = 0) const;
  SampledFluidState SampleFluidPhysicsVolume(const CollisionVolume& vol) const;
 
  /// `eyePos` is camera/eye position; collision AABB derived from `cap`.
  bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
+ bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                     CreatureId skipCreatureId) const;
  /// Solid block directly under the player feet (for step-up / grounded checks).
  bool HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
  /// Moves from eye position along delta with axis-separated resolution (Y, then X, then Z).
  glm::vec3 ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
-                           const PlayerCapsule& cap) const;
+                           const PlayerCapsule& cap,
+                           CreatureId skipCreatureId = 0) const;
+
+ CreatureId GetMovementCollisionSkipId() const { return controlledCreatureId_; }
 
  struct StepUpProbe {
   bool valid{false};
@@ -212,6 +222,9 @@ public:
 
  void SetStepUpEnabled(bool enabled) { stepUpEnabled_ = enabled; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
+
+ void SetEntityCollisionEnabled(bool enabled) { entityCollisionEnabled_ = enabled; }
+ bool IsEntityCollisionEnabled() const { return entityCollisionEnabled_; }
 
  static bool HasPersistedTerrainOnDisk(const std::string& world_folder_path);
 
@@ -289,6 +302,7 @@ private:
  std::unique_ptr<ChunkStreamer> streamer_;
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
+ bool entityCollisionEnabled_{true};
  RenderSettings renderSettings_;
  int renderDistanceChunks_{4};
  std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;

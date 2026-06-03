@@ -1005,7 +1005,7 @@ World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
  return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
 }
 
-bool World::CheckCollisionVolume(const CollisionVolume& vol) const
+bool World::CheckBlockCollisionVolume(const CollisionVolume& vol) const
 {
  if (!blockRegistry_) {
   return false;
@@ -1033,9 +1033,42 @@ bool World::CheckCollisionVolume(const CollisionVolume& vol) const
  return false;
 }
 
+bool World::CheckCreatureCollisionVolume(const CollisionVolume& vol,
+                                         CreatureId skipCreatureId) const
+{
+ for (const auto& entry : creatures_) {
+  if (entry.first == skipCreatureId) {
+   continue;
+  }
+  const CollisionVolume other = entry.second->GetCollisionVolume();
+  if (Cube::CheckAabbCollision(vol.center, vol.halfExtents, other.center,
+                               other.halfExtents)) {
+   return true;
+  }
+ }
+ return false;
+}
+
+bool World::CheckCollisionVolume(const CollisionVolume& vol, CreatureId skipCreatureId) const
+{
+ if (CheckBlockCollisionVolume(vol)) {
+  return true;
+ }
+ if (!entityCollisionEnabled_) {
+  return false;
+ }
+ return CheckCreatureCollisionVolume(vol, skipCreatureId);
+}
+
 bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
- return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap));
+ return CheckCollision(eyePos, cap, GetMovementCollisionSkipId());
+}
+
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                           CreatureId skipCreatureId) const
+{
+ return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap), skipCreatureId);
 }
 
 bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const
@@ -1063,7 +1096,7 @@ constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
 glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, float axisDelta,
-                                 int axis, const PlayerCapsule& cap)
+                                 int axis, const PlayerCapsule& cap, CreatureId skipCreatureId)
 {
  if (std::abs(axisDelta) < 1e-8f) {
   return fromEye;
@@ -1078,12 +1111,12 @@ glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, f
  while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
   const float step = std::min(remaining, kCollisionMaxStep);
   const glm::vec3 next = pos + axisUnit * step * sign;
-  if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap))) {
+  if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap), skipCreatureId)) {
    glm::vec3 lo = pos;
    glm::vec3 hi = next;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap))) {
+    if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap), skipCreatureId)) {
      hi = mid;
     } else {
      lo = mid;
@@ -1104,7 +1137,8 @@ glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, f
 }
 
 glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody, float axisDelta,
-                                  int axis, const glm::vec3& currentSizeBlocks)
+                                  int axis, const glm::vec3& currentSizeBlocks,
+                                  CreatureId skipCreatureId)
 {
  if (std::abs(axisDelta) < 1e-8f) {
   return fromBody;
@@ -1119,12 +1153,14 @@ glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody,
  while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
   const float step = std::min(remaining, kCollisionMaxStep);
   const glm::vec3 nextBody = body + axisUnit * step * sign;
-  if (world.CheckCollisionVolume(CollisionVolumeFromBody(nextBody, currentSizeBlocks))) {
+  if (world.CheckCollisionVolume(CollisionVolumeFromBody(nextBody, currentSizeBlocks),
+                                 skipCreatureId)) {
    glm::vec3 lo = body;
    glm::vec3 hi = nextBody;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (world.CheckCollisionVolume(CollisionVolumeFromBody(mid, currentSizeBlocks))) {
+    if (world.CheckCollisionVolume(CollisionVolumeFromBody(mid, currentSizeBlocks),
+                                   skipCreatureId)) {
      hi = mid;
     } else {
      lo = mid;
@@ -1147,20 +1183,21 @@ glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody,
 } // namespace
 
 glm::vec3 World::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
-                                     const glm::vec3& currentSizeBlocks) const
+                                     const glm::vec3& currentSizeBlocks,
+                                     CreatureId skipCreatureId) const
 {
  if (glm::dot(delta, delta) < 1e-10f) {
   return bodyOrigin;
  }
  glm::vec3 body = bodyOrigin;
- body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks);
- body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks);
- body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks);
+ body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks, skipCreatureId);
+ body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks, skipCreatureId);
+ body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks, skipCreatureId);
  return body;
 }
 
 glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
-                                 const PlayerCapsule& cap) const
+                                 const PlayerCapsule& cap, CreatureId skipCreatureId) const
 {
  if (glm::dot(delta, delta) < 1e-10f) {
   return eyePos;
@@ -1168,7 +1205,7 @@ glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta
  const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
  const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
  const glm::vec3 body = BodyOriginFromEye(eyePos, eyeOffset);
- const glm::vec3 newBody = ResolveMovementBody(body, delta, sizeBlocks);
+ const glm::vec3 newBody = ResolveMovementBody(body, delta, sizeBlocks, skipCreatureId);
  return BoundsEyePosition(newBody, eyeOffset);
 }
 
@@ -1285,7 +1322,7 @@ bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
 
  glm::vec3 resolved = eyePos;
  const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
- resolved = ResolveMovement(eyePos, stepDelta, cap);
+ resolved = ResolveMovement(eyePos, stepDelta, cap, GetMovementCollisionSkipId());
  const float movedH = glm::length(glm::vec2(resolved.x - eyePos.x, resolved.z - eyePos.z));
  if (movedH < 0.08f || CheckCollision(resolved, cap)) {
   return false;

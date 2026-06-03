@@ -32,6 +32,7 @@
 #include "ViewEngine.h"
 #include "World.h"
 #include "Camera.h"
+#include "CameraPerspective.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -769,6 +770,15 @@ bool Application::RouteKey(int key, int action, int mods)
         suppressConsoleToggleChar_ = true;
       } else {
         suppressConsoleToggleChar_ = false;
+      }
+      return true;
+    }
+    if (!consoleOpen_ && key == GLFW_KEY_F5 && world_) {
+      if (auto cam = world_->GetCurrentUserCamera()) {
+        cam->CyclePerspective();
+        if (geometry_) {
+          geometry_->ShowTransientMessage(CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
+        }
       }
       return true;
     }

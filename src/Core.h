@@ -70,6 +70,7 @@ public:
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
+ bool IsEntityCollisionEnabled() const { return entityCollisionEnabled_; }
  std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
  std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
   return TextureCubeStorageInstance;
@@ -98,6 +99,7 @@ private:
  int renderDistanceChunks_{4};
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
+ bool entityCollisionEnabled_{true};
  RenderSettings renderSettings_;
  UiSettings uiSettings_;
 
