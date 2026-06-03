@@ -27,9 +27,9 @@
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "World.h"
+#include "CreatureDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
-#include "World.h"
 #include "TextureCube.h"
 #include "TextureBase.h"
 #include "ObjectStorage.h"
@@ -267,6 +267,10 @@ void Core::LoadConfig(const std::string& config_file_name)
      blockDefinitions->Load(texture_cube_storage_file_name.string());
      TextureCubeStorageInstance->SetBlockDefinitions(blockDefinitions);
      WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
+
+     auto creatureDefinitions = std::make_shared<CreatureDefinitionStorage>();
+     creatureDefinitions->Load((project_dir / "models" / "creatures").string());
+     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
 
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
 

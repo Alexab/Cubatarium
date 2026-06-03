@@ -1,0 +1,22 @@
+{
+  "id": "test_mob",
+  "bounds": {
+    "rest": [0.8, 1.6, 0.8],
+    "max": [1.2, 1.6, 0.8],
+    "min": [0.8, 0.8, 0.8]
+  },
+  "eye_height": 1.45,
+  "locomotion": { "can_fly": true, "can_crouch": false, "can_jump": true },
+  "visual": {
+    "backend": "rigid_voxels",
+    "parts": [
+      { "name": "body", "offset": [0, 0.4, 0], "size": [0.6, 0.8, 0.4] },
+      { "name": "head", "parent": "body", "pivot": [0, 0.4, 0], "size": [0.4, 0.4, 0.4] }
+    ]
+  },
+  "animations": {
+    "idle": { "head": { "rotate": [0, 0, 0] } },
+    "walk": { "head": { "rotate": [0, 15, 0] } },
+    "fly": { "body": { "rotate": [10, 0, 0] } }
+  }
+}
