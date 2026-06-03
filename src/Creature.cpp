@@ -36,10 +36,7 @@ glm::vec3 Creature::GetEyePosition() const
 
 glm::vec3 Creature::GetLocomotionEye() const
 {
- const float eyeY = locomotion_.IsFeetAnchored()
-                        ? locomotion_.GetFeetY() + locomotion_.GetViewEyeHeight()
-                        : bodyOrigin_.y + locomotion_.GetViewEyeHeight();
- return glm::vec3(bodyOrigin_.x, eyeY, bodyOrigin_.z);
+ return glm::vec3(bodyOrigin_.x, bodyOrigin_.y + locomotion_.GetViewEyeHeight(), bodyOrigin_.z);
 }
 
 void Creature::SetOrientation(float yaw, float pitch)
@@ -63,10 +60,9 @@ void Creature::SyncFeetFromLocomotion(const glm::vec3& eyeAfterLocomotion)
 {
  bodyOrigin_.x = eyeAfterLocomotion.x;
  bodyOrigin_.z = eyeAfterLocomotion.z;
+ bodyOrigin_.y = FeetYFromEye(eyeAfterLocomotion, eyeOffset_.y);
  if (locomotion_.IsFeetAnchored()) {
-  bodyOrigin_.y = locomotion_.GetFeetY();
- } else {
-  bodyOrigin_.y = eyeAfterLocomotion.y - eyeOffset_.y;
+  locomotion_.SyncFeetAnchorFromView(bodyOrigin_.y, true);
  }
 }
 

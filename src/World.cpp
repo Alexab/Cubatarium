@@ -1620,14 +1620,11 @@ void World::DoMovement()
 
  if (controlled && camera) {
   const glm::vec3 eye = camera->GetPosition();
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
+  const float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
   controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
-  controlled->GetLocomotion().SyncFeetAnchorFromView(camera->GetAnchoredFeetY(),
-                                                     camera->HasAnchoredFeet());
-  if (camera->HasAnchoredFeet()) {
-   controlled->SetBodyOrigin(glm::vec3(eye.x, camera->GetAnchoredFeetY(), eye.z));
-  } else {
-   controlled->SetBodyOrigin(BodyOriginFromEye(eye, controlled->GetEyeOffset()));
-  }
+  controlled->GetLocomotion().SyncFeetAnchorFromView(feetY, camera->HasAnchoredFeet());
   controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()), camera->GetPitch());
   controlled->SyncBoundsFromStance();
   controlled->GetLocomotion().SetMode(

@@ -115,9 +115,7 @@ void CreatureLocomotionController::SyncAfterStepLanding(glm::vec3& eyePos, const
  verticalVelocity_ = 0.0f;
  if (world) {
   anchorFeetFromStandingEye(world, eyePos);
-  if (stanceBlend_ > kJumpStanceMax) {
-   applyCrouchEyeFromFeet(eyePos);
-  }
+  syncEyeFromFeet(eyePos);
  }
  updateLocomotionState({});
 }
@@ -134,11 +132,6 @@ bool CreatureLocomotionController::anchorFeetFromStandingEye(const World* world,
   return false;
  }
  feetY_ = cap.feetY(eyePos);
- const int supportY = static_cast<int>(std::floor(feetY_ - 0.04f));
- const float blockTop = static_cast<float>(supportY) + 1.0f;
- if (feetY_ < blockTop - 0.02f) {
-  feetY_ = blockTop;
- }
  feetAnchored_ = true;
  return true;
 }
@@ -162,7 +155,7 @@ void CreatureLocomotionController::SyncFeetAnchorFromView(float feetY, bool anch
  feetAnchored_ = anchored;
 }
 
-void CreatureLocomotionController::applyCrouchEyeFromFeet(glm::vec3& eyePos) const
+void CreatureLocomotionController::syncEyeFromFeet(glm::vec3& eyePos) const
 {
  if (!feetAnchored_) {
   return;
@@ -189,6 +182,7 @@ void CreatureLocomotionController::landStanding(const World* world, glm::vec3& e
   eyePos.y += 0.1f;
  }
  anchorFeetFromStandingEye(world, eyePos);
+ syncEyeFromFeet(eyePos);
 }
 
 bool CreatureLocomotionController::canStandUpAt(const World* world,
@@ -240,7 +234,7 @@ bool CreatureLocomotionController::tryStandFromCrouch(const World* world, glm::v
   return false;
  }
  stanceBlend_ = 0.0f;
- applyCrouchEyeFromFeet(eyePos);
+ syncEyeFromFeet(eyePos);
  if (input.crouchHeld) {
   clearShiftRequest_ = true;
  }
@@ -274,10 +268,10 @@ void CreatureLocomotionController::syncGroundedPose(const World* world, glm::vec
   if (!feetAnchored_) {
    anchorFeetFromStandingEye(world, eyePos);
   }
-  applyCrouchEyeFromFeet(eyePos);
  } else {
   anchorFeetFromStandingEye(world, eyePos);
  }
+ syncEyeFromFeet(eyePos);
 }
 
 void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec3& eyePos,
@@ -340,7 +334,7 @@ void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec
   eyePos = world->ResolveMovement(eyePos, verticalDelta, cap, skipCreatureId);
   updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
   if (stanceBlend_ > kJumpStanceMax && feetAnchored_) {
-   applyCrouchEyeFromFeet(eyePos);
+   syncEyeFromFeet(eyePos);
   }
   spaceWasPressed_ = input.jumpHeld;
   updateLocomotionState(input);

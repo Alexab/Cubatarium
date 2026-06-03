@@ -111,7 +111,8 @@ void GameSession::RegisterCommands()
             user->SetPosition(eye);
             camera->SetPosition(eye);
             if (controlled) {
-                controlled->SetBodyOrigin(BodyOriginFromEye(eye, controlled->GetEyeOffset()));
+                controlled->SetBodyOrigin(
+                    glm::vec3(eye.x, FeetYFromEye(eye, controlled->GetEyeOffset().y), eye.z));
             }
             return CommandResult{true, "Teleported"};
         } catch (...) {

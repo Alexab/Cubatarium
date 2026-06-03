@@ -46,7 +46,7 @@ public:
 private:
  void updateLocomotionState(const CreatureInput& input);
  bool anchorFeetFromStandingEye(const World* world, const glm::vec3& eyePos);
- void applyCrouchEyeFromFeet(glm::vec3& eyePos) const;
+ void syncEyeFromFeet(glm::vec3& eyePos) const;
  void landStanding(const World* world, glm::vec3& eyePos, CreatureId skipCreatureId);
  bool canStandUpAt(const World* world, const glm::vec3& eyePos, CreatureId skipCreatureId) const;
  void updateStanceBlend(const World* world, const glm::vec3& eyePos, const CreatureInput& input,

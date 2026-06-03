@@ -77,4 +77,9 @@ glm::vec3 BodyOriginFromEye(const glm::vec3& eyePos, const glm::vec3& eyeOffset)
  return eyePos - eyeOffset;
 }
 
+float FeetYFromEye(const glm::vec3& eyePos, float eyeHeight)
+{
+ return eyePos.y - eyeHeight;
+}
+
 } // namespace cutum
