@@ -140,6 +140,7 @@ public:
  CreatureId GetControlledCreatureId() const { return controlledCreatureId_; }
  CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
  bool SetControlledCreature(CreatureId id);
+ void SnapCreatureFeetToGround(Creature& creature) const;
  CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                           const std::string& skinId = "");
  bool SpawnCreatureByView(const std::string& speciesId);

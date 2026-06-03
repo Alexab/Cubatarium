@@ -1,9 +1,16 @@
 #include "CreatureLocomotionController.h"
+#include "CreatureBounds.h"
 #include "World.h"
 #include <algorithm>
 #include <cmath>
 
 namespace cutum {
+
+void CreatureLocomotionController::SetCollisionProfile(const glm::vec3& sizeBlocks, float eyeHeight)
+{
+ collisionSizeBlocks_ = sizeBlocks;
+ eyeHeight_ = eyeHeight;
+}
 
 void CreatureLocomotionController::Reset()
 {
@@ -61,7 +68,13 @@ void CreatureLocomotionController::updateLocomotionState(const CreatureInput& in
 
 PlayerCapsule CreatureLocomotionController::GetCapsule() const
 {
- return PlayerCapsule::Lerp(stanceBlend_);
+ const PlayerCapsule rest = PlayerCapsule::FromCreatureBlocks(collisionSizeBlocks_, eyeHeight_);
+ const PlayerCapsule crouch = PlayerCapsule::FromCreatureBlocks(
+     glm::vec3(collisionSizeBlocks_.x, collisionSizeBlocks_.y * 0.85f, collisionSizeBlocks_.z),
+     eyeHeight_ * 0.85f);
+ const float t = std::clamp(stanceBlend_, 0.0f, 1.0f);
+ return {rest.height + (crouch.height - rest.height) * t,
+         rest.eyeHeight + (crouch.eyeHeight - rest.eyeHeight) * t, rest.halfWidth};
 }
 
 bool CreatureLocomotionController::OnSpacePressed()
@@ -121,12 +134,12 @@ bool CreatureLocomotionController::anchorFeetFromStandingEye(const World* world,
  if (!world) {
   return false;
  }
- const PlayerCapsule stand = PlayerCapsule::Standing();
- if (!world->HasGroundSupport(eyePos, stand)) {
+ const PlayerCapsule cap = GetCapsule();
+ if (!world->HasGroundSupport(eyePos, cap)) {
   feetAnchored_ = false;
   return false;
  }
- const float probeFeetY = stand.feetY(eyePos);
+ const float probeFeetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(probeFeetY - 0.04f));
  feetY_ = static_cast<float>(supportY) + 1.0f;
  feetAnchored_ = true;
@@ -138,7 +151,7 @@ void CreatureLocomotionController::applyCrouchEyeFromFeet(glm::vec3& eyePos) con
  if (!feetAnchored_) {
   return;
  }
- const PlayerCapsule cap = PlayerCapsule::Lerp(stanceBlend_);
+ const PlayerCapsule cap = GetCapsule();
  eyePos.y = feetY_ + cap.eyeHeight;
 }
 
@@ -155,9 +168,9 @@ void CreatureLocomotionController::landStanding(const World* world, glm::vec3& e
  if (!anchorFeetFromStandingEye(world, eyePos)) {
   return;
  }
- const PlayerCapsule stand = PlayerCapsule::Standing();
- eyePos.y = feetY_ + stand.eyeHeight;
- for (int i = 0; i < 32 && world->CheckCollision(eyePos, stand, skipCreatureId); ++i) {
+ const PlayerCapsule cap = GetCapsule();
+ eyePos.y = feetY_ + cap.eyeHeight;
+ for (int i = 0; i < 32 && world->CheckCollision(eyePos, cap, skipCreatureId); ++i) {
   eyePos.y += 0.1f;
  }
  anchorFeetFromStandingEye(world, eyePos);
@@ -170,8 +183,9 @@ bool CreatureLocomotionController::canStandUpAt(const World* world,
  if (!world || !feetAnchored_) {
   return true;
  }
- const glm::vec3 trialEye(eyePos.x, feetY_ + PlayerCapsule::Standing().eyeHeight, eyePos.z);
- return !world->CheckCollision(trialEye, PlayerCapsule::Standing(), skipCreatureId);
+ const PlayerCapsule cap = GetCapsule();
+ const glm::vec3 trialEye(eyePos.x, feetY_ + cap.eyeHeight, eyePos.z);
+ return !world->CheckCollision(trialEye, cap, skipCreatureId);
 }
 
 void CreatureLocomotionController::updateStanceBlend(const World* world, const glm::vec3& eyePos,
@@ -261,8 +275,8 @@ void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec
 
  if (mode_ == CreatureMovementMode::Flying) {
   stanceBlend_ = 0.0f;
-  const PlayerCapsule stand = PlayerCapsule::Standing();
-  if (world->HasGroundSupport(eyePos, stand)) {
+  const PlayerCapsule cap = GetCapsule();
+  if (world->HasGroundSupport(eyePos, cap)) {
    OnLandedFromFlight(world, eyePos, false);
   }
   if (!input.jumpHeld) {
@@ -318,7 +332,9 @@ void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec
   return;
  }
 
- const bool supported = world->HasGroundSupport(eyePos, cap);
+ const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
+ const float feetY = supportVol.center.y - supportVol.halfExtents.y;
+ const bool supported = world->HasGroundSupportVolume(supportVol, feetY);
  const bool groundedPose = verticalVelocity_ <= 0.05f && supported;
 
  if (groundedPose) {

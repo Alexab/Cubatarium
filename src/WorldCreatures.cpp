@@ -1,5 +1,7 @@
 #include "World.h"
+#include "Creature.h"
 #include "CreatureAppearance.h"
+#include "GridMath.h"
 #include "CreatureDefinitionStorage.h"
 #include "SkinDefinitionStorage.h"
 #include "CreatureVisualFactory.h"
@@ -72,6 +74,21 @@ bool World::SetControlledCreature(CreatureId id)
  return true;
 }
 
+void World::SnapCreatureFeetToGround(Creature& creature) const
+{
+ if (!blockRegistry_) {
+  return;
+ }
+ const glm::vec3 origin = creature.GetBodyOrigin();
+ const glm::ivec3 column = WorldPosToBlock(origin);
+ const std::optional<int> topY = FindHighestSolidY(column.x, column.z);
+ if (!topY) {
+  return;
+ }
+ const float feetY = static_cast<float>(*topY) + 1.0f;
+ creature.SetBodyOrigin(glm::vec3(origin.x, feetY, origin.z));
+}
+
 CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                                 const std::string& skinId)
 {
@@ -97,11 +114,14 @@ CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& b
   creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
  }
  creature->SetCapabilities(def->locomotion);
+ creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
+                                              def->eyeHeight);
  if (!skinId.empty()) {
   creature->SetSkinId(skinId);
  }
  creature->SetVisual(CreateCreatureVisual(*def));
  creatures_[id] = std::move(creature);
+ SnapCreatureFeetToGround(*creatures_[id]);
  return id;
 }
 

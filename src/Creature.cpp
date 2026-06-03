@@ -43,6 +43,7 @@ void Creature::SetOrientation(float yaw, float pitch)
 void Creature::SyncBoundsFromStance()
 {
  bounds_ = LerpBoundsStance(bounds_, locomotion_.GetStanceBlend());
+ locomotion_.SetCollisionProfile(bounds_.currentSizeBlocks, eyeOffset_.y);
 }
 
 CollisionVolume Creature::GetCollisionVolume() const
@@ -77,19 +78,25 @@ void Creature::ApplyIntent(World& world, float dt)
   pitch_ = 0.0f;
  }
 
- if (possessed_ || intent_.moveDirWorld == glm::vec3(0.0f)) {
-  return;
- }
- glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
- delta.y = 0.0f;
- bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.currentSizeBlocks, id_);
-
- if (locomotion_.GetMode() == CreatureMovementMode::Walking) {
+ if (!possessed_ && locomotion_.GetMode() == CreatureMovementMode::Walking) {
   glm::vec3 eye = GetEyePosition();
   CreatureInput emptyInput;
   locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
   bodyOrigin_ = BodyOriginFromEye(eye, eyeOffset_);
   SyncBoundsFromStance();
+ }
+
+ if (possessed_) {
+  if (intent_.clearOnApply) {
+   ClearIntent();
+  }
+  return;
+ }
+
+ if (intent_.moveDirWorld != glm::vec3(0.0f)) {
+  glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
+  delta.y = 0.0f;
+  bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.currentSizeBlocks, id_);
  }
 
  if (intent_.clearOnApply) {

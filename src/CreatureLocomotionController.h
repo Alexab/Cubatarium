@@ -17,6 +17,7 @@ class CreatureLocomotionController {
 public:
  void Reset();
  void SetCapabilities(const CreatureLocomotionCapabilities& caps) { caps_ = caps; }
+ void SetCollisionProfile(const glm::vec3& sizeBlocks, float eyeHeight);
 
  CreatureMovementMode GetMode() const { return mode_; }
  void SetMode(CreatureMovementMode mode);
@@ -54,6 +55,8 @@ private:
  CreatureMovementMode mode_{CreatureMovementMode::Walking};
  LocomotionState locomotionState_{LocomotionState::Idle};
  CreatureLocomotionCapabilities caps_{};
+ glm::vec3 collisionSizeBlocks_{0.6f, 1.8f, 0.6f};
+ float eyeHeight_{1.62f};
  float stanceBlend_{0.0f};
  float feetY_{0.0f};
  bool feetAnchored_{false};
