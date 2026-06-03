@@ -1699,6 +1699,43 @@ void GeometryEngine::DestroyOutlineBuffers()
     if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
 }
 
+void GeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color)
+{
+ if (!outlineShader || !outlineShader->IsValid()) {
+  if (!InitOutlineBuffers()) {
+   return;
+  }
+ }
+ if (outlineVAO == 0 && !InitOutlineBuffers()) {
+  return;
+ }
+
+ GLboolean cullFaceEnabled;
+ glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+ GLfloat previousLineWidth = 1.0f;
+ glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+
+ glDisable(GL_CULL_FACE);
+ glLineWidth(2.5f);
+
+ outlineShader->Use();
+ outlineShader->SetMat4("mvp_matrix", mvp);
+ outlineShader->SetVec4("color", color);
+
+ glBindVertexArray(outlineVAO);
+ glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+ glBindVertexArray(0);
+
+ outlineShader->Unuse();
+
+ glLineWidth(previousLineWidth);
+ if (cullFaceEnabled) {
+  glEnable(GL_CULL_FACE);
+ } else {
+  glDisable(GL_CULL_FACE);
+ }
+}
+
 void GeometryEngine::RenderCreatures()
 {
  if (!WorldInstance) {

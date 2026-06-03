@@ -74,6 +74,9 @@ public:
 
  void ShowTransientMessage(const std::string& msg, double seconds);
 
+ /// Unit cube wireframe (1x1 centered) with given MVP and color.
+ void DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color);
+
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
  std::shared_ptr<ShaderManager> GetShaderManager() const { return shaderManager; }

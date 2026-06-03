@@ -8,6 +8,7 @@
 #include "Creature.h"
 #include "CreatureBounds.h"
 #include "CreatureInventory.h"
+#include "CreatureDefinition.h"
 #include "Player.h"
 
 #include <GLFW/glfw3.h>
@@ -133,12 +134,28 @@ void GameSession::RegisterCommands()
         if (!world_) {
             return CommandResult{false, "No world"};
         }
-        glm::vec3 origin = world_->GetSpawnPoint();
-        origin.x += 2.0f;
-        const glm::vec3 eyeOffset(0.0f, 1.45f, 0.0f);
-        const CreatureId id =
-            world_->SpawnCreature("test_mob", BodyOriginFromEye(origin, eyeOffset));
-        return CommandResult{true, "Spawned test_mob id=" + std::to_string(id)};
+        float eyeHeight = 1.45f;
+        if (const CreatureDefinition* def = world_->GetCreatureDefinition("test_mob")) {
+            eyeHeight = def->eyeHeight;
+        }
+        const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
+
+        glm::vec3 bodyOrigin = world_->GetSpawnPoint();
+        bodyOrigin.y -= eyeOffset.y;
+        if (auto camera = world_->GetCurrentUserCamera()) {
+            glm::vec3 forward = camera->GetFront();
+            forward.y = 0.0f;
+            if (glm::length(forward) > 0.01f) {
+                bodyOrigin = camera->GetPosition() - eyeOffset + glm::normalize(forward) * 3.0f;
+            } else {
+                bodyOrigin = camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
+            }
+        } else if (Creature* player = world_->GetPlayerCreature()) {
+            bodyOrigin = player->GetBodyOrigin() + glm::vec3(3.0f, 0.0f, 0.0f);
+        }
+
+        const CreatureId id = world_->SpawnCreature("test_mob", bodyOrigin);
+        return CommandResult{true, "Spawned test_mob id=" + std::to_string(id) + " (3m ahead)"};
     });
 
     commandRegistry_.Register("possess", [this](const std::vector<std::string>& args) {

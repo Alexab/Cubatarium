@@ -1,12 +1,17 @@
 #include "CreatureVisualRigid.h"
 #include "Creature.h"
+#include "CreatureBounds.h"
 #include "CreatureDefinition.h"
+#include "GeometryEngine.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace cutum {
 
-void CreatureVisualRigid::UpdatePose(const Creature& /*creature*/, LocomotionState state,
+void CreatureVisualRigid::UpdatePose(const Creature& creature, LocomotionState state,
                                      const CreatureDefinition& /*animDef*/, float /*dt*/)
 {
+ bodyOrigin_ = creature.GetBodyOrigin();
+ sizeBlocks_ = creature.GetBounds().currentSizeBlocks;
  switch (state) {
  case LocomotionState::Walk:
   headYaw_ = 0.2f;
@@ -20,9 +25,12 @@ void CreatureVisualRigid::UpdatePose(const Creature& /*creature*/, LocomotionSta
  }
 }
 
-void CreatureVisualRigid::SubmitDraw(GeometryEngine& /*engine*/, const glm::mat4& /*viewProj*/)
+void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& viewProj)
 {
- // Rigid voxel mesh draw (iteration B: pose state only; full mesh pass later)
+ const glm::vec3 center = BoundsCollisionCenter(bodyOrigin_, sizeBlocks_);
+ glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+ model = glm::scale(model, sizeBlocks_);
+ engine.DrawBoxWireframe(viewProj * model, glm::vec4(0.95f, 0.45f, 0.1f, 1.0f));
 }
 
 } // namespace cutum
