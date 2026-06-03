@@ -11,8 +11,10 @@
 #include <limits>
 #include <unordered_set>
 #include <array>
+#include <functional>
 #include <map>
 #include <tuple>
+#include <unordered_map>
 #include "BlockWorld.h"
 #include "BlockDefinition.h"
 #include "BlockDefinitionStorage.h"
@@ -27,8 +29,12 @@
 #include "CollisionVolume.h"
 #include "CreatureBounds.h"
 #include "PlayerCapsule.h"
+#include "Creature.h"
 
 namespace cutum {
+
+class CreatureDefinitionStorage;
+struct CreatureDefinition;
 
 class ViewEngine;
 class ObjectStorage;
@@ -65,6 +71,7 @@ public:
 
  const std::string& GetCurrentUserName() const;
  std::shared_ptr<User> GetCurrentUser();
+ std::shared_ptr<User> GetCurrentUser() const;
  bool SetCurrentUserName(const std::string& name);
 
  std::shared_ptr<Camera> GetUserCamera(const std::string& name);
@@ -108,6 +115,26 @@ public:
  std::optional<glm::ivec3> FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const;
 
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
+
+ void SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage);
+
+ Creature* GetCreature(CreatureId id);
+ const Creature* GetCreature(CreatureId id) const;
+ Creature* GetControlledCreature();
+ const Creature* GetControlledCreature() const;
+ Creature* GetPlayerCreature();
+ CreatureId GetControlledCreatureId() const { return controlledCreatureId_; }
+ CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
+ bool SetControlledCreature(CreatureId id);
+ CreatureId SpawnCreature(const std::string& typeId, const glm::vec3& bodyOrigin);
+ void RemoveCreature(CreatureId id);
+ void ForEachCreature(const std::function<void(Creature&)>& fn);
+ void ForEachCreature(const std::function<void(const Creature&)>& fn) const;
+ std::string ResolveAnimationTypeId(const Creature& creature) const;
+ const CreatureDefinition* GetCreatureDefinition(const std::string& typeId) const;
+
+ void LoadCreatures(const std::string& file_name);
+ void SaveCreatures(const std::string& file_name);
 
  bool CheckCollisionVolume(const CollisionVolume& vol) const;
  bool HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const;
@@ -197,6 +224,7 @@ private:
 
  void LoadUsers(const std::string &file_name);
  void SaveUsers(const std::string &file_name);
+ void LinkUsersToPlayerCreatures();
 
  void MigrateObjectsFromJson(const std::string &file_name);
 
@@ -239,6 +267,12 @@ private:
  bool loadedFromChunkSave_{false};
 
  std::map<std::string, std::shared_ptr<User>> Users;
+
+ std::unordered_map<CreatureId, std::unique_ptr<Creature>> creatures_;
+ CreatureId nextCreatureId_{1};
+ CreatureId playerCreatureId_{0};
+ CreatureId controlledCreatureId_{0};
+ std::shared_ptr<CreatureDefinitionStorage> creatureDefinitions_;
 
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<ViewEngine> ViewInstance;
