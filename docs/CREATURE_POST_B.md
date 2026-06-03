@@ -2,6 +2,8 @@
 
 Краткое руководство после итерации B: entity–entity collision и три режима камеры (Minecraft Java, F5).
 
+Каталог существ и скинов (палитра, spawn, `skin_id`): [CREATURE_CATALOG.md](CREATURE_CATALOG.md).
+
 ---
 
 ## 1. Entity collision

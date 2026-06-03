@@ -2,6 +2,8 @@
 
 Источник требований: `.cursor/plans/интеграция_creature_*.plan.md`, [`CREATURE_AGENTS.md`](CREATURE_AGENTS.md) (фаза агентов **после** B).
 
+> **Каталог species/skins (ship set 4+5):** [CREATURE_CATALOG.md](CREATURE_CATALOG.md) — JSON, палитра, команды, smoke.
+
 **Принципы:**
 
 1. Каждый шаг — компилируемый кусок; не переходить дальше, пока не пройден checkpoint.
