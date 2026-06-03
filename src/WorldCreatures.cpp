@@ -353,7 +353,7 @@ void World::LoadCreatures(const std::string& file_name)
     creature->SetSkinId(skin);
    }
    creature->SetVisual(CreateCreatureVisual(*def));
-   creature->SetOrientation(c.value("yaw", -90.0f), c.value("pitch", 0.0f));
+   creature->SetOrientation(c.value("yaw", 0.0f), c.value("pitch", 0.0f));
    if (c.value("movement_mode", "walking") == "flying") {
     creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
    }

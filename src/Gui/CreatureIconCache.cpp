@@ -1,4 +1,5 @@
 #include "CreatureIconCache.h"
+#include "CreaturePartMeshData.h"
 #include "CreatureAppearance.h"
 #include "CreatureCatalogTypes.h"
 #include "CreatureDefinitionStorage.h"
@@ -31,62 +32,52 @@ CreatureIconCache::~CreatureIconCache()
     Shutdown();
 }
 
-bool CreatureIconCache::InitCubeMesh()
+namespace {
+
+void UploadIconCubeMesh(GLuint& vao, GLuint& vbo, GLuint& ebo, const float* texCoords)
 {
-    if (cubeVao_ != 0) {
-        return true;
+    float vertices[24 * 5];
+    for (int v = 0; v < 24; ++v) {
+        vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+        vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+        vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+        vertices[v * 5 + 3] = texCoords[v * 2 + 0];
+        vertices[v * 5 + 4] = texCoords[v * 2 + 1];
     }
-    const float vertices[] = {
-        -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-    };
-    const unsigned int indices[] = {
-        0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11,
-        12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
-    };
-
-    glGenVertexArrays(1, &cubeVao_);
-    glGenBuffers(1, &cubeVbo_);
-    glGenBuffers(1, &cubeEbo_);
-    glBindVertexArray(cubeVao_);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVbo_);
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeEbo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices), kCreaturePartIndices,
+                 GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                           reinterpret_cast<void*>(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
-    return true;
+}
+
+} // namespace
+
+bool CreatureIconCache::InitCubeMesh()
+{
+    if (cubeVao_ != 0) {
+        return true;
+    }
+    float boxUv[48];
+    float headUv[48];
+    float bodyUv[48];
+    BuildCreatureBoxTexCoords(boxUv);
+    BuildCreatureHeadTexCoords(headUv);
+    BuildCreatureBodyTexCoords(bodyUv);
+    UploadIconCubeMesh(cubeVao_, cubeVbo_, cubeEbo_, boxUv);
+    UploadIconCubeMesh(headCubeVao_, headCubeVbo_, headCubeEbo_, headUv);
+    UploadIconCubeMesh(bodyCubeVao_, bodyCubeVbo_, bodyCubeEbo_, bodyUv);
+    return cubeVao_ != 0 && headCubeVao_ != 0 && bodyCubeVao_ != 0;
 }
 
 bool CreatureIconCache::Initialize()
@@ -171,6 +162,30 @@ void CreatureIconCache::Shutdown()
         glDeleteFramebuffers(1, &fbo_);
         fbo_ = 0;
     }
+    if (bodyCubeEbo_ != 0) {
+        glDeleteBuffers(1, &bodyCubeEbo_);
+        bodyCubeEbo_ = 0;
+    }
+    if (bodyCubeVbo_ != 0) {
+        glDeleteBuffers(1, &bodyCubeVbo_);
+        bodyCubeVbo_ = 0;
+    }
+    if (bodyCubeVao_ != 0) {
+        glDeleteVertexArrays(1, &bodyCubeVao_);
+        bodyCubeVao_ = 0;
+    }
+    if (headCubeEbo_ != 0) {
+        glDeleteBuffers(1, &headCubeEbo_);
+        headCubeEbo_ = 0;
+    }
+    if (headCubeVbo_ != 0) {
+        glDeleteBuffers(1, &headCubeVbo_);
+        headCubeVbo_ = 0;
+    }
+    if (headCubeVao_ != 0) {
+        glDeleteVertexArrays(1, &headCubeVao_);
+        headCubeVao_ = 0;
+    }
     if (cubeEbo_ != 0) {
         glDeleteBuffers(1, &cubeEbo_);
         cubeEbo_ = 0;
@@ -242,8 +257,6 @@ GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
     shader_->SetInt("texture0", 0);
     shader_->SetInt("uAnimFrame", 0);
     shader_->SetInt("uAnimFrameCount", 1);
-    glBindVertexArray(cubeVao_);
-
     for (const ResolvedCreaturePart& part : appearance.parts) {
         const GLuint tex = textures_->GetTexture(part.textureAssetKey);
         if (tex == 0) {
@@ -251,6 +264,13 @@ GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
         }
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, tex);
+        GLuint partVao = cubeVao_;
+        if (part.partId == "head") {
+            partVao = headCubeVao_;
+        } else if (part.partId == "torso") {
+            partVao = bodyCubeVao_;
+        }
+        glBindVertexArray(partVao);
         const glm::vec3 local = part.offsetBlocks * fitScale;
         const glm::mat4 model = glm::translate(glm::mat4(1.0f), local) *
                                 glm::scale(glm::mat4(1.0f), part.sizeBlocks * fitScale);

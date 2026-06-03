@@ -10,6 +10,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
+#include "CreaturePartMeshData.h"
 #include "CreatureTextureStorage.h"
 #include "Creature.h"
 #include "CreatureBounds.h"
@@ -83,7 +84,8 @@ bool GeometryEngine::InitEngine()
  // Initialize preview buffers
  InitPreviewBuffers();
 
- if (!InitCreaturePartBuffers()) {
+ if (!InitCreaturePartBuffers() || !InitCreatureHeadPartBuffers() ||
+     !InitCreatureBodyPartBuffers()) {
   std::cerr << "Failed to initialize creature part buffers" << std::endl;
   return false;
  }
@@ -1708,66 +1710,98 @@ void GeometryEngine::DestroyOutlineBuffers()
     if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
 }
 
-bool GeometryEngine::InitCreaturePartBuffers()
+namespace {
+
+bool UploadCreaturePartMesh(GLuint& vao, GLuint& vbo, GLuint& ebo, const float* texCoords)
 {
- if (creaturePartVAO != 0) {
-  return true;
+ float vertices[24 * 5];
+ for (int v = 0; v < 24; ++v) {
+  vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+  vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+  vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+  vertices[v * 5 + 3] = texCoords[v * 2 + 0];
+  vertices[v * 5 + 4] = texCoords[v * 2 + 1];
  }
- // Same face order/winding as InitCubeBuffers; UV 0-1 per face (not atlas).
- const float vertices[] = {
-     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-     -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-      0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
 
-      0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-      0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-      0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-      0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-
-      0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     -0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-      0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
-     -0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-
-     -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
-     -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-     -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-      0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-      0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-
-     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
- };
- const unsigned int indices[] = {
-     0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11,
-     12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
- };
-
- glGenVertexArrays(1, &creaturePartVAO);
- glGenBuffers(1, &creaturePartVBO);
- glGenBuffers(1, &creaturePartEBO);
- glBindVertexArray(creaturePartVAO);
- glBindBuffer(GL_ARRAY_BUFFER, creaturePartVBO);
+ if (vao == 0) {
+  glGenVertexArrays(1, &vao);
+  glGenBuffers(1, &vbo);
+  glGenBuffers(1, &ebo);
+ }
+ glBindVertexArray(vao);
+ glBindBuffer(GL_ARRAY_BUFFER, vbo);
  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
- glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, creaturePartEBO);
- glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices), kCreaturePartIndices,
+              GL_STATIC_DRAW);
  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
  glEnableVertexAttribArray(0);
  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
  glEnableVertexAttribArray(1);
  glBindVertexArray(0);
- return true;
+ return vao != 0;
+}
+
+} // namespace
+
+bool GeometryEngine::InitCreaturePartBuffers()
+{
+ if (creaturePartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureBoxTexCoords(texCoords);
+ return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO, creaturePartEBO, texCoords);
+}
+
+bool GeometryEngine::InitCreatureHeadPartBuffers()
+{
+ if (creatureHeadPartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureHeadTexCoords(texCoords);
+ return UploadCreaturePartMesh(creatureHeadPartVAO, creatureHeadPartVBO, creatureHeadPartEBO,
+                              texCoords);
+}
+
+bool GeometryEngine::InitCreatureBodyPartBuffers()
+{
+ if (creatureBodyPartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureBodyTexCoords(texCoords);
+ return UploadCreaturePartMesh(creatureBodyPartVAO, creatureBodyPartVBO, creatureBodyPartEBO,
+                              texCoords);
 }
 
 void GeometryEngine::DestroyCreaturePartBuffers()
 {
+ if (creatureBodyPartEBO) {
+  glDeleteBuffers(1, &creatureBodyPartEBO);
+  creatureBodyPartEBO = 0;
+ }
+ if (creatureBodyPartVBO) {
+  glDeleteBuffers(1, &creatureBodyPartVBO);
+  creatureBodyPartVBO = 0;
+ }
+ if (creatureBodyPartVAO) {
+  glDeleteVertexArrays(1, &creatureBodyPartVAO);
+  creatureBodyPartVAO = 0;
+ }
+ if (creatureHeadPartEBO) {
+  glDeleteBuffers(1, &creatureHeadPartEBO);
+  creatureHeadPartEBO = 0;
+ }
+ if (creatureHeadPartVBO) {
+  glDeleteBuffers(1, &creatureHeadPartVBO);
+  creatureHeadPartVBO = 0;
+ }
+ if (creatureHeadPartVAO) {
+  glDeleteVertexArrays(1, &creatureHeadPartVAO);
+  creatureHeadPartVAO = 0;
+ }
  if (creaturePartEBO) {
   glDeleteBuffers(1, &creaturePartEBO);
   creaturePartEBO = 0;
@@ -1782,13 +1816,33 @@ void GeometryEngine::DestroyCreaturePartBuffers()
  }
 }
 
-void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture)
+void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture,
+                                              CreaturePartMesh mesh)
 {
  if (texture == 0 || !defaultShader || !defaultShader->IsValid()) {
   return;
  }
- if (creaturePartVAO == 0 && !InitCreaturePartBuffers()) {
-  return;
+ GLuint vao = 0;
+ switch (mesh) {
+ case CreaturePartMesh::Head:
+  if (creatureHeadPartVAO == 0 && !InitCreatureHeadPartBuffers()) {
+   return;
+  }
+  vao = creatureHeadPartVAO;
+  break;
+ case CreaturePartMesh::Body:
+  if (creatureBodyPartVAO == 0 && !InitCreatureBodyPartBuffers()) {
+   return;
+  }
+  vao = creatureBodyPartVAO;
+  break;
+ case CreaturePartMesh::Box:
+ default:
+  if (creaturePartVAO == 0 && !InitCreaturePartBuffers()) {
+   return;
+  }
+  vao = creaturePartVAO;
+  break;
  }
 
  GLboolean depthEnabled = GL_TRUE;
@@ -1803,7 +1857,7 @@ void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint textu
  defaultShader->SetInt("uAnimFrameCount", 1);
  defaultShader->SetMat4("mvp_matrix", mvp);
 
- glBindVertexArray(creaturePartVAO);
+ glBindVertexArray(vao);
  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
  glBindVertexArray(0);
 

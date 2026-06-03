@@ -29,6 +29,7 @@
 #include "worldgen/PrefabFeaturePlacer.h"
 #include "ChunkManager.h"
 #include "CreatureBounds.h"
+#include "CreaturePartMeshData.h"
 #include "PlayerCapsule.h"
 #include "Cube.h"
 #include "Chunk.h"
@@ -1435,7 +1436,7 @@ void World::LoadUsers(const std::string &file_name)
         inv.InitCreativeDefaults();
        }
        inv.EnsureDefaultHotbar();
-       playerCreature->SetOrientation(yaw, pitch);
+       playerCreature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
        if (!user->GetSelectedSkinId().empty()) {
         playerCreature->SetSkinId(user->GetSelectedSkinId());
         if (const CreatureDefinition* def =
@@ -1619,7 +1620,7 @@ void World::DoMovement()
 
  if (controlled && camera) {
   controlled->SetBodyOrigin(BodyOriginFromEye(camera->GetPosition(), controlled->GetEyeOffset()));
-  controlled->SetOrientation(camera->GetYaw(), camera->GetPitch());
+  controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()), camera->GetPitch());
   controlled->SyncBoundsFromStance();
   controlled->GetLocomotion().SetMode(
       camera->GetFreeMove() ? CreatureMovementMode::Flying : CreatureMovementMode::Walking);

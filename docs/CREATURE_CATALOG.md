@@ -27,7 +27,7 @@ Ship set for the `creature` feature branch: **4 species** and **5 skins**, data-
 
 ```
 models/creatures/<species_id>/creature.json
-models/creatures/<species_id>/textures/<name>.png
+models/creatures/<species_id>/textures/body.png, face.png, leg.png, arm.png
 models/skins/<skin_id>/skin.json
 models/skins/<skin_id>/textures/diffuse.png
 ```

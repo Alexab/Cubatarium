@@ -9,6 +9,7 @@
 #include "CreatureBounds.h"
 #include "CreatureInventory.h"
 #include "CreatureDefinition.h"
+#include "CreaturePartMeshData.h"
 #include "SkinDefinitionStorage.h"
 #include "Player.h"
 
@@ -240,7 +241,7 @@ void GameSession::RegisterCommands()
         if (auto cam = world_->GetCurrentUserCamera()) {
             if (Creature* c = world_->GetCreature(target)) {
                 cam->SetPosition(c->GetEyePosition());
-                cam->SetOrientation(c->GetYaw(), c->GetPitch());
+                cam->SetOrientation(CameraYawFromModelYaw(c->GetYaw()), c->GetPitch());
             }
         }
         return CommandResult{true, "Possessing id=" + std::to_string(target)};
@@ -257,7 +258,7 @@ void GameSession::RegisterCommands()
         if (auto cam = world_->GetCurrentUserCamera()) {
             if (Creature* c = world_->GetPlayerCreature()) {
                 cam->SetPosition(c->GetEyePosition());
-                cam->SetOrientation(c->GetYaw(), c->GetPitch());
+                cam->SetOrientation(CameraYawFromModelYaw(c->GetYaw()), c->GetPitch());
             }
         }
         return CommandResult{true, "Returned to player"};

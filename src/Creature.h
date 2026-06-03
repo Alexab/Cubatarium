@@ -76,7 +76,7 @@ protected:
  std::string skinId_;
  glm::vec3 bodyOrigin_;
  glm::vec3 eyeOffset_;
- float yaw_{-90.0f};
+ float yaw_{0.0f};
  float pitch_{0.0f};
  CreatureBoundsState bounds_;
  CreatureLocomotionController locomotion_;

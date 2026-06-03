@@ -1,8 +1,10 @@
 #include "Creature.h"
 #include "CreatureDefinition.h"
 #include "CreatureVisual.h"
+#include "CreaturePartMeshData.h"
 #include "CreatureWanderBehavior.h"
 #include "World.h"
+#include <cmath>
 #include <cstdlib>
 
 namespace cutum {
@@ -67,6 +69,12 @@ void Creature::ApplyIntent(World& world, float dt)
     ApplyWanderIntent(*this, def->behavior, dt);
    }
   }
+ }
+
+ const float moveLen = glm::length(glm::vec2(intent_.moveDirWorld.x, intent_.moveDirWorld.z));
+ if (!possessed_ && moveLen > 1e-4f) {
+  yaw_ = ModelYawFromDirection(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
+  pitch_ = 0.0f;
  }
 
  if (possessed_ || intent_.moveDirWorld == glm::vec3(0.0f)) {

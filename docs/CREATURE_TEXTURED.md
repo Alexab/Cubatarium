@@ -19,7 +19,8 @@ Wireframe is **not** drawn in normal play. Use debug settings for bounds or over
   "default_texture": "body",
   "parts": [
     { "id": "torso", "offset": [0.0, 0.9, 0.0], "size": [0.7, 0.9, 0.45], "texture": "body" },
-    { "id": "head",  "offset": [0.0, 1.55, 0.0], "size": [0.45, 0.45, 0.45], "texture": "body" }
+    { "id": "head",  "offset": [0.0, 1.55, 0.0], "size": [0.45, 0.45, 0.45], "texture": "face" },
+    { "id": "leg_l", "offset": [-0.2, 0.35, 0.0], "size": [0.25, 0.7, 0.25], "texture": "leg" }
   ],
   "icon": { "mode": "parts_preview", "color": [1.0, 0.55, 0.1, 1.0] }
 }
@@ -31,6 +32,10 @@ Wireframe is **not** drawn in normal play. Use debug settings for bounds or over
 | `size` | Cube scale in blocks |
 | `texture` | Stem → `models/creatures/<species>/textures/<stem>.png` → key `<species_id>/<stem>` |
 
+Ship-set stems: `body` (torso, chest/belt bands), `face` (head atlas: eyes only on +X forward), `leg` (striped, brown-tinted), `arm` (shoulder/cuff bands). Parts `arm_l` / `arm_r` in JSON.
+
+Head mesh uses atlas UVs (`creatureHeadPartVAO`) so the face panel is not repeated on all four horizontal sides.
+
 **Fallback:** empty `parts` → one part synthesized from `bounds.rest` + `default_texture` (old JSON still works).
 
 ## Skin `texture_map`
@@ -38,7 +43,7 @@ Wireframe is **not** drawn in normal play. Use debug settings for bounds or over
 ```json
 "visual": {
   "texture": "diffuse",
-  "texture_map": { "body": "diffuse" },
+  "texture_map": { "body": "diffuse", "face": "diffuse", "leg": "diffuse" },
   "wireframe_color": [1.0, 0.9, 0.2, 1.0]
 }
 ```
@@ -54,6 +59,23 @@ For a part with `texture: "body"` and active skin, resolve uses `skin/<skin_id>/
 | `creature_debug_bounds` | `false` | Cyan max AABB wireframe (unchanged) |
 
 Set `creature_textured_parts` to `false` to fall back to a single wireframe box per creature.
+
+## Body yaw (facing)
+
+- **Mobs** (`wander`): `Creature::ApplyIntent` sets `yaw` from `moveDirWorld` via `atan2(z, x)` (degrees, same XZ convention as the camera). Last yaw kept when idle.
+- **Controlled** (`human`): `World` syncs `yaw` from the camera each frame (unchanged).
+- **Render**: `CreatureVisualRigid` applies `rotate(Y, yaw)` around `bodyOrigin` before each part offset (local +X = forward).
+
+`yaw` is saved in `creatures.json` per instance.
+
+## Regenerate PNG assets
+
+```powershell
+Set-Location "e:\Work\Home\Cubatarium"
+python tools/generate_creature_assets.py
+```
+
+Writes `body.png`, `face.png`, `leg.png` per species and skin `diffuse.png` files.
 
 ## Geometry
 
@@ -78,7 +100,7 @@ World/collision/spawn/palette behavior is unchanged.
 
 ## Smoke acceptance
 
-1. Scout in world: torso + head + legs with orange diffuse, not one wireframe cube.
+1. Scout in world: torso + head (face texture) + darker legs; model turns when wander direction changes.
 2. `scout_golden` on scout → parts use yellow skin diffuse.
 3. Brute taller/wider than human — part scales match bounds.
 4. F5 3rd person: human with parts; 1st person: no body (unchanged).
