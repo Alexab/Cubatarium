@@ -885,3 +885,12 @@ void SetIntent(CreatureIntent);  // already
 3. **`Give` команда** — писать в `GetControlledCreature()->GetInventory()`.
 4. **Placement ray** — оставить от camera eye (controlled).
 5. **PlayerCapsule adapter** — удалить только после шага 7 checkpoint.
+
+---
+
+## 17. Post-B (коллизии существ + камера)
+
+Реализовано отдельно от шагов 1–12. Подробности и чеклист приёмки: [`CREATURE_POST_B.md`](CREATURE_POST_B.md).
+
+- `gameplay.entity_collision` — коллизии AABB между всеми `creatures_` (default on).
+- F5 — цикл First / Third back / Third front; eye остаётся в `Camera::Position`.
