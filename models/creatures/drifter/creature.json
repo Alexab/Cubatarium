@@ -1,0 +1,16 @@
+{
+  "id": "drifter",
+  "display_name": "Drifter",
+  "catalog": { "tags": ["mobs"], "spawnable": true, "sort_order": 30 },
+  "role": "mob",
+  "bounds": { "rest": [0.9, 1.4, 0.9], "max": [1.1, 1.4, 1.1], "min": [0.9, 0.9, 0.9] },
+  "eye_height": 1.25,
+  "locomotion": { "can_fly": false, "can_crouch": false, "can_jump": true },
+  "behavior": "wander",
+  "behavior_params": { "move_speed": 1.8, "wander_interval_min": 2.0, "wander_interval_max": 4.5 },
+  "visual": {
+    "backend": "rigid_voxels",
+    "default_texture": "body",
+    "icon": { "mode": "bounds_wireframe", "color": [0.2, 0.85, 0.35, 1.0] }
+  }
+}

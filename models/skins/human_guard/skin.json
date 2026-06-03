@@ -1,0 +1,11 @@
+{
+  "id": "human_guard",
+  "display_name": "Guard",
+  "creature_id": "human",
+  "catalog": { "tags": ["outfits"], "equippable": true, "sort_order": 1 },
+  "visual": {
+    "texture": "diffuse",
+    "wireframe_color": [0.55, 0.55, 0.6, 1.0],
+    "icon": { "mode": "skin_texture", "fallback_color": [0.55, 0.55, 0.6, 1.0] }
+  }
+}
