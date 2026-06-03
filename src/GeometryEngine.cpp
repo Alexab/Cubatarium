@@ -1713,16 +1713,37 @@ bool GeometryEngine::InitCreaturePartBuffers()
  if (creaturePartVAO != 0) {
   return true;
  }
+ // Same face order/winding as InitCubeBuffers; UV 0-1 per face (not atlas).
  const float vertices[] = {
-     // pos                  // uv
-     -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
-     0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 1.0f,
-     -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, -0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 1.0f, -0.5f, -0.5f, 0.0f, 1.0f,
-     -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f,
-     0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.5f, -0.5f, 1.0f, 1.0f,
-     -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, -0.5f, -0.5f, 1.0f, 0.0f,
-     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, -0.5f, 0.5f, 1.0f, 0.0f,
+     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+     -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+      0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+      0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+
+      0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+     -0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+
+     -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+     -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+      0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+
+     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
  };
  const unsigned int indices[] = {
      0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11,
@@ -1778,6 +1799,8 @@ void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint textu
  glBindTexture(GL_TEXTURE_2D, texture);
  defaultShader->Use();
  defaultShader->SetInt("texture0", 0);
+ defaultShader->SetInt("uAnimFrame", 0);
+ defaultShader->SetInt("uAnimFrameCount", 1);
  defaultShader->SetMat4("mvp_matrix", mvp);
 
  glBindVertexArray(creaturePartVAO);
