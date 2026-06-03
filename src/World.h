@@ -124,6 +124,12 @@ public:
 
  void SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage);
  void SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage);
+ const std::shared_ptr<CreatureDefinitionStorage>& GetCreatureDefinitionStorage() const {
+  return creatureDefinitions_;
+ }
+ const std::shared_ptr<SkinDefinitionStorage>& GetSkinDefinitionStorage() const {
+  return skinDefinitions_;
+ }
 
  Creature* GetCreature(CreatureId id);
  const Creature* GetCreature(CreatureId id) const;

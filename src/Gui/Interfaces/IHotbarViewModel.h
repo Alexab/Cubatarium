@@ -13,6 +13,7 @@ struct HotbarSlotView {
     std::string id;
     std::string label;
     bool isBlock{true};
+    InventoryEntryKind entryKind{InventoryEntryKind::Block};
     bool selected{false};
     int hotkey{-1};
 };

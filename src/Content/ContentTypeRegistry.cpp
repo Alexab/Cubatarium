@@ -1,6 +1,8 @@
 #include "ContentTypeRegistry.h"
 #include "BlockDefinitionStorage.h"
+#include "CreatureDefinitionStorage.h"
 #include "Prefab.h"
+#include "SkinDefinitionStorage.h"
 
 #include <algorithm>
 #include <fstream>
@@ -88,6 +90,60 @@ void ContentTypeRegistry::IndexBlocks(const BlockDefinitionStorage& storage)
     }
 }
 
+void ContentTypeRegistry::IndexCreatures(const CreatureDefinitionStorage& storage)
+{
+    creatureEntries_.clear();
+    EnsureDefaultTypes();
+    for (const auto& type : types_) {
+        creatureEntries_[type.id] = {};
+    }
+    for (const std::string& id : storage.ListSpawnable()) {
+        const CreatureDefinition* def = storage.Get(id);
+        if (!def) {
+            continue;
+        }
+        const auto typeIds = GetTypesForTags(def->catalog.tags);
+        const CatalogEntry entry{id, def->displayName.empty() ? id : def->displayName};
+        for (const auto& typeId : typeIds) {
+            if (!creatureEntries_.count(typeId)) {
+                creatureEntries_[typeId] = {};
+            }
+            creatureEntries_[typeId].push_back(entry);
+        }
+    }
+    for (auto& pair : creatureEntries_) {
+        std::sort(pair.second.begin(), pair.second.end(),
+                  [](const CatalogEntry& a, const CatalogEntry& b) { return a.id < b.id; });
+    }
+}
+
+void ContentTypeRegistry::IndexSkins(const SkinDefinitionStorage& storage)
+{
+    skinEntries_.clear();
+    EnsureDefaultTypes();
+    for (const auto& type : types_) {
+        skinEntries_[type.id] = {};
+    }
+    for (const std::string& id : storage.ListEquippable()) {
+        const SkinDefinition* def = storage.Get(id);
+        if (!def) {
+            continue;
+        }
+        const auto typeIds = GetTypesForTags(def->catalog.tags);
+        const CatalogEntry entry{id, def->displayName.empty() ? id : def->displayName};
+        for (const auto& typeId : typeIds) {
+            if (!skinEntries_.count(typeId)) {
+                skinEntries_[typeId] = {};
+            }
+            skinEntries_[typeId].push_back(entry);
+        }
+    }
+    for (auto& pair : skinEntries_) {
+        std::sort(pair.second.begin(), pair.second.end(),
+                  [](const CatalogEntry& a, const CatalogEntry& b) { return a.id < b.id; });
+    }
+}
+
 void ContentTypeRegistry::IndexPrefabs(const PrefabLibrary& prefabs)
 {
     objectEntries_.clear();
@@ -107,9 +163,16 @@ void ContentTypeRegistry::IndexPrefabs(const PrefabLibrary& prefabs)
 std::vector<std::string> ContentTypeRegistry::GetTypeIds(ContentKind kind) const
 {
     std::vector<std::string> ids;
-    const auto& map = kind == ContentKind::Block ? blockEntries_ : objectEntries_;
+    const std::unordered_map<std::string, std::vector<CatalogEntry>>* map = &blockEntries_;
+    if (kind == ContentKind::Object) {
+        map = &objectEntries_;
+    } else if (kind == ContentKind::Creature) {
+        map = &creatureEntries_;
+    } else if (kind == ContentKind::Skin) {
+        map = &skinEntries_;
+    }
     for (const auto& type : types_) {
-        if (map.count(type.id) && !map.at(type.id).empty()) {
+        if (map->count(type.id) && !map->at(type.id).empty()) {
             ids.push_back(type.id);
         }
     }
@@ -131,13 +194,20 @@ std::string ContentTypeRegistry::GetTypeDisplayName(const std::string& typeId) c
 std::vector<CatalogEntry> ContentTypeRegistry::GetEntries(ContentKind kind,
                                                           const std::string& typeId) const
 {
-    const auto& map = kind == ContentKind::Block ? blockEntries_ : objectEntries_;
-    const auto it = map.find(typeId);
-    if (it != map.end()) {
+    const std::unordered_map<std::string, std::vector<CatalogEntry>>* map = &blockEntries_;
+    if (kind == ContentKind::Object) {
+        map = &objectEntries_;
+    } else if (kind == ContentKind::Creature) {
+        map = &creatureEntries_;
+    } else if (kind == ContentKind::Skin) {
+        map = &skinEntries_;
+    }
+    const auto it = map->find(typeId);
+    if (it != map->end()) {
         return it->second;
     }
-    const auto misc = map.find(kMiscType);
-    if (misc != map.end()) {
+    const auto misc = map->find(kMiscType);
+    if (misc != map->end()) {
         return misc->second;
     }
     return {};

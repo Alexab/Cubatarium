@@ -17,6 +17,8 @@ public:
     GLuint GetBlockIconTexture(const std::string& blockName) override;
     GLuint GetPrefabIconTexture(const std::string& prefabName) override;
     GLuint GetPrefabIconTextureIfCached(const std::string& prefabName) const override;
+    GLuint GetCreatureIconTexture(const std::string& speciesId) override;
+    GLuint GetSkinIconTexture(const std::string& skinId) override;
 
     PrefabIconCache& GetPrefabCache() { return *prefabCache_; }
     void WarmupPrefabIcons(size_t maxPerFrame);

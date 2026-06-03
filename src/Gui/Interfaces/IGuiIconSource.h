@@ -14,6 +14,8 @@ public:
     virtual GLuint GetPrefabIconTexture(const std::string& prefabName) = 0;
     /// Без FBO-рендера; 0 если иконка ещё не в кэше.
     virtual GLuint GetPrefabIconTextureIfCached(const std::string& prefabName) const = 0;
+    virtual GLuint GetCreatureIconTexture(const std::string& speciesId) = 0;
+    virtual GLuint GetSkinIconTexture(const std::string& skinId) = 0;
 };
 
 } // namespace cutum

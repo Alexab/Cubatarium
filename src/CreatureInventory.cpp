@@ -172,7 +172,20 @@ void CreatureInventory::SerializeToJson(nlohmann::json& out) const
    nlohmann::json s;
    s["empty"] = slot.empty;
    if (!slot.empty) {
-    s["kind"] = slot.entry.kind == InventoryEntryKind::Block ? "block" : "object";
+    switch (slot.entry.kind) {
+    case InventoryEntryKind::Block:
+     s["kind"] = "block";
+     break;
+    case InventoryEntryKind::Object:
+     s["kind"] = "object";
+     break;
+    case InventoryEntryKind::Creature:
+     s["kind"] = "creature";
+     break;
+    case InventoryEntryKind::Skin:
+     s["kind"] = "skin";
+     break;
+    }
     s["id"] = slot.entry.id;
     s["count"] = slot.entry.count;
    }
@@ -209,8 +222,15 @@ void CreatureInventory::DeserializeFromJson(const nlohmann::json& data, size_t m
      bar.slots[si].empty = slotJson.value("empty", true);
      if (!bar.slots[si].empty) {
       const std::string kind = slotJson.value("kind", "block");
-      bar.slots[si].entry.kind =
-          kind == "object" ? InventoryEntryKind::Object : InventoryEntryKind::Block;
+      if (kind == "object") {
+       bar.slots[si].entry.kind = InventoryEntryKind::Object;
+      } else if (kind == "creature") {
+       bar.slots[si].entry.kind = InventoryEntryKind::Creature;
+      } else if (kind == "skin") {
+       bar.slots[si].entry.kind = InventoryEntryKind::Skin;
+      } else {
+       bar.slots[si].entry.kind = InventoryEntryKind::Block;
+      }
       bar.slots[si].entry.id = slotJson.value("id", "");
       bar.slots[si].entry.count = slotJson.value("count", 0);
       bar.slots[si].entry.empty = false;

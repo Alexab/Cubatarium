@@ -65,10 +65,23 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
     panel_ = panel.get();
 
     auto mainTabs = std::make_unique<GuiTabBar>(theme_);
-    mainTabs->SetTabs({"Blocks", "Objects"});
+    mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
     mainTabs_ = mainTabs.get();
     mainTabs->SetOnTabChanged([this](int tab) {
-        kind_ = tab == 0 ? ContentKind::Block : ContentKind::Object;
+        switch (tab) {
+        case 0:
+            kind_ = ContentKind::Block;
+            break;
+        case 1:
+            kind_ = ContentKind::Object;
+            break;
+        case 2:
+            kind_ = ContentKind::Creature;
+            break;
+        default:
+            kind_ = ContentKind::Skin;
+            break;
+        }
         if (catalog_) {
             const auto types = catalog_->GetTypeIds(kind_);
             activeTypeId_ = types.empty() ? "misc" : types.front();
@@ -189,17 +202,35 @@ void CreativePaletteScreen::RebuildGrid()
         const std::string entryId = entries[i].id;
         slot->SetSelected(entryId == selectedEntryId_);
         if (icons_) {
-            const GLuint tex =
-                kind_ == ContentKind::Block
-                    ? icons_->GetBlockIconTexture(entryId)
-                    : icons_->GetPrefabIconTexture(entryId);
+            GLuint tex = 0;
+            if (kind_ == ContentKind::Block) {
+                tex = icons_->GetBlockIconTexture(entryId);
+            } else if (kind_ == ContentKind::Object) {
+                tex = icons_->GetPrefabIconTexture(entryId);
+            } else if (kind_ == ContentKind::Creature) {
+                tex = icons_->GetCreatureIconTexture(entryId);
+            } else if (kind_ == ContentKind::Skin) {
+                tex = icons_->GetSkinIconTexture(entryId);
+            }
             slot->SetIconTexture(tex);
         }
         InventoryEntryRef entry;
         entry.empty = false;
         entry.id = entryId;
-        entry.kind = kind_ == ContentKind::Block ? InventoryEntryKind::Block
-                                                 : InventoryEntryKind::Object;
+        switch (kind_) {
+        case ContentKind::Block:
+            entry.kind = InventoryEntryKind::Block;
+            break;
+        case ContentKind::Object:
+            entry.kind = InventoryEntryKind::Object;
+            break;
+        case ContentKind::Creature:
+            entry.kind = InventoryEntryKind::Creature;
+            break;
+        case ContentKind::Skin:
+            entry.kind = InventoryEntryKind::Skin;
+            break;
+        }
 
         SlotAddress address;
         address.surface = SlotSurface::PaletteGrid;

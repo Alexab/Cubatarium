@@ -57,6 +57,14 @@ void GameSession::InitializeCatalog(const std::string& typesJsonPath,
     contentCatalog_.LoadTypes(typesJsonPath);
     contentCatalog_.IndexBlocks(blocks);
     contentCatalog_.IndexPrefabs(prefabs);
+    if (world_) {
+        if (const auto& creatureDefs = world_->GetCreatureDefinitionStorage()) {
+            contentCatalog_.IndexCreatures(*creatureDefs);
+        }
+        if (const auto& skinDefs = world_->GetSkinDefinitionStorage()) {
+            contentCatalog_.IndexSkins(*skinDefs);
+        }
+    }
 }
 
 void GameSession::RegisterCommands()
@@ -298,6 +306,7 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
         if (!slot.entry.id.empty()) {
             slots[i].id = slot.entry.id;
             slots[i].label = slot.entry.id;
+            slots[i].entryKind = slot.entry.kind;
             slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
         }
         slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
@@ -496,9 +505,27 @@ std::vector<InventoryEntryView> GameSession::GetEntries(ContentKind tab,
         creatureInv ? &creatureInv->GetStorage() : nullptr;
     for (const auto& e : entries) {
         InventoryEntryRef ref;
-        ref.kind = (tab == ContentKind::Block) ? InventoryEntryKind::Block : InventoryEntryKind::Object;
+        switch (tab) {
+        case ContentKind::Block:
+            ref.kind = InventoryEntryKind::Block;
+            break;
+        case ContentKind::Object:
+            ref.kind = InventoryEntryKind::Object;
+            break;
+        case ContentKind::Creature:
+            ref.kind = InventoryEntryKind::Creature;
+            break;
+        case ContentKind::Skin:
+            ref.kind = InventoryEntryKind::Skin;
+            break;
+        }
         ref.id = e.id;
         ref.empty = false;
+        if (tab == ContentKind::Creature || tab == ContentKind::Skin) {
+            ref.count = 1;
+            result.push_back({ref, e.displayName});
+            continue;
+        }
         ref.count = 0;
         if (inv) {
             const auto it = inv->find(e.id);

@@ -43,6 +43,16 @@ GLuint GuiIconSource::GetPrefabIconTextureIfCached(const std::string& prefabName
     return prefabCache_->GetIconIfCached(prefabName);
 }
 
+GLuint GuiIconSource::GetCreatureIconTexture(const std::string& /*speciesId*/)
+{
+    return 0;
+}
+
+GLuint GuiIconSource::GetSkinIconTexture(const std::string& /*skinId*/)
+{
+    return 0;
+}
+
 void GuiIconSource::WarmupPrefabIcons(size_t maxPerFrame)
 {
     if (prefabCache_) {

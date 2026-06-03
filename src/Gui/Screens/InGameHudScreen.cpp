@@ -213,22 +213,44 @@ void InGameHudScreen::SyncSlotIcons()
     }
     const auto primary = session_->GetBarSlots(0);
     for (size_t i = 0; i < primarySlots_.size() && i < primary.size(); ++i) {
-        const GLuint tex =
-            primary[i].id.empty()
-                ? 0
-                : (primary[i].isBlock
-                    ? icons_->GetBlockIconTexture(primary[i].id)
-                    : icons_->GetPrefabIconTexture(primary[i].id));
+        GLuint tex = 0;
+        if (!primary[i].id.empty()) {
+            switch (primary[i].entryKind) {
+            case InventoryEntryKind::Block:
+                tex = icons_->GetBlockIconTexture(primary[i].id);
+                break;
+            case InventoryEntryKind::Object:
+                tex = icons_->GetPrefabIconTexture(primary[i].id);
+                break;
+            case InventoryEntryKind::Creature:
+                tex = icons_->GetCreatureIconTexture(primary[i].id);
+                break;
+            case InventoryEntryKind::Skin:
+                tex = icons_->GetSkinIconTexture(primary[i].id);
+                break;
+            }
+        }
         primarySlots_[i]->SetIconTexture(tex);
     }
     const auto secondary = session_->GetBarSlots(1);
     for (size_t i = 0; i < secondarySlots_.size() && i < secondary.size(); ++i) {
-        const GLuint tex =
-            secondary[i].id.empty()
-                ? 0
-                : (secondary[i].isBlock
-                    ? icons_->GetBlockIconTexture(secondary[i].id)
-                    : icons_->GetPrefabIconTexture(secondary[i].id));
+        GLuint tex = 0;
+        if (!secondary[i].id.empty()) {
+            switch (secondary[i].entryKind) {
+            case InventoryEntryKind::Block:
+                tex = icons_->GetBlockIconTexture(secondary[i].id);
+                break;
+            case InventoryEntryKind::Object:
+                tex = icons_->GetPrefabIconTexture(secondary[i].id);
+                break;
+            case InventoryEntryKind::Creature:
+                tex = icons_->GetCreatureIconTexture(secondary[i].id);
+                break;
+            case InventoryEntryKind::Skin:
+                tex = icons_->GetSkinIconTexture(secondary[i].id);
+                break;
+            }
+        }
         secondarySlots_[i]->SetIconTexture(tex);
     }
 }
