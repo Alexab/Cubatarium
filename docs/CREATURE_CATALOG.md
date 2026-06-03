@@ -9,9 +9,9 @@ Ship set for the `creature` feature branch: **4 species** and **5 skins**, data-
 | id | role | behavior | notes |
 |----|------|----------|-------|
 | `human` | controlled_default | none | Player spawn; not in Creatures palette |
-| `scout` | mob | wander | Orange wireframe |
-| `brute` | mob | wander | Red wireframe, larger bounds |
-| `drifter` | mob | wander | Green wireframe |
+| `scout` | mob | wander | Orange multi-part (torso/head/legs) |
+| `brute` | mob | wander | Red multi-part, larger bounds |
+| `drifter` | mob | wander | Green multi-part |
 
 ### Skins
 
@@ -44,13 +44,13 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `bounds`, `eye_height`, `locomotion`
 - `behavior`: `none` | `wander`
 - `behavior_params`: `move_speed`, `wander_interval_min`, `wander_interval_max`
-- `visual`: `backend`, `default_texture`, `icon.color` (wireframe RGBA)
+- `visual`: `backend`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`), `icon` (`mode`: `parts_preview`, `color`)
 
 ### `skin.json`
 
 - `id`, `display_name`, `creature_id`
 - `catalog`: `tags`, `equippable`, `sort_order`
-- `visual`: `texture`, `wireframe_color`, `icon.fallback_color`
+- `visual`: `texture`, `texture_map` (part stem → skin texture stem), `wireframe_color`, `icon.fallback_color`
 
 ## Commands
 
@@ -84,9 +84,9 @@ python tools/generate_creature_assets.py
 
 ## Smoke acceptance
 
-1. New world → controlled species `human` (blue wireframe in 3rd person, F5).
-2. Palette **Creatures** → spawn scout, brute, drifter (distinct colors, wander).
-3. **Skins** → `scout_golden` → LMB on scout → yellow outline.
+1. New world → controlled species `human` (textured parts in 3rd person, F5).
+2. Palette **Creatures** → spawn scout, brute, drifter (distinct part meshes, wander).
+3. **Skins** → `scout_golden` → LMB on scout → yellow diffuse on parts.
 4. Console: `select_skin human_adventurer` → controlled color changes.
 5. Save world → reload → mob keeps `skin_id`.
 6. Regression: blocks, prefabs, possess/depossess, F5, entity collision.
@@ -101,4 +101,4 @@ python tools/generate_creature_assets.py
 | World | `SpawnCreature`, `SpawnCreatureByView`, `PickCreatureByView`, `TryApplySkin` |
 | UI | `ContentTypeRegistry`, `CreativePaletteScreen`, `CreatureIconCache` |
 
-See also: [CREATURE_IMPLEMENTATION.md](CREATURE_IMPLEMENTATION.md), [CREATURE_POST_B.md](CREATURE_POST_B.md).
+See also: [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md), [CREATURE_IMPLEMENTATION.md](CREATURE_IMPLEMENTATION.md), [CREATURE_POST_B.md](CREATURE_POST_B.md).
