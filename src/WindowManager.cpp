@@ -601,7 +601,7 @@ void WindowManager::RenderHelpText() {
     
     // Main control hints in English
     std::vector<std::string> helpLines = {
-        "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
+        "WASD - Move, Space - Jump, dbl Space - Fly, RMB hold - Look, ` - Console",
         "LMB - Place/remove, 0-9 primary hotbar, E inventory",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"

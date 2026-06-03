@@ -27,6 +27,7 @@
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "World.h"
+#include "Creature.h"
 #include "CreatureDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
@@ -339,6 +340,9 @@ void Core::EnterGame()
      if (auto user = WorldInstance->GetCurrentUser()) {
       if (user->GetActiveObject() == nullptr) {
        user->SetActiveBlockIndex(0);
+       if (Creature* player = WorldInstance->GetPlayerCreature()) {
+        player->GetInventory().SetActiveSlot(0, 0);
+       }
       }
      }
  } catch (const std::exception& e) {

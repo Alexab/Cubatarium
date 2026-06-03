@@ -59,6 +59,27 @@ void CopyUserInventoryToCreature(const User& user, CreatureInventory& inv)
  const json hotbarState = user.SerializeHotbars();
  inv.DeserializeFromJson(hotbarState, 4);
 }
+
+void EnsureDefaultPlayerHotbar(CreatureInventory& inv)
+{
+ inv.EnsureHotbarCount(1);
+ bool hasBlock = false;
+ for (const auto& slot : inv.GetHotbar(0).slots) {
+  if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block && !slot.entry.id.empty()) {
+   hasBlock = true;
+   break;
+  }
+ }
+ if (!hasBlock) {
+  InventoryEntryRef wood;
+  wood.kind = InventoryEntryKind::Block;
+  wood.id = "wood";
+  wood.empty = false;
+  wood.count = -1;
+  inv.AssignToHotbar(0, 1, wood);
+ }
+ inv.SetActiveSlot(0, 1);
+}
 constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool HasChunkJsonFiles(const std::string& chunks_dir)
@@ -123,7 +144,12 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
 void World::GenerateUsers()
 {
  AddUser("Username");
- GetUser("Username")->SetActiveBlockIndex(1);
+ if (auto user = GetUser("Username")) {
+  user->SetActiveBlockIndex(1);
+  if (Creature* player = GetPlayerCreature()) {
+   player->GetInventory().SetActiveSlot(0, 1);
+  }
+ }
  ApplySpawnToCamera();
 }
 
@@ -675,6 +701,7 @@ bool World::AddUser(const std::string &name)
  if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
   player->BindUser(user);
   CopyUserInventoryToCreature(*user, player->GetInventory());
+  EnsureDefaultPlayerHotbar(player->GetInventory());
  }
  if (Users.size() == 1) {
   playerCreatureId_ = pid;
@@ -1526,11 +1553,6 @@ void World::DoMovement()
  const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
  const float dt = camera ? camera->GetDeltaTime() : 0.0f;
 
- if (controlled && camera) {
-  camera->SetPosition(controlled->GetEyePosition());
-  camera->SetOrientation(controlled->GetYaw(), controlled->GetPitch());
- }
-
  if (camera && streamer_ && streamingEnabled_) {
   const glm::vec3 eyePos = camera->GetPosition();
   float feetY = eyePos.y - 1.62f;
@@ -1551,15 +1573,13 @@ void World::DoMovement()
 
  bool is_moved = camera && camera->DoMovement(this);
 
- if (is_moved && controlled && camera) {
+ if (controlled && camera) {
   controlled->SetBodyOrigin(BodyOriginFromEye(camera->GetPosition(), controlled->GetEyeOffset()));
   controlled->SetOrientation(camera->GetYaw(), camera->GetPitch());
   controlled->SyncBoundsFromStance();
-  if (controlled->GetLocomotion().GetMode() == CreatureMovementMode::Flying) {
-   camera->SetFreeMove(true);
-  } else {
-   camera->SetFreeMove(false);
-  }
+  controlled->GetLocomotion().SetMode(
+      camera->GetFreeMove() ? CreatureMovementMode::Flying : CreatureMovementMode::Walking);
+  is_moved = true;
  }
 
  if (camera) {
