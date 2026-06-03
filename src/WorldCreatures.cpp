@@ -7,8 +7,11 @@
 #include "User.h"
 #include "Camera.h"
 #include "ViewEngine.h"
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <nlohmann/json.hpp>
 
 namespace cutum {
@@ -159,8 +162,143 @@ ResolvedCreatureAppearance World::GetResolvedAppearance(const Creature& creature
  }
  SkinDefinitionStorage empty;
  const SkinDefinitionStorage& skins = skinDefinitions_ ? *skinDefinitions_ : empty;
- return ResolveCreatureAppearance(*creatureDefinitions_, skins, creature.GetTypeId(),
-                                  creature.GetSkinId());
+ std::string skinId = creature.GetSkinId();
+ if (skinId.empty() && creature.IsPlayerCharacter()) {
+  if (auto user = GetCurrentUser()) {
+   if (!user->GetSelectedSkinId().empty()) {
+    skinId = user->GetSelectedSkinId();
+   } else if (!user->GetSelectedAppearanceTypeId().empty()) {
+    skinId = user->GetSelectedAppearanceTypeId();
+   }
+  }
+ }
+ return ResolveCreatureAppearance(*creatureDefinitions_, skins, creature.GetTypeId(), skinId);
+}
+
+namespace {
+
+bool RayIntersectsAabb(const glm::vec3& origin, const glm::vec3& dir, const glm::vec3& boxMin,
+                       const glm::vec3& boxMax, float maxDistance, float& outT)
+{
+ float tmin = 0.0f;
+ float tmax = maxDistance;
+ for (int axis = 0; axis < 3; ++axis) {
+  if (std::abs(dir[axis]) < 1e-6f) {
+   if (origin[axis] < boxMin[axis] || origin[axis] > boxMax[axis]) {
+    return false;
+   }
+   continue;
+  }
+  const float inv = 1.0f / dir[axis];
+  float t1 = (boxMin[axis] - origin[axis]) * inv;
+  float t2 = (boxMax[axis] - origin[axis]) * inv;
+  if (t1 > t2) {
+   std::swap(t1, t2);
+  }
+  tmin = std::max(tmin, t1);
+  tmax = std::min(tmax, t2);
+  if (tmin > tmax) {
+   return false;
+  }
+ }
+ outT = tmin;
+ return tmin >= 0.0f && tmin <= maxDistance;
+}
+
+glm::vec3 ComputeSpawnBodyOriginAhead(World& world, float eyeHeight)
+{
+ const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
+ glm::vec3 bodyOrigin = world.GetSpawnPoint();
+ bodyOrigin.y -= eyeOffset.y;
+ if (auto camera = world.GetCurrentUserCamera()) {
+  glm::vec3 forward = camera->GetFront();
+  forward.y = 0.0f;
+  if (glm::length(forward) > 0.01f) {
+   bodyOrigin = camera->GetPosition() - eyeOffset + glm::normalize(forward) * 3.0f;
+  } else {
+   bodyOrigin = camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
+  }
+ } else if (Creature* player = world.GetPlayerCreature()) {
+  bodyOrigin = player->GetBodyOrigin() + glm::vec3(3.0f, 0.0f, 0.0f);
+ }
+ return bodyOrigin;
+}
+
+} // namespace
+
+bool World::SpawnCreatureByView(const std::string& speciesId)
+{
+ const CreatureDefinition* def = creatureDefinitions_ ? creatureDefinitions_->Get(speciesId) : nullptr;
+ if (!def) {
+  return false;
+ }
+ if (!def->catalog.spawnable && def->role != CreatureRole::ControlledDefault) {
+  return false;
+ }
+ const glm::vec3 bodyOrigin = ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+ return SpawnCreature(speciesId, bodyOrigin) != 0;
+}
+
+std::optional<CreatureId> World::PickCreatureByView(const glm::vec3& eye, const glm::vec3& front,
+                                                  float maxDistance) const
+{
+ if (glm::length(front) < 1e-4f) {
+  return std::nullopt;
+ }
+ const glm::vec3 dir = glm::normalize(front);
+ float bestT = std::numeric_limits<float>::max();
+ CreatureId bestId = 0;
+ ForEachCreature([&](const Creature& creature) {
+  const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
+  const glm::vec3 center = BoundsCollisionCenter(creature.GetBodyOrigin(), size);
+  const glm::vec3 half = size * 0.5f;
+  const glm::vec3 boxMin = center - half;
+  const glm::vec3 boxMax = center + half;
+  float t = 0.0f;
+  if (!RayIntersectsAabb(eye, dir, boxMin, boxMax, maxDistance, t)) {
+   return;
+  }
+  if (t < bestT) {
+   bestT = t;
+   bestId = creature.GetId();
+  }
+ });
+ if (bestId == 0) {
+  return std::nullopt;
+ }
+ return bestId;
+}
+
+bool World::TryApplySkin(CreatureId target, const std::string& skinId, std::string* outError)
+{
+ auto setError = [&](const std::string& msg) {
+  if (outError) {
+   *outError = msg;
+  }
+ };
+ Creature* creature = GetCreature(target);
+ if (!creature) {
+  setError("Creature not found");
+  return false;
+ }
+ if (!skinDefinitions_) {
+  setError("Skin catalog not loaded");
+  return false;
+ }
+ const SkinDefinition* skin = skinDefinitions_->Get(skinId);
+ if (!skin) {
+  setError("Unknown skin");
+  return false;
+ }
+ if (!skinDefinitions_->IsCompatible(skinId, creature->GetTypeId())) {
+  setError("Skin is not compatible with this species");
+  return false;
+ }
+ creature->SetSkinId(skinId);
+ if (const CreatureDefinition* def = GetCreatureDefinition(creature->GetTypeId())) {
+  creature->SetVisual(CreateCreatureVisual(*def));
+ }
+ return true;
 }
 
 void World::LinkUsersToPlayerCreatures()

@@ -1750,8 +1750,6 @@ void GeometryEngine::RenderCreatures()
    if (camera->GetPerspective() == CameraPerspective::FirstPerson) {
     return;
    }
-  } else if (creature.IsPlayerCharacter()) {
-   return;
   }
   const std::string animType = WorldInstance->ResolveAnimationTypeId(creature);
   const CreatureDefinition* def = WorldInstance->GetCreatureDefinition(animType);

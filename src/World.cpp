@@ -38,6 +38,7 @@
 #include "Creature.h"
 #include "CreatureInventory.h"
 #include "CreatureDefinitionStorage.h"
+#include "CreatureVisualFactory.h"
 #include "Frustum.h"
 #include "RenderSettings.h"
 #include <map>
@@ -672,6 +673,12 @@ bool World::AddUser(const std::string &name)
  user->SetPlayerCreatureId(pid);
  if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
   player->BindUser(user);
+  if (!user->GetSelectedSkinId().empty()) {
+   player->SetSkinId(user->GetSelectedSkinId());
+   if (const CreatureDefinition* def = GetCreatureDefinition(speciesId)) {
+    player->SetVisual(CreateCreatureVisual(*def));
+   }
+  }
   CreatureInventory& inv = player->GetInventory();
   inv.InitCreativeDefaults();
   inv.EnsureDefaultHotbar();
@@ -1394,8 +1401,11 @@ void World::LoadUsers(const std::string &file_name)
         playerCreatureId_ = savedId;
        }
       }
-      if (user_data.contains("selected_appearance_type")) {
+      if (user_data.contains("selected_skin_id")) {
+       user->SetSelectedSkinId(user_data["selected_skin_id"].get<std::string>());
+      } else if (user_data.contains("selected_appearance_type")) {
        user->SetSelectedAppearanceTypeId(user_data["selected_appearance_type"].get<std::string>());
+       user->SetSelectedSkinId(user_data["selected_appearance_type"].get<std::string>());
       }
       Creature* playerCreature = GetCreature(user->GetPlayerCreatureId());
       if (!playerCreature && playerCreatureId_ != 0) {
@@ -1426,6 +1436,13 @@ void World::LoadUsers(const std::string &file_name)
        }
        inv.EnsureDefaultHotbar();
        playerCreature->SetOrientation(yaw, pitch);
+       if (!user->GetSelectedSkinId().empty()) {
+        playerCreature->SetSkinId(user->GetSelectedSkinId());
+        if (const CreatureDefinition* def =
+                GetCreatureDefinition(playerCreature->GetTypeId())) {
+         playerCreature->SetVisual(CreateCreatureVisual(*def));
+        }
+       }
       }
 
       if (auto camera = GetUserCamera(user_name)) {
@@ -1465,7 +1482,9 @@ void World::SaveUsers(const std::string &file_name)
   user_json["yaw"] = yaw;
   user_json["pitch"] = pitch;
   user_json["player_creature_id"] = user->GetPlayerCreatureId();
-  if (!user->GetSelectedAppearanceTypeId().empty()) {
+  if (!user->GetSelectedSkinId().empty()) {
+   user_json["selected_skin_id"] = user->GetSelectedSkinId();
+  } else if (!user->GetSelectedAppearanceTypeId().empty()) {
    user_json["selected_appearance_type"] = user->GetSelectedAppearanceTypeId();
   }
 

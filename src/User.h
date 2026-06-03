@@ -32,6 +32,9 @@ public:
  const std::string& GetSelectedAppearanceTypeId() const;
  void SetSelectedAppearanceTypeId(const std::string& typeId);
 
+ const std::string& GetSelectedSkinId() const;
+ void SetSelectedSkinId(const std::string& skinId);
+
 private:
  glm::vec3 Position{};
  glm::vec3 ViewDirection{};
@@ -40,6 +43,7 @@ private:
  size_t ViewId{0};
  CreatureId playerCreatureId_{0};
  std::string selectedAppearanceTypeId_;
+ std::string selectedSkinId_;
 };
 
 }

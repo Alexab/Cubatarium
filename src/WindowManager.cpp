@@ -463,13 +463,33 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                 if (Creature* controlled = worldInstance->GetControlledCreature()) {
                     active = controlled->GetInventory().GetActiveEntryRef();
                 }
-                const bool placePrefab =
-                    altDown
-                    || (active && active->kind == InventoryEntryKind::Object && !active->id.empty());
-                if (placePrefab) {
-                    worldInstance->PlaceActivePrefabByView();
+                if (active && active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
+                    if (!worldInstance->SpawnCreatureByView(active->id) && geometries) {
+                        geometries->ShowTransientMessage("Cannot spawn " + active->id, 2.0);
+                    }
+                } else if (active && active->kind == InventoryEntryKind::Skin && !active->id.empty()) {
+                    auto camera = worldInstance->GetCurrentUserCamera();
+                    if (camera) {
+                        const auto target = worldInstance->PickCreatureByView(
+                            camera->GetPosition(), camera->GetFront(), 8.0f);
+                        std::string error;
+                        if (target && worldInstance->TryApplySkin(*target, active->id, &error)) {
+                            // applied
+                        } else if (geometries) {
+                            geometries->ShowTransientMessage(
+                                error.empty() ? "No creature in view" : error, 2.0);
+                        }
+                    }
                 } else {
-                    worldInstance->AddObjectByView();
+                    const bool placePrefab =
+                        altDown
+                        || (active && active->kind == InventoryEntryKind::Object
+                            && !active->id.empty());
+                    if (placePrefab) {
+                        worldInstance->PlaceActivePrefabByView();
+                    } else {
+                        worldInstance->AddObjectByView();
+                    }
                 }
             } else {
                 worldInstance->DelObjectByView();

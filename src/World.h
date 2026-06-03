@@ -13,6 +13,7 @@
 #include <array>
 #include <functional>
 #include <map>
+#include <optional>
 #include <tuple>
 #include <unordered_map>
 #include "BlockWorld.h"
@@ -141,6 +142,10 @@ public:
  bool SetControlledCreature(CreatureId id);
  CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                           const std::string& skinId = "");
+ bool SpawnCreatureByView(const std::string& speciesId);
+ std::optional<CreatureId> PickCreatureByView(const glm::vec3& eye, const glm::vec3& front,
+                                              float maxDistance) const;
+ bool TryApplySkin(CreatureId target, const std::string& skinId, std::string* outError = nullptr);
  void RemoveCreature(CreatureId id);
  void ForEachCreature(const std::function<void(Creature&)>& fn);
  void ForEachCreature(const std::function<void(const Creature&)>& fn) const;

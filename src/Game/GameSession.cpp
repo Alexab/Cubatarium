@@ -9,6 +9,7 @@
 #include "CreatureBounds.h"
 #include "CreatureInventory.h"
 #include "CreatureDefinition.h"
+#include "SkinDefinitionStorage.h"
 #include "Player.h"
 
 #include <GLFW/glfw3.h>
@@ -71,8 +72,8 @@ void GameSession::RegisterCommands()
 {
     commandRegistry_.Register("help", [](const std::vector<std::string>&) {
         return CommandResult{true,
-            "Commands: help, give, tp, fly, time, spawn_test_mob, possess, depossess, "
-            "select_appearance"};
+            "Commands: help, give, tp, fly, time, spawn, select_skin, apply_skin, possess, "
+            "depossess, select_appearance"};
     });
 
     commandRegistry_.Register("time", [](const std::vector<std::string>&) {
@@ -134,16 +135,29 @@ void GameSession::RegisterCommands()
         return CommandResult{true, enable ? "Flight on" : "Flight off"};
     });
 
-    commandRegistry_.Register("spawn_test_mob", [this](const std::vector<std::string>&) {
+    commandRegistry_.Register("spawn", [this](const std::vector<std::string>& args) {
         if (!world_) {
             return CommandResult{false, "No world"};
         }
-        float eyeHeight = 1.45f;
-        if (const CreatureDefinition* def = world_->GetCreatureDefinition("test_mob")) {
-            eyeHeight = def->eyeHeight;
+        if (args.size() < 2) {
+            return CommandResult{false, "Usage: spawn <species> [skin]"};
         }
-        const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
-
+        const std::string& species = args[1];
+        const CreatureDefinition* def = world_->GetCreatureDefinition(species);
+        if (!def) {
+            return CommandResult{false, "Unknown species: " + species};
+        }
+        if (!def->catalog.spawnable) {
+            return CommandResult{false, "Species is not spawnable: " + species};
+        }
+        const std::string skin = args.size() >= 3 ? args[2] : "";
+        if (!skin.empty()) {
+            const auto& skinStorage = world_->GetSkinDefinitionStorage();
+            if (!skinStorage || !skinStorage->IsCompatible(skin, species)) {
+                return CommandResult{false, "Skin is not compatible with species"};
+            }
+        }
+        const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
         glm::vec3 bodyOrigin = world_->GetSpawnPoint();
         bodyOrigin.y -= eyeOffset.y;
         if (auto camera = world_->GetCurrentUserCamera()) {
@@ -154,12 +168,52 @@ void GameSession::RegisterCommands()
             } else {
                 bodyOrigin = camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
             }
-        } else if (Creature* player = world_->GetPlayerCreature()) {
-            bodyOrigin = player->GetBodyOrigin() + glm::vec3(3.0f, 0.0f, 0.0f);
         }
+        const CreatureId id = world_->SpawnCreature(species, bodyOrigin, skin);
+        if (id == 0) {
+            return CommandResult{false, "Spawn failed"};
+        }
+        return CommandResult{true, "Spawned " + species + " id=" + std::to_string(id)};
+    });
 
-        const CreatureId id = world_->SpawnCreature("test_mob", bodyOrigin);
-        return CommandResult{true, "Spawned test_mob id=" + std::to_string(id) + " (3m ahead)"};
+    commandRegistry_.Register("select_skin", [this](const std::vector<std::string>& args) {
+        if (args.size() < 2) {
+            return CommandResult{false, "Usage: select_skin <skin_id>"};
+        }
+        auto user = world_->GetCurrentUser();
+        Creature* controlled = world_->GetControlledCreature();
+        if (!user || !controlled) {
+            return CommandResult{false, "No controlled creature"};
+        }
+        std::string error;
+        if (!world_->TryApplySkin(controlled->GetId(), args[1], &error)) {
+            return CommandResult{false, error};
+        }
+        user->SetSelectedSkinId(args[1]);
+        return CommandResult{true, "Skin set to " + args[1]};
+    });
+
+    commandRegistry_.Register("apply_skin", [this](const std::vector<std::string>& args) {
+        if (!world_) {
+            return CommandResult{false, "No world"};
+        }
+        if (args.size() < 2) {
+            return CommandResult{false, "Usage: apply_skin <skin_id>"};
+        }
+        auto camera = world_->GetCurrentUserCamera();
+        if (!camera) {
+            return CommandResult{false, "No camera"};
+        }
+        const auto target =
+            world_->PickCreatureByView(camera->GetPosition(), camera->GetFront(), 8.0f);
+        if (!target) {
+            return CommandResult{false, "No creature in view"};
+        }
+        std::string error;
+        if (!world_->TryApplySkin(*target, args[1], &error)) {
+            return CommandResult{false, error};
+        }
+        return CommandResult{true, "Applied skin " + args[1]};
     });
 
     commandRegistry_.Register("possess", [this](const std::vector<std::string>& args) {
@@ -211,12 +265,18 @@ void GameSession::RegisterCommands()
 
     commandRegistry_.Register("select_appearance", [this](const std::vector<std::string>& args) {
         if (args.size() < 2) {
-            return CommandResult{false, "Usage: select_appearance <type_id>"};
+            return CommandResult{false, "Usage: select_appearance <skin_id> (alias: select_skin)"};
         }
         auto user = world_->GetCurrentUser();
-        if (!user) {
-            return CommandResult{false, "No user"};
+        Creature* controlled = world_->GetControlledCreature();
+        if (!user || !controlled) {
+            return CommandResult{false, "No controlled creature"};
         }
+        std::string error;
+        if (!world_->TryApplySkin(controlled->GetId(), args[1], &error)) {
+            return CommandResult{false, error};
+        }
+        user->SetSelectedSkinId(args[1]);
         user->SetSelectedAppearanceTypeId(args[1]);
         return CommandResult{true, "Appearance set to " + args[1]};
     });

@@ -60,4 +60,14 @@ void User::SetSelectedAppearanceTypeId(const std::string& typeId)
  selectedAppearanceTypeId_ = typeId;
 }
 
+const std::string& User::GetSelectedSkinId() const
+{
+ return selectedSkinId_;
+}
+
+void User::SetSelectedSkinId(const std::string& skinId)
+{
+ selectedSkinId_ = skinId;
+}
+
 }
