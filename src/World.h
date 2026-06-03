@@ -24,6 +24,8 @@
 #include "ProceduralSettings.h"
 #include "worldgen/IWorldGenPipeline.h"
 #include "worldgen/WorldGenContext.h"
+#include "CollisionVolume.h"
+#include "CreatureBounds.h"
 #include "PlayerCapsule.h"
 
 namespace cutum {
@@ -106,6 +108,13 @@ public:
  std::optional<glm::ivec3> FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const;
 
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
+
+ bool CheckCollisionVolume(const CollisionVolume& vol) const;
+ bool HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const;
+ /// Moves from body origin along delta (Y, X, Z axis order).
+ glm::vec3 ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
+                               const glm::vec3& currentSizeBlocks) const;
+ SampledFluidState SampleFluidPhysicsVolume(const CollisionVolume& vol) const;
 
  /// `eyePos` is camera/eye position; collision AABB derived from `cap`.
  bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const;

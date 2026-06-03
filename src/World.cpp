@@ -28,6 +28,7 @@
 #include "worldgen/WorldGenContext.h"
 #include "worldgen/PrefabFeaturePlacer.h"
 #include "ChunkManager.h"
+#include "CreatureBounds.h"
 #include "PlayerCapsule.h"
 #include "Cube.h"
 #include "Chunk.h"
@@ -879,16 +880,15 @@ bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
  return true;
 }
 
-World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
-                                                   const PlayerCapsule& cap) const
+World::SampledFluidState World::SampleFluidPhysicsVolume(const CollisionVolume& vol) const
 {
  SampledFluidState state;
  if (!blockRegistry_) {
   return state;
  }
  std::unordered_map<BlockId, int> fluidWeights;
- const glm::vec3 center = cap.centerFromEye(eyePos);
- const glm::vec3 half = cap.halfExtents();
+ const glm::vec3 center = vol.center;
+ const glm::vec3 half = vol.halfExtents;
  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
  const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
  const glm::vec3 blockHalf(0.5f);
@@ -926,13 +926,19 @@ World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
  return state;
 }
 
-bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
+                                                   const PlayerCapsule& cap) const
+{
+ return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
+}
+
+bool World::CheckCollisionVolume(const CollisionVolume& vol) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const glm::vec3 center = cap.centerFromEye(eyePos);
- const glm::vec3 half = cap.halfExtents();
+ const glm::vec3 center = vol.center;
+ const glm::vec3 half = vol.halfExtents;
  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
  const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
  const glm::vec3 blockHalf(0.5f);
@@ -954,18 +960,27 @@ bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) co
  return false;
 }
 
-bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap));
+}
+
+bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const float feetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
  const glm::ivec3 standCell(
-     static_cast<int>(std::floor(eyePos.x)),
+     static_cast<int>(std::floor(vol.center.x)),
      supportY,
-     static_cast<int>(std::floor(eyePos.z)));
+     static_cast<int>(std::floor(vol.center.z)));
  return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
+}
+
+bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ return HasGroundSupportVolume(CollisionVolumeFromEye(eyePos, cap), cap.feetY(eyePos));
 }
 
 namespace {
@@ -974,15 +989,15 @@ constexpr float kCollisionMaxStep = 0.25f;
 constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
-glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float axisDelta,
-                              int axis, const PlayerCapsule& cap)
+glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, float axisDelta,
+                                 int axis, const PlayerCapsule& cap)
 {
  if (std::abs(axisDelta) < 1e-8f) {
-  return from;
+  return fromEye;
  }
  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
  float remaining = std::abs(axisDelta);
- glm::vec3 pos = from;
+ glm::vec3 pos = fromEye;
  glm::vec3 axisUnit(0.0f);
  axisUnit[axis] = 1.0f;
 
@@ -990,18 +1005,17 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
  while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
   const float step = std::min(remaining, kCollisionMaxStep);
   const glm::vec3 next = pos + axisUnit * step * sign;
-  if (world.CheckCollision(next, cap)) {
+  if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap))) {
    glm::vec3 lo = pos;
    glm::vec3 hi = next;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (world.CheckCollision(mid, cap)) {
+    if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap))) {
      hi = mid;
     } else {
      lo = mid;
     }
    }
-   // Do not push upward when landing — that caused float above floor and Y jitter.
    if (axis == 1 && sign < 0.0f) {
     pos = lo;
    } else {
@@ -1016,7 +1030,61 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
  return pos;
 }
 
+glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody, float axisDelta,
+                                  int axis, const glm::vec3& currentSizeBlocks)
+{
+ if (std::abs(axisDelta) < 1e-8f) {
+  return fromBody;
+ }
+ const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
+ float remaining = std::abs(axisDelta);
+ glm::vec3 body = fromBody;
+ glm::vec3 axisUnit(0.0f);
+ axisUnit[axis] = 1.0f;
+
+ int iterations = 0;
+ while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
+  const float step = std::min(remaining, kCollisionMaxStep);
+  const glm::vec3 nextBody = body + axisUnit * step * sign;
+  if (world.CheckCollisionVolume(CollisionVolumeFromBody(nextBody, currentSizeBlocks))) {
+   glm::vec3 lo = body;
+   glm::vec3 hi = nextBody;
+   for (int i = 0; i < 8; ++i) {
+    const glm::vec3 mid = (lo + hi) * 0.5f;
+    if (world.CheckCollisionVolume(CollisionVolumeFromBody(mid, currentSizeBlocks))) {
+     hi = mid;
+    } else {
+     lo = mid;
+    }
+   }
+   if (axis == 1 && sign < 0.0f) {
+    body = lo;
+   } else {
+    body = lo - axisUnit * kCollisionEpsilon * sign;
+   }
+   break;
+  }
+  body = nextBody;
+  remaining -= step;
+  ++iterations;
+ }
+ return body;
+}
+
 } // namespace
+
+glm::vec3 World::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
+                                     const glm::vec3& currentSizeBlocks) const
+{
+ if (glm::dot(delta, delta) < 1e-10f) {
+  return bodyOrigin;
+ }
+ glm::vec3 body = bodyOrigin;
+ body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks);
+ body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks);
+ body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks);
+ return body;
+}
 
 glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
                                  const PlayerCapsule& cap) const
@@ -1024,11 +1092,11 @@ glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta
  if (glm::dot(delta, delta) < 1e-10f) {
   return eyePos;
  }
- glm::vec3 pos = eyePos;
- pos = ResolveMovementAxis(*this, pos, delta.y, 1, cap);
- pos = ResolveMovementAxis(*this, pos, delta.x, 0, cap);
- pos = ResolveMovementAxis(*this, pos, delta.z, 2, cap);
- return pos;
+ const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
+ const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
+ const glm::vec3 body = BodyOriginFromEye(eyePos, eyeOffset);
+ const glm::vec3 newBody = ResolveMovementBody(body, delta, sizeBlocks);
+ return BoundsEyePosition(newBody, eyeOffset);
 }
 
 namespace {
