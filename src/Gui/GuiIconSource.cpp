@@ -4,9 +4,11 @@
 namespace cutum {
 
 GuiIconSource::GuiIconSource(std::shared_ptr<TextureCubeStorage> textures,
-                             std::unique_ptr<PrefabIconCache> prefabCache)
+                             std::unique_ptr<PrefabIconCache> prefabCache,
+                             std::unique_ptr<CreatureIconCache> creatureCache)
     : textures_(std::move(textures))
     , prefabCache_(std::move(prefabCache))
+    , creatureCache_(std::move(creatureCache))
 {
 }
 
@@ -43,14 +45,27 @@ GLuint GuiIconSource::GetPrefabIconTextureIfCached(const std::string& prefabName
     return prefabCache_->GetIconIfCached(prefabName);
 }
 
-GLuint GuiIconSource::GetCreatureIconTexture(const std::string& /*speciesId*/)
+GLuint GuiIconSource::GetCreatureIconTexture(const std::string& speciesId)
 {
-    return 0;
+    if (!creatureCache_ || speciesId.empty()) {
+        return 0;
+    }
+    return creatureCache_->GetSpeciesIcon(speciesId);
 }
 
-GLuint GuiIconSource::GetSkinIconTexture(const std::string& /*skinId*/)
+GLuint GuiIconSource::GetSkinIconTexture(const std::string& skinId)
 {
-    return 0;
+    if (!creatureCache_ || skinId.empty()) {
+        return 0;
+    }
+    return creatureCache_->GetSkinIcon(skinId);
+}
+
+void GuiIconSource::WarmupCreatureIcons(size_t maxPerFrame)
+{
+    if (creatureCache_) {
+        creatureCache_->WarmupNext(maxPerFrame);
+    }
 }
 
 void GuiIconSource::WarmupPrefabIcons(size_t maxPerFrame)

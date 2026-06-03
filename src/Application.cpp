@@ -13,6 +13,7 @@
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/CreatureIconCache.h"
 #include "Gui/GuiIconSource.h"
 #include "Gui/PrefabIconCache.h"
 #include "Gui/Screens/LoadWorldScreen.h"
@@ -148,7 +149,17 @@ void Application::Startup(const std::string& configPath)
         auto prefabCache = std::make_unique<PrefabIconCache>(
             core_->GetPrefabLibrary(), textures, blockDefinitions_, shaderManager_);
         if (prefabCache->Initialize()) {
-            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache));
+            std::unique_ptr<CreatureIconCache> creatureCache;
+            if (world_) {
+                creatureCache = std::make_unique<CreatureIconCache>(
+                    world_->GetCreatureDefinitionStorage(), world_->GetSkinDefinitionStorage(),
+                    core_->GetCreatureTextureStorage());
+                if (!creatureCache->Initialize()) {
+                    creatureCache.reset();
+                }
+            }
+            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache),
+                                                          std::move(creatureCache));
         }
     }
 
@@ -568,10 +579,21 @@ void Application::DrawDragGhost(int width, int height)
     if (drag.entry.empty) {
         return;
     }
-    const GLuint tex =
-        drag.entry.kind == InventoryEntryKind::Block
-            ? iconSource_->GetBlockIconTexture(drag.entry.id)
-            : iconSource_->GetPrefabIconTexture(drag.entry.id);
+    GLuint tex = 0;
+    switch (drag.entry.kind) {
+    case InventoryEntryKind::Block:
+        tex = iconSource_->GetBlockIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Object:
+        tex = iconSource_->GetPrefabIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Creature:
+        tex = iconSource_->GetCreatureIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Skin:
+        tex = iconSource_->GetSkinIconTexture(drag.entry.id);
+        break;
+    }
     if (tex == 0) {
         return;
     }
@@ -655,6 +677,7 @@ void Application::RenderFrame(int width, int height, double viewDuration)
 
     if (state_ == AppState::InGame && iconSource_) {
         iconSource_->WarmupPrefabIcons(2);
+        iconSource_->WarmupCreatureIcons(2);
     }
 
     if (hudScreen_ && hudScreen_->GetRoot()) {

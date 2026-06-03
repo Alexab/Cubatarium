@@ -127,6 +127,7 @@ set(SOURCES
     src/Gui/UiTexturedQuadBatch.cpp
     src/Gui/GuiIconSource.cpp
     src/Gui/PrefabIconCache.cpp
+    src/Gui/CreatureIconCache.cpp
     src/Gui/GuiInputRouter.cpp
     src/Gui/GuiFocus.cpp
     src/Gui/GuiContext.cpp
