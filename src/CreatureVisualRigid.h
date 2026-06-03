@@ -17,6 +17,7 @@ private:
 
  float headYaw_{0.0f};
  float bodyYaw_{-90.0f};
+ float crouchUpperDrop_{0.0f};
  glm::vec3 bodyOrigin_{0.0f};
  glm::vec3 sizeBlocks_{0.8f, 1.6f, 0.8f};
 };

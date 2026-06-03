@@ -69,6 +69,7 @@ public:
  PlayerCapsule GetPlayerCapsule() const;
  float GetAnchoredFeetY() const;
  bool HasAnchoredFeet() const;
+ float GetStanceBlend() const;
  bool IsCrouching() const;
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const;

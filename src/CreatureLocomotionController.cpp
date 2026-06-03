@@ -71,14 +71,6 @@ PlayerCapsule CreatureLocomotionController::GetCapsule() const
  return PlayerCapsule::FromCreatureBlocks(collisionSizeBlocks_, eyeHeight_);
 }
 
-float CreatureLocomotionController::viewEyeHeight() const
-{
- const PlayerCapsule stand = GetCapsule();
- const float crouchEye = eyeHeight_ * 0.85f;
- const float t = std::clamp(stanceBlend_, 0.0f, 1.0f);
- return stand.eyeHeight + (crouchEye - stand.eyeHeight) * t;
-}
-
 bool CreatureLocomotionController::OnSpacePressed()
 {
  if (!caps_.canFly) {
@@ -141,11 +133,33 @@ bool CreatureLocomotionController::anchorFeetFromStandingEye(const World* world,
   feetAnchored_ = false;
   return false;
  }
- const float probeFeetY = cap.feetY(eyePos);
- const int supportY = static_cast<int>(std::floor(probeFeetY - 0.04f));
- feetY_ = static_cast<float>(supportY) + 1.0f;
+ feetY_ = cap.feetY(eyePos);
+ const int supportY = static_cast<int>(std::floor(feetY_ - 0.04f));
+ const float blockTop = static_cast<float>(supportY) + 1.0f;
+ if (feetY_ < blockTop - 0.02f) {
+  feetY_ = blockTop;
+ }
  feetAnchored_ = true;
  return true;
+}
+
+float CreatureLocomotionController::GetViewEyeHeight() const
+{
+ const PlayerCapsule stand = GetCapsule();
+ const float crouchEye = eyeHeight_ * 0.85f;
+ const float t = std::clamp(stanceBlend_, 0.0f, 1.0f);
+ return stand.eyeHeight + (crouchEye - stand.eyeHeight) * t;
+}
+
+void CreatureLocomotionController::SetStanceBlendForView(float blend01)
+{
+ stanceBlend_ = std::clamp(blend01, 0.0f, 1.0f);
+}
+
+void CreatureLocomotionController::SyncFeetAnchorFromView(float feetY, bool anchored)
+{
+ feetY_ = feetY;
+ feetAnchored_ = anchored;
 }
 
 void CreatureLocomotionController::applyCrouchEyeFromFeet(glm::vec3& eyePos) const
@@ -153,7 +167,7 @@ void CreatureLocomotionController::applyCrouchEyeFromFeet(glm::vec3& eyePos) con
  if (!feetAnchored_) {
   return;
  }
- eyePos.y = feetY_ + viewEyeHeight();
+ eyePos.y = feetY_ + GetViewEyeHeight();
 }
 
 void CreatureLocomotionController::landStanding(const World* world, glm::vec3& eyePos,
@@ -185,7 +199,7 @@ bool CreatureLocomotionController::canStandUpAt(const World* world,
   return true;
  }
  const PlayerCapsule cap = GetCapsule();
- const glm::vec3 trialEye(eyePos.x, feetY_ + viewEyeHeight(), eyePos.z);
+ const glm::vec3 trialEye(eyePos.x, feetY_ + GetViewEyeHeight(), eyePos.z);
  return !world->CheckCollision(trialEye, GetCapsule(), skipCreatureId);
 }
 

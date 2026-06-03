@@ -28,7 +28,11 @@ public:
  glm::vec3 GetBodyOrigin() const { return bodyOrigin_; }
  void SetBodyOrigin(const glm::vec3& v) { bodyOrigin_ = v; }
  glm::vec3 GetEyeOffset() const { return eyeOffset_; }
+ /// Feet on ground (collision / rig root). Same as body origin.
+ glm::vec3 GetFeetPosition() const { return bodyOrigin_; }
  glm::vec3 GetEyePosition() const;
+ /// Eye used by locomotion (feet + view eye height when grounded).
+ glm::vec3 GetLocomotionEye() const;
  float GetYaw() const { return yaw_; }
  float GetPitch() const { return pitch_; }
  void SetOrientation(float yaw, float pitch);
@@ -36,7 +40,7 @@ public:
  const CreatureBoundsState& GetBounds() const { return bounds_; }
  CreatureBoundsState& GetBoundsMutable() { return bounds_; }
  void SyncBoundsFromStance();
- void SyncBodyOriginFromEye(const glm::vec3& eye);
+ void SyncFeetFromLocomotion(const glm::vec3& eyeAfterLocomotion);
 
  CollisionVolume GetCollisionVolume() const;
  CreatureLocomotionController& GetLocomotion() { return locomotion_; }

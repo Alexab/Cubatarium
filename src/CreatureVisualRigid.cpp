@@ -12,6 +12,20 @@ namespace cutum {
 
 namespace {
 
+bool IsLegPart(const std::string& partId)
+{
+ return partId == "leg_l" || partId == "leg_r";
+}
+
+float CrouchUpperBodyDrop(const Creature& creature)
+{
+ const float blend = creature.GetLocomotion().GetStanceBlend();
+ if (blend <= 0.0f) {
+  return 0.0f;
+ }
+ return blend * (creature.GetEyeOffset().y - creature.GetLocomotion().GetViewEyeHeight());
+}
+
 CreaturePartMesh MeshForPart(const ResolvedCreaturePart& part)
 {
  if (part.partId == "head") {
@@ -39,8 +53,9 @@ glm::mat4 CreatureVisualRigid::BuildPartModel(const glm::vec3& bodyOrigin, float
 void CreatureVisualRigid::UpdatePose(const Creature& creature, LocomotionState state,
                                      const CreatureDefinition& /*animDef*/, float /*dt*/)
 {
- bodyOrigin_ = creature.GetBodyOrigin();
+ bodyOrigin_ = creature.GetFeetPosition();
  bodyYaw_ = creature.GetYaw();
+ crouchUpperDrop_ = CrouchUpperBodyDrop(creature);
  sizeBlocks_ = creature.GetBounds().currentSizeBlocks;
  switch (state) {
  case LocomotionState::Walk:
@@ -64,6 +79,9 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
  if (drawTextured && creatureTextures) {
   for (const ResolvedCreaturePart& part : appearance_.parts) {
    glm::vec3 offset = part.offsetBlocks;
+   if (!IsLegPart(part.partId)) {
+    offset.y -= crouchUpperDrop_;
+   }
    if (part.partId == "head") {
     offset.z += headYaw_ * 0.15f;
    }
@@ -90,6 +108,9 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
  if (settings.creatureWireframeOverlay && drawTextured) {
   for (const ResolvedCreaturePart& part : appearance_.parts) {
    glm::vec3 offset = part.offsetBlocks;
+   if (!IsLegPart(part.partId)) {
+    offset.y -= crouchUpperDrop_;
+   }
    if (part.partId == "head") {
     offset.z += headYaw_ * 0.15f;
    }

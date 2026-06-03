@@ -77,13 +77,4 @@ glm::vec3 BodyOriginFromEye(const glm::vec3& eyePos, const glm::vec3& eyeOffset)
  return eyePos - eyeOffset;
 }
 
-glm::vec3 BodyOriginFromEyeAndFeet(const glm::vec3& eyePos, const glm::vec3& eyeOffset,
-                                   float feetY, bool feetAnchored)
-{
- if (feetAnchored) {
-  return glm::vec3(eyePos.x, feetY, eyePos.z);
- }
- return BodyOriginFromEye(eyePos, eyeOffset);
-}
-
 } // namespace cutum

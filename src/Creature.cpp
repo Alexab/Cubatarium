@@ -31,7 +31,15 @@ void Creature::SetVisual(std::unique_ptr<ICreatureVisual> visual)
 
 glm::vec3 Creature::GetEyePosition() const
 {
- return BoundsEyePosition(bodyOrigin_, eyeOffset_);
+ return GetLocomotionEye();
+}
+
+glm::vec3 Creature::GetLocomotionEye() const
+{
+ const float eyeY = locomotion_.IsFeetAnchored()
+                        ? locomotion_.GetFeetY() + locomotion_.GetViewEyeHeight()
+                        : bodyOrigin_.y + locomotion_.GetViewEyeHeight();
+ return glm::vec3(bodyOrigin_.x, eyeY, bodyOrigin_.z);
 }
 
 void Creature::SetOrientation(float yaw, float pitch)
@@ -51,10 +59,15 @@ CollisionVolume Creature::GetCollisionVolume() const
  return CollisionVolumeFromBody(bodyOrigin_, bounds_.profile.restSizeBlocks);
 }
 
-void Creature::SyncBodyOriginFromEye(const glm::vec3& eye)
+void Creature::SyncFeetFromLocomotion(const glm::vec3& eyeAfterLocomotion)
 {
- bodyOrigin_ = BodyOriginFromEyeAndFeet(eye, eyeOffset_, locomotion_.GetFeetY(),
-                                        locomotion_.IsFeetAnchored());
+ bodyOrigin_.x = eyeAfterLocomotion.x;
+ bodyOrigin_.z = eyeAfterLocomotion.z;
+ if (locomotion_.IsFeetAnchored()) {
+  bodyOrigin_.y = locomotion_.GetFeetY();
+ } else {
+  bodyOrigin_.y = eyeAfterLocomotion.y - eyeOffset_.y;
+ }
 }
 
 void Creature::TickWanderTimer(float dt, float /*intervalMin*/, float /*intervalMax*/)
@@ -85,10 +98,10 @@ void Creature::ApplyIntent(World& world, float dt)
  }
 
  if (!possessed_ && locomotion_.GetMode() == CreatureMovementMode::Walking) {
-  glm::vec3 eye = GetEyePosition();
+  glm::vec3 eye = GetLocomotionEye();
   CreatureInput emptyInput;
   locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
-  SyncBodyOriginFromEye(eye);
+  SyncFeetFromLocomotion(eye);
   SyncBoundsFromStance();
  }
 
@@ -113,9 +126,9 @@ void Creature::ApplyIntent(World& world, float dt)
 void Creature::UpdateControlled(World& world, const CreatureInput& input, float dt)
 {
  ClearIntent();
- glm::vec3 eye = GetEyePosition();
+ glm::vec3 eye = GetLocomotionEye();
  locomotion_.UpdateLocomotion(&world, eye, input, dt, id_);
- SyncBodyOriginFromEye(eye);
+ SyncFeetFromLocomotion(eye);
  SyncBoundsFromStance();
 }
 

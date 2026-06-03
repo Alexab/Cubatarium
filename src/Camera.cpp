@@ -217,6 +217,11 @@ bool Camera::HasAnchoredFeet() const
  return locomotion_.IsFeetAnchored();
 }
 
+float Camera::GetStanceBlend() const
+{
+ return locomotion_.GetStanceBlend();
+}
+
 bool Camera::IsCrouching() const
 {
  return locomotion_.GetStanceBlend() > 0.5f;

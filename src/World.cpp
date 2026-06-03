@@ -1620,9 +1620,14 @@ void World::DoMovement()
 
  if (controlled && camera) {
   const glm::vec3 eye = camera->GetPosition();
-  controlled->SetBodyOrigin(BodyOriginFromEyeAndFeet(eye, controlled->GetEyeOffset(),
-                                                    camera->GetAnchoredFeetY(),
-                                                    camera->HasAnchoredFeet()));
+  controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
+  controlled->GetLocomotion().SyncFeetAnchorFromView(camera->GetAnchoredFeetY(),
+                                                     camera->HasAnchoredFeet());
+  if (camera->HasAnchoredFeet()) {
+   controlled->SetBodyOrigin(glm::vec3(eye.x, camera->GetAnchoredFeetY(), eye.z));
+  } else {
+   controlled->SetBodyOrigin(BodyOriginFromEye(eye, controlled->GetEyeOffset()));
+  }
   controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()), camera->GetPitch());
   controlled->SyncBoundsFromStance();
   controlled->GetLocomotion().SetMode(
