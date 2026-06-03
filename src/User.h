@@ -13,6 +13,8 @@ namespace cutum {
 
 class Object;
 
+using CreatureId = uint64_t;
+
 class User
 {
 public:
@@ -60,6 +62,11 @@ public:
  size_t GetViewId() const;
  void SetViewId(size_t value);
 
+ CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
+ void SetPlayerCreatureId(CreatureId id) { playerCreatureId_ = id; }
+ const std::string& GetSelectedAppearanceTypeId() const;
+ void SetSelectedAppearanceTypeId(const std::string& typeId);
+
  nlohmann::json SerializeHotbars() const;
  void DeserializeHotbars(const nlohmann::json& userData, size_t maxBarCount);
 
@@ -80,6 +87,8 @@ private:
  float CameraYaw{-90.0f};
  float CameraPitch{0.0f};
  size_t ViewId;
+ CreatureId playerCreatureId_{0};
+ std::string selectedAppearanceTypeId_;
 };
 
 }

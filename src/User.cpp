@@ -226,6 +226,16 @@ const std::string& User::EmptyString()
  return kEmpty;
 }
 
+const std::string& User::GetSelectedAppearanceTypeId() const
+{
+ return selectedAppearanceTypeId_;
+}
+
+void User::SetSelectedAppearanceTypeId(const std::string& typeId)
+{
+ selectedAppearanceTypeId_ = typeId;
+}
+
 const InventoryEntryRef* User::GetActiveEntryRef() const
 {
  if (hotbars_.empty()) {
