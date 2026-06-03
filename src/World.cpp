@@ -34,6 +34,10 @@
 #include "Chunk.h"
 #include "Prefab.h"
 #include "ChunkStreamer.h"
+#include "Player.h"
+#include "Creature.h"
+#include "CreatureInventory.h"
+#include "CreatureDefinitionStorage.h"
 #include "Frustum.h"
 #include "RenderSettings.h"
 #include <map>
@@ -46,6 +50,15 @@ namespace cutum {
 namespace {
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
+
+void CopyUserInventoryToCreature(const User& user, CreatureInventory& inv)
+{
+ for (const auto& entry : user.GetInventory()) {
+  inv.GetStorageMutable()[entry.first] = entry.second;
+ }
+ const json hotbarState = user.SerializeHotbars();
+ inv.DeserializeFromJson(hotbarState, 4);
+}
 constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool HasChunkJsonFiles(const std::string& chunks_dir)
@@ -461,7 +474,14 @@ void World::Load(const std::string& world_folder_path)
  allowProceduralFill_ = !hasPersistedSave_;
 
  LoadWorldData(world_data_file_name);
+ creatures_.clear();
+ nextCreatureId_ = 1;
+ playerCreatureId_ = 0;
+ controlledCreatureId_ = 0;
+
  LoadUsers(users_file_name);
+ LoadCreatures(worldFolderPath_ + "/creatures.json");
+ LinkUsersToPlayerCreatures();
 
  RefreshBlockRegistry();
 
@@ -554,6 +574,7 @@ void World::Save(const std::string& world_folder_path)
  }
 
  SaveUsers(users_file_name);
+ SaveCreatures(world_folder_path + "/creatures.json");
  SaveWorldData(world_data_file_name);
  modifiedChunks_.clear();
 }
@@ -647,6 +668,18 @@ bool World::AddUser(const std::string &name)
 
  Users[name] = std::make_shared<User>();
  auto user = Users[name];
+ const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
+ const glm::vec3 bodyOrigin = BodyOriginFromEye(SpawnPoint, eyeOffset);
+ const CreatureId pid = SpawnCreature("player", bodyOrigin);
+ user->SetPlayerCreatureId(pid);
+ if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
+  player->BindUser(user);
+  CopyUserInventoryToCreature(*user, player->GetInventory());
+ }
+ if (Users.size() == 1) {
+  playerCreatureId_ = pid;
+  controlledCreatureId_ = pid;
+ }
  auto camera = std::make_shared<Camera>(SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
  camera->SetFreeMove(false);
  const size_t viewId = ViewInstance->AddCameraReturnId(camera);
@@ -683,11 +716,22 @@ std::shared_ptr<User> World::GetCurrentUser()
  return GetUser(CurrentUserName);
 }
 
+std::shared_ptr<User> World::GetCurrentUser() const
+{
+ return const_cast<World*>(this)->GetUser(CurrentUserName);
+}
+
 bool World::SetCurrentUserName(const std::string& name)
 {
  if(Users.find(name) == Users.end())
   return false;
  CurrentUserName = name;
+ if (auto user = GetCurrentUser()) {
+  if (user->GetPlayerCreatureId() != 0) {
+   playerCreatureId_ = user->GetPlayerCreatureId();
+   SetControlledCreature(playerCreatureId_);
+  }
+ }
  ApplyUserToCamera(GetCurrentUser());
  if (auto user = GetCurrentUser()) {
   ViewInstance->SetActiveCamera(user->GetViewId());
@@ -804,9 +848,19 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
   return false;
  }
 
+ const std::string blockType = [&]() -> std::string {
+  if (Creature* controlled = GetControlledCreature()) {
+   return controlled->GetInventory().GetActiveBlockTypeName();
+  }
+  return user->GetActiveBlockTypeName();
+ }();
+ if (blockType.empty()) {
+  return false;
+ }
+
  auto object_pos = FindNearestFreeCubePosition(position, front);
  if (object_pos.has_value()) {
-  if (AddObject(user->GetActiveBlockTypeName(), object_pos.value())) {
+  if (AddObject(blockType, object_pos.value())) {
    UpdateIntersection(position, front);
    return true;
   }
@@ -827,7 +881,12 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
   return false;
  }
 
- const std::string& prefabName = user->GetActivePrefabName();
+ const std::string prefabName = [&]() -> std::string {
+  if (Creature* controlled = GetControlledCreature()) {
+   return controlled->GetInventory().GetActivePrefabName();
+  }
+  return user->GetActivePrefabName();
+ }();
  if (prefabName.empty()) {
   return false;
  }
@@ -1270,6 +1329,26 @@ void World::LoadUsers(const std::string &file_name)
       user->SetPosition(position);
       SanitizeUserPosition(user);
 
+      if (user_data.contains("player_creature_id")) {
+       const CreatureId savedId = user_data["player_creature_id"].get<CreatureId>();
+       if (GetCreature(savedId)) {
+        user->SetPlayerCreatureId(savedId);
+        playerCreatureId_ = savedId;
+       }
+      }
+      if (user_data.contains("selected_appearance_type")) {
+       user->SetSelectedAppearanceTypeId(user_data["selected_appearance_type"].get<std::string>());
+      }
+      Creature* playerCreature = GetCreature(user->GetPlayerCreatureId());
+      if (!playerCreature && playerCreatureId_ != 0) {
+       user->SetPlayerCreatureId(playerCreatureId_);
+       playerCreature = GetCreature(playerCreatureId_);
+      }
+      if (playerCreature) {
+       const glm::vec3 eyeOffset = playerCreature->GetEyeOffset();
+       playerCreature->SetBodyOrigin(BodyOriginFromEye(user->GetPosition(), eyeOffset));
+      }
+
       float yaw = -90.0f;
       float pitch = 0.0f;
       if (user_data.contains("yaw")) {
@@ -1282,6 +1361,10 @@ void World::LoadUsers(const std::string &file_name)
 
       const size_t hotbarCount = 2;
       user->DeserializeHotbars(user_data, hotbarCount);
+      if (playerCreature) {
+       CopyUserInventoryToCreature(*user, playerCreature->GetInventory());
+       playerCreature->SetOrientation(yaw, pitch);
+      }
 
       if (auto camera = GetUserCamera(user_name)) {
        camera->SetPosition(position);
@@ -1319,8 +1402,15 @@ void World::SaveUsers(const std::string &file_name)
   user_json["position"] = json::array({position.x, position.y, position.z});
   user_json["yaw"] = yaw;
   user_json["pitch"] = pitch;
+  user_json["player_creature_id"] = user->GetPlayerCreatureId();
+  if (!user->GetSelectedAppearanceTypeId().empty()) {
+   user_json["selected_appearance_type"] = user->GetSelectedAppearanceTypeId();
+  }
 
-  const json hotbarState = user->SerializeHotbars();
+  json hotbarState = user->SerializeHotbars();
+  if (Creature* playerCreature = GetCreature(user->GetPlayerCreatureId())) {
+   playerCreature->GetInventory().SerializeToJson(hotbarState);
+  }
   if (hotbarState.contains("hotbars")) {
    user_json["hotbars"] = hotbarState["hotbars"];
   }
@@ -1432,25 +1522,52 @@ void World::DoMovement()
  auto t_begin = std::chrono::high_resolution_clock::now();
 
  auto camera = GetCurrentUserCamera();
+ Creature* controlled = GetControlledCreature();
  const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
+ const float dt = camera ? camera->GetDeltaTime() : 0.0f;
+
+ if (controlled && camera) {
+  camera->SetPosition(controlled->GetEyePosition());
+  camera->SetOrientation(controlled->GetYaw(), controlled->GetPitch());
+ }
 
  if (camera && streamer_ && streamingEnabled_) {
-  const glm::vec3 playerPos = camera->GetPosition();
-  const PlayerCapsule cap = camera->GetPlayerCapsule();
-  const glm::ivec3 feetBlock = WorldPosToBlock(
-      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
+  const glm::vec3 eyePos = camera->GetPosition();
+  float feetY = eyePos.y - 1.62f;
+  if (controlled) {
+   feetY = BoundsFeetY(controlled->GetBodyOrigin());
+  }
+  const glm::ivec3 feetBlock = WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
   streamer_->EnsureCollisionChunks(feetBlock);
  }
 
+ // TODO(CREATURE_AGENTS): creatureActivityDirector_.TickAgents(*this, dt);
+ ForEachCreature([&](Creature& creature) {
+  if (controlledCreatureId_ != 0 && creature.GetId() == controlledCreatureId_) {
+   return;
+  }
+  creature.ApplyIntent(*this, dt);
+ });
+
  bool is_moved = camera && camera->DoMovement(this);
+
+ if (is_moved && controlled && camera) {
+  controlled->SetBodyOrigin(BodyOriginFromEye(camera->GetPosition(), controlled->GetEyeOffset()));
+  controlled->SetOrientation(camera->GetYaw(), camera->GetPitch());
+  controlled->SyncBoundsFromStance();
+  if (controlled->GetLocomotion().GetMode() == CreatureMovementMode::Flying) {
+   camera->SetFreeMove(true);
+  } else {
+   camera->SetFreeMove(false);
+  }
+ }
 
  if (camera) {
   UpdateStreaming();
   blockWorldReady_ = true;
  }
 
- if(is_moved && camera)
- {
+ if (is_moved && camera) {
   if (auto user = GetCurrentUser()) {
    user->SetPosition(camera->GetPosition());
    user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
