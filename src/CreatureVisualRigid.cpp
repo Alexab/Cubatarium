@@ -30,7 +30,7 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
  const glm::vec3 center = BoundsCollisionCenter(bodyOrigin_, sizeBlocks_);
  glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
  model = glm::scale(model, sizeBlocks_);
- engine.DrawBoxWireframe(viewProj * model, glm::vec4(0.95f, 0.45f, 0.1f, 1.0f));
+ engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
 }
 
 } // namespace cutum

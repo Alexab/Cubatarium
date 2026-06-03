@@ -1761,6 +1761,7 @@ void GeometryEngine::RenderCreatures()
    def = &fallback;
   }
   if (ICreatureVisual* visual = creature.GetVisual()) {
+   visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
    visual->UpdatePose(creature, creature.GetLocomotionState(), *def, dt);
    visual->SubmitDraw(*this, viewProj);
   }

@@ -30,10 +30,12 @@
 #include "CreatureBounds.h"
 #include "PlayerCapsule.h"
 #include "Creature.h"
+#include "CreatureCatalogTypes.h"
 
 namespace cutum {
 
 class CreatureDefinitionStorage;
+class SkinDefinitionStorage;
 struct CreatureDefinition;
 
 class ViewEngine;
@@ -121,6 +123,7 @@ public:
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
  void SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage);
+ void SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage);
 
  Creature* GetCreature(CreatureId id);
  const Creature* GetCreature(CreatureId id) const;
@@ -136,6 +139,7 @@ public:
  void ForEachCreature(const std::function<void(const Creature&)>& fn) const;
  std::string ResolveAnimationTypeId(const Creature& creature) const;
  const CreatureDefinition* GetCreatureDefinition(const std::string& typeId) const;
+ ResolvedCreatureAppearance GetResolvedAppearance(const Creature& creature) const;
 
  void LoadCreatures(const std::string& file_name);
  void SaveCreatures(const std::string& file_name);
@@ -290,6 +294,7 @@ private:
  CreatureId playerCreatureId_{0};
  CreatureId controlledCreatureId_{0};
  std::shared_ptr<CreatureDefinitionStorage> creatureDefinitions_;
+ std::shared_ptr<SkinDefinitionStorage> skinDefinitions_;
 
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<ViewEngine> ViewInstance;

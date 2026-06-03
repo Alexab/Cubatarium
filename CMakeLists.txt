@@ -58,6 +58,8 @@ set(SOURCES
     src/WorldCreatures.cpp
     src/CreatureDefinitionStorage.cpp
     src/CreatureTextureStorage.cpp
+    src/SkinDefinitionStorage.cpp
+    src/CreatureAppearance.cpp
     src/CreatureVisualRigid.cpp
     src/CreatureVisualGltf.cpp
     src/CreatureVisualFactory.cpp

@@ -1,5 +1,7 @@
 #include "World.h"
+#include "CreatureAppearance.h"
 #include "CreatureDefinitionStorage.h"
+#include "SkinDefinitionStorage.h"
 #include "CreatureVisualFactory.h"
 #include "Player.h"
 #include "TestMob.h"
@@ -17,6 +19,11 @@ using json = nlohmann::json;
 void World::SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage)
 {
  creatureDefinitions_ = std::move(storage);
+}
+
+void World::SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage)
+{
+ skinDefinitions_ = std::move(storage);
 }
 
 Creature* World::GetCreature(CreatureId id)
@@ -151,6 +158,17 @@ const CreatureDefinition* World::GetCreatureDefinition(const std::string& typeId
   return nullptr;
  }
  return creatureDefinitions_->Get(typeId);
+}
+
+ResolvedCreatureAppearance World::GetResolvedAppearance(const Creature& creature) const
+{
+ if (!creatureDefinitions_) {
+  return ResolvedCreatureAppearance{};
+ }
+ SkinDefinitionStorage empty;
+ const SkinDefinitionStorage& skins = skinDefinitions_ ? *skinDefinitions_ : empty;
+ return ResolveCreatureAppearance(*creatureDefinitions_, skins, creature.GetTypeId(),
+                                  creature.GetSkinId());
 }
 
 void World::LinkUsersToPlayerCreatures()

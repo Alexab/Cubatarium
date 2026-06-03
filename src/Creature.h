@@ -23,6 +23,8 @@ public:
 
  CreatureId GetId() const { return id_; }
  const std::string& GetTypeId() const { return typeId_; }
+ const std::string& GetSkinId() const { return skinId_; }
+ void SetSkinId(const std::string& id) { skinId_ = id; }
  glm::vec3 GetBodyOrigin() const { return bodyOrigin_; }
  void SetBodyOrigin(const glm::vec3& v) { bodyOrigin_ = v; }
  glm::vec3 GetEyeOffset() const { return eyeOffset_; }
@@ -65,6 +67,7 @@ public:
 protected:
  CreatureId id_;
  std::string typeId_;
+ std::string skinId_;
  glm::vec3 bodyOrigin_;
  glm::vec3 eyeOffset_;
  float yaw_{-90.0f};
