@@ -1,21 +1,28 @@
 #include "CreatureIconCache.h"
+#include "CreatureAppearance.h"
 #include "CreatureCatalogTypes.h"
 #include "CreatureDefinitionStorage.h"
-#include <glm/glm.hpp>
 #include "CreatureTextureStorage.h"
+#include "ShaderManager.h"
 #include "SkinDefinitionStorage.h"
 
+#include "render/GlStateScope.h"
+#include "render/GlStateMask.h"
+
 #include <GL/glew.h>
-#include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 
 namespace cutum {
 
 CreatureIconCache::CreatureIconCache(std::shared_ptr<CreatureDefinitionStorage> species,
                                      std::shared_ptr<SkinDefinitionStorage> skins,
-                                     std::shared_ptr<CreatureTextureStorage> textures)
+                                     std::shared_ptr<CreatureTextureStorage> textures,
+                                     std::shared_ptr<ShaderManager> shaderManager)
     : species_(std::move(species))
     , skins_(std::move(skins))
     , textures_(std::move(textures))
+    , shaderManager_(std::move(shaderManager))
 {
 }
 
@@ -24,8 +31,54 @@ CreatureIconCache::~CreatureIconCache()
     Shutdown();
 }
 
+bool CreatureIconCache::InitCubeMesh()
+{
+    if (cubeVao_ != 0) {
+        return true;
+    }
+    const float vertices[] = {
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, -0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 1.0f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, -0.5f, -0.5f, 1.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, -0.5f, 0.5f, 1.0f, 0.0f,
+    };
+    const unsigned int indices[] = {
+        0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11,
+        12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
+    };
+
+    glGenVertexArrays(1, &cubeVao_);
+    glGenBuffers(1, &cubeVbo_);
+    glGenBuffers(1, &cubeEbo_);
+    glBindVertexArray(cubeVao_);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVbo_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeEbo_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                          reinterpret_cast<void*>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
+    return true;
+}
+
 bool CreatureIconCache::Initialize()
 {
+    if (!shaderManager_) {
+        return false;
+    }
+    shader_ = shaderManager_->CreateShader("creature_icon", "shaders/vshader.glsl",
+                                           "shaders/fshader.glsl");
+    if (!shader_ || !shader_->IsValid() || !InitCubeMesh()) {
+        return false;
+    }
+
     glGenFramebuffers(1, &fbo_);
     glGenTextures(1, &colorTex_);
     glBindTexture(GL_TEXTURE_2D, colorTex_);
@@ -35,6 +88,12 @@ bool CreatureIconCache::Initialize()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTex_, 0);
+
+    glGenRenderbuffers(1, &depthRbo_);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRbo_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kIconSize, kIconSize);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRbo_);
+
     const bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -65,12 +124,24 @@ void CreatureIconCache::Shutdown()
         }
     }
     for (const auto& entry : skinCache_) {
-        if (entry.second != 0 && entry.second != colorTex_) {
-            glDeleteTextures(1, &entry.second);
+        if (entry.second == 0) {
+            continue;
         }
+        if (textures_) {
+            const GLuint diffuse = textures_->GetTexture("skin/" + entry.first + "/diffuse");
+            if (entry.second == diffuse) {
+                continue;
+            }
+        }
+        glDeleteTextures(1, &entry.second);
     }
     speciesCache_.clear();
     skinCache_.clear();
+    shader_.reset();
+    if (depthRbo_ != 0) {
+        glDeleteRenderbuffers(1, &depthRbo_);
+        depthRbo_ = 0;
+    }
     if (colorTex_ != 0) {
         glDeleteTextures(1, &colorTex_);
         colorTex_ = 0;
@@ -78,6 +149,18 @@ void CreatureIconCache::Shutdown()
     if (fbo_ != 0) {
         glDeleteFramebuffers(1, &fbo_);
         fbo_ = 0;
+    }
+    if (cubeEbo_ != 0) {
+        glDeleteBuffers(1, &cubeEbo_);
+        cubeEbo_ = 0;
+    }
+    if (cubeVbo_ != 0) {
+        glDeleteBuffers(1, &cubeVbo_);
+        cubeVbo_ = 0;
+    }
+    if (cubeVao_ != 0) {
+        glDeleteVertexArrays(1, &cubeVao_);
+        cubeVao_ = 0;
     }
 }
 
@@ -98,19 +181,84 @@ GLuint CreatureIconCache::RenderSolidColorIcon(float r, float g, float b, float 
     return tex;
 }
 
+GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
+{
+    if (!species_ || !skins_ || !textures_ || !shader_ || fbo_ == 0) {
+        return 0;
+    }
+    const CreatureDefinition* def = species_->Get(speciesId);
+    if (!def) {
+        return 0;
+    }
+
+    const ResolvedCreatureAppearance appearance =
+        ResolveCreatureAppearance(*species_, *skins_, speciesId, "");
+
+    GLuint iconTex = 0;
+    glGenTextures(1, &iconTex);
+    glBindTexture(GL_TEXTURE_2D, iconTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GlStateScope glState(kGlMaskIconFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex, 0);
+    glViewport(0, 0, kIconSize, kIconSize);
+    glEnable(GL_DEPTH_TEST);
+    const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
+    glClearColor(bg.r, bg.g, bg.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    const float fitHeight = std::max(def->bounds.restSizeBlocks.y, 0.5f);
+    const float fitScale = 1.6f / fitHeight;
+    const glm::mat4 projection = glm::perspective(glm::radians(28.0f), 1.0f, 0.1f, 30.0f);
+    const glm::mat4 view =
+        glm::lookAt(glm::vec3(1.8f, 1.4f, 1.8f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    shader_->Use();
+    shader_->SetInt("texture0", 0);
+    shader_->SetInt("uAnimFrame", 0);
+    shader_->SetInt("uAnimFrameCount", 1);
+    glBindVertexArray(cubeVao_);
+
+    for (const ResolvedCreaturePart& part : appearance.parts) {
+        const GLuint tex = textures_->GetTexture(part.textureAssetKey);
+        if (tex == 0) {
+            continue;
+        }
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        const glm::vec3 local = part.offsetBlocks * fitScale;
+        const glm::mat4 model = glm::translate(glm::mat4(1.0f), local) *
+                                glm::scale(glm::mat4(1.0f), part.sizeBlocks * fitScale);
+        shader_->SetMat4("mvp_matrix", projection * view * model);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    }
+
+    glBindVertexArray(0);
+    shader_->Unuse();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return iconTex;
+}
+
 GLuint CreatureIconCache::GetOrCreateSpeciesIcon(const std::string& speciesId)
 {
     const auto it = speciesCache_.find(speciesId);
     if (it != speciesCache_.end()) {
         return it->second;
     }
-    glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
-    if (species_) {
-        if (const CreatureDefinition* def = species_->Get(speciesId)) {
-            color = def->visual.wireframeColor;
+    GLuint tex = RenderSpeciesPartsIcon(speciesId);
+    if (tex == 0) {
+        glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
+        if (species_) {
+            if (const CreatureDefinition* def = species_->Get(speciesId)) {
+                color = def->visual.wireframeColor;
+            }
         }
+        tex = RenderSolidColorIcon(color.r, color.g, color.b, color.a);
     }
-    const GLuint tex = RenderSolidColorIcon(color.r, color.g, color.b, color.a);
     speciesCache_[speciesId] = tex;
     return tex;
 }

@@ -12,13 +12,15 @@ namespace cutum {
 
 class CreatureDefinitionStorage;
 class CreatureTextureStorage;
+class ShaderManager;
 class SkinDefinitionStorage;
 
 class CreatureIconCache {
 public:
     CreatureIconCache(std::shared_ptr<CreatureDefinitionStorage> species,
                       std::shared_ptr<SkinDefinitionStorage> skins,
-                      std::shared_ptr<CreatureTextureStorage> textures);
+                      std::shared_ptr<CreatureTextureStorage> textures,
+                      std::shared_ptr<ShaderManager> shaderManager);
     ~CreatureIconCache();
 
     bool Initialize();
@@ -29,13 +31,17 @@ public:
     void WarmupNext(size_t count);
 
 private:
+    bool InitCubeMesh();
     GLuint RenderSolidColorIcon(float r, float g, float b, float a);
+    GLuint RenderSpeciesPartsIcon(const std::string& speciesId);
     GLuint GetOrCreateSpeciesIcon(const std::string& speciesId);
     GLuint GetOrCreateSkinIcon(const std::string& skinId);
 
     std::shared_ptr<CreatureDefinitionStorage> species_;
     std::shared_ptr<SkinDefinitionStorage> skins_;
     std::shared_ptr<CreatureTextureStorage> textures_;
+    std::shared_ptr<ShaderManager> shaderManager_;
+    std::shared_ptr<class ShaderProgram> shader_;
 
     std::unordered_map<std::string, GLuint> speciesCache_;
     std::unordered_map<std::string, GLuint> skinCache_;
@@ -44,6 +50,10 @@ private:
 
     GLuint fbo_{0};
     GLuint colorTex_{0};
+    GLuint depthRbo_{0};
+    GLuint cubeVao_{0};
+    GLuint cubeVbo_{0};
+    GLuint cubeEbo_{0};
     static constexpr int kIconSize = 64;
 };
 

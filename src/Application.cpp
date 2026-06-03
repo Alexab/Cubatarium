@@ -153,7 +153,7 @@ void Application::Startup(const std::string& configPath)
             if (world_) {
                 creatureCache = std::make_unique<CreatureIconCache>(
                     world_->GetCreatureDefinitionStorage(), world_->GetSkinDefinitionStorage(),
-                    core_->GetCreatureTextureStorage());
+                    core_->GetCreatureTextureStorage(), shaderManager_);
                 if (!creatureCache->Initialize()) {
                     creatureCache.reset();
                 }
