@@ -2,6 +2,7 @@
 #define SKINDEFINITION_H
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
 
@@ -20,6 +21,7 @@ struct SkinDefinition {
  SkinCatalogInfo catalog;
  glm::vec4 wireframeTint{1.f, 1.f, 1.f, 1.f};
  std::string textureKey{"diffuse"};
+ std::unordered_map<std::string, std::string> textureMap;
  std::string iconMode{"skin_texture"};
  glm::vec4 iconFallbackColor{1.f, 1.f, 1.f, 1.f};
 };

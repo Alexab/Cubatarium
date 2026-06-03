@@ -5,6 +5,7 @@
   "catalog": { "tags": ["mobs"], "equippable": true, "sort_order": 30 },
   "visual": {
     "texture": "diffuse",
+    "texture_map": { "body": "diffuse" },
     "wireframe_color": [0.5, 0.85, 1.0, 1.0],
     "icon": { "mode": "skin_texture", "fallback_color": [0.5, 0.85, 1.0, 1.0] }
   }

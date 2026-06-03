@@ -5,6 +5,7 @@
   "catalog": { "tags": ["outfits"], "equippable": true, "sort_order": 0 },
   "visual": {
     "texture": "diffuse",
+    "texture_map": { "default": "diffuse" },
     "wireframe_color": [0.95, 0.75, 0.2, 1.0],
     "icon": { "mode": "skin_texture", "fallback_color": [0.95, 0.75, 0.2, 1.0] }
   }

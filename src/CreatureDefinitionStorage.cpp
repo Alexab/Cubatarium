@@ -109,6 +109,20 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
     def.visual.wireframeColor =
         ReadVec4(icon.value("color", nlohmann::json::array()), def.visual.wireframeColor);
    }
+   if (vis.contains("parts") && vis["parts"].is_array()) {
+    for (const auto& partJson : vis["parts"]) {
+     CreatureVisualPartDef part;
+     part.id = partJson.value("id", "");
+     part.textureStem = partJson.value("texture", def.visual.defaultTextureKey);
+     if (part.textureStem.empty()) {
+      part.textureStem = "body";
+     }
+     part.offsetBlocks =
+         ReadVec3(partJson.value("offset", nlohmann::json::array()), part.offsetBlocks);
+     part.sizeBlocks = ReadVec3(partJson.value("size", nlohmann::json::array()), part.sizeBlocks);
+     def.visual.parts.push_back(part);
+    }
+   }
   }
   definitions_[def.id] = def;
   return true;

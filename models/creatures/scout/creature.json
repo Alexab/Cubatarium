@@ -1,16 +1,22 @@
-{
-  "id": "scout",
-  "display_name": "Scout",
-  "catalog": { "tags": ["mobs"], "spawnable": true, "sort_order": 10 },
-  "role": "mob",
-  "bounds": { "rest": [0.8, 1.6, 0.8], "max": [1.2, 1.6, 0.8], "min": [0.8, 0.8, 0.8] },
-  "eye_height": 1.45,
-  "locomotion": { "can_fly": false, "can_crouch": false, "can_jump": true },
-  "behavior": "wander",
-  "behavior_params": { "move_speed": 2.5, "wander_interval_min": 2.0, "wander_interval_max": 4.0 },
-  "visual": {
-    "backend": "rigid_voxels",
-    "default_texture": "body",
-    "icon": { "mode": "bounds_wireframe", "color": [1.0, 0.55, 0.1, 1.0] }
-  }
-}
+{
+  "id": "scout",
+  "display_name": "Scout",
+  "catalog": { "tags": ["mobs"], "spawnable": true, "sort_order": 10 },
+  "role": "mob",
+  "bounds": { "rest": [0.8, 1.6, 0.8], "max": [1.2, 1.6, 0.8], "min": [0.8, 0.8, 0.8] },
+  "eye_height": 1.45,
+  "locomotion": { "can_fly": false, "can_crouch": false, "can_jump": true },
+  "behavior": "wander",
+  "behavior_params": { "move_speed": 2.5, "wander_interval_min": 2.0, "wander_interval_max": 4.0 },
+  "visual": {
+    "backend": "rigid_voxels",
+    "default_texture": "body",
+    "parts": [
+      { "id": "torso", "offset": [0.0, 0.85, 0.0], "size": [0.65, 0.85, 0.5], "texture": "body" },
+      { "id": "head", "offset": [0.0, 1.48, 0.0], "size": [0.45, 0.45, 0.45], "texture": "body" },
+      { "id": "leg_l", "offset": [-0.22, 0.32, 0.0], "size": [0.24, 0.65, 0.24], "texture": "body" },
+      { "id": "leg_r", "offset": [0.22, 0.32, 0.0], "size": [0.24, 0.65, 0.24], "texture": "body" }
+    ],
+    "icon": { "mode": "parts_preview", "color": [1.0, 0.55, 0.1, 1.0] }
+  }
+}

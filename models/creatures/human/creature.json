@@ -1,15 +1,21 @@
-{
-  "id": "human",
-  "display_name": "Human",
-  "catalog": { "tags": ["humanoid"], "spawnable": false, "sort_order": 0 },
-  "role": "controlled_default",
-  "bounds": { "rest": [0.6, 1.8, 0.6], "max": [0.6, 1.8, 0.6], "min": [0.6, 1.5, 0.6] },
-  "eye_height": 1.62,
-  "locomotion": { "can_fly": true, "can_crouch": true, "can_jump": true },
-  "behavior": "none",
-  "visual": {
-    "backend": "rigid_voxels",
-    "default_texture": "default",
-    "icon": { "mode": "bounds_wireframe", "color": [0.3, 0.7, 1.0, 1.0] }
-  }
-}
+{
+  "id": "human",
+  "display_name": "Human",
+  "catalog": { "tags": ["humanoid"], "spawnable": false, "sort_order": 0 },
+  "role": "controlled_default",
+  "bounds": { "rest": [0.6, 1.8, 0.6], "max": [0.6, 1.8, 0.6], "min": [0.6, 1.5, 0.6] },
+  "eye_height": 1.62,
+  "locomotion": { "can_fly": true, "can_crouch": true, "can_jump": true },
+  "behavior": "none",
+  "visual": {
+    "backend": "rigid_voxels",
+    "default_texture": "default",
+    "parts": [
+      { "id": "torso", "offset": [0.0, 0.95, 0.0], "size": [0.5, 1.0, 0.32], "texture": "default" },
+      { "id": "head", "offset": [0.0, 1.58, 0.0], "size": [0.38, 0.38, 0.38], "texture": "default" },
+      { "id": "leg_l", "offset": [-0.14, 0.32, 0.0], "size": [0.2, 0.65, 0.2], "texture": "default" },
+      { "id": "leg_r", "offset": [0.14, 0.32, 0.0], "size": [0.2, 0.65, 0.2], "texture": "default" }
+    ],
+    "icon": { "mode": "parts_preview", "color": [0.3, 0.7, 1.0, 1.0] }
+  }
+}

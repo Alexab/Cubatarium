@@ -45,16 +45,33 @@ struct CreatureBehaviorParams {
  float wanderIntervalMax{4.f};
 };
 
+struct CreatureVisualPartDef {
+ std::string id;
+ glm::vec3 offsetBlocks{0.f};
+ glm::vec3 sizeBlocks{0.6f, 1.8f, 0.6f};
+ std::string textureStem;
+};
+
 struct CreatureVisualSpec {
  std::string backend{"rigid_voxels"};
  glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
  std::string defaultTextureKey;
  std::string iconMode{"bounds_wireframe"};
+ std::vector<CreatureVisualPartDef> parts;
+};
+
+struct ResolvedCreaturePart {
+ std::string partId;
+ glm::vec3 offsetBlocks{0.f};
+ glm::vec3 sizeBlocks{0.6f, 1.8f, 0.6f};
+ std::string textureAssetKey;
 };
 
 struct ResolvedCreatureAppearance {
  glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
  std::string visualBackend{"rigid_voxels"};
+ std::vector<ResolvedCreaturePart> parts;
+ bool useWireframeFallback{false};
 };
 
 } // namespace cutum

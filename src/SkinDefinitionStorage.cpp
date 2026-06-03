@@ -70,6 +70,13 @@ bool SkinDefinitionStorage::LoadFile(const std::string& path)
   if (data.contains("visual") && data["visual"].is_object()) {
    const auto& vis = data["visual"];
    def.textureKey = vis.value("texture", def.textureKey);
+   if (vis.contains("texture_map") && vis["texture_map"].is_object()) {
+    for (auto it = vis["texture_map"].begin(); it != vis["texture_map"].end(); ++it) {
+     if (it.value().is_string()) {
+      def.textureMap[it.key()] = it.value().get<std::string>();
+     }
+    }
+   }
    def.wireframeTint =
        ReadVec4(vis.value("wireframe_color", nlohmann::json::array()), def.wireframeTint);
    if (vis.contains("icon") && vis["icon"].is_object()) {
