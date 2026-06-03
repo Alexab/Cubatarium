@@ -1153,7 +1153,7 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     uiShader->SetVec2("screenSize", glm::vec2(width_size, height_size));
     
     // Set yellow color for crosshair
-uiShader->SetVec3("color", glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
+uiShader->SetVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
     
     // Crosshair dimensions
 int crosshairSize = 20; // Size in pixels
@@ -1757,7 +1757,7 @@ void GeometryEngine::RenderSelectionOutline()
 
     outlineShader->Use();
     outlineShader->SetMat4("mvp_matrix", mvp);
-    outlineShader->SetVec3("color", glm::vec3(0.0f, 0.0f, 0.0f));
+    outlineShader->SetVec4("color", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
     glBindVertexArray(outlineVAO);
     glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);

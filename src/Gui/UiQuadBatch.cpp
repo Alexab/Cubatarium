@@ -112,7 +112,7 @@ void UiQuadBatch::Flush()
 
     shader_->Use();
     shader_->SetVec2("screenSize", glm::vec2(windowWidth_, windowHeight_));
-    shader_->SetVec3("color", glm::vec3(currentColor_.r, currentColor_.g, currentColor_.b));
+    shader_->SetVec4("color", currentColor_);
 
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);

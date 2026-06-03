@@ -2,6 +2,7 @@
 #define CONSOLE_SCREEN_H
 
 #include "Gui/GuiScreenBase.h"
+#include "Gui/GuiTheme.h"
 #include "Gui/GuiTypes.h"
 #include <memory>
 
@@ -33,6 +34,7 @@ private:
     GameSession* session_{nullptr};
     GuiListView* logView_{nullptr};
     GuiTextInput* input_{nullptr};
+    GuiTheme consoleTheme_{};
     bool visible_{false};
 };
 
