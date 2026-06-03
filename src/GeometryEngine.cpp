@@ -10,6 +10,9 @@
 #include <vector>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
+#include "Creature.h"
+#include "CreatureDefinition.h"
+#include "CreatureVisual.h"
 #include "GridMath.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
@@ -327,7 +330,8 @@ if (!camera) {
   }
 
   RenderSelectionOutline();
- 
+  RenderCreatures();
+
   // Active object preview disabled to avoid per-frame resource churn
  
   // Restore state
@@ -1293,10 +1297,21 @@ void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
     const float labelScale = 0.75f;
 
     const float blockY = previewBottom + static_cast<float>(kPreviewSize) * 0.5f - 6.0f;
-    textRenderer->RenderText(user->GetActiveBlockTypeName(), labelX, blockY, labelScale,
+    std::string activeBlock;
+    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+        activeBlock = controlled->GetInventory().GetActiveBlockTypeName();
+    } else {
+        activeBlock = user->GetActiveBlockTypeName();
+    }
+    textRenderer->RenderText(activeBlock, labelX, blockY, labelScale,
                              glm::vec3(1.0f, 1.0f, 1.0f));
 
-    const std::string& prefabName = user->GetActivePrefabName();
+    std::string prefabName;
+    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+        prefabName = controlled->GetInventory().GetActivePrefabName();
+    } else {
+        prefabName = user->GetActivePrefabName();
+    }
     if (!prefabName.empty()) {
         textRenderer->RenderText("Object: " + prefabName, static_cast<float>(kPreviewMargin),
                                  previewBottom - 18.0f, labelScale, glm::vec3(0.85f, 1.0f, 0.85f));
@@ -1452,17 +1467,19 @@ void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
     // Pick texture by active block name if available
     GLuint texId = previewTexture;
     if (WorldInstance && TextureCubeStorageInstance) {
-        auto user = WorldInstance->GetCurrentUser();
-        if (user) {
-            const std::string &activeName = user->GetActiveBlockTypeName();
-            if (!activeName.empty()) {
-                const auto &texMap = TextureCubeStorageInstance->GetTextures();
-                for (const auto &kv : texMap) {
-                    const TextureCube &tc = kv.second;
-                    if (tc.GetName() == activeName) {
-                        texId = tc.GetTexture();
-                        break;
-                    }
+        std::string activeName;
+        if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+            activeName = controlled->GetInventory().GetActiveBlockTypeName();
+        } else if (auto user = WorldInstance->GetCurrentUser()) {
+            activeName = user->GetActiveBlockTypeName();
+        }
+        if (!activeName.empty()) {
+            const auto& texMap = TextureCubeStorageInstance->GetTextures();
+            for (const auto& kv : texMap) {
+                const TextureCube& tc = kv.second;
+                if (tc.GetName() == activeName) {
+                    texId = tc.GetTexture();
+                    break;
                 }
             }
         }
@@ -1680,6 +1697,35 @@ void GeometryEngine::DestroyOutlineBuffers()
     if (outlineEBO) { glDeleteBuffers(1, &outlineEBO); outlineEBO = 0; }
     if (outlineVBO) { glDeleteBuffers(1, &outlineVBO); outlineVBO = 0; }
     if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
+}
+
+void GeometryEngine::RenderCreatures()
+{
+ if (!WorldInstance) {
+  return;
+ }
+ auto camera = WorldInstance->GetCurrentUserCamera();
+ if (!camera) {
+  return;
+ }
+ const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
+ const float dt = static_cast<float>(camera->GetDeltaTime());
+ WorldInstance->ForEachCreature([&](Creature& creature) {
+  if (creature.IsPlayerCharacter()) {
+   return;
+  }
+  const std::string animType = WorldInstance->ResolveAnimationTypeId(creature);
+  const CreatureDefinition* def = WorldInstance->GetCreatureDefinition(animType);
+  CreatureDefinition fallback;
+  if (!def) {
+   fallback.id = animType;
+   def = &fallback;
+  }
+  if (ICreatureVisual* visual = creature.GetVisual()) {
+   visual->UpdatePose(creature, creature.GetLocomotionState(), *def, dt);
+   visual->SubmitDraw(*this, viewProj);
+  }
+ });
 }
 
 void GeometryEngine::RenderSelectionOutline()

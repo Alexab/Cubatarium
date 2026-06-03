@@ -119,6 +119,7 @@ GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
  bool InitOutlineBuffers();
  void DestroyOutlineBuffers();
  void RenderSelectionOutline();
+ void RenderCreatures();
  
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint

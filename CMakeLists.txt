@@ -50,6 +50,16 @@ set(SOURCES
     src/Camera.cpp
     src/CreatureBounds.cpp
     src/CreatureLocomotionController.cpp
+    src/Creature.cpp
+    src/CreatureInventory.cpp
+    src/Player.cpp
+    src/TestMob.cpp
+    src/MobController.cpp
+    src/WorldCreatures.cpp
+    src/CreatureDefinitionStorage.cpp
+    src/CreatureVisualRigid.cpp
+    src/CreatureVisualGltf.cpp
+    src/CreatureVisualFactory.cpp
     src/PlayerController.cpp
     src/Core.cpp
     src/Cube.cpp
