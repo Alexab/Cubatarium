@@ -567,4 +567,15 @@ void GameSession::AddChatLine(const std::string& line)
     }
 }
 
+void GameSession::InitCommandHistory(const std::filesystem::path& filePath)
+{
+    commandHistory_.SetFilePath(filePath);
+    commandHistory_.Load();
+}
+
+void GameSession::SaveCommandHistory()
+{
+    commandHistory_.Save();
+}
+
 } // namespace cutum

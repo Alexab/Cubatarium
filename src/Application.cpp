@@ -22,6 +22,8 @@
 #include "TextureCube.h"
 #include "Gui/GuiTypes.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IGuiClipboard.h"
+#include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Prefab.h"
 #include "ShaderManager.h"
@@ -47,6 +49,33 @@ WindowManager* GetWindowManager(GLFWwindow* window)
     }
     return static_cast<WindowManager*>(glfwGetWindowUserPointer(window));
 }
+
+class GlfwClipboard : public IGuiClipboard {
+public:
+    explicit GlfwClipboard(GLFWwindow* window)
+        : window_(window)
+    {
+    }
+
+    std::string GetString() const override
+    {
+        if (!window_) {
+            return {};
+        }
+        const char* text = glfwGetClipboardString(window_);
+        return text ? std::string(text) : std::string{};
+    }
+
+    void SetString(const std::string& text) override
+    {
+        if (window_) {
+            glfwSetClipboardString(window_, text.c_str());
+        }
+    }
+
+private:
+    GLFWwindow* window_;
+};
 
 bool KeyNameIs(const std::string& name, int glfwKey)
 {
@@ -164,6 +193,9 @@ void Application::RequestEnterGame()
 
 void Application::RequestQuit()
 {
+    if (gameSession_) {
+        gameSession_->SaveCommandHistory();
+    }
     quitRequested_ = true;
     if (window_) {
         glfwSetWindowShouldClose(window_, GLFW_TRUE);
@@ -202,6 +234,9 @@ void Application::SetHotbarCountSetting(int count)
 void Application::ReturnToMainMenu()
 {
     if (state_ == AppState::InGame) {
+        if (gameSession_) {
+            gameSession_->SaveCommandHistory();
+        }
         if (auto* wm = GetWindowManager(window_)) {
             wm->ResetGameplayMouseCapture();
         }
@@ -359,13 +394,23 @@ const std::vector<std::string>& Application::GetWorldNames() const
 
 void Application::ShowInGameHud()
 {
+    if (window_ && !clipboard_) {
+        clipboard_ = std::make_unique<GlfwClipboard>(window_);
+        guiContext_->SetClipboard(clipboard_.get());
+    }
+
+    gameSession_->InitCommandHistory(GetExecutableDirectory() / "console_history.txt");
+
     IGuiIconSource* icons = iconSource_.get();
     auto hud = std::make_unique<InGameHudScreen>(gameSession_.get(), &guiContext_->GetTheme(), icons);
     hud->Build(*guiContext_);
     hudScreen_ = std::move(hud);
 
+    overlayPopup_ = std::make_unique<GuiPopupMenu>(&guiContext_->GetTheme());
+
     consoleScreen_ = std::make_unique<ConsoleScreen>(gameSession_.get());
     consoleScreen_->Build(*guiContext_);
+    consoleScreen_->AttachPopup(overlayPopup_.get());
     consoleScreen_->SetVisible(false);
 
     paletteScreen_ = std::make_unique<CreativePaletteScreen>(
@@ -620,6 +665,12 @@ void Application::RenderFrame(int width, int height, double viewDuration)
         consoleScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height, false);
     }
+    if (overlayPopup_ && overlayPopup_->IsOpen()) {
+        auto& renderer = guiContext_->GetRenderer();
+        renderer.BeginFrame(width, height);
+        overlayPopup_->Draw(renderer);
+        renderer.EndFrame();
+    }
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
         paletteScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height, false);
@@ -661,8 +712,14 @@ bool Application::RouteKey(int key, int action, int mods)
                  : (action == GLFW_PRESS ? GuiKeyAction::Press : GuiKeyAction::Release);
   event.mods = mods;
 
-  if (action == GLFW_PRESS && state_ == AppState::InGame) {
+    if (action == GLFW_PRESS && state_ == AppState::InGame) {
     if (key == GLFW_KEY_ESCAPE) {
+      if (consoleOpen_ && consoleScreen_ && consoleScreen_->IsPopupOpen()) {
+        if (overlayPopup_) {
+          overlayPopup_->Close();
+        }
+        return true;
+      }
       if (consoleOpen_) {
         consoleOpen_ = false;
         suppressConsoleToggleChar_ = false;
@@ -802,22 +859,29 @@ bool Application::RouteMouseButton(int button, bool pressed, int x, int y)
     if (state_ == AppState::InGame) {
         dragCursorX_ = x;
         dragCursorY_ = y;
-        if (event.button == GuiMouseButton::Left) {
-            if (!pressed && gameSession_ && gameSession_->IsDragging()) {
-                SlotAddress target;
-                const bool hasTarget = ResolveSlotAt(x, y, target);
-                if (hasTarget) {
-                    if (!gameSession_->DropOnSlot(target)) {
-                        gameSession_->CancelDrag();
-                    }
-                } else {
+        if (event.button == GuiMouseButton::Left && !pressed && gameSession_ &&
+            gameSession_->IsDragging()) {
+            SlotAddress target;
+            const bool hasTarget = ResolveSlotAt(x, y, target);
+            if (hasTarget) {
+                if (!gameSession_->DropOnSlot(target)) {
                     gameSession_->CancelDrag();
                 }
-                if (overlayPointerCapture_ != OverlayPointerCapture::None) {
-                    TryRouteInGameOverlay(event, false);
-                }
+            } else {
+                gameSession_->CancelDrag();
+            }
+            if (overlayPointerCapture_ != OverlayPointerCapture::None) {
+                TryRouteInGameOverlay(event, false);
+            }
+            return true;
+        }
+        if ((overlayPopup_ && overlayPopup_->IsOpen()) || consoleOpen_) {
+            if (consoleScreen_ &&
+                consoleScreen_->RouteMouseButton(event, guiContext_->GetRenderer())) {
                 return true;
             }
+        }
+        if (event.button == GuiMouseButton::Left) {
             if (TryRouteInGameOverlay(event, pressed)) {
                 return true;
             }
@@ -846,15 +910,21 @@ bool Application::RouteMouseMove(int x, int y)
         if (gameSession_ && gameSession_->IsDragging()) {
             return true;
         }
+        if (overlayPopup_ && overlayPopup_->IsOpen()) {
+            if (overlayPopup_->OnMouseMove(event)) {
+                return true;
+            }
+        }
+        if (consoleOpen_ && consoleScreen_ &&
+            consoleScreen_->RouteMouseMove(event, guiContext_->GetRenderer())) {
+            return true;
+        }
         auto routeMove = [&](GuiWidget* root) -> bool {
             return root && root->OnMouseMove(event);
         };
         bool handled = false;
         if (paletteOpen_) {
             handled |= routeMove(paletteScreen_->GetRoot());
-        }
-        if (consoleOpen_) {
-            handled |= routeMove(consoleScreen_->GetRoot());
         }
         handled |= routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr);
         return handled;

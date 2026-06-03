@@ -4,7 +4,9 @@
 #include "AppState.h"
 #include "CursorCapture.h"
 #include "UiSettings.h"
+#include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/GuiContext.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -144,6 +146,8 @@ private:
     std::unique_ptr<InGameHudScreen> hudScreen_;
     std::unique_ptr<ConsoleScreen> consoleScreen_;
     std::unique_ptr<CreativePaletteScreen> paletteScreen_;
+    std::unique_ptr<IGuiClipboard> clipboard_;
+    std::unique_ptr<GuiPopupMenu> overlayPopup_;
 
     MenuSubview menuSubview_{MenuSubview::Main};
     MainMenuScreen* mainMenuScreen_{nullptr};

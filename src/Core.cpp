@@ -77,20 +77,6 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
  return start;
 }
 
-std::filesystem::path GetExecutableDirectory()
-{
-#ifdef _WIN32
- wchar_t buffer[MAX_PATH];
- const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
- if (length == 0 || length >= MAX_PATH) {
-  return std::filesystem::current_path();
- }
- return std::filesystem::path(buffer).parent_path();
-#else
- return std::filesystem::current_path();
-#endif
-}
-
 bool ParseWorldNumberSuffix(const std::string& name, int& outNumber)
 {
  constexpr const char* kPrefix = "World_";
@@ -110,6 +96,20 @@ bool ParseWorldNumberSuffix(const std::string& name, int& outNumber)
 }
 
 } // namespace
+
+std::filesystem::path GetExecutableDirectory()
+{
+#ifdef _WIN32
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH) {
+        return std::filesystem::current_path();
+    }
+    return std::filesystem::path(buffer).parent_path();
+#else
+    return std::filesystem::current_path();
+#endif
+}
 
 Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
            std::shared_ptr<TextureCubeStorage> texture_cube_storage_,

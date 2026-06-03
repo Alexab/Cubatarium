@@ -704,6 +704,9 @@ void WindowManager::ErrorCallback(int error, const char* description) {
 
 void WindowManager::WindowCloseCallback(GLFWwindow* w) {
     auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(w));
+    if (self && self->application_) {
+        self->application_->GetGameSession().SaveCommandHistory();
+    }
     if (self && self->core) {
         self->core->SaveSystem("config.json");
     }

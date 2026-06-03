@@ -11,6 +11,7 @@ class GuiRenderer;
 class GuiInputRouter;
 class GuiScreenBase;
 class GuiWidget;
+class IGuiClipboard;
 class ShaderManager;
 class TextRenderer;
 
@@ -46,7 +47,11 @@ public:
     GuiRenderer& GetRenderer() { return *renderer_; }
     const GuiTheme& GetTheme() const { return theme_; }
 
+    void SetClipboard(IGuiClipboard* clipboard) { clipboard_ = clipboard; }
+    IGuiClipboard* GetClipboard() const { return clipboard_; }
+
 private:
+    IGuiClipboard* clipboard_{nullptr};
     GuiTheme theme_;
     std::unique_ptr<GuiRenderer> renderer_;
     std::unique_ptr<GuiInputRouter> inputRouter_;

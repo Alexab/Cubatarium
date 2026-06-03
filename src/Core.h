@@ -15,6 +15,8 @@
 
 namespace cutum {
 
+std::filesystem::path GetExecutableDirectory();
+
 class World;
 class TextureBaseStorage;
 class TextureCubeStorage;

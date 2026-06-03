@@ -117,6 +117,8 @@ set(SOURCES
     src/Game/GameSession.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
+    src/ConsoleCommandHistory.cpp
+    src/ConsoleInputSanitize.cpp
     src/Gui/GuiTheme.cpp
     src/Gui/GuiRenderer.cpp
     src/Gui/UiQuadBatch.cpp
@@ -133,6 +135,7 @@ set(SOURCES
     src/Gui/Widgets/GuiButton.cpp
     src/Gui/Widgets/GuiLabel.cpp
     src/Gui/Widgets/GuiTextInput.cpp
+    src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
     src/Gui/Widgets/GuiTabBar.cpp
     src/Gui/Widgets/GuiScrollView.cpp
@@ -195,6 +198,8 @@ set(HEADERS
     src/Content/ContentTypeRegistry.h
     src/Commands/CommandRegistry.h
     src/Commands/CommandResult.h
+    src/ConsoleCommandHistory.h
+    src/ConsoleInputSanitize.h
     src/Gui/GuiTypes.h
     src/Gui/GuiTheme.h
     src/Gui/GuiRenderer.h
@@ -213,6 +218,7 @@ set(HEADERS
     src/Gui/Widgets/GuiButton.h
     src/Gui/Widgets/GuiLabel.h
     src/Gui/Widgets/GuiTextInput.h
+    src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h
     src/Gui/Widgets/GuiTabBar.h
     src/Gui/Widgets/GuiScrollView.h
@@ -226,6 +232,7 @@ set(HEADERS
     src/Gui/Interfaces/IHotbarViewModel.h
     src/Gui/Interfaces/IContentCatalog.h
     src/Gui/Interfaces/IGameCommandContext.h
+    src/Gui/Interfaces/IGuiClipboard.h
     src/Gui/Screens/MainMenuScreen.h
     src/Gui/Screens/SettingsScreen.h
     src/Gui/Screens/NewWorldScreen.h

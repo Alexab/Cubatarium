@@ -135,6 +135,15 @@ void GuiRenderer::DrawTextCenteredInRect(const GuiRect& rect, const std::string&
     DrawText(text, x, yTop, color);
 }
 
+int GuiRenderer::MeasureTextWidth(const std::string& text) const
+{
+    if (!textRenderer_ || text.empty()) {
+        return 0;
+    }
+    constexpr float kScale = 1.0f;
+    return static_cast<int>(textRenderer_->GetTextSize(text, kScale).x);
+}
+
 void GuiRenderer::DrawText(const std::string& text, int x, int yTop, const glm::vec3& color)
 {
     if (!textRenderer_ || text.empty() || windowHeight_ <= 0) {
