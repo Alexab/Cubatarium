@@ -178,7 +178,7 @@ void Application::RequestEnterGame()
         }
         if (world_) {
             if (auto user = world_->GetCurrentUser()) {
-                user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+                world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
             }
         }
         worldSessionActive_ = true;
@@ -226,7 +226,7 @@ void Application::SetHotbarCountSetting(int count)
     }
     if (world_) {
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
     }
 }
@@ -302,7 +302,7 @@ void Application::EnterGameAfterWorldChange()
     if (core_ && world_) {
         uiSettings_ = core_->GetUiSettings();
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
         if (geometry_) {
             geometry_->SetShowHud(uiSettings_.legacyHud);
@@ -353,7 +353,7 @@ void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
     }
     if (world_) {
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
     }
 }

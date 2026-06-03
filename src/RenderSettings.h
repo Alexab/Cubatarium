@@ -9,6 +9,8 @@ struct RenderSettings {
  bool faceQuads{true};
  bool frustumCulling{true};
  bool batchCache{true};
+ /// Draw creature current/max collision AABB wireframes (in addition to mob visual).
+ bool creatureDebugBounds{false};
 
  static RenderSettings Legacy() {
   RenderSettings s;

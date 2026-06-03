@@ -20,6 +20,56 @@ void CreatureInventory::AddToInventory(const std::string& id)
  storage_[id]++;
 }
 
+void CreatureInventory::InitCreativeDefaults()
+{
+ static const char* kBlocks[] = {"wood",      "grass",     "stone",     "tree_birch",
+                                 "pumpkin",   "sandstone", "stonebrick", "tnt",
+                                 "brick",     "bedrock",   "water",     "lava",
+                                 "fire"};
+ for (const char* id : kBlocks) {
+  storage_[id] = -1;
+ }
+}
+
+void CreatureInventory::EnsureDefaultHotbar()
+{
+ EnsureHotbarCount(1);
+ bool hasBlock = false;
+ for (const auto& slot : GetHotbar(0).slots) {
+  if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block && !slot.entry.id.empty()) {
+   hasBlock = true;
+   break;
+  }
+ }
+ if (!hasBlock) {
+  InventoryEntryRef wood;
+  wood.kind = InventoryEntryKind::Block;
+  wood.id = "wood";
+  wood.empty = false;
+  wood.count = -1;
+  AssignToHotbar(0, 1, wood);
+ }
+ SetActiveSlot(0, 1);
+}
+
+void CreatureInventory::SetPrefabHotbar(const std::vector<std::string>& prefab_names)
+{
+ EnsureHotbarCount(2);
+ size_t idx = 0;
+ for (const std::string& name : prefab_names) {
+  if (idx >= kHotbarSlots) {
+   break;
+  }
+  InventoryEntryRef entry;
+  entry.kind = InventoryEntryKind::Object;
+  entry.id = name;
+  entry.empty = false;
+  entry.count = 0;
+  AssignToHotbar(1, idx, entry);
+  ++idx;
+ }
+}
+
 const HotbarBar& CreatureInventory::GetHotbar(size_t bar) const
 {
  static const HotbarBar kEmpty{};

@@ -465,8 +465,6 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                 const InventoryEntryRef* active = nullptr;
                 if (Creature* controlled = worldInstance->GetControlledCreature()) {
                     active = controlled->GetInventory().GetActiveEntryRef();
-                } else if (auto user = worldInstance->GetCurrentUser()) {
-                    active = user->GetActiveHotbarEntry();
                 }
                 const bool placePrefab =
                     altDown

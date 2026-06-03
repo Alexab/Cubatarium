@@ -75,14 +75,10 @@ void GameSession::RegisterCommands()
         if (args.size() < 2) {
             return CommandResult{false, "Usage: give <block>"};
         }
-        auto user = world_->GetCurrentUser();
-        if (!user) {
-            return CommandResult{false, "No user"};
-        }
         if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
             inv->AddToInventory(args[1]);
         } else {
-            user->AddToInventory(args[1]);
+            return CommandResult{false, "No controlled creature"};
         }
         return CommandResult{true, "Added " + args[1]};
     });

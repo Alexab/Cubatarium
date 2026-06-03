@@ -232,6 +232,7 @@ void Core::LoadConfig(const std::string& config_file_name)
        renderSettings_.faceQuads = r.value("face_quads", true);
        renderSettings_.frustumCulling = r.value("frustum_culling", true);
        renderSettings_.batchCache = r.value("batch_cache", true);
+       renderSettings_.creatureDebugBounds = r.value("creature_debug_bounds", false);
        if (renderSettings_.greedyMeshing && !renderSettings_.faceQuads) {
         std::cout << "Render: greedy_meshing enabled — auto-enabling face_quads" << std::endl;
         renderSettings_.faceQuads = true;
@@ -285,7 +286,7 @@ void Core::LoadConfig(const std::string& config_file_name)
       PrefabLibraryInstance->Load(prefabs_path_.string(), WorldInstance->GetBlockRegistry());
       WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
       if (auto user = WorldInstance->GetCurrentUser()) {
-       user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+       WorldInstance->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
       }
      }
 
@@ -337,12 +338,9 @@ void Core::EnterGame()
      if (WorldInstance->GetCurrentUser() == nullptr) {
       WorldInstance->GenerateUsers();
      }
-     if (auto user = WorldInstance->GetCurrentUser()) {
-      if (user->GetActiveObject() == nullptr) {
-       user->SetActiveBlockIndex(0);
-       if (Creature* player = WorldInstance->GetPlayerCreature()) {
-        player->GetInventory().SetActiveSlot(0, 0);
-       }
+     if (Creature* player = WorldInstance->GetPlayerCreature()) {
+      if (player->GetInventory().GetActiveEntryRef() == nullptr) {
+       player->GetInventory().SetActiveSlot(0, 1);
       }
      }
  } catch (const std::exception& e) {
@@ -378,6 +376,7 @@ void Core::SaveConfigFile()
  render["face_quads"] = renderSettings_.faceQuads;
  render["frustum_culling"] = renderSettings_.frustumCulling;
  render["batch_cache"] = renderSettings_.batchCache;
+ render["creature_debug_bounds"] = renderSettings_.creatureDebugBounds;
  system_data["render"] = render;
  WriteUiSettings(system_data, uiSettings_);
 

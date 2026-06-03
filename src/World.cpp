@@ -51,35 +51,6 @@ namespace {
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
 
-void CopyUserInventoryToCreature(const User& user, CreatureInventory& inv)
-{
- for (const auto& entry : user.GetInventory()) {
-  inv.GetStorageMutable()[entry.first] = entry.second;
- }
- const json hotbarState = user.SerializeHotbars();
- inv.DeserializeFromJson(hotbarState, 4);
-}
-
-void EnsureDefaultPlayerHotbar(CreatureInventory& inv)
-{
- inv.EnsureHotbarCount(1);
- bool hasBlock = false;
- for (const auto& slot : inv.GetHotbar(0).slots) {
-  if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block && !slot.entry.id.empty()) {
-   hasBlock = true;
-   break;
-  }
- }
- if (!hasBlock) {
-  InventoryEntryRef wood;
-  wood.kind = InventoryEntryKind::Block;
-  wood.id = "wood";
-  wood.empty = false;
-  wood.count = -1;
-  inv.AssignToHotbar(0, 1, wood);
- }
- inv.SetActiveSlot(0, 1);
-}
 constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool HasChunkJsonFiles(const std::string& chunks_dir)
@@ -144,12 +115,6 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
 void World::GenerateUsers()
 {
  AddUser("Username");
- if (auto user = GetUser("Username")) {
-  user->SetActiveBlockIndex(1);
-  if (Creature* player = GetPlayerCreature()) {
-   player->GetInventory().SetActiveSlot(0, 1);
-  }
- }
  ApplySpawnToCamera();
 }
 
@@ -700,8 +665,9 @@ bool World::AddUser(const std::string &name)
  user->SetPlayerCreatureId(pid);
  if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
   player->BindUser(user);
-  CopyUserInventoryToCreature(*user, player->GetInventory());
-  EnsureDefaultPlayerHotbar(player->GetInventory());
+  CreatureInventory& inv = player->GetInventory();
+  inv.InitCreativeDefaults();
+  inv.EnsureDefaultHotbar();
  }
  if (Users.size() == 1) {
   playerCreatureId_ = pid;
@@ -746,6 +712,29 @@ std::shared_ptr<User> World::GetCurrentUser()
 std::shared_ptr<User> World::GetCurrentUser() const
 {
  return const_cast<World*>(this)->GetUser(CurrentUserName);
+}
+
+CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user)
+{
+ if (!user || user->GetPlayerCreatureId() == 0) {
+  return nullptr;
+ }
+ if (Creature* creature = GetCreature(user->GetPlayerCreatureId())) {
+  return &creature->GetInventory();
+ }
+ return nullptr;
+}
+
+const CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user) const
+{
+ return const_cast<World*>(this)->GetPlayerInventory(user);
+}
+
+void World::EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount)
+{
+ if (CreatureInventory* inv = GetPlayerInventory(user)) {
+  inv->EnsureHotbarCount(barCount);
+ }
 }
 
 bool World::SetCurrentUserName(const std::string& name)
@@ -875,12 +864,11 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
   return false;
  }
 
- const std::string blockType = [&]() -> std::string {
-  if (Creature* controlled = GetControlledCreature()) {
-   return controlled->GetInventory().GetActiveBlockTypeName();
-  }
-  return user->GetActiveBlockTypeName();
- }();
+ Creature* controlled = GetControlledCreature();
+ if (!controlled) {
+  return false;
+ }
+ const std::string& blockType = controlled->GetInventory().GetActiveBlockTypeName();
  if (blockType.empty()) {
   return false;
  }
@@ -908,12 +896,11 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
   return false;
  }
 
- const std::string prefabName = [&]() -> std::string {
-  if (Creature* controlled = GetControlledCreature()) {
-   return controlled->GetInventory().GetActivePrefabName();
-  }
-  return user->GetActivePrefabName();
- }();
+ Creature* controlled = GetControlledCreature();
+ if (!controlled) {
+  return false;
+ }
+ const std::string& prefabName = controlled->GetInventory().GetActivePrefabName();
  if (prefabName.empty()) {
   return false;
  }
@@ -1387,9 +1374,13 @@ void World::LoadUsers(const std::string &file_name)
       user->SetCameraOrientation(yaw, pitch);
 
       const size_t hotbarCount = 2;
-      user->DeserializeHotbars(user_data, hotbarCount);
       if (playerCreature) {
-       CopyUserInventoryToCreature(*user, playerCreature->GetInventory());
+       CreatureInventory& inv = playerCreature->GetInventory();
+       inv.DeserializeFromJson(user_data, hotbarCount);
+       if (inv.GetStorage().empty()) {
+        inv.InitCreativeDefaults();
+       }
+       inv.EnsureDefaultHotbar();
        playerCreature->SetOrientation(yaw, pitch);
       }
 
@@ -1434,18 +1425,8 @@ void World::SaveUsers(const std::string &file_name)
    user_json["selected_appearance_type"] = user->GetSelectedAppearanceTypeId();
   }
 
-  json hotbarState = user->SerializeHotbars();
   if (Creature* playerCreature = GetCreature(user->GetPlayerCreatureId())) {
-   playerCreature->GetInventory().SerializeToJson(hotbarState);
-  }
-  if (hotbarState.contains("hotbars")) {
-   user_json["hotbars"] = hotbarState["hotbars"];
-  }
-  if (hotbarState.contains("active_bar")) {
-   user_json["active_bar"] = hotbarState["active_bar"];
-  }
-  if (hotbarState.contains("active_slot")) {
-   user_json["active_slot"] = hotbarState["active_slot"];
+   playerCreature->GetInventory().SerializeToJson(user_json);
   }
 
   objects[user_name] = user_json;

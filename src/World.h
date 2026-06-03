@@ -74,6 +74,10 @@ public:
  std::shared_ptr<User> GetCurrentUser() const;
  bool SetCurrentUserName(const std::string& name);
 
+ CreatureInventory* GetPlayerInventory(const std::shared_ptr<User>& user);
+ const CreatureInventory* GetPlayerInventory(const std::shared_ptr<User>& user) const;
+ void EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount);
+
  std::shared_ptr<Camera> GetUserCamera(const std::string& name);
  std::shared_ptr<Camera> GetCurrentUserCamera();
 

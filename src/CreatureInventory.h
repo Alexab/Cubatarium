@@ -16,6 +16,11 @@ public:
  void AddItem(const std::string& id, int count = 1);
  void AddToInventory(const std::string& id);
 
+ /// Creative-mode defaults (counts -1 = unlimited).
+ void InitCreativeDefaults();
+ void EnsureDefaultHotbar();
+ void SetPrefabHotbar(const std::vector<std::string>& prefab_names);
+
  size_t GetHotbarCount() const { return hotbars_.size(); }
  const HotbarBar& GetHotbar(size_t bar) const;
  const std::vector<HotbarBar>& GetHotbars() const { return hotbars_; }

@@ -11,8 +11,10 @@
 #include <GL/glew.h>
 #include "GeometryEngine.h"
 #include "Creature.h"
+#include "CreatureBounds.h"
 #include "CreatureDefinition.h"
 #include "CreatureVisual.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include "GridMath.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
@@ -1300,8 +1302,6 @@ void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
     std::string activeBlock;
     if (Creature* controlled = WorldInstance->GetControlledCreature()) {
         activeBlock = controlled->GetInventory().GetActiveBlockTypeName();
-    } else {
-        activeBlock = user->GetActiveBlockTypeName();
     }
     textRenderer->RenderText(activeBlock, labelX, blockY, labelScale,
                              glm::vec3(1.0f, 1.0f, 1.0f));
@@ -1309,8 +1309,6 @@ void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
     std::string prefabName;
     if (Creature* controlled = WorldInstance->GetControlledCreature()) {
         prefabName = controlled->GetInventory().GetActivePrefabName();
-    } else {
-        prefabName = user->GetActivePrefabName();
     }
     if (!prefabName.empty()) {
         textRenderer->RenderText("Object: " + prefabName, static_cast<float>(kPreviewMargin),
@@ -1470,8 +1468,6 @@ void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
         std::string activeName;
         if (Creature* controlled = WorldInstance->GetControlledCreature()) {
             activeName = controlled->GetInventory().GetActiveBlockTypeName();
-        } else if (auto user = WorldInstance->GetCurrentUser()) {
-            activeName = user->GetActiveBlockTypeName();
         }
         if (!activeName.empty()) {
             const auto& texMap = TextureCubeStorageInstance->GetTextures();
@@ -1761,6 +1757,14 @@ void GeometryEngine::RenderCreatures()
   if (ICreatureVisual* visual = creature.GetVisual()) {
    visual->UpdatePose(creature, creature.GetLocomotionState(), *def, dt);
    visual->SubmitDraw(*this, viewProj);
+  }
+
+  if (renderSettings_.creatureDebugBounds) {
+   const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
+   const glm::vec3 center = BoundsCollisionCenter(creature.GetBodyOrigin(), maxSize);
+   glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+   model = glm::scale(model, maxSize);
+   DrawBoxWireframe(viewProj * model, glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
   }
  });
 }
