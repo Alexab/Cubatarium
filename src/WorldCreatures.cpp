@@ -85,7 +85,7 @@ void World::SnapCreatureFeetToGround(Creature& creature) const
  if (!topY) {
   return;
  }
- const float feetY = static_cast<float>(*topY) + 1.0f;
+ const float feetY = BlockTopY(*topY);
  creature.SetBodyOrigin(glm::vec3(origin.x, feetY, origin.z));
 }
 

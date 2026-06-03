@@ -380,7 +380,7 @@ void World::EnsurePlayerOnGround()
  }
 
  pos = BlockCenter(glm::ivec3(x, *topY, z));
- pos.y = static_cast<float>(*topY) + 1.0f + cap.eyeHeight;
+ pos.y = BlockTopY(*topY) + cap.eyeHeight;
  while (CheckCollision(pos, cap)) {
   pos.y += 0.1f;
  }
@@ -1228,7 +1228,7 @@ namespace {
 
 glm::vec3 StepStandPosition(const glm::ivec3& stepCell, const PlayerCapsule& cap)
 {
- const float feetY = static_cast<float>(stepCell.y) + 1.0f;
+ const float feetY = BlockTopY(stepCell.y);
  return glm::vec3(static_cast<float>(stepCell.x), feetY + cap.eyeHeight,
                   static_cast<float>(stepCell.z));
 }
