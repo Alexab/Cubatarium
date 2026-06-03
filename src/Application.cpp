@@ -29,6 +29,7 @@
 #include "User.h"
 #include "ViewEngine.h"
 #include "World.h"
+#include "Camera.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -172,6 +173,7 @@ void Application::RequestQuit()
 void Application::ShowMainMenu()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     auto menu = std::make_unique<MainMenuScreen>(gameSession_.get());
@@ -207,6 +209,7 @@ void Application::ReturnToMainMenu()
         ReleasePlatformCursorClip();
     }
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     state_ = AppState::MainMenu;
@@ -216,6 +219,7 @@ void Application::ReturnToMainMenu()
 void Application::ShowSettings()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -227,6 +231,7 @@ void Application::ShowSettings()
 void Application::ShowNewWorld()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -238,6 +243,7 @@ void Application::ShowNewWorld()
 void Application::ShowLoadWorld()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -399,6 +405,16 @@ void Application::SyncCursorVisibility()
     ApplyCursorPolicy(window_, GetCursorPolicy());
 }
 
+void Application::ClearGameplayKeyboard()
+{
+    if (!world_) {
+        return;
+    }
+    if (auto camera = world_->GetCurrentUserCamera()) {
+        camera->ResetAllKeyStatus();
+    }
+}
+
 void Application::HandleWindowFocus(bool focused)
 {
     if (!window_) {
@@ -414,6 +430,7 @@ void Application::HandleWindowFocus(bool focused)
 void Application::EnterInGameInputState()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     guiContext_->ClearInputState();
@@ -601,7 +618,7 @@ void Application::RenderFrame(int width, int height, double viewDuration)
     }
     if (consoleOpen_ && consoleScreen_ && consoleScreen_->GetRoot()) {
         consoleScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height);
+        guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height, false);
     }
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
         paletteScreen_->OnViewportChanged(width, height);
@@ -648,9 +665,11 @@ bool Application::RouteKey(int key, int action, int mods)
     if (key == GLFW_KEY_ESCAPE) {
       if (consoleOpen_) {
         consoleOpen_ = false;
+        suppressConsoleToggleChar_ = false;
         if (consoleScreen_) {
           consoleScreen_->SetVisible(false);
         }
+        ClearGameplayKeyboard();
         return true;
       }
       if (paletteOpen_) {
@@ -663,7 +682,7 @@ bool Application::RouteKey(int key, int action, int mods)
       ReturnToMainMenu();
       return true;
     }
-    if (key == GLFW_KEY_RIGHT_ALT) {
+    if (!consoleOpen_ && key == GLFW_KEY_RIGHT_ALT) {
       freeCursor_ = !freeCursor_;
       if (freeCursor_) {
         if (auto* wm = GetWindowManager(window_)) {
@@ -688,16 +707,22 @@ bool Application::RouteKey(int key, int action, int mods)
       if (consoleScreen_) {
         consoleScreen_->SetVisible(consoleOpen_);
       }
+      if (consoleOpen_) {
+        ClearGameplayKeyboard();
+        suppressConsoleToggleChar_ = true;
+      } else {
+        suppressConsoleToggleChar_ = false;
+      }
       return true;
     }
-    if (KeyNameIs(uiSettings_.paletteKey, key)) {
+    if (!consoleOpen_ && KeyNameIs(uiSettings_.paletteKey, key)) {
       paletteOpen_ = !paletteOpen_;
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
       }
       return true;
     }
-    if (KeyNameIs(uiSettings_.inventoryKey, key)) {
+    if (!consoleOpen_ && KeyNameIs(uiSettings_.inventoryKey, key)) {
       paletteOpen_ = !paletteOpen_;
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
@@ -708,10 +733,12 @@ bool Application::RouteKey(int key, int action, int mods)
       consoleScreen_->SubmitCommand();
       return true;
     }
-    const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
-    if (hotbarSlot >= 0 && gameSession_) {
-      gameSession_->OnPrimaryHotbarKey(hotbarSlot);
-      return true;
+    if (!consoleOpen_) {
+      const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
+      if (hotbarSlot >= 0 && gameSession_) {
+        gameSession_->OnPrimaryHotbarKey(hotbarSlot);
+        return true;
+      }
     }
   }
 
@@ -734,6 +761,14 @@ bool Application::RouteKey(int key, int action, int mods)
     }
   }
 
+  if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
+    if (KeyNameIs(uiSettings_.consoleKey, key)) {
+      return true;
+    }
+    consoleScreen_->RouteKey(event);
+    return true;
+  }
+
   if (guiContext_->RouteKey(event)) {
     return true;
   }
@@ -742,6 +777,15 @@ bool Application::RouteKey(int key, int action, int mods)
 
 bool Application::RouteChar(unsigned int codepoint)
 {
+    if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
+        if (suppressConsoleToggleChar_) {
+            suppressConsoleToggleChar_ = false;
+            return true;
+        }
+        consoleScreen_->RouteChar(GuiCharEvent{codepoint});
+        return true;
+    }
+    suppressConsoleToggleChar_ = false;
     return guiContext_->RouteChar(GuiCharEvent{codepoint});
 }
 

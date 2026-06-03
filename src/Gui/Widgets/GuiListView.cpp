@@ -182,7 +182,7 @@ bool GuiListView::SelectIndex(int index)
 
 bool GuiListView::HandleKeyNavigation(const GuiKeyEvent& event)
 {
-    if (!visible_ || items_.empty()) {
+    if (!acceptKeyNavigation_ || !visible_ || items_.empty()) {
         return false;
     }
     if (event.action != GuiKeyAction::Press && event.action != GuiKeyAction::Repeat) {

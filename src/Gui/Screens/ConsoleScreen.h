@@ -2,6 +2,7 @@
 #define CONSOLE_SCREEN_H
 
 #include "Gui/GuiScreenBase.h"
+#include "Gui/GuiTypes.h"
 #include <memory>
 
 namespace cutum {
@@ -23,6 +24,8 @@ public:
     bool IsVisible() const { return visible_; }
     void Toggle();
     void SubmitCommand();
+    bool RouteKey(const GuiKeyEvent& event);
+    bool RouteChar(const GuiCharEvent& event);
 
 private:
     void Relayout();

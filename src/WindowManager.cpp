@@ -223,6 +223,11 @@ void WindowManager::ProcessInput() {
     inputManager->Update();
 
     if (application_ && application_->WantsCaptureKeyboard()) {
+        if (worldInstance) {
+            if (auto camera = worldInstance->GetCurrentUserCamera()) {
+                camera->ResetAllKeyStatus();
+            }
+        }
         return;
     }
 
@@ -304,6 +309,10 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         glfwAction = GLFW_REPEAT;
     }
     if (application_ && application_->RouteKey(glfwKey, glfwAction, mods)) {
+        return;
+    }
+
+    if (application_ && application_->WantsCaptureKeyboard()) {
         return;
     }
 

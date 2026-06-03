@@ -31,6 +31,7 @@ private:
     std::string buffer_;
     size_t caretPos_{0};
     bool focused_{false};
+    unsigned int suppressCharCodepoint_{0};
 };
 
 } // namespace cutum

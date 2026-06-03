@@ -20,6 +20,9 @@ void ConsoleScreen::SetVisible(bool visible)
     if (root_) {
         root_->SetVisible(visible);
     }
+    if (input_) {
+        input_->SetFocused(visible);
+    }
 }
 
 void ConsoleScreen::Toggle()
@@ -34,6 +37,7 @@ void ConsoleScreen::Build(GuiContext& ctx)
     panel->SetVisible(false);
 
     auto log = std::make_unique<GuiListView>(&theme);
+    log->SetAcceptKeyNavigation(false);
     logView_ = log.get();
 
     auto input = std::make_unique<GuiTextInput>(&theme);
@@ -74,6 +78,24 @@ void ConsoleScreen::Update(double /*dt*/)
     if (session_ && logView_) {
         logView_->SetItems(session_->GetChatLog());
     }
+}
+
+bool ConsoleScreen::RouteKey(const GuiKeyEvent& event)
+{
+    if (!visible_ || !input_) {
+        return false;
+    }
+    input_->SetFocused(true);
+    return input_->OnKey(event);
+}
+
+bool ConsoleScreen::RouteChar(const GuiCharEvent& event)
+{
+    if (!visible_ || !input_) {
+        return false;
+    }
+    input_->SetFocused(true);
+    return input_->OnChar(event);
 }
 
 void ConsoleScreen::SubmitCommand()

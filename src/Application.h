@@ -109,6 +109,7 @@ private:
     bool TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed);
     bool ResolveSlotAt(int x, int y, SlotAddress& out);
     void DrawDragGhost(int width, int height);
+    void ClearGameplayKeyboard();
 
     std::shared_ptr<Core> core_;
     std::shared_ptr<World> world_;
@@ -127,6 +128,8 @@ private:
     bool consoleOpen_{false};
     bool paletteOpen_{false};
     bool freeCursor_{false};
+    /// Подавить следующий glfw char после открытия консоли (символ клавиши-тоггла).
+    bool suppressConsoleToggleChar_{false};
     enum class OverlayPointerCapture { None, Palette, Console, Hud };
     OverlayPointerCapture overlayPointerCapture_{OverlayPointerCapture::None};
     int dragCursorX_{0};

@@ -5,6 +5,7 @@
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cctype>
 
 namespace cutum {
 
@@ -62,6 +63,10 @@ bool GuiTextInput::OnChar(const GuiCharEvent& event)
     if (!focused_ || !enabled_) {
         return false;
     }
+    if (suppressCharCodepoint_ != 0 && event.codepoint == suppressCharCodepoint_) {
+        suppressCharCodepoint_ = 0;
+        return true;
+    }
     if (event.codepoint >= 32 && event.codepoint < 127) {
         buffer_.insert(caretPos_, 1, static_cast<char>(event.codepoint));
         ++caretPos_;
@@ -95,6 +100,23 @@ bool GuiTextInput::OnKey(const GuiKeyEvent& event)
         return true;
     }
     if (event.keyCode == GLFW_KEY_RIGHT && caretPos_ < buffer_.size()) {
+        ++caretPos_;
+        return true;
+    }
+    if (event.keyCode >= GLFW_KEY_A && event.keyCode <= GLFW_KEY_Z) {
+        char c = static_cast<char>('a' + (event.keyCode - GLFW_KEY_A));
+        if ((event.mods & GLFW_MOD_SHIFT) != 0) {
+            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        }
+        suppressCharCodepoint_ = static_cast<unsigned int>(c);
+        buffer_.insert(caretPos_, 1, c);
+        ++caretPos_;
+        return true;
+    }
+    if (event.keyCode >= GLFW_KEY_0 && event.keyCode <= GLFW_KEY_9) {
+        const char c = static_cast<char>('0' + (event.keyCode - GLFW_KEY_0));
+        suppressCharCodepoint_ = static_cast<unsigned int>(c);
+        buffer_.insert(caretPos_, 1, c);
         ++caretPos_;
         return true;
     }
