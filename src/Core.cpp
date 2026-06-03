@@ -238,6 +238,8 @@ void Core::LoadConfig(const std::string& config_file_name)
        renderSettings_.frustumCulling = r.value("frustum_culling", true);
        renderSettings_.batchCache = r.value("batch_cache", true);
        renderSettings_.creatureDebugBounds = r.value("creature_debug_bounds", false);
+       renderSettings_.creatureTexturedParts = r.value("creature_textured_parts", true);
+       renderSettings_.creatureWireframeOverlay = r.value("creature_wireframe_overlay", false);
        if (renderSettings_.greedyMeshing && !renderSettings_.faceQuads) {
         std::cout << "Render: greedy_meshing enabled — auto-enabling face_quads" << std::endl;
         renderSettings_.faceQuads = true;
@@ -319,6 +321,7 @@ void Core::LoadConfig(const std::string& config_file_name)
      WorldInstance->SetRenderSettings(renderSettings_);
      if (GeometryEngineInstance) {
       GeometryEngineInstance->SetRenderSettings(renderSettings_);
+      GeometryEngineInstance->SetCreatureTextureStorage(CreatureTextureStorageInstance);
      }
      std::cout << "Render: greedy=" << renderSettings_.greedyMeshing
                << " face_quads=" << renderSettings_.faceQuads
@@ -394,6 +397,8 @@ void Core::SaveConfigFile()
  render["frustum_culling"] = renderSettings_.frustumCulling;
  render["batch_cache"] = renderSettings_.batchCache;
  render["creature_debug_bounds"] = renderSettings_.creatureDebugBounds;
+ render["creature_textured_parts"] = renderSettings_.creatureTexturedParts;
+ render["creature_wireframe_overlay"] = renderSettings_.creatureWireframeOverlay;
  system_data["render"] = render;
  WriteUiSettings(system_data, uiSettings_);
 
@@ -456,6 +461,7 @@ void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
  WorldInstance->SetRenderSettings(renderSettings_);
  if (GeometryEngineInstance) {
   GeometryEngineInstance->SetRenderSettings(renderSettings_);
+  GeometryEngineInstance->SetCreatureTextureStorage(CreatureTextureStorageInstance);
  }
 }
 

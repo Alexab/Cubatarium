@@ -31,6 +31,7 @@ typedef int GLint;
 namespace cutum {
 
 class Core;
+class CreatureTextureStorage;
 
 // Structure for batch rendering
 struct RenderBatch {
@@ -77,6 +78,12 @@ public:
  /// Unit cube wireframe (1x1 centered) with given MVP and color.
  void DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color);
 
+ void SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage);
+ std::shared_ptr<CreatureTextureStorage> GetCreatureTextureStorage() const {
+  return CreatureTextureStorageInstance_;
+ }
+ void DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture);
+
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
  std::shared_ptr<ShaderManager> GetShaderManager() const { return shaderManager; }
@@ -118,9 +125,14 @@ GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
 GLuint previewTexture = 0; // Preview texture
 GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
+GLuint creaturePartVAO = 0;
+GLuint creaturePartVBO = 0;
+GLuint creaturePartEBO = 0;
  bool EnsureCubeDrawVAO();
  bool InitOutlineBuffers();
  void DestroyOutlineBuffers();
+ bool InitCreaturePartBuffers();
+ void DestroyCreaturePartBuffers();
  void RenderSelectionOutline();
  void RenderCreatures();
  
@@ -170,6 +182,7 @@ GLuint overlayVBO{0};
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
+ std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance_;
  std::shared_ptr<World> WorldInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<TextRenderer> textRenderer;

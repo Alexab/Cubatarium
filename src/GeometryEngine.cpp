@@ -10,6 +10,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
+#include "CreatureTextureStorage.h"
 #include "Creature.h"
 #include "CreatureBounds.h"
 #include "CameraPerspective.h"
@@ -50,7 +51,13 @@ GeometryEngine::~GeometryEngine()
     DestroyGreedyMeshBuffers();
     DestroyPreviewBuffers();
     DestroyOutlineBuffers();
+    DestroyCreaturePartBuffers();
     DestroyOverlayBuffers();
+}
+
+void GeometryEngine::SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage)
+{
+ CreatureTextureStorageInstance_ = std::move(storage);
 }
 
 bool GeometryEngine::InitEngine()
@@ -75,6 +82,11 @@ bool GeometryEngine::InitEngine()
  
  // Initialize preview buffers
  InitPreviewBuffers();
+
+ if (!InitCreaturePartBuffers()) {
+  std::cerr << "Failed to initialize creature part buffers" << std::endl;
+  return false;
+ }
 
  if (!InitOutlineBuffers()) {
      std::cerr << "Failed to initialize outline buffers" << std::endl;
@@ -1694,6 +1706,90 @@ void GeometryEngine::DestroyOutlineBuffers()
     if (outlineEBO) { glDeleteBuffers(1, &outlineEBO); outlineEBO = 0; }
     if (outlineVBO) { glDeleteBuffers(1, &outlineVBO); outlineVBO = 0; }
     if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
+}
+
+bool GeometryEngine::InitCreaturePartBuffers()
+{
+ if (creaturePartVAO != 0) {
+  return true;
+ }
+ const float vertices[] = {
+     // pos                  // uv
+     -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+     0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 1.0f,
+     -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, -0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 1.0f, -0.5f, -0.5f, 0.0f, 1.0f,
+     -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f,
+     0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.5f, -0.5f, 1.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, -0.5f, -0.5f, 1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, -0.5f, 0.5f, 1.0f, 0.0f,
+ };
+ const unsigned int indices[] = {
+     0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11,
+     12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
+ };
+
+ glGenVertexArrays(1, &creaturePartVAO);
+ glGenBuffers(1, &creaturePartVBO);
+ glGenBuffers(1, &creaturePartEBO);
+ glBindVertexArray(creaturePartVAO);
+ glBindBuffer(GL_ARRAY_BUFFER, creaturePartVBO);
+ glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, creaturePartEBO);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+ glEnableVertexAttribArray(0);
+ glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+ glEnableVertexAttribArray(1);
+ glBindVertexArray(0);
+ return true;
+}
+
+void GeometryEngine::DestroyCreaturePartBuffers()
+{
+ if (creaturePartEBO) {
+  glDeleteBuffers(1, &creaturePartEBO);
+  creaturePartEBO = 0;
+ }
+ if (creaturePartVBO) {
+  glDeleteBuffers(1, &creaturePartVBO);
+  creaturePartVBO = 0;
+ }
+ if (creaturePartVAO) {
+  glDeleteVertexArrays(1, &creaturePartVAO);
+  creaturePartVAO = 0;
+ }
+}
+
+void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture)
+{
+ if (texture == 0 || !defaultShader || !defaultShader->IsValid()) {
+  return;
+ }
+ if (creaturePartVAO == 0 && !InitCreaturePartBuffers()) {
+  return;
+ }
+
+ GLboolean depthEnabled = GL_TRUE;
+ glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+ glEnable(GL_DEPTH_TEST);
+ glEnable(GL_CULL_FACE);
+
+ glBindTexture(GL_TEXTURE_2D, texture);
+ defaultShader->Use();
+ defaultShader->SetInt("texture0", 0);
+ defaultShader->SetMat4("mvp_matrix", mvp);
+
+ glBindVertexArray(creaturePartVAO);
+ glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+ glBindVertexArray(0);
+
+ defaultShader->Unuse();
+ glBindTexture(GL_TEXTURE_2D, 0);
+
+ if (!depthEnabled) {
+  glDisable(GL_DEPTH_TEST);
+ }
 }
 
 void GeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color)
