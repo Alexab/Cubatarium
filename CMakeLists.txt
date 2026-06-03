@@ -48,6 +48,7 @@ set(SOURCES
     src/stb_image.cpp
     src/main.cpp
     src/Camera.cpp
+    src/CreatureBounds.cpp
     src/PlayerController.cpp
     src/Core.cpp
     src/Cube.cpp
