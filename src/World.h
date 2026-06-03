@@ -133,7 +133,8 @@ public:
  CreatureId GetControlledCreatureId() const { return controlledCreatureId_; }
  CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
  bool SetControlledCreature(CreatureId id);
- CreatureId SpawnCreature(const std::string& typeId, const glm::vec3& bodyOrigin);
+ CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
+                          const std::string& skinId = "");
  void RemoveCreature(CreatureId id);
  void ForEachCreature(const std::function<void(Creature&)>& fn);
  void ForEachCreature(const std::function<void(const Creature&)>& fn) const;

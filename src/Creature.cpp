@@ -1,6 +1,9 @@
 #include "Creature.h"
+#include "CreatureDefinition.h"
 #include "CreatureVisual.h"
+#include "CreatureWanderBehavior.h"
 #include "World.h"
+#include <cstdlib>
 
 namespace cutum {
 
@@ -45,8 +48,27 @@ CollisionVolume Creature::GetCollisionVolume() const
  return CollisionVolumeFromBody(bodyOrigin_, bounds_.currentSizeBlocks);
 }
 
+void Creature::TickWanderTimer(float dt, float /*intervalMin*/, float /*intervalMax*/)
+{
+ wanderTimer_ -= dt;
+}
+
+void Creature::ResetWanderTimer(float intervalMin, float intervalMax)
+{
+ const float span = intervalMax - intervalMin;
+ wanderTimer_ = intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
+}
+
 void Creature::ApplyIntent(World& world, float dt)
 {
+ if (!possessed_) {
+  if (const CreatureDefinition* def = world.GetCreatureDefinition(typeId_)) {
+   if (def->behavior.id == "wander") {
+    ApplyWanderIntent(*this, def->behavior, dt);
+   }
+  }
+ }
+
  if (possessed_ || intent_.moveDirWorld == glm::vec3(0.0f)) {
   return;
  }

@@ -661,7 +661,14 @@ bool World::AddUser(const std::string &name)
  auto user = Users[name];
  const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
  const glm::vec3 bodyOrigin = BodyOriginFromEye(SpawnPoint, eyeOffset);
- const CreatureId pid = SpawnCreature("player", bodyOrigin);
+ std::string speciesId = "human";
+ if (creatureDefinitions_) {
+  const std::string controlled = creatureDefinitions_->GetControlledDefaultSpeciesId();
+  if (!controlled.empty()) {
+   speciesId = controlled;
+  }
+ }
+ const CreatureId pid = SpawnCreature(speciesId, bodyOrigin);
  user->SetPlayerCreatureId(pid);
  if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
   player->BindUser(user);

@@ -53,8 +53,7 @@ set(SOURCES
     src/Creature.cpp
     src/CreatureInventory.cpp
     src/Player.cpp
-    src/TestMob.cpp
-    src/MobController.cpp
+    src/CreatureWanderBehavior.cpp
     src/WorldCreatures.cpp
     src/CreatureDefinitionStorage.cpp
     src/CreatureTextureStorage.cpp

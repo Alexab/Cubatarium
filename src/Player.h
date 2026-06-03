@@ -10,7 +10,7 @@ class User;
 
 class Player : public Creature {
 public:
- Player(CreatureId id, glm::vec3 bodyOrigin);
+ Player(CreatureId id, const std::string& speciesId, glm::vec3 bodyOrigin);
 
  bool IsPlayer() const override { return true; }
 
