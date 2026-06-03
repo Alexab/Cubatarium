@@ -5,6 +5,10 @@
 #include "Prefab.h"
 #include "User.h"
 #include "World.h"
+#include "Creature.h"
+#include "CreatureBounds.h"
+#include "CreatureInventory.h"
+#include "Player.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -12,6 +16,32 @@
 #include <sstream>
 
 namespace cutum {
+
+namespace {
+
+CreatureInventory* GetControlledInventory(World* world)
+{
+ if (!world) {
+  return nullptr;
+ }
+ if (Creature* creature = world->GetControlledCreature()) {
+  return &creature->GetInventory();
+ }
+ return nullptr;
+}
+
+const CreatureInventory* GetControlledInventory(const World* world)
+{
+ if (!world) {
+  return nullptr;
+ }
+ if (const Creature* creature = world->GetControlledCreature()) {
+  return &creature->GetInventory();
+ }
+ return nullptr;
+}
+
+} // namespace
 
 GameSession::GameSession(Application* application, std::shared_ptr<World> world)
     : application_(application)
@@ -31,7 +61,9 @@ void GameSession::InitializeCatalog(const std::string& typesJsonPath,
 void GameSession::RegisterCommands()
 {
     commandRegistry_.Register("help", [](const std::vector<std::string>&) {
-        return CommandResult{true, "Commands: help, give, tp, fly, time"};
+        return CommandResult{true,
+            "Commands: help, give, tp, fly, time, spawn_test_mob, possess, depossess, "
+            "select_appearance"};
     });
 
     commandRegistry_.Register("time", [](const std::vector<std::string>&) {
@@ -46,7 +78,11 @@ void GameSession::RegisterCommands()
         if (!user) {
             return CommandResult{false, "No user"};
         }
-        user->AddToInventory(args[1]);
+        if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
+            inv->AddToInventory(args[1]);
+        } else {
+            user->AddToInventory(args[1]);
+        }
         return CommandResult{true, "Added " + args[1]};
     });
 
@@ -56,6 +92,7 @@ void GameSession::RegisterCommands()
         }
         auto user = world_->GetCurrentUser();
         auto camera = world_->GetCurrentUserCamera();
+        Creature* controlled = world_->GetControlledCreature();
         if (!user || !camera) {
             return CommandResult{false, "No user/camera"};
         }
@@ -63,9 +100,12 @@ void GameSession::RegisterCommands()
             const float x = std::stof(args[1]);
             const float y = std::stof(args[2]);
             const float z = std::stof(args[3]);
-            const glm::vec3 pos{x, y, z};
-            user->SetPosition(pos);
-            camera->SetPosition(pos);
+            const glm::vec3 eye{x, y, z};
+            user->SetPosition(eye);
+            camera->SetPosition(eye);
+            if (controlled) {
+                controlled->SetBodyOrigin(BodyOriginFromEye(eye, controlled->GetEyeOffset()));
+            }
             return CommandResult{true, "Teleported"};
         } catch (...) {
             return CommandResult{false, "Invalid coordinates"};
@@ -82,7 +122,82 @@ void GameSession::RegisterCommands()
             enable = args[1] == "on" || args[1] == "1" || args[1] == "true";
         }
         camera->SetFreeMove(enable);
+        if (Creature* c = world_->GetControlledCreature()) {
+            c->GetLocomotion().SetMode(enable ? CreatureMovementMode::Flying
+                                                : CreatureMovementMode::Walking);
+        }
         return CommandResult{true, enable ? "Flight on" : "Flight off"};
+    });
+
+    commandRegistry_.Register("spawn_test_mob", [this](const std::vector<std::string>&) {
+        if (!world_) {
+            return CommandResult{false, "No world"};
+        }
+        glm::vec3 origin = world_->GetSpawnPoint();
+        origin.x += 2.0f;
+        const glm::vec3 eyeOffset(0.0f, 1.45f, 0.0f);
+        const CreatureId id =
+            world_->SpawnCreature("test_mob", BodyOriginFromEye(origin, eyeOffset));
+        return CommandResult{true, "Spawned test_mob id=" + std::to_string(id)};
+    });
+
+    commandRegistry_.Register("possess", [this](const std::vector<std::string>& args) {
+        if (!world_) {
+            return CommandResult{false, "No world"};
+        }
+        CreatureId target = 0;
+        if (args.size() >= 2) {
+            try {
+                target = static_cast<CreatureId>(std::stoull(args[1]));
+            } catch (...) {
+                return CommandResult{false, "Invalid creature id"};
+            }
+        } else {
+            world_->ForEachCreature([&](Creature& c) {
+                if (target == 0 && !c.IsPlayerCharacter()) {
+                    target = c.GetId();
+                }
+            });
+        }
+        if (target == 0 || !world_->SetControlledCreature(target)) {
+            return CommandResult{false, "Cannot possess"};
+        }
+        if (auto cam = world_->GetCurrentUserCamera()) {
+            if (Creature* c = world_->GetCreature(target)) {
+                cam->SetPosition(c->GetEyePosition());
+                cam->SetOrientation(c->GetYaw(), c->GetPitch());
+            }
+        }
+        return CommandResult{true, "Possessing id=" + std::to_string(target)};
+    });
+
+    commandRegistry_.Register("depossess", [this](const std::vector<std::string>&) {
+        if (!world_) {
+            return CommandResult{false, "No world"};
+        }
+        const CreatureId playerId = world_->GetPlayerCreatureId();
+        if (playerId == 0 || !world_->SetControlledCreature(playerId)) {
+            return CommandResult{false, "No player creature"};
+        }
+        if (auto cam = world_->GetCurrentUserCamera()) {
+            if (Creature* c = world_->GetPlayerCreature()) {
+                cam->SetPosition(c->GetEyePosition());
+                cam->SetOrientation(c->GetYaw(), c->GetPitch());
+            }
+        }
+        return CommandResult{true, "Returned to player"};
+    });
+
+    commandRegistry_.Register("select_appearance", [this](const std::vector<std::string>& args) {
+        if (args.size() < 2) {
+            return CommandResult{false, "Usage: select_appearance <type_id>"};
+        }
+        auto user = world_->GetCurrentUser();
+        if (!user) {
+            return CommandResult{false, "No user"};
+        }
+        user->SetSelectedAppearanceTypeId(args[1]);
+        return CommandResult{true, "Appearance set to " + args[1]};
     });
 }
 
@@ -147,20 +262,24 @@ void GameSession::SetHotbarCountSetting(int count)
 
 size_t GameSession::GetBarCount() const
 {
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    return user ? user->GetHotbarCount() : 0;
+    CreatureInventory* inv = GetControlledInventory(world_.get());
+    if (!inv) {
+        return 0;
+    }
+    inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+    return inv->GetHotbarCount();
 }
 
 std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
 {
     std::array<HotbarSlotView, 10> slots{};
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user) {
+    CreatureInventory* inv = GetControlledInventory(world_.get());
+    if (!inv || barIndex >= inv->GetHotbarCount()) {
         return slots;
     }
-    const HotbarBar& bar = user->GetHotbar(barIndex);
-    const size_t activeBar = user->GetActiveBarIndex();
-    const size_t activeIndex = user->GetActiveSlotIndex(barIndex);
+    const HotbarBar& bar = inv->GetHotbar(barIndex);
+    const size_t activeBar = inv->GetActiveBarIndex();
+    const size_t activeIndex = inv->GetActiveSlotIndex(barIndex);
     for (size_t i = 0; i < slots.size(); ++i) {
         const HotbarSlot& slot = bar.slots[i];
         if (!slot.entry.id.empty()) {
@@ -178,21 +297,21 @@ std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
 
 size_t GameSession::GetSelectedSlot(size_t barIndex) const
 {
-    auto user = world_->GetCurrentUser();
-    return user ? user->GetActiveSlotIndex(barIndex) : 10;
+    const CreatureInventory* inv = GetControlledInventory(world_.get());
+    return inv ? inv->GetActiveSlotIndex(barIndex) : 10;
 }
 
 void GameSession::SelectSlot(size_t barIndex, size_t slotIndex)
 {
-    if (auto user = world_->GetCurrentUser()) {
-        user->SetActiveSlot(barIndex, slotIndex);
+    if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
+        inv->SetActiveSlot(barIndex, slotIndex);
     }
 }
 
 bool GameSession::AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry)
 {
-    if (auto user = world_->GetCurrentUser()) {
-        return user->AssignToHotbar(barIndex, slotIndex, entry);
+    if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
+        return inv->AssignToHotbar(barIndex, slotIndex, entry);
     }
     return false;
 }
@@ -261,11 +380,11 @@ bool GameSession::OnPrimaryHotbarKey(int slotIndex)
 InventoryEntryRef GameSession::GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const
 {
     InventoryEntryRef entry;
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user || barIndex >= user->GetHotbarCount() || slotIndex >= 10) {
+    const CreatureInventory* inv = GetControlledInventory(world_.get());
+    if (!inv || barIndex >= inv->GetHotbarCount() || slotIndex >= 10) {
         return entry;
     }
-    const HotbarSlot& slot = user->GetHotbar(barIndex).slots[slotIndex];
+    const HotbarSlot& slot = inv->GetHotbar(barIndex).slots[slotIndex];
     if (slot.empty || slot.entry.empty) {
         return entry;
     }
@@ -314,8 +433,8 @@ bool GameSession::DropOnSlot(const SlotAddress& target)
         }
         if (source.surface == SlotSurface::Hotbar
             && (source.bar != target.bar || source.slot != target.slot)) {
-            if (auto user = world_->GetCurrentUser()) {
-                user->ClearHotbarSlot(source.bar, source.slot);
+            if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
+                inv->ClearHotbarSlot(source.bar, source.slot);
             }
         }
         SelectSlot(target.bar, target.slot);
@@ -324,8 +443,8 @@ bool GameSession::DropOnSlot(const SlotAddress& target)
     }
 
     if (target.surface == SlotSurface::PaletteGrid && source.surface == SlotSurface::Hotbar) {
-        if (auto user = world_->GetCurrentUser()) {
-            user->ClearHotbarSlot(source.bar, source.slot);
+        if (CreatureInventory* inv = GetControlledInventory(world_.get())) {
+            inv->ClearHotbarSlot(source.bar, source.slot);
         }
         CancelDrag();
         return true;
@@ -359,8 +478,9 @@ std::vector<InventoryEntryView> GameSession::GetEntries(ContentKind tab,
 {
     std::vector<InventoryEntryView> result;
     auto entries = contentCatalog_.GetEntries(tab, groupId);
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    const auto* inv = user ? &user->GetInventory() : nullptr;
+    const CreatureInventory* creatureInv = GetControlledInventory(world_.get());
+    const std::map<std::string, int>* inv =
+        creatureInv ? &creatureInv->GetStorage() : nullptr;
     for (const auto& e : entries) {
         InventoryEntryRef ref;
         ref.kind = (tab == ContentKind::Block) ? InventoryEntryKind::Block : InventoryEntryKind::Object;
@@ -392,14 +512,14 @@ bool GameSession::CanAssignToHotbar(const InventoryEntryRef& entry,
     if (entry.empty || slotIndex >= 10) {
         return false;
     }
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user || barIndex >= user->GetHotbarCount()) {
+    const CreatureInventory* creatureInv = GetControlledInventory(world_.get());
+    if (!creatureInv || barIndex >= creatureInv->GetHotbarCount()) {
         return false;
     }
     if (inventoryMode_ == InventoryMode::Creative) {
         return true;
     }
-    const auto& inv = user->GetInventory();
+    const auto& inv = creatureInv->GetStorage();
     const auto it = inv.find(entry.id);
     return it != inv.end() && it->second > 0;
 }

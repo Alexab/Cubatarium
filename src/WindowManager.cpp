@@ -4,6 +4,8 @@
 #include "Core.h"
 #include "ProceduralSettings.h"
 #include "World.h"
+#include "Creature.h"
+#include "CreatureInventory.h"
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
@@ -451,9 +453,12 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                  glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
 
             if (delta_time < 0.5) {
-                auto user = worldInstance->GetCurrentUser();
-                const InventoryEntryRef* active =
-                    user ? user->GetActiveHotbarEntry() : nullptr;
+                const InventoryEntryRef* active = nullptr;
+                if (Creature* controlled = worldInstance->GetControlledCreature()) {
+                    active = controlled->GetInventory().GetActiveEntryRef();
+                } else if (auto user = worldInstance->GetCurrentUser()) {
+                    active = user->GetActiveHotbarEntry();
+                }
                 const bool placePrefab =
                     altDown
                     || (active && active->kind == InventoryEntryKind::Object && !active->id.empty());
