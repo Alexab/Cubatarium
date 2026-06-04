@@ -69,12 +69,6 @@ public:
 
  void SetCapabilities(const CreatureLocomotionCapabilities& caps) { locomotion_.SetCapabilities(caps); }
 
- void TickWanderTimer(float dt, float intervalMin, float intervalMax);
- void ResetWanderTimer(float intervalMin, float intervalMax);
- float GetWanderTimer() const { return wanderTimer_; }
- const glm::vec3& GetWanderDirection() const { return wanderDir_; }
- void SetWanderDirection(const glm::vec3& dir) { wanderDir_ = dir; }
-
 protected:
  CreatureId id_;
  std::string typeId_;
@@ -90,8 +84,6 @@ protected:
  bool playerCharacter_{false};
  bool possessed_{false};
  std::unique_ptr<ICreatureVisual> visual_;
- float wanderTimer_{0.0f};
- glm::vec3 wanderDir_{1.0f, 0.0f, 0.0f};
 };
 
 } // namespace cutum

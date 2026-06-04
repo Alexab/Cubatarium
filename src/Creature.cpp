@@ -86,17 +86,6 @@ void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLoc
  }
 }
 
-void Creature::TickWanderTimer(float dt, float /*intervalMin*/, float /*intervalMax*/)
-{
- wanderTimer_ -= dt;
-}
-
-void Creature::ResetWanderTimer(float intervalMin, float intervalMax)
-{
- const float span = intervalMax - intervalMin;
- wanderTimer_ = intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
-}
-
 void Creature::ExecuteIntent(World& world, float dt)
 {
  const float moveLen = glm::length(glm::vec2(intent_.moveDirWorld.x, intent_.moveDirWorld.z));

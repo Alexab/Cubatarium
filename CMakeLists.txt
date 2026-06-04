@@ -53,7 +53,6 @@ set(SOURCES
     src/Creature.cpp
     src/CreatureInventory.cpp
     src/Player.cpp
-    src/CreatureWanderBehavior.cpp
     src/activity/CreatureActivityDirector.cpp
     src/activity/WorldCreatureActivitySink.cpp
     src/activity/CreatureActivityRegistry.cpp
