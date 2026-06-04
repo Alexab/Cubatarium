@@ -1950,7 +1950,8 @@ void GeometryEngine::RenderCreatures()
    const float feetY = BoundsFeetY(bodyOrigin);
    float groundY = feetY;
    float delta = 0.0f;
-   if (const std::optional<float> queryY = WorldInstance->QueryGroundFeetY(gx, gz)) {
+   if (const std::optional<float> queryY =
+           WorldInstance->QueryGroundFeetYUnder(gx, gz, feetY)) {
     groundY = *queryY;
     delta = feetY - groundY;
    }

@@ -16,8 +16,11 @@ class World;
 class CreatureLocomotionController {
 public:
  void Reset();
- void SetCapabilities(const CreatureLocomotionCapabilities& caps) { caps_ = caps; }
+ void SetCapabilities(const CreatureLocomotionCapabilities& caps);
  void SetCollisionProfile(const glm::vec3& sizeBlocks, float eyeHeight);
+
+ float GetWalkSpeed() const { return caps_.walkSpeed; }
+ float GetFlySpeed() const { return caps_.flySpeed; }
 
  CreatureMovementMode GetMode() const { return mode_; }
  void SetMode(CreatureMovementMode mode);
@@ -60,6 +63,7 @@ private:
  CreatureMovementMode mode_{CreatureMovementMode::Walking};
  LocomotionState locomotionState_{LocomotionState::Idle};
  CreatureLocomotionCapabilities caps_{};
+ float jumpSpeed_{0.0f};
  glm::vec3 collisionSizeBlocks_{0.6f, 1.8f, 0.6f};
  float eyeHeight_{1.62f};
  float stanceBlend_{0.0f};
@@ -74,7 +78,7 @@ private:
 
  static constexpr int kDoubleSpaceTapMs = 350;
  static constexpr float kGravity = -20.0f;
- static constexpr float kJumpSpeed = 8.0f;
+ static constexpr float kGravityMagnitude = 20.0f;
  static constexpr float kStanceTransitionDuration = 0.12f;
  static constexpr float kJumpStanceMax = 0.05f;
 };

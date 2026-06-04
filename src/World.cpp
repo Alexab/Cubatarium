@@ -339,12 +339,50 @@ std::optional<int> World::FindHighestSolidY(int x, int z) const
  return std::nullopt;
 }
 
-std::optional<float> World::QueryGroundFeetY(int worldX, int worldZ) const
+std::optional<float> World::QueryGroundFeetYColumn(int worldX, int worldZ) const
 {
  if (const std::optional<int> topY = FindHighestSolidY(worldX, worldZ)) {
   return BlockTopY(*topY);
  }
  return std::nullopt;
+}
+
+std::optional<float> World::QueryGroundFeetYUnder(int worldX, int worldZ,
+                                                   float referenceFeetY) const
+{
+ if (!blockRegistry_) {
+  return std::nullopt;
+ }
+ const int startY =
+     std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)), 0, 255);
+ for (int y = startY; y >= 0; --y) {
+  if (blockRegistry_->IsSolid(blockWorld_.GetBlock(glm::ivec3(worldX, y, worldZ)))) {
+   return BlockTopY(y);
+  }
+ }
+ return std::nullopt;
+}
+
+bool World::IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ if (!blockRegistry_->BlocksMovement(blockWorld_.GetBlock(cell))) {
+  return false;
+ }
+ const std::optional<int> columnTopY = FindHighestSolidY(cell.x, cell.z);
+ if (!columnTopY || *columnTopY != cell.y) {
+  return false;
+ }
+ const int layers = static_cast<int>(std::ceil(cap.height));
+ for (int dy = 1; dy <= layers; ++dy) {
+  const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
+  if (blockRegistry_->BlocksMovement(blockWorld_.GetBlock(above))) {
+   return false;
+  }
+ }
+ return true;
 }
 
 void World::EnsurePlayerOnGround()
@@ -1252,15 +1290,22 @@ bool FindSteppableLedge(const World& world, const BlockWorld& blockWorld,
  }
  const float feetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
- const glm::ivec3 standCell(
-     static_cast<int>(std::floor(eyePos.x)),
-     supportY,
-     static_cast<int>(std::floor(eyePos.z)));
+ const glm::ivec3 standCell(WorldCoordToBlockIndex(eyePos.x), supportY,
+                            WorldCoordToBlockIndex(eyePos.z));
  if (!registry.BlocksMovement(blockWorld.GetBlock(standCell))) {
   return false;
  }
+ const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
+ if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell))) {
+  return false;
+ }
  const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
- if (!registry.BlocksMovement(blockWorld.GetBlock(stepCell))) {
+ if (!world.IsValidStandCell(stepCell, cap)) {
+  return false;
+ }
+ const float stepFeetY = BlockTopY(stepCell.y);
+ const float rise = stepFeetY - feetY;
+ if (rise < 0.45f || rise > 1.05f) {
   return false;
  }
  const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
@@ -1339,19 +1384,7 @@ bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
 
  outLanding = probe.targetPos
               - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
- if (!CheckCollision(outLanding, cap)) {
-  return true;
- }
-
- glm::vec3 resolved = eyePos;
- const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
- resolved = ResolveMovement(eyePos, stepDelta, cap, GetMovementCollisionSkipId());
- const float movedH = glm::length(glm::vec2(resolved.x - eyePos.x, resolved.z - eyePos.z));
- if (movedH < 0.08f || CheckCollision(resolved, cap)) {
-  return false;
- }
- outLanding = resolved;
- return true;
+ return !CheckCollision(outLanding, cap);
 }
 
 bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
@@ -1630,9 +1663,9 @@ void World::DoMovement()
   const glm::vec3 eye = camera->GetPosition();
   float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
   if (!camera->GetFreeMove() && camera->HasAnchoredFeet()) {
-   const int gx = static_cast<int>(std::floor(eye.x));
-   const int gz = static_cast<int>(std::floor(eye.z));
-   if (const std::optional<float> gy = QueryGroundFeetY(gx, gz)) {
+   const int gx = WorldCoordToBlockIndex(eye.x);
+   const int gz = WorldCoordToBlockIndex(eye.z);
+   if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY)) {
     feetY = *gy;
    }
   }

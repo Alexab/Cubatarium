@@ -1,10 +1,29 @@
 #include "CreatureLocomotionController.h"
 #include "CreatureBounds.h"
+#include "GridMath.h"
 #include "World.h"
 #include <algorithm>
 #include <cmath>
 
 namespace cutum {
+
+namespace {
+
+CreatureLocomotionCapabilities ClampCapabilities(CreatureLocomotionCapabilities caps)
+{
+ caps.jumpHeightBlocks = std::clamp(caps.jumpHeightBlocks, 0.25f, 3.0f);
+ caps.walkSpeed = std::clamp(caps.walkSpeed, 0.5f, 20.0f);
+ caps.flySpeed = std::clamp(caps.flySpeed, 0.5f, 20.0f);
+ return caps;
+}
+
+} // namespace
+
+void CreatureLocomotionController::SetCapabilities(const CreatureLocomotionCapabilities& caps)
+{
+ caps_ = ClampCapabilities(caps);
+ jumpSpeed_ = caps_.canJump ? JumpSpeedFromHeight(caps_.jumpHeightBlocks, kGravityMagnitude) : 0.0f;
+}
 
 void CreatureLocomotionController::SetCollisionProfile(const glm::vec3& sizeBlocks, float eyeHeight)
 {
@@ -177,6 +196,14 @@ void CreatureLocomotionController::landStanding(const World* world, glm::vec3& e
   return;
  }
  const PlayerCapsule cap = GetCapsule();
+ const int supportY = static_cast<int>(std::floor(feetY_ - 0.04f));
+ const glm::ivec3 standCell(WorldCoordToBlockIndex(eyePos.x), supportY,
+                            WorldCoordToBlockIndex(eyePos.z));
+ if (!world->IsValidStandCell(standCell, cap)) {
+  onGround_ = false;
+  feetAnchored_ = false;
+  return;
+ }
  eyePos.y = feetY_ + cap.eyeHeight;
  for (int i = 0; i < 32 && world->CheckCollision(eyePos, cap, skipCreatureId); ++i) {
   eyePos.y += 0.1f;
@@ -252,7 +279,7 @@ bool CreatureLocomotionController::tryJump(const CreatureInput& /*input*/)
  feetAnchored_ = false;
  onGround_ = false;
  stanceBlend_ = 0.0f;
- verticalVelocity_ = kJumpSpeed;
+ verticalVelocity_ = jumpSpeed_;
  return true;
 }
 

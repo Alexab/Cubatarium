@@ -5,6 +5,8 @@
 #include "CreatureWanderBehavior.h"
 #include "World.h"
 #include "CreatureBounds.h"
+#include "GridMath.h"
+#include "PlayerCapsule.h"
 #include <cmath>
 #include <cstdlib>
 #include <optional>
@@ -66,9 +68,12 @@ void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLoc
  const bool useGround = locomotion_.GetMode() == CreatureMovementMode::Walking
                         && locomotion_.IsFeetAnchored() && locomotion_.IsOnGround();
  if (useGround) {
-  const int gx = static_cast<int>(std::floor(bodyOrigin_.x));
-  const int gz = static_cast<int>(std::floor(bodyOrigin_.z));
-  if (const std::optional<float> groundY = world.QueryGroundFeetY(gx, gz)) {
+  const float refFeetY = FeetYFromEye(eyeAfterLocomotion, eyeOffset_.y);
+  const int gx = WorldCoordToBlockIndex(bodyOrigin_.x);
+  const int gz = WorldCoordToBlockIndex(bodyOrigin_.z);
+  const PlayerCapsule cap =
+      PlayerCapsule::FromCreatureBlocks(bounds_.currentSizeBlocks, eyeOffset_.y);
+  if (const std::optional<float> groundY = world.QueryGroundFeetYUnder(gx, gz, refFeetY)) {
    bodyOrigin_.y = *groundY;
    eyeAfterLocomotion.y = bodyOrigin_.y + locomotion_.GetViewEyeHeight();
    locomotion_.SyncFeetAnchorFromView(*groundY, true);
@@ -98,7 +103,7 @@ void Creature::ApplyIntent(World& world, float dt)
  if (!possessed_) {
   if (const CreatureDefinition* def = world.GetCreatureDefinition(typeId_)) {
    if (def->behavior.id == "wander") {
-    ApplyWanderIntent(*this, def->behavior, dt);
+    ApplyWanderIntent(*this, def->behavior, def->locomotion, dt);
    }
   }
  }

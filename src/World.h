@@ -140,9 +140,15 @@ public:
  CreatureId GetControlledCreatureId() const { return controlledCreatureId_; }
  CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
  bool SetControlledCreature(CreatureId id);
+ void ApplyLocomotionDefinitionToCamera(Camera& camera, const CreatureDefinition& def) const;
  void SnapCreatureFeetToGround(Creature& creature) const;
- /// World Y of feet on the top face of the highest solid block in column (x, z).
- std::optional<float> QueryGroundFeetY(int worldX, int worldZ) const;
+ /// Top face under feet: highest solid in column at or below referenceFeetY (runtime pose).
+ std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ, float referenceFeetY) const;
+ /// Top face of the highest solid in the full column (spawn / load snap).
+ std::optional<float> QueryGroundFeetYColumn(int worldX, int worldZ) const;
+ std::optional<int> FindHighestSolidY(int x, int z) const;
+ /// Stand cell is column top with standing clearance (step-up / landing validation).
+ bool IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const;
  CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                           const std::string& skinId = "");
  bool SpawnCreatureByView(const std::string& speciesId);
@@ -283,7 +289,6 @@ private:
  bool IsReasonablePlayerPosition(const glm::vec3& position) const;
  void SanitizeUserPosition(const std::shared_ptr<User>& user);
  void EnsurePlayerOnGround();
- std::optional<int> FindHighestSolidY(int x, int z) const;
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
  void UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY);
  void RebuildWorldGenPipeline();

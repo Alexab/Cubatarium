@@ -70,16 +70,27 @@ bool World::SetControlledCreature(CreatureId id)
  controlledCreatureId_ = id;
  if (Creature* c = GetCreature(id)) {
   c->SetPossessed(true);
+  if (const CreatureDefinition* def = GetCreatureDefinition(c->GetTypeId())) {
+   if (auto camera = GetCurrentUserCamera()) {
+    ApplyLocomotionDefinitionToCamera(*camera, *def);
+   }
+  }
  }
  return true;
+}
+
+void World::ApplyLocomotionDefinitionToCamera(Camera& camera,
+                                              const CreatureDefinition& def) const
+{
+ camera.ApplyCreatureLocomotion(def.locomotion, def.bounds, def.eyeHeight);
 }
 
 void World::SnapCreatureFeetToGround(Creature& creature) const
 {
  const glm::vec3 origin = creature.GetBodyOrigin();
- const int gx = static_cast<int>(std::floor(origin.x));
- const int gz = static_cast<int>(std::floor(origin.z));
- if (const std::optional<float> feetY = QueryGroundFeetY(gx, gz)) {
+ const int gx = WorldCoordToBlockIndex(origin.x);
+ const int gz = WorldCoordToBlockIndex(origin.z);
+ if (const std::optional<float> feetY = QueryGroundFeetYColumn(gx, gz)) {
   creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
  }
 }
