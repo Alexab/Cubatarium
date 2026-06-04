@@ -151,6 +151,7 @@ void BlockInputController::HandleLeftRelease(float holdSeconds, const BlockInput
             return;
         }
 
+        // Cubatarium dead zone: placeClickMaxSeconds <= hold < breakHoldMinSeconds => noop.
         const float placeMax = ctx.ui->placeClickMaxSeconds;
         const float breakMin = ctx.ui->breakHoldMinSeconds;
 

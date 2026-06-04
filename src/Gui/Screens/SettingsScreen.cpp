@@ -1,5 +1,6 @@
 #include "SettingsScreen.h"
 #include "AppSettingsSnapshot.h"
+#include "UiSettings.h"
 #include "Gui/GuiContext.h"
 #include "Gui/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -88,6 +89,7 @@ void SettingsScreen::OnSave()
         app.ui.paletteKey = paletteKeyInput_->GetText();
     }
     app.ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
+    app.ui.blockInputProfile = blockInputProfile_;
     if (app.render.greedyMeshing && !app.render.faceQuads) {
         app.render.faceQuads = true;
     }
@@ -117,6 +119,7 @@ void SettingsScreen::Build(GuiContext& ctx)
     const AppSettingsSnapshot appSnap = host_ ? host_->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
     hotbarCount_ = std::clamp(appSnap.ui.hotbarCount, 1, 2);
+    blockInputProfile_ = appSnap.ui.blockInputProfile;
 
     auto backdrop = std::make_unique<GuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
@@ -223,6 +226,23 @@ void SettingsScreen::Build(GuiContext& ctx)
     hotbarPlusButton_ = hotbarPlus.get();
     app.AddChild(std::move(hotbarPlus));
 
+    auto blockProfileLbl = std::make_unique<GuiLabel>(&theme, "Block input profile:");
+    blockInputProfileLabel_ = blockProfileLbl.get();
+    app.AddChild(std::move(blockProfileLbl));
+    auto profileBtn = std::make_unique<GuiButton>(
+        &theme, blockInputProfile_ == BlockInputProfile::Cubatarium ? "Cubatarium" : "Classic");
+    profileBtn->SetOnClick([this]() {
+        blockInputProfile_ = blockInputProfile_ == BlockInputProfile::Classic
+                                 ? BlockInputProfile::Cubatarium
+                                 : BlockInputProfile::Classic;
+        if (blockInputProfileButton_) {
+            blockInputProfileButton_->SetLabel(
+                blockInputProfile_ == BlockInputProfile::Cubatarium ? "Cubatarium" : "Classic");
+        }
+    });
+    blockInputProfileButton_ = profileBtn.get();
+    app.AddChild(std::move(profileBtn));
+
     GuiPanel& world = frame->AddScrollPage();
     worldPanel_ = &world;
     worldForm_ = std::make_unique<WorldGenSettingsForm>(&theme);
@@ -298,6 +318,8 @@ std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& sp
         {paletteKeyInput_, 8, 1, 1, 1, 32},
         {hotbarCountLabel_, 9, 0, 1, 1, 28},
         {hotbarCountValueLabel_, hotbarValueRow, hotbarValueCol, 1, 1, 32},
+        {blockInputProfileLabel_, 10, 0, 1, 1, 28},
+        {blockInputProfileButton_, 10, 1, 1, 1, 32},
     };
 }
 

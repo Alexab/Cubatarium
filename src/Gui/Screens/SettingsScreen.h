@@ -2,6 +2,7 @@
 
 #include "Gui/GuiScreenBase.h"
 #include "Gui/GuiTypes.h"
+#include "UiSettings.h"
 #include "Gui/Layout/GuiLayout.h"
 #include <memory>
 #include <vector>
@@ -50,6 +51,9 @@ private:
     GuiLabel* paletteKeyLabel_{nullptr};
     GuiLabel* hotbarCountLabel_{nullptr};
     GuiLabel* hotbarCountValueLabel_{nullptr};
+    GuiLabel* blockInputProfileLabel_{nullptr};
+    GuiButton* blockInputProfileButton_{nullptr};
+    BlockInputProfile blockInputProfile_{BlockInputProfile::Classic};
 
     GuiTextInput* defaultUserInput_{nullptr};
     GuiTextInput* defaultWorldInput_{nullptr};
