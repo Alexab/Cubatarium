@@ -6,7 +6,7 @@
 #include "CreatureTextureStorage.h"
 #include "GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
+#include <optional>
 
 namespace cutum {
 
@@ -15,6 +15,11 @@ namespace {
 bool IsLegPart(const std::string& partId)
 {
  return partId == "leg_l" || partId == "leg_r";
+}
+
+bool IsArmPart(const std::string& partId)
+{
+ return partId == "arm_l" || partId == "arm_r";
 }
 
 float CrouchUpperBodyDrop(const Creature& creature, float stanceBlend01)
@@ -36,8 +41,18 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart& part)
  return CreaturePartMesh::Box;
 }
 
-glm::mat4 BuildPartModel(const glm::vec3& bodyOrigin, float bodyYaw, const glm::vec3& localOffset,
-                         const glm::vec3& sizeBlocks, const CreaturePartPose* partPose)
+std::optional<float> TorsoBottomY(const std::vector<ResolvedCreaturePart>& parts)
+{
+ for (const ResolvedCreaturePart& part : parts) {
+  if (part.partId == "torso") {
+   return part.offsetBlocks.y - part.sizeBlocks.y * 0.5f;
+  }
+ }
+ return std::nullopt;
+}
+
+glm::mat4 BuildRigidPartModel(const glm::vec3& bodyOrigin, float bodyYaw, const glm::vec3& localOffset,
+                              const glm::vec3& sizeBlocks, const CreaturePartPose* partPose)
 {
  glm::mat4 model = glm::translate(glm::mat4(1.0f), bodyOrigin);
  model = glm::rotate(model, glm::radians(bodyYaw), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -51,6 +66,28 @@ glm::mat4 BuildPartModel(const glm::vec3& bodyOrigin, float bodyYaw, const glm::
   model = glm::rotate(model, glm::radians(partPose->eulerDeg.y), glm::vec3(0.0f, 1.0f, 0.0f));
   model = glm::rotate(model, glm::radians(partPose->eulerDeg.z), glm::vec3(0.0f, 0.0f, 1.0f));
  }
+ model = glm::scale(model, sizeBlocks);
+ return model;
+}
+
+/// Limb rotates about pivot (hip / shoulder); mesh center is offset from pivot.
+glm::mat4 BuildLimbPartModel(const glm::vec3& bodyOrigin, float bodyYaw, const glm::vec3& pivot,
+                             const glm::vec3& meshCenter, const glm::vec3& sizeBlocks,
+                             const CreaturePartPose* partPose)
+{
+ glm::mat4 model = glm::translate(glm::mat4(1.0f), bodyOrigin);
+ model = glm::rotate(model, glm::radians(bodyYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+ glm::vec3 pivotPos = pivot;
+ if (partPose) {
+  pivotPos += partPose->offsetDelta;
+ }
+ model = glm::translate(model, pivotPos);
+ if (partPose) {
+  model = glm::rotate(model, glm::radians(partPose->eulerDeg.x), glm::vec3(1.0f, 0.0f, 0.0f));
+  model = glm::rotate(model, glm::radians(partPose->eulerDeg.y), glm::vec3(0.0f, 1.0f, 0.0f));
+  model = glm::rotate(model, glm::radians(partPose->eulerDeg.z), glm::vec3(0.0f, 0.0f, 1.0f));
+ }
+ model = glm::translate(model, meshCenter - pivot);
  model = glm::scale(model, sizeBlocks);
  return model;
 }
@@ -78,6 +115,7 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
  const RenderSettings& settings = engine.GetRenderSettings();
  const bool drawTextured = settings.creatureTexturedParts && !appearance_.parts.empty();
  auto creatureTextures = engine.GetCreatureTextureStorage();
+ const std::optional<float> torsoBottomY = TorsoBottomY(appearance_.parts);
 
  auto drawPart = [&](const ResolvedCreaturePart& part) {
   glm::vec3 offset = part.offsetBlocks;
@@ -91,7 +129,17 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
     offset.z += headYaw_ * 0.15f;
    }
   }
-  return BuildPartModel(bodyOrigin_, bodyYaw_, offset, part.sizeBlocks, partPose);
+
+  if (IsLegPart(part.partId) && torsoBottomY) {
+   const glm::vec3 pivot(part.offsetBlocks.x, *torsoBottomY, part.offsetBlocks.z);
+   return BuildLimbPartModel(bodyOrigin_, bodyYaw_, pivot, part.offsetBlocks, part.sizeBlocks, partPose);
+  }
+  if (IsArmPart(part.partId)) {
+   const glm::vec3 pivot(part.offsetBlocks.x, part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
+                         part.offsetBlocks.z);
+   return BuildLimbPartModel(bodyOrigin_, bodyYaw_, pivot, part.offsetBlocks, part.sizeBlocks, partPose);
+  }
+  return BuildRigidPartModel(bodyOrigin_, bodyYaw_, offset, part.sizeBlocks, partPose);
  };
 
  if (drawTextured && creatureTextures) {
@@ -106,7 +154,7 @@ void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& vi
   }
  } else if (appearance_.useWireframeFallback || !drawTextured) {
   const glm::vec3 localCenter(0.0f, sizeBlocks_.y * 0.5f, 0.0f);
-  const glm::mat4 model = BuildPartModel(bodyOrigin_, bodyYaw_, localCenter, sizeBlocks_, nullptr);
+  const glm::mat4 model = BuildRigidPartModel(bodyOrigin_, bodyYaw_, localCenter, sizeBlocks_, nullptr);
   engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
  }
 

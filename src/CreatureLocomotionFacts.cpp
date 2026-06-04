@@ -6,12 +6,15 @@
 
 namespace cutum {
 
-float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz, float dt)
+float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz, float walkSpeedRef,
+                     float dt)
 {
- if (horizontalSpeed < 0.05f || walkCycleHz <= 0.0f) {
+ if (horizontalSpeed < 0.05f || walkCycleHz <= 0.0f || walkSpeedRef <= 1e-4f || dt <= 0.0f) {
   return phase;
  }
- return phase + walkCycleHz * dt;
+ constexpr float kTwoPi = 6.283185307f;
+ const float speedRatio = horizontalSpeed / walkSpeedRef;
+ return phase + kTwoPi * walkCycleHz * speedRatio * dt;
 }
 
 void FillTerrestrialRawFacts(CreatureLocomotionFacts& out, const CreatureLocomotionRawInput& input,
@@ -42,7 +45,8 @@ void FinalizeLocomotionFacts(CreatureLocomotionFacts& facts,
                              float dt)
 {
  facts.state = DeriveLocomotionState(facts.archetype, facts, caps, &input);
- facts.animPhase = AdvanceAnimPhase(facts.animPhase, facts.horizontalSpeed, walkCycleHz, dt);
+ facts.animPhase =
+     AdvanceAnimPhase(facts.animPhase, facts.horizontalSpeed, walkCycleHz, caps.walkSpeed, dt);
 }
 
 } // namespace cutum

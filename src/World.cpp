@@ -1755,6 +1755,7 @@ void World::DoMovement()
    horizontalSpeed = camLoc.GetFlySpeed();
   }
   controlled->RebuildLocomotionFactsFromController(camLoc, controlled->GetLocomotion().GetCapabilities(),
+                                                   static_cast<float>(camera->GetDeltaTime()),
                                                    horizontalSpeed);
   is_moved = true;
  }

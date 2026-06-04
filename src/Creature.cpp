@@ -90,8 +90,10 @@ void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLoc
 void Creature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
                                     const CreatureLocomotionCapabilities& caps)
 {
+ const float prevPhase = locomotionFacts_.animPhase;
  CreatureLocomotionFacts raw;
  FillTerrestrialRawFacts(raw, input, locomotionArchetype_, yaw_, pitch_);
+ raw.animPhase = prevPhase;
  if (intent_.lookAtWeight > 0.0f) {
   raw.lookAtWorld = intent_.lookAtWorld;
   raw.lookAtWeight = intent_.lookAtWeight;
@@ -107,15 +109,17 @@ void Creature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
 
 void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
                                                   const CreatureLocomotionCapabilities& caps,
-                                                  float horizontalSpeedOverride)
+                                                  float dt, float horizontalSpeedOverride)
 {
+ const float prevPhase = locomotionFacts_.animPhase;
  CreatureLocomotionRawInput input;
  input.locomotion = &controller;
  input.bodyOriginBefore = bodyOrigin_;
  input.bodyOriginAfter = bodyOrigin_;
- input.dt = 0.0f;
+ input.dt = dt;
  CreatureLocomotionFacts raw;
  FillTerrestrialRawFacts(raw, input, locomotionArchetype_, yaw_, pitch_);
+ raw.animPhase = prevPhase;
  if (horizontalSpeedOverride >= 0.0f) {
   raw.horizontalSpeed = horizontalSpeedOverride;
  }
@@ -124,7 +128,7 @@ void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionCont
   raw.lookAtWeight = intent_.lookAtWeight;
  }
  locomotionFacts_ = raw;
- FinalizeLocomotionFacts(locomotionFacts_, caps, input, walkCycleHz_, 0.0f);
+ FinalizeLocomotionFacts(locomotionFacts_, caps, input, walkCycleHz_, dt);
 }
 
 void Creature::ExecuteIntent(World& world, float dt)

@@ -34,7 +34,8 @@ struct CreatureLocomotionFacts {
  float animPhase{0.0f};
 };
 
-float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz, float dt);
+float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz, float walkSpeedRef,
+                     float dt);
 
 void FillTerrestrialRawFacts(CreatureLocomotionFacts& out, const CreatureLocomotionRawInput& input,
                              LocomotionArchetype archetype, float bodyYaw, float bodyPitch);

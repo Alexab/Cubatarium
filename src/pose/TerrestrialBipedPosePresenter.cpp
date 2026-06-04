@@ -22,16 +22,18 @@ CreaturePoseParams TerrestrialBipedPosePresenter::Compute(const CreatureLocomoti
  switch (facts.state) {
  case LocomotionState::Walk:
  case LocomotionState::Run: {
-  const float swing = std::sin(facts.animPhase) * legSwing;
-  const float armRatio = legSwing > 1e-4f ? armSwing / legSwing : 0.6f;
+  const float sinP = std::sin(facts.animPhase);
+  const float legTilt = sinP * legSwing;
+  const float armTilt = -sinP * armSwing;
+
   CreaturePartPose legL;
-  legL.eulerDeg = glm::vec3(swing, 0.0f, 0.0f);
+  legL.eulerDeg = glm::vec3(legTilt, 0.0f, 0.0f);
   CreaturePartPose legR;
-  legR.eulerDeg = glm::vec3(-swing, 0.0f, 0.0f);
+  legR.eulerDeg = glm::vec3(-legTilt, 0.0f, 0.0f);
   CreaturePartPose armL;
-  armL.eulerDeg = glm::vec3(-swing * armRatio, 0.0f, 0.0f);
+  armL.eulerDeg = glm::vec3(armTilt, 0.0f, 0.0f);
   CreaturePartPose armR;
-  armR.eulerDeg = glm::vec3(swing * armRatio, 0.0f, 0.0f);
+  armR.eulerDeg = glm::vec3(-armTilt, 0.0f, 0.0f);
   pose.SetPart("leg_l", legL);
   pose.SetPart("leg_r", legR);
   pose.SetPart("arm_l", armL);
@@ -69,9 +71,10 @@ CreaturePoseParams TerrestrialBipedPosePresenter::Compute(const CreatureLocomoti
   head.offsetDelta = glm::vec3(0.0f, 0.0f, headSway);
   head.eulerDeg = glm::vec3(0.0f, facts.bodyPitch * 0.25f, 0.0f);
   pose.SetPart("head", head);
- } else if (facts.state == LocomotionState::Walk) {
+ } else if (facts.state == LocomotionState::Walk || facts.state == LocomotionState::Run) {
+  const float bob = std::sin(facts.animPhase * 2.0f) * 0.04f;
   CreaturePartPose head;
-  head.offsetDelta = glm::vec3(0.0f, 0.0f, 0.2f);
+  head.offsetDelta = glm::vec3(0.0f, bob, 0.06f);
   pose.SetPart("head", head);
  } else if (facts.state == LocomotionState::Fly) {
   CreaturePartPose head;

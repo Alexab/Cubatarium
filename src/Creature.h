@@ -63,7 +63,7 @@ public:
                             const CreatureLocomotionCapabilities& caps);
  void RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
                                            const CreatureLocomotionCapabilities& caps,
-                                           float horizontalSpeedOverride = -1.0f);
+                                           float dt, float horizontalSpeedOverride = -1.0f);
 
  bool IsPlayerCharacter() const { return playerCharacter_; }
  void SetPlayerCharacter(bool v) { playerCharacter_ = v; }
