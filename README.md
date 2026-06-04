@@ -22,14 +22,17 @@ cmake -S . -B bin
 | WASD | Move |
 | Space | Jump |
 | Q/E | Up/down (creative-style vertical nudge) |
-| Mouse (RMB drag) | Look |
-| LMB short | Place block or prefab (hotbar) |
-| LMB hold | Remove block |
+| Mouse (RMB drag) | Look (Classic: click RMB to place when not dragging) |
+| LMB (Classic, default) | Hold to break block (animated); creature/skin slots use tap |
+| RMB click (Classic) | Place block, prefab (Alt), or hotbar object |
+| LMB (Cubatarium profile) | Tap to place; hold to break; dead zone between tap and hold |
+| RMB (Cubatarium) | Look only (drag) |
 | 0–9 | Hotbar (slot 9 = `tree_small` prefab) |
 | F7 | Place test tree prefab at crosshair |
 | F12 | Show new-world hint |
 | Shift+F12 | Create new procedural world (saves current) |
-| Delete | Remove targeted block |
+| Delete | Remove targeted block (instant) |
+| Settings | Block input profile: Classic (default) or Cubatarium |
 | F9 | Toggle HUD |
 | F10 | Performance overlay |
 | F11 | Crosshair |
