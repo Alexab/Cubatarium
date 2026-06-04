@@ -255,6 +255,12 @@ void Core::LoadConfig(const std::string& config_file_name)
        uiSettings_.paletteKey = u.value("palette_key", "b");
        uiSettings_.inventoryKey = u.value("inventory_key", "e");
        uiSettings_.hotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
+       uiSettings_.blockInputProfile =
+           BlockInputProfileFromString(u.value("block_input_profile", "classic"));
+       uiSettings_.placeClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
+       uiSettings_.breakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
+       uiSettings_.breakDurationSeconds = u.value("break_duration_seconds", 0.25f);
+       uiSettings_.rmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
       }
      } else {
       default_world_name.clear();

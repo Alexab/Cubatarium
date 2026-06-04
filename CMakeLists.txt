@@ -70,6 +70,7 @@ set(SOURCES
     src/pose/CreaturePosePresenterRegistry.cpp
     src/pose/TerrestrialBipedPosePresenter.cpp
     src/Core.cpp
+    src/UiSettings.cpp
     src/Cube.cpp
     src/CubeGL.cpp
     src/Object.cpp

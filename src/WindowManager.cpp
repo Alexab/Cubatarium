@@ -458,7 +458,8 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                 (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
                  glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
 
-            if (delta_time < 0.5) {
+            const float breakHoldMin = core ? core->GetUiSettings().breakHoldMinSeconds : 0.5f;
+            if (delta_time < breakHoldMin) {
                 const InventoryEntryRef* active = nullptr;
                 if (Creature* controlled = worldInstance->GetControlledCreature()) {
                     active = controlled->GetInventory().GetActiveEntryRef();

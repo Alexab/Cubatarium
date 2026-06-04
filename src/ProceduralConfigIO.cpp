@@ -112,6 +112,11 @@ void WriteUiSettings(nlohmann::json& root, const UiSettings& settings)
  ui["palette_key"] = settings.paletteKey;
  ui["inventory_key"] = settings.inventoryKey;
  ui["hotbar_count"] = settings.hotbarCount;
+ ui["block_input_profile"] = BlockInputProfileToString(settings.blockInputProfile);
+ ui["place_click_max_seconds"] = settings.placeClickMaxSeconds;
+ ui["break_hold_min_seconds"] = settings.breakHoldMinSeconds;
+ ui["break_duration_seconds"] = settings.breakDurationSeconds;
+ ui["rmb_drag_threshold_px"] = settings.rmbDragThresholdPx;
  root["ui"] = ui;
 }
 
