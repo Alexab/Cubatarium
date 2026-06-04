@@ -767,7 +767,7 @@ bool Application::RouteKey(int key, int action, int mods)
       ReturnToMainMenu();
       return true;
     }
-    if (!consoleOpen_ && key == GLFW_KEY_RIGHT_ALT) {
+    if (!consoleOpen_ && key == GLFW_KEY_LEFT_ALT) {
       freeCursor_ = !freeCursor_;
       if (freeCursor_) {
         if (auto* wm = GetWindowManager(window_)) {
@@ -833,6 +833,9 @@ bool Application::RouteKey(int key, int action, int mods)
     if (!consoleOpen_) {
       const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
       if (hotbarSlot >= 0 && gameSession_) {
+        if ((mods & GLFW_MOD_ALT) != 0) {
+          return true;
+        }
         gameSession_->OnPrimaryHotbarKey(hotbarSlot);
         return true;
       }

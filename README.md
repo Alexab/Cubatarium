@@ -25,8 +25,8 @@ Two **control schemes** (Settings → Application → Control scheme; `config.js
 |-------|--------|
 | Mouse move | Look (captured cursor) |
 | LMB hold | Break block (animated) |
-| RMB click | Place block / prefab (Alt) |
-| Right Alt | Toggle free cursor for HUD clicks |
+| RMB click | Place block or prefab from active hotbar slot |
+| Left Alt | Toggle free cursor for HUD clicks |
 | Creature/Skin hotbar | LMB tap to spawn / apply skin |
 
 ### Cubatarium

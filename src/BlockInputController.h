@@ -34,7 +34,6 @@ public:
     bool IsRightLookActive() const { return rightLookActive_; }
 
 private:
-    bool IsAltDown(const BlockInputContext& ctx) const;
     const InventoryEntryRef* GetActiveEntry(const BlockInputContext& ctx) const;
     bool ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const;
 
@@ -43,7 +42,7 @@ private:
     void HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx);
     void HandleRightRelease(const BlockInputContext& ctx);
 
-    void TryPlaceBlockOrPrefab(bool altDown, const BlockInputContext& ctx);
+    void TryPlaceFromActiveSlot(const BlockInputContext& ctx);
     void TrySpawnCreatureOrSkin(const BlockInputContext& ctx);
     void TryInstantBreak(const BlockInputContext& ctx);
 

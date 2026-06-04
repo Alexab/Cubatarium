@@ -24,13 +24,6 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
 
 } // namespace
 
-bool BlockInputController::IsAltDown(const BlockInputContext& ctx) const
-{
-    return ctx.window
-        && (glfwGetKey(ctx.window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-            || glfwGetKey(ctx.window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
-}
-
 const InventoryEntryRef* BlockInputController::GetActiveEntry(const BlockInputContext& ctx) const
 {
     if (!ctx.world) {
@@ -57,15 +50,13 @@ bool BlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputCont
     return false;
 }
 
-void BlockInputController::TryPlaceBlockOrPrefab(bool altDown, const BlockInputContext& ctx)
+void BlockInputController::TryPlaceFromActiveSlot(const BlockInputContext& ctx)
 {
     if (!ctx.world) {
         return;
     }
     const InventoryEntryRef* active = GetActiveEntry(ctx);
-    const bool placePrefab =
-        altDown || (active && active->kind == InventoryEntryKind::Object && !active->id.empty());
-    if (placePrefab) {
+    if (active && active->kind == InventoryEntryKind::Object && !active->id.empty()) {
         ctx.world->PlaceActivePrefabByView();
     } else {
         ctx.world->AddObjectByView();
@@ -158,7 +149,7 @@ void BlockInputController::HandleLeftRelease(float holdSeconds, const BlockInput
 
         if (holdSeconds < placeMax) {
             ctx.world->CancelBreakSession();
-            TryPlaceBlockOrPrefab(IsAltDown(ctx), ctx);
+            TryPlaceFromActiveSlot(ctx);
         } else if (holdSeconds < breakMin) {
             ctx.world->CancelBreakSession();
         } else {
@@ -222,7 +213,7 @@ void BlockInputController::HandleRightRelease(const BlockInputContext& ctx)
         return;
     }
 
-    TryPlaceBlockOrPrefab(IsAltDown(ctx), ctx);
+    TryPlaceFromActiveSlot(ctx);
 }
 
 void BlockInputController::OnMouseButton(

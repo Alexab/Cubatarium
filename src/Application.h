@@ -74,7 +74,7 @@ public:
     GameSession& GetGameSession() { return *gameSession_; }
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
-    /// ЛКМ в мир (постановка блока/префаба) при закрытых палитре и консоли, в т.ч. с видимым курсором (Right Alt).
+    /// ЛКМ в мир (постановка блока/префаба) при закрытых палитре и консоли, в т.ч. с видимым курсором (Left Alt).
     bool AllowsWorldMousePlacement() const;
     const UiSettings& GetUiSettings() const { return uiSettings_; }
     int GetHotbarCountSetting() const { return uiSettings_.hotbarCount; }
@@ -104,7 +104,7 @@ private:
     void SyncCursorVisibility();
     AppCursorPolicy GetCursorPolicy() const;
     void EnterInGameInputState();
-    /// Выход из UI-only (Right Alt): обзор снова только по зажатой ПКМ.
+    /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.
     void RecaptureMouseForLook();
     bool UsesUiPointer() const;
     bool BlocksGameMouseLook() const;
