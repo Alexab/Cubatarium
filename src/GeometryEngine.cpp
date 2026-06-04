@@ -1281,8 +1281,8 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
          "Shift - Crouch / Fly down",
          "2xSpace - Toggle flight",
          "0-9 - Block, Alt+0-9 - Object",
-         "Classic: Hold LMB break, RMB place, RMB drag look",
-         "Cubatarium: LMB tap place / hold break (Settings profile)",
+         "Classic: mouse look, hold LMB break, RMB place",
+         "Cubatarium: RMB drag look, LMB tap place / hold break",
          "Delete - Instant break, F1-F8 - Sky",
      };
 

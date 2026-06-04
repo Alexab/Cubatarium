@@ -584,7 +584,7 @@ void WindowManager::RenderHelpText() {
     // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, RMB hold - Look, ` - Console",
-        "Classic: hold LMB break, RMB place; Cubatarium in Settings",
+        "Classic (Minecraft): mouse look, LMB break, RMB place; Cubatarium: RMB look",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };

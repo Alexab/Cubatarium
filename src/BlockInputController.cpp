@@ -121,7 +121,7 @@ void BlockInputController::HandleLeftPress(const BlockInputContext& ctx)
     leftDownTime_ = std::chrono::steady_clock::now();
     leftHeld_ = true;
 
-    if (ctx.ui->blockInputProfile == BlockInputProfile::Classic) {
+    if (ctx.ui->controlScheme == ControlScheme::Classic) {
         if (ActiveSlotBlocksWorldInteraction(ctx)) {
             return;
         }
@@ -140,7 +140,7 @@ void BlockInputController::HandleLeftRelease(float holdSeconds, const BlockInput
 
     const InventoryEntryRef* active = GetActiveEntry(ctx);
 
-    if (ctx.ui->blockInputProfile == BlockInputProfile::Cubatarium) {
+    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
         if (active && active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
             TrySpawnCreatureOrSkin(ctx);
             leftHeld_ = false;
@@ -192,6 +192,10 @@ void BlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputConte
     rightDragExceeded_ = false;
     rightLookActive_ = false;
 
+    if (!ctx.ui || ctx.ui->controlScheme != ControlScheme::Cubatarium) {
+        return;
+    }
+
     if (ctx.world) {
         if (auto camera = ctx.world->GetCurrentUserCamera()) {
             camera->ResetMouseMove(pos.x, pos.y);
@@ -207,14 +211,10 @@ void BlockInputController::HandleRightRelease(const BlockInputContext& ctx)
         return;
     }
 
-    const bool wasLookOnly =
-        rightDragExceeded_
-        || (ctx.ui->blockInputProfile == BlockInputProfile::Cubatarium);
-
     rightPressed_ = false;
     rightLookActive_ = false;
 
-    if (wasLookOnly) {
+    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
         return;
     }
 
@@ -231,7 +231,9 @@ void BlockInputController::OnMouseButton(
     if (button == MouseButton::Right) {
         if (pressed) {
             HandleRightPress(pos, ctx);
-            rightLookActive_ = true;
+            if (ctx.ui && ctx.ui->controlScheme == ControlScheme::Cubatarium) {
+                rightLookActive_ = true;
+            }
         } else {
             HandleRightRelease(ctx);
         }
@@ -254,11 +256,22 @@ void BlockInputController::OnMouseButton(
 void BlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx)
 {
     (void)delta;
-    if (!rightPressed_ || !ctx.world) {
+    if (!ctx.world || !ctx.ui) {
         return;
     }
 
-    const int threshold = ctx.ui ? ctx.ui->rmbDragThresholdPx : 4;
+    if (ctx.ui->controlScheme == ControlScheme::Classic) {
+        if (auto camera = ctx.world->GetCurrentUserCamera()) {
+            camera->UpdateMouseMove(ctx.world, pos.x, pos.y);
+        }
+        return;
+    }
+
+    if (!rightPressed_) {
+        return;
+    }
+
+    const int threshold = ctx.ui->rmbDragThresholdPx;
     if (!rightDragExceeded_
         && CursorDragDistancePx(pos, rightDownPos_) > static_cast<float>(threshold)) {
         rightDragExceeded_ = true;
@@ -301,7 +314,7 @@ void BlockInputController::Tick(float dt, const BlockInputContext& ctx)
         return;
     }
 
-    if (ctx.ui->blockInputProfile == BlockInputProfile::Cubatarium) {
+    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
         const float holdSeconds = std::chrono::duration<float>(
             std::chrono::steady_clock::now() - leftDownTime_).count();
         if (holdSeconds >= ctx.ui->breakHoldMinSeconds) {
