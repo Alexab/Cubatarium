@@ -61,7 +61,7 @@ public:
  void SetPossessed(bool v) { possessed_ = v; }
 
  virtual bool IsPlayer() const { return false; }
- virtual void ApplyIntent(World& world, float dt);
+ virtual void ExecuteIntent(World& world, float dt);
  virtual void UpdateControlled(World& world, const CreatureInput& input, float dt);
 
  ICreatureVisual* GetVisual() { return visual_.get(); }

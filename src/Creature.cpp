@@ -2,7 +2,6 @@
 #include "CreatureDefinition.h"
 #include "CreatureVisual.h"
 #include "CreaturePartMeshData.h"
-#include "CreatureWanderBehavior.h"
 #include "World.h"
 #include "CreatureBounds.h"
 #include "GridMath.h"
@@ -98,16 +97,8 @@ void Creature::ResetWanderTimer(float intervalMin, float intervalMax)
  wanderTimer_ = intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
 }
 
-void Creature::ApplyIntent(World& world, float dt)
+void Creature::ExecuteIntent(World& world, float dt)
 {
- if (!possessed_) {
-  if (const CreatureDefinition* def = world.GetCreatureDefinition(typeId_)) {
-   if (def->behavior.id == "wander") {
-    ApplyWanderIntent(*this, def->behavior, def->locomotion, dt);
-   }
-  }
- }
-
  const float moveLen = glm::length(glm::vec2(intent_.moveDirWorld.x, intent_.moveDirWorld.z));
  if (!possessed_ && moveLen > 1e-4f) {
   yaw_ = ModelYawFromDirection(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
