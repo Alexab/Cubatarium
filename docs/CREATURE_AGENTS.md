@@ -1,8 +1,8 @@
-# Архитектура агентов существ (отложено)
+# Архитектура агентов существ (реализуется)
 
-Документ описывает **оркестрацию активности** существ в мире Cubatarium. Реализация **не входит** в текущую итерацию интеграции `Creature` (см. план `интеграция_creature`); в итерации B для `test_mob` допустим **временный** `MobController` внутри существа с явной пометкой «заменить на агента».
+Документ описывает **оркестрацию активности** существ в мире Cubatarium. Базовый слой **реализован** в `src/activity/`: директор тикает агентов, агенты пишут `CreatureIntent`, существо только **исполняет** намерение (`Creature::ExecuteIntent`).
 
-Связанные документы: [`ARCHITECTURE.md`](ARCHITECTURE.md), план Creature в `.cursor/plans/`, пошаговая реализация B — [`CREATURE_IMPLEMENTATION.md`](CREATURE_IMPLEMENTATION.md).
+Связанные документы: [`ARCHITECTURE.md`](ARCHITECTURE.md), [`CREATURE_CATALOG.md`](CREATURE_CATALOG.md), [`CREATURE_IMPLEMENTATION.md`](CREATURE_IMPLEMENTATION.md).
 
 ---
 
@@ -60,21 +60,22 @@ flowchart TB
 | Модуль | Ответственность |
 |--------|----------------|
 | **`Creature`** | Состояние тела, bounds, инвентарь, `CreatureLocomotionController`, визуал. **Не** содержит стратегический ИИ (только применяет `Intent` / player input). |
-| **`CreatureAgent`** | Владеет списком `creatureId`; раз в тик (или реже) строит решение; пишет существам **`CreatureIntent`** (куда идти, режим, цель). |
-| **`World`** (или `CreatureActivityDirector`) | Хранит реестр агентов; **опрашивает** агентов: `TickAgents(dt)`; предоставляет **`IWorldPerception`** для запросов агента (блоки, сущности в радиусе, controlled player, fluid). |
+| **`ICreatureActivityAgent`** (напр. `WanderActivityAgent`) | Владеет списком `CreatureId` с одним `behavior` из каталога; в `Tick` строит решение и вызывает `ICreatureActivitySink::SetIntent`. |
+| **`CreatureActivityDirector`** | Реестр агентов по `behaviorId`; membership при spawn/load; **`TickAgents(perception, sink, dt)`**. |
+| **`World`** | Реализует **`IWorldPerception`**; в `DoMovement` создаёт **`WorldCreatureActivitySink`** и тикает директор **перед** `ExecuteIntent`. |
 | **Управляемая сущность** | При `possess` / ввод игрока агент **не** перезаписывает intent (или агент снимает существо с своего списка на время possess). |
 
 ### Направление данных
 
 - **Мир → агенты:** вызов `agent->Tick(perception, dt)` (pull со стороны мира, как вы описали: «мир опрашивает агентов»).
 - **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IWorldPerception` + **запись intent** в подчинённых `Creature`.
-- **Агент → существо:** `creature->SetIntent(intent)`; на следующем шаге `Creature::ApplyIntent` / locomotion исполняет движение через существующий `World::ResolveMovement`.
+- **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` / locomotion исполняет движение через `World::ResolveMovement`.
 
 ### Где живёт ИИ
 
 | Слой | Где | Частота |
 |------|-----|---------|
-| Стратегия (куда патрулировать, агро) | **`CreatureAgent`** (или pluggable `IAgentBrain`) | 0.2–2 Гц или по событию |
+| Стратегия (куда патрулировать, агро) | **`ICreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
 | Исполнение (коллизии, гравитация, анимация state) | **`Creature` + `World`** | каждый кадр |
 
@@ -92,69 +93,67 @@ flowchart TB
 
 ---
 
-## Интерфейсы (эскиз, не реализовано)
+## Реализованные интерфейсы
 
-```cpp
-struct CreatureIntent {
-  glm::vec3 moveDirectionWorld{0};  // normalized * speed
-  bool wantJump{false};
-  LocomotionState suggestedAnim{LocomotionState::Idle};
-  // позже: targetEntityId, interactBlock, ...
-};
+| Тип | Файл | Назначение |
+|-----|------|------------|
+| `CreatureActivityTypes` | `CreatureActivityTypes.h` | `CreatureId`, `CreatureActivityView`, `ControlledCreatureInfo` |
+| `IWorldPerception` | `IWorldPerception.h` | `QueryControlledCreatureInfo()`, `CreaturesInRadius()` |
+| `ICreatureActivitySink` | `ICreatureActivitySink.h` | `GetCreatureView`, `GetBehaviorSnapshot`, `SetIntent` |
+| `ICreatureActivityAgent` | `ICreatureActivityAgent.h` | `GetBehaviorId()`, membership, `Tick` |
+| `CreatureActivityDirector` | `CreatureActivityDirector.*` | Реестр агентов, `OnCreatureAdded/Removed`, `TickAgents` |
+| `WorldCreatureActivitySink` | `WorldCreatureActivitySink.*` | Адаптер к `World` / `Creature` |
+| `RegisterDefaultCreatureActivityAgents` | `CreatureActivityRegistry.*` | Регистрация `WanderActivityAgent` для `behavior: wander` |
+| `WanderActivityAgent` | `agents/WanderActivityAgent.*` | Случайное блуждание; состояние таймера в агенте |
 
-class IWorldPerception {
- public:
-  virtual bool SampleBlocksAABB(const glm::ivec3& min, const glm::ivec3& max,
-                                PerceptionCallback cb) const = 0;
-  virtual std::vector<CreatureId> CreaturesInRadius(glm::vec3 center, float r) const = 0;
-  virtual std::optional<ControlledCreatureInfo> GetControlledCreature() const = 0;
-};
+`CreatureIntent` и `SetIntent` на существе уже есть; исполнение — **`Creature::ExecuteIntent`**.
 
-class IAgentBrain {
- public:
-  virtual void Think(IWorldPerception& world,
-                     const std::vector<CreatureHandle>& owned,
-                     float dt) = 0;
-};
+### Порядок `World::DoMovement`
 
-class CreatureAgent {
- public:
-  void AddCreature(CreatureId id);
-  void RemoveCreature(CreatureId id);
-  void Tick(IWorldPerception& world, float dt);  // brain -> SetIntent on each
-};
+1. Стриминг коллизий вокруг controlled (если включён).
+2. `WorldCreatureActivitySink activitySink(*this);`
+3. `activityDirector_.TickAgents(*this, activitySink, dt);` — агенты выставляют intent.
+4. `ForEachCreature` → `ExecuteIntent` для всех, **кроме** controlled id и **possessed**.
+5. `Camera::DoMovement` — ввод игрока, синхронизация controlled с камерой.
+6. Коллизии / привязка ног / прочая физика мира (как раньше).
+
+Controlled и possessed **не** получают intent от агентов в шаге 4; игрок двигается через камеру.
+
+### Membership при spawn
+
+`World::SpawnCreature` / загрузка `creatures.json` вызывает `activityDirector_.OnCreatureAdded(id, behaviorId)` из `creature.json`. Значение `none` или пустое — **без** агента. `wander` — попадает в `WanderActivityAgent`.
+
+---
+
+## Файлы `src/activity/`
+
+```
+src/activity/
+  CreatureActivityTypes.h
+  ICreatureActivitySink.h
+  IWorldPerception.h
+  ICreatureActivityAgent.h
+  CreatureActivityDirector.h
+  CreatureActivityDirector.cpp
+  WorldCreatureActivitySink.h
+  WorldCreatureActivitySink.cpp
+  CreatureActivityRegistry.h
+  CreatureActivityRegistry.cpp
+  agents/
+    WanderActivityAgent.h
+    WanderActivityAgent.cpp
 ```
 
-`World::DoMovement` (будущая форма):
-
-1. `creatureActivityDirector_.TickAgents(*this, dt);`
-2. Для каждого `Creature` с intent (не possessed): `ApplyIntent` → locomotion.
-3. Controlled creature: `CreatureLocomotionController` от ввода (как в плане Creature).
-4. Общий проход коллизий / sync camera.
-
 ---
 
-## Согласование с планом Creature (итерация B)
+## Этапы внедрения (дальше)
 
-| План Creature сейчас | Этот документ |
-|----------------------|---------------|
-| `MobController` в `TestMob` | **Временная заглушка** — 5–10 строк wander; TODO: `TestMobAgent` + `WanderBrain` |
-| `World::DoMovement` цикл по `creatures_` | Сохранить цикл; позже вставить `TickAgents` **перед** `ApplyIntent` |
-| Possess отключает AI | То же: агент пропускает possessed id |
-| Полёт / анимации на `Creature` | Без изменений; агент может выставлять `suggestedAnim = Fly` |
-
-**Не менять** в итерации B: реестр агентов, `IWorldPerception`, разбиение по чанкам — только заложить в `Creature` поле `CreatureIntent intent_` и метод `SetIntent`, чтобы миграция была механической.
-
----
-
-## Этапы внедрения (после итерации B)
-
-1. **`CreatureIntent` + `ApplyIntent`** на всех существах; player input по-прежнему перекрывает intent.
-2. **`CreatureActivityDirector`** в `World`, один **`WanderAgent`** на всех `test_mob`.
-3. **`IWorldPerception`** — блоки + список существ в радиусе (без gossip).
+1. ~~`CreatureIntent` + `ExecuteIntent`~~ — сделано.
+2. ~~`CreatureActivityDirector` + `WanderActivityAgent`~~ — сделано.
+3. ~~`IWorldPerception` (controlled + существа в радиусе)~~ — сделано.
 4. Региональные агенты по чанкам; лимит существ на агент.
-5. Pluggable `IAgentBrain`; опционально отдельный тик реже `dt`.
-6. Долгосрочно: локальные belief / события (gossip), если понадобится социальный ИИ.
+5. `SampleBlocks` в `IWorldPerception`; pluggable `IAgentBrain`; throttle `Tick`.
+6. Долгосрочно: локальные belief / gossip.
 
 ---
 
@@ -168,6 +167,5 @@ class CreatureAgent {
 ## Резюме
 
 - **Лучшая практика:** мозг отдельно от исполнения; мир/директор тикает обработчики; пространственная локальность; гибрид региональных координаторов.
-- **Ваше предложение** с этим согласуется и **не противоречит** плану Creature, но **выносится в отдельную фазу**.
-- **Итерация B:** `MobController` = минимальный wander **внутри** моба + комментарий/TODO на миграцию к `CreatureAgent`.
-- **Этот файл** — источник истины для фазы агентов; план Creature ссылается сюда и не дублирует детали.
+- **Сейчас в коде:** один глобальный `WanderActivityAgent` на всех мобов с `behavior: wander`; wander-состояние **не** в `Creature`.
+- **Этот файл** — источник истины для расширения агентов; каталог поведений — [`CREATURE_CATALOG.md`](CREATURE_CATALOG.md).

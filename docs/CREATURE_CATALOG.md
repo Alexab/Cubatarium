@@ -43,7 +43,7 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `role`: `controlled_default` | `mob`
 - `bounds`, `eye_height`, `locomotion`
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
-- `behavior`: `none` | `wander`
+- `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
 - `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
 - `visual`: `backend`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`), `icon` (`mode`: `parts_preview`, `color`)
 
@@ -92,6 +92,19 @@ python tools/generate_creature_assets.py
 5. Save world → reload → mob keeps `skin_id`.
 6. Regression: blocks, prefabs, possess/depossess, F5, entity collision.
 
+## Activity agents
+
+Поле `behavior` в `creature.json` задаёт membership в [`CreatureActivityDirector`](CREATURE_AGENTS.md), не логику внутри `Creature`.
+
+| `behavior` | При spawn / load | Движение каждый кадр |
+|------------|------------------|----------------------|
+| `wander` | `OnCreatureAdded` → **`WanderActivityAgent`** (таймер, направление в агенте) | Агент `SetIntent` в `DoMovement`, затем `Creature::ExecuteIntent` |
+| `none` | Нет membership в директоре | Только `ExecuteIntent` (гравитация, коллизии; intent пустой, если не задан иначе) |
+
+Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`.
+
+Параметры wander читаются агентом через `ICreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
+
 ## Code map
 
 | Layer | Types |
@@ -99,7 +112,8 @@ python tools/generate_creature_assets.py
 | Data | `models/creatures`, `models/skins` |
 | Storage | `CreatureDefinitionStorage`, `SkinDefinitionStorage`, `CreatureTextureStorage` |
 | Appearance | `ResolveCreatureAppearance`, `World::GetResolvedAppearance` |
-| World | `SpawnCreature`, `SpawnCreatureByView`, `PickCreatureByView`, `TryApplySkin` |
+| Activity | `src/activity/*`, `CreatureActivityDirector`, `WanderActivityAgent` |
+| World | `SpawnCreature`, `SpawnCreatureByView`, `PickCreatureByView`, `TryApplySkin`, `DoMovement` |
 | UI | `ContentTypeRegistry`, `CreativePaletteScreen`, `CreatureIconCache` |
 
-See also: [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md), [CREATURE_IMPLEMENTATION.md](CREATURE_IMPLEMENTATION.md), [CREATURE_POST_B.md](CREATURE_POST_B.md).
+See also: [CREATURE_AGENTS.md](CREATURE_AGENTS.md), [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md), [CREATURE_IMPLEMENTATION.md](CREATURE_IMPLEMENTATION.md), [CREATURE_POST_B.md](CREATURE_POST_B.md).
