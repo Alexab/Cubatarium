@@ -339,6 +339,14 @@ std::optional<int> World::FindHighestSolidY(int x, int z) const
  return std::nullopt;
 }
 
+std::optional<float> World::QueryGroundFeetY(int worldX, int worldZ) const
+{
+ if (const std::optional<int> topY = FindHighestSolidY(worldX, worldZ)) {
+  return BlockTopY(*topY);
+ }
+ return std::nullopt;
+}
+
 void World::EnsurePlayerOnGround()
 {
  auto user = GetCurrentUser();
@@ -1600,7 +1608,7 @@ void World::DoMovement()
 
  if (camera && streamer_ && streamingEnabled_) {
   const glm::vec3 eyePos = camera->GetPosition();
-  float feetY = eyePos.y - 1.62f;
+  float feetY = FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
   if (controlled) {
    feetY = BoundsFeetY(controlled->GetBodyOrigin());
   }
@@ -1620,8 +1628,14 @@ void World::DoMovement()
 
  if (controlled && camera) {
   const glm::vec3 eye = camera->GetPosition();
-  const PlayerCapsule cap = camera->GetPlayerCapsule();
-  const float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet()) {
+   const int gx = static_cast<int>(std::floor(eye.x));
+   const int gz = static_cast<int>(std::floor(eye.z));
+   if (const std::optional<float> gy = QueryGroundFeetY(gx, gz)) {
+    feetY = *gy;
+   }
+  }
   controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
   controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
   controlled->GetLocomotion().SyncFeetAnchorFromView(feetY, camera->HasAnchoredFeet());

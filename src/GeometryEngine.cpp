@@ -1938,11 +1938,41 @@ void GeometryEngine::RenderCreatures()
   }
 
   if (renderSettings_.creatureDebugBounds) {
+   const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
    const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
-   const glm::vec3 center = BoundsCollisionCenter(creature.GetBodyOrigin(), maxSize);
+   const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
    glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
    model = glm::scale(model, maxSize);
    DrawBoxWireframe(viewProj * model, glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
+
+   const int gx = static_cast<int>(std::floor(bodyOrigin.x));
+   const int gz = static_cast<int>(std::floor(bodyOrigin.z));
+   const float feetY = BoundsFeetY(bodyOrigin);
+   float groundY = feetY;
+   float delta = 0.0f;
+   if (const std::optional<float> queryY = WorldInstance->QueryGroundFeetY(gx, gz)) {
+    groundY = *queryY;
+    delta = feetY - groundY;
+   }
+   const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY, static_cast<float>(gz) + 0.5f);
+   glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
+   groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
+   const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
+   DrawBoxWireframe(viewProj * groundModel,
+                    glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
+
+   static auto lastPoseLog = std::chrono::steady_clock::now();
+   const auto now = std::chrono::steady_clock::now();
+   if (now - lastPoseLog >= std::chrono::seconds(2)) {
+    lastPoseLog = now;
+    const float eyeY = creature.GetLocomotionEye().y;
+    const bool isControlled = creature.GetId() == controlledId;
+    if (isControlled || controlledId == 0) {
+     std::cerr << "[creature_pose] id=" << creature.GetId()
+               << " feetY=" << feetY << " groundY=" << groundY << " delta=" << delta
+               << " eyeY=" << eyeY << std::endl;
+    }
+   }
   }
  });
 }

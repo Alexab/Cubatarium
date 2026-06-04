@@ -4,8 +4,10 @@
 #include "CreaturePartMeshData.h"
 #include "CreatureWanderBehavior.h"
 #include "World.h"
+#include "CreatureBounds.h"
 #include <cmath>
 #include <cstdlib>
+#include <optional>
 
 namespace cutum {
 
@@ -56,10 +58,24 @@ CollisionVolume Creature::GetCollisionVolume() const
  return CollisionVolumeFromBody(bodyOrigin_, bounds_.profile.restSizeBlocks);
 }
 
-void Creature::SyncFeetFromLocomotion(const glm::vec3& eyeAfterLocomotion)
+void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLocomotion)
 {
  bodyOrigin_.x = eyeAfterLocomotion.x;
  bodyOrigin_.z = eyeAfterLocomotion.z;
+
+ const bool useGround = locomotion_.GetMode() == CreatureMovementMode::Walking
+                        && locomotion_.IsFeetAnchored() && locomotion_.IsOnGround();
+ if (useGround) {
+  const int gx = static_cast<int>(std::floor(bodyOrigin_.x));
+  const int gz = static_cast<int>(std::floor(bodyOrigin_.z));
+  if (const std::optional<float> groundY = world.QueryGroundFeetY(gx, gz)) {
+   bodyOrigin_.y = *groundY;
+   eyeAfterLocomotion.y = bodyOrigin_.y + locomotion_.GetViewEyeHeight();
+   locomotion_.SyncFeetAnchorFromView(*groundY, true);
+   return;
+  }
+ }
+
  bodyOrigin_.y = FeetYFromEye(eyeAfterLocomotion, eyeOffset_.y);
  if (locomotion_.IsFeetAnchored()) {
   locomotion_.SyncFeetAnchorFromView(bodyOrigin_.y, true);
@@ -97,7 +113,7 @@ void Creature::ApplyIntent(World& world, float dt)
   glm::vec3 eye = GetLocomotionEye();
   CreatureInput emptyInput;
   locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
-  SyncFeetFromLocomotion(eye);
+  SyncFeetFromLocomotion(world, eye);
   SyncBoundsFromStance();
  }
 
@@ -124,7 +140,7 @@ void Creature::UpdateControlled(World& world, const CreatureInput& input, float 
  ClearIntent();
  glm::vec3 eye = GetLocomotionEye();
  locomotion_.UpdateLocomotion(&world, eye, input, dt, id_);
- SyncFeetFromLocomotion(eye);
+ SyncFeetFromLocomotion(world, eye);
  SyncBoundsFromStance();
 }
 

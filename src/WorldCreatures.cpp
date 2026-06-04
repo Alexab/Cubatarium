@@ -76,17 +76,12 @@ bool World::SetControlledCreature(CreatureId id)
 
 void World::SnapCreatureFeetToGround(Creature& creature) const
 {
- if (!blockRegistry_) {
-  return;
- }
  const glm::vec3 origin = creature.GetBodyOrigin();
- const glm::ivec3 column = WorldPosToBlock(origin);
- const std::optional<int> topY = FindHighestSolidY(column.x, column.z);
- if (!topY) {
-  return;
+ const int gx = static_cast<int>(std::floor(origin.x));
+ const int gz = static_cast<int>(std::floor(origin.z));
+ if (const std::optional<float> feetY = QueryGroundFeetY(gx, gz)) {
+  creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
  }
- const float feetY = BlockTopY(*topY);
- creature.SetBodyOrigin(glm::vec3(origin.x, feetY, origin.z));
 }
 
 CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
@@ -380,6 +375,7 @@ void World::LoadCreatures(const std::string& file_name)
     creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
    }
    creature->GetInventory().DeserializeFromJson(c);
+   SnapCreatureFeetToGround(*creature);
    creatures_[id] = std::move(creature);
    nextCreatureId_ = std::max(nextCreatureId_, id + 1);
   }

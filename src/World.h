@@ -141,6 +141,8 @@ public:
  CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
  bool SetControlledCreature(CreatureId id);
  void SnapCreatureFeetToGround(Creature& creature) const;
+ /// World Y of feet on the top face of the highest solid block in column (x, z).
+ std::optional<float> QueryGroundFeetY(int worldX, int worldZ) const;
  CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                           const std::string& skinId = "");
  bool SpawnCreatureByView(const std::string& speciesId);

@@ -23,6 +23,7 @@
 #include <windows.h>
 #endif
 #include "Core.h"
+#include "Version.h"
 #include "BlockDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
@@ -362,6 +363,7 @@ void Core::EnterGame()
        player->GetInventory().SetActiveSlot(0, 1);
       }
      }
+     std::cout << kCubatariumVersion << " (feet snap: BlockTopY)" << std::endl;
  } catch (const std::exception& e) {
      std::cerr << "Core::EnterGame error: " << e.what() << std::endl;
      CreateWorld();

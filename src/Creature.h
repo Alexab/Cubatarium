@@ -40,7 +40,7 @@ public:
  const CreatureBoundsState& GetBounds() const { return bounds_; }
  CreatureBoundsState& GetBoundsMutable() { return bounds_; }
  void SyncBoundsFromStance();
- void SyncFeetFromLocomotion(const glm::vec3& eyeAfterLocomotion);
+ void SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLocomotion);
 
  CollisionVolume GetCollisionVolume() const;
  CreatureLocomotionController& GetLocomotion() { return locomotion_; }
