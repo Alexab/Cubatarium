@@ -30,6 +30,38 @@ void World::RegisterDefaultActivityAgents()
 {
 }
 
+std::optional<ControlledCreatureInfo> World::QueryControlledCreatureInfo() const
+{
+ if (controlledCreatureId_ == 0) {
+  return std::nullopt;
+ }
+ const Creature* controlled = GetControlledCreature();
+ if (!controlled) {
+  return std::nullopt;
+ }
+ ControlledCreatureInfo info;
+ info.id = controlledCreatureId_;
+ info.eyePosition = controlled->GetEyePosition();
+ return info;
+}
+
+std::vector<CreatureId> World::CreaturesInRadius(const glm::vec3& center, float radius) const
+{
+ std::vector<CreatureId> out;
+ const float radiusSq = radius * radius;
+ ForEachCreature([&](const Creature& creature) {
+  if (creature.IsPlayerCharacter()) {
+   return;
+  }
+  const glm::vec3 delta = creature.GetBodyOrigin() - center;
+  const float distSq = delta.x * delta.x + delta.z * delta.z;
+  if (distSq <= radiusSq) {
+   out.push_back(creature.GetId());
+  }
+ });
+ return out;
+}
+
 void World::SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage)
 {
  skinDefinitions_ = std::move(storage);

@@ -33,6 +33,7 @@
 #include "Creature.h"
 #include "CreatureCatalogTypes.h"
 #include "activity/CreatureActivityDirector.h"
+#include "activity/IWorldPerception.h"
 
 namespace cutum {
 
@@ -46,7 +47,7 @@ class PrefabLibrary;
 class User;
 class Camera;
 
-class World
+class World : public IWorldPerception
 {
 public:
  World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views);
@@ -144,6 +145,9 @@ public:
  void ApplyLocomotionDefinitionToCamera(Camera& camera, const CreatureDefinition& def) const;
  void RegisterDefaultActivityAgents();
  void SnapCreatureFeetToGround(Creature& creature) const;
+
+ std::optional<ControlledCreatureInfo> QueryControlledCreatureInfo() const override;
+ std::vector<CreatureId> CreaturesInRadius(const glm::vec3& center, float radius) const override;
  /// Top face under feet: highest solid in column at or below referenceFeetY (runtime pose).
  std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ, float referenceFeetY) const;
  /// Top face of the highest solid in the full column (spawn / load snap).

@@ -11,7 +11,7 @@ namespace cutum {
 class IWorldPerception {
  public:
  virtual ~IWorldPerception() = default;
- virtual std::optional<ControlledCreatureInfo> GetControlledCreature() const = 0;
+ virtual std::optional<ControlledCreatureInfo> QueryControlledCreatureInfo() const = 0;
  virtual std::vector<CreatureId> CreaturesInRadius(const glm::vec3& center, float radius) const = 0;
 };
 
