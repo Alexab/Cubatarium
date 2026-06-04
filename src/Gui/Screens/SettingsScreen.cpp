@@ -231,14 +231,14 @@ void SettingsScreen::Build(GuiContext& ctx)
     app.AddChild(std::move(controlSchemeLbl));
     auto profileBtn = std::make_unique<GuiButton>(
         &theme,
-        controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic (Minecraft)");
+        controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
     profileBtn->SetOnClick([this]() {
         controlScheme_ = controlScheme_ == ControlScheme::Classic
                              ? ControlScheme::Cubatarium
                              : ControlScheme::Classic;
         if (controlSchemeButton_) {
             controlSchemeButton_->SetLabel(
-                controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic (Minecraft)");
+                controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
         }
     });
     controlSchemeButton_ = profileBtn.get();
