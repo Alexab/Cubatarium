@@ -13,7 +13,6 @@
 #include <array>
 #include <functional>
 #include <map>
-#include <optional>
 #include <tuple>
 #include <unordered_map>
 #include "BlockWorld.h"
@@ -117,6 +116,15 @@ public:
  bool AddObjectByView();
  bool PlaceActivePrefabByView();
  bool DelObjectByView();
+ bool DelBlockAt(glm::ivec3 blockPos);
+
+ void StartBreakSession(glm::ivec3 blockPos);
+ void CancelBreakSession();
+ void TickBreakSession(float dt, float durationSeconds);
+ bool CompleteBreakSession();
+ float GetBreakProgress() const;
+ bool HasBreakSession() const { return breakSession_.has_value(); }
+ std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
 
  bool AddObject(const std::string type_id, const glm::vec3 &position);
 
@@ -361,6 +369,12 @@ private:
  glm::ivec3 intersectionBlockPos_{0};
  bool hasPlaceTarget_{false};
  glm::ivec3 placeBlockPos_{0};
+
+ struct BlockBreakSession {
+  glm::ivec3 blockPos{0};
+  float progress{0.f};
+ };
+ std::optional<BlockBreakSession> breakSession_;
 
  uint64_t DurationDoMovementMks;
  MovementDiagnostics movementDiagnostics_;

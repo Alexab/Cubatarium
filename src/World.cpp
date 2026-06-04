@@ -1043,19 +1043,76 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
  return false;
 }
 
+bool World::DelBlockAt(glm::ivec3 blockPos)
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ if (blockWorld_.GetBlock(blockPos) == BLOCK_AIR) {
+  return false;
+ }
+ blockWorld_.SetBlock(blockPos, BLOCK_AIR);
+ if (cachedBlockCount_ > 0) {
+  --cachedBlockCount_;
+ }
+ MarkBlockChunkDirty(blockPos);
+ if (auto camera = GetCurrentUserCamera()) {
+  UpdateIntersection(camera->GetPosition(), camera->GetFront());
+ }
+ return true;
+}
+
 bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return false;
  }
- blockWorld_.SetBlock(hit->blockPos, BLOCK_AIR);
- if (cachedBlockCount_ > 0) {
-  --cachedBlockCount_;
+ return DelBlockAt(hit->blockPos);
+}
+
+void World::StartBreakSession(glm::ivec3 blockPos)
+{
+ BlockBreakSession session;
+ session.blockPos = blockPos;
+ session.progress = 0.f;
+ breakSession_ = session;
+}
+
+void World::CancelBreakSession()
+{
+ breakSession_.reset();
+}
+
+void World::TickBreakSession(float dt, float durationSeconds)
+{
+ if (!breakSession_ || durationSeconds <= 0.f) {
+  return;
  }
- MarkBlockChunkDirty(hit->blockPos);
- UpdateIntersection(position, front);
- return true;
+ breakSession_->progress = std::min(1.f, breakSession_->progress + dt / durationSeconds);
+}
+
+bool World::CompleteBreakSession()
+{
+ if (!breakSession_) {
+  return false;
+ }
+ const glm::ivec3 pos = breakSession_->blockPos;
+ breakSession_.reset();
+ return DelBlockAt(pos);
+}
+
+float World::GetBreakProgress() const
+{
+ return breakSession_ ? breakSession_->progress : 0.f;
+}
+
+std::optional<glm::ivec3> World::GetBreakSessionBlockPos() const
+{
+ if (!breakSession_) {
+  return std::nullopt;
+ }
+ return breakSession_->blockPos;
 }
 
 

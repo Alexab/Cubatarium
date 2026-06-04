@@ -145,6 +145,7 @@ GLuint creatureBodyPartEBO = 0;
  bool InitCreatureBodyPartBuffers();
  void DestroyCreaturePartBuffers();
  void RenderSelectionOutline();
+ void RenderBlockCrackOverlay();
  void RenderCreatures();
  
  void DrawCubeGeometry();

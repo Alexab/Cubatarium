@@ -351,6 +351,7 @@ if (!camera) {
   }
 
   RenderSelectionOutline();
+  RenderBlockCrackOverlay();
   RenderCreatures();
 
   // Active object preview disabled to avoid per-frame resource churn
@@ -1280,9 +1281,9 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
          "Shift - Crouch / Fly down",
          "2xSpace - Toggle flight",
          "0-9 - Block, Alt+0-9 - Object",
-         "LMB - Place block, Alt+LMB - Place object",
-         "Hold LMB - Remove block, Delete - Remove",
-         "Right Mouse - Camera, F1-F8 - Sky",
+         "Classic: Hold LMB break, RMB place, RMB drag look",
+         "Cubatarium: LMB tap place / hold break (Settings profile)",
+         "Delete - Instant break, F1-F8 - Sky",
      };
 
      constexpr float helpX = 20.0f;
@@ -2006,6 +2007,57 @@ void DrawBlockOutline(ShaderProgram* shader, GLuint vao, const glm::mat4& mvp, c
 }
 
 } // namespace
+
+void GeometryEngine::RenderBlockCrackOverlay()
+{
+    if (!WorldInstance || !WorldInstance->HasBreakSession()) {
+        return;
+    }
+    const std::optional<glm::ivec3> blockPos = WorldInstance->GetBreakSessionBlockPos();
+    if (!blockPos || !outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
+        return;
+    }
+
+    auto camera = WorldInstance->GetCurrentUserCamera();
+    if (!camera) {
+        return;
+    }
+
+    const float progress = WorldInstance->GetBreakProgress();
+    const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
+    const glm::mat4 mvp =
+        viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(*blockPos));
+
+    GLboolean cullFaceEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+    GLfloat previousLineWidth = 1.0f;
+    glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glLineWidth(1.5f + progress * 4.0f);
+
+    const float alpha = 0.35f + progress * 0.55f;
+    DrawBlockOutline(outlineShader.get(), outlineVAO, mvp,
+                     glm::vec4(0.25f, 0.25f, 0.25f, alpha));
+
+    if (progress > 0.35f) {
+        const glm::mat4 inset =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(*blockPos))
+            * glm::scale(glm::mat4(1.0f), glm::vec3(0.92f));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, inset,
+                         glm::vec4(0.1f, 0.1f, 0.1f, alpha * 0.85f));
+    }
+
+    glLineWidth(previousLineWidth);
+    glDisable(GL_BLEND);
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
+}
 
 void GeometryEngine::RenderSelectionOutline()
 {
