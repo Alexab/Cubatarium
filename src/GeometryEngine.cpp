@@ -1989,12 +1989,26 @@ void GeometryEngine::RenderCreatures()
  });
 }
 
-void GeometryEngine::RenderSelectionOutline()
+namespace {
+
+void DrawBlockOutline(ShaderProgram* shader, GLuint vao, const glm::mat4& mvp, const glm::vec4& color)
 {
-    if (!WorldInstance->GetIsBlockIntersectionExists()) {
+    if (!shader || !shader->IsValid() || vao == 0) {
         return;
     }
+    shader->Use();
+    shader->SetMat4("mvp_matrix", mvp);
+    shader->SetVec4("color", color);
+    glBindVertexArray(vao);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    shader->Unuse();
+}
 
+} // namespace
+
+void GeometryEngine::RenderSelectionOutline()
+{
     if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
         return;
     }
@@ -2004,9 +2018,7 @@ void GeometryEngine::RenderSelectionOutline()
         return;
     }
 
-    const glm::ivec3 blockPos = WorldInstance->GetIntersectionBlockPos();
-    const glm::mat4 model = glm::translate(glm::mat4(1.0f), BlockCenter(blockPos));
-    const glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
+    const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
 
     GLboolean cullFaceEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
@@ -2016,15 +2028,21 @@ void GeometryEngine::RenderSelectionOutline()
     glDisable(GL_CULL_FACE);
     glLineWidth(2.0f);
 
-    outlineShader->Use();
-    outlineShader->SetMat4("mvp_matrix", mvp);
-    outlineShader->SetVec4("color", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    if (WorldInstance->GetIsBlockIntersectionExists()) {
+        const glm::ivec3 breakPos = WorldInstance->GetBreakBlockPos();
+        const glm::mat4 breakMvp =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(breakPos));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, breakMvp,
+                         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    }
 
-    glBindVertexArray(outlineVAO);
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-
-    outlineShader->Unuse();
+    if (WorldInstance->HasPlaceTarget()) {
+        const glm::ivec3 placePos = WorldInstance->GetPlaceBlockPos();
+        const glm::mat4 placeMvp =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(placePos));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, placeMvp,
+                         glm::vec4(0.2f, 0.8f, 0.2f, 1.0f));
+    }
 
     glLineWidth(previousLineWidth);
     if (cullFaceEnabled) {

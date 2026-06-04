@@ -231,6 +231,9 @@ public:
 
  bool GetIsBlockIntersectionExists() const { return hasIntersectionBlock_; }
  glm::ivec3 GetIntersectionBlockPos() const { return intersectionBlockPos_; }
+ glm::ivec3 GetBreakBlockPos() const { return intersectionBlockPos_; }
+ bool HasPlaceTarget() const { return hasPlaceTarget_; }
+ glm::ivec3 GetPlaceBlockPos() const { return placeBlockPos_; }
 
  uint64_t GetDurationDoMovementMks() const;
 
@@ -356,6 +359,8 @@ private:
 
  bool hasIntersectionBlock_{false};
  glm::ivec3 intersectionBlockPos_{0};
+ bool hasPlaceTarget_{false};
+ glm::ivec3 placeBlockPos_{0};
 
  uint64_t DurationDoMovementMks;
  MovementDiagnostics movementDiagnostics_;

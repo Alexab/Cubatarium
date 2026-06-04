@@ -1866,10 +1866,30 @@ void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front
  IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  hasIntersectionBlock_ = hit.has_value();
+ hasPlaceTarget_ = false;
  if (hit) {
   intersectionBlockPos_ = hit->blockPos;
+  if (FindNearestFreeCubePosition(position, front).has_value()) {
+   glm::ivec3 normal = hit->faceNormal;
+   if (normal == glm::ivec3(0)) {
+    const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+    if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+     normal.x = toCamera.x > 0.0f ? 1 : -1;
+    } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+     normal.y = toCamera.y > 0.0f ? 1 : -1;
+    } else {
+     normal.z = toCamera.z > 0.0f ? 1 : -1;
+    }
+   }
+   const glm::ivec3 placePos = hit->blockPos + normal;
+   if (blockWorld_.IsAir(placePos)) {
+    hasPlaceTarget_ = true;
+    placeBlockPos_ = placePos;
+   }
+  }
  } else {
   intersectionBlockPos_ = glm::ivec3(0);
+  placeBlockPos_ = glm::ivec3(0);
  }
 
  if (auto user = GetCurrentUser()) {
