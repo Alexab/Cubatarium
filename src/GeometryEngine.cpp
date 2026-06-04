@@ -87,6 +87,7 @@ bool GeometryEngine::InitEngine()
  // Initialize preview buffers
  InitPreviewBuffers();
 
+ DestroyCreaturePartBuffers();
  if (!InitCreaturePartBuffers() || !InitCreatureHeadPartBuffers() ||
      !InitCreatureBodyPartBuffers()) {
   std::cerr << "Failed to initialize creature part buffers" << std::endl;

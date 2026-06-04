@@ -25,10 +25,13 @@ CreaturePoseParams TerrestrialBipedPosePresenter::Compute(const CreatureLocomoti
   const float sinP = std::sin(facts.animPhase);
   const float legTilt = sinP * legSwing;
   const float armTilt = -sinP * armSwing;
+  constexpr float kLegStrideBlocks = 0.05f;
 
   CreaturePartPose legL;
+  legL.offsetDelta = glm::vec3(0.0f, 0.0f, sinP * kLegStrideBlocks);
   legL.eulerDeg = glm::vec3(legTilt, 0.0f, 0.0f);
   CreaturePartPose legR;
+  legR.offsetDelta = glm::vec3(0.0f, 0.0f, -sinP * kLegStrideBlocks);
   legR.eulerDeg = glm::vec3(-legTilt, 0.0f, 0.0f);
   CreaturePartPose armL;
   armL.eulerDeg = glm::vec3(armTilt, 0.0f, 0.0f);

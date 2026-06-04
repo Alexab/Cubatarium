@@ -66,6 +66,8 @@ struct CreatureRigSpec {
 
 struct CreatureVisualSpec {
  std::string backend{"rigid_voxels"};
+ /// Extra Y rotation (degrees) for mob wander facing; 180 if model faces backward vs movement.
+ float modelYawOffsetDeg{0.f};
  glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
  std::string defaultTextureKey;
  std::string iconMode{"bounds_wireframe"};

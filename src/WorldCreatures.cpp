@@ -161,6 +161,7 @@ CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& b
  }
  creature->SetCapabilities(def->locomotion);
  creature->SetLocomotionArchetype(def->locomotionArchetype);
+ creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
  creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
  creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
                                               def->eyeHeight);
@@ -423,6 +424,7 @@ void World::LoadCreatures(const std::string& file_name)
    creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
    creature->SetCapabilities(def->locomotion);
    creature->SetLocomotionArchetype(def->locomotionArchetype);
+   creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
    creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
    creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
                                                 def->eyeHeight);

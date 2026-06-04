@@ -113,6 +113,7 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
   if (data.contains("visual") && data["visual"].is_object()) {
    const auto& vis = data["visual"];
    def.visual.backend = vis.value("backend", def.visual.backend);
+   def.visual.modelYawOffsetDeg = vis.value("model_yaw_offset_deg", 0.f);
    def.visual.defaultTextureKey = vis.value("default_texture", def.visual.defaultTextureKey);
    if (vis.contains("icon") && vis["icon"].is_object()) {
     const auto& icon = vis["icon"];

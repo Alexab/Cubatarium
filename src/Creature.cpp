@@ -134,11 +134,6 @@ void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionCont
 void Creature::ExecuteIntent(World& world, float dt)
 {
  const glm::vec3 bodyOriginBefore = bodyOrigin_;
- const float moveLen = glm::length(glm::vec2(intent_.moveDirWorld.x, intent_.moveDirWorld.z));
- if (!possessed_ && moveLen > 1e-4f) {
-  yaw_ = ModelYawFromDirection(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
-  pitch_ = 0.0f;
- }
 
  if (!possessed_ && locomotion_.GetMode() == CreatureMovementMode::Walking) {
   glm::vec3 eye = GetLocomotionEye();
@@ -159,6 +154,24 @@ void Creature::ExecuteIntent(World& world, float dt)
   glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
   delta.y = 0.0f;
   bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.profile.restSizeBlocks, id_);
+ }
+
+ if (!possessed_) {
+  glm::vec2 faceDir(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
+  const glm::vec3 xzDelta = bodyOrigin_ - bodyOriginBefore;
+  const glm::vec2 xzActual(xzDelta.x, xzDelta.z);
+  if (glm::length(xzActual) > 1e-5f) {
+   faceDir = xzActual;
+  }
+  if (glm::length(faceDir) > 1e-4f) {
+   yaw_ = ModelYawFromDirection(faceDir.x, faceDir.y) + modelYawOffsetDeg_;
+   if (yaw_ > 180.0f) {
+    yaw_ -= 360.0f;
+   } else if (yaw_ <= -180.0f) {
+    yaw_ += 360.0f;
+   }
+   pitch_ = 0.0f;
+  }
  }
 
  if (intent_.clearOnApply) {

@@ -6,7 +6,7 @@
 namespace cutum {
 
 // Unit cube positions (24 verts × xyz); face order matches GeometryEngine::InitCubeBuffers.
-// Rig forward: local +Z (between arms at ±X). +Z face index 0, +X index 1.
+// Rig forward: local +Z (front atlas on +Z face). +Z face index 0, +X index 1.
 inline constexpr float kCreaturePartPositions[] = {
     -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
     0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f,
@@ -38,9 +38,15 @@ inline float ModelYawFromDirection(float dirX, float dirZ)
     if (dirX * dirX + dirZ * dirZ < 1e-8f) {
         return 0.0f;
     }
-    return static_cast<float>(std::atan2(static_cast<double>(dirX),
-                                         static_cast<double>(dirZ)) *
-                              57.2957795);
+    float yaw = static_cast<float>(std::atan2(static_cast<double>(dirX),
+                                              static_cast<double>(dirZ)) *
+                               57.2957795);
+    if (yaw > 180.0f) {
+        yaw -= 360.0f;
+    } else if (yaw <= -180.0f) {
+        yaw += 360.0f;
+    }
+    return yaw;
 }
 
 // Camera look yaw (degrees) -> model yaw (local +Z forward).

@@ -36,6 +36,8 @@ public:
  glm::vec3 GetLocomotionEye() const;
  float GetYaw() const { return yaw_; }
  float GetPitch() const { return pitch_; }
+ float GetModelYawOffsetDeg() const { return modelYawOffsetDeg_; }
+ void SetModelYawOffsetDeg(float degrees) { modelYawOffsetDeg_ = degrees; }
  void SetOrientation(float yaw, float pitch);
 
  const CreatureBoundsState& GetBounds() const { return bounds_; }
@@ -87,6 +89,7 @@ protected:
  glm::vec3 eyeOffset_;
  float yaw_{0.0f};
  float pitch_{0.0f};
+ float modelYawOffsetDeg_{0.0f};
  CreatureBoundsState bounds_;
  CreatureLocomotionController locomotion_;
  CreatureInventory inventory_;
