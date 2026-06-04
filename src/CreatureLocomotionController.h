@@ -21,6 +21,7 @@ public:
 
  float GetWalkSpeed() const { return caps_.walkSpeed; }
  float GetFlySpeed() const { return caps_.flySpeed; }
+ const CreatureLocomotionCapabilities& GetCapabilities() const { return caps_; }
 
  CreatureMovementMode GetMode() const { return mode_; }
  void SetMode(CreatureMovementMode mode);

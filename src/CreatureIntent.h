@@ -12,6 +12,8 @@ struct CreatureIntent {
  bool wantJump{false};
  bool clearOnApply{true};
  LocomotionState suggestedAnim{LocomotionState::Idle};
+ glm::vec3 lookAtWorld{0.0f};
+ float lookAtWeight{0.0f};
 };
 
 } // namespace cutum

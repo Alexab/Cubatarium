@@ -9,6 +9,7 @@
 #include "CreatureIntent.h"
 #include "CreatureInventory.h"
 #include "CreatureLocomotionController.h"
+#include "CreatureLocomotionFacts.h"
 #include "LocomotionTypes.h"
 
 namespace cutum {
@@ -52,8 +53,17 @@ public:
  void SetIntent(const CreatureIntent& intent) { intent_ = intent; }
  void ClearIntent() { intent_ = CreatureIntent{}; }
 
- LocomotionState GetLocomotionState() const { return locomotion_.GetLocomotionState(); }
+ LocomotionState GetLocomotionState() const { return locomotionFacts_.state; }
+ const CreatureLocomotionFacts& GetLocomotionFacts() const { return locomotionFacts_; }
  CreatureMovementMode GetMovementMode() const { return locomotion_.GetMode(); }
+ LocomotionArchetype GetLocomotionArchetype() const { return locomotionArchetype_; }
+ void SetLocomotionArchetype(LocomotionArchetype archetype) { locomotionArchetype_ = archetype; }
+ void SetWalkCycleHz(float hz) { walkCycleHz_ = hz; }
+ void RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
+                            const CreatureLocomotionCapabilities& caps);
+ void RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
+                                           const CreatureLocomotionCapabilities& caps,
+                                           float horizontalSpeedOverride = -1.0f);
 
  bool IsPlayerCharacter() const { return playerCharacter_; }
  void SetPlayerCharacter(bool v) { playerCharacter_ = v; }
@@ -84,6 +94,10 @@ protected:
  bool playerCharacter_{false};
  bool possessed_{false};
  std::unique_ptr<ICreatureVisual> visual_;
+ LocomotionArchetype locomotionArchetype_{LocomotionArchetype::TerrestrialBiped};
+ CreatureLocomotionFacts locomotionFacts_{};
+ glm::vec3 lastBodyOrigin_{0.0f};
+ float walkCycleHz_{2.0f};
 };
 
 } // namespace cutum

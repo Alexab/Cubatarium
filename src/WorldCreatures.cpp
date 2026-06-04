@@ -160,6 +160,8 @@ CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& b
   creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
  }
  creature->SetCapabilities(def->locomotion);
+ creature->SetLocomotionArchetype(def->locomotionArchetype);
+ creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
  creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
                                               def->eyeHeight);
  if (!skinId.empty()) {
@@ -420,6 +422,8 @@ void World::LoadCreatures(const std::string& file_name)
    creature->GetBoundsMutable().profile = def->bounds;
    creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
    creature->SetCapabilities(def->locomotion);
+   creature->SetLocomotionArchetype(def->locomotionArchetype);
+   creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
    creature->GetLocomotion().SetCollisionProfile(creature->GetBounds().currentSizeBlocks,
                                                 def->eyeHeight);
    if (!skin.empty()) {

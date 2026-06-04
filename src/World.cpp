@@ -113,6 +113,7 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
  }
  IsIntersectionExists = false;
  hasIntersectionBlock_ = false;
+ RegisterDefaultCreaturePosePresenters(posePresenterRegistry_);
 }
 
 void World::GenerateUsers()
@@ -1744,6 +1745,17 @@ void World::DoMovement()
   controlled->SyncBoundsFromStance();
   controlled->GetLocomotion().SetMode(
       camera->GetFreeMove() ? CreatureMovementMode::Flying : CreatureMovementMode::Walking);
+  float horizontalSpeed = 0.0f;
+  const CreatureLocomotionController& camLoc = camera->GetLocomotionController();
+  const LocomotionState camState = camLoc.GetLocomotionState();
+  if (camState == LocomotionState::Walk || camState == LocomotionState::Run) {
+   horizontalSpeed = camLoc.GetWalkSpeed();
+  } else if (camState == LocomotionState::Fly || camState == LocomotionState::Glide ||
+             camState == LocomotionState::Hover) {
+   horizontalSpeed = camLoc.GetFlySpeed();
+  }
+  controlled->RebuildLocomotionFactsFromController(camLoc, controlled->GetLocomotion().GetCapabilities(),
+                                                   horizontalSpeed);
   is_moved = true;
  }
 

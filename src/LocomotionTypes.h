@@ -1,19 +1,42 @@
 #ifndef LOCOMOTIONTYPES_H
 #define LOCOMOTIONTYPES_H
 
+#include <cstdint>
+#include <string>
+
 namespace cutum {
 
 enum class CreatureMovementMode { Walking, Flying };
 
-enum class LocomotionState {
+enum class LocomotionState : uint8_t {
  Idle,
  Walk,
  Run,
  Jump,
  Fall,
  Crouch,
- Fly
+ Fly,
+ Glide,
+ Hover,
+ Swim,
+ Tread,
+ Slither,
+ Coil,
+ Action,
+ Count
 };
+
+enum class LocomotionArchetype : uint8_t {
+ TerrestrialBiped,
+ TerrestrialQuadruped,
+ Aerial,
+ Aquatic,
+ Serpentine
+};
+
+LocomotionArchetype ParseLocomotionArchetype(const std::string& s);
+const char* ToString(LocomotionState state);
+const char* ToString(LocomotionArchetype archetype);
 
 struct CreatureInput {
  bool moveForward{false};

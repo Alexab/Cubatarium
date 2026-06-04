@@ -17,6 +17,9 @@
 #include "CameraPerspective.h"
 #include "CreatureDefinition.h"
 #include "CreatureVisual.h"
+#include "CreatureLocomotionFacts.h"
+#include "CreaturePoseParams.h"
+#include "pose/ICreaturePosePresenter.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include "GridMath.h"
 #include "Core.h"
@@ -1933,7 +1936,14 @@ void GeometryEngine::RenderCreatures()
   }
   if (ICreatureVisual* visual = creature.GetVisual()) {
    visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
-   visual->UpdatePose(creature, creature.GetLocomotionState(), *def, dt);
+   const CreatureLocomotionFacts& facts = creature.GetLocomotionFacts();
+   ICreaturePosePresenter* presenter =
+       WorldInstance->GetPosePresenterRegistry().Get(facts.archetype);
+   CreaturePoseParams pose;
+   if (presenter) {
+    pose = presenter->Compute(facts, *def, dt);
+   }
+   visual->UpdatePose(creature, facts, pose, *def, dt);
    visual->SubmitDraw(*this, viewProj);
   }
 

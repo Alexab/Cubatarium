@@ -4,6 +4,7 @@
 #include <string>
 #include "CreatureBounds.h"
 #include "CreatureCatalogTypes.h"
+
 #include "LocomotionTypes.h"
 
 namespace cutum {
@@ -16,6 +17,7 @@ struct CreatureDefinition {
  CreatureBoundsProfile bounds;
  float eyeHeight{1.62f};
  CreatureLocomotionCapabilities locomotion;
+ LocomotionArchetype locomotionArchetype{LocomotionArchetype::TerrestrialBiped};
  CreatureBehaviorParams behavior;
  CreatureVisualSpec visual;
 };

@@ -23,6 +23,7 @@ Creature::Creature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm:
  bounds_.profile.maxSizeBlocks = glm::vec3(0.6f, 1.8f, 0.6f);
  bounds_.currentSizeBlocks = bounds_.profile.restSizeBlocks;
  locomotion_.Reset();
+ lastBodyOrigin_ = bodyOrigin_;
 }
 
 Creature::~Creature() = default;
@@ -86,8 +87,49 @@ void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLoc
  }
 }
 
+void Creature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
+                                    const CreatureLocomotionCapabilities& caps)
+{
+ CreatureLocomotionFacts raw;
+ FillTerrestrialRawFacts(raw, input, locomotionArchetype_, yaw_, pitch_);
+ if (intent_.lookAtWeight > 0.0f) {
+  raw.lookAtWorld = intent_.lookAtWorld;
+  raw.lookAtWeight = intent_.lookAtWeight;
+ }
+ locomotionFacts_ = raw;
+ CreatureLocomotionRawInput deriveInput = input;
+ if (intent_.suggestedAnim != LocomotionState::Idle) {
+  deriveInput.suggestedAnim = intent_.suggestedAnim;
+  deriveInput.hasSuggestedAnim = true;
+ }
+ FinalizeLocomotionFacts(locomotionFacts_, caps, deriveInput, walkCycleHz_, input.dt);
+}
+
+void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
+                                                  const CreatureLocomotionCapabilities& caps,
+                                                  float horizontalSpeedOverride)
+{
+ CreatureLocomotionRawInput input;
+ input.locomotion = &controller;
+ input.bodyOriginBefore = bodyOrigin_;
+ input.bodyOriginAfter = bodyOrigin_;
+ input.dt = 0.0f;
+ CreatureLocomotionFacts raw;
+ FillTerrestrialRawFacts(raw, input, locomotionArchetype_, yaw_, pitch_);
+ if (horizontalSpeedOverride >= 0.0f) {
+  raw.horizontalSpeed = horizontalSpeedOverride;
+ }
+ if (intent_.lookAtWeight > 0.0f) {
+  raw.lookAtWorld = intent_.lookAtWorld;
+  raw.lookAtWeight = intent_.lookAtWeight;
+ }
+ locomotionFacts_ = raw;
+ FinalizeLocomotionFacts(locomotionFacts_, caps, input, walkCycleHz_, 0.0f);
+}
+
 void Creature::ExecuteIntent(World& world, float dt)
 {
+ const glm::vec3 bodyOriginBefore = bodyOrigin_;
  const float moveLen = glm::length(glm::vec2(intent_.moveDirWorld.x, intent_.moveDirWorld.z));
  if (!possessed_ && moveLen > 1e-4f) {
   yaw_ = ModelYawFromDirection(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
@@ -118,6 +160,14 @@ void Creature::ExecuteIntent(World& world, float dt)
  if (intent_.clearOnApply) {
   ClearIntent();
  }
+
+ CreatureLocomotionRawInput rawInput;
+ rawInput.locomotion = &locomotion_;
+ rawInput.bodyOriginBefore = bodyOriginBefore;
+ rawInput.bodyOriginAfter = bodyOrigin_;
+ rawInput.dt = dt;
+ RebuildLocomotionFacts(rawInput, locomotion_.GetCapabilities());
+ lastBodyOrigin_ = bodyOrigin_;
 }
 
 void Creature::UpdateControlled(World& world, const CreatureInput& input, float dt)

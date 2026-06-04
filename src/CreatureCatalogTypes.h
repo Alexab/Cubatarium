@@ -52,11 +52,25 @@ struct CreatureVisualPartDef {
  std::string textureStem;
 };
 
+struct CreatureAnimationParams {
+ float walkCycleHz{2.0f};
+ float legSwingDeg{25.0f};
+ float armSwingDeg{15.0f};
+ float flyBodyPitchDeg{10.0f};
+};
+
+struct CreatureRigSpec {
+ std::string templateId{"biped"};
+ std::vector<std::string> partIds;
+};
+
 struct CreatureVisualSpec {
  std::string backend{"rigid_voxels"};
  glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
  std::string defaultTextureKey;
  std::string iconMode{"bounds_wireframe"};
+ CreatureRigSpec rig;
+ CreatureAnimationParams animation;
  std::vector<CreatureVisualPartDef> parts;
 };
 

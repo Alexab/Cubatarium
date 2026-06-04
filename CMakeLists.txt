@@ -50,6 +50,7 @@ set(SOURCES
     src/Camera.cpp
     src/CreatureBounds.cpp
     src/CreatureLocomotionController.cpp
+    src/CreatureLocomotionFacts.cpp
     src/Creature.cpp
     src/CreatureInventory.cpp
     src/Player.cpp
@@ -66,6 +67,8 @@ set(SOURCES
     src/CreatureVisualGltf.cpp
     src/CreatureVisualFactory.cpp
     src/PlayerController.cpp
+    src/pose/CreaturePosePresenterRegistry.cpp
+    src/pose/TerrestrialBipedPosePresenter.cpp
     src/Core.cpp
     src/Cube.cpp
     src/CubeGL.cpp
@@ -115,6 +118,8 @@ set(SOURCES
     src/ChunkStreamer.cpp
     src/GreedyMesher.cpp
     src/InputManager.cpp
+    src/LocomotionTypes.cpp
+    src/LocomotionStateDerive.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
     src/Application.cpp

@@ -77,6 +77,7 @@ public:
  bool IsCrouching() const;
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const;
+ const CreatureLocomotionController& GetLocomotionController() const { return locomotion_; }
  bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
 
  CameraPerspective GetPerspective() const { return perspective_; }

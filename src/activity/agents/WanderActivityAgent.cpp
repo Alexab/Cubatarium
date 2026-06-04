@@ -50,7 +50,6 @@ void WanderActivityAgent::Tick(IWorldPerception& /*perception*/, ICreatureActivi
   const float walkSpeed = snapshot->locomotion.walkSpeed;
   intent.moveSpeed =
       walkSpeed > 0.0f ? walkSpeed : snapshot->behavior.moveSpeed;
-  intent.suggestedAnim = LocomotionState::Walk;
   intent.clearOnApply = false;
   sink.SetIntent(id, intent);
  }

@@ -34,6 +34,7 @@
 #include "CreatureCatalogTypes.h"
 #include "activity/CreatureActivityDirector.h"
 #include "activity/IWorldPerception.h"
+#include "pose/CreaturePosePresenterRegistry.h"
 
 namespace cutum {
 
@@ -168,6 +169,10 @@ public:
  void ForEachCreature(const std::function<void(const Creature&)>& fn) const;
  std::string ResolveAnimationTypeId(const Creature& creature) const;
  const CreatureDefinition* GetCreatureDefinition(const std::string& typeId) const;
+ CreaturePosePresenterRegistry& GetPosePresenterRegistry() { return posePresenterRegistry_; }
+ const CreaturePosePresenterRegistry& GetPosePresenterRegistry() const {
+  return posePresenterRegistry_;
+ }
  ResolvedCreatureAppearance GetResolvedAppearance(const Creature& creature) const;
 
  void LoadCreatures(const std::string& file_name);
@@ -324,6 +329,7 @@ private:
  std::shared_ptr<CreatureDefinitionStorage> creatureDefinitions_;
  std::shared_ptr<SkinDefinitionStorage> skinDefinitions_;
  CreatureActivityDirector activityDirector_;
+ CreaturePosePresenterRegistry posePresenterRegistry_;
 
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<ViewEngine> ViewInstance;

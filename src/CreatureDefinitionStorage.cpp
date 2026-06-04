@@ -1,4 +1,5 @@
 #include "CreatureDefinitionStorage.h"
+#include "LocomotionTypes.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <filesystem>
@@ -86,6 +87,8 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
        ReadVec3(b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
   }
   def.eyeHeight = data.value("eye_height", def.eyeHeight);
+  def.locomotionArchetype =
+      ParseLocomotionArchetype(data.value("locomotion_archetype", "terrestrial_biped"));
   def.behavior.id = data.value("behavior", def.behavior.id);
   if (data.contains("behavior_params") && data["behavior_params"].is_object()) {
    const auto& bp = data["behavior_params"];
@@ -116,6 +119,25 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
     def.visual.iconMode = icon.value("mode", def.visual.iconMode);
     def.visual.wireframeColor =
         ReadVec4(icon.value("color", nlohmann::json::array()), def.visual.wireframeColor);
+   }
+   if (vis.contains("animation") && vis["animation"].is_object()) {
+    const auto& anim = vis["animation"];
+    def.visual.animation.walkCycleHz = anim.value("walk_cycle_hz", def.visual.animation.walkCycleHz);
+    def.visual.animation.legSwingDeg = anim.value("leg_swing_deg", def.visual.animation.legSwingDeg);
+    def.visual.animation.armSwingDeg = anim.value("arm_swing_deg", def.visual.animation.armSwingDeg);
+    def.visual.animation.flyBodyPitchDeg =
+        anim.value("fly_body_pitch_deg", def.visual.animation.flyBodyPitchDeg);
+   }
+   if (vis.contains("rig") && vis["rig"].is_object()) {
+    const auto& rig = vis["rig"];
+    def.visual.rig.templateId = rig.value("template", def.visual.rig.templateId);
+    if (rig.contains("parts") && rig["parts"].is_array()) {
+     for (const auto& partId : rig["parts"]) {
+      if (partId.is_string()) {
+       def.visual.rig.partIds.push_back(partId.get<std::string>());
+      }
+     }
+    }
    }
    if (vis.contains("parts") && vis["parts"].is_array()) {
     for (const auto& partJson : vis["parts"]) {

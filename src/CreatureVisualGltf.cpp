@@ -5,7 +5,8 @@
 
 namespace cutum {
 
-void CreatureVisualGltf::UpdatePose(const Creature& /*creature*/, LocomotionState /*state*/,
+void CreatureVisualGltf::UpdatePose(const Creature& /*creature*/, const CreatureLocomotionFacts& /*facts*/,
+                                    const CreaturePoseParams& /*pose*/,
                                     const CreatureDefinition& /*animDef*/, float /*dt*/)
 {
 }

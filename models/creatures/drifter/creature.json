@@ -5,6 +5,7 @@
   "role": "mob",
   "bounds": { "rest": [0.9, 1.4, 0.9], "max": [0.9, 1.4, 0.9], "min": [0.9, 1.0, 0.9] },
   "eye_height": 1.28,
+  "locomotion_archetype": "terrestrial_biped",
   "locomotion": {
     "can_fly": false,
     "can_crouch": false,
@@ -16,6 +17,12 @@
   "behavior_params": { "move_speed": 1.8, "wander_interval_min": 2.0, "wander_interval_max": 4.0 },
   "visual": {
     "backend": "rigid_voxels",
+    "animation": {
+      "walk_cycle_hz": 2.2,
+      "leg_swing_deg": 22,
+      "arm_swing_deg": 14,
+      "fly_body_pitch_deg": 10
+    },
     "default_texture": "body",
     "parts": [
       { "id": "torso", "offset": [0.0, 0.72, 0.0], "size": [0.7, 0.75, 0.55], "texture": "body" },

@@ -5,6 +5,7 @@
   "role": "controlled_default",
   "bounds": { "rest": [0.6, 1.8, 0.6], "max": [0.6, 1.8, 0.6], "min": [0.6, 1.5, 0.6] },
   "eye_height": 1.62,
+  "locomotion_archetype": "terrestrial_biped",
   "locomotion": {
     "can_fly": true,
     "can_crouch": true,
@@ -16,6 +17,12 @@
   "behavior": "none",
   "visual": {
     "backend": "rigid_voxels",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 25,
+      "arm_swing_deg": 15,
+      "fly_body_pitch_deg": 10
+    },
     "default_texture": "body",
     "parts": [
       { "id": "torso", "offset": [0.0, 0.95, 0.0], "size": [0.5, 1.0, 0.32], "texture": "body" },

@@ -77,7 +77,8 @@ flowchart TB
 |------|-----|---------|
 | Стратегия (куда патрулировать, агро) | **`ICreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
-| Исполнение (коллизии, гравитация, анимация state) | **`Creature` + `World`** | каждый кадр |
+| Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + `World`** | каждый кадр |
+| Presentation (поза частей, walk cycle) | **`src/pose/*` + `ICreatureVisual`** | каждый кадр (render) |
 
 ИИ **не** внутри `Creature` как монолит; **мозг** — у агента (или у plug-in мозга агента). Существо — **исполнитель** намерений + особый случай **player input** для controlled.
 
@@ -105,6 +106,7 @@ flowchart TB
 | `WorldCreatureActivitySink` | `WorldCreatureActivitySink.*` | Адаптер к `World` / `Creature` |
 | `RegisterDefaultCreatureActivityAgents` | `CreatureActivityRegistry.*` | Регистрация `WanderActivityAgent` для `behavior: wander` |
 | `WanderActivityAgent` | `agents/WanderActivityAgent.*` | Случайное блуждание; состояние таймера в агенте |
+| `TerrestrialBipedPosePresenter` | `src/pose/*` | Процедурная анимация по `CreatureLocomotionFacts` (не в агенте) |
 
 `CreatureIntent` и `SetIntent` на существе уже есть; исполнение — **`Creature::ExecuteIntent`**.
 

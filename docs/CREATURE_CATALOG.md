@@ -41,11 +41,12 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `id`, `display_name`
 - `catalog`: `tags`, `spawnable`, `sort_order`
 - `role`: `controlled_default` | `mob`
-- `bounds`, `eye_height`, `locomotion`
+- `bounds`, `eye_height`, `locomotion_archetype`, `locomotion`
+- `locomotion_archetype`: `terrestrial_biped` (default) | `terrestrial_quadruped` | `aerial` | `aquatic` | `serpentine` — выбор pose presenter и derive `LocomotionState`
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
 - `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
-- `visual`: `backend`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`), `icon` (`mode`: `parts_preview`, `color`)
+- `visual`: `backend`, `animation` (`walk_cycle_hz`, `leg_swing_deg`, `arm_swing_deg`, `fly_body_pitch_deg`), `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`), `icon` (`mode`: `parts_preview`, `color`)
 
 ### `skin.json`
 
@@ -92,6 +93,17 @@ python tools/generate_creature_assets.py
 5. Save world → reload → mob keeps `skin_id`.
 6. Regression: blocks, prefabs, possess/depossess, F5, entity collision.
 
+## Locomotion presentation
+
+Анимация конечностей **не** в activity-агентах. Pipeline:
+
+1. Motor: `Creature::ExecuteIntent` / `Camera::DoMovement` → `CreatureLocomotionFacts` (скорость, grounded, stance).
+2. `DeriveLocomotionState` → `LocomotionState` (Idle, Walk, Run, Jump, Fall, Crouch, Fly, …).
+3. `CreaturePosePresenterRegistry` → `TerrestrialBipedPosePresenter` → `CreaturePoseParams` по part id.
+4. `ICreatureVisual::UpdatePose` → `CreatureVisualRigid` рисует части.
+
+Опционально в `CreatureIntent`: `lookAtWorld`, `lookAtWeight` (IK головы).
+
 ## Activity agents
 
 Поле `behavior` в `creature.json` задаёт membership в [`CreatureActivityDirector`](CREATURE_AGENTS.md), не логику внутри `Creature`.
@@ -113,6 +125,7 @@ Controlled (`human`, `controlled_default`) использует `behavior: none`
 | Storage | `CreatureDefinitionStorage`, `SkinDefinitionStorage`, `CreatureTextureStorage` |
 | Appearance | `ResolveCreatureAppearance`, `World::GetResolvedAppearance` |
 | Activity | `src/activity/*`, `CreatureActivityDirector`, `WanderActivityAgent` |
+| Presentation | `src/pose/*`, `CreatureLocomotionFacts`, `LocomotionStateDerive` |
 | World | `SpawnCreature`, `SpawnCreatureByView`, `PickCreatureByView`, `TryApplySkin`, `DoMovement` |
 | UI | `ContentTypeRegistry`, `CreativePaletteScreen`, `CreatureIconCache` |
 
