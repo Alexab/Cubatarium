@@ -186,9 +186,14 @@ void InputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int a
         instance->mouseButtonJustReleased[button] = true;
     }
 
-    // Call user callback
+    double x = 0.0;
+    double y = 0.0;
+    glfwGetCursorPos(window, &x, &y);
+    const glm::vec2 pos(static_cast<float>(x), static_cast<float>(y));
+    instance->mousePosition = pos;
+
     if (instance->mouseButtonCallback) {
-        instance->mouseButtonCallback(mouseButton, pressed, instance->mousePosition);
+        instance->mouseButtonCallback(mouseButton, pressed, pos);
     }
 }
 
