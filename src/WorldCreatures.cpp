@@ -9,6 +9,7 @@
 #include "User.h"
 #include "Camera.h"
 #include "ViewEngine.h"
+#include "activity/CreatureActivityRegistry.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -28,6 +29,8 @@ void World::SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStora
 
 void World::RegisterDefaultActivityAgents()
 {
+ activityDirector_.Clear();
+ RegisterDefaultCreatureActivityAgents(activityDirector_);
 }
 
 std::optional<ControlledCreatureInfo> World::QueryControlledCreatureInfo() const

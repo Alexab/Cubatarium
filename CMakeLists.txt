@@ -56,6 +56,8 @@ set(SOURCES
     src/CreatureWanderBehavior.cpp
     src/activity/CreatureActivityDirector.cpp
     src/activity/WorldCreatureActivitySink.cpp
+    src/activity/CreatureActivityRegistry.cpp
+    src/activity/agents/WanderActivityAgent.cpp
     src/WorldCreatures.cpp
     src/CreatureDefinitionStorage.cpp
     src/CreatureTextureStorage.cpp
