@@ -8,8 +8,10 @@ namespace cutum {
 enum class AppCursorPolicy {
     /// Обычный курсор (меню, UI-only).
     Free,
-    /// Видимый курсор, не выходит за клиентскую область окна.
+    /// Видимый курсор, не выходит за клиентскую область окна (Cubatarium).
     ConfinedVisible,
+    /// Скрытый курсор, относительное движение (Classic / Minecraft).
+    CapturedHidden,
 };
 
 void ApplyCursorPolicy(GLFWwindow* window, AppCursorPolicy policy);

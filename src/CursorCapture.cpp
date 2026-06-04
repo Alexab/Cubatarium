@@ -85,11 +85,18 @@ void ApplyCursorPolicy(GLFWwindow* window, AppCursorPolicy policy)
         return;
     }
 
-    if (TryGlfwCapturedCursor(window)) {
+    if (policy == AppCursorPolicy::CapturedHidden) {
+        if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+        if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
+            TryGlfwCapturedCursor(window);
+        }
         ReleasePlatformCursorClip();
         return;
     }
 
+    // ConfinedVisible
     if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL) {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }

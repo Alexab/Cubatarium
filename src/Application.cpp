@@ -368,6 +368,7 @@ void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
             world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
     }
+    SyncCursorVisibility();
 }
 
 void Application::CreateNewWorldWithSettings(const ProceduralSettings& settings)
@@ -449,6 +450,9 @@ AppCursorPolicy Application::GetCursorPolicy() const
         return AppCursorPolicy::Free;
     }
     if (state_ == AppState::InGame) {
+        if (uiSettings_.controlScheme == ControlScheme::Classic) {
+            return AppCursorPolicy::CapturedHidden;
+        }
         return AppCursorPolicy::ConfinedVisible;
     }
     return AppCursorPolicy::Free;
@@ -794,6 +798,7 @@ bool Application::RouteKey(int key, int action, int mods)
       } else {
         suppressConsoleToggleChar_ = false;
       }
+      SyncCursorVisibility();
       return true;
     }
     if (!consoleOpen_ && key == GLFW_KEY_F5 && world_) {
@@ -810,6 +815,7 @@ bool Application::RouteKey(int key, int action, int mods)
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
       }
+      SyncCursorVisibility();
       return true;
     }
     if (!consoleOpen_ && KeyNameIs(uiSettings_.inventoryKey, key)) {
@@ -817,6 +823,7 @@ bool Application::RouteKey(int key, int action, int mods)
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
       }
+      SyncCursorVisibility();
       return true;
     }
     if (consoleOpen_ && key == GLFW_KEY_ENTER && consoleScreen_) {
