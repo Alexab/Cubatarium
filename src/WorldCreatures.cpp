@@ -168,6 +168,9 @@ CreatureId World::SpawnCreature(const std::string& speciesId, const glm::vec3& b
  creature->SetVisual(CreateCreatureVisual(*def));
  creatures_[id] = std::move(creature);
  SnapCreatureFeetToGround(*creatures_[id]);
+ if (def->role != CreatureRole::ControlledDefault) {
+  activityDirector_.OnCreatureAdded(id, def->behavior.id);
+ }
  return id;
 }
 
@@ -179,6 +182,7 @@ void World::RemoveCreature(CreatureId id)
  if (playerCreatureId_ == id) {
   playerCreatureId_ = 0;
  }
+ activityDirector_.OnCreatureRemoved(id);
  creatures_.erase(id);
 }
 
@@ -388,6 +392,7 @@ void World::LoadCreatures(const std::string& file_name)
   if (!data.contains("creatures") || !data["creatures"].is_array()) {
    return;
   }
+  activityDirector_.Clear();
   for (const auto& c : data["creatures"]) {
    const CreatureId id = c.value("id", 0);
    if (id == 0) {
@@ -428,6 +433,7 @@ void World::LoadCreatures(const std::string& file_name)
    creature->GetInventory().DeserializeFromJson(c);
    SnapCreatureFeetToGround(*creature);
    creatures_[id] = std::move(creature);
+   activityDirector_.OnCreatureAdded(id, def->behavior.id);
    nextCreatureId_ = std::max(nextCreatureId_, id + 1);
   }
   if (playerCreatureId_ != 0 && controlledCreatureId_ == 0) {

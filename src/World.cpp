@@ -40,6 +40,7 @@
 #include "CreatureInventory.h"
 #include "CreatureDefinitionStorage.h"
 #include "CreatureVisualFactory.h"
+#include "activity/WorldCreatureActivitySink.h"
 #include "Frustum.h"
 #include "RenderSettings.h"
 #include <map>
@@ -1711,12 +1712,17 @@ void World::DoMovement()
   streamer_->EnsureCollisionChunks(feetBlock);
  }
 
- // TODO(CREATURE_AGENTS): creatureActivityDirector_.TickAgents(*this, dt);
+ WorldCreatureActivitySink activitySink(*this);
+ activityDirector_.TickAgents(*this, activitySink, dt);
+
  ForEachCreature([&](Creature& creature) {
   if (controlledCreatureId_ != 0 && creature.GetId() == controlledCreatureId_) {
    return;
   }
-  creature.ApplyIntent(*this, dt);
+  if (creature.IsPossessed()) {
+   return;
+  }
+  creature.ExecuteIntent(*this, dt);
  });
 
  bool is_moved = camera && camera->DoMovement(this);
