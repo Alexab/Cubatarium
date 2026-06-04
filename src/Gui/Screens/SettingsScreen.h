@@ -51,9 +51,9 @@ private:
     GuiLabel* paletteKeyLabel_{nullptr};
     GuiLabel* hotbarCountLabel_{nullptr};
     GuiLabel* hotbarCountValueLabel_{nullptr};
-    GuiLabel* blockInputProfileLabel_{nullptr};
-    GuiButton* blockInputProfileButton_{nullptr};
-    BlockInputProfile blockInputProfile_{BlockInputProfile::Classic};
+    GuiLabel* controlSchemeLabel_{nullptr};
+    GuiButton* controlSchemeButton_{nullptr};
+    ControlScheme controlScheme_{ControlScheme::Classic};
 
     GuiTextInput* defaultUserInput_{nullptr};
     GuiTextInput* defaultWorldInput_{nullptr};

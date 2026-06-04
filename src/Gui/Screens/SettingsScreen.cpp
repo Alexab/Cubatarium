@@ -89,7 +89,7 @@ void SettingsScreen::OnSave()
         app.ui.paletteKey = paletteKeyInput_->GetText();
     }
     app.ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
-    app.ui.blockInputProfile = blockInputProfile_;
+    app.ui.controlScheme = controlScheme_;
     if (app.render.greedyMeshing && !app.render.faceQuads) {
         app.render.faceQuads = true;
     }
@@ -119,7 +119,7 @@ void SettingsScreen::Build(GuiContext& ctx)
     const AppSettingsSnapshot appSnap = host_ ? host_->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
     hotbarCount_ = std::clamp(appSnap.ui.hotbarCount, 1, 2);
-    blockInputProfile_ = appSnap.ui.blockInputProfile;
+    controlScheme_ = appSnap.ui.controlScheme;
 
     auto backdrop = std::make_unique<GuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
@@ -226,21 +226,22 @@ void SettingsScreen::Build(GuiContext& ctx)
     hotbarPlusButton_ = hotbarPlus.get();
     app.AddChild(std::move(hotbarPlus));
 
-    auto blockProfileLbl = std::make_unique<GuiLabel>(&theme, "Block input profile:");
-    blockInputProfileLabel_ = blockProfileLbl.get();
-    app.AddChild(std::move(blockProfileLbl));
+    auto controlSchemeLbl = std::make_unique<GuiLabel>(&theme, "Control scheme:");
+    controlSchemeLabel_ = controlSchemeLbl.get();
+    app.AddChild(std::move(controlSchemeLbl));
     auto profileBtn = std::make_unique<GuiButton>(
-        &theme, blockInputProfile_ == BlockInputProfile::Cubatarium ? "Cubatarium" : "Classic");
+        &theme,
+        controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic (Minecraft)");
     profileBtn->SetOnClick([this]() {
-        blockInputProfile_ = blockInputProfile_ == BlockInputProfile::Classic
-                                 ? BlockInputProfile::Cubatarium
-                                 : BlockInputProfile::Classic;
-        if (blockInputProfileButton_) {
-            blockInputProfileButton_->SetLabel(
-                blockInputProfile_ == BlockInputProfile::Cubatarium ? "Cubatarium" : "Classic");
+        controlScheme_ = controlScheme_ == ControlScheme::Classic
+                             ? ControlScheme::Cubatarium
+                             : ControlScheme::Classic;
+        if (controlSchemeButton_) {
+            controlSchemeButton_->SetLabel(
+                controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic (Minecraft)");
         }
     });
-    blockInputProfileButton_ = profileBtn.get();
+    controlSchemeButton_ = profileBtn.get();
     app.AddChild(std::move(profileBtn));
 
     GuiPanel& world = frame->AddScrollPage();
@@ -318,8 +319,8 @@ std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& sp
         {paletteKeyInput_, 8, 1, 1, 1, 32},
         {hotbarCountLabel_, 9, 0, 1, 1, 28},
         {hotbarCountValueLabel_, hotbarValueRow, hotbarValueCol, 1, 1, 32},
-        {blockInputProfileLabel_, 10, 0, 1, 1, 28},
-        {blockInputProfileButton_, 10, 1, 1, 1, 32},
+        {controlSchemeLabel_, 10, 0, 1, 1, 28},
+        {controlSchemeButton_, 10, 1, 1, 1, 32},
     };
 }
 

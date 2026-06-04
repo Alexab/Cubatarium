@@ -16,21 +16,24 @@ std::string ToLowerAscii(std::string s)
 
 } // namespace
 
-BlockInputProfile BlockInputProfileFromString(const std::string& value)
+ControlScheme ControlSchemeFromString(const std::string& value)
 {
     const std::string key = ToLowerAscii(value);
     if (key == "cubatarium") {
-        return BlockInputProfile::Cubatarium;
+        return ControlScheme::Cubatarium;
     }
-    return BlockInputProfile::Classic;
+    if (key == "classic" || key == "minecraft") {
+        return ControlScheme::Classic;
+    }
+    return ControlScheme::Classic;
 }
 
-const char* BlockInputProfileToString(BlockInputProfile profile)
+const char* ControlSchemeToString(ControlScheme scheme)
 {
-    switch (profile) {
-    case BlockInputProfile::Cubatarium:
+    switch (scheme) {
+    case ControlScheme::Cubatarium:
         return "cubatarium";
-    case BlockInputProfile::Classic:
+    case ControlScheme::Classic:
     default:
         return "classic";
     }

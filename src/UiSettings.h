@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-enum class BlockInputProfile {
+enum class ControlScheme {
     Classic,
     Cubatarium,
 };
@@ -17,15 +17,16 @@ struct UiSettings {
     std::string inventoryKey{"e"};
     int hotbarCount{1};
 
-    BlockInputProfile blockInputProfile{BlockInputProfile::Classic};
+    ControlScheme controlScheme{ControlScheme::Classic};
     float placeClickMaxSeconds{0.20f};
     float breakHoldMinSeconds{0.50f};
     float breakDurationSeconds{0.25f};
+    /// Cubatarium only: RMB drag distance before treating as camera look.
     int rmbDragThresholdPx{4};
 };
 
-BlockInputProfile BlockInputProfileFromString(const std::string& value);
-const char* BlockInputProfileToString(BlockInputProfile profile);
+ControlScheme ControlSchemeFromString(const std::string& value);
+const char* ControlSchemeToString(ControlScheme scheme);
 
 } // namespace cutum
 

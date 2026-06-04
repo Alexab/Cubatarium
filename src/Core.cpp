@@ -255,8 +255,13 @@ void Core::LoadConfig(const std::string& config_file_name)
        uiSettings_.paletteKey = u.value("palette_key", "b");
        uiSettings_.inventoryKey = u.value("inventory_key", "e");
        uiSettings_.hotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
-       uiSettings_.blockInputProfile =
-           BlockInputProfileFromString(u.value("block_input_profile", "classic"));
+       std::string schemeStr = "classic";
+       if (u.contains("control_scheme") && u["control_scheme"].is_string()) {
+        schemeStr = u["control_scheme"].get<std::string>();
+       } else if (u.contains("block_input_profile") && u["block_input_profile"].is_string()) {
+        schemeStr = u["block_input_profile"].get<std::string>();
+       }
+       uiSettings_.controlScheme = ControlSchemeFromString(schemeStr);
        uiSettings_.placeClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
        uiSettings_.breakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
        uiSettings_.breakDurationSeconds = u.value("break_duration_seconds", 0.25f);
