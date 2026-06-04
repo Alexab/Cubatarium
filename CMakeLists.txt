@@ -71,6 +71,7 @@ set(SOURCES
     src/pose/TerrestrialBipedPosePresenter.cpp
     src/Core.cpp
     src/UiSettings.cpp
+    src/BlockInputController.cpp
     src/Cube.cpp
     src/CubeGL.cpp
     src/Object.cpp
@@ -181,6 +182,7 @@ set(HEADERS
     src/ViewEngine.h
     src/World.h
     src/WindowManager.h
+    src/BlockInputController.h
     src/GeometryEngine.h
     src/BlockTypes.h
     src/GridMath.h

@@ -1,4 +1,5 @@
 #include "WindowManager.h"
+#include "BlockInputController.h"
 #include "Application.h"
 #include "InputManager.h"
 #include "Core.h"
@@ -47,10 +48,9 @@ WindowManager::WindowManager()
     , isRunning(false)
     , isInitialized(false)
     , deltaTime(0.0)
-    , isMousePressed(false)
-    , isLeftMouseButtonPressed(false)
     , skyColor(0.5f, 0.7f, 1.0f, 1.0f)
     , useGradientSky(false)
+    , blockInput_(std::make_unique<BlockInputController>())
 {
     lastFrameTime = std::chrono::high_resolution_clock::now();
     lastAutosaveTime_ = std::chrono::steady_clock::now();
@@ -260,6 +260,15 @@ void WindowManager::Update() {
 
     if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         worldInstance->DoMovement();
+        if (blockInput_) {
+            BlockInputContext ctx;
+            ctx.world = worldInstance.get();
+            ctx.geometries = geometries.get();
+            ctx.ui = core ? &core->GetUiSettings() : nullptr;
+            ctx.window = window;
+            ctx.app = application_.get();
+            blockInput_->Tick(static_cast<float>(deltaTime), ctx);
+        }
     }
 
     if (core && worldInstance && application_ && application_->GetState() == AppState::InGame) {
@@ -347,7 +356,15 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
             // reserved
         }
         else if (key == KeyCode::Key_Delete) {
-            worldInstance->DelObjectByView();
+            if (blockInput_) {
+                BlockInputContext ctx;
+                ctx.world = worldInstance.get();
+                ctx.geometries = geometries.get();
+                ctx.ui = core ? &core->GetUiSettings() : nullptr;
+                ctx.window = window;
+                ctx.app = application_.get();
+                blockInput_->OnKeyDelete(ctx);
+            }
         }
         else if (key == KeyCode::Key_F1) {
             SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Blue sky
@@ -394,8 +411,6 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
 
 void WindowManager::ResetGameplayMouseCapture()
 {
-    isMousePressed = false;
-    isLeftMouseButtonPressed = false;
     if (worldInstance && window) {
         double x = 0.0;
         double y = 0.0;
@@ -412,16 +427,14 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                          : button == MouseButton::Right  ? GLFW_MOUSE_BUTTON_RIGHT
                                                          : GLFW_MOUSE_BUTTON_MIDDLE;
 
-    if (button == MouseButton::Right && !pressed) {
-        isMousePressed = false;
-    }
-
     if (application_ &&
         application_->RouteMouseButton(glfwButton, pressed, fbPos.x, fbPos.y)) {
         return;
     }
 
-    if (!worldInstance) return;
+    if (!worldInstance || !blockInput_) {
+        return;
+    }
     if (application_ && application_->GetState() != AppState::InGame) {
         return;
     }
@@ -430,73 +443,17 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
         const bool allowPlace =
             button == MouseButton::Left && !pressed && application_->AllowsWorldMousePlacement();
         if (!allowPlace) {
-            if (button == MouseButton::Right && !pressed) {
-                isMousePressed = false;
-            }
             return;
         }
     }
 
-    if (button == MouseButton::Right) {
-        if (pressed) {
-            if (auto camera = worldInstance->GetCurrentUserCamera()) {
-                camera->ResetMouseMove(pos.x, pos.y);
-            }
-            isMousePressed = true;
-        }
-    }
-    else if (button == MouseButton::Left) {
-        if (pressed) {
-            leftMousePressed = std::chrono::steady_clock::now();
-            isLeftMouseButtonPressed = true;
-        } else {
-            isLeftMouseButtonPressed = false;
-            double delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - leftMousePressed).count() / 1000.0;
-            
-            const bool altDown = window &&
-                (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-                 glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
-
-            const float breakHoldMin = core ? core->GetUiSettings().breakHoldMinSeconds : 0.5f;
-            if (delta_time < breakHoldMin) {
-                const InventoryEntryRef* active = nullptr;
-                if (Creature* controlled = worldInstance->GetControlledCreature()) {
-                    active = controlled->GetInventory().GetActiveEntryRef();
-                }
-                if (active && active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
-                    if (!worldInstance->SpawnCreatureByView(active->id) && geometries) {
-                        geometries->ShowTransientMessage("Cannot spawn " + active->id, 2.0);
-                    }
-                } else if (active && active->kind == InventoryEntryKind::Skin && !active->id.empty()) {
-                    auto camera = worldInstance->GetCurrentUserCamera();
-                    if (camera) {
-                        const auto target = worldInstance->PickCreatureByView(
-                            camera->GetPosition(), camera->GetFront(), 8.0f);
-                        std::string error;
-                        if (target && worldInstance->TryApplySkin(*target, active->id, &error)) {
-                            // applied
-                        } else if (geometries) {
-                            geometries->ShowTransientMessage(
-                                error.empty() ? "No creature in view" : error, 2.0);
-                        }
-                    }
-                } else {
-                    const bool placePrefab =
-                        altDown
-                        || (active && active->kind == InventoryEntryKind::Object
-                            && !active->id.empty());
-                    if (placePrefab) {
-                        worldInstance->PlaceActivePrefabByView();
-                    } else {
-                        worldInstance->AddObjectByView();
-                    }
-                }
-            } else {
-                worldInstance->DelObjectByView();
-            }
-        }
-    }
+    BlockInputContext ctx;
+    ctx.world = worldInstance.get();
+    ctx.geometries = geometries.get();
+    ctx.ui = core ? &core->GetUiSettings() : nullptr;
+    ctx.window = window;
+    ctx.app = application_.get();
+    blockInput_->OnMouseButton(button, pressed, pos, ctx);
 }
 
 void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
@@ -516,13 +473,13 @@ void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
         return;
     }
 
-    if (!isMousePressed) {
-        return;
-    }
-
-    if (auto camera = worldInstance->GetCurrentUserCamera()) {
-        camera->UpdateMouseMove(worldInstance, pos.x, pos.y);
-    }
+    BlockInputContext ctx;
+    ctx.world = worldInstance.get();
+    ctx.geometries = geometries.get();
+    ctx.ui = core ? &core->GetUiSettings() : nullptr;
+    ctx.window = window;
+    ctx.app = application_.get();
+    blockInput_->OnMouseMove(pos, delta, ctx);
 }
 
 void WindowManager::HandleWindowResizeEvent(int width, int height) {
@@ -627,7 +584,7 @@ void WindowManager::RenderHelpText() {
     // Main control hints in English
     std::vector<std::string> helpLines = {
         "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, RMB hold - Look, ` - Console",
-        "LMB - Place/remove, 0-9 primary hotbar, E inventory",
+        "Classic: hold LMB break, RMB place; Cubatarium in Settings",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };

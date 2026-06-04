@@ -20,6 +20,7 @@ class GeometryEngine;
 class ViewEngine;
 class InputManager;
 class Application;
+class BlockInputController;
 
 enum class KeyCode;
 enum class KeyState;
@@ -105,10 +106,7 @@ private:
     static constexpr double kAutosaveIntervalSec = 60.0;
     double deltaTime;
     
-    glm::vec2 mousePressPosition;
-    bool isMousePressed;
-    bool isLeftMouseButtonPressed;
-    std::chrono::steady_clock::time_point leftMousePressed;
+    std::unique_ptr<BlockInputController> blockInput_;
     
     glm::vec4 skyColor;
     bool useGradientSky;
