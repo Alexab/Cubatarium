@@ -186,29 +186,30 @@ void CreatureLocomotionController::landStanding(const World* world, glm::vec3& e
                                                 CreatureId skipCreatureId)
 {
  stanceBlend_ = 0.0f;
- onGround_ = true;
- verticalVelocity_ = 0.0f;
  if (!world) {
+  onGround_ = false;
   feetAnchored_ = false;
   return;
  }
  if (!anchorFeetFromStandingEye(world, eyePos)) {
+  onGround_ = false;
   return;
  }
  const PlayerCapsule cap = GetCapsule();
- const int supportY = static_cast<int>(std::floor(feetY_ - 0.04f));
- const glm::ivec3 standCell(WorldCoordToBlockIndex(eyePos.x), supportY,
-                            WorldCoordToBlockIndex(eyePos.z));
- if (!world->IsValidStandCell(standCell, cap)) {
+ if (!world->IsValidStandFootprint(eyePos, cap, feetY_)) {
   onGround_ = false;
   feetAnchored_ = false;
   return;
  }
  eyePos.y = feetY_ + cap.eyeHeight;
- for (int i = 0; i < 32 && world->CheckCollision(eyePos, cap, skipCreatureId); ++i) {
-  eyePos.y += 0.1f;
+ if (world->CheckCollision(eyePos, cap, skipCreatureId)) {
+  onGround_ = false;
+  feetAnchored_ = false;
+  return;
  }
- anchorFeetFromStandingEye(world, eyePos);
+
+ onGround_ = true;
+ verticalVelocity_ = 0.0f;
  syncEyeFromFeet(eyePos);
 }
 

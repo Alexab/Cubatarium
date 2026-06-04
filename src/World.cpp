@@ -385,6 +385,70 @@ bool World::IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) c
  return true;
 }
 
+namespace {
+
+constexpr int kFootprintMinSolidSamples = 4;
+
+struct FootprintStandSampleStats {
+ int solidSamples{0};
+ int validStandSamples{0};
+ bool centerSolid{false};
+ bool centerValidStand{false};
+};
+
+FootprintStandSampleStats SampleFootprintAtFeet(const World& world, const BlockWorld& blockWorld,
+                                                const BlockRegistry& registry, float feetY,
+                                                float centerX, float centerZ, float halfWidth,
+                                                const PlayerCapsule& cap, bool checkValidStand)
+{
+ FootprintStandSampleStats stats{};
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const int centerGx = WorldCoordToBlockIndex(centerX);
+ const int centerGz = WorldCoordToBlockIndex(centerZ);
+ const float sampleX[3] = {centerX - halfWidth, centerX, centerX + halfWidth};
+ const float sampleZ[3] = {centerZ - halfWidth, centerZ, centerZ + halfWidth};
+ for (float sx : sampleX) {
+  for (float sz : sampleZ) {
+   const glm::ivec3 cell(WorldCoordToBlockIndex(sx), supportY, WorldCoordToBlockIndex(sz));
+   const bool solid = registry.BlocksMovement(blockWorld.GetBlock(cell));
+   if (!solid) {
+    continue;
+   }
+   ++stats.solidSamples;
+   const bool isCenter = cell.x == centerGx && cell.z == centerGz;
+   if (isCenter) {
+    stats.centerSolid = true;
+   }
+   if (!checkValidStand) {
+    continue;
+   }
+   if (!world.IsValidStandCell(cell, cap)) {
+    continue;
+   }
+   ++stats.validStandSamples;
+   if (isCenter) {
+    stats.centerValidStand = true;
+   }
+  }
+ }
+ return stats;
+}
+
+} // namespace
+
+bool World::IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                                  float feetY) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const CollisionVolume vol = CollisionVolumeFromEye(eyePos, cap);
+ const FootprintStandSampleStats stats = SampleFootprintAtFeet(
+     *this, blockWorld_, *blockRegistry_, feetY, vol.center.x, vol.center.z, cap.halfWidth, cap,
+     true);
+ return stats.centerValidStand && stats.validStandSamples >= kFootprintMinSolidSamples;
+}
+
 void World::EnsurePlayerOnGround()
 {
  auto user = GetCurrentUser();
@@ -1137,12 +1201,10 @@ bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) cons
  if (!blockRegistry_) {
   return false;
  }
- const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
- const glm::ivec3 standCell(
-     static_cast<int>(std::floor(vol.center.x)),
-     supportY,
-     static_cast<int>(std::floor(vol.center.z)));
- return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
+ const FootprintStandSampleStats stats = SampleFootprintAtFeet(
+     *this, blockWorld_, *blockRegistry_, feetY, vol.center.x, vol.center.z, vol.halfExtents.x,
+     PlayerCapsule{}, false);
+ return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
 }
 
 bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const

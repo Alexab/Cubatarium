@@ -149,6 +149,8 @@ public:
  std::optional<int> FindHighestSolidY(int x, int z) const;
  /// Stand cell is column top with standing clearance (step-up / landing validation).
  bool IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const;
+ /// Enough footprint samples on valid stand cells at `feetY` (blocks corner ledge / wall lip landings).
+ bool IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap, float feetY) const;
  CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
                           const std::string& skinId = "");
  bool SpawnCreatureByView(const std::string& speciesId);
