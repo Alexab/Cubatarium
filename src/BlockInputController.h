@@ -6,6 +6,7 @@
 #include "UiSettings.h"
 #include <chrono>
 #include <glm/glm.hpp>
+#include <memory>
 
 struct GLFWwindow;
 
@@ -16,7 +17,7 @@ class GeometryEngine;
 class World;
 
 struct BlockInputContext {
-    World* world{nullptr};
+    std::shared_ptr<World> world;
     GeometryEngine* geometries{nullptr};
     const UiSettings* ui{nullptr};
     GLFWwindow* window{nullptr};

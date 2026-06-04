@@ -1,6 +1,7 @@
 #include "BlockInputController.h"
 
 #include "Application.h"
+#include "Camera.h"
 #include "Creature.h"
 #include "CreatureInventory.h"
 #include "GeometryEngine.h"
@@ -296,10 +297,20 @@ void BlockInputController::Tick(float dt, const BlockInputContext& ctx)
         return;
     }
 
-    if (ctx.ui->blockInputProfile == BlockInputProfile::Classic
-        && ctx.world->GetIsBlockIntersectionExists()) {
-        ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+    if (!ctx.world->GetIsBlockIntersectionExists()) {
+        return;
     }
+
+    if (ctx.ui->blockInputProfile == BlockInputProfile::Cubatarium) {
+        const float holdSeconds = std::chrono::duration<float>(
+            std::chrono::steady_clock::now() - leftDownTime_).count();
+        if (holdSeconds >= ctx.ui->breakHoldMinSeconds) {
+            ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+        }
+        return;
+    }
+
+    ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
 }
 
 } // namespace cutum

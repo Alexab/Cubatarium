@@ -262,7 +262,7 @@ void WindowManager::Update() {
         worldInstance->DoMovement();
         if (blockInput_) {
             BlockInputContext ctx;
-            ctx.world = worldInstance.get();
+            ctx.world = worldInstance;
             ctx.geometries = geometries.get();
             ctx.ui = core ? &core->GetUiSettings() : nullptr;
             ctx.window = window;
@@ -358,7 +358,7 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         else if (key == KeyCode::Key_Delete) {
             if (blockInput_) {
                 BlockInputContext ctx;
-                ctx.world = worldInstance.get();
+                ctx.world = worldInstance;
                 ctx.geometries = geometries.get();
                 ctx.ui = core ? &core->GetUiSettings() : nullptr;
                 ctx.window = window;
@@ -448,7 +448,7 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
     }
 
     BlockInputContext ctx;
-    ctx.world = worldInstance.get();
+    ctx.world = worldInstance;
     ctx.geometries = geometries.get();
     ctx.ui = core ? &core->GetUiSettings() : nullptr;
     ctx.window = window;
@@ -474,7 +474,7 @@ void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
     }
 
     BlockInputContext ctx;
-    ctx.world = worldInstance.get();
+    ctx.world = worldInstance;
     ctx.geometries = geometries.get();
     ctx.ui = core ? &core->GetUiSettings() : nullptr;
     ctx.window = window;
