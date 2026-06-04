@@ -23,6 +23,11 @@ using json = nlohmann::json;
 void World::SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage)
 {
  creatureDefinitions_ = std::move(storage);
+ RegisterDefaultActivityAgents();
+}
+
+void World::RegisterDefaultActivityAgents()
+{
 }
 
 void World::SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage)

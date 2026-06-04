@@ -54,6 +54,7 @@ set(SOURCES
     src/CreatureInventory.cpp
     src/Player.cpp
     src/CreatureWanderBehavior.cpp
+    src/activity/CreatureActivityDirector.cpp
     src/WorldCreatures.cpp
     src/CreatureDefinitionStorage.cpp
     src/CreatureTextureStorage.cpp

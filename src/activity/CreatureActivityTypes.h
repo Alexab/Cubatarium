@@ -1,0 +1,28 @@
+#ifndef CREATUREACTIVITYTYPES_H
+#define CREATUREACTIVITYTYPES_H
+
+#include <cstdint>
+#include <string>
+#include <glm/glm.hpp>
+
+namespace cutum {
+
+using CreatureId = uint64_t;
+
+struct ControlledCreatureInfo {
+ CreatureId id{0};
+ glm::vec3 eyePosition{0.0f};
+};
+
+struct CreatureActivityView {
+ CreatureId id{0};
+ glm::vec3 bodyOrigin{0.0f};
+ std::string typeId;
+ std::string behaviorId;
+ bool possessed{false};
+ bool isPlayerCharacter{false};
+};
+
+} // namespace cutum
+
+#endif

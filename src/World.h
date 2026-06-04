@@ -32,6 +32,7 @@
 #include "PlayerCapsule.h"
 #include "Creature.h"
 #include "CreatureCatalogTypes.h"
+#include "activity/CreatureActivityDirector.h"
 
 namespace cutum {
 
@@ -141,6 +142,7 @@ public:
  CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
  bool SetControlledCreature(CreatureId id);
  void ApplyLocomotionDefinitionToCamera(Camera& camera, const CreatureDefinition& def) const;
+ void RegisterDefaultActivityAgents();
  void SnapCreatureFeetToGround(Creature& creature) const;
  /// Top face under feet: highest solid in column at or below referenceFeetY (runtime pose).
  std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ, float referenceFeetY) const;
@@ -317,6 +319,7 @@ private:
  CreatureId controlledCreatureId_{0};
  std::shared_ptr<CreatureDefinitionStorage> creatureDefinitions_;
  std::shared_ptr<SkinDefinitionStorage> skinDefinitions_;
+ CreatureActivityDirector activityDirector_;
 
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<ViewEngine> ViewInstance;
