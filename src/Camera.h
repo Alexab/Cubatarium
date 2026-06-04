@@ -9,6 +9,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "CreatureBounds.h"
+#include "LocomotionTypes.h"
 #include "PlayerCapsule.h"
 #include "PlayerController.h"
 #include "CameraPerspective.h"
@@ -65,6 +67,8 @@ public:
 
  bool DoMovement(const World* world);
  void ResetVerticalPhysics();
+ void ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
+                              const CreatureBoundsProfile& bounds, float eyeHeight);
 
  PlayerCapsule GetPlayerCapsule() const;
  float GetAnchoredFeetY() const;

@@ -6,7 +6,8 @@
 
 namespace cutum {
 
-void ApplyWanderIntent(Creature& self, const CreatureBehaviorParams& params, float dt)
+void ApplyWanderIntent(Creature& self, const CreatureBehaviorParams& params,
+                       const CreatureLocomotionCapabilities& locomotion, float dt)
 {
  if (self.IsPossessed()) {
   return;
@@ -21,7 +22,7 @@ void ApplyWanderIntent(Creature& self, const CreatureBehaviorParams& params, flo
 
  CreatureIntent intent;
  intent.moveDirWorld = self.GetWanderDirection();
- intent.moveSpeed = params.moveSpeed;
+ intent.moveSpeed = locomotion.walkSpeed > 0.0f ? locomotion.walkSpeed : params.moveSpeed;
  intent.suggestedAnim = LocomotionState::Walk;
  intent.clearOnApply = false;
  self.SetIntent(intent);

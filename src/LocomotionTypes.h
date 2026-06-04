@@ -29,6 +29,10 @@ struct CreatureLocomotionCapabilities {
  bool canFly{true};
  bool canCrouch{true};
  bool canJump{true};
+ /// Feet rise in blocks at jump apex (used with shared gravity to derive jump speed).
+ float jumpHeightBlocks{1.25f};
+ float walkSpeed{3.0f};
+ float flySpeed{3.0f};
 };
 
 } // namespace cutum

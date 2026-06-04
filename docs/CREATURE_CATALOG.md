@@ -42,8 +42,9 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `catalog`: `tags`, `spawnable`, `sort_order`
 - `role`: `controlled_default` | `mob`
 - `bounds`, `eye_height`, `locomotion`
+- `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander`
-- `behavior_params`: `move_speed`, `wander_interval_min`, `wander_interval_max`
+- `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
 - `visual`: `backend`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`), `icon` (`mode`: `parts_preview`, `color`)
 
 ### `skin.json`

@@ -5,7 +5,13 @@
   "role": "mob",
   "bounds": { "rest": [1.0, 2.0, 1.0], "max": [1.0, 2.0, 1.0], "min": [1.0, 1.5, 1.0] },
   "eye_height": 1.85,
-  "locomotion": { "can_fly": false, "can_crouch": false, "can_jump": true },
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 0.9,
+    "walk_speed": 1.2
+  },
   "behavior": "wander",
   "behavior_params": { "move_speed": 1.2, "wander_interval_min": 2.5, "wander_interval_max": 5.0 },
   "visual": {

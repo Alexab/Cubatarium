@@ -86,18 +86,26 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
        ReadVec3(b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
   }
   def.eyeHeight = data.value("eye_height", def.eyeHeight);
-  if (data.contains("locomotion")) {
-   const auto& loc = data["locomotion"];
-   def.locomotion.canFly = loc.value("can_fly", true);
-   def.locomotion.canCrouch = loc.value("can_crouch", true);
-   def.locomotion.canJump = loc.value("can_jump", true);
-  }
   def.behavior.id = data.value("behavior", def.behavior.id);
   if (data.contains("behavior_params") && data["behavior_params"].is_object()) {
    const auto& bp = data["behavior_params"];
    def.behavior.moveSpeed = bp.value("move_speed", def.behavior.moveSpeed);
    def.behavior.wanderIntervalMin = bp.value("wander_interval_min", def.behavior.wanderIntervalMin);
    def.behavior.wanderIntervalMax = bp.value("wander_interval_max", def.behavior.wanderIntervalMax);
+  }
+  if (data.contains("locomotion")) {
+   const auto& loc = data["locomotion"];
+   def.locomotion.canFly = loc.value("can_fly", true);
+   def.locomotion.canCrouch = loc.value("can_crouch", true);
+   def.locomotion.canJump = loc.value("can_jump", true);
+   def.locomotion.jumpHeightBlocks = loc.value("jump_height", def.locomotion.jumpHeightBlocks);
+   const bool hasWalkSpeed = loc.contains("walk_speed");
+   def.locomotion.walkSpeed =
+       loc.value("walk_speed", hasWalkSpeed ? def.locomotion.walkSpeed : def.behavior.moveSpeed);
+   def.locomotion.flySpeed = loc.value("fly_speed", def.locomotion.walkSpeed);
+  } else {
+   def.locomotion.walkSpeed = def.behavior.moveSpeed;
+   def.locomotion.flySpeed = def.locomotion.walkSpeed;
   }
   if (data.contains("visual") && data["visual"].is_object()) {
    const auto& vis = data["visual"];

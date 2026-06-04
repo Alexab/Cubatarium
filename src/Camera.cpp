@@ -283,7 +283,7 @@ void Camera::SetViewEngine(ViewEngine* view_engine)
 
 glm::vec3 Camera::ComputeHorizontalShift(float deltaTime)
 {
- const float velocity = MovementSpeed * deltaTime;
+ const float velocity = locomotion_.GetWalkSpeed() * deltaTime;
  glm::vec3 shift(0.0f);
  if (KeysStatus[GLFW_KEY_W]) {
   shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
@@ -398,9 +398,12 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
  const bool grounded =
      world->HasGroundSupport(Position, cap) || locomotion_.IsOnGround();
  const glm::vec3 intent = GetMoveIntentDir();
+ const PlayerInput stepInput = BuildPlayerInput(false);
 
  bool stepped = false;
  if (world->IsStepUpEnabled() && !fluid.inFluid && grounded
+     && locomotion_.IsOnGround() && locomotion_.IsFeetAnchored()
+     && !stepInput.jumpHeld
      && locomotion_.GetVerticalVelocity() <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
   const World::StepUpProbe probe = world->ProbeStepUp(
       newPos, intent, cap, kStepUpTriggerDistance);
@@ -432,7 +435,8 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
                              const PlayerCapsule& collisionCap)
 {
- const float velocity = MovementSpeed * deltaTime;
+ const float speed = FreeMove ? locomotion_.GetFlySpeed() : locomotion_.GetWalkSpeed();
+ const float velocity = speed * deltaTime;
  glm::vec3 shift(0.0f);
 
  if (direction == FORWARD) {
@@ -622,6 +626,16 @@ void Camera::InitLocomotionCollisionProfile()
  const PlayerCapsule stand = PlayerCapsule::Standing();
  locomotion_.SetCollisionProfile(
      glm::vec3(stand.halfWidth * 2.0f, stand.height, stand.halfWidth * 2.0f), stand.eyeHeight);
+}
+
+void Camera::ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
+                                     const CreatureBoundsProfile& bounds, float eyeHeight)
+{
+ locomotion_.SetCapabilities(caps);
+ const glm::vec3 size = bounds.restSizeBlocks.x > 0.0f ? bounds.restSizeBlocks
+                                                       : glm::vec3(0.6f, 1.8f, 0.6f);
+ locomotion_.SetCollisionProfile(size, eyeHeight);
+ MovementSpeed = caps.walkSpeed;
 }
 
 void Camera::ResetVerticalPhysics()
