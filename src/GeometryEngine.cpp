@@ -1177,28 +1177,24 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     // Set yellow color for crosshair
 uiShader->SetVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
     
-    // Crosshair dimensions
-int crosshairSize = 20; // Size in pixels
-int lineThickness = 2;  // Line thickness in pixels
-    
-    // Screen center
-    int centerX = width_size / 2;
-    int centerY = height_size / 2;
-    
-    // Create data for horizontal line
-    float horizontalLine[] = {
-        centerX - crosshairSize, centerY - lineThickness/2,  // Left point
-centerX + crosshairSize, centerY - lineThickness/2,  // Right point
-centerX - crosshairSize, centerY + lineThickness/2,  // Left point (bottom)
-centerX + crosshairSize, centerY + lineThickness/2   // Right point (bottom)
+    const float centerX = static_cast<float>(width_size) * 0.5f;
+    const float centerY = static_cast<float>(height_size) * 0.5f;
+    const float crosshairSize = 20.0f;
+    const float lineThickness = 2.0f;
+    const float halfThick = lineThickness * 0.5f;
+
+    const float horizontalLine[] = {
+        centerX - crosshairSize, centerY - halfThick,
+        centerX + crosshairSize, centerY - halfThick,
+        centerX - crosshairSize, centerY + halfThick,
+        centerX + crosshairSize, centerY + halfThick,
     };
-    
-    // Create data for vertical line
-    float verticalLine[] = {
-        centerX - lineThickness/2, centerY - crosshairSize,  // Top point
-centerX + lineThickness/2, centerY - crosshairSize,  // Top point (right)
-centerX - lineThickness/2, centerY + crosshairSize,  // Bottom point
-centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
+
+    const float verticalLine[] = {
+        centerX - halfThick, centerY - crosshairSize,
+        centerX + halfThick, centerY - crosshairSize,
+        centerX - halfThick, centerY + crosshairSize,
+        centerX + halfThick, centerY + crosshairSize,
     };
     
     // Create VAO and VBO for horizontal line

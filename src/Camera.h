@@ -141,8 +141,8 @@ private:
  float DeltaTime;
  std::chrono::time_point<std::chrono::steady_clock> LastFrame;
 
- float LastMouseX;
- float LastMouseY;
+ double LastMouseX{0.0};
+ double LastMouseY{0.0};
  bool FirstMouseCoords;
 
  glm::vec3 lastMoveIntentDir_{0.0f, 0.0f, -1.0f};

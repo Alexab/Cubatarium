@@ -10,7 +10,7 @@
 namespace cutum {
 
 class Creature;
-class CreatureDefinition;
+struct CreatureDefinition;
 class GeometryEngine;
 
 class ICreatureVisual {

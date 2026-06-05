@@ -34,8 +34,9 @@ BiomeId BiomeSampler::At(int x, int z, int surfaceY, int seaLevel, int maxHeight
      seed_ + 2000, 3, 0.5f, 2.0f);
  const float temperature = (tempRaw + 1.0f) * 0.5f;
  const float moisture = (moistRaw + 1.0f) * 0.5f;
- const float denom = std::max(1, maxHeight - seaLevel);
- const float localHeightNorm = std::clamp(static_cast<float>(surfaceY - seaLevel) / denom, 0.0f, 1.0f);
+ const float denom = static_cast<float>(std::max(1, maxHeight - seaLevel));
+ const float localHeightNorm = std::clamp(
+     static_cast<float>(surfaceY - seaLevel) / denom, 0.0f, 1.0f);
  return ClassifyBiome(temperature, moisture, localHeightNorm);
 }
 

@@ -42,8 +42,8 @@ Camera::Camera()
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
@@ -77,8 +77,8 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
@@ -111,8 +111,8 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
@@ -592,13 +592,13 @@ void Camera::UpdateMouseMove(std::shared_ptr<World> world, double xpos, double y
      FirstMouseCoords = false;
  }
 
- float xoffset = xpos - LastMouseX;
- float yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
+ const double xoffset = xpos - LastMouseX;
+ const double yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
 
  LastMouseX = xpos;
  LastMouseY = ypos;
 
- ProcessMouseMovement(xoffset, yoffset);
+ ProcessMouseMovement(static_cast<float>(xoffset), static_cast<float>(yoffset));
  world->UpdateIntersection(GetPosition(), GetFront());
 }
 
@@ -611,13 +611,14 @@ void Camera::ResetMouseMove(double xpos, double ypos)
 
 void Camera::UpdateMouseScroll(double xoffset, double yoffset)
 {
- ProcessMouseScroll(yoffset);
+ ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 void Camera::UpdateFrameTime()
 {
  auto current_frame = std::chrono::steady_clock::now();
- DeltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(current_frame-LastFrame).count() / 1000.0;
+ DeltaTime = static_cast<float>(
+     std::chrono::duration<double>(current_frame - LastFrame).count());
  LastFrame = current_frame;
 }
 

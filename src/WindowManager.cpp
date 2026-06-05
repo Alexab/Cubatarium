@@ -305,7 +305,8 @@ void WindowManager::Render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (geometries && views) {
-        geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
+        geometries->Paint(windowWidth, windowHeight,
+                          static_cast<double>(views->GetDurationUpdateMks()));
     }
 }
 

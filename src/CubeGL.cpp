@@ -58,7 +58,7 @@ CubeGL::~CubeGL()
 void CubeGL::Init(const glm::mat4 &initial_pose, float size)
 {
  Cube::Init(initial_pose, size);
- float size2 = Size / 2.0;
+ float size2 = Size * 0.5f;
 
  float cube_shift = 1.0f/6.0f;
 

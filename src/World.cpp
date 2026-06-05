@@ -1831,7 +1831,8 @@ void World::DoMovement()
  }
 
  auto t_end = std::chrono::high_resolution_clock::now();
- DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+ DurationDoMovementMks = static_cast<uint64_t>(
+     std::chrono::duration<double, std::micro>(t_end - t_begin).count());
  UpdateMovementDiagnostics(camera, prevPlayerY);
 }
 
