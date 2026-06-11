@@ -13,20 +13,23 @@
 
 ### Вариант 1: vcpkg (рекомендуется)
 
+На Windows проект линкуется **статически** (triplet `x64-windows-static`, CRT `/MT` для Release).
+VC++ Redistributable и DLL от vcpkg рядом с exe не нужны.
+
 ```bash
 # Установка vcpkg (если не установлен)
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 ./bootstrap-vcpkg.bat
 
-# Установка зависимостей
-vcpkg install glfw3:x64-windows
-vcpkg install glm:x64-windows
-vcpkg install glew:x64-windows
+# Установка зависимостей (static triplet)
+vcpkg install glfw3 glew glm freetype nlohmann-json --triplet x64-windows-static
 
 # Интеграция с CMake
 vcpkg integrate install
 ```
+
+После смены triplet удалите `bin/CMakeCache.txt` (или задачу clean-cache) и перезапустите configure.
 
 ### Вариант 2: Ручная установка
 

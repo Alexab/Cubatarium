@@ -4,12 +4,15 @@
 #include "AppState.h"
 #include "CursorCapture.h"
 #include "UiSettings.h"
+#include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/GuiContext.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "AppSettingsSnapshot.h"
 #include "Game/GameSession.h"
+#include "SlotInteraction.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "ProceduralSettings.h"
 #include <functional>
@@ -71,6 +74,8 @@ public:
     GameSession& GetGameSession() { return *gameSession_; }
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
+    /// ЛКМ в мир (постановка блока/префаба) при закрытых палитре и консоли, в т.ч. с видимым курсором (Left Alt).
+    bool AllowsWorldMousePlacement() const;
     const UiSettings& GetUiSettings() const { return uiSettings_; }
     int GetHotbarCountSetting() const { return uiSettings_.hotbarCount; }
     void SetHotbarCountSetting(int count);
@@ -99,11 +104,14 @@ private:
     void SyncCursorVisibility();
     AppCursorPolicy GetCursorPolicy() const;
     void EnterInGameInputState();
-    /// Выход из UI-only (Right Alt): обзор снова только по зажатой ПКМ.
+    /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.
     void RecaptureMouseForLook();
     bool UsesUiPointer() const;
     bool BlocksGameMouseLook() const;
     bool TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed);
+    bool ResolveSlotAt(int x, int y, SlotAddress& out);
+    void DrawDragGhost(int width, int height);
+    void ClearGameplayKeyboard();
 
     std::shared_ptr<Core> core_;
     std::shared_ptr<World> world_;
@@ -122,6 +130,12 @@ private:
     bool consoleOpen_{false};
     bool paletteOpen_{false};
     bool freeCursor_{false};
+    /// Подавить следующий glfw char после открытия консоли (символ клавиши-тоггла).
+    bool suppressConsoleToggleChar_{false};
+    enum class OverlayPointerCapture { None, Palette, Console, Hud };
+    OverlayPointerCapture overlayPointerCapture_{OverlayPointerCapture::None};
+    int dragCursorX_{0};
+    int dragCursorY_{0};
     bool worldSessionActive_{false};
     bool pendingEnterGame_{false};
     bool pendingQuit_{false};
@@ -132,6 +146,8 @@ private:
     std::unique_ptr<InGameHudScreen> hudScreen_;
     std::unique_ptr<ConsoleScreen> consoleScreen_;
     std::unique_ptr<CreativePaletteScreen> paletteScreen_;
+    std::unique_ptr<IGuiClipboard> clipboard_;
+    std::unique_ptr<GuiPopupMenu> overlayPopup_;
 
     MenuSubview menuSubview_{MenuSubview::Main};
     MainMenuScreen* mainMenuScreen_{nullptr};

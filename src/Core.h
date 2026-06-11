@@ -15,9 +15,12 @@
 
 namespace cutum {
 
+std::filesystem::path GetExecutableDirectory();
+
 class World;
 class TextureBaseStorage;
 class TextureCubeStorage;
+class CreatureTextureStorage;
 class ObjectStorage;
 class PrefabLibrary;
 class GeometryEngine;
@@ -68,9 +71,13 @@ public:
  uint32_t GetWorldSeed() const { return worldSeed_; }
  const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
+ bool IsEntityCollisionEnabled() const { return entityCollisionEnabled_; }
  std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
  std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
   return TextureCubeStorageInstance;
+ }
+ std::shared_ptr<CreatureTextureStorage> GetCreatureTextureStorage() const {
+  return CreatureTextureStorageInstance;
  }
 
 private:
@@ -96,11 +103,13 @@ private:
  int renderDistanceChunks_{4};
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
+ bool entityCollisionEnabled_{true};
  RenderSettings renderSettings_;
  UiSettings uiSettings_;
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
+ std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<PrefabLibrary> PrefabLibraryInstance;
  std::shared_ptr<GeometryEngine> GeometryEngineInstance;

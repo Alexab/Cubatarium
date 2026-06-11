@@ -34,6 +34,14 @@ struct PlayerCapsule {
   return {stand.height + (crouch.height - stand.height) * t,
           stand.eyeHeight + (crouch.eyeHeight - stand.eyeHeight) * t, stand.halfWidth};
  }
+
+ /// Collision capsule from creature bounds (body origin = feet, size in blocks).
+ static PlayerCapsule FromCreatureBlocks(const glm::vec3& sizeBlocks, float eyeHeight)
+ {
+  const float halfW = std::max(0.15f, sizeBlocks.x * 0.5f);
+  const float height = std::max(0.5f, sizeBlocks.y);
+  return {height, eyeHeight, halfW};
+ }
 };
 
 } // namespace cutum

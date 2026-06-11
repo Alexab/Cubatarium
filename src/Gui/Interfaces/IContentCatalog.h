@@ -6,7 +6,7 @@
 
 namespace cutum {
 
-enum class ContentKind { Block, Object };
+enum class ContentKind { Block, Object, Creature, Skin };
 
 struct CatalogEntry {
     std::string id;

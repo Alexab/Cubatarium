@@ -1,5 +1,6 @@
 #include "SettingsScreen.h"
 #include "AppSettingsSnapshot.h"
+#include "UiSettings.h"
 #include "Gui/GuiContext.h"
 #include "Gui/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -88,6 +89,7 @@ void SettingsScreen::OnSave()
         app.ui.paletteKey = paletteKeyInput_->GetText();
     }
     app.ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
+    app.ui.controlScheme = controlScheme_;
     if (app.render.greedyMeshing && !app.render.faceQuads) {
         app.render.faceQuads = true;
     }
@@ -117,6 +119,7 @@ void SettingsScreen::Build(GuiContext& ctx)
     const AppSettingsSnapshot appSnap = host_ ? host_->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
     hotbarCount_ = std::clamp(appSnap.ui.hotbarCount, 1, 2);
+    controlScheme_ = appSnap.ui.controlScheme;
 
     auto backdrop = std::make_unique<GuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
@@ -223,6 +226,24 @@ void SettingsScreen::Build(GuiContext& ctx)
     hotbarPlusButton_ = hotbarPlus.get();
     app.AddChild(std::move(hotbarPlus));
 
+    auto controlSchemeLbl = std::make_unique<GuiLabel>(&theme, "Control scheme:");
+    controlSchemeLabel_ = controlSchemeLbl.get();
+    app.AddChild(std::move(controlSchemeLbl));
+    auto profileBtn = std::make_unique<GuiButton>(
+        &theme,
+        controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
+    profileBtn->SetOnClick([this]() {
+        controlScheme_ = controlScheme_ == ControlScheme::Classic
+                             ? ControlScheme::Cubatarium
+                             : ControlScheme::Classic;
+        if (controlSchemeButton_) {
+            controlSchemeButton_->SetLabel(
+                controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
+        }
+    });
+    controlSchemeButton_ = profileBtn.get();
+    app.AddChild(std::move(profileBtn));
+
     GuiPanel& world = frame->AddScrollPage();
     worldPanel_ = &world;
     worldForm_ = std::make_unique<WorldGenSettingsForm>(&theme);
@@ -298,6 +319,8 @@ std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& sp
         {paletteKeyInput_, 8, 1, 1, 1, 32},
         {hotbarCountLabel_, 9, 0, 1, 1, 28},
         {hotbarCountValueLabel_, hotbarValueRow, hotbarValueCol, 1, 1, 32},
+        {controlSchemeLabel_, 10, 0, 1, 1, 28},
+        {controlSchemeButton_, 10, 1, 1, 1, 32},
     };
 }
 

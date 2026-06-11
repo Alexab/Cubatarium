@@ -11,6 +11,10 @@
 
 namespace cutum {
 
+namespace {
+constexpr int kQuitModalZOrder = 100;
+}
+
 MainMenuScreen::MainMenuScreen(IGuiGameActions* actions)
     : actions_(actions)
 {
@@ -35,7 +39,24 @@ void MainMenuScreen::ShowQuitConfirmation(bool visible)
         quitNoButton_->SetVisible(visible);
     }
     if (visible) {
+        if (quitBackdrop_) {
+            quitBackdrop_->SetZOrder(kQuitModalZOrder);
+        }
+        for (GuiButton* btn : buttons_) {
+            if (btn) {
+                btn->SetEnabled(false);
+            }
+        }
         RelayoutQuitDialog();
+    } else {
+        if (quitBackdrop_) {
+            quitBackdrop_->SetZOrder(0);
+        }
+        for (GuiButton* btn : buttons_) {
+            if (btn) {
+                btn->SetEnabled(true);
+            }
+        }
     }
 }
 

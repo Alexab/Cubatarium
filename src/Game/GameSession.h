@@ -2,12 +2,15 @@
 #define GAME_SESSION_H
 
 #include "Commands/CommandRegistry.h"
+#include "ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGameCommandContext.h"
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
 #include "Gui/Interfaces/IInventoryViewModel.h"
+#include "SlotInteraction.h"
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -54,6 +57,14 @@ public:
     bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) override;
     void ClearPendingAssignment() override;
 
+    bool OnPrimaryHotbarKey(int slotIndex);
+    void BeginDragFromSlot(const SlotAddress& source, const InventoryEntryRef& entry);
+    bool IsDragging() const;
+    const DragState& GetDrag() const { return drag_; }
+    bool DropOnSlot(const SlotAddress& target);
+    void CancelDrag();
+    InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
+
     std::vector<InventoryGroupView> GetGroups(ContentKind tab, InventoryMode mode) const override;
     std::vector<InventoryEntryView> GetEntries(ContentKind tab,
                                                const std::string& groupId,
@@ -71,14 +82,21 @@ public:
     void AddChatLine(const std::string& line) override;
     const std::vector<std::string>& GetChatLog() const { return chatLog_; }
 
+    ConsoleCommandHistory& GetCommandHistory() { return commandHistory_; }
+    const ConsoleCommandHistory& GetCommandHistory() const { return commandHistory_; }
+    void InitCommandHistory(const std::filesystem::path& filePath);
+    void SaveCommandHistory();
+
 private:
     Application* application_;
     std::shared_ptr<World> world_;
     CommandRegistry commandRegistry_;
     ContentTypeRegistry contentCatalog_;
     std::vector<std::string> chatLog_;
+    ConsoleCommandHistory commandHistory_;
     InventoryMode inventoryMode_{InventoryMode::Creative};
     std::optional<InventoryEntryRef> pendingAssignment_;
+    DragState drag_;
 };
 
 } // namespace cutum

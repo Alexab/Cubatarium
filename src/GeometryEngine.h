@@ -1,6 +1,8 @@
 #ifndef GEOMETRYENGINE_H
 #define GEOMETRYENGINE_H
 
+#include "CreaturePartMeshData.h"
+
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL types
 typedef unsigned int GLuint;
@@ -31,6 +33,7 @@ typedef int GLint;
 namespace cutum {
 
 class Core;
+class CreatureTextureStorage;
 
 // Structure for batch rendering
 struct RenderBatch {
@@ -74,6 +77,16 @@ public:
 
  void ShowTransientMessage(const std::string& msg, double seconds);
 
+ /// Unit cube wireframe (1x1 centered) with given MVP and color.
+ void DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color);
+
+ void SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage);
+ std::shared_ptr<CreatureTextureStorage> GetCreatureTextureStorage() const {
+  return CreatureTextureStorageInstance_;
+ }
+ void DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture,
+                               CreaturePartMesh mesh = CreaturePartMesh::Box);
+
  void SetRenderSettings(const RenderSettings& settings);
  const RenderSettings& GetRenderSettings() const { return renderSettings_; }
  std::shared_ptr<ShaderManager> GetShaderManager() const { return shaderManager; }
@@ -115,10 +128,25 @@ GLuint cubeDrawVAO = 0; // VAO used for DrawCube path (CubeGL VBO/EBO)
 GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
 GLuint previewTexture = 0; // Preview texture
 GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
+GLuint creaturePartVAO = 0;
+GLuint creaturePartVBO = 0;
+GLuint creaturePartEBO = 0;
+GLuint creatureHeadPartVAO = 0;
+GLuint creatureHeadPartVBO = 0;
+GLuint creatureHeadPartEBO = 0;
+GLuint creatureBodyPartVAO = 0;
+GLuint creatureBodyPartVBO = 0;
+GLuint creatureBodyPartEBO = 0;
  bool EnsureCubeDrawVAO();
  bool InitOutlineBuffers();
  void DestroyOutlineBuffers();
+ bool InitCreaturePartBuffers();
+ bool InitCreatureHeadPartBuffers();
+ bool InitCreatureBodyPartBuffers();
+ void DestroyCreaturePartBuffers();
  void RenderSelectionOutline();
+ void RenderBlockCrackOverlay();
+ void RenderCreatures();
  
  void DrawCubeGeometry();
  void DrawCube(std::shared_ptr<Cube> icube, GLuint texture); // Replace QOpenGLTexture with GLuint
@@ -166,6 +194,7 @@ GLuint overlayVBO{0};
 
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
+ std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance_;
  std::shared_ptr<World> WorldInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<TextRenderer> textRenderer;

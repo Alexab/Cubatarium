@@ -9,6 +9,11 @@ struct RenderSettings {
  bool faceQuads{true};
  bool frustumCulling{true};
  bool batchCache{true};
+ /// Draw creature current/max collision AABB wireframes (in addition to mob visual).
+ bool creatureDebugBounds{false};
+ /// Draw rigid_voxels as textured multi-part cubes (when false, wireframe fallback per part).
+ bool creatureTexturedParts{true};
+ bool creatureWireframeOverlay{false};
 
  static RenderSettings Legacy() {
   RenderSettings s;

@@ -121,7 +121,7 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 - **ObjectStorage** — legacy single-block brush catalog (`TakeObject` deprecated).
 - **PrefabLibrary** — JSON templates with sparse `blocks[]` and `anchor`; placement via `World::PlacePrefab`.
-- **Hotbar** — `0–9` block hotbar; `Alt+0–9` prefab hotbar (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
+- **Hotbar** — `0–9` primary bar; second bar (prefabs) via HUD when `hotbar_count` is 2 (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
 
 ## Streaming
 
@@ -184,6 +184,6 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 
 **Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`). Saved from Settings together with other app keys.
 
-**Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` / `Alt+0–9` remain in `WindowManager`.
+**Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` in `Application::RouteKey`. Left Alt toggles free cursor for HUD.
 
 **Manual check (GUI):** resize main menu and in-game window; verify hotbar centering and row order; block/prefab icons and tooltips on hover and slot selection; F9 palette and console panel edges on resize.

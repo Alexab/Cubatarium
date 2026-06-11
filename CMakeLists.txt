@@ -1,4 +1,17 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
+
+# Static CRT (/MT) and vcpkg libs for MSVC Windows (Release family + Debug in bin/).
+if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
+    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
+    set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
+endif()
+
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+endif()
+if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
@@ -47,9 +60,32 @@ endif()
 set(SOURCES
     src/stb_image.cpp
     src/main.cpp
+    src/Utils.cpp
     src/Camera.cpp
+    src/CreatureBounds.cpp
+    src/CreatureLocomotionController.cpp
+    src/CreatureLocomotionFacts.cpp
+    src/Creature.cpp
+    src/CreatureInventory.cpp
+    src/Player.cpp
+    src/activity/CreatureActivityDirector.cpp
+    src/activity/WorldCreatureActivitySink.cpp
+    src/activity/CreatureActivityRegistry.cpp
+    src/activity/agents/WanderActivityAgent.cpp
+    src/WorldCreatures.cpp
+    src/CreatureDefinitionStorage.cpp
+    src/CreatureTextureStorage.cpp
+    src/SkinDefinitionStorage.cpp
+    src/CreatureAppearance.cpp
+    src/CreatureVisualRigid.cpp
+    src/CreatureVisualGltf.cpp
+    src/CreatureVisualFactory.cpp
     src/PlayerController.cpp
+    src/pose/CreaturePosePresenterRegistry.cpp
+    src/pose/TerrestrialBipedPosePresenter.cpp
     src/Core.cpp
+    src/UiSettings.cpp
+    src/BlockInputController.cpp
     src/Cube.cpp
     src/CubeGL.cpp
     src/Object.cpp
@@ -98,6 +134,8 @@ set(SOURCES
     src/ChunkStreamer.cpp
     src/GreedyMesher.cpp
     src/InputManager.cpp
+    src/LocomotionTypes.cpp
+    src/LocomotionStateDerive.cpp
     src/ShaderManager.cpp
     src/TextRenderer.cpp
     src/Application.cpp
@@ -105,12 +143,15 @@ set(SOURCES
     src/Game/GameSession.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
+    src/ConsoleCommandHistory.cpp
+    src/ConsoleInputSanitize.cpp
     src/Gui/GuiTheme.cpp
     src/Gui/GuiRenderer.cpp
     src/Gui/UiQuadBatch.cpp
     src/Gui/UiTexturedQuadBatch.cpp
     src/Gui/GuiIconSource.cpp
     src/Gui/PrefabIconCache.cpp
+    src/Gui/CreatureIconCache.cpp
     src/Gui/GuiInputRouter.cpp
     src/Gui/GuiFocus.cpp
     src/Gui/GuiContext.cpp
@@ -121,6 +162,7 @@ set(SOURCES
     src/Gui/Widgets/GuiButton.cpp
     src/Gui/Widgets/GuiLabel.cpp
     src/Gui/Widgets/GuiTextInput.cpp
+    src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
     src/Gui/Widgets/GuiTabBar.cpp
     src/Gui/Widgets/GuiScrollView.cpp
@@ -154,6 +196,7 @@ set(HEADERS
     src/ViewEngine.h
     src/World.h
     src/WindowManager.h
+    src/BlockInputController.h
     src/GeometryEngine.h
     src/BlockTypes.h
     src/GridMath.h
@@ -183,6 +226,8 @@ set(HEADERS
     src/Content/ContentTypeRegistry.h
     src/Commands/CommandRegistry.h
     src/Commands/CommandResult.h
+    src/ConsoleCommandHistory.h
+    src/ConsoleInputSanitize.h
     src/Gui/GuiTypes.h
     src/Gui/GuiTheme.h
     src/Gui/GuiRenderer.h
@@ -201,6 +246,7 @@ set(HEADERS
     src/Gui/Widgets/GuiButton.h
     src/Gui/Widgets/GuiLabel.h
     src/Gui/Widgets/GuiTextInput.h
+    src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h
     src/Gui/Widgets/GuiTabBar.h
     src/Gui/Widgets/GuiScrollView.h
@@ -214,6 +260,7 @@ set(HEADERS
     src/Gui/Interfaces/IHotbarViewModel.h
     src/Gui/Interfaces/IContentCatalog.h
     src/Gui/Interfaces/IGameCommandContext.h
+    src/Gui/Interfaces/IGuiClipboard.h
     src/Gui/Screens/MainMenuScreen.h
     src/Gui/Screens/SettingsScreen.h
     src/Gui/Screens/NewWorldScreen.h

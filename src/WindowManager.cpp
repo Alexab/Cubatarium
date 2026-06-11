@@ -1,12 +1,16 @@
 #include "WindowManager.h"
+#include "BlockInputController.h"
 #include "Application.h"
 #include "InputManager.h"
 #include "Core.h"
 #include "ProceduralSettings.h"
 #include "World.h"
+#include "Creature.h"
+#include "CreatureInventory.h"
 #include "GeometryEngine.h"
 #include "ViewEngine.h"
 #include "User.h"
+#include "InventoryTypes.h"
 #include "AppState.h"
 #include <iostream>
 #include <stdexcept>
@@ -35,17 +39,6 @@ glm::ivec2 CursorToFramebufferPixels(GLFWwindow* window, float x, float y)
     return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
 }
 
-int PrimaryHotbarIndexFromNumericKey(KeyCode key)
-{
-    if (key >= KeyCode::Key_1 && key <= KeyCode::Key_9) {
-        return static_cast<int>(key) - static_cast<int>(KeyCode::Key_1);
-    }
-    if (key == KeyCode::Key_0) {
-        return 9;
-    }
-    return -1;
-}
-
 } // namespace
 
 WindowManager::WindowManager()
@@ -55,10 +48,9 @@ WindowManager::WindowManager()
     , isRunning(false)
     , isInitialized(false)
     , deltaTime(0.0)
-    , isMousePressed(false)
-    , isLeftMouseButtonPressed(false)
     , skyColor(0.5f, 0.7f, 1.0f, 1.0f)
     , useGradientSky(false)
+    , blockInput_(std::make_unique<BlockInputController>())
 {
     lastFrameTime = std::chrono::high_resolution_clock::now();
     lastAutosaveTime_ = std::chrono::steady_clock::now();
@@ -231,6 +223,11 @@ void WindowManager::ProcessInput() {
     inputManager->Update();
 
     if (application_ && application_->WantsCaptureKeyboard()) {
+        if (worldInstance) {
+            if (auto camera = worldInstance->GetCurrentUserCamera()) {
+                camera->ResetAllKeyStatus();
+            }
+        }
         return;
     }
 
@@ -263,6 +260,15 @@ void WindowManager::Update() {
 
     if (worldInstance && application_ && application_->GetState() == AppState::InGame) {
         worldInstance->DoMovement();
+        if (blockInput_) {
+            BlockInputContext ctx;
+            ctx.world = worldInstance;
+            ctx.geometries = geometries.get();
+            ctx.ui = core ? &core->GetUiSettings() : nullptr;
+            ctx.window = window;
+            ctx.app = application_.get();
+            blockInput_->Tick(static_cast<float>(deltaTime), ctx);
+        }
     }
 
     if (core && worldInstance && application_ && application_->GetState() == AppState::InGame) {
@@ -299,7 +305,8 @@ void WindowManager::Render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     if (geometries && views) {
-        geometries->Paint(windowWidth, windowHeight, views->GetDurationUpdateMks());
+        geometries->Paint(windowWidth, windowHeight,
+                          static_cast<double>(views->GetDurationUpdateMks()));
     }
 }
 
@@ -312,6 +319,10 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         glfwAction = GLFW_REPEAT;
     }
     if (application_ && application_->RouteKey(glfwKey, glfwAction, mods)) {
+        return;
+    }
+
+    if (application_ && application_->WantsCaptureKeyboard()) {
         return;
     }
 
@@ -342,19 +353,19 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
                 }
             }
         }
-        else if (key >= KeyCode::Key_0 && key <= KeyCode::Key_9) {
-            const int index = PrimaryHotbarIndexFromNumericKey(key);
-            if (auto user = worldInstance->GetCurrentUser()) {
-                if (index >= 0) {
-                    user->SetActiveSlot(0, static_cast<size_t>(index));
-                }
-            }
-        }
         else if (key == KeyCode::Key_F12) {
             // reserved
         }
         else if (key == KeyCode::Key_Delete) {
-            worldInstance->DelObjectByView();
+            if (blockInput_) {
+                BlockInputContext ctx;
+                ctx.world = worldInstance;
+                ctx.geometries = geometries.get();
+                ctx.ui = core ? &core->GetUiSettings() : nullptr;
+                ctx.window = window;
+                ctx.app = application_.get();
+                blockInput_->OnKeyDelete(ctx);
+            }
         }
         else if (key == KeyCode::Key_F1) {
             SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Blue sky
@@ -367,9 +378,6 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
         }
         else if (key == KeyCode::Key_F4) {
             SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Gray sky
-        }
-        else if (key == KeyCode::Key_F5) {
-            SetGradientSky(!IsGradientSky());
         }
         else if (key == KeyCode::Key_F6) {
             SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
@@ -404,8 +412,6 @@ void WindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) {
 
 void WindowManager::ResetGameplayMouseCapture()
 {
-    isMousePressed = false;
-    isLeftMouseButtonPressed = false;
     if (worldInstance && window) {
         double x = 0.0;
         double y = 0.0;
@@ -422,61 +428,33 @@ void WindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, glm
                          : button == MouseButton::Right  ? GLFW_MOUSE_BUTTON_RIGHT
                                                          : GLFW_MOUSE_BUTTON_MIDDLE;
 
-    if (button == MouseButton::Right && !pressed) {
-        isMousePressed = false;
-    }
-
     if (application_ &&
         application_->RouteMouseButton(glfwButton, pressed, fbPos.x, fbPos.y)) {
         return;
     }
 
-    if (!worldInstance) return;
+    if (!worldInstance || !blockInput_) {
+        return;
+    }
     if (application_ && application_->GetState() != AppState::InGame) {
         return;
     }
 
     if (application_ && application_->WantsCaptureMouse()) {
-        if (button == MouseButton::Right && !pressed) {
-            isMousePressed = false;
+        const bool allowPlace =
+            button == MouseButton::Left && !pressed && application_->AllowsWorldMousePlacement();
+        if (!allowPlace) {
+            return;
         }
-        return;
     }
 
-    if (button == MouseButton::Right) {
-        if (pressed) {
-            if (auto camera = worldInstance->GetCurrentUserCamera()) {
-                camera->ResetMouseMove(pos.x, pos.y);
-            }
-            isMousePressed = true;
-        }
-    }
-    else if (button == MouseButton::Left) {
-        if (pressed) {
-            leftMousePressed = std::chrono::steady_clock::now();
-            isLeftMouseButtonPressed = true;
-        } else {
-            isLeftMouseButtonPressed = false;
-            double delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - leftMousePressed).count() / 1000.0;
-            
-            const bool altDown = window &&
-                (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-                 glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
-
-            if (delta_time < 0.5) {
-                auto user = worldInstance->GetCurrentUser();
-                const bool hasActiveObject = user && !user->GetActivePrefabName().empty();
-                if (altDown || hasActiveObject) {
-                    worldInstance->PlaceActivePrefabByView();
-                } else {
-                    worldInstance->AddObjectByView();
-                }
-            } else {
-                worldInstance->DelObjectByView();
-            }
-        }
-    }
+    BlockInputContext ctx;
+    ctx.world = worldInstance;
+    ctx.geometries = geometries.get();
+    ctx.ui = core ? &core->GetUiSettings() : nullptr;
+    ctx.window = window;
+    ctx.app = application_.get();
+    blockInput_->OnMouseButton(button, pressed, pos, ctx);
 }
 
 void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
@@ -496,13 +474,13 @@ void WindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta) {
         return;
     }
 
-    if (!isMousePressed) {
-        return;
-    }
-
-    if (auto camera = worldInstance->GetCurrentUserCamera()) {
-        camera->UpdateMouseMove(worldInstance, pos.x, pos.y);
-    }
+    BlockInputContext ctx;
+    ctx.world = worldInstance;
+    ctx.geometries = geometries.get();
+    ctx.ui = core ? &core->GetUiSettings() : nullptr;
+    ctx.window = window;
+    ctx.app = application_.get();
+    blockInput_->OnMouseMove(pos, delta, ctx);
 }
 
 void WindowManager::HandleWindowResizeEvent(int width, int height) {
@@ -606,8 +584,8 @@ void WindowManager::RenderHelpText() {
     
     // Main control hints in English
     std::vector<std::string> helpLines = {
-        "WASD - Movement, Space - Jump, double Space - Flight, Mouse - Look",
-        "LMB - Place/remove, 0-9 primary hotbar, E inventory",
+        "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, RMB hold - Look, ` - Console",
+        "Classic (Minecraft): mouse look, LMB break, RMB place; Cubatarium: RMB look",
         "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
         "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
     };
@@ -700,6 +678,9 @@ void WindowManager::ErrorCallback(int error, const char* description) {
 
 void WindowManager::WindowCloseCallback(GLFWwindow* w) {
     auto* self = static_cast<WindowManager*>(glfwGetWindowUserPointer(w));
+    if (self && self->application_) {
+        self->application_->GetGameSession().SaveCommandHistory();
+    }
     if (self && self->core) {
         self->core->SaveSystem("config.json");
     }

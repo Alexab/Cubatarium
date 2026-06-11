@@ -93,7 +93,8 @@ void ViewEngine::UpdateFrameTime()
  for(auto & camera_item : Cameras)
   camera_item.second->UpdateFrameTime();
  auto t_view_end = std::chrono::high_resolution_clock::now();
- DurationUpdateMks = std::chrono::duration<double, std::micro>(t_view_end-t_begin).count();
+ DurationUpdateMks = static_cast<uint64_t>(
+     std::chrono::duration<double, std::micro>(t_view_end - t_begin).count());
 }
 
 void ViewEngine::ResetAllKeyStatus()

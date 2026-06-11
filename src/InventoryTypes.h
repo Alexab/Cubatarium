@@ -8,7 +8,9 @@ namespace cutum {
 
 enum class InventoryEntryKind {
     Block,
-    Object
+    Object,
+    Creature,
+    Skin
 };
 
 struct InventoryEntryRef {

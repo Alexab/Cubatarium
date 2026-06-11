@@ -10,6 +10,17 @@
 #include <vector>
 #include <GL/glew.h>
 #include "GeometryEngine.h"
+#include "CreaturePartMeshData.h"
+#include "CreatureTextureStorage.h"
+#include "Creature.h"
+#include "CreatureBounds.h"
+#include "CameraPerspective.h"
+#include "CreatureDefinition.h"
+#include "CreatureVisual.h"
+#include "CreatureLocomotionFacts.h"
+#include "CreaturePoseParams.h"
+#include "pose/ICreaturePosePresenter.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include "GridMath.h"
 #include "Core.h"
 #include "ObjectImplementation.h"
@@ -44,7 +55,13 @@ GeometryEngine::~GeometryEngine()
     DestroyGreedyMeshBuffers();
     DestroyPreviewBuffers();
     DestroyOutlineBuffers();
+    DestroyCreaturePartBuffers();
     DestroyOverlayBuffers();
+}
+
+void GeometryEngine::SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage)
+{
+ CreatureTextureStorageInstance_ = std::move(storage);
 }
 
 bool GeometryEngine::InitEngine()
@@ -69,6 +86,13 @@ bool GeometryEngine::InitEngine()
  
  // Initialize preview buffers
  InitPreviewBuffers();
+
+ DestroyCreaturePartBuffers();
+ if (!InitCreaturePartBuffers() || !InitCreatureHeadPartBuffers() ||
+     !InitCreatureBodyPartBuffers()) {
+  std::cerr << "Failed to initialize creature part buffers" << std::endl;
+  return false;
+ }
 
  if (!InitOutlineBuffers()) {
      std::cerr << "Failed to initialize outline buffers" << std::endl;
@@ -327,7 +351,9 @@ if (!camera) {
   }
 
   RenderSelectionOutline();
- 
+  RenderBlockCrackOverlay();
+  RenderCreatures();
+
   // Active object preview disabled to avoid per-frame resource churn
  
   // Restore state
@@ -1149,30 +1175,26 @@ void GeometryEngine::RenderCrosshair(int width_size, int height_size)
     uiShader->SetVec2("screenSize", glm::vec2(width_size, height_size));
     
     // Set yellow color for crosshair
-uiShader->SetVec3("color", glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow color
+uiShader->SetVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
     
-    // Crosshair dimensions
-int crosshairSize = 20; // Size in pixels
-int lineThickness = 2;  // Line thickness in pixels
-    
-    // Screen center
-    int centerX = width_size / 2;
-    int centerY = height_size / 2;
-    
-    // Create data for horizontal line
-    float horizontalLine[] = {
-        centerX - crosshairSize, centerY - lineThickness/2,  // Left point
-centerX + crosshairSize, centerY - lineThickness/2,  // Right point
-centerX - crosshairSize, centerY + lineThickness/2,  // Left point (bottom)
-centerX + crosshairSize, centerY + lineThickness/2   // Right point (bottom)
+    const float centerX = static_cast<float>(width_size) * 0.5f;
+    const float centerY = static_cast<float>(height_size) * 0.5f;
+    const float crosshairSize = 20.0f;
+    const float lineThickness = 2.0f;
+    const float halfThick = lineThickness * 0.5f;
+
+    const float horizontalLine[] = {
+        centerX - crosshairSize, centerY - halfThick,
+        centerX + crosshairSize, centerY - halfThick,
+        centerX - crosshairSize, centerY + halfThick,
+        centerX + crosshairSize, centerY + halfThick,
     };
-    
-    // Create data for vertical line
-    float verticalLine[] = {
-        centerX - lineThickness/2, centerY - crosshairSize,  // Top point
-centerX + lineThickness/2, centerY - crosshairSize,  // Top point (right)
-centerX - lineThickness/2, centerY + crosshairSize,  // Bottom point
-centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
+
+    const float verticalLine[] = {
+        centerX - halfThick, centerY - crosshairSize,
+        centerX + halfThick, centerY - crosshairSize,
+        centerX - halfThick, centerY + crosshairSize,
+        centerX + halfThick, centerY + crosshairSize,
     };
     
     // Create VAO and VBO for horizontal line
@@ -1254,10 +1276,10 @@ centerX + lineThickness/2, centerY + crosshairSize   // Bottom point (right)
          "Space - Jump / Fly up",
          "Shift - Crouch / Fly down",
          "2xSpace - Toggle flight",
-         "0-9 - Block, Alt+0-9 - Object",
-         "LMB - Place block, Alt+LMB - Place object",
-         "Hold LMB - Remove block, Delete - Remove",
-         "Right Mouse - Camera, F1-F8 - Sky",
+         "0-9 - Primary hotbar; objects via HUD / palette",
+         "Classic: mouse look, hold LMB break, RMB place",
+         "Cubatarium: RMB drag look, LMB tap place / hold break",
+         "Delete - Instant break, F1-F8 - Sky",
      };
 
      constexpr float helpX = 20.0f;
@@ -1293,10 +1315,17 @@ void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
     const float labelScale = 0.75f;
 
     const float blockY = previewBottom + static_cast<float>(kPreviewSize) * 0.5f - 6.0f;
-    textRenderer->RenderText(user->GetActiveBlockTypeName(), labelX, blockY, labelScale,
+    std::string activeBlock;
+    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+        activeBlock = controlled->GetInventory().GetActiveBlockTypeName();
+    }
+    textRenderer->RenderText(activeBlock, labelX, blockY, labelScale,
                              glm::vec3(1.0f, 1.0f, 1.0f));
 
-    const std::string& prefabName = user->GetActivePrefabName();
+    std::string prefabName;
+    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+        prefabName = controlled->GetInventory().GetActivePrefabName();
+    }
     if (!prefabName.empty()) {
         textRenderer->RenderText("Object: " + prefabName, static_cast<float>(kPreviewMargin),
                                  previewBottom - 18.0f, labelScale, glm::vec3(0.85f, 1.0f, 0.85f));
@@ -1452,17 +1481,17 @@ void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
     // Pick texture by active block name if available
     GLuint texId = previewTexture;
     if (WorldInstance && TextureCubeStorageInstance) {
-        auto user = WorldInstance->GetCurrentUser();
-        if (user) {
-            const std::string &activeName = user->GetActiveBlockTypeName();
-            if (!activeName.empty()) {
-                const auto &texMap = TextureCubeStorageInstance->GetTextures();
-                for (const auto &kv : texMap) {
-                    const TextureCube &tc = kv.second;
-                    if (tc.GetName() == activeName) {
-                        texId = tc.GetTexture();
-                        break;
-                    }
+        std::string activeName;
+        if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+            activeName = controlled->GetInventory().GetActiveBlockTypeName();
+        }
+        if (!activeName.empty()) {
+            const auto& texMap = TextureCubeStorageInstance->GetTextures();
+            for (const auto& kv : texMap) {
+                const TextureCube& tc = kv.second;
+                if (tc.GetName() == activeName) {
+                    texId = tc.GetTexture();
+                    break;
                 }
             }
         }
@@ -1682,12 +1711,352 @@ void GeometryEngine::DestroyOutlineBuffers()
     if (outlineVAO) { glDeleteVertexArrays(1, &outlineVAO); outlineVAO = 0; }
 }
 
-void GeometryEngine::RenderSelectionOutline()
+namespace {
+
+bool UploadCreaturePartMesh(GLuint& vao, GLuint& vbo, GLuint& ebo, const float* texCoords)
 {
-    if (!WorldInstance->GetIsBlockIntersectionExists()) {
+ float vertices[24 * 5];
+ for (int v = 0; v < 24; ++v) {
+  vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+  vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+  vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+  vertices[v * 5 + 3] = texCoords[v * 2 + 0];
+  vertices[v * 5 + 4] = texCoords[v * 2 + 1];
+ }
+
+ if (vao == 0) {
+  glGenVertexArrays(1, &vao);
+  glGenBuffers(1, &vbo);
+  glGenBuffers(1, &ebo);
+ }
+ glBindVertexArray(vao);
+ glBindBuffer(GL_ARRAY_BUFFER, vbo);
+ glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+ glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices), kCreaturePartIndices,
+              GL_STATIC_DRAW);
+ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+ glEnableVertexAttribArray(0);
+ glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+ glEnableVertexAttribArray(1);
+ glBindVertexArray(0);
+ return vao != 0;
+}
+
+} // namespace
+
+bool GeometryEngine::InitCreaturePartBuffers()
+{
+ if (creaturePartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureBoxTexCoords(texCoords);
+ return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO, creaturePartEBO, texCoords);
+}
+
+bool GeometryEngine::InitCreatureHeadPartBuffers()
+{
+ if (creatureHeadPartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureHeadTexCoords(texCoords);
+ return UploadCreaturePartMesh(creatureHeadPartVAO, creatureHeadPartVBO, creatureHeadPartEBO,
+                              texCoords);
+}
+
+bool GeometryEngine::InitCreatureBodyPartBuffers()
+{
+ if (creatureBodyPartVAO != 0) {
+  return true;
+ }
+ float texCoords[48];
+ BuildCreatureBodyTexCoords(texCoords);
+ return UploadCreaturePartMesh(creatureBodyPartVAO, creatureBodyPartVBO, creatureBodyPartEBO,
+                              texCoords);
+}
+
+void GeometryEngine::DestroyCreaturePartBuffers()
+{
+ if (creatureBodyPartEBO) {
+  glDeleteBuffers(1, &creatureBodyPartEBO);
+  creatureBodyPartEBO = 0;
+ }
+ if (creatureBodyPartVBO) {
+  glDeleteBuffers(1, &creatureBodyPartVBO);
+  creatureBodyPartVBO = 0;
+ }
+ if (creatureBodyPartVAO) {
+  glDeleteVertexArrays(1, &creatureBodyPartVAO);
+  creatureBodyPartVAO = 0;
+ }
+ if (creatureHeadPartEBO) {
+  glDeleteBuffers(1, &creatureHeadPartEBO);
+  creatureHeadPartEBO = 0;
+ }
+ if (creatureHeadPartVBO) {
+  glDeleteBuffers(1, &creatureHeadPartVBO);
+  creatureHeadPartVBO = 0;
+ }
+ if (creatureHeadPartVAO) {
+  glDeleteVertexArrays(1, &creatureHeadPartVAO);
+  creatureHeadPartVAO = 0;
+ }
+ if (creaturePartEBO) {
+  glDeleteBuffers(1, &creaturePartEBO);
+  creaturePartEBO = 0;
+ }
+ if (creaturePartVBO) {
+  glDeleteBuffers(1, &creaturePartVBO);
+  creaturePartVBO = 0;
+ }
+ if (creaturePartVAO) {
+  glDeleteVertexArrays(1, &creaturePartVAO);
+  creaturePartVAO = 0;
+ }
+}
+
+void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture,
+                                              CreaturePartMesh mesh)
+{
+ if (texture == 0 || !defaultShader || !defaultShader->IsValid()) {
+  return;
+ }
+ GLuint vao = 0;
+ switch (mesh) {
+ case CreaturePartMesh::Head:
+  if (creatureHeadPartVAO == 0 && !InitCreatureHeadPartBuffers()) {
+   return;
+  }
+  vao = creatureHeadPartVAO;
+  break;
+ case CreaturePartMesh::Body:
+  if (creatureBodyPartVAO == 0 && !InitCreatureBodyPartBuffers()) {
+   return;
+  }
+  vao = creatureBodyPartVAO;
+  break;
+ case CreaturePartMesh::Box:
+ default:
+  if (creaturePartVAO == 0 && !InitCreaturePartBuffers()) {
+   return;
+  }
+  vao = creaturePartVAO;
+  break;
+ }
+
+ GLboolean depthEnabled = GL_TRUE;
+ glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+ glEnable(GL_DEPTH_TEST);
+ glEnable(GL_CULL_FACE);
+
+ glBindTexture(GL_TEXTURE_2D, texture);
+ defaultShader->Use();
+ defaultShader->SetInt("texture0", 0);
+ defaultShader->SetInt("uAnimFrame", 0);
+ defaultShader->SetInt("uAnimFrameCount", 1);
+ defaultShader->SetMat4("mvp_matrix", mvp);
+
+ glBindVertexArray(vao);
+ glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+ glBindVertexArray(0);
+
+ defaultShader->Unuse();
+ glBindTexture(GL_TEXTURE_2D, 0);
+
+ if (!depthEnabled) {
+  glDisable(GL_DEPTH_TEST);
+ }
+}
+
+void GeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color)
+{
+ if (!outlineShader || !outlineShader->IsValid()) {
+  if (!InitOutlineBuffers()) {
+   return;
+  }
+ }
+ if (outlineVAO == 0 && !InitOutlineBuffers()) {
+  return;
+ }
+
+ GLboolean cullFaceEnabled;
+ glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+ GLfloat previousLineWidth = 1.0f;
+ glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+
+ glDisable(GL_CULL_FACE);
+ glLineWidth(2.5f);
+
+ outlineShader->Use();
+ outlineShader->SetMat4("mvp_matrix", mvp);
+ outlineShader->SetVec4("color", color);
+
+ glBindVertexArray(outlineVAO);
+ glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+ glBindVertexArray(0);
+
+ outlineShader->Unuse();
+
+ glLineWidth(previousLineWidth);
+ if (cullFaceEnabled) {
+  glEnable(GL_CULL_FACE);
+ } else {
+  glDisable(GL_CULL_FACE);
+ }
+}
+
+void GeometryEngine::RenderCreatures()
+{
+ if (!WorldInstance) {
+  return;
+ }
+ auto camera = WorldInstance->GetCurrentUserCamera();
+ if (!camera) {
+  return;
+ }
+ const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
+ const float dt = static_cast<float>(camera->GetDeltaTime());
+ const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
+ WorldInstance->ForEachCreature([&](Creature& creature) {
+  if (creature.GetId() == controlledId) {
+   if (camera->GetPerspective() == CameraPerspective::FirstPerson) {
+    return;
+   }
+  }
+  const std::string animType = WorldInstance->ResolveAnimationTypeId(creature);
+  const CreatureDefinition* def = WorldInstance->GetCreatureDefinition(animType);
+  CreatureDefinition fallback;
+  if (!def) {
+   fallback.id = animType;
+   def = &fallback;
+  }
+  if (ICreatureVisual* visual = creature.GetVisual()) {
+   visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
+   const CreatureLocomotionFacts& facts = creature.GetLocomotionFacts();
+   ICreaturePosePresenter* presenter =
+       WorldInstance->GetPosePresenterRegistry().Get(facts.archetype);
+   CreaturePoseParams pose;
+   if (presenter) {
+    pose = presenter->Compute(facts, *def, dt);
+   }
+   visual->UpdatePose(creature, facts, pose, *def, dt);
+   visual->SubmitDraw(*this, viewProj);
+  }
+
+  if (renderSettings_.creatureDebugBounds) {
+   const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
+   const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
+   const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
+   glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+   model = glm::scale(model, maxSize);
+   DrawBoxWireframe(viewProj * model, glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
+
+   const int gx = static_cast<int>(std::floor(bodyOrigin.x));
+   const int gz = static_cast<int>(std::floor(bodyOrigin.z));
+   const float feetY = BoundsFeetY(bodyOrigin);
+   float groundY = feetY;
+   float delta = 0.0f;
+   if (const std::optional<float> queryY =
+           WorldInstance->QueryGroundFeetYUnder(gx, gz, feetY)) {
+    groundY = *queryY;
+    delta = feetY - groundY;
+   }
+   const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY, static_cast<float>(gz) + 0.5f);
+   glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
+   groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
+   const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
+   DrawBoxWireframe(viewProj * groundModel,
+                    glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
+
+   static auto lastPoseLog = std::chrono::steady_clock::now();
+   const auto now = std::chrono::steady_clock::now();
+   if (now - lastPoseLog >= std::chrono::seconds(2)) {
+    lastPoseLog = now;
+    const float eyeY = creature.GetLocomotionEye().y;
+    const bool isControlled = creature.GetId() == controlledId;
+    if (isControlled || controlledId == 0) {
+     std::cerr << "[creature_pose] id=" << creature.GetId()
+               << " feetY=" << feetY << " groundY=" << groundY << " delta=" << delta
+               << " eyeY=" << eyeY << std::endl;
+    }
+   }
+  }
+ });
+}
+
+namespace {
+
+void DrawBlockOutline(ShaderProgram* shader, GLuint vao, const glm::mat4& mvp, const glm::vec4& color)
+{
+    if (!shader || !shader->IsValid() || vao == 0) {
+        return;
+    }
+    shader->Use();
+    shader->SetMat4("mvp_matrix", mvp);
+    shader->SetVec4("color", color);
+    glBindVertexArray(vao);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    shader->Unuse();
+}
+
+} // namespace
+
+void GeometryEngine::RenderBlockCrackOverlay()
+{
+    if (!WorldInstance || !WorldInstance->HasBreakSession()) {
+        return;
+    }
+    const std::optional<glm::ivec3> blockPos = WorldInstance->GetBreakSessionBlockPos();
+    if (!blockPos || !outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
         return;
     }
 
+    auto camera = WorldInstance->GetCurrentUserCamera();
+    if (!camera) {
+        return;
+    }
+
+    const float progress = WorldInstance->GetBreakProgress();
+    const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
+    const glm::mat4 mvp =
+        viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(*blockPos));
+
+    GLboolean cullFaceEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+    GLfloat previousLineWidth = 1.0f;
+    glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glLineWidth(1.5f + progress * 4.0f);
+
+    const float alpha = 0.35f + progress * 0.55f;
+    DrawBlockOutline(outlineShader.get(), outlineVAO, mvp,
+                     glm::vec4(0.25f, 0.25f, 0.25f, alpha));
+
+    if (progress > 0.35f) {
+        const glm::mat4 inset =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(*blockPos))
+            * glm::scale(glm::mat4(1.0f), glm::vec3(0.92f));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, inset,
+                         glm::vec4(0.1f, 0.1f, 0.1f, alpha * 0.85f));
+    }
+
+    glLineWidth(previousLineWidth);
+    glDisable(GL_BLEND);
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
+}
+
+void GeometryEngine::RenderSelectionOutline()
+{
     if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
         return;
     }
@@ -1697,9 +2066,7 @@ void GeometryEngine::RenderSelectionOutline()
         return;
     }
 
-    const glm::ivec3 blockPos = WorldInstance->GetIntersectionBlockPos();
-    const glm::mat4 model = glm::translate(glm::mat4(1.0f), BlockCenter(blockPos));
-    const glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
+    const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
 
     GLboolean cullFaceEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
@@ -1709,15 +2076,21 @@ void GeometryEngine::RenderSelectionOutline()
     glDisable(GL_CULL_FACE);
     glLineWidth(2.0f);
 
-    outlineShader->Use();
-    outlineShader->SetMat4("mvp_matrix", mvp);
-    outlineShader->SetVec3("color", glm::vec3(0.0f, 0.0f, 0.0f));
+    if (WorldInstance->GetIsBlockIntersectionExists()) {
+        const glm::ivec3 breakPos = WorldInstance->GetBreakBlockPos();
+        const glm::mat4 breakMvp =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(breakPos));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, breakMvp,
+                         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    }
 
-    glBindVertexArray(outlineVAO);
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-
-    outlineShader->Unuse();
+    if (WorldInstance->HasPlaceTarget()) {
+        const glm::ivec3 placePos = WorldInstance->GetPlaceBlockPos();
+        const glm::mat4 placeMvp =
+            viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(placePos));
+        DrawBlockOutline(outlineShader.get(), outlineVAO, placeMvp,
+                         glm::vec4(0.2f, 0.8f, 0.2f, 1.0f));
+    }
 
     glLineWidth(previousLineWidth);
     if (cullFaceEnabled) {

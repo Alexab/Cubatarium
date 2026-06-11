@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "HotbarInput.h"
+#include "SlotInteraction.h"
 
 #include "CursorCapture.h"
 #include "WindowManager.h"
@@ -7,9 +9,11 @@
 #include "Game/GameSession.h"
 #include "GeometryEngine.h"
 #include "Gui/GuiContext.h"
+#include "Gui/GuiRenderer.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/CreatureIconCache.h"
 #include "Gui/GuiIconSource.h"
 #include "Gui/PrefabIconCache.h"
 #include "Gui/Screens/LoadWorldScreen.h"
@@ -19,6 +23,8 @@
 #include "TextureCube.h"
 #include "Gui/GuiTypes.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IGuiClipboard.h"
+#include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Prefab.h"
 #include "ShaderManager.h"
@@ -26,6 +32,8 @@
 #include "User.h"
 #include "ViewEngine.h"
 #include "World.h"
+#include "Camera.h"
+#include "CameraPerspective.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -43,6 +51,33 @@ WindowManager* GetWindowManager(GLFWwindow* window)
     }
     return static_cast<WindowManager*>(glfwGetWindowUserPointer(window));
 }
+
+class GlfwClipboard : public IGuiClipboard {
+public:
+    explicit GlfwClipboard(GLFWwindow* window)
+        : window_(window)
+    {
+    }
+
+    std::string GetString() const override
+    {
+        if (!window_) {
+            return {};
+        }
+        const char* text = glfwGetClipboardString(window_);
+        return text ? std::string(text) : std::string{};
+    }
+
+    void SetString(const std::string& text) override
+    {
+        if (window_) {
+            glfwSetClipboardString(window_, text.c_str());
+        }
+    }
+
+private:
+    GLFWwindow* window_;
+};
 
 bool KeyNameIs(const std::string& name, int glfwKey)
 {
@@ -114,7 +149,17 @@ void Application::Startup(const std::string& configPath)
         auto prefabCache = std::make_unique<PrefabIconCache>(
             core_->GetPrefabLibrary(), textures, blockDefinitions_, shaderManager_);
         if (prefabCache->Initialize()) {
-            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache));
+            std::unique_ptr<CreatureIconCache> creatureCache;
+            if (world_) {
+                creatureCache = std::make_unique<CreatureIconCache>(
+                    world_->GetCreatureDefinitionStorage(), world_->GetSkinDefinitionStorage(),
+                    core_->GetCreatureTextureStorage(), shaderManager_);
+                if (!creatureCache->Initialize()) {
+                    creatureCache.reset();
+                }
+            }
+            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache),
+                                                          std::move(creatureCache));
         }
     }
 
@@ -145,7 +190,7 @@ void Application::RequestEnterGame()
         }
         if (world_) {
             if (auto user = world_->GetCurrentUser()) {
-                user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+                world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
             }
         }
         worldSessionActive_ = true;
@@ -160,6 +205,9 @@ void Application::RequestEnterGame()
 
 void Application::RequestQuit()
 {
+    if (gameSession_) {
+        gameSession_->SaveCommandHistory();
+    }
     quitRequested_ = true;
     if (window_) {
         glfwSetWindowShouldClose(window_, GLFW_TRUE);
@@ -169,6 +217,7 @@ void Application::RequestQuit()
 void Application::ShowMainMenu()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     auto menu = std::make_unique<MainMenuScreen>(gameSession_.get());
@@ -189,7 +238,7 @@ void Application::SetHotbarCountSetting(int count)
     }
     if (world_) {
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
     }
 }
@@ -197,6 +246,9 @@ void Application::SetHotbarCountSetting(int count)
 void Application::ReturnToMainMenu()
 {
     if (state_ == AppState::InGame) {
+        if (gameSession_) {
+            gameSession_->SaveCommandHistory();
+        }
         if (auto* wm = GetWindowManager(window_)) {
             wm->ResetGameplayMouseCapture();
         }
@@ -204,6 +256,7 @@ void Application::ReturnToMainMenu()
         ReleasePlatformCursorClip();
     }
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     state_ = AppState::MainMenu;
@@ -213,6 +266,7 @@ void Application::ReturnToMainMenu()
 void Application::ShowSettings()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -224,6 +278,7 @@ void Application::ShowSettings()
 void Application::ShowNewWorld()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -235,6 +290,7 @@ void Application::ShowNewWorld()
 void Application::ShowLoadWorld()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     mainMenuScreen_ = nullptr;
@@ -258,7 +314,7 @@ void Application::EnterGameAfterWorldChange()
     if (core_ && world_) {
         uiSettings_ = core_->GetUiSettings();
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
         if (geometry_) {
             geometry_->SetShowHud(uiSettings_.legacyHud);
@@ -309,9 +365,10 @@ void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
     }
     if (world_) {
         if (auto user = world_->GetCurrentUser()) {
-            user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
         }
     }
+    SyncCursorVisibility();
 }
 
 void Application::CreateNewWorldWithSettings(const ProceduralSettings& settings)
@@ -350,13 +407,23 @@ const std::vector<std::string>& Application::GetWorldNames() const
 
 void Application::ShowInGameHud()
 {
+    if (window_ && !clipboard_) {
+        clipboard_ = std::make_unique<GlfwClipboard>(window_);
+        guiContext_->SetClipboard(clipboard_.get());
+    }
+
+    gameSession_->InitCommandHistory(GetExecutableDirectory() / "console_history.txt");
+
     IGuiIconSource* icons = iconSource_.get();
     auto hud = std::make_unique<InGameHudScreen>(gameSession_.get(), &guiContext_->GetTheme(), icons);
     hud->Build(*guiContext_);
     hudScreen_ = std::move(hud);
 
+    overlayPopup_ = std::make_unique<GuiPopupMenu>(&guiContext_->GetTheme());
+
     consoleScreen_ = std::make_unique<ConsoleScreen>(gameSession_.get());
     consoleScreen_->Build(*guiContext_);
+    consoleScreen_->AttachPopup(overlayPopup_.get());
     consoleScreen_->SetVisible(false);
 
     paletteScreen_ = std::make_unique<CreativePaletteScreen>(
@@ -383,6 +450,9 @@ AppCursorPolicy Application::GetCursorPolicy() const
         return AppCursorPolicy::Free;
     }
     if (state_ == AppState::InGame) {
+        if (uiSettings_.controlScheme == ControlScheme::Classic) {
+            return AppCursorPolicy::CapturedHidden;
+        }
         return AppCursorPolicy::ConfinedVisible;
     }
     return AppCursorPolicy::Free;
@@ -394,6 +464,16 @@ void Application::SyncCursorVisibility()
         return;
     }
     ApplyCursorPolicy(window_, GetCursorPolicy());
+}
+
+void Application::ClearGameplayKeyboard()
+{
+    if (!world_) {
+        return;
+    }
+    if (auto camera = world_->GetCurrentUserCamera()) {
+        camera->ResetAllKeyStatus();
+    }
 }
 
 void Application::HandleWindowFocus(bool focused)
@@ -411,6 +491,7 @@ void Application::HandleWindowFocus(bool focused)
 void Application::EnterInGameInputState()
 {
     consoleOpen_ = false;
+    suppressConsoleToggleChar_ = false;
     paletteOpen_ = false;
     freeCursor_ = false;
     guiContext_->ClearInputState();
@@ -436,25 +517,96 @@ void Application::RecaptureMouseForLook()
 
 bool Application::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed)
 {
-    auto routeRoot = [&](GuiWidget* root) -> bool {
+    auto routeRoot = [&](GuiWidget* root, bool requireHitTest) -> bool {
         if (!root) {
             return false;
         }
-        if (!root->HitTest(event.x, event.y)) {
+        if (requireHitTest && !root->HitTest(event.x, event.y)) {
             return false;
         }
         return pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
     };
-    if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot())) {
+
+    if (pressed) {
+        overlayPointerCapture_ = OverlayPointerCapture::None;
+        if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Palette;
+            return true;
+        }
+        if (consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Console;
+            return true;
+        }
+        if (routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, true)) {
+            overlayPointerCapture_ = OverlayPointerCapture::Hud;
+            return true;
+        }
+        return false;
+    }
+
+    const OverlayPointerCapture capture = overlayPointerCapture_;
+    overlayPointerCapture_ = OverlayPointerCapture::None;
+    if (capture == OverlayPointerCapture::None) {
+        return false;
+    }
+
+    switch (capture) {
+    case OverlayPointerCapture::Palette:
+        return paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), false);
+    case OverlayPointerCapture::Console:
+        return consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), false);
+    case OverlayPointerCapture::Hud:
+        return routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, false);
+    default:
+        return false;
+    }
+}
+
+bool Application::ResolveSlotAt(int x, int y, SlotAddress& out)
+{
+    // Хотбар под палитрой: при drop сначала проверяем HUD, иначе палитра «съедает» цель.
+    if (hudScreen_ && hudScreen_->PickSlot(x, y, out)) {
         return true;
     }
-    if (consoleOpen_ && routeRoot(consoleScreen_->GetRoot())) {
-        return true;
-    }
-    if (routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
+    if (paletteOpen_ && paletteScreen_ && paletteScreen_->PickSlot(x, y, out)) {
         return true;
     }
     return false;
+}
+
+void Application::DrawDragGhost(int width, int height)
+{
+    if (!gameSession_ || !gameSession_->IsDragging() || !iconSource_ || !guiContext_) {
+        return;
+    }
+    const DragState& drag = gameSession_->GetDrag();
+    if (drag.entry.empty) {
+        return;
+    }
+    GLuint tex = 0;
+    switch (drag.entry.kind) {
+    case InventoryEntryKind::Block:
+        tex = iconSource_->GetBlockIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Object:
+        tex = iconSource_->GetPrefabIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Creature:
+        tex = iconSource_->GetCreatureIconTexture(drag.entry.id);
+        break;
+    case InventoryEntryKind::Skin:
+        tex = iconSource_->GetSkinIconTexture(drag.entry.id);
+        break;
+    }
+    if (tex == 0) {
+        return;
+    }
+    const int size = guiContext_->GetTheme().hotbarSlotSize;
+    const GuiRect rect{dragCursorX_ - size / 2, dragCursorY_ - size / 2, size, size};
+    GuiRenderer& renderer = guiContext_->GetRenderer();
+    renderer.BeginFrame(width, height);
+    renderer.DrawTexturedRect(rect, tex);
+    renderer.EndFrame();
 }
 
 void Application::Update(double dt)
@@ -529,9 +681,7 @@ void Application::RenderFrame(int width, int height, double viewDuration)
 
     if (state_ == AppState::InGame && iconSource_) {
         iconSource_->WarmupPrefabIcons(2);
-        if (paletteOpen_ && paletteScreen_) {
-            paletteScreen_->InvalidateGrid();
-        }
+        iconSource_->WarmupCreatureIcons(2);
     }
 
     if (hudScreen_ && hudScreen_->GetRoot()) {
@@ -541,11 +691,20 @@ void Application::RenderFrame(int width, int height, double viewDuration)
     }
     if (consoleOpen_ && consoleScreen_ && consoleScreen_->GetRoot()) {
         consoleScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height);
+        guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height, false);
+    }
+    if (overlayPopup_ && overlayPopup_->IsOpen()) {
+        auto& renderer = guiContext_->GetRenderer();
+        renderer.BeginFrame(width, height);
+        overlayPopup_->Draw(renderer);
+        renderer.EndFrame();
     }
     if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
         paletteScreen_->OnViewportChanged(width, height);
         guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height, false);
+    }
+    if (state_ == AppState::InGame) {
+        DrawDragGhost(width, height);
     }
 }
 
@@ -568,6 +727,11 @@ bool Application::WantsCaptureKeyboard() const
     return consoleOpen_ || paletteOpen_ || guiContext_->WantsCaptureKeyboard();
 }
 
+bool Application::AllowsWorldMousePlacement() const
+{
+    return state_ == AppState::InGame && !paletteOpen_ && !consoleOpen_;
+}
+
 bool Application::RouteKey(int key, int action, int mods)
 {
   GuiKeyEvent event;
@@ -576,13 +740,21 @@ bool Application::RouteKey(int key, int action, int mods)
                  : (action == GLFW_PRESS ? GuiKeyAction::Press : GuiKeyAction::Release);
   event.mods = mods;
 
-  if (action == GLFW_PRESS && state_ == AppState::InGame) {
+    if (action == GLFW_PRESS && state_ == AppState::InGame) {
     if (key == GLFW_KEY_ESCAPE) {
+      if (consoleOpen_ && consoleScreen_ && consoleScreen_->IsPopupOpen()) {
+        if (overlayPopup_) {
+          overlayPopup_->Close();
+        }
+        return true;
+      }
       if (consoleOpen_) {
         consoleOpen_ = false;
+        suppressConsoleToggleChar_ = false;
         if (consoleScreen_) {
           consoleScreen_->SetVisible(false);
         }
+        ClearGameplayKeyboard();
         return true;
       }
       if (paletteOpen_) {
@@ -595,7 +767,7 @@ bool Application::RouteKey(int key, int action, int mods)
       ReturnToMainMenu();
       return true;
     }
-    if (key == GLFW_KEY_RIGHT_ALT) {
+    if (!consoleOpen_ && key == GLFW_KEY_LEFT_ALT) {
       freeCursor_ = !freeCursor_;
       if (freeCursor_) {
         if (auto* wm = GetWindowManager(window_)) {
@@ -620,25 +792,53 @@ bool Application::RouteKey(int key, int action, int mods)
       if (consoleScreen_) {
         consoleScreen_->SetVisible(consoleOpen_);
       }
+      if (consoleOpen_) {
+        ClearGameplayKeyboard();
+        suppressConsoleToggleChar_ = true;
+      } else {
+        suppressConsoleToggleChar_ = false;
+      }
+      SyncCursorVisibility();
       return true;
     }
-    if (KeyNameIs(uiSettings_.paletteKey, key)) {
+    if (!consoleOpen_ && key == GLFW_KEY_F5 && world_) {
+      if (auto cam = world_->GetCurrentUserCamera()) {
+        cam->CyclePerspective();
+        if (geometry_) {
+          geometry_->ShowTransientMessage(CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
+        }
+      }
+      return true;
+    }
+    if (!consoleOpen_ && KeyNameIs(uiSettings_.paletteKey, key)) {
       paletteOpen_ = !paletteOpen_;
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
       }
+      SyncCursorVisibility();
       return true;
     }
-    if (KeyNameIs(uiSettings_.inventoryKey, key)) {
+    if (!consoleOpen_ && KeyNameIs(uiSettings_.inventoryKey, key)) {
       paletteOpen_ = !paletteOpen_;
       if (paletteScreen_) {
         paletteScreen_->SetVisible(paletteOpen_);
       }
+      SyncCursorVisibility();
       return true;
     }
     if (consoleOpen_ && key == GLFW_KEY_ENTER && consoleScreen_) {
       consoleScreen_->SubmitCommand();
       return true;
+    }
+    if (!consoleOpen_) {
+      const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
+      if (hotbarSlot >= 0 && gameSession_) {
+        if ((mods & GLFW_MOD_ALT) != 0) {
+          return true;
+        }
+        gameSession_->OnPrimaryHotbarKey(hotbarSlot);
+        return true;
+      }
     }
   }
 
@@ -661,6 +861,14 @@ bool Application::RouteKey(int key, int action, int mods)
     }
   }
 
+  if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
+    if (KeyNameIs(uiSettings_.consoleKey, key)) {
+      return true;
+    }
+    consoleScreen_->RouteKey(event);
+    return true;
+  }
+
   if (guiContext_->RouteKey(event)) {
     return true;
   }
@@ -669,6 +877,15 @@ bool Application::RouteKey(int key, int action, int mods)
 
 bool Application::RouteChar(unsigned int codepoint)
 {
+    if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
+        if (suppressConsoleToggleChar_) {
+            suppressConsoleToggleChar_ = false;
+            return true;
+        }
+        consoleScreen_->RouteChar(GuiCharEvent{codepoint});
+        return true;
+    }
+    suppressConsoleToggleChar_ = false;
     return guiContext_->RouteChar(GuiCharEvent{codepoint});
 }
 
@@ -683,6 +900,30 @@ bool Application::RouteMouseButton(int button, bool pressed, int x, int y)
     event.pressed = pressed;
 
     if (state_ == AppState::InGame) {
+        dragCursorX_ = x;
+        dragCursorY_ = y;
+        if (event.button == GuiMouseButton::Left && !pressed && gameSession_ &&
+            gameSession_->IsDragging()) {
+            SlotAddress target;
+            const bool hasTarget = ResolveSlotAt(x, y, target);
+            if (hasTarget) {
+                if (!gameSession_->DropOnSlot(target)) {
+                    gameSession_->CancelDrag();
+                }
+            } else {
+                gameSession_->CancelDrag();
+            }
+            if (overlayPointerCapture_ != OverlayPointerCapture::None) {
+                TryRouteInGameOverlay(event, false);
+            }
+            return true;
+        }
+        if ((overlayPopup_ && overlayPopup_->IsOpen()) || consoleOpen_) {
+            if (consoleScreen_ &&
+                consoleScreen_->RouteMouseButton(event, guiContext_->GetRenderer())) {
+                return true;
+            }
+        }
         if (event.button == GuiMouseButton::Left) {
             if (TryRouteInGameOverlay(event, pressed)) {
                 return true;
@@ -707,19 +948,29 @@ bool Application::RouteMouseMove(int x, int y)
         hudScreen_->SetPointerPosition(x, y);
     }
     if (state_ == AppState::InGame) {
+        dragCursorX_ = x;
+        dragCursorY_ = y;
+        if (gameSession_ && gameSession_->IsDragging()) {
+            return true;
+        }
+        if (overlayPopup_ && overlayPopup_->IsOpen()) {
+            if (overlayPopup_->OnMouseMove(event)) {
+                return true;
+            }
+        }
+        if (consoleOpen_ && consoleScreen_ &&
+            consoleScreen_->RouteMouseMove(event, guiContext_->GetRenderer())) {
+            return true;
+        }
         auto routeMove = [&](GuiWidget* root) -> bool {
-            return root && root->HitTest(x, y) && root->OnMouseMove(event);
+            return root && root->OnMouseMove(event);
         };
-        if (paletteOpen_ && routeMove(paletteScreen_->GetRoot())) {
-            return true;
+        bool handled = false;
+        if (paletteOpen_) {
+            handled |= routeMove(paletteScreen_->GetRoot());
         }
-        if (consoleOpen_ && routeMove(consoleScreen_->GetRoot())) {
-            return true;
-        }
-        if (routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
-            return true;
-        }
-        return false;
+        handled |= routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr);
+        return handled;
     }
     return guiContext_->RouteMouseMove(event);
 }

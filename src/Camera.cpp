@@ -42,11 +42,12 @@ Camera::Camera()
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 // Constructor with vectors
@@ -76,11 +77,12 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 // Constructor with scalar values
@@ -109,11 +111,12 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 
  DeltaTime = 0.0f;
  LastFrame = std::chrono::steady_clock::now();
- LastMouseX = 0;
- LastMouseY = 0;
+ LastMouseX = 0.0;
+ LastMouseY = 0.0;
  FirstMouseCoords = true;
 
  UpdateCameraVectors();
+ InitLocomotionCollisionProfile();
 }
 
 glm::mat4 Camera::GetPose() const
@@ -204,6 +207,21 @@ PlayerCapsule Camera::GetPlayerCapsule() const
  return locomotion_.GetCapsule();
 }
 
+float Camera::GetAnchoredFeetY() const
+{
+ return locomotion_.GetFeetY();
+}
+
+bool Camera::HasAnchoredFeet() const
+{
+ return locomotion_.IsFeetAnchored();
+}
+
+float Camera::GetStanceBlend() const
+{
+ return locomotion_.GetStanceBlend();
+}
+
 bool Camera::IsCrouching() const
 {
  return locomotion_.GetStanceBlend() > 0.5f;
@@ -265,7 +283,7 @@ void Camera::SetViewEngine(ViewEngine* view_engine)
 
 glm::vec3 Camera::ComputeHorizontalShift(float deltaTime)
 {
- const float velocity = MovementSpeed * deltaTime;
+ const float velocity = locomotion_.GetWalkSpeed() * deltaTime;
  glm::vec3 shift(0.0f);
  if (KeysStatus[GLFW_KEY_W]) {
   shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) * velocity;
@@ -374,15 +392,18 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 
  glm::vec3 newPos = Position;
  if (hasShift) {
-  newPos = world->ResolveMovement(Position, shift, cap);
+  newPos = world->ResolveMovement(Position, shift, cap, world->GetMovementCollisionSkipId());
  }
 
  const bool grounded =
      world->HasGroundSupport(Position, cap) || locomotion_.IsOnGround();
  const glm::vec3 intent = GetMoveIntentDir();
+ const PlayerInput stepInput = BuildPlayerInput(false);
 
  bool stepped = false;
  if (world->IsStepUpEnabled() && !fluid.inFluid && grounded
+     && locomotion_.IsOnGround() && locomotion_.IsFeetAnchored()
+     && !stepInput.jumpHeld
      && locomotion_.GetVerticalVelocity() <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
   const World::StepUpProbe probe = world->ProbeStepUp(
       newPos, intent, cap, kStepUpTriggerDistance);
@@ -414,7 +435,8 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
                              const PlayerCapsule& collisionCap)
 {
- const float velocity = MovementSpeed * deltaTime;
+ const float speed = FreeMove ? locomotion_.GetFlySpeed() : locomotion_.GetWalkSpeed();
+ const float velocity = speed * deltaTime;
  glm::vec3 shift(0.0f);
 
  if (direction == FORWARD) {
@@ -438,7 +460,8 @@ void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, floa
  }
 
  if (world) {
-  glm::vec3 newPos = world->ResolveMovement(Position, shift, collisionCap);
+  glm::vec3 newPos = world->ResolveMovement(Position, shift, collisionCap,
+                                            world->GetMovementCollisionSkipId());
   Position = newPos;
  } else {
   Position += shift;
@@ -520,11 +543,29 @@ void Camera::ProcessMouseScroll(float yoffset)
   UpdatePose();
  }
 
+glm::vec3 Camera::ComputeCameraWorldPosition() const
+{
+ if (perspective_ == CameraPerspective::FirstPerson) {
+  return Position;
+ }
+ if (perspective_ == CameraPerspective::ThirdPersonBack) {
+  return Position - Front * thirdPersonDistance_ + Up * thirdPersonHeight_;
+ }
+ return Position + Front * thirdPersonDistance_;
+}
+
+void Camera::CyclePerspective()
+{
+ perspective_ = CycleCameraPerspective(perspective_);
+ UpdatePose();
+}
+
 void Camera::UpdatePose()
 {
- glm::mat4 pose = glm::lookAt(this->Position, this->Position + this->Front, this->Up);
-
- Pose = pose;
+ const glm::vec3 eye = Position;
+ const glm::vec3 camWorld = ComputeCameraWorldPosition();
+ const glm::vec3 target = eye + Front;
+ Pose = glm::lookAt(camWorld, target, Up);
 
  Projection = glm::perspective(glm::radians(Fov), AspectRatio, NearPlane, FarPlane);
 
@@ -551,13 +592,13 @@ void Camera::UpdateMouseMove(std::shared_ptr<World> world, double xpos, double y
      FirstMouseCoords = false;
  }
 
- float xoffset = xpos - LastMouseX;
- float yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
+ const double xoffset = xpos - LastMouseX;
+ const double yoffset = LastMouseY - ypos;  // Reversed since y-coordinates go from bottom to left
 
  LastMouseX = xpos;
  LastMouseY = ypos;
 
- ProcessMouseMovement(xoffset, yoffset);
+ ProcessMouseMovement(static_cast<float>(xoffset), static_cast<float>(yoffset));
  world->UpdateIntersection(GetPosition(), GetFront());
 }
 
@@ -570,19 +611,38 @@ void Camera::ResetMouseMove(double xpos, double ypos)
 
 void Camera::UpdateMouseScroll(double xoffset, double yoffset)
 {
- ProcessMouseScroll(yoffset);
+ ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 void Camera::UpdateFrameTime()
 {
  auto current_frame = std::chrono::steady_clock::now();
- DeltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(current_frame-LastFrame).count() / 1000.0;
+ DeltaTime = static_cast<float>(
+     std::chrono::duration<double>(current_frame - LastFrame).count());
  LastFrame = current_frame;
+}
+
+void Camera::InitLocomotionCollisionProfile()
+{
+ const PlayerCapsule stand = PlayerCapsule::Standing();
+ locomotion_.SetCollisionProfile(
+     glm::vec3(stand.halfWidth * 2.0f, stand.height, stand.halfWidth * 2.0f), stand.eyeHeight);
+}
+
+void Camera::ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
+                                     const CreatureBoundsProfile& bounds, float eyeHeight)
+{
+ locomotion_.SetCapabilities(caps);
+ const glm::vec3 size = bounds.restSizeBlocks.x > 0.0f ? bounds.restSizeBlocks
+                                                       : glm::vec3(0.6f, 1.8f, 0.6f);
+ locomotion_.SetCollisionProfile(size, eyeHeight);
+ MovementSpeed = caps.walkSpeed;
 }
 
 void Camera::ResetVerticalPhysics()
 {
  locomotion_.Reset();
+ InitLocomotionCollisionProfile();
  stepUpAnim_.active = false;
  SyncFreeMoveFromController();
  UpdatePose();
@@ -651,7 +711,7 @@ bool Camera::DoMovement(const World* world)
    return is_moved;
   }
 
-  locomotion_.UpdateLocomotion(world, Position, input, dt);
+  locomotion_.UpdateLocomotion(world, Position, input, dt, world->GetMovementCollisionSkipId());
   if (locomotion_.ConsumeClearShiftRequest()) {
    ClearShiftKeyState();
   }

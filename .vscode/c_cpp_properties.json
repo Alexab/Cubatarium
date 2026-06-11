@@ -5,11 +5,11 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/src",
-                "C:/vcpkg/installed/x64-windows/include",
-                "C:/vcpkg/installed/x64-windows/include/glm",
-                "C:/vcpkg/installed/x64-windows/include/GLFW",
-                "C:/vcpkg/installed/x64-windows/include/GL",
-                "C:/vcpkg/installed/x64-windows/include/GLEW"
+                "E:/vcpkg/installed/x64-windows-static/include",
+                "E:/vcpkg/installed/x64-windows-static/include/glm",
+                "E:/vcpkg/installed/x64-windows-static/include/GLFW",
+                "E:/vcpkg/installed/x64-windows-static/include/GL",
+                "E:/vcpkg/installed/x64-windows-static/include/GLEW"
             ],
             "defines": [
                 "_DEBUG",
@@ -19,7 +19,6 @@
                 "_WIN32"
             ],
             "windowsSdkVersion": "10.0.19041.0",
-            "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.37.32822/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-msvc-x64",

@@ -9,8 +9,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "CreatureBounds.h"
+#include "LocomotionTypes.h"
 #include "PlayerCapsule.h"
 #include "PlayerController.h"
+#include "CameraPerspective.h"
 
 namespace cutum {
 
@@ -40,6 +43,7 @@ public:
  Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
  Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
+ /// Eye world position (not render camera position in 3rd person).
  glm::vec3 GetPosition() const;
  void SetPosition(const glm::vec3& value);
  float GetYaw() const;
@@ -63,12 +67,21 @@ public:
 
  bool DoMovement(const World* world);
  void ResetVerticalPhysics();
+ void ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
+                              const CreatureBoundsProfile& bounds, float eyeHeight);
 
  PlayerCapsule GetPlayerCapsule() const;
+ float GetAnchoredFeetY() const;
+ bool HasAnchoredFeet() const;
+ float GetStanceBlend() const;
  bool IsCrouching() const;
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const;
+ const CreatureLocomotionController& GetLocomotionController() const { return locomotion_; }
  bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
+
+ CameraPerspective GetPerspective() const { return perspective_; }
+ void CyclePerspective();
 
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
@@ -93,8 +106,10 @@ private:
  void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true);
  void ProcessMouseScroll(float yoffset);
  void UpdatePose();
+ glm::vec3 ComputeCameraWorldPosition() const;
  void UpdateCameraVectors();
  void SyncFreeMoveFromController();
+ void InitLocomotionCollisionProfile();
 
  float Fov;
  float AspectRatio;
@@ -126,8 +141,8 @@ private:
  float DeltaTime;
  std::chrono::time_point<std::chrono::steady_clock> LastFrame;
 
- float LastMouseX;
- float LastMouseY;
+ double LastMouseX{0.0};
+ double LastMouseY{0.0};
  bool FirstMouseCoords;
 
  glm::vec3 lastMoveIntentDir_{0.0f, 0.0f, -1.0f};
@@ -143,6 +158,10 @@ private:
   float elapsed{0.0f};
  };
  StepUpAnimation stepUpAnim_;
+
+ CameraPerspective perspective_{CameraPerspective::FirstPerson};
+ float thirdPersonDistance_{4.0f};
+ float thirdPersonHeight_{0.5f};
 
  static constexpr float kMinReasonablePlayerY = -32.0f;
  static constexpr float kMaxPhysicsDelta = 1.0f / 30.0f;

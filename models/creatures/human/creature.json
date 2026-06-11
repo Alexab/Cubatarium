@@ -1,0 +1,37 @@
+{
+  "id": "human",
+  "display_name": "Human",
+  "catalog": { "tags": ["humanoid"], "spawnable": false, "sort_order": 0 },
+  "role": "controlled_default",
+  "bounds": { "rest": [0.6, 1.8, 0.6], "max": [0.6, 1.8, 0.6], "min": [0.6, 1.5, 0.6] },
+  "eye_height": 1.62,
+  "locomotion_archetype": "terrestrial_biped",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": true,
+    "can_jump": true,
+    "jump_height": 1.25,
+    "walk_speed": 3.0,
+    "fly_speed": 3.0
+  },
+  "behavior": "none",
+  "visual": {
+    "backend": "rigid_voxels",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 25,
+      "arm_swing_deg": 15,
+      "fly_body_pitch_deg": 10
+    },
+    "default_texture": "body",
+    "parts": [
+      { "id": "torso", "offset": [0.0, 0.95, 0.0], "size": [0.5, 1.0, 0.32], "texture": "body" },
+      { "id": "arm_l", "offset": [-0.34, 1.02, 0.0], "size": [0.16, 0.52, 0.16], "texture": "arm" },
+      { "id": "arm_r", "offset": [0.34, 1.02, 0.0], "size": [0.16, 0.52, 0.16], "texture": "arm" },
+      { "id": "head", "offset": [0.0, 1.58, 0.0], "size": [0.38, 0.38, 0.38], "texture": "face" },
+      { "id": "leg_l", "offset": [-0.14, 0.32, 0.0], "size": [0.2, 0.65, 0.2], "texture": "leg" },
+      { "id": "leg_r", "offset": [0.14, 0.32, 0.0], "size": [0.2, 0.65, 0.2], "texture": "leg" }
+    ],
+    "icon": { "mode": "parts_preview", "color": [0.3, 0.7, 1.0, 1.0] }
+  }
+}

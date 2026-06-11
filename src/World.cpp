@@ -28,11 +28,19 @@
 #include "worldgen/WorldGenContext.h"
 #include "worldgen/PrefabFeaturePlacer.h"
 #include "ChunkManager.h"
+#include "CreatureBounds.h"
+#include "CreaturePartMeshData.h"
 #include "PlayerCapsule.h"
 #include "Cube.h"
 #include "Chunk.h"
 #include "Prefab.h"
 #include "ChunkStreamer.h"
+#include "Player.h"
+#include "Creature.h"
+#include "CreatureInventory.h"
+#include "CreatureDefinitionStorage.h"
+#include "CreatureVisualFactory.h"
+#include "activity/WorldCreatureActivitySink.h"
 #include "Frustum.h"
 #include "RenderSettings.h"
 #include <map>
@@ -45,6 +53,7 @@ namespace cutum {
 namespace {
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
+
 constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool HasChunkJsonFiles(const std::string& chunks_dir)
@@ -104,12 +113,12 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
  }
  IsIntersectionExists = false;
  hasIntersectionBlock_ = false;
+ RegisterDefaultCreaturePosePresenters(posePresenterRegistry_);
 }
 
 void World::GenerateUsers()
 {
  AddUser("Username");
- GetUser("Username")->SetActiveBlockIndex(1);
  ApplySpawnToCamera();
 }
 
@@ -332,6 +341,116 @@ std::optional<int> World::FindHighestSolidY(int x, int z) const
  return std::nullopt;
 }
 
+std::optional<float> World::QueryGroundFeetYColumn(int worldX, int worldZ) const
+{
+ if (const std::optional<int> topY = FindHighestSolidY(worldX, worldZ)) {
+  return BlockTopY(*topY);
+ }
+ return std::nullopt;
+}
+
+std::optional<float> World::QueryGroundFeetYUnder(int worldX, int worldZ,
+                                                   float referenceFeetY) const
+{
+ if (!blockRegistry_) {
+  return std::nullopt;
+ }
+ const int startY =
+     std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)), 0, 255);
+ for (int y = startY; y >= 0; --y) {
+  if (blockRegistry_->IsSolid(blockWorld_.GetBlock(glm::ivec3(worldX, y, worldZ)))) {
+   return BlockTopY(y);
+  }
+ }
+ return std::nullopt;
+}
+
+bool World::IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ if (!blockRegistry_->BlocksMovement(blockWorld_.GetBlock(cell))) {
+  return false;
+ }
+ const std::optional<int> columnTopY = FindHighestSolidY(cell.x, cell.z);
+ if (!columnTopY || *columnTopY != cell.y) {
+  return false;
+ }
+ const int layers = static_cast<int>(std::ceil(cap.height));
+ for (int dy = 1; dy <= layers; ++dy) {
+  const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
+  if (blockRegistry_->BlocksMovement(blockWorld_.GetBlock(above))) {
+   return false;
+  }
+ }
+ return true;
+}
+
+namespace {
+
+constexpr int kFootprintMinSolidSamples = 4;
+
+struct FootprintStandSampleStats {
+ int solidSamples{0};
+ int validStandSamples{0};
+ bool centerSolid{false};
+ bool centerValidStand{false};
+};
+
+FootprintStandSampleStats SampleFootprintAtFeet(const World& world, const BlockWorld& blockWorld,
+                                                const BlockRegistry& registry, float feetY,
+                                                float centerX, float centerZ, float halfWidth,
+                                                const PlayerCapsule& cap, bool checkValidStand)
+{
+ FootprintStandSampleStats stats{};
+ const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
+ const int centerGx = WorldCoordToBlockIndex(centerX);
+ const int centerGz = WorldCoordToBlockIndex(centerZ);
+ const float sampleX[3] = {centerX - halfWidth, centerX, centerX + halfWidth};
+ const float sampleZ[3] = {centerZ - halfWidth, centerZ, centerZ + halfWidth};
+ for (float sx : sampleX) {
+  for (float sz : sampleZ) {
+   const glm::ivec3 cell(WorldCoordToBlockIndex(sx), supportY, WorldCoordToBlockIndex(sz));
+   const bool solid = registry.BlocksMovement(blockWorld.GetBlock(cell));
+   if (!solid) {
+    continue;
+   }
+   ++stats.solidSamples;
+   const bool isCenter = cell.x == centerGx && cell.z == centerGz;
+   if (isCenter) {
+    stats.centerSolid = true;
+   }
+   if (!checkValidStand) {
+    continue;
+   }
+   if (!world.IsValidStandCell(cell, cap)) {
+    continue;
+   }
+   ++stats.validStandSamples;
+   if (isCenter) {
+    stats.centerValidStand = true;
+   }
+  }
+ }
+ return stats;
+}
+
+} // namespace
+
+bool World::IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                                  float feetY) const
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ const CollisionVolume vol = CollisionVolumeFromEye(eyePos, cap);
+ const FootprintStandSampleStats stats = SampleFootprintAtFeet(
+     *this, blockWorld_, *blockRegistry_, feetY, vol.center.x, vol.center.z, cap.halfWidth, cap,
+     true);
+ return stats.centerValidStand && stats.validStandSamples >= kFootprintMinSolidSamples;
+}
+
 void World::EnsurePlayerOnGround()
 {
  auto user = GetCurrentUser();
@@ -373,7 +492,7 @@ void World::EnsurePlayerOnGround()
  }
 
  pos = BlockCenter(glm::ivec3(x, *topY, z));
- pos.y = static_cast<float>(*topY) + 1.0f + cap.eyeHeight;
+ pos.y = BlockTopY(*topY) + cap.eyeHeight;
  while (CheckCollision(pos, cap)) {
   pos.y += 0.1f;
  }
@@ -460,7 +579,14 @@ void World::Load(const std::string& world_folder_path)
  allowProceduralFill_ = !hasPersistedSave_;
 
  LoadWorldData(world_data_file_name);
+ creatures_.clear();
+ nextCreatureId_ = 1;
+ playerCreatureId_ = 0;
+ controlledCreatureId_ = 0;
+
  LoadUsers(users_file_name);
+ LoadCreatures(worldFolderPath_ + "/creatures.json");
+ LinkUsersToPlayerCreatures();
 
  RefreshBlockRegistry();
 
@@ -553,6 +679,7 @@ void World::Save(const std::string& world_folder_path)
  }
 
  SaveUsers(users_file_name);
+ SaveCreatures(world_folder_path + "/creatures.json");
  SaveWorldData(world_data_file_name);
  modifiedChunks_.clear();
 }
@@ -646,6 +773,33 @@ bool World::AddUser(const std::string &name)
 
  Users[name] = std::make_shared<User>();
  auto user = Users[name];
+ const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
+ const glm::vec3 bodyOrigin = BodyOriginFromEye(SpawnPoint, eyeOffset);
+ std::string speciesId = "human";
+ if (creatureDefinitions_) {
+  const std::string controlled = creatureDefinitions_->GetControlledDefaultSpeciesId();
+  if (!controlled.empty()) {
+   speciesId = controlled;
+  }
+ }
+ const CreatureId pid = SpawnCreature(speciesId, bodyOrigin);
+ user->SetPlayerCreatureId(pid);
+ if (Player* player = dynamic_cast<Player*>(GetCreature(pid))) {
+  player->BindUser(user);
+  if (!user->GetSelectedSkinId().empty()) {
+   player->SetSkinId(user->GetSelectedSkinId());
+   if (const CreatureDefinition* def = GetCreatureDefinition(speciesId)) {
+    player->SetVisual(CreateCreatureVisual(*def));
+   }
+  }
+  CreatureInventory& inv = player->GetInventory();
+  inv.InitCreativeDefaults();
+  inv.EnsureDefaultHotbar();
+ }
+ if (Users.size() == 1) {
+  playerCreatureId_ = pid;
+  controlledCreatureId_ = pid;
+ }
  auto camera = std::make_shared<Camera>(SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
  camera->SetFreeMove(false);
  const size_t viewId = ViewInstance->AddCameraReturnId(camera);
@@ -682,11 +836,45 @@ std::shared_ptr<User> World::GetCurrentUser()
  return GetUser(CurrentUserName);
 }
 
+std::shared_ptr<User> World::GetCurrentUser() const
+{
+ return const_cast<World*>(this)->GetUser(CurrentUserName);
+}
+
+CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user)
+{
+ if (!user || user->GetPlayerCreatureId() == 0) {
+  return nullptr;
+ }
+ if (Creature* creature = GetCreature(user->GetPlayerCreatureId())) {
+  return &creature->GetInventory();
+ }
+ return nullptr;
+}
+
+const CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user) const
+{
+ return const_cast<World*>(this)->GetPlayerInventory(user);
+}
+
+void World::EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount)
+{
+ if (CreatureInventory* inv = GetPlayerInventory(user)) {
+  inv->EnsureHotbarCount(barCount);
+ }
+}
+
 bool World::SetCurrentUserName(const std::string& name)
 {
  if(Users.find(name) == Users.end())
   return false;
  CurrentUserName = name;
+ if (auto user = GetCurrentUser()) {
+  if (user->GetPlayerCreatureId() != 0) {
+   playerCreatureId_ = user->GetPlayerCreatureId();
+   SetControlledCreature(playerCreatureId_);
+  }
+ }
  ApplyUserToCamera(GetCurrentUser());
  if (auto user = GetCurrentUser()) {
   ViewInstance->SetActiveCamera(user->GetViewId());
@@ -803,9 +991,18 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
   return false;
  }
 
+ Creature* controlled = GetControlledCreature();
+ if (!controlled) {
+  return false;
+ }
+ const std::string& blockType = controlled->GetInventory().GetActiveBlockTypeName();
+ if (blockType.empty()) {
+  return false;
+ }
+
  auto object_pos = FindNearestFreeCubePosition(position, front);
  if (object_pos.has_value()) {
-  if (AddObject(user->GetActiveBlockTypeName(), object_pos.value())) {
+  if (AddObject(blockType, object_pos.value())) {
    UpdateIntersection(position, front);
    return true;
   }
@@ -826,7 +1023,11 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
   return false;
  }
 
- const std::string& prefabName = user->GetActivePrefabName();
+ Creature* controlled = GetControlledCreature();
+ if (!controlled) {
+  return false;
+ }
+ const std::string& prefabName = controlled->GetInventory().GetActivePrefabName();
  if (prefabName.empty()) {
   return false;
  }
@@ -842,19 +1043,76 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
  return false;
 }
 
+bool World::DelBlockAt(glm::ivec3 blockPos)
+{
+ if (!blockRegistry_) {
+  return false;
+ }
+ if (blockWorld_.GetBlock(blockPos) == BLOCK_AIR) {
+  return false;
+ }
+ blockWorld_.SetBlock(blockPos, BLOCK_AIR);
+ if (cachedBlockCount_ > 0) {
+  --cachedBlockCount_;
+ }
+ MarkBlockChunkDirty(blockPos);
+ if (auto camera = GetCurrentUserCamera()) {
+  UpdateIntersection(camera->GetPosition(), camera->GetFront());
+ }
+ return true;
+}
+
 bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
   return false;
  }
- blockWorld_.SetBlock(hit->blockPos, BLOCK_AIR);
- if (cachedBlockCount_ > 0) {
-  --cachedBlockCount_;
+ return DelBlockAt(hit->blockPos);
+}
+
+void World::StartBreakSession(glm::ivec3 blockPos)
+{
+ BlockBreakSession session;
+ session.blockPos = blockPos;
+ session.progress = 0.f;
+ breakSession_ = session;
+}
+
+void World::CancelBreakSession()
+{
+ breakSession_.reset();
+}
+
+void World::TickBreakSession(float dt, float durationSeconds)
+{
+ if (!breakSession_ || durationSeconds <= 0.f) {
+  return;
  }
- MarkBlockChunkDirty(hit->blockPos);
- UpdateIntersection(position, front);
- return true;
+ breakSession_->progress = std::min(1.f, breakSession_->progress + dt / durationSeconds);
+}
+
+bool World::CompleteBreakSession()
+{
+ if (!breakSession_) {
+  return false;
+ }
+ const glm::ivec3 pos = breakSession_->blockPos;
+ breakSession_.reset();
+ return DelBlockAt(pos);
+}
+
+float World::GetBreakProgress() const
+{
+ return breakSession_ ? breakSession_->progress : 0.f;
+}
+
+std::optional<glm::ivec3> World::GetBreakSessionBlockPos() const
+{
+ if (!breakSession_) {
+  return std::nullopt;
+ }
+ return breakSession_->blockPos;
 }
 
 
@@ -879,16 +1137,15 @@ bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
  return true;
 }
 
-World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
-                                                   const PlayerCapsule& cap) const
+World::SampledFluidState World::SampleFluidPhysicsVolume(const CollisionVolume& vol) const
 {
  SampledFluidState state;
  if (!blockRegistry_) {
   return state;
  }
  std::unordered_map<BlockId, int> fluidWeights;
- const glm::vec3 center = cap.centerFromEye(eyePos);
- const glm::vec3 half = cap.halfExtents();
+ const glm::vec3 center = vol.center;
+ const glm::vec3 half = vol.halfExtents;
  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
  const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
  const glm::vec3 blockHalf(0.5f);
@@ -926,13 +1183,19 @@ World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
  return state;
 }
 
-bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
+                                                   const PlayerCapsule& cap) const
+{
+ return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
+}
+
+bool World::CheckBlockCollisionVolume(const CollisionVolume& vol) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const glm::vec3 center = cap.centerFromEye(eyePos);
- const glm::vec3 half = cap.halfExtents();
+ const glm::vec3 center = vol.center;
+ const glm::vec3 half = vol.halfExtents;
  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
  const int radius = static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
  const glm::vec3 blockHalf(0.5f);
@@ -954,18 +1217,58 @@ bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) co
  return false;
 }
 
-bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+bool World::CheckCreatureCollisionVolume(const CollisionVolume& vol,
+                                         CreatureId skipCreatureId) const
+{
+ for (const auto& entry : creatures_) {
+  if (entry.first == skipCreatureId) {
+   continue;
+  }
+  const CollisionVolume other = entry.second->GetCollisionVolume();
+  if (Cube::CheckAabbCollision(vol.center, vol.halfExtents, other.center,
+                               other.halfExtents)) {
+   return true;
+  }
+ }
+ return false;
+}
+
+bool World::CheckCollisionVolume(const CollisionVolume& vol, CreatureId skipCreatureId) const
+{
+ if (CheckBlockCollisionVolume(vol)) {
+  return true;
+ }
+ if (!entityCollisionEnabled_) {
+  return false;
+ }
+ return CheckCreatureCollisionVolume(vol, skipCreatureId);
+}
+
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ return CheckCollision(eyePos, cap, GetMovementCollisionSkipId());
+}
+
+bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                           CreatureId skipCreatureId) const
+{
+ return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap), skipCreatureId);
+}
+
+bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const
 {
  if (!blockRegistry_) {
   return false;
  }
- const float feetY = cap.feetY(eyePos);
- const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
- const glm::ivec3 standCell(
-     static_cast<int>(std::floor(eyePos.x)),
-     supportY,
-     static_cast<int>(std::floor(eyePos.z)));
- return blockRegistry_->BlocksMovement(blockWorld_.GetBlock(standCell));
+ const FootprintStandSampleStats stats = SampleFootprintAtFeet(
+     *this, blockWorld_, *blockRegistry_, feetY, vol.center.x, vol.center.z, vol.halfExtents.x,
+     PlayerCapsule{}, false);
+ return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
+}
+
+bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+{
+ return HasGroundSupportVolume(CollisionVolumeFromEye(eyePos, cap), cap.feetY(eyePos));
 }
 
 namespace {
@@ -974,15 +1277,15 @@ constexpr float kCollisionMaxStep = 0.25f;
 constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
-glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float axisDelta,
-                              int axis, const PlayerCapsule& cap)
+glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, float axisDelta,
+                                 int axis, const PlayerCapsule& cap, CreatureId skipCreatureId)
 {
  if (std::abs(axisDelta) < 1e-8f) {
-  return from;
+  return fromEye;
  }
  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
  float remaining = std::abs(axisDelta);
- glm::vec3 pos = from;
+ glm::vec3 pos = fromEye;
  glm::vec3 axisUnit(0.0f);
  axisUnit[axis] = 1.0f;
 
@@ -990,18 +1293,17 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
  while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
   const float step = std::min(remaining, kCollisionMaxStep);
   const glm::vec3 next = pos + axisUnit * step * sign;
-  if (world.CheckCollision(next, cap)) {
+  if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap), skipCreatureId)) {
    glm::vec3 lo = pos;
    glm::vec3 hi = next;
    for (int i = 0; i < 8; ++i) {
     const glm::vec3 mid = (lo + hi) * 0.5f;
-    if (world.CheckCollision(mid, cap)) {
+    if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap), skipCreatureId)) {
      hi = mid;
     } else {
      lo = mid;
     }
    }
-   // Do not push upward when landing — that caused float above floor and Y jitter.
    if (axis == 1 && sign < 0.0f) {
     pos = lo;
    } else {
@@ -1016,26 +1318,84 @@ glm::vec3 ResolveMovementAxis(const World& world, const glm::vec3& from, float a
  return pos;
 }
 
+glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody, float axisDelta,
+                                  int axis, const glm::vec3& currentSizeBlocks,
+                                  CreatureId skipCreatureId)
+{
+ if (std::abs(axisDelta) < 1e-8f) {
+  return fromBody;
+ }
+ const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
+ float remaining = std::abs(axisDelta);
+ glm::vec3 body = fromBody;
+ glm::vec3 axisUnit(0.0f);
+ axisUnit[axis] = 1.0f;
+
+ int iterations = 0;
+ while (remaining > 1e-6f && iterations < kCollisionMaxIterations) {
+  const float step = std::min(remaining, kCollisionMaxStep);
+  const glm::vec3 nextBody = body + axisUnit * step * sign;
+  if (world.CheckCollisionVolume(CollisionVolumeFromBody(nextBody, currentSizeBlocks),
+                                 skipCreatureId)) {
+   glm::vec3 lo = body;
+   glm::vec3 hi = nextBody;
+   for (int i = 0; i < 8; ++i) {
+    const glm::vec3 mid = (lo + hi) * 0.5f;
+    if (world.CheckCollisionVolume(CollisionVolumeFromBody(mid, currentSizeBlocks),
+                                   skipCreatureId)) {
+     hi = mid;
+    } else {
+     lo = mid;
+    }
+   }
+   if (axis == 1 && sign < 0.0f) {
+    body = lo;
+   } else {
+    body = lo - axisUnit * kCollisionEpsilon * sign;
+   }
+   break;
+  }
+  body = nextBody;
+  remaining -= step;
+  ++iterations;
+ }
+ return body;
+}
+
 } // namespace
 
+glm::vec3 World::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
+                                     const glm::vec3& currentSizeBlocks,
+                                     CreatureId skipCreatureId) const
+{
+ if (glm::dot(delta, delta) < 1e-10f) {
+  return bodyOrigin;
+ }
+ glm::vec3 body = bodyOrigin;
+ body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks, skipCreatureId);
+ body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks, skipCreatureId);
+ body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks, skipCreatureId);
+ return body;
+}
+
 glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
-                                 const PlayerCapsule& cap) const
+                                 const PlayerCapsule& cap, CreatureId skipCreatureId) const
 {
  if (glm::dot(delta, delta) < 1e-10f) {
   return eyePos;
  }
- glm::vec3 pos = eyePos;
- pos = ResolveMovementAxis(*this, pos, delta.y, 1, cap);
- pos = ResolveMovementAxis(*this, pos, delta.x, 0, cap);
- pos = ResolveMovementAxis(*this, pos, delta.z, 2, cap);
- return pos;
+ const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
+ const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
+ const glm::vec3 body = BodyOriginFromEye(eyePos, eyeOffset);
+ const glm::vec3 newBody = ResolveMovementBody(body, delta, sizeBlocks, skipCreatureId);
+ return BoundsEyePosition(newBody, eyeOffset);
 }
 
 namespace {
 
 glm::vec3 StepStandPosition(const glm::ivec3& stepCell, const PlayerCapsule& cap)
 {
- const float feetY = static_cast<float>(stepCell.y) + 1.0f;
+ const float feetY = BlockTopY(stepCell.y);
  return glm::vec3(static_cast<float>(stepCell.x), feetY + cap.eyeHeight,
                   static_cast<float>(stepCell.z));
 }
@@ -1051,15 +1411,22 @@ bool FindSteppableLedge(const World& world, const BlockWorld& blockWorld,
  }
  const float feetY = cap.feetY(eyePos);
  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
- const glm::ivec3 standCell(
-     static_cast<int>(std::floor(eyePos.x)),
-     supportY,
-     static_cast<int>(std::floor(eyePos.z)));
+ const glm::ivec3 standCell(WorldCoordToBlockIndex(eyePos.x), supportY,
+                            WorldCoordToBlockIndex(eyePos.z));
  if (!registry.BlocksMovement(blockWorld.GetBlock(standCell))) {
   return false;
  }
+ const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
+ if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell))) {
+  return false;
+ }
  const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
- if (!registry.BlocksMovement(blockWorld.GetBlock(stepCell))) {
+ if (!world.IsValidStandCell(stepCell, cap)) {
+  return false;
+ }
+ const float stepFeetY = BlockTopY(stepCell.y);
+ const float rise = stepFeetY - feetY;
+ if (rise < 0.45f || rise > 1.05f) {
   return false;
  }
  const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
@@ -1138,19 +1505,7 @@ bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
 
  outLanding = probe.targetPos
               - glm::vec3(probe.moveDir.x * 0.18f, 0.0f, probe.moveDir.z * 0.18f);
- if (!CheckCollision(outLanding, cap)) {
-  return true;
- }
-
- glm::vec3 resolved = eyePos;
- const glm::vec3 stepDelta(probe.moveDir.x * 0.45f, 1.02f, probe.moveDir.z * 0.45f);
- resolved = ResolveMovement(eyePos, stepDelta, cap);
- const float movedH = glm::length(glm::vec2(resolved.x - eyePos.x, resolved.z - eyePos.z));
- if (movedH < 0.08f || CheckCollision(resolved, cap)) {
-  return false;
- }
- outLanding = resolved;
- return true;
+ return !CheckCollision(outLanding, cap);
 }
 
 bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
@@ -1202,6 +1557,29 @@ void World::LoadUsers(const std::string &file_name)
       user->SetPosition(position);
       SanitizeUserPosition(user);
 
+      if (user_data.contains("player_creature_id")) {
+       const CreatureId savedId = user_data["player_creature_id"].get<CreatureId>();
+       if (GetCreature(savedId)) {
+        user->SetPlayerCreatureId(savedId);
+        playerCreatureId_ = savedId;
+       }
+      }
+      if (user_data.contains("selected_skin_id")) {
+       user->SetSelectedSkinId(user_data["selected_skin_id"].get<std::string>());
+      } else if (user_data.contains("selected_appearance_type")) {
+       user->SetSelectedAppearanceTypeId(user_data["selected_appearance_type"].get<std::string>());
+       user->SetSelectedSkinId(user_data["selected_appearance_type"].get<std::string>());
+      }
+      Creature* playerCreature = GetCreature(user->GetPlayerCreatureId());
+      if (!playerCreature && playerCreatureId_ != 0) {
+       user->SetPlayerCreatureId(playerCreatureId_);
+       playerCreature = GetCreature(playerCreatureId_);
+      }
+      if (playerCreature) {
+       const glm::vec3 eyeOffset = playerCreature->GetEyeOffset();
+       playerCreature->SetBodyOrigin(BodyOriginFromEye(user->GetPosition(), eyeOffset));
+      }
+
       float yaw = -90.0f;
       float pitch = 0.0f;
       if (user_data.contains("yaw")) {
@@ -1211,6 +1589,24 @@ void World::LoadUsers(const std::string &file_name)
        pitch = user_data["pitch"].get<float>();
       }
       user->SetCameraOrientation(yaw, pitch);
+
+      const size_t hotbarCount = 2;
+      if (playerCreature) {
+       CreatureInventory& inv = playerCreature->GetInventory();
+       inv.DeserializeFromJson(user_data, hotbarCount);
+       if (inv.GetStorage().empty()) {
+        inv.InitCreativeDefaults();
+       }
+       inv.EnsureDefaultHotbar();
+       playerCreature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
+       if (!user->GetSelectedSkinId().empty()) {
+        playerCreature->SetSkinId(user->GetSelectedSkinId());
+        if (const CreatureDefinition* def =
+                GetCreatureDefinition(playerCreature->GetTypeId())) {
+         playerCreature->SetVisual(CreateCreatureVisual(*def));
+        }
+       }
+      }
 
       if (auto camera = GetUserCamera(user_name)) {
        camera->SetPosition(position);
@@ -1248,6 +1644,16 @@ void World::SaveUsers(const std::string &file_name)
   user_json["position"] = json::array({position.x, position.y, position.z});
   user_json["yaw"] = yaw;
   user_json["pitch"] = pitch;
+  user_json["player_creature_id"] = user->GetPlayerCreatureId();
+  if (!user->GetSelectedSkinId().empty()) {
+   user_json["selected_skin_id"] = user->GetSelectedSkinId();
+  } else if (!user->GetSelectedAppearanceTypeId().empty()) {
+   user_json["selected_appearance_type"] = user->GetSelectedAppearanceTypeId();
+  }
+
+  if (Creature* playerCreature = GetCreature(user->GetPlayerCreatureId())) {
+   playerCreature->GetInventory().SerializeToJson(user_json);
+  }
 
   objects[user_name] = user_json;
  }
@@ -1350,25 +1756,73 @@ void World::DoMovement()
  auto t_begin = std::chrono::high_resolution_clock::now();
 
  auto camera = GetCurrentUserCamera();
+ Creature* controlled = GetControlledCreature();
  const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
+ const float dt = camera ? camera->GetDeltaTime() : 0.0f;
 
  if (camera && streamer_ && streamingEnabled_) {
-  const glm::vec3 playerPos = camera->GetPosition();
-  const PlayerCapsule cap = camera->GetPlayerCapsule();
-  const glm::ivec3 feetBlock = WorldPosToBlock(
-      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
+  const glm::vec3 eyePos = camera->GetPosition();
+  float feetY = FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
+  if (controlled) {
+   feetY = BoundsFeetY(controlled->GetBodyOrigin());
+  }
+  const glm::ivec3 feetBlock = WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
   streamer_->EnsureCollisionChunks(feetBlock);
  }
 
+ WorldCreatureActivitySink activitySink(*this);
+ activityDirector_.TickAgents(*this, activitySink, dt);
+
+ ForEachCreature([&](Creature& creature) {
+  if (controlledCreatureId_ != 0 && creature.GetId() == controlledCreatureId_) {
+   return;
+  }
+  if (creature.IsPossessed()) {
+   return;
+  }
+  creature.ExecuteIntent(*this, dt);
+ });
+
  bool is_moved = camera && camera->DoMovement(this);
+
+ if (controlled && camera) {
+  const glm::vec3 eye = camera->GetPosition();
+  float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet()) {
+   const int gx = WorldCoordToBlockIndex(eye.x);
+   const int gz = WorldCoordToBlockIndex(eye.z);
+   if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY)) {
+    feetY = *gy;
+   }
+  }
+  controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
+  controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
+  controlled->GetLocomotion().SyncFeetAnchorFromView(feetY, camera->HasAnchoredFeet());
+  controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()), camera->GetPitch());
+  controlled->SyncBoundsFromStance();
+  controlled->GetLocomotion().SetMode(
+      camera->GetFreeMove() ? CreatureMovementMode::Flying : CreatureMovementMode::Walking);
+  float horizontalSpeed = 0.0f;
+  const CreatureLocomotionController& camLoc = camera->GetLocomotionController();
+  const LocomotionState camState = camLoc.GetLocomotionState();
+  if (camState == LocomotionState::Walk || camState == LocomotionState::Run) {
+   horizontalSpeed = camLoc.GetWalkSpeed();
+  } else if (camState == LocomotionState::Fly || camState == LocomotionState::Glide ||
+             camState == LocomotionState::Hover) {
+   horizontalSpeed = camLoc.GetFlySpeed();
+  }
+  controlled->RebuildLocomotionFactsFromController(camLoc, controlled->GetLocomotion().GetCapabilities(),
+                                                   static_cast<float>(camera->GetDeltaTime()),
+                                                   horizontalSpeed);
+  is_moved = true;
+ }
 
  if (camera) {
   UpdateStreaming();
   blockWorldReady_ = true;
  }
 
- if(is_moved && camera)
- {
+ if (is_moved && camera) {
   if (auto user = GetCurrentUser()) {
    user->SetPosition(camera->GetPosition());
    user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
@@ -1377,7 +1831,8 @@ void World::DoMovement()
  }
 
  auto t_end = std::chrono::high_resolution_clock::now();
- DurationDoMovementMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
+ DurationDoMovementMks = static_cast<uint64_t>(
+     std::chrono::duration<double, std::micro>(t_end - t_begin).count());
  UpdateMovementDiagnostics(camera, prevPlayerY);
 }
 
@@ -1469,10 +1924,30 @@ void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front
  IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  hasIntersectionBlock_ = hit.has_value();
+ hasPlaceTarget_ = false;
  if (hit) {
   intersectionBlockPos_ = hit->blockPos;
+  if (FindNearestFreeCubePosition(position, front).has_value()) {
+   glm::ivec3 normal = hit->faceNormal;
+   if (normal == glm::ivec3(0)) {
+    const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+    if (std::abs(toCamera.x) >= std::abs(toCamera.y) && std::abs(toCamera.x) >= std::abs(toCamera.z)) {
+     normal.x = toCamera.x > 0.0f ? 1 : -1;
+    } else if (std::abs(toCamera.y) >= std::abs(toCamera.z)) {
+     normal.y = toCamera.y > 0.0f ? 1 : -1;
+    } else {
+     normal.z = toCamera.z > 0.0f ? 1 : -1;
+    }
+   }
+   const glm::ivec3 placePos = hit->blockPos + normal;
+   if (blockWorld_.IsAir(placePos)) {
+    hasPlaceTarget_ = true;
+    placeBlockPos_ = placePos;
+   }
+  }
  } else {
   intersectionBlockPos_ = glm::ivec3(0);
+  placeBlockPos_ = glm::ivec3(0);
  }
 
  if (auto user = GetCurrentUser()) {

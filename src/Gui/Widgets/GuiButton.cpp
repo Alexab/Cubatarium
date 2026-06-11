@@ -89,7 +89,7 @@ bool GuiButton::OnMouseUp(const GuiMouseEvent& event)
     }
     const bool inside = bounds_.Contains(event.x, event.y);
     const bool wasPressed = pressedInside_;
-    if (wasPressed && inside && event.button == GuiMouseButton::Left && onClick_) {
+    if (wasPressed && event.button == GuiMouseButton::Left && onClick_) {
         onClick_();
     }
     pressedInside_ = false;

@@ -11,8 +11,10 @@
 #include <limits>
 #include <unordered_set>
 #include <array>
+#include <functional>
 #include <map>
 #include <tuple>
+#include <unordered_map>
 #include "BlockWorld.h"
 #include "BlockDefinition.h"
 #include "BlockDefinitionStorage.h"
@@ -24,9 +26,20 @@
 #include "ProceduralSettings.h"
 #include "worldgen/IWorldGenPipeline.h"
 #include "worldgen/WorldGenContext.h"
+#include "CollisionVolume.h"
+#include "CreatureBounds.h"
 #include "PlayerCapsule.h"
+#include "Creature.h"
+#include "CreatureCatalogTypes.h"
+#include "activity/CreatureActivityDirector.h"
+#include "activity/IWorldPerception.h"
+#include "pose/CreaturePosePresenterRegistry.h"
 
 namespace cutum {
+
+class CreatureDefinitionStorage;
+class SkinDefinitionStorage;
+struct CreatureDefinition;
 
 class ViewEngine;
 class ObjectStorage;
@@ -34,7 +47,7 @@ class PrefabLibrary;
 class User;
 class Camera;
 
-class World
+class World : public IWorldPerception
 {
 public:
  World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views);
@@ -63,7 +76,12 @@ public:
 
  const std::string& GetCurrentUserName() const;
  std::shared_ptr<User> GetCurrentUser();
+ std::shared_ptr<User> GetCurrentUser() const;
  bool SetCurrentUserName(const std::string& name);
+
+ CreatureInventory* GetPlayerInventory(const std::shared_ptr<User>& user);
+ const CreatureInventory* GetPlayerInventory(const std::shared_ptr<User>& user) const;
+ void EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount);
 
  std::shared_ptr<Camera> GetUserCamera(const std::string& name);
  std::shared_ptr<Camera> GetCurrentUserCamera();
@@ -98,6 +116,15 @@ public:
  bool AddObjectByView();
  bool PlaceActivePrefabByView();
  bool DelObjectByView();
+ bool DelBlockAt(glm::ivec3 blockPos);
+
+ void StartBreakSession(glm::ivec3 blockPos);
+ void CancelBreakSession();
+ void TickBreakSession(float dt, float durationSeconds);
+ bool CompleteBreakSession();
+ float GetBreakProgress() const;
+ bool HasBreakSession() const { return breakSession_.has_value(); }
+ std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
 
  bool AddObject(const std::string type_id, const glm::vec3 &position);
 
@@ -107,13 +134,82 @@ public:
 
  void SetPrefabLibrary(PrefabLibrary* library) { prefabLibrary_ = library; }
 
+ void SetCreatureDefinitionStorage(std::shared_ptr<CreatureDefinitionStorage> storage);
+ void SetSkinDefinitionStorage(std::shared_ptr<SkinDefinitionStorage> storage);
+ const std::shared_ptr<CreatureDefinitionStorage>& GetCreatureDefinitionStorage() const {
+  return creatureDefinitions_;
+ }
+ const std::shared_ptr<SkinDefinitionStorage>& GetSkinDefinitionStorage() const {
+  return skinDefinitions_;
+ }
+
+ Creature* GetCreature(CreatureId id);
+ const Creature* GetCreature(CreatureId id) const;
+ Creature* GetControlledCreature();
+ const Creature* GetControlledCreature() const;
+ Creature* GetPlayerCreature();
+ CreatureId GetControlledCreatureId() const { return controlledCreatureId_; }
+ CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
+ bool SetControlledCreature(CreatureId id);
+ void ApplyLocomotionDefinitionToCamera(Camera& camera, const CreatureDefinition& def) const;
+ void RegisterDefaultActivityAgents();
+ void SnapCreatureFeetToGround(Creature& creature) const;
+
+ std::optional<ControlledCreatureInfo> QueryControlledCreatureInfo() const override;
+ std::vector<CreatureId> CreaturesInRadius(const glm::vec3& center, float radius) const override;
+ /// Top face under feet: highest solid in column at or below referenceFeetY (runtime pose).
+ std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ, float referenceFeetY) const;
+ /// Top face of the highest solid in the full column (spawn / load snap).
+ std::optional<float> QueryGroundFeetYColumn(int worldX, int worldZ) const;
+ std::optional<int> FindHighestSolidY(int x, int z) const;
+ /// Stand cell is column top with standing clearance (step-up / landing validation).
+ bool IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const;
+ /// Enough footprint samples on valid stand cells at `feetY` (blocks corner ledge / wall lip landings).
+ bool IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap, float feetY) const;
+ CreatureId SpawnCreature(const std::string& speciesId, const glm::vec3& bodyOrigin,
+                          const std::string& skinId = "");
+ bool SpawnCreatureByView(const std::string& speciesId);
+ std::optional<CreatureId> PickCreatureByView(const glm::vec3& eye, const glm::vec3& front,
+                                              float maxDistance) const;
+ bool TryApplySkin(CreatureId target, const std::string& skinId, std::string* outError = nullptr);
+ void RemoveCreature(CreatureId id);
+ void ForEachCreature(const std::function<void(Creature&)>& fn);
+ void ForEachCreature(const std::function<void(const Creature&)>& fn) const;
+ std::string ResolveAnimationTypeId(const Creature& creature) const;
+ const CreatureDefinition* GetCreatureDefinition(const std::string& typeId) const;
+ CreaturePosePresenterRegistry& GetPosePresenterRegistry() { return posePresenterRegistry_; }
+ const CreaturePosePresenterRegistry& GetPosePresenterRegistry() const {
+  return posePresenterRegistry_;
+ }
+ ResolvedCreatureAppearance GetResolvedAppearance(const Creature& creature) const;
+
+ void LoadCreatures(const std::string& file_name);
+ void SaveCreatures(const std::string& file_name);
+
+ bool CheckBlockCollisionVolume(const CollisionVolume& vol) const;
+ bool CheckCreatureCollisionVolume(const CollisionVolume& vol,
+                                   CreatureId skipCreatureId) const;
+ bool CheckCollisionVolume(const CollisionVolume& vol,
+                           CreatureId skipCreatureId = 0) const;
+ bool HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const;
+ /// Moves from body origin along delta (Y, X, Z axis order).
+ glm::vec3 ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
+                               const glm::vec3& currentSizeBlocks,
+                               CreatureId skipCreatureId = 0) const;
+ SampledFluidState SampleFluidPhysicsVolume(const CollisionVolume& vol) const;
+
  /// `eyePos` is camera/eye position; collision AABB derived from `cap`.
  bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
+ bool CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
+                     CreatureId skipCreatureId) const;
  /// Solid block directly under the player feet (for step-up / grounded checks).
  bool HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const;
  /// Moves from eye position along delta with axis-separated resolution (Y, then X, then Z).
  glm::vec3 ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
-                           const PlayerCapsule& cap) const;
+                           const PlayerCapsule& cap,
+                           CreatureId skipCreatureId = 0) const;
+
+ CreatureId GetMovementCollisionSkipId() const { return controlledCreatureId_; }
 
  struct StepUpProbe {
   bool valid{false};
@@ -143,6 +239,9 @@ public:
 
  bool GetIsBlockIntersectionExists() const { return hasIntersectionBlock_; }
  glm::ivec3 GetIntersectionBlockPos() const { return intersectionBlockPos_; }
+ glm::ivec3 GetBreakBlockPos() const { return intersectionBlockPos_; }
+ bool HasPlaceTarget() const { return hasPlaceTarget_; }
+ glm::ivec3 GetPlaceBlockPos() const { return placeBlockPos_; }
 
  uint64_t GetDurationDoMovementMks() const;
 
@@ -173,6 +272,9 @@ public:
  void SetStepUpEnabled(bool enabled) { stepUpEnabled_ = enabled; }
  bool IsStepUpEnabled() const { return stepUpEnabled_; }
 
+ void SetEntityCollisionEnabled(bool enabled) { entityCollisionEnabled_ = enabled; }
+ bool IsEntityCollisionEnabled() const { return entityCollisionEnabled_; }
+
  static bool HasPersistedTerrainOnDisk(const std::string& world_folder_path);
 
 private:
@@ -188,6 +290,7 @@ private:
 
  void LoadUsers(const std::string &file_name);
  void SaveUsers(const std::string &file_name);
+ void LinkUsersToPlayerCreatures();
 
  void MigrateObjectsFromJson(const std::string &file_name);
 
@@ -210,7 +313,6 @@ private:
  bool IsReasonablePlayerPosition(const glm::vec3& position) const;
  void SanitizeUserPosition(const std::shared_ptr<User>& user);
  void EnsurePlayerOnGround();
- std::optional<int> FindHighestSolidY(int x, int z) const;
  void MarkBlockChunkDirty(glm::ivec3 blockPos);
  void UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY);
  void RebuildWorldGenPipeline();
@@ -231,6 +333,15 @@ private:
 
  std::map<std::string, std::shared_ptr<User>> Users;
 
+ std::unordered_map<CreatureId, std::unique_ptr<Creature>> creatures_;
+ CreatureId nextCreatureId_{1};
+ CreatureId playerCreatureId_{0};
+ CreatureId controlledCreatureId_{0};
+ std::shared_ptr<CreatureDefinitionStorage> creatureDefinitions_;
+ std::shared_ptr<SkinDefinitionStorage> skinDefinitions_;
+ CreatureActivityDirector activityDirector_;
+ CreaturePosePresenterRegistry posePresenterRegistry_;
+
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<ViewEngine> ViewInstance;
  PrefabLibrary* prefabLibrary_{nullptr};
@@ -242,6 +353,7 @@ private:
  std::unique_ptr<ChunkStreamer> streamer_;
  bool streamingEnabled_{true};
  bool stepUpEnabled_{true};
+ bool entityCollisionEnabled_{true};
  RenderSettings renderSettings_;
  int renderDistanceChunks_{4};
  std::unordered_set<glm::ivec3, IVec3Hash> modifiedChunks_;
@@ -255,6 +367,14 @@ private:
 
  bool hasIntersectionBlock_{false};
  glm::ivec3 intersectionBlockPos_{0};
+ bool hasPlaceTarget_{false};
+ glm::ivec3 placeBlockPos_{0};
+
+ struct BlockBreakSession {
+  glm::ivec3 blockPos{0};
+  float progress{0.f};
+ };
+ std::optional<BlockBreakSession> breakSession_;
 
  uint64_t DurationDoMovementMks;
  MovementDiagnostics movementDiagnostics_;

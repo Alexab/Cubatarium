@@ -23,13 +23,17 @@
 #include <windows.h>
 #endif
 #include "Core.h"
+#include "Version.h"
 #include "BlockDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
 #include "World.h"
+#include "Creature.h"
+#include "CreatureDefinitionStorage.h"
+#include "CreatureTextureStorage.h"
+#include "SkinDefinitionStorage.h"
 #include "ProceduralConfigIO.h"
 #include "ProceduralSettings.h"
-#include "World.h"
 #include "TextureCube.h"
 #include "TextureBase.h"
 #include "ObjectStorage.h"
@@ -76,20 +80,6 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
  return start;
 }
 
-std::filesystem::path GetExecutableDirectory()
-{
-#ifdef _WIN32
- wchar_t buffer[MAX_PATH];
- const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
- if (length == 0 || length >= MAX_PATH) {
-  return std::filesystem::current_path();
- }
- return std::filesystem::path(buffer).parent_path();
-#else
- return std::filesystem::current_path();
-#endif
-}
-
 bool ParseWorldNumberSuffix(const std::string& name, int& outNumber)
 {
  constexpr const char* kPrefix = "World_";
@@ -109,6 +99,20 @@ bool ParseWorldNumberSuffix(const std::string& name, int& outNumber)
 }
 
 } // namespace
+
+std::filesystem::path GetExecutableDirectory()
+{
+#ifdef _WIN32
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH) {
+        return std::filesystem::current_path();
+    }
+    return std::filesystem::path(buffer).parent_path();
+#else
+    return std::filesystem::current_path();
+#endif
+}
 
 Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
            std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
@@ -221,9 +225,12 @@ void Core::LoadConfig(const std::string& config_file_name)
       renderDistanceChunks_ = d.value("render_distance_chunks", 4);
       streamingEnabled_ = d.value("streaming_enabled", true);
       if (d.contains("gameplay") && d["gameplay"].is_object()) {
-       stepUpEnabled_ = d["gameplay"].value("step_up", true);
+       const json& gameplay = d["gameplay"];
+       stepUpEnabled_ = gameplay.value("step_up", true);
+       entityCollisionEnabled_ = gameplay.value("entity_collision", true);
       } else {
        stepUpEnabled_ = true;
+       entityCollisionEnabled_ = true;
       }
       if (d.contains("render") && d["render"].is_object()) {
        const json& r = d["render"];
@@ -231,6 +238,9 @@ void Core::LoadConfig(const std::string& config_file_name)
        renderSettings_.faceQuads = r.value("face_quads", true);
        renderSettings_.frustumCulling = r.value("frustum_culling", true);
        renderSettings_.batchCache = r.value("batch_cache", true);
+       renderSettings_.creatureDebugBounds = r.value("creature_debug_bounds", false);
+       renderSettings_.creatureTexturedParts = r.value("creature_textured_parts", true);
+       renderSettings_.creatureWireframeOverlay = r.value("creature_wireframe_overlay", false);
        if (renderSettings_.greedyMeshing && !renderSettings_.faceQuads) {
         std::cout << "Render: greedy_meshing enabled — auto-enabling face_quads" << std::endl;
         renderSettings_.faceQuads = true;
@@ -245,6 +255,17 @@ void Core::LoadConfig(const std::string& config_file_name)
        uiSettings_.paletteKey = u.value("palette_key", "b");
        uiSettings_.inventoryKey = u.value("inventory_key", "e");
        uiSettings_.hotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
+       std::string schemeStr = "classic";
+       if (u.contains("control_scheme") && u["control_scheme"].is_string()) {
+        schemeStr = u["control_scheme"].get<std::string>();
+       } else if (u.contains("block_input_profile") && u["block_input_profile"].is_string()) {
+        schemeStr = u["block_input_profile"].get<std::string>();
+       }
+       uiSettings_.controlScheme = ControlSchemeFromString(schemeStr);
+       uiSettings_.placeClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
+       uiSettings_.breakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
+       uiSettings_.breakDurationSeconds = u.value("break_duration_seconds", 0.25f);
+       uiSettings_.rmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
       }
      } else {
       default_world_name.clear();
@@ -268,6 +289,19 @@ void Core::LoadConfig(const std::string& config_file_name)
      TextureCubeStorageInstance->SetBlockDefinitions(blockDefinitions);
      WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
+     auto creatureDefinitions = std::make_shared<CreatureDefinitionStorage>();
+     creatureDefinitions->Load((project_dir / "models" / "creatures").string());
+     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
+
+     auto skinDefinitions = std::make_shared<SkinDefinitionStorage>();
+     skinDefinitions->Load((project_dir / "models" / "skins").string());
+     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
+
+     CreatureTextureStorageInstance = std::make_shared<CreatureTextureStorage>();
+     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
+         (project_dir / "models" / "creatures").string(),
+         (project_dir / "models" / "skins").string());
+
      TextureBaseStorageInstance->Load(texture_base_storage_file_name.string());
 
      TextureCubeStorageInstance->Load(texture_cube_storage_file_name.string());
@@ -280,7 +314,7 @@ void Core::LoadConfig(const std::string& config_file_name)
       PrefabLibraryInstance->Load(prefabs_path_.string(), WorldInstance->GetBlockRegistry());
       WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
       if (auto user = WorldInstance->GetCurrentUser()) {
-       user->EnsureHotbarCount(static_cast<size_t>(uiSettings_.hotbarCount));
+       WorldInstance->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
       }
      }
 
@@ -295,15 +329,18 @@ void Core::LoadConfig(const std::string& config_file_name)
      WorldInstance->SetStreamingEnabled(streamingEnabled_);
      WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
      WorldInstance->SetStepUpEnabled(stepUpEnabled_);
+     WorldInstance->SetEntityCollisionEnabled(entityCollisionEnabled_);
      WorldInstance->SetRenderSettings(renderSettings_);
      if (GeometryEngineInstance) {
       GeometryEngineInstance->SetRenderSettings(renderSettings_);
+      GeometryEngineInstance->SetCreatureTextureStorage(CreatureTextureStorageInstance);
      }
      std::cout << "Render: greedy=" << renderSettings_.greedyMeshing
                << " face_quads=" << renderSettings_.faceQuads
                << " frustum=" << renderSettings_.frustumCulling
                << " batch_cache=" << renderSettings_.batchCache << std::endl;
-     std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0") << std::endl;
+     std::cout << "Gameplay: step_up=" << (stepUpEnabled_ ? "1" : "0")
+               << " entity_collision=" << (entityCollisionEnabled_ ? "1" : "0") << std::endl;
  } catch (const json::exception& e) {
      std::cerr << "JSON parsing error: " << e.what() << std::endl;
  }
@@ -332,11 +369,12 @@ void Core::EnterGame()
      if (WorldInstance->GetCurrentUser() == nullptr) {
       WorldInstance->GenerateUsers();
      }
-     if (auto user = WorldInstance->GetCurrentUser()) {
-      if (user->GetActiveObject() == nullptr) {
-       user->SetActiveBlockIndex(0);
+     if (Creature* player = WorldInstance->GetPlayerCreature()) {
+      if (player->GetInventory().GetActiveEntryRef() == nullptr) {
+       player->GetInventory().SetActiveSlot(0, 1);
       }
      }
+     std::cout << kCubatariumVersion << " (feet snap: BlockTopY)" << std::endl;
  } catch (const std::exception& e) {
      std::cerr << "Core::EnterGame error: " << e.what() << std::endl;
      CreateWorld();
@@ -364,12 +402,16 @@ void Core::SaveConfigFile()
  system_data["streaming_enabled"] = streamingEnabled_;
  json gameplay;
  gameplay["step_up"] = stepUpEnabled_;
+ gameplay["entity_collision"] = entityCollisionEnabled_;
  system_data["gameplay"] = gameplay;
  json render;
  render["greedy_meshing"] = renderSettings_.greedyMeshing;
  render["face_quads"] = renderSettings_.faceQuads;
  render["frustum_culling"] = renderSettings_.frustumCulling;
  render["batch_cache"] = renderSettings_.batchCache;
+ render["creature_debug_bounds"] = renderSettings_.creatureDebugBounds;
+ render["creature_textured_parts"] = renderSettings_.creatureTexturedParts;
+ render["creature_wireframe_overlay"] = renderSettings_.creatureWireframeOverlay;
  system_data["render"] = render;
  WriteUiSettings(system_data, uiSettings_);
 
@@ -408,6 +450,7 @@ AppSettingsSnapshot Core::GetAppSettings() const
  snapshot.renderDistanceChunks = renderDistanceChunks_;
  snapshot.streamingEnabled = streamingEnabled_;
  snapshot.stepUpEnabled = stepUpEnabled_;
+ snapshot.entityCollisionEnabled = entityCollisionEnabled_;
  snapshot.render = renderSettings_;
  snapshot.ui = uiSettings_;
  return snapshot;
@@ -420,15 +463,18 @@ void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
  renderDistanceChunks_ = settings.renderDistanceChunks;
  streamingEnabled_ = settings.streamingEnabled;
  stepUpEnabled_ = settings.stepUpEnabled;
+ entityCollisionEnabled_ = settings.entityCollisionEnabled;
  renderSettings_ = settings.render;
  uiSettings_ = settings.ui;
 
  WorldInstance->SetStreamingEnabled(streamingEnabled_);
  WorldInstance->SetRenderDistanceChunks(renderDistanceChunks_);
  WorldInstance->SetStepUpEnabled(stepUpEnabled_);
+ WorldInstance->SetEntityCollisionEnabled(entityCollisionEnabled_);
  WorldInstance->SetRenderSettings(renderSettings_);
  if (GeometryEngineInstance) {
   GeometryEngineInstance->SetRenderSettings(renderSettings_);
+  GeometryEngineInstance->SetCreatureTextureStorage(CreatureTextureStorageInstance);
  }
 }
 

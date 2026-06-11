@@ -18,6 +18,7 @@ public:
     void SetSelectedIndex(int index);
     int GetSelectedIndex() const { return selectedIndex_; }
     void SetOnSelectionChanged(std::function<void(int)> handler);
+    void SetAcceptKeyNavigation(bool enabled) { acceptKeyNavigation_ = enabled; }
 
     bool CanFocus() const override;
     void RevealFocused();
@@ -46,6 +47,7 @@ private:
     int scrollOffsetPx_{0};
     int rowHeight_{20};
     std::function<void(int)> onSelectionChanged_;
+    bool acceptKeyNavigation_{true};
     static constexpr int kScrollbarWidth = 10;
 };
 

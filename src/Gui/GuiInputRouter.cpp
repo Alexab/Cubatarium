@@ -128,9 +128,12 @@ bool GuiInputRouter::OnMouseDown(const GuiMouseEvent& event)
         SetKeyboardFocus(nullptr, false);
     }
     if (hit) {
-        captureMouse_ = true;
-        mousePressedWidget_ = hit;
-        return hit->OnMouseDown(event);
+        if (hit->OnMouseDown(event)) {
+            captureMouse_ = true;
+            mousePressedWidget_ = hit;
+            return true;
+        }
+        return false;
     }
     captureMouse_ = false;
     mousePressedWidget_ = nullptr;
@@ -141,10 +144,10 @@ bool GuiInputRouter::OnMouseUp(const GuiMouseEvent& event)
 {
     bool consumed = false;
     if (root_) {
-        if (GuiWidget* hit = root_->HitTest(event.x, event.y)) {
-            consumed = hit->OnMouseUp(event);
-        } else if (mousePressedWidget_) {
+        if (mousePressedWidget_) {
             consumed = mousePressedWidget_->OnMouseUp(event);
+        } else if (GuiWidget* hit = root_->HitTest(event.x, event.y)) {
+            consumed = hit->OnMouseUp(event);
         }
     }
     captureMouse_ = false;
@@ -156,6 +159,9 @@ bool GuiInputRouter::OnMouseMove(const GuiMouseEvent& event)
 {
     lastMouseX_ = event.x;
     lastMouseY_ = event.y;
+    if (captureMouse_ && mousePressedWidget_) {
+        return mousePressedWidget_->OnMouseMove(event);
+    }
     if (!root_) {
         return false;
     }

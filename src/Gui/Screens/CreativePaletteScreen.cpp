@@ -2,7 +2,8 @@
 #include "Gui/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
-#include "Gui/Interfaces/IHotbarViewModel.h"
+#include "Game/GameSession.h"
+#include "SlotInteraction.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
@@ -12,12 +13,35 @@
 
 namespace cutum {
 
-CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, IHotbarViewModel* hotbar,
+CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, GameSession* session,
                                              IGuiIconSource* icons)
     : catalog_(catalog)
-    , hotbar_(hotbar)
+    , session_(session)
     , icons_(icons)
 {
+}
+
+bool CreativePaletteScreen::PickSlot(int x, int y, SlotAddress& out) const
+{
+    if (!visible_) {
+        return false;
+    }
+    for (size_t i = 0; i < gridSlots_.size(); ++i) {
+        const GuiSlot* slot = gridSlots_[i];
+        if (!slot || !slot->IsVisible() || !slot->GetBounds().Contains(x, y)) {
+            continue;
+        }
+        if (i >= gridEntryIds_.size()) {
+            return false;
+        }
+        out.surface = SlotSurface::PaletteGrid;
+        out.paletteKind = kind_;
+        out.entryId = gridEntryIds_[i];
+        out.bar = 0;
+        out.slot = 0;
+        return true;
+    }
+    return false;
 }
 
 void CreativePaletteScreen::SetVisible(bool visible)
@@ -41,10 +65,23 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
     panel_ = panel.get();
 
     auto mainTabs = std::make_unique<GuiTabBar>(theme_);
-    mainTabs->SetTabs({"Blocks", "Objects"});
+    mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
     mainTabs_ = mainTabs.get();
     mainTabs->SetOnTabChanged([this](int tab) {
-        kind_ = tab == 0 ? ContentKind::Block : ContentKind::Object;
+        switch (tab) {
+        case 0:
+            kind_ = ContentKind::Block;
+            break;
+        case 1:
+            kind_ = ContentKind::Object;
+            break;
+        case 2:
+            kind_ = ContentKind::Creature;
+            break;
+        default:
+            kind_ = ContentKind::Skin;
+            break;
+        }
         if (catalog_) {
             const auto types = catalog_->GetTypeIds(kind_);
             activeTypeId_ = types.empty() ? "misc" : types.front();
@@ -149,11 +186,12 @@ void CreativePaletteScreen::Update(double /*dt*/)
 
 void CreativePaletteScreen::RebuildGrid()
 {
-    if (!scroll_ || !catalog_ || !hotbar_ || !theme_) {
+    if (!scroll_ || !catalog_ || !session_ || !theme_) {
         return;
     }
     scroll_->Content().ClearChildren();
     gridSlots_.clear();
+    gridEntryIds_.clear();
 
     const auto entries =
         catalog_->GetEntries(kind_, activeTypeId_.empty() ? "misc" : activeTypeId_);
@@ -164,27 +202,57 @@ void CreativePaletteScreen::RebuildGrid()
         const std::string entryId = entries[i].id;
         slot->SetSelected(entryId == selectedEntryId_);
         if (icons_) {
-            const GLuint tex =
-                kind_ == ContentKind::Block
-                    ? icons_->GetBlockIconTexture(entryId)
-                    : icons_->GetPrefabIconTexture(entryId);
+            GLuint tex = 0;
+            if (kind_ == ContentKind::Block) {
+                tex = icons_->GetBlockIconTexture(entryId);
+            } else if (kind_ == ContentKind::Object) {
+                tex = icons_->GetPrefabIconTexture(entryId);
+            } else if (kind_ == ContentKind::Creature) {
+                tex = icons_->GetCreatureIconTexture(entryId);
+            } else if (kind_ == ContentKind::Skin) {
+                tex = icons_->GetSkinIconTexture(entryId);
+            }
             slot->SetIconTexture(tex);
         }
-        slot->SetOnClick([this, entryId]() {
-            if (!hotbar_) {
+        InventoryEntryRef entry;
+        entry.empty = false;
+        entry.id = entryId;
+        switch (kind_) {
+        case ContentKind::Block:
+            entry.kind = InventoryEntryKind::Block;
+            break;
+        case ContentKind::Object:
+            entry.kind = InventoryEntryKind::Object;
+            break;
+        case ContentKind::Creature:
+            entry.kind = InventoryEntryKind::Creature;
+            break;
+        case ContentKind::Skin:
+            entry.kind = InventoryEntryKind::Skin;
+            break;
+        }
+
+        SlotAddress address;
+        address.surface = SlotSurface::PaletteGrid;
+        address.paletteKind = kind_;
+        address.entryId = entryId;
+
+        slot->SetOnClick([this, entry]() {
+            if (!session_) {
                 return;
             }
-            selectedEntryId_ = entryId;
-            InventoryEntryRef entry;
-            entry.empty = false;
-            entry.id = entryId;
-            entry.kind = kind_ == ContentKind::Block ? InventoryEntryKind::Block
-                                                     : InventoryEntryKind::Object;
-            hotbar_->BeginPendingAssignment(entry);
+            selectedEntryId_ = entry.id;
+            session_->BeginPendingAssignment(entry);
             built_ = false;
+        });
+        slot->SetOnBeginDrag([this, address, entry]() {
+            if (session_) {
+                session_->BeginDragFromSlot(address, entry);
+            }
         });
         GuiSlot* ptr = static_cast<GuiSlot*>(scroll_->Content().AddChild(std::move(slot)));
         gridSlots_.push_back(ptr);
+        gridEntryIds_.push_back(entryId);
     }
 
     scroll_->SetAfterScrollLayout([this](GuiScrollView&) {

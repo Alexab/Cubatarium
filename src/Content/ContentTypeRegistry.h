@@ -9,13 +9,17 @@
 namespace cutum {
 
 class BlockDefinitionStorage;
+class CreatureDefinitionStorage;
 class PrefabLibrary;
+class SkinDefinitionStorage;
 
 class ContentTypeRegistry : public IContentCatalog {
 public:
     void LoadTypes(const std::string& typesJsonPath);
     void IndexBlocks(const BlockDefinitionStorage& storage);
     void IndexPrefabs(const PrefabLibrary& prefabs);
+    void IndexCreatures(const CreatureDefinitionStorage& storage);
+    void IndexSkins(const SkinDefinitionStorage& storage);
 
     std::vector<std::string> GetTypeIds(ContentKind kind) const override;
     std::string GetTypeDisplayName(const std::string& typeId) const override;
@@ -30,6 +34,8 @@ private:
     std::unordered_map<std::string, ContentType> typeById_;
     std::unordered_map<std::string, std::vector<CatalogEntry>> blockEntries_;
     std::unordered_map<std::string, std::vector<CatalogEntry>> objectEntries_;
+    std::unordered_map<std::string, std::vector<CatalogEntry>> creatureEntries_;
+    std::unordered_map<std::string, std::vector<CatalogEntry>> skinEntries_;
 };
 
 } // namespace cutum

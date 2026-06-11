@@ -32,6 +32,7 @@ public:
     /// @p yTop — отступ сверху (как в GUI), не baseline FreeType.
     void DrawText(const std::string& text, int x, int yTop, const glm::vec3& color);
     void DrawTextCenteredInRect(const GuiRect& rect, const std::string& text, const glm::vec3& color);
+    int MeasureTextWidth(const std::string& text) const;
 
     void PushClipRect(const GuiRect& rect);
     void PopClipRect();
