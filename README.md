@@ -4,7 +4,7 @@ A Minecraft-like voxel sandbox engine using C++17, OpenGL, and GLFW. Uses Minecr
 
 ## Build
 
-- CMake 3.10+, C++17 compiler
+- CMake 3.15+, C++17 compiler
 - Dependencies via vcpkg: GLFW, GLEW, GLM, FreeType, nlohmann/json
 - Configure with `CMAKE_BINARY_DIR` pointing to `bin/` (see root `CMakeLists.txt`)
 - Build with Visual Studio or MSBuild: `bin/Cubatarium.sln`, Configuration **Release**

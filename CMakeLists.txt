@@ -1,4 +1,17 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
+
+# Static CRT (/MT) and vcpkg libs for MSVC Windows (Release family + Debug in bin/).
+if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
+    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
+    set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
+endif()
+
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+endif()
+if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
@@ -47,6 +60,7 @@ endif()
 set(SOURCES
     src/stb_image.cpp
     src/main.cpp
+    src/Utils.cpp
     src/Camera.cpp
     src/CreatureBounds.cpp
     src/CreatureLocomotionController.cpp

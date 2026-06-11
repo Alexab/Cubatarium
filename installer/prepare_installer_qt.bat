@@ -17,23 +17,19 @@ if not exist "%OUT_BIN%" mkdir "%OUT_BIN%"
 
 echo Staging installer files into %OUT% ...
 
-rem Executable and runtime DLLs (whitelist only; no Qt / no *d debug copies)
+rem Executable (static CRT + vcpkg libs; no third-party DLLs)
 xcopy "%SRC_BIN%\Cubatarium.exe" "%OUT_BIN%\" /Y /D
-for %%F in (
-    glfw3.dll
-    glew32.dll
-    freetype.dll
-    zlib1.dll
-    bz2.dll
-    libpng16.dll
-    brotlidec.dll
-    brotlicommon.dll
-) do (
-    if exist "%SRC_BIN%\%%F" xcopy "%SRC_BIN%\%%F" "%OUT_BIN%\" /Y /D
-)
-rem Remove stale DLLs from a previous staging (e.g. Qt / Debug leftovers)
+rem Remove stale DLLs from a previous dynamic staging
 del /q "%OUT_BIN%\Qt5*.dll" 2>nul
 del /q "%OUT_BIN%\*d.dll" 2>nul
+del /q "%OUT_BIN%\glfw3.dll" 2>nul
+del /q "%OUT_BIN%\glew32.dll" 2>nul
+del /q "%OUT_BIN%\freetype.dll" 2>nul
+del /q "%OUT_BIN%\zlib1.dll" 2>nul
+del /q "%OUT_BIN%\bz2.dll" 2>nul
+del /q "%OUT_BIN%\libpng16.dll" 2>nul
+del /q "%OUT_BIN%\brotlidec.dll" 2>nul
+del /q "%OUT_BIN%\brotlicommon.dll" 2>nul
 
 rem Config next to exe (worlds/ and saves are created at runtime under bin)
 if exist "%SRC_BIN%\config.json" (
