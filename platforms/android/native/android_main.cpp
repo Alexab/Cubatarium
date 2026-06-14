@@ -29,6 +29,76 @@ void HandleAppCmd(android_app *app, int32_t cmd)
   state->window->OnAppCmd(cmd);
 }
 
+bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
+{
+  const auto flag = paths.WritableRoot() / ".assets_extracted";
+  const auto font = paths.AssetRoot() / "fonts/arial.ttf";
+  if (std::filesystem::exists(flag) || std::filesystem::exists(font))
+  {
+    return true;
+  }
+
+  CubatariumLogInfo("Android", "Waiting for game assets extraction...");
+  while (app->destroyRequested == 0)
+  {
+    if (std::filesystem::exists(flag) || std::filesystem::exists(font))
+    {
+      return true;
+    }
+    int events = 0;
+    android_poll_source *source = nullptr;
+    while (ALooper_pollOnce(0, nullptr, &events,
+                            reinterpret_cast<void **>(&source)) >= 0)
+    {
+      if (source)
+      {
+        source->process(app, source);
+      }
+      if (app->destroyRequested != 0)
+      {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+bool WaitForEglSurface(android_app *app, AndroidPlatformWindow &window)
+{
+  if (window.HasSurface())
+  {
+    return true;
+  }
+
+  CubatariumLogInfo("Android", "Waiting for native window / EGL...");
+  while (app->destroyRequested == 0)
+  {
+    if (app->window != nullptr && !window.HasSurface())
+    {
+      window.InitEgl(app);
+    }
+    if (window.HasSurface())
+    {
+      return true;
+    }
+    int events = 0;
+    android_poll_source *source = nullptr;
+    while (ALooper_pollOnce(0, nullptr, &events,
+                            reinterpret_cast<void **>(&source)) >= 0)
+    {
+      if (source)
+      {
+        source->process(app, source);
+      }
+      if (app->destroyRequested != 0)
+      {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 } // namespace cutum
@@ -36,6 +106,12 @@ void HandleAppCmd(android_app *app, int32_t cmd)
 extern "C" void android_main(struct android_app *app)
 {
   using namespace cutum;
+
+  AndroidPlatformWindow window(app);
+  AndroidAppState state;
+  state.window = &window;
+  app->userData = &state;
+  app->onAppCmd = HandleAppCmd;
 
   if (!CubatariumAndroidWaitForJavaInit(app))
   {
@@ -47,33 +123,19 @@ extern "C" void android_main(struct android_app *app)
   pathsPtr->EnsureWritableConfig();
   IPlatformPaths::SetGlobal(pathsPtr);
 
-  AndroidPlatformWindow window(app);
-  AndroidAppState state;
-  state.window = &window;
-  app->userData = &state;
-  app->onAppCmd = HandleAppCmd;
-
-  while (app->window == nullptr && app->destroyRequested == 0)
+  if (app->window != nullptr)
   {
-    int events = 0;
-    android_poll_source *source = nullptr;
-    while (ALooper_pollOnce(-1, nullptr, &events,
-                            reinterpret_cast<void **>(&source)) >= 0)
-    {
-      if (source)
-      {
-        source->process(app, source);
-      }
-      if (app->destroyRequested != 0)
-      {
-        return;
-      }
-    }
+    window.InitEgl(app);
   }
 
-  if (!window.InitEgl(app))
+  if (!WaitForGameAssets(app, *pathsPtr))
   {
-    CubatariumLogError("Android", "EGL init failed");
+    return;
+  }
+
+  if (!WaitForEglSurface(app, window))
+  {
+    CubatariumLogError("Android", "No EGL surface before game start");
     return;
   }
 

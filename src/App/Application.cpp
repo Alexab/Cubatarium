@@ -792,6 +792,10 @@ void UApplication::ProcessInput() { (void)0; }
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
+  if (width > 0 && height > 0)
+  {
+    glViewport(0, 0, width, height);
+  }
   if (State == AppState::MainMenu)
   {
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);

@@ -5,32 +5,18 @@
 #include <EGL/egl.h>
 #include <android/native_window.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <sstream>
 
 namespace cutum
 {
 
-bool EglContext::Initialize(android_app *app)
+namespace
 {
-  app_ = app;
-  if (!app_ || !app_->window)
-  {
-    return false;
-  }
 
-  display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-  if (display_ == EGL_NO_DISPLAY)
-  {
-    CubatariumLogError("EGL", "eglGetDisplay failed");
-    return false;
-  }
-  if (!eglInitialize(static_cast<EGLDisplay>(display_), nullptr, nullptr))
-  {
-    CubatariumLogError("EGL", "eglInitialize failed");
-    return false;
-  }
-
+bool ChooseConfig(EGLDisplay display, EGLint renderableType, EGLConfig *config)
+{
   const EGLint configAttribs[] = {EGL_RENDERABLE_TYPE,
-                                  EGL_OPENGL_ES3_BIT,
+                                  renderableType,
                                   EGL_SURFACE_TYPE,
                                   EGL_WINDOW_BIT,
                                   EGL_BLUE_SIZE,
@@ -42,23 +28,69 @@ bool EglContext::Initialize(android_app *app)
                                   EGL_DEPTH_SIZE,
                                   24,
                                   EGL_NONE};
-
-  EGLConfig config = nullptr;
   EGLint numConfigs = 0;
-  if (!eglChooseConfig(static_cast<EGLDisplay>(display_), configAttribs, &config,
-                       1, &numConfigs) ||
-      numConfigs == 0)
+  return eglChooseConfig(display, configAttribs, config, 1, &numConfigs) &&
+         numConfigs > 0;
+}
+
+} // namespace
+
+bool EglContext::Initialize(android_app *app)
+{
+  app_ = app;
+  if (!app_ || !app_->window)
   {
-    CubatariumLogError("EGL", "eglChooseConfig failed");
+    return false;
+  }
+  if (HasSurface())
+  {
+    return true;
+  }
+
+  display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  if (display_ == EGL_NO_DISPLAY)
+  {
+    CubatariumLogError("EGL", "eglGetDisplay failed");
+    return false;
+  }
+  if (!eglInitialize(static_cast<EGLDisplay>(display_), nullptr, nullptr))
+  {
+    CubatariumLogError("EGL", "eglInitialize failed");
+    display_ = EGL_NO_DISPLAY;
     return false;
   }
 
-  const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
-  context_ = eglCreateContext(static_cast<EGLDisplay>(display_), config,
-                              EGL_NO_CONTEXT, contextAttribs);
+  EGLConfig config = nullptr;
+  EGLint clientVersion = 3;
+  if (!ChooseConfig(static_cast<EGLDisplay>(display_), EGL_OPENGL_ES3_BIT, &config))
+  {
+    CubatariumLogInfo("EGL", "GLES 3 config unavailable, trying GLES 2 config");
+    if (!ChooseConfig(static_cast<EGLDisplay>(display_), EGL_OPENGL_ES2_BIT, &config))
+    {
+      CubatariumLogError("EGL", "eglChooseConfig failed");
+      eglTerminate(static_cast<EGLDisplay>(display_));
+      display_ = EGL_NO_DISPLAY;
+      return false;
+    }
+  }
+
+  for (EGLint tryVersion : {3, 2})
+  {
+    const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, tryVersion,
+                                     EGL_NONE};
+    context_ = eglCreateContext(static_cast<EGLDisplay>(display_), config,
+                                EGL_NO_CONTEXT, contextAttribs);
+    if (context_ != EGL_NO_CONTEXT)
+    {
+      clientVersion = tryVersion;
+      break;
+    }
+  }
   if (context_ == EGL_NO_CONTEXT)
   {
     CubatariumLogError("EGL", "eglCreateContext failed");
+    eglTerminate(static_cast<EGLDisplay>(display_));
+    display_ = EGL_NO_DISPLAY;
     return false;
   }
 
@@ -67,6 +99,11 @@ bool EglContext::Initialize(android_app *app)
   if (surface_ == EGL_NO_SURFACE)
   {
     CubatariumLogError("EGL", "eglCreateWindowSurface failed");
+    eglDestroyContext(static_cast<EGLDisplay>(display_),
+                      static_cast<EGLContext>(context_));
+    context_ = EGL_NO_CONTEXT;
+    eglTerminate(static_cast<EGLDisplay>(display_));
+    display_ = EGL_NO_DISPLAY;
     return false;
   }
 
@@ -76,14 +113,29 @@ bool EglContext::Initialize(android_app *app)
                       static_cast<EGLContext>(context_)))
   {
     CubatariumLogError("EGL", "eglMakeCurrent failed");
+    Shutdown();
     return false;
   }
 
   width_ = ANativeWindow_getWidth(app_->window);
   height_ = ANativeWindow_getHeight(app_->window);
-  CubatariumLogInfo("EGL", "Context ready " + std::to_string(width_) + "x" +
-                                std::to_string(height_));
+  std::ostringstream msg;
+  msg << "Context ready GLES" << clientVersion << " " << width_ << "x"
+      << height_;
+  CubatariumLogInfo("EGL", msg.str());
   return true;
+}
+
+bool EglContext::EnsureCurrent()
+{
+  if (!HasSurface())
+  {
+    return false;
+  }
+  return eglMakeCurrent(static_cast<EGLDisplay>(display_),
+                        static_cast<EGLSurface>(surface_),
+                        static_cast<EGLSurface>(surface_),
+                        static_cast<EGLContext>(context_)) == EGL_TRUE;
 }
 
 void EglContext::Shutdown()
@@ -108,6 +160,8 @@ void EglContext::Shutdown()
   }
   eglTerminate(static_cast<EGLDisplay>(display_));
   display_ = EGL_NO_DISPLAY;
+  width_ = 0;
+  height_ = 0;
 }
 
 void EglContext::SwapBuffers()

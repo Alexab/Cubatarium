@@ -32,10 +32,13 @@ bool AndroidPlatformWindow::Initialize(int width, int height, const char *title)
   width_ = width;
   height_ = height;
   touch_.SetScreenSize(width_, height_);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
+  if (egl_.EnsureCurrent())
+  {
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
+  }
   initialized_ = true;
   return true;
 }
@@ -47,9 +50,29 @@ bool AndroidPlatformWindow::InitEgl(android_app *app)
 
 void AndroidPlatformWindow::OnAppCmd(int32_t cmd)
 {
-  if (cmd == APP_CMD_TERM_WINDOW)
+  switch (cmd)
   {
+  case APP_CMD_INIT_WINDOW:
+    if (app_ && app_->window)
+    {
+      if (!egl_.HasSurface())
+      {
+        if (!InitEgl(app_))
+        {
+          CubatariumLogError("Android", "EGL init failed on APP_CMD_INIT_WINDOW");
+        }
+      }
+      else
+      {
+        egl_.EnsureCurrent();
+      }
+    }
+    break;
+  case APP_CMD_TERM_WINDOW:
     egl_.Shutdown();
+    break;
+  default:
+    break;
   }
 }
 
@@ -80,8 +103,13 @@ void AndroidPlatformWindow::Run()
         break;
       }
     }
+    if (app_->window && !egl_.HasSurface())
+    {
+      InitEgl(app_);
+    }
     if (egl_.HasSurface())
     {
+      egl_.EnsureCurrent();
       ProcessFrame();
     }
   }

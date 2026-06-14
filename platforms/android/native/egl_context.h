@@ -12,6 +12,7 @@ public:
   bool Initialize(android_app *app);
   void Shutdown();
   bool HasSurface() const { return surface_ != nullptr; }
+  bool EnsureCurrent();
   void SwapBuffers();
   int Width() const { return width_; }
   int Height() const { return height_; }

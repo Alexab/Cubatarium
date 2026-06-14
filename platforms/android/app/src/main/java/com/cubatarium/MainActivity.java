@@ -12,13 +12,13 @@ public class MainActivity extends GameActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        nativeOnCreate();
         try {
             AssetExtractor.extractIfNeeded(this);
         } catch (RuntimeException e) {
             android.util.Log.e("Cubatarium", "Asset extraction failed", e);
             throw e;
         }
-        nativeOnCreate();
     }
 
     private native void nativeOnCreate();

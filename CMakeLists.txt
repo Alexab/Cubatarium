@@ -349,6 +349,10 @@ if(ANDROID)
 
     find_package(game-activity REQUIRED CONFIG)
 
+    # Keep GameActivity JNI entry points when linking the static prefab.
+    set(CMAKE_SHARED_LINKER_FLAGS
+        "${CMAKE_SHARED_LINKER_FLAGS} -u Java_com_google_androidgamesdk_GameActivity_initializeNativeCode")
+
     find_library(android-lib android)
     find_library(log-lib log)
     find_library(egl-lib EGL)
@@ -358,7 +362,6 @@ if(ANDROID)
         glm::glm
         nlohmann_json::nlohmann_json
         freetype
-        game-activity::game-activity
         game-activity::game-activity_static
         ${android-lib}
         ${log-lib}
