@@ -14,7 +14,7 @@
 
 namespace cutum {
 
-class World;
+class UWorld;
 class ICreatureVisual;
 
 class Creature {
@@ -43,7 +43,7 @@ public:
  const CreatureBoundsState& GetBounds() const { return bounds_; }
  CreatureBoundsState& GetBoundsMutable() { return bounds_; }
  void SyncBoundsFromStance();
- void SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLocomotion);
+ void SyncFeetFromLocomotion(const UWorld& world, glm::vec3& eyeAfterLocomotion);
 
  CollisionVolume GetCollisionVolume() const;
  CreatureLocomotionController& GetLocomotion() { return locomotion_; }
@@ -73,8 +73,8 @@ public:
  void SetPossessed(bool v) { possessed_ = v; }
 
  virtual bool IsPlayer() const { return false; }
- virtual void ExecuteIntent(World& world, float dt);
- virtual void UpdateControlled(World& world, const CreatureInput& input, float dt);
+ virtual void ExecuteIntent(UWorld& world, float dt);
+ virtual void UpdateControlled(UWorld& world, const CreatureInput& input, float dt);
 
  ICreatureVisual* GetVisual() { return visual_.get(); }
  void SetVisual(std::unique_ptr<ICreatureVisual> visual);

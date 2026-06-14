@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-WorldCreatureActivitySink::WorldCreatureActivitySink(World& world) : world_(world) {}
+WorldCreatureActivitySink::WorldCreatureActivitySink(UWorld& world) : world_(world) {}
 
 std::optional<CreatureActivityView> WorldCreatureActivitySink::GetCreatureView(CreatureId id) const
 {

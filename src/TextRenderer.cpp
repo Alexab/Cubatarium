@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-TextRenderer::TextRenderer()
+UTextRenderer::UTextRenderer()
     : textShader(0)
     , VAO(0)
     , VBO(0)
@@ -17,11 +17,11 @@ TextRenderer::TextRenderer()
 {
 }
 
-TextRenderer::~TextRenderer() {
+UTextRenderer::~UTextRenderer() {
     Shutdown();
 }
 
-bool TextRenderer::Initialize(int fontSize) {
+bool UTextRenderer::Initialize(int fontSize) {
     // Find available font automatically
     std::string fontPath = FindAvailableFont();
     if (fontPath.empty()) {
@@ -32,7 +32,7 @@ bool TextRenderer::Initialize(int fontSize) {
     return Initialize(fontPath, fontSize);
 }
 
-bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
+bool UTextRenderer::Initialize(const std::string& fontPath, int fontSize) {
     // Initialize FreeType
     if (!InitializeFreeType()) {
         std::cerr << "Failed to initialize FreeType" << std::endl;
@@ -70,7 +70,7 @@ bool TextRenderer::Initialize(const std::string& fontPath, int fontSize) {
     return true;
 }
 
-bool TextRenderer::InitializeFreeType() {
+bool UTextRenderer::InitializeFreeType() {
     if (ftInitialized) {
         return true;
     }
@@ -85,7 +85,7 @@ bool TextRenderer::InitializeFreeType() {
     return true;
 }
 
-void TextRenderer::CleanupFreeType() {
+void UTextRenderer::CleanupFreeType() {
     if (face) {
         FT_Done_Face(face);
         face = nullptr;
@@ -97,7 +97,7 @@ void TextRenderer::CleanupFreeType() {
     }
 }
 
-void TextRenderer::Shutdown() {
+void UTextRenderer::Shutdown() {
     if (VAO) {
         glDeleteVertexArrays(1, &VAO);
         VAO = 0;
@@ -121,7 +121,7 @@ void TextRenderer::Shutdown() {
     CleanupFreeType();
 }
 
-bool TextRenderer::CreateShader() {
+bool UTextRenderer::CreateShader() {
     const char* vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec4 vertex;
@@ -201,7 +201,7 @@ void main()
     return textShader != 0;
 }
 
-bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
+bool UTextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
     if (!ftInitialized) {
         std::cerr << "FreeType not initialized" << std::endl;
         return false;
@@ -269,7 +269,7 @@ bool TextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
     return true;
 }
 
-void TextRenderer::RenderText(const std::string& text, float x, float y, float scale, const glm::vec3& color) {
+void UTextRenderer::RenderText(const std::string& text, float x, float y, float scale, const glm::vec3& color) {
     if (!textShader) {
         std::cerr << "TextRenderer: textShader is null!" << std::endl;
         return;
@@ -340,13 +340,13 @@ void TextRenderer::RenderText(const std::string& text, float x, float y, float s
     glBindVertexArray(0);
 }
 
-void TextRenderer::RenderTextCentered(const std::string& text, float y, float scale, const glm::vec3& color) {
+void UTextRenderer::RenderTextCentered(const std::string& text, float y, float scale, const glm::vec3& color) {
     glm::vec2 textSize = GetTextSize(text, scale);
     float x = (windowWidth - textSize.x) / 2.0f;
     RenderText(text, x, y, scale, color);
 }
 
-glm::vec2 TextRenderer::GetTextSize(const std::string& text, float scale) {
+glm::vec2 UTextRenderer::GetTextSize(const std::string& text, float scale) {
     float width = 0.0f;
     float height = 0.0f;
     
@@ -360,12 +360,12 @@ glm::vec2 TextRenderer::GetTextSize(const std::string& text, float scale) {
     return glm::vec2(width, height);
 }
 
-void TextRenderer::SetWindowSize(int width, int height) {
+void UTextRenderer::SetWindowSize(int width, int height) {
     windowWidth = width;
     windowHeight = height;
 }
 
-std::string TextRenderer::FindAvailableFont() {
+std::string UTextRenderer::FindAvailableFont() {
     // First try to find fonts in local fonts directory
     std::vector<std::string> localFonts = ScanFontsDirectory();
     for (const auto& font : localFonts) {
@@ -378,7 +378,7 @@ std::string TextRenderer::FindAvailableFont() {
     return GetSystemFontPath();
 }
 
-std::vector<std::string> TextRenderer::ScanFontsDirectory() {
+std::vector<std::string> UTextRenderer::ScanFontsDirectory() {
     std::vector<std::string> fonts;
     std::string fontsDir = "fonts";
     
@@ -404,7 +404,7 @@ std::vector<std::string> TextRenderer::ScanFontsDirectory() {
     return fonts;
 }
 
-std::string TextRenderer::GetSystemFontPath() {
+std::string UTextRenderer::GetSystemFontPath() {
 #ifdef _WIN32
     return "C:/Windows/Fonts/arial.ttf";
 #elif defined(__linux__)

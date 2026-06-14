@@ -7,10 +7,10 @@
 
 namespace cutum {
 
-class ViewEngine
+class UViewEngine
 {
 public:
- ViewEngine();
+ UViewEngine();
 
  void GenerateSimpleCamera();
 

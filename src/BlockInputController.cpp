@@ -24,7 +24,7 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
 
 } // namespace
 
-const InventoryEntryRef* BlockInputController::GetActiveEntry(const BlockInputContext& ctx) const
+const InventoryEntryRef* UBlockInputController::GetActiveEntry(const BlockInputContext& ctx) const
 {
     if (!ctx.world) {
         return nullptr;
@@ -35,7 +35,7 @@ const InventoryEntryRef* BlockInputController::GetActiveEntry(const BlockInputCo
     return nullptr;
 }
 
-bool BlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const
+bool UBlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const
 {
     const InventoryEntryRef* active = GetActiveEntry(ctx);
     if (!active) {
@@ -50,7 +50,7 @@ bool BlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputCont
     return false;
 }
 
-void BlockInputController::TryPlaceFromActiveSlot(const BlockInputContext& ctx)
+void UBlockInputController::TryPlaceFromActiveSlot(const BlockInputContext& ctx)
 {
     if (!ctx.world) {
         return;
@@ -63,7 +63,7 @@ void BlockInputController::TryPlaceFromActiveSlot(const BlockInputContext& ctx)
     }
 }
 
-void BlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext& ctx)
+void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext& ctx)
 {
     if (!ctx.world) {
         return;
@@ -96,7 +96,7 @@ void BlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext& ctx)
     }
 }
 
-void BlockInputController::TryInstantBreak(const BlockInputContext& ctx)
+void UBlockInputController::TryInstantBreak(const BlockInputContext& ctx)
 {
     if (ctx.world) {
         ctx.world->CancelBreakSession();
@@ -104,7 +104,7 @@ void BlockInputController::TryInstantBreak(const BlockInputContext& ctx)
     }
 }
 
-void BlockInputController::HandleLeftPress(const BlockInputContext& ctx)
+void UBlockInputController::HandleLeftPress(const BlockInputContext& ctx)
 {
     if (!ctx.ui || !ctx.world) {
         return;
@@ -122,7 +122,7 @@ void BlockInputController::HandleLeftPress(const BlockInputContext& ctx)
     }
 }
 
-void BlockInputController::HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx)
+void UBlockInputController::HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx)
 {
     if (!ctx.ui || !ctx.world) {
         leftHeld_ = false;
@@ -176,7 +176,7 @@ void BlockInputController::HandleLeftRelease(float holdSeconds, const BlockInput
     leftHeld_ = false;
 }
 
-void BlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx)
+void UBlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx)
 {
     rightDownPos_ = pos;
     rightPressed_ = true;
@@ -194,7 +194,7 @@ void BlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputConte
     }
 }
 
-void BlockInputController::HandleRightRelease(const BlockInputContext& ctx)
+void UBlockInputController::HandleRightRelease(const BlockInputContext& ctx)
 {
     if (!ctx.ui || !ctx.world) {
         rightPressed_ = false;
@@ -216,7 +216,7 @@ void BlockInputController::HandleRightRelease(const BlockInputContext& ctx)
     TryPlaceFromActiveSlot(ctx);
 }
 
-void BlockInputController::OnMouseButton(
+void UBlockInputController::OnMouseButton(
     MouseButton button, bool pressed, glm::vec2 pos, const BlockInputContext& ctx)
 {
     if (button == MouseButton::Right) {
@@ -244,7 +244,7 @@ void BlockInputController::OnMouseButton(
     }
 }
 
-void BlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx)
+void UBlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx)
 {
     (void)delta;
     if (!ctx.world || !ctx.ui) {
@@ -277,12 +277,12 @@ void BlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta, const Blo
     }
 }
 
-void BlockInputController::OnKeyDelete(const BlockInputContext& ctx)
+void UBlockInputController::OnKeyDelete(const BlockInputContext& ctx)
 {
     TryInstantBreak(ctx);
 }
 
-void BlockInputController::Tick(float dt, const BlockInputContext& ctx)
+void UBlockInputController::Tick(float dt, const BlockInputContext& ctx)
 {
     if (!ctx.ui || !ctx.world) {
         return;

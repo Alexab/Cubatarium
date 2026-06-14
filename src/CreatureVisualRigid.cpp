@@ -110,7 +110,7 @@ void CreatureVisualRigid::UpdatePose(const Creature& creature, const CreatureLoc
  }
 }
 
-void CreatureVisualRigid::SubmitDraw(GeometryEngine& engine, const glm::mat4& viewProj)
+void CreatureVisualRigid::SubmitDraw(UGeometryEngine& engine, const glm::mat4& viewProj)
 {
  const RenderSettings& settings = engine.GetRenderSettings();
  const bool drawTextured = settings.creatureTexturedParts && !appearance_.parts.empty();

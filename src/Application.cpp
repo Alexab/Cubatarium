@@ -44,12 +44,12 @@ namespace cutum {
 
 namespace {
 
-WindowManager* GetWindowManager(GLFWwindow* window)
+UWindowManager* GetWindowManager(GLFWwindow* window)
 {
     if (!window) {
         return nullptr;
     }
-    return static_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    return static_cast<UWindowManager*>(glfwGetWindowUserPointer(window));
 }
 
 class GlfwClipboard : public IGuiClipboard {
@@ -95,11 +95,11 @@ bool KeyNameIs(const std::string& name, int glfwKey)
 
 } // namespace
 
-Application::Application(std::shared_ptr<Core> core,
-                         std::shared_ptr<World> world,
-                         std::shared_ptr<GeometryEngine> geometry,
-                         std::shared_ptr<ViewEngine> views,
-                         std::shared_ptr<TextRenderer> textRenderer,
+UApplication::UApplication(std::shared_ptr<UCore> core,
+                         std::shared_ptr<UWorld> world,
+                         std::shared_ptr<UGeometryEngine> geometry,
+                         std::shared_ptr<UViewEngine> views,
+                         std::shared_ptr<UTextRenderer> textRenderer,
                          std::shared_ptr<ShaderManager> shaderManager,
                          std::shared_ptr<BlockDefinitionStorage> blockDefinitions)
     : core_(std::move(core))
@@ -114,9 +114,9 @@ Application::Application(std::shared_ptr<Core> core,
     gameSession_ = std::make_unique<GameSession>(this, world_);
 }
 
-Application::~Application() = default;
+UApplication::~UApplication() = default;
 
-void Application::Startup(const std::string& configPath)
+void UApplication::Startup(const std::string& configPath)
 {
     if (core_) {
         core_->LoadConfig(configPath);
@@ -167,17 +167,17 @@ void Application::Startup(const std::string& configPath)
     ShowMainMenu();
 }
 
-void Application::ScheduleEnterGame()
+void UApplication::ScheduleEnterGame()
 {
     pendingEnterGame_ = true;
 }
 
-void Application::ScheduleQuit()
+void UApplication::ScheduleQuit()
 {
     pendingQuit_ = true;
 }
 
-void Application::RequestEnterGame()
+void UApplication::RequestEnterGame()
 {
     if (state_ == AppState::InGame) {
         return;
@@ -203,7 +203,7 @@ void Application::RequestEnterGame()
     EnterInGameInputState();
 }
 
-void Application::RequestQuit()
+void UApplication::RequestQuit()
 {
     if (gameSession_) {
         gameSession_->SaveCommandHistory();
@@ -214,7 +214,7 @@ void Application::RequestQuit()
     }
 }
 
-void Application::ShowMainMenu()
+void UApplication::ShowMainMenu()
 {
     consoleOpen_ = false;
     suppressConsoleToggleChar_ = false;
@@ -227,7 +227,7 @@ void Application::ShowMainMenu()
     SyncCursorVisibility();
 }
 
-void Application::SetHotbarCountSetting(int count)
+void UApplication::SetHotbarCountSetting(int count)
 {
     uiSettings_.hotbarCount = std::clamp(count, 1, 2);
     if (core_) {
@@ -243,7 +243,7 @@ void Application::SetHotbarCountSetting(int count)
     }
 }
 
-void Application::ReturnToMainMenu()
+void UApplication::ReturnToMainMenu()
 {
     if (state_ == AppState::InGame) {
         if (gameSession_) {
@@ -263,7 +263,7 @@ void Application::ReturnToMainMenu()
     ShowMainMenu();
 }
 
-void Application::ShowSettings()
+void UApplication::ShowSettings()
 {
     consoleOpen_ = false;
     suppressConsoleToggleChar_ = false;
@@ -275,7 +275,7 @@ void Application::ShowSettings()
     SyncCursorVisibility();
 }
 
-void Application::ShowNewWorld()
+void UApplication::ShowNewWorld()
 {
     consoleOpen_ = false;
     suppressConsoleToggleChar_ = false;
@@ -287,7 +287,7 @@ void Application::ShowNewWorld()
     SyncCursorVisibility();
 }
 
-void Application::ShowLoadWorld()
+void UApplication::ShowLoadWorld()
 {
     consoleOpen_ = false;
     suppressConsoleToggleChar_ = false;
@@ -299,7 +299,7 @@ void Application::ShowLoadWorld()
     SyncCursorVisibility();
 }
 
-void Application::SaveActiveWorldIfNeeded()
+void UApplication::SaveActiveWorldIfNeeded()
 {
     if (!worldSessionActive_ || !core_) {
         return;
@@ -308,7 +308,7 @@ void Application::SaveActiveWorldIfNeeded()
     core_->SaveConfigFile();
 }
 
-void Application::EnterGameAfterWorldChange()
+void UApplication::EnterGameAfterWorldChange()
 {
     worldSessionActive_ = true;
     if (core_ && world_) {
@@ -326,12 +326,12 @@ void Application::EnterGameAfterWorldChange()
     EnterInGameInputState();
 }
 
-void Application::ScheduleDeferredMenuAction(std::function<void()> action)
+void UApplication::ScheduleDeferredMenuAction(std::function<void()> action)
 {
     pendingMenuAction_ = std::move(action);
 }
 
-void Application::SaveIfNeededAndProceed(std::function<void()> proceed)
+void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
 {
     if (!proceed) {
         return;
@@ -340,17 +340,17 @@ void Application::SaveIfNeededAndProceed(std::function<void()> proceed)
     ScheduleDeferredMenuAction(std::move(proceed));
 }
 
-AppSettingsSnapshot Application::LoadAppSettingsSnapshot() const
+AppSettingsSnapshot UApplication::LoadAppSettingsSnapshot() const
 {
     return core_ ? core_->GetAppSettings() : AppSettingsSnapshot{};
 }
 
-ProceduralSettings Application::LoadProceduralTemplate() const
+ProceduralSettings UApplication::LoadProceduralTemplate() const
 {
     return core_ ? core_->GetProceduralTemplate() : ProceduralSettings{};
 }
 
-void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
+void UApplication::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
                                              const ProceduralSettings& procedural)
 {
     if (!core_) {
@@ -371,7 +371,7 @@ void Application::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
     SyncCursorVisibility();
 }
 
-void Application::CreateNewWorldWithSettings(const ProceduralSettings& settings)
+void UApplication::CreateNewWorldWithSettings(const ProceduralSettings& settings)
 {
     if (!core_) {
         return;
@@ -382,7 +382,7 @@ void Application::CreateNewWorldWithSettings(const ProceduralSettings& settings)
     EnterGameAfterWorldChange();
 }
 
-void Application::LoadSelectedWorld(const std::string& worldName)
+void UApplication::LoadSelectedWorld(const std::string& worldName)
 {
     if (!core_) {
         return;
@@ -392,20 +392,20 @@ void Application::LoadSelectedWorld(const std::string& worldName)
     EnterGameAfterWorldChange();
 }
 
-void Application::RefreshWorldList()
+void UApplication::RefreshWorldList()
 {
     if (core_) {
         core_->RefreshWorldList();
     }
 }
 
-const std::vector<std::string>& Application::GetWorldNames() const
+const std::vector<std::string>& UApplication::GetWorldNames() const
 {
     static const std::vector<std::string> kEmpty;
     return core_ ? core_->GetWorldList() : kEmpty;
 }
 
-void Application::ShowInGameHud()
+void UApplication::ShowInGameHud()
 {
     if (window_ && !clipboard_) {
         clipboard_ = std::make_unique<GlfwClipboard>(window_);
@@ -434,17 +434,17 @@ void Application::ShowInGameHud()
     guiContext_->SetScreen(nullptr);
 }
 
-bool Application::UsesUiPointer() const
+bool UApplication::UsesUiPointer() const
 {
     return state_ == AppState::MainMenu || freeCursor_ || consoleOpen_ || paletteOpen_;
 }
 
-bool Application::BlocksGameMouseLook() const
+bool UApplication::BlocksGameMouseLook() const
 {
     return state_ == AppState::InGame && (freeCursor_ || consoleOpen_ || paletteOpen_);
 }
 
-AppCursorPolicy Application::GetCursorPolicy() const
+AppCursorPolicy UApplication::GetCursorPolicy() const
 {
     if (UsesUiPointer()) {
         return AppCursorPolicy::Free;
@@ -458,7 +458,7 @@ AppCursorPolicy Application::GetCursorPolicy() const
     return AppCursorPolicy::Free;
 }
 
-void Application::SyncCursorVisibility()
+void UApplication::SyncCursorVisibility()
 {
     if (!window_) {
         return;
@@ -466,7 +466,7 @@ void Application::SyncCursorVisibility()
     ApplyCursorPolicy(window_, GetCursorPolicy());
 }
 
-void Application::ClearGameplayKeyboard()
+void UApplication::ClearGameplayKeyboard()
 {
     if (!world_) {
         return;
@@ -476,7 +476,7 @@ void Application::ClearGameplayKeyboard()
     }
 }
 
-void Application::HandleWindowFocus(bool focused)
+void UApplication::HandleWindowFocus(bool focused)
 {
     if (!window_) {
         return;
@@ -488,7 +488,7 @@ void Application::HandleWindowFocus(bool focused)
     SyncCursorVisibility();
 }
 
-void Application::EnterInGameInputState()
+void UApplication::EnterInGameInputState()
 {
     consoleOpen_ = false;
     suppressConsoleToggleChar_ = false;
@@ -509,13 +509,13 @@ void Application::EnterInGameInputState()
     }
 }
 
-void Application::RecaptureMouseForLook()
+void UApplication::RecaptureMouseForLook()
 {
     freeCursor_ = false;
     EnterInGameInputState();
 }
 
-bool Application::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed)
+bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed)
 {
     auto routeRoot = [&](GuiWidget* root, bool requireHitTest) -> bool {
         if (!root) {
@@ -562,7 +562,7 @@ bool Application::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed
     }
 }
 
-bool Application::ResolveSlotAt(int x, int y, SlotAddress& out)
+bool UApplication::ResolveSlotAt(int x, int y, SlotAddress& out)
 {
     // Хотбар под палитрой: при drop сначала проверяем HUD, иначе палитра «съедает» цель.
     if (hudScreen_ && hudScreen_->PickSlot(x, y, out)) {
@@ -574,7 +574,7 @@ bool Application::ResolveSlotAt(int x, int y, SlotAddress& out)
     return false;
 }
 
-void Application::DrawDragGhost(int width, int height)
+void UApplication::DrawDragGhost(int width, int height)
 {
     if (!gameSession_ || !gameSession_->IsDragging() || !iconSource_ || !guiContext_) {
         return;
@@ -609,7 +609,7 @@ void Application::DrawDragGhost(int width, int height)
     renderer.EndFrame();
 }
 
-void Application::Update(double dt)
+void UApplication::Update(double dt)
 {
     if (pendingEnterGame_) {
         pendingEnterGame_ = false;
@@ -647,12 +647,12 @@ void Application::Update(double dt)
     SyncCursorVisibility();
 }
 
-void Application::ProcessInput()
+void UApplication::ProcessInput()
 {
     (void)0;
 }
 
-void Application::RenderFrame(int width, int height, double viewDuration)
+void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
     if (state_ == AppState::MainMenu) {
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
@@ -708,7 +708,7 @@ void Application::RenderFrame(int width, int height, double viewDuration)
     }
 }
 
-bool Application::WantsCaptureMouse() const
+bool UApplication::WantsCaptureMouse() const
 {
     if (state_ == AppState::MainMenu) {
         return true;
@@ -719,7 +719,7 @@ bool Application::WantsCaptureMouse() const
     return guiContext_->WantsCaptureMouse();
 }
 
-bool Application::WantsCaptureKeyboard() const
+bool UApplication::WantsCaptureKeyboard() const
 {
     if (state_ == AppState::MainMenu) {
         return true;
@@ -727,12 +727,12 @@ bool Application::WantsCaptureKeyboard() const
     return consoleOpen_ || paletteOpen_ || guiContext_->WantsCaptureKeyboard();
 }
 
-bool Application::AllowsWorldMousePlacement() const
+bool UApplication::AllowsWorldMousePlacement() const
 {
     return state_ == AppState::InGame && !paletteOpen_ && !consoleOpen_;
 }
 
-bool Application::RouteKey(int key, int action, int mods)
+bool UApplication::RouteKey(int key, int action, int mods)
 {
   GuiKeyEvent event;
   event.keyCode = key;
@@ -875,7 +875,7 @@ bool Application::RouteKey(int key, int action, int mods)
   return false;
 }
 
-bool Application::RouteChar(unsigned int codepoint)
+bool UApplication::RouteChar(unsigned int codepoint)
 {
     if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
         if (suppressConsoleToggleChar_) {
@@ -889,7 +889,7 @@ bool Application::RouteChar(unsigned int codepoint)
     return guiContext_->RouteChar(GuiCharEvent{codepoint});
 }
 
-bool Application::RouteMouseButton(int button, bool pressed, int x, int y)
+bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
 {
     GuiMouseEvent event;
     event.x = x;
@@ -939,7 +939,7 @@ bool Application::RouteMouseButton(int button, bool pressed, int x, int y)
     return pressed ? guiContext_->RouteMouseDown(event) : guiContext_->RouteMouseUp(event);
 }
 
-bool Application::RouteMouseMove(int x, int y)
+bool UApplication::RouteMouseMove(int x, int y)
 {
     GuiMouseEvent event;
     event.x = x;
@@ -975,7 +975,7 @@ bool Application::RouteMouseMove(int x, int y)
     return guiContext_->RouteMouseMove(event);
 }
 
-bool Application::RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY)
+bool UApplication::RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY)
 {
     if (state_ == AppState::InGame) {
         GuiScrollEvent event{xoffset, yoffset};

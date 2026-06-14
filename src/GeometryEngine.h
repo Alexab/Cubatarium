@@ -32,7 +32,7 @@ typedef int GLint;
 
 namespace cutum {
 
-class Core;
+class UCore;
 class CreatureTextureStorage;
 
 // Structure for batch rendering
@@ -46,11 +46,11 @@ struct RenderBatch {
     std::vector<size_t> cubeIndices;
 };
 
-class GeometryEngine : public IGreedyTransparentBackend
+class UGeometryEngine : public IGreedyTransparentBackend
 {
 public:
- GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer = nullptr);
- virtual ~GeometryEngine();
+ UGeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<UWorld> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<UTextRenderer> text_renderer = nullptr);
+ virtual ~UGeometryEngine();
 
  bool InitEngine();
  bool InitShaders();
@@ -195,9 +195,9 @@ GLuint overlayVBO{0};
  std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
  std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
  std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance_;
- std::shared_ptr<World> WorldInstance;
+ std::shared_ptr<UWorld> WorldInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
- std::shared_ptr<TextRenderer> textRenderer;
+ std::shared_ptr<UTextRenderer> textRenderer;
 
  // performance data
  double DurationDrawSceneMks;

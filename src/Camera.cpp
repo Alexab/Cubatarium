@@ -276,7 +276,7 @@ PlayerInput Camera::BuildPlayerInput(bool spaceJustPressed) const
  return input;
 }
 
-void Camera::SetViewEngine(ViewEngine* view_engine)
+void Camera::SetViewEngine(UViewEngine* view_engine)
 {
  ViewEngineInstance = view_engine;
 }
@@ -345,7 +345,7 @@ glm::vec3 Camera::GetMoveIntentDir() const
  return glm::vec3(0.0f);
 }
 
-bool Camera::TickStepUpAnimation(const World* world, float dt)
+bool Camera::TickStepUpAnimation(const UWorld* world, float dt)
 {
  if (!stepUpAnim_.active) {
   return false;
@@ -371,7 +371,7 @@ bool Camera::TickStepUpAnimation(const World* world, float dt)
  return true;
 }
 
-bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
+bool Camera::ApplyHorizontalMovement(const UWorld* world, float deltaTime)
 {
  if (TickStepUpAnimation(world, deltaTime)) {
   return true;
@@ -383,7 +383,7 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
  const bool hasShift = glm::dot(shift, shift) > 1e-10f;
 
  const PlayerCapsule cap = GetPlayerCapsule();
- const World::SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
+ const UWorld::SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
  if (hasShift && fluid.inFluid) {
   const float drag = 1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
   shift.x *= drag;
@@ -405,7 +405,7 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
      && locomotion_.IsOnGround() && locomotion_.IsFeetAnchored()
      && !stepInput.jumpHeld
      && locomotion_.GetVerticalVelocity() <= 0.05f && glm::dot(intent, intent) > 1e-10f) {
-  const World::StepUpProbe probe = world->ProbeStepUp(
+  const UWorld::StepUpProbe probe = world->ProbeStepUp(
       newPos, intent, cap, kStepUpTriggerDistance);
   if (probe.valid) {
    glm::vec3 landing = newPos;
@@ -432,7 +432,7 @@ bool Camera::ApplyHorizontalMovement(const World* world, float deltaTime)
 }
 
 // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void Camera::ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
+void Camera::ProcessKeyboard(const UWorld* world, Camera_Movement direction, float deltaTime,
                              const PlayerCapsule& collisionCap)
 {
  const float speed = FreeMove ? locomotion_.GetFlySpeed() : locomotion_.GetWalkSpeed();
@@ -583,7 +583,7 @@ void Camera::ResetAllKeyStatus()
   I->second = false;
 }
 
-void Camera::UpdateMouseMove(std::shared_ptr<World> world, double xpos, double ypos)
+void Camera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos)
 {
  if(FirstMouseCoords)
  {
@@ -648,7 +648,7 @@ void Camera::ResetVerticalPhysics()
  UpdatePose();
 }
 
-bool Camera::DoMovement(const World* world)
+bool Camera::DoMovement(const UWorld* world)
 {
  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
  const PlayerCapsule flightCap = PlayerCapsule::Standing();

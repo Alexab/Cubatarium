@@ -41,16 +41,16 @@ class CreatureDefinitionStorage;
 class SkinDefinitionStorage;
 struct CreatureDefinition;
 
-class ViewEngine;
+class UViewEngine;
 class ObjectStorage;
 class PrefabLibrary;
 class User;
 class Camera;
 
-class World : public IWorldPerception
+class UWorld : public IWorldPerception
 {
 public:
- World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views);
+ UWorld(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<UViewEngine> views);
 
  void GenerateUsers();
 
@@ -343,7 +343,7 @@ private:
  CreaturePosePresenterRegistry posePresenterRegistry_;
 
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
- std::shared_ptr<ViewEngine> ViewInstance;
+ std::shared_ptr<UViewEngine> ViewInstance;
  PrefabLibrary* prefabLibrary_{nullptr};
 
  std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;

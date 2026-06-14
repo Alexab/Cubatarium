@@ -15,7 +15,7 @@ GuiRenderer::~GuiRenderer()
 }
 
 bool GuiRenderer::Initialize(std::shared_ptr<ShaderManager> shaderManager,
-                             std::shared_ptr<TextRenderer> textRenderer)
+                             std::shared_ptr<UTextRenderer> textRenderer)
 {
     textRenderer_ = std::move(textRenderer);
     if (!shaderManager) {

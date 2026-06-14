@@ -60,7 +60,7 @@ CollisionVolume Creature::GetCollisionVolume() const
  return CollisionVolumeFromBody(bodyOrigin_, bounds_.profile.restSizeBlocks);
 }
 
-void Creature::SyncFeetFromLocomotion(const World& world, glm::vec3& eyeAfterLocomotion)
+void Creature::SyncFeetFromLocomotion(const UWorld& world, glm::vec3& eyeAfterLocomotion)
 {
  bodyOrigin_.x = eyeAfterLocomotion.x;
  bodyOrigin_.z = eyeAfterLocomotion.z;
@@ -131,7 +131,7 @@ void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionCont
  FinalizeLocomotionFacts(locomotionFacts_, caps, input, walkCycleHz_, dt);
 }
 
-void Creature::ExecuteIntent(World& world, float dt)
+void Creature::ExecuteIntent(UWorld& world, float dt)
 {
  const glm::vec3 bodyOriginBefore = bodyOrigin_;
 
@@ -187,7 +187,7 @@ void Creature::ExecuteIntent(World& world, float dt)
  lastBodyOrigin_ = bodyOrigin_;
 }
 
-void Creature::UpdateControlled(World& world, const CreatureInput& input, float dt)
+void Creature::UpdateControlled(UWorld& world, const CreatureInput& input, float dt)
 {
  ClearIntent();
  glm::vec3 eye = GetLocomotionEye();

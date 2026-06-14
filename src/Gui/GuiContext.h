@@ -13,7 +13,7 @@ class GuiScreenBase;
 class GuiWidget;
 class IGuiClipboard;
 class ShaderManager;
-class TextRenderer;
+class UTextRenderer;
 
 class GuiContext {
 public:
@@ -21,7 +21,7 @@ public:
     ~GuiContext();
 
     bool Initialize(std::shared_ptr<ShaderManager> shaderManager,
-                    std::shared_ptr<TextRenderer> textRenderer);
+                    std::shared_ptr<UTextRenderer> textRenderer);
     void Shutdown();
 
     void SetScreen(std::unique_ptr<GuiScreenBase> screen);

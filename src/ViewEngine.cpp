@@ -3,13 +3,13 @@
 
 namespace cutum {
 
-ViewEngine::ViewEngine()
+UViewEngine::UViewEngine()
 {
  ActiveViewIndex = 0;
  GenerateSimpleCamera();
 }
 
-void ViewEngine::GenerateSimpleCamera()
+void UViewEngine::GenerateSimpleCamera()
 {
  // Above default flat terrain (top layer y=3)
  std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
@@ -17,13 +17,13 @@ void ViewEngine::GenerateSimpleCamera()
  AddCamera(view);
 }
 
-bool ViewEngine::AddCamera(std::shared_ptr<Camera> camera)
+bool UViewEngine::AddCamera(std::shared_ptr<Camera> camera)
 {
  AddCameraReturnId(camera);
  return camera != nullptr;
 }
 
-size_t ViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
+size_t UViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
 {
  if(camera == nullptr)
   return 0;
@@ -43,7 +43,7 @@ size_t ViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
  return newId;
 }
 
-bool ViewEngine::DelCamera(size_t index)
+bool UViewEngine::DelCamera(size_t index)
 {
  auto I = Cameras.find(index);
  if(I == Cameras.end())
@@ -60,7 +60,7 @@ bool ViewEngine::DelCamera(size_t index)
  return true;
 }
 
-std::shared_ptr<Camera> ViewEngine::GetActiveCamera() const
+std::shared_ptr<Camera> UViewEngine::GetActiveCamera() const
 {
  auto I = Cameras.find(ActiveViewIndex);
  if(I == Cameras.end())
@@ -69,7 +69,7 @@ std::shared_ptr<Camera> ViewEngine::GetActiveCamera() const
  return I->second;
 }
 
-std::shared_ptr<Camera> ViewEngine::GetCamera(size_t index) const
+std::shared_ptr<Camera> UViewEngine::GetCamera(size_t index) const
 {
  auto I = Cameras.find(index);
  if(I == Cameras.end())
@@ -77,7 +77,7 @@ std::shared_ptr<Camera> ViewEngine::GetCamera(size_t index) const
  return Cameras.at(index);
 }
 
-bool ViewEngine::SetActiveCamera(size_t index)
+bool UViewEngine::SetActiveCamera(size_t index)
 {
  auto I = Cameras.find(index);
  if(I == Cameras.end())
@@ -87,7 +87,7 @@ bool ViewEngine::SetActiveCamera(size_t index)
  return true;
 }
 
-void ViewEngine::UpdateFrameTime()
+void UViewEngine::UpdateFrameTime()
 {
  auto t_begin = std::chrono::high_resolution_clock::now();
  for(auto & camera_item : Cameras)
@@ -97,13 +97,13 @@ void ViewEngine::UpdateFrameTime()
      std::chrono::duration<double, std::micro>(t_view_end - t_begin).count());
 }
 
-void ViewEngine::ResetAllKeyStatus()
+void UViewEngine::ResetAllKeyStatus()
 {
  for(auto & camera_item : Cameras)
   camera_item.second->ResetAllKeyStatus();
 }
 
-uint64_t ViewEngine::GetDurationUpdateMks() const
+uint64_t UViewEngine::GetDurationUpdateMks() const
 {
  return DurationUpdateMks;
 }

@@ -114,13 +114,13 @@ std::filesystem::path GetExecutableDirectory()
 #endif
 }
 
-Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
+UCore::UCore(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
            std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
            std::shared_ptr<ObjectStorage> object_storage_,
            std::shared_ptr<PrefabLibrary> prefab_library_,
-           std::shared_ptr<World> world_,
-           std::shared_ptr<GeometryEngine> geometries_,
-           std::shared_ptr<ViewEngine> views_)
+           std::shared_ptr<UWorld> world_,
+           std::shared_ptr<UGeometryEngine> geometries_,
+           std::shared_ptr<UViewEngine> views_)
  : TextureBaseStorageInstance(texture_base_storage_)
  , TextureCubeStorageInstance(texture_cube_storage_)
  , ObjectStorageInstance(object_storage_)
@@ -131,12 +131,12 @@ Core::Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
 {
 }
 
-std::filesystem::path Core::WorldFolderPath(const std::string& world_name) const
+std::filesystem::path UCore::WorldFolderPath(const std::string& world_name) const
 {
  return WorldPath / world_name;
 }
 
-std::string Core::AllocateNextWorldName() const
+std::string UCore::AllocateNextWorldName() const
 {
  int maxNumber = 0;
  if (std::filesystem::exists(WorldPath) && std::filesystem::is_directory(WorldPath)) {
@@ -156,7 +156,7 @@ std::string Core::AllocateNextWorldName() const
  return nameBuffer;
 }
 
-bool Core::ShouldCreateWorldOnStartup() const
+bool UCore::ShouldCreateWorldOnStartup() const
 {
  if (default_world_name.empty()) {
   return true;
@@ -180,7 +180,7 @@ bool Core::ShouldCreateWorldOnStartup() const
  return !std::filesystem::exists(worldFolder);
 }
 
-void Core::LoadConfig(const std::string& config_file_name)
+void UCore::LoadConfig(const std::string& config_file_name)
 {
  exeDir_ = GetExecutableDirectory();
  const auto cwd = std::filesystem::current_path();
@@ -346,7 +346,7 @@ void Core::LoadConfig(const std::string& config_file_name)
  }
 }
 
-void Core::EnterGame()
+void UCore::EnterGame()
 {
  try {
      std::filesystem::create_directories(WorldPath);
@@ -381,13 +381,13 @@ void Core::EnterGame()
  }
 }
 
-void Core::LoadSystem(const std::string& config_file_name)
+void UCore::LoadSystem(const std::string& config_file_name)
 {
  LoadConfig(config_file_name);
  EnterGame();
 }
 
-void Core::SaveConfigFile()
+void UCore::SaveConfigFile()
 {
  if (configFilePath_.empty()) {
   configFilePath_ = exeDir_ / "config.json";
@@ -424,7 +424,7 @@ void Core::SaveConfigFile()
  }
 }
 
-void Core::SaveSystem(const std::string& config_file_name)
+void UCore::SaveSystem(const std::string& config_file_name)
 {
  if (!WorldInstance->GetWorldName().empty()) {
   default_world_name = WorldInstance->GetWorldName();
@@ -442,7 +442,7 @@ void Core::SaveSystem(const std::string& config_file_name)
  SaveWorld(WorldInstance->GetWorldName());
 }
 
-AppSettingsSnapshot Core::GetAppSettings() const
+AppSettingsSnapshot UCore::GetAppSettings() const
 {
  AppSettingsSnapshot snapshot;
  snapshot.defaultUser = default_user_name;
@@ -456,7 +456,7 @@ AppSettingsSnapshot Core::GetAppSettings() const
  return snapshot;
 }
 
-void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
+void UCore::ApplyAppSettings(const AppSettingsSnapshot& settings)
 {
  default_user_name = settings.defaultUser;
  default_world_name = settings.defaultWorld;
@@ -478,7 +478,7 @@ void Core::ApplyAppSettings(const AppSettingsSnapshot& settings)
  }
 }
 
-void Core::SetProceduralTemplate(const ProceduralSettings& settings)
+void UCore::SetProceduralTemplate(const ProceduralSettings& settings)
 {
  proceduralSettings_ = settings;
  worldSeed_ = settings.seed;
@@ -487,7 +487,7 @@ void Core::SetProceduralTemplate(const ProceduralSettings& settings)
  ApplyGeneratorTierDefaults(proceduralSettings_);
 }
 
-void Core::CreateNewWorldFromTemplate()
+void UCore::CreateNewWorldFromTemplate()
 {
  worldSeed_ += 1;
  proceduralSettings_.seed = worldSeed_;
@@ -497,19 +497,19 @@ void Core::CreateNewWorldFromTemplate()
  CreateNewWorldWithCurrentSettings();
 }
 
-void Core::RefreshWorldList()
+void UCore::RefreshWorldList()
 {
  std::filesystem::create_directories(WorldPath);
  LoadWorldList(WorldPath.string());
 }
 
-void Core::LoadWorldByName(const std::string& world_name)
+void UCore::LoadWorldByName(const std::string& world_name)
 {
  default_world_name = world_name;
  LoadWorld(world_name);
 }
 
-void Core::CreateWorld(const std::string& terrain_type)
+void UCore::CreateWorld(const std::string& terrain_type)
 {
  worldSeed_ += 1;
  if (!terrain_type.empty()) {
@@ -523,7 +523,7 @@ void Core::CreateWorld(const std::string& terrain_type)
  CreateNewWorldWithCurrentSettings();
 }
 
-void Core::CreateWorldFromProceduralConfig()
+void UCore::CreateWorldFromProceduralConfig()
 {
  if (!configFilePath_.empty() && std::filesystem::exists(configFilePath_)) {
   std::ifstream file(configFilePath_.string());
@@ -553,7 +553,7 @@ void Core::CreateWorldFromProceduralConfig()
  CreateNewWorldWithCurrentSettings();
 }
 
-void Core::CreateNewWorldWithCurrentSettings()
+void UCore::CreateNewWorldWithCurrentSettings()
 {
  const std::string new_world_name = AllocateNextWorldName();
  default_world_name = new_world_name;
@@ -572,7 +572,7 @@ void Core::CreateNewWorldWithCurrentSettings()
  LoadWorldList(WorldPath.string());
 }
 
-void Core::LoadWorld(const std::string& world_name)
+void UCore::LoadWorld(const std::string& world_name)
 {
  activeWorldFolder_ = WorldFolderPath(world_name);
  WorldInstance->Load(activeWorldFolder_.string());
@@ -581,7 +581,7 @@ void Core::LoadWorld(const std::string& world_name)
  }
 }
 
-void Core::LoadLastWorld()
+void UCore::LoadLastWorld()
 {
  if (default_world_name.empty()) {
   std::cerr << "Core::LoadLastWorld: default_world is not set in config." << std::endl;
@@ -603,7 +603,7 @@ void Core::LoadLastWorld()
  WorldInstance->FinalizePlayerAfterWorldLoad();
 }
 
-void Core::SaveWorld(const std::string& world_name)
+void UCore::SaveWorld(const std::string& world_name)
 {
  if (activeWorldFolder_.empty()) {
   activeWorldFolder_ = WorldFolderPath(world_name);
@@ -611,7 +611,7 @@ void Core::SaveWorld(const std::string& world_name)
  WorldInstance->Save(activeWorldFolder_.string());
 }
 
-void Core::LoadWorldList(const std::string& world_path)
+void UCore::LoadWorldList(const std::string& world_path)
 {
  WorldList.clear();
 

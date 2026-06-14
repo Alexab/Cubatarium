@@ -119,7 +119,7 @@ bool CreatureLocomotionController::ConsumeClearShiftRequest()
  return request;
 }
 
-void CreatureLocomotionController::OnLandedFromFlight(const World* world, glm::vec3& eyePos,
+void CreatureLocomotionController::OnLandedFromFlight(const UWorld* world, glm::vec3& eyePos,
                                                       bool /*clearShiftKeys*/)
 {
  SetMode(CreatureMovementMode::Walking);
@@ -128,7 +128,7 @@ void CreatureLocomotionController::OnLandedFromFlight(const World* world, glm::v
  suppressNextJump_ = false;
 }
 
-void CreatureLocomotionController::SyncAfterStepLanding(glm::vec3& eyePos, const World* world)
+void CreatureLocomotionController::SyncAfterStepLanding(glm::vec3& eyePos, const UWorld* world)
 {
  onGround_ = true;
  verticalVelocity_ = 0.0f;
@@ -139,7 +139,7 @@ void CreatureLocomotionController::SyncAfterStepLanding(glm::vec3& eyePos, const
  updateLocomotionState({});
 }
 
-bool CreatureLocomotionController::anchorFeetFromStandingEye(const World* world,
+bool CreatureLocomotionController::anchorFeetFromStandingEye(const UWorld* world,
                                                              const glm::vec3& eyePos)
 {
  if (!world) {
@@ -182,7 +182,7 @@ void CreatureLocomotionController::syncEyeFromFeet(glm::vec3& eyePos) const
  eyePos.y = feetY_ + GetViewEyeHeight();
 }
 
-void CreatureLocomotionController::landStanding(const World* world, glm::vec3& eyePos,
+void CreatureLocomotionController::landStanding(const UWorld* world, glm::vec3& eyePos,
                                                 CreatureId skipCreatureId)
 {
  stanceBlend_ = 0.0f;
@@ -213,7 +213,7 @@ void CreatureLocomotionController::landStanding(const World* world, glm::vec3& e
  syncEyeFromFeet(eyePos);
 }
 
-bool CreatureLocomotionController::canStandUpAt(const World* world,
+bool CreatureLocomotionController::canStandUpAt(const UWorld* world,
                                                  const glm::vec3& eyePos,
                                                  CreatureId skipCreatureId) const
 {
@@ -225,7 +225,7 @@ bool CreatureLocomotionController::canStandUpAt(const World* world,
  return !world->CheckCollision(trialEye, GetCapsule(), skipCreatureId);
 }
 
-void CreatureLocomotionController::updateStanceBlend(const World* world, const glm::vec3& eyePos,
+void CreatureLocomotionController::updateStanceBlend(const UWorld* world, const glm::vec3& eyePos,
                                                      const CreatureInput& input, float dt,
                                                      CreatureId skipCreatureId)
 {
@@ -251,7 +251,7 @@ void CreatureLocomotionController::updateStanceBlend(const World* world, const g
  }
 }
 
-bool CreatureLocomotionController::tryStandFromCrouch(const World* world, glm::vec3& eyePos,
+bool CreatureLocomotionController::tryStandFromCrouch(const UWorld* world, glm::vec3& eyePos,
                                                       const CreatureInput& input,
                                                       CreatureId skipCreatureId)
 {
@@ -284,7 +284,7 @@ bool CreatureLocomotionController::tryJump(const CreatureInput& /*input*/)
  return true;
 }
 
-void CreatureLocomotionController::syncGroundedPose(const World* world, glm::vec3& eyePos,
+void CreatureLocomotionController::syncGroundedPose(const UWorld* world, glm::vec3& eyePos,
                                                     const CreatureInput& input, float dt,
                                                     CreatureId skipCreatureId)
 {
@@ -302,7 +302,7 @@ void CreatureLocomotionController::syncGroundedPose(const World* world, glm::vec
  syncEyeFromFeet(eyePos);
 }
 
-void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec3& eyePos,
+void CreatureLocomotionController::UpdateLocomotion(const UWorld* world, glm::vec3& eyePos,
                                                    const CreatureInput& input, float dt,
                                                    CreatureId skipCreatureId)
 {
@@ -325,7 +325,7 @@ void CreatureLocomotionController::UpdateLocomotion(const World* world, glm::vec
  }
 
  const PlayerCapsule cap = GetCapsule();
- const World::SampledFluidState fluid = world->SampleFluidPhysics(eyePos, cap);
+ const UWorld::SampledFluidState fluid = world->SampleFluidPhysics(eyePos, cap);
 
  if (!input.jumpHeld) {
   suppressNextJump_ = false;

@@ -46,9 +46,9 @@ int RunValidateLoad()
   auto block_definitions = std::make_shared<BlockDefinitionStorage>();
   auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
   auto prefab_library = std::make_shared<PrefabLibrary>();
-  auto view_engine = std::make_shared<ViewEngine>();
-  auto world = std::make_shared<World>(object_storage, view_engine);
-  auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
+  auto view_engine = std::make_shared<UViewEngine>();
+  auto world = std::make_shared<UWorld>(object_storage, view_engine);
+  auto core = std::make_shared<UCore>(texture_base_instance, texture_cube_instance,
                                      object_storage, prefab_library, world, nullptr, view_engine);
 
   block_definitions->Load("models/blocks");

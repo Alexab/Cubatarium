@@ -71,7 +71,7 @@ bool HasChunkJsonFiles(const std::string& chunks_dir)
 
 } // namespace
 
-bool World::HasPersistedTerrainOnDisk(const std::string& world_folder_path)
+bool UWorld::HasPersistedTerrainOnDisk(const std::string& world_folder_path)
 {
  const std::string blocks_file = world_folder_path + "/blocks.json";
  if (std::filesystem::exists(blocks_file) && std::filesystem::file_size(blocks_file) > 2) {
@@ -103,7 +103,7 @@ bool World::HasPersistedTerrainOnDisk(const std::string& world_folder_path)
  }
 }
 
-World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<ViewEngine> views)
+UWorld::UWorld(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<UViewEngine> views)
  : ObjectStorageInstance(object_storage)
  , ViewInstance(views)
 {
@@ -116,33 +116,33 @@ World::World(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<View
  RegisterDefaultCreaturePosePresenters(posePresenterRegistry_);
 }
 
-void World::GenerateUsers()
+void UWorld::GenerateUsers()
 {
  AddUser("Username");
  ApplySpawnToCamera();
 }
 
-std::string World::GetWorldName() const
+std::string UWorld::GetWorldName() const
 {
  return WorldName;
 }
 
-void World::SetWorldName(const std::string& value)
+void UWorld::SetWorldName(const std::string& value)
 {
  WorldName = value;
 }
 
-glm::vec3 World::GetSpawnPoint() const
+glm::vec3 UWorld::GetSpawnPoint() const
 {
  return SpawnPoint;
 }
 
-void World::SetSpawnPoint(glm::vec3 value)
+void UWorld::SetSpawnPoint(glm::vec3 value)
 {
  SpawnPoint = value;
 }
 
-void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
+void UWorld::SetTerrainParams(uint32_t seed, const std::string& terrainType)
 {
  worldSeed_ = seed;
  terrainType_ = terrainType;
@@ -157,7 +157,7 @@ void World::SetTerrainParams(uint32_t seed, const std::string& terrainType)
  }
 }
 
-void World::SetProceduralSettings(const ProceduralSettings& settings)
+void UWorld::SetProceduralSettings(const ProceduralSettings& settings)
 {
  proceduralSettings_ = settings;
  worldSeed_ = settings.seed;
@@ -168,7 +168,7 @@ void World::SetProceduralSettings(const ProceduralSettings& settings)
  RebuildWorldGenPipeline();
 }
 
-void World::RebuildWorldGenPipeline()
+void UWorld::RebuildWorldGenPipeline()
 {
  if (!blockRegistry_) {
   worldGen_.reset();
@@ -183,7 +183,7 @@ void World::RebuildWorldGenPipeline()
  worldGen_ = ProceduralWorldGenFactory::Create(ctx);
 }
 
-void World::SetRenderDistanceChunks(int distance)
+void UWorld::SetRenderDistanceChunks(int distance)
 {
  renderDistanceChunks_ = distance;
  if (streamer_) {
@@ -192,7 +192,7 @@ void World::SetRenderDistanceChunks(int distance)
  meshCache_.SetRenderDistanceChunks(distance);
 }
 
-void World::InitStreamerCallbacks()
+void UWorld::InitStreamerCallbacks()
 {
  if (!streamer_ || !blockRegistry_) {
   return;
@@ -215,7 +215,7 @@ void World::InitStreamerCallbacks()
      [this](glm::ivec3 coord) { meshCache_.RemoveChunk(coord); });
 }
 
-void World::GenerateWorldBlocks()
+void UWorld::GenerateWorldBlocks()
 {
  if (!blockRegistry_) {
   return;
@@ -248,7 +248,7 @@ void World::GenerateWorldBlocks()
  }
 }
 
-void World::SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> definitions)
+void UWorld::SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> definitions)
 {
  blockDefinitions_ = std::move(definitions);
  if (blockRegistry_) {
@@ -259,14 +259,14 @@ void World::SetBlockDefinitionStorage(std::shared_ptr<BlockDefinitionStorage> de
  }
 }
 
-void World::RefreshBlockRegistry()
+void UWorld::RefreshBlockRegistry()
 {
  if (blockRegistry_) {
   blockRegistry_->Reload();
  }
 }
 
-void World::RebuildBlockMesh()
+void UWorld::RebuildBlockMesh()
 {
  if (!blockRegistry_) {
   return;
@@ -276,7 +276,7 @@ void World::RebuildBlockMesh()
  blockWorldReady_ = cachedBlockCount_ > 0;
 }
 
-bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
+bool UWorld::IsReasonablePlayerPosition(const glm::vec3& position) const
 {
  if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) {
   return false;
@@ -290,7 +290,7 @@ bool World::IsReasonablePlayerPosition(const glm::vec3& position) const
  return true;
 }
 
-void World::SanitizeUserPosition(const std::shared_ptr<User>& user)
+void UWorld::SanitizeUserPosition(const std::shared_ptr<User>& user)
 {
  if (!user) {
   return;
@@ -304,7 +304,7 @@ void World::SanitizeUserPosition(const std::shared_ptr<User>& user)
  }
 }
 
-void World::ApplySpawnToCamera()
+void UWorld::ApplySpawnToCamera()
 {
  glm::vec3 spawn = SpawnPoint;
  const PlayerCapsule cap = PlayerCapsule::Standing();
@@ -328,7 +328,7 @@ void World::ApplySpawnToCamera()
  }
 }
 
-std::optional<int> World::FindHighestSolidY(int x, int z) const
+std::optional<int> UWorld::FindHighestSolidY(int x, int z) const
 {
  if (!blockRegistry_) {
   return std::nullopt;
@@ -341,7 +341,7 @@ std::optional<int> World::FindHighestSolidY(int x, int z) const
  return std::nullopt;
 }
 
-std::optional<float> World::QueryGroundFeetYColumn(int worldX, int worldZ) const
+std::optional<float> UWorld::QueryGroundFeetYColumn(int worldX, int worldZ) const
 {
  if (const std::optional<int> topY = FindHighestSolidY(worldX, worldZ)) {
   return BlockTopY(*topY);
@@ -349,7 +349,7 @@ std::optional<float> World::QueryGroundFeetYColumn(int worldX, int worldZ) const
  return std::nullopt;
 }
 
-std::optional<float> World::QueryGroundFeetYUnder(int worldX, int worldZ,
+std::optional<float> UWorld::QueryGroundFeetYUnder(int worldX, int worldZ,
                                                    float referenceFeetY) const
 {
  if (!blockRegistry_) {
@@ -365,7 +365,7 @@ std::optional<float> World::QueryGroundFeetYUnder(int worldX, int worldZ,
  return std::nullopt;
 }
 
-bool World::IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const
+bool UWorld::IsValidStandCell(const glm::ivec3& cell, const PlayerCapsule& cap) const
 {
  if (!blockRegistry_) {
   return false;
@@ -398,7 +398,7 @@ struct FootprintStandSampleStats {
  bool centerValidStand{false};
 };
 
-FootprintStandSampleStats SampleFootprintAtFeet(const World& world, const BlockWorld& blockWorld,
+FootprintStandSampleStats SampleFootprintAtFeet(const UWorld& world, const BlockWorld& blockWorld,
                                                 const BlockRegistry& registry, float feetY,
                                                 float centerX, float centerZ, float halfWidth,
                                                 const PlayerCapsule& cap, bool checkValidStand)
@@ -438,7 +438,7 @@ FootprintStandSampleStats SampleFootprintAtFeet(const World& world, const BlockW
 
 } // namespace
 
-bool World::IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap,
+bool UWorld::IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& cap,
                                   float feetY) const
 {
  if (!blockRegistry_) {
@@ -451,7 +451,7 @@ bool World::IsValidStandFootprint(const glm::vec3& eyePos, const PlayerCapsule& 
  return stats.centerValidStand && stats.validStandSamples >= kFootprintMinSolidSamples;
 }
 
-void World::EnsurePlayerOnGround()
+void UWorld::EnsurePlayerOnGround()
 {
  auto user = GetCurrentUser();
  if (!user || !blockRegistry_) {
@@ -502,7 +502,7 @@ void World::EnsurePlayerOnGround()
  camera->ResetVerticalPhysics();
 }
 
-void World::FinalizePlayerAfterWorldLoad()
+void UWorld::FinalizePlayerAfterWorldLoad()
 {
  blockWorldReady_ = cachedBlockCount_ > 0;
  physicsSuspendFrames_ = 3;
@@ -523,7 +523,7 @@ void World::FinalizePlayerAfterWorldLoad()
  }
 }
 
-void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
+void UWorld::ApplyUserToCamera(const std::shared_ptr<User>& user)
 {
  if (!user) {
   return;
@@ -543,7 +543,7 @@ void World::ApplyUserToCamera(const std::shared_ptr<User>& user)
  }
 }
 
-void World::Create(const std::string& world_name)
+void UWorld::Create(const std::string& world_name)
 {
  blockWorldReady_ = false;
  hasPersistedSave_ = false;
@@ -560,7 +560,7 @@ void World::Create(const std::string& world_name)
  FinalizePlayerAfterWorldLoad();
 }
 
-void World::Load(const std::string& world_folder_path)
+void UWorld::Load(const std::string& world_folder_path)
 {
  worldFolderPath_ = world_folder_path;
  blockWorldReady_ = false;
@@ -655,7 +655,7 @@ void World::Load(const std::string& world_folder_path)
  FinalizePlayerAfterWorldLoad();
 }
 
-void World::Save(const std::string& world_folder_path)
+void UWorld::Save(const std::string& world_folder_path)
 {
  RefreshBlockRegistry();
  std::filesystem::create_directories(world_folder_path);
@@ -684,7 +684,7 @@ void World::Save(const std::string& world_folder_path)
  modifiedChunks_.clear();
 }
 
-bool World::AddObject(const std::string type_id, const glm::vec3 &position)
+bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
 {
  if (!blockRegistry_) {
   return false;
@@ -708,7 +708,7 @@ bool World::AddObject(const std::string type_id, const glm::vec3 &position)
  return true;
 }
 
-bool World::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos)
+bool UWorld::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos)
 {
  if (!prefabLibrary_ || !blockRegistry_) {
   return false;
@@ -731,7 +731,7 @@ bool World::PlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPo
  return true;
 }
 
-bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const
+bool UWorld::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorldPos) const
 {
  if (!prefabLibrary_ || !blockRegistry_) {
   return false;
@@ -743,7 +743,7 @@ bool World::CanPlacePrefab(const std::string& prefab_name, glm::ivec3 anchorWorl
  return CanPlacePrefabAt(blockWorld_, *prefab, anchorWorldPos);
 }
 
-std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const
+std::optional<glm::ivec3> UWorld::FindPrefabAnchorFromView(const glm::vec3& position, const glm::vec3& front) const
 {
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
@@ -763,7 +763,7 @@ std::optional<glm::ivec3> World::FindPrefabAnchorFromView(const glm::vec3& posit
  return hit->blockPos + normal;
 }
 
-bool World::AddUser(const std::string &name)
+bool UWorld::AddUser(const std::string &name)
 {
  if(Users.find(name) != Users.end())
   return false;
@@ -812,7 +812,7 @@ bool World::AddUser(const std::string &name)
  return true;
 }
 
-void World::DelUser(const std::string &name)
+void UWorld::DelUser(const std::string &name)
 {
  if(Users.find(name) == Users.end())
   return;
@@ -820,28 +820,28 @@ void World::DelUser(const std::string &name)
  Users.erase(name);
 }
 
-std::shared_ptr<User> World::GetUser(const std::string &name)
+std::shared_ptr<User> UWorld::GetUser(const std::string &name)
 {
  auto I = Users.find(name);
  return (I != Users.end())?I->second:nullptr;
 }
 
-const std::string& World::GetCurrentUserName() const
+const std::string& UWorld::GetCurrentUserName() const
 {
  return CurrentUserName;
 }
 
-std::shared_ptr<User> World::GetCurrentUser()
+std::shared_ptr<User> UWorld::GetCurrentUser()
 {
  return GetUser(CurrentUserName);
 }
 
-std::shared_ptr<User> World::GetCurrentUser() const
+std::shared_ptr<User> UWorld::GetCurrentUser() const
 {
- return const_cast<World*>(this)->GetUser(CurrentUserName);
+ return const_cast<UWorld*>(this)->GetUser(CurrentUserName);
 }
 
-CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user)
+CreatureInventory* UWorld::GetPlayerInventory(const std::shared_ptr<User>& user)
 {
  if (!user || user->GetPlayerCreatureId() == 0) {
   return nullptr;
@@ -852,19 +852,19 @@ CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user)
  return nullptr;
 }
 
-const CreatureInventory* World::GetPlayerInventory(const std::shared_ptr<User>& user) const
+const CreatureInventory* UWorld::GetPlayerInventory(const std::shared_ptr<User>& user) const
 {
- return const_cast<World*>(this)->GetPlayerInventory(user);
+ return const_cast<UWorld*>(this)->GetPlayerInventory(user);
 }
 
-void World::EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount)
+void UWorld::EnsurePlayerHotbarCount(const std::shared_ptr<User>& user, size_t barCount)
 {
  if (CreatureInventory* inv = GetPlayerInventory(user)) {
   inv->EnsureHotbarCount(barCount);
  }
 }
 
-bool World::SetCurrentUserName(const std::string& name)
+bool UWorld::SetCurrentUserName(const std::string& name)
 {
  if(Users.find(name) == Users.end())
   return false;
@@ -882,7 +882,7 @@ bool World::SetCurrentUserName(const std::string& name)
  return true;
 }
 
-std::shared_ptr<Camera> World::GetUserCamera(const std::string& name)
+std::shared_ptr<Camera> UWorld::GetUserCamera(const std::string& name)
 {
  auto user = GetUser(name);
  if(user == nullptr)
@@ -891,7 +891,7 @@ std::shared_ptr<Camera> World::GetUserCamera(const std::string& name)
  return ViewInstance->GetCamera(user->GetViewId());
 }
 
-std::shared_ptr<Camera> World::GetCurrentUserCamera()
+std::shared_ptr<Camera> UWorld::GetCurrentUserCamera()
 {
  auto user = GetCurrentUser();
  if(user == nullptr)
@@ -900,17 +900,17 @@ std::shared_ptr<Camera> World::GetCurrentUserCamera()
  return ViewInstance->GetCamera(user->GetViewId());
 }
 
-bool World::AddObjectByView()
+bool UWorld::AddObjectByView()
 {
  return AddObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
 }
 
-bool World::DelObjectByView()
+bool UWorld::DelObjectByView()
 {
  return DelObjectByView(GetCurrentUserCamera()->GetPosition(), GetCurrentUserCamera()->GetFront());
 }
 
-bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
+bool UWorld::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>& distance_map) const
 {
  distance_map.clear();
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
@@ -927,7 +927,7 @@ bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fro
  return true;
 }
 
-bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
+bool UWorld::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, glm::vec3& intersecion, float &distance, size_t &cube_index, int &cube_side, size_t &object_index) const
 {
  std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>> distance_map;
 
@@ -942,12 +942,12 @@ bool World::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fro
  return result;
 }
 
-bool World::CheckPositionFree(const glm::vec3& position, float /*size*/) const
+bool UWorld::CheckPositionFree(const glm::vec3& position, float /*size*/) const
 {
  return blockWorld_.IsAir(WorldPosToBlock(position));
 }
 
-std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
+std::optional<glm::vec3> UWorld::FindNearestFreeCubePosition(const glm::vec3& position, const glm::vec3& front) const
 {
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
@@ -984,7 +984,7 @@ std::optional<glm::vec3> World::FindNearestFreeCubePosition(const glm::vec3& pos
  return res_position;
 }
 
-bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
+bool UWorld::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
  auto user = GetCurrentUser();
  if (!user) {
@@ -1010,13 +1010,13 @@ bool World::AddObjectByView(const glm::vec3& position, const glm::vec3& front)
  return false;
 }
 
-bool World::PlaceActivePrefabByView()
+bool UWorld::PlaceActivePrefabByView()
 {
  return PlaceActivePrefabByView(GetCurrentUserCamera()->GetPosition(),
                                 GetCurrentUserCamera()->GetFront());
 }
 
-bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& front)
+bool UWorld::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& front)
 {
  auto user = GetCurrentUser();
  if (!user) {
@@ -1043,7 +1043,7 @@ bool World::PlaceActivePrefabByView(const glm::vec3& position, const glm::vec3& 
  return false;
 }
 
-bool World::DelBlockAt(glm::ivec3 blockPos)
+bool UWorld::DelBlockAt(glm::ivec3 blockPos)
 {
  if (!blockRegistry_) {
   return false;
@@ -1062,7 +1062,7 @@ bool World::DelBlockAt(glm::ivec3 blockPos)
  return true;
 }
 
-bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
+bool UWorld::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
 {
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
  if (!hit) {
@@ -1071,7 +1071,7 @@ bool World::DelObjectByView(const glm::vec3& position, const glm::vec3& front)
  return DelBlockAt(hit->blockPos);
 }
 
-void World::StartBreakSession(glm::ivec3 blockPos)
+void UWorld::StartBreakSession(glm::ivec3 blockPos)
 {
  BlockBreakSession session;
  session.blockPos = blockPos;
@@ -1079,12 +1079,12 @@ void World::StartBreakSession(glm::ivec3 blockPos)
  breakSession_ = session;
 }
 
-void World::CancelBreakSession()
+void UWorld::CancelBreakSession()
 {
  breakSession_.reset();
 }
 
-void World::TickBreakSession(float dt, float durationSeconds)
+void UWorld::TickBreakSession(float dt, float durationSeconds)
 {
  if (!breakSession_ || durationSeconds <= 0.f) {
   return;
@@ -1092,7 +1092,7 @@ void World::TickBreakSession(float dt, float durationSeconds)
  breakSession_->progress = std::min(1.f, breakSession_->progress + dt / durationSeconds);
 }
 
-bool World::CompleteBreakSession()
+bool UWorld::CompleteBreakSession()
 {
  if (!breakSession_) {
   return false;
@@ -1102,12 +1102,12 @@ bool World::CompleteBreakSession()
  return DelBlockAt(pos);
 }
 
-float World::GetBreakProgress() const
+float UWorld::GetBreakProgress() const
 {
  return breakSession_ ? breakSession_->progress : 0.f;
 }
 
-std::optional<glm::ivec3> World::GetBreakSessionBlockPos() const
+std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
 {
  if (!breakSession_) {
   return std::nullopt;
@@ -1116,7 +1116,7 @@ std::optional<glm::ivec3> World::GetBreakSessionBlockPos() const
 }
 
 
-bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
+bool UWorld::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
 {
  if (!blockRegistry_) {
   return false;
@@ -1137,7 +1137,7 @@ bool World::IsCameraInsideFluid(const glm::vec3& eye, BlockId* outFluid) const
  return true;
 }
 
-World::SampledFluidState World::SampleFluidPhysicsVolume(const CollisionVolume& vol) const
+UWorld::SampledFluidState UWorld::SampleFluidPhysicsVolume(const CollisionVolume& vol) const
 {
  SampledFluidState state;
  if (!blockRegistry_) {
@@ -1183,13 +1183,13 @@ World::SampledFluidState World::SampleFluidPhysicsVolume(const CollisionVolume& 
  return state;
 }
 
-World::SampledFluidState World::SampleFluidPhysics(const glm::vec3& eyePos,
+UWorld::SampledFluidState UWorld::SampleFluidPhysics(const glm::vec3& eyePos,
                                                    const PlayerCapsule& cap) const
 {
  return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
 }
 
-bool World::CheckBlockCollisionVolume(const CollisionVolume& vol) const
+bool UWorld::CheckBlockCollisionVolume(const CollisionVolume& vol) const
 {
  if (!blockRegistry_) {
   return false;
@@ -1217,7 +1217,7 @@ bool World::CheckBlockCollisionVolume(const CollisionVolume& vol) const
  return false;
 }
 
-bool World::CheckCreatureCollisionVolume(const CollisionVolume& vol,
+bool UWorld::CheckCreatureCollisionVolume(const CollisionVolume& vol,
                                          CreatureId skipCreatureId) const
 {
  for (const auto& entry : creatures_) {
@@ -1233,7 +1233,7 @@ bool World::CheckCreatureCollisionVolume(const CollisionVolume& vol,
  return false;
 }
 
-bool World::CheckCollisionVolume(const CollisionVolume& vol, CreatureId skipCreatureId) const
+bool UWorld::CheckCollisionVolume(const CollisionVolume& vol, CreatureId skipCreatureId) const
 {
  if (CheckBlockCollisionVolume(vol)) {
   return true;
@@ -1244,18 +1244,18 @@ bool World::CheckCollisionVolume(const CollisionVolume& vol, CreatureId skipCrea
  return CheckCreatureCollisionVolume(vol, skipCreatureId);
 }
 
-bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+bool UWorld::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
  return CheckCollision(eyePos, cap, GetMovementCollisionSkipId());
 }
 
-bool World::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
+bool UWorld::CheckCollision(const glm::vec3& eyePos, const PlayerCapsule& cap,
                            CreatureId skipCreatureId) const
 {
  return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap), skipCreatureId);
 }
 
-bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const
+bool UWorld::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) const
 {
  if (!blockRegistry_) {
   return false;
@@ -1266,7 +1266,7 @@ bool World::HasGroundSupportVolume(const CollisionVolume& vol, float feetY) cons
  return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
 }
 
-bool World::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
+bool UWorld::HasGroundSupport(const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
  return HasGroundSupportVolume(CollisionVolumeFromEye(eyePos, cap), cap.feetY(eyePos));
 }
@@ -1277,7 +1277,7 @@ constexpr float kCollisionMaxStep = 0.25f;
 constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
-glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, float axisDelta,
+glm::vec3 ResolveMovementAxisEye(const UWorld& world, const glm::vec3& fromEye, float axisDelta,
                                  int axis, const PlayerCapsule& cap, CreatureId skipCreatureId)
 {
  if (std::abs(axisDelta) < 1e-8f) {
@@ -1318,7 +1318,7 @@ glm::vec3 ResolveMovementAxisEye(const World& world, const glm::vec3& fromEye, f
  return pos;
 }
 
-glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody, float axisDelta,
+glm::vec3 ResolveMovementAxisBody(const UWorld& world, const glm::vec3& fromBody, float axisDelta,
                                   int axis, const glm::vec3& currentSizeBlocks,
                                   CreatureId skipCreatureId)
 {
@@ -1364,7 +1364,7 @@ glm::vec3 ResolveMovementAxisBody(const World& world, const glm::vec3& fromBody,
 
 } // namespace
 
-glm::vec3 World::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
+glm::vec3 UWorld::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec3& delta,
                                      const glm::vec3& currentSizeBlocks,
                                      CreatureId skipCreatureId) const
 {
@@ -1378,7 +1378,7 @@ glm::vec3 World::ResolveMovementBody(const glm::vec3& bodyOrigin, const glm::vec
  return body;
 }
 
-glm::vec3 World::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
+glm::vec3 UWorld::ResolveMovement(const glm::vec3& eyePos, const glm::vec3& delta,
                                  const PlayerCapsule& cap, CreatureId skipCreatureId) const
 {
  if (glm::dot(delta, delta) < 1e-10f) {
@@ -1400,7 +1400,7 @@ glm::vec3 StepStandPosition(const glm::ivec3& stepCell, const PlayerCapsule& cap
                   static_cast<float>(stepCell.z));
 }
 
-bool FindSteppableLedge(const World& world, const BlockWorld& blockWorld,
+bool FindSteppableLedge(const UWorld& world, const BlockWorld& blockWorld,
                         const BlockRegistry& registry, const glm::vec3& eyePos,
                         const glm::vec3& dir, const PlayerCapsule& cap, glm::ivec3& outStepCell)
 {
@@ -1450,7 +1450,7 @@ float DistanceToStepRiser(const glm::vec3& eyePos, const glm::ivec3& stepCell,
 
 } // namespace
 
-World::StepUpProbe World::ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& horiz,
+UWorld::StepUpProbe UWorld::ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& horiz,
                                       const PlayerCapsule& cap,
                                       float maxTriggerDistance) const
 {
@@ -1479,7 +1479,7 @@ World::StepUpProbe World::ProbeStepUp(const glm::vec3& eyePos, const glm::vec3& 
  return probe;
 }
 
-bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
+bool UWorld::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
                              const PlayerCapsule& cap, float maxTriggerDistance,
                              glm::vec3& outLanding) const
 {
@@ -1508,7 +1508,7 @@ bool World::GetStepUpLanding(const glm::vec3& eyePos, const glm::vec3& horiz,
  return !CheckCollision(outLanding, cap);
 }
 
-bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
+bool UWorld::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCapsule& cap,
                       float maxTriggerDistance) const
 {
  glm::vec3 landing = eyePos;
@@ -1519,7 +1519,7 @@ bool World::TryStepUp(glm::vec3& eyePos, const glm::vec3& horiz, const PlayerCap
  return true;
 }
 
-void World::LoadUsers(const std::string &file_name)
+void UWorld::LoadUsers(const std::string &file_name)
 {
  std::string val;
  std::ifstream file(file_name);
@@ -1618,7 +1618,7 @@ void World::LoadUsers(const std::string &file_name)
  }
 }
 
-void World::SaveUsers(const std::string &file_name)
+void UWorld::SaveUsers(const std::string &file_name)
 {
  json objects;
 
@@ -1665,7 +1665,7 @@ void World::SaveUsers(const std::string &file_name)
  }
 }
 
-void World::LoadWorldData(const std::string &file_name)
+void UWorld::LoadWorldData(const std::string &file_name)
 {
  std::string val;
  std::ifstream file(file_name);
@@ -1723,7 +1723,7 @@ void World::LoadWorldData(const std::string &file_name)
  }
 }
 
-void World::SaveWorldData(const std::string &file_name)
+void UWorld::SaveWorldData(const std::string &file_name)
 {
  json world_data;
 
@@ -1743,7 +1743,7 @@ void World::SaveWorldData(const std::string &file_name)
 }
 
 
-void World::DoMovement()
+void UWorld::DoMovement()
 {
  if (!blockWorldReady_) {
   return;
@@ -1836,7 +1836,7 @@ void World::DoMovement()
  UpdateMovementDiagnostics(camera, prevPlayerY);
 }
 
-void World::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY)
+void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, float prevPlayerY)
 {
  movementDiagnostics_ = MovementDiagnostics{};
  if (!camera) {
@@ -1897,7 +1897,7 @@ void World::UpdateMovementDiagnostics(const std::shared_ptr<Camera>& camera, flo
  }
 }
 
-void World::UpdateStreaming()
+void UWorld::UpdateStreaming()
 {
  if (!streamer_ || !streamingEnabled_) {
   return;
@@ -1911,7 +1911,7 @@ void World::UpdateStreaming()
  }
 }
 
-size_t World::GetRenderInstanceCount() const
+size_t UWorld::GetRenderInstanceCount() const
 {
  if (renderSettings_.greedyMeshing) {
   return meshCache_.GetGreedyVertexCount();
@@ -1919,7 +1919,7 @@ size_t World::GetRenderInstanceCount() const
  return meshCache_.GetInstanceCount();
 }
 
-void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
+void UWorld::UpdateIntersection(const glm::vec3& position, const glm::vec3& front)
 {
  IsIntersectionExists = CheckRayIntersection(position, front, Intersection, IntersectionDistance, IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
  const auto hit = RaycastSolidBlocks(blockWorld_, *blockRegistry_, position, front);
@@ -1958,40 +1958,40 @@ void World::UpdateIntersection(const glm::vec3& position, const glm::vec3& front
  }
 }
 
-bool World::GetIsIntersectionExists() const
+bool UWorld::GetIsIntersectionExists() const
 {
  return IsIntersectionExists;
 }
 
-size_t World::GetIntersectionObjectIndex() const
+size_t UWorld::GetIntersectionObjectIndex() const
 {
  return IntersectionObjectIndex;
 }
 
-size_t World::GetIntersectionCubeIndex() const
+size_t UWorld::GetIntersectionCubeIndex() const
 {
  return IntersectionCubeIndex;
 }
 
-uint64_t World::GetDurationDoMovementMks() const
+uint64_t UWorld::GetDurationDoMovementMks() const
 {
  return DurationDoMovementMks;
 }
 
-void World::InvalidateBlockMesh()
+void UWorld::InvalidateBlockMesh()
 {
  if (blockRegistry_) {
   meshCache_.MarkAllDirtyFromWorld(blockWorld_);
  }
 }
 
-void World::SetRenderSettings(const RenderSettings& settings)
+void UWorld::SetRenderSettings(const RenderSettings& settings)
 {
  renderSettings_ = settings;
  meshCache_.SetRenderSettings(settings);
 }
 
-const std::vector<FaceInstance>& World::GetBlockRenderInstances()
+const std::vector<FaceInstance>& UWorld::GetBlockRenderInstances()
 {
  if (blockRegistry_ && meshCache_.HasPendingDirty()) {
   const int rebuildBudget = renderSettings_.greedyMeshing ? 128 : 32;
@@ -2010,28 +2010,28 @@ const std::vector<FaceInstance>& World::GetBlockRenderInstances()
  return meshCache_.GetFaceInstances();
 }
 
-const std::vector<GreedyMeshBatch>& World::GetGreedyRenderBatches()
+const std::vector<GreedyMeshBatch>& UWorld::GetGreedyRenderBatches()
 {
  GetBlockRenderInstances();
  return meshCache_.GetGreedyBatches();
 }
 
-size_t World::GetGreedyVertexCount() const
+size_t UWorld::GetGreedyVertexCount() const
 {
  return meshCache_.GetGreedyVertexCount();
 }
 
-uint64_t World::GetMeshRevision() const
+uint64_t UWorld::GetMeshRevision() const
 {
  return meshCache_.GetMeshRevision();
 }
 
-uint64_t World::GetCullRevision() const
+uint64_t UWorld::GetCullRevision() const
 {
  return meshCache_.GetCullRevision();
 }
 
-void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
+void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
  const glm::ivec3 chunkCoord = ChunkManager::WorldToChunk(blockPos);
  modifiedChunks_.insert(chunkCoord);
@@ -2050,7 +2050,7 @@ void World::MarkBlockChunkDirty(glm::ivec3 blockPos)
  }
 }
 
-void World::LoadBlocks(const std::string& file_name)
+void UWorld::LoadBlocks(const std::string& file_name)
 {
  if (!blockRegistry_) {
   return;
@@ -2077,7 +2077,7 @@ void World::LoadBlocks(const std::string& file_name)
  }
 }
 
-void World::SaveBlocks(const std::string& file_name)
+void UWorld::SaveBlocks(const std::string& file_name)
 {
  if (!blockRegistry_) {
   return;
@@ -2104,7 +2104,7 @@ void World::SaveBlocks(const std::string& file_name)
  }
 }
 
-void World::LoadChunks(const std::string& file_name)
+void UWorld::LoadChunks(const std::string& file_name)
 {
  if (!blockRegistry_) {
   return;
@@ -2147,7 +2147,7 @@ void World::LoadChunks(const std::string& file_name)
  }
 }
 
-void World::SaveChunks(const std::string& file_name)
+void UWorld::SaveChunks(const std::string& file_name)
 {
  if (!blockRegistry_) {
   return;
@@ -2193,7 +2193,7 @@ void World::SaveChunks(const std::string& file_name)
  }
 }
 
-void World::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+void UWorld::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_folder)
 {
  if (!blockRegistry_) {
   return;
@@ -2245,7 +2245,7 @@ void World::SaveChunkToFile(glm::ivec3 chunkCoord, const std::string& world_fold
  }
 }
 
-int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
+int UWorld::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_folder)
 {
  if (!blockRegistry_) {
   return -1;
@@ -2289,14 +2289,14 @@ int World::LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string& world_fol
  }
 }
 
-void World::MigrateMonolithicChunksJson(const std::string& /*chunks_file*/, const std::string& world_folder)
+void UWorld::MigrateMonolithicChunksJson(const std::string& /*chunks_file*/, const std::string& world_folder)
 {
  blockWorld_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
   SaveChunkToFile(chunk.GetCoord(), world_folder);
  });
 }
 
-void World::MigrateObjectsFromJson(const std::string& file_name)
+void UWorld::MigrateObjectsFromJson(const std::string& file_name)
 {
  std::ifstream file(file_name);
  if (!file.is_open()) {

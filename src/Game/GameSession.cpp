@@ -22,7 +22,7 @@ namespace cutum {
 
 namespace {
 
-CreatureInventory* GetControlledInventory(World* world)
+CreatureInventory* GetControlledInventory(UWorld* world)
 {
  if (!world) {
   return nullptr;
@@ -33,7 +33,7 @@ CreatureInventory* GetControlledInventory(World* world)
  return nullptr;
 }
 
-const CreatureInventory* GetControlledInventory(const World* world)
+const CreatureInventory* GetControlledInventory(const UWorld* world)
 {
  if (!world) {
   return nullptr;
@@ -46,7 +46,7 @@ const CreatureInventory* GetControlledInventory(const World* world)
 
 } // namespace
 
-GameSession::GameSession(Application* application, std::shared_ptr<World> world)
+GameSession::GameSession(UApplication* application, std::shared_ptr<UWorld> world)
     : application_(application)
     , world_(std::move(world))
 {

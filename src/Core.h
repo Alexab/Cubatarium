@@ -17,26 +17,26 @@ namespace cutum {
 
 std::filesystem::path GetExecutableDirectory();
 
-class World;
+class UWorld;
 class TextureBaseStorage;
 class TextureCubeStorage;
 class CreatureTextureStorage;
 class ObjectStorage;
 class PrefabLibrary;
-class GeometryEngine;
-class ViewEngine;
+class UGeometryEngine;
+class UViewEngine;
 
-class Core
+class UCore
 {
 public:
- Core(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
+ UCore(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
       std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
       std::shared_ptr<ObjectStorage> object_storage_,
       std::shared_ptr<PrefabLibrary> prefab_library_,
-      std::shared_ptr<World> world_,
-      std::shared_ptr<GeometryEngine>
+      std::shared_ptr<UWorld> world_,
+      std::shared_ptr<UGeometryEngine>
       geometries_,
-      std::shared_ptr<ViewEngine> views_);
+      std::shared_ptr<UViewEngine> views_);
 
 public:
  void LoadConfig(const std::string& config_file_name);
@@ -112,9 +112,9 @@ private:
  std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance;
  std::shared_ptr<ObjectStorage> ObjectStorageInstance;
  std::shared_ptr<PrefabLibrary> PrefabLibraryInstance;
- std::shared_ptr<GeometryEngine> GeometryEngineInstance;
- std::shared_ptr<ViewEngine> ViewEngineInstance;
- std::shared_ptr<World> WorldInstance;
+ std::shared_ptr<UGeometryEngine> GeometryEngineInstance;
+ std::shared_ptr<UViewEngine> ViewEngineInstance;
+ std::shared_ptr<UWorld> WorldInstance;
 
  bool ShouldCreateWorldOnStartup() const;
  std::filesystem::path WorldFolderPath(const std::string& world_name) const;

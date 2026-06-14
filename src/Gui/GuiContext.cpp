@@ -16,7 +16,7 @@ GuiContext::~GuiContext()
 }
 
 bool GuiContext::Initialize(std::shared_ptr<ShaderManager> shaderManager,
-                            std::shared_ptr<TextRenderer> textRenderer)
+                            std::shared_ptr<UTextRenderer> textRenderer)
 {
     theme_ = DefaultGuiTheme();
     renderer_ = std::make_unique<GuiRenderer>();

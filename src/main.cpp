@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    auto windowManager = std::make_unique<WindowManager>();
+    auto windowManager = std::make_unique<UWindowManager>();
     
     if (!windowManager->Initialize(1280, 720, "Cubatarium")) 
     {
@@ -50,11 +50,11 @@ int main(int argc, char *argv[])
 
     auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
     auto prefab_library = std::make_shared<PrefabLibrary>();
-    auto view_engine = std::make_shared<ViewEngine>();
+    auto view_engine = std::make_shared<UViewEngine>();
 
-    auto world = std::make_shared<World>(object_storage, view_engine);
+    auto world = std::make_shared<UWorld>(object_storage, view_engine);
 
-    auto text_renderer = std::make_shared<TextRenderer>();
+    auto text_renderer = std::make_shared<UTextRenderer>();
     
     if (!text_renderer->Initialize(16)) 
     {
@@ -64,24 +64,24 @@ int main(int argc, char *argv[])
     
     text_renderer->SetWindowSize(1280, 720);
     
-    auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance, text_renderer);    
+    auto geometry_engine = std::make_shared<UGeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance, text_renderer);    
     if (!geometry_engine->InitEngine()) 
     {
       std::cerr << "Failed to initialize geometry engine" << std::endl;
       return -1;
     }
 
-    auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
+    auto core = std::make_shared<UCore>(texture_base_instance, texture_cube_instance,
                                       object_storage, prefab_library, world, geometry_engine, view_engine);
 
     block_definitions->Load("models/blocks");
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
 
-    windowManager->Init(core, world, geometry_engine, view_engine);
+    windowManager->SetInstances(core, world, geometry_engine, view_engine);
     windowManager->SetTextRenderer(text_renderer);
 
-    auto application = std::make_shared<Application>(core, world, geometry_engine, view_engine, 
+    auto application = std::make_shared<UApplication>(core, world, geometry_engine, view_engine, 
                         text_renderer,geometry_engine->GetShaderManager(), block_definitions);
     windowManager->SetApplication(application);
 

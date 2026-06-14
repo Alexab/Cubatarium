@@ -12,46 +12,48 @@ struct GLFWwindow;
 
 namespace cutum {
 
-class Application;
-class GeometryEngine;
-class World;
+class UApplication;
+class UGeometryEngine;
+class UWorld;
 
-struct BlockInputContext {
-    std::shared_ptr<World> world;
-    GeometryEngine* geometries{nullptr};
-    const UiSettings* ui{nullptr};
-    GLFWwindow* window{nullptr};
-    Application* app{nullptr};
+struct BlockInputContext 
+{
+  std::shared_ptr<UWorld> world;
+  UGeometryEngine* geometries{nullptr};
+  const UiSettings* ui{nullptr};
+  GLFWwindow* window{nullptr};
+  UApplication* app{nullptr};
 };
 
-class BlockInputController {
+class UBlockInputController 
+{
 public:
-    void OnMouseButton(MouseButton button, bool pressed, glm::vec2 pos, const BlockInputContext& ctx);
-    void OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx);
-    void OnKeyDelete(const BlockInputContext& ctx);
-    void Tick(float dt, const BlockInputContext& ctx);
+  void OnMouseButton(MouseButton button, bool pressed, glm::vec2 pos, const BlockInputContext& ctx);
+  void OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx);
+  void OnKeyDelete(const BlockInputContext& ctx);
+  void Tick(float dt, const BlockInputContext& ctx);
 
-    bool IsRightLookActive() const { return rightLookActive_; }
+  bool IsRightLookActive() const { return rightLookActive_; }
 
 private:
-    const InventoryEntryRef* GetActiveEntry(const BlockInputContext& ctx) const;
-    bool ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const;
+  const InventoryEntryRef* GetActiveEntry(const BlockInputContext& ctx) const;
+  bool ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const;
 
-    void HandleLeftPress(const BlockInputContext& ctx);
-    void HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx);
-    void HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx);
-    void HandleRightRelease(const BlockInputContext& ctx);
+  void HandleLeftPress(const BlockInputContext& ctx);
+  void HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx);
+  void HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx);
+  void HandleRightRelease(const BlockInputContext& ctx);
 
-    void TryPlaceFromActiveSlot(const BlockInputContext& ctx);
-    void TrySpawnCreatureOrSkin(const BlockInputContext& ctx);
-    void TryInstantBreak(const BlockInputContext& ctx);
+  void TryPlaceFromActiveSlot(const BlockInputContext& ctx);
+  void TrySpawnCreatureOrSkin(const BlockInputContext& ctx);
+  void TryInstantBreak(const BlockInputContext& ctx);
 
-    std::chrono::steady_clock::time_point leftDownTime_{};
-    bool leftHeld_{false};
-    glm::vec2 rightDownPos_{0.0f};
-    bool rightPressed_{false};
-    bool rightLookActive_{false};
-    bool rightDragExceeded_{false};
+  std::chrono::steady_clock::time_point leftDownTime_{};
+  bool leftHeld_{false};
+  glm::vec2 rightDownPos_{0.0f};
+  bool rightPressed_{false};
+  bool rightLookActive_{false};
+  bool rightDragExceeded_{false};
 };
 
 } // namespace cutum

@@ -20,10 +20,10 @@ struct Character {
     GLuint advance;     // Distance to next symbol (in 1/64 pixels)
 };
 
-class TextRenderer {
+class UTextRenderer {
 public:
-    TextRenderer();
-    ~TextRenderer();
+    UTextRenderer();
+    ~UTextRenderer();
 
     // Initialize text rendering system
     bool Initialize(int fontSize = 16);

@@ -35,7 +35,7 @@
 
 namespace cutum {
 
-GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<World> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<TextRenderer> text_renderer)
+UGeometryEngine::UGeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<UWorld> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<UTextRenderer> text_renderer)
  : ObjectStorageInstance(object_storage)
  , WorldInstance(world)
  , TextureBaseStorageInstance(texture_base_storage)
@@ -48,7 +48,7 @@ GeometryEngine::GeometryEngine(std::shared_ptr<ObjectStorage> object_storage, st
 {
 }
 
-GeometryEngine::~GeometryEngine()
+UGeometryEngine::~UGeometryEngine()
 {
     DestroyCubeBuffers();
     DestroyFaceQuadBuffers();
@@ -59,12 +59,12 @@ GeometryEngine::~GeometryEngine()
     DestroyOverlayBuffers();
 }
 
-void GeometryEngine::SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage)
+void UGeometryEngine::SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage)
 {
  CreatureTextureStorageInstance_ = std::move(storage);
 }
 
-bool GeometryEngine::InitEngine()
+bool UGeometryEngine::InitEngine()
 {
      // Initialize ShaderManager
  shaderManager = std::make_shared<ShaderManager>();
@@ -102,7 +102,7 @@ bool GeometryEngine::InitEngine()
  return true;
 }
 
-bool GeometryEngine::InitShaders()
+bool UGeometryEngine::InitShaders()
 {
      // Create shaders through ShaderManager
  defaultShader = shaderManager->CreateShader("default", "shaders/vshader.glsl", "shaders/fshader.glsl");
@@ -248,7 +248,7 @@ float insetMix(float a, float b, float t, float inset) {
  return true;
 }
 
-void GeometryEngine::Paint(int width_size, int height_size, double view_duration)
+void UGeometryEngine::Paint(int width_size, int height_size, double view_duration)
 {
  if (auto camera = WorldInstance->GetCurrentUserCamera()) {
   animationClock_.Tick(static_cast<float>(camera->GetDeltaTime()));
@@ -277,7 +277,7 @@ if (showHud) {
     }
 }
 
-void GeometryEngine::DrawCubeGeometry()
+void UGeometryEngine::DrawCubeGeometry()
 {
  auto t_begin = std::chrono::high_resolution_clock::now();
  
@@ -377,14 +377,14 @@ if (!camera) {
   DurationDrawSceneMks = std::chrono::duration<double, std::micro>(t_end-t_begin).count();
 }
 
-void GeometryEngine::ShowTransientMessage(const std::string& msg, double seconds)
+void UGeometryEngine::ShowTransientMessage(const std::string& msg, double seconds)
 {
  transientMessage_ = msg;
  transientMessageUntil_ = std::chrono::duration<double>(
      std::chrono::steady_clock::now().time_since_epoch()).count() + seconds;
 }
 
-void GeometryEngine::SetRenderSettings(const RenderSettings& settings)
+void UGeometryEngine::SetRenderSettings(const RenderSettings& settings)
 {
  renderSettings_ = settings;
  blockBatchesValid_ = false;
@@ -392,7 +392,7 @@ void GeometryEngine::SetRenderSettings(const RenderSettings& settings)
  DestroyFaceQuadBuffers();
 }
 
-void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
+void UGeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
                                                     const std::map<size_t, TextureCube>& textures)
 {
  renderBatches.clear();
@@ -419,14 +419,14 @@ void GeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInsta
  }
 }
 
-void GeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
+void UGeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 {
  for (const auto& batch : renderBatches) {
      DrawBatch(batch, mvp_matrix);
  }
 }
 
-void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
+void UGeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
 {
  if (batch.modelMatrices.empty() && batch.objects.empty()) {
      if (verboseLogging) std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
@@ -526,7 +526,7 @@ void GeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_ma
  activeShader->Unuse();
 }
 
-void GeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache& cache)
+void UGeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache& cache)
 {
  for (GreedyGpuBatch& batch : cache.batches) {
   if (batch.ebo) {
@@ -544,13 +544,13 @@ void GeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache& cache)
  cache.sortRevision = 0;
 }
 
-void GeometryEngine::DestroyGreedyGpuBatches()
+void UGeometryEngine::DestroyGreedyGpuBatches()
 {
  DestroyGreedyGpuPassCache(greedyGpuOpaque_);
  DestroyGreedyGpuPassCache(greedyGpuTransparent_);
 }
 
-void GeometryEngine::RefreshGreedyGpuBatches(
+void UGeometryEngine::RefreshGreedyGpuBatches(
     const std::vector<GreedyMeshBatch>& batches,
     uint64_t meshRevision,
     uint64_t cullRevision,
@@ -594,7 +594,7 @@ void GeometryEngine::RefreshGreedyGpuBatches(
  cache.sortRevision = sortRevision;
 }
 
-void GeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader,
                                           BlockId blockId,
                                           const std::map<size_t, TextureCube>& textures)
 {
@@ -611,13 +611,13 @@ void GeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& 
  shader->SetInt("uAnimFrameCount", frameCount);
 }
 
-void GeometryEngine::PrepareFrameRendering()
+void UGeometryEngine::PrepareFrameRendering()
 {
  auto camera = WorldInstance->GetCurrentUserCamera();
  if (!camera) {
   return;
  }
- const World::SampledFluidState fluid =
+ const UWorld::SampledFluidState fluid =
      WorldInstance->SampleFluidPhysics(camera->GetPosition(), camera->GetPlayerCapsule());
  BlockId eyeFluid = BLOCK_AIR;
  const bool cameraInFluid =
@@ -656,7 +656,7 @@ void GeometryEngine::PrepareFrameRendering()
  skyColor = glm::vec4(smoothedSkyTint_, 1.0f);
 }
 
-void GeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
                                          const glm::vec3& cameraPos)
 {
  shader->SetVec3("uCameraPos", cameraPos);
@@ -667,7 +667,7 @@ void GeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>&
  shader->SetFloat("uFogEnabled", fogEnabled_);
 }
 
-void GeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader,
                                          bool transparentPass,
                                          GreedyShaderMode mode,
                                          float shellAlphaThreshold)
@@ -682,7 +682,7 @@ void GeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& s
  }
 }
 
-void GeometryEngine::DrawGreedyGpuBatches(
+void UGeometryEngine::DrawGreedyGpuBatches(
     const GreedyGpuPassCache& cache,
     const glm::mat4& vp,
     const std::map<size_t, TextureCube>& textures,
@@ -744,7 +744,7 @@ void GeometryEngine::DrawGreedyGpuBatches(
  greedyShader->Unuse();
 }
 
-void GeometryEngine::DrawGreedyOpaqueBatches(
+void UGeometryEngine::DrawGreedyOpaqueBatches(
     const std::vector<GreedyMeshBatch>& batches,
     const glm::mat4& vp,
     const std::map<size_t, TextureCube>& textures,
@@ -766,7 +766,7 @@ void GeometryEngine::DrawGreedyOpaqueBatches(
                       GreedyShaderMode::TransparentColor, 0.0f);
 }
 
-void GeometryEngine::PrepareTransparent(const GreedyTransparentDrawContext& ctx)
+void UGeometryEngine::PrepareTransparent(const GreedyTransparentDrawContext& ctx)
 {
  std::vector<GreedyMeshBatch> filtered;
  filtered.reserve(ctx.allBatches.size());
@@ -788,7 +788,7 @@ void GeometryEngine::PrepareTransparent(const GreedyTransparentDrawContext& ctx)
  preparedTransparentTextures_ = &ctx.textures;
 }
 
-void GeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode, float shellAlpha)
+void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode, float shellAlpha)
 {
  if (!preparedTransparentTextures_ || greedyGpuTransparent_.batches.empty()) {
   return;
@@ -797,7 +797,7 @@ void GeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode, float shellA
                       *preparedTransparentTextures_, true, mode, shellAlpha);
 }
 
-bool GeometryEngine::InitGreedyMeshBuffers()
+bool UGeometryEngine::InitGreedyMeshBuffers()
 {
  if (greedyMeshVAO != 0) {
   return true;
@@ -825,7 +825,7 @@ bool GeometryEngine::InitGreedyMeshBuffers()
  return greedyMeshVAO != 0;
 }
 
-void GeometryEngine::DestroyGreedyMeshBuffers()
+void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
  DestroyGreedyGpuBatches();
  if (greedyMeshEBO) { glDeleteBuffers(1, &greedyMeshEBO); greedyMeshEBO = 0; }
@@ -833,7 +833,7 @@ void GeometryEngine::DestroyGreedyMeshBuffers()
  if (greedyMeshVAO) { glDeleteVertexArrays(1, &greedyMeshVAO); greedyMeshVAO = 0; }
 }
 
-void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
+void UGeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
 {
  auto cube = std::dynamic_pointer_cast<CubeGL>(icube);
  if(!cube) {
@@ -895,7 +895,7 @@ void GeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
  defaultShader->Unuse();
 }
 
-void GeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures)
+void UGeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures)
 {
  for(size_t i=0; i<object->GetCubes().size(); i++)
  {
@@ -906,13 +906,13 @@ void GeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<s
 
 }
 
-void GeometryEngine::DrawSkyGradient()
+void UGeometryEngine::DrawSkyGradient()
 {
  // Use simple version which is more reliable
  DrawSkyGradientSimple();
 }
 
-void GeometryEngine::DrawSkyGradientSimple()
+void UGeometryEngine::DrawSkyGradientSimple()
 {
  // Check that sky shader is ready
  if (!skyShader->IsValid()) {
@@ -979,7 +979,7 @@ static const GLfloat skyVertices[] = {
  glEnable(GL_DEPTH_TEST);
 }
 
-bool GeometryEngine::InitOverlayBuffers()
+bool UGeometryEngine::InitOverlayBuffers()
 {
  if (overlayVAO != 0) {
   return true;
@@ -1008,7 +1008,7 @@ bool GeometryEngine::InitOverlayBuffers()
  return true;
 }
 
-void GeometryEngine::DestroyOverlayBuffers()
+void UGeometryEngine::DestroyOverlayBuffers()
 {
  if (overlayVBO) {
   glDeleteBuffers(1, &overlayVBO);
@@ -1020,7 +1020,7 @@ void GeometryEngine::DestroyOverlayBuffers()
  }
 }
 
-void GeometryEngine::RenderFluidOverlay(int width, int height)
+void UGeometryEngine::RenderFluidOverlay(int width, int height)
 {
  (void)width;
  (void)height;
@@ -1068,36 +1068,36 @@ void GeometryEngine::RenderFluidOverlay(int width, int height)
 }
 
 // Methods for sky color management
-void GeometryEngine::SetSkyColor(float r, float g, float b, float a)
+void UGeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
  baseSkyColor_ = glm::vec3(r, g, b);
  smoothedSkyTint_ = baseSkyColor_;
  skyColor = glm::vec4(r, g, b, a);
 }
 
-void GeometryEngine::SetSkyColor(const glm::vec4& color)
+void UGeometryEngine::SetSkyColor(const glm::vec4& color)
 {
  baseSkyColor_ = glm::vec3(color);
  smoothedSkyTint_ = baseSkyColor_;
  skyColor = color;
 }
 
-glm::vec4 GeometryEngine::GetSkyColor() const
+glm::vec4 UGeometryEngine::GetSkyColor() const
 {
  return skyColor;
 }
 
-void GeometryEngine::SetGradientSky(bool useGradient)
+void UGeometryEngine::SetGradientSky(bool useGradient)
 {
  useGradientSky = useGradient;
 }
 
-bool GeometryEngine::IsGradientSky() const
+bool UGeometryEngine::IsGradientSky() const
 {
  return useGradientSky;
 }
 
-void GeometryEngine::RenderPerformanceText(int width_size, int height_size, double view_duration)
+void UGeometryEngine::RenderPerformanceText(int width_size, int height_size, double view_duration)
 {
     if (!textRenderer) {
         return;
@@ -1152,7 +1152,7 @@ void GeometryEngine::RenderPerformanceText(int width_size, int height_size, doub
     }
 }
 
-void GeometryEngine::RenderCrosshair(int width_size, int height_size)
+void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
 {
     if (!uiShader || !uiShader->IsValid()) {
         std::cerr << "UI shader is not valid" << std::endl;
@@ -1250,7 +1250,7 @@ uiShader->SetVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
          }
  }
  
-  void GeometryEngine::RenderSimpleText(int width_size, int height_size)
+  void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
  {
      if (!textRenderer || !WorldInstance) {
          if (!textRenderer) {
@@ -1296,7 +1296,7 @@ uiShader->SetVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
      }
  }
 
-void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
+void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
 {
     if (!textRenderer || !WorldInstance) {
         return;
@@ -1332,7 +1332,7 @@ void GeometryEngine::RenderHotbarLabels(int width_size, int height_size)
     }
 }
  
-void GeometryEngine::InitPreviewBuffers()
+void UGeometryEngine::InitPreviewBuffers()
 {
     // Create a simple cube for preview (smaller scale)
     float scale = 0.3f; // Smaller cube for preview
@@ -1423,7 +1423,7 @@ void GeometryEngine::InitPreviewBuffers()
     }
 }
 
-void GeometryEngine::DestroyPreviewBuffers()
+void UGeometryEngine::DestroyPreviewBuffers()
 {
     if (previewVAO) {
         glDeleteVertexArrays(1, &previewVAO);
@@ -1440,7 +1440,7 @@ void GeometryEngine::DestroyPreviewBuffers()
     // Note: previewTexture is managed by TextureCubeStorage, don't delete it
 }
 
-void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
+void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
 {
     if (!defaultShader || !defaultShader->IsValid() || !previewVAO) return;
     
@@ -1515,7 +1515,7 @@ void GeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
 }
  
 // Initialize static cube geometry buffers
-bool GeometryEngine::InitCubeBuffers()
+bool UGeometryEngine::InitCubeBuffers()
 {
     if (cubeVAO != 0) return true;
 
@@ -1600,7 +1600,7 @@ bool GeometryEngine::InitCubeBuffers()
     return cubeVAO != 0;
 }
 
-bool GeometryEngine::InitFaceQuadBuffers()
+bool UGeometryEngine::InitFaceQuadBuffers()
 {
     if (faceVAO != 0) {
         DestroyFaceQuadBuffers();
@@ -1647,7 +1647,7 @@ bool GeometryEngine::InitFaceQuadBuffers()
     return faceVAO != 0;
 }
 
-void GeometryEngine::DestroyFaceQuadBuffers()
+void UGeometryEngine::DestroyFaceQuadBuffers()
 {
     if (instanceBlockVBO) { glDeleteBuffers(1, &instanceBlockVBO); instanceBlockVBO = 0; }
     if (faceEBO) { glDeleteBuffers(1, &faceEBO); faceEBO = 0; }
@@ -1655,7 +1655,7 @@ void GeometryEngine::DestroyFaceQuadBuffers()
     if (faceVAO) { glDeleteVertexArrays(1, &faceVAO); faceVAO = 0; }
 }
 
-void GeometryEngine::DestroyCubeBuffers()
+void UGeometryEngine::DestroyCubeBuffers()
 {
     if (cubeEBO) { glDeleteBuffers(1, &cubeEBO); cubeEBO = 0; }
     if (cubeVBO) { glDeleteBuffers(1, &cubeVBO); cubeVBO = 0; }
@@ -1663,7 +1663,7 @@ void GeometryEngine::DestroyCubeBuffers()
     if (cubeVAO) { glDeleteVertexArrays(1, &cubeVAO); cubeVAO = 0; }
 }
 
-bool GeometryEngine::InitOutlineBuffers()
+bool UGeometryEngine::InitOutlineBuffers()
 {
     if (outlineVAO != 0) {
         return true;
@@ -1704,7 +1704,7 @@ bool GeometryEngine::InitOutlineBuffers()
     return outlineVAO != 0;
 }
 
-void GeometryEngine::DestroyOutlineBuffers()
+void UGeometryEngine::DestroyOutlineBuffers()
 {
     if (outlineEBO) { glDeleteBuffers(1, &outlineEBO); outlineEBO = 0; }
     if (outlineVBO) { glDeleteBuffers(1, &outlineVBO); outlineVBO = 0; }
@@ -1745,7 +1745,7 @@ bool UploadCreaturePartMesh(GLuint& vao, GLuint& vbo, GLuint& ebo, const float* 
 
 } // namespace
 
-bool GeometryEngine::InitCreaturePartBuffers()
+bool UGeometryEngine::InitCreaturePartBuffers()
 {
  if (creaturePartVAO != 0) {
   return true;
@@ -1755,7 +1755,7 @@ bool GeometryEngine::InitCreaturePartBuffers()
  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO, creaturePartEBO, texCoords);
 }
 
-bool GeometryEngine::InitCreatureHeadPartBuffers()
+bool UGeometryEngine::InitCreatureHeadPartBuffers()
 {
  if (creatureHeadPartVAO != 0) {
   return true;
@@ -1766,7 +1766,7 @@ bool GeometryEngine::InitCreatureHeadPartBuffers()
                               texCoords);
 }
 
-bool GeometryEngine::InitCreatureBodyPartBuffers()
+bool UGeometryEngine::InitCreatureBodyPartBuffers()
 {
  if (creatureBodyPartVAO != 0) {
   return true;
@@ -1777,7 +1777,7 @@ bool GeometryEngine::InitCreatureBodyPartBuffers()
                               texCoords);
 }
 
-void GeometryEngine::DestroyCreaturePartBuffers()
+void UGeometryEngine::DestroyCreaturePartBuffers()
 {
  if (creatureBodyPartEBO) {
   glDeleteBuffers(1, &creatureBodyPartEBO);
@@ -1817,7 +1817,7 @@ void GeometryEngine::DestroyCreaturePartBuffers()
  }
 }
 
-void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture,
+void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint texture,
                                               CreaturePartMesh mesh)
 {
  if (texture == 0 || !defaultShader || !defaultShader->IsValid()) {
@@ -1870,7 +1870,7 @@ void GeometryEngine::DrawCreatureTexturedPart(const glm::mat4& mvp, GLuint textu
  }
 }
 
-void GeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color)
+void UGeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& color)
 {
  if (!outlineShader || !outlineShader->IsValid()) {
   if (!InitOutlineBuffers()) {
@@ -1907,7 +1907,7 @@ void GeometryEngine::DrawBoxWireframe(const glm::mat4& mvp, const glm::vec4& col
  }
 }
 
-void GeometryEngine::RenderCreatures()
+void UGeometryEngine::RenderCreatures()
 {
  if (!WorldInstance) {
   return;
@@ -2004,7 +2004,7 @@ void DrawBlockOutline(ShaderProgram* shader, GLuint vao, const glm::mat4& mvp, c
 
 } // namespace
 
-void GeometryEngine::RenderBlockCrackOverlay()
+void UGeometryEngine::RenderBlockCrackOverlay()
 {
     if (!WorldInstance || !WorldInstance->HasBreakSession()) {
         return;
@@ -2055,7 +2055,7 @@ void GeometryEngine::RenderBlockCrackOverlay()
     }
 }
 
-void GeometryEngine::RenderSelectionOutline()
+void UGeometryEngine::RenderSelectionOutline()
 {
     if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0) {
         return;

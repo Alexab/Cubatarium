@@ -17,8 +17,8 @@
 
 namespace cutum {
 
-class ViewEngine;
-class World;
+class UViewEngine;
+class UWorld;
 
 const float YAW        = -90.0f;
 const float PITCH      =  0.0f;
@@ -62,10 +62,10 @@ public:
  bool TryToggleFlightOnDoubleSpace();
  bool OnSpacePressed();
 
- void SetViewEngine(ViewEngine* view_engine);
+ void SetViewEngine(UViewEngine* view_engine);
  void SetAspectRatio(float value);
 
- bool DoMovement(const World* world);
+ bool DoMovement(const UWorld* world);
  void ResetVerticalPhysics();
  void ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
                               const CreatureBoundsProfile& bounds, float eyeHeight);
@@ -86,7 +86,7 @@ public:
  void UpdateKeyStatus(size_t key_index, bool is_pressed);
  void ResetAllKeyStatus();
  void UpdateFrameTime();
- void UpdateMouseMove(std::shared_ptr<World> world, double xpos, double ypos);
+ void UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos);
  void ResetMouseMove(double xpos, double ypos);
  void UpdateMouseScroll(double xoffset, double yoffset);
 
@@ -96,9 +96,9 @@ private:
  glm::vec3 ComputeHorizontalShift(float deltaTime);
  void UpdateMoveIntentFromKeys();
  glm::vec3 GetMoveIntentDir() const;
- bool ApplyHorizontalMovement(const World* world, float deltaTime);
- bool TickStepUpAnimation(const World* world, float dt);
- void ProcessKeyboard(const World* world, Camera_Movement direction, float deltaTime,
+ bool ApplyHorizontalMovement(const UWorld* world, float deltaTime);
+ bool TickStepUpAnimation(const UWorld* world, float dt);
+ void ProcessKeyboard(const UWorld* world, Camera_Movement direction, float deltaTime,
                       const PlayerCapsule& collisionCap);
  PlayerInput BuildPlayerInput(bool spaceJustPressed) const;
  bool IsShiftDown() const;
@@ -134,7 +134,7 @@ private:
  glm::mat4 Projection;
  glm::mat4 MvpMatrix;
 
- ViewEngine* ViewEngineInstance;
+ UViewEngine* ViewEngineInstance;
  PlayerController locomotion_;
 
  std::map<size_t, bool> KeysStatus;

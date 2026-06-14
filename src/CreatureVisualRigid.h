@@ -12,7 +12,7 @@ public:
  void UpdatePose(const Creature& creature, const CreatureLocomotionFacts& facts,
                  const CreaturePoseParams& pose, const CreatureDefinition& animDef,
                  float dt) override;
- void SubmitDraw(GeometryEngine& engine, const glm::mat4& viewProj) override;
+ void SubmitDraw(UGeometryEngine& engine, const glm::mat4& viewProj) override;
 
 private:
  float headYaw_{0.0f};

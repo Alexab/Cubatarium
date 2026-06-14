@@ -11,7 +11,7 @@ void CreatureVisualGltf::UpdatePose(const Creature& /*creature*/, const Creature
 {
 }
 
-void CreatureVisualGltf::SubmitDraw(GeometryEngine& /*engine*/, const glm::mat4& /*viewProj*/)
+void CreatureVisualGltf::SubmitDraw(UGeometryEngine& /*engine*/, const glm::mat4& /*viewProj*/)
 {
  // glTF skeleton backend stub (phase D)
 }

@@ -18,15 +18,15 @@
 
 namespace cutum {
 
-class Application;
-class World;
+class UApplication;
+class UWorld;
 
 class GameSession : public IGuiGameActions,
                     public IHotbarViewModel,
                     public IInventoryViewModel,
                     public IGameCommandContext {
 public:
-    GameSession(Application* application, std::shared_ptr<World> world);
+    GameSession(UApplication* application, std::shared_ptr<UWorld> world);
 
     void InitializeCatalog(const std::string& typesJsonPath,
                            const BlockDefinitionStorage& blocks,
@@ -88,8 +88,8 @@ public:
     void SaveCommandHistory();
 
 private:
-    Application* application_;
-    std::shared_ptr<World> world_;
+    UApplication* application_;
+    std::shared_ptr<UWorld> world_;
     CommandRegistry commandRegistry_;
     ContentTypeRegistry contentCatalog_;
     std::vector<std::string> chatLog_;

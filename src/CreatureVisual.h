@@ -11,7 +11,7 @@ namespace cutum {
 
 class Creature;
 struct CreatureDefinition;
-class GeometryEngine;
+class UGeometryEngine;
 
 class ICreatureVisual {
 public:
@@ -22,7 +22,7 @@ public:
  virtual void SetAppearance(const ResolvedCreatureAppearance& appearance) {
   appearance_ = appearance;
  }
- virtual void SubmitDraw(GeometryEngine& engine, const glm::mat4& viewProj) = 0;
+ virtual void SubmitDraw(UGeometryEngine& engine, const glm::mat4& viewProj) = 0;
 
 protected:
  ResolvedCreatureAppearance appearance_{};

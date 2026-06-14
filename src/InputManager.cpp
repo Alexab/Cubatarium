@@ -4,9 +4,9 @@
 namespace cutum {
 
 // Static pointer to instance for GLFW callbacks
-InputManager* InputManager::instance = nullptr;
+UInputManager* UInputManager::instance = nullptr;
 
-InputManager::InputManager()
+UInputManager::UInputManager()
     : glfwWindow(nullptr)
     , mousePosition(0.0f, 0.0f)
     , previousMousePosition(0.0f, 0.0f)
@@ -16,7 +16,7 @@ InputManager::InputManager()
     std::cout << "InputManager created, instance set to: " << instance << std::endl;
 }
 
-InputManager::~InputManager() {
+UInputManager::~UInputManager() {
     std::cout << "InputManager destructor called, instance: " << instance << std::endl;
     Shutdown();
     if (instance == this) {
@@ -25,7 +25,7 @@ InputManager::~InputManager() {
     }
 }
 
-void InputManager::Initialize(GLFWwindow* window) {
+void UInputManager::Initialize(GLFWwindow* window) {
     glfwWindow = window;
     
     // Get initial mouse position
@@ -35,7 +35,7 @@ void InputManager::Initialize(GLFWwindow* window) {
     previousMousePosition = mousePosition;
 }
 
-void InputManager::Shutdown() {
+void UInputManager::Shutdown() {
     glfwWindow = nullptr;
     keyStates.clear();
     previousKeyStates.clear();
@@ -47,7 +47,7 @@ void InputManager::Shutdown() {
     mouseButtonJustReleased.clear();
 }
 
-void InputManager::Update() {
+void UInputManager::Update() {
     // Update key states
     for (auto& [key, pressed] : keyStates) {
         previousKeyStates[key] = pressed;
@@ -67,45 +67,45 @@ void InputManager::Update() {
     mouseDelta = mousePosition - previousMousePosition;
 }
 
-bool InputManager::IsKeyPressed(KeyCode key) const {
+bool UInputManager::IsKeyPressed(KeyCode key) const {
     auto it = keyStates.find(static_cast<int>(key));
     return it != keyStates.end() && it->second;
 }
 
-bool InputManager::IsKeyJustPressed(KeyCode key) const {
+bool UInputManager::IsKeyJustPressed(KeyCode key) const {
     auto it = keyJustPressed.find(static_cast<int>(key));
     return it != keyJustPressed.end() && it->second;
 }
 
-bool InputManager::IsKeyJustReleased(KeyCode key) const {
+bool UInputManager::IsKeyJustReleased(KeyCode key) const {
     auto it = keyJustReleased.find(static_cast<int>(key));
     return it != keyJustReleased.end() && it->second;
 }
 
-bool InputManager::IsMouseButtonPressed(MouseButton button) const {
+bool UInputManager::IsMouseButtonPressed(MouseButton button) const {
     auto it = mouseButtonStates.find(static_cast<int>(button));
     return it != mouseButtonStates.end() && it->second;
 }
 
-bool InputManager::IsMouseButtonJustPressed(MouseButton button) const {
+bool UInputManager::IsMouseButtonJustPressed(MouseButton button) const {
     auto it = mouseButtonJustPressed.find(static_cast<int>(button));
     return it != mouseButtonJustPressed.end() && it->second;
 }
 
-bool InputManager::IsMouseButtonJustReleased(MouseButton button) const {
+bool UInputManager::IsMouseButtonJustReleased(MouseButton button) const {
     auto it = mouseButtonJustReleased.find(static_cast<int>(button));
     return it != mouseButtonJustReleased.end() && it->second;
 }
 
-glm::vec2 InputManager::GetMousePosition() const {
+glm::vec2 UInputManager::GetMousePosition() const {
     return mousePosition;
 }
 
-glm::vec2 InputManager::GetMouseDelta() const {
+glm::vec2 UInputManager::GetMouseDelta() const {
     return mouseDelta;
 }
 
-void InputManager::SetKeyCallback(KeyCallback callback) {
+void UInputManager::SetKeyCallback(KeyCallback callback) {
     if (callback) {
         keyCallback = callback;
     } else {
@@ -113,23 +113,23 @@ void InputManager::SetKeyCallback(KeyCallback callback) {
     }
 }
 
-void InputManager::SetMouseButtonCallback(MouseButtonCallback callback) {
+void UInputManager::SetMouseButtonCallback(MouseButtonCallback callback) {
     mouseButtonCallback = callback;
 }
 
-void InputManager::SetMouseMoveCallback(MouseMoveCallback callback) {
+void UInputManager::SetMouseMoveCallback(MouseMoveCallback callback) {
     mouseMoveCallback = callback;
 }
 
-void InputManager::SetMouseScrollCallback(MouseScrollCallback callback) {
+void UInputManager::SetMouseScrollCallback(MouseScrollCallback callback) {
     mouseScrollCallback = callback;
 }
 
-void InputManager::SetWindowResizeCallback(WindowResizeCallback callback) {
+void UInputManager::SetWindowResizeCallback(WindowResizeCallback callback) {
     windowResizeCallback = callback;
 }
 
-void InputManager::ResetAllKeyStatus() {
+void UInputManager::ResetAllKeyStatus() {
     keyStates.clear();
     previousKeyStates.clear();
     keyJustPressed.clear();
@@ -141,7 +141,7 @@ void InputManager::ResetAllKeyStatus() {
 }
 
     // GLFW callback functions
-void InputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void UInputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (!instance) {
         std::cerr << "InputManager::GLFWKeyCallback: instance is null" << std::endl;
         return;
@@ -171,7 +171,7 @@ void InputManager::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, in
     }
 }
 
-void InputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+void UInputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (!instance) return;
 
     MouseButton mouseButton = static_cast<MouseButton>(button);
@@ -197,7 +197,7 @@ void InputManager::GLFWMouseButtonCallback(GLFWwindow* window, int button, int a
     }
 }
 
-void InputManager::GLFWCursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+void UInputManager::GLFWCursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     if (!instance) return;
 
     glm::vec2 newPosition(static_cast<float>(xpos), static_cast<float>(ypos));
@@ -211,13 +211,13 @@ void InputManager::GLFWCursorPosCallback(GLFWwindow* window, double xpos, double
     }
 }
 
-void InputManager::GLFWScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+void UInputManager::GLFWScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     if (!instance || !instance->mouseScrollCallback) return;
 
     instance->mouseScrollCallback(xoffset, yoffset);
 }
 
-void InputManager::GLFWFramebufferSizeCallback(GLFWwindow* window, int width, int height) {
+void UInputManager::GLFWFramebufferSizeCallback(GLFWwindow* window, int width, int height) {
     if (!instance || !instance->windowResizeCallback) return;
 
     instance->windowResizeCallback(width, height);

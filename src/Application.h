@@ -24,11 +24,11 @@ struct GLFWwindow;
 
 namespace cutum {
 
-class Core;
-class World;
-class GeometryEngine;
-class ViewEngine;
-class TextRenderer;
+class UCore;
+class UWorld;
+class UGeometryEngine;
+class UViewEngine;
+class UTextRenderer;
 class ShaderManager;
 class GuiContext;
 class GameSession;
@@ -38,16 +38,16 @@ class MainMenuScreen;
 
 enum class MenuSubview { Main, Settings, LoadWorld, NewWorld };
 
-class Application : public IGuiMenuHost {
+class UApplication : public IGuiMenuHost {
 public:
-    Application(std::shared_ptr<Core> core,
-                std::shared_ptr<World> world,
-                std::shared_ptr<GeometryEngine> geometry,
-                std::shared_ptr<ViewEngine> views,
-                std::shared_ptr<TextRenderer> textRenderer,
+    UApplication(std::shared_ptr<UCore> core,
+                std::shared_ptr<UWorld> world,
+                std::shared_ptr<UGeometryEngine> geometry,
+                std::shared_ptr<UViewEngine> views,
+                std::shared_ptr<UTextRenderer> textRenderer,
                 std::shared_ptr<ShaderManager> shaderManager,
                 std::shared_ptr<BlockDefinitionStorage> blockDefinitions);
-    ~Application();
+    ~UApplication();
 
     void Startup(const std::string& configPath);
     void RequestEnterGame();
@@ -113,11 +113,11 @@ private:
     void DrawDragGhost(int width, int height);
     void ClearGameplayKeyboard();
 
-    std::shared_ptr<Core> core_;
-    std::shared_ptr<World> world_;
-    std::shared_ptr<GeometryEngine> geometry_;
-    std::shared_ptr<ViewEngine> views_;
-    std::shared_ptr<TextRenderer> textRenderer_;
+    std::shared_ptr<UCore> core_;
+    std::shared_ptr<UWorld> world_;
+    std::shared_ptr<UGeometryEngine> geometry_;
+    std::shared_ptr<UViewEngine> views_;
+    std::shared_ptr<UTextRenderer> textRenderer_;
     std::shared_ptr<ShaderManager> shaderManager_;
     std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;
 

@@ -11,7 +11,7 @@ namespace cutum {
 
 using CreatureId = uint64_t;
 
-class World;
+class UWorld;
 
 class CreatureLocomotionController {
 public:
@@ -38,27 +38,27 @@ public:
  void SyncFeetAnchorFromView(float feetY, bool anchored);
 
  bool OnSpacePressed();
- void OnLandedFromFlight(const World* world, glm::vec3& eyePos, bool clearShiftKeys);
- void UpdateLocomotion(const World* world, glm::vec3& eyePos, const CreatureInput& input, float dt,
+ void OnLandedFromFlight(const UWorld* world, glm::vec3& eyePos, bool clearShiftKeys);
+ void UpdateLocomotion(const UWorld* world, glm::vec3& eyePos, const CreatureInput& input, float dt,
                        CreatureId skipCreatureId = 0);
 
  bool ShouldBlockJump() const { return suppressNextJump_; }
  void NotifySpaceReleased() { suppressNextJump_ = false; }
- void SyncAfterStepLanding(glm::vec3& eyePos, const World* world);
+ void SyncAfterStepLanding(glm::vec3& eyePos, const UWorld* world);
  bool ConsumeClearShiftRequest();
 
 private:
  void updateLocomotionState(const CreatureInput& input);
- bool anchorFeetFromStandingEye(const World* world, const glm::vec3& eyePos);
+ bool anchorFeetFromStandingEye(const UWorld* world, const glm::vec3& eyePos);
  void syncEyeFromFeet(glm::vec3& eyePos) const;
- void landStanding(const World* world, glm::vec3& eyePos, CreatureId skipCreatureId);
- bool canStandUpAt(const World* world, const glm::vec3& eyePos, CreatureId skipCreatureId) const;
- void updateStanceBlend(const World* world, const glm::vec3& eyePos, const CreatureInput& input,
+ void landStanding(const UWorld* world, glm::vec3& eyePos, CreatureId skipCreatureId);
+ bool canStandUpAt(const UWorld* world, const glm::vec3& eyePos, CreatureId skipCreatureId) const;
+ void updateStanceBlend(const UWorld* world, const glm::vec3& eyePos, const CreatureInput& input,
                         float dt, CreatureId skipCreatureId);
  bool tryJump(const CreatureInput& input);
- bool tryStandFromCrouch(const World* world, glm::vec3& eyePos, const CreatureInput& input,
+ bool tryStandFromCrouch(const UWorld* world, glm::vec3& eyePos, const CreatureInput& input,
                          CreatureId skipCreatureId);
- void syncGroundedPose(const World* world, glm::vec3& eyePos, const CreatureInput& input,
+ void syncGroundedPose(const UWorld* world, glm::vec3& eyePos, const CreatureInput& input,
                        float dt, CreatureId skipCreatureId);
 
  CreatureMovementMode mode_{CreatureMovementMode::Walking};

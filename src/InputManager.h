@@ -109,10 +109,10 @@ using MouseMoveCallback = std::function<void(glm::vec2, glm::vec2)>;
 using MouseScrollCallback = std::function<void(double, double)>;
 using WindowResizeCallback = std::function<void(int, int)>;
 
-class InputManager {
+class UInputManager {
 public:
-    InputManager();
-    ~InputManager();
+    UInputManager();
+    ~UInputManager();
 
     // Инициализация
     void Initialize(GLFWwindow* window);
@@ -181,7 +181,7 @@ private:
     WindowResizeCallback windowResizeCallback;
 
     // Статический указатель на экземпляр для GLFW callbacks
-    static InputManager* instance;
+    static UInputManager* instance;
 };
 
 } // namespace cutum
