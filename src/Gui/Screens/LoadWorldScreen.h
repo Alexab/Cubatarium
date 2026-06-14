@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gui/GuiScreenBase.h"
+#include "Gui/Core/GuiScreenBase.h"
 
 namespace cutum
 {

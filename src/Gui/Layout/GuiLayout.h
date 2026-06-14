@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include <vector>
 
 namespace cutum

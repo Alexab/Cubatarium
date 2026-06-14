@@ -2,14 +2,14 @@
 #define GAME_SESSION_H
 
 #include "Commands/CommandRegistry.h"
-#include "ConsoleCommandHistory.h"
+#include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGameCommandContext.h"
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
 #include "Gui/Interfaces/IInventoryViewModel.h"
-#include "SlotInteraction.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include <filesystem>
 #include <functional>
 #include <memory>

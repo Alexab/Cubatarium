@@ -1,8 +1,8 @@
 #include "ContentTypeRegistry.h"
-#include "BlockDefinitionStorage.h"
-#include "CreatureDefinitionStorage.h"
-#include "Prefab.h"
-#include "SkinDefinitionStorage.h"
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "World/Prefabs/Prefab.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
 
 #include <algorithm>
 #include <fstream>

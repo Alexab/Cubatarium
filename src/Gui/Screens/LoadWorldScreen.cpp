@@ -1,8 +1,8 @@
 #include "LoadWorldScreen.h"
 
-#include "Gui/GuiContext.h"
+#include "Gui/Core/GuiContext.h"
 
-#include "Gui/GuiRenderer.h"
+#include "Gui/Core/GuiRenderer.h"
 
 #include "Gui/Interfaces/IGuiMenuHost.h"
 

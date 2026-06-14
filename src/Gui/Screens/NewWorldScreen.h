@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Gui/GuiScreenBase.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 
 namespace cutum

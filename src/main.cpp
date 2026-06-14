@@ -7,20 +7,20 @@
 #include <windows.h>
 #endif
 
-#include "Application.h"
-#include "BlockDefinitionStorage.h"
-#include "Core.h"
-#include "GeometryEngine.h"
-#include "Object.h"
-#include "ObjectStorage.h"
-#include "Prefab.h"
-#include "TextRenderer.h"
-#include "TextureBase.h"
-#include "TextureCube.h"
-#include "Utils.h"
-#include "ViewEngine.h"
-#include "WindowManager.h"
-#include "World.h"
+#include "App/Application.h"
+#include "Blocks/BlockDefinitionStorage.h"
+#include "App/Core.h"
+#include "Render/Engine/GeometryEngine.h"
+#include "Storage/Object.h"
+#include "Storage/ObjectStorage.h"
+#include "World/Prefabs/Prefab.h"
+#include "Render/Engine/TextRenderer.h"
+#include "Render/Textures/TextureBase.h"
+#include "Render/Textures/TextureCube.h"
+#include "App/Utils.h"
+#include "Render/Engine/ViewEngine.h"
+#include "App/Platform/WindowManager.h"
+#include "World/Core/World.h"
 
 int main(int argc, char *argv[])
 {

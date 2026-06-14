@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
-#include "ProceduralSettings.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <memory>
 #include <vector>
 

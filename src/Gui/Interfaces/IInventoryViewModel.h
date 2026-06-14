@@ -2,7 +2,7 @@
 #define I_INVENTORY_VIEW_MODEL_H
 
 #include "Gui/Interfaces/IContentCatalog.h"
-#include "InventoryTypes.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include <string>
 #include <vector>
 

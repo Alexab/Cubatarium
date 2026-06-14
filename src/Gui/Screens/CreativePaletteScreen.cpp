@@ -1,13 +1,13 @@
 #include "CreativePaletteScreen.h"
 #include "Game/GameSession.h"
-#include "Gui/GuiContext.h"
+#include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
-#include "SlotInteraction.h"
+#include "Game/Inventory/SlotInteraction.h"
 
 #include <algorithm>
 

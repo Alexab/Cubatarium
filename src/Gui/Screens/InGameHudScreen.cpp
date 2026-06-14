@@ -1,13 +1,13 @@
 #include "InGameHudScreen.h"
 #include "Game/GameSession.h"
-#include "Gui/GuiContext.h"
+#include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
-#include "SlotInteraction.h"
+#include "Game/Inventory/SlotInteraction.h"
 
 namespace cutum
 {

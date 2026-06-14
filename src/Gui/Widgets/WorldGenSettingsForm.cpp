@@ -1,5 +1,5 @@
 #include "WorldGenSettingsForm.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Core/GuiTheme.h"
 #include "GuiButton.h"
 #include "GuiCheckbox.h"
 #include "GuiLabel.h"

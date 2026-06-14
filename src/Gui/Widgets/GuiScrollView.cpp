@@ -1,6 +1,6 @@
 #include "GuiScrollView.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
 
 #include <GLFW/glfw3.h>

@@ -1,6 +1,6 @@
 #include "MainMenuScreen.h"
-#include "Gui/GuiContext.h"
-#include "Gui/GuiRenderer.h"
+#include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"

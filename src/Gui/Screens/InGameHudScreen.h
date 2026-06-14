@@ -1,8 +1,8 @@
 #ifndef IN_GAME_HUD_SCREEN_H
 #define IN_GAME_HUD_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
-#include "SlotInteraction.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include <memory>
 #include <vector>
 

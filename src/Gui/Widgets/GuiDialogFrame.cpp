@@ -1,5 +1,5 @@
 #include "GuiDialogFrame.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "GuiButton.h"
 #include "GuiPanel.h"

@@ -1,5 +1,5 @@
 #include "GuiWidget.h"
-#include "Gui/GuiRenderer.h"
+#include "Gui/Core/GuiRenderer.h"
 
 #include <algorithm>
 

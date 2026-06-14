@@ -1,7 +1,7 @@
 #ifndef I_HOTBAR_VIEW_MODEL_H
 #define I_HOTBAR_VIEW_MODEL_H
 
-#include "InventoryTypes.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include <array>
 #include <cstddef>
 #include <string>

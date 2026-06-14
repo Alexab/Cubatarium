@@ -1,7 +1,7 @@
 #include "SettingsScreen.h"
-#include "AppSettingsSnapshot.h"
-#include "Gui/GuiContext.h"
-#include "Gui/GuiRenderer.h"
+#include "App/Settings/AppSettingsSnapshot.h"
+#include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -12,7 +12,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
-#include "UiSettings.h"
+#include "App/Settings/UiSettings.h"
 #include <algorithm>
 
 namespace cutum

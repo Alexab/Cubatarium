@@ -1,6 +1,6 @@
 #include "GuiTabBar.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 
 namespace cutum
 {

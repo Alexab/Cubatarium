@@ -1,9 +1,9 @@
 #ifndef CREATIVE_PALETTE_SCREEN_H
 #define CREATIVE_PALETTE_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IContentCatalog.h"
-#include "SlotInteraction.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include <memory>
 #include <string>
 

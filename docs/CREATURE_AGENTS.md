@@ -1,6 +1,6 @@
 # Архитектура агентов существ (реализуется)
 
-Документ описывает **оркестрацию активности** существ в мире Cubatarium. Базовый слой **реализован** в `src/activity/`: директор тикает агентов, агенты пишут `CreatureIntent`, существо только **исполняет** намерение (`Creature::ExecuteIntent`).
+Документ описывает **оркестрацию активности** существ в мире Cubatarium. Базовый слой **реализован** в `src/Activity/`: директор тикает агентов, агенты пишут `CreatureIntent`, существо только **исполняет** намерение (`Creature::ExecuteIntent`).
 
 Связанные документы: [`ARCHITECTURE.md`](ARCHITECTURE.md), [`CREATURE_CATALOG.md`](CREATURE_CATALOG.md), [`CREATURE_IMPLEMENTATION.md`](CREATURE_IMPLEMENTATION.md).
 
@@ -78,7 +78,7 @@ flowchart TB
 | Стратегия (куда патрулировать, агро) | **`ICreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
 | Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + `World`** | каждый кадр |
-| Presentation (поза частей, walk cycle) | **`src/pose/*` + `ICreatureVisual`** | каждый кадр (render) |
+| Presentation (поза частей, walk cycle) | **`src/Pose/*` + `ICreatureVisual`** | каждый кадр (render) |
 
 ИИ **не** внутри `Creature` как монолит; **мозг** — у агента (или у plug-in мозга агента). Существо — **исполнитель** намерений + особый случай **player input** для controlled.
 
@@ -106,7 +106,7 @@ flowchart TB
 | `WorldCreatureActivitySink` | `WorldCreatureActivitySink.*` | Адаптер к `World` / `Creature` |
 | `RegisterDefaultCreatureActivityAgents` | `CreatureActivityRegistry.*` | Регистрация `WanderActivityAgent` для `behavior: wander` |
 | `WanderActivityAgent` | `agents/WanderActivityAgent.*` | Случайное блуждание; состояние таймера в агенте |
-| `TerrestrialBipedPosePresenter` | `src/pose/*` | Процедурная анимация по `CreatureLocomotionFacts` (не в агенте) |
+| `TerrestrialBipedPosePresenter` | `src/Pose/*` | Процедурная анимация по `CreatureLocomotionFacts` (не в агенте) |
 
 `CreatureIntent` и `SetIntent` на существе уже есть; исполнение — **`Creature::ExecuteIntent`**.
 
@@ -127,10 +127,10 @@ Controlled и possessed **не** получают intent от агентов в 
 
 ---
 
-## Файлы `src/activity/`
+## Файлы `src/Activity/`
 
 ```
-src/activity/
+src/Activity/
   CreatureActivityTypes.h
   ICreatureActivitySink.h
   IWorldPerception.h

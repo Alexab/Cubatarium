@@ -124,8 +124,8 @@ Controlled (`human`, `controlled_default`) использует `behavior: none`
 | Data | `models/creatures`, `models/skins` |
 | Storage | `CreatureDefinitionStorage`, `SkinDefinitionStorage`, `CreatureTextureStorage` |
 | Appearance | `ResolveCreatureAppearance`, `World::GetResolvedAppearance` |
-| Activity | `src/activity/*`, `CreatureActivityDirector`, `WanderActivityAgent` |
-| Presentation | `src/pose/*`, `CreatureLocomotionFacts`, `LocomotionStateDerive` |
+| Activity | `src/Activity/*`, `CreatureActivityDirector`, `WanderActivityAgent` |
+| Presentation | `src/Pose/*`, `CreatureLocomotionFacts`, `LocomotionStateDerive` |
 | World | `SpawnCreature`, `SpawnCreatureByView`, `PickCreatureByView`, `TryApplySkin`, `DoMovement` |
 | UI | `ContentTypeRegistry`, `CreativePaletteScreen`, `CreatureIconCache` |
 

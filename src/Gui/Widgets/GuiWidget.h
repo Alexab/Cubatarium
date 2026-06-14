@@ -1,7 +1,7 @@
 #ifndef GUI_WIDGET_H
 #define GUI_WIDGET_H
 
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 #include <vector>
 

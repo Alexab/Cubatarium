@@ -1,7 +1,7 @@
 #ifndef MAIN_MENU_SCREEN_H
 #define MAIN_MENU_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include <memory>
 #include <vector>
 

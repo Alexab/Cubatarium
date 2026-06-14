@@ -1,6 +1,6 @@
 #include "GuiPanel.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
 
 namespace cutum

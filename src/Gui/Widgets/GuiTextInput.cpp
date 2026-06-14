@@ -1,8 +1,8 @@
 #include "GuiTextInput.h"
-#include "ConsoleInputSanitize.h"
-#include "Gui/GuiFocus.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Console/ConsoleInputSanitize.h"
+#include "Gui/Core/GuiFocus.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>

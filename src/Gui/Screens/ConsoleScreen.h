@@ -1,9 +1,9 @@
 #ifndef CONSOLE_SCREEN_H
 #define CONSOLE_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
-#include "Gui/GuiTheme.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 #include <string>
 

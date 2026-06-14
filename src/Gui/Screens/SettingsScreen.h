@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Gui/GuiScreenBase.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
-#include "UiSettings.h"
+#include "App/Settings/UiSettings.h"
 #include <memory>
 #include <vector>
 
