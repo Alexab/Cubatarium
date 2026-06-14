@@ -1,7 +1,7 @@
 #include "Gui/Batch/UiQuadBatch.h"
 #include "Render/Engine/ShaderManager.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <algorithm>
 #include <iostream>
 

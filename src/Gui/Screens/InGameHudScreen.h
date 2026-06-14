@@ -5,6 +5,9 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include <memory>
 #include <vector>
+#if defined(__ANDROID__)
+#include <functional>
+#endif
 
 namespace cutum
 {
@@ -21,6 +24,7 @@ class UInGameHudScreen : public UGuiScreenBase
 public:
   UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
                    IGuiIconSource *icons);
+  ~UInGameHudScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out);
 
@@ -28,6 +32,11 @@ public:
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;
   void SetPointerPosition(int x, int y);
+#if defined(__ANDROID__)
+  void ConfigureTouchControls(class TouchInputBridge *bridge,
+                             std::function<void()> onMenu,
+                             std::function<void()> onInventory);
+#endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).
   void SyncSlotIcons();
@@ -48,6 +57,9 @@ private:
   int pointerX_{-1};
   int pointerY_{-1};
   bool hotbarBuilt_{false};
+#if defined(__ANDROID__)
+  std::unique_ptr<class GuiTouchControls> touchControls_;
+#endif
 };
 
 } // namespace cutum

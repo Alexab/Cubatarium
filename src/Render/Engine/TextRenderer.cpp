@@ -451,8 +451,10 @@ std::string UTextRenderer::GetSystemFontPath()
   return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 #elif defined(__APPLE__)
   return "/System/Library/Fonts/Arial.ttf";
+#elif defined(__ANDROID__)
+  return "fonts/arial.ttf";
 #else
-  return "fonts/arial.ttf"; // Default fallback
+  return "fonts/arial.ttf";
 #endif
 }
 

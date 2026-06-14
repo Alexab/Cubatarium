@@ -38,6 +38,8 @@ GuiGridSpec BuildWorldGridSpec(int width)
 
 UNewWorldScreen::UNewWorldScreen(IGuiMenuHost *host) : host_(host) {}
 
+UNewWorldScreen::~UNewWorldScreen() = default;
+
 void UNewWorldScreen::OnCreate()
 {
   if (!host_ || !worldForm_)

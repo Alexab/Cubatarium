@@ -2,7 +2,7 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <algorithm>
 
 namespace cutum

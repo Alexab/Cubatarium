@@ -4,7 +4,7 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
 #include <cctype>
 #include <glm/glm.hpp>
@@ -168,26 +168,26 @@ bool UGuiTextInput::HandleEditShortcut(const GuiKeyEvent &event)
   {
     return false;
   }
-  if ((event.mods & GLFW_MOD_CONTROL) == 0)
+  if ((event.mods & GuiKey::ModControl) == 0)
   {
     return false;
   }
-  if (event.keyCode == GLFW_KEY_A)
+  if (event.keyCode == GuiKey::A)
   {
     SelectAll();
     return true;
   }
-  if (event.keyCode == GLFW_KEY_C)
+  if (event.keyCode == GuiKey::C)
   {
     CopySelectionToClipboard();
     return true;
   }
-  if (event.keyCode == GLFW_KEY_X)
+  if (event.keyCode == GuiKey::X)
   {
     CutSelectionToClipboard();
     return true;
   }
-  if (event.keyCode == GLFW_KEY_V)
+  if (event.keyCode == GuiKey::V)
   {
     PasteFromClipboard();
     return true;
@@ -331,9 +331,9 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
   {
     return false;
   }
-  const bool shift = (event.mods & GLFW_MOD_SHIFT) != 0;
+  const bool shift = (event.mods & GuiKey::ModShift) != 0;
 
-  if (event.keyCode == GLFW_KEY_DELETE)
+  if (event.keyCode == GuiKey::Delete)
   {
     if (HasSelection())
     {
@@ -346,7 +346,7 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     NotifyEdited();
     return true;
   }
-  if (event.keyCode == GLFW_KEY_BACKSPACE)
+  if (event.keyCode == GuiKey::Backspace)
   {
     if (HasSelection())
     {
@@ -360,7 +360,7 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     NotifyEdited();
     return true;
   }
-  if (event.keyCode == GLFW_KEY_LEFT)
+  if (event.keyCode == GuiKey::Left)
   {
     if (caretPos_ > 0)
     {
@@ -376,7 +376,7 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     }
     return true;
   }
-  if (event.keyCode == GLFW_KEY_RIGHT)
+  if (event.keyCode == GuiKey::Right)
   {
     if (caretPos_ < buffer_.size())
     {
@@ -392,7 +392,7 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     }
     return true;
   }
-  if (event.keyCode == GLFW_KEY_HOME)
+  if (event.keyCode == GuiKey::Home)
   {
     caretPos_ = 0;
     if (shift)
@@ -405,7 +405,7 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     }
     return true;
   }
-  if (event.keyCode == GLFW_KEY_END)
+  if (event.keyCode == GuiKey::End)
   {
     caretPos_ = buffer_.size();
     if (shift)
@@ -418,10 +418,10 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     }
     return true;
   }
-  if (event.keyCode >= GLFW_KEY_A && event.keyCode <= GLFW_KEY_Z)
+  if (event.keyCode >= GuiKey::A && event.keyCode <= GuiKey::Z)
   {
-    char c = static_cast<char>('a' + (event.keyCode - GLFW_KEY_A));
-    if ((event.mods & GLFW_MOD_SHIFT) != 0)
+    char c = static_cast<char>('a' + (event.keyCode - GuiKey::A));
+    if ((event.mods & GuiKey::ModShift) != 0)
     {
       c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
     }
@@ -429,14 +429,14 @@ bool UGuiTextInput::OnKey(const GuiKeyEvent &event)
     InsertText(std::string(1, c));
     return true;
   }
-  if (event.keyCode >= GLFW_KEY_0 && event.keyCode <= GLFW_KEY_9)
+  if (event.keyCode >= GuiKey::Digit0 && event.keyCode <= GuiKey::Digit9)
   {
-    const char c = static_cast<char>('0' + (event.keyCode - GLFW_KEY_0));
+    const char c = static_cast<char>('0' + (event.keyCode - GuiKey::Digit0));
     suppressCharCodepoint_ = static_cast<unsigned int>(c);
     InsertText(std::string(1, c));
     return true;
   }
-  if (event.keyCode == GLFW_KEY_SPACE)
+  if (event.keyCode == GuiKey::Space)
   {
     suppressCharCodepoint_ = static_cast<unsigned int>(' ');
     InsertText(" ");

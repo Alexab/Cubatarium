@@ -1,11 +1,15 @@
 #include <algorithm>
 #include <cmath>
-#define GLFW_INCLUDE_NONE
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/Core/World.h"
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
+#if defined(__ANDROID__)
+#include "App/Platform/GlfwKeyCompat.h"
+#else
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

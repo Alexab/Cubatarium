@@ -22,6 +22,7 @@
 #endif
 #include <windows.h>
 #endif
+#include "App/Platform/IPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "App/Core.h"
 #include "Creatures/Core/Creature.h"
@@ -203,27 +204,42 @@ bool UCore::ShouldCreateWorldOnStartup() const
 
 void UCore::LoadConfig(const std::string &config_file_name)
 {
-  ExeDir = GetExecutableDirectory();
-  const auto cwd = std::filesystem::current_path();
-  std::filesystem::path project_dir = cwd;
-  if (auto fromExe = TryFindProjectRoot(ExeDir))
+#ifdef __ANDROID__
+  if (auto *paths = IPlatformPaths::TryGet())
   {
-    project_dir = *fromExe;
-  }
-  else if (auto fromCwd = TryFindProjectRoot(cwd))
-  {
-    project_dir = *fromCwd;
+    ExeDir = paths->WritableRoot();
+    ConfigFilePath = std::filesystem::path(config_file_name);
+    WorldPath = paths->ResolveWritable("worlds");
+    WorkDir = paths->AssetRoot();
+    std::error_code pathEc;
+    std::filesystem::current_path(WorkDir, pathEc);
+    std::filesystem::create_directories(WorldPath);
   }
   else
+#endif
   {
-    project_dir = FindProjectRoot(cwd);
-  }
-  std::error_code pathEc;
-  std::filesystem::current_path(project_dir, pathEc);
+    ExeDir = GetExecutableDirectory();
+    const auto cwd = std::filesystem::current_path();
+    std::filesystem::path project_dir = cwd;
+    if (auto fromExe = TryFindProjectRoot(ExeDir))
+    {
+      project_dir = *fromExe;
+    }
+    else if (auto fromCwd = TryFindProjectRoot(cwd))
+    {
+      project_dir = *fromCwd;
+    }
+    else
+    {
+      project_dir = FindProjectRoot(cwd);
+    }
+    std::error_code pathEc;
+    std::filesystem::current_path(project_dir, pathEc);
 
-  ConfigFilePath = ExeDir / config_file_name;
-  WorldPath = ExeDir / "worlds";
-  WorkDir = project_dir;
+    ConfigFilePath = ExeDir / config_file_name;
+    WorldPath = ExeDir / "worlds";
+    WorkDir = project_dir;
+  }
 
   std::string val;
   bool configRead = false;
@@ -328,10 +344,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
       Render = RenderSettings::Default();
     }
 
-    TextureBaseStorageFileName = project_dir / "textures" / "blocks";
-    TextureCubeStorageFileName = project_dir / "models" / "blocks";
-    ObjectStorageFileName = project_dir / "models" / "objects";
-    PrefabsPath = project_dir / "prefabs";
+    TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
+    TextureCubeStorageFileName = WorkDir / "models" / "blocks";
+    ObjectStorageFileName = WorkDir / "models" / "objects";
+    PrefabsPath = WorkDir / "prefabs";
 
     auto blockDefinitions = std::make_shared<UBlockDefinitionStorage>();
     blockDefinitions->Load(TextureCubeStorageFileName.string());
@@ -339,18 +355,18 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
     auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
-    creatureDefinitions->Load((project_dir / "models" / "creatures").string());
+    creatureDefinitions->Load((WorkDir / "models" / "creatures").string());
     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
 
     auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
-    skinDefinitions->Load((project_dir / "models" / "skins").string());
+    skinDefinitions->Load((WorkDir / "models" / "skins").string());
     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
 
     CreatureTextureStorageInstance =
         std::make_shared<UCreatureTextureStorage>();
     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
-        (project_dir / "models" / "creatures").string(),
-        (project_dir / "models" / "skins").string());
+        (WorkDir / "models" / "creatures").string(),
+        (WorkDir / "models" / "skins").string());
 
     TextureBaseStorageInstance->Load(TextureBaseStorageFileName.string());
 

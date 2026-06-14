@@ -10,7 +10,7 @@
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 

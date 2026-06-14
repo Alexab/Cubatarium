@@ -1,5 +1,5 @@
 #include "Render/Primitives/CubeGL.h"
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {

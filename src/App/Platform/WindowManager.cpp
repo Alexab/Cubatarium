@@ -92,11 +92,13 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
   glfwMakeContextCurrent(Window);
 
   // GLEW initialization (must be after context creation)
+#ifndef __ANDROID__
   if (glewInit() != GLEW_OK)
   {
     std::cerr << "Failed to initialize GLEW" << std::endl;
     return false;
   }
+#endif
 
   // Настройка OpenGL
   InitializeOpenGL();

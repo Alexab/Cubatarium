@@ -1,6 +1,6 @@
 #include "Render/Pipeline/GlStateScope.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {

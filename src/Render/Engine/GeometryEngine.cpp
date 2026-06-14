@@ -21,7 +21,7 @@
 #include "Render/Pipeline/GreedyShaderMode.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>

@@ -3,7 +3,7 @@
 
 #include "Render/Pipeline/GlStateMask.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {

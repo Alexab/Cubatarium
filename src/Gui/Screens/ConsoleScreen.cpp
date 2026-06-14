@@ -7,7 +7,7 @@
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiTextInput.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 
 namespace cutum
 {
@@ -121,7 +121,7 @@ bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
     return false;
   }
   auto &history = session_->GetCommandHistory();
-  if (event.keyCode == GLFW_KEY_UP)
+  if (event.keyCode == GuiKey::Up)
   {
     if (historyBrowseFromEnd_ == -1)
     {
@@ -138,7 +138,7 @@ bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
     }
     return true;
   }
-  if (event.keyCode == GLFW_KEY_DOWN)
+  if (event.keyCode == GuiKey::Down)
   {
     if (historyBrowseFromEnd_ > 0)
     {

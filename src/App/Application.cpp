@@ -7,6 +7,9 @@
 #include "Render/Camera/CameraPerspective.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
+#ifndef __ANDROID__
+#include "App/Platform/WindowManager.h"
+#endif
 #include "Game/GameSession.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Gui/Cache/CreatureIconCache.h"
@@ -32,10 +35,13 @@
 #include "Render/Textures/TextureCube.h"
 #include "Creatures/Player/User.h"
 #include "Render/Engine/ViewEngine.h"
-#include "App/Platform/WindowManager.h"
 #include "World/Core/World.h"
 
+#ifndef __ANDROID__
 #include <GLFW/glfw3.h>
+#else
+#include "App/Platform/GlfwKeyCompat.h"
+#endif
 #include <algorithm>
 #include <cctype>
 #include <iostream>
@@ -46,6 +52,7 @@ namespace cutum
 namespace
 {
 
+#ifndef __ANDROID__
 UWindowManager *GetWindowManager(GLFWwindow *window)
 {
   if (!window)
@@ -81,6 +88,14 @@ public:
 private:
   GLFWwindow *Window;
 };
+#else
+class NullClipboard : public IGuiClipboard
+{
+public:
+  std::string GetString() const override { return {}; }
+  void SetString(const std::string &) override {}
+};
+#endif
 
 bool KeyNameIs(const std::string &name, int glfwKey)
 {
@@ -138,6 +153,7 @@ void UApplication::Startup(const std::string &configPath)
   }
   if (Window)
   {
+#ifndef __ANDROID__
     int fbW = 0;
     int fbH = 0;
     glfwGetFramebufferSize(Window, &fbW, &fbH);
@@ -145,6 +161,7 @@ void UApplication::Startup(const std::string &configPath)
     {
       TextRenderer->SetWindowSize(fbW, fbH);
     }
+#endif
   }
   if (Core && BlockDefinitions)
   {
@@ -227,10 +244,12 @@ void UApplication::RequestQuit()
     GameSession->SaveCommandHistory();
   }
   QuitRequested = true;
+#ifndef __ANDROID__
   if (Window)
   {
     glfwSetWindowShouldClose(Window, GLFW_TRUE);
   }
+#endif
 }
 
 void UApplication::ShowMainMenu()
@@ -273,12 +292,16 @@ void UApplication::ReturnToMainMenu()
     {
       GameSession->SaveCommandHistory();
     }
+#ifndef __ANDROID__
     if (auto *wm = GetWindowManager(Window))
     {
       wm->ResetGameplayMouseCapture();
     }
+#endif
     GuiContext->ClearInputState();
+#ifndef __ANDROID__
     ReleasePlatformCursorClip();
+#endif
   }
   ConsoleOpen = false;
   SuppressConsoleToggleChar = false;
@@ -445,11 +468,19 @@ const std::vector<std::string> &UApplication::GetWorldNames() const
 
 void UApplication::ShowInGameHud()
 {
+#ifndef __ANDROID__
   if (Window && !Clipboard)
   {
     Clipboard = std::make_unique<GlfwClipboard>(Window);
     GuiContext->SetClipboard(Clipboard.get());
   }
+#else
+  if (!Clipboard)
+  {
+    Clipboard = std::make_unique<NullClipboard>();
+    GuiContext->SetClipboard(Clipboard.get());
+  }
+#endif
 
   GameSession->InitCommandHistory(GetExecutableDirectory() /
                                   "console_history.txt");
@@ -457,6 +488,21 @@ void UApplication::ShowInGameHud()
   IGuiIconSource *icons = IconSource.get();
   auto hud = std::make_unique<UInGameHudScreen>(GameSession.get(),
                                                 &GuiContext->GetTheme(), icons);
+#if defined(__ANDROID__)
+  if (touchBridge_)
+  {
+    hud->ConfigureTouchControls(
+        touchBridge_, [this]() { ReturnToMainMenu(); },
+        [this]() {
+          PaletteOpen = !PaletteOpen;
+          if (PaletteScreen)
+          {
+            PaletteScreen->SetVisible(PaletteOpen);
+          }
+          SyncCursorVisibility();
+        });
+  }
+#endif
   hud->Build(*GuiContext);
   HudScreen = std::move(hud);
 
@@ -506,11 +552,13 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
 
 void UApplication::SyncCursorVisibility()
 {
+#ifndef __ANDROID__
   if (!Window)
   {
     return;
   }
   ApplyCursorPolicy(Window, GetCursorPolicy());
+#endif
 }
 
 void UApplication::ClearGameplayKeyboard()
@@ -527,6 +575,7 @@ void UApplication::ClearGameplayKeyboard()
 
 void UApplication::HandleWindowFocus(bool focused)
 {
+#ifndef __ANDROID__
   if (!Window)
   {
     return;
@@ -537,6 +586,9 @@ void UApplication::HandleWindowFocus(bool focused)
     return;
   }
   SyncCursorVisibility();
+#else
+  (void)focused;
+#endif
 }
 
 void UApplication::EnterInGameInputState()
@@ -547,6 +599,7 @@ void UApplication::EnterInGameInputState()
   FreeCursor = false;
   GuiContext->ClearInputState();
   SyncCursorVisibility();
+#ifndef __ANDROID__
   if (auto *wm = GetWindowManager(Window))
   {
     wm->ResetGameplayMouseCapture();
@@ -561,6 +614,7 @@ void UApplication::EnterInGameInputState()
       camera->ResetMouseMove(x, y);
     }
   }
+#endif
 }
 
 void UApplication::RecaptureMouseForLook()
@@ -706,15 +760,20 @@ void UApplication::Update(double dt)
   }
   else if (State == AppState::InGame)
   {
-    if (HudScreen && Window)
+    if (HudScreen)
     {
-      int fbW = 0;
-      int fbH = 0;
-      glfwGetFramebufferSize(Window, &fbW, &fbH);
-      if (fbW > 0 && fbH > 0)
+#ifndef __ANDROID__
+      if (Window)
       {
-        HudScreen->OnViewportChanged(fbW, fbH);
+        int fbW = 0;
+        int fbH = 0;
+        glfwGetFramebufferSize(Window, &fbW, &fbH);
+        if (fbW > 0 && fbH > 0)
+        {
+          HudScreen->OnViewportChanged(fbW, fbH);
+        }
       }
+#endif
       HudScreen->Update(dt);
     }
     if (ConsoleScreen)
@@ -870,6 +929,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
     }
     if (!ConsoleOpen && key == GLFW_KEY_LEFT_ALT)
     {
+#ifndef __ANDROID__
       FreeCursor = !FreeCursor;
       if (FreeCursor)
       {
@@ -893,6 +953,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
         RecaptureMouseForLook();
       }
       SyncCursorVisibility();
+#endif
       return true;
     }
     if (KeyNameIs(Ui.consoleKey, key))

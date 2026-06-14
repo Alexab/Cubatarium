@@ -4,7 +4,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWidget.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
 
 namespace cutum
@@ -15,15 +15,15 @@ namespace
 
 bool IsTabKey(const GuiKeyEvent &event)
 {
-  return event.keyCode == GLFW_KEY_TAB && event.action == GuiKeyAction::Press;
+  return event.keyCode == GuiKey::Tab && event.action == GuiKeyAction::Press;
 }
 
 bool IsActivationKey(const GuiKeyEvent &event)
 {
   return event.action == GuiKeyAction::Press &&
-         (event.keyCode == GLFW_KEY_ENTER ||
-          event.keyCode == GLFW_KEY_KP_ENTER ||
-          event.keyCode == GLFW_KEY_SPACE);
+         (event.keyCode == GuiKey::Enter ||
+          event.keyCode == GuiKey::KpEnter ||
+          event.keyCode == GuiKey::Space);
 }
 
 } // namespace
@@ -221,7 +221,7 @@ bool UGuiInputRouter::OnKey(const GuiKeyEvent &event)
   {
     if (auto *text = dynamic_cast<UGuiTextInput *>(keyboardFocus_))
     {
-      if (event.keyCode == GLFW_KEY_SPACE)
+      if (event.keyCode == GuiKey::Space)
       {
         return text->OnKey(event);
       }

@@ -3,7 +3,7 @@
 
 #define GLFW_INCLUDE_NONE
 #include "Render/Engine/TextRenderer.h"
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <functional>

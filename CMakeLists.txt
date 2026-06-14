@@ -35,19 +35,21 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 endif()
 
-find_package(PkgConfig REQUIRED)
-find_package(OpenGL REQUIRED)
+if(NOT ANDROID)
+    find_package(PkgConfig REQUIRED)
+    find_package(OpenGL REQUIRED)
 
-if(WIN32)
-    find_package(glfw3 REQUIRED)
-else()
-    find_package(glfw3 REQUIRED)
+    if(WIN32)
+        find_package(glfw3 REQUIRED)
+    else()
+        find_package(glfw3 REQUIRED)
+    endif()
+
+    find_package(glm REQUIRED)
+    find_package(GLEW REQUIRED)
+    find_package(Freetype REQUIRED)
+    find_package(nlohmann_json REQUIRED)
 endif()
-
-find_package(glm REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(Freetype REQUIRED)
-find_package(nlohmann_json REQUIRED)
 
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image.h")
 if(NOT EXISTS ${STB_IMAGE_HEADER})
@@ -178,6 +180,11 @@ set(SOURCES
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
+    src/App/Platform/AppRunner.cpp
+    src/App/Platform/DesktopPlatformPaths.cpp
+    src/App/Platform/DesktopPlatformWindow.cpp
+    src/App/Platform/IPlatformPaths.cpp
+    src/App/Platform/Log.cpp
 )
 
 set(HEADERS
@@ -272,6 +279,94 @@ set(HEADERS
 
 if(WIN32)
     set(ICON_RESOURCE resources/Cubatarium.ico)
+endif()
+
+# --- Android native library ---
+if(ANDROID)
+    set(CUBATARIUM_DESKTOP_ONLY
+        src/main.cpp
+        src/App/Utils.cpp
+        src/App/Platform/WindowManager.cpp
+        src/App/Platform/InputManager.cpp
+        src/App/Platform/CursorCapture.cpp
+        src/App/Platform/DesktopPlatformPaths.cpp
+        src/App/Platform/DesktopPlatformWindow.cpp
+    )
+    set(CUBATARIUM_ANDROID_SOURCES
+        platforms/android/native/android_main.cpp
+        platforms/android/native/egl_context.cpp
+        platforms/android/native/android_jni.cpp
+        src/App/Platform/AppRunner.cpp
+        src/App/Platform/AndroidPlatformPaths.cpp
+        src/App/Platform/AndroidPlatformWindow.cpp
+        src/App/Platform/TouchInputBridge.cpp
+        src/Gui/Widgets/GuiTouchControls.cpp
+        src/App/Platform/Log.cpp
+        src/App/Platform/IPlatformPaths.cpp
+    )
+    set(CUBATARIUM_COMMON_SOURCES ${SOURCES})
+    foreach(_desktop_only ${CUBATARIUM_DESKTOP_ONLY})
+        list(REMOVE_ITEM CUBATARIUM_COMMON_SOURCES ${_desktop_only})
+    endforeach()
+
+    include(FetchContent)
+    FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG 1.0.1
+    )
+    FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+    )
+    FetchContent_Declare(
+        freetype
+        GIT_REPOSITORY https://github.com/freetype/freetype.git
+        GIT_TAG VER-2-13-2
+    )
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(glm json freetype)
+
+    add_library(cubatarium SHARED
+        ${CUBATARIUM_COMMON_SOURCES}
+        ${CUBATARIUM_ANDROID_SOURCES}
+    )
+
+    target_include_directories(cubatarium PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/platforms/android/native
+        ${CUBATARIUM_GENERATED_DIR}
+    )
+
+    target_compile_definitions(cubatarium PRIVATE
+        CUBATARIUM_GLES=1
+        $<$<CONFIG:Debug>:CUBATARIUM_DEBUG>
+    )
+
+    find_package(game-activity REQUIRED CONFIG)
+
+    find_library(android-lib android)
+    find_library(log-lib log)
+    find_library(egl-lib EGL)
+    find_library(glesv3-lib GLESv3)
+
+    target_link_libraries(cubatarium
+        glm::glm
+        nlohmann_json::nlohmann_json
+        freetype
+        game-activity::game-activity
+        game-activity::game-activity_static
+        ${android-lib}
+        ${log-lib}
+        ${egl-lib}
+        ${glesv3-lib}
+    )
+
+    return()
 endif()
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)

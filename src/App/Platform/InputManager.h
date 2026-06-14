@@ -1,8 +1,13 @@
 #ifndef INPUTMANAGER_H
 #define INPUTMANAGER_H
 
+#if defined(__ANDROID__)
+#include "App/Platform/GlfwKeyCompat.h"
+struct GLFWwindow;
+#else
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 #include <functional>
 #include <glm/glm.hpp>
 #include <unordered_map>

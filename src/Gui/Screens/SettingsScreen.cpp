@@ -48,6 +48,8 @@ GuiGridSpec BuildTwoColumnSpec(int width)
 
 USettingsScreen::USettingsScreen(IGuiMenuHost *host) : host_(host) {}
 
+USettingsScreen::~USettingsScreen() = default;
+
 void USettingsScreen::OnSave()
 {
   if (!host_)

@@ -3,7 +3,7 @@
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
 
 namespace cutum
@@ -286,22 +286,22 @@ bool UGuiScrollView::HandleKeyScroll(const GuiKeyEvent &event)
   const int step = 24;
   switch (event.keyCode)
   {
-  case GLFW_KEY_UP:
+  case GuiKey::Up:
     scrollY_ -= step;
     break;
-  case GLFW_KEY_DOWN:
+  case GuiKey::Down:
     scrollY_ += step;
     break;
-  case GLFW_KEY_PAGE_UP:
+  case GuiKey::PageUp:
     scrollY_ -= bounds_.h;
     break;
-  case GLFW_KEY_PAGE_DOWN:
+  case GuiKey::PageDown:
     scrollY_ += bounds_.h;
     break;
-  case GLFW_KEY_HOME:
+  case GuiKey::Home:
     scrollY_ = 0;
     break;
-  case GLFW_KEY_END:
+  case GuiKey::End:
     scrollY_ = MaxScrollY();
     break;
   default:

@@ -3,7 +3,7 @@
 
 #include "Render/Pipeline/GreedyShaderMode.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <array>
 
 namespace cutum

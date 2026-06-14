@@ -1,5 +1,6 @@
 #include "Render/Engine/ShaderManager.h"
-#include <GL/glew.h>
+#include "App/Platform/IPlatformPaths.h"
+#include "Render/GlIncludes.h"
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -207,12 +208,46 @@ void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
   }
 }
 
+namespace
+{
+
+std::string ResolveShaderPath(const std::string &filepath)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  const auto slash = filepath.find_last_of('/');
+  const std::string fileName =
+      slash == std::string::npos ? filepath : filepath.substr(slash + 1);
+  const std::string glesRel = "shaders/gles/" + fileName;
+  if (auto *paths = IPlatformPaths::TryGet())
+  {
+    if (paths->AssetExists(glesRel))
+    {
+      return (paths->AssetRoot() / glesRel).string();
+    }
+  }
+  return glesRel;
+#else
+  return filepath;
+#endif
+}
+
+} // namespace
+
 std::string UShaderProgram::ReadFile(const std::string &filepath)
 {
-  std::ifstream file(filepath);
+  const std::string resolved = ResolveShaderPath(filepath);
+  if (auto *paths = IPlatformPaths::TryGet())
+  {
+    std::string text;
+    if (paths->ReadAssetText(resolved, text))
+    {
+      return text;
+    }
+  }
+  std::ifstream file(resolved);
   if (!file.is_open())
   {
-    std::cerr << "Shader file open error: " << filepath << std::endl;
+    std::cerr << "Shader file open error: " << resolved << std::endl;
     return "";
   }
 

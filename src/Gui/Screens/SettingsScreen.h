@@ -24,6 +24,7 @@ class USettingsScreen : public UGuiScreenBase
 {
 public:
   explicit USettingsScreen(IGuiMenuHost *host);
+  ~USettingsScreen();
 
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;

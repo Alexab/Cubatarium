@@ -53,3 +53,10 @@ Debug
 
 
 bin/console_history.txt
+
+# Gradle syncAssets output (sources are in repo root)
+platforms/android/app/src/main/assets/
+platforms/android/.gradle/
+platforms/android/app/build/
+platforms/android/build/
+platforms/android/local.properties

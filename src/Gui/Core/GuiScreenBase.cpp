@@ -1,8 +1,11 @@
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Widgets/GuiWidget.h"
 
 namespace cutum
 {
+
+UGuiScreenBase::~UGuiScreenBase() = default;
 
 void UGuiScreenBase::OnAttach(UGuiContext & /*ctx*/) {}
 void UGuiScreenBase::OnDetach() {}

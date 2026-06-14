@@ -9,6 +9,10 @@
 #include "Gui/Widgets/GuiWidget.h"
 #include "Game/Inventory/SlotInteraction.h"
 
+#if defined(__ANDROID__)
+#include "Gui/Widgets/GuiTouchControls.h"
+#endif
+
 namespace cutum
 {
 
@@ -27,6 +31,8 @@ UInGameHudScreen::UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
     : session_(session), theme_(theme), icons_(icons)
 {
 }
+
+UInGameHudScreen::~UInGameHudScreen() = default;
 
 bool UInGameHudScreen::PickSlot(int x, int y, SlotAddress &out)
 {
@@ -74,12 +80,35 @@ void UInGameHudScreen::Build(UGuiContext &ctx)
   rootPanel_ = panel.get();
   root_ = std::move(panel);
   hotbarBuilt_ = false;
+#if defined(__ANDROID__)
+  if (touchControls_)
+  {
+    touchControls_->Build(rootPanel_);
+  }
+#endif
 }
+
+#if defined(__ANDROID__)
+void UInGameHudScreen::ConfigureTouchControls(
+    TouchInputBridge *bridge, std::function<void()> onMenu,
+    std::function<void()> onInventory)
+{
+  touchControls_ = std::make_unique<GuiTouchControls>(theme_, bridge,
+                                                      std::move(onMenu),
+                                                      std::move(onInventory));
+}
+#endif
 
 void UInGameHudScreen::OnViewportChanged(int width, int height)
 {
   UGuiScreenBase::OnViewportChanged(width, height);
   LayoutHotbar();
+#if defined(__ANDROID__)
+  if (touchControls_)
+  {
+    touchControls_->Layout(width, height);
+  }
+#endif
 }
 
 void UInGameHudScreen::SetPointerPosition(int x, int y)

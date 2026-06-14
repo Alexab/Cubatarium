@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 
 #include "Blocks/BlockDefinitionStorage.h"

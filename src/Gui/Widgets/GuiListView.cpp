@@ -3,7 +3,7 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
 
 namespace cutum
@@ -224,22 +224,22 @@ bool UGuiListView::HandleKeyNavigation(const GuiKeyEvent &event)
 
   switch (event.keyCode)
   {
-  case GLFW_KEY_UP:
+  case GuiKey::Up:
     index = std::max(0, index - 1);
     break;
-  case GLFW_KEY_DOWN:
+  case GuiKey::Down:
     index = std::min(count - 1, index + 1);
     break;
-  case GLFW_KEY_HOME:
+  case GuiKey::Home:
     index = 0;
     break;
-  case GLFW_KEY_END:
+  case GuiKey::End:
     index = count - 1;
     break;
-  case GLFW_KEY_PAGE_UP:
+  case GuiKey::PageUp:
     index = std::max(0, index - pageRows);
     break;
-  case GLFW_KEY_PAGE_DOWN:
+  case GuiKey::PageDown:
     index = std::min(count - 1, index + pageRows);
     break;
   default:

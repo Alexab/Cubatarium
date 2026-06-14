@@ -1,7 +1,7 @@
 #include "Gui/Batch/UiTexturedQuadBatch.h"
 #include "Render/Engine/ShaderManager.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {

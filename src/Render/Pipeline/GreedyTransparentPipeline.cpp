@@ -4,7 +4,7 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/TransparentPass.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <iostream>
 
 namespace cutum

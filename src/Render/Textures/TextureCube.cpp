@@ -7,7 +7,7 @@
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "ThirdParty/stb_image.h"
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>

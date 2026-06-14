@@ -8,7 +8,6 @@
 #include "Game/Inventory/InventoryTypes.h"
 #include "World/Core/World.h"
 
-#include <GLFW/glfw3.h>
 #include <cmath>
 
 namespace cutum

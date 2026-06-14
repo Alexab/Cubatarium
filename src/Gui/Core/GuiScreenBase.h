@@ -12,7 +12,7 @@ class UGuiWidget;
 class UGuiScreenBase
 {
 public:
-  virtual ~UGuiScreenBase() = default;
+  virtual ~UGuiScreenBase();
 
   virtual void OnAttach(UGuiContext &ctx);
   virtual void OnDetach();

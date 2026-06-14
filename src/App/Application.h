@@ -25,6 +25,8 @@ struct GLFWwindow;
 namespace cutum
 {
 
+class TouchInputBridge;
+
 class UCore;
 class UWorld;
 class UGeometryEngine;
@@ -63,6 +65,9 @@ public:
   void ScheduleQuit();
   void RequestQuit();
   void SetWindow(GLFWwindow *window) { Window = window; }
+  void SetTouchInputBridge(TouchInputBridge *bridge) { touchBridge_ = bridge; }
+  TouchInputBridge *GetTouchInputBridge() const { return touchBridge_; }
+  bool IsQuitRequested() const { return QuitRequested; }
   void HandleWindowFocus(bool focused);
 
   void Update(double dt);
@@ -167,6 +172,7 @@ private:
 
   MenuSubview MenuSubview{MenuSubview::Main};
   UMainMenuScreen *MainMenuScreen{nullptr};
+  TouchInputBridge *touchBridge_{nullptr};
 };
 
 } // namespace cutum

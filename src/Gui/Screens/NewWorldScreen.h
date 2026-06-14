@@ -17,6 +17,7 @@ class UNewWorldScreen : public UGuiScreenBase
 {
 public:
   explicit UNewWorldScreen(IGuiMenuHost *host);
+  ~UNewWorldScreen();
 
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;

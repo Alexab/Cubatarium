@@ -13,7 +13,6 @@
 #include "Creatures/Player/User.h"
 #include "World/Core/World.h"
 
-#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
