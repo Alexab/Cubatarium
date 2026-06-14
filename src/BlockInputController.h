@@ -10,43 +10,46 @@
 
 struct GLFWwindow;
 
-namespace cutum {
+namespace cutum
+{
 
 class UApplication;
 class UGeometryEngine;
 class UWorld;
 
-struct BlockInputContext 
+struct BlockInputContext
 {
   std::shared_ptr<UWorld> World;
-  UGeometryEngine* Geometries{nullptr};
-  const UiSettings* Ui{nullptr};
-  GLFWwindow* Window{nullptr};
-  UApplication* App{nullptr};
+  UGeometryEngine *Geometries{nullptr};
+  const UiSettings *Ui{nullptr};
+  GLFWwindow *Window{nullptr};
+  UApplication *App{nullptr};
 };
 
-class UBlockInputController 
+class UBlockInputController
 {
 public:
-  void OnMouseButton(MouseButton button, bool pressed, glm::vec2 pos, const BlockInputContext& ctx);
-  void OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx);
-  void OnKeyDelete(const BlockInputContext& ctx);
-  void Tick(float dt, const BlockInputContext& ctx);
+  void OnMouseButton(MouseButton button, bool pressed, glm::vec2 pos,
+                     const BlockInputContext &ctx);
+  void OnMouseMove(glm::vec2 pos, glm::vec2 delta,
+                   const BlockInputContext &ctx);
+  void OnKeyDelete(const BlockInputContext &ctx);
+  void Tick(float dt, const BlockInputContext &ctx);
 
   bool IsRightLookActive() const { return RightLookActive; }
 
 private:
-  const InventoryEntryRef* GetActiveEntry(const BlockInputContext& ctx) const;
-  bool ActiveSlotBlocksWorldInteraction(const BlockInputContext& ctx) const;
+  const InventoryEntryRef *GetActiveEntry(const BlockInputContext &ctx) const;
+  bool ActiveSlotBlocksWorldInteraction(const BlockInputContext &ctx) const;
 
-  void HandleLeftPress(const BlockInputContext& ctx);
-  void HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx);
-  void HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx);
-  void HandleRightRelease(const BlockInputContext& ctx);
+  void HandleLeftPress(const BlockInputContext &ctx);
+  void HandleLeftRelease(float holdSeconds, const BlockInputContext &ctx);
+  void HandleRightPress(glm::vec2 pos, const BlockInputContext &ctx);
+  void HandleRightRelease(const BlockInputContext &ctx);
 
-  void TryPlaceFromActiveSlot(const BlockInputContext& ctx);
-  void TrySpawnCreatureOrSkin(const BlockInputContext& ctx);
-  void TryInstantBreak(const BlockInputContext& ctx);
+  void TryPlaceFromActiveSlot(const BlockInputContext &ctx);
+  void TrySpawnCreatureOrSkin(const BlockInputContext &ctx);
+  void TryInstantBreak(const BlockInputContext &ctx);
 
   std::chrono::steady_clock::time_point LeftDownTime{};
   bool LeftHeld{false};

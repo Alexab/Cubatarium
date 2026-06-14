@@ -1,7 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-namespace cutum {
+namespace cutum
+{
 
 /// Headless GL init + LoadSystem for CI / --validate-load.
 int RunValidateLoad();

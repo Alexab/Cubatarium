@@ -3,18 +3,20 @@
 
 struct GLFWwindow;
 
-namespace cutum {
+namespace cutum
+{
 
-enum class AppCursorPolicy {
-    /// Обычный курсор (меню, UI-only).
-    Free,
-    /// Видимый курсор, не выходит за клиентскую область окна (Cubatarium).
-    ConfinedVisible,
-    /// Скрытый курсор, относительное движение (Classic / Minecraft).
-    CapturedHidden,
+enum class AppCursorPolicy
+{
+  /// Обычный курсор (меню, UI-only).
+  Free,
+  /// Видимый курсор, не выходит за клиентскую область окна (Cubatarium).
+  ConfinedVisible,
+  /// Скрытый курсор, относительное движение (Classic / Minecraft).
+  CapturedHidden,
 };
 
-void ApplyCursorPolicy(GLFWwindow* window, AppCursorPolicy policy);
+void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy);
 void ReleasePlatformCursorClip();
 
 } // namespace cutum

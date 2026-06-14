@@ -4,15 +4,17 @@
 #include "CreatureLocomotionFacts.h"
 #include "LocomotionTypes.h"
 
-namespace cutum {
+namespace cutum
+{
 
 bool IsAirborneLocomotionState(LocomotionState state);
 bool IsAquaticLocomotionState(LocomotionState state);
 
-LocomotionState DeriveLocomotionState(LocomotionArchetype archetype,
-                                      const CreatureLocomotionFacts& raw,
-                                      const CreatureLocomotionCapabilities& caps,
-                                      const CreatureLocomotionRawInput* hintInput = nullptr);
+LocomotionState
+DeriveLocomotionState(LocomotionArchetype archetype,
+                      const CreatureLocomotionFacts &raw,
+                      const CreatureLocomotionCapabilities &caps,
+                      const CreatureLocomotionRawInput *hintInput = nullptr);
 
 } // namespace cutum
 

@@ -1,40 +1,41 @@
 #ifndef VIEWENGINE_H
 #define VIEWENGINE_H
 
-#include <chrono>
-#include "geometryengine.h"
 #include "Camera.h"
+#include "geometryengine.h"
+#include <chrono>
 
-namespace cutum {
+namespace cutum
+{
 
 class UViewEngine
 {
 public:
- UViewEngine();
+  UViewEngine();
 
- void GenerateSimpleCamera();
+  void GenerateSimpleCamera();
 
- bool AddCamera(std::shared_ptr<UCamera> camera);
- size_t AddCameraReturnId(std::shared_ptr<UCamera> camera);
- bool DelCamera(size_t index);
+  bool AddCamera(std::shared_ptr<UCamera> camera);
+  size_t AddCameraReturnId(std::shared_ptr<UCamera> camera);
+  bool DelCamera(size_t index);
 
- std::shared_ptr<UCamera> GetActiveCamera() const;
- std::shared_ptr<UCamera> GetCamera(size_t index) const;
- bool SetActiveCamera(size_t index);
+  std::shared_ptr<UCamera> GetActiveCamera() const;
+  std::shared_ptr<UCamera> GetCamera(size_t index) const;
+  bool SetActiveCamera(size_t index);
 
- void UpdateFrameTime();
- void ResetAllKeyStatus();
+  void UpdateFrameTime();
+  void ResetAllKeyStatus();
 
- uint64_t GetDurationUpdateMks() const;
+  uint64_t GetDurationUpdateMks() const;
 
 private:
- std::map<size_t, std::shared_ptr<UCamera>> Cameras;
+  std::map<size_t, std::shared_ptr<UCamera>> Cameras;
 
- size_t ActiveViewIndex;
+  size_t ActiveViewIndex;
 
- uint64_t DurationUpdateMks;
+  uint64_t DurationUpdateMks;
 };
 
-}
+} // namespace cutum
 
 #endif // VIEWENGINE_H

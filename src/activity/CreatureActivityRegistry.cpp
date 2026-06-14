@@ -3,11 +3,12 @@
 #include "activity/agents/WanderActivityAgent.h"
 #include <memory>
 
-namespace cutum {
-
-void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector& director)
+namespace cutum
 {
- director.RegisterAgent(std::make_unique<UWanderActivityAgent>());
+
+void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector &director)
+{
+  director.RegisterAgent(std::make_unique<UWanderActivityAgent>());
 }
 
 } // namespace cutum

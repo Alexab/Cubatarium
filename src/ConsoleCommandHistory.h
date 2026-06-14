@@ -5,25 +5,27 @@
 #include <string>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-class UConsoleCommandHistory {
+class UConsoleCommandHistory
+{
 public:
-    static constexpr size_t kMaxEntries = 100;
+  static constexpr size_t kMaxEntries = 100;
 
-    void SetFilePath(std::filesystem::path path);
-    bool Load();
-    bool Save() const;
+  void SetFilePath(std::filesystem::path path);
+  bool Load();
+  bool Save() const;
 
-    void Append(std::string line);
-    const std::vector<std::string>& Entries() const { return entries_; }
+  void Append(std::string line);
+  const std::vector<std::string> &Entries() const { return entries_; }
 
-    size_t Size() const { return entries_.size(); }
-    std::string GetFromEnd(size_t indexFromEnd) const;
+  size_t Size() const { return entries_.size(); }
+  std::string GetFromEnd(size_t indexFromEnd) const;
 
 private:
-    std::filesystem::path filePath_;
-    std::vector<std::string> entries_;
+  std::filesystem::path filePath_;
+  std::vector<std::string> entries_;
 };
 
 } // namespace cutum

@@ -4,13 +4,15 @@
 #include "render/GreedyTransparentSettings.h"
 #include "render/IGreedyTransparentBackend.h"
 
-namespace cutum {
+namespace cutum
+{
 
-class UGreedyTransparentPipeline {
+class UGreedyTransparentPipeline
+{
 public:
- static void Draw(IGreedyTransparentBackend& backend,
-                  const GreedyTransparentDrawContext& ctx,
-                  const GreedyTransparentSettings& settings = {});
+  static void Draw(IGreedyTransparentBackend &backend,
+                   const GreedyTransparentDrawContext &ctx,
+                   const GreedyTransparentSettings &settings = {});
 };
 
 } // namespace cutum

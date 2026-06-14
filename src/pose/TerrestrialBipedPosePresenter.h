@@ -3,13 +3,15 @@
 
 #include "ICreaturePosePresenter.h"
 
-namespace cutum {
+namespace cutum
+{
 
-class UTerrestrialBipedPosePresenter : public ICreaturePosePresenter {
- public:
- LocomotionArchetype GetArchetype() const override;
- CreaturePoseParams Compute(const CreatureLocomotionFacts& facts, const CreatureDefinition& def,
-                            float dt) override;
+class UTerrestrialBipedPosePresenter : public ICreaturePosePresenter
+{
+public:
+  LocomotionArchetype GetArchetype() const override;
+  CreaturePoseParams Compute(const CreatureLocomotionFacts &facts,
+                             const CreatureDefinition &def, float dt) override;
 };
 
 } // namespace cutum

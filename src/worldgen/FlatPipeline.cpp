@@ -1,39 +1,37 @@
 #include "FlatPipeline.h"
 #include "WorldGenStages.h"
 
-namespace cutum {
-
-UFlatPipeline::UFlatPipeline(WorldGenContext ctx)
- : IWorldGenPipeline(ctx)
+namespace cutum
 {
-}
+
+UFlatPipeline::UFlatPipeline(WorldGenContext ctx) : IWorldGenPipeline(ctx) {}
 
 void UFlatPipeline::GenerateColumn(int worldX, int worldZ)
 {
- FillFlatColumn(ctx_, worldX, worldZ);
+  FillFlatColumn(ctx_, worldX, worldZ);
 }
 
 int UFlatPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- (void)worldX;
- (void)worldZ;
- return ctx_.Settings.flatSurfaceY;
+  (void)worldX;
+  (void)worldZ;
+  return ctx_.Settings.flatSurfaceY;
 }
 
 ULegacyHashPipeline::ULegacyHashPipeline(WorldGenContext ctx)
- : IWorldGenPipeline(ctx)
+    : IWorldGenPipeline(ctx)
 {
 }
 
 void ULegacyHashPipeline::GenerateColumn(int worldX, int worldZ)
 {
- FillLegacyHashColumn(ctx_, worldX, worldZ);
+  FillLegacyHashColumn(ctx_, worldX, worldZ);
 }
 
 int ULegacyHashPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.Settings);
- return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
+  const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.Settings);
+  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
 }
 
 } // namespace cutum

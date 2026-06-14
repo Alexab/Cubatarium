@@ -3,11 +3,13 @@
 
 #include <glm/glm.hpp>
 
-namespace cutum {
+namespace cutum
+{
 
-struct CollisionVolume {
- glm::vec3 center{0.0f};
- glm::vec3 halfExtents{0.5f};
+struct CollisionVolume
+{
+  glm::vec3 center{0.0f};
+  glm::vec3 halfExtents{0.5f};
 };
 
 } // namespace cutum

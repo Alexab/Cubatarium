@@ -1,13 +1,15 @@
 #ifndef CREATUREVISUALFACTORY_H
 #define CREATUREVISUALFACTORY_H
 
-#include <memory>
 #include "CreatureVisual.h"
+#include <memory>
 
-namespace cutum {
+namespace cutum
+{
 
 struct CreatureDefinition;
-std::unique_ptr<ICreatureVisual> CreateCreatureVisual(const CreatureDefinition& def);
+std::unique_ptr<ICreatureVisual>
+CreateCreatureVisual(const CreatureDefinition &def);
 
 } // namespace cutum
 

@@ -4,29 +4,34 @@
 #include <array>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
-enum class InventoryEntryKind {
-    Block,
-    UObject,
-    UCreature,
-    Skin
+enum class InventoryEntryKind
+{
+  Block,
+  UObject,
+  UCreature,
+  Skin
 };
 
-struct InventoryEntryRef {
-    InventoryEntryKind kind{InventoryEntryKind::Block};
-    std::string id;
-    int count{0};
-    bool empty{true};
+struct InventoryEntryRef
+{
+  InventoryEntryKind kind{InventoryEntryKind::Block};
+  std::string id;
+  int count{0};
+  bool empty{true};
 };
 
-struct HotbarSlot {
-    bool empty{true};
-    InventoryEntryRef entry{};
+struct HotbarSlot
+{
+  bool empty{true};
+  InventoryEntryRef entry{};
 };
 
-struct HotbarBar {
-    std::array<HotbarSlot, 10> slots{};
+struct HotbarBar
+{
+  std::array<HotbarSlot, 10> slots{};
 };
 
 } // namespace cutum

@@ -3,20 +3,24 @@
 
 #include "ICreatureActivitySink.h"
 
-namespace cutum {
+namespace cutum
+{
 
 class UWorld;
 
-class UWorldCreatureActivitySink : public ICreatureActivitySink {
- public:
- explicit UWorldCreatureActivitySink(UWorld& world);
+class UWorldCreatureActivitySink : public ICreatureActivitySink
+{
+public:
+  explicit UWorldCreatureActivitySink(UWorld &world);
 
- std::optional<CreatureActivityView> GetCreatureView(CreatureId id) const override;
- std::optional<CreatureBehaviorSnapshot> GetBehaviorSnapshot(CreatureId id) const override;
- void SetIntent(CreatureId id, const CreatureIntent& intent) override;
+  std::optional<CreatureActivityView>
+  GetCreatureView(CreatureId id) const override;
+  std::optional<CreatureBehaviorSnapshot>
+  GetBehaviorSnapshot(CreatureId id) const override;
+  void SetIntent(CreatureId id, const CreatureIntent &intent) override;
 
- private:
- UWorld& World;
+private:
+  UWorld &World;
 };
 
 } // namespace cutum

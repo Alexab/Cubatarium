@@ -1,31 +1,36 @@
 #ifndef CREATUREVISUAL_H
 #define CREATUREVISUAL_H
 
-#include <glm/glm.hpp>
 #include "CreatureCatalogTypes.h"
 #include "CreatureLocomotionFacts.h"
 #include "CreaturePoseParams.h"
 #include "LocomotionTypes.h"
+#include <glm/glm.hpp>
 
-namespace cutum {
+namespace cutum
+{
 
 class UCreature;
 struct CreatureDefinition;
 class UGeometryEngine;
 
-class ICreatureVisual {
+class ICreatureVisual
+{
 public:
- virtual ~ICreatureVisual() = default;
- virtual void UpdatePose(const UCreature& creature, const CreatureLocomotionFacts& facts,
-                         const CreaturePoseParams& pose, const CreatureDefinition& animDef,
-                         float dt) = 0;
- virtual void SetAppearance(const ResolvedCreatureAppearance& appearance) {
-  appearance_ = appearance;
- }
- virtual void SubmitDraw(UGeometryEngine& engine, const glm::mat4& viewProj) = 0;
+  virtual ~ICreatureVisual() = default;
+  virtual void UpdatePose(const UCreature &creature,
+                          const CreatureLocomotionFacts &facts,
+                          const CreaturePoseParams &pose,
+                          const CreatureDefinition &animDef, float dt) = 0;
+  virtual void SetAppearance(const ResolvedCreatureAppearance &appearance)
+  {
+    appearance_ = appearance;
+  }
+  virtual void SubmitDraw(UGeometryEngine &engine,
+                          const glm::mat4 &viewProj) = 0;
 
 protected:
- ResolvedCreatureAppearance appearance_{};
+  ResolvedCreatureAppearance appearance_{};
 };
 
 } // namespace cutum

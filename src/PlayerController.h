@@ -4,7 +4,8 @@
 #include "CreatureLocomotionController.h"
 #include "LocomotionTypes.h"
 
-namespace cutum {
+namespace cutum
+{
 
 using PlayerController = UCreatureLocomotionController;
 using PlayerInput = CreatureInput;

@@ -6,25 +6,28 @@
 #include <GL/glew.h>
 #include <array>
 
-namespace cutum {
+namespace cutum
+{
 
-enum class TransparentPassId {
- ShellDepth,
- BehindShell,
- ShellSurface,
- FuzzyEdges,
+enum class TransparentPassId
+{
+  ShellDepth,
+  BehindShell,
+  ShellSurface,
+  FuzzyEdges,
 };
 
-struct TransparentPassDesc {
- TransparentPassId id;
- const char* debugName;
- GLenum depthFunc;
- bool depthWrite;
- bool colorWrite;
- GLenum stencilFunc;
- int stencilRef;
- bool stencilReplaceOnPass;
- GreedyShaderMode shaderMode;
+struct TransparentPassDesc
+{
+  TransparentPassId id;
+  const char *debugName;
+  GLenum depthFunc;
+  bool depthWrite;
+  bool colorWrite;
+  GLenum stencilFunc;
+  int stencilRef;
+  bool stencilReplaceOnPass;
+  GreedyShaderMode shaderMode;
 };
 
 std::array<TransparentPassDesc, 4> GetGreedyTransparentPasses();

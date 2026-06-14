@@ -4,21 +4,23 @@
 #include "Creature.h"
 #include <memory>
 
-namespace cutum {
+namespace cutum
+{
 
 class UUser;
 
-class UPlayer : public UCreature {
+class UPlayer : public UCreature
+{
 public:
- UPlayer(CreatureId id, const std::string& speciesId, glm::vec3 bodyOrigin);
+  UPlayer(CreatureId id, const std::string &speciesId, glm::vec3 bodyOrigin);
 
- bool IsPlayer() const override { return true; }
+  bool IsPlayer() const override { return true; }
 
- void BindUser(const std::shared_ptr<UUser>& user) { user_ = user; }
- std::shared_ptr<UUser> GetUser() const { return user_.lock(); }
+  void BindUser(const std::shared_ptr<UUser> &user) { user_ = user; }
+  std::shared_ptr<UUser> GetUser() const { return user_.lock(); }
 
 private:
- std::weak_ptr<UUser> user_;
+  std::weak_ptr<UUser> user_;
 };
 
 } // namespace cutum

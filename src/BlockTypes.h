@@ -3,12 +3,13 @@
 
 #include <cstdint>
 
-namespace cutum {
+namespace cutum
+{
 
 using BlockId = uint16_t;
 
 constexpr BlockId BLOCK_AIR = 0;
 
-}
+} // namespace cutum
 
 #endif

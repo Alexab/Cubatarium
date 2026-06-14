@@ -4,12 +4,13 @@
 #include <cstddef>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 constexpr size_t kConsoleMaxLineLength = 256;
 
 std::string SanitizeConsoleLine(std::string s);
-std::string SanitizeConsolePaste(const std::string& raw, size_t currentLen,
+std::string SanitizeConsolePaste(const std::string &raw, size_t currentLen,
                                  size_t maxTotalLen = kConsoleMaxLineLength);
 
 } // namespace cutum

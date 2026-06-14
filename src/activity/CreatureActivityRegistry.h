@@ -1,11 +1,12 @@
 #ifndef CREATUREACTIVITYREGISTRY_H
 #define CREATUREACTIVITYREGISTRY_H
 
-namespace cutum {
+namespace cutum
+{
 
 class UCreatureActivityDirector;
 
-void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector& director);
+void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector &director);
 
 } // namespace cutum
 

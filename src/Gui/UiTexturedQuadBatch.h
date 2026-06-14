@@ -8,34 +8,38 @@
 
 typedef unsigned int GLuint;
 
-namespace cutum {
+namespace cutum
+{
 
 class UShaderProgram;
 
-class UiTexturedQuadBatch {
+class UiTexturedQuadBatch
+{
 public:
-    UiTexturedQuadBatch();
-    ~UiTexturedQuadBatch();
+  UiTexturedQuadBatch();
+  ~UiTexturedQuadBatch();
 
-    bool Initialize(std::shared_ptr<UShaderProgram> shader);
-    void Shutdown();
+  bool Initialize(std::shared_ptr<UShaderProgram> shader);
+  void Shutdown();
 
-    void Begin(int WindowWidth, int WindowHeight);
-    void DrawTexturedRect(const GuiRect& rect, GLuint texture, const glm::vec4& tint);
-    void End();
+  void Begin(int WindowWidth, int WindowHeight);
+  void DrawTexturedRect(const GuiRect &rect, GLuint texture,
+                        const glm::vec4 &tint);
+  void End();
 
 private:
-    void GuiRectToShaderCoords(const GuiRect& rect, float& x0, float& y0, float& x1, float& y1) const;
+  void GuiRectToShaderCoords(const GuiRect &rect, float &x0, float &y0,
+                             float &x1, float &y1) const;
 
-    std::shared_ptr<UShaderProgram> shader_;
-    GLuint vao_{0};
-    GLuint vbo_{0};
-    int windowWidth_{0};
-    int windowHeight_{0};
-    bool initialized_{false};
-    bool depthTestWasEnabled_{false};
-    bool blendWasEnabled_{false};
-    GLuint boundTexture_{0};
+  std::shared_ptr<UShaderProgram> shader_;
+  GLuint vao_{0};
+  GLuint vbo_{0};
+  int windowWidth_{0};
+  int windowHeight_{0};
+  bool initialized_{false};
+  bool depthTestWasEnabled_{false};
+  bool blendWasEnabled_{false};
+  GLuint boundTexture_{0};
 };
 
 } // namespace cutum

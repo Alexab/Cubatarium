@@ -3,17 +3,21 @@
 #include "CreatureDefinition.h"
 #include <iostream>
 
-namespace cutum {
+namespace cutum
+{
 
-void UCreatureVisualGltf::UpdatePose(const UCreature& /*creature*/, const CreatureLocomotionFacts& /*facts*/,
-                                    const CreaturePoseParams& /*pose*/,
-                                    const CreatureDefinition& /*animDef*/, float /*dt*/)
+void UCreatureVisualGltf::UpdatePose(const UCreature & /*creature*/,
+                                     const CreatureLocomotionFacts & /*facts*/,
+                                     const CreaturePoseParams & /*pose*/,
+                                     const CreatureDefinition & /*animDef*/,
+                                     float /*dt*/)
 {
 }
 
-void UCreatureVisualGltf::SubmitDraw(UGeometryEngine& /*engine*/, const glm::mat4& /*viewProj*/)
+void UCreatureVisualGltf::SubmitDraw(UGeometryEngine & /*engine*/,
+                                     const glm::mat4 & /*viewProj*/)
 {
- // glTF skeleton backend stub (phase D)
+  // glTF skeleton backend stub (phase D)
 }
 
 } // namespace cutum

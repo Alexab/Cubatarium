@@ -1,12 +1,14 @@
 #ifndef APP_STATE_H
 #define APP_STATE_H
 
-namespace cutum {
+namespace cutum
+{
 
-enum class AppState {
-    MainMenu,
-    Loading,
-    InGame,
+enum class AppState
+{
+  MainMenu,
+  Loading,
+  InGame,
 };
 
 } // namespace cutum

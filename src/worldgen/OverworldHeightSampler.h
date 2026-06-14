@@ -2,32 +2,41 @@
 
 #include <cstdint>
 
-namespace cutum {
+namespace cutum
+{
 
-enum class HeightPreset { Overworld, Hills, Mountains };
-
-struct HeightSampleParams {
- int octavesBase{4};
- float persistence{0.5f};
- float lacunarity{2.0f};
- float amplitudeBlocks{6.f};
- float detailScale{4.f};
- float detailWeight{0.15f};
- int stoneSurfaceAboveY{-1};
+enum class HeightPreset
+{
+  Overworld,
+  Hills,
+  Mountains
 };
 
-class UOverworldHeightSampler {
-public:
- UOverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight, HeightPreset preset);
+struct HeightSampleParams
+{
+  int octavesBase{4};
+  float persistence{0.5f};
+  float lacunarity{2.0f};
+  float amplitudeBlocks{6.f};
+  float detailScale{4.f};
+  float detailWeight{0.15f};
+  int stoneSurfaceAboveY{-1};
+};
 
- int SurfaceYAt(int x, int z) const;
- HeightSampleParams params() const { return params_; }
+class UOverworldHeightSampler
+{
+public:
+  UOverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight,
+                          HeightPreset preset);
+
+  int SurfaceYAt(int x, int z) const;
+  HeightSampleParams params() const { return params_; }
 
 private:
- uint32_t seed_;
- int seaLevel_;
- int maxHeight_;
- HeightSampleParams params_;
+  uint32_t seed_;
+  int seaLevel_;
+  int maxHeight_;
+  HeightSampleParams params_;
 };
 
 } // namespace cutum

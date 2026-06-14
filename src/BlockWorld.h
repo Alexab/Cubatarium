@@ -1,29 +1,31 @@
 #ifndef BLOCKWORLD_H
 #define BLOCKWORLD_H
 
-#include <functional>
-#include <glm/glm.hpp>
 #include "BlockTypes.h"
 #include "ChunkManager.h"
+#include <functional>
+#include <glm/glm.hpp>
 
-namespace cutum {
+namespace cutum
+{
 
-class UBlockWorld {
+class UBlockWorld
+{
 public:
- BlockId GetBlock(glm::ivec3 pos) const;
- void SetBlock(glm::ivec3 pos, BlockId id);
- bool IsAir(glm::ivec3 pos) const;
- void Clear();
- size_t CountNonAir() const;
- void ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& fn) const;
+  BlockId GetBlock(glm::ivec3 pos) const;
+  void SetBlock(glm::ivec3 pos, BlockId id);
+  bool IsAir(glm::ivec3 pos) const;
+  void Clear();
+  size_t CountNonAir() const;
+  void ForEachBlock(const std::function<void(glm::ivec3, BlockId)> &fn) const;
 
- UChunkManager& GetChunkManager() { return Chunks; }
- const UChunkManager& GetChunkManager() const { return Chunks; }
+  UChunkManager &GetChunkManager() { return Chunks; }
+  const UChunkManager &GetChunkManager() const { return Chunks; }
 
 private:
- UChunkManager Chunks;
+  UChunkManager Chunks;
 };
 
-}
+} // namespace cutum
 
 #endif

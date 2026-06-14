@@ -1,10 +1,8 @@
 #include "GuiTheme.h"
 
-namespace cutum {
-
-GuiTheme DefaultGuiTheme()
+namespace cutum
 {
-    return GuiTheme{};
-}
+
+GuiTheme DefaultGuiTheme() { return GuiTheme{}; }
 
 } // namespace cutum

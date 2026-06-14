@@ -5,18 +5,23 @@
 #include <memory>
 #include <unordered_map>
 
-namespace cutum {
+namespace cutum
+{
 
-class UBlockDefinitionStorage {
+class UBlockDefinitionStorage
+{
 public:
- void Load(const std::string& modelsPath);
- const BlockDefinition* GetById(BlockId id) const;
- const BlockDefinition* GetByName(const std::string& name) const;
- const std::unordered_map<BlockId, BlockDefinition>& GetAll() const { return byId_; }
+  void Load(const std::string &modelsPath);
+  const BlockDefinition *GetById(BlockId id) const;
+  const BlockDefinition *GetByName(const std::string &name) const;
+  const std::unordered_map<BlockId, BlockDefinition> &GetAll() const
+  {
+    return byId_;
+  }
 
 private:
- std::unordered_map<BlockId, BlockDefinition> byId_;
- std::unordered_map<std::string, BlockId> nameToId_;
+  std::unordered_map<BlockId, BlockDefinition> byId_;
+  std::unordered_map<std::string, BlockId> nameToId_;
 };
 
 } // namespace cutum
