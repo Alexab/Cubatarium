@@ -7,31 +7,31 @@
 
 namespace cutum {
 
-class GuiRenderer;
-class GuiInputRouter;
-class GuiScreenBase;
-class GuiWidget;
+class UGuiRenderer;
+class UGuiInputRouter;
+class UGuiScreenBase;
+class UGuiWidget;
 class IGuiClipboard;
-class ShaderManager;
+class UShaderManager;
 class UTextRenderer;
 
-class GuiContext {
+class UGuiContext {
 public:
-    GuiContext();
-    ~GuiContext();
+    UGuiContext();
+    ~UGuiContext();
 
-    bool Initialize(std::shared_ptr<ShaderManager> shaderManager,
+    bool Initialize(std::shared_ptr<UShaderManager> shaderManager,
                     std::shared_ptr<UTextRenderer> textRenderer);
     void Shutdown();
 
-    void SetScreen(std::unique_ptr<GuiScreenBase> screen);
-    GuiScreenBase* GetScreen() { return activeScreen_.get(); }
+    void SetScreen(std::unique_ptr<UGuiScreenBase> screen);
+    UGuiScreenBase* GetScreen() { return activeScreen_.get(); }
 
     void Update(double dt);
-    void Render(int windowWidth, int windowHeight);
-    void RenderOverlay(GuiWidget& root, int windowWidth, int windowHeight,
+    void Render(int WindowWidth, int WindowHeight);
+    void RenderOverlay(UGuiWidget& root, int WindowWidth, int WindowHeight,
                        bool expandRootToViewport = true);
-    void NotifyViewport(int windowWidth, int windowHeight);
+    void NotifyViewport(int WindowWidth, int WindowHeight);
 
     bool RouteKey(const GuiKeyEvent& event);
     bool RouteChar(const GuiCharEvent& event);
@@ -44,18 +44,18 @@ public:
     bool WantsCaptureKeyboard() const;
     void ClearInputState();
 
-    GuiRenderer& GetRenderer() { return *renderer_; }
+    UGuiRenderer& GetRenderer() { return *renderer_; }
     const GuiTheme& GetTheme() const { return theme_; }
 
-    void SetClipboard(IGuiClipboard* clipboard) { clipboard_ = clipboard; }
-    IGuiClipboard* GetClipboard() const { return clipboard_; }
+    void SetClipboard(IGuiClipboard* clipboard) { Clipboard = clipboard; }
+    IGuiClipboard* GetClipboard() const { return Clipboard; }
 
 private:
-    IGuiClipboard* clipboard_{nullptr};
+    IGuiClipboard* Clipboard{nullptr};
     GuiTheme theme_;
-    std::unique_ptr<GuiRenderer> renderer_;
-    std::unique_ptr<GuiInputRouter> inputRouter_;
-    std::unique_ptr<GuiScreenBase> activeScreen_;
+    std::unique_ptr<UGuiRenderer> renderer_;
+    std::unique_ptr<UGuiInputRouter> inputRouter_;
+    std::unique_ptr<UGuiScreenBase> activeScreen_;
 };
 
 } // namespace cutum

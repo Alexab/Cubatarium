@@ -26,7 +26,7 @@ namespace cutum {
 
 
 
-LoadWorldScreen::LoadWorldScreen(IGuiMenuHost* host)
+ULoadWorldScreen::ULoadWorldScreen(IGuiMenuHost* host)
 
     : host_(host)
 
@@ -36,7 +36,7 @@ LoadWorldScreen::LoadWorldScreen(IGuiMenuHost* host)
 
 
 
-void LoadWorldScreen::OnLoad()
+void ULoadWorldScreen::OnLoad()
 
 {
 
@@ -71,7 +71,7 @@ void LoadWorldScreen::OnLoad()
 
 
 
-void LoadWorldScreen::Build(GuiContext& ctx)
+void ULoadWorldScreen::Build(UGuiContext& ctx)
 
 {
 
@@ -103,7 +103,7 @@ void LoadWorldScreen::Build(GuiContext& ctx)
 
 
 
-    auto backdrop = std::make_unique<GuiPanel>(&theme);
+    auto backdrop = std::make_unique<UGuiPanel>(&theme);
 
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
 
@@ -113,21 +113,21 @@ void LoadWorldScreen::Build(GuiContext& ctx)
 
     const int winH = std::min(400, viewportH_ - 40);
 
-    auto window = std::make_unique<GuiWindow>(&theme, "Load World");
+    auto window = std::make_unique<UGuiWindow>(&theme, "Load World");
 
-    window_ = window.get();
+    Window = window.get();
 
     window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
 
 
 
-    auto frame = std::make_unique<GuiDialogFrame>(&theme);
+    auto frame = std::make_unique<UGuiDialogFrame>(&theme);
 
     dialogFrame_ = frame.get();
 
 
 
-    auto list = std::make_unique<GuiListView>(&theme);
+    auto list = std::make_unique<UGuiListView>(&theme);
 
     list_ = list.get();
 
@@ -143,7 +143,7 @@ void LoadWorldScreen::Build(GuiContext& ctx)
 
 
 
-    auto empty = std::make_unique<GuiLabel>(&theme, "No saved worlds.");
+    auto empty = std::make_unique<UGuiLabel>(&theme, "No saved worlds.");
 
     emptyLabel_ = empty.get();
 
@@ -153,7 +153,7 @@ void LoadWorldScreen::Build(GuiContext& ctx)
 
 
 
-    auto loadBtn = std::make_unique<GuiButton>(&theme, "Load");
+    auto loadBtn = std::make_unique<UGuiButton>(&theme, "Load");
 
     loadBtn_ = loadBtn.get();
 
@@ -161,7 +161,7 @@ void LoadWorldScreen::Build(GuiContext& ctx)
     loadBtn->SetOnClick([this]() { OnLoad(); });
     frame->AddFooterButton(std::move(loadBtn));
 
-    frame->AddFooterButton(std::make_unique<GuiButton>(&theme, "Cancel"))
+    frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Cancel"))
 
         .SetOnClick([this]() {
 
@@ -187,11 +187,11 @@ void LoadWorldScreen::Build(GuiContext& ctx)
 
 
 
-void LoadWorldScreen::OnViewportChanged(int width, int height)
+void ULoadWorldScreen::OnViewportChanged(int width, int height)
 
 {
 
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
 
     Relayout();
 
@@ -199,11 +199,11 @@ void LoadWorldScreen::OnViewportChanged(int width, int height)
 
 
 
-void LoadWorldScreen::Relayout()
+void ULoadWorldScreen::Relayout()
 
 {
 
-    if (!window_ || !dialogFrame_) {
+    if (!Window || !dialogFrame_) {
 
         return;
 
@@ -213,15 +213,15 @@ void LoadWorldScreen::Relayout()
 
     const int winH = std::min(400, viewportH_ - 40);
 
-    window_->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+    Window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
 
-    dialogFrame_->SetBounds(window_->GetClientArea());
+    dialogFrame_->SetBounds(Window->GetClientArea());
 
     dialogFrame_->LayoutFrame();
 
     if (emptyLabel_) {
 
-        const GuiRect client = window_->GetClientArea();
+        const GuiRect client = Window->GetClientArea();
 
         emptyLabel_->SetBounds({client.x + 16, client.y + 24, client.w - 32, 24});
 

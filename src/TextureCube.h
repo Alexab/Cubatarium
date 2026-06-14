@@ -10,16 +10,16 @@ typedef unsigned int GLuint;
 
 namespace cutum {
 
-class BlockDefinitionStorage;
+class UBlockDefinitionStorage;
 
-class TextureCube
+class UTextureCube
 {
 public:
- TextureCube();
- TextureCube(const std::string& name, size_t type_id, const std::vector<std::string>& texture_names);
- TextureCube(const TextureCube&) = default;
+ UTextureCube();
+ UTextureCube(const std::string& name, size_t type_id, const std::vector<std::string>& texture_names);
+ UTextureCube(const UTextureCube&) = default;
 
- TextureCube& operator = (const TextureCube&) = default;
+ UTextureCube& operator = (const UTextureCube&) = default;
 
  const std::string& GetName() const;
  size_t GetTypeId() const;
@@ -43,29 +43,29 @@ private:
  GLuint Texture;
 };
 
-class TextureCubeStorage
+class UTextureCubeStorage
 {
 public:
- TextureCubeStorage(std::shared_ptr<TextureBaseStorage> base_textures);
+ UTextureCubeStorage(std::shared_ptr<UTextureBaseStorage> base_textures);
 
- void SetBlockDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions);
+ void SetBlockDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions);
  void GenerateCubeTextures();
  void Load(const std::string &textures_path);
 
- const std::map<size_t, TextureCube>& GetTextures() const;
+ const std::map<size_t, UTextureCube>& GetTextures() const;
  size_t GetTypeIdByName(const std::string& name) const;
 
 private:
- TextureCube CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id,
+ UTextureCube CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id,
                                const std::vector<std::string>& texture_names, int stripFrameCount);
  GLuint LoadTexture(const std::string &image_path);
 
  bool LoadJson(const std::string& file_name, std::string &name, size_t &id, std::vector<std::string> &textures);
 
- std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
- std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;
+ std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
+ std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;
 
- std::map<size_t, TextureCube> Textures;
+ std::map<size_t, UTextureCube> Textures;
  std::map<std::string, size_t> TexturesNames;
 };
 

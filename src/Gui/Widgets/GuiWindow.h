@@ -6,12 +6,12 @@
 
 namespace cutum {
 
-class GuiWindow : public GuiPanel {
+class UGuiWindow : public UGuiPanel {
 public:
-    GuiWindow(const GuiTheme* theme, std::string title);
+    UGuiWindow(const GuiTheme* theme, std::string title);
 
     GuiRect GetClientArea() const;
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
 
 private:
     std::string title_;

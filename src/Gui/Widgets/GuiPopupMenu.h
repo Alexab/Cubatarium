@@ -16,19 +16,19 @@ struct GuiPopupMenuItem {
     bool enabled{true};
 };
 
-class GuiPopupMenu : public GuiWidget {
+class UGuiPopupMenu : public UGuiWidget {
 public:
-    explicit GuiPopupMenu(const GuiTheme* theme);
+    explicit UGuiPopupMenu(const GuiTheme* theme);
 
     void SetItems(std::vector<GuiPopupMenuItem> items);
     void OpenAt(int x, int y, int viewportW, int viewportH);
     void Close();
     bool IsOpen() const { return open_; }
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnMouseMove(const GuiMouseEvent& event) override;
-    GuiWidget* HitTest(int x, int y) override;
+    UGuiWidget* HitTest(int x, int y) override;
 
 private:
     int ItemIndexAt(int x, int y) const;

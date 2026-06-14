@@ -11,59 +11,59 @@
 
 namespace cutum {
 
-GuiTextInput::GuiTextInput(const GuiTheme* theme)
+UGuiTextInput::UGuiTextInput(const GuiTheme* theme)
     : theme_(theme)
 {
 }
 
-int GuiTextInput::GetPreferredHeight() const
+int UGuiTextInput::GetPreferredHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
 }
 
-int GuiTextInput::TextPadding() const
+int UGuiTextInput::TextPadding() const
 {
     return theme_ ? theme_->padding : 8;
 }
 
-int GuiTextInput::TextLeft() const
+int UGuiTextInput::TextLeft() const
 {
     return bounds_.x + TextPadding();
 }
 
-bool GuiTextInput::CanFocus() const
+bool UGuiTextInput::CanFocus() const
 {
     return enabled_ && visible_;
 }
 
-size_t GuiTextInput::SelMin() const
+size_t UGuiTextInput::SelMin() const
 {
     return std::min(selAnchor_, selEnd_);
 }
 
-size_t GuiTextInput::SelMax() const
+size_t UGuiTextInput::SelMax() const
 {
     return std::max(selAnchor_, selEnd_);
 }
 
-bool GuiTextInput::HasSelection() const
+bool UGuiTextInput::HasSelection() const
 {
     return SelMin() < SelMax();
 }
 
-void GuiTextInput::ClearSelection()
+void UGuiTextInput::ClearSelection()
 {
     selAnchor_ = selEnd_ = caretPos_;
 }
 
-void GuiTextInput::NotifyEdited()
+void UGuiTextInput::NotifyEdited()
 {
     if (!programmaticChange_ && onEdited_) {
         onEdited_();
     }
 }
 
-void GuiTextInput::SetText(const std::string& text)
+void UGuiTextInput::SetText(const std::string& text)
 {
     programmaticChange_ = true;
     buffer_ = SanitizeConsoleLine(text);
@@ -75,7 +75,7 @@ void GuiTextInput::SetText(const std::string& text)
     programmaticChange_ = false;
 }
 
-void GuiTextInput::DeleteSelection()
+void UGuiTextInput::DeleteSelection()
 {
     if (!HasSelection()) {
         return;
@@ -87,7 +87,7 @@ void GuiTextInput::DeleteSelection()
     ClearSelection();
 }
 
-void GuiTextInput::InsertText(const std::string& text)
+void UGuiTextInput::InsertText(const std::string& text)
 {
     if (text.empty()) {
         return;
@@ -100,7 +100,7 @@ void GuiTextInput::InsertText(const std::string& text)
     NotifyEdited();
 }
 
-size_t GuiTextInput::CaretIndexFromX(int mouseX, GuiRenderer& renderer) const
+size_t UGuiTextInput::CaretIndexFromX(int mouseX, UGuiRenderer& renderer) const
 {
     const int left = TextLeft();
     const int relX = mouseX - left;
@@ -120,7 +120,7 @@ size_t GuiTextInput::CaretIndexFromX(int mouseX, GuiRenderer& renderer) const
     return std::min(lo, buffer_.size());
 }
 
-std::string GuiTextInput::GetSelectedText() const
+std::string UGuiTextInput::GetSelectedText() const
 {
     if (!HasSelection()) {
         return {};
@@ -128,26 +128,26 @@ std::string GuiTextInput::GetSelectedText() const
     return buffer_.substr(SelMin(), SelMax() - SelMin());
 }
 
-void GuiTextInput::SelectAll()
+void UGuiTextInput::SelectAll()
 {
     selAnchor_ = 0;
     selEnd_ = buffer_.size();
     caretPos_ = buffer_.size();
 }
 
-void GuiTextInput::CopySelectionToClipboard()
+void UGuiTextInput::CopySelectionToClipboard()
 {
-    if (!clipboard_) {
+    if (!Clipboard) {
         return;
     }
     std::string text = GetSelectedText();
     if (text.empty()) {
         text = buffer_;
     }
-    clipboard_->SetString(text);
+    Clipboard->SetString(text);
 }
 
-void GuiTextInput::CutSelectionToClipboard()
+void UGuiTextInput::CutSelectionToClipboard()
 {
     CopySelectionToClipboard();
     if (HasSelection()) {
@@ -156,15 +156,15 @@ void GuiTextInput::CutSelectionToClipboard()
     }
 }
 
-void GuiTextInput::PasteFromClipboard()
+void UGuiTextInput::PasteFromClipboard()
 {
-    if (!clipboard_) {
+    if (!Clipboard) {
         return;
     }
-    InsertText(SanitizeConsolePaste(clipboard_->GetString(), buffer_.size(), kMaxLength));
+    InsertText(SanitizeConsolePaste(Clipboard->GetString(), buffer_.size(), kMaxLength));
 }
 
-bool GuiTextInput::HandleEditShortcut(const GuiKeyEvent& event)
+bool UGuiTextInput::HandleEditShortcut(const GuiKeyEvent& event)
 {
     if (!focused_ || !enabled_) {
         return false;
@@ -194,7 +194,7 @@ bool GuiTextInput::HandleEditShortcut(const GuiKeyEvent& event)
     return false;
 }
 
-void GuiTextInput::Draw(GuiRenderer& renderer)
+void UGuiTextInput::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_) {
         return;
@@ -222,7 +222,7 @@ void GuiTextInput::Draw(GuiRenderer& renderer)
     }
 }
 
-bool GuiTextInput::PointerDown(const GuiMouseEvent& event, GuiRenderer& renderer)
+bool UGuiTextInput::PointerDown(const GuiMouseEvent& event, UGuiRenderer& renderer)
 {
     if (!visible_ || event.button != GuiMouseButton::Left || !bounds_.Contains(event.x, event.y)) {
         return false;
@@ -234,7 +234,7 @@ bool GuiTextInput::PointerDown(const GuiMouseEvent& event, GuiRenderer& renderer
     return true;
 }
 
-bool GuiTextInput::PointerMove(const GuiMouseEvent& event, GuiRenderer& renderer)
+bool UGuiTextInput::PointerMove(const GuiMouseEvent& event, UGuiRenderer& renderer)
 {
     if (!draggingSelection_ || !focused_) {
         return false;
@@ -244,7 +244,7 @@ bool GuiTextInput::PointerMove(const GuiMouseEvent& event, GuiRenderer& renderer
     return true;
 }
 
-bool GuiTextInput::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiTextInput::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!visible_) {
         return false;
@@ -255,14 +255,14 @@ bool GuiTextInput::OnMouseDown(const GuiMouseEvent& event)
     return event.button == GuiMouseButton::Left && bounds_.Contains(event.x, event.y);
 }
 
-bool GuiTextInput::OnMouseUp(const GuiMouseEvent& event)
+bool UGuiTextInput::OnMouseUp(const GuiMouseEvent& event)
 {
     (void)event;
     draggingSelection_ = false;
     return focused_;
 }
 
-bool GuiTextInput::OnMouseMove(const GuiMouseEvent& event)
+bool UGuiTextInput::OnMouseMove(const GuiMouseEvent& event)
 {
     if (!draggingSelection_ || !focused_) {
         return false;
@@ -270,7 +270,7 @@ bool GuiTextInput::OnMouseMove(const GuiMouseEvent& event)
     return bounds_.Contains(event.x, event.y) || draggingSelection_;
 }
 
-bool GuiTextInput::OnChar(const GuiCharEvent& event)
+bool UGuiTextInput::OnChar(const GuiCharEvent& event)
 {
     if (!focused_ || !enabled_) {
         return false;
@@ -292,7 +292,7 @@ bool GuiTextInput::OnChar(const GuiCharEvent& event)
     return false;
 }
 
-bool GuiTextInput::OnKey(const GuiKeyEvent& event)
+bool UGuiTextInput::OnKey(const GuiKeyEvent& event)
 {
     if (!focused_ || !enabled_) {
         return false;

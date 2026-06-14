@@ -8,7 +8,7 @@
 
 namespace cutum {
 
-class CreaturePosePresenterRegistry {
+class UCreaturePosePresenterRegistry {
  public:
  void Register(std::unique_ptr<ICreaturePosePresenter> presenter);
  ICreaturePosePresenter* Get(LocomotionArchetype archetype) const;
@@ -18,7 +18,7 @@ class CreaturePosePresenterRegistry {
  std::array<std::unique_ptr<ICreaturePosePresenter>, 5> presenters_{};
 };
 
-void RegisterDefaultCreaturePosePresenters(CreaturePosePresenterRegistry& registry);
+void RegisterDefaultCreaturePosePresenters(UCreaturePosePresenterRegistry& registry);
 
 } // namespace cutum
 

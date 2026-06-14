@@ -10,18 +10,18 @@ typedef unsigned int GLuint;
 
 namespace cutum {
 
-class CreatureDefinitionStorage;
-class CreatureTextureStorage;
-class ShaderManager;
-class SkinDefinitionStorage;
+class UCreatureDefinitionStorage;
+class UCreatureTextureStorage;
+class UShaderManager;
+class USkinDefinitionStorage;
 
-class CreatureIconCache {
+class UCreatureIconCache {
 public:
-    CreatureIconCache(std::shared_ptr<CreatureDefinitionStorage> species,
-                      std::shared_ptr<SkinDefinitionStorage> skins,
-                      std::shared_ptr<CreatureTextureStorage> textures,
-                      std::shared_ptr<ShaderManager> shaderManager);
-    ~CreatureIconCache();
+    UCreatureIconCache(std::shared_ptr<UCreatureDefinitionStorage> species,
+                      std::shared_ptr<USkinDefinitionStorage> skins,
+                      std::shared_ptr<UCreatureTextureStorage> textures,
+                      std::shared_ptr<UShaderManager> shaderManager);
+    ~UCreatureIconCache();
 
     bool Initialize();
     void Shutdown();
@@ -37,11 +37,11 @@ private:
     GLuint GetOrCreateSpeciesIcon(const std::string& speciesId);
     GLuint GetOrCreateSkinIcon(const std::string& skinId);
 
-    std::shared_ptr<CreatureDefinitionStorage> species_;
-    std::shared_ptr<SkinDefinitionStorage> skins_;
-    std::shared_ptr<CreatureTextureStorage> textures_;
-    std::shared_ptr<ShaderManager> shaderManager_;
-    std::shared_ptr<class ShaderProgram> shader_;
+    std::shared_ptr<UCreatureDefinitionStorage> species_;
+    std::shared_ptr<USkinDefinitionStorage> skins_;
+    std::shared_ptr<UCreatureTextureStorage> textures_;
+    std::shared_ptr<UShaderManager> ShaderManager;
+    std::shared_ptr<class UShaderProgram> shader_;
 
     std::unordered_map<std::string, GLuint> speciesCache_;
     std::unordered_map<std::string, GLuint> skinCache_;

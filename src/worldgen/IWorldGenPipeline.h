@@ -22,7 +22,7 @@ protected:
  WorldGenContext ctx_;
 };
 
-class ProceduralWorldGenFactory {
+class UProceduralWorldGenFactory {
 public:
  static std::unique_ptr<IWorldGenPipeline> Create(WorldGenContext ctx);
 };

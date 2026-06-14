@@ -5,9 +5,9 @@
 
 namespace cutum {
 
-void RegisterDefaultCreatureActivityAgents(CreatureActivityDirector& director)
+void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector& director)
 {
- director.RegisterAgent(std::make_unique<WanderActivityAgent>());
+ director.RegisterAgent(std::make_unique<UWanderActivityAgent>());
 }
 
 } // namespace cutum

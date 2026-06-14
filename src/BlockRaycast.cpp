@@ -22,7 +22,7 @@ float NextBoundaryT(const glm::vec3& origin, const glm::vec3& direction, int blo
  return std::numeric_limits<float>::max();
 }
 
-bool IsRaycastTarget(const BlockWorld& world, const BlockRegistry& registry, glm::ivec3 pos)
+bool IsRaycastTarget(const UBlockWorld& world, const UBlockRegistry& registry, glm::ivec3 pos)
 {
  const BlockId id = world.GetBlock(pos);
  return registry.BlocksMovement(id);
@@ -31,8 +31,8 @@ bool IsRaycastTarget(const BlockWorld& world, const BlockRegistry& registry, glm
 } // namespace
 
 std::optional<BlockRayHit> RaycastSolidBlocks(
-    const BlockWorld& world,
-    const BlockRegistry& registry,
+    const UBlockWorld& world,
+    const UBlockRegistry& registry,
     glm::vec3 origin,
     glm::vec3 direction,
     float maxDistance)

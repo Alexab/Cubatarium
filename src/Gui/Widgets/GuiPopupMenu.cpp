@@ -6,24 +6,24 @@
 
 namespace cutum {
 
-GuiPopupMenu::GuiPopupMenu(const GuiTheme* theme)
+UGuiPopupMenu::UGuiPopupMenu(const GuiTheme* theme)
     : theme_(theme)
 {
     SetVisible(false);
     SetZOrder(1000);
 }
 
-void GuiPopupMenu::SetItems(std::vector<GuiPopupMenuItem> items)
+void UGuiPopupMenu::SetItems(std::vector<GuiPopupMenuItem> items)
 {
     items_ = std::move(items);
 }
 
-int GuiPopupMenu::ItemHeight() const
+int UGuiPopupMenu::ItemHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
 }
 
-int GuiPopupMenu::MenuWidth(int viewportW) const
+int UGuiPopupMenu::MenuWidth(int viewportW) const
 {
     if (!theme_) {
         return 120;
@@ -36,7 +36,7 @@ int GuiPopupMenu::MenuWidth(int viewportW) const
     return std::min(maxW, viewportW - 8);
 }
 
-void GuiPopupMenu::OpenAt(int x, int y, int viewportW, int viewportH)
+void UGuiPopupMenu::OpenAt(int x, int y, int viewportW, int viewportH)
 {
     if (items_.empty() || !theme_) {
         return;
@@ -57,14 +57,14 @@ void GuiPopupMenu::OpenAt(int x, int y, int viewportW, int viewportH)
     SetVisible(true);
 }
 
-void GuiPopupMenu::Close()
+void UGuiPopupMenu::Close()
 {
     open_ = false;
     SetVisible(false);
     hoverIndex_ = -1;
 }
 
-int GuiPopupMenu::ItemIndexAt(int x, int y) const
+int UGuiPopupMenu::ItemIndexAt(int x, int y) const
 {
     if (!open_ || !bounds_.Contains(x, y)) {
         return -1;
@@ -77,7 +77,7 @@ int GuiPopupMenu::ItemIndexAt(int x, int y) const
     return idx;
 }
 
-GuiWidget* GuiPopupMenu::HitTest(int x, int y)
+UGuiWidget* UGuiPopupMenu::HitTest(int x, int y)
 {
     if (!open_ || !visible_) {
         return nullptr;
@@ -88,7 +88,7 @@ GuiWidget* GuiPopupMenu::HitTest(int x, int y)
     return nullptr;
 }
 
-bool GuiPopupMenu::OnMouseMove(const GuiMouseEvent& event)
+bool UGuiPopupMenu::OnMouseMove(const GuiMouseEvent& event)
 {
     if (!open_) {
         return false;
@@ -97,7 +97,7 @@ bool GuiPopupMenu::OnMouseMove(const GuiMouseEvent& event)
     return bounds_.Contains(event.x, event.y);
 }
 
-bool GuiPopupMenu::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiPopupMenu::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!open_ || event.button != GuiMouseButton::Left) {
         return false;
@@ -118,7 +118,7 @@ bool GuiPopupMenu::OnMouseDown(const GuiMouseEvent& event)
     return true;
 }
 
-void GuiPopupMenu::Draw(GuiRenderer& renderer)
+void UGuiPopupMenu::Draw(UGuiRenderer& renderer)
 {
     if (!open_ || !visible_ || !theme_) {
         return;

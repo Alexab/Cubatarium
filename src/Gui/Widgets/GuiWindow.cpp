@@ -4,31 +4,31 @@
 
 namespace cutum {
 
-GuiWindow::GuiWindow(const GuiTheme* theme, std::string title)
-    : GuiPanel(theme)
+UGuiWindow::UGuiWindow(const GuiTheme* theme, std::string title)
+    : UGuiPanel(theme)
     , title_(std::move(title))
 {
 }
 
-GuiRect GuiWindow::GetClientArea() const
+GuiRect UGuiWindow::GetClientArea() const
 {
     return {bounds_.x, bounds_.y + kTitleBarHeight, bounds_.w,
             std::max(0, bounds_.h - kTitleBarHeight)};
 }
 
-void GuiWindow::Draw(GuiRenderer& renderer)
+void UGuiWindow::Draw(UGuiRenderer& renderer)
 {
     if (!visible_) {
         return;
     }
-    GuiPanel::Draw(renderer);
+    UGuiPanel::Draw(renderer);
     if (!theme_) {
         return;
     }
     GuiRect titleBar{bounds_.x, bounds_.y, bounds_.w, kTitleBarHeight};
     renderer.DrawFilledRect(titleBar, theme_->buttonPressed);
     renderer.DrawText(title_, titleBar.x + theme_->padding, titleBar.y + 4, theme_->textPrimary);
-    GuiWidget::Draw(renderer);
+    UGuiWidget::Draw(renderer);
 }
 
 } // namespace cutum

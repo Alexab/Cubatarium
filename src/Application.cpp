@@ -55,28 +55,28 @@ UWindowManager* GetWindowManager(GLFWwindow* window)
 class GlfwClipboard : public IGuiClipboard {
 public:
     explicit GlfwClipboard(GLFWwindow* window)
-        : window_(window)
+        : Window(window)
     {
     }
 
     std::string GetString() const override
     {
-        if (!window_) {
+        if (!Window) {
             return {};
         }
-        const char* text = glfwGetClipboardString(window_);
+        const char* text = glfwGetClipboardString(Window);
         return text ? std::string(text) : std::string{};
     }
 
     void SetString(const std::string& text) override
     {
-        if (window_) {
-            glfwSetClipboardString(window_, text.c_str());
+        if (Window) {
+            glfwSetClipboardString(Window, text.c_str());
         }
     }
 
 private:
-    GLFWwindow* window_;
+    GLFWwindow* Window;
 };
 
 bool KeyNameIs(const std::string& name, int glfwKey)
@@ -99,236 +99,236 @@ UApplication::UApplication(std::shared_ptr<UCore> core,
                          std::shared_ptr<UWorld> world,
                          std::shared_ptr<UGeometryEngine> geometry,
                          std::shared_ptr<UViewEngine> views,
-                         std::shared_ptr<UTextRenderer> textRenderer,
-                         std::shared_ptr<ShaderManager> shaderManager,
-                         std::shared_ptr<BlockDefinitionStorage> blockDefinitions)
-    : core_(std::move(core))
-    , world_(std::move(world))
-    , geometry_(std::move(geometry))
-    , views_(std::move(views))
-    , textRenderer_(std::move(textRenderer))
-    , shaderManager_(std::move(shaderManager))
-    , blockDefinitions_(std::move(blockDefinitions))
+                         std::shared_ptr<UTextRenderer> text_renderer,
+                         std::shared_ptr<UShaderManager> shader_manager,
+                         std::shared_ptr<UBlockDefinitionStorage> block_definitions)
+    : Core(std::move(core))
+    , World(std::move(world))
+    , Geometry(std::move(geometry))
+    , Views(std::move(views))
+    , TextRenderer(std::move(text_renderer))
+    , ShaderManager(std::move(shader_manager))
+    , BlockDefinitions(std::move(block_definitions))
 {
-    guiContext_ = std::make_unique<GuiContext>();
-    gameSession_ = std::make_unique<GameSession>(this, world_);
+    GuiContext = std::make_unique<UGuiContext>();
+    GameSession = std::make_unique<UGameSession>(this, World);
 }
 
 UApplication::~UApplication() = default;
 
 void UApplication::Startup(const std::string& configPath)
 {
-    if (core_) {
-        core_->LoadConfig(configPath);
-        uiSettings_ = core_->GetUiSettings();
+    if (Core) {
+        Core->LoadConfig(configPath);
+        Ui = Core->GetUiSettings();
     }
-    if (geometry_) {
-        geometry_->SetShowHud(uiSettings_.legacyHud);
+    if (Geometry) {
+        Geometry->SetShowHud(Ui.legacyHud);
     }
-    if (!guiContext_->Initialize(shaderManager_, textRenderer_)) {
-        std::cerr << "Application: GuiContext init failed" << std::endl;
+    if (!GuiContext->Initialize(ShaderManager, TextRenderer)) {
+        std::cerr << "Application: UGuiContext init failed" << std::endl;
         return;
     }
-    if (window_) {
+    if (Window) {
         int fbW = 0;
         int fbH = 0;
-        glfwGetFramebufferSize(window_, &fbW, &fbH);
-        if (fbW > 0 && fbH > 0 && textRenderer_) {
-            textRenderer_->SetWindowSize(fbW, fbH);
+        glfwGetFramebufferSize(Window, &fbW, &fbH);
+        if (fbW > 0 && fbH > 0 && TextRenderer) {
+            TextRenderer->SetWindowSize(fbW, fbH);
         }
     }
-    if (core_ && blockDefinitions_) {
+    if (Core && BlockDefinitions) {
         const std::string typesPath = "content/types.json";
-        gameSession_->InitializeCatalog(typesPath, *blockDefinitions_,
-                                      *core_->GetPrefabLibrary());
+        GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
+                                      *Core->GetPrefabLibrary());
     }
-    gameSession_->RegisterCommands();
+    GameSession->RegisterCommands();
 
-    if (core_ && blockDefinitions_ && shaderManager_) {
-        auto textures = core_->GetTextureCubeStorage();
-        auto prefabCache = std::make_unique<PrefabIconCache>(
-            core_->GetPrefabLibrary(), textures, blockDefinitions_, shaderManager_);
+    if (Core && BlockDefinitions && ShaderManager) {
+        auto textures = Core->GetTextureCubeStorage();
+        auto prefabCache = std::make_unique<UPrefabIconCache>(
+            Core->GetPrefabLibrary(), textures, BlockDefinitions, ShaderManager);
         if (prefabCache->Initialize()) {
-            std::unique_ptr<CreatureIconCache> creatureCache;
-            if (world_) {
-                creatureCache = std::make_unique<CreatureIconCache>(
-                    world_->GetCreatureDefinitionStorage(), world_->GetSkinDefinitionStorage(),
-                    core_->GetCreatureTextureStorage(), shaderManager_);
+            std::unique_ptr<UCreatureIconCache> creatureCache;
+            if (World) {
+                creatureCache = std::make_unique<UCreatureIconCache>(
+                    World->GetCreatureDefinitionStorage(), World->GetSkinDefinitionStorage(),
+                    Core->GetCreatureTextureStorage(), ShaderManager);
                 if (!creatureCache->Initialize()) {
                     creatureCache.reset();
                 }
             }
-            iconSource_ = std::make_unique<GuiIconSource>(textures, std::move(prefabCache),
+            IconSource = std::make_unique<UGuiIconSource>(textures, std::move(prefabCache),
                                                           std::move(creatureCache));
         }
     }
 
-    state_ = AppState::MainMenu;
+    State = AppState::MainMenu;
     ShowMainMenu();
 }
 
 void UApplication::ScheduleEnterGame()
 {
-    pendingEnterGame_ = true;
+    PendingEnterGame = true;
 }
 
 void UApplication::ScheduleQuit()
 {
-    pendingQuit_ = true;
+    PendingQuit = true;
 }
 
 void UApplication::RequestEnterGame()
 {
-    if (state_ == AppState::InGame) {
+    if (State == AppState::InGame) {
         return;
     }
 
-    if (!worldSessionActive_) {
-        state_ = AppState::Loading;
-        if (core_) {
-            core_->EnterGame();
+    if (!WorldSessionActive) {
+        State = AppState::Loading;
+        if (Core) {
+            Core->EnterGame();
         }
-        if (world_) {
-            if (auto user = world_->GetCurrentUser()) {
-                world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
+        if (World) {
+            if (auto user = World->GetCurrentUser()) {
+                World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
             }
         }
-        worldSessionActive_ = true;
+        WorldSessionActive = true;
         ShowInGameHud();
     } else {
-        guiContext_->SetScreen(nullptr);
+        GuiContext->SetScreen(nullptr);
     }
 
-    state_ = AppState::InGame;
+    State = AppState::InGame;
     EnterInGameInputState();
 }
 
 void UApplication::RequestQuit()
 {
-    if (gameSession_) {
-        gameSession_->SaveCommandHistory();
+    if (GameSession) {
+        GameSession->SaveCommandHistory();
     }
-    quitRequested_ = true;
-    if (window_) {
-        glfwSetWindowShouldClose(window_, GLFW_TRUE);
+    QuitRequested = true;
+    if (Window) {
+        glfwSetWindowShouldClose(Window, GLFW_TRUE);
     }
 }
 
 void UApplication::ShowMainMenu()
 {
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    auto menu = std::make_unique<MainMenuScreen>(gameSession_.get());
-    mainMenuScreen_ = menu.get();
-    menuSubview_ = MenuSubview::Main;
-    guiContext_->SetScreen(std::move(menu));
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    auto menu = std::make_unique<UMainMenuScreen>(GameSession.get());
+    MainMenuScreen = menu.get();
+    MenuSubview = MenuSubview::Main;
+    GuiContext->SetScreen(std::move(menu));
     SyncCursorVisibility();
 }
 
 void UApplication::SetHotbarCountSetting(int count)
 {
-    uiSettings_.hotbarCount = std::clamp(count, 1, 2);
-    if (core_) {
-        AppSettingsSnapshot app = core_->GetAppSettings();
-        app.ui = uiSettings_;
-        core_->ApplyAppSettings(app);
-        core_->SaveConfigFile();
+    Ui.hotbarCount = std::clamp(count, 1, 2);
+    if (Core) {
+        AppSettingsSnapshot app = Core->GetAppSettings();
+        app.Ui = Ui;
+        Core->ApplyAppSettings(app);
+        Core->SaveConfigFile();
     }
-    if (world_) {
-        if (auto user = world_->GetCurrentUser()) {
-            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
+    if (World) {
+        if (auto user = World->GetCurrentUser()) {
+            World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
         }
     }
 }
 
 void UApplication::ReturnToMainMenu()
 {
-    if (state_ == AppState::InGame) {
-        if (gameSession_) {
-            gameSession_->SaveCommandHistory();
+    if (State == AppState::InGame) {
+        if (GameSession) {
+            GameSession->SaveCommandHistory();
         }
-        if (auto* wm = GetWindowManager(window_)) {
+        if (auto* wm = GetWindowManager(Window)) {
             wm->ResetGameplayMouseCapture();
         }
-        guiContext_->ClearInputState();
+        GuiContext->ClearInputState();
         ReleasePlatformCursorClip();
     }
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    state_ = AppState::MainMenu;
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    State = AppState::MainMenu;
     ShowMainMenu();
 }
 
 void UApplication::ShowSettings()
 {
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    mainMenuScreen_ = nullptr;
-    menuSubview_ = MenuSubview::Settings;
-    guiContext_->SetScreen(std::make_unique<SettingsScreen>(this));
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    MainMenuScreen = nullptr;
+    MenuSubview = MenuSubview::Settings;
+    GuiContext->SetScreen(std::make_unique<USettingsScreen>(this));
     SyncCursorVisibility();
 }
 
 void UApplication::ShowNewWorld()
 {
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    mainMenuScreen_ = nullptr;
-    menuSubview_ = MenuSubview::NewWorld;
-    guiContext_->SetScreen(std::make_unique<NewWorldScreen>(this));
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    MainMenuScreen = nullptr;
+    MenuSubview = MenuSubview::NewWorld;
+    GuiContext->SetScreen(std::make_unique<UNewWorldScreen>(this));
     SyncCursorVisibility();
 }
 
 void UApplication::ShowLoadWorld()
 {
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    mainMenuScreen_ = nullptr;
-    menuSubview_ = MenuSubview::LoadWorld;
-    guiContext_->SetScreen(std::make_unique<LoadWorldScreen>(this));
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    MainMenuScreen = nullptr;
+    MenuSubview = MenuSubview::LoadWorld;
+    GuiContext->SetScreen(std::make_unique<ULoadWorldScreen>(this));
     SyncCursorVisibility();
 }
 
 void UApplication::SaveActiveWorldIfNeeded()
 {
-    if (!worldSessionActive_ || !core_) {
+    if (!WorldSessionActive || !Core) {
         return;
     }
-    core_->SaveWorld(world_->GetWorldName());
-    core_->SaveConfigFile();
+    Core->SaveWorld(World->GetWorldName());
+    Core->SaveConfigFile();
 }
 
 void UApplication::EnterGameAfterWorldChange()
 {
-    worldSessionActive_ = true;
-    if (core_ && world_) {
-        uiSettings_ = core_->GetUiSettings();
-        if (auto user = world_->GetCurrentUser()) {
-            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
+    WorldSessionActive = true;
+    if (Core && World) {
+        Ui = Core->GetUiSettings();
+        if (auto user = World->GetCurrentUser()) {
+            World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
         }
-        if (geometry_) {
-            geometry_->SetShowHud(uiSettings_.legacyHud);
+        if (Geometry) {
+            Geometry->SetShowHud(Ui.legacyHud);
         }
-        world_->FinalizePlayerAfterWorldLoad();
+        World->FinalizePlayerAfterWorldLoad();
     }
     ShowInGameHud();
-    state_ = AppState::InGame;
+    State = AppState::InGame;
     EnterInGameInputState();
 }
 
 void UApplication::ScheduleDeferredMenuAction(std::function<void()> action)
 {
-    pendingMenuAction_ = std::move(action);
+    PendingMenuAction = std::move(action);
 }
 
 void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
@@ -342,30 +342,30 @@ void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
 
 AppSettingsSnapshot UApplication::LoadAppSettingsSnapshot() const
 {
-    return core_ ? core_->GetAppSettings() : AppSettingsSnapshot{};
+    return Core ? Core->GetAppSettings() : AppSettingsSnapshot{};
 }
 
 ProceduralSettings UApplication::LoadProceduralTemplate() const
 {
-    return core_ ? core_->GetProceduralTemplate() : ProceduralSettings{};
+    return Core ? Core->GetProceduralTemplate() : ProceduralSettings{};
 }
 
 void UApplication::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
                                              const ProceduralSettings& procedural)
 {
-    if (!core_) {
+    if (!Core) {
         return;
     }
-    core_->ApplyAppSettings(app);
-    core_->SetProceduralTemplate(procedural);
-    core_->SaveConfigFile();
-    uiSettings_ = core_->GetUiSettings();
-    if (geometry_) {
-        geometry_->SetShowHud(uiSettings_.legacyHud);
+    Core->ApplyAppSettings(app);
+    Core->SetProceduralTemplate(procedural);
+    Core->SaveConfigFile();
+    Ui = Core->GetUiSettings();
+    if (Geometry) {
+        Geometry->SetShowHud(Ui.legacyHud);
     }
-    if (world_) {
-        if (auto user = world_->GetCurrentUser()) {
-            world_->EnsurePlayerHotbarCount(user, static_cast<size_t>(uiSettings_.hotbarCount));
+    if (World) {
+        if (auto user = World->GetCurrentUser()) {
+            World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
         }
     }
     SyncCursorVisibility();
@@ -373,75 +373,75 @@ void UApplication::SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
 
 void UApplication::CreateNewWorldWithSettings(const ProceduralSettings& settings)
 {
-    if (!core_) {
+    if (!Core) {
         return;
     }
-    core_->SetProceduralTemplate(settings);
-    core_->CreateNewWorldFromTemplate();
-    core_->SaveConfigFile();
+    Core->SetProceduralTemplate(settings);
+    Core->CreateNewWorldFromTemplate();
+    Core->SaveConfigFile();
     EnterGameAfterWorldChange();
 }
 
 void UApplication::LoadSelectedWorld(const std::string& worldName)
 {
-    if (!core_) {
+    if (!Core) {
         return;
     }
-    core_->LoadWorldByName(worldName);
-    core_->SaveConfigFile();
+    Core->LoadWorldByName(worldName);
+    Core->SaveConfigFile();
     EnterGameAfterWorldChange();
 }
 
 void UApplication::RefreshWorldList()
 {
-    if (core_) {
-        core_->RefreshWorldList();
+    if (Core) {
+        Core->RefreshWorldList();
     }
 }
 
 const std::vector<std::string>& UApplication::GetWorldNames() const
 {
     static const std::vector<std::string> kEmpty;
-    return core_ ? core_->GetWorldList() : kEmpty;
+    return Core ? Core->GetWorldList() : kEmpty;
 }
 
 void UApplication::ShowInGameHud()
 {
-    if (window_ && !clipboard_) {
-        clipboard_ = std::make_unique<GlfwClipboard>(window_);
-        guiContext_->SetClipboard(clipboard_.get());
+    if (Window && !Clipboard) {
+        Clipboard = std::make_unique<GlfwClipboard>(Window);
+        GuiContext->SetClipboard(Clipboard.get());
     }
 
-    gameSession_->InitCommandHistory(GetExecutableDirectory() / "console_history.txt");
+    GameSession->InitCommandHistory(GetExecutableDirectory() / "console_history.txt");
 
-    IGuiIconSource* icons = iconSource_.get();
-    auto hud = std::make_unique<InGameHudScreen>(gameSession_.get(), &guiContext_->GetTheme(), icons);
-    hud->Build(*guiContext_);
-    hudScreen_ = std::move(hud);
+    IGuiIconSource* icons = IconSource.get();
+    auto hud = std::make_unique<UInGameHudScreen>(GameSession.get(), &GuiContext->GetTheme(), icons);
+    hud->Build(*GuiContext);
+    HudScreen = std::move(hud);
 
-    overlayPopup_ = std::make_unique<GuiPopupMenu>(&guiContext_->GetTheme());
+    OverlayPopup = std::make_unique<UGuiPopupMenu>(&GuiContext->GetTheme());
 
-    consoleScreen_ = std::make_unique<ConsoleScreen>(gameSession_.get());
-    consoleScreen_->Build(*guiContext_);
-    consoleScreen_->AttachPopup(overlayPopup_.get());
-    consoleScreen_->SetVisible(false);
+    ConsoleScreen = std::make_unique<UConsoleScreen>(GameSession.get());
+    ConsoleScreen->Build(*GuiContext);
+    ConsoleScreen->AttachPopup(OverlayPopup.get());
+    ConsoleScreen->SetVisible(false);
 
-    paletteScreen_ = std::make_unique<CreativePaletteScreen>(
-        &gameSession_->GetContentCatalog(), gameSession_.get(), icons);
-    paletteScreen_->Build(*guiContext_);
-    paletteScreen_->SetVisible(false);
+    PaletteScreen = std::make_unique<UCreativePaletteScreen>(
+        &GameSession->GetContentCatalog(), GameSession.get(), icons);
+    PaletteScreen->Build(*GuiContext);
+    PaletteScreen->SetVisible(false);
 
-    guiContext_->SetScreen(nullptr);
+    GuiContext->SetScreen(nullptr);
 }
 
 bool UApplication::UsesUiPointer() const
 {
-    return state_ == AppState::MainMenu || freeCursor_ || consoleOpen_ || paletteOpen_;
+    return State == AppState::MainMenu || FreeCursor || ConsoleOpen || PaletteOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
-    return state_ == AppState::InGame && (freeCursor_ || consoleOpen_ || paletteOpen_);
+    return State == AppState::InGame && (FreeCursor || ConsoleOpen || PaletteOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -449,8 +449,8 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
     if (UsesUiPointer()) {
         return AppCursorPolicy::Free;
     }
-    if (state_ == AppState::InGame) {
-        if (uiSettings_.controlScheme == ControlScheme::Classic) {
+    if (State == AppState::InGame) {
+        if (Ui.controlScheme == ControlScheme::Classic) {
             return AppCursorPolicy::CapturedHidden;
         }
         return AppCursorPolicy::ConfinedVisible;
@@ -460,25 +460,25 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
 
 void UApplication::SyncCursorVisibility()
 {
-    if (!window_) {
+    if (!Window) {
         return;
     }
-    ApplyCursorPolicy(window_, GetCursorPolicy());
+    ApplyCursorPolicy(Window, GetCursorPolicy());
 }
 
 void UApplication::ClearGameplayKeyboard()
 {
-    if (!world_) {
+    if (!World) {
         return;
     }
-    if (auto camera = world_->GetCurrentUserCamera()) {
+    if (auto camera = World->GetCurrentUserCamera()) {
         camera->ResetAllKeyStatus();
     }
 }
 
 void UApplication::HandleWindowFocus(bool focused)
 {
-    if (!window_) {
+    if (!Window) {
         return;
     }
     if (!focused) {
@@ -490,20 +490,20 @@ void UApplication::HandleWindowFocus(bool focused)
 
 void UApplication::EnterInGameInputState()
 {
-    consoleOpen_ = false;
-    suppressConsoleToggleChar_ = false;
-    paletteOpen_ = false;
-    freeCursor_ = false;
-    guiContext_->ClearInputState();
+    ConsoleOpen = false;
+    SuppressConsoleToggleChar = false;
+    PaletteOpen = false;
+    FreeCursor = false;
+    GuiContext->ClearInputState();
     SyncCursorVisibility();
-    if (auto* wm = GetWindowManager(window_)) {
+    if (auto* wm = GetWindowManager(Window)) {
         wm->ResetGameplayMouseCapture();
     }
-    if (world_ && window_) {
+    if (World && Window) {
         double x = 0.0;
         double y = 0.0;
-        glfwGetCursorPos(window_, &x, &y);
-        if (auto camera = world_->GetCurrentUserCamera()) {
+        glfwGetCursorPos(Window, &x, &y);
+        if (auto camera = World->GetCurrentUserCamera()) {
             camera->ResetMouseMove(x, y);
         }
     }
@@ -511,13 +511,13 @@ void UApplication::EnterInGameInputState()
 
 void UApplication::RecaptureMouseForLook()
 {
-    freeCursor_ = false;
+    FreeCursor = false;
     EnterInGameInputState();
 }
 
 bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent& event, bool pressed)
 {
-    auto routeRoot = [&](GuiWidget* root, bool requireHitTest) -> bool {
+    auto routeRoot = [&](UGuiWidget* root, bool requireHitTest) -> bool {
         if (!root) {
             return false;
         }
@@ -528,35 +528,35 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent& event, bool presse
     };
 
     if (pressed) {
-        overlayPointerCapture_ = OverlayPointerCapture::None;
-        if (paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), true)) {
-            overlayPointerCapture_ = OverlayPointerCapture::Palette;
+        ActiveOverlayCapture = OverlayPointerCapture::None;
+        if (PaletteOpen && routeRoot(PaletteScreen->GetRoot(), true)) {
+            ActiveOverlayCapture = OverlayPointerCapture::Palette;
             return true;
         }
-        if (consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), true)) {
-            overlayPointerCapture_ = OverlayPointerCapture::Console;
+        if (ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), true)) {
+            ActiveOverlayCapture = OverlayPointerCapture::Console;
             return true;
         }
-        if (routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, true)) {
-            overlayPointerCapture_ = OverlayPointerCapture::Hud;
+        if (routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, true)) {
+            ActiveOverlayCapture = OverlayPointerCapture::Hud;
             return true;
         }
         return false;
     }
 
-    const OverlayPointerCapture capture = overlayPointerCapture_;
-    overlayPointerCapture_ = OverlayPointerCapture::None;
+    const OverlayPointerCapture capture = ActiveOverlayCapture;
+    ActiveOverlayCapture = OverlayPointerCapture::None;
     if (capture == OverlayPointerCapture::None) {
         return false;
     }
 
     switch (capture) {
     case OverlayPointerCapture::Palette:
-        return paletteOpen_ && routeRoot(paletteScreen_->GetRoot(), false);
+        return PaletteOpen && routeRoot(PaletteScreen->GetRoot(), false);
     case OverlayPointerCapture::Console:
-        return consoleOpen_ && routeRoot(consoleScreen_->GetRoot(), false);
+        return ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), false);
     case OverlayPointerCapture::Hud:
-        return routeRoot(hudScreen_ ? hudScreen_->GetRoot() : nullptr, false);
+        return routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, false);
     default:
         return false;
     }
@@ -565,10 +565,10 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent& event, bool presse
 bool UApplication::ResolveSlotAt(int x, int y, SlotAddress& out)
 {
     // Хотбар под палитрой: при drop сначала проверяем HUD, иначе палитра «съедает» цель.
-    if (hudScreen_ && hudScreen_->PickSlot(x, y, out)) {
+    if (HudScreen && HudScreen->PickSlot(x, y, out)) {
         return true;
     }
-    if (paletteOpen_ && paletteScreen_ && paletteScreen_->PickSlot(x, y, out)) {
+    if (PaletteOpen && PaletteScreen && PaletteScreen->PickSlot(x, y, out)) {
         return true;
     }
     return false;
@@ -576,34 +576,34 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress& out)
 
 void UApplication::DrawDragGhost(int width, int height)
 {
-    if (!gameSession_ || !gameSession_->IsDragging() || !iconSource_ || !guiContext_) {
+    if (!GameSession || !GameSession->IsDragging() || !IconSource || !GuiContext) {
         return;
     }
-    const DragState& drag = gameSession_->GetDrag();
+    const DragState& drag = GameSession->GetDrag();
     if (drag.entry.empty) {
         return;
     }
     GLuint tex = 0;
     switch (drag.entry.kind) {
     case InventoryEntryKind::Block:
-        tex = iconSource_->GetBlockIconTexture(drag.entry.id);
+        tex = IconSource->GetBlockIconTexture(drag.entry.id);
         break;
-    case InventoryEntryKind::Object:
-        tex = iconSource_->GetPrefabIconTexture(drag.entry.id);
+    case InventoryEntryKind::UObject:
+        tex = IconSource->GetPrefabIconTexture(drag.entry.id);
         break;
-    case InventoryEntryKind::Creature:
-        tex = iconSource_->GetCreatureIconTexture(drag.entry.id);
+    case InventoryEntryKind::UCreature:
+        tex = IconSource->GetCreatureIconTexture(drag.entry.id);
         break;
     case InventoryEntryKind::Skin:
-        tex = iconSource_->GetSkinIconTexture(drag.entry.id);
+        tex = IconSource->GetSkinIconTexture(drag.entry.id);
         break;
     }
     if (tex == 0) {
         return;
     }
-    const int size = guiContext_->GetTheme().hotbarSlotSize;
-    const GuiRect rect{dragCursorX_ - size / 2, dragCursorY_ - size / 2, size, size};
-    GuiRenderer& renderer = guiContext_->GetRenderer();
+    const int size = GuiContext->GetTheme().hotbarSlotSize;
+    const GuiRect rect{DragCursorX - size / 2, DragCursorY - size / 2, size, size};
+    UGuiRenderer& renderer = GuiContext->GetRenderer();
     renderer.BeginFrame(width, height);
     renderer.DrawTexturedRect(rect, tex);
     renderer.EndFrame();
@@ -611,37 +611,37 @@ void UApplication::DrawDragGhost(int width, int height)
 
 void UApplication::Update(double dt)
 {
-    if (pendingEnterGame_) {
-        pendingEnterGame_ = false;
+    if (PendingEnterGame) {
+        PendingEnterGame = false;
         RequestEnterGame();
     }
-    if (pendingQuit_) {
-        pendingQuit_ = false;
+    if (PendingQuit) {
+        PendingQuit = false;
         RequestQuit();
     }
-    if (pendingMenuAction_) {
-        auto action = std::move(pendingMenuAction_);
-        pendingMenuAction_ = nullptr;
+    if (PendingMenuAction) {
+        auto action = std::move(PendingMenuAction);
+        PendingMenuAction = nullptr;
         action();
     }
 
-    if (state_ == AppState::MainMenu) {
-        guiContext_->Update(dt);
-    } else if (state_ == AppState::InGame) {
-        if (hudScreen_ && window_) {
+    if (State == AppState::MainMenu) {
+        GuiContext->Update(dt);
+    } else if (State == AppState::InGame) {
+        if (HudScreen && Window) {
             int fbW = 0;
             int fbH = 0;
-            glfwGetFramebufferSize(window_, &fbW, &fbH);
+            glfwGetFramebufferSize(Window, &fbW, &fbH);
             if (fbW > 0 && fbH > 0) {
-                hudScreen_->OnViewportChanged(fbW, fbH);
+                HudScreen->OnViewportChanged(fbW, fbH);
             }
-            hudScreen_->Update(dt);
+            HudScreen->Update(dt);
         }
-        if (consoleScreen_) {
-            consoleScreen_->Update(dt);
+        if (ConsoleScreen) {
+            ConsoleScreen->Update(dt);
         }
-        if (paletteScreen_) {
-            paletteScreen_->Update(dt);
+        if (PaletteScreen) {
+            PaletteScreen->Update(dt);
         }
     }
     SyncCursorVisibility();
@@ -654,82 +654,82 @@ void UApplication::ProcessInput()
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
-    if (state_ == AppState::MainMenu) {
+    if (State == AppState::MainMenu) {
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        guiContext_->Render(width, height);
+        GuiContext->Render(width, height);
         return;
     }
 
-    if (state_ == AppState::InGame && geometry_ && world_) {
+    if (State == AppState::InGame && Geometry && World) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, width, height);
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
         glDepthMask(GL_TRUE);
-        if (auto camera = world_->GetCurrentUserCamera()) {
+        if (auto camera = World->GetCurrentUserCamera()) {
             const float aspect =
                 static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
             camera->SetAspectRatio(aspect);
         }
-        geometry_->PrepareFrameRendering();
-        const glm::vec4 clearColor = geometry_->GetSkyColor();
+        Geometry->PrepareFrameRendering();
+        const glm::vec4 clearColor = Geometry->GetSkyColor();
         glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        geometry_->Paint(width, height, viewDuration);
+        Geometry->Paint(width, height, viewDuration);
     }
 
-    if (state_ == AppState::InGame && iconSource_) {
-        iconSource_->WarmupPrefabIcons(2);
-        iconSource_->WarmupCreatureIcons(2);
+    if (State == AppState::InGame && IconSource) {
+        IconSource->WarmupPrefabIcons(2);
+        IconSource->WarmupCreatureIcons(2);
     }
 
-    if (hudScreen_ && hudScreen_->GetRoot()) {
-        hudScreen_->SyncSlotIcons();
-        hudScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*hudScreen_->GetRoot(), width, height, false);
+    if (HudScreen && HudScreen->GetRoot()) {
+        HudScreen->SyncSlotIcons();
+        HudScreen->OnViewportChanged(width, height);
+        GuiContext->RenderOverlay(*HudScreen->GetRoot(), width, height, false);
     }
-    if (consoleOpen_ && consoleScreen_ && consoleScreen_->GetRoot()) {
-        consoleScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*consoleScreen_->GetRoot(), width, height, false);
+    if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot()) {
+        ConsoleScreen->OnViewportChanged(width, height);
+        GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height, false);
     }
-    if (overlayPopup_ && overlayPopup_->IsOpen()) {
-        auto& renderer = guiContext_->GetRenderer();
+    if (OverlayPopup && OverlayPopup->IsOpen()) {
+        auto& renderer = GuiContext->GetRenderer();
         renderer.BeginFrame(width, height);
-        overlayPopup_->Draw(renderer);
+        OverlayPopup->Draw(renderer);
         renderer.EndFrame();
     }
-    if (paletteOpen_ && paletteScreen_ && paletteScreen_->GetRoot()) {
-        paletteScreen_->OnViewportChanged(width, height);
-        guiContext_->RenderOverlay(*paletteScreen_->GetRoot(), width, height, false);
+    if (PaletteOpen && PaletteScreen && PaletteScreen->GetRoot()) {
+        PaletteScreen->OnViewportChanged(width, height);
+        GuiContext->RenderOverlay(*PaletteScreen->GetRoot(), width, height, false);
     }
-    if (state_ == AppState::InGame) {
+    if (State == AppState::InGame) {
         DrawDragGhost(width, height);
     }
 }
 
 bool UApplication::WantsCaptureMouse() const
 {
-    if (state_ == AppState::MainMenu) {
+    if (State == AppState::MainMenu) {
         return true;
     }
     if (BlocksGameMouseLook()) {
         return true;
     }
-    return guiContext_->WantsCaptureMouse();
+    return GuiContext->WantsCaptureMouse();
 }
 
 bool UApplication::WantsCaptureKeyboard() const
 {
-    if (state_ == AppState::MainMenu) {
+    if (State == AppState::MainMenu) {
         return true;
     }
-    return consoleOpen_ || paletteOpen_ || guiContext_->WantsCaptureKeyboard();
+    return ConsoleOpen || PaletteOpen || GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
-    return state_ == AppState::InGame && !paletteOpen_ && !consoleOpen_;
+    return State == AppState::InGame && !PaletteOpen && !ConsoleOpen;
 }
 
 bool UApplication::RouteKey(int key, int action, int mods)
@@ -740,44 +740,44 @@ bool UApplication::RouteKey(int key, int action, int mods)
                  : (action == GLFW_PRESS ? GuiKeyAction::Press : GuiKeyAction::Release);
   event.mods = mods;
 
-    if (action == GLFW_PRESS && state_ == AppState::InGame) {
+    if (action == GLFW_PRESS && State == AppState::InGame) {
     if (key == GLFW_KEY_ESCAPE) {
-      if (consoleOpen_ && consoleScreen_ && consoleScreen_->IsPopupOpen()) {
-        if (overlayPopup_) {
-          overlayPopup_->Close();
+      if (ConsoleOpen && ConsoleScreen && ConsoleScreen->IsPopupOpen()) {
+        if (OverlayPopup) {
+          OverlayPopup->Close();
         }
         return true;
       }
-      if (consoleOpen_) {
-        consoleOpen_ = false;
-        suppressConsoleToggleChar_ = false;
-        if (consoleScreen_) {
-          consoleScreen_->SetVisible(false);
+      if (ConsoleOpen) {
+        ConsoleOpen = false;
+        SuppressConsoleToggleChar = false;
+        if (ConsoleScreen) {
+          ConsoleScreen->SetVisible(false);
         }
         ClearGameplayKeyboard();
         return true;
       }
-      if (paletteOpen_) {
-        paletteOpen_ = false;
-        if (paletteScreen_) {
-          paletteScreen_->SetVisible(false);
+      if (PaletteOpen) {
+        PaletteOpen = false;
+        if (PaletteScreen) {
+          PaletteScreen->SetVisible(false);
         }
         return true;
       }
       ReturnToMainMenu();
       return true;
     }
-    if (!consoleOpen_ && key == GLFW_KEY_LEFT_ALT) {
-      freeCursor_ = !freeCursor_;
-      if (freeCursor_) {
-        if (auto* wm = GetWindowManager(window_)) {
+    if (!ConsoleOpen && key == GLFW_KEY_LEFT_ALT) {
+      FreeCursor = !FreeCursor;
+      if (FreeCursor) {
+        if (auto* wm = GetWindowManager(Window)) {
           wm->ResetGameplayMouseCapture();
         }
-        if (world_ && window_) {
+        if (World && Window) {
           double x = 0.0;
           double y = 0.0;
-          glfwGetCursorPos(window_, &x, &y);
-          if (auto camera = world_->GetCurrentUserCamera()) {
+          glfwGetCursorPos(Window, &x, &y);
+          if (auto camera = World->GetCurrentUserCamera()) {
             camera->ResetMouseMove(x, y);
           }
         }
@@ -787,89 +787,89 @@ bool UApplication::RouteKey(int key, int action, int mods)
       SyncCursorVisibility();
       return true;
     }
-    if (KeyNameIs(uiSettings_.consoleKey, key)) {
-      consoleOpen_ = !consoleOpen_;
-      if (consoleScreen_) {
-        consoleScreen_->SetVisible(consoleOpen_);
+    if (KeyNameIs(Ui.consoleKey, key)) {
+      ConsoleOpen = !ConsoleOpen;
+      if (ConsoleScreen) {
+        ConsoleScreen->SetVisible(ConsoleOpen);
       }
-      if (consoleOpen_) {
+      if (ConsoleOpen) {
         ClearGameplayKeyboard();
-        suppressConsoleToggleChar_ = true;
+        SuppressConsoleToggleChar = true;
       } else {
-        suppressConsoleToggleChar_ = false;
+        SuppressConsoleToggleChar = false;
       }
       SyncCursorVisibility();
       return true;
     }
-    if (!consoleOpen_ && key == GLFW_KEY_F5 && world_) {
-      if (auto cam = world_->GetCurrentUserCamera()) {
+    if (!ConsoleOpen && key == GLFW_KEY_F5 && World) {
+      if (auto cam = World->GetCurrentUserCamera()) {
         cam->CyclePerspective();
-        if (geometry_) {
-          geometry_->ShowTransientMessage(CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
+        if (Geometry) {
+          Geometry->ShowTransientMessage(CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
         }
       }
       return true;
     }
-    if (!consoleOpen_ && KeyNameIs(uiSettings_.paletteKey, key)) {
-      paletteOpen_ = !paletteOpen_;
-      if (paletteScreen_) {
-        paletteScreen_->SetVisible(paletteOpen_);
+    if (!ConsoleOpen && KeyNameIs(Ui.paletteKey, key)) {
+      PaletteOpen = !PaletteOpen;
+      if (PaletteScreen) {
+        PaletteScreen->SetVisible(PaletteOpen);
       }
       SyncCursorVisibility();
       return true;
     }
-    if (!consoleOpen_ && KeyNameIs(uiSettings_.inventoryKey, key)) {
-      paletteOpen_ = !paletteOpen_;
-      if (paletteScreen_) {
-        paletteScreen_->SetVisible(paletteOpen_);
+    if (!ConsoleOpen && KeyNameIs(Ui.inventoryKey, key)) {
+      PaletteOpen = !PaletteOpen;
+      if (PaletteScreen) {
+        PaletteScreen->SetVisible(PaletteOpen);
       }
       SyncCursorVisibility();
       return true;
     }
-    if (consoleOpen_ && key == GLFW_KEY_ENTER && consoleScreen_) {
-      consoleScreen_->SubmitCommand();
+    if (ConsoleOpen && key == GLFW_KEY_ENTER && ConsoleScreen) {
+      ConsoleScreen->SubmitCommand();
       return true;
     }
-    if (!consoleOpen_) {
+    if (!ConsoleOpen) {
       const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
-      if (hotbarSlot >= 0 && gameSession_) {
+      if (hotbarSlot >= 0 && GameSession) {
         if ((mods & GLFW_MOD_ALT) != 0) {
           return true;
         }
-        gameSession_->OnPrimaryHotbarKey(hotbarSlot);
+        GameSession->OnPrimaryHotbarKey(hotbarSlot);
         return true;
       }
     }
   }
 
-  if (action == GLFW_PRESS && state_ == AppState::MainMenu && key == GLFW_KEY_ESCAPE) {
-    if (mainMenuScreen_ && mainMenuScreen_->IsQuitConfirmationVisible()) {
-      mainMenuScreen_->ShowQuitConfirmation(false);
+  if (action == GLFW_PRESS && State == AppState::MainMenu && key == GLFW_KEY_ESCAPE) {
+    if (MainMenuScreen && MainMenuScreen->IsQuitConfirmationVisible()) {
+      MainMenuScreen->ShowQuitConfirmation(false);
       return true;
     }
-    if (menuSubview_ != MenuSubview::Main) {
+    if (MenuSubview != MenuSubview::Main) {
       ShowMainMenu();
       return true;
     }
-    if (HasWorldSession() && gameSession_) {
-      gameSession_->ResumeGame();
+    if (HasWorldSession() && GameSession) {
+      GameSession->ResumeGame();
       return true;
     }
-    if (mainMenuScreen_) {
-      mainMenuScreen_->ShowQuitConfirmation(true);
+    if (MainMenuScreen) {
+      MainMenuScreen->ShowQuitConfirmation(true);
       return true;
     }
   }
 
-  if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
-    if (KeyNameIs(uiSettings_.consoleKey, key)) {
+  if (State == AppState::InGame && ConsoleOpen && ConsoleScreen) {
+    if (KeyNameIs(Ui.consoleKey, key)) {
       return true;
     }
-    consoleScreen_->RouteKey(event);
+    ConsoleScreen->RouteKey(event);
     return true;
   }
 
-  if (guiContext_->RouteKey(event)) {
+  if (GuiContext->RouteKey(event)) {
     return true;
   }
   return false;
@@ -877,16 +877,16 @@ bool UApplication::RouteKey(int key, int action, int mods)
 
 bool UApplication::RouteChar(unsigned int codepoint)
 {
-    if (state_ == AppState::InGame && consoleOpen_ && consoleScreen_) {
-        if (suppressConsoleToggleChar_) {
-            suppressConsoleToggleChar_ = false;
+    if (State == AppState::InGame && ConsoleOpen && ConsoleScreen) {
+        if (SuppressConsoleToggleChar) {
+            SuppressConsoleToggleChar = false;
             return true;
         }
-        consoleScreen_->RouteChar(GuiCharEvent{codepoint});
+        ConsoleScreen->RouteChar(GuiCharEvent{codepoint});
         return true;
     }
-    suppressConsoleToggleChar_ = false;
-    return guiContext_->RouteChar(GuiCharEvent{codepoint});
+    SuppressConsoleToggleChar = false;
+    return GuiContext->RouteChar(GuiCharEvent{codepoint});
 }
 
 bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
@@ -899,28 +899,28 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
                                                        : GuiMouseButton::Left;
     event.pressed = pressed;
 
-    if (state_ == AppState::InGame) {
-        dragCursorX_ = x;
-        dragCursorY_ = y;
-        if (event.button == GuiMouseButton::Left && !pressed && gameSession_ &&
-            gameSession_->IsDragging()) {
+    if (State == AppState::InGame) {
+        DragCursorX = x;
+        DragCursorY = y;
+        if (event.button == GuiMouseButton::Left && !pressed && GameSession &&
+            GameSession->IsDragging()) {
             SlotAddress target;
             const bool hasTarget = ResolveSlotAt(x, y, target);
             if (hasTarget) {
-                if (!gameSession_->DropOnSlot(target)) {
-                    gameSession_->CancelDrag();
+                if (!GameSession->DropOnSlot(target)) {
+                    GameSession->CancelDrag();
                 }
             } else {
-                gameSession_->CancelDrag();
+                GameSession->CancelDrag();
             }
-            if (overlayPointerCapture_ != OverlayPointerCapture::None) {
+            if (ActiveOverlayCapture != OverlayPointerCapture::None) {
                 TryRouteInGameOverlay(event, false);
             }
             return true;
         }
-        if ((overlayPopup_ && overlayPopup_->IsOpen()) || consoleOpen_) {
-            if (consoleScreen_ &&
-                consoleScreen_->RouteMouseButton(event, guiContext_->GetRenderer())) {
+        if ((OverlayPopup && OverlayPopup->IsOpen()) || ConsoleOpen) {
+            if (ConsoleScreen &&
+                ConsoleScreen->RouteMouseButton(event, GuiContext->GetRenderer())) {
                 return true;
             }
         }
@@ -928,7 +928,7 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
             if (TryRouteInGameOverlay(event, pressed)) {
                 return true;
             }
-            if (freeCursor_ && pressed) {
+            if (FreeCursor && pressed) {
                 RecaptureMouseForLook();
                 return true;
             }
@@ -936,7 +936,7 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
         return false;
     }
 
-    return pressed ? guiContext_->RouteMouseDown(event) : guiContext_->RouteMouseUp(event);
+    return pressed ? GuiContext->RouteMouseDown(event) : GuiContext->RouteMouseUp(event);
 }
 
 bool UApplication::RouteMouseMove(int x, int y)
@@ -944,56 +944,56 @@ bool UApplication::RouteMouseMove(int x, int y)
     GuiMouseEvent event;
     event.x = x;
     event.y = y;
-    if (state_ == AppState::InGame && hudScreen_) {
-        hudScreen_->SetPointerPosition(x, y);
+    if (State == AppState::InGame && HudScreen) {
+        HudScreen->SetPointerPosition(x, y);
     }
-    if (state_ == AppState::InGame) {
-        dragCursorX_ = x;
-        dragCursorY_ = y;
-        if (gameSession_ && gameSession_->IsDragging()) {
+    if (State == AppState::InGame) {
+        DragCursorX = x;
+        DragCursorY = y;
+        if (GameSession && GameSession->IsDragging()) {
             return true;
         }
-        if (overlayPopup_ && overlayPopup_->IsOpen()) {
-            if (overlayPopup_->OnMouseMove(event)) {
+        if (OverlayPopup && OverlayPopup->IsOpen()) {
+            if (OverlayPopup->OnMouseMove(event)) {
                 return true;
             }
         }
-        if (consoleOpen_ && consoleScreen_ &&
-            consoleScreen_->RouteMouseMove(event, guiContext_->GetRenderer())) {
+        if (ConsoleOpen && ConsoleScreen &&
+            ConsoleScreen->RouteMouseMove(event, GuiContext->GetRenderer())) {
             return true;
         }
-        auto routeMove = [&](GuiWidget* root) -> bool {
+        auto routeMove = [&](UGuiWidget* root) -> bool {
             return root && root->OnMouseMove(event);
         };
         bool handled = false;
-        if (paletteOpen_) {
-            handled |= routeMove(paletteScreen_->GetRoot());
+        if (PaletteOpen) {
+            handled |= routeMove(PaletteScreen->GetRoot());
         }
-        handled |= routeMove(hudScreen_ ? hudScreen_->GetRoot() : nullptr);
+        handled |= routeMove(HudScreen ? HudScreen->GetRoot() : nullptr);
         return handled;
     }
-    return guiContext_->RouteMouseMove(event);
+    return GuiContext->RouteMouseMove(event);
 }
 
 bool UApplication::RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY)
 {
-    if (state_ == AppState::InGame) {
+    if (State == AppState::InGame) {
         GuiScrollEvent event{xoffset, yoffset};
-        auto routeScroll = [&](GuiWidget* root) -> bool {
+        auto routeScroll = [&](UGuiWidget* root) -> bool {
             return root && root->ScrollAtPoint(mouseX, mouseY, event);
         };
-        if (paletteOpen_ && routeScroll(paletteScreen_ ? paletteScreen_->GetRoot() : nullptr)) {
+        if (PaletteOpen && routeScroll(PaletteScreen ? PaletteScreen->GetRoot() : nullptr)) {
             return true;
         }
-        if (consoleOpen_ && routeScroll(consoleScreen_ ? consoleScreen_->GetRoot() : nullptr)) {
+        if (ConsoleOpen && routeScroll(ConsoleScreen ? ConsoleScreen->GetRoot() : nullptr)) {
             return true;
         }
-        if (routeScroll(hudScreen_ ? hudScreen_->GetRoot() : nullptr)) {
+        if (routeScroll(HudScreen ? HudScreen->GetRoot() : nullptr)) {
             return true;
         }
         return false;
     }
-    return guiContext_->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouseX, mouseY);
+    return GuiContext->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouseX, mouseY);
 }
 
 } // namespace cutum

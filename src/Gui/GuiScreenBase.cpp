@@ -3,11 +3,11 @@
 
 namespace cutum {
 
-void GuiScreenBase::OnAttach(GuiContext& /*ctx*/) {}
-void GuiScreenBase::OnDetach() {}
-void GuiScreenBase::Update(double /*dt*/) {}
+void UGuiScreenBase::OnAttach(UGuiContext& /*ctx*/) {}
+void UGuiScreenBase::OnDetach() {}
+void UGuiScreenBase::Update(double /*dt*/) {}
 
-void GuiScreenBase::OnViewportChanged(int width, int height)
+void UGuiScreenBase::OnViewportChanged(int width, int height)
 {
     if (width > 0) {
         viewportW_ = width;

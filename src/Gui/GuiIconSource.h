@@ -8,13 +8,13 @@
 
 namespace cutum {
 
-class TextureCubeStorage;
+class UTextureCubeStorage;
 
-class GuiIconSource : public IGuiIconSource {
+class UGuiIconSource : public IGuiIconSource {
 public:
-    GuiIconSource(std::shared_ptr<TextureCubeStorage> textures,
-                  std::unique_ptr<PrefabIconCache> prefabCache,
-                  std::unique_ptr<CreatureIconCache> creatureCache = nullptr);
+    UGuiIconSource(std::shared_ptr<UTextureCubeStorage> textures,
+                  std::unique_ptr<UPrefabIconCache> prefabCache,
+                  std::unique_ptr<UCreatureIconCache> creatureCache = nullptr);
 
     GLuint GetBlockIconTexture(const std::string& blockName) override;
     GLuint GetPrefabIconTexture(const std::string& prefabName) override;
@@ -22,14 +22,14 @@ public:
     GLuint GetCreatureIconTexture(const std::string& speciesId) override;
     GLuint GetSkinIconTexture(const std::string& skinId) override;
 
-    PrefabIconCache& GetPrefabCache() { return *prefabCache_; }
+    UPrefabIconCache& GetPrefabCache() { return *prefabCache_; }
     void WarmupPrefabIcons(size_t maxPerFrame);
     void WarmupCreatureIcons(size_t maxPerFrame);
 
 private:
-    std::shared_ptr<TextureCubeStorage> textures_;
-    std::unique_ptr<PrefabIconCache> prefabCache_;
-    std::unique_ptr<CreatureIconCache> creatureCache_;
+    std::shared_ptr<UTextureCubeStorage> textures_;
+    std::unique_ptr<UPrefabIconCache> prefabCache_;
+    std::unique_ptr<UCreatureIconCache> creatureCache_;
 };
 
 } // namespace cutum

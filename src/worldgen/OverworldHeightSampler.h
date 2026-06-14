@@ -16,9 +16,9 @@ struct HeightSampleParams {
  int stoneSurfaceAboveY{-1};
 };
 
-class OverworldHeightSampler {
+class UOverworldHeightSampler {
 public:
- OverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight, HeightPreset preset);
+ UOverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight, HeightPreset preset);
 
  int SurfaceYAt(int x, int z) const;
  HeightSampleParams params() const { return params_; }

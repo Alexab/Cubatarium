@@ -5,23 +5,23 @@
 
 namespace cutum {
 
-GuiCheckbox::GuiCheckbox(const GuiTheme* theme, std::string label)
+UGuiCheckbox::UGuiCheckbox(const GuiTheme* theme, std::string label)
     : theme_(theme)
     , label_(std::move(label))
 {
 }
 
-int GuiCheckbox::GetPreferredHeight() const
+int UGuiCheckbox::GetPreferredHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding : 24;
 }
 
-bool GuiCheckbox::CanFocus() const
+bool UGuiCheckbox::CanFocus() const
 {
     return enabled_ && visible_;
 }
 
-bool GuiCheckbox::Activate()
+bool UGuiCheckbox::Activate()
 {
     if (!CanFocus()) {
         return false;
@@ -33,7 +33,7 @@ bool GuiCheckbox::Activate()
     return true;
 }
 
-void GuiCheckbox::Draw(GuiRenderer& renderer)
+void UGuiCheckbox::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_) {
         return;
@@ -52,7 +52,7 @@ void GuiCheckbox::Draw(GuiRenderer& renderer)
     }
 }
 
-bool GuiCheckbox::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiCheckbox::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y)) {
         return false;

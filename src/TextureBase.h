@@ -6,11 +6,11 @@
 
 namespace cutum {
 
-class TextureBase
+class UTextureBase
 {
 public:
- TextureBase();
- TextureBase(const std::string& name, const std::string& file_name);
+ UTextureBase();
+ UTextureBase(const std::string& name, const std::string& file_name);
 
  const std::string& GetName() const;
  const std::string& GetFileName() const;
@@ -20,15 +20,15 @@ private:
  std::string FileName;
 };
 
-class TextureBaseStorage
+class UTextureBaseStorage
 {
 public:
  void Load(const std::string &textures_path);
 
- const std::map<std::string, TextureBase>& GetBaseTextures() const;
+ const std::map<std::string, UTextureBase>& GetBaseTextures() const;
 
 private:
- std::map<std::string, TextureBase> TextureBaseStorage;
+ std::map<std::string, UTextureBase> BaseTextures;
 };
 
 }

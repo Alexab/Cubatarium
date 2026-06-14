@@ -12,9 +12,9 @@ struct BiomeSurfaceRule {
  BlockId subsurface{BLOCK_AIR};
 };
 
-class BiomeSampler {
+class UBiomeSampler {
 public:
- explicit BiomeSampler(uint32_t seed);
+ explicit UBiomeSampler(uint32_t seed);
 
  BiomeId At(int x, int z, int surfaceY, int seaLevel, int maxHeight) const;
  BiomeSurfaceRule SurfaceRule(BiomeId biome, const WorldGenContext& ctx) const;

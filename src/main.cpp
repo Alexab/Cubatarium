@@ -44,12 +44,12 @@ int main(int argc, char *argv[])
       return -1;
     }
 
-    auto texture_base_instance = std::make_shared<TextureBaseStorage>();
-    auto texture_cube_instance = std::make_shared<TextureCubeStorage>(texture_base_instance);
-    auto block_definitions = std::make_shared<BlockDefinitionStorage>();
+    auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+    auto texture_cube_instance = std::make_shared<UTextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
 
-    auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
-    auto prefab_library = std::make_shared<PrefabLibrary>();
+    auto object_storage = std::make_shared<UObjectStorage>(texture_cube_instance);
+    auto prefab_library = std::make_shared<UPrefabLibrary>();
     auto view_engine = std::make_shared<UViewEngine>();
 
     auto world = std::make_shared<UWorld>(object_storage, view_engine);

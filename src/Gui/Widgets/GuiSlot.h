@@ -10,9 +10,9 @@ namespace cutum {
 
 struct GuiTheme;
 
-class GuiSlot : public GuiWidget {
+class UGuiSlot : public UGuiWidget {
 public:
-    GuiSlot(const GuiTheme* theme, int size);
+    UGuiSlot(const GuiTheme* theme, int size);
 
     void SetSelected(bool selected) { selected_ = selected; }
     void SetLabel(const std::string& label) { label_ = label; }
@@ -22,7 +22,7 @@ public:
     void SetOnBeginDrag(std::function<void()> handler) { onBeginDrag_ = std::move(handler); }
     const std::string& GetLabel() const { return label_; }
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnMouseUp(const GuiMouseEvent& event) override;
     bool OnMouseMove(const GuiMouseEvent& event) override;

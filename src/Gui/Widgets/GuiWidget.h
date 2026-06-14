@@ -7,11 +7,11 @@
 
 namespace cutum {
 
-class GuiRenderer;
+class UGuiRenderer;
 
-class GuiWidget {
+class UGuiWidget {
 public:
-    virtual ~GuiWidget() = default;
+    virtual ~UGuiWidget() = default;
 
     void SetBounds(const GuiRect& bounds) { bounds_ = bounds; }
     const GuiRect& GetBounds() const { return bounds_; }
@@ -30,7 +30,7 @@ public:
 
     virtual void UpdateLayout(const GuiRect& parentClientArea);
     virtual void Update(double dt);
-    virtual void Draw(GuiRenderer& renderer);
+    virtual void Draw(UGuiRenderer& renderer);
 
     /// Tab-stop widget (buttons, inputs, checkboxes, lists, …).
     virtual bool CanFocus() const { return false; }
@@ -38,17 +38,17 @@ public:
     virtual bool Activate();
     void SetFocusHighlight(bool on) { focusHighlight_ = on; }
     bool HasFocusHighlight() const { return focusHighlight_; }
-    virtual void CollectFocusables(std::vector<GuiWidget*>& out);
+    virtual void CollectFocusables(std::vector<UGuiWidget*>& out);
 
-    virtual GuiWidget* HitTest(int x, int y);
+    virtual UGuiWidget* HitTest(int x, int y);
     /// Deepest focusable widget at point (for mouse focus).
-    virtual GuiWidget* HitTestFocusable(int x, int y);
-    const std::vector<std::unique_ptr<GuiWidget>>& GetChildren() const { return children_; }
+    virtual UGuiWidget* HitTestFocusable(int x, int y);
+    const std::vector<std::unique_ptr<UGuiWidget>>& GetChildren() const { return children_; }
 
     /// Route mouse wheel to widget under cursor (depth-first).
     virtual bool ScrollAtPoint(int x, int y, const GuiScrollEvent& event);
 
-    GuiWidget* AddChild(std::unique_ptr<GuiWidget> child);
+    UGuiWidget* AddChild(std::unique_ptr<UGuiWidget> child);
     void ClearChildren();
 
     virtual bool OnMouseDown(const GuiMouseEvent& event);
@@ -64,7 +64,7 @@ protected:
     bool enabled_{true};
     bool focusHighlight_{false};
     int zOrder_{0};
-    std::vector<std::unique_ptr<GuiWidget>> children_;
+    std::vector<std::unique_ptr<UGuiWidget>> children_;
 };
 
 } // namespace cutum

@@ -8,8 +8,8 @@ namespace cutum {
 
 enum class InventoryEntryKind {
     Block,
-    Object,
-    Creature,
+    UObject,
+    UCreature,
     Skin
 };
 

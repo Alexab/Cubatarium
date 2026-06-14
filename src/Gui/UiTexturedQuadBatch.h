@@ -10,24 +10,24 @@ typedef unsigned int GLuint;
 
 namespace cutum {
 
-class ShaderProgram;
+class UShaderProgram;
 
 class UiTexturedQuadBatch {
 public:
     UiTexturedQuadBatch();
     ~UiTexturedQuadBatch();
 
-    bool Initialize(std::shared_ptr<ShaderProgram> shader);
+    bool Initialize(std::shared_ptr<UShaderProgram> shader);
     void Shutdown();
 
-    void Begin(int windowWidth, int windowHeight);
+    void Begin(int WindowWidth, int WindowHeight);
     void DrawTexturedRect(const GuiRect& rect, GLuint texture, const glm::vec4& tint);
     void End();
 
 private:
     void GuiRectToShaderCoords(const GuiRect& rect, float& x0, float& y0, float& x1, float& y1) const;
 
-    std::shared_ptr<ShaderProgram> shader_;
+    std::shared_ptr<UShaderProgram> shader_;
     GLuint vao_{0};
     GLuint vbo_{0};
     int windowWidth_{0};

@@ -4,12 +4,12 @@
 
 namespace cutum {
 
-GuiTabBar::GuiTabBar(const GuiTheme* theme)
+UGuiTabBar::UGuiTabBar(const GuiTheme* theme)
     : theme_(theme)
 {
 }
 
-void GuiTabBar::SetTabs(std::vector<std::string> labels)
+void UGuiTabBar::SetTabs(std::vector<std::string> labels)
 {
     labels_ = std::move(labels);
     if (activeTab_ >= static_cast<int>(labels_.size())) {
@@ -17,24 +17,24 @@ void GuiTabBar::SetTabs(std::vector<std::string> labels)
     }
 }
 
-void GuiTabBar::SetActiveTab(int tab)
+void UGuiTabBar::SetActiveTab(int tab)
 {
     if (tab >= 0 && tab < static_cast<int>(labels_.size())) {
         activeTab_ = tab;
     }
 }
 
-void GuiTabBar::SetOnTabChanged(std::function<void(int)> handler)
+void UGuiTabBar::SetOnTabChanged(std::function<void(int)> handler)
 {
     onTabChanged_ = std::move(handler);
 }
 
-int GuiTabBar::GetPreferredHeight() const
+int UGuiTabBar::GetPreferredHeight() const
 {
     return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
 }
 
-void GuiTabBar::Draw(GuiRenderer& renderer)
+void UGuiTabBar::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_ || labels_.empty()) {
         return;
@@ -50,7 +50,7 @@ void GuiTabBar::Draw(GuiRenderer& renderer)
     }
 }
 
-bool GuiTabBar::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiTabBar::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!visible_ || !bounds_.Contains(event.x, event.y) || labels_.empty()) {
         return false;

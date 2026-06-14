@@ -22,16 +22,16 @@ struct Prefab {
  glm::ivec3 boundsMax{0};
 };
 
-class BlockRegistry;
+class UBlockRegistry;
 
-class PrefabLibrary {
+class UPrefabLibrary {
 public:
- void Load(const std::string& prefabs_folder, BlockRegistry& registry);
+ void Load(const std::string& prefabs_folder, UBlockRegistry& registry);
  const Prefab* Get(const std::string& name) const;
  std::vector<std::string> ListNames() const;
 
 private:
- bool LoadFile(const std::string& path, BlockRegistry& registry);
+ bool LoadFile(const std::string& path, UBlockRegistry& registry);
 
  std::unordered_map<std::string, Prefab> prefabs_;
 };

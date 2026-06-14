@@ -6,7 +6,7 @@
 
 namespace cutum {
 
-bool CanPlacePrefabAt(const BlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos);
+bool CanPlacePrefabAt(const UBlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos);
 
 struct PrefabPlacementStats {
  int placedCount{0};
@@ -14,7 +14,7 @@ struct PrefabPlacementStats {
  int maxY{0};
 };
 
-PrefabPlacementStats PlacePrefabAt(BlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos,
+PrefabPlacementStats PlacePrefabAt(UBlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos,
     bool skipOccupied);
 
 } // namespace cutum

@@ -9,15 +9,15 @@
 
 namespace cutum {
 
-class TextureCubeStorage;
-class BlockDefinitionStorage;
+class UTextureCubeStorage;
+class UBlockDefinitionStorage;
 
-class BlockRegistry {
+class UBlockRegistry {
 public:
- BlockRegistry(std::shared_ptr<TextureCubeStorage> textures,
-               std::shared_ptr<BlockDefinitionStorage> definitions = nullptr);
+ UBlockRegistry(std::shared_ptr<UTextureCubeStorage> textures,
+               std::shared_ptr<UBlockDefinitionStorage> definitions = nullptr);
 
- void SetDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions);
+ void SetDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions);
  void Reload();
 
  BlockId GetIdByTypeName(const std::string& name) const;
@@ -33,8 +33,8 @@ public:
 
 private:
  void RebuildMaps();
- std::shared_ptr<TextureCubeStorage> textures_;
- std::shared_ptr<BlockDefinitionStorage> definitions_;
+ std::shared_ptr<UTextureCubeStorage> textures_;
+ std::shared_ptr<UBlockDefinitionStorage> definitions_;
  std::unordered_map<std::string, BlockId> nameToId_;
  std::unordered_map<BlockId, std::string> idToName_;
  mutable BlockPhysicsProfile solidDefault_;

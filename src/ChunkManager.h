@@ -20,26 +20,26 @@ struct IVec3Hash {
  }
 };
 
-class ChunkManager {
+class UChunkManager {
 public:
  BlockId GetBlock(glm::ivec3 worldPos) const;
  void SetBlock(glm::ivec3 worldPos, BlockId id);
  void Clear();
  void ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& fn) const;
 
- Chunk* GetChunk(glm::ivec3 chunkCoord);
- const Chunk* GetChunk(glm::ivec3 chunkCoord) const;
- bool HasChunk(glm::ivec3 chunkCoord) const;
- void RemoveChunk(glm::ivec3 chunkCoord);
- void ForEachChunk(const std::function<void(const Chunk&)>& fn) const;
+ UChunk* GetChunk(glm::ivec3 chunk_coord);
+ const UChunk* GetChunk(glm::ivec3 chunk_coord) const;
+ bool HasChunk(glm::ivec3 chunk_coord) const;
+ void RemoveChunk(glm::ivec3 chunk_coord);
+ void ForEachChunk(const std::function<void(const UChunk&)>& fn) const;
 
- static glm::ivec3 WorldToChunk(glm::ivec3 worldPos);
- static glm::ivec3 WorldToLocal(glm::ivec3 worldPos);
+ static glm::ivec3 WorldToChunk(glm::ivec3 world_pos);
+ static glm::ivec3 WorldToLocal(glm::ivec3 world_pos);
 
 private:
- Chunk& GetOrCreateChunk(glm::ivec3 chunkCoord);
+ UChunk& GetOrCreateChunk(glm::ivec3 chunk_coord);
 
- std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>, IVec3Hash> chunks_;
+ std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
 };
 
 }

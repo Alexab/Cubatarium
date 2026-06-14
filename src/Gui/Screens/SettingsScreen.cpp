@@ -41,57 +41,57 @@ GuiGridSpec BuildTwoColumnSpec(int width)
 
 } // namespace
 
-SettingsScreen::SettingsScreen(IGuiMenuHost* host)
+USettingsScreen::USettingsScreen(IGuiMenuHost* host)
     : host_(host)
 {
 }
 
-void SettingsScreen::OnSave()
+void USettingsScreen::OnSave()
 {
     if (!host_) {
         return;
     }
     AppSettingsSnapshot app = host_->LoadAppSettingsSnapshot();
     if (defaultUserInput_) {
-        app.defaultUser = defaultUserInput_->GetText();
+        app.DefaultUser = defaultUserInput_->GetText();
     }
     if (defaultWorldInput_) {
-        app.defaultWorld = defaultWorldInput_->GetText();
+        app.DefaultWorld = defaultWorldInput_->GetText();
     }
     if (renderDistInput_) {
-        app.renderDistanceChunks = ParseIntOr(renderDistInput_->GetText(), app.renderDistanceChunks);
+        app.RenderDistanceChunks = ParseIntOr(renderDistInput_->GetText(), app.RenderDistanceChunks);
     }
     if (streamingBox_) {
-        app.streamingEnabled = streamingBox_->IsChecked();
+        app.StreamingEnabled = streamingBox_->IsChecked();
     }
     if (stepUpBox_) {
-        app.stepUpEnabled = stepUpBox_->IsChecked();
+        app.StepUpEnabled = stepUpBox_->IsChecked();
     }
     if (greedyBox_) {
-        app.render.greedyMeshing = greedyBox_->IsChecked();
+        app.Render.greedyMeshing = greedyBox_->IsChecked();
     }
     if (faceQuadsBox_) {
-        app.render.faceQuads = faceQuadsBox_->IsChecked();
+        app.Render.faceQuads = faceQuadsBox_->IsChecked();
     }
     if (frustumBox_) {
-        app.render.frustumCulling = frustumBox_->IsChecked();
+        app.Render.frustumCulling = frustumBox_->IsChecked();
     }
     if (batchCacheBox_) {
-        app.render.batchCache = batchCacheBox_->IsChecked();
+        app.Render.batchCache = batchCacheBox_->IsChecked();
     }
     if (legacyHudBox_) {
-        app.ui.legacyHud = legacyHudBox_->IsChecked();
+        app.Ui.legacyHud = legacyHudBox_->IsChecked();
     }
     if (consoleKeyInput_) {
-        app.ui.consoleKey = consoleKeyInput_->GetText();
+        app.Ui.consoleKey = consoleKeyInput_->GetText();
     }
     if (paletteKeyInput_) {
-        app.ui.paletteKey = paletteKeyInput_->GetText();
+        app.Ui.paletteKey = paletteKeyInput_->GetText();
     }
-    app.ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
-    app.ui.controlScheme = controlScheme_;
-    if (app.render.greedyMeshing && !app.render.faceQuads) {
-        app.render.faceQuads = true;
+    app.Ui.hotbarCount = std::clamp(hotbarCount_, 1, 2);
+    app.Ui.controlScheme = controlScheme_;
+    if (app.Render.greedyMeshing && !app.Render.faceQuads) {
+        app.Render.faceQuads = true;
     }
 
     ProceduralSettings proc = worldForm_ ? worldForm_->ReadSettings() : host_->LoadProceduralTemplate();
@@ -99,14 +99,14 @@ void SettingsScreen::OnSave()
     host_->ReturnToMainMenu();
 }
 
-void SettingsScreen::ShowTab(int tab)
+void USettingsScreen::ShowTab(int tab)
 {
     if (dialogFrame_) {
         dialogFrame_->SetActivePage(tab);
     }
 }
 
-void SettingsScreen::Build(GuiContext& ctx)
+void USettingsScreen::Build(UGuiContext& ctx)
 {
     int w = ctx.GetRenderer().GetWindowWidth();
     int h = ctx.GetRenderer().GetWindowHeight();
@@ -118,96 +118,96 @@ void SettingsScreen::Build(GuiContext& ctx)
     const GuiTheme& theme = ctx.GetTheme();
     const AppSettingsSnapshot appSnap = host_ ? host_->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
-    hotbarCount_ = std::clamp(appSnap.ui.hotbarCount, 1, 2);
-    controlScheme_ = appSnap.ui.controlScheme;
+    hotbarCount_ = std::clamp(appSnap.Ui.hotbarCount, 1, 2);
+    controlScheme_ = appSnap.Ui.controlScheme;
 
-    auto backdrop = std::make_unique<GuiPanel>(&theme);
+    auto backdrop = std::make_unique<UGuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
 
     const int winW = std::min(860, viewportW_ - 32);
     const int winH = std::min(540, viewportH_ - 32);
-    auto window = std::make_unique<GuiWindow>(&theme, "Settings");
-    window_ = window.get();
+    auto window = std::make_unique<UGuiWindow>(&theme, "Settings");
+    Window = window.get();
     window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
 
-    auto frame = std::make_unique<GuiDialogFrame>(&theme);
+    auto frame = std::make_unique<UGuiDialogFrame>(&theme);
     dialogFrame_ = frame.get();
     frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
     frame->CreateTabBar({"Application", "World defaults"}, [this](int tab) { ShowTab(tab); });
 
-    GuiPanel& app = frame->AddScrollPage();
+    UGuiPanel& app = frame->AddScrollPage();
     appPanel_ = &app;
-    auto defaultUserLbl = std::make_unique<GuiLabel>(&theme, "Default user:");
+    auto defaultUserLbl = std::make_unique<UGuiLabel>(&theme, "Default user:");
     defaultUserLabel_ = defaultUserLbl.get();
     app.AddChild(std::move(defaultUserLbl));
-    auto userIn = std::make_unique<GuiTextInput>(&theme);
+    auto userIn = std::make_unique<UGuiTextInput>(&theme);
     defaultUserInput_ = userIn.get();
-    userIn->SetText(appSnap.defaultUser);
+    userIn->SetText(appSnap.DefaultUser);
     app.AddChild(std::move(userIn));
-    auto defaultWorldLbl = std::make_unique<GuiLabel>(&theme, "Default world folder:");
+    auto defaultWorldLbl = std::make_unique<UGuiLabel>(&theme, "Default world folder:");
     defaultWorldLabel_ = defaultWorldLbl.get();
     app.AddChild(std::move(defaultWorldLbl));
-    auto worldIn = std::make_unique<GuiTextInput>(&theme);
+    auto worldIn = std::make_unique<UGuiTextInput>(&theme);
     defaultWorldInput_ = worldIn.get();
-    worldIn->SetText(appSnap.defaultWorld);
+    worldIn->SetText(appSnap.DefaultWorld);
     app.AddChild(std::move(worldIn));
-    auto renderDistLbl = std::make_unique<GuiLabel>(&theme, "Render distance (chunks):");
+    auto renderDistLbl = std::make_unique<UGuiLabel>(&theme, "Render distance (chunks):");
     renderDistLabel_ = renderDistLbl.get();
     app.AddChild(std::move(renderDistLbl));
-    auto distIn = std::make_unique<GuiTextInput>(&theme);
+    auto distIn = std::make_unique<UGuiTextInput>(&theme);
     renderDistInput_ = distIn.get();
-    distIn->SetText(std::to_string(appSnap.renderDistanceChunks));
+    distIn->SetText(std::to_string(appSnap.RenderDistanceChunks));
     app.AddChild(std::move(distIn));
-    auto stream = std::make_unique<GuiCheckbox>(&theme, "Streaming enabled");
+    auto stream = std::make_unique<UGuiCheckbox>(&theme, "Streaming enabled");
     streamingBox_ = stream.get();
-    stream->SetChecked(appSnap.streamingEnabled);
+    stream->SetChecked(appSnap.StreamingEnabled);
     app.AddChild(std::move(stream));
-    auto step = std::make_unique<GuiCheckbox>(&theme, "Step up");
+    auto step = std::make_unique<UGuiCheckbox>(&theme, "Step up");
     stepUpBox_ = step.get();
-    step->SetChecked(appSnap.stepUpEnabled);
+    step->SetChecked(appSnap.StepUpEnabled);
     app.AddChild(std::move(step));
-    auto greedy = std::make_unique<GuiCheckbox>(&theme, "Greedy meshing");
+    auto greedy = std::make_unique<UGuiCheckbox>(&theme, "Greedy meshing");
     greedyBox_ = greedy.get();
-    greedy->SetChecked(appSnap.render.greedyMeshing);
+    greedy->SetChecked(appSnap.Render.greedyMeshing);
     app.AddChild(std::move(greedy));
-    auto face = std::make_unique<GuiCheckbox>(&theme, "Face quads");
+    auto face = std::make_unique<UGuiCheckbox>(&theme, "Face quads");
     faceQuadsBox_ = face.get();
-    face->SetChecked(appSnap.render.faceQuads);
+    face->SetChecked(appSnap.Render.faceQuads);
     app.AddChild(std::move(face));
-    auto frust = std::make_unique<GuiCheckbox>(&theme, "Frustum culling");
+    auto frust = std::make_unique<UGuiCheckbox>(&theme, "Frustum culling");
     frustumBox_ = frust.get();
-    frust->SetChecked(appSnap.render.frustumCulling);
+    frust->SetChecked(appSnap.Render.frustumCulling);
     app.AddChild(std::move(frust));
-    auto batch = std::make_unique<GuiCheckbox>(&theme, "Batch cache");
+    auto batch = std::make_unique<UGuiCheckbox>(&theme, "Batch cache");
     batchCacheBox_ = batch.get();
-    batch->SetChecked(appSnap.render.batchCache);
+    batch->SetChecked(appSnap.Render.batchCache);
     app.AddChild(std::move(batch));
-    auto hud = std::make_unique<GuiCheckbox>(&theme, "Legacy HUD");
+    auto hud = std::make_unique<UGuiCheckbox>(&theme, "Legacy HUD");
     legacyHudBox_ = hud.get();
-    hud->SetChecked(appSnap.ui.legacyHud);
+    hud->SetChecked(appSnap.Ui.legacyHud);
     app.AddChild(std::move(hud));
-    auto consoleLbl = std::make_unique<GuiLabel>(&theme, "Console key:");
+    auto consoleLbl = std::make_unique<UGuiLabel>(&theme, "Console key:");
     consoleKeyLabel_ = consoleLbl.get();
     app.AddChild(std::move(consoleLbl));
-    auto ckIn = std::make_unique<GuiTextInput>(&theme);
+    auto ckIn = std::make_unique<UGuiTextInput>(&theme);
     consoleKeyInput_ = ckIn.get();
-    ckIn->SetText(appSnap.ui.consoleKey);
+    ckIn->SetText(appSnap.Ui.consoleKey);
     app.AddChild(std::move(ckIn));
-    auto paletteLbl = std::make_unique<GuiLabel>(&theme, "Palette key:");
+    auto paletteLbl = std::make_unique<UGuiLabel>(&theme, "Palette key:");
     paletteKeyLabel_ = paletteLbl.get();
     app.AddChild(std::move(paletteLbl));
-    auto pkIn = std::make_unique<GuiTextInput>(&theme);
+    auto pkIn = std::make_unique<UGuiTextInput>(&theme);
     paletteKeyInput_ = pkIn.get();
-    pkIn->SetText(appSnap.ui.paletteKey);
+    pkIn->SetText(appSnap.Ui.paletteKey);
     app.AddChild(std::move(pkIn));
-    auto hotbarLbl = std::make_unique<GuiLabel>(&theme, "Hotbar count:");
+    auto hotbarLbl = std::make_unique<UGuiLabel>(&theme, "Hotbar count:");
     hotbarCountLabel_ = hotbarLbl.get();
     app.AddChild(std::move(hotbarLbl));
-    auto hotbarValue = std::make_unique<GuiLabel>(&theme, std::to_string(hotbarCount_));
+    auto hotbarValue = std::make_unique<UGuiLabel>(&theme, std::to_string(hotbarCount_));
     hotbarValue->SetTextAlign(GuiTextAlign::Center);
     hotbarCountValueLabel_ = hotbarValue.get();
     app.AddChild(std::move(hotbarValue));
-    auto hotbarMinus = std::make_unique<GuiButton>(&theme, "-");
+    auto hotbarMinus = std::make_unique<UGuiButton>(&theme, "-");
     hotbarMinus->SetOnClick([this]() {
         hotbarCount_ = std::max(1, hotbarCount_ - 1);
         if (hotbarCountValueLabel_) {
@@ -216,7 +216,7 @@ void SettingsScreen::Build(GuiContext& ctx)
     });
     hotbarMinusButton_ = hotbarMinus.get();
     app.AddChild(std::move(hotbarMinus));
-    auto hotbarPlus = std::make_unique<GuiButton>(&theme, "+");
+    auto hotbarPlus = std::make_unique<UGuiButton>(&theme, "+");
     hotbarPlus->SetOnClick([this]() {
         hotbarCount_ = std::min(2, hotbarCount_ + 1);
         if (hotbarCountValueLabel_) {
@@ -226,10 +226,10 @@ void SettingsScreen::Build(GuiContext& ctx)
     hotbarPlusButton_ = hotbarPlus.get();
     app.AddChild(std::move(hotbarPlus));
 
-    auto controlSchemeLbl = std::make_unique<GuiLabel>(&theme, "Control scheme:");
+    auto controlSchemeLbl = std::make_unique<UGuiLabel>(&theme, "Control scheme:");
     controlSchemeLabel_ = controlSchemeLbl.get();
     app.AddChild(std::move(controlSchemeLbl));
-    auto profileBtn = std::make_unique<GuiButton>(
+    auto profileBtn = std::make_unique<UGuiButton>(
         &theme,
         controlScheme_ == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
     profileBtn->SetOnClick([this]() {
@@ -244,9 +244,9 @@ void SettingsScreen::Build(GuiContext& ctx)
     controlSchemeButton_ = profileBtn.get();
     app.AddChild(std::move(profileBtn));
 
-    GuiPanel& world = frame->AddScrollPage();
+    UGuiPanel& world = frame->AddScrollPage();
     worldPanel_ = &world;
-    worldForm_ = std::make_unique<WorldGenSettingsForm>(&theme);
+    worldForm_ = std::make_unique<UWorldGenSettingsForm>(&theme);
     worldForm_->SetSettings(procSnap);
     worldForm_->BuildInto(world);
     frame->SetScrollPageLayout(
@@ -258,10 +258,10 @@ void SettingsScreen::Build(GuiContext& ctx)
         [this](const GuiRect& area) { return MeasureWorldPageHeight(area); },
         [this](const GuiRect& area) { LayoutWorldPage(area); });
 
-    auto saveBtn = std::make_unique<GuiButton>(&theme, "Save");
+    auto saveBtn = std::make_unique<UGuiButton>(&theme, "Save");
     saveBtn->SetOnClick([this]() { OnSave(); });
     frame->AddFooterButton(std::move(saveBtn));
-    auto cancelBtn = std::make_unique<GuiButton>(&theme, "Cancel");
+    auto cancelBtn = std::make_unique<UGuiButton>(&theme, "Cancel");
     cancelBtn->SetOnClick([this]() {
         if (host_) {
             host_->ReturnToMainMenu();
@@ -277,25 +277,25 @@ void SettingsScreen::Build(GuiContext& ctx)
     ShowTab(0);
 }
 
-void SettingsScreen::OnViewportChanged(int width, int height)
+void USettingsScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
     Relayout();
 }
 
-void SettingsScreen::Relayout()
+void USettingsScreen::Relayout()
 {
-    if (!window_ || !dialogFrame_) {
+    if (!Window || !dialogFrame_) {
         return;
     }
     const int winW = std::min(860, viewportW_ - 32);
     const int winH = std::min(540, viewportH_ - 32);
-    window_->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
-    dialogFrame_->SetBounds(window_->GetClientArea());
+    Window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+    dialogFrame_->SetBounds(Window->GetClientArea());
     dialogFrame_->LayoutFrame();
 }
 
-std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& spec) const
+std::vector<GuiGridItem> USettingsScreen::BuildAppGridItems(const GuiGridSpec& spec) const
 {
     const int hotbarValueRow = spec.columns > 1 ? 9 : 10;
     const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
@@ -324,7 +324,7 @@ std::vector<GuiGridItem> SettingsScreen::BuildAppGridItems(const GuiGridSpec& sp
     };
 }
 
-void SettingsScreen::LayoutHotbarCountControls(const GuiGridSpec& spec) const
+void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec& spec) const
 {
     if (!hotbarCountValueLabel_ || !hotbarMinusButton_ || !hotbarPlusButton_) {
         return;
@@ -352,20 +352,20 @@ void SettingsScreen::LayoutHotbarCountControls(const GuiGridSpec& spec) const
     hotbarMinusButton_->SetBounds({startX + valueW + gap + btnSize + gap, y, btnSize, btnSize});
 }
 
-int SettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
+int USettingsScreen::MeasureAppPageHeight(const GuiRect& area) const
 {
     const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
-    return GuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
+    return UGuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
 }
 
-void SettingsScreen::LayoutAppPage(const GuiRect& area) const
+void USettingsScreen::LayoutAppPage(const GuiRect& area) const
 {
     const GuiGridSpec spec = BuildTwoColumnSpec(area.w);
-    GuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
+    UGuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
     LayoutHotbarCountControls(spec);
 }
 
-int SettingsScreen::MeasureWorldPageHeight(const GuiRect& area) const
+int USettingsScreen::MeasureWorldPageHeight(const GuiRect& area) const
 {
     if (!worldForm_) {
         return 0;
@@ -373,7 +373,7 @@ int SettingsScreen::MeasureWorldPageHeight(const GuiRect& area) const
     return worldForm_->MeasureGridHeight(area, BuildTwoColumnSpec(area.w));
 }
 
-void SettingsScreen::LayoutWorldPage(const GuiRect& area) const
+void USettingsScreen::LayoutWorldPage(const GuiRect& area) const
 {
     if (!worldForm_) {
         return;

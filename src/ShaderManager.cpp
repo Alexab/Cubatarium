@@ -7,19 +7,19 @@
 
 namespace cutum {
 
-ShaderProgram::ShaderProgram()
+UShaderProgram::UShaderProgram()
     : programID(0)
 {
 }
 
-ShaderProgram::~ShaderProgram() {
+UShaderProgram::~UShaderProgram() {
     if (programID != 0) {
         glDeleteProgram(programID);
         programID = 0;
     }
 }
 
-bool ShaderProgram::CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath) {
+bool UShaderProgram::CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath) {
     std::string vertexSource = ReadFile(vertexPath);
     std::string fragmentSource = ReadFile(fragmentPath);
     
@@ -30,7 +30,7 @@ bool ShaderProgram::CreateFromFiles(const std::string& vertexPath, const std::st
     return CreateFromStrings(vertexSource, fragmentSource);
 }
 
-bool ShaderProgram::CreateFromStrings(const std::string& vertexSource, const std::string& fragmentSource) {
+bool UShaderProgram::CreateFromStrings(const std::string& vertexSource, const std::string& fragmentSource) {
     GLuint vertexShader, fragmentShader;
     
     // Vertex shader compilation
@@ -63,71 +63,71 @@ bool ShaderProgram::CreateFromStrings(const std::string& vertexSource, const std
     return true;
 }
 
-void ShaderProgram::Use() {
+void UShaderProgram::Use() {
     glUseProgram(programID);
 }
 
-void ShaderProgram::Unuse() {
+void UShaderProgram::Unuse() {
     glUseProgram(0);
 }
 
-void ShaderProgram::SetBool(const std::string& name, bool value) {
+void UShaderProgram::SetBool(const std::string& name, bool value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform1i(location, static_cast<int>(value));
     }
 }
 
-void ShaderProgram::SetInt(const std::string& name, int value) {
+void UShaderProgram::SetInt(const std::string& name, int value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform1i(location, value);
     }
 }
 
-void ShaderProgram::SetFloat(const std::string& name, float value) {
+void UShaderProgram::SetFloat(const std::string& name, float value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform1f(location, value);
     }
 }
 
-void ShaderProgram::SetVec2(const std::string& name, const glm::vec2& value) {
+void UShaderProgram::SetVec2(const std::string& name, const glm::vec2& value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform2fv(location, 1, glm::value_ptr(value));
     }
 }
 
-void ShaderProgram::SetVec3(const std::string& name, const glm::vec3& value) {
+void UShaderProgram::SetVec3(const std::string& name, const glm::vec3& value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform3fv(location, 1, glm::value_ptr(value));
     }
 }
 
-void ShaderProgram::SetVec4(const std::string& name, const glm::vec4& value) {
+void UShaderProgram::SetVec4(const std::string& name, const glm::vec4& value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniform4fv(location, 1, glm::value_ptr(value));
     }
 }
 
-void ShaderProgram::SetMat3(const std::string& name, const glm::mat3& value) {
+void UShaderProgram::SetMat3(const std::string& name, const glm::mat3& value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
     }
 }
 
-void ShaderProgram::SetMat4(const std::string& name, const glm::mat4& value) {
+void UShaderProgram::SetMat4(const std::string& name, const glm::mat4& value) {
     GLint location = GetUniformLocation(name);
     if (location != -1) {
         glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
     }
 }
 
-GLint ShaderProgram::GetUniformLocation(const std::string& name) {
+GLint UShaderProgram::GetUniformLocation(const std::string& name) {
     auto it = uniformLocations.find(name);
     if (it != uniformLocations.end()) {
         return it->second;
@@ -138,7 +138,7 @@ GLint ShaderProgram::GetUniformLocation(const std::string& name) {
     return location;
 }
 
-bool ShaderProgram::CompileShader(GLuint& shaderID, GLenum shaderType, const std::string& source) {
+bool UShaderProgram::CompileShader(GLuint& shaderID, GLenum shaderType, const std::string& source) {
     shaderID = glCreateShader(shaderType);
     const char* sourcePtr = source.c_str();
     glShaderSource(shaderID, 1, &sourcePtr, nullptr);
@@ -149,13 +149,13 @@ bool ShaderProgram::CompileShader(GLuint& shaderID, GLenum shaderType, const std
     return shaderID != 0;
 }
 
-bool ShaderProgram::LinkProgram() {
+bool UShaderProgram::LinkProgram() {
     glLinkProgram(programID);
     CheckCompileErrors(programID, "PROGRAM");
     return programID != 0;
 }
 
-void ShaderProgram::CheckCompileErrors(GLuint shader, const std::string& type) {
+void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string& type) {
     GLint success;
     GLchar infoLog[1024];
     
@@ -174,7 +174,7 @@ void ShaderProgram::CheckCompileErrors(GLuint shader, const std::string& type) {
     }
 }
 
-std::string ShaderProgram::ReadFile(const std::string& filepath) {
+std::string UShaderProgram::ReadFile(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Shader file open error: " << filepath << std::endl;
@@ -186,27 +186,27 @@ std::string ShaderProgram::ReadFile(const std::string& filepath) {
     return buffer.str();
 }
 
-// ShaderManager implementation
-ShaderManager::ShaderManager() {
+// UShaderManager implementation
+UShaderManager::UShaderManager() {
 }
 
-ShaderManager::~ShaderManager() {
+UShaderManager::~UShaderManager() {
     Shutdown();
 }
 
-bool ShaderManager::Initialize() {
+bool UShaderManager::Initialize() {
     CreateDefaultShaders();
     return true;
 }
 
-void ShaderManager::Shutdown() {
+void UShaderManager::Shutdown() {
     ClearAllShaders();
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::CreateShader(const std::string& name, 
+std::shared_ptr<UShaderProgram> UShaderManager::CreateShader(const std::string& name, 
                                                          const std::string& vertexPath, 
                                                          const std::string& fragmentPath) {
-    auto shader = std::make_shared<ShaderProgram>();
+    auto shader = std::make_shared<UShaderProgram>();
     if (shader->CreateFromFiles(vertexPath, fragmentPath)) {
         shaders[name] = shader;
         return shader;
@@ -214,10 +214,10 @@ std::shared_ptr<ShaderProgram> ShaderManager::CreateShader(const std::string& na
     return nullptr;
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::CreateShaderFromStrings(const std::string& name,
+std::shared_ptr<UShaderProgram> UShaderManager::CreateShaderFromStrings(const std::string& name,
                                                                      const std::string& vertexSource,
                                                                      const std::string& fragmentSource) {
-    auto shader = std::make_shared<ShaderProgram>();
+    auto shader = std::make_shared<UShaderProgram>();
     if (shader->CreateFromStrings(vertexSource, fragmentSource)) {
         shaders[name] = shader;
         return shader;
@@ -225,7 +225,7 @@ std::shared_ptr<ShaderProgram> ShaderManager::CreateShaderFromStrings(const std:
     return nullptr;
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::GetShader(const std::string& name) {
+std::shared_ptr<UShaderProgram> UShaderManager::GetShader(const std::string& name) {
     auto it = shaders.find(name);
     if (it != shaders.end()) {
         return it->second;
@@ -233,31 +233,31 @@ std::shared_ptr<ShaderProgram> ShaderManager::GetShader(const std::string& name)
     return nullptr;
 }
 
-bool ShaderManager::HasShader(const std::string& name) const {
+bool UShaderManager::HasShader(const std::string& name) const {
     return shaders.find(name) != shaders.end();
 }
 
-void ShaderManager::RemoveShader(const std::string& name) {
+void UShaderManager::RemoveShader(const std::string& name) {
     shaders.erase(name);
 }
 
-void ShaderManager::ClearAllShaders() {
+void UShaderManager::ClearAllShaders() {
     shaders.clear();
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::GetDefaultShader() {
+std::shared_ptr<UShaderProgram> UShaderManager::GetDefaultShader() {
     return GetShader("default");
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::GetSkyShader() {
+std::shared_ptr<UShaderProgram> UShaderManager::GetSkyShader() {
     return GetShader("sky");
 }
 
-std::shared_ptr<ShaderProgram> ShaderManager::GetTextureShader() {
+std::shared_ptr<UShaderProgram> UShaderManager::GetTextureShader() {
     return GetShader("texture");
 }
 
-void ShaderManager::CreateDefaultShaders() {
+void UShaderManager::CreateDefaultShaders() {
     // Create default shader
     CreateShaderFromStrings("default", GetDefaultVertexShader(), GetDefaultFragmentShader());
     
@@ -268,7 +268,7 @@ void ShaderManager::CreateDefaultShaders() {
     CreateShaderFromStrings("texture", GetTextureVertexShader(), GetTextureFragmentShader());
 }
 
-std::string ShaderManager::GetDefaultVertexShader() {
+std::string UShaderManager::GetDefaultVertexShader() {
     return R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -288,7 +288,7 @@ void main()
 )";
 }
 
-std::string ShaderManager::GetDefaultFragmentShader() {
+std::string UShaderManager::GetDefaultFragmentShader() {
     return R"(
 #version 330 core
 out vec4 FragColor;
@@ -308,7 +308,7 @@ void main()
 )";
 }
 
-std::string ShaderManager::GetSkyVertexShader() {
+std::string UShaderManager::GetSkyVertexShader() {
     return R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -327,7 +327,7 @@ void main()
 )";
 }
 
-std::string ShaderManager::GetSkyFragmentShader() {
+std::string UShaderManager::GetSkyFragmentShader() {
     return R"(
 #version 330 core
 out vec4 FragColor;
@@ -351,7 +351,7 @@ void main()
 )";
 }
 
-std::string ShaderManager::GetTextureVertexShader() {
+std::string UShaderManager::GetTextureVertexShader() {
     return R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -371,7 +371,7 @@ void main()
 )";
 }
 
-std::string ShaderManager::GetTextureFragmentShader() {
+std::string UShaderManager::GetTextureFragmentShader() {
     return R"(
 #version 330 core
 out vec4 FragColor;

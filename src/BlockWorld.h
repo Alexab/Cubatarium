@@ -8,7 +8,7 @@
 
 namespace cutum {
 
-class BlockWorld {
+class UBlockWorld {
 public:
  BlockId GetBlock(glm::ivec3 pos) const;
  void SetBlock(glm::ivec3 pos, BlockId id);
@@ -17,11 +17,11 @@ public:
  size_t CountNonAir() const;
  void ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& fn) const;
 
- ChunkManager& GetChunkManager() { return chunks_; }
- const ChunkManager& GetChunkManager() const { return chunks_; }
+ UChunkManager& GetChunkManager() { return Chunks; }
+ const UChunkManager& GetChunkManager() const { return Chunks; }
 
 private:
- ChunkManager chunks_;
+ UChunkManager Chunks;
 };
 
 }

@@ -21,12 +21,12 @@ BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm)
  return BiomeId::Plains;
 }
 
-BiomeSampler::BiomeSampler(uint32_t seed)
+UBiomeSampler::UBiomeSampler(uint32_t seed)
  : seed_(seed)
 {
 }
 
-BiomeId BiomeSampler::At(int x, int z, int surfaceY, int seaLevel, int maxHeight) const
+BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int seaLevel, int maxHeight) const
 {
  const float tempRaw = FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
      seed_ + 1000, 3, 0.5f, 2.0f);
@@ -40,27 +40,27 @@ BiomeId BiomeSampler::At(int x, int z, int surfaceY, int seaLevel, int maxHeight
  return ClassifyBiome(temperature, moisture, localHeightNorm);
 }
 
-BiomeSurfaceRule BiomeSampler::SurfaceRule(BiomeId biome, const WorldGenContext& ctx) const
+BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome, const WorldGenContext& ctx) const
 {
  BiomeSurfaceRule rule;
  switch (biome) {
  case BiomeId::Desert:
-  rule.surface = ctx.sand;
-  rule.subsurface = ctx.sandstone != BLOCK_AIR ? ctx.sandstone : ctx.sand;
+  rule.surface = ctx.Sand;
+  rule.subsurface = ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : ctx.Sand;
   break;
  case BiomeId::Tundra:
-  rule.surface = ctx.snow != BLOCK_AIR ? ctx.snow : ctx.stone;
-  rule.subsurface = ctx.dirt;
+  rule.surface = ctx.Snow != BLOCK_AIR ? ctx.Snow : ctx.Stone;
+  rule.subsurface = ctx.Dirt;
   break;
  case BiomeId::Hills:
-  rule.surface = ctx.stone;
-  rule.subsurface = ctx.gravel != BLOCK_AIR ? ctx.gravel : ctx.stone;
+  rule.surface = ctx.Stone;
+  rule.subsurface = ctx.Gravel != BLOCK_AIR ? ctx.Gravel : ctx.Stone;
   break;
  case BiomeId::Forest:
  case BiomeId::Plains:
  default:
-  rule.surface = ctx.grass;
-  rule.subsurface = ctx.dirt;
+  rule.surface = ctx.Grass;
+  rule.subsurface = ctx.Dirt;
   break;
  }
  return rule;

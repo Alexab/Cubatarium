@@ -6,16 +6,16 @@
 
 namespace cutum {
 
-class OverworldBiomesPipeline : public IWorldGenPipeline {
+class UOverworldBiomesPipeline : public IWorldGenPipeline {
 public:
- explicit OverworldBiomesPipeline(WorldGenContext ctx);
+ explicit UOverworldBiomesPipeline(WorldGenContext ctx);
 
  void GenerateColumn(int worldX, int worldZ) override;
  int SurfaceYAt(int worldX, int worldZ) const override;
 
 private:
- OverworldHeightSampler heightSampler_;
- BiomeSampler biomeSampler_;
+ UOverworldHeightSampler heightSampler_;
+ UBiomeSampler biomeSampler_;
  FeatureParams featureParams_;
 };
 

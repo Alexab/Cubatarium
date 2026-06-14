@@ -3,19 +3,19 @@
 
 namespace cutum {
 
-void AnimationClock::SetFrameCount(int count)
+void UAnimationClock::SetFrameCount(int count)
 {
  frameCount_ = std::max(1, count);
  currentFrame_ %= frameCount_;
 }
 
-void AnimationClock::SetFrametimeTicks(int ticks)
+void UAnimationClock::SetFrametimeTicks(int ticks)
 {
  frametimeTicks_ = std::max(1, ticks);
  frameDuration_ = static_cast<float>(frametimeTicks_) / 20.0f;
 }
 
-void AnimationClock::Tick(float deltaSeconds)
+void UAnimationClock::Tick(float deltaSeconds)
 {
  if (deltaSeconds <= 0.0f) {
   return;

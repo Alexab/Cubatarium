@@ -6,29 +6,29 @@ namespace cutum {
 
 namespace fs = std::filesystem;
 
-TextureBase::TextureBase()
+UTextureBase::UTextureBase()
 {
 
 }
 
-TextureBase::TextureBase(const std::string& name, const std::string& file_name)
+UTextureBase::UTextureBase(const std::string& name, const std::string& file_name)
  : Name(name)
  , FileName(file_name)
 {
 
 }
 
-const std::string& TextureBase::GetName() const
+const std::string& UTextureBase::GetName() const
 {
  return Name;
 }
 
-const std::string& TextureBase::GetFileName() const
+const std::string& UTextureBase::GetFileName() const
 {
  return FileName;
 }
 
-void TextureBaseStorage::Load(const std::string &textures_path)
+void UTextureBaseStorage::Load(const std::string &textures_path)
 {
  try
  {
@@ -38,8 +38,8 @@ void TextureBaseStorage::Load(const std::string &textures_path)
    auto ext = entry.path().extension();
    if(ext.string() == ".png")
    {
-    TextureBase descr(stem.string(), entry.path().string());
-    TextureBaseStorage[stem.string()] = descr;
+    UTextureBase descr(stem.string(), entry.path().string());
+    BaseTextures[stem.string()] = descr;
    }
   }
  }
@@ -49,9 +49,9 @@ void TextureBaseStorage::Load(const std::string &textures_path)
  }
 }
 
-const std::map<std::string, TextureBase>& TextureBaseStorage::GetBaseTextures() const
+const std::map<std::string, UTextureBase>& UTextureBaseStorage::GetBaseTextures() const
 {
- return TextureBaseStorage;
+ return BaseTextures;
 }
 
 }

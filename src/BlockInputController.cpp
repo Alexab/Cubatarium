@@ -26,10 +26,10 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
 
 const InventoryEntryRef* UBlockInputController::GetActiveEntry(const BlockInputContext& ctx) const
 {
-    if (!ctx.world) {
+    if (!ctx.World) {
         return nullptr;
     }
-    if (Creature* controlled = ctx.world->GetControlledCreature()) {
+    if (UCreature* controlled = ctx.World->GetControlledCreature()) {
         return controlled->GetInventory().GetActiveEntryRef();
     }
     return nullptr;
@@ -41,7 +41,7 @@ bool UBlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputCon
     if (!active) {
         return false;
     }
-    if (active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
+    if (active->kind == InventoryEntryKind::UCreature && !active->id.empty()) {
         return true;
     }
     if (active->kind == InventoryEntryKind::Skin && !active->id.empty()) {
@@ -52,45 +52,45 @@ bool UBlockInputController::ActiveSlotBlocksWorldInteraction(const BlockInputCon
 
 void UBlockInputController::TryPlaceFromActiveSlot(const BlockInputContext& ctx)
 {
-    if (!ctx.world) {
+    if (!ctx.World) {
         return;
     }
     const InventoryEntryRef* active = GetActiveEntry(ctx);
-    if (active && active->kind == InventoryEntryKind::Object && !active->id.empty()) {
-        ctx.world->PlaceActivePrefabByView();
+    if (active && active->kind == InventoryEntryKind::UObject && !active->id.empty()) {
+        ctx.World->PlaceActivePrefabByView();
     } else {
-        ctx.world->AddObjectByView();
+        ctx.World->AddObjectByView();
     }
 }
 
 void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext& ctx)
 {
-    if (!ctx.world) {
+    if (!ctx.World) {
         return;
     }
     const InventoryEntryRef* active = GetActiveEntry(ctx);
     if (!active) {
         return;
     }
-    if (active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
-        if (!ctx.world->SpawnCreatureByView(active->id) && ctx.geometries) {
-            ctx.geometries->ShowTransientMessage("Cannot spawn " + active->id, 2.0);
+    if (active->kind == InventoryEntryKind::UCreature && !active->id.empty()) {
+        if (!ctx.World->SpawnCreatureByView(active->id) && ctx.Geometries) {
+            ctx.Geometries->ShowTransientMessage("Cannot spawn " + active->id, 2.0);
         }
         return;
     }
     if (active->kind == InventoryEntryKind::Skin && !active->id.empty()) {
-        auto camera = ctx.world->GetCurrentUserCamera();
+        auto camera = ctx.World->GetCurrentUserCamera();
         if (!camera) {
             return;
         }
-        const auto target = ctx.world->PickCreatureByView(
+        const auto target = ctx.World->PickCreatureByView(
             camera->GetPosition(), camera->GetFront(), 8.0f);
         std::string error;
-        if (target && ctx.world->TryApplySkin(*target, active->id, &error)) {
+        if (target && ctx.World->TryApplySkin(*target, active->id, &error)) {
             return;
         }
-        if (ctx.geometries) {
-            ctx.geometries->ShowTransientMessage(
+        if (ctx.Geometries) {
+            ctx.Geometries->ShowTransientMessage(
                 error.empty() ? "No creature in view" : error, 2.0);
         }
     }
@@ -98,97 +98,97 @@ void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext& ctx)
 
 void UBlockInputController::TryInstantBreak(const BlockInputContext& ctx)
 {
-    if (ctx.world) {
-        ctx.world->CancelBreakSession();
-        ctx.world->DelObjectByView();
+    if (ctx.World) {
+        ctx.World->CancelBreakSession();
+        ctx.World->DelObjectByView();
     }
 }
 
 void UBlockInputController::HandleLeftPress(const BlockInputContext& ctx)
 {
-    if (!ctx.ui || !ctx.world) {
+    if (!ctx.Ui || !ctx.World) {
         return;
     }
-    leftDownTime_ = std::chrono::steady_clock::now();
-    leftHeld_ = true;
+    LeftDownTime = std::chrono::steady_clock::now();
+    LeftHeld = true;
 
-    if (ctx.ui->controlScheme == ControlScheme::Classic) {
+    if (ctx.Ui->controlScheme == ControlScheme::Classic) {
         if (ActiveSlotBlocksWorldInteraction(ctx)) {
             return;
         }
-        if (ctx.world->GetIsBlockIntersectionExists()) {
-            ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+        if (ctx.World->GetIsBlockIntersectionExists()) {
+            ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
         }
     }
 }
 
 void UBlockInputController::HandleLeftRelease(float holdSeconds, const BlockInputContext& ctx)
 {
-    if (!ctx.ui || !ctx.world) {
-        leftHeld_ = false;
+    if (!ctx.Ui || !ctx.World) {
+        LeftHeld = false;
         return;
     }
 
     const InventoryEntryRef* active = GetActiveEntry(ctx);
 
-    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
-        if (active && active->kind == InventoryEntryKind::Creature && !active->id.empty()) {
+    if (ctx.Ui->controlScheme == ControlScheme::Cubatarium) {
+        if (active && active->kind == InventoryEntryKind::UCreature && !active->id.empty()) {
             TrySpawnCreatureOrSkin(ctx);
-            leftHeld_ = false;
+            LeftHeld = false;
             return;
         }
         if (active && active->kind == InventoryEntryKind::Skin && !active->id.empty()) {
             TrySpawnCreatureOrSkin(ctx);
-            leftHeld_ = false;
+            LeftHeld = false;
             return;
         }
 
         // Cubatarium dead zone: placeClickMaxSeconds <= hold < breakHoldMinSeconds => noop.
-        const float placeMax = ctx.ui->placeClickMaxSeconds;
-        const float breakMin = ctx.ui->breakHoldMinSeconds;
+        const float placeMax = ctx.Ui->placeClickMaxSeconds;
+        const float breakMin = ctx.Ui->breakHoldMinSeconds;
 
         if (holdSeconds < placeMax) {
-            ctx.world->CancelBreakSession();
+            ctx.World->CancelBreakSession();
             TryPlaceFromActiveSlot(ctx);
         } else if (holdSeconds < breakMin) {
-            ctx.world->CancelBreakSession();
+            ctx.World->CancelBreakSession();
         } else {
-            if (!ctx.world->HasBreakSession()
-                && ctx.world->GetIsBlockIntersectionExists()) {
-                ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+            if (!ctx.World->HasBreakSession()
+                && ctx.World->GetIsBlockIntersectionExists()) {
+                ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
             }
         }
-        leftHeld_ = false;
+        LeftHeld = false;
         return;
     }
 
     // Classic
     if (ActiveSlotBlocksWorldInteraction(ctx)) {
         TrySpawnCreatureOrSkin(ctx);
-        ctx.world->CancelBreakSession();
-        leftHeld_ = false;
+        ctx.World->CancelBreakSession();
+        LeftHeld = false;
         return;
     }
 
-    if (ctx.world->HasBreakSession()) {
-        ctx.world->CancelBreakSession();
+    if (ctx.World->HasBreakSession()) {
+        ctx.World->CancelBreakSession();
     }
-    leftHeld_ = false;
+    LeftHeld = false;
 }
 
 void UBlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputContext& ctx)
 {
-    rightDownPos_ = pos;
-    rightPressed_ = true;
-    rightDragExceeded_ = false;
-    rightLookActive_ = false;
+    RightDownPos = pos;
+    RightPressed = true;
+    RightDragExceeded = false;
+    RightLookActive = false;
 
-    if (!ctx.ui || ctx.ui->controlScheme != ControlScheme::Cubatarium) {
+    if (!ctx.Ui || ctx.Ui->controlScheme != ControlScheme::Cubatarium) {
         return;
     }
 
-    if (ctx.world) {
-        if (auto camera = ctx.world->GetCurrentUserCamera()) {
+    if (ctx.World) {
+        if (auto camera = ctx.World->GetCurrentUserCamera()) {
             camera->ResetMouseMove(pos.x, pos.y);
         }
     }
@@ -196,16 +196,16 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos, const BlockInputCont
 
 void UBlockInputController::HandleRightRelease(const BlockInputContext& ctx)
 {
-    if (!ctx.ui || !ctx.world) {
-        rightPressed_ = false;
-        rightLookActive_ = false;
+    if (!ctx.Ui || !ctx.World) {
+        RightPressed = false;
+        RightLookActive = false;
         return;
     }
 
-    rightPressed_ = false;
-    rightLookActive_ = false;
+    RightPressed = false;
+    RightLookActive = false;
 
-    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
+    if (ctx.Ui->controlScheme == ControlScheme::Cubatarium) {
         return;
     }
 
@@ -222,8 +222,8 @@ void UBlockInputController::OnMouseButton(
     if (button == MouseButton::Right) {
         if (pressed) {
             HandleRightPress(pos, ctx);
-            if (ctx.ui && ctx.ui->controlScheme == ControlScheme::Cubatarium) {
-                rightLookActive_ = true;
+            if (ctx.Ui && ctx.Ui->controlScheme == ControlScheme::Cubatarium) {
+                RightLookActive = true;
             }
         } else {
             HandleRightRelease(ctx);
@@ -239,7 +239,7 @@ void UBlockInputController::OnMouseButton(
         HandleLeftPress(ctx);
     } else {
         const double holdSeconds = std::chrono::duration<double>(
-            std::chrono::steady_clock::now() - leftDownTime_).count();
+            std::chrono::steady_clock::now() - LeftDownTime).count();
         HandleLeftRelease(static_cast<float>(holdSeconds), ctx);
     }
 }
@@ -247,33 +247,33 @@ void UBlockInputController::OnMouseButton(
 void UBlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta, const BlockInputContext& ctx)
 {
     (void)delta;
-    if (!ctx.world || !ctx.ui) {
+    if (!ctx.World || !ctx.Ui) {
         return;
     }
 
-    if (ctx.ui->controlScheme == ControlScheme::Classic) {
-        if (auto camera = ctx.world->GetCurrentUserCamera()) {
-            camera->UpdateMouseMove(ctx.world, pos.x, pos.y);
+    if (ctx.Ui->controlScheme == ControlScheme::Classic) {
+        if (auto camera = ctx.World->GetCurrentUserCamera()) {
+            camera->UpdateMouseMove(ctx.World, pos.x, pos.y);
         }
         return;
     }
 
-    if (!rightPressed_) {
+    if (!RightPressed) {
         return;
     }
 
-    const int threshold = ctx.ui->rmbDragThresholdPx;
-    if (!rightDragExceeded_
-        && CursorDragDistancePx(pos, rightDownPos_) > static_cast<float>(threshold)) {
-        rightDragExceeded_ = true;
+    const int threshold = ctx.Ui->rmbDragThresholdPx;
+    if (!RightDragExceeded
+        && CursorDragDistancePx(pos, RightDownPos) > static_cast<float>(threshold)) {
+        RightDragExceeded = true;
     }
 
-    if (!rightLookActive_) {
+    if (!RightLookActive) {
         return;
     }
 
-    if (auto camera = ctx.world->GetCurrentUserCamera()) {
-        camera->UpdateMouseMove(ctx.world, pos.x, pos.y);
+    if (auto camera = ctx.World->GetCurrentUserCamera()) {
+        camera->UpdateMouseMove(ctx.World, pos.x, pos.y);
     }
 }
 
@@ -284,37 +284,37 @@ void UBlockInputController::OnKeyDelete(const BlockInputContext& ctx)
 
 void UBlockInputController::Tick(float dt, const BlockInputContext& ctx)
 {
-    if (!ctx.ui || !ctx.world) {
+    if (!ctx.Ui || !ctx.World) {
         return;
     }
 
-    if (ctx.world->HasBreakSession()) {
-        ctx.world->TickBreakSession(dt, ctx.ui->breakDurationSeconds);
-        if (ctx.world->GetBreakProgress() >= 1.0f) {
-            ctx.world->CompleteBreakSession();
-            leftHeld_ = false;
+    if (ctx.World->HasBreakSession()) {
+        ctx.World->TickBreakSession(dt, ctx.Ui->breakDurationSeconds);
+        if (ctx.World->GetBreakProgress() >= 1.0f) {
+            ctx.World->CompleteBreakSession();
+            LeftHeld = false;
         }
         return;
     }
 
-    if (!leftHeld_ || ActiveSlotBlocksWorldInteraction(ctx)) {
+    if (!LeftHeld || ActiveSlotBlocksWorldInteraction(ctx)) {
         return;
     }
 
-    if (!ctx.world->GetIsBlockIntersectionExists()) {
+    if (!ctx.World->GetIsBlockIntersectionExists()) {
         return;
     }
 
-    if (ctx.ui->controlScheme == ControlScheme::Cubatarium) {
+    if (ctx.Ui->controlScheme == ControlScheme::Cubatarium) {
         const float holdSeconds = std::chrono::duration<float>(
-            std::chrono::steady_clock::now() - leftDownTime_).count();
-        if (holdSeconds >= ctx.ui->breakHoldMinSeconds) {
-            ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+            std::chrono::steady_clock::now() - LeftDownTime).count();
+        if (holdSeconds >= ctx.Ui->breakHoldMinSeconds) {
+            ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
         }
         return;
     }
 
-    ctx.world->StartBreakSession(ctx.world->GetBreakBlockPos());
+    ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
 }
 
 } // namespace cutum

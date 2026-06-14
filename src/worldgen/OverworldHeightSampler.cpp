@@ -35,7 +35,7 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int maxHeight)
 
 } // namespace
 
-OverworldHeightSampler::OverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight, HeightPreset preset)
+UOverworldHeightSampler::UOverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight, HeightPreset preset)
  : seed_(seed)
  , seaLevel_(seaLevel)
  , maxHeight_(maxHeight)
@@ -46,7 +46,7 @@ OverworldHeightSampler::OverworldHeightSampler(uint32_t seed, int seaLevel, int 
  }
 }
 
-int OverworldHeightSampler::SurfaceYAt(int x, int z) const
+int UOverworldHeightSampler::SurfaceYAt(int x, int z) const
 {
  const float sx = static_cast<float>(x) * 0.01f;
  const float sz = static_cast<float>(z) * 0.01f;

@@ -14,12 +14,12 @@ public:
 
  void GenerateSimpleCamera();
 
- bool AddCamera(std::shared_ptr<Camera> camera);
- size_t AddCameraReturnId(std::shared_ptr<Camera> camera);
+ bool AddCamera(std::shared_ptr<UCamera> camera);
+ size_t AddCameraReturnId(std::shared_ptr<UCamera> camera);
  bool DelCamera(size_t index);
 
- std::shared_ptr<Camera> GetActiveCamera() const;
- std::shared_ptr<Camera> GetCamera(size_t index) const;
+ std::shared_ptr<UCamera> GetActiveCamera() const;
+ std::shared_ptr<UCamera> GetCamera(size_t index) const;
  bool SetActiveCamera(size_t index);
 
  void UpdateFrameTime();
@@ -28,7 +28,7 @@ public:
  uint64_t GetDurationUpdateMks() const;
 
 private:
- std::map<size_t, std::shared_ptr<Camera>> Cameras;
+ std::map<size_t, std::shared_ptr<UCamera>> Cameras;
 
  size_t ActiveViewIndex;
 

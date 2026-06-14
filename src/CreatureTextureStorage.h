@@ -8,7 +8,7 @@
 
 namespace cutum {
 
-class CreatureTextureStorage {
+class UCreatureTextureStorage {
 public:
  void LoadFromCreatureAndSkinRoots(const std::string& creaturesRoot,
                                    const std::string& skinsRoot);

@@ -35,13 +35,13 @@ enum Camera_Movement {
     DOWN
 };
 
-class Camera
+class UCamera
 {
 public:
- Camera();
- Camera(const Camera &) = default;
- Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
- Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
+ UCamera();
+ UCamera(const UCamera &) = default;
+ UCamera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
+ UCamera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
  /// Eye world position (not render camera position in 3rd person).
  glm::vec3 GetPosition() const;
@@ -77,7 +77,7 @@ public:
  bool IsCrouching() const;
  float GetDeltaTime() const { return DeltaTime; }
  bool IsOnGround() const;
- const CreatureLocomotionController& GetLocomotionController() const { return locomotion_; }
+ const UCreatureLocomotionController& GetLocomotionController() const { return locomotion_; }
  bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
 
  CameraPerspective GetPerspective() const { return perspective_; }

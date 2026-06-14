@@ -10,9 +10,9 @@ namespace cutum {
 constexpr int CHUNK_SIZE = 16;
 constexpr int CHUNK_VOLUME = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
-class Chunk {
+class UChunk {
 public:
- explicit Chunk(glm::ivec3 chunkCoord);
+ explicit UChunk(glm::ivec3 chunkCoord);
 
  glm::ivec3 GetCoord() const { return coord_; }
  BlockId GetBlockLocal(glm::ivec3 local) const;

@@ -8,11 +8,11 @@ namespace cutum {
 
 struct GuiTheme;
 
-class GuiPanel : public GuiWidget {
+class UGuiPanel : public UGuiWidget {
 public:
-    explicit GuiPanel(const GuiTheme* theme);
+    explicit UGuiPanel(const GuiTheme* theme);
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
 
     void SetDrawBackground(bool draw) { drawBackground_ = draw; }
     bool GetDrawBackground() const { return drawBackground_; }

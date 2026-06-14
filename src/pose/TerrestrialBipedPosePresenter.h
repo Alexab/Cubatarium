@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-class TerrestrialBipedPosePresenter : public ICreaturePosePresenter {
+class UTerrestrialBipedPosePresenter : public ICreaturePosePresenter {
  public:
  LocomotionArchetype GetArchetype() const override;
  CreaturePoseParams Compute(const CreatureLocomotionFacts& facts, const CreatureDefinition& def,

@@ -12,8 +12,8 @@
 
 namespace cutum {
 
-class BlockRegistry;
-class BlockWorld;
+class UBlockRegistry;
+class UBlockWorld;
 
 struct StreamingFrameStats {
  void Reset()
@@ -32,7 +32,7 @@ struct StreamingFrameStats {
  std::vector<glm::ivec3> unloadedCoords;
 };
 
-class ChunkStreamer {
+class UChunkStreamer {
 public:
  using LoadChunkFn = std::function<bool(glm::ivec3)>;
  using SaveChunkFn = std::function<void(glm::ivec3)>;
@@ -40,7 +40,7 @@ public:
  using UnloadChunkFn = std::function<void(glm::ivec3)>;
  using GenerateColumnFn = std::function<void(int x, int z)>;
 
- ChunkStreamer(BlockWorld& world, BlockRegistry& registry, uint32_t seed,
+ UChunkStreamer(UBlockWorld& world, UBlockRegistry& registry, uint32_t seed,
      int baseY, int maxHeight);
 
  void SetWorldFolder(const std::string& path);
@@ -66,8 +66,8 @@ private:
  bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
      const glm::vec3& eyePos, const PlayerCapsule& cap) const;
 
- BlockWorld& world_;
- BlockRegistry& registry_;
+ UBlockWorld& World;
+ UBlockRegistry& registry_;
  uint32_t seed_;
  int baseY_;
  int maxHeight_;

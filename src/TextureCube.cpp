@@ -20,7 +20,7 @@ namespace cutum {
 
 namespace fs = std::filesystem;
 
-TextureCube::TextureCube()
+UTextureCube::UTextureCube()
  : TypeId(0)
  , NumTextureFrames(0)
  , TextureId(0)
@@ -29,7 +29,7 @@ TextureCube::TextureCube()
 
 }
 
-TextureCube::TextureCube(const std::string& name, size_t type_id, const std::vector<std::string>& texture_names)
+UTextureCube::UTextureCube(const std::string& name, size_t type_id, const std::vector<std::string>& texture_names)
  : Name(name)
  , TypeId(type_id)
  , TextureNames(texture_names)
@@ -40,65 +40,65 @@ TextureCube::TextureCube(const std::string& name, size_t type_id, const std::vec
 
 }
 
-const std::string& TextureCube::GetName() const
+const std::string& UTextureCube::GetName() const
 {
  return Name;
 }
 
-size_t TextureCube::GetTypeId() const
+size_t UTextureCube::GetTypeId() const
 {
  return TypeId;
 }
 
-GLuint TextureCube::GetTextureId() const
+GLuint UTextureCube::GetTextureId() const
 {
  return TextureId;
 }
 
-const std::vector<std::string>& TextureCube::GetTextureNames() const
+const std::vector<std::string>& UTextureCube::GetTextureNames() const
 {
  return TextureNames;
 }
 
-size_t TextureCube::GetNumTextureFrames() const
+size_t UTextureCube::GetNumTextureFrames() const
 {
  return NumTextureFrames;
 }
 
-void TextureCube::SetNumTextureFrames(size_t count)
+void UTextureCube::SetNumTextureFrames(size_t count)
 {
  NumTextureFrames = count < 1 ? 1 : count;
 }
 
-GLuint TextureCube::GetTexture() const
+GLuint UTextureCube::GetTexture() const
 {
  return Texture;
 }
 
-void TextureCube::SetTexture(GLuint value)
+void UTextureCube::SetTexture(GLuint value)
 {
  Texture = value;
  TextureId = value;
 }
 
-TextureCubeStorage::TextureCubeStorage(std::shared_ptr<TextureBaseStorage> base_textures)
+UTextureCubeStorage::UTextureCubeStorage(std::shared_ptr<UTextureBaseStorage> base_textures)
  : TextureBaseStorageInstance(base_textures)
 {
 }
 
-void TextureCubeStorage::SetBlockDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions)
+void UTextureCubeStorage::SetBlockDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions)
 {
- blockDefinitions_ = std::move(definitions);
+ BlockDefinitions = std::move(definitions);
 }
 
-void TextureCubeStorage::GenerateCubeTextures()
+void UTextureCubeStorage::GenerateCubeTextures()
 {
 }
 
-void TextureCubeStorage::Load(const std::string &textures_path)
+void UTextureCubeStorage::Load(const std::string &textures_path)
 {
 #ifdef CUBATARIUM_DEBUG
- std::cout << "TextureCubeStorage::Load: Loading from " << textures_path << std::endl;
+ std::cout << "UTextureCubeStorage::Load: Loading from " << textures_path << std::endl;
 #endif
  
  try
@@ -115,25 +115,25 @@ void TextureCubeStorage::Load(const std::string &textures_path)
          if(LoadJson(entry.path().string(), name, id, textures))
      {
       int stripFrames = 0;
-      if (blockDefinitions_) {
-       if (const BlockDefinition* def = blockDefinitions_->GetByName(name)) {
+      if (BlockDefinitions) {
+       if (const BlockDefinition* def = BlockDefinitions->GetByName(name)) {
         if (textures.size() == 6 && def->animation.frameCount > 1) {
          stripFrames = def->animation.frameCount;
         }
        }
       }
-      TextureCube descr = CreateCubeTexture(name, id, textures, stripFrames);
+      UTextureCube descr = CreateCubeTexture(name, id, textures, stripFrames);
       Textures[descr.GetTypeId()] = descr;
       loaded_count++;
 #ifdef CUBATARIUM_DEBUG
-      std::cout << "TextureCubeStorage::Load: Added texture '" << name << "'" << std::endl;
+      std::cout << "UTextureCubeStorage::Load: Added texture '" << name << "'" << std::endl;
 #endif
      }
    }
   }
 
 #ifdef CUBATARIUM_DEBUG
-  std::cout << "TextureCubeStorage::Load: Total loaded textures: " << loaded_count << std::endl;
+  std::cout << "UTextureCubeStorage::Load: Total loaded textures: " << loaded_count << std::endl;
 #endif
   }
   catch(std::filesystem::filesystem_error &ex)
@@ -142,12 +142,12 @@ void TextureCubeStorage::Load(const std::string &textures_path)
   }
  }
 
-const std::map<size_t, TextureCube>& TextureCubeStorage::GetTextures() const
+const std::map<size_t, UTextureCube>& UTextureCubeStorage::GetTextures() const
 {
  return Textures;
 }
 
-size_t TextureCubeStorage::GetTypeIdByName(const std::string& name) const
+size_t UTextureCubeStorage::GetTypeIdByName(const std::string& name) const
 {
  const auto it = TexturesNames.find(name);
  if (it != TexturesNames.end()) {
@@ -177,12 +177,12 @@ void CopyRegion(unsigned char* dst, int dstX, int dstY, int dstStride, int dstTo
 
 } // namespace
 
-TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id,
+UTextureCube UTextureCubeStorage::CreateCubeTexture(const std::string &cube_type_name, size_t cube_type_id,
                                                     const std::vector<std::string>& texture_names,
                                                     int stripFrameCount)
 {
  const auto & base_texture_descriptions = TextureBaseStorageInstance->GetBaseTextures();
- TextureCube result(cube_type_name, cube_type_id, texture_names);
+ UTextureCube result(cube_type_name, cube_type_id, texture_names);
  const bool useVerticalStrip = stripFrameCount > 1 && texture_names.size() == 6;
  int num_texture_frames = useVerticalStrip ? stripFrameCount : int(result.GetNumTextureFrames());
  if (useVerticalStrip) {
@@ -197,7 +197,7 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
      // Load first texture to get dimensions
  const auto firstTexIt = base_texture_descriptions.find(texture_names[0]);
  if (firstTexIt == base_texture_descriptions.end()) {
-  std::cerr << "TextureCubeStorage::CreateCubeTexture: unknown base texture '"
+  std::cerr << "UTextureCubeStorage::CreateCubeTexture: unknown base texture '"
             << texture_names[0] << "' for " << cube_type_name << std::endl;
   return result;
  }
@@ -253,7 +253,7 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
     if (k < texture_names.size()) {
      const auto texIt = base_texture_descriptions.find(texture_names[k]);
      if (texIt == base_texture_descriptions.end()) {
-      std::cerr << "TextureCubeStorage::CreateCubeTexture: unknown base texture '"
+      std::cerr << "UTextureCubeStorage::CreateCubeTexture: unknown base texture '"
                 << texture_names[k] << "'" << std::endl;
       ++k;
       continue;
@@ -299,7 +299,7 @@ TextureCube TextureCubeStorage::CreateCubeTexture(const std::string &cube_type_n
  return result;
 }
 
-GLuint TextureCubeStorage::LoadTexture(const std::string &image_path)
+GLuint UTextureCubeStorage::LoadTexture(const std::string &image_path)
 {
  GLuint textureId;
  glGenTextures(1, &textureId);
@@ -326,7 +326,7 @@ GLuint TextureCubeStorage::LoadTexture(const std::string &image_path)
 
 
 
-bool TextureCubeStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::vector<std::string> &textures)
+bool UTextureCubeStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::vector<std::string> &textures)
 {
  std::string val;
  std::ifstream file(file_name);

@@ -6,10 +6,10 @@
 
 namespace cutum {
 
-class CreatureLocomotionController;
+class UCreatureLocomotionController;
 
 struct CreatureLocomotionRawInput {
- const CreatureLocomotionController* locomotion{nullptr};
+ const UCreatureLocomotionController* locomotion{nullptr};
  glm::vec3 bodyOriginBefore{0.0f};
  glm::vec3 bodyOriginAfter{0.0f};
  float dt{0.0f};

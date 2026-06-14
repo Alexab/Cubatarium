@@ -17,20 +17,20 @@ namespace cutum {
 class UWorld;
 class ICreatureVisual;
 
-class Creature {
+class UCreature {
 public:
- Creature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm::vec3 eyeOffset);
- virtual ~Creature();
+ UCreature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm::vec3 eyeOffset);
+ virtual ~UCreature();
 
- CreatureId GetId() const { return id_; }
- const std::string& GetTypeId() const { return typeId_; }
- const std::string& GetSkinId() const { return skinId_; }
- void SetSkinId(const std::string& id) { skinId_ = id; }
- glm::vec3 GetBodyOrigin() const { return bodyOrigin_; }
- void SetBodyOrigin(const glm::vec3& v) { bodyOrigin_ = v; }
- glm::vec3 GetEyeOffset() const { return eyeOffset_; }
+ CreatureId GetId() const { return Id; }
+ const std::string& GetTypeId() const { return TypeId; }
+ const std::string& GetSkinId() const { return SkinId; }
+ void SetSkinId(const std::string& id) { SkinId = id; }
+ glm::vec3 GetBodyOrigin() const { return BodyOrigin; }
+ void SetBodyOrigin(const glm::vec3& v) { BodyOrigin = v; }
+ glm::vec3 GetEyeOffset() const { return EyeOffset; }
  /// Feet on ground (collision / rig root). Same as body origin.
- glm::vec3 GetFeetPosition() const { return bodyOrigin_; }
+ glm::vec3 GetFeetPosition() const { return BodyOrigin; }
  glm::vec3 GetEyePosition() const;
  /// Eye used by locomotion (feet + view eye height when grounded).
  glm::vec3 GetLocomotionEye() const;
@@ -46,10 +46,10 @@ public:
  void SyncFeetFromLocomotion(const UWorld& world, glm::vec3& eyeAfterLocomotion);
 
  CollisionVolume GetCollisionVolume() const;
- CreatureLocomotionController& GetLocomotion() { return locomotion_; }
- const CreatureLocomotionController& GetLocomotion() const { return locomotion_; }
- CreatureInventory& GetInventory() { return inventory_; }
- const CreatureInventory& GetInventory() const { return inventory_; }
+ UCreatureLocomotionController& GetLocomotion() { return locomotion_; }
+ const UCreatureLocomotionController& GetLocomotion() const { return locomotion_; }
+ UCreatureInventory& GetInventory() { return inventory_; }
+ const UCreatureInventory& GetInventory() const { return inventory_; }
 
  CreatureIntent GetIntent() const { return intent_; }
  void SetIntent(const CreatureIntent& intent) { intent_ = intent; }
@@ -63,7 +63,7 @@ public:
  void SetWalkCycleHz(float hz) { walkCycleHz_ = hz; }
  void RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
                             const CreatureLocomotionCapabilities& caps);
- void RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
+ void RebuildLocomotionFactsFromController(const UCreatureLocomotionController& controller,
                                            const CreatureLocomotionCapabilities& caps,
                                            float dt, float horizontalSpeedOverride = -1.0f);
 
@@ -82,17 +82,17 @@ public:
  void SetCapabilities(const CreatureLocomotionCapabilities& caps) { locomotion_.SetCapabilities(caps); }
 
 protected:
- CreatureId id_;
- std::string typeId_;
- std::string skinId_;
- glm::vec3 bodyOrigin_;
- glm::vec3 eyeOffset_;
+ CreatureId Id;
+ std::string TypeId;
+ std::string SkinId;
+ glm::vec3 BodyOrigin;
+ glm::vec3 EyeOffset;
  float yaw_{0.0f};
  float pitch_{0.0f};
  float modelYawOffsetDeg_{0.0f};
  CreatureBoundsState bounds_;
- CreatureLocomotionController locomotion_;
- CreatureInventory inventory_;
+ UCreatureLocomotionController locomotion_;
+ UCreatureInventory inventory_;
  CreatureIntent intent_{};
  bool playerCharacter_{false};
  bool possessed_{false};

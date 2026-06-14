@@ -3,37 +3,37 @@
 
 namespace cutum {
 
-FlatPipeline::FlatPipeline(WorldGenContext ctx)
+UFlatPipeline::UFlatPipeline(WorldGenContext ctx)
  : IWorldGenPipeline(ctx)
 {
 }
 
-void FlatPipeline::GenerateColumn(int worldX, int worldZ)
+void UFlatPipeline::GenerateColumn(int worldX, int worldZ)
 {
  FillFlatColumn(ctx_, worldX, worldZ);
 }
 
-int FlatPipeline::SurfaceYAt(int worldX, int worldZ) const
+int UFlatPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
  (void)worldX;
  (void)worldZ;
- return ctx_.settings.flatSurfaceY;
+ return ctx_.Settings.flatSurfaceY;
 }
 
-LegacyHashPipeline::LegacyHashPipeline(WorldGenContext ctx)
+ULegacyHashPipeline::ULegacyHashPipeline(WorldGenContext ctx)
  : IWorldGenPipeline(ctx)
 {
 }
 
-void LegacyHashPipeline::GenerateColumn(int worldX, int worldZ)
+void ULegacyHashPipeline::GenerateColumn(int worldX, int worldZ)
 {
  FillLegacyHashColumn(ctx_, worldX, worldZ);
 }
 
-int LegacyHashPipeline::SurfaceYAt(int worldX, int worldZ) const
+int ULegacyHashPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
- const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.settings);
- return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
+ const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.Settings);
+ return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
 }
 
 } // namespace cutum

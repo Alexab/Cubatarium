@@ -113,12 +113,12 @@ GridPlacementData BuildGridPlacementData(const GuiRect& clientArea, const GuiGri
 
 } // namespace
 
-int GuiLayout::StackVerticalMeasure(const GuiRect& clientArea, int spacing, int padding,
-                                    const std::vector<GuiWidget*>& children)
+int UGuiLayout::StackVerticalMeasure(const GuiRect& clientArea, int spacing, int padding,
+                                    const std::vector<UGuiWidget*>& children)
 {
     int total = padding * 2;
     bool first = true;
-    for (GuiWidget* child : children) {
+    for (UGuiWidget* child : children) {
         if (!child || !child->IsVisible()) {
             continue;
         }
@@ -131,11 +131,11 @@ int GuiLayout::StackVerticalMeasure(const GuiRect& clientArea, int spacing, int 
     return total;
 }
 
-void GuiLayout::StackVertical(const GuiRect& clientArea, int spacing, int padding,
-                             const std::vector<GuiWidget*>& children)
+void UGuiLayout::StackVertical(const GuiRect& clientArea, int spacing, int padding,
+                             const std::vector<UGuiWidget*>& children)
 {
     GuiRect cursor = ClientWithPadding(clientArea, padding);
-    for (GuiWidget* child : children) {
+    for (UGuiWidget* child : children) {
         if (!child || !child->IsVisible()) {
             continue;
         }
@@ -145,11 +145,11 @@ void GuiLayout::StackVertical(const GuiRect& clientArea, int spacing, int paddin
     }
 }
 
-void GuiLayout::StackHorizontal(const GuiRect& clientArea, int spacing, int padding,
-                               const std::vector<GuiWidget*>& children)
+void UGuiLayout::StackHorizontal(const GuiRect& clientArea, int spacing, int padding,
+                               const std::vector<UGuiWidget*>& children)
 {
     GuiRect cursor = ClientWithPadding(clientArea, padding);
-    for (GuiWidget* child : children) {
+    for (UGuiWidget* child : children) {
         if (!child || !child->IsVisible()) {
             continue;
         }
@@ -159,8 +159,8 @@ void GuiLayout::StackHorizontal(const GuiRect& clientArea, int spacing, int padd
     }
 }
 
-void GuiLayout::AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int margin,
-                            GuiWidget* child)
+void UGuiLayout::AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int margin,
+                            UGuiWidget* child)
 {
     if (!child) {
         return;
@@ -191,7 +191,7 @@ void GuiLayout::AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int m
     child->SetBounds(bounds);
 }
 
-int GuiLayout::GridMeasure(const GuiRect& clientArea, const GuiGridSpec& spec,
+int UGuiLayout::GridMeasure(const GuiRect& clientArea, const GuiGridSpec& spec,
                            const std::vector<GuiGridItem>& items)
 {
     const GridPlacementData d = BuildGridPlacementData(clientArea, spec, items);
@@ -202,7 +202,7 @@ int GuiLayout::GridMeasure(const GuiRect& clientArea, const GuiGridSpec& spec,
     return std::max(0, totalRows + totalGaps + std::max(0, spec.padding) * 2);
 }
 
-void GuiLayout::GridPlace(const GuiRect& clientArea, const GuiGridSpec& spec,
+void UGuiLayout::GridPlace(const GuiRect& clientArea, const GuiGridSpec& spec,
                           const std::vector<GuiGridItem>& items)
 {
     const GridPlacementData d = BuildGridPlacementData(clientArea, spec, items);

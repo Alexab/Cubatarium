@@ -9,7 +9,7 @@ namespace cutum {
 
 namespace {
 
-bool NeighborHidesFace(const BlockWorld& world, BlockRegistry& registry, BlockId faceId,
+bool NeighborHidesFace(const UBlockWorld& world, UBlockRegistry& registry, BlockId faceId,
                        glm::ivec3 neighborPos)
 {
  const BlockId neighbor = world.GetBlock(neighborPos);
@@ -28,11 +28,11 @@ bool NeighborHidesFace(const BlockWorld& world, BlockRegistry& registry, BlockId
 
 } // namespace
 
-std::vector<GreedyQuad> GreedyMesher::BuildChunkMesh(
-    const BlockWorld& world, glm::ivec3 chunkCoord, BlockRegistry& registry)
+std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(
+    const UBlockWorld& world, glm::ivec3 chunkCoord, UBlockRegistry& registry)
 {
  std::vector<GreedyQuad> quads;
- const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
+ const UChunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
   return quads;
  }

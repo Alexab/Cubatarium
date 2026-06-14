@@ -10,7 +10,7 @@ namespace {
 constexpr int kDragThresholdPx = 8;
 }
 
-GuiSlot::GuiSlot(const GuiTheme* theme, int size)
+UGuiSlot::UGuiSlot(const GuiTheme* theme, int size)
     : theme_(theme)
     , slotSize_(size)
 {
@@ -18,10 +18,10 @@ GuiSlot::GuiSlot(const GuiTheme* theme, int size)
     bounds_.h = size;
 }
 
-int GuiSlot::GetPreferredWidth() const { return slotSize_; }
-int GuiSlot::GetPreferredHeight() const { return slotSize_; }
+int UGuiSlot::GetPreferredWidth() const { return slotSize_; }
+int UGuiSlot::GetPreferredHeight() const { return slotSize_; }
 
-void GuiSlot::Draw(GuiRenderer& renderer)
+void UGuiSlot::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_) {
         return;
@@ -52,7 +52,7 @@ void GuiSlot::Draw(GuiRenderer& renderer)
     }
 }
 
-bool GuiSlot::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiSlot::OnMouseDown(const GuiMouseEvent& event)
 {
     if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y)) {
         return false;
@@ -64,7 +64,7 @@ bool GuiSlot::OnMouseDown(const GuiMouseEvent& event)
     return true;
 }
 
-bool GuiSlot::OnMouseUp(const GuiMouseEvent& event)
+bool UGuiSlot::OnMouseUp(const GuiMouseEvent& event)
 {
     if (!enabled_ || !pressed_) {
         return false;
@@ -81,7 +81,7 @@ bool GuiSlot::OnMouseUp(const GuiMouseEvent& event)
     return true;
 }
 
-bool GuiSlot::OnMouseMove(const GuiMouseEvent& event)
+bool UGuiSlot::OnMouseMove(const GuiMouseEvent& event)
 {
     if (!pressed_ || dragStarted_) {
         return pressed_;

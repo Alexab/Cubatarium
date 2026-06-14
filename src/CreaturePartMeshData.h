@@ -49,7 +49,7 @@ inline float ModelYawFromDirection(float dirX, float dirZ)
     return yaw;
 }
 
-// Camera look yaw (degrees) -> model yaw (local +Z forward).
+// UCamera look yaw (degrees) -> model yaw (local +Z forward).
 inline float ModelYawFromCameraYaw(float cameraYawDeg)
 {
     const float r = cameraYawDeg * 0.0174532925f;

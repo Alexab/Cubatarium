@@ -27,14 +27,14 @@ struct VertexData
  VertexData(glm::vec3 position, glm::vec2 texCoord);
 };
 
-class CubeGL: public Cube
+class UCubeGL: public UCube
 {
 public:
- CubeGL();
- CubeGL(const CubeGL &copy);
- CubeGL& operator = (const CubeGL &copy);
+ UCubeGL();
+ UCubeGL(const UCubeGL &copy);
+ UCubeGL& operator = (const UCubeGL &copy);
 
- ~CubeGL();
+ ~UCubeGL();
 
  void Init(const glm::mat4 &initial_pose, float size=1.0);
  void UpdateVertices();
@@ -53,7 +53,7 @@ private:
  GLuint indexBuf;
 };
 
-extern std::shared_ptr<Cube> NewCube();
+extern std::shared_ptr<UCube> NewCube();
 
 }
 

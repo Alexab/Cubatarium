@@ -30,7 +30,7 @@ glm::vec4 ReadVec4(const nlohmann::json& arr, const glm::vec4& fallback)
 
 } // namespace
 
-void CreatureDefinitionStorage::Load(const std::string& folder)
+void UCreatureDefinitionStorage::Load(const std::string& folder)
 {
  definitions_.clear();
  if (!std::filesystem::exists(folder)) {
@@ -45,11 +45,11 @@ void CreatureDefinitionStorage::Load(const std::string& folder)
    LoadFile(jsonPath.string());
   }
  }
- std::cout << "CreatureDefinitionStorage: loaded " << definitions_.size() << " definitions"
+ std::cout << "UCreatureDefinitionStorage: loaded " << definitions_.size() << " definitions"
            << std::endl;
 }
 
-bool CreatureDefinitionStorage::LoadFile(const std::string& path)
+bool UCreatureDefinitionStorage::LoadFile(const std::string& path)
 {
  try {
   std::ifstream file(path);
@@ -158,12 +158,12 @@ bool CreatureDefinitionStorage::LoadFile(const std::string& path)
   definitions_[def.id] = def;
   return true;
  } catch (const std::exception& e) {
-  std::cerr << "CreatureDefinitionStorage: " << path << ": " << e.what() << std::endl;
+  std::cerr << "UCreatureDefinitionStorage: " << path << ": " << e.what() << std::endl;
   return false;
  }
 }
 
-const CreatureDefinition* CreatureDefinitionStorage::Get(const std::string& id) const
+const CreatureDefinition* UCreatureDefinitionStorage::Get(const std::string& id) const
 {
  const auto it = definitions_.find(id);
  if (it == definitions_.end()) {
@@ -172,7 +172,7 @@ const CreatureDefinition* CreatureDefinitionStorage::Get(const std::string& id) 
  return &it->second;
 }
 
-std::vector<std::string> CreatureDefinitionStorage::ListAllIds() const
+std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
 {
  std::vector<std::string> ids;
  ids.reserve(definitions_.size());
@@ -193,7 +193,7 @@ std::vector<std::string> CreatureDefinitionStorage::ListAllIds() const
  return ids;
 }
 
-std::vector<std::string> CreatureDefinitionStorage::ListSpawnable() const
+std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
 {
  std::vector<std::string> ids;
  for (const auto& [id, def] : definitions_) {
@@ -214,7 +214,7 @@ std::vector<std::string> CreatureDefinitionStorage::ListSpawnable() const
  return ids;
 }
 
-std::string CreatureDefinitionStorage::GetControlledDefaultSpeciesId() const
+std::string UCreatureDefinitionStorage::GetControlledDefaultSpeciesId() const
 {
  for (const auto& [id, def] : definitions_) {
   if (def.role == CreatureRole::ControlledDefault) {

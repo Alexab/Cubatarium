@@ -21,7 +21,7 @@ glm::vec4 ReadVec4(const nlohmann::json& arr, const glm::vec4& fallback)
 
 } // namespace
 
-void SkinDefinitionStorage::Load(const std::string& folder)
+void USkinDefinitionStorage::Load(const std::string& folder)
 {
  definitions_.clear();
  if (!std::filesystem::exists(folder)) {
@@ -36,10 +36,10 @@ void SkinDefinitionStorage::Load(const std::string& folder)
    LoadFile(jsonPath.string());
   }
  }
- std::cout << "SkinDefinitionStorage: loaded " << definitions_.size() << " skins" << std::endl;
+ std::cout << "USkinDefinitionStorage: loaded " << definitions_.size() << " skins" << std::endl;
 }
 
-bool SkinDefinitionStorage::LoadFile(const std::string& path)
+bool USkinDefinitionStorage::LoadFile(const std::string& path)
 {
  try {
   std::ifstream file(path);
@@ -89,12 +89,12 @@ bool SkinDefinitionStorage::LoadFile(const std::string& path)
   definitions_[def.id] = def;
   return true;
  } catch (const std::exception& e) {
-  std::cerr << "SkinDefinitionStorage: " << path << ": " << e.what() << std::endl;
+  std::cerr << "USkinDefinitionStorage: " << path << ": " << e.what() << std::endl;
   return false;
  }
 }
 
-const SkinDefinition* SkinDefinitionStorage::Get(const std::string& id) const
+const SkinDefinition* USkinDefinitionStorage::Get(const std::string& id) const
 {
  const auto it = definitions_.find(id);
  if (it == definitions_.end()) {
@@ -103,7 +103,7 @@ const SkinDefinition* SkinDefinitionStorage::Get(const std::string& id) const
  return &it->second;
 }
 
-std::vector<std::string> SkinDefinitionStorage::ListEquippable() const
+std::vector<std::string> USkinDefinitionStorage::ListEquippable() const
 {
  std::vector<std::string> ids;
  for (const auto& [id, def] : definitions_) {
@@ -124,7 +124,7 @@ std::vector<std::string> SkinDefinitionStorage::ListEquippable() const
  return ids;
 }
 
-bool SkinDefinitionStorage::IsCompatible(const std::string& skinId,
+bool USkinDefinitionStorage::IsCompatible(const std::string& skinId,
                                          const std::string& speciesId) const
 {
  const SkinDefinition* skin = Get(skinId);

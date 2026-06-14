@@ -12,18 +12,18 @@
 namespace cutum {
 
 class UTextRenderer;
-class ShaderManager;
+class UShaderManager;
 
-class GuiRenderer {
+class UGuiRenderer {
 public:
-    GuiRenderer();
-    ~GuiRenderer();
+    UGuiRenderer();
+    ~UGuiRenderer();
 
-    bool Initialize(std::shared_ptr<ShaderManager> shaderManager,
+    bool Initialize(std::shared_ptr<UShaderManager> shaderManager,
                     std::shared_ptr<UTextRenderer> textRenderer);
     void Shutdown();
 
-    void BeginFrame(int windowWidth, int windowHeight);
+    void BeginFrame(int WindowWidth, int WindowHeight);
     void EndFrame();
 
     void DrawFilledRect(const GuiRect& rect, const glm::vec4& color);
@@ -43,7 +43,7 @@ public:
 private:
     void ApplyClipStack();
 
-    std::shared_ptr<UTextRenderer> textRenderer_;
+    std::shared_ptr<UTextRenderer> TextRenderer;
     UiQuadBatch quadBatch_;
     UiTexturedQuadBatch texturedQuadBatch_;
     int windowWidth_{0};

@@ -8,15 +8,15 @@ VertexData::VertexData(glm::vec3 position, glm::vec2 texCoord)
 {
 }
 
-CubeGL::CubeGL()
-: Cube()
+UCubeGL::UCubeGL()
+: UCube()
 {
  glGenBuffers(1, &arrayBuf);
  glGenBuffers(1, &indexBuf);
 }
 
-CubeGL::CubeGL(const CubeGL &copy)
- : Cube(copy)
+UCubeGL::UCubeGL(const UCubeGL &copy)
+ : UCube(copy)
 {
  glGenBuffers(1, &arrayBuf);
  glGenBuffers(1, &indexBuf);
@@ -33,9 +33,9 @@ CubeGL::CubeGL(const CubeGL &copy)
  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-CubeGL& CubeGL::operator = (const CubeGL &copy)
+UCubeGL& UCubeGL::operator = (const UCubeGL &copy)
 {
- Cube::operator = (copy);
+ UCube::operator = (copy);
  Vertices = copy.Vertices;
  Indices = copy.Indices;
 
@@ -49,15 +49,15 @@ CubeGL& CubeGL::operator = (const CubeGL &copy)
  return *this;
 }
 
-CubeGL::~CubeGL()
+UCubeGL::~UCubeGL()
 {
  glDeleteBuffers(1, &arrayBuf);
  glDeleteBuffers(1, &indexBuf);
 }
 
-void CubeGL::Init(const glm::mat4 &initial_pose, float size)
+void UCubeGL::Init(const glm::mat4 &initial_pose, float size)
 {
- Cube::Init(initial_pose, size);
+ UCube::Init(initial_pose, size);
  float size2 = Size * 0.5f;
 
  float cube_shift = 1.0f/6.0f;
@@ -120,7 +120,7 @@ void CubeGL::Init(const glm::mat4 &initial_pose, float size)
  UpdateVertices();
 }
 
-void CubeGL::UpdateVertices()
+void UCubeGL::UpdateVertices()
 {
  Vertices.resize(VerticesInitialPos.size());
  for(size_t i=0;i<Vertices.size();i++)
@@ -134,34 +134,34 @@ void CubeGL::UpdateVertices()
  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-std::vector<VertexData> CubeGL::GetVertices() const
+std::vector<VertexData> UCubeGL::GetVertices() const
 {
  return Vertices;
 }
 
-std::vector<VertexData> CubeGL::GetVerticesInitialPos() const
+std::vector<VertexData> UCubeGL::GetVerticesInitialPos() const
 {
  return VerticesInitialPos;
 }
 
-std::vector<GLushort> CubeGL::GetIndices() const
+std::vector<GLushort> UCubeGL::GetIndices() const
 {
  return Indices;
 }
 
-GLuint CubeGL::GetArrayBuf()
+GLuint UCubeGL::GetArrayBuf()
 {
  return arrayBuf;
 }
 
-GLuint CubeGL::GetIndexBuf()
+GLuint UCubeGL::GetIndexBuf()
 {
  return indexBuf;
 }
 
-std::shared_ptr<Cube> NewCube()
+std::shared_ptr<UCube> NewCube()
 {
- return std::make_shared<CubeGL>();
+ return std::make_shared<UCubeGL>();
 }
 
 }

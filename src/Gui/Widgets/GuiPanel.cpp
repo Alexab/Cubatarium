@@ -5,33 +5,33 @@
 
 namespace cutum {
 
-GuiPanel::GuiPanel(const GuiTheme* theme)
+UGuiPanel::UGuiPanel(const GuiTheme* theme)
     : theme_(theme)
 {
 }
 
-void GuiPanel::SetStackLayout(int spacing, int padding)
+void UGuiPanel::SetStackLayout(int spacing, int padding)
 {
     stackSpacing_ = spacing;
     stackPadding_ = padding;
 }
 
-int GuiPanel::GetPreferredHeight() const
+int UGuiPanel::GetPreferredHeight() const
 {
-    std::vector<GuiWidget*> kids;
+    std::vector<UGuiWidget*> kids;
     for (const auto& child : children_) {
         if (child->IsVisible()) {
             kids.push_back(child.get());
         }
     }
     if (kids.empty()) {
-        return GuiWidget::GetPreferredHeight();
+        return UGuiWidget::GetPreferredHeight();
     }
     const int w = bounds_.w > 0 ? bounds_.w : 400;
-    return GuiLayout::StackVerticalMeasure({0, 0, w, 100000}, stackSpacing_, stackPadding_, kids);
+    return UGuiLayout::StackVerticalMeasure({0, 0, w, 100000}, stackSpacing_, stackPadding_, kids);
 }
 
-void GuiPanel::Draw(GuiRenderer& renderer)
+void UGuiPanel::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_) {
         return;
@@ -40,7 +40,7 @@ void GuiPanel::Draw(GuiRenderer& renderer)
         renderer.DrawFilledRect(bounds_, theme_->panelBackground);
         renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
     }
-    GuiWidget::Draw(renderer);
+    UGuiWidget::Draw(renderer);
 }
 
 } // namespace cutum

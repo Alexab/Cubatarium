@@ -14,7 +14,7 @@ struct WanderAgentState {
  glm::vec3 direction{1.0f, 0.0f, 0.0f};
 };
 
-class WanderActivityAgent : public ICreatureActivityAgent {
+class UWanderActivityAgent : public ICreatureActivityAgent {
  public:
  const char* GetBehaviorId() const override { return "wander"; }
  void OnCreatureAdded(CreatureId id) override;
@@ -25,7 +25,7 @@ class WanderActivityAgent : public ICreatureActivityAgent {
  void ResetWanderState(CreatureId id, float intervalMin, float intervalMax);
 
  std::unordered_set<CreatureId> members_;
- std::unordered_map<CreatureId, WanderAgentState> state_;
+ std::unordered_map<CreatureId, WanderAgentState> State;
 };
 
 } // namespace cutum

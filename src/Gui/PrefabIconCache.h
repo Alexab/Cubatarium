@@ -11,18 +11,18 @@ typedef unsigned int GLuint;
 
 namespace cutum {
 
-class BlockDefinitionStorage;
-class PrefabLibrary;
-class ShaderManager;
-class TextureCubeStorage;
+class UBlockDefinitionStorage;
+class UPrefabLibrary;
+class UShaderManager;
+class UTextureCubeStorage;
 
-class PrefabIconCache {
+class UPrefabIconCache {
 public:
-    PrefabIconCache(std::shared_ptr<PrefabLibrary> prefabs,
-                    std::shared_ptr<TextureCubeStorage> textures,
-                    std::shared_ptr<BlockDefinitionStorage> blockDefs,
-                    std::shared_ptr<ShaderManager> shaderManager);
-    ~PrefabIconCache();
+    UPrefabIconCache(std::shared_ptr<UPrefabLibrary> prefabs,
+                    std::shared_ptr<UTextureCubeStorage> textures,
+                    std::shared_ptr<UBlockDefinitionStorage> blockDefs,
+                    std::shared_ptr<UShaderManager> shaderManager);
+    ~UPrefabIconCache();
 
     bool Initialize();
     void Shutdown();
@@ -39,11 +39,11 @@ private:
     GLuint GetBlockTexture(BlockId blockId) const;
     bool InitCubeMesh();
 
-    std::shared_ptr<PrefabLibrary> prefabs_;
-    std::shared_ptr<TextureCubeStorage> textures_;
-    std::shared_ptr<BlockDefinitionStorage> blockDefs_;
-    std::shared_ptr<ShaderManager> shaderManager_;
-    std::shared_ptr<class ShaderProgram> shader_;
+    std::shared_ptr<UPrefabLibrary> prefabs_;
+    std::shared_ptr<UTextureCubeStorage> textures_;
+    std::shared_ptr<UBlockDefinitionStorage> blockDefs_;
+    std::shared_ptr<UShaderManager> ShaderManager;
+    std::shared_ptr<class UShaderProgram> shader_;
 
     std::unordered_map<std::string, GLuint> cache_;
     std::unordered_map<BlockId, GLuint> blockCache_;

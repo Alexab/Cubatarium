@@ -18,25 +18,24 @@ namespace cutum {
 std::filesystem::path GetExecutableDirectory();
 
 class UWorld;
-class TextureBaseStorage;
-class TextureCubeStorage;
-class CreatureTextureStorage;
-class ObjectStorage;
-class PrefabLibrary;
+class UTextureBaseStorage;
+class UTextureCubeStorage;
+class UCreatureTextureStorage;
+class UObjectStorage;
+class UPrefabLibrary;
 class UGeometryEngine;
 class UViewEngine;
 
 class UCore
 {
 public:
- UCore(std::shared_ptr<TextureBaseStorage> texture_base_storage_,
-      std::shared_ptr<TextureCubeStorage> texture_cube_storage_,
-      std::shared_ptr<ObjectStorage> object_storage_,
-      std::shared_ptr<PrefabLibrary> prefab_library_,
-      std::shared_ptr<UWorld> world_,
-      std::shared_ptr<UGeometryEngine>
-      geometries_,
-      std::shared_ptr<UViewEngine> views_);
+ UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
+      std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
+      std::shared_ptr<UObjectStorage> object_storage,
+      std::shared_ptr<UPrefabLibrary> prefab_library,
+      std::shared_ptr<UWorld> world,
+      std::shared_ptr<UGeometryEngine> geometries,
+      std::shared_ptr<UViewEngine> views);
 
 public:
  void LoadConfig(const std::string& config_file_name);
@@ -48,7 +47,7 @@ public:
  AppSettingsSnapshot GetAppSettings() const;
  void ApplyAppSettings(const AppSettingsSnapshot& settings);
 
- ProceduralSettings GetProceduralTemplate() const { return proceduralSettings_; }
+ ProceduralSettings GetProceduralTemplate() const { return ProceduralTemplate; }
  void SetProceduralTemplate(const ProceduralSettings& settings);
 
  void CreateNewWorldFromTemplate();
@@ -57,8 +56,8 @@ public:
  void RefreshWorldList();
  void LoadWorldByName(const std::string& world_name);
 
- const UiSettings& GetUiSettings() const { return uiSettings_; }
- RenderSettings GetRenderSettings() const { return renderSettings_; }
+ const UiSettings& GetUiSettings() const { return Ui; }
+ RenderSettings GetRenderSettings() const { return Render; }
 
  void CreateWorld(const std::string& terrain_type = "");
  void CreateWorldFromProceduralConfig();
@@ -68,15 +67,15 @@ public:
 
  void LoadWorldList(const std::string& world_path);
 
- uint32_t GetWorldSeed() const { return worldSeed_; }
- const ProceduralSettings& GetProceduralSettings() const { return proceduralSettings_; }
- bool IsStepUpEnabled() const { return stepUpEnabled_; }
- bool IsEntityCollisionEnabled() const { return entityCollisionEnabled_; }
- std::shared_ptr<PrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
- std::shared_ptr<TextureCubeStorage> GetTextureCubeStorage() const {
+ uint32_t GetWorldSeed() const { return WorldSeed; }
+ const ProceduralSettings& GetProceduralSettings() const { return ProceduralTemplate; }
+ bool IsStepUpEnabled() const { return StepUpEnabled; }
+ bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
+ std::shared_ptr<UPrefabLibrary> GetPrefabLibrary() const { return PrefabLibraryInstance; }
+ std::shared_ptr<UTextureCubeStorage> GetTextureCubeStorage() const {
   return TextureCubeStorageInstance;
  }
- std::shared_ptr<CreatureTextureStorage> GetCreatureTextureStorage() const {
+ std::shared_ptr<UCreatureTextureStorage> GetCreatureTextureStorage() const {
   return CreatureTextureStorageInstance;
  }
 
@@ -84,34 +83,34 @@ private:
  std::vector<std::string> WorldList;
 
  std::filesystem::path WorkDir;
- std::filesystem::path exeDir_;
+ std::filesystem::path ExeDir;
 
- std::filesystem::path texture_base_storage_file_name;
- std::filesystem::path texture_cube_storage_file_name;
- std::filesystem::path object_storage_file_name;
- std::filesystem::path prefabs_path_;
+ std::filesystem::path TextureBaseStorageFileName;
+ std::filesystem::path TextureCubeStorageFileName;
+ std::filesystem::path ObjectStorageFileName;
+ std::filesystem::path PrefabsPath;
  std::filesystem::path WorldPath;
- std::filesystem::path activeWorldFolder_;
- std::filesystem::path configFilePath_;
+ std::filesystem::path ActiveWorldFolder;
+ std::filesystem::path ConfigFilePath;
 
- std::string default_world_name;
- std::string default_user_name;
+ std::string DefaultWorldName;
+ std::string DefaultUserName;
 
- uint32_t worldSeed_{12345};
- std::string terrainType_{"heightmap"};
- ProceduralSettings proceduralSettings_;
- int renderDistanceChunks_{4};
- bool streamingEnabled_{true};
- bool stepUpEnabled_{true};
- bool entityCollisionEnabled_{true};
- RenderSettings renderSettings_;
- UiSettings uiSettings_;
+ uint32_t WorldSeed{12345};
+ std::string TerrainType{"heightmap"};
+ ProceduralSettings ProceduralTemplate;
+ int RenderDistanceChunks{4};
+ bool StreamingEnabled{true};
+ bool StepUpEnabled{true};
+ bool EntityCollisionEnabled{true};
+ RenderSettings Render;
+ UiSettings Ui;
 
- std::shared_ptr<TextureBaseStorage> TextureBaseStorageInstance;
- std::shared_ptr<TextureCubeStorage> TextureCubeStorageInstance;
- std::shared_ptr<CreatureTextureStorage> CreatureTextureStorageInstance;
- std::shared_ptr<ObjectStorage> ObjectStorageInstance;
- std::shared_ptr<PrefabLibrary> PrefabLibraryInstance;
+ std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
+ std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
+ std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
+ std::shared_ptr<UObjectStorage> ObjectStorageInstance;
+ std::shared_ptr<UPrefabLibrary> PrefabLibraryInstance;
  std::shared_ptr<UGeometryEngine> GeometryEngineInstance;
  std::shared_ptr<UViewEngine> ViewEngineInstance;
  std::shared_ptr<UWorld> WorldInstance;

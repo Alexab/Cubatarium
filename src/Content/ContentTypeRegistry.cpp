@@ -18,7 +18,7 @@ constexpr const char* kMiscType = "misc";
 
 } // namespace
 
-void ContentTypeRegistry::EnsureDefaultTypes()
+void UContentTypeRegistry::EnsureDefaultTypes()
 {
     if (!typeById_.count(kMiscType)) {
         types_.push_back({kMiscType, "Misc", 999});
@@ -26,7 +26,7 @@ void ContentTypeRegistry::EnsureDefaultTypes()
     }
 }
 
-void ContentTypeRegistry::LoadTypes(const std::string& typesJsonPath)
+void UContentTypeRegistry::LoadTypes(const std::string& typesJsonPath)
 {
     types_.clear();
     typeById_.clear();
@@ -50,14 +50,14 @@ void ContentTypeRegistry::LoadTypes(const std::string& typesJsonPath)
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << "ContentTypeRegistry: " << e.what() << std::endl;
+        std::cerr << "UContentTypeRegistry: " << e.what() << std::endl;
     }
     EnsureDefaultTypes();
     std::sort(types_.begin(), types_.end(),
               [](const ContentType& a, const ContentType& b) { return a.sortOrder < b.sortOrder; });
 }
 
-std::vector<std::string> ContentTypeRegistry::GetTypesForTags(
+std::vector<std::string> UContentTypeRegistry::GetTypesForTags(
     const std::vector<std::string>& tags) const
 {
     if (tags.empty()) {
@@ -66,7 +66,7 @@ std::vector<std::string> ContentTypeRegistry::GetTypesForTags(
     return tags;
 }
 
-void ContentTypeRegistry::IndexBlocks(const BlockDefinitionStorage& storage)
+void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage& storage)
 {
     blockEntries_.clear();
     EnsureDefaultTypes();
@@ -90,7 +90,7 @@ void ContentTypeRegistry::IndexBlocks(const BlockDefinitionStorage& storage)
     }
 }
 
-void ContentTypeRegistry::IndexCreatures(const CreatureDefinitionStorage& storage)
+void UContentTypeRegistry::IndexCreatures(const UCreatureDefinitionStorage& storage)
 {
     creatureEntries_.clear();
     EnsureDefaultTypes();
@@ -117,7 +117,7 @@ void ContentTypeRegistry::IndexCreatures(const CreatureDefinitionStorage& storag
     }
 }
 
-void ContentTypeRegistry::IndexSkins(const SkinDefinitionStorage& storage)
+void UContentTypeRegistry::IndexSkins(const USkinDefinitionStorage& storage)
 {
     skinEntries_.clear();
     EnsureDefaultTypes();
@@ -144,7 +144,7 @@ void ContentTypeRegistry::IndexSkins(const SkinDefinitionStorage& storage)
     }
 }
 
-void ContentTypeRegistry::IndexPrefabs(const PrefabLibrary& prefabs)
+void UContentTypeRegistry::IndexPrefabs(const UPrefabLibrary& prefabs)
 {
     objectEntries_.clear();
     EnsureDefaultTypes();
@@ -160,13 +160,13 @@ void ContentTypeRegistry::IndexPrefabs(const PrefabLibrary& prefabs)
     }
 }
 
-std::vector<std::string> ContentTypeRegistry::GetTypeIds(ContentKind kind) const
+std::vector<std::string> UContentTypeRegistry::GetTypeIds(ContentKind kind) const
 {
     std::vector<std::string> ids;
     const std::unordered_map<std::string, std::vector<CatalogEntry>>* map = &blockEntries_;
-    if (kind == ContentKind::Object) {
+    if (kind == ContentKind::UObject) {
         map = &objectEntries_;
-    } else if (kind == ContentKind::Creature) {
+    } else if (kind == ContentKind::UCreature) {
         map = &creatureEntries_;
     } else if (kind == ContentKind::Skin) {
         map = &skinEntries_;
@@ -182,7 +182,7 @@ std::vector<std::string> ContentTypeRegistry::GetTypeIds(ContentKind kind) const
     return ids;
 }
 
-std::string ContentTypeRegistry::GetTypeDisplayName(const std::string& typeId) const
+std::string UContentTypeRegistry::GetTypeDisplayName(const std::string& typeId) const
 {
     const auto it = typeById_.find(typeId);
     if (it != typeById_.end()) {
@@ -191,13 +191,13 @@ std::string ContentTypeRegistry::GetTypeDisplayName(const std::string& typeId) c
     return typeId;
 }
 
-std::vector<CatalogEntry> ContentTypeRegistry::GetEntries(ContentKind kind,
+std::vector<CatalogEntry> UContentTypeRegistry::GetEntries(ContentKind kind,
                                                           const std::string& typeId) const
 {
     const std::unordered_map<std::string, std::vector<CatalogEntry>>* map = &blockEntries_;
-    if (kind == ContentKind::Object) {
+    if (kind == ContentKind::UObject) {
         map = &objectEntries_;
-    } else if (kind == ContentKind::Creature) {
+    } else if (kind == ContentKind::UCreature) {
         map = &creatureEntries_;
     } else if (kind == ContentKind::Skin) {
         map = &skinEntries_;

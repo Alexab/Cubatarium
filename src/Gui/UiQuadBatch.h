@@ -10,17 +10,17 @@ typedef unsigned int GLuint;
 
 namespace cutum {
 
-class ShaderProgram;
+class UShaderProgram;
 
 class UiQuadBatch {
 public:
     UiQuadBatch();
     ~UiQuadBatch();
 
-    bool Initialize(std::shared_ptr<ShaderProgram> shader);
+    bool Initialize(std::shared_ptr<UShaderProgram> shader);
     void Shutdown();
 
-    void Begin(int windowWidth, int windowHeight);
+    void Begin(int WindowWidth, int WindowHeight);
     void DrawFilledRect(const GuiRect& rect, const glm::vec4& color);
     void DrawBorderRect(const GuiRect& rect, const glm::vec4& color, int thicknessPx);
     void Flush();
@@ -33,7 +33,7 @@ private:
     /// GuiRect — top-left origin; shader expects bottom-left pixel Y.
     void GuiRectToShaderCoords(const GuiRect& rect, float& x0, float& y0, float& x1, float& y1) const;
 
-    std::shared_ptr<ShaderProgram> shader_;
+    std::shared_ptr<UShaderProgram> shader_;
     GLuint vao_{0};
     GLuint vbo_{0};
     int windowWidth_{0};

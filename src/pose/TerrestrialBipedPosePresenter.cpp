@@ -5,12 +5,12 @@
 
 namespace cutum {
 
-LocomotionArchetype TerrestrialBipedPosePresenter::GetArchetype() const
+LocomotionArchetype UTerrestrialBipedPosePresenter::GetArchetype() const
 {
  return LocomotionArchetype::TerrestrialBiped;
 }
 
-CreaturePoseParams TerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts& facts,
+CreaturePoseParams UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts& facts,
                                                           const CreatureDefinition& def,
                                                           float /*dt*/)
 {

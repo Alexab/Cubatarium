@@ -11,12 +11,12 @@
 
 namespace cutum {
 
-ConsoleScreen::ConsoleScreen(GameSession* session)
+UConsoleScreen::UConsoleScreen(UGameSession* session)
     : session_(session)
 {
 }
 
-void ConsoleScreen::SetVisible(bool visible)
+void UConsoleScreen::SetVisible(bool visible)
 {
     visible_ = visible;
     if (root_) {
@@ -34,23 +34,23 @@ void ConsoleScreen::SetVisible(bool visible)
     }
 }
 
-void ConsoleScreen::Toggle()
+void UConsoleScreen::Toggle()
 {
     SetVisible(!visible_);
 }
 
-void ConsoleScreen::AttachPopup(GuiPopupMenu* popup)
+void UConsoleScreen::AttachPopup(UGuiPopupMenu* popup)
 {
     popup_ = popup;
 }
 
-void ConsoleScreen::OnInputEdited()
+void UConsoleScreen::OnInputEdited()
 {
     historyBrowseFromEnd_ = -1;
     draftValid_ = false;
 }
 
-void ConsoleScreen::Build(GuiContext& ctx)
+void UConsoleScreen::Build(UGuiContext& ctx)
 {
     consoleTheme_ = ctx.GetTheme();
     consoleTheme_.panelBackground = {0.06f, 0.06f, 0.09f, 0.45f};
@@ -58,14 +58,14 @@ void ConsoleScreen::Build(GuiContext& ctx)
     consoleTheme_.buttonNormal = {0.18f, 0.18f, 0.2f, 0.5f};
     consoleTheme_.buttonHover = {0.28f, 0.28f, 0.31f, 0.55f};
 
-    auto panel = std::make_unique<GuiPanel>(&consoleTheme_);
+    auto panel = std::make_unique<UGuiPanel>(&consoleTheme_);
     panel->SetVisible(false);
 
-    auto log = std::make_unique<GuiListView>(&consoleTheme_);
+    auto log = std::make_unique<UGuiListView>(&consoleTheme_);
     log->SetAcceptKeyNavigation(false);
     logView_ = log.get();
 
-    auto input = std::make_unique<GuiTextInput>(&consoleTheme_);
+    auto input = std::make_unique<UGuiTextInput>(&consoleTheme_);
     input->SetClipboard(ctx.GetClipboard());
     input->SetOnEdited([this]() { OnInputEdited(); });
     input_ = input.get();
@@ -76,13 +76,13 @@ void ConsoleScreen::Build(GuiContext& ctx)
     Relayout();
 }
 
-void ConsoleScreen::OnViewportChanged(int width, int height)
+void UConsoleScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
     Relayout();
 }
 
-void ConsoleScreen::Relayout()
+void UConsoleScreen::Relayout()
 {
     if (!root_) {
         return;
@@ -98,7 +98,7 @@ void ConsoleScreen::Relayout()
     }
 }
 
-void ConsoleScreen::Update(double /*dt*/)
+void UConsoleScreen::Update(double /*dt*/)
 {
     if (!root_ || !visible_) {
         return;
@@ -108,7 +108,7 @@ void ConsoleScreen::Update(double /*dt*/)
     }
 }
 
-bool ConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent& event)
+bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent& event)
 {
     if (!session_ || !input_) {
         return false;
@@ -145,7 +145,7 @@ bool ConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent& event)
     return false;
 }
 
-bool ConsoleScreen::RouteKey(const GuiKeyEvent& event)
+bool UConsoleScreen::RouteKey(const GuiKeyEvent& event)
 {
     if (!visible_ || !input_) {
         return false;
@@ -160,7 +160,7 @@ bool ConsoleScreen::RouteKey(const GuiKeyEvent& event)
     return input_->OnKey(event);
 }
 
-bool ConsoleScreen::RouteChar(const GuiCharEvent& event)
+bool UConsoleScreen::RouteChar(const GuiCharEvent& event)
 {
     if (!visible_ || !input_) {
         return false;
@@ -169,7 +169,7 @@ bool ConsoleScreen::RouteChar(const GuiCharEvent& event)
     return input_->OnChar(event);
 }
 
-void ConsoleScreen::OpenContextMenu(int x, int y)
+void UConsoleScreen::OpenContextMenu(int x, int y)
 {
     if (!popup_ || !input_) {
         return;
@@ -183,12 +183,12 @@ void ConsoleScreen::OpenContextMenu(int x, int y)
     popup_->OpenAt(x, y, viewportW_, viewportH_);
 }
 
-bool ConsoleScreen::IsPopupOpen() const
+bool UConsoleScreen::IsPopupOpen() const
 {
     return popup_ && popup_->IsOpen();
 }
 
-bool ConsoleScreen::RouteMouseButton(const GuiMouseEvent& event, GuiRenderer& renderer)
+bool UConsoleScreen::RouteMouseButton(const GuiMouseEvent& event, UGuiRenderer& renderer)
 {
     if (!visible_) {
         return false;
@@ -221,7 +221,7 @@ bool ConsoleScreen::RouteMouseButton(const GuiMouseEvent& event, GuiRenderer& re
     return false;
 }
 
-bool ConsoleScreen::RouteMouseMove(const GuiMouseEvent& event, GuiRenderer& renderer)
+bool UConsoleScreen::RouteMouseMove(const GuiMouseEvent& event, UGuiRenderer& renderer)
 {
     if (!visible_ || !input_) {
         return false;
@@ -237,7 +237,7 @@ bool ConsoleScreen::RouteMouseMove(const GuiMouseEvent& event, GuiRenderer& rend
     return false;
 }
 
-void ConsoleScreen::SubmitCommand()
+void UConsoleScreen::SubmitCommand()
 {
     if (!session_ || !input_) {
         return;

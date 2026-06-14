@@ -24,17 +24,17 @@ struct GreedyMeshBatch {
  std::vector<GreedyMeshVertex> vertices;
  std::vector<uint32_t> indices;
 };
-class BlockRegistry;
-class BlockWorld;
-class ChunkMeshCache {
+class UBlockRegistry;
+class UBlockWorld;
+class UChunkMeshCache {
 public:
  void MarkAllDirty();
- void MarkAllDirtyFromWorld(const BlockWorld& world);
+ void MarkAllDirtyFromWorld(const UBlockWorld& world);
  void MarkDirty(glm::ivec3 chunkCoord);
  void RemoveChunk(glm::ivec3 chunkCoord);
- void RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame = 8);
- void RebuildAll(BlockWorld& world, BlockRegistry& registry);
- void RebuildChunkImmediate(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord);
+ void RebuildDirtyChunks(UBlockWorld& world, UBlockRegistry& registry, int maxChunksPerFrame = 8);
+ void RebuildAll(UBlockWorld& world, UBlockRegistry& registry);
+ void RebuildChunkImmediate(const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord);
  bool HasPendingDirty() const { return !dirtyChunks_.empty(); }
  size_t GetInstanceCount() const { return instances_.size(); }
  size_t GetGreedyVertexCount() const;
@@ -42,7 +42,7 @@ public:
  uint64_t GetCullRevision() const { return cullRevision_; }
  void UpdateVisibleInstances(const Frustum& frustum, const glm::mat4& viewProj, const glm::vec3& cameraPos);
  void SetRenderSettings(const RenderSettings& settings);
- void SetRenderDistanceChunks(int distance) { renderDistanceChunks_ = distance; }
+ void SetRenderDistanceChunks(int distance) { RenderDistanceChunks = distance; }
  const std::vector<FaceInstance>& GetFaceInstances() const { return instances_; }
  const std::vector<FaceInstance>& GetInstances() const { return instances_; }
  const std::vector<GreedyMeshBatch>& GetGreedyBatches() const { return greedyBatches_; }
@@ -50,8 +50,8 @@ private:
  struct ChunkGreedyMesh {
   std::vector<GreedyMeshBatch> batches;
  };
- void RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord);
- void RebuildChunkLegacy(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord,
+ void RebuildChunk(const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord);
+ void RebuildChunkLegacy(const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord,
                          std::vector<FaceInstance>& chunkInstances);
  void RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos, float maxCullDistance);
  void RebuildFlatGreedyBatches(const Frustum* frustum, const glm::vec3* cameraPos, float maxCullDistance);
@@ -69,8 +69,8 @@ private:
  uint64_t cullRevision_{0};
  glm::ivec3 lastCullCameraChunk_{INT32_MAX, INT32_MAX, INT32_MAX};
  uint64_t lastCullMeshRevision_{0};
- int renderDistanceChunks_{4};
- RenderSettings renderSettings_;
+ int RenderDistanceChunks{4};
+ RenderSettings Render;
 };
 }
 #endif

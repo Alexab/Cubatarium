@@ -3,7 +3,7 @@
 
 namespace cutum {
 
-void CreaturePosePresenterRegistry::Register(std::unique_ptr<ICreaturePosePresenter> presenter)
+void UCreaturePosePresenterRegistry::Register(std::unique_ptr<ICreaturePosePresenter> presenter)
 {
  if (!presenter) {
   return;
@@ -14,7 +14,7 @@ void CreaturePosePresenterRegistry::Register(std::unique_ptr<ICreaturePosePresen
  }
 }
 
-ICreaturePosePresenter* CreaturePosePresenterRegistry::Get(LocomotionArchetype archetype) const
+ICreaturePosePresenter* UCreaturePosePresenterRegistry::Get(LocomotionArchetype archetype) const
 {
  const size_t index = static_cast<size_t>(archetype);
  if (index >= presenters_.size()) {
@@ -23,16 +23,16 @@ ICreaturePosePresenter* CreaturePosePresenterRegistry::Get(LocomotionArchetype a
  return presenters_[index].get();
 }
 
-void CreaturePosePresenterRegistry::Clear()
+void UCreaturePosePresenterRegistry::Clear()
 {
  for (auto& entry : presenters_) {
   entry.reset();
  }
 }
 
-void RegisterDefaultCreaturePosePresenters(CreaturePosePresenterRegistry& registry)
+void RegisterDefaultCreaturePosePresenters(UCreaturePosePresenterRegistry& registry)
 {
- registry.Register(std::make_unique<TerrestrialBipedPosePresenter>());
+ registry.Register(std::make_unique<UTerrestrialBipedPosePresenter>());
 }
 
 } // namespace cutum

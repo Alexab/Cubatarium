@@ -5,9 +5,9 @@
 
 namespace cutum {
 
-class CreatureVisualGltf : public ICreatureVisual {
+class UCreatureVisualGltf : public ICreatureVisual {
 public:
- void UpdatePose(const Creature& creature, const CreatureLocomotionFacts& facts,
+ void UpdatePose(const UCreature& creature, const CreatureLocomotionFacts& facts,
                  const CreaturePoseParams& pose, const CreatureDefinition& animDef,
                  float dt) override;
  void SubmitDraw(UGeometryEngine& engine, const glm::mat4& viewProj) override;

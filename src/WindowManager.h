@@ -37,10 +37,10 @@ public:
   void Shutdown();
 
   /// Initializes the window manager with the specified parameters.
-  /// \param core_ The core instance.
-  /// \param world_ The world instance.
+  /// \param Core The core instance.
+  /// \param World The world instance.
   /// \param geometries_ The geometry engine instance.
-  /// \param views_ The view engine instance.
+  /// \param Views The view engine instance.
   void SetInstances(std::shared_ptr<UCore> core, 
             std::shared_ptr<UWorld> world, 
             std::shared_ptr<UGeometryEngine> geometries,

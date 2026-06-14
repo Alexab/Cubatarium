@@ -169,7 +169,7 @@ void ApplyRenderPresetDefaults(BlockRenderProfile& render, const std::string& ph
 {
  if (physicsPreset == "water" || physicsPreset == "lava") {
   render.transparent = true;
-  if (render.style == BlockRenderStyle::Cube) {
+  if (render.style == BlockRenderStyle::UCube) {
    render.style = BlockRenderStyle::Fluid;
   }
   const FluidViewProfile preset = FluidViewFromPreset(physicsPreset);
@@ -184,7 +184,7 @@ void ApplyRenderPresetDefaults(BlockRenderProfile& render, const std::string& ph
   }
  } else if (physicsPreset == "fire") {
   render.transparent = true;
-  if (render.style == BlockRenderStyle::Cube) {
+  if (render.style == BlockRenderStyle::UCube) {
    render.style = BlockRenderStyle::Cross;
   }
   if (render.fluidView.overlayAlpha <= 0.0f) {

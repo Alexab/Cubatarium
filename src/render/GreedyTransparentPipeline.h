@@ -6,7 +6,7 @@
 
 namespace cutum {
 
-class GreedyTransparentPipeline {
+class UGreedyTransparentPipeline {
 public:
  static void Draw(IGreedyTransparentBackend& backend,
                   const GreedyTransparentDrawContext& ctx,

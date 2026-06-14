@@ -13,7 +13,7 @@ bool HasBit(GlStateMask mask, GlStateBit bit)
 
 } // namespace
 
-GlStateScope::GlStateScope(GlStateMask mask) : mask_(mask)
+UGlStateScope::UGlStateScope(GlStateMask mask) : mask_(mask)
 {
  if (HasBit(mask_, GlStateBit::ViewportFb)) {
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer_);
@@ -56,7 +56,7 @@ GlStateScope::GlStateScope(GlStateMask mask) : mask_(mask)
  }
 }
 
-GlStateScope::~GlStateScope()
+UGlStateScope::~UGlStateScope()
 {
  if (HasBit(mask_, GlStateBit::ColorMask)) {
   glColorMask(colorMask_[0], colorMask_[1], colorMask_[2], colorMask_[3]);

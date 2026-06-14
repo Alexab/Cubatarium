@@ -6,12 +6,12 @@
 
 namespace cutum {
 
-class CreatureDefinitionStorage;
-class SkinDefinitionStorage;
+class UCreatureDefinitionStorage;
+class USkinDefinitionStorage;
 
 ResolvedCreatureAppearance ResolveCreatureAppearance(
-    const CreatureDefinitionStorage& species,
-    const SkinDefinitionStorage& skins,
+    const UCreatureDefinitionStorage& species,
+    const USkinDefinitionStorage& skins,
     const std::string& speciesId,
     const std::string& skinId);
 

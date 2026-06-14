@@ -16,28 +16,28 @@
 
 namespace cutum {
 
-PrefabIconCache::PrefabIconCache(std::shared_ptr<PrefabLibrary> prefabs,
-                                 std::shared_ptr<TextureCubeStorage> textures,
-                                 std::shared_ptr<BlockDefinitionStorage> blockDefs,
-                                 std::shared_ptr<ShaderManager> shaderManager)
+UPrefabIconCache::UPrefabIconCache(std::shared_ptr<UPrefabLibrary> prefabs,
+                                 std::shared_ptr<UTextureCubeStorage> textures,
+                                 std::shared_ptr<UBlockDefinitionStorage> blockDefs,
+                                 std::shared_ptr<UShaderManager> shader_manager)
     : prefabs_(std::move(prefabs))
     , textures_(std::move(textures))
     , blockDefs_(std::move(blockDefs))
-    , shaderManager_(std::move(shaderManager))
+    , ShaderManager(std::move(shader_manager))
 {
 }
 
-PrefabIconCache::~PrefabIconCache()
+UPrefabIconCache::~UPrefabIconCache()
 {
     Shutdown();
 }
 
-bool PrefabIconCache::Initialize()
+bool UPrefabIconCache::Initialize()
 {
-    if (!shaderManager_ || !prefabs_) {
+    if (!ShaderManager || !prefabs_) {
         return false;
     }
-    shader_ = shaderManager_->CreateShader("gui_prefab_icon", "shaders/vshader.glsl",
+    shader_ = ShaderManager->CreateShader("gui_prefab_icon", "shaders/vshader.glsl",
                                            "shaders/fshader.glsl");
     if (!shader_ || !shader_->IsValid()) {
         return false;
@@ -69,7 +69,7 @@ bool PrefabIconCache::Initialize()
     return complete;
 }
 
-void PrefabIconCache::Shutdown()
+void UPrefabIconCache::Shutdown()
 {
     for (const auto& entry : cache_) {
         if (entry.second != 0 && entry.second != colorTex_) {
@@ -111,7 +111,7 @@ void PrefabIconCache::Shutdown()
     shader_.reset();
 }
 
-bool PrefabIconCache::InitCubeMesh()
+bool UPrefabIconCache::InitCubeMesh()
 {
     if (cubeVao_ != 0) {
         return true;
@@ -153,7 +153,7 @@ bool PrefabIconCache::InitCubeMesh()
     return true;
 }
 
-GLuint PrefabIconCache::GetBlockTexture(BlockId blockId) const
+GLuint UPrefabIconCache::GetBlockTexture(BlockId blockId) const
 {
     if (!blockDefs_ || !textures_ || blockId == BLOCK_AIR) {
         return 0;
@@ -171,7 +171,7 @@ GLuint PrefabIconCache::GetBlockTexture(BlockId blockId) const
     return 0;
 }
 
-GLuint PrefabIconCache::GetBlockIconTexture(const std::string& blockName)
+GLuint UPrefabIconCache::GetBlockIconTexture(const std::string& blockName)
 {
     if (!blockDefs_ || !textures_ || !shader_ || blockName.empty()) {
         return 0;
@@ -192,7 +192,7 @@ GLuint PrefabIconCache::GetBlockIconTexture(const std::string& blockName)
     return tex;
 }
 
-GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
+GLuint UPrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
 {
     const Prefab* prefab = prefabs_ ? prefabs_->Get(prefabName) : nullptr;
     if (!prefab || prefab->voxels.empty() || !shader_ || fbo_ == 0) {
@@ -207,7 +207,7 @@ GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    GlStateScope glState(kGlMaskIconFbo);
+    UGlStateScope glState(kGlMaskIconFbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex, 0);
@@ -267,7 +267,7 @@ GLuint PrefabIconCache::RenderPrefabIcon(const std::string& prefabName)
     return iconTex;
 }
 
-GLuint PrefabIconCache::RenderBlockIcon(BlockId blockId)
+GLuint UPrefabIconCache::RenderBlockIcon(BlockId blockId)
 {
     const GLuint tex = GetBlockTexture(blockId);
     if (tex == 0 || !shader_ || fbo_ == 0) {
@@ -282,7 +282,7 @@ GLuint PrefabIconCache::RenderBlockIcon(BlockId blockId)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    GlStateScope glState(kGlMaskIconFbo);
+    UGlStateScope glState(kGlMaskIconFbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex,
                            0);
@@ -318,13 +318,13 @@ GLuint PrefabIconCache::RenderBlockIcon(BlockId blockId)
     return iconTex;
 }
 
-GLuint PrefabIconCache::GetIconIfCached(const std::string& prefabName) const
+GLuint UPrefabIconCache::GetIconIfCached(const std::string& prefabName) const
 {
     const auto it = cache_.find(prefabName);
     return it != cache_.end() ? it->second : 0;
 }
 
-GLuint PrefabIconCache::GetIcon(const std::string& prefabName)
+GLuint UPrefabIconCache::GetIcon(const std::string& prefabName)
 {
     if (prefabName.empty()) {
         return 0;
@@ -337,7 +337,7 @@ GLuint PrefabIconCache::GetIcon(const std::string& prefabName)
     return tex;
 }
 
-void PrefabIconCache::WarmupNext(size_t count)
+void UPrefabIconCache::WarmupNext(size_t count)
 {
     for (size_t n = 0; n < count && warmupIndex_ < warmupQueue_.size(); ++n, ++warmupIndex_) {
         GetIcon(warmupQueue_[warmupIndex_]);

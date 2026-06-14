@@ -2,72 +2,72 @@
 
 namespace cutum {
 
-User::User() = default;
+UUser::UUser() = default;
 
-const glm::vec3& User::GetPosition() const
+const glm::vec3& UUser::GetPosition() const
 {
  return Position;
 }
 
-const glm::vec3& User::GetViewDirection() const
+const glm::vec3& UUser::GetViewDirection() const
 {
  return ViewDirection;
 }
 
-void User::SetPosition(const glm::vec3& value)
+void UUser::SetPosition(const glm::vec3& value)
 {
  Position = value;
 }
 
-void User::SetViewDirection(const glm::vec3& value)
+void UUser::SetViewDirection(const glm::vec3& value)
 {
  ViewDirection = value;
 }
 
-float User::GetCameraYaw() const
+float UUser::GetCameraYaw() const
 {
  return CameraYaw;
 }
 
-float User::GetCameraPitch() const
+float UUser::GetCameraPitch() const
 {
  return CameraPitch;
 }
 
-void User::SetCameraOrientation(float yaw, float pitch)
+void UUser::SetCameraOrientation(float yaw, float pitch)
 {
  CameraYaw = yaw;
  CameraPitch = pitch;
 }
 
-size_t User::GetViewId() const
+size_t UUser::GetViewId() const
 {
  return ViewId;
 }
 
-void User::SetViewId(size_t value)
+void UUser::SetViewId(size_t value)
 {
  ViewId = value;
 }
 
-const std::string& User::GetSelectedAppearanceTypeId() const
+const std::string& UUser::GetSelectedAppearanceTypeId() const
 {
- return selectedAppearanceTypeId_;
+ return SelectedAppearanceTypeId;
 }
 
-void User::SetSelectedAppearanceTypeId(const std::string& typeId)
+void UUser::SetSelectedAppearanceTypeId(const std::string& typeId)
 {
- selectedAppearanceTypeId_ = typeId;
+ SelectedAppearanceTypeId = typeId;
 }
 
-const std::string& User::GetSelectedSkinId() const
+const std::string& UUser::GetSelectedSkinId() const
 {
- return selectedSkinId_;
+ return SelectedSkinId;
 }
 
-void User::SetSelectedSkinId(const std::string& skinId)
+void UUser::SetSelectedSkinId(const std::string& skinId)
 {
- selectedSkinId_ = skinId;
+ SelectedSkinId = skinId;
 }
 
 }

@@ -15,10 +15,10 @@ typedef int GLint;
 
 namespace cutum {
 
-class ShaderProgram {
+class UShaderProgram {
 public:
-    ShaderProgram();
-    ~ShaderProgram();
+    UShaderProgram();
+    ~UShaderProgram();
 
     // Create and compile shaders
     bool CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
@@ -56,26 +56,26 @@ private:
     std::string ReadFile(const std::string& filepath);
 };
 
-class ShaderManager {
+class UShaderManager {
 public:
-    ShaderManager();
-    ~ShaderManager();
+    UShaderManager();
+    ~UShaderManager();
 
     // Initialization
     bool Initialize();
     void Shutdown();
 
     // Create and manage shaders
-    std::shared_ptr<ShaderProgram> CreateShader(const std::string& name, 
+    std::shared_ptr<UShaderProgram> CreateShader(const std::string& name, 
                                                const std::string& vertexPath, 
                                                const std::string& fragmentPath);
     
-    std::shared_ptr<ShaderProgram> CreateShaderFromStrings(const std::string& name,
+    std::shared_ptr<UShaderProgram> CreateShaderFromStrings(const std::string& name,
                                                           const std::string& vertexSource,
                                                           const std::string& fragmentSource);
 
     // Get shaders
-    std::shared_ptr<ShaderProgram> GetShader(const std::string& name);
+    std::shared_ptr<UShaderProgram> GetShader(const std::string& name);
     bool HasShader(const std::string& name) const;
 
     // Delete shaders
@@ -83,12 +83,12 @@ public:
     void ClearAllShaders();
 
     // Preset shaders
-    std::shared_ptr<ShaderProgram> GetDefaultShader();
-    std::shared_ptr<ShaderProgram> GetSkyShader();
-    std::shared_ptr<ShaderProgram> GetTextureShader();
+    std::shared_ptr<UShaderProgram> GetDefaultShader();
+    std::shared_ptr<UShaderProgram> GetSkyShader();
+    std::shared_ptr<UShaderProgram> GetTextureShader();
 
 private:
-    std::unordered_map<std::string, std::shared_ptr<ShaderProgram>> shaders;
+    std::unordered_map<std::string, std::shared_ptr<UShaderProgram>> shaders;
     
     // Create preset shaders
     void CreateDefaultShaders();

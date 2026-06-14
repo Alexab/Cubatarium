@@ -10,24 +10,24 @@
 namespace cutum {
 
 class IContentCatalog;
-class GameSession;
+class UGameSession;
 class IGuiIconSource;
-class GuiTabBar;
-class GuiScrollView;
-class GuiPanel;
-class GuiSlot;
+class UGuiTabBar;
+class UGuiScrollView;
+class UGuiPanel;
+class UGuiSlot;
 struct GuiTheme;
 
-class CreativePaletteScreen : public GuiScreenBase {
+class UCreativePaletteScreen : public UGuiScreenBase {
 public:
-    CreativePaletteScreen(IContentCatalog* catalog, GameSession* session,
+    UCreativePaletteScreen(IContentCatalog* catalog, UGameSession* session,
                           IGuiIconSource* icons);
 
     bool PickSlot(int x, int y, SlotAddress& out) const;
 
     void OnViewportChanged(int width, int height) override;
 
-    void Build(GuiContext& ctx) override;
+    void Build(UGuiContext& ctx) override;
     void Update(double dt) override;
     bool BlocksGameInput() const override { return visible_; }
 
@@ -41,14 +41,14 @@ private:
     void LayoutGridInScroll();
 
     IContentCatalog* catalog_{nullptr};
-    GameSession* session_{nullptr};
+    UGameSession* session_{nullptr};
     IGuiIconSource* icons_{nullptr};
     std::vector<std::string> gridEntryIds_;
-    GuiPanel* panel_{nullptr};
-    GuiTabBar* mainTabs_{nullptr};
-    GuiTabBar* subTabs_{nullptr};
-    GuiScrollView* scroll_{nullptr};
-    std::vector<GuiSlot*> gridSlots_;
+    UGuiPanel* panel_{nullptr};
+    UGuiTabBar* mainTabs_{nullptr};
+    UGuiTabBar* subTabs_{nullptr};
+    UGuiScrollView* scroll_{nullptr};
+    std::vector<UGuiSlot*> gridSlots_;
     std::string selectedEntryId_;
     ContentKind kind_{ContentKind::Block};
     std::string activeTypeId_;

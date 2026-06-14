@@ -6,12 +6,12 @@
 
 namespace cutum {
 
-void CommandRegistry::Register(const std::string& name, CommandHandler handler)
+void UCommandRegistry::Register(const std::string& name, CommandHandler handler)
 {
     handlers_[name] = std::move(handler);
 }
 
-std::vector<std::string> CommandRegistry::Tokenize(const std::string& line)
+std::vector<std::string> UCommandRegistry::Tokenize(const std::string& line)
 {
     std::vector<std::string> tokens;
     std::istringstream stream(line);
@@ -22,7 +22,7 @@ std::vector<std::string> CommandRegistry::Tokenize(const std::string& line)
     return tokens;
 }
 
-CommandResult CommandRegistry::ExecuteLine(const std::string& line) const
+CommandResult UCommandRegistry::ExecuteLine(const std::string& line) const
 {
     const auto tokens = Tokenize(line);
     if (tokens.empty()) {

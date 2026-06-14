@@ -10,10 +10,10 @@ namespace cutum {
 std::unique_ptr<ICreatureVisual> CreateCreatureVisual(const CreatureDefinition& def)
 {
  if (def.visual.backend == "gltf_skeleton") {
-  std::cout << "CreatureVisual: gltf_skeleton stub for " << def.id << std::endl;
-  return std::make_unique<CreatureVisualGltf>();
+  std::cout << "UCreatureVisual: gltf_skeleton stub for " << def.id << std::endl;
+  return std::make_unique<UCreatureVisualGltf>();
  }
- return std::make_unique<CreatureVisualRigid>();
+ return std::make_unique<UCreatureVisualRigid>();
 }
 
 } // namespace cutum

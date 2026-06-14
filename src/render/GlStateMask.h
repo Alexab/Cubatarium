@@ -29,7 +29,7 @@ inline constexpr GlStateMask operator|(GlStateMask a, GlStateBit b)
  return a | static_cast<GlStateMask>(b);
 }
 
-/// FBO icon render (PrefabIconCache).
+/// FBO icon render (UPrefabIconCache).
 inline constexpr GlStateMask kGlMaskIconFbo =
     GlStateBit::ViewportFb | GlStateBit::DepthTest | GlStateBit::Blend | GlStateBit::CullFace;
 

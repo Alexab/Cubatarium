@@ -7,7 +7,7 @@
 
 namespace cutum {
 
-class ConsoleCommandHistory {
+class UConsoleCommandHistory {
 public:
     static constexpr size_t kMaxEntries = 100;
 

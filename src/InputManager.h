@@ -93,21 +93,21 @@ struct InputEvent {
     EventType type;
     KeyCode key;
     MouseButton mouseButton;
-    glm::vec2 mousePosition;
-    glm::vec2 mouseDelta;
+    glm::vec2 MousePosition;
+    glm::vec2 MouseDelta;
     double scrollDelta;
-    int windowWidth;
-    int windowHeight;
+    int WindowWidth;
+    int WindowHeight;
     bool isPressed;
     int modifiers;
 };
 
 // Callback functions
-using KeyCallback = std::function<void(KeyCode, KeyState, int)>;
-using MouseButtonCallback = std::function<void(MouseButton, bool, glm::vec2)>;
-using MouseMoveCallback = std::function<void(glm::vec2, glm::vec2)>;
-using MouseScrollCallback = std::function<void(double, double)>;
-using WindowResizeCallback = std::function<void(int, int)>;
+using KeyCallbackFn = std::function<void(KeyCode, KeyState, int)>;
+using MouseButtonCallbackFn = std::function<void(MouseButton, bool, glm::vec2)>;
+using MouseMoveCallbackFn = std::function<void(glm::vec2, glm::vec2)>;
+using MouseScrollCallbackFn = std::function<void(double, double)>;
+using WindowResizeCallbackFn = std::function<void(int, int)>;
 
 class UInputManager {
 public:
@@ -136,11 +136,11 @@ public:
     glm::vec2 GetMouseDelta() const;
 
     // Callback регистрация
-    void SetKeyCallback(KeyCallback callback);
-    void SetMouseButtonCallback(MouseButtonCallback callback);
-    void SetMouseMoveCallback(MouseMoveCallback callback);
-    void SetMouseScrollCallback(MouseScrollCallback callback);
-    void SetWindowResizeCallback(WindowResizeCallback callback);
+    void SetKeyCallback(KeyCallbackFn callback);
+    void SetMouseButtonCallback(MouseButtonCallbackFn callback);
+    void SetMouseMoveCallback(MouseMoveCallbackFn callback);
+    void SetMouseScrollCallback(MouseScrollCallbackFn callback);
+    void SetWindowResizeCallback(WindowResizeCallbackFn callback);
 
     // GLFW callback функции (статичные)
     static void GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -154,31 +154,31 @@ public:
 
 private:
     // GLFW window
-    GLFWwindow* glfwWindow;
+    GLFWwindow* GlfwWindow;
 
     // Состояние клавиш
-    std::unordered_map<int, bool> keyStates;
-    std::unordered_map<int, bool> previousKeyStates;
-    std::unordered_map<int, bool> keyJustPressed;
-    std::unordered_map<int, bool> keyJustReleased;
+    std::unordered_map<int, bool> KeyStates;
+    std::unordered_map<int, bool> PreviousKeyStates;
+    std::unordered_map<int, bool> KeyJustPressed;
+    std::unordered_map<int, bool> KeyJustReleased;
 
     // Состояние мыши
-    std::unordered_map<int, bool> mouseButtonStates;
-    std::unordered_map<int, bool> previousMouseButtonStates;
-    std::unordered_map<int, bool> mouseButtonJustPressed;
-    std::unordered_map<int, bool> mouseButtonJustReleased;
+    std::unordered_map<int, bool> MouseButtonStates;
+    std::unordered_map<int, bool> PreviousMouseButtonStates;
+    std::unordered_map<int, bool> MouseButtonJustPressed;
+    std::unordered_map<int, bool> MouseButtonJustReleased;
 
     // Позиция мыши
-    glm::vec2 mousePosition;
-    glm::vec2 previousMousePosition;
-    glm::vec2 mouseDelta;
+    glm::vec2 MousePosition;
+    glm::vec2 PreviousMousePosition;
+    glm::vec2 MouseDelta;
 
     // Callback функции
-    KeyCallback keyCallback;
-    MouseButtonCallback mouseButtonCallback;
-    MouseMoveCallback mouseMoveCallback;
-    MouseScrollCallback mouseScrollCallback;
-    WindowResizeCallback windowResizeCallback;
+    KeyCallbackFn KeyCallback;
+    MouseButtonCallbackFn MouseButtonCallback;
+    MouseMoveCallbackFn MouseMoveCallback;
+    MouseScrollCallbackFn MouseScrollCallback;
+    WindowResizeCallbackFn WindowResizeCallback;
 
     // Статический указатель на экземпляр для GLFW callbacks
     static UInputManager* instance;

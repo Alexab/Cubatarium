@@ -10,11 +10,11 @@ using json = nlohmann::json;
 
 namespace cutum {
 
-void PrefabLibrary::Load(const std::string& prefabs_folder, BlockRegistry& registry)
+void UPrefabLibrary::Load(const std::string& prefabs_folder, UBlockRegistry& registry)
 {
  prefabs_.clear();
  if (!std::filesystem::exists(prefabs_folder)) {
-  std::cerr << "PrefabLibrary: folder not found: " << prefabs_folder << std::endl;
+  std::cerr << "UPrefabLibrary: folder not found: " << prefabs_folder << std::endl;
   return;
  }
 
@@ -37,10 +37,10 @@ void PrefabLibrary::Load(const std::string& prefabs_folder, BlockRegistry& regis
   }
  }
 
- std::cout << "PrefabLibrary: loaded " << prefabs_.size() << " prefabs" << std::endl;
+ std::cout << "UPrefabLibrary: loaded " << prefabs_.size() << " prefabs" << std::endl;
 }
 
-bool PrefabLibrary::LoadFile(const std::string& path, BlockRegistry& registry)
+bool UPrefabLibrary::LoadFile(const std::string& path, UBlockRegistry& registry)
 {
  std::ifstream file(path);
  if (!file.is_open()) {
@@ -69,7 +69,7 @@ bool PrefabLibrary::LoadFile(const std::string& path, BlockRegistry& registry)
    const std::string type = blockEntry.at("type").get<std::string>();
    const BlockId id = registry.GetIdByTypeName(type);
    if (id == BLOCK_AIR) {
-    std::cerr << "PrefabLibrary: unknown type '" << type << "' in " << path << std::endl;
+    std::cerr << "UPrefabLibrary: unknown type '" << type << "' in " << path << std::endl;
     continue;
    }
    PrefabVoxel voxel;
@@ -83,19 +83,19 @@ bool PrefabLibrary::LoadFile(const std::string& path, BlockRegistry& registry)
   }
 
   if (prefab.voxels.empty()) {
-   std::cerr << "PrefabLibrary: empty prefab skipped: " << path << std::endl;
+   std::cerr << "UPrefabLibrary: empty prefab skipped: " << path << std::endl;
    return false;
   }
 
   prefabs_[prefab.name] = std::move(prefab);
   return true;
  } catch (const json::exception& e) {
-  std::cerr << "PrefabLibrary: JSON error in " << path << ": " << e.what() << std::endl;
+  std::cerr << "UPrefabLibrary: JSON error in " << path << ": " << e.what() << std::endl;
   return false;
  }
 }
 
-const Prefab* PrefabLibrary::Get(const std::string& name) const
+const Prefab* UPrefabLibrary::Get(const std::string& name) const
 {
  const auto it = prefabs_.find(name);
  if (it == prefabs_.end()) {
@@ -104,7 +104,7 @@ const Prefab* PrefabLibrary::Get(const std::string& name) const
  return &it->second;
 }
 
-std::vector<std::string> PrefabLibrary::ListNames() const
+std::vector<std::string> UPrefabLibrary::ListNames() const
 {
  std::vector<std::string> names;
  names.reserve(prefabs_.size());

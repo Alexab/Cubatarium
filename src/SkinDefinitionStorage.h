@@ -8,7 +8,7 @@
 
 namespace cutum {
 
-class SkinDefinitionStorage {
+class USkinDefinitionStorage {
 public:
  void Load(const std::string& folder);
  const SkinDefinition* Get(const std::string& id) const;

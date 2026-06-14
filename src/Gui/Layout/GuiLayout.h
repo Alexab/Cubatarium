@@ -5,7 +5,7 @@
 
 namespace cutum {
 
-class GuiWidget;
+class UGuiWidget;
 
 enum class GuiAnchorKind {
     TopLeft,
@@ -31,7 +31,7 @@ struct GuiGridSpec {
 };
 
 struct GuiGridItem {
-    GuiWidget* widget{nullptr};
+    UGuiWidget* widget{nullptr};
     int row{0};
     int col{0};
     int rowSpan{1};
@@ -39,7 +39,7 @@ struct GuiGridItem {
     int minH{0};
 
     GuiGridItem() = default;
-    GuiGridItem(GuiWidget* w, int r, int c, int rs = 1, int cs = 1, int mh = 0)
+    GuiGridItem(UGuiWidget* w, int r, int c, int rs = 1, int cs = 1, int mh = 0)
         : widget(w), row(r), col(c), rowSpan(rs), colSpan(cs), minH(mh)
     {
     }
@@ -48,17 +48,17 @@ struct GuiGridItem {
 HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize, int gap,
                                     int marginBottom);
 
-class GuiLayout {
+class UGuiLayout {
 public:
     static void StackVertical(const GuiRect& clientArea, int spacing, int padding,
-                              const std::vector<GuiWidget*>& children);
+                              const std::vector<UGuiWidget*>& children);
     /// Returns total height used (including padding).
     static int StackVerticalMeasure(const GuiRect& clientArea, int spacing, int padding,
-                                    const std::vector<GuiWidget*>& children);
+                                    const std::vector<UGuiWidget*>& children);
     static void StackHorizontal(const GuiRect& clientArea, int spacing, int padding,
-                                const std::vector<GuiWidget*>& children);
+                                const std::vector<UGuiWidget*>& children);
     static void AnchorChild(const GuiRect& clientArea, GuiAnchorKind kind, int margin,
-                            GuiWidget* child);
+                            UGuiWidget* child);
     static int GridMeasure(const GuiRect& clientArea, const GuiGridSpec& spec,
                            const std::vector<GuiGridItem>& items);
     static void GridPlace(const GuiRect& clientArea, const GuiGridSpec& spec,

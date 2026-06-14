@@ -22,8 +22,8 @@ void CarveColumnCaves(WorldGenContext& ctx, int x, int z, int surfaceY, uint32_t
 {
  for (int y = params.minY; y <= surfaceY - params.maxDepthBelowSurface; ++y) {
   if (ShouldCarve(x, y, z, surfaceY, seed, params)) {
-   if (!ctx.world.IsAir(glm::ivec3(x, y, z))) {
-    ctx.world.SetBlock(glm::ivec3(x, y, z), BLOCK_AIR);
+   if (!ctx.World.IsAir(glm::ivec3(x, y, z))) {
+    ctx.World.SetBlock(glm::ivec3(x, y, z), BLOCK_AIR);
    }
   }
  }

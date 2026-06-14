@@ -5,12 +5,12 @@
 
 namespace cutum {
 
-void ConsoleCommandHistory::SetFilePath(std::filesystem::path path)
+void UConsoleCommandHistory::SetFilePath(std::filesystem::path path)
 {
     filePath_ = std::move(path);
 }
 
-bool ConsoleCommandHistory::Load()
+bool UConsoleCommandHistory::Load()
 {
     entries_.clear();
     if (filePath_.empty()) {
@@ -36,7 +36,7 @@ bool ConsoleCommandHistory::Load()
     return true;
 }
 
-bool ConsoleCommandHistory::Save() const
+bool UConsoleCommandHistory::Save() const
 {
     if (filePath_.empty()) {
         return false;
@@ -51,7 +51,7 @@ bool ConsoleCommandHistory::Save() const
     return static_cast<bool>(file);
 }
 
-void ConsoleCommandHistory::Append(std::string line)
+void UConsoleCommandHistory::Append(std::string line)
 {
     line = SanitizeConsoleLine(std::move(line));
     if (line.empty()) {
@@ -67,7 +67,7 @@ void ConsoleCommandHistory::Append(std::string line)
     Save();
 }
 
-std::string ConsoleCommandHistory::GetFromEnd(size_t indexFromEnd) const
+std::string UConsoleCommandHistory::GetFromEnd(size_t indexFromEnd) const
 {
     if (indexFromEnd >= entries_.size()) {
         return {};

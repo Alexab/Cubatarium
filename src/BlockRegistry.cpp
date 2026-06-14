@@ -4,8 +4,8 @@
 
 namespace cutum {
 
-BlockRegistry::BlockRegistry(std::shared_ptr<TextureCubeStorage> textures,
-                             std::shared_ptr<BlockDefinitionStorage> definitions)
+UBlockRegistry::UBlockRegistry(std::shared_ptr<UTextureCubeStorage> textures,
+                             std::shared_ptr<UBlockDefinitionStorage> definitions)
  : textures_(std::move(textures))
  , definitions_(std::move(definitions))
  , solidDefault_(BlockPhysicsProfile::Solid())
@@ -13,17 +13,17 @@ BlockRegistry::BlockRegistry(std::shared_ptr<TextureCubeStorage> textures,
  RebuildMaps();
 }
 
-void BlockRegistry::SetDefinitions(std::shared_ptr<BlockDefinitionStorage> definitions)
+void UBlockRegistry::SetDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions)
 {
  definitions_ = std::move(definitions);
 }
 
-void BlockRegistry::Reload()
+void UBlockRegistry::Reload()
 {
  RebuildMaps();
 }
 
-void BlockRegistry::RebuildMaps()
+void UBlockRegistry::RebuildMaps()
 {
  nameToId_.clear();
  idToName_.clear();
@@ -41,7 +41,7 @@ void BlockRegistry::RebuildMaps()
  }
 }
 
-BlockId BlockRegistry::GetIdByTypeName(const std::string& name) const
+BlockId UBlockRegistry::GetIdByTypeName(const std::string& name) const
 {
  auto it = nameToId_.find(name);
  if (it != nameToId_.end()) {
@@ -56,7 +56,7 @@ BlockId BlockRegistry::GetIdByTypeName(const std::string& name) const
  return BLOCK_AIR;
 }
 
-const std::string& BlockRegistry::GetTypeNameById(BlockId id) const
+const std::string& UBlockRegistry::GetTypeNameById(BlockId id) const
 {
  static const std::string empty;
  auto it = idToName_.find(id);
@@ -72,7 +72,7 @@ const std::string& BlockRegistry::GetTypeNameById(BlockId id) const
  return empty;
 }
 
-const BlockPhysicsProfile& BlockRegistry::Physics(BlockId id) const
+const BlockPhysicsProfile& UBlockRegistry::Physics(BlockId id) const
 {
  if (id == BLOCK_AIR) {
   return solidDefault_;
@@ -85,7 +85,7 @@ const BlockPhysicsProfile& BlockRegistry::Physics(BlockId id) const
  return solidDefault_;
 }
 
-bool BlockRegistry::BlocksMovement(BlockId id) const
+bool UBlockRegistry::BlocksMovement(BlockId id) const
 {
  if (id == BLOCK_AIR) {
   return false;
@@ -93,12 +93,12 @@ bool BlockRegistry::BlocksMovement(BlockId id) const
  return Physics(id).movement.occupancy >= 1.0f;
 }
 
-bool BlockRegistry::IsSolid(BlockId id) const
+bool UBlockRegistry::IsSolid(BlockId id) const
 {
  return BlocksMovement(id);
 }
 
-bool BlockRegistry::IsTransparent(BlockId id) const
+bool UBlockRegistry::IsTransparent(BlockId id) const
 {
  if (id == BLOCK_AIR) {
   return true;
@@ -111,17 +111,17 @@ bool BlockRegistry::IsTransparent(BlockId id) const
  return false;
 }
 
-BlockRenderStyle BlockRegistry::GetRenderStyle(BlockId id) const
+BlockRenderStyle UBlockRegistry::GetRenderStyle(BlockId id) const
 {
  if (definitions_) {
   if (const BlockDefinition* def = definitions_->GetById(id)) {
    return def->render.style;
   }
  }
- return BlockRenderStyle::Cube;
+ return BlockRenderStyle::UCube;
 }
 
-const FluidViewProfile* BlockRegistry::GetFluidView(BlockId id) const
+const FluidViewProfile* UBlockRegistry::GetFluidView(BlockId id) const
 {
  if (definitions_) {
   if (const BlockDefinition* def = definitions_->GetById(id)) {
@@ -135,7 +135,7 @@ const FluidViewProfile* BlockRegistry::GetFluidView(BlockId id) const
  return nullptr;
 }
 
-size_t BlockRegistry::GetTextureId(BlockId id) const
+size_t UBlockRegistry::GetTextureId(BlockId id) const
 {
  return static_cast<size_t>(id);
 }

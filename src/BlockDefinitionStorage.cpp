@@ -10,7 +10,7 @@ namespace cutum {
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-void BlockDefinitionStorage::Load(const std::string& modelsPath)
+void UBlockDefinitionStorage::Load(const std::string& modelsPath)
 {
  byId_.clear();
  nameToId_.clear();
@@ -29,7 +29,7 @@ void BlockDefinitionStorage::Load(const std::string& modelsPath)
    try {
     d = json::parse(buffer.str());
    } catch (const json::exception& e) {
-    std::cerr << "BlockDefinitionStorage: parse error " << entry.path() << ": " << e.what()
+    std::cerr << "UBlockDefinitionStorage: parse error " << entry.path() << ": " << e.what()
               << std::endl;
     continue;
    }
@@ -65,11 +65,11 @@ void BlockDefinitionStorage::Load(const std::string& modelsPath)
    nameToId_[def.name] = def.id;
   }
  } catch (const fs::filesystem_error& ex) {
-  std::cerr << "BlockDefinitionStorage::Load: " << ex.what() << std::endl;
+  std::cerr << "UBlockDefinitionStorage::Load: " << ex.what() << std::endl;
  }
 }
 
-const BlockDefinition* BlockDefinitionStorage::GetById(BlockId id) const
+const BlockDefinition* UBlockDefinitionStorage::GetById(BlockId id) const
 {
  const auto it = byId_.find(id);
  if (it != byId_.end()) {
@@ -78,7 +78,7 @@ const BlockDefinition* BlockDefinitionStorage::GetById(BlockId id) const
  return nullptr;
 }
 
-const BlockDefinition* BlockDefinitionStorage::GetByName(const std::string& name) const
+const BlockDefinition* UBlockDefinitionStorage::GetByName(const std::string& name) const
 {
  const auto it = nameToId_.find(name);
  if (it == nameToId_.end()) {

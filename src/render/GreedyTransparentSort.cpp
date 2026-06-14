@@ -44,7 +44,7 @@ int TransparentBatchLayer(BlockRenderStyle style)
 
 void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch>& batches,
                                   const glm::vec3& cameraPos,
-                                  const BlockRegistry& registry)
+                                  const UBlockRegistry& registry)
 {
  std::sort(batches.begin(), batches.end(),
            [&](const GreedyMeshBatch& a, const GreedyMeshBatch& b) {

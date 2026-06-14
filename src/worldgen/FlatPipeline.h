@@ -4,17 +4,17 @@
 
 namespace cutum {
 
-class FlatPipeline : public IWorldGenPipeline {
+class UFlatPipeline : public IWorldGenPipeline {
 public:
- explicit FlatPipeline(WorldGenContext ctx);
+ explicit UFlatPipeline(WorldGenContext ctx);
 
  void GenerateColumn(int worldX, int worldZ) override;
  int SurfaceYAt(int worldX, int worldZ) const override;
 };
 
-class LegacyHashPipeline : public IWorldGenPipeline {
+class ULegacyHashPipeline : public IWorldGenPipeline {
 public:
- explicit LegacyHashPipeline(WorldGenContext ctx);
+ explicit ULegacyHashPipeline(WorldGenContext ctx);
 
  void GenerateColumn(int worldX, int worldZ) override;
  int SurfaceYAt(int worldX, int worldZ) const override;

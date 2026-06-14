@@ -18,26 +18,26 @@ uint32_t FeatureHash(int x, int z, uint32_t seed)
 
 bool CanPlacePrefabAt(const WorldGenContext& ctx, const std::string& prefabName, glm::ivec3 anchorWorldPos)
 {
- if (!ctx.prefabs) {
+ if (!ctx.Prefabs) {
   return false;
  }
- const Prefab* prefab = ctx.prefabs->Get(prefabName);
+ const Prefab* prefab = ctx.Prefabs->Get(prefabName);
  if (!prefab) {
   return false;
  }
- return CanPlacePrefabAt(ctx.world, *prefab, anchorWorldPos);
+ return CanPlacePrefabAt(ctx.World, *prefab, anchorWorldPos);
 }
 
 bool PlacePrefabAt(WorldGenContext& ctx, const std::string& prefabName, glm::ivec3 anchorWorldPos)
 {
- if (!ctx.prefabs) {
+ if (!ctx.Prefabs) {
   return false;
  }
- const Prefab* prefab = ctx.prefabs->Get(prefabName);
+ const Prefab* prefab = ctx.Prefabs->Get(prefabName);
  if (!prefab || !CanPlacePrefabAt(ctx, prefabName, anchorWorldPos)) {
   return false;
  }
- const PrefabPlacementStats stats = PlacePrefabAt(ctx.world, *prefab, anchorWorldPos, false);
+ const PrefabPlacementStats stats = PlacePrefabAt(ctx.World, *prefab, anchorWorldPos, false);
  if (stats.placedCount == 0) {
   return false;
  }
@@ -47,7 +47,7 @@ bool PlacePrefabAt(WorldGenContext& ctx, const std::string& prefabName, glm::ive
 
 bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome, const FeatureParams& params)
 {
- if (!ctx.settings.enableTrees || !ctx.prefabs) {
+ if (!ctx.Settings.enableTrees || !ctx.Prefabs) {
   return false;
  }
  if (biome != BiomeId::Forest && biome != BiomeId::Plains) {
@@ -55,7 +55,7 @@ bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biom
  }
 
  const glm::ivec3 anchor(x, surfaceY + 1, z);
- const uint32_t seed = ctx.settings.seed;
+ const uint32_t seed = ctx.Settings.seed;
 
  if (biome == BiomeId::Forest) {
   if (FeatureHash(x, z, seed + params.treeLargeSeedOffset) %
@@ -81,24 +81,24 @@ bool TryPlaceTree(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biom
 
 bool TryPlaceLavaPool(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome)
 {
- if (!ctx.settings.fillLava || ctx.lava == BLOCK_AIR || biome != BiomeId::Hills) {
+ if (!ctx.Settings.fillLava || ctx.Lava == BLOCK_AIR || biome != BiomeId::Hills) {
   return false;
  }
- const uint32_t seed = ctx.settings.seed;
+ const uint32_t seed = ctx.Settings.seed;
  if (FeatureHash(x, z, seed + 9001) % 400 != 0) {
   return false;
  }
  for (int dx = -1; dx <= 1; ++dx) {
   for (int dz = -1; dz <= 1; ++dz) {
    const glm::ivec3 pos(x + dx, surfaceY + 1, z + dz);
-   const BlockId below = ctx.world.GetBlock(glm::ivec3(x + dx, surfaceY, z + dz));
-   if (below != ctx.stone && below != ctx.gravel) {
+   const BlockId below = ctx.World.GetBlock(glm::ivec3(x + dx, surfaceY, z + dz));
+   if (below != ctx.Stone && below != ctx.Gravel) {
     return false;
    }
-   if (!ctx.world.IsAir(pos)) {
+   if (!ctx.World.IsAir(pos)) {
     return false;
    }
-   ctx.world.SetBlock(pos, ctx.lava);
+   ctx.World.SetBlock(pos, ctx.Lava);
   }
  }
  ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
@@ -107,23 +107,23 @@ bool TryPlaceLavaPool(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId 
 
 bool TryPlaceFirePatch(WorldGenContext& ctx, int x, int z, int surfaceY, BiomeId biome, BlockId grassId)
 {
- if (!ctx.settings.fillFire || ctx.fire == BLOCK_AIR) {
+ if (!ctx.Settings.fillFire || ctx.Fire == BLOCK_AIR) {
   return false;
  }
  (void)biome;
- const BlockId surface = ctx.world.GetBlock(glm::ivec3(x, surfaceY, z));
+ const BlockId surface = ctx.World.GetBlock(glm::ivec3(x, surfaceY, z));
  if (surface != grassId) {
   return false;
  }
  const glm::ivec3 firePos(x, surfaceY + 1, z);
- if (!ctx.world.IsAir(firePos)) {
+ if (!ctx.World.IsAir(firePos)) {
   return false;
  }
- const uint32_t seed = ctx.settings.seed;
+ const uint32_t seed = ctx.Settings.seed;
  if (FeatureHash(x, z, seed + 12007) % 512 != 0) {
   return false;
  }
- ctx.world.SetBlock(firePos, ctx.fire);
+ ctx.World.SetBlock(firePos, ctx.Fire);
  ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
  return true;
 }

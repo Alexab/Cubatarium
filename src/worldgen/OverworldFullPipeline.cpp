@@ -5,44 +5,44 @@
 
 namespace cutum {
 
-OverworldFullPipeline::OverworldFullPipeline(WorldGenContext ctx)
+UOverworldFullPipeline::UOverworldFullPipeline(WorldGenContext ctx)
  : IWorldGenPipeline(ctx)
- , heightSampler_(ctx.settings.seed, ctx.settings.seaLevel, ctx.settings.maxHeight, HeightPreset::Overworld)
- , biomeSampler_(ctx.settings.seed)
+ , heightSampler_(ctx.Settings.seed, ctx.Settings.seaLevel, ctx.Settings.maxHeight, HeightPreset::Overworld)
+ , biomeSampler_(ctx.Settings.seed)
 {
 }
 
-void OverworldFullPipeline::GenerateColumn(int worldX, int worldZ)
+void UOverworldFullPipeline::GenerateColumn(int worldX, int worldZ)
 {
  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
- const int surfaceY = AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
+ const int surfaceY = AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
  const BiomeId biome = biomeSampler_.At(worldX, worldZ, surfaceY,
-     ctx_.settings.seaLevel, ctx_.settings.maxHeight);
+     ctx_.Settings.seaLevel, ctx_.Settings.maxHeight);
  const BiomeSurfaceRule biomeRule = biomeSampler_.SurfaceRule(biome, ctx_);
 
  ColumnLayerRule rule;
  rule.surfaceBlock = biomeRule.surface;
  rule.subsurfaceBlock = biomeRule.subsurface;
- rule.fillerBlock = ctx_.stone;
+ rule.fillerBlock = ctx_.Stone;
 
  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
  FillFluidColumn(ctx_, worldX, worldZ, surfaceY);
 
- if (ctx_.settings.enableCaves) {
-  CarveColumnCaves(ctx_, worldX, worldZ, surfaceY, ctx_.settings.seed, caveParams_);
+ if (ctx_.Settings.enableCaves) {
+  CarveColumnCaves(ctx_, worldX, worldZ, surfaceY, ctx_.Settings.seed, caveParams_);
  }
 
- if (ctx_.settings.enableTrees) {
+ if (ctx_.Settings.enableTrees) {
   TryPlaceTree(ctx_, worldX, worldZ, surfaceY, biome, featureParams_);
  }
  TryPlaceLavaPool(ctx_, worldX, worldZ, surfaceY, biome);
- TryPlaceFirePatch(ctx_, worldX, worldZ, surfaceY, biome, ctx_.grass);
+ TryPlaceFirePatch(ctx_, worldX, worldZ, surfaceY, biome, ctx_.Grass);
 }
 
-int OverworldFullPipeline::SurfaceYAt(int worldX, int worldZ) const
+int UOverworldFullPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
- return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.settings);
+ return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
 }
 
 } // namespace cutum

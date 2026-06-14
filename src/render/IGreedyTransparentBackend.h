@@ -14,7 +14,7 @@
 
 namespace cutum {
 
-class BlockRegistry;
+class UBlockRegistry;
 
 struct GreedyTransparentDrawContext {
  const std::vector<GreedyMeshBatch>& allBatches;
@@ -22,8 +22,8 @@ struct GreedyTransparentDrawContext {
  uint64_t meshRevision;
  uint64_t cullRevision;
  glm::vec3 cameraPos;
- const BlockRegistry& blockRegistry;
- const std::map<size_t, TextureCube>& textures;
+ const UBlockRegistry& blockRegistry;
+ const std::map<size_t, UTextureCube>& textures;
 };
 
 class IGreedyTransparentBackend {

@@ -16,18 +16,18 @@
 
 namespace cutum {
 
-CreatureIconCache::CreatureIconCache(std::shared_ptr<CreatureDefinitionStorage> species,
-                                     std::shared_ptr<SkinDefinitionStorage> skins,
-                                     std::shared_ptr<CreatureTextureStorage> textures,
-                                     std::shared_ptr<ShaderManager> shaderManager)
+UCreatureIconCache::UCreatureIconCache(std::shared_ptr<UCreatureDefinitionStorage> species,
+                                     std::shared_ptr<USkinDefinitionStorage> skins,
+                                     std::shared_ptr<UCreatureTextureStorage> textures,
+                                     std::shared_ptr<UShaderManager> shader_manager)
     : species_(std::move(species))
     , skins_(std::move(skins))
     , textures_(std::move(textures))
-    , shaderManager_(std::move(shaderManager))
+    , ShaderManager(std::move(shader_manager))
 {
 }
 
-CreatureIconCache::~CreatureIconCache()
+UCreatureIconCache::~UCreatureIconCache()
 {
     Shutdown();
 }
@@ -63,7 +63,7 @@ void UploadIconCubeMesh(GLuint& vao, GLuint& vbo, GLuint& ebo, const float* texC
 
 } // namespace
 
-bool CreatureIconCache::InitCubeMesh()
+bool UCreatureIconCache::InitCubeMesh()
 {
     if (cubeVao_ != 0) {
         return true;
@@ -80,12 +80,12 @@ bool CreatureIconCache::InitCubeMesh()
     return cubeVao_ != 0 && headCubeVao_ != 0 && bodyCubeVao_ != 0;
 }
 
-bool CreatureIconCache::Initialize()
+bool UCreatureIconCache::Initialize()
 {
-    if (!shaderManager_) {
+    if (!ShaderManager) {
         return false;
     }
-    shader_ = shaderManager_->CreateShader("creature_icon", "shaders/vshader.glsl",
+    shader_ = ShaderManager->CreateShader("creature_icon", "shaders/vshader.glsl",
                                            "shaders/fshader.glsl");
     if (!shader_ || !shader_->IsValid() || !InitCubeMesh()) {
         return false;
@@ -128,7 +128,7 @@ bool CreatureIconCache::Initialize()
     return complete;
 }
 
-void CreatureIconCache::Shutdown()
+void UCreatureIconCache::Shutdown()
 {
     for (const auto& entry : speciesCache_) {
         if (entry.second != 0) {
@@ -200,7 +200,7 @@ void CreatureIconCache::Shutdown()
     }
 }
 
-GLuint CreatureIconCache::RenderSolidColorIcon(float r, float g, float b, float a)
+GLuint UCreatureIconCache::RenderSolidColorIcon(float r, float g, float b, float a)
 {
     GLuint tex = 0;
     glGenTextures(1, &tex);
@@ -217,7 +217,7 @@ GLuint CreatureIconCache::RenderSolidColorIcon(float r, float g, float b, float 
     return tex;
 }
 
-GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
+GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
 {
     if (!species_ || !skins_ || !textures_ || !shader_ || fbo_ == 0) {
         return 0;
@@ -238,7 +238,7 @@ GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    GlStateScope glState(kGlMaskIconFbo);
+    UGlStateScope glState(kGlMaskIconFbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, iconTex, 0);
     glViewport(0, 0, kIconSize, kIconSize);
@@ -284,7 +284,7 @@ GLuint CreatureIconCache::RenderSpeciesPartsIcon(const std::string& speciesId)
     return iconTex;
 }
 
-GLuint CreatureIconCache::GetOrCreateSpeciesIcon(const std::string& speciesId)
+GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string& speciesId)
 {
     const auto it = speciesCache_.find(speciesId);
     if (it != speciesCache_.end()) {
@@ -304,7 +304,7 @@ GLuint CreatureIconCache::GetOrCreateSpeciesIcon(const std::string& speciesId)
     return tex;
 }
 
-GLuint CreatureIconCache::GetOrCreateSkinIcon(const std::string& skinId)
+GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string& skinId)
 {
     const auto it = skinCache_.find(skinId);
     if (it != skinCache_.end()) {
@@ -328,7 +328,7 @@ GLuint CreatureIconCache::GetOrCreateSkinIcon(const std::string& skinId)
     return tex;
 }
 
-GLuint CreatureIconCache::GetSpeciesIcon(const std::string& speciesId)
+GLuint UCreatureIconCache::GetSpeciesIcon(const std::string& speciesId)
 {
     if (speciesId.empty()) {
         return 0;
@@ -336,7 +336,7 @@ GLuint CreatureIconCache::GetSpeciesIcon(const std::string& speciesId)
     return GetOrCreateSpeciesIcon(speciesId);
 }
 
-GLuint CreatureIconCache::GetSkinIcon(const std::string& skinId)
+GLuint UCreatureIconCache::GetSkinIcon(const std::string& skinId)
 {
     if (skinId.empty()) {
         return 0;
@@ -344,7 +344,7 @@ GLuint CreatureIconCache::GetSkinIcon(const std::string& skinId)
     return GetOrCreateSkinIcon(skinId);
 }
 
-void CreatureIconCache::WarmupNext(size_t count)
+void UCreatureIconCache::WarmupNext(size_t count)
 {
     for (size_t i = 0; i < count && warmupIndex_ < warmupQueue_.size(); ++i, ++warmupIndex_) {
         const std::string& key = warmupQueue_[warmupIndex_];

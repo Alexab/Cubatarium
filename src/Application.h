@@ -29,12 +29,12 @@ class UWorld;
 class UGeometryEngine;
 class UViewEngine;
 class UTextRenderer;
-class ShaderManager;
-class GuiContext;
-class GameSession;
-class BlockDefinitionStorage;
-class GuiIconSource;
-class MainMenuScreen;
+class UShaderManager;
+class UGuiContext;
+class UGameSession;
+class UBlockDefinitionStorage;
+class UGuiIconSource;
+class UMainMenuScreen;
 
 enum class MenuSubview { Main, Settings, LoadWorld, NewWorld };
 
@@ -44,9 +44,9 @@ public:
                 std::shared_ptr<UWorld> world,
                 std::shared_ptr<UGeometryEngine> geometry,
                 std::shared_ptr<UViewEngine> views,
-                std::shared_ptr<UTextRenderer> textRenderer,
-                std::shared_ptr<ShaderManager> shaderManager,
-                std::shared_ptr<BlockDefinitionStorage> blockDefinitions);
+                std::shared_ptr<UTextRenderer> text_renderer,
+                std::shared_ptr<UShaderManager> shader_manager,
+                std::shared_ptr<UBlockDefinitionStorage> block_definitions);
     ~UApplication();
 
     void Startup(const std::string& configPath);
@@ -55,7 +55,7 @@ public:
     void ScheduleEnterGame();
     void ScheduleQuit();
     void RequestQuit();
-    void SetWindow(GLFWwindow* window) { window_ = window; }
+    void SetWindow(GLFWwindow* window) { Window = window; }
     void HandleWindowFocus(bool focused);
 
     void Update(double dt);
@@ -68,16 +68,16 @@ public:
     bool RouteMouseMove(int x, int y);
     bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
 
-    AppState GetState() const { return state_; }
-    bool HasWorldSession() const { return worldSessionActive_; }
-    GuiContext& GetGui() { return *guiContext_; }
-    GameSession& GetGameSession() { return *gameSession_; }
+    AppState GetState() const { return State; }
+    bool HasWorldSession() const { return WorldSessionActive; }
+    UGuiContext& GetGui() { return *GuiContext; }
+    UGameSession& GetGameSession() { return *GameSession; }
     bool WantsCaptureMouse() const;
     bool WantsCaptureKeyboard() const;
     /// ЛКМ в мир (постановка блока/префаба) при закрытых палитре и консоли, в т.ч. с видимым курсором (Left Alt).
     bool AllowsWorldMousePlacement() const;
-    const UiSettings& GetUiSettings() const { return uiSettings_; }
-    int GetHotbarCountSetting() const { return uiSettings_.hotbarCount; }
+    const UiSettings& GetUiSettings() const { return Ui; }
+    int GetHotbarCountSetting() const { return Ui.hotbarCount; }
     void SetHotbarCountSetting(int count);
 
     void ReturnToMainMenu() override;
@@ -113,44 +113,44 @@ private:
     void DrawDragGhost(int width, int height);
     void ClearGameplayKeyboard();
 
-    std::shared_ptr<UCore> core_;
-    std::shared_ptr<UWorld> world_;
-    std::shared_ptr<UGeometryEngine> geometry_;
-    std::shared_ptr<UViewEngine> views_;
-    std::shared_ptr<UTextRenderer> textRenderer_;
-    std::shared_ptr<ShaderManager> shaderManager_;
-    std::shared_ptr<BlockDefinitionStorage> blockDefinitions_;
+    std::shared_ptr<UCore> Core;
+    std::shared_ptr<UWorld> World;
+    std::shared_ptr<UGeometryEngine> Geometry;
+    std::shared_ptr<UViewEngine> Views;
+    std::shared_ptr<UTextRenderer> TextRenderer;
+    std::shared_ptr<UShaderManager> ShaderManager;
+    std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;
 
-    std::unique_ptr<GuiContext> guiContext_;
-    std::unique_ptr<GameSession> gameSession_;
+    std::unique_ptr<UGuiContext> GuiContext;
+    std::unique_ptr<UGameSession> GameSession;
 
-    AppState state_{AppState::MainMenu};
-    UiSettings uiSettings_;
-    GLFWwindow* window_{nullptr};
-    bool consoleOpen_{false};
-    bool paletteOpen_{false};
-    bool freeCursor_{false};
+    AppState State{AppState::MainMenu};
+    UiSettings Ui;
+    GLFWwindow* Window{nullptr};
+    bool ConsoleOpen{false};
+    bool PaletteOpen{false};
+    bool FreeCursor{false};
     /// Подавить следующий glfw char после открытия консоли (символ клавиши-тоггла).
-    bool suppressConsoleToggleChar_{false};
+    bool SuppressConsoleToggleChar{false};
     enum class OverlayPointerCapture { None, Palette, Console, Hud };
-    OverlayPointerCapture overlayPointerCapture_{OverlayPointerCapture::None};
-    int dragCursorX_{0};
-    int dragCursorY_{0};
-    bool worldSessionActive_{false};
-    bool pendingEnterGame_{false};
-    bool pendingQuit_{false};
-    std::function<void()> pendingMenuAction_;
-    bool quitRequested_{false};
+    OverlayPointerCapture ActiveOverlayCapture{OverlayPointerCapture::None};
+    int DragCursorX{0};
+    int DragCursorY{0};
+    bool WorldSessionActive{false};
+    bool PendingEnterGame{false};
+    bool PendingQuit{false};
+    std::function<void()> PendingMenuAction;
+    bool QuitRequested{false};
 
-    std::unique_ptr<GuiIconSource> iconSource_;
-    std::unique_ptr<InGameHudScreen> hudScreen_;
-    std::unique_ptr<ConsoleScreen> consoleScreen_;
-    std::unique_ptr<CreativePaletteScreen> paletteScreen_;
-    std::unique_ptr<IGuiClipboard> clipboard_;
-    std::unique_ptr<GuiPopupMenu> overlayPopup_;
+    std::unique_ptr<UGuiIconSource> IconSource;
+    std::unique_ptr<UInGameHudScreen> HudScreen;
+    std::unique_ptr<UConsoleScreen> ConsoleScreen;
+    std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
+    std::unique_ptr<IGuiClipboard> Clipboard;
+    std::unique_ptr<UGuiPopupMenu> OverlayPopup;
 
-    MenuSubview menuSubview_{MenuSubview::Main};
-    MainMenuScreen* mainMenuScreen_{nullptr};
+    MenuSubview MenuSubview{MenuSubview::Main};
+    UMainMenuScreen* MainMenuScreen{nullptr};
 };
 
 } // namespace cutum

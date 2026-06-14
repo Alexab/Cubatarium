@@ -12,18 +12,18 @@ UViewEngine::UViewEngine()
 void UViewEngine::GenerateSimpleCamera()
 {
  // Above default flat terrain (top layer y=3)
- std::shared_ptr<Camera> view = std::make_shared<Camera>(glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+ std::shared_ptr<UCamera> view = std::make_shared<UCamera>(glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
  view->SetFreeMove(false); // Disable free movement to enable collisions
  AddCamera(view);
 }
 
-bool UViewEngine::AddCamera(std::shared_ptr<Camera> camera)
+bool UViewEngine::AddCamera(std::shared_ptr<UCamera> camera)
 {
  AddCameraReturnId(camera);
  return camera != nullptr;
 }
 
-size_t UViewEngine::AddCameraReturnId(std::shared_ptr<Camera> camera)
+size_t UViewEngine::AddCameraReturnId(std::shared_ptr<UCamera> camera)
 {
  if(camera == nullptr)
   return 0;
@@ -60,7 +60,7 @@ bool UViewEngine::DelCamera(size_t index)
  return true;
 }
 
-std::shared_ptr<Camera> UViewEngine::GetActiveCamera() const
+std::shared_ptr<UCamera> UViewEngine::GetActiveCamera() const
 {
  auto I = Cameras.find(ActiveViewIndex);
  if(I == Cameras.end())
@@ -69,7 +69,7 @@ std::shared_ptr<Camera> UViewEngine::GetActiveCamera() const
  return I->second;
 }
 
-std::shared_ptr<Camera> UViewEngine::GetCamera(size_t index) const
+std::shared_ptr<UCamera> UViewEngine::GetCamera(size_t index) const
 {
  auto I = Cameras.find(index);
  if(I == Cameras.end())

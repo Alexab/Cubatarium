@@ -10,16 +10,16 @@ namespace cutum {
 
 struct GuiTheme;
 
-class GuiTabBar : public GuiWidget {
+class UGuiTabBar : public UGuiWidget {
 public:
-    GuiTabBar(const GuiTheme* theme);
+    UGuiTabBar(const GuiTheme* theme);
 
     void SetTabs(std::vector<std::string> labels);
     int GetActiveTab() const { return activeTab_; }
     void SetActiveTab(int tab);
     void SetOnTabChanged(std::function<void(int)> handler);
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
 
     int GetPreferredHeight() const override;

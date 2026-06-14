@@ -13,9 +13,9 @@ enum class GuiTextAlign {
     Center
 };
 
-class GuiLabel : public GuiWidget {
+class UGuiLabel : public UGuiWidget {
 public:
-    GuiLabel(const GuiTheme* theme, std::string text);
+    UGuiLabel(const GuiTheme* theme, std::string text);
 
     void SetText(const std::string& text) { text_ = text; }
     const std::string& GetText() const { return text_; }
@@ -23,7 +23,7 @@ public:
     void SetDrawBackground(bool draw) { drawBackground_ = draw; }
     void SetUseSecondaryColor(bool use) { useSecondaryColor_ = use; }
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
 
 private:
     const GuiTheme* theme_;

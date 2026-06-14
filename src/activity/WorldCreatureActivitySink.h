@@ -7,16 +7,16 @@ namespace cutum {
 
 class UWorld;
 
-class WorldCreatureActivitySink : public ICreatureActivitySink {
+class UWorldCreatureActivitySink : public ICreatureActivitySink {
  public:
- explicit WorldCreatureActivitySink(UWorld& world);
+ explicit UWorldCreatureActivitySink(UWorld& world);
 
  std::optional<CreatureActivityView> GetCreatureView(CreatureId id) const override;
  std::optional<CreatureBehaviorSnapshot> GetBehaviorSnapshot(CreatureId id) const override;
  void SetIntent(CreatureId id, const CreatureIntent& intent) override;
 
  private:
- UWorld& world_;
+ UWorld& World;
 };
 
 } // namespace cutum

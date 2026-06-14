@@ -3,7 +3,7 @@
 
 namespace cutum {
 
-bool CanPlacePrefabAt(const BlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos)
+bool CanPlacePrefabAt(const UBlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos)
 {
  for (const auto& voxel : prefab.voxels) {
   const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab.anchor;
@@ -14,7 +14,7 @@ bool CanPlacePrefabAt(const BlockWorld& world, const Prefab& prefab, glm::ivec3 
  return !prefab.voxels.empty();
 }
 
-PrefabPlacementStats PlacePrefabAt(BlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos,
+PrefabPlacementStats PlacePrefabAt(UBlockWorld& world, const Prefab& prefab, glm::ivec3 anchorWorldPos,
     bool skipOccupied)
 {
  PrefabPlacementStats stats;

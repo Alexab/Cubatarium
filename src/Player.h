@@ -6,19 +6,19 @@
 
 namespace cutum {
 
-class User;
+class UUser;
 
-class Player : public Creature {
+class UPlayer : public UCreature {
 public:
- Player(CreatureId id, const std::string& speciesId, glm::vec3 bodyOrigin);
+ UPlayer(CreatureId id, const std::string& speciesId, glm::vec3 bodyOrigin);
 
  bool IsPlayer() const override { return true; }
 
- void BindUser(const std::shared_ptr<User>& user) { user_ = user; }
- std::shared_ptr<User> GetUser() const { return user_.lock(); }
+ void BindUser(const std::shared_ptr<UUser>& user) { user_ = user; }
+ std::shared_ptr<UUser> GetUser() const { return user_.lock(); }
 
 private:
- std::weak_ptr<User> user_;
+ std::weak_ptr<UUser> user_;
 };
 
 } // namespace cutum

@@ -18,11 +18,11 @@ class UWorld;
 
 struct BlockInputContext 
 {
-  std::shared_ptr<UWorld> world;
-  UGeometryEngine* geometries{nullptr};
-  const UiSettings* ui{nullptr};
-  GLFWwindow* window{nullptr};
-  UApplication* app{nullptr};
+  std::shared_ptr<UWorld> World;
+  UGeometryEngine* Geometries{nullptr};
+  const UiSettings* Ui{nullptr};
+  GLFWwindow* Window{nullptr};
+  UApplication* App{nullptr};
 };
 
 class UBlockInputController 
@@ -33,7 +33,7 @@ public:
   void OnKeyDelete(const BlockInputContext& ctx);
   void Tick(float dt, const BlockInputContext& ctx);
 
-  bool IsRightLookActive() const { return rightLookActive_; }
+  bool IsRightLookActive() const { return RightLookActive; }
 
 private:
   const InventoryEntryRef* GetActiveEntry(const BlockInputContext& ctx) const;
@@ -48,12 +48,12 @@ private:
   void TrySpawnCreatureOrSkin(const BlockInputContext& ctx);
   void TryInstantBreak(const BlockInputContext& ctx);
 
-  std::chrono::steady_clock::time_point leftDownTime_{};
-  bool leftHeld_{false};
-  glm::vec2 rightDownPos_{0.0f};
-  bool rightPressed_{false};
-  bool rightLookActive_{false};
-  bool rightDragExceeded_{false};
+  std::chrono::steady_clock::time_point LeftDownTime{};
+  bool LeftHeld{false};
+  glm::vec2 RightDownPos{0.0f};
+  bool RightPressed{false};
+  bool RightLookActive{false};
+  bool RightDragExceeded{false};
 };
 
 } // namespace cutum

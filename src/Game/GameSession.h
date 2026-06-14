@@ -21,20 +21,20 @@ namespace cutum {
 class UApplication;
 class UWorld;
 
-class GameSession : public IGuiGameActions,
+class UGameSession : public IGuiGameActions,
                     public IHotbarViewModel,
                     public IInventoryViewModel,
                     public IGameCommandContext {
 public:
-    GameSession(UApplication* application, std::shared_ptr<UWorld> world);
+    UGameSession(UApplication* application, std::shared_ptr<UWorld> world);
 
     void InitializeCatalog(const std::string& typesJsonPath,
-                           const BlockDefinitionStorage& blocks,
-                           const PrefabLibrary& prefabs);
+                           const UBlockDefinitionStorage& blocks,
+                           const UPrefabLibrary& prefabs);
     void RegisterCommands();
 
-    CommandRegistry& GetCommandRegistry() { return commandRegistry_; }
-    ContentTypeRegistry& GetContentCatalog() { return contentCatalog_; }
+    UCommandRegistry& GetCommandRegistry() { return commandRegistry_; }
+    UContentTypeRegistry& GetContentCatalog() { return contentCatalog_; }
     IContentCatalog& AsContentCatalog() { return contentCatalog_; }
 
     void LoadLastWorld() override;
@@ -82,18 +82,18 @@ public:
     void AddChatLine(const std::string& line) override;
     const std::vector<std::string>& GetChatLog() const { return chatLog_; }
 
-    ConsoleCommandHistory& GetCommandHistory() { return commandHistory_; }
-    const ConsoleCommandHistory& GetCommandHistory() const { return commandHistory_; }
+    UConsoleCommandHistory& GetCommandHistory() { return commandHistory_; }
+    const UConsoleCommandHistory& GetCommandHistory() const { return commandHistory_; }
     void InitCommandHistory(const std::filesystem::path& filePath);
     void SaveCommandHistory();
 
 private:
     UApplication* application_;
-    std::shared_ptr<UWorld> world_;
-    CommandRegistry commandRegistry_;
-    ContentTypeRegistry contentCatalog_;
+    std::shared_ptr<UWorld> World;
+    UCommandRegistry commandRegistry_;
+    UContentTypeRegistry contentCatalog_;
     std::vector<std::string> chatLog_;
-    ConsoleCommandHistory commandHistory_;
+    UConsoleCommandHistory commandHistory_;
     InventoryMode inventoryMode_{InventoryMode::Creative};
     std::optional<InventoryEntryRef> pendingAssignment_;
     DragState drag_;

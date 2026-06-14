@@ -30,11 +30,11 @@ void ApplyPassGlState(const TransparentPassDesc& pass)
 
 } // namespace
 
-void GreedyTransparentPipeline::Draw(IGreedyTransparentBackend& backend,
+void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend& backend,
                                      const GreedyTransparentDrawContext& ctx,
                                      const GreedyTransparentSettings& settings)
 {
- GlStateScope glGuard(kGlMaskTransparentPipeline);
+ UGlStateScope glGuard(kGlMaskTransparentPipeline);
  glEnable(GL_BLEND);
  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
  glDisable(GL_CULL_FACE);

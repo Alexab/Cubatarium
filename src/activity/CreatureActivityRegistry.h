@@ -3,9 +3,9 @@
 
 namespace cutum {
 
-class CreatureActivityDirector;
+class UCreatureActivityDirector;
 
-void RegisterDefaultCreatureActivityAgents(CreatureActivityDirector& director);
+void RegisterDefaultCreatureActivityAgents(UCreatureActivityDirector& director);
 
 } // namespace cutum
 

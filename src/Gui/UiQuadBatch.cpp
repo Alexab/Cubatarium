@@ -14,7 +14,7 @@ UiQuadBatch::~UiQuadBatch()
     Shutdown();
 }
 
-bool UiQuadBatch::Initialize(std::shared_ptr<ShaderProgram> shader)
+bool UiQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
 {
     if (!shader || !shader->IsValid()) {
         return false;
@@ -48,10 +48,10 @@ void UiQuadBatch::Shutdown()
     initialized_ = false;
 }
 
-void UiQuadBatch::Begin(int windowWidth, int windowHeight)
+void UiQuadBatch::Begin(int WindowWidth, int WindowHeight)
 {
-    windowWidth_ = windowWidth;
-    windowHeight_ = windowHeight;
+    windowWidth_ = WindowWidth;
+    windowHeight_ = WindowHeight;
     vertices_.clear();
 
     GLboolean depthTest;

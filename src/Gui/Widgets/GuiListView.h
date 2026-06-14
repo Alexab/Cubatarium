@@ -10,9 +10,9 @@ namespace cutum {
 
 struct GuiTheme;
 
-class GuiListView : public GuiWidget {
+class UGuiListView : public UGuiWidget {
 public:
-    GuiListView(const GuiTheme* theme);
+    UGuiListView(const GuiTheme* theme);
 
     void SetItems(std::vector<std::string> items);
     void SetSelectedIndex(int index);
@@ -23,7 +23,7 @@ public:
     bool CanFocus() const override;
     void RevealFocused();
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnKey(const GuiKeyEvent& event) override;
     bool OnScroll(const GuiScrollEvent& event) override;
@@ -36,7 +36,7 @@ private:
     GuiRect ScrollbarTrackRect() const;
     GuiRect ScrollbarThumbRect() const;
     GuiRect ListAreaRect() const;
-    void DrawScrollbar(GuiRenderer& renderer);
+    void DrawScrollbar(UGuiRenderer& renderer);
     void EnsureSelectedVisible();
     bool SelectIndex(int index);
     bool HandleKeyNavigation(const GuiKeyEvent& event);

@@ -8,16 +8,16 @@
 namespace cutum {
 
 class IGuiGameActions;
-class GuiButton;
-class GuiLabel;
-class GuiPanel;
+class UGuiButton;
+class UGuiLabel;
+class UGuiPanel;
 struct GuiTheme;
 
-class MainMenuScreen : public GuiScreenBase {
+class UMainMenuScreen : public UGuiScreenBase {
 public:
-    explicit MainMenuScreen(IGuiGameActions* actions);
+    explicit UMainMenuScreen(IGuiGameActions* actions);
 
-    void Build(GuiContext& ctx) override;
+    void Build(UGuiContext& ctx) override;
     void OnViewportChanged(int width, int height) override;
     bool BlocksGameInput() const override { return true; }
 
@@ -29,15 +29,15 @@ private:
     void RelayoutQuitDialog();
 
     IGuiGameActions* actions_{nullptr};
-    GuiLabel* title_{nullptr};
-    GuiLabel* versionLabel_{nullptr};
-    std::vector<GuiButton*> buttons_;
+    UGuiLabel* title_{nullptr};
+    UGuiLabel* versionLabel_{nullptr};
+    std::vector<UGuiButton*> buttons_;
 
-    GuiPanel* quitBackdrop_{nullptr};
-    GuiPanel* quitDialog_{nullptr};
-    GuiLabel* quitMessage_{nullptr};
-    GuiButton* quitYesButton_{nullptr};
-    GuiButton* quitNoButton_{nullptr};
+    UGuiPanel* quitBackdrop_{nullptr};
+    UGuiPanel* quitDialog_{nullptr};
+    UGuiLabel* quitMessage_{nullptr};
+    UGuiButton* quitYesButton_{nullptr};
+    UGuiButton* quitNoButton_{nullptr};
     bool quitDialogVisible_{false};
 };
 

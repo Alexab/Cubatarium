@@ -32,7 +32,7 @@ struct BlockPhysicsProfile {
 };
 
 enum class BlockRenderStyle {
- Cube,
+ UCube,
  Fluid,
  Cross,
 };
@@ -49,7 +49,7 @@ struct FluidViewProfile {
 struct BlockRenderProfile {
  bool transparent{false};
  bool doubleSided{false};
- BlockRenderStyle style{BlockRenderStyle::Cube};
+ BlockRenderStyle style{BlockRenderStyle::UCube};
  FluidViewProfile fluidView;
 };
 

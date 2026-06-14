@@ -18,34 +18,34 @@ namespace cutum {
 
 namespace fs = std::filesystem;
 
-const ObjectPrototype& UnknownPrototype()
+const UObjectPrototype& UnknownPrototype()
 {
- static ObjectPrototype prototype;
+ static UObjectPrototype prototype;
  return prototype;
 }
 
-ObjectStorage::ObjectStorage(std::shared_ptr<TextureCubeStorage> texture_cube)
+UObjectStorage::UObjectStorage(std::shared_ptr<UTextureCubeStorage> texture_cube)
  : TextureCubeInstance(texture_cube)
 {
 
 }
 
-void ObjectStorage::Generate()
+void UObjectStorage::Generate()
 {
-// ObjectPrototype wood("wood", 1, std::make_shared<SingleCube>(1));
+// UObjectPrototype wood("wood", 1, std::make_shared<USingleCube>(1));
 // AddPrototype(wood);
-// ObjectPrototype grass("grass", 2, std::make_shared<SingleCube>(2));
+// UObjectPrototype grass("grass", 2, std::make_shared<USingleCube>(2));
 // AddPrototype(grass);
-// ObjectPrototype stone("stone", 3, std::make_shared<SingleCube>(3));
+// UObjectPrototype stone("stone", 3, std::make_shared<USingleCube>(3));
 // AddPrototype(stone);
-// ObjectPrototype tree_birch("tree_birch", 4, std::make_shared<SingleCube>(4));
+// UObjectPrototype tree_birch("tree_birch", 4, std::make_shared<USingleCube>(4));
 // AddPrototype(tree_birch);
 }
 
-void ObjectStorage::Load(const std::string& objects_path)
+void UObjectStorage::Load(const std::string& objects_path)
 {
 #ifdef CUBATARIUM_DEBUG
- std::cout << "ObjectStorage::Load: Loading from " << objects_path << std::endl;
+ std::cout << "UObjectStorage::Load: Loading from " << objects_path << std::endl;
 #endif
  
  try
@@ -62,7 +62,7 @@ void ObjectStorage::Load(const std::string& objects_path)
     std::vector<std::string> cube_textures;
     if(LoadJson(entry.path().string(), name, id, class_name, cube_textures))
     {
-     if(class_name == "SingleCube" && cube_textures.size()>0)
+     if(class_name == "USingleCube" && cube_textures.size()>0)
      {
       std::string texture_name = cube_textures[0];
       auto texture_cube_id = TextureCubeInstance->GetTypeIdByName(texture_name);
@@ -71,15 +71,15 @@ void ObjectStorage::Load(const std::string& objects_path)
         std::cerr << "Texture id for name "<< texture_name << "not found";
         continue;
       }
-      ObjectPrototype object_description(name, id, std::make_shared<SingleCube>(texture_cube_id));
+      UObjectPrototype object_description(name, id, std::make_shared<USingleCube>(texture_cube_id));
       AddPrototype(object_description);
       loaded_count++;
 #ifdef CUBATARIUM_DEBUG
-      std::cout << "ObjectStorage::Load: Added SingleCube prototype '" << name << "'" << std::endl;
+      std::cout << "UObjectStorage::Load: Added USingleCube prototype '" << name << "'" << std::endl;
 #endif
      }
      else
-     if(class_name == "TerrainPlane" && cube_textures.size()>0)
+     if(class_name == "UTerrainPlane" && cube_textures.size()>0)
      {
       std::string texture_name = cube_textures[0];
       auto texture_cube_id = TextureCubeInstance->GetTypeIdByName(texture_name);
@@ -88,12 +88,12 @@ void ObjectStorage::Load(const std::string& objects_path)
         std::cerr << "Texture id for name "<< texture_name << "not found";
         continue;
       }
-      ObjectPrototype object_description(name, id, std::make_shared<TerrainPlane>(30, 30));
-      std::dynamic_pointer_cast<TerrainPlane>(object_description.GetSample())->Generate(texture_cube_id);
+      UObjectPrototype object_description(name, id, std::make_shared<UTerrainPlane>(30, 30));
+      std::dynamic_pointer_cast<UTerrainPlane>(object_description.GetSample())->Generate(texture_cube_id);
       AddPrototype(object_description);
       loaded_count++;
 #ifdef CUBATARIUM_DEBUG
-      std::cout << "ObjectStorage::Load: Added TerrainPlane prototype '" << name << "'" << std::endl;
+      std::cout << "UObjectStorage::Load: Added UTerrainPlane prototype '" << name << "'" << std::endl;
 #endif
      }
     }
@@ -101,7 +101,7 @@ void ObjectStorage::Load(const std::string& objects_path)
   }
 
 #ifdef CUBATARIUM_DEBUG
- std::cout << "ObjectStorage::Load: Total loaded prototypes: " << loaded_count << std::endl;
+ std::cout << "UObjectStorage::Load: Total loaded prototypes: " << loaded_count << std::endl;
 #endif
  }
  catch(std::filesystem::filesystem_error &ex)
@@ -110,12 +110,12 @@ void ObjectStorage::Load(const std::string& objects_path)
  }
 }
 
-void ObjectStorage::Save(const std::string& objects_path)
+void UObjectStorage::Save(const std::string& objects_path)
 {
 
 }
 
-bool ObjectStorage::AddPrototype(const ObjectPrototype& prototype)
+bool UObjectStorage::AddPrototype(const UObjectPrototype& prototype)
 {
  if(PrototypeNames.find(prototype.GetTypeName()) != PrototypeNames.end())
   return false;
@@ -128,23 +128,23 @@ bool ObjectStorage::AddPrototype(const ObjectPrototype& prototype)
  return true;
 }
 
-const ObjectPrototype& ObjectStorage::GetPrototype(const std::string& type_name) const
+const UObjectPrototype& UObjectStorage::GetPrototype(const std::string& type_name) const
 {
  auto type_id = GetObjectTypeId(type_name);
  if(type_id == 0) {
-  std::cerr << "ObjectStorage::GetPrototype: unknown type '" << type_name << "'" << std::endl;
+  std::cerr << "UObjectStorage::GetPrototype: unknown type '" << type_name << "'" << std::endl;
   return UnknownPrototype();
  }
  auto it = Prototypes.find(type_id);
  if (it == Prototypes.end()) {
-  std::cerr << "ObjectStorage::GetPrototype: missing prototype id " << type_id << std::endl;
+  std::cerr << "UObjectStorage::GetPrototype: missing prototype id " << type_id << std::endl;
   return UnknownPrototype();
  }
  return it->second;
 }
 
 
-std::shared_ptr<Object> ObjectStorage::TakeObject(const std::string& type_name)
+std::shared_ptr<UObject> UObjectStorage::TakeObject(const std::string& type_name)
 {
  auto I = PrototypeNames.find(type_name);
  if (I != PrototypeNames.end()) {
@@ -153,7 +153,7 @@ std::shared_ptr<Object> ObjectStorage::TakeObject(const std::string& type_name)
  return nullptr;
 }
 
-std::shared_ptr<Object> ObjectStorage::TakeObject(uint64_t type_id)
+std::shared_ptr<UObject> UObjectStorage::TakeObject(uint64_t type_id)
 {
  auto I = Prototypes.find(type_id);
  auto result = (I != Prototypes.end())?I->second.New():nullptr;
@@ -163,13 +163,13 @@ std::shared_ptr<Object> ObjectStorage::TakeObject(uint64_t type_id)
  return result;
 }
 
-uint64_t ObjectStorage::GetObjectTypeId(const std::string& type_name) const
+uint64_t UObjectStorage::GetObjectTypeId(const std::string& type_name) const
 {
  auto I = PrototypeNames.find(type_name);
  return (I != PrototypeNames.end())?I->second:0;
 }
 
-std::string ObjectStorage::GetObjectTypeName(uint64_t type_id) const
+std::string UObjectStorage::GetObjectTypeName(uint64_t type_id) const
 {
  for(auto I = PrototypeNames.begin(); I != PrototypeNames.end(); ++I)
  {
@@ -179,7 +179,7 @@ std::string ObjectStorage::GetObjectTypeName(uint64_t type_id) const
  return std::string("");
 }
 
-bool ObjectStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::string &class_name, std::vector<std::string> &cube_textures)
+bool UObjectStorage::LoadJson(const std::string& file_name, std::string &name, size_t &id, std::string &class_name, std::vector<std::string> &cube_textures)
 {
  std::string val;
  std::ifstream file(file_name);

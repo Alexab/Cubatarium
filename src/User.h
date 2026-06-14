@@ -8,11 +8,11 @@ namespace cutum {
 
 using CreatureId = uint64_t;
 
-/// Session identity: camera cache, view id, link to player creature. Inventory lives on Creature.
-class User
+/// Session identity: camera cache, view id, link to player creature. Inventory lives on UCreature.
+class UUser
 {
 public:
- User();
+ UUser();
 
  const glm::vec3& GetPosition() const;
  const glm::vec3& GetViewDirection() const;
@@ -26,8 +26,8 @@ public:
  size_t GetViewId() const;
  void SetViewId(size_t value);
 
- CreatureId GetPlayerCreatureId() const { return playerCreatureId_; }
- void SetPlayerCreatureId(CreatureId id) { playerCreatureId_ = id; }
+ CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
+ void SetPlayerCreatureId(CreatureId id) { PlayerCreatureId = id; }
 
  const std::string& GetSelectedAppearanceTypeId() const;
  void SetSelectedAppearanceTypeId(const std::string& typeId);
@@ -41,9 +41,9 @@ private:
  float CameraYaw{-90.0f};
  float CameraPitch{0.0f};
  size_t ViewId{0};
- CreatureId playerCreatureId_{0};
- std::string selectedAppearanceTypeId_;
- std::string selectedSkinId_;
+ CreatureId PlayerCreatureId{0};
+ std::string SelectedAppearanceTypeId;
+ std::string SelectedSkinId;
 };
 
 }

@@ -26,17 +26,18 @@ glm::ivec2 CursorToFramebufferPixels(GLFWwindow* window, float x, float y)
   {
     return {static_cast<int>(x), static_cast<int>(y)};
   }
-  int fbW = 0;
-  int fbH = 0;
-  int winW = 0;
-  int winH = 0;
-  glfwGetFramebufferSize(window, &fbW, &fbH);
-  glfwGetWindowSize(window, &winW, &winH);
-  if (winW <= 0 || winH <= 0 || fbW <= 0 || fbH <= 0) {
-      return {static_cast<int>(x), static_cast<int>(y)};
+  int fb_w = 0;
+  int fb_h = 0;
+  int win_w = 0;
+  int win_h = 0;
+  glfwGetFramebufferSize(window, &fb_w, &fb_h);
+  glfwGetWindowSize(window, &win_w, &win_h);
+  if (win_w <= 0 || win_h <= 0 || fb_w <= 0 || fb_h <= 0)
+  {
+    return {static_cast<int>(x), static_cast<int>(y)};
   }
-  const float sx = static_cast<float>(fbW) / static_cast<float>(winW);
-  const float sy = static_cast<float>(fbH) / static_cast<float>(winH);
+  const float sx = static_cast<float>(fb_w) / static_cast<float>(win_w);
+  const float sy = static_cast<float>(fb_h) / static_cast<float>(win_h);
   return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
 }
 
@@ -57,7 +58,8 @@ UWindowManager::UWindowManager()
   LastAutosaveTime = std::chrono::steady_clock::now();
 }
 
-UWindowManager::~UWindowManager() {
+UWindowManager::~UWindowManager()
+{
   Shutdown();
 }
 
@@ -218,9 +220,9 @@ void UWindowManager::Run()
   while (!glfwWindowShouldClose(Window) && IsRunning) 
   {
     // Time update
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    DeltaTime = std::chrono::duration<double>(currentTime - LastFrameTime).count();
-    LastFrameTime = currentTime;
+    auto current_time = std::chrono::high_resolution_clock::now();
+    DeltaTime = std::chrono::duration<double>(current_time - LastFrameTime).count();
+    LastFrameTime = current_time;
 
     glfwPollEvents();
 
@@ -257,13 +259,13 @@ void UWindowManager::ProcessInput()
     return;
   }
 
-  // Camera control key processing
+  // UCamera control key processing
   if (World && Application && Application->GetState() == AppState::InGame)
   {
     auto camera = World->GetCurrentUserCamera();
     if (camera) 
     {
-      const bool shiftDown = InputManager->IsKeyPressed(KeyCode::Key_Shift)
+      const bool shift_down = InputManager->IsKeyPressed(KeyCode::Key_Shift)
           || (Window && glfwGetKey(Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
                             InputManager->IsKeyPressed(KeyCode::Key_W));
@@ -275,8 +277,8 @@ void UWindowManager::ProcessInput()
                             InputManager->IsKeyPressed(KeyCode::Key_D));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
                             InputManager->IsKeyPressed(KeyCode::Key_Space));
-      camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shiftDown);
-      camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
+      camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shift_down);
+      camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shift_down);
     }
   }
 }
@@ -294,11 +296,11 @@ void UWindowManager::Update()
     if (BlockInput) 
     {
       BlockInputContext ctx;
-      ctx.world = World;
-      ctx.geometries = Geometries.get();
-      ctx.ui = Core ? &Core->GetUiSettings() : nullptr;
-      ctx.window = Window;
-      ctx.app = Application.get();
+      ctx.World = World;
+      ctx.Geometries = Geometries.get();
+      ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+      ctx.Window = Window;
+      ctx.App = Application.get();
       BlockInput->Tick(static_cast<float>(DeltaTime), ctx);
     }
   }
@@ -320,26 +322,26 @@ void UWindowManager::Render()
   if (Application) 
   {
     Application->SetWindow(Window);
-    int fbW = WindowWidth;
-    int fbH = WindowHeight;
+    int fb_w = WindowWidth;
+    int fb_h = WindowHeight;
     if (Window) 
     {
-      glfwGetFramebufferSize(Window, &fbW, &fbH);
-      if (fbW > 0 && fbH > 0) 
+      glfwGetFramebufferSize(Window, &fb_w, &fb_h);
+      if (fb_w > 0 && fb_h > 0) 
       {
-        WindowWidth = fbW;
-        WindowHeight = fbH;
+        WindowWidth = fb_w;
+        WindowHeight = fb_h;
       }
     }
-    Application->RenderFrame(fbW, fbH, Views ? Views->GetDurationUpdateMks() : 0.0);
+    Application->RenderFrame(fb_w, fb_h, Views ? Views->GetDurationUpdateMks() : 0.0);
     return;
   }
 
   if (Geometries) 
   {
     Geometries->PrepareFrameRendering();
-    const glm::vec4 clearColor = Geometries->GetSkyColor();
-    glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+    const glm::vec4 clear_color = Geometries->GetSkyColor();
+    glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -352,18 +354,18 @@ void UWindowManager::Render()
 
 void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods) 
 {
-  const int glfwKey = static_cast<int>(key);
-  int glfwAction = GLFW_RELEASE;
+  const int glfw_key = static_cast<int>(key);
+  int glfw_action = GLFW_RELEASE;
   if (state == KeyState::Pressed) 
   {
-    glfwAction = GLFW_PRESS;
+    glfw_action = GLFW_PRESS;
   } 
   else 
   if (state == KeyState::Repeated) 
   {
-    glfwAction = GLFW_REPEAT;
+    glfw_action = GLFW_REPEAT;
   }
-  if (Application && Application->RouteKey(glfwKey, glfwAction, mods)) 
+  if (Application && Application->RouteKey(glfw_key, glfw_action, mods)) 
   {
     return;
   }
@@ -383,15 +385,15 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods)
     return;
   }
 
-  const bool keyDown = (state == KeyState::Pressed || state == KeyState::Repeated);
+  const bool key_down = (state == KeyState::Pressed || state == KeyState::Repeated);
 
   // Update key states in camera
   if (auto camera = World->GetCurrentUserCamera()) 
   {
-    camera->UpdateKeyStatus(static_cast<int>(key), keyDown);
+    camera->UpdateKeyStatus(static_cast<int>(key), key_down);
     if (static_cast<int>(key) == GLFW_KEY_RIGHT_SHIFT) 
     {
-      camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, keyDown);
+      camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, key_down);
     }
   }
 
@@ -422,11 +424,11 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods)
       if (BlockInput) 
       {
         BlockInputContext ctx;
-        ctx.world = World;
-        ctx.geometries = Geometries.get();
-        ctx.ui = Core ? &Core->GetUiSettings() : nullptr;
-        ctx.window = Window;
-        ctx.app = Application.get();
+        ctx.World = World;
+        ctx.Geometries = Geometries.get();
+        ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+        ctx.Window = Window;
+        ctx.App = Application.get();
         BlockInput->OnKeyDelete(ctx);
       }
     }
@@ -545,11 +547,11 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed, gl
   }
 
   BlockInputContext ctx;
-  ctx.world = World;
-  ctx.geometries = Geometries.get();
-  ctx.ui = Core ? &Core->GetUiSettings() : nullptr;
-  ctx.window = Window;
-  ctx.app = Application.get();
+  ctx.World = World;
+  ctx.Geometries = Geometries.get();
+  ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+  ctx.Window = Window;
+  ctx.App = Application.get();
   BlockInput->OnMouseButton(button, pressed, pos, ctx);
 }
 
@@ -576,11 +578,11 @@ void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
   }
 
   BlockInputContext ctx;
-  ctx.world = World;
-  ctx.geometries = Geometries.get();
-  ctx.ui = Core ? &Core->GetUiSettings() : nullptr;
-  ctx.window = Window;
-  ctx.app = Application.get();
+  ctx.World = World;
+  ctx.Geometries = Geometries.get();
+  ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+  ctx.Window = Window;
+  ctx.App = Application.get();
   BlockInput->OnMouseMove(pos, delta, ctx);
 }
 
@@ -702,19 +704,19 @@ void UWindowManager::RenderHelpText()
   
   float y = WindowHeight - 30.0f; // Margin from top of screen
   float scale = 1.0f;
-  glm::vec3 textColor(1.0f, 1.0f, 1.0f); // White color
+  glm::vec3 text_color(1.0f, 1.0f, 1.0f); // White color
   
   // Main control hints in English
-  std::vector<std::string> helpLines = {
+  std::vector<std::string> help_lines = {
     "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, RMB hold - Look, ` - Console",
     "Classic (Minecraft): mouse look, LMB break, RMB place; Cubatarium: RMB look",
     "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, Shift+F11 - Flat",
     "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"
   };
   
-  for (const auto& line : helpLines) 
+  for (const auto& line : help_lines) 
   {
-    TextRenderer->RenderText(line, 10.0f, y, scale, textColor);
+    TextRenderer->RenderText(line, 10.0f, y, scale, text_color);
     y -= 25.0f; // Margin between lines
   }
 }

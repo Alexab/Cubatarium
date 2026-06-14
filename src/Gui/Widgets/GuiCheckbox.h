@@ -9,9 +9,9 @@ namespace cutum {
 
 struct GuiTheme;
 
-class GuiCheckbox : public GuiWidget {
+class UGuiCheckbox : public UGuiWidget {
 public:
-    GuiCheckbox(const GuiTheme* theme, std::string label);
+    UGuiCheckbox(const GuiTheme* theme, std::string label);
 
     void SetChecked(bool checked) { checked_ = checked; }
     bool IsChecked() const { return checked_; }
@@ -20,7 +20,7 @@ public:
     bool CanFocus() const override;
     bool Activate() override;
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
 
     int GetPreferredHeight() const override;

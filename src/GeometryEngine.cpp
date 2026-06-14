@@ -35,7 +35,7 @@
 
 namespace cutum {
 
-UGeometryEngine::UGeometryEngine(std::shared_ptr<ObjectStorage> object_storage, std::shared_ptr<UWorld> world, std::shared_ptr<TextureBaseStorage> texture_base_storage, std::shared_ptr<TextureCubeStorage> texture_cube_storage, std::shared_ptr<UTextRenderer> text_renderer)
+UGeometryEngine::UGeometryEngine(std::shared_ptr<UObjectStorage> object_storage, std::shared_ptr<UWorld> world, std::shared_ptr<UTextureBaseStorage> texture_base_storage, std::shared_ptr<UTextureCubeStorage> texture_cube_storage, std::shared_ptr<UTextRenderer> text_renderer)
  : ObjectStorageInstance(object_storage)
  , WorldInstance(world)
  , TextureBaseStorageInstance(texture_base_storage)
@@ -59,17 +59,17 @@ UGeometryEngine::~UGeometryEngine()
     DestroyOverlayBuffers();
 }
 
-void UGeometryEngine::SetCreatureTextureStorage(std::shared_ptr<CreatureTextureStorage> storage)
+void UGeometryEngine::SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage)
 {
  CreatureTextureStorageInstance_ = std::move(storage);
 }
 
 bool UGeometryEngine::InitEngine()
 {
-     // Initialize ShaderManager
- shaderManager = std::make_shared<ShaderManager>();
+     // Initialize UShaderManager
+ shaderManager = std::make_shared<UShaderManager>();
  if (!shaderManager->Initialize()) {
-     std::cerr << "Failed to initialize ShaderManager" << std::endl;
+     std::cerr << "Failed to initialize UShaderManager" << std::endl;
      return false;
  }
  
@@ -104,7 +104,7 @@ bool UGeometryEngine::InitEngine()
 
 bool UGeometryEngine::InitShaders()
 {
-     // Create shaders through ShaderManager
+     // Create shaders through UShaderManager
  defaultShader = shaderManager->CreateShader("default", "shaders/vshader.glsl", "shaders/fshader.glsl");
  if (!defaultShader || !defaultShader->IsValid()) {
      std::cerr << "Failed to create default shader" << std::endl;
@@ -123,8 +123,8 @@ bool UGeometryEngine::InitShaders()
      return false;
  }
  
- textShader = shaderManager->CreateShader("text", "shaders/vshader_text.glsl", "shaders/fshader_text.glsl");
- if (!textShader || !textShader->IsValid()) {
+ TextShader = shaderManager->CreateShader("text", "shaders/vshader_text.glsl", "shaders/fshader_text.glsl");
+ if (!TextShader || !TextShader->IsValid()) {
      std::cerr << "Failed to create text shader" << std::endl;
      return false;
  }
@@ -260,19 +260,19 @@ void UGeometryEngine::Paint(int width_size, int height_size, double view_duratio
  }
  
      // Render crosshair
-if (showCrosshair) {
+if (ShowCrosshair) {
     RenderCrosshair(width_size, height_size);
 }
  
      // Render simple text
-if (showHud) {
+if (ShowHud) {
     RenderSimpleText(width_size, height_size);
     RenderActiveObjectPreview(width_size, height_size);
     RenderHotbarLabels(width_size, height_size);
 }
  
      // Disable performance UI text rendering
-    if (showPerformance) {
+    if (ShowPerformance) {
         RenderPerformanceText(width_size, height_size, view_duration);
     }
 }
@@ -304,11 +304,11 @@ if (!camera) {
 
   auto textures = TextureCubeStorageInstance->GetTextures();
   const uint64_t meshRevision = WorldInstance->GetMeshRevision();
-  const bool useGreedyMesh = renderSettings_.UseFaceQuadDraw();
+  const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount = useGreedyMesh
       ? WorldInstance->GetGreedyVertexCount()
       : WorldInstance->GetBlockRenderInstances().size();
-  const bool useBatchCache = renderSettings_.batchCache && !useGreedyMesh;
+  const bool useBatchCache = Render.batchCache && !useGreedyMesh;
 
   if (useGreedyMesh) {
    const auto& greedyBatches = WorldInstance->GetGreedyRenderBatches();
@@ -328,7 +328,7 @@ if (!camera) {
    GreedyTransparentDrawContext tctx{greedyBatches, vp, meshRevision, cullRev,
                                      camera->GetPosition(),
                                      WorldInstance->GetBlockRegistry(), textures};
-   GreedyTransparentPipeline::Draw(*this, tctx);
+   UGreedyTransparentPipeline::Draw(*this, tctx);
    if (cullWasEnabled) {
     glEnable(GL_CULL_FACE);
    } else {
@@ -386,14 +386,14 @@ void UGeometryEngine::ShowTransientMessage(const std::string& msg, double second
 
 void UGeometryEngine::SetRenderSettings(const RenderSettings& settings)
 {
- renderSettings_ = settings;
+ Render = settings;
  blockBatchesValid_ = false;
  DestroyGreedyGpuBatches();
  DestroyFaceQuadBuffers();
 }
 
 void UGeometryEngine::PrepareRenderBatchesFromBlocks(const std::vector<BlockInstance>& instances,
-                                                    const std::map<size_t, TextureCube>& textures)
+                                                    const std::map<size_t, UTextureCube>& textures)
 {
  renderBatches.clear();
  std::unordered_map<size_t, RenderBatch> batchMap;
@@ -429,11 +429,11 @@ void UGeometryEngine::RenderBatches(const glm::mat4& mvp_matrix)
 void UGeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_matrix)
 {
  if (batch.modelMatrices.empty() && batch.objects.empty()) {
-     if (verboseLogging) std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
+     if (VerboseLogging) std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
      return;
  }
  
- if (verboseLogging) std::cout << "DrawBatch: Drawing " << batch.modelMatrices.size() << " objects" << std::endl;
+ if (VerboseLogging) std::cout << "DrawBatch: Drawing " << batch.modelMatrices.size() << " objects" << std::endl;
  
  glBindTexture(GL_TEXTURE_2D, batch.textureID);
 
@@ -461,12 +461,12 @@ void UGeometryEngine::DrawBatch(const RenderBatch& batch, const glm::mat4& mvp_m
  }
 
  const bool isBlockBatch = batch.objects.empty() && !batch.modelMatrices.empty();
- const bool drawFaceQuads = isBlockBatch && renderSettings_.UseFaceQuadDraw()
+ const bool drawFaceQuads = isBlockBatch && Render.UseFaceQuadDraw()
      && batch.faceIndices.size() == batch.modelMatrices.size();
  const GLsizei indexCount = drawFaceQuads ? 6 : 36;
  GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
 
- std::shared_ptr<ShaderProgram> activeShader = instancedShader;
+ std::shared_ptr<UShaderProgram> activeShader = instancedShader;
  if (drawFaceQuads) {
   if (faceVAO == 0 && !InitFaceQuadBuffers()) {
    return;
@@ -594,9 +594,9 @@ void UGeometryEngine::RefreshGreedyGpuBatches(
  cache.sortRevision = sortRevision;
 }
 
-void UGeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::SetBlockAnimUniforms(const std::shared_ptr<UShaderProgram>& shader,
                                           BlockId blockId,
-                                          const std::map<size_t, TextureCube>& textures)
+                                          const std::map<size_t, UTextureCube>& textures)
 {
  int frameCount = 1;
  const auto texIt = textures.find(static_cast<size_t>(blockId));
@@ -628,7 +628,7 @@ void UGeometryEngine::PrepareFrameRendering()
  overlayTintAlpha_ = 0.0f;
  overlayBlockId_ = BLOCK_AIR;
 
- const BlockRegistry& registry = WorldInstance->GetBlockRegistry();
+ const UBlockRegistry& registry = WorldInstance->GetBlockRegistry();
  if (cameraInFluid) {
   if (const FluidViewProfile* fv = registry.GetFluidView(eyeFluid)) {
    if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid) {
@@ -656,7 +656,7 @@ void UGeometryEngine::PrepareFrameRendering()
  skyColor = glm::vec4(smoothedSkyTint_, 1.0f);
 }
 
-void UGeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<UShaderProgram>& shader,
                                          const glm::vec3& cameraPos)
 {
  shader->SetVec3("uCameraPos", cameraPos);
@@ -667,7 +667,7 @@ void UGeometryEngine::ApplyFluidFogUniforms(const std::shared_ptr<ShaderProgram>
  shader->SetFloat("uFogEnabled", fogEnabled_);
 }
 
-void UGeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& shader,
+void UGeometryEngine::SetGreedyShaderMode(const std::shared_ptr<UShaderProgram>& shader,
                                          bool transparentPass,
                                          GreedyShaderMode mode,
                                          float shellAlphaThreshold)
@@ -685,7 +685,7 @@ void UGeometryEngine::SetGreedyShaderMode(const std::shared_ptr<ShaderProgram>& 
 void UGeometryEngine::DrawGreedyGpuBatches(
     const GreedyGpuPassCache& cache,
     const glm::mat4& vp,
-    const std::map<size_t, TextureCube>& textures,
+    const std::map<size_t, UTextureCube>& textures,
     bool transparentPass,
     GreedyShaderMode mode,
     float shellAlphaThreshold)
@@ -747,7 +747,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 void UGeometryEngine::DrawGreedyOpaqueBatches(
     const std::vector<GreedyMeshBatch>& batches,
     const glm::mat4& vp,
-    const std::map<size_t, TextureCube>& textures,
+    const std::map<size_t, UTextureCube>& textures,
     uint64_t meshRevision,
     uint64_t cullRevision)
 {
@@ -833,11 +833,11 @@ void UGeometryEngine::DestroyGreedyMeshBuffers()
  if (greedyMeshVAO) { glDeleteVertexArrays(1, &greedyMeshVAO); greedyMeshVAO = 0; }
 }
 
-void UGeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
+void UGeometryEngine::DrawCube(std::shared_ptr<UCube> icube, GLuint texture)
 {
- auto cube = std::dynamic_pointer_cast<CubeGL>(icube);
+ auto cube = std::dynamic_pointer_cast<UCubeGL>(icube);
  if(!cube) {
-     std::cout << "DrawCube: Failed to cast to CubeGL" << std::endl;
+     std::cout << "DrawCube: Failed to cast to UCubeGL" << std::endl;
      return;
  }
  
@@ -886,7 +886,7 @@ void UGeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
  }
 
  // Draw cube geometry using indices from VBO 1
- glDrawElements(GL_TRIANGLE_STRIP, int(std::dynamic_pointer_cast<CubeGL>(cube)->GetIndices().size()), GL_UNSIGNED_SHORT, nullptr);
+ glDrawElements(GL_TRIANGLE_STRIP, int(std::dynamic_pointer_cast<UCubeGL>(cube)->GetIndices().size()), GL_UNSIGNED_SHORT, nullptr);
  
  glBindBuffer(GL_ARRAY_BUFFER, 0);
  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -895,7 +895,7 @@ void UGeometryEngine::DrawCube(std::shared_ptr<Cube> icube, GLuint texture)
  defaultShader->Unuse();
 }
 
-void UGeometryEngine::DrawObject(std::shared_ptr<Object> object, const std::map<size_t, TextureCube>& textures)
+void UGeometryEngine::DrawObject(std::shared_ptr<UObject> object, const std::map<size_t, UTextureCube>& textures)
 {
  for(size_t i=0; i<object->GetCubes().size(); i++)
  {
@@ -1316,18 +1316,18 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
 
     const float blockY = previewBottom + static_cast<float>(kPreviewSize) * 0.5f - 6.0f;
     std::string activeBlock;
-    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+    if (UCreature* controlled = WorldInstance->GetControlledCreature()) {
         activeBlock = controlled->GetInventory().GetActiveBlockTypeName();
     }
     textRenderer->RenderText(activeBlock, labelX, blockY, labelScale,
                              glm::vec3(1.0f, 1.0f, 1.0f));
 
     std::string prefabName;
-    if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+    if (UCreature* controlled = WorldInstance->GetControlledCreature()) {
         prefabName = controlled->GetInventory().GetActivePrefabName();
     }
     if (!prefabName.empty()) {
-        textRenderer->RenderText("Object: " + prefabName, static_cast<float>(kPreviewMargin),
+        textRenderer->RenderText("UObject: " + prefabName, static_cast<float>(kPreviewMargin),
                                  previewBottom - 18.0f, labelScale, glm::vec3(0.85f, 1.0f, 0.85f));
     }
 }
@@ -1410,7 +1410,7 @@ void UGeometryEngine::InitPreviewBuffers()
         const auto &texMap = TextureCubeStorageInstance->GetTextures();
         GLuint texId = 0;
         for (const auto &kv : texMap) {
-            const TextureCube &tc = kv.second;
+            const UTextureCube &tc = kv.second;
             if (tc.GetName() == std::string("stone")) {
                 texId = tc.GetTexture();
                 break;
@@ -1437,7 +1437,7 @@ void UGeometryEngine::DestroyPreviewBuffers()
         glDeleteBuffers(1, &previewEBO);
         previewEBO = 0;
     }
-    // Note: previewTexture is managed by TextureCubeStorage, don't delete it
+    // Note: previewTexture is managed by UTextureCubeStorage, don't delete it
 }
 
 void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
@@ -1482,13 +1482,13 @@ void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
     GLuint texId = previewTexture;
     if (WorldInstance && TextureCubeStorageInstance) {
         std::string activeName;
-        if (Creature* controlled = WorldInstance->GetControlledCreature()) {
+        if (UCreature* controlled = WorldInstance->GetControlledCreature()) {
             activeName = controlled->GetInventory().GetActiveBlockTypeName();
         }
         if (!activeName.empty()) {
             const auto& texMap = TextureCubeStorageInstance->GetTextures();
             for (const auto& kv : texMap) {
-                const TextureCube& tc = kv.second;
+                const UTextureCube& tc = kv.second;
                 if (tc.GetName() == activeName) {
                     texId = tc.GetTexture();
                     break;
@@ -1919,7 +1919,7 @@ void UGeometryEngine::RenderCreatures()
  const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
  const float dt = static_cast<float>(camera->GetDeltaTime());
  const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
- WorldInstance->ForEachCreature([&](Creature& creature) {
+ WorldInstance->ForEachCreature([&](UCreature& creature) {
   if (creature.GetId() == controlledId) {
    if (camera->GetPerspective() == CameraPerspective::FirstPerson) {
     return;
@@ -1945,7 +1945,7 @@ void UGeometryEngine::RenderCreatures()
    visual->SubmitDraw(*this, viewProj);
   }
 
-  if (renderSettings_.creatureDebugBounds) {
+  if (Render.creatureDebugBounds) {
    const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
    const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
    const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
@@ -1988,7 +1988,7 @@ void UGeometryEngine::RenderCreatures()
 
 namespace {
 
-void DrawBlockOutline(ShaderProgram* shader, GLuint vao, const glm::mat4& mvp, const glm::vec4& color)
+void DrawBlockOutline(UShaderProgram* shader, GLuint vao, const glm::mat4& mvp, const glm::vec4& color)
 {
     if (!shader || !shader->IsValid() || vao == 0) {
         return;

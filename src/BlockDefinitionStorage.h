@@ -7,7 +7,7 @@
 
 namespace cutum {
 
-class BlockDefinitionStorage {
+class UBlockDefinitionStorage {
 public:
  void Load(const std::string& modelsPath);
  const BlockDefinition* GetById(BlockId id) const;

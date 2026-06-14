@@ -7,55 +7,55 @@
 
 namespace cutum {
 
-class Terrain: public Object
+class Terrain: public UObject
 {
 public:
  Terrain() = default;
  virtual void Generate()=0;
 };
 
-class TerrainPlane: public Terrain
+class UTerrainPlane: public Terrain
 {
 public:
- TerrainPlane();
- TerrainPlane(int width, int height);
+ UTerrainPlane();
+ UTerrainPlane(int width, int height);
  virtual void Generate();
  virtual void Generate(size_t type_id);
 
- virtual std::shared_ptr<Object> New();
+ virtual std::shared_ptr<UObject> New();
 
 private:
  int Width, Height;
 };
 
 
-class Person: public Object
+class UPerson: public UObject
 {
 public:
  virtual void Generate();
 
- virtual std::shared_ptr<Object> New();
+ virtual std::shared_ptr<UObject> New();
 };
 
-class Rect: public Object
+class URect: public UObject
 {
 public:
- Rect(int width, int height, int length);
+ URect(int width, int height, int length);
  virtual void Generate();
 
- virtual std::shared_ptr<Object> New();
+ virtual std::shared_ptr<UObject> New();
 private:
  int Width, Height, Length;
 };
 
-class SingleCube: public Object
+class USingleCube: public UObject
 {
 public:
- SingleCube();
- SingleCube(uint64_t object_type);
+ USingleCube();
+ USingleCube(uint64_t object_type);
  virtual void Generate();
 
- virtual std::shared_ptr<Object> New();
+ virtual std::shared_ptr<UObject> New();
 };
 
 }

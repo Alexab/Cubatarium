@@ -7,16 +7,16 @@
 namespace cutum {
 
 class IGuiMenuHost;
-class GuiWindow;
-class GuiDialogFrame;
-class WorldGenSettingsForm;
-class GuiPanel;
+class UGuiWindow;
+class UGuiDialogFrame;
+class UWorldGenSettingsForm;
+class UGuiPanel;
 
-class NewWorldScreen : public GuiScreenBase {
+class UNewWorldScreen : public UGuiScreenBase {
 public:
-    explicit NewWorldScreen(IGuiMenuHost* host);
+    explicit UNewWorldScreen(IGuiMenuHost* host);
 
-    void Build(GuiContext& ctx) override;
+    void Build(UGuiContext& ctx) override;
     void OnViewportChanged(int width, int height) override;
 
 private:
@@ -26,10 +26,10 @@ private:
     void LayoutWorldPage(const GuiRect& area) const;
 
     IGuiMenuHost* host_{nullptr};
-    GuiWindow* window_{nullptr};
-    GuiDialogFrame* dialogFrame_{nullptr};
-    GuiPanel* worldPage_{nullptr};
-    std::unique_ptr<WorldGenSettingsForm> worldForm_;
+    UGuiWindow* Window{nullptr};
+    UGuiDialogFrame* dialogFrame_{nullptr};
+    UGuiPanel* worldPage_{nullptr};
+    std::unique_ptr<UWorldGenSettingsForm> worldForm_;
 };
 
 } // namespace cutum

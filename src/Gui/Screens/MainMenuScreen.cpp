@@ -15,12 +15,12 @@ namespace {
 constexpr int kQuitModalZOrder = 100;
 }
 
-MainMenuScreen::MainMenuScreen(IGuiGameActions* actions)
+UMainMenuScreen::UMainMenuScreen(IGuiGameActions* actions)
     : actions_(actions)
 {
 }
 
-void MainMenuScreen::ShowQuitConfirmation(bool visible)
+void UMainMenuScreen::ShowQuitConfirmation(bool visible)
 {
     quitDialogVisible_ = visible;
     if (quitBackdrop_) {
@@ -42,7 +42,7 @@ void MainMenuScreen::ShowQuitConfirmation(bool visible)
         if (quitBackdrop_) {
             quitBackdrop_->SetZOrder(kQuitModalZOrder);
         }
-        for (GuiButton* btn : buttons_) {
+        for (UGuiButton* btn : buttons_) {
             if (btn) {
                 btn->SetEnabled(false);
             }
@@ -52,7 +52,7 @@ void MainMenuScreen::ShowQuitConfirmation(bool visible)
         if (quitBackdrop_) {
             quitBackdrop_->SetZOrder(0);
         }
-        for (GuiButton* btn : buttons_) {
+        for (UGuiButton* btn : buttons_) {
             if (btn) {
                 btn->SetEnabled(true);
             }
@@ -60,7 +60,7 @@ void MainMenuScreen::ShowQuitConfirmation(bool visible)
     }
 }
 
-void MainMenuScreen::Build(GuiContext& ctx)
+void UMainMenuScreen::Build(UGuiContext& ctx)
 {
     int w = ctx.GetRenderer().GetWindowWidth();
     int h = ctx.GetRenderer().GetWindowHeight();
@@ -69,16 +69,16 @@ void MainMenuScreen::Build(GuiContext& ctx)
         viewportH_ = h;
     }
     const GuiTheme& theme = ctx.GetTheme();
-    auto panel = std::make_unique<GuiPanel>(&theme);
+    auto panel = std::make_unique<UGuiPanel>(&theme);
     panel->SetBounds({0, 0, viewportW_, viewportH_});
 
-    auto title = std::make_unique<GuiLabel>(&theme, "Cubatarium");
+    auto title = std::make_unique<UGuiLabel>(&theme, "Cubatarium");
     title->SetTextAlign(GuiTextAlign::Center);
     title->SetBounds({0, 0, 400, 56});
     title_ = title.get();
 
     const bool resume = actions_ && actions_->HasPausedSession();
-    auto primary = std::make_unique<GuiButton>(&theme, resume ? "Resume" : "Load Last World");
+    auto primary = std::make_unique<UGuiButton>(&theme, resume ? "Resume" : "Load Last World");
     primary->SetOnClick([this, resume]() {
         if (!actions_) {
             return;
@@ -90,28 +90,28 @@ void MainMenuScreen::Build(GuiContext& ctx)
         }
     });
 
-    auto loadWorld = std::make_unique<GuiButton>(&theme, "Load World");
+    auto loadWorld = std::make_unique<UGuiButton>(&theme, "Load World");
     loadWorld->SetOnClick([this]() {
         if (actions_) {
             actions_->OpenLoadWorld();
         }
     });
 
-    auto newWorld = std::make_unique<GuiButton>(&theme, "New World");
+    auto newWorld = std::make_unique<UGuiButton>(&theme, "New World");
     newWorld->SetOnClick([this]() {
         if (actions_) {
             actions_->OpenNewWorld();
         }
     });
 
-    auto settings = std::make_unique<GuiButton>(&theme, "Settings");
+    auto settings = std::make_unique<UGuiButton>(&theme, "Settings");
     settings->SetOnClick([this]() {
         if (actions_) {
             actions_->OpenSettings();
         }
     });
 
-    auto quit = std::make_unique<GuiButton>(&theme, "Quit");
+    auto quit = std::make_unique<UGuiButton>(&theme, "Quit");
     quit->SetOnClick([this]() {
         ShowQuitConfirmation(true);
     });
@@ -123,25 +123,25 @@ void MainMenuScreen::Build(GuiContext& ctx)
     buttons_.push_back(settings.get());
     buttons_.push_back(quit.get());
 
-    auto version = std::make_unique<GuiLabel>(&theme, kCubatariumVersion);
+    auto version = std::make_unique<UGuiLabel>(&theme, kCubatariumVersion);
     version->SetTextAlign(GuiTextAlign::Left);
     version->SetUseSecondaryColor(true);
     versionLabel_ = version.get();
 
-    auto quitBackdrop = std::make_unique<GuiPanel>(&theme);
+    auto quitBackdrop = std::make_unique<UGuiPanel>(&theme);
     quitBackdrop->SetVisible(false);
     quitBackdrop_ = quitBackdrop.get();
 
-    auto quitDialog = std::make_unique<GuiPanel>(&theme);
+    auto quitDialog = std::make_unique<UGuiPanel>(&theme);
     quitDialog->SetVisible(false);
     quitDialog_ = quitDialog.get();
 
-    auto quitMessage = std::make_unique<GuiLabel>(&theme, "Exit the application?");
+    auto quitMessage = std::make_unique<UGuiLabel>(&theme, "Exit the application?");
     quitMessage->SetTextAlign(GuiTextAlign::Center);
     quitMessage->SetVisible(false);
     quitMessage_ = quitMessage.get();
 
-    auto quitYes = std::make_unique<GuiButton>(&theme, "Yes");
+    auto quitYes = std::make_unique<UGuiButton>(&theme, "Yes");
     quitYes->SetVisible(false);
     quitYes->SetOnClick([this]() {
         if (actions_) {
@@ -150,7 +150,7 @@ void MainMenuScreen::Build(GuiContext& ctx)
     });
     quitYesButton_ = quitYes.get();
 
-    auto quitNo = std::make_unique<GuiButton>(&theme, "No");
+    auto quitNo = std::make_unique<UGuiButton>(&theme, "No");
     quitNo->SetVisible(false);
     quitNo->SetOnClick([this]() { ShowQuitConfirmation(false); });
     quitNoButton_ = quitNo.get();
@@ -172,13 +172,13 @@ void MainMenuScreen::Build(GuiContext& ctx)
     Relayout();
 }
 
-void MainMenuScreen::OnViewportChanged(int width, int height)
+void UMainMenuScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
     Relayout();
 }
 
-void MainMenuScreen::RelayoutQuitDialog()
+void UMainMenuScreen::RelayoutQuitDialog()
 {
     if (!quitBackdrop_ || !quitDialog_ || !quitMessage_ || !quitYesButton_ || !quitNoButton_) {
         return;
@@ -203,7 +203,7 @@ void MainMenuScreen::RelayoutQuitDialog()
     quitNoButton_->SetBounds({btnStartX + btnW + btnGap, btnY, btnW, btnH});
 }
 
-void MainMenuScreen::Relayout()
+void UMainMenuScreen::Relayout()
 {
     if (!root_) {
         return;
@@ -212,7 +212,7 @@ void MainMenuScreen::Relayout()
     root_->SetBounds(full);
 
     if (title_) {
-        GuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, 20, title_);
+        UGuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, 20, title_);
     }
 
     if (versionLabel_) {
@@ -230,11 +230,11 @@ void MainMenuScreen::Relayout()
         const int stackH = static_cast<int>(buttons_.size()) * btnH +
                            static_cast<int>(buttons_.size() - 1) * spacing;
         GuiRect stackArea{(viewportW_ - btnW) / 2, (viewportH_ - stackH) / 2, btnW, stackH};
-        std::vector<GuiWidget*> children;
-        for (GuiButton* btn : buttons_) {
+        std::vector<UGuiWidget*> children;
+        for (UGuiButton* btn : buttons_) {
             children.push_back(btn);
         }
-        GuiLayout::StackVertical(stackArea, spacing, 0, children);
+        UGuiLayout::StackVertical(stackArea, spacing, 0, children);
     }
 
     if (quitDialogVisible_) {

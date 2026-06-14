@@ -5,28 +5,28 @@
 
 namespace cutum {
 
-class GuiContext;
-class GuiWidget;
+class UGuiContext;
+class UGuiWidget;
 
-class GuiScreenBase {
+class UGuiScreenBase {
 public:
-    virtual ~GuiScreenBase() = default;
+    virtual ~UGuiScreenBase() = default;
 
-    virtual void OnAttach(GuiContext& ctx);
+    virtual void OnAttach(UGuiContext& ctx);
     virtual void OnDetach();
-    virtual void Build(GuiContext& ctx) = 0;
+    virtual void Build(UGuiContext& ctx) = 0;
     virtual void Update(double dt);
     virtual void OnViewportChanged(int width, int height);
     virtual bool BlocksGameInput() const { return false; }
 
-    GuiWidget* GetRoot() { return root_.get(); }
-    const GuiWidget* GetRoot() const { return root_.get(); }
+    UGuiWidget* GetRoot() { return root_.get(); }
+    const UGuiWidget* GetRoot() const { return root_.get(); }
 
     int GetViewportWidth() const { return viewportW_; }
     int GetViewportHeight() const { return viewportH_; }
 
 protected:
-    std::unique_ptr<GuiWidget> root_;
+    std::unique_ptr<UGuiWidget> root_;
     int viewportW_{1280};
     int viewportH_{720};
 };

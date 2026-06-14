@@ -4,26 +4,26 @@
 
 namespace cutum {
 
-void WanderActivityAgent::OnCreatureAdded(CreatureId id)
+void UWanderActivityAgent::OnCreatureAdded(CreatureId id)
 {
  members_.insert(id);
  ResetWanderState(id, 2.0f, 4.0f);
 }
 
-void WanderActivityAgent::OnCreatureRemoved(CreatureId id)
+void UWanderActivityAgent::OnCreatureRemoved(CreatureId id)
 {
  members_.erase(id);
- state_.erase(id);
+ State.erase(id);
 }
 
-void WanderActivityAgent::ResetWanderState(CreatureId id, float intervalMin, float intervalMax)
+void UWanderActivityAgent::ResetWanderState(CreatureId id, float intervalMin, float intervalMax)
 {
  const float span = intervalMax - intervalMin;
- WanderAgentState& st = state_[id];
+ WanderAgentState& st = State[id];
  st.timer = intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
 }
 
-void WanderActivityAgent::Tick(IWorldPerception& /*perception*/, ICreatureActivitySink& sink, float dt)
+void UWanderActivityAgent::Tick(IWorldPerception& /*perception*/, ICreatureActivitySink& sink, float dt)
 {
  for (const CreatureId id : members_) {
   const std::optional<CreatureActivityView> view = sink.GetCreatureView(id);
@@ -35,7 +35,7 @@ void WanderActivityAgent::Tick(IWorldPerception& /*perception*/, ICreatureActivi
    continue;
   }
 
-  WanderAgentState& st = state_[id];
+  WanderAgentState& st = State[id];
   const float intervalMin = snapshot->behavior.wanderIntervalMin;
   const float intervalMax = snapshot->behavior.wanderIntervalMax;
   st.timer -= dt;

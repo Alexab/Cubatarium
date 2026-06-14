@@ -13,7 +13,7 @@ using CreatureId = uint64_t;
 
 class UWorld;
 
-class CreatureLocomotionController {
+class UCreatureLocomotionController {
 public:
  void Reset();
  void SetCapabilities(const CreatureLocomotionCapabilities& caps);

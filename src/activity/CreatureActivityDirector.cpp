@@ -2,7 +2,7 @@
 
 namespace cutum {
 
-void CreatureActivityDirector::RegisterAgent(std::unique_ptr<ICreatureActivityAgent> agent)
+void UCreatureActivityDirector::RegisterAgent(std::unique_ptr<ICreatureActivityAgent> agent)
 {
  if (!agent) {
   return;
@@ -11,7 +11,7 @@ void CreatureActivityDirector::RegisterAgent(std::unique_ptr<ICreatureActivityAg
  agents_.push_back(std::move(agent));
 }
 
-void CreatureActivityDirector::Clear()
+void UCreatureActivityDirector::Clear()
 {
  std::vector<CreatureId> ids;
  ids.reserve(membership_.size());
@@ -23,7 +23,7 @@ void CreatureActivityDirector::Clear()
  }
 }
 
-void CreatureActivityDirector::OnCreatureAdded(CreatureId id, const std::string& behaviorId)
+void UCreatureActivityDirector::OnCreatureAdded(CreatureId id, const std::string& behaviorId)
 {
  if (id == 0 || behaviorId.empty() || behaviorId == "none") {
   return;
@@ -37,7 +37,7 @@ void CreatureActivityDirector::OnCreatureAdded(CreatureId id, const std::string&
  membership_[id] = agent;
 }
 
-void CreatureActivityDirector::OnCreatureRemoved(CreatureId id)
+void UCreatureActivityDirector::OnCreatureRemoved(CreatureId id)
 {
  const auto it = membership_.find(id);
  if (it == membership_.end()) {
@@ -49,7 +49,7 @@ void CreatureActivityDirector::OnCreatureRemoved(CreatureId id)
  membership_.erase(it);
 }
 
-void CreatureActivityDirector::TickAgents(IWorldPerception& perception,
+void UCreatureActivityDirector::TickAgents(IWorldPerception& perception,
                                           ICreatureActivitySink& sink, float dt)
 {
  for (const auto& agent : agents_) {
@@ -57,7 +57,7 @@ void CreatureActivityDirector::TickAgents(IWorldPerception& perception,
  }
 }
 
-ICreatureActivityAgent* CreatureActivityDirector::FindAgent(const std::string& behaviorId) const
+ICreatureActivityAgent* UCreatureActivityDirector::FindAgent(const std::string& behaviorId) const
 {
  const auto it = agentsByBehaviorId_.find(behaviorId);
  return it != agentsByBehaviorId_.end() ? it->second : nullptr;

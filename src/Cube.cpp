@@ -33,18 +33,18 @@ int LocalFaceSide(int axis, int sign)
 
 } // namespace
 
-Cube::Cube()
+UCube::UCube()
 {
 }
 
-Cube::Cube(const Cube &copy)
+UCube::UCube(const UCube &copy)
 {
  InitialPose = copy.InitialPose;
  ObjectPose = copy.ObjectPose;
  Size = copy.Size;
 }
 
-Cube& Cube::operator = (const Cube &copy)
+UCube& UCube::operator = (const UCube &copy)
 {
  InitialPose = copy.InitialPose;
  ObjectPose = copy.ObjectPose;
@@ -52,46 +52,46 @@ Cube& Cube::operator = (const Cube &copy)
  return *this;
 }
 
-const glm::mat4& Cube::GetObjectPose() const
+const glm::mat4& UCube::GetObjectPose() const
 {
  return ObjectPose;
 }
 
-const glm::mat4& Cube::GetInitialPose() const
+const glm::mat4& UCube::GetInitialPose() const
 {
  return InitialPose;
 }
 
-float Cube::GetSize() const
+float UCube::GetSize() const
 {
  return Size;
 }
 
-void Cube::SetSize(float size)
+void UCube::SetSize(float size)
 {
  Size = size;
 }
 
-void Cube::Init(const glm::mat4& initial_pose, float size)
+void UCube::Init(const glm::mat4& initial_pose, float size)
 {
  InitialPose = initial_pose;
  Size = size;
 }
 
-void Cube::SetObjectPose(const glm::mat4 &pose)
+void UCube::SetObjectPose(const glm::mat4 &pose)
 {
  ObjectPose = pose;
  UpdateVertices();
 }
 
-glm::vec3 Cube::GetCenterPosition() const
+glm::vec3 UCube::GetCenterPosition() const
 {
  glm::mat4 pose = ObjectPose * InitialPose;
  glm::vec3 a(pose[3][0], pose[3][1], pose[3][2]);
  return a;
 }
 
-bool Cube::CheckCollision(Cube &cube)
+bool UCube::CheckCollision(UCube &cube)
 {
  glm::mat4 pose1 = ObjectPose * InitialPose;
  glm::mat4 pose2 = cube.GetObjectPose() * cube.GetInitialPose();
@@ -108,7 +108,7 @@ bool Cube::CheckCollision(Cube &cube)
    if(fabs(a.z - b.z) < Size/2.0 + cube.Size/2.0)
    {
     std::stringstream s;
-    s << "Cube collision: (" << a.x << "," << a.y << "," << a.z << ")" << " vs (" << b.x << "," << b.y << "," << b.z << ")" <<std::endl;
+    s << "UCube collision: (" << a.x << "," << a.y << "," << a.z << ")" << " vs (" << b.x << "," << b.y << "," << b.z << ")" <<std::endl;
     std::cout << s.str() << std::endl;
     return true;
    }
@@ -118,23 +118,23 @@ bool Cube::CheckCollision(Cube &cube)
  return false;
 }
 
-bool Cube::CheckCollision(const glm::vec3& position, float size)
+bool UCube::CheckCollision(const glm::vec3& position, float size)
 {
  glm::mat4 pose1 = ObjectPose * InitialPose;
  glm::vec3 a(pose1[3][0], pose1[3][1], pose1[3][2]);
  glm::vec3 b(position);
 
- return Cube::CheckCollision(a, Size, b, size);
+ return UCube::CheckCollision(a, Size, b, size);
 }
 
-bool Cube::CheckCollision(const glm::vec3& position1, float size1, const glm::vec3& position2, float size2)
+bool UCube::CheckCollision(const glm::vec3& position1, float size1, const glm::vec3& position2, float size2)
 {
  const glm::vec3 h1(size1 * 0.5f);
  const glm::vec3 h2(size2 * 0.5f);
  return CheckAabbCollision(position1, h1, position2, h2);
 }
 
-bool Cube::CheckAabbCollision(const glm::vec3& c1, const glm::vec3& h1,
+bool UCube::CheckAabbCollision(const glm::vec3& c1, const glm::vec3& h1,
                               const glm::vec3& c2, const glm::vec3& h2)
 {
  return std::abs(c1.x - c2.x) < h1.x + h2.x
@@ -142,7 +142,7 @@ bool Cube::CheckAabbCollision(const glm::vec3& c1, const glm::vec3& h1,
      && std::abs(c1.z - c2.z) < h1.z + h2.z;
 }
 
-bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const
+bool UCube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, std::map<float, std::pair<int,glm::vec3>> &intersected_sides) const
 {
  intersected_sides.clear();
 
@@ -224,7 +224,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
  return true;
 }
 
-bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, int &side, glm::vec3& normal, float &distance) const
+bool UCube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirRay, float sizeOfSide, int &side, glm::vec3& normal, float &distance) const
 {
  std::map<float, std::pair<int,glm::vec3>> intersected_sides;
  bool result = IsIntersectionCube(originRay, dirRay, sizeOfSide, intersected_sides);
@@ -240,7 +240,7 @@ bool Cube::IsIntersectionCube( const glm::vec3& originRay, const glm::vec3& dirR
 }
 
 // https://www.gamedev.ru/code/forum/?id=40346
-bool Cube::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3>> &intersection_results) const
+bool UCube::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3>> &intersection_results) const
 {
  intersection_results.clear();
 
@@ -274,25 +274,25 @@ bool Cube::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fron
  return is_intersected && !intersection_results.empty();
 }
 
-size_t Cube::GetTypeId() const
+size_t UCube::GetTypeId() const
 {
  return TypeId;
 }
 
-void Cube::SetTypeId(size_t value)
+void UCube::SetTypeId(size_t value)
 {
  TypeId = value;
 }
 
-void Cube::Copy(const Cube &copy)
+void UCube::Copy(const UCube &copy)
 {
  SetTypeId(copy.GetTypeId());
  Init(copy.GetInitialPose(), copy.GetSize());
 }
 
-void Cube::Copy(std::shared_ptr<Cube> copy)
+void UCube::Copy(std::shared_ptr<UCube> copy)
 {
- Cube::Copy(*copy);
+ UCube::Copy(*copy);
 }
 
 }

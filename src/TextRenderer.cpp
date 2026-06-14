@@ -6,11 +6,11 @@
 namespace cutum {
 
 UTextRenderer::UTextRenderer()
-    : textShader(0)
+    : TextShader(0)
     , VAO(0)
     , VBO(0)
-    , windowWidth(1280)
-    , windowHeight(720)
+    , WindowWidth(1280)
+    , WindowHeight(720)
     , ft(nullptr)
     , face(nullptr)
     , ftInitialized(false)
@@ -106,9 +106,9 @@ void UTextRenderer::Shutdown() {
         glDeleteBuffers(1, &VBO);
         VBO = 0;
     }
-    if (textShader) {
-        glDeleteProgram(textShader);
-        textShader = 0;
+    if (TextShader) {
+        glDeleteProgram(TextShader);
+        TextShader = 0;
     }
     
     // Delete character textures
@@ -178,15 +178,15 @@ void main()
         return false;
     }
 
-    textShader = glCreateProgram();
-    glAttachShader(textShader, vertexShader);
-    glAttachShader(textShader, fragmentShader);
-    glLinkProgram(textShader);
+    TextShader = glCreateProgram();
+    glAttachShader(TextShader, vertexShader);
+    glAttachShader(TextShader, fragmentShader);
+    glLinkProgram(TextShader);
 
     // Program linking check
-    glGetProgramiv(textShader, GL_LINK_STATUS, &success);
+    glGetProgramiv(TextShader, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramInfoLog(textShader, 512, NULL, infoLog);
+        glGetProgramInfoLog(TextShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         return false;
     }
@@ -195,10 +195,10 @@ void main()
     glDeleteShader(fragmentShader);
 
     // Cache uniform locations
-    textColorLocation = glGetUniformLocation(textShader, "textColor");
-    projectionLocation = glGetUniformLocation(textShader, "projection");
+    textColorLocation = glGetUniformLocation(TextShader, "textColor");
+    projectionLocation = glGetUniformLocation(TextShader, "projection");
 
-    return textShader != 0;
+    return TextShader != 0;
 }
 
 bool UTextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
@@ -270,8 +270,8 @@ bool UTextRenderer::LoadCharacters(const std::string& fontPath, int fontSize) {
 }
 
 void UTextRenderer::RenderText(const std::string& text, float x, float y, float scale, const glm::vec3& color) {
-    if (!textShader) {
-        std::cerr << "TextRenderer: textShader is null!" << std::endl;
+    if (!TextShader) {
+        std::cerr << "TextRenderer: TextShader is null!" << std::endl;
         return;
     }
     
@@ -279,7 +279,7 @@ void UTextRenderer::RenderText(const std::string& text, float x, float y, float 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    glUseProgram(textShader);
+    glUseProgram(TextShader);
     
     // Check uniform locations
     if (textColorLocation == -1) {
@@ -295,7 +295,7 @@ void UTextRenderer::RenderText(const std::string& text, float x, float y, float 
     glBindVertexArray(VAO);
 
     // Orthographic projection for 2D text
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(windowWidth), 0.0f, static_cast<float>(windowHeight));
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(WindowWidth), 0.0f, static_cast<float>(WindowHeight));
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
 
     std::string::const_iterator c;
@@ -342,7 +342,7 @@ void UTextRenderer::RenderText(const std::string& text, float x, float y, float 
 
 void UTextRenderer::RenderTextCentered(const std::string& text, float y, float scale, const glm::vec3& color) {
     glm::vec2 textSize = GetTextSize(text, scale);
-    float x = (windowWidth - textSize.x) / 2.0f;
+    float x = (WindowWidth - textSize.x) / 2.0f;
     RenderText(text, x, y, scale, color);
 }
 
@@ -361,8 +361,8 @@ glm::vec2 UTextRenderer::GetTextSize(const std::string& text, float scale) {
 }
 
 void UTextRenderer::SetWindowSize(int width, int height) {
-    windowWidth = width;
-    windowHeight = height;
+    WindowWidth = width;
+    WindowHeight = height;
 }
 
 std::string UTextRenderer::FindAvailableFont() {

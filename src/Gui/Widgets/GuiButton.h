@@ -17,9 +17,9 @@ enum class GuiButtonState {
     Disabled
 };
 
-class GuiButton : public GuiWidget {
+class UGuiButton : public UGuiWidget {
 public:
-    GuiButton(const GuiTheme* theme, std::string label);
+    UGuiButton(const GuiTheme* theme, std::string label);
 
     void SetOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
     void SetLabel(const std::string& label) { label_ = label; }
@@ -27,7 +27,7 @@ public:
     bool CanFocus() const override;
     bool Activate() override;
 
-    void Draw(GuiRenderer& renderer) override;
+    void Draw(UGuiRenderer& renderer) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnMouseUp(const GuiMouseEvent& event) override;
     bool OnMouseMove(const GuiMouseEvent& event) override;
@@ -39,7 +39,7 @@ private:
 
     const GuiTheme* theme_;
     std::string label_;
-    GuiButtonState state_{GuiButtonState::Normal};
+    GuiButtonState State{GuiButtonState::Normal};
     bool pressedInside_{false};
     std::function<void()> onClick_;
 };

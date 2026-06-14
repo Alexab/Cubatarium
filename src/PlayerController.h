@@ -6,7 +6,7 @@
 
 namespace cutum {
 
-using PlayerController = CreatureLocomotionController;
+using PlayerController = UCreatureLocomotionController;
 using PlayerInput = CreatureInput;
 using PlayerMovementMode = CreatureMovementMode;
 

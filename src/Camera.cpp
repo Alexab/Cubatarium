@@ -18,7 +18,7 @@ float radians(float degrees)
  return static_cast<float>(degrees * 0.01745329251994329576923690768489);
 }
 
-Camera::Camera()
+UCamera::UCamera()
  : Position(glm::vec3(0.0f, 0.0f, 0.0f))
  , WorldUp(glm::vec3(0.0f, 1.0f, 0.0f))
  , Yaw(0.0)
@@ -51,7 +51,7 @@ Camera::Camera()
 }
 
 // Constructor with vectors
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+UCamera::UCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
  : Front(glm::vec3(0.0f, 0.0f, -1.0f))
  , MovementSpeed(SPEED)
  , MouseSensitivity(SENSITIVTY)
@@ -86,7 +86,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 }
 
 // Constructor with scalar values
-Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
+UCamera::UCamera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
  : Front(glm::vec3(0.0f, 0.0f, -1.0f))
  , MovementSpeed(SPEED)
  , MouseSensitivity(SENSITIVTY)
@@ -119,48 +119,48 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
  InitLocomotionCollisionProfile();
 }
 
-glm::mat4 Camera::GetPose() const
+glm::mat4 UCamera::GetPose() const
 {
  return Pose;
 }
 
-glm::mat4 Camera::GetProjection() const
+glm::mat4 UCamera::GetProjection() const
 {
  return Projection;
 }
 
-glm::mat4 Camera::GetViewMatrix() const
+glm::mat4 UCamera::GetViewMatrix() const
 {
  return Pose;
 }
 
-glm::mat4 Camera::GetMvpMatrix() const
+glm::mat4 UCamera::GetMvpMatrix() const
 {
  return MvpMatrix;
 }
 
-glm::vec3 Camera::GetPosition() const
+glm::vec3 UCamera::GetPosition() const
 {
  return Position;
 }
 
-void Camera::SetPosition(const glm::vec3& value)
+void UCamera::SetPosition(const glm::vec3& value)
 {
  Position = value;
  UpdatePose();
 }
 
-float Camera::GetYaw() const
+float UCamera::GetYaw() const
 {
  return Yaw;
 }
 
-float Camera::GetPitch() const
+float UCamera::GetPitch() const
 {
  return Pitch;
 }
 
-void Camera::SetOrientation(float yaw, float pitch)
+void UCamera::SetOrientation(float yaw, float pitch)
 {
  Yaw = yaw;
  Pitch = pitch;
@@ -174,65 +174,65 @@ void Camera::SetOrientation(float yaw, float pitch)
  UpdatePose();
 }
 
-glm::vec3 Camera::GetFront() const
+glm::vec3 UCamera::GetFront() const
 {
  return Front;
 }
 
-void Camera::SetAspectRatio(float value)
+void UCamera::SetAspectRatio(float value)
 {
  AspectRatio = value;
  UpdatePose();
 }
 
-bool Camera::GetFreeMove() const
+bool UCamera::GetFreeMove() const
 {
  return locomotion_.GetMode() == PlayerMovementMode::Flying;
 }
 
-void Camera::SyncFreeMoveFromController()
+void UCamera::SyncFreeMoveFromController()
 {
  FreeMove = GetFreeMove();
 }
 
-void Camera::SetFreeMove(bool value)
+void UCamera::SetFreeMove(bool value)
 {
  locomotion_.SetMode(value ? PlayerMovementMode::Flying : PlayerMovementMode::Walking);
  SyncFreeMoveFromController();
  UpdatePose();
 }
 
-PlayerCapsule Camera::GetPlayerCapsule() const
+PlayerCapsule UCamera::GetPlayerCapsule() const
 {
  return locomotion_.GetCapsule();
 }
 
-float Camera::GetAnchoredFeetY() const
+float UCamera::GetAnchoredFeetY() const
 {
  return locomotion_.GetFeetY();
 }
 
-bool Camera::HasAnchoredFeet() const
+bool UCamera::HasAnchoredFeet() const
 {
  return locomotion_.IsFeetAnchored();
 }
 
-float Camera::GetStanceBlend() const
+float UCamera::GetStanceBlend() const
 {
  return locomotion_.GetStanceBlend();
 }
 
-bool Camera::IsCrouching() const
+bool UCamera::IsCrouching() const
 {
  return locomotion_.GetStanceBlend() > 0.5f;
 }
 
-bool Camera::IsOnGround() const
+bool UCamera::IsOnGround() const
 {
  return locomotion_.IsOnGround();
 }
 
-bool Camera::IsShiftDown() const
+bool UCamera::IsShiftDown() const
 {
  const auto pressed = [](const std::map<size_t, bool>& keys, size_t code) {
   const auto it = keys.find(code);
@@ -241,25 +241,25 @@ bool Camera::IsShiftDown() const
  return pressed(KeysStatus, GLFW_KEY_LEFT_SHIFT) || pressed(KeysStatus, GLFW_KEY_RIGHT_SHIFT);
 }
 
-void Camera::ClearShiftKeyState()
+void UCamera::ClearShiftKeyState()
 {
  KeysStatus[GLFW_KEY_LEFT_SHIFT] = false;
  KeysStatus[GLFW_KEY_RIGHT_SHIFT] = false;
 }
 
-bool Camera::OnSpacePressed()
+bool UCamera::OnSpacePressed()
 {
  const bool toggled = locomotion_.OnSpacePressed();
  SyncFreeMoveFromController();
  return toggled;
 }
 
-bool Camera::TryToggleFlightOnDoubleSpace()
+bool UCamera::TryToggleFlightOnDoubleSpace()
 {
  return OnSpacePressed();
 }
 
-PlayerInput Camera::BuildPlayerInput(bool spaceJustPressed) const
+PlayerInput UCamera::BuildPlayerInput(bool spaceJustPressed) const
 {
  PlayerInput input;
  const auto keyDown = [this](size_t key) {
@@ -276,12 +276,12 @@ PlayerInput Camera::BuildPlayerInput(bool spaceJustPressed) const
  return input;
 }
 
-void Camera::SetViewEngine(UViewEngine* view_engine)
+void UCamera::SetViewEngine(UViewEngine* view_engine)
 {
  ViewEngineInstance = view_engine;
 }
 
-glm::vec3 Camera::ComputeHorizontalShift(float deltaTime)
+glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 {
  const float velocity = locomotion_.GetWalkSpeed() * deltaTime;
  glm::vec3 shift(0.0f);
@@ -300,7 +300,7 @@ glm::vec3 Camera::ComputeHorizontalShift(float deltaTime)
  return shift;
 }
 
-void Camera::UpdateMoveIntentFromKeys()
+void UCamera::UpdateMoveIntentFromKeys()
 {
  glm::vec3 shift = ComputeHorizontalShift(1.0f);
  shift.y = 0.0f;
@@ -312,7 +312,7 @@ void Camera::UpdateMoveIntentFromKeys()
  lastMoveIntentTime_ = std::chrono::steady_clock::now();
 }
 
-glm::vec3 Camera::GetMoveIntentDir() const
+glm::vec3 UCamera::GetMoveIntentDir() const
 {
  auto keyDown = [this](size_t key) {
   const auto it = KeysStatus.find(key);
@@ -345,7 +345,7 @@ glm::vec3 Camera::GetMoveIntentDir() const
  return glm::vec3(0.0f);
 }
 
-bool Camera::TickStepUpAnimation(const UWorld* world, float dt)
+bool UCamera::TickStepUpAnimation(const UWorld* world, float dt)
 {
  if (!stepUpAnim_.active) {
   return false;
@@ -371,7 +371,7 @@ bool Camera::TickStepUpAnimation(const UWorld* world, float dt)
  return true;
 }
 
-bool Camera::ApplyHorizontalMovement(const UWorld* world, float deltaTime)
+bool UCamera::ApplyHorizontalMovement(const UWorld* world, float deltaTime)
 {
  if (TickStepUpAnimation(world, deltaTime)) {
   return true;
@@ -432,7 +432,7 @@ bool Camera::ApplyHorizontalMovement(const UWorld* world, float deltaTime)
 }
 
 // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void Camera::ProcessKeyboard(const UWorld* world, Camera_Movement direction, float deltaTime,
+void UCamera::ProcessKeyboard(const UWorld* world, Camera_Movement direction, float deltaTime,
                              const PlayerCapsule& collisionCap)
 {
  const float speed = FreeMove ? locomotion_.GetFlySpeed() : locomotion_.GetWalkSpeed();
@@ -470,7 +470,7 @@ void Camera::ProcessKeyboard(const UWorld* world, Camera_Movement direction, flo
 }
 
 // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch)
+void UCamera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch)
 {
  xoffset *= this->MouseSensitivity;
  yoffset *= this->MouseSensitivity;
@@ -492,7 +492,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPi
 }
 
 // Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-void Camera::ProcessMouseScroll(float yoffset)
+void UCamera::ProcessMouseScroll(float yoffset)
 {
  if (this->Zoom >= 1.0f && this->Zoom <= 45.0f)
      this->Zoom -= yoffset;
@@ -503,7 +503,7 @@ void Camera::ProcessMouseScroll(float yoffset)
  UpdatePose();
 }
 
- void Camera::UpdateCameraVectors()
+ void UCamera::UpdateCameraVectors()
  {
   // Calculate the new Front vector
   glm::vec3 front;
@@ -543,7 +543,7 @@ void Camera::ProcessMouseScroll(float yoffset)
   UpdatePose();
  }
 
-glm::vec3 Camera::ComputeCameraWorldPosition() const
+glm::vec3 UCamera::ComputeCameraWorldPosition() const
 {
  if (perspective_ == CameraPerspective::FirstPerson) {
   return Position;
@@ -554,13 +554,13 @@ glm::vec3 Camera::ComputeCameraWorldPosition() const
  return Position + Front * thirdPersonDistance_;
 }
 
-void Camera::CyclePerspective()
+void UCamera::CyclePerspective()
 {
  perspective_ = CycleCameraPerspective(perspective_);
  UpdatePose();
 }
 
-void Camera::UpdatePose()
+void UCamera::UpdatePose()
 {
  const glm::vec3 eye = Position;
  const glm::vec3 camWorld = ComputeCameraWorldPosition();
@@ -572,18 +572,18 @@ void Camera::UpdatePose()
  MvpMatrix = Projection * Pose;
 }
 
-void Camera::UpdateKeyStatus(size_t key_index, bool is_pressed)
+void UCamera::UpdateKeyStatus(size_t key_index, bool is_pressed)
 {
  KeysStatus[key_index] = is_pressed;
 }
 
-void Camera::ResetAllKeyStatus()
+void UCamera::ResetAllKeyStatus()
 {
  for(auto I=KeysStatus.begin(); I!=KeysStatus.end();++I)
   I->second = false;
 }
 
-void Camera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos)
+void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos)
 {
  if(FirstMouseCoords)
  {
@@ -602,19 +602,19 @@ void Camera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double 
  world->UpdateIntersection(GetPosition(), GetFront());
 }
 
-void Camera::ResetMouseMove(double xpos, double ypos)
+void UCamera::ResetMouseMove(double xpos, double ypos)
 {
  LastMouseX = xpos;
  LastMouseY = ypos;
  FirstMouseCoords = true;
 }
 
-void Camera::UpdateMouseScroll(double xoffset, double yoffset)
+void UCamera::UpdateMouseScroll(double xoffset, double yoffset)
 {
  ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void Camera::UpdateFrameTime()
+void UCamera::UpdateFrameTime()
 {
  auto current_frame = std::chrono::steady_clock::now();
  DeltaTime = static_cast<float>(
@@ -622,14 +622,14 @@ void Camera::UpdateFrameTime()
  LastFrame = current_frame;
 }
 
-void Camera::InitLocomotionCollisionProfile()
+void UCamera::InitLocomotionCollisionProfile()
 {
  const PlayerCapsule stand = PlayerCapsule::Standing();
  locomotion_.SetCollisionProfile(
      glm::vec3(stand.halfWidth * 2.0f, stand.height, stand.halfWidth * 2.0f), stand.eyeHeight);
 }
 
-void Camera::ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
+void UCamera::ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
                                      const CreatureBoundsProfile& bounds, float eyeHeight)
 {
  locomotion_.SetCapabilities(caps);
@@ -639,7 +639,7 @@ void Camera::ApplyCreatureLocomotion(const CreatureLocomotionCapabilities& caps,
  MovementSpeed = caps.walkSpeed;
 }
 
-void Camera::ResetVerticalPhysics()
+void UCamera::ResetVerticalPhysics()
 {
  locomotion_.Reset();
  InitLocomotionCollisionProfile();
@@ -648,7 +648,7 @@ void Camera::ResetVerticalPhysics()
  UpdatePose();
 }
 
-bool Camera::DoMovement(const UWorld* world)
+bool UCamera::DoMovement(const UWorld* world)
 {
  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
  const PlayerCapsule flightCap = PlayerCapsule::Standing();

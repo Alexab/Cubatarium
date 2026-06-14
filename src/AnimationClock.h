@@ -4,7 +4,7 @@
 namespace cutum {
 
 /// Global block texture animation clock (Minecraft-style 20 ticks per second).
-class AnimationClock {
+class UAnimationClock {
 public:
  void Tick(float deltaSeconds);
  int CurrentFrame() const { return currentFrame_; }

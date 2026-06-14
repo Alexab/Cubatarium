@@ -2,25 +2,25 @@
 
 namespace cutum {
 
-TerrainPlane::TerrainPlane()
+UTerrainPlane::UTerrainPlane()
 {
  Width=30;
  Height=30;
  Generate();
 }
 
-TerrainPlane::TerrainPlane(int width, int height)
+UTerrainPlane::UTerrainPlane(int width, int height)
 {
  Width = width;
  Height = height;
 }
 
-void TerrainPlane::Generate()
+void UTerrainPlane::Generate()
 {
  Generate(2);
 }
 
-void TerrainPlane::Generate(size_t type_id)
+void UTerrainPlane::Generate(size_t type_id)
 {
  Cubes.resize(Width*Height);
  size_t k=0;
@@ -41,12 +41,12 @@ void TerrainPlane::Generate(size_t type_id)
  SetPose(pose);
 }
 
- std::shared_ptr<Object> TerrainPlane::New()
+ std::shared_ptr<UObject> UTerrainPlane::New()
  {
-  return std::make_shared<TerrainPlane>();
+  return std::make_shared<UTerrainPlane>();
  }
 
-void Person::Generate()
+void UPerson::Generate()
 {
  Cubes.resize(2);
  for(int i=0;i<2;i++)
@@ -63,18 +63,18 @@ void Person::Generate()
  SetPose(pose);
 }
 
-std::shared_ptr<Object> Person::New()
+std::shared_ptr<UObject> UPerson::New()
 {
- return std::make_shared<Person>();
+ return std::make_shared<UPerson>();
 }
 
-Rect::Rect(int width, int height, int length)
+URect::URect(int width, int height, int length)
  : Width(width), Height(height), Length(length)
 {
 
 }
 
-void Rect::Generate()
+void URect::Generate()
 {
  Cubes.resize(Width*Height*Length);
  size_t k=0;
@@ -99,12 +99,12 @@ void Rect::Generate()
  SetPose(pose);
 }
 
-std::shared_ptr<Object> Rect::New()
+std::shared_ptr<UObject> URect::New()
 {
- return std::make_shared<Rect>(3, 3, 3);
+ return std::make_shared<URect>(3, 3, 3);
 }
 
-SingleCube::SingleCube()
+USingleCube::USingleCube()
 {
  Cubes.resize(1);
  glm::mat4 pose = glm::mat4(1.0f);
@@ -113,7 +113,7 @@ SingleCube::SingleCube()
  Cubes[0]->SetTypeId(3);
 }
 
-SingleCube::SingleCube(uint64_t object_type)
+USingleCube::USingleCube(uint64_t object_type)
 {
  Cubes.resize(1);
  glm::mat4 pose = glm::mat4(1.0f);
@@ -122,7 +122,7 @@ SingleCube::SingleCube(uint64_t object_type)
  Cubes[0]->SetTypeId(object_type);
 }
 
-void SingleCube::Generate()
+void USingleCube::Generate()
 {
  Cubes.resize(1);
  glm::mat4 pose = glm::mat4(1.0f);
@@ -131,9 +131,9 @@ void SingleCube::Generate()
  Cubes[0]->SetTypeId(3);
 }
 
-std::shared_ptr<Object> SingleCube::New()
+std::shared_ptr<UObject> USingleCube::New()
 {
- return std::make_shared<SingleCube>();
+ return std::make_shared<USingleCube>();
 }
 
 }

@@ -7,8 +7,8 @@
 
 namespace cutum {
 
-class BlockRegistry;
-class BlockWorld;
+class UBlockRegistry;
+class UBlockWorld;
 
 struct GreedyQuad {
  int axis;
@@ -21,10 +21,10 @@ struct GreedyQuad {
  int faceSign;
 };
 
-class GreedyMesher {
+class UGreedyMesher {
 public:
  static std::vector<GreedyQuad> BuildChunkMesh(
-     const BlockWorld& world, glm::ivec3 chunkCoord, BlockRegistry& registry);
+     const UBlockWorld& world, glm::ivec3 chunkCoord, UBlockRegistry& registry);
 };
 
 }

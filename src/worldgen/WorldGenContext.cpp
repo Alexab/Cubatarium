@@ -10,55 +10,55 @@ namespace cutum {
 void WorldGenContext::ResolveBlockIds()
 {
  auto resolve = [this](const char* name, BlockId& out) {
-  out = registry.GetIdByTypeName(name);
+  out = Registry.GetIdByTypeName(name);
   if (out == BLOCK_AIR) {
    std::cerr << "WorldGen: missing block type '" << name << "', fallback stone/air" << std::endl;
   }
  };
- resolve("bedrock", bedrock);
- resolve("stone", stone);
- resolve("dirt", dirt);
- resolve("grass", grass);
- resolve("sand", sand);
- resolve("sandstone", sandstone);
- resolve("wood", wood);
- resolve("gravel", gravel);
- resolve("snow", snow);
- resolve("clay", clay);
- resolve("ice", ice);
- resolve("hellrock", hellrock);
- resolve("water", water);
- resolve("lava", lava);
- resolve("fire", fire);
- if (settings.fillWater && water == BLOCK_AIR) {
+ resolve("bedrock", Bedrock);
+ resolve("stone", Stone);
+ resolve("dirt", Dirt);
+ resolve("grass", Grass);
+ resolve("sand", Sand);
+ resolve("sandstone", Sandstone);
+ resolve("wood", Wood);
+ resolve("gravel", Gravel);
+ resolve("snow", Snow);
+ resolve("clay", Clay);
+ resolve("ice", Ice);
+ resolve("hellrock", Hellrock);
+ resolve("water", Water);
+ resolve("lava", Lava);
+ resolve("fire", Fire);
+ if (Settings.fillWater && Water == BLOCK_AIR) {
   std::cerr << "WorldGen: block type 'water' not loaded — fill_water will have no effect"
             << std::endl;
  }
- if (gravel == BLOCK_AIR) {
-  gravel = stone;
+ if (Gravel == BLOCK_AIR) {
+  Gravel = Stone;
  }
- if (snow == BLOCK_AIR) {
-  snow = stone;
+ if (Snow == BLOCK_AIR) {
+  Snow = Stone;
  }
- if (sand == BLOCK_AIR) {
-  sand = sandstone != BLOCK_AIR ? sandstone : stone;
+ if (Sand == BLOCK_AIR) {
+  Sand = Sandstone != BLOCK_AIR ? Sandstone : Stone;
  }
- if (dirt == BLOCK_AIR) {
-  dirt = stone;
+ if (Dirt == BLOCK_AIR) {
+  Dirt = Stone;
  }
 }
 
-void WorldGenContext::MarkDirtyColumn(int worldX, int worldZ, int minY, int maxY) const
+void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y, int max_y) const
 {
- if (!meshCache) {
+ if (!MeshCache) {
   return;
  }
- std::unordered_set<glm::ivec3, IVec3Hash> dirtyChunks;
- for (int y = minY; y <= maxY; ++y) {
-  dirtyChunks.insert(ChunkManager::WorldToChunk(glm::ivec3(worldX, y, worldZ)));
+ std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
+ for (int y = min_y; y <= max_y; ++y) {
+  dirty_chunks.insert(UChunkManager::WorldToChunk(glm::ivec3(world_x, y, world_z)));
  }
- for (const glm::ivec3& coord : dirtyChunks) {
-  meshCache->MarkDirty(coord);
+ for (const glm::ivec3& coord : dirty_chunks) {
+  MeshCache->MarkDirty(coord);
  }
 }
 

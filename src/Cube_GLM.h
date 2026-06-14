@@ -20,17 +20,17 @@ enum CubeSide {
     CUBE_SIDE_BOTTOM
 };
 
-class Cube
+class UCube
 {
 public:
-    Cube();
-    Cube(const Cube &copy);
-    Cube& operator = (const Cube &copy);
+    UCube();
+    UCube(const UCube &copy);
+    UCube& operator = (const UCube &copy);
     
     // Replace QMatrix4x4 with glm::mat4
     virtual void Init(const glm::mat4& initial_pose, float size=1.0);
     virtual void SetObjectPose(const glm::mat4 &pose);
-    virtual bool CheckCollision(Cube &cube);
+    virtual bool CheckCollision(UCube &cube);
     
     // Replace QVector3D with glm::vec3
     virtual bool CheckCollision(const glm::vec3& position, float size=1.0);
@@ -56,8 +56,8 @@ public:
     size_t GetTypeId() const;
     void SetTypeId(size_t value);
 
-    void Copy(const Cube &copy);
-    virtual void Copy(std::shared_ptr<Cube> copy);
+    void Copy(const UCube &copy);
+    virtual void Copy(std::shared_ptr<UCube> copy);
 
 protected:
     virtual void UpdateVertices()=0;
@@ -72,7 +72,7 @@ protected:
     size_t TypeId;
 };
 
-extern std::shared_ptr<Cube> NewCube();
+extern std::shared_ptr<UCube> NewCube();
 
 } // namespace cutum
 

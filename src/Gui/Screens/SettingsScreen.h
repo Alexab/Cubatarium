@@ -10,20 +10,20 @@
 namespace cutum {
 
 class IGuiMenuHost;
-class GuiPanel;
-class GuiWindow;
-class GuiDialogFrame;
-class WorldGenSettingsForm;
-class GuiTextInput;
-class GuiCheckbox;
-class GuiLabel;
-class GuiButton;
+class UGuiPanel;
+class UGuiWindow;
+class UGuiDialogFrame;
+class UWorldGenSettingsForm;
+class UGuiTextInput;
+class UGuiCheckbox;
+class UGuiLabel;
+class UGuiButton;
 
-class SettingsScreen : public GuiScreenBase {
+class USettingsScreen : public UGuiScreenBase {
 public:
-    explicit SettingsScreen(IGuiMenuHost* host);
+    explicit USettingsScreen(IGuiMenuHost* host);
 
-    void Build(GuiContext& ctx) override;
+    void Build(UGuiContext& ctx) override;
     void OnViewportChanged(int width, int height) override;
 
 private:
@@ -38,37 +38,37 @@ private:
     void LayoutWorldPage(const GuiRect& area) const;
 
     IGuiMenuHost* host_{nullptr};
-    GuiWindow* window_{nullptr};
-    GuiDialogFrame* dialogFrame_{nullptr};
-    GuiPanel* appPanel_{nullptr};
-    GuiPanel* worldPanel_{nullptr};
-    std::unique_ptr<WorldGenSettingsForm> worldForm_;
+    UGuiWindow* Window{nullptr};
+    UGuiDialogFrame* dialogFrame_{nullptr};
+    UGuiPanel* appPanel_{nullptr};
+    UGuiPanel* worldPanel_{nullptr};
+    std::unique_ptr<UWorldGenSettingsForm> worldForm_;
 
-    GuiLabel* defaultUserLabel_{nullptr};
-    GuiLabel* defaultWorldLabel_{nullptr};
-    GuiLabel* renderDistLabel_{nullptr};
-    GuiLabel* consoleKeyLabel_{nullptr};
-    GuiLabel* paletteKeyLabel_{nullptr};
-    GuiLabel* hotbarCountLabel_{nullptr};
-    GuiLabel* hotbarCountValueLabel_{nullptr};
-    GuiLabel* controlSchemeLabel_{nullptr};
-    GuiButton* controlSchemeButton_{nullptr};
+    UGuiLabel* defaultUserLabel_{nullptr};
+    UGuiLabel* defaultWorldLabel_{nullptr};
+    UGuiLabel* renderDistLabel_{nullptr};
+    UGuiLabel* consoleKeyLabel_{nullptr};
+    UGuiLabel* paletteKeyLabel_{nullptr};
+    UGuiLabel* hotbarCountLabel_{nullptr};
+    UGuiLabel* hotbarCountValueLabel_{nullptr};
+    UGuiLabel* controlSchemeLabel_{nullptr};
+    UGuiButton* controlSchemeButton_{nullptr};
     ControlScheme controlScheme_{ControlScheme::Classic};
 
-    GuiTextInput* defaultUserInput_{nullptr};
-    GuiTextInput* defaultWorldInput_{nullptr};
-    GuiTextInput* renderDistInput_{nullptr};
-    GuiCheckbox* streamingBox_{nullptr};
-    GuiCheckbox* stepUpBox_{nullptr};
-    GuiCheckbox* greedyBox_{nullptr};
-    GuiCheckbox* faceQuadsBox_{nullptr};
-    GuiCheckbox* frustumBox_{nullptr};
-    GuiCheckbox* batchCacheBox_{nullptr};
-    GuiCheckbox* legacyHudBox_{nullptr};
-    GuiTextInput* consoleKeyInput_{nullptr};
-    GuiTextInput* paletteKeyInput_{nullptr};
-    GuiButton* hotbarMinusButton_{nullptr};
-    GuiButton* hotbarPlusButton_{nullptr};
+    UGuiTextInput* defaultUserInput_{nullptr};
+    UGuiTextInput* defaultWorldInput_{nullptr};
+    UGuiTextInput* renderDistInput_{nullptr};
+    UGuiCheckbox* streamingBox_{nullptr};
+    UGuiCheckbox* stepUpBox_{nullptr};
+    UGuiCheckbox* greedyBox_{nullptr};
+    UGuiCheckbox* faceQuadsBox_{nullptr};
+    UGuiCheckbox* frustumBox_{nullptr};
+    UGuiCheckbox* batchCacheBox_{nullptr};
+    UGuiCheckbox* legacyHudBox_{nullptr};
+    UGuiTextInput* consoleKeyInput_{nullptr};
+    UGuiTextInput* paletteKeyInput_{nullptr};
+    UGuiButton* hotbarMinusButton_{nullptr};
+    UGuiButton* hotbarPlusButton_{nullptr};
     int hotbarCount_{1};
 };
 

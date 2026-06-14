@@ -8,13 +8,13 @@
 namespace cutum {
 
 /// Saves selected OpenGL state on construction and restores it on destruction.
-class GlStateScope {
+class UGlStateScope {
 public:
- explicit GlStateScope(GlStateMask mask);
- ~GlStateScope();
+ explicit UGlStateScope(GlStateMask mask);
+ ~UGlStateScope();
 
- GlStateScope(const GlStateScope&) = delete;
- GlStateScope& operator=(const GlStateScope&) = delete;
+ UGlStateScope(const UGlStateScope&) = delete;
+ UGlStateScope& operator=(const UGlStateScope&) = delete;
 
 private:
  GlStateMask mask_{0};

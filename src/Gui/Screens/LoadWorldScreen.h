@@ -5,17 +5,17 @@
 namespace cutum {
 
 class IGuiMenuHost;
-class GuiWindow;
-class GuiDialogFrame;
-class GuiListView;
-class GuiLabel;
-class GuiButton;
+class UGuiWindow;
+class UGuiDialogFrame;
+class UGuiListView;
+class UGuiLabel;
+class UGuiButton;
 
-class LoadWorldScreen : public GuiScreenBase {
+class ULoadWorldScreen : public UGuiScreenBase {
 public:
-    explicit LoadWorldScreen(IGuiMenuHost* host);
+    explicit ULoadWorldScreen(IGuiMenuHost* host);
 
-    void Build(GuiContext& ctx) override;
+    void Build(UGuiContext& ctx) override;
     void OnViewportChanged(int width, int height) override;
 
 private:
@@ -23,11 +23,11 @@ private:
     void OnLoad();
 
     IGuiMenuHost* host_{nullptr};
-    GuiWindow* window_{nullptr};
-    GuiDialogFrame* dialogFrame_{nullptr};
-    GuiListView* list_{nullptr};
-    GuiLabel* emptyLabel_{nullptr};
-    GuiButton* loadBtn_{nullptr};
+    UGuiWindow* Window{nullptr};
+    UGuiDialogFrame* dialogFrame_{nullptr};
+    UGuiListView* list_{nullptr};
+    UGuiLabel* emptyLabel_{nullptr};
+    UGuiButton* loadBtn_{nullptr};
 };
 
 } // namespace cutum

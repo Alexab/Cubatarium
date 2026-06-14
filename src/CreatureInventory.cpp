@@ -7,12 +7,12 @@ namespace {
 constexpr size_t kHotbarSlots = 10;
 }
 
-void CreatureInventory::AddItem(const std::string& id, int count)
+void UCreatureInventory::AddItem(const std::string& id, int count)
 {
  storage_[id] += count;
 }
 
-void CreatureInventory::AddToInventory(const std::string& id)
+void UCreatureInventory::AddToInventory(const std::string& id)
 {
  if (storage_[id] < 0) {
   return;
@@ -20,7 +20,7 @@ void CreatureInventory::AddToInventory(const std::string& id)
  storage_[id]++;
 }
 
-void CreatureInventory::InitCreativeDefaults()
+void UCreatureInventory::InitCreativeDefaults()
 {
  static const char* kBlocks[] = {"wood",      "grass",     "stone",     "tree_birch",
                                  "pumpkin",   "sandstone", "stonebrick", "tnt",
@@ -31,7 +31,7 @@ void CreatureInventory::InitCreativeDefaults()
  }
 }
 
-void CreatureInventory::EnsureDefaultHotbar()
+void UCreatureInventory::EnsureDefaultHotbar()
 {
  EnsureHotbarCount(1);
  bool hasBlock = false;
@@ -52,7 +52,7 @@ void CreatureInventory::EnsureDefaultHotbar()
  SetActiveSlot(0, 1);
 }
 
-void CreatureInventory::SetPrefabHotbar(const std::vector<std::string>& prefab_names)
+void UCreatureInventory::SetPrefabHotbar(const std::vector<std::string>& prefab_names)
 {
  EnsureHotbarCount(2);
  size_t idx = 0;
@@ -61,7 +61,7 @@ void CreatureInventory::SetPrefabHotbar(const std::vector<std::string>& prefab_n
    break;
   }
   InventoryEntryRef entry;
-  entry.kind = InventoryEntryKind::Object;
+  entry.kind = InventoryEntryKind::UObject;
   entry.id = name;
   entry.empty = false;
   entry.count = 0;
@@ -70,7 +70,7 @@ void CreatureInventory::SetPrefabHotbar(const std::vector<std::string>& prefab_n
  }
 }
 
-const HotbarBar& CreatureInventory::GetHotbar(size_t bar) const
+const HotbarBar& UCreatureInventory::GetHotbar(size_t bar) const
 {
  static const HotbarBar kEmpty{};
  if (bar >= hotbars_.size()) {
@@ -79,7 +79,7 @@ const HotbarBar& CreatureInventory::GetHotbar(size_t bar) const
  return hotbars_[bar];
 }
 
-void CreatureInventory::ClearHotbarSlot(size_t bar, size_t slot)
+void UCreatureInventory::ClearHotbarSlot(size_t bar, size_t slot)
 {
  if (bar >= hotbars_.size() || slot >= kHotbarSlots) {
   return;
@@ -87,7 +87,7 @@ void CreatureInventory::ClearHotbarSlot(size_t bar, size_t slot)
  hotbars_[bar].slots[slot] = HotbarSlot{};
 }
 
-bool CreatureInventory::SetActiveSlot(size_t bar, size_t slot)
+bool UCreatureInventory::SetActiveSlot(size_t bar, size_t slot)
 {
  if (bar >= hotbars_.size() || slot >= kHotbarSlots) {
   return false;
@@ -97,7 +97,7 @@ bool CreatureInventory::SetActiveSlot(size_t bar, size_t slot)
  return true;
 }
 
-size_t CreatureInventory::GetActiveSlotIndex(size_t bar) const
+size_t UCreatureInventory::GetActiveSlotIndex(size_t bar) const
 {
  if (bar == activeBarIndex_) {
   return activeSlotIndex_;
@@ -105,7 +105,7 @@ size_t CreatureInventory::GetActiveSlotIndex(size_t bar) const
  return kHotbarSlots;
 }
 
-const std::string& CreatureInventory::GetActiveBlockTypeName() const
+const std::string& UCreatureInventory::GetActiveBlockTypeName() const
 {
  static const std::string kEmpty;
  const InventoryEntryRef* active = GetActiveEntryRef();
@@ -115,17 +115,17 @@ const std::string& CreatureInventory::GetActiveBlockTypeName() const
  return kEmpty;
 }
 
-const std::string& CreatureInventory::GetActivePrefabName() const
+const std::string& UCreatureInventory::GetActivePrefabName() const
 {
  static const std::string kEmpty;
  const InventoryEntryRef* active = GetActiveEntryRef();
- if (active && !active->empty && active->kind == InventoryEntryKind::Object) {
+ if (active && !active->empty && active->kind == InventoryEntryKind::UObject) {
   return active->id;
  }
  return kEmpty;
 }
 
-const InventoryEntryRef* CreatureInventory::GetActiveEntryRef() const
+const InventoryEntryRef* UCreatureInventory::GetActiveEntryRef() const
 {
  if (hotbars_.empty() || activeBarIndex_ >= hotbars_.size()) {
   return nullptr;
@@ -141,7 +141,7 @@ const InventoryEntryRef* CreatureInventory::GetActiveEntryRef() const
  return &slot.entry;
 }
 
-void CreatureInventory::EnsureHotbarCount(size_t count)
+void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
  if (hotbars_.size() >= count) {
   return;
@@ -151,7 +151,7 @@ void CreatureInventory::EnsureHotbarCount(size_t count)
  }
 }
 
-bool CreatureInventory::AssignToHotbar(size_t bar, size_t slot, const InventoryEntryRef& entry)
+bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot, const InventoryEntryRef& entry)
 {
  EnsureHotbarCount(bar + 1);
  if (slot >= kHotbarSlots) {
@@ -162,7 +162,7 @@ bool CreatureInventory::AssignToHotbar(size_t bar, size_t slot, const InventoryE
  return true;
 }
 
-void CreatureInventory::SerializeToJson(nlohmann::json& out) const
+void UCreatureInventory::SerializeToJson(nlohmann::json& out) const
 {
  out["storage"] = storage_;
  nlohmann::json bars = nlohmann::json::array();
@@ -176,10 +176,10 @@ void CreatureInventory::SerializeToJson(nlohmann::json& out) const
     case InventoryEntryKind::Block:
      s["kind"] = "block";
      break;
-    case InventoryEntryKind::Object:
+    case InventoryEntryKind::UObject:
      s["kind"] = "object";
      break;
-    case InventoryEntryKind::Creature:
+    case InventoryEntryKind::UCreature:
      s["kind"] = "creature";
      break;
     case InventoryEntryKind::Skin:
@@ -198,7 +198,7 @@ void CreatureInventory::SerializeToJson(nlohmann::json& out) const
  out["active_slot"] = activeSlotIndex_;
 }
 
-void CreatureInventory::DeserializeFromJson(const nlohmann::json& data, size_t maxBarCount)
+void UCreatureInventory::DeserializeFromJson(const nlohmann::json& data, size_t maxBarCount)
 {
  storage_.clear();
  if (data.contains("storage") && data["storage"].is_object()) {
@@ -223,9 +223,9 @@ void CreatureInventory::DeserializeFromJson(const nlohmann::json& data, size_t m
      if (!bar.slots[si].empty) {
       const std::string kind = slotJson.value("kind", "block");
       if (kind == "object") {
-       bar.slots[si].entry.kind = InventoryEntryKind::Object;
+       bar.slots[si].entry.kind = InventoryEntryKind::UObject;
       } else if (kind == "creature") {
-       bar.slots[si].entry.kind = InventoryEntryKind::Creature;
+       bar.slots[si].entry.kind = InventoryEntryKind::UCreature;
       } else if (kind == "skin") {
        bar.slots[si].entry.kind = InventoryEntryKind::Skin;
       } else {

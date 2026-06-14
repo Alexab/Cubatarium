@@ -33,12 +33,12 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3& eyePos,
         pz0 <= cz1 && pz1 >= cz0;
 }
 
-bool TerrainColumnIsEmpty(const BlockWorld& world, int worldX, int worldZ)
+bool TerrainColumnIsEmpty(const UBlockWorld& world, int worldX, int worldZ)
 {
  return world.GetBlock(glm::ivec3(worldX, 0, worldZ)) == BLOCK_AIR;
 }
 
-void MarkChunkAndNeighborsDirty(const ChunkStreamer::MarkDirtyFn& markDirtyFn, glm::ivec3 chunkCoord)
+void MarkChunkAndNeighborsDirty(const UChunkStreamer::MarkDirtyFn& markDirtyFn, glm::ivec3 chunkCoord)
 {
  if (!markDirtyFn) {
   return;
@@ -51,9 +51,9 @@ void MarkChunkAndNeighborsDirty(const ChunkStreamer::MarkDirtyFn& markDirtyFn, g
 
 } // namespace
 
-ChunkStreamer::ChunkStreamer(BlockWorld& world, BlockRegistry& registry, uint32_t seed,
+UChunkStreamer::UChunkStreamer(UBlockWorld& world, UBlockRegistry& registry, uint32_t seed,
     int baseY, int maxHeight)
- : world_(world)
+ : World(world)
  , registry_(registry)
  , seed_(seed)
  , baseY_(baseY)
@@ -61,12 +61,12 @@ ChunkStreamer::ChunkStreamer(BlockWorld& world, BlockRegistry& registry, uint32_
 {
 }
 
-void ChunkStreamer::SetWorldFolder(const std::string& path)
+void UChunkStreamer::SetWorldFolder(const std::string& path)
 {
  worldFolder_ = path;
 }
 
-void ChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn, MarkDirtyFn markDirtyFn,
+void UChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn, MarkDirtyFn markDirtyFn,
     GenerateColumnFn generateColumnFn, UnloadChunkFn unloadFn)
 {
  loadChunkFn_ = std::move(loadFn);
@@ -76,14 +76,14 @@ void ChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn, MarkDir
  unloadChunkFn_ = std::move(unloadFn);
 }
 
-bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
+bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
 {
- // Terrain columns are generated at world Y=0..surface; only fill ground layer chunks.
+ // UTerrain columns are generated at world Y=0..surface; only fill ground layer chunks.
  if (chunkCoord.y != 0) {
   return false;
  }
 
- const Chunk* existing = world_.GetChunkManager().GetChunk(chunkCoord);
+ const UChunk* existing = World.GetChunkManager().GetChunk(chunkCoord);
  if (existing == nullptr) {
   if (loadChunkFn_ && loadChunkFn_(chunkCoord)) {
    MarkChunkAndNeighborsDirty(markDirtyFn_, chunkCoord);
@@ -102,7 +102,7 @@ bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
    const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
    const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
-   if (onlyEmptyColumns && !TerrainColumnIsEmpty(world_, worldX, worldZ)) {
+   if (onlyEmptyColumns && !TerrainColumnIsEmpty(World, worldX, worldZ)) {
     continue;
    }
    generateColumnFn_(worldX, worldZ);
@@ -119,10 +119,10 @@ bool ChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
  return true;
 }
 
-bool ChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
+bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
     const glm::vec3& eyePos, const PlayerCapsule& cap) const
 {
- const glm::ivec3 feetChunk = ChunkManager::WorldToChunk(feetBlockPos);
+ const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
 
  for (int dx = -1; dx <= 1; ++dx) {
   for (int dy = -1; dy <= 1; ++dy) {
@@ -134,7 +134,7 @@ bool ChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feet
   }
  }
 
- const glm::ivec3 playerChunk = ChunkManager::WorldToChunk(feetBlockPos);
+ const glm::ivec3 playerChunk = UChunkManager::WorldToChunk(feetBlockPos);
  const int dx = std::abs(chunkCoord.x - playerChunk.x);
  const int dy = std::abs(chunkCoord.y - playerChunk.y);
  const int dz = std::abs(chunkCoord.z - playerChunk.z);
@@ -150,13 +150,13 @@ bool ChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feet
  return false;
 }
 
-void ChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
+void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
 {
  if (!enabled_) {
   return;
  }
 
- const glm::ivec3 feetChunk = ChunkManager::WorldToChunk(feetBlockPos);
+ const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
  for (int dx = -1; dx <= 1; ++dx) {
   for (int dz = -1; dz <= 1; ++dz) {
    for (int dy = -1; dy <= 1; ++dy) {
@@ -167,13 +167,13 @@ void ChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
  }
 }
 
-void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
+void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
     const glm::vec3& eyePos, const PlayerCapsule& cap)
 {
  std::vector<glm::ivec3> toUnload;
  const int limit = renderDistance_ + unloadMargin_;
 
- world_.GetChunkManager().ForEachChunk([&](const Chunk& chunk) {
+ World.GetChunkManager().ForEachChunk([&](const UChunk& chunk) {
   const glm::ivec3 coord = chunk.GetCoord();
   const int dx = std::abs(coord.x - centerChunk.x);
   const int dy = std::abs(coord.y - centerChunk.y);
@@ -196,7 +196,7 @@ void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetB
    saveChunkFn_(coord);
    ++lastFrameStats_.savesThisFrame;
   }
-  world_.GetChunkManager().RemoveChunk(coord);
+  World.GetChunkManager().RemoveChunk(coord);
   procedurallyGenerated_.erase(coord);
   if (unloadChunkFn_) {
    unloadChunkFn_(coord);
@@ -207,7 +207,7 @@ void ChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetB
  }
 }
 
-void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos,
+void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos,
                          const PlayerCapsule& cap)
 {
  if (!enabled_) {
@@ -216,7 +216,7 @@ void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos,
 
  lastFrameStats_.Reset();
 
- const glm::ivec3 centerChunk = ChunkManager::WorldToChunk(cameraBlockPos);
+ const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(cameraBlockPos);
  const glm::ivec3 feetBlockPos = WorldPosToBlock(
      glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
 
@@ -228,7 +228,7 @@ void ChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3& eyePos,
      goto finish_loads;
     }
     const glm::ivec3 coord(cx, cy, cz);
-    if (world_.GetChunkManager().HasChunk(coord)) {
+    if (World.GetChunkManager().HasChunk(coord)) {
      continue;
     }
     if (EnsureChunkLoaded(coord)) {

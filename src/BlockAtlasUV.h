@@ -23,7 +23,7 @@ inline glm::vec3 BlockCenterFromFacePoint(const glm::vec3& worldPos, const glm::
  return glm::floor(inside + glm::vec3(0.5f));
 }
 
-/// Atlas UV for a point on a cube face; matches InitCubeBuffers / CubeGL layout.
+/// Atlas UV for a point on a cube face; matches InitCubeBuffers / UCubeGL layout.
 inline glm::vec2 AtlasUVFromWorldPos(int faceIndex, const glm::vec3& worldPos)
 {
  constexpr float kCubeShift = 1.0f / 6.0f;

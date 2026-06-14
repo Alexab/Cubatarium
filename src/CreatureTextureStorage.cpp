@@ -20,7 +20,7 @@ GLuint LoadPngFile(const std::string& imagePath)
  int channels = 0;
  unsigned char* data = stbi_load(imagePath.c_str(), &width, &height, &channels, 4);
  if (!data) {
-  std::cerr << "CreatureTextureStorage: failed to load " << imagePath << std::endl;
+  std::cerr << "UCreatureTextureStorage: failed to load " << imagePath << std::endl;
   glDeleteTextures(1, &textureId);
   return 0;
  }
@@ -58,7 +58,7 @@ void IndexPngTextures(const std::filesystem::path& texturesDir,
 
 } // namespace
 
-void CreatureTextureStorage::LoadFromCreatureAndSkinRoots(const std::string& creaturesRoot,
+void UCreatureTextureStorage::LoadFromCreatureAndSkinRoots(const std::string& creaturesRoot,
                                                           const std::string& skinsRoot)
 {
  textures_.clear();
@@ -83,10 +83,10 @@ void CreatureTextureStorage::LoadFromCreatureAndSkinRoots(const std::string& cre
   }
  }
 
- std::cout << "CreatureTextureStorage: loaded " << textures_.size() << " textures" << std::endl;
+ std::cout << "UCreatureTextureStorage: loaded " << textures_.size() << " textures" << std::endl;
 }
 
-GLuint CreatureTextureStorage::GetTexture(const std::string& assetKey) const
+GLuint UCreatureTextureStorage::GetTexture(const std::string& assetKey) const
 {
  const auto it = textures_.find(assetKey);
  if (it == textures_.end()) {

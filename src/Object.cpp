@@ -7,7 +7,7 @@
 
 namespace cutum {
 
-ObjectPrototype::ObjectPrototype(const std::string& type_name, uint64_t type_id, std::shared_ptr<Object> sample)
+UObjectPrototype::UObjectPrototype(const std::string& type_name, uint64_t type_id, std::shared_ptr<UObject> sample)
  : TypeName(type_name)
  , TypeId(type_id)
  , Sample(sample)
@@ -15,39 +15,39 @@ ObjectPrototype::ObjectPrototype(const std::string& type_name, uint64_t type_id,
  Sample->SetObjectTypeId(type_id);
 }
 
-const std::string& ObjectPrototype::GetTypeName() const
+const std::string& UObjectPrototype::GetTypeName() const
 {
  return TypeName;
 }
 
-uint64_t ObjectPrototype::GetTypeId() const
+uint64_t UObjectPrototype::GetTypeId() const
 {
  return TypeId;
 }
 
-std::shared_ptr<Object> ObjectPrototype::GetSample() const
+std::shared_ptr<UObject> UObjectPrototype::GetSample() const
 {
  return Sample;
 }
 
 
-std::shared_ptr<Object> ObjectPrototype::New()
+std::shared_ptr<UObject> UObjectPrototype::New()
 {
  auto result=Sample->New();
  result->SetObjectTypeId(TypeId);
  return result;
 }
 
-std::atomic_uint64_t Object::LastObjectId=0;
+std::atomic_uint64_t UObject::LastObjectId=0;
 
-Object::Object()
+UObject::UObject()
  : ObjectId(++LastObjectId)
  , ObjectTypeId(0)
 {
 
 }
 /*
-Object::Object(const Object &copy)
+UObject::UObject(const UObject &copy)
  : ObjectId(++LastObjectId)
  : Cubes;
 glm::mat4 Pose;
@@ -55,17 +55,17 @@ glm::mat4 Pose;
 
 }
 
-Object& Object::operator = (const Object &copy)
+UObject& UObject::operator = (const UObject &copy)
 {
 
 }*/
 
-std::shared_ptr<Object> Object::New()
+std::shared_ptr<UObject> UObject::New()
 {
- return std::make_shared<Object>();
+ return std::make_shared<UObject>();
 }
 
-void Object::Copy(std::shared_ptr<Object> copy)
+void UObject::Copy(std::shared_ptr<UObject> copy)
 {
  SetObjectTypeId(copy->GetObjectTypeId());
  if(Cubes.size() == copy->GetCubes().size())
@@ -79,22 +79,22 @@ void Object::Copy(std::shared_ptr<Object> copy)
 
 
 
-uint64_t Object::GetObjectId() const
+uint64_t UObject::GetObjectId() const
 {
  return ObjectId;
 }
 
-uint64_t Object::GetObjectTypeId() const
+uint64_t UObject::GetObjectTypeId() const
 {
  return ObjectTypeId;
 }
 
-std::vector<std::shared_ptr<Cube>>& Object::GetCubes()
+std::vector<std::shared_ptr<UCube>>& UObject::GetCubes()
 {
  return Cubes;
 }
 
-bool Object::CheckCollision(Object &object)
+bool UObject::CheckCollision(UObject &object)
 {
  auto & object_cubes = object.GetCubes();
  for(auto & cube : Cubes)
@@ -108,7 +108,7 @@ bool Object::CheckCollision(Object &object)
  return false;
 }
 
-bool Object::CheckCollision(const glm::vec3& position, float size)
+bool UObject::CheckCollision(const glm::vec3& position, float size)
 {
  for(auto & cube : Cubes)
  {
@@ -118,7 +118,7 @@ bool Object::CheckCollision(const glm::vec3& position, float size)
  return false;
 }
 
-bool Object::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> &distance_map) const
+bool UObject::CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> &distance_map) const
 {
  distance_map.clear();
 
@@ -145,25 +145,25 @@ bool Object::CheckRayIntersection(const glm::vec3& position, const glm::vec3& fr
  return true;
 }
 
-glm::mat4 Object::GetPose() const
+glm::mat4 UObject::GetPose() const
 {
  return Pose;
 }
 
-void Object::SetPose(const glm::mat4 &value)
+void UObject::SetPose(const glm::mat4 &value)
 {
  Pose = value;
  UpdatePose();
 }
 
-void Object::SetPoseFromTranslation(const glm::vec3 &translation)
+void UObject::SetPoseFromTranslation(const glm::vec3 &translation)
 {
  glm::mat4 pose = glm::mat4(1.0f);
  pose = glm::translate(pose, translation);
  SetPose(pose);
 }
 
-void Object::UpdatePose()
+void UObject::UpdatePose()
 {
  for(auto & cube : Cubes)
  {
@@ -171,7 +171,7 @@ void Object::UpdatePose()
  }
 }
 
-void Object::SetObjectTypeId(uint64_t value)
+void UObject::SetObjectTypeId(uint64_t value)
 {
  ObjectTypeId = value;
 }

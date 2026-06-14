@@ -9,7 +9,7 @@
 
 namespace cutum {
 
-class CreatureInventory {
+class UCreatureInventory {
 public:
  const std::map<std::string, int>& GetStorage() const { return storage_; }
  std::map<std::string, int>& GetStorageMutable() { return storage_; }

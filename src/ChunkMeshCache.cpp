@@ -15,7 +15,7 @@
 namespace cutum {
 
 namespace {
-bool IsFullyEnclosed(const BlockWorld& world, glm::ivec3 pos)
+bool IsFullyEnclosed(const UBlockWorld& world, glm::ivec3 pos)
 {
  for (const glm::ivec3& offset : NEIGHBOR_OFFSETS) {
   if (world.IsAir(pos + offset)) {
@@ -37,21 +37,21 @@ void MergeGreedyBatch(GreedyMeshBatch& dst, const GreedyMeshBatch& src)
  }
 }
 } // namespace
-float ChunkMeshCache::MaxCullDistance() const
+float UChunkMeshCache::MaxCullDistance() const
 {
- return static_cast<float>(renderDistanceChunks_ + 2) * static_cast<float>(CHUNK_SIZE);
+ return static_cast<float>(RenderDistanceChunks + 2) * static_cast<float>(CHUNK_SIZE);
 }
-void ChunkMeshCache::InvalidateVisibleList()
+void UChunkMeshCache::InvalidateVisibleList()
 {
  instancesDirty_ = true;
  greedyBatchesDirty_ = true;
  lastCullCameraChunk_ = glm::ivec3(INT32_MAX, INT32_MAX, INT32_MAX);
  lastCullMeshRevision_ = 0;
 }
-void ChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
+void UChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
 {
- const bool meshPathChanged = settings.greedyMeshing != renderSettings_.greedyMeshing;
- renderSettings_ = settings;
+ const bool meshPathChanged = settings.greedyMeshing != Render.greedyMeshing;
+ Render = settings;
  if (meshPathChanged) {
   for (const auto& entry : cache_) {
    MarkDirty(entry.first);
@@ -63,7 +63,7 @@ void ChunkMeshCache::SetRenderSettings(const RenderSettings& settings)
   ++meshRevision_;
  }
 }
-void ChunkMeshCache::MarkAllDirty()
+void UChunkMeshCache::MarkAllDirty()
 {
  dirtyChunks_.clear();
  dirtyChunkSet_.clear();
@@ -76,19 +76,19 @@ void ChunkMeshCache::MarkAllDirty()
  greedyBatchesDirty_ = true;
  InvalidateVisibleList();
 }
-void ChunkMeshCache::MarkAllDirtyFromWorld(const BlockWorld& world)
+void UChunkMeshCache::MarkAllDirtyFromWorld(const UBlockWorld& world)
 {
  MarkAllDirty();
- world.GetChunkManager().ForEachChunk([this](const Chunk& chunk) {
+ world.GetChunkManager().ForEachChunk([this](const UChunk& chunk) {
   MarkDirty(chunk.GetCoord());
  });
 }
-void ChunkMeshCache::RebuildAll(BlockWorld& world, BlockRegistry& registry)
+void UChunkMeshCache::RebuildAll(UBlockWorld& world, UBlockRegistry& registry)
 {
  MarkAllDirtyFromWorld(world);
  RebuildDirtyChunks(world, registry, 10000);
 }
-void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
+void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
  if (dirtyChunkSet_.insert(chunkCoord).second) {
   dirtyChunks_.push_back(chunkCoord);
@@ -98,7 +98,7 @@ void ChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
  greedyBatchesDirty_ = true;
  InvalidateVisibleList();
 }
-void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
+void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
  cache_.erase(chunkCoord);
  greedyCache_.erase(chunkCoord);
@@ -108,7 +108,7 @@ void ChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
  greedyBatchesDirty_ = true;
  InvalidateVisibleList();
 }
-size_t ChunkMeshCache::GetGreedyVertexCount() const
+size_t UChunkMeshCache::GetGreedyVertexCount() const
 {
  size_t count = 0;
  for (const GreedyMeshBatch& batch : greedyBatches_) {
@@ -116,7 +116,7 @@ size_t ChunkMeshCache::GetGreedyVertexCount() const
  }
  return count;
 }
-void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos,
+void UChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::vec3* cameraPos,
                                              float maxCullDistance)
 {
  instances_.clear();
@@ -132,7 +132,7 @@ void ChunkMeshCache::RebuildFlatInstanceList(const Frustum* frustum, const glm::
  instancesDirty_ = false;
  ++cullRevision_;
 }
-void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm::vec3* cameraPos,
+void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm::vec3* cameraPos,
                                               float maxCullDistance)
 {
  greedyBatches_.clear();
@@ -158,35 +158,35 @@ void ChunkMeshCache::RebuildFlatGreedyBatches(const Frustum* frustum, const glm:
  greedyBatchesDirty_ = false;
  ++cullRevision_;
 }
-void ChunkMeshCache::UpdateVisibleInstances(
+void UChunkMeshCache::UpdateVisibleInstances(
     const Frustum& frustum, const glm::mat4& viewProj, const glm::vec3& cameraPos)
 {
  (void)viewProj;
- const glm::ivec3 cameraChunk = ChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
+ const glm::ivec3 cameraChunk = UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
  const float maxCullDistance = MaxCullDistance();
  if (!instancesDirty_ && !greedyBatchesDirty_
      && cameraChunk == lastCullCameraChunk_
      && meshRevision_ == lastCullMeshRevision_
-     && !(renderSettings_.greedyMeshing && greedyBatches_.empty() && !greedyCache_.empty())) {
+     && !(Render.greedyMeshing && greedyBatches_.empty() && !greedyCache_.empty())) {
   return;
  }
  lastCullCameraChunk_ = cameraChunk;
  lastCullMeshRevision_ = meshRevision_;
- if (renderSettings_.greedyMeshing) {
-  if (renderSettings_.frustumCulling) {
+ if (Render.greedyMeshing) {
+  if (Render.frustumCulling) {
    RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
   } else {
    RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
   }
  } else {
-  if (renderSettings_.frustumCulling) {
+  if (Render.frustumCulling) {
    RebuildFlatInstanceList(&frustum, &cameraPos, maxCullDistance);
   } else {
    RebuildFlatInstanceList(nullptr, nullptr, 0.0f);
   }
  }
 }
-void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& registry, int maxChunksPerFrame)
+void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld& world, UBlockRegistry& registry, int maxChunksPerFrame)
 {
  int rebuilt = 0;
  for (auto it = dirtyChunks_.begin(); it != dirtyChunks_.end() && rebuilt < maxChunksPerFrame;) {
@@ -196,7 +196,7 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
   ++rebuilt;
  }
  if (instancesDirty_ || greedyBatchesDirty_) {
-  if (renderSettings_.greedyMeshing) {
+  if (Render.greedyMeshing) {
    RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
   } else {
    RebuildFlatInstanceList(nullptr, nullptr, 0.0f);
@@ -205,8 +205,8 @@ void ChunkMeshCache::RebuildDirtyChunks(BlockWorld& world, BlockRegistry& regist
   lastCullMeshRevision_ = 0;
  }
 }
-void ChunkMeshCache::RebuildChunkImmediate(
-    const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord)
+void UChunkMeshCache::RebuildChunkImmediate(
+    const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord)
 {
  RebuildChunk(world, registry, chunkCoord);
  dirtyChunkSet_.erase(chunkCoord);
@@ -215,11 +215,11 @@ void ChunkMeshCache::RebuildChunkImmediate(
      dirtyChunks_.end());
  InvalidateVisibleList();
 }
-void ChunkMeshCache::RebuildChunkLegacy(
-    const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord,
+void UChunkMeshCache::RebuildChunkLegacy(
+    const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord,
     std::vector<FaceInstance>& chunkInstances)
 {
- const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
+ const UChunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
   return;
  }
@@ -246,9 +246,9 @@ void ChunkMeshCache::RebuildChunkLegacy(
   }
  }
 }
-void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& registry, glm::ivec3 chunkCoord)
+void UChunkMeshCache::RebuildChunk(const UBlockWorld& world, UBlockRegistry& registry, glm::ivec3 chunkCoord)
 {
- const Chunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
+ const UChunk* chunk = world.GetChunkManager().GetChunk(chunkCoord);
  if (!chunk) {
   cache_.erase(chunkCoord);
   greedyCache_.erase(chunkCoord);
@@ -258,10 +258,10 @@ void ChunkMeshCache::RebuildChunk(const BlockWorld& world, BlockRegistry& regist
   InvalidateVisibleList();
   return;
  }
- if (renderSettings_.greedyMeshing) {
+ if (Render.greedyMeshing) {
   cache_.erase(chunkCoord);
   std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-  const auto quads = GreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
+  const auto quads = UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
   for (const GreedyQuad& q : quads) {
    GreedyMeshBatch& batch = byBlockId[q.id];
    batch.blockId = q.id;

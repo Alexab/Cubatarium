@@ -12,12 +12,12 @@
 namespace cutum {
 
 struct GuiTheme;
-class GuiTabBar;
-class GuiPanel;
-class GuiButton;
+class UGuiTabBar;
+class UGuiPanel;
+class UGuiButton;
 
 /// Modal dialog body: optional tabs, scrollable or fixed body, footer buttons.
-class GuiDialogFrame : public GuiWidget {
+class UGuiDialogFrame : public UGuiWidget {
 public:
     using PageMeasureFn = std::function<int(const GuiRect&)>;
     using PageLayoutFn = std::function<void(const GuiRect&)>;
@@ -25,13 +25,13 @@ public:
     static constexpr int kFooterHeight = 44;
     static constexpr int kTabGap = 4;
 
-    explicit GuiDialogFrame(const GuiTheme* theme);
+    explicit UGuiDialogFrame(const GuiTheme* theme);
 
-    GuiTabBar* CreateTabBar(const std::vector<std::string>& labels,
+    UGuiTabBar* CreateTabBar(const std::vector<std::string>& labels,
                             std::function<void(int)> onTabChanged);
-    GuiPanel& AddScrollPage();
-    GuiWidget& SetFixedBody(std::unique_ptr<GuiWidget> body);
-    GuiButton& AddFooterButton(std::unique_ptr<GuiButton> button);
+    UGuiPanel& AddScrollPage();
+    UGuiWidget& SetFixedBody(std::unique_ptr<UGuiWidget> body);
+    UGuiButton& AddFooterButton(std::unique_ptr<UGuiButton> button);
 
     void SetActivePage(int index);
     void SetScrollPageLayout(size_t pageIndex, PageMeasureFn measureFn, PageLayoutFn layoutFn);
@@ -39,8 +39,8 @@ public:
     void SetDrawScrollbar(bool draw);
     void LayoutFrame();
 
-    void CollectFocusables(std::vector<GuiWidget*>& out) override;
-    GuiWidget* HitTest(int x, int y) override;
+    void CollectFocusables(std::vector<UGuiWidget*>& out) override;
+    UGuiWidget* HitTest(int x, int y) override;
     bool OnKey(const GuiKeyEvent& event) override;
 
 private:
@@ -48,13 +48,13 @@ private:
     void RelayoutVisiblePageContents();
 
     const GuiTheme* theme_;
-    GuiTabBar* tabBar_{nullptr};
-    GuiScrollView* scroll_{nullptr};
-    GuiWidget* fixedBody_{nullptr};
-    std::vector<GuiPanel*> scrollPages_;
+    UGuiTabBar* tabBar_{nullptr};
+    UGuiScrollView* scroll_{nullptr};
+    UGuiWidget* fixedBody_{nullptr};
+    std::vector<UGuiPanel*> scrollPages_;
     std::vector<PageMeasureFn> scrollPageMeasureFns_;
     std::vector<PageLayoutFn> scrollPageLayoutFns_;
-    std::vector<GuiButton*> footerButtons_;
+    std::vector<UGuiButton*> footerButtons_;
     int activePage_{0};
     GuiScrollbarMode scrollbarMode_{GuiScrollbarMode::Auto};
 };

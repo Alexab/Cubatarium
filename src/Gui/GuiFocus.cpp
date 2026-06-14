@@ -8,7 +8,7 @@ namespace cutum {
 
 namespace {
 
-bool IsDescendantOf(const GuiWidget* root, const GuiWidget* target)
+bool IsDescendantOf(const UGuiWidget* root, const UGuiWidget* target)
 {
     if (!root || !target) {
         return false;
@@ -24,12 +24,12 @@ bool IsDescendantOf(const GuiWidget* root, const GuiWidget* target)
     return false;
 }
 
-bool FindScrollAndReveal(GuiWidget* node, GuiWidget* target)
+bool FindScrollAndReveal(UGuiWidget* node, UGuiWidget* target)
 {
     if (!node) {
         return false;
     }
-    if (auto* scroll = dynamic_cast<GuiScrollView*>(node)) {
+    if (auto* scroll = dynamic_cast<UGuiScrollView*>(node)) {
         if (scroll->ContainsWidget(target)) {
             scroll->EnsureWidgetVisible(*target);
             return true;
@@ -48,7 +48,7 @@ bool FindScrollAndReveal(GuiWidget* node, GuiWidget* target)
 
 } // namespace
 
-void DrawWidgetFocusRing(GuiRenderer& renderer, const GuiTheme& theme, const GuiRect& bounds)
+void DrawWidgetFocusRing(UGuiRenderer& renderer, const GuiTheme& theme, const GuiRect& bounds)
 {
     if (bounds.w <= 0 || bounds.h <= 0) {
         return;
@@ -58,12 +58,12 @@ void DrawWidgetFocusRing(GuiRenderer& renderer, const GuiTheme& theme, const Gui
     renderer.DrawBorderRect(ring, theme.focusRing, theme.focusRingThickness);
 }
 
-void RevealWidgetForKeyboardFocus(GuiWidget* root, GuiWidget* widget)
+void RevealWidgetForKeyboardFocus(UGuiWidget* root, UGuiWidget* widget)
 {
     if (!root || !widget) {
         return;
     }
-    if (auto* list = dynamic_cast<GuiListView*>(widget)) {
+    if (auto* list = dynamic_cast<UGuiListView*>(widget)) {
         list->RevealFocused();
         return;
     }

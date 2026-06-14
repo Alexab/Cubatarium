@@ -7,12 +7,12 @@
 
 namespace cutum {
 
-int WorldGenerator::SurfaceYAt(int x, int z, uint32_t seed, int baseY, int maxHeight)
+int UWorldGenerator::SurfaceYAt(int x, int z, uint32_t seed, int baseY, int maxHeight)
 {
  return HeightAt(x, z, seed, baseY, maxHeight);
 }
 
-void WorldGenerator::GenerateColumn(BlockWorld& world, BlockRegistry& registry,
+void UWorldGenerator::GenerateColumn(UBlockWorld& world, UBlockRegistry& registry,
     int x, int z, uint32_t seed, int baseY, int maxHeight)
 {
  const BlockId bedrock = registry.GetIdByTypeName("bedrock");
@@ -21,7 +21,7 @@ void WorldGenerator::GenerateColumn(BlockWorld& world, BlockRegistry& registry,
  const BlockId grass = registry.GetIdByTypeName("grass");
 
  if (bedrock == BLOCK_AIR || stone == BLOCK_AIR || grass == BLOCK_AIR) {
-  std::cerr << "WorldGenerator::GenerateColumn: missing block types" << std::endl;
+  std::cerr << "UWorldGenerator::GenerateColumn: missing block types" << std::endl;
   return;
  }
 
@@ -43,7 +43,7 @@ void WorldGenerator::GenerateColumn(BlockWorld& world, BlockRegistry& registry,
  }
 }
 
-void WorldGenerator::GenerateHeightmap(BlockWorld& world, BlockRegistry& registry,
+void UWorldGenerator::GenerateHeightmap(UBlockWorld& world, UBlockRegistry& registry,
     int halfExtent, uint32_t seed, int baseY, int maxHeight)
 {
  for (int x = -halfExtent; x <= halfExtent; ++x) {
@@ -53,7 +53,7 @@ void WorldGenerator::GenerateHeightmap(BlockWorld& world, BlockRegistry& registr
  }
 }
 
-void WorldGenerator::GenerateSpawnArea(BlockWorld& world, BlockRegistry& registry,
+void UWorldGenerator::GenerateSpawnArea(UBlockWorld& world, UBlockRegistry& registry,
     int centerX, int centerZ, int radiusChunks, uint32_t seed, int baseY, int maxHeight)
 {
  const int halfBlocks = radiusChunks * CHUNK_SIZE;
@@ -64,7 +64,7 @@ void WorldGenerator::GenerateSpawnArea(BlockWorld& world, BlockRegistry& registr
  }
 }
 
-glm::vec3 WorldGenerator::DefaultSpawnPosition(int x, int z, uint32_t seed,
+glm::vec3 UWorldGenerator::DefaultSpawnPosition(int x, int z, uint32_t seed,
     int baseY, int maxHeight, float eyeHeight)
 {
  const int sy = SurfaceYAt(x, z, seed, baseY, maxHeight);
@@ -73,7 +73,7 @@ glm::vec3 WorldGenerator::DefaultSpawnPosition(int x, int z, uint32_t seed,
                   static_cast<float>(z));
 }
 
-void WorldGenerator::GenerateFlatColumn(BlockWorld& world, BlockRegistry& registry, int x, int z,
+void UWorldGenerator::GenerateFlatColumn(UBlockWorld& world, UBlockRegistry& registry, int x, int z,
     int surfaceY)
 {
  const BlockId bedrock = registry.GetIdByTypeName("bedrock");
@@ -90,7 +90,7 @@ void WorldGenerator::GenerateFlatColumn(BlockWorld& world, BlockRegistry& regist
  world.SetBlock(glm::ivec3(x, surfaceY, z), grass);
 }
 
-void WorldGenerator::GenerateFlatArea(BlockWorld& world, BlockRegistry& registry, int centerX,
+void UWorldGenerator::GenerateFlatArea(UBlockWorld& world, UBlockRegistry& registry, int centerX,
     int centerZ, int radiusChunks, int surfaceY)
 {
  const int halfBlocks = radiusChunks * CHUNK_SIZE;
@@ -101,7 +101,7 @@ void WorldGenerator::GenerateFlatArea(BlockWorld& world, BlockRegistry& registry
  }
 }
 
-void WorldGenerator::GenerateFlat(BlockWorld& world, BlockRegistry& registry, int halfExtent, int surfaceY)
+void UWorldGenerator::GenerateFlat(UBlockWorld& world, UBlockRegistry& registry, int halfExtent, int surfaceY)
 {
  for (int x = -halfExtent; x <= halfExtent; ++x) {
   for (int z = -halfExtent; z <= halfExtent; ++z) {

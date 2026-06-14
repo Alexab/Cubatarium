@@ -57,8 +57,8 @@ void ResolvePartsFromSpecies(const CreatureDefinition& def, const SkinDefinition
 } // namespace
 
 ResolvedCreatureAppearance ResolveCreatureAppearance(
-    const CreatureDefinitionStorage& species,
-    const SkinDefinitionStorage& skins,
+    const UCreatureDefinitionStorage& species,
+    const USkinDefinitionStorage& skins,
     const std::string& speciesId,
     const std::string& skinId)
 {

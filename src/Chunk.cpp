@@ -2,18 +2,18 @@
 
 namespace cutum {
 
-Chunk::Chunk(glm::ivec3 chunkCoord)
+UChunk::UChunk(glm::ivec3 chunkCoord)
  : coord_(chunkCoord)
 {
  data_.fill(BLOCK_AIR);
 }
 
-int Chunk::LocalIndex(glm::ivec3 local)
+int UChunk::LocalIndex(glm::ivec3 local)
 {
  return local.x + CHUNK_SIZE * local.y + CHUNK_SIZE * CHUNK_SIZE * local.z;
 }
 
-BlockId Chunk::GetBlockLocal(glm::ivec3 local) const
+BlockId UChunk::GetBlockLocal(glm::ivec3 local) const
 {
  if (local.x < 0 || local.x >= CHUNK_SIZE ||
      local.y < 0 || local.y >= CHUNK_SIZE ||
@@ -23,7 +23,7 @@ BlockId Chunk::GetBlockLocal(glm::ivec3 local) const
  return data_[static_cast<size_t>(LocalIndex(local))];
 }
 
-void Chunk::SetBlockLocal(glm::ivec3 local, BlockId id)
+void UChunk::SetBlockLocal(glm::ivec3 local, BlockId id)
 {
  if (local.x < 0 || local.x >= CHUNK_SIZE ||
      local.y < 0 || local.y >= CHUNK_SIZE ||

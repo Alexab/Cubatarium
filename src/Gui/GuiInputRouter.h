@@ -6,13 +6,13 @@
 
 namespace cutum {
 
-class GuiWidget;
-class GuiScreenBase;
+class UGuiWidget;
+class UGuiScreenBase;
 
-class GuiInputRouter {
+class UGuiInputRouter {
 public:
-    void SetRoot(GuiWidget* root);
-    void SetActiveScreen(GuiScreenBase* screen);
+    void SetRoot(UGuiWidget* root);
+    void SetActiveScreen(UGuiScreenBase* screen);
 
     bool OnMouseDown(const GuiMouseEvent& event);
     bool OnMouseUp(const GuiMouseEvent& event);
@@ -31,16 +31,16 @@ public:
     void ReleaseFocusWithoutNotify();
 
 private:
-    void SetKeyboardFocus(GuiWidget* widget, bool reveal);
+    void SetKeyboardFocus(UGuiWidget* widget, bool reveal);
     void CollectFocusOrder();
     void FocusNext(bool reverse);
 
-    GuiWidget* root_{nullptr};
-    GuiScreenBase* screen_{nullptr};
-    GuiWidget* keyboardFocus_{nullptr};
-    GuiWidget* mousePressedWidget_{nullptr};
-    GuiWidget* hoveredWidget_{nullptr};
-    std::vector<GuiWidget*> focusOrder_;
+    UGuiWidget* root_{nullptr};
+    UGuiScreenBase* screen_{nullptr};
+    UGuiWidget* keyboardFocus_{nullptr};
+    UGuiWidget* mousePressedWidget_{nullptr};
+    UGuiWidget* hoveredWidget_{nullptr};
+    std::vector<UGuiWidget*> focusOrder_;
     bool captureMouse_{false};
     bool modalKeyboard_{false};
     int lastMouseX_{-1};

@@ -31,12 +31,12 @@ GuiGridSpec BuildWorldGridSpec(int width)
 
 } // namespace
 
-NewWorldScreen::NewWorldScreen(IGuiMenuHost* host)
+UNewWorldScreen::UNewWorldScreen(IGuiMenuHost* host)
     : host_(host)
 {
 }
 
-void NewWorldScreen::OnCreate()
+void UNewWorldScreen::OnCreate()
 {
     if (!host_ || !worldForm_) {
         return;
@@ -46,7 +46,7 @@ void NewWorldScreen::OnCreate()
     host_->SaveIfNeededAndProceed(create);
 }
 
-void NewWorldScreen::Build(GuiContext& ctx)
+void UNewWorldScreen::Build(UGuiContext& ctx)
 {
     int w = ctx.GetRenderer().GetWindowWidth();
     int h = ctx.GetRenderer().GetWindowHeight();
@@ -58,21 +58,21 @@ void NewWorldScreen::Build(GuiContext& ctx)
     const GuiTheme& theme = ctx.GetTheme();
     const ProceduralSettings procSnap = host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
 
-    auto backdrop = std::make_unique<GuiPanel>(&theme);
+    auto backdrop = std::make_unique<UGuiPanel>(&theme);
     backdrop->SetBounds({0, 0, viewportW_, viewportH_});
 
     const int winW = std::min(820, viewportW_ - 32);
     const int winH = std::min(500, viewportH_ - 32);
-    auto window = std::make_unique<GuiWindow>(&theme, "New World");
-    window_ = window.get();
+    auto window = std::make_unique<UGuiWindow>(&theme, "New World");
+    Window = window.get();
     window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
 
-    auto frame = std::make_unique<GuiDialogFrame>(&theme);
+    auto frame = std::make_unique<UGuiDialogFrame>(&theme);
     dialogFrame_ = frame.get();
     frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
-    GuiPanel& body = frame->AddScrollPage();
+    UGuiPanel& body = frame->AddScrollPage();
     worldPage_ = &body;
-    worldForm_ = std::make_unique<WorldGenSettingsForm>(&theme);
+    worldForm_ = std::make_unique<UWorldGenSettingsForm>(&theme);
     worldForm_->SetSettings(procSnap);
     worldForm_->BuildInto(body);
     frame->SetScrollPageLayout(
@@ -80,9 +80,9 @@ void NewWorldScreen::Build(GuiContext& ctx)
         [this](const GuiRect& area) { return MeasureWorldPageHeight(area); },
         [this](const GuiRect& area) { LayoutWorldPage(area); });
 
-    frame->AddFooterButton(std::make_unique<GuiButton>(&theme, "Create"))
+    frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Create"))
         .SetOnClick([this]() { OnCreate(); });
-    frame->AddFooterButton(std::make_unique<GuiButton>(&theme, "Cancel"))
+    frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Cancel"))
         .SetOnClick([this]() {
             if (host_) {
                 host_->ReturnToMainMenu();
@@ -95,25 +95,25 @@ void NewWorldScreen::Build(GuiContext& ctx)
     Relayout();
 }
 
-void NewWorldScreen::OnViewportChanged(int width, int height)
+void UNewWorldScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
     Relayout();
 }
 
-void NewWorldScreen::Relayout()
+void UNewWorldScreen::Relayout()
 {
-    if (!window_ || !dialogFrame_) {
+    if (!Window || !dialogFrame_) {
         return;
     }
     const int winW = std::min(820, viewportW_ - 32);
     const int winH = std::min(500, viewportH_ - 32);
-    window_->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
-    dialogFrame_->SetBounds(window_->GetClientArea());
+    Window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+    dialogFrame_->SetBounds(Window->GetClientArea());
     dialogFrame_->LayoutFrame();
 }
 
-int NewWorldScreen::MeasureWorldPageHeight(const GuiRect& area) const
+int UNewWorldScreen::MeasureWorldPageHeight(const GuiRect& area) const
 {
     if (!worldForm_) {
         return 0;
@@ -122,7 +122,7 @@ int NewWorldScreen::MeasureWorldPageHeight(const GuiRect& area) const
     return worldForm_->MeasureGridHeight(area, spec);
 }
 
-void NewWorldScreen::LayoutWorldPage(const GuiRect& area) const
+void UNewWorldScreen::LayoutWorldPage(const GuiRect& area) const
 {
     if (!worldForm_) {
         return;

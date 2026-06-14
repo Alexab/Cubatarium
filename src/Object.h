@@ -14,44 +14,44 @@
 
 namespace cutum {
 
-class Object;
+class UObject;
 
-class ObjectPrototype
+class UObjectPrototype
 {
 public:
- ObjectPrototype() = default;
- ObjectPrototype(const ObjectPrototype&) = default;
- ObjectPrototype(const std::string& type_name, uint64_t type_id, std::shared_ptr<Object> sample);
+ UObjectPrototype() = default;
+ UObjectPrototype(const UObjectPrototype&) = default;
+ UObjectPrototype(const std::string& type_name, uint64_t type_id, std::shared_ptr<UObject> sample);
 
  const std::string& GetTypeName() const;
  uint64_t GetTypeId() const;
- std::shared_ptr<Object> GetSample() const;
+ std::shared_ptr<UObject> GetSample() const;
 
- std::shared_ptr<Object> New();
+ std::shared_ptr<UObject> New();
 
 private:
  std::string TypeName;
  uint64_t TypeId;
 
- std::shared_ptr<Object> Sample;
+ std::shared_ptr<UObject> Sample;
 };
 
-class Object
+class UObject
 {
-friend class ObjectPrototype;
+friend class UObjectPrototype;
 public:
- Object();
- Object(const Object &copy) = delete;
- Object& operator = (const Object &copy) = delete;
+ UObject();
+ UObject(const UObject &copy) = delete;
+ UObject& operator = (const UObject &copy) = delete;
 
- virtual std::shared_ptr<Object> New();
- virtual void Copy(std::shared_ptr<Object> copy);
+ virtual std::shared_ptr<UObject> New();
+ virtual void Copy(std::shared_ptr<UObject> copy);
 
  uint64_t GetObjectId() const;
  uint64_t GetObjectTypeId() const;
 
- virtual std::vector<std::shared_ptr<Cube>>& GetCubes();
- virtual bool CheckCollision(Object &object);
+ virtual std::vector<std::shared_ptr<UCube>>& GetCubes();
+ virtual bool CheckCollision(UObject &object);
  virtual bool CheckCollision(const glm::vec3& position, float size = 1.0); // QVector3D -> glm::vec3
  virtual bool CheckRayIntersection(const glm::vec3& position, const glm::vec3& front, std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t>> &distance_map) const; // QVector3D -> glm::vec3
 
@@ -63,7 +63,7 @@ protected:
  void UpdatePose();
  void SetObjectTypeId(uint64_t value);
 protected:
- std::vector<std::shared_ptr<Cube>> Cubes;
+ std::vector<std::shared_ptr<UCube>> Cubes;
  glm::mat4 Pose; // QMatrix4x4 -> glm::mat4
  uint64_t ObjectId;
  uint64_t ObjectTypeId;

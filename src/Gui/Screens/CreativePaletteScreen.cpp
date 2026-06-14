@@ -13,7 +13,7 @@
 
 namespace cutum {
 
-CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, GameSession* session,
+UCreativePaletteScreen::UCreativePaletteScreen(IContentCatalog* catalog, UGameSession* session,
                                              IGuiIconSource* icons)
     : catalog_(catalog)
     , session_(session)
@@ -21,13 +21,13 @@ CreativePaletteScreen::CreativePaletteScreen(IContentCatalog* catalog, GameSessi
 {
 }
 
-bool CreativePaletteScreen::PickSlot(int x, int y, SlotAddress& out) const
+bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress& out) const
 {
     if (!visible_) {
         return false;
     }
     for (size_t i = 0; i < gridSlots_.size(); ++i) {
-        const GuiSlot* slot = gridSlots_[i];
+        const UGuiSlot* slot = gridSlots_[i];
         if (!slot || !slot->IsVisible() || !slot->GetBounds().Contains(x, y)) {
             continue;
         }
@@ -44,7 +44,7 @@ bool CreativePaletteScreen::PickSlot(int x, int y, SlotAddress& out) const
     return false;
 }
 
-void CreativePaletteScreen::SetVisible(bool visible)
+void UCreativePaletteScreen::SetVisible(bool visible)
 {
     visible_ = visible;
     if (root_) {
@@ -52,19 +52,19 @@ void CreativePaletteScreen::SetVisible(bool visible)
     }
 }
 
-void CreativePaletteScreen::Toggle()
+void UCreativePaletteScreen::Toggle()
 {
     SetVisible(!visible_);
 }
 
-void CreativePaletteScreen::Build(GuiContext& ctx)
+void UCreativePaletteScreen::Build(UGuiContext& ctx)
 {
     theme_ = &ctx.GetTheme();
-    auto panel = std::make_unique<GuiPanel>(theme_);
+    auto panel = std::make_unique<UGuiPanel>(theme_);
     panel->SetVisible(false);
     panel_ = panel.get();
 
-    auto mainTabs = std::make_unique<GuiTabBar>(theme_);
+    auto mainTabs = std::make_unique<UGuiTabBar>(theme_);
     mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
     mainTabs_ = mainTabs.get();
     mainTabs->SetOnTabChanged([this](int tab) {
@@ -73,10 +73,10 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
             kind_ = ContentKind::Block;
             break;
         case 1:
-            kind_ = ContentKind::Object;
+            kind_ = ContentKind::UObject;
             break;
         case 2:
-            kind_ = ContentKind::Creature;
+            kind_ = ContentKind::UCreature;
             break;
         default:
             kind_ = ContentKind::Skin;
@@ -90,7 +90,7 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
         built_ = false;
     });
 
-    auto subTabs = std::make_unique<GuiTabBar>(theme_);
+    auto subTabs = std::make_unique<UGuiTabBar>(theme_);
     subTabs_ = subTabs.get();
     subTabs->SetOnTabChanged([this](int tab) {
         if (catalog_) {
@@ -103,7 +103,7 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
         built_ = false;
     });
 
-    auto scroll = std::make_unique<GuiScrollView>(theme_);
+    auto scroll = std::make_unique<UGuiScrollView>(theme_);
     scroll_ = scroll.get();
 
     panel->AddChild(std::move(mainTabs));
@@ -115,13 +115,13 @@ void CreativePaletteScreen::Build(GuiContext& ctx)
     built_ = false;
 }
 
-void CreativePaletteScreen::OnViewportChanged(int width, int height)
+void UCreativePaletteScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
+    UGuiScreenBase::OnViewportChanged(width, height);
     RelayoutPanel();
 }
 
-void CreativePaletteScreen::RelayoutPanel()
+void UCreativePaletteScreen::RelayoutPanel()
 {
     if (!panel_) {
         return;
@@ -148,7 +148,7 @@ void CreativePaletteScreen::RelayoutPanel()
     }
 }
 
-void CreativePaletteScreen::Update(double /*dt*/)
+void UCreativePaletteScreen::Update(double /*dt*/)
 {
     if (!visible_ || !panel_ || !catalog_ || !theme_) {
         return;
@@ -184,7 +184,7 @@ void CreativePaletteScreen::Update(double /*dt*/)
     }
 }
 
-void CreativePaletteScreen::RebuildGrid()
+void UCreativePaletteScreen::RebuildGrid()
 {
     if (!scroll_ || !catalog_ || !session_ || !theme_) {
         return;
@@ -197,7 +197,7 @@ void CreativePaletteScreen::RebuildGrid()
         catalog_->GetEntries(kind_, activeTypeId_.empty() ? "misc" : activeTypeId_);
     const int slotSize = theme_->hotbarSlotSize;
     for (size_t i = 0; i < entries.size(); ++i) {
-        auto slot = std::make_unique<GuiSlot>(theme_, slotSize);
+        auto slot = std::make_unique<UGuiSlot>(theme_, slotSize);
         slot->SetBounds({0, 0, slotSize, slotSize});
         const std::string entryId = entries[i].id;
         slot->SetSelected(entryId == selectedEntryId_);
@@ -205,9 +205,9 @@ void CreativePaletteScreen::RebuildGrid()
             GLuint tex = 0;
             if (kind_ == ContentKind::Block) {
                 tex = icons_->GetBlockIconTexture(entryId);
-            } else if (kind_ == ContentKind::Object) {
+            } else if (kind_ == ContentKind::UObject) {
                 tex = icons_->GetPrefabIconTexture(entryId);
-            } else if (kind_ == ContentKind::Creature) {
+            } else if (kind_ == ContentKind::UCreature) {
                 tex = icons_->GetCreatureIconTexture(entryId);
             } else if (kind_ == ContentKind::Skin) {
                 tex = icons_->GetSkinIconTexture(entryId);
@@ -221,11 +221,11 @@ void CreativePaletteScreen::RebuildGrid()
         case ContentKind::Block:
             entry.kind = InventoryEntryKind::Block;
             break;
-        case ContentKind::Object:
-            entry.kind = InventoryEntryKind::Object;
+        case ContentKind::UObject:
+            entry.kind = InventoryEntryKind::UObject;
             break;
-        case ContentKind::Creature:
-            entry.kind = InventoryEntryKind::Creature;
+        case ContentKind::UCreature:
+            entry.kind = InventoryEntryKind::UCreature;
             break;
         case ContentKind::Skin:
             entry.kind = InventoryEntryKind::Skin;
@@ -250,12 +250,12 @@ void CreativePaletteScreen::RebuildGrid()
                 session_->BeginDragFromSlot(address, entry);
             }
         });
-        GuiSlot* ptr = static_cast<GuiSlot*>(scroll_->Content().AddChild(std::move(slot)));
+        UGuiSlot* ptr = static_cast<UGuiSlot*>(scroll_->Content().AddChild(std::move(slot)));
         gridSlots_.push_back(ptr);
         gridEntryIds_.push_back(entryId);
     }
 
-    scroll_->SetAfterScrollLayout([this](GuiScrollView&) {
+    scroll_->SetAfterScrollLayout([this](UGuiScrollView&) {
         LayoutGridInScroll();
     });
     scroll_->LayoutContent();
@@ -263,7 +263,7 @@ void CreativePaletteScreen::RebuildGrid()
     built_ = true;
 }
 
-void CreativePaletteScreen::LayoutGridInScroll()
+void UCreativePaletteScreen::LayoutGridInScroll()
 {
     if (!scroll_ || !theme_) {
         return;
@@ -280,7 +280,7 @@ void CreativePaletteScreen::LayoutGridInScroll()
     int x = contentRect.x;
     int y = contentTop;
     for (size_t i = 0; i < gridSlots_.size(); ++i) {
-        GuiSlot* slot = gridSlots_[i];
+        UGuiSlot* slot = gridSlots_[i];
         if (!slot) {
             continue;
         }

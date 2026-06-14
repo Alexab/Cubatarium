@@ -43,10 +43,10 @@ public:
     void SetWindowSize(int width, int height);
 
 private:
-    GLuint textShader;
+    GLuint TextShader;
     GLuint VAO, VBO;
     std::map<GLchar, Character> characters;
-    int windowWidth, windowHeight;
+    int WindowWidth, WindowHeight;
     
     // FreeType
     FT_Library ft;

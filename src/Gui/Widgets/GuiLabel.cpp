@@ -4,13 +4,13 @@
 
 namespace cutum {
 
-GuiLabel::GuiLabel(const GuiTheme* theme, std::string text)
+UGuiLabel::UGuiLabel(const GuiTheme* theme, std::string text)
     : theme_(theme)
     , text_(std::move(text))
 {
 }
 
-void GuiLabel::Draw(GuiRenderer& renderer)
+void UGuiLabel::Draw(UGuiRenderer& renderer)
 {
     if (!visible_ || !theme_ || text_.empty()) {
         return;

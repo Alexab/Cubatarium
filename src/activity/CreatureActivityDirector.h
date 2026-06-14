@@ -12,7 +12,7 @@
 
 namespace cutum {
 
-class CreatureActivityDirector {
+class UCreatureActivityDirector {
  public:
  void RegisterAgent(std::unique_ptr<ICreatureActivityAgent> agent);
  void Clear();

@@ -9,7 +9,7 @@
 
 namespace cutum {
 
-class CommandRegistry {
+class UCommandRegistry {
 public:
     using CommandHandler = std::function<CommandResult(const std::vector<std::string>&)>;
 

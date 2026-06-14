@@ -8,7 +8,7 @@
 
 namespace cutum {
 
-class CreatureDefinitionStorage {
+class UCreatureDefinitionStorage {
 public:
  void Load(const std::string& folder);
  const CreatureDefinition* Get(const std::string& id) const;

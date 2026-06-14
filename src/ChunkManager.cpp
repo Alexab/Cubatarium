@@ -3,7 +3,7 @@
 
 namespace cutum {
 
-glm::ivec3 ChunkManager::WorldToChunk(glm::ivec3 worldPos)
+glm::ivec3 UChunkManager::WorldToChunk(glm::ivec3 worldPos)
 {
  return glm::ivec3(
      FloorDiv(worldPos.x, CHUNK_SIZE),
@@ -11,7 +11,7 @@ glm::ivec3 ChunkManager::WorldToChunk(glm::ivec3 worldPos)
      FloorDiv(worldPos.z, CHUNK_SIZE));
 }
 
-glm::ivec3 ChunkManager::WorldToLocal(glm::ivec3 worldPos)
+glm::ivec3 UChunkManager::WorldToLocal(glm::ivec3 worldPos)
 {
  return glm::ivec3(
      PositiveMod(worldPos.x, CHUNK_SIZE),
@@ -19,32 +19,32 @@ glm::ivec3 ChunkManager::WorldToLocal(glm::ivec3 worldPos)
      PositiveMod(worldPos.z, CHUNK_SIZE));
 }
 
-BlockId ChunkManager::GetBlock(glm::ivec3 worldPos) const
+BlockId UChunkManager::GetBlock(glm::ivec3 worldPos) const
 {
  const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
- auto it = chunks_.find(chunkCoord);
- if (it == chunks_.end()) {
+ auto it = Chunks.find(chunkCoord);
+ if (it == Chunks.end()) {
   return BLOCK_AIR;
  }
  return it->second->GetBlockLocal(WorldToLocal(worldPos));
 }
 
-void ChunkManager::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
- Chunk& chunk = GetOrCreateChunk(WorldToChunk(worldPos));
+ UChunk& chunk = GetOrCreateChunk(WorldToChunk(worldPos));
  chunk.SetBlockLocal(WorldToLocal(worldPos), id);
 }
 
-void ChunkManager::Clear()
+void UChunkManager::Clear()
 {
- chunks_.clear();
+ Chunks.clear();
 }
 
-void ChunkManager::ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& fn) const
+void UChunkManager::ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& fn) const
 {
- for (const auto& entry : chunks_) {
+ for (const auto& entry : Chunks) {
   const glm::ivec3 chunkCoord = entry.first;
-  const Chunk& chunk = *entry.second;
+  const UChunk& chunk = *entry.second;
   for (int z = 0; z < CHUNK_SIZE; ++z) {
    for (int y = 0; y < CHUNK_SIZE; ++y) {
     for (int x = 0; x < CHUNK_SIZE; ++x) {
@@ -64,50 +64,50 @@ void ChunkManager::ForEachBlock(const std::function<void(glm::ivec3, BlockId)>& 
  }
 }
 
-Chunk* ChunkManager::GetChunk(glm::ivec3 chunkCoord)
+UChunk* UChunkManager::GetChunk(glm::ivec3 chunkCoord)
 {
- auto it = chunks_.find(chunkCoord);
- if (it == chunks_.end()) {
+ auto it = Chunks.find(chunkCoord);
+ if (it == Chunks.end()) {
   return nullptr;
  }
  return it->second.get();
 }
 
-const Chunk* ChunkManager::GetChunk(glm::ivec3 chunkCoord) const
+const UChunk* UChunkManager::GetChunk(glm::ivec3 chunkCoord) const
 {
- auto it = chunks_.find(chunkCoord);
- if (it == chunks_.end()) {
+ auto it = Chunks.find(chunkCoord);
+ if (it == Chunks.end()) {
   return nullptr;
  }
  return it->second.get();
 }
 
-bool ChunkManager::HasChunk(glm::ivec3 chunkCoord) const
+bool UChunkManager::HasChunk(glm::ivec3 chunkCoord) const
 {
- return chunks_.find(chunkCoord) != chunks_.end();
+ return Chunks.find(chunkCoord) != Chunks.end();
 }
 
-void ChunkManager::ForEachChunk(const std::function<void(const Chunk&)>& fn) const
+void UChunkManager::ForEachChunk(const std::function<void(const UChunk&)>& fn) const
 {
- for (const auto& entry : chunks_) {
+ for (const auto& entry : Chunks) {
   fn(*entry.second);
  }
 }
 
-void ChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
+void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
- chunks_.erase(chunkCoord);
+ Chunks.erase(chunkCoord);
 }
 
-Chunk& ChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
+UChunk& UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
 {
- auto it = chunks_.find(chunkCoord);
- if (it != chunks_.end()) {
+ auto it = Chunks.find(chunkCoord);
+ if (it != Chunks.end()) {
   return *it->second;
  }
- auto chunk = std::make_unique<Chunk>(chunkCoord);
- Chunk& ref = *chunk;
- chunks_.emplace(chunkCoord, std::move(chunk));
+ auto chunk = std::make_unique<UChunk>(chunkCoord);
+ UChunk& ref = *chunk;
+ Chunks.emplace(chunkCoord, std::move(chunk));
  return ref;
 }
 

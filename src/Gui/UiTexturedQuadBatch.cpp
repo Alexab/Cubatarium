@@ -12,7 +12,7 @@ UiTexturedQuadBatch::~UiTexturedQuadBatch()
     Shutdown();
 }
 
-bool UiTexturedQuadBatch::Initialize(std::shared_ptr<ShaderProgram> shader)
+bool UiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
 {
     if (!shader || !shader->IsValid()) {
         return false;
@@ -56,10 +56,10 @@ void UiTexturedQuadBatch::Shutdown()
     initialized_ = false;
 }
 
-void UiTexturedQuadBatch::Begin(int windowWidth, int windowHeight)
+void UiTexturedQuadBatch::Begin(int WindowWidth, int WindowHeight)
 {
-    windowWidth_ = windowWidth;
-    windowHeight_ = windowHeight;
+    windowWidth_ = WindowWidth;
+    windowHeight_ = WindowHeight;
     boundTexture_ = 0;
 
     GLboolean depthTest;

@@ -15,12 +15,12 @@ enum class GuiScrollbarMode {
 };
 
 /// Scrollable viewport with clipped content, scrollbar, wheel and keyboard scrolling.
-class GuiScrollView : public GuiWidget {
+class UGuiScrollView : public UGuiWidget {
 public:
-    explicit GuiScrollView(const GuiTheme* theme);
+    explicit UGuiScrollView(const GuiTheme* theme);
 
-    GuiPanel& Content();
-    const GuiPanel& Content() const;
+    UGuiPanel& Content();
+    const UGuiPanel& Content() const;
 
     void LayoutContent(int spacing = 6, int padding = 0);
     int ContentHeight() const { return contentHeight_; }
@@ -29,9 +29,9 @@ public:
     int GetScrollY() const { return scrollY_; }
     int MaxScrollY() const;
 
-    bool ContainsWidget(const GuiWidget* widget) const;
-    void EnsureWidgetVisible(const GuiWidget& widget);
-    using AfterScrollLayoutFn = std::function<void(GuiScrollView&)>;
+    bool ContainsWidget(const UGuiWidget* widget) const;
+    void EnsureWidgetVisible(const UGuiWidget& widget);
+    using AfterScrollLayoutFn = std::function<void(UGuiScrollView&)>;
     void SetAfterScrollLayout(AfterScrollLayoutFn callback);
     void SetScrollbarMode(GuiScrollbarMode mode) { scrollbarMode_ = mode; }
     GuiScrollbarMode GetScrollbarMode() const { return scrollbarMode_; }
@@ -40,9 +40,9 @@ public:
         scrollbarMode_ = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
     }
 
-    void Draw(GuiRenderer& renderer) override;
-    GuiWidget* HitTest(int x, int y) override;
-    GuiWidget* HitTestFocusable(int x, int y) override;
+    void Draw(UGuiRenderer& renderer) override;
+    UGuiWidget* HitTest(int x, int y) override;
+    UGuiWidget* HitTestFocusable(int x, int y) override;
     bool OnMouseDown(const GuiMouseEvent& event) override;
     bool OnMouseUp(const GuiMouseEvent& event) override;
     bool OnMouseMove(const GuiMouseEvent& event) override;
@@ -50,7 +50,7 @@ public:
     bool OnScroll(const GuiScrollEvent& event) override;
     bool OnKey(const GuiKeyEvent& event) override;
     bool ScrollAtPoint(int x, int y, const GuiScrollEvent& event) override;
-    void CollectFocusables(std::vector<GuiWidget*>& out) override;
+    void CollectFocusables(std::vector<UGuiWidget*>& out) override;
 
 private:
     bool HandleKeyScroll(const GuiKeyEvent& event);
@@ -58,10 +58,10 @@ private:
     GuiRect ScrollbarTrackRect() const;
     GuiRect ScrollbarThumbRect() const;
     void ClampScroll();
-    void DrawScrollbar(GuiRenderer& renderer);
+    void DrawScrollbar(UGuiRenderer& renderer);
 
     const GuiTheme* theme_;
-    GuiPanel content_;
+    UGuiPanel content_;
     int scrollY_{0};
     int contentHeight_{0};
     int layoutSpacing_{6};

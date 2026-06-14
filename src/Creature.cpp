@@ -12,82 +12,82 @@
 
 namespace cutum {
 
-Creature::Creature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm::vec3 eyeOffset)
-    : id_(id)
-    , typeId_(std::move(typeId))
-    , bodyOrigin_(bodyOrigin)
-    , eyeOffset_(eyeOffset)
+UCreature::UCreature(CreatureId id, std::string typeId, glm::vec3 bodyOrigin, glm::vec3 eyeOffset)
+    : Id(id)
+    , TypeId(std::move(typeId))
+    , BodyOrigin(bodyOrigin)
+    , EyeOffset(eyeOffset)
 {
  bounds_.profile.restSizeBlocks = glm::vec3(0.6f, 1.8f, 0.6f);
  bounds_.profile.minSizeBlocks = glm::vec3(0.6f, 1.5f, 0.6f);
  bounds_.profile.maxSizeBlocks = glm::vec3(0.6f, 1.8f, 0.6f);
  bounds_.currentSizeBlocks = bounds_.profile.restSizeBlocks;
  locomotion_.Reset();
- lastBodyOrigin_ = bodyOrigin_;
+ lastBodyOrigin_ = BodyOrigin;
 }
 
-Creature::~Creature() = default;
+UCreature::~UCreature() = default;
 
-void Creature::SetVisual(std::unique_ptr<ICreatureVisual> visual)
+void UCreature::SetVisual(std::unique_ptr<ICreatureVisual> visual)
 {
  visual_ = std::move(visual);
 }
 
-glm::vec3 Creature::GetEyePosition() const
+glm::vec3 UCreature::GetEyePosition() const
 {
  return GetLocomotionEye();
 }
 
-glm::vec3 Creature::GetLocomotionEye() const
+glm::vec3 UCreature::GetLocomotionEye() const
 {
- return glm::vec3(bodyOrigin_.x, bodyOrigin_.y + locomotion_.GetViewEyeHeight(), bodyOrigin_.z);
+ return glm::vec3(BodyOrigin.x, BodyOrigin.y + locomotion_.GetViewEyeHeight(), BodyOrigin.z);
 }
 
-void Creature::SetOrientation(float yaw, float pitch)
+void UCreature::SetOrientation(float yaw, float pitch)
 {
  yaw_ = yaw;
  pitch_ = pitch;
 }
 
-void Creature::SyncBoundsFromStance()
+void UCreature::SyncBoundsFromStance()
 {
  bounds_ = LerpBoundsStance(bounds_, locomotion_.GetStanceBlend());
- locomotion_.SetCollisionProfile(bounds_.profile.restSizeBlocks, eyeOffset_.y);
+ locomotion_.SetCollisionProfile(bounds_.profile.restSizeBlocks, EyeOffset.y);
 }
 
-CollisionVolume Creature::GetCollisionVolume() const
+CollisionVolume UCreature::GetCollisionVolume() const
 {
- return CollisionVolumeFromBody(bodyOrigin_, bounds_.profile.restSizeBlocks);
+ return CollisionVolumeFromBody(BodyOrigin, bounds_.profile.restSizeBlocks);
 }
 
-void Creature::SyncFeetFromLocomotion(const UWorld& world, glm::vec3& eyeAfterLocomotion)
+void UCreature::SyncFeetFromLocomotion(const UWorld& world, glm::vec3& eyeAfterLocomotion)
 {
- bodyOrigin_.x = eyeAfterLocomotion.x;
- bodyOrigin_.z = eyeAfterLocomotion.z;
+ BodyOrigin.x = eyeAfterLocomotion.x;
+ BodyOrigin.z = eyeAfterLocomotion.z;
 
  const bool useGround = locomotion_.GetMode() == CreatureMovementMode::Walking
                         && locomotion_.IsFeetAnchored() && locomotion_.IsOnGround();
  if (useGround) {
-  const float refFeetY = FeetYFromEye(eyeAfterLocomotion, eyeOffset_.y);
-  const int gx = WorldCoordToBlockIndex(bodyOrigin_.x);
-  const int gz = WorldCoordToBlockIndex(bodyOrigin_.z);
+  const float refFeetY = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
+  const int gx = WorldCoordToBlockIndex(BodyOrigin.x);
+  const int gz = WorldCoordToBlockIndex(BodyOrigin.z);
   const PlayerCapsule cap =
-      PlayerCapsule::FromCreatureBlocks(bounds_.currentSizeBlocks, eyeOffset_.y);
+      PlayerCapsule::FromCreatureBlocks(bounds_.currentSizeBlocks, EyeOffset.y);
   if (const std::optional<float> groundY = world.QueryGroundFeetYUnder(gx, gz, refFeetY)) {
-   bodyOrigin_.y = *groundY;
-   eyeAfterLocomotion.y = bodyOrigin_.y + locomotion_.GetViewEyeHeight();
+   BodyOrigin.y = *groundY;
+   eyeAfterLocomotion.y = BodyOrigin.y + locomotion_.GetViewEyeHeight();
    locomotion_.SyncFeetAnchorFromView(*groundY, true);
    return;
   }
  }
 
- bodyOrigin_.y = FeetYFromEye(eyeAfterLocomotion, eyeOffset_.y);
+ BodyOrigin.y = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
  if (locomotion_.IsFeetAnchored()) {
-  locomotion_.SyncFeetAnchorFromView(bodyOrigin_.y, true);
+  locomotion_.SyncFeetAnchorFromView(BodyOrigin.y, true);
  }
 }
 
-void Creature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
+void UCreature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
                                     const CreatureLocomotionCapabilities& caps)
 {
  const float prevPhase = locomotionFacts_.animPhase;
@@ -107,15 +107,15 @@ void Creature::RebuildLocomotionFacts(const CreatureLocomotionRawInput& input,
  FinalizeLocomotionFacts(locomotionFacts_, caps, deriveInput, walkCycleHz_, input.dt);
 }
 
-void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionController& controller,
+void UCreature::RebuildLocomotionFactsFromController(const UCreatureLocomotionController& controller,
                                                   const CreatureLocomotionCapabilities& caps,
                                                   float dt, float horizontalSpeedOverride)
 {
  const float prevPhase = locomotionFacts_.animPhase;
  CreatureLocomotionRawInput input;
  input.locomotion = &controller;
- input.bodyOriginBefore = bodyOrigin_;
- input.bodyOriginAfter = bodyOrigin_;
+ input.bodyOriginBefore = BodyOrigin;
+ input.bodyOriginAfter = BodyOrigin;
  input.dt = dt;
  CreatureLocomotionFacts raw;
  FillTerrestrialRawFacts(raw, input, locomotionArchetype_, yaw_, pitch_);
@@ -131,14 +131,14 @@ void Creature::RebuildLocomotionFactsFromController(const CreatureLocomotionCont
  FinalizeLocomotionFacts(locomotionFacts_, caps, input, walkCycleHz_, dt);
 }
 
-void Creature::ExecuteIntent(UWorld& world, float dt)
+void UCreature::ExecuteIntent(UWorld& world, float dt)
 {
- const glm::vec3 bodyOriginBefore = bodyOrigin_;
+ const glm::vec3 bodyOriginBefore = BodyOrigin;
 
  if (!possessed_ && locomotion_.GetMode() == CreatureMovementMode::Walking) {
   glm::vec3 eye = GetLocomotionEye();
   CreatureInput emptyInput;
-  locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, id_);
+  locomotion_.UpdateLocomotion(&world, eye, emptyInput, dt, Id);
   SyncFeetFromLocomotion(world, eye);
   SyncBoundsFromStance();
  }
@@ -153,12 +153,12 @@ void Creature::ExecuteIntent(UWorld& world, float dt)
  if (intent_.moveDirWorld != glm::vec3(0.0f)) {
   glm::vec3 delta = intent_.moveDirWorld * intent_.moveSpeed * dt;
   delta.y = 0.0f;
-  bodyOrigin_ = world.ResolveMovementBody(bodyOrigin_, delta, bounds_.profile.restSizeBlocks, id_);
+  BodyOrigin = world.ResolveMovementBody(BodyOrigin, delta, bounds_.profile.restSizeBlocks, Id);
  }
 
  if (!possessed_) {
   glm::vec2 faceDir(intent_.moveDirWorld.x, intent_.moveDirWorld.z);
-  const glm::vec3 xzDelta = bodyOrigin_ - bodyOriginBefore;
+  const glm::vec3 xzDelta = BodyOrigin - bodyOriginBefore;
   const glm::vec2 xzActual(xzDelta.x, xzDelta.z);
   if (glm::length(xzActual) > 1e-5f) {
    faceDir = xzActual;
@@ -181,17 +181,17 @@ void Creature::ExecuteIntent(UWorld& world, float dt)
  CreatureLocomotionRawInput rawInput;
  rawInput.locomotion = &locomotion_;
  rawInput.bodyOriginBefore = bodyOriginBefore;
- rawInput.bodyOriginAfter = bodyOrigin_;
+ rawInput.bodyOriginAfter = BodyOrigin;
  rawInput.dt = dt;
  RebuildLocomotionFacts(rawInput, locomotion_.GetCapabilities());
- lastBodyOrigin_ = bodyOrigin_;
+ lastBodyOrigin_ = BodyOrigin;
 }
 
-void Creature::UpdateControlled(UWorld& world, const CreatureInput& input, float dt)
+void UCreature::UpdateControlled(UWorld& world, const CreatureInput& input, float dt)
 {
  ClearIntent();
  glm::vec3 eye = GetLocomotionEye();
- locomotion_.UpdateLocomotion(&world, eye, input, dt, id_);
+ locomotion_.UpdateLocomotion(&world, eye, input, dt, Id);
  SyncFeetFromLocomotion(world, eye);
  SyncBoundsFromStance();
 }

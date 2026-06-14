@@ -26,7 +26,7 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts& out, const CreatureLocomot
  if (!input.locomotion) {
   return;
  }
- const CreatureLocomotionController& loc = *input.locomotion;
+ const UCreatureLocomotionController& loc = *input.locomotion;
  out.mode = loc.GetMode();
  out.onGround = loc.IsOnGround();
  out.stanceBlend = loc.GetStanceBlend();

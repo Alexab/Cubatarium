@@ -5,11 +5,11 @@
 
 namespace cutum {
 
-WorldCreatureActivitySink::WorldCreatureActivitySink(UWorld& world) : world_(world) {}
+UWorldCreatureActivitySink::UWorldCreatureActivitySink(UWorld& world) : World(world) {}
 
-std::optional<CreatureActivityView> WorldCreatureActivitySink::GetCreatureView(CreatureId id) const
+std::optional<CreatureActivityView> UWorldCreatureActivitySink::GetCreatureView(CreatureId id) const
 {
- const Creature* creature = world_.GetCreature(id);
+ const UCreature* creature = World.GetCreature(id);
  if (!creature) {
   return std::nullopt;
  }
@@ -19,20 +19,20 @@ std::optional<CreatureActivityView> WorldCreatureActivitySink::GetCreatureView(C
  view.typeId = creature->GetTypeId();
  view.possessed = creature->IsPossessed();
  view.isPlayerCharacter = creature->IsPlayerCharacter();
- if (const CreatureDefinition* def = world_.GetCreatureDefinition(creature->GetTypeId())) {
+ if (const CreatureDefinition* def = World.GetCreatureDefinition(creature->GetTypeId())) {
   view.behaviorId = def->behavior.id;
  }
  return view;
 }
 
-std::optional<CreatureBehaviorSnapshot> WorldCreatureActivitySink::GetBehaviorSnapshot(
+std::optional<CreatureBehaviorSnapshot> UWorldCreatureActivitySink::GetBehaviorSnapshot(
     CreatureId id) const
 {
- const Creature* creature = world_.GetCreature(id);
+ const UCreature* creature = World.GetCreature(id);
  if (!creature) {
   return std::nullopt;
  }
- const CreatureDefinition* def = world_.GetCreatureDefinition(creature->GetTypeId());
+ const CreatureDefinition* def = World.GetCreatureDefinition(creature->GetTypeId());
  if (!def) {
   return std::nullopt;
  }
@@ -42,9 +42,9 @@ std::optional<CreatureBehaviorSnapshot> WorldCreatureActivitySink::GetBehaviorSn
  return snapshot;
 }
 
-void WorldCreatureActivitySink::SetIntent(CreatureId id, const CreatureIntent& intent)
+void UWorldCreatureActivitySink::SetIntent(CreatureId id, const CreatureIntent& intent)
 {
- if (Creature* creature = world_.GetCreature(id)) {
+ if (UCreature* creature = World.GetCreature(id)) {
   creature->SetIntent(intent);
  }
 }

@@ -11,13 +11,13 @@
 
 namespace cutum {
 
-class BlockRegistry;
+class UBlockRegistry;
 
 float GreedyBatchViewDistance(const GreedyMeshBatch& batch, const glm::vec3& cameraPos);
 int TransparentBatchLayer(BlockRenderStyle style);
 void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch>& batches,
                                   const glm::vec3& cameraPos,
-                                  const BlockRegistry& registry);
+                                  const UBlockRegistry& registry);
 uint64_t GreedyTransparentSortRevision(const glm::vec3& cameraPos);
 
 } // namespace cutum
