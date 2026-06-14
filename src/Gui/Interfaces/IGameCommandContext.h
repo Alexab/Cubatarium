@@ -4,18 +4,21 @@
 #include <string>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-struct CommandResult {
-    bool success{false};
-    std::string text;
+struct CommandResult
+{
+  bool success{false};
+  std::string text;
 };
 
-class IGameCommandContext {
+class IGameCommandContext
+{
 public:
-    virtual ~IGameCommandContext() = default;
-    virtual CommandResult Execute(const std::vector<std::string>& args) = 0;
-    virtual void AddChatLine(const std::string& line) = 0;
+  virtual ~IGameCommandContext() = default;
+  virtual CommandResult Execute(const std::vector<std::string> &args) = 0;
+  virtual void AddChatLine(const std::string &line) = 0;
 };
 
 } // namespace cutum

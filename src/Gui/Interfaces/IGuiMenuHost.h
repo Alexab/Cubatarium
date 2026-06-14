@@ -5,28 +5,33 @@
 #include <string>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
 struct AppSettingsSnapshot;
 struct ProceduralSettings;
 
-class IGuiMenuHost {
+class IGuiMenuHost
+{
 public:
-    virtual ~IGuiMenuHost() = default;
+  virtual ~IGuiMenuHost() = default;
 
-    virtual void ReturnToMainMenu() = 0;
-    /// Saves the active world if a session is running, then runs @p proceed next frame.
-    virtual void SaveIfNeededAndProceed(std::function<void()> proceed) = 0;
+  virtual void ReturnToMainMenu() = 0;
+  /// Saves the active world if a session is running, then runs @p proceed next
+  /// frame.
+  virtual void SaveIfNeededAndProceed(std::function<void()> proceed) = 0;
 
-    virtual AppSettingsSnapshot LoadAppSettingsSnapshot() const = 0;
-    virtual ProceduralSettings LoadProceduralTemplate() const = 0;
-    virtual void SaveAppAndTemplateSettings(const AppSettingsSnapshot& app,
-                                            const ProceduralSettings& procedural) = 0;
+  virtual AppSettingsSnapshot LoadAppSettingsSnapshot() const = 0;
+  virtual ProceduralSettings LoadProceduralTemplate() const = 0;
+  virtual void
+  SaveAppAndTemplateSettings(const AppSettingsSnapshot &app,
+                             const ProceduralSettings &procedural) = 0;
 
-    virtual void CreateNewWorldWithSettings(const ProceduralSettings& settings) = 0;
-    virtual void LoadSelectedWorld(const std::string& worldName) = 0;
-    virtual void RefreshWorldList() = 0;
-    virtual const std::vector<std::string>& GetWorldNames() const = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings) = 0;
+  virtual void LoadSelectedWorld(const std::string &worldName) = 0;
+  virtual void RefreshWorldList() = 0;
+  virtual const std::vector<std::string> &GetWorldNames() const = 0;
 };
 
 } // namespace cutum

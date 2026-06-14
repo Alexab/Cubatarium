@@ -94,7 +94,7 @@ Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`
 
 ### Greedy transparent passes
 
-Documented in [`src/render/README.md`](../src/render/README.md). Implementation: [`GreedyTransparentPipeline.cpp`](../src/render/GreedyTransparentPipeline.cpp).
+Documented in [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md). Implementation: [`GreedyTransparentPipeline.cpp`](../src/Render/Pipeline/GreedyTransparentPipeline.cpp).
 
 1. **ShellDepth** — depth prepass (α ≥ `shellAlpha`, default 0.35) + stencil mark.
 2. **BehindShell** — color, `GL_GREATER`, stencil == 1 (layers behind the shell; not through solid blocks).

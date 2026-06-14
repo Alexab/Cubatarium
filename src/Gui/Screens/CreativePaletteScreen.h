@@ -1,60 +1,62 @@
 #ifndef CREATIVE_PALETTE_SCREEN_H
 #define CREATIVE_PALETTE_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IContentCatalog.h"
-#include "SlotInteraction.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include <memory>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 class IContentCatalog;
-class GameSession;
+class UGameSession;
 class IGuiIconSource;
-class GuiTabBar;
-class GuiScrollView;
-class GuiPanel;
-class GuiSlot;
+class UGuiTabBar;
+class UGuiScrollView;
+class UGuiPanel;
+class UGuiSlot;
 struct GuiTheme;
 
-class CreativePaletteScreen : public GuiScreenBase {
+class UCreativePaletteScreen : public UGuiScreenBase
+{
 public:
-    CreativePaletteScreen(IContentCatalog* catalog, GameSession* session,
-                          IGuiIconSource* icons);
+  UCreativePaletteScreen(IContentCatalog *catalog, UGameSession *session,
+                         IGuiIconSource *icons);
 
-    bool PickSlot(int x, int y, SlotAddress& out) const;
+  bool PickSlot(int x, int y, SlotAddress &out) const;
 
-    void OnViewportChanged(int width, int height) override;
+  void OnViewportChanged(int width, int height) override;
 
-    void Build(GuiContext& ctx) override;
-    void Update(double dt) override;
-    bool BlocksGameInput() const override { return visible_; }
+  void Build(UGuiContext &ctx) override;
+  void Update(double dt) override;
+  bool BlocksGameInput() const override { return visible_; }
 
-    void SetVisible(bool visible);
-    void Toggle();
-    void InvalidateGrid() { built_ = false; }
+  void SetVisible(bool visible);
+  void Toggle();
+  void InvalidateGrid() { built_ = false; }
 
 private:
-    void RebuildGrid();
-    void RelayoutPanel();
-    void LayoutGridInScroll();
+  void RebuildGrid();
+  void RelayoutPanel();
+  void LayoutGridInScroll();
 
-    IContentCatalog* catalog_{nullptr};
-    GameSession* session_{nullptr};
-    IGuiIconSource* icons_{nullptr};
-    std::vector<std::string> gridEntryIds_;
-    GuiPanel* panel_{nullptr};
-    GuiTabBar* mainTabs_{nullptr};
-    GuiTabBar* subTabs_{nullptr};
-    GuiScrollView* scroll_{nullptr};
-    std::vector<GuiSlot*> gridSlots_;
-    std::string selectedEntryId_;
-    ContentKind kind_{ContentKind::Block};
-    std::string activeTypeId_;
-    const GuiTheme* theme_{nullptr};
-    bool visible_{false};
-    bool built_{false};
+  IContentCatalog *catalog_{nullptr};
+  UGameSession *session_{nullptr};
+  IGuiIconSource *icons_{nullptr};
+  std::vector<std::string> gridEntryIds_;
+  UGuiPanel *panel_{nullptr};
+  UGuiTabBar *mainTabs_{nullptr};
+  UGuiTabBar *subTabs_{nullptr};
+  UGuiScrollView *scroll_{nullptr};
+  std::vector<UGuiSlot *> gridSlots_;
+  std::string selectedEntryId_;
+  ContentKind kind_{ContentKind::Block};
+  std::string activeTypeId_;
+  const GuiTheme *theme_{nullptr};
+  bool visible_{false};
+  bool built_{false};
 };
 
 } // namespace cutum

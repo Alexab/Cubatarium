@@ -5,31 +5,36 @@
 #include <functional>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiCheckbox : public GuiWidget {
+class UGuiCheckbox : public UGuiWidget
+{
 public:
-    GuiCheckbox(const GuiTheme* theme, std::string label);
+  UGuiCheckbox(const GuiTheme *theme, std::string label);
 
-    void SetChecked(bool checked) { checked_ = checked; }
-    bool IsChecked() const { return checked_; }
-    void SetOnChanged(std::function<void(bool)> handler) { onChanged_ = std::move(handler); }
+  void SetChecked(bool checked) { checked_ = checked; }
+  bool IsChecked() const { return checked_; }
+  void SetOnChanged(std::function<void(bool)> handler)
+  {
+    onChanged_ = std::move(handler);
+  }
 
-    bool CanFocus() const override;
-    bool Activate() override;
+  bool CanFocus() const override;
+  bool Activate() override;
 
-    void Draw(GuiRenderer& renderer) override;
-    bool OnMouseDown(const GuiMouseEvent& event) override;
+  void Draw(UGuiRenderer &renderer) override;
+  bool OnMouseDown(const GuiMouseEvent &event) override;
 
-    int GetPreferredHeight() const override;
+  int GetPreferredHeight() const override;
 
 private:
-    const GuiTheme* theme_;
-    std::string label_;
-    bool checked_{false};
-    std::function<void(bool)> onChanged_;
+  const GuiTheme *theme_;
+  std::string label_;
+  bool checked_{false};
+  std::function<void(bool)> onChanged_;
 };
 
 } // namespace cutum

@@ -1,60 +1,62 @@
 #pragma once
 
-#include "ProceduralSettings.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <memory>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
-class GuiPanel;
-class GuiLabel;
-class GuiTextInput;
-class GuiButton;
-class GuiCheckbox;
+class UGuiPanel;
+class UGuiLabel;
+class UGuiTextInput;
+class UGuiButton;
+class UGuiCheckbox;
 
-class WorldGenSettingsForm {
+class UWorldGenSettingsForm
+{
 public:
-    explicit WorldGenSettingsForm(const GuiTheme* theme);
+  explicit UWorldGenSettingsForm(const GuiTheme *theme);
 
-    void SetSettings(const ProceduralSettings& settings);
-    ProceduralSettings ReadSettings() const;
+  void SetSettings(const ProceduralSettings &settings);
+  ProceduralSettings ReadSettings() const;
 
-    void BuildInto(GuiPanel& panel);
-    int MeasureGridHeight(const GuiRect& area, const GuiGridSpec& spec) const;
-    void LayoutGrid(const GuiRect& area, const GuiGridSpec& spec) const;
+  void BuildInto(UGuiPanel &panel);
+  int MeasureGridHeight(const GuiRect &area, const GuiGridSpec &spec) const;
+  void LayoutGrid(const GuiRect &area, const GuiGridSpec &spec) const;
 
 private:
-    void AddWidgetsTo(GuiPanel& panel);
-    void CycleGenerator();
-    void CycleVertical();
+  void AddWidgetsTo(UGuiPanel &panel);
+  void CycleGenerator();
+  void CycleVertical();
 
-    const GuiTheme* theme_;
-    ProceduralSettings settings_;
-    bool built_{false};
+  const GuiTheme *theme_;
+  ProceduralSettings settings_;
+  bool built_{false};
 
-    GuiLabel* hintLabel_{nullptr};
-    GuiLabel* generatorLabel_{nullptr};
-    GuiLabel* verticalLabel_{nullptr};
-    GuiLabel* seedLabel_{nullptr};
-    GuiLabel* seaLevelLabel_{nullptr};
-    GuiLabel* maxHeightLabel_{nullptr};
-    GuiLabel* flatYLabel_{nullptr};
-    GuiButton* generatorBtn_{nullptr};
-    GuiButton* verticalBtn_{nullptr};
-    GuiTextInput* seedInput_{nullptr};
-    GuiTextInput* seaLevelInput_{nullptr};
-    GuiTextInput* maxHeightInput_{nullptr};
-    GuiTextInput* flatYInput_{nullptr};
-    GuiCheckbox* cavesBox_{nullptr};
-    GuiCheckbox* treesBox_{nullptr};
-    GuiCheckbox* waterBox_{nullptr};
-    GuiCheckbox* lavaBox_{nullptr};
-    GuiCheckbox* fireBox_{nullptr};
+  UGuiLabel *hintLabel_{nullptr};
+  UGuiLabel *generatorLabel_{nullptr};
+  UGuiLabel *verticalLabel_{nullptr};
+  UGuiLabel *seedLabel_{nullptr};
+  UGuiLabel *seaLevelLabel_{nullptr};
+  UGuiLabel *maxHeightLabel_{nullptr};
+  UGuiLabel *flatYLabel_{nullptr};
+  UGuiButton *generatorBtn_{nullptr};
+  UGuiButton *verticalBtn_{nullptr};
+  UGuiTextInput *seedInput_{nullptr};
+  UGuiTextInput *seaLevelInput_{nullptr};
+  UGuiTextInput *maxHeightInput_{nullptr};
+  UGuiTextInput *flatYInput_{nullptr};
+  UGuiCheckbox *cavesBox_{nullptr};
+  UGuiCheckbox *treesBox_{nullptr};
+  UGuiCheckbox *waterBox_{nullptr};
+  UGuiCheckbox *lavaBox_{nullptr};
+  UGuiCheckbox *fireBox_{nullptr};
 
-    std::vector<GuiGridItem> BuildGridItems() const;
+  std::vector<GuiGridItem> BuildGridItems() const;
 };
 
 } // namespace cutum

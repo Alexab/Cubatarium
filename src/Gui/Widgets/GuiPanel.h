@@ -4,27 +4,29 @@
 #include "GuiWidget.h"
 #include <glm/glm.hpp>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiPanel : public GuiWidget {
+class UGuiPanel : public UGuiWidget
+{
 public:
-    explicit GuiPanel(const GuiTheme* theme);
+  explicit UGuiPanel(const GuiTheme *theme);
 
-    void Draw(GuiRenderer& renderer) override;
+  void Draw(UGuiRenderer &renderer) override;
 
-    void SetDrawBackground(bool draw) { drawBackground_ = draw; }
-    bool GetDrawBackground() const { return drawBackground_; }
+  void SetDrawBackground(bool draw) { drawBackground_ = draw; }
+  bool GetDrawBackground() const { return drawBackground_; }
 
-    void SetStackLayout(int spacing, int padding);
-    int GetPreferredHeight() const override;
+  void SetStackLayout(int spacing, int padding);
+  int GetPreferredHeight() const override;
 
 protected:
-    const GuiTheme* theme_;
-    bool drawBackground_{true};
-    int stackSpacing_{6};
-    int stackPadding_{0};
+  const GuiTheme *theme_;
+  bool drawBackground_{true};
+  int stackSpacing_{6};
+  int stackPadding_{0};
 };
 
 } // namespace cutum

@@ -6,43 +6,51 @@
 #include <glm/glm.hpp>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiSlot : public GuiWidget {
+class UGuiSlot : public UGuiWidget
+{
 public:
-    GuiSlot(const GuiTheme* theme, int size);
+  UGuiSlot(const GuiTheme *theme, int size);
 
-    void SetSelected(bool selected) { selected_ = selected; }
-    void SetLabel(const std::string& label) { label_ = label; }
-    void SetIconTexture(unsigned int texture) { iconTexture_ = texture; }
-    void SetCornerHint(const std::string& hint) { cornerHint_ = hint; }
-    void SetOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
-    void SetOnBeginDrag(std::function<void()> handler) { onBeginDrag_ = std::move(handler); }
-    const std::string& GetLabel() const { return label_; }
+  void SetSelected(bool selected) { selected_ = selected; }
+  void SetLabel(const std::string &label) { label_ = label; }
+  void SetIconTexture(unsigned int texture) { iconTexture_ = texture; }
+  void SetCornerHint(const std::string &hint) { cornerHint_ = hint; }
+  void SetOnClick(std::function<void()> handler)
+  {
+    onClick_ = std::move(handler);
+  }
+  void SetOnBeginDrag(std::function<void()> handler)
+  {
+    onBeginDrag_ = std::move(handler);
+  }
+  const std::string &GetLabel() const { return label_; }
 
-    void Draw(GuiRenderer& renderer) override;
-    bool OnMouseDown(const GuiMouseEvent& event) override;
-    bool OnMouseUp(const GuiMouseEvent& event) override;
-    bool OnMouseMove(const GuiMouseEvent& event) override;
+  void Draw(UGuiRenderer &renderer) override;
+  bool OnMouseDown(const GuiMouseEvent &event) override;
+  bool OnMouseUp(const GuiMouseEvent &event) override;
+  bool OnMouseMove(const GuiMouseEvent &event) override;
 
-    int GetPreferredWidth() const override;
-    int GetPreferredHeight() const override;
+  int GetPreferredWidth() const override;
+  int GetPreferredHeight() const override;
 
 private:
-    const GuiTheme* theme_;
-    int slotSize_;
-    bool selected_{false};
-    std::string label_;
-    std::string cornerHint_;
-    unsigned int iconTexture_{0};
-    bool pressed_{false};
-    bool dragStarted_{false};
-    int pressX_{0};
-    int pressY_{0};
-    std::function<void()> onClick_;
-    std::function<void()> onBeginDrag_;
+  const GuiTheme *theme_;
+  int slotSize_;
+  bool selected_{false};
+  std::string label_;
+  std::string cornerHint_;
+  unsigned int iconTexture_{0};
+  bool pressed_{false};
+  bool dragStarted_{false};
+  int pressX_{0};
+  int pressY_{0};
+  std::function<void()> onClick_;
+  std::function<void()> onBeginDrag_;
 };
 
 } // namespace cutum

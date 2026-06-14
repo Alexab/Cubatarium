@@ -3,13 +3,15 @@
 
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
-class IGuiClipboard {
+class IGuiClipboard
+{
 public:
-    virtual ~IGuiClipboard() = default;
-    virtual std::string GetString() const = 0;
-    virtual void SetString(const std::string& text) = 0;
+  virtual ~IGuiClipboard() = default;
+  virtual std::string GetString() const = 0;
+  virtual void SetString(const std::string &text) = 0;
 };
 
 } // namespace cutum

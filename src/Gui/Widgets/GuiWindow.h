@@ -4,18 +4,20 @@
 #include "GuiPanel.h"
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
-class GuiWindow : public GuiPanel {
+class UGuiWindow : public UGuiPanel
+{
 public:
-    GuiWindow(const GuiTheme* theme, std::string title);
+  UGuiWindow(const GuiTheme *theme, std::string title);
 
-    GuiRect GetClientArea() const;
-    void Draw(GuiRenderer& renderer) override;
+  GuiRect GetClientArea() const;
+  void Draw(UGuiRenderer &renderer) override;
 
 private:
-    std::string title_;
-    static constexpr int kTitleBarHeight = 24;
+  std::string title_;
+  static constexpr int kTitleBarHeight = 24;
 };
 
 } // namespace cutum
