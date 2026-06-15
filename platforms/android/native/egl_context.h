@@ -14,6 +14,7 @@ public:
   bool HasSurface() const { return surface_ != nullptr; }
   bool EnsureCurrent();
   void SwapBuffers();
+  void UpdateSurfaceSize();
   int Width() const { return width_; }
   int Height() const { return height_; }
 

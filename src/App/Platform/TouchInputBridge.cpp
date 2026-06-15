@@ -10,8 +10,65 @@ namespace
 {
 
 constexpr int kKeyIndex(KeyCode key) { return static_cast<int>(key); }
+constexpr float kLookDragThresholdPx = 10.f;
+constexpr float kTapCancelDragPx = 24.f;
 
 } // namespace
+
+int TouchInputBridge::NormalizePointerId(int pointerId) const
+{
+  if (pointerId < 0)
+  {
+    return 0;
+  }
+  if (pointerId >= kMaxPointers)
+  {
+    return kMaxPointers - 1;
+  }
+  return pointerId;
+}
+
+void TouchInputBridge::ClearBlockedGameRegions()
+{
+  for (TouchBlockedRegion &region : blockedRegions_)
+  {
+    region = TouchBlockedRegion{};
+  }
+}
+
+void TouchInputBridge::SetBlockedGameRegion(int index,
+                                            const TouchBlockedRegion &region)
+{
+  if (index < 0 || index >= kMaxBlockedRegions)
+  {
+    return;
+  }
+  blockedRegions_[static_cast<size_t>(index)] = region;
+}
+
+bool TouchInputBridge::IsBlockedGameInput(float x, float y) const
+{
+  if (x < ContentLeft() || x > ContentRight() || y < ContentTop() ||
+      y > ContentBottom())
+  {
+    return true;
+  }
+  for (const TouchBlockedRegion &region : blockedRegions_)
+  {
+    if (region.w <= 0 || region.h <= 0)
+    {
+      continue;
+    }
+    if (x >= static_cast<float>(region.x) &&
+        x < static_cast<float>(region.x + region.w) &&
+        y >= static_cast<float>(region.y) &&
+        y < static_cast<float>(region.y + region.h))
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
 void TouchInputBridge::Reset()
 {
@@ -21,50 +78,91 @@ void TouchInputBridge::Reset()
   std::fill(std::begin(mouseButtons_), std::end(mouseButtons_), false);
   std::fill(std::begin(prevMouseButtons_), std::end(prevMouseButtons_), false);
   std::fill(std::begin(mouseJustPressed_), std::end(mouseJustPressed_), false);
+  std::fill(std::begin(mouseJustReleased_), std::end(mouseJustReleased_), false);
+  for (PointerState &pointer : pointers_)
+  {
+    pointer = PointerState{};
+  }
   joystick_ = {0.f, 0.f};
   mouseDelta_ = {0.f, 0.f};
-  lookActive_ = false;
 }
 
-void TouchInputBridge::OnTouchDown(int pointerId, float x, float y)
+void TouchInputBridge::OnTouchDown(int pointerId, float x, float y,
+                                   bool gameInput)
 {
-  (void)pointerId;
+  const int id = NormalizePointerId(pointerId);
+  PointerState &pointer = pointers_[id];
+  pointer = PointerState{};
+  pointer.active = true;
+  pointer.gamePointer = gameInput;
+  pointer.startPos = {x, y};
+  pointer.lastLookPos = {x, y};
   mousePosition_ = {x, y};
-  const bool rightSide = x > screenWidth_ * 0.5f;
-  const bool leftSide = x < screenWidth_ * 0.2f;
-  if (rightSide)
+
+  if (!gameInput || IsBlockedGameInput(x, y))
   {
-    lookActive_ = true;
-    lastLookPos_ = {x, y};
+    return;
   }
-  if (!leftSide && !rightSide)
-  {
-    mouseButtons_[static_cast<int>(MouseButton::Left)] = true;
-    mouseJustPressed_[static_cast<int>(MouseButton::Left)] = true;
-  }
+
+  pointer.tapCandidate = true;
+  mouseButtons_[static_cast<int>(MouseButton::Left)] = true;
+  mouseJustPressed_[static_cast<int>(MouseButton::Left)] = true;
 }
 
-void TouchInputBridge::OnTouchMove(int pointerId, float x, float y)
+void TouchInputBridge::OnTouchMove(int pointerId, float x, float y,
+                                   bool allowLook)
 {
-  (void)pointerId;
-  if (lookActive_ && x > screenWidth_ * 0.5f)
+  const int id = NormalizePointerId(pointerId);
+  PointerState &pointer = pointers_[id];
+  if (!pointer.active || !pointer.gamePointer)
   {
-    mouseDelta_ += glm::vec2(x - lastLookPos_.x, y - lastLookPos_.y);
-    lastLookPos_ = {x, y};
+    mousePosition_ = {x, y};
+    return;
   }
+
+  const glm::vec2 pos{x, y};
+  const float dragDistance =
+      glm::length(pos - pointer.startPos);
+
+  if (pointer.tapCandidate && !pointer.lookDrag)
+  {
+    if (IsInLookZone(pointer.startPos.x) && dragDistance > kLookDragThresholdPx)
+    {
+      pointer.lookDrag = true;
+      pointer.tapCandidate = false;
+      mouseButtons_[static_cast<int>(MouseButton::Left)] = false;
+    }
+    else if (!IsInLookZone(pointer.startPos.x) &&
+             dragDistance > kTapCancelDragPx)
+    {
+      pointer.tapCandidate = false;
+      mouseButtons_[static_cast<int>(MouseButton::Left)] = false;
+    }
+  }
+
+  if (allowLook && pointer.lookDrag)
+  {
+    mouseDelta_ += glm::vec2(x - pointer.lastLookPos.x, y - pointer.lastLookPos.y);
+    pointer.lastLookPos = {x, y};
+  }
+
   mousePosition_ = {x, y};
 }
 
 void TouchInputBridge::OnTouchUp(int pointerId, float x, float y)
 {
-  (void)pointerId;
+  const int id = NormalizePointerId(pointerId);
+  PointerState &pointer = pointers_[id];
   mousePosition_ = {x, y};
-  if (x > screenWidth_ * 0.5f)
+
+  if (pointer.active && pointer.gamePointer && pointer.tapCandidate)
   {
-    lookActive_ = false;
+    mouseJustReleased_[static_cast<int>(MouseButton::Left)] = true;
   }
+
   mouseButtons_[static_cast<int>(MouseButton::Left)] = false;
   mouseButtons_[static_cast<int>(MouseButton::Right)] = false;
+  pointer = PointerState{};
 }
 
 void TouchInputBridge::Update()
@@ -73,6 +171,7 @@ void TouchInputBridge::Update()
   std::copy(std::begin(mouseButtons_), std::end(mouseButtons_),
             std::begin(prevMouseButtons_));
   std::fill(std::begin(mouseJustPressed_), std::end(mouseJustPressed_), false);
+  std::fill(std::begin(mouseJustReleased_), std::end(mouseJustReleased_), false);
   ApplyJoystickToKeys();
 }
 
@@ -113,6 +212,10 @@ glm::vec2 TouchInputBridge::ConsumeMouseDelta()
 bool TouchInputBridge::IsMouseButtonJustReleased(MouseButton button) const
 {
   const int idx = static_cast<int>(button);
+  if (idx >= 0 && idx < 8 && mouseJustReleased_[idx])
+  {
+    return true;
+  }
   return idx >= 0 && idx < 8 && !mouseButtons_[idx] && prevMouseButtons_[idx];
 }
 

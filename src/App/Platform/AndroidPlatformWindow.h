@@ -6,6 +6,7 @@
 #include "Blocks/Input/BlockInputController.h"
 #include "egl_context.h"
 
+#include <array>
 #include <game-activity/GameActivityEvents.h>
 #include <chrono>
 
@@ -68,6 +69,7 @@ private:
   double deltaTime_{0.0};
   std::chrono::high_resolution_clock::time_point lastFrame_;
   std::chrono::steady_clock::time_point lastAutosave_;
+  std::array<bool, TouchInputBridge::kMaxPointers> uiPointerCapture_{};
 };
 
 } // namespace cutum

@@ -84,21 +84,27 @@ void UGuiContext::Update(double dt)
   }
 }
 
-void UGuiContext::NotifyViewport(int WindowWidth, int WindowHeight)
+void UGuiContext::NotifyViewport(int WindowWidth, int WindowHeight,
+                                 int insetLeft, int insetTop, int insetRight,
+                                 int insetBottom)
 {
   if (activeScreen_)
   {
+    activeScreen_->SetViewportInsets(insetLeft, insetTop, insetRight,
+                                     insetBottom);
     activeScreen_->OnViewportChanged(WindowWidth, WindowHeight);
   }
 }
 
-void UGuiContext::Render(int WindowWidth, int WindowHeight)
+void UGuiContext::Render(int WindowWidth, int WindowHeight, int insetLeft,
+                         int insetTop, int insetRight, int insetBottom)
 {
   if (!renderer_ || !activeScreen_ || !activeScreen_->GetRoot())
   {
     return;
   }
-  NotifyViewport(WindowWidth, WindowHeight);
+  NotifyViewport(WindowWidth, WindowHeight, insetLeft, insetTop, insetRight,
+                 insetBottom);
   RenderOverlay(*activeScreen_->GetRoot(), WindowWidth, WindowHeight);
 }
 

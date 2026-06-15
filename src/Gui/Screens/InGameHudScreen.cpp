@@ -106,7 +106,8 @@ void UInGameHudScreen::OnViewportChanged(int width, int height)
 #if defined(__ANDROID__)
   if (touchControls_)
   {
-    touchControls_->Layout(width, height);
+    touchControls_->Layout(viewportW_, viewportH_, GetContentOffsetX(),
+                           GetContentOffsetY());
   }
 #endif
 }
@@ -206,7 +207,8 @@ void UInGameHudScreen::LayoutHotbar()
   {
     return;
   }
-  rootPanel_->SetBounds({0, 0, viewportW_, viewportH_});
+  rootPanel_->SetBounds({GetContentOffsetX(), GetContentOffsetY(), viewportW_,
+                         viewportH_});
 
   const int slotSize = theme_->hotbarSlotSize;
   const int gap = theme_->hotbarSlotGap;

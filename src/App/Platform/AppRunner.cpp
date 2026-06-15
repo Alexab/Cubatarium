@@ -29,7 +29,10 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     IPlatformPaths::SetGlobal(
         std::shared_ptr<IPlatformPaths>(&paths, [](IPlatformPaths *) {}));
 
-    if (!window.Initialize(1280, 720, "Cubatarium"))
+    const glm::ivec2 fbSize = window.GetFramebufferSize();
+    const int initW = fbSize.x > 0 ? fbSize.x : 1280;
+    const int initH = fbSize.y > 0 ? fbSize.y : 720;
+    if (!window.Initialize(initW, initH, "Cubatarium"))
     {
       CubatariumLogError("App", "Failed to initialize platform window");
       return -1;
@@ -53,7 +56,7 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
       return -1;
     }
 
-    text_renderer->SetWindowSize(1280, 720);
+    text_renderer->SetWindowSize(initW, initH);
 
     auto geometry_engine = std::make_shared<UGeometryEngine>(
         object_storage, world, texture_base_instance, texture_cube_instance,

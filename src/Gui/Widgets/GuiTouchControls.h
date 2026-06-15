@@ -19,7 +19,7 @@ public:
                    std::function<void()> onInventory);
 
   void Build(UGuiPanel *parent);
-  void Layout(int width, int height);
+  void Layout(int width, int height, int offsetX, int offsetY);
   ~GuiTouchControls();
 
 private:
@@ -28,6 +28,8 @@ private:
   std::function<void()> onMenu_;
   std::function<void()> onInventory_;
   UGuiPanel *root_{nullptr};
+  UGuiWidget *joystick_{nullptr};
+  UGuiWidget *lookPad_{nullptr};
   UGuiWidget *jumpButton_{nullptr};
   UGuiWidget *sneakButton_{nullptr};
   UGuiWidget *inventoryButton_{nullptr};

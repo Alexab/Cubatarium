@@ -30,10 +30,13 @@ public:
   UGuiScreenBase *GetScreen() { return activeScreen_.get(); }
 
   void Update(double dt);
-  void Render(int WindowWidth, int WindowHeight);
+  void NotifyViewport(int WindowWidth, int WindowHeight, int insetLeft = 0,
+                      int insetTop = 0, int insetRight = 0,
+                      int insetBottom = 0);
+  void Render(int WindowWidth, int WindowHeight, int insetLeft = 0,
+              int insetTop = 0, int insetRight = 0, int insetBottom = 0);
   void RenderOverlay(UGuiWidget &root, int WindowWidth, int WindowHeight,
                      bool expandRootToViewport = true);
-  void NotifyViewport(int WindowWidth, int WindowHeight);
 
   bool RouteKey(const GuiKeyEvent &event);
   bool RouteChar(const GuiCharEvent &event);

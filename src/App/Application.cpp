@@ -597,6 +597,9 @@ void UApplication::EnterInGameInputState()
   SuppressConsoleToggleChar = false;
   PaletteOpen = false;
   FreeCursor = false;
+#if defined(__ANDROID__)
+  Ui.controlScheme = ControlScheme::Cubatarium;
+#endif
   GuiContext->ClearInputState();
   SyncCursorVisibility();
 #ifndef __ANDROID__
@@ -790,8 +793,26 @@ void UApplication::Update(double dt)
 
 void UApplication::ProcessInput() { (void)0; }
 
+void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
+{
+  viewportInsetLeft_ = std::max(0, left);
+  viewportInsetTop_ = std::max(0, top);
+  viewportInsetRight_ = std::max(0, right);
+  viewportInsetBottom_ = std::max(0, bottom);
+}
+
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
+  const auto notifyViewport = [&](UGuiScreenBase *screen)
+  {
+    if (screen)
+    {
+      screen->SetViewportInsets(viewportInsetLeft_, viewportInsetTop_,
+                                viewportInsetRight_, viewportInsetBottom_);
+      screen->OnViewportChanged(width, height);
+    }
+  };
+
   if (width > 0 && height > 0)
   {
     glViewport(0, 0, width, height);
@@ -800,7 +821,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    GuiContext->Render(width, height);
+    GuiContext->Render(width, height, viewportInsetLeft_, viewportInsetTop_,
+                       viewportInsetRight_, viewportInsetBottom_);
     return;
   }
 
@@ -833,12 +855,12 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (HudScreen && HudScreen->GetRoot())
   {
     HudScreen->SyncSlotIcons();
-    HudScreen->OnViewportChanged(width, height);
+    notifyViewport(HudScreen.get());
     GuiContext->RenderOverlay(*HudScreen->GetRoot(), width, height, false);
   }
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())
   {
-    ConsoleScreen->OnViewportChanged(width, height);
+    notifyViewport(ConsoleScreen.get());
     GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height, false);
   }
   if (OverlayPopup && OverlayPopup->IsOpen())
@@ -850,7 +872,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
   if (PaletteOpen && PaletteScreen && PaletteScreen->GetRoot())
   {
-    PaletteScreen->OnViewportChanged(width, height);
+    notifyViewport(PaletteScreen.get());
     GuiContext->RenderOverlay(*PaletteScreen->GetRoot(), width, height, false);
   }
   if (State == AppState::InGame)

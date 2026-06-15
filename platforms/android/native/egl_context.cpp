@@ -4,6 +4,7 @@
 
 #include <EGL/egl.h>
 #include <android/native_window.h>
+#include <game-activity/GameActivity.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <sstream>
 
@@ -171,6 +172,16 @@ void EglContext::SwapBuffers()
     eglSwapBuffers(static_cast<EGLDisplay>(display_),
                    static_cast<EGLSurface>(surface_));
   }
+}
+
+void EglContext::UpdateSurfaceSize()
+{
+  if (!app_ || !app_->window)
+  {
+    return;
+  }
+  width_ = ANativeWindow_getWidth(app_->window);
+  height_ = ANativeWindow_getHeight(app_->window);
 }
 
 } // namespace cutum

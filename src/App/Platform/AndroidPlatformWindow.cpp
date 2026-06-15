@@ -13,11 +13,48 @@
 #include "World/Core/World.h"
 
 #include <android/input.h>
+#include <game-activity/GameActivity.h>
 #include <game-activity/GameActivityEvents.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 
 namespace cutum
 {
+
+namespace
+{
+
+int NormalizePointerIndex(int pointer)
+{
+  if (pointer < 0)
+  {
+    return 0;
+  }
+  if (pointer >= TouchInputBridge::kMaxPointers)
+  {
+    return TouchInputBridge::kMaxPointers - 1;
+  }
+  return pointer;
+}
+
+void QueryViewportInsets(android_app *app, int &left, int &top, int &right,
+                         int &bottom)
+{
+  left = top = right = bottom = 0;
+  if (!app || !app->activity)
+  {
+    return;
+  }
+  ARect systemBars{};
+  GameActivity_getWindowInsets(reinterpret_cast<GameActivity *>(app->activity),
+                               GAMECOMMON_INSETS_TYPE_SYSTEM_BARS,
+                               &systemBars);
+  left = systemBars.left;
+  top = systemBars.top;
+  right = systemBars.right;
+  bottom = systemBars.bottom;
+}
+
+} // namespace
 
 AndroidPlatformWindow::AndroidPlatformWindow(android_app *app) : app_(app)
 {
@@ -70,6 +107,13 @@ void AndroidPlatformWindow::OnAppCmd(int32_t cmd)
     break;
   case APP_CMD_TERM_WINDOW:
     egl_.Shutdown();
+    break;
+  case APP_CMD_WINDOW_RESIZED:
+  case APP_CMD_CONTENT_RECT_CHANGED:
+    if (egl_.HasSurface())
+    {
+      egl_.UpdateSurfaceSize();
+    }
     break;
   default:
     break;
@@ -284,10 +328,19 @@ void AndroidPlatformWindow::Render()
   {
     return;
   }
+  egl_.UpdateSurfaceSize();
   const auto size = GetFramebufferSize();
   width_ = size.x;
   height_ = size.y;
+  int insetLeft = 0;
+  int insetTop = 0;
+  int insetRight = 0;
+  int insetBottom = 0;
+  QueryViewportInsets(app_, insetLeft, insetTop, insetRight, insetBottom);
   touch_.SetScreenSize(width_, height_);
+  touch_.SetContentInsets(insetLeft, insetTop, insetRight, insetBottom);
+  application_->SetViewportInsets(insetLeft, insetTop, insetRight,
+                                  insetBottom);
   application_->RenderFrame(size.x, size.y,
                             views_ ? views_->GetDurationUpdateMks() : 0.0);
 }
@@ -309,12 +362,16 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
   if (masked == AMOTION_EVENT_ACTION_DOWN ||
       masked == AMOTION_EVENT_ACTION_POINTER_DOWN)
   {
-    touch_.OnTouchDown(pointer, x, y);
+    bool uiConsumed = false;
     if (application_)
     {
-      application_->RouteMouseButton(static_cast<int>(MouseButton::Left), true,
-                                     static_cast<int>(x), static_cast<int>(y));
+      uiConsumed = application_->RouteMouseButton(
+          static_cast<int>(MouseButton::Left), true, static_cast<int>(x),
+          static_cast<int>(y));
     }
+    const int pointerIndex = NormalizePointerIndex(pointer);
+    uiPointerCapture_[pointerIndex] = uiConsumed;
+    touch_.OnTouchDown(pointer, x, y, !uiConsumed);
   }
   else if (masked == AMOTION_EVENT_ACTION_MOVE)
   {
@@ -322,10 +379,11 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
     {
       const float px = GameActivityPointerAxes_getX(&event.pointers[i]);
       const float py = GameActivityPointerAxes_getY(&event.pointers[i]);
-      touch_.OnTouchMove(static_cast<int>(i), px, py);
+      const int pointerIndex = NormalizePointerIndex(static_cast<int>(i));
+      touch_.OnTouchMove(static_cast<int>(i), px, py,
+                         !uiPointerCapture_[pointerIndex]);
     }
-    const glm::vec2 delta = touch_.GetMouseDelta();
-    if (application_ && (delta.x != 0.f || delta.y != 0.f))
+    if (application_)
     {
       application_->RouteMouseMove(static_cast<int>(x), static_cast<int>(y));
     }
@@ -333,12 +391,13 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
   else if (masked == AMOTION_EVENT_ACTION_UP ||
            masked == AMOTION_EVENT_ACTION_POINTER_UP)
   {
-    touch_.OnTouchUp(pointer, x, y);
     if (application_)
     {
       application_->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
                                      static_cast<int>(x), static_cast<int>(y));
     }
+    touch_.OnTouchUp(pointer, x, y);
+    uiPointerCapture_[NormalizePointerIndex(pointer)] = false;
   }
   return true;
 }

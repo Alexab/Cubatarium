@@ -73,6 +73,7 @@ public:
   void Update(double dt);
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
+  void SetViewportInsets(int left, int top, int right, int bottom);
 
   bool RouteKey(int key, int action, int mods);
   bool RouteChar(unsigned int codepoint);
@@ -173,6 +174,10 @@ private:
   MenuSubview MenuSubview{MenuSubview::Main};
   UMainMenuScreen *MainMenuScreen{nullptr};
   TouchInputBridge *touchBridge_{nullptr};
+  int viewportInsetLeft_{0};
+  int viewportInsetTop_{0};
+  int viewportInsetRight_{0};
+  int viewportInsetBottom_{0};
 };
 
 } // namespace cutum
