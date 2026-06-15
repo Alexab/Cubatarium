@@ -1,6 +1,9 @@
 #include "Blocks/Input/BlockInputController.h"
 
 #include "App/Application.h"
+#if defined(__ANDROID__)
+#include "App/Platform/TouchInputBridge.h"
+#endif
 #include "Render/Camera/Camera.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -21,6 +24,21 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
   const float dx = a.x - b.x;
   const float dy = a.y - b.y;
   return std::sqrt(dx * dx + dy * dy);
+}
+
+bool ShouldBlockBreakByMovement(const BlockInputContext &ctx)
+{
+#if defined(__ANDROID__)
+  if (!ctx.App)
+  {
+    return false;
+  }
+  const auto *touch = ctx.App->GetTouchInputBridge();
+  return touch && touch->IsMovementBlockingBreak();
+#else
+  (void)ctx;
+  return false;
+#endif
 }
 
 } // namespace
@@ -126,6 +144,30 @@ void UBlockInputController::TryInstantBreak(const BlockInputContext &ctx)
   }
 }
 
+void UBlockInputController::CancelPointerInteraction(const BlockInputContext &ctx)
+{
+  LeftHeld = false;
+  if (ctx.World)
+  {
+    ctx.World->CancelBreakSession();
+  }
+}
+
+void UBlockInputController::OnQuickTap(const BlockInputContext &ctx)
+{
+  if (!ctx.Ui || !ctx.World)
+  {
+    return;
+  }
+  if (ActiveSlotBlocksWorldInteraction(ctx))
+  {
+    return;
+  }
+  ctx.World->CancelBreakSession();
+  TryPlaceFromActiveSlot(ctx);
+  LeftHeld = false;
+}
+
 void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
 {
   if (!ctx.Ui || !ctx.World)
@@ -193,7 +235,8 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
     else
     {
       if (!ctx.World->HasBreakSession() &&
-          ctx.World->GetIsBlockIntersectionExists())
+          ctx.World->GetIsBlockIntersectionExists() &&
+          !ShouldBlockBreakByMovement(ctx))
       {
         ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
       }
@@ -381,6 +424,10 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 
   if (ctx.Ui->controlScheme == ControlScheme::Cubatarium)
   {
+    if (ShouldBlockBreakByMovement(ctx))
+    {
+      return;
+    }
     const float holdSeconds =
         std::chrono::duration<float>(std::chrono::steady_clock::now() -
                                      LeftDownTime)

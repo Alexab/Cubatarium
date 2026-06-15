@@ -3,6 +3,7 @@
 
 #include "App/Platform/InputManager.h"
 #include <array>
+#include <chrono>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -25,7 +26,7 @@ public:
   void Reset();
   void OnTouchDown(int pointerId, float x, float y, bool gameInput = true);
   void OnTouchMove(int pointerId, float x, float y, bool allowLook = true);
-  void OnTouchUp(int pointerId, float x, float y);
+  void OnTouchUp(int pointerId, float x, float y, bool cancelled = false);
   void Update();
 
   bool IsKeyPressed(KeyCode key) const;
@@ -39,6 +40,26 @@ public:
   bool IsMouseButtonJustReleased(MouseButton button) const;
 
   void SetJoystickVector(glm::vec2 v) { joystick_ = v; }
+  void SetJoystickActive(bool active);
+  bool IsJoystickActive() const { return joystickActive_; }
+  bool IsMovementBlockingBreak() const;
+  void AddLookDelta(float dx, float dy);
+  void ResetJoystick();
+
+  bool ConsumePendingPlaceTap(glm::vec2 &outPos);
+  bool ConsumeCameraBaseline(float &outX, float &outY);
+  bool ConsumeBlockInputCancel();
+
+  void SetUiScale(float scale) { uiScale_ = scale; }
+  void SetPlaceClickMaxSeconds(float seconds)
+  {
+    placeClickMaxSeconds_ = seconds;
+  }
+  void SetBreakHoldMinSeconds(float seconds)
+  {
+    breakHoldMinSeconds_ = seconds;
+  }
+
   void SetScreenSize(int w, int h)
   {
     screenWidth_ = w;
@@ -53,6 +74,8 @@ public:
   }
   void ClearBlockedGameRegions();
   void SetBlockedGameRegion(int index, const TouchBlockedRegion &region);
+  void QueuePlaceTap(float x, float y);
+  void RequestCameraBaseline(float x, float y);
 
 private:
   struct PointerState
@@ -60,9 +83,11 @@ private:
     bool active{false};
     bool gamePointer{false};
     bool tapCandidate{false};
+    bool lookZoneTouch{false};
     bool lookDrag{false};
     glm::vec2 startPos{0.f, 0.f};
     glm::vec2 lastLookPos{0.f, 0.f};
+    std::chrono::steady_clock::time_point downTime{};
   };
 
   void ApplyJoystickToKeys();
@@ -85,12 +110,17 @@ private:
   {
     return ContentLeft() + ContentWidth() * 0.58f;
   }
+  float LookDragThresholdPx() const;
+  float PlaceTapSlopPx() const;
   bool IsBlockedGameInput(float x, float y) const;
   bool IsInLookZone(float x) const { return x >= LookZoneStartX(); }
+  void QueueCameraBaseline(float x, float y);
 
   glm::vec2 joystick_{0.f};
   glm::vec2 mousePosition_{0.f};
   glm::vec2 mouseDelta_{0.f};
+  glm::vec2 pendingPlacePos_{0.f};
+  glm::vec2 cameraBaselinePos_{0.f};
   std::array<PointerState, kMaxPointers> pointers_{};
   std::array<TouchBlockedRegion, kMaxBlockedRegions> blockedRegions_{};
   int screenWidth_{1280};
@@ -99,6 +129,9 @@ private:
   int contentInsetTop_{0};
   int contentInsetRight_{0};
   int contentInsetBottom_{0};
+  float uiScale_{1.f};
+  float placeClickMaxSeconds_{0.20f};
+  float breakHoldMinSeconds_{0.50f};
   bool keys_[512]{};
   bool prevKeys_[512]{};
   bool mouseButtons_[8]{};
@@ -106,6 +139,10 @@ private:
   bool mouseJustPressed_[8]{};
   bool mouseJustReleased_[8]{};
   bool manualKeys_[512]{};
+  bool joystickActive_{false};
+  bool pendingPlaceTap_{false};
+  bool cameraBaselinePending_{false};
+  bool blockInputCancelPending_{false};
 };
 
 } // namespace cutum

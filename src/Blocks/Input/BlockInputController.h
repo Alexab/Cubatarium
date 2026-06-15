@@ -36,6 +36,9 @@ public:
   void OnKeyDelete(const BlockInputContext &ctx);
   void Tick(float dt, const BlockInputContext &ctx);
 
+  void OnQuickTap(const BlockInputContext &ctx);
+  void CancelPointerInteraction(const BlockInputContext &ctx);
+
   bool IsRightLookActive() const { return RightLookActive; }
 
 private:

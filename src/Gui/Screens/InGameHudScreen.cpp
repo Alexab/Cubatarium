@@ -91,11 +91,33 @@ void UInGameHudScreen::Build(UGuiContext &ctx)
 #if defined(__ANDROID__)
 void UInGameHudScreen::ConfigureTouchControls(
     TouchInputBridge *bridge, std::function<void()> onMenu,
-    std::function<void()> onInventory)
+    std::function<void()> onInventory, std::function<void()> onJumpPress)
 {
   touchControls_ = std::make_unique<GuiTouchControls>(theme_, bridge,
                                                       std::move(onMenu),
-                                                      std::move(onInventory));
+                                                      std::move(onInventory),
+                                                      std::move(onJumpPress));
+}
+
+bool UInGameHudScreen::RouteTouchMove(int x, int y)
+{
+  return touchControls_ && touchControls_->RouteCapturedMove(x, y);
+}
+
+void UInGameHudScreen::ReleaseJoystickCapture()
+{
+  if (touchControls_)
+  {
+    touchControls_->ReleaseJoystickCapture();
+  }
+}
+
+void UInGameHudScreen::ReleaseTouchCaptures()
+{
+  if (touchControls_)
+  {
+    touchControls_->ReleaseAllCaptures();
+  }
 }
 #endif
 
@@ -106,8 +128,10 @@ void UInGameHudScreen::OnViewportChanged(int width, int height)
 #if defined(__ANDROID__)
   if (touchControls_)
   {
+    const float uiScale =
+        static_cast<float>(theme_->fontSizeBody) / 16.f;
     touchControls_->Layout(viewportW_, viewportH_, GetContentOffsetX(),
-                           GetContentOffsetY());
+                           GetContentOffsetY(), uiScale);
   }
 #endif
 }

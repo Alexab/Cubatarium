@@ -46,6 +46,9 @@ public:
   int GetWindowWidth() const { return windowWidth_; }
   int GetWindowHeight() const { return windowHeight_; }
 
+  void SetTextScale(float scale) { textScale_ = scale; }
+  float GetTextScale() const { return textScale_; }
+
 private:
   void ApplyClipStack();
 
@@ -54,6 +57,7 @@ private:
   UiTexturedQuadBatch texturedQuadBatch_;
   int windowWidth_{0};
   int windowHeight_{0};
+  float textScale_{1.f};
   std::vector<GuiRect> clipStack_;
 };
 

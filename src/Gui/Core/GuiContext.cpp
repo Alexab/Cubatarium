@@ -1,4 +1,5 @@
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiScale.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Gui/Core/GuiInputRouter.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -17,6 +18,8 @@ bool UGuiContext::Initialize(std::shared_ptr<UShaderManager> shaderManager,
                              std::shared_ptr<UTextRenderer> textRenderer)
 {
   theme_ = DefaultGuiTheme();
+  baseTheme_ = theme_;
+  uiScale_ = 1.f;
   renderer_ = std::make_unique<UGuiRenderer>();
   inputRouter_ = std::make_unique<UGuiInputRouter>();
   return renderer_->Initialize(std::move(shaderManager),
@@ -171,6 +174,16 @@ void UGuiContext::ClearInputState()
   if (inputRouter_)
   {
     inputRouter_->ClearInteractionState();
+  }
+}
+
+void UGuiContext::ApplyUiScale(float scale)
+{
+  uiScale_ = scale;
+  theme_ = ScaleGuiTheme(baseTheme_, uiScale_);
+  if (renderer_)
+  {
+    renderer_->SetTextScale(uiScale_);
   }
 }
 

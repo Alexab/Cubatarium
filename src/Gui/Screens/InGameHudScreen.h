@@ -35,7 +35,11 @@ public:
 #if defined(__ANDROID__)
   void ConfigureTouchControls(class TouchInputBridge *bridge,
                              std::function<void()> onMenu,
-                             std::function<void()> onInventory);
+                             std::function<void()> onInventory,
+                             std::function<void()> onJumpPress);
+  bool RouteTouchMove(int x, int y);
+  void ReleaseJoystickCapture();
+  void ReleaseTouchCaptures();
 #endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).

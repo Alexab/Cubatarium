@@ -3,11 +3,13 @@
 #include "App/Platform/InputManager.h"
 #include "App/Platform/TouchInputBridge.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiPanel.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <glm/glm.hpp>
 #include <vector>
@@ -18,9 +20,9 @@ namespace cutum
 namespace
 {
 
-constexpr int kButtonSize = 64;
-constexpr int kMargin = 16;
-constexpr int kJoystickSize = 148;
+constexpr int kButtonSizeBase = 64;
+constexpr int kMarginBase = 16;
+constexpr int kJoystickSizeBase = 200;
 constexpr int kTouchControlsZOrder = 100;
 
 class TouchControlPanel : public UGuiPanel
@@ -58,8 +60,10 @@ class TouchHoldButton : public UGuiButton
 {
 public:
   TouchHoldButton(const GuiTheme *theme, std::string label, KeyCode key,
-                  TouchInputBridge *bridge)
-      : UGuiButton(theme, std::move(label)), key_(key), bridge_(bridge)
+                  TouchInputBridge *bridge,
+                  std::function<void()> onPress = nullptr)
+      : UGuiButton(theme, std::move(label)), key_(key), bridge_(bridge),
+        onPress_(std::move(onPress))
   {
   }
 
@@ -69,6 +73,11 @@ public:
     {
       return false;
     }
+    if (onPress_)
+    {
+      onPress_();
+    }
+    held_ = true;
     if (bridge_)
     {
       bridge_->SetHeldKey(key_, true);
@@ -78,17 +87,33 @@ public:
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
+    if (!held_)
+    {
+      return false;
+    }
     const bool handled = UGuiButton::OnMouseUp(event);
     if (bridge_)
     {
       bridge_->SetHeldKey(key_, false);
     }
+    held_ = false;
     return handled;
+  }
+
+  void ForceRelease()
+  {
+    held_ = false;
+    if (bridge_)
+    {
+      bridge_->SetHeldKey(key_, false);
+    }
   }
 
 private:
   KeyCode key_;
   TouchInputBridge *bridge_;
+  std::function<void()> onPress_;
+  bool held_{false};
 };
 
 class TouchVirtualJoystick : public UGuiWidget
@@ -97,6 +122,29 @@ public:
   TouchVirtualJoystick(const GuiTheme *theme, TouchInputBridge *bridge)
       : theme_(theme), bridge_(bridge)
   {
+  }
+
+  bool IsActive() const { return active_; }
+
+  void ForceRelease()
+  {
+    active_ = false;
+    knobOffset_ = {0.f, 0.f};
+    if (bridge_)
+    {
+      bridge_->SetJoystickVector({0.f, 0.f});
+      bridge_->SetJoystickActive(false);
+    }
+  }
+
+  bool OnCapturedMove(int x, int y)
+  {
+    if (!active_)
+    {
+      return false;
+    }
+    UpdateStick(x, y);
+    return true;
   }
 
   void Draw(UGuiRenderer &renderer) override
@@ -120,6 +168,12 @@ public:
       return false;
     }
     active_ = true;
+    if (bridge_)
+    {
+      bridge_->SetJoystickActive(true);
+      bridge_->RequestCameraBaseline(static_cast<float>(event.x),
+                                     static_cast<float>(event.y));
+    }
     UpdateStick(event.x, event.y);
     return true;
   }
@@ -140,27 +194,11 @@ public:
     {
       return false;
     }
-    active_ = false;
-    knobOffset_ = {0.f, 0.f};
-    if (bridge_)
-    {
-      bridge_->SetJoystickVector({0.f, 0.f});
-    }
+    ForceRelease();
     return event.button == GuiMouseButton::Left;
   }
 
 private:
-  GuiRect ComputeKnobRect() const
-  {
-    const int knobSize = std::max(28, bounds_.w / 3);
-    const float centerX =
-        static_cast<float>(bounds_.x + bounds_.w / 2) + knobOffset_.x;
-    const float centerY =
-        static_cast<float>(bounds_.y + bounds_.h / 2) + knobOffset_.y;
-    return {static_cast<int>(centerX - knobSize / 2),
-            static_cast<int>(centerY - knobSize / 2), knobSize, knobSize};
-  }
-
   void UpdateStick(int x, int y)
   {
     const float centerX = static_cast<float>(bounds_.x + bounds_.w / 2);
@@ -184,6 +222,17 @@ private:
     }
   }
 
+  GuiRect ComputeKnobRect() const
+  {
+    const int knobSize = std::max(28, bounds_.w / 3);
+    const float centerX =
+        static_cast<float>(bounds_.x + bounds_.w / 2) + knobOffset_.x;
+    const float centerY =
+        static_cast<float>(bounds_.y + bounds_.h / 2) + knobOffset_.y;
+    return {static_cast<int>(centerX - knobSize / 2),
+            static_cast<int>(centerY - knobSize / 2), knobSize, knobSize};
+  }
+
   const GuiTheme *theme_{nullptr};
   TouchInputBridge *bridge_{nullptr};
   glm::vec2 knobOffset_{0.f, 0.f};
@@ -193,14 +242,22 @@ private:
 class TouchLookPad : public UGuiWidget
 {
 public:
-  explicit TouchLookPad(const GuiTheme *theme) : theme_(theme) {}
+  TouchLookPad(const GuiTheme *theme, const float *uiScale,
+               TouchInputBridge *bridge)
+      : theme_(theme), uiScale_(uiScale), bridge_(bridge)
+  {
+  }
 
   UGuiWidget *HitTest(int x, int y) override
   {
-    (void)x;
-    (void)y;
-    return nullptr;
+    if (!visible_ || !enabled_ || !bounds_.Contains(x, y))
+    {
+      return nullptr;
+    }
+    return this;
   }
+
+  bool OnCapturedMove(int x, int y) { return OnLookMove(x, y); }
 
   void Draw(UGuiRenderer &renderer) override
   {
@@ -208,17 +265,107 @@ public:
     {
       return;
     }
-    renderer.DrawFilledRect(bounds_, {0.10f, 0.12f, 0.16f, 0.22f});
-    renderer.DrawBorderRect(bounds_, {1.f, 1.f, 1.f, 0.22f},
+    const float scale = uiScale_ ? *uiScale_ : 1.f;
+    renderer.DrawFilledRect(bounds_, {0.10f, 0.12f, 0.16f, 0.35f});
+    renderer.DrawBorderRect(bounds_, {1.f, 1.f, 1.f, 0.28f},
                             theme_->borderThickness);
     GuiRect labelRect = bounds_;
-    labelRect.y += bounds_.h / 2 - 12;
-    labelRect.h = 24;
+    labelRect.y += bounds_.h / 2 - ScalePx(12, scale);
+    labelRect.h = ScalePx(24, scale);
     renderer.DrawTextCenteredInRect(labelRect, "Look", {0.92f, 0.92f, 0.95f});
   }
 
+  bool OnMouseDown(const GuiMouseEvent &event) override
+  {
+    if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y) ||
+        event.button != GuiMouseButton::Left)
+    {
+      return false;
+    }
+    active_ = true;
+    dragged_ = false;
+    startX_ = event.x;
+    startY_ = event.y;
+    lastX_ = event.x;
+    lastY_ = event.y;
+    downTime_ = std::chrono::steady_clock::now();
+    if (bridge_)
+    {
+      bridge_->RequestCameraBaseline(static_cast<float>(event.x),
+                                     static_cast<float>(event.y));
+    }
+    return true;
+  }
+
+  bool OnMouseMove(const GuiMouseEvent &event) override
+  {
+    return OnLookMove(event.x, event.y);
+  }
+
+  bool OnMouseUp(const GuiMouseEvent &event) override
+  {
+    if (!active_)
+    {
+      return false;
+    }
+    const bool handled = dragged_ || bounds_.Contains(event.x, event.y);
+    if (bridge_ && !dragged_)
+    {
+      const float holdSeconds = std::chrono::duration<float>(
+                                    std::chrono::steady_clock::now() - downTime_)
+                                    .count();
+      const float dragDistance = std::sqrt(
+          static_cast<float>((event.x - startX_) * (event.x - startX_) +
+                             (event.y - startY_) * (event.y - startY_)));
+      const float slop = uiScale_ ? std::min(36.f * *uiScale_, 56.f) : 36.f;
+      if (dragDistance < slop && holdSeconds < 0.50f)
+      {
+        bridge_->QueuePlaceTap(static_cast<float>(event.x),
+                               static_cast<float>(event.y));
+      }
+    }
+    active_ = false;
+    dragged_ = false;
+    return handled;
+  }
+
 private:
+  bool OnLookMove(int x, int y)
+  {
+    if (!active_ || !bridge_)
+    {
+      return false;
+    }
+    const float dx = static_cast<float>(x - lastX_);
+    const float dy = static_cast<float>(y - lastY_);
+    const float dragDistance = std::sqrt(
+        static_cast<float>((x - startX_) * (x - startX_) +
+                           (y - startY_) * (y - startY_)));
+    const float threshold = uiScale_ ? 10.f * *uiScale_ : 10.f;
+    if (!dragged_ && dragDistance > threshold)
+    {
+      dragged_ = true;
+      bridge_->RequestCameraBaseline(static_cast<float>(x), static_cast<float>(y));
+    }
+    if (dragged_)
+    {
+      bridge_->AddLookDelta(dx, dy);
+    }
+    lastX_ = x;
+    lastY_ = y;
+    return true;
+  }
+
   const GuiTheme *theme_{nullptr};
+  const float *uiScale_{nullptr};
+  TouchInputBridge *bridge_{nullptr};
+  int startX_{0};
+  int startY_{0};
+  int lastX_{0};
+  int lastY_{0};
+  bool active_{false};
+  bool dragged_{false};
+  std::chrono::steady_clock::time_point downTime_{};
 };
 
 } // namespace
@@ -226,9 +373,11 @@ private:
 GuiTouchControls::GuiTouchControls(const GuiTheme *theme,
                                    TouchInputBridge *bridge,
                                    std::function<void()> onMenu,
-                                   std::function<void()> onInventory)
+                                   std::function<void()> onInventory,
+                                   std::function<void()> onJumpPress)
     : theme_(theme), bridge_(bridge), onMenu_(std::move(onMenu)),
-      onInventory_(std::move(onInventory))
+      onInventory_(std::move(onInventory)),
+      onJumpPress_(std::move(onJumpPress))
 {
 }
 
@@ -248,17 +397,28 @@ void GuiTouchControls::Build(UGuiPanel *parent)
 
   auto joystick =
       std::make_unique<TouchVirtualJoystick>(theme_, bridge_);
-  joystick_ = joystick.get();
+  auto *joystickWidget = joystick.get();
+  joystick_ = joystickWidget;
   root_->AddChild(std::move(joystick));
 
-  auto jump = std::make_unique<TouchHoldButton>(theme_, "Jump", KeyCode::Key_Space,
-                                                bridge_);
-  jumpButton_ = jump.get();
+  auto jump = std::make_unique<TouchHoldButton>(
+      theme_, "Jump", KeyCode::Key_Space, bridge_,
+      [this]() {
+        if (onJumpPress_)
+        {
+          onJumpPress_();
+        }
+      });
+  auto *jumpWidget = jump.get();
+  jump->SetZOrder(kTouchControlsZOrder + 2);
+  jumpButton_ = jumpWidget;
   root_->AddChild(std::move(jump));
 
   auto sneak = std::make_unique<TouchHoldButton>(theme_, "Sneak", KeyCode::Key_Shift,
                                                  bridge_);
-  sneakButton_ = sneak.get();
+  auto *sneakWidget = sneak.get();
+  sneak->SetZOrder(kTouchControlsZOrder + 2);
+  sneakButton_ = sneakWidget;
   root_->AddChild(std::move(sneak));
 
   auto inventory = std::make_unique<UGuiButton>(theme_, "Inv");
@@ -281,75 +441,140 @@ void GuiTouchControls::Build(UGuiPanel *parent)
   menuButton_ = menu.get();
   root_->AddChild(std::move(menu));
 
-  auto lookPad = std::make_unique<TouchLookPad>(theme_);
+  auto lookPad = std::make_unique<TouchLookPad>(theme_, &uiScale_, bridge_);
+  lookPad->SetZOrder(kTouchControlsZOrder + 1);
   lookPad_ = lookPad.get();
   root_->AddChild(std::move(lookPad));
+
+  routeCapturedMove_ = [joystickWidget, lookPad = lookPad_](int x, int y)
+  {
+    if (joystickWidget->OnCapturedMove(x, y))
+    {
+      return true;
+    }
+    if (lookPad)
+    {
+      return static_cast<TouchLookPad *>(lookPad)->OnCapturedMove(x, y);
+    }
+    return false;
+  };
+  releaseJoystickCapture_ = [joystickWidget]()
+  { joystickWidget->ForceRelease(); };
+  releaseAllCaptures_ = [joystickWidget, jumpWidget, sneakWidget]()
+  {
+    joystickWidget->ForceRelease();
+    jumpWidget->ForceRelease();
+    sneakWidget->ForceRelease();
+  };
 }
 
-void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
+bool GuiTouchControls::RouteCapturedMove(int x, int y)
+{
+  return routeCapturedMove_ ? routeCapturedMove_(x, y) : false;
+}
+
+void GuiTouchControls::ReleaseJoystickCapture()
+{
+  if (releaseJoystickCapture_)
+  {
+    releaseJoystickCapture_();
+  }
+  if (bridge_)
+  {
+    bridge_->ResetJoystick();
+  }
+}
+
+void GuiTouchControls::ReleaseAllCaptures()
+{
+  if (releaseAllCaptures_)
+  {
+    releaseAllCaptures_();
+  }
+  if (bridge_)
+  {
+    bridge_->ResetJoystick();
+  }
+}
+
+void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
+                              float uiScale)
 {
   if (!root_)
   {
     return;
   }
+  uiScale_ = uiScale;
   root_->SetBounds({0, 0, width, height});
 
-  const int bottomRowY = height - kButtonSize - kMargin;
-  const int leftControlsW =
-      kMargin + kJoystickSize + 12 + kButtonSize + 8 + kButtonSize + kMargin;
-  const int leftControlsH = kJoystickSize + kMargin;
+  const int buttonSize = ScalePx(kButtonSizeBase, uiScale);
+  const int margin = std::max(ScalePx(24, uiScale),
+                              ScalePx(kMarginBase, uiScale));
+  const int shortEdge = std::min(width, height);
+  const int joystickTarget = ScalePx(kJoystickSizeBase, uiScale);
+  const int joystickMax =
+      std::max(ScalePx(120, uiScale), static_cast<int>(shortEdge * 0.20f));
+  const int joystickSize = std::min(joystickTarget, joystickMax);
+  const int buttonGap = ScalePx(8, uiScale);
+  const int controlLift = ScalePx(8, uiScale);
+
+  const int bottomRowY = height - buttonSize - margin;
+  const int joystickY = bottomRowY - joystickSize - controlLift;
+  const int leftMargin =
+      std::max(margin, offsetX + ScalePx(12, uiScale));
+  const int leftControlsW = leftMargin + joystickSize + margin;
+  const int leftControlsTop = std::max(0, joystickY - controlLift);
+  const int leftControlsH = std::max(1, height - leftControlsTop);
+  const int rightColX = width - margin - buttonSize;
+  const int jumpX = rightColX - buttonSize - buttonGap;
   if (joystick_)
   {
-    joystick_->SetBounds(
-        {kMargin, bottomRowY - kJoystickSize + kButtonSize, kJoystickSize,
-         kJoystickSize});
+    joystick_->SetBounds({leftMargin, joystickY, joystickSize, joystickSize});
   }
   if (jumpButton_)
   {
-    const int jumpX = kMargin + kJoystickSize + 12;
-    jumpButton_->SetBounds({jumpX, bottomRowY, kButtonSize, kButtonSize});
+    jumpButton_->SetBounds({jumpX, bottomRowY, buttonSize, buttonSize});
   }
   if (sneakButton_)
   {
-    const int jumpX = kMargin + kJoystickSize + 12;
-    sneakButton_->SetBounds(
-        {jumpX + kButtonSize + 8, bottomRowY, kButtonSize, kButtonSize});
+    sneakButton_->SetBounds({rightColX, bottomRowY, buttonSize, buttonSize});
   }
   if (menuButton_)
   {
     menuButton_->SetBounds(
-        {width - kButtonSize - kMargin, kMargin, kButtonSize, kButtonSize});
+        {width - buttonSize - margin, margin, buttonSize, buttonSize});
   }
   if (inventoryButton_)
   {
-    inventoryButton_->SetBounds({width - kButtonSize - kMargin,
-                                 kMargin + kButtonSize + 8, kButtonSize,
-                                 kButtonSize});
+    inventoryButton_->SetBounds({width - buttonSize - margin,
+                                   margin + buttonSize + buttonGap, buttonSize,
+                                   buttonSize});
   }
 
-  constexpr int kHotbarReserve = 96;
-  constexpr int kTopMenuReserve = 152;
-  const int lookPadX =
-      kMargin + static_cast<int>(static_cast<float>(width) * 0.58f);
-  const int lookPadW = std::max(0, width - lookPadX - kMargin);
-  const int lookPadY = kTopMenuReserve;
-  const int lookPadH = std::max(0, height - lookPadY - kHotbarReserve);
   if (lookPad_)
   {
-    lookPad_->SetBounds({lookPadX, lookPadY, lookPadW, lookPadH});
+    const int lookSize = std::max(joystickSize, buttonSize * 2 + buttonGap);
+    const int lookX = width - margin - lookSize;
+    const int lookY = bottomRowY - lookSize - controlLift;
+    lookPad_->SetBounds({lookX, lookY, lookSize, lookSize});
   }
 
   if (bridge_)
   {
     bridge_->ClearBlockedGameRegions();
     bridge_->SetBlockedGameRegion(
-        0, {offsetX + kMargin,
-            offsetY + std::max(0, height - leftControlsH),
+        0, {offsetX + leftMargin, offsetY + leftControlsTop,
             leftControlsW, leftControlsH});
     bridge_->SetBlockedGameRegion(
-        1, {offsetX + std::max(0, width - kButtonSize - kMargin * 2),
-            offsetY + kMargin, kButtonSize + kMargin * 2,
-            kButtonSize * 2 + 8 + kMargin});
+        1, {offsetX + std::max(0, width - buttonSize - margin * 2),
+            offsetY + margin, buttonSize + margin * 2,
+            buttonSize * 2 + buttonGap + margin});
+    const int actionPad = ScalePx(4, uiScale);
+    bridge_->SetBlockedGameRegion(
+        2, {offsetX + std::max(0, jumpX - actionPad),
+            offsetY + std::max(0, bottomRowY - actionPad),
+            buttonSize * 2 + buttonGap + actionPad * 2,
+            buttonSize + actionPad * 2});
   }
 }
 

@@ -55,7 +55,12 @@ public:
   void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
   IGuiClipboard *GetClipboard() const { return Clipboard; }
 
+  void ApplyUiScale(float scale);
+  float GetUiScale() const { return uiScale_; }
+
 private:
+  GuiTheme baseTheme_;
+  float uiScale_{1.f};
   IGuiClipboard *Clipboard{nullptr};
   GuiTheme theme_;
   std::unique_ptr<UGuiRenderer> renderer_;

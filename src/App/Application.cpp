@@ -7,6 +7,9 @@
 #include "Render/Camera/CameraPerspective.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
+#ifdef __ANDROID__
+#include "App/Platform/TouchInputBridge.h"
+#endif
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
 #endif
@@ -44,6 +47,7 @@
 #endif
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iostream>
 
 namespace cutum
@@ -500,7 +504,8 @@ void UApplication::ShowInGameHud()
             PaletteScreen->SetVisible(PaletteOpen);
           }
           SyncCursorVisibility();
-        });
+        },
+        [this]() { TryToggleFlightOnJumpPress(); });
   }
 #endif
   hud->Build(*GuiContext);
@@ -644,7 +649,6 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
 
   if (pressed)
   {
-    ActiveOverlayCapture = OverlayPointerCapture::None;
     if (PaletteOpen && routeRoot(PaletteScreen->GetRoot(), true))
     {
       ActiveOverlayCapture = OverlayPointerCapture::Palette;
@@ -799,6 +803,25 @@ void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
   viewportInsetTop_ = std::max(0, top);
   viewportInsetRight_ = std::max(0, right);
   viewportInsetBottom_ = std::max(0, bottom);
+}
+
+void UApplication::SetUiScale(float scale)
+{
+  if (std::fabs(scale - uiScale_) < 0.01f)
+  {
+    return;
+  }
+  uiScale_ = scale;
+  if (GuiContext)
+  {
+    GuiContext->ApplyUiScale(uiScale_);
+  }
+#ifdef __ANDROID__
+  if (touchBridge_)
+  {
+    touchBridge_->SetUiScale(uiScale_);
+  }
+#endif
 }
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
@@ -1204,6 +1227,12 @@ bool UApplication::RouteMouseMove(int x, int y)
     {
       return true;
     }
+#if defined(__ANDROID__)
+    if (HudScreen && HudScreen->RouteTouchMove(x, y))
+    {
+      return true;
+    }
+#endif
     auto routeMove = [&](UGuiWidget *root) -> bool
     { return root && root->OnMouseMove(event); };
     bool handled = false;
@@ -1216,6 +1245,36 @@ bool UApplication::RouteMouseMove(int x, int y)
   }
   return GuiContext->RouteMouseMove(event);
 }
+
+#if defined(__ANDROID__)
+void UApplication::ReleaseHudJoystickCapture()
+{
+  if (State == AppState::InGame && HudScreen)
+  {
+    HudScreen->ReleaseJoystickCapture();
+  }
+}
+
+void UApplication::TryToggleFlightOnJumpPress()
+{
+  if (State != AppState::InGame || !World)
+  {
+    return;
+  }
+  auto camera = World->GetCurrentUserCamera();
+  if (!camera || !camera->TryToggleFlightOnDoubleSpace())
+  {
+    return;
+  }
+  if (Geometry)
+  {
+    const std::string msg =
+        camera->GetFreeMove() ? "Flight ON (Space up, Shift down, 2xSpace off)"
+                              : "Flight mode OFF";
+    Geometry->ShowTransientMessage(msg, 2.5);
+  }
+}
+#endif
 
 bool UApplication::RouteScroll(double xoffset, double yoffset, int mouseX,
                                int mouseY)

@@ -645,6 +645,11 @@ void UCamera::ResetMouseMove(double xpos, double ypos)
   FirstMouseCoords = true;
 }
 
+void UCamera::ApplyRelativeMouseMove(float xoffset, float yoffset)
+{
+  ProcessMouseMovement(xoffset, yoffset);
+}
+
 void UCamera::UpdateMouseScroll(double xoffset, double yoffset)
 {
   ProcessMouseScroll(static_cast<float>(yoffset));

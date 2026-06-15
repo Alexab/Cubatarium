@@ -2,16 +2,20 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
+#include "Gui/Core/GuiScale.h"
 #include "App/Platform/InputManager.h"
 #include "App/Platform/Log.h"
 #include "App/Settings/AppState.h"
+#include "App/Settings/UiSettings.h"
 #include "Creatures/Player/User.h"
 #include "Game/GameSession.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
 
+#include <android/configuration.h>
 #include <android/input.h>
 #include <game-activity/GameActivity.h>
 #include <game-activity/GameActivityEvents.h>
@@ -52,6 +56,31 @@ void QueryViewportInsets(android_app *app, int &left, int &top, int &right,
   top = systemBars.top;
   right = systemBars.right;
   bottom = systemBars.bottom;
+}
+
+int QueryDensityDpi(android_app *app)
+{
+  if (!app || !app->config)
+  {
+    return 0;
+  }
+  switch (AConfiguration_getDensity(app->config))
+  {
+  case ACONFIGURATION_DENSITY_LOW:
+    return 120;
+  case ACONFIGURATION_DENSITY_MEDIUM:
+    return 160;
+  case ACONFIGURATION_DENSITY_HIGH:
+    return 240;
+  case ACONFIGURATION_DENSITY_XHIGH:
+    return 320;
+  case ACONFIGURATION_DENSITY_XXHIGH:
+    return 480;
+  case ACONFIGURATION_DENSITY_XXXHIGH:
+    return 640;
+  default:
+    return 160;
+  }
 }
 
 } // namespace
@@ -250,11 +279,39 @@ void AndroidPlatformWindow::ProcessInput()
   ctx.Geometries = geometries_.get();
   ctx.Ui = core_ ? &core_->GetUiSettings() : nullptr;
   ctx.App = application_.get();
-  const glm::vec2 pos = touch_.GetMousePosition();
+  glm::vec2 pos = touch_.GetMousePosition();
+
+  if (touch_.ConsumeBlockInputCancel() && blockInput_)
+  {
+    blockInput_->CancelPointerInteraction(ctx);
+  }
+
+  glm::vec2 placeTapPos{};
+  if (touch_.ConsumePendingPlaceTap(placeTapPos))
+  {
+    pos = placeTapPos;
+    if (blockInput_ && world_)
+    {
+      if (auto camera = world_->GetCurrentUserCamera())
+      {
+        world_->UpdateIntersection(camera->GetPosition(), camera->GetFront());
+      }
+      blockInput_->OnQuickTap(ctx);
+    }
+  }
+
   const glm::vec2 lookDelta = touch_.ConsumeMouseDelta();
 
   if (auto camera = world_->GetCurrentUserCamera())
   {
+    float baselineX = 0.f;
+    float baselineY = 0.f;
+    if (touch_.ConsumeCameraBaseline(baselineX, baselineY))
+    {
+      camera->ResetMouseMove(static_cast<double>(baselineX),
+                             static_cast<double>(baselineY));
+    }
+
     camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
                             touch_.IsKeyPressed(KeyCode::Key_W));
     camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
@@ -265,10 +322,13 @@ void AndroidPlatformWindow::ProcessInput()
                             touch_.IsKeyPressed(KeyCode::Key_D));
     camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
                             touch_.IsKeyPressed(KeyCode::Key_Space));
+    const bool shiftDown = touch_.IsKeyPressed(KeyCode::Key_Shift);
+    camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shiftDown);
+    camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
     if (lookDelta.x != 0.f || lookDelta.y != 0.f)
     {
-      camera->UpdateMouseMove(world_, static_cast<double>(pos.x),
-                              static_cast<double>(pos.y));
+      camera->ApplyRelativeMouseMove(lookDelta.x, -lookDelta.y);
+      world_->UpdateIntersection(camera->GetPosition(), camera->GetFront());
     }
   }
 
@@ -298,6 +358,10 @@ void AndroidPlatformWindow::Update()
   if (world_ && application_ &&
       application_->GetState() == AppState::InGame)
   {
+    if (!world_->IsStepUpEnabled())
+    {
+      world_->SetStepUpEnabled(true);
+    }
     world_->DoMovement();
     if (blockInput_)
     {
@@ -339,6 +403,26 @@ void AndroidPlatformWindow::Render()
   QueryViewportInsets(app_, insetLeft, insetTop, insetRight, insetBottom);
   touch_.SetScreenSize(width_, height_);
   touch_.SetContentInsets(insetLeft, insetTop, insetRight, insetBottom);
+  static int lastDensityDpi = 0;
+  static int lastUiWidth = 0;
+  static int lastUiHeight = 0;
+  const int densityDpi = QueryDensityDpi(app_);
+  if (densityDpi != lastDensityDpi || width_ != lastUiWidth ||
+      height_ != lastUiHeight)
+  {
+    application_->SetUiScale(
+        ComputeUiScale(densityDpi, width_, height_));
+    lastDensityDpi = densityDpi;
+    lastUiWidth = width_;
+    lastUiHeight = height_;
+  }
+  if (core_)
+  {
+    const UiSettings &ui = core_->GetUiSettings();
+    touch_.SetPlaceClickMaxSeconds(ui.placeClickMaxSeconds);
+    touch_.SetBreakHoldMinSeconds(ui.breakHoldMinSeconds);
+    touch_.SetUiScale(application_->GetUiScale());
+  }
   application_->SetViewportInsets(insetLeft, insetTop, insetRight,
                                   insetBottom);
   application_->RenderFrame(size.x, size.y,
@@ -382,22 +466,34 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
       const int pointerIndex = NormalizePointerIndex(static_cast<int>(i));
       touch_.OnTouchMove(static_cast<int>(i), px, py,
                          !uiPointerCapture_[pointerIndex]);
-    }
-    if (application_)
-    {
-      application_->RouteMouseMove(static_cast<int>(x), static_cast<int>(y));
+      if (application_ && uiPointerCapture_[pointerIndex])
+      {
+        application_->RouteMouseMove(static_cast<int>(px), static_cast<int>(py));
+      }
     }
   }
   else if (masked == AMOTION_EVENT_ACTION_UP ||
            masked == AMOTION_EVENT_ACTION_POINTER_UP)
   {
+    const int pointerIndex = NormalizePointerIndex(pointer);
     if (application_)
     {
       application_->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
                                      static_cast<int>(x), static_cast<int>(y));
     }
     touch_.OnTouchUp(pointer, x, y);
-    uiPointerCapture_[NormalizePointerIndex(pointer)] = false;
+    uiPointerCapture_[pointerIndex] = false;
+  }
+  else if (masked == AMOTION_EVENT_ACTION_CANCEL)
+  {
+    const int pointerIndex = NormalizePointerIndex(pointer);
+    if (application_)
+    {
+      application_->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
+                                     static_cast<int>(x), static_cast<int>(y));
+    }
+    touch_.OnTouchUp(pointer, x, y, true);
+    uiPointerCapture_[pointerIndex] = false;
   }
   return true;
 }

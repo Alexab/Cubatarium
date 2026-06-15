@@ -74,12 +74,18 @@ public:
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void SetViewportInsets(int left, int top, int right, int bottom);
+  void SetUiScale(float scale);
+  float GetUiScale() const { return uiScale_; }
 
   bool RouteKey(int key, int action, int mods);
   bool RouteChar(unsigned int codepoint);
   bool RouteMouseButton(int button, bool pressed, int x, int y);
   bool RouteMouseMove(int x, int y);
   bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
+#if defined(__ANDROID__)
+  void ReleaseHudJoystickCapture();
+  void TryToggleFlightOnJumpPress();
+#endif
 
   AppState GetState() const { return State; }
   bool HasWorldSession() const { return WorldSessionActive; }
@@ -174,6 +180,7 @@ private:
   MenuSubview MenuSubview{MenuSubview::Main};
   UMainMenuScreen *MainMenuScreen{nullptr};
   TouchInputBridge *touchBridge_{nullptr};
+  float uiScale_{1.f};
   int viewportInsetLeft_{0};
   int viewportInsetTop_{0};
   int viewportInsetRight_{0};

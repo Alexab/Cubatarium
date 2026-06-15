@@ -148,6 +148,7 @@ set(SOURCES
     src/Console/ConsoleCommandHistory.cpp
     src/Console/ConsoleInputSanitize.cpp
     src/Gui/Core/GuiTheme.cpp
+    src/Gui/Core/GuiScale.cpp
     src/Gui/Core/GuiRenderer.cpp
     src/Gui/Batch/UiQuadBatch.cpp
     src/Gui/Batch/UiTexturedQuadBatch.cpp

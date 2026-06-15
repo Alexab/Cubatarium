@@ -96,6 +96,7 @@ public:
   void UpdateFrameTime();
   void UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos);
   void ResetMouseMove(double xpos, double ypos);
+  void ApplyRelativeMouseMove(float xoffset, float yoffset);
   void UpdateMouseScroll(double xoffset, double yoffset);
 
   void ClearShiftKeyState();
