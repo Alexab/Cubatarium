@@ -23,6 +23,8 @@
 #include <game-activity/GameActivityEvents.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 
+#include <algorithm>
+
 namespace cutum
 {
 
@@ -58,6 +60,21 @@ void QueryViewportInsets(android_app *app, int &left, int &top, int &right,
   top = systemBars.top;
   right = systemBars.right;
   bottom = systemBars.bottom;
+}
+
+int QueryKeyboardInsetBottom(android_app *app)
+{
+  if (!app || !app->activity)
+  {
+    return 0;
+  }
+  auto *activity = reinterpret_cast<GameActivity *>(app->activity);
+  ARect ime{};
+  ARect systemBars{};
+  GameActivity_getWindowInsets(activity, GAMECOMMON_INSETS_TYPE_IME, &ime);
+  GameActivity_getWindowInsets(activity, GAMECOMMON_INSETS_TYPE_SYSTEM_BARS,
+                               &systemBars);
+  return std::max(0, ime.bottom - systemBars.bottom);
 }
 
 int QueryDensityDpi(android_app *app)
@@ -144,6 +161,13 @@ void AndroidPlatformWindow::OnAppCmd(int32_t cmd)
     if (egl_.HasSurface())
     {
       egl_.UpdateSurfaceSize();
+    }
+    break;
+  case APP_CMD_EDITOR_ACTION:
+    if (application_)
+    {
+      AndroidSoftKeyboardHandleEditorAction(application_.get(),
+                                            app_ ? app_->editorAction : 0);
     }
     break;
   default:
@@ -433,6 +457,7 @@ void AndroidPlatformWindow::Render()
   }
   application_->SetViewportInsets(insetLeft, insetTop, insetRight,
                                   insetBottom);
+  application_->SetKeyboardInsetBottom(QueryKeyboardInsetBottom(app_));
   application_->RenderFrame(size.x, size.y,
                             views_ ? views_->GetDurationUpdateMks() : 0.0);
 }

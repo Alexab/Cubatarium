@@ -29,6 +29,7 @@ public:
 
   void SetVisible(bool visible);
   bool IsVisible() const { return visible_; }
+  void SetKeyboardInsetBottom(int bottom);
   void Toggle();
   void SubmitCommand();
   void AttachPopup(UGuiPopupMenu *popup);
@@ -51,6 +52,7 @@ private:
   UGuiPopupMenu *popup_{nullptr};
   GuiTheme consoleTheme_{};
   bool visible_{false};
+  int keyboardInsetBottom_{0};
   int historyBrowseFromEnd_{-1};
   std::string draftLine_;
   bool draftValid_{false};

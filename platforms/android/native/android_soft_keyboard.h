@@ -13,6 +13,7 @@ void AndroidSoftKeyboardAttachApp(android_app *app);
 void AndroidSoftKeyboardSetTarget(UGuiTextInput *input);
 void AndroidSoftKeyboardClearTarget();
 void AndroidSoftKeyboardProcess(UApplication *application);
+bool AndroidSoftKeyboardHandleEditorAction(UApplication *application, int action);
 
 } // namespace cutum
 

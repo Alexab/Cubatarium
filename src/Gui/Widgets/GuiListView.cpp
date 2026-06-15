@@ -69,6 +69,11 @@ void UGuiListView::ClampScroll()
   scrollOffsetPx_ = std::clamp(scrollOffsetPx_, 0, MaxScrollY());
 }
 
+void UGuiListView::ScrollToEnd()
+{
+  scrollOffsetPx_ = MaxScrollY();
+}
+
 void UGuiListView::EnsureSelectedVisible()
 {
   if (selectedIndex_ < 0 || items_.empty())

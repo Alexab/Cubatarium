@@ -30,6 +30,20 @@ void OnImeState(void *context, const GameTextInputState *state)
                              static_cast<size_t>(state->text_length)));
 }
 
+bool IsImeSubmitAction(int action)
+{
+  switch (action & IME_MASK_ACTION)
+  {
+  case IME_ACTION_DONE:
+  case IME_ACTION_GO:
+  case IME_ACTION_SEND:
+  case IME_ACTION_UNSPECIFIED:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // namespace
 
 void AndroidSoftKeyboardAttachApp(android_app *app) { gApp = app; }
@@ -70,6 +84,7 @@ void AndroidSoftKeyboardClearTarget()
 
 void AndroidSoftKeyboardProcess(UApplication *application)
 {
+  (void)application;
   if (!gApp || !gApp->activity || gApp->textInputState == 0)
   {
     return;
@@ -80,6 +95,20 @@ void AndroidSoftKeyboardProcess(UApplication *application)
     GameActivity_getTextInputState(gApp->activity, OnImeState, gActiveInput);
   }
   gApp->textInputState = 0;
+}
+
+bool AndroidSoftKeyboardHandleEditorAction(UApplication *application, int action)
+{
+  if (!application || !IsImeSubmitAction(action))
+  {
+    return false;
+  }
+  if (gApp && gApp->activity && gActiveInput)
+  {
+    GameActivity_getTextInputState(gApp->activity, OnImeState, gActiveInput);
+  }
+  application->SubmitConsoleCommand();
+  return true;
 }
 
 } // namespace cutum

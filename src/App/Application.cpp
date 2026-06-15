@@ -850,6 +850,20 @@ void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
   }
 }
 
+void UApplication::SetKeyboardInsetBottom(int bottom)
+{
+  const int inset = std::max(0, bottom);
+  if (keyboardInsetBottom_ == inset)
+  {
+    return;
+  }
+  keyboardInsetBottom_ = inset;
+  if (ConsoleScreen)
+  {
+    ConsoleScreen->SetKeyboardInsetBottom(keyboardInsetBottom_);
+  }
+}
+
 void UApplication::SetUiScale(float scale)
 {
   if (std::fabs(scale - uiScale_) < 0.01f)
@@ -1320,6 +1334,14 @@ void UApplication::TryToggleFlightOnJumpPress()
         camera->GetFreeMove() ? "Flight ON (Space up, Shift down, 2xSpace off)"
                               : "Flight mode OFF";
     Geometry->ShowTransientMessage(msg, 2.5);
+  }
+}
+
+void UApplication::SubmitConsoleCommand()
+{
+  if (State == AppState::InGame && ConsoleOpen && ConsoleScreen)
+  {
+    ConsoleScreen->SubmitCommand();
   }
 }
 #endif

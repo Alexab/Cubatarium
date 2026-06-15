@@ -75,6 +75,7 @@ public:
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void SetViewportInsets(int left, int top, int right, int bottom);
+  void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);
   float GetUiScale() const { return uiScale_; }
 
@@ -87,6 +88,7 @@ public:
 #if defined(__ANDROID__)
   void ReleaseHudJoystickCapture();
   void TryToggleFlightOnJumpPress();
+  void SubmitConsoleCommand();
 #endif
 
   AppState GetState() const { return State; }
@@ -190,6 +192,7 @@ private:
   int viewportInsetTop_{0};
   int viewportInsetRight_{0};
   int viewportInsetBottom_{0};
+  int keyboardInsetBottom_{0};
 };
 
 } // namespace cutum

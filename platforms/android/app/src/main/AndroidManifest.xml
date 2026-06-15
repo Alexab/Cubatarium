@@ -10,6 +10,7 @@
             android:exported="true"
             android:theme="@style/Theme.Cubatarium"
             android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing|stateHidden"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <meta-data
                 android:name="android.app.lib_name"

@@ -49,6 +49,17 @@ void UConsoleScreen::SetVisible(bool visible)
   }
 }
 
+void UConsoleScreen::SetKeyboardInsetBottom(int bottom)
+{
+  const int inset = std::max(0, bottom);
+  if (keyboardInsetBottom_ == inset)
+  {
+    return;
+  }
+  keyboardInsetBottom_ = inset;
+  Relayout();
+}
+
 void UConsoleScreen::Toggle() { SetVisible(!visible_); }
 
 void UConsoleScreen::AttachPopup(UGuiPopupMenu *popup) { popup_ = popup; }
@@ -99,19 +110,42 @@ void UConsoleScreen::Relayout()
   }
   const int ox = GetContentOffsetX();
   const int oy = GetContentOffsetY();
+  constexpr int padding = 8;
   const int inputH = std::max(48, 40);
+
+  if (keyboardInsetBottom_ > 0)
+  {
+    const int inputY =
+        oy + viewportH_ - keyboardInsetBottom_ - padding - inputH;
+    const int logH = std::max(72, inputH + 24);
+    const int logY = inputY - 4 - logH;
+    const int panelY = std::max(oy, logY - padding);
+    const int panelH = inputY + inputH + padding - panelY;
+    root_->SetBounds({ox, panelY, viewportW_, panelH});
+    if (logView_)
+    {
+      logView_->SetBounds({ox + padding, logY, viewportW_ - 2 * padding, logH});
+      logView_->ScrollToEnd();
+    }
+    if (input_)
+    {
+      input_->SetBounds({ox + padding, inputY, viewportW_ - 2 * padding, inputH});
+    }
+    return;
+  }
+
   const int panelH = std::max(inputH + 96, viewportH_ * 42 / 100);
   const int panelY = oy + std::max(0, viewportH_ - panelH);
   root_->SetBounds({ox, panelY, viewportW_, panelH});
   if (logView_)
   {
-    logView_->SetBounds({ox + 8, panelY + 8, viewportW_ - 16,
+    logView_->SetBounds({ox + padding, panelY + padding, viewportW_ - 2 * padding,
                          std::max(32, panelH - inputH - 20)});
   }
   if (input_)
   {
-    input_->SetBounds({ox + 8, panelY + panelH - inputH - 8, viewportW_ - 16,
-                       inputH});
+    input_->SetBounds({ox + padding, panelY + panelH - inputH - padding,
+                       viewportW_ - 2 * padding, inputH});
   }
 }
 
@@ -124,6 +158,10 @@ void UConsoleScreen::Update(double /*dt*/)
   if (session_ && logView_)
   {
     logView_->SetItems(session_->GetChatLog());
+    if (keyboardInsetBottom_ > 0)
+    {
+      logView_->ScrollToEnd();
+    }
   }
 }
 

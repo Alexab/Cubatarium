@@ -21,6 +21,7 @@ public:
   int GetSelectedIndex() const { return selectedIndex_; }
   void SetOnSelectionChanged(std::function<void(int)> handler);
   void SetAcceptKeyNavigation(bool enabled) { acceptKeyNavigation_ = enabled; }
+  void ScrollToEnd();
 
   bool CanFocus() const override;
   void RevealFocused();
