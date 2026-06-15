@@ -8,5 +8,6 @@ AAssetManager *CubatariumAndroidGetAssetManager();
 std::string CubatariumAndroidGetFilesDir();
 /// Blocks until MainActivity.nativeOnCreate() has run (or destroy requested).
 bool CubatariumAndroidWaitForJavaInit(struct android_app *app);
+void CubatariumAndroidFinishActivity();
 
 #endif

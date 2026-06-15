@@ -17,12 +17,13 @@ public:
   GuiTouchControls(const GuiTheme *theme, TouchInputBridge *bridge,
                    std::function<void()> onMenu,
                    std::function<void()> onInventory,
+                   std::function<void()> onConsole,
                    std::function<void()> onJumpPress);
 
   void Build(UGuiPanel *parent);
   void Layout(int width, int height, int offsetX, int offsetY,
               float uiScale = 1.f);
-  bool RouteCapturedMove(int x, int y);
+  bool RouteCapturedMove(int pointerId, int x, int y);
   void ReleaseJoystickCapture();
   void ReleaseAllCaptures();
   ~GuiTouchControls();
@@ -32,6 +33,7 @@ private:
   TouchInputBridge *bridge_{nullptr};
   std::function<void()> onMenu_;
   std::function<void()> onInventory_;
+  std::function<void()> onConsole_;
   std::function<void()> onJumpPress_;
   UGuiPanel *root_{nullptr};
   UGuiWidget *joystick_{nullptr};
@@ -40,8 +42,9 @@ private:
   UGuiWidget *sneakButton_{nullptr};
   UGuiWidget *inventoryButton_{nullptr};
   UGuiWidget *menuButton_{nullptr};
+  UGuiWidget *consoleButton_{nullptr};
   float uiScale_{1.f};
-  std::function<bool(int, int)> routeCapturedMove_;
+  std::function<bool(int, int, int)> routeCapturedMove_;
   std::function<void()> releaseJoystickCapture_;
   std::function<void()> releaseAllCaptures_;
 };

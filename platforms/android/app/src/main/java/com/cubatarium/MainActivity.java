@@ -58,4 +58,9 @@ public class MainActivity extends GameActivity {
     }
 
     private native void nativeOnCreate();
+
+    /** Called from native code to close the app on the UI thread. */
+    public void finishFromNative() {
+        runOnUiThread(this::finish);
+    }
 }

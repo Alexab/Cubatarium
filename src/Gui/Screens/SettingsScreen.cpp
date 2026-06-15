@@ -98,6 +98,10 @@ void USettingsScreen::OnSave()
   {
     app.Ui.legacyHud = legacyHudBox_->IsChecked();
   }
+  if (showPerformanceBox_)
+  {
+    app.Ui.showPerformance = showPerformanceBox_->IsChecked();
+  }
   if (consoleKeyInput_)
   {
     app.Ui.consoleKey = consoleKeyInput_->GetText();
@@ -214,6 +218,10 @@ void USettingsScreen::Build(UGuiContext &ctx)
   legacyHudBox_ = hud.get();
   hud->SetChecked(appSnap.Ui.legacyHud);
   app.AddChild(std::move(hud));
+  auto perf = std::make_unique<UGuiCheckbox>(&theme, "Show performance overlay");
+  showPerformanceBox_ = perf.get();
+  perf->SetChecked(appSnap.Ui.showPerformance);
+  app.AddChild(std::move(perf));
   auto consoleLbl = std::make_unique<UGuiLabel>(&theme, "Console key:");
   consoleKeyLabel_ = consoleLbl.get();
   app.AddChild(std::move(consoleLbl));
@@ -341,7 +349,7 @@ void USettingsScreen::Relayout()
 std::vector<GuiGridItem>
 USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
 {
-  const int hotbarValueRow = spec.columns > 1 ? 9 : 10;
+  const int hotbarValueRow = spec.columns > 1 ? 10 : 11;
   const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
   return {
       {defaultUserLabel_, 0, 0, 1, 1, 28},
@@ -357,14 +365,15 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
       {frustumBox_, 5, 0, 1, 1, 30},
       {batchCacheBox_, 5, 1, 1, 1, 30},
       {legacyHudBox_, 6, 0, 1, 2, 30},
-      {consoleKeyLabel_, 7, 0, 1, 1, 28},
-      {consoleKeyInput_, 7, 1, 1, 1, 32},
-      {paletteKeyLabel_, 8, 0, 1, 1, 28},
-      {paletteKeyInput_, 8, 1, 1, 1, 32},
-      {hotbarCountLabel_, 9, 0, 1, 1, 28},
+      {showPerformanceBox_, 7, 0, 1, 2, 30},
+      {consoleKeyLabel_, 8, 0, 1, 1, 28},
+      {consoleKeyInput_, 8, 1, 1, 1, 32},
+      {paletteKeyLabel_, 9, 0, 1, 1, 28},
+      {paletteKeyInput_, 9, 1, 1, 1, 32},
+      {hotbarCountLabel_, 10, 0, 1, 1, 28},
       {hotbarCountValueLabel_, hotbarValueRow, hotbarValueCol, 1, 1, 32},
-      {controlSchemeLabel_, 10, 0, 1, 1, 28},
-      {controlSchemeButton_, 10, 1, 1, 1, 32},
+      {controlSchemeLabel_, 11, 0, 1, 1, 28},
+      {controlSchemeButton_, 11, 1, 1, 1, 32},
   };
 }
 

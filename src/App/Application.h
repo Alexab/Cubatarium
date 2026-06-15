@@ -15,6 +15,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "App/Settings/UiSettings.h"
+#include <array>
 #include <functional>
 #include <memory>
 #include <string>
@@ -79,8 +80,9 @@ public:
 
   bool RouteKey(int key, int action, int mods);
   bool RouteChar(unsigned int codepoint);
-  bool RouteMouseButton(int button, bool pressed, int x, int y);
-  bool RouteMouseMove(int x, int y);
+  bool RouteMouseButton(int button, bool pressed, int x, int y,
+                        int pointerId = -1);
+  bool RouteMouseMove(int x, int y, int pointerId = -1);
   bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
 #if defined(__ANDROID__)
   void ReleaseHudJoystickCapture();
@@ -130,6 +132,7 @@ private:
   bool UsesUiPointer() const;
   bool BlocksGameMouseLook() const;
   bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool pressed);
+  bool HasAnyOverlayCapture() const;
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
@@ -161,7 +164,9 @@ private:
     Console,
     Hud
   };
-  OverlayPointerCapture ActiveOverlayCapture{OverlayPointerCapture::None};
+  static constexpr int kMaxOverlayPointers = 10;
+  std::array<OverlayPointerCapture, kMaxOverlayPointers> overlayCaptures_{};
+  int NormalizeOverlayPointer(int pointerId) const;
   int DragCursorX{0};
   int DragCursorY{0};
   bool WorldSessionActive{false};

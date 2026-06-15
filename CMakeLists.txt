@@ -297,6 +297,7 @@ if(ANDROID)
         platforms/android/native/android_main.cpp
         platforms/android/native/egl_context.cpp
         platforms/android/native/android_jni.cpp
+        platforms/android/native/android_soft_keyboard.cpp
         src/App/Platform/AppRunner.cpp
         src/App/Platform/AndroidPlatformPaths.cpp
         src/App/Platform/AndroidPlatformWindow.cpp

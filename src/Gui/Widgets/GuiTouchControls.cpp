@@ -5,6 +5,7 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiPanel.h"
 
@@ -23,6 +24,7 @@ namespace
 constexpr int kButtonSizeBase = 64;
 constexpr int kMarginBase = 16;
 constexpr int kJoystickSizeBase = 200;
+constexpr int kTopRightStackOffsetBase = 132;
 constexpr int kTouchControlsZOrder = 100;
 
 class TouchControlPanel : public UGuiPanel
@@ -73,6 +75,7 @@ public:
     {
       return false;
     }
+    capturePointerId_ = event.pointerId;
     if (onPress_)
     {
       onPress_();
@@ -87,7 +90,7 @@ public:
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!held_)
+    if (!held_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
     {
       return false;
     }
@@ -97,12 +100,14 @@ public:
       bridge_->SetHeldKey(key_, false);
     }
     held_ = false;
+    capturePointerId_ = -1;
     return handled;
   }
 
   void ForceRelease()
   {
     held_ = false;
+    capturePointerId_ = -1;
     if (bridge_)
     {
       bridge_->SetHeldKey(key_, false);
@@ -114,6 +119,7 @@ private:
   TouchInputBridge *bridge_;
   std::function<void()> onPress_;
   bool held_{false};
+  int capturePointerId_{-1};
 };
 
 class TouchVirtualJoystick : public UGuiWidget
@@ -129,6 +135,7 @@ public:
   void ForceRelease()
   {
     active_ = false;
+    capturePointerId_ = -1;
     knobOffset_ = {0.f, 0.f};
     if (bridge_)
     {
@@ -137,9 +144,9 @@ public:
     }
   }
 
-  bool OnCapturedMove(int x, int y)
+  bool OnCapturedMove(int pointerId, int x, int y)
   {
-    if (!active_)
+    if (!active_ || !GuiPointerMatches(pointerId, capturePointerId_))
     {
       return false;
     }
@@ -168,6 +175,7 @@ public:
       return false;
     }
     active_ = true;
+    capturePointerId_ = event.pointerId;
     if (bridge_)
     {
       bridge_->SetJoystickActive(true);
@@ -180,7 +188,7 @@ public:
 
   bool OnMouseMove(const GuiMouseEvent &event) override
   {
-    if (!active_)
+    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
     {
       return false;
     }
@@ -190,11 +198,12 @@ public:
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!active_)
+    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
     {
       return false;
     }
     ForceRelease();
+    capturePointerId_ = -1;
     return event.button == GuiMouseButton::Left;
   }
 
@@ -237,6 +246,7 @@ private:
   TouchInputBridge *bridge_{nullptr};
   glm::vec2 knobOffset_{0.f, 0.f};
   bool active_{false};
+  int capturePointerId_{-1};
 };
 
 class TouchLookPad : public UGuiWidget
@@ -257,7 +267,14 @@ public:
     return this;
   }
 
-  bool OnCapturedMove(int x, int y) { return OnLookMove(x, y); }
+  bool OnCapturedMove(int pointerId, int x, int y)
+  {
+    if (!active_ || !GuiPointerMatches(pointerId, capturePointerId_))
+    {
+      return false;
+    }
+    return OnLookMove(x, y);
+  }
 
   void Draw(UGuiRenderer &renderer) override
   {
@@ -283,6 +300,7 @@ public:
       return false;
     }
     active_ = true;
+    capturePointerId_ = event.pointerId;
     dragged_ = false;
     startX_ = event.x;
     startY_ = event.y;
@@ -299,16 +317,19 @@ public:
 
   bool OnMouseMove(const GuiMouseEvent &event) override
   {
+    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    {
+      return false;
+    }
     return OnLookMove(event.x, event.y);
   }
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!active_)
+    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
     {
       return false;
     }
-    const bool handled = dragged_ || bounds_.Contains(event.x, event.y);
     if (bridge_ && !dragged_)
     {
       const float holdSeconds = std::chrono::duration<float>(
@@ -326,7 +347,8 @@ public:
     }
     active_ = false;
     dragged_ = false;
-    return handled;
+    capturePointerId_ = -1;
+    return true;
   }
 
 private:
@@ -365,6 +387,7 @@ private:
   int lastY_{0};
   bool active_{false};
   bool dragged_{false};
+  int capturePointerId_{-1};
   std::chrono::steady_clock::time_point downTime_{};
 };
 
@@ -374,9 +397,11 @@ GuiTouchControls::GuiTouchControls(const GuiTheme *theme,
                                    TouchInputBridge *bridge,
                                    std::function<void()> onMenu,
                                    std::function<void()> onInventory,
+                                   std::function<void()> onConsole,
                                    std::function<void()> onJumpPress)
     : theme_(theme), bridge_(bridge), onMenu_(std::move(onMenu)),
       onInventory_(std::move(onInventory)),
+      onConsole_(std::move(onConsole)),
       onJumpPress_(std::move(onJumpPress))
 {
 }
@@ -441,20 +466,33 @@ void GuiTouchControls::Build(UGuiPanel *parent)
   menuButton_ = menu.get();
   root_->AddChild(std::move(menu));
 
+  auto console = std::make_unique<UGuiButton>(theme_, "Cmd");
+  console->SetOnClick([this]() {
+    if (onConsole_)
+    {
+      onConsole_();
+    }
+  });
+  consoleButton_ = console.get();
+  root_->AddChild(std::move(console));
+
   auto lookPad = std::make_unique<TouchLookPad>(theme_, &uiScale_, bridge_);
   lookPad->SetZOrder(kTouchControlsZOrder + 1);
   lookPad_ = lookPad.get();
   root_->AddChild(std::move(lookPad));
 
-  routeCapturedMove_ = [joystickWidget, lookPad = lookPad_](int x, int y)
+  routeCapturedMove_ = [joystickWidget, lookPad = lookPad_](int pointerId, int x,
+                                                            int y)
   {
-    if (joystickWidget->OnCapturedMove(x, y))
+    if (static_cast<TouchVirtualJoystick *>(joystickWidget)
+            ->OnCapturedMove(pointerId, x, y))
     {
       return true;
     }
     if (lookPad)
     {
-      return static_cast<TouchLookPad *>(lookPad)->OnCapturedMove(x, y);
+      return static_cast<TouchLookPad *>(lookPad)->OnCapturedMove(pointerId, x,
+                                                                  y);
     }
     return false;
   };
@@ -468,9 +506,9 @@ void GuiTouchControls::Build(UGuiPanel *parent)
   };
 }
 
-bool GuiTouchControls::RouteCapturedMove(int x, int y)
+bool GuiTouchControls::RouteCapturedMove(int pointerId, int x, int y)
 {
-  return routeCapturedMove_ ? routeCapturedMove_(x, y) : false;
+  return routeCapturedMove_ ? routeCapturedMove_(pointerId, x, y) : false;
 }
 
 void GuiTouchControls::ReleaseJoystickCapture()
@@ -527,6 +565,9 @@ void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   const int leftControlsH = std::max(1, height - leftControlsTop);
   const int rightColX = width - margin - buttonSize;
   const int jumpX = rightColX - buttonSize - buttonGap;
+  const int topRightY = margin + ScalePx(kTopRightStackOffsetBase, uiScale);
+  const int topRightStackH =
+      buttonSize * 3 + buttonGap * 2 + margin;
   if (joystick_)
   {
     joystick_->SetBounds({leftMargin, joystickY, joystickSize, joystickSize});
@@ -542,13 +583,19 @@ void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   if (menuButton_)
   {
     menuButton_->SetBounds(
-        {width - buttonSize - margin, margin, buttonSize, buttonSize});
+        {width - buttonSize - margin, topRightY, buttonSize, buttonSize});
   }
   if (inventoryButton_)
   {
     inventoryButton_->SetBounds({width - buttonSize - margin,
-                                   margin + buttonSize + buttonGap, buttonSize,
-                                   buttonSize});
+                                   topRightY + buttonSize + buttonGap,
+                                   buttonSize, buttonSize});
+  }
+  if (consoleButton_)
+  {
+    consoleButton_->SetBounds(
+        {width - buttonSize - margin,
+         topRightY + (buttonSize + buttonGap) * 2, buttonSize, buttonSize});
   }
 
   if (lookPad_)
@@ -567,8 +614,8 @@ void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
             leftControlsW, leftControlsH});
     bridge_->SetBlockedGameRegion(
         1, {offsetX + std::max(0, width - buttonSize - margin * 2),
-            offsetY + margin, buttonSize + margin * 2,
-            buttonSize * 2 + buttonGap + margin});
+            offsetY + topRightY - margin / 2, buttonSize + margin * 2,
+            topRightStackH});
     const int actionPad = ScalePx(4, uiScale);
     bridge_->SetBlockedGameRegion(
         2, {offsetX + std::max(0, jumpX - actionPad),

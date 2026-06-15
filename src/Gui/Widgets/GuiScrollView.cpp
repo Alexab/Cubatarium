@@ -1,6 +1,7 @@
 #include "GuiScrollView.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
 
 #include "Gui/Core/GuiKeyCodes.h"
@@ -49,6 +50,21 @@ bool ShouldShowScrollbar(GuiScrollbarMode mode, int maxScrollY)
 bool IsScrollInteractionEnabled(GuiScrollbarMode mode)
 {
   return mode != GuiScrollbarMode::Hidden;
+}
+
+int MeasureVisibleContentExtent(const UGuiPanel &content, int contentTop)
+{
+  int maxBottom = 0;
+  for (const auto &child : content.GetChildren())
+  {
+    if (!child || !child->IsVisible())
+    {
+      continue;
+    }
+    const GuiRect &b = child->GetBounds();
+    maxBottom = std::max(maxBottom, b.y + b.h - contentTop);
+  }
+  return maxBottom;
 }
 
 } // namespace
@@ -164,7 +180,9 @@ void UGuiScrollView::LayoutContent(int spacing, int padding)
     }
     content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
     afterScrollLayout_(*this);
-    contentHeight_ = std::max(vp.h, content_.GetBounds().h);
+    const int contentTop = vp.y - scrollY_;
+    contentHeight_ =
+        std::max(vp.h, MeasureVisibleContentExtent(content_, contentTop));
     ClampScroll();
     content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
     afterScrollLayout_(*this);
@@ -243,18 +261,87 @@ UGuiWidget *UGuiScrollView::HitTest(int x, int y)
   return nullptr;
 }
 
+bool UGuiScrollView::BeginDeferredTouch(const GuiMouseEvent &event)
+{
+  if (!ViewportRect().Contains(event.x, event.y) &&
+      !ScrollbarTrackRect().Contains(event.x, event.y))
+  {
+    return false;
+  }
+  if (MaxScrollY() <= 0)
+  {
+    return false;
+  }
+  deferredTouchActive_ = true;
+  deferredDragged_ = false;
+  deferredDown_ = event;
+  deferredDragStartY_ = event.y;
+  deferredDragStartScroll_ = scrollY_;
+  return true;
+}
+
+bool UGuiScrollView::OnDeferredMove(const GuiMouseEvent &event)
+{
+  if (!deferredTouchActive_)
+  {
+    return false;
+  }
+  const int dy = event.y - deferredDragStartY_;
+  if (!deferredDragged_ && std::abs(dy) > kGuiTouchDragSlopPx)
+  {
+    deferredDragged_ = true;
+  }
+  if (deferredDragged_)
+  {
+    scrollY_ = deferredDragStartScroll_ - dy;
+    ClampScroll();
+    LayoutContent(layoutSpacing_, layoutPadding_);
+    return true;
+  }
+  return false;
+}
+
+bool UGuiScrollView::OnDeferredUp(const GuiMouseEvent &event)
+{
+  if (!deferredTouchActive_)
+  {
+    return false;
+  }
+  deferredTouchActive_ = false;
+  if (!deferredDragged_)
+  {
+    content_.OnMouseDown(deferredDown_);
+    content_.OnMouseUp(event);
+    return true;
+  }
+  deferredDragged_ = false;
+  return true;
+}
+
 bool UGuiScrollView::OnMouseDown(const GuiMouseEvent &event)
 {
+  if (BeginDeferredTouch(event))
+  {
+    return true;
+  }
   return content_.OnMouseDown(event);
 }
 
 bool UGuiScrollView::OnMouseUp(const GuiMouseEvent &event)
 {
+  if (deferredTouchActive_)
+  {
+    return OnDeferredUp(event);
+  }
   return content_.OnMouseUp(event);
 }
 
 bool UGuiScrollView::OnMouseMove(const GuiMouseEvent &event)
 {
+  if (deferredTouchActive_)
+  {
+    return OnDeferredMove(event);
+  }
   return content_.OnMouseMove(event);
 }
 

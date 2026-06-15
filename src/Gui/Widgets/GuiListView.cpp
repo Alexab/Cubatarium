@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 
 #include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
@@ -173,19 +174,53 @@ bool UGuiListView::OnMouseDown(const GuiMouseEvent &event)
   {
     return false;
   }
+  dragActive_ = true;
+  dragMoved_ = false;
+  dragStartY_ = event.y;
+  dragStartScroll_ = scrollOffsetPx_;
   const int localY = event.y - bounds_.y + scrollOffsetPx_;
-  const int index = localY / rowHeight_;
-  if (index >= 0 && index < static_cast<int>(items_.size()))
+  pendingSelectIndex_ = localY / rowHeight_;
+  if (pendingSelectIndex_ < 0 ||
+      pendingSelectIndex_ >= static_cast<int>(items_.size()))
   {
-    selectedIndex_ = index;
-    if (onSelectionChanged_)
-    {
-      onSelectionChanged_(index);
-    }
-    EnsureSelectedVisible();
+    pendingSelectIndex_ = -1;
+  }
+  return true;
+}
+
+bool UGuiListView::OnMouseMove(const GuiMouseEvent &event)
+{
+  if (!dragActive_)
+  {
+    return false;
+  }
+  const int dy = event.y - dragStartY_;
+  if (!dragMoved_ && std::abs(dy) > kGuiTouchDragSlopPx)
+  {
+    dragMoved_ = true;
+  }
+  if (dragMoved_)
+  {
+    scrollOffsetPx_ = dragStartScroll_ - dy;
+    ClampScroll();
     return true;
   }
-  return false;
+  return ListAreaRect().Contains(event.x, event.y);
+}
+
+bool UGuiListView::OnMouseUp(const GuiMouseEvent &event)
+{
+  if (!dragActive_)
+  {
+    return false;
+  }
+  dragActive_ = false;
+  if (!dragMoved_ && pendingSelectIndex_ >= 0)
+  {
+    SelectIndex(pendingSelectIndex_);
+  }
+  pendingSelectIndex_ = -1;
+  return ListAreaRect().Contains(event.x, event.y) || dragMoved_;
 }
 
 bool UGuiListView::SelectIndex(int index)

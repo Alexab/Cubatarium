@@ -91,17 +91,17 @@ void UInGameHudScreen::Build(UGuiContext &ctx)
 #if defined(__ANDROID__)
 void UInGameHudScreen::ConfigureTouchControls(
     TouchInputBridge *bridge, std::function<void()> onMenu,
-    std::function<void()> onInventory, std::function<void()> onJumpPress)
+    std::function<void()> onInventory, std::function<void()> onConsole,
+    std::function<void()> onJumpPress)
 {
-  touchControls_ = std::make_unique<GuiTouchControls>(theme_, bridge,
-                                                      std::move(onMenu),
-                                                      std::move(onInventory),
-                                                      std::move(onJumpPress));
+  touchControls_ = std::make_unique<GuiTouchControls>(
+      theme_, bridge, std::move(onMenu), std::move(onInventory),
+      std::move(onConsole), std::move(onJumpPress));
 }
 
-bool UInGameHudScreen::RouteTouchMove(int x, int y)
+bool UInGameHudScreen::RouteTouchMove(int pointerId, int x, int y)
 {
-  return touchControls_ && touchControls_->RouteCapturedMove(x, y);
+  return touchControls_ && touchControls_->RouteCapturedMove(pointerId, x, y);
 }
 
 void UInGameHudScreen::ReleaseJoystickCapture()

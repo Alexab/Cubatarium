@@ -149,6 +149,7 @@ void UApplication::Startup(const std::string &configPath)
   if (Geometry)
   {
     Geometry->SetShowHud(Ui.legacyHud);
+    Geometry->SetShowPerformance(Ui.showPerformance);
   }
   if (!GuiContext->Initialize(ShaderManager, TextRenderer))
   {
@@ -421,6 +422,7 @@ void UApplication::SaveAppAndTemplateSettings(
   if (Geometry)
   {
     Geometry->SetShowHud(Ui.legacyHud);
+    Geometry->SetShowPerformance(Ui.showPerformance);
   }
   if (World)
   {
@@ -502,6 +504,18 @@ void UApplication::ShowInGameHud()
           if (PaletteScreen)
           {
             PaletteScreen->SetVisible(PaletteOpen);
+          }
+          SyncCursorVisibility();
+        },
+        [this]() {
+          ConsoleOpen = !ConsoleOpen;
+          if (ConsoleScreen)
+          {
+            ConsoleScreen->SetVisible(ConsoleOpen);
+          }
+          if (ConsoleOpen)
+          {
+            ClearGameplayKeyboard();
           }
           SyncCursorVisibility();
         },
@@ -631,9 +645,36 @@ void UApplication::RecaptureMouseForLook()
   EnterInGameInputState();
 }
 
+int UApplication::NormalizeOverlayPointer(int pointerId) const
+{
+  if (pointerId < 0)
+  {
+    return 0;
+  }
+  if (pointerId >= kMaxOverlayPointers)
+  {
+    return kMaxOverlayPointers - 1;
+  }
+  return pointerId;
+}
+
+bool UApplication::HasAnyOverlayCapture() const
+{
+  for (const OverlayPointerCapture capture : overlayCaptures_)
+  {
+    if (capture != OverlayPointerCapture::None)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
                                          bool pressed)
 {
+  const int pointerIndex = NormalizeOverlayPointer(event.pointerId);
+
   auto routeRoot = [&](UGuiWidget *root, bool requireHitTest) -> bool
   {
     if (!root)
@@ -651,24 +692,24 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
   {
     if (PaletteOpen && routeRoot(PaletteScreen->GetRoot(), true))
     {
-      ActiveOverlayCapture = OverlayPointerCapture::Palette;
+      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Palette;
       return true;
     }
     if (ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), true))
     {
-      ActiveOverlayCapture = OverlayPointerCapture::Console;
+      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Console;
       return true;
     }
     if (routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, true))
     {
-      ActiveOverlayCapture = OverlayPointerCapture::Hud;
+      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Hud;
       return true;
     }
     return false;
   }
 
-  const OverlayPointerCapture capture = ActiveOverlayCapture;
-  ActiveOverlayCapture = OverlayPointerCapture::None;
+  const OverlayPointerCapture capture = overlayCaptures_[pointerIndex];
+  overlayCaptures_[pointerIndex] = OverlayPointerCapture::None;
   if (capture == OverlayPointerCapture::None)
   {
     return false;
@@ -803,6 +844,10 @@ void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
   viewportInsetTop_ = std::max(0, top);
   viewportInsetRight_ = std::max(0, right);
   viewportInsetBottom_ = std::max(0, bottom);
+  if (Geometry)
+  {
+    Geometry->SetOverlayMargins(viewportInsetRight_ + 16, viewportInsetTop_ + 30);
+  }
 }
 
 void UApplication::SetUiScale(float scale)
@@ -1135,11 +1180,13 @@ bool UApplication::RouteChar(unsigned int codepoint)
   return GuiContext->RouteChar(GuiCharEvent{codepoint});
 }
 
-bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
+bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y,
+                                    int pointerId)
 {
   GuiMouseEvent event;
   event.x = x;
   event.y = y;
+  event.pointerId = pointerId;
   event.button = button == GLFW_MOUSE_BUTTON_RIGHT    ? GuiMouseButton::Right
                  : button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
                                                       : GuiMouseButton::Left;
@@ -1165,7 +1212,7 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
       {
         GameSession->CancelDrag();
       }
-      if (ActiveOverlayCapture != OverlayPointerCapture::None)
+      if (HasAnyOverlayCapture())
       {
         TryRouteInGameOverlay(event, false);
       }
@@ -1198,11 +1245,12 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y)
                  : GuiContext->RouteMouseUp(event);
 }
 
-bool UApplication::RouteMouseMove(int x, int y)
+bool UApplication::RouteMouseMove(int x, int y, int pointerId)
 {
   GuiMouseEvent event;
   event.x = x;
   event.y = y;
+  event.pointerId = pointerId;
   if (State == AppState::InGame && HudScreen)
   {
     HudScreen->SetPointerPosition(x, y);
@@ -1228,7 +1276,7 @@ bool UApplication::RouteMouseMove(int x, int y)
       return true;
     }
 #if defined(__ANDROID__)
-    if (HudScreen && HudScreen->RouteTouchMove(x, y))
+    if (HudScreen && HudScreen->RouteTouchMove(pointerId, x, y))
     {
       return true;
     }

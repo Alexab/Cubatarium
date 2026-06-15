@@ -36,8 +36,9 @@ public:
   void ConfigureTouchControls(class TouchInputBridge *bridge,
                              std::function<void()> onMenu,
                              std::function<void()> onInventory,
+                             std::function<void()> onConsole,
                              std::function<void()> onJumpPress);
-  bool RouteTouchMove(int x, int y);
+  bool RouteTouchMove(int pointerId, int x, int y);
   void ReleaseJoystickCapture();
   void ReleaseTouchCaptures();
 #endif

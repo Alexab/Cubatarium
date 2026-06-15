@@ -50,6 +50,9 @@ public:
   bool OnMouseDown(const GuiMouseEvent &event) override;
   bool OnMouseUp(const GuiMouseEvent &event) override;
   bool OnMouseMove(const GuiMouseEvent &event) override;
+  bool BeginDeferredTouch(const GuiMouseEvent &event);
+  bool OnDeferredMove(const GuiMouseEvent &event);
+  bool OnDeferredUp(const GuiMouseEvent &event);
   bool OnChar(const GuiCharEvent &event) override;
   bool OnScroll(const GuiScrollEvent &event) override;
   bool OnKey(const GuiKeyEvent &event) override;
@@ -72,6 +75,11 @@ private:
   int layoutPadding_{4};
   GuiScrollbarMode scrollbarMode_{GuiScrollbarMode::Auto};
   AfterScrollLayoutFn afterScrollLayout_;
+  bool deferredTouchActive_{false};
+  bool deferredDragged_{false};
+  GuiMouseEvent deferredDown_{};
+  int deferredDragStartY_{0};
+  int deferredDragStartScroll_{0};
   static constexpr int kScrollbarWidth = 10;
 };
 

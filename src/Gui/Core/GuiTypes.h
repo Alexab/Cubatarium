@@ -48,7 +48,17 @@ struct GuiMouseEvent
   int y{0};
   GuiMouseButton button{GuiMouseButton::Left};
   bool pressed{false};
+  /// Android touch pointer index; -1 on desktop (matches any capture).
+  int pointerId{-1};
 };
+
+inline bool GuiPointerMatches(int eventPointerId, int capturePointerId)
+{
+  return eventPointerId < 0 || capturePointerId < 0 ||
+         eventPointerId == capturePointerId;
+}
+
+inline constexpr int kGuiTouchDragSlopPx = 14;
 
 struct GuiKeyEvent
 {

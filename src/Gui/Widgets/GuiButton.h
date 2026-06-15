@@ -47,6 +47,9 @@ private:
   std::string label_;
   GuiButtonState State{GuiButtonState::Normal};
   bool pressedInside_{false};
+  int downX_{0};
+  int downY_{0};
+  bool dragged_{false};
   std::function<void()> onClick_;
 };
 

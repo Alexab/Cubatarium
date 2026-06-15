@@ -1271,6 +1271,12 @@ void UGeometryEngine::SetGradientSky(bool useGradient)
 
 bool UGeometryEngine::IsGradientSky() const { return useGradientSky; }
 
+void UGeometryEngine::SetOverlayMargins(int right, int top)
+{
+  overlayMarginRight_ = std::max(10, right);
+  overlayMarginTop_ = std::max(30, top);
+}
+
 void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
                                             double view_duration)
 {
@@ -1324,13 +1330,13 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   }
 
   // Display text in top right corner
-  float y = height_size - 30.0f;
+  float y = static_cast<float>(height_size) - static_cast<float>(overlayMarginTop_);
   for (const auto &line : performanceLines)
   {
     // Calculate position for right alignment
     glm::vec2 textSize = textRenderer->GetTextSize(line, scale);
-    float x =
-        width_size - textSize.x - 10.0f; // 10 pixel margin from right edge
+    float x = static_cast<float>(width_size) - textSize.x -
+              static_cast<float>(overlayMarginRight_);
 
     textRenderer->RenderText(line, x, y, scale, textColor);
     y -= 18.0f; // Margin between lines

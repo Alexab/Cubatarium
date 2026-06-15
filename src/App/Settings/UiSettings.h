@@ -15,6 +15,7 @@ enum class ControlScheme
 struct UiSettings
 {
   bool legacyHud{false};
+  bool showPerformance{true};
   std::string consoleKey{"grave"};
   std::string paletteKey{"b"};
   std::string inventoryKey{"e"};

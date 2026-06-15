@@ -8,6 +8,9 @@
 #include "Gui/Widgets/GuiTextInput.h"
 
 #include "Gui/Core/GuiKeyCodes.h"
+#ifdef __ANDROID__
+#include "android_soft_keyboard.h"
+#endif
 
 namespace cutum
 {
@@ -24,6 +27,16 @@ void UConsoleScreen::SetVisible(bool visible)
   if (input_)
   {
     input_->SetFocused(visible);
+#ifdef __ANDROID__
+    if (visible)
+    {
+      AndroidSoftKeyboardSetTarget(input_);
+    }
+    else
+    {
+      AndroidSoftKeyboardClearTarget();
+    }
+#endif
   }
   if (!visible)
   {
@@ -84,16 +97,21 @@ void UConsoleScreen::Relayout()
   {
     return;
   }
-  const int panelH = viewportH_ * 40 / 100;
-  const int panelY = viewportH_ - panelH;
-  root_->SetBounds({0, panelY, viewportW_, panelH});
+  const int ox = GetContentOffsetX();
+  const int oy = GetContentOffsetY();
+  const int inputH = std::max(48, 40);
+  const int panelH = std::max(inputH + 96, viewportH_ * 42 / 100);
+  const int panelY = oy + std::max(0, viewportH_ - panelH);
+  root_->SetBounds({ox, panelY, viewportW_, panelH});
   if (logView_)
   {
-    logView_->SetBounds({8, panelY + 8, viewportW_ - 16, panelH - 48});
+    logView_->SetBounds({ox + 8, panelY + 8, viewportW_ - 16,
+                         std::max(32, panelH - inputH - 20)});
   }
   if (input_)
   {
-    input_->SetBounds({8, panelY + panelH - 40, viewportW_ - 16, 32});
+    input_->SetBounds({ox + 8, panelY + panelH - inputH - 8, viewportW_ - 16,
+                       inputH});
   }
 }
 
@@ -229,6 +247,9 @@ bool UConsoleScreen::RouteMouseButton(const GuiMouseEvent &event,
     if (event.pressed && event.button == GuiMouseButton::Left)
     {
       input_->PointerDown(event, renderer);
+#ifdef __ANDROID__
+      AndroidSoftKeyboardSetTarget(input_);
+#endif
       return true;
     }
     if (!event.pressed && event.button == GuiMouseButton::Left)

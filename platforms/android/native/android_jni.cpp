@@ -85,3 +85,38 @@ Java_com_cubatarium_MainActivity_nativeOnCreate(JNIEnv *env, jobject activity)
   gAssetManager = AAssetManager_fromJava(env, assetManagerObj);
   gJavaInitDone.store(true, std::memory_order_release);
 }
+
+void CubatariumAndroidFinishActivity()
+{
+  if (!gJvm || !gActivity)
+  {
+    return;
+  }
+  JNIEnv *env = nullptr;
+  bool detach = false;
+  const jint envStat =
+      gJvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+  if (envStat == JNI_EDETACHED)
+  {
+    if (gJvm->AttachCurrentThread(&env, nullptr) != JNI_OK)
+    {
+      return;
+    }
+    detach = true;
+  }
+  else if (envStat != JNI_OK)
+  {
+    return;
+  }
+  jclass activityClass = env->GetObjectClass(gActivity);
+  jmethodID finishFromNative =
+      env->GetMethodID(activityClass, "finishFromNative", "()V");
+  if (finishFromNative)
+  {
+    env->CallVoidMethod(gActivity, finishFromNative);
+  }
+  if (detach)
+  {
+    gJvm->DetachCurrentThread();
+  }
+}

@@ -3,6 +3,9 @@
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#ifdef __ANDROID__
+#include "android_soft_keyboard.h"
+#endif
 
 #include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
@@ -243,6 +246,9 @@ bool UGuiTextInput::PointerDown(const GuiMouseEvent &event,
   }
   focused_ = true;
   draggingSelection_ = true;
+#ifdef __ANDROID__
+  AndroidSoftKeyboardSetTarget(this);
+#endif
   caretPos_ = CaretIndexFromX(event.x, renderer);
   selAnchor_ = selEnd_ = caretPos_;
   return true;
@@ -270,8 +276,16 @@ bool UGuiTextInput::OnMouseDown(const GuiMouseEvent &event)
   {
     return bounds_.Contains(event.x, event.y);
   }
-  return event.button == GuiMouseButton::Left &&
-         bounds_.Contains(event.x, event.y);
+  if (event.button == GuiMouseButton::Left &&
+      bounds_.Contains(event.x, event.y))
+  {
+    focused_ = true;
+#ifdef __ANDROID__
+    AndroidSoftKeyboardSetTarget(this);
+#endif
+    return true;
+  }
+  return false;
 }
 
 bool UGuiTextInput::OnMouseUp(const GuiMouseEvent &event)

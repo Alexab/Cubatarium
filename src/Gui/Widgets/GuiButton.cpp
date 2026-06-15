@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 
 namespace cutum
 {
@@ -89,6 +90,9 @@ bool UGuiButton::OnMouseDown(const GuiMouseEvent &event)
   }
   State = GuiButtonState::Pressed;
   pressedInside_ = true;
+  downX_ = event.x;
+  downY_ = event.y;
+  dragged_ = false;
   return true;
 }
 
@@ -100,11 +104,12 @@ bool UGuiButton::OnMouseUp(const GuiMouseEvent &event)
   }
   const bool inside = bounds_.Contains(event.x, event.y);
   const bool wasPressed = pressedInside_;
-  if (wasPressed && event.button == GuiMouseButton::Left && onClick_)
+  if (wasPressed && event.button == GuiMouseButton::Left && onClick_ && !dragged_)
   {
     onClick_();
   }
   pressedInside_ = false;
+  dragged_ = false;
   State = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
   return wasPressed || inside;
 }
@@ -124,6 +129,15 @@ bool UGuiButton::OnMouseMove(const GuiMouseEvent &event)
   if (State != GuiButtonState::Pressed)
   {
     State = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
+  }
+  else if (pressedInside_ && !dragged_)
+  {
+    const int dx = event.x - downX_;
+    const int dy = event.y - downY_;
+    if (dx * dx + dy * dy > kGuiTouchDragSlopPx * kGuiTouchDragSlopPx)
+    {
+      dragged_ = true;
+    }
   }
   return inside;
 }

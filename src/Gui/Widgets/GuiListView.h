@@ -27,6 +27,8 @@ public:
 
   void Draw(UGuiRenderer &renderer) override;
   bool OnMouseDown(const GuiMouseEvent &event) override;
+  bool OnMouseUp(const GuiMouseEvent &event) override;
+  bool OnMouseMove(const GuiMouseEvent &event) override;
   bool OnKey(const GuiKeyEvent &event) override;
   bool OnScroll(const GuiScrollEvent &event) override;
   bool ScrollAtPoint(int x, int y, const GuiScrollEvent &event) override;
@@ -50,6 +52,11 @@ private:
   int rowHeight_{20};
   std::function<void(int)> onSelectionChanged_;
   bool acceptKeyNavigation_{true};
+  bool dragActive_{false};
+  bool dragMoved_{false};
+  int dragStartY_{0};
+  int dragStartScroll_{0};
+  int pendingSelectIndex_{-1};
   static constexpr int kScrollbarWidth = 10;
 };
 

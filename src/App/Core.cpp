@@ -310,6 +310,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         const json &u = d["ui"];
         Ui.legacyHud = u.value("legacy_hud", false);
+        Ui.showPerformance = u.value("show_performance", true);
         Ui.consoleKey = u.value("console_key", "grave");
         Ui.paletteKey = u.value("palette_key", "b");
         Ui.inventoryKey = u.value("inventory_key", "e");

@@ -68,6 +68,7 @@ private:
   UGuiCheckbox *frustumBox_{nullptr};
   UGuiCheckbox *batchCacheBox_{nullptr};
   UGuiCheckbox *legacyHudBox_{nullptr};
+  UGuiCheckbox *showPerformanceBox_{nullptr};
   UGuiTextInput *consoleKeyInput_{nullptr};
   UGuiTextInput *paletteKeyInput_{nullptr};
   UGuiButton *hotbarMinusButton_{nullptr};

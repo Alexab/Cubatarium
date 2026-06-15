@@ -1,6 +1,8 @@
 #include "App/Platform/AndroidPlatformWindow.h"
 
 #include "App/Application.h"
+#include "android_jni.h"
+#include "android_soft_keyboard.h"
 #include "App/Core.h"
 #include "Gui/Core/GuiScale.h"
 #include "App/Platform/InputManager.h"
@@ -155,6 +157,7 @@ void AndroidPlatformWindow::Run()
   {
     return;
   }
+  AndroidSoftKeyboardAttachApp(app_);
   while (running_ && app_->destroyRequested == 0)
   {
     if (application_ && application_->IsQuitRequested())
@@ -186,6 +189,10 @@ void AndroidPlatformWindow::Run()
       ProcessFrame();
     }
   }
+  if (application_ && application_->IsQuitRequested())
+  {
+    CubatariumAndroidFinishActivity();
+  }
 }
 
 void AndroidPlatformWindow::ProcessFrame()
@@ -208,6 +215,7 @@ void AndroidPlatformWindow::ProcessFrame()
   ProcessInput();
   if (application_)
   {
+    AndroidSoftKeyboardProcess(application_.get());
     application_->Update(deltaTime_);
   }
   Update();
@@ -451,7 +459,7 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
     {
       uiConsumed = application_->RouteMouseButton(
           static_cast<int>(MouseButton::Left), true, static_cast<int>(x),
-          static_cast<int>(y));
+          static_cast<int>(y), pointer);
     }
     const int pointerIndex = NormalizePointerIndex(pointer);
     uiPointerCapture_[pointerIndex] = uiConsumed;
@@ -468,7 +476,8 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
                          !uiPointerCapture_[pointerIndex]);
       if (application_ && uiPointerCapture_[pointerIndex])
       {
-        application_->RouteMouseMove(static_cast<int>(px), static_cast<int>(py));
+        application_->RouteMouseMove(static_cast<int>(px), static_cast<int>(py),
+                                     static_cast<int>(i));
       }
     }
   }
@@ -479,7 +488,8 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
     if (application_)
     {
       application_->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
-                                     static_cast<int>(x), static_cast<int>(y));
+                                     static_cast<int>(x), static_cast<int>(y),
+                                     pointer);
     }
     touch_.OnTouchUp(pointer, x, y);
     uiPointerCapture_[pointerIndex] = false;
@@ -490,7 +500,8 @@ bool AndroidPlatformWindow::HandleGameMotionEvent(
     if (application_)
     {
       application_->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
-                                     static_cast<int>(x), static_cast<int>(y));
+                                     static_cast<int>(x), static_cast<int>(y),
+                                     pointer);
     }
     touch_.OnTouchUp(pointer, x, y, true);
     uiPointerCapture_[pointerIndex] = false;
