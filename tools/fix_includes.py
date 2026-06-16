@@ -7,6 +7,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent / "src"
 SKIP = {"stb_image.h"}
 
+# Class name in code -> actual header basename (without .h)
+SPECIAL_HEADER = {
+    "GuiQuadBatch": "UiQuadBatch",
+    "GuiTexturedQuadBatch": "UiTexturedQuadBatch",
+}
+
 STRIP_U = {
     "TerrestrialBipedPosePresenter", "CreaturePosePresenterRegistry",
     "CreatureLocomotionController", "CreatureDefinitionStorage",
@@ -37,6 +43,12 @@ STRIP_U = {
     "TextureBase", "BlockRaycast", "PrefabUtil", "Creature", "Camera",
     "Player", "Chunk", "CubeGL", "Object", "Cube", "User",
     "TerrainPlane", "SingleCube", "Terrain", "Person", "Rect",
+    "AndroidPlatformWindow", "AndroidPlatformPaths",
+    "DesktopPlatformWindow", "DesktopPlatformPaths",
+    "TouchInputBridge", "GuiTouchControls",
+    "TouchControlPanel", "TouchHoldButton", "TouchVirtualJoystick",
+    "TouchLookPad", "GlfwClipboard", "NullClipboard", "AssetStreamBuf",
+    "GuiQuadBatch", "GuiTexturedQuadBatch",
 }
 
 INCLUDE_RE = re.compile(r'(#include\s+["<])([^">]+)([">])')
@@ -49,7 +61,8 @@ def fix_include_path(path: str) -> str:
         return path
     base = fname[:-2]
     if base.startswith("U") and base[1:] in STRIP_U:
-        parts[-1] = base[1:] + ".h"
+        stem = SPECIAL_HEADER.get(base[1:], base[1:])
+        parts[-1] = stem + ".h"
         return "/".join(parts)
     return path
 
