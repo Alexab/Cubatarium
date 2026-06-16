@@ -16,7 +16,7 @@ namespace
 
 struct AndroidAppState
 {
-  AndroidPlatformWindow *window{nullptr};
+  UAndroidPlatformWindow *window{nullptr};
 };
 
 void HandleAppCmd(android_app *app, int32_t cmd)
@@ -63,7 +63,7 @@ bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
   return false;
 }
 
-bool WaitForEglSurface(android_app *app, AndroidPlatformWindow &window)
+bool WaitForEglSurface(android_app *app, UAndroidPlatformWindow &window)
 {
   if (window.HasSurface())
   {
@@ -107,7 +107,7 @@ extern "C" void android_main(struct android_app *app)
 {
   using namespace cutum;
 
-  AndroidPlatformWindow window(app);
+  UAndroidPlatformWindow window(app);
   AndroidAppState state;
   state.window = &window;
   app->userData = &state;
@@ -119,7 +119,8 @@ extern "C" void android_main(struct android_app *app)
   }
 
   auto pathsPtr =
-      std::make_shared<AndroidPlatformPaths>(CubatariumAndroidGetAssetManager());
+      std::make_shared<UAndroidPlatformPaths>(
+          CubatariumAndroidGetAssetManager());
   pathsPtr->EnsureWritableConfig();
   IPlatformPaths::SetGlobal(pathsPtr);
 

@@ -27,20 +27,20 @@ constexpr int kJoystickSizeBase = 200;
 constexpr int kTopRightStackOffsetBase = 132;
 constexpr int kTouchControlsZOrder = 100;
 
-class TouchControlPanel : public UGuiPanel
+class UTouchControlPanel : public UGuiPanel
 {
 public:
-  explicit TouchControlPanel(const GuiTheme *theme) : UGuiPanel(theme) {}
+  explicit UTouchControlPanel(const GuiTheme *theme) : UGuiPanel(theme) {}
 
   UGuiWidget *HitTest(int x, int y) override
   {
-    if (!visible_)
+    if (!Visible)
     {
       return nullptr;
     }
     std::vector<UGuiWidget *> sorted;
-    sorted.reserve(children_.size());
-    for (auto &child : children_)
+    sorted.reserve(Children.size());
+    for (auto &child : Children)
     {
       sorted.push_back(child.get());
     }
@@ -58,13 +58,13 @@ public:
   }
 };
 
-class TouchHoldButton : public UGuiButton
+class UTouchHoldButton : public UGuiButton
 {
 public:
-  TouchHoldButton(const GuiTheme *theme, std::string label, KeyCode key,
-                  TouchInputBridge *bridge,
-                  std::function<void()> onPress = nullptr)
-      : UGuiButton(theme, std::move(label)), key_(key), bridge_(bridge),
+  UTouchHoldButton(const GuiTheme *theme, std::string label, KeyCode key,
+                   UTouchInputBridge *bridge,
+                   std::function<void()> onPress = nullptr)
+      : UGuiButton(theme, std::move(label)), key_(key), Bridge(bridge),
         onPress_(std::move(onPress))
   {
   }
@@ -75,29 +75,29 @@ public:
     {
       return false;
     }
-    capturePointerId_ = event.pointerId;
+    capturePointerId_ = event.PointerId;
     if (onPress_)
     {
       onPress_();
     }
     held_ = true;
-    if (bridge_)
+    if (Bridge)
     {
-      bridge_->SetHeldKey(key_, true);
+      Bridge->SetHeldKey(key_, true);
     }
     return true;
   }
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!held_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    if (!held_ || !GuiPointerMatches(event.PointerId, capturePointerId_))
     {
       return false;
     }
     const bool handled = UGuiButton::OnMouseUp(event);
-    if (bridge_)
+    if (Bridge)
     {
-      bridge_->SetHeldKey(key_, false);
+      Bridge->SetHeldKey(key_, false);
     }
     held_ = false;
     capturePointerId_ = -1;
@@ -108,25 +108,25 @@ public:
   {
     held_ = false;
     capturePointerId_ = -1;
-    if (bridge_)
+    if (Bridge)
     {
-      bridge_->SetHeldKey(key_, false);
+      Bridge->SetHeldKey(key_, false);
     }
   }
 
 private:
   KeyCode key_;
-  TouchInputBridge *bridge_;
+  UTouchInputBridge *Bridge;
   std::function<void()> onPress_;
   bool held_{false};
   int capturePointerId_{-1};
 };
 
-class TouchVirtualJoystick : public UGuiWidget
+class UTouchVirtualJoystick : public UGuiWidget
 {
 public:
-  TouchVirtualJoystick(const GuiTheme *theme, TouchInputBridge *bridge)
-      : theme_(theme), bridge_(bridge)
+  UTouchVirtualJoystick(const GuiTheme *theme, UTouchInputBridge *bridge)
+      : Theme(theme), Bridge(bridge)
   {
   }
 
@@ -137,16 +137,16 @@ public:
     active_ = false;
     capturePointerId_ = -1;
     knobOffset_ = {0.f, 0.f};
-    if (bridge_)
+    if (Bridge)
     {
-      bridge_->SetJoystickVector({0.f, 0.f});
-      bridge_->SetJoystickActive(false);
+      Bridge->SetJoystickVector({0.f, 0.f});
+      Bridge->SetJoystickActive(false);
     }
   }
 
-  bool OnCapturedMove(int pointerId, int x, int y)
+  bool OnCapturedMove(int PointerId, int x, int y)
   {
-    if (!active_ || !GuiPointerMatches(pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(PointerId, capturePointerId_))
     {
       return false;
     }
@@ -156,65 +156,65 @@ public:
 
   void Draw(UGuiRenderer &renderer) override
   {
-    if (!visible_ || !theme_)
+    if (!Visible || !Theme)
     {
       return;
     }
-    renderer.DrawFilledRect(bounds_, {0.12f, 0.12f, 0.14f, 0.45f});
-    renderer.DrawBorderRect(bounds_, {1.f, 1.f, 1.f, 0.35f},
-                            theme_->borderThickness);
+    renderer.DrawFilledRect(Bounds, {0.12f, 0.12f, 0.14f, 0.45f});
+    renderer.DrawBorderRect(Bounds, {1.f, 1.f, 1.f, 0.35f},
+                            Theme->BorderThickness);
     renderer.DrawFilledRect(ComputeKnobRect(), {0.92f, 0.92f, 0.95f, 0.85f});
     renderer.DrawBorderRect(ComputeKnobRect(), {1.f, 1.f, 1.f, 0.5f}, 1);
   }
 
   bool OnMouseDown(const GuiMouseEvent &event) override
   {
-    if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y) ||
-        event.button != GuiMouseButton::Left)
+    if (!Enabled || !Visible || !Bounds.Contains(event.X, event.Y) ||
+        event.Button != GuiMouseButton::Left)
     {
       return false;
     }
     active_ = true;
-    capturePointerId_ = event.pointerId;
-    if (bridge_)
+    capturePointerId_ = event.PointerId;
+    if (Bridge)
     {
-      bridge_->SetJoystickActive(true);
-      bridge_->RequestCameraBaseline(static_cast<float>(event.x),
-                                     static_cast<float>(event.y));
+      Bridge->SetJoystickActive(true);
+      Bridge->RequestCameraBaseline(static_cast<float>(event.X),
+                                    static_cast<float>(event.Y));
     }
-    UpdateStick(event.x, event.y);
+    UpdateStick(event.X, event.Y);
     return true;
   }
 
   bool OnMouseMove(const GuiMouseEvent &event) override
   {
-    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(event.PointerId, capturePointerId_))
     {
       return false;
     }
-    UpdateStick(event.x, event.y);
+    UpdateStick(event.X, event.Y);
     return true;
   }
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(event.PointerId, capturePointerId_))
     {
       return false;
     }
     ForceRelease();
     capturePointerId_ = -1;
-    return event.button == GuiMouseButton::Left;
+    return event.Button == GuiMouseButton::Left;
   }
 
 private:
   void UpdateStick(int x, int y)
   {
-    const float centerX = static_cast<float>(bounds_.x + bounds_.w / 2);
-    const float centerY = static_cast<float>(bounds_.y + bounds_.h / 2);
+    const float centerX = static_cast<float>(Bounds.X + Bounds.W / 2);
+    const float centerY = static_cast<float>(Bounds.Y + Bounds.H / 2);
     float dx = static_cast<float>(x) - centerX;
     float dy = centerY - static_cast<float>(y);
-    const float maxRadius = static_cast<float>(bounds_.w) * 0.38f;
+    const float maxRadius = static_cast<float>(Bounds.W) * 0.38f;
     const float length = std::sqrt(dx * dx + dy * dy);
     if (length > maxRadius && length > 0.f)
     {
@@ -222,54 +222,54 @@ private:
       dy = dy / length * maxRadius;
     }
     knobOffset_ = {dx, -dy};
-    if (bridge_)
+    if (Bridge)
     {
       const glm::vec2 normalized =
           maxRadius > 0.f ? glm::vec2(dx / maxRadius, dy / maxRadius)
                           : glm::vec2{0.f, 0.f};
-      bridge_->SetJoystickVector(normalized);
+      Bridge->SetJoystickVector(normalized);
     }
   }
 
   GuiRect ComputeKnobRect() const
   {
-    const int knobSize = std::max(28, bounds_.w / 3);
+    const int knobSize = std::max(28, Bounds.W / 3);
     const float centerX =
-        static_cast<float>(bounds_.x + bounds_.w / 2) + knobOffset_.x;
+        static_cast<float>(Bounds.X + Bounds.W / 2) + knobOffset_.x;
     const float centerY =
-        static_cast<float>(bounds_.y + bounds_.h / 2) + knobOffset_.y;
+        static_cast<float>(Bounds.Y + Bounds.H / 2) + knobOffset_.y;
     return {static_cast<int>(centerX - knobSize / 2),
             static_cast<int>(centerY - knobSize / 2), knobSize, knobSize};
   }
 
-  const GuiTheme *theme_{nullptr};
-  TouchInputBridge *bridge_{nullptr};
+  const GuiTheme *Theme{nullptr};
+  UTouchInputBridge *Bridge{nullptr};
   glm::vec2 knobOffset_{0.f, 0.f};
   bool active_{false};
   int capturePointerId_{-1};
 };
 
-class TouchLookPad : public UGuiWidget
+class UTouchLookPad : public UGuiWidget
 {
 public:
-  TouchLookPad(const GuiTheme *theme, const float *uiScale,
-               TouchInputBridge *bridge)
-      : theme_(theme), uiScale_(uiScale), bridge_(bridge)
+  UTouchLookPad(const GuiTheme *theme, const float *uiScale,
+                UTouchInputBridge *bridge)
+      : Theme(theme), UiScale(uiScale), Bridge(bridge)
   {
   }
 
   UGuiWidget *HitTest(int x, int y) override
   {
-    if (!visible_ || !enabled_ || !bounds_.Contains(x, y))
+    if (!Visible || !Enabled || !Bounds.Contains(x, y))
     {
       return nullptr;
     }
     return this;
   }
 
-  bool OnCapturedMove(int pointerId, int x, int y)
+  bool OnCapturedMove(int PointerId, int x, int y)
   {
-    if (!active_ || !GuiPointerMatches(pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(PointerId, capturePointerId_))
     {
       return false;
     }
@@ -278,75 +278,76 @@ public:
 
   void Draw(UGuiRenderer &renderer) override
   {
-    if (!visible_ || !theme_)
+    if (!Visible || !Theme)
     {
       return;
     }
-    const float scale = uiScale_ ? *uiScale_ : 1.f;
-    renderer.DrawFilledRect(bounds_, {0.10f, 0.12f, 0.16f, 0.35f});
-    renderer.DrawBorderRect(bounds_, {1.f, 1.f, 1.f, 0.28f},
-                            theme_->borderThickness);
-    GuiRect labelRect = bounds_;
-    labelRect.y += bounds_.h / 2 - ScalePx(12, scale);
-    labelRect.h = ScalePx(24, scale);
+    const float scale = UiScale ? *UiScale : 1.f;
+    renderer.DrawFilledRect(Bounds, {0.10f, 0.12f, 0.16f, 0.35f});
+    renderer.DrawBorderRect(Bounds, {1.f, 1.f, 1.f, 0.28f},
+                            Theme->BorderThickness);
+    GuiRect labelRect = Bounds;
+    labelRect.Y += Bounds.H / 2 - ScalePx(12, scale);
+    labelRect.H = ScalePx(24, scale);
     renderer.DrawTextCenteredInRect(labelRect, "Look", {0.92f, 0.92f, 0.95f});
   }
 
   bool OnMouseDown(const GuiMouseEvent &event) override
   {
-    if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y) ||
-        event.button != GuiMouseButton::Left)
+    if (!Enabled || !Visible || !Bounds.Contains(event.X, event.Y) ||
+        event.Button != GuiMouseButton::Left)
     {
       return false;
     }
     active_ = true;
-    capturePointerId_ = event.pointerId;
-    dragged_ = false;
-    startX_ = event.x;
-    startY_ = event.y;
-    lastX_ = event.x;
-    lastY_ = event.y;
+    capturePointerId_ = event.PointerId;
+    Dragged = false;
+    startX_ = event.X;
+    startY_ = event.Y;
+    lastX_ = event.X;
+    lastY_ = event.Y;
     downTime_ = std::chrono::steady_clock::now();
-    if (bridge_)
+    if (Bridge)
     {
-      bridge_->RequestCameraBaseline(static_cast<float>(event.x),
-                                     static_cast<float>(event.y));
+      Bridge->RequestCameraBaseline(static_cast<float>(event.X),
+                                    static_cast<float>(event.Y));
     }
     return true;
   }
 
   bool OnMouseMove(const GuiMouseEvent &event) override
   {
-    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(event.PointerId, capturePointerId_))
     {
       return false;
     }
-    return OnLookMove(event.x, event.y);
+    return OnLookMove(event.X, event.Y);
   }
 
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    if (!active_ || !GuiPointerMatches(event.pointerId, capturePointerId_))
+    if (!active_ || !GuiPointerMatches(event.PointerId, capturePointerId_))
     {
       return false;
     }
-    if (bridge_ && !dragged_)
+    if (Bridge && !Dragged)
     {
-      const float holdSeconds = std::chrono::duration<float>(
-                                    std::chrono::steady_clock::now() - downTime_)
-                                    .count();
+      const float holdSeconds =
+          std::chrono::duration<float>(std::chrono::steady_clock::now() -
+                                       downTime_)
+              .count();
       const float dragDistance = std::sqrt(
-          static_cast<float>((event.x - startX_) * (event.x - startX_) +
-                             (event.y - startY_) * (event.y - startY_)));
-      const float slop = uiScale_ ? std::min(36.f * *uiScale_, 56.f) : 36.f;
+          static_cast<float>((event.X - startX_) * (event.X - startX_) +
+                             (event.Y - startY_) * (event.Y - startY_)));
+      const float slop = UiScale ? std::min(36.f * *UiScale, 56.f) : 36.f;
       if (dragDistance < slop && holdSeconds < 0.50f)
       {
-        bridge_->QueuePlaceTap(static_cast<float>(event.x),
-                               static_cast<float>(event.y));
+        Bridge->QueuePlaceTap(static_cast<float>(event.X),
+                              static_cast<float>(event.Y));
       }
     }
     active_ = false;
-    dragged_ = false;
+    Dragged = false;
     capturePointerId_ = -1;
     return true;
   }
@@ -354,151 +355,156 @@ public:
 private:
   bool OnLookMove(int x, int y)
   {
-    if (!active_ || !bridge_)
+    if (!active_ || !Bridge)
     {
       return false;
     }
     const float dx = static_cast<float>(x - lastX_);
     const float dy = static_cast<float>(y - lastY_);
-    const float dragDistance = std::sqrt(
-        static_cast<float>((x - startX_) * (x - startX_) +
-                           (y - startY_) * (y - startY_)));
-    const float threshold = uiScale_ ? 10.f * *uiScale_ : 10.f;
-    if (!dragged_ && dragDistance > threshold)
+    const float dragDistance = std::sqrt(static_cast<float>(
+        (x - startX_) * (x - startX_) + (y - startY_) * (y - startY_)));
+    const float threshold = UiScale ? 10.f * *UiScale : 10.f;
+    if (!Dragged && dragDistance > threshold)
     {
-      dragged_ = true;
-      bridge_->RequestCameraBaseline(static_cast<float>(x), static_cast<float>(y));
+      Dragged = true;
+      Bridge->RequestCameraBaseline(static_cast<float>(x),
+                                    static_cast<float>(y));
     }
-    if (dragged_)
+    if (Dragged)
     {
-      bridge_->AddLookDelta(dx, dy);
+      Bridge->AddLookDelta(dx, dy);
     }
     lastX_ = x;
     lastY_ = y;
     return true;
   }
 
-  const GuiTheme *theme_{nullptr};
-  const float *uiScale_{nullptr};
-  TouchInputBridge *bridge_{nullptr};
+  const GuiTheme *Theme{nullptr};
+  const float *UiScale{nullptr};
+  UTouchInputBridge *Bridge{nullptr};
   int startX_{0};
   int startY_{0};
   int lastX_{0};
   int lastY_{0};
   bool active_{false};
-  bool dragged_{false};
+  bool Dragged{false};
   int capturePointerId_{-1};
   std::chrono::steady_clock::time_point downTime_{};
 };
 
 } // namespace
 
-GuiTouchControls::GuiTouchControls(const GuiTheme *theme,
-                                   TouchInputBridge *bridge,
-                                   std::function<void()> onMenu,
-                                   std::function<void()> onInventory,
-                                   std::function<void()> onConsole,
-                                   std::function<void()> onJumpPress)
-    : theme_(theme), bridge_(bridge), onMenu_(std::move(onMenu)),
-      onInventory_(std::move(onInventory)),
-      onConsole_(std::move(onConsole)),
-      onJumpPress_(std::move(onJumpPress))
+UGuiTouchControls::UGuiTouchControls(const GuiTheme *theme,
+                                     UTouchInputBridge *bridge,
+                                     std::function<void()> onMenu,
+                                     std::function<void()> onInventory,
+                                     std::function<void()> onConsole,
+                                     std::function<void()> onJumpPress)
+    : Theme(theme), Bridge(bridge), OnMenu(std::move(onMenu)),
+      OnInventory(std::move(onInventory)), OnConsole(std::move(onConsole)),
+      OnJumpPress(std::move(onJumpPress))
 {
 }
 
-GuiTouchControls::~GuiTouchControls() = default;
+UGuiTouchControls::~UGuiTouchControls() = default;
 
-void GuiTouchControls::Build(UGuiPanel *parent)
+void UGuiTouchControls::Build(UGuiPanel *parent)
 {
-  if (!parent || !theme_ || !bridge_)
+  if (!parent || !Theme || !Bridge)
   {
     return;
   }
-  auto panel = std::make_unique<TouchControlPanel>(theme_);
+  auto panel = std::make_unique<UTouchControlPanel>(Theme);
   panel->SetDrawBackground(false);
   panel->SetZOrder(kTouchControlsZOrder);
-  root_ = panel.get();
+  Root = panel.get();
   parent->AddChild(std::move(panel));
 
-  auto joystick =
-      std::make_unique<TouchVirtualJoystick>(theme_, bridge_);
+  auto joystick = std::make_unique<UTouchVirtualJoystick>(Theme, Bridge);
   auto *joystickWidget = joystick.get();
-  joystick_ = joystickWidget;
-  root_->AddChild(std::move(joystick));
+  JoystickWidget = joystickWidget;
+  Root->AddChild(std::move(joystick));
 
-  auto jump = std::make_unique<TouchHoldButton>(
-      theme_, "Jump", KeyCode::Key_Space, bridge_,
-      [this]() {
-        if (onJumpPress_)
+  auto Jump = std::make_unique<UTouchHoldButton>(Theme, "Jump",
+                                                 KeyCode::Key_Space, Bridge,
+                                                 [this]()
+                                                 {
+                                                   if (OnJumpPress)
+                                                   {
+                                                     OnJumpPress();
+                                                   }
+                                                 });
+  auto *jumpWidget = Jump.get();
+  Jump->SetZOrder(kTouchControlsZOrder + 2);
+  JumpButton = jumpWidget;
+  Root->AddChild(std::move(Jump));
+
+  auto Sneak = std::make_unique<UTouchHoldButton>(Theme, "Sneak",
+                                                  KeyCode::Key_Shift, Bridge);
+  auto *sneakWidget = Sneak.get();
+  Sneak->SetZOrder(kTouchControlsZOrder + 2);
+  SneakButton = sneakWidget;
+  Root->AddChild(std::move(Sneak));
+
+  auto inventory = std::make_unique<UGuiButton>(Theme, "Inv");
+  inventory->SetOnClick(
+      [this]()
+      {
+        if (OnInventory)
         {
-          onJumpPress_();
+          OnInventory();
         }
       });
-  auto *jumpWidget = jump.get();
-  jump->SetZOrder(kTouchControlsZOrder + 2);
-  jumpButton_ = jumpWidget;
-  root_->AddChild(std::move(jump));
+  InventoryButton = inventory.get();
+  Root->AddChild(std::move(inventory));
 
-  auto sneak = std::make_unique<TouchHoldButton>(theme_, "Sneak", KeyCode::Key_Shift,
-                                                 bridge_);
-  auto *sneakWidget = sneak.get();
-  sneak->SetZOrder(kTouchControlsZOrder + 2);
-  sneakButton_ = sneakWidget;
-  root_->AddChild(std::move(sneak));
+  auto menu = std::make_unique<UGuiButton>(Theme, "Menu");
+  menu->SetOnClick(
+      [this]()
+      {
+        if (OnMenu)
+        {
+          OnMenu();
+        }
+      });
+  MenuButton = menu.get();
+  Root->AddChild(std::move(menu));
 
-  auto inventory = std::make_unique<UGuiButton>(theme_, "Inv");
-  inventory->SetOnClick([this]() {
-    if (onInventory_)
-    {
-      onInventory_();
-    }
-  });
-  inventoryButton_ = inventory.get();
-  root_->AddChild(std::move(inventory));
+  auto console = std::make_unique<UGuiButton>(Theme, "Cmd");
+  console->SetOnClick(
+      [this]()
+      {
+        if (OnConsole)
+        {
+          OnConsole();
+        }
+      });
+  ConsoleButton = console.get();
+  Root->AddChild(std::move(console));
 
-  auto menu = std::make_unique<UGuiButton>(theme_, "Menu");
-  menu->SetOnClick([this]() {
-    if (onMenu_)
-    {
-      onMenu_();
-    }
-  });
-  menuButton_ = menu.get();
-  root_->AddChild(std::move(menu));
-
-  auto console = std::make_unique<UGuiButton>(theme_, "Cmd");
-  console->SetOnClick([this]() {
-    if (onConsole_)
-    {
-      onConsole_();
-    }
-  });
-  consoleButton_ = console.get();
-  root_->AddChild(std::move(console));
-
-  auto lookPad = std::make_unique<TouchLookPad>(theme_, &uiScale_, bridge_);
+  auto lookPad = std::make_unique<UTouchLookPad>(Theme, &UiScale, Bridge);
   lookPad->SetZOrder(kTouchControlsZOrder + 1);
-  lookPad_ = lookPad.get();
-  root_->AddChild(std::move(lookPad));
+  LookPad = lookPad.get();
+  Root->AddChild(std::move(lookPad));
 
-  routeCapturedMove_ = [joystickWidget, lookPad = lookPad_](int pointerId, int x,
-                                                            int y)
+  OnRouteCapturedMove =
+      [joystickWidget, lookPad = LookPad](int PointerId, int x, int y)
   {
-    if (static_cast<TouchVirtualJoystick *>(joystickWidget)
-            ->OnCapturedMove(pointerId, x, y))
+    if (static_cast<UTouchVirtualJoystick *>(joystickWidget)
+            ->OnCapturedMove(PointerId, x, y))
     {
       return true;
     }
     if (lookPad)
     {
-      return static_cast<TouchLookPad *>(lookPad)->OnCapturedMove(pointerId, x,
-                                                                  y);
+      return static_cast<UTouchLookPad *>(lookPad)->OnCapturedMove(PointerId, x,
+                                                                   y);
     }
     return false;
   };
-  releaseJoystickCapture_ = [joystickWidget]()
+  OnReleaseJoystickCapture = [joystickWidget]()
   { joystickWidget->ForceRelease(); };
-  releaseAllCaptures_ = [joystickWidget, jumpWidget, sneakWidget]()
+  OnReleaseAllCaptures = [joystickWidget, jumpWidget, sneakWidget]()
   {
     joystickWidget->ForceRelease();
     jumpWidget->ForceRelease();
@@ -506,48 +512,48 @@ void GuiTouchControls::Build(UGuiPanel *parent)
   };
 }
 
-bool GuiTouchControls::RouteCapturedMove(int pointerId, int x, int y)
+bool UGuiTouchControls::RouteCapturedMove(int PointerId, int x, int y)
 {
-  return routeCapturedMove_ ? routeCapturedMove_(pointerId, x, y) : false;
+  return OnRouteCapturedMove ? OnRouteCapturedMove(PointerId, x, y) : false;
 }
 
-void GuiTouchControls::ReleaseJoystickCapture()
+void UGuiTouchControls::ReleaseJoystickCapture()
 {
-  if (releaseJoystickCapture_)
+  if (OnReleaseJoystickCapture)
   {
-    releaseJoystickCapture_();
+    OnReleaseJoystickCapture();
   }
-  if (bridge_)
+  if (Bridge)
   {
-    bridge_->ResetJoystick();
-  }
-}
-
-void GuiTouchControls::ReleaseAllCaptures()
-{
-  if (releaseAllCaptures_)
-  {
-    releaseAllCaptures_();
-  }
-  if (bridge_)
-  {
-    bridge_->ResetJoystick();
+    Bridge->ResetJoystick();
   }
 }
 
-void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
-                              float uiScale)
+void UGuiTouchControls::ReleaseAllCaptures()
 {
-  if (!root_)
+  if (OnReleaseAllCaptures)
+  {
+    OnReleaseAllCaptures();
+  }
+  if (Bridge)
+  {
+    Bridge->ResetJoystick();
+  }
+}
+
+void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
+                               float uiScale)
+{
+  if (!Root)
   {
     return;
   }
-  uiScale_ = uiScale;
-  root_->SetBounds({0, 0, width, height});
+  UiScale = uiScale;
+  Root->SetBounds({0, 0, width, height});
 
   const int buttonSize = ScalePx(kButtonSizeBase, uiScale);
-  const int margin = std::max(ScalePx(24, uiScale),
-                              ScalePx(kMarginBase, uiScale));
+  const int margin =
+      std::max(ScalePx(24, uiScale), ScalePx(kMarginBase, uiScale));
   const int shortEdge = std::min(width, height);
   const int joystickTarget = ScalePx(kJoystickSizeBase, uiScale);
   const int joystickMax =
@@ -558,70 +564,69 @@ void GuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
 
   const int bottomRowY = height - buttonSize - margin;
   const int joystickY = bottomRowY - joystickSize - controlLift;
-  const int leftMargin =
-      std::max(margin, offsetX + ScalePx(12, uiScale));
+  const int leftMargin = std::max(margin, offsetX + ScalePx(12, uiScale));
   const int leftControlsW = leftMargin + joystickSize + margin;
   const int leftControlsTop = std::max(0, joystickY - controlLift);
   const int leftControlsH = std::max(1, height - leftControlsTop);
   const int rightColX = width - margin - buttonSize;
   const int jumpX = rightColX - buttonSize - buttonGap;
   const int topRightY = margin + ScalePx(kTopRightStackOffsetBase, uiScale);
-  const int topRightStackH =
-      buttonSize * 3 + buttonGap * 2 + margin;
-  if (joystick_)
+  const int topRightStackH = buttonSize * 3 + buttonGap * 2 + margin;
+  if (JoystickWidget)
   {
-    joystick_->SetBounds({leftMargin, joystickY, joystickSize, joystickSize});
+    JoystickWidget->SetBounds(
+        {leftMargin, joystickY, joystickSize, joystickSize});
   }
-  if (jumpButton_)
+  if (JumpButton)
   {
-    jumpButton_->SetBounds({jumpX, bottomRowY, buttonSize, buttonSize});
+    JumpButton->SetBounds({jumpX, bottomRowY, buttonSize, buttonSize});
   }
-  if (sneakButton_)
+  if (SneakButton)
   {
-    sneakButton_->SetBounds({rightColX, bottomRowY, buttonSize, buttonSize});
+    SneakButton->SetBounds({rightColX, bottomRowY, buttonSize, buttonSize});
   }
-  if (menuButton_)
+  if (MenuButton)
   {
-    menuButton_->SetBounds(
+    MenuButton->SetBounds(
         {width - buttonSize - margin, topRightY, buttonSize, buttonSize});
   }
-  if (inventoryButton_)
+  if (InventoryButton)
   {
-    inventoryButton_->SetBounds({width - buttonSize - margin,
-                                   topRightY + buttonSize + buttonGap,
-                                   buttonSize, buttonSize});
+    InventoryButton->SetBounds({width - buttonSize - margin,
+                                topRightY + buttonSize + buttonGap, buttonSize,
+                                buttonSize});
   }
-  if (consoleButton_)
+  if (ConsoleButton)
   {
-    consoleButton_->SetBounds(
-        {width - buttonSize - margin,
-         topRightY + (buttonSize + buttonGap) * 2, buttonSize, buttonSize});
+    ConsoleButton->SetBounds({width - buttonSize - margin,
+                              topRightY + (buttonSize + buttonGap) * 2,
+                              buttonSize, buttonSize});
   }
 
-  if (lookPad_)
+  if (LookPad)
   {
     const int lookSize = std::max(joystickSize, buttonSize * 2 + buttonGap);
     const int lookX = width - margin - lookSize;
     const int lookY = bottomRowY - lookSize - controlLift;
-    lookPad_->SetBounds({lookX, lookY, lookSize, lookSize});
+    LookPad->SetBounds({lookX, lookY, lookSize, lookSize});
   }
 
-  if (bridge_)
+  if (Bridge)
   {
-    bridge_->ClearBlockedGameRegions();
-    bridge_->SetBlockedGameRegion(
-        0, {offsetX + leftMargin, offsetY + leftControlsTop,
-            leftControlsW, leftControlsH});
-    bridge_->SetBlockedGameRegion(
+    Bridge->ClearBlockedGameRegions();
+    Bridge->SetBlockedGameRegion(0, {offsetX + leftMargin,
+                                     offsetY + leftControlsTop, leftControlsW,
+                                     leftControlsH});
+    Bridge->SetBlockedGameRegion(
         1, {offsetX + std::max(0, width - buttonSize - margin * 2),
             offsetY + topRightY - margin / 2, buttonSize + margin * 2,
             topRightStackH});
     const int actionPad = ScalePx(4, uiScale);
-    bridge_->SetBlockedGameRegion(
-        2, {offsetX + std::max(0, jumpX - actionPad),
-            offsetY + std::max(0, bottomRowY - actionPad),
-            buttonSize * 2 + buttonGap + actionPad * 2,
-            buttonSize + actionPad * 2});
+    Bridge->SetBlockedGameRegion(2,
+                                 {offsetX + std::max(0, jumpX - actionPad),
+                                  offsetY + std::max(0, bottomRowY - actionPad),
+                                  buttonSize * 2 + buttonGap + actionPad * 2,
+                                  buttonSize + actionPad * 2});
   }
 }
 

@@ -7,8 +7,8 @@
 #include "egl_context.h"
 
 #include <array>
-#include <game-activity/GameActivityEvents.h>
 #include <chrono>
+#include <game-activity/GameActivityEvents.h>
 
 struct android_app;
 struct android_input_buffer;
@@ -17,10 +17,10 @@ struct GameActivityMotionEvent;
 namespace cutum
 {
 
-class AndroidPlatformWindow : public IPlatformWindow
+class UAndroidPlatformWindow : public IPlatformWindow
 {
 public:
-  explicit AndroidPlatformWindow(android_app *app);
+  explicit UAndroidPlatformWindow(android_app *app);
 
   bool Initialize(int width, int height, const char *title) override;
   bool InitEgl(android_app *app);
@@ -32,7 +32,7 @@ public:
   glm::ivec2 GetFramebufferSize() const override;
   bool ShouldClose() const override;
   void RequestClose() override;
-  double DeltaTime() const override { return deltaTime_; }
+  double DeltaTime() const override { return FrameDeltaTime; }
 
   void SetInstances(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
                     std::shared_ptr<UGeometryEngine> geometries,
@@ -44,32 +44,32 @@ public:
   void ProcessFrame();
   void ProcessInputBuffer(struct android_input_buffer *buffer);
   bool HandleGameMotionEvent(const GameActivityMotionEvent &event);
-  bool HasSurface() const { return egl_.HasSurface(); }
+  bool HasSurface() const { return Egl.HasSurface(); }
 
 private:
   void ProcessInput();
   void Update();
   void Render();
 
-  android_app *app_;
-  EglContext egl_;
-  TouchInputBridge touch_;
-  std::unique_ptr<UBlockInputController> blockInput_;
-  std::shared_ptr<UCore> core_;
-  std::shared_ptr<UWorld> world_;
-  std::shared_ptr<UGeometryEngine> geometries_;
-  std::shared_ptr<UViewEngine> views_;
-  std::shared_ptr<UTextRenderer> textRenderer_;
-  std::shared_ptr<UApplication> application_;
-  CharCallbackFn charCallback_;
-  bool running_{true};
-  bool initialized_{false};
-  int width_{1280};
-  int height_{720};
-  double deltaTime_{0.0};
-  std::chrono::high_resolution_clock::time_point lastFrame_;
-  std::chrono::steady_clock::time_point lastAutosave_;
-  std::array<bool, TouchInputBridge::kMaxPointers> uiPointerCapture_{};
+  android_app *App;
+  EglContext Egl;
+  UTouchInputBridge Touch;
+  std::unique_ptr<UBlockInputController> BlockInput;
+  std::shared_ptr<UCore> Core;
+  std::shared_ptr<UWorld> World;
+  std::shared_ptr<UGeometryEngine> Geometries;
+  std::shared_ptr<UViewEngine> Views;
+  std::shared_ptr<UTextRenderer> TextRenderer;
+  std::shared_ptr<UApplication> Application;
+  CharCallbackFn CharCallback;
+  bool Running{true};
+  bool Initialized{false};
+  int Width{1280};
+  int Height{720};
+  double FrameDeltaTime{0.0};
+  std::chrono::high_resolution_clock::time_point LastFrame;
+  std::chrono::steady_clock::time_point LastAutosave;
+  std::array<bool, UTouchInputBridge::kMaxPointers> UiPointerCapture{};
 };
 
 } // namespace cutum
