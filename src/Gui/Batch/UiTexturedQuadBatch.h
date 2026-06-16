@@ -13,16 +13,16 @@ namespace cutum
 
 class UShaderProgram;
 
-class UiTexturedQuadBatch
+class UGuiTexturedQuadBatch
 {
 public:
-  UiTexturedQuadBatch();
-  ~UiTexturedQuadBatch();
+  UGuiTexturedQuadBatch();
+  ~UGuiTexturedQuadBatch();
 
   bool Initialize(std::shared_ptr<UShaderProgram> shader);
   void Shutdown();
 
-  void Begin(int WindowWidth, int WindowHeight);
+  void Begin(int window_width, int window_height);
   void DrawTexturedRect(const GuiRect &rect, GLuint texture,
                         const glm::vec4 &tint);
   void End();
@@ -31,15 +31,15 @@ private:
   void GuiRectToShaderCoords(const GuiRect &rect, float &x0, float &y0,
                              float &x1, float &y1) const;
 
-  std::shared_ptr<UShaderProgram> shader_;
-  GLuint vao_{0};
-  GLuint vbo_{0};
-  int windowWidth_{0};
-  int windowHeight_{0};
-  bool initialized_{false};
-  bool depthTestWasEnabled_{false};
-  bool blendWasEnabled_{false};
-  GLuint boundTexture_{0};
+  std::shared_ptr<UShaderProgram> Shader;
+  GLuint Vao{0};
+  GLuint Vbo{0};
+  int WindowWidth{0};
+  int WindowHeight{0};
+  bool Initialized{false};
+  bool DepthTestWasEnabled{false};
+  bool BlendWasEnabled{false};
+  GLuint BoundTexture{0};
 };
 
 } // namespace cutum

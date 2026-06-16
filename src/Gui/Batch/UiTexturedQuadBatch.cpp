@@ -6,17 +6,17 @@
 namespace cutum
 {
 
-UiTexturedQuadBatch::UiTexturedQuadBatch() = default;
+UGuiTexturedQuadBatch::UGuiTexturedQuadBatch() = default;
 
-UiTexturedQuadBatch::~UiTexturedQuadBatch() { Shutdown(); }
+UGuiTexturedQuadBatch::~UGuiTexturedQuadBatch() { Shutdown(); }
 
-bool UiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
+bool UGuiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
 {
   if (!shader || !shader->IsValid())
   {
     return false;
   }
-  shader_ = std::move(shader);
+  Shader = std::move(shader);
 
   struct Vertex
   {
@@ -26,10 +26,10 @@ bool UiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
     float v;
   };
 
-  glGenVertexArrays(1, &vao_);
-  glGenBuffers(1, &vbo_);
-  glBindVertexArray(vao_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  glGenVertexArrays(1, &Vao);
+  glGenBuffers(1, &Vbo);
+  glBindVertexArray(Vao);
+  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 6, nullptr, GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
   glEnableVertexAttribArray(0);
@@ -38,60 +38,61 @@ bool UiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
   glEnableVertexAttribArray(1);
   glBindVertexArray(0);
 
-  initialized_ = true;
+  Initialized = true;
   return true;
 }
 
-void UiTexturedQuadBatch::Shutdown()
+void UGuiTexturedQuadBatch::Shutdown()
 {
-  if (vbo_ != 0)
+  if (Vbo != 0)
   {
-    glDeleteBuffers(1, &vbo_);
-    vbo_ = 0;
+    glDeleteBuffers(1, &Vbo);
+    Vbo = 0;
   }
-  if (vao_ != 0)
+  if (Vao != 0)
   {
-    glDeleteVertexArrays(1, &vao_);
-    vao_ = 0;
+    glDeleteVertexArrays(1, &Vao);
+    Vao = 0;
   }
-  shader_.reset();
-  initialized_ = false;
+  Shader.reset();
+  Initialized = false;
 }
 
-void UiTexturedQuadBatch::Begin(int WindowWidth, int WindowHeight)
+void UGuiTexturedQuadBatch::Begin(int window_width, int window_height)
 {
-  windowWidth_ = WindowWidth;
-  windowHeight_ = WindowHeight;
-  boundTexture_ = 0;
+  WindowWidth = window_width;
+  WindowHeight = window_height;
+  BoundTexture = 0;
 
   GLboolean depthTest;
   glGetBooleanv(GL_DEPTH_TEST, &depthTest);
-  depthTestWasEnabled_ = depthTest == GL_TRUE;
+  DepthTestWasEnabled = depthTest == GL_TRUE;
   glDisable(GL_DEPTH_TEST);
 
   GLboolean blend;
   glGetBooleanv(GL_BLEND, &blend);
-  blendWasEnabled_ = blend == GL_TRUE;
+  BlendWasEnabled = blend == GL_TRUE;
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void UiTexturedQuadBatch::GuiRectToShaderCoords(const GuiRect &rect, float &x0,
-                                                float &y0, float &x1,
-                                                float &y1) const
+void UGuiTexturedQuadBatch::GuiRectToShaderCoords(const GuiRect &rect,
+                                                  float &x0, float &y0,
+                                                  float &x1, float &y1) const
 {
-  x0 = static_cast<float>(rect.x);
-  x1 = static_cast<float>(rect.x + rect.w);
-  const float top = static_cast<float>(rect.y);
-  const float bottom = static_cast<float>(rect.y + rect.h);
-  y0 = static_cast<float>(windowHeight_) - bottom;
-  y1 = static_cast<float>(windowHeight_) - top;
+  x0 = static_cast<float>(rect.X);
+  x1 = static_cast<float>(rect.X + rect.W);
+  const float top = static_cast<float>(rect.Y);
+  const float bottom = static_cast<float>(rect.Y + rect.H);
+  y0 = static_cast<float>(WindowHeight) - bottom;
+  y1 = static_cast<float>(WindowHeight) - top;
 }
 
-void UiTexturedQuadBatch::DrawTexturedRect(const GuiRect &rect, GLuint texture,
-                                           const glm::vec4 &tint)
+void UGuiTexturedQuadBatch::DrawTexturedRect(const GuiRect &rect,
+                                             GLuint texture,
+                                             const glm::vec4 &tint)
 {
-  if (!initialized_ || !shader_ || texture == 0)
+  if (!Initialized || !Shader || texture == 0)
   {
     return;
   }
@@ -107,26 +108,26 @@ void UiTexturedQuadBatch::DrawTexturedRect(const GuiRect &rect, GLuint texture,
       x0, y1, 0.0f, 1.0f, x1, y0, 1.0f, 0.0f, x1, y1, 1.0f, 1.0f,
   };
 
-  shader_->Use();
-  shader_->SetVec2("screenSize", glm::vec2(static_cast<float>(windowWidth_),
-                                           static_cast<float>(windowHeight_)));
-  shader_->SetVec4("tint", tint);
-  shader_->SetInt("texture0", 0);
+  Shader->Use();
+  Shader->SetVec2("screenSize", glm::vec2(static_cast<float>(WindowWidth),
+                                          static_cast<float>(WindowHeight)));
+  Shader->SetVec4("tint", tint);
+  Shader->SetInt("texture0", 0);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
 
-  glBindVertexArray(vao_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  glBindVertexArray(Vao);
+  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
   glDrawArrays(GL_TRIANGLES, 0, 6);
   glBindVertexArray(0);
-  shader_->Unuse();
+  Shader->Unuse();
 }
 
-void UiTexturedQuadBatch::End()
+void UGuiTexturedQuadBatch::End()
 {
-  if (depthTestWasEnabled_)
+  if (DepthTestWasEnabled)
   {
     glEnable(GL_DEPTH_TEST);
   }
@@ -134,7 +135,7 @@ void UiTexturedQuadBatch::End()
   {
     glDisable(GL_DEPTH_TEST);
   }
-  if (!blendWasEnabled_)
+  if (!BlendWasEnabled)
   {
     glDisable(GL_BLEND);
   }

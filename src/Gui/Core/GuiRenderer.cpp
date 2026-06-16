@@ -26,7 +26,7 @@ bool UGuiRenderer::Initialize(std::shared_ptr<UShaderManager> shaderManager,
   {
     return false;
   }
-  if (!quadBatch_.Initialize(uiShader))
+  if (!QuadBatch.Initialize(uiShader))
   {
     return false;
   }
@@ -37,88 +37,88 @@ bool UGuiRenderer::Initialize(std::shared_ptr<UShaderManager> shaderManager,
   {
     return false;
   }
-  return texturedQuadBatch_.Initialize(texShader);
+  return TexturedQuadBatch.Initialize(texShader);
 }
 
 void UGuiRenderer::Shutdown()
 {
-  texturedQuadBatch_.Shutdown();
-  quadBatch_.Shutdown();
+  TexturedQuadBatch.Shutdown();
+  QuadBatch.Shutdown();
   TextRenderer.reset();
-  clipStack_.clear();
+  ClipStack.clear();
 }
 
-void UGuiRenderer::BeginFrame(int WindowWidth, int WindowHeight)
+void UGuiRenderer::BeginFrame(int window_width, int window_height)
 {
-  windowWidth_ = WindowWidth;
-  windowHeight_ = WindowHeight;
+  WindowWidth = window_width;
+  WindowHeight = window_height;
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   if (TextRenderer)
   {
     TextRenderer->SetWindowSize(WindowWidth, WindowHeight);
   }
-  quadBatch_.Begin(WindowWidth, WindowHeight);
-  texturedQuadBatch_.Begin(WindowWidth, WindowHeight);
-  clipStack_.clear();
+  QuadBatch.Begin(window_width, window_height);
+  TexturedQuadBatch.Begin(window_width, window_height);
+  ClipStack.clear();
 }
 
 void UGuiRenderer::EndFrame()
 {
-  quadBatch_.End();
-  texturedQuadBatch_.End();
+  QuadBatch.End();
+  TexturedQuadBatch.End();
   glDisable(GL_SCISSOR_TEST);
 }
 
 void UGuiRenderer::ApplyClipStack()
 {
-  if (clipStack_.empty())
+  if (ClipStack.empty())
   {
     glDisable(GL_SCISSOR_TEST);
     return;
   }
-  GuiRect clip = clipStack_.back();
-  for (int i = static_cast<int>(clipStack_.size()) - 2; i >= 0; --i)
+  GuiRect clip = ClipStack.back();
+  for (int i = static_cast<int>(ClipStack.size()) - 2; i >= 0; --i)
   {
-    const GuiRect &r = clipStack_[static_cast<size_t>(i)];
-    const int x1 = std::max(clip.x, r.x);
-    const int y1 = std::max(clip.y, r.y);
-    const int x2 = std::min(clip.x + clip.w, r.x + r.w);
-    const int y2 = std::min(clip.y + clip.h, r.y + r.h);
-    clip.x = x1;
-    clip.y = y1;
-    clip.w = std::max(0, x2 - x1);
-    clip.h = std::max(0, y2 - y1);
+    const GuiRect &r = ClipStack[static_cast<size_t>(i)];
+    const int x1 = std::max(clip.X, r.X);
+    const int y1 = std::max(clip.Y, r.Y);
+    const int x2 = std::min(clip.X + clip.W, r.X + r.W);
+    const int y2 = std::min(clip.Y + clip.H, r.Y + r.H);
+    clip.X = x1;
+    clip.Y = y1;
+    clip.W = std::max(0, x2 - x1);
+    clip.H = std::max(0, y2 - y1);
   }
   glEnable(GL_SCISSOR_TEST);
-  const int glY = windowHeight_ - (clip.y + clip.h);
-  glScissor(clip.x, glY, clip.w, clip.h);
+  const int glY = WindowHeight - (clip.Y + clip.H);
+  glScissor(clip.X, glY, clip.W, clip.H);
 }
 
 void UGuiRenderer::PushClipRect(const GuiRect &rect)
 {
-  clipStack_.push_back(rect);
+  ClipStack.push_back(rect);
   ApplyClipStack();
 }
 
 void UGuiRenderer::PopClipRect()
 {
-  if (!clipStack_.empty())
+  if (!ClipStack.empty())
   {
-    clipStack_.pop_back();
+    ClipStack.pop_back();
   }
   ApplyClipStack();
 }
 
 void UGuiRenderer::DrawFilledRect(const GuiRect &rect, const glm::vec4 &color)
 {
-  quadBatch_.DrawFilledRect(rect, color);
+  QuadBatch.DrawFilledRect(rect, color);
 }
 
 void UGuiRenderer::DrawBorderRect(const GuiRect &rect, const glm::vec4 &color,
                                   int thicknessPx)
 {
-  quadBatch_.DrawBorderRect(rect, color, thicknessPx);
+  QuadBatch.DrawBorderRect(rect, color, thicknessPx);
 }
 
 void UGuiRenderer::DrawTexturedRect(const GuiRect &rect, GLuint texture,
@@ -128,8 +128,8 @@ void UGuiRenderer::DrawTexturedRect(const GuiRect &rect, GLuint texture,
   {
     return;
   }
-  quadBatch_.Flush();
-  texturedQuadBatch_.DrawTexturedRect(rect, texture, tint);
+  QuadBatch.Flush();
+  TexturedQuadBatch.DrawTexturedRect(rect, texture, tint);
 }
 
 void UGuiRenderer::DrawTextCenteredInRect(const GuiRect &rect,
@@ -141,10 +141,10 @@ void UGuiRenderer::DrawTextCenteredInRect(const GuiRect &rect,
     return;
   }
   constexpr float kScale = 1.0f;
-  const float textScale = textScale_ > 0.f ? textScale_ : kScale;
+  const float textScale = TextScale > 0.f ? TextScale : kScale;
   const glm::vec2 size = TextRenderer->GetTextSize(text, textScale);
-  const int x = rect.x + (rect.w - static_cast<int>(size.x)) / 2;
-  const int yTop = rect.y + (rect.h - static_cast<int>(size.y)) / 2;
+  const int x = rect.X + (rect.W - static_cast<int>(size.x)) / 2;
+  const int yTop = rect.Y + (rect.H - static_cast<int>(size.y)) / 2;
   DrawText(text, x, yTop, color);
 }
 
@@ -155,26 +155,26 @@ int UGuiRenderer::MeasureTextWidth(const std::string &text) const
     return 0;
   }
   constexpr float kScale = 1.0f;
-  const float textScale = textScale_ > 0.f ? textScale_ : kScale;
+  const float textScale = TextScale > 0.f ? TextScale : kScale;
   return static_cast<int>(TextRenderer->GetTextSize(text, textScale).x);
 }
 
 void UGuiRenderer::DrawText(const std::string &text, int x, int yTop,
                             const glm::vec3 &color)
 {
-  if (!TextRenderer || text.empty() || windowHeight_ <= 0)
+  if (!TextRenderer || text.empty() || WindowHeight <= 0)
   {
     return;
   }
-  quadBatch_.Flush();
+  QuadBatch.Flush();
 
   // FreeType atlas is built at TextRenderer init size; scale is a glyph
   // multiplier (0.7–1.0), not px size.
   constexpr float kScale = 1.0f;
-  const float textScale = textScale_ > 0.f ? textScale_ : kScale;
+  const float textScale = TextScale > 0.f ? TextScale : kScale;
   const glm::vec2 size = TextRenderer->GetTextSize(text, textScale);
   const float baselineY =
-      static_cast<float>(windowHeight_) - static_cast<float>(yTop) - size.y;
+      static_cast<float>(WindowHeight) - static_cast<float>(yTop) - size.y;
 
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);

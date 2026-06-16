@@ -8,70 +8,70 @@
 namespace cutum
 {
 
-UiQuadBatch::UiQuadBatch() = default;
+UGuiQuadBatch::UGuiQuadBatch() = default;
 
-UiQuadBatch::~UiQuadBatch() { Shutdown(); }
+UGuiQuadBatch::~UGuiQuadBatch() { Shutdown(); }
 
-bool UiQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
+bool UGuiQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
 {
   if (!shader || !shader->IsValid())
   {
     return false;
   }
-  shader_ = std::move(shader);
+  Shader = std::move(shader);
 
-  glGenVertexArrays(1, &vao_);
-  glGenBuffers(1, &vbo_);
-  glBindVertexArray(vao_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  glGenVertexArrays(1, &Vao);
+  glGenBuffers(1, &Vbo);
+  glBindVertexArray(Vao);
+  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 6 * 256, nullptr,
                GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
   glEnableVertexAttribArray(0);
   glBindVertexArray(0);
 
-  initialized_ = true;
+  Initialized = true;
   return true;
 }
 
-void UiQuadBatch::Shutdown()
+void UGuiQuadBatch::Shutdown()
 {
-  if (vbo_ != 0)
+  if (Vbo != 0)
   {
-    glDeleteBuffers(1, &vbo_);
-    vbo_ = 0;
+    glDeleteBuffers(1, &Vbo);
+    Vbo = 0;
   }
-  if (vao_ != 0)
+  if (Vao != 0)
   {
-    glDeleteVertexArrays(1, &vao_);
-    vao_ = 0;
+    glDeleteVertexArrays(1, &Vao);
+    Vao = 0;
   }
-  shader_.reset();
-  initialized_ = false;
+  Shader.reset();
+  Initialized = false;
 }
 
-void UiQuadBatch::Begin(int WindowWidth, int WindowHeight)
+void UGuiQuadBatch::Begin(int window_width, int window_height)
 {
-  windowWidth_ = WindowWidth;
-  windowHeight_ = WindowHeight;
-  vertices_.clear();
+  WindowWidth = window_width;
+  WindowHeight = window_height;
+  Vertices.clear();
 
   GLboolean depthTest;
   glGetBooleanv(GL_DEPTH_TEST, &depthTest);
-  depthTestWasEnabled_ = depthTest == GL_TRUE;
+  DepthTestWasEnabled = depthTest == GL_TRUE;
   glDisable(GL_DEPTH_TEST);
 
   GLboolean blend;
   glGetBooleanv(GL_BLEND, &blend);
-  blendWasEnabled_ = blend == GL_TRUE;
+  BlendWasEnabled = blend == GL_TRUE;
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void UiQuadBatch::End()
+void UGuiQuadBatch::End()
 {
   Flush();
-  if (depthTestWasEnabled_)
+  if (DepthTestWasEnabled)
   {
     glEnable(GL_DEPTH_TEST);
   }
@@ -79,64 +79,64 @@ void UiQuadBatch::End()
   {
     glDisable(GL_DEPTH_TEST);
   }
-  if (!blendWasEnabled_)
+  if (!BlendWasEnabled)
   {
     glDisable(GL_BLEND);
   }
 }
 
-void UiQuadBatch::GuiRectToShaderCoords(const GuiRect &rect, float &x0,
-                                        float &y0, float &x1, float &y1) const
+void UGuiQuadBatch::GuiRectToShaderCoords(const GuiRect &rect, float &x0,
+                                          float &y0, float &x1, float &y1) const
 {
-  x0 = static_cast<float>(rect.x);
-  x1 = static_cast<float>(rect.x + rect.w);
-  const float h = static_cast<float>(windowHeight_);
-  y0 = h - static_cast<float>(rect.y + rect.h);
-  y1 = h - static_cast<float>(rect.y);
+  x0 = static_cast<float>(rect.X);
+  x1 = static_cast<float>(rect.X + rect.W);
+  const float h = static_cast<float>(WindowHeight);
+  y0 = h - static_cast<float>(rect.Y + rect.H);
+  y1 = h - static_cast<float>(rect.Y);
 }
 
-void UiQuadBatch::AddQuad(float x0, float y0, float x1, float y1,
-                          const glm::vec4 &color)
+void UGuiQuadBatch::AddQuad(float x0, float y0, float x1, float y1,
+                            const glm::vec4 &color)
 {
-  if (color != currentColor_ && !vertices_.empty())
+  if (color != CurrentColor && !Vertices.empty())
   {
     Flush();
   }
-  currentColor_ = color;
-  vertices_.push_back({x0, y0});
-  vertices_.push_back({x1, y0});
-  vertices_.push_back({x0, y1});
-  vertices_.push_back({x0, y1});
-  vertices_.push_back({x1, y0});
-  vertices_.push_back({x1, y1});
+  CurrentColor = color;
+  Vertices.push_back({x0, y0});
+  Vertices.push_back({x1, y0});
+  Vertices.push_back({x0, y1});
+  Vertices.push_back({x0, y1});
+  Vertices.push_back({x1, y0});
+  Vertices.push_back({x1, y1});
 }
 
-void UiQuadBatch::Flush()
+void UGuiQuadBatch::Flush()
 {
-  if (!initialized_ || vertices_.empty() || !shader_)
+  if (!Initialized || Vertices.empty() || !Shader)
   {
-    vertices_.clear();
+    Vertices.clear();
     return;
   }
 
-  shader_->Use();
-  shader_->SetVec2("screenSize", glm::vec2(windowWidth_, windowHeight_));
-  shader_->SetVec4("color", currentColor_);
+  Shader->Use();
+  Shader->SetVec2("screenSize", glm::vec2(WindowWidth, WindowHeight));
+  Shader->SetVec4("color", CurrentColor);
 
-  glBindVertexArray(vao_);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  glBindVertexArray(Vao);
+  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   glBufferSubData(GL_ARRAY_BUFFER, 0,
-                  static_cast<GLsizeiptr>(vertices_.size() * sizeof(Vertex)),
-                  vertices_.data());
-  glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices_.size()));
+                  static_cast<GLsizeiptr>(Vertices.size() * sizeof(Vertex)),
+                  Vertices.data());
+  glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(Vertices.size()));
   glBindVertexArray(0);
-  shader_->Unuse();
-  vertices_.clear();
+  Shader->Unuse();
+  Vertices.clear();
 }
 
-void UiQuadBatch::DrawFilledRect(const GuiRect &rect, const glm::vec4 &color)
+void UGuiQuadBatch::DrawFilledRect(const GuiRect &rect, const glm::vec4 &color)
 {
-  if (rect.w <= 0 || rect.h <= 0)
+  if (rect.W <= 0 || rect.H <= 0)
   {
     return;
   }
@@ -148,14 +148,14 @@ void UiQuadBatch::DrawFilledRect(const GuiRect &rect, const glm::vec4 &color)
   AddQuad(x0, y0, x1, y1, color);
 }
 
-void UiQuadBatch::DrawBorderRect(const GuiRect &rect, const glm::vec4 &color,
-                                 int thicknessPx)
+void UGuiQuadBatch::DrawBorderRect(const GuiRect &rect, const glm::vec4 &color,
+                                   int thicknessPx)
 {
   const int t = std::max(1, thicknessPx);
-  DrawFilledRect({rect.x, rect.y, rect.w, t}, color);
-  DrawFilledRect({rect.x, rect.y + rect.h - t, rect.w, t}, color);
-  DrawFilledRect({rect.x, rect.y, t, rect.h}, color);
-  DrawFilledRect({rect.x + rect.w - t, rect.y, t, rect.h}, color);
+  DrawFilledRect({rect.X, rect.Y, rect.W, t}, color);
+  DrawFilledRect({rect.X, rect.Y + rect.H - t, rect.W, t}, color);
+  DrawFilledRect({rect.X, rect.Y, t, rect.H}, color);
+  DrawFilledRect({rect.X + rect.W - t, rect.Y, t, rect.H}, color);
 }
 
 } // namespace cutum

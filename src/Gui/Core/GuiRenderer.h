@@ -1,9 +1,9 @@
 #ifndef GUI_RENDERER_H
 #define GUI_RENDERER_H
 
-#include "Gui/Core/GuiTypes.h"
 #include "Gui/Batch/UiQuadBatch.h"
 #include "Gui/Batch/UiTexturedQuadBatch.h"
+#include "Gui/Core/GuiTypes.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -25,7 +25,7 @@ public:
                   std::shared_ptr<UTextRenderer> textRenderer);
   void Shutdown();
 
-  void BeginFrame(int WindowWidth, int WindowHeight);
+  void BeginFrame(int window_width, int window_height);
   void EndFrame();
 
   void DrawFilledRect(const GuiRect &rect, const glm::vec4 &color);
@@ -43,22 +43,22 @@ public:
   void PushClipRect(const GuiRect &rect);
   void PopClipRect();
 
-  int GetWindowWidth() const { return windowWidth_; }
-  int GetWindowHeight() const { return windowHeight_; }
+  int GetWindowWidth() const { return WindowWidth; }
+  int GetWindowHeight() const { return WindowHeight; }
 
-  void SetTextScale(float scale) { textScale_ = scale; }
-  float GetTextScale() const { return textScale_; }
+  void SetTextScale(float scale) { TextScale = scale; }
+  float GetTextScale() const { return TextScale; }
 
 private:
   void ApplyClipStack();
 
   std::shared_ptr<UTextRenderer> TextRenderer;
-  UiQuadBatch quadBatch_;
-  UiTexturedQuadBatch texturedQuadBatch_;
-  int windowWidth_{0};
-  int windowHeight_{0};
-  float textScale_{1.f};
-  std::vector<GuiRect> clipStack_;
+  UGuiQuadBatch QuadBatch;
+  UGuiTexturedQuadBatch TexturedQuadBatch;
+  int WindowWidth{0};
+  int WindowHeight{0};
+  float TextScale{1.f};
+  std::vector<GuiRect> ClipStack;
 };
 
 } // namespace cutum
