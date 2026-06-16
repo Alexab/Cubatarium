@@ -41,7 +41,7 @@ public:
   /// Initializes the window manager with the specified parameters.
   /// \param Core The core instance.
   /// \param World The world instance.
-  /// \param geometries_ The geometry engine instance.
+  /// \param Geometries The geometry engine instance.
   /// \param Views The view engine instance.
   void SetInstances(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
                     std::shared_ptr<UGeometryEngine> geometries,
@@ -72,13 +72,13 @@ public:
 private:
   static void FramebufferSizeCallback(GLFWwindow *window, int width,
                                       int height);
-  static void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
-                          int mods);
-  static void MouseButtonCallback(GLFWwindow *window, int button, int action,
-                                  int mods);
+  static void KeyCallback(GLFWwindow *window, int key, int scancode, int Action,
+                          int Mods);
+  static void MouseButtonCallback(GLFWwindow *window, int Button, int Action,
+                                  int Mods);
   static void CursorPosCallback(GLFWwindow *window, double xpos, double ypos);
-  static void ScrollCallback(GLFWwindow *window, double xoffset,
-                             double yoffset);
+  static void ScrollCallback(GLFWwindow *window, double Xoffset,
+                             double Yoffset);
   static void ErrorCallback(int error, const char *description);
   static void WindowCloseCallback(GLFWwindow *window);
 
@@ -88,8 +88,8 @@ private:
   void SetupCallbacks();
   void InitializeOpenGL();
 
-  void HandleKeyEvent(KeyCode key, KeyState state, int mods);
-  void HandleMouseButtonEvent(MouseButton button, bool pressed, glm::vec2 pos);
+  void HandleKeyEvent(KeyCode key, KeyState state, int Mods);
+  void HandleMouseButtonEvent(MouseButton Button, bool Pressed, glm::vec2 pos);
   void HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta);
   void HandleWindowResizeEvent(int width, int height);
 

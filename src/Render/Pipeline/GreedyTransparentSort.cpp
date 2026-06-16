@@ -34,9 +34,9 @@ float GreedyBatchViewDistance(const GreedyMeshBatch &batch,
   return glm::length(centroid - cameraPos);
 }
 
-int TransparentBatchLayer(BlockRenderStyle style)
+int TransparentBatchLayer(BlockRenderStyle Style)
 {
-  switch (style)
+  switch (Style)
   {
   case BlockRenderStyle::Fluid:
     return 0;

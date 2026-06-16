@@ -13,7 +13,7 @@ CreateCreatureVisual(const CreatureDefinition &def)
 {
   if (def.visual.backend == "gltf_skeleton")
   {
-    std::cout << "UCreatureVisual: gltf_skeleton stub for " << def.id
+    std::cout << "UCreatureVisual: gltf_skeleton stub for " << def.Id
               << std::endl;
     return std::make_unique<UCreatureVisualGltf>();
   }

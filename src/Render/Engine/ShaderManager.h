@@ -2,7 +2,7 @@
 #define SHADERMANAGER_H
 
 // GLEW will be included in .cpp file after GLFW initialization
-// Forward declaration for OpenGL types
+// Forward declaration for OpenGL Types
 typedef unsigned int GLuint;
 typedef unsigned int GLenum;
 typedef int GLint;
@@ -37,17 +37,17 @@ public:
   GLuint GetProgramID() const { return programID; }
 
   // Set uniform variables
-  void SetBool(const std::string &name, bool value);
-  void SetInt(const std::string &name, int value);
-  void SetFloat(const std::string &name, float value);
-  void SetVec2(const std::string &name, const glm::vec2 &value);
-  void SetVec3(const std::string &name, const glm::vec3 &value);
-  void SetVec4(const std::string &name, const glm::vec4 &value);
-  void SetMat3(const std::string &name, const glm::mat3 &value);
-  void SetMat4(const std::string &name, const glm::mat4 &value);
+  void SetBool(const std::string &Name, bool value);
+  void SetInt(const std::string &Name, int value);
+  void SetFloat(const std::string &Name, float value);
+  void SetVec2(const std::string &Name, const glm::vec2 &value);
+  void SetVec3(const std::string &Name, const glm::vec3 &value);
+  void SetVec4(const std::string &Name, const glm::vec4 &value);
+  void SetMat3(const std::string &Name, const glm::mat3 &value);
+  void SetMat4(const std::string &Name, const glm::mat4 &value);
 
   // Get uniform variable locations
-  GLint GetUniformLocation(const std::string &name);
+  GLint GetUniformLocation(const std::string &Name);
 
 private:
   GLuint programID;
@@ -72,21 +72,21 @@ public:
   void Shutdown();
 
   // Create and manage shaders
-  std::shared_ptr<UShaderProgram> CreateShader(const std::string &name,
+  std::shared_ptr<UShaderProgram> CreateShader(const std::string &Name,
                                                const std::string &vertexPath,
                                                const std::string &fragmentPath);
 
   std::shared_ptr<UShaderProgram>
-  CreateShaderFromStrings(const std::string &name,
+  CreateShaderFromStrings(const std::string &Name,
                           const std::string &vertexSource,
                           const std::string &fragmentSource);
 
   // Get shaders
-  std::shared_ptr<UShaderProgram> GetShader(const std::string &name);
-  bool HasShader(const std::string &name) const;
+  std::shared_ptr<UShaderProgram> GetShader(const std::string &Name);
+  bool HasShader(const std::string &Name) const;
 
   // Delete shaders
-  void RemoveShader(const std::string &name);
+  void RemoveShader(const std::string &Name);
   void ClearAllShaders();
 
   // Preset shaders

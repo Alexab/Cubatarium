@@ -18,7 +18,7 @@ struct SkinCatalogInfo
 
 struct SkinDefinition
 {
-  std::string id;
+  std::string Id;
   std::string displayName;
   std::string creatureId;
   SkinCatalogInfo catalog;

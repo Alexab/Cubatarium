@@ -1,7 +1,7 @@
 #ifndef GUI_SCROLL_VIEW_H
 #define GUI_SCROLL_VIEW_H
 
-#include "GuiPanel.h"
+#include "Gui/Widgets/GuiPanel.h"
 #include <functional>
 
 namespace cutum
@@ -26,22 +26,22 @@ public:
   UGuiPanel &Content();
   const UGuiPanel &Content() const;
 
-  void LayoutContent(int spacing = 6, int padding = 0);
-  int ContentHeight() const { return contentHeight_; }
+  void LayoutContent(int spacing = 6, int Padding = 0);
+  int ContentHeight() const { return ScrollContentHeight; }
 
   void SetScrollY(int y);
-  int GetScrollY() const { return scrollY_; }
+  int GetScrollY() const { return ScrollY; }
   int MaxScrollY() const;
 
   bool ContainsWidget(const UGuiWidget *widget) const;
   void EnsureWidgetVisible(const UGuiWidget &widget);
   using AfterScrollLayoutFn = std::function<void(UGuiScrollView &)>;
   void SetAfterScrollLayout(AfterScrollLayoutFn callback);
-  void SetScrollbarMode(GuiScrollbarMode mode) { scrollbarMode_ = mode; }
-  GuiScrollbarMode GetScrollbarMode() const { return scrollbarMode_; }
+  void SetScrollbarMode(GuiScrollbarMode mode) { ScrollbarMode = mode; }
+  GuiScrollbarMode GetScrollbarMode() const { return ScrollbarMode; }
   void SetDrawScrollbar(bool draw)
   {
-    scrollbarMode_ = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
+    ScrollbarMode = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
   }
 
   void Draw(UGuiRenderer &renderer) override;
@@ -67,19 +67,19 @@ private:
   void ClampScroll();
   void DrawScrollbar(UGuiRenderer &renderer);
 
-  const GuiTheme *theme_;
-  UGuiPanel content_;
-  int scrollY_{0};
-  int contentHeight_{0};
-  int layoutSpacing_{6};
-  int layoutPadding_{4};
-  GuiScrollbarMode scrollbarMode_{GuiScrollbarMode::Auto};
-  AfterScrollLayoutFn afterScrollLayout_;
-  bool deferredTouchActive_{false};
-  bool deferredDragged_{false};
-  GuiMouseEvent deferredDown_{};
-  int deferredDragStartY_{0};
-  int deferredDragStartScroll_{0};
+  const GuiTheme *Theme;
+  UGuiPanel ContentPanel;
+  int ScrollY{0};
+  int ScrollContentHeight{0};
+  int LayoutSpacing{6};
+  int LayoutPadding{4};
+  GuiScrollbarMode ScrollbarMode{GuiScrollbarMode::Auto};
+  AfterScrollLayoutFn AfterScrollLayout;
+  bool DeferredTouchActive{false};
+  bool DeferredDragged{false};
+  GuiMouseEvent DeferredDown{};
+  int DeferredDragStartY{0};
+  int DeferredDragStartScroll{0};
   static constexpr int kScrollbarWidth = 10;
 };
 

@@ -1,4 +1,4 @@
-#include "GuiLayout.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiWidget.h"
 
 #include <algorithm>
@@ -11,9 +11,9 @@ namespace cutum
 namespace
 {
 
-GuiRect ClientWithPadding(const GuiRect &area, int padding)
+GuiRect ClientWithPadding(const GuiRect &area, int Padding)
 {
-  return area.Inset(padding);
+  return area.Inset(Padding);
 }
 
 int ClampColumns(const GuiGridSpec &spec) { return std::max(1, spec.columns); }
@@ -65,11 +65,11 @@ GridPlacementData BuildGridPlacementData(const GuiRect &clientArea,
 {
   GridPlacementData d;
   d.columns = ClampColumns(spec);
-  d.inner = ClientWithPadding(clientArea, std::max(0, spec.padding));
+  d.inner = ClientWithPadding(clientArea, std::max(0, spec.Padding));
   const int gapsW = std::max(0, d.columns - 1) * std::max(0, spec.hGap);
-  const int availableW = std::max(0, d.inner.w - gapsW);
+  const int availableW = std::max(0, d.inner.W - gapsW);
   d.colW = ComputeColumnWidths(availableW, d.columns, spec.columnWeights);
-  d.colX.resize(d.columns, d.inner.x);
+  d.colX.resize(d.columns, d.inner.X);
   for (int c = 1; c < d.columns; ++c)
   {
     d.colX[c] = d.colX[c - 1] + d.colW[c - 1] + std::max(0, spec.hGap);
@@ -134,10 +134,10 @@ GridPlacementData BuildGridPlacementData(const GuiRect &clientArea,
 } // namespace
 
 int UGuiLayout::StackVerticalMeasure(const GuiRect &clientArea, int spacing,
-                                     int padding,
+                                     int Padding,
                                      const std::vector<UGuiWidget *> &children)
 {
-  int total = padding * 2;
+  int total = Padding * 2;
   bool first = true;
   for (UGuiWidget *child : children)
   {
@@ -156,10 +156,10 @@ int UGuiLayout::StackVerticalMeasure(const GuiRect &clientArea, int spacing,
 }
 
 void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing,
-                               int padding,
+                               int Padding,
                                const std::vector<UGuiWidget *> &children)
 {
-  GuiRect cursor = ClientWithPadding(clientArea, padding);
+  GuiRect cursor = ClientWithPadding(clientArea, Padding);
   for (UGuiWidget *child : children)
   {
     if (!child || !child->IsVisible())
@@ -167,16 +167,16 @@ void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing,
       continue;
     }
     const int childH = child->GetPreferredHeight();
-    child->SetBounds({cursor.x, cursor.y, cursor.w, childH});
-    cursor.y += childH + spacing;
+    child->SetBounds({cursor.X, cursor.Y, cursor.W, childH});
+    cursor.Y += childH + spacing;
   }
 }
 
 void UGuiLayout::StackHorizontal(const GuiRect &clientArea, int spacing,
-                                 int padding,
+                                 int Padding,
                                  const std::vector<UGuiWidget *> &children)
 {
-  GuiRect cursor = ClientWithPadding(clientArea, padding);
+  GuiRect cursor = ClientWithPadding(clientArea, Padding);
   for (UGuiWidget *child : children)
   {
     if (!child || !child->IsVisible())
@@ -184,8 +184,8 @@ void UGuiLayout::StackHorizontal(const GuiRect &clientArea, int spacing,
       continue;
     }
     const int childW = child->GetPreferredWidth();
-    child->SetBounds({cursor.x, cursor.y, childW, cursor.h});
-    cursor.x += childW + spacing;
+    child->SetBounds({cursor.X, cursor.Y, childW, cursor.H});
+    cursor.X += childW + spacing;
   }
 }
 
@@ -205,20 +205,20 @@ void UGuiLayout::AnchorChild(const GuiRect &clientArea, GuiAnchorKind kind,
     bounds = clientArea.Inset(margin);
     break;
   case GuiAnchorKind::TopCenter:
-    bounds = {clientArea.x + (clientArea.w - pw) / 2, clientArea.y + margin, pw,
+    bounds = {clientArea.X + (clientArea.W - pw) / 2, clientArea.Y + margin, pw,
               ph};
     break;
   case GuiAnchorKind::Center:
-    bounds = {clientArea.x + (clientArea.w - pw) / 2,
-              clientArea.y + (clientArea.h - ph) / 2, pw, ph};
+    bounds = {clientArea.X + (clientArea.W - pw) / 2,
+              clientArea.Y + (clientArea.H - ph) / 2, pw, ph};
     break;
   case GuiAnchorKind::BottomCenter:
-    bounds = {clientArea.x + (clientArea.w - pw) / 2,
-              clientArea.y + clientArea.h - ph - margin, pw, ph};
+    bounds = {clientArea.X + (clientArea.W - pw) / 2,
+              clientArea.Y + clientArea.H - ph - margin, pw, ph};
     break;
   case GuiAnchorKind::TopLeft:
   default:
-    bounds = {clientArea.x + margin, clientArea.y + margin, pw, ph};
+    bounds = {clientArea.X + margin, clientArea.Y + margin, pw, ph};
     break;
   }
   child->SetBounds(bounds);
@@ -232,7 +232,7 @@ int UGuiLayout::GridMeasure(const GuiRect &clientArea, const GuiGridSpec &spec,
   const int rows = static_cast<int>(d.rowH.size());
   const int totalRows = std::accumulate(d.rowH.begin(), d.rowH.end(), 0);
   const int totalGaps = std::max(0, rows - 1) * vGap;
-  return std::max(0, totalRows + totalGaps + std::max(0, spec.padding) * 2);
+  return std::max(0, totalRows + totalGaps + std::max(0, spec.Padding) * 2);
 }
 
 void UGuiLayout::GridPlace(const GuiRect &clientArea, const GuiGridSpec &spec,
@@ -242,7 +242,7 @@ void UGuiLayout::GridPlace(const GuiRect &clientArea, const GuiGridSpec &spec,
   const int hGap = std::max(0, spec.hGap);
   const int vGap = std::max(0, spec.vGap);
 
-  std::vector<int> rowY(d.rowH.size(), d.inner.y);
+  std::vector<int> rowY(d.rowH.size(), d.inner.Y);
   for (int r = 1; r < static_cast<int>(d.rowH.size()); ++r)
   {
     rowY[r] = rowY[r - 1] + d.rowH[r - 1] + vGap;

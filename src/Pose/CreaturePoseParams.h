@@ -16,12 +16,12 @@ struct CreaturePartPose
 
 struct CreaturePoseParams
 {
-  std::unordered_map<std::string, CreaturePartPose> parts;
+  std::unordered_map<std::string, CreaturePartPose> Parts;
   float crouchUpperDrop{0.0f};
 
-  void SetPart(const std::string &id, CreaturePartPose pose)
+  void SetPart(const std::string &Id, CreaturePartPose pose)
   {
-    parts[id] = pose;
+    Parts[Id] = pose;
   }
 };
 

@@ -6,25 +6,25 @@ namespace cutum
 
 struct GuiRect
 {
-  int x{0};
-  int y{0};
-  int w{0};
-  int h{0};
+  int X{0};
+  int Y{0};
+  int W{0};
+  int H{0};
 
   bool Contains(int px, int py) const
   {
-    return px >= x && px < x + w && py >= y && py < y + h;
+    return px >= X && px < X + W && py >= Y && py < Y + H;
   }
 
   bool Intersects(const GuiRect &other) const
   {
-    return x < other.x + other.w && x + w > other.x && y < other.y + other.h &&
-           y + h > other.y;
+    return X < other.X + other.W && X + W > other.X && Y < other.Y + other.H &&
+           Y + H > other.Y;
   }
 
   GuiRect Inset(int pad) const
   {
-    return {x + pad, y + pad, w - 2 * pad, h - 2 * pad};
+    return {X + pad, Y + pad, W - 2 * pad, H - 2 * pad};
   }
 };
 
@@ -44,12 +44,12 @@ enum class GuiKeyAction
 
 struct GuiMouseEvent
 {
-  int x{0};
-  int y{0};
-  GuiMouseButton button{GuiMouseButton::Left};
-  bool pressed{false};
+  int X{0};
+  int Y{0};
+  GuiMouseButton Button{GuiMouseButton::Left};
+  bool Pressed{false};
   /// Android touch pointer index; -1 on desktop (matches any capture).
-  int pointerId{-1};
+  int PointerId{-1};
 };
 
 inline bool GuiPointerMatches(int eventPointerId, int capturePointerId)
@@ -62,20 +62,20 @@ inline constexpr int kGuiTouchDragSlopPx = 14;
 
 struct GuiKeyEvent
 {
-  int keyCode{0};
-  GuiKeyAction action{GuiKeyAction::Press};
-  int mods{0};
+  int KeyCode{0};
+  GuiKeyAction Action{GuiKeyAction::Press};
+  int Mods{0};
 };
 
 struct GuiCharEvent
 {
-  unsigned int codepoint{0};
+  unsigned int Codepoint{0};
 };
 
 struct GuiScrollEvent
 {
-  double xoffset{0.0};
-  double yoffset{0.0};
+  double Xoffset{0.0};
+  double Yoffset{0.0};
 };
 
 } // namespace cutum

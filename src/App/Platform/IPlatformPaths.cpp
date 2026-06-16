@@ -16,7 +16,8 @@ IPlatformPaths &IPlatformPaths::Current()
 {
   if (!Global)
   {
-    throw std::runtime_error("IPlatformPaths::Current() called before SetGlobal");
+    throw std::runtime_error(
+        "IPlatformPaths::Current() called before SetGlobal");
   }
   return *Global;
 }

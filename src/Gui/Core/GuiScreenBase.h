@@ -23,22 +23,22 @@ public:
                          int insetBottom);
   virtual bool BlocksGameInput() const { return false; }
 
-  UGuiWidget *GetRoot() { return root_.get(); }
-  const UGuiWidget *GetRoot() const { return root_.get(); }
+  UGuiWidget *GetRoot() { return Root.get(); }
+  const UGuiWidget *GetRoot() const { return Root.get(); }
 
-  int GetViewportWidth() const { return viewportW_; }
-  int GetViewportHeight() const { return viewportH_; }
-  int GetContentOffsetX() const { return contentOffsetX_; }
-  int GetContentOffsetY() const { return contentOffsetY_; }
+  int GetViewportWidth() const { return ViewportW; }
+  int GetViewportHeight() const { return ViewportH; }
+  int GetContentOffsetX() const { return ContentOffsetX; }
+  int GetContentOffsetY() const { return ContentOffsetY; }
 
 protected:
-  std::unique_ptr<UGuiWidget> root_;
-  int viewportW_{1280};
-  int viewportH_{720};
-  int contentOffsetX_{0};
-  int contentOffsetY_{0};
-  int contentInsetRight_{0};
-  int contentInsetBottom_{0};
+  std::unique_ptr<UGuiWidget> Root;
+  int ViewportW{1280};
+  int ViewportH{720};
+  int ContentOffsetX{0};
+  int ContentOffsetY{0};
+  int ContentInsetRight{0};
+  int ContentInsetBottom{0};
 };
 
 } // namespace cutum

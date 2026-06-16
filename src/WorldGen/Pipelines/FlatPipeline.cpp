@@ -8,14 +8,14 @@ UFlatPipeline::UFlatPipeline(WorldGenContext ctx) : IWorldGenPipeline(ctx) {}
 
 void UFlatPipeline::GenerateColumn(int worldX, int worldZ)
 {
-  FillFlatColumn(ctx_, worldX, worldZ);
+  FillFlatColumn(Ctx, worldX, worldZ);
 }
 
 int UFlatPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
   (void)worldX;
   (void)worldZ;
-  return ctx_.Settings.flatSurfaceY;
+  return Ctx.Settings.FlatSurfaceY;
 }
 
 ULegacyHashPipeline::ULegacyHashPipeline(WorldGenContext ctx)
@@ -25,13 +25,13 @@ ULegacyHashPipeline::ULegacyHashPipeline(WorldGenContext ctx)
 
 void ULegacyHashPipeline::GenerateColumn(int worldX, int worldZ)
 {
-  FillLegacyHashColumn(ctx_, worldX, worldZ);
+  FillLegacyHashColumn(Ctx, worldX, worldZ);
 }
 
 int ULegacyHashPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
-  const int naturalY = LegacyHashSurfaceY(worldX, worldZ, ctx_.Settings);
-  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
+  const int naturalY = LegacyHashSurfaceY(worldX, worldZ, Ctx.Settings);
+  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
 }
 
 } // namespace cutum

@@ -13,8 +13,8 @@ class UCreatureDefinitionStorage
 {
 public:
   void Load(const std::string &folder);
-  const CreatureDefinition *Get(const std::string &id) const;
-  size_t Count() const { return definitions_.size(); }
+  const CreatureDefinition *Get(const std::string &Id) const;
+  size_t Count() const { return Definitions.size(); }
 
   std::vector<std::string> ListAllIds() const;
   std::vector<std::string> ListSpawnable() const;
@@ -23,7 +23,7 @@ public:
 private:
   bool LoadFile(const std::string &path);
 
-  std::unordered_map<std::string, CreatureDefinition> definitions_;
+  std::unordered_map<std::string, CreatureDefinition> Definitions;
 };
 
 } // namespace cutum

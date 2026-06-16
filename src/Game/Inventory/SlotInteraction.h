@@ -1,8 +1,8 @@
 #ifndef SLOT_INTERACTION_H
 #define SLOT_INTERACTION_H
 
-#include "Gui/Interfaces/IContentCatalog.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Interfaces/IContentCatalog.h"
 #include <cstddef>
 #include <string>
 
@@ -27,7 +27,7 @@ struct SlotAddress
 
 struct DragState
 {
-  bool active{false};
+  bool Active{false};
   InventoryEntryRef entry;
   SlotAddress source;
 };

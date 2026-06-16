@@ -1,73 +1,73 @@
-#include "GuiTabBar.h"
+#include "Gui/Widgets/GuiTabBar.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
 namespace cutum
 {
 
-UGuiTabBar::UGuiTabBar(const GuiTheme *theme) : theme_(theme) {}
+UGuiTabBar::UGuiTabBar(const GuiTheme *theme) : Theme(theme) {}
 
 void UGuiTabBar::SetTabs(std::vector<std::string> labels)
 {
-  labels_ = std::move(labels);
-  if (activeTab_ >= static_cast<int>(labels_.size()))
+  Labels = std::move(labels);
+  if (ActiveTab >= static_cast<int>(Labels.size()))
   {
-    activeTab_ = labels_.empty() ? 0 : static_cast<int>(labels_.size()) - 1;
+    ActiveTab = Labels.empty() ? 0 : static_cast<int>(Labels.size()) - 1;
   }
 }
 
 void UGuiTabBar::SetActiveTab(int tab)
 {
-  if (tab >= 0 && tab < static_cast<int>(labels_.size()))
+  if (tab >= 0 && tab < static_cast<int>(Labels.size()))
   {
-    activeTab_ = tab;
+    ActiveTab = tab;
   }
 }
 
 void UGuiTabBar::SetOnTabChanged(std::function<void(int)> handler)
 {
-  onTabChanged_ = std::move(handler);
+  OnTabChanged = std::move(handler);
 }
 
 int UGuiTabBar::GetPreferredHeight() const
 {
-  return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
+  return Theme ? Theme->FontSizeBody + Theme->Padding * 2 : 28;
 }
 
 void UGuiTabBar::Draw(UGuiRenderer &renderer)
 {
-  if (!visible_ || !theme_ || labels_.empty())
+  if (!Visible || !Theme || Labels.empty())
   {
     return;
   }
-  const int tabW = bounds_.w / static_cast<int>(labels_.size());
-  for (size_t i = 0; i < labels_.size(); ++i)
+  const int tabW = Bounds.W / static_cast<int>(Labels.size());
+  for (size_t i = 0; i < Labels.size(); ++i)
   {
-    GuiRect tabRect{bounds_.x + static_cast<int>(i) * tabW, bounds_.y, tabW,
-                    bounds_.h};
-    const glm::vec4 color = static_cast<int>(i) == activeTab_
-                                ? theme_->buttonHover
-                                : theme_->buttonNormal;
+    GuiRect tabRect{Bounds.X + static_cast<int>(i) * tabW, Bounds.Y, tabW,
+                    Bounds.H};
+    const glm::vec4 color = static_cast<int>(i) == ActiveTab
+                                ? Theme->ButtonHover
+                                : Theme->ButtonNormal;
     renderer.DrawFilledRect(tabRect, color);
-    renderer.DrawText(labels_[i], tabRect.x + theme_->padding,
-                      tabRect.y + theme_->padding, theme_->textPrimary);
+    renderer.DrawText(Labels[i], tabRect.X + Theme->Padding,
+                      tabRect.Y + Theme->Padding, Theme->TextPrimary);
   }
 }
 
 bool UGuiTabBar::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!visible_ || !bounds_.Contains(event.x, event.y) || labels_.empty())
+  if (!Visible || !Bounds.Contains(event.X, event.Y) || Labels.empty())
   {
     return false;
   }
-  const int tabW = bounds_.w / static_cast<int>(labels_.size());
-  const int index = (event.x - bounds_.x) / tabW;
-  if (index >= 0 && index < static_cast<int>(labels_.size()))
+  const int tabW = Bounds.W / static_cast<int>(Labels.size());
+  const int index = (event.X - Bounds.X) / tabW;
+  if (index >= 0 && index < static_cast<int>(Labels.size()))
   {
-    activeTab_ = index;
-    if (onTabChanged_)
+    ActiveTab = index;
+    if (OnTabChanged)
     {
-      onTabChanged_(index);
+      OnTabChanged(index);
     }
     return true;
   }

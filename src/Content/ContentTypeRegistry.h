@@ -1,7 +1,7 @@
 #ifndef CONTENT_TYPE_REGISTRY_H
 #define CONTENT_TYPE_REGISTRY_H
 
-#include "ContentType.h"
+#include "Content/ContentType.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include <unordered_map>
 #include <vector>
@@ -33,12 +33,12 @@ private:
   std::vector<std::string>
   GetTypesForTags(const std::vector<std::string> &tags) const;
 
-  std::vector<ContentType> types_;
-  std::unordered_map<std::string, ContentType> typeById_;
-  std::unordered_map<std::string, std::vector<CatalogEntry>> blockEntries_;
-  std::unordered_map<std::string, std::vector<CatalogEntry>> objectEntries_;
-  std::unordered_map<std::string, std::vector<CatalogEntry>> creatureEntries_;
-  std::unordered_map<std::string, std::vector<CatalogEntry>> skinEntries_;
+  std::vector<ContentType> Types;
+  std::unordered_map<std::string, ContentType> TypeById;
+  std::unordered_map<std::string, std::vector<CatalogEntry>> BlockEntries;
+  std::unordered_map<std::string, std::vector<CatalogEntry>> ObjectEntries;
+  std::unordered_map<std::string, std::vector<CatalogEntry>> CreatureEntries;
+  std::unordered_map<std::string, std::vector<CatalogEntry>> SkinEntries;
 };
 
 } // namespace cutum

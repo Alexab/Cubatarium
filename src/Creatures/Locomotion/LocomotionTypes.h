@@ -47,10 +47,10 @@ const char *ToString(LocomotionArchetype archetype);
 
 struct CreatureInput
 {
-  bool moveForward{false};
-  bool moveBack{false};
-  bool moveLeft{false};
-  bool moveRight{false};
+  bool MoveForward{false};
+  bool MoveBack{false};
+  bool MoveLeft{false};
+  bool MoveRight{false};
   bool jumpHeld{false};
   bool jumpPressed{false};
   bool crouchHeld{false};
@@ -61,7 +61,7 @@ struct CreatureLocomotionCapabilities
   bool canFly{true};
   bool canCrouch{true};
   bool canJump{true};
-  /// Feet rise in blocks at jump apex (used with shared gravity to derive jump
+  /// Feet rise in blocks at Jump apex (used with shared gravity to derive Jump
   /// speed).
   float jumpHeightBlocks{1.25f};
   float walkSpeed{3.0f};

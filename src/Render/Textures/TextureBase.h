@@ -11,7 +11,7 @@ class UTextureBase
 {
 public:
   UTextureBase();
-  UTextureBase(const std::string &name, const std::string &file_name);
+  UTextureBase(const std::string &Name, const std::string &file_name);
 
   const std::string &GetName() const;
   const std::string &GetFileName() const;

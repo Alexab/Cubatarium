@@ -26,7 +26,7 @@ glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
 
 void USkinDefinitionStorage::Load(const std::string &folder)
 {
-  definitions_.clear();
+  Definitions.clear();
   if (!std::filesystem::exists(folder))
   {
     return;
@@ -43,7 +43,7 @@ void USkinDefinitionStorage::Load(const std::string &folder)
       LoadFile(jsonPath.string());
     }
   }
-  std::cout << "USkinDefinitionStorage: loaded " << definitions_.size()
+  std::cout << "USkinDefinitionStorage: loaded " << Definitions.size()
             << " skins" << std::endl;
 }
 
@@ -59,12 +59,12 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
     nlohmann::json data;
     file >> data;
     SkinDefinition def;
-    def.id = data.value("id", "");
-    if (def.id.empty())
+    def.Id = data.value("id", "");
+    if (def.Id.empty())
     {
       return false;
     }
-    def.displayName = data.value("display_name", def.id);
+    def.displayName = data.value("display_name", def.Id);
     def.creatureId = data.value("creature_id", "");
     if (data.contains("catalog") && data["catalog"].is_object())
     {
@@ -109,7 +109,7 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
                      def.iconFallbackColor);
       }
     }
-    definitions_[def.id] = def;
+    Definitions[def.Id] = def;
     return true;
   }
   catch (const std::exception &e)
@@ -120,10 +120,10 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
   }
 }
 
-const SkinDefinition *USkinDefinitionStorage::Get(const std::string &id) const
+const SkinDefinition *USkinDefinitionStorage::Get(const std::string &Id) const
 {
-  const auto it = definitions_.find(id);
-  if (it == definitions_.end())
+  const auto it = Definitions.find(Id);
+  if (it == Definitions.end())
   {
     return nullptr;
   }
@@ -133,11 +133,11 @@ const SkinDefinition *USkinDefinitionStorage::Get(const std::string &id) const
 std::vector<std::string> USkinDefinitionStorage::ListEquippable() const
 {
   std::vector<std::string> ids;
-  for (const auto &[id, def] : definitions_)
+  for (const auto &[Id, def] : Definitions)
   {
     if (def.catalog.equippable)
     {
-      ids.push_back(id);
+      ids.push_back(Id);
     }
   }
   std::sort(ids.begin(), ids.end(),

@@ -19,7 +19,7 @@ enum class TransparentPassId
 
 struct TransparentPassDesc
 {
-  TransparentPassId id;
+  TransparentPassId Id;
   const char *debugName;
   GLenum depthFunc;
   bool depthWrite;

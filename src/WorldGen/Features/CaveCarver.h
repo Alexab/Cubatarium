@@ -16,10 +16,10 @@ struct CaveParams
   float scale{0.05f};
 };
 
-bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t seed,
+bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params);
 
 void CarveColumnCaves(struct WorldGenContext &ctx, int x, int z, int surfaceY,
-                      uint32_t seed, const CaveParams &params);
+                      uint32_t Seed, const CaveParams &params);
 
 } // namespace cutum

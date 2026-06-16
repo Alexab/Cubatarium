@@ -17,7 +17,7 @@ class UTextureCube
 {
 public:
   UTextureCube();
-  UTextureCube(const std::string &name, size_t type_id,
+  UTextureCube(const std::string &Name, size_t type_id,
                const std::vector<std::string> &texture_names);
   UTextureCube(const UTextureCube &) = default;
 
@@ -56,7 +56,7 @@ public:
   void Load(const std::string &textures_path);
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
-  size_t GetTypeIdByName(const std::string &name) const;
+  size_t GetTypeIdByName(const std::string &Name) const;
 
 private:
   UTextureCube CreateCubeTexture(const std::string &cube_type_name,
@@ -65,7 +65,7 @@ private:
                                  int stripFrameCount);
   GLuint LoadTexture(const std::string &image_path);
 
-  bool LoadJson(const std::string &file_name, std::string &name, size_t &id,
+  bool LoadJson(const std::string &file_name, std::string &Name, size_t &Id,
                 std::vector<std::string> &textures);
 
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;

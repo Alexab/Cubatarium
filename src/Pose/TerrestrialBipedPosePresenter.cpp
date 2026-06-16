@@ -17,9 +17,9 @@ UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts &facts,
                                         float /*dt*/)
 {
   CreaturePoseParams pose;
-  const float legSwing = def.visual.animation.legSwingDeg;
-  const float armSwing = def.visual.animation.armSwingDeg;
-  const float flyPitch = def.visual.animation.flyBodyPitchDeg;
+  const float legSwing = def.visual.Animation.legSwingDeg;
+  const float armSwing = def.visual.Animation.armSwingDeg;
+  const float flyPitch = def.visual.Animation.flyBodyPitchDeg;
 
   switch (facts.state)
   {

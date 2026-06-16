@@ -1,25 +1,25 @@
-#include "GuiDialogFrame.h"
+#include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
-#include "GuiButton.h"
-#include "GuiPanel.h"
-#include "GuiTabBar.h"
+#include "Gui/Widgets/GuiButton.h"
+#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiTabBar.h"
 
 #include <algorithm>
 
 namespace cutum
 {
 
-UGuiDialogFrame::UGuiDialogFrame(const GuiTheme *theme) : theme_(theme) {}
+UGuiDialogFrame::UGuiDialogFrame(const GuiTheme *theme) : Theme(theme) {}
 
 UGuiTabBar *
 UGuiDialogFrame::CreateTabBar(const std::vector<std::string> &labels,
                               std::function<void(int)> onTabChanged)
 {
-  auto tabs = std::make_unique<UGuiTabBar>(theme_);
-  tabBar_ = tabs.get();
-  tabBar_->SetTabs(labels);
-  tabBar_->SetOnTabChanged(
+  auto tabs = std::make_unique<UGuiTabBar>(Theme);
+  TabBar = tabs.get();
+  TabBar->SetTabs(labels);
+  TabBar->SetOnTabChanged(
       [this, onTabChanged = std::move(onTabChanged)](int tab)
       {
         SetActivePage(tab);
@@ -29,56 +29,56 @@ UGuiDialogFrame::CreateTabBar(const std::vector<std::string> &labels,
         }
       });
   AddChild(std::move(tabs));
-  return tabBar_;
+  return TabBar;
 }
 
 UGuiPanel &UGuiDialogFrame::AddScrollPage()
 {
-  if (!scroll_)
+  if (!Scroll)
   {
-    auto scroll = std::make_unique<UGuiScrollView>(theme_);
-    scroll_ = scroll.get();
-    scroll_->SetScrollbarMode(scrollbarMode_);
-    scroll_->SetAfterScrollLayout([this](UGuiScrollView &)
-                                  { RelayoutVisiblePageContents(); });
+    auto scroll = std::make_unique<UGuiScrollView>(Theme);
+    Scroll = scroll.get();
+    Scroll->SetScrollbarMode(ScrollbarMode);
+    Scroll->SetAfterScrollLayout([this](UGuiScrollView &)
+                                 { RelayoutVisiblePageContents(); });
     AddChild(std::move(scroll));
   }
-  auto page = std::make_unique<UGuiPanel>(theme_);
+  auto page = std::make_unique<UGuiPanel>(Theme);
   page->SetDrawBackground(false);
   page->SetStackLayout(6, 0);
   UGuiPanel *raw = page.get();
-  scrollPages_.push_back(raw);
-  scrollPageMeasureFns_.push_back({});
-  scrollPageLayoutFns_.push_back({});
-  scroll_->Content().AddChild(std::move(page));
+  ScrollPages.push_back(raw);
+  ScrollPageMeasureFns.push_back({});
+  ScrollPageLayoutFns.push_back({});
+  Scroll->Content().AddChild(std::move(page));
   return *raw;
 }
 
 UGuiWidget &UGuiDialogFrame::SetFixedBody(std::unique_ptr<UGuiWidget> body)
 {
-  fixedBody_ = body.get();
+  FixedBody = body.get();
   AddChild(std::move(body));
-  return *fixedBody_;
+  return *FixedBody;
 }
 
-UGuiButton &UGuiDialogFrame::AddFooterButton(std::unique_ptr<UGuiButton> button)
+UGuiButton &UGuiDialogFrame::AddFooterButton(std::unique_ptr<UGuiButton> Button)
 {
-  UGuiButton *raw = button.get();
-  footerButtons_.push_back(raw);
-  AddChild(std::move(button));
+  UGuiButton *raw = Button.get();
+  FooterButtons.push_back(raw);
+  AddChild(std::move(Button));
   return *raw;
 }
 
 void UGuiDialogFrame::SetActivePage(int index)
 {
-  if (scrollPages_.empty())
+  if (ScrollPages.empty())
   {
     return;
   }
-  activePage_ = std::clamp(index, 0, static_cast<int>(scrollPages_.size()) - 1);
-  for (size_t i = 0; i < scrollPages_.size(); ++i)
+  ActivePage = std::clamp(index, 0, static_cast<int>(ScrollPages.size()) - 1);
+  for (size_t i = 0; i < ScrollPages.size(); ++i)
   {
-    scrollPages_[i]->SetVisible(static_cast<int>(i) == activePage_);
+    ScrollPages[i]->SetVisible(static_cast<int>(i) == ActivePage);
   }
   LayoutFrame();
 }
@@ -87,55 +87,55 @@ void UGuiDialogFrame::SetScrollPageLayout(size_t pageIndex,
                                           PageMeasureFn measureFn,
                                           PageLayoutFn layoutFn)
 {
-  if (pageIndex >= scrollPageMeasureFns_.size() ||
-      pageIndex >= scrollPageLayoutFns_.size())
+  if (pageIndex >= ScrollPageMeasureFns.size() ||
+      pageIndex >= ScrollPageLayoutFns.size())
   {
     return;
   }
-  scrollPageMeasureFns_[pageIndex] = std::move(measureFn);
-  scrollPageLayoutFns_[pageIndex] = std::move(layoutFn);
+  ScrollPageMeasureFns[pageIndex] = std::move(measureFn);
+  ScrollPageLayoutFns[pageIndex] = std::move(layoutFn);
 }
 
 void UGuiDialogFrame::SetDrawScrollbar(bool draw)
 {
-  scrollbarMode_ = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
-  if (scroll_)
+  ScrollbarMode = draw ? GuiScrollbarMode::Auto : GuiScrollbarMode::Hidden;
+  if (Scroll)
   {
-    scroll_->SetScrollbarMode(scrollbarMode_);
+    Scroll->SetScrollbarMode(ScrollbarMode);
   }
 }
 
 void UGuiDialogFrame::SetScrollbarMode(GuiScrollbarMode mode)
 {
-  scrollbarMode_ = mode;
-  if (scroll_)
+  ScrollbarMode = mode;
+  if (Scroll)
   {
-    scroll_->SetScrollbarMode(mode);
+    Scroll->SetScrollbarMode(mode);
   }
 }
 
 void UGuiDialogFrame::LayoutScrollPages(const GuiRect &bodyArea)
 {
-  if (!scroll_)
+  if (!Scroll)
   {
     return;
   }
-  scroll_->SetBounds(bodyArea);
-  for (UGuiPanel *page : scrollPages_)
+  Scroll->SetBounds(bodyArea);
+  for (UGuiPanel *page : ScrollPages)
   {
     if (!page || !page->IsVisible())
     {
       continue;
     }
-    const auto it = std::find(scrollPages_.begin(), scrollPages_.end(), page);
-    const size_t idx = it == scrollPages_.end()
+    const auto it = std::find(ScrollPages.begin(), ScrollPages.end(), page);
+    const size_t idx = it == ScrollPages.end()
                            ? 0
-                           : static_cast<size_t>(it - scrollPages_.begin());
+                           : static_cast<size_t>(it - ScrollPages.begin());
     int pageH = 0;
-    if (idx < scrollPageMeasureFns_.size() && scrollPageMeasureFns_[idx])
+    if (idx < ScrollPageMeasureFns.size() && ScrollPageMeasureFns[idx])
     {
       pageH = std::max(
-          0, scrollPageMeasureFns_[idx]({0, 0, bodyArea.w, bodyArea.h}));
+          0, ScrollPageMeasureFns[idx]({0, 0, bodyArea.W, bodyArea.H}));
     }
     else
     {
@@ -144,21 +144,21 @@ void UGuiDialogFrame::LayoutScrollPages(const GuiRect &bodyArea)
       {
         inner.push_back(child.get());
       }
-      const GuiRect measureArea{0, 0, bodyArea.w, 100000};
+      const GuiRect measureArea{0, 0, bodyArea.W, 100000};
       pageH = UGuiLayout::StackVerticalMeasure(measureArea, 6, 0, inner);
     }
-    page->SetBounds({0, 0, bodyArea.w, pageH});
+    page->SetBounds({0, 0, bodyArea.W, pageH});
   }
-  scroll_->LayoutContent(6, 4);
+  Scroll->LayoutContent(6, 4);
   RelayoutVisiblePageContents();
 }
 
 void UGuiDialogFrame::RelayoutVisiblePageContents()
 {
-  if (scroll_)
+  if (Scroll)
   {
-    const GuiRect contentBounds = scroll_->Content().GetBounds();
-    for (UGuiPanel *page : scrollPages_)
+    const GuiRect contentBounds = Scroll->Content().GetBounds();
+    for (UGuiPanel *page : ScrollPages)
     {
       if (!page || !page->IsVisible())
       {
@@ -166,24 +166,24 @@ void UGuiDialogFrame::RelayoutVisiblePageContents()
       }
       const GuiRect pageBounds = page->GetBounds();
       page->SetBounds(
-          {contentBounds.x, contentBounds.y, pageBounds.w, pageBounds.h});
+          {contentBounds.X, contentBounds.Y, pageBounds.W, pageBounds.H});
     }
   }
 
-  for (UGuiPanel *page : scrollPages_)
+  for (UGuiPanel *page : ScrollPages)
   {
     if (!page || !page->IsVisible())
     {
       continue;
     }
-    const auto it = std::find(scrollPages_.begin(), scrollPages_.end(), page);
-    const size_t idx = it == scrollPages_.end()
+    const auto it = std::find(ScrollPages.begin(), ScrollPages.end(), page);
+    const size_t idx = it == ScrollPages.end()
                            ? 0
-                           : static_cast<size_t>(it - scrollPages_.begin());
+                           : static_cast<size_t>(it - ScrollPages.begin());
     const GuiRect &pageBounds = page->GetBounds();
-    if (idx < scrollPageLayoutFns_.size() && scrollPageLayoutFns_[idx])
+    if (idx < ScrollPageLayoutFns.size() && ScrollPageLayoutFns[idx])
     {
-      scrollPageLayoutFns_[idx](pageBounds);
+      ScrollPageLayoutFns[idx](pageBounds);
       continue;
     }
     std::vector<UGuiWidget *> inner;
@@ -197,38 +197,38 @@ void UGuiDialogFrame::RelayoutVisiblePageContents()
 
 void UGuiDialogFrame::LayoutFrame()
 {
-  if (bounds_.w <= 0 || bounds_.h <= 0)
+  if (Bounds.W <= 0 || Bounds.H <= 0)
   {
     return;
   }
-  GuiRect area = bounds_;
-  int bodyY = area.y;
+  GuiRect area = Bounds;
+  int bodyY = area.Y;
 
-  if (tabBar_)
+  if (TabBar)
   {
-    const int tabH = tabBar_->GetPreferredHeight();
-    tabBar_->SetBounds({area.x, bodyY, area.w, tabH});
+    const int tabH = TabBar->GetPreferredHeight();
+    TabBar->SetBounds({area.X, bodyY, area.W, tabH});
     bodyY += tabH + kTabGap;
   }
 
-  const int footerY = area.y + area.h - kFooterHeight;
+  const int footerY = area.Y + area.H - kFooterHeight;
   const int bodyH = std::max(0, footerY - bodyY);
-  const GuiRect bodyArea{area.x + 4, bodyY, std::max(0, area.w - 8), bodyH};
+  const GuiRect bodyArea{area.X + 4, bodyY, std::max(0, area.W - 8), bodyH};
 
-  if (scroll_)
+  if (Scroll)
   {
     LayoutScrollPages(bodyArea);
   }
-  else if (fixedBody_)
+  else if (FixedBody)
   {
-    fixedBody_->SetBounds(bodyArea);
+    FixedBody->SetBounds(bodyArea);
   }
 
-  if (!footerButtons_.empty())
+  if (!FooterButtons.empty())
   {
-    GuiRect footer{area.x + 8, footerY + 4, area.w - 16, kFooterHeight - 8};
+    GuiRect footer{area.X + 8, footerY + 4, area.W - 16, kFooterHeight - 8};
     std::vector<UGuiWidget *> btns;
-    for (UGuiButton *btn : footerButtons_)
+    for (UGuiButton *btn : FooterButtons)
     {
       btns.push_back(btn);
     }
@@ -238,19 +238,19 @@ void UGuiDialogFrame::LayoutFrame()
 
 void UGuiDialogFrame::CollectFocusables(std::vector<UGuiWidget *> &out)
 {
-  if (!visible_ || !enabled_)
+  if (!Visible || !Enabled)
   {
     return;
   }
-  if (scroll_)
+  if (Scroll)
   {
-    scroll_->CollectFocusables(out);
+    Scroll->CollectFocusables(out);
   }
-  else if (fixedBody_)
+  else if (FixedBody)
   {
-    fixedBody_->CollectFocusables(out);
+    FixedBody->CollectFocusables(out);
   }
-  for (UGuiButton *btn : footerButtons_)
+  for (UGuiButton *btn : FooterButtons)
   {
     if (btn && btn->CanFocus())
     {
@@ -266,19 +266,19 @@ UGuiWidget *UGuiDialogFrame::HitTest(int x, int y)
 
 bool UGuiDialogFrame::OnKey(const GuiKeyEvent &event)
 {
-  if (fixedBody_ && fixedBody_->OnKey(event))
+  if (FixedBody && FixedBody->OnKey(event))
   {
     return true;
   }
-  if (tabBar_ && tabBar_->OnKey(event))
+  if (TabBar && TabBar->OnKey(event))
   {
     return true;
   }
-  if (scroll_ && scroll_->OnKey(event))
+  if (Scroll && Scroll->OnKey(event))
   {
     return true;
   }
-  for (UGuiButton *btn : footerButtons_)
+  for (UGuiButton *btn : FooterButtons)
   {
     if (btn && btn->OnKey(event))
     {

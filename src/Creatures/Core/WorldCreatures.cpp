@@ -1,15 +1,15 @@
-#include "Render/Camera/Camera.h"
-#include "Creatures/Core/Creature.h"
-#include "Creatures/Visual/CreatureAppearance.h"
-#include "Creatures/Definition/CreatureDefinitionStorage.h"
-#include "Creatures/Visual/CreatureVisualFactory.h"
-#include "World/Math/GridMath.h"
-#include "Creatures/Player/Player.h"
-#include "Creatures/Definition/SkinDefinitionStorage.h"
-#include "Creatures/Player/User.h"
-#include "Render/Engine/ViewEngine.h"
-#include "World/Core/World.h"
 #include "Activity/CreatureActivityRegistry.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Player/Player.h"
+#include "Creatures/Player/User.h"
+#include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Render/Engine/ViewEngine.h"
+#include "Render/Camera/Camera.h"
+#include "World/Core/World.h"
+#include "World/Math/GridMath.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -48,7 +48,7 @@ UWorld::QueryControlledCreatureInfo() const
     return std::nullopt;
   }
   ControlledCreatureInfo info;
-  info.id = ControlledCreatureId;
+  info.Id = ControlledCreatureId;
   info.eyePosition = controlled->GetEyePosition();
   return info;
 }
@@ -81,15 +81,15 @@ void UWorld::SetSkinDefinitionStorage(
   SkinDefinitions = std::move(storage);
 }
 
-UCreature *UWorld::GetCreature(CreatureId id)
+UCreature *UWorld::GetCreature(CreatureId Id)
 {
-  const auto it = Creatures.find(id);
+  const auto it = Creatures.find(Id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
 
-const UCreature *UWorld::GetCreature(CreatureId id) const
+const UCreature *UWorld::GetCreature(CreatureId Id) const
 {
-  const auto it = Creatures.find(id);
+  const auto it = Creatures.find(Id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
 
@@ -105,9 +105,9 @@ const UCreature *UWorld::GetControlledCreature() const
 
 UCreature *UWorld::GetPlayerCreature() { return GetCreature(PlayerCreatureId); }
 
-bool UWorld::SetControlledCreature(CreatureId id)
+bool UWorld::SetControlledCreature(CreatureId Id)
 {
-  if (id == 0 || !GetCreature(id))
+  if (Id == 0 || !GetCreature(Id))
   {
     return false;
   }
@@ -118,8 +118,8 @@ bool UWorld::SetControlledCreature(CreatureId id)
       prev->SetPossessed(false);
     }
   }
-  ControlledCreatureId = id;
-  if (UCreature *c = GetCreature(id))
+  ControlledCreatureId = Id;
+  if (UCreature *c = GetCreature(Id))
   {
     c->SetPossessed(true);
     if (const CreatureDefinition *def = GetCreatureDefinition(c->GetTypeId()))
@@ -163,18 +163,18 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
     return 0;
   }
 
-  const CreatureId id = NextCreatureId++;
+  const CreatureId Id = NextCreatureId++;
   const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
 
   std::unique_ptr<UCreature> creature;
   if (def->role == CreatureRole::ControlledDefault)
   {
-    creature = std::make_unique<UPlayer>(id, speciesId, bodyOrigin);
+    creature = std::make_unique<UPlayer>(Id, speciesId, bodyOrigin);
   }
   else
   {
     creature =
-        std::make_unique<UCreature>(id, speciesId, bodyOrigin, eyeOffset);
+        std::make_unique<UCreature>(Id, speciesId, bodyOrigin, eyeOffset);
   }
 
   creature->GetBoundsMutable().profile = def->bounds;
@@ -185,7 +185,7 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   creature->SetCapabilities(def->locomotion);
   creature->SetLocomotionArchetype(def->locomotionArchetype);
   creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-  creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
+  creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
       creature->GetBounds().currentSizeBlocks, def->eyeHeight);
   if (!skinId.empty())
@@ -193,27 +193,27 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
     creature->SetSkinId(skinId);
   }
   creature->SetVisual(CreateCreatureVisual(*def));
-  Creatures[id] = std::move(creature);
-  SnapCreatureFeetToGround(*Creatures[id]);
+  Creatures[Id] = std::move(creature);
+  SnapCreatureFeetToGround(*Creatures[Id]);
   if (def->role != CreatureRole::ControlledDefault)
   {
-    ActivityDirector.OnCreatureAdded(id, def->behavior.id);
+    ActivityDirector.OnCreatureAdded(Id, def->behavior.Id);
   }
-  return id;
+  return Id;
 }
 
-void UWorld::RemoveCreature(CreatureId id)
+void UWorld::RemoveCreature(CreatureId Id)
 {
-  if (ControlledCreatureId == id)
+  if (ControlledCreatureId == Id)
   {
     ControlledCreatureId = PlayerCreatureId;
   }
-  if (PlayerCreatureId == id)
+  if (PlayerCreatureId == Id)
   {
     PlayerCreatureId = 0;
   }
-  ActivityDirector.OnCreatureRemoved(id);
-  Creatures.erase(id);
+  ActivityDirector.OnCreatureRemoved(Id);
+  Creatures.erase(Id);
 }
 
 void UWorld::ForEachCreature(const std::function<void(UCreature &)> &fn)
@@ -523,7 +523,7 @@ void UWorld::LoadCreatures(const std::string &file_name)
       creature->SetCapabilities(def->locomotion);
       creature->SetLocomotionArchetype(def->locomotionArchetype);
       creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-      creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
+      creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
       creature->GetLocomotion().SetCollisionProfile(
           creature->GetBounds().currentSizeBlocks, def->eyeHeight);
       if (!skin.empty())
@@ -539,7 +539,7 @@ void UWorld::LoadCreatures(const std::string &file_name)
       creature->GetInventory().DeserializeFromJson(c);
       SnapCreatureFeetToGround(*creature);
       Creatures[id] = std::move(creature);
-      ActivityDirector.OnCreatureAdded(id, def->behavior.id);
+      ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
       NextCreatureId = std::max(NextCreatureId, id + 1);
     }
     if (PlayerCreatureId != 0 && ControlledCreatureId == 0)

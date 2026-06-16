@@ -3,53 +3,55 @@
 namespace cutum
 {
 
-bool DesktopPlatformWindow::Initialize(int width, int height, const char *title)
+bool UDesktopPlatformWindow::Initialize(int width, int height,
+                                        const char *title)
 {
-  return WindowManager_.Initialize(width, height, title);
+  return WindowManager.Initialize(width, height, title);
 }
 
-void DesktopPlatformWindow::Run() { WindowManager_.Run(); }
+void UDesktopPlatformWindow::Run() { WindowManager.Run(); }
 
-void DesktopPlatformWindow::Shutdown() { WindowManager_.Shutdown(); }
+void UDesktopPlatformWindow::Shutdown() { WindowManager.Shutdown(); }
 
-void DesktopPlatformWindow::PollEvents() {}
+void UDesktopPlatformWindow::PollEvents() {}
 
-void DesktopPlatformWindow::SwapBuffers() {}
+void UDesktopPlatformWindow::SwapBuffers() {}
 
-glm::ivec2 DesktopPlatformWindow::GetFramebufferSize() const
+glm::ivec2 UDesktopPlatformWindow::GetFramebufferSize() const
 {
-  return {WindowManager_.GetWidth(), WindowManager_.GetHeight()};
+  return {WindowManager.GetWidth(), WindowManager.GetHeight()};
 }
 
-bool DesktopPlatformWindow::ShouldClose() const
+bool UDesktopPlatformWindow::ShouldClose() const
 {
-  return WindowManager_.ShouldClose();
+  return WindowManager.ShouldClose();
 }
 
-void DesktopPlatformWindow::RequestClose() {}
+void UDesktopPlatformWindow::RequestClose() {}
 
-double DesktopPlatformWindow::DeltaTime() const { return 0.0; }
+double UDesktopPlatformWindow::DeltaTime() const { return 0.0; }
 
-void DesktopPlatformWindow::SetInstances(std::shared_ptr<UCore> core,
-                                       std::shared_ptr<UWorld> world,
-                                       std::shared_ptr<UGeometryEngine> geometries,
-                                       std::shared_ptr<UViewEngine> views)
+void UDesktopPlatformWindow::SetInstances(
+    std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
+    std::shared_ptr<UGeometryEngine> geometries,
+    std::shared_ptr<UViewEngine> views)
 {
-  WindowManager_.SetInstances(core, world, geometries, views);
+  WindowManager.SetInstances(core, world, geometries, views);
 }
 
-void DesktopPlatformWindow::SetApplication(std::shared_ptr<UApplication> application)
+void UDesktopPlatformWindow::SetApplication(
+    std::shared_ptr<UApplication> application)
 {
-  WindowManager_.SetApplication(application);
+  WindowManager.SetApplication(application);
 }
 
-void DesktopPlatformWindow::SetTextRenderer(
+void UDesktopPlatformWindow::SetTextRenderer(
     std::shared_ptr<UTextRenderer> text_renderer)
 {
-  WindowManager_.SetTextRenderer(text_renderer);
+  WindowManager.SetTextRenderer(text_renderer);
 }
 
-void DesktopPlatformWindow::SetCharCallback(CharCallbackFn callback)
+void UDesktopPlatformWindow::SetCharCallback(CharCallbackFn callback)
 {
   (void)callback;
 }

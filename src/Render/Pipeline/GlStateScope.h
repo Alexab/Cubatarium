@@ -19,29 +19,29 @@ public:
   UGlStateScope &operator=(const UGlStateScope &) = delete;
 
 private:
-  GlStateMask mask_{0};
+  GlStateMask Mask{0};
 
-  GLboolean depthTest_{GL_FALSE};
-  GLint depthFunc_{0};
-  GLboolean depthMask_{GL_TRUE};
-  GLboolean blend_{GL_FALSE};
-  GLboolean cullFace_{GL_FALSE};
-  GLboolean stencilTest_{GL_FALSE};
-  GLint stencilFunc_{GL_ALWAYS};
-  GLint stencilRef_{0};
-  GLint stencilValueMask_{0xFF};
-  GLint stencilWriteMask_{0xFF};
-  GLint stencilFail_{GL_KEEP};
-  GLint stencilZFail_{GL_KEEP};
-  GLint stencilZPass_{GL_KEEP};
-  GLboolean colorMask_[4]{GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
+  GLboolean DepthTest{GL_FALSE};
+  GLint DepthFunc{0};
+  GLboolean DepthMask{GL_TRUE};
+  GLboolean Blend{GL_FALSE};
+  GLboolean CullFace{GL_FALSE};
+  GLboolean StencilTest{GL_FALSE};
+  GLint StencilFunc{GL_ALWAYS};
+  GLint StencilRef{0};
+  GLint StencilValueMask{0xFF};
+  GLint StencilWriteMask{0xFF};
+  GLint StencilFail{GL_KEEP};
+  GLint StencilZFail{GL_KEEP};
+  GLint StencilZPass{GL_KEEP};
+  GLboolean ColorMask[4]{GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
 
-  GLint framebuffer_{0};
-  GLint viewport_[4]{0, 0, 0, 0};
-  GLint activeTexture_{0};
-  GLint boundTexture_{0};
-  GLint program_{0};
-  GLint vao_{0};
+  GLint Framebuffer{0};
+  GLint Viewport[4]{0, 0, 0, 0};
+  GLint ActiveTexture{0};
+  GLint BoundTexture{0};
+  GLint Program{0};
+  GLint Vao{0};
 };
 
 } // namespace cutum

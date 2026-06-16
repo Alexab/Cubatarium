@@ -9,11 +9,11 @@ namespace cutum
 namespace
 {
 
-HeightSampleParams ParamsForPreset(HeightPreset preset, int maxHeight)
+HeightSampleParams ParamsForPreset(HeightPreset preset, int MaxHeight)
 {
   HeightSampleParams p;
   const float scale =
-      maxHeight > 15 ? static_cast<float>(maxHeight) / 12.0f : 1.0f;
+      MaxHeight > 15 ? static_cast<float>(MaxHeight) / 12.0f : 1.0f;
   switch (preset)
   {
   case HeightPreset::Hills:
@@ -39,17 +39,17 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int maxHeight)
 
 } // namespace
 
-UOverworldHeightSampler::UOverworldHeightSampler(uint32_t seed, int seaLevel,
-                                                 int maxHeight,
+UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
+                                                 int MaxHeight,
                                                  HeightPreset preset)
-    : seed_(seed), seaLevel_(seaLevel), maxHeight_(maxHeight),
-      params_(ParamsForPreset(preset, maxHeight))
+    : Seed(Seed), SeaLevel(SeaLevel), MaxHeight(MaxHeight),
+      Params(ParamsForPreset(preset, MaxHeight))
 {
   if (preset == HeightPreset::Mountains)
   {
-    params_.stoneSurfaceAboveY =
-        seaLevel +
-        static_cast<int>(12.0f * (maxHeight > 15 ? maxHeight / 96.0f : 1.0f));
+    Params.stoneSurfaceAboveY =
+        SeaLevel +
+        static_cast<int>(12.0f * (MaxHeight > 15 ? MaxHeight / 96.0f : 1.0f));
   }
 }
 
@@ -57,15 +57,15 @@ int UOverworldHeightSampler::SurfaceYAt(int x, int z) const
 {
   const float sx = static_cast<float>(x) * 0.01f;
   const float sz = static_cast<float>(z) * 0.01f;
-  const float h = FBM2D(sx, sz, seed_, params_.octavesBase, params_.persistence,
-                        params_.lacunarity);
+  const float h = FBM2D(sx, sz, Seed, Params.octavesBase, Params.persistence,
+                        Params.lacunarity);
   const float detail =
-      FBM2D(sx * params_.detailScale, sz * params_.detailScale, seed_ + 1, 2,
-            params_.persistence, params_.lacunarity) *
-      params_.detailWeight;
-  int surfaceY = seaLevel_ + static_cast<int>((h + detail - 0.5f) *
-                                              params_.amplitudeBlocks);
-  surfaceY = std::clamp(surfaceY, 1, maxHeight_);
+      FBM2D(sx * Params.detailScale, sz * Params.detailScale, Seed + 1, 2,
+            Params.persistence, Params.lacunarity) *
+      Params.detailWeight;
+  int surfaceY =
+      SeaLevel + static_cast<int>((h + detail - 0.5f) * Params.amplitudeBlocks);
+  surfaceY = std::clamp(surfaceY, 1, MaxHeight);
   return surfaceY;
 }
 

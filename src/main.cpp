@@ -13,9 +13,9 @@ int main(int argc, char *argv[])
   (void)argc;
   (void)argv;
 
-  auto paths = std::make_shared<cutum::DesktopPlatformPaths>();
+  auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
   cutum::IPlatformPaths::SetGlobal(paths);
-  cutum::DesktopPlatformWindow window;
+  cutum::UDesktopPlatformWindow window;
   return cutum::RunCubatarium(window, *paths);
 }
 

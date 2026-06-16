@@ -37,7 +37,7 @@ PrefabPlacementStats PlacePrefabAt(UBlockWorld &world, const Prefab &prefab,
     {
       continue;
     }
-    world.SetBlock(worldPos, voxel.id);
+    world.SetBlock(worldPos, voxel.Id);
     stats.minY = std::min(stats.minY, worldPos.y);
     stats.maxY = std::max(stats.maxY, worldPos.y);
     ++stats.placedCount;

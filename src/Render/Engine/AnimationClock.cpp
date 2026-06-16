@@ -6,14 +6,14 @@ namespace cutum
 
 void UAnimationClock::SetFrameCount(int count)
 {
-  frameCount_ = std::max(1, count);
-  currentFrame_ %= frameCount_;
+  TotalFrames = std::max(1, count);
+  FrameIndex %= TotalFrames;
 }
 
 void UAnimationClock::SetFrametimeTicks(int ticks)
 {
-  frametimeTicks_ = std::max(1, ticks);
-  frameDuration_ = static_cast<float>(frametimeTicks_) / 20.0f;
+  FrametimeTicks = std::max(1, ticks);
+  FrameDuration = static_cast<float>(FrametimeTicks) / 20.0f;
 }
 
 void UAnimationClock::Tick(float deltaSeconds)
@@ -22,18 +22,18 @@ void UAnimationClock::Tick(float deltaSeconds)
   {
     return;
   }
-  if (frameDuration_ <= 0.0f)
+  if (FrameDuration <= 0.0f)
   {
-    frameDuration_ = 2.0f / 20.0f;
+    FrameDuration = 2.0f / 20.0f;
   }
-  accumulator_ += deltaSeconds;
-  while (accumulator_ >= frameDuration_)
+  Accumulator += deltaSeconds;
+  while (Accumulator >= FrameDuration)
   {
-    accumulator_ -= frameDuration_;
-    ++currentFrame_;
-    if (currentFrame_ > 1000000)
+    Accumulator -= FrameDuration;
+    ++FrameIndex;
+    if (FrameIndex > 1000000)
     {
-      currentFrame_ = 0;
+      FrameIndex = 0;
     }
   }
 }

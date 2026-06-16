@@ -30,7 +30,7 @@ struct GuiGridSpec
   int columns{1};
   int hGap{8};
   int vGap{6};
-  int padding{0};
+  int Padding{0};
   std::vector<int> columnWeights;
 };
 
@@ -56,14 +56,14 @@ HotbarLayoutResult LayoutHotbarRows(int viewportW, int viewportH, int slotSize,
 class UGuiLayout
 {
 public:
-  static void StackVertical(const GuiRect &clientArea, int spacing, int padding,
+  static void StackVertical(const GuiRect &clientArea, int spacing, int Padding,
                             const std::vector<UGuiWidget *> &children);
-  /// Returns total height used (including padding).
+  /// Returns total height used (including Padding).
   static int StackVerticalMeasure(const GuiRect &clientArea, int spacing,
-                                  int padding,
+                                  int Padding,
                                   const std::vector<UGuiWidget *> &children);
   static void StackHorizontal(const GuiRect &clientArea, int spacing,
-                              int padding,
+                              int Padding,
                               const std::vector<UGuiWidget *> &children);
   static void AnchorChild(const GuiRect &clientArea, GuiAnchorKind kind,
                           int margin, UGuiWidget *child);

@@ -25,18 +25,18 @@ enum class VerticalMode
 
 struct ProceduralSettings
 {
-  ProceduralGenerator generator{ProceduralGenerator::Heightmap};
-  VerticalMode vertical{VerticalMode::Compact};
-  uint32_t seed{12345};
-  int seaLevel{4};
-  int maxHeight{12};
-  int bedrockTopY{0};
-  bool enableCaves{false};
-  bool enableTrees{false};
-  int flatSurfaceY{3};
-  bool fillWater{false};
-  bool fillLava{false};
-  bool fillFire{false};
+  ProceduralGenerator Generator{ProceduralGenerator::Heightmap};
+  VerticalMode Vertical{VerticalMode::Compact};
+  uint32_t Seed{12345};
+  int SeaLevel{4};
+  int MaxHeight{12};
+  int BedrockTopY{0};
+  bool EnableCaves{false};
+  bool EnableTrees{false};
+  int FlatSurfaceY{3};
+  bool FillWater{false};
+  bool FillLava{false};
+  bool FillFire{false};
 };
 
 ProceduralGenerator ProceduralGeneratorFromString(const std::string &s);

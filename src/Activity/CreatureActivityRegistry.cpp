@@ -1,6 +1,6 @@
 #include "Activity/CreatureActivityRegistry.h"
-#include "Activity/CreatureActivityDirector.h"
 #include "Activity/Agents/WanderActivityAgent.h"
+#include "Activity/CreatureActivityDirector.h"
 #include <memory>
 
 namespace cutum

@@ -1,8 +1,8 @@
 #include "Render/Mesh/GreedyMesher.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Core/BlockWorld.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/BlockWorld.h"
 #include <cstring>
 
 namespace cutum
@@ -71,24 +71,24 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                       chunkCoord.y * CHUNK_SIZE + local.y,
                                       chunkCoord.z * CHUNK_SIZE + local.z);
 
-            const BlockId id = chunk->GetBlockLocal(local);
-            if (id == BLOCK_AIR)
+            const BlockId Id = chunk->GetBlockLocal(local);
+            if (Id == BLOCK_AIR)
             {
               continue;
             }
-            if (registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
+            if (registry.GetRenderStyle(Id) == BlockRenderStyle::Cross)
             {
               continue;
             }
 
             glm::ivec3 neighborPos = worldPos;
             neighborPos[axis] += sign;
-            if (NeighborHidesFace(world, registry, id, neighborPos))
+            if (NeighborHidesFace(world, registry, Id, neighborPos))
             {
               continue;
             }
 
-            mask[v][u] = id;
+            mask[v][u] = Id;
           }
         }
 
@@ -96,14 +96,14 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
         {
           for (int u = 0; u < CHUNK_SIZE; ++u)
           {
-            const BlockId id = mask[v][u];
-            if (id == BLOCK_AIR)
+            const BlockId Id = mask[v][u];
+            if (Id == BLOCK_AIR)
             {
               continue;
             }
 
             int width = 1;
-            while (u + width < CHUNK_SIZE && mask[v][u + width] == id)
+            while (u + width < CHUNK_SIZE && mask[v][u + width] == Id)
             {
               ++width;
             }
@@ -114,7 +114,7 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
             {
               for (int k = 0; k < width; ++k)
               {
-                if (mask[v + height][u + k] != id)
+                if (mask[v + height][u + k] != Id)
                 {
                   done = true;
                   break;
@@ -133,7 +133,7 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
             quad.v = v;
             quad.width = width;
             quad.height = height;
-            quad.id = id;
+            quad.Id = Id;
             quad.faceSign = sign;
             quads.push_back(quad);
 

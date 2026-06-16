@@ -6,8 +6,8 @@
 // #include <QFile>
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "ThirdParty/stb_image.h"
 #include "Render/GlIncludes.h"
+#include "ThirdParty/stb_image.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -26,9 +26,9 @@ UTextureCube::UTextureCube()
 {
 }
 
-UTextureCube::UTextureCube(const std::string &name, size_t type_id,
+UTextureCube::UTextureCube(const std::string &Name, size_t type_id,
                            const std::vector<std::string> &texture_names)
-    : Name(name), TypeId(type_id), TextureNames(texture_names),
+    : Name(Name), TypeId(type_id), TextureNames(texture_names),
       NumTextureFrames((TextureNames.size() / 6) < 1 ? 1
                                                      : TextureNames.size() / 6),
       TextureId(0), Texture(0)
@@ -90,28 +90,28 @@ void UTextureCubeStorage::Load(const std::string &textures_path)
       auto ext = entry.path().extension();
       if (ext.string() == ".json")
       {
-        std::string name;
-        size_t id;
+        std::string Name;
+        size_t Id;
         std::vector<std::string> textures;
-        if (LoadJson(entry.path().string(), name, id, textures))
+        if (LoadJson(entry.path().string(), Name, Id, textures))
         {
           int stripFrames = 0;
           if (BlockDefinitions)
           {
-            if (const BlockDefinition *def = BlockDefinitions->GetByName(name))
+            if (const BlockDefinition *def = BlockDefinitions->GetByName(Name))
             {
-              if (textures.size() == 6 && def->animation.frameCount > 1)
+              if (textures.size() == 6 && def->Animation.FrameCount > 1)
               {
-                stripFrames = def->animation.frameCount;
+                stripFrames = def->Animation.FrameCount;
               }
             }
           }
           UTextureCube descr =
-              CreateCubeTexture(name, id, textures, stripFrames);
+              CreateCubeTexture(Name, Id, textures, stripFrames);
           Textures[descr.GetTypeId()] = descr;
           loaded_count++;
 #ifdef CUBATARIUM_DEBUG
-          std::cout << "UTextureCubeStorage::Load: Added texture '" << name
+          std::cout << "UTextureCubeStorage::Load: Added texture '" << Name
                     << "'" << std::endl;
 #endif
         }
@@ -134,9 +134,9 @@ const std::map<size_t, UTextureCube> &UTextureCubeStorage::GetTextures() const
   return Textures;
 }
 
-size_t UTextureCubeStorage::GetTypeIdByName(const std::string &name) const
+size_t UTextureCubeStorage::GetTypeIdByName(const std::string &Name) const
 {
-  const auto it = TexturesNames.find(name);
+  const auto it = TexturesNames.find(Name);
   if (it != TexturesNames.end())
   {
     return it->second;
@@ -350,7 +350,7 @@ GLuint UTextureCubeStorage::LoadTexture(const std::string &image_path)
 }
 
 bool UTextureCubeStorage::LoadJson(const std::string &file_name,
-                                   std::string &name, size_t &id,
+                                   std::string &Name, size_t &Id,
                                    std::vector<std::string> &textures)
 {
   std::string val;
@@ -378,8 +378,8 @@ bool UTextureCubeStorage::LoadJson(const std::string &file_name,
     if (name_value.empty() || id_value == 0 || textures_value.empty())
       return false;
 
-    name = name_value;
-    id = id_value;
+    Name = name_value;
+    Id = id_value;
 
     if (!textures_value.is_array())
       return false;

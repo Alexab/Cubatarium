@@ -12,7 +12,7 @@ namespace cutum
 
 struct HotbarSlotView
 {
-  std::string id;
+  std::string Id;
   std::string label;
   bool isBlock{true};
   InventoryEntryKind entryKind{InventoryEntryKind::Block};

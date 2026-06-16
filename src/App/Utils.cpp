@@ -6,14 +6,14 @@
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 
-#include "Blocks/BlockDefinitionStorage.h"
 #include "App/Core.h"
-#include "Storage/ObjectStorage.h"
-#include "World/Prefabs/Prefab.h"
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Render/Engine/ViewEngine.h"
+#include "Storage/ObjectStorage.h"
 #include "World/Core/World.h"
+#include "World/Prefabs/Prefab.h"
 
 namespace cutum
 {

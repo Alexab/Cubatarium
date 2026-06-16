@@ -56,7 +56,7 @@ void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend &backend,
   {
     if (settings.logPassNames)
     {
-      std::cout << "[transparent] " << pass.debugName << std::endl;
+      std::cout << "[Transparent] " << pass.debugName << std::endl;
     }
     ApplyPassGlState(pass);
     backend.DrawPreparedTransparent(pass.shaderMode, settings.shellAlpha);

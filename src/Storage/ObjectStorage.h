@@ -33,7 +33,7 @@ public:
   }
 
 private:
-  bool LoadJson(const std::string &file_name, std::string &name, size_t &id,
+  bool LoadJson(const std::string &file_name, std::string &Name, size_t &Id,
                 std::string &class_name,
                 std::vector<std::string> &cube_textures);
 

@@ -261,7 +261,7 @@ bool UCube::IsIntersectionCube(const glm::vec3 &originRay,
   return result;
 }
 
-// https://www.gamedev.ru/code/forum/?id=40346
+// https://www.gamedev.ru/code/forum/?Id=40346
 bool UCube::CheckRayIntersection(
     const glm::vec3 &position, const glm::vec3 &front,
     std::map<float, std::tuple<int, glm::vec3, glm::vec3>>

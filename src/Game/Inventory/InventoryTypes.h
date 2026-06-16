@@ -18,7 +18,7 @@ enum class InventoryEntryKind
 struct InventoryEntryRef
 {
   InventoryEntryKind kind{InventoryEntryKind::Block};
-  std::string id;
+  std::string Id;
   int count{0};
   bool empty{true};
 };

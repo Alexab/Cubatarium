@@ -1,7 +1,7 @@
 #pragma once
 
-#include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 #include <string>
 
 namespace cutum

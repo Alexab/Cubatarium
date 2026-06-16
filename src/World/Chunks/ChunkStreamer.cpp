@@ -1,7 +1,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Core/BlockWorld.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <cmath>
@@ -56,15 +56,15 @@ void MarkChunkAndNeighborsDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
 } // namespace
 
 UChunkStreamer::UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry,
-                               uint32_t seed, int baseY, int maxHeight)
-    : World(world), registry_(registry), seed_(seed), baseY_(baseY),
-      maxHeight_(maxHeight)
+                               uint32_t Seed, int baseY, int MaxHeight)
+    : World(world), Registry(registry), Seed(Seed), BaseY(baseY),
+      MaxHeight(MaxHeight)
 {
 }
 
 void UChunkStreamer::SetWorldFolder(const std::string &path)
 {
-  worldFolder_ = path;
+  WorldFolder = path;
 }
 
 void UChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
@@ -72,11 +72,11 @@ void UChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
                                   GenerateColumnFn generateColumnFn,
                                   UnloadChunkFn unloadFn)
 {
-  loadChunkFn_ = std::move(loadFn);
-  saveChunkFn_ = std::move(saveFn);
-  markDirtyFn_ = std::move(markDirtyFn);
-  generateColumnFn_ = std::move(generateColumnFn);
-  unloadChunkFn_ = std::move(unloadFn);
+  OnLoadChunk = std::move(loadFn);
+  OnSaveChunk = std::move(saveFn);
+  OnMarkDirty = std::move(markDirtyFn);
+  OnGenerateColumn = std::move(generateColumnFn);
+  OnUnloadChunk = std::move(unloadFn);
 }
 
 bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
@@ -91,17 +91,17 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
   if (existing == nullptr)
   {
-    if (loadChunkFn_ && loadChunkFn_(chunkCoord))
+    if (OnLoadChunk && OnLoadChunk(chunkCoord))
     {
-      MarkChunkAndNeighborsDirty(markDirtyFn_, chunkCoord);
+      MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
       return true;
     }
-    if (!generateColumnFn_)
+    if (!OnGenerateColumn)
     {
       return false;
     }
   }
-  else if (!generateColumnFn_)
+  else if (!OnGenerateColumn)
   {
     return false;
   }
@@ -118,7 +118,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
       {
         continue;
       }
-      generateColumnFn_(worldX, worldZ);
+      OnGenerateColumn(worldX, worldZ);
       generated = true;
     }
   }
@@ -128,8 +128,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
     return false;
   }
 
-  MarkChunkAndNeighborsDirty(markDirtyFn_, chunkCoord);
-  procedurallyGenerated_.insert(chunkCoord);
+  MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
+  ProcedurallyGenerated.insert(chunkCoord);
   return true;
 }
 
@@ -159,7 +159,7 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
   const int dy = std::abs(chunkCoord.y - playerChunk.y);
   const int dz = std::abs(chunkCoord.z - playerChunk.z);
   const int distFromPlayer = std::max({dx, dy, dz});
-  if (distFromPlayer <= renderDistance_ + unloadMargin_)
+  if (distFromPlayer <= RenderDistance + UnloadMargin)
   {
     return true;
   }
@@ -174,7 +174,7 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
 
 void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
 {
-  if (!enabled_)
+  if (!Enabled)
   {
     return;
   }
@@ -199,7 +199,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk,
                                          const PlayerCapsule &cap)
 {
   std::vector<glm::ivec3> toUnload;
-  const int limit = renderDistance_ + unloadMargin_;
+  const int limit = RenderDistance + UnloadMargin;
 
   World.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
@@ -218,7 +218,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk,
   int unloadOps = 0;
   for (const glm::ivec3 &coord : toUnload)
   {
-    if (unloadOps >= maxUnloadOpsPerFrame_)
+    if (unloadOps >= MaxUnloadOpsPerFrame)
     {
       break;
     }
@@ -226,19 +226,19 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk,
     {
       continue;
     }
-    if (saveChunkFn_)
+    if (OnSaveChunk)
     {
-      saveChunkFn_(coord);
-      ++lastFrameStats_.savesThisFrame;
+      OnSaveChunk(coord);
+      ++LastFrameStats.savesThisFrame;
     }
     World.GetChunkManager().RemoveChunk(coord);
-    procedurallyGenerated_.erase(coord);
-    if (unloadChunkFn_)
+    ProcedurallyGenerated.erase(coord);
+    if (OnUnloadChunk)
     {
-      unloadChunkFn_(coord);
+      OnUnloadChunk(coord);
     }
-    lastFrameStats_.unloadedCoords.push_back(coord);
-    ++lastFrameStats_.unloadsThisFrame;
+    LastFrameStats.unloadedCoords.push_back(coord);
+    ++LastFrameStats.unloadsThisFrame;
     ++unloadOps;
   }
 }
@@ -246,27 +246,27 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk,
 void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
                             const PlayerCapsule &cap)
 {
-  if (!enabled_)
+  if (!Enabled)
   {
     return;
   }
 
-  lastFrameStats_.Reset();
+  LastFrameStats.Reset();
 
   const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(cameraBlockPos);
   const glm::ivec3 feetBlockPos =
       WorldPosToBlock(glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
 
   int loadOps = 0;
-  for (int cx = centerChunk.x - renderDistance_;
-       cx <= centerChunk.x + renderDistance_; ++cx)
+  for (int cx = centerChunk.x - RenderDistance;
+       cx <= centerChunk.x + RenderDistance; ++cx)
   {
-    for (int cz = centerChunk.z - renderDistance_;
-         cz <= centerChunk.z + renderDistance_; ++cz)
+    for (int cz = centerChunk.z - RenderDistance;
+         cz <= centerChunk.z + RenderDistance; ++cz)
     {
       for (int cy = centerChunk.y - 1; cy <= centerChunk.y + 1; ++cy)
       {
-        if (loadOps >= maxLoadOpsPerFrame_)
+        if (loadOps >= MaxLoadOpsPerFrame)
         {
           goto finish_loads;
         }
@@ -277,8 +277,8 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
         }
         if (EnsureChunkLoaded(coord))
         {
-          lastFrameStats_.loadedCoords.push_back(coord);
-          ++lastFrameStats_.loadsThisFrame;
+          LastFrameStats.loadedCoords.push_back(coord);
+          ++LastFrameStats.loadsThisFrame;
           ++loadOps;
         }
       }

@@ -15,21 +15,21 @@ namespace cutum
 namespace
 {
 
-class AssetStreamBuf : public std::streambuf
+class UAssetStreamBuf : public std::streambuf
 {
 public:
-  explicit AssetStreamBuf(AAsset *asset) : asset_(asset)
+  explicit UAssetStreamBuf(AAsset *asset) : asset_(asset)
   {
     const off_t length = AAsset_getLength(asset_);
     if (length > 0)
     {
-      buffer_.resize(static_cast<size_t>(length));
-      AAsset_read(asset_, buffer_.data(), static_cast<size_t>(length));
-      setg(buffer_.data(), buffer_.data(), buffer_.data() + buffer_.size());
+      Buffer.resize(static_cast<size_t>(length));
+      AAsset_read(asset_, Buffer.data(), static_cast<size_t>(length));
+      setg(Buffer.data(), Buffer.data(), Buffer.data() + Buffer.size());
     }
   }
 
-  ~AssetStreamBuf() override
+  ~UAssetStreamBuf() override
   {
     if (asset_)
     {
@@ -39,42 +39,43 @@ public:
 
 private:
   AAsset *asset_{nullptr};
-  std::vector<char> buffer_;
+  std::vector<char> Buffer;
 };
 
 } // namespace
 
-AndroidPlatformPaths::AndroidPlatformPaths(AAssetManager *assetManager)
-    : AssetManager_(assetManager)
+UAndroidPlatformPaths::UAndroidPlatformPaths(AAssetManager *assetManager)
+    : AssetManager(assetManager)
 {
 }
 
-std::filesystem::path AndroidPlatformPaths::WritableRoot() const
+std::filesystem::path UAndroidPlatformPaths::WritableRoot() const
 {
-  if (writableRoot_.empty())
+  if (WritableRootPath.empty())
   {
-    writableRoot_ = CubatariumAndroidGetFilesDir();
+    WritableRootPath = CubatariumAndroidGetFilesDir();
   }
-  return writableRoot_;
+  return WritableRootPath;
 }
 
-std::filesystem::path AndroidPlatformPaths::AssetRoot() const
+std::filesystem::path UAndroidPlatformPaths::AssetRoot() const
 {
   return WritableRoot() / "game";
 }
 
-bool AndroidPlatformPaths::AssetExists(const std::string &rel) const
+bool UAndroidPlatformPaths::AssetExists(const std::string &rel) const
 {
   const auto disk = AssetRoot() / rel;
   if (std::filesystem::exists(disk))
   {
     return true;
   }
-  if (!AssetManager_)
+  if (!AssetManager)
   {
     return false;
   }
-  AAsset *asset = AAssetManager_open(AssetManager_, rel.c_str(), AASSET_MODE_UNKNOWN);
+  AAsset *asset =
+      AAssetManager_open(AssetManager, rel.c_str(), AASSET_MODE_UNKNOWN);
   if (!asset)
   {
     return false;
@@ -84,13 +85,13 @@ bool AndroidPlatformPaths::AssetExists(const std::string &rel) const
 }
 
 std::filesystem::path
-AndroidPlatformPaths::ResolveWritable(const std::string &rel) const
+UAndroidPlatformPaths::ResolveWritable(const std::string &rel) const
 {
   return WritableRoot() / rel;
 }
 
-bool AndroidPlatformPaths::ReadAssetText(const std::string &rel,
-                                        std::string &out) const
+bool UAndroidPlatformPaths::ReadAssetText(const std::string &rel,
+                                          std::string &out) const
 {
   const auto disk = AssetRoot() / rel;
   if (std::filesystem::exists(disk))
@@ -105,11 +106,12 @@ bool AndroidPlatformPaths::ReadAssetText(const std::string &rel,
     out = buffer.str();
     return true;
   }
-  if (!AssetManager_)
+  if (!AssetManager)
   {
     return false;
   }
-  AAsset *asset = AAssetManager_open(AssetManager_, rel.c_str(), AASSET_MODE_BUFFER);
+  AAsset *asset =
+      AAssetManager_open(AssetManager, rel.c_str(), AASSET_MODE_BUFFER);
   if (!asset)
   {
     return false;
@@ -128,22 +130,23 @@ bool AndroidPlatformPaths::ReadAssetText(const std::string &rel,
 }
 
 std::unique_ptr<std::istream>
-AndroidPlatformPaths::OpenAsset(const std::string &rel) const
+UAndroidPlatformPaths::OpenAsset(const std::string &rel) const
 {
-  if (!AssetManager_)
+  if (!AssetManager)
   {
     return nullptr;
   }
-  AAsset *asset = AAssetManager_open(AssetManager_, rel.c_str(), AASSET_MODE_BUFFER);
+  AAsset *asset =
+      AAssetManager_open(AssetManager, rel.c_str(), AASSET_MODE_BUFFER);
   if (!asset)
   {
     return nullptr;
   }
-  auto stream = std::make_unique<std::istream>(new AssetStreamBuf(asset));
+  auto stream = std::make_unique<std::istream>(new UAssetStreamBuf(asset));
   return stream;
 }
 
-void AndroidPlatformPaths::EnsureWritableConfig() const
+void UAndroidPlatformPaths::EnsureWritableConfig() const
 {
   const auto configPath = ResolveWritable("config.json");
   if (std::filesystem::exists(configPath))

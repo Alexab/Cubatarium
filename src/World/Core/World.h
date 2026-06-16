@@ -1,24 +1,24 @@
 #ifndef WORLD_H
 #define WORLD_H
 
+#include "Activity/CreatureActivityDirector.h"
+#include "Activity/IWorldPerception.h"
+#include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Core/BlockWorld.h"
-#include "World/Chunks/ChunkManager.h"
-#include "Render/Mesh/ChunkMeshCache.h"
-#include "World/Chunks/ChunkStreamer.h"
-#include "World/Math/CollisionVolume.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
-#include "WorldGen/Core/ProceduralSettings.h"
-#include "App/Settings/RenderSettings.h"
-#include "Activity/CreatureActivityDirector.h"
-#include "Activity/IWorldPerception.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
+#include "Render/Mesh/ChunkMeshCache.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/ChunkStreamer.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Math/CollisionVolume.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include <array>
 #include <functional>
@@ -62,7 +62,7 @@ public:
   glm::vec3 GetSpawnPoint() const;
   void SetSpawnPoint(glm::vec3 value);
 
-  void SetTerrainParams(uint32_t seed, const std::string &terrainType);
+  void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
   void SetProceduralSettings(const ProceduralSettings &settings);
   const ProceduralSettings &GetProceduralSettings() const
   {
@@ -75,14 +75,14 @@ public:
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
 
-  std::shared_ptr<UUser> GetUser(const std::string &name);
-  bool AddUser(const std::string &name);
-  void DelUser(const std::string &name);
+  std::shared_ptr<UUser> GetUser(const std::string &Name);
+  bool AddUser(const std::string &Name);
+  void DelUser(const std::string &Name);
 
   const std::string &GetCurrentUserName() const;
   std::shared_ptr<UUser> GetCurrentUser();
   std::shared_ptr<UUser> GetCurrentUser() const;
-  bool SetCurrentUserName(const std::string &name);
+  bool SetCurrentUserName(const std::string &Name);
 
   UCreatureInventory *GetPlayerInventory(const std::shared_ptr<UUser> &user);
   const UCreatureInventory *
@@ -90,7 +90,7 @@ public:
   void EnsurePlayerHotbarCount(const std::shared_ptr<UUser> &user,
                                size_t barCount);
 
-  std::shared_ptr<UCamera> GetUserCamera(const std::string &name);
+  std::shared_ptr<UCamera> GetUserCamera(const std::string &Name);
   std::shared_ptr<UCamera> GetCurrentUserCamera();
 
   const UBlockWorld &GetBlockWorld() const { return BlockWorld; }
@@ -107,9 +107,9 @@ public:
     bool inFluid{false};
     BlockId dominantFluid{BLOCK_AIR};
     float blendWeight{0.0f};
-    float dragHorizontal{0.0f};
-    float sinkSpeed{0.0f};
-    float riseSpeed{0.0f};
+    float DragHorizontal{0.0f};
+    float SinkSpeed{0.0f};
+    float RiseSpeed{0.0f};
   };
   SampledFluidState SampleFluidPhysics(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const;
@@ -164,14 +164,14 @@ public:
     return SkinDefinitions;
   }
 
-  UCreature *GetCreature(CreatureId id);
-  const UCreature *GetCreature(CreatureId id) const;
+  UCreature *GetCreature(CreatureId Id);
+  const UCreature *GetCreature(CreatureId Id) const;
   UCreature *GetControlledCreature();
   const UCreature *GetControlledCreature() const;
   UCreature *GetPlayerCreature();
   CreatureId GetControlledCreatureId() const { return ControlledCreatureId; }
   CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
-  bool SetControlledCreature(CreatureId id);
+  bool SetControlledCreature(CreatureId Id);
   void ApplyLocomotionDefinitionToCamera(UCamera &camera,
                                          const CreatureDefinition &def) const;
   void RegisterDefaultActivityAgents();
@@ -204,7 +204,7 @@ public:
                                                float maxDistance) const;
   bool TryApplySkin(CreatureId target, const std::string &skinId,
                     std::string *outError = nullptr);
-  void RemoveCreature(CreatureId id);
+  void RemoveCreature(CreatureId Id);
   void ForEachCreature(const std::function<void(UCreature &)> &fn);
   void ForEachCreature(const std::function<void(const UCreature &)> &fn) const;
   std::string ResolveAnimationTypeId(const UCreature &creature) const;
@@ -255,10 +255,10 @@ public:
 
   struct StepUpProbe
   {
-    bool valid{false};
-    float distanceToLedge{0.0f};
-    glm::vec3 targetPos{0.0f};
-    glm::vec3 moveDir{0.0f};
+    bool Valid{false};
+    float DistanceToLedge{0.0f};
+    glm::vec3 TargetPos{0.0f};
+    glm::vec3 MoveDir{0.0f};
   };
   StepUpProbe ProbeStepUp(const glm::vec3 &eyePos, const glm::vec3 &horiz,
                           const PlayerCapsule &cap,

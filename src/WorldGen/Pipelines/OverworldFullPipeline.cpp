@@ -8,48 +8,47 @@ namespace cutum
 
 UOverworldFullPipeline::UOverworldFullPipeline(WorldGenContext ctx)
     : IWorldGenPipeline(ctx),
-      heightSampler_(ctx.Settings.seed, ctx.Settings.seaLevel,
-                     ctx.Settings.maxHeight, HeightPreset::Overworld),
-      biomeSampler_(ctx.Settings.seed)
+      HeightSampler(ctx.Settings.Seed, ctx.Settings.SeaLevel,
+                    ctx.Settings.MaxHeight, HeightPreset::Overworld),
+      UBiomeSampler(ctx.Settings.Seed)
 {
 }
 
 void UOverworldFullPipeline::GenerateColumn(int worldX, int worldZ)
 {
-  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+  const int naturalY = HeightSampler.SurfaceYAt(worldX, worldZ);
   const int surfaceY =
-      AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
-  const BiomeId biome =
-      biomeSampler_.At(worldX, worldZ, surfaceY, ctx_.Settings.seaLevel,
-                       ctx_.Settings.maxHeight);
-  const BiomeSurfaceRule biomeRule = biomeSampler_.SurfaceRule(biome, ctx_);
+      AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
+  const BiomeId biome = UBiomeSampler.At(
+      worldX, worldZ, surfaceY, Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+  const BiomeSurfaceRule biomeRule = UBiomeSampler.SurfaceRule(biome, Ctx);
 
   ColumnLayerRule rule;
   rule.surfaceBlock = biomeRule.surface;
   rule.subsurfaceBlock = biomeRule.subsurface;
-  rule.fillerBlock = ctx_.Stone;
+  rule.fillerBlock = Ctx.Stone;
 
-  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
-  FillFluidColumn(ctx_, worldX, worldZ, surfaceY);
+  FillTerrainColumn(Ctx, worldX, worldZ, surfaceY, rule);
+  FillFluidColumn(Ctx, worldX, worldZ, surfaceY);
 
-  if (ctx_.Settings.enableCaves)
+  if (Ctx.Settings.EnableCaves)
   {
-    CarveColumnCaves(ctx_, worldX, worldZ, surfaceY, ctx_.Settings.seed,
-                     caveParams_);
+    CarveColumnCaves(Ctx, worldX, worldZ, surfaceY, Ctx.Settings.Seed,
+                     CaveParams);
   }
 
-  if (ctx_.Settings.enableTrees)
+  if (Ctx.Settings.EnableTrees)
   {
-    TryPlaceTree(ctx_, worldX, worldZ, surfaceY, biome, featureParams_);
+    TryPlaceTree(Ctx, worldX, worldZ, surfaceY, biome, FeatureParams);
   }
-  TryPlaceLavaPool(ctx_, worldX, worldZ, surfaceY, biome);
-  TryPlaceFirePatch(ctx_, worldX, worldZ, surfaceY, biome, ctx_.Grass);
+  TryPlaceLavaPool(Ctx, worldX, worldZ, surfaceY, biome);
+  TryPlaceFirePatch(Ctx, worldX, worldZ, surfaceY, biome, Ctx.Grass);
 }
 
 int UOverworldFullPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
-  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
-  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
+  const int naturalY = HeightSampler.SurfaceYAt(worldX, worldZ);
+  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
 }
 
 } // namespace cutum

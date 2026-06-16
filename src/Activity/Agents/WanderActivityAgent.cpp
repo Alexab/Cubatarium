@@ -5,23 +5,23 @@
 namespace cutum
 {
 
-void UWanderActivityAgent::OnCreatureAdded(CreatureId id)
+void UWanderActivityAgent::OnCreatureAdded(CreatureId Id)
 {
-  members_.insert(id);
-  ResetWanderState(id, 2.0f, 4.0f);
+  Members.insert(Id);
+  ResetWanderState(Id, 2.0f, 4.0f);
 }
 
-void UWanderActivityAgent::OnCreatureRemoved(CreatureId id)
+void UWanderActivityAgent::OnCreatureRemoved(CreatureId Id)
 {
-  members_.erase(id);
-  State.erase(id);
+  Members.erase(Id);
+  State.erase(Id);
 }
 
-void UWanderActivityAgent::ResetWanderState(CreatureId id, float intervalMin,
+void UWanderActivityAgent::ResetWanderState(CreatureId Id, float intervalMin,
                                             float intervalMax)
 {
   const float span = intervalMax - intervalMin;
-  WanderAgentState &st = State[id];
+  WanderAgentState &st = State[Id];
   st.timer =
       intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
 }
@@ -29,27 +29,27 @@ void UWanderActivityAgent::ResetWanderState(CreatureId id, float intervalMin,
 void UWanderActivityAgent::Tick(IWorldPerception & /*perception*/,
                                 ICreatureActivitySink &sink, float dt)
 {
-  for (const CreatureId id : members_)
+  for (const CreatureId Id : Members)
   {
-    const std::optional<CreatureActivityView> view = sink.GetCreatureView(id);
+    const std::optional<CreatureActivityView> view = sink.GetCreatureView(Id);
     if (!view || view->possessed || view->isPlayerCharacter)
     {
       continue;
     }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
-        sink.GetBehaviorSnapshot(id);
+        sink.GetBehaviorSnapshot(Id);
     if (!snapshot)
     {
       continue;
     }
 
-    WanderAgentState &st = State[id];
+    WanderAgentState &st = State[Id];
     const float intervalMin = snapshot->behavior.wanderIntervalMin;
     const float intervalMax = snapshot->behavior.wanderIntervalMax;
     st.timer -= dt;
     if (st.timer <= 0.0f)
     {
-      ResetWanderState(id, intervalMin, intervalMax);
+      ResetWanderState(Id, intervalMin, intervalMax);
       const float angle = static_cast<float>(std::rand() % 628) / 100.0f;
       st.direction =
           glm::normalize(glm::vec3(std::cos(angle), 0.0f, std::sin(angle)));
@@ -61,7 +61,7 @@ void UWanderActivityAgent::Tick(IWorldPerception & /*perception*/,
     intent.moveSpeed =
         walkSpeed > 0.0f ? walkSpeed : snapshot->behavior.moveSpeed;
     intent.clearOnApply = false;
-    sink.SetIntent(id, intent);
+    sink.SetIntent(Id, intent);
   }
 }
 

@@ -6,38 +6,38 @@ namespace cutum
 
 UOverworldPipeline::UOverworldPipeline(WorldGenContext ctx, HeightPreset preset)
     : IWorldGenPipeline(ctx),
-      heightSampler_(ctx.Settings.seed, ctx.Settings.seaLevel,
-                     ctx.Settings.maxHeight, preset),
-      preset_(preset)
+      HeightSampler(ctx.Settings.Seed, ctx.Settings.SeaLevel,
+                    ctx.Settings.MaxHeight, preset),
+      Preset(preset)
 {
 }
 
 void UOverworldPipeline::GenerateColumn(int worldX, int worldZ)
 {
-  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
+  const int naturalY = HeightSampler.SurfaceYAt(worldX, worldZ);
   const int surfaceY =
-      AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
+      AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
   ColumnLayerRule rule;
-  rule.surfaceBlock = ctx_.Grass;
-  rule.subsurfaceBlock = ctx_.Dirt;
-  rule.fillerBlock = ctx_.Stone;
+  rule.surfaceBlock = Ctx.Grass;
+  rule.subsurfaceBlock = Ctx.Dirt;
+  rule.fillerBlock = Ctx.Stone;
 
-  if (preset_ == HeightPreset::Mountains &&
-      heightSampler_.params().stoneSurfaceAboveY > 0 &&
-      surfaceY >= heightSampler_.params().stoneSurfaceAboveY)
+  if (Preset == HeightPreset::Mountains &&
+      HeightSampler.params().stoneSurfaceAboveY > 0 &&
+      surfaceY >= HeightSampler.params().stoneSurfaceAboveY)
   {
-    rule.surfaceBlock = ctx_.Stone;
-    rule.subsurfaceBlock = ctx_.Stone;
+    rule.surfaceBlock = Ctx.Stone;
+    rule.subsurfaceBlock = Ctx.Stone;
   }
 
-  FillTerrainColumn(ctx_, worldX, worldZ, surfaceY, rule);
-  FillFluidColumn(ctx_, worldX, worldZ, surfaceY);
+  FillTerrainColumn(Ctx, worldX, worldZ, surfaceY, rule);
+  FillFluidColumn(Ctx, worldX, worldZ, surfaceY);
 }
 
 int UOverworldPipeline::SurfaceYAt(int worldX, int worldZ) const
 {
-  const int naturalY = heightSampler_.SurfaceYAt(worldX, worldZ);
-  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, ctx_.Settings);
+  const int naturalY = HeightSampler.SurfaceYAt(worldX, worldZ);
+  return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
 }
 
 } // namespace cutum

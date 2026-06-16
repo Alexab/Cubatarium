@@ -25,10 +25,10 @@ public:
   void Build(UGuiContext &ctx) override;
   void Update(double dt) override;
   void OnViewportChanged(int width, int height) override;
-  bool BlocksGameInput() const override { return visible_; }
+  bool BlocksGameInput() const override { return Visible; }
 
   void SetVisible(bool visible);
-  bool IsVisible() const { return visible_; }
+  bool IsVisible() const { return Visible; }
   void SetKeyboardInsetBottom(int bottom);
   void Toggle();
   void SubmitCommand();
@@ -46,16 +46,16 @@ private:
   bool HandleHistoryNavigation(const GuiKeyEvent &event);
   void OpenContextMenu(int x, int y);
 
-  UGameSession *session_{nullptr};
-  UGuiListView *logView_{nullptr};
-  UGuiTextInput *input_{nullptr};
-  UGuiPopupMenu *popup_{nullptr};
-  GuiTheme consoleTheme_{};
-  bool visible_{false};
-  int keyboardInsetBottom_{0};
-  int historyBrowseFromEnd_{-1};
-  std::string draftLine_;
-  bool draftValid_{false};
+  UGameSession *Session{nullptr};
+  UGuiListView *LogView{nullptr};
+  UGuiTextInput *Input{nullptr};
+  UGuiPopupMenu *Popup{nullptr};
+  GuiTheme ConsoleTheme{};
+  bool Visible{false};
+  int KeyboardInsetBottom{0};
+  int HistoryBrowseFromEnd{-1};
+  std::string DraftLine;
+  bool DraftValid{false};
 };
 
 } // namespace cutum

@@ -22,7 +22,7 @@ public:
 
 protected:
   explicit IWorldGenPipeline(WorldGenContext ctx);
-  WorldGenContext ctx_;
+  WorldGenContext Ctx;
 };
 
 class UProceduralWorldGenFactory

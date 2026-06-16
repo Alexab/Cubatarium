@@ -7,7 +7,7 @@
 namespace cutum
 {
 
-class DesktopPlatformWindow : public IPlatformWindow
+class UDesktopPlatformWindow : public IPlatformWindow
 {
 public:
   bool Initialize(int width, int height, const char *title) override;
@@ -28,7 +28,7 @@ public:
   void SetCharCallback(CharCallbackFn callback) override;
 
 private:
-  UWindowManager WindowManager_;
+  UWindowManager WindowManager;
 };
 
 } // namespace cutum

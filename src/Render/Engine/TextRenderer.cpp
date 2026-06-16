@@ -440,7 +440,8 @@ std::string UTextRenderer::FindAvailableFont()
       }
       catch (const std::exception &e)
       {
-        CubatariumLogError("Text", std::string("Font scan failed: ") + e.what());
+        CubatariumLogError("Text",
+                           std::string("Font scan failed: ") + e.what());
       }
     }
     const auto bundled = paths->AssetRoot() / "fonts/arial.ttf";

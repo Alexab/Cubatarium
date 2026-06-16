@@ -76,88 +76,88 @@ void UShaderProgram::Use() { glUseProgram(programID); }
 
 void UShaderProgram::Unuse() { glUseProgram(0); }
 
-void UShaderProgram::SetBool(const std::string &name, bool value)
+void UShaderProgram::SetBool(const std::string &Name, bool value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform1i(location, static_cast<int>(value));
   }
 }
 
-void UShaderProgram::SetInt(const std::string &name, int value)
+void UShaderProgram::SetInt(const std::string &Name, int value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform1i(location, value);
   }
 }
 
-void UShaderProgram::SetFloat(const std::string &name, float value)
+void UShaderProgram::SetFloat(const std::string &Name, float value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform1f(location, value);
   }
 }
 
-void UShaderProgram::SetVec2(const std::string &name, const glm::vec2 &value)
+void UShaderProgram::SetVec2(const std::string &Name, const glm::vec2 &value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform2fv(location, 1, glm::value_ptr(value));
   }
 }
 
-void UShaderProgram::SetVec3(const std::string &name, const glm::vec3 &value)
+void UShaderProgram::SetVec3(const std::string &Name, const glm::vec3 &value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform3fv(location, 1, glm::value_ptr(value));
   }
 }
 
-void UShaderProgram::SetVec4(const std::string &name, const glm::vec4 &value)
+void UShaderProgram::SetVec4(const std::string &Name, const glm::vec4 &value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniform4fv(location, 1, glm::value_ptr(value));
   }
 }
 
-void UShaderProgram::SetMat3(const std::string &name, const glm::mat3 &value)
+void UShaderProgram::SetMat3(const std::string &Name, const glm::mat3 &value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
   }
 }
 
-void UShaderProgram::SetMat4(const std::string &name, const glm::mat4 &value)
+void UShaderProgram::SetMat4(const std::string &Name, const glm::mat4 &value)
 {
-  GLint location = GetUniformLocation(name);
+  GLint location = GetUniformLocation(Name);
   if (location != -1)
   {
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
   }
 }
 
-GLint UShaderProgram::GetUniformLocation(const std::string &name)
+GLint UShaderProgram::GetUniformLocation(const std::string &Name)
 {
-  auto it = uniformLocations.find(name);
+  auto it = uniformLocations.find(Name);
   if (it != uniformLocations.end())
   {
     return it->second;
   }
 
-  GLint location = glGetUniformLocation(programID, name.c_str());
-  uniformLocations[name] = location;
+  GLint location = glGetUniformLocation(programID, Name.c_str());
+  uniformLocations[Name] = location;
   return location;
 }
 
@@ -270,37 +270,37 @@ bool UShaderManager::Initialize()
 void UShaderManager::Shutdown() { ClearAllShaders(); }
 
 std::shared_ptr<UShaderProgram>
-UShaderManager::CreateShader(const std::string &name,
+UShaderManager::CreateShader(const std::string &Name,
                              const std::string &vertexPath,
                              const std::string &fragmentPath)
 {
   auto shader = std::make_shared<UShaderProgram>();
   if (shader->CreateFromFiles(vertexPath, fragmentPath))
   {
-    shaders[name] = shader;
+    shaders[Name] = shader;
     return shader;
   }
   return nullptr;
 }
 
 std::shared_ptr<UShaderProgram>
-UShaderManager::CreateShaderFromStrings(const std::string &name,
+UShaderManager::CreateShaderFromStrings(const std::string &Name,
                                         const std::string &vertexSource,
                                         const std::string &fragmentSource)
 {
   auto shader = std::make_shared<UShaderProgram>();
   if (shader->CreateFromStrings(vertexSource, fragmentSource))
   {
-    shaders[name] = shader;
+    shaders[Name] = shader;
     return shader;
   }
   return nullptr;
 }
 
 std::shared_ptr<UShaderProgram>
-UShaderManager::GetShader(const std::string &name)
+UShaderManager::GetShader(const std::string &Name)
 {
-  auto it = shaders.find(name);
+  auto it = shaders.find(Name);
   if (it != shaders.end())
   {
     return it->second;
@@ -308,14 +308,14 @@ UShaderManager::GetShader(const std::string &name)
   return nullptr;
 }
 
-bool UShaderManager::HasShader(const std::string &name) const
+bool UShaderManager::HasShader(const std::string &Name) const
 {
-  return shaders.find(name) != shaders.end();
+  return shaders.find(Name) != shaders.end();
 }
 
-void UShaderManager::RemoveShader(const std::string &name)
+void UShaderManager::RemoveShader(const std::string &Name)
 {
-  shaders.erase(name);
+  shaders.erase(Name);
 }
 
 void UShaderManager::ClearAllShaders() { shaders.clear(); }

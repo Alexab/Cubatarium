@@ -2,7 +2,7 @@
 #define GUI_TEXT_INPUT_H
 
 #include "Gui/Interfaces/IGuiClipboard.h"
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 
@@ -18,13 +18,13 @@ public:
 
   explicit UGuiTextInput(const GuiTheme *theme);
 
-  const std::string &GetText() const { return buffer_; }
+  const std::string &GetText() const { return Buffer; }
   void SetText(const std::string &text);
-  void SetFocused(bool focused) { focused_ = focused; }
-  bool IsFocused() const { return focused_; }
+  void SetFocused(bool focused) { Focused = focused; }
+  bool IsFocused() const { return Focused; }
 
   void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
-  void SetOnEdited(std::function<void()> fn) { onEdited_ = std::move(fn); }
+  void SetOnEdited(std::function<void()> fn) { OnEdited = std::move(fn); }
 
   void ClearSelection();
   bool HasSelection() const;
@@ -58,17 +58,17 @@ private:
   int TextLeft() const;
   int TextPadding() const;
 
-  const GuiTheme *theme_;
+  const GuiTheme *Theme;
   IGuiClipboard *Clipboard{nullptr};
-  std::function<void()> onEdited_;
-  std::string buffer_;
-  size_t caretPos_{0};
-  size_t selAnchor_{0};
-  size_t selEnd_{0};
-  bool focused_{false};
-  bool draggingSelection_{false};
-  bool programmaticChange_{false};
-  unsigned int suppressCharCodepoint_{0};
+  std::function<void()> OnEdited;
+  std::string Buffer;
+  size_t CaretPos{0};
+  size_t SelAnchor{0};
+  size_t SelEnd{0};
+  bool Focused{false};
+  bool DraggingSelection{false};
+  bool ProgrammaticChange{false};
+  unsigned int SuppressCharCodepoint{0};
 };
 
 } // namespace cutum

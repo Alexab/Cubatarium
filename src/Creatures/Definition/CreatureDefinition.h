@@ -12,7 +12,7 @@ namespace cutum
 
 struct CreatureDefinition
 {
-  std::string id;
+  std::string Id;
   std::string displayName;
   CreatureCatalogInfo catalog;
   CreatureRole role{CreatureRole::Unknown};

@@ -1,8 +1,8 @@
 #ifndef I_PLATFORM_WINDOW_H
 #define I_PLATFORM_WINDOW_H
 
-#include <glm/glm.hpp>
 #include <functional>
+#include <glm/glm.hpp>
 #include <memory>
 
 namespace cutum
@@ -32,11 +32,13 @@ public:
   virtual void RequestClose() = 0;
   virtual double DeltaTime() const = 0;
 
-  virtual void SetInstances(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
+  virtual void SetInstances(std::shared_ptr<UCore> core,
+                            std::shared_ptr<UWorld> world,
                             std::shared_ptr<UGeometryEngine> geometries,
                             std::shared_ptr<UViewEngine> views) = 0;
   virtual void SetApplication(std::shared_ptr<UApplication> application) = 0;
-  virtual void SetTextRenderer(std::shared_ptr<UTextRenderer> text_renderer) = 0;
+  virtual void
+  SetTextRenderer(std::shared_ptr<UTextRenderer> text_renderer) = 0;
   virtual void SetCharCallback(CharCallbackFn callback) = 0;
 };
 

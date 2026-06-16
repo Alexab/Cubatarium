@@ -26,22 +26,22 @@ BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm)
   return BiomeId::Plains;
 }
 
-UBiomeSampler::UBiomeSampler(uint32_t seed) : seed_(seed) {}
+UBiomeSampler::UBiomeSampler(uint32_t Seed) : Seed(Seed) {}
 
-BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int seaLevel,
-                          int maxHeight) const
+BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int SeaLevel,
+                          int MaxHeight) const
 {
   const float tempRaw =
       FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
-            seed_ + 1000, 3, 0.5f, 2.0f);
+            Seed + 1000, 3, 0.5f, 2.0f);
   const float moistRaw =
       FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
-            seed_ + 2000, 3, 0.5f, 2.0f);
+            Seed + 2000, 3, 0.5f, 2.0f);
   const float temperature = (tempRaw + 1.0f) * 0.5f;
   const float moisture = (moistRaw + 1.0f) * 0.5f;
-  const float denom = static_cast<float>(std::max(1, maxHeight - seaLevel));
+  const float denom = static_cast<float>(std::max(1, MaxHeight - SeaLevel));
   const float localHeightNorm =
-      std::clamp(static_cast<float>(surfaceY - seaLevel) / denom, 0.0f, 1.0f);
+      std::clamp(static_cast<float>(surfaceY - SeaLevel) / denom, 0.0f, 1.0f);
   return ClassifyBiome(temperature, moisture, localHeightNorm);
 }
 

@@ -26,17 +26,17 @@ struct HeightSampleParams
 class UOverworldHeightSampler
 {
 public:
-  UOverworldHeightSampler(uint32_t seed, int seaLevel, int maxHeight,
+  UOverworldHeightSampler(uint32_t Seed, int SeaLevel, int MaxHeight,
                           HeightPreset preset);
 
   int SurfaceYAt(int x, int z) const;
-  HeightSampleParams params() const { return params_; }
+  HeightSampleParams params() const { return Params; }
 
 private:
-  uint32_t seed_;
-  int seaLevel_;
-  int maxHeight_;
-  HeightSampleParams params_;
+  uint32_t Seed;
+  int SeaLevel;
+  int MaxHeight;
+  HeightSampleParams Params;
 };
 
 } // namespace cutum

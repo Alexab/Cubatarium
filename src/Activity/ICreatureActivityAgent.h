@@ -12,8 +12,8 @@ class ICreatureActivityAgent
 public:
   virtual ~ICreatureActivityAgent() = default;
   virtual const char *GetBehaviorId() const = 0;
-  virtual void OnCreatureAdded(CreatureId id) = 0;
-  virtual void OnCreatureRemoved(CreatureId id) = 0;
+  virtual void OnCreatureAdded(CreatureId Id) = 0;
+  virtual void OnCreatureRemoved(CreatureId Id) = 0;
   virtual void Tick(IWorldPerception &perception, ICreatureActivitySink &sink,
                     float dt) = 0;
 };

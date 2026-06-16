@@ -8,23 +8,24 @@ struct AAssetManager;
 namespace cutum
 {
 
-class AndroidPlatformPaths : public IPlatformPaths
+class UAndroidPlatformPaths : public IPlatformPaths
 {
 public:
-  explicit AndroidPlatformPaths(AAssetManager *assetManager);
+  explicit UAndroidPlatformPaths(AAssetManager *assetManager);
 
   std::filesystem::path WritableRoot() const override;
   std::filesystem::path AssetRoot() const override;
   bool ReadAssetText(const std::string &rel, std::string &out) const override;
-  std::unique_ptr<std::istream> OpenAsset(const std::string &rel) const override;
+  std::unique_ptr<std::istream>
+  OpenAsset(const std::string &rel) const override;
   bool AssetExists(const std::string &rel) const override;
   std::filesystem::path ResolveWritable(const std::string &rel) const override;
 
   void EnsureWritableConfig() const;
 
 private:
-  AAssetManager *AssetManager_;
-  mutable std::filesystem::path writableRoot_;
+  AAssetManager *AssetManager;
+  mutable std::filesystem::path WritableRootPath;
 };
 
 } // namespace cutum

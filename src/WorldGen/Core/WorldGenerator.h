@@ -24,21 +24,21 @@ public:
                                int surfaceY = 3);
 
   static void GenerateHeightmap(UBlockWorld &world, UBlockRegistry &registry,
-                                int halfExtent, uint32_t seed, int baseY = 0,
-                                int maxHeight = 8);
+                                int halfExtent, uint32_t Seed, int baseY = 0,
+                                int MaxHeight = 8);
 
   static void GenerateColumn(UBlockWorld &world, UBlockRegistry &registry,
-                             int x, int z, uint32_t seed, int baseY,
-                             int maxHeight);
+                             int x, int z, uint32_t Seed, int baseY,
+                             int MaxHeight);
 
-  static int SurfaceYAt(int x, int z, uint32_t seed, int baseY, int maxHeight);
+  static int SurfaceYAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight);
 
-  static glm::vec3 DefaultSpawnPosition(int x, int z, uint32_t seed, int baseY,
-                                        int maxHeight, float eyeHeight = 1.62f);
+  static glm::vec3 DefaultSpawnPosition(int x, int z, uint32_t Seed, int baseY,
+                                        int MaxHeight, float eyeHeight = 1.62f);
 
   static void GenerateSpawnArea(UBlockWorld &world, UBlockRegistry &registry,
                                 int centerX, int centerZ, int radiusChunks,
-                                uint32_t seed, int baseY, int maxHeight);
+                                uint32_t Seed, int baseY, int MaxHeight);
 };
 
 } // namespace cutum

@@ -8,11 +8,11 @@
 namespace cutum
 {
 
-std::filesystem::path DesktopPlatformPaths::ProjectRoot() const
+std::filesystem::path UDesktopPlatformPaths::ProjectRoot() const
 {
-  if (!cachedRoot_.empty())
+  if (!CachedRoot.empty())
   {
-    return cachedRoot_;
+    return CachedRoot;
   }
   const auto exeDir = GetExecutableDirectory();
   const auto cwd = std::filesystem::current_path();
@@ -26,8 +26,8 @@ std::filesystem::path DesktopPlatformPaths::ProjectRoot() const
           std::filesystem::exists(path / "prefabs") &&
           std::filesystem::exists(path / "shaders" / "vshader_greedy.glsl"))
       {
-        cachedRoot_ = path;
-        return cachedRoot_;
+        CachedRoot = path;
+        return CachedRoot;
       }
       if (!path.has_parent_path())
       {
@@ -36,30 +36,33 @@ std::filesystem::path DesktopPlatformPaths::ProjectRoot() const
       path = path.parent_path();
     }
   }
-  cachedRoot_ = exeDir;
-  return cachedRoot_;
+  CachedRoot = exeDir;
+  return CachedRoot;
 }
 
-std::filesystem::path DesktopPlatformPaths::WritableRoot() const
+std::filesystem::path UDesktopPlatformPaths::WritableRoot() const
 {
   return GetExecutableDirectory();
 }
 
-std::filesystem::path DesktopPlatformPaths::AssetRoot() const { return ProjectRoot(); }
+std::filesystem::path UDesktopPlatformPaths::AssetRoot() const
+{
+  return ProjectRoot();
+}
 
-bool DesktopPlatformPaths::AssetExists(const std::string &rel) const
+bool UDesktopPlatformPaths::AssetExists(const std::string &rel) const
 {
   return std::filesystem::exists(ProjectRoot() / rel);
 }
 
 std::filesystem::path
-DesktopPlatformPaths::ResolveWritable(const std::string &rel) const
+UDesktopPlatformPaths::ResolveWritable(const std::string &rel) const
 {
   return WritableRoot() / rel;
 }
 
-bool DesktopPlatformPaths::ReadAssetText(const std::string &rel,
-                                         std::string &out) const
+bool UDesktopPlatformPaths::ReadAssetText(const std::string &rel,
+                                          std::string &out) const
 {
   const auto path = ProjectRoot() / rel;
   std::ifstream file(path, std::ios::binary);
@@ -74,10 +77,10 @@ bool DesktopPlatformPaths::ReadAssetText(const std::string &rel,
 }
 
 std::unique_ptr<std::istream>
-DesktopPlatformPaths::OpenAsset(const std::string &rel) const
+UDesktopPlatformPaths::OpenAsset(const std::string &rel) const
 {
   return std::make_unique<std::ifstream>((ProjectRoot() / rel).string(),
-                                          std::ios::binary);
+                                         std::ios::binary);
 }
 
 } // namespace cutum

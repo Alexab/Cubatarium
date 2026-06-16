@@ -1,10 +1,12 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
-#include "App/Platform/CursorCapture.h"
+#include "App/Settings/UiSettings.h"
 #include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -13,8 +15,6 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "Game/Inventory/SlotInteraction.h"
-#include "App/Settings/UiSettings.h"
 #include <array>
 #include <functional>
 #include <memory>
@@ -26,7 +26,7 @@ struct GLFWwindow;
 namespace cutum
 {
 
-class TouchInputBridge;
+class UTouchInputBridge;
 
 class UCore;
 class UWorld;
@@ -66,8 +66,8 @@ public:
   void ScheduleQuit();
   void RequestQuit();
   void SetWindow(GLFWwindow *window) { Window = window; }
-  void SetTouchInputBridge(TouchInputBridge *bridge) { touchBridge_ = bridge; }
-  TouchInputBridge *GetTouchInputBridge() const { return touchBridge_; }
+  void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
+  UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
   bool IsQuitRequested() const { return QuitRequested; }
   void HandleWindowFocus(bool focused);
 
@@ -77,14 +77,14 @@ public:
   void SetViewportInsets(int left, int top, int right, int bottom);
   void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);
-  float GetUiScale() const { return uiScale_; }
+  float GetUiScale() const { return UiScale; }
 
-  bool RouteKey(int key, int action, int mods);
-  bool RouteChar(unsigned int codepoint);
-  bool RouteMouseButton(int button, bool pressed, int x, int y,
-                        int pointerId = -1);
-  bool RouteMouseMove(int x, int y, int pointerId = -1);
-  bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
+  bool RouteKey(int key, int Action, int Mods);
+  bool RouteChar(unsigned int Codepoint);
+  bool RouteMouseButton(int Button, bool Pressed, int x, int y,
+                        int PointerId = -1);
+  bool RouteMouseMove(int x, int y, int PointerId = -1);
+  bool RouteScroll(double Xoffset, double Yoffset, int mouseX, int mouseY);
 #if defined(__ANDROID__)
   void ReleaseHudJoystickCapture();
   void TryToggleFlightOnJumpPress();
@@ -101,7 +101,7 @@ public:
   /// т.ч. с видимым курсором (Left Alt).
   bool AllowsWorldMousePlacement() const;
   const UiSettings &GetUiSettings() const { return Ui; }
-  int GetHotbarCountSetting() const { return Ui.hotbarCount; }
+  int GetHotbarCountSetting() const { return Ui.HotbarCount; }
   void SetHotbarCountSetting(int count);
 
   void ReturnToMainMenu() override;
@@ -123,7 +123,7 @@ public:
 private:
   void ShowMainMenu();
   void SaveActiveWorldIfNeeded();
-  void ScheduleDeferredMenuAction(std::function<void()> action);
+  void ScheduleDeferredMenuAction(std::function<void()> Action);
   void EnterGameAfterWorldChange();
   void ShowInGameHud();
   void SyncCursorVisibility();
@@ -133,7 +133,7 @@ private:
   void RecaptureMouseForLook();
   bool UsesUiPointer() const;
   bool BlocksGameMouseLook() const;
-  bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool pressed);
+  bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool Pressed);
   bool HasAnyOverlayCapture() const;
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
@@ -167,8 +167,8 @@ private:
     Hud
   };
   static constexpr int kMaxOverlayPointers = 10;
-  std::array<OverlayPointerCapture, kMaxOverlayPointers> overlayCaptures_{};
-  int NormalizeOverlayPointer(int pointerId) const;
+  std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
+  int NormalizeOverlayPointer(int PointerId) const;
   int DragCursorX{0};
   int DragCursorY{0};
   bool WorldSessionActive{false};
@@ -186,13 +186,13 @@ private:
 
   MenuSubview MenuSubview{MenuSubview::Main};
   UMainMenuScreen *MainMenuScreen{nullptr};
-  TouchInputBridge *touchBridge_{nullptr};
-  float uiScale_{1.f};
-  int viewportInsetLeft_{0};
-  int viewportInsetTop_{0};
-  int viewportInsetRight_{0};
-  int viewportInsetBottom_{0};
-  int keyboardInsetBottom_{0};
+  UTouchInputBridge *TouchBridge{nullptr};
+  float UiScale{1.f};
+  int ViewportInsetLeft{0};
+  int ViewportInsetTop{0};
+  int ViewportInsetRight{0};
+  int ViewportInsetBottom{0};
+  int KeyboardInsetBottom{0};
 };
 
 } // namespace cutum

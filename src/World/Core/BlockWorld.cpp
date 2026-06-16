@@ -8,14 +8,14 @@ BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const
   return Chunks.GetBlock(pos);
 }
 
-void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId id)
+void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
 {
-  if (id == BLOCK_AIR)
+  if (Id == BLOCK_AIR)
   {
     Chunks.SetBlock(pos, BLOCK_AIR);
     return;
   }
-  Chunks.SetBlock(pos, id);
+  Chunks.SetBlock(pos, Id);
 }
 
 bool UBlockWorld::IsAir(glm::ivec3 pos) const

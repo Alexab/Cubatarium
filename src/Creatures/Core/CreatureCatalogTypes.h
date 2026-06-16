@@ -50,7 +50,7 @@ inline const char *CreatureRoleToString(CreatureRole role)
 
 struct CreatureBehaviorParams
 {
-  std::string id{"none"};
+  std::string Id{"none"};
   float moveSpeed{2.f};
   float wanderIntervalMin{2.f};
   float wanderIntervalMax{4.f};
@@ -58,7 +58,7 @@ struct CreatureBehaviorParams
 
 struct CreatureVisualPartDef
 {
-  std::string id;
+  std::string Id;
   glm::vec3 offsetBlocks{0.f};
   glm::vec3 sizeBlocks{0.6f, 1.8f, 0.6f};
   std::string textureStem;
@@ -82,14 +82,14 @@ struct CreatureVisualSpec
 {
   std::string backend{"rigid_voxels"};
   /// Extra Y rotation (degrees) for mob wander facing; 180 if model faces
-  /// backward vs movement.
+  /// backward vs Movement.
   float modelYawOffsetDeg{0.f};
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string defaultTextureKey;
   std::string iconMode{"bounds_wireframe"};
   CreatureRigSpec rig;
-  CreatureAnimationParams animation;
-  std::vector<CreatureVisualPartDef> parts;
+  CreatureAnimationParams Animation;
+  std::vector<CreatureVisualPartDef> Parts;
 };
 
 struct ResolvedCreaturePart
@@ -104,7 +104,7 @@ struct ResolvedCreatureAppearance
 {
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string visualBackend{"rigid_voxels"};
-  std::vector<ResolvedCreaturePart> parts;
+  std::vector<ResolvedCreaturePart> Parts;
   bool useWireframeFallback{false};
 };
 

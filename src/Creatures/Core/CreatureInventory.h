@@ -13,24 +13,24 @@ namespace cutum
 class UCreatureInventory
 {
 public:
-  const std::map<std::string, int> &GetStorage() const { return storage_; }
-  std::map<std::string, int> &GetStorageMutable() { return storage_; }
-  void AddItem(const std::string &id, int count = 1);
-  void AddToInventory(const std::string &id);
+  const std::map<std::string, int> &GetStorage() const { return Storage; }
+  std::map<std::string, int> &GetStorageMutable() { return Storage; }
+  void AddItem(const std::string &Id, int count = 1);
+  void AddToInventory(const std::string &Id);
 
   /// Creative-mode defaults (counts -1 = unlimited).
   void InitCreativeDefaults();
   void EnsureDefaultHotbar();
   void SetPrefabHotbar(const std::vector<std::string> &prefab_names);
 
-  size_t GetHotbarCount() const { return hotbars_.size(); }
+  size_t GetHotbarCount() const { return Hotbars.size(); }
   const HotbarBar &GetHotbar(size_t bar) const;
-  const std::vector<HotbarBar> &GetHotbars() const { return hotbars_; }
-  std::vector<HotbarBar> &GetHotbarsMutable() { return hotbars_; }
-  size_t GetActiveBarIndex() const { return activeBarIndex_; }
-  size_t GetActiveSlotIndex() const { return activeSlotIndex_; }
-  void SetActiveBarIndex(size_t bar) { activeBarIndex_ = bar; }
-  void SetActiveSlotIndex(size_t slot) { activeSlotIndex_ = slot; }
+  const std::vector<HotbarBar> &GetHotbars() const { return Hotbars; }
+  std::vector<HotbarBar> &GetHotbarsMutable() { return Hotbars; }
+  size_t GetActiveBarIndex() const { return ActiveBarIndex; }
+  size_t GetActiveSlotIndex() const { return ActiveSlotIndex; }
+  void SetActiveBarIndex(size_t bar) { ActiveBarIndex = bar; }
+  void SetActiveSlotIndex(size_t slot) { ActiveSlotIndex = slot; }
 
   const InventoryEntryRef *GetActiveEntryRef() const;
   void EnsureHotbarCount(size_t count);
@@ -46,10 +46,10 @@ public:
   void DeserializeFromJson(const nlohmann::json &data, size_t maxBarCount = 4);
 
 private:
-  std::map<std::string, int> storage_;
-  std::vector<HotbarBar> hotbars_;
-  size_t activeBarIndex_{0};
-  size_t activeSlotIndex_{0};
+  std::map<std::string, int> Storage;
+  std::vector<HotbarBar> Hotbars;
+  size_t ActiveBarIndex{0};
+  size_t ActiveSlotIndex{0};
 };
 
 } // namespace cutum

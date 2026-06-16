@@ -48,9 +48,9 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part)
 }
 
 std::optional<float>
-TorsoBottomY(const std::vector<ResolvedCreaturePart> &parts)
+TorsoBottomY(const std::vector<ResolvedCreaturePart> &Parts)
 {
-  for (const ResolvedCreaturePart &part : parts)
+  for (const ResolvedCreaturePart &part : Parts)
   {
     if (part.partId == "torso")
     {
@@ -126,17 +126,17 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
                                       float /*dt*/)
 {
   BodyOrigin = creature.GetFeetPosition();
-  bodyYaw_ = creature.GetYaw();
+  BodyYaw = creature.GetYaw();
   const float blend = pose.crouchUpperDrop > 0.0f
                           ? pose.crouchUpperDrop
                           : creature.GetLocomotion().GetStanceBlend();
-  crouchUpperDrop_ = CrouchUpperBodyDrop(creature, blend);
-  sizeBlocks_ = creature.GetBounds().currentSizeBlocks;
-  partPoses_ = pose.parts;
-  headYaw_ = 0.0f;
-  if (const auto it = partPoses_.find("head"); it != partPoses_.end())
+  CrouchUpperDrop = CrouchUpperBodyDrop(creature, blend);
+  SizeBlocks = creature.GetBounds().currentSizeBlocks;
+  PartPoses = pose.Parts;
+  HeadYaw = 0.0f;
+  if (const auto it = PartPoses.find("head"); it != PartPoses.end())
   {
-    headYaw_ = it->second.offsetDelta.z;
+    HeadYaw = it->second.offsetDelta.z;
   }
 }
 
@@ -145,24 +145,24 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
 {
   const RenderSettings &settings = engine.GetRenderSettings();
   const bool drawTextured =
-      settings.creatureTexturedParts && !appearance_.parts.empty();
+      settings.CreatureTexturedParts && !Appearance.Parts.empty();
   auto creatureTextures = engine.GetCreatureTextureStorage();
-  const std::optional<float> torsoBottomY = TorsoBottomY(appearance_.parts);
+  const std::optional<float> torsoBottomY = TorsoBottomY(Appearance.Parts);
 
   auto drawPart = [&](const ResolvedCreaturePart &part)
   {
     glm::vec3 offset = part.offsetBlocks;
     if (!IsLegPart(part.partId))
     {
-      offset.y -= crouchUpperDrop_;
+      offset.y -= CrouchUpperDrop;
     }
     const CreaturePartPose *partPose = nullptr;
-    if (const auto it = partPoses_.find(part.partId); it != partPoses_.end())
+    if (const auto it = PartPoses.find(part.partId); it != PartPoses.end())
     {
       partPose = &it->second;
-      if (part.partId == "head" && headYaw_ != 0.0f)
+      if (part.partId == "head" && HeadYaw != 0.0f)
       {
-        offset.z += headYaw_ * 0.15f;
+        offset.z += HeadYaw * 0.15f;
       }
     }
 
@@ -170,7 +170,7 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
     {
       const glm::vec3 pivot(part.offsetBlocks.x, *torsoBottomY,
                             part.offsetBlocks.z);
-      return BuildLimbPartModel(BodyOrigin, bodyYaw_, pivot, part.offsetBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
     if (IsArmPart(part.partId))
@@ -178,16 +178,16 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
       const glm::vec3 pivot(part.offsetBlocks.x,
                             part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
                             part.offsetBlocks.z);
-      return BuildLimbPartModel(BodyOrigin, bodyYaw_, pivot, part.offsetBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
-    return BuildRigidPartModel(BodyOrigin, bodyYaw_, offset, part.sizeBlocks,
+    return BuildRigidPartModel(BodyOrigin, BodyYaw, offset, part.sizeBlocks,
                                partPose);
   };
 
   if (drawTextured && creatureTextures)
   {
-    for (const ResolvedCreaturePart &part : appearance_.parts)
+    for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       const glm::mat4 model = drawPart(part);
       const GLuint tex = creatureTextures->GetTexture(part.textureAssetKey);
@@ -196,26 +196,26 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
         engine.DrawCreatureTexturedPart(viewProj * model, tex,
                                         MeshForPart(part));
       }
-      else if (settings.creatureWireframeOverlay)
+      else if (settings.CreatureWireframeOverlay)
       {
-        engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
+        engine.DrawBoxWireframe(viewProj * model, Appearance.wireframeColor);
       }
     }
   }
-  else if (appearance_.useWireframeFallback || !drawTextured)
+  else if (Appearance.useWireframeFallback || !drawTextured)
   {
-    const glm::vec3 localCenter(0.0f, sizeBlocks_.y * 0.5f, 0.0f);
+    const glm::vec3 localCenter(0.0f, SizeBlocks.y * 0.5f, 0.0f);
     const glm::mat4 model = BuildRigidPartModel(
-        BodyOrigin, bodyYaw_, localCenter, sizeBlocks_, nullptr);
-    engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
+        BodyOrigin, BodyYaw, localCenter, SizeBlocks, nullptr);
+    engine.DrawBoxWireframe(viewProj * model, Appearance.wireframeColor);
   }
 
-  if (settings.creatureWireframeOverlay && drawTextured)
+  if (settings.CreatureWireframeOverlay && drawTextured)
   {
-    for (const ResolvedCreaturePart &part : appearance_.parts)
+    for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       engine.DrawBoxWireframe(viewProj * drawPart(part),
-                              appearance_.wireframeColor);
+                              Appearance.wireframeColor);
     }
   }
 }

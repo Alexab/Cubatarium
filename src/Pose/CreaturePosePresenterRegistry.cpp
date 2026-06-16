@@ -12,9 +12,9 @@ void UCreaturePosePresenterRegistry::Register(
     return;
   }
   const size_t index = static_cast<size_t>(presenter->GetArchetype());
-  if (index < presenters_.size())
+  if (index < Presenters.size())
   {
-    presenters_[index] = std::move(presenter);
+    Presenters[index] = std::move(presenter);
   }
 }
 
@@ -22,16 +22,16 @@ ICreaturePosePresenter *
 UCreaturePosePresenterRegistry::Get(LocomotionArchetype archetype) const
 {
   const size_t index = static_cast<size_t>(archetype);
-  if (index >= presenters_.size())
+  if (index >= Presenters.size())
   {
     return nullptr;
   }
-  return presenters_[index].get();
+  return Presenters[index].get();
 }
 
 void UCreaturePosePresenterRegistry::Clear()
 {
-  for (auto &entry : presenters_)
+  for (auto &entry : Presenters)
   {
     entry.reset();
   }

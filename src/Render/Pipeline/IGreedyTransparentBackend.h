@@ -2,8 +2,8 @@
 #define I_GREEDY_TRANSPARENT_BACKEND_H
 
 #include "Render/Mesh/ChunkMeshCache.h"
-#include "Render/Textures/TextureCube.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
+#include "Render/Textures/TextureCube.h"
 
 #include <cstdint>
 #include <map>

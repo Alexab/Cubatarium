@@ -4,24 +4,24 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
-// Forward declaration for OpenGL types
+// Forward declaration for OpenGL Types
 typedef unsigned int GLuint;
 typedef float GLfloat;
 typedef int GLint;
 
-#include "Render/Engine/AnimationClock.h"
-#include "Render/Mesh/ChunkMeshCache.h"
-#include "Render/Primitives/CubeGL.h"
-#include "Render/Mesh/GreedyMeshVertex.h"
-#include "Storage/Object.h"
 #include "App/Settings/RenderSettings.h"
+#include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
-#include "Render/Textures/TextureBase.h"
-#include "Render/Textures/TextureCube.h"
-#include "World/Core/World.h"
+#include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
 #include "Render/Pipeline/IGreedyTransparentBackend.h"
+#include "Render/Primitives/CubeGL.h"
+#include "Render/Textures/TextureBase.h"
+#include "Render/Textures/TextureCube.h"
+#include "Storage/Object.h"
+#include "World/Core/World.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -42,7 +42,7 @@ struct RenderBatch
   GLuint textureID; // Replace QOpenGLTexture with GLuint
   size_t blockTypeId{0};
   std::vector<glm::mat4>
-      modelMatrices; // Per-instance model (blocks) or unused for objects
+      ModelMatrices; // Per-instance model (blocks) or unused for objects
   std::vector<float> faceIndices;
   std::vector<glm::vec2> quadSizes;
   std::vector<std::shared_ptr<UObject>> objects;
@@ -92,7 +92,7 @@ public:
   SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
   std::shared_ptr<UCreatureTextureStorage> GetCreatureTextureStorage() const
   {
-    return CreatureTextureStorageInstance_;
+    return CreatureTextureStorage;
   }
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
@@ -220,7 +220,7 @@ private:
 
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
-  std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance_;
+  std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorage;
   std::shared_ptr<UWorld> WorldInstance;
   std::shared_ptr<UObjectStorage> ObjectStorageInstance;
   std::shared_ptr<UTextRenderer> textRenderer;
@@ -230,16 +230,16 @@ private:
 
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
-  glm::vec3 baseSkyColor_{0.5f, 0.7f, 1.0f};
-  glm::vec3 smoothedSkyTint_{0.5f, 0.7f, 1.0f};
-  glm::vec3 smoothedFogColor_{0.05f, 0.15f, 0.35f};
-  float fogStart_{0.0f};
-  float fogEnd_{1000.0f};
-  float fogMinBlend_{0.0f};
-  float fogEnabled_{0.0f};
-  glm::vec3 overlayTintColor_{0.0f};
-  float overlayTintAlpha_{0.0f};
-  BlockId overlayBlockId_{BLOCK_AIR};
+  glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
+  glm::vec3 SmoothedSkyTint{0.5f, 0.7f, 1.0f};
+  glm::vec3 SmoothedFogColor{0.05f, 0.15f, 0.35f};
+  float FogStart{0.0f};
+  float FogEnd{1000.0f};
+  float FogMinBlend{0.0f};
+  float FogEnabled{0.0f};
+  glm::vec3 OverlayTintColor{0.0f};
+  float OverlayTintAlpha{0.0f};
+  BlockId OverlayBlockId{BLOCK_AIR};
   bool useGradientSky; // Use gradient sky
 
   // Logging
@@ -249,16 +249,16 @@ private:
   bool ShowHud = true;
   bool ShowCrosshair = true;
   bool ShowPerformance = true;
-  int overlayMarginRight_{10};
-  int overlayMarginTop_{30};
+  int OverlayMarginRight{10};
+  int OverlayMarginTop{30};
 
   // Rendering optimization
   std::vector<RenderBatch> renderBatches;
-  size_t cachedInstanceCount_{0};
-  uint64_t cachedMeshRevision_{0};
-  bool blockBatchesValid_{false};
+  size_t CachedInstanceCount{0};
+  uint64_t CachedMeshRevision{0};
+  bool BlockBatchesValid{false};
   RenderSettings Render;
-  UAnimationClock animationClock_;
+  UAnimationClock AnimationClock;
 
   struct GreedyGpuBatch
   {
@@ -274,10 +274,10 @@ private:
     uint64_t cullRevision{0};
     uint64_t sortRevision{0};
   };
-  GreedyGpuPassCache greedyGpuOpaque_;
-  GreedyGpuPassCache greedyGpuTransparent_;
-  glm::mat4 preparedTransparentVp_{};
-  const std::map<size_t, UTextureCube> *preparedTransparentTextures_{nullptr};
+  GreedyGpuPassCache GreedyGpuOpaque;
+  GreedyGpuPassCache GreedyGpuTransparent;
+  glm::mat4 PreparedTransparentVp{};
+  const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   void DrawGreedyOpaqueBatches(const std::vector<GreedyMeshBatch> &batches,
                                const glm::mat4 &vp,
                                const std::map<size_t, UTextureCube> &textures,
@@ -297,8 +297,8 @@ private:
   void DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache);
   void DestroyGreedyGpuBatches();
 
-  std::string transientMessage_;
-  double transientMessageUntil_{0.0};
+  std::string TransientMessage;
+  double TransientMessageUntil{0.0};
 };
 
 } // namespace cutum

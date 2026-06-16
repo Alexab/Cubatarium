@@ -63,14 +63,14 @@ bool FindScrollAndReveal(UGuiWidget *node, UGuiWidget *target)
 void DrawWidgetFocusRing(UGuiRenderer &renderer, const GuiTheme &theme,
                          const GuiRect &bounds)
 {
-  if (bounds.w <= 0 || bounds.h <= 0)
+  if (bounds.W <= 0 || bounds.H <= 0)
   {
     return;
   }
-  const int pad = theme.focusRingThickness;
-  GuiRect ring{bounds.x - pad, bounds.y - pad, bounds.w + pad * 2,
-               bounds.h + pad * 2};
-  renderer.DrawBorderRect(ring, theme.focusRing, theme.focusRingThickness);
+  const int pad = theme.FocusRingThickness;
+  GuiRect ring{bounds.X - pad, bounds.Y - pad, bounds.W + pad * 2,
+               bounds.H + pad * 2};
+  renderer.DrawBorderRect(ring, theme.FocusRing, theme.FocusRingThickness);
 }
 
 void RevealWidgetForKeyboardFocus(UGuiWidget *root, UGuiWidget *widget)

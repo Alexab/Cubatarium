@@ -1,8 +1,8 @@
 #pragma once
 
-#include "WorldGen/Sampling/BiomeSampler.h"
-#include "WorldGen/Pipelines/OverworldPipeline.h"
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Pipelines/OverworldPipeline.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 
 namespace cutum
 {
@@ -16,9 +16,9 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
 private:
-  UOverworldHeightSampler heightSampler_;
-  UBiomeSampler biomeSampler_;
-  FeatureParams featureParams_;
+  UOverworldHeightSampler HeightSampler;
+  UBiomeSampler UBiomeSampler;
+  FeatureParams FeatureParams;
 };
 
 } // namespace cutum

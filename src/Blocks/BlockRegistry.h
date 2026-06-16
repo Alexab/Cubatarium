@@ -23,24 +23,24 @@ public:
   void SetDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions);
   void Reload();
 
-  BlockId GetIdByTypeName(const std::string &name) const;
-  const std::string &GetTypeNameById(BlockId id) const;
+  BlockId GetIdByTypeName(const std::string &Name) const;
+  const std::string &GetTypeNameById(BlockId Id) const;
 
-  bool IsSolid(BlockId id) const;
-  bool BlocksMovement(BlockId id) const;
-  bool IsTransparent(BlockId id) const;
-  BlockRenderStyle GetRenderStyle(BlockId id) const;
-  const FluidViewProfile *GetFluidView(BlockId id) const;
-  const BlockPhysicsProfile &Physics(BlockId id) const;
-  size_t GetTextureId(BlockId id) const;
+  bool IsSolid(BlockId Id) const;
+  bool BlocksMovement(BlockId Id) const;
+  bool IsTransparent(BlockId Id) const;
+  BlockRenderStyle GetRenderStyle(BlockId Id) const;
+  const FluidViewProfile *GetFluidView(BlockId Id) const;
+  const BlockPhysicsProfile &Physics(BlockId Id) const;
+  size_t GetTextureId(BlockId Id) const;
 
 private:
   void RebuildMaps();
-  std::shared_ptr<UTextureCubeStorage> textures_;
-  std::shared_ptr<UBlockDefinitionStorage> definitions_;
-  std::unordered_map<std::string, BlockId> nameToId_;
-  std::unordered_map<BlockId, std::string> idToName_;
-  mutable BlockPhysicsProfile solidDefault_;
+  std::shared_ptr<UTextureCubeStorage> Textures;
+  std::shared_ptr<UBlockDefinitionStorage> Definitions;
+  std::unordered_map<std::string, BlockId> NameToId;
+  std::unordered_map<BlockId, std::string> IdToName;
+  mutable BlockPhysicsProfile SolidDefault;
 };
 
 } // namespace cutum

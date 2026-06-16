@@ -12,15 +12,15 @@ UWorldCreatureActivitySink::UWorldCreatureActivitySink(UWorld &world)
 }
 
 std::optional<CreatureActivityView>
-UWorldCreatureActivitySink::GetCreatureView(CreatureId id) const
+UWorldCreatureActivitySink::GetCreatureView(CreatureId Id) const
 {
-  const UCreature *creature = World.GetCreature(id);
+  const UCreature *creature = World.GetCreature(Id);
   if (!creature)
   {
     return std::nullopt;
   }
   CreatureActivityView view;
-  view.id = creature->GetId();
+  view.Id = creature->GetId();
   view.bodyOrigin = creature->GetBodyOrigin();
   view.typeId = creature->GetTypeId();
   view.possessed = creature->IsPossessed();
@@ -28,15 +28,15 @@ UWorldCreatureActivitySink::GetCreatureView(CreatureId id) const
   if (const CreatureDefinition *def =
           World.GetCreatureDefinition(creature->GetTypeId()))
   {
-    view.behaviorId = def->behavior.id;
+    view.behaviorId = def->behavior.Id;
   }
   return view;
 }
 
 std::optional<CreatureBehaviorSnapshot>
-UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId id) const
+UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
 {
-  const UCreature *creature = World.GetCreature(id);
+  const UCreature *creature = World.GetCreature(Id);
   if (!creature)
   {
     return std::nullopt;
@@ -53,10 +53,10 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId id) const
   return snapshot;
 }
 
-void UWorldCreatureActivitySink::SetIntent(CreatureId id,
+void UWorldCreatureActivitySink::SetIntent(CreatureId Id,
                                            const CreatureIntent &intent)
 {
-  if (UCreature *creature = World.GetCreature(id))
+  if (UCreature *creature = World.GetCreature(Id))
   {
     creature->SetIntent(intent);
   }

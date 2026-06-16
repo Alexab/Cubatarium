@@ -1,7 +1,7 @@
 #ifndef GUI_CHECKBOX_H
 #define GUI_CHECKBOX_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 
@@ -15,11 +15,11 @@ class UGuiCheckbox : public UGuiWidget
 public:
   UGuiCheckbox(const GuiTheme *theme, std::string label);
 
-  void SetChecked(bool checked) { checked_ = checked; }
-  bool IsChecked() const { return checked_; }
+  void SetChecked(bool checked) { Checked = checked; }
+  bool IsChecked() const { return Checked; }
   void SetOnChanged(std::function<void(bool)> handler)
   {
-    onChanged_ = std::move(handler);
+    OnChanged = std::move(handler);
   }
 
   bool CanFocus() const override;
@@ -31,10 +31,10 @@ public:
   int GetPreferredHeight() const override;
 
 private:
-  const GuiTheme *theme_;
-  std::string label_;
-  bool checked_{false};
-  std::function<void(bool)> onChanged_;
+  const GuiTheme *Theme;
+  std::string Label;
+  bool Checked{false};
+  std::function<void(bool)> OnChanged;
 };
 
 } // namespace cutum

@@ -29,10 +29,10 @@ BlockId UChunkManager::GetBlock(glm::ivec3 worldPos) const
   return it->second->GetBlockLocal(WorldToLocal(worldPos));
 }
 
-void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId Id)
 {
   UChunk &chunk = GetOrCreateChunk(WorldToChunk(worldPos));
-  chunk.SetBlockLocal(WorldToLocal(worldPos), id);
+  chunk.SetBlockLocal(WorldToLocal(worldPos), Id);
 }
 
 void UChunkManager::Clear() { Chunks.clear(); }
@@ -51,15 +51,15 @@ void UChunkManager::ForEachBlock(
         for (int x = 0; x < CHUNK_SIZE; ++x)
         {
           const glm::ivec3 local(x, y, z);
-          const BlockId id = chunk.GetBlockLocal(local);
-          if (id == BLOCK_AIR)
+          const BlockId Id = chunk.GetBlockLocal(local);
+          if (Id == BLOCK_AIR)
           {
             continue;
           }
           const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + x,
                                     chunkCoord.y * CHUNK_SIZE + y,
                                     chunkCoord.z * CHUNK_SIZE + z);
-          fn(worldPos, id);
+          fn(worldPos, Id);
         }
       }
     }

@@ -28,11 +28,11 @@ private:
   int MeasureWorldPageHeight(const GuiRect &area) const;
   void LayoutWorldPage(const GuiRect &area) const;
 
-  IGuiMenuHost *host_{nullptr};
+  IGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
-  UGuiDialogFrame *dialogFrame_{nullptr};
-  UGuiPanel *worldPage_{nullptr};
-  std::unique_ptr<UWorldGenSettingsForm> worldForm_;
+  UGuiDialogFrame *DialogFrame{nullptr};
+  UGuiPanel *WorldPage{nullptr};
+  std::unique_ptr<UWorldGenSettingsForm> WorldForm;
 };
 
 } // namespace cutum

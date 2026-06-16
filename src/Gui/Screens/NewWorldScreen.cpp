@@ -1,4 +1,4 @@
-#include "NewWorldScreen.h"
+#include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -29,27 +29,27 @@ GuiGridSpec BuildWorldGridSpec(int width)
   }
   spec.hGap = 12;
   spec.vGap = 8;
-  spec.padding = 4;
+  spec.Padding = 4;
   spec.columnWeights = {1, 1};
   return spec;
 }
 
 } // namespace
 
-UNewWorldScreen::UNewWorldScreen(IGuiMenuHost *host) : host_(host) {}
+UNewWorldScreen::UNewWorldScreen(IGuiMenuHost *host) : Host(host) {}
 
 UNewWorldScreen::~UNewWorldScreen() = default;
 
 void UNewWorldScreen::OnCreate()
 {
-  if (!host_ || !worldForm_)
+  if (!Host || !WorldForm)
   {
     return;
   }
-  const ProceduralSettings settings = worldForm_->ReadSettings();
+  const ProceduralSettings settings = WorldForm->ReadSettings();
   auto create = [this, settings]()
-  { host_->CreateNewWorldWithSettings(settings); };
-  host_->SaveIfNeededAndProceed(create);
+  { Host->CreateNewWorldWithSettings(settings); };
+  Host->SaveIfNeededAndProceed(create);
 }
 
 void UNewWorldScreen::Build(UGuiContext &ctx)
@@ -58,32 +58,32 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   int h = ctx.GetRenderer().GetWindowHeight();
   if (w > 0 && h > 0)
   {
-    viewportW_ = w;
-    viewportH_ = h;
+    ViewportW = w;
+    ViewportH = h;
   }
 
   const GuiTheme &theme = ctx.GetTheme();
   const ProceduralSettings procSnap =
-      host_ ? host_->LoadProceduralTemplate() : ProceduralSettings{};
+      Host ? Host->LoadProceduralTemplate() : ProceduralSettings{};
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
-  backdrop->SetBounds({0, 0, viewportW_, viewportH_});
+  backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int winW = std::min(820, viewportW_ - 32);
-  const int winH = std::min(500, viewportH_ - 32);
+  const int winW = std::min(820, ViewportW - 32);
+  const int winH = std::min(500, ViewportH - 32);
   auto window = std::make_unique<UGuiWindow>(&theme, "New World");
   Window = window.get();
   window->SetBounds(
-      {(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
 
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
-  dialogFrame_ = frame.get();
+  DialogFrame = frame.get();
   frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
   UGuiPanel &body = frame->AddScrollPage();
-  worldPage_ = &body;
-  worldForm_ = std::make_unique<UWorldGenSettingsForm>(&theme);
-  worldForm_->SetSettings(procSnap);
-  worldForm_->BuildInto(body);
+  WorldPage = &body;
+  WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
+  WorldForm->SetSettings(procSnap);
+  WorldForm->BuildInto(body);
   frame->SetScrollPageLayout(
       0, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
       [this](const GuiRect &area) { LayoutWorldPage(area); });
@@ -94,15 +94,15 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
       .SetOnClick(
           [this]()
           {
-            if (host_)
+            if (Host)
             {
-              host_->ReturnToMainMenu();
+              Host->ReturnToMainMenu();
             }
           });
 
   window->AddChild(std::move(frame));
   backdrop->AddChild(std::move(window));
-  root_ = std::move(backdrop);
+  Root = std::move(backdrop);
   Relayout();
 }
 
@@ -114,36 +114,36 @@ void UNewWorldScreen::OnViewportChanged(int width, int height)
 
 void UNewWorldScreen::Relayout()
 {
-  if (!Window || !dialogFrame_)
+  if (!Window || !DialogFrame)
   {
     return;
   }
-  const int winW = std::min(820, viewportW_ - 32);
-  const int winH = std::min(500, viewportH_ - 32);
+  const int winW = std::min(820, ViewportW - 32);
+  const int winH = std::min(500, ViewportH - 32);
   Window->SetBounds(
-      {(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
-  dialogFrame_->SetBounds(Window->GetClientArea());
-  dialogFrame_->LayoutFrame();
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
+  DialogFrame->SetBounds(Window->GetClientArea());
+  DialogFrame->LayoutFrame();
 }
 
 int UNewWorldScreen::MeasureWorldPageHeight(const GuiRect &area) const
 {
-  if (!worldForm_)
+  if (!WorldForm)
   {
     return 0;
   }
-  const GuiGridSpec spec = BuildWorldGridSpec(area.w);
-  return worldForm_->MeasureGridHeight(area, spec);
+  const GuiGridSpec spec = BuildWorldGridSpec(area.W);
+  return WorldForm->MeasureGridHeight(area, spec);
 }
 
 void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
 {
-  if (!worldForm_)
+  if (!WorldForm)
   {
     return;
   }
-  const GuiGridSpec spec = BuildWorldGridSpec(area.w);
-  worldForm_->LayoutGrid(area, spec);
+  const GuiGridSpec spec = BuildWorldGridSpec(area.W);
+  WorldForm->LayoutGrid(area, spec);
 }
 
 } // namespace cutum

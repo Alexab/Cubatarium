@@ -1,10 +1,10 @@
-#include "WorldGenSettingsForm.h"
+#include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Core/GuiTheme.h"
-#include "GuiButton.h"
-#include "GuiCheckbox.h"
-#include "GuiLabel.h"
-#include "GuiPanel.h"
-#include "GuiTextInput.h"
+#include "Gui/Widgets/GuiButton.h"
+#include "Gui/Widgets/GuiCheckbox.h"
+#include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiTextInput.h"
 #include <algorithm>
 #include <sstream>
 
@@ -48,101 +48,101 @@ uint32_t ParseSeedOr(const std::string &text, uint32_t fallback)
 } // namespace
 
 UWorldGenSettingsForm::UWorldGenSettingsForm(const GuiTheme *theme)
-    : theme_(theme)
+    : Theme(theme)
 {
 }
 
 void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
 {
-  settings_ = settings;
-  if (hintLabel_)
+  FormSettings = settings;
+  if (HintLabel)
   {
-    hintLabel_->SetText("Defaults for the next new worlds.");
+    HintLabel->SetText("Defaults for the next new worlds.");
   }
-  if (generatorBtn_)
+  if (GeneratorBtn)
   {
-    generatorBtn_->SetLabel(GeneratorLabel(settings_.generator));
+    GeneratorBtn->SetLabel(GeneratorLabel(FormSettings.Generator));
   }
-  if (verticalBtn_)
+  if (VerticalBtn)
   {
-    verticalBtn_->SetLabel(VerticalLabel(settings_.vertical));
+    VerticalBtn->SetLabel(VerticalLabel(FormSettings.Vertical));
   }
-  if (seedInput_)
+  if (SeedInput)
   {
-    seedInput_->SetText(std::to_string(settings_.seed));
+    SeedInput->SetText(std::to_string(FormSettings.Seed));
   }
-  if (seaLevelInput_)
+  if (SeaLevelInput)
   {
-    seaLevelInput_->SetText(std::to_string(settings_.seaLevel));
+    SeaLevelInput->SetText(std::to_string(FormSettings.SeaLevel));
   }
-  if (maxHeightInput_)
+  if (MaxHeightInput)
   {
-    maxHeightInput_->SetText(std::to_string(settings_.maxHeight));
+    MaxHeightInput->SetText(std::to_string(FormSettings.MaxHeight));
   }
-  if (flatYInput_)
+  if (FlatYInput)
   {
-    flatYInput_->SetText(std::to_string(settings_.flatSurfaceY));
+    FlatYInput->SetText(std::to_string(FormSettings.FlatSurfaceY));
   }
-  if (cavesBox_)
+  if (CavesBox)
   {
-    cavesBox_->SetChecked(settings_.enableCaves);
+    CavesBox->SetChecked(FormSettings.EnableCaves);
   }
-  if (treesBox_)
+  if (TreesBox)
   {
-    treesBox_->SetChecked(settings_.enableTrees);
+    TreesBox->SetChecked(FormSettings.EnableTrees);
   }
-  if (waterBox_)
+  if (WaterBox)
   {
-    waterBox_->SetChecked(settings_.fillWater);
+    WaterBox->SetChecked(FormSettings.FillWater);
   }
-  if (lavaBox_)
+  if (LavaBox)
   {
-    lavaBox_->SetChecked(settings_.fillLava);
+    LavaBox->SetChecked(FormSettings.FillLava);
   }
-  if (fireBox_)
+  if (FireBox)
   {
-    fireBox_->SetChecked(settings_.fillFire);
+    FireBox->SetChecked(FormSettings.FillFire);
   }
 }
 
 ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
 {
-  ProceduralSettings s = settings_;
-  if (seedInput_)
+  ProceduralSettings s = FormSettings;
+  if (SeedInput)
   {
-    s.seed = ParseSeedOr(seedInput_->GetText(), s.seed);
+    s.Seed = ParseSeedOr(SeedInput->GetText(), s.Seed);
   }
-  if (seaLevelInput_)
+  if (SeaLevelInput)
   {
-    s.seaLevel = ParseIntOr(seaLevelInput_->GetText(), s.seaLevel);
+    s.SeaLevel = ParseIntOr(SeaLevelInput->GetText(), s.SeaLevel);
   }
-  if (maxHeightInput_)
+  if (MaxHeightInput)
   {
-    s.maxHeight = ParseIntOr(maxHeightInput_->GetText(), s.maxHeight);
+    s.MaxHeight = ParseIntOr(MaxHeightInput->GetText(), s.MaxHeight);
   }
-  if (flatYInput_)
+  if (FlatYInput)
   {
-    s.flatSurfaceY = ParseIntOr(flatYInput_->GetText(), s.flatSurfaceY);
+    s.FlatSurfaceY = ParseIntOr(FlatYInput->GetText(), s.FlatSurfaceY);
   }
-  if (cavesBox_)
+  if (CavesBox)
   {
-    s.enableCaves = cavesBox_->IsChecked();
+    s.EnableCaves = CavesBox->IsChecked();
   }
-  if (treesBox_)
+  if (TreesBox)
   {
-    s.enableTrees = treesBox_->IsChecked();
+    s.EnableTrees = TreesBox->IsChecked();
   }
-  if (waterBox_)
+  if (WaterBox)
   {
-    s.fillWater = waterBox_->IsChecked();
+    s.FillWater = WaterBox->IsChecked();
   }
-  if (lavaBox_)
+  if (LavaBox)
   {
-    s.fillLava = lavaBox_->IsChecked();
+    s.FillLava = LavaBox->IsChecked();
   }
-  if (fireBox_)
+  if (FireBox)
   {
-    s.fillFire = fireBox_->IsChecked();
+    s.FillFire = FireBox->IsChecked();
   }
   ResolveProceduralDefaults(s);
   ApplyGeneratorTierDefaults(s);
@@ -160,39 +160,39 @@ void UWorldGenSettingsForm::CycleGenerator()
   int idx = 0;
   for (int i = 0; i < static_cast<int>(sizeof(kOrder) / sizeof(kOrder[0])); ++i)
   {
-    if (kOrder[i] == settings_.generator)
+    if (kOrder[i] == FormSettings.Generator)
     {
       idx = i;
       break;
     }
   }
   idx = (idx + 1) % static_cast<int>(sizeof(kOrder) / sizeof(kOrder[0]));
-  settings_.generator = kOrder[idx];
-  if (generatorBtn_)
+  FormSettings.Generator = kOrder[idx];
+  if (GeneratorBtn)
   {
-    generatorBtn_->SetLabel(GeneratorLabel(settings_.generator));
+    GeneratorBtn->SetLabel(GeneratorLabel(FormSettings.Generator));
   }
 }
 
 void UWorldGenSettingsForm::CycleVertical()
 {
-  settings_.vertical = settings_.vertical == VerticalMode::Compact
-                           ? VerticalMode::Extended
-                           : VerticalMode::Compact;
-  if (verticalBtn_)
+  FormSettings.Vertical = FormSettings.Vertical == VerticalMode::Compact
+                              ? VerticalMode::Extended
+                              : VerticalMode::Compact;
+  if (VerticalBtn)
   {
-    verticalBtn_->SetLabel(VerticalLabel(settings_.vertical));
+    VerticalBtn->SetLabel(VerticalLabel(FormSettings.Vertical));
   }
 }
 
 void UWorldGenSettingsForm::BuildInto(UGuiPanel &panel)
 {
-  if (!built_)
+  if (!Built)
   {
     AddWidgetsTo(panel);
-    built_ = true;
+    Built = true;
   }
-  SetSettings(settings_);
+  SetSettings(FormSettings);
 }
 
 int UWorldGenSettingsForm::MeasureGridHeight(const GuiRect &area,
@@ -210,114 +210,114 @@ void UWorldGenSettingsForm::LayoutGrid(const GuiRect &area,
 void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
 {
   auto hint =
-      std::make_unique<UGuiLabel>(theme_, "Defaults for the next new worlds.");
-  hintLabel_ = hint.get();
+      std::make_unique<UGuiLabel>(Theme, "Defaults for the next new worlds.");
+  HintLabel = hint.get();
   panel.AddChild(std::move(hint));
 
-  auto genLabel = std::make_unique<UGuiLabel>(theme_, "Generator:");
-  generatorLabel_ = genLabel.get();
+  auto genLabel = std::make_unique<UGuiLabel>(Theme, "Generator:");
+  GeneratorCaption = genLabel.get();
   panel.AddChild(std::move(genLabel));
-  auto genBtn =
-      std::make_unique<UGuiButton>(theme_, GeneratorLabel(settings_.generator));
-  generatorBtn_ = genBtn.get();
+  auto genBtn = std::make_unique<UGuiButton>(
+      Theme, GeneratorLabel(FormSettings.Generator));
+  GeneratorBtn = genBtn.get();
   genBtn->SetOnClick([this]() { CycleGenerator(); });
   panel.AddChild(std::move(genBtn));
 
-  auto vertLabel = std::make_unique<UGuiLabel>(theme_, "Vertical:");
-  verticalLabel_ = vertLabel.get();
+  auto vertLabel = std::make_unique<UGuiLabel>(Theme, "Vertical:");
+  VerticalCaption = vertLabel.get();
   panel.AddChild(std::move(vertLabel));
   auto vertBtn =
-      std::make_unique<UGuiButton>(theme_, VerticalLabel(settings_.vertical));
-  verticalBtn_ = vertBtn.get();
+      std::make_unique<UGuiButton>(Theme, VerticalLabel(FormSettings.Vertical));
+  VerticalBtn = vertBtn.get();
   vertBtn->SetOnClick([this]() { CycleVertical(); });
   panel.AddChild(std::move(vertBtn));
 
-  auto seedLabel = std::make_unique<UGuiLabel>(theme_, "World seed:");
-  seedLabel_ = seedLabel.get();
+  auto seedLabel = std::make_unique<UGuiLabel>(Theme, "World Seed:");
+  SeedLabel = seedLabel.get();
   panel.AddChild(std::move(seedLabel));
-  auto seedIn = std::make_unique<UGuiTextInput>(theme_);
-  seedInput_ = seedIn.get();
-  seedIn->SetText(std::to_string(settings_.seed));
+  auto seedIn = std::make_unique<UGuiTextInput>(Theme);
+  SeedInput = seedIn.get();
+  seedIn->SetText(std::to_string(FormSettings.Seed));
   panel.AddChild(std::move(seedIn));
 
-  auto seaLabel = std::make_unique<UGuiLabel>(theme_, "Sea level:");
-  seaLevelLabel_ = seaLabel.get();
+  auto seaLabel = std::make_unique<UGuiLabel>(Theme, "Sea level:");
+  SeaLevelLabel = seaLabel.get();
   panel.AddChild(std::move(seaLabel));
-  auto seaIn = std::make_unique<UGuiTextInput>(theme_);
-  seaLevelInput_ = seaIn.get();
-  seaIn->SetText(std::to_string(settings_.seaLevel));
+  auto seaIn = std::make_unique<UGuiTextInput>(Theme);
+  SeaLevelInput = seaIn.get();
+  seaIn->SetText(std::to_string(FormSettings.SeaLevel));
   panel.AddChild(std::move(seaIn));
 
-  auto maxLabel = std::make_unique<UGuiLabel>(theme_, "Max height:");
-  maxHeightLabel_ = maxLabel.get();
+  auto maxLabel = std::make_unique<UGuiLabel>(Theme, "Max height:");
+  MaxHeightLabel = maxLabel.get();
   panel.AddChild(std::move(maxLabel));
-  auto maxIn = std::make_unique<UGuiTextInput>(theme_);
-  maxHeightInput_ = maxIn.get();
-  maxIn->SetText(std::to_string(settings_.maxHeight));
+  auto maxIn = std::make_unique<UGuiTextInput>(Theme);
+  MaxHeightInput = maxIn.get();
+  maxIn->SetText(std::to_string(FormSettings.MaxHeight));
   panel.AddChild(std::move(maxIn));
 
-  auto flatLabel = std::make_unique<UGuiLabel>(theme_, "Flat surface Y:");
-  flatYLabel_ = flatLabel.get();
+  auto flatLabel = std::make_unique<UGuiLabel>(Theme, "Flat surface Y:");
+  FlatYLabel = flatLabel.get();
   panel.AddChild(std::move(flatLabel));
-  auto flatIn = std::make_unique<UGuiTextInput>(theme_);
-  flatYInput_ = flatIn.get();
-  flatIn->SetText(std::to_string(settings_.flatSurfaceY));
+  auto flatIn = std::make_unique<UGuiTextInput>(Theme);
+  FlatYInput = flatIn.get();
+  flatIn->SetText(std::to_string(FormSettings.FlatSurfaceY));
   panel.AddChild(std::move(flatIn));
 
-  auto caves = std::make_unique<UGuiCheckbox>(theme_, "Caves");
-  cavesBox_ = caves.get();
-  caves->SetChecked(settings_.enableCaves);
-  caves->SetOnChanged([this](bool v) { settings_.enableCaves = v; });
+  auto caves = std::make_unique<UGuiCheckbox>(Theme, "Caves");
+  CavesBox = caves.get();
+  caves->SetChecked(FormSettings.EnableCaves);
+  caves->SetOnChanged([this](bool v) { FormSettings.EnableCaves = v; });
   panel.AddChild(std::move(caves));
 
-  auto trees = std::make_unique<UGuiCheckbox>(theme_, "Trees");
-  treesBox_ = trees.get();
-  trees->SetChecked(settings_.enableTrees);
-  trees->SetOnChanged([this](bool v) { settings_.enableTrees = v; });
+  auto trees = std::make_unique<UGuiCheckbox>(Theme, "Trees");
+  TreesBox = trees.get();
+  trees->SetChecked(FormSettings.EnableTrees);
+  trees->SetOnChanged([this](bool v) { FormSettings.EnableTrees = v; });
   panel.AddChild(std::move(trees));
 
-  auto water = std::make_unique<UGuiCheckbox>(theme_, "Fill water");
-  waterBox_ = water.get();
-  water->SetChecked(settings_.fillWater);
-  water->SetOnChanged([this](bool v) { settings_.fillWater = v; });
+  auto water = std::make_unique<UGuiCheckbox>(Theme, "Fill water");
+  WaterBox = water.get();
+  water->SetChecked(FormSettings.FillWater);
+  water->SetOnChanged([this](bool v) { FormSettings.FillWater = v; });
   panel.AddChild(std::move(water));
 
-  auto lava = std::make_unique<UGuiCheckbox>(theme_, "Fill lava");
-  lavaBox_ = lava.get();
-  lava->SetChecked(settings_.fillLava);
-  lava->SetOnChanged([this](bool v) { settings_.fillLava = v; });
+  auto lava = std::make_unique<UGuiCheckbox>(Theme, "Fill lava");
+  LavaBox = lava.get();
+  lava->SetChecked(FormSettings.FillLava);
+  lava->SetOnChanged([this](bool v) { FormSettings.FillLava = v; });
   panel.AddChild(std::move(lava));
 
-  auto fire = std::make_unique<UGuiCheckbox>(theme_, "Fill fire");
-  fireBox_ = fire.get();
-  fire->SetChecked(settings_.fillFire);
-  fire->SetOnChanged([this](bool v) { settings_.fillFire = v; });
+  auto fire = std::make_unique<UGuiCheckbox>(Theme, "Fill fire");
+  FireBox = fire.get();
+  fire->SetChecked(FormSettings.FillFire);
+  fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
 }
 
 std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
 {
   std::vector<GuiGridItem> items;
-  items.push_back({hintLabel_, 0, 0, 1, 2, 28});
+  items.push_back({HintLabel, 0, 0, 1, 2, 28});
 
-  items.push_back({generatorLabel_, 1, 0, 1, 1, 28});
-  items.push_back({generatorBtn_, 1, 1, 1, 1, 32});
-  items.push_back({verticalLabel_, 2, 0, 1, 1, 28});
-  items.push_back({verticalBtn_, 2, 1, 1, 1, 32});
-  items.push_back({seedLabel_, 3, 0, 1, 1, 28});
-  items.push_back({seedInput_, 3, 1, 1, 1, 32});
-  items.push_back({seaLevelLabel_, 4, 0, 1, 1, 28});
-  items.push_back({seaLevelInput_, 4, 1, 1, 1, 32});
-  items.push_back({maxHeightLabel_, 5, 0, 1, 1, 28});
-  items.push_back({maxHeightInput_, 5, 1, 1, 1, 32});
-  items.push_back({flatYLabel_, 6, 0, 1, 1, 28});
-  items.push_back({flatYInput_, 6, 1, 1, 1, 32});
+  items.push_back({GeneratorCaption, 1, 0, 1, 1, 28});
+  items.push_back({GeneratorBtn, 1, 1, 1, 1, 32});
+  items.push_back({VerticalCaption, 2, 0, 1, 1, 28});
+  items.push_back({VerticalBtn, 2, 1, 1, 1, 32});
+  items.push_back({SeedLabel, 3, 0, 1, 1, 28});
+  items.push_back({SeedInput, 3, 1, 1, 1, 32});
+  items.push_back({SeaLevelLabel, 4, 0, 1, 1, 28});
+  items.push_back({SeaLevelInput, 4, 1, 1, 1, 32});
+  items.push_back({MaxHeightLabel, 5, 0, 1, 1, 28});
+  items.push_back({MaxHeightInput, 5, 1, 1, 1, 32});
+  items.push_back({FlatYLabel, 6, 0, 1, 1, 28});
+  items.push_back({FlatYInput, 6, 1, 1, 1, 32});
 
-  items.push_back({cavesBox_, 7, 0, 1, 1, 30});
-  items.push_back({treesBox_, 7, 1, 1, 1, 30});
-  items.push_back({waterBox_, 8, 0, 1, 1, 30});
-  items.push_back({lavaBox_, 8, 1, 1, 1, 30});
-  items.push_back({fireBox_, 9, 0, 1, 2, 30});
+  items.push_back({CavesBox, 7, 0, 1, 1, 30});
+  items.push_back({TreesBox, 7, 1, 1, 1, 30});
+  items.push_back({WaterBox, 8, 0, 1, 1, 30});
+  items.push_back({LavaBox, 8, 1, 1, 1, 30});
+  items.push_back({FireBox, 9, 0, 1, 2, 30});
   return items;
 }
 

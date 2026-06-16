@@ -6,11 +6,11 @@
 #include <memory>
 #include <vector>
 
-#include "Render/Camera/CameraPerspective.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/PlayerController.h"
+#include "Render/Camera/CameraPerspective.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -47,7 +47,7 @@ public:
   UCamera(float posX, float posY, float posZ, float upX, float upY, float upZ,
           float yaw, float pitch);
 
-  /// Eye world position (not render camera position in 3rd person).
+  /// Eye world position (not Render camera position in 3rd person).
   glm::vec3 GetPosition() const;
   void SetPosition(const glm::vec3 &value);
   float GetYaw() const;
@@ -84,11 +84,11 @@ public:
   bool IsOnGround() const;
   const UCreatureLocomotionController &GetLocomotionController() const
   {
-    return locomotion_;
+    return Locomotion;
   }
-  bool IsStepUpAnimationActive() const { return stepUpAnim_.active; }
+  bool IsStepUpAnimationActive() const { return StepUpAnim.Active; }
 
-  CameraPerspective GetPerspective() const { return perspective_; }
+  CameraPerspective GetPerspective() const { return Perspective; }
   void CyclePerspective();
 
   void UpdateKeyStatus(size_t key_index, bool is_pressed);
@@ -96,8 +96,8 @@ public:
   void UpdateFrameTime();
   void UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos);
   void ResetMouseMove(double xpos, double ypos);
-  void ApplyRelativeMouseMove(float xoffset, float yoffset);
-  void UpdateMouseScroll(double xoffset, double yoffset);
+  void ApplyRelativeMouseMove(float Xoffset, float Yoffset);
+  void UpdateMouseScroll(double Xoffset, double Yoffset);
 
   void ClearShiftKeyState();
 
@@ -112,9 +112,9 @@ private:
   PlayerInput BuildPlayerInput(bool spaceJustPressed) const;
   bool IsShiftDown() const;
 
-  void ProcessMouseMovement(float xoffset, float yoffset,
+  void ProcessMouseMovement(float Xoffset, float Yoffset,
                             bool constrainPitch = true);
-  void ProcessMouseScroll(float yoffset);
+  void ProcessMouseScroll(float Yoffset);
   void UpdatePose();
   glm::vec3 ComputeCameraWorldPosition() const;
   void UpdateCameraVectors();
@@ -145,7 +145,7 @@ private:
   glm::mat4 MvpMatrix;
 
   UViewEngine *ViewEngineInstance;
-  PlayerController locomotion_;
+  PlayerController Locomotion;
 
   std::map<size_t, bool> KeysStatus;
   float DeltaTime;
@@ -155,24 +155,24 @@ private:
   double LastMouseY{0.0};
   bool FirstMouseCoords;
 
-  glm::vec3 lastMoveIntentDir_{0.0f, 0.0f, -1.0f};
-  bool lastMoveIntentValid_{false};
-  std::chrono::steady_clock::time_point lastMoveIntentTime_{};
+  glm::vec3 LastMoveIntentDir{0.0f, 0.0f, -1.0f};
+  bool LastMoveIntentValid{false};
+  std::chrono::steady_clock::time_point LastMoveIntentTime{};
   static constexpr float kStepUpTriggerDistance = 0.36f;
   static constexpr float kStepUpIntentRetainSec = 0.3f;
   static constexpr float kStepUpAnimDuration = 0.14f;
   struct StepUpAnimation
   {
-    bool active{false};
-    glm::vec3 startPos{0.0f};
-    glm::vec3 targetPos{0.0f};
-    float elapsed{0.0f};
+    bool Active{false};
+    glm::vec3 StartPos{0.0f};
+    glm::vec3 TargetPos{0.0f};
+    float Elapsed{0.0f};
   };
-  StepUpAnimation stepUpAnim_;
+  StepUpAnimation StepUpAnim;
 
-  CameraPerspective perspective_{CameraPerspective::FirstPerson};
-  float thirdPersonDistance_{4.0f};
-  float thirdPersonHeight_{0.5f};
+  CameraPerspective Perspective{CameraPerspective::FirstPerson};
+  float ThirdPersonDistance{4.0f};
+  float ThirdPersonHeight{0.5f};
 
   static constexpr float kMinReasonablePlayerY = -32.0f;
   static constexpr float kMaxPhysicsDelta = 1.0f / 30.0f;

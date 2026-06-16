@@ -1,9 +1,9 @@
 #pragma once
 
+#include "App/Settings/UiSettings.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
-#include "App/Settings/UiSettings.h"
 #include <memory>
 #include <vector>
 
@@ -40,40 +40,40 @@ private:
   int MeasureWorldPageHeight(const GuiRect &area) const;
   void LayoutWorldPage(const GuiRect &area) const;
 
-  IGuiMenuHost *host_{nullptr};
+  IGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
-  UGuiDialogFrame *dialogFrame_{nullptr};
-  UGuiPanel *appPanel_{nullptr};
-  UGuiPanel *worldPanel_{nullptr};
-  std::unique_ptr<UWorldGenSettingsForm> worldForm_;
+  UGuiDialogFrame *DialogFrame{nullptr};
+  UGuiPanel *AppPanel{nullptr};
+  UGuiPanel *WorldPanel{nullptr};
+  std::unique_ptr<UWorldGenSettingsForm> WorldForm;
 
-  UGuiLabel *defaultUserLabel_{nullptr};
-  UGuiLabel *defaultWorldLabel_{nullptr};
-  UGuiLabel *renderDistLabel_{nullptr};
-  UGuiLabel *consoleKeyLabel_{nullptr};
-  UGuiLabel *paletteKeyLabel_{nullptr};
-  UGuiLabel *hotbarCountLabel_{nullptr};
-  UGuiLabel *hotbarCountValueLabel_{nullptr};
-  UGuiLabel *controlSchemeLabel_{nullptr};
-  UGuiButton *controlSchemeButton_{nullptr};
-  ControlScheme controlScheme_{ControlScheme::Classic};
+  UGuiLabel *DefaultUserLabel{nullptr};
+  UGuiLabel *DefaultWorldLabel{nullptr};
+  UGuiLabel *RenderDistLabel{nullptr};
+  UGuiLabel *ConsoleKeyLabel{nullptr};
+  UGuiLabel *PaletteKeyLabel{nullptr};
+  UGuiLabel *HotbarCountLabel{nullptr};
+  UGuiLabel *HotbarCountValueLabel{nullptr};
+  UGuiLabel *ControlSchemeLabel{nullptr};
+  UGuiButton *ControlSchemeButton{nullptr};
+  ControlScheme SelectedControlScheme{ControlScheme::Classic};
 
-  UGuiTextInput *defaultUserInput_{nullptr};
-  UGuiTextInput *defaultWorldInput_{nullptr};
-  UGuiTextInput *renderDistInput_{nullptr};
-  UGuiCheckbox *streamingBox_{nullptr};
-  UGuiCheckbox *stepUpBox_{nullptr};
-  UGuiCheckbox *greedyBox_{nullptr};
-  UGuiCheckbox *faceQuadsBox_{nullptr};
-  UGuiCheckbox *frustumBox_{nullptr};
-  UGuiCheckbox *batchCacheBox_{nullptr};
-  UGuiCheckbox *legacyHudBox_{nullptr};
-  UGuiCheckbox *showPerformanceBox_{nullptr};
-  UGuiTextInput *consoleKeyInput_{nullptr};
-  UGuiTextInput *paletteKeyInput_{nullptr};
-  UGuiButton *hotbarMinusButton_{nullptr};
-  UGuiButton *hotbarPlusButton_{nullptr};
-  int hotbarCount_{1};
+  UGuiTextInput *DefaultUserInput{nullptr};
+  UGuiTextInput *DefaultWorldInput{nullptr};
+  UGuiTextInput *RenderDistInput{nullptr};
+  UGuiCheckbox *StreamingBox{nullptr};
+  UGuiCheckbox *StepUpBox{nullptr};
+  UGuiCheckbox *GreedyBox{nullptr};
+  UGuiCheckbox *FaceQuadsBox{nullptr};
+  UGuiCheckbox *FrustumBox{nullptr};
+  UGuiCheckbox *BatchCacheBox{nullptr};
+  UGuiCheckbox *LegacyHudBox{nullptr};
+  UGuiCheckbox *ShowPerformanceBox{nullptr};
+  UGuiTextInput *ConsoleKeyInput{nullptr};
+  UGuiTextInput *PaletteKeyInput{nullptr};
+  UGuiButton *HotbarMinusButton{nullptr};
+  UGuiButton *HotbarPlusButton{nullptr};
+  int HotbarCount{1};
 };
 
 } // namespace cutum

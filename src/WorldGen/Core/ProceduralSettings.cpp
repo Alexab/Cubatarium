@@ -35,7 +35,7 @@ ProceduralGenerator ProceduralGeneratorFromString(const std::string &s)
   {
     return ProceduralGenerator::OverworldFull;
   }
-  std::cerr << "WARN: unknown procedural.generator '" << s
+  std::cerr << "WARN: unknown procedural.Generator '" << s
             << "', using heightmap" << std::endl;
   return ProceduralGenerator::Heightmap;
 }
@@ -71,7 +71,7 @@ VerticalMode VerticalModeFromString(const std::string &s)
   }
   if (s != "compact" && !s.empty())
   {
-    std::cerr << "WARN: unknown procedural.vertical '" << s
+    std::cerr << "WARN: unknown procedural.Vertical '" << s
               << "', using compact" << std::endl;
   }
   return VerticalMode::Compact;
@@ -84,50 +84,50 @@ const char *VerticalModeToString(VerticalMode m)
 
 void ResolveProceduralDefaults(ProceduralSettings &s)
 {
-  if (s.vertical == VerticalMode::Compact)
+  if (s.Vertical == VerticalMode::Compact)
   {
-    if (s.maxHeight <= 0 || s.maxHeight > 15)
+    if (s.MaxHeight <= 0 || s.MaxHeight > 15)
     {
-      if (s.maxHeight > 15)
+      if (s.MaxHeight > 15)
       {
-        s.maxHeight = 15;
+        s.MaxHeight = 15;
       }
       else
       {
-        s.maxHeight = 12;
+        s.MaxHeight = 12;
       }
     }
-    if (s.seaLevel <= 0)
+    if (s.SeaLevel <= 0)
     {
-      s.seaLevel = 4;
+      s.SeaLevel = 4;
     }
-    s.seaLevel = std::min(s.seaLevel, s.maxHeight - 2);
-    s.seaLevel = std::max(s.seaLevel, 2);
+    s.SeaLevel = std::min(s.SeaLevel, s.MaxHeight - 2);
+    s.SeaLevel = std::max(s.SeaLevel, 2);
   }
   else
   {
-    if (s.maxHeight <= 0)
+    if (s.MaxHeight <= 0)
     {
-      s.maxHeight = 96;
+      s.MaxHeight = 96;
     }
-    s.maxHeight = std::clamp(s.maxHeight, 16, 128);
-    if (s.seaLevel <= 0)
+    s.MaxHeight = std::clamp(s.MaxHeight, 16, 128);
+    if (s.SeaLevel <= 0)
     {
-      s.seaLevel = 32;
+      s.SeaLevel = 32;
     }
-    s.seaLevel = std::clamp(s.seaLevel, 4, s.maxHeight - 4);
+    s.SeaLevel = std::clamp(s.SeaLevel, 4, s.MaxHeight - 4);
   }
-  s.flatSurfaceY = std::clamp(s.flatSurfaceY, 1, s.maxHeight);
+  s.FlatSurfaceY = std::clamp(s.FlatSurfaceY, 1, s.MaxHeight);
 }
 
 void ApplyGeneratorTierDefaults(ProceduralSettings &s)
 {
-  if (s.generator == ProceduralGenerator::OverworldBiomes ||
-      s.generator == ProceduralGenerator::OverworldFull ||
-      s.generator == ProceduralGenerator::Overworld)
+  if (s.Generator == ProceduralGenerator::OverworldBiomes ||
+      s.Generator == ProceduralGenerator::OverworldFull ||
+      s.Generator == ProceduralGenerator::Overworld)
   {
-    s.fillWater = true;
-    s.fillFire = true;
+    s.FillWater = true;
+    s.FillFire = true;
   }
 }
 

@@ -19,7 +19,7 @@ struct GreedyQuad
   int v;
   int width;
   int height;
-  BlockId id;
+  BlockId Id;
   int faceSign;
 };
 

@@ -16,10 +16,13 @@ public:
 
   virtual std::filesystem::path WritableRoot() const = 0;
   virtual std::filesystem::path AssetRoot() const = 0;
-  virtual bool ReadAssetText(const std::string &rel, std::string &out) const = 0;
-  virtual std::unique_ptr<std::istream> OpenAsset(const std::string &rel) const = 0;
+  virtual bool ReadAssetText(const std::string &rel,
+                             std::string &out) const = 0;
+  virtual std::unique_ptr<std::istream>
+  OpenAsset(const std::string &rel) const = 0;
   virtual bool AssetExists(const std::string &rel) const = 0;
-  virtual std::filesystem::path ResolveWritable(const std::string &rel) const = 0;
+  virtual std::filesystem::path
+  ResolveWritable(const std::string &rel) const = 0;
 
   static void SetGlobal(std::shared_ptr<IPlatformPaths> paths);
   static IPlatformPaths &Current();

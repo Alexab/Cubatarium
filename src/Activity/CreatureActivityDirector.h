@@ -18,17 +18,17 @@ class UCreatureActivityDirector
 public:
   void RegisterAgent(std::unique_ptr<ICreatureActivityAgent> agent);
   void Clear();
-  void OnCreatureAdded(CreatureId id, const std::string &behaviorId);
-  void OnCreatureRemoved(CreatureId id);
+  void OnCreatureAdded(CreatureId Id, const std::string &behaviorId);
+  void OnCreatureRemoved(CreatureId Id);
   void TickAgents(IWorldPerception &perception, ICreatureActivitySink &sink,
                   float dt);
 
 private:
   ICreatureActivityAgent *FindAgent(const std::string &behaviorId) const;
 
-  std::vector<std::unique_ptr<ICreatureActivityAgent>> agents_;
-  std::unordered_map<std::string, ICreatureActivityAgent *> agentsByBehaviorId_;
-  std::unordered_map<CreatureId, ICreatureActivityAgent *> membership_;
+  std::vector<std::unique_ptr<ICreatureActivityAgent>> Agents;
+  std::unordered_map<std::string, ICreatureActivityAgent *> AgentsByBehaviorId;
+  std::unordered_map<CreatureId, ICreatureActivityAgent *> Membership;
 };
 
 } // namespace cutum

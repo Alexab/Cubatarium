@@ -6,7 +6,7 @@
 namespace cutum
 {
 
-bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t seed,
+bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params)
 {
   if (y < params.minY || y > surfaceY - params.maxDepthBelowSurface)
@@ -15,18 +15,18 @@ bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t seed,
   }
   const float n = FBM3D(static_cast<float>(x) * params.scale,
                         static_cast<float>(y) * params.scale,
-                        static_cast<float>(z) * params.scale, seed + 3000,
+                        static_cast<float>(z) * params.scale, Seed + 3000,
                         params.octaves, params.persistence, params.lacunarity);
   const float n01 = (n + 1.0f) * 0.5f;
   return n01 > params.threshold;
 }
 
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
-                      uint32_t seed, const CaveParams &params)
+                      uint32_t Seed, const CaveParams &params)
 {
   for (int y = params.minY; y <= surfaceY - params.maxDepthBelowSurface; ++y)
   {
-    if (ShouldCarve(x, y, z, surfaceY, seed, params))
+    if (ShouldCarve(x, y, z, surfaceY, Seed, params))
     {
       if (!ctx.World.IsAir(glm::ivec3(x, y, z)))
       {

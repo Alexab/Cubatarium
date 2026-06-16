@@ -9,18 +9,18 @@ namespace
 constexpr size_t kHotbarSlots = 10;
 }
 
-void UCreatureInventory::AddItem(const std::string &id, int count)
+void UCreatureInventory::AddItem(const std::string &Id, int count)
 {
-  storage_[id] += count;
+  Storage[Id] += count;
 }
 
-void UCreatureInventory::AddToInventory(const std::string &id)
+void UCreatureInventory::AddToInventory(const std::string &Id)
 {
-  if (storage_[id] < 0)
+  if (Storage[Id] < 0)
   {
     return;
   }
-  storage_[id]++;
+  Storage[Id]++;
 }
 
 void UCreatureInventory::InitCreativeDefaults()
@@ -29,9 +29,9 @@ void UCreatureInventory::InitCreativeDefaults()
       "wood",      "grass",      "stone", "tree_birch", "pumpkin",
       "sandstone", "stonebrick", "tnt",   "brick",      "bedrock",
       "water",     "lava",       "fire"};
-  for (const char *id : kBlocks)
+  for (const char *Id : kBlocks)
   {
-    storage_[id] = -1;
+    Storage[Id] = -1;
   }
 }
 
@@ -42,7 +42,7 @@ void UCreatureInventory::EnsureDefaultHotbar()
   for (const auto &slot : GetHotbar(0).slots)
   {
     if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block &&
-        !slot.entry.id.empty())
+        !slot.entry.Id.empty())
     {
       hasBlock = true;
       break;
@@ -52,7 +52,7 @@ void UCreatureInventory::EnsureDefaultHotbar()
   {
     InventoryEntryRef wood;
     wood.kind = InventoryEntryKind::Block;
-    wood.id = "wood";
+    wood.Id = "wood";
     wood.empty = false;
     wood.count = -1;
     AssignToHotbar(0, 1, wood);
@@ -65,7 +65,7 @@ void UCreatureInventory::SetPrefabHotbar(
 {
   EnsureHotbarCount(2);
   size_t idx = 0;
-  for (const std::string &name : prefab_names)
+  for (const std::string &Name : prefab_names)
   {
     if (idx >= kHotbarSlots)
     {
@@ -73,7 +73,7 @@ void UCreatureInventory::SetPrefabHotbar(
     }
     InventoryEntryRef entry;
     entry.kind = InventoryEntryKind::UObject;
-    entry.id = name;
+    entry.Id = Name;
     entry.empty = false;
     entry.count = 0;
     AssignToHotbar(1, idx, entry);
@@ -84,38 +84,38 @@ void UCreatureInventory::SetPrefabHotbar(
 const HotbarBar &UCreatureInventory::GetHotbar(size_t bar) const
 {
   static const HotbarBar kEmpty{};
-  if (bar >= hotbars_.size())
+  if (bar >= Hotbars.size())
   {
     return kEmpty;
   }
-  return hotbars_[bar];
+  return Hotbars[bar];
 }
 
 void UCreatureInventory::ClearHotbarSlot(size_t bar, size_t slot)
 {
-  if (bar >= hotbars_.size() || slot >= kHotbarSlots)
+  if (bar >= Hotbars.size() || slot >= kHotbarSlots)
   {
     return;
   }
-  hotbars_[bar].slots[slot] = HotbarSlot{};
+  Hotbars[bar].slots[slot] = HotbarSlot{};
 }
 
 bool UCreatureInventory::SetActiveSlot(size_t bar, size_t slot)
 {
-  if (bar >= hotbars_.size() || slot >= kHotbarSlots)
+  if (bar >= Hotbars.size() || slot >= kHotbarSlots)
   {
     return false;
   }
-  activeBarIndex_ = bar;
-  activeSlotIndex_ = slot;
+  ActiveBarIndex = bar;
+  ActiveSlotIndex = slot;
   return true;
 }
 
 size_t UCreatureInventory::GetActiveSlotIndex(size_t bar) const
 {
-  if (bar == activeBarIndex_)
+  if (bar == ActiveBarIndex)
   {
-    return activeSlotIndex_;
+    return ActiveSlotIndex;
   }
   return kHotbarSlots;
 }
@@ -123,10 +123,10 @@ size_t UCreatureInventory::GetActiveSlotIndex(size_t bar) const
 const std::string &UCreatureInventory::GetActiveBlockTypeName() const
 {
   static const std::string kEmpty;
-  const InventoryEntryRef *active = GetActiveEntryRef();
-  if (active && !active->empty && active->kind == InventoryEntryKind::Block)
+  const InventoryEntryRef *Active = GetActiveEntryRef();
+  if (Active && !Active->empty && Active->kind == InventoryEntryKind::Block)
   {
-    return active->id;
+    return Active->Id;
   }
   return kEmpty;
 }
@@ -134,26 +134,26 @@ const std::string &UCreatureInventory::GetActiveBlockTypeName() const
 const std::string &UCreatureInventory::GetActivePrefabName() const
 {
   static const std::string kEmpty;
-  const InventoryEntryRef *active = GetActiveEntryRef();
-  if (active && !active->empty && active->kind == InventoryEntryKind::UObject)
+  const InventoryEntryRef *Active = GetActiveEntryRef();
+  if (Active && !Active->empty && Active->kind == InventoryEntryKind::UObject)
   {
-    return active->id;
+    return Active->Id;
   }
   return kEmpty;
 }
 
 const InventoryEntryRef *UCreatureInventory::GetActiveEntryRef() const
 {
-  if (hotbars_.empty() || activeBarIndex_ >= hotbars_.size())
+  if (Hotbars.empty() || ActiveBarIndex >= Hotbars.size())
   {
     return nullptr;
   }
-  const auto &bar = hotbars_[activeBarIndex_];
-  if (activeSlotIndex_ >= bar.slots.size())
+  const auto &bar = Hotbars[ActiveBarIndex];
+  if (ActiveSlotIndex >= bar.slots.size())
   {
     return nullptr;
   }
-  const auto &slot = bar.slots[activeSlotIndex_];
+  const auto &slot = bar.slots[ActiveSlotIndex];
   if (slot.empty)
   {
     return nullptr;
@@ -163,13 +163,13 @@ const InventoryEntryRef *UCreatureInventory::GetActiveEntryRef() const
 
 void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
-  if (hotbars_.size() >= count)
+  if (Hotbars.size() >= count)
   {
     return;
   }
-  while (hotbars_.size() < count)
+  while (Hotbars.size() < count)
   {
-    hotbars_.push_back(HotbarBar{});
+    Hotbars.push_back(HotbarBar{});
   }
 }
 
@@ -181,16 +181,16 @@ bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot,
   {
     return false;
   }
-  hotbars_[bar].slots[slot].empty = entry.empty;
-  hotbars_[bar].slots[slot].entry = entry;
+  Hotbars[bar].slots[slot].empty = entry.empty;
+  Hotbars[bar].slots[slot].entry = entry;
   return true;
 }
 
 void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
 {
-  out["storage"] = storage_;
+  out["storage"] = Storage;
   nlohmann::json bars = nlohmann::json::array();
-  for (const auto &bar : hotbars_)
+  for (const auto &bar : Hotbars)
   {
     nlohmann::json slots = nlohmann::json::array();
     for (const auto &slot : bar.slots)
@@ -214,7 +214,7 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
           s["kind"] = "skin";
           break;
         }
-        s["id"] = slot.entry.id;
+        s["id"] = slot.entry.Id;
         s["count"] = slot.entry.count;
       }
       slots.push_back(s);
@@ -222,27 +222,27 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
     bars.push_back(slots);
   }
   out["hotbars"] = bars;
-  out["active_bar"] = activeBarIndex_;
-  out["active_slot"] = activeSlotIndex_;
+  out["active_bar"] = ActiveBarIndex;
+  out["active_slot"] = ActiveSlotIndex;
 }
 
 void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
                                              size_t maxBarCount)
 {
-  storage_.clear();
+  Storage.clear();
   if (data.contains("storage") && data["storage"].is_object())
   {
     for (auto it = data["storage"].begin(); it != data["storage"].end(); ++it)
     {
-      storage_[it.key()] = it.value().get<int>();
+      Storage[it.key()] = it.value().get<int>();
     }
   }
-  hotbars_.clear();
+  Hotbars.clear();
   if (data.contains("hotbars") && data["hotbars"].is_array())
   {
     for (const auto &barJson : data["hotbars"])
     {
-      if (hotbars_.size() >= maxBarCount)
+      if (Hotbars.size() >= maxBarCount)
       {
         break;
       }
@@ -276,26 +276,26 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Block;
             }
-            bar.slots[si].entry.id = slotJson.value("id", "");
+            bar.slots[si].entry.Id = slotJson.value("id", "");
             bar.slots[si].entry.count = slotJson.value("count", 0);
             bar.slots[si].entry.empty = false;
           }
           ++si;
         }
       }
-      hotbars_.push_back(bar);
+      Hotbars.push_back(bar);
     }
   }
-  if (hotbars_.empty())
+  if (Hotbars.empty())
   {
-    hotbars_.resize(1);
+    Hotbars.resize(1);
   }
-  activeBarIndex_ = std::min(data.value("active_bar", 0u),
-                             static_cast<unsigned>(hotbars_.size() - 1));
-  activeSlotIndex_ = data.value("active_slot", 0u);
-  if (activeSlotIndex_ >= kHotbarSlots)
+  ActiveBarIndex = std::min(data.value("active_bar", 0u),
+                            static_cast<unsigned>(Hotbars.size() - 1));
+  ActiveSlotIndex = data.value("active_slot", 0u);
+  if (ActiveSlotIndex >= kHotbarSlots)
   {
-    activeSlotIndex_ = 0;
+    ActiveSlotIndex = 0;
   }
 }
 

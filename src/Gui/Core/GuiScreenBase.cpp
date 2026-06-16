@@ -16,23 +16,21 @@ void UGuiScreenBase::Update(double /*dt*/) {}
 void UGuiScreenBase::SetViewportInsets(int insetLeft, int insetTop,
                                        int insetRight, int insetBottom)
 {
-  contentOffsetX_ = std::max(0, insetLeft);
-  contentOffsetY_ = std::max(0, insetTop);
-  contentInsetRight_ = std::max(0, insetRight);
-  contentInsetBottom_ = std::max(0, insetBottom);
+  ContentOffsetX = std::max(0, insetLeft);
+  ContentOffsetY = std::max(0, insetTop);
+  ContentInsetRight = std::max(0, insetRight);
+  ContentInsetBottom = std::max(0, insetBottom);
 }
 
 void UGuiScreenBase::OnViewportChanged(int width, int height)
 {
   if (width > 0)
   {
-    viewportW_ =
-        std::max(0, width - contentOffsetX_ - contentInsetRight_);
+    ViewportW = std::max(0, width - ContentOffsetX - ContentInsetRight);
   }
   if (height > 0)
   {
-    viewportH_ =
-        std::max(0, height - contentOffsetY_ - contentInsetBottom_);
+    ViewportH = std::max(0, height - ContentOffsetY - ContentInsetBottom);
   }
 }
 

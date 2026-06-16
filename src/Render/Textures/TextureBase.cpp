@@ -9,9 +9,9 @@ namespace fs = std::filesystem;
 
 UTextureBase::UTextureBase() {}
 
-UTextureBase::UTextureBase(const std::string &name,
+UTextureBase::UTextureBase(const std::string &Name,
                            const std::string &file_name)
-    : Name(name), FileName(file_name)
+    : Name(Name), FileName(file_name)
 {
 }
 

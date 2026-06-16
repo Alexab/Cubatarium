@@ -1,9 +1,9 @@
 #include "Gui/Core/GuiContext.h"
-#include "Gui/Core/GuiScale.h"
-#include "Gui/Widgets/GuiWidget.h"
 #include "Gui/Core/GuiInputRouter.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
 
@@ -17,72 +17,72 @@ UGuiContext::~UGuiContext() { Shutdown(); }
 bool UGuiContext::Initialize(std::shared_ptr<UShaderManager> shaderManager,
                              std::shared_ptr<UTextRenderer> textRenderer)
 {
-  theme_ = DefaultGuiTheme();
-  baseTheme_ = theme_;
-  uiScale_ = 1.f;
-  renderer_ = std::make_unique<UGuiRenderer>();
-  inputRouter_ = std::make_unique<UGuiInputRouter>();
-  return renderer_->Initialize(std::move(shaderManager),
-                               std::move(textRenderer));
+  Theme = DefaultGuiTheme();
+  BaseTheme = Theme;
+  UiScale = 1.f;
+  Renderer = std::make_unique<UGuiRenderer>();
+  InputRouter = std::make_unique<UGuiInputRouter>();
+  return Renderer->Initialize(std::move(shaderManager),
+                              std::move(textRenderer));
 }
 
 void UGuiContext::Shutdown()
 {
-  if (inputRouter_)
+  if (InputRouter)
   {
-    inputRouter_->ClearInteractionState();
-    inputRouter_->SetActiveScreen(nullptr);
+    InputRouter->ClearInteractionState();
+    InputRouter->SetActiveScreen(nullptr);
   }
-  if (activeScreen_)
+  if (ActiveScreen)
   {
-    activeScreen_->OnDetach();
-    activeScreen_.reset();
+    ActiveScreen->OnDetach();
+    ActiveScreen.reset();
   }
-  if (renderer_)
+  if (Renderer)
   {
-    renderer_->Shutdown();
-    renderer_.reset();
+    Renderer->Shutdown();
+    Renderer.reset();
   }
-  if (inputRouter_)
+  if (InputRouter)
   {
-    inputRouter_->ReleaseFocusWithoutNotify();
-    inputRouter_->SetRoot(nullptr);
+    InputRouter->ReleaseFocusWithoutNotify();
+    InputRouter->SetRoot(nullptr);
   }
 }
 
 void UGuiContext::SetScreen(std::unique_ptr<UGuiScreenBase> screen)
 {
-  if (inputRouter_)
+  if (InputRouter)
   {
-    inputRouter_->ClearInteractionState();
+    InputRouter->ClearInteractionState();
   }
-  if (activeScreen_)
+  if (ActiveScreen)
   {
-    activeScreen_->OnDetach();
+    ActiveScreen->OnDetach();
   }
-  activeScreen_ = std::move(screen);
-  if (activeScreen_)
+  ActiveScreen = std::move(screen);
+  if (ActiveScreen)
   {
-    activeScreen_->OnAttach(*this);
-    activeScreen_->Build(*this);
-    inputRouter_->SetRoot(activeScreen_->GetRoot());
-    inputRouter_->SetActiveScreen(activeScreen_.get());
+    ActiveScreen->OnAttach(*this);
+    ActiveScreen->Build(*this);
+    InputRouter->SetRoot(ActiveScreen->GetRoot());
+    InputRouter->SetActiveScreen(ActiveScreen.get());
   }
   else
   {
-    inputRouter_->SetRoot(nullptr);
-    inputRouter_->SetActiveScreen(nullptr);
+    InputRouter->SetRoot(nullptr);
+    InputRouter->SetActiveScreen(nullptr);
   }
 }
 
 void UGuiContext::Update(double dt)
 {
-  if (activeScreen_)
+  if (ActiveScreen)
   {
-    activeScreen_->Update(dt);
-    if (activeScreen_->GetRoot())
+    ActiveScreen->Update(dt);
+    if (ActiveScreen->GetRoot())
     {
-      activeScreen_->GetRoot()->Update(dt);
+      ActiveScreen->GetRoot()->Update(dt);
     }
   }
 }
@@ -91,34 +91,34 @@ void UGuiContext::NotifyViewport(int WindowWidth, int WindowHeight,
                                  int insetLeft, int insetTop, int insetRight,
                                  int insetBottom)
 {
-  if (activeScreen_)
+  if (ActiveScreen)
   {
-    activeScreen_->SetViewportInsets(insetLeft, insetTop, insetRight,
-                                     insetBottom);
-    activeScreen_->OnViewportChanged(WindowWidth, WindowHeight);
+    ActiveScreen->SetViewportInsets(insetLeft, insetTop, insetRight,
+                                    insetBottom);
+    ActiveScreen->OnViewportChanged(WindowWidth, WindowHeight);
   }
 }
 
 void UGuiContext::Render(int WindowWidth, int WindowHeight, int insetLeft,
                          int insetTop, int insetRight, int insetBottom)
 {
-  if (!renderer_ || !activeScreen_ || !activeScreen_->GetRoot())
+  if (!Renderer || !ActiveScreen || !ActiveScreen->GetRoot())
   {
     return;
   }
   NotifyViewport(WindowWidth, WindowHeight, insetLeft, insetTop, insetRight,
                  insetBottom);
-  RenderOverlay(*activeScreen_->GetRoot(), WindowWidth, WindowHeight);
+  RenderOverlay(*ActiveScreen->GetRoot(), WindowWidth, WindowHeight);
 }
 
 void UGuiContext::RenderOverlay(UGuiWidget &root, int WindowWidth,
                                 int WindowHeight, bool expandRootToViewport)
 {
-  if (!renderer_)
+  if (!Renderer)
   {
     return;
   }
-  renderer_->BeginFrame(WindowWidth, WindowHeight);
+  Renderer->BeginFrame(WindowWidth, WindowHeight);
   if (expandRootToViewport)
   {
     NotifyViewport(WindowWidth, WindowHeight);
@@ -130,60 +130,60 @@ void UGuiContext::RenderOverlay(UGuiWidget &root, int WindowWidth,
   {
     root.UpdateLayout(root.GetBounds());
   }
-  root.Draw(*renderer_);
-  renderer_->EndFrame();
+  root.Draw(*Renderer);
+  Renderer->EndFrame();
 }
 
 bool UGuiContext::RouteKey(const GuiKeyEvent &event)
 {
-  return inputRouter_ && inputRouter_->OnKey(event);
+  return InputRouter && InputRouter->OnKey(event);
 }
 bool UGuiContext::RouteChar(const GuiCharEvent &event)
 {
-  return inputRouter_ && inputRouter_->OnChar(event);
+  return InputRouter && InputRouter->OnChar(event);
 }
 bool UGuiContext::RouteMouseDown(const GuiMouseEvent &event)
 {
-  return inputRouter_ && inputRouter_->OnMouseDown(event);
+  return InputRouter && InputRouter->OnMouseDown(event);
 }
 bool UGuiContext::RouteMouseUp(const GuiMouseEvent &event)
 {
-  return inputRouter_ && inputRouter_->OnMouseUp(event);
+  return InputRouter && InputRouter->OnMouseUp(event);
 }
 bool UGuiContext::RouteMouseMove(const GuiMouseEvent &event)
 {
-  return inputRouter_ && inputRouter_->OnMouseMove(event);
+  return InputRouter && InputRouter->OnMouseMove(event);
 }
 bool UGuiContext::RouteScroll(const GuiScrollEvent &event, int mouseX,
                               int mouseY)
 {
-  return inputRouter_ && inputRouter_->OnScroll(event, mouseX, mouseY);
+  return InputRouter && InputRouter->OnScroll(event, mouseX, mouseY);
 }
 
 bool UGuiContext::WantsCaptureMouse() const
 {
-  return inputRouter_ && inputRouter_->WantsCaptureMouse();
+  return InputRouter && InputRouter->WantsCaptureMouse();
 }
 bool UGuiContext::WantsCaptureKeyboard() const
 {
-  return inputRouter_ && inputRouter_->WantsCaptureKeyboard();
+  return InputRouter && InputRouter->WantsCaptureKeyboard();
 }
 
 void UGuiContext::ClearInputState()
 {
-  if (inputRouter_)
+  if (InputRouter)
   {
-    inputRouter_->ClearInteractionState();
+    InputRouter->ClearInteractionState();
   }
 }
 
 void UGuiContext::ApplyUiScale(float scale)
 {
-  uiScale_ = scale;
-  theme_ = ScaleGuiTheme(baseTheme_, uiScale_);
-  if (renderer_)
+  UiScale = scale;
+  Theme = ScaleGuiTheme(BaseTheme, UiScale);
+  if (Renderer)
   {
-    renderer_->SetTextScale(uiScale_);
+    Renderer->SetTextScale(UiScale);
   }
 }
 

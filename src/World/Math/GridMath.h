@@ -13,7 +13,7 @@ int PositiveMod(int a, int b);
 glm::vec3 BlockCenter(const glm::ivec3 &blockPos);
 /// World Y of the top face of a 1×1 block whose center is at integer `blockY`.
 inline float BlockTopY(int blockY) { return static_cast<float>(blockY) + 0.5f; }
-/// Initial upward speed for a jump that reaches `heightBlocks` under constant
+/// Initial upward speed for a Jump that reaches `heightBlocks` under constant
 /// gravity magnitude.
 inline float JumpSpeedFromHeight(float heightBlocks,
                                  float gravityMagnitude = 20.0f)

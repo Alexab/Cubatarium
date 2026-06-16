@@ -36,7 +36,7 @@ inline constexpr CreatureFaceUv kUvBodyFront = {0.28f, 0.22f, 0.72f, 0.78f};
 inline constexpr CreatureFaceUv kUvBodyBack = {0.02f, 0.55f, 0.18f, 0.82f};
 inline constexpr CreatureFaceUv kUvHair = {0.55f, 0.02f, 0.78f, 0.14f};
 
-// World XZ direction (dx, dz) -> model yaw so local +Z aligns with movement.
+// World XZ direction (dx, dz) -> model yaw so local +Z aligns with Movement.
 inline float ModelYawFromDirection(float dirX, float dirZ)
 {
   if (dirX * dirX + dirZ * dirZ < 1e-8f)

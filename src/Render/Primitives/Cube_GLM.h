@@ -53,7 +53,7 @@ public:
                        std::map<float, std::tuple<int, glm::vec3, glm::vec3>>
                            &intersection_results) const;
 
-  // Replace return types
+  // Replace return Types
   const glm::mat4 &GetObjectPose() const;
   const glm::mat4 &GetInitialPose() const;
   glm::vec3 GetCenterPosition() const;
@@ -69,7 +69,7 @@ protected:
   virtual void UpdateVertices() = 0;
 
 protected:
-  // Replace Qt types with GLM
+  // Replace Qt Types with GLM
   glm::mat4 ObjectPose;
   glm::mat4 InitialPose;
   float Size;

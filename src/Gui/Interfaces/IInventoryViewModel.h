@@ -1,8 +1,8 @@
 #ifndef I_INVENTORY_VIEW_MODEL_H
 #define I_INVENTORY_VIEW_MODEL_H
 
-#include "Gui/Interfaces/IContentCatalog.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Interfaces/IContentCatalog.h"
 #include <string>
 #include <vector>
 
@@ -17,7 +17,7 @@ enum class InventoryMode
 
 struct InventoryGroupView
 {
-  std::string id;
+  std::string Id;
   std::string label;
   int order{0};
 };

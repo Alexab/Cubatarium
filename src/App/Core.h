@@ -8,9 +8,9 @@
 #include <string>
 
 #include "App/Settings/AppSettingsSnapshot.h"
-#include "WorldGen/Core/ProceduralSettings.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <vector>
 
 namespace cutum

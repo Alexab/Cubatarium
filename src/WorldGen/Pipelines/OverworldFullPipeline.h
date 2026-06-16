@@ -1,8 +1,8 @@
 #pragma once
 
 #include "WorldGen/Features/CaveCarver.h"
-#include "WorldGen/Pipelines/OverworldBiomesPipeline.h"
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Pipelines/OverworldBiomesPipeline.h"
 
 namespace cutum
 {
@@ -16,10 +16,10 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
 private:
-  UOverworldHeightSampler heightSampler_;
-  UBiomeSampler biomeSampler_;
-  CaveParams caveParams_;
-  FeatureParams featureParams_;
+  UOverworldHeightSampler HeightSampler;
+  UBiomeSampler UBiomeSampler;
+  CaveParams CaveParams;
+  FeatureParams FeatureParams;
 };
 
 } // namespace cutum

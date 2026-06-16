@@ -15,10 +15,10 @@ public:
   void LoadFromCreatureAndSkinRoots(const std::string &creaturesRoot,
                                     const std::string &skinsRoot);
   GLuint GetTexture(const std::string &assetKey) const;
-  size_t Count() const { return textures_.size(); }
+  size_t Count() const { return Textures.size(); }
 
 private:
-  std::unordered_map<std::string, GLuint> textures_;
+  std::unordered_map<std::string, GLuint> Textures;
 };
 
 } // namespace cutum

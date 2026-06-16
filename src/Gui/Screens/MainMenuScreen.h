@@ -23,24 +23,24 @@ public:
   void OnViewportChanged(int width, int height) override;
   bool BlocksGameInput() const override { return true; }
 
-  bool IsQuitConfirmationVisible() const { return quitDialogVisible_; }
+  bool IsQuitConfirmationVisible() const { return QuitDialogVisible; }
   void ShowQuitConfirmation(bool visible);
 
 private:
   void Relayout();
   void RelayoutQuitDialog();
 
-  IGuiGameActions *actions_{nullptr};
-  UGuiLabel *title_{nullptr};
-  UGuiLabel *versionLabel_{nullptr};
-  std::vector<UGuiButton *> buttons_;
+  IGuiGameActions *Actions{nullptr};
+  UGuiLabel *Title{nullptr};
+  UGuiLabel *VersionLabel{nullptr};
+  std::vector<UGuiButton *> Buttons;
 
-  UGuiPanel *quitBackdrop_{nullptr};
-  UGuiPanel *quitDialog_{nullptr};
-  UGuiLabel *quitMessage_{nullptr};
-  UGuiButton *quitYesButton_{nullptr};
-  UGuiButton *quitNoButton_{nullptr};
-  bool quitDialogVisible_{false};
+  UGuiPanel *QuitBackdrop{nullptr};
+  UGuiPanel *QuitDialog{nullptr};
+  UGuiLabel *QuitMessage{nullptr};
+  UGuiButton *QuitYesButton{nullptr};
+  UGuiButton *QuitNoButton{nullptr};
+  bool QuitDialogVisible{false};
 };
 
 } // namespace cutum

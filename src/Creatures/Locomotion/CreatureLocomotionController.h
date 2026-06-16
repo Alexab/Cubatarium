@@ -21,23 +21,20 @@ public:
   void SetCapabilities(const CreatureLocomotionCapabilities &caps);
   void SetCollisionProfile(const glm::vec3 &sizeBlocks, float eyeHeight);
 
-  float GetWalkSpeed() const { return caps_.walkSpeed; }
-  float GetFlySpeed() const { return caps_.flySpeed; }
-  const CreatureLocomotionCapabilities &GetCapabilities() const
-  {
-    return caps_;
-  }
+  float GetWalkSpeed() const { return Caps.walkSpeed; }
+  float GetFlySpeed() const { return Caps.flySpeed; }
+  const CreatureLocomotionCapabilities &GetCapabilities() const { return Caps; }
 
-  CreatureMovementMode GetMode() const { return mode_; }
+  CreatureMovementMode GetMode() const { return Mode; }
   void SetMode(CreatureMovementMode mode);
 
-  bool IsOnGround() const { return onGround_; }
-  float GetStanceBlend() const { return stanceBlend_; }
-  float GetVerticalVelocity() const { return verticalVelocity_; }
-  LocomotionState GetLocomotionState() const { return locomotionState_; }
+  bool IsOnGround() const { return OnGround; }
+  float GetStanceBlend() const { return StanceBlend; }
+  float GetVerticalVelocity() const { return VerticalVelocity; }
+  LocomotionState GetLocomotionState() const { return LocomotionState; }
   PlayerCapsule GetCapsule() const;
-  float GetFeetY() const { return feetY_; }
-  bool IsFeetAnchored() const { return feetAnchored_; }
+  float GetFeetY() const { return FeetY; }
+  bool IsFeetAnchored() const { return FeetAnchored; }
   float GetViewEyeHeight() const;
   void SetStanceBlendForView(float blend01);
   void SyncFeetAnchorFromView(float feetY, bool anchored);
@@ -49,8 +46,8 @@ public:
                         const CreatureInput &input, float dt,
                         CreatureId skipCreatureId = 0);
 
-  bool ShouldBlockJump() const { return suppressNextJump_; }
-  void NotifySpaceReleased() { suppressNextJump_ = false; }
+  bool ShouldBlockJump() const { return SuppressNextJump; }
+  void NotifySpaceReleased() { SuppressNextJump = false; }
   void SyncAfterStepLanding(glm::vec3 &eyePos, const UWorld *world);
   bool ConsumeClearShiftRequest();
 
@@ -73,21 +70,21 @@ private:
                         const CreatureInput &input, float dt,
                         CreatureId skipCreatureId);
 
-  CreatureMovementMode mode_{CreatureMovementMode::Walking};
-  LocomotionState locomotionState_{LocomotionState::Idle};
-  CreatureLocomotionCapabilities caps_{};
-  float jumpSpeed_{0.0f};
-  glm::vec3 collisionSizeBlocks_{0.6f, 1.8f, 0.6f};
-  float eyeHeight_{1.62f};
-  float stanceBlend_{0.0f};
-  float feetY_{0.0f};
-  bool feetAnchored_{false};
-  bool onGround_{false};
-  float verticalVelocity_{0.0f};
-  bool spaceWasPressed_{false};
-  bool suppressNextJump_{false};
-  bool clearShiftRequest_{false};
-  std::chrono::steady_clock::time_point lastSpacePressTime_{};
+  CreatureMovementMode Mode{CreatureMovementMode::Walking};
+  LocomotionState LocomotionState{LocomotionState::Idle};
+  CreatureLocomotionCapabilities Caps{};
+  float JumpSpeed{0.0f};
+  glm::vec3 CollisionSizeBlocks{0.6f, 1.8f, 0.6f};
+  float EyeHeight{1.62f};
+  float StanceBlend{0.0f};
+  float FeetY{0.0f};
+  bool FeetAnchored{false};
+  bool OnGround{false};
+  float VerticalVelocity{0.0f};
+  bool SpaceWasPressed{false};
+  bool SuppressNextJump{false};
+  bool ClearShiftRequest{false};
+  std::chrono::steady_clock::time_point LastSpacePressTime{};
 
   static constexpr int kDoubleSpaceTapMs = 350;
   static constexpr float kGravity = -20.0f;

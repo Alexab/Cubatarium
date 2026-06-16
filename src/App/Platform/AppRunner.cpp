@@ -5,17 +5,16 @@
 #include "App/Platform/IPlatformPaths.h"
 #include "App/Platform/IPlatformWindow.h"
 #include "App/Platform/Log.h"
-#include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Engine/GeometryEngine.h"
-#include "Storage/Object.h"
-#include "Storage/ObjectStorage.h"
-#include "World/Prefabs/Prefab.h"
 #include "Render/Engine/TextRenderer.h"
+#include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Render/Engine/ViewEngine.h"
+#include "Storage/Object.h"
+#include "Storage/ObjectStorage.h"
 #include "World/Core/World.h"
+#include "World/Prefabs/Prefab.h"
 
 #include <iostream>
 

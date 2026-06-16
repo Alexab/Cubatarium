@@ -1,6 +1,6 @@
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
-#include "World/Core/BlockWorld.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
 #include <cstdint>
@@ -11,9 +11,9 @@ namespace cutum
 namespace
 {
 
-uint32_t FeatureHash(int x, int z, uint32_t seed)
+uint32_t FeatureHash(int x, int z, uint32_t Seed)
 {
-  return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ seed;
+  return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ Seed;
 }
 
 } // namespace
@@ -59,7 +59,7 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
 bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
                   BiomeId biome, const FeatureParams &params)
 {
-  if (!ctx.Settings.enableTrees || !ctx.Prefabs)
+  if (!ctx.Settings.EnableTrees || !ctx.Prefabs)
   {
     return false;
   }
@@ -69,17 +69,17 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
 
   const glm::ivec3 anchor(x, surfaceY + 1, z);
-  const uint32_t seed = ctx.Settings.seed;
+  const uint32_t Seed = ctx.Settings.Seed;
 
   if (biome == BiomeId::Forest)
   {
-    if (FeatureHash(x, z, seed + params.treeLargeSeedOffset) %
+    if (FeatureHash(x, z, Seed + params.treeLargeSeedOffset) %
             static_cast<uint32_t>(params.treeLargeSpacingModForest) ==
         0)
     {
       return PlacePrefabAt(ctx, params.treeLargePrefabName, anchor);
     }
-    if (FeatureHash(x, z, seed + params.treeSeedOffset) %
+    if (FeatureHash(x, z, Seed + params.treeSeedOffset) %
             static_cast<uint32_t>(params.treeSmallSpacingModForest) ==
         0)
     {
@@ -88,13 +88,13 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
 
-  if (FeatureHash(x, z, seed + params.treeSeedOffset) %
+  if (FeatureHash(x, z, Seed + params.treeSeedOffset) %
           static_cast<uint32_t>(params.treeSmallSpacingModPlains) !=
       0)
   {
     return false;
   }
-  if (FeatureHash(x, z, seed + params.treeSeedOffset + 7) % 5 != 0)
+  if (FeatureHash(x, z, Seed + params.treeSeedOffset + 7) % 5 != 0)
   {
     return false;
   }
@@ -104,13 +104,13 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome)
 {
-  if (!ctx.Settings.fillLava || ctx.Lava == BLOCK_AIR ||
+  if (!ctx.Settings.FillLava || ctx.Lava == BLOCK_AIR ||
       biome != BiomeId::Hills)
   {
     return false;
   }
-  const uint32_t seed = ctx.Settings.seed;
-  if (FeatureHash(x, z, seed + 9001) % 400 != 0)
+  const uint32_t Seed = ctx.Settings.Seed;
+  if (FeatureHash(x, z, Seed + 9001) % 400 != 0)
   {
     return false;
   }
@@ -139,7 +139,7 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
                        BiomeId biome, BlockId grassId)
 {
-  if (!ctx.Settings.fillFire || ctx.Fire == BLOCK_AIR)
+  if (!ctx.Settings.FillFire || ctx.Fire == BLOCK_AIR)
   {
     return false;
   }
@@ -154,8 +154,8 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
-  const uint32_t seed = ctx.Settings.seed;
-  if (FeatureHash(x, z, seed + 12007) % 512 != 0)
+  const uint32_t Seed = ctx.Settings.Seed;
+  if (FeatureHash(x, z, Seed + 12007) % 512 != 0)
   {
     return false;
   }

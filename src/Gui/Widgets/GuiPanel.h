@@ -1,7 +1,7 @@
 #ifndef GUI_PANEL_H
 #define GUI_PANEL_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -16,17 +16,17 @@ public:
 
   void Draw(UGuiRenderer &renderer) override;
 
-  void SetDrawBackground(bool draw) { drawBackground_ = draw; }
-  bool GetDrawBackground() const { return drawBackground_; }
+  void SetDrawBackground(bool draw) { DrawBackground = draw; }
+  bool GetDrawBackground() const { return DrawBackground; }
 
-  void SetStackLayout(int spacing, int padding);
+  void SetStackLayout(int spacing, int Padding);
   int GetPreferredHeight() const override;
 
 protected:
-  const GuiTheme *theme_;
-  bool drawBackground_{true};
-  int stackSpacing_{6};
-  int stackPadding_{0};
+  const GuiTheme *Theme;
+  bool DrawBackground{true};
+  int StackSpacing{6};
+  int StackPadding{0};
 };
 
 } // namespace cutum

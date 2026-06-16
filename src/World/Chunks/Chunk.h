@@ -16,19 +16,19 @@ class UChunk
 public:
   explicit UChunk(glm::ivec3 chunkCoord);
 
-  glm::ivec3 GetCoord() const { return coord_; }
+  glm::ivec3 GetCoord() const { return Coord; }
   BlockId GetBlockLocal(glm::ivec3 local) const;
-  void SetBlockLocal(glm::ivec3 local, BlockId id);
-  bool IsDirty() const { return dirty_; }
-  void ClearDirty() { dirty_ = false; }
-  void MarkDirty() { dirty_ = true; }
+  void SetBlockLocal(glm::ivec3 local, BlockId Id);
+  bool IsDirty() const { return Dirty; }
+  void ClearDirty() { Dirty = false; }
+  void MarkDirty() { Dirty = true; }
 
   static int LocalIndex(glm::ivec3 local);
 
 private:
-  glm::ivec3 coord_;
-  std::array<BlockId, CHUNK_VOLUME> data_{};
-  bool dirty_{true};
+  glm::ivec3 Coord;
+  std::array<BlockId, CHUNK_VOLUME> Data{};
+  bool Dirty{true};
 };
 
 } // namespace cutum

@@ -42,7 +42,7 @@ const char *ToString(LocomotionState state)
   case LocomotionState::Run:
     return "run";
   case LocomotionState::Jump:
-    return "jump";
+    return "Jump";
   case LocomotionState::Fall:
     return "fall";
   case LocomotionState::Crouch:
@@ -62,7 +62,7 @@ const char *ToString(LocomotionState state)
   case LocomotionState::Coil:
     return "coil";
   case LocomotionState::Action:
-    return "action";
+    return "Action";
   case LocomotionState::Count:
     return "count";
   }

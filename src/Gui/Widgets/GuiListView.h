@@ -1,7 +1,7 @@
 #ifndef GUI_LIST_VIEW_H
 #define GUI_LIST_VIEW_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -18,9 +18,9 @@ public:
 
   void SetItems(std::vector<std::string> items);
   void SetSelectedIndex(int index);
-  int GetSelectedIndex() const { return selectedIndex_; }
+  int GetSelectedIndex() const { return SelectedIndex; }
   void SetOnSelectionChanged(std::function<void(int)> handler);
-  void SetAcceptKeyNavigation(bool enabled) { acceptKeyNavigation_ = enabled; }
+  void SetAcceptKeyNavigation(bool enabled) { AcceptKeyNavigation = enabled; }
   void ScrollToEnd();
 
   bool CanFocus() const override;
@@ -46,18 +46,18 @@ private:
   bool SelectIndex(int index);
   bool HandleKeyNavigation(const GuiKeyEvent &event);
 
-  const GuiTheme *theme_;
-  std::vector<std::string> items_;
-  int selectedIndex_{-1};
-  int scrollOffsetPx_{0};
-  int rowHeight_{20};
-  std::function<void(int)> onSelectionChanged_;
-  bool acceptKeyNavigation_{true};
-  bool dragActive_{false};
-  bool dragMoved_{false};
-  int dragStartY_{0};
-  int dragStartScroll_{0};
-  int pendingSelectIndex_{-1};
+  const GuiTheme *Theme;
+  std::vector<std::string> Items;
+  int SelectedIndex{-1};
+  int ScrollOffsetPx{0};
+  int RowHeight{20};
+  std::function<void(int)> OnSelectionChanged;
+  bool AcceptKeyNavigation{true};
+  bool DragActive{false};
+  bool DragMoved{false};
+  int DragStartY{0};
+  int DragStartScroll{0};
+  int PendingSelectIndex{-1};
   static constexpr int kScrollbarWidth = 10;
 };
 

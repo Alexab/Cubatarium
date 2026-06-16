@@ -1,7 +1,7 @@
 #ifndef GUI_POPUP_MENU_H
 #define GUI_POPUP_MENU_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -14,7 +14,7 @@ struct GuiTheme;
 struct GuiPopupMenuItem
 {
   std::string label;
-  std::function<void()> action;
+  std::function<void()> Action;
   bool enabled{true};
 };
 
@@ -26,7 +26,7 @@ public:
   void SetItems(std::vector<GuiPopupMenuItem> items);
   void OpenAt(int x, int y, int viewportW, int viewportH);
   void Close();
-  bool IsOpen() const { return open_; }
+  bool IsOpen() const { return Open; }
 
   void Draw(UGuiRenderer &renderer) override;
   bool OnMouseDown(const GuiMouseEvent &event) override;
@@ -38,10 +38,10 @@ private:
   int ItemHeight() const;
   int MenuWidth(int viewportW) const;
 
-  const GuiTheme *theme_;
-  std::vector<GuiPopupMenuItem> items_;
-  int hoverIndex_{-1};
-  bool open_{false};
+  const GuiTheme *Theme;
+  std::vector<GuiPopupMenuItem> Items;
+  int HoverIndex{-1};
+  bool Open{false};
 };
 
 } // namespace cutum

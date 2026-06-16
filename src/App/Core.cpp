@@ -22,24 +22,24 @@
 #endif
 #include <windows.h>
 #endif
+#include "App/Core.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "App/Core.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/ViewEngine.h"
+#include "Render/Textures/TextureBase.h"
+#include "Render/Textures/TextureCube.h"
 #include "Storage/ObjectStorage.h"
+#include "Version.h"
+#include "World/Core/World.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "Creatures/Definition/SkinDefinitionStorage.h"
-#include "Render/Textures/TextureBase.h"
-#include "Render/Textures/TextureCube.h"
-#include "Creatures/Player/User.h"
-#include "Version.h"
-#include "Render/Engine/ViewEngine.h"
-#include "World/Core/World.h"
 
 using json = nlohmann::json;
 
@@ -87,25 +87,25 @@ std::filesystem::path FindProjectRoot(std::filesystem::path start)
   return start;
 }
 
-bool ParseWorldNumberSuffix(const std::string &name, int &outNumber)
+bool ParseWorldNumberSuffix(const std::string &Name, int &outNumber)
 {
   constexpr const char *kPrefix = "World_";
-  if (name.size() != 9)
+  if (Name.size() != 9)
   {
     return false;
   }
-  if (name.compare(0, 6, kPrefix) != 0)
+  if (Name.compare(0, 6, kPrefix) != 0)
   {
     return false;
   }
-  for (size_t i = 6; i < name.size(); ++i)
+  for (size_t i = 6; i < Name.size(); ++i)
   {
-    if (!std::isdigit(static_cast<unsigned char>(name[i])))
+    if (!std::isdigit(static_cast<unsigned char>(Name[i])))
     {
       return false;
     }
   }
-  outNumber = std::stoi(name.substr(6));
+  outNumber = std::stoi(Name.substr(6));
   return true;
 }
 
@@ -131,13 +131,13 @@ UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UObjectStorage> object_storage_,
              std::shared_ptr<UPrefabLibrary> prefab_library_,
              std::shared_ptr<UWorld> World,
-             std::shared_ptr<UGeometryEngine> geometries_,
+             std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
       ObjectStorageInstance(object_storage_),
       PrefabLibraryInstance(prefab_library_), WorldInstance(World),
-      GeometryEngineInstance(geometries_), ViewEngineInstance(Views)
+      GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
 }
 
@@ -268,8 +268,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
       WorldSeed = d.value("world_seed", 12345u);
       TerrainType = d.value("terrain", "heightmap");
       ProceduralTemplate = ParseProceduralSettings(d);
-      WorldSeed = ProceduralTemplate.seed;
-      TerrainType = ProceduralGeneratorToString(ProceduralTemplate.generator);
+      WorldSeed = ProceduralTemplate.Seed;
+      TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
       RenderDistanceChunks = d.value("render_distance_chunks", 4);
       StreamingEnabled = d.value("streaming_enabled", true);
       if (d.contains("gameplay") && d["gameplay"].is_object())
@@ -286,20 +286,20 @@ void UCore::LoadConfig(const std::string &config_file_name)
       if (d.contains("render") && d["render"].is_object())
       {
         const json &r = d["render"];
-        Render.greedyMeshing = r.value("greedy_meshing", true);
-        Render.faceQuads = r.value("face_quads", true);
-        Render.frustumCulling = r.value("frustum_culling", true);
-        Render.batchCache = r.value("batch_cache", true);
-        Render.creatureDebugBounds = r.value("creature_debug_bounds", false);
-        Render.creatureTexturedParts = r.value("creature_textured_parts", true);
-        Render.creatureWireframeOverlay =
+        Render.GreedyMeshing = r.value("greedy_meshing", true);
+        Render.FaceQuads = r.value("face_quads", true);
+        Render.FrustumCulling = r.value("frustum_culling", true);
+        Render.BatchCache = r.value("batch_cache", true);
+        Render.CreatureDebugBounds = r.value("creature_debug_bounds", false);
+        Render.CreatureTexturedParts = r.value("creature_textured_parts", true);
+        Render.CreatureWireframeOverlay =
             r.value("creature_wireframe_overlay", false);
-        if (Render.greedyMeshing && !Render.faceQuads)
+        if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
               << "Render: greedy_meshing enabled — auto-enabling face_quads"
               << std::endl;
-          Render.faceQuads = true;
+          Render.FaceQuads = true;
         }
       }
       else
@@ -309,12 +309,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
       if (d.contains("ui") && d["ui"].is_object())
       {
         const json &u = d["ui"];
-        Ui.legacyHud = u.value("legacy_hud", false);
-        Ui.showPerformance = u.value("show_performance", true);
-        Ui.consoleKey = u.value("console_key", "grave");
-        Ui.paletteKey = u.value("palette_key", "b");
-        Ui.inventoryKey = u.value("inventory_key", "e");
-        Ui.hotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
+        Ui.LegacyHud = u.value("legacy_hud", false);
+        Ui.ShowPerformance = u.value("show_performance", true);
+        Ui.ConsoleKey = u.value("console_key", "grave");
+        Ui.PaletteKey = u.value("palette_key", "b");
+        Ui.InventoryKey = u.value("inventory_key", "e");
+        Ui.HotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
         std::string schemeStr = "classic";
         if (u.contains("control_scheme") && u["control_scheme"].is_string())
         {
@@ -325,11 +325,11 @@ void UCore::LoadConfig(const std::string &config_file_name)
         {
           schemeStr = u["block_input_profile"].get<std::string>();
         }
-        Ui.controlScheme = ControlSchemeFromString(schemeStr);
-        Ui.placeClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
-        Ui.breakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
-        Ui.breakDurationSeconds = u.value("break_duration_seconds", 0.25f);
-        Ui.rmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
+        Ui.ControlScheme = ControlSchemeFromString(schemeStr);
+        Ui.PlaceClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
+        Ui.BreakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
+        Ui.BreakDurationSeconds = u.value("break_duration_seconds", 0.25f);
+        Ui.RmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
       }
     }
     else
@@ -339,7 +339,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       WorldSeed = 12345u;
       TerrainType = "heightmap";
       ProceduralTemplate = ProceduralSettings{};
-      ProceduralTemplate.seed = WorldSeed;
+      ProceduralTemplate.Seed = WorldSeed;
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
       Render = RenderSettings::Default();
@@ -385,19 +385,19 @@ void UCore::LoadConfig(const std::string &config_file_name)
       if (auto user = WorldInstance->GetCurrentUser())
       {
         WorldInstance->EnsurePlayerHotbarCount(
-            user, static_cast<size_t>(Ui.hotbarCount));
+            user, static_cast<size_t>(Ui.HotbarCount));
       }
     }
 
     WorldInstance->SetProceduralSettings(ProceduralTemplate);
     std::cout << "Procedural: "
-              << ProceduralGeneratorToString(ProceduralTemplate.generator)
-              << " (" << VerticalModeToString(ProceduralTemplate.vertical)
-              << ", seed=" << ProceduralTemplate.seed
-              << ", sea=" << ProceduralTemplate.seaLevel
-              << ", maxY=" << ProceduralTemplate.maxHeight
-              << ", caves=" << (ProceduralTemplate.enableCaves ? "1" : "0")
-              << ", trees=" << (ProceduralTemplate.enableTrees ? "1" : "0")
+              << ProceduralGeneratorToString(ProceduralTemplate.Generator)
+              << " (" << VerticalModeToString(ProceduralTemplate.Vertical)
+              << ", Seed=" << ProceduralTemplate.Seed
+              << ", sea=" << ProceduralTemplate.SeaLevel
+              << ", maxY=" << ProceduralTemplate.MaxHeight
+              << ", caves=" << (ProceduralTemplate.EnableCaves ? "1" : "0")
+              << ", trees=" << (ProceduralTemplate.EnableTrees ? "1" : "0")
               << ")" << std::endl;
     WorldInstance->SetStreamingEnabled(StreamingEnabled);
     WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
@@ -410,10 +410,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
       GeometryEngineInstance->SetCreatureTextureStorage(
           CreatureTextureStorageInstance);
     }
-    std::cout << "Render: greedy=" << Render.greedyMeshing
-              << " face_quads=" << Render.faceQuads
-              << " frustum=" << Render.frustumCulling
-              << " batch_cache=" << Render.batchCache << std::endl;
+    std::cout << "Render: greedy=" << Render.GreedyMeshing
+              << " face_quads=" << Render.FaceQuads
+              << " frustum=" << Render.FrustumCulling
+              << " batch_cache=" << Render.BatchCache << std::endl;
     std::cout << "Gameplay: step_up=" << (StepUpEnabled ? "1" : "0")
               << " entity_collision=" << (EntityCollisionEnabled ? "1" : "0")
               << std::endl;
@@ -494,15 +494,15 @@ void UCore::SaveConfigFile()
   gameplay["step_up"] = StepUpEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
   system_data["gameplay"] = gameplay;
-  json render;
-  render["greedy_meshing"] = Render.greedyMeshing;
-  render["face_quads"] = Render.faceQuads;
-  render["frustum_culling"] = Render.frustumCulling;
-  render["batch_cache"] = Render.batchCache;
-  render["creature_debug_bounds"] = Render.creatureDebugBounds;
-  render["creature_textured_parts"] = Render.creatureTexturedParts;
-  render["creature_wireframe_overlay"] = Render.creatureWireframeOverlay;
-  system_data["render"] = render;
+  json render_json;
+  render_json["greedy_meshing"] = Render.GreedyMeshing;
+  render_json["face_quads"] = Render.FaceQuads;
+  render_json["frustum_culling"] = Render.FrustumCulling;
+  render_json["batch_cache"] = Render.BatchCache;
+  render_json["creature_debug_bounds"] = Render.CreatureDebugBounds;
+  render_json["creature_textured_parts"] = Render.CreatureTexturedParts;
+  render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
+  system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);
 
   std::ofstream file(ConfigFilePath.string());
@@ -528,7 +528,7 @@ void UCore::SaveSystem(const std::string &config_file_name)
   {
     DefaultUserName = WorldInstance->GetCurrentUserName();
   }
-  WorldSeed = ProceduralTemplate.seed;
+  WorldSeed = ProceduralTemplate.Seed;
 
   if (ConfigFilePath.empty())
   {
@@ -580,8 +580,8 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
 void UCore::SetProceduralTemplate(const ProceduralSettings &settings)
 {
   ProceduralTemplate = settings;
-  WorldSeed = settings.seed;
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.generator);
+  WorldSeed = settings.Seed;
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
   ResolveProceduralDefaults(ProceduralTemplate);
   ApplyGeneratorTierDefaults(ProceduralTemplate);
 }
@@ -589,10 +589,10 @@ void UCore::SetProceduralTemplate(const ProceduralSettings &settings)
 void UCore::CreateNewWorldFromTemplate()
 {
   WorldSeed += 1;
-  ProceduralTemplate.seed = WorldSeed;
+  ProceduralTemplate.Seed = WorldSeed;
   ResolveProceduralDefaults(ProceduralTemplate);
   ApplyGeneratorTierDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.generator);
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
   CreateNewWorldWithCurrentSettings();
 }
 
@@ -614,12 +614,12 @@ void UCore::CreateWorld(const std::string &terrain_type)
   if (!terrain_type.empty())
   {
     TerrainType = terrain_type;
-    ProceduralTemplate.generator = ProceduralGeneratorFromString(terrain_type);
+    ProceduralTemplate.Generator = ProceduralGeneratorFromString(terrain_type);
   }
-  ProceduralTemplate.seed = WorldSeed;
+  ProceduralTemplate.Seed = WorldSeed;
   ResolveProceduralDefaults(ProceduralTemplate);
   ApplyGeneratorTierDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.generator);
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
   CreateNewWorldWithCurrentSettings();
 }
 
@@ -636,7 +636,7 @@ void UCore::CreateWorldFromProceduralConfig()
       {
         const json d = json::parse(buffer.str());
         ProceduralTemplate = ParseProceduralSettings(d);
-        WorldSeed = ProceduralTemplate.seed;
+        WorldSeed = ProceduralTemplate.Seed;
       }
       catch (const json::exception &e)
       {
@@ -647,14 +647,14 @@ void UCore::CreateWorldFromProceduralConfig()
   }
 
   WorldSeed += 1;
-  ProceduralTemplate.seed = WorldSeed;
+  ProceduralTemplate.Seed = WorldSeed;
   ResolveProceduralDefaults(ProceduralTemplate);
   ApplyGeneratorTierDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.generator);
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
 
   std::cout << "Core::CreateWorldFromProceduralConfig: " << TerrainType << " ("
-            << VerticalModeToString(ProceduralTemplate.vertical)
-            << ", seed=" << ProceduralTemplate.seed << ")" << std::endl;
+            << VerticalModeToString(ProceduralTemplate.Vertical)
+            << ", Seed=" << ProceduralTemplate.Seed << ")" << std::endl;
 
   CreateNewWorldWithCurrentSettings();
 }
@@ -742,11 +742,11 @@ void UCore::LoadWorldList(const std::string &world_path)
       {
         continue;
       }
-      const std::string name = entry.path().filename().string();
-      if (std::find(WorldList.begin(), WorldList.end(), name) ==
+      const std::string Name = entry.path().filename().string();
+      if (std::find(WorldList.begin(), WorldList.end(), Name) ==
           WorldList.end())
       {
-        WorldList.push_back(name);
+        WorldList.push_back(Name);
       }
     }
   }

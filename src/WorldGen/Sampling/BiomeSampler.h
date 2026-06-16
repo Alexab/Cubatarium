@@ -24,13 +24,13 @@ struct BiomeSurfaceRule
 class UBiomeSampler
 {
 public:
-  explicit UBiomeSampler(uint32_t seed);
+  explicit UBiomeSampler(uint32_t Seed);
 
-  BiomeId At(int x, int z, int surfaceY, int seaLevel, int maxHeight) const;
+  BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;
   BiomeSurfaceRule SurfaceRule(BiomeId biome, const WorldGenContext &ctx) const;
 
 private:
-  uint32_t seed_;
+  uint32_t Seed;
 };
 
 BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm);

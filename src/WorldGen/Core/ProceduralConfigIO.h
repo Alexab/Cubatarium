@@ -1,7 +1,7 @@
 #pragma once
 
-#include "WorldGen/Core/ProceduralSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <nlohmann/json_fwd.hpp>
 
 namespace cutum

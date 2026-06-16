@@ -2,8 +2,8 @@
 #define BLOCKINPUTCONTROLLER_H
 
 #include "App/Platform/InputManager.h"
-#include "Game/Inventory/InventoryTypes.h"
 #include "App/Settings/UiSettings.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include <chrono>
 #include <glm/glm.hpp>
 #include <memory>
@@ -29,7 +29,7 @@ struct BlockInputContext
 class UBlockInputController
 {
 public:
-  void OnMouseButton(MouseButton button, bool pressed, glm::vec2 pos,
+  void OnMouseButton(MouseButton Button, bool Pressed, glm::vec2 pos,
                      const BlockInputContext &ctx);
   void OnMouseMove(glm::vec2 pos, glm::vec2 delta,
                    const BlockInputContext &ctx);

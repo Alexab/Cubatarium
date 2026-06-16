@@ -14,7 +14,7 @@ namespace cutum
 void UPrefabLibrary::Load(const std::string &prefabs_folder,
                           UBlockRegistry &registry)
 {
-  prefabs_.clear();
+  Prefabs.clear();
   if (!std::filesystem::exists(prefabs_folder))
   {
     std::cerr << "UPrefabLibrary: folder not found: " << prefabs_folder
@@ -47,7 +47,7 @@ void UPrefabLibrary::Load(const std::string &prefabs_folder,
     }
   }
 
-  std::cout << "UPrefabLibrary: loaded " << prefabs_.size() << " prefabs"
+  std::cout << "UPrefabLibrary: loaded " << Prefabs.size() << " prefabs"
             << std::endl;
 }
 
@@ -63,7 +63,7 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
   {
     json data = json::parse(file);
     Prefab prefab;
-    prefab.name =
+    prefab.Name =
         data.value("name", std::filesystem::path(path).stem().string());
 
     if (data.contains("anchor") && data["anchor"].is_array() &&
@@ -83,8 +83,8 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
       const int dy = blockEntry.at("dy").get<int>();
       const int dz = blockEntry.at("dz").get<int>();
       const std::string type = blockEntry.at("type").get<std::string>();
-      const BlockId id = registry.GetIdByTypeName(type);
-      if (id == BLOCK_AIR)
+      const BlockId Id = registry.GetIdByTypeName(type);
+      if (Id == BLOCK_AIR)
       {
         std::cerr << "UPrefabLibrary: unknown type '" << type << "' in " << path
                   << std::endl;
@@ -92,7 +92,7 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
       }
       PrefabVoxel voxel;
       voxel.offset = glm::ivec3(dx, dy, dz);
-      voxel.id = id;
+      voxel.Id = Id;
       prefab.voxels.push_back(voxel);
 
       const glm::ivec3 worldOffset = prefab.anchor + voxel.offset;
@@ -107,7 +107,7 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
       return false;
     }
 
-    prefabs_[prefab.name] = std::move(prefab);
+    Prefabs[prefab.Name] = std::move(prefab);
     return true;
   }
   catch (const json::exception &e)
@@ -118,10 +118,10 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
   }
 }
 
-const Prefab *UPrefabLibrary::Get(const std::string &name) const
+const Prefab *UPrefabLibrary::Get(const std::string &Name) const
 {
-  const auto it = prefabs_.find(name);
-  if (it == prefabs_.end())
+  const auto it = Prefabs.find(Name);
+  if (it == Prefabs.end())
   {
     return nullptr;
   }
@@ -131,8 +131,8 @@ const Prefab *UPrefabLibrary::Get(const std::string &name) const
 std::vector<std::string> UPrefabLibrary::ListNames() const
 {
   std::vector<std::string> names;
-  names.reserve(prefabs_.size());
-  for (const auto &entry : prefabs_)
+  names.reserve(Prefabs.size());
+  for (const auto &entry : Prefabs)
   {
     names.push_back(entry.first);
   }

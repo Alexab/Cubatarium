@@ -42,8 +42,8 @@ void AppendFallbackPart(const CreatureDefinition &def,
   const std::string stem = def.visual.defaultTextureKey.empty()
                                ? "body"
                                : def.visual.defaultTextureKey;
-  part.textureAssetKey = def.id + "/" + stem;
-  result.parts.push_back(part);
+  part.textureAssetKey = def.Id + "/" + stem;
+  result.Parts.push_back(part);
 }
 
 void ResolvePartsFromSpecies(const CreatureDefinition &def,
@@ -51,22 +51,22 @@ void ResolvePartsFromSpecies(const CreatureDefinition &def,
                              const std::string &skinId,
                              ResolvedCreatureAppearance &result)
 {
-  if (def.visual.parts.empty())
+  if (def.visual.Parts.empty())
   {
     AppendFallbackPart(def, result);
     return;
   }
-  for (const CreatureVisualPartDef &partDef : def.visual.parts)
+  for (const CreatureVisualPartDef &partDef : def.visual.Parts)
   {
     ResolvedCreaturePart part;
-    part.partId = partDef.id;
+    part.partId = partDef.Id;
     part.offsetBlocks = partDef.offsetBlocks;
     part.sizeBlocks = partDef.sizeBlocks;
     const std::string stem = partDef.textureStem.empty()
                                  ? def.visual.defaultTextureKey
                                  : partDef.textureStem;
-    part.textureAssetKey = ResolvePartTextureKey(def.id, stem, skin, skinId);
-    result.parts.push_back(part);
+    part.textureAssetKey = ResolvePartTextureKey(def.Id, stem, skin, skinId);
+    result.Parts.push_back(part);
   }
 }
 

@@ -1,4 +1,4 @@
-#include "LoadWorldScreen.h"
+#include "Gui/Screens/LoadWorldScreen.h"
 
 #include "Gui/Core/GuiContext.h"
 
@@ -25,7 +25,7 @@ namespace cutum
 
 ULoadWorldScreen::ULoadWorldScreen(IGuiMenuHost *host)
 
-    : host_(host)
+    : Host(host)
 
 {
 }
@@ -34,13 +34,13 @@ void ULoadWorldScreen::OnLoad()
 
 {
 
-  if (!host_ || !list_)
+  if (!Host || !List)
   {
 
     return;
   }
 
-  const int idx = list_->GetSelectedIndex();
+  const int idx = List->GetSelectedIndex();
 
   if (idx < 0)
   {
@@ -48,7 +48,7 @@ void ULoadWorldScreen::OnLoad()
     return;
   }
 
-  const auto &names = host_->GetWorldNames();
+  const auto &names = Host->GetWorldNames();
 
   if (idx >= static_cast<int>(names.size()))
   {
@@ -58,8 +58,8 @@ void ULoadWorldScreen::OnLoad()
 
   const std::string worldName = names[static_cast<size_t>(idx)];
 
-  host_->SaveIfNeededAndProceed([this, worldName]()
-                                { host_->LoadSelectedWorld(worldName); });
+  Host->SaveIfNeededAndProceed([this, worldName]()
+                               { Host->LoadSelectedWorld(worldName); });
 }
 
 void ULoadWorldScreen::Build(UGuiContext &ctx)
@@ -73,44 +73,44 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
   if (w > 0 && h > 0)
   {
 
-    viewportW_ = w;
+    ViewportW = w;
 
-    viewportH_ = h;
+    ViewportH = h;
   }
 
-  if (host_)
+  if (Host)
   {
 
-    host_->RefreshWorldList();
+    Host->RefreshWorldList();
   }
 
   const GuiTheme &theme = ctx.GetTheme();
 
   const auto &worlds =
-      host_ ? host_->GetWorldNames() : std::vector<std::string>{};
+      Host ? Host->GetWorldNames() : std::vector<std::string>{};
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
 
-  backdrop->SetBounds({0, 0, viewportW_, viewportH_});
+  backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int winW = std::min(480, viewportW_ - 40);
+  const int winW = std::min(480, ViewportW - 40);
 
-  const int winH = std::min(400, viewportH_ - 40);
+  const int winH = std::min(400, ViewportH - 40);
 
   auto window = std::make_unique<UGuiWindow>(&theme, "Load World");
 
   Window = window.get();
 
   window->SetBounds(
-      {(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
 
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
 
-  dialogFrame_ = frame.get();
+  DialogFrame = frame.get();
 
   auto list = std::make_unique<UGuiListView>(&theme);
 
-  list_ = list.get();
+  List = list.get();
 
   list->SetItems(worlds);
 
@@ -124,7 +124,7 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
 
   auto empty = std::make_unique<UGuiLabel>(&theme, "No saved worlds.");
 
-  emptyLabel_ = empty.get();
+  EmptyLabel = empty.get();
 
   empty->SetVisible(worlds.empty());
 
@@ -132,7 +132,7 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
 
   auto loadBtn = std::make_unique<UGuiButton>(&theme, "Load");
 
-  loadBtn_ = loadBtn.get();
+  LoadBtn = loadBtn.get();
 
   loadBtn->SetEnabled(!worlds.empty());
   loadBtn->SetOnClick([this]() { OnLoad(); });
@@ -144,10 +144,10 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
       .SetOnClick(
           [this]()
           {
-            if (host_)
+            if (Host)
             {
 
-              host_->ReturnToMainMenu();
+              Host->ReturnToMainMenu();
             }
           });
 
@@ -155,7 +155,7 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
 
   backdrop->AddChild(std::move(window));
 
-  root_ = std::move(backdrop);
+  Root = std::move(backdrop);
 
   Relayout();
 }
@@ -173,29 +173,29 @@ void ULoadWorldScreen::Relayout()
 
 {
 
-  if (!Window || !dialogFrame_)
+  if (!Window || !DialogFrame)
   {
 
     return;
   }
 
-  const int winW = std::min(480, viewportW_ - 40);
+  const int winW = std::min(480, ViewportW - 40);
 
-  const int winH = std::min(400, viewportH_ - 40);
+  const int winH = std::min(400, ViewportH - 40);
 
   Window->SetBounds(
-      {(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
 
-  dialogFrame_->SetBounds(Window->GetClientArea());
+  DialogFrame->SetBounds(Window->GetClientArea());
 
-  dialogFrame_->LayoutFrame();
+  DialogFrame->LayoutFrame();
 
-  if (emptyLabel_)
+  if (EmptyLabel)
   {
 
     const GuiRect client = Window->GetClientArea();
 
-    emptyLabel_->SetBounds({client.x + 16, client.y + 24, client.w - 32, 24});
+    EmptyLabel->SetBounds({client.X + 16, client.Y + 24, client.W - 32, 24});
   }
 }
 

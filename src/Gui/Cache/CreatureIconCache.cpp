@@ -1,11 +1,11 @@
 #include "Gui/Cache/CreatureIconCache.h"
-#include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Render/Engine/ShaderManager.h"
-#include "Creatures/Definition/SkinDefinitionStorage.h"
 
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -22,8 +22,8 @@ UCreatureIconCache::UCreatureIconCache(
     std::shared_ptr<USkinDefinitionStorage> skins,
     std::shared_ptr<UCreatureTextureStorage> textures,
     std::shared_ptr<UShaderManager> shader_manager)
-    : species_(std::move(species)), skins_(std::move(skins)),
-      textures_(std::move(textures)), ShaderManager(std::move(shader_manager))
+    : Species(std::move(species)), Skins(std::move(skins)),
+      Textures(std::move(textures)), ShaderManager(std::move(shader_manager))
 {
 }
 
@@ -65,7 +65,7 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
 
 bool UCreatureIconCache::InitCubeMesh()
 {
-  if (cubeVao_ != 0)
+  if (CubeVao != 0)
   {
     return true;
   }
@@ -75,10 +75,10 @@ bool UCreatureIconCache::InitCubeMesh()
   BuildCreatureBoxTexCoords(boxUv);
   BuildCreatureHeadTexCoords(headUv);
   BuildCreatureBodyTexCoords(bodyUv);
-  UploadIconCubeMesh(cubeVao_, cubeVbo_, cubeEbo_, boxUv);
-  UploadIconCubeMesh(headCubeVao_, headCubeVbo_, headCubeEbo_, headUv);
-  UploadIconCubeMesh(bodyCubeVao_, bodyCubeVbo_, bodyCubeEbo_, bodyUv);
-  return cubeVao_ != 0 && headCubeVao_ != 0 && bodyCubeVao_ != 0;
+  UploadIconCubeMesh(CubeVao, CubeVbo, CubeEbo, boxUv);
+  UploadIconCubeMesh(HeadCubeVao, HeadCubeVbo, HeadCubeEbo, headUv);
+  UploadIconCubeMesh(BodyCubeVao, BodyCubeVbo, BodyCubeEbo, bodyUv);
+  return CubeVao != 0 && HeadCubeVao != 0 && BodyCubeVao != 0;
 }
 
 bool UCreatureIconCache::Initialize()
@@ -87,79 +87,79 @@ bool UCreatureIconCache::Initialize()
   {
     return false;
   }
-  shader_ = ShaderManager->CreateShader("creature_icon", "shaders/vshader.glsl",
+  Shader = ShaderManager->CreateShader("creature_icon", "shaders/vshader.glsl",
                                         "shaders/fshader.glsl");
-  if (!shader_ || !shader_->IsValid() || !InitCubeMesh())
+  if (!Shader || !Shader->IsValid() || !InitCubeMesh())
   {
     return false;
   }
 
-  glGenFramebuffers(1, &fbo_);
-  glGenTextures(1, &colorTex_);
-  glBindTexture(GL_TEXTURE_2D, colorTex_);
+  glGenFramebuffers(1, &Fbo);
+  glGenTextures(1, &ColorTex);
+  glBindTexture(GL_TEXTURE_2D, ColorTex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         colorTex_, 0);
+                         ColorTex, 0);
 
-  glGenRenderbuffers(1, &depthRbo_);
-  glBindRenderbuffer(GL_RENDERBUFFER, depthRbo_);
+  glGenRenderbuffers(1, &DepthRbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kIconSize,
                         kIconSize);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, depthRbo_);
+                            GL_RENDERBUFFER, DepthRbo);
 
   const bool complete =
       glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  if (species_)
+  if (Species)
   {
-    warmupQueue_ = species_->ListSpawnable();
-    for (const std::string &id : species_->ListAllIds())
+    WarmupQueue = Species->ListSpawnable();
+    for (const std::string &Id : Species->ListAllIds())
     {
-      if (const CreatureDefinition *def = species_->Get(id))
+      if (const CreatureDefinition *def = Species->Get(Id))
       {
         if (def->role == CreatureRole::ControlledDefault)
         {
-          warmupQueue_.push_back(id);
+          WarmupQueue.push_back(Id);
         }
       }
     }
   }
-  if (skins_)
+  if (Skins)
   {
-    for (const std::string &id : skins_->ListEquippable())
+    for (const std::string &Id : Skins->ListEquippable())
     {
-      warmupQueue_.push_back("skin:" + id);
+      WarmupQueue.push_back("skin:" + Id);
     }
   }
-  warmupIndex_ = 0;
+  WarmupIndex = 0;
   return complete;
 }
 
 void UCreatureIconCache::Shutdown()
 {
-  for (const auto &entry : speciesCache_)
+  for (const auto &entry : SpeciesCache)
   {
     if (entry.second != 0)
     {
       glDeleteTextures(1, &entry.second);
     }
   }
-  for (const auto &entry : skinCache_)
+  for (const auto &entry : SkinCache)
   {
     if (entry.second == 0)
     {
       continue;
     }
-    if (textures_)
+    if (Textures)
     {
       const GLuint diffuse =
-          textures_->GetTexture("skin/" + entry.first + "/diffuse");
+          Textures->GetTexture("skin/" + entry.first + "/diffuse");
       if (entry.second == diffuse)
       {
         continue;
@@ -167,68 +167,68 @@ void UCreatureIconCache::Shutdown()
     }
     glDeleteTextures(1, &entry.second);
   }
-  speciesCache_.clear();
-  skinCache_.clear();
-  shader_.reset();
-  if (depthRbo_ != 0)
+  SpeciesCache.clear();
+  SkinCache.clear();
+  Shader.reset();
+  if (DepthRbo != 0)
   {
-    glDeleteRenderbuffers(1, &depthRbo_);
-    depthRbo_ = 0;
+    glDeleteRenderbuffers(1, &DepthRbo);
+    DepthRbo = 0;
   }
-  if (colorTex_ != 0)
+  if (ColorTex != 0)
   {
-    glDeleteTextures(1, &colorTex_);
-    colorTex_ = 0;
+    glDeleteTextures(1, &ColorTex);
+    ColorTex = 0;
   }
-  if (fbo_ != 0)
+  if (Fbo != 0)
   {
-    glDeleteFramebuffers(1, &fbo_);
-    fbo_ = 0;
+    glDeleteFramebuffers(1, &Fbo);
+    Fbo = 0;
   }
-  if (bodyCubeEbo_ != 0)
+  if (BodyCubeEbo != 0)
   {
-    glDeleteBuffers(1, &bodyCubeEbo_);
-    bodyCubeEbo_ = 0;
+    glDeleteBuffers(1, &BodyCubeEbo);
+    BodyCubeEbo = 0;
   }
-  if (bodyCubeVbo_ != 0)
+  if (BodyCubeVbo != 0)
   {
-    glDeleteBuffers(1, &bodyCubeVbo_);
-    bodyCubeVbo_ = 0;
+    glDeleteBuffers(1, &BodyCubeVbo);
+    BodyCubeVbo = 0;
   }
-  if (bodyCubeVao_ != 0)
+  if (BodyCubeVao != 0)
   {
-    glDeleteVertexArrays(1, &bodyCubeVao_);
-    bodyCubeVao_ = 0;
+    glDeleteVertexArrays(1, &BodyCubeVao);
+    BodyCubeVao = 0;
   }
-  if (headCubeEbo_ != 0)
+  if (HeadCubeEbo != 0)
   {
-    glDeleteBuffers(1, &headCubeEbo_);
-    headCubeEbo_ = 0;
+    glDeleteBuffers(1, &HeadCubeEbo);
+    HeadCubeEbo = 0;
   }
-  if (headCubeVbo_ != 0)
+  if (HeadCubeVbo != 0)
   {
-    glDeleteBuffers(1, &headCubeVbo_);
-    headCubeVbo_ = 0;
+    glDeleteBuffers(1, &HeadCubeVbo);
+    HeadCubeVbo = 0;
   }
-  if (headCubeVao_ != 0)
+  if (HeadCubeVao != 0)
   {
-    glDeleteVertexArrays(1, &headCubeVao_);
-    headCubeVao_ = 0;
+    glDeleteVertexArrays(1, &HeadCubeVao);
+    HeadCubeVao = 0;
   }
-  if (cubeEbo_ != 0)
+  if (CubeEbo != 0)
   {
-    glDeleteBuffers(1, &cubeEbo_);
-    cubeEbo_ = 0;
+    glDeleteBuffers(1, &CubeEbo);
+    CubeEbo = 0;
   }
-  if (cubeVbo_ != 0)
+  if (CubeVbo != 0)
   {
-    glDeleteBuffers(1, &cubeVbo_);
-    cubeVbo_ = 0;
+    glDeleteBuffers(1, &CubeVbo);
+    CubeVbo = 0;
   }
-  if (cubeVao_ != 0)
+  if (CubeVao != 0)
   {
-    glDeleteVertexArrays(1, &cubeVao_);
-    cubeVao_ = 0;
+    glDeleteVertexArrays(1, &CubeVao);
+    CubeVao = 0;
   }
 }
 
@@ -237,7 +237,7 @@ GLuint UCreatureIconCache::RenderSolidColorIcon(float r, float g, float b,
 {
   GLuint tex = 0;
   glGenTextures(1, &tex);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          tex, 0);
   glViewport(0, 0, kIconSize, kIconSize);
@@ -253,18 +253,18 @@ GLuint UCreatureIconCache::RenderSolidColorIcon(float r, float g, float b,
 
 GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
 {
-  if (!species_ || !skins_ || !textures_ || !shader_ || fbo_ == 0)
+  if (!Species || !Skins || !Textures || !Shader || Fbo == 0)
   {
     return 0;
   }
-  const CreatureDefinition *def = species_->Get(speciesId);
+  const CreatureDefinition *def = Species->Get(speciesId);
   if (!def)
   {
     return 0;
   }
 
   const ResolvedCreatureAppearance appearance =
-      ResolveCreatureAppearance(*species_, *skins_, speciesId, "");
+      ResolveCreatureAppearance(*Species, *Skins, speciesId, "");
 
   GLuint iconTex = 0;
   glGenTextures(1, &iconTex);
@@ -275,7 +275,7 @@ GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          iconTex, 0);
   glViewport(0, 0, kIconSize, kIconSize);
@@ -292,47 +292,47 @@ GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
       glm::lookAt(glm::vec3(1.8f, 1.4f, 1.8f), glm::vec3(0.0f),
                   glm::vec3(0.0f, 1.0f, 0.0f));
 
-  shader_->Use();
-  shader_->SetInt("texture0", 0);
-  shader_->SetInt("uAnimFrame", 0);
-  shader_->SetInt("uAnimFrameCount", 1);
-  for (const ResolvedCreaturePart &part : appearance.parts)
+  Shader->Use();
+  Shader->SetInt("texture0", 0);
+  Shader->SetInt("uAnimFrame", 0);
+  Shader->SetInt("uAnimFrameCount", 1);
+  for (const ResolvedCreaturePart &part : appearance.Parts)
   {
-    const GLuint tex = textures_->GetTexture(part.textureAssetKey);
+    const GLuint tex = Textures->GetTexture(part.textureAssetKey);
     if (tex == 0)
     {
       continue;
     }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
-    GLuint partVao = cubeVao_;
+    GLuint partVao = CubeVao;
     if (part.partId == "head")
     {
-      partVao = headCubeVao_;
+      partVao = HeadCubeVao;
     }
     else if (part.partId == "torso")
     {
-      partVao = bodyCubeVao_;
+      partVao = BodyCubeVao;
     }
     glBindVertexArray(partVao);
     const glm::vec3 local = part.offsetBlocks * fitScale;
     const glm::mat4 model =
         glm::translate(glm::mat4(1.0f), local) *
         glm::scale(glm::mat4(1.0f), part.sizeBlocks * fitScale);
-    shader_->SetMat4("mvp_matrix", projection * view * model);
+    Shader->SetMat4("mvp_matrix", projection * view * model);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
   }
 
   glBindVertexArray(0);
-  shader_->Unuse();
+  Shader->Unuse();
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   return iconTex;
 }
 
 GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
 {
-  const auto it = speciesCache_.find(speciesId);
-  if (it != speciesCache_.end())
+  const auto it = SpeciesCache.find(speciesId);
+  if (it != SpeciesCache.end())
   {
     return it->second;
   }
@@ -340,46 +340,45 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
   if (tex == 0)
   {
     glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
-    if (species_)
+    if (Species)
     {
-      if (const CreatureDefinition *def = species_->Get(speciesId))
+      if (const CreatureDefinition *def = Species->Get(speciesId))
       {
         color = def->visual.wireframeColor;
       }
     }
     tex = RenderSolidColorIcon(color.r, color.g, color.b, color.a);
   }
-  speciesCache_[speciesId] = tex;
+  SpeciesCache[speciesId] = tex;
   return tex;
 }
 
 GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
 {
-  const auto it = skinCache_.find(skinId);
-  if (it != skinCache_.end())
+  const auto it = SkinCache.find(skinId);
+  if (it != SkinCache.end())
   {
     return it->second;
   }
-  if (textures_)
+  if (Textures)
   {
-    const GLuint existing =
-        textures_->GetTexture("skin/" + skinId + "/diffuse");
+    const GLuint existing = Textures->GetTexture("skin/" + skinId + "/diffuse");
     if (existing != 0)
     {
-      skinCache_[skinId] = existing;
+      SkinCache[skinId] = existing;
       return existing;
     }
   }
   glm::vec4 color{0.7f, 0.7f, 0.7f, 1.0f};
-  if (skins_)
+  if (Skins)
   {
-    if (const SkinDefinition *def = skins_->Get(skinId))
+    if (const SkinDefinition *def = Skins->Get(skinId))
     {
       color = def->iconFallbackColor;
     }
   }
   const GLuint tex = RenderSolidColorIcon(color.r, color.g, color.b, color.a);
-  skinCache_[skinId] = tex;
+  SkinCache[skinId] = tex;
   return tex;
 }
 
@@ -403,10 +402,10 @@ GLuint UCreatureIconCache::GetSkinIcon(const std::string &skinId)
 
 void UCreatureIconCache::WarmupNext(size_t count)
 {
-  for (size_t i = 0; i < count && warmupIndex_ < warmupQueue_.size();
-       ++i, ++warmupIndex_)
+  for (size_t i = 0; i < count && WarmupIndex < WarmupQueue.size();
+       ++i, ++WarmupIndex)
   {
-    const std::string &key = warmupQueue_[warmupIndex_];
+    const std::string &key = WarmupQueue[WarmupIndex];
     if (key.rfind("skin:", 0) == 0)
     {
       GetOrCreateSkinIcon(key.substr(5));

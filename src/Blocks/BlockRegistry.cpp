@@ -8,8 +8,8 @@ namespace cutum
 UBlockRegistry::UBlockRegistry(
     std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UBlockDefinitionStorage> definitions)
-    : textures_(std::move(textures)), definitions_(std::move(definitions)),
-      solidDefault_(BlockPhysicsProfile::Solid())
+    : Textures(std::move(textures)), Definitions(std::move(definitions)),
+      SolidDefault(BlockPhysicsProfile::Solid())
 {
   RebuildMaps();
 }
@@ -17,62 +17,62 @@ UBlockRegistry::UBlockRegistry(
 void UBlockRegistry::SetDefinitions(
     std::shared_ptr<UBlockDefinitionStorage> definitions)
 {
-  definitions_ = std::move(definitions);
+  Definitions = std::move(definitions);
 }
 
 void UBlockRegistry::Reload() { RebuildMaps(); }
 
 void UBlockRegistry::RebuildMaps()
 {
-  nameToId_.clear();
-  idToName_.clear();
-  if (!textures_)
+  NameToId.clear();
+  IdToName.clear();
+  if (!Textures)
   {
     return;
   }
-  for (const auto &entry : textures_->GetTextures())
+  for (const auto &entry : Textures->GetTextures())
   {
     const auto &cube = entry.second;
-    const BlockId id = static_cast<BlockId>(cube.GetTypeId());
-    if (id == BLOCK_AIR)
+    const BlockId Id = static_cast<BlockId>(cube.GetTypeId());
+    if (Id == BLOCK_AIR)
     {
       continue;
     }
-    nameToId_[cube.GetName()] = id;
-    idToName_[id] = cube.GetName();
+    NameToId[cube.GetName()] = Id;
+    IdToName[Id] = cube.GetName();
   }
 }
 
-BlockId UBlockRegistry::GetIdByTypeName(const std::string &name) const
+BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 {
-  auto it = nameToId_.find(name);
-  if (it != nameToId_.end())
+  auto it = NameToId.find(Name);
+  if (it != NameToId.end())
   {
     return it->second;
   }
-  if (textures_)
+  if (Textures)
   {
-    const size_t id = textures_->GetTypeIdByName(name);
-    if (id != 0)
+    const size_t Id = Textures->GetTypeIdByName(Name);
+    if (Id != 0)
     {
-      return static_cast<BlockId>(id);
+      return static_cast<BlockId>(Id);
     }
   }
   return BLOCK_AIR;
 }
 
-const std::string &UBlockRegistry::GetTypeNameById(BlockId id) const
+const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;
-  auto it = idToName_.find(id);
-  if (it != idToName_.end())
+  auto it = IdToName.find(Id);
+  if (it != IdToName.end())
   {
     return it->second;
   }
-  if (textures_)
+  if (Textures)
   {
-    const auto texIt = textures_->GetTextures().find(static_cast<size_t>(id));
-    if (texIt != textures_->GetTextures().end())
+    const auto texIt = Textures->GetTextures().find(static_cast<size_t>(Id));
+    if (texIt != Textures->GetTextures().end())
     {
       return texIt->second.GetName();
     }
@@ -80,81 +80,81 @@ const std::string &UBlockRegistry::GetTypeNameById(BlockId id) const
   return empty;
 }
 
-const BlockPhysicsProfile &UBlockRegistry::Physics(BlockId id) const
+const BlockPhysicsProfile &UBlockRegistry::Physics(BlockId Id) const
 {
-  if (id == BLOCK_AIR)
+  if (Id == BLOCK_AIR)
   {
-    return solidDefault_;
+    return SolidDefault;
   }
-  if (definitions_)
+  if (Definitions)
   {
-    if (const BlockDefinition *def = definitions_->GetById(id))
+    if (const BlockDefinition *def = Definitions->GetById(Id))
     {
-      return def->physics;
+      return def->Physics;
     }
   }
-  return solidDefault_;
+  return SolidDefault;
 }
 
-bool UBlockRegistry::BlocksMovement(BlockId id) const
+bool UBlockRegistry::BlocksMovement(BlockId Id) const
 {
-  if (id == BLOCK_AIR)
+  if (Id == BLOCK_AIR)
   {
     return false;
   }
-  return Physics(id).movement.occupancy >= 1.0f;
+  return Physics(Id).Movement.Occupancy >= 1.0f;
 }
 
-bool UBlockRegistry::IsSolid(BlockId id) const { return BlocksMovement(id); }
+bool UBlockRegistry::IsSolid(BlockId Id) const { return BlocksMovement(Id); }
 
-bool UBlockRegistry::IsTransparent(BlockId id) const
+bool UBlockRegistry::IsTransparent(BlockId Id) const
 {
-  if (id == BLOCK_AIR)
+  if (Id == BLOCK_AIR)
   {
     return true;
   }
-  if (definitions_)
+  if (Definitions)
   {
-    if (const BlockDefinition *def = definitions_->GetById(id))
+    if (const BlockDefinition *def = Definitions->GetById(Id))
     {
-      return def->render.transparent;
+      return def->Render.Transparent;
     }
   }
   return false;
 }
 
-BlockRenderStyle UBlockRegistry::GetRenderStyle(BlockId id) const
+BlockRenderStyle UBlockRegistry::GetRenderStyle(BlockId Id) const
 {
-  if (definitions_)
+  if (Definitions)
   {
-    if (const BlockDefinition *def = definitions_->GetById(id))
+    if (const BlockDefinition *def = Definitions->GetById(Id))
     {
-      return def->render.style;
+      return def->Render.Style;
     }
   }
   return BlockRenderStyle::UCube;
 }
 
-const FluidViewProfile *UBlockRegistry::GetFluidView(BlockId id) const
+const FluidViewProfile *UBlockRegistry::GetFluidView(BlockId Id) const
 {
-  if (definitions_)
+  if (Definitions)
   {
-    if (const BlockDefinition *def = definitions_->GetById(id))
+    if (const BlockDefinition *def = Definitions->GetById(Id))
     {
-      if (def->render.style == BlockRenderStyle::Fluid ||
-          def->render.style == BlockRenderStyle::Cross ||
-          def->render.fluidView.overlayAlpha > 0.0f)
+      if (def->Render.Style == BlockRenderStyle::Fluid ||
+          def->Render.Style == BlockRenderStyle::Cross ||
+          def->Render.FluidView.OverlayAlpha > 0.0f)
       {
-        return &def->render.fluidView;
+        return &def->Render.FluidView;
       }
     }
   }
   return nullptr;
 }
 
-size_t UBlockRegistry::GetTextureId(BlockId id) const
+size_t UBlockRegistry::GetTextureId(BlockId Id) const
 {
-  return static_cast<size_t>(id);
+  return static_cast<size_t>(Id);
 }
 
 } // namespace cutum

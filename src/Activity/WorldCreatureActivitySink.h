@@ -14,10 +14,10 @@ public:
   explicit UWorldCreatureActivitySink(UWorld &world);
 
   std::optional<CreatureActivityView>
-  GetCreatureView(CreatureId id) const override;
+  GetCreatureView(CreatureId Id) const override;
   std::optional<CreatureBehaviorSnapshot>
-  GetBehaviorSnapshot(CreatureId id) const override;
-  void SetIntent(CreatureId id, const CreatureIntent &intent) override;
+  GetBehaviorSnapshot(CreatureId Id) const override;
+  void SetIntent(CreatureId Id, const CreatureIntent &intent) override;
 
 private:
   UWorld &World;

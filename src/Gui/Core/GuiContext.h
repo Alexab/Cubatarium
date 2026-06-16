@@ -27,7 +27,7 @@ public:
   void Shutdown();
 
   void SetScreen(std::unique_ptr<UGuiScreenBase> screen);
-  UGuiScreenBase *GetScreen() { return activeScreen_.get(); }
+  UGuiScreenBase *GetScreen() { return ActiveScreen.get(); }
 
   void Update(double dt);
   void NotifyViewport(int WindowWidth, int WindowHeight, int insetLeft = 0,
@@ -49,23 +49,23 @@ public:
   bool WantsCaptureKeyboard() const;
   void ClearInputState();
 
-  UGuiRenderer &GetRenderer() { return *renderer_; }
-  const GuiTheme &GetTheme() const { return theme_; }
+  UGuiRenderer &GetRenderer() { return *Renderer; }
+  const GuiTheme &GetTheme() const { return Theme; }
 
   void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
   IGuiClipboard *GetClipboard() const { return Clipboard; }
 
   void ApplyUiScale(float scale);
-  float GetUiScale() const { return uiScale_; }
+  float GetUiScale() const { return UiScale; }
 
 private:
-  GuiTheme baseTheme_;
-  float uiScale_{1.f};
+  GuiTheme BaseTheme;
+  float UiScale{1.f};
   IGuiClipboard *Clipboard{nullptr};
-  GuiTheme theme_;
-  std::unique_ptr<UGuiRenderer> renderer_;
-  std::unique_ptr<UGuiInputRouter> inputRouter_;
-  std::unique_ptr<UGuiScreenBase> activeScreen_;
+  GuiTheme Theme;
+  std::unique_ptr<UGuiRenderer> Renderer;
+  std::unique_ptr<UGuiInputRouter> InputRouter;
+  std::unique_ptr<UGuiScreenBase> ActiveScreen;
 };
 
 } // namespace cutum

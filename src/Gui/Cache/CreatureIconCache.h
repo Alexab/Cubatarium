@@ -39,29 +39,29 @@ private:
   GLuint GetOrCreateSpeciesIcon(const std::string &speciesId);
   GLuint GetOrCreateSkinIcon(const std::string &skinId);
 
-  std::shared_ptr<UCreatureDefinitionStorage> species_;
-  std::shared_ptr<USkinDefinitionStorage> skins_;
-  std::shared_ptr<UCreatureTextureStorage> textures_;
+  std::shared_ptr<UCreatureDefinitionStorage> Species;
+  std::shared_ptr<USkinDefinitionStorage> Skins;
+  std::shared_ptr<UCreatureTextureStorage> Textures;
   std::shared_ptr<UShaderManager> ShaderManager;
-  std::shared_ptr<class UShaderProgram> shader_;
+  std::shared_ptr<class UShaderProgram> Shader;
 
-  std::unordered_map<std::string, GLuint> speciesCache_;
-  std::unordered_map<std::string, GLuint> skinCache_;
-  std::vector<std::string> warmupQueue_;
-  size_t warmupIndex_{0};
+  std::unordered_map<std::string, GLuint> SpeciesCache;
+  std::unordered_map<std::string, GLuint> SkinCache;
+  std::vector<std::string> WarmupQueue;
+  size_t WarmupIndex{0};
 
-  GLuint fbo_{0};
-  GLuint colorTex_{0};
-  GLuint depthRbo_{0};
-  GLuint cubeVao_{0};
-  GLuint cubeVbo_{0};
-  GLuint cubeEbo_{0};
-  GLuint headCubeVao_{0};
-  GLuint headCubeVbo_{0};
-  GLuint headCubeEbo_{0};
-  GLuint bodyCubeVao_{0};
-  GLuint bodyCubeVbo_{0};
-  GLuint bodyCubeEbo_{0};
+  GLuint Fbo{0};
+  GLuint ColorTex{0};
+  GLuint DepthRbo{0};
+  GLuint CubeVao{0};
+  GLuint CubeVbo{0};
+  GLuint CubeEbo{0};
+  GLuint HeadCubeVao{0};
+  GLuint HeadCubeVbo{0};
+  GLuint HeadCubeEbo{0};
+  GLuint BodyCubeVao{0};
+  GLuint BodyCubeVbo{0};
+  GLuint BodyCubeEbo{0};
   static constexpr int kIconSize = 64;
 };
 

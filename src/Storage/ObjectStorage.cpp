@@ -4,8 +4,8 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "Storage/ObjectStorage.h"
-#include "Storage/ObjectImplementation.h"
 #include "Render/Textures/TextureCube.h"
+#include "Storage/ObjectImplementation.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -58,11 +58,11 @@ void UObjectStorage::Load(const std::string &objects_path)
       auto ext = entry.path().extension();
       if (ext.string() == ".json")
       {
-        std::string name;
-        size_t id;
+        std::string Name;
+        size_t Id;
         std::string class_name;
         std::vector<std::string> cube_textures;
-        if (LoadJson(entry.path().string(), name, id, class_name,
+        if (LoadJson(entry.path().string(), Name, Id, class_name,
                      cube_textures))
         {
           if (class_name == "USingleCube" && cube_textures.size() > 0)
@@ -72,17 +72,17 @@ void UObjectStorage::Load(const std::string &objects_path)
                 TextureCubeInstance->GetTypeIdByName(texture_name);
             if (texture_cube_id == 0)
             {
-              std::cerr << "Texture id for name " << texture_name
+              std::cerr << "Texture Id for Name " << texture_name
                         << "not found";
               continue;
             }
             UObjectPrototype object_description(
-                name, id, std::make_shared<USingleCube>(texture_cube_id));
+                Name, Id, std::make_shared<USingleCube>(texture_cube_id));
             AddPrototype(object_description);
             loaded_count++;
 #ifdef CUBATARIUM_DEBUG
             std::cout << "UObjectStorage::Load: Added USingleCube prototype '"
-                      << name << "'" << std::endl;
+                      << Name << "'" << std::endl;
 #endif
           }
           else if (class_name == "UTerrainPlane" && cube_textures.size() > 0)
@@ -92,12 +92,12 @@ void UObjectStorage::Load(const std::string &objects_path)
                 TextureCubeInstance->GetTypeIdByName(texture_name);
             if (texture_cube_id == 0)
             {
-              std::cerr << "Texture id for name " << texture_name
+              std::cerr << "Texture Id for Name " << texture_name
                         << "not found";
               continue;
             }
             UObjectPrototype object_description(
-                name, id, std::make_shared<UTerrainPlane>(30, 30));
+                Name, Id, std::make_shared<UTerrainPlane>(30, 30));
             std::dynamic_pointer_cast<UTerrainPlane>(
                 object_description.GetSample())
                 ->Generate(texture_cube_id);
@@ -105,7 +105,7 @@ void UObjectStorage::Load(const std::string &objects_path)
             loaded_count++;
 #ifdef CUBATARIUM_DEBUG
             std::cout << "UObjectStorage::Load: Added UTerrainPlane prototype '"
-                      << name << "'" << std::endl;
+                      << Name << "'" << std::endl;
 #endif
           }
         }
@@ -151,7 +151,7 @@ UObjectStorage::GetPrototype(const std::string &type_name) const
   auto it = Prototypes.find(type_id);
   if (it == Prototypes.end())
   {
-    std::cerr << "UObjectStorage::GetPrototype: missing prototype id "
+    std::cerr << "UObjectStorage::GetPrototype: missing prototype Id "
               << type_id << std::endl;
     return UnknownPrototype();
   }
@@ -195,8 +195,8 @@ std::string UObjectStorage::GetObjectTypeName(uint64_t type_id) const
   return std::string("");
 }
 
-bool UObjectStorage::LoadJson(const std::string &file_name, std::string &name,
-                              size_t &id, std::string &class_name,
+bool UObjectStorage::LoadJson(const std::string &file_name, std::string &Name,
+                              size_t &Id, std::string &class_name,
                               std::vector<std::string> &cube_textures)
 {
   std::string val;
@@ -227,8 +227,8 @@ bool UObjectStorage::LoadJson(const std::string &file_name, std::string &name,
         class_value.empty())
       return false;
 
-    name = name_value;
-    id = static_cast<size_t>(id_value);
+    Name = name_value;
+    Id = static_cast<size_t>(id_value);
     class_name = class_value;
 
     cube_textures.clear();

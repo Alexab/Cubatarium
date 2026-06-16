@@ -15,8 +15,8 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
 private:
-  UOverworldHeightSampler heightSampler_;
-  HeightPreset preset_;
+  UOverworldHeightSampler HeightSampler;
+  HeightPreset Preset;
 };
 
 } // namespace cutum

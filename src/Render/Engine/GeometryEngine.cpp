@@ -1,27 +1,27 @@
 
 #include "Render/Engine/GeometryEngine.h"
-#include "Blocks/BlockRegistry.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Camera/CameraPerspective.h"
 #include "App/Core.h"
+#include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
+#include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Pose/CreaturePoseParams.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/CreatureVisual.h"
-#include "World/Math/GridMath.h"
-#include "Storage/ObjectImplementation.h"
-#include "Storage/ObjectStorage.h"
-#include "Render/Engine/ShaderManager.h"
-#include "Creatures/Player/User.h"
+#include "Pose/CreaturePoseParams.h"
 #include "Pose/ICreaturePosePresenter.h"
+#include "Render/Engine/ShaderManager.h"
+#include "Render/GlIncludes.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
-#include "Render/GlIncludes.h"
+#include "Render/Camera/Camera.h"
+#include "Render/Camera/CameraPerspective.h"
+#include "Storage/ObjectImplementation.h"
+#include "Storage/ObjectStorage.h"
+#include "World/Math/GridMath.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -45,7 +45,7 @@ UGeometryEngine::UGeometryEngine(
       TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      baseSkyColor_(0.5f, 0.7f, 1.0f), smoothedSkyTint_(0.5f, 0.7f, 1.0f),
+      BaseSkyColor(0.5f, 0.7f, 1.0f), SmoothedSkyTint(0.5f, 0.7f, 1.0f),
       useGradientSky(false) // Use simple color by default
 {
 }
@@ -64,7 +64,7 @@ UGeometryEngine::~UGeometryEngine()
 void UGeometryEngine::SetCreatureTextureStorage(
     std::shared_ptr<UCreatureTextureStorage> storage)
 {
-  CreatureTextureStorageInstance_ = std::move(storage);
+  CreatureTextureStorage = std::move(storage);
 }
 
 bool UGeometryEngine::InitEngine()
@@ -87,7 +87,7 @@ bool UGeometryEngine::InitEngine()
     return false;
   }
 
-  blockBatchesValid_ = false;
+  BlockBatchesValid = false;
 
   // Initialize preview buffers
   InitPreviewBuffers();
@@ -220,12 +220,12 @@ float insetMix(float a, float b, float t, float inset) {
      float tx = voxelTile(wp.x);
      float ty = voxelTile(wp.y);
      float tz = voxelTile(wp.z);
-    if (face == 0) return vec2(insetMix(u0, u1, tx, inset.x), insetMix(1.0, 0.0, ty, inset.y));
-    if (face == 1) return vec2(insetMix(u0, u1, 1.0 - tz, inset.x), insetMix(1.0, 0.0, ty, inset.y));
-    if (face == 2) return vec2(insetMix(u0, u1, 1.0 - tx, inset.x), insetMix(1.0, 0.0, ty, inset.y));
-    if (face == 3) return vec2(insetMix(u0, u1, tz, inset.x), insetMix(1.0, 0.0, ty, inset.y));
-    if (face == 4) return vec2(insetMix(u0, u1, tx, inset.x), insetMix(0.0, 1.0, 1.0 - tz, inset.y));
-    return vec2(insetMix(u0, u1, tx, inset.x), insetMix(0.0, 1.0, tz, inset.y));
+    if (face == 0) return vec2(insetMix(u0, u1, tx, inset.X), insetMix(1.0, 0.0, ty, inset.Y));
+    if (face == 1) return vec2(insetMix(u0, u1, 1.0 - tz, inset.X), insetMix(1.0, 0.0, ty, inset.Y));
+    if (face == 2) return vec2(insetMix(u0, u1, 1.0 - tx, inset.X), insetMix(1.0, 0.0, ty, inset.Y));
+    if (face == 3) return vec2(insetMix(u0, u1, tz, inset.X), insetMix(1.0, 0.0, ty, inset.Y));
+    if (face == 4) return vec2(insetMix(u0, u1, tx, inset.X), insetMix(0.0, 1.0, 1.0 - tz, inset.Y));
+    return vec2(insetMix(u0, u1, tx, inset.X), insetMix(0.0, 1.0, tz, inset.Y));
  }
  void main() {
      vec4 worldPos = instanceModel * vec4(aPos, 1.0);
@@ -286,11 +286,11 @@ void UGeometryEngine::Paint(int width_size, int height_size,
 {
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    animationClock_.Tick(static_cast<float>(camera->GetDeltaTime()));
+    AnimationClock.Tick(static_cast<float>(camera->GetDeltaTime()));
   }
   (void)view_duration;
   DrawCubeGeometry();
-  if (overlayTintAlpha_ > 0.01f)
+  if (OverlayTintAlpha > 0.01f)
   {
     RenderFluidOverlay(width_size, height_size);
   }
@@ -351,18 +351,18 @@ void UGeometryEngine::DrawCubeGeometry()
   const size_t renderCount =
       useGreedyMesh ? WorldInstance->GetGreedyVertexCount()
                     : WorldInstance->GetBlockRenderInstances().size();
-  const bool useBatchCache = Render.batchCache && !useGreedyMesh;
+  const bool useBatchCache = Render.BatchCache && !useGreedyMesh;
 
   if (useGreedyMesh)
   {
     const auto &greedyBatches = WorldInstance->GetGreedyRenderBatches();
-    if (!useBatchCache || !blockBatchesValid_ ||
-        greedyBatches.size() != cachedInstanceCount_ ||
-        meshRevision != cachedMeshRevision_)
+    if (!useBatchCache || !BlockBatchesValid ||
+        greedyBatches.size() != CachedInstanceCount ||
+        meshRevision != CachedMeshRevision)
     {
-      cachedInstanceCount_ = greedyBatches.size();
-      cachedMeshRevision_ = meshRevision;
-      blockBatchesValid_ = true;
+      CachedInstanceCount = greedyBatches.size();
+      CachedMeshRevision = meshRevision;
+      BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
     const uint64_t cullRev = WorldInstance->GetCullRevision();
@@ -395,14 +395,14 @@ void UGeometryEngine::DrawCubeGeometry()
   else
   {
     const auto &blockInstances = WorldInstance->GetBlockRenderInstances();
-    if (!useBatchCache || !blockBatchesValid_ ||
-        renderCount != cachedInstanceCount_ ||
-        meshRevision != cachedMeshRevision_)
+    if (!useBatchCache || !BlockBatchesValid ||
+        renderCount != CachedInstanceCount ||
+        meshRevision != CachedMeshRevision)
     {
       PrepareRenderBatchesFromBlocks(blockInstances, textures);
-      cachedInstanceCount_ = renderCount;
-      cachedMeshRevision_ = meshRevision;
-      blockBatchesValid_ = true;
+      CachedInstanceCount = renderCount;
+      CachedMeshRevision = meshRevision;
+      BlockBatchesValid = true;
     }
     glm::mat4 dummy_mvp = camera->GetMvpMatrix();
     RenderBatches(dummy_mvp);
@@ -448,8 +448,8 @@ void UGeometryEngine::DrawCubeGeometry()
 void UGeometryEngine::ShowTransientMessage(const std::string &msg,
                                            double seconds)
 {
-  transientMessage_ = msg;
-  transientMessageUntil_ =
+  TransientMessage = msg;
+  TransientMessageUntil =
       std::chrono::duration<double>(
           std::chrono::steady_clock::now().time_since_epoch())
           .count() +
@@ -459,7 +459,7 @@ void UGeometryEngine::ShowTransientMessage(const std::string &msg,
 void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
 {
   Render = settings;
-  blockBatchesValid_ = false;
+  BlockBatchesValid = false;
   DestroyGreedyGpuBatches();
   DestroyFaceQuadBuffers();
 }
@@ -473,7 +473,7 @@ void UGeometryEngine::PrepareRenderBatchesFromBlocks(
 
   for (const auto &instance : instances)
   {
-    const size_t textureId = static_cast<size_t>(instance.id);
+    const size_t textureId = static_cast<size_t>(instance.Id);
     auto &batch = batchMap[textureId];
     batch.blockTypeId = textureId;
     if (batch.textureID == 0)
@@ -485,7 +485,7 @@ void UGeometryEngine::PrepareRenderBatchesFromBlocks(
       }
       batch.textureID = texIt->second.GetTextureId();
     }
-    batch.modelMatrices.push_back(instance.model);
+    batch.ModelMatrices.push_back(instance.model);
     batch.faceIndices.push_back(static_cast<float>(instance.faceIndex));
     batch.quadSizes.push_back(instance.quadSize);
   }
@@ -507,7 +507,7 @@ void UGeometryEngine::RenderBatches(const glm::mat4 &mvp_matrix)
 void UGeometryEngine::DrawBatch(const RenderBatch &batch,
                                 const glm::mat4 &mvp_matrix)
 {
-  if (batch.modelMatrices.empty() && batch.objects.empty())
+  if (batch.ModelMatrices.empty() && batch.objects.empty())
   {
     if (VerboseLogging)
       std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
@@ -515,7 +515,7 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   }
 
   if (VerboseLogging)
-    std::cout << "DrawBatch: Drawing " << batch.modelMatrices.size()
+    std::cout << "DrawBatch: Drawing " << batch.ModelMatrices.size()
               << " objects" << std::endl;
 
   glBindTexture(GL_TEXTURE_2D, batch.textureID);
@@ -544,8 +544,8 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   }
   else
   {
-    instanceMVPs.reserve(batch.modelMatrices.size());
-    for (const auto &model : batch.modelMatrices)
+    instanceMVPs.reserve(batch.ModelMatrices.size());
+    for (const auto &model : batch.ModelMatrices)
     {
       instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
                              model);
@@ -553,10 +553,10 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   }
 
   const bool isBlockBatch =
-      batch.objects.empty() && !batch.modelMatrices.empty();
+      batch.objects.empty() && !batch.ModelMatrices.empty();
   const bool drawFaceQuads =
       isBlockBatch && Render.UseFaceQuadDraw() &&
-      batch.faceIndices.size() == batch.modelMatrices.size();
+      batch.faceIndices.size() == batch.ModelMatrices.size();
   const GLsizei indexCount = drawFaceQuads ? 6 : 36;
   GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
 
@@ -597,13 +597,13 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
       float pad[3];
     };
     std::vector<BlockDrawInstance> blockInstances;
-    blockInstances.reserve(batch.modelMatrices.size());
+    blockInstances.reserve(batch.ModelMatrices.size());
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
     activeShader->SetMat4("uVP", vp);
-    for (size_t i = 0; i < batch.modelMatrices.size(); ++i)
+    for (size_t i = 0; i < batch.ModelMatrices.size(); ++i)
     {
       BlockDrawInstance inst;
-      inst.model = batch.modelMatrices[i];
+      inst.model = batch.ModelMatrices[i];
       inst.faceIndex = batch.faceIndices[i];
       inst.pad[0] = inst.pad[1] = inst.pad[2] = 0.0f;
       blockInstances.push_back(inst);
@@ -622,7 +622,7 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
 
   glBindVertexArray(vao);
   const GLsizei instanceCount =
-      drawFaceQuads ? static_cast<GLsizei>(batch.modelMatrices.size())
+      drawFaceQuads ? static_cast<GLsizei>(batch.ModelMatrices.size())
                     : static_cast<GLsizei>(instanceMVPs.size());
   if (instanceCount > 0)
   {
@@ -658,8 +658,8 @@ void UGeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache)
 
 void UGeometryEngine::DestroyGreedyGpuBatches()
 {
-  DestroyGreedyGpuPassCache(greedyGpuOpaque_);
-  DestroyGreedyGpuPassCache(greedyGpuTransparent_);
+  DestroyGreedyGpuPassCache(GreedyGpuOpaque);
+  DestroyGreedyGpuPassCache(GreedyGpuTransparent);
 }
 
 void UGeometryEngine::RefreshGreedyGpuBatches(
@@ -708,19 +708,19 @@ void UGeometryEngine::SetBlockAnimUniforms(
     const std::shared_ptr<UShaderProgram> &shader, BlockId blockId,
     const std::map<size_t, UTextureCube> &textures)
 {
-  int frameCount = 1;
+  int FrameCount = 1;
   const auto texIt = textures.find(static_cast<size_t>(blockId));
   if (texIt != textures.end())
   {
-    frameCount = static_cast<int>(texIt->second.GetNumTextureFrames());
+    FrameCount = static_cast<int>(texIt->second.GetNumTextureFrames());
   }
-  if (frameCount < 1)
+  if (FrameCount < 1)
   {
-    frameCount = 1;
+    FrameCount = 1;
   }
-  const int frame = animationClock_.CurrentFrame() % frameCount;
+  const int frame = AnimationClock.CurrentFrame() % FrameCount;
   shader->SetInt("uAnimFrame", frame);
-  shader->SetInt("uAnimFrameCount", frameCount);
+  shader->SetInt("uAnimFrameCount", FrameCount);
 }
 
 void UGeometryEngine::PrepareFrameRendering()
@@ -736,10 +736,10 @@ void UGeometryEngine::PrepareFrameRendering()
   const bool cameraInFluid =
       WorldInstance->IsCameraInsideFluid(camera->GetPosition(), &eyeFluid);
 
-  glm::vec3 targetSky = baseSkyColor_;
-  fogEnabled_ = 0.0f;
-  overlayTintAlpha_ = 0.0f;
-  overlayBlockId_ = BLOCK_AIR;
+  glm::vec3 targetSky = BaseSkyColor;
+  FogEnabled = 0.0f;
+  OverlayTintAlpha = 0.0f;
+  OverlayBlockId = BLOCK_AIR;
 
   const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
   if (cameraInFluid)
@@ -748,12 +748,12 @@ void UGeometryEngine::PrepareFrameRendering()
     {
       if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid)
       {
-        fogEnabled_ = 1.0f;
-        fogStart_ = fv->fogStart;
-        fogEnd_ = fv->fogEnd;
-        fogMinBlend_ = fv->fogMinBlend;
-        smoothedFogColor_ = glm::mix(smoothedFogColor_, fv->fogColor, 0.15f);
-        targetSky = fv->fogColor;
+        FogEnabled = 1.0f;
+        FogStart = fv->FogStart;
+        FogEnd = fv->FogEnd;
+        FogMinBlend = fv->FogMinBlend;
+        SmoothedFogColor = glm::mix(SmoothedFogColor, fv->FogColor, 0.15f);
+        targetSky = fv->FogColor;
       }
     }
   }
@@ -761,30 +761,30 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(fluid.dominantFluid))
     {
-      if (fv->overlayAlpha > 0.01f &&
+      if (fv->OverlayAlpha > 0.01f &&
           registry.GetRenderStyle(fluid.dominantFluid) ==
               BlockRenderStyle::Cross)
       {
-        overlayTintAlpha_ = fv->overlayAlpha;
-        overlayTintColor_ = fv->overlayColor;
-        overlayBlockId_ = fluid.dominantFluid;
+        OverlayTintAlpha = fv->OverlayAlpha;
+        OverlayTintColor = fv->OverlayColor;
+        OverlayBlockId = fluid.dominantFluid;
       }
     }
   }
 
-  smoothedSkyTint_ = glm::mix(smoothedSkyTint_, targetSky, 0.15f);
-  skyColor = glm::vec4(smoothedSkyTint_, 1.0f);
+  SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky, 0.15f);
+  skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
 }
 
 void UGeometryEngine::ApplyFluidFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos)
 {
   shader->SetVec3("uCameraPos", cameraPos);
-  shader->SetVec3("uFogColor", smoothedFogColor_);
-  shader->SetFloat("uFogStart", fogStart_);
-  shader->SetFloat("uFogEnd", fogEnd_);
-  shader->SetFloat("uFogMinBlend", fogMinBlend_);
-  shader->SetFloat("uFogEnabled", fogEnabled_);
+  shader->SetVec3("uFogColor", SmoothedFogColor);
+  shader->SetFloat("uFogStart", FogStart);
+  shader->SetFloat("uFogEnd", FogEnd);
+  shader->SetFloat("uFogMinBlend", FogMinBlend);
+  shader->SetFloat("uFogEnabled", FogEnabled);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -880,7 +880,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   filtered.reserve(batches.size());
   for (const GreedyMeshBatch &batch : batches)
   {
-    if (!batch.transparent)
+    if (!batch.Transparent)
     {
       filtered.push_back(batch);
     }
@@ -889,9 +889,9 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   {
     return;
   }
-  RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision,
-                          greedyGpuOpaque_, 0);
-  DrawGreedyGpuBatches(greedyGpuOpaque_, vp, textures, false,
+  RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, GreedyGpuOpaque,
+                          0);
+  DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false,
                        GreedyShaderMode::TransparentColor, 0.0f);
 }
 
@@ -902,34 +902,34 @@ void UGeometryEngine::PrepareTransparent(
   filtered.reserve(ctx.allBatches.size());
   for (const GreedyMeshBatch &batch : ctx.allBatches)
   {
-    if (batch.transparent)
+    if (batch.Transparent)
     {
       filtered.push_back(batch);
     }
   }
   if (filtered.empty())
   {
-    greedyGpuTransparent_.batches.clear();
-    preparedTransparentTextures_ = nullptr;
+    GreedyGpuTransparent.batches.clear();
+    PreparedTransparentTextures = nullptr;
     return;
   }
   SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
   RefreshGreedyGpuBatches(filtered, ctx.meshRevision, ctx.cullRevision,
-                          greedyGpuTransparent_, sortRevision);
-  preparedTransparentVp_ = ctx.viewProjection;
-  preparedTransparentTextures_ = &ctx.textures;
+                          GreedyGpuTransparent, sortRevision);
+  PreparedTransparentVp = ctx.viewProjection;
+  PreparedTransparentTextures = &ctx.textures;
 }
 
 void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
                                               float shellAlpha)
 {
-  if (!preparedTransparentTextures_ || greedyGpuTransparent_.batches.empty())
+  if (!PreparedTransparentTextures || GreedyGpuTransparent.batches.empty())
   {
     return;
   }
-  DrawGreedyGpuBatches(greedyGpuTransparent_, preparedTransparentVp_,
-                       *preparedTransparentTextures_, true, mode, shellAlpha);
+  DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
+                       *PreparedTransparentTextures, true, mode, shellAlpha);
 }
 
 bool UGeometryEngine::InitGreedyMeshBuffers()
@@ -1196,7 +1196,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 {
   (void)width;
   (void)height;
-  if (!overlayShader || overlayBlockId_ == BLOCK_AIR ||
+  if (!overlayShader || OverlayBlockId == BLOCK_AIR ||
       !TextureCubeStorageInstance)
   {
     return;
@@ -1206,7 +1206,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
     return;
   }
   const auto textures = TextureCubeStorageInstance->GetTextures();
-  const auto texIt = textures.find(static_cast<size_t>(overlayBlockId_));
+  const auto texIt = textures.find(static_cast<size_t>(OverlayBlockId));
   if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
   {
     return;
@@ -1223,9 +1223,9 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 
   overlayShader->Use();
   overlayShader->SetInt("texture0", 0);
-  SetBlockAnimUniforms(overlayShader, overlayBlockId_, textures);
-  overlayShader->SetVec3("uTintColor", overlayTintColor_);
-  overlayShader->SetFloat("uTintAlpha", overlayTintAlpha_);
+  SetBlockAnimUniforms(overlayShader, OverlayBlockId, textures);
+  overlayShader->SetVec3("uTintColor", OverlayTintColor);
+  overlayShader->SetFloat("uTintAlpha", OverlayTintAlpha);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
   glBindVertexArray(overlayVAO);
@@ -1250,15 +1250,15 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 // Methods for sky color management
 void UGeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
-  baseSkyColor_ = glm::vec3(r, g, b);
-  smoothedSkyTint_ = baseSkyColor_;
+  BaseSkyColor = glm::vec3(r, g, b);
+  SmoothedSkyTint = BaseSkyColor;
   skyColor = glm::vec4(r, g, b, a);
 }
 
 void UGeometryEngine::SetSkyColor(const glm::vec4 &color)
 {
-  baseSkyColor_ = glm::vec3(color);
-  smoothedSkyTint_ = baseSkyColor_;
+  BaseSkyColor = glm::vec3(color);
+  SmoothedSkyTint = BaseSkyColor;
   skyColor = color;
 }
 
@@ -1273,8 +1273,8 @@ bool UGeometryEngine::IsGradientSky() const { return useGradientSky; }
 
 void UGeometryEngine::SetOverlayMargins(int right, int top)
 {
-  overlayMarginRight_ = std::max(10, right);
-  overlayMarginTop_ = std::max(30, top);
+  OverlayMarginRight = std::max(10, right);
+  OverlayMarginTop = std::max(30, top);
 }
 
 void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
@@ -1330,13 +1330,14 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   }
 
   // Display text in top right corner
-  float y = static_cast<float>(height_size) - static_cast<float>(overlayMarginTop_);
+  float y =
+      static_cast<float>(height_size) - static_cast<float>(OverlayMarginTop);
   for (const auto &line : performanceLines)
   {
     // Calculate position for right alignment
     glm::vec2 textSize = textRenderer->GetTextSize(line, scale);
     float x = static_cast<float>(width_size) - textSize.x -
-              static_cast<float>(overlayMarginRight_);
+              static_cast<float>(OverlayMarginRight);
 
     textRenderer->RenderText(line, x, y, scale, textColor);
     y -= 18.0f; // Margin between lines
@@ -1403,7 +1404,7 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
   // Draw horizontal line
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-  // Create VAO and VBO for vertical line
+  // Create VAO and VBO for Vertical line
   GLuint verticalVAO, verticalVBO;
   glGenVertexArrays(1, &verticalVAO);
   glGenBuffers(1, &verticalVBO);
@@ -1416,7 +1417,7 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  // Draw vertical line
+  // Draw Vertical line
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   // Очищаем ресурсы
@@ -1493,10 +1494,9 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
   const double now = std::chrono::duration<double>(
                          std::chrono::steady_clock::now().time_since_epoch())
                          .count();
-  if (!transientMessage_.empty() && now < transientMessageUntil_)
+  if (!TransientMessage.empty() && now < TransientMessageUntil)
   {
-    textRenderer->RenderTextCentered(transientMessage_, 8.0f, 1.0f,
-                                     statusColor);
+    textRenderer->RenderTextCentered(TransientMessage, 8.0f, 1.0f, statusColor);
   }
 }
 
@@ -1687,7 +1687,7 @@ void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
   defaultShader->SetMat4("mvp_matrix", mvp);
   defaultShader->SetInt("texture0", 0);
 
-  // Pick texture by active block name if available
+  // Pick texture by Active block Name if available
   GLuint texId = previewTexture;
   if (WorldInstance && TextureCubeStorageInstance)
   {
@@ -2222,7 +2222,7 @@ void UGeometryEngine::RenderCreatures()
         CreatureDefinition fallback;
         if (!def)
         {
-          fallback.id = animType;
+          fallback.Id = animType;
           def = &fallback;
         }
         if (ICreatureVisual *visual = creature.GetVisual())
@@ -2240,7 +2240,7 @@ void UGeometryEngine::RenderCreatures()
           visual->SubmitDraw(*this, viewProj);
         }
 
-        if (Render.creatureDebugBounds)
+        if (Render.CreatureDebugBounds)
         {
           const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
           const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
@@ -2279,7 +2279,7 @@ void UGeometryEngine::RenderCreatures()
             const bool isControlled = creature.GetId() == controlledId;
             if (isControlled || controlledId == 0)
             {
-              std::cerr << "[creature_pose] id=" << creature.GetId()
+              std::cerr << "[creature_pose] Id=" << creature.GetId()
                         << " feetY=" << feetY << " groundY=" << groundY
                         << " delta=" << delta << " eyeY=" << eyeY << std::endl;
             }

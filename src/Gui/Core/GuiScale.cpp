@@ -34,7 +34,7 @@ float ComputeUiScale(int densityDpi, int screenWidthPx, int screenHeightPx)
         std::clamp(static_cast<float>(shortEdge) / 720.f, 0.55f, 1.15f);
     scale *= screenFactor;
 
-    // Keep touch targets near ~10% of the short edge (base button = 64px).
+    // Keep touch targets near ~10% of the short edge (base Button = 64px).
     const float maxByScreen = (static_cast<float>(shortEdge) * 0.10f) / 64.f;
     scale = std::min(scale, maxByScreen);
   }
@@ -54,14 +54,15 @@ GuiTheme ScaleGuiTheme(const GuiTheme &base, float scale)
     return base;
   }
   GuiTheme scaled = base;
-  scaled.fontSizeBody = ScalePx(base.fontSizeBody, scale);
-  scaled.padding = ScalePx(base.padding, scale);
-  scaled.hotbarSlotSize = ScalePx(base.hotbarSlotSize, scale);
-  scaled.hotbarSlotGap = ScalePx(base.hotbarSlotGap, scale);
-  scaled.borderThickness = std::max(1, ScalePx(base.borderThickness, scale));
-  scaled.focusRingThickness = std::max(1, ScalePx(base.focusRingThickness, scale));
-  scaled.slotSelectedBorderThickness =
-      std::max(1, ScalePx(base.slotSelectedBorderThickness, scale));
+  scaled.FontSizeBody = ScalePx(base.FontSizeBody, scale);
+  scaled.Padding = ScalePx(base.Padding, scale);
+  scaled.HotbarSlotSize = ScalePx(base.HotbarSlotSize, scale);
+  scaled.HotbarSlotGap = ScalePx(base.HotbarSlotGap, scale);
+  scaled.BorderThickness = std::max(1, ScalePx(base.BorderThickness, scale));
+  scaled.FocusRingThickness =
+      std::max(1, ScalePx(base.FocusRingThickness, scale));
+  scaled.SlotSelectedBorderThickness =
+      std::max(1, ScalePx(base.SlotSelectedBorderThickness, scale));
   return scaled;
 }
 

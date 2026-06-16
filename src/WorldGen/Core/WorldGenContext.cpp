@@ -1,8 +1,8 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Core/BlockWorld.h"
-#include "World/Chunks/ChunkManager.h"
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Core/BlockWorld.h"
 #include <iostream>
 
 namespace cutum
@@ -10,12 +10,12 @@ namespace cutum
 
 void WorldGenContext::ResolveBlockIds()
 {
-  auto resolve = [this](const char *name, BlockId &out)
+  auto resolve = [this](const char *Name, BlockId &out)
   {
-    out = Registry.GetIdByTypeName(name);
+    out = Registry.GetIdByTypeName(Name);
     if (out == BLOCK_AIR)
     {
-      std::cerr << "WorldGen: missing block type '" << name
+      std::cerr << "WorldGen: missing block type '" << Name
                 << "', fallback stone/air" << std::endl;
     }
   };
@@ -34,7 +34,7 @@ void WorldGenContext::ResolveBlockIds()
   resolve("water", Water);
   resolve("lava", Lava);
   resolve("fire", Fire);
-  if (Settings.fillWater && Water == BLOCK_AIR)
+  if (Settings.FillWater && Water == BLOCK_AIR)
   {
     std::cerr << "WorldGen: block type 'water' not loaded — fill_water will "
                  "have no effect"

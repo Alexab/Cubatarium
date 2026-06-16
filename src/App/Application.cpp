@@ -2,27 +2,27 @@
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 
+#include "App/Core.h"
+#include "App/Platform/CursorCapture.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
-#include "App/Core.h"
-#include "App/Platform/CursorCapture.h"
 #ifdef __ANDROID__
 #include "App/Platform/TouchInputBridge.h"
 #endif
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
 #endif
+#include "Creatures/Player/User.h"
 #include "Game/GameSession.h"
-#include "Render/Engine/GeometryEngine.h"
 #include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/PrefabIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
-#include "Gui/Cache/PrefabIconCache.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -32,13 +32,13 @@
 #include "Gui/Screens/SettingsScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiWidget.h"
-#include "World/Prefabs/Prefab.h"
+#include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
-#include "Render/Textures/TextureCube.h"
-#include "Creatures/Player/User.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Textures/TextureCube.h"
 #include "World/Core/World.h"
+#include "World/Prefabs/Prefab.h"
 
 #ifndef __ANDROID__
 #include <GLFW/glfw3.h>
@@ -66,10 +66,10 @@ UWindowManager *GetWindowManager(GLFWwindow *window)
   return static_cast<UWindowManager *>(glfwGetWindowUserPointer(window));
 }
 
-class GlfwClipboard : public IGuiClipboard
+class UGlfwClipboard : public IGuiClipboard
 {
 public:
-  explicit GlfwClipboard(GLFWwindow *window) : Window(window) {}
+  explicit UGlfwClipboard(GLFWwindow *window) : Window(window) {}
 
   std::string GetString() const override
   {
@@ -93,7 +93,7 @@ private:
   GLFWwindow *Window;
 };
 #else
-class NullClipboard : public IGuiClipboard
+class UNullClipboard : public IGuiClipboard
 {
 public:
   std::string GetString() const override { return {}; }
@@ -101,15 +101,15 @@ public:
 };
 #endif
 
-bool KeyNameIs(const std::string &name, int glfwKey)
+bool KeyNameIs(const std::string &Name, int glfwKey)
 {
-  if (name == "grave")
+  if (Name == "grave")
   {
     return glfwKey == GLFW_KEY_GRAVE_ACCENT;
   }
-  if (name.size() == 1)
+  if (Name.size() == 1)
   {
-    const char c = static_cast<char>(std::tolower(name[0]));
+    const char c = static_cast<char>(std::tolower(Name[0]));
     if (c >= 'a' && c <= 'z')
     {
       return glfwKey == GLFW_KEY_A + (c - 'a');
@@ -148,12 +148,12 @@ void UApplication::Startup(const std::string &configPath)
   }
   if (Geometry)
   {
-    Geometry->SetShowHud(Ui.legacyHud);
-    Geometry->SetShowPerformance(Ui.showPerformance);
+    Geometry->SetShowHud(Ui.LegacyHud);
+    Geometry->SetShowPerformance(Ui.ShowPerformance);
   }
   if (!GuiContext->Initialize(ShaderManager, TextRenderer))
   {
-    std::cerr << "Application: UGuiContext init failed" << std::endl;
+    std::cerr << "Application: GuiContext init failed" << std::endl;
     return;
   }
   if (Window)
@@ -170,9 +170,9 @@ void UApplication::Startup(const std::string &configPath)
   }
   if (Core && BlockDefinitions)
   {
-    const std::string typesPath = "content/types.json";
+    const std::string typesPath = "content/Types.json";
     GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
-                                   *Core->GetPrefabLibrary());
+                                    *Core->GetPrefabLibrary());
   }
   GameSession->RegisterCommands();
 
@@ -227,7 +227,7 @@ void UApplication::RequestEnterGame()
       if (auto user = World->GetCurrentUser())
       {
         World->EnsurePlayerHotbarCount(user,
-                                       static_cast<size_t>(Ui.hotbarCount));
+                                       static_cast<size_t>(Ui.HotbarCount));
       }
     }
     WorldSessionActive = true;
@@ -272,7 +272,7 @@ void UApplication::ShowMainMenu()
 
 void UApplication::SetHotbarCountSetting(int count)
 {
-  Ui.hotbarCount = std::clamp(count, 1, 2);
+  Ui.HotbarCount = std::clamp(count, 1, 2);
   if (Core)
   {
     AppSettingsSnapshot app = Core->GetAppSettings();
@@ -284,7 +284,7 @@ void UApplication::SetHotbarCountSetting(int count)
   {
     if (auto user = World->GetCurrentUser())
     {
-      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
+      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.HotbarCount));
     }
   }
 }
@@ -370,11 +370,11 @@ void UApplication::EnterGameAfterWorldChange()
     Ui = Core->GetUiSettings();
     if (auto user = World->GetCurrentUser())
     {
-      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
+      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.HotbarCount));
     }
     if (Geometry)
     {
-      Geometry->SetShowHud(Ui.legacyHud);
+      Geometry->SetShowHud(Ui.LegacyHud);
     }
     World->FinalizePlayerAfterWorldLoad();
   }
@@ -383,9 +383,9 @@ void UApplication::EnterGameAfterWorldChange()
   EnterInGameInputState();
 }
 
-void UApplication::ScheduleDeferredMenuAction(std::function<void()> action)
+void UApplication::ScheduleDeferredMenuAction(std::function<void()> Action)
 {
-  PendingMenuAction = std::move(action);
+  PendingMenuAction = std::move(Action);
 }
 
 void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
@@ -421,14 +421,14 @@ void UApplication::SaveAppAndTemplateSettings(
   Ui = Core->GetUiSettings();
   if (Geometry)
   {
-    Geometry->SetShowHud(Ui.legacyHud);
-    Geometry->SetShowPerformance(Ui.showPerformance);
+    Geometry->SetShowHud(Ui.LegacyHud);
+    Geometry->SetShowPerformance(Ui.ShowPerformance);
   }
   if (World)
   {
     if (auto user = World->GetCurrentUser())
     {
-      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.hotbarCount));
+      World->EnsurePlayerHotbarCount(user, static_cast<size_t>(Ui.HotbarCount));
     }
   }
   SyncCursorVisibility();
@@ -477,29 +477,30 @@ void UApplication::ShowInGameHud()
 #ifndef __ANDROID__
   if (Window && !Clipboard)
   {
-    Clipboard = std::make_unique<GlfwClipboard>(Window);
+    Clipboard = std::make_unique<UGlfwClipboard>(Window);
     GuiContext->SetClipboard(Clipboard.get());
   }
 #else
   if (!Clipboard)
   {
-    Clipboard = std::make_unique<NullClipboard>();
+    Clipboard = std::make_unique<UNullClipboard>();
     GuiContext->SetClipboard(Clipboard.get());
   }
 #endif
 
   GameSession->InitCommandHistory(GetExecutableDirectory() /
-                                  "console_history.txt");
+                                   "console_history.txt");
 
   IGuiIconSource *icons = IconSource.get();
-  auto hud = std::make_unique<UInGameHudScreen>(GameSession.get(),
-                                                &GuiContext->GetTheme(), icons);
+  auto hud = std::make_unique<UInGameHudScreen>(
+      GameSession.get(), &GuiContext->GetTheme(), icons);
 #if defined(__ANDROID__)
-  if (touchBridge_)
+  if (TouchBridge)
   {
     hud->ConfigureTouchControls(
-        touchBridge_, [this]() { ReturnToMainMenu(); },
-        [this]() {
+        TouchBridge, [this]() { ReturnToMainMenu(); },
+        [this]()
+        {
           PaletteOpen = !PaletteOpen;
           if (PaletteScreen)
           {
@@ -507,7 +508,8 @@ void UApplication::ShowInGameHud()
           }
           SyncCursorVisibility();
         },
-        [this]() {
+        [this]()
+        {
           ConsoleOpen = !ConsoleOpen;
           if (ConsoleScreen)
           {
@@ -560,7 +562,7 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
   }
   if (State == AppState::InGame)
   {
-    if (Ui.controlScheme == ControlScheme::Classic)
+    if (Ui.ControlScheme == ControlScheme::Classic)
     {
       return AppCursorPolicy::CapturedHidden;
     }
@@ -617,7 +619,7 @@ void UApplication::EnterInGameInputState()
   PaletteOpen = false;
   FreeCursor = false;
 #if defined(__ANDROID__)
-  Ui.controlScheme = ControlScheme::Cubatarium;
+  Ui.ControlScheme = ControlScheme::Cubatarium;
 #endif
   GuiContext->ClearInputState();
   SyncCursorVisibility();
@@ -645,22 +647,22 @@ void UApplication::RecaptureMouseForLook()
   EnterInGameInputState();
 }
 
-int UApplication::NormalizeOverlayPointer(int pointerId) const
+int UApplication::NormalizeOverlayPointer(int PointerId) const
 {
-  if (pointerId < 0)
+  if (PointerId < 0)
   {
     return 0;
   }
-  if (pointerId >= kMaxOverlayPointers)
+  if (PointerId >= kMaxOverlayPointers)
   {
     return kMaxOverlayPointers - 1;
   }
-  return pointerId;
+  return PointerId;
 }
 
 bool UApplication::HasAnyOverlayCapture() const
 {
-  for (const OverlayPointerCapture capture : overlayCaptures_)
+  for (const OverlayPointerCapture capture : OverlayCaptures)
   {
     if (capture != OverlayPointerCapture::None)
     {
@@ -671,9 +673,9 @@ bool UApplication::HasAnyOverlayCapture() const
 }
 
 bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
-                                         bool pressed)
+                                         bool Pressed)
 {
-  const int pointerIndex = NormalizeOverlayPointer(event.pointerId);
+  const int pointerIndex = NormalizeOverlayPointer(event.PointerId);
 
   auto routeRoot = [&](UGuiWidget *root, bool requireHitTest) -> bool
   {
@@ -681,35 +683,35 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     {
       return false;
     }
-    if (requireHitTest && !root->HitTest(event.x, event.y))
+    if (requireHitTest && !root->HitTest(event.X, event.Y))
     {
       return false;
     }
-    return pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
+    return Pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
   };
 
-  if (pressed)
+  if (Pressed)
   {
     if (PaletteOpen && routeRoot(PaletteScreen->GetRoot(), true))
     {
-      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Palette;
+      OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
       return true;
     }
     if (ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), true))
     {
-      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Console;
+      OverlayCaptures[pointerIndex] = OverlayPointerCapture::Console;
       return true;
     }
     if (routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, true))
     {
-      overlayCaptures_[pointerIndex] = OverlayPointerCapture::Hud;
+      OverlayCaptures[pointerIndex] = OverlayPointerCapture::Hud;
       return true;
     }
     return false;
   }
 
-  const OverlayPointerCapture capture = overlayCaptures_[pointerIndex];
-  overlayCaptures_[pointerIndex] = OverlayPointerCapture::None;
+  const OverlayPointerCapture capture = OverlayCaptures[pointerIndex];
+  OverlayCaptures[pointerIndex] = OverlayPointerCapture::None;
   if (capture == OverlayPointerCapture::None)
   {
     return false;
@@ -745,7 +747,8 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 
 void UApplication::DrawDragGhost(int width, int height)
 {
-  if (!GameSession || !GameSession->IsDragging() || !IconSource || !GuiContext)
+  if (!GameSession || !GameSession->IsDragging() || !IconSource ||
+      !GuiContext)
   {
     return;
   }
@@ -758,23 +761,23 @@ void UApplication::DrawDragGhost(int width, int height)
   switch (drag.entry.kind)
   {
   case InventoryEntryKind::Block:
-    tex = IconSource->GetBlockIconTexture(drag.entry.id);
+    tex = IconSource->GetBlockIconTexture(drag.entry.Id);
     break;
   case InventoryEntryKind::UObject:
-    tex = IconSource->GetPrefabIconTexture(drag.entry.id);
+    tex = IconSource->GetPrefabIconTexture(drag.entry.Id);
     break;
   case InventoryEntryKind::UCreature:
-    tex = IconSource->GetCreatureIconTexture(drag.entry.id);
+    tex = IconSource->GetCreatureIconTexture(drag.entry.Id);
     break;
   case InventoryEntryKind::Skin:
-    tex = IconSource->GetSkinIconTexture(drag.entry.id);
+    tex = IconSource->GetSkinIconTexture(drag.entry.Id);
     break;
   }
   if (tex == 0)
   {
     return;
   }
-  const int size = GuiContext->GetTheme().hotbarSlotSize;
+  const int size = GuiContext->GetTheme().HotbarSlotSize;
   const GuiRect rect{DragCursorX - size / 2, DragCursorY - size / 2, size,
                      size};
   UGuiRenderer &renderer = GuiContext->GetRenderer();
@@ -797,9 +800,9 @@ void UApplication::Update(double dt)
   }
   if (PendingMenuAction)
   {
-    auto action = std::move(PendingMenuAction);
+    auto Action = std::move(PendingMenuAction);
     PendingMenuAction = nullptr;
-    action();
+    Action();
   }
 
   if (State == AppState::MainMenu)
@@ -840,45 +843,45 @@ void UApplication::ProcessInput() { (void)0; }
 
 void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
 {
-  viewportInsetLeft_ = std::max(0, left);
-  viewportInsetTop_ = std::max(0, top);
-  viewportInsetRight_ = std::max(0, right);
-  viewportInsetBottom_ = std::max(0, bottom);
+  ViewportInsetLeft = std::max(0, left);
+  ViewportInsetTop = std::max(0, top);
+  ViewportInsetRight = std::max(0, right);
+  ViewportInsetBottom = std::max(0, bottom);
   if (Geometry)
   {
-    Geometry->SetOverlayMargins(viewportInsetRight_ + 16, viewportInsetTop_ + 30);
+    Geometry->SetOverlayMargins(ViewportInsetRight + 16, ViewportInsetTop + 30);
   }
 }
 
 void UApplication::SetKeyboardInsetBottom(int bottom)
 {
   const int inset = std::max(0, bottom);
-  if (keyboardInsetBottom_ == inset)
+  if (KeyboardInsetBottom == inset)
   {
     return;
   }
-  keyboardInsetBottom_ = inset;
+  KeyboardInsetBottom = inset;
   if (ConsoleScreen)
   {
-    ConsoleScreen->SetKeyboardInsetBottom(keyboardInsetBottom_);
+    ConsoleScreen->SetKeyboardInsetBottom(KeyboardInsetBottom);
   }
 }
 
 void UApplication::SetUiScale(float scale)
 {
-  if (std::fabs(scale - uiScale_) < 0.01f)
+  if (std::fabs(scale - UiScale) < 0.01f)
   {
     return;
   }
-  uiScale_ = scale;
+  UiScale = scale;
   if (GuiContext)
   {
-    GuiContext->ApplyUiScale(uiScale_);
+    GuiContext->ApplyUiScale(UiScale);
   }
 #ifdef __ANDROID__
-  if (touchBridge_)
+  if (TouchBridge)
   {
-    touchBridge_->SetUiScale(uiScale_);
+    TouchBridge->SetUiScale(UiScale);
   }
 #endif
 }
@@ -889,8 +892,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     if (screen)
     {
-      screen->SetViewportInsets(viewportInsetLeft_, viewportInsetTop_,
-                                viewportInsetRight_, viewportInsetBottom_);
+      screen->SetViewportInsets(ViewportInsetLeft, ViewportInsetTop,
+                                ViewportInsetRight, ViewportInsetBottom);
       screen->OnViewportChanged(width, height);
     }
   };
@@ -903,8 +906,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    GuiContext->Render(width, height, viewportInsetLeft_, viewportInsetTop_,
-                       viewportInsetRight_, viewportInsetBottom_);
+    GuiContext->Render(width, height, ViewportInsetLeft, ViewportInsetTop,
+                        ViewportInsetRight, ViewportInsetBottom);
     return;
   }
 
@@ -943,7 +946,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())
   {
     notifyViewport(ConsoleScreen.get());
-    GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height, false);
+    GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height,
+                               false);
   }
   if (OverlayPopup && OverlayPopup->IsOpen())
   {
@@ -990,17 +994,17 @@ bool UApplication::AllowsWorldMousePlacement() const
   return State == AppState::InGame && !PaletteOpen && !ConsoleOpen;
 }
 
-bool UApplication::RouteKey(int key, int action, int mods)
+bool UApplication::RouteKey(int key, int Action, int Mods)
 {
   GuiKeyEvent event;
-  event.keyCode = key;
-  event.action = action == GLFW_REPEAT
+  event.KeyCode = key;
+  event.Action = Action == GLFW_REPEAT
                      ? GuiKeyAction::Repeat
-                     : (action == GLFW_PRESS ? GuiKeyAction::Press
+                     : (Action == GLFW_PRESS ? GuiKeyAction::Press
                                              : GuiKeyAction::Release);
-  event.mods = mods;
+  event.Mods = Mods;
 
-  if (action == GLFW_PRESS && State == AppState::InGame)
+  if (Action == GLFW_PRESS && State == AppState::InGame)
   {
     if (key == GLFW_KEY_ESCAPE)
     {
@@ -1064,7 +1068,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
 #endif
       return true;
     }
-    if (KeyNameIs(Ui.consoleKey, key))
+    if (KeyNameIs(Ui.ConsoleKey, key))
     {
       ConsoleOpen = !ConsoleOpen;
       if (ConsoleScreen)
@@ -1096,7 +1100,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
       }
       return true;
     }
-    if (!ConsoleOpen && KeyNameIs(Ui.paletteKey, key))
+    if (!ConsoleOpen && KeyNameIs(Ui.PaletteKey, key))
     {
       PaletteOpen = !PaletteOpen;
       if (PaletteScreen)
@@ -1106,7 +1110,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
       SyncCursorVisibility();
       return true;
     }
-    if (!ConsoleOpen && KeyNameIs(Ui.inventoryKey, key))
+    if (!ConsoleOpen && KeyNameIs(Ui.InventoryKey, key))
     {
       PaletteOpen = !PaletteOpen;
       if (PaletteScreen)
@@ -1126,7 +1130,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
       const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
       if (hotbarSlot >= 0 && GameSession)
       {
-        if ((mods & GLFW_MOD_ALT) != 0)
+        if ((Mods & GLFW_MOD_ALT) != 0)
         {
           return true;
         }
@@ -1136,7 +1140,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
     }
   }
 
-  if (action == GLFW_PRESS && State == AppState::MainMenu &&
+  if (Action == GLFW_PRESS && State == AppState::MainMenu &&
       key == GLFW_KEY_ESCAPE)
   {
     if (MainMenuScreen && MainMenuScreen->IsQuitConfirmationVisible())
@@ -1163,7 +1167,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
 
   if (State == AppState::InGame && ConsoleOpen && ConsoleScreen)
   {
-    if (KeyNameIs(Ui.consoleKey, key))
+    if (KeyNameIs(Ui.ConsoleKey, key))
     {
       return true;
     }
@@ -1178,7 +1182,7 @@ bool UApplication::RouteKey(int key, int action, int mods)
   return false;
 }
 
-bool UApplication::RouteChar(unsigned int codepoint)
+bool UApplication::RouteChar(unsigned int Codepoint)
 {
   if (State == AppState::InGame && ConsoleOpen && ConsoleScreen)
   {
@@ -1187,30 +1191,30 @@ bool UApplication::RouteChar(unsigned int codepoint)
       SuppressConsoleToggleChar = false;
       return true;
     }
-    ConsoleScreen->RouteChar(GuiCharEvent{codepoint});
+    ConsoleScreen->RouteChar(GuiCharEvent{Codepoint});
     return true;
   }
   SuppressConsoleToggleChar = false;
-  return GuiContext->RouteChar(GuiCharEvent{codepoint});
+  return GuiContext->RouteChar(GuiCharEvent{Codepoint});
 }
 
-bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y,
-                                    int pointerId)
+bool UApplication::RouteMouseButton(int Button, bool Pressed, int x, int y,
+                                    int PointerId)
 {
   GuiMouseEvent event;
-  event.x = x;
-  event.y = y;
-  event.pointerId = pointerId;
-  event.button = button == GLFW_MOUSE_BUTTON_RIGHT    ? GuiMouseButton::Right
-                 : button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
+  event.X = x;
+  event.Y = y;
+  event.PointerId = PointerId;
+  event.Button = Button == GLFW_MOUSE_BUTTON_RIGHT    ? GuiMouseButton::Right
+                 : Button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
                                                       : GuiMouseButton::Left;
-  event.pressed = pressed;
+  event.Pressed = Pressed;
 
   if (State == AppState::InGame)
   {
     DragCursorX = x;
     DragCursorY = y;
-    if (event.button == GuiMouseButton::Left && !pressed && GameSession &&
+    if (event.Button == GuiMouseButton::Left && !Pressed && GameSession &&
         GameSession->IsDragging())
     {
       SlotAddress target;
@@ -1240,13 +1244,13 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y,
         return true;
       }
     }
-    if (event.button == GuiMouseButton::Left)
+    if (event.Button == GuiMouseButton::Left)
     {
-      if (TryRouteInGameOverlay(event, pressed))
+      if (TryRouteInGameOverlay(event, Pressed))
       {
         return true;
       }
-      if (FreeCursor && pressed)
+      if (FreeCursor && Pressed)
       {
         RecaptureMouseForLook();
         return true;
@@ -1255,16 +1259,16 @@ bool UApplication::RouteMouseButton(int button, bool pressed, int x, int y,
     return false;
   }
 
-  return pressed ? GuiContext->RouteMouseDown(event)
+  return Pressed ? GuiContext->RouteMouseDown(event)
                  : GuiContext->RouteMouseUp(event);
 }
 
-bool UApplication::RouteMouseMove(int x, int y, int pointerId)
+bool UApplication::RouteMouseMove(int x, int y, int PointerId)
 {
   GuiMouseEvent event;
-  event.x = x;
-  event.y = y;
-  event.pointerId = pointerId;
+  event.X = x;
+  event.Y = y;
+  event.PointerId = PointerId;
   if (State == AppState::InGame && HudScreen)
   {
     HudScreen->SetPointerPosition(x, y);
@@ -1290,7 +1294,7 @@ bool UApplication::RouteMouseMove(int x, int y, int pointerId)
       return true;
     }
 #if defined(__ANDROID__)
-    if (HudScreen && HudScreen->RouteTouchMove(pointerId, x, y))
+    if (HudScreen && HudScreen->RouteTouchMove(PointerId, x, y))
     {
       return true;
     }
@@ -1346,12 +1350,12 @@ void UApplication::SubmitConsoleCommand()
 }
 #endif
 
-bool UApplication::RouteScroll(double xoffset, double yoffset, int mouseX,
+bool UApplication::RouteScroll(double Xoffset, double Yoffset, int mouseX,
                                int mouseY)
 {
   if (State == AppState::InGame)
   {
-    GuiScrollEvent event{xoffset, yoffset};
+    GuiScrollEvent event{Xoffset, Yoffset};
     auto routeScroll = [&](UGuiWidget *root) -> bool
     { return root && root->ScrollAtPoint(mouseX, mouseY, event); };
     if (PaletteOpen &&
@@ -1370,8 +1374,8 @@ bool UApplication::RouteScroll(double xoffset, double yoffset, int mouseX,
     }
     return false;
   }
-  return GuiContext->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouseX,
-                                 mouseY);
+  return GuiContext->RouteScroll(GuiScrollEvent{Xoffset, Yoffset}, mouseX,
+                                  mouseY);
 }
 
 } // namespace cutum
