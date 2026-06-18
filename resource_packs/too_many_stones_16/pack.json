@@ -8,7 +8,9 @@
   "worldgen_role": "secondary",
   "pack_format": 1,
   "merge_mode": "skip_existing",
-  "depends": [],
+  "depends": [
+    "kenney_voxel_16"
+  ],
   "conflicts": [],
-  "min_game_version": ""
+  "min_game_version": "0.1.0"
 }

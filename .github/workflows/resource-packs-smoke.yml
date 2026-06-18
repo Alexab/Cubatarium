@@ -1,0 +1,34 @@
+name: Resource packs smoke
+
+on:
+  push:
+    branches: [main, master, resource_packs]
+    paths:
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+      - "docs/RESOURCE_PACKS.md"
+  pull_request:
+    branches: [main, master, resource_packs]
+    paths:
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: pip install pyyaml
+
+      - name: Resource pack smoke checks
+        run: python tools/smoke_resource_packs.py

@@ -34,6 +34,7 @@ resource_packs/<pack_id>/
 
 - **priority**: tiebreaker within the same UI tier and list position.
 - **worldgen_role**: `primary` (worldgen-capable) or `secondary` (decorative / partial).
+- Primary candidates are **whitelisted** in `tools/pack_dependencies.yaml` (not auto-promoted when tier A is complete). Run `python tools/update_pack_metadata.py` after rebuilding packs.
 - **merge_mode**: `skip_existing` (default), `override`, or `duplicate` (`pack_id::local_name`).
 - **id**: must match the folder name under `resource_packs/`.
 
@@ -150,7 +151,23 @@ python tools/audit_resource_packs.py --write-roles
 python tools/apply_canonical_types.py
 python tools/update_pack_metadata.py
 python tools/sync_texture_overrides.py
+python tools/audit_resource_packs.py --primary-only
+python tools/smoke_resource_packs.py
 ```
+
+Headless C++ merge/worldgen smoke (no window):
+
+```powershell
+Cubatarium.exe --smoke-packs
+```
+
+`texture_overrides.yaml` is loaded at runtime (JSON optional via `sync_texture_overrides.py`).
+
+## Pack dependencies
+
+Policy: [`tools/pack_dependencies.yaml`](../tools/pack_dependencies.yaml). Apply with `python tools/update_pack_metadata.py`.
+
+Partial pattern/terrain packs declare `depends: [kenney_voxel_16]`. `minetest_default_16` and `minecraft_legacy_16` declare mutual `conflicts`.
 
 Offline merge:
 
@@ -166,7 +183,7 @@ Git-tracked packs (`cubatarium_cc0_base`, `kenney_voxel_16`, `kenney_voxel_128`)
 
 | Pack | Blocks | Resolution | Role |
 |------|--------|------------|------|
-| `cubatarium_cc0_base` | 15 (minimal survival) | 16px | Fallback / default for new worlds |
+| `cubatarium_cc0_base` | 15 (minimal survival) | 16px | Secondary fallback (tier A subset) |
 | `kenney_voxel_16` | ~58 (terrain, ores, wool, …) | 16px | Full CC0 sandbox set |
 | `kenney_voxel_128` | same as 16 | 128px | High-res Kenney tiles |
 | `minecraft_legacy_16` | ~173 | 16px | Local MC migrate (not in git) |

@@ -14,7 +14,6 @@
 | TD-006 | 1.1 | Android: selective asset extraction | Large pipeline refactor | backlog |
 | TD-008 | 1.1 | Archive `tools/import_blocks.ps1` | Deprecated; kept for migrate script | 4 |
 | TD-009 | 1.1 | Simplify `WorldGenContext` stone-fallback after I8 | Redundant but harmless | backlog |
-| TD-010 | 1.1 | Unit tests for merge/placeholder | Optional smoke in 1.2 | backlog |
 | TD-011 | 4.2 | In-game Settings: switch packs for the **current** world without restart | Per-world save exists; hot-reload API exists; UI deferred | backlog |
 
 ## Closed
@@ -22,3 +21,4 @@
 | ID | Closed in | Resolution |
 |----|-----------|------------|
 | TD-007 | 4.1 | Core always loads blocks via resource pack resolver; legacy models/blocks path removed |
+| TD-010 | backlog | `tools/smoke_resource_packs.py`, GitHub workflow `resource-packs-smoke.yml`, `Cubatarium --smoke-packs` |

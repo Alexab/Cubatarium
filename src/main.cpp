@@ -2,16 +2,26 @@
 #include "App/Platform/DesktopPlatformPaths.h"
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/IPlatformPaths.h"
+#include "ResourcePacks/ResourcePackSmoke.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
+#include <cstring>
+
 int main(int argc, char *argv[])
 {
-  (void)argc;
-  (void)argv;
+  for (int i = 1; i < argc; ++i)
+  {
+    if (std::strcmp(argv[i], "--smoke-packs") == 0)
+    {
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IPlatformPaths::SetGlobal(paths);
+      return cutum::RunResourcePackSmoke(*paths);
+    }
+  }
 
   auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
   cutum::IPlatformPaths::SetGlobal(paths);

@@ -1,0 +1,82 @@
+# Pack dependency policy for Cubatarium resource packs.
+# Applied to pack.json by tools/update_pack_metadata.py
+#
+# worldgen_role: primary — pack appears in the "Primary" list in New World UI
+# (worldgen owner candidates). Only a small whitelist; tier-A completeness is
+# audited separately (worldgen_ready_score).
+
+packs:
+  cubatarium_cc0_base:
+    depends: []
+    conflicts: []
+    worldgen_role: secondary
+
+  kenney_voxel_16:
+    depends: []
+    conflicts: []
+    worldgen_role: primary
+
+  kenney_voxel_128:
+    depends: []
+    conflicts: []
+    worldgen_role: primary
+
+  minetest_default_16:
+    depends: []
+    conflicts: [minecraft_legacy_16]
+    worldgen_role: primary
+
+  programmer_art_16:
+    depends: []
+    conflicts: []
+    worldgen_role: primary
+
+  refi_textures_16:
+    depends: []
+    conflicts: []
+    worldgen_role: secondary
+
+  goncalo_patterns_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  kenney_pattern_lines_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  kenney_pattern_pixel_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  seamless_patterns_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  sbs_sandbox_terrain_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  too_many_stones_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  snez_16:
+    depends: []
+    conflicts: []
+    worldgen_role: secondary
+
+  oga_mc_inspired_16:
+    depends: [kenney_voxel_16]
+    conflicts: []
+    worldgen_role: secondary
+
+  minecraft_legacy_16:
+    depends: []
+    conflicts: [minetest_default_16]
+    worldgen_role: secondary

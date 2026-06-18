@@ -126,6 +126,7 @@ blocks:
   note_block: musicBlock
   sandstone_carved: sandstone_carved
   sandstone_smooth: sandstone_smooth
+  sandstone: sandstone_smooth
   farmland_dry:
     faces:
     - dirt
@@ -337,9 +338,6 @@ blocks:
     render:
       transparent: true
       style: fluid
-    animation:
-      frame_count: 2
-      frametime: 2
   lava:
     faces:
     - lava

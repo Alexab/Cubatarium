@@ -96,6 +96,11 @@ def semantics_match(block: dict, spec: dict) -> list[str]:
                     issues.append(
                         f"animation.{key} expected {exp_anim[key]!r}, got {act_anim.get(key)!r}"
                     )
+    exp_display = spec.get("display_name")
+    if exp_display and block.get("displayName") != exp_display:
+        issues.append(
+            f"displayName expected {exp_display!r}, got {block.get('displayName')!r}"
+        )
     return issues
 
 
@@ -116,23 +121,45 @@ def check_animation_png(
     if not isinstance(textures, list) or not textures:
         return issues
     tex_dir = pack_dir / "textures" / "blocks"
-    stems = textures[:FACE_COUNT]
-    for stem in stems:
-        if not isinstance(stem, str):
-            continue
-        png = tex_dir / f"{stem}.png"
-        if not png.is_file():
-            continue
-        size = read_png_size(png)
-        if size is None:
-            issues.append(f"{block_name}: could not read PNG size for {stem}")
-            continue
-        w, h = size
-        expected_h = w * frame_count
-        if h != expected_h:
+    if len(textures) == FACE_COUNT:
+        stems = textures[:FACE_COUNT]
+        for stem in stems:
+            if not isinstance(stem, str):
+                continue
+            png = tex_dir / f"{stem}.png"
+            if not png.is_file():
+                continue
+            size = read_png_size(png)
+            if size is None:
+                issues.append(f"{block_name}: could not read PNG size for {stem}")
+                continue
+            w, h = size
+            expected_h = w * frame_count
+            if h != expected_h:
+                issues.append(
+                    f"{block_name}: {stem}.png height {h} != width×frames ({w}×{frame_count}={expected_h})"
+                )
+    elif len(textures) > FACE_COUNT and len(textures) % FACE_COUNT == 0:
+        layer_frames = len(textures) // FACE_COUNT
+        if layer_frames != frame_count:
             issues.append(
-                f"{block_name}: {stem}.png height {h} != width×frames ({w}×{frame_count}={expected_h})"
+                f"{block_name}: texture layers {layer_frames} != animation.frame_count {frame_count}"
             )
+        for stem in textures[:FACE_COUNT]:
+            if not isinstance(stem, str):
+                continue
+            png = tex_dir / f"{stem}.png"
+            if not png.is_file():
+                continue
+            size = read_png_size(png)
+            if size is None:
+                issues.append(f"{block_name}: could not read PNG size for {stem}")
+                continue
+            w, h = size
+            if h != w:
+                issues.append(
+                    f"{block_name}: {stem}.png must be square for layer animation ({w}×{h})"
+                )
     return issues
 
 
@@ -157,7 +184,7 @@ def audit_pack(
         except json.JSONDecodeError:
             pass
     pack_id = manifest.get("id", pack_dir.name)
-
+    declared_role = manifest.get("worldgen_role", "secondary")
     tier_a: dict[str, Any] = canonical.get("tier_a", {})
     global_deny: list[str] = canonical.get("global_stem_denylist", [])
 
@@ -210,7 +237,16 @@ def audit_pack(
 
     tier_total = len(tier_a)
     score = round(100.0 * tier_semantics_ok / tier_total, 1) if tier_total else 0.0
-    worldgen_role = "primary" if tier_present == tier_total and tier_semantics_ok == tier_total else "secondary"
+    worldgen_capable = (
+        tier_present == tier_total and tier_semantics_ok == tier_total
+    )
+
+    if declared_role == "primary" and not worldgen_capable:
+        warnings.append(
+            f"declared primary but tier A incomplete "
+            f"({tier_present}/{tier_total} present, "
+            f"{tier_semantics_ok}/{tier_total} semantics OK)"
+        )
 
     depends = manifest.get("depends", [])
     if isinstance(depends, list):
@@ -235,7 +271,9 @@ def audit_pack(
         "tier_a_total": tier_total,
         "tier_a_semantics_ok": tier_semantics_ok,
         "worldgen_ready_score": score,
-        "worldgen_role": worldgen_role,
+        "worldgen_capable": worldgen_capable,
+        "worldgen_role": declared_role,
+        "declared_role": declared_role,
         "resolution": resolution,
         "depends": depends if isinstance(depends, list) else [],
         "conflicts": conflicts if isinstance(conflicts, list) else [],
@@ -243,6 +281,21 @@ def audit_pack(
         "warnings": warnings,
         "block_count": len(block_by_name),
     }
+
+
+def load_pack_manifest(pack_dir: Path) -> dict[str, Any]:
+    pack_json_path = pack_dir / "pack.json"
+    if not pack_json_path.is_file():
+        return {}
+    try:
+        return json.loads(pack_json_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def is_declared_primary(pack_dir: Path) -> bool:
+    manifest = load_pack_manifest(pack_dir)
+    return manifest.get("worldgen_role") == "primary"
 
 
 def write_pack_roles(pack_dir: Path, role: str) -> None:
@@ -253,6 +306,26 @@ def write_pack_roles(pack_dir: Path, role: str) -> None:
     manifest["worldgen_role"] = role
     manifest["pack_format"] = 1
     pack_json_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def load_role_policy() -> dict[str, str]:
+    policy_path = REPO / "tools" / "pack_dependencies.yaml"
+    if not policy_path.is_file():
+        return {}
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    data = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
+    packs = data.get("packs", {})
+    roles: dict[str, str] = {}
+    if isinstance(packs, dict):
+        for pack_id, spec in packs.items():
+            if isinstance(spec, dict):
+                role = spec.get("worldgen_role", "secondary")
+                if isinstance(role, str):
+                    roles[pack_id] = role
+    return roles
 
 
 def render_markdown(report: dict[str, Any]) -> str:
@@ -331,6 +404,16 @@ def main() -> int:
         help="Pack id whose tier_a textures are compared as reference (warnings only)",
     )
     parser.add_argument(
+        "--primary-only",
+        action="store_true",
+        help="Audit only packs with worldgen_role: primary in pack.json",
+    )
+    parser.add_argument(
+        "--fail-on-warnings",
+        action="store_true",
+        help="Exit with error if any pack has warnings",
+    )
+    parser.add_argument(
         "--output-json",
         type=Path,
         default=AUDIT_JSON,
@@ -345,6 +428,12 @@ def main() -> int:
         return 1
 
     pack_dirs = sorted(p for p in packs_dir.iterdir() if p.is_dir() and (p / "pack.json").is_file())
+    if args.primary_only:
+        pack_dirs = [p for p in pack_dirs if is_declared_primary(p)]
+        if not pack_dirs:
+            print("ERROR: no primary packs found")
+            return 1
+        print(f"Primary-only audit: {len(pack_dirs)} pack(s)")
     installed_ids = set()
     for p in pack_dirs:
         try:
@@ -385,14 +474,19 @@ def main() -> int:
         ]
 
     if args.write_roles:
+        role_policy = load_role_policy()
         for pack_dir, result in zip(pack_dirs, pack_results):
-            write_pack_roles(pack_dir, result["worldgen_role"])
+            pack_id = result["pack_id"]
+            role = role_policy.get(pack_id, "secondary")
+            write_pack_roles(pack_dir, role)
 
     report = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "canonical": str(args.canonical.resolve().relative_to(REPO)).replace("\\", "/"),
         "reference_pack": args.reference_pack,
+        "primary_only": args.primary_only,
         "pack_count": len(pack_results),
+        "primary_issues": sum(len(p["issues"]) for p in pack_results),
         "global_warnings": global_warnings,
         "packs": pack_results,
     }
@@ -409,8 +503,13 @@ def main() -> int:
 
     error_count = sum(len(p["issues"]) for p in pack_results)
     warn_count = len(global_warnings) + sum(len(p["warnings"]) for p in pack_results)
-    print(f"Audit complete: {error_count} issue(s), {warn_count} warning(s)")
-    return 1 if error_count else 0
+    label = "primary " if args.primary_only else ""
+    print(f"Audit complete: {error_count} {label}issue(s), {warn_count} warning(s)")
+    if error_count:
+        return 1
+    if args.fail_on_warnings and warn_count:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

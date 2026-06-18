@@ -108,14 +108,8 @@ bool UResourcePackPickerForm::HasValidPrimarySelection() const
 
 void UResourcePackPickerForm::SyncListItems()
 {
-  const auto primaryPacks = [&]() {
-    auto packs = FilterByRole(InstalledPacks, WorldgenRole::Primary);
-    if (packs.empty())
-    {
-      return InstalledPacks;
-    }
-    return packs;
-  }();
+  const auto primaryPacks =
+      FilterByRole(InstalledPacks, WorldgenRole::Primary);
   const auto secondaryPacks =
       FilterByRole(InstalledPacks, WorldgenRole::Secondary);
 

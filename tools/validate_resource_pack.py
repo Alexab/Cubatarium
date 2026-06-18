@@ -102,13 +102,27 @@ def validate_pack(pack_dir: Path) -> int:
                 widths.add(w)
                 heights.add(h)
                 if isinstance(frame_count, int) and frame_count > 0:
-                    expected_h = w * frame_count
-                    if h != expected_h:
-                        err(
-                            f"{block_path}: {stem}.png height {h} != "
-                            f"width×frame_count ({w}×{frame_count}={expected_h})"
-                        )
-                        errors += 1
+                    if len(textures) == FACE_COUNT:
+                        expected_h = w * frame_count
+                        if h != expected_h:
+                            err(
+                                f"{block_path}: {stem}.png height {h} != "
+                                f"width×frame_count ({w}×{frame_count}={expected_h})"
+                            )
+                            errors += 1
+                    elif len(textures) > FACE_COUNT and len(textures) % FACE_COUNT == 0:
+                        layer_frames = len(textures) // FACE_COUNT
+                        if layer_frames != frame_count:
+                            err(
+                                f"{block_path}: texture layers {layer_frames} != "
+                                f"animation.frame_count {frame_count}"
+                            )
+                            errors += 1
+                        if h != w:
+                            err(
+                                f"{block_path}: {stem}.png must be square for layer animation ({w}×{h})"
+                            )
+                            errors += 1
             except Exception:
                 warn(f"{png}: could not read PNG dimensions")
 

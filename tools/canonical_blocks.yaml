@@ -1,216 +1,476 @@
-# Canonical block taxonomy for Cubatarium resource packs.
-# Source of truth for audit_resource_packs.py and worldgen_refs.
-
 schema_version: 1
-
 global_stem_denylist:
-  - "*bucket*"
-  - waterlily
-  - lily_pad
-  - river_water_bucket
-  - lava_bucket
-  - water_bucket
-
+- '*bucket*'
+- waterlily
+- lily_pad
+- river_water_bucket
+- lava_bucket
+- water_bucket
 tier_a:
   bedrock:
-    types: [building, natural]
-    textures: [bedrock, bedrock, bedrock, bedrock, bedrock, bedrock]
-    worldgen_refs: [bedrock]
-    reference_pack: cubatarium_cc0_base
-
-  stone:
-    types: [natural, building]
-    textures: [stone, stone, stone, stone, stone, stone]
-    worldgen_refs: [stone]
-    reference_pack: cubatarium_cc0_base
-
-  dirt:
-    types: [natural]
-    textures: [dirt, dirt, dirt, dirt, dirt, dirt]
-    worldgen_refs: [dirt]
-    reference_pack: cubatarium_cc0_base
-
-  grass:
-    types: [natural, plants]
-    textures: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
-    stem_denylist: [tallgrass, tall_grass, fern, deadbush]
-    worldgen_refs: [grass]
-    reference_pack: cubatarium_cc0_base
-
-  sand:
-    types: [natural]
-    textures: [sand, sand, sand, sand, sand, sand]
-    worldgen_refs: [sand]
-    reference_pack: cubatarium_cc0_base
-
-  sandstone:
-    types: [natural, building]
+    types:
+    - building
+    - natural
     textures:
-      [sandstone_side, sandstone_side, sandstone_side, sandstone_side, sandstone_top, sandstone_bottom]
-    worldgen_refs: [sandstone]
+    - bedrock
+    - bedrock
+    - bedrock
+    - bedrock
+    - bedrock
+    - bedrock
+    worldgen_refs:
+    - bedrock
+    reference_pack: cubatarium_cc0_base
+    display_name: Bedrock
+  stone:
+    types:
+    - natural
+    - building
+    textures:
+    - stone
+    - stone
+    - stone
+    - stone
+    - stone
+    - stone
+    worldgen_refs:
+    - stone
+    reference_pack: cubatarium_cc0_base
+    display_name: Stone
+  dirt:
+    types:
+    - natural
+    textures:
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    worldgen_refs:
+    - dirt
+    reference_pack: cubatarium_cc0_base
+    display_name: Dirt
+  grass:
+    types:
+    - natural
+    - plants
+    textures:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top
+    - dirt
+    stem_denylist:
+    - tallgrass
+    - tall_grass
+    - fern
+    - deadbush
+    worldgen_refs:
+    - grass
+    reference_pack: cubatarium_cc0_base
+    display_name: Grass Block
+  sand:
+    types:
+    - natural
+    textures:
+    - sand
+    - sand
+    - sand
+    - sand
+    - sand
+    - sand
+    worldgen_refs:
+    - sand
+    reference_pack: cubatarium_cc0_base
+    display_name: Sand
+  sandstone:
+    types:
+    - natural
+    - building
+    textures:
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_top
+    - sandstone_bottom
+    worldgen_refs:
+    - sandstone
     reference_pack: kenney_voxel_16
-
+    display_name: Sandstone
   gravel:
-    types: [natural]
-    textures: [gravel, gravel, gravel, gravel, gravel, gravel]
-    worldgen_refs: [gravel]
+    types:
+    - natural
+    textures:
+    - gravel
+    - gravel
+    - gravel
+    - gravel
+    - gravel
+    - gravel
+    worldgen_refs:
+    - gravel
     reference_pack: cubatarium_cc0_base
-
+    display_name: Gravel
   snow:
-    types: [natural]
-    textures: [snow, snow, snow, snow, snow, snow]
-    worldgen_refs: [snow]
+    types:
+    - natural
+    textures:
+    - snow
+    - snow
+    - snow
+    - snow
+    - snow
+    - snow
+    worldgen_refs:
+    - snow
     reference_pack: cubatarium_cc0_base
-
+    display_name: Snow
   clay:
-    types: [natural]
-    textures: [clay, clay, clay, clay, clay, clay]
-    worldgen_refs: [clay]
+    types:
+    - natural
+    textures:
+    - clay
+    - clay
+    - clay
+    - clay
+    - clay
+    - clay
+    worldgen_refs:
+    - clay
     reference_pack: cubatarium_cc0_base
-
+    display_name: Clay
   ice:
-    types: [natural]
-    textures: [ice, ice, ice, ice, ice, ice]
-    worldgen_refs: [ice]
+    types:
+    - natural
+    textures:
+    - ice
+    - ice
+    - ice
+    - ice
+    - ice
+    - ice
+    worldgen_refs:
+    - ice
     reference_pack: cubatarium_cc0_base
-
+    display_name: Ice
   hellrock:
-    types: [natural]
-    textures: [hellrock, hellrock, hellrock, hellrock, hellrock, hellrock]
-    worldgen_refs: [hellrock]
+    types:
+    - natural
+    textures:
+    - hellrock
+    - hellrock
+    - hellrock
+    - hellrock
+    - hellrock
+    - hellrock
+    worldgen_refs:
+    - hellrock
     reference_pack: cubatarium_cc0_base
-
+    display_name: Hellrock
   water:
-    types: [fluid, natural]
-    textures: [water, water, water, water, water, water]
-    physics: { preset: water }
-    render: { transparent: true, style: fluid }
-    animation: { frame_count: 4, frametime: 2 }
-    stem_denylist: [waterlily, lily_pad, river_water_bucket, water_bucket, bucket]
-    worldgen_refs: [water]
+    types:
+    - fluid
+    - natural
+    textures:
+    - water
+    - water
+    - water
+    - water
+    - water
+    - water
+    physics:
+      preset: water
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 4
+      frametime: 2
+    stem_denylist:
+    - waterlily
+    - lily_pad
+    - river_water_bucket
+    - water_bucket
+    - bucket
+    worldgen_refs:
+    - water
     reference_pack: cubatarium_cc0_base
-
+    display_name: Water
   lava:
-    types: [fluid, natural]
-    textures: [lava, lava, lava, lava, lava, lava]
-    physics: { preset: lava }
-    render: { transparent: true, style: fluid }
-    animation: { frame_count: 4, frametime: 2 }
-    stem_denylist: [lava_bucket, bucket]
-    worldgen_refs: [lava]
+    types:
+    - fluid
+    - natural
+    textures:
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    physics:
+      preset: lava
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 4
+      frametime: 2
+    stem_denylist:
+    - lava_bucket
+    - bucket
+    worldgen_refs:
+    - lava
     reference_pack: cubatarium_cc0_base
-
+    display_name: Lava
   fire:
-    types: [natural]
-    textures: [fire_0, fire_0, fire_0, fire_0, fire_0, fire_0]
-    physics: { preset: fire }
-    render: { transparent: true }
-    animation: { frame_count: 2, frametime: 2 }
-    stem_denylist: [torch, redtorch, default_torch_on_floor, default_lava]
-    worldgen_refs: [fire]
+    types:
+    - natural
+    textures:
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    physics:
+      preset: fire
+    render:
+      transparent: true
+    animation:
+      frame_count: 2
+      frametime: 2
+    stem_denylist:
+    - torch
+    - redtorch
+    - default_torch_on_floor
+    - default_lava
+    worldgen_refs:
+    - fire
     reference_pack: cubatarium_cc0_base
-
+    display_name: Fire
   wood:
-    types: [natural, building]
-    textures: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
-    worldgen_refs: [wood]
+    types:
+    - natural
+    - building
+    textures:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_top
+    - tree_top
+    worldgen_refs:
+    - wood
     reference_pack: cubatarium_cc0_base
-
+    display_name: Wood
   tree_log:
-    types: [natural, plants]
-    textures: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
-    worldgen_refs: [tree_log]
+    types:
+    - natural
+    - plants
+    textures:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_top
+    - tree_top
+    worldgen_refs:
+    - tree_log
     reference_pack: kenney_voxel_16
-
+    display_name: Tree Log
   tree_leaves:
-    types: [natural, plants]
-    textures: [leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque]
-    worldgen_refs: [tree_leaves]
+    types:
+    - natural
+    - plants
+    textures:
+    - leaves_opaque
+    - leaves_opaque
+    - leaves_opaque
+    - leaves_opaque
+    - leaves_opaque
+    - leaves_opaque
+    worldgen_refs:
+    - tree_leaves
     reference_pack: kenney_voxel_16
-
+    display_name: Leaves
 tier_b:
   glass:
-    types: [building, decorative]
-    render: { transparent: true }
+    types:
+    - building
+    - decorative
+    render:
+      transparent: true
+    display_name: Glass
   obsidian:
-    types: [natural]
+    types:
+    - natural
+    display_name: Obsidian
   hellsand:
-    types: [natural]
+    types:
+    - natural
+    display_name: Soul Sand
   whiteStone:
-    types: [natural, building]
+    types:
+    - natural
+    - building
+    display_name: Quartz Block
   web:
-    types: [decorative, misc]
+    types:
+    - decorative
+    - misc
+    display_name: Cobweb
   bookshelf:
-    types: [building, decorative]
+    types:
+    - building
+    - decorative
+    display_name: Bookshelf
   oreCoal:
-    types: [natural]
+    types:
+    - natural
+    display_name: Coal Ore
   oreIron:
-    types: [natural]
+    types:
+    - natural
+    display_name: Iron Ore
   oreGold:
-    types: [natural]
+    types:
+    - natural
+    display_name: Gold Ore
   oreDiamond:
-    types: [natural]
+    types:
+    - natural
+    display_name: Diamond Ore
   oreEmerald:
-    types: [natural]
+    types:
+    - natural
+    display_name: Emerald Ore
   oreLapis:
-    types: [natural]
+    types:
+    - natural
+    display_name: Lapis Ore
   oreRedstone:
-    types: [natural]
+    types:
+    - natural
+    display_name: Redstone Ore
   blockIron:
-    types: [building]
+    types:
+    - building
+    display_name: Iron Block
   blockGold:
-    types: [building]
+    types:
+    - building
+    display_name: Gold Block
   blockDiamond:
-    types: [building]
+    types:
+    - building
+    display_name: Diamond Block
   blockEmerald:
-    types: [building]
+    types:
+    - building
+    display_name: Emerald Block
   blockLapis:
-    types: [building]
+    types:
+    - building
+    display_name: Lapis Block
   blockRedstone:
-    types: [building]
+    types:
+    - building
+    display_name: Redstone Block
   stoneMoss:
-    types: [natural, building]
+    types:
+    - natural
+    - building
+    display_name: Mossy Stone
   stonebricksmooth:
-    types: [building]
+    types:
+    - building
+    display_name: Stone Bricks
   stonebricksmooth_carved:
-    types: [building]
+    types:
+    - building
+    display_name: Chiseled Stone Bricks
   stonebricksmooth_cracked:
-    types: [building]
+    types:
+    - building
+    display_name: Cracked Stone Bricks
   stonebricksmooth_mossy:
-    types: [building]
+    types:
+    - building
+    display_name: Mossy Stone Bricks
   cactus:
-    types: [natural, plants]
+    types:
+    - natural
+    - plants
+    display_name: Cactus
   melon:
-    types: [natural, plants]
+    types:
+    - natural
+    - plants
+    display_name: Melon
   wool_0:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: White Wool
   wool_1:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Orange Wool
   wool_2:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Magenta Wool
   wool_3:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Light Blue Wool
   wool_4:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Yellow Wool
   wool_5:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Lime Wool
   wool_6:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Pink Wool
   wool_7:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Gray Wool
   wool_8:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Light Gray Wool
   wool_9:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Cyan Wool
   wool_10:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Purple Wool
   wool_11:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Blue Wool
   wool_12:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Brown Wool
   wool_13:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Green Wool
   wool_14:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Red Wool
   wool_15:
-    types: [decorative]
+    types:
+    - decorative
+    display_name: Black Wool

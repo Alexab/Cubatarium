@@ -206,9 +206,25 @@ def load_texture_image(source_root: Path, ref: Any, flat: bool) -> Image.Image:
 
 
 def write_static(stem: str, ref: Any, source_root: Path, out_dir: Path, size: int, flat: bool) -> None:
-    img = resize_square(load_texture_image(source_root, ref, flat), size)
+    from animated_texture_utils import to_square_frame
+
+    img = load_texture_image(source_root, ref, flat)
+    img = to_square_frame(img, size)
     out_dir.mkdir(parents=True, exist_ok=True)
     img.save(out_dir / f"{stem}.png")
+
+
+def canonical_animation_frame_count(block_name: str) -> int | None:
+    from stem_mapping_common import load_canonical_block_specs
+
+    spec = load_canonical_block_specs().get(block_name)
+    if not spec:
+        return None
+    anim = spec.get("animation")
+    if not isinstance(anim, dict):
+        return None
+    fc = anim.get("frame_count")
+    return fc if isinstance(fc, int) and fc > 0 else None
 
 
 def write_animated_or_strip(
@@ -218,13 +234,21 @@ def write_animated_or_strip(
     out_dir: Path,
     size: int,
     flat: bool,
+    target_frames: int | None = None,
 ) -> None:
+    from animated_texture_utils import resample_strip
+
     img = load_texture_image(source_root, ref, flat)
     w, h = img.size
-    if h > w and w > 0 and h % w == 0:
+    frames = target_frames
+    if frames is None and h > w and w > 0 and h % w == 0:
         frames = h // w
+    if frames is not None and frames > 1:
+        img = resample_strip(img, frames, size)
+    elif h > w and w > 0 and h % w == 0:
         if w != size:
-            img = img.resize((size, frames * size), Image.Resampling.NEAREST)
+            src_frames = h // w
+            img = img.resize((size, src_frames * size), Image.Resampling.NEAREST)
     else:
         img = resize_square(img, size)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -260,19 +284,42 @@ def export_staging(spec: dict, mapping: dict, staging: Path) -> None:
     animated: dict[str, list[Any]] = mapping.get("animated", {})
 
     needed = collect_block_stems(mapping.get("blocks", {}))
+    blocks = mapping.get("blocks", {})
     for stem in sorted(needed):
         if stem in animated:
             frames = animated[stem]
             ref = frames[0] if len(frames) == 1 else frames
+            target_frames = None
+            for block_name, spec in blocks.items():
+                block_stems = (
+                    [spec] * 6
+                    if isinstance(spec, str)
+                    else (spec.get("faces") or [spec.get("texture", block_name)] * 6)
+                )
+                if stem in block_stems[:6]:
+                    target_frames = canonical_animation_frame_count(block_name)
+                    if target_frames is None and isinstance(spec, dict):
+                        anim = spec.get("animation")
+                        if isinstance(anim, dict):
+                            fc = anim.get("frame_count")
+                            if isinstance(fc, int) and fc > 0:
+                                target_frames = fc
+                    break
             if isinstance(ref, list):
                 # multi-frame from separate files — stack vertically
                 imgs = [resize_square(load_texture_image(source_root, r, flat), resolution) for r in ref]
                 strip = Image.new("RGBA", (resolution, resolution * len(imgs)))
                 for i, frame in enumerate(imgs):
                     strip.paste(frame, (0, i * resolution))
+                if target_frames and target_frames != len(imgs):
+                    from animated_texture_utils import resample_strip
+
+                    strip = resample_strip(strip, target_frames, resolution)
                 strip.save(tex_dir / f"{stem}.png")
             else:
-                write_animated_or_strip(stem, ref, source_root, tex_dir, resolution, flat)
+                write_animated_or_strip(
+                    stem, ref, source_root, tex_dir, resolution, flat, target_frames
+                )
         elif stem in textures:
             write_static(stem, textures[stem], source_root, tex_dir, resolution, flat)
         else:
@@ -299,6 +346,9 @@ def build_pack(spec: dict, staging: Path) -> None:
     if mapping.get("pack_version"):
         data["version"] = mapping["pack_version"]
     (spec["out"] / "pack.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    from update_pack_metadata import load_dependencies, update_pack_json
+
+    update_pack_json(spec["out"] / "pack.json", spec["pack_id"], load_dependencies(), False)
 
 
 def validate_pack(path: Path) -> None:

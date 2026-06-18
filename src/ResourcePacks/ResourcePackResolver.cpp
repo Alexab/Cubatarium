@@ -1,6 +1,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <algorithm>
 #include <iostream>
+#include <unordered_set>
 #include <map>
 #include <nlohmann/json.hpp>
 
@@ -179,6 +180,31 @@ std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
   };
   addTier(selection.Primary, 0);
   addTier(selection.Secondary, 1);
+
+  const auto enabled = selection.AllIds();
+  std::unordered_set<std::string> enabledSet(enabled.begin(), enabled.end());
+  for (const auto &manifest : result)
+  {
+    for (const std::string &dep : manifest.Depends)
+    {
+      if (!enabledSet.count(dep))
+      {
+        std::cerr << "UResourcePackResolver: pack '" << manifest.Id
+                  << "' depends on '" << dep << "' which is not enabled"
+                  << std::endl;
+      }
+    }
+    for (const std::string &conflict : manifest.Conflicts)
+    {
+      if (enabledSet.count(conflict))
+      {
+        std::cerr << "UResourcePackResolver: pack '" << manifest.Id
+                  << "' conflicts with enabled pack '" << conflict << "'"
+                  << std::endl;
+      }
+    }
+  }
+
   std::sort(result.begin(), result.end(),
             [](const ResourcePackManifest &a, const ResourcePackManifest &b) {
               return a.EffectivePriority < b.EffectivePriority;

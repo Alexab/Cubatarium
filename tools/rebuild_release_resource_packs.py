@@ -214,6 +214,9 @@ def build_pack(spec: dict, staging: Path) -> None:
     data = json.loads(pack_json.read_text(encoding="utf-8"))
     data["name"] = spec["name"]
     pack_json.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    from update_pack_metadata import load_dependencies, update_pack_json
+
+    update_pack_json(pack_json, spec["pack_id"], load_dependencies(), False)
 
 
 def validate_pack(path: Path) -> None:

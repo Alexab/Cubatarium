@@ -1,7 +1,9 @@
 #include "ResourcePacks/TextureOverrides.h"
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 namespace cutum
 {
@@ -42,6 +44,59 @@ int FaceIndexFromName(const std::string &face)
   return -1;
 }
 
+std::string Trim(const std::string &s)
+{
+  size_t start = 0;
+  while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start])))
+  {
+    ++start;
+  }
+  size_t end = s.size();
+  while (end > start &&
+         std::isspace(static_cast<unsigned char>(s[end - 1])))
+  {
+    --end;
+  }
+  return s.substr(start, end - start);
+}
+
+void CommitOverrideEntry(std::vector<TextureFaceOverride> &overrides,
+                         TextureFaceOverride &entry)
+{
+  if (entry.Faces.empty())
+  {
+    entry.Faces = {0, 1, 2, 3, 4, 5};
+  }
+  if (!entry.Stem.empty())
+  {
+    overrides.push_back(entry);
+  }
+  entry = TextureFaceOverride{};
+}
+
+void ParseFacesBracketList(const std::string &value,
+                           TextureFaceOverride &entry)
+{
+  std::string inner = value;
+  const auto lb = inner.find('[');
+  const auto rb = inner.find(']');
+  if (lb != std::string::npos && rb != std::string::npos && rb > lb)
+  {
+    inner = inner.substr(lb + 1, rb - lb - 1);
+  }
+  std::stringstream ss(inner);
+  std::string token;
+  while (std::getline(ss, token, ','))
+  {
+    token = Trim(token);
+    const int idx = FaceIndexFromName(token);
+    if (idx >= 0)
+    {
+      entry.Faces.push_back(idx);
+    }
+  }
+}
+
 void ParseOverrideEntry(const nlohmann::json &entry,
                         std::vector<TextureFaceOverride> &out)
 {
@@ -69,14 +124,7 @@ void ParseOverrideEntry(const nlohmann::json &entry,
       }
     }
   }
-  if (ov.Faces.empty())
-  {
-    ov.Faces = {0, 1, 2, 3, 4, 5};
-  }
-  if (!ov.Stem.empty())
-  {
-    out.push_back(std::move(ov));
-  }
+  CommitOverrideEntry(out, ov);
 }
 
 TextureOverrideMap LoadFromJson(const std::filesystem::path &path)
@@ -132,22 +180,85 @@ TextureOverrideMap LoadFromJson(const std::filesystem::path &path)
   return result;
 }
 
+TextureOverrideMap LoadFromYaml(const std::filesystem::path &path)
+{
+  TextureOverrideMap result;
+  std::ifstream in(path);
+  if (!in.is_open())
+  {
+    return result;
+  }
+  std::string currentBlock;
+  std::vector<TextureFaceOverride> currentOverrides;
+  TextureFaceOverride currentEntry;
+  std::string line;
+  while (std::getline(in, line))
+  {
+    const std::string trimmed = Trim(line);
+    if (trimmed.empty() || trimmed[0] == '#')
+    {
+      continue;
+    }
+    if (trimmed[0] != ' ' && trimmed[0] != '\t' && trimmed.back() == ':')
+    {
+      if (!currentBlock.empty())
+      {
+        CommitOverrideEntry(currentOverrides, currentEntry);
+        if (!currentOverrides.empty())
+        {
+          result[currentBlock] = std::move(currentOverrides);
+        }
+        currentOverrides.clear();
+      }
+      currentBlock = trimmed.substr(0, trimmed.size() - 1);
+      currentBlock = Trim(currentBlock);
+      continue;
+    }
+    if (trimmed.rfind("- ", 0) == 0)
+    {
+      CommitOverrideEntry(currentOverrides, currentEntry);
+      continue;
+    }
+    const auto colon = trimmed.find(':');
+    if (colon == std::string::npos)
+    {
+      continue;
+    }
+    const std::string key = Trim(trimmed.substr(0, colon));
+    const std::string value = Trim(trimmed.substr(colon + 1));
+    if (key == "faces")
+    {
+      ParseFacesBracketList(value, currentEntry);
+    }
+    else if (key == "stem")
+    {
+      currentEntry.Stem = value;
+    }
+  }
+  if (!currentBlock.empty())
+  {
+    CommitOverrideEntry(currentOverrides, currentEntry);
+    if (!currentOverrides.empty())
+    {
+      result[currentBlock] = std::move(currentOverrides);
+    }
+  }
+  return result;
+}
+
 } // namespace
 
 TextureOverrideMap LoadTextureOverrides(const std::filesystem::path &packRoot)
 {
   const auto jsonPath = packRoot / "texture_overrides.json";
+  const auto yamlPath = packRoot / "texture_overrides.yaml";
   if (std::filesystem::exists(jsonPath))
   {
     return LoadFromJson(jsonPath);
   }
-  const auto yamlPath = packRoot / "texture_overrides.yaml";
   if (std::filesystem::exists(yamlPath))
   {
-    std::cerr << "TextureOverrides: found " << yamlPath
-              << " but no texture_overrides.json — run "
-                 "tools/sync_texture_overrides.py"
-              << std::endl;
+    return LoadFromYaml(yamlPath);
   }
   return {};
 }

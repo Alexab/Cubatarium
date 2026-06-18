@@ -20,6 +20,29 @@ blocks:
   snow: snow
   hellrock: hellrock
   hellsand: hellsand
+  bedrock: bedrock
+  stone: stone
+  sandstone: sandstone
+  grass:
+    faces:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top
+    - dirt
+    types:
+    - natural
+  wood:
+    faces:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_top
+    - tree_top
+    types:
+    - natural
   whiteStone: whiteStone
   bookshelf: bookshelf
   oreCoal: oreCoal
@@ -1209,6 +1232,14 @@ textures:
   redstoneDust_line: default_mese_crystal_fragment.png
   leaves_spruce: default_pine_needles.png
   leaves_jungle: default_jungleleaves.png
+  bedrock: default_cobble.png
+  stone: default_stone.png
+  sandstone: default_sandstone.png
+  grass_side:
+    composite:
+      base: default_dirt.png
+      overlay: default_grass_side.png
+  grass_top: default_grass.png
   water: default_water_source_animated.png
   lava: default_lava_source_animated.png
   fire_0: default_fire.png

@@ -22,5 +22,6 @@
   "animation": {
     "frame_count": 4,
     "frametime": 2
-  }
+  },
+  "displayName": "Lava"
 }

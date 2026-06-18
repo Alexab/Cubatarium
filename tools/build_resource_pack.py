@@ -100,22 +100,55 @@ def upscale_png_nearest(src: Path, dst: Path, target_w: int, target_h: int | Non
     write_png(dst, target_w, target_h, bytes(out))
 
 
-def copy_or_generate_texture(
-    src_png: Path, dst_png: Path, resolution: int, fallback_rgb: tuple[int, int, int]
+def copy_texture_for_block(
+    src_png: Path,
+    dst_png: Path,
+    resolution: int,
+    block: dict,
+    stem: str,
+    fallback_rgb: tuple[int, int, int],
 ) -> None:
+    from animated_texture_utils import animation_mode, resample_strip, to_square_frame
+
+    try:
+        from PIL import Image
+    except ImportError:
+        copy_or_generate_texture(src_png, dst_png, resolution, fallback_rgb)
+        return
+
+    textures = block.get("textures", [])
+    anim = block.get("animation")
     if src_png.is_file():
-        size = read_png_size(src_png)
-        if size:
-            sw, sh = size
-            target_w = resolution
-            target_h = sh * resolution // sw if sw else resolution
-            if sw != target_w or sh != target_h:
-                upscale_png_nearest(src_png, dst_png, target_w, target_h)
+        img = Image.open(src_png).convert("RGBA")
+        if anim and stem in textures:
+            mode = animation_mode(len(textures))
+            frame_count = anim.get("frame_count")
+            if (
+                mode == "strip"
+                and isinstance(frame_count, int)
+                and frame_count > 1
+                and stem in textures[:6]
+            ):
+                img = resample_strip(img, frame_count, resolution)
+                dst_png.parent.mkdir(parents=True, exist_ok=True)
+                img.save(dst_png)
+                return
+            if mode == "layers" and stem in textures[:6]:
+                img = to_square_frame(img, resolution)
+                dst_png.parent.mkdir(parents=True, exist_ok=True)
+                img.save(dst_png)
+                return
+        w, h = img.size
+        if w != resolution or (h == w and h != resolution) or (h != w and h * resolution // w != h):
+            if h == w:
+                img = img.resize((resolution, resolution), Image.Resampling.NEAREST)
             else:
-                shutil.copy2(src_png, dst_png)
-        else:
-            shutil.copy2(src_png, dst_png)
-    elif not dst_png.is_file():
+                target_h = h * resolution // w if w else resolution
+                img = img.resize((resolution, target_h), Image.Resampling.NEAREST)
+        dst_png.parent.mkdir(parents=True, exist_ok=True)
+        img.save(dst_png)
+        return
+    if not dst_png.is_file():
         write_png(dst_png, resolution, resolution, solid_rgba(fallback_rgb, resolution))
 
 
@@ -175,7 +208,7 @@ def build_pack(
         for stem in set(stems):
             src_png = source / f"{stem}.png"
             dst_png = tex_dir / f"{stem}.png"
-            copy_or_generate_texture(src_png, dst_png, resolution, (160, 160, 160))
+            copy_texture_for_block(src_png, dst_png, resolution, block, stem, (160, 160, 160))
 
 
 def main() -> None:

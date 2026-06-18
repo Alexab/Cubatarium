@@ -115,6 +115,7 @@ set(SOURCES
     src/ResourcePacks/BlockMergeRegistry.cpp
     src/ResourcePacks/BlockNameUtil.cpp
     src/ResourcePacks/TextureOverrides.cpp
+    src/ResourcePacks/ResourcePackSmoke.cpp
     src/ResourcePacks/PlaceholderTextureCache.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
