@@ -678,6 +678,10 @@ void UWorld::Load(const std::string &world_folder_path)
   AllowProceduralFill = !HasPersistedSave;
 
   LoadWorldData(world_data_file_name);
+  if (OnAfterWorldDataLoaded)
+  {
+    OnAfterWorldDataLoaded();
+  }
   Creatures.clear();
   NextCreatureId = 1;
   PlayerCreatureId = 0;
@@ -2084,6 +2088,21 @@ void UWorld::LoadWorldData(const std::string &file_name)
       ResolveProceduralDefaults(ProceduralTemplate);
       ApplyGeneratorTierDefaults(ProceduralTemplate);
     }
+    if (d.contains("resource_packs") && d["resource_packs"].is_object())
+    {
+      const auto &rp = d["resource_packs"];
+      if (rp.contains("enabled") && rp["enabled"].is_array())
+      {
+        ResourcePacksEnabled.clear();
+        for (const auto &id : rp["enabled"])
+        {
+          if (id.is_string())
+          {
+            ResourcePacksEnabled.push_back(id.get<std::string>());
+          }
+        }
+      }
+    }
     RebuildWorldGenPipeline();
   }
   catch (const json::exception &e)
@@ -2104,6 +2123,11 @@ void UWorld::SaveWorldData(const std::string &file_name)
 
   json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
   world_data["spawn_point"] = arr;
+
+  if (!ResourcePacksEnabled.empty())
+  {
+    world_data["resource_packs"]["enabled"] = ResourcePacksEnabled;
+  }
 
   std::ofstream file(file_name);
   if (file.is_open())

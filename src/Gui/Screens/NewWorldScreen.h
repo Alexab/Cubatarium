@@ -11,7 +11,9 @@ class IGuiMenuHost;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
+class UResourcePackPickerForm;
 class UGuiPanel;
+class UGuiLabel;
 
 class UNewWorldScreen : public UGuiScreenBase
 {
@@ -33,6 +35,8 @@ private:
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiPanel *WorldPage{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
+  UGuiLabel *PackSectionLabel{nullptr};
+  std::unique_ptr<UResourcePackPickerForm> PackForm;
 };
 
 } // namespace cutum

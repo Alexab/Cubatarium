@@ -111,10 +111,16 @@ public:
   void
   SaveAppAndTemplateSettings(const AppSettingsSnapshot &app,
                              const ProceduralSettings &procedural) override;
-  void CreateNewWorldWithSettings(const ProceduralSettings &settings) override;
+  void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const std::vector<std::string> &resourcePacksEnabled) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
+  std::vector<InstalledPackInfo> ListInstalledResourcePacks() const override;
+  std::vector<std::string> GetDefaultEnabledResourcePacks() const override;
+  std::vector<std::string>
+  PeekWorldResourcePacks(const std::string &worldName) const override;
 
   void ShowSettings();
   void ShowNewWorld();

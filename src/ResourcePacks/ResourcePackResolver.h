@@ -12,10 +12,19 @@ namespace cutum
 
 struct ResourcePacksConfig
 {
-  bool UseResourcePacks{true};
-  std::vector<std::string> Enabled;
+  std::vector<std::string> DefaultEnabled;
   int PlaceholderTileSize{16};
   std::string PlaceholderBackground{"#6b4a9e"};
+};
+
+struct InstalledPackInfo
+{
+  std::string Id;
+  std::string DisplayName;
+  int Priority{0};
+  int Resolution{16};
+  std::string License;
+  bool FromWritableRoot{false};
 };
 
 inline const std::vector<std::string> &DefaultEnabledResourcePacks()
@@ -30,8 +39,12 @@ class UResourcePackResolver
 public:
   static ResourcePacksConfig ParseFromJson(const nlohmann::json &root);
 
+  static std::vector<InstalledPackInfo>
+  ListInstalled(const std::filesystem::path &assetRoot,
+                const std::filesystem::path &writableRoot);
+
   std::vector<ResourcePackManifest>
-  Resolve(const ResourcePacksConfig &cfg,
+  Resolve(const std::vector<std::string> &enabledIds,
           const std::filesystem::path &assetRoot,
           const std::filesystem::path &writableRoot) const;
 };

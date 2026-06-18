@@ -7,7 +7,9 @@
 #include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiWindow.h"
+#include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
 
 namespace cutum
@@ -15,6 +17,10 @@ namespace cutum
 
 namespace
 {
+
+constexpr int kNewWorldWinW = 860;
+constexpr int kNewWorldWinH = 660;
+constexpr int kNewWorldMargin = 32;
 
 GuiGridSpec BuildWorldGridSpec(int width)
 {
@@ -34,6 +40,12 @@ GuiGridSpec BuildWorldGridSpec(int width)
   return spec;
 }
 
+std::pair<int, int> NewWorldWindowSize(int viewportW, int viewportH)
+{
+  return {std::min(kNewWorldWinW, viewportW - kNewWorldMargin),
+          std::min(kNewWorldWinH, viewportH - kNewWorldMargin)};
+}
+
 } // namespace
 
 UNewWorldScreen::UNewWorldScreen(IGuiMenuHost *host) : Host(host) {}
@@ -47,8 +59,14 @@ void UNewWorldScreen::OnCreate()
     return;
   }
   const ProceduralSettings settings = WorldForm->ReadSettings();
-  auto create = [this, settings]()
-  { Host->CreateNewWorldWithSettings(settings); };
+  std::vector<std::string> packs =
+      PackForm ? PackForm->ReadSelection() : std::vector<std::string>{};
+  if (packs.empty() && Host)
+  {
+    packs = Host->GetDefaultEnabledResourcePacks();
+  }
+  auto create = [this, settings, packs]()
+  { Host->CreateNewWorldWithSettings(settings, packs); };
   Host->SaveIfNeededAndProceed(create);
 }
 
@@ -69,8 +87,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int winW = std::min(820, ViewportW - 32);
-  const int winH = std::min(500, ViewportH - 32);
+  const auto [winW, winH] = NewWorldWindowSize(ViewportW, ViewportH);
   auto window = std::make_unique<UGuiWindow>(&theme, "New World");
   Window = window.get();
   window->SetBounds(
@@ -78,12 +95,23 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
 
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
   DialogFrame = frame.get();
-  frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
+  frame->SetScrollbarMode(GuiScrollbarMode::Auto);
   UGuiPanel &body = frame->AddScrollPage();
   WorldPage = &body;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
   WorldForm->BuildInto(body);
+
+  auto packSection = std::make_unique<UGuiLabel>(&theme, "Resource packs:");
+  PackSectionLabel = packSection.get();
+  body.AddChild(std::move(packSection));
+  PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
+  PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
+                          : std::vector<InstalledPackInfo>{});
+  PackForm->SetSelection(Host ? Host->GetDefaultEnabledResourcePacks()
+                              : std::vector<std::string>{});
+  PackForm->BuildInto(body);
+
   frame->SetScrollPageLayout(
       0, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
       [this](const GuiRect &area) { LayoutWorldPage(area); });
@@ -118,8 +146,7 @@ void UNewWorldScreen::Relayout()
   {
     return;
   }
-  const int winW = std::min(820, ViewportW - 32);
-  const int winH = std::min(500, ViewportH - 32);
+  const auto [winW, winH] = NewWorldWindowSize(ViewportW, ViewportH);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -133,7 +160,14 @@ int UNewWorldScreen::MeasureWorldPageHeight(const GuiRect &area) const
     return 0;
   }
   const GuiGridSpec spec = BuildWorldGridSpec(area.W);
-  return WorldForm->MeasureGridHeight(area, spec);
+  int height = WorldForm->MeasureGridHeight(area, spec);
+  if (PackForm)
+  {
+    constexpr int kSectionGap = 16;
+    constexpr int kLabelH = 28;
+    height += kSectionGap + kLabelH + PackForm->MeasureHeight(area);
+  }
+  return height;
 }
 
 void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
@@ -143,7 +177,21 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
     return;
   }
   const GuiGridSpec spec = BuildWorldGridSpec(area.W);
-  WorldForm->LayoutGrid(area, spec);
+  const int gridH = WorldForm->MeasureGridHeight(area, spec);
+  WorldForm->LayoutGrid({area.X, area.Y, area.W, gridH}, spec);
+  if (!PackForm)
+  {
+    return;
+  }
+  constexpr int kSectionGap = 16;
+  constexpr int kLabelH = 28;
+  int y = area.Y + gridH + kSectionGap;
+  if (PackSectionLabel)
+  {
+    PackSectionLabel->SetBounds({area.X, y, area.W, kLabelH});
+    y += kLabelH;
+  }
+  PackForm->Layout({area.X, y, area.W, PackForm->MeasureHeight(area)});
 }
 
 } // namespace cutum

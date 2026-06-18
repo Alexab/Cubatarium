@@ -10,6 +10,7 @@ namespace cutum
 
 struct AppSettingsSnapshot;
 struct ProceduralSettings;
+struct InstalledPackInfo;
 
 class IGuiMenuHost
 {
@@ -28,10 +29,15 @@ public:
                              const ProceduralSettings &procedural) = 0;
 
   virtual void
-  CreateNewWorldWithSettings(const ProceduralSettings &settings) = 0;
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const std::vector<std::string> &resourcePacksEnabled) = 0;
   virtual void LoadSelectedWorld(const std::string &worldName) = 0;
   virtual void RefreshWorldList() = 0;
   virtual const std::vector<std::string> &GetWorldNames() const = 0;
+  virtual std::vector<InstalledPackInfo> ListInstalledResourcePacks() const = 0;
+  virtual std::vector<std::string> GetDefaultEnabledResourcePacks() const = 0;
+  virtual std::vector<std::string>
+  PeekWorldResourcePacks(const std::string &worldName) const = 0;
 };
 
 } // namespace cutum

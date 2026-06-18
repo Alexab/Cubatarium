@@ -11,6 +11,7 @@ class UGuiDialogFrame;
 class UGuiListView;
 class UGuiLabel;
 class UGuiButton;
+class UGuiPanel;
 
 class ULoadWorldScreen : public UGuiScreenBase
 {
@@ -29,6 +30,8 @@ private:
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiListView *List{nullptr};
   UGuiLabel *EmptyLabel{nullptr};
+  UGuiLabel *PackSubtitle{nullptr};
+  UGuiPanel *BodyPanel{nullptr};
   UGuiButton *LoadBtn{nullptr};
 };
 

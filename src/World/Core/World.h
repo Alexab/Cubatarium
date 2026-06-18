@@ -105,6 +105,19 @@ public:
   void SetBlockMergeRegistry(
       std::shared_ptr<class UBlockMergeRegistry> merge_registry);
 
+  const std::vector<std::string> &GetResourcePacksEnabled() const
+  {
+    return ResourcePacksEnabled;
+  }
+  void SetResourcePacksEnabled(const std::vector<std::string> &enabled)
+  {
+    ResourcePacksEnabled = enabled;
+  }
+  void SetOnAfterWorldDataLoaded(std::function<void()> callback)
+  {
+    OnAfterWorldDataLoaded = std::move(callback);
+  }
+
   struct SampledFluidState
   {
     bool inFluid{false};
@@ -398,6 +411,8 @@ private:
   bool AllowProceduralFill{true};
   bool HasPersistedSave{false};
   bool LoadedFromChunkSave{false};
+  std::vector<std::string> ResourcePacksEnabled;
+  std::function<void()> OnAfterWorldDataLoaded;
 
   std::map<std::string, std::shared_ptr<UUser>> Users;
 

@@ -14,6 +14,7 @@
 #include <array>
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
+#include <functional>
 #include <vector>
 
 namespace cutum
@@ -107,6 +108,19 @@ public:
     return CreatureTextureStorageInstance;
   }
 
+  std::vector<std::string> GetDefaultEnabledResourcePacks() const;
+  void SetDefaultEnabledResourcePacks(const std::vector<std::string> &ids);
+  std::vector<std::string> GetActiveResourcePacksEnabled() const
+  {
+    return ActiveResourcePacksEnabled;
+  }
+  std::vector<InstalledPackInfo> ListInstalledResourcePacks() const;
+  bool ApplyResourcePacks(const std::vector<std::string> &enabledIds);
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const std::vector<std::string> &resourcePacks);
+  std::vector<std::string>
+  PeekWorldResourcePacks(const std::string &world_name) const;
+
 private:
   std::vector<std::string> WorldList;
 
@@ -134,6 +148,8 @@ private:
   RenderSettings Render;
   UiSettings Ui;
   ResourcePacksConfig ResourcePacks;
+  std::vector<std::string> ActiveResourcePacksEnabled;
+  std::vector<std::string> PendingNewWorldResourcePacks;
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
   std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;
@@ -152,6 +168,9 @@ private:
   std::string AllocateNextWorldName() const;
   void CreateNewWorldWithCurrentSettings();
   void RebuildBlockTexturesFromMergeRegistry();
+  void ApplyResourcePacksAfterWorldDataLoaded();
+  std::vector<std::string>
+  NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
 };
 
 } // namespace cutum

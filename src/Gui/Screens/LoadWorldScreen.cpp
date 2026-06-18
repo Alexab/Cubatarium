@@ -19,9 +19,48 @@
 #include "Gui/Widgets/GuiWindow.h"
 
 #include <algorithm>
+#include <sstream>
 
 namespace cutum
 {
+
+namespace
+{
+
+std::string FormatPackList(const std::vector<std::string> &packs)
+{
+  if (packs.empty())
+  {
+    return "Resource packs: (defaults)";
+  }
+  std::ostringstream oss;
+  oss << "Resource packs: ";
+  for (size_t i = 0; i < packs.size(); ++i)
+  {
+    if (i > 0)
+    {
+      oss << ", ";
+    }
+    oss << packs[i];
+  }
+  return oss.str();
+}
+
+void UpdatePackSubtitle(IGuiMenuHost *host, UGuiLabel *label, int index)
+{
+  if (!host || !label || index < 0)
+  {
+    return;
+  }
+  const auto &names = host->GetWorldNames();
+  if (index >= static_cast<int>(names.size()))
+  {
+    return;
+  }
+  label->SetText(FormatPackList(host->PeekWorldResourcePacks(names[index])));
+}
+
+} // namespace
 
 ULoadWorldScreen::ULoadWorldScreen(IGuiMenuHost *host)
 
@@ -108,6 +147,9 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
 
   DialogFrame = frame.get();
 
+  auto bodyPanel = std::make_unique<UGuiPanel>(&theme);
+  BodyPanel = bodyPanel.get();
+
   auto list = std::make_unique<UGuiListView>(&theme);
 
   List = list.get();
@@ -120,7 +162,20 @@ void ULoadWorldScreen::Build(UGuiContext &ctx)
     list->SetSelectedIndex(0);
   }
 
-  frame->SetFixedBody(std::move(list));
+  bodyPanel->AddChild(std::move(list));
+
+  auto packSubtitle = std::make_unique<UGuiLabel>(&theme, "");
+  PackSubtitle = packSubtitle.get();
+  packSubtitle->SetTextAlign(GuiTextAlign::Left);
+  bodyPanel->AddChild(std::move(packSubtitle));
+  if (Host && !worlds.empty())
+  {
+    UpdatePackSubtitle(Host, PackSubtitle, 0);
+  }
+  List->SetOnSelectionChanged(
+      [this](int index) { UpdatePackSubtitle(Host, PackSubtitle, index); });
+
+  frame->SetFixedBody(std::move(bodyPanel));
 
   auto empty = std::make_unique<UGuiLabel>(&theme, "No saved worlds.");
 
@@ -189,6 +244,15 @@ void ULoadWorldScreen::Relayout()
   DialogFrame->SetBounds(Window->GetClientArea());
 
   DialogFrame->LayoutFrame();
+
+  if (BodyPanel && List && PackSubtitle)
+  {
+    const GuiRect area = BodyPanel->GetBounds();
+    constexpr int subH = 22;
+    List->SetBounds({area.X, area.Y, area.W, std::max(0, area.H - subH - 4)});
+    PackSubtitle->SetBounds(
+        {area.X, area.Y + area.H - subH, area.W, subH});
+  }
 
   if (EmptyLabel)
   {

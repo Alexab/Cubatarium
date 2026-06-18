@@ -15,6 +15,7 @@
 | TD-008 | 1.1 | Archive `tools/import_blocks.ps1` | Deprecated; kept for migrate script | 4 |
 | TD-009 | 1.1 | Simplify `WorldGenContext` stone-fallback after I8 | Redundant but harmless | backlog |
 | TD-010 | 1.1 | Unit tests for merge/placeholder | Optional smoke in 1.2 | backlog |
+| TD-011 | 4.2 | In-game Settings: switch packs for the **current** world without restart | Per-world save exists; hot-reload API exists; UI deferred | backlog |
 
 ## Closed
 

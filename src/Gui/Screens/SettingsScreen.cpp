@@ -13,6 +13,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
 
 namespace cutum
@@ -115,6 +116,14 @@ void USettingsScreen::OnSave()
   if (app.Render.GreedyMeshing && !app.Render.FaceQuads)
   {
     app.Render.FaceQuads = true;
+  }
+  if (PackForm)
+  {
+    app.DefaultResourcePacksEnabled = PackForm->ReadSelection();
+    if (app.DefaultResourcePacksEnabled.empty() && Host)
+    {
+      app.DefaultResourcePacksEnabled = Host->GetDefaultEnabledResourcePacks();
+    }
   }
 
   ProceduralSettings proc =
@@ -293,6 +302,23 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ControlSchemeButton = profileBtn.get();
   app.AddChild(std::move(profileBtn));
 
+  auto packSection =
+      std::make_unique<UGuiLabel>(&theme, "Default resource packs:");
+  PackSectionLabel = packSection.get();
+  app.AddChild(std::move(packSection));
+  auto packNote = std::make_unique<UGuiLabel>(
+      &theme,
+      "Used for new worlds and worlds without a saved pack list.");
+  PackNoteLabel = packNote.get();
+  app.AddChild(std::move(packNote));
+  PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
+  PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
+                          : std::vector<InstalledPackInfo>{});
+  PackForm->SetSelection(appSnap.DefaultResourcePacksEnabled.empty() && Host
+                             ? Host->GetDefaultEnabledResourcePacks()
+                             : appSnap.DefaultResourcePacksEnabled);
+  PackForm->BuildInto(app);
+
   UGuiPanel &world = frame->AddScrollPage();
   WorldPanel = &world;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
@@ -413,7 +439,13 @@ void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec &spec) const
 int USettingsScreen::MeasureAppPageHeight(const GuiRect &area) const
 {
   const GuiGridSpec spec = BuildTwoColumnSpec(area.W);
-  return UGuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
+  int height = UGuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
+  if (PackForm)
+  {
+    constexpr int kSectionGap = 12;
+    height += kSectionGap + PackForm->MeasureHeight(area);
+  }
+  return height;
 }
 
 void USettingsScreen::LayoutAppPage(const GuiRect &area) const
@@ -421,6 +453,25 @@ void USettingsScreen::LayoutAppPage(const GuiRect &area) const
   const GuiGridSpec spec = BuildTwoColumnSpec(area.W);
   UGuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
   LayoutHotbarCountControls(spec);
+  if (!PackForm)
+  {
+    return;
+  }
+  const int gridH = UGuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
+  constexpr int kSectionGap = 12;
+  constexpr int kLabelH = 28;
+  int y = area.Y + gridH + kSectionGap;
+  if (PackSectionLabel)
+  {
+    PackSectionLabel->SetBounds({area.X, y, area.W, kLabelH});
+    y += kLabelH;
+  }
+  if (PackNoteLabel)
+  {
+    PackNoteLabel->SetBounds({area.X, y, area.W, kLabelH});
+    y += kLabelH;
+  }
+  PackForm->Layout({area.X, y, area.W, PackForm->MeasureHeight(area)});
 }
 
 int USettingsScreen::MeasureWorldPageHeight(const GuiRect &area) const

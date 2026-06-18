@@ -178,6 +178,7 @@ set(SOURCES
     src/Gui/Widgets/GuiSlot.cpp
     src/Gui/Widgets/GuiCheckbox.cpp
     src/Gui/Widgets/WorldGenSettingsForm.cpp
+    src/Gui/Widgets/ResourcePackPickerForm.cpp
     src/Gui/Screens/MainMenuScreen.cpp
     src/Gui/Screens/SettingsScreen.cpp
     src/Gui/Screens/NewWorldScreen.cpp
@@ -271,6 +272,7 @@ set(HEADERS
     src/Gui/Widgets/GuiSlot.h
     src/Gui/Widgets/GuiCheckbox.h
     src/Gui/Widgets/WorldGenSettingsForm.h
+    src/Gui/Widgets/ResourcePackPickerForm.h
     src/Gui/Interfaces/IGuiMenuHost.h
     src/Gui/Interfaces/IGuiGameActions.h
     src/Gui/Interfaces/IHotbarViewModel.h

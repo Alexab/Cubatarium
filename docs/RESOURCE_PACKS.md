@@ -39,7 +39,7 @@ Face order for `textures` (6 entries):
 
 ## Merge rules
 
-1. Load enabled packs from `config.json` → `resource_packs.enabled` (list of pack ids).
+1. Load enabled packs (see configuration below).
 2. Sort packs by `priority` ascending.
 3. **Union** of all block names across packs.
 4. For each name, **definition** (physics, render, animation, types) comes from the **first** pack (lowest priority) that declares the block.
@@ -49,15 +49,41 @@ Face order for `textures` (6 entries):
 
 Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).
 
-## config.json
+## Configuration
+
+### Global defaults — `config.json`
 
 ```json
-"use_resource_packs": false,
 "resource_packs": {
-  "enabled": ["cubatarium_cc0_base"],
+  "default_enabled": ["kenney_voxel_16", "cubatarium_cc0_base"],
   "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
 }
 ```
+
+- **default_enabled**: pack ids used when creating a new world (pre-filled in **New World** UI) and when loading a legacy world without a saved pack list.
+- Legacy configs with `resource_packs.enabled` are migrated to `default_enabled` on read.
+
+Edit defaults in **Settings → Application → Default resource packs**. This does **not** change packs for the currently loaded world.
+
+### Per-world — `worlds/World_NNN/world_data.json`
+
+```json
+"resource_packs": {
+  "enabled": ["minecraft_legacy_16"]
+}
+```
+
+Written when creating a world from **New World** (resource pack picker). Applied on world load with hot-reload (textures and block registry rebuild).
+
+## UI
+
+| Screen | Purpose |
+|--------|---------|
+| **Settings → Application** | Default pack list for new / legacy worlds |
+| **New World** | Pack list saved into `world_data.json` |
+| **Load World** | Subtitle shows saved pack ids (debug) |
+
+Installed packs are discovered by scanning `resource_packs/*/pack.json` under the asset and writable roots.
 
 ## Asset paths
 
@@ -68,6 +94,10 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with l
 
 Resolver checks **writable root first**, then asset root.
 
+### Android note
+
+`minecraft_legacy_16` is **not** bundled in the APK (Minecraft-derived assets). It appears in the picker on desktop only if generated locally. Saves referencing missing packs log a warning and fall back to `default_enabled`.
+
 ## Local legacy pack
 
 `resource_packs/minecraft_legacy_16/` is generated locally via `tools/migrate_to_resource_pack.ps1` and is **gitignored** (Minecraft-derived assets).
@@ -77,7 +107,3 @@ Resolver checks **writable root first**, then asset root.
 ```powershell
 python tools/validate_resource_pack.py resource_packs/cubatarium_cc0_base
 ```
-
-## Tech debt
-
-See [TECH_DEBT_RESOURCE_PACKS.md](TECH_DEBT_RESOURCE_PACKS.md).

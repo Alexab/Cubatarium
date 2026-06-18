@@ -14,7 +14,7 @@ For full Minecraft-parity visuals, generate a local pack (gitignored):
 .\tools\migrate_to_resource_pack.ps1
 ```
 
-Then set `"enabled": ["minecraft_legacy_16"]` in `config.json`.
+Then pick `minecraft_legacy_16` in **Settings → Application** (default for new worlds) or **New World** (per-world). You can also set `"default_enabled": ["minecraft_legacy_16"]` in `config.json`.
 
 ## Build
 

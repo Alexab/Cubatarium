@@ -15,6 +15,7 @@ class UGuiPanel;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
+class UResourcePackPickerForm;
 class UGuiTextInput;
 class UGuiCheckbox;
 class UGuiLabel;
@@ -73,6 +74,9 @@ private:
   UGuiTextInput *PaletteKeyInput{nullptr};
   UGuiButton *HotbarMinusButton{nullptr};
   UGuiButton *HotbarPlusButton{nullptr};
+  UGuiLabel *PackSectionLabel{nullptr};
+  UGuiLabel *PackNoteLabel{nullptr};
+  std::unique_ptr<UResourcePackPickerForm> PackForm;
   int HotbarCount{1};
 };
 

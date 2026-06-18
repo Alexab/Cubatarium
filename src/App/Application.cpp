@@ -439,16 +439,35 @@ void UApplication::SaveAppAndTemplateSettings(
 }
 
 void UApplication::CreateNewWorldWithSettings(
-    const ProceduralSettings &settings)
+    const ProceduralSettings &settings,
+    const std::vector<std::string> &resourcePacksEnabled)
 {
   if (!Core)
   {
     return;
   }
-  Core->SetProceduralTemplate(settings);
-  Core->CreateNewWorldFromTemplate();
+  Core->CreateNewWorldWithSettings(settings, resourcePacksEnabled);
   Core->SaveConfigFile();
   EnterGameAfterWorldChange();
+}
+
+std::vector<InstalledPackInfo> UApplication::ListInstalledResourcePacks() const
+{
+  return Core ? Core->ListInstalledResourcePacks()
+              : std::vector<InstalledPackInfo>{};
+}
+
+std::vector<std::string> UApplication::GetDefaultEnabledResourcePacks() const
+{
+  return Core ? Core->GetDefaultEnabledResourcePacks()
+              : std::vector<std::string>{};
+}
+
+std::vector<std::string>
+UApplication::PeekWorldResourcePacks(const std::string &worldName) const
+{
+  return Core ? Core->PeekWorldResourcePacks(worldName)
+              : std::vector<std::string>{};
 }
 
 void UApplication::LoadSelectedWorld(const std::string &worldName)

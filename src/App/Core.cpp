@@ -14,6 +14,7 @@
 #include <optional>
 #include <sstream>
 #include <system_error>
+#include <unordered_set>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -388,7 +389,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       StreamingEnabled = true;
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
-      ResourcePacks.Enabled = DefaultEnabledResourcePacks();
+      ResourcePacks.DefaultEnabled = DefaultEnabledResourcePacks();
     }
 
     TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
@@ -400,34 +401,16 @@ void UCore::LoadConfig(const std::string &config_file_name)
     BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
     auto blockDefinitions = BlockDefinitionsInstance;
 
-    UResourcePackResolver resolver;
-    const auto packs = resolver.Resolve(ResourcePacks, WorkDir, ExeDir);
-    if (packs.empty())
-    {
-      std::cerr << "Resource packs: no packs resolved — check "
-                << (ExeDir / "resource_packs").string() << std::endl;
-    }
-    else
-    {
-      std::cout << "Resource packs: loaded " << packs.size() << " pack(s)";
-      for (const auto &p : packs)
-      {
-        std::cout << " [" << p.Id << "]";
-      }
-      std::cout << std::endl;
-    }
     const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
                                        glm::vec3(0.42f, 0.29f, 0.62f));
     PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
         ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
-    BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
+    BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
                                         ResourcePacks.PlaceholderTileSize);
-    RebuildBlockTexturesFromMergeRegistry();
-    std::cout << "Resource packs: "
-              << BlockMergeRegistryInstance->GetCubeDescriptors().size()
-              << " block type(s) registered" << std::endl;
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
+    WorldInstance->SetOnAfterWorldDataLoaded(
+        [this]() { ApplyResourcePacksAfterWorldDataLoaded(); });
 
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
@@ -536,12 +519,6 @@ void UCore::EnterGame()
       LoadLastWorld();
     }
 
-    RebuildBlockTexturesFromMergeRegistry();
-    if (WorldInstance)
-    {
-      WorldInstance->OnBlockRegistryChanged();
-    }
-
     if (DefaultUserName.empty())
     {
       DefaultUserName = WorldInstance->GetCurrentUserName();
@@ -618,9 +595,8 @@ void UCore::SaveConfigFile()
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);
-  system_data["use_resource_packs"] = ResourcePacks.UseResourcePacks;
   json resource_packs;
-  resource_packs["enabled"] = ResourcePacks.Enabled;
+  resource_packs["default_enabled"] = ResourcePacks.DefaultEnabled;
   json placeholder;
   placeholder["tile_size"] = ResourcePacks.PlaceholderTileSize;
   placeholder["background"] = ResourcePacks.PlaceholderBackground;
@@ -672,6 +648,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
+  snapshot.DefaultResourcePacksEnabled = ResourcePacks.DefaultEnabled;
   return snapshot;
 }
 
@@ -685,6 +662,10 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
   Render = settings.Render;
   Ui = settings.Ui;
+  if (!settings.DefaultResourcePacksEnabled.empty())
+  {
+    ResourcePacks.DefaultEnabled = settings.DefaultResourcePacksEnabled;
+  }
 
   WorldInstance->SetStreamingEnabled(StreamingEnabled);
   WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
@@ -783,6 +764,27 @@ void UCore::CreateWorldFromProceduralConfig()
 
 void UCore::CreateNewWorldWithCurrentSettings()
 {
+  std::vector<std::string> packs = PendingNewWorldResourcePacks;
+  PendingNewWorldResourcePacks.clear();
+  if (packs.empty())
+  {
+    packs = ResourcePacks.DefaultEnabled;
+  }
+  if (packs.empty())
+  {
+    packs.assign(DefaultEnabledResourcePacks().begin(),
+                 DefaultEnabledResourcePacks().end());
+  }
+  packs = NormalizeEnabledPackIds(packs);
+  if (packs.empty())
+  {
+    packs.assign(DefaultEnabledResourcePacks().begin(),
+                 DefaultEnabledResourcePacks().end());
+  }
+
+  WorldInstance->SetResourcePacksEnabled(packs);
+  ApplyResourcePacks(packs);
+
   const std::string new_world_name = AllocateNextWorldName();
   DefaultWorldName = new_world_name;
   ActiveWorldFolder = WorldFolderPath(new_world_name);
@@ -875,6 +877,176 @@ void UCore::LoadWorldList(const std::string &world_path)
   catch (const std::filesystem::filesystem_error &ex)
   {
     std::cerr << ex.what() << std::endl;
+  }
+}
+
+std::vector<std::string> UCore::GetDefaultEnabledResourcePacks() const
+{
+  if (!ResourcePacks.DefaultEnabled.empty())
+  {
+    return ResourcePacks.DefaultEnabled;
+  }
+  return std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
+                                  DefaultEnabledResourcePacks().end());
+}
+
+void UCore::SetDefaultEnabledResourcePacks(
+    const std::vector<std::string> &ids)
+{
+  ResourcePacks.DefaultEnabled = ids;
+}
+
+std::vector<InstalledPackInfo> UCore::ListInstalledResourcePacks() const
+{
+  return UResourcePackResolver::ListInstalled(WorkDir, ExeDir);
+}
+
+std::vector<std::string>
+UCore::NormalizeEnabledPackIds(const std::vector<std::string> &requested) const
+{
+  const auto installed = ListInstalledResourcePacks();
+  std::unordered_set<std::string> installedIds;
+  for (const auto &pack : installed)
+  {
+    installedIds.insert(pack.Id);
+  }
+  std::vector<std::string> result;
+  for (const auto &id : requested)
+  {
+    if (installedIds.count(id) != 0)
+    {
+      result.push_back(id);
+    }
+    else
+    {
+      std::cerr << "UCore: resource pack not installed, skipping: " << id
+                << std::endl;
+    }
+  }
+  return result;
+}
+
+bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
+{
+  if (!BlockMergeRegistryInstance)
+  {
+    return false;
+  }
+  std::vector<std::string> ids = NormalizeEnabledPackIds(enabledIds);
+  if (ids.empty())
+  {
+    ids = NormalizeEnabledPackIds(ResourcePacks.DefaultEnabled);
+  }
+  if (ids.empty())
+  {
+    ids = NormalizeEnabledPackIds(
+        std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
+                                 DefaultEnabledResourcePacks().end()));
+  }
+  if (ids.empty())
+  {
+    std::cerr << "UCore::ApplyResourcePacks: no packs available" << std::endl;
+    return false;
+  }
+
+  UResourcePackResolver resolver;
+  const auto packs = resolver.Resolve(ids, WorkDir, ExeDir);
+  if (packs.empty())
+  {
+    std::cerr << "UCore::ApplyResourcePacks: no packs resolved" << std::endl;
+    return false;
+  }
+
+  if (!PlaceholderCacheInstance)
+  {
+    const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
+                                       glm::vec3(0.42f, 0.29f, 0.62f));
+    PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
+        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
+  }
+
+  BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
+                                      ResourcePacks.PlaceholderTileSize);
+  RebuildBlockTexturesFromMergeRegistry();
+  ActiveResourcePacksEnabled = ids;
+
+  std::cout << "Resource packs: applied " << packs.size() << " pack(s)";
+  for (const auto &p : packs)
+  {
+    std::cout << " [" << p.Id << "]";
+  }
+  std::cout << " (" << BlockMergeRegistryInstance->GetCubeDescriptors().size()
+            << " block types)" << std::endl;
+
+  if (WorldInstance && !WorldInstance->GetWorldName().empty())
+  {
+    WorldInstance->OnBlockRegistryChanged();
+  }
+  return true;
+}
+
+void UCore::ApplyResourcePacksAfterWorldDataLoaded()
+{
+  std::vector<std::string> packs = WorldInstance->GetResourcePacksEnabled();
+  if (packs.empty())
+  {
+    packs = GetDefaultEnabledResourcePacks();
+    WorldInstance->SetResourcePacksEnabled(packs);
+  }
+  ApplyResourcePacks(packs);
+}
+
+void UCore::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings,
+    const std::vector<std::string> &resourcePacks)
+{
+  SetProceduralTemplate(settings);
+  WorldSeed += 1;
+  ProceduralTemplate.Seed = WorldSeed;
+  ResolveProceduralDefaults(ProceduralTemplate);
+  ApplyGeneratorTierDefaults(ProceduralTemplate);
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
+  PendingNewWorldResourcePacks = resourcePacks;
+  CreateNewWorldWithCurrentSettings();
+}
+
+std::vector<std::string>
+UCore::PeekWorldResourcePacks(const std::string &world_name) const
+{
+  const auto path = WorldFolderPath(world_name) / "world_data.json";
+  std::ifstream file(path.string());
+  if (!file.is_open())
+  {
+    return {};
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  try
+  {
+    const json d = json::parse(buffer.str());
+    if (!d.contains("resource_packs") || !d["resource_packs"].is_object())
+    {
+      return {};
+    }
+    const auto &rp = d["resource_packs"];
+    if (!rp.contains("enabled") || !rp["enabled"].is_array())
+    {
+      return {};
+    }
+    std::vector<std::string> result;
+    for (const auto &id : rp["enabled"])
+    {
+      if (id.is_string())
+      {
+        result.push_back(id.get<std::string>());
+      }
+    }
+    return result;
+  }
+  catch (const json::exception &e)
+  {
+    std::cerr << "PeekWorldResourcePacks: " << e.what() << std::endl;
+    return {};
   }
 }
 
