@@ -59,11 +59,19 @@ void UNewWorldScreen::OnCreate()
     return;
   }
   const ProceduralSettings settings = WorldForm->ReadSettings();
-  std::vector<std::string> packs =
-      PackForm ? PackForm->ReadSelection() : std::vector<std::string>{};
-  if (packs.empty() && Host)
+  ResourcePackSelection packs =
+      PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
+  if (packs.Primary.empty() && Host)
   {
-    packs = Host->GetDefaultEnabledResourcePacks();
+    packs = Host->GetDefaultResourcePackSelection();
+  }
+  if (packs.Primary.empty())
+  {
+    return;
+  }
+  if (packs.WorldgenOwner.empty())
+  {
+    packs.WorldgenOwner = packs.Primary.front();
   }
   auto create = [this, settings, packs]()
   { Host->CreateNewWorldWithSettings(settings, packs); };
@@ -108,8 +116,8 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
                           : std::vector<InstalledPackInfo>{});
-  PackForm->SetSelection(Host ? Host->GetDefaultEnabledResourcePacks()
-                              : std::vector<std::string>{});
+  PackForm->SetSelection(Host ? Host->GetDefaultResourcePackSelection()
+                              : ResourcePackSelection{});
   PackForm->BuildInto(body);
 
   frame->SetScrollPageLayout(

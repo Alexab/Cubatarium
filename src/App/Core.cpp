@@ -597,7 +597,12 @@ void UCore::SaveConfigFile()
   system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
-  resource_packs["default_enabled"] = ResourcePacks.DefaultEnabled;
+  resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
+  resource_packs["default_secondary"] = ResourcePacks.DefaultSecondary;
+  if (!ResourcePacks.DefaultEnabled.empty())
+  {
+    resource_packs["default_enabled"] = ResourcePacks.DefaultEnabled;
+  }
   json placeholder;
   placeholder["tile_size"] = ResourcePacks.PlaceholderTileSize;
   placeholder["background"] = ResourcePacks.PlaceholderBackground;
@@ -649,7 +654,8 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
-  snapshot.DefaultResourcePacksEnabled = ResourcePacks.DefaultEnabled;
+  snapshot.DefaultResourcePacks = GetDefaultResourcePackSelection();
+  snapshot.DefaultResourcePacksEnabled = snapshot.DefaultResourcePacks.AllIds();
   return snapshot;
 }
 
@@ -663,9 +669,13 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
   Render = settings.Render;
   Ui = settings.Ui;
-  if (!settings.DefaultResourcePacksEnabled.empty())
+  if (!settings.DefaultResourcePacks.Primary.empty())
   {
-    ResourcePacks.DefaultEnabled = settings.DefaultResourcePacksEnabled;
+    SetDefaultResourcePackSelection(settings.DefaultResourcePacks);
+  }
+  else if (!settings.DefaultResourcePacksEnabled.empty())
+  {
+    SetDefaultEnabledResourcePacks(settings.DefaultResourcePacksEnabled);
   }
 
   WorldInstance->SetStreamingEnabled(StreamingEnabled);
@@ -765,26 +775,34 @@ void UCore::CreateWorldFromProceduralConfig()
 
 void UCore::CreateNewWorldWithCurrentSettings()
 {
-  std::vector<std::string> packs = PendingNewWorldResourcePacks;
+  ResourcePackSelection selection = PendingNewWorldPackSelection;
+  const std::vector<std::string> legacyPacks = PendingNewWorldResourcePacks;
+  PendingNewWorldPackSelection = {};
   PendingNewWorldResourcePacks.clear();
-  if (packs.empty())
+  if (selection.Primary.empty())
   {
-    packs = ResourcePacks.DefaultEnabled;
+    selection.Primary = NormalizeEnabledPackIds(legacyPacks);
   }
-  if (packs.empty())
+  if (selection.Primary.empty())
   {
-    packs.assign(DefaultEnabledResourcePacks().begin(),
-                 DefaultEnabledResourcePacks().end());
+    selection = GetDefaultResourcePackSelection();
   }
-  packs = NormalizeEnabledPackIds(packs);
-  if (packs.empty())
+  selection.Primary = NormalizeEnabledPackIds(selection.Primary);
+  selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
+  if (selection.Primary.empty())
   {
-    packs.assign(DefaultEnabledResourcePacks().begin(),
-                 DefaultEnabledResourcePacks().end());
+    selection.Primary = NormalizeEnabledPackIds(
+        std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
+                                 DefaultEnabledResourcePacks().end()));
+  }
+  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
   }
 
-  WorldInstance->SetResourcePacksEnabled(packs);
-  ApplyResourcePacks(packs);
+  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
+                                          selection.WorldgenOwner);
+  ApplyResourcePacks(selection);
 
   const std::string new_world_name = AllocateNextWorldName();
   DefaultWorldName = new_world_name;
@@ -883,18 +901,48 @@ void UCore::LoadWorldList(const std::string &world_path)
 
 std::vector<std::string> UCore::GetDefaultEnabledResourcePacks() const
 {
-  if (!ResourcePacks.DefaultEnabled.empty())
+  const auto selection = GetDefaultResourcePackSelection();
+  return selection.AllIds();
+}
+
+ResourcePackSelection UCore::GetDefaultResourcePackSelection() const
+{
+  ResourcePackSelection selection;
+  if (!ResourcePacks.DefaultPrimary.empty())
   {
-    return ResourcePacks.DefaultEnabled;
+    selection.Primary = ResourcePacks.DefaultPrimary;
+    selection.Secondary = ResourcePacks.DefaultSecondary;
   }
-  return std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
-                                  DefaultEnabledResourcePacks().end());
+  else if (!ResourcePacks.DefaultEnabled.empty())
+  {
+    selection.Primary = ResourcePacks.DefaultEnabled;
+  }
+  else
+  {
+    selection.Primary.assign(DefaultEnabledResourcePacks().begin(),
+                             DefaultEnabledResourcePacks().end());
+  }
+  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  return selection;
 }
 
 void UCore::SetDefaultEnabledResourcePacks(
     const std::vector<std::string> &ids)
 {
   ResourcePacks.DefaultEnabled = ids;
+  ResourcePacks.DefaultPrimary = ids;
+  ResourcePacks.DefaultSecondary.clear();
+}
+
+void UCore::SetDefaultResourcePackSelection(
+    const ResourcePackSelection &selection)
+{
+  ResourcePacks.DefaultPrimary = selection.Primary;
+  ResourcePacks.DefaultSecondary = selection.Secondary;
+  ResourcePacks.DefaultEnabled = selection.AllIds();
 }
 
 std::vector<InstalledPackInfo> UCore::ListInstalledResourcePacks() const
@@ -912,10 +960,16 @@ UCore::NormalizeEnabledPackIds(const std::vector<std::string> &requested) const
     installedIds.insert(pack.Id);
   }
   std::vector<std::string> result;
+  std::unordered_set<std::string> seen;
   for (const auto &id : requested)
   {
+    if (seen.count(id) != 0)
+    {
+      continue;
+    }
     if (installedIds.count(id) != 0)
     {
+      seen.insert(id);
       result.push_back(id);
     }
     else
@@ -929,29 +983,42 @@ UCore::NormalizeEnabledPackIds(const std::vector<std::string> &requested) const
 
 bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
 {
+  ResourcePackSelection selection;
+  selection.Primary = enabledIds;
+  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  return ApplyResourcePacks(selection);
+}
+
+bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
+{
   if (!BlockMergeRegistryInstance)
   {
     return false;
   }
-  std::vector<std::string> ids = NormalizeEnabledPackIds(enabledIds);
-  if (ids.empty())
+  ResourcePackSelection selection = selectionIn;
+  selection.Primary = NormalizeEnabledPackIds(selection.Primary);
+  selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
+  if (selection.Primary.empty())
   {
-    ids = NormalizeEnabledPackIds(ResourcePacks.DefaultEnabled);
+    selection = GetDefaultResourcePackSelection();
+    selection.Primary = NormalizeEnabledPackIds(selection.Primary);
+    selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
   }
-  if (ids.empty())
-  {
-    ids = NormalizeEnabledPackIds(
-        std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
-                                 DefaultEnabledResourcePacks().end()));
-  }
-  if (ids.empty())
+  if (selection.Primary.empty())
   {
     std::cerr << "UCore::ApplyResourcePacks: no packs available" << std::endl;
     return false;
   }
+  if (selection.WorldgenOwner.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
 
   UResourcePackResolver resolver;
-  const auto packs = resolver.Resolve(ids, WorkDir, ExeDir);
+  const auto packs = resolver.Resolve(selection, WorkDir, ExeDir);
   if (packs.empty())
   {
     std::cerr << "UCore::ApplyResourcePacks: no packs resolved" << std::endl;
@@ -966,10 +1033,13 @@ bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
         ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
   }
 
+  BlockMergeRegistryInstance->SetPrimaryPackIds(selection.Primary);
+  BlockMergeRegistryInstance->SetWorldgenOwnerPackId(selection.WorldgenOwner);
   BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
                                       ResourcePacks.PlaceholderTileSize);
   RebuildBlockTexturesFromMergeRegistry();
-  ActiveResourcePacksEnabled = ids;
+  ActivePackSelection = selection;
+  ActiveResourcePacksEnabled = selection.AllIds();
 
   std::cout << "Resource packs: applied " << packs.size() << " pack(s)";
   for (const auto &p : packs)
@@ -978,6 +1048,13 @@ bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
   }
   std::cout << " (" << BlockMergeRegistryInstance->GetCubeDescriptors().size()
             << " block types)" << std::endl;
+
+  if (PrefabLibraryInstance && WorldInstance)
+  {
+    PrefabLibraryInstance->Load(PrefabsPath.string(),
+                                WorldInstance->GetBlockRegistry());
+    WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+  }
 
   if (WorldInstance && !WorldInstance->GetWorldName().empty())
   {
@@ -988,18 +1065,39 @@ bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
 
 void UCore::ApplyResourcePacksAfterWorldDataLoaded()
 {
-  std::vector<std::string> packs = WorldInstance->GetResourcePacksEnabled();
-  if (packs.empty())
+  ResourcePackSelection selection;
+  selection.Primary = WorldInstance->GetResourcePacksPrimary();
+  selection.Secondary = WorldInstance->GetResourcePacksSecondary();
+  selection.WorldgenOwner = WorldInstance->GetWorldgenOwnerPackId();
+  if (selection.Primary.empty())
   {
-    packs = GetDefaultEnabledResourcePacks();
-    WorldInstance->SetResourcePacksEnabled(packs);
+    selection.Primary = WorldInstance->GetResourcePacksEnabled();
   }
-  ApplyResourcePacks(packs);
+  if (selection.Primary.empty())
+  {
+    selection = GetDefaultResourcePackSelection();
+    WorldInstance->SetResourcePackSelection(
+        selection.Primary, selection.Secondary, selection.WorldgenOwner);
+  }
+  ApplyResourcePacks(selection);
 }
 
 void UCore::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const std::vector<std::string> &resourcePacks)
+{
+  ResourcePackSelection selection;
+  selection.Primary = resourcePacks;
+  if (!selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  CreateNewWorldWithSettings(settings, selection);
+}
+
+void UCore::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings,
+    const ResourcePackSelection &resourcePacks)
 {
   SetProceduralTemplate(settings);
   WorldSeed += 1;
@@ -1007,7 +1105,7 @@ void UCore::CreateNewWorldWithSettings(
   ResolveProceduralDefaults(ProceduralTemplate);
   ApplyGeneratorTierDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-  PendingNewWorldResourcePacks = resourcePacks;
+  PendingNewWorldPackSelection = resourcePacks;
   CreateNewWorldWithCurrentSettings();
 }
 

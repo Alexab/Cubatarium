@@ -1,7 +1,7 @@
 {
   "name": "blockDiamond",
   "types": [
-    "natural"
+    "building"
   ],
   "textures": [
     "blockDiamond",

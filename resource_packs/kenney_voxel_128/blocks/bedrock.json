@@ -1,6 +1,7 @@
 {
   "name": "bedrock",
   "types": [
+    "building",
     "natural"
   ],
   "textures": [

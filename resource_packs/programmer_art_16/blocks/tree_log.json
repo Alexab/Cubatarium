@@ -1,7 +1,8 @@
 {
   "name": "tree_log",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "tree_side",

@@ -1,5 +1,6 @@
 #include "Content/ContentTypeRegistry.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "World/Prefabs/Prefab.h"
@@ -89,7 +90,9 @@ void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage &storage)
   {
     const BlockDefinition &def = pair.second;
     const auto typeIds = GetTypesForTags(def.Types);
-    CatalogEntry entry{def.Name, def.Name};
+    const std::string label =
+        def.DisplayName.empty() ? HumanizeBlockName(def.Name) : def.DisplayName;
+    CatalogEntry entry{def.Name, label};
     for (const auto &typeId : typeIds)
     {
       if (!BlockEntries.count(typeId))

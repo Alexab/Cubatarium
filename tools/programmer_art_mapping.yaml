@@ -338,7 +338,7 @@ blocks:
       transparent: true
       style: fluid
     animation:
-      frame_count: 16
+      frame_count: 2
       frametime: 2
   lava:
     faces:
@@ -384,6 +384,26 @@ blocks:
     - natural
   tree_birch: tree_birch
   wood: wood
+  fire:
+    faces:
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    types:
+    - natural
+    physics:
+      preset: fire
+    render:
+      transparent: true
 textures:
   sand: sand.png
   dirt: dirt.png
@@ -519,7 +539,7 @@ textures:
   redstoneDust_line: redstone_dust_line.png
   leaves_spruce: leaves_spruce.png
   leaves_jungle: leaves_jungle.png
-  water: waterlily.png
+  water: water_flow.png
   lava: lava_flow.png
   bedrock: bedrock.png
   brick: brick.png
@@ -531,3 +551,17 @@ textures:
   tnt_side: tnt_side.png
   tnt_bottom: tnt_bottom.png
   tnt_top: tnt_top.png
+  fire_0: fire_layer_0.png
+  fire_1: fire_layer_1.png
+animated:
+  water:
+  - water_flow.png
+  lava:
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png
+  - lava_flow.png

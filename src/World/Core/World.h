@@ -100,6 +100,10 @@ public:
 
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
+  void SetOnBlockRegistryChanged(std::function<void()> callback)
+  {
+    OnBlockRegistryChangedCallback = std::move(callback);
+  }
   void SetBlockDefinitionStorage(
       std::shared_ptr<UBlockDefinitionStorage> definitions);
   void SetBlockMergeRegistry(
@@ -109,9 +113,34 @@ public:
   {
     return ResourcePacksEnabled;
   }
+  const std::vector<std::string> &GetResourcePacksPrimary() const
+  {
+    return ResourcePacksPrimary;
+  }
+  const std::vector<std::string> &GetResourcePacksSecondary() const
+  {
+    return ResourcePacksSecondary;
+  }
+  const std::string &GetWorldgenOwnerPackId() const
+  {
+    return WorldgenOwnerPackId;
+  }
   void SetResourcePacksEnabled(const std::vector<std::string> &enabled)
   {
     ResourcePacksEnabled = enabled;
+    ResourcePacksPrimary = enabled;
+    ResourcePacksSecondary.clear();
+  }
+  void SetResourcePackSelection(const std::vector<std::string> &primary,
+                                const std::vector<std::string> &secondary,
+                                const std::string &worldgenOwner = {})
+  {
+    ResourcePacksPrimary = primary;
+    ResourcePacksSecondary = secondary;
+    ResourcePacksEnabled = primary;
+    ResourcePacksEnabled.insert(ResourcePacksEnabled.end(), secondary.begin(),
+                                secondary.end());
+    WorldgenOwnerPackId = worldgenOwner;
   }
   void SetOnAfterWorldDataLoaded(std::function<void()> callback)
   {
@@ -412,7 +441,11 @@ private:
   bool HasPersistedSave{false};
   bool LoadedFromChunkSave{false};
   std::vector<std::string> ResourcePacksEnabled;
+  std::vector<std::string> ResourcePacksPrimary;
+  std::vector<std::string> ResourcePacksSecondary;
+  std::string WorldgenOwnerPackId;
   std::function<void()> OnAfterWorldDataLoaded;
+  std::function<void()> OnBlockRegistryChangedCallback;
 
   std::map<std::string, std::shared_ptr<UUser>> Users;
 

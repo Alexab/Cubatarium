@@ -55,6 +55,10 @@ void ScanRootForPacks(const fs::path &root, bool writable,
       info.Priority = manifest->Priority;
       info.Resolution = manifest->Resolution;
       info.License = manifest->License;
+      info.MinGameVersion = manifest->MinGameVersion;
+      info.Depends = manifest->Depends;
+      info.Conflicts = manifest->Conflicts;
+      info.Role = manifest->Role;
       info.FromWritableRoot = writable;
       const auto it = out.find(info.Id);
       if (it == out.end() || writable)
@@ -63,6 +67,28 @@ void ScanRootForPacks(const fs::path &root, bool writable,
       }
     }
   }
+}
+
+std::optional<ResourcePackManifest>
+LoadPackManifest(const std::string &packId, const fs::path &assetRoot,
+                 const fs::path &writableRoot)
+{
+  const fs::path roots[] = {writableRoot / "resource_packs",
+                            assetRoot / "resource_packs"};
+  for (const auto &root : roots)
+  {
+    const auto candidate = root / packId;
+    if (auto manifest = UResourcePack::LoadManifest(candidate))
+    {
+      return manifest;
+    }
+  }
+  return std::nullopt;
+}
+
+int ComputeEffectivePriority(int tier, int invertedSelectionIndex, int packPriority)
+{
+  return tier * 1000 + invertedSelectionIndex * 10 + packPriority;
 }
 
 } // namespace
@@ -74,6 +100,14 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
   if (root.contains("resource_packs") && root["resource_packs"].is_object())
   {
     const auto &rp = root["resource_packs"];
+    if (rp.contains("default_primary") && rp["default_primary"].is_array())
+    {
+      ParseEnabledArray(rp["default_primary"], cfg.DefaultPrimary);
+    }
+    if (rp.contains("default_secondary") && rp["default_secondary"].is_array())
+    {
+      ParseEnabledArray(rp["default_secondary"], cfg.DefaultSecondary);
+    }
     if (rp.contains("default_enabled") && rp["default_enabled"].is_array())
     {
       ParseEnabledArray(rp["default_enabled"], cfg.DefaultEnabled);
@@ -82,6 +116,10 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
     {
       ParseEnabledArray(rp["enabled"], cfg.DefaultEnabled);
     }
+    if (cfg.DefaultPrimary.empty() && !cfg.DefaultEnabled.empty())
+    {
+      cfg.DefaultPrimary = cfg.DefaultEnabled;
+    }
     if (rp.contains("placeholder") && rp["placeholder"].is_object())
     {
       const auto &ph = rp["placeholder"];
@@ -89,9 +127,9 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
       cfg.PlaceholderBackground = ph.value("background", "#6b4a9e");
     }
   }
-  if (cfg.DefaultEnabled.empty())
+  if (cfg.DefaultPrimary.empty() && cfg.DefaultEnabled.empty())
   {
-    cfg.DefaultEnabled = DefaultEnabledResourcePacks();
+    cfg.DefaultPrimary = DefaultEnabledResourcePacks();
   }
   return cfg;
 }
@@ -116,36 +154,45 @@ std::vector<InstalledPackInfo> UResourcePackResolver::ListInstalled(
 }
 
 std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
-    const std::vector<std::string> &enabledIds,
-    const fs::path &assetRoot, const fs::path &writableRoot) const
+    const ResourcePackSelection &selection, const fs::path &assetRoot,
+    const fs::path &writableRoot) const
 {
   std::vector<ResourcePackManifest> result;
-  const fs::path roots[] = {writableRoot / "resource_packs",
-                            assetRoot / "resource_packs"};
-  for (const auto &packId : enabledIds)
-  {
-    bool found = false;
-    for (const auto &root : roots)
+  auto addTier = [&](const std::vector<std::string> &ids, int tier) {
+    const int count = static_cast<int>(ids.size());
+    for (int i = 0; i < count; ++i)
     {
-      const auto candidate = root / packId;
-      if (auto manifest = UResourcePack::LoadManifest(candidate))
+      const auto &packId = ids[static_cast<size_t>(i)];
+      if (auto manifest = LoadPackManifest(packId, assetRoot, writableRoot))
       {
+        manifest->SelectionIndex = i;
+        manifest->EffectivePriority =
+            ComputeEffectivePriority(tier, count - 1 - i, manifest->Priority);
         result.push_back(*manifest);
-        found = true;
-        break;
+      }
+      else
+      {
+        std::cerr << "UResourcePackResolver: pack not found: " << packId
+                  << std::endl;
       }
     }
-    if (!found)
-    {
-      std::cerr << "UResourcePackResolver: pack not found: " << packId
-                << std::endl;
-    }
-  }
+  };
+  addTier(selection.Primary, 0);
+  addTier(selection.Secondary, 1);
   std::sort(result.begin(), result.end(),
             [](const ResourcePackManifest &a, const ResourcePackManifest &b) {
-              return a.Priority < b.Priority;
+              return a.EffectivePriority < b.EffectivePriority;
             });
   return result;
+}
+
+std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
+    const std::vector<std::string> &enabledIds, const fs::path &assetRoot,
+    const fs::path &writableRoot) const
+{
+  ResourcePackSelection selection;
+  selection.Primary = enabledIds;
+  return Resolve(selection, assetRoot, writableRoot);
 }
 
 } // namespace cutum

@@ -1,7 +1,8 @@
 {
   "name": "web",
   "types": [
-    "natural"
+    "decorative",
+    "misc"
   ],
   "textures": [
     "web",

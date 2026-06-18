@@ -208,6 +208,8 @@
 
 ## 8. Архитектура множественных texture packs
 
+> **Актуальная реализация (2026):** runtime resource packs, merge v2, canonical blocks и аудит описаны в [RESOURCE_PACKS.md](RESOURCE_PACKS.md) и [block-semantics-audit.md](block-semantics-audit.md). Ниже — исходное исследование MVP; часть имён файлов устарела.
+
 Сейчас: только build-time импорт через [`import_blocks.ps1`](../tools/import_blocks.ps1). Runtime-смены пака нет.
 
 ### Модель

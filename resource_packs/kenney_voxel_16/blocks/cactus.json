@@ -1,7 +1,8 @@
 {
   "name": "cactus",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "cactus_side",

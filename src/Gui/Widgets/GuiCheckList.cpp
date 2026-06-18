@@ -1,6 +1,7 @@
 #include "Gui/Widgets/GuiCheckList.h"
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiKeyCodes.h"
+#include "Gui/Core/GuiKeyCodes.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
@@ -63,6 +64,29 @@ std::vector<std::string> UGuiCheckList::GetCheckedIds() const
 void UGuiCheckList::SetOnChanged(std::function<void()> handler)
 {
   OnChanged = std::move(handler);
+}
+
+bool UGuiCheckList::MoveFocusedItem(int delta)
+{
+  if (Items.empty() || delta == 0)
+  {
+    return false;
+  }
+  if (FocusedIndex < 0)
+  {
+    FocusedIndex = 0;
+  }
+  const int target = FocusedIndex + delta;
+  if (target < 0 || target >= static_cast<int>(Items.size()))
+  {
+    return false;
+  }
+  std::swap(Items[static_cast<size_t>(FocusedIndex)],
+            Items[static_cast<size_t>(target)]);
+  FocusedIndex = target;
+  EnsureFocusedVisible();
+  NotifyChanged();
+  return true;
 }
 
 bool UGuiCheckList::CanFocus() const
@@ -228,6 +252,7 @@ bool UGuiCheckList::OnMouseDown(const GuiMouseEvent &event)
   }
   DragActive = true;
   DragMoved = false;
+  ReorderDrag = false;
   DragStartY = event.Y;
   DragStartScroll = ScrollOffsetPx;
   const int localY = event.Y - Bounds.Y + ScrollOffsetPx;
@@ -250,6 +275,26 @@ bool UGuiCheckList::OnMouseMove(const GuiMouseEvent &event)
   if (!DragMoved && std::abs(dy) > kGuiTouchDragSlopPx)
   {
     DragMoved = true;
+    if (PendingToggleIndex >= 0)
+    {
+      ReorderDrag = true;
+    }
+  }
+  if (DragMoved && ReorderDrag && PendingToggleIndex >= 0)
+  {
+    const int localY = event.Y - Bounds.Y + ScrollOffsetPx;
+    int targetIndex = localY / RowHeight;
+    targetIndex = std::clamp(targetIndex, 0, static_cast<int>(Items.size()) - 1);
+    if (targetIndex != PendingToggleIndex)
+    {
+      std::swap(Items[static_cast<size_t>(PendingToggleIndex)],
+                Items[static_cast<size_t>(targetIndex)]);
+      FocusedIndex = targetIndex;
+      PendingToggleIndex = targetIndex;
+      EnsureFocusedVisible();
+      NotifyChanged();
+    }
+    return true;
   }
   if (DragMoved)
   {
@@ -267,6 +312,7 @@ bool UGuiCheckList::OnMouseUp(const GuiMouseEvent &event)
     return false;
   }
   DragActive = false;
+  ReorderDrag = false;
   if (!DragMoved && PendingToggleIndex >= 0)
   {
     FocusIndex(PendingToggleIndex);
@@ -325,9 +371,17 @@ bool UGuiCheckList::HandleKeyNavigation(const GuiKeyEvent &event)
   switch (event.KeyCode)
   {
   case GuiKey::Up:
+    if ((event.Mods & GuiKey::ModControl) != 0)
+    {
+      return MoveFocusedItem(-1);
+    }
     index = std::max(0, index - 1);
     break;
   case GuiKey::Down:
+    if ((event.Mods & GuiKey::ModControl) != 0)
+    {
+      return MoveFocusedItem(1);
+    }
     index = std::min(count - 1, index + 1);
     break;
   case GuiKey::Home:

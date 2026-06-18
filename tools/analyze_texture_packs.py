@@ -12,6 +12,8 @@ import struct
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import yaml
+
 try:
     from PIL import Image
 except ImportError:
@@ -59,55 +61,19 @@ PACK_META = {
     "vexed_block_land": {"license": "CC0-1.0", "source": "https://v3x3d.itch.io/block-land"},
 }
 
+STEM_RULES_PATH = REPO / "tools" / "stem_rules.yaml"
+
+
+def load_stem_aliases() -> dict[str, list[str]]:
+    if not STEM_RULES_PATH.is_file():
+        return {}
+    data = yaml.safe_load(STEM_RULES_PATH.read_text(encoding="utf-8")) or {}
+    aliases = data.get("stem_aliases", {})
+    return aliases if isinstance(aliases, dict) else {}
+
+
 # Explicit stem aliases: canonical -> candidate filenames (no ext)
-STEM_ALIASES: dict[str, list[str]] = {
-    "dirt": ["dirt", "default_dirt", "terrain_dirt", "dirt_16x16"],
-    "grass_side": ["grass_side", "default_grass_side", "dirt_grass", "grass_side_overlay"],
-    "grass_top": ["grass_top", "default_grass", "grass_top_green", "grass1", "grass2"],
-    "grass_top_green": ["grass_top", "default_grass", "grass_top_green", "grass1"],
-    "stone": ["stone", "default_stone", "greystone", "stone_16x16", "rocks"],
-    "sand": ["sand", "default_sand", "greysand", "sand_16x16"],
-    "gravel": ["gravel", "default_gravel", "gravel_stone", "gravel_dirt", "gravel_16x16"],
-    "glass": ["glass", "default_glass", "glass_frame"],
-    "obsidian": ["obsidian", "default_obsidian"],
-    "ice": ["ice", "default_ice"],
-    "snow": ["snow", "default_snow", "dirt_snow"],
-    "water": ["water", "default_water_source", "default_water_flowing", "water_16x16"],
-    "lava": ["lava", "default_lava_source", "default_lava_flowing"],
-    "oreCoal": ["oreCoal", "default_stone_with_coal", "coal_ore"],
-    "oreIron": ["oreIron", "default_stone_with_iron", "iron_ore"],
-    "oreGold": ["oreGold", "default_stone_with_gold", "gold_ore"],
-    "oreDiamond": ["oreDiamond", "default_stone_with_diamond", "diamond_ore"],
-    "tree_side": ["tree_side", "default_tree", "default_wood", "wood", "log_side"],
-    "tree_top": ["tree_top", "default_tree_top", "wood_top", "log_top"],
-    "leaves_opaque": ["leaves_opaque", "default_leaves", "leaves"],
-    "hellrock": ["hellrock", "default_netherrack", "netherrack"],
-    "hellsand": ["hellsand", "default_nether_sand", "soul_sand"],
-    "whiteStone": ["whiteStone", "default_stone", "end_stone"],
-    "cloth_0": ["cloth_0", "wool_white", "cotton_tan", "wool_colored_white"],
-    "grass_block_top": ["grass_top", "default_grass", "grass_block_top"],
-    "grass_block_side": ["grass_side", "default_grass_side", "grass_block_side"],
-    "planks_oak": ["wood", "default_wood", "planks_oak", "oak_planks"],
-    "log_oak": ["tree_side", "default_tree", "log_oak", "oak_log"],
-    "log_oak_top": ["tree_top", "default_tree_top", "log_oak_top"],
-    "lapis_ore": ["oreLapis", "default_stone_with_lapis", "lapis_ore"],
-    "emerald_ore": ["oreEmerald", "emerald_ore"],
-    "redstone_ore": ["oreRedstone", "redstone_ore"],
-    "netherrack": ["hellrock", "default_netherrack", "netherrack"],
-    "soul_sand": ["hellsand", "default_nether_sand", "soul_sand"],
-    "end_stone": ["whiteStone", "end_stone"],
-    "glowstone": ["lightgem", "glowstone", "default_meselamp"],
-    "gold_block": ["blockGold", "default_gold_block", "gold_block"],
-    "iron_block": ["blockIron", "default_steel_block", "iron_block"],
-    "stone_bricks": ["stonebricksmooth", "default_stone_brick", "stone_bricks"],
-    "mossy_stone_bricks": ["stonebricksmooth_mossy", "mossy_stone_bricks"],
-    "cracked_stone_bricks": ["stonebricksmooth_cracked", "cracked_stone_bricks"],
-    "chiseled_stone_bricks": ["stonebricksmooth_carved", "chiseled_stone_bricks"],
-    "chiseled_sandstone": ["sandstone_carved", "chiseled_sandstone"],
-    "smooth_sandstone": ["sandstone_smooth", "smooth_sandstone"],
-    "coal_ore": ["oreCoal", "coal_ore"],
-    "cobblestone": ["stone", "default_cobble", "cobblestone"],
-}
+STEM_ALIASES: dict[str, list[str]] = load_stem_aliases()
 
 CATEGORY_KEYWORDS = {
     "terrain": ["dirt", "grass", "stone", "sand", "gravel", "snow", "clay", "mycel", "farmland"],

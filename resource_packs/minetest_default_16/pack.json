@@ -4,5 +4,11 @@
   "version": 2,
   "license": "CC-BY-SA-3.0",
   "resolution": 16,
-  "priority": 4
+  "priority": 4,
+  "worldgen_role": "primary",
+  "pack_format": 1,
+  "merge_mode": "skip_existing",
+  "depends": [],
+  "conflicts": [],
+  "min_game_version": ""
 }

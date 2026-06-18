@@ -19,31 +19,61 @@ resource_packs/<pack_id>/
 {
   "id": "cubatarium_cc0_base",
   "name": "Cubatarium CC0 Base",
+  "pack_format": 1,
   "version": 1,
   "license": "CC0-1.0",
   "resolution": 16,
-  "priority": 10
+  "priority": 10,
+  "worldgen_role": "primary",
+  "merge_mode": "skip_existing",
+  "depends": [],
+  "conflicts": [],
+  "min_game_version": "0.1.0"
 }
 ```
 
-- **priority**: lower number wins when two packs define the same block `name`.
+- **priority**: tiebreaker within the same UI tier and list position.
+- **worldgen_role**: `primary` (worldgen-capable) or `secondary` (decorative / partial).
+- **merge_mode**: `skip_existing` (default), `override`, or `duplicate` (`pack_id::local_name`).
 - **id**: must match the folder name under `resource_packs/`.
+
+## Merge rules (3 layers, Bedrock-style)
+
+1. **Block catalog** — union of block names from enabled packs; `merge_mode` controls collisions.
+2. **Block definition** — physics/render/types from the **owner pack** only.
+3. **Texture atlas** — stems resolved in the owner pack; atlas keys remain `pack_id/stem`.
+
+**Selection order:** `primary[]` then `secondary[]`. **Higher in each list = higher priority** (like Minecraft). Effective priority:
+
+`tier * 1000 + inverted_selection_index * 10 + pack.priority`
+
+| merge_mode | Behaviour |
+|------------|-----------|
+| `skip_existing` | Add block only if name not taken (default for secondary) |
+| `override` | Replace canonical block definition |
+| `duplicate` | Register `pack_id::local_name` as separate block |
+
+**texture_overrides.json** (optional, Luanti-style): secondary packs can remap faces of canonical blocks without new block JSON.
+
+**Qualified names:** `pack_id::local_name` in saves/prefabs/worldgen; fallback to short `local_name`.
+
+See also `docs/block-semantics-audit.md` and `tools/audit_resource_packs.py`.
+
+### Comparison with Minecraft / Minetest
+
+| Pattern | Cubatarium |
+|---------|------------|
+| UI order = priority | primary/secondary lists, top wins |
+| Path overwrite textures | owner-pack texture resolve |
+| Namespaced ids | `pack_id::local_name` |
+| override.txt face remap | `texture_overrides.json` |
+| Offline baked pack | `tools/bake_merged_resource_pack.py` |
 
 ## blocks/<name>.json
 
-Full block definition (same schema as legacy `models/blocks/*.json`). The numeric `id` field is **optional and ignored** at runtime; block identity is the string `name`.
+Full block definition. The numeric `id` field is optional and ignored at runtime; identity is the string `name` (no `::` in pack JSON).
 
-Face order for `textures` (6 entries):
-
-`[+Z, +X, -Z, -X, +Y, -Y]`
-
-## Merge rules
-
-1. Load enabled packs (see configuration below).
-2. Sort packs by `priority` ascending.
-3. **Union** of all block names across packs.
-4. For each name, **definition** (physics, render, animation, types) comes from the **first** pack (lowest priority) that declares the block.
-5. For each texture **stem** on each face, resolve PNG by scanning packs in priority order; the atlas stores textures under `pack_id/stem` so packs cannot overwrite each other. Missing file → **placeholder** face (solid color + block name label).
+Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 
 ## Placeholder
 
@@ -55,13 +85,14 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with l
 
 ```json
 "resource_packs": {
-  "default_enabled": ["kenney_voxel_16", "cubatarium_cc0_base"],
+  "default_primary": ["kenney_voxel_16"],
+  "default_secondary": ["cubatarium_cc0_base"],
   "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
 }
 ```
 
-- **default_enabled**: pack ids used when creating a new world (pre-filled in **New World** UI) and when loading a legacy world without a saved pack list.
-- Legacy configs with `resource_packs.enabled` are migrated to `default_enabled` on read.
+- **default_primary** / **default_secondary**: defaults for **New World** UI.
+- Legacy `default_enabled` / `enabled` arrays migrate to `primary` on read.
 
 Edit defaults in **Settings → Application → Default resource packs**. This does **not** change packs for the currently loaded world.
 
@@ -69,21 +100,27 @@ Edit defaults in **Settings → Application → Default resource packs**. This d
 
 ```json
 "resource_packs": {
-  "enabled": ["minecraft_legacy_16"]
+  "primary": ["kenney_voxel_16"],
+  "secondary": ["cubatarium_cc0_base"],
+  "worldgen_owner": "kenney_voxel_16"
 }
 ```
 
-Written when creating a world from **New World** (resource pack picker). Applied on world load with hot-reload (textures and block registry rebuild).
+Legacy `"enabled": [...]` is read as `primary`. `worldgen_owner` defaults to `primary[0]`.
 
 ## UI
 
 | Screen | Purpose |
 |--------|---------|
-| **Settings → Application** | Default pack list for new / legacy worlds |
-| **New World** | Pack list saved into `world_data.json` |
+| **Settings → Application** | Default primary/secondary pack lists |
+| **New World** | Primary (required) + secondary pack lists → `world_data.json` |
 | **Load World** | Subtitle shows saved pack ids (debug) |
 
-Installed packs are discovered by scanning `resource_packs/*/pack.json` under the asset and writable roots.
+Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority. Missing `depends` / active `conflicts` show a **WARN** line under the lists.
+
+## Worldgen block resolution
+
+`content/worldgen_refs.json` (from `tools/generate_worldgen_refs.py` + `canonical_blocks.yaml`) maps worldgen slots (`stone`, `grass`, …) to block names. `WorldGenContext` resolves via `worldgen_owner` qualified names first (`pack_id::stone`), then short names. `worldgen_owner` is stored in `world_data.json` and passed to `BlockMergeRegistry`.
 
 ## Asset paths
 
@@ -106,6 +143,19 @@ Resolver checks **writable root first**, then asset root.
 
 ```powershell
 python tools/validate_resource_pack.py resource_packs/cubatarium_cc0_base
+python tools/generate_worldgen_refs.py
+python tools/audit_resource_packs.py
+python tools/audit_resource_packs.py --reference-pack cubatarium_cc0_base
+python tools/audit_resource_packs.py --write-roles
+python tools/apply_canonical_types.py
+python tools/update_pack_metadata.py
+python tools/sync_texture_overrides.py
+```
+
+Offline merge:
+
+```powershell
+python tools/bake_merged_resource_pack.py --primary kenney_voxel_16 --secondary cubatarium_cc0_base --output resource_packs/_baked_merged --pack-id baked_merged
 ```
 
 ## Rebuilding release packs

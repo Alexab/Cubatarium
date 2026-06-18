@@ -119,11 +119,12 @@ void USettingsScreen::OnSave()
   }
   if (PackForm)
   {
-    app.DefaultResourcePacksEnabled = PackForm->ReadSelection();
-    if (app.DefaultResourcePacksEnabled.empty() && Host)
+    app.DefaultResourcePacks = PackForm->ReadSelection();
+    if (app.DefaultResourcePacks.Primary.empty() && Host)
     {
-      app.DefaultResourcePacksEnabled = Host->GetDefaultEnabledResourcePacks();
+      app.DefaultResourcePacks = Host->GetDefaultResourcePackSelection();
     }
+    app.DefaultResourcePacksEnabled = app.DefaultResourcePacks.AllIds();
   }
 
   ProceduralSettings proc =
@@ -314,9 +315,11 @@ void USettingsScreen::Build(UGuiContext &ctx)
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
                           : std::vector<InstalledPackInfo>{});
-  PackForm->SetSelection(appSnap.DefaultResourcePacksEnabled.empty() && Host
-                             ? Host->GetDefaultEnabledResourcePacks()
-                             : appSnap.DefaultResourcePacksEnabled);
+  PackForm->SetSelection(
+      !appSnap.DefaultResourcePacks.Primary.empty()
+          ? appSnap.DefaultResourcePacks
+          : (Host ? Host->GetDefaultResourcePackSelection()
+                  : ResourcePackSelection{}));
   PackForm->BuildInto(app);
 
   UGuiPanel &world = frame->AddScrollPage();

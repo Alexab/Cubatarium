@@ -20,8 +20,10 @@ public:
   explicit UResourcePackPickerForm(const GuiTheme *theme);
 
   void SetPacks(const std::vector<InstalledPackInfo> &packs);
+  void SetSelection(const ResourcePackSelection &selection);
   void SetSelection(const std::vector<std::string> &selectedIds);
-  std::vector<std::string> ReadSelection() const;
+  ResourcePackSelection ReadSelection() const;
+  bool HasValidPrimarySelection() const;
 
   void BuildInto(UGuiPanel &panel);
   int MeasureHeight(const GuiRect &area) const;
@@ -31,15 +33,22 @@ public:
 
 private:
   void SyncListItems();
+  void UpdateWarnings();
   static std::string FormatPackLabel(const InstalledPackInfo &pack);
+  static std::vector<InstalledPackInfo>
+  FilterByRole(const std::vector<InstalledPackInfo> &packs, WorldgenRole role);
 
   const GuiTheme *Theme;
   std::vector<InstalledPackInfo> InstalledPacks;
-  std::vector<std::string> SelectedIds;
+  ResourcePackSelection Selection;
   bool Built{false};
 
-  UGuiLabel *HintLabel{nullptr};
-  UGuiCheckList *List{nullptr};
+  UGuiLabel *PrimaryHintLabel{nullptr};
+  UGuiLabel *SecondaryHintLabel{nullptr};
+  UGuiLabel *PriorityHintLabel{nullptr};
+  UGuiLabel *WarningLabel{nullptr};
+  UGuiCheckList *PrimaryList{nullptr};
+  UGuiCheckList *SecondaryList{nullptr};
 };
 
 } // namespace cutum

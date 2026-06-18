@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
@@ -480,7 +481,7 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
     if (!slot.entry.Id.empty())
     {
       slots[i].Id = slot.entry.Id;
-      slots[i].label = slot.entry.Id;
+      slots[i].label = HumanizeBlockName(slot.entry.Id);
       slots[i].entryKind = slot.entry.kind;
       slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
     }

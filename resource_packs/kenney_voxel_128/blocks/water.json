@@ -1,6 +1,7 @@
 {
   "name": "water",
   "types": [
+    "fluid",
     "natural"
   ],
   "textures": [

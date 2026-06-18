@@ -11,12 +11,44 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 RESEARCH = Path(r"E:/Work/Home/CubatariumTextureResearch")
+CANONICAL_BLOCKS_PATH = REPO / "tools" / "canonical_blocks.yaml"
 
 MANIFEST_FILES = [
     REPO / "tools/block_manifest.json",
     REPO / "tools/block_manifest_supplement.json",
     REPO / "tools/block_manifest_animated.json",
 ]
+
+
+def load_canonical_block_specs() -> dict[str, dict[str, Any]]:
+    """Return merged tier_a + tier_b canonical block specs keyed by block name."""
+    if not CANONICAL_BLOCKS_PATH.is_file():
+        return {}
+    data = yaml.safe_load(CANONICAL_BLOCKS_PATH.read_text(encoding="utf-8")) or {}
+    specs: dict[str, dict[str, Any]] = {}
+    for tier in ("tier_a", "tier_b"):
+        tier_data = data.get(tier, {})
+        if isinstance(tier_data, dict):
+            specs.update(tier_data)
+    return specs
+
+
+def apply_canonical_meta_to_block_json(block: dict[str, Any]) -> dict[str, Any]:
+    """Apply types/physics/render/animation/displayName from canonical_blocks.yaml."""
+    name = block.get("name")
+    if not isinstance(name, str) or not name:
+        return block
+    spec = load_canonical_block_specs().get(name)
+    if not spec:
+        return block
+    if "types" in spec:
+        block["types"] = list(spec["types"])
+    for key in ("physics", "render", "animation"):
+        if key in spec:
+            block[key] = spec[key]
+    if "display_name" in spec:
+        block["displayName"] = spec["display_name"]
+    return block
 
 
 def load_manifest_blocks() -> list[dict]:
@@ -30,34 +62,6 @@ def load_manifest_blocks() -> list[dict]:
                 seen.add(name)
                 blocks.append(block)
 
-    # Core blocks defined in legacy models but omitted from manifests.
-    models_dir = REPO / "models" / "blocks"
-    if models_dir.is_dir():
-        for mf in sorted(models_dir.glob("*.json")):
-            if mf.name == "selection.json":
-                continue
-            data = json.loads(mf.read_text(encoding="utf-8-sig"))
-            name = data.get("name")
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            textures = data.get("textures", [])
-            entry: dict[str, Any] = {"name": name, "id": data.get("id", 0)}
-            if len(textures) == 6 and len(set(textures)) == 1:
-                entry["uniform"] = textures[0]
-            elif len(textures) >= 6:
-                entry["faces"] = textures[:6]
-            elif len(textures) == 1:
-                entry["uniform"] = textures[0]
-            else:
-                continue
-            if data.get("types"):
-                entry["types"] = data["types"]
-            if data.get("physics"):
-                entry["physics"] = data["physics"]
-            if data.get("render"):
-                entry["render"] = data["render"]
-            blocks.append(entry)
     return blocks
 
 
@@ -257,8 +261,8 @@ MINETEST_STEM_MAP: dict[str, str | dict | None] = {
     "tnt_bottom": "default_sand.png",
     "water": "default_water_source_animated.png",
     "lava": "default_lava_source_animated.png",
-    "fire_0": "default_lava.png",
-    "fire_1": "default_torch_on_floor.png",
+    "fire_0": "default_fire.png",
+    "fire_1": "default_fire_overlay.png",
     "quartz_side": "default_silver_sandstone.png",
     "quartz_top": "default_silver_sandstone_block.png",
     "quartz_bottom": "default_silver_sandstone.png",
@@ -389,6 +393,19 @@ for _stem in (
     "piston_top_sticky",
 ):
     MINETEST_STEM_MAP.setdefault(_stem, None)
+
+
+def _apply_stem_rules_overrides() -> None:
+    rules_path = REPO / "tools" / "stem_rules.yaml"
+    if not rules_path.is_file():
+        return
+    data = yaml.safe_load(rules_path.read_text(encoding="utf-8")) or {}
+    overrides = data.get("minetest_stem_map", {})
+    if isinstance(overrides, dict):
+        MINETEST_STEM_MAP.update(overrides)
+
+
+_apply_stem_rules_overrides()
 
 
 def write_minetest_stem_map_yaml(path: Path) -> None:

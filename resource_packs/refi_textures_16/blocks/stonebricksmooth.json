@@ -1,7 +1,7 @@
 {
   "name": "stonebricksmooth",
   "types": [
-    "natural"
+    "building"
   ],
   "textures": [
     "stonebricksmooth",

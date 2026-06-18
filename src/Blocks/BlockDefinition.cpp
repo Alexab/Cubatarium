@@ -260,6 +260,10 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool warnLegacyId)
     return out;
   }
   out.Definition.Name = j.value("name", "");
+  if (j.contains("displayName") && j["displayName"].is_string())
+  {
+    out.Definition.DisplayName = j["displayName"].get<std::string>();
+  }
   if (out.Definition.Name.empty() || IsReservedBlockName(out.Definition.Name))
   {
     return out;

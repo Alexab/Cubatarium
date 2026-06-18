@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+"""Audit Cubatarium resource packs against canonical_blocks.yaml."""
+
+from __future__ import annotations
+
+import argparse
+import fnmatch
+import json
+import struct
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+REPO = Path(__file__).resolve().parents[1]
+PACKS_DIR = REPO / "resource_packs"
+CANONICAL_PATH = Path(__file__).resolve().parent / "canonical_blocks.yaml"
+AUDIT_MD = REPO / "docs" / "block-semantics-audit.md"
+AUDIT_JSON = REPO / "audit_report.json"
+FACE_COUNT = 6
+
+
+def load_canonical(path: Path = CANONICAL_PATH) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data
+
+
+def read_png_size(png_path: Path) -> tuple[int, int] | None:
+    try:
+        raw = png_path.read_bytes()
+        if raw[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        w = struct.unpack(">I", raw[16:20])[0]
+        h = struct.unpack(">I", raw[20:24])[0]
+        return w, h
+    except OSError:
+        return None
+
+
+def stem_matches_denylist(stem: str, patterns: list[str]) -> str | None:
+    lower = stem.lower()
+    for pattern in patterns:
+        if fnmatch.fnmatch(lower, pattern.lower()):
+            return pattern
+    return None
+
+
+def nested_get(data: dict | None, *keys: str) -> Any:
+    cur: Any = data
+    for key in keys:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(key)
+    return cur
+
+
+def types_ok(actual: list | None, expected: list | None) -> bool:
+    if not expected:
+        return True
+    if not actual:
+        return False
+    return set(expected).issubset(set(actual))
+
+
+def semantics_match(block: dict, spec: dict) -> list[str]:
+    issues: list[str] = []
+    exp_physics = spec.get("physics")
+    act_physics = block.get("physics")
+    if exp_physics:
+        if nested_get(act_physics, "preset") != nested_get(exp_physics, "preset"):
+            issues.append(
+                f"physics.preset expected {nested_get(exp_physics, 'preset')!r}, "
+                f"got {nested_get(act_physics, 'preset')!r}"
+            )
+    exp_render = spec.get("render")
+    act_render = block.get("render")
+    if exp_render:
+        for key in ("transparent", "style"):
+            if key in exp_render and nested_get(act_render, key) != exp_render[key]:
+                issues.append(
+                    f"render.{key} expected {exp_render[key]!r}, got {nested_get(act_render, key)!r}"
+                )
+    exp_types = spec.get("types")
+    act_types = block.get("types")
+    if exp_types and not types_ok(act_types, exp_types):
+        issues.append(f"types expected superset of {exp_types!r}, got {act_types!r}")
+    exp_anim = spec.get("animation")
+    act_anim = block.get("animation")
+    if exp_anim:
+        if not act_anim:
+            issues.append("missing animation section")
+        else:
+            for key in ("frame_count", "frametime"):
+                if key in exp_anim and act_anim.get(key) != exp_anim[key]:
+                    issues.append(
+                        f"animation.{key} expected {exp_anim[key]!r}, got {act_anim.get(key)!r}"
+                    )
+    return issues
+
+
+def check_animation_png(
+    pack_dir: Path,
+    block: dict,
+    block_name: str,
+) -> list[str]:
+    issues: list[str] = []
+    animation = block.get("animation")
+    if not animation:
+        return issues
+    frame_count = animation.get("frame_count")
+    if not isinstance(frame_count, int) or frame_count < 1:
+        issues.append(f"{block_name}: invalid animation.frame_count")
+        return issues
+    textures = block.get("textures", [])
+    if not isinstance(textures, list) or not textures:
+        return issues
+    tex_dir = pack_dir / "textures" / "blocks"
+    stems = textures[:FACE_COUNT]
+    for stem in stems:
+        if not isinstance(stem, str):
+            continue
+        png = tex_dir / f"{stem}.png"
+        if not png.is_file():
+            continue
+        size = read_png_size(png)
+        if size is None:
+            issues.append(f"{block_name}: could not read PNG size for {stem}")
+            continue
+        w, h = size
+        expected_h = w * frame_count
+        if h != expected_h:
+            issues.append(
+                f"{block_name}: {stem}.png height {h} != width×frames ({w}×{frame_count}={expected_h})"
+            )
+    return issues
+
+
+def load_block_json(path: Path) -> dict | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def audit_pack(
+    pack_dir: Path,
+    canonical: dict[str, Any],
+    installed_ids: set[str],
+    reference_blocks: dict[str, dict] | None = None,
+) -> dict[str, Any]:
+    pack_json_path = pack_dir / "pack.json"
+    manifest: dict[str, Any] = {}
+    if pack_json_path.is_file():
+        try:
+            manifest = json.loads(pack_json_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError:
+            pass
+    pack_id = manifest.get("id", pack_dir.name)
+
+    tier_a: dict[str, Any] = canonical.get("tier_a", {})
+    global_deny: list[str] = canonical.get("global_stem_denylist", [])
+
+    issues: list[str] = []
+    warnings: list[str] = []
+    tier_present = 0
+    tier_semantics_ok = 0
+
+    blocks_dir = pack_dir / "blocks"
+    block_by_name: dict[str, dict] = {}
+    if blocks_dir.is_dir():
+        for block_path in sorted(blocks_dir.glob("*.json")):
+            data = load_block_json(block_path)
+            if data and data.get("name"):
+                block_by_name[data["name"]] = data
+
+    for name, spec in tier_a.items():
+        block = block_by_name.get(name)
+        if block is None:
+            issues.append(f"missing tier_a block: {name}")
+            continue
+        tier_present += 1
+
+        sem_issues = semantics_match(block, spec)
+        deny_patterns = list(global_deny) + list(spec.get("stem_denylist", []))
+        textures = block.get("textures", [])
+        if isinstance(textures, list):
+            for stem in textures:
+                if not isinstance(stem, str):
+                    continue
+                hit = stem_matches_denylist(stem, deny_patterns)
+                if hit:
+                    sem_issues.append(f"denylisted stem {stem!r} (pattern {hit!r})")
+        sem_issues.extend(check_animation_png(pack_dir, block, name))
+
+        if sem_issues:
+            for msg in sem_issues:
+                issues.append(f"{name}: {msg}")
+        else:
+            tier_semantics_ok += 1
+
+        if reference_blocks is not None and name in reference_blocks:
+            ref_tex = reference_blocks[name].get("textures")
+            act_tex = block.get("textures")
+            if ref_tex != act_tex:
+                warnings.append(
+                    f"{name}: textures differ from reference pack "
+                    f"(ref={ref_tex!r}, actual={act_tex!r})"
+                )
+
+    tier_total = len(tier_a)
+    score = round(100.0 * tier_semantics_ok / tier_total, 1) if tier_total else 0.0
+    worldgen_role = "primary" if tier_present == tier_total and tier_semantics_ok == tier_total else "secondary"
+
+    depends = manifest.get("depends", [])
+    if isinstance(depends, list):
+        for dep in depends:
+            if dep not in installed_ids:
+                issues.append(f"missing depends pack: {dep}")
+
+    conflicts = manifest.get("conflicts", [])
+    if isinstance(conflicts, list):
+        for other in conflicts:
+            if other in installed_ids and other != pack_id:
+                warnings.append(f"conflicts with installed pack: {other}")
+
+    resolution = manifest.get("resolution")
+    if resolution is not None and not isinstance(resolution, int):
+        warnings.append(f"non-integer resolution: {resolution!r}")
+
+    return {
+        "pack_id": pack_id,
+        "pack_dir": str(pack_dir.relative_to(REPO)).replace("\\", "/"),
+        "tier_a_present": tier_present,
+        "tier_a_total": tier_total,
+        "tier_a_semantics_ok": tier_semantics_ok,
+        "worldgen_ready_score": score,
+        "worldgen_role": worldgen_role,
+        "resolution": resolution,
+        "depends": depends if isinstance(depends, list) else [],
+        "conflicts": conflicts if isinstance(conflicts, list) else [],
+        "issues": issues,
+        "warnings": warnings,
+        "block_count": len(block_by_name),
+    }
+
+
+def write_pack_roles(pack_dir: Path, role: str) -> None:
+    pack_json_path = pack_dir / "pack.json"
+    if not pack_json_path.is_file():
+        return
+    manifest = json.loads(pack_json_path.read_text(encoding="utf-8-sig"))
+    manifest["worldgen_role"] = role
+    manifest["pack_format"] = 1
+    pack_json_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def render_markdown(report: dict[str, Any]) -> str:
+    lines = [
+        "# Block semantics audit",
+        "",
+        f"Generated: {report['generated_at']}",
+        "",
+        "## Summary",
+        "",
+        f"| Pack | Blocks | Tier A | Semantics OK | Score | Role |",
+        f"|------|--------|--------|--------------|-------|------|",
+    ]
+    for pack in report["packs"]:
+        lines.append(
+            f"| `{pack['pack_id']}` | {pack['block_count']} | "
+            f"{pack['tier_a_present']}/{pack['tier_a_total']} | "
+            f"{pack['tier_a_semantics_ok']}/{pack['tier_a_total']} | "
+            f"{pack['worldgen_ready_score']}% | {pack['worldgen_role']} |"
+        )
+    global_warnings = report.get("global_warnings", [])
+    if global_warnings:
+        lines.extend(["", "## Global warnings", ""])
+        for w in global_warnings:
+            lines.append(f"- {w}")
+    lines.extend(["", "## Per-pack issues", ""])
+    for pack in report["packs"]:
+        if not pack["issues"] and not pack["warnings"]:
+            continue
+        lines.append(f"### `{pack['pack_id']}`")
+        lines.append("")
+        if pack["issues"]:
+            lines.append("**Errors / semantics:**")
+            lines.append("")
+            for issue in pack["issues"]:
+                lines.append(f"- {issue}")
+            lines.append("")
+        if pack["warnings"]:
+            lines.append("**Warnings:**")
+            lines.append("")
+            for warn in pack["warnings"]:
+                lines.append(f"- {warn}")
+            lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Audit resource packs against canonical_blocks.yaml")
+    parser.add_argument(
+        "--packs-dir",
+        type=Path,
+        default=PACKS_DIR,
+        help="Directory containing resource pack folders",
+    )
+    parser.add_argument(
+        "--write-roles",
+        action="store_true",
+        help="Write worldgen_role and pack_format:1 to each pack.json",
+    )
+    parser.add_argument(
+        "--canonical",
+        type=Path,
+        default=CANONICAL_PATH,
+        help="Path to canonical_blocks.yaml",
+    )
+    parser.add_argument(
+        "--output-md",
+        type=Path,
+        default=AUDIT_MD,
+        help="Markdown report output path",
+    )
+    parser.add_argument(
+        "--reference-pack",
+        type=str,
+        default=None,
+        help="Pack id whose tier_a textures are compared as reference (warnings only)",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=AUDIT_JSON,
+        help="JSON report output path",
+    )
+    args = parser.parse_args()
+
+    canonical = load_canonical(args.canonical.resolve())
+    packs_dir = args.packs_dir.resolve()
+    if not packs_dir.is_dir():
+        print(f"ERROR: packs dir not found: {packs_dir}")
+        return 1
+
+    pack_dirs = sorted(p for p in packs_dir.iterdir() if p.is_dir() and (p / "pack.json").is_file())
+    installed_ids = set()
+    for p in pack_dirs:
+        try:
+            m = json.loads((p / "pack.json").read_text(encoding="utf-8-sig"))
+            installed_ids.add(m.get("id", p.name))
+        except json.JSONDecodeError:
+            installed_ids.add(p.name)
+
+    reference_blocks: dict[str, dict] | None = None
+    if args.reference_pack:
+        ref_dir = packs_dir / args.reference_pack
+        if not ref_dir.is_dir():
+            print(f"ERROR: reference pack not found: {ref_dir}")
+            return 1
+        reference_blocks = {}
+        blocks_dir = ref_dir / "blocks"
+        if blocks_dir.is_dir():
+            for block_path in blocks_dir.glob("*.json"):
+                data = load_block_json(block_path)
+                if data and data.get("name"):
+                    reference_blocks[data["name"]] = data
+        print(f"Reference pack '{args.reference_pack}': {len(reference_blocks)} blocks")
+
+    pack_results = [
+        audit_pack(p, canonical, installed_ids, reference_blocks) for p in pack_dirs
+    ]
+
+    global_warnings: list[str] = []
+    resolutions: dict[int, list[str]] = {}
+    for result in pack_results:
+        res = result.get("resolution")
+        if isinstance(res, int):
+            resolutions.setdefault(res, []).append(result["pack_id"])
+    if len(resolutions) > 1:
+        global_warnings = [
+            f"resolution_mismatch across installed packs — "
+            + ", ".join(f"{res}px: {', '.join(ids)}" for res, ids in sorted(resolutions.items()))
+        ]
+
+    if args.write_roles:
+        for pack_dir, result in zip(pack_dirs, pack_results):
+            write_pack_roles(pack_dir, result["worldgen_role"])
+
+    report = {
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "canonical": str(args.canonical.resolve().relative_to(REPO)).replace("\\", "/"),
+        "reference_pack": args.reference_pack,
+        "pack_count": len(pack_results),
+        "global_warnings": global_warnings,
+        "packs": pack_results,
+    }
+
+    args.output_json.parent.mkdir(parents=True, exist_ok=True)
+    args.output_md.parent.mkdir(parents=True, exist_ok=True)
+    args.output_json.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    args.output_md.write_text(render_markdown(report), encoding="utf-8")
+
+    print(f"Wrote {args.output_json.relative_to(REPO)}")
+    print(f"Wrote {args.output_md.relative_to(REPO)}")
+    if args.write_roles:
+        print("Updated pack.json worldgen_role and pack_format in all packs")
+
+    error_count = sum(len(p["issues"]) for p in pack_results)
+    warn_count = len(global_warnings) + sum(len(p["warnings"]) for p in pack_results)
+    print(f"Audit complete: {error_count} issue(s), {warn_count} warning(s)")
+    return 1 if error_count else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -21,6 +21,8 @@ struct WorldGenContext
   ProceduralSettings Settings;
   UPrefabLibrary *Prefabs{nullptr};
   UChunkMeshCache *MeshCache{nullptr};
+  /// Primary pack that owns worldgen block definitions (from world_data / config).
+  std::string WorldgenOwnerPackId;
 
   BlockId Bedrock{BLOCK_AIR};
   BlockId Stone{BLOCK_AIR};

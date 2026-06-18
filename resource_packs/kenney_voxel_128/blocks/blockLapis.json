@@ -1,7 +1,7 @@
 {
   "name": "blockLapis",
   "types": [
-    "natural"
+    "building"
   ],
   "textures": [
     "blockLapis",

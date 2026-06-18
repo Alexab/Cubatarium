@@ -275,6 +275,16 @@ blocks:
     - natural
   tree_birch: tree_birch
   wood: wood
+  grass:
+    faces:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top
+    - dirt
+    types:
+    - natural
 textures:
   sand: default_sand.png
   dirt: default_dirt.png
@@ -364,8 +374,8 @@ textures:
   anvil_top_damaged_2: mcl_anvils_anvil_top_damaged_2.png
   doorWood_upper: default_wood.png
   redstoneDust_line: default_stone.png
-  water: mcl_buckets_river_water_bucket.png
-  lava: mcl_buckets_lava_bucket.png
+  water: default_water_source_animated.png
+  lava: default_lava_source_animated.png
   bedrock: mcl_core_bedrock.png
   brick: default_brick.png
   sandstone_bottom: default_sand.png
@@ -377,3 +387,13 @@ textures:
   tnt_bottom: default_tnt_bottom.png
   tnt_side: default_tnt_side.png
   wood: default_wood.png
+  grass_side:
+    composite:
+      base: default_dirt.png
+      overlay: mcl_core_grass_block_side_overlay.png
+  grass_top: mcl_core_grass_block_top.png
+animated:
+  water:
+  - default_water_source_animated.png
+  lava:
+  - default_lava_source_animated.png

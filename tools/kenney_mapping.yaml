@@ -1,7 +1,7 @@
 license: CC0-1.0
 license_text: |
   Kenney Voxel Pack (CC0). See https://kenney.nl/assets/voxel-pack
-  Legacy minimal mapping — use kenney_full_mapping.yaml for release builds.
+  DEPRECATED: unused by build scripts. Legacy minimal mapping — use kenney_full_mapping.yaml for release builds.
 blocks:
   dirt: dirt
   stone: stone

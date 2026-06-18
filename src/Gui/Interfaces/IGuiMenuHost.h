@@ -1,6 +1,7 @@
 #ifndef I_GUI_MENU_HOST_H
 #define I_GUI_MENU_HOST_H
 
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -31,11 +32,15 @@ public:
   virtual void
   CreateNewWorldWithSettings(const ProceduralSettings &settings,
                              const std::vector<std::string> &resourcePacksEnabled) = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection) = 0;
   virtual void LoadSelectedWorld(const std::string &worldName) = 0;
   virtual void RefreshWorldList() = 0;
   virtual const std::vector<std::string> &GetWorldNames() const = 0;
   virtual std::vector<InstalledPackInfo> ListInstalledResourcePacks() const = 0;
   virtual std::vector<std::string> GetDefaultEnabledResourcePacks() const = 0;
+  virtual ResourcePackSelection GetDefaultResourcePackSelection() const = 0;
   virtual std::vector<std::string>
   PeekWorldResourcePacks(const std::string &worldName) const = 0;
 };

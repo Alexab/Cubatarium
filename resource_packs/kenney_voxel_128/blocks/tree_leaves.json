@@ -1,7 +1,8 @@
 {
   "name": "tree_leaves",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "leaves_opaque",

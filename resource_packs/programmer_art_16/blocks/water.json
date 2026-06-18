@@ -1,6 +1,7 @@
 {
   "name": "water",
   "types": [
+    "fluid",
     "natural"
   ],
   "textures": [
@@ -19,7 +20,7 @@
     "style": "fluid"
   },
   "animation": {
-    "frame_count": 16,
+    "frame_count": 4,
     "frametime": 2
   }
 }

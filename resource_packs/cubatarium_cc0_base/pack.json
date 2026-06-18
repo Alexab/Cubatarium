@@ -4,5 +4,11 @@
   "version": 1,
   "license": "CC0-1.0",
   "resolution": 16,
-  "priority": 10
+  "priority": 10,
+  "worldgen_role": "primary",
+  "pack_format": 1,
+  "merge_mode": "skip_existing",
+  "depends": [],
+  "conflicts": [],
+  "min_game_version": ""
 }

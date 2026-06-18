@@ -1,7 +1,8 @@
 {
   "name": "glass",
   "types": [
-    "building"
+    "building",
+    "decorative"
   ],
   "textures": [
     "glass",

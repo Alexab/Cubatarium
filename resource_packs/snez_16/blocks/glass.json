@@ -1,7 +1,8 @@
 {
   "name": "glass",
   "types": [
-    "natural"
+    "building",
+    "decorative"
   ],
   "textures": [
     "glass",
@@ -10,5 +11,8 @@
     "glass",
     "glass",
     "glass"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  }
 }

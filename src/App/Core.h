@@ -109,15 +109,20 @@ public:
   }
 
   std::vector<std::string> GetDefaultEnabledResourcePacks() const;
+  ResourcePackSelection GetDefaultResourcePackSelection() const;
   void SetDefaultEnabledResourcePacks(const std::vector<std::string> &ids);
+  void SetDefaultResourcePackSelection(const ResourcePackSelection &selection);
   std::vector<std::string> GetActiveResourcePacksEnabled() const
   {
     return ActiveResourcePacksEnabled;
   }
   std::vector<InstalledPackInfo> ListInstalledResourcePacks() const;
   bool ApplyResourcePacks(const std::vector<std::string> &enabledIds);
+  bool ApplyResourcePacks(const ResourcePackSelection &selection);
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const std::vector<std::string> &resourcePacks);
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection);
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &world_name) const;
 
@@ -150,6 +155,8 @@ private:
   ResourcePacksConfig ResourcePacks;
   std::vector<std::string> ActiveResourcePacksEnabled;
   std::vector<std::string> PendingNewWorldResourcePacks;
+  ResourcePackSelection PendingNewWorldPackSelection;
+  ResourcePackSelection ActivePackSelection;
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
   std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;

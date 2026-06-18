@@ -16,6 +16,7 @@
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -114,11 +115,15 @@ public:
   void CreateNewWorldWithSettings(
       const ProceduralSettings &settings,
       const std::vector<std::string> &resourcePacksEnabled) override;
+  void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const ResourcePackSelection &selection) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
   std::vector<InstalledPackInfo> ListInstalledResourcePacks() const override;
   std::vector<std::string> GetDefaultEnabledResourcePacks() const override;
+  ResourcePackSelection GetDefaultResourcePackSelection() const override;
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &worldName) const override;
 

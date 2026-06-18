@@ -17,6 +17,7 @@ class UGuiTabBar;
 class UGuiScrollView;
 class UGuiPanel;
 class UGuiSlot;
+class UGuiLabel;
 struct GuiTheme;
 
 class UCreativePaletteScreen : public UGuiScreenBase
@@ -36,8 +37,11 @@ public:
   void SetVisible(bool visible);
   void Toggle();
   void InvalidateGrid() { Built = false; }
+  void SetPointerPosition(int x, int y);
+  void SetPointerPressed(bool pressed);
 
 private:
+  void UpdateTooltip();
   void RebuildGrid();
   void RelayoutPanel();
   void LayoutGridInScroll();
@@ -46,11 +50,19 @@ private:
   UGameSession *Session{nullptr};
   IGuiIconSource *Icons{nullptr};
   std::vector<std::string> GridEntryIds;
+  std::vector<std::string> GridEntryLabels;
   UGuiPanel *Panel{nullptr};
   UGuiTabBar *MainTabs{nullptr};
   UGuiTabBar *SubTabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
+  UGuiLabel *TooltipLabel{nullptr};
   std::vector<UGuiSlot *> GridSlots;
+  int PointerX{-1};
+  int PointerY{-1};
+  bool PointerPressed{false};
+  double HoldTimer{0.0};
+  int HoldSlotIndex{-1};
+  static constexpr double kHoldTooltipSeconds = 0.45;
   std::string SelectedEntryId;
   ContentKind Kind{ContentKind::Block};
   std::string ActiveTypeId;

@@ -12,9 +12,25 @@ namespace cutum
 
 struct ResourcePacksConfig
 {
+  std::vector<std::string> DefaultPrimary;
+  std::vector<std::string> DefaultSecondary;
   std::vector<std::string> DefaultEnabled;
   int PlaceholderTileSize{16};
   std::string PlaceholderBackground{"#6b4a9e"};
+};
+
+struct ResourcePackSelection
+{
+  std::vector<std::string> Primary;
+  std::vector<std::string> Secondary;
+  std::string WorldgenOwner;
+
+  std::vector<std::string> AllIds() const
+  {
+    std::vector<std::string> all = Primary;
+    all.insert(all.end(), Secondary.begin(), Secondary.end());
+    return all;
+  }
 };
 
 struct InstalledPackInfo
@@ -24,6 +40,10 @@ struct InstalledPackInfo
   int Priority{0};
   int Resolution{16};
   std::string License;
+  std::string MinGameVersion;
+  std::vector<std::string> Depends;
+  std::vector<std::string> Conflicts;
+  WorldgenRole Role{WorldgenRole::Secondary};
   bool FromWritableRoot{false};
 };
 
@@ -42,6 +62,11 @@ public:
   static std::vector<InstalledPackInfo>
   ListInstalled(const std::filesystem::path &assetRoot,
                 const std::filesystem::path &writableRoot);
+
+  std::vector<ResourcePackManifest>
+  Resolve(const ResourcePackSelection &selection,
+          const std::filesystem::path &assetRoot,
+          const std::filesystem::path &writableRoot) const;
 
   std::vector<ResourcePackManifest>
   Resolve(const std::vector<std::string> &enabledIds,

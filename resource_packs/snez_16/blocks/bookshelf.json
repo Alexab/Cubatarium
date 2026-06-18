@@ -1,7 +1,8 @@
 {
   "name": "bookshelf",
   "types": [
-    "natural"
+    "building",
+    "decorative"
   ],
   "textures": [
     "bookshelf",

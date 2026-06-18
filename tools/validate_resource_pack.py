@@ -58,6 +58,10 @@ def validate_pack(pack_dir: Path) -> int:
             err(f"{block_path}: missing name")
             errors += 1
             continue
+        if "::" in name:
+            err(f"{block_path}: block name must not contain '::' (use local name only)")
+            errors += 1
+            continue
         if name in RESERVED_NAMES:
             err(f"{block_path}: reserved name '{name}'")
             errors += 1
@@ -75,6 +79,8 @@ def validate_pack(pack_dir: Path) -> int:
         stems = textures[:FACE_COUNT]
         widths: set[int] = set()
         heights: set[int] = set()
+        animation = data.get("animation")
+        frame_count = animation.get("frame_count") if isinstance(animation, dict) else None
         for stem in stems:
             if not isinstance(stem, str) or not stem:
                 err(f"{block_path}: invalid texture stem")
@@ -86,7 +92,6 @@ def validate_pack(pack_dir: Path) -> int:
                 continue
             try:
                 import struct
-                import zlib
 
                 raw = png.read_bytes()
                 if raw[:8] != b"\x89PNG\r\n\x1a\n":
@@ -96,6 +101,14 @@ def validate_pack(pack_dir: Path) -> int:
                 h = struct.unpack(">I", raw[20:24])[0]
                 widths.add(w)
                 heights.add(h)
+                if isinstance(frame_count, int) and frame_count > 0:
+                    expected_h = w * frame_count
+                    if h != expected_h:
+                        err(
+                            f"{block_path}: {stem}.png height {h} != "
+                            f"width×frame_count ({w}×{frame_count}={expected_h})"
+                        )
+                        errors += 1
             except Exception:
                 warn(f"{png}: could not read PNG dimensions")
 

@@ -1,0 +1,61 @@
+# Stem alias and Minetest texture mapping rules.
+# Used by analyze_texture_packs.py; minetest_stem_map overrides fix known bad mappings.
+
+description: |
+  Canonical texture stem aliases for cross-pack matching.
+  minetest_stem_map overrides correct fire_0/fire_1 (was default_lava / torch).
+
+stem_aliases:
+  dirt: [dirt, default_dirt, terrain_dirt, dirt_16x16]
+  grass_side: [grass_side, default_grass_side, dirt_grass, grass_block_side, grass_side_overlay]
+  grass_top: [grass_top, default_grass, grass_top_green, grass1, grass2, grass_block_top]
+  grass_top_green: [grass_top, default_grass, grass_top_green, grass1]
+  stone: [stone, default_stone, greystone, stone_16x16, rocks, cobblestone, default_cobble]
+  sand: [sand, default_sand, greysand, sand_16x16]
+  gravel: [gravel, default_gravel, gravel_stone, gravel_dirt, gravel_16x16]
+  glass: [glass, default_glass, glass_frame]
+  obsidian: [obsidian, default_obsidian]
+  ice: [ice, default_ice]
+  snow: [snow, default_snow, dirt_snow]
+  water: [water, default_water_source, default_water_flowing, default_water_source_animated, water_16x16]
+  lava: [lava, default_lava_source, default_lava_flowing, default_lava_source_animated]
+  fire_0: [fire_0, fire_basic_flame_animated, fire_basic_flame, default_fire]
+  fire_1: [fire_1, fire_basic_flame, fire_basic_flame_animated]
+  oreCoal: [oreCoal, default_stone_with_coal, coal_ore]
+  oreIron: [oreIron, default_stone_with_iron, iron_ore]
+  oreGold: [oreGold, default_stone_with_gold, gold_ore]
+  oreDiamond: [oreDiamond, default_stone_with_diamond, diamond_ore]
+  tree_side: [tree_side, default_tree, default_wood, wood, log_side, log_oak]
+  tree_top: [tree_top, default_tree_top, wood_top, log_top, log_oak_top]
+  leaves_opaque: [leaves_opaque, default_leaves, leaves]
+  hellrock: [hellrock, default_netherrack, netherrack]
+  hellsand: [hellsand, default_nether_sand, soul_sand]
+  whiteStone: [whiteStone, default_stone, end_stone]
+  cloth_0: [cloth_0, wool_white, cotton_tan, wool_colored_white, wool_0]
+  grass_block_top: [grass_top, default_grass, grass_block_top]
+  grass_block_side: [grass_side, default_grass_side, grass_block_side]
+  planks_oak: [wood, default_wood, planks_oak, oak_planks]
+  log_oak: [tree_side, default_tree, log_oak, oak_log]
+  log_oak_top: [tree_top, default_tree_top, log_oak_top]
+  lapis_ore: [oreLapis, default_stone_with_lapis, lapis_ore]
+  emerald_ore: [oreEmerald, emerald_ore]
+  redstone_ore: [oreRedstone, redstone_ore]
+  netherrack: [hellrock, default_netherrack, netherrack]
+  soul_sand: [hellsand, default_nether_sand, soul_sand]
+  end_stone: [whiteStone, end_stone]
+  glowstone: [lightgem, glowstone, default_meselamp]
+  gold_block: [blockGold, default_gold_block, gold_block]
+  iron_block: [blockIron, default_steel_block, iron_block]
+  stone_bricks: [stonebricksmooth, default_stone_brick, stone_bricks]
+  mossy_stone_bricks: [stonebricksmooth_mossy, mossy_stone_bricks]
+  cracked_stone_bricks: [stonebricksmooth_cracked, cracked_stone_bricks]
+  chiseled_stone_bricks: [stonebricksmooth_carved, chiseled_stone_bricks]
+  chiseled_sandstone: [sandstone_carved, chiseled_sandstone]
+  smooth_sandstone: [sandstone_smooth, smooth_sandstone]
+  coal_ore: [oreCoal, coal_ore]
+  cobblestone: [stone, default_cobble, cobblestone]
+
+# Overrides for tools/stem_mapping_common.MINETEST_STEM_MAP (fire was mapped to lava/torch).
+minetest_stem_map:
+  fire_0: default_fire.png
+  fire_1: default_fire_overlay.png

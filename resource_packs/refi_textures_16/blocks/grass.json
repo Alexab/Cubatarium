@@ -1,7 +1,8 @@
 {
   "name": "grass",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "grass_side",

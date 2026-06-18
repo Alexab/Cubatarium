@@ -1,0 +1,4 @@
+# Example: override grass top face without duplicating the whole block JSON.
+grass:
+  - faces: [top]
+    stem: grass_top

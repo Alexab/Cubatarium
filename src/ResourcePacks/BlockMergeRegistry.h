@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -32,6 +33,25 @@ public:
                int placeholderTileSize);
 
   BlockId ResolveName(const std::string &name);
+  BlockId ResolveBlockName(const std::string &name);
+
+  void SetWorldgenOwnerPackId(const std::string &packId)
+  {
+    WorldgenOwnerPackId = packId;
+  }
+  const std::string &GetWorldgenOwnerPackId() const
+  {
+    return WorldgenOwnerPackId;
+  }
+  void SetPrimaryPackIds(const std::vector<std::string> &ids)
+  {
+    PrimaryPackIds = ids;
+  }
+
+  bool HasBlock(const std::string &name) const
+  {
+    return BlocksByName.find(name) != BlocksByName.end();
+  }
 
   BlockId RegisterRuntimeBlock(const BlockDefinition &def,
                                const std::array<std::string, 6> &stems);
@@ -63,14 +83,23 @@ private:
   {
     BlockDefinition Definition;
     std::array<std::string, 6> Stems{};
+    std::string OwnerPackId;
+    bool IsQualifiedDuplicate{false};
   };
 
-  std::string ResolveStem(const std::string &stem,
-                          const std::vector<ResourcePackManifest> &packs) const;
+  void MergeBlockCatalog(const std::vector<ResourcePackManifest> &sorted);
+  void ResolveBlockDefinitions(const std::vector<ResourcePackManifest> &sorted);
+  void ResolveTextureAtlas(const std::vector<ResourcePackManifest> &sorted);
+  void ApplyTextureOverrides(const std::vector<ResourcePackManifest> &sorted);
+
+  std::string ResolveStemInPack(const std::string &stem,
+                                const ResourcePackManifest &pack) const;
   void AssignRuntimeIds();
   BlockId CreateSyntheticBlock(const std::string &name);
 
   std::vector<ResourcePackManifest> ActivePacks;
+  std::vector<std::string> PrimaryPackIds;
+  std::string WorldgenOwnerPackId;
   std::unordered_map<std::string, MergedEntry> BlocksByName;
   std::unordered_map<std::string, BlockId> NameToId;
   std::unordered_map<BlockId, std::string> IdToName;
@@ -79,6 +108,7 @@ private:
       RuntimeOverlay;
   std::shared_ptr<UPlaceholderTextureCache> PlaceholderCache;
   int PlaceholderTileSize{16};
+  static const std::unordered_set<std::string> kTierAWorldgenNames;
 };
 
 } // namespace cutum

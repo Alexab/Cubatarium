@@ -1,6 +1,7 @@
 {
   "name": "lava",
   "types": [
+    "fluid",
     "natural"
   ],
   "textures": [

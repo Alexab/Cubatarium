@@ -1,7 +1,8 @@
 {
   "name": "wood",
   "types": [
-    "natural"
+    "natural",
+    "building"
   ],
   "textures": [
     "tree_side",

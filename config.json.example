@@ -33,6 +33,8 @@
         "palette_key": "b"
     },
     "resource_packs": {
+        "default_primary": ["kenney_voxel_16"],
+        "default_secondary": ["cubatarium_cc0_base"],
         "default_enabled": ["kenney_voxel_16", "cubatarium_cc0_base"],
         "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
     }

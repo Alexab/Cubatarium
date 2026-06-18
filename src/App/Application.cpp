@@ -2,6 +2,7 @@
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 
+#include "App/Platform/Log.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -32,6 +33,7 @@
 #include "Gui/Screens/SettingsScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiWidget.h"
+#include "WorldGen/Core/WorldGenRefs.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
@@ -135,6 +137,10 @@ UApplication::UApplication(
 {
   GuiContext = std::make_unique<UGuiContext>();
   GameSession = std::make_unique<UGameSession>(this, World);
+  if (World)
+  {
+    World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
+  }
 }
 
 UApplication::~UApplication() = default;
@@ -175,6 +181,10 @@ void UApplication::Startup(const std::string &configPath)
   if (Core && BlockDefinitions)
   {
     const std::string typesPath = "content/types.json";
+    if (!UWorldGenRefs::LoadFromFile("content/worldgen_refs.json"))
+    {
+      CubatariumLogInfo("App", "worldgen_refs.json not loaded — using legacy block name resolution");
+    }
     GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
                                     *Core->GetPrefabLibrary());
   }
@@ -469,11 +479,23 @@ void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const std::vector<std::string> &resourcePacksEnabled)
 {
+  ResourcePackSelection selection;
+  selection.Primary = resourcePacksEnabled;
+  if (!selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  CreateNewWorldWithSettings(settings, selection);
+}
+
+void UApplication::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings, const ResourcePackSelection &selection)
+{
   if (!Core)
   {
     return;
   }
-  Core->CreateNewWorldWithSettings(settings, resourcePacksEnabled);
+  Core->CreateNewWorldWithSettings(settings, selection);
   Core->SaveConfigFile();
   EnterGameAfterWorldChange();
 }
@@ -488,6 +510,12 @@ std::vector<std::string> UApplication::GetDefaultEnabledResourcePacks() const
 {
   return Core ? Core->GetDefaultEnabledResourcePacks()
               : std::vector<std::string>{};
+}
+
+ResourcePackSelection UApplication::GetDefaultResourcePackSelection() const
+{
+  return Core ? Core->GetDefaultResourcePackSelection()
+              : ResourcePackSelection{};
 }
 
 std::vector<std::string>
@@ -1260,6 +1288,11 @@ bool UApplication::RouteMouseButton(int Button, bool Pressed, int x, int y,
                                                       : GuiMouseButton::Left;
   event.Pressed = Pressed;
 
+  if (PaletteOpen && PaletteScreen && event.Button == GuiMouseButton::Left)
+  {
+    PaletteScreen->SetPointerPressed(Pressed);
+  }
+
   if (State == AppState::InGame)
   {
     DragCursorX = x;
@@ -1322,6 +1355,10 @@ bool UApplication::RouteMouseMove(int x, int y, int PointerId)
   if (State == AppState::InGame && HudScreen)
   {
     HudScreen->SetPointerPosition(x, y);
+  }
+  if (PaletteOpen && PaletteScreen)
+  {
+    PaletteScreen->SetPointerPosition(x, y);
   }
   if (State == AppState::InGame)
   {

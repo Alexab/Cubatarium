@@ -64,8 +64,8 @@ stems:
   farmland_wet: default_dirt.png
   fenceIron: default_ladder_steel.png
   fern: default_fern_1.png
-  fire_0: default_lava.png
-  fire_1: default_torch_on_floor.png
+  fire_0: default_fire.png
+  fire_1: default_fire_overlay.png
   flower: default_dry_grass_1.png
   furnace_bottom: default_furnace_bottom.png
   furnace_front: default_furnace_front.png

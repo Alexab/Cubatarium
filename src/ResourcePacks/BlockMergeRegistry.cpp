@@ -1,6 +1,7 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureBase.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -11,19 +12,11 @@ namespace cutum
 
 namespace fs = std::filesystem;
 
-std::string UBlockMergeRegistry::ResolveStem(
-    const std::string &stem, const std::vector<ResourcePackManifest> &packs) const
-{
-  for (const auto &pack : packs)
-  {
-    const fs::path path = UResourcePack::TexturePath(pack, stem);
-    if (fs::exists(path))
-    {
-      return PackQualifiedTextureStem(pack.Id, stem);
-    }
-  }
-  return {};
-}
+const std::unordered_set<std::string> UBlockMergeRegistry::kTierAWorldgenNames =
+    {"bedrock",  "stone",      "dirt",        "grass",      "sand",
+     "sandstone", "gravel",    "snow",        "clay",       "ice",
+     "hellrock", "water",      "lava",        "fire",       "wood",
+     "tree_log", "tree_leaves"};
 
 void UBlockMergeRegistry::Rebuild(
     const std::vector<ResourcePackManifest> &packs,
@@ -41,30 +34,188 @@ void UBlockMergeRegistry::Rebuild(
   std::vector<ResourcePackManifest> sorted = packs;
   std::sort(sorted.begin(), sorted.end(),
             [](const ResourcePackManifest &a, const ResourcePackManifest &b) {
-              return a.Priority < b.Priority;
+              return a.EffectivePriority < b.EffectivePriority;
             });
+
+  MergeBlockCatalog(sorted);
+  ResolveBlockDefinitions(sorted);
+  ApplyTextureOverrides(sorted);
+  ResolveTextureAtlas(sorted);
+
+  for (const auto &rt : RuntimeOverlay)
+  {
+    if (BlocksByName.find(rt.first.Name) != BlocksByName.end())
+    {
+      continue;
+    }
+    MergedEntry entry;
+    entry.Definition = rt.first;
+    entry.Stems = rt.second;
+    entry.OwnerPackId = "runtime";
+    BlocksByName[rt.first.Name] = entry;
+  }
+  if (!RuntimeOverlay.empty())
+  {
+    ResolveTextureAtlas(sorted);
+  }
+
+  AssignRuntimeIds();
+}
+
+void UBlockMergeRegistry::MergeBlockCatalog(
+    const std::vector<ResourcePackManifest> &sorted)
+{
+  struct PendingBlock
+  {
+    std::string RegistryName;
+    std::string LocalName;
+    ResourcePackBlock Block;
+    ResourcePackManifest Pack;
+  };
+  std::vector<PendingBlock> pending;
 
   for (const auto &pack : sorted)
   {
     for (const auto &block : UResourcePack::LoadBlocks(pack))
     {
-      if (BlocksByName.find(block.Definition.Name) != BlocksByName.end())
+      PendingBlock pb;
+      pb.LocalName = block.Definition.Name;
+      pb.RegistryName = block.Definition.Name;
+      pb.Block = block;
+      pb.Pack = pack;
+      if (pack.MergeMode == PackMergeMode::Duplicate)
+      {
+        pb.RegistryName = MakeQualifiedBlockName(pack.Id, pb.LocalName);
+      }
+      pending.push_back(std::move(pb));
+    }
+  }
+
+  for (const auto &pb : pending)
+  {
+    const auto existing = BlocksByName.find(pb.RegistryName);
+    if (existing != BlocksByName.end() && !pb.Pack.Id.empty() &&
+        existing->second.OwnerPackId == pb.Pack.Id &&
+        pb.RegistryName == pb.LocalName)
+    {
+      continue;
+    }
+    if (existing != BlocksByName.end())
+    {
+      if (pb.Pack.MergeMode == PackMergeMode::SkipExisting)
       {
         continue;
       }
-      MergedEntry entry;
-      entry.Definition = block.Definition;
-      entry.Stems = block.TextureStems;
-      BlocksByName[block.Definition.Name] = entry;
+      if (pb.Pack.MergeMode == PackMergeMode::Override)
+      {
+        MergedEntry entry;
+        entry.Definition = pb.Block.Definition;
+        entry.Definition.Name = pb.RegistryName;
+        entry.Stems = pb.Block.TextureStems;
+        entry.OwnerPackId = pb.Pack.Id;
+        entry.IsQualifiedDuplicate =
+            pb.RegistryName != pb.LocalName;
+        BlocksByName[pb.RegistryName] = entry;
+        continue;
+      }
+      if (pb.Pack.MergeMode == PackMergeMode::Duplicate)
+      {
+        if (BlocksByName.find(pb.RegistryName) != BlocksByName.end())
+        {
+          continue;
+        }
+      }
     }
+    if (BlocksByName.find(pb.RegistryName) != BlocksByName.end())
+    {
+      continue;
+    }
+    MergedEntry entry;
+    entry.Definition = pb.Block.Definition;
+    entry.Definition.Name = pb.RegistryName;
+    entry.Stems = pb.Block.TextureStems;
+    entry.OwnerPackId = pb.Pack.Id;
+    entry.IsQualifiedDuplicate = pb.RegistryName != pb.LocalName;
+    BlocksByName[pb.RegistryName] = entry;
+  }
+}
+
+void UBlockMergeRegistry::ResolveBlockDefinitions(
+    const std::vector<ResourcePackManifest> & /*sorted*/)
+{
+  for (auto &pair : BlocksByName)
+  {
+    pair.second.Definition.Name = pair.first;
+  }
+}
+
+void UBlockMergeRegistry::ApplyTextureOverrides(
+    const std::vector<ResourcePackManifest> &sorted)
+{
+  for (const auto &pack : sorted)
+  {
+    const auto overrides = UResourcePack::LoadTextureOverrideMap(pack);
+    for (const auto &[blockName, faceOverrides] : overrides)
+    {
+      auto it = BlocksByName.find(blockName);
+      if (it == BlocksByName.end())
+      {
+        continue;
+      }
+      for (const auto &ov : faceOverrides)
+      {
+        for (int face : ov.Faces)
+        {
+          if (face >= 0 && face < 6)
+          {
+            it->second.Stems[static_cast<size_t>(face)] = ov.Stem;
+          }
+        }
+      }
+    }
+  }
+}
+
+std::string UBlockMergeRegistry::ResolveStemInPack(
+    const std::string &stem, const ResourcePackManifest &pack) const
+{
+  if (stem.empty())
+  {
+    return {};
+  }
+  if (stem.find('/') != std::string::npos)
+  {
+    return stem;
+  }
+  const fs::path path = UResourcePack::TexturePath(pack, stem);
+  if (fs::exists(path))
+  {
+    return PackQualifiedTextureStem(pack.Id, stem);
+  }
+  return {};
+}
+
+void UBlockMergeRegistry::ResolveTextureAtlas(
+    const std::vector<ResourcePackManifest> &sorted)
+{
+  std::unordered_map<std::string, ResourcePackManifest> packById;
+  for (const auto &pack : sorted)
+  {
+    packById[pack.Id] = pack;
   }
 
   for (auto &pair : BlocksByName)
   {
+    const auto packIt = packById.find(pair.second.OwnerPackId);
+    if (packIt == packById.end())
+    {
+      continue;
+    }
+    const ResourcePackManifest &ownerPack = packIt->second;
     for (int face = 0; face < 6; ++face)
     {
-      const std::string resolved =
-          ResolveStem(pair.second.Stems[static_cast<size_t>(face)], sorted);
+      const std::string resolved = ResolveStemInPack(
+          pair.second.Stems[static_cast<size_t>(face)], ownerPack);
       if (!resolved.empty())
       {
         pair.second.Stems[static_cast<size_t>(face)] = resolved;
@@ -77,35 +228,6 @@ void UBlockMergeRegistry::Rebuild(
       }
     }
   }
-
-  for (const auto &rt : RuntimeOverlay)
-  {
-    if (BlocksByName.find(rt.first.Name) != BlocksByName.end())
-    {
-      continue;
-    }
-    MergedEntry entry;
-    entry.Definition = rt.first;
-    entry.Stems = rt.second;
-    for (int face = 0; face < 6; ++face)
-    {
-      const std::string resolved =
-          ResolveStem(entry.Stems[static_cast<size_t>(face)], sorted);
-      if (!resolved.empty())
-      {
-        entry.Stems[static_cast<size_t>(face)] = resolved;
-      }
-      else if (PlaceholderCache)
-      {
-        entry.Stems[static_cast<size_t>(face)] =
-            PlaceholderCache->GetOrCreateStem(entry.Definition.Name, face,
-                                              PlaceholderTileSize);
-      }
-    }
-    BlocksByName[rt.first.Name] = entry;
-  }
-
-  AssignRuntimeIds();
 }
 
 void UBlockMergeRegistry::AssignRuntimeIds()
@@ -153,10 +275,19 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
     return NameToId.at(name);
   }
 
+  const std::string local = LocalBlockName(name);
+  if (kTierAWorldgenNames.count(local) != 0)
+  {
+    std::cerr << "BlockMergeRegistry: CRITICAL missing Tier A block '" << name
+              << "'" << std::endl;
+    return BLOCK_AIR;
+  }
+
   MergedEntry entry;
   entry.Definition.Name = name;
   entry.Definition.Physics = BlockPhysicsProfile::Solid();
   entry.Definition.Types = {"unknown"};
+  entry.OwnerPackId = "synthetic";
   for (int face = 0; face < 6; ++face)
   {
     if (PlaceholderCache)
@@ -170,18 +301,42 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   return NameToId.at(name);
 }
 
-BlockId UBlockMergeRegistry::ResolveName(const std::string &name)
+BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
 {
   if (name.empty())
   {
     return BLOCK_AIR;
+  }
+  if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
+  {
+    const std::string qualified =
+        MakeQualifiedBlockName(WorldgenOwnerPackId, name);
+    const auto qualifiedIt = NameToId.find(qualified);
+    if (qualifiedIt != NameToId.end())
+    {
+      return qualifiedIt->second;
+    }
   }
   const auto it = NameToId.find(name);
   if (it != NameToId.end())
   {
     return it->second;
   }
+  if (IsQualifiedBlockName(name))
+  {
+    const std::string local = LocalBlockName(name);
+    const auto localIt = NameToId.find(local);
+    if (localIt != NameToId.end())
+    {
+      return localIt->second;
+    }
+  }
   return CreateSyntheticBlock(name);
+}
+
+BlockId UBlockMergeRegistry::ResolveName(const std::string &name)
+{
+  return ResolveBlockName(name);
 }
 
 BlockId UBlockMergeRegistry::RegisterRuntimeBlock(

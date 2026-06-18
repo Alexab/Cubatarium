@@ -113,6 +113,8 @@ set(SOURCES
     src/ResourcePacks/ResourcePack.cpp
     src/ResourcePacks/ResourcePackResolver.cpp
     src/ResourcePacks/BlockMergeRegistry.cpp
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/ResourcePacks/TextureOverrides.cpp
     src/ResourcePacks/PlaceholderTextureCache.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
@@ -122,6 +124,7 @@ set(SOURCES
     src/WorldGen/Core/ProceduralConfigIO.cpp
     src/World/Prefabs/PrefabUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/IWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Pipelines/FlatPipeline.cpp
@@ -220,6 +223,8 @@ set(HEADERS
     src/ResourcePacks/ResourcePack.h
     src/ResourcePacks/ResourcePackResolver.h
     src/ResourcePacks/BlockMergeRegistry.h
+    src/ResourcePacks/BlockNameUtil.h
+    src/ResourcePacks/TextureOverrides.h
     src/ResourcePacks/PlaceholderTextureCache.h
     src/Render/Engine/AnimationClock.h
     src/World/Core/BlockWorld.h

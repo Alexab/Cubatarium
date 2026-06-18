@@ -115,6 +115,12 @@ def main() -> int:
                 textures_out[stem] = upstream_textures[stem]
         added_upstream += 1
 
+    for extra_stem in ("fire_1",):
+        if "fire" in blocks_out and extra_stem not in textures_out:
+            ref = resolve_stem_ref(extra_stem, index, stem_map, MT_TEX)
+            if ref is not None and texture_ref_exists(MT_TEX, ref):
+                textures_out[extra_stem] = ref
+
     animated: dict[str, list[Any]] = {}
     for stem, mt_name in [
         ("water", "default_water_source_animated.png"),

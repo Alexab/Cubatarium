@@ -64,6 +64,7 @@ struct BlockRenderProfile
 struct BlockDefinition
 {
   std::string Name;
+  std::string DisplayName;
   BlockId Id{BLOCK_AIR};
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;

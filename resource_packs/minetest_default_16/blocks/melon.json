@@ -1,7 +1,8 @@
 {
   "name": "melon",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "melon_side",

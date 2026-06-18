@@ -1,7 +1,8 @@
 {
   "name": "stoneMoss",
   "types": [
-    "natural"
+    "natural",
+    "building"
   ],
   "textures": [
     "stoneMoss",

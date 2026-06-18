@@ -1,7 +1,8 @@
 {
   "name": "whiteStone",
   "types": [
-    "natural"
+    "natural",
+    "building"
   ],
   "textures": [
     "whiteStone",

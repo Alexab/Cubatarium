@@ -88,7 +88,8 @@ KENNEY_STEM_TO_KENNEY: dict[str, str] = {
 ANIMATED_STEMS: dict[str, list[str]] = {
     "water": ["water", "water", "water", "water"],
     "lava": ["lava", "lava", "lava", "lava"],
-    "fire_0": ["redsand", "redstone"],
+    "fire_0": ["redstone", "redsand"],
+    "fire_1": ["redsand", "redstone"],
 }
 
 PACK_SPECS = [

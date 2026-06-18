@@ -10,6 +10,8 @@ import struct
 import zlib
 from pathlib import Path
 
+from stem_mapping_common import apply_canonical_meta_to_block_json
+
 try:
     import yaml
 except ImportError:
@@ -167,6 +169,7 @@ def build_pack(
             block["render"] = spec["render"]
         if "animation" in spec and isinstance(spec, dict):
             block["animation"] = spec["animation"]
+        apply_canonical_meta_to_block_json(block)
         (blocks_dir / f"{name}.json").write_text(json.dumps(block, indent=2), encoding="utf-8")
 
         for stem in set(stems):

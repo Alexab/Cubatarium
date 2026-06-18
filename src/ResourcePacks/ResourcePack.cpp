@@ -1,4 +1,5 @@
 #include "ResourcePacks/ResourcePack.h"
+#include "ResourcePacks/TextureOverrides.h"
 #include "Render/Textures/TextureBase.h"
 #include <fstream>
 #include <iostream>
@@ -44,6 +45,45 @@ UResourcePack::LoadManifest(const fs::path &root)
     m.Version = d.value("version", 1);
     m.Priority = d.value("priority", 0);
     m.Resolution = d.value("resolution", 16);
+    m.PackFormat = d.value("pack_format", 1);
+    m.MinGameVersion = d.value("min_game_version", "");
+    m.AllowResolutionMix = d.value("allow_resolution_mix", false);
+    if (d.contains("depends") && d["depends"].is_array())
+    {
+      for (const auto &dep : d["depends"])
+      {
+        if (dep.is_string())
+        {
+          m.Depends.push_back(dep.get<std::string>());
+        }
+      }
+    }
+    if (d.contains("conflicts") && d["conflicts"].is_array())
+    {
+      for (const auto &c : d["conflicts"])
+      {
+        if (c.is_string())
+        {
+          m.Conflicts.push_back(c.get<std::string>());
+        }
+      }
+    }
+    const std::string role = d.value("worldgen_role", "secondary");
+    m.Role =
+        (role == "primary") ? WorldgenRole::Primary : WorldgenRole::Secondary;
+    const std::string merge = d.value("merge_mode", "skip_existing");
+    if (merge == "override")
+    {
+      m.MergeMode = PackMergeMode::Override;
+    }
+    else if (merge == "duplicate")
+    {
+      m.MergeMode = PackMergeMode::Duplicate;
+    }
+    else
+    {
+      m.MergeMode = PackMergeMode::SkipExisting;
+    }
     return m;
   }
   catch (const json::exception &e)
@@ -104,6 +144,12 @@ fs::path UResourcePack::TexturePath(const ResourcePackManifest &manifest,
                                     const std::string &stem)
 {
   return manifest.Root / "textures" / "blocks" / (stem + ".png");
+}
+
+TextureOverrideMap
+UResourcePack::LoadTextureOverrideMap(const ResourcePackManifest &manifest)
+{
+  return LoadTextureOverrides(manifest.Root);
 }
 
 void UResourcePack::RegisterTextures(const ResourcePackManifest &manifest,

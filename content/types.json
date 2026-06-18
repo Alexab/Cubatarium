@@ -2,9 +2,12 @@
   "types": [
     { "id": "building", "displayName": "Building", "sortOrder": 10 },
     { "id": "natural", "displayName": "Natural", "sortOrder": 20 },
+    { "id": "plants", "displayName": "Plants", "sortOrder": 25 },
     { "id": "fluid", "displayName": "Fluids", "sortOrder": 30 },
+    { "id": "decorative", "displayName": "Decorative", "sortOrder": 35 },
+    { "id": "mechanisms", "displayName": "Mechanisms", "sortOrder": 40 },
     { "id": "misc", "displayName": "Misc", "sortOrder": 999 },
-    { "id": "mobs", "displayName": "Mobs", "sortOrder": 40 },
-    { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 50 }
+    { "id": "mobs", "displayName": "Mobs", "sortOrder": 50 },
+    { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 60 }
   ]
 }

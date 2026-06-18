@@ -1,7 +1,7 @@
 {
   "name": "blockGold",
   "types": [
-    "natural"
+    "building"
   ],
   "textures": [
     "blockGold",

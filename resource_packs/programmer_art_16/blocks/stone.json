@@ -1,7 +1,8 @@
 {
   "name": "stone",
   "types": [
-    "natural"
+    "natural",
+    "building"
   ],
   "textures": [
     "stone",

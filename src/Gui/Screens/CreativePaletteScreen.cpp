@@ -4,12 +4,12 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
-#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
 
-#include <algorithm>
+#include "ResourcePacks/BlockNameUtil.h"
 
 namespace cutum
 {
@@ -116,6 +116,11 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   auto scroll = std::make_unique<UGuiScrollView>(Theme);
   Scroll = scroll.get();
 
+  auto tooltip = std::make_unique<UGuiLabel>(Theme, "");
+  tooltip->SetVisible(false);
+  TooltipLabel = tooltip.get();
+  panel->AddChild(std::move(tooltip));
+
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
@@ -151,6 +156,11 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     SubTabs->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
   }
+  if (TooltipLabel && Panel)
+  {
+    const GuiRect b = Panel->GetBounds();
+    TooltipLabel->SetBounds({b.X + 8, b.Y + b.H - 28, b.W - 16, 22});
+  }
   if (Scroll)
   {
     const int scrollH = std::max(0, panelH - 84);
@@ -163,13 +173,102 @@ void UCreativePaletteScreen::RelayoutPanel()
   }
 }
 
-void UCreativePaletteScreen::Update(double /*dt*/)
+void UCreativePaletteScreen::SetPointerPosition(int x, int y)
+{
+  PointerX = x;
+  PointerY = y;
+}
+
+void UCreativePaletteScreen::SetPointerPressed(bool pressed)
+{
+  if (!pressed)
+  {
+    HoldTimer = 0.0;
+    HoldSlotIndex = -1;
+  }
+  PointerPressed = pressed;
+}
+
+void UCreativePaletteScreen::UpdateTooltip()
+{
+  if (!TooltipLabel)
+  {
+    return;
+  }
+  std::string text;
+  auto labelAt = [this](size_t index) -> std::string {
+    if (index < GridEntryLabels.size() && !GridEntryLabels[index].empty())
+    {
+      return GridEntryLabels[index];
+    }
+    if (index < GridEntryIds.size())
+    {
+      return HumanizeBlockName(GridEntryIds[index]);
+    }
+    return {};
+  };
+
+  if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0 &&
+      static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
+  {
+    text = labelAt(static_cast<size_t>(HoldSlotIndex));
+  }
+  else if (PointerX >= 0 && PointerY >= 0 && Scroll)
+  {
+    for (size_t i = 0; i < GridSlots.size(); ++i)
+    {
+      UGuiSlot *slot = GridSlots[i];
+      if (slot && slot->IsVisible() && slot->GetBounds().Contains(PointerX, PointerY) &&
+          i < GridEntryIds.size())
+      {
+        text = labelAt(i);
+        break;
+      }
+    }
+  }
+  TooltipLabel->SetText(text);
+  TooltipLabel->SetVisible(!text.empty());
+}
+
+void UCreativePaletteScreen::Update(double dt)
 {
   if (!Visible || !Panel || !Catalog || !Theme)
   {
     return;
   }
   RelayoutPanel();
+
+  if (PointerPressed && PointerX >= 0 && PointerY >= 0)
+  {
+    int slotUnderPointer = -1;
+    for (size_t i = 0; i < GridSlots.size(); ++i)
+    {
+      UGuiSlot *slot = GridSlots[i];
+      if (slot && slot->IsVisible() &&
+          slot->GetBounds().Contains(PointerX, PointerY))
+      {
+        slotUnderPointer = static_cast<int>(i);
+        break;
+      }
+    }
+    if (slotUnderPointer >= 0)
+    {
+      if (slotUnderPointer != HoldSlotIndex)
+      {
+        HoldSlotIndex = slotUnderPointer;
+        HoldTimer = 0.0;
+      }
+      else
+      {
+        HoldTimer += dt;
+      }
+    }
+    else
+    {
+      HoldSlotIndex = -1;
+      HoldTimer = 0.0;
+    }
+  }
 
   if (SubTabs)
   {
@@ -209,6 +308,7 @@ void UCreativePaletteScreen::Update(double /*dt*/)
   {
     RebuildGrid();
   }
+  UpdateTooltip();
 }
 
 void UCreativePaletteScreen::RebuildGrid()
@@ -220,6 +320,7 @@ void UCreativePaletteScreen::RebuildGrid()
   Scroll->Content().ClearChildren();
   GridSlots.clear();
   GridEntryIds.clear();
+  GridEntryLabels.clear();
 
   const auto entries =
       Catalog->GetEntries(Kind, ActiveTypeId.empty() ? "misc" : ActiveTypeId);
@@ -298,6 +399,7 @@ void UCreativePaletteScreen::RebuildGrid()
         static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
     GridSlots.push_back(ptr);
     GridEntryIds.push_back(entryId);
+    GridEntryLabels.push_back(entries[i].displayName);
   }
 
   Scroll->SetAfterScrollLayout([this](UGuiScrollView &)

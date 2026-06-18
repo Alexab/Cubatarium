@@ -186,6 +186,7 @@ void UWorld::RebuildWorldGenPipeline()
   }
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                       PrefabLibrary, &MeshCache};
+  ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
 
@@ -260,6 +261,7 @@ void UWorld::GenerateWorldBlocks()
   {
     WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                         PrefabLibrary, &MeshCache};
+    ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
     ctx.ResolveBlockIds();
     const int surfaceY = WorldGen->SurfaceYAt(8, 8);
     PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
@@ -296,6 +298,10 @@ void UWorld::OnBlockRegistryChanged()
 {
   RefreshBlockRegistry();
   RebuildBlockMesh();
+  if (OnBlockRegistryChangedCallback)
+  {
+    OnBlockRegistryChangedCallback();
+  }
 }
 
 void UWorld::RefreshBlockRegistry()
@@ -2088,20 +2094,48 @@ void UWorld::LoadWorldData(const std::string &file_name)
       ResolveProceduralDefaults(ProceduralTemplate);
       ApplyGeneratorTierDefaults(ProceduralTemplate);
     }
+    ResourcePacksEnabled.clear();
+    ResourcePacksPrimary.clear();
+    ResourcePacksSecondary.clear();
+    WorldgenOwnerPackId.clear();
     if (d.contains("resource_packs") && d["resource_packs"].is_object())
     {
       const auto &rp = d["resource_packs"];
-      if (rp.contains("enabled") && rp["enabled"].is_array())
-      {
-        ResourcePacksEnabled.clear();
-        for (const auto &id : rp["enabled"])
+      auto parseIds = [](const nlohmann::json &arr,
+                         std::vector<std::string> &out) {
+        if (!arr.is_array())
+        {
+          return;
+        }
+        for (const auto &id : arr)
         {
           if (id.is_string())
           {
-            ResourcePacksEnabled.push_back(id.get<std::string>());
+            out.push_back(id.get<std::string>());
           }
         }
+      };
+      if (rp.contains("primary") && rp["primary"].is_array())
+      {
+        parseIds(rp["primary"], ResourcePacksPrimary);
       }
+      if (rp.contains("secondary") && rp["secondary"].is_array())
+      {
+        parseIds(rp["secondary"], ResourcePacksSecondary);
+      }
+      if (ResourcePacksPrimary.empty() && rp.contains("enabled") &&
+          rp["enabled"].is_array())
+      {
+        parseIds(rp["enabled"], ResourcePacksPrimary);
+      }
+      if (rp.contains("worldgen_owner") && rp["worldgen_owner"].is_string())
+      {
+        WorldgenOwnerPackId = rp["worldgen_owner"].get<std::string>();
+      }
+      ResourcePacksEnabled = ResourcePacksPrimary;
+      ResourcePacksEnabled.insert(ResourcePacksEnabled.end(),
+                                  ResourcePacksSecondary.begin(),
+                                  ResourcePacksSecondary.end());
     }
     RebuildWorldGenPipeline();
   }
@@ -2124,9 +2158,25 @@ void UWorld::SaveWorldData(const std::string &file_name)
   json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
   world_data["spawn_point"] = arr;
 
-  if (!ResourcePacksEnabled.empty())
+  if (!ResourcePacksPrimary.empty() || !ResourcePacksSecondary.empty())
   {
-    world_data["resource_packs"]["enabled"] = ResourcePacksEnabled;
+    auto &rp = world_data["resource_packs"];
+    if (!ResourcePacksPrimary.empty())
+    {
+      rp["primary"] = ResourcePacksPrimary;
+    }
+    if (!ResourcePacksSecondary.empty())
+    {
+      rp["secondary"] = ResourcePacksSecondary;
+    }
+    if (!WorldgenOwnerPackId.empty())
+    {
+      rp["worldgen_owner"] = WorldgenOwnerPackId;
+    }
+  }
+  else if (!ResourcePacksEnabled.empty())
+  {
+    world_data["resource_packs"]["primary"] = ResourcePacksEnabled;
   }
 
   std::ofstream file(file_name);

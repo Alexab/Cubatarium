@@ -27,6 +27,7 @@ public:
   void SetCheckedIds(const std::vector<std::string> &ids);
   std::vector<std::string> GetCheckedIds() const;
   void SetOnChanged(std::function<void()> handler);
+  bool MoveFocusedItem(int delta);
 
   bool CanFocus() const override;
   bool Activate() override;
@@ -62,6 +63,7 @@ private:
   std::function<void()> OnChanged;
   bool DragActive{false};
   bool DragMoved{false};
+  bool ReorderDrag{false};
   int DragStartY{0};
   int DragStartScroll{0};
   int PendingToggleIndex{-1};
