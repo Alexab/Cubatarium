@@ -1,0 +1,14 @@
+{
+  "name": "mtg_dry_grass_1",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_dry_grass_1",
+    "mtg_dry_grass_1",
+    "mtg_dry_grass_1",
+    "mtg_dry_grass_1",
+    "mtg_dry_grass_1",
+    "mtg_dry_grass_1"
+  ]
+}

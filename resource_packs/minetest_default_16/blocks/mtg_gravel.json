@@ -1,0 +1,14 @@
+{
+  "name": "mtg_gravel",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_gravel",
+    "mtg_gravel",
+    "mtg_gravel",
+    "mtg_gravel",
+    "mtg_gravel",
+    "mtg_gravel"
+  ]
+}

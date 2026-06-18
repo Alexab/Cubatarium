@@ -1,0 +1,14 @@
+{
+  "name": "bookshelf",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf"
+  ]
+}

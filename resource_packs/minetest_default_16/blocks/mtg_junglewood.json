@@ -1,0 +1,14 @@
+{
+  "name": "mtg_junglewood",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_junglewood",
+    "mtg_junglewood",
+    "mtg_junglewood",
+    "mtg_junglewood",
+    "mtg_junglewood",
+    "mtg_junglewood"
+  ]
+}

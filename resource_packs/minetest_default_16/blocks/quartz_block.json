@@ -1,0 +1,14 @@
+{
+  "name": "quartz_block",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "quartzblock_side",
+    "quartzblock_side",
+    "quartzblock_side",
+    "quartzblock_side",
+    "quartzblock_top",
+    "quartzblock_bottom"
+  ]
+}

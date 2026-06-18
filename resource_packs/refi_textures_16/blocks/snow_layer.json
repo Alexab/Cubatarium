@@ -1,0 +1,14 @@
+{
+  "name": "snow_layer",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side"
+  ]
+}

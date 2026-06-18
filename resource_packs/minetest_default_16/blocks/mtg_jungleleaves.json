@@ -1,0 +1,14 @@
+{
+  "name": "mtg_jungleleaves",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_jungleleaves",
+    "mtg_jungleleaves",
+    "mtg_jungleleaves",
+    "mtg_jungleleaves",
+    "mtg_jungleleaves",
+    "mtg_jungleleaves"
+  ]
+}

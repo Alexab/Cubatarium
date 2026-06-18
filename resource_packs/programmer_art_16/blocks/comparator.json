@@ -1,0 +1,14 @@
+{
+  "name": "comparator",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator"
+  ]
+}

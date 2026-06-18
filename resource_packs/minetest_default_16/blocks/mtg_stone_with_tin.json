@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_tin",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_tin",
+    "mtg_stone_with_tin",
+    "mtg_stone_with_tin",
+    "mtg_stone_with_tin",
+    "mtg_stone_with_tin",
+    "mtg_stone_with_tin"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "blockLapis",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis"
+  ]
+}

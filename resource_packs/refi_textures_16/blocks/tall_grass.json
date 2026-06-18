@@ -1,0 +1,14 @@
+{
+  "name": "tall_grass",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass"
+  ]
+}

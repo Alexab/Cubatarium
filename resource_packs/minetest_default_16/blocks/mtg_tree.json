@@ -1,0 +1,14 @@
+{
+  "name": "mtg_tree",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree_top",
+    "mtg_tree_default_tree_top"
+  ]
+}

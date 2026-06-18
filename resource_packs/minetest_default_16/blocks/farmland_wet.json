@@ -1,0 +1,14 @@
+{
+  "name": "farmland_wet",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "dirt",
+    "dirt",
+    "dirt",
+    "dirt",
+    "farmland_wet",
+    "dirt"
+  ]
+}

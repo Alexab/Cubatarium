@@ -1,0 +1,14 @@
+{
+  "name": "log_birch",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "wood_birch",
+    "wood_birch"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "vines",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "vine",
+    "vine",
+    "vine",
+    "vine",
+    "vine",
+    "vine"
+  ]
+}

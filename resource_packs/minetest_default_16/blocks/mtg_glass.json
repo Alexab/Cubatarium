@@ -1,0 +1,14 @@
+{
+  "name": "mtg_glass",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass",
+    "mtg_glass_default_glass_detail"
+  ]
+}

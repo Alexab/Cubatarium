@@ -1,0 +1,14 @@
+{
+  "name": "mtg_tinblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_tinblock",
+    "mtg_tinblock",
+    "mtg_tinblock",
+    "mtg_tinblock",
+    "mtg_tinblock",
+    "mtg_tinblock"
+  ]
+}

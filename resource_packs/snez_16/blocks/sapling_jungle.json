@@ -1,0 +1,14 @@
+{
+  "name": "sapling_jungle",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sapling_jungle",
+    "sapling_jungle",
+    "sapling_jungle",
+    "sapling_jungle",
+    "sapling_jungle",
+    "sapling_jungle"
+  ]
+}

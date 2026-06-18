@@ -1,0 +1,14 @@
+{
+  "name": "mtg_silver_sand",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_silver_sand",
+    "mtg_silver_sand",
+    "mtg_silver_sand",
+    "mtg_silver_sand",
+    "mtg_silver_sand",
+    "mtg_silver_sand"
+  ]
+}

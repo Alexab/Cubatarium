@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_iron",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_iron",
+    "mtg_stone_with_iron",
+    "mtg_stone_with_iron",
+    "mtg_stone_with_iron",
+    "mtg_stone_with_iron",
+    "mtg_stone_with_iron"
+  ]
+}

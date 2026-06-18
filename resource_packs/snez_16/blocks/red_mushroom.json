@@ -1,0 +1,14 @@
+{
+  "name": "red_mushroom",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red"
+  ]
+}

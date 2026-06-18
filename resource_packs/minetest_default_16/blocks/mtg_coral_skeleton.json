@@ -1,0 +1,14 @@
+{
+  "name": "mtg_coral_skeleton",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coral_skeleton",
+    "mtg_coral_skeleton",
+    "mtg_coral_skeleton",
+    "mtg_coral_skeleton",
+    "mtg_coral_skeleton",
+    "mtg_coral_skeleton"
+  ]
+}

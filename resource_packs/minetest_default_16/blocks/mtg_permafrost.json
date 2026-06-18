@@ -1,0 +1,14 @@
+{
+  "name": "mtg_permafrost",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_permafrost",
+    "mtg_permafrost",
+    "mtg_permafrost",
+    "mtg_permafrost",
+    "mtg_permafrost",
+    "mtg_permafrost"
+  ]
+}

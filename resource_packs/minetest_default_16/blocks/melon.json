@@ -1,0 +1,14 @@
+{
+  "name": "melon",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "melon_side",
+    "melon_side",
+    "melon_side",
+    "melon_side",
+    "melon_top",
+    "melon_side"
+  ]
+}

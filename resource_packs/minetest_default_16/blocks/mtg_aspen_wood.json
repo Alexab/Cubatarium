@@ -1,0 +1,14 @@
+{
+  "name": "mtg_aspen_wood",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_aspen_wood",
+    "mtg_aspen_wood",
+    "mtg_aspen_wood",
+    "mtg_aspen_wood",
+    "mtg_aspen_wood",
+    "mtg_aspen_wood"
+  ]
+}

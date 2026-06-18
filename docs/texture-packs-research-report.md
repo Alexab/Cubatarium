@@ -282,6 +282,23 @@ Opt-in CLI `tools/register_pack_extras.ps1`: сканирует `extras`, пре
 
 ---
 
+## 10. Реализованные Luanti resource packs (2026-06-18)
+
+Скачаны и собраны в `resource_packs/`:
+
+| Pack ID | Блоков | Лицензия | Источник |
+|---------|--------|----------|----------|
+| `minetest_default_16` v2 | 261 | CC BY-SA 3.0 | [minetest-game/default](https://github.com/minetest-game/default) |
+| `refi_textures_16` | 108 | CC BY-SA 4.0 | [MysticTempest/REFI_Textures](https://github.com/MysticTempest/REFI_Textures) |
+| `programmer_art_16` | 127 | CC BY 4.0 | [deathcap/ProgrammerArt](https://github.com/deathcap/ProgrammerArt) |
+| `snez_16` | 87 | CC BY-SA | [FrugalGamer/snez-texture-pack](https://github.com/FrugalGamer/snez-texture-pack) |
+| `too_many_stones_16` | 38 | CC0 | [asuna-mt/Too_Many_Stones](https://github.com/asuna-mt/Too_Many_Stones) |
+
+Пайплайн: `tools/download_texture_packs.py` → mapping YAML → `tools/build_research_resource_packs.py`.  
+Полный Minetest: `tools/minetest_stem_map.yaml`, `tools/generate_minetest_upstream_catalog.py`, composite руд (`stone^mineral`).
+
+---
+
 ## Приложение: команды
 
 ```powershell

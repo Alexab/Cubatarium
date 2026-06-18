@@ -360,13 +360,14 @@ bool UGuiCheckList::OnKey(const GuiKeyEvent &event)
 
 bool UGuiCheckList::OnScroll(const GuiScrollEvent &event)
 {
-  if (!Visible || Bounds.H <= 0)
+  if (!Visible || Bounds.H <= 0 || MaxScrollY() <= 0)
   {
     return false;
   }
+  const int before = ScrollOffsetPx;
   ScrollOffsetPx -= static_cast<int>(event.Yoffset * RowHeight);
   ClampScroll();
-  return true;
+  return ScrollOffsetPx != before;
 }
 
 bool UGuiCheckList::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)

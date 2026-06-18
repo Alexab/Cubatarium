@@ -1,0 +1,14 @@
+{
+  "name": "mtg_cave_ice",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_cave_ice",
+    "mtg_cave_ice",
+    "mtg_cave_ice",
+    "mtg_cave_ice",
+    "mtg_cave_ice",
+    "mtg_cave_ice"
+  ]
+}

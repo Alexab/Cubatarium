@@ -1,0 +1,14 @@
+{
+  "name": "log_spruce",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_spruce",
+    "tree_spruce",
+    "tree_spruce",
+    "tree_spruce",
+    "wood_spruce",
+    "wood_spruce"
+  ]
+}

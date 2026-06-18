@@ -1,0 +1,14 @@
+{
+  "name": "mtg_mese",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_mese",
+    "mtg_mese",
+    "mtg_mese",
+    "mtg_mese",
+    "mtg_mese",
+    "mtg_mese"
+  ]
+}

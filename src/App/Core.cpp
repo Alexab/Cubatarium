@@ -92,6 +92,7 @@ constexpr int kMaxProjectRootSearchDepth = 8;
 std::optional<std::filesystem::path>
 TryFindProjectRoot(std::filesystem::path start)
 {
+  std::optional<std::filesystem::path> best;
   for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth)
   {
     const auto textures_dir = start / "textures" / "blocks";
@@ -107,11 +108,11 @@ TryFindProjectRoot(std::filesystem::path start)
         std::filesystem::exists(shaders_dir / "vshader_greedy.glsl");
     if (hasResourcePacks && hasPrefabs && hasShaders)
     {
-      return start;
+      best = start;
     }
-    if (hasTextures && hasModels && hasPrefabs && hasShaders)
+    else if (hasTextures && hasModels && hasPrefabs && hasShaders)
     {
-      return start;
+      best = start;
     }
     if (!start.has_parent_path())
     {
@@ -119,7 +120,7 @@ TryFindProjectRoot(std::filesystem::path start)
     }
     start = start.parent_path();
   }
-  return std::nullopt;
+  return best;
 }
 
 std::filesystem::path FindProjectRoot(std::filesystem::path start)

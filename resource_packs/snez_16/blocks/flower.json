@@ -1,0 +1,14 @@
+{
+  "name": "flower",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "flower",
+    "flower",
+    "flower",
+    "flower",
+    "flower",
+    "flower"
+  ]
+}

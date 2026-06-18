@@ -1,0 +1,14 @@
+{
+  "name": "mtg_large_cactus_seedling",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_large_cactus_seedling",
+    "mtg_large_cactus_seedling",
+    "mtg_large_cactus_seedling",
+    "mtg_large_cactus_seedling",
+    "mtg_large_cactus_seedling",
+    "mtg_large_cactus_seedling"
+  ]
+}

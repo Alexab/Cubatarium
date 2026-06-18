@@ -1,0 +1,14 @@
+{
+  "name": "blockIron",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockIron",
+    "blockIron",
+    "blockIron",
+    "blockIron",
+    "blockIron",
+    "blockIron"
+  ]
+}

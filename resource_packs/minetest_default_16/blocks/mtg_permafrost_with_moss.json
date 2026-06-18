@@ -1,0 +1,14 @@
+{
+  "name": "mtg_permafrost_with_moss",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_permafrost_with_moss_composite_0",
+    "mtg_permafrost_with_moss_composite_0",
+    "mtg_permafrost_with_moss_composite_0",
+    "mtg_permafrost_with_moss_composite_0",
+    "mtg_permafrost_with_moss_default_moss",
+    "mtg_permafrost_with_moss_default_permafrost"
+  ]
+}

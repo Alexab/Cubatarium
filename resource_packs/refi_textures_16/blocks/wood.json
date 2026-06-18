@@ -1,0 +1,14 @@
+{
+  "name": "wood",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "wood"
+  ]
+}

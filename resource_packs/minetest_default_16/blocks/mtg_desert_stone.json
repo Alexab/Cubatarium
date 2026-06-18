@@ -1,0 +1,14 @@
+{
+  "name": "mtg_desert_stone",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_desert_stone",
+    "mtg_desert_stone",
+    "mtg_desert_stone",
+    "mtg_desert_stone",
+    "mtg_desert_stone",
+    "mtg_desert_stone"
+  ]
+}

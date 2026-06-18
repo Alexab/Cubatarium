@@ -1,0 +1,14 @@
+{
+  "name": "log_jungle",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_jungle",
+    "tree_jungle",
+    "tree_jungle",
+    "tree_jungle",
+    "wood_jungle",
+    "wood_jungle"
+  ]
+}

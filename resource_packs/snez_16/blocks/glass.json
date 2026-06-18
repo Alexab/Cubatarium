@@ -1,0 +1,14 @@
+{
+  "name": "glass",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "glass",
+    "glass",
+    "glass",
+    "glass",
+    "glass",
+    "glass"
+  ]
+}

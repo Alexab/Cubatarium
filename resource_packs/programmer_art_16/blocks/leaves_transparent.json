@@ -1,0 +1,14 @@
+{
+  "name": "leaves_transparent",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves"
+  ]
+}

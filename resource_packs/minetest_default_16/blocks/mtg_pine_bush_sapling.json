@@ -1,0 +1,14 @@
+{
+  "name": "mtg_pine_bush_sapling",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_bush_sapling",
+    "mtg_pine_bush_sapling",
+    "mtg_pine_bush_sapling",
+    "mtg_pine_bush_sapling",
+    "mtg_pine_bush_sapling",
+    "mtg_pine_bush_sapling"
+  ]
+}

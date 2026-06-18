@@ -1,0 +1,14 @@
+{
+  "name": "mtg_permafrost_with_stones",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_permafrost_with_stones_composite_0",
+    "mtg_permafrost_with_stones_composite_0",
+    "mtg_permafrost_with_stones_composite_0",
+    "mtg_permafrost_with_stones_composite_0",
+    "mtg_permafrost_with_stones_composite_1",
+    "mtg_permafrost_with_stones_default_permafrost"
+  ]
+}

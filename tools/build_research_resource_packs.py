@@ -95,6 +95,46 @@ PACK_SPECS = [
         "resolution": 16,
         "source_is_flat": True,
     },
+    {
+        "pack_id": "refi_textures_16",
+        "name": "REFI Textures 16",
+        "mapping": REPO / "tools/refi_textures_mapping.yaml",
+        "source": RESEARCH / "refi_textures" / "textures",
+        "out": REPO / "resource_packs/refi_textures_16",
+        "priority": 5,
+        "resolution": 16,
+        "source_is_flat": False,
+    },
+    {
+        "pack_id": "programmer_art_16",
+        "name": "ProgrammerArt 16",
+        "mapping": REPO / "tools/programmer_art_mapping.yaml",
+        "source": RESEARCH / "programmer_art" / "textures" / "blocks",
+        "out": REPO / "resource_packs/programmer_art_16",
+        "priority": 5,
+        "resolution": 16,
+        "source_is_flat": True,
+    },
+    {
+        "pack_id": "snez_16",
+        "name": "Snez 16",
+        "mapping": REPO / "tools/snez_mapping.yaml",
+        "source": RESEARCH / "snez" / "Snez",
+        "out": REPO / "resource_packs/snez_16",
+        "priority": 6,
+        "resolution": 16,
+        "source_is_flat": True,
+    },
+    {
+        "pack_id": "too_many_stones_16",
+        "name": "Too Many Stones 16",
+        "mapping": REPO / "tools/too_many_stones_mapping.yaml",
+        "source": RESEARCH / "too_many_stones" / "textures",
+        "out": REPO / "resource_packs/too_many_stones_16",
+        "priority": 7,
+        "resolution": 16,
+        "source_is_flat": True,
+    },
 ]
 
 
@@ -104,22 +144,40 @@ def resize_square(img: Image.Image, size: int) -> Image.Image:
     return img.resize((size, size), Image.Resampling.NEAREST)
 
 
-def parse_texture_ref(ref: Any) -> tuple[str, int | None, tuple[int, int, int, int] | None]:
-    """Return (relative_path, sheet_tile_index, crop_box)."""
+def parse_texture_ref(ref: Any) -> tuple[str, int | None, tuple[int, int, int, int] | None, dict | None]:
+    """Return (relative_path, sheet_tile_index, crop_box, composite_spec)."""
     if isinstance(ref, str):
-        return ref, None, None
+        return ref, None, None, None
     if isinstance(ref, dict):
+        if "composite" in ref:
+            return "", None, None, ref["composite"]
         if "sheet" in ref:
-            return ref["sheet"], int(ref.get("tile", 0)), None
+            return ref["sheet"], int(ref.get("tile", 0)), None, None
         if "file" in ref:
             crop = ref.get("crop")
             box = tuple(crop) if crop else None
-            return ref["file"], None, box
+            return ref["file"], None, box, None
     raise ValueError(f"Invalid texture ref: {ref!r}")
 
 
+def composite_images(base: Image.Image, overlay: Image.Image) -> Image.Image:
+    """Luanti-style alpha overlay (^ operator)."""
+    base = base.convert("RGBA")
+    overlay = overlay.convert("RGBA")
+    if overlay.size != base.size:
+        overlay = overlay.resize(base.size, Image.Resampling.NEAREST)
+    out = base.copy()
+    out.alpha_composite(overlay)
+    return out
+
+
 def load_texture_image(source_root: Path, ref: Any, flat: bool) -> Image.Image:
-    rel, tile_idx, crop = parse_texture_ref(ref)
+    rel, tile_idx, crop, composite = parse_texture_ref(ref)
+    if composite:
+        base_img = load_texture_image(source_root, composite["base"], flat)
+        overlay_img = load_texture_image(source_root, composite["overlay"], flat)
+        return composite_images(base_img, overlay_img)
+
     path = source_root / rel
     if not path.is_file() and flat:
         alt = source_root / Path(rel).name
@@ -237,6 +295,9 @@ def build_pack(spec: dict, staging: Path) -> None:
     )
     data = json.loads((spec["out"] / "pack.json").read_text(encoding="utf-8"))
     data["name"] = spec["name"]
+    mapping = yaml.safe_load(spec["mapping"].read_text(encoding="utf-8"))
+    if mapping.get("pack_version"):
+        data["version"] = mapping["pack_version"]
     (spec["out"] / "pack.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 

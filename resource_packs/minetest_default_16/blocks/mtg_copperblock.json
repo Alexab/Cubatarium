@@ -1,0 +1,14 @@
+{
+  "name": "mtg_copperblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_copperblock",
+    "mtg_copperblock",
+    "mtg_copperblock",
+    "mtg_copperblock",
+    "mtg_copperblock",
+    "mtg_copperblock"
+  ]
+}

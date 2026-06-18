@@ -1,0 +1,14 @@
+{
+  "name": "mtg_junglegrass",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_junglegrass",
+    "mtg_junglegrass",
+    "mtg_junglegrass",
+    "mtg_junglegrass",
+    "mtg_junglegrass",
+    "mtg_junglegrass"
+  ]
+}

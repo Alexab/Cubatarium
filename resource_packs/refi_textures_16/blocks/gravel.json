@@ -1,0 +1,14 @@
+{
+  "name": "gravel",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "sandstone_smooth",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sandstone_smooth",
+    "sandstone_smooth",
+    "sandstone_smooth",
+    "sandstone_smooth",
+    "sandstone_smooth",
+    "sandstone_smooth"
+  ]
+}

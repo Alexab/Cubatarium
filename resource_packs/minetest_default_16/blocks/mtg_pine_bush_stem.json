@@ -1,0 +1,14 @@
+{
+  "name": "mtg_pine_bush_stem",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_stem"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "note_block",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock"
+  ]
+}

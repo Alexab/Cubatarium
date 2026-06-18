@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_diamond",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_diamond",
+    "mtg_stone_with_diamond",
+    "mtg_stone_with_diamond",
+    "mtg_stone_with_diamond",
+    "mtg_stone_with_diamond",
+    "mtg_stone_with_diamond"
+  ]
+}

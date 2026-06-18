@@ -417,6 +417,10 @@ bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
   {
     return false;
   }
+  if (ContentPanel.ScrollAtPoint(x, y, event))
+  {
+    return true;
+  }
   return OnScroll(event);
 }
 

@@ -1,0 +1,14 @@
+{
+  "name": "repeater",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "repeater",
+    "repeater",
+    "repeater",
+    "repeater",
+    "repeater",
+    "repeater"
+  ]
+}

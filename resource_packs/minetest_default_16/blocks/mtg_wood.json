@@ -1,0 +1,14 @@
+{
+  "name": "mtg_wood",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_wood",
+    "mtg_wood",
+    "mtg_wood",
+    "mtg_wood",
+    "mtg_wood",
+    "mtg_wood"
+  ]
+}

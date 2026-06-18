@@ -1,0 +1,14 @@
+{
+  "name": "mtg_steelblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_steelblock",
+    "mtg_steelblock",
+    "mtg_steelblock",
+    "mtg_steelblock",
+    "mtg_steelblock",
+    "mtg_steelblock"
+  ]
+}

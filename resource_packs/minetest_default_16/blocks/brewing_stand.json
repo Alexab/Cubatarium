@@ -1,0 +1,14 @@
+{
+  "name": "brewing_stand",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "brewingStand",
+    "brewingStand_base"
+  ]
+}

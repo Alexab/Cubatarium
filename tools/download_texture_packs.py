@@ -58,6 +58,61 @@ PACKS = [
         "download": {
             "type": "github_archive",
             "repo": "minetest-game/default",
+            "branch": "master",
+            "paths": [
+                "textures",
+                "nodes.lua",
+                "torch.lua",
+                "trees.lua",
+                "chests.lua",
+                "tools.lua",
+                "furnace.lua",
+                "mapgen.lua",
+                "craftitems.lua",
+            ],
+        },
+    },
+    {
+        "id": "refi_textures",
+        "license": "CC-BY-SA-4.0",
+        "source_url": "https://github.com/MysticTempest/REFI_Textures",
+        "download": {
+            "type": "github_archive",
+            "repo": "MysticTempest/REFI_Textures",
+            "branch": "master",
+            "paths": ["textures"],
+        },
+    },
+    {
+        "id": "programmer_art",
+        "license": "CC-BY-4.0",
+        "source_url": "https://github.com/deathcap/ProgrammerArt",
+        "download": {
+            "type": "github_archive",
+            "repo": "deathcap/ProgrammerArt",
+            "branch": "master",
+            "paths": ["textures/blocks"],
+        },
+    },
+    {
+        "id": "snez",
+        "license": "CC-BY-SA-3.0",
+        "source_url": "https://github.com/FrugalGamer/snez-texture-pack",
+        "download": {
+            "type": "github_archive",
+            "repo": "FrugalGamer/snez-texture-pack",
+            "branch": "main",
+            "paths": ["Snez"],
+        },
+    },
+    {
+        "id": "too_many_stones",
+        "license": "CC0-1.0",
+        "source_url": "https://github.com/asuna-mt/Too_Many_Stones",
+        "download": {
+            "type": "github_archive",
+            "repo": "asuna-mt/Too_Many_Stones",
+            "branch": "asuna",
             "paths": ["textures"],
         },
     },
@@ -285,9 +340,15 @@ def itch_download(
         raise RuntimeError("itch: downloaded HTML instead of archive")
 
 
-def github_archive(repo: str, paths: list[str], dest: Path, session: requests.Session) -> None:
+def github_archive(
+    repo: str,
+    paths: list[str],
+    dest: Path,
+    session: requests.Session,
+    branch: str = "master",
+) -> None:
     """Download GitHub repo archive zip and copy selected top-level paths."""
-    archive_url = f"https://github.com/{repo}/archive/refs/heads/master.zip"
+    archive_url = f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"
     print(f"  github archive {archive_url}")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -307,8 +368,15 @@ def github_archive(repo: str, paths: list[str], dest: Path, session: requests.Se
                 raise RuntimeError(f"github archive: missing path {sub}")
             target = dest / sub
             if target.exists():
-                shutil.rmtree(target)
-            shutil.copytree(src, target)
+                if target.is_dir():
+                    shutil.rmtree(target)
+                else:
+                    target.unlink()
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_dir():
+                shutil.copytree(src, target)
+            else:
+                shutil.copy2(src, target)
 
 
 def git_sparse(repo: str, sparse_paths: list[str], dest: Path) -> None:
@@ -389,7 +457,13 @@ def download_pack(pack: dict, out_root: Path, session: requests.Session) -> None
                 raise RuntimeError(f"itch: unknown archive format (magic {archive.read_bytes()[:4]!r})")
             extract_archive(archive, pack_dir)
         elif dtype == "github_archive":
-            github_archive(dl["repo"], dl["paths"], pack_dir, session)
+            github_archive(
+                dl["repo"],
+                dl["paths"],
+                pack_dir,
+                session,
+                branch=dl.get("branch", "master"),
+            )
         elif dtype == "git_sparse":
             git_sparse(dl["repo"], dl["sparse_paths"], pack_dir)
         else:

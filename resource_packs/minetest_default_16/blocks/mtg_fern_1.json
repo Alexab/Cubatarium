@@ -1,0 +1,14 @@
+{
+  "name": "mtg_fern_1",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_fern_1",
+    "mtg_fern_1",
+    "mtg_fern_1",
+    "mtg_fern_1",
+    "mtg_fern_1",
+    "mtg_fern_1"
+  ]
+}

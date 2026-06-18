@@ -1,0 +1,14 @@
+{
+  "name": "leaves_spruce",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque"
+  ]
+}

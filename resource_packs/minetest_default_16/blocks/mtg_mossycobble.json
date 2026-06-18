@@ -1,0 +1,14 @@
+{
+  "name": "mtg_mossycobble",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_mossycobble",
+    "mtg_mossycobble",
+    "mtg_mossycobble",
+    "mtg_mossycobble",
+    "mtg_mossycobble",
+    "mtg_mossycobble"
+  ]
+}

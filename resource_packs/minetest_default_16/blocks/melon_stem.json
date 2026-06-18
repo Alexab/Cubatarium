@@ -1,0 +1,14 @@
+{
+  "name": "melon_stem",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight"
+  ]
+}

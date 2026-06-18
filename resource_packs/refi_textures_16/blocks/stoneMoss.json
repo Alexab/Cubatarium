@@ -1,0 +1,14 @@
+{
+  "name": "stoneMoss",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stoneMoss",
+    "stoneMoss",
+    "stoneMoss",
+    "stoneMoss",
+    "stoneMoss",
+    "stoneMoss"
+  ]
+}

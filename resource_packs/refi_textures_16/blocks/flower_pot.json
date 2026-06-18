@@ -1,0 +1,14 @@
+{
+  "name": "flower_pot",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "flowerPot",
+    "flowerPot",
+    "flowerPot",
+    "flowerPot",
+    "flowerPot",
+    "flowerPot"
+  ]
+}

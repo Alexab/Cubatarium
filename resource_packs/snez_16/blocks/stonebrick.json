@@ -1,0 +1,14 @@
+{
+  "name": "stonebrick",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stonebrick",
+    "stonebrick",
+    "stonebrick",
+    "stonebrick",
+    "stonebrick",
+    "stonebrick"
+  ]
+}

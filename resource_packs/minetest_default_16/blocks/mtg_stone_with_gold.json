@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_gold",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_gold",
+    "mtg_stone_with_gold",
+    "mtg_stone_with_gold",
+    "mtg_stone_with_gold",
+    "mtg_stone_with_gold",
+    "mtg_stone_with_gold"
+  ]
+}

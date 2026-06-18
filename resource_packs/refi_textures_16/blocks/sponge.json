@@ -1,0 +1,14 @@
+{
+  "name": "sponge",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sponge",
+    "sponge",
+    "sponge",
+    "sponge",
+    "sponge",
+    "sponge"
+  ]
+}

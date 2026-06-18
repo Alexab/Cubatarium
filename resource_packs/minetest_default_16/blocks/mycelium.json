@@ -1,0 +1,14 @@
+{
+  "name": "mycelium",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mycel_side",
+    "mycel_side",
+    "mycel_side",
+    "mycel_side",
+    "mycel_top",
+    "dirt"
+  ]
+}

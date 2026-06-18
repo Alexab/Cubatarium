@@ -1,0 +1,14 @@
+{
+  "name": "golden_rail",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail"
+  ]
+}

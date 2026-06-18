@@ -42,6 +42,11 @@ void ScanRootForPacks(const fs::path &root, bool writable,
     {
       continue;
     }
+    const std::string dirName = entry.path().filename().string();
+    if (!dirName.empty() && dirName[0] == '_')
+    {
+      continue;
+    }
     if (auto manifest = UResourcePack::LoadManifest(entry.path()))
     {
       InstalledPackInfo info;

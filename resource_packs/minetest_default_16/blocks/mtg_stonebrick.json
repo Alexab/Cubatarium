@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stonebrick",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stonebrick",
+    "mtg_stonebrick",
+    "mtg_stonebrick",
+    "mtg_stonebrick",
+    "mtg_stonebrick",
+    "mtg_stonebrick"
+  ]
+}

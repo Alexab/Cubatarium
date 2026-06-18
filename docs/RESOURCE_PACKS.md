@@ -133,7 +133,11 @@ Built from `E:/Work/Home/CubatariumTextureResearch/` via mapping YAML in `tools/
 
 | Pack | Blocks | License | Source research folder |
 |------|--------|---------|------------------------|
-| `minetest_default_16` | ~60 | CC BY-SA 3.0 | `minetest_default` |
+| `minetest_default_16` | ~261 | CC BY-SA 3.0 | `minetest_default` |
+| `refi_textures_16` | ~108 | CC BY-SA 4.0 | `refi_textures` |
+| `programmer_art_16` | ~127 | CC BY 4.0 | `programmer_art` |
+| `snez_16` | ~87 | CC BY-SA | `snez` |
+| `too_many_stones_16` | ~38 | CC0 | `too_many_stones` |
 | `seamless_patterns_16` | ~28 | CC0 | `seamless_pattern_pack` |
 | `kenney_pattern_pixel_16` | ~17 | CC0 | `kenney_pattern_pixel` |
 | `goncalo_patterns_16` | ~10 | CC0 | `goncalo_pixel_patterns` |
@@ -147,10 +151,20 @@ Built from `E:/Work/Home/CubatariumTextureResearch/` via mapping YAML in `tools/
 python tools/download_texture_packs.py
 ```
 
-2. Regenerate Minetest mapping (optional, after MT textures update):
+2. Regenerate Minetest mapping (after MT textures update):
 
 ```powershell
+python tools/generate_minetest_upstream_catalog.py
 python tools/generate_minetest_mapping.py
+```
+
+Other Luanti packs:
+
+```powershell
+python tools/generate_stem_mapping.py --source E:/Work/Home/CubatariumTextureResearch/refi_textures/textures --out tools/refi_textures_mapping.yaml --license CC-BY-SA-4.0
+python tools/generate_stem_mapping.py --source E:/Work/Home/CubatariumTextureResearch/snez/Snez --out tools/snez_mapping.yaml --license CC-BY-SA-3.0 --flat
+python tools/generate_programmer_art_mapping.py
+python tools/generate_too_many_stones_mapping.py
 ```
 
 3. Build all research packs:

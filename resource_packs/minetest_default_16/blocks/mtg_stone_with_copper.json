@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_copper",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_copper",
+    "mtg_stone_with_copper",
+    "mtg_stone_with_copper",
+    "mtg_stone_with_copper",
+    "mtg_stone_with_copper",
+    "mtg_stone_with_copper"
+  ]
+}

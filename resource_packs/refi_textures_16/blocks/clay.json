@@ -1,0 +1,14 @@
+{
+  "name": "clay",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay"
+  ]
+}

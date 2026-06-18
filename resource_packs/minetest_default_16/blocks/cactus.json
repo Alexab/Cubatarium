@@ -1,0 +1,14 @@
+{
+  "name": "cactus",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "cactus_side",
+    "cactus_side",
+    "cactus_side",
+    "cactus_side",
+    "cactus_top",
+    "cactus_bottom"
+  ]
+}

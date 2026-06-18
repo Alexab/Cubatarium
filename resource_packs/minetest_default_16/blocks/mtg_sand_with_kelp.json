@@ -1,0 +1,14 @@
+{
+  "name": "mtg_sand_with_kelp",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_sand_with_kelp",
+    "mtg_sand_with_kelp",
+    "mtg_sand_with_kelp",
+    "mtg_sand_with_kelp",
+    "mtg_sand_with_kelp",
+    "mtg_sand_with_kelp"
+  ]
+}

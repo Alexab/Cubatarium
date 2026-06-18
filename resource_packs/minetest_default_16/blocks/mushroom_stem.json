@@ -1,0 +1,14 @@
+{
+  "name": "mushroom_stem",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "mtg_bush_leaves",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_bush_leaves",
+    "mtg_bush_leaves",
+    "mtg_bush_leaves",
+    "mtg_bush_leaves",
+    "mtg_bush_leaves",
+    "mtg_bush_leaves"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "mtg_acacia_leaves",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_acacia_leaves",
+    "mtg_acacia_leaves",
+    "mtg_acacia_leaves",
+    "mtg_acacia_leaves",
+    "mtg_acacia_leaves",
+    "mtg_acacia_leaves"
+  ]
+}

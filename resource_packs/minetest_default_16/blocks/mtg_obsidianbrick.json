@@ -1,0 +1,14 @@
+{
+  "name": "mtg_obsidianbrick",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_obsidianbrick",
+    "mtg_obsidianbrick",
+    "mtg_obsidianbrick",
+    "mtg_obsidianbrick",
+    "mtg_obsidianbrick",
+    "mtg_obsidianbrick"
+  ]
+}

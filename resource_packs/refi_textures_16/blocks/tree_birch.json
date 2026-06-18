@@ -1,0 +1,14 @@
+{
+  "name": "tree_birch",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "tree_birch"
+  ]
+}

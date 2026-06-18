@@ -1,0 +1,14 @@
+{
+  "name": "detector_rail",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "detectorRail",
+    "detectorRail",
+    "detectorRail",
+    "detectorRail",
+    "detectorRail",
+    "detectorRail"
+  ]
+}

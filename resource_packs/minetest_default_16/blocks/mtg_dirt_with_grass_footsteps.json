@@ -1,0 +1,14 @@
+{
+  "name": "mtg_dirt_with_grass_footsteps",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_dirt_with_grass_footsteps_composite_0",
+    "mtg_dirt_with_grass_footsteps_composite_0",
+    "mtg_dirt_with_grass_footsteps_composite_0",
+    "mtg_dirt_with_grass_footsteps_composite_0",
+    "mtg_dirt_with_grass_footsteps_composite_1",
+    "mtg_dirt_with_grass_footsteps_default_dirt"
+  ]
+}

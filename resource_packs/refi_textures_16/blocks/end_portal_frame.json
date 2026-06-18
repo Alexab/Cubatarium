@@ -1,0 +1,14 @@
+{
+  "name": "end_portal_frame",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "endframe_side",
+    "endframe_side",
+    "endframe_side",
+    "endframe_side",
+    "endframe_top",
+    "endframe_side"
+  ]
+}

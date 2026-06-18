@@ -1,0 +1,14 @@
+{
+  "name": "bedrock",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "bedrock",
+    "bedrock",
+    "bedrock",
+    "bedrock",
+    "bedrock",
+    "bedrock"
+  ]
+}

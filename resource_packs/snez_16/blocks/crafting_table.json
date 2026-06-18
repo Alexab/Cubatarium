@@ -1,0 +1,14 @@
+{
+  "name": "crafting_table",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "workbench_front",
+    "workbench_side",
+    "workbench_side",
+    "workbench_side",
+    "workbench_top",
+    "workbench_side"
+  ]
+}

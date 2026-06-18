@@ -1,0 +1,14 @@
+{
+  "name": "mtg_cloud",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_cloud",
+    "mtg_cloud",
+    "mtg_cloud",
+    "mtg_cloud",
+    "mtg_cloud",
+    "mtg_cloud"
+  ]
+}

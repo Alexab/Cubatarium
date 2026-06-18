@@ -1,0 +1,14 @@
+{
+  "name": "command_block",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "commandBlock",
+    "commandBlock",
+    "commandBlock",
+    "commandBlock",
+    "commandBlock",
+    "commandBlock"
+  ]
+}

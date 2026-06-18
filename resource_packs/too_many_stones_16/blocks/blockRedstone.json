@@ -1,0 +1,14 @@
+{
+  "name": "blockRedstone",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone"
+  ]
+}

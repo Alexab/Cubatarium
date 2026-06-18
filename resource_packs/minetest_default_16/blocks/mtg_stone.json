@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone",
+    "mtg_stone",
+    "mtg_stone",
+    "mtg_stone",
+    "mtg_stone",
+    "mtg_stone"
+  ]
+}

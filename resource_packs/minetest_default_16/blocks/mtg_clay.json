@@ -1,0 +1,14 @@
+{
+  "name": "mtg_clay",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_clay",
+    "mtg_clay",
+    "mtg_clay",
+    "mtg_clay",
+    "mtg_clay",
+    "mtg_clay"
+  ]
+}

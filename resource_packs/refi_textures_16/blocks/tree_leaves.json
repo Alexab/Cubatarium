@@ -1,0 +1,14 @@
+{
+  "name": "tree_leaves",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque"
+  ]
+}

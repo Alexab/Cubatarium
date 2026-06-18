@@ -1,0 +1,14 @@
+{
+  "name": "sapling_oak",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sapling",
+    "sapling",
+    "sapling",
+    "sapling",
+    "sapling",
+    "sapling"
+  ]
+}

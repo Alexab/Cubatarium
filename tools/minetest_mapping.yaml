@@ -8,6 +8,7 @@ license_text: 'Minetest Game default textures (CC BY-SA 3.0).
   Modifications and repackaging under the same license.
 
   '
+pack_version: 2
 blocks:
   sand: sand
   dirt: dirt
@@ -17,18 +18,64 @@ blocks:
   obsidian: obsidian
   ice: ice
   snow: snow
+  hellrock: hellrock
   hellsand: hellsand
   whiteStone: whiteStone
   bookshelf: bookshelf
+  oreCoal: oreCoal
+  oreIron: oreIron
+  oreGold: oreGold
   oreDiamond: oreDiamond
+  oreEmerald: oreEmerald
+  oreLapis: oreLapis
   oreRedstone: oreRedstone
+  blockIron: blockIron
+  blockGold: blockGold
   blockDiamond: blockDiamond
+  blockEmerald: blockEmerald
+  blockLapis: blockLapis
   blockRedstone: blockRedstone
   stoneMoss: stoneMoss
   stonebricksmooth: stonebricksmooth
   stonebricksmooth_carved: stonebricksmooth_carved
   stonebricksmooth_cracked: stonebricksmooth_cracked
   stonebricksmooth_mossy: stonebricksmooth_mossy
+  cactus:
+    faces:
+    - cactus_side
+    - cactus_side
+    - cactus_side
+    - cactus_side
+    - cactus_top
+    - cactus_bottom
+    types:
+    - natural
+  melon:
+    faces:
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_top
+    - melon_side
+    types:
+    - natural
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+  wool_3: cloth_3
+  wool_4: cloth_4
+  wool_5: cloth_5
+  wool_6: cloth_6
+  wool_7: cloth_7
+  wool_8: cloth_8
+  wool_9: cloth_9
+  wool_10: cloth_10
+  wool_11: cloth_11
+  wool_12: cloth_12
+  wool_13: cloth_13
+  wool_14: cloth_14
+  wool_15: cloth_15
   tree_log:
     faces:
     - tree_side
@@ -77,8 +124,40 @@ blocks:
   leaves_spruce: leaves_spruce_opaque
   leaves_jungle: leaves_jungle_opaque
   nether_brick: netherBrick
+  sponge: sponge
+  glowstone: lightgem
   sandstone_carved: sandstone_carved
   sandstone_smooth: sandstone_smooth
+  mycelium:
+    faces:
+    - mycel_side
+    - mycel_side
+    - mycel_side
+    - mycel_side
+    - mycel_top
+    - dirt
+    types:
+    - natural
+  farmland_dry:
+    faces:
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - farmland_dry
+    - dirt
+    types:
+    - natural
+  farmland_wet:
+    faces:
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - farmland_wet
+    - dirt
+    types:
+    - natural
   furnace:
     faces:
     - furnace_front
@@ -99,24 +178,227 @@ blocks:
     - furnace_top
     types:
     - natural
+  crafting_table:
+    faces:
+    - workbench_front
+    - workbench_side
+    - workbench_side
+    - workbench_side
+    - workbench_top
+    - workbench_side
+    types:
+    - natural
+  enchantment_table:
+    faces:
+    - enchantment_side
+    - enchantment_side
+    - enchantment_side
+    - enchantment_side
+    - enchantment_top
+    - enchantment_bottom
+    types:
+    - natural
+  jukebox:
+    faces:
+    - wood
+    - wood
+    - wood
+    - wood
+    - jukebox_top
+    - wood
+    types:
+    - natural
+  quartz_block:
+    faces:
+    - quartzblock_side
+    - quartzblock_side
+    - quartzblock_side
+    - quartzblock_side
+    - quartzblock_top
+    - quartzblock_bottom
+    types:
+    - natural
+  quartz_chiseled:
+    faces:
+    - quartzblock_chiseled
+    - quartzblock_chiseled
+    - quartzblock_chiseled
+    - quartzblock_chiseled
+    - quartzblock_chiseled_top
+    - quartzblock_bottom
+    types:
+    - natural
+  quartz_pillar:
+    faces:
+    - quartzblock_lines
+    - quartzblock_lines
+    - quartzblock_lines
+    - quartzblock_lines
+    - quartzblock_lines_top
+    - quartzblock_lines_top
+    types:
+    - natural
+  piston:
+    faces:
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_top
+    - piston_bottom
+    types:
+    - natural
+  hopper:
+    faces:
+    - hopper
+    - hopper
+    - hopper
+    - hopper
+    - hopper_top
+    - hopper_inside
+    types:
+    - natural
+  anvil:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top
+    - anvil_base
+    types:
+    - natural
+  cauldron:
+    faces:
+    - cauldron_side
+    - cauldron_side
+    - cauldron_side
+    - cauldron_side
+    - cauldron_top
+    - cauldron_bottom
+    types:
+    - natural
+  cake:
+    faces:
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_top
+    - cake_bottom
+    types:
+    - natural
+  dispenser:
+    faces:
+    - dispenser_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  dropper:
+    faces:
+    - dropper_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  end_portal_frame:
+    faces:
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_top
+    - endframe_side
+    types:
+    - natural
+  end_portal_frame_eye:
+    faces:
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_eye
+    - endframe_side
+    types:
+    - natural
+  daylight_sensor:
+    faces:
+    - daylightDetector_side
+    - daylightDetector_side
+    - daylightDetector_side
+    - daylightDetector_side
+    - daylightDetector_top
+    - daylightDetector_side
+    types:
+    - natural
+  jack_o_lantern:
+    faces:
+    - pumpkin_side
+    - pumpkin_jack
+    - pumpkin_side
+    - pumpkin_jack
+    - pumpkin_top
+    - pumpkin_side
+    types:
+    - natural
+  melon_stem: stem_straight
+  pumpkin_stem: stem_bent
   sapling_oak: sapling
   sapling_birch: sapling_birch
   sapling_spruce: sapling_spruce
   sapling_jungle: sapling_jungle
   tall_grass: tallgrass
   fern: fern
+  deadbush: deadbush
+  flower: flower
+  rose: rose
+  reeds: reeds
+  vines: vine
   lily_pad: waterlily
   rail: rail
   torch: torch
+  redstone_torch: redtorch
+  redstone_torch_on: redtorch_lit
   ladder: ladder
+  lever: lever
+  trapdoor: trapdoor
+  iron_bars: fenceIron
   redstone_lamp: redstoneLight
   redstone_lamp_on: redstoneLight_lit
   redstone_dust: redstoneDust_cross
   wooden_door: doorWood_lower
+  cocoa: cocoa_2
+  wheat: crops_7
+  carrots: carrots_3
+  potatoes: potatoes_3
+  nether_wart: netherStalk_2
+  brown_mushroom_block: mushroom_skin_brown
+  red_mushroom_block: mushroom_skin_red
+  mushroom_stem: mushroom_skin_stem
+  brown_mushroom: mushroom_brown
+  red_mushroom: mushroom_red
+  brewing_stand:
+    faces:
+    - wood
+    - wood
+    - wood
+    - wood
+    - brewingStand
+    - brewingStand_base
+    types:
+    - natural
   snow_layer: snow_side
   stone_slab: stoneslab_side
   stone_slab_top: stoneslab_top
   thin_glass: thinglass_top
+  item_frame: itemframe_back
   wooden_door_upper: doorWood_upper
   redstone_dust_line: redstoneDust_line
   leaves_spruce_light: leaves_spruce
@@ -157,6 +439,638 @@ blocks:
     animation:
       frame_count: 8
       frametime: 2
+  fire:
+    faces:
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_0
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    - fire_1
+    types:
+    - natural
+    physics:
+      preset: fire
+    render:
+      transparent: true
+  bedrock: bedrock
+  brick: brick
+  grass:
+    faces:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top_green
+    - grass_top
+    types:
+    - natural
+  pumpkin:
+    faces:
+    - pumpkin_side
+    - pumpkin_face
+    - pumpkin_side
+    - pumpkin_jack
+    - pumpkin_top
+    - pumpkin_side
+    types:
+    - natural
+  sandstone:
+    faces:
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_top
+    - sandstone_bottom
+    types:
+    - natural
+  stone: stone
+  stonebrick: stonebrick
+  tnt:
+    faces:
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_top
+    - tnt_bottom
+    types:
+    - natural
+  tree_birch: tree_birch
+  wood: wood
+  mtg_stone:
+    uniform: mtg_stone_default_stone
+    types:
+    - building
+  mtg_cobble:
+    uniform: mtg_cobble_default_cobble
+    types:
+    - building
+  mtg_stonebrick:
+    uniform: mtg_stonebrick_default_stone_brick
+    types:
+    - building
+  mtg_stone_block:
+    uniform: mtg_stone_block_default_stone_block
+    types:
+    - building
+  mtg_mossycobble:
+    uniform: mtg_mossycobble_default_mossycobble
+    types:
+    - building
+  mtg_desert_stone:
+    uniform: mtg_desert_stone_default_desert_stone
+    types:
+    - building
+  mtg_desert_cobble:
+    uniform: mtg_desert_cobble_default_desert_cobble
+    types:
+    - building
+  mtg_desert_stonebrick:
+    uniform: mtg_desert_stonebrick_default_desert_stone_brick
+    types:
+    - building
+  mtg_desert_stone_block:
+    uniform: mtg_desert_stone_block_default_desert_stone_block
+    types:
+    - building
+  mtg_sandstone:
+    uniform: mtg_sandstone_default_sandstone
+    types:
+    - building
+  mtg_sandstonebrick:
+    uniform: mtg_sandstonebrick_default_sandstone_brick
+    types:
+    - building
+  mtg_sandstone_block:
+    uniform: mtg_sandstone_block_default_sandstone_block
+    types:
+    - building
+  mtg_desert_sandstone:
+    uniform: mtg_desert_sandstone_default_desert_sandstone
+    types:
+    - building
+  mtg_desert_sandstone_brick:
+    uniform: mtg_desert_sandstone_brick_default_desert_sandstone_brick
+    types:
+    - building
+  mtg_desert_sandstone_block:
+    uniform: mtg_desert_sandstone_block_default_desert_sandstone_block
+    types:
+    - building
+  mtg_silver_sandstone:
+    uniform: mtg_silver_sandstone_default_silver_sandstone
+    types:
+    - building
+  mtg_silver_sandstone_brick:
+    uniform: mtg_silver_sandstone_brick_default_silver_sandstone_brick
+    types:
+    - building
+  mtg_silver_sandstone_block:
+    uniform: mtg_silver_sandstone_block_default_silver_sandstone_block
+    types:
+    - building
+  mtg_obsidian:
+    uniform: mtg_obsidian_default_obsidian
+    types:
+    - building
+  mtg_obsidianbrick:
+    uniform: mtg_obsidianbrick_default_obsidian_brick
+    types:
+    - building
+  mtg_obsidian_block:
+    uniform: mtg_obsidian_block_default_obsidian_block
+    types:
+    - building
+  mtg_dirt:
+    uniform: mtg_dirt_default_dirt
+    types:
+    - building
+  mtg_dirt_with_grass:
+    faces:
+    - mtg_dirt_with_grass_composite_0
+    - mtg_dirt_with_grass_composite_0
+    - mtg_dirt_with_grass_composite_0
+    - mtg_dirt_with_grass_composite_0
+    - mtg_dirt_with_grass_default_grass
+    - mtg_dirt_with_grass_default_dirt
+    types:
+    - building
+  mtg_dirt_with_grass_footsteps:
+    faces:
+    - mtg_dirt_with_grass_footsteps_composite_0
+    - mtg_dirt_with_grass_footsteps_composite_0
+    - mtg_dirt_with_grass_footsteps_composite_0
+    - mtg_dirt_with_grass_footsteps_composite_0
+    - mtg_dirt_with_grass_footsteps_composite_1
+    - mtg_dirt_with_grass_footsteps_default_dirt
+    types:
+    - building
+  mtg_dirt_with_dry_grass:
+    faces:
+    - mtg_dirt_with_dry_grass_composite_0
+    - mtg_dirt_with_dry_grass_composite_0
+    - mtg_dirt_with_dry_grass_composite_0
+    - mtg_dirt_with_dry_grass_composite_0
+    - mtg_dirt_with_dry_grass_default_dry_grass
+    - mtg_dirt_with_dry_grass_default_dirt
+    types:
+    - building
+  mtg_dirt_with_snow:
+    faces:
+    - mtg_dirt_with_snow_composite_0
+    - mtg_dirt_with_snow_composite_0
+    - mtg_dirt_with_snow_composite_0
+    - mtg_dirt_with_snow_composite_0
+    - mtg_dirt_with_snow_default_snow
+    - mtg_dirt_with_snow_default_dirt
+    types:
+    - building
+  mtg_dirt_with_rainforest_litter:
+    faces:
+    - mtg_dirt_with_rainforest_litter_composite_0
+    - mtg_dirt_with_rainforest_litter_composite_0
+    - mtg_dirt_with_rainforest_litter_composite_0
+    - mtg_dirt_with_rainforest_litter_composite_0
+    - mtg_dirt_with_rainforest_litter_default_rainforest_litter
+    - mtg_dirt_with_rainforest_litter_default_dirt
+    types:
+    - building
+  mtg_dirt_with_coniferous_litter:
+    faces:
+    - mtg_dirt_with_coniferous_litter_composite_0
+    - mtg_dirt_with_coniferous_litter_composite_0
+    - mtg_dirt_with_coniferous_litter_composite_0
+    - mtg_dirt_with_coniferous_litter_composite_0
+    - mtg_dirt_with_coniferous_litter_default_coniferous_litter
+    - mtg_dirt_with_coniferous_litter_default_dirt
+    types:
+    - building
+  mtg_dry_dirt:
+    uniform: mtg_dry_dirt_default_dry_dirt
+    types:
+    - building
+  mtg_dry_dirt_with_dry_grass:
+    faces:
+    - mtg_dry_dirt_with_dry_grass_composite_0
+    - mtg_dry_dirt_with_dry_grass_composite_0
+    - mtg_dry_dirt_with_dry_grass_composite_0
+    - mtg_dry_dirt_with_dry_grass_composite_0
+    - mtg_dry_dirt_with_dry_grass_default_dry_grass
+    - mtg_dry_dirt_with_dry_grass_default_dry_dirt
+    types:
+    - building
+  mtg_permafrost:
+    uniform: mtg_permafrost_default_permafrost
+    types:
+    - building
+  mtg_permafrost_with_stones:
+    faces:
+    - mtg_permafrost_with_stones_composite_0
+    - mtg_permafrost_with_stones_composite_0
+    - mtg_permafrost_with_stones_composite_0
+    - mtg_permafrost_with_stones_composite_0
+    - mtg_permafrost_with_stones_composite_1
+    - mtg_permafrost_with_stones_default_permafrost
+    types:
+    - building
+  mtg_permafrost_with_moss:
+    faces:
+    - mtg_permafrost_with_moss_composite_0
+    - mtg_permafrost_with_moss_composite_0
+    - mtg_permafrost_with_moss_composite_0
+    - mtg_permafrost_with_moss_composite_0
+    - mtg_permafrost_with_moss_default_moss
+    - mtg_permafrost_with_moss_default_permafrost
+    types:
+    - building
+  mtg_sand:
+    uniform: mtg_sand_default_sand
+    types:
+    - building
+  mtg_desert_sand:
+    uniform: mtg_desert_sand_default_desert_sand
+    types:
+    - building
+  mtg_silver_sand:
+    uniform: mtg_silver_sand_default_silver_sand
+    types:
+    - building
+  mtg_gravel:
+    uniform: mtg_gravel_default_gravel
+    types:
+    - building
+  mtg_clay:
+    uniform: mtg_clay_default_clay
+    types:
+    - building
+  mtg_snow:
+    uniform: mtg_snow_default_snow
+    types:
+    - building
+  mtg_snowblock:
+    uniform: mtg_snowblock_default_snow
+    types:
+    - building
+  mtg_ice:
+    uniform: mtg_ice_default_ice
+    types:
+    - building
+  mtg_cave_ice:
+    uniform: mtg_cave_ice_default_ice
+    types:
+    - building
+  mtg_tree:
+    faces:
+    - mtg_tree_default_tree
+    - mtg_tree_default_tree
+    - mtg_tree_default_tree
+    - mtg_tree_default_tree
+    - mtg_tree_default_tree_top
+    - mtg_tree_default_tree_top
+    types:
+    - building
+  mtg_wood:
+    uniform: mtg_wood_default_wood
+    types:
+    - building
+  mtg_sapling:
+    uniform: mtg_sapling_default_sapling
+    types:
+    - building
+  mtg_leaves:
+    uniform: mtg_leaves_default_leaves
+    types:
+    - building
+  mtg_apple:
+    uniform: mtg_apple_default_apple
+    types:
+    - building
+  mtg_jungletree:
+    faces:
+    - mtg_jungletree_default_jungletree
+    - mtg_jungletree_default_jungletree
+    - mtg_jungletree_default_jungletree
+    - mtg_jungletree_default_jungletree
+    - mtg_jungletree_default_jungletree_top
+    - mtg_jungletree_default_jungletree_top
+    types:
+    - building
+  mtg_junglewood:
+    uniform: mtg_junglewood_default_junglewood
+    types:
+    - building
+  mtg_jungleleaves:
+    uniform: mtg_jungleleaves_default_jungleleaves
+    types:
+    - building
+  mtg_junglesapling:
+    uniform: mtg_junglesapling_default_junglesapling
+    types:
+    - building
+  mtg_emergent_jungle_sapling:
+    uniform: mtg_emergent_jungle_sapling_default_emergent_jungle_sapling
+    types:
+    - building
+  mtg_pine_tree:
+    faces:
+    - mtg_pine_tree_default_pine_tree
+    - mtg_pine_tree_default_pine_tree
+    - mtg_pine_tree_default_pine_tree
+    - mtg_pine_tree_default_pine_tree
+    - mtg_pine_tree_default_pine_tree_top
+    - mtg_pine_tree_default_pine_tree_top
+    types:
+    - building
+  mtg_pine_wood:
+    uniform: mtg_pine_wood_default_pine_wood
+    types:
+    - building
+  mtg_pine_needles:
+    uniform: mtg_pine_needles_default_pine_needles
+    types:
+    - building
+  mtg_pine_sapling:
+    uniform: mtg_pine_sapling_default_pine_sapling
+    types:
+    - building
+  mtg_acacia_tree:
+    faces:
+    - mtg_acacia_tree_default_acacia_tree
+    - mtg_acacia_tree_default_acacia_tree
+    - mtg_acacia_tree_default_acacia_tree
+    - mtg_acacia_tree_default_acacia_tree
+    - mtg_acacia_tree_default_acacia_tree_top
+    - mtg_acacia_tree_default_acacia_tree_top
+    types:
+    - building
+  mtg_acacia_wood:
+    uniform: mtg_acacia_wood_default_acacia_wood
+    types:
+    - building
+  mtg_acacia_leaves:
+    uniform: mtg_acacia_leaves_default_acacia_leaves
+    types:
+    - building
+  mtg_acacia_sapling:
+    uniform: mtg_acacia_sapling_default_acacia_sapling
+    types:
+    - building
+  mtg_aspen_tree:
+    faces:
+    - mtg_aspen_tree_default_aspen_tree
+    - mtg_aspen_tree_default_aspen_tree
+    - mtg_aspen_tree_default_aspen_tree
+    - mtg_aspen_tree_default_aspen_tree
+    - mtg_aspen_tree_default_aspen_tree_top
+    - mtg_aspen_tree_default_aspen_tree_top
+    types:
+    - building
+  mtg_aspen_wood:
+    uniform: mtg_aspen_wood_default_aspen_wood
+    types:
+    - building
+  mtg_aspen_leaves:
+    uniform: mtg_aspen_leaves_default_aspen_leaves
+    types:
+    - building
+  mtg_aspen_sapling:
+    uniform: mtg_aspen_sapling_default_aspen_sapling
+    types:
+    - building
+  mtg_stone_with_coal:
+    uniform: mtg_stone_with_coal_composite_0
+    types:
+    - building
+  mtg_coalblock:
+    uniform: mtg_coalblock_default_coal_block
+    types:
+    - building
+  mtg_stone_with_iron:
+    uniform: mtg_stone_with_iron_composite_0
+    types:
+    - building
+  mtg_steelblock:
+    uniform: mtg_steelblock_default_steel_block
+    types:
+    - building
+  mtg_stone_with_copper:
+    uniform: mtg_stone_with_copper_composite_0
+    types:
+    - building
+  mtg_copperblock:
+    uniform: mtg_copperblock_default_copper_block
+    types:
+    - building
+  mtg_stone_with_tin:
+    uniform: mtg_stone_with_tin_composite_0
+    types:
+    - building
+  mtg_tinblock:
+    uniform: mtg_tinblock_default_tin_block
+    types:
+    - building
+  mtg_bronzeblock:
+    uniform: mtg_bronzeblock_default_bronze_block
+    types:
+    - building
+  mtg_stone_with_mese:
+    uniform: mtg_stone_with_mese_composite_0
+    types:
+    - building
+  mtg_mese:
+    uniform: mtg_mese_default_mese_block
+    types:
+    - building
+  mtg_stone_with_gold:
+    uniform: mtg_stone_with_gold_composite_0
+    types:
+    - building
+  mtg_goldblock:
+    uniform: mtg_goldblock_default_gold_block
+    types:
+    - building
+  mtg_stone_with_diamond:
+    uniform: mtg_stone_with_diamond_composite_0
+    types:
+    - building
+  mtg_diamondblock:
+    uniform: mtg_diamondblock_default_diamond_block
+    types:
+    - building
+  mtg_cactus:
+    faces:
+    - mtg_cactus_default_cactus_side
+    - mtg_cactus_default_cactus_side
+    - mtg_cactus_default_cactus_side
+    - mtg_cactus_default_cactus_side
+    - mtg_cactus_default_cactus_top
+    - mtg_cactus_default_cactus_top
+    types:
+    - building
+  mtg_large_cactus_seedling:
+    uniform: mtg_large_cactus_seedling_default_large_cactus_seedling
+    types:
+    - building
+  mtg_papyrus:
+    uniform: mtg_papyrus_default_papyrus
+    types:
+    - building
+  mtg_dry_shrub:
+    uniform: mtg_dry_shrub_default_dry_shrub
+    types:
+    - building
+  mtg_junglegrass:
+    uniform: mtg_junglegrass_default_junglegrass
+    types:
+    - building
+  mtg_grass_1:
+    uniform: mtg_grass_1_default_grass_1
+    types:
+    - building
+  mtg_dry_grass_1:
+    uniform: mtg_dry_grass_1_default_dry_grass_1
+    types:
+    - building
+  mtg_fern_1:
+    uniform: mtg_fern_1_default_fern_1
+    types:
+    - building
+  mtg_marram_grass_1:
+    uniform: mtg_marram_grass_1_default_marram_grass_1
+    types:
+    - building
+  mtg_bush_stem:
+    uniform: mtg_bush_stem_default_bush_stem
+    types:
+    - building
+  mtg_bush_leaves:
+    uniform: mtg_bush_leaves_default_leaves_simple
+    types:
+    - building
+  mtg_bush_sapling:
+    uniform: mtg_bush_sapling_default_bush_sapling
+    types:
+    - building
+  mtg_blueberry_bush_leaves_with_berries:
+    uniform: mtg_blueberry_bush_leaves_with_berries_composite_0
+    types:
+    - building
+  mtg_blueberry_bush_leaves:
+    uniform: mtg_blueberry_bush_leaves_default_blueberry_bush_leaves
+    types:
+    - building
+  mtg_blueberry_bush_sapling:
+    uniform: mtg_blueberry_bush_sapling_default_blueberry_bush_sapling
+    types:
+    - building
+  mtg_acacia_bush_stem:
+    uniform: mtg_acacia_bush_stem_default_acacia_bush_stem
+    types:
+    - building
+  mtg_acacia_bush_leaves:
+    uniform: mtg_acacia_bush_leaves_default_acacia_leaves_simple
+    types:
+    - building
+  mtg_acacia_bush_sapling:
+    uniform: mtg_acacia_bush_sapling_default_acacia_bush_sapling
+    types:
+    - building
+  mtg_pine_bush_stem:
+    uniform: mtg_pine_bush_stem_default_pine_bush_stem
+    types:
+    - building
+  mtg_pine_bush_needles:
+    uniform: mtg_pine_bush_needles_default_pine_needles
+    types:
+    - building
+  mtg_pine_bush_sapling:
+    uniform: mtg_pine_bush_sapling_default_pine_bush_sapling
+    types:
+    - building
+  mtg_sand_with_kelp:
+    uniform: mtg_sand_with_kelp_default_sand
+    types:
+    - building
+  mtg_coral_green:
+    uniform: mtg_coral_green_default_coral_skeleton
+    types:
+    - building
+  mtg_coral_pink:
+    uniform: mtg_coral_pink_default_coral_skeleton
+    types:
+    - building
+  mtg_coral_cyan:
+    uniform: mtg_coral_cyan_default_coral_skeleton
+    types:
+    - building
+  mtg_coral_brown:
+    uniform: mtg_coral_brown_default_coral_brown
+    types:
+    - building
+  mtg_coral_orange:
+    uniform: mtg_coral_orange_default_coral_orange
+    types:
+    - building
+  mtg_coral_skeleton:
+    uniform: mtg_coral_skeleton_default_coral_skeleton
+    types:
+    - building
+  mtg_water_flowing:
+    uniform: mtg_water_flowing_default_water
+    types:
+    - building
+  mtg_river_water_flowing:
+    uniform: mtg_river_water_flowing_default_river_water
+    types:
+    - building
+  mtg_lava_flowing:
+    uniform: mtg_lava_flowing_default_lava
+    types:
+    - building
+  mtg_ladder_wood:
+    uniform: mtg_ladder_wood_default_ladder_wood
+    types:
+    - building
+  mtg_ladder_steel:
+    uniform: mtg_ladder_steel_default_ladder_steel
+    types:
+    - building
+  mtg_glass:
+    faces:
+    - mtg_glass_default_glass_detail
+    - mtg_glass_default_glass_detail
+    - mtg_glass_default_glass_detail
+    - mtg_glass_default_glass_detail
+    - mtg_glass_default_glass
+    - mtg_glass_default_glass_detail
+    types:
+    - building
+  mtg_obsidian_glass:
+    faces:
+    - mtg_obsidian_glass_default_obsidian_glass_detail
+    - mtg_obsidian_glass_default_obsidian_glass_detail
+    - mtg_obsidian_glass_default_obsidian_glass_detail
+    - mtg_obsidian_glass_default_obsidian_glass_detail
+    - mtg_obsidian_glass_default_obsidian_glass
+    - mtg_obsidian_glass_default_obsidian_glass_detail
+    types:
+    - building
+  mtg_meselamp:
+    uniform: mtg_meselamp_default_meselamp
+    types:
+    - building
+  mtg_cloud:
+    uniform: mtg_cloud_default_cloud
+    types:
+    - building
 textures:
   sand: default_sand.png
   dirt: default_dirt.png
@@ -166,61 +1080,397 @@ textures:
   obsidian: default_obsidian.png
   ice: default_ice.png
   snow: default_snow.png
-  hellsand: default_sand.png
-  whiteStone: default_stone.png
+  hellrock: default_obsidian.png
+  hellsand: default_desert_sand.png
+  whiteStone: default_silver_sandstone.png
   bookshelf: default_bookshelf.png
-  oreDiamond: default_diamond.png
-  oreRedstone: default_stone.png
-  blockDiamond: default_diamond.png
-  blockRedstone: default_stone.png
-  stoneMoss: default_moss.png
-  stonebricksmooth: default_brick.png
-  stonebricksmooth_carved: default_brick.png
-  stonebricksmooth_cracked: default_brick.png
-  stonebricksmooth_mossy: default_brick.png
-  tree_side: default_tree.png
+  oreCoal:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_coal.png
+  oreIron:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_iron.png
+  oreGold:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_gold.png
+  oreDiamond:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_diamond.png
+  oreEmerald:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_diamond.png
+  oreLapis:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_copper.png
+  oreRedstone:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_mese.png
+  blockIron: default_steel_block.png
+  blockGold: default_gold_block.png
+  blockDiamond: default_diamond_block.png
+  blockEmerald: default_diamond_block.png
+  blockLapis: default_copper_block.png
+  blockRedstone: default_mese_block.png
+  stoneMoss: default_mossycobble.png
+  stonebricksmooth: default_stone_brick.png
+  stonebricksmooth_carved: default_stone_brick.png
+  stonebricksmooth_cracked: default_cobble.png
+  stonebricksmooth_mossy: default_mossycobble.png
+  cactus_top: default_cactus_top.png
+  cactus_side: default_cactus_side.png
+  cactus_bottom: default_cactus_top.png
+  melon_top: default_cactus_top.png
+  melon_side: default_cactus_side.png
+  cloth_0: default_sand.png
+  cloth_1: default_stone.png
+  cloth_2: default_cobble.png
+  cloth_3: default_desert_sand.png
+  cloth_4: default_gravel.png
+  cloth_5: default_dirt.png
+  cloth_6: default_clay.png
+  cloth_7: default_silver_sand.png
+  cloth_8: default_stone_brick.png
+  cloth_9: default_sandstone.png
+  cloth_10: default_obsidian.png
+  cloth_11: default_brick.png
+  cloth_12: default_mossycobble.png
+  cloth_13: default_silver_sandstone.png
+  cloth_14: default_desert_sandstone.png
+  cloth_15: default_permafrost.png
   tree_top: default_tree_top.png
+  tree_side: default_tree.png
   leaves_opaque: default_leaves.png
-  wood_birch: default_wood.png
-  wood_spruce: default_wood.png
-  wood_jungle: default_wood.png
-  tree_birch: default_tree.png
-  tree_spruce: default_tree.png
-  tree_jungle: default_tree.png
-  leaves: default_leaves.png
-  leaves_spruce_opaque: default_leaves.png
-  leaves_jungle_opaque: default_leaves.png
-  netherBrick: default_brick.png
-  sandstone_carved: default_sand.png
-  sandstone_smooth: default_sand.png
+  wood_birch: default_aspen_wood.png
+  wood_spruce: default_pine_wood.png
+  wood_jungle: default_junglewood.png
+  tree_birch: default_aspen_tree.png
+  tree_spruce: default_pine_tree.png
+  tree_jungle: default_jungletree.png
+  leaves: default_leaves_simple.png
+  leaves_spruce_opaque: default_pine_needles.png
+  leaves_jungle_opaque: default_jungleleaves.png
+  netherBrick: default_obsidian_brick.png
+  sponge: default_moss.png
+  lightgem: default_meselamp.png
+  sandstone_carved: default_sandstone_brick.png
+  sandstone_smooth: default_sandstone_block.png
+  mycel_top: default_moss.png
+  mycel_side: default_dirt.png
+  farmland_dry: default_dry_dirt.png
+  farmland_wet: default_dirt.png
   furnace_front: default_furnace_front.png
-  furnace_side: default_furnace_side.png
   furnace_top: default_furnace_top.png
-  furnace_front_lit: default_furnace_front.png
+  furnace_side: default_furnace_side.png
+  furnace_front_lit: default_furnace_front_active.png
+  workbench_front: default_tree.png
+  workbench_top: default_wood.png
+  workbench_side: default_wood.png
+  enchantment_side: default_obsidian.png
+  enchantment_bottom: default_obsidian.png
+  enchantment_top: default_obsidian_brick.png
+  jukebox_top: default_wood.png
+  wood: default_wood.png
+  quartzblock_bottom: default_silver_sandstone.png
+  quartzblock_side: default_silver_sandstone.png
+  quartzblock_top: default_silver_sandstone_block.png
+  quartzblock_chiseled: default_silver_sandstone_brick.png
+  quartzblock_chiseled_top: default_silver_sandstone_brick.png
+  quartzblock_lines: default_silver_sandstone.png
+  quartzblock_lines_top: default_silver_sandstone_block.png
+  piston_bottom: default_pine_tree_top.png
+  piston_side: default_pine_wood.png
+  piston_top: default_pine_tree_top.png
+  hopper_inside: default_chest_inside.png
+  hopper_top: default_chest_top.png
+  hopper: default_chest_side.png
+  anvil_base: default_steel_block.png
+  anvil_top: default_steel_block.png
+  cauldron_top: default_steel_block.png
+  cauldron_bottom: default_steel_block.png
+  cauldron_side: default_steel_block.png
+  cake_top: default_clay.png
+  cake_bottom: default_clay.png
+  cake_side: default_clay.png
+  dispenser_front: default_furnace_front.png
+  dropper_front: default_furnace_front.png
+  endframe_side: default_obsidian_brick.png
+  endframe_top: default_obsidian.png
+  endframe_eye: default_meselamp.png
+  daylightDetector_top: default_sand.png
+  daylightDetector_side: default_wood.png
+  pumpkin_side: default_cactus_side.png
+  pumpkin_jack: default_cactus_top.png
+  pumpkin_top: default_cactus_top.png
+  stem_straight: default_papyrus.png
+  stem_bent: default_papyrus.png
   sapling: default_sapling.png
-  sapling_birch: default_sapling.png
-  sapling_spruce: default_sapling.png
-  sapling_jungle: default_sapling.png
-  tallgrass: default_grass.png
+  sapling_birch: default_aspen_sapling.png
+  sapling_spruce: default_pine_sapling.png
+  sapling_jungle: default_junglesapling.png
+  tallgrass: default_grass_1.png
   fern: default_fern_1.png
-  waterlily: default_water.png
-  rail: default_fence_rail_acacia_wood.png
-  torch: default_torch_animated.png
-  ladder: default_ladder_steel.png
-  redstoneLight: default_stone.png
-  redstoneLight_lit: default_stone.png
-  redstoneDust_cross: default_stone.png
+  deadbush: default_dry_shrub.png
+  flower: default_dry_grass_1.png
+  rose: default_dry_grass_2.png
+  reeds: default_papyrus.png
+  vine: default_papyrus.png
+  waterlily: default_dry_grass_3.png
+  rail: default_fence_rail_wood.png
+  torch: default_torch_on_floor.png
+  redtorch: default_mese_crystal.png
+  redtorch_lit: default_meselamp.png
+  ladder: default_ladder_wood.png
+  lever: default_stick.png
+  trapdoor: default_wood.png
+  fenceIron: default_ladder_steel.png
+  redstoneLight: default_meselamp.png
+  redstoneLight_lit: default_meselamp.png
+  redstoneDust_cross: default_mese_crystal_fragment.png
   doorWood_lower: default_wood.png
+  cocoa_2: default_jungleleaves.png
+  crops_7: default_grass_3.png
+  carrots_3: default_grass_4.png
+  potatoes_3: default_grass_5.png
+  netherStalk_2: default_papyrus.png
+  mushroom_skin_brown: default_dirt.png
+  mushroom_skin_red: default_dirt.png
+  mushroom_skin_stem: default_wood.png
+  mushroom_brown: default_dry_grass_4.png
+  mushroom_red: default_dry_grass_5.png
+  brewingStand_base: default_stone.png
+  brewingStand: default_cobble.png
   snow_side: default_snow_side.png
   stoneslab_side: default_stone.png
   stoneslab_top: default_stone.png
   thinglass_top: default_glass.png
+  itemframe_back: default_wood.png
   doorWood_upper: default_wood.png
-  redstoneDust_line: default_stone.png
-  leaves_spruce: default_leaves.png
-  leaves_jungle: default_leaves.png
-  water: default_water.png
-  lava: default_lava.png
+  redstoneDust_line: default_mese_crystal_fragment.png
+  leaves_spruce: default_pine_needles.png
+  leaves_jungle: default_jungleleaves.png
+  water: default_water_source_animated.png
+  lava: default_lava_source_animated.png
+  fire_0: default_lava.png
+  bedrock: default_stone.png
+  brick: default_brick.png
+  grass_top_green: default_grass.png
+  grass_top: default_grass.png
+  grass_side: default_grass_side.png
+  pumpkin_face: default_cactus_side.png
+  sandstone_bottom: default_sand.png
+  sandstone_top: default_sand.png
+  sandstone_side: default_sand.png
+  stone: default_stone.png
+  stonebrick: default_stone_brick.png
+  tnt_top: default_sand.png
+  tnt_bottom: default_sand.png
+  tnt_side: default_sand.png
+  mtg_stone_default_stone: default_stone.png
+  mtg_cobble_default_cobble: default_cobble.png
+  mtg_stonebrick_default_stone_brick: default_stone_brick.png
+  mtg_stone_block_default_stone_block: default_stone_block.png
+  mtg_mossycobble_default_mossycobble: default_mossycobble.png
+  mtg_desert_stone_default_desert_stone: default_desert_stone.png
+  mtg_desert_cobble_default_desert_cobble: default_desert_cobble.png
+  mtg_desert_stonebrick_default_desert_stone_brick: default_desert_stone_brick.png
+  mtg_desert_stone_block_default_desert_stone_block: default_desert_stone_block.png
+  mtg_sandstone_default_sandstone: default_sandstone.png
+  mtg_sandstonebrick_default_sandstone_brick: default_sandstone_brick.png
+  mtg_sandstone_block_default_sandstone_block: default_sandstone_block.png
+  mtg_desert_sandstone_default_desert_sandstone: default_desert_sandstone.png
+  mtg_desert_sandstone_brick_default_desert_sandstone_brick: default_desert_sandstone_brick.png
+  mtg_desert_sandstone_block_default_desert_sandstone_block: default_desert_sandstone_block.png
+  mtg_silver_sandstone_default_silver_sandstone: default_silver_sandstone.png
+  mtg_silver_sandstone_brick_default_silver_sandstone_brick: default_silver_sandstone_brick.png
+  mtg_silver_sandstone_block_default_silver_sandstone_block: default_silver_sandstone_block.png
+  mtg_obsidian_default_obsidian: default_obsidian.png
+  mtg_obsidianbrick_default_obsidian_brick: default_obsidian_brick.png
+  mtg_obsidian_block_default_obsidian_block: default_obsidian_block.png
+  mtg_dirt_default_dirt: default_dirt.png
+  mtg_dirt_with_grass_default_grass: default_grass.png
+  mtg_dirt_with_grass_default_dirt: default_dirt.png
+  mtg_dirt_with_grass_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_grass_side.png
+  mtg_dirt_with_grass_footsteps_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_grass_side.png
+  mtg_dirt_with_grass_footsteps_composite_1:
+    composite:
+      base: default_grass.png
+      overlay: default_footprint.png
+  mtg_dirt_with_grass_footsteps_default_dirt: default_dirt.png
+  mtg_dirt_with_dry_grass_default_dirt: default_dirt.png
+  mtg_dirt_with_dry_grass_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_dry_grass_side.png
+  mtg_dirt_with_dry_grass_default_dry_grass: default_dry_grass.png
+  mtg_dirt_with_snow_default_snow: default_snow.png
+  mtg_dirt_with_snow_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_snow_side.png
+  mtg_dirt_with_snow_default_dirt: default_dirt.png
+  mtg_dirt_with_rainforest_litter_default_dirt: default_dirt.png
+  mtg_dirt_with_rainforest_litter_default_rainforest_litter: default_rainforest_litter.png
+  mtg_dirt_with_rainforest_litter_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_rainforest_litter_side.png
+  mtg_dirt_with_coniferous_litter_default_coniferous_litter: default_coniferous_litter.png
+  mtg_dirt_with_coniferous_litter_composite_0:
+    composite:
+      base: default_dirt.png
+      overlay: default_coniferous_litter_side.png
+  mtg_dirt_with_coniferous_litter_default_dirt: default_dirt.png
+  mtg_dry_dirt_default_dry_dirt: default_dry_dirt.png
+  mtg_dry_dirt_with_dry_grass_composite_0:
+    composite:
+      base: default_dry_dirt.png
+      overlay: default_dry_grass_side.png
+  mtg_dry_dirt_with_dry_grass_default_dry_dirt: default_dry_dirt.png
+  mtg_dry_dirt_with_dry_grass_default_dry_grass: default_dry_grass.png
+  mtg_permafrost_default_permafrost: default_permafrost.png
+  mtg_permafrost_with_stones_composite_0:
+    composite:
+      base: default_permafrost.png
+      overlay: default_stones_side.png
+  mtg_permafrost_with_stones_default_permafrost: default_permafrost.png
+  mtg_permafrost_with_stones_composite_1:
+    composite:
+      base: default_permafrost.png
+      overlay: default_stones.png
+  mtg_permafrost_with_moss_default_moss: default_moss.png
+  mtg_permafrost_with_moss_composite_0:
+    composite:
+      base: default_permafrost.png
+      overlay: default_moss_side.png
+  mtg_permafrost_with_moss_default_permafrost: default_permafrost.png
+  mtg_sand_default_sand: default_sand.png
+  mtg_desert_sand_default_desert_sand: default_desert_sand.png
+  mtg_silver_sand_default_silver_sand: default_silver_sand.png
+  mtg_gravel_default_gravel: default_gravel.png
+  mtg_clay_default_clay: default_clay.png
+  mtg_snow_default_snow: default_snow.png
+  mtg_snowblock_default_snow: default_snow.png
+  mtg_ice_default_ice: default_ice.png
+  mtg_cave_ice_default_ice: default_ice.png
+  mtg_tree_default_tree_top: default_tree_top.png
+  mtg_tree_default_tree: default_tree.png
+  mtg_wood_default_wood: default_wood.png
+  mtg_sapling_default_sapling: default_sapling.png
+  mtg_leaves_default_leaves: default_leaves.png
+  mtg_apple_default_apple: default_apple.png
+  mtg_jungletree_default_jungletree: default_jungletree.png
+  mtg_jungletree_default_jungletree_top: default_jungletree_top.png
+  mtg_junglewood_default_junglewood: default_junglewood.png
+  mtg_jungleleaves_default_jungleleaves: default_jungleleaves.png
+  mtg_junglesapling_default_junglesapling: default_junglesapling.png
+  mtg_emergent_jungle_sapling_default_emergent_jungle_sapling: default_emergent_jungle_sapling.png
+  mtg_pine_tree_default_pine_tree: default_pine_tree.png
+  mtg_pine_tree_default_pine_tree_top: default_pine_tree_top.png
+  mtg_pine_wood_default_pine_wood: default_pine_wood.png
+  mtg_pine_needles_default_pine_needles: default_pine_needles.png
+  mtg_pine_sapling_default_pine_sapling: default_pine_sapling.png
+  mtg_acacia_tree_default_acacia_tree_top: default_acacia_tree_top.png
+  mtg_acacia_tree_default_acacia_tree: default_acacia_tree.png
+  mtg_acacia_wood_default_acacia_wood: default_acacia_wood.png
+  mtg_acacia_leaves_default_acacia_leaves: default_acacia_leaves.png
+  mtg_acacia_sapling_default_acacia_sapling: default_acacia_sapling.png
+  mtg_aspen_tree_default_aspen_tree: default_aspen_tree.png
+  mtg_aspen_tree_default_aspen_tree_top: default_aspen_tree_top.png
+  mtg_aspen_wood_default_aspen_wood: default_aspen_wood.png
+  mtg_aspen_leaves_default_aspen_leaves: default_aspen_leaves.png
+  mtg_aspen_sapling_default_aspen_sapling: default_aspen_sapling.png
+  mtg_stone_with_coal_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_coal.png
+  mtg_coalblock_default_coal_block: default_coal_block.png
+  mtg_stone_with_iron_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_iron.png
+  mtg_steelblock_default_steel_block: default_steel_block.png
+  mtg_stone_with_copper_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_copper.png
+  mtg_copperblock_default_copper_block: default_copper_block.png
+  mtg_stone_with_tin_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_tin.png
+  mtg_tinblock_default_tin_block: default_tin_block.png
+  mtg_bronzeblock_default_bronze_block: default_bronze_block.png
+  mtg_stone_with_mese_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_mese.png
+  mtg_mese_default_mese_block: default_mese_block.png
+  mtg_stone_with_gold_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_gold.png
+  mtg_goldblock_default_gold_block: default_gold_block.png
+  mtg_stone_with_diamond_composite_0:
+    composite:
+      base: default_stone.png
+      overlay: default_mineral_diamond.png
+  mtg_diamondblock_default_diamond_block: default_diamond_block.png
+  mtg_cactus_default_cactus_side: default_cactus_side.png
+  mtg_cactus_default_cactus_top: default_cactus_top.png
+  mtg_large_cactus_seedling_default_large_cactus_seedling: default_large_cactus_seedling.png
+  mtg_papyrus_default_papyrus: default_papyrus.png
+  mtg_dry_shrub_default_dry_shrub: default_dry_shrub.png
+  mtg_junglegrass_default_junglegrass: default_junglegrass.png
+  mtg_grass_1_default_grass_1: default_grass_1.png
+  mtg_dry_grass_1_default_dry_grass_1: default_dry_grass_1.png
+  mtg_fern_1_default_fern_1: default_fern_1.png
+  mtg_marram_grass_1_default_marram_grass_1: default_marram_grass_1.png
+  mtg_bush_stem_default_bush_stem: default_bush_stem.png
+  mtg_bush_leaves_default_leaves_simple: default_leaves_simple.png
+  mtg_bush_sapling_default_bush_sapling: default_bush_sapling.png
+  mtg_blueberry_bush_leaves_with_berries_composite_0:
+    composite:
+      base: default_blueberry_bush_leaves.png
+      overlay: default_blueberry_overlay.png
+  mtg_blueberry_bush_leaves_default_blueberry_bush_leaves: default_blueberry_bush_leaves.png
+  mtg_blueberry_bush_sapling_default_blueberry_bush_sapling: default_blueberry_bush_sapling.png
+  mtg_acacia_bush_stem_default_acacia_bush_stem: default_acacia_bush_stem.png
+  mtg_acacia_bush_leaves_default_acacia_leaves_simple: default_acacia_leaves_simple.png
+  mtg_acacia_bush_sapling_default_acacia_bush_sapling: default_acacia_bush_sapling.png
+  mtg_pine_bush_stem_default_pine_bush_stem: default_pine_bush_stem.png
+  mtg_pine_bush_needles_default_pine_needles: default_pine_needles.png
+  mtg_pine_bush_sapling_default_pine_bush_sapling: default_pine_bush_sapling.png
+  mtg_sand_with_kelp_default_sand: default_sand.png
+  mtg_coral_green_default_coral_skeleton: default_coral_skeleton.png
+  mtg_coral_pink_default_coral_skeleton: default_coral_skeleton.png
+  mtg_coral_cyan_default_coral_skeleton: default_coral_skeleton.png
+  mtg_coral_brown_default_coral_brown: default_coral_brown.png
+  mtg_coral_orange_default_coral_orange: default_coral_orange.png
+  mtg_coral_skeleton_default_coral_skeleton: default_coral_skeleton.png
+  mtg_water_flowing_default_water: default_water.png
+  mtg_river_water_flowing_default_river_water: default_river_water.png
+  mtg_lava_flowing_default_lava: default_lava.png
+  mtg_ladder_wood_default_ladder_wood: default_ladder_wood.png
+  mtg_ladder_steel_default_ladder_steel: default_ladder_steel.png
+  mtg_glass_default_glass: default_glass.png
+  mtg_glass_default_glass_detail: default_glass_detail.png
+  mtg_obsidian_glass_default_obsidian_glass: default_obsidian_glass.png
+  mtg_obsidian_glass_default_obsidian_glass_detail: default_obsidian_glass_detail.png
+  mtg_meselamp_default_meselamp: default_meselamp.png
+  mtg_cloud_default_cloud: default_cloud.png
 animated:
   water:
   - default_water_source_animated.png

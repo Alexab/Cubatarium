@@ -1,0 +1,14 @@
+{
+  "name": "mtg_stone_with_coal",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_coal",
+    "mtg_stone_with_coal",
+    "mtg_stone_with_coal",
+    "mtg_stone_with_coal",
+    "mtg_stone_with_coal",
+    "mtg_stone_with_coal"
+  ]
+}

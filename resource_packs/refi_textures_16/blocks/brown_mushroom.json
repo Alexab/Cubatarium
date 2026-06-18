@@ -1,0 +1,14 @@
+{
+  "name": "brown_mushroom",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_brown",
+    "mushroom_brown",
+    "mushroom_brown",
+    "mushroom_brown",
+    "mushroom_brown",
+    "mushroom_brown"
+  ]
+}

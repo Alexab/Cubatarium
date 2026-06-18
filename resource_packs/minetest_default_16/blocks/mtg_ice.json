@@ -1,0 +1,14 @@
+{
+  "name": "mtg_ice",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_ice",
+    "mtg_ice",
+    "mtg_ice",
+    "mtg_ice",
+    "mtg_ice",
+    "mtg_ice"
+  ]
+}

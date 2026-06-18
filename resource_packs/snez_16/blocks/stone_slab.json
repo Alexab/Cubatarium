@@ -1,0 +1,14 @@
+{
+  "name": "stone_slab",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side"
+  ]
+}

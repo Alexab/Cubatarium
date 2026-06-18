@@ -1,0 +1,14 @@
+{
+  "name": "mtg_coral_pink",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coral_pink",
+    "mtg_coral_pink",
+    "mtg_coral_pink",
+    "mtg_coral_pink",
+    "mtg_coral_pink",
+    "mtg_coral_pink"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "mtg_leaves",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_leaves",
+    "mtg_leaves",
+    "mtg_leaves",
+    "mtg_leaves",
+    "mtg_leaves",
+    "mtg_leaves"
+  ]
+}

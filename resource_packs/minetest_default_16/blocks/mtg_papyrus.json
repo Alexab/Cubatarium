@@ -1,0 +1,14 @@
+{
+  "name": "mtg_papyrus",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_papyrus",
+    "mtg_papyrus",
+    "mtg_papyrus",
+    "mtg_papyrus",
+    "mtg_papyrus",
+    "mtg_papyrus"
+  ]
+}

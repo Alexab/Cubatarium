@@ -1,0 +1,14 @@
+{
+  "name": "mtg_lava_flowing",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_lava_flowing",
+    "mtg_lava_flowing",
+    "mtg_lava_flowing",
+    "mtg_lava_flowing",
+    "mtg_lava_flowing",
+    "mtg_lava_flowing"
+  ]
+}

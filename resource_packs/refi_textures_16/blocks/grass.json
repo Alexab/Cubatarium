@@ -1,0 +1,14 @@
+{
+  "name": "grass",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "grass_side",
+    "grass_side",
+    "grass_side",
+    "grass_side",
+    "grass_top_green",
+    "grass_top"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "mtg_sandstone_block",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_sandstone_block",
+    "mtg_sandstone_block",
+    "mtg_sandstone_block",
+    "mtg_sandstone_block",
+    "mtg_sandstone_block",
+    "mtg_sandstone_block"
+  ]
+}

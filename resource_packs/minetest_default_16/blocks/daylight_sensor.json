@@ -1,0 +1,14 @@
+{
+  "name": "daylight_sensor",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "daylightDetector_side",
+    "daylightDetector_side",
+    "daylightDetector_side",
+    "daylightDetector_side",
+    "daylightDetector_top",
+    "daylightDetector_side"
+  ]
+}

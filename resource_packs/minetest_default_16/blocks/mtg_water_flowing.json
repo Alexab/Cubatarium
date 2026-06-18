@@ -1,0 +1,14 @@
+{
+  "name": "mtg_water_flowing",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_water_flowing",
+    "mtg_water_flowing",
+    "mtg_water_flowing",
+    "mtg_water_flowing",
+    "mtg_water_flowing",
+    "mtg_water_flowing"
+  ]
+}

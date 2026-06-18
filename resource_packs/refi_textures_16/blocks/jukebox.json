@@ -1,0 +1,14 @@
+{
+  "name": "jukebox",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "jukebox_top",
+    "wood"
+  ]
+}

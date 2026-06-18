@@ -1,0 +1,14 @@
+{
+  "name": "mtg_goldblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_goldblock",
+    "mtg_goldblock",
+    "mtg_goldblock",
+    "mtg_goldblock",
+    "mtg_goldblock",
+    "mtg_goldblock"
+  ]
+}

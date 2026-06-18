@@ -1,0 +1,14 @@
+{
+  "name": "wheat",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7"
+  ]
+}

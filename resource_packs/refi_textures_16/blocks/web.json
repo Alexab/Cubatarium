@@ -1,0 +1,14 @@
+{
+  "name": "web",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "web",
+    "web",
+    "web",
+    "web",
+    "web",
+    "web"
+  ]
+}

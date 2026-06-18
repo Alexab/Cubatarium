@@ -1,0 +1,14 @@
+{
+  "name": "blockEmerald",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockEmerald",
+    "blockEmerald",
+    "blockEmerald",
+    "blockEmerald",
+    "blockEmerald",
+    "blockEmerald"
+  ]
+}

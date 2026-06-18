@@ -1,0 +1,14 @@
+{
+  "name": "mtg_dirt",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_dirt",
+    "mtg_dirt",
+    "mtg_dirt",
+    "mtg_dirt",
+    "mtg_dirt",
+    "mtg_dirt"
+  ]
+}

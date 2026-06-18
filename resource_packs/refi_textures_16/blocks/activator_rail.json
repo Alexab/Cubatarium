@@ -1,0 +1,14 @@
+{
+  "name": "activator_rail",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail"
+  ]
+}

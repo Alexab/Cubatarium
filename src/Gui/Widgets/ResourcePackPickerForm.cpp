@@ -85,16 +85,25 @@ void UResourcePackPickerForm::SyncListItems()
   }
   List->SetItems(std::move(items));
   List->SetCheckedIds(SelectedIds);
+  if (HintLabel)
+  {
+    std::ostringstream hint;
+    hint << "Select one or more installed resource packs ("
+         << InstalledPacks.size() << " available). Scroll the list if needed.";
+    HintLabel->SetText(hint.str());
+  }
 }
 
 void UResourcePackPickerForm::BuildInto(UGuiPanel &panel)
 {
   if (!Built)
   {
-    auto hint = std::make_unique<UGuiLabel>(
-        Theme, "Select one or more installed resource packs.");
-    HintLabel = hint.get();
-    panel.AddChild(std::move(hint));
+    std::ostringstream hint;
+    hint << "Select one or more installed resource packs ("
+         << InstalledPacks.size() << " available). Scroll the list if needed.";
+    auto hintLabel = std::make_unique<UGuiLabel>(Theme, hint.str());
+    HintLabel = hintLabel.get();
+    panel.AddChild(std::move(hintLabel));
 
     auto list = std::make_unique<UGuiCheckList>(Theme);
     List = list.get();

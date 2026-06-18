@@ -1,0 +1,14 @@
+{
+  "name": "mtg_coalblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coalblock",
+    "mtg_coalblock",
+    "mtg_coalblock",
+    "mtg_coalblock",
+    "mtg_coalblock",
+    "mtg_coalblock"
+  ]
+}

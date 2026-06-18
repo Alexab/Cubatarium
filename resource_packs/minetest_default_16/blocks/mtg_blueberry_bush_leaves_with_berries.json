@@ -1,0 +1,14 @@
+{
+  "name": "mtg_blueberry_bush_leaves_with_berries",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_blueberry_bush_leaves_with_berries"
+  ]
+}

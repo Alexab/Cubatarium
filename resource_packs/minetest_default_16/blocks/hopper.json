@@ -1,0 +1,14 @@
+{
+  "name": "hopper",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper_top",
+    "hopper_inside"
+  ]
+}

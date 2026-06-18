@@ -1,0 +1,14 @@
+{
+  "name": "ladder",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder"
+  ]
+}

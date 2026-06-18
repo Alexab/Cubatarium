@@ -1,0 +1,14 @@
+{
+  "name": "mtg_acacia_bush_stem",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_stem"
+  ]
+}

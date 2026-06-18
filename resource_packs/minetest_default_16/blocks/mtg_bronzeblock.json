@@ -1,0 +1,14 @@
+{
+  "name": "mtg_bronzeblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_bronzeblock",
+    "mtg_bronzeblock",
+    "mtg_bronzeblock",
+    "mtg_bronzeblock",
+    "mtg_bronzeblock",
+    "mtg_bronzeblock"
+  ]
+}

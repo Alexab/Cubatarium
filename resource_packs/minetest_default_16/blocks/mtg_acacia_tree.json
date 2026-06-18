@@ -1,0 +1,14 @@
+{
+  "name": "mtg_acacia_tree",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_acacia_tree_default_acacia_tree",
+    "mtg_acacia_tree_default_acacia_tree",
+    "mtg_acacia_tree_default_acacia_tree",
+    "mtg_acacia_tree_default_acacia_tree",
+    "mtg_acacia_tree_default_acacia_tree_top",
+    "mtg_acacia_tree_default_acacia_tree_top"
+  ]
+}

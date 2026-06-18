@@ -1,0 +1,14 @@
+{
+  "name": "blockGold",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold"
+  ]
+}

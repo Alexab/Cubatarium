@@ -1,0 +1,14 @@
+{
+  "name": "mob_spawner",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "brown_mushroom_block",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown"
+  ]
+}

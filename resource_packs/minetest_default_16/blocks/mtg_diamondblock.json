@@ -1,0 +1,14 @@
+{
+  "name": "mtg_diamondblock",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_diamondblock",
+    "mtg_diamondblock",
+    "mtg_diamondblock",
+    "mtg_diamondblock",
+    "mtg_diamondblock",
+    "mtg_diamondblock"
+  ]
+}

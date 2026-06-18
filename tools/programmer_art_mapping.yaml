@@ -1,0 +1,533 @@
+license: CC-BY-4.0
+license_text: 'ProgrammerArt textures (CC BY 4.0).
+
+  Copyright deathcap / ProgrammerArt contributors.
+
+  Source: https://github.com/deathcap/ProgrammerArt
+
+  '
+blocks:
+  sand: sand
+  dirt: dirt
+  gravel: gravel
+  glass: glass
+  clay: clay
+  obsidian: obsidian
+  ice: ice
+  snow: snow
+  hellrock: hellrock
+  hellsand: hellsand
+  whiteStone: whiteStone
+  web: web
+  bookshelf: bookshelf
+  oreCoal: oreCoal
+  oreIron: oreIron
+  oreGold: oreGold
+  oreDiamond: oreDiamond
+  oreEmerald: oreEmerald
+  oreLapis: oreLapis
+  oreRedstone: oreRedstone
+  blockIron: blockIron
+  blockGold: blockGold
+  blockDiamond: blockDiamond
+  blockEmerald: blockEmerald
+  blockLapis: blockLapis
+  blockRedstone: blockRedstone
+  cactus:
+    faces:
+    - cactus_side
+    - cactus_side
+    - cactus_side
+    - cactus_side
+    - cactus_top
+    - cactus_bottom
+    types:
+    - natural
+  melon:
+    faces:
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_top
+    - melon_side
+    types:
+    - natural
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+  wool_3: cloth_3
+  wool_4: cloth_4
+  wool_5: cloth_5
+  wool_6: cloth_6
+  wool_7: cloth_7
+  wool_8: cloth_8
+  wool_9: cloth_9
+  wool_10: cloth_10
+  wool_11: cloth_11
+  wool_12: cloth_12
+  wool_13: cloth_13
+  wool_14: cloth_14
+  wool_15: cloth_15
+  tree_log:
+    faces:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_top
+    - tree_top
+    types:
+    - natural
+  tree_leaves: leaves_opaque
+  planks_birch: wood_birch
+  planks_spruce: wood_spruce
+  planks_jungle: wood_jungle
+  log_birch:
+    faces:
+    - tree_birch
+    - tree_birch
+    - tree_birch
+    - tree_birch
+    - wood_birch
+    - wood_birch
+    types:
+    - natural
+  log_spruce:
+    faces:
+    - tree_spruce
+    - tree_spruce
+    - tree_spruce
+    - tree_spruce
+    - wood_spruce
+    - wood_spruce
+    types:
+    - natural
+  log_jungle:
+    faces:
+    - tree_jungle
+    - tree_jungle
+    - tree_jungle
+    - tree_jungle
+    - wood_jungle
+    - wood_jungle
+    types:
+    - natural
+  leaves_transparent: leaves
+  leaves_spruce: leaves_spruce_opaque
+  leaves_jungle: leaves_jungle_opaque
+  nether_brick: netherBrick
+  sponge: sponge
+  glowstone: lightgem
+  nether_quartz_ore: netherquartz
+  mob_spawner: mobSpawner
+  command_block: commandBlock
+  beacon: beacon
+  note_block: musicBlock
+  sandstone_carved: sandstone_carved
+  sandstone_smooth: sandstone_smooth
+  farmland_dry:
+    faces:
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - farmland_dry
+    - dirt
+    types:
+    - natural
+  farmland_wet:
+    faces:
+    - dirt
+    - dirt
+    - dirt
+    - dirt
+    - farmland_wet
+    - dirt
+    types:
+    - natural
+  furnace:
+    faces:
+    - furnace_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  jukebox:
+    faces:
+    - wood
+    - wood
+    - wood
+    - wood
+    - jukebox_top
+    - wood
+    types:
+    - natural
+  piston:
+    faces:
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_top
+    - piston_bottom
+    types:
+    - natural
+  sticky_piston:
+    faces:
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_side
+    - piston_top_sticky
+    - piston_bottom
+    types:
+    - natural
+  hopper:
+    faces:
+    - hopper
+    - hopper
+    - hopper
+    - hopper
+    - hopper_top
+    - hopper_inside
+    types:
+    - natural
+  anvil:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top
+    - anvil_base
+    types:
+    - natural
+  cauldron:
+    faces:
+    - cauldron_side
+    - cauldron_side
+    - cauldron_side
+    - cauldron_side
+    - cauldron_top
+    - cauldron_bottom
+    types:
+    - natural
+  cake:
+    faces:
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_top
+    - cake_bottom
+    types:
+    - natural
+  dispenser:
+    faces:
+    - dispenser_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  dropper:
+    faces:
+    - dropper_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  end_portal_frame:
+    faces:
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_top
+    - endframe_side
+    types:
+    - natural
+  end_portal_frame_eye:
+    faces:
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_side
+    - endframe_eye
+    - endframe_side
+    types:
+    - natural
+  sapling_oak: sapling
+  sapling_birch: sapling_birch
+  sapling_spruce: sapling_spruce
+  sapling_jungle: sapling_jungle
+  tall_grass: tallgrass
+  fern: fern
+  deadbush: deadbush
+  flower: flower
+  rose: rose
+  reeds: reeds
+  vines: vine
+  lily_pad: waterlily
+  rail: rail
+  torch: torch
+  redstone_torch: redtorch
+  redstone_torch_on: redtorch_lit
+  ladder: ladder
+  lever: lever
+  trapdoor: trapdoor
+  iron_bars: fenceIron
+  redstone_lamp_on: redstoneLight_lit
+  repeater: repeater
+  comparator: comparator
+  redstone_dust: redstoneDust_cross
+  tripwire: tripWire
+  wooden_door: doorWood_lower
+  brown_mushroom: mushroom_brown
+  red_mushroom: mushroom_red
+  stone_slab: stoneslab_side
+  stone_slab_top: stoneslab_top
+  thin_glass: thinglass_top
+  item_frame: itemframe_back
+  anvil_slightly_damaged:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top_damaged_1
+    - anvil_base
+    types:
+    - natural
+  anvil_very_damaged:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top_damaged_2
+    - anvil_base
+    types:
+    - natural
+  wooden_door_upper: doorWood_upper
+  redstone_dust_line: redstoneDust_line
+  leaves_spruce_light: leaves_spruce
+  leaves_jungle_light: leaves_jungle
+  water:
+    faces:
+    - water
+    - water
+    - water
+    - water
+    - water
+    - water
+    types:
+    - natural
+    physics:
+      preset: water
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 16
+      frametime: 2
+  lava:
+    faces:
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    types:
+    - natural
+    physics:
+      preset: lava
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 8
+      frametime: 2
+  bedrock: bedrock
+  brick: brick
+  grass:
+    faces:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top_green
+    - grass_top
+    types:
+    - natural
+  stone: stone
+  stonebrick: stonebrick
+  tnt:
+    faces:
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_top
+    - tnt_bottom
+    types:
+    - natural
+  tree_birch: tree_birch
+  wood: wood
+textures:
+  sand: sand.png
+  dirt: dirt.png
+  gravel: gravel.png
+  glass: glass.png
+  clay: clay.png
+  obsidian: obsidian.png
+  ice: ice.png
+  snow: snow.png
+  hellrock: netherrack.png
+  hellsand: soul_sand.png
+  whiteStone: end_stone.png
+  web: web.png
+  bookshelf: bookshelf.png
+  oreCoal: coal_ore.png
+  oreIron: iron_ore.png
+  oreGold: gold_ore.png
+  oreDiamond: diamond_ore.png
+  oreEmerald: emerald_ore.png
+  oreLapis: lapis_ore.png
+  oreRedstone: redstone_ore.png
+  blockIron: iron_block.png
+  blockGold: gold_block.png
+  blockDiamond: diamond_block.png
+  blockEmerald: emerald_block.png
+  blockLapis: lapis_block.png
+  blockRedstone: redstone_block.png
+  cactus_top: cactus_top.png
+  cactus_side: cactus_side.png
+  cactus_bottom: cactus_bottom.png
+  melon_top: melon_top.png
+  melon_side: melon_side.png
+  cloth_0: wool_colored_white.png
+  cloth_1: wool_colored_orange.png
+  cloth_2: wool_colored_magenta.png
+  cloth_3: wool_colored_light_blue.png
+  cloth_4: wool_colored_yellow.png
+  cloth_5: wool_colored_lime.png
+  cloth_6: wool_colored_pink.png
+  cloth_7: wool_colored_gray.png
+  cloth_8: wool_colored_silver.png
+  cloth_9: wool_colored_cyan.png
+  cloth_10: wool_colored_purple.png
+  cloth_11: wool_colored_blue.png
+  cloth_12: wool_colored_brown.png
+  cloth_13: wool_colored_green.png
+  cloth_14: wool_colored_red.png
+  cloth_15: wool_colored_black.png
+  tree_top: log_oak_top.png
+  tree_side: log_oak.png
+  leaves_opaque: leaves_oak.png
+  wood_birch: planks_birch.png
+  wood_spruce: planks_spruce.png
+  wood_jungle: planks_jungle.png
+  tree_birch: log_birch.png
+  tree_spruce: log_spruce.png
+  tree_jungle: log_jungle.png
+  leaves: leaves_oak.png
+  leaves_spruce_opaque: leaves_spruce_opaque.png
+  leaves_jungle_opaque: leaves_jungle_opaque.png
+  netherBrick: nether_brick.png
+  sponge: sponge.png
+  lightgem: glowstone.png
+  netherquartz: quartz_ore.png
+  mobSpawner: mob_spawner.png
+  commandBlock: command_block.png
+  beacon: beacon.png
+  musicBlock: noteblock.png
+  sandstone_carved: sandstone_carved.png
+  sandstone_smooth: sandstone_smooth.png
+  farmland_dry: farmland_dry.png
+  farmland_wet: farmland_wet.png
+  furnace_side: furnace_side.png
+  furnace_top: furnace_top.png
+  furnace_front: furnace_front_off.png
+  wood: planks_oak.png
+  jukebox_top: jukebox_top.png
+  piston_top: piston_top_normal.png
+  piston_side: piston_side.png
+  piston_bottom: piston_bottom.png
+  piston_top_sticky: piston_top_sticky.png
+  hopper_top: hopper_top.png
+  hopper: hopper_inside.png
+  hopper_inside: hopper_inside.png
+  anvil_base: anvil_base.png
+  anvil_top: anvil_top_damaged_0.png
+  cauldron_bottom: cauldron_bottom.png
+  cauldron_side: cauldron_side.png
+  cauldron_top: cauldron_top.png
+  cake_bottom: cake_bottom.png
+  cake_side: cake_side.png
+  cake_top: cake_top.png
+  dispenser_front: dispenser_front_horizontal.png
+  dropper_front: dropper_front_horizontal.png
+  endframe_side: endframe_side.png
+  endframe_top: endframe_top.png
+  endframe_eye: endframe_eye.png
+  sapling: sapling_acacia.png
+  sapling_birch: sapling_birch.png
+  sapling_spruce: sapling_spruce.png
+  sapling_jungle: sapling_jungle.png
+  tallgrass: tallgrass.png
+  fern: fern.png
+  deadbush: deadbush.png
+  flower: chorus_flower.png
+  rose: double_plant_rose_bottom.png
+  reeds: reeds.png
+  vine: vine.png
+  waterlily: waterlily.png
+  rail: rail_activator.png
+  torch: redstone_torch_off.png
+  redtorch: redstone_torch_off.png
+  redtorch_lit: redstone_torch_on.png
+  ladder: ladder.png
+  lever: lever.png
+  trapdoor: trapdoor.png
+  fenceIron: iron_bars.png
+  redstoneLight_lit: redstone_lamp_on.png
+  repeater: repeater_off.png
+  comparator: comparator_off.png
+  redstoneDust_cross: redstone_dust_dot.png
+  tripWire: trip_wire.png
+  doorWood_lower: door_wood_lower.png
+  mushroom_brown: mushroom_brown.png
+  mushroom_red: mushroom_red.png
+  stoneslab_side: stone_slab_side.png
+  stoneslab_top: stone_slab_top.png
+  thinglass_top: glass_pane_top.png
+  itemframe_back: itemframe_background.png
+  anvil_top_damaged_1: anvil_top_damaged_1.png
+  anvil_top_damaged_2: anvil_top_damaged_2.png
+  doorWood_upper: door_wood_upper.png
+  redstoneDust_line: redstone_dust_line.png
+  leaves_spruce: leaves_spruce.png
+  leaves_jungle: leaves_jungle.png
+  water: waterlily.png
+  lava: lava_flow.png
+  bedrock: bedrock.png
+  brick: brick.png
+  grass_side: grass_side.png
+  grass_top_green: grass_top.png
+  grass_top: grass_top.png
+  stone: stone.png
+  stonebrick: stonebrick.png
+  tnt_side: tnt_side.png
+  tnt_bottom: tnt_bottom.png
+  tnt_top: tnt_top.png

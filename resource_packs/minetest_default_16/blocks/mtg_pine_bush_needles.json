@@ -1,0 +1,14 @@
+{
+  "name": "mtg_pine_bush_needles",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_bush_needles",
+    "mtg_pine_bush_needles",
+    "mtg_pine_bush_needles",
+    "mtg_pine_bush_needles",
+    "mtg_pine_bush_needles",
+    "mtg_pine_bush_needles"
+  ]
+}

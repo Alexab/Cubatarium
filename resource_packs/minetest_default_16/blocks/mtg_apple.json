@@ -1,0 +1,14 @@
+{
+  "name": "mtg_apple",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_apple",
+    "mtg_apple",
+    "mtg_apple",
+    "mtg_apple",
+    "mtg_apple",
+    "mtg_apple"
+  ]
+}

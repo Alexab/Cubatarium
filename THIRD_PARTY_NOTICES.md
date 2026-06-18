@@ -47,11 +47,38 @@
 
 ### Minetest Game default textures (CC BY-SA 3.0)
 
-- **Pack ID:** `minetest_default_16`
+- **Pack ID:** `minetest_default_16` (version 2 — full upstream catalog)
 - **Source:** [minetest-game/default](https://github.com/minetest-game/default)
 - **Copyright:** celeron55, Perttu Ahola et al.
 - **License:** [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
-- **Note:** Repackaged textures and derivatives are licensed under CC BY-SA 3.0. Attribution required.
+- **Note:** ~261 blocks (145 Cubatarium + 116 `mtg_*` upstream nodes), ~322 textures. Repackaged under CC BY-SA 3.0.
+
+### REFI Textures (CC BY-SA 4.0)
+
+- **Pack ID:** `refi_textures_16`
+- **Source:** [MysticTempest/REFI_Textures](https://github.com/MysticTempest/REFI_Textures)
+- **License:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- **Author:** MysticTempest
+
+### ProgrammerArt (CC BY 4.0)
+
+- **Pack ID:** `programmer_art_16`
+- **Source:** [deathcap/ProgrammerArt](https://github.com/deathcap/ProgrammerArt)
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+### Snez texture pack (CC BY-SA 3.0)
+
+- **Pack ID:** `snez_16`
+- **Source:** [FrugalGamer/snez-texture-pack](https://github.com/FrugalGamer/snez-texture-pack)
+- **License:** CC BY-SA (see `texture_pack.conf` in upstream)
+- **Author:** TheFrugalGamer
+
+### Too Many Stones (CC0 textures)
+
+- **Pack ID:** `too_many_stones_16`
+- **Source:** [asuna-mt/Too_Many_Stones](https://github.com/asuna-mt/Too_Many_Stones) (textures CC0)
+- **License:** CC0 (textures); mod code LGPL (not redistributed)
+- **Note:** Partial mapping to Cubatarium stone/ore blocks (~38 blocks).
 
 Research packs are built via `python tools/build_research_resource_packs.py` from assets downloaded by `python tools/download_texture_packs.py`.
 

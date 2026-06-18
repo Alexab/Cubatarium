@@ -1,0 +1,14 @@
+{
+  "name": "mtg_emergent_jungle_sapling",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_emergent_jungle_sapling",
+    "mtg_emergent_jungle_sapling",
+    "mtg_emergent_jungle_sapling",
+    "mtg_emergent_jungle_sapling",
+    "mtg_emergent_jungle_sapling",
+    "mtg_emergent_jungle_sapling"
+  ]
+}

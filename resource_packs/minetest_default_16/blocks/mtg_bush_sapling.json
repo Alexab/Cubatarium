@@ -1,0 +1,14 @@
+{
+  "name": "mtg_bush_sapling",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_bush_sapling",
+    "mtg_bush_sapling",
+    "mtg_bush_sapling",
+    "mtg_bush_sapling",
+    "mtg_bush_sapling",
+    "mtg_bush_sapling"
+  ]
+}

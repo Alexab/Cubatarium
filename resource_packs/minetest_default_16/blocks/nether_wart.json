@@ -1,0 +1,14 @@
+{
+  "name": "nether_wart",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "glowstone",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "blockDiamond",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "blockDiamond",
+    "blockDiamond",
+    "blockDiamond",
+    "blockDiamond",
+    "blockDiamond",
+    "blockDiamond"
+  ]
+}

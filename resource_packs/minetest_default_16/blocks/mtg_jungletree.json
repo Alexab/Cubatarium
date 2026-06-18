@@ -1,0 +1,14 @@
+{
+  "name": "mtg_jungletree",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree_top",
+    "mtg_jungletree_default_jungletree_top"
+  ]
+}
