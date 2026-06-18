@@ -1,0 +1,14 @@
+{
+  "name": "sandstone",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "sandstone",
+    "sandstone",
+    "sandstone",
+    "sandstone",
+    "sandstone",
+    "sandstone"
+  ]
+}

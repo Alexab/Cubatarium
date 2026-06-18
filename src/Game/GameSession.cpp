@@ -62,6 +62,12 @@ void UGameSession::InitializeCatalog(const std::string &typesJsonPath,
                                      const UPrefabLibrary &prefabs)
 {
   ContentCatalog.LoadTypes(typesJsonPath);
+  ReindexBlockCatalog(blocks, prefabs);
+}
+
+void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
+                                       const UPrefabLibrary &prefabs)
+{
   ContentCatalog.IndexBlocks(blocks);
   ContentCatalog.IndexPrefabs(prefabs);
   if (World)

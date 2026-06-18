@@ -12,6 +12,7 @@ namespace cutum
 {
 
 class UBlockDefinitionStorage;
+struct MergedCubeDesc;
 
 class UTextureCube
 {
@@ -54,6 +55,8 @@ public:
   SetBlockDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions);
   void GenerateCubeTextures();
   void Load(const std::string &textures_path);
+  void Clear();
+  void BuildFromDescriptors(const std::vector<MergedCubeDesc> &descriptors);
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
   size_t GetTypeIdByName(const std::string &Name) const;

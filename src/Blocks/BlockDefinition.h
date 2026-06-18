@@ -2,6 +2,7 @@
 #define BLOCKDEFINITION_H
 
 #include "World/Math/BlockTypes.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
@@ -69,6 +70,18 @@ struct BlockDefinition
   BlockRenderProfile Render;
   std::vector<std::string> Types;
 };
+
+struct ParsedBlockJson
+{
+  BlockDefinition Definition;
+  std::array<std::string, 6> TextureStems{};
+  bool Valid{false};
+};
+
+bool IsReservedBlockName(const std::string &name);
+
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
+                                   bool warnLegacyId = true);
 
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json &j);
 BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j);

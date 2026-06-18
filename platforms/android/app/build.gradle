@@ -76,6 +76,10 @@ tasks.register("syncAssets", Copy) {
     from("${repoRoot}/models") { into "models" }
     from("${repoRoot}/prefabs") { into "prefabs" }
     from("${repoRoot}/content") { into "content" }
+    from("${repoRoot}/resource_packs") {
+        into "resource_packs"
+        exclude "minecraft_legacy_16/**"
+    }
     from("${repoRoot}/shaders/gles") { into "shaders/gles" }
     from("${repoRoot}/fonts") { into "fonts" }
     from("${repoRoot}/config.json.example") { into "." }

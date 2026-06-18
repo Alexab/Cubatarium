@@ -145,6 +145,10 @@ void UApplication::Startup(const std::string &configPath)
   {
     Core->LoadConfig(configPath);
     Ui = Core->GetUiSettings();
+    if (auto defs = Core->GetBlockDefinitionStorage())
+    {
+      BlockDefinitions = defs;
+    }
   }
   if (Geometry)
   {
@@ -170,7 +174,7 @@ void UApplication::Startup(const std::string &configPath)
   }
   if (Core && BlockDefinitions)
   {
-    const std::string typesPath = "content/Types.json";
+    const std::string typesPath = "content/types.json";
     GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
                                     *Core->GetPrefabLibrary());
   }

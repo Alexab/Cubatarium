@@ -70,7 +70,6 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
         texture_base_instance, texture_cube_instance, object_storage,
         prefab_library, world, geometry_engine, view_engine);
 
-    block_definitions->Load("models/blocks");
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
 

@@ -10,7 +10,10 @@
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "Blocks/BlockDefinition.h"
+#include <array>
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <vector>
 
 namespace cutum
@@ -26,6 +29,9 @@ class UObjectStorage;
 class UPrefabLibrary;
 class UGeometryEngine;
 class UViewEngine;
+class UBlockDefinitionStorage;
+class UBlockMergeRegistry;
+class UPlaceholderTextureCache;
 
 class UCore
 {
@@ -82,6 +88,16 @@ public:
   {
     return PrefabLibraryInstance;
   }
+  std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
+  {
+    return BlockDefinitionsInstance;
+  }
+  std::shared_ptr<UBlockMergeRegistry> GetBlockMergeRegistry() const
+  {
+    return BlockMergeRegistryInstance;
+  }
+  bool RegisterRuntimeBlock(const BlockDefinition &def,
+                            const std::array<std::string, 6> &textureStems);
   std::shared_ptr<UTextureCubeStorage> GetTextureCubeStorage() const
   {
     return TextureCubeStorageInstance;
@@ -117,7 +133,11 @@ private:
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   UiSettings Ui;
+  ResourcePacksConfig ResourcePacks;
 
+  std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
+  std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;
+  std::shared_ptr<UPlaceholderTextureCache> PlaceholderCacheInstance;
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
@@ -131,6 +151,7 @@ private:
   std::filesystem::path WorldFolderPath(const std::string &world_name) const;
   std::string AllocateNextWorldName() const;
   void CreateNewWorldWithCurrentSettings();
+  void RebuildBlockTexturesFromMergeRegistry();
 };
 
 } // namespace cutum

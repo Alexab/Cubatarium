@@ -54,20 +54,27 @@ Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo
 
 ## Blocks
 
-| Path | Role |
-|------|------|
-| `textures/blocks/*.png` | Base face textures (`TextureBaseStorage`; stem = filename without `.png`) |
-| `models/blocks/*.json` | Block types → `TextureCubeStorage` → `BlockRegistry` |
+Block types and face textures load from **resource packs** under `resource_packs/` (see [RESOURCE_PACKS.md](RESOURCE_PACKS.md)). `UCore::LoadConfig` resolves enabled packs via `UResourcePackResolver`, merges definitions in `UBlockMergeRegistry`, and builds GPU textures in `UTextureCubeStorage`.
 
-Each block JSON requires `name`, `id` (non-zero), and `textures`: six strings in face order **[+Z, +X, −Z, −X, +Y, −Y]**.
+| Component | Role |
+|-----------|------|
+| `resource_packs/*/pack.json` | Pack id, priority, license, resolution |
+| `resource_packs/*/blocks/*.json` | Block physics, render, animation, six (or twelve) texture stems |
+| `resource_packs/*/textures/blocks/*.png` | Face PNGs (stems referenced by block JSON) |
+| `UBlockMergeRegistry` | Union + merge by block `name`; runtime `BlockId` after lexicographic sort |
+| `UPlaceholderTextureCache` | Programmatic PNG when a stem is missing across the pack chain |
 
-Import or refresh blocks from an external pack:
+Face order in block JSON: **[+Z, +X, −Z, −X, +Y, −Y]** (same as `BlockAtlasUV.h`).
+
+Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base`. For full Minecraft-parity visuals, generate a local legacy pack (gitignored):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools/import_blocks.ps1
+.\tools\migrate_to_resource_pack.ps1
 ```
 
-Manifest: `tools/block_manifest.json` (+ optional `tools/block_manifest_supplement.json` for extended blocks). Run `tools/import_blocks.ps1` to copy static PNGs from the external pack and regenerate `models/blocks/*.json`. CMake copies `textures/` to `bin/textures` on build (like `models/`).
+Validate a pack: `python tools/validate_resource_pack.py resource_packs/cubatarium_cc0_base`
+
+Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; use resource packs instead.
 
 ### Worldgen surface blocks (biomes)
 
@@ -82,7 +89,7 @@ Trees: prefabs `tree_small` / `tree_large` use block types `tree_log` (bark `tre
 
 ### Animated blocks and fluids
 
-Block metadata lives in `models/blocks/*.json` (`animation`, `render`, `physics`) parsed by `BlockDefinitionStorage`. Flipbook atlases are built in `TextureCubeStorage::CreateCubeTexture` (vertical strip for uniform six-face blocks like `water`/`lava`; multi-face rows for `fire`).
+Block metadata lives in `resource_packs/*/blocks/*.json` (`animation`, `render`, `physics`) parsed by `BlockDefinitionStorage`. Flipbook atlases are built in `TextureCubeStorage::CreateCubeTexture` (vertical strip for uniform six-face blocks like `water`/`lava`; multi-face rows for `fire`).
 
 | Module | Role |
 |--------|------|
@@ -103,15 +110,15 @@ Documented in [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md
 
 Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
-Import animated types: `tools/block_manifest_animated.json` (ids 170–172) via `tools/import_blocks.ps1`. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
+Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 12 stems) ship in CC0 packs. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
 
 ## Asset paths
 
 | Path | Role |
 |------|------|
-| `models/blocks/` | Block types → `BlockRegistry` |
-| `textures/blocks/` | Per-face PNG atlases for blocks |
+| `resource_packs/` | Block packs (definitions + textures); copied to `bin/resource_packs/` on build |
 | `models/objects/` | Legacy brush prototypes (`SingleCube` only) |
+| `textures/` | Non-block textures (creatures, UI, etc.) |
 | `prefabs/` | Multi-block templates → `PrefabLibrary` |
 | `prefabs/user/` | Drop-in user prefabs (optional) |
 

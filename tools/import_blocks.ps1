@@ -1,3 +1,5 @@
+# DEPRECATED: use resource packs (tools/migrate_to_resource_pack.ps1, docs/RESOURCE_PACKS.md).
+# Kept for migrating legacy Minecraft assets into resource_packs/minecraft_legacy_16.
 param(
     [string]$Source = "E:\Work\Home\CubatariumTextures\blocks",
     [string]$RepoRoot = (Resolve-Path "$PSScriptRoot\..").Path

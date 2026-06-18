@@ -31,5 +31,10 @@
         "legacy_hud": false,
         "console_key": "grave",
         "palette_key": "b"
+    },
+    "use_resource_packs": true,
+    "resource_packs": {
+        "enabled": ["kenney_voxel_16", "cubatarium_cc0_base"],
+        "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
     }
 }

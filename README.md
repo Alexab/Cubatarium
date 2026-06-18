@@ -2,6 +2,20 @@
 
 A Minecraft-like voxel sandbox engine using C++17, OpenGL, and GLFW. Uses Minecraft-style block textures.
 
+## Resource packs
+
+Blocks and block textures ship as **resource packs** under `resource_packs/`. See [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md).
+
+Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base` (CC0). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+For full Minecraft-parity visuals, generate a local pack (gitignored):
+
+```powershell
+.\tools\migrate_to_resource_pack.ps1
+```
+
+Then set `"enabled": ["minecraft_legacy_16"]` in `config.json`.
+
 ## Build
 
 - CMake 3.15+, C++17 compiler

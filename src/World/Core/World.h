@@ -99,8 +99,11 @@ public:
   const UBlockRegistry &GetBlockRegistry() const { return *BlockRegistry; }
 
   void RefreshBlockRegistry();
+  void OnBlockRegistryChanged();
   void SetBlockDefinitionStorage(
       std::shared_ptr<UBlockDefinitionStorage> definitions);
+  void SetBlockMergeRegistry(
+      std::shared_ptr<class UBlockMergeRegistry> merge_registry);
 
   struct SampledFluidState
   {
@@ -412,6 +415,7 @@ private:
   UPrefabLibrary *PrefabLibrary{nullptr};
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;
+  std::shared_ptr<class UBlockMergeRegistry> BlockMergeRegistry;
   std::unique_ptr<UBlockRegistry> BlockRegistry;
   UBlockWorld BlockWorld;
   UChunkMeshCache MeshCache;

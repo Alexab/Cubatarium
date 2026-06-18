@@ -111,4 +111,12 @@ UBlockDefinitionStorage::GetByName(const std::string &Name) const
   return GetById(it->second);
 }
 
+void UBlockDefinitionStorage::ReplaceAll(
+    std::unordered_map<BlockId, BlockDefinition> newById,
+    std::unordered_map<std::string, BlockId> newNameToId)
+{
+  ById = std::move(newById);
+  NameToId = std::move(newNameToId);
+}
+
 } // namespace cutum

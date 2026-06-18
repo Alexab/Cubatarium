@@ -30,6 +30,7 @@
 /bin/prefabs/
 /bin/resources/
 /bin/content/
+/bin/resource_packs/
 /bin/config.json
 
 # CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
@@ -60,3 +61,7 @@ platforms/android/.gradle/
 platforms/android/app/build/
 platforms/android/build/
 platforms/android/local.properties
+
+# Local Minecraft-derived pack (generate via tools/migrate_to_resource_pack.ps1)
+resource_packs/minecraft_legacy_16/
+.placeholder_cache/

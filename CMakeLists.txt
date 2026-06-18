@@ -110,6 +110,10 @@ set(SOURCES
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
     src/Blocks/BlockDefinitionStorage.cpp
+    src/ResourcePacks/ResourcePack.cpp
+    src/ResourcePacks/ResourcePackResolver.cpp
+    src/ResourcePacks/BlockMergeRegistry.cpp
+    src/ResourcePacks/PlaceholderTextureCache.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
     src/WorldGen/Core/WorldGenerator.cpp
@@ -211,6 +215,10 @@ set(HEADERS
     src/Blocks/BlockRegistry.h
     src/Blocks/BlockDefinition.h
     src/Blocks/BlockDefinitionStorage.h
+    src/ResourcePacks/ResourcePack.h
+    src/ResourcePacks/ResourcePackResolver.h
+    src/ResourcePacks/BlockMergeRegistry.h
+    src/ResourcePacks/PlaceholderTextureCache.h
     src/Render/Engine/AnimationClock.h
     src/World/Core/BlockWorld.h
     src/WorldGen/Core/WorldGenerator.h
@@ -459,5 +467,14 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/content")
             "${CMAKE_SOURCE_DIR}/content"
             "${CMAKE_BINARY_DIR}/content"
         COMMENT "Copying content data to output directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/resource_packs"
+            "${CMAKE_BINARY_DIR}/resource_packs"
+        COMMENT "Copying resource packs to output directory"
     )
 endif()

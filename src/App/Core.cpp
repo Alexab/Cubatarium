@@ -16,6 +16,8 @@
 #include <system_error>
 #include <vector>
 
+#include <glm/glm.hpp>
+
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -25,6 +27,9 @@
 #include "App/Core.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
+#include "ResourcePacks/PlaceholderTextureCache.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -43,6 +48,38 @@
 
 using json = nlohmann::json;
 
+namespace
+{
+
+glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
+{
+  if (hex.size() != 7 || hex[0] != '#')
+  {
+    return fallback;
+  }
+  auto nib = [&](size_t i) -> int {
+    const char c = hex[i];
+    if (c >= '0' && c <= '9')
+    {
+      return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+      return 10 + (c - 'a');
+    }
+    if (c >= 'A' && c <= 'F')
+    {
+      return 10 + (c - 'A');
+    }
+    return 0;
+  };
+  return glm::vec3((nib(1) * 16 + nib(2)) / 255.0f,
+                   (nib(3) * 16 + nib(4)) / 255.0f,
+                   (nib(5) * 16 + nib(6)) / 255.0f);
+}
+
+} // namespace
+
 namespace cutum
 {
 
@@ -58,13 +95,19 @@ TryFindProjectRoot(std::filesystem::path start)
   {
     const auto textures_dir = start / "textures" / "blocks";
     const auto models_blocks_dir = start / "models" / "blocks";
+    const auto resource_packs_dir = start / "resource_packs";
     const auto prefabs_dir = start / "prefabs";
     const auto shaders_dir = start / "shaders";
     const bool hasTextures = std::filesystem::exists(textures_dir);
     const bool hasModels = std::filesystem::exists(models_blocks_dir);
+    const bool hasResourcePacks = std::filesystem::exists(resource_packs_dir);
     const bool hasPrefabs = std::filesystem::exists(prefabs_dir);
     const bool hasShaders =
         std::filesystem::exists(shaders_dir / "vshader_greedy.glsl");
+    if (hasResourcePacks && hasPrefabs && hasShaders)
+    {
+      return start;
+    }
     if (hasTextures && hasModels && hasPrefabs && hasShaders)
     {
       return start;
@@ -331,6 +374,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Ui.BreakDurationSeconds = u.value("break_duration_seconds", 0.25f);
         Ui.RmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
       }
+      ResourcePacks = UResourcePackResolver::ParseFromJson(d);
     }
     else
     {
@@ -343,6 +387,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
       Render = RenderSettings::Default();
+      ResourcePacks = ResourcePacksConfig{};
+      ResourcePacks.Enabled = DefaultEnabledResourcePacks();
     }
 
     TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
@@ -350,9 +396,39 @@ void UCore::LoadConfig(const std::string &config_file_name)
     ObjectStorageFileName = WorkDir / "models" / "objects";
     PrefabsPath = WorkDir / "prefabs";
 
-    auto blockDefinitions = std::make_shared<UBlockDefinitionStorage>();
-    blockDefinitions->Load(TextureCubeStorageFileName.string());
-    TextureCubeStorageInstance->SetBlockDefinitions(blockDefinitions);
+    BlockDefinitionsInstance = std::make_shared<UBlockDefinitionStorage>();
+    BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
+    auto blockDefinitions = BlockDefinitionsInstance;
+
+    UResourcePackResolver resolver;
+    const auto packs = resolver.Resolve(ResourcePacks, WorkDir, ExeDir);
+    if (packs.empty())
+    {
+      std::cerr << "Resource packs: no packs resolved — check "
+                << (ExeDir / "resource_packs").string() << std::endl;
+    }
+    else
+    {
+      std::cout << "Resource packs: loaded " << packs.size() << " pack(s)";
+      for (const auto &p : packs)
+      {
+        std::cout << " [" << p.Id << "]";
+      }
+      std::cout << std::endl;
+    }
+    const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
+                                       glm::vec3(0.42f, 0.29f, 0.62f));
+    PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
+        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
+    BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
+                                        ResourcePacks.PlaceholderTileSize);
+    RebuildBlockTexturesFromMergeRegistry();
+    std::cout << "Resource packs: "
+              << BlockMergeRegistryInstance->GetCubeDescriptors().size()
+              << " block type(s) registered" << std::endl;
+
+    WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
+
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
     auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
@@ -368,10 +444,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
         (WorkDir / "models" / "creatures").string(),
         (WorkDir / "models" / "skins").string());
-
-    TextureBaseStorageInstance->Load(TextureBaseStorageFileName.string());
-
-    TextureCubeStorageInstance->Load(TextureCubeStorageFileName.string());
 
     ObjectStorageInstance->Load(ObjectStorageFileName.string());
 
@@ -424,6 +496,24 @@ void UCore::LoadConfig(const std::string &config_file_name)
   }
 }
 
+void UCore::RebuildBlockTexturesFromMergeRegistry()
+{
+  if (!BlockMergeRegistryInstance || !BlockDefinitionsInstance ||
+      !TextureBaseStorageInstance || !TextureCubeStorageInstance)
+  {
+    return;
+  }
+  BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
+      *BlockDefinitionsInstance);
+  TextureBaseStorageInstance->Clear();
+  BlockMergeRegistryInstance->PopulateTextureBaseStorage(
+      *TextureBaseStorageInstance);
+  TextureCubeStorageInstance->Clear();
+  TextureCubeStorageInstance->SetBlockDefinitions(BlockDefinitionsInstance);
+  TextureCubeStorageInstance->BuildFromDescriptors(
+      BlockMergeRegistryInstance->GetCubeDescriptors());
+}
+
 void UCore::EnterGame()
 {
   try
@@ -444,6 +534,12 @@ void UCore::EnterGame()
     else
     {
       LoadLastWorld();
+    }
+
+    RebuildBlockTexturesFromMergeRegistry();
+    if (WorldInstance)
+    {
+      WorldInstance->OnBlockRegistryChanged();
     }
 
     if (DefaultUserName.empty())
@@ -476,6 +572,24 @@ void UCore::LoadSystem(const std::string &config_file_name)
   EnterGame();
 }
 
+bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
+                                 const std::array<std::string, 6> &textureStems)
+{
+  if (!BlockMergeRegistryInstance || !WorldInstance)
+  {
+    return false;
+  }
+  const BlockId id =
+      BlockMergeRegistryInstance->RegisterRuntimeBlock(def, textureStems);
+  if (id == BLOCK_AIR)
+  {
+    return false;
+  }
+  RebuildBlockTexturesFromMergeRegistry();
+  WorldInstance->OnBlockRegistryChanged();
+  return true;
+}
+
 void UCore::SaveConfigFile()
 {
   if (ConfigFilePath.empty())
@@ -504,6 +618,14 @@ void UCore::SaveConfigFile()
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);
+  system_data["use_resource_packs"] = ResourcePacks.UseResourcePacks;
+  json resource_packs;
+  resource_packs["enabled"] = ResourcePacks.Enabled;
+  json placeholder;
+  placeholder["tile_size"] = ResourcePacks.PlaceholderTileSize;
+  placeholder["background"] = ResourcePacks.PlaceholderBackground;
+  resource_packs["placeholder"] = placeholder;
+  system_data["resource_packs"] = resource_packs;
 
   std::ofstream file(ConfigFilePath.string());
   if (file.is_open())

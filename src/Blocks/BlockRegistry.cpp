@@ -1,6 +1,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureCube.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 
 namespace cutum
 {
@@ -11,6 +12,13 @@ UBlockRegistry::UBlockRegistry(
     : Textures(std::move(textures)), Definitions(std::move(definitions)),
       SolidDefault(BlockPhysicsProfile::Solid())
 {
+  RebuildMaps();
+}
+
+void UBlockRegistry::SetMergeRegistry(
+    std::shared_ptr<UBlockMergeRegistry> merge_registry)
+{
+  MergeRegistry = std::move(merge_registry);
   RebuildMaps();
 }
 
@@ -26,6 +34,15 @@ void UBlockRegistry::RebuildMaps()
 {
   NameToId.clear();
   IdToName.clear();
+  if (MergeRegistry)
+  {
+    for (const auto &entry : MergeRegistry->GetNameToId())
+    {
+      NameToId[entry.first] = entry.second;
+      IdToName[entry.second] = entry.first;
+    }
+    return;
+  }
   if (!Textures)
   {
     return;
@@ -45,6 +62,10 @@ void UBlockRegistry::RebuildMaps()
 
 BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 {
+  if (MergeRegistry)
+  {
+    return MergeRegistry->ResolveName(Name);
+  }
   auto it = NameToId.find(Name);
   if (it != NameToId.end())
   {
@@ -64,6 +85,13 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;
+  if (MergeRegistry)
+  {
+    if (const std::string *name = MergeRegistry->GetTypeNameById(Id))
+    {
+      return *name;
+    }
+  }
   auto it = IdToName.find(Id);
   if (it != IdToName.end())
   {

@@ -33,6 +33,8 @@ public:
   void InitializeCatalog(const std::string &typesJsonPath,
                          const UBlockDefinitionStorage &blocks,
                          const UPrefabLibrary &prefabs);
+  void ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
+                           const UPrefabLibrary &prefabs);
   void RegisterCommands();
 
   UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }

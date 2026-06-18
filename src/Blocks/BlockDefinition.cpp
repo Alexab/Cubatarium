@@ -1,6 +1,8 @@
 #include "Blocks/BlockDefinition.h"
 #include <algorithm>
+#include <array>
 #include <glm/glm.hpp>
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -243,6 +245,80 @@ void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
       Render.FluidView = FluidViewFromPreset("fire");
     }
   }
+}
+
+bool IsReservedBlockName(const std::string &name)
+{
+  return name == "__missing__" || name == "__air__";
+}
+
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool warnLegacyId)
+{
+  ParsedBlockJson out;
+  if (!j.is_object())
+  {
+    return out;
+  }
+  out.Definition.Name = j.value("name", "");
+  if (out.Definition.Name.empty() || IsReservedBlockName(out.Definition.Name))
+  {
+    return out;
+  }
+  if (j.contains("id"))
+  {
+    if (warnLegacyId)
+    {
+      std::cerr << "ParseBlockFromJson: ignoring legacy id field for block '"
+                << out.Definition.Name << "'" << std::endl;
+    }
+  }
+  if (j.contains("animation"))
+  {
+    out.Definition.Animation = ParseAnimationFromJson(j["animation"]);
+  }
+  if (j.contains("physics"))
+  {
+    out.Definition.Physics = ParsePhysicsFromJson(j["physics"]);
+  }
+  else
+  {
+    out.Definition.Physics = BlockPhysicsProfile::Solid();
+  }
+  if (j.contains("render"))
+  {
+    out.Definition.Render = ParseRenderFromJson(j["render"]);
+  }
+  if (j.contains("types") && j["types"].is_array())
+  {
+    for (const auto &t : j["types"])
+    {
+      if (t.is_string())
+      {
+        out.Definition.Types.push_back(t.get<std::string>());
+      }
+    }
+  }
+  if (j.contains("physics") && j["physics"].is_object() &&
+      j["physics"].contains("preset") && j["physics"]["preset"].is_string())
+  {
+    ApplyRenderPresetDefaults(out.Definition.Render,
+                              j["physics"]["preset"].get<std::string>());
+  }
+  const auto textures = j.value("textures", nlohmann::json::array());
+  if (!textures.is_array() || textures.size() < 6)
+  {
+    return out;
+  }
+  for (int i = 0; i < 6; ++i)
+  {
+    if (!textures[i].is_string())
+    {
+      return out;
+    }
+    out.TextureStems[static_cast<size_t>(i)] = textures[i].get<std::string>();
+  }
+  out.Valid = true;
+  return out;
 }
 
 } // namespace cutum

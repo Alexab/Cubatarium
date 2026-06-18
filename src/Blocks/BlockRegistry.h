@@ -12,6 +12,7 @@ namespace cutum
 
 class UTextureCubeStorage;
 class UBlockDefinitionStorage;
+class UBlockMergeRegistry;
 
 class UBlockRegistry
 {
@@ -21,6 +22,7 @@ public:
       std::shared_ptr<UBlockDefinitionStorage> definitions = nullptr);
 
   void SetDefinitions(std::shared_ptr<UBlockDefinitionStorage> definitions);
+  void SetMergeRegistry(std::shared_ptr<UBlockMergeRegistry> merge_registry);
   void Reload();
 
   BlockId GetIdByTypeName(const std::string &Name) const;
@@ -38,6 +40,7 @@ private:
   void RebuildMaps();
   std::shared_ptr<UTextureCubeStorage> Textures;
   std::shared_ptr<UBlockDefinitionStorage> Definitions;
+  std::shared_ptr<UBlockMergeRegistry> MergeRegistry;
   std::unordered_map<std::string, BlockId> NameToId;
   std::unordered_map<BlockId, std::string> IdToName;
   mutable BlockPhysicsProfile SolidDefault;

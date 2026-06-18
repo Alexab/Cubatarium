@@ -5,6 +5,7 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Creatures/Core/Creature.h"
@@ -279,6 +280,22 @@ void UWorld::SetBlockDefinitionStorage(
     BlockRegistry = std::make_unique<UBlockRegistry>(
         ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
   }
+}
+
+void UWorld::SetBlockMergeRegistry(
+    std::shared_ptr<UBlockMergeRegistry> merge_registry)
+{
+  BlockMergeRegistry = std::move(merge_registry);
+  if (BlockRegistry)
+  {
+    BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
+  }
+}
+
+void UWorld::OnBlockRegistryChanged()
+{
+  RefreshBlockRegistry();
+  RebuildBlockMesh();
 }
 
 void UWorld::RefreshBlockRegistry()
@@ -749,9 +766,22 @@ void UWorld::Load(const std::string &world_folder_path)
   }
   else if (blocksInWorld == 0 && LoadedFromChunkSave)
   {
-    std::cerr << "World::Load: chunk save on disk but 0 blocks loaded — no "
-                 "procedural fill. "
-              << "Check models/blocks match chunk type names." << std::endl;
+    if (chunkFilesRead == 0 && voxelsFromChunkFiles == 0)
+    {
+      std::cerr << "World::Load: chunk files on disk are empty — regenerating "
+                   "procedural terrain."
+                << std::endl;
+      HasPersistedSave = false;
+      LoadedFromChunkSave = false;
+      AllowProceduralFill = true;
+      GenerateWorldBlocks();
+    }
+    else
+    {
+      std::cerr << "World::Load: chunk save on disk but 0 blocks loaded — no "
+                   "procedural fill."
+                << std::endl;
+    }
   }
 
   InitStreamerCallbacks();
@@ -2468,11 +2498,12 @@ void UWorld::LoadBlocks(const std::string &file_name)
       const int y = entry.at("y").get<int>();
       const int z = entry.at("z").get<int>();
       const std::string type = entry.at("type").get<std::string>();
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-      if (Id != BLOCK_AIR)
+      if (type.empty())
       {
-        BlockWorld.SetBlock(glm::ivec3(x, y, z), Id);
+        continue;
       }
+      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
+      BlockWorld.SetBlock(glm::ivec3(x, y, z), Id);
     }
   }
   catch (const json::exception &e)
@@ -2547,11 +2578,11 @@ void UWorld::LoadChunks(const std::string &file_name)
         const int ly = voxel.at("ly").get<int>();
         const int lz = voxel.at("lz").get<int>();
         const std::string type = voxel.at("type").get<std::string>();
-        const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-        if (Id == BLOCK_AIR)
+        if (type.empty())
         {
           continue;
         }
+        const BlockId Id = BlockRegistry->GetIdByTypeName(type);
         const glm::ivec3 worldPos(cx * CHUNK_SIZE + lx, cy * CHUNK_SIZE + ly,
                                   cz * CHUNK_SIZE + lz);
         BlockWorld.SetBlock(worldPos, Id);
@@ -2707,11 +2738,11 @@ int UWorld::LoadChunkFromFile(glm::ivec3 chunkCoord,
       const int ly = voxel.at("ly").get<int>();
       const int lz = voxel.at("lz").get<int>();
       const std::string type = voxel.at("type").get<std::string>();
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-      if (Id == BLOCK_AIR)
+      if (type.empty())
       {
         continue;
       }
+      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
       const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
                                 chunkCoord.y * CHUNK_SIZE + ly,
                                 chunkCoord.z * CHUNK_SIZE + lz);

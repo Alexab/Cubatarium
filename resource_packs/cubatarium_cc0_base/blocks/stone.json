@@ -1,0 +1,14 @@
+{
+  "name": "stone",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "stone",
+    "stone",
+    "stone",
+    "stone",
+    "stone",
+    "stone"
+  ]
+}

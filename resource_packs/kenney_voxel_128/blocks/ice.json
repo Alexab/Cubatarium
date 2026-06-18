@@ -1,0 +1,14 @@
+{
+  "name": "ice",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "ice",
+    "ice",
+    "ice",
+    "ice",
+    "ice",
+    "ice"
+  ]
+}
