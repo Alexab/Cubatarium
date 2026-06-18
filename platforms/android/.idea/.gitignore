@@ -1,3 +1,6 @@
-# Default ignored files
-/shelf/
-/workspace.xml
+# Ignore all IDE state except shared team files (see repo docs).
+*
+!.gitignore
+!vcs.xml
+!runConfigurations/
+!runConfigurations/**

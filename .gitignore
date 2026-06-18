@@ -61,8 +61,19 @@ platforms/android/.gradle/
 platforms/android/app/build/
 platforms/android/build/
 platforms/android/local.properties
+platforms/android/gradle/gradle-daemon-jvm.properties
 
 # Local Minecraft-derived pack (generate via tools/migrate_to_resource_pack.ps1)
 resource_packs/minecraft_legacy_16/
 resource_packs/_build_staging_*/
 .placeholder_cache/
+
+# Local dev / debug artifacts
+/emulator-logcat*.txt
+/emulator-*.png
+tools/__pycache__/
+tools/_members_out.txt
+
+# Deprecated legacy block assets (use resource_packs/ instead)
+/models/blocks/
+/textures/
