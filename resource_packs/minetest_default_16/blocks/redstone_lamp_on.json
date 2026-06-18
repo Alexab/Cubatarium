@@ -1,0 +1,14 @@
+{
+  "name": "redstone_lamp_on",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit"
+  ]
+}

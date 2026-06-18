@@ -64,4 +64,5 @@ platforms/android/local.properties
 
 # Local Minecraft-derived pack (generate via tools/migrate_to_resource_pack.ps1)
 resource_packs/minecraft_legacy_16/
+resource_packs/_build_staging_*/
 .placeholder_cache/

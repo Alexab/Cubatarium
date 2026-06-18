@@ -1,0 +1,14 @@
+{
+  "name": "rail",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "rail",
+    "rail",
+    "rail",
+    "rail",
+    "rail",
+    "rail"
+  ]
+}

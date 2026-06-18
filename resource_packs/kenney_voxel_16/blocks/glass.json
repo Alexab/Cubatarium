@@ -1,0 +1,17 @@
+{
+  "name": "glass",
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "glass",
+    "glass",
+    "glass",
+    "glass",
+    "glass",
+    "glass"
+  ],
+  "render": {
+    "transparent": true
+  }
+}

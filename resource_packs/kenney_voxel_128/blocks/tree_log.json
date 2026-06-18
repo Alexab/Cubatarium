@@ -1,0 +1,14 @@
+{
+  "name": "tree_log",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_top",
+    "tree_top"
+  ]
+}

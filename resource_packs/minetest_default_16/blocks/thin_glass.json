@@ -1,0 +1,14 @@
+{
+  "name": "thin_glass",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "thinglass_top",
+    "thinglass_top",
+    "thinglass_top",
+    "thinglass_top",
+    "thinglass_top",
+    "thinglass_top"
+  ]
+}

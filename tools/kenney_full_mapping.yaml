@@ -1,0 +1,91 @@
+license: CC0-1.0
+license_text: |
+  Kenney Voxel Pack (CC0). See https://kenney.nl/assets/voxel-pack
+  Extended block set mapped from PNG/Tiles (85 tiles).
+blocks:
+  dirt: dirt
+  stone: stone
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  tree_log:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+    types: [natural]
+  tree_leaves:
+    faces: [leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque]
+    types: [natural]
+  gravel: gravel
+  snow: snow
+  clay: clay
+  ice: ice
+  glass:
+    faces: [glass, glass, glass, glass, glass, glass]
+    types: [building]
+    render: { transparent: true }
+  obsidian:
+    faces: [obsidian, obsidian, obsidian, obsidian, obsidian, obsidian]
+    types: [natural]
+  hellrock: hellrock
+  hellsand: hellsand
+  whiteStone: whiteStone
+  bedrock: bedrock
+  sandstone: sandstone
+  stoneMoss: stoneMoss
+  stonebricksmooth: stonebricksmooth
+  stonebricksmooth_carved: stonebricksmooth_carved
+  stonebricksmooth_cracked: stonebricksmooth_cracked
+  stonebricksmooth_mossy: stonebricksmooth_mossy
+  brick: brick
+  oreCoal: oreCoal
+  oreIron: oreIron
+  oreGold: oreGold
+  oreDiamond: oreDiamond
+  oreEmerald: oreEmerald
+  oreLapis: oreLapis
+  oreRedstone: oreRedstone
+  blockIron: blockIron
+  blockGold: blockGold
+  blockDiamond: blockDiamond
+  blockEmerald: blockEmerald
+  blockLapis: blockLapis
+  blockRedstone: blockRedstone
+  cactus:
+    faces: [cactus_side, cactus_side, cactus_side, cactus_side, cactus_top, cactus_bottom]
+    types: [natural]
+  melon:
+    faces: [melon_side, melon_side, melon_side, melon_side, melon_top, melon_side]
+    types: [natural]
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+  wool_3: cloth_3
+  wool_4: cloth_4
+  wool_5: cloth_5
+  wool_6: cloth_6
+  wool_7: cloth_7
+  wool_8: cloth_8
+  wool_9: cloth_9
+  wool_10: cloth_10
+  wool_11: cloth_11
+  wool_12: cloth_12
+  wool_13: cloth_13
+  wool_14: cloth_14
+  wool_15: cloth_15
+  water:
+    faces: [water, water, water, water, water, water]
+    physics: { preset: water }
+    render: { transparent: true, style: fluid }
+    animation: { frame_count: 4, frametime: 2 }
+  lava:
+    faces: [lava, lava, lava, lava, lava, lava]
+    physics: { preset: lava }
+    render: { transparent: true, style: fluid }
+    animation: { frame_count: 4, frametime: 2 }
+  fire:
+    faces: [fire_0, fire_0, fire_0, fire_0, fire_0, fire_0]
+    physics: { preset: fire }
+    render: { transparent: true }
+    animation: { frame_count: 2, frametime: 2 }

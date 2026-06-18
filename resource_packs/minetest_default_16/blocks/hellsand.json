@@ -1,0 +1,14 @@
+{
+  "name": "hellsand",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand"
+  ]
+}

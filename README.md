@@ -6,7 +6,7 @@ A Minecraft-like voxel sandbox engine using C++17, OpenGL, and GLFW. Uses Minecr
 
 Blocks and block textures ship as **resource packs** under `resource_packs/`. See [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md).
 
-Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base` (CC0). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base` (Kenney Voxel Pack, CC0). Regenerate textures with `python tools/rebuild_release_resource_packs.py`. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 For full Minecraft-parity visuals, generate a local pack (gitignored):
 

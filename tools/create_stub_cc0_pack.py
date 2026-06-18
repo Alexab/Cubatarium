@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Create minimal cubatarium_cc0_base resource pack for smoke tests."""
+"""Create minimal cubatarium_cc0_base resource pack for smoke tests.
+
+DEPRECATED for release assets — use tools/rebuild_release_resource_packs.py
+(Kenney CC0 tiles) instead.
+"""
 import json
 import struct
 import zlib

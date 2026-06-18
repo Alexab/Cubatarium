@@ -1,8 +1,7 @@
 license: CC0-1.0
 license_text: |
   Kenney Voxel Pack (CC0). See https://kenney.nl/assets/voxel-pack
-  Textures in this repo pack are sourced from cubatarium_cc0_base stubs when
-  Kenney assets are unavailable; replace with real Kenney PNGs via --source.
+  Legacy minimal mapping — use kenney_full_mapping.yaml for release builds.
 blocks:
   dirt: dirt
   stone: stone
@@ -30,7 +29,7 @@ blocks:
     render: { transparent: true, style: fluid }
     animation: { frame_count: 4, frametime: 2 }
   fire:
-    faces: [fire_0, fire_0, fire_0, fire_0, fire_0, fire_0, fire_1, fire_1, fire_1, fire_1, fire_1, fire_1]
+    faces: [fire_0, fire_0, fire_0, fire_0, fire_0, fire_0]
     physics: { preset: fire }
     render: { transparent: true }
     animation: { frame_count: 2, frametime: 2 }

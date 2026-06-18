@@ -1,0 +1,8 @@
+{
+  "id": "minetest_default_16",
+  "name": "Minetest Default 16",
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "resolution": 16,
+  "priority": 4
+}

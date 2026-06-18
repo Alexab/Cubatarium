@@ -299,6 +299,18 @@ GLuint UPrefabIconCache::GetBlockTexture(BlockId blockId) const
   return 0;
 }
 
+void UPrefabIconCache::ClearBlockIconCache()
+{
+  for (const auto &entry : BlockCache)
+  {
+    if (entry.second != 0 && entry.second != ColorTex)
+    {
+      glDeleteTextures(1, &entry.second);
+    }
+  }
+  BlockCache.clear();
+}
+
 GLuint UPrefabIconCache::GetBlockIconTexture(const std::string &blockName)
 {
   if (!BlockDefs || !Textures || !Shader || blockName.empty())

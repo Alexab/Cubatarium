@@ -1,1 +1,2 @@
-CC0-1.0 placeholder base pack
+Cubatarium CC0 Base — textures from Kenney Voxel Pack (CC0).
+https://kenney.nl/assets/voxel-pack

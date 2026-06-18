@@ -1,0 +1,14 @@
+{
+  "name": "dirt",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "dirt",
+    "dirt",
+    "dirt",
+    "dirt",
+    "dirt",
+    "dirt"
+  ]
+}

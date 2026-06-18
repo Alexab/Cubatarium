@@ -1,0 +1,14 @@
+{
+  "name": "oreLapis",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreLapis",
+    "oreLapis",
+    "oreLapis",
+    "oreLapis",
+    "oreLapis",
+    "oreLapis"
+  ]
+}

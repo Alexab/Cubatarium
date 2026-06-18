@@ -1,6 +1,7 @@
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Widgets/GuiCheckList.h"
 #include "Gui/Widgets/GuiListView.h"
 #include "Gui/Widgets/GuiScrollView.h"
 
@@ -82,6 +83,11 @@ void RevealWidgetForKeyboardFocus(UGuiWidget *root, UGuiWidget *widget)
   if (auto *list = dynamic_cast<UGuiListView *>(widget))
   {
     list->RevealFocused();
+    return;
+  }
+  if (auto *checkList = dynamic_cast<UGuiCheckList *>(widget))
+  {
+    checkList->RevealFocused();
     return;
   }
   FindScrollAndReveal(root, widget);

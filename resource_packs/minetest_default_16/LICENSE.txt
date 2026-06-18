@@ -1,0 +1,4 @@
+Minetest Game default textures (CC BY-SA 3.0).
+Copyright (c) celeron55, Perttu Ahola et al.
+Source: https://github.com/minetest-game/default
+Modifications and repackaging under the same license.

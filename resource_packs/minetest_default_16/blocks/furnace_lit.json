@@ -1,0 +1,14 @@
+{
+  "name": "furnace_lit",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "furnace_front_lit",
+    "furnace_side",
+    "furnace_side",
+    "furnace_side",
+    "furnace_top",
+    "furnace_top"
+  ]
+}

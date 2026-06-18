@@ -35,6 +35,8 @@ public:
 
   GLuint GetBlockIconTexture(const std::string &blockName);
 
+  void ClearBlockIconCache();
+
 private:
   GLuint RenderPrefabIcon(const std::string &prefabName);
   GLuint RenderBlockIcon(BlockId blockId);

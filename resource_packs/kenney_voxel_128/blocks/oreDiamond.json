@@ -1,0 +1,14 @@
+{
+  "name": "oreDiamond",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond"
+  ]
+}

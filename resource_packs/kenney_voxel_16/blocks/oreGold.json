@@ -1,0 +1,14 @@
+{
+  "name": "oreGold",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold"
+  ]
+}

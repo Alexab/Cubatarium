@@ -87,4 +87,12 @@ void UGuiIconSource::WarmupPrefabIcons(size_t maxPerFrame)
   }
 }
 
+void UGuiIconSource::ClearBlockIconCache()
+{
+  if (PrefabCache)
+  {
+    PrefabCache->ClearBlockIconCache();
+  }
+}
+
 } // namespace cutum

@@ -1,0 +1,14 @@
+{
+  "name": "sand",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sand",
+    "sand",
+    "sand",
+    "sand",
+    "sand",
+    "sand"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "oreCoal",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal"
+  ]
+}

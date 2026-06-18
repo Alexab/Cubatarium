@@ -43,7 +43,7 @@ Face order for `textures` (6 entries):
 2. Sort packs by `priority` ascending.
 3. **Union** of all block names across packs.
 4. For each name, **definition** (physics, render, animation, types) comes from the **first** pack (lowest priority) that declares the block.
-5. For each texture **stem** on each face, resolve PNG by scanning packs in priority order; missing file → **placeholder** face (solid color + block name label).
+5. For each texture **stem** on each face, resolve PNG by scanning packs in priority order; the atlas stores textures under `pack_id/stem` so packs cannot overwrite each other. Missing file → **placeholder** face (solid color + block name label).
 
 ## Placeholder
 
@@ -107,3 +107,60 @@ Resolver checks **writable root first**, then asset root.
 ```powershell
 python tools/validate_resource_pack.py resource_packs/cubatarium_cc0_base
 ```
+
+## Rebuilding release packs
+
+### Kenney CC0 packs
+
+Git-tracked packs (`cubatarium_cc0_base`, `kenney_voxel_16`, `kenney_voxel_128`) use **Kenney Voxel Pack** textures (CC0).
+
+| Pack | Blocks | Resolution | Role |
+|------|--------|------------|------|
+| `cubatarium_cc0_base` | 15 (minimal survival) | 16px | Fallback / default for new worlds |
+| `kenney_voxel_16` | ~58 (terrain, ores, wool, …) | 16px | Full CC0 sandbox set |
+| `kenney_voxel_128` | same as 16 | 128px | High-res Kenney tiles |
+| `minecraft_legacy_16` | ~173 | 16px | Local MC migrate (not in git) |
+
+```powershell
+python tools/rebuild_release_resource_packs.py
+```
+
+Requires Kenney tiles under `E:/Work/Home/CubatariumTextureResearch/kenney_voxel_pack/` (see `tools/download_texture_packs.py`).
+
+### Research-derived packs
+
+Built from `E:/Work/Home/CubatariumTextureResearch/` via mapping YAML in `tools/`:
+
+| Pack | Blocks | License | Source research folder |
+|------|--------|---------|------------------------|
+| `minetest_default_16` | ~60 | CC BY-SA 3.0 | `minetest_default` |
+| `seamless_patterns_16` | ~28 | CC0 | `seamless_pattern_pack` |
+| `kenney_pattern_pixel_16` | ~17 | CC0 | `kenney_pattern_pixel` |
+| `goncalo_patterns_16` | ~10 | CC0 | `goncalo_pixel_patterns` |
+| `sbs_sandbox_terrain_16` | ~13 | CC0 | `sbs_sandbox_terrain` |
+| `kenney_pattern_lines_16` | ~9 | CC0 | `kenney_pattern_lines` |
+| `oga_mc_inspired_16` | ~5 | CC0 | `oga_mc_inspired` |
+
+1. Download research assets (once):
+
+```powershell
+python tools/download_texture_packs.py
+```
+
+2. Regenerate Minetest mapping (optional, after MT textures update):
+
+```powershell
+python tools/generate_minetest_mapping.py
+```
+
+3. Build all research packs:
+
+```powershell
+python tools/build_research_resource_packs.py
+```
+
+Build a single pack: `python tools/build_research_resource_packs.py minetest_default_16`
+
+These packs are **not** in `default_enabled` — enable them per-world in **New World** or **Settings**.
+
+Requires PyYAML and Pillow. Rebuild the game or restart so `bin/resource_packs/` is refreshed.

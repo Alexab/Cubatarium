@@ -234,6 +234,7 @@ void UApplication::RequestEnterGame()
                                        static_cast<size_t>(Ui.HotbarCount));
       }
     }
+    RefreshBlockCatalog();
     WorldSessionActive = true;
     ShowInGameHud();
   }
@@ -366,6 +367,31 @@ void UApplication::SaveActiveWorldIfNeeded()
   Core->SaveConfigFile();
 }
 
+void UApplication::RefreshBlockCatalog()
+{
+  if (!GameSession || !Core)
+  {
+    return;
+  }
+  if (auto defs = Core->GetBlockDefinitionStorage())
+  {
+    BlockDefinitions = defs;
+  }
+  if (!BlockDefinitions)
+  {
+    return;
+  }
+  GameSession->ReindexBlockCatalog(*BlockDefinitions, *Core->GetPrefabLibrary());
+  if (IconSource)
+  {
+    IconSource->ClearBlockIconCache();
+  }
+  if (PaletteScreen)
+  {
+    PaletteScreen->InvalidateGrid();
+  }
+}
+
 void UApplication::EnterGameAfterWorldChange()
 {
   WorldSessionActive = true;
@@ -382,6 +408,7 @@ void UApplication::EnterGameAfterWorldChange()
     }
     World->FinalizePlayerAfterWorldLoad();
   }
+  RefreshBlockCatalog();
   ShowInGameHud();
   State = AppState::InGame;
   EnterInGameInputState();

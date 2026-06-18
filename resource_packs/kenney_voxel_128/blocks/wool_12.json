@@ -1,0 +1,14 @@
+{
+  "name": "wool_12",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "cloth_12",
+    "cloth_12",
+    "cloth_12",
+    "cloth_12",
+    "cloth_12",
+    "cloth_12"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "torch",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch"
+  ]
+}

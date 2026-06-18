@@ -11,6 +11,12 @@ namespace cutum
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+std::string PackQualifiedTextureStem(const std::string &packId,
+                                     const std::string &stem)
+{
+  return packId + "/" + stem;
+}
+
 std::optional<ResourcePackManifest>
 UResourcePack::LoadManifest(const fs::path &root)
 {
@@ -113,7 +119,8 @@ void UResourcePack::RegisterTextures(const ResourcePackManifest &manifest,
     if (entry.path().extension() == ".png")
     {
       const std::string stem = entry.path().stem().string();
-      storage.Register(stem, entry.path().string());
+      storage.Register(PackQualifiedTextureStem(manifest.Id, stem),
+                       entry.path().string());
     }
   }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "brick",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "brick",
+    "brick",
+    "brick",
+    "brick",
+    "brick",
+    "brick"
+  ]
+}

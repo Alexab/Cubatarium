@@ -19,7 +19,7 @@ std::string UBlockMergeRegistry::ResolveStem(
     const fs::path path = UResourcePack::TexturePath(pack, stem);
     if (fs::exists(path))
     {
-      return stem;
+      return PackQualifiedTextureStem(pack.Id, stem);
     }
   }
   return {};

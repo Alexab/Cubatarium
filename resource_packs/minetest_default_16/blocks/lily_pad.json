@@ -1,0 +1,14 @@
+{
+  "name": "lily_pad",
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily"
+  ]
+}

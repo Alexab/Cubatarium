@@ -1,0 +1,16 @@
+license: CC0-1.0
+license_text: |
+  CC0 Minecraft-inspired textures. OpenGameArt.
+  https://opengameart.org/content/cc0-minecraft-inspired-textures
+blocks:
+  stone: stone
+  oreDiamond: oreDiamond
+  blockDiamond: blockDiamond
+  hellrock: hellrock
+  obsidian: obsidian
+textures:
+  stone: terminus.png
+  oreDiamond: ruby_block.png
+  blockDiamond: ruby_block.png
+  hellrock: rune.png
+  obsidian: shell.png

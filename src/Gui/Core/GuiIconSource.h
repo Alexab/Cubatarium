@@ -26,6 +26,7 @@ public:
   GLuint GetSkinIconTexture(const std::string &skinId) override;
 
   UPrefabIconCache &GetPrefabCache() { return *PrefabCache; }
+  void ClearBlockIconCache();
   void WarmupPrefabIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/Core/GuiTypes.h"
+#include "Gui/Widgets/GuiCheckList.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <memory>
 #include <string>
@@ -12,7 +13,6 @@ namespace cutum
 struct GuiTheme;
 class UGuiPanel;
 class UGuiLabel;
-class UGuiCheckbox;
 
 class UResourcePackPickerForm
 {
@@ -27,14 +27,10 @@ public:
   int MeasureHeight(const GuiRect &area) const;
   void Layout(const GuiRect &area) const;
 
-private:
-  struct PackRow
-  {
-    std::string Id;
-    UGuiCheckbox *Checkbox{nullptr};
-  };
+  static int VisibleListHeight(const GuiTheme *theme);
 
-  void AddWidgetsTo(UGuiPanel &panel);
+private:
+  void SyncListItems();
   static std::string FormatPackLabel(const InstalledPackInfo &pack);
 
   const GuiTheme *Theme;
@@ -43,7 +39,7 @@ private:
   bool Built{false};
 
   UGuiLabel *HintLabel{nullptr};
-  std::vector<PackRow> Rows;
+  UGuiCheckList *List{nullptr};
 };
 
 } // namespace cutum

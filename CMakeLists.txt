@@ -171,6 +171,7 @@ set(SOURCES
     src/Gui/Widgets/GuiTextInput.cpp
     src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
+    src/Gui/Widgets/GuiCheckList.cpp
     src/Gui/Widgets/GuiTabBar.cpp
     src/Gui/Widgets/GuiScrollView.cpp
     src/Gui/Widgets/GuiDialogFrame.cpp
@@ -265,6 +266,7 @@ set(HEADERS
     src/Gui/Widgets/GuiTextInput.h
     src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h
+    src/Gui/Widgets/GuiCheckList.h
     src/Gui/Widgets/GuiTabBar.h
     src/Gui/Widgets/GuiScrollView.h
     src/Gui/Widgets/GuiDialogFrame.h

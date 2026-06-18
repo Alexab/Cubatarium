@@ -1,0 +1,39 @@
+license: CC0-1.0
+license_text: |
+  SBS Sandbox Terrain Pack (CC0). Screaming Brain Studios.
+  https://screamingbrainstudios.itch.io/sbst-pack
+  Tiles extracted from 128px sprite sheets.
+blocks:
+  dirt: dirt
+  stone: stone
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  gravel: gravel
+  snow: snow
+  hellrock: hellrock
+  oreCoal: oreCoal
+  oreIron: oreIron
+  oreGold: oreGold
+  oreDiamond: oreDiamond
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  tree_log:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+    types: [natural]
+textures:
+  dirt: {sheet: "Cubes/Cubes - Dirt 128x128.png", tile: 0}
+  stone: {sheet: "Cubes/Cubes - Stone 128x128.png", tile: 0}
+  grass_side: {sheet: "Cubes/Cubes - Green 128x128.png", tile: 0}
+  grass_top: {sheet: "Cubes/Cubes - Green 128x128.png", tile: 1}
+  sand: {sheet: "Cubes/Cubes - Basic 128x128.png", tile: 0}
+  gravel: {sheet: "Cubes/Cubes - Stone 128x128.png", tile: 1}
+  snow: {sheet: "Cubes/Cubes - White 128x128.png", tile: 0}
+  hellrock: {sheet: "Cubes/Cubes - Ores 1 128x128.png", tile: 0}
+  oreCoal: {sheet: "Cubes/Cubes - Ores 1 128x128.png", tile: 1}
+  oreIron: {sheet: "Cubes/Cubes - Ores 1 128x128.png", tile: 2}
+  oreGold: {sheet: "Cubes/Cubes - Ores 1 128x128.png", tile: 3}
+  oreDiamond: {sheet: "Cubes/Cubes - Ores 1 128x128.png", tile: 4}
+  tree_side: {sheet: "Cubes/Cubes - Dirt 128x128.png", tile: 1}
+  tree_top: {sheet: "Cubes/Cubes - Dirt 128x128.png", tile: 2}

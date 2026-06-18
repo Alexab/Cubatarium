@@ -27,6 +27,10 @@ struct ResourcePackBlock
   std::array<std::string, 6> TextureStems{};
 };
 
+/// Runtime texture atlas key: isolates same stem name across packs (e.g. stone).
+std::string PackQualifiedTextureStem(const std::string &packId,
+                                     const std::string &stem);
+
 class UResourcePack
 {
 public:

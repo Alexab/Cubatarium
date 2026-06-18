@@ -131,6 +131,7 @@ private:
   void SaveActiveWorldIfNeeded();
   void ScheduleDeferredMenuAction(std::function<void()> Action);
   void EnterGameAfterWorldChange();
+  void RefreshBlockCatalog();
   void ShowInGameHud();
   void SyncCursorVisibility();
   AppCursorPolicy GetCursorPolicy() const;
