@@ -10,6 +10,7 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+#include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <cmath>
@@ -223,13 +224,23 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
 
   const glm::vec3 spawnOrigin =
       AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
-  if (def->role != CreatureRole::ControlledDefault &&
-      !CanCreatureOccupyAt(def->habitat, spawnOrigin,
-                           def->bounds.restSizeBlocks))
+  const glm::vec3 spawnSize = def->bounds.restSizeBlocks;
+  if (def->role != CreatureRole::ControlledDefault)
   {
-    std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
-              << std::endl;
-    return 0;
+    if (!cutum::HabitatAllowsAtForSpawn(*this, def->habitat, spawnOrigin,
+                                        spawnSize))
+    {
+      std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
+                << std::endl;
+      return 0;
+    }
+    const CollisionVolume vol = CollisionVolumeFromBody(spawnOrigin, spawnSize);
+    if (CheckCreatureCollisionVolume(vol, 0) || CheckBlockCollisionVolume(vol))
+    {
+      std::cerr << "SpawnCreature: no space for '" << speciesId << "'"
+                << std::endl;
+      return 0;
+    }
   }
 
   const CreatureId Id = NextCreatureId++;
@@ -257,7 +268,7 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
       creature->GetBounds().currentSizeBlocks, def->eyeHeight);
-  if (def->habitat != CreatureHabitat::Terrestrial)
+  if (def.habitat != CreatureHabitat::Terrestrial)
   {
     creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
   }
@@ -270,6 +281,16 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   if (def->habitat == CreatureHabitat::Terrestrial)
   {
     SnapCreatureFeetToGround(*Creatures[Id]);
+  }
+  else if (def->habitat == CreatureHabitat::Amphibious)
+  {
+    const EnvironmentSample env = ProbeEnvironmentAt(
+        *this, Creatures[Id]->GetBodyOrigin(),
+        def->bounds.restSizeBlocks);
+    if (!env.inWater)
+    {
+      SnapCreatureFeetToGround(*Creatures[Id]);
+    }
   }
   if (def->role != CreatureRole::ControlledDefault)
   {

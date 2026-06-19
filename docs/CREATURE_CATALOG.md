@@ -136,7 +136,7 @@ Sources: `tools/creature_luanti_sources.yaml`, UV mapping: `tools/creature_rigid
 
 Audit baseline (asset tier, icons, habitat): `python tools/audit_creature_catalog.py` → `docs/CREATURE_AUDIT_REPORT.md`, `tools/creature_audit_status.yaml`.
 
-Spawn / runtime tracking: `python tools/diagnose_creature_spawn.py`, `python tools/verify_creature_spawn.py`, `python tools/sync_creature_resolution.py` → `tools/creature_resolution_log.yaml`, `docs/CREATURE_RESOLUTION_LOG.md`, `docs/CREATURE_SPAWN_MATRIX.md`, `docs/CREATURE_VERIFICATION_MATRIX.md`. Manual spawn checklist: `docs/CREATURE_MANUAL_SPAWN_CHECKLIST.md`.
+Spawn / runtime tracking: `python tools/diagnose_creature_spawn.py`, `python tools/verify_creature_spawn.py`, `python tools/sync_creature_resolution.py` → `tools/creature_resolution_log.yaml`, `docs/CREATURE_RESOLUTION_LOG.md`, `docs/CREATURE_SPAWN_MATRIX.md`, `docs/CREATURE_VERIFICATION_MATRIX.md`. Manual spawn checklist: `docs/CREATURE_MANUAL_SPAWN_CHECKLIST.md`. **Remaining work:** [`docs/CREATURE_DEBT_PLAN.md`](CREATURE_DEBT_PLAN.md).
 
 Sync custom part geometry into JSON after editing `creature_rigid_parts.yaml`:
 

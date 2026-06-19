@@ -202,7 +202,10 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     const glm::vec3 candidate = world.ResolveMovementBody(
         BodyOrigin, delta, Bounds.profile.restSizeBlocks, Id);
     const bool habitatOk =
-        habitat == CreatureHabitat::Aerial
+        (habitat == CreatureHabitat::Aerial ||
+         habitat == CreatureHabitat::Aquatic ||
+         habitat == CreatureHabitat::Amphibious ||
+         habitat == CreatureHabitat::Lava)
             ? world.HabitatAllowsMovementAt(habitat, candidate,
                                             Bounds.profile.restSizeBlocks)
             : HabitatAllowsAt(world, habitat, candidate,

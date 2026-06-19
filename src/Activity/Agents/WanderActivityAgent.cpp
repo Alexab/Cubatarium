@@ -8,8 +8,8 @@ namespace cutum
 namespace
 {
 
-constexpr int kMaxDirectionAttempts = 8;
-constexpr float kWanderProbeDistance = 1.0f;
+constexpr int kMaxDirectionAttempts = 12;
+constexpr float kWanderProbeDistance = 1.25f;
 
 glm::vec3 RandomWanderDirection(CreatureHabitat habitat)
 {
@@ -52,15 +52,15 @@ bool PickWanderDirection(IWorldPerception &perception,
     glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
     if (habitat == CreatureHabitat::Aerial)
     {
-      for (float lift = 0.0f; lift <= 3.0f; lift += 1.0f)
+      for (float lift = -1.0f; lift <= 4.0f; lift += 1.0f)
       {
         const glm::vec3 lifted = probe + glm::vec3(0.0f, lift, 0.0f);
         if (perception.HabitatAllowsMovementAt(habitat, lifted, boundsSize))
         {
           outDirection = dir;
-          if (lift > 0.0f)
+          if (std::abs(lift) > 1e-3f)
           {
-            outDirection.y += lift * 0.15f;
+            outDirection.y += lift * 0.12f;
             if (glm::length(outDirection) > 1e-4f)
             {
               outDirection = glm::normalize(outDirection);
@@ -131,7 +131,14 @@ void UWanderActivityAgent::Tick(IWorldPerception &perception,
       if (!PickWanderDirection(perception, *view, snapshot->habitat,
                                snapshot->boundsSize, nextDir))
       {
-        nextDir = glm::vec3(0.0f);
+        if (snapshot->habitat == CreatureHabitat::Aerial)
+        {
+          nextDir = RandomWanderDirection(CreatureHabitat::Aerial);
+        }
+        else
+        {
+          nextDir = glm::vec3(0.0f);
+        }
       }
       st.direction = nextDir;
     }

@@ -125,7 +125,7 @@ std::optional<float> FindAquaticSpawnFeetY(const UWorld &world, int worldX,
   }
   const float depth =
       static_cast<float>(column->maxY - column->minY + 1);
-  if (depth + 1e-3f < bodyHeight * 0.55f)
+  if (depth + 1e-3f < bodyHeight * 0.35f)
   {
     return std::nullopt;
   }
@@ -257,7 +257,10 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
 
   if (def.habitat == CreatureHabitat::Terrestrial)
   {
-    if (const std::optional<float> feetY = world.QueryGroundFeetYColumn(gx, gz))
+    const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
+    const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
+    if (const std::optional<float> feetY =
+            world.QueryGroundFeetYColumn(probeGx, probeGz))
     {
       return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
@@ -279,14 +282,12 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
     if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
             world, fluidCol.x, fluidCol.y, false, bodyHeight))
     {
-      return glm::vec3(static_cast<float>(fluidCol.x), *feetY,
-                       static_cast<float>(fluidCol.y));
+      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     if (const std::optional<float> feetY =
             FindAquaticFeetY(world, fluidCol.x, fluidCol.y, false))
     {
-      return glm::vec3(static_cast<float>(fluidCol.x), *feetY,
-                       static_cast<float>(fluidCol.y));
+      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -306,8 +307,7 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
     if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
             world, fluidCol.x, fluidCol.y, true, bodyHeight))
     {
-      return glm::vec3(static_cast<float>(fluidCol.x), *feetY,
-                       static_cast<float>(fluidCol.y));
+      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -331,8 +331,7 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
       if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
               world, fluidCol.x, fluidCol.y, false, bodyHeight))
       {
-        return glm::vec3(static_cast<float>(fluidCol.x), *feetY,
-                         static_cast<float>(fluidCol.y));
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
     }
     if (const std::optional<float> feetY = world.QueryGroundFeetYColumn(gx, gz))
@@ -381,28 +380,50 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
                              const glm::vec3 &sizeBlocks)
 {
-  if (habitat != CreatureHabitat::Aerial)
-  {
-    return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
-  }
-  const EnvironmentSample env =
-      ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 0.5f);
-  if (env.inFluid)
-  {
-    return false;
-  }
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
   if (world.CheckCollisionVolume(vol, 0))
   {
     return false;
   }
-  return HasAerialClearance(world, vol, 0.5f);
+  if (habitat == CreatureHabitat::Aerial)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 0.25f);
+    return !env.inFluid;
+  }
+  if (habitat == CreatureHabitat::Aquatic)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    return env.inWater;
+  }
+  if (habitat == CreatureHabitat::Lava)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    return env.inLava;
+  }
+  if (habitat == CreatureHabitat::Amphibious)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    if (env.inWater)
+    {
+      return true;
+    }
+    return env.onSolidGround && !env.inFluid;
+  }
+  return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
 }
 
 bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
                              const glm::vec3 &sizeBlocks)
 {
+  if (habitat == CreatureHabitat::Aerial)
+  {
+    return HabitatAllowsMovementAt(world, habitat, bodyOrigin, sizeBlocks);
+  }
   const EnvironmentSample env =
       ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 0.5f);
   return HabitatMatches(habitat, env);
