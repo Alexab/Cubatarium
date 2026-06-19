@@ -283,6 +283,33 @@ def build_limb_atlas(region: Image.Image) -> Image.Image:
     return region.resize((64, 64), Image.NEAREST)
 
 
+def opaque_fill(img: Image.Image) -> Image.Image:
+    out = img.convert("RGBA").copy()
+    w, h = out.size
+    if w == 0 or h == 0:
+        return out
+    px = out.load()
+    for _ in range(max(w, h)):
+        changed = False
+        nxt = out.copy()
+        npx = nxt.load()
+        for y in range(h):
+            for x in range(w):
+                if px[x, y][3] >= 250:
+                    continue
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] >= 250:
+                        npx[x, y] = (px[nx, ny][0], px[nx, ny][1], px[nx, ny][2], 255)
+                        changed = True
+                        break
+        out = nxt
+        px = out.load()
+        if not changed:
+            break
+    return out
+
+
 def tint_rgba(img: Image.Image, rgb: tuple[int, int, int], strength: float = 0.45) -> Image.Image:
     out = img.convert("RGBA")
     tint = Image.new("RGBA", out.size, (*rgb, 255))
@@ -301,10 +328,10 @@ def export_player_parts(skin_path: Path, out_dir: Path, tint: tuple[int, int, in
         leg = tint_rgba(leg, tint, 0.4)
         arm = tint_rgba(arm, tint, 0.25)
     out_dir.mkdir(parents=True, exist_ok=True)
-    face.save(out_dir / "face.png")
-    body.save(out_dir / "body.png")
-    arm.save(out_dir / "arm.png")
-    leg.save(out_dir / "leg.png")
+    opaque_fill(face).save(out_dir / "face.png")
+    opaque_fill(body).save(out_dir / "body.png")
+    opaque_fill(arm).save(out_dir / "arm.png")
+    opaque_fill(leg).save(out_dir / "leg.png")
     icon = skin.resize((32, 32), Image.NEAREST)
     icon.save(out_dir / "icon.png")
 
@@ -323,11 +350,11 @@ def export_skin_player_parts(
         legs = tint_rgba(legs, tint, 0.4)
         arms = tint_rgba(arms, tint, 0.25)
     out_dir.mkdir(parents=True, exist_ok=True)
-    face.save(out_dir / "face.png")
-    torso.save(out_dir / "torso.png")
-    arms.save(out_dir / "arms.png")
-    legs.save(out_dir / "legs.png")
-    torso.save(out_dir / "diffuse.png")
+    opaque_fill(face).save(out_dir / "face.png")
+    opaque_fill(torso).save(out_dir / "torso.png")
+    opaque_fill(arms).save(out_dir / "arms.png")
+    opaque_fill(legs).save(out_dir / "legs.png")
+    opaque_fill(torso).save(out_dir / "diffuse.png")
 
 
 def export_mob_texture(src: Path, out_dir: Path) -> None:
