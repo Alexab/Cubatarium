@@ -21,6 +21,7 @@ struct GuiTheme
   glm::vec4 SlotSelected{0.75f, 0.88f, 0.28f, 1.0f};
   glm::vec4 SlotSelectedFill{0.45f, 0.55f, 0.15f, 0.45f};
   glm::vec4 SlotSelectedInner{0.9f, 0.95f, 0.5f, 0.9f};
+  glm::vec4 SlotDisabledFill{0.0f, 0.0f, 0.0f, 0.55f};
   /// Keyboard focus ring (Tab navigation).
   glm::vec4 FocusRing{0.75f, 0.88f, 0.28f, 1.0f};
   int FocusRingThickness{2};

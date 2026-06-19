@@ -65,7 +65,7 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
 - `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
-- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation` (`walk_cycle_hz`, `leg_swing_deg`, `arm_swing_deg`, `fly_body_pitch_deg`, `body_bob_blocks`, `tail_swing_deg`, `run_speed_multiplier`, `crouch_leg_bend_deg`, `wing_idle_swing_deg`), `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `color`)
+- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation` (`walk_cycle_hz`, `leg_swing_deg`, `arm_swing_deg`, `fly_body_pitch_deg`, `body_bob_blocks`, `tail_swing_deg`, `run_speed_multiplier`, `crouch_leg_bend_deg`, `wing_idle_swing_deg`), `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `species_texture`, `color`)
 
 ### `skin.json`
 
@@ -89,7 +89,7 @@ Removed: `spawn_test_mob`.
 - **E** → Creative palette: Blocks, Objects, **Creatures**, **Skins**
 - Use active slot (ПКМ Classic / tap ЛКМ Cubatarium): spawn species ahead of view
 - **Creatures** icons are **dimmed** when spawn is impossible in the current view zone (wrong habitat)
-- Tooltip on dimmed entry: `Requires land` / `Requires water` / `Requires open air`
+- Tooltip on dimmed entry: habitat hint in Russian (`Нужна вода`, `Нужно открытое небо`, …)
 - Skins slot: apply skin to targeted creature (ray-AABB, 8 m)
 
 ## Habitat
@@ -133,6 +133,14 @@ python tools/bake_rigid_creature_textures.py
 ```
 
 Sources: `tools/creature_luanti_sources.yaml`, UV mapping: `tools/creature_rigid_uv_maps.yaml`, part geometry: `tools/creature_rigid_parts.yaml`. Requires `E:\Work\Home\CubatariumTextureResearch` with `.b3d` models and textures.
+
+Audit baseline (asset tier, icons, habitat): `python tools/audit_creature_catalog.py` → `docs/CREATURE_AUDIT_REPORT.md`, `tools/creature_audit_status.yaml`.
+
+Sync custom part geometry into JSON after editing `creature_rigid_parts.yaml`:
+
+```powershell
+python tools/sync_creature_parts_from_rigid.py --species seahorse shark
+```
 
 Debug / tuning:
 

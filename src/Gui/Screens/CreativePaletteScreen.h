@@ -52,6 +52,7 @@ private:
   IGuiIconSource *Icons{nullptr};
   std::vector<std::string> GridEntryIds;
   std::vector<std::string> GridEntryLabels;
+  std::vector<std::string> GridSpawnHints;
   UGuiPanel *Panel{nullptr};
   UGuiTabBar *MainTabs{nullptr};
   UGuiTabBar *SubTabs{nullptr};

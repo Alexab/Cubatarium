@@ -20,6 +20,7 @@ public:
   void SetLabel(const std::string &label) { Label = label; }
   void SetIconTexture(unsigned int texture) { IconTexture = texture; }
   void SetCornerHint(const std::string &hint) { CornerHint = hint; }
+  void SetDimmed(bool dimmed) { Dimmed = dimmed; }
   void SetOnClick(std::function<void()> handler)
   {
     OnClick = std::move(handler);
@@ -42,6 +43,7 @@ private:
   const GuiTheme *Theme;
   int SlotSize;
   bool Selected{false};
+  bool Dimmed{false};
   std::string Label;
   std::string CornerHint;
   unsigned int IconTexture{0};

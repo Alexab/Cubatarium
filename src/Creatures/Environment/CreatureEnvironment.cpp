@@ -163,6 +163,25 @@ std::string HabitatRequirementLabel(CreatureHabitat habitat)
   return u8"Здесь нельзя заспавнить";
 }
 
+std::string GetCreatureSpawnBlockedHint(const UWorld &world,
+                                        const CreatureDefinition &def,
+                                        const glm::vec3 &bodyOrigin)
+{
+  const glm::vec3 size = def.bounds.restSizeBlocks;
+  const glm::vec3 adjusted = AdjustSpawnBodyOrigin(world, def, bodyOrigin);
+  const EnvironmentSample env = ProbeEnvironmentAt(world, adjusted, size);
+  if (!HabitatMatches(def.habitat, env))
+  {
+    return HabitatRequirementLabel(def.habitat);
+  }
+  const CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
+  if (world.CheckCollisionVolume(vol, 0))
+  {
+    return u8"Нет места";
+  }
+  return {};
+}
+
 glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
                                 const CreatureDefinition &def,
                                 const glm::vec3 &probeOrigin)
@@ -203,6 +222,24 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
                      probeOrigin.z);
     }
     return probeOrigin;
+  }
+  if (def.habitat == CreatureHabitat::Aerial)
+  {
+    const glm::vec3 size = def.bounds.restSizeBlocks;
+    for (float dy = 2.0f; dy <= 12.0f; dy += 1.0f)
+    {
+      const glm::vec3 lifted = probeOrigin + glm::vec3(0.0f, dy, 0.0f);
+      const EnvironmentSample env = ProbeEnvironmentAt(world, lifted, size);
+      if (!HabitatMatches(CreatureHabitat::Aerial, env))
+      {
+        continue;
+      }
+      const CollisionVolume vol = CollisionVolumeFromBody(lifted, size);
+      if (!world.CheckCollisionVolume(vol, 0))
+      {
+        return lifted;
+      }
+    }
   }
   return probeOrigin;
 }

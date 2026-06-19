@@ -42,6 +42,10 @@ bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
 
 std::string HabitatRequirementLabel(CreatureHabitat habitat);
 
+std::string GetCreatureSpawnBlockedHint(const UWorld &world,
+                                        const CreatureDefinition &def,
+                                        const glm::vec3 &bodyOrigin);
+
 glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
                                 const CreatureDefinition &def,
                                 const glm::vec3 &probeOrigin);

@@ -226,6 +226,72 @@ def check_hotbar_creature_persistence() -> None:
     print("OK hotbar creature slot 1 survives load without EnsureDefaultHotbar")
 
 
+def is_solid_icon(path: Path) -> bool:
+    im = Image.open(path).convert("RGBA")
+    px = [p for p in im.getdata() if p[3] > 200]
+    if len(px) < 16:
+        return True
+    r0, g0, b0, _ = px[0]
+    for r, g, b, _ in px[1:]:
+        if abs(r - r0) > 8 or abs(g - g0) > 8 or abs(b - b0) > 8:
+            return False
+    return True
+
+
+WAVE_BAKE_TERRESTRIAL = (
+    "bunny",
+    "rat",
+    "fox",
+    "badger",
+    "spider",
+    "stone_monster",
+    "tree_monster",
+    "mese_monster",
+    "dirt_monster",
+    "orc",
+    "ogre",
+    "golem",
+    "warthog",
+    "panda",
+    "hedgehog",
+    "treeman",
+)
+
+WAVE_BAKE_MARINE = (
+    "trout",
+    "shark",
+    "seahorse",
+    "dolphin",
+    "crab",
+    "lobster",
+    "squid",
+    "octopus",
+    "whale",
+    "stingray",
+)
+
+
+def check_wave_baked(species: str) -> None:
+    lic = MODELS / species / "LICENSE.txt"
+    if lic.is_file() and "Placeholder procedural" in lic.read_text(encoding="utf-8"):
+        print(f"SKIP wave bake {species}: placeholder (upstream texture missing)")
+        return
+    creature = load_creature(species)
+    icon_mode = creature.get("visual", {}).get("icon", {}).get("mode", "")
+    icon_path = MODELS / species / "textures" / "icon.png"
+    if icon_mode == "species_texture" and icon_path.is_file():
+        if is_solid_icon(icon_path):
+            raise SystemExit(f"FAIL {species}: baked icon still solid color")
+    stems = sorted(texture_stems(creature) & {"body", "face"})
+    opaque_stems: tuple[str, ...] = ("body",)
+    if "face" in stems:
+        face_path = MODELS / species / "textures" / "face.png"
+        if face_path.is_file() and alpha_fraction(face_path) <= 0.001:
+            opaque_stems = ("body", "face")
+    check_opaque(species, opaque_stems)
+    print(f"OK wave bake {species}")
+
+
 def main() -> None:
     print("=== creature fidelity smoke ===")
     check_opaque("sheep", ("body", "face", "ear", "tail"))
@@ -261,6 +327,14 @@ def main() -> None:
         if lic.is_file() and "Placeholder procedural" in lic.read_text(encoding="utf-8"):
             raise SystemExit(f"FAIL {species}: still using placeholder LICENSE")
     print("OK wave-2 imported textures (sample)")
+    for species in WAVE_BAKE_TERRESTRIAL:
+        path = MODELS / species / "textures" / "body.png"
+        if path.is_file():
+            check_wave_baked(species)
+    for species in WAVE_BAKE_MARINE:
+        path = MODELS / species / "textures" / "body.png"
+        if path.is_file():
+            check_wave_baked(species)
     check_b3d_samples()
     check_hotbar_legacy_id_remap()
     check_hotbar_creature_persistence()

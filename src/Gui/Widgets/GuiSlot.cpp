@@ -70,6 +70,11 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
         Selected ? glm::vec3(0.95f, 0.95f, 0.95f) : Theme->TextSecondary;
     renderer.DrawText(CornerHint, Bounds.X + 4, Bounds.Y + 2, textColor);
   }
+
+  if (Dimmed)
+  {
+    renderer.DrawFilledRect(Bounds, Theme->SlotDisabledFill);
+  }
 }
 
 bool UGuiSlot::OnMouseDown(const GuiMouseEvent &event)

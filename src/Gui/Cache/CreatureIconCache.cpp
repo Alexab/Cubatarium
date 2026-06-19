@@ -349,7 +349,11 @@ GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
   if (Textures)
   {
     const GLuint iconTex = Textures->GetTexture(speciesId + "/icon");
-    if (iconTex != 0)
+    const bool useDirectIcon =
+        iconTex != 0 &&
+        (def->visual.iconMode == "species_texture" ||
+         def->visual.iconMode == "skin_texture");
+    if (useDirectIcon)
     {
       return iconTex;
     }

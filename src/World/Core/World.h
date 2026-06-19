@@ -250,6 +250,7 @@ public:
                            const std::string &skinId = "");
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
+  std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
   bool CanCreatureOccupyAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
                            const glm::vec3 &sizeBlocks) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,

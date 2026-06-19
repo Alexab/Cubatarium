@@ -425,6 +425,23 @@ bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
   return CanSpawnCreatureAt(*this, *def, bodyOrigin);
 }
 
+std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
+{
+  const CreatureDefinition *def =
+      CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
+  if (!def)
+  {
+    return u8"Неизвестный вид";
+  }
+  if (!def->catalog.spawnable && def->role != CreatureRole::ControlledDefault)
+  {
+    return u8"Нельзя спавнить";
+  }
+  const glm::vec3 bodyOrigin =
+      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+  return ::cutum::GetCreatureSpawnBlockedHint(*this, *def, bodyOrigin);
+}
+
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,
                                                      const glm::vec3 &front,
                                                      float maxDistance) const

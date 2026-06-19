@@ -14,6 +14,9 @@
 | TD-CRE-010 | 3 | FP viewmodel arms (`fp_parts[]`) | Not a blocker | backlog |
 | TD-CRE-015 | habitat | Amphibious habitat (`penguin`, `seal`) | `CreatureHabitat::Amphibious` + spawn/move rules | done |
 | TD-CRE-016 | habitat | Lava fluid habitat for `lava_flan` | `CreatureHabitat::Lava` + lava block probe | done |
+| TD-CRE-017 | audit | Wave bake coverage (~42 Luanti mobs) | `creature_luanti_sources.yaml` + `bake_rigid_creature_textures.py`; partial until all research textures present | 3 |
+| TD-CRE-018 | audit | Per-species aquatic rigid parts (seahorse ≠ dolphin template) | `creature_rigid_parts.yaml` + `sync_creature_parts_from_rigid.py` | done |
+| TD-CRE-019 | audit | Icon placeholder fallback (`parts_preview` → FBO; baked `species_texture` → `icon.png`) | `CreatureIconCache.cpp` + bake `patch_creature_icon_mode` | done |
 
 ## Closed
 

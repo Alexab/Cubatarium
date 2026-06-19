@@ -1,4 +1,5 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Content/ContentTypeRegistry.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
@@ -217,6 +218,12 @@ void UCreativePaletteScreen::UpdateTooltip()
       static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
   {
     text = labelAt(static_cast<size_t>(HoldSlotIndex));
+    if (Kind == ContentKind::UCreature &&
+        static_cast<size_t>(HoldSlotIndex) < GridSpawnHints.size() &&
+        !GridSpawnHints[static_cast<size_t>(HoldSlotIndex)].empty())
+    {
+      text += "\n" + GridSpawnHints[static_cast<size_t>(HoldSlotIndex)];
+    }
     if (PointerX < 0 || PointerY < 0)
     {
       UGuiSlot *slot = static_cast<size_t>(HoldSlotIndex) < GridSlots.size()
@@ -240,6 +247,12 @@ void UCreativePaletteScreen::UpdateTooltip()
           i < GridEntryIds.size())
       {
         text = labelAt(i);
+        if (Kind == ContentKind::UCreature &&
+            static_cast<size_t>(i) < GridSpawnHints.size() &&
+            !GridSpawnHints[i].empty())
+        {
+          text += "\n" + GridSpawnHints[i];
+        }
         break;
       }
     }
@@ -349,6 +362,7 @@ void UCreativePaletteScreen::RebuildGrid()
   GridSlots.clear();
   GridEntryIds.clear();
   GridEntryLabels.clear();
+  GridSpawnHints.clear();
 
   const auto entries =
       Catalog->GetEntries(Kind, ActiveTypeId.empty() ? "misc" : ActiveTypeId);
@@ -432,11 +446,22 @@ void UCreativePaletteScreen::RebuildGrid()
             Session->BeginDragFromSlot(address, entry);
           }
         });
+    std::string spawnHint;
+    if (Kind == ContentKind::UCreature && Session)
+    {
+      const bool canSpawn = Session->CanSpawnCreatureByView(entryId);
+      slot->SetDimmed(!canSpawn);
+      if (!canSpawn)
+      {
+        spawnHint = Session->GetCreatureSpawnBlockedHint(entryId);
+      }
+    }
     UGuiSlot *ptr =
         static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
     GridSlots.push_back(ptr);
     GridEntryIds.push_back(entryId);
     GridEntryLabels.push_back(entries[i].displayName);
+    GridSpawnHints.push_back(std::move(spawnHint));
   }
 
   Scroll->SetAfterScrollLayout([this](UGuiScrollView &)

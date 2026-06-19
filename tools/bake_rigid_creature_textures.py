@@ -284,6 +284,8 @@ def bake_species(
         v1 = max(r[3] for r in stem_rects.values())
         crop_uv(atlas, (u0, v0, u1, v1), icon_size).save(tex_dir / "icon.png")
 
+    patch_creature_icon_mode(models_root, species_id)
+
     for stem in ("body", "leg", "arm", "face"):
         if stem not in stem_rects and (tex_dir / f"{stem}.png").exists():
             pass
@@ -376,6 +378,18 @@ def patch_creature_json_layout(models_root: Path, species_id: str, layout: str) 
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def patch_creature_icon_mode(models_root: Path, species_id: str) -> None:
+    path = models_root / "creatures" / species_id / "creature.json"
+    if not path.is_file():
+        return
+    data = json.loads(path.read_text(encoding="utf-8"))
+    vis = data.setdefault("visual", {})
+    icon = vis.setdefault("icon", {})
+    if icon.get("mode") != "species_texture":
+        icon["mode"] = "species_texture"
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--research", type=Path, default=RESEARCH_DEFAULT)
@@ -398,10 +412,13 @@ def main() -> None:
         patch_creature_json_layout(ROOT / "models", species_id, layout)
         if species_id == "human":
             continue
-        bake_species(
-            species_id, sources, maps, args.research.resolve(),
-            ROOT / "models", out_size, icon_size, pad, match_margin, leg_margin,
-        )
+        try:
+            bake_species(
+                species_id, sources, maps, args.research.resolve(),
+                ROOT / "models", out_size, icon_size, pad, match_margin, leg_margin,
+            )
+        except FileNotFoundError as exc:
+            print(f"SKIP {species_id}: {exc}")
 
     skin_list = args.skin or list(sources.get("skins", {}).keys())
     for skin_id in skin_list:

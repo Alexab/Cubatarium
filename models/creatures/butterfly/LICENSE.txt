@@ -1,2 +1,4 @@
-Placeholder procedural textures for Cubatarium.
-Replace with CC-licensed Luanti assets when imported.
+Source file: dmobs_butterfly1.png
+Upstream: dmobs/textures/dmobs_butterfly1.png
+License: CC BY-SA 3.0
+Attribution: dmobs — D00Med

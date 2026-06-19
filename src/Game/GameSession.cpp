@@ -800,6 +800,21 @@ bool UGameSession::AssignToHotbar(const InventoryEntryRef &entry,
   return AssignSlot(barIndex, slotIndex, entry);
 }
 
+bool UGameSession::CanSpawnCreatureByView(const std::string &speciesId) const
+{
+  return World && World->CanSpawnCreatureByView(speciesId);
+}
+
+std::string UGameSession::GetCreatureSpawnBlockedHint(
+    const std::string &speciesId) const
+{
+  if (!World)
+  {
+    return {};
+  }
+  return World->GetCreatureSpawnBlockedHint(speciesId);
+}
+
 InventoryMode UGameSession::GetInventoryMode() const { return ActiveInventoryMode; }
 
 void UGameSession::SetInventoryMode(InventoryMode mode)

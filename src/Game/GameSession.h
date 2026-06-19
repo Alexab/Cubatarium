@@ -80,6 +80,8 @@ public:
                          size_t slotIndex) const override;
   bool AssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
                       size_t slotIndex) override;
+  bool CanSpawnCreatureByView(const std::string &speciesId) const;
+  std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
   InventoryMode GetInventoryMode() const override;
   void SetInventoryMode(InventoryMode mode) override;
 

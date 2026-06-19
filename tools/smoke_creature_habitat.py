@@ -68,7 +68,7 @@ REPRESENTATIVE = {
     "terrestrial": "sheep",
     "aquatic": "trout",
     "aerial": "bee",
-    "amphibious": "seal",
+    "amphibious": "penguin",
     "lava": "lava_flan",
 }
 
@@ -123,6 +123,13 @@ def main() -> None:
     if total < 50:
         raise SystemExit(f"FAIL catalog size {total} < 50")
     print(f"OK catalog size: {total} species")
+
+    # Aerial spawn lift: body on ground fails habitat; lifted probe passes in open air.
+    aerial = load_creature("bee")
+    if aerial.get("habitat") != "aerial":
+        raise SystemExit("FAIL bee: expected aerial for spawn lift fixture")
+    print("OK aerial spawn lift fixture species: bee")
+
     print("smoke_creature_habitat: all checks passed")
 
 
