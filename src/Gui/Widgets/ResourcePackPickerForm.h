@@ -42,6 +42,8 @@ private:
   std::vector<InstalledPackInfo> InstalledPacks;
   ResourcePackSelection Selection;
   bool Built{false};
+  mutable bool HasLastLayoutArea{false};
+  mutable GuiRect LastLayoutArea{};
 
   UGuiLabel *PrimaryHintLabel{nullptr};
   UGuiLabel *SecondaryHintLabel{nullptr};

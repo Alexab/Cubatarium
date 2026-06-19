@@ -75,6 +75,8 @@ private:
   int DragStartY{0};
   int DragStartScroll{0};
   int PendingToggleIndex{-1};
+  bool HasLayoutBounds{false};
+  GuiRect LayoutBounds{};
   static constexpr int kScrollbarWidth = 10;
 };
 

@@ -157,6 +157,14 @@ void UNewWorldScreen::OnViewportChanged(int width, int height)
   Relayout();
 }
 
+void UNewWorldScreen::Update(double /*dt*/)
+{
+  if (BodyScroll)
+  {
+    BodyScroll->LayoutContent(0, 0);
+  }
+}
+
 void UNewWorldScreen::Relayout()
 {
   if (!Window || !DialogFrame)

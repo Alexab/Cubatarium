@@ -42,6 +42,11 @@ int UGuiCheckList::MinHeight() const
 
 void UGuiCheckList::ApplyMinimumBounds()
 {
+  if (HasLayoutBounds)
+  {
+    Bounds = LayoutBounds;
+    return;
+  }
   const int minH = MinHeight();
   if (Bounds.H < minH)
   {
@@ -63,11 +68,13 @@ void UGuiCheckList::SetBounds(const GuiRect &bounds)
   }
   b.W = std::max(1, b.W);
   UGuiWidget::SetBounds(b);
+  LayoutBounds = b;
+  HasLayoutBounds = true;
 }
 
 void UGuiCheckList::UpdateLayout(const GuiRect &parentClientArea)
 {
-  UGuiWidget::UpdateLayout(parentClientArea);
+  (void)parentClientArea;
   ApplyMinimumBounds();
 }
 

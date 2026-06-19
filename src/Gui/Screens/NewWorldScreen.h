@@ -23,6 +23,7 @@ public:
   ~UNewWorldScreen();
 
   void Build(UGuiContext &ctx) override;
+  void Update(double dt) override;
   void OnViewportChanged(int width, int height) override;
 
 private:

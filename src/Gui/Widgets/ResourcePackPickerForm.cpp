@@ -155,13 +155,9 @@ void UResourcePackPickerForm::SyncListItems()
   wireList(SecondaryList);
   UpdateWarnings();
 
-  if (PrimaryList)
+  if (HasLastLayoutArea && LastLayoutArea.W > 0)
   {
-    PrimaryList->SetBounds(PrimaryList->GetBounds());
-  }
-  if (SecondaryList)
-  {
-    SecondaryList->SetBounds(SecondaryList->GetBounds());
+    Layout(LastLayoutArea);
   }
 
   if (PrimaryHintLabel)
@@ -236,20 +232,26 @@ void UResourcePackPickerForm::UpdateWarnings()
   {
     WarningLabel->SetText("");
     WarningLabel->SetVisible(false);
-    return;
   }
-  std::ostringstream oss;
-  oss << "WARN: ";
-  for (size_t i = 0; i < warnings.size(); ++i)
+  else
   {
-    if (i > 0)
+    std::ostringstream oss;
+    oss << "WARN: ";
+    for (size_t i = 0; i < warnings.size(); ++i)
     {
-      oss << "; ";
+      if (i > 0)
+      {
+        oss << "; ";
+      }
+      oss << warnings[i];
     }
-    oss << warnings[i];
+    WarningLabel->SetText(oss.str());
+    WarningLabel->SetVisible(true);
   }
-  WarningLabel->SetText(oss.str());
-  WarningLabel->SetVisible(true);
+  if (HasLastLayoutArea && LastLayoutArea.W > 0)
+  {
+    Layout(LastLayoutArea);
+  }
 }
 
 void UResourcePackPickerForm::BuildInto(UGuiPanel &panel)
@@ -320,6 +322,8 @@ int UResourcePackPickerForm::MeasureHeight(const GuiRect &area) const
 
 void UResourcePackPickerForm::Layout(const GuiRect &area) const
 {
+  LastLayoutArea = area;
+  HasLastLayoutArea = area.W > 0;
   if (ContainerPanel)
   {
     ContainerPanel->SetBounds(area);

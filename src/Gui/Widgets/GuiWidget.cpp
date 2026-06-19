@@ -8,9 +8,20 @@ namespace cutum
 
 void UGuiWidget::UpdateLayout(const GuiRect &parentClientArea)
 {
-  if (Bounds.W <= 0 || Bounds.H <= 0)
+  if (Bounds.W <= 0 && Bounds.H <= 0)
   {
     Bounds = parentClientArea;
+  }
+  else
+  {
+    if (Bounds.W <= 0)
+    {
+      Bounds.W = std::max(1, parentClientArea.W);
+    }
+    if (Bounds.H <= 0)
+    {
+      Bounds.H = std::max(1, parentClientArea.H);
+    }
   }
   const GuiRect childClient = Bounds.Inset(0);
   for (auto &child : Children)
