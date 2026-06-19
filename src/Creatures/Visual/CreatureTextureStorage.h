@@ -14,6 +14,7 @@ class UCreatureTextureStorage
 public:
   void LoadFromCreatureAndSkinRoots(const std::string &creaturesRoot,
                                     const std::string &skinsRoot);
+  void MergeCreatureRoot(const std::string &creaturesRoot);
   GLuint GetTexture(const std::string &assetKey) const;
   size_t Count() const { return Textures.size(); }
 

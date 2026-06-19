@@ -2165,6 +2165,13 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
   }
 }
 
+void UGeometryEngine::DrawCreatureSkinnedMesh(const glm::mat4 & /*mvp*/,
+                                            GLuint /*meshVao*/,
+                                            GLuint /*texture*/)
+{
+  // glTF skinned mesh draw — TD-CRE-001
+}
+
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
                                        const glm::vec4 &color)
 {

@@ -140,6 +140,17 @@ UApplication::UApplication(
   if (World)
   {
     World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
+    World->SetOnCreatureCatalogChanged([this]()
+                                       {
+                                         if (IconSource)
+                                         {
+                                           IconSource->ClearCreatureIconCache();
+                                         }
+                                         if (PaletteScreen)
+                                         {
+                                           PaletteScreen->InvalidateGrid();
+                                         }
+                                       });
   }
 }
 

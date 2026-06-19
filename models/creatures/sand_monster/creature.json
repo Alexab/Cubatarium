@@ -1,0 +1,174 @@
+{
+  "id": "sand_monster",
+  "display_name": "Sand Monster",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "hostile"
+    ],
+    "spawnable": true,
+    "sort_order": 32
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.75,
+      1.9,
+      0.75
+    ],
+    "max": [
+      0.75,
+      1.9,
+      0.75
+    ],
+    "min": [
+      0.75,
+      1.4,
+      0.75
+    ]
+  },
+  "eye_height": 1.65,
+  "locomotion_archetype": "terrestrial_biped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 25,
+      "arm_swing_deg": 15,
+      "fly_body_pitch_deg": 10
+    },
+    "default_texture": "body",
+    "parts": [
+      {
+        "id": "torso",
+        "offset": [
+          0.0,
+          0.95,
+          0.0
+        ],
+        "size": [
+          0.5,
+          1.0,
+          0.32
+        ],
+        "texture": "body"
+      },
+      {
+        "id": "arm_l",
+        "offset": [
+          -0.34,
+          1.02,
+          0.0
+        ],
+        "size": [
+          0.16,
+          0.52,
+          0.16
+        ],
+        "texture": "arm",
+        "pivot": [
+          -0.34,
+          1.28,
+          0.0
+        ],
+        "limb": "arm"
+      },
+      {
+        "id": "arm_r",
+        "offset": [
+          0.34,
+          1.02,
+          0.0
+        ],
+        "size": [
+          0.16,
+          0.52,
+          0.16
+        ],
+        "texture": "arm",
+        "pivot": [
+          0.34,
+          1.28,
+          0.0
+        ],
+        "limb": "arm"
+      },
+      {
+        "id": "head",
+        "offset": [
+          0.0,
+          1.58,
+          0.0
+        ],
+        "size": [
+          0.38,
+          0.38,
+          0.38
+        ],
+        "texture": "face"
+      },
+      {
+        "id": "leg_l",
+        "offset": [
+          -0.14,
+          0.32,
+          0.0
+        ],
+        "size": [
+          0.2,
+          0.65,
+          0.2
+        ],
+        "texture": "leg",
+        "pivot": [
+          -0.14,
+          0.65,
+          0.0
+        ],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_r",
+        "offset": [
+          0.14,
+          0.32,
+          0.0
+        ],
+        "size": [
+          0.2,
+          0.65,
+          0.2
+        ],
+        "texture": "leg",
+        "pivot": [
+          0.14,
+          0.65,
+          0.0
+        ],
+        "limb": "leg"
+      }
+    ],
+    "icon": {
+      "mode": "parts_preview",
+      "color": [
+        0.8,
+        0.65,
+        0.3,
+        1.0
+      ]
+    }
+  }
+}

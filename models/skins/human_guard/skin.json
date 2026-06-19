@@ -2,11 +2,35 @@
   "id": "human_guard",
   "display_name": "Guard",
   "creature_id": "human",
-  "catalog": { "tags": ["outfits"], "equippable": true, "sort_order": 1 },
+  "catalog": {
+    "tags": [
+      "outfits"
+    ],
+    "equippable": true,
+    "sort_order": 0
+  },
   "visual": {
-    "texture": "diffuse",
-    "texture_map": { "body": "diffuse", "face": "diffuse", "leg": "diffuse", "arm": "diffuse", "default": "diffuse" },
-    "wireframe_color": [0.55, 0.55, 0.6, 1.0],
-    "icon": { "mode": "skin_texture", "fallback_color": [0.55, 0.55, 0.6, 1.0] }
+    "texture": "torso",
+    "texture_map": {
+      "body": "torso",
+      "face": "face",
+      "leg": "legs",
+      "arm": "arms"
+    },
+    "wireframe_color": [
+      0.55,
+      0.55,
+      0.6,
+      1.0
+    ],
+    "icon": {
+      "mode": "skin_texture",
+      "fallback_color": [
+        0.55,
+        0.55,
+        0.6,
+        1.0
+      ]
+    }
   }
 }

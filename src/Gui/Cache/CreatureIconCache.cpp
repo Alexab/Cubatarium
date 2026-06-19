@@ -141,6 +141,69 @@ bool UCreatureIconCache::Initialize()
   return complete;
 }
 
+void UCreatureIconCache::ClearRenderedIcons()
+{
+  for (const auto &entry : SpeciesCache)
+  {
+    GLuint tex = entry.second;
+    if (tex == 0)
+    {
+      continue;
+    }
+    if (Textures)
+    {
+      const GLuint iconTex = Textures->GetTexture(entry.first + "/icon");
+      if (tex == iconTex)
+      {
+        continue;
+      }
+    }
+    glDeleteTextures(1, &tex);
+  }
+  for (const auto &entry : SkinCache)
+  {
+    GLuint tex = entry.second;
+    if (tex == 0)
+    {
+      continue;
+    }
+    if (Textures)
+    {
+      const GLuint diffuse =
+          Textures->GetTexture("skin/" + entry.first + "/diffuse");
+      if (tex == diffuse)
+      {
+        continue;
+      }
+    }
+    glDeleteTextures(1, &tex);
+  }
+  SpeciesCache.clear();
+  SkinCache.clear();
+  WarmupIndex = 0;
+  if (Species)
+  {
+    WarmupQueue = Species->ListSpawnable();
+    for (const std::string &Id : Species->ListAllIds())
+    {
+      if (const CreatureDefinition *def = Species->Get(Id))
+      {
+        if (def->role == CreatureRole::ControlledDefault)
+        {
+          WarmupQueue.push_back(Id);
+        }
+      }
+    }
+  }
+  if (Skins)
+  {
+    for (const std::string &Id : Skins->ListEquippable())
+    {
+      WarmupQueue.push_back("skin:" + Id);
+    }
+  }
+}
+
 void UCreatureIconCache::Shutdown()
 {
   for (const auto &entry : SpeciesCache)
@@ -261,6 +324,23 @@ GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
   if (!def)
   {
     return 0;
+  }
+
+  if (Textures)
+  {
+    const GLuint iconTex = Textures->GetTexture(speciesId + "/icon");
+    if (iconTex != 0)
+    {
+      return iconTex;
+    }
+  }
+
+  if (ParseCreatureVisualBackend(def->visual.backend) ==
+      CreatureVisualBackend::GltfSkeleton)
+  {
+    return RenderSolidColorIcon(def->visual.wireframeColor.r,
+                              def->visual.wireframeColor.g,
+                              def->visual.wireframeColor.b, 1.0f);
   }
 
   const ResolvedCreatureAppearance appearance =

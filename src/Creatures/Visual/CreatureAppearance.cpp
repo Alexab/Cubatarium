@@ -66,6 +66,10 @@ void ResolvePartsFromSpecies(const CreatureDefinition &def,
                                  ? def.visual.defaultTextureKey
                                  : partDef.textureStem;
     part.textureAssetKey = ResolvePartTextureKey(def.Id, stem, skin, skinId);
+    part.PivotBlocks = partDef.PivotBlocks;
+    part.HasPivot = partDef.HasPivot;
+    part.LimbKind = partDef.LimbKind;
+    part.LimbAxis = partDef.LimbAxis;
     result.Parts.push_back(part);
   }
 }

@@ -27,6 +27,7 @@ public:
 
   UPrefabIconCache &GetPrefabCache() { return *PrefabCache; }
   void ClearBlockIconCache();
+  void ClearCreatureIconCache();
   void WarmupPrefabIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
 

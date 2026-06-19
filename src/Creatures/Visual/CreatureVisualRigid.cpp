@@ -14,14 +14,25 @@ namespace cutum
 namespace
 {
 
-bool IsLegPart(const std::string &partId)
+bool IsLegLimb(const ResolvedCreaturePart &part)
 {
-  return partId == "leg_l" || partId == "leg_r";
+  if (part.LimbKind == "leg")
+  {
+    return true;
+  }
+  const std::string &id = part.partId;
+  return id == "leg_l" || id == "leg_r" || id == "leg_fl" || id == "leg_fr" ||
+         id == "leg_bl" || id == "leg_br";
 }
 
-bool IsArmPart(const std::string &partId)
+bool IsArmLimb(const ResolvedCreaturePart &part)
 {
-  return partId == "arm_l" || partId == "arm_r";
+  if (part.LimbKind == "arm")
+  {
+    return true;
+  }
+  const std::string &id = part.partId;
+  return id == "arm_l" || id == "arm_r";
 }
 
 float CrouchUpperBodyDrop(const UCreature &creature, float stanceBlend01)
@@ -87,7 +98,6 @@ glm::mat4 BuildRigidPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
   return model;
 }
 
-/// Limb rotates about pivot (hip / shoulder); mesh center is offset from pivot.
 glm::mat4 BuildLimbPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
                              const glm::vec3 &pivot,
                              const glm::vec3 &meshCenter,
@@ -117,6 +127,19 @@ glm::mat4 BuildLimbPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
   return model;
 }
 
+glm::vec3 DefaultLegPivot(const ResolvedCreaturePart &part,
+                          float torsoBottomY)
+{
+  return glm::vec3(part.offsetBlocks.x, torsoBottomY, part.offsetBlocks.z);
+}
+
+glm::vec3 DefaultArmPivot(const ResolvedCreaturePart &part)
+{
+  return glm::vec3(part.offsetBlocks.x,
+                   part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
+                   part.offsetBlocks.z);
+}
+
 } // namespace
 
 void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
@@ -133,11 +156,6 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
   CrouchUpperDrop = CrouchUpperBodyDrop(creature, blend);
   SizeBlocks = creature.GetBounds().currentSizeBlocks;
   PartPoses = pose.Parts;
-  HeadYaw = 0.0f;
-  if (const auto it = PartPoses.find("head"); it != PartPoses.end())
-  {
-    HeadYaw = it->second.offsetDelta.z;
-  }
 }
 
 void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
@@ -152,7 +170,7 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
   auto drawPart = [&](const ResolvedCreaturePart &part)
   {
     glm::vec3 offset = part.offsetBlocks;
-    if (!IsLegPart(part.partId))
+    if (!IsLegLimb(part))
     {
       offset.y -= CrouchUpperDrop;
     }
@@ -160,24 +178,22 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
     if (const auto it = PartPoses.find(part.partId); it != PartPoses.end())
     {
       partPose = &it->second;
-      if (part.partId == "head" && HeadYaw != 0.0f)
-      {
-        offset.z += HeadYaw * 0.15f;
-      }
     }
 
-    if (IsLegPart(part.partId) && torsoBottomY)
+    if (part.HasPivot)
     {
-      const glm::vec3 pivot(part.offsetBlocks.x, *torsoBottomY,
-                            part.offsetBlocks.z);
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, part.PivotBlocks,
+                                part.offsetBlocks, part.sizeBlocks, partPose);
+    }
+    if (IsLegLimb(part) && torsoBottomY)
+    {
+      const glm::vec3 pivot = DefaultLegPivot(part, *torsoBottomY);
       return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
-    if (IsArmPart(part.partId))
+    if (IsArmLimb(part))
     {
-      const glm::vec3 pivot(part.offsetBlocks.x,
-                            part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
-                            part.offsetBlocks.z);
+      const glm::vec3 pivot = DefaultArmPivot(part);
       return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }

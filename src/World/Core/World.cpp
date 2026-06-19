@@ -304,6 +304,14 @@ void UWorld::OnBlockRegistryChanged()
   }
 }
 
+void UWorld::OnCreatureCatalogChanged()
+{
+  if (OnCreatureCatalogChangedCallback)
+  {
+    OnCreatureCatalogChangedCallback();
+  }
+}
+
 void UWorld::RefreshBlockRegistry()
 {
   if (BlockRegistry)

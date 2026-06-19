@@ -1,0 +1,35 @@
+{
+  "id": "sheep_wool_black",
+  "display_name": "Black Wool",
+  "creature_id": "sheep",
+  "catalog": {
+    "tags": [
+      "outfits"
+    ],
+    "equippable": true,
+    "sort_order": 0
+  },
+  "visual": {
+    "texture": "body",
+    "texture_map": {
+      "body": "body",
+      "face": "face",
+      "leg": "leg"
+    },
+    "wireframe_color": [
+      0.2,
+      0.2,
+      0.25,
+      1.0
+    ],
+    "icon": {
+      "mode": "skin_texture",
+      "fallback_color": [
+        0.2,
+        0.2,
+        0.25,
+        1.0
+      ]
+    }
+  }
+}

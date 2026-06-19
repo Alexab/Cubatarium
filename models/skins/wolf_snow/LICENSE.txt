@@ -1,0 +1,4 @@
+Source file: texturewolf3.png
+Upstream: animalworld/textures/texturewolf3.png
+License: MIT
+Attribution: animalworld — Skandarella / Liil (snow variant)

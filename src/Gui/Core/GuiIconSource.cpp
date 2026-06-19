@@ -95,4 +95,12 @@ void UGuiIconSource::ClearBlockIconCache()
   }
 }
 
+void UGuiIconSource::ClearCreatureIconCache()
+{
+  if (CreatureCache)
+  {
+    CreatureCache->ClearRenderedIcons();
+  }
+}
+
 } // namespace cutum

@@ -18,7 +18,6 @@ public:
   void SubmitDraw(UGeometryEngine &engine, const glm::mat4 &viewProj) override;
 
 private:
-  float HeadYaw{0.0f};
   std::unordered_map<std::string, CreaturePartPose> PartPoses;
   float BodyYaw{-90.0f};
   float CrouchUpperDrop{0.0f};

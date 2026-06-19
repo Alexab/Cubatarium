@@ -14,6 +14,10 @@ public:
                   const CreaturePoseParams &pose,
                   const CreatureDefinition &animDef, float dt) override;
   void SubmitDraw(UGeometryEngine &engine, const glm::mat4 &viewProj) override;
+
+private:
+  glm::vec3 BodyOrigin{0.f};
+  glm::vec3 SizeBlocks{0.6f, 1.8f, 0.6f};
 };
 
 } // namespace cutum

@@ -30,7 +30,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/PlaceholderTextureCache.h"
-#include "ResourcePacks/ResourcePackResolver.h"
+#include "ResourcePacks/CreaturePackMerge.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -1064,7 +1064,26 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
   {
     WorldInstance->OnBlockRegistryChanged();
   }
+  ReloadCreatureCatalog(packs);
   return true;
+}
+
+void UCore::ReloadCreatureCatalog(
+    const std::vector<ResourcePackManifest> &packs)
+{
+  if (!WorldInstance || !CreatureTextureStorageInstance)
+  {
+    return;
+  }
+  auto defs = WorldInstance->GetCreatureDefinitionStorage();
+  if (!defs)
+  {
+    return;
+  }
+  ApplyCreaturePackOverlays(*defs, *CreatureTextureStorageInstance,
+                            WorkDir / "models" / "creatures",
+                            WorkDir / "models" / "skins", packs);
+  WorldInstance->OnCreatureCatalogChanged();
 }
 
 void UCore::ApplyResourcePacksAfterWorldDataLoaded()

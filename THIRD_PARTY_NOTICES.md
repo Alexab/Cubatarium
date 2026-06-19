@@ -82,6 +82,22 @@
 
 Research packs are built via `python tools/build_research_resource_packs.py` from assets downloaded by `python tools/download_texture_packs.py`.
 
+### Luanti mob textures (MIT / CC BY-SA 3.0) — creature catalog
+
+- **Paths:** `models/creatures/*/textures/`, `models/creatures/*/LICENSE.txt`, `models/skins/*/LICENSE.txt`
+- **Sources (cloned to `CubatariumTextureResearch/`):**
+  - [tenplus1/mobs_animal](https://codeberg.org/tenplus1/mobs_animal) — sheep, cow, chicken (MIT)
+  - [tenplus1/mobs_monster](https://codeberg.org/tenplus1/mobs_monster) — oerkki, sand_monster (MIT)
+  - [tenplus1/dmobs](https://codeberg.org/tenplus1/dmobs) — skeleton (CC BY-SA 3.0, D00Med)
+  - [Skandarella/animalworld](https://github.com/Skandarella/animalworld) — wolf, pig/boar (MIT)
+  - [minetest/minetest_game](https://github.com/minetest/minetest_game) — `character.png` player skin (CC BY-SA 3.0)
+- **Import:** `python tools/import_luanti_creature_textures.py --download`
+- **Note:** Pig uses wild boar texture from animalworld as a Luanti-style stand-in. Rigid_voxels copies each mob mesh texture to all part stems.
+
+### Creature resource packs
+
+Packs may overlay `creatures/<species>/creature.json` and `textures/` under `resource_packs/<pack_id>/creatures/`. Applied after base `models/creatures` via `ApplyCreaturePackOverlays` in `Core::ApplyResourcePacks`.
+
 ## Removed from repository
 
 Minecraft-derived block textures and JSON under `textures/blocks/` and `models/blocks/` were removed from version control as part of the resource-pack migration. They may be regenerated locally for personal use only via `tools/migrate_to_resource_pack.ps1` into `resource_packs/minecraft_legacy_16/` (gitignored). **Do not redistribute** Minecraft-derived assets.

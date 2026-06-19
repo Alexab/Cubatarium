@@ -1,0 +1,4 @@
+Source file: mobs_cow.png
+Upstream: mobs_animal/textures/mobs_cow.png
+License: MIT
+Attribution: mobs_animal — sirrobzeroone, TenPlus1

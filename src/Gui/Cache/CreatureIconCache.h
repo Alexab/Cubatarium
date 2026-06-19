@@ -27,6 +27,7 @@ public:
 
   bool Initialize();
   void Shutdown();
+  void ClearRenderedIcons();
 
   GLuint GetSpeciesIcon(const std::string &speciesId);
   GLuint GetSkinIcon(const std::string &skinId);

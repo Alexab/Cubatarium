@@ -96,6 +96,8 @@ public:
   }
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
+  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint meshVao,
+                               GLuint texture);
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }

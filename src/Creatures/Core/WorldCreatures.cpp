@@ -468,6 +468,43 @@ void UWorld::LinkUsersToPlayerCreatures()
   }
 }
 
+namespace
+{
+
+void RemapLegacySpeciesType(std::string &type)
+{
+  if (type == "test_mob" || type == "scout")
+  {
+    type = "sheep";
+  }
+  else if (type == "brute")
+  {
+    type = "sand_monster";
+  }
+  else if (type == "drifter")
+  {
+    type = "wolf";
+  }
+}
+
+void RemapLegacySkinId(std::string &skinId)
+{
+  if (skinId == "scout_golden")
+  {
+    skinId = "sheep_wool_golden";
+  }
+  else if (skinId == "drifter_ice")
+  {
+    skinId = "wolf_snow";
+  }
+  else if (skinId == "brute_rust")
+  {
+    skinId.clear();
+  }
+}
+
+} // namespace
+
 void UWorld::LoadCreatures(const std::string &file_name)
 {
   if (!std::filesystem::exists(file_name))
@@ -491,16 +528,14 @@ void UWorld::LoadCreatures(const std::string &file_name)
       {
         continue;
       }
-      std::string type = c.value("type", "scout");
-      if (type == "test_mob")
-      {
-        type = "scout";
-      }
+      std::string type = c.value("type", "sheep");
+      RemapLegacySpeciesType(type);
       if (type == "player")
       {
         continue;
       }
-      const std::string skin = c.value("skin_id", "");
+      std::string skin = c.value("skin_id", "");
+      RemapLegacySkinId(skin);
       glm::vec3 bodyOrigin(0.0f);
       if (c.contains("body_origin") && c["body_origin"].is_array() &&
           c["body_origin"].size() == 3)
@@ -510,6 +545,13 @@ void UWorld::LoadCreatures(const std::string &file_name)
                                c["body_origin"][2].get<float>());
       }
       const CreatureDefinition *def = CreatureDefinitions->Get(type);
+      if (!def)
+      {
+        std::cerr << "LoadCreatures: unknown type '" << type
+                  << "', falling back to sheep" << std::endl;
+        type = "sheep";
+      }
+      def = CreatureDefinitions->Get(type);
       if (!def)
       {
         continue;

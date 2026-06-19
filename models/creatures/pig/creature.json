@@ -1,0 +1,188 @@
+{
+  "id": "pig",
+  "display_name": "Pig",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 15
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.95,
+      0.95,
+      1.5
+    ],
+    "max": [
+      0.95,
+      0.95,
+      1.5
+    ],
+    "min": [
+      0.95,
+      0.7,
+      1.5
+    ]
+  },
+  "eye_height": 0.85,
+  "locomotion_archetype": "terrestrial_quadruped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 25,
+      "arm_swing_deg": 15,
+      "fly_body_pitch_deg": 10
+    },
+    "default_texture": "body",
+    "parts": [
+      {
+        "id": "torso",
+        "offset": [
+          0.0,
+          0.75,
+          0.0
+        ],
+        "size": [
+          0.7,
+          0.55,
+          1.1
+        ],
+        "texture": "body"
+      },
+      {
+        "id": "head",
+        "offset": [
+          0.0,
+          0.95,
+          0.65
+        ],
+        "size": [
+          0.45,
+          0.45,
+          0.45
+        ],
+        "texture": "face"
+      },
+      {
+        "id": "neck",
+        "offset": [
+          0.0,
+          0.88,
+          0.35
+        ],
+        "size": [
+          0.25,
+          0.3,
+          0.25
+        ],
+        "texture": "body"
+      },
+      {
+        "id": "leg_fl",
+        "offset": [
+          -0.28,
+          0.32,
+          0.35
+        ],
+        "size": [
+          0.18,
+          0.55,
+          0.18
+        ],
+        "texture": "leg",
+        "pivot": [
+          -0.28,
+          0.6,
+          0.35
+        ],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_fr",
+        "offset": [
+          0.28,
+          0.32,
+          0.35
+        ],
+        "size": [
+          0.18,
+          0.55,
+          0.18
+        ],
+        "texture": "leg",
+        "pivot": [
+          0.28,
+          0.6,
+          0.35
+        ],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_bl",
+        "offset": [
+          -0.28,
+          0.32,
+          -0.35
+        ],
+        "size": [
+          0.18,
+          0.55,
+          0.18
+        ],
+        "texture": "leg",
+        "pivot": [
+          -0.28,
+          0.6,
+          -0.35
+        ],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_br",
+        "offset": [
+          0.28,
+          0.32,
+          -0.35
+        ],
+        "size": [
+          0.18,
+          0.55,
+          0.18
+        ],
+        "texture": "leg",
+        "pivot": [
+          0.28,
+          0.6,
+          -0.35
+        ],
+        "limb": "leg"
+      }
+    ],
+    "icon": {
+      "mode": "parts_preview",
+      "color": [
+        1.0,
+        0.7,
+        0.7,
+        1.0
+      ]
+    }
+  }
+}

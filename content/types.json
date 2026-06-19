@@ -8,6 +8,9 @@
     { "id": "mechanisms", "displayName": "Mechanisms", "sortOrder": 40 },
     { "id": "misc", "displayName": "Misc", "sortOrder": 999 },
     { "id": "mobs", "displayName": "Mobs", "sortOrder": 50 },
+    { "id": "passive", "displayName": "Passive mobs", "sortOrder": 51 },
+    { "id": "hostile", "displayName": "Hostile mobs", "sortOrder": 52 },
+    { "id": "flying", "displayName": "Flying mobs", "sortOrder": 53 },
     { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 60 }
   ]
 }

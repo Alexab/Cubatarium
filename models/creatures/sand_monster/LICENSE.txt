@@ -1,0 +1,4 @@
+Source file: mobs_sand_monster.png
+Upstream: mobs_monster/textures/mobs_sand_monster.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

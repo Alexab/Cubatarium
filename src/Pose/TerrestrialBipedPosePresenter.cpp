@@ -1,5 +1,6 @@
 #include "Pose/TerrestrialBipedPosePresenter.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include <algorithm>
 #include <cmath>
 #include <glm/glm.hpp>
 
@@ -20,6 +21,9 @@ UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts &facts,
   const float legSwing = def.visual.Animation.legSwingDeg;
   const float armSwing = def.visual.Animation.armSwingDeg;
   const float flyPitch = def.visual.Animation.flyBodyPitchDeg;
+  const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
+  const float swingScale =
+      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
 
   switch (facts.state)
   {
@@ -27,8 +31,8 @@ UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts &facts,
   case LocomotionState::Run:
   {
     const float sinP = std::sin(facts.animPhase);
-    const float legTilt = sinP * legSwing;
-    const float armTilt = -sinP * armSwing;
+    const float legTilt = sinP * legSwing * swingScale;
+    const float armTilt = -sinP * armSwing * swingScale;
 
     CreaturePartPose legL;
     legL.eulerDeg = glm::vec3(legTilt, 0.0f, 0.0f);
@@ -69,7 +73,13 @@ UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts &facts,
     pose.crouchUpperDrop = facts.stanceBlend;
     break;
   default:
+  {
+    const float idleSway = std::sin(facts.animPhase * 0.5f) * 2.0f;
+    CreaturePartPose torso;
+    torso.eulerDeg = glm::vec3(idleSway, 0.0f, 0.0f);
+    pose.SetPart("torso", torso);
     break;
+  }
   }
 
   if (facts.lookAtWeight > 0.0f)
@@ -77,7 +87,15 @@ UTerrestrialBipedPosePresenter::Compute(const CreatureLocomotionFacts &facts,
     const float headSway = 0.15f * facts.lookAtWeight;
     CreaturePartPose head;
     head.offsetDelta = glm::vec3(0.0f, 0.0f, headSway);
-    head.eulerDeg = glm::vec3(0.0f, facts.bodyPitch * 0.25f, 0.0f);
+    head.eulerDeg = glm::vec3(facts.bodyPitch * 0.25f, 0.0f, 0.0f);
+    pose.SetPart("head", head);
+  }
+  else if (std::abs(facts.bodyPitch) > 0.01f &&
+           facts.state != LocomotionState::Walk &&
+           facts.state != LocomotionState::Run)
+  {
+    CreaturePartPose head;
+    head.eulerDeg = glm::vec3(facts.bodyPitch * 0.5f, 0.0f, 0.0f);
     pose.SetPart("head", head);
   }
   else if (facts.state == LocomotionState::Walk ||

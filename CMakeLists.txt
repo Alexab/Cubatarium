@@ -65,6 +65,7 @@ set(SOURCES
     src/App/Utils.cpp
     src/Render/Camera/Camera.cpp
     src/Creatures/Core/CreatureBounds.cpp
+    src/Creatures/Core/CreatureCatalogTypes.cpp
     src/Creatures/Locomotion/CreatureLocomotionController.cpp
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
@@ -85,6 +86,8 @@ set(SOURCES
     src/Creatures/Player/PlayerController.cpp
     src/Pose/CreaturePosePresenterRegistry.cpp
     src/Pose/TerrestrialBipedPosePresenter.cpp
+    src/Pose/TerrestrialQuadrupedPosePresenter.cpp
+    src/Pose/AerialPosePresenter.cpp
     src/App/Core.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
@@ -117,6 +120,7 @@ set(SOURCES
     src/ResourcePacks/TextureOverrides.cpp
     src/ResourcePacks/ResourcePackSmoke.cpp
     src/ResourcePacks/PlaceholderTextureCache.cpp
+    src/ResourcePacks/CreaturePackMerge.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
     src/WorldGen/Core/WorldGenerator.cpp

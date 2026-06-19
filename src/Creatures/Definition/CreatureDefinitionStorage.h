@@ -13,6 +13,7 @@ class UCreatureDefinitionStorage
 {
 public:
   void Load(const std::string &folder);
+  void LoadOverlay(const std::string &folder);
   const CreatureDefinition *Get(const std::string &Id) const;
   size_t Count() const { return Definitions.size(); }
 

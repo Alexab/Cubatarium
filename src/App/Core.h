@@ -176,6 +176,7 @@ private:
   void CreateNewWorldWithCurrentSettings();
   void RebuildBlockTexturesFromMergeRegistry();
   void ApplyResourcePacksAfterWorldDataLoaded();
+  void ReloadCreatureCatalog(const std::vector<ResourcePackManifest> &packs);
   std::vector<std::string>
   NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
 };

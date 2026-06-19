@@ -104,6 +104,11 @@ public:
   {
     OnBlockRegistryChangedCallback = std::move(callback);
   }
+  void OnCreatureCatalogChanged();
+  void SetOnCreatureCatalogChanged(std::function<void()> callback)
+  {
+    OnCreatureCatalogChangedCallback = std::move(callback);
+  }
   void SetBlockDefinitionStorage(
       std::shared_ptr<UBlockDefinitionStorage> definitions);
   void SetBlockMergeRegistry(
@@ -450,6 +455,7 @@ private:
   std::string WorldgenOwnerPackId;
   std::function<void()> OnAfterWorldDataLoaded;
   std::function<void()> OnBlockRegistryChangedCallback;
+  std::function<void()> OnCreatureCatalogChangedCallback;
 
   std::map<std::string, std::shared_ptr<UUser>> Users;
 
