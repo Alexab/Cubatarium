@@ -42,9 +42,18 @@ void UGuiWidget::Draw(UGuiRenderer &renderer)
   std::sort(sorted.begin(), sorted.end(),
             [](const UGuiWidget *a, const UGuiWidget *b)
             { return a->GetZOrder() < b->GetZOrder(); });
+  const bool clip = ClipChildren && Bounds.W > 0 && Bounds.H > 0;
+  if (clip)
+  {
+    renderer.PushClipRect(Bounds);
+  }
   for (UGuiWidget *child : sorted)
   {
     child->Draw(renderer);
+  }
+  if (clip)
+  {
+    renderer.PopClipRect();
   }
 }
 

@@ -29,6 +29,53 @@ UGuiCheckList::UGuiCheckList(const GuiTheme *theme) : Theme(theme)
   }
 }
 
+void UGuiCheckList::SetVisibleRowCount(int rows)
+{
+  VisibleRowCount = std::max(1, rows);
+  ApplyMinimumBounds();
+}
+
+int UGuiCheckList::MinHeight() const
+{
+  return std::max(RowHeight, VisibleRowCount * RowHeight);
+}
+
+void UGuiCheckList::ApplyMinimumBounds()
+{
+  const int minH = MinHeight();
+  if (Bounds.H < minH)
+  {
+    Bounds.H = minH;
+  }
+  if (Bounds.W < 1)
+  {
+    Bounds.W = 1;
+  }
+}
+
+void UGuiCheckList::SetBounds(const GuiRect &bounds)
+{
+  GuiRect b = bounds;
+  const int minH = MinHeight();
+  if (b.H < minH)
+  {
+    b.H = minH;
+  }
+  b.W = std::max(1, b.W);
+  UGuiWidget::SetBounds(b);
+}
+
+void UGuiCheckList::UpdateLayout(const GuiRect &parentClientArea)
+{
+  UGuiWidget::UpdateLayout(parentClientArea);
+  ApplyMinimumBounds();
+}
+
+int UGuiCheckList::GetPreferredHeight() const
+{
+  return MinHeight();
+}
+
 void UGuiCheckList::SetItems(std::vector<GuiCheckListItem> items)
 {
   Items = std::move(items);
@@ -38,6 +85,7 @@ void UGuiCheckList::SetItems(std::vector<GuiCheckListItem> items)
   }
   ClampScroll();
   EnsureFocusedVisible();
+  ApplyMinimumBounds();
 }
 
 void UGuiCheckList::SetCheckedIds(const std::vector<std::string> &ids)
@@ -205,6 +253,7 @@ void UGuiCheckList::Draw(UGuiRenderer &renderer)
   {
     return;
   }
+  ApplyMinimumBounds();
   renderer.DrawFilledRect(Bounds, Theme->ButtonNormal);
   const GuiRect listArea = ListAreaRect();
   const int box = Theme->FontSizeBody;

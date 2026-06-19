@@ -14,6 +14,7 @@ class UWorldGenSettingsForm;
 class UResourcePackPickerForm;
 class UGuiPanel;
 class UGuiLabel;
+class UGuiScrollView;
 
 class UNewWorldScreen : public UGuiScreenBase
 {
@@ -27,12 +28,14 @@ public:
 private:
   void Relayout();
   void OnCreate();
-  int MeasureWorldPageHeight(const GuiRect &area) const;
+  int MeasureWorldPageContentHeight(int width) const;
+  void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
   void LayoutWorldPage(const GuiRect &area) const;
 
   IGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
+  UGuiScrollView *BodyScroll{nullptr};
   UGuiPanel *WorldPage{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
   UGuiLabel *PackSectionLabel{nullptr};

@@ -15,7 +15,7 @@ class UGuiWidget
 public:
   virtual ~UGuiWidget() = default;
 
-  void SetBounds(const GuiRect &bounds) { Bounds = bounds; }
+  virtual void SetBounds(const GuiRect &bounds) { Bounds = bounds; }
   const GuiRect &GetBounds() const { return Bounds; }
 
   void SetVisible(bool visible) { Visible = visible; }
@@ -26,6 +26,9 @@ public:
 
   void SetZOrder(int z) { ZOrder = z; }
   int GetZOrder() const { return ZOrder; }
+
+  void SetClipChildren(bool clip) { ClipChildren = clip; }
+  bool GetClipChildren() const { return ClipChildren; }
 
   virtual int GetPreferredWidth() const
   {
@@ -74,6 +77,7 @@ protected:
   bool Visible{true};
   bool Enabled{true};
   bool FocusHighlight{false};
+  bool ClipChildren{false};
   int ZOrder{0};
   std::vector<std::unique_ptr<UGuiWidget>> Children;
 };

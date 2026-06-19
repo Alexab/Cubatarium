@@ -16,7 +16,11 @@ public:
 
   void Draw(UGuiRenderer &renderer) override;
 
-  void SetDrawBackground(bool draw) { DrawBackground = draw; }
+  void SetDrawBackground(bool draw)
+  {
+    DrawBackground = draw;
+    SetClipChildren(draw);
+  }
   bool GetDrawBackground() const { return DrawBackground; }
 
   void SetStackLayout(int spacing, int Padding);

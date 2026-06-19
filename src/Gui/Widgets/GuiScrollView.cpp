@@ -201,10 +201,6 @@ void UGuiScrollView::LayoutContent(int spacing, int Padding)
   UGuiLayout::StackVertical({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight}, spacing,
                             Padding, kids);
   ClampScroll();
-  if (AfterScrollLayout)
-  {
-    AfterScrollLayout(*this);
-  }
 }
 
 void UGuiScrollView::DrawScrollbar(UGuiRenderer &renderer)
@@ -240,6 +236,11 @@ UGuiWidget *UGuiScrollView::HitTestFocusable(int x, int y)
   {
     return nullptr;
   }
+  const GuiRect vp = ViewportRect();
+  if (!vp.Contains(x, y))
+  {
+    return nullptr;
+  }
   return ContentPanel.HitTestFocusable(x, y);
 }
 
@@ -249,9 +250,14 @@ UGuiWidget *UGuiScrollView::HitTest(int x, int y)
   {
     return nullptr;
   }
+  const GuiRect vp = ViewportRect();
   if (UGuiWidget *hit = ContentPanel.HitTest(x, y))
   {
-    return hit;
+    if (vp.Contains(x, y))
+    {
+      return hit;
+    }
+    return nullptr;
   }
   if (ViewportRect().Contains(x, y) || ScrollbarTrackRect().Contains(x, y))
   {
@@ -412,14 +418,17 @@ bool UGuiScrollView::OnScroll(const GuiScrollEvent &event)
 
 bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!Visible || !Bounds.Contains(x, y) ||
-      !IsScrollInteractionEnabled(ScrollbarMode))
+  if (!Visible || !Bounds.Contains(x, y))
   {
     return false;
   }
   if (ContentPanel.ScrollAtPoint(x, y, event))
   {
     return true;
+  }
+  if (!IsScrollInteractionEnabled(ScrollbarMode))
+  {
+    return false;
   }
   return OnScroll(event);
 }

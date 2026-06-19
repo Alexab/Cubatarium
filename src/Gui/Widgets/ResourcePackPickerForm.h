@@ -49,6 +49,7 @@ private:
   UGuiLabel *WarningLabel{nullptr};
   UGuiCheckList *PrimaryList{nullptr};
   UGuiCheckList *SecondaryList{nullptr};
+  UGuiPanel *ContainerPanel{nullptr};
 };
 
 } // namespace cutum

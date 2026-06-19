@@ -28,6 +28,11 @@ public:
   std::vector<std::string> GetCheckedIds() const;
   void SetOnChanged(std::function<void()> handler);
   bool MoveFocusedItem(int delta);
+  void SetVisibleRowCount(int rows);
+
+  void SetBounds(const GuiRect &bounds) override;
+  int GetPreferredHeight() const override;
+  void UpdateLayout(const GuiRect &parentClientArea) override;
 
   bool CanFocus() const override;
   bool Activate() override;
@@ -54,12 +59,15 @@ private:
   bool ToggleIndex(int index);
   bool HandleKeyNavigation(const GuiKeyEvent &event);
   void NotifyChanged();
+  void ApplyMinimumBounds();
+  int MinHeight() const;
 
   const GuiTheme *Theme;
   std::vector<GuiCheckListItem> Items;
   int FocusedIndex{-1};
   int ScrollOffsetPx{0};
   int RowHeight{20};
+  int VisibleRowCount{5};
   std::function<void()> OnChanged;
   bool DragActive{false};
   bool DragMoved{false};

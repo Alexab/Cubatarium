@@ -17,6 +17,7 @@ class IGuiIconSource;
 class UGuiSlot;
 class UGuiPanel;
 class UGuiLabel;
+class UGuiRenderer;
 struct GuiTheme;
 
 class UInGameHudScreen : public UGuiScreenBase
@@ -59,6 +60,7 @@ private:
   std::vector<UGuiSlot *> PrimarySlots;
   std::vector<UGuiSlot *> SecondarySlots;
   UGuiLabel *Tooltip{nullptr};
+  UGuiRenderer *Renderer{nullptr};
   int PointerX{-1};
   int PointerY{-1};
   bool HotbarBuilt{false};

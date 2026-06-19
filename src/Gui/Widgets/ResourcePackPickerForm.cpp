@@ -13,9 +13,17 @@ namespace
 {
 
 constexpr int kHintH = 22;
+constexpr int kHintListGap = 4;
 constexpr int kWarnH = 36;
 constexpr int kPad = 6;
 constexpr int kVisibleRows = 5;
+constexpr int kColumnGap = 12;
+constexpr int kStackBreakpointW = 640;
+
+bool UseHorizontalColumns(int areaW)
+{
+  return areaW >= kStackBreakpointW;
+}
 
 } // namespace
 
@@ -147,6 +155,15 @@ void UResourcePackPickerForm::SyncListItems()
   wireList(SecondaryList);
   UpdateWarnings();
 
+  if (PrimaryList)
+  {
+    PrimaryList->SetBounds(PrimaryList->GetBounds());
+  }
+  if (SecondaryList)
+  {
+    SecondaryList->SetBounds(SecondaryList->GetBounds());
+  }
+
   if (PrimaryHintLabel)
   {
     std::ostringstream hint;
@@ -239,75 +256,131 @@ void UResourcePackPickerForm::BuildInto(UGuiPanel &panel)
 {
   if (!Built)
   {
+    auto container = std::make_unique<UGuiPanel>(Theme);
+    container->SetDrawBackground(false);
+    ContainerPanel = container.get();
+    UGuiPanel &root = *ContainerPanel;
+
     auto priorityHint =
         std::make_unique<UGuiLabel>(Theme, "Higher in the list = higher priority (like Minecraft).");
     PriorityHintLabel = priorityHint.get();
-    panel.AddChild(std::move(priorityHint));
+    root.AddChild(std::move(priorityHint));
 
     auto primaryHint = std::make_unique<UGuiLabel>(Theme, "Primary packs");
     PrimaryHintLabel = primaryHint.get();
-    panel.AddChild(std::move(primaryHint));
+    root.AddChild(std::move(primaryHint));
 
     auto primaryList = std::make_unique<UGuiCheckList>(Theme);
+    primaryList->SetVisibleRowCount(kVisibleRows);
     PrimaryList = primaryList.get();
-    panel.AddChild(std::move(primaryList));
+    root.AddChild(std::move(primaryList));
 
     auto secondaryHint = std::make_unique<UGuiLabel>(Theme, "Secondary packs");
     SecondaryHintLabel = secondaryHint.get();
-    panel.AddChild(std::move(secondaryHint));
+    root.AddChild(std::move(secondaryHint));
 
     auto secondaryList = std::make_unique<UGuiCheckList>(Theme);
+    secondaryList->SetVisibleRowCount(kVisibleRows);
     SecondaryList = secondaryList.get();
-    panel.AddChild(std::move(secondaryList));
+    root.AddChild(std::move(secondaryList));
 
     auto warn = std::make_unique<UGuiLabel>(Theme, "");
     warn->SetVisible(false);
     WarningLabel = warn.get();
-    panel.AddChild(std::move(warn));
+    root.AddChild(std::move(warn));
 
+    panel.AddChild(std::move(container));
     Built = true;
+
+    const int listH = VisibleListHeight(Theme);
+    if (PrimaryList)
+    {
+      PrimaryList->SetBounds({0, 0, 400, listH});
+    }
+    if (SecondaryList)
+    {
+      SecondaryList->SetBounds({0, 0, 400, listH});
+    }
   }
   SyncListItems();
 }
 
-int UResourcePackPickerForm::MeasureHeight(const GuiRect & /*area*/) const
+int UResourcePackPickerForm::MeasureHeight(const GuiRect &area) const
 {
   const int warnExtra =
       (WarningLabel && WarningLabel->IsVisible()) ? kWarnH : 0;
-  return kHintH + VisibleListHeight(Theme) + kHintH + VisibleListHeight(Theme) +
-         kHintH + warnExtra + kPad * 2;
+  const int listH = VisibleListHeight(Theme);
+  const int columnBlockH = kHintH + kHintListGap + listH;
+  if (UseHorizontalColumns(area.W))
+  {
+    return kHintH + columnBlockH + warnExtra + kPad * 2;
+  }
+  return kHintH + columnBlockH + columnBlockH + warnExtra + kPad * 2;
 }
 
 void UResourcePackPickerForm::Layout(const GuiRect &area) const
 {
+  if (ContainerPanel)
+  {
+    ContainerPanel->SetBounds(area);
+  }
+
+  const int listH = VisibleListHeight(Theme);
   int y = area.Y;
   if (PriorityHintLabel)
   {
     PriorityHintLabel->SetBounds({area.X, y, area.W, kHintH});
     y += kHintH;
   }
-  if (PrimaryHintLabel)
+
+  if (UseHorizontalColumns(area.W))
   {
-    PrimaryHintLabel->SetBounds({area.X, y, area.W, kHintH});
-    y += kHintH;
-  }
-  if (PrimaryList)
-  {
-    const int listH = VisibleListHeight(Theme);
-    PrimaryList->SetBounds({area.X, y, area.W, listH});
+    const int colW = std::max(1, (area.W - kColumnGap) / 2);
+    const int leftX = area.X;
+    const int rightX = area.X + colW + kColumnGap;
+    if (PrimaryHintLabel)
+    {
+      PrimaryHintLabel->SetBounds({leftX, y, colW, kHintH});
+    }
+    if (SecondaryHintLabel)
+    {
+      SecondaryHintLabel->SetBounds({rightX, y, colW, kHintH});
+    }
+    y += kHintH + kHintListGap;
+    if (PrimaryList)
+    {
+      PrimaryList->SetBounds({leftX, y, colW, listH});
+    }
+    if (SecondaryList)
+    {
+      SecondaryList->SetBounds({rightX, y, colW, listH});
+    }
     y += listH + kPad;
   }
-  if (SecondaryHintLabel)
+  else
   {
-    SecondaryHintLabel->SetBounds({area.X, y, area.W, kHintH});
-    y += kHintH;
+    if (PrimaryHintLabel)
+    {
+      PrimaryHintLabel->SetBounds({area.X, y, area.W, kHintH});
+      y += kHintH + kHintListGap;
+    }
+    if (PrimaryList)
+    {
+      PrimaryList->SetBounds({area.X, y, area.W, listH});
+      y += listH + kPad;
+    }
+    if (SecondaryHintLabel)
+    {
+      SecondaryHintLabel->SetBounds({area.X, y, area.W, kHintH});
+      y += kHintH + kHintListGap;
+    }
+    if (SecondaryList)
+    {
+      SecondaryList->SetBounds({area.X, y, area.W, listH});
+      y += listH + kPad;
+    }
   }
-  if (SecondaryList)
-  {
-    const int listH = VisibleListHeight(Theme);
-    SecondaryList->SetBounds({area.X, y, area.W, listH});
-    y += listH + kPad;
-  }
+
   if (WarningLabel && WarningLabel->IsVisible())
   {
     WarningLabel->SetBounds({area.X, y, area.W, kWarnH});

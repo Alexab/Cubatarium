@@ -168,6 +168,7 @@ set(SOURCES
     src/Gui/Core/GuiContext.cpp
     src/Gui/Core/GuiScreenBase.cpp
     src/Gui/Layout/GuiLayout.cpp
+    src/Gui/Layout/GuiTooltipLayout.cpp
     src/Gui/Widgets/GuiWidget.cpp
     src/Gui/Widgets/GuiPanel.cpp
     src/Gui/Widgets/GuiButton.cpp
@@ -265,6 +266,7 @@ set(HEADERS
     src/Gui/Core/GuiContext.h
     src/Gui/Core/GuiScreenBase.h
     src/Gui/Layout/GuiLayout.h
+    src/Gui/Layout/GuiTooltipLayout.h
     src/Gui/Widgets/GuiWidget.h
     src/Gui/Widgets/GuiPanel.h
     src/Gui/Widgets/GuiButton.h

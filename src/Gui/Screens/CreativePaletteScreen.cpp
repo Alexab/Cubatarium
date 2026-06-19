@@ -4,6 +4,8 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
@@ -62,6 +64,7 @@ void UCreativePaletteScreen::Toggle() { SetVisible(!Visible); }
 void UCreativePaletteScreen::Build(UGuiContext &ctx)
 {
   Theme = &ctx.GetTheme();
+  Renderer = &ctx.GetRenderer();
   auto panel = std::make_unique<UGuiPanel>(Theme);
   panel->SetVisible(false);
   Panel = panel.get();
@@ -156,11 +159,6 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     SubTabs->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
   }
-  if (TooltipLabel && Panel)
-  {
-    const GuiRect b = Panel->GetBounds();
-    TooltipLabel->SetBounds({b.X + 8, b.Y + b.H - 28, b.W - 16, 22});
-  }
   if (Scroll)
   {
     const int scrollH = std::max(0, panelH - 84);
@@ -191,11 +189,13 @@ void UCreativePaletteScreen::SetPointerPressed(bool pressed)
 
 void UCreativePaletteScreen::UpdateTooltip()
 {
-  if (!TooltipLabel)
+  if (!TooltipLabel || !Theme)
   {
     return;
   }
   std::string text;
+  int tipX = PointerX;
+  int tipY = PointerY;
   auto labelAt = [this](size_t index) -> std::string {
     if (index < GridEntryLabels.size() && !GridEntryLabels[index].empty())
     {
@@ -212,13 +212,26 @@ void UCreativePaletteScreen::UpdateTooltip()
       static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
   {
     text = labelAt(static_cast<size_t>(HoldSlotIndex));
+    if (PointerX < 0 || PointerY < 0)
+    {
+      UGuiSlot *slot = static_cast<size_t>(HoldSlotIndex) < GridSlots.size()
+                           ? GridSlots[static_cast<size_t>(HoldSlotIndex)]
+                           : nullptr;
+      if (slot)
+      {
+        const GuiRect b = slot->GetBounds();
+        tipX = b.X + b.W / 2;
+        tipY = b.Y + b.H / 2;
+      }
+    }
   }
   else if (PointerX >= 0 && PointerY >= 0 && Scroll)
   {
     for (size_t i = 0; i < GridSlots.size(); ++i)
     {
       UGuiSlot *slot = GridSlots[i];
-      if (slot && slot->IsVisible() && slot->GetBounds().Contains(PointerX, PointerY) &&
+      if (slot && slot->IsVisible() &&
+          slot->GetBounds().Contains(PointerX, PointerY) &&
           i < GridEntryIds.size())
       {
         text = labelAt(i);
@@ -226,8 +239,18 @@ void UCreativePaletteScreen::UpdateTooltip()
       }
     }
   }
-  TooltipLabel->SetText(text);
-  TooltipLabel->SetVisible(!text.empty());
+
+  if (text.empty() || tipX < 0 || tipY < 0)
+  {
+    TooltipLabel->SetVisible(false);
+    return;
+  }
+
+  const GuiRect viewport{GetContentOffsetX(), GetContentOffsetY(), ViewportW,
+                         ViewportH};
+  const int textW = MeasureTooltipTextWidth(text, *Theme, Renderer);
+  LayoutTooltipNearPointer(*TooltipLabel, text, tipX, tipY, viewport, *Theme,
+                             textW);
 }
 
 void UCreativePaletteScreen::Update(double dt)

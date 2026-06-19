@@ -18,20 +18,31 @@ GuiRect UGuiWindow::GetClientArea() const
 
 void UGuiWindow::Draw(UGuiRenderer &renderer)
 {
-  if (!Visible)
+  if (!Visible || !Theme)
   {
     return;
   }
-  UGuiPanel::Draw(renderer);
-  if (!Theme)
+  if (DrawBackground)
   {
-    return;
+    renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
+    renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
   }
-  GuiRect titleBar{Bounds.X, Bounds.Y, Bounds.W, kTitleBarHeight};
+  const GuiRect titleBar{Bounds.X, Bounds.Y, Bounds.W, kTitleBarHeight};
   renderer.DrawFilledRect(titleBar, Theme->ButtonPressed);
   renderer.DrawText(Title, titleBar.X + Theme->Padding, titleBar.Y + 4,
                     Theme->TextPrimary);
+
+  const GuiRect client = GetClientArea();
+  const bool clipClient = client.W > 0 && client.H > 0;
+  if (clipClient)
+  {
+    renderer.PushClipRect(client);
+  }
   UGuiWidget::Draw(renderer);
+  if (clipClient)
+  {
+    renderer.PopClipRect();
+  }
 }
 
 } // namespace cutum

@@ -6,7 +6,10 @@
 namespace cutum
 {
 
-UGuiPanel::UGuiPanel(const GuiTheme *theme) : Theme(theme) {}
+UGuiPanel::UGuiPanel(const GuiTheme *theme) : Theme(theme)
+{
+  SetClipChildren(true);
+}
 
 void UGuiPanel::SetStackLayout(int spacing, int Padding)
 {

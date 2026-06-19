@@ -18,6 +18,7 @@ class UGuiScrollView;
 class UGuiPanel;
 class UGuiSlot;
 class UGuiLabel;
+class UGuiRenderer;
 struct GuiTheme;
 
 class UCreativePaletteScreen : public UGuiScreenBase
@@ -56,6 +57,7 @@ private:
   UGuiTabBar *SubTabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
   UGuiLabel *TooltipLabel{nullptr};
+  UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
   int PointerX{-1};
   int PointerY{-1};

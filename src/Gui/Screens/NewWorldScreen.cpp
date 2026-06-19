@@ -6,6 +6,7 @@
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
@@ -18,9 +19,10 @@ namespace cutum
 namespace
 {
 
-constexpr int kNewWorldWinW = 860;
-constexpr int kNewWorldWinH = 660;
+constexpr int kNewWorldWinW = 1040;
+constexpr int kNewWorldWinH = 720;
 constexpr int kNewWorldMargin = 32;
+constexpr int kContentPad = 8;
 
 GuiGridSpec BuildWorldGridSpec(int width)
 {
@@ -103,26 +105,33 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
 
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
   DialogFrame = frame.get();
-  frame->SetScrollbarMode(GuiScrollbarMode::Auto);
-  UGuiPanel &body = frame->AddScrollPage();
-  WorldPage = &body;
+
+  auto scroll = std::make_unique<UGuiScrollView>(&theme);
+  scroll->SetScrollbarMode(GuiScrollbarMode::Hidden);
+  BodyScroll = scroll.get();
+  scroll->SetAfterScrollLayout(
+      [this](UGuiScrollView &sv) { LayoutWorldPageInScroll(sv); });
+
+  auto body = std::make_unique<UGuiPanel>(&theme);
+  body->SetDrawBackground(false);
+  WorldPage = body.get();
+
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
-  WorldForm->BuildInto(body);
+  WorldForm->BuildInto(*body);
 
   auto packSection = std::make_unique<UGuiLabel>(&theme, "Resource packs:");
   PackSectionLabel = packSection.get();
-  body.AddChild(std::move(packSection));
+  body->AddChild(std::move(packSection));
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
                           : std::vector<InstalledPackInfo>{});
   PackForm->SetSelection(Host ? Host->GetDefaultResourcePackSelection()
                               : ResourcePackSelection{});
-  PackForm->BuildInto(body);
+  PackForm->BuildInto(*body);
 
-  frame->SetScrollPageLayout(
-      0, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
-      [this](const GuiRect &area) { LayoutWorldPage(area); });
+  scroll->Content().AddChild(std::move(body));
+  frame->SetFixedBody(std::move(scroll));
 
   frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Create"))
       .SetOnClick([this]() { OnCreate(); });
@@ -159,28 +168,51 @@ void UNewWorldScreen::Relayout()
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
   DialogFrame->LayoutFrame();
+  if (BodyScroll)
+  {
+    BodyScroll->SetScrollY(0);
+    BodyScroll->LayoutContent(0, 0);
+  }
 }
 
-int UNewWorldScreen::MeasureWorldPageHeight(const GuiRect &area) const
+int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
 {
-  if (!WorldForm)
+  if (!WorldForm || width <= 0)
   {
     return 0;
   }
-  const GuiGridSpec spec = BuildWorldGridSpec(area.W);
+  const GuiRect area{0, 0, width, 100000};
+  const GuiGridSpec spec = BuildWorldGridSpec(width);
   int height = WorldForm->MeasureGridHeight(area, spec);
   if (PackForm)
   {
-    constexpr int kSectionGap = 16;
+    constexpr int kSectionGap = 12;
     constexpr int kLabelH = 28;
     height += kSectionGap + kLabelH + PackForm->MeasureHeight(area);
   }
   return height;
 }
 
+void UNewWorldScreen::LayoutWorldPageInScroll(UGuiScrollView &scroll) const
+{
+  if (!WorldPage)
+  {
+    return;
+  }
+  const GuiRect vp = scroll.GetBounds();
+  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad,
+                           std::max(0, vp.W - 2 * kContentPad),
+                           std::max(0, vp.H - 2 * kContentPad)};
+  const int contentH = MeasureWorldPageContentHeight(layoutArea.W);
+  const int pageH = std::max(vp.H, contentH + 2 * kContentPad);
+  WorldPage->SetBounds(
+      {vp.X, vp.Y - scroll.GetScrollY(), vp.W, pageH});
+  LayoutWorldPage(layoutArea);
+}
+
 void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
 {
-  if (!WorldForm)
+  if (!WorldForm || area.W <= 0)
   {
     return;
   }
@@ -191,7 +223,7 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
   {
     return;
   }
-  constexpr int kSectionGap = 16;
+  constexpr int kSectionGap = 12;
   constexpr int kLabelH = 28;
   int y = area.Y + gridH + kSectionGap;
   if (PackSectionLabel)
