@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_cloud",
-    "mtg_cloud",
-    "mtg_cloud",
-    "mtg_cloud",
-    "mtg_cloud",
-    "mtg_cloud"
+    "mtg_cloud_default_cloud",
+    "mtg_cloud_default_cloud",
+    "mtg_cloud_default_cloud",
+    "mtg_cloud_default_cloud",
+    "mtg_cloud_default_cloud",
+    "mtg_cloud_default_cloud"
   ]
 }

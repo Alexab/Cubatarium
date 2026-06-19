@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_permafrost",
-    "mtg_permafrost",
-    "mtg_permafrost",
-    "mtg_permafrost",
-    "mtg_permafrost",
-    "mtg_permafrost"
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost"
   ]
 }

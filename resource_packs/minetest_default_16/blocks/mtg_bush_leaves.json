@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_bush_leaves",
-    "mtg_bush_leaves",
-    "mtg_bush_leaves",
-    "mtg_bush_leaves",
-    "mtg_bush_leaves",
-    "mtg_bush_leaves"
+    "mtg_bush_leaves_default_leaves_simple",
+    "mtg_bush_leaves_default_leaves_simple",
+    "mtg_bush_leaves_default_leaves_simple",
+    "mtg_bush_leaves_default_leaves_simple",
+    "mtg_bush_leaves_default_leaves_simple",
+    "mtg_bush_leaves_default_leaves_simple"
   ]
 }

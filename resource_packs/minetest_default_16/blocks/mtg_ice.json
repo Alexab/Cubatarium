@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_ice",
-    "mtg_ice",
-    "mtg_ice",
-    "mtg_ice",
-    "mtg_ice",
-    "mtg_ice"
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice"
   ]
 }

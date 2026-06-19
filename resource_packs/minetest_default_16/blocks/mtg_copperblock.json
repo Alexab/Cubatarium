@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_copperblock",
-    "mtg_copperblock",
-    "mtg_copperblock",
-    "mtg_copperblock",
-    "mtg_copperblock",
-    "mtg_copperblock"
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block"
   ]
 }

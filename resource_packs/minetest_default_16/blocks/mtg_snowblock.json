@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_snowblock",
-    "mtg_snowblock",
-    "mtg_snowblock",
-    "mtg_snowblock",
-    "mtg_snowblock",
-    "mtg_snowblock"
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow"
   ]
 }

@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_blueberry_bush_sapling",
-    "mtg_blueberry_bush_sapling",
-    "mtg_blueberry_bush_sapling",
-    "mtg_blueberry_bush_sapling",
-    "mtg_blueberry_bush_sapling",
-    "mtg_blueberry_bush_sapling"
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
+    "mtg_blueberry_bush_sapling_default_blueberry_bush_sapling"
   ]
 }

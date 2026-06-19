@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_coalblock",
-    "mtg_coalblock",
-    "mtg_coalblock",
-    "mtg_coalblock",
-    "mtg_coalblock",
-    "mtg_coalblock"
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block"
   ]
 }

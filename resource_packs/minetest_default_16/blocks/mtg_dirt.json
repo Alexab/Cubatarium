@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_dirt",
-    "mtg_dirt",
-    "mtg_dirt",
-    "mtg_dirt",
-    "mtg_dirt",
-    "mtg_dirt"
+    "mtg_dirt_default_dirt",
+    "mtg_dirt_default_dirt",
+    "mtg_dirt_default_dirt",
+    "mtg_dirt_default_dirt",
+    "mtg_dirt_default_dirt",
+    "mtg_dirt_default_dirt"
   ]
 }

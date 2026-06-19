@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_papyrus",
-    "mtg_papyrus",
-    "mtg_papyrus",
-    "mtg_papyrus",
-    "mtg_papyrus",
-    "mtg_papyrus"
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus"
   ]
 }

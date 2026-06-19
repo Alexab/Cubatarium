@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_pine_bush_stem",
-    "mtg_pine_bush_stem",
-    "mtg_pine_bush_stem",
-    "mtg_pine_bush_stem",
-    "mtg_pine_bush_stem",
-    "mtg_pine_bush_stem"
+    "mtg_pine_bush_stem_default_pine_bush_stem",
+    "mtg_pine_bush_stem_default_pine_bush_stem",
+    "mtg_pine_bush_stem_default_pine_bush_stem",
+    "mtg_pine_bush_stem_default_pine_bush_stem",
+    "mtg_pine_bush_stem_default_pine_bush_stem",
+    "mtg_pine_bush_stem_default_pine_bush_stem"
   ]
 }

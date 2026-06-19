@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_acacia_leaves",
-    "mtg_acacia_leaves",
-    "mtg_acacia_leaves",
-    "mtg_acacia_leaves",
-    "mtg_acacia_leaves",
-    "mtg_acacia_leaves"
+    "mtg_acacia_leaves_default_acacia_leaves",
+    "mtg_acacia_leaves_default_acacia_leaves",
+    "mtg_acacia_leaves_default_acacia_leaves",
+    "mtg_acacia_leaves_default_acacia_leaves",
+    "mtg_acacia_leaves_default_acacia_leaves",
+    "mtg_acacia_leaves_default_acacia_leaves"
   ]
 }

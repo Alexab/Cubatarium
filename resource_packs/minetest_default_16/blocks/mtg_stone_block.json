@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_stone_block",
-    "mtg_stone_block",
-    "mtg_stone_block",
-    "mtg_stone_block",
-    "mtg_stone_block",
-    "mtg_stone_block"
+    "mtg_stone_block_default_stone_block",
+    "mtg_stone_block_default_stone_block",
+    "mtg_stone_block_default_stone_block",
+    "mtg_stone_block_default_stone_block",
+    "mtg_stone_block_default_stone_block",
+    "mtg_stone_block_default_stone_block"
   ]
 }

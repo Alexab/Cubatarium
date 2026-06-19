@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_silver_sandstone_brick",
-    "mtg_silver_sandstone_brick",
-    "mtg_silver_sandstone_brick",
-    "mtg_silver_sandstone_brick",
-    "mtg_silver_sandstone_brick",
-    "mtg_silver_sandstone_brick"
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick",
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick",
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick",
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick",
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick",
+    "mtg_silver_sandstone_brick_default_silver_sandstone_brick"
   ]
 }

@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_wood",
-    "mtg_wood",
-    "mtg_wood",
-    "mtg_wood",
-    "mtg_wood",
-    "mtg_wood"
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood"
   ]
 }

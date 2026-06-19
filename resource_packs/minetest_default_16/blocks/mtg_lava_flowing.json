@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_lava_flowing",
-    "mtg_lava_flowing",
-    "mtg_lava_flowing",
-    "mtg_lava_flowing",
-    "mtg_lava_flowing",
-    "mtg_lava_flowing"
+    "mtg_lava_flowing_default_lava",
+    "mtg_lava_flowing_default_lava",
+    "mtg_lava_flowing_default_lava",
+    "mtg_lava_flowing_default_lava",
+    "mtg_lava_flowing_default_lava",
+    "mtg_lava_flowing_default_lava"
   ]
 }

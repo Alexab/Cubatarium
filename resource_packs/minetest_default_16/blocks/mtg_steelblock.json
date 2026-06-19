@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_steelblock",
-    "mtg_steelblock",
-    "mtg_steelblock",
-    "mtg_steelblock",
-    "mtg_steelblock",
-    "mtg_steelblock"
+    "mtg_steelblock_default_steel_block",
+    "mtg_steelblock_default_steel_block",
+    "mtg_steelblock_default_steel_block",
+    "mtg_steelblock_default_steel_block",
+    "mtg_steelblock_default_steel_block",
+    "mtg_steelblock_default_steel_block"
   ]
 }

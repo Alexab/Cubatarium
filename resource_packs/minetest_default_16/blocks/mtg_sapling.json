@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_sapling",
-    "mtg_sapling",
-    "mtg_sapling",
-    "mtg_sapling",
-    "mtg_sapling",
-    "mtg_sapling"
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling"
   ]
 }

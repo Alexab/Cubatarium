@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_ladder_wood",
-    "mtg_ladder_wood",
-    "mtg_ladder_wood",
-    "mtg_ladder_wood",
-    "mtg_ladder_wood",
-    "mtg_ladder_wood"
+    "mtg_ladder_wood_default_ladder_wood",
+    "mtg_ladder_wood_default_ladder_wood",
+    "mtg_ladder_wood_default_ladder_wood",
+    "mtg_ladder_wood_default_ladder_wood",
+    "mtg_ladder_wood_default_ladder_wood",
+    "mtg_ladder_wood_default_ladder_wood"
   ]
 }

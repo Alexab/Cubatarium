@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_aspen_wood",
-    "mtg_aspen_wood",
-    "mtg_aspen_wood",
-    "mtg_aspen_wood",
-    "mtg_aspen_wood",
-    "mtg_aspen_wood"
+    "mtg_aspen_wood_default_aspen_wood",
+    "mtg_aspen_wood_default_aspen_wood",
+    "mtg_aspen_wood_default_aspen_wood",
+    "mtg_aspen_wood_default_aspen_wood",
+    "mtg_aspen_wood_default_aspen_wood",
+    "mtg_aspen_wood_default_aspen_wood"
   ]
 }

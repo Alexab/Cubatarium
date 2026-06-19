@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_acacia_bush_stem",
-    "mtg_acacia_bush_stem",
-    "mtg_acacia_bush_stem",
-    "mtg_acacia_bush_stem",
-    "mtg_acacia_bush_stem",
-    "mtg_acacia_bush_stem"
+    "mtg_acacia_bush_stem_default_acacia_bush_stem",
+    "mtg_acacia_bush_stem_default_acacia_bush_stem",
+    "mtg_acacia_bush_stem_default_acacia_bush_stem",
+    "mtg_acacia_bush_stem_default_acacia_bush_stem",
+    "mtg_acacia_bush_stem_default_acacia_bush_stem",
+    "mtg_acacia_bush_stem_default_acacia_bush_stem"
   ]
 }

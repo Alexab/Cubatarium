@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_obsidian",
-    "mtg_obsidian",
-    "mtg_obsidian",
-    "mtg_obsidian",
-    "mtg_obsidian",
-    "mtg_obsidian"
+    "mtg_obsidian_default_obsidian",
+    "mtg_obsidian_default_obsidian",
+    "mtg_obsidian_default_obsidian",
+    "mtg_obsidian_default_obsidian",
+    "mtg_obsidian_default_obsidian",
+    "mtg_obsidian_default_obsidian"
   ]
 }

@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_sandstonebrick",
-    "mtg_sandstonebrick",
-    "mtg_sandstonebrick",
-    "mtg_sandstonebrick",
-    "mtg_sandstonebrick",
-    "mtg_sandstonebrick"
+    "mtg_sandstonebrick_default_sandstone_brick",
+    "mtg_sandstonebrick_default_sandstone_brick",
+    "mtg_sandstonebrick_default_sandstone_brick",
+    "mtg_sandstonebrick_default_sandstone_brick",
+    "mtg_sandstonebrick_default_sandstone_brick",
+    "mtg_sandstonebrick_default_sandstone_brick"
   ]
 }

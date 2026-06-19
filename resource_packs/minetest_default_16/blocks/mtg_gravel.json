@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_gravel",
-    "mtg_gravel",
-    "mtg_gravel",
-    "mtg_gravel",
-    "mtg_gravel",
-    "mtg_gravel"
+    "mtg_gravel_default_gravel",
+    "mtg_gravel_default_gravel",
+    "mtg_gravel_default_gravel",
+    "mtg_gravel_default_gravel",
+    "mtg_gravel_default_gravel",
+    "mtg_gravel_default_gravel"
   ]
 }

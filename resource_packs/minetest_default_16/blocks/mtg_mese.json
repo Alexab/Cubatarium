@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_mese",
-    "mtg_mese",
-    "mtg_mese",
-    "mtg_mese",
-    "mtg_mese",
-    "mtg_mese"
+    "mtg_mese_default_mese_block",
+    "mtg_mese_default_mese_block",
+    "mtg_mese_default_mese_block",
+    "mtg_mese_default_mese_block",
+    "mtg_mese_default_mese_block",
+    "mtg_mese_default_mese_block"
   ]
 }

@@ -10,7 +10,7 @@ import struct
 import zlib
 from pathlib import Path
 
-from stem_mapping_common import apply_canonical_meta_to_block_json
+from stem_mapping_common import apply_canonical_meta_to_block_json, face_stems
 
 try:
     import yaml
@@ -189,9 +189,7 @@ def build_pack(
             stems = [spec] * 6
             types = ["natural"]
         else:
-            stems = spec.get("faces")
-            if stems is None:
-                stems = [spec.get("texture", name)] * 6
+            stems = face_stems(spec)
             if len(stems) not in (6, 12):
                 raise ValueError(f"block {name}: need 6 or 12 face stems")
             types = spec.get("types", ["natural"])

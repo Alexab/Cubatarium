@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_desert_sandstone_brick",
-    "mtg_desert_sandstone_brick",
-    "mtg_desert_sandstone_brick",
-    "mtg_desert_sandstone_brick",
-    "mtg_desert_sandstone_brick",
-    "mtg_desert_sandstone_brick"
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick"
   ]
 }

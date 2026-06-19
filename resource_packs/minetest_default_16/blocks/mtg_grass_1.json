@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_grass_1",
-    "mtg_grass_1",
-    "mtg_grass_1",
-    "mtg_grass_1",
-    "mtg_grass_1",
-    "mtg_grass_1"
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1"
   ]
 }

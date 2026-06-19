@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_diamondblock",
-    "mtg_diamondblock",
-    "mtg_diamondblock",
-    "mtg_diamondblock",
-    "mtg_diamondblock",
-    "mtg_diamondblock"
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block"
   ]
 }

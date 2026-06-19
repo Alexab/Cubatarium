@@ -256,16 +256,14 @@ def write_animated_or_strip(
 
 
 def collect_block_stems(blocks: dict) -> set[str]:
+    from stem_mapping_common import face_stems
+
     stems: set[str] = set()
-    for spec in blocks.values():
+    for name, spec in blocks.items():
         if isinstance(spec, str):
             stems.add(spec)
         else:
-            faces = spec.get("faces")
-            if faces:
-                stems.update(faces if len(faces) == 6 else faces[:6])
-            elif "texture" in spec:
-                stems.add(spec["texture"])
+            stems.update(face_stems(spec)[:6])
     return stems
 
 
@@ -285,17 +283,15 @@ def export_staging(spec: dict, mapping: dict, staging: Path) -> None:
 
     needed = collect_block_stems(mapping.get("blocks", {}))
     blocks = mapping.get("blocks", {})
+    from stem_mapping_common import face_stems
+
     for stem in sorted(needed):
         if stem in animated:
             frames = animated[stem]
             ref = frames[0] if len(frames) == 1 else frames
             target_frames = None
             for block_name, spec in blocks.items():
-                block_stems = (
-                    [spec] * 6
-                    if isinstance(spec, str)
-                    else (spec.get("faces") or [spec.get("texture", block_name)] * 6)
-                )
+                block_stems = [spec] * 6 if isinstance(spec, str) else face_stems(spec)
                 if stem in block_stems[:6]:
                     target_frames = canonical_animation_frame_count(block_name)
                     if target_frames is None and isinstance(spec, dict):

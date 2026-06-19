@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_tinblock",
-    "mtg_tinblock",
-    "mtg_tinblock",
-    "mtg_tinblock",
-    "mtg_tinblock",
-    "mtg_tinblock"
+    "mtg_tinblock_default_tin_block",
+    "mtg_tinblock_default_tin_block",
+    "mtg_tinblock_default_tin_block",
+    "mtg_tinblock_default_tin_block",
+    "mtg_tinblock_default_tin_block",
+    "mtg_tinblock_default_tin_block"
   ]
 }

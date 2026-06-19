@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_meselamp",
-    "mtg_meselamp",
-    "mtg_meselamp",
-    "mtg_meselamp",
-    "mtg_meselamp",
-    "mtg_meselamp"
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp"
   ]
 }

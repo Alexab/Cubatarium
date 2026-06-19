@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_river_water_flowing",
-    "mtg_river_water_flowing",
-    "mtg_river_water_flowing",
-    "mtg_river_water_flowing",
-    "mtg_river_water_flowing",
-    "mtg_river_water_flowing"
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water"
   ]
 }

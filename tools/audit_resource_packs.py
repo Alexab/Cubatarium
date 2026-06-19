@@ -7,6 +7,7 @@ import argparse
 import fnmatch
 import json
 import struct
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,62 @@ FACE_COUNT = 6
 def load_canonical(path: Path = CANONICAL_PATH) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data
+
+
+def read_png_first_pixel(png_path: Path) -> tuple[int, int, int, int] | None:
+    try:
+        raw = png_path.read_bytes()
+        if raw[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        pos = 8
+        idat = b""
+        while pos < len(raw):
+            length = struct.unpack(">I", raw[pos : pos + 4])[0]
+            tag = raw[pos + 4 : pos + 8]
+            data = raw[pos + 8 : pos + 8 + length]
+            pos += 12 + length
+            if tag == b"IDAT":
+                idat += data
+            elif tag == b"IEND":
+                break
+        if not idat:
+            return None
+        inflated = zlib.decompress(idat)
+        if len(inflated) < 5:
+            return None
+        return tuple(inflated[1:5])  # type: ignore[return-value]
+    except (OSError, struct.error, zlib.error):
+        return None
+
+
+PLACEHOLDER_RGBA = (160, 160, 160, 160)
+
+
+def is_placeholder_texture(png_path: Path) -> bool:
+    px = read_png_first_pixel(png_path)
+    return px == PLACEHOLDER_RGBA
+
+
+def check_block_texture_stems(
+    pack_dir: Path,
+    block_by_name: dict[str, dict],
+) -> list[str]:
+    issues: list[str] = []
+    tex_dir = pack_dir / "textures" / "blocks"
+    for block_name, block in block_by_name.items():
+        textures = block.get("textures", [])
+        if not isinstance(textures, list):
+            continue
+        for stem in textures[:FACE_COUNT]:
+            if not isinstance(stem, str):
+                continue
+            png = tex_dir / f"{stem}.png"
+            if not png.is_file():
+                issues.append(f"{block_name}: missing texture {stem}.png")
+                continue
+            if is_placeholder_texture(png):
+                issues.append(f"{block_name}: placeholder texture {stem}.png")
+    return issues
 
 
 def read_png_size(png_path: Path) -> tuple[int, int] | None:
@@ -263,6 +320,9 @@ def audit_pack(
     resolution = manifest.get("resolution")
     if resolution is not None and not isinstance(resolution, int):
         warnings.append(f"non-integer resolution: {resolution!r}")
+
+    for msg in check_block_texture_stems(pack_dir, block_by_name):
+        issues.append(msg)
 
     return {
         "pack_id": pack_id,

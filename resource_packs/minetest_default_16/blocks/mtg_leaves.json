@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_leaves",
-    "mtg_leaves",
-    "mtg_leaves",
-    "mtg_leaves",
-    "mtg_leaves",
-    "mtg_leaves"
+    "mtg_leaves_default_leaves",
+    "mtg_leaves_default_leaves",
+    "mtg_leaves_default_leaves",
+    "mtg_leaves_default_leaves",
+    "mtg_leaves_default_leaves",
+    "mtg_leaves_default_leaves"
   ]
 }

@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_junglesapling",
-    "mtg_junglesapling",
-    "mtg_junglesapling",
-    "mtg_junglesapling",
-    "mtg_junglesapling",
-    "mtg_junglesapling"
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling"
   ]
 }

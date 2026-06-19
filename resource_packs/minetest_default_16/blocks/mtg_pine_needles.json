@@ -4,11 +4,11 @@
     "building"
   ],
   "textures": [
-    "mtg_pine_needles",
-    "mtg_pine_needles",
-    "mtg_pine_needles",
-    "mtg_pine_needles",
-    "mtg_pine_needles",
-    "mtg_pine_needles"
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles"
   ]
 }
