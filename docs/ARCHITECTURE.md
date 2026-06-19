@@ -93,7 +93,7 @@ Block metadata lives in `resource_packs/*/blocks/*.json` (`animation`, `render`,
 
 | Module | Role |
 |--------|------|
-| `AnimationClock` | Global 20 TPS tick; `uAnimFrame` / `uAnimFrameCount` in greedy and instanced shaders |
+| `AnimationClock` | Global elapsed time; per-block `frametime` from block JSON (20 ticks/s) drives `uAnimFrame` |
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
 | Greedy mesh | Opaque pass, then multi-pass transparent (see below); fluid–fluid faces kept |

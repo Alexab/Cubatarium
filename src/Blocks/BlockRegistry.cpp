@@ -180,6 +180,18 @@ const FluidViewProfile *UBlockRegistry::GetFluidView(BlockId Id) const
   return nullptr;
 }
 
+const BlockAnimationSpec &UBlockRegistry::Animation(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Animation;
+    }
+  }
+  return DefaultAnimation;
+}
+
 size_t UBlockRegistry::GetTextureId(BlockId Id) const
 {
   return static_cast<size_t>(Id);

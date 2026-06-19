@@ -25,7 +25,7 @@
   },
   "animation": {
     "frame_count": 2,
-    "frametime": 2
+    "frametime": 6
   },
   "displayName": "Fire"
 }

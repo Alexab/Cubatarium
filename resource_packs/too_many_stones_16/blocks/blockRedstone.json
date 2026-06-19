@@ -10,5 +10,6 @@
     "blockRedstone",
     "blockRedstone",
     "blockRedstone"
-  ]
+  ],
+  "displayName": "Redstone Block"
 }

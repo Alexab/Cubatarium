@@ -443,7 +443,7 @@ blocks:
       style: fluid
     animation:
       frame_count: 16
-      frametime: 2
+      frametime: 6
   lava:
     faces:
     - lava
@@ -461,7 +461,7 @@ blocks:
       style: fluid
     animation:
       frame_count: 8
-      frametime: 2
+      frametime: 6
   fire:
     faces:
     - fire_0

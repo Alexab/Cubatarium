@@ -14,5 +14,6 @@
   ],
   "render": {
     "transparent": true
-  }
+  },
+  "displayName": "Glass"
 }

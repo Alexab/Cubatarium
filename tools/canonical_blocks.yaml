@@ -188,7 +188,7 @@ tier_a:
       style: fluid
     animation:
       frame_count: 4
-      frametime: 2
+      frametime: 6
     stem_denylist:
     - waterlily
     - lily_pad
@@ -217,7 +217,7 @@ tier_a:
       style: fluid
     animation:
       frame_count: 4
-      frametime: 2
+      frametime: 6
     stem_denylist:
     - lava_bucket
     - bucket
@@ -241,7 +241,7 @@ tier_a:
       transparent: true
     animation:
       frame_count: 2
-      frametime: 2
+      frametime: 6
     stem_denylist:
     - torch
     - redtorch

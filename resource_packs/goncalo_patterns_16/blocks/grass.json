@@ -11,5 +11,6 @@
     "grass_side",
     "grass_top",
     "dirt"
-  ]
+  ],
+  "displayName": "Grass Block"
 }

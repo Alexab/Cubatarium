@@ -34,6 +34,7 @@ public:
   BlockRenderStyle GetRenderStyle(BlockId Id) const;
   const FluidViewProfile *GetFluidView(BlockId Id) const;
   const BlockPhysicsProfile &Physics(BlockId Id) const;
+  const BlockAnimationSpec &Animation(BlockId Id) const;
   size_t GetTextureId(BlockId Id) const;
 
 private:
@@ -44,6 +45,7 @@ private:
   std::unordered_map<std::string, BlockId> NameToId;
   std::unordered_map<BlockId, std::string> IdToName;
   mutable BlockPhysicsProfile SolidDefault;
+  BlockAnimationSpec DefaultAnimation{};
 };
 
 } // namespace cutum

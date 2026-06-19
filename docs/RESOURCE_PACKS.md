@@ -35,6 +35,7 @@ resource_packs/<pack_id>/
 - **priority**: tiebreaker within the same UI tier and list position.
 - **worldgen_role**: `primary` (worldgen-capable) or `secondary` (decorative / partial).
 - Primary candidates are **whitelisted** in `tools/pack_dependencies.yaml` (not auto-promoted when tier A is complete). Run `python tools/update_pack_metadata.py` after rebuilding packs.
+- **animation.frametime**: game ticks per frame (20 ticks = 1 second), same as Minecraft `.mcmeta` / Minetest. Canonical tier A fluids/fire use `frametime: 6` (~0.3 s per frame).
 - **merge_mode**: `skip_existing` (default), `override`, or `duplicate` (`pack_id::local_name`).
 - **id**: must match the folder name under `resource_packs/`.
 

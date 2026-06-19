@@ -718,7 +718,25 @@ void UGeometryEngine::SetBlockAnimUniforms(
   {
     FrameCount = 1;
   }
-  const int frame = AnimationClock.CurrentFrame() % FrameCount;
+
+  int frame = 0;
+  if (FrameCount > 1 && WorldInstance)
+  {
+    const BlockAnimationSpec &anim =
+        WorldInstance->GetBlockRegistry().Animation(blockId);
+    const int frametimeTicks = std::max(1, anim.FrametimeTicks);
+    const float frameDuration = static_cast<float>(frametimeTicks) / 20.0f;
+    if (frameDuration > 0.0f)
+    {
+      const float elapsed = AnimationClock.ElapsedSeconds();
+      frame = static_cast<int>(elapsed / frameDuration) % FrameCount;
+      if (frame < 0)
+      {
+        frame = 0;
+      }
+    }
+  }
+
   shader->SetInt("uAnimFrame", frame);
   shader->SetInt("uAnimFrameCount", FrameCount);
 }

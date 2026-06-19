@@ -21,7 +21,7 @@
   },
   "animation": {
     "frame_count": 4,
-    "frametime": 2
+    "frametime": 6
   },
   "displayName": "Water"
 }
