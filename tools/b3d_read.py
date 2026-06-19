@@ -22,6 +22,21 @@ class B3DMesh:
   vertices: list[B3DVertex] = field(default_factory=list)
 
 
+@dataclass
+class B3DKeyframe:
+  frame: int
+  position: tuple[float, float, float] | None = None
+  scale: tuple[float, float, float] | None = None
+  rotation: tuple[float, float, float, float] | None = None
+
+
+@dataclass
+class B3DBone:
+  name: str
+  keyframes: list[B3DKeyframe] = field(default_factory=list)
+  children: list["B3DBone"] = field(default_factory=list)
+
+
 class B3DReader:
   def __init__(self, data: bytes) -> None:
     self._data = data
@@ -139,21 +154,35 @@ class B3DReader:
       self._pos = end
     return mesh
 
-  def _parse_keys(self) -> None:
+  def _parse_keys(self) -> list[B3DKeyframe]:
     flags = self._i32()
     has_rot = (flags % 8) >= 4
     rem = flags % 8 - (4 if has_rot else 0)
     has_scale = rem >= 2
     rem -= 2 if has_scale else 0
     has_pos = rem >= 1
+    keyframes: list[B3DKeyframe] = []
     while self._remaining():
-      self._i32()
-      if has_pos:
-        self._vec3()
-      if has_scale:
-        self._vec3()
+      frame = self._i32()
+      position = self._vec3() if has_pos else None
+      scale = self._vec3() if has_scale else None
+      rotation = None
       if has_rot:
-        self._quat()
+        rotation = (
+            self._f32(),
+            self._f32(),
+            self._f32(),
+            self._f32(),
+        )
+      keyframes.append(
+          B3DKeyframe(
+              frame=frame,
+              position=position,
+              scale=scale,
+              rotation=rotation,
+          )
+      )
+    return keyframes
 
   def _parse_node(self) -> B3DMesh:
     self._string()
@@ -186,6 +215,69 @@ class B3DReader:
           pass
       self._pos = end
     return mesh
+
+  def _parse_node_pose(self) -> B3DBone:
+    name = self._string()
+    self._vec3()
+    self._vec3()
+    self._quat()
+    bone = B3DBone(name=name)
+    while self._remaining():
+      tag, length = self._read_chunk()
+      start = self._pos
+      end = start + length
+      with self._bounded(end):
+        if tag == "MESH":
+          self._parse_mesh()
+        elif tag == "NODE":
+          bone.children.append(self._parse_node_pose())
+        elif tag == "KEYS":
+          bone.keyframes = self._parse_keys()
+        elif tag == "ANIM":
+          self._i32()
+          self._i32()
+          self._f32()
+        elif tag == "BONE":
+          while self._remaining():
+            self._id()
+            self._f32()
+        else:
+          pass
+      self._pos = end
+    return bone
+
+  def _parse_bb3d_pose(self) -> list[B3DBone]:
+    self._i32()
+    roots: list[B3DBone] = []
+    while self._remaining():
+      tag, length = self._read_chunk()
+      start = self._pos
+      end = start + length
+      with self._bounded(end):
+        if tag == "NODE":
+          roots.append(self._parse_node_pose())
+        elif tag == "TEXS":
+          while self._remaining():
+            self._string()
+            self._i32()
+            self._i32()
+            self._f32()
+            self._f32()
+            self._f32()
+            self._f32()
+        elif tag == "BRUS":
+          n_texs = self._i32()
+          while self._remaining():
+            self._string()
+            for _ in range(4):
+              self._f32()
+            self._f32()
+            self._i32()
+            self._i32()
+            for _ in range(n_texs):
+              self._optional_id()
+      self._pos = end
+    return roots
 
   def _parse_bb3d(self) -> B3DMesh:
     self._i32()
@@ -230,6 +322,35 @@ class B3DReader:
     with self._bounded(end):
       return self._parse_bb3d()
 
+  def read_pose(self) -> list[B3DBone]:
+    self._pos = 0
+    tag, length = self._read_chunk()
+    if tag != "BB3D":
+      raise ValueError(f"not a BB3D file (got {tag!r})")
+    end = self._pos + length
+    with self._bounded(end):
+      return self._parse_bb3d_pose()
+
 
 def load_b3d_vertices(path: Path) -> list[B3DVertex]:
   return B3DReader(path.read_bytes()).read_mesh().vertices
+
+
+def load_b3d_pose(path: Path) -> list[B3DBone]:
+  return B3DReader(path.read_bytes()).read_pose()
+
+
+def iter_b3d_bones(roots: list[B3DBone]):
+  """Depth-first yield of every bone with keyframes or not."""
+  stack = list(roots)
+  while stack:
+    bone = stack.pop()
+    yield bone
+    stack.extend(reversed(bone.children))
+
+
+def find_b3d_bone(roots: list[B3DBone], name: str) -> B3DBone | None:
+  for bone in iter_b3d_bones(roots):
+    if bone.name == name:
+      return bone
+  return None

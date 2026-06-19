@@ -73,6 +73,7 @@ resource_packs/_build_staging_*/
 /emulator-*.png
 tools/__pycache__/
 tools/_members_out.txt
+tools/debug_uv_overlays/
 /_tmp_*.png
 /audit_report.json
 /build*/
