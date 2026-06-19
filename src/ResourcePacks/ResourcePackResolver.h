@@ -47,10 +47,18 @@ struct InstalledPackInfo
   bool FromWritableRoot{false};
 };
 
+inline ResourcePackSelection DefaultResourcePackSelection()
+{
+  ResourcePackSelection selection;
+  selection.Primary = {"minetest_default_16"};
+  selection.WorldgenOwner = "minetest_default_16";
+  return selection;
+}
+
 inline const std::vector<std::string> &DefaultEnabledResourcePacks()
 {
-  static const std::vector<std::string> kDefaults = {"kenney_voxel_16",
-                                                     "cubatarium_cc0_base"};
+  static const std::vector<std::string> kDefaults =
+      DefaultResourcePackSelection().AllIds();
   return kDefaults;
 }
 

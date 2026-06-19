@@ -390,7 +390,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
       StreamingEnabled = true;
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
-      ResourcePacks.DefaultEnabled = DefaultEnabledResourcePacks();
+      {
+        const ResourcePackSelection defaults = DefaultResourcePackSelection();
+        ResourcePacks.DefaultPrimary = defaults.Primary;
+        ResourcePacks.DefaultSecondary = defaults.Secondary;
+        ResourcePacks.DefaultEnabled = defaults.AllIds();
+      }
     }
 
     TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
@@ -791,9 +796,9 @@ void UCore::CreateNewWorldWithCurrentSettings()
   selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
   if (selection.Primary.empty())
   {
-    selection.Primary = NormalizeEnabledPackIds(
-        std::vector<std::string>(DefaultEnabledResourcePacks().begin(),
-                                 DefaultEnabledResourcePacks().end()));
+    selection = GetDefaultResourcePackSelection();
+    selection.Primary = NormalizeEnabledPackIds(selection.Primary);
+    selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
   }
   if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
   {
@@ -919,8 +924,7 @@ ResourcePackSelection UCore::GetDefaultResourcePackSelection() const
   }
   else
   {
-    selection.Primary.assign(DefaultEnabledResourcePacks().begin(),
-                             DefaultEnabledResourcePacks().end());
+    selection = DefaultResourcePackSelection();
   }
   if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
   {

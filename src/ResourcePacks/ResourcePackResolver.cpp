@@ -92,6 +92,29 @@ int ComputeEffectivePriority(int tier, int invertedSelectionIndex, int packPrior
   return tier * 1000 + invertedSelectionIndex * 10 + packPriority;
 }
 
+int PrimaryPackListRank(const std::string &packId)
+{
+  if (packId == "minetest_default_16")
+  {
+    return 0;
+  }
+  return 1;
+}
+
+void SortInstalledPackList(std::vector<InstalledPackInfo> &packs)
+{
+  std::sort(packs.begin(), packs.end(),
+            [](const InstalledPackInfo &a, const InstalledPackInfo &b) {
+              const int ra = PrimaryPackListRank(a.Id);
+              const int rb = PrimaryPackListRank(b.Id);
+              if (ra != rb)
+              {
+                return ra < rb;
+              }
+              return a.DisplayName < b.DisplayName;
+            });
+}
+
 } // namespace
 
 ResourcePacksConfig
@@ -130,7 +153,10 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
   }
   if (cfg.DefaultPrimary.empty() && cfg.DefaultEnabled.empty())
   {
-    cfg.DefaultPrimary = DefaultEnabledResourcePacks();
+    const ResourcePackSelection defaults = DefaultResourcePackSelection();
+    cfg.DefaultPrimary = defaults.Primary;
+    cfg.DefaultSecondary = defaults.Secondary;
+    cfg.DefaultEnabled = defaults.AllIds();
   }
   return cfg;
 }
@@ -147,10 +173,7 @@ std::vector<InstalledPackInfo> UResourcePackResolver::ListInstalled(
   {
     result.push_back(std::move(pair.second));
   }
-  std::sort(result.begin(), result.end(),
-            [](const InstalledPackInfo &a, const InstalledPackInfo &b) {
-              return a.DisplayName < b.DisplayName;
-            });
+  SortInstalledPackList(result);
   return result;
 }
 
