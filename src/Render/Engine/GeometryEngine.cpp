@@ -2056,8 +2056,36 @@ bool UGeometryEngine::InitCreatureBodyPartBuffers()
                                 creatureBodyPartEBO, texCoords);
 }
 
+bool UGeometryEngine::InitCreatureRigidHeadPartBuffers()
+{
+  if (creatureRigidHeadPartVAO != 0)
+  {
+    return true;
+  }
+  float texCoords[48];
+  BuildCreatureRigidHeadTexCoords(texCoords);
+  return UploadCreaturePartMesh(creatureRigidHeadPartVAO,
+                                creatureRigidHeadPartVBO,
+                                creatureRigidHeadPartEBO, texCoords);
+}
+
 void UGeometryEngine::DestroyCreaturePartBuffers()
 {
+  if (creatureRigidHeadPartEBO)
+  {
+    glDeleteBuffers(1, &creatureRigidHeadPartEBO);
+    creatureRigidHeadPartEBO = 0;
+  }
+  if (creatureRigidHeadPartVBO)
+  {
+    glDeleteBuffers(1, &creatureRigidHeadPartVBO);
+    creatureRigidHeadPartVBO = 0;
+  }
+  if (creatureRigidHeadPartVAO)
+  {
+    glDeleteVertexArrays(1, &creatureRigidHeadPartVAO);
+    creatureRigidHeadPartVAO = 0;
+  }
   if (creatureBodyPartEBO)
   {
     glDeleteBuffers(1, &creatureBodyPartEBO);
@@ -2129,6 +2157,13 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
       return;
     }
     vao = creatureBodyPartVAO;
+    break;
+  case CreaturePartMesh::RigidHead:
+    if (creatureRigidHeadPartVAO == 0 && !InitCreatureRigidHeadPartBuffers())
+    {
+      return;
+    }
+    vao = creatureRigidHeadPartVAO;
     break;
   case CreaturePartMesh::Box:
   default:

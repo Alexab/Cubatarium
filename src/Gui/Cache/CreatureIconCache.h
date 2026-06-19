@@ -63,6 +63,9 @@ private:
   GLuint BodyCubeVao{0};
   GLuint BodyCubeVbo{0};
   GLuint BodyCubeEbo{0};
+  GLuint RigidHeadCubeVao{0};
+  GLuint RigidHeadCubeVbo{0};
+  GLuint RigidHeadCubeEbo{0};
   static constexpr int kIconSize = 64;
 };
 

@@ -72,13 +72,18 @@ bool UCreatureIconCache::InitCubeMesh()
   float boxUv[48];
   float headUv[48];
   float bodyUv[48];
+  float rigidHeadUv[48];
   BuildCreatureBoxTexCoords(boxUv);
   BuildCreatureHeadTexCoords(headUv);
   BuildCreatureBodyTexCoords(bodyUv);
+  BuildCreatureRigidHeadTexCoords(rigidHeadUv);
   UploadIconCubeMesh(CubeVao, CubeVbo, CubeEbo, boxUv);
   UploadIconCubeMesh(HeadCubeVao, HeadCubeVbo, HeadCubeEbo, headUv);
   UploadIconCubeMesh(BodyCubeVao, BodyCubeVbo, BodyCubeEbo, bodyUv);
-  return CubeVao != 0 && HeadCubeVao != 0 && BodyCubeVao != 0;
+  UploadIconCubeMesh(RigidHeadCubeVao, RigidHeadCubeVbo, RigidHeadCubeEbo,
+                     rigidHeadUv);
+  return CubeVao != 0 && HeadCubeVao != 0 && BodyCubeVao != 0 &&
+         RigidHeadCubeVao != 0;
 }
 
 bool UCreatureIconCache::Initialize()
@@ -263,6 +268,21 @@ void UCreatureIconCache::Shutdown()
     glDeleteVertexArrays(1, &BodyCubeVao);
     BodyCubeVao = 0;
   }
+  if (RigidHeadCubeEbo != 0)
+  {
+    glDeleteBuffers(1, &RigidHeadCubeEbo);
+    RigidHeadCubeEbo = 0;
+  }
+  if (RigidHeadCubeVbo != 0)
+  {
+    glDeleteBuffers(1, &RigidHeadCubeVbo);
+    RigidHeadCubeVbo = 0;
+  }
+  if (RigidHeadCubeVao != 0)
+  {
+    glDeleteVertexArrays(1, &RigidHeadCubeVao);
+    RigidHeadCubeVao = 0;
+  }
   if (HeadCubeEbo != 0)
   {
     glDeleteBuffers(1, &HeadCubeEbo);
@@ -386,13 +406,21 @@ GLuint UCreatureIconCache::RenderSpeciesPartsIcon(const std::string &speciesId)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     GLuint partVao = CubeVao;
-    if (part.partId == "head")
+    if (ParseCreatureTextureLayout(appearance.textureLayout) ==
+        CreatureTextureLayout::PlayerSkinAtlas)
     {
-      partVao = HeadCubeVao;
+      if (part.partId == "head")
+      {
+        partVao = HeadCubeVao;
+      }
+      else if (part.partId == "torso")
+      {
+        partVao = BodyCubeVao;
+      }
     }
-    else if (part.partId == "torso")
+    else if (UsesRigidFaceTexture(part.textureAssetKey))
     {
-      partVao = BodyCubeVao;
+      partVao = RigidHeadCubeVao;
     }
     glBindVertexArray(partVao);
     const glm::vec3 local = part.offsetBlocks * fitScale;

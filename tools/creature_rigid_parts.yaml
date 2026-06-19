@@ -1,0 +1,269 @@
+# Per-species rigid_voxels part geometry (offset/size in local blocks).
+# Used by generate_luanti_creature_catalog.py and bake AABB mapping.
+
+sheep:
+  parts:
+    - id: torso
+      offset: [0.0, 0.72, 0.0]
+      size: [0.65, 0.5, 0.90]
+      texture: body
+    - id: head
+      offset: [0.0, 0.90, 0.48]
+      size: [0.36, 0.34, 0.32]
+      texture: body
+    - id: snout
+      offset: [0.0, 0.86, 0.66]
+      size: [0.24, 0.22, 0.20]
+      texture: face
+    - id: ear_l
+      offset: [-0.22, 0.98, 0.50]
+      size: [0.14, 0.16, 0.08]
+      texture: ear
+    - id: ear_r
+      offset: [0.22, 0.98, 0.50]
+      size: [0.14, 0.16, 0.08]
+      texture: ear
+    - id: neck
+      offset: [0.0, 0.82, 0.28]
+      size: [0.22, 0.25, 0.22]
+      texture: body
+    - id: tail
+      offset: [0.0, 0.75, -0.52]
+      size: [0.12, 0.14, 0.18]
+      texture: tail
+    - id: leg_fl
+      offset: [-0.24, 0.28, 0.3]
+      size: [0.14, 0.42, 0.14]
+      texture: leg
+      pivot: [-0.24, 0.5, 0.3]
+      limb: leg
+    - id: leg_fr
+      offset: [0.24, 0.28, 0.3]
+      size: [0.14, 0.42, 0.14]
+      texture: leg
+      pivot: [0.24, 0.5, 0.3]
+      limb: leg
+    - id: leg_bl
+      offset: [-0.24, 0.28, -0.3]
+      size: [0.14, 0.42, 0.14]
+      texture: leg
+      pivot: [-0.24, 0.5, -0.3]
+      limb: leg
+    - id: leg_br
+      offset: [0.24, 0.28, -0.3]
+      size: [0.14, 0.42, 0.14]
+      texture: leg
+      pivot: [0.24, 0.5, -0.3]
+      limb: leg
+
+wolf:
+  parts:
+    - id: torso
+      offset: [0.0, 0.78, 0.0]
+      size: [0.55, 0.48, 1.20]
+      texture: body
+    - id: head
+      offset: [0.0, 0.94, 0.72]
+      size: [0.32, 0.32, 0.38]
+      texture: body
+    - id: snout
+      offset: [0.0, 0.90, 0.92]
+      size: [0.22, 0.20, 0.30]
+      texture: face
+    - id: ear_l
+      offset: [-0.18, 1.02, 0.70]
+      size: [0.12, 0.14, 0.08]
+      texture: ear
+    - id: ear_r
+      offset: [0.18, 1.02, 0.70]
+      size: [0.12, 0.14, 0.08]
+      texture: ear
+    - id: neck
+      offset: [0.0, 0.86, 0.42]
+      size: [0.2, 0.28, 0.2]
+      texture: body
+    - id: tail
+      offset: [0.0, 0.82, -0.68]
+      size: [0.16, 0.14, 0.28]
+      texture: tail
+    - id: leg_fl
+      offset: [-0.26, 0.34, 0.38]
+      size: [0.15, 0.58, 0.15]
+      texture: leg
+      pivot: [-0.26, 0.62, 0.38]
+      limb: leg
+    - id: leg_fr
+      offset: [0.26, 0.34, 0.38]
+      size: [0.15, 0.58, 0.15]
+      texture: leg
+      pivot: [0.26, 0.62, 0.38]
+      limb: leg
+    - id: leg_bl
+      offset: [-0.26, 0.34, -0.38]
+      size: [0.15, 0.58, 0.15]
+      texture: leg
+      pivot: [-0.26, 0.62, -0.38]
+      limb: leg
+    - id: leg_br
+      offset: [0.26, 0.34, -0.38]
+      size: [0.15, 0.58, 0.15]
+      texture: leg
+      pivot: [0.26, 0.62, -0.38]
+      limb: leg
+
+cow:
+  parts:
+    - id: torso
+      offset: [0.0, 0.82, 0.0]
+      size: [0.85, 0.62, 1.45]
+      texture: body
+    - id: head
+      offset: [0.0, 1.06, 0.65]
+      size: [0.44, 0.44, 0.40]
+      texture: body
+    - id: snout
+      offset: [0.0, 1.02, 0.82]
+      size: [0.28, 0.26, 0.24]
+      texture: face
+    - id: ear_l
+      offset: [-0.28, 1.14, 0.62]
+      size: [0.14, 0.16, 0.08]
+      texture: ear
+    - id: ear_r
+      offset: [0.28, 1.14, 0.62]
+      size: [0.14, 0.16, 0.08]
+      texture: ear
+    - id: neck
+      offset: [0.0, 0.95, 0.38]
+      size: [0.28, 0.32, 0.28]
+      texture: body
+    - id: tail
+      offset: [0.0, 0.85, -0.78]
+      size: [0.14, 0.12, 0.35]
+      texture: tail
+    - id: leg_fl
+      offset: [-0.32, 0.36, 0.38]
+      size: [0.2, 0.58, 0.2]
+      texture: leg
+      pivot: [-0.32, 0.64, 0.38]
+      limb: leg
+    - id: leg_fr
+      offset: [0.32, 0.36, 0.38]
+      size: [0.2, 0.58, 0.2]
+      texture: leg
+      pivot: [0.32, 0.64, 0.38]
+      limb: leg
+    - id: leg_bl
+      offset: [-0.32, 0.36, -0.38]
+      size: [0.2, 0.58, 0.2]
+      texture: leg
+      pivot: [-0.32, 0.64, -0.38]
+      limb: leg
+    - id: leg_br
+      offset: [0.32, 0.36, -0.38]
+      size: [0.2, 0.58, 0.2]
+      texture: leg
+      pivot: [0.32, 0.64, -0.38]
+      limb: leg
+
+pig:
+  parts:
+    - id: torso
+      offset: [0.0, 0.68, 0.0]
+      size: [0.8, 0.48, 1.05]
+      texture: body
+    - id: head
+      offset: [0.0, 0.84, 0.52]
+      size: [0.38, 0.36, 0.36]
+      texture: body
+    - id: snout
+      offset: [0.0, 0.80, 0.72]
+      size: [0.30, 0.24, 0.22]
+      texture: face
+    - id: ear_l
+      offset: [-0.24, 0.92, 0.50]
+      size: [0.12, 0.14, 0.08]
+      texture: ear
+    - id: ear_r
+      offset: [0.24, 0.92, 0.50]
+      size: [0.12, 0.14, 0.08]
+      texture: ear
+    - id: neck
+      offset: [0.0, 0.76, 0.32]
+      size: [0.24, 0.26, 0.24]
+      texture: body
+    - id: tail
+      offset: [0.0, 0.72, -0.58]
+      size: [0.12, 0.10, 0.22]
+      texture: tail
+    - id: leg_fl
+      offset: [-0.3, 0.26, 0.32]
+      size: [0.18, 0.4, 0.18]
+      texture: leg
+      pivot: [-0.3, 0.46, 0.32]
+      limb: leg
+    - id: leg_fr
+      offset: [0.3, 0.26, 0.32]
+      size: [0.18, 0.4, 0.18]
+      texture: leg
+      pivot: [0.3, 0.46, 0.32]
+      limb: leg
+    - id: leg_bl
+      offset: [-0.3, 0.26, -0.32]
+      size: [0.18, 0.4, 0.18]
+      texture: leg
+      pivot: [-0.3, 0.46, -0.32]
+      limb: leg
+    - id: leg_br
+      offset: [0.3, 0.26, -0.32]
+      size: [0.18, 0.4, 0.18]
+      texture: leg
+      pivot: [0.3, 0.46, -0.32]
+      limb: leg
+
+chicken:
+  parts:
+    - id: torso
+      offset: [0.0, 0.40, 0.0]
+      size: [0.35, 0.36, 0.42]
+      texture: body
+    - id: neck
+      offset: [0.0, 0.50, 0.12]
+      size: [0.14, 0.14, 0.14]
+      texture: body
+    - id: head
+      offset: [0.0, 0.58, 0.18]
+      size: [0.18, 0.18, 0.18]
+      texture: face
+    - id: comb
+      offset: [0.0, 0.66, 0.16]
+      size: [0.08, 0.06, 0.10]
+      texture: face
+    - id: beak
+      offset: [0.0, 0.56, 0.30]
+      size: [0.10, 0.08, 0.12]
+      texture: face
+    - id: wing_l
+      offset: [-0.32, 0.44, 0.0]
+      size: [0.18, 0.10, 0.40]
+      texture: body
+      pivot: [-0.18, 0.44, 0.0]
+      limb: arm
+    - id: wing_r
+      offset: [0.32, 0.44, 0.0]
+      size: [0.18, 0.10, 0.40]
+      texture: body
+      pivot: [0.18, 0.44, 0.0]
+      limb: arm
+    - id: leg_l
+      offset: [-0.08, 0.16, 0.04]
+      size: [0.07, 0.22, 0.07]
+      texture: leg
+      pivot: [-0.08, 0.27, 0.04]
+      limb: leg
+    - id: leg_r
+      offset: [0.08, 0.16, 0.04]
+      size: [0.07, 0.22, 0.07]
+      texture: leg
+      pivot: [0.08, 0.27, 0.04]
+      limb: leg

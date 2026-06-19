@@ -3,12 +3,19 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import struct
 import zlib
 from pathlib import Path
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
 ROOT = Path(__file__).resolve().parent.parent
+TOOLS = Path(__file__).resolve().parent
 
 # Luanti-inspired palette (CC-style placeholders; replace with imported PNGs when available).
 SPECIES: dict[str, dict] = {
@@ -142,8 +149,8 @@ SKINS = [
         "creature_id": "sheep",
         "color": (40, 40, 45),
         "wire": [0.2, 0.2, 0.25, 1.0],
-        "map": {"body": "body", "face": "face", "leg": "leg"},
-        "stems": ["body", "face", "leg"],
+        "map": {"body": "body", "face": "face", "leg": "leg", "ear": "ear", "tail": "tail"},
+        "stems": ["body", "face", "leg", "ear", "tail"],
     },
     {
         "id": "sheep_wool_golden",
@@ -151,8 +158,8 @@ SKINS = [
         "creature_id": "sheep",
         "color": (255, 220, 80),
         "wire": [1.0, 0.9, 0.3, 1.0],
-        "map": {"body": "body", "face": "face", "leg": "leg"},
-        "stems": ["body", "face", "leg"],
+        "map": {"body": "body", "face": "face", "leg": "leg", "ear": "ear", "tail": "tail"},
+        "stems": ["body", "face", "leg", "ear", "tail"],
     },
     {
         "id": "wolf_snow",
@@ -288,16 +295,30 @@ def aerial_parts() -> list[dict]:
     ]
 
 
-def build_creature_json(species_id: str, meta: dict) -> dict:
+def load_rigid_parts_yaml() -> dict:
+    path = TOOLS / "creature_rigid_parts.yaml"
+    if not path.is_file():
+        return {}
+    if yaml is None:
+        raise SystemExit("PyYAML required: pip install pyyaml")
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def species_parts(species_id: str, meta: dict, rigid_parts: dict) -> list[dict]:
+    if species_id in rigid_parts and "parts" in rigid_parts[species_id]:
+        return rigid_parts[species_id]["parts"]
     archetype = meta["archetype"]
     if archetype == "terrestrial_quadruped":
-        parts = quadruped_parts()
-    elif archetype == "aerial":
-        parts = aerial_parts()
-    else:
-        parts = biped_parts(pivot=(species_id == "human" or True))
+        return quadruped_parts()
+    if archetype == "aerial":
+        return aerial_parts()
+    return biped_parts(pivot=(species_id == "human" or True))
 
+
+def build_creature_json(species_id: str, meta: dict, rigid_parts: dict) -> dict:
+    parts = species_parts(species_id, meta, rigid_parts)
     role = meta.get("role", "mob")
+    archetype = meta["archetype"]
     behavior = meta.get("behavior", "wander" if role == "mob" else "none")
     return {
         "id": species_id,
@@ -334,6 +355,11 @@ def build_creature_json(species_id: str, meta: dict) -> dict:
                 "leg_swing_deg": 25,
                 "arm_swing_deg": 15,
                 "fly_body_pitch_deg": 10,
+                "body_bob_blocks": 0.025,
+                "tail_swing_deg": 12,
+                "run_speed_multiplier": 1.3,
+                "crouch_leg_bend_deg": 25,
+                "wing_idle_swing_deg": 5,
             },
             "default_texture": "body",
             "parts": parts,
@@ -419,12 +445,28 @@ def remove_legacy() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--preserve-parts",
+        action="store_true",
+        help="Keep visual.parts from existing creature.json when present",
+    )
+    args = parser.parse_args()
+
+    rigid_parts = load_rigid_parts_yaml()
     remove_legacy()
     for species_id, meta in SPECIES.items():
         folder = ROOT / "models" / "creatures" / species_id
         folder.mkdir(parents=True, exist_ok=True)
-        data = build_creature_json(species_id, meta)
-        (folder / "creature.json").write_text(
+        creature_path = folder / "creature.json"
+        existing_parts = None
+        if args.preserve_parts and creature_path.is_file():
+            existing = json.loads(creature_path.read_text(encoding="utf-8"))
+            existing_parts = existing.get("visual", {}).get("parts")
+        data = build_creature_json(species_id, meta, rigid_parts)
+        if existing_parts:
+            data["visual"]["parts"] = existing_parts
+        creature_path.write_text(
             json.dumps(data, indent=2) + "\n", encoding="utf-8"
         )
         write_textures(species_id, meta["color"])

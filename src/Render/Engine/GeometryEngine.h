@@ -154,12 +154,16 @@ private:
   GLuint creatureBodyPartVAO = 0;
   GLuint creatureBodyPartVBO = 0;
   GLuint creatureBodyPartEBO = 0;
+  GLuint creatureRigidHeadPartVAO = 0;
+  GLuint creatureRigidHeadPartVBO = 0;
+  GLuint creatureRigidHeadPartEBO = 0;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
   bool InitCreaturePartBuffers();
   bool InitCreatureHeadPartBuffers();
   bool InitCreatureBodyPartBuffers();
+  bool InitCreatureRigidHeadPartBuffers();
   void DestroyCreaturePartBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();

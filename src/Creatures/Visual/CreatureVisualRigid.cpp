@@ -59,6 +59,11 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
       return CreaturePartMesh::Body;
     }
   }
+  else if (layout == CreatureTextureLayout::RigidCrop &&
+           UsesRigidFaceTexture(part.textureAssetKey))
+  {
+    return CreaturePartMesh::RigidHead;
+  }
   return CreaturePartMesh::Box;
 }
 

@@ -2,6 +2,7 @@
 #define CREATURE_PART_MESH_DATA_H
 
 #include <cmath>
+#include <string>
 
 namespace cutum
 {
@@ -113,12 +114,36 @@ inline void BuildCreatureBodyTexCoords(float *out)
   AppendFaceUv(out, i, kUvPlain);     // -Y
 }
 
+// Mob rigid_crop face stem: full baked face on +Z, plain corner on other faces.
+inline void BuildCreatureRigidHeadTexCoords(float *out)
+{
+  int i = 0;
+  AppendFaceUv(out, i, kUvFull);  // +Z forward
+  AppendFaceUv(out, i, kUvPlain); // +X
+  AppendFaceUv(out, i, kUvPlain); // -Z
+  AppendFaceUv(out, i, kUvPlain); // -X
+  AppendFaceUv(out, i, kUvPlain); // +Y
+  AppendFaceUv(out, i, kUvPlain); // -Y
+}
+
 enum class CreaturePartMesh
 {
   Box,
   Head,
   Body,
+  RigidHead,
 };
+
+inline bool UsesRigidFaceTexture(const std::string &textureAssetKey)
+{
+  static constexpr const char kSuffix[] = "/face";
+  if (textureAssetKey.size() < sizeof(kSuffix) - 1)
+  {
+    return false;
+  }
+  return textureAssetKey.compare(textureAssetKey.size() - (sizeof(kSuffix) - 1),
+                                sizeof(kSuffix) - 1, kSuffix) == 0;
+}
 
 } // namespace cutum
 
