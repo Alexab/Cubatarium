@@ -28,6 +28,7 @@
     ]
   },
   "eye_height": 1.15,
+  "habitat": "terrestrial",
   "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {
     "can_fly": false,

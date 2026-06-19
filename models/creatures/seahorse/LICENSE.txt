@@ -1,0 +1,4 @@
+Source file: textureseahorse.png
+Upstream: animalworld/textures/textureseahorse.png
+License: MIT
+Attribution: animalworld — Skandarella

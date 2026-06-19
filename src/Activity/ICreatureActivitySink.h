@@ -14,6 +14,8 @@ struct CreatureBehaviorSnapshot
 {
   CreatureBehaviorParams behavior;
   CreatureLocomotionCapabilities locomotion;
+  CreatureHabitat habitat{CreatureHabitat::Terrestrial};
+  glm::vec3 boundsSize{0.6f, 1.8f, 0.6f};
 };
 
 class ICreatureActivitySink

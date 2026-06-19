@@ -85,6 +85,62 @@ species:
       leg: [0.00, 0.50, 0.35, 0.95]
       arm: [0.55, 0.00, 0.95, 0.45]
 
+  bunny:
+    model: mobs_animal/models/mobs_bunny.b3d
+    texture: mobs_animal/textures/mobs_bunny_grey.png
+    manual_uv:
+      body: [0.20, 0.35, 0.75, 0.85]
+      face: [0.55, 0.05, 0.90, 0.40]
+      ear: [0.05, 0.05, 0.25, 0.25]
+      tail: [0.05, 0.40, 0.20, 0.58]
+      leg: [0.00, 0.65, 0.45, 1.00]
+
+  rat:
+    texture: mobs_animal/textures/mobs_rat.png
+    manual_uv:
+      body: [0.15, 0.40, 0.70, 0.85]
+      face: [0.55, 0.10, 0.90, 0.42]
+      tail: [0.05, 0.15, 0.25, 0.40]
+      leg: [0.00, 0.65, 0.40, 1.00]
+
+  penguin:
+    model: mobs_animal/models/mobs_penguin.b3d
+    texture: mobs_animal/textures/mobs_penguin.png
+    manual_uv:
+      body: [0.20, 0.25, 0.75, 0.88]
+      face: [0.55, 0.02, 0.92, 0.35]
+      leg: [0.00, 0.65, 0.35, 1.00]
+
+  spider:
+    model: mobs_monster/models/mobs_spider.b3d
+    texture: mobs_monster/textures/mobs_spider_grey.png
+    manual_uv:
+      body: [0.25, 0.35, 0.75, 0.80]
+      face: [0.55, 0.05, 0.92, 0.38]
+      leg: [0.00, 0.00, 0.45, 0.45]
+
+  trout:
+    texture: animalworld/textures/texturetrout.png
+    manual_uv:
+      body: [0.10, 0.20, 0.90, 0.80]
+      face: [0.70, 0.15, 0.95, 0.45]
+      leg: [0.05, 0.55, 0.45, 0.95]
+
+  fox:
+    texture: dmobs/textures/dmobs_fox.png
+    manual_uv:
+      body: [0.15, 0.30, 0.70, 0.80]
+      face: [0.55, 0.05, 0.92, 0.38]
+      tail: [0.05, 0.10, 0.25, 0.35]
+      leg: [0.00, 0.60, 0.42, 1.00]
+
+  tortoise:
+    texture: dmobs/textures/dmobs_tortoise.png
+    manual_uv:
+      body: [0.10, 0.30, 0.90, 0.85]
+      face: [0.55, 0.05, 0.90, 0.35]
+      leg: [0.00, 0.00, 0.40, 0.40]
+
 skins:
   sheep_wool_black:
     creature_id: sheep

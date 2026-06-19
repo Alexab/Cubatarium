@@ -1,3 +1,4 @@
+#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
@@ -93,16 +94,26 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
 
 void UCreature::RebuildLocomotionFacts(
     const CreatureLocomotionRawInput &input,
-    const CreatureLocomotionCapabilities &caps)
+    const CreatureLocomotionCapabilities &caps, const UWorld *world)
 {
   const float prevPhase = LocomotionFacts.animPhase;
   CreatureLocomotionFacts raw;
   FillTerrestrialRawFacts(raw, input, LocomotionArchetype, Yaw, Pitch);
+  if (LocomotionArchetype == LocomotionArchetype::Aquatic && input.dt > 1e-6f)
+  {
+    const glm::vec3 delta = input.bodyOriginAfter - input.bodyOriginBefore;
+    raw.horizontalSpeed = glm::length(delta) / input.dt;
+  }
   raw.animPhase = prevPhase;
   if (Intent.lookAtWeight > 0.0f)
   {
     raw.lookAtWorld = Intent.lookAtWorld;
     raw.lookAtWeight = Intent.lookAtWeight;
+  }
+  if (world)
+  {
+    ApplyEnvironmentLocomotionFacts(*world, BodyOrigin,
+                                    Bounds.profile.restSizeBlocks, raw);
   }
   LocomotionFacts = raw;
   CreatureLocomotionRawInput deriveInput = input;
@@ -118,7 +129,7 @@ void UCreature::RebuildLocomotionFacts(
 void UCreature::RebuildLocomotionFactsFromController(
     const UCreatureLocomotionController &controller,
     const CreatureLocomotionCapabilities &caps, float dt,
-    float horizontalSpeedOverride)
+    float horizontalSpeedOverride, const UWorld *world)
 {
   const float prevPhase = LocomotionFacts.animPhase;
   CreatureLocomotionRawInput input;
@@ -137,6 +148,11 @@ void UCreature::RebuildLocomotionFactsFromController(
   {
     raw.lookAtWorld = Intent.lookAtWorld;
     raw.lookAtWeight = Intent.lookAtWeight;
+  }
+  if (world)
+  {
+    ApplyEnvironmentLocomotionFacts(*world, BodyOrigin,
+                                    Bounds.profile.restSizeBlocks, raw);
   }
   LocomotionFacts = raw;
   FinalizeLocomotionFacts(LocomotionFacts, caps, input, WalkCycleHz, dt);
@@ -166,10 +182,52 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   if (Intent.moveDirWorld != glm::vec3(0.0f))
   {
+    const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
+    const CreatureHabitat habitat =
+        def ? def->habitat : CreatureHabitat::Terrestrial;
     glm::vec3 delta = Intent.moveDirWorld * Intent.moveSpeed * dt;
-    delta.y = 0.0f;
-    BodyOrigin = world.ResolveMovementBody(BodyOrigin, delta,
-                                           Bounds.profile.restSizeBlocks, Id);
+    if (habitat == CreatureHabitat::Terrestrial)
+    {
+      delta.y = 0.0f;
+    }
+    else if (habitat == CreatureHabitat::Amphibious)
+    {
+      const EnvironmentSample env = ProbeEnvironmentAt(
+          world, BodyOrigin, Bounds.profile.restSizeBlocks);
+      if (!env.inWater)
+      {
+        delta.y = 0.0f;
+      }
+    }
+    const glm::vec3 candidate = world.ResolveMovementBody(
+        BodyOrigin, delta, Bounds.profile.restSizeBlocks, Id);
+    if (CanCreatureOccupyAt(world, habitat, candidate,
+                            Bounds.profile.restSizeBlocks))
+    {
+      BodyOrigin = candidate;
+    }
+  }
+
+  if (!Possessed)
+  {
+    const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
+    const CreatureHabitat habitat =
+        def ? def->habitat : CreatureHabitat::Terrestrial;
+    if (habitat == CreatureHabitat::Aquatic ||
+        habitat == CreatureHabitat::Amphibious ||
+        habitat == CreatureHabitat::Lava)
+    {
+      const CollisionVolume vol = GetCollisionVolume();
+      const UWorld::SampledFluidState fluid =
+          world.SampleFluidPhysicsVolume(vol);
+      if (fluid.inFluid && glm::length(Intent.moveDirWorld) < 1e-4f)
+      {
+        const float sink = fluid.SinkSpeed * dt * 0.2f;
+        const glm::vec3 buoyancyDelta(0.0f, -sink, 0.0f);
+        BodyOrigin = world.ResolveMovementBody(
+            BodyOrigin, buoyancyDelta, Bounds.profile.restSizeBlocks, Id);
+      }
+    }
   }
 
   if (!Possessed)
@@ -206,7 +264,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   rawInput.bodyOriginBefore = bodyOriginBefore;
   rawInput.bodyOriginAfter = BodyOrigin;
   rawInput.dt = dt;
-  RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities());
+  RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities(), &world);
   LastBodyOrigin = BodyOrigin;
 }
 

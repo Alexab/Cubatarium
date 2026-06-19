@@ -1,0 +1,4 @@
+Source file: texturelobster.png
+Upstream: animalworld/textures/texturelobster.png
+License: MIT
+Attribution: animalworld — Skandarella

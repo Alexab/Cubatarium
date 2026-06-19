@@ -72,6 +72,13 @@ CreaturePoseParams UTerrestrialQuadrupedPosePresenter::Compute(
     pose.SetPart("leg_fr", legFr);
     pose.SetPart("leg_bl", legBl);
 
+    CreaturePartPose legMl;
+    legMl.eulerDeg = glm::vec3(legTilt * 0.85f, 0.0f, 0.0f);
+    CreaturePartPose legMr;
+    legMr.eulerDeg = glm::vec3(-legTilt * 0.85f, 0.0f, 0.0f);
+    pose.SetPart("leg_ml", legMl);
+    pose.SetPart("leg_mr", legMr);
+
     const float spineOffset = 0.18f * kPi;
     CreaturePartPose torso;
     torso.offsetDelta = glm::vec3(

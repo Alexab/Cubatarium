@@ -1,22 +1,33 @@
 # Creature catalog and skins
 
-Ship set: **9 species** (1 player + 8 mobs) and **5 skins**, Luanti-style rigid voxels, data-driven spawn, palette tabs, and appearance resolution.
+Ship set: **51 species** (1 player + 50 mobs) and **5 skins**, Luanti-style rigid voxels, data-driven spawn with **habitat** gating, palette tabs, and appearance resolution.
 
-## Ship set
+## Ship set (original 9)
 
 ### Species
 
-| id | role | archetype | tags | notes |
-|----|------|-----------|------|-------|
-| `human` | controlled_default | terrestrial_biped | humanoid | Player spawn; not in Creatures palette |
-| `sheep` | mob | terrestrial_quadruped | mobs, passive | |
-| `wolf` | mob | terrestrial_quadruped | mobs, hostile | |
-| `pig` | mob | terrestrial_quadruped | mobs, passive | |
-| `cow` | mob | terrestrial_quadruped | mobs, passive | |
-| `chicken` | mob | aerial | mobs, passive | Ground walk (legs), idle peck; wing flap only when `can_fly` |
-| `oerkki` | mob | terrestrial_biped | mobs, hostile | |
-| `skeleton` | mob | terrestrial_biped | mobs, hostile | |
-| `sand_monster` | mob | terrestrial_biped | mobs, hostile | |
+| id | role | archetype | habitat | tags | notes |
+|----|------|-----------|---------|------|-------|
+| `human` | controlled_default | terrestrial_biped | — | humanoid | Player spawn; not in Creatures palette |
+| `sheep` | mob | terrestrial_quadruped | terrestrial | mobs, passive | |
+| `wolf` | mob | terrestrial_quadruped | terrestrial | mobs, hostile | |
+| `pig` | mob | terrestrial_quadruped | terrestrial | mobs, passive | |
+| `cow` | mob | terrestrial_quadruped | terrestrial | mobs, passive | |
+| `chicken` | mob | aerial | terrestrial | mobs, passive | Ground bird; wing flap only when `can_fly` |
+| `oerkki` | mob | terrestrial_biped | terrestrial | mobs, hostile | |
+| `skeleton` | mob | terrestrial_biped | terrestrial | mobs, hostile | |
+| `sand_monster` | mob | terrestrial_biped | terrestrial | mobs, hostile | |
+
+### Extended catalog (waves)
+
+| Wave | Species |
+|------|---------|
+| mobs_animal | `bunny`, `rat`, `panda`, `kitten`, `penguin`, `bee`, `warthog` |
+| mobs_monster | `spider`, `stone_monster`, `tree_monster`, `mese_monster`, `dirt_monster`, `dungeon_master`, `fire_spirit`, `land_guard`, `lava_flan` |
+| dmobs | `fox`, `badger`, `hedgehog`, `tortoise`, `orc`, `ogre`, `golem`, `treeman`, `butterfly`, `owl`, `wasp` |
+| marine | `trout`, `shark`, `squid`, `stingray`, `seahorse`, `manatee`, `lobster`, `hermitcrab`, `seal`, `dolphin`, `whale`, `water_dragon`, `crab`, `octopus`, `puffin` |
+
+Regenerate: `python tools/generate_luanti_creature_catalog.py` (merges [`tools/extra_creature_species.py`](../tools/extra_creature_species.py)).
 
 **Removed:** `scout`, `brute`, `drifter` (legacy placeholders).
 
@@ -48,7 +59,8 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `id`, `display_name`
 - `catalog`: `tags`, `spawnable`, `sort_order`
 - `role`: `controlled_default` | `mob`
-- `bounds`, `eye_height`, `locomotion_archetype`, `locomotion`
+- `bounds`, `eye_height`, `habitat`, `locomotion_archetype`, `locomotion`
+- `habitat`: `terrestrial` | `aquatic` | `aerial` | `amphibious` | `lava` — spawn zone and wander constraints (see [Habitat](#habitat))
 - `locomotion_archetype`: `terrestrial_biped` (default) | `terrestrial_quadruped` | `aerial` | `aquatic` | `serpentine` — выбор pose presenter и derive `LocomotionState`
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
@@ -75,8 +87,26 @@ Removed: `spawn_test_mob`.
 ## Palette and hotbar
 
 - **E** → Creative palette: Blocks, Objects, **Creatures**, **Skins**
-- LMB with Creatures slot: spawn species ahead of view
-- LMB with Skins slot: apply skin to targeted creature (ray-AABB, 8 m)
+- Use active slot (ПКМ Classic / tap ЛКМ Cubatarium): spawn species ahead of view
+- **Creatures** icons are **dimmed** when spawn is impossible in the current view zone (wrong habitat)
+- Tooltip on dimmed entry: `Requires land` / `Requires water` / `Requires open air`
+- Skins slot: apply skin to targeted creature (ray-AABB, 8 m)
+
+## Habitat
+
+| `habitat` | Spawn requires | Movement |
+|-----------|----------------|----------|
+| `terrestrial` | solid ground, not in fluid | XZ wander; blocked leaving land |
+| `aquatic` | body in fluid (water) | 3D wander in water; cannot surface on dry land |
+| `aerial` | open air, not in fluid, ≥1 block clearance above | fly mode wander with light vertical drift |
+| `amphibious` | solid ground **or** water | XZ on land; 3D in water (`penguin`, `seal`) |
+| `lava` | body in lava fluid | 3D wander in lava (`lava_flan`) |
+
+Runtime: [`CreatureEnvironment`](../src/Creatures/Environment/CreatureEnvironment.cpp), `UWorld::CanSpawnCreatureByView`, `WanderActivityAgent` habitat probe.
+
+Derive from Luanti `.lua`: `python tools/derive_creature_habitat_from_luanti.py` → `tools/creature_habitat_map.json`.
+
+Smoke: `python tools/smoke_creature_habitat.py`.
 
 ## Persistence
 

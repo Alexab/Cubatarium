@@ -1,5 +1,7 @@
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Pose/AerialPosePresenter.h"
+#include "Pose/AquaticPosePresenter.h"
+#include "Pose/SerpentinePosePresenter.h"
 #include "Pose/TerrestrialBipedPosePresenter.h"
 #include "Pose/TerrestrialQuadrupedPosePresenter.h"
 
@@ -45,6 +47,8 @@ void RegisterDefaultCreaturePosePresenters(
   registry.Register(std::make_unique<UTerrestrialBipedPosePresenter>());
   registry.Register(std::make_unique<UTerrestrialQuadrupedPosePresenter>());
   registry.Register(std::make_unique<UAerialPosePresenter>());
+  registry.Register(std::make_unique<UAquaticPosePresenter>());
+  registry.Register(std::make_unique<USerpentinePosePresenter>());
 }
 
 } // namespace cutum

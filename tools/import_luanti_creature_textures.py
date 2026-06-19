@@ -18,6 +18,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 RESEARCH_DEFAULT = Path(r"E:/Work/Home/CubatariumTextureResearch")
+IMPORTS_YAML = ROOT / "tools" / "creature_texture_imports.yaml"
 
 # Luanti 64x32 skin regions (Minecraft classic layout).
 SKIN64x32 = {
@@ -73,8 +74,32 @@ DOWNLOAD_REPOS = [
 ]
 
 
+def load_yaml_imports() -> list[MobImport]:
+    if not IMPORTS_YAML.is_file():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "-q"])
+        import yaml
+    data = yaml.safe_load(IMPORTS_YAML.read_text(encoding="utf-8")) or {}
+    out: list[MobImport] = []
+    for species_id, meta in (data.get("mobs") or {}).items():
+        out.append(
+            MobImport(
+                species_id,
+                TextureSource(
+                    meta["path"],
+                    meta.get("license", "Unknown"),
+                    meta.get("attribution", meta["path"]),
+                ),
+            )
+        )
+    return out
+
+
 def mob_sources(research: Path) -> list[MobImport]:
-    return [
+    base = [
         MobImport(
             "human",
             TextureSource(
@@ -148,6 +173,12 @@ def mob_sources(research: Path) -> list[MobImport]:
             ),
         ),
     ]
+    seen = {entry.species_id for entry in base}
+    for entry in load_yaml_imports():
+        if entry.species_id not in seen:
+            base.append(entry)
+            seen.add(entry.species_id)
+    return base
 
 
 def skin_sources(research: Path) -> list[SkinImport]:

@@ -1,0 +1,4 @@
+Source file: dmobs_golem.png
+Upstream: dmobs/textures/dmobs_golem.png
+License: CC BY-SA 3.0
+Attribution: dmobs — D00Med

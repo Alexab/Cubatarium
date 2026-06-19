@@ -50,6 +50,8 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
   CreatureBehaviorSnapshot snapshot;
   snapshot.behavior = def->behavior;
   snapshot.locomotion = def->locomotion;
+  snapshot.habitat = def->habitat;
+  snapshot.boundsSize = def->bounds.restSizeBlocks;
   return snapshot;
 }
 

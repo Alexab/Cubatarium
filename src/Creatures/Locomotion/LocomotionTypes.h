@@ -41,7 +41,18 @@ enum class LocomotionArchetype : uint8_t
   Serpentine
 };
 
+enum class CreatureHabitat : uint8_t
+{
+  Terrestrial,
+  Aquatic,
+  Aerial,
+  Amphibious,
+  Lava
+};
+
 LocomotionArchetype ParseLocomotionArchetype(const std::string &s);
+CreatureHabitat ParseCreatureHabitat(const std::string &s);
+const char *ToString(CreatureHabitat habitat);
 const char *ToString(LocomotionState state);
 const char *ToString(LocomotionArchetype archetype);
 

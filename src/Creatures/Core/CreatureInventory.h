@@ -21,6 +21,7 @@ public:
   /// Creative-mode defaults (counts -1 = unlimited).
   void InitCreativeDefaults();
   void EnsureDefaultHotbar();
+  bool IsPrimaryHotbarEmpty() const;
   void SetPrefabHotbar(const std::vector<std::string> &prefab_names);
 
   size_t GetHotbarCount() const { return Hotbars.size(); }

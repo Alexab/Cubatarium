@@ -1,4 +1,5 @@
 #include "Activity/CreatureActivityRegistry.h"
+#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -73,6 +74,13 @@ std::vector<CreatureId> UWorld::CreaturesInRadius(const glm::vec3 &center,
         }
       });
   return out;
+}
+
+bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
+                                 const glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks) const
+{
+  return cutum::CanCreatureOccupyAt(*this, habitat, bodyOrigin, sizeBlocks);
 }
 
 void UWorld::SetSkinDefinitionStorage(
@@ -163,18 +171,29 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
     return 0;
   }
 
+  const glm::vec3 spawnOrigin =
+      AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
+  if (def->role != CreatureRole::ControlledDefault &&
+      !CanCreatureOccupyAt(def->habitat, spawnOrigin,
+                           def->bounds.restSizeBlocks))
+  {
+    std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
+              << std::endl;
+    return 0;
+  }
+
   const CreatureId Id = NextCreatureId++;
   const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
 
   std::unique_ptr<UCreature> creature;
   if (def->role == CreatureRole::ControlledDefault)
   {
-    creature = std::make_unique<UPlayer>(Id, speciesId, bodyOrigin);
+    creature = std::make_unique<UPlayer>(Id, speciesId, spawnOrigin);
   }
   else
   {
     creature =
-        std::make_unique<UCreature>(Id, speciesId, bodyOrigin, eyeOffset);
+        std::make_unique<UCreature>(Id, speciesId, spawnOrigin, eyeOffset);
   }
 
   creature->GetBoundsMutable().profile = def->bounds;
@@ -188,13 +207,20 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
       creature->GetBounds().currentSizeBlocks, def->eyeHeight);
+  if (def->habitat != CreatureHabitat::Terrestrial)
+  {
+    creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
+  }
   if (!skinId.empty())
   {
     creature->SetSkinId(skinId);
   }
   creature->SetVisual(CreateCreatureVisual(*def));
   Creatures[Id] = std::move(creature);
-  SnapCreatureFeetToGround(*Creatures[Id]);
+  if (def->habitat == CreatureHabitat::Terrestrial)
+  {
+    SnapCreatureFeetToGround(*Creatures[Id]);
+  }
   if (def->role != CreatureRole::ControlledDefault)
   {
     ActivityDirector.OnCreatureAdded(Id, def->behavior.Id);
@@ -374,7 +400,29 @@ bool UWorld::SpawnCreatureByView(const std::string &speciesId)
   }
   const glm::vec3 bodyOrigin =
       ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
-  return SpawnCreature(speciesId, bodyOrigin) != 0;
+  if (!CanSpawnCreatureAt(*this, *def, bodyOrigin))
+  {
+    return false;
+  }
+  const glm::vec3 adjusted = AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
+  return SpawnCreature(speciesId, adjusted) != 0;
+}
+
+bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
+{
+  const CreatureDefinition *def =
+      CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
+  if (!def)
+  {
+    return false;
+  }
+  if (!def->catalog.spawnable && def->role != CreatureRole::ControlledDefault)
+  {
+    return false;
+  }
+  const glm::vec3 bodyOrigin =
+      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+  return CanSpawnCreatureAt(*this, *def, bodyOrigin);
 }
 
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,
@@ -574,12 +622,16 @@ void UWorld::LoadCreatures(const std::string &file_name)
       }
       creature->SetVisual(CreateCreatureVisual(*def));
       creature->SetOrientation(c.value("yaw", 0.0f), c.value("pitch", 0.0f));
-      if (c.value("movement_mode", "walking") == "flying")
+      if (def->habitat != CreatureHabitat::Terrestrial ||
+          c.value("movement_mode", "walking") == "flying")
       {
         creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
       }
       creature->GetInventory().DeserializeFromJson(c);
-      SnapCreatureFeetToGround(*creature);
+      if (def->habitat == CreatureHabitat::Terrestrial)
+      {
+        SnapCreatureFeetToGround(*creature);
+      }
       Creatures[id] = std::move(creature);
       ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
       NextCreatureId = std::max(NextCreatureId, id + 1);

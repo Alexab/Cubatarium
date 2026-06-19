@@ -831,6 +831,14 @@ void UCore::LoadWorld(const std::string &world_name)
 {
   ActiveWorldFolder = WorldFolderPath(world_name);
   WorldInstance->Load(ActiveWorldFolder.string());
+  if (!DefaultUserName.empty())
+  {
+    if (!WorldInstance->SetCurrentUserName(DefaultUserName))
+    {
+      std::cerr << "Core::LoadWorld: user '" << DefaultUserName
+                << "' not found." << std::endl;
+    }
+  }
   if (WorldInstance->GetCurrentUser() == nullptr)
   {
     WorldInstance->GenerateUsers();

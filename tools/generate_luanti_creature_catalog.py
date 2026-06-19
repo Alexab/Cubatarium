@@ -17,6 +17,13 @@ except ImportError:
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
+try:
+    from extra_creature_species import EXTRA_SPECIES
+except ImportError:
+    EXTRA_SPECIES = {}
+
+HABITAT_MAP_PATH = TOOLS / "creature_habitat_map.json"
+
 # Luanti-inspired palette (CC-style placeholders; replace with imported PNGs when available).
 SPECIES: dict[str, dict] = {
     "human": {
@@ -83,6 +90,7 @@ SPECIES: dict[str, dict] = {
         "tags": ["mobs", "passive"],
         "sort": 17,
         "archetype": "aerial",
+        "habitat": "terrestrial",
         "color": (255, 240, 200),
         "bounds": {"rest": [0.5, 0.7, 0.5], "max": [0.5, 0.7, 0.5], "min": [0.5, 0.5, 0.5]},
         "eye": 0.55,
@@ -123,6 +131,12 @@ SPECIES: dict[str, dict] = {
         "icon": [0.8, 0.65, 0.3, 1.0],
     },
 }
+
+SPECIES.update(EXTRA_SPECIES)
+
+for _sid, _meta in SPECIES.items():
+    if _sid != "human" and "habitat" not in _meta:
+        _meta["habitat"] = "terrestrial"
 
 SKINS = [
     {
@@ -304,6 +318,58 @@ def load_rigid_parts_yaml() -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
+def aquatic_parts() -> list[dict]:
+    return [
+        {"id": "torso", "offset": [0.0, 0.25, 0.0], "size": [0.55, 0.35, 1.0], "texture": "body"},
+        {"id": "head", "offset": [0.0, 0.3, 0.65], "size": [0.35, 0.3, 0.35], "texture": "face"},
+        {
+            "id": "tail",
+            "offset": [0.0, 0.28, -0.55],
+            "size": [0.2, 0.15, 0.45],
+            "texture": "body",
+            "pivot": [0.0, 0.28, -0.35],
+            "limb": "arm",
+        },
+        {
+            "id": "fin_l",
+            "offset": [-0.35, 0.2, 0.0],
+            "size": [0.12, 0.08, 0.35],
+            "texture": "leg",
+            "pivot": [-0.28, 0.2, 0.0],
+            "limb": "arm",
+        },
+        {
+            "id": "fin_r",
+            "offset": [0.35, 0.2, 0.0],
+            "size": [0.12, 0.08, 0.35],
+            "texture": "leg",
+            "pivot": [0.28, 0.2, 0.0],
+            "limb": "arm",
+        },
+    ]
+
+
+def serpentine_parts() -> list[dict]:
+    return [
+        {"id": "torso", "offset": [0.0, 0.32, 0.0], "size": [0.7, 0.28, 0.85], "texture": "body"},
+        {"id": "head", "offset": [0.0, 0.34, 0.52], "size": [0.28, 0.22, 0.28], "texture": "face"},
+        {
+            "id": "tail",
+            "offset": [0.0, 0.3, -0.52],
+            "size": [0.22, 0.18, 0.48],
+            "texture": "body",
+            "pivot": [0.0, 0.3, -0.32],
+            "limb": "arm",
+        },
+    ]
+
+
+def load_habitat_map() -> dict[str, str]:
+    if not HABITAT_MAP_PATH.is_file():
+        return {}
+    return json.loads(HABITAT_MAP_PATH.read_text(encoding="utf-8"))
+
+
 def species_parts(species_id: str, meta: dict, rigid_parts: dict) -> list[dict]:
     if species_id in rigid_parts and "parts" in rigid_parts[species_id]:
         return rigid_parts[species_id]["parts"]
@@ -312,6 +378,10 @@ def species_parts(species_id: str, meta: dict, rigid_parts: dict) -> list[dict]:
         return quadruped_parts()
     if archetype == "aerial":
         return aerial_parts()
+    if archetype == "aquatic":
+        return aquatic_parts()
+    if archetype == "serpentine":
+        return serpentine_parts()
     return biped_parts(pivot=(species_id == "human" or True))
 
 
@@ -319,7 +389,14 @@ def build_creature_json(species_id: str, meta: dict, rigid_parts: dict) -> dict:
     parts = species_parts(species_id, meta, rigid_parts)
     role = meta.get("role", "mob")
     archetype = meta["archetype"]
+    habitat = meta.get("habitat", "terrestrial")
     behavior = meta.get("behavior", "wander" if role == "mob" else "none")
+    can_fly = species_id == "human" or habitat in (
+        "aquatic",
+        "aerial",
+        "amphibious",
+        "lava",
+    )
     return {
         "id": species_id,
         "display_name": meta["display"],
@@ -331,11 +408,12 @@ def build_creature_json(species_id: str, meta: dict, rigid_parts: dict) -> dict:
         "role": role,
         "bounds": meta["bounds"],
         "eye_height": meta["eye"],
+        "habitat": habitat,
         "locomotion_archetype": archetype,
         "locomotion": {
-            "can_fly": species_id == "human",
+            "can_fly": can_fly,
             "can_crouch": species_id == "human",
-            "can_jump": True,
+            "can_jump": habitat in ("terrestrial", "amphibious"),
             "jump_height": 1.0 if species_id != "human" else 1.25,
             "walk_speed": meta["walk"],
         },
@@ -454,6 +532,10 @@ def main() -> None:
     args = parser.parse_args()
 
     rigid_parts = load_rigid_parts_yaml()
+    habitat_map = load_habitat_map()
+    for species_id, meta in SPECIES.items():
+        if species_id in habitat_map and "habitat" not in meta:
+            meta["habitat"] = habitat_map[species_id]
     remove_legacy()
     for species_id, meta in SPECIES.items():
         folder = ROOT / "models" / "creatures" / species_id

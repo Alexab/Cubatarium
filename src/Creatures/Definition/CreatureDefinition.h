@@ -21,6 +21,7 @@ struct CreatureDefinition
   CreatureLocomotionCapabilities locomotion;
   LocomotionArchetype locomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};
+  CreatureHabitat habitat{CreatureHabitat::Terrestrial};
   CreatureBehaviorParams behavior;
   CreatureVisualSpec visual;
 };

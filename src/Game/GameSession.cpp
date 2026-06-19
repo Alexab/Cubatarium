@@ -497,7 +497,12 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
 size_t UGameSession::GetSelectedSlot(size_t barIndex) const
 {
   const UCreatureInventory *inv = GetControlledInventory(World.get());
-  return inv ? inv->GetActiveSlotIndex(barIndex) : 10;
+  if (!inv)
+  {
+    return 0;
+  }
+  const size_t slot = inv->GetActiveSlotIndex(barIndex);
+  return slot < 10 ? slot : 0;
 }
 
 void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
@@ -511,11 +516,13 @@ void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
 bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
                               const InventoryEntryRef &entry)
 {
-  if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
   {
-    return inv->AssignToHotbar(barIndex, slotIndex, entry);
+    return false;
   }
-  return false;
+  inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  return inv->AssignToHotbar(barIndex, slotIndex, entry);
 }
 
 void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
@@ -764,7 +771,13 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
     return false;
   }
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
-  if (!creatureInv || barIndex >= creatureInv->GetHotbarCount())
+  if (!creatureInv)
+  {
+    return false;
+  }
+  const_cast<UCreatureInventory *>(creatureInv)->EnsureHotbarCount(
+      static_cast<size_t>(GetHotbarCountSetting()));
+  if (barIndex >= creatureInv->GetHotbarCount())
   {
     return false;
   }

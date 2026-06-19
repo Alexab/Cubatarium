@@ -13,6 +13,8 @@
 
 #include "ResourcePacks/BlockNameUtil.h"
 
+#include <algorithm>
+
 namespace cutum
 {
 
@@ -146,7 +148,10 @@ void UCreativePaletteScreen::RelayoutPanel()
     return;
   }
   const int panelW = ViewportW * 60 / 100;
-  const int panelH = ViewportH * 70 / 100;
+  const int slotSize = Theme ? Theme->HotbarSlotSize : 48;
+  const int hotbarReserve = slotSize + 24 + 16;
+  const int maxPanelH = std::max(120, ViewportH - hotbarReserve - ViewportH / 12);
+  const int panelH = std::min(ViewportH * 70 / 100, maxPanelH);
   const int panelX = (ViewportW - panelW) / 2;
   const int panelY = (ViewportH - panelH) / 2;
   Panel->SetBounds({panelX, panelY, panelW, panelH});
@@ -407,7 +412,16 @@ void UCreativePaletteScreen::RebuildGrid()
             return;
           }
           SelectedEntryId = entry.Id;
-          Session->BeginPendingAssignment(entry);
+          const size_t bar = 0;
+          const size_t slot = Session->GetSelectedSlot(bar);
+          if (Session->AssignToHotbar(entry, bar, slot))
+          {
+            Session->ClearPendingAssignment();
+          }
+          else
+          {
+            Session->BeginPendingAssignment(entry);
+          }
           Built = false;
         });
     slot->SetOnBeginDrag(

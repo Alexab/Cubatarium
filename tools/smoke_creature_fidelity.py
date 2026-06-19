@@ -149,6 +149,40 @@ def check_b3d_samples() -> None:
     )
 
 
+def remap_legacy_hotbar_creature_id(species_id: str) -> str:
+    if species_id in ("test_mob", "scout"):
+        return "sheep"
+    if species_id == "brute":
+        return "sand_monster"
+    if species_id == "drifter":
+        return "wolf"
+    return species_id
+
+
+def deserialize_hotbar_slot(slot_json: dict) -> dict:
+    """Mirror CreatureInventory::DeserializeFromJson slot rules."""
+    entry_id = slot_json.get("id", "")
+    slot_empty = slot_json["empty"] if "empty" in slot_json else not entry_id
+    if slot_empty:
+        return {"empty": True, "id": ""}
+    kind = slot_json.get("kind", "block")
+    if kind == "creature":
+        entry_id = remap_legacy_hotbar_creature_id(entry_id)
+    return {"empty": False, "kind": kind, "id": entry_id}
+
+
+def check_hotbar_legacy_id_remap() -> None:
+    slot = deserialize_hotbar_slot(
+        {"empty": False, "kind": "creature", "id": "brute", "count": 0}
+    )
+    if slot["id"] != "sand_monster":
+        raise SystemExit(f"FAIL hotbar remap: brute -> {slot['id']}")
+    legacy = deserialize_hotbar_slot({"kind": "creature", "id": "drifter"})
+    if legacy["empty"] or legacy["id"] != "wolf":
+        raise SystemExit(f"FAIL hotbar migrate empty: {legacy}")
+    print("OK hotbar legacy id remap + empty migration")
+
+
 def check_hotbar_creature_persistence() -> None:
     """Mirror post-load hotbar rules: saved creature in slot 1 must not become wood."""
     user_data = {
@@ -213,8 +247,23 @@ def main() -> None:
     check_human_atlas()
     check_proportions()
     check_animation_fields()
-    check_hotbar_creature_persistence()
+    check_parts(
+        "spider",
+        {"leg_fl", "leg_fr", "leg_ml", "leg_mr", "leg_bl", "leg_br"},
+    )
+    check_parts("penguin", {"fin_l", "fin_r", "leg_l", "leg_r", "beak"})
+    check_parts("tortoise", {"tail"})
+    for species in ("bunny", "spider", "penguin", "trout", "fox", "tortoise"):
+        path = MODELS / species / "textures" / "body.png"
+        if not path.is_file():
+            raise SystemExit(f"FAIL {species}: missing imported body.png")
+        lic = MODELS / species / "LICENSE.txt"
+        if lic.is_file() and "Placeholder procedural" in lic.read_text(encoding="utf-8"):
+            raise SystemExit(f"FAIL {species}: still using placeholder LICENSE")
+    print("OK wave-2 imported textures (sample)")
     check_b3d_samples()
+    check_hotbar_legacy_id_remap()
+    check_hotbar_creature_persistence()
     print("=== all creature fidelity smoke checks passed ===")
     print(
         "Manual: spawn sheep/cow/chicken/skeleton; F5 human walk/crouch; "

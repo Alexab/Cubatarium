@@ -69,6 +69,51 @@ const char *ToString(LocomotionState state)
   return "unknown";
 }
 
+CreatureHabitat ParseCreatureHabitat(const std::string &s)
+{
+  if (s == "aquatic")
+  {
+    return CreatureHabitat::Aquatic;
+  }
+  if (s == "aerial")
+  {
+    return CreatureHabitat::Aerial;
+  }
+  if (s == "amphibious")
+  {
+    return CreatureHabitat::Amphibious;
+  }
+  if (s == "lava")
+  {
+    return CreatureHabitat::Lava;
+  }
+  if (s == "terrestrial" || s.empty())
+  {
+    return CreatureHabitat::Terrestrial;
+  }
+  std::cerr << "ParseCreatureHabitat: unknown '" << s
+            << "', using terrestrial" << std::endl;
+  return CreatureHabitat::Terrestrial;
+}
+
+const char *ToString(CreatureHabitat habitat)
+{
+  switch (habitat)
+  {
+  case CreatureHabitat::Aquatic:
+    return "aquatic";
+  case CreatureHabitat::Aerial:
+    return "aerial";
+  case CreatureHabitat::Amphibious:
+    return "amphibious";
+  case CreatureHabitat::Lava:
+    return "lava";
+  case CreatureHabitat::Terrestrial:
+    return "terrestrial";
+  }
+  return "terrestrial";
+}
+
 const char *ToString(LocomotionArchetype archetype)
 {
   switch (archetype)

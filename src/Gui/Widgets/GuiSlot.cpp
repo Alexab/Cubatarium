@@ -41,6 +41,16 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
                            Bounds.W - inset * 2, Bounds.H - inset * 2};
     renderer.DrawTexturedRect(iconRect, IconTexture);
   }
+  else if (!Label.empty())
+  {
+    std::string text = Label;
+    if (text.size() > 8)
+    {
+      text = text.substr(0, 8);
+    }
+    renderer.DrawText(text, Bounds.X + 3, Bounds.Y + Bounds.H / 2 - 6,
+                      Theme->TextSecondary);
+  }
 
   if (Selected)
   {

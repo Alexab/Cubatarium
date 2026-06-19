@@ -143,6 +143,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
+    def.habitat =
+        ParseCreatureHabitat(data.value("habitat", "terrestrial"));
     def.behavior.Id = data.value("behavior", def.behavior.Id);
     if (data.contains("behavior_params") && data["behavior_params"].is_object())
     {

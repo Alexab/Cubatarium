@@ -1,0 +1,4 @@
+Source file: mobs_panda.png
+Upstream: mobs_animal/textures/mobs_panda.png
+License: MIT
+Attribution: mobs_animal — TenPlus1

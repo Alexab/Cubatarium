@@ -78,11 +78,13 @@ public:
   }
   void SetWalkCycleHz(float hz) { WalkCycleHz = hz; }
   void RebuildLocomotionFacts(const CreatureLocomotionRawInput &input,
-                              const CreatureLocomotionCapabilities &caps);
+                              const CreatureLocomotionCapabilities &caps,
+                              const UWorld *world = nullptr);
   void RebuildLocomotionFactsFromController(
       const UCreatureLocomotionController &controller,
       const CreatureLocomotionCapabilities &caps, float dt,
-      float horizontalSpeedOverride = -1.0f);
+      float horizontalSpeedOverride = -1.0f,
+      const UWorld *world = nullptr);
 
   bool IsPlayerCharacter() const { return PlayerCharacter; }
   void SetPlayerCharacter(bool v) { PlayerCharacter = v; }

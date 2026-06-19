@@ -28,6 +28,7 @@
     ]
   },
   "eye_height": 0.55,
+  "habitat": "terrestrial",
   "locomotion_archetype": "aerial",
   "locomotion": {
     "can_fly": false,
@@ -47,7 +48,7 @@
     "texture_layout": "rigid_crop",
     "animation": {
       "walk_cycle_hz": 2.0,
-      "leg_swing_deg": 30,
+      "leg_swing_deg": 25,
       "arm_swing_deg": 15,
       "fly_body_pitch_deg": 10,
       "body_bob_blocks": 0.025,

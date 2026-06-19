@@ -249,6 +249,9 @@ public:
                            const glm::vec3 &bodyOrigin,
                            const std::string &skinId = "");
   bool SpawnCreatureByView(const std::string &speciesId);
+  bool CanSpawnCreatureByView(const std::string &speciesId);
+  bool CanCreatureOccupyAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
+                           const glm::vec3 &sizeBlocks) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;

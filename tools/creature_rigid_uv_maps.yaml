@@ -15,7 +15,7 @@ default_part_groups:
       part_ids: [tail]
       stem: tail
     leg:
-      part_ids: [leg_fl, leg_fr, leg_bl, leg_br]
+      part_ids: [leg_fl, leg_fr, leg_bl, leg_br, leg_ml, leg_mr]
       stem: leg
   biped:
     body:
@@ -40,6 +40,23 @@ default_part_groups:
     leg:
       part_ids: [leg_l, leg_r]
       stem: leg
+  aquatic:
+    body:
+      part_ids: [torso, tail]
+      stem: body
+    face:
+      part_ids: [head, beak]
+      stem: face
+    leg:
+      part_ids: [fin_l, fin_r, leg_l, leg_r]
+      stem: leg
+  serpentine:
+    body:
+      part_ids: [torso, tail]
+      stem: body
+    face:
+      part_ids: [head]
+      stem: face
 
 species_archetype:
   sheep: quadruped
@@ -50,6 +67,48 @@ species_archetype:
   oerkki: biped
   skeleton: biped
   sand_monster: biped
+  bunny: quadruped
+  rat: quadruped
+  panda: quadruped
+  kitten: quadruped
+  penguin: aquatic
+  bee: aerial
+  warthog: quadruped
+  spider: quadruped
+  stone_monster: biped
+  tree_monster: biped
+  mese_monster: biped
+  dirt_monster: biped
+  dungeon_master: biped
+  fire_spirit: aerial
+  land_guard: biped
+  lava_flan: biped
+  fox: quadruped
+  badger: quadruped
+  hedgehog: quadruped
+  tortoise: serpentine
+  orc: biped
+  ogre: biped
+  golem: biped
+  treeman: biped
+  butterfly: aerial
+  owl: aerial
+  wasp: aerial
+  trout: aquatic
+  shark: aquatic
+  squid: aquatic
+  stingray: aquatic
+  seahorse: aquatic
+  manatee: aquatic
+  lobster: aquatic
+  hermitcrab: aquatic
+  seal: aquatic
+  dolphin: aquatic
+  whale: aquatic
+  water_dragon: aquatic
+  crab: aquatic
+  octopus: aquatic
+  puffin: aerial
 
 output_size: 64
 icon_size: 32

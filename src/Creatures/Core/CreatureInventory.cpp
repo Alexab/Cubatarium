@@ -7,6 +7,26 @@ namespace cutum
 namespace
 {
 constexpr size_t kHotbarSlots = 10;
+
+void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
+{
+  if (entry.kind != InventoryEntryKind::UCreature)
+  {
+    return;
+  }
+  if (entry.Id == "test_mob" || entry.Id == "scout")
+  {
+    entry.Id = "sheep";
+  }
+  else if (entry.Id == "brute")
+  {
+    entry.Id = "sand_monster";
+  }
+  else if (entry.Id == "drifter")
+  {
+    entry.Id = "wolf";
+  }
+}
 }
 
 void UCreatureInventory::AddItem(const std::string &Id, int count)
@@ -73,6 +93,22 @@ void UCreatureInventory::EnsureDefaultHotbar()
   {
     SetActiveSlot(0, 1);
   }
+}
+
+bool UCreatureInventory::IsPrimaryHotbarEmpty() const
+{
+  if (Hotbars.empty())
+  {
+    return true;
+  }
+  for (const auto &slot : GetHotbar(0).slots)
+  {
+    if (!slot.empty && !slot.entry.Id.empty())
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 void UCreatureInventory::SetPrefabHotbar(
@@ -271,7 +307,10 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
           {
             break;
           }
-          bar.slots[si].empty = slotJson.value("empty", true);
+          const std::string id = slotJson.value("id", "");
+          const bool slotEmpty =
+              slotJson.contains("empty") ? slotJson["empty"].get<bool>() : id.empty();
+          bar.slots[si].empty = slotEmpty;
           if (!bar.slots[si].empty)
           {
             const std::string kind = slotJson.value("kind", "block");
@@ -291,9 +330,10 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Block;
             }
-            bar.slots[si].entry.Id = slotJson.value("id", "");
+            bar.slots[si].entry.Id = id;
             bar.slots[si].entry.count = slotJson.value("count", 0);
             bar.slots[si].entry.empty = false;
+            RemapLegacyHotbarEntryId(bar.slots[si].entry);
           }
           ++si;
         }

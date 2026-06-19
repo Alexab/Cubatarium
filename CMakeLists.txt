@@ -76,6 +76,7 @@ set(SOURCES
     src/Activity/CreatureActivityRegistry.cpp
     src/Activity/Agents/WanderActivityAgent.cpp
     src/Creatures/Core/WorldCreatures.cpp
+    src/Creatures/Environment/CreatureEnvironment.cpp
     src/Creatures/Definition/CreatureDefinitionStorage.cpp
     src/Creatures/Visual/CreatureTextureStorage.cpp
     src/Creatures/Definition/SkinDefinitionStorage.cpp
@@ -88,6 +89,8 @@ set(SOURCES
     src/Pose/TerrestrialBipedPosePresenter.cpp
     src/Pose/TerrestrialQuadrupedPosePresenter.cpp
     src/Pose/AerialPosePresenter.cpp
+    src/Pose/AquaticPosePresenter.cpp
+    src/Pose/SerpentinePosePresenter.cpp
     src/App/Core.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp

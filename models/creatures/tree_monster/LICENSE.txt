@@ -1,0 +1,4 @@
+Source file: mobs_tree_monster.png
+Upstream: mobs_monster/textures/mobs_tree_monster.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

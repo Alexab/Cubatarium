@@ -603,6 +603,26 @@ void UWorld::FinalizePlayerAfterWorldLoad()
   BlockWorldReady = CachedBlockCount > 0;
   PhysicsSuspendFrames = 3;
 
+  if (CurrentUserName.empty() && !Users.empty())
+  {
+    SetCurrentUserName(Users.begin()->first);
+  }
+  if (ControlledCreatureId == 0)
+  {
+    if (PlayerCreatureId != 0)
+    {
+      SetControlledCreature(PlayerCreatureId);
+    }
+    else if (auto user = GetCurrentUser())
+    {
+      if (user->GetPlayerCreatureId() != 0)
+      {
+        PlayerCreatureId = user->GetPlayerCreatureId();
+        SetControlledCreature(PlayerCreatureId);
+      }
+    }
+  }
+
   if (auto user = GetCurrentUser())
   {
     SanitizeUserPosition(user);
@@ -1962,6 +1982,36 @@ void UWorld::LoadUsers(const std::string &file_name)
         user->SetPlayerCreatureId(PlayerCreatureId);
         playerCreature = GetCreature(PlayerCreatureId);
       }
+      if (!playerCreature)
+      {
+        std::string speciesId = "human";
+        if (CreatureDefinitions)
+        {
+          const std::string controlled =
+              CreatureDefinitions->GetControlledDefaultSpeciesId();
+          if (!controlled.empty())
+          {
+            speciesId = controlled;
+          }
+        }
+        const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
+        const glm::vec3 bodyOrigin = BodyOriginFromEye(position, eyeOffset);
+        const CreatureId pid = SpawnCreature(speciesId, bodyOrigin);
+        if (pid != 0)
+        {
+          user->SetPlayerCreatureId(pid);
+          PlayerCreatureId = pid;
+          if (Users.size() == 1)
+          {
+            ControlledCreatureId = pid;
+          }
+          if (UPlayer *player = dynamic_cast<UPlayer *>(GetCreature(pid)))
+          {
+            player->BindUser(user);
+          }
+          playerCreature = GetCreature(pid);
+        }
+      }
       if (playerCreature)
       {
         const glm::vec3 eyeOffset = playerCreature->GetEyeOffset();
@@ -1992,7 +2042,7 @@ void UWorld::LoadUsers(const std::string &file_name)
         {
           inv.InitCreativeDefaults();
         }
-        if (!hadHotbars)
+        if (!hadHotbars || inv.IsPrimaryHotbarEmpty())
         {
           inv.EnsureDefaultHotbar();
         }
@@ -2327,7 +2377,7 @@ void UWorld::DoMovement()
     }
     controlled->RebuildLocomotionFactsFromController(
         camLoc, controlled->GetLocomotion().GetCapabilities(),
-        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed);
+        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
     is_moved = true;
   }
 

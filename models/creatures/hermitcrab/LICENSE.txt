@@ -1,0 +1,4 @@
+Source file: texturehermitcrab.png
+Upstream: animalworld/textures/texturehermitcrab.png
+License: MIT
+Attribution: animalworld — Skandarella

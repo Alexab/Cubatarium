@@ -8,11 +8,12 @@
 |----|----------|------|--------------|--------|
 | TD-CRE-001 | 0 | Full glTF backend (cgltf, skinned shader, clip playback) | Primary path is rigid_voxels | 5 |
 | TD-CRE-003 | 0 | `visual.rig` parsed but does not select pose presenter | `locomotion_archetype` is sufficient | backlog |
-| TD-CRE-006 | 1 | `AerialPosePresenter` — flying birds / full b3d clip playback | Ground chicken walk+peck done; fly IK deferred | backlog |
-| TD-CRE-007 | 1 | `AquaticPosePresenter` / `SerpentinePosePresenter` | No mobs in phase-2 ship set | backlog |
+| TD-CRE-006 | 1 | `AerialPosePresenter` — full b3d clip playback for flying birds | Ground chicken walk+peck done; fly IK deferred | backlog |
 | TD-CRE-008 | 2 | `FleeActivityAgent`, `MeleeAttackActivityAgent` | Visual scope, not AI | backlog |
-| TD-CRE-009 | 2 | Spider / 8 legs rigid approximation | High complexity | backlog |
+| TD-CRE-009 | 2 | Spider / 8 legs rigid approximation | 6-leg template (`leg_ml`/`leg_mr`) + quadruped pose | done |
 | TD-CRE-010 | 3 | FP viewmodel arms (`fp_parts[]`) | Not a blocker | backlog |
+| TD-CRE-015 | habitat | Amphibious habitat (`penguin`, `seal`) | `CreatureHabitat::Amphibious` + spawn/move rules | done |
+| TD-CRE-016 | habitat | Lava fluid habitat for `lava_flan` | `CreatureHabitat::Lava` + lava block probe | done |
 
 ## Closed
 
@@ -25,3 +26,4 @@
 | TD-CRE-005 | 2 | Ship-set creature JSON uses explicit pivot/limb fields |
 | TD-CRE-004 | 3 | Icons for all ship-set species (`icon.png` or `parts_preview` FBO) |
 | TD-CRE-011 | 4 | Creature resource packs merge via `ApplyCreaturePackOverlays` |
+| TD-CRE-007 | habitat | `AquaticPosePresenter` / `SerpentinePosePresenter` + habitat spawn/move UI | Implemented in habitat wave |
