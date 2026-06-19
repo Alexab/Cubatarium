@@ -51,7 +51,7 @@ bool PickWanderDirection(IWorldPerception &perception,
     const glm::vec3 dir = RandomWanderDirection(habitat);
     const glm::vec3 probe =
         view.bodyOrigin + dir * kWanderProbeDistance;
-    if (perception.CanCreatureOccupyAt(habitat, probe, boundsSize))
+    if (perception.HabitatAllowsAt(habitat, probe, boundsSize))
     {
       outDirection = dir;
       return true;

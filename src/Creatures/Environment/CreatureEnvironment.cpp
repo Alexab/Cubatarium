@@ -136,13 +136,31 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
   return !world.CheckCollisionVolume(vol, 0);
 }
 
+bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
+                     const glm::vec3 &bodyOrigin,
+                     const glm::vec3 &sizeBlocks)
+{
+  const EnvironmentSample env =
+      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+  return HabitatMatches(habitat, env);
+}
+
 bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
                         const glm::vec3 &bodyOrigin)
 {
   const glm::vec3 size = def.bounds.restSizeBlocks;
   const glm::vec3 adjusted =
       AdjustSpawnBodyOrigin(world, def, bodyOrigin);
-  return CanCreatureOccupyAt(world, def.habitat, adjusted, size);
+  if (!HabitatAllowsAt(world, def.habitat, adjusted, size))
+  {
+    return false;
+  }
+  const CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
+  if (world.CheckCreatureCollisionVolume(vol, 0))
+  {
+    return false;
+  }
+  return !world.CheckBlockCollisionVolume(vol);
 }
 
 std::string HabitatRequirementLabel(CreatureHabitat habitat)
@@ -194,12 +212,10 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
     if (const std::optional<float> feetY =
             FindAquaticFeetY(world, gx, gz, false))
     {
-      const float halfHeight = def.bounds.restSizeBlocks.y * 0.5f;
       const float minFeet = *feetY;
       const float maxFeet =
           minFeet + static_cast<float>(255) - def.bounds.restSizeBlocks.y;
-      const float feetYClamped =
-          std::clamp(probeOrigin.y - halfHeight, minFeet, maxFeet);
+      const float feetYClamped = std::clamp(probeOrigin.y, minFeet, maxFeet);
       return glm::vec3(probeOrigin.x, feetYClamped, probeOrigin.z);
     }
     if (def.habitat == CreatureHabitat::Amphibious)
@@ -214,12 +230,10 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
     if (const std::optional<float> feetY =
             FindAquaticFeetY(world, gx, gz, true))
     {
-      const float halfHeight = def.bounds.restSizeBlocks.y * 0.5f;
-      const float feetYClamped = *feetY;
-      return glm::vec3(probeOrigin.x,
-                     std::clamp(probeOrigin.y - halfHeight, feetYClamped,
-                                feetYClamped + 32.0f),
-                     probeOrigin.z);
+      const float minFeet = *feetY;
+      const float maxFeet = minFeet + 32.0f;
+      const float feetYClamped = std::clamp(probeOrigin.y, minFeet, maxFeet);
+      return glm::vec3(probeOrigin.x, feetYClamped, probeOrigin.z);
     }
     return probeOrigin;
   }

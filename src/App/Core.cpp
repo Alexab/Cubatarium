@@ -819,10 +819,7 @@ void UCore::CreateNewWorldWithCurrentSettings()
 
   WorldInstance->SetProceduralSettings(ProceduralTemplate);
   WorldInstance->Create(new_world_name);
-  if (WorldInstance->GetCurrentUser() == nullptr)
-  {
-    WorldInstance->GenerateUsers();
-  }
+  WorldInstance->GenerateUsers();
   SaveWorld(new_world_name);
   LoadWorldList(WorldPath.string());
 }

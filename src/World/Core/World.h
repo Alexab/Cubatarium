@@ -253,6 +253,8 @@ public:
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
   bool CanCreatureOccupyAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
                            const glm::vec3 &sizeBlocks) const override;
+  bool HabitatAllowsAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
+                       const glm::vec3 &sizeBlocks) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;
@@ -387,6 +389,8 @@ public:
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
+
+  void ClearCreaturesAndUsers();
 
 private:
   bool CheckRayIntersection(

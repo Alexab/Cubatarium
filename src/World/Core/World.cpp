@@ -672,6 +672,7 @@ void UWorld::ApplyUserToCamera(const std::shared_ptr<UUser> &user)
 
 void UWorld::Create(const std::string &world_name)
 {
+  ClearCreaturesAndUsers();
   BlockWorldReady = false;
   HasPersistedSave = false;
   LoadedFromChunkSave = false;

@@ -21,6 +21,9 @@ public:
   virtual bool CanCreatureOccupyAt(CreatureHabitat habitat,
                                    const glm::vec3 &bodyOrigin,
                                    const glm::vec3 &sizeBlocks) const = 0;
+  virtual bool HabitatAllowsAt(CreatureHabitat habitat,
+                               const glm::vec3 &bodyOrigin,
+                               const glm::vec3 &sizeBlocks) const = 0;
 };
 
 } // namespace cutum

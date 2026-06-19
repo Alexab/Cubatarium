@@ -32,8 +32,28 @@ void UWorld::SetCreatureDefinitionStorage(
 
 void UWorld::RegisterDefaultActivityAgents()
 {
+  std::vector<std::pair<CreatureId, std::string>> rebind;
+  for (const auto &entry : Creatures)
+  {
+    if (!entry.second)
+    {
+      continue;
+    }
+    const CreatureDefinition *def =
+        GetCreatureDefinition(entry.second->GetTypeId());
+    if (!def || def->role == CreatureRole::ControlledDefault ||
+        def->behavior.Id.empty() || def->behavior.Id == "none")
+    {
+      continue;
+    }
+    rebind.emplace_back(entry.first, def->behavior.Id);
+  }
   ActivityDirector.Clear();
   RegisterDefaultCreatureActivityAgents(ActivityDirector);
+  for (const auto &pair : rebind)
+  {
+    ActivityDirector.OnCreatureAdded(pair.first, pair.second);
+  }
 }
 
 std::optional<ControlledCreatureInfo>
@@ -81,6 +101,24 @@ bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
                                  const glm::vec3 &sizeBlocks) const
 {
   return cutum::CanCreatureOccupyAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+bool UWorld::HabitatAllowsAt(CreatureHabitat habitat,
+                             const glm::vec3 &bodyOrigin,
+                             const glm::vec3 &sizeBlocks) const
+{
+  return cutum::HabitatAllowsAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+void UWorld::ClearCreaturesAndUsers()
+{
+  ActivityDirector.Clear();
+  Creatures.clear();
+  NextCreatureId = 1;
+  PlayerCreatureId = 0;
+  ControlledCreatureId = 0;
+  CurrentUserName.clear();
+  Users.clear();
 }
 
 void UWorld::SetSkinDefinitionStorage(

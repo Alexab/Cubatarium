@@ -37,6 +37,10 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
                          const glm::vec3 &bodyOrigin,
                          const glm::vec3 &sizeBlocks);
 
+bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
+                     const glm::vec3 &bodyOrigin,
+                     const glm::vec3 &sizeBlocks);
+
 bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
                         const glm::vec3 &bodyOrigin);
 
