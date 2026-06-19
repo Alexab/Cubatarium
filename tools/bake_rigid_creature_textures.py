@@ -166,6 +166,53 @@ def crop_uv(atlas: Image.Image, rect: tuple[float, float, float, float], size: i
     return atlas.crop(box).resize((size, size), Image.NEAREST)
 
 
+def opaque_fill(img: Image.Image) -> Image.Image:
+    """Fill transparent pixels from nearest opaque neighbors; force alpha=255."""
+    out = img.convert("RGBA").copy()
+    w, h = out.size
+    if w == 0 or h == 0:
+        return out
+    px = out.load()
+    for _ in range(max(w, h)):
+        changed = False
+        nxt = out.copy()
+        npx = nxt.load()
+        for y in range(h):
+            for x in range(w):
+                if px[x, y][3] >= 250:
+                    continue
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] >= 250:
+                        npx[x, y] = (px[nx, ny][0], px[nx, ny][1], px[nx, ny][2], 255)
+                        changed = True
+                        break
+        out = nxt
+        px = out.load()
+        if not changed:
+            break
+    opaque_rgb: list[tuple[int, int, int]] = []
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] >= 250:
+                opaque_rgb.append(px[x, y][:3])
+    if opaque_rgb:
+        fill = opaque_rgb[len(opaque_rgb) // 2]
+        for y in range(h):
+            for x in range(w):
+                if px[x, y][3] < 250:
+                    px[x, y] = (*fill, 255)
+    return out
+
+
+def prune_orphan_stems(tex_dir: Path, stem_rects: dict[str, tuple]) -> None:
+    keep = set(stem_rects.keys()) | {"icon"}
+    for path in tex_dir.glob("*.png"):
+        if path.stem not in keep:
+            path.unlink()
+            print(f"  removed orphan {path.name}")
+
+
 def bake_species(
     species_id: str,
     sources: dict,
@@ -217,16 +264,19 @@ def bake_species(
     tex_dir = models_root / "creatures" / species_id / "textures"
     tex_dir.mkdir(parents=True, exist_ok=True)
     for stem, rect in stem_rects.items():
-        crop_uv(atlas, rect, out_size).save(tex_dir / f"{stem}.png")
+        baked = opaque_fill(crop_uv(atlas, rect, out_size))
+        baked.save(tex_dir / f"{stem}.png")
         print(f"  {species_id}/{stem}.png <- uv {rect}")
+    prune_orphan_stems(tex_dir, stem_rects)
 
     icon_path = spec.get("icon")
     if icon_path:
         src = research / icon_path
         if src.is_file():
-            Image.open(src).convert("RGBA").resize((icon_size, icon_size), Image.NEAREST).save(
-                tex_dir / "icon.png"
+            icon_img = Image.open(src).convert("RGBA").resize(
+                (icon_size, icon_size), Image.NEAREST
             )
+            icon_img.transpose(Image.FLIP_TOP_BOTTOM).save(tex_dir / "icon.png")
     elif stem_rects:
         u0 = min(r[0] for r in stem_rects.values())
         v0 = min(r[1] for r in stem_rects.values())
@@ -309,9 +359,11 @@ def bake_skin(
         rect = stem_rects.get(part_stem)
         if not rect:
             continue
-        crop_uv(atlas, rect, out_size).save(tex_dir / f"{skin_stem}.png")
+        opaque_fill(crop_uv(atlas, rect, out_size)).save(tex_dir / f"{skin_stem}.png")
     if "body" in stem_rects:
-        crop_uv(atlas, stem_rects["body"], out_size).save(tex_dir / "diffuse.png")
+        opaque_fill(crop_uv(atlas, stem_rects["body"], out_size)).save(
+            tex_dir / "diffuse.png"
+        )
     print(f"  skin {skin_id}")
 
 

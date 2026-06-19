@@ -3,11 +3,17 @@
 default_part_groups:
   quadruped:
     body:
-      part_ids: [torso]
+      part_ids: [torso, head, neck]
       stem: body
     face:
-      part_ids: [head]
+      part_ids: [snout]
       stem: face
+    ear:
+      part_ids: [ear_l, ear_r]
+      stem: ear
+    tail:
+      part_ids: [tail]
+      stem: tail
     leg:
       part_ids: [leg_fl, leg_fr, leg_bl, leg_br]
       stem: leg
@@ -26,10 +32,10 @@ default_part_groups:
       stem: arm
   aerial:
     body:
-      part_ids: [torso, wing_l, wing_r]
+      part_ids: [torso, neck, wing_l, wing_r, comb]
       stem: body
     face:
-      part_ids: [head]
+      part_ids: [head, beak]
       stem: face
     leg:
       part_ids: [leg_l, leg_r]
