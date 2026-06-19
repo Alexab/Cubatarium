@@ -39,4 +39,31 @@ std::string CreatureVisualBackendToString(CreatureVisualBackend backend)
   return ToString(backend);
 }
 
+CreatureTextureLayout ParseCreatureTextureLayout(const std::string &s)
+{
+  if (s == "player_skin_atlas")
+  {
+    return CreatureTextureLayout::PlayerSkinAtlas;
+  }
+  if (s == "rigid_crop" || s.empty())
+  {
+    return CreatureTextureLayout::RigidCrop;
+  }
+  std::cerr << "ParseCreatureTextureLayout: unknown '" << s
+            << "', using rigid_crop" << std::endl;
+  return CreatureTextureLayout::RigidCrop;
+}
+
+const char *ToString(CreatureTextureLayout layout)
+{
+  switch (layout)
+  {
+  case CreatureTextureLayout::PlayerSkinAtlas:
+    return "player_skin_atlas";
+  case CreatureTextureLayout::RigidCrop:
+    return "rigid_crop";
+  }
+  return "rigid_crop";
+}
+
 } // namespace cutum

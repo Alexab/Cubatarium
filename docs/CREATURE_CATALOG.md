@@ -53,7 +53,7 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
 - `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
-- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `animation`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `color`)
+- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `color`)
 
 ### `skin.json`
 
@@ -94,6 +94,15 @@ python tools/import_luanti_creature_textures.py --download
 # or, if E:\Work\Home\CubatariumTextureResearch already has mobs_animal etc.:
 python tools/import_luanti_creature_textures.py
 ```
+
+Bake per-part rigid crops from Luanti mesh atlases (mobs use `rigid_crop`; human keeps `player_skin_atlas`):
+
+```powershell
+python tools/bake_rigid_creature_textures.py
+# optional: --species sheep --skin sheep_wool_black
+```
+
+Sources: `tools/creature_luanti_sources.yaml`, UV mapping: `tools/creature_rigid_uv_maps.yaml`. Requires `E:\Work\Home\CubatariumTextureResearch` with `.b3d` models and textures.
 
 Regenerate JSON only (keeps imported PNGs when LICENSE is not a placeholder):
 

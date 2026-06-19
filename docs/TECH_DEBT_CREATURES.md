@@ -13,6 +13,7 @@
 | TD-CRE-008 | 2 | `FleeActivityAgent`, `MeleeAttackActivityAgent` | Visual scope, not AI | backlog |
 | TD-CRE-009 | 2 | Spider / 8 legs rigid approximation | High complexity | backlog |
 | TD-CRE-010 | 3 | FP viewmodel arms (`fp_parts[]`) | Not a blocker | backlog |
+| TD-CRE-013 | 5 | Per-part `uv_rect` on rigid box sides (dominant-color lateral faces) | Phase-2 bake to 64×64 stems is sufficient for ship set; lateral box faces still repeat the front crop | backlog |
 
 ## Closed
 

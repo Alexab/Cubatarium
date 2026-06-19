@@ -11,6 +11,21 @@ skin.json texture_map       →  per-part texture keys      →  CreatureTexture
 
 Wireframe is **not** drawn in normal play. Use debug settings for bounds or overlay.
 
+## Luanti mesh atlas vs `rigid_crop`
+
+Luanti mobs use `visual = "mesh"`: a single PNG atlas (often 128×128) with per-vertex UV from `.b3d`. Cubatarium `rigid_voxels` draws axis-aligned boxes with one texture stem per part.
+
+| Layout | Species | UV in renderer | PNG source |
+|--------|---------|----------------|------------|
+| `player_skin_atlas` | `human` | `Head` / `Body` VAO crops (face on +X only) | 64×32 skin sliced into player-atlas layout |
+| `rigid_crop` | mobs | All parts → `Box` + full 0–1 UV on each face | 64×64 bake per stem (`body`, `face`, `leg`, …) |
+
+**Without bake:** importing a mesh atlas into every stem and applying player UV to mob `head`/`torso` produces stretched “face on torso” artifacts.
+
+**Bake pipeline:** `tools/bake_rigid_creature_textures.py` composites Luanti layers (e.g. sheep `base ^ wool`), parses `.b3d` UV (`tools/b3d_read.py`), maps rigid JSON part AABBs to atlas regions, and writes `models/creatures/<id>/textures/<stem>.png`. Override failed auto-crops via `manual_uv` in `tools/creature_luanti_sources.yaml`.
+
+Set in JSON: `"texture_layout": "rigid_crop"` (mobs) or `"player_skin_atlas"` (human). Runtime: `CreatureVisualRigid::MeshForPart` uses `Head`/`Body` meshes only when layout is `player_skin_atlas`.
+
 ## `visual.parts` in `creature.json`
 
 ```json
@@ -37,7 +52,7 @@ Wireframe is **not** drawn in normal play. Use debug settings for bounds or over
 
 Ship-set stems: `body` (torso, chest/belt bands), `face` (head atlas: eyes only on +X forward), `leg` (striped, brown-tinted), `arm` (shoulder/cuff bands). Parts `arm_l` / `arm_r` in JSON.
 
-Head mesh uses atlas UVs (`creatureHeadPartVAO`) so the face panel is not repeated on all four horizontal sides.
+Head mesh uses atlas UVs (`creatureHeadPartVAO`) so the face panel is not repeated on all four horizontal sides — **only when** `visual.texture_layout` is `player_skin_atlas` (human). Mobs with `rigid_crop` use the box mesh on every part.
 
 **Fallback:** empty `parts` → one part synthesized from `bounds.rest` + `default_texture` (old JSON still works).
 
@@ -73,12 +88,20 @@ Set `creature_textured_parts` to `false` to fall back to a single wireframe box 
 
 ## Regenerate PNG assets
 
+Luanti mob crops (after research folder is present):
+
 ```powershell
 Set-Location "e:\Work\Home\Cubatarium"
+python tools/bake_rigid_creature_textures.py
+```
+
+Catalog JSON + placeholders:
+
+```powershell
 python tools/generate_luanti_creature_catalog.py
 ```
 
-Writes placeholder Luanti-style PNGs for all ship-set species and skins. Replace with CC-licensed imports via `tools/import_luanti_rigid_creature.py`.
+Writes placeholder Luanti-style PNGs for all ship-set species and skins. Replace with CC-licensed imports via `tools/import_luanti_creature_textures.py`.
 
 ## Geometry
 
@@ -103,7 +126,7 @@ World/collision/spawn/palette behavior is unchanged.
 
 ## Smoke acceptance
 
-1. Sheep in world: quadruped gait; model turns when wander direction changes.
+1. Sheep in world: torso shows wool patch, head shows face, legs show leg patch (not full mesh atlas on every face).
 2. `sheep_wool_golden` on sheep → parts use golden skin textures.
 3. Cow taller/wider than human — part scales match bounds.
 4. F5 3rd person: human with parts; 1st person: no body (unchanged).

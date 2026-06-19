@@ -91,6 +91,7 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
   }
   result.wireframeColor = def->visual.wireframeColor;
   result.visualBackend = def->visual.backend;
+  result.textureLayout = def->visual.textureLayout;
 
   const SkinDefinition *skin = nullptr;
   if (!skinId.empty())

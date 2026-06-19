@@ -169,6 +169,7 @@
         0.7,
         1.0
       ]
-    }
+    },
+    "texture_layout": "rigid_crop"
   }
 }

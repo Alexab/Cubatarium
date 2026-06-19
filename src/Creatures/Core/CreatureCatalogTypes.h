@@ -68,6 +68,15 @@ CreatureVisualBackend ParseCreatureVisualBackend(const std::string &s);
 const char *ToString(CreatureVisualBackend backend);
 std::string CreatureVisualBackendToString(CreatureVisualBackend backend);
 
+enum class CreatureTextureLayout : uint8_t
+{
+  RigidCrop,
+  PlayerSkinAtlas,
+};
+
+CreatureTextureLayout ParseCreatureTextureLayout(const std::string &s);
+const char *ToString(CreatureTextureLayout layout);
+
 struct CreatureVisualPartDef
 {
   std::string Id;
@@ -116,6 +125,7 @@ struct CreatureVisualSpec
 {
   std::string backend{"rigid_voxels"};
   std::string fallbackBackend;
+  std::string textureLayout{"rigid_crop"};
   /// Extra Y rotation (degrees) for mob wander facing; 180 if model faces
   /// backward vs Movement.
   float modelYawOffsetDeg{0.f};
@@ -144,6 +154,7 @@ struct ResolvedCreatureAppearance
 {
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string visualBackend{"rigid_voxels"};
+  std::string textureLayout{"rigid_crop"};
   std::vector<ResolvedCreaturePart> Parts;
   bool useWireframeFallback{false};
 };

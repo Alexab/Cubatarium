@@ -45,15 +45,19 @@ float CrouchUpperBodyDrop(const UCreature &creature, float stanceBlend01)
                           creature.GetLocomotion().GetViewEyeHeight());
 }
 
-CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part)
+CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
+                             CreatureTextureLayout layout)
 {
-  if (part.partId == "head")
+  if (layout == CreatureTextureLayout::PlayerSkinAtlas)
   {
-    return CreaturePartMesh::Head;
-  }
-  if (part.partId == "torso")
-  {
-    return CreaturePartMesh::Body;
+    if (part.partId == "head")
+    {
+      return CreaturePartMesh::Head;
+    }
+    if (part.partId == "torso")
+    {
+      return CreaturePartMesh::Body;
+    }
   }
   return CreaturePartMesh::Box;
 }
@@ -201,6 +205,9 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
                                partPose);
   };
 
+  const CreatureTextureLayout textureLayout =
+      ParseCreatureTextureLayout(Appearance.textureLayout);
+
   if (drawTextured && creatureTextures)
   {
     for (const ResolvedCreaturePart &part : Appearance.Parts)
@@ -210,7 +217,7 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
       if (tex != 0)
       {
         engine.DrawCreatureTexturedPart(viewProj * model, tex,
-                                        MeshForPart(part));
+                                        MeshForPart(part, textureLayout));
       }
       else if (settings.CreatureWireframeOverlay)
       {

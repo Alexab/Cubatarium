@@ -326,6 +326,9 @@ def build_creature_json(species_id: str, meta: dict) -> dict:
         },
         "visual": {
             "backend": "rigid_voxels",
+            "texture_layout": "player_skin_atlas"
+            if species_id == "human"
+            else "rigid_crop",
             "animation": {
                 "walk_cycle_hz": 2.0,
                 "leg_swing_deg": 25,

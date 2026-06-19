@@ -168,6 +168,7 @@
         0.85,
         1.0
       ]
-    }
+    },
+    "texture_layout": "player_skin_atlas"
   }
 }

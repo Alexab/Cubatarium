@@ -182,6 +182,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           ParseCreatureVisualBackend(def.visual.backend);
       def.visual.backend = ToString(parsedBackend);
       def.visual.modelYawOffsetDeg = vis.value("model_yaw_offset_deg", 0.f);
+      def.visual.textureLayout =
+          vis.value("texture_layout", def.visual.textureLayout);
       def.visual.defaultTextureKey =
           vis.value("default_texture", def.visual.defaultTextureKey);
       if (vis.contains("icon") && vis["icon"].is_object())

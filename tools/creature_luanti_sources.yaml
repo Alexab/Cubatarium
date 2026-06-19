@@ -1,0 +1,71 @@
+# Luanti research paths and texture composites for rigid_voxels bake.
+# research_root defaults to E:/Work/Home/CubatariumTextureResearch
+
+species:
+  sheep:
+    model: mobs_animal/models/mobs_sheep.b3d
+    composite:
+      - mod: mobs_animal
+        file: textures/mobs_sheep_base.png
+      - mod: mobs_animal
+        file: textures/mobs_sheep_wool.png
+    icon: mobs_animal/textures/mobs_sheep_inv.png
+    manual_uv:
+      leg: [0.0, 0.66, 0.55, 1.0]
+
+  cow:
+    model: mobs_animal/models/mobs_cow.b3d
+    texture: mobs_animal/textures/mobs_cow.png
+    icon: mobs_animal/textures/mobs_cow_inv.png
+
+  chicken:
+    model: mobs_animal/models/mobs_chicken.b3d
+    texture: mobs_animal/textures/mobs_chicken.png
+    icon: mobs_animal/textures/mobs_chicken_inv.png
+
+  wolf:
+  # No mobs_animal b3d — manual UV rects on animalworld texture.
+    texture: animalworld/textures/awolf.png
+    icon: animalworld/textures/awolf.png
+    manual_uv:
+      body: [0.05, 0.15, 0.55, 0.55]
+      face: [0.55, 0.12, 0.92, 0.42]
+      leg: [0.08, 0.55, 0.45, 0.92]
+
+  pig:
+    texture: animalworld/textures/awildboar.png
+    icon: animalworld/textures/awildboar.png
+    manual_uv:
+      body: [0.08, 0.20, 0.58, 0.58]
+      face: [0.58, 0.18, 0.95, 0.48]
+      leg: [0.10, 0.58, 0.48, 0.95]
+
+  oerkki:
+    model: mobs_monster/models/mobs_oerkki.b3d
+    texture: mobs_monster/textures/mobs_oerkki.png
+
+  skeleton:
+    model: dmobs/models/skeleton.b3d
+    texture: dmobs/textures/dmobs_skeleton.png
+    manual_uv:
+      body: [0.25, 0.50, 0.50, 0.75]
+      face: [0.38, 0.12, 0.62, 0.38]
+      leg: [0.00, 0.50, 0.25, 0.75]
+      arm: [0.50, 0.12, 0.75, 0.38]
+
+  sand_monster:
+    model: mobs_monster/models/mobs_sand_monster.b3d
+    texture: mobs_monster/textures/mobs_sand_monster.png
+    manual_uv:
+      body: [0.50, 0.00, 1.00, 0.52]
+
+skins:
+  sheep_wool_black:
+    creature_id: sheep
+    multiply: "#28282D"
+  sheep_wool_golden:
+    creature_id: sheep
+    multiply: "#FFDC50"
+  wolf_snow:
+    creature_id: wolf
+    texture: animalworld/textures/texturewolf3.png

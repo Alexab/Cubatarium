@@ -183,6 +183,7 @@
         0.55,
         1.0
       ]
-    }
+    },
+    "texture_layout": "rigid_crop"
   }
 }
