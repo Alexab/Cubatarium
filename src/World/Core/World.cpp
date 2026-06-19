@@ -1114,6 +1114,16 @@ std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera()
   return ViewInstance->GetCamera(user->GetViewId());
 }
 
+std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera() const
+{
+  auto user = GetCurrentUser();
+  if (user == nullptr)
+  {
+    return nullptr;
+  }
+  return ViewInstance->GetCamera(user->GetViewId());
+}
+
 bool UWorld::AddObjectByView()
 {
   return AddObjectByView(GetCurrentUserCamera()->GetPosition(),

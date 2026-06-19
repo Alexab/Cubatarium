@@ -127,6 +127,7 @@ species:
       leg: [0.05, 0.55, 0.45, 0.95]
 
   fox:
+    model: dmobs/models/fox.b3d
     texture: dmobs/textures/dmobs_fox.png
     manual_uv:
       body: [0.15, 0.30, 0.70, 0.80]
@@ -135,6 +136,7 @@ species:
       leg: [0.00, 0.60, 0.42, 1.00]
 
   tortoise:
+    model: dmobs/models/tortoise.b3d
     texture: dmobs/textures/dmobs_tortoise.png
     manual_uv:
       body: [0.10, 0.30, 0.90, 0.85]
@@ -169,9 +171,10 @@ species:
   bee:
     texture: mobs_animal/textures/mobs_bee.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
+      body: [0.22, 0.38, 0.78, 0.82]
+      face: [0.52, 0.08, 0.88, 0.36]
+      wing: [0.05, 0.05, 0.45, 0.35]
+      leg: [0.00, 0.58, 0.35, 0.92]
 
   stone_monster:
     texture: mobs_monster/textures/mobs_stone_monster.png
@@ -236,6 +239,7 @@ species:
       leg: [0.05, 0.55, 0.45, 0.95]
 
   badger:
+    model: dmobs/models/badger.b3d
     texture: dmobs/textures/dmobs_badger.png
     manual_uv:
       body: [0.15, 0.30, 0.70, 0.80]
@@ -244,6 +248,7 @@ species:
       leg: [0.00, 0.60, 0.42, 1.00]
 
   hedgehog:
+    model: dmobs/models/hedgehog.b3d
     texture: dmobs/textures/dmobs_hedgehog.png
     manual_uv:
       body: [0.15, 0.40, 0.70, 0.85]
@@ -285,30 +290,34 @@ species:
   butterfly:
     texture: dmobs/textures/dmobs_butterfly1.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
+      body: [0.40, 0.42, 0.62, 0.58]
+      face: [0.48, 0.35, 0.58, 0.48]
+      wing: [0.05, 0.05, 0.95, 0.45]
+      leg: [0.42, 0.55, 0.58, 0.72]
 
   owl:
     texture: dmobs/textures/dmobs_owl.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
+      body: [0.28, 0.32, 0.72, 0.78]
+      face: [0.38, 0.05, 0.72, 0.38]
+      wing: [0.05, 0.12, 0.35, 0.55]
+      leg: [0.35, 0.72, 0.65, 0.95]
 
   wasp:
     texture: dmobs/textures/dmobs_wasp.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
+      body: [0.25, 0.35, 0.75, 0.80]
+      face: [0.55, 0.08, 0.88, 0.35]
+      wing: [0.05, 0.02, 0.48, 0.32]
+      leg: [0.00, 0.55, 0.38, 0.92]
 
   puffin:
     texture: animalworld/textures/texturepuffin.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
+      body: [0.22, 0.30, 0.78, 0.82]
+      face: [0.48, 0.05, 0.82, 0.38]
+      wing: [0.05, 0.15, 0.42, 0.48]
+      leg: [0.38, 0.72, 0.62, 0.95]
 
   shark:
     texture: animalworld/textures/textureshark.png
@@ -334,9 +343,10 @@ species:
   seahorse:
     texture: animalworld/textures/textureseahorse.png
     manual_uv:
-      body: [0.15, 0.15, 0.85, 0.85]
-      face: [0.55, 0.05, 0.90, 0.35]
-      leg: [0.05, 0.55, 0.45, 0.95]
+      body: [0.35, 0.12, 0.72, 0.88]
+      face: [0.55, 0.02, 0.88, 0.28]
+      leg: [0.08, 0.55, 0.42, 0.92]
+      tail: [0.05, 0.35, 0.32, 0.95]
 
   manatee:
     texture: animalworld/textures/texturemanatee.png
@@ -348,9 +358,11 @@ species:
   lobster:
     texture: animalworld/textures/texturelobster.png
     manual_uv:
-      body: [0.10, 0.25, 0.90, 0.75]
-      face: [0.65, 0.15, 0.95, 0.45]
-      leg: [0.00, 0.55, 0.50, 0.95]
+      body: [0.12, 0.28, 0.88, 0.72]
+      face: [0.62, 0.10, 0.95, 0.42]
+      leg: [0.02, 0.02, 0.48, 0.28]
+      claw_l: [0.02, 0.55, 0.35, 0.88]
+      claw_r: [0.65, 0.55, 0.98, 0.88]
 
   hermitcrab:
     texture: animalworld/textures/texturehermitcrab.png

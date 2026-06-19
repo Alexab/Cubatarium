@@ -49,9 +49,29 @@ bool PickWanderDirection(IWorldPerception &perception,
   for (int attempt = 0; attempt < kMaxDirectionAttempts; ++attempt)
   {
     const glm::vec3 dir = RandomWanderDirection(habitat);
-    const glm::vec3 probe =
-        view.bodyOrigin + dir * kWanderProbeDistance;
-    if (perception.HabitatAllowsAt(habitat, probe, boundsSize))
+    glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
+    if (habitat == CreatureHabitat::Aerial)
+    {
+      for (float lift = 0.0f; lift <= 3.0f; lift += 1.0f)
+      {
+        const glm::vec3 lifted = probe + glm::vec3(0.0f, lift, 0.0f);
+        if (perception.HabitatAllowsMovementAt(habitat, lifted, boundsSize))
+        {
+          outDirection = dir;
+          if (lift > 0.0f)
+          {
+            outDirection.y += lift * 0.15f;
+            if (glm::length(outDirection) > 1e-4f)
+            {
+              outDirection = glm::normalize(outDirection);
+            }
+          }
+          return true;
+        }
+      }
+      continue;
+    }
+    if (perception.HabitatAllowsMovementAt(habitat, probe, boundsSize))
     {
       outDirection = dir;
       return true;

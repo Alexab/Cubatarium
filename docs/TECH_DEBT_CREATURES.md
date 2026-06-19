@@ -17,6 +17,8 @@
 | TD-CRE-017 | audit | Wave bake coverage (~42 Luanti mobs) | `creature_luanti_sources.yaml` + `bake_rigid_creature_textures.py`; partial until all research textures present | 3 |
 | TD-CRE-018 | audit | Per-species aquatic rigid parts (seahorse ≠ dolphin template) | `creature_rigid_parts.yaml` + `sync_creature_parts_from_rigid.py` | done |
 | TD-CRE-019 | audit | Icon placeholder fallback (`parts_preview` → FBO; baked `species_texture` → `icon.png`) | `CreatureIconCache.cpp` + bake `patch_creature_icon_mode` | done |
+| TD-CRE-020 | spawn | Universal spawn probe + habitat snap (50 spawnable) | `CreatureEnvironment.cpp`, `WorldCreatures.cpp` | done |
+| TD-CRE-021 | audit | 8 placeholder species (dolphin, whale, octopus, kitten, warthog, mese_monster, lava_flan, water_dragon) — textures missing in `CubatariumTextureResearch` | Import animalworld/mobs_* PNGs then `bake_rigid_creature_textures.py` | backlog |
 
 ## Closed
 

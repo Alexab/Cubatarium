@@ -24,6 +24,9 @@ public:
   virtual bool HabitatAllowsAt(CreatureHabitat habitat,
                                const glm::vec3 &bodyOrigin,
                                const glm::vec3 &sizeBlocks) const = 0;
+  virtual bool HabitatAllowsMovementAt(CreatureHabitat habitat,
+                                       const glm::vec3 &bodyOrigin,
+                                       const glm::vec3 &sizeBlocks) const = 0;
 };
 
 } // namespace cutum

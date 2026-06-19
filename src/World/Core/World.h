@@ -92,6 +92,7 @@ public:
 
   std::shared_ptr<UCamera> GetUserCamera(const std::string &Name);
   std::shared_ptr<UCamera> GetCurrentUserCamera();
+  std::shared_ptr<UCamera> GetCurrentUserCamera() const;
 
   const UBlockWorld &GetBlockWorld() const { return BlockWorld; }
   UBlockWorld &GetBlockWorld() { return BlockWorld; }
@@ -219,6 +220,7 @@ public:
   UCreature *GetControlledCreature();
   const UCreature *GetControlledCreature() const;
   UCreature *GetPlayerCreature();
+  const UCreature *GetPlayerCreature() const;
   CreatureId GetControlledCreatureId() const { return ControlledCreatureId; }
   CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
   bool SetControlledCreature(CreatureId Id);
@@ -255,6 +257,9 @@ public:
                            const glm::vec3 &sizeBlocks) const override;
   bool HabitatAllowsAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
                        const glm::vec3 &sizeBlocks) const override;
+  bool HabitatAllowsMovementAt(CreatureHabitat habitat,
+                               const glm::vec3 &bodyOrigin,
+                               const glm::vec3 &sizeBlocks) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;

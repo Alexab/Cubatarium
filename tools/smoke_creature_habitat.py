@@ -130,6 +130,11 @@ def main() -> None:
         raise SystemExit("FAIL bee: expected aerial for spawn lift fixture")
     print("OK aerial spawn lift fixture species: bee")
 
+    diag = ROOT / "tools" / "creature_spawn_diagnosis.yaml"
+    if not diag.is_file():
+        raise SystemExit("FAIL run diagnose_creature_spawn.py first")
+    print("OK spawn diagnosis artifact present")
+
     print("smoke_creature_habitat: all checks passed")
 
 

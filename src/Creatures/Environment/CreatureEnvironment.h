@@ -20,6 +20,7 @@ struct EnvironmentSample
   bool inLava{false};
   bool onSolidGround{false};
   bool inOpenAir{false};
+  bool bodyBlocked{false};
 };
 
 void ApplyEnvironmentLocomotionFacts(const UWorld &world,
@@ -40,6 +41,22 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
 bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
                      const glm::vec3 &bodyOrigin,
                      const glm::vec3 &sizeBlocks);
+
+bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
+                             const glm::vec3 &bodyOrigin,
+                             const glm::vec3 &sizeBlocks);
+
+bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
+                             const glm::vec3 &bodyOrigin,
+                             const glm::vec3 &sizeBlocks);
+
+float ResolveViewerEyeHeight(const UWorld &world);
+
+glm::ivec2 ResolveSpawnProbeColumn(const UWorld &world);
+
+glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
+                                  const CreatureDefinition &def,
+                                  const glm::vec3 &viewProbe);
 
 bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
                         const glm::vec3 &bodyOrigin);

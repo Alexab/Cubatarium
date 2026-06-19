@@ -2,10 +2,10 @@ summary:
   total: 51
   placeholder: 8
   in_bake_yaml: 50
-  custom_parts: 19
+  custom_parts: 24
   icon_issues: 31
   high_body_alpha: 1
-  duplicate_templates: 3
+  duplicate_templates: 2
   by_habitat:
     terrestrial: 28
     aerial: 6
@@ -21,11 +21,6 @@ duplicate_template_groups:
   - panda
   - rat
   - warthog
-- - bee
-  - butterfly
-  - owl
-  - puffin
-  - wasp
 - - dirt_monster
   - dungeon_master
   - fire_spirit
@@ -72,17 +67,17 @@ species:
     asset_tier: baked
     license_tier: imported
     in_bake_yaml: true
-    parts_profile: template
-    parts_count: 6
+    parts_profile: custom
+    parts_count: 7
     missing_texture_stems: []
     body_alpha_frac: 0.0
     icon_quality: ok
     icon_mode: species_texture
     has_walk_hz: true
-    parts_sig: (('torso', 'body', (0.4, 0.45, 0.55)), ('head', 'face', (0.22, 0.22,
-      0.22)), ('wing_l', 'body', (0.15, 0.08, 0.45)), ('wing_r', 'body', (0.15, 0.08,
-      0.45)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
-      0.08)))
+    parts_sig: (('torso', 'body', (0.32, 0.32, 0.48)), ('head', 'face', (0.2, 0.2,
+      0.2)), ('wing_l', 'wing', (0.22, 0.06, 0.38)), ('wing_r', 'wing', (0.22, 0.06,
+      0.38)), ('stinger', 'body', (0.08, 0.08, 0.14)), ('leg_fl', 'leg', (0.06, 0.18,
+      0.06)), ('leg_fr', 'leg', (0.06, 0.18, 0.06)))
   bunny:
     id: bunny
     wave: luanti
@@ -112,17 +107,17 @@ species:
     asset_tier: baked
     license_tier: imported
     in_bake_yaml: true
-    parts_profile: template
+    parts_profile: custom
     parts_count: 6
     missing_texture_stems: []
     body_alpha_frac: 0.0
     icon_quality: atlas_thumb
     icon_mode: species_texture
     has_walk_hz: true
-    parts_sig: (('torso', 'body', (0.4, 0.45, 0.55)), ('head', 'face', (0.22, 0.22,
-      0.22)), ('wing_l', 'body', (0.15, 0.08, 0.45)), ('wing_r', 'body', (0.15, 0.08,
-      0.45)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
-      0.08)))
+    parts_sig: (('torso', 'body', (0.08, 0.28, 0.08)), ('head', 'face', (0.1, 0.1,
+      0.1)), ('wing_l', 'wing', (0.26, 0.04, 0.36)), ('wing_r', 'wing', (0.26, 0.04,
+      0.36)), ('leg_fl', 'leg', (0.04, 0.14, 0.04)), ('leg_fr', 'leg', (0.04, 0.14,
+      0.04)))
   chicken:
     id: chicken
     wave: ship
@@ -560,16 +555,16 @@ species:
     asset_tier: baked
     license_tier: imported
     in_bake_yaml: true
-    parts_profile: template
+    parts_profile: custom
     parts_count: 6
     missing_texture_stems: []
     body_alpha_frac: 0.0
     icon_quality: ok
     icon_mode: species_texture
     has_walk_hz: true
-    parts_sig: (('torso', 'body', (0.4, 0.45, 0.55)), ('head', 'face', (0.22, 0.22,
-      0.22)), ('wing_l', 'body', (0.15, 0.08, 0.45)), ('wing_r', 'body', (0.15, 0.08,
-      0.45)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
+    parts_sig: (('torso', 'body', (0.38, 0.42, 0.38)), ('head', 'face', (0.32, 0.28,
+      0.3)), ('wing_l', 'wing', (0.14, 0.08, 0.42)), ('wing_r', 'wing', (0.14, 0.08,
+      0.42)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
       0.08)))
   panda:
     id: panda
@@ -642,17 +637,17 @@ species:
     asset_tier: baked
     license_tier: imported
     in_bake_yaml: true
-    parts_profile: template
-    parts_count: 6
+    parts_profile: custom
+    parts_count: 7
     missing_texture_stems: []
     body_alpha_frac: 0.0
     icon_quality: high_alpha
     icon_mode: species_texture
     has_walk_hz: true
-    parts_sig: (('torso', 'body', (0.4, 0.45, 0.55)), ('head', 'face', (0.22, 0.22,
-      0.22)), ('wing_l', 'body', (0.15, 0.08, 0.45)), ('wing_r', 'body', (0.15, 0.08,
-      0.45)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
-      0.08)))
+    parts_sig: (('torso', 'body', (0.32, 0.36, 0.32)), ('head', 'face', (0.26, 0.24,
+      0.26)), ('beak', 'face', (0.1, 0.08, 0.14)), ('wing_l', 'wing', (0.12, 0.06,
+      0.28)), ('wing_r', 'wing', (0.12, 0.06, 0.28)), ('leg_l', 'leg', (0.06, 0.18,
+      0.06)), ('leg_r', 'leg', (0.06, 0.18, 0.06)))
   rat:
     id: rat
     wave: luanti
@@ -969,17 +964,17 @@ species:
     asset_tier: baked
     license_tier: imported
     in_bake_yaml: true
-    parts_profile: template
+    parts_profile: custom
     parts_count: 6
     missing_texture_stems: []
     body_alpha_frac: 0.0
     icon_quality: ok
     icon_mode: species_texture
     has_walk_hz: true
-    parts_sig: (('torso', 'body', (0.4, 0.45, 0.55)), ('head', 'face', (0.22, 0.22,
-      0.22)), ('wing_l', 'body', (0.15, 0.08, 0.45)), ('wing_r', 'body', (0.15, 0.08,
-      0.45)), ('leg_l', 'leg', (0.08, 0.22, 0.08)), ('leg_r', 'leg', (0.08, 0.22,
-      0.08)))
+    parts_sig: (('torso', 'body', (0.28, 0.3, 0.52)), ('head', 'face', (0.18, 0.18,
+      0.18)), ('wing_l', 'wing', (0.2, 0.05, 0.34)), ('wing_r', 'wing', (0.2, 0.05,
+      0.34)), ('stinger', 'body', (0.06, 0.06, 0.16)), ('leg_fl', 'leg', (0.06, 0.2,
+      0.06)))
   water_dragon:
     id: water_dragon
     wave: luanti

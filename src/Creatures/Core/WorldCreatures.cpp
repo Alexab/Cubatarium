@@ -110,6 +110,13 @@ bool UWorld::HabitatAllowsAt(CreatureHabitat habitat,
   return cutum::HabitatAllowsAt(*this, habitat, bodyOrigin, sizeBlocks);
 }
 
+bool UWorld::HabitatAllowsMovementAt(CreatureHabitat habitat,
+                                     const glm::vec3 &bodyOrigin,
+                                     const glm::vec3 &sizeBlocks) const
+{
+  return cutum::HabitatAllowsMovementAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
 void UWorld::ClearCreaturesAndUsers()
 {
   ActivityDirector.Clear();
@@ -150,6 +157,11 @@ const UCreature *UWorld::GetControlledCreature() const
 }
 
 UCreature *UWorld::GetPlayerCreature() { return GetCreature(PlayerCreatureId); }
+
+const UCreature *UWorld::GetPlayerCreature() const
+{
+  return GetCreature(PlayerCreatureId);
+}
 
 bool UWorld::SetControlledCreature(CreatureId Id)
 {
@@ -395,8 +407,9 @@ bool RayIntersectsAabb(const glm::vec3 &origin, const glm::vec3 &dir,
   return tmin >= 0.0f && tmin <= maxDistance;
 }
 
-glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float eyeHeight)
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
 {
+  const float eyeHeight = ResolveViewerEyeHeight(world);
   const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
   glm::vec3 bodyOrigin = world.GetSpawnPoint();
   bodyOrigin.y -= eyeOffset.y;
@@ -422,6 +435,12 @@ glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float eyeHeight)
   return bodyOrigin;
 }
 
+glm::vec3 ComputeSpawnProbeOrigin(UWorld &world, const CreatureDefinition &def)
+{
+  const glm::vec3 viewProbe = ComputeSpawnBodyOriginAhead(world);
+  return SnapSpawnProbeToHabitat(world, def, viewProbe);
+}
+
 } // namespace
 
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
@@ -436,8 +455,7 @@ bool UWorld::SpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin =
-      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
   if (!CanSpawnCreatureAt(*this, *def, bodyOrigin))
   {
     return false;
@@ -458,8 +476,7 @@ bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin =
-      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
   return CanSpawnCreatureAt(*this, *def, bodyOrigin);
 }
 
@@ -475,8 +492,7 @@ std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
   {
     return u8"Нельзя спавнить";
   }
-  const glm::vec3 bodyOrigin =
-      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
   return ::cutum::GetCreatureSpawnBlockedHint(*this, *def, bodyOrigin);
 }
 
