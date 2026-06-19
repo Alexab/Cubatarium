@@ -335,13 +335,21 @@ bool UCreatureLocomotionController::tryStandFromCrouch(
   return true;
 }
 
-bool UCreatureLocomotionController::tryJump(const CreatureInput & /*input*/)
+bool UCreatureLocomotionController::tryJump(const UWorld *world,
+                                            glm::vec3 &eyePos,
+                                            const CreatureInput & /*input*/,
+                                            CreatureId skipCreatureId)
 {
   if (!Caps.canJump || SuppressNextJump || StanceBlend > kJumpStanceMax)
   {
     return false;
   }
   if (!OnGround || !FeetAnchored)
+  {
+    return false;
+  }
+  const PlayerCapsule cap = GetCollisionCapsule();
+  if (world && world->CheckCollision(eyePos, cap, skipCreatureId))
   {
     return false;
   }
@@ -358,9 +366,22 @@ void UCreatureLocomotionController::syncGroundedPose(const UWorld *world,
                                                      float dt,
                                                      CreatureId skipCreatureId)
 {
+  updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
+
+  const PlayerCapsule cap = GetCollisionCapsule();
+  if (world && world->CheckCollision(eyePos, cap, skipCreatureId))
+  {
+    if (!world->DepenetrateEye(eyePos, cap, skipCreatureId))
+    {
+      OnGround = false;
+      FeetAnchored = false;
+      VerticalVelocity = 0.0f;
+      return;
+    }
+  }
+
   OnGround = true;
   VerticalVelocity = 0.0f;
-  updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
 
   if (StanceBlend > kJumpStanceMax)
   {
@@ -442,7 +463,8 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
         return;
       }
     }
-    else if (StanceBlend <= kJumpStanceMax && tryJump(input))
+    else if (StanceBlend <= kJumpStanceMax &&
+             tryJump(world, eyePos, input, skipCreatureId))
     {
       SpaceWasPressed = true;
       updateLocomotionState(input);
@@ -491,6 +513,11 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   {
     OnGround = false;
     updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
+
+    if (world->CheckCollision(eyePos, cap, skipCreatureId))
+    {
+      world->DepenetrateEye(eyePos, cap, skipCreatureId);
+    }
 
     VerticalVelocity += kGravity * dt;
     const glm::vec3 verticalDelta(0.0f, VerticalVelocity * dt, 0.0f);

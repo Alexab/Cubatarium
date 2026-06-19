@@ -286,6 +286,9 @@ public:
   bool CheckCollision(const glm::vec3 &eyePos, const PlayerCapsule &cap) const;
   bool CheckCollision(const glm::vec3 &eyePos, const PlayerCapsule &cap,
                       CreatureId skipCreatureId) const;
+  /// Lifts eye position until the capsule no longer intersects solids.
+  bool DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
+                      CreatureId skipCreatureId = 0) const;
   /// Solid block directly under the player feet (for step-up / grounded
   /// checks).
   bool HasGroundSupport(const glm::vec3 &eyePos,
@@ -389,7 +392,8 @@ private:
   bool CheckPositionFree(const glm::vec3 &position, float size = 1.0) const;
   std::optional<glm::vec3>
   FindNearestFreeCubePosition(const glm::vec3 &position,
-                              const glm::vec3 &front) const;
+                              const glm::vec3 &front,
+                              const PlayerCapsule &cap) const;
 
   bool AddObjectByView(const glm::vec3 &position, const glm::vec3 &front);
   bool PlaceActivePrefabByView(const glm::vec3 &position,

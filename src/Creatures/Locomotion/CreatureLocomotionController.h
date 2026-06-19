@@ -63,7 +63,8 @@ private:
   void updateStanceBlend(const UWorld *world, const glm::vec3 &eyePos,
                          const CreatureInput &input, float dt,
                          CreatureId skipCreatureId);
-  bool tryJump(const CreatureInput &input);
+  bool tryJump(const UWorld *world, glm::vec3 &eyePos, const CreatureInput &input,
+               CreatureId skipCreatureId);
   bool tryStandFromCrouch(const UWorld *world, glm::vec3 &eyePos,
                           const CreatureInput &input,
                           CreatureId skipCreatureId);

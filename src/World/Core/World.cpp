@@ -362,10 +362,7 @@ void UWorld::ApplySpawnToCamera()
 {
   glm::vec3 spawn = SpawnPoint;
   const PlayerCapsule cap = PlayerCapsule::Standing();
-  while (CheckCollision(spawn, cap))
-  {
-    spawn.y += 0.1f;
-  }
+  DepenetrateEye(spawn, cap, GetMovementCollisionSkipId());
   SpawnPoint = spawn;
 
   if (auto user = GetCurrentUser())
@@ -586,10 +583,7 @@ void UWorld::EnsurePlayerOnGround()
 
   pos = BlockCenter(glm::ivec3(x, *topY, z));
   pos.y = BlockTopY(*topY) + cap.eyeHeight;
-  while (CheckCollision(pos, cap))
-  {
-    pos.y += 0.1f;
-  }
+  DepenetrateEye(pos, cap, GetMovementCollisionSkipId());
 
   user->SetPosition(pos);
   camera->SetPosition(pos);
@@ -1150,7 +1144,8 @@ bool UWorld::CheckPositionFree(const glm::vec3 &position, float /*size*/) const
 
 std::optional<glm::vec3>
 UWorld::FindNearestFreeCubePosition(const glm::vec3 &position,
-                                    const glm::vec3 &front) const
+                                    const glm::vec3 &front,
+                                    const PlayerCapsule &cap) const
 {
   const auto hit =
       RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
@@ -1190,8 +1185,11 @@ UWorld::FindNearestFreeCubePosition(const glm::vec3 &position,
     return std::nullopt;
   }
 
-  constexpr float kCameraRadius = 0.3f;
-  if (UCube::CheckCollision(res_position, 1.0f, position, kCameraRadius * 2.0f))
+  const CollisionVolume vol = CollisionVolumeFromEye(position, cap);
+  const glm::vec3 blockCenter = BlockCenter(placePos);
+  const glm::vec3 blockHalf(0.5f);
+  if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, blockCenter,
+                                blockHalf))
   {
     return std::nullopt;
   }
@@ -1219,7 +1217,13 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
     return false;
   }
 
-  auto object_pos = FindNearestFreeCubePosition(position, front);
+  PlayerCapsule cap = PlayerCapsule::Standing();
+  if (const auto camera = GetCurrentUserCamera())
+  {
+    cap = camera->GetPlayerCapsule();
+  }
+
+  auto object_pos = FindNearestFreeCubePosition(position, front, cap);
   if (object_pos.has_value())
   {
     if (AddObject(blockType, object_pos.value()))
@@ -1522,6 +1526,26 @@ bool UWorld::CheckCollision(const glm::vec3 &eyePos, const PlayerCapsule &cap,
                               skipCreatureId);
 }
 
+bool UWorld::DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
+                            CreatureId skipCreatureId) const
+{
+  constexpr int kMaxIterations = 32;
+  constexpr float kStep = 0.05f;
+  if (!CheckCollision(eyePos, cap, skipCreatureId))
+  {
+    return true;
+  }
+  for (int i = 0; i < kMaxIterations; ++i)
+  {
+    eyePos.y += kStep;
+    if (!CheckCollision(eyePos, cap, skipCreatureId))
+    {
+      return true;
+    }
+  }
+  return !CheckCollision(eyePos, cap, skipCreatureId);
+}
+
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {
@@ -1587,7 +1611,7 @@ glm::vec3 ResolveMovementAxisEye(const UWorld &world, const glm::vec3 &fromEye,
           lo = mid;
         }
       }
-      if (axis == 1 && sign < 0.0f)
+      if (axis == 1)
       {
         pos = lo;
       }
@@ -1691,10 +1715,15 @@ glm::vec3 UWorld::ResolveMovement(const glm::vec3 &eyePos,
   {
     return eyePos;
   }
+  glm::vec3 resolvedEye = eyePos;
+  if (delta.y > 0.0f && CheckCollision(resolvedEye, cap, skipCreatureId))
+  {
+    DepenetrateEye(resolvedEye, cap, skipCreatureId);
+  }
   const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
   const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height,
                              cap.halfWidth * 2.0f);
-  const glm::vec3 body = BodyOriginFromEye(eyePos, eyeOffset);
+  const glm::vec3 body = BodyOriginFromEye(resolvedEye, eyeOffset);
   const glm::vec3 newBody =
       ResolveMovementBody(body, delta, sizeBlocks, skipCreatureId);
   return BoundsEyePosition(newBody, eyeOffset);
@@ -2203,6 +2232,12 @@ void UWorld::DoMovement()
 
   auto camera = GetCurrentUserCamera();
   UCreature *controlled = GetControlledCreature();
+  if (camera && camera->GetPosition().y < kMinReasonablePlayerY)
+  {
+    EnsurePlayerOnGround();
+    camera->ResetVerticalPhysics();
+    return;
+  }
   const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
 
@@ -2414,7 +2449,10 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   if (hit)
   {
     IntersectionBlockPos = hit->blockPos;
-    if (FindNearestFreeCubePosition(position, front).has_value())
+    const auto camera = GetCurrentUserCamera();
+    const PlayerCapsule cap =
+        camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
+    if (FindNearestFreeCubePosition(position, front, cap).has_value())
     {
       glm::ivec3 normal = hit->faceNormal;
       if (normal == glm::ivec3(0))
