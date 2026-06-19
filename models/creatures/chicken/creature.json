@@ -44,11 +44,17 @@
   },
   "visual": {
     "backend": "rigid_voxels",
+    "texture_layout": "rigid_crop",
     "animation": {
       "walk_cycle_hz": 2.0,
-      "leg_swing_deg": 25,
+      "leg_swing_deg": 30,
       "arm_swing_deg": 15,
-      "fly_body_pitch_deg": 10
+      "fly_body_pitch_deg": 10,
+      "body_bob_blocks": 0.025,
+      "tail_swing_deg": 12,
+      "run_speed_multiplier": 1.3,
+      "crouch_leg_bend_deg": 25,
+      "wing_idle_swing_deg": 5
     },
     "default_texture": "body",
     "parts": [
@@ -56,13 +62,27 @@
         "id": "torso",
         "offset": [
           0.0,
-          0.45,
+          0.4,
           0.0
         ],
         "size": [
-          0.4,
-          0.45,
-          0.55
+          0.35,
+          0.36,
+          0.42
+        ],
+        "texture": "body"
+      },
+      {
+        "id": "neck",
+        "offset": [
+          0.0,
+          0.5,
+          0.12
+        ],
+        "size": [
+          0.14,
+          0.14,
+          0.14
         ],
         "texture": "body"
       },
@@ -70,32 +90,60 @@
         "id": "head",
         "offset": [
           0.0,
-          0.62,
-          0.2
+          0.58,
+          0.18
         ],
         "size": [
-          0.22,
-          0.22,
-          0.22
+          0.18,
+          0.18,
+          0.18
+        ],
+        "texture": "face"
+      },
+      {
+        "id": "comb",
+        "offset": [
+          0.0,
+          0.66,
+          0.16
+        ],
+        "size": [
+          0.08,
+          0.06,
+          0.1
+        ],
+        "texture": "face"
+      },
+      {
+        "id": "beak",
+        "offset": [
+          0.0,
+          0.56,
+          0.3
+        ],
+        "size": [
+          0.1,
+          0.08,
+          0.12
         ],
         "texture": "face"
       },
       {
         "id": "wing_l",
         "offset": [
-          -0.35,
-          0.5,
+          -0.32,
+          0.44,
           0.0
         ],
         "size": [
-          0.15,
-          0.08,
-          0.45
+          0.18,
+          0.1,
+          0.4
         ],
         "texture": "body",
         "pivot": [
-          -0.2,
-          0.5,
+          -0.18,
+          0.44,
           0.0
         ],
         "limb": "arm"
@@ -103,19 +151,19 @@
       {
         "id": "wing_r",
         "offset": [
-          0.35,
-          0.5,
+          0.32,
+          0.44,
           0.0
         ],
         "size": [
-          0.15,
-          0.08,
-          0.45
+          0.18,
+          0.1,
+          0.4
         ],
         "texture": "body",
         "pivot": [
-          0.2,
-          0.5,
+          0.18,
+          0.44,
           0.0
         ],
         "limb": "arm"
@@ -123,40 +171,40 @@
       {
         "id": "leg_l",
         "offset": [
-          -0.1,
-          0.18,
-          0.05
+          -0.08,
+          0.16,
+          0.04
         ],
         "size": [
-          0.08,
+          0.07,
           0.22,
-          0.08
+          0.07
         ],
         "texture": "leg",
         "pivot": [
-          -0.1,
-          0.3,
-          0.05
+          -0.08,
+          0.27,
+          0.04
         ],
         "limb": "leg"
       },
       {
         "id": "leg_r",
         "offset": [
-          0.1,
-          0.18,
-          0.05
+          0.08,
+          0.16,
+          0.04
         ],
         "size": [
-          0.08,
+          0.07,
           0.22,
-          0.08
+          0.07
         ],
         "texture": "leg",
         "pivot": [
-          0.1,
-          0.3,
-          0.05
+          0.08,
+          0.27,
+          0.04
         ],
         "limb": "leg"
       }
@@ -169,7 +217,6 @@
         0.7,
         1.0
       ]
-    },
-    "texture_layout": "rigid_crop"
+    }
   }
 }

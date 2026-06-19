@@ -14,7 +14,9 @@
     "texture_map": {
       "body": "body",
       "face": "face",
-      "leg": "leg"
+      "leg": "leg",
+      "ear": "ear",
+      "tail": "tail"
     },
     "wireframe_color": [
       1.0,
