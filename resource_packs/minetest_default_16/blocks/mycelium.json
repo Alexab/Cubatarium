@@ -10,5 +10,6 @@
     "mycel_side",
     "mycel_top",
     "dirt"
-  ]
+  ],
+  "render": {}
 }

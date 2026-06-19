@@ -12,5 +12,6 @@
     "bedrock",
     "bedrock"
   ],
-  "displayName": "Bedrock"
+  "displayName": "Bedrock",
+  "render": {}
 }

@@ -12,5 +12,6 @@
     "melon_top",
     "melon_side"
   ],
-  "displayName": "Melon"
+  "displayName": "Melon",
+  "render": {}
 }

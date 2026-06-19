@@ -11,5 +11,6 @@
     "hellrock",
     "hellrock"
   ],
-  "displayName": "Hellrock"
+  "displayName": "Hellrock",
+  "render": {}
 }

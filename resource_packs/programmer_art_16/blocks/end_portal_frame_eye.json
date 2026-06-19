@@ -10,5 +10,6 @@
     "endframe_side",
     "endframe_eye",
     "endframe_side"
-  ]
+  ],
+  "render": {}
 }

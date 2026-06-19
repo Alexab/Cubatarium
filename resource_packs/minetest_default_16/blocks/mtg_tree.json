@@ -10,5 +10,6 @@
     "mtg_tree_default_tree",
     "mtg_tree_default_tree_top",
     "mtg_tree_default_tree_top"
-  ]
+  ],
+  "render": {}
 }

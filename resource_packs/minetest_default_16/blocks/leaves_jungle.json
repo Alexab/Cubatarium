@@ -1,7 +1,8 @@
 {
   "name": "leaves_jungle",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "leaves_jungle_opaque",
@@ -10,5 +11,9 @@
     "leaves_jungle_opaque",
     "leaves_jungle_opaque",
     "leaves_jungle_opaque"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Jungle Leaves"
 }

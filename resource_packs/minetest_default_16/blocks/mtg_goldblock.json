@@ -10,5 +10,6 @@
     "mtg_goldblock_default_gold_block",
     "mtg_goldblock_default_gold_block",
     "mtg_goldblock_default_gold_block"
-  ]
+  ],
+  "render": {}
 }

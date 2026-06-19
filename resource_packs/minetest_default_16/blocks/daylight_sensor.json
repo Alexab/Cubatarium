@@ -10,5 +10,6 @@
     "daylightDetector_side",
     "daylightDetector_top",
     "daylightDetector_side"
-  ]
+  ],
+  "render": {}
 }

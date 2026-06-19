@@ -10,5 +10,6 @@
     "mtg_cobble_default_cobble",
     "mtg_cobble_default_cobble",
     "mtg_cobble_default_cobble"
-  ]
+  ],
+  "render": {}
 }

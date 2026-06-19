@@ -10,5 +10,6 @@
     "cauldron_side",
     "cauldron_top",
     "cauldron_bottom"
-  ]
+  ],
+  "render": {}
 }

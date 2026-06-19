@@ -11,5 +11,6 @@
     "blockRedstone",
     "blockRedstone"
   ],
-  "displayName": "Redstone Block"
+  "displayName": "Redstone Block",
+  "render": {}
 }

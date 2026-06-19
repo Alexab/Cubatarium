@@ -10,5 +10,6 @@
     "redstoneLight",
     "redstoneLight",
     "redstoneLight"
-  ]
+  ],
+  "render": {}
 }

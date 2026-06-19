@@ -12,5 +12,6 @@
     "sandstone",
     "sandstone"
   ],
-  "displayName": "Sandstone"
+  "displayName": "Sandstone",
+  "render": {}
 }

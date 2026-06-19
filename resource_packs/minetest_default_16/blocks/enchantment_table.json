@@ -10,5 +10,6 @@
     "enchantment_side",
     "enchantment_top",
     "enchantment_bottom"
-  ]
+  ],
+  "render": {}
 }

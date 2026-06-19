@@ -1,7 +1,8 @@
 {
   "name": "leaves_spruce_light",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "leaves_spruce",
@@ -10,5 +11,9 @@
     "leaves_spruce",
     "leaves_spruce",
     "leaves_spruce"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Spruce Leaves"
 }

@@ -1,7 +1,7 @@
 {
   "name": "mtg_cave_ice",
   "types": [
-    "building"
+    "natural"
   ],
   "textures": [
     "mtg_cave_ice_default_ice",
@@ -10,5 +10,9 @@
     "mtg_cave_ice_default_ice",
     "mtg_cave_ice_default_ice",
     "mtg_cave_ice_default_ice"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Cave Ice"
 }

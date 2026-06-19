@@ -10,5 +10,6 @@
     "mtg_sandstone_default_sandstone",
     "mtg_sandstone_default_sandstone",
     "mtg_sandstone_default_sandstone"
-  ]
+  ],
+  "render": {}
 }

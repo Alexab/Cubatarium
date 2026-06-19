@@ -10,5 +10,6 @@
     "redtorch",
     "redtorch",
     "redtorch"
-  ]
+  ],
+  "render": {}
 }

@@ -10,5 +10,8 @@
     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  }
 }

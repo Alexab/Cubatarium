@@ -11,5 +11,6 @@
     "blockGold",
     "blockGold"
   ],
-  "displayName": "Gold Block"
+  "displayName": "Gold Block",
+  "render": {}
 }

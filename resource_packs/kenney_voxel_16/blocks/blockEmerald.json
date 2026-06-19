@@ -11,5 +11,6 @@
     "blockEmerald",
     "blockEmerald"
   ],
-  "displayName": "Emerald Block"
+  "displayName": "Emerald Block",
+  "render": {}
 }

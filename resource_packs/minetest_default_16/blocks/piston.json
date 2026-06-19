@@ -10,5 +10,6 @@
     "piston_side",
     "piston_top",
     "piston_bottom"
-  ]
+  ],
+  "render": {}
 }

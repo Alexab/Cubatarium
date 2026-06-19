@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import fnmatch
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
@@ -20,11 +21,33 @@ MANIFEST_FILES = [
 ]
 
 
-def load_canonical_block_specs() -> dict[str, dict[str, Any]]:
-    """Return merged tier_a + tier_b canonical block specs keyed by block name."""
+def load_canonical_yaml() -> dict[str, Any]:
     if not CANONICAL_BLOCKS_PATH.is_file():
         return {}
-    data = yaml.safe_load(CANONICAL_BLOCKS_PATH.read_text(encoding="utf-8")) or {}
+    return yaml.safe_load(CANONICAL_BLOCKS_PATH.read_text(encoding="utf-8")) or {}
+
+
+def load_transparent_name_patterns() -> list[str]:
+    data = load_canonical_yaml()
+    patterns = data.get("transparent_name_patterns", [])
+    if not isinstance(patterns, list):
+        return []
+    return [p for p in patterns if isinstance(p, str)]
+
+
+def block_name_suggests_transparent(name: str, patterns: list[str] | None = None) -> bool:
+    if patterns is None:
+        patterns = load_transparent_name_patterns()
+    lower = name.lower()
+    for pattern in patterns:
+        if fnmatch.fnmatch(lower, pattern.lower()):
+            return True
+    return False
+
+
+def load_canonical_block_specs() -> dict[str, dict[str, Any]]:
+    """Return merged tier_a + tier_b canonical block specs keyed by block name."""
+    data = load_canonical_yaml()
     specs: dict[str, dict[str, Any]] = {}
     for tier in ("tier_a", "tier_b"):
         tier_data = data.get(tier, {})
@@ -39,15 +62,20 @@ def apply_canonical_meta_to_block_json(block: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(name, str) or not name:
         return block
     spec = load_canonical_block_specs().get(name)
-    if not spec:
-        return block
-    if "types" in spec:
-        block["types"] = list(spec["types"])
-    for key in ("physics", "render", "animation"):
-        if key in spec:
-            block[key] = spec[key]
-    if "display_name" in spec:
-        block["displayName"] = spec["display_name"]
+    if spec:
+        if "types" in spec:
+            block["types"] = list(spec["types"])
+        for key in ("physics", "render", "animation"):
+            if key in spec:
+                block[key] = spec[key]
+        if "display_name" in spec:
+            block["displayName"] = spec["display_name"]
+    render = block.get("render")
+    if not isinstance(render, dict):
+        render = {}
+        block["render"] = render
+    if not render.get("transparent") and block_name_suggests_transparent(name):
+        render["transparent"] = True
     return block
 
 

@@ -10,5 +10,8 @@
     "mtg_jungleleaves_default_jungleleaves",
     "mtg_jungleleaves_default_jungleleaves",
     "mtg_jungleleaves_default_jungleleaves"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  }
 }

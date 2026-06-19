@@ -10,5 +10,8 @@
     "mtg_leaves_default_leaves",
     "mtg_leaves_default_leaves",
     "mtg_leaves_default_leaves"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  }
 }

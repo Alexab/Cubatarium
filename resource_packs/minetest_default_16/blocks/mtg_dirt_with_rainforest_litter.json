@@ -10,5 +10,6 @@
     "mtg_dirt_with_rainforest_litter_composite_0",
     "mtg_dirt_with_rainforest_litter_default_rainforest_litter",
     "mtg_dirt_with_rainforest_litter_default_dirt"
-  ]
+  ],
+  "render": {}
 }

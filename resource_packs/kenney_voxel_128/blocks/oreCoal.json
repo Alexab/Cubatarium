@@ -11,5 +11,6 @@
     "oreCoal",
     "oreCoal"
   ],
-  "displayName": "Coal Ore"
+  "displayName": "Coal Ore",
+  "render": {}
 }

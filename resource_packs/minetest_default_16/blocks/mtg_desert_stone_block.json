@@ -10,5 +10,6 @@
     "mtg_desert_stone_block_default_desert_stone_block",
     "mtg_desert_stone_block_default_desert_stone_block",
     "mtg_desert_stone_block_default_desert_stone_block"
-  ]
+  ],
+  "render": {}
 }

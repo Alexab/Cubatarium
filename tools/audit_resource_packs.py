@@ -22,6 +22,31 @@ AUDIT_JSON = REPO / "audit_report.json"
 FACE_COUNT = 6
 
 
+def name_suggests_transparent(name: str, patterns: list[str]) -> bool:
+    lower = name.lower()
+    for pattern in patterns:
+        if isinstance(pattern, str) and fnmatch.fnmatch(lower, pattern.lower()):
+            return True
+    return False
+
+
+def check_transparent_block_marking(
+    block_by_name: dict[str, dict],
+    patterns: list[str],
+) -> list[str]:
+    warnings: list[str] = []
+    if not patterns:
+        return warnings
+    for name, block in block_by_name.items():
+        render = block.get("render")
+        transparent = isinstance(render, dict) and render.get("transparent") is True
+        if name_suggests_transparent(name, patterns) and not transparent:
+            warnings.append(
+                f"{name}: name matches transparent_name_patterns but render.transparent is missing"
+            )
+    return warnings
+
+
 def load_canonical(path: Path = CANONICAL_PATH) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data
@@ -323,6 +348,12 @@ def audit_pack(
 
     for msg in check_block_texture_stems(pack_dir, block_by_name):
         issues.append(msg)
+
+    transparent_patterns = canonical.get("transparent_name_patterns", [])
+    if isinstance(transparent_patterns, list):
+        warnings.extend(
+            check_transparent_block_marking(block_by_name, transparent_patterns)
+        )
 
     return {
         "pack_id": pack_id,

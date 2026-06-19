@@ -11,5 +11,6 @@
     "blockDiamond",
     "blockDiamond"
   ],
-  "displayName": "Diamond Block"
+  "displayName": "Diamond Block",
+  "render": {}
 }

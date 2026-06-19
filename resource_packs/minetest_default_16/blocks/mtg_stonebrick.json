@@ -10,5 +10,6 @@
     "mtg_stonebrick_default_stone_brick",
     "mtg_stonebrick_default_stone_brick",
     "mtg_stonebrick_default_stone_brick"
-  ]
+  ],
+  "render": {}
 }

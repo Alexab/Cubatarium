@@ -10,5 +10,6 @@
     "mtg_cactus_default_cactus_side",
     "mtg_cactus_default_cactus_top",
     "mtg_cactus_default_cactus_top"
-  ]
+  ],
+  "render": {}
 }

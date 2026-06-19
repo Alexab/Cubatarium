@@ -10,5 +10,6 @@
     "wood",
     "brewingStand",
     "brewingStand_base"
-  ]
+  ],
+  "render": {}
 }

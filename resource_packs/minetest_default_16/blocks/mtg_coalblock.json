@@ -10,5 +10,6 @@
     "mtg_coalblock_default_coal_block",
     "mtg_coalblock_default_coal_block",
     "mtg_coalblock_default_coal_block"
-  ]
+  ],
+  "render": {}
 }

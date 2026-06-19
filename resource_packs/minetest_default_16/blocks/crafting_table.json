@@ -10,5 +10,6 @@
     "workbench_side",
     "workbench_top",
     "workbench_side"
-  ]
+  ],
+  "render": {}
 }

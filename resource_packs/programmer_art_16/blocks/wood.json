@@ -12,5 +12,6 @@
     "wood",
     "wood"
   ],
-  "displayName": "Wood"
+  "displayName": "Wood",
+  "render": {}
 }

@@ -10,5 +10,6 @@
     "mtg_desert_stonebrick_default_desert_stone_brick",
     "mtg_desert_stonebrick_default_desert_stone_brick",
     "mtg_desert_stonebrick_default_desert_stone_brick"
-  ]
+  ],
+  "render": {}
 }

@@ -12,8 +12,10 @@ namespace
 {
 
 bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
-                       BlockId faceId, glm::ivec3 neighborPos)
+                       BlockId faceId, glm::ivec3 blockPos,
+                       glm::ivec3 neighborOffset)
 {
+  const glm::ivec3 neighborPos = blockPos + neighborOffset;
   const BlockId neighbor = world.GetBlock(neighborPos);
   if (neighbor == BLOCK_AIR)
   {
@@ -25,6 +27,36 @@ bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
   {
     return true;
   }
+
+  const bool faceTransparent = registry.IsTransparent(faceId);
+  const bool neighborTransparent = registry.IsTransparent(neighbor);
+
+  if (faceTransparent && neighborTransparent)
+  {
+    return true;
+  }
+
+  if (!faceTransparent && neighborTransparent)
+  {
+    const glm::ivec3 beyondPos = neighborPos + neighborOffset;
+    const glm::ivec3 beforePos = blockPos - neighborOffset;
+    const BlockId beyond = world.GetBlock(beyondPos);
+    const BlockId before = world.GetBlock(beforePos);
+    const bool beyondOpen =
+        (beyond == BLOCK_AIR || !registry.BlocksMovement(beyond));
+    const bool beforeSolid =
+        (before != BLOCK_AIR && registry.BlocksMovement(before));
+    if (beyondOpen && beforeSolid)
+    {
+      return false;
+    }
+    if (beyondOpen)
+    {
+      return true;
+    }
+    return false;
+  }
+
   if (registry.BlocksMovement(neighbor))
   {
     return true;
@@ -81,9 +113,10 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
               continue;
             }
 
-            glm::ivec3 neighborPos = worldPos;
-            neighborPos[axis] += sign;
-            if (NeighborHidesFace(world, registry, Id, neighborPos))
+            glm::ivec3 neighborOffset(0);
+            neighborOffset[axis] = sign;
+            glm::ivec3 neighborPos = worldPos + neighborOffset;
+            if (NeighborHidesFace(world, registry, Id, worldPos, neighborOffset))
             {
               continue;
             }

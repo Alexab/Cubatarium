@@ -12,5 +12,6 @@
     "sandstone_smooth",
     "sandstone_smooth"
   ],
-  "displayName": "Sandstone"
+  "displayName": "Sandstone",
+  "render": {}
 }

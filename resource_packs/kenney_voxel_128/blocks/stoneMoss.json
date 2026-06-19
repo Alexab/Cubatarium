@@ -12,5 +12,6 @@
     "stoneMoss",
     "stoneMoss"
   ],
-  "displayName": "Mossy Stone"
+  "displayName": "Mossy Stone",
+  "render": {}
 }

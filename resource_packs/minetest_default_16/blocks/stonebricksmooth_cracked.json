@@ -11,5 +11,6 @@
     "stonebricksmooth_cracked",
     "stonebricksmooth_cracked"
   ],
-  "displayName": "Cracked Stone Bricks"
+  "displayName": "Cracked Stone Bricks",
+  "render": {}
 }

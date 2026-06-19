@@ -11,5 +11,6 @@
     "hellsand",
     "hellsand"
   ],
-  "displayName": "Soul Sand"
+  "displayName": "Soul Sand",
+  "render": {}
 }

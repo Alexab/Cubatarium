@@ -10,5 +10,6 @@
     "pumpkin_jack",
     "pumpkin_top",
     "pumpkin_side"
-  ]
+  ],
+  "render": {}
 }

@@ -11,5 +11,6 @@
     "oreIron",
     "oreIron"
   ],
-  "displayName": "Iron Ore"
+  "displayName": "Iron Ore",
+  "render": {}
 }

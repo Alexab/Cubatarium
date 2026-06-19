@@ -12,5 +12,6 @@
     "tree_top",
     "tree_top"
   ],
-  "displayName": "Tree Log"
+  "displayName": "Tree Log",
+  "render": {}
 }

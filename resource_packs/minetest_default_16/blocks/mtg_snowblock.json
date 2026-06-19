@@ -10,5 +10,6 @@
     "mtg_snowblock_default_snow",
     "mtg_snowblock_default_snow",
     "mtg_snowblock_default_snow"
-  ]
+  ],
+  "render": {}
 }

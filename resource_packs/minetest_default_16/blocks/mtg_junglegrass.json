@@ -10,5 +10,6 @@
     "mtg_junglegrass_default_junglegrass",
     "mtg_junglegrass_default_junglegrass",
     "mtg_junglegrass_default_junglegrass"
-  ]
+  ],
+  "render": {}
 }

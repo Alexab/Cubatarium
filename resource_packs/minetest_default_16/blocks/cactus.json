@@ -12,5 +12,6 @@
     "cactus_top",
     "cactus_bottom"
   ],
-  "displayName": "Cactus"
+  "displayName": "Cactus",
+  "render": {}
 }

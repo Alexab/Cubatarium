@@ -1,4 +1,11 @@
 schema_version: 1
+# Block names matching these fnmatch patterns should have render.transparent: true.
+transparent_name_patterns:
+- '*glass*'
+- '*leaves*'
+- '*_ice'
+- ice
+- web
 global_stem_denylist:
 - '*bucket*'
 - waterlily
@@ -152,6 +159,8 @@ tier_a:
     - ice
     - ice
     - ice
+    render:
+      transparent: true
     worldgen_refs:
     - ice
     reference_pack: cubatarium_cc0_base
@@ -292,6 +301,8 @@ tier_a:
     - leaves_opaque
     - leaves_opaque
     - leaves_opaque
+    render:
+      transparent: true
     worldgen_refs:
     - tree_leaves
     reference_pack: kenney_voxel_16
@@ -304,6 +315,72 @@ tier_b:
     render:
       transparent: true
     display_name: Glass
+  thin_glass:
+    types:
+    - building
+    - decorative
+    render:
+      transparent: true
+    display_name: Thin Glass
+  leaves_transparent:
+    types:
+    - natural
+    - plants
+    render:
+      transparent: true
+    display_name: Leaves
+  leaves_spruce:
+    types:
+    - natural
+    - plants
+    render:
+      transparent: true
+    display_name: Spruce Leaves
+  leaves_jungle:
+    types:
+    - natural
+    - plants
+    render:
+      transparent: true
+    display_name: Jungle Leaves
+  leaves_spruce_light:
+    types:
+    - natural
+    - plants
+    render:
+      transparent: true
+    display_name: Spruce Leaves
+  leaves_jungle_light:
+    types:
+    - natural
+    - plants
+    render:
+      transparent: true
+    display_name: Jungle Leaves
+  mtg_glass:
+    types:
+    - building
+    render:
+      transparent: true
+    display_name: Glass
+  mtg_obsidian_glass:
+    types:
+    - building
+    render:
+      transparent: true
+    display_name: Obsidian Glass
+  mtg_ice:
+    types:
+    - natural
+    render:
+      transparent: true
+    display_name: Ice
+  mtg_cave_ice:
+    types:
+    - natural
+    render:
+      transparent: true
+    display_name: Cave Ice
   obsidian:
     types:
     - natural
@@ -321,6 +398,8 @@ tier_b:
     types:
     - decorative
     - misc
+    render:
+      transparent: true
     display_name: Cobweb
   bookshelf:
     types:

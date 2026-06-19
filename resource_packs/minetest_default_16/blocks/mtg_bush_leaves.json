@@ -10,5 +10,8 @@
     "mtg_bush_leaves_default_leaves_simple",
     "mtg_bush_leaves_default_leaves_simple",
     "mtg_bush_leaves_default_leaves_simple"
-  ]
+  ],
+  "render": {
+    "transparent": true
+  }
 }

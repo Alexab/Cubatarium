@@ -10,5 +10,6 @@
     "mtg_dirt_with_grass_composite_0",
     "mtg_dirt_with_grass_default_grass",
     "mtg_dirt_with_grass_default_dirt"
-  ]
+  ],
+  "render": {}
 }

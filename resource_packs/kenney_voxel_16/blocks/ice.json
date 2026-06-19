@@ -11,5 +11,8 @@
     "ice",
     "ice"
   ],
-  "displayName": "Ice"
+  "displayName": "Ice",
+  "render": {
+    "transparent": true
+  }
 }

@@ -11,5 +11,6 @@
     "cloth_12",
     "cloth_12"
   ],
-  "displayName": "Brown Wool"
+  "displayName": "Brown Wool",
+  "render": {}
 }

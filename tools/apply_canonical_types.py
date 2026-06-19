@@ -17,7 +17,6 @@ def patch_pack(pack_dir: Path, dry_run: bool) -> int:
     blocks_dir = pack_dir / "blocks"
     if not blocks_dir.is_dir():
         return 0
-    specs = load_canonical_block_specs()
     changed = 0
     for block_path in sorted(blocks_dir.glob("*.json")):
         try:
@@ -25,7 +24,7 @@ def patch_pack(pack_dir: Path, dry_run: bool) -> int:
         except (OSError, json.JSONDecodeError):
             continue
         name = block.get("name")
-        if not name or name not in specs:
+        if not name:
             continue
         before = json.dumps(block, sort_keys=True)
         updated = apply_canonical_meta_to_block_json(block)

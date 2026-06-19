@@ -10,5 +10,6 @@
     "mobSpawner",
     "mobSpawner",
     "mobSpawner"
-  ]
+  ],
+  "render": {}
 }

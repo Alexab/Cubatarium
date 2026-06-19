@@ -10,5 +10,6 @@
     "mtg_tinblock_default_tin_block",
     "mtg_tinblock_default_tin_block",
     "mtg_tinblock_default_tin_block"
-  ]
+  ],
+  "render": {}
 }

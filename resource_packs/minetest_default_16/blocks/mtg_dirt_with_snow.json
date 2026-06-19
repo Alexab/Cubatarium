@@ -10,5 +10,6 @@
     "mtg_dirt_with_snow_composite_0",
     "mtg_dirt_with_snow_default_snow",
     "mtg_dirt_with_snow_default_dirt"
-  ]
+  ],
+  "render": {}
 }

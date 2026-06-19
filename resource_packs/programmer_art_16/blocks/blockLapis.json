@@ -11,5 +11,6 @@
     "blockLapis",
     "blockLapis"
   ],
-  "displayName": "Lapis Block"
+  "displayName": "Lapis Block",
+  "render": {}
 }

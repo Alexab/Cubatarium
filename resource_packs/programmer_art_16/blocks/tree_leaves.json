@@ -12,5 +12,8 @@
     "leaves_opaque",
     "leaves_opaque"
   ],
-  "displayName": "Leaves"
+  "displayName": "Leaves",
+  "render": {
+    "transparent": true
+  }
 }

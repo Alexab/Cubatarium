@@ -11,5 +11,6 @@
     "blockIron",
     "blockIron"
   ],
-  "displayName": "Iron Block"
+  "displayName": "Iron Block",
+  "render": {}
 }

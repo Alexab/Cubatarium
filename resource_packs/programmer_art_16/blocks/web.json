@@ -12,5 +12,8 @@
     "web",
     "web"
   ],
-  "displayName": "Cobweb"
+  "displayName": "Cobweb",
+  "render": {
+    "transparent": true
+  }
 }

@@ -11,5 +11,6 @@
     "oreLapis",
     "oreLapis"
   ],
-  "displayName": "Lapis Ore"
+  "displayName": "Lapis Ore",
+  "render": {}
 }
