@@ -205,6 +205,16 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
             anim.value("arm_swing_deg", def.visual.Animation.armSwingDeg);
         def.visual.Animation.flyBodyPitchDeg = anim.value(
             "fly_body_pitch_deg", def.visual.Animation.flyBodyPitchDeg);
+        def.visual.Animation.bodyBobBlocks =
+            anim.value("body_bob_blocks", def.visual.Animation.bodyBobBlocks);
+        def.visual.Animation.tailSwingDeg =
+            anim.value("tail_swing_deg", def.visual.Animation.tailSwingDeg);
+        def.visual.Animation.runSpeedMultiplier = anim.value(
+            "run_speed_multiplier", def.visual.Animation.runSpeedMultiplier);
+        def.visual.Animation.crouchLegBendDeg = anim.value(
+            "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
+        def.visual.Animation.wingIdleSwingDeg = anim.value(
+            "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
         if (anim.contains("clips") && anim["clips"].is_object())
         {
           for (const auto &[clipId, clipJson] : anim["clips"].items())

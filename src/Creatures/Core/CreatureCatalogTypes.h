@@ -103,6 +103,11 @@ struct CreatureAnimationParams
   float legSwingDeg{25.0f};
   float armSwingDeg{15.0f};
   float flyBodyPitchDeg{10.0f};
+  float bodyBobBlocks{0.025f};
+  float tailSwingDeg{12.0f};
+  float runSpeedMultiplier{1.3f};
+  float crouchLegBendDeg{25.0f};
+  float wingIdleSwingDeg{5.0f};
   std::unordered_map<std::string, CreatureAnimationClipDef> clips;
   std::unordered_map<std::string, std::string> stateMap;
 };
