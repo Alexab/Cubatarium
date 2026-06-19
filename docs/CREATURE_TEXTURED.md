@@ -18,13 +18,27 @@ Luanti mobs use `visual = "mesh"`: a single PNG atlas (often 128×128) with per-
 | Layout | Species | UV in renderer | PNG source |
 |--------|---------|----------------|------------|
 | `player_skin_atlas` | `human` | `Head` / `Body` VAO crops (face on +X only) | 64×32 skin sliced into player-atlas layout |
-| `rigid_crop` | mobs | All parts → `Box` + full 0–1 UV on each face | 64×64 bake per stem (`body`, `face`, `leg`, …) |
+| `rigid_crop` | mobs | `Box` for body/leg/ear/tail; `RigidHead` for `face` stem (`snout`/`beak`/aerial `head`/`comb`) — морда только на +Z | 64×64 bake per stem (`body`, `face`, `leg`, `ear`, `tail`, …) |
 
 **Without bake:** importing a mesh atlas into every stem and applying player UV to mob `head`/`torso` produces stretched “face on torso” artifacts.
 
-**Bake pipeline:** `tools/bake_rigid_creature_textures.py` composites Luanti layers (e.g. sheep `base ^ wool`), parses `.b3d` UV (`tools/b3d_read.py`), maps rigid JSON part AABBs to atlas regions, and writes `models/creatures/<id>/textures/<stem>.png`. Override failed auto-crops via `manual_uv` in `tools/creature_luanti_sources.yaml`.
+**Bake pipeline:** `tools/bake_rigid_creature_textures.py` composites Luanti layers (e.g. sheep `base ^ wool`), parses `.b3d` UV (`tools/b3d_read.py`), maps rigid JSON part AABBs to atlas regions, applies **`opaque_fill`** (dilate transparent atlas pixels — fixes semi-transparent sheep/skeleton), and writes `models/creatures/<id>/textures/<stem>.png`. Orphan stems (e.g. old `arm.png` on quadrupeds) are removed after bake. Override failed auto-crops via `manual_uv` in `tools/creature_luanti_sources.yaml`. UV validation: `python tools/debug_creature_uv_crops.py --species sheep`.
 
-Set in JSON: `"texture_layout": "rigid_crop"` (mobs) or `"player_skin_atlas"` (human). Runtime: `CreatureVisualRigid::MeshForPart` uses `Head`/`Body` meshes only when layout is `player_skin_atlas`.
+Set in JSON: `"texture_layout": "rigid_crop"` (mobs) or `"player_skin_atlas"` (human). Runtime: `CreatureVisualRigid::MeshForPart` uses `Head`/`Body` for human; mob parts with `/face` texture use `RigidHead` (full crop on +Z, plain corner on sides).
+
+### Quadruped face parts
+
+Per-species geometry in [`tools/creature_rigid_parts.yaml`](../../tools/creature_rigid_parts.yaml):
+
+- `head` — skull/wool (`body` texture)
+- `snout` — forward box (`face` texture, `RigidHead` UV)
+- `ear_l` / `ear_r` — optional (`ear` texture stem)
+- `tail` — optional (`tail` texture stem)
+- Chicken: `neck`, `head` + `comb` + `beak` (`face` stem), wings, legs
+
+Part geometry source: [`tools/creature_rigid_parts.yaml`](../../tools/creature_rigid_parts.yaml). Proportion hints: `python tools/derive_rigid_proportions.py`.
+
+Regenerate JSON: `python tools/generate_luanti_creature_catalog.py`
 
 ## `visual.parts` in `creature.json`
 
@@ -50,7 +64,7 @@ Set in JSON: `"texture_layout": "rigid_crop"` (mobs) or `"player_skin_atlas"` (h
 | `pivot` | Optional limb hinge in local blocks (enables pose rotation) |
 | `limb` | `leg` or `arm` — selects swing axis in pose presenter |
 
-Ship-set stems: `body` (torso, chest/belt bands), `face` (head atlas: eyes only on +X forward), `leg` (striped, brown-tinted), `arm` (shoulder/cuff bands). Parts `arm_l` / `arm_r` in JSON.
+Ship-set stems: `body`, `face`, `leg`, `ear`, `tail` (quadrupeds), `arm` (bipeds). Human uses `player_skin_atlas` via `tools/import_luanti_creature_textures.py` (not mob bake). Player UV audit: `python tools/debug_player_skin_uv.py`.
 
 Head mesh uses atlas UVs (`creatureHeadPartVAO`) so the face panel is not repeated on all four horizontal sides — **only when** `visual.texture_layout` is `player_skin_atlas` (human). Mobs with `rigid_crop` use the box mesh on every part.
 
@@ -77,6 +91,23 @@ For a part with `texture: "body"` and active skin, resolve uses `skin/<skin_id>/
 | `creature_debug_bounds` | `false` | Cyan max AABB wireframe (unchanged) |
 
 Set `creature_textured_parts` to `false` to fall back to a single wireframe box per creature.
+
+## Procedural animation (`visual.animation`)
+
+Parsed into `CreatureAnimationParams` and used by pose presenters (`src/Pose/*`):
+
+| Field | Default | Effect |
+|-------|---------|--------|
+| `walk_cycle_hz` | 2.0 | Leg/arm phase rate vs `walk_speed` |
+| `leg_swing_deg` / `arm_swing_deg` | 25 / 15 | Limb swing amplitude |
+| `fly_body_pitch_deg` | 10 | Torso pitch when flying |
+| `body_bob_blocks` | 0.025 | Vertical torso/head bob on walk |
+| `tail_swing_deg` | 12 | Quadruped tail wag |
+| `run_speed_multiplier` | 1.3 | Faster swing above ~1.2× walk speed |
+| `crouch_leg_bend_deg` | 25 | Human knee bend when crouching |
+| `wing_idle_swing_deg` | 5 | Ground chicken wing tuck on walk |
+
+Ground chicken (`can_fly: false`, aerial archetype): legs alternate, wings tucked, idle peck. Quadrupeds: tail wag + spine-offset torso bob.
 
 ## Body yaw (facing)
 
@@ -126,10 +157,10 @@ World/collision/spawn/palette behavior is unchanged.
 
 ## Smoke acceptance
 
-1. Sheep in world: torso shows wool patch, head shows face, legs show leg patch (not full mesh atlas on every face).
-2. `sheep_wool_golden` on sheep → parts use golden skin textures.
-3. Cow taller/wider than human — part scales match bounds.
-4. F5 3rd person: human with parts; 1st person: no body (unchanged).
+1. Sheep in world: opaque wool, **eyes on snout**, visible ears/tail; chicken walks with leg swing (not wing flap).
+2. `sheep_wool_golden` on sheep → parts use golden skin textures (incl. ear/tail stems).
+3. Cow torso longer than sheep; wolf has ears and snout.
+4. F5 3rd person: human face on head, torso front/back correct; crouch bends knees; walk bob.
 5. `creature_debug_bounds`: cyan max AABB over mesh.
 6. Save/reload: `skin_id`, wander, collision, palette OK.
 7. ~10–20 mobs: no obvious FPS drop.

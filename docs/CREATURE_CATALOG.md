@@ -13,7 +13,7 @@ Ship set: **9 species** (1 player + 8 mobs) and **5 skins**, Luanti-style rigid 
 | `wolf` | mob | terrestrial_quadruped | mobs, hostile | |
 | `pig` | mob | terrestrial_quadruped | mobs, passive | |
 | `cow` | mob | terrestrial_quadruped | mobs, passive | |
-| `chicken` | mob | aerial | mobs, passive | Wing flap via `AerialPosePresenter` |
+| `chicken` | mob | aerial | mobs, passive | Ground walk (legs), idle peck; wing flap only when `can_fly` |
 | `oerkki` | mob | terrestrial_biped | mobs, hostile | |
 | `skeleton` | mob | terrestrial_biped | mobs, hostile | |
 | `sand_monster` | mob | terrestrial_biped | mobs, hostile | |
@@ -53,7 +53,7 @@ Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
 - `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
 - `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
-- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation`, `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `color`)
+- `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation` (`walk_cycle_hz`, `leg_swing_deg`, `arm_swing_deg`, `fly_body_pitch_deg`, `body_bob_blocks`, `tail_swing_deg`, `run_speed_multiplier`, `crouch_leg_bend_deg`, `wing_idle_swing_deg`), `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `color`)
 
 ### `skin.json`
 
@@ -102,7 +102,16 @@ python tools/bake_rigid_creature_textures.py
 # optional: --species sheep --skin sheep_wool_black
 ```
 
-Sources: `tools/creature_luanti_sources.yaml`, UV mapping: `tools/creature_rigid_uv_maps.yaml`. Requires `E:\Work\Home\CubatariumTextureResearch` with `.b3d` models and textures.
+Sources: `tools/creature_luanti_sources.yaml`, UV mapping: `tools/creature_rigid_uv_maps.yaml`, part geometry: `tools/creature_rigid_parts.yaml`. Requires `E:\Work\Home\CubatariumTextureResearch` with `.b3d` models and textures.
+
+Debug / tuning:
+
+```powershell
+python tools/debug_creature_uv_crops.py --species sheep
+python tools/debug_player_skin_uv.py
+python tools/derive_rigid_proportions.py
+python tools/sample_b3d_pose_curves.py
+```
 
 Regenerate JSON only (keeps imported PNGs when LICENSE is not a placeholder):
 
