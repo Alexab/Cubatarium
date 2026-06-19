@@ -263,7 +263,7 @@ def collect_block_stems(blocks: dict) -> set[str]:
         if isinstance(spec, str):
             stems.add(spec)
         else:
-            stems.update(face_stems(spec)[:6])
+            stems.update(face_stems(spec))
     return stems
 
 

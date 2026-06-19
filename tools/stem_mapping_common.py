@@ -69,7 +69,9 @@ def face_stems(entry: dict) -> list[str]:
     if "uniform" in entry:
         return [entry["uniform"]] * 6
     faces = entry.get("faces", [])
-    return faces[:6] if len(faces) >= 6 else list(faces)
+    if len(faces) in (6, 12):
+        return list(faces)
+    return list(faces)
 
 
 def block_spec(entry: dict) -> dict | str:
