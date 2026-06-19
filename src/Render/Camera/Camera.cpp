@@ -177,6 +177,10 @@ void UCamera::SetFreeMove(bool value)
 
 PlayerCapsule UCamera::GetPlayerCapsule() const
 {
+  if (Locomotion.GetStanceBlend() > 0.05f)
+  {
+    return Locomotion.GetCollisionCapsule();
+  }
   return Locomotion.GetCapsule();
 }
 
@@ -693,6 +697,10 @@ bool UCamera::DoMovement(const UWorld *world)
 {
   const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
+  if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
+  {
+    ClearShiftKeyState();
+  }
   const PlayerInput input = BuildPlayerInput(false);
 
   bool is_moved(false);
@@ -773,10 +781,6 @@ bool UCamera::DoMovement(const UWorld *world)
 
     Locomotion.UpdateLocomotion(world, Position, input, dt,
                                 world->GetMovementCollisionSkipId());
-    if (Locomotion.ConsumeClearShiftRequest())
-    {
-      ClearShiftKeyState();
-    }
     is_moved = true;
     UpdatePose();
   }

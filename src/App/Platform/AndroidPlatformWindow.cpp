@@ -359,8 +359,11 @@ void UAndroidPlatformWindow::ProcessInput()
     camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
     if (lookDelta.x != 0.f || lookDelta.y != 0.f)
     {
-      camera->ApplyRelativeMouseMove(lookDelta.x, -lookDelta.y);
-      World->UpdateIntersection(camera->GetPosition(), camera->GetFront());
+      if (!Application->WantsCaptureMouse())
+      {
+        camera->ApplyRelativeMouseMove(lookDelta.x, -lookDelta.y);
+        World->UpdateIntersection(camera->GetPosition(), camera->GetFront());
+      }
     }
   }
 

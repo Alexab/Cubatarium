@@ -43,6 +43,7 @@ void UCreatureLocomotionController::Reset()
   Mode = CreatureMovementMode::Walking;
   LocomotionState = LocomotionState::Idle;
   StanceBlend = 0.0f;
+  UnsupportedFluidStreak = 0;
   FeetY = 0.0f;
   FeetAnchored = false;
   OnGround = true;
@@ -105,6 +106,25 @@ void UCreatureLocomotionController::updateLocomotionState(
 PlayerCapsule UCreatureLocomotionController::GetCapsule() const
 {
   return PlayerCapsule::FromCreatureBlocks(CollisionSizeBlocks, EyeHeight);
+}
+
+PlayerCapsule UCreatureLocomotionController::GetCollisionCapsule() const
+{
+  const PlayerCapsule stand = GetCapsule();
+  const float t = std::clamp(StanceBlend, 0.0f, 1.0f);
+  if (t <= 0.0f)
+  {
+    return stand;
+  }
+  const PlayerCapsule refStand = PlayerCapsule::Standing();
+  const PlayerCapsule refCrouch = PlayerCapsule::Crouching();
+  const float crouchHeight =
+      stand.height * (refCrouch.height / refStand.height);
+  const float crouchEye =
+      stand.eyeHeight * (refCrouch.eyeHeight / refStand.eyeHeight);
+  return {stand.height + (crouchHeight - stand.height) * t,
+          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t,
+          stand.halfWidth};
 }
 
 bool UCreatureLocomotionController::OnSpacePressed()
@@ -255,9 +275,9 @@ bool UCreatureLocomotionController::canStandUpAt(
   {
     return true;
   }
-  const PlayerCapsule cap = GetCapsule();
-  const glm::vec3 trialEye(eyePos.x, FeetY + GetViewEyeHeight(), eyePos.z);
-  return !world->CheckCollision(trialEye, GetCapsule(), skipCreatureId);
+  const PlayerCapsule stand = GetCapsule();
+  const glm::vec3 trialEye(eyePos.x, FeetY + stand.eyeHeight, eyePos.z);
+  return !world->CheckCollision(trialEye, stand, skipCreatureId);
 }
 
 void UCreatureLocomotionController::updateStanceBlend(
@@ -272,12 +292,13 @@ void UCreatureLocomotionController::updateStanceBlend(
 
   float target = 0.0f;
   if (Caps.canCrouch && world && FeetAnchored && OnGround &&
-      VerticalVelocity <= 0.05f && input.crouchHeld)
+      VerticalVelocity <= 0.05f && input.crouchHeld && !ClearShiftRequest)
   {
     target = 1.0f;
   }
-  if (target < 1.0f && StanceBlend > 0.0f &&
-      !canStandUpAt(world, eyePos, skipCreatureId))
+  if (target < 1.0f && StanceBlend > kJumpStanceMax &&
+      !canStandUpAt(world, eyePos, skipCreatureId) &&
+      (input.crouchHeld || StanceBlend > 0.5f))
   {
     target = 1.0f;
   }
@@ -383,9 +404,23 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
     return;
   }
 
-  const PlayerCapsule cap = GetCapsule();
+  const PlayerCapsule cap = GetCollisionCapsule();
   const UWorld::SampledFluidState fluid =
       world->SampleFluidPhysics(eyePos, cap);
+
+  const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
+  const float feetY = supportVol.center.y - supportVol.halfExtents.y;
+  const bool supported = world->HasGroundSupportVolume(supportVol, feetY);
+
+  if (fluid.inFluid && !supported)
+  {
+    UnsupportedFluidStreak = std::min(UnsupportedFluidStreak + 1, 8);
+  }
+  else
+  {
+    UnsupportedFluidStreak = 0;
+  }
+  const bool swimmingFluid = fluid.inFluid && UnsupportedFluidStreak >= 2;
 
   if (!input.jumpHeld)
   {
@@ -393,7 +428,9 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   }
 
   const bool jumpEdge = input.jumpHeld && !SpaceWasPressed;
-  if (jumpEdge && !SuppressNextJump && OnGround && FeetAnchored)
+  const bool jumpFromGround =
+      FeetAnchored && (OnGround || (supported && !swimmingFluid));
+  if (jumpEdge && !SuppressNextJump && jumpFromGround)
   {
     if (StanceBlend > kJumpStanceMax &&
         canStandUpAt(world, eyePos, skipCreatureId))
@@ -401,6 +438,8 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
       if (tryStandFromCrouch(world, eyePos, input, skipCreatureId))
       {
         SpaceWasPressed = true;
+        updateLocomotionState(input);
+        return;
       }
     }
     else if (StanceBlend <= kJumpStanceMax && tryJump(input))
@@ -411,7 +450,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
     }
   }
 
-  if (fluid.inFluid)
+  if (swimmingFluid)
   {
     OnGround = false;
     FeetAnchored = false;
@@ -432,18 +471,16 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
     const glm::vec3 verticalDelta(0.0f, VerticalVelocity * dt, 0.0f);
     eyePos = world->ResolveMovement(eyePos, verticalDelta, cap, skipCreatureId);
     updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
-    if (StanceBlend > kJumpStanceMax && FeetAnchored)
+    if (!input.crouchHeld && StanceBlend > 0.0f)
     {
-      syncEyeFromFeet(eyePos);
+      const float step = dt / kStanceTransitionDuration;
+      StanceBlend = std::max(0.0f, StanceBlend - step * 2.5f);
     }
     SpaceWasPressed = input.jumpHeld;
     updateLocomotionState(input);
     return;
   }
 
-  const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
-  const float feetY = supportVol.center.y - supportVol.halfExtents.y;
-  const bool supported = world->HasGroundSupportVolume(supportVol, feetY);
   const bool groundedPose = VerticalVelocity <= 0.05f && supported;
 
   if (groundedPose)

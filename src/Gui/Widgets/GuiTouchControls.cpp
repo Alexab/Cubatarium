@@ -144,6 +144,14 @@ public:
     }
   }
 
+  void ResyncPointer(int x, int y)
+  {
+    if (active_)
+    {
+      UpdateStick(x, y);
+    }
+  }
+
   bool OnCapturedMove(int PointerId, int x, int y)
   {
     if (!active_ || !GuiPointerMatches(PointerId, capturePointerId_))
@@ -504,6 +512,11 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   };
   OnReleaseJoystickCapture = [joystickWidget]()
   { joystickWidget->ForceRelease(); };
+  OnReleaseHoldButtons = [jumpWidget, sneakWidget]()
+  {
+    jumpWidget->ForceRelease();
+    sneakWidget->ForceRelease();
+  };
   OnReleaseAllCaptures = [joystickWidget, jumpWidget, sneakWidget]()
   {
     joystickWidget->ForceRelease();
@@ -548,6 +561,23 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   {
     return;
   }
+  if (width == lastLayoutWidth_ && height == lastLayoutHeight_ &&
+      offsetX == lastLayoutOffsetX_ && offsetY == lastLayoutOffsetY_ &&
+      std::fabs(uiScale - lastLayoutUiScale_) < 0.01f)
+  {
+    return;
+  }
+  const bool hadLayout = lastLayoutWidth_ >= 0;
+  lastLayoutWidth_ = width;
+  lastLayoutHeight_ = height;
+  lastLayoutOffsetX_ = offsetX;
+  lastLayoutOffsetY_ = offsetY;
+  lastLayoutUiScale_ = uiScale;
+  if (hadLayout && OnReleaseHoldButtons)
+  {
+    OnReleaseHoldButtons();
+  }
+
   UiScale = uiScale;
   Root->SetBounds({0, 0, width, height});
 
@@ -627,6 +657,19 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
                                   offsetY + std::max(0, bottomRowY - actionPad),
                                   buttonSize * 2 + buttonGap + actionPad * 2,
                                   buttonSize + actionPad * 2});
+  }
+
+  if (JoystickWidget && Bridge)
+  {
+    if (auto *joystick = dynamic_cast<UTouchVirtualJoystick *>(JoystickWidget))
+    {
+      if (joystick->IsActive())
+      {
+        const glm::vec2 pos = Bridge->GetMousePosition();
+        joystick->ResyncPointer(static_cast<int>(pos.x),
+                                static_cast<int>(pos.y));
+      }
+    }
   }
 }
 

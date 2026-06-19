@@ -580,6 +580,12 @@ void UApplication::ShowInGameHud()
         [this]()
         {
           PaletteOpen = !PaletteOpen;
+#if defined(__ANDROID__)
+          if (PaletteOpen && HudScreen)
+          {
+            HudScreen->ReleaseTouchCaptures();
+          }
+#endif
           if (PaletteScreen)
           {
             PaletteScreen->SetVisible(PaletteOpen);
@@ -589,6 +595,12 @@ void UApplication::ShowInGameHud()
         [this]()
         {
           ConsoleOpen = !ConsoleOpen;
+#if defined(__ANDROID__)
+          if (ConsoleOpen && HudScreen)
+          {
+            HudScreen->ReleaseTouchCaptures();
+          }
+#endif
           if (ConsoleScreen)
           {
             ConsoleScreen->SetVisible(ConsoleOpen);
@@ -649,15 +661,62 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
   return AppCursorPolicy::Free;
 }
 
-void UApplication::SyncCursorVisibility()
+void UApplication::SyncGameplayLookCapture()
 {
-#ifndef __ANDROID__
-  if (!Window)
+  if (!World)
   {
     return;
   }
-  ApplyCursorPolicy(Window, GetCursorPolicy());
+#ifndef __ANDROID__
+  if (Window)
+  {
+    if (auto *wm = GetWindowManager(Window))
+    {
+      wm->ResetGameplayMouseCapture();
+      return;
+    }
+    double x = 0.0;
+    double y = 0.0;
+    glfwGetCursorPos(Window, &x, &y);
+    if (auto camera = World->GetCurrentUserCamera())
+    {
+      camera->ResetMouseMove(x, y);
+    }
+  }
+#else
+  if (TouchBridge)
+  {
+    TouchBridge->ConsumeMouseDelta();
+    const glm::vec2 pos = TouchBridge->GetMousePosition();
+    if (auto camera = World->GetCurrentUserCamera())
+    {
+      camera->ResetMouseMove(static_cast<double>(pos.x),
+                             static_cast<double>(pos.y));
+    }
+  }
 #endif
+}
+
+void UApplication::SyncCursorVisibility()
+{
+  const AppCursorPolicy policy = GetCursorPolicy();
+  const bool leavingUiPointer = LastCursorPolicy == AppCursorPolicy::Free &&
+                                policy != AppCursorPolicy::Free &&
+                                State == AppState::InGame;
+
+#ifndef __ANDROID__
+  if (Window)
+  {
+    ApplyCursorPolicy(Window, policy);
+  }
+#endif
+
+  if (leavingUiPointer)
+  {
+    SyncGameplayLookCapture();
+  }
+
+  LastCursorPolicy = policy;
 }
 
 void UApplication::ClearGameplayKeyboard()
@@ -701,22 +760,6 @@ void UApplication::EnterInGameInputState()
 #endif
   GuiContext->ClearInputState();
   SyncCursorVisibility();
-#ifndef __ANDROID__
-  if (auto *wm = GetWindowManager(Window))
-  {
-    wm->ResetGameplayMouseCapture();
-  }
-  if (World && Window)
-  {
-    double x = 0.0;
-    double y = 0.0;
-    glfwGetCursorPos(Window, &x, &y);
-    if (auto camera = World->GetCurrentUserCamera())
-    {
-      camera->ResetMouseMove(x, y);
-    }
-  }
-#endif
 }
 
 void UApplication::RecaptureMouseForLook()
@@ -921,10 +964,21 @@ void UApplication::ProcessInput() { (void)0; }
 
 void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
 {
-  ViewportInsetLeft = std::max(0, left);
-  ViewportInsetTop = std::max(0, top);
-  ViewportInsetRight = std::max(0, right);
-  ViewportInsetBottom = std::max(0, bottom);
+  const int newLeft = std::max(0, left);
+  const int newTop = std::max(0, top);
+  const int newRight = std::max(0, right);
+  const int newBottom = std::max(0, bottom);
+  constexpr int kInsetHysteresisPx = 16;
+  if (newLeft == ViewportInsetLeft && newTop == ViewportInsetTop &&
+      newRight == ViewportInsetRight &&
+      std::abs(newBottom - ViewportInsetBottom) < kInsetHysteresisPx)
+  {
+    return;
+  }
+  ViewportInsetLeft = newLeft;
+  ViewportInsetTop = newTop;
+  ViewportInsetRight = newRight;
+  ViewportInsetBottom = newBottom;
   if (Geometry)
   {
     Geometry->SetOverlayMargins(ViewportInsetRight + 16, ViewportInsetTop + 30);
@@ -1103,6 +1157,7 @@ bool UApplication::RouteKey(int key, int Action, int Mods)
           ConsoleScreen->SetVisible(false);
         }
         ClearGameplayKeyboard();
+        SyncCursorVisibility();
         return true;
       }
       if (PaletteOpen)
@@ -1112,6 +1167,7 @@ bool UApplication::RouteKey(int key, int Action, int Mods)
         {
           PaletteScreen->SetVisible(false);
         }
+        SyncCursorVisibility();
         return true;
       }
       ReturnToMainMenu();
@@ -1149,6 +1205,12 @@ bool UApplication::RouteKey(int key, int Action, int Mods)
     if (KeyNameIs(Ui.ConsoleKey, key))
     {
       ConsoleOpen = !ConsoleOpen;
+#if defined(__ANDROID__)
+      if (ConsoleOpen && HudScreen)
+      {
+        HudScreen->ReleaseTouchCaptures();
+      }
+#endif
       if (ConsoleScreen)
       {
         ConsoleScreen->SetVisible(ConsoleOpen);
@@ -1181,6 +1243,12 @@ bool UApplication::RouteKey(int key, int Action, int Mods)
     if (!ConsoleOpen && KeyNameIs(Ui.PaletteKey, key))
     {
       PaletteOpen = !PaletteOpen;
+#if defined(__ANDROID__)
+      if (PaletteOpen && HudScreen)
+      {
+        HudScreen->ReleaseTouchCaptures();
+      }
+#endif
       if (PaletteScreen)
       {
         PaletteScreen->SetVisible(PaletteOpen);
@@ -1191,6 +1259,12 @@ bool UApplication::RouteKey(int key, int Action, int Mods)
     if (!ConsoleOpen && KeyNameIs(Ui.InventoryKey, key))
     {
       PaletteOpen = !PaletteOpen;
+#if defined(__ANDROID__)
+      if (PaletteOpen && HudScreen)
+      {
+        HudScreen->ReleaseTouchCaptures();
+      }
+#endif
       if (PaletteScreen)
       {
         PaletteScreen->SetVisible(PaletteOpen);
@@ -1367,6 +1441,36 @@ bool UApplication::RouteMouseMove(int x, int y, int PointerId)
     if (GameSession && GameSession->IsDragging())
     {
       return true;
+    }
+    const int pointerIndex = NormalizeOverlayPointer(PointerId);
+    const OverlayPointerCapture capture = OverlayCaptures[pointerIndex];
+    if (capture != OverlayPointerCapture::None)
+    {
+      auto routeCapturedMove = [&](UGuiWidget *root) -> bool
+      { return root && root->OnMouseMove(event); };
+      switch (capture)
+      {
+      case OverlayPointerCapture::Palette:
+        if (PaletteOpen && routeCapturedMove(PaletteScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case OverlayPointerCapture::Console:
+        if (ConsoleOpen && routeCapturedMove(ConsoleScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case OverlayPointerCapture::Hud:
+        if (routeCapturedMove(HudScreen ? HudScreen->GetRoot() : nullptr))
+        {
+          return true;
+        }
+        break;
+      default:
+        break;
+      }
     }
     if (OverlayPopup && OverlayPopup->IsOpen())
     {

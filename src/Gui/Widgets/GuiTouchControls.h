@@ -44,8 +44,14 @@ private:
   UGuiWidget *MenuButton{nullptr};
   UGuiWidget *ConsoleButton{nullptr};
   float UiScale{1.f};
+  int lastLayoutWidth_{-1};
+  int lastLayoutHeight_{-1};
+  int lastLayoutOffsetX_{-1};
+  int lastLayoutOffsetY_{-1};
+  float lastLayoutUiScale_{-1.f};
   std::function<bool(int, int, int)> OnRouteCapturedMove;
   std::function<void()> OnReleaseJoystickCapture;
+  std::function<void()> OnReleaseHoldButtons;
   std::function<void()> OnReleaseAllCaptures;
 };
 

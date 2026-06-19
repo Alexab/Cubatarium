@@ -139,6 +139,7 @@ private:
   void RefreshBlockCatalog();
   void ShowInGameHud();
   void SyncCursorVisibility();
+  void SyncGameplayLookCapture();
   AppCursorPolicy GetCursorPolicy() const;
   void EnterInGameInputState();
   /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.
@@ -205,6 +206,7 @@ private:
   int ViewportInsetRight{0};
   int ViewportInsetBottom{0};
   int KeyboardInsetBottom{0};
+  AppCursorPolicy LastCursorPolicy{AppCursorPolicy::Free};
 };
 
 } // namespace cutum

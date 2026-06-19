@@ -33,6 +33,7 @@ public:
   float GetVerticalVelocity() const { return VerticalVelocity; }
   LocomotionState GetLocomotionState() const { return LocomotionState; }
   PlayerCapsule GetCapsule() const;
+  PlayerCapsule GetCollisionCapsule() const;
   float GetFeetY() const { return FeetY; }
   bool IsFeetAnchored() const { return FeetAnchored; }
   float GetViewEyeHeight() const;
@@ -84,6 +85,7 @@ private:
   bool SpaceWasPressed{false};
   bool SuppressNextJump{false};
   bool ClearShiftRequest{false};
+  int UnsupportedFluidStreak{0};
   std::chrono::steady_clock::time_point LastSpacePressTime{};
 
   static constexpr int kDoubleSpaceTapMs = 350;

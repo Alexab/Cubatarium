@@ -325,6 +325,11 @@ bool UGuiScrollView::OnDeferredUp(const GuiMouseEvent &event)
 
 bool UGuiScrollView::OnMouseDown(const GuiMouseEvent &event)
 {
+  if (ContentPanel.HitTest(event.X, event.Y) &&
+      ContentPanel.OnMouseDown(event))
+  {
+    return true;
+  }
   if (BeginDeferredTouch(event))
   {
     return true;
