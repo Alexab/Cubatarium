@@ -43,15 +43,13 @@ public:
 
 private:
   const InventoryEntryRef *GetActiveEntry(const BlockInputContext &ctx) const;
-  bool ActiveSlotBlocksWorldInteraction(const BlockInputContext &ctx) const;
 
   void HandleLeftPress(const BlockInputContext &ctx);
   void HandleLeftRelease(float holdSeconds, const BlockInputContext &ctx);
   void HandleRightPress(glm::vec2 pos, const BlockInputContext &ctx);
   void HandleRightRelease(const BlockInputContext &ctx);
 
-  void TryPlaceFromActiveSlot(const BlockInputContext &ctx);
-  void TrySpawnCreatureOrSkin(const BlockInputContext &ctx);
+  void TryUseActiveSlot(const BlockInputContext &ctx);
   void TryInstantBreak(const BlockInputContext &ctx);
 
   std::chrono::steady_clock::time_point LeftDownTime{};

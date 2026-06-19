@@ -1985,12 +1985,17 @@ void UWorld::LoadUsers(const std::string &file_name)
       if (playerCreature)
       {
         UCreatureInventory &inv = playerCreature->GetInventory();
+        const bool hadHotbars = user_data.contains("hotbars") &&
+                                user_data["hotbars"].is_array();
         inv.DeserializeFromJson(user_data, HotbarCount);
         if (inv.GetStorage().empty())
         {
           inv.InitCreativeDefaults();
         }
-        inv.EnsureDefaultHotbar();
+        if (!hadHotbars)
+        {
+          inv.EnsureDefaultHotbar();
+        }
         playerCreature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
         if (!user->GetSelectedSkinId().empty())
         {

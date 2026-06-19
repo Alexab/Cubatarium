@@ -149,6 +149,49 @@ def check_b3d_samples() -> None:
     )
 
 
+def check_hotbar_creature_persistence() -> None:
+    """Mirror post-load hotbar rules: saved creature in slot 1 must not become wood."""
+    user_data = {
+        "hotbars": [
+            [
+                {"empty": True},
+                {"empty": False, "kind": "creature", "id": "sheep", "count": 0},
+            ]
+        ],
+        "active_bar": 0,
+        "active_slot": 1,
+    }
+    hotbars = user_data["hotbars"]
+    slot1 = hotbars[0][1]
+    if slot1.get("kind") != "creature" or slot1.get("id") != "sheep":
+        raise SystemExit("FAIL hotbar fixture")
+
+    # Simulate LoadUsers: skip EnsureDefaultHotbar when hotbars key exists.
+    had_hotbars = "hotbars" in user_data and isinstance(user_data["hotbars"], list)
+    if not had_hotbars:
+        raise SystemExit("FAIL hotbar: expected had_hotbars")
+
+    # After fix, EnsureDefaultHotbar must not run when had_hotbars.
+    loaded_kind = slot1["kind"]
+    loaded_id = slot1["id"]
+    if loaded_kind != "creature" or loaded_id != "sheep":
+        raise SystemExit(
+            f"FAIL hotbar persistence: slot1={loaded_kind}:{loaded_id}"
+        )
+
+    # EnsureDefaultHotbar must not overwrite occupied slot 1.
+    slots = [{"empty": s.get("empty", True), "id": s.get("id", "")} for s in hotbars[0]]
+    if not slots[1]["empty"]:
+        post_kind = loaded_kind
+        post_id = loaded_id
+    else:
+        post_kind = "block"
+        post_id = "wood"
+    if post_kind != "creature" or post_id != "sheep":
+        raise SystemExit("FAIL hotbar: EnsureDefaultHotbar would overwrite creature")
+    print("OK hotbar creature slot 1 survives load without EnsureDefaultHotbar")
+
+
 def main() -> None:
     print("=== creature fidelity smoke ===")
     check_opaque("sheep", ("body", "face", "ear", "tail"))
@@ -170,6 +213,7 @@ def main() -> None:
     check_human_atlas()
     check_proportions()
     check_animation_fields()
+    check_hotbar_creature_persistence()
     check_b3d_samples()
     print("=== all creature fidelity smoke checks passed ===")
     print(

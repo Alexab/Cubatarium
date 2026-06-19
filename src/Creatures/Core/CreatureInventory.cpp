@@ -38,26 +38,41 @@ void UCreatureInventory::InitCreativeDefaults()
 void UCreatureInventory::EnsureDefaultHotbar()
 {
   EnsureHotbarCount(1);
-  bool hasBlock = false;
+  bool hotbarEmpty = true;
   for (const auto &slot : GetHotbar(0).slots)
   {
-    if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block &&
-        !slot.entry.Id.empty())
+    if (!slot.empty && !slot.entry.Id.empty())
     {
-      hasBlock = true;
+      hotbarEmpty = false;
       break;
     }
   }
-  if (!hasBlock)
+  if (GetHotbar(0).slots[1].empty)
   {
-    InventoryEntryRef wood;
-    wood.kind = InventoryEntryKind::Block;
-    wood.Id = "wood";
-    wood.empty = false;
-    wood.count = -1;
-    AssignToHotbar(0, 1, wood);
+    bool hasBlock = false;
+    for (const auto &slot : GetHotbar(0).slots)
+    {
+      if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block &&
+          !slot.entry.Id.empty())
+      {
+        hasBlock = true;
+        break;
+      }
+    }
+    if (!hasBlock)
+    {
+      InventoryEntryRef wood;
+      wood.kind = InventoryEntryKind::Block;
+      wood.Id = "wood";
+      wood.empty = false;
+      wood.count = -1;
+      AssignToHotbar(0, 1, wood);
+    }
   }
-  SetActiveSlot(0, 1);
+  if (hotbarEmpty)
+  {
+    SetActiveSlot(0, 1);
+  }
 }
 
 void UCreatureInventory::SetPrefabHotbar(

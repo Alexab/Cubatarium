@@ -1496,8 +1496,8 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "Shift - Crouch / Fly down",
       "2xSpace - Toggle flight",
       "0-9 - Primary hotbar; objects via HUD / palette",
-      "Classic: mouse look, hold LMB break, RMB place",
-      "Cubatarium: RMB drag look, LMB tap place / hold break",
+      "Classic: mouse look, hold LMB break, RMB place/use slot",
+      "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
       "Delete - Instant break, F1-F8 - Sky",
   };
 
