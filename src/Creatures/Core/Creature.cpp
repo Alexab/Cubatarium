@@ -185,8 +185,11 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
     const CreatureHabitat habitat =
         def ? def->habitat : CreatureHabitat::Terrestrial;
+    const bool airMobility =
+        Locomotion.GetMode() == CreatureMovementMode::Flying ||
+        habitat == CreatureHabitat::Aerial;
     glm::vec3 delta = Intent.moveDirWorld * Intent.moveSpeed * dt;
-    if (habitat == CreatureHabitat::Terrestrial)
+    if (habitat == CreatureHabitat::Terrestrial && !airMobility)
     {
       delta.y = 0.0f;
     }
@@ -199,20 +202,29 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         delta.y = 0.0f;
       }
     }
-    const glm::vec3 candidate = world.ResolveMovementBody(
-        BodyOrigin, delta, Bounds.profile.restSizeBlocks, Id);
-    const bool habitatOk =
-        (habitat == CreatureHabitat::Aerial ||
-         habitat == CreatureHabitat::Aquatic ||
-         habitat == CreatureHabitat::Amphibious ||
-         habitat == CreatureHabitat::Lava)
-            ? world.HabitatAllowsMovementAt(habitat, candidate,
-                                            Bounds.profile.restSizeBlocks)
-            : HabitatAllowsAt(world, habitat, candidate,
-                              Bounds.profile.restSizeBlocks);
-    if (habitatOk)
+    const glm::vec3 size = Bounds.profile.restSizeBlocks;
+    const glm::vec3 candidate =
+        world.ResolveMovementBody(BodyOrigin, delta, size, Id);
+    if (airMobility)
     {
-      BodyOrigin = candidate;
+      const CollisionVolume vol = CollisionVolumeFromBody(candidate, size);
+      if (!world.CheckBlockCollisionVolume(vol))
+      {
+        BodyOrigin = candidate;
+      }
+    }
+    else
+    {
+      const bool habitatOk =
+          (habitat == CreatureHabitat::Aquatic ||
+           habitat == CreatureHabitat::Amphibious ||
+           habitat == CreatureHabitat::Lava)
+              ? world.HabitatAllowsMovementAt(habitat, candidate, size)
+              : HabitatAllowsAt(world, habitat, candidate, size);
+      if (habitatOk)
+      {
+        BodyOrigin = candidate;
+      }
     }
   }
 

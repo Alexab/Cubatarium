@@ -62,6 +62,7 @@ void UCreatureLocomotionController::SetMode(CreatureMovementMode mode)
     LocomotionState = LocomotionState::Fly;
     StanceBlend = 0.0f;
     FeetAnchored = false;
+    OnGround = false;
   }
   else
   {

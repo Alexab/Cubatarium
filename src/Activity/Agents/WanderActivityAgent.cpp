@@ -46,31 +46,15 @@ bool PickWanderDirection(IWorldPerception &perception,
                          CreatureHabitat habitat, const glm::vec3 &boundsSize,
                          glm::vec3 &outDirection)
 {
+  if (habitat == CreatureHabitat::Aerial)
+  {
+    outDirection = RandomWanderDirection(CreatureHabitat::Aerial);
+    return glm::length(outDirection) > 1e-4f;
+  }
   for (int attempt = 0; attempt < kMaxDirectionAttempts; ++attempt)
   {
     const glm::vec3 dir = RandomWanderDirection(habitat);
-    glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
-    if (habitat == CreatureHabitat::Aerial)
-    {
-      for (float lift = -1.0f; lift <= 4.0f; lift += 1.0f)
-      {
-        const glm::vec3 lifted = probe + glm::vec3(0.0f, lift, 0.0f);
-        if (perception.HabitatAllowsMovementAt(habitat, lifted, boundsSize))
-        {
-          outDirection = dir;
-          if (std::abs(lift) > 1e-3f)
-          {
-            outDirection.y += lift * 0.12f;
-            if (glm::length(outDirection) > 1e-4f)
-            {
-              outDirection = glm::normalize(outDirection);
-            }
-          }
-          return true;
-        }
-      }
-      continue;
-    }
+    const glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
     if (perception.HabitatAllowsMovementAt(habitat, probe, boundsSize))
     {
       outDirection = dir;
@@ -86,6 +70,7 @@ void UWanderActivityAgent::OnCreatureAdded(CreatureId Id)
 {
   Members.insert(Id);
   ResetWanderState(Id, 2.0f, 4.0f);
+  State[Id].timer = 0.0f;
 }
 
 void UWanderActivityAgent::OnCreatureRemoved(CreatureId Id)
@@ -145,9 +130,23 @@ void UWanderActivityAgent::Tick(IWorldPerception &perception,
 
     CreatureIntent intent;
     intent.moveDirWorld = st.direction;
-    const float walkSpeed = snapshot->locomotion.walkSpeed;
-    intent.moveSpeed =
-        walkSpeed > 0.0f ? walkSpeed : snapshot->behavior.moveSpeed;
+    float moveSpeed = snapshot->behavior.moveSpeed;
+    if (snapshot->habitat == CreatureHabitat::Aerial)
+    {
+      if (snapshot->locomotion.flySpeed > 0.0f)
+      {
+        moveSpeed = snapshot->locomotion.flySpeed;
+      }
+      else if (snapshot->locomotion.walkSpeed > 0.0f)
+      {
+        moveSpeed = snapshot->locomotion.walkSpeed;
+      }
+    }
+    else if (snapshot->locomotion.walkSpeed > 0.0f)
+    {
+      moveSpeed = snapshot->locomotion.walkSpeed;
+    }
+    intent.moveSpeed = moveSpeed;
     intent.clearOnApply = false;
     sink.SetIntent(Id, intent);
   }

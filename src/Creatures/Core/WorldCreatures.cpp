@@ -268,7 +268,7 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
       creature->GetBounds().currentSizeBlocks, def->eyeHeight);
-  if (def.habitat != CreatureHabitat::Terrestrial)
+  if (def->habitat != CreatureHabitat::Terrestrial)
   {
     creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
   }
