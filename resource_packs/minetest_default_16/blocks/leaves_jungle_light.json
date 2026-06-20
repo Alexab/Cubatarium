@@ -13,7 +13,12 @@
     "leaves_jungle"
   ],
   "render": {
-    "transparent": true
+    "style": "cutout"
   },
-  "displayName": "Jungle Leaves"
+  "displayName": "Jungle Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

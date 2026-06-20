@@ -14,6 +14,11 @@
   ],
   "displayName": "Cobweb",
   "render": {
-    "transparent": true
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
   }
 }

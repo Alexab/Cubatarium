@@ -12,6 +12,11 @@
     "mtg_acacia_bush_leaves_default_acacia_leaves_simple"
   ],
   "render": {
-    "transparent": true
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
   }
 }

@@ -1,7 +1,8 @@
 {
   "name": "rose",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "rose",
@@ -11,5 +12,14 @@
     "rose",
     "rose"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Rose"
 }

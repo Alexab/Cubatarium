@@ -15,5 +15,10 @@
   "displayName": "Leaves",
   "render": {
     "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
   }
 }

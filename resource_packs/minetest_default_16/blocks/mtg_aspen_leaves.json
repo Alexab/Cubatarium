@@ -12,6 +12,11 @@
     "mtg_aspen_leaves_default_aspen_leaves"
   ],
   "render": {
-    "transparent": true
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
   }
 }

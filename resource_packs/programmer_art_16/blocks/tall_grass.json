@@ -1,7 +1,8 @@
 {
   "name": "tall_grass",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "tallgrass",
@@ -11,5 +12,14 @@
     "tallgrass",
     "tallgrass"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Tall Grass"
 }

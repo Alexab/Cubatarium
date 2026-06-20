@@ -1,7 +1,8 @@
 {
   "name": "lily_pad",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "waterlily",
@@ -11,5 +12,14 @@
     "waterlily",
     "waterlily"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Lily Pad"
 }

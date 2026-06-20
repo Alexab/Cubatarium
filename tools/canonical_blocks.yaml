@@ -1,12 +1,15 @@
 schema_version: 1
-# Block names matching these fnmatch patterns should have render.transparent: true.
-transparent_name_patterns:
-- '*glass*'
+# Cube blocks with alpha holes → render.style: cutout (opaque pass + alpha discard).
+cutout_name_patterns:
 - '*leaves*'
-- '*reeds*'
+- web
+# True semi-transparent blend (glass, ice, fluids) → render.transparent: true.
+blend_name_patterns:
+- '*glass*'
 - '*_ice'
 - ice
-- web
+# Deprecated alias; audit still reads this for backward compat warnings.
+transparent_name_patterns: []
 global_stem_denylist:
 - '*bucket*'
 - waterlily
@@ -302,6 +305,9 @@ tier_a:
     - leaves_opaque
     - leaves_opaque
     - leaves_opaque
+    physics:
+      movement:
+        occupancy: 0
     render:
       style: cutout
     worldgen_refs:
@@ -327,36 +333,51 @@ tier_b:
     types:
     - natural
     - plants
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Leaves
   leaves_spruce:
     types:
     - natural
     - plants
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Spruce Leaves
   leaves_jungle:
     types:
     - natural
     - plants
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Jungle Leaves
   leaves_spruce_light:
     types:
     - natural
     - plants
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Spruce Leaves
   leaves_jungle_light:
     types:
     - natural
     - plants
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Jungle Leaves
   mtg_glass:
     types:
@@ -399,8 +420,11 @@ tier_b:
     types:
     - decorative
     - misc
+    physics:
+      movement:
+        occupancy: 0
     render:
-      transparent: true
+      style: cutout
     display_name: Cobweb
   bookshelf:
     types:

@@ -27,22 +27,51 @@ def load_canonical_yaml() -> dict[str, Any]:
     return yaml.safe_load(CANONICAL_BLOCKS_PATH.read_text(encoding="utf-8")) or {}
 
 
-def load_transparent_name_patterns() -> list[str]:
+def load_pattern_list(key: str) -> list[str]:
     data = load_canonical_yaml()
-    patterns = data.get("transparent_name_patterns", [])
+    patterns = data.get(key, [])
     if not isinstance(patterns, list):
         return []
     return [p for p in patterns if isinstance(p, str)]
 
 
-def block_name_suggests_transparent(name: str, patterns: list[str] | None = None) -> bool:
-    if patterns is None:
-        patterns = load_transparent_name_patterns()
+def load_cutout_name_patterns() -> list[str]:
+    return load_pattern_list("cutout_name_patterns")
+
+
+def load_blend_name_patterns() -> list[str]:
+    return load_pattern_list("blend_name_patterns")
+
+
+def load_transparent_name_patterns() -> list[str]:
+    """Legacy + blend patterns for audit backward compatibility."""
+    blend = load_blend_name_patterns()
+    legacy = load_pattern_list("transparent_name_patterns")
+    return blend + [p for p in legacy if p not in blend]
+
+
+def _name_matches_patterns(name: str, patterns: list[str]) -> bool:
     lower = name.lower()
     for pattern in patterns:
         if fnmatch.fnmatch(lower, pattern.lower()):
             return True
     return False
+
+
+def block_name_suggests_cutout(name: str, patterns: list[str] | None = None) -> bool:
+    if patterns is None:
+        patterns = load_cutout_name_patterns()
+    return _name_matches_patterns(name, patterns)
+
+
+def block_name_suggests_blend(name: str, patterns: list[str] | None = None) -> bool:
+    if patterns is None:
+        patterns = load_blend_name_patterns()
+    return _name_matches_patterns(name, patterns)
+
+
+def block_name_suggests_transparent(name: str, patterns: list[str] | None = None) -> bool:
+    return block_name_suggests_blend(name, patterns)
 
 
 def load_canonical_block_specs() -> dict[str, dict[str, Any]]:
@@ -74,11 +103,24 @@ def apply_canonical_meta_to_block_json(block: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(render, dict):
         render = {}
         block["render"] = render
-    uses_cutout = render.get("style") == "cutout"
-    if (
+    style = render.get("style")
+    if block_name_suggests_cutout(name) and style not in ("cross", "fluid"):
+        render["style"] = "cutout"
+        render.pop("transparent", None)
+        physics = block.get("physics")
+        if not isinstance(physics, dict):
+            physics = {}
+            block["physics"] = physics
+        movement = physics.get("movement")
+        if not isinstance(movement, dict):
+            movement = {}
+            physics["movement"] = movement
+        if movement.get("occupancy", 1.0) >= 1.0:
+            movement["occupancy"] = 0
+    elif (
         not render.get("transparent")
-        and block_name_suggests_transparent(name)
-        and not uses_cutout
+        and block_name_suggests_blend(name)
+        and style != "cutout"
     ):
         render["transparent"] = True
     return block

@@ -22,7 +22,7 @@ AUDIT_JSON = REPO / "audit_report.json"
 FACE_COUNT = 6
 
 
-def name_suggests_transparent(name: str, patterns: list[str]) -> bool:
+def name_matches_patterns(name: str, patterns: list[str]) -> bool:
     lower = name.lower()
     for pattern in patterns:
         if isinstance(pattern, str) and fnmatch.fnmatch(lower, pattern.lower()):
@@ -30,7 +30,40 @@ def name_suggests_transparent(name: str, patterns: list[str]) -> bool:
     return False
 
 
-def check_transparent_block_marking(
+def name_suggests_transparent(name: str, patterns: list[str]) -> bool:
+    return name_matches_patterns(name, patterns)
+
+
+def block_occupancy(block: dict) -> float | None:
+    physics = block.get("physics")
+    if not isinstance(physics, dict):
+        return None
+    movement = physics.get("movement")
+    if not isinstance(movement, dict):
+        return None
+    occ = movement.get("occupancy")
+    if isinstance(occ, (int, float)):
+        return float(occ)
+    return None
+
+
+def render_style(block: dict) -> str | None:
+    render = block.get("render")
+    if not isinstance(render, dict):
+        return None
+    style = render.get("style")
+    return style if isinstance(style, str) else None
+
+
+def is_blend_cube(block: dict) -> bool:
+    render = block.get("render")
+    if not isinstance(render, dict) or render.get("transparent") is not True:
+        return False
+    style = render.get("style")
+    return style not in ("cross", "fluid", "cutout")
+
+
+def check_blend_block_marking(
     block_by_name: dict[str, dict],
     patterns: list[str],
 ) -> list[str]:
@@ -38,15 +71,158 @@ def check_transparent_block_marking(
     if not patterns:
         return warnings
     for name, block in block_by_name.items():
-        render = block.get("render")
-        if isinstance(render, dict) and render.get("style") == "cutout":
+        if render_style(block) == "cutout":
             continue
-        transparent = isinstance(render, dict) and render.get("transparent") is True
-        if name_suggests_transparent(name, patterns) and not transparent:
+        transparent = isinstance(block.get("render"), dict) and block["render"].get(
+            "transparent"
+        ) is True
+        if name_matches_patterns(name, patterns) and not transparent:
             warnings.append(
-                f"{name}: name matches transparent_name_patterns but render.transparent is missing"
+                f"{name}: name matches blend_name_patterns but render.transparent is missing"
             )
     return warnings
+
+
+def check_cutout_block_marking(
+    block_by_name: dict[str, dict],
+    patterns: list[str],
+) -> list[str]:
+    warnings: list[str] = []
+    if not patterns:
+        return warnings
+    for name, block in block_by_name.items():
+        style = render_style(block)
+        if style in ("cross", "fluid"):
+            continue
+        if name_matches_patterns(name, patterns) and style != "cutout":
+            warnings.append(
+                f"{name}: name matches cutout_name_patterns but render.style is not cutout"
+            )
+    return warnings
+
+
+def check_cube_blend_mismatch(block_by_name: dict[str, dict]) -> list[str]:
+    issues: list[str] = []
+    for name, block in block_by_name.items():
+        if not is_blend_cube(block):
+            continue
+        if name_matches_patterns(name, ["*leaves*", "web"]):
+            issues.append(
+                f"{name}: cube blend render on alpha-hole block; use render.style: cutout"
+            )
+    return issues
+
+
+def check_cutout_occupancy(block_by_name: dict[str, dict]) -> list[str]:
+    warnings: list[str] = []
+    for name, block in block_by_name.items():
+        if render_style(block) != "cutout":
+            continue
+        occ = block_occupancy(block)
+        if occ is None or occ >= 1.0:
+            warnings.append(
+                f"{name}: cutout block should have physics.movement.occupancy < 1"
+            )
+    return warnings
+
+
+def scan_png_alpha_profile(png_path: Path) -> tuple[bool, bool] | None:
+    """Return (has_alpha_holes, has_semitransparent) for RGBA/GA PNGs."""
+    try:
+        raw = png_path.read_bytes()
+        if raw[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        if len(raw) < 26:
+            return None
+        width = struct.unpack(">I", raw[16:20])[0]
+        height = struct.unpack(">I", raw[20:24])[0]
+        bit_depth = raw[24]
+        color_type = raw[25]
+        if bit_depth != 8 or color_type not in (4, 6):
+            return None
+        bytes_per_pixel = 2 if color_type == 4 else 4
+        alpha_index = 1 if color_type == 4 else 3
+        pos = 8
+        idat = b""
+        while pos < len(raw):
+            length = struct.unpack(">I", raw[pos : pos + 4])[0]
+            tag = raw[pos + 4 : pos + 8]
+            data = raw[pos + 8 : pos + 8 + length]
+            pos += 12 + length
+            if tag == b"IDAT":
+                idat += data
+            elif tag == b"IEND":
+                break
+        if not idat or width == 0 or height == 0:
+            return None
+        inflated = zlib.decompress(idat)
+        row_bytes = 1 + width * bytes_per_pixel
+        has_holes = False
+        has_semi = False
+        offset = 0
+        for _ in range(height):
+            if offset + row_bytes > len(inflated):
+                return None
+            row_start = offset + 1
+            offset += row_bytes
+            for px in range(width):
+                alpha = inflated[row_start + px * bytes_per_pixel + alpha_index]
+                if alpha == 0:
+                    has_holes = True
+                elif alpha < 255:
+                    has_semi = True
+        return has_holes, has_semi
+    except (OSError, struct.error, zlib.error):
+        return None
+
+
+def check_alpha_cutout_candidates(
+    pack_dir: Path,
+    block_by_name: dict[str, dict],
+    cutout_patterns: list[str],
+) -> list[str]:
+    warnings: list[str] = []
+    if not cutout_patterns:
+        return warnings
+    tex_dir = pack_dir / "textures" / "blocks"
+    for name, block in block_by_name.items():
+        if not name_matches_patterns(name, cutout_patterns):
+            continue
+        if render_style(block) == "cutout":
+            continue
+        style = render_style(block)
+        render = block.get("render")
+        if isinstance(render, dict) and (
+            render.get("transparent") is True or style in ("cross", "fluid")
+        ):
+            continue
+        textures = block.get("textures", [])
+        if not isinstance(textures, list):
+            continue
+        for stem in textures[:FACE_COUNT]:
+            if not isinstance(stem, str):
+                continue
+            png = tex_dir / f"{stem}.png"
+            if not png.is_file():
+                continue
+            profile = scan_png_alpha_profile(png)
+            if profile is None:
+                continue
+            has_holes, has_semi = profile
+            if has_holes:
+                warnings.append(
+                    f"{name}: {stem}.png has transparent pixels (alpha=0) but block "
+                    f"has no render.style cutout or render.transparent"
+                )
+                break
+    return warnings
+
+
+def check_transparent_block_marking(
+    block_by_name: dict[str, dict],
+    patterns: list[str],
+) -> list[str]:
+    return check_blend_block_marking(block_by_name, patterns)
 
 
 def load_canonical(path: Path = CANONICAL_PATH) -> dict[str, Any]:
@@ -156,6 +332,12 @@ def semantics_match(block: dict, spec: dict) -> list[str]:
             issues.append(
                 f"physics.preset expected {nested_get(exp_physics, 'preset')!r}, "
                 f"got {nested_get(act_physics, 'preset')!r}"
+            )
+        exp_occ = nested_get(exp_physics, "movement", "occupancy")
+        act_occ = nested_get(act_physics, "movement", "occupancy")
+        if exp_occ is not None and act_occ != exp_occ:
+            issues.append(
+                f"physics.movement.occupancy expected {exp_occ!r}, got {act_occ!r}"
             )
     exp_render = spec.get("render")
     act_render = block.get("render")
@@ -351,8 +533,25 @@ def audit_pack(
     for msg in check_block_texture_stems(pack_dir, block_by_name):
         issues.append(msg)
 
+    for msg in check_cube_blend_mismatch(block_by_name):
+        issues.append(msg)
+
+    blend_patterns = canonical.get("blend_name_patterns", [])
+    if isinstance(blend_patterns, list):
+        warnings.extend(check_blend_block_marking(block_by_name, blend_patterns))
+
+    cutout_patterns = canonical.get("cutout_name_patterns", [])
+    if isinstance(cutout_patterns, list):
+        warnings.extend(check_cutout_block_marking(block_by_name, cutout_patterns))
+
+    warnings.extend(check_cutout_occupancy(block_by_name))
+    if isinstance(cutout_patterns, list):
+        warnings.extend(
+            check_alpha_cutout_candidates(pack_dir, block_by_name, cutout_patterns)
+        )
+
     transparent_patterns = canonical.get("transparent_name_patterns", [])
-    if isinstance(transparent_patterns, list):
+    if isinstance(transparent_patterns, list) and transparent_patterns:
         warnings.extend(
             check_transparent_block_marking(block_by_name, transparent_patterns)
         )

@@ -12,6 +12,11 @@
     "mtg_leaves_default_leaves"
   ],
   "render": {
-    "transparent": true
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
   }
 }
