@@ -281,6 +281,10 @@ void UWorld::SetBlockDefinitionStorage(
   {
     BlockRegistry = std::make_unique<UBlockRegistry>(
         ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
+    if (BlockMergeRegistry)
+    {
+      BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
+    }
   }
 }
 
@@ -297,6 +301,7 @@ void UWorld::SetBlockMergeRegistry(
 void UWorld::OnBlockRegistryChanged()
 {
   RefreshBlockRegistry();
+  RebuildWorldGenPipeline();
   RebuildBlockMesh();
   if (OnBlockRegistryChangedCallback)
   {
@@ -332,6 +337,18 @@ void UWorld::RefreshBlockRegistry()
 {
   if (BlockRegistry)
   {
+    if (BlockMergeRegistry)
+    {
+      BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
+      if (BlockDefinitions)
+      {
+        BlockMergeRegistry->PopulateBlockDefinitionStorage(*BlockDefinitions);
+      }
+    }
+    if (BlockDefinitions)
+    {
+      BlockRegistry->SetDefinitions(BlockDefinitions);
+    }
     BlockRegistry->Reload();
   }
 }
@@ -2256,7 +2273,6 @@ void UWorld::LoadWorldData(const std::string &file_name)
                                   ResourcePacksSecondary.begin(),
                                   ResourcePacksSecondary.end());
     }
-    RebuildWorldGenPipeline();
   }
   catch (const json::exception &e)
   {

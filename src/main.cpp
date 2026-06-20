@@ -2,6 +2,7 @@
 #include "App/Platform/DesktopPlatformPaths.h"
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/IPlatformPaths.h"
+#include "App/Utils.h"
 #include "ResourcePacks/ResourcePackSmoke.h"
 
 #ifdef _WIN32
@@ -20,6 +21,12 @@ int main(int argc, char *argv[])
       auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
       cutum::IPlatformPaths::SetGlobal(paths);
       return cutum::RunResourcePackSmoke(*paths);
+    }
+    if (std::strcmp(argv[i], "--validate-load") == 0)
+    {
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IPlatformPaths::SetGlobal(paths);
+      return cutum::RunValidateLoad();
     }
   }
 

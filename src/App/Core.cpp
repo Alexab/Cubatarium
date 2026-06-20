@@ -413,8 +413,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
     PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
         ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg,
         static_cast<size_t>(ResourcePacks.PlaceholderCacheMaxEntries));
-    BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
-                                        ResourcePacks.PlaceholderTileSize);
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
     WorldInstance->SetOnAfterWorldDataLoaded(
@@ -438,18 +436,26 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     ObjectStorageInstance->Load(ObjectStorageFileName.string());
 
-    WorldInstance->RefreshBlockRegistry();
-
-    if (PrefabLibraryInstance)
+    const ResourcePackSelection defaultPacks = GetDefaultResourcePackSelection();
+    WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
+                                            defaultPacks.Secondary,
+                                            defaultPacks.WorldgenOwner);
+    if (!ApplyResourcePacks(defaultPacks))
     {
-      PrefabLibraryInstance->Load(PrefabsPath.string(),
-                                  WorldInstance->GetBlockRegistry());
-      WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
-      if (auto user = WorldInstance->GetCurrentUser())
+      BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
+                                          ResourcePacks.PlaceholderTileSize);
+      WorldInstance->RefreshBlockRegistry();
+      if (PrefabLibraryInstance)
       {
-        WorldInstance->EnsurePlayerHotbarCount(
-            user, static_cast<size_t>(Ui.HotbarCount));
+        PrefabLibraryInstance->Load(PrefabsPath.string(),
+                                    WorldInstance->GetBlockRegistry());
+        WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
       }
+    }
+    else if (auto user = WorldInstance->GetCurrentUser())
+    {
+      WorldInstance->EnsurePlayerHotbarCount(user,
+                                             static_cast<size_t>(Ui.HotbarCount));
     }
 
     WorldInstance->SetProceduralSettings(ProceduralTemplate);
@@ -1070,9 +1076,17 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
   BlockMergeRegistryInstance->SetWorldgenOwnerPackId(selection.WorldgenOwner);
   BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
                                       ResourcePacks.PlaceholderTileSize);
-  RebuildBlockTexturesFromMergeRegistry();
   ActivePackSelection = selection;
   ActiveResourcePacksEnabled = selection.AllIds();
+
+  if (PrefabLibraryInstance && WorldInstance)
+  {
+    PrefabLibraryInstance->LoadMerged(PrefabsPath, packs,
+                                      WorldInstance->GetBlockRegistry());
+    WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+  }
+
+  RebuildBlockTexturesFromMergeRegistry();
 
   std::cout << "Resource packs: applied " << packs.size() << " pack(s)";
   for (const auto &p : packs)
@@ -1082,16 +1096,10 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
   std::cout << " (" << BlockMergeRegistryInstance->GetCubeDescriptors().size()
             << " block types)" << std::endl;
 
-  if (PrefabLibraryInstance && WorldInstance)
-  {
-    PrefabLibraryInstance->LoadMerged(PrefabsPath, packs,
-                                      WorldInstance->GetBlockRegistry());
-    WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
-  }
-
-  if (WorldInstance && !WorldInstance->GetWorldName().empty())
+  if (WorldInstance)
   {
     WorldInstance->OnBlockRegistryChanged();
+    RebuildBlockTexturesFromMergeRegistry();
   }
   ReloadCreatureCatalog(packs);
   return true;

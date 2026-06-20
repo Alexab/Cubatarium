@@ -69,6 +69,7 @@ void UPrefabLibrary::LoadMerged(
     const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
 {
   Prefabs.clear();
+  LoggedUnknownTypes.clear();
   LoadDirectory(baseFolder, "", registry);
   LoadDirectoryRecursive(baseFolder / "imported", "", registry);
   LoadDirectory(baseFolder / "user", "", registry);
@@ -131,8 +132,12 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       const BlockId Id = registry.GetIdByTypeName(type);
       if (Id == BLOCK_AIR)
       {
-        std::cerr << "UPrefabLibrary: unknown type '" << type << "' in " << path
-                  << std::endl;
+        const std::string logKey = path + '\x1f' + type;
+        if (LoggedUnknownTypes.insert(logKey).second)
+        {
+          std::cerr << "UPrefabLibrary: unknown type '" << type << "' in "
+                    << path << std::endl;
+        }
         continue;
       }
       PrefabVoxel voxel;

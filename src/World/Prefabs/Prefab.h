@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -55,6 +56,7 @@ private:
                               UBlockRegistry &registry);
 
   std::unordered_map<std::string, Prefab> Prefabs;
+  std::unordered_set<std::string> LoggedUnknownTypes;
 };
 
 } // namespace cutum

@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <set>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -265,6 +266,17 @@ void UBlockMergeRegistry::AssignRuntimeIds()
   }
 }
 
+namespace
+{
+
+std::unordered_set<std::string> &LoggedTierAMissing()
+{
+  static std::unordered_set<std::string> logged;
+  return logged;
+}
+
+} // namespace
+
 BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
 {
   if (name.empty() || IsReservedBlockName(name))
@@ -279,8 +291,11 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   const std::string local = LocalBlockName(name);
   if (kTierAWorldgenNames.count(local) != 0)
   {
-    std::cerr << "BlockMergeRegistry: CRITICAL missing Tier A block '" << name
-              << "'" << std::endl;
+    if (LoggedTierAMissing().insert(name).second)
+    {
+      std::cerr << "BlockMergeRegistry: CRITICAL missing Tier A block '" << name
+                << "'" << std::endl;
+    }
     return BLOCK_AIR;
   }
 
@@ -298,8 +313,23 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
     }
   }
   BlocksByName[name] = entry;
-  AssignRuntimeIds();
-  return NameToId.at(name);
+  BlockId nextId = 1;
+  for (const auto &pair : IdToName)
+  {
+    nextId = std::max(nextId, static_cast<BlockId>(pair.first + 1));
+  }
+  BlocksByName[name].Definition.Id = nextId;
+  NameToId[name] = nextId;
+  IdToName[nextId] = name;
+
+  MergedCubeDesc desc;
+  desc.Name = name;
+  desc.Id = nextId;
+  desc.Stems = BlocksByName[name].Stems;
+  desc.AnimFrames =
+      std::max(1, BlocksByName[name].Definition.Animation.FrameCount);
+  CubeDescs.push_back(desc);
+  return nextId;
 }
 
 BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)

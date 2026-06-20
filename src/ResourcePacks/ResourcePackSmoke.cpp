@@ -5,6 +5,10 @@
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "ResourcePacks/TextureOverrides.h"
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Blocks/BlockDefinition.h"
+#include "Blocks/BlockRegistry.h"
+#include "World/Prefabs/Prefab.h"
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 
@@ -78,6 +82,25 @@ bool SmokeSelection(const ResourcePackSelection &selection,
       return false;
     }
   }
+  UBlockDefinitionStorage defs;
+  registry.PopulateBlockDefinitionStorage(defs);
+  for (const char *fluid : {"water", "lava", "fire"})
+  {
+    const BlockDefinition *def = defs.GetByName(fluid);
+    if (!def)
+    {
+      std::cerr << "ResourcePackSmoke: missing definition for '" << fluid << "'"
+                << std::endl;
+      return false;
+    }
+    if (def->Physics.Movement.Occupancy >= 1.0f)
+    {
+      std::cerr << "ResourcePackSmoke: block '" << fluid
+                << "' is solid (occupancy=" << def->Physics.Movement.Occupancy
+                << ")" << std::endl;
+      return false;
+    }
+  }
   for (const auto &pack : packs)
   {
     const auto overrides = LoadTextureOverrides(pack.Root);
@@ -89,6 +112,58 @@ bool SmokeSelection(const ResourcePackSelection &selection,
   }
   std::cout << "ResourcePackSmoke: OK " << packs.size() << " pack(s), "
             << firstCount << " blocks" << std::endl;
+  return true;
+}
+
+bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
+                    std::shared_ptr<UPlaceholderTextureCache> placeholders)
+{
+  auto registry = std::make_shared<UBlockMergeRegistry>();
+  const ResourcePackSelection defaults = DefaultResourcePackSelection();
+  if (!SmokeSelection(defaults, assetRoot, writableRoot, *registry,
+                      placeholders))
+  {
+    return false;
+  }
+
+  UResourcePackResolver resolver;
+  const auto packs = resolver.Resolve(defaults, assetRoot, writableRoot);
+  UBlockRegistry blockRegistry(nullptr, nullptr);
+  blockRegistry.SetMergeRegistry(registry);
+
+  UPrefabLibrary prefabs;
+  prefabs.LoadMerged(assetRoot / "prefabs", packs, blockRegistry);
+
+  // Simulate worldgen slot resolution creating synthetic blocks (e.g. ore_coal).
+  (void)blockRegistry.GetIdByTypeName("ore_coal");
+  (void)blockRegistry.GetIdByTypeName("ore_iron");
+
+  UBlockDefinitionStorage defsAfterPrefabs;
+  registry->PopulateBlockDefinitionStorage(defsAfterPrefabs);
+  for (const char *fluid : {"water", "lava", "fire"})
+  {
+    const BlockId id = registry->ResolveBlockName(fluid);
+    const BlockDefinition *def = defsAfterPrefabs.GetById(id);
+    const BlockDefinition *defByName = defsAfterPrefabs.GetByName(fluid);
+    if (!def || !defByName || def != defByName ||
+        def->Physics.Movement.Occupancy >= 1.0f)
+    {
+      std::cerr << "ResourcePackSmoke: post-worldgen fluid '" << fluid
+                << "' invalid (id=" << id << ")" << std::endl;
+      return false;
+    }
+  }
+
+  const size_t prefabCount = prefabs.ListNames().size();
+  constexpr size_t kMinPrefabs = 45;
+  if (prefabCount < kMinPrefabs)
+  {
+    std::cerr << "ResourcePackSmoke: startup init loaded only " << prefabCount
+              << " prefab(s), expected >= " << kMinPrefabs << std::endl;
+    return false;
+  }
+  std::cout << "ResourcePackSmoke: startup init OK (" << prefabCount
+            << " prefabs after pack merge)" << std::endl;
   return true;
 }
 
@@ -137,6 +212,11 @@ int RunResourcePackSmoke(IPlatformPaths &paths)
     return 1;
   }
   if (!SmokeSelection(oga, assetRoot, writableRoot, registry, placeholders))
+  {
+    return 1;
+  }
+
+  if (!SmokeStartupInit(assetRoot, writableRoot, placeholders))
   {
     return 1;
   }
