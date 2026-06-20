@@ -93,6 +93,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   {
     if (OnLoadChunk && OnLoadChunk(chunkCoord))
     {
+      ProcedurallyGenerated.insert(chunkCoord);
       MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
       return true;
     }
@@ -125,6 +126,10 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
 
   if (!generated)
   {
+    if (existing != nullptr)
+    {
+      ProcedurallyGenerated.insert(chunkCoord);
+    }
     return false;
   }
 
@@ -264,23 +269,20 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     for (int cz = centerChunk.z - RenderDistance;
          cz <= centerChunk.z + RenderDistance; ++cz)
     {
-      for (int cy = centerChunk.y - 1; cy <= centerChunk.y + 1; ++cy)
+      if (loadOps >= MaxLoadOpsPerFrame)
       {
-        if (loadOps >= MaxLoadOpsPerFrame)
-        {
-          goto finish_loads;
-        }
-        const glm::ivec3 coord(cx, cy, cz);
-        if (World.GetChunkManager().HasChunk(coord))
-        {
-          continue;
-        }
-        if (EnsureChunkLoaded(coord))
-        {
-          LastFrameStats.loadedCoords.push_back(coord);
-          ++LastFrameStats.loadsThisFrame;
-          ++loadOps;
-        }
+        goto finish_loads;
+      }
+      const glm::ivec3 coord(cx, 0, cz);
+      if (ProcedurallyGenerated.count(coord))
+      {
+        continue;
+      }
+      if (EnsureChunkLoaded(coord))
+      {
+        LastFrameStats.loadedCoords.push_back(coord);
+        ++LastFrameStats.loadsThisFrame;
+        ++loadOps;
       }
     }
   }
