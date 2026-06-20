@@ -10,5 +10,6 @@
     "anvil_base",
     "anvil_top_damaged_1",
     "anvil_base"
-  ]
+  ],
+  "render": {}
 }

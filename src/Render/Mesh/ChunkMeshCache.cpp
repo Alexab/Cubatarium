@@ -323,6 +323,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       GreedyMeshBatch &batch = byBlockId[q.Id];
       batch.blockId = q.Id;
       batch.Transparent = registry.IsTransparent(q.Id);
+      batch.AlphaCutout =
+          registry.GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
       AppendGreedyQuad(q, chunkCoord, batch.vertices, batch.indices);
     }
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)

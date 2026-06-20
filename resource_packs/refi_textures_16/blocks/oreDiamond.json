@@ -11,5 +11,6 @@
     "oreDiamond",
     "oreDiamond"
   ],
-  "displayName": "Diamond Ore"
+  "displayName": "Diamond Ore",
+  "render": {}
 }

@@ -11,5 +11,6 @@
     "clay",
     "clay"
   ],
-  "displayName": "Clay"
+  "displayName": "Clay",
+  "render": {}
 }

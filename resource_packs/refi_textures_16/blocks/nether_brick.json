@@ -10,5 +10,6 @@
     "netherBrick",
     "netherBrick",
     "netherBrick"
-  ]
+  ],
+  "render": {}
 }

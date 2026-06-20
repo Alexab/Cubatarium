@@ -12,5 +12,6 @@
     "whiteStone",
     "whiteStone"
   ],
-  "displayName": "Quartz Block"
+  "displayName": "Quartz Block",
+  "render": {}
 }

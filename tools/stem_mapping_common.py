@@ -74,7 +74,12 @@ def apply_canonical_meta_to_block_json(block: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(render, dict):
         render = {}
         block["render"] = render
-    if not render.get("transparent") and block_name_suggests_transparent(name):
+    uses_cutout = render.get("style") == "cutout"
+    if (
+        not render.get("transparent")
+        and block_name_suggests_transparent(name)
+        and not uses_cutout
+    ):
         render["transparent"] = True
     return block
 

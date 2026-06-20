@@ -659,6 +659,7 @@ void UGeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache)
 void UGeometryEngine::DestroyGreedyGpuBatches()
 {
   DestroyGreedyGpuPassCache(GreedyGpuOpaque);
+  DestroyGreedyGpuPassCache(GreedyGpuCutout);
   DestroyGreedyGpuPassCache(GreedyGpuTransparent);
 }
 
@@ -806,10 +807,10 @@ void UGeometryEngine::ApplyFluidFogUniforms(
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
-    const std::shared_ptr<UShaderProgram> &shader, bool transparentPass,
-    GreedyShaderMode mode, float shellAlphaThreshold)
+    const std::shared_ptr<UShaderProgram> &shader, bool alphaCutout,
+    bool transparentPass, GreedyShaderMode mode, float shellAlphaThreshold)
 {
-  shader->SetInt("uAlphaCutout", transparentPass ? 1 : 0);
+  shader->SetInt("uAlphaCutout", alphaCutout ? 1 : 0);
   if (transparentPass)
   {
     shader->SetInt("uGreedyShaderMode", GreedyShaderModeToUniform(mode));
@@ -824,8 +825,8 @@ void UGeometryEngine::SetGreedyShaderMode(
 
 void UGeometryEngine::DrawGreedyGpuBatches(
     const GreedyGpuPassCache &cache, const glm::mat4 &vp,
-    const std::map<size_t, UTextureCube> &textures, bool transparentPass,
-    GreedyShaderMode mode, float shellAlphaThreshold)
+    const std::map<size_t, UTextureCube> &textures, bool alphaCutout,
+    bool transparentPass, GreedyShaderMode mode, float shellAlphaThreshold)
 {
   if (cache.batches.empty())
   {
@@ -843,7 +844,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->Use();
   greedyShader->SetMat4("mvp_matrix", vp);
   greedyShader->SetInt("texture0", 0);
-  SetGreedyShaderMode(greedyShader, transparentPass, mode, shellAlphaThreshold);
+  SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
+                      shellAlphaThreshold);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
@@ -894,23 +896,46 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
     uint64_t cullRevision)
 {
-  std::vector<GreedyMeshBatch> filtered;
-  filtered.reserve(batches.size());
+  std::vector<GreedyMeshBatch> solid;
+  std::vector<GreedyMeshBatch> cutout;
+  solid.reserve(batches.size());
+  cutout.reserve(batches.size());
   for (const GreedyMeshBatch &batch : batches)
   {
-    if (!batch.Transparent)
+    if (batch.Transparent)
     {
-      filtered.push_back(batch);
+      continue;
+    }
+    if (batch.AlphaCutout)
+    {
+      cutout.push_back(batch);
+    }
+    else
+    {
+      solid.push_back(batch);
     }
   }
-  if (filtered.empty())
+  if (!solid.empty())
   {
-    return;
+    RefreshGreedyGpuBatches(solid, meshRevision, cullRevision, GreedyGpuOpaque,
+                            0);
+    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
+                         GreedyShaderMode::TransparentColor, 0.0f);
   }
-  RefreshGreedyGpuBatches(filtered, meshRevision, cullRevision, GreedyGpuOpaque,
-                          0);
-  DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false,
-                       GreedyShaderMode::TransparentColor, 0.0f);
+  if (!cutout.empty())
+  {
+    GLboolean cullWasEnabled;
+    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+    glDisable(GL_CULL_FACE);
+    RefreshGreedyGpuBatches(cutout, meshRevision, cullRevision, GreedyGpuCutout,
+                            0);
+    DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
+                         GreedyShaderMode::TransparentColor, 0.0f);
+    if (cullWasEnabled)
+    {
+      glEnable(GL_CULL_FACE);
+    }
+  }
 }
 
 void UGeometryEngine::PrepareTransparent(
@@ -947,7 +972,8 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
     return;
   }
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
-                       *PreparedTransparentTextures, true, mode, shellAlpha);
+                       *PreparedTransparentTextures, true, true, mode,
+                       shellAlpha);
 }
 
 bool UGeometryEngine::InitGreedyMeshBuffers()

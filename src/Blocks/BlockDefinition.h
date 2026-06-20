@@ -41,6 +41,7 @@ enum class BlockRenderStyle
   UCube,
   Fluid,
   Cross,
+  Cutout,
 };
 
 struct FluidViewProfile

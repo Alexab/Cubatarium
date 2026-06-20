@@ -11,5 +11,6 @@
     "gravel",
     "gravel"
   ],
-  "displayName": "Gravel"
+  "displayName": "Gravel",
+  "render": {}
 }

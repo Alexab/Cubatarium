@@ -10,5 +10,6 @@
     "goldenRail_powered",
     "goldenRail_powered",
     "goldenRail_powered"
-  ]
+  ],
+  "render": {}
 }

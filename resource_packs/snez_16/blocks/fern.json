@@ -10,5 +10,6 @@
     "fern",
     "fern",
     "fern"
-  ]
+  ],
+  "render": {}
 }

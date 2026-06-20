@@ -11,5 +11,6 @@
     "stonebricksmooth_mossy",
     "stonebricksmooth_mossy"
   ],
-  "displayName": "Mossy Stone Bricks"
+  "displayName": "Mossy Stone Bricks",
+  "render": {}
 }

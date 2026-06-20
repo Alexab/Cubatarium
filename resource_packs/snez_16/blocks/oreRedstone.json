@@ -11,5 +11,6 @@
     "oreRedstone",
     "oreRedstone"
   ],
-  "displayName": "Redstone Ore"
+  "displayName": "Redstone Ore",
+  "render": {}
 }

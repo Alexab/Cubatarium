@@ -14,6 +14,6 @@
   ],
   "displayName": "Leaves",
   "render": {
-    "transparent": true
+    "style": "cutout"
   }
 }

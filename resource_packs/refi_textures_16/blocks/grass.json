@@ -12,5 +12,6 @@
     "grass_top_green",
     "grass_top"
   ],
-  "displayName": "Grass Block"
+  "displayName": "Grass Block",
+  "render": {}
 }

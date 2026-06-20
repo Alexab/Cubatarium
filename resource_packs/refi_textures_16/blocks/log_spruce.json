@@ -10,5 +10,6 @@
     "tree_spruce",
     "wood_spruce",
     "wood_spruce"
-  ]
+  ],
+  "render": {}
 }

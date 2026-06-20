@@ -10,5 +10,6 @@
     "torch",
     "torch",
     "torch"
-  ]
+  ],
+  "render": {}
 }

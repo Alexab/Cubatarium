@@ -10,5 +10,6 @@
     "rail_turn",
     "rail_turn",
     "rail_turn"
-  ]
+  ],
+  "render": {}
 }

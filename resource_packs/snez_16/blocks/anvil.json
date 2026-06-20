@@ -10,5 +10,6 @@
     "anvil_base",
     "anvil_top",
     "anvil_base"
-  ]
+  ],
+  "render": {}
 }

@@ -281,6 +281,7 @@ private:
     uint64_t sortRevision{0};
   };
   GreedyGpuPassCache GreedyGpuOpaque;
+  GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
@@ -289,13 +290,13 @@ private:
                                const std::map<size_t, UTextureCube> &textures,
                                uint64_t meshRevision, uint64_t cullRevision);
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
-                           bool transparentPass, GreedyShaderMode mode,
-                           float shellAlphaThreshold);
+                           bool alphaCutout, bool transparentPass,
+                           GreedyShaderMode mode, float shellAlphaThreshold);
   void DrawGreedyGpuBatches(const GreedyGpuPassCache &cache,
                             const glm::mat4 &vp,
                             const std::map<size_t, UTextureCube> &textures,
-                            bool transparentPass, GreedyShaderMode mode,
-                            float shellAlphaThreshold);
+                            bool alphaCutout, bool transparentPass,
+                            GreedyShaderMode mode, float shellAlphaThreshold);
   void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch> &batches,
                                uint64_t meshRevision, uint64_t cullRevision,
                                GreedyGpuPassCache &cache,

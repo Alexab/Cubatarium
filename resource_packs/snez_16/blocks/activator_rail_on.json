@@ -10,5 +10,6 @@
     "activatorRail_powered",
     "activatorRail_powered",
     "activatorRail_powered"
-  ]
+  ],
+  "render": {}
 }

@@ -24,6 +24,7 @@ struct GreedyMeshBatch
 {
   BlockId blockId{BLOCK_AIR};
   bool Transparent{false};
+  bool AlphaCutout{false};
   std::vector<GreedyMeshVertex> vertices;
   std::vector<uint32_t> indices;
 };

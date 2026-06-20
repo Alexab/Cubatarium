@@ -10,5 +10,6 @@
     "detectorRail_on",
     "detectorRail_on",
     "detectorRail_on"
-  ]
+  ],
+  "render": {}
 }

@@ -178,6 +178,11 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
     {
       r.Style = BlockRenderStyle::Cross;
     }
+    else if (style == "cutout")
+    {
+      r.Style = BlockRenderStyle::Cutout;
+      r.Transparent = false;
+    }
   }
   if (j.contains("fog_color") && j["fog_color"].is_array() &&
       j["fog_color"].size() >= 3)

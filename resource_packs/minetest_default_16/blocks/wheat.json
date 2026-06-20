@@ -1,7 +1,8 @@
 {
   "name": "wheat",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "crops_7",
@@ -11,5 +12,14 @@
     "crops_7",
     "crops_7"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Wheat"
 }

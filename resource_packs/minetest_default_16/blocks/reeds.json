@@ -1,7 +1,8 @@
 {
   "name": "reeds",
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "reeds",
@@ -11,5 +12,14 @@
     "reeds",
     "reeds"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Reeds"
 }

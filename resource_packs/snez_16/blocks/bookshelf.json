@@ -12,5 +12,6 @@
     "bookshelf",
     "bookshelf"
   ],
-  "displayName": "Bookshelf"
+  "displayName": "Bookshelf",
+  "render": {}
 }

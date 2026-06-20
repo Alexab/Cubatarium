@@ -3,6 +3,7 @@ schema_version: 1
 transparent_name_patterns:
 - '*glass*'
 - '*leaves*'
+- '*reeds*'
 - '*_ice'
 - ice
 - web
@@ -302,7 +303,7 @@ tier_a:
     - leaves_opaque
     - leaves_opaque
     render:
-      transparent: true
+      style: cutout
     worldgen_refs:
     - tree_leaves
     reference_pack: kenney_voxel_16
@@ -479,6 +480,42 @@ tier_b:
     types:
     - building
     display_name: Mossy Stone Bricks
+  reeds:
+    types:
+    - natural
+    - plants
+    textures:
+    - reeds
+    - reeds
+    - reeds
+    - reeds
+    - reeds
+    - reeds
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Reeds
+  wheat:
+    types:
+    - natural
+    - plants
+    textures:
+    - crops_7
+    - crops_7
+    - crops_7
+    - crops_7
+    - crops_7
+    - crops_7
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Wheat
   cactus:
     types:
     - natural

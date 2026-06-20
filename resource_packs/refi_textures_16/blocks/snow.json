@@ -11,5 +11,6 @@
     "snow",
     "snow"
   ],
-  "displayName": "Snow"
+  "displayName": "Snow",
+  "render": {}
 }

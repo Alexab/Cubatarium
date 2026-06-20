@@ -10,5 +10,6 @@
     "detectorRail",
     "detectorRail",
     "detectorRail"
-  ]
+  ],
+  "render": {}
 }

@@ -10,5 +10,6 @@
     "tree_birch",
     "wood_birch",
     "wood_birch"
-  ]
+  ],
+  "render": {}
 }

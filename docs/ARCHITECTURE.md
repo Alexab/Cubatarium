@@ -116,18 +116,20 @@ Block metadata lives in `resource_packs/*/blocks/*.json` (`animation`, `render`,
 | `AnimationClock` | Global elapsed time; per-block `frametime` from block JSON (20 ticks/s) drives `uAnimFrame` |
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
-| Greedy mesh | Opaque pass, then multi-pass transparent (see below); fluid–fluid faces kept; opaque↔transparent face rules (below) |
+| Greedy mesh | Opaque pass (solid, then cutout), then multi-pass transparent (see below); fluid–fluid faces kept; opaque↔transparent face rules (below) |
 | Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level`; with `fill_water`, `AdjustSurfaceYForSpawnIsland` raises terrain in a ~48-block-radius disk (+16-block blend) around spawn (0,0) so the player starts on dry land |
 
 ### Greedy mesh: opaque ↔ transparent culling
 
 Implementation: [`GreedyMesher.cpp`](../src/Render/Mesh/GreedyMesher.cpp) (`NeighborHidesFace`).
 
-Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ transparent** boundaries (glass, ice, leaves with `render.transparent: true`) an extra **two-hop** check avoids x-ray through glass into open air volumes:
+Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ transparent** boundaries (glass, ice, fluids, cross plants with `render.transparent: true`) an extra **two-hop** check avoids x-ray through glass into open air volumes:
 
 - `stone | glass | air` (window) — opaque face toward glass stays culled; room stays visible through the pane.
 - `air | glass | stone` (glass on a solid facade) — opaque face toward glass is **kept** so depth/color behind glass is the adjacent stone, not sky or distant caves.
 - `stone | glass | stone` (embedded glass) — opaque faces kept on both sides.
+
+**Cutout** blocks (`render.style: cutout`, e.g. `tree_leaves`) use the opaque pass with alpha discard (`uAlphaCutout`) and solid face-culling against stone/glass; **shared faces between cutout neighbors are kept** so leaf clusters are not hollow shells (see `NeighborHidesFace` in [`GreedyMesher.cpp`](../src/Render/Mesh/GreedyMesher.cpp)). The cutout pass draws with face culling disabled. **Cross** plants (`render.style: cross`, e.g. `reeds`, `fire`) are billboards in the transparent pass.
 
 Transparent↔transparent shared faces are culled. Blocks that should use the transparent render path are marked in pack JSON (`render.transparent: true`) and listed in `transparent_name_patterns` in [`tools/canonical_blocks.yaml`](../tools/canonical_blocks.yaml).
 

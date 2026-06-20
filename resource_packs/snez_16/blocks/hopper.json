@@ -10,5 +10,6 @@
     "hopper",
     "hopper_top",
     "hopper_inside"
-  ]
+  ],
+  "render": {}
 }

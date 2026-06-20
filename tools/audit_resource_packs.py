@@ -39,6 +39,8 @@ def check_transparent_block_marking(
         return warnings
     for name, block in block_by_name.items():
         render = block.get("render")
+        if isinstance(render, dict) and render.get("style") == "cutout":
+            continue
         transparent = isinstance(render, dict) and render.get("transparent") is True
         if name_suggests_transparent(name, patterns) and not transparent:
             warnings.append(

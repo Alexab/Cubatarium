@@ -10,5 +10,6 @@
     "tnt_side",
     "tnt_top",
     "tnt_bottom"
-  ]
+  ],
+  "render": {}
 }

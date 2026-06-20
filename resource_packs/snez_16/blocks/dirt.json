@@ -11,5 +11,6 @@
     "dirt",
     "dirt"
   ],
-  "displayName": "Dirt"
+  "displayName": "Dirt",
+  "render": {}
 }

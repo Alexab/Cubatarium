@@ -12,5 +12,6 @@
     "sandstone_top",
     "sandstone_bottom"
   ],
-  "displayName": "Sandstone"
+  "displayName": "Sandstone",
+  "render": {}
 }

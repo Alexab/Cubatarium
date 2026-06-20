@@ -10,5 +10,6 @@
     "cake_side",
     "cake_top",
     "cake_bottom"
-  ]
+  ],
+  "render": {}
 }

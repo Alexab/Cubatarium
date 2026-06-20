@@ -21,6 +21,16 @@ bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
   {
     return false;
   }
+
+  const BlockRenderStyle faceStyle = registry.GetRenderStyle(faceId);
+  if (faceStyle == BlockRenderStyle::Cutout)
+  {
+    if (registry.GetRenderStyle(neighbor) == BlockRenderStyle::Cutout)
+    {
+      return false;
+    }
+  }
+
   // Hide shared faces between identical fluid blocks (avoids hollow water/fire
   // volumes).
   if (neighbor == faceId && !registry.BlocksMovement(faceId))

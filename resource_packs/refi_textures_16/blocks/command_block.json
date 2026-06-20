@@ -10,5 +10,6 @@
     "commandBlock",
     "commandBlock",
     "commandBlock"
-  ]
+  ],
+  "render": {}
 }
