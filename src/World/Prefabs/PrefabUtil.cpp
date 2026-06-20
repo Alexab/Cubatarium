@@ -18,6 +18,20 @@ bool CanPlacePrefabAt(const UBlockWorld &world, const Prefab &prefab,
   return !prefab.voxels.empty();
 }
 
+bool CanPlacePrefabAtForWorldGen(const UBlockWorld &world, const Prefab &prefab,
+                                 glm::ivec3 anchorWorldPos, int surfaceY)
+{
+  for (const auto &voxel : prefab.voxels)
+  {
+    const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab.anchor;
+    if (worldPos.y > surfaceY && !world.IsAir(worldPos))
+    {
+      return false;
+    }
+  }
+  return !prefab.voxels.empty();
+}
+
 PrefabPlacementStats PlacePrefabAt(UBlockWorld &world, const Prefab &prefab,
                                    glm::ivec3 anchorWorldPos, bool skipOccupied)
 {

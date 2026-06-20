@@ -15,6 +15,7 @@ vegetation:
   weight: 1
   seed_offset: 4104
   spacing: 22
+  placement_y_offset: -1
 - prefab: bush_common
   biomes:
   - plains
@@ -38,21 +39,7 @@ vegetation:
   seed_offset: 4201
   spacing: 12
   placement_y_offset: -1
-- prefab: reeds_on_dirt
-  biomes:
-  - plains
-  - forest
-  weight: 1
-  seed_offset: 4202
-  spacing: 40
-- prefab: reeds_on_dry_dirt
-  biomes:
-  - desert
-  - plains
-  weight: 1
-  seed_offset: 4203
-  spacing: 45
-- prefab: tree_acacia
+- prefab: tree_acacia_mapgen
   biomes:
   - plains
   - desert
@@ -60,7 +47,7 @@ vegetation:
   seed_offset: 4007
   spacing: 30
   placement_y_offset: -1
-- prefab: tree_apple
+- prefab: tree_apple_mapgen
   biomes:
   - plains
   - forest
@@ -68,7 +55,7 @@ vegetation:
   seed_offset: 4001
   spacing: 28
   placement_y_offset: -1
-- prefab: tree_aspen
+- prefab: tree_aspen_mapgen
   biomes:
   - plains
   - forest
@@ -76,21 +63,21 @@ vegetation:
   seed_offset: 4008
   spacing: 32
   placement_y_offset: -1
-- prefab: tree_jungle
-  biomes:
-  - forest
-  weight: 2
-  seed_offset: 4005
-  spacing: 35
-  placement_y_offset: -1
-- prefab: tree_jungle_emergent
+- prefab: tree_jungle_emergent_mapgen
   biomes:
   - forest
   weight: 1
   seed_offset: 4006
   spacing: 90
   placement_y_offset: -1
-- prefab: tree_pine
+- prefab: tree_jungle_mapgen
+  biomes:
+  - forest
+  weight: 2
+  seed_offset: 4005
+  spacing: 35
+  placement_y_offset: -1
+- prefab: tree_pine_mapgen
   biomes:
   - forest
   - tundra
@@ -98,7 +85,7 @@ vegetation:
   seed_offset: 4002
   spacing: 32
   placement_y_offset: -1
-- prefab: tree_pine_small
+- prefab: tree_pine_small_mapgen
   biomes:
   - tundra
   weight: 3
@@ -182,6 +169,21 @@ decoration:
   weight: 1
   seed_offset: 9203
   spacing: 100
+- prefab: reeds_on_dirt
+  biomes:
+  - plains
+  - forest
+  weight: 1
+  seed_offset: 4202
+  spacing: 72
+  placement_y_offset: -1
+- prefab: reeds_on_dry_dirt
+  biomes:
+  - desert
+  weight: 1
+  seed_offset: 4203
+  spacing: 80
+  placement_y_offset: -1
 structures:
 - prefab: house_stone_cottage
   biomes:

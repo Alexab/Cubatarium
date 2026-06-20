@@ -144,6 +144,7 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
   const BiomeWeightSet weights =
       SampleBiomeWeights(worldX, worldZ, surfaceY);
   const BiomeId biome = DominantBiome(weights);
+  const BiomeId featureBiome = PickSurfaceBiome(worldX, worldZ, weights);
   const ColumnLayerRule rule =
       BuildTerrainRule(worldX, worldZ, surfaceY, biome, weights);
 
@@ -164,23 +165,23 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
   }
   if (Config.Vegetation && Ctx.Settings.EnableTrees)
   {
-    TryPlaceVegetationFeatures(Ctx, worldX, worldZ, surfaceY, biome);
+    TryPlaceVegetationFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome);
   }
-  if (Config.Decoration && Ctx.Settings.EnableTrees)
+  if (Config.Decoration)
   {
-    TryPlaceDecorationFeatures(Ctx, worldX, worldZ, surfaceY, biome);
+    TryPlaceDecorationFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome);
   }
   if (Config.Structures)
   {
-    TryPlaceStructureFeatures(Ctx, worldX, worldZ, surfaceY, biome);
+    TryPlaceStructureFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome);
   }
   if (Config.LavaPools)
   {
-    TryPlaceLavaPool(Ctx, worldX, worldZ, surfaceY, biome);
+    TryPlaceLavaPool(Ctx, worldX, worldZ, surfaceY, featureBiome);
   }
   if (Config.FirePatch)
   {
-    TryPlaceFirePatch(Ctx, worldX, worldZ, surfaceY, biome, Ctx.Grass);
+    TryPlaceFirePatch(Ctx, worldX, worldZ, surfaceY, featureBiome, Ctx.Grass);
   }
 }
 

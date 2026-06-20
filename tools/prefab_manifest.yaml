@@ -9,7 +9,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 28, weight: 3, seed_offset: 4001 }
   tree_pine:
     source_mts: mtg/pine_tree_from_sapling.mts
     category: plants
@@ -17,7 +16,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest, tundra], spacing: 32, weight: 2, seed_offset: 4002 }
   tree_pine_small:
     source_mts: mtg/small_pine_tree_from_sapling.mts
     category: plants
@@ -25,7 +23,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [tundra], spacing: 22, weight: 3, seed_offset: 4003 }
   tree_pine_snowy:
     source_mts: mtg/snowy_pine_tree_from_sapling.mts
     category: plants
@@ -41,7 +38,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 35, weight: 2, seed_offset: 4005 }
   tree_jungle_emergent:
     source_mts: mtg/emergent_jungle_tree_from_sapling.mts
     category: plants
@@ -49,7 +45,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 90, weight: 1, seed_offset: 4006 }
   tree_acacia:
     source_mts: mtg/acacia_tree_from_sapling.mts
     category: plants
@@ -57,7 +52,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, desert], spacing: 30, weight: 2, seed_offset: 4007 }
   tree_aspen:
     source_mts: mtg/aspen_tree_from_sapling.mts
     category: plants
@@ -65,51 +59,64 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 32, weight: 2, seed_offset: 4008 }
 
-  # --- MAX mapgen tree variants ---
+  # --- MAX mapgen tree variants (used by procedural worldgen) ---
   tree_apple_mapgen:
     source_mts: mtg/apple_tree.mts
     category: plants
     displayName: Apple Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 28, weight: 3, seed_offset: 4001 }
   tree_pine_mapgen:
     source_mts: mtg/pine_tree.mts
     category: plants
     displayName: Pine Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [forest, tundra], spacing: 32, weight: 2, seed_offset: 4002 }
   tree_pine_small_mapgen:
     source_mts: mtg/small_pine_tree.mts
     category: plants
     displayName: Small Pine Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [tundra], spacing: 22, weight: 3, seed_offset: 4003 }
   tree_jungle_mapgen:
     source_mts: mtg/jungle_tree.mts
     category: plants
     displayName: Jungle Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 35, weight: 2, seed_offset: 4005 }
   tree_jungle_emergent_mapgen:
     source_mts: mtg/emergent_jungle_tree.mts
     category: plants
     displayName: Emergent Jungle Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 90, weight: 1, seed_offset: 4006 }
   tree_acacia_mapgen:
     source_mts: mtg/acacia_tree.mts
     category: plants
     displayName: Acacia Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [plains, desert], spacing: 30, weight: 2, seed_offset: 4007 }
   tree_aspen_mapgen:
     source_mts: mtg/aspen_tree.mts
     category: plants
     displayName: Aspen Tree (mapgen)
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 32, weight: 2, seed_offset: 4008 }
   tree_pine_snowy_small:
     source_mts: mtg/snowy_small_pine_tree_from_sapling.mts
     category: plants
@@ -149,6 +156,7 @@ prefabs:
     category: plants
     displayName: Blueberry Bush
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [random-geek] }
     worldgen: { pool: vegetation, biomes: [forest, plains], spacing: 22, weight: 1, seed_offset: 4104 }
 
@@ -166,15 +174,17 @@ prefabs:
     category: plants
     displayName: Reeds on Dirt
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 40, weight: 1, seed_offset: 4202 }
+    worldgen: { pool: decoration, biomes: [plains, forest], spacing: 72, weight: 1, seed_offset: 4202 }
   reeds_on_dry_dirt:
     source_mts: mtg/papyrus_on_dry_dirt.mts
     category: plants
     displayName: Reeds on Dry Dirt
     import_status: ready
+    placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [desert, plains], spacing: 45, weight: 1, seed_offset: 4203 }
+    worldgen: { pool: decoration, biomes: [desert], spacing: 80, weight: 1, seed_offset: 4203 }
 
   # --- Fallen logs (decoration) ---
   deco_log_apple:

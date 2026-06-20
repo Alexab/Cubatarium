@@ -23,7 +23,7 @@ struct FeatureParams
 bool CanPlacePrefabAt(const WorldGenContext &ctx, const std::string &prefabName,
                       glm::ivec3 anchorWorldPos);
 bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
-                   glm::ivec3 anchorWorldPos);
+                   glm::ivec3 anchorWorldPos, int surfaceY = -1);
 
 bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
                   BiomeId biome, const FeatureParams &params);

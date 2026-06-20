@@ -10,6 +10,11 @@ namespace cutum
 bool CanPlacePrefabAt(const UBlockWorld &world, const Prefab &prefab,
                       glm::ivec3 anchorWorldPos);
 
+/// Worldgen placement: blocks at or below \p surfaceY may replace terrain;
+/// blocks above \p surfaceY must be air.
+bool CanPlacePrefabAtForWorldGen(const UBlockWorld &world, const Prefab &prefab,
+                                 glm::ivec3 anchorWorldPos, int surfaceY);
+
 struct PrefabPlacementStats
 {
   int placedCount{0};

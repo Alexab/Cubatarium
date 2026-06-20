@@ -74,6 +74,35 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
   return prefab->PlacementYOffset;
 }
 
+bool PrefabRequiresNearWater(const std::string &prefabName)
+{
+  return prefabName.rfind("reeds_", 0) == 0;
+}
+
+bool IsNearSurfaceWater(const WorldGenContext &ctx, int x, int z, int surfaceY,
+                        int radius = 5)
+{
+  if (ctx.Water == BLOCK_AIR)
+  {
+    return false;
+  }
+  for (int dz = -radius; dz <= radius; ++dz)
+  {
+    for (int dx = -radius; dx <= radius; ++dx)
+    {
+      for (int dy = -1; dy <= 1; ++dy)
+      {
+        if (ctx.World.GetBlock(glm::ivec3(x + dx, surfaceY + dy, z + dz)) ==
+            ctx.Water)
+        {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                         BiomeId biome,
                         const std::vector<PrefabFeatureRule> &rules,
@@ -151,7 +180,12 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 
   const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
   const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
-  return PlacePrefabAt(ctx, chosen->PrefabName, anchor);
+  if (PrefabRequiresNearWater(chosen->PrefabName) &&
+      !IsNearSurfaceWater(ctx, x, z, surfaceY))
+  {
+    return false;
+  }
+  return PlacePrefabAt(ctx, chosen->PrefabName, anchor, surfaceY);
 }
 
 } // namespace
@@ -172,14 +206,23 @@ bool CanPlacePrefabAt(const WorldGenContext &ctx, const std::string &prefabName,
 }
 
 bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
-                   glm::ivec3 anchorWorldPos)
+                   glm::ivec3 anchorWorldPos, int surfaceY)
 {
   if (!ctx.Prefabs)
   {
     return false;
   }
   const Prefab *prefab = ctx.Prefabs->Get(prefabName);
-  if (!prefab || !CanPlacePrefabAt(ctx, prefabName, anchorWorldPos))
+  if (!prefab)
+  {
+    return false;
+  }
+  const bool canPlace =
+      surfaceY >= 0
+          ? CanPlacePrefabAtForWorldGen(ctx.World, *prefab, anchorWorldPos,
+                                        surfaceY)
+          : CanPlacePrefabAt(ctx.World, *prefab, anchorWorldPos);
+  if (!canPlace)
   {
     return false;
   }
@@ -220,13 +263,13 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
             static_cast<uint32_t>(params.treeLargeSpacingModForest) ==
         0)
     {
-      return PlacePrefabAt(ctx, params.treeLargePrefabName, anchor);
+      return PlacePrefabAt(ctx, params.treeLargePrefabName, anchor, surfaceY);
     }
     if (FeatureHash(x, z, Seed + params.treeSeedOffset) %
             static_cast<uint32_t>(params.treeSmallSpacingModForest) ==
         0)
     {
-      return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
+      return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor, surfaceY);
     }
     return false;
   }
@@ -241,7 +284,7 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
-  return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
+  return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor, surfaceY);
 }
 
 bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
@@ -265,7 +308,7 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Decoration, 6000,
-                            false, true, ctx.Settings.Tuning.decorationDensity);
+                            false, false, ctx.Settings.Tuning.decorationDensity);
 }
 
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
