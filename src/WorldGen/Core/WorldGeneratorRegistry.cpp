@@ -29,15 +29,6 @@ void ApplyHeightmapDefaults(ProceduralSettings &s)
   s.EnableOres = false;
 }
 
-void ApplyOverworldDefaults(ProceduralSettings &s)
-{
-  s.Generator = ProceduralGenerator::Overworld;
-  ApplyGeneratorTierDefaults(s);
-  s.EnableTrees = false;
-  s.EnableCaves = false;
-  s.EnableOres = false;
-}
-
 void ApplyHillsDefaults(ProceduralSettings &s)
 {
   s.Generator = ProceduralGenerator::Hills;
@@ -56,22 +47,10 @@ void ApplyMountainsDefaults(ProceduralSettings &s)
   s.EnableOres = false;
 }
 
-void ApplyBiomesDefaults(ProceduralSettings &s)
+void ApplyOverworldDefaults(ProceduralSettings &s)
 {
-  s.Generator = ProceduralGenerator::OverworldBiomes;
+  s.Generator = ProceduralGenerator::Overworld;
   ApplyGeneratorTierDefaults(s);
-  s.EnableTrees = true;
-  s.EnableCaves = false;
-  s.EnableOres = false;
-}
-
-void ApplyFullDefaults(ProceduralSettings &s)
-{
-  s.Generator = ProceduralGenerator::OverworldFull;
-  ApplyGeneratorTierDefaults(s);
-  s.EnableTrees = true;
-  s.EnableCaves = true;
-  s.EnableOres = true;
 }
 
 void ApplyBetaRetroDefaults(ProceduralSettings &s)
@@ -84,16 +63,6 @@ void ApplyBetaRetroDefaults(ProceduralSettings &s)
   s.Tuning.biomeHillsWeight = 0.6f;
   s.Tuning.vegetationDensity = 0.85f;
   s.Tuning.decorationDensity = 0.6f;
-}
-
-void ApplyIndevRetroDefaults(ProceduralSettings &s)
-{
-  s.Generator = ProceduralGenerator::IndevRetro;
-  s.FillWater = false;
-  s.FillFire = false;
-  s.EnableTrees = false;
-  s.EnableCaves = false;
-  s.EnableOres = false;
 }
 
 std::unique_ptr<IWorldGenPipeline> MakeComposable(WorldGenContext ctx,
@@ -119,15 +88,6 @@ std::unique_ptr<IWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
-{
-  ComposableWorldGenConfig config;
-  config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
-  config.HeightPreset = HeightPreset::Overworld;
-  config.Fluids = true;
-  return MakeComposable(ctx, config);
-}
-
 std::unique_ptr<IWorldGenPipeline> CreateHills(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
@@ -146,35 +106,20 @@ std::unique_ptr<IWorldGenPipeline> CreateMountains(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateBiomes(WorldGenContext ctx)
+std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
   config.HeightPreset = HeightPreset::Overworld;
   config.UseBiomeSurface = true;
-  config.Fluids = true;
-  config.Vegetation = true;
-  config.Decoration = true;
-  config.Structures = true;
-  config.LavaPools = true;
-  config.FirePatch = true;
-  return MakeComposable(ctx, config);
-}
-
-std::unique_ptr<IWorldGenPipeline> CreateFull(WorldGenContext ctx)
-{
-  ComposableWorldGenConfig config;
-  config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
-  config.HeightPreset = HeightPreset::Overworld;
-  config.UseBiomeSurface = true;
-  config.Fluids = true;
-  config.Caves = true;
-  config.Ores = true;
-  config.Vegetation = true;
-  config.Decoration = true;
-  config.Structures = true;
-  config.LavaPools = true;
-  config.FirePatch = true;
+  config.Fluids = ctx.Settings.FillWater;
+  config.Caves = ctx.Settings.EnableCaves;
+  config.Ores = ctx.Settings.EnableOres;
+  config.Vegetation = ctx.Settings.EnableTrees;
+  config.Decoration = ctx.Settings.EnableTrees;
+  config.Structures = ctx.Settings.EnableTrees;
+  config.LavaPools = ctx.Settings.FillLava;
+  config.FirePatch = ctx.Settings.FillFire;
   return MakeComposable(ctx, config);
 }
 
@@ -193,14 +138,6 @@ std::unique_ptr<IWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateIndevRetro(WorldGenContext ctx)
-{
-  ComposableWorldGenConfig config;
-  config.TerrainMode = ComposableTerrainMode::IndevRetro;
-  config.Fluids = ctx.Settings.FillWater;
-  return MakeComposable(ctx, config);
-}
-
 constexpr WorldGeneratorDescriptor kDescriptors[] = {
     {ProceduralGenerator::Flat,
      "Flat",
@@ -213,61 +150,39 @@ constexpr WorldGeneratorDescriptor kDescriptors[] = {
      "Heightmap",
      "Legacy hash hills with optional water.",
      "default",
-     kFeatureFluids | kFeatureVertical,
+     kFeatureFluids,
      ApplyHeightmapDefaults,
      CreateHeightmap},
-    {ProceduralGenerator::Overworld,
-     "Overworld",
-     "Smooth noise terrain with oceans and spawn island.",
-     "default",
-     kFeatureFluids | kFeatureVertical | kFeatureTuning,
-     ApplyOverworldDefaults,
-     CreateOverworld},
     {ProceduralGenerator::Hills,
      "Hills",
      "Rolling hills with stronger height variation.",
      "default",
-     kFeatureFluids | kFeatureVertical | kFeatureTuning,
+     kFeatureFluids | kFeatureTuning,
      ApplyHillsDefaults,
      CreateHills},
     {ProceduralGenerator::Mountains,
      "Mountains",
      "Taller peaks with stone caps at high elevation.",
      "default",
-     kFeatureFluids | kFeatureVertical | kFeatureTuning,
+     kFeatureFluids | kFeatureTuning,
      ApplyMountainsDefaults,
      CreateMountains},
-    {ProceduralGenerator::OverworldBiomes,
-     "Overworld (Biomes)",
-     "Biome-aware terrain with trees, decor and structures.",
-     "default",
-     kFeatureBiomes | kFeatureTrees | kFeatureStructures | kFeatureFluids |
-         kFeatureVertical | kFeatureTuning,
-     ApplyBiomesDefaults,
-     CreateBiomes},
-    {ProceduralGenerator::OverworldFull,
-     "Overworld (Full)",
-     "Biomes, caves, ores, vegetation, decor and structures.",
+    {ProceduralGenerator::Overworld,
+     "Overworld",
+     "Biome world with stage toggles (default: full preset).",
      "default",
      kFeatureBiomes | kFeatureTrees | kFeatureStructures | kFeatureCaves |
-         kFeatureOres | kFeatureFluids | kFeatureVertical | kFeatureTuning,
-     ApplyFullDefaults,
-     CreateFull},
+         kFeatureOres | kFeatureFluids | kFeatureTuning,
+     ApplyOverworldDefaults,
+     CreateOverworld},
     {ProceduralGenerator::BetaRetro,
-     "Beta Retro",
+     "Overworld (BetaRetro)",
      "Classic beta-style cliffs with biomes and sparse decor.",
      "default",
      kFeatureBiomes | kFeatureTrees | kFeatureStructures | kFeatureFluids |
-         kFeatureVertical | kFeatureTuning,
+         kFeatureTuning,
      ApplyBetaRetroDefaults,
      CreateBetaRetro},
-    {ProceduralGenerator::IndevRetro,
-     "Indev Retro",
-     "Early heightmap hills with rare floating islands.",
-     "default",
-     kFeatureFluids | kFeatureVertical,
-     ApplyIndevRetroDefaults,
-     CreateIndevRetro},
 };
 
 } // namespace
@@ -304,6 +219,13 @@ int UWorldGeneratorRegistry::IndexOf(ProceduralGenerator id)
       return static_cast<int>(i);
     }
   }
+  for (size_t i = 0; i < std::size(kDescriptors); ++i)
+  {
+    if (kDescriptors[i].Id == ProceduralGenerator::Overworld)
+    {
+      return static_cast<int>(i);
+    }
+  }
   return 0;
 }
 
@@ -313,7 +235,11 @@ std::unique_ptr<IWorldGenPipeline> UWorldGeneratorRegistry::Create(
   const WorldGeneratorDescriptor *descriptor = Find(ctx.Settings.Generator);
   if (!descriptor)
   {
-    descriptor = &kDescriptors[5];
+    descriptor = Find(ProceduralGenerator::Overworld);
+    if (!descriptor)
+    {
+      descriptor = &kDescriptors[0];
+    }
   }
   return descriptor->Create(ctx);
 }

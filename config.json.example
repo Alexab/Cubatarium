@@ -2,9 +2,9 @@
     "default_user": "Username",
     "default_world": "World_001",
     "world_seed": 12345,
-    "terrain": "overworld_biomes",
+    "terrain": "overworld",
     "procedural": {
-        "generator": "overworld_biomes"
+        "generator": "overworld"
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,

@@ -35,11 +35,6 @@ int UComposableWorldGenerator::SampleSurfaceY(int worldX, int worldZ) const
     const int naturalY = LegacyHashSurfaceY(worldX, worldZ, Ctx.Settings);
     return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
   }
-  case ComposableTerrainMode::IndevRetro:
-  {
-    const int naturalY = IndevRetroSurfaceY(worldX, worldZ, Ctx.Settings);
-    return AdjustSurfaceYForSpawnIsland(worldX, worldZ, naturalY, Ctx.Settings);
-  }
   case ComposableTerrainMode::NoiseHeightmap:
   default:
   {
@@ -123,20 +118,6 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
   if (Config.TerrainMode == ComposableTerrainMode::LegacyHash)
   {
     FillLegacyHashColumn(Ctx, worldX, worldZ);
-    return;
-  }
-  if (Config.TerrainMode == ComposableTerrainMode::IndevRetro)
-  {
-    const int surfaceY = SampleSurfaceY(worldX, worldZ);
-    ColumnLayerRule rule;
-    rule.fillerBlock = Ctx.Stone;
-    rule.surfaceBlock = Ctx.Grass;
-    rule.subsurfaceBlock = Ctx.Dirt;
-    FillTerrainColumn(Ctx, worldX, worldZ, surfaceY, rule);
-    if (Config.Fluids)
-    {
-      FillFluidColumn(Ctx, worldX, worldZ, surfaceY);
-    }
     return;
   }
 

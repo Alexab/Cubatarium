@@ -139,8 +139,14 @@ float HashNoise2D(int x, int z, uint32_t Seed)
 
 int LegacyHeightAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight)
 {
-  const float n = HashNoise2D(x, z, Seed);
-  return baseY + static_cast<int>(n * MaxHeight);
+  const float xf = static_cast<float>(x) * 0.075f;
+  const float zf = static_cast<float>(z) * 0.075f;
+  const float low = FBM2D(xf, zf, Seed ^ 0x9E3779B9u, 3, 0.55f, 2.0f);
+  const float detail =
+      FBM2D(xf * 2.4f, zf * 2.4f, Seed ^ 0x85EBCA6Bu, 2, 0.5f, 2.0f);
+  float normalized = 0.5f + 0.5f * ((low * 0.8f + detail * 0.2f) / 1.35f);
+  normalized = std::clamp(normalized, 0.0f, 1.0f);
+  return baseY + static_cast<int>(normalized * static_cast<float>(MaxHeight));
 }
 
 float Noise2D(int x, int z, uint32_t Seed) { return HashNoise2D(x, z, Seed); }

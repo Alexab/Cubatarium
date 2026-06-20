@@ -455,8 +455,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetProceduralSettings(ProceduralTemplate);
     std::cout << "Procedural: "
               << ProceduralGeneratorToString(ProceduralTemplate.Generator)
-              << " (" << VerticalModeToString(ProceduralTemplate.Vertical)
-              << ", Seed=" << ProceduralTemplate.Seed
+              << " (Seed=" << ProceduralTemplate.Seed
               << ", sea=" << ProceduralTemplate.SeaLevel
               << ", maxY=" << ProceduralTemplate.MaxHeight
               << ", caves=" << (ProceduralTemplate.EnableCaves ? "1" : "0")
@@ -781,9 +780,8 @@ void UCore::CreateWorldFromProceduralConfig()
   ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
 
-  std::cout << "Core::CreateWorldFromProceduralConfig: " << TerrainType << " ("
-            << VerticalModeToString(ProceduralTemplate.Vertical)
-            << ", Seed=" << ProceduralTemplate.Seed << ")" << std::endl;
+  std::cout << "Core::CreateWorldFromProceduralConfig: " << TerrainType
+            << " (Seed=" << ProceduralTemplate.Seed << ")" << std::endl;
 
   PendingNewWorldSettings.reset();
   CreateNewWorldWithCurrentSettings();

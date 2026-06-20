@@ -13,7 +13,6 @@ struct GuiTheme;
 class UGuiPanel;
 class UGuiLabel;
 class UGuiTextInput;
-class UGuiButton;
 class UGuiCheckbox;
 class UGuiListView;
 
@@ -33,7 +32,6 @@ public:
 
 private:
   void AddWidgetsTo(UGuiPanel &panel);
-  void CycleVertical();
   void OnGeneratorSelected(int index);
   void RefreshGeneratorDescription();
   void UpdateFieldVisibility();
@@ -47,7 +45,6 @@ private:
   UGuiLabel *GeneratorCaption{nullptr};
   UGuiLabel *GeneratorDescLabel{nullptr};
   UGuiListView *GeneratorList{nullptr};
-  UGuiLabel *VerticalCaption{nullptr};
   UGuiLabel *WorldGenPackIdLabel{nullptr};
   UGuiLabel *SeedLabel{nullptr};
   UGuiLabel *SeaLevelLabel{nullptr};
@@ -71,7 +68,6 @@ private:
   UGuiLabel *CaveMaxDepthLabel{nullptr};
   UGuiLabel *CaveStyleLabel{nullptr};
   UGuiLabel *BedrockTopYLabel{nullptr};
-  UGuiButton *VerticalBtn{nullptr};
   UGuiTextInput *WorldGenPackIdInput{nullptr};
   UGuiTextInput *SeedInput{nullptr};
   UGuiTextInput *SeaLevelInput{nullptr};

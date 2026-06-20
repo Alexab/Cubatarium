@@ -15,16 +15,7 @@ enum class ProceduralGenerator
   Overworld,
   Hills,
   Mountains,
-  OverworldBiomes,
-  OverworldFull,
   BetaRetro,
-  IndevRetro,
-};
-
-enum class VerticalMode
-{
-  Compact,
-  Extended,
 };
 
 struct WorldGenTuning
@@ -45,8 +36,7 @@ struct WorldGenTuning
 
 struct ProceduralSettings
 {
-  ProceduralGenerator Generator{ProceduralGenerator::OverworldBiomes};
-  VerticalMode Vertical{VerticalMode::Extended};
+  ProceduralGenerator Generator{ProceduralGenerator::Overworld};
   uint32_t Seed{12345};
   int SeaLevel{48};
   int MaxHeight{128};
@@ -68,17 +58,12 @@ float ClampTuningValue(float value);
 ProceduralGenerator ProceduralGeneratorFromString(const std::string &s);
 const char *ProceduralGeneratorToString(ProceduralGenerator g);
 
-VerticalMode VerticalModeFromString(const std::string &s);
-const char *VerticalModeToString(VerticalMode m);
-
 CaveStyle CaveStyleFromString(const std::string &s);
 const char *CaveStyleToString(CaveStyle style);
 
 void ResolveProceduralDefaults(ProceduralSettings &s);
 void ApplyGeneratorTierDefaults(ProceduralSettings &s);
 void ApplyGeneratorDescriptorDefaults(ProceduralSettings &s);
-void ApplyVerticalModeDefaults(ProceduralSettings &s);
-void ApplyGeneratorVerticalDefaults(ProceduralSettings &s);
 void ResetToGeneratorDefaults(ProceduralSettings &s);
 
 } // namespace cutum

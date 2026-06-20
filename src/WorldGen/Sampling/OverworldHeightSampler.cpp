@@ -1,7 +1,5 @@
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Core/Noise.h"
-#include "WorldGen/Core/ProceduralSettings.h"
-#include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <cmath>
 
@@ -84,20 +82,6 @@ int UOverworldHeightSampler::SurfaceYAt(int x, int z) const
       SeaLevel + static_cast<int>((h + detail - 0.5f) * Params.amplitudeBlocks);
   surfaceY = std::clamp(surfaceY, 1, MaxHeight);
   return surfaceY;
-}
-
-int IndevRetroSurfaceY(int x, int z, const ProceduralSettings &settings)
-{
-  const int base = LegacyHashSurfaceY(x, z, settings);
-  const float island = FBM2D(static_cast<float>(x) * 0.02f,
-                             static_cast<float>(z) * 0.02f,
-                             settings.Seed + 4400, 2, 0.5f, 2.0f);
-  if (island > 0.72f)
-  {
-    const int bump = static_cast<int>((island - 0.72f) * 40.0f);
-    return std::clamp(base + bump, 1, settings.MaxHeight);
-  }
-  return base;
 }
 
 } // namespace cutum

@@ -116,10 +116,6 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
 {
-  if (settings.Vertical == VerticalMode::Compact)
-  {
-    return LegacyHeightAt(x, z, settings.Seed, 0, 8);
-  }
   const int range = std::max(1, settings.MaxHeight - settings.SeaLevel);
   const int surfaceY =
       LegacyHeightAt(x, z, settings.Seed, settings.SeaLevel, range);

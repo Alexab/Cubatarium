@@ -10,6 +10,71 @@ namespace cutum
 namespace
 {
 
+void ApplyLegacyVerticalMode(ProceduralSettings &settings,
+                             const std::string &verticalMode,
+                             bool hasSeaLevel, bool hasMaxHeight)
+{
+  if (hasSeaLevel || hasMaxHeight)
+  {
+    return;
+  }
+  if (verticalMode == "compact")
+  {
+    settings.SeaLevel = 5;
+    settings.MaxHeight = 15;
+    return;
+  }
+  if (verticalMode == "extended")
+  {
+    settings.SeaLevel = 48;
+    settings.MaxHeight = 128;
+    return;
+  }
+  if (!verticalMode.empty())
+  {
+    std::cerr << "WARN: unknown procedural.vertical '" << verticalMode
+              << "', ignoring legacy field" << std::endl;
+  }
+}
+
+void ApplyLegacyOverworldProfile(const std::string &legacyGenerator,
+                                 ProceduralSettings &settings, bool hasCaves,
+                                 bool hasTrees, bool hasOres, bool hasFillWater,
+                                 bool hasFillLava, bool hasFillFire)
+{
+  if (settings.Generator != ProceduralGenerator::Overworld)
+  {
+    return;
+  }
+  if (legacyGenerator == "overworld_biomes")
+  {
+    if (!hasTrees)
+    {
+      settings.EnableTrees = true;
+    }
+    if (!hasCaves)
+    {
+      settings.EnableCaves = false;
+    }
+    if (!hasOres)
+    {
+      settings.EnableOres = false;
+    }
+    if (!hasFillWater)
+    {
+      settings.FillWater = true;
+    }
+    if (!hasFillLava)
+    {
+      settings.FillLava = true;
+    }
+    if (!hasFillFire)
+    {
+      settings.FillFire = true;
+    }
+  }
+}
+
 void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
 {
   if (!tuning.is_object())
@@ -94,23 +159,35 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
   if (hasProcedural)
   {
     const nlohmann::json &p = root["procedural"];
+    std::string legacyGeneratorId;
+    std::string legacyVerticalMode;
+    bool hasSeaLevel = false;
+    bool hasMaxHeight = false;
+    bool hasCaves = false;
+    bool hasTrees = false;
+    bool hasOres = false;
+    bool hasFillWater = false;
+    bool hasFillLava = false;
+    bool hasFillFire = false;
     if (p.contains("generator") && p["generator"].is_string())
     {
+      legacyGeneratorId = p["generator"].get<std::string>();
       settings.Generator =
-          ProceduralGeneratorFromString(p["generator"].get<std::string>());
+          ProceduralGeneratorFromString(legacyGeneratorId);
     }
     if (p.contains("vertical") && p["vertical"].is_string())
     {
-      settings.Vertical =
-          VerticalModeFromString(p["vertical"].get<std::string>());
+      legacyVerticalMode = p["vertical"].get<std::string>();
     }
     if (p.contains("sea_level"))
     {
       settings.SeaLevel = p["sea_level"].get<int>();
+      hasSeaLevel = true;
     }
     if (p.contains("max_height"))
     {
       settings.MaxHeight = p["max_height"].get<int>();
+      hasMaxHeight = true;
     }
     if (p.contains("bedrock_top_y"))
     {
@@ -123,14 +200,17 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("caves") && p["caves"].is_boolean())
     {
       settings.EnableCaves = p["caves"].get<bool>();
+      hasCaves = true;
     }
     if (p.contains("enable_caves"))
     {
       settings.EnableCaves = p["enable_caves"].get<bool>();
+      hasCaves = true;
     }
     if (p.contains("trees"))
     {
       settings.EnableTrees = p["trees"].get<bool>();
+      hasTrees = true;
     }
     if (p.contains("flat_surface_y"))
     {
@@ -139,18 +219,22 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("fill_water"))
     {
       settings.FillWater = p["fill_water"].get<bool>();
+      hasFillWater = true;
     }
     if (p.contains("fill_lava"))
     {
       settings.FillLava = p["fill_lava"].get<bool>();
+      hasFillLava = true;
     }
     if (p.contains("fill_fire"))
     {
       settings.FillFire = p["fill_fire"].get<bool>();
+      hasFillFire = true;
     }
     if (p.contains("ores"))
     {
       settings.EnableOres = p["ores"].get<bool>();
+      hasOres = true;
     }
     if (p.contains("cave_params") && p["cave_params"].is_object())
     {
@@ -182,6 +266,10 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       ParseTuning(p["tuning"], settings.Tuning);
     }
+    ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
+                            hasMaxHeight);
+    ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
+                                hasOres, hasFillWater, hasFillLava, hasFillFire);
   }
   else if (root.contains("terrain") && root["terrain"].is_string())
   {
@@ -211,35 +299,6 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
   ResolveProceduralDefaults(settings);
   ApplyGeneratorTierDefaults(settings);
 
-  if (settings.Generator == ProceduralGenerator::OverworldFull)
-  {
-    if (hasProcedural)
-    {
-      const nlohmann::json &p = root["procedural"];
-      if (p.contains("caves"))
-      {
-        settings.EnableCaves = p["caves"].get<bool>();
-      }
-      else
-      {
-        settings.EnableCaves = true;
-      }
-      if (p.contains("trees"))
-      {
-        settings.EnableTrees = p["trees"].get<bool>();
-      }
-      else
-      {
-        settings.EnableTrees = true;
-      }
-    }
-    else
-    {
-      settings.EnableCaves = true;
-      settings.EnableTrees = true;
-    }
-  }
-
   return settings;
 }
 
@@ -247,6 +306,7 @@ ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
 {
   ProceduralSettings settings;
   settings.Seed = root.value("world_seed", 12345u);
+  std::string legacyGeneratorId;
 
   const bool hasProcedural =
       root.contains("procedural") && root["procedural"].is_object();
@@ -255,17 +315,21 @@ ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
     const nlohmann::json &p = root["procedural"];
     if (p.contains("generator") && p["generator"].is_string())
     {
+      legacyGeneratorId = p["generator"].get<std::string>();
       settings.Generator =
-          ProceduralGeneratorFromString(p["generator"].get<std::string>());
+          ProceduralGeneratorFromString(legacyGeneratorId);
     }
   }
   else if (root.contains("terrain") && root["terrain"].is_string())
   {
+    legacyGeneratorId = root["terrain"].get<std::string>();
     settings.Generator =
-        ProceduralGeneratorFromString(root["terrain"].get<std::string>());
+        ProceduralGeneratorFromString(legacyGeneratorId);
   }
 
   ResetToGeneratorDefaults(settings);
+  ApplyLegacyOverworldProfile(legacyGeneratorId, settings, false, false, false,
+                              false, false, false);
   return settings;
 }
 
@@ -274,7 +338,6 @@ void WriteProceduralSettings(nlohmann::json &root,
 {
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
-  procedural["vertical"] = VerticalModeToString(settings.Vertical);
   procedural["sea_level"] = settings.SeaLevel;
   procedural["max_height"] = settings.MaxHeight;
   procedural["bedrock_top_y"] = settings.BedrockTopY;

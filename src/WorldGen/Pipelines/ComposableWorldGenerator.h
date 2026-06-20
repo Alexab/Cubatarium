@@ -14,7 +14,6 @@ enum class ComposableTerrainMode
 {
   Flat,
   LegacyHash,
-  IndevRetro,
   NoiseHeightmap,
 };
 

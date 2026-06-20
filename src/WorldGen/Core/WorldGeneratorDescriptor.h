@@ -18,8 +18,7 @@ enum WorldGenFeatureFlags : uint32_t
   kFeatureStructures = 1u << 4,
   kFeatureFluids = 1u << 5,
   kFeatureTuning = 1u << 6,
-  kFeatureVertical = 1u << 7,
-  kFeatureOres = 1u << 8,
+  kFeatureOres = 1u << 7,
 };
 
 struct WorldGeneratorDescriptor

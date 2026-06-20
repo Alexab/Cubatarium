@@ -41,6 +41,4 @@ private:
   HeightSampleParams Params;
 };
 
-int IndevRetroSurfaceY(int x, int z, const struct ProceduralSettings &settings);
-
 } // namespace cutum

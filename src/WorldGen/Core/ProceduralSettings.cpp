@@ -35,11 +35,11 @@ ProceduralGenerator ProceduralGeneratorFromString(const std::string &s)
   }
   if (s == "overworld_biomes")
   {
-    return ProceduralGenerator::OverworldBiomes;
+    return ProceduralGenerator::Overworld;
   }
   if (s == "overworld_full")
   {
-    return ProceduralGenerator::OverworldFull;
+    return ProceduralGenerator::Overworld;
   }
   if (s == "beta_retro")
   {
@@ -47,11 +47,14 @@ ProceduralGenerator ProceduralGeneratorFromString(const std::string &s)
   }
   if (s == "indev_retro")
   {
-    return ProceduralGenerator::IndevRetro;
+    std::cerr << "WARN: procedural.Generator 'indev_retro' is deprecated, "
+                 "using heightmap"
+              << std::endl;
+    return ProceduralGenerator::Heightmap;
   }
   std::cerr << "WARN: unknown procedural.Generator '" << s
-            << "', using overworld_biomes" << std::endl;
-  return ProceduralGenerator::OverworldBiomes;
+            << "', using overworld" << std::endl;
+  return ProceduralGenerator::Overworld;
 }
 
 const char *ProceduralGeneratorToString(ProceduralGenerator g)
@@ -68,36 +71,11 @@ const char *ProceduralGeneratorToString(ProceduralGenerator g)
     return "hills";
   case ProceduralGenerator::Mountains:
     return "mountains";
-  case ProceduralGenerator::OverworldBiomes:
-    return "overworld_biomes";
-  case ProceduralGenerator::OverworldFull:
-    return "overworld_full";
   case ProceduralGenerator::BetaRetro:
     return "beta_retro";
-  case ProceduralGenerator::IndevRetro:
-    return "indev_retro";
   default:
-    return "overworld_biomes";
+    return "overworld";
   }
-}
-
-VerticalMode VerticalModeFromString(const std::string &s)
-{
-  if (s == "extended")
-  {
-    return VerticalMode::Extended;
-  }
-  if (s != "compact" && !s.empty())
-  {
-    std::cerr << "WARN: unknown procedural.Vertical '" << s
-              << "', using extended" << std::endl;
-  }
-  return VerticalMode::Compact;
-}
-
-const char *VerticalModeToString(VerticalMode m)
-{
-  return m == VerticalMode::Extended ? "extended" : "compact";
 }
 
 CaveStyle CaveStyleFromString(const std::string &s)
@@ -137,25 +115,12 @@ void ClampTuning(WorldGenTuning &t)
   }
 }
 
-void MigrateLegacyExtendedHeights(ProceduralSettings &s)
+void ApplyGeneratorHeightDefaults(ProceduralSettings &s)
 {
-  if (s.Vertical != VerticalMode::Extended)
-  {
-    return;
-  }
-  // Pocket-era values saved under extended vertical (e.g. sea 10 / max 32).
-  if (s.MaxHeight <= 32)
-  {
-    s.SeaLevel = 48;
-    s.MaxHeight = 128;
-  }
-}
-
-} // namespace
-
-void ApplyVerticalModeDefaults(ProceduralSettings &s)
-{
-  if (s.Vertical == VerticalMode::Compact)
+  const bool compactGenerator =
+      s.Generator == ProceduralGenerator::Flat ||
+      s.Generator == ProceduralGenerator::Heightmap;
+  if (compactGenerator)
   {
     s.SeaLevel = 5;
     s.MaxHeight = 15;
@@ -167,26 +132,7 @@ void ApplyVerticalModeDefaults(ProceduralSettings &s)
   }
 }
 
-void ApplyGeneratorVerticalDefaults(ProceduralSettings &s)
-{
-  switch (s.Generator)
-  {
-  case ProceduralGenerator::Flat:
-  case ProceduralGenerator::Heightmap:
-  case ProceduralGenerator::IndevRetro:
-    s.Vertical = VerticalMode::Compact;
-    break;
-  default:
-    s.Vertical = VerticalMode::Extended;
-    break;
-  }
-  ApplyVerticalModeDefaults(s);
-  if (s.Generator == ProceduralGenerator::Flat)
-  {
-    s.FlatSurfaceY = std::clamp(s.FlatSurfaceY > 0 ? s.FlatSurfaceY : 3, 1,
-                                s.MaxHeight);
-  }
-}
+} // namespace
 
 void ResetToGeneratorDefaults(ProceduralSettings &s)
 {
@@ -211,14 +157,21 @@ void ResetToGeneratorDefaults(ProceduralSettings &s)
   {
     ApplyGeneratorTierDefaults(s);
   }
-  ApplyGeneratorVerticalDefaults(s);
+  ApplyGeneratorHeightDefaults(s);
+  if (s.Generator == ProceduralGenerator::Flat)
+  {
+    s.FlatSurfaceY = std::clamp(s.FlatSurfaceY > 0 ? s.FlatSurfaceY : 3, 1,
+                                s.MaxHeight);
+  }
   ResolveProceduralDefaults(s);
 }
 
 void ResolveProceduralDefaults(ProceduralSettings &s)
 {
-  MigrateLegacyExtendedHeights(s);
-  if (s.Vertical == VerticalMode::Compact)
+  const bool compactGenerator =
+      s.Generator == ProceduralGenerator::Flat ||
+      s.Generator == ProceduralGenerator::Heightmap;
+  if (compactGenerator)
   {
     if (s.MaxHeight <= 0 || s.MaxHeight > 15)
     {
@@ -251,9 +204,7 @@ void ResolveProceduralDefaults(ProceduralSettings &s)
 
 void ApplyGeneratorTierDefaults(ProceduralSettings &s)
 {
-  if (s.Generator == ProceduralGenerator::OverworldBiomes ||
-      s.Generator == ProceduralGenerator::OverworldFull ||
-      s.Generator == ProceduralGenerator::Overworld ||
+  if (s.Generator == ProceduralGenerator::Overworld ||
       s.Generator == ProceduralGenerator::Hills ||
       s.Generator == ProceduralGenerator::Mountains ||
       s.Generator == ProceduralGenerator::BetaRetro)
@@ -261,13 +212,13 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
     s.FillWater = true;
     s.FillFire = true;
   }
-  if (s.Generator == ProceduralGenerator::OverworldBiomes ||
-      s.Generator == ProceduralGenerator::OverworldFull ||
+  if (s.Generator == ProceduralGenerator::Overworld ||
       s.Generator == ProceduralGenerator::BetaRetro)
   {
     s.EnableTrees = true;
+    s.FillLava = true;
   }
-  if (s.Generator == ProceduralGenerator::OverworldFull)
+  if (s.Generator == ProceduralGenerator::Overworld)
   {
     s.EnableCaves = true;
     s.EnableOres = true;

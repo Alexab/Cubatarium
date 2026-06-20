@@ -95,15 +95,13 @@ Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorR
 |--------------|-------------|
 | `flat` | Flat grass platform |
 | `heightmap` | Legacy hash hills |
-| `overworld` / `hills` / `mountains` | Noise terrain presets |
-| `overworld_biomes` | Biomes, trees, decor, structures (default) |
-| `overworld_full` | Biomes + caves + ores + full feature set |
-| `beta_retro` | Beta-style cliffs with biomes |
-| `indev_retro` | Early heightmap hills with floating islands |
+| `overworld` | Biomes + caves + ores + vegetation/decor/structures (default, stage checkboxes) |
+| `hills` / `mountains` | Noise terrain presets |
+| `beta_retro` | Overworld (BetaRetro): beta-style cliffs with biomes |
 
 `UComposableWorldGenerator` composes column stages: terrain, fluids, caves, prefab features. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
-Defaults (Extended): `sea_level` 48, `max_height` 128, `generator` `overworld_biomes`. Compact mode remains available (`sea_level` ~5, `max_height` ~15).
+Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 
 Settings persist in `config.json` (template: **generator + seed only**) and per-world `world_data.json` under full `procedural` + `procedural.tuning`. Sea level, height, and tuning are reset from generator defaults on each app start; per-world overrides live only in `world_data.json`.
 
@@ -144,7 +142,7 @@ Documented in [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md
 
 Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
-Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 12 stems) ship in CC0 packs. QA: new world with `overworld_biomes`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
+Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 12 stems) ship in CC0 packs. QA: new world with `overworld`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
 
 ## Asset paths
 
@@ -183,7 +181,7 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 ## Config (`<exe_dir>/config.json`)
 
 - `default_world` — folder name under `worlds/` (e.g. `World_001`)
-- `default_user`, `world_seed`, `procedural` (generator, vertical, sea_level, max_height, tuning, …)
+- `default_user`, `world_seed`, `procedural` (generator, sea_level, max_height, tuning, …)
 - `render_distance_chunks`, `streaming_enabled`
 - Autosave every 60s; exit saves world + config
 
