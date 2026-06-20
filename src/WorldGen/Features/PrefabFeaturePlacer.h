@@ -1,8 +1,10 @@
 #pragma once
 
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Features/PrefabFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -25,6 +27,13 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
 
 bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
                   BiomeId biome, const FeatureParams &params);
+
+bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
+                                int surfaceY, BiomeId biome);
+bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
+                                int surfaceY, BiomeId biome);
+bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
+                               int surfaceY, BiomeId biome);
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome);

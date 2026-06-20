@@ -85,7 +85,7 @@ Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; 
 | Hills | stone | gravel (fallback stone) |
 | Tundra | snow (fallback stone) | dirt |
 
-Trees: prefabs `tree_small` / `tree_large` use block types `tree_log` (bark `tree_side`, rings `tree_top`) and `tree_leaves` (`leaves_opaque`). Requires `procedural.trees: true` in config.
+Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome). Requires `procedural.trees: true` for vegetation/decoration; structures place independently. Legacy prefabs `tree_small` / `tree_large` remain for hotbar compatibility. See [`docs/PREFAB_CATALOG.md`](PREFAB_CATALOG.md) and [`docs/PREFAB_ATTRIBUTION.md`](PREFAB_ATTRIBUTION.md).
 
 ### Animated blocks and fluids
 
@@ -139,7 +139,7 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 ## PrefabLibrary vs ObjectStorage
 
 - **ObjectStorage** — legacy single-block brush catalog (`TakeObject` deprecated).
-- **PrefabLibrary** — JSON templates with sparse `blocks[]` and `anchor`; placement via `World::PlacePrefab`.
+- **PrefabLibrary** — JSON templates with sparse `blocks[]`, optional `category`, `displayName`, `placement.y_offset`; loaded from `prefabs/`, `prefabs/imported/`, `prefabs/user/`, and optional `resource_packs/*/prefabs/`; placement via `World::PlacePrefab`.
 - **Hotbar** — `0–9` primary bar; second bar (prefabs) via HUD when `hotbar_count` is 2 (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
 
 ## Streaming

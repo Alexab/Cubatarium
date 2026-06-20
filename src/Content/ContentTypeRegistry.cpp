@@ -191,10 +191,17 @@ void UContentTypeRegistry::IndexPrefabs(const UPrefabLibrary &prefabs)
   }
   for (const std::string &Name : prefabs.ListNames())
   {
-    const auto typeIds = std::vector<std::string>{kMiscType};
-    CatalogEntry entry{Name, Name};
+    const std::string category = prefabs.GetCategory(Name);
+    const std::string label = prefabs.GetDisplayName(Name);
+    const auto typeIds =
+        GetTypesForTags({category == "misc" ? kMiscType : category});
+    CatalogEntry entry{Name, label};
     for (const auto &typeId : typeIds)
     {
+      if (!ObjectEntries.count(typeId))
+      {
+        ObjectEntries[typeId] = {};
+      }
       ObjectEntries[typeId].push_back(entry);
     }
   }

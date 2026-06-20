@@ -1,0 +1,43 @@
+# Schema reference for tools/prefab_manifest.yaml (documentation only).
+schema_version: 1
+
+prefab_entry:
+  required:
+    - source_mts
+    - category
+    - import_status
+  fields:
+    source_mts:
+      type: string
+      description: Path relative to third_party/schematics/
+    category:
+      enum: [plants, decorative, building, natural, misc]
+    displayName:
+      type: string
+    import_status:
+      enum: [ready, needs_review, skip, skip_worldgen]
+    placement:
+      y_offset:
+        type: int
+        default: 0
+    source:
+      mod: string
+      license: string
+      authors: [string]
+    worldgen:
+      pool:
+        enum: [vegetation, decoration, structures]
+      biomes:
+        type: [plains, forest, desert, hills, tundra]
+      spacing:
+        type: int
+        description: Hash modulus for vegetation/decoration
+      weight:
+        type: int
+        default: 1
+      chance_per_column:
+        type: int
+        description: Hash modulus for structures
+      seed_offset:
+        type: int
+        default: 0

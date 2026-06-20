@@ -101,6 +101,11 @@ def check_texture_overrides_sync() -> None:
     run([sys.executable, "tools/sync_texture_overrides.py", "--check"])
 
 
+def check_prefabs() -> None:
+    run([sys.executable, "tools/generate_prefab_features.py"])
+    run([sys.executable, "tools/validate_prefabs.py"])
+
+
 def main() -> int:
     print("=== resource pack smoke ===")
     check_worldgen_refs_drift()
@@ -108,6 +113,7 @@ def main() -> int:
     merge_smoke()
     check_primary_audit()
     check_validate_primary()
+    check_prefabs()
     print("=== all smoke checks passed ===")
     return 0
 

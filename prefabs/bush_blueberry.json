@@ -1,0 +1,50 @@
+{
+  "name": "bush_blueberry",
+  "version": 2,
+  "category": "plants",
+  "displayName": "Blueberry Bush",
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_leaves"
+    }
+  ],
+  "source": {
+    "mod": "minetest-game/default",
+    "license": "CC-BY-SA-3.0",
+    "authors": [
+      "random-geek"
+    ]
+  }
+}

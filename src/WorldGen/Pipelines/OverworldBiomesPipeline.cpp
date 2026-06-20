@@ -32,8 +32,10 @@ void UOverworldBiomesPipeline::GenerateColumn(int worldX, int worldZ)
 
   if (Ctx.Settings.EnableTrees)
   {
-    TryPlaceTree(Ctx, worldX, worldZ, surfaceY, biome, FeatureParams);
+    TryPlaceVegetationFeatures(Ctx, worldX, worldZ, surfaceY, biome);
+    TryPlaceDecorationFeatures(Ctx, worldX, worldZ, surfaceY, biome);
   }
+  TryPlaceStructureFeatures(Ctx, worldX, worldZ, surfaceY, biome);
   TryPlaceLavaPool(Ctx, worldX, worldZ, surfaceY, biome);
   TryPlaceFirePatch(Ctx, worldX, worldZ, surfaceY, biome, Ctx.Grass);
 }

@@ -35,6 +35,7 @@
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "WorldGen/Core/WorldGenRefs.h"
+#include "WorldGen/Features/PrefabFeatureConfig.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
@@ -196,6 +197,10 @@ void UApplication::Startup(const std::string &configPath)
     if (!UWorldGenRefs::LoadFromFile("content/worldgen_refs.json"))
     {
       CubatariumLogInfo("App", "worldgen_refs.json not loaded — using legacy block name resolution");
+    }
+    if (!UPrefabFeatureConfigStorage::LoadFromFile("content/prefab_features.json"))
+    {
+      CubatariumLogInfo("App", "prefab_features.json not loaded — legacy tree placement only");
     }
     GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
                                     *Core->GetPrefabLibrary());

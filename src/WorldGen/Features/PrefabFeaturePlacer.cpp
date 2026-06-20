@@ -16,6 +16,117 @@ uint32_t FeatureHash(int x, int z, uint32_t Seed)
   return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ Seed;
 }
 
+bool BiomeMatches(BiomeId biome, const std::vector<BiomeId> &allowed)
+{
+  for (BiomeId allowedBiome : allowed)
+  {
+    if (allowedBiome == biome)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+int ResolvePlacementYOffset(const WorldGenContext &ctx,
+                            const PrefabFeatureRule &rule)
+{
+  if (rule.PlacementYOffset != 0)
+  {
+    return rule.PlacementYOffset;
+  }
+  if (!ctx.Prefabs)
+  {
+    return 0;
+  }
+  const Prefab *prefab = ctx.Prefabs->Get(rule.PrefabName);
+  if (!prefab)
+  {
+    return 0;
+  }
+  return prefab->PlacementYOffset;
+}
+
+bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
+                        BiomeId biome,
+                        const std::vector<PrefabFeatureRule> &rules,
+                        uint32_t pickSeedOffset, bool useChanceOnly,
+                        bool requireTreesEnabled)
+{
+  if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || !ctx.Prefabs ||
+      rules.empty())
+  {
+    return false;
+  }
+
+  struct Candidate
+  {
+    const PrefabFeatureRule *Rule;
+    int Weight;
+  };
+
+  std::vector<Candidate> candidates;
+  candidates.reserve(rules.size());
+  const uint32_t seed = ctx.Settings.Seed;
+
+  for (const PrefabFeatureRule &rule : rules)
+  {
+    if (!BiomeMatches(biome, rule.Biomes))
+    {
+      continue;
+    }
+    if (!ctx.Prefabs->Get(rule.PrefabName))
+    {
+      continue;
+    }
+    const uint32_t h = FeatureHash(x, z, seed + rule.SeedOffset);
+    if (useChanceOnly)
+    {
+      if (rule.ChancePerColumn <= 0 ||
+          h % static_cast<uint32_t>(rule.ChancePerColumn) != 0)
+      {
+        continue;
+      }
+    }
+    else
+    {
+      if (rule.Spacing <= 0 ||
+          h % static_cast<uint32_t>(rule.Spacing) != 0)
+      {
+        continue;
+      }
+    }
+    candidates.push_back({&rule, std::max(1, rule.Weight)});
+  }
+
+  if (candidates.empty())
+  {
+    return false;
+  }
+
+  int totalWeight = 0;
+  for (const Candidate &c : candidates)
+  {
+    totalWeight += c.Weight;
+  }
+  int pick = static_cast<int>(
+      FeatureHash(x, z, seed + pickSeedOffset) % static_cast<uint32_t>(totalWeight));
+  const PrefabFeatureRule *chosen = candidates.front().Rule;
+  for (const Candidate &c : candidates)
+  {
+    pick -= c.Weight;
+    if (pick < 0)
+    {
+      chosen = c.Rule;
+      break;
+    }
+  }
+
+  const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
+  const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
+  return PlacePrefabAt(ctx, chosen->PrefabName, anchor);
+}
+
 } // namespace
 
 bool CanPlacePrefabAt(const WorldGenContext &ctx, const std::string &prefabName,
@@ -59,6 +170,11 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
 bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
                   BiomeId biome, const FeatureParams &params)
 {
+  if (UPrefabFeatureConfigStorage::IsLoaded())
+  {
+    return TryPlaceVegetationFeatures(ctx, x, z, surfaceY, biome);
+  }
+
   if (!ctx.Settings.EnableTrees || !ctx.Prefabs)
   {
     return false;
@@ -99,6 +215,42 @@ bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
   return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor);
+}
+
+bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
+                                int surfaceY, BiomeId biome)
+{
+  if (!UPrefabFeatureConfigStorage::IsLoaded())
+  {
+    return false;
+  }
+  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
+                            UPrefabFeatureConfigStorage::Get().Vegetation, 5000,
+                            false, true);
+}
+
+bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
+                                int surfaceY, BiomeId biome)
+{
+  if (!UPrefabFeatureConfigStorage::IsLoaded())
+  {
+    return false;
+  }
+  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
+                            UPrefabFeatureConfigStorage::Get().Decoration, 6000,
+                            false, true);
+}
+
+bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
+                               int surfaceY, BiomeId biome)
+{
+  if (!UPrefabFeatureConfigStorage::IsLoaded())
+  {
+    return false;
+  }
+  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
+                            UPrefabFeatureConfigStorage::Get().Structures, 7000,
+                            true, false);
 }
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,

@@ -1,0 +1,173 @@
+{
+  "name": "shed_wood",
+  "version": 2,
+  "category": "building",
+  "displayName": "Wood Shed",
+  "source": {
+    "mod": "cubatarium/procedural",
+    "license": "CC0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "wooden_door"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": -1,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 0,
+      "type": "wood"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 1,
+      "type": "wood"
+    }
+  ]
+}

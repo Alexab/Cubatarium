@@ -141,6 +141,7 @@ set(SOURCES
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Pipelines/OverworldBiomesPipeline.cpp
     src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/PrefabFeatureConfig.cpp
     src/WorldGen/Features/PrefabFeaturePlacer.cpp
     src/WorldGen/Pipelines/OverworldFullPipeline.cpp
     src/WorldGen/Core/ProceduralWorldGenFactory.cpp

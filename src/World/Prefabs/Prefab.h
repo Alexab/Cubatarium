@@ -21,6 +21,9 @@ struct PrefabVoxel
 struct Prefab
 {
   std::string Name;
+  std::string Category;
+  std::string DisplayName;
+  int PlacementYOffset{0};
   glm::ivec3 anchor{0};
   std::vector<PrefabVoxel> voxels;
   glm::ivec3 boundsMin{0};
@@ -38,6 +41,8 @@ public:
                   UBlockRegistry &registry);
   const Prefab *Get(const std::string &Name) const;
   std::vector<std::string> ListNames() const;
+  std::string GetDisplayName(const std::string &Name) const;
+  std::string GetCategory(const std::string &Name) const;
 
 private:
   bool LoadFile(const std::string &path, UBlockRegistry &registry,
@@ -45,6 +50,9 @@ private:
   void LoadDirectory(const std::filesystem::path &folder,
                      const std::string &namePrefix,
                      UBlockRegistry &registry);
+  void LoadDirectoryRecursive(const std::filesystem::path &folder,
+                              const std::string &namePrefix,
+                              UBlockRegistry &registry);
 
   std::unordered_map<std::string, Prefab> Prefabs;
 };

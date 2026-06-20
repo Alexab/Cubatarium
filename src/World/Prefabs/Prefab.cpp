@@ -13,9 +13,16 @@ using json = nlohmann::json;
 namespace cutum
 {
 
+namespace
+{
+
+constexpr const char *kDefaultCategory = "misc";
+
+} // namespace
+
 void UPrefabLibrary::LoadDirectory(const std::filesystem::path &folder,
-                                  const std::string &namePrefix,
-                                  UBlockRegistry &registry)
+                                   const std::string &namePrefix,
+                                   UBlockRegistry &registry)
 {
   if (!std::filesystem::exists(folder))
   {
@@ -35,16 +42,39 @@ void UPrefabLibrary::LoadDirectory(const std::filesystem::path &folder,
   }
 }
 
+void UPrefabLibrary::LoadDirectoryRecursive(
+    const std::filesystem::path &folder, const std::string &namePrefix,
+    UBlockRegistry &registry)
+{
+  if (!std::filesystem::exists(folder))
+  {
+    return;
+  }
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(folder))
+  {
+    if (!entry.is_regular_file() || entry.path().extension() != ".json")
+    {
+      continue;
+    }
+    const std::string localName = entry.path().stem().string();
+    const std::string registerName =
+        namePrefix.empty() ? localName
+                           : MakeQualifiedBlockName(namePrefix, localName);
+    LoadFile(entry.path().string(), registry, registerName);
+  }
+}
+
 void UPrefabLibrary::LoadMerged(
     const std::filesystem::path &baseFolder,
     const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
 {
   Prefabs.clear();
   LoadDirectory(baseFolder, "", registry);
+  LoadDirectoryRecursive(baseFolder / "imported", "", registry);
   LoadDirectory(baseFolder / "user", "", registry);
   for (const auto &pack : packs)
   {
-    LoadDirectory(pack.Root / "prefabs", pack.Id, registry);
+    LoadDirectoryRecursive(pack.Root / "prefabs", pack.Id, registry);
   }
   std::cout << "UPrefabLibrary: loaded " << Prefabs.size() << " prefabs"
             << std::endl;
@@ -73,6 +103,13 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
                       ? data.value("name",
                                    std::filesystem::path(path).stem().string())
                       : registerName;
+    prefab.Category = data.value("category", kDefaultCategory);
+    prefab.DisplayName = data.value("displayName", prefab.Name);
+    if (data.contains("placement") && data["placement"].is_object())
+    {
+      prefab.PlacementYOffset =
+          data["placement"].value("y_offset", prefab.PlacementYOffset);
+    }
 
     if (data.contains("anchor") && data["anchor"].is_array() &&
         data["anchor"].size() == 3)
@@ -145,6 +182,26 @@ std::vector<std::string> UPrefabLibrary::ListNames() const
     names.push_back(entry.first);
   }
   return names;
+}
+
+std::string UPrefabLibrary::GetDisplayName(const std::string &Name) const
+{
+  const Prefab *prefab = Get(Name);
+  if (!prefab || prefab->DisplayName.empty())
+  {
+    return Name;
+  }
+  return prefab->DisplayName;
+}
+
+std::string UPrefabLibrary::GetCategory(const std::string &Name) const
+{
+  const Prefab *prefab = Get(Name);
+  if (!prefab || prefab->Category.empty())
+  {
+    return kDefaultCategory;
+  }
+  return prefab->Category;
 }
 
 } // namespace cutum
