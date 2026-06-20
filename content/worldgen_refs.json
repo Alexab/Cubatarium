@@ -89,6 +89,18 @@
       "block_names": [
         "tree_leaves"
       ]
+    },
+    "ore_coal": {
+      "block_names": [
+        "oreCoal"
+      ],
+      "fallback_slot": "stone"
+    },
+    "ore_iron": {
+      "block_names": [
+        "oreIron"
+      ],
+      "fallback_slot": "stone"
     }
   }
 }

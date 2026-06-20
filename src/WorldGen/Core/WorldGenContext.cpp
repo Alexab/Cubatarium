@@ -90,6 +90,8 @@ void WorldGenContext::ResolveBlockIds()
   resolve("water", Water);
   resolve("lava", Lava);
   resolve("fire", Fire);
+  resolve("ore_coal", OreCoal);
+  resolve("ore_iron", OreIron);
 
   if (Settings.FillWater && Water == BLOCK_AIR)
   {

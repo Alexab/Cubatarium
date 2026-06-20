@@ -9,7 +9,8 @@ enum class HeightPreset
 {
   Overworld,
   Hills,
-  Mountains
+  Mountains,
+  BetaRetro,
 };
 
 struct HeightSampleParams
@@ -21,6 +22,7 @@ struct HeightSampleParams
   float detailScale{4.f};
   float detailWeight{0.15f};
   int stoneSurfaceAboveY{-1};
+  bool useRidgeNoise{false};
 };
 
 class UOverworldHeightSampler
@@ -38,5 +40,7 @@ private:
   int MaxHeight;
   HeightSampleParams Params;
 };
+
+int IndevRetroSurfaceY(int x, int z, const struct ProceduralSettings &settings);
 
 } // namespace cutum

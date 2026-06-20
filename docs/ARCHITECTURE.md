@@ -85,7 +85,7 @@ Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; 
 | Hills | stone | gravel (fallback stone) |
 | Tundra | snow (fallback stone) | dirt |
 
-Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome). Requires `procedural.trees: true` for vegetation/decoration; structures place independently. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `structure_density`, biome weights). Legacy prefabs `tree_small` / `tree_large` remain for hotbar compatibility. See [`docs/PREFAB_CATALOG.md`](PREFAB_CATALOG.md) and [`docs/PREFAB_ATTRIBUTION.md`](PREFAB_ATTRIBUTION.md).
+Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome). Requires `procedural.trees: true` for vegetation/decoration; structures place independently. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `structure_density`, `biome_*_weight`, `biome_blend_radius`, `ore_density`, `terrain_erosion`). Biome height profiles load from [`content/worldgen_packs/default/`](../content/worldgen_packs/default/). Cave tuning uses `procedural.cave_params` (`threshold`, `style`: `noise` or `worm`).
 
 ## World generation
 
@@ -97,7 +97,9 @@ Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorR
 | `heightmap` | Legacy hash hills |
 | `overworld` / `hills` / `mountains` | Noise terrain presets |
 | `overworld_biomes` | Biomes, trees, decor, structures (default) |
-| `overworld_full` | Biomes + caves + full feature set |
+| `overworld_full` | Biomes + caves + ores + full feature set |
+| `beta_retro` | Beta-style cliffs with biomes |
+| `indev_retro` | Early heightmap hills with floating islands |
 
 `UComposableWorldGenerator` composes column stages: terrain, fluids, caves, prefab features. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 

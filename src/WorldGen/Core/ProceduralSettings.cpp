@@ -41,6 +41,14 @@ ProceduralGenerator ProceduralGeneratorFromString(const std::string &s)
   {
     return ProceduralGenerator::OverworldFull;
   }
+  if (s == "beta_retro")
+  {
+    return ProceduralGenerator::BetaRetro;
+  }
+  if (s == "indev_retro")
+  {
+    return ProceduralGenerator::IndevRetro;
+  }
   std::cerr << "WARN: unknown procedural.Generator '" << s
             << "', using overworld_biomes" << std::endl;
   return ProceduralGenerator::OverworldBiomes;
@@ -64,6 +72,10 @@ const char *ProceduralGeneratorToString(ProceduralGenerator g)
     return "overworld_biomes";
   case ProceduralGenerator::OverworldFull:
     return "overworld_full";
+  case ProceduralGenerator::BetaRetro:
+    return "beta_retro";
+  case ProceduralGenerator::IndevRetro:
+    return "indev_retro";
   default:
     return "overworld_biomes";
   }
@@ -88,6 +100,20 @@ const char *VerticalModeToString(VerticalMode m)
   return m == VerticalMode::Extended ? "extended" : "compact";
 }
 
+CaveStyle CaveStyleFromString(const std::string &s)
+{
+  if (s == "worm")
+  {
+    return CaveStyle::Worm;
+  }
+  return CaveStyle::Noise;
+}
+
+const char *CaveStyleToString(CaveStyle style)
+{
+  return style == CaveStyle::Worm ? "worm" : "noise";
+}
+
 namespace
 {
 
@@ -102,6 +128,9 @@ void ClampTuning(WorldGenTuning &t)
   t.biomeHillsWeight = ClampTuningValue(t.biomeHillsWeight);
   t.biomeTundraWeight = ClampTuningValue(t.biomeTundraWeight);
   t.terrainRoughness = ClampTuningValue(t.terrainRoughness);
+  t.biomeBlendRadius = std::clamp(t.biomeBlendRadius, 0.0f, 16.0f);
+  t.oreDensity = ClampTuningValue(t.oreDensity);
+  t.terrainErosion = std::clamp(t.terrainErosion, 0.0f, 1.0f);
   if (t.terrainRoughness < 0.25f)
   {
     t.terrainRoughness = 0.25f;
@@ -144,6 +173,7 @@ void ApplyGeneratorVerticalDefaults(ProceduralSettings &s)
   {
   case ProceduralGenerator::Flat:
   case ProceduralGenerator::Heightmap:
+  case ProceduralGenerator::IndevRetro:
     s.Vertical = VerticalMode::Compact;
     break;
   default:
@@ -220,19 +250,30 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
       s.Generator == ProceduralGenerator::OverworldFull ||
       s.Generator == ProceduralGenerator::Overworld ||
       s.Generator == ProceduralGenerator::Hills ||
-      s.Generator == ProceduralGenerator::Mountains)
+      s.Generator == ProceduralGenerator::Mountains ||
+      s.Generator == ProceduralGenerator::BetaRetro)
   {
     s.FillWater = true;
     s.FillFire = true;
   }
   if (s.Generator == ProceduralGenerator::OverworldBiomes ||
-      s.Generator == ProceduralGenerator::OverworldFull)
+      s.Generator == ProceduralGenerator::OverworldFull ||
+      s.Generator == ProceduralGenerator::BetaRetro)
   {
     s.EnableTrees = true;
   }
   if (s.Generator == ProceduralGenerator::OverworldFull)
   {
     s.EnableCaves = true;
+    s.EnableOres = true;
+  }
+  if (s.Generator == ProceduralGenerator::BetaRetro)
+  {
+    s.FillWater = true;
+    s.EnableTrees = true;
+    s.Tuning.biomeHillsWeight = 0.6f;
+    s.Tuning.vegetationDensity = 0.85f;
+    s.Tuning.decorationDensity = 0.6f;
   }
 }
 

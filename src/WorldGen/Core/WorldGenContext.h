@@ -40,6 +40,8 @@ struct WorldGenContext
   BlockId Water{BLOCK_AIR};
   BlockId Lava{BLOCK_AIR};
   BlockId Fire{BLOCK_AIR};
+  BlockId OreCoal{BLOCK_AIR};
+  BlockId OreIron{BLOCK_AIR};
 
   void ResolveBlockIds();
   void MarkDirtyColumn(int world_x, int world_z, int min_y, int max_y) const;

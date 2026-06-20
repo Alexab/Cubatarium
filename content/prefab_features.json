@@ -385,6 +385,34 @@
       "weight": 1,
       "seed_offset": 9103,
       "chance_per_column": 512
+    },
+    {
+      "prefab": "tower_stone",
+      "biomes": [
+        "tundra"
+      ],
+      "weight": 1,
+      "seed_offset": 9110,
+      "chance_per_column": 1000
+    },
+    {
+      "prefab": "ruin_stonehenge",
+      "biomes": [
+        "hills",
+        "tundra"
+      ],
+      "weight": 1,
+      "seed_offset": 9111,
+      "chance_per_column": 720
+    },
+    {
+      "prefab": "ruin_sandstone",
+      "biomes": [
+        "desert"
+      ],
+      "weight": 2,
+      "seed_offset": 9112,
+      "chance_per_column": 500
     }
   ]
 }

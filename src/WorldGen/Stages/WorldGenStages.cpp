@@ -62,10 +62,11 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return;
   }
+  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
   for (int y = 0; y <= surfaceY; ++y)
   {
     BlockId Id = rule.fillerBlock;
-    if (y == 0)
+    if (y <= bedrockTop)
     {
       Id = ctx.Bedrock;
     }

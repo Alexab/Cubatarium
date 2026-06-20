@@ -52,6 +52,18 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.terrainRoughness = tuning["terrain_roughness"].get<float>();
   }
+  if (tuning.contains("biome_blend_radius"))
+  {
+    out.biomeBlendRadius = tuning["biome_blend_radius"].get<float>();
+  }
+  if (tuning.contains("ore_density"))
+  {
+    out.oreDensity = tuning["ore_density"].get<float>();
+  }
+  if (tuning.contains("terrain_erosion"))
+  {
+    out.terrainErosion = tuning["terrain_erosion"].get<float>();
+  }
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
@@ -65,6 +77,9 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["biome_hills_weight"] = tuning.biomeHillsWeight;
   out["biome_tundra_weight"] = tuning.biomeTundraWeight;
   out["terrain_roughness"] = tuning.terrainRoughness;
+  out["biome_blend_radius"] = tuning.biomeBlendRadius;
+  out["ore_density"] = tuning.oreDensity;
+  out["terrain_erosion"] = tuning.terrainErosion;
 }
 
 } // namespace
@@ -97,9 +112,13 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.MaxHeight = p["max_height"].get<int>();
     }
-    if (p.contains("caves"))
+    if (p.contains("caves") && p["caves"].is_boolean())
     {
       settings.EnableCaves = p["caves"].get<bool>();
+    }
+    if (p.contains("enable_caves"))
+    {
+      settings.EnableCaves = p["enable_caves"].get<bool>();
     }
     if (p.contains("trees"))
     {
@@ -120,6 +139,36 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("fill_fire"))
     {
       settings.FillFire = p["fill_fire"].get<bool>();
+    }
+    if (p.contains("ores"))
+    {
+      settings.EnableOres = p["ores"].get<bool>();
+    }
+    if (p.contains("cave_params") && p["cave_params"].is_object())
+    {
+      const nlohmann::json &caves = p["cave_params"];
+      if (caves.contains("threshold"))
+      {
+        settings.Caves.threshold = caves["threshold"].get<float>();
+      }
+      if (caves.contains("min_y"))
+      {
+        settings.Caves.minY = caves["min_y"].get<int>();
+      }
+      if (caves.contains("max_depth_below_surface"))
+      {
+        settings.Caves.maxDepthBelowSurface =
+            caves["max_depth_below_surface"].get<int>();
+      }
+      if (caves.contains("scale"))
+      {
+        settings.Caves.scale = caves["scale"].get<float>();
+      }
+      if (caves.contains("style") && caves["style"].is_string())
+      {
+        settings.Caves.style =
+            CaveStyleFromString(caves["style"].get<std::string>());
+      }
     }
     if (p.contains("tuning") && p["tuning"].is_object())
     {
@@ -221,11 +270,20 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["sea_level"] = settings.SeaLevel;
   procedural["max_height"] = settings.MaxHeight;
   procedural["caves"] = settings.EnableCaves;
+  procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
   procedural["flat_surface_y"] = settings.FlatSurfaceY;
   procedural["fill_water"] = settings.FillWater;
   procedural["fill_lava"] = settings.FillLava;
   procedural["fill_fire"] = settings.FillFire;
+  procedural["ores"] = settings.EnableOres;
+  nlohmann::json caveParams;
+  caveParams["threshold"] = settings.Caves.threshold;
+  caveParams["min_y"] = settings.Caves.minY;
+  caveParams["max_depth_below_surface"] = settings.Caves.maxDepthBelowSurface;
+  caveParams["scale"] = settings.Caves.scale;
+  caveParams["style"] = CaveStyleToString(settings.Caves.style);
+  procedural["cave_params"] = caveParams;
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);
   procedural["tuning"] = tuning;

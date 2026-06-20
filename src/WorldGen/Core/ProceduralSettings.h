@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "WorldGen/Features/CaveCarver.h"
+
 namespace cutum
 {
 
@@ -15,6 +17,8 @@ enum class ProceduralGenerator
   Mountains,
   OverworldBiomes,
   OverworldFull,
+  BetaRetro,
+  IndevRetro,
 };
 
 enum class VerticalMode
@@ -34,6 +38,9 @@ struct WorldGenTuning
   float biomeHillsWeight{1.0f};
   float biomeTundraWeight{1.0f};
   float terrainRoughness{1.0f};
+  float biomeBlendRadius{6.0f};
+  float oreDensity{1.0f};
+  float terrainErosion{0.0f};
 };
 
 struct ProceduralSettings
@@ -46,10 +53,12 @@ struct ProceduralSettings
   int BedrockTopY{0};
   bool EnableCaves{false};
   bool EnableTrees{true};
+  bool EnableOres{false};
   int FlatSurfaceY{3};
   bool FillWater{false};
   bool FillLava{false};
   bool FillFire{false};
+  CaveParams Caves;
   WorldGenTuning Tuning;
 };
 
@@ -60,6 +69,9 @@ const char *ProceduralGeneratorToString(ProceduralGenerator g);
 
 VerticalMode VerticalModeFromString(const std::string &s);
 const char *VerticalModeToString(VerticalMode m);
+
+CaveStyle CaveStyleFromString(const std::string &s);
+const char *CaveStyleToString(CaveStyle style);
 
 void ResolveProceduralDefaults(ProceduralSettings &s);
 void ApplyGeneratorTierDefaults(ProceduralSettings &s);

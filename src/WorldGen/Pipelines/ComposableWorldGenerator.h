@@ -14,6 +14,7 @@ enum class ComposableTerrainMode
 {
   Flat,
   LegacyHash,
+  IndevRetro,
   NoiseHeightmap,
 };
 
@@ -24,6 +25,7 @@ struct ComposableWorldGenConfig
   bool UseBiomeSurface{false};
   bool Fluids{true};
   bool Caves{false};
+  bool Ores{false};
   bool Vegetation{false};
   bool Decoration{false};
   bool Structures{false};
@@ -42,13 +44,14 @@ public:
 private:
   int SampleSurfaceY(int worldX, int worldZ) const;
   BiomeId SampleBiome(int worldX, int worldZ, int surfaceY) const;
+  BiomeWeightSet SampleBiomeWeights(int worldX, int worldZ, int surfaceY) const;
   ColumnLayerRule BuildTerrainRule(int worldX, int worldZ, int surfaceY,
-                                   BiomeId biome) const;
+                                   BiomeId biome,
+                                   const BiomeWeightSet &weights) const;
 
   ComposableWorldGenConfig Config;
   std::optional<UOverworldHeightSampler> HeightSampler;
   std::optional<UBiomeSampler> BiomeSampler;
-  CaveParams CaveParams;
 };
 
 } // namespace cutum

@@ -1,0 +1,8 @@
+{
+  "id": "hills",
+  "height": {
+    "base_offset": 4,
+    "amplitude_mul": 1.6,
+    "volatility_mul": 1.2
+  }
+}

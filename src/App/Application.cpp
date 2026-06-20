@@ -36,6 +36,7 @@
 #include "Gui/Widgets/GuiWidget.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
@@ -201,6 +202,10 @@ void UApplication::Startup(const std::string &configPath)
     if (!UPrefabFeatureConfigStorage::LoadFromFile("content/prefab_features.json"))
     {
       CubatariumLogInfo("App", "prefab_features.json not loaded — legacy tree placement only");
+    }
+    if (!UWorldGenPack::LoadFromDirectory("content/worldgen_packs/default"))
+    {
+      CubatariumLogInfo("App", "worldgen pack not loaded — built-in biome defaults only");
     }
     GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
                                     *Core->GetPrefabLibrary());

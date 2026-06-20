@@ -1,5 +1,7 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Features/PrefabFeatureConfig.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -13,6 +15,44 @@ namespace
 uint32_t BiomePickHash(int x, int z, uint32_t seed)
 {
   return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ seed;
+}
+
+} // namespace
+
+int BiomeIndex(BiomeId biome)
+{
+  switch (biome)
+  {
+  case BiomeId::Forest:
+    return 1;
+  case BiomeId::Desert:
+    return 2;
+  case BiomeId::Hills:
+    return 3;
+  case BiomeId::Tundra:
+    return 4;
+  case BiomeId::Plains:
+  default:
+    return 0;
+  }
+}
+
+BiomeId BiomeFromIndex(int index)
+{
+  switch (index)
+  {
+  case 1:
+    return BiomeId::Forest;
+  case 2:
+    return BiomeId::Desert;
+  case 3:
+    return BiomeId::Hills;
+  case 4:
+    return BiomeId::Tundra;
+  case 0:
+  default:
+    return BiomeId::Plains;
+  }
 }
 
 float BiomeAffinity(BiomeId biome, float temperature, float moisture,
@@ -38,7 +78,121 @@ float BiomeAffinity(BiomeId biome, float temperature, float moisture,
   }
 }
 
-} // namespace
+int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
+                    const ProceduralSettings &settings)
+{
+  const float forest = weights.weights[BiomeIndex(BiomeId::Forest)];
+  const float plains = weights.weights[BiomeIndex(BiomeId::Plains)];
+  const float humid = forest + plains;
+  if (humid < 0.35f)
+  {
+    return surfaceY;
+  }
+  const float riverNoise =
+      FBM2D(static_cast<float>(x) * 0.008f, static_cast<float>(z) * 0.008f,
+            settings.Seed + 8801, 2, 0.5f, 2.0f);
+  if (riverNoise > 0.62f)
+  {
+    return std::max(1, settings.SeaLevel - 2);
+  }
+  return surfaceY;
+}
+
+float SampleHeightGradient(int x, int z, int coarseY, uint32_t seed)
+{
+  const int hx =
+      coarseY -
+      static_cast<int>(FBM2D(static_cast<float>(x + 3) * 0.01f,
+                             static_cast<float>(z) * 0.01f, seed + 91, 2, 0.5f,
+                             2.0f) *
+                       2.0f);
+  const int hz =
+      coarseY -
+      static_cast<int>(FBM2D(static_cast<float>(x) * 0.01f,
+                             static_cast<float>(z + 3) * 0.01f, seed + 92, 2,
+                             0.5f, 2.0f) *
+                       2.0f);
+  return static_cast<float>(std::abs(hx - hz));
+}
+
+int ApplyErosionLite(int x, int z, int surfaceY, uint32_t seed,
+                     const ProceduralSettings &settings)
+{
+  const float erosion = std::clamp(settings.Tuning.terrainErosion, 0.0f, 1.0f);
+  if (erosion <= 0.0f)
+  {
+    return surfaceY;
+  }
+  const float gradient = SampleHeightGradient(x, z, surfaceY, seed);
+  if (gradient > 2.0f * erosion)
+  {
+    return std::max(1, surfaceY - static_cast<int>(gradient * erosion));
+  }
+  return surfaceY;
+}
+
+BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome)
+{
+  if (const BiomeHeightProfile *packProfile =
+          UWorldGenPack::HeightProfileFor(BiomeIdToString(biome)))
+  {
+    return *packProfile;
+  }
+  BiomeHeightProfile profile;
+  switch (biome)
+  {
+  case BiomeId::Desert:
+    profile.baseOffsetBlocks = -2.f;
+    profile.amplitudeMultiplier = 0.45f;
+    profile.volatilityMultiplier = 0.5f;
+    break;
+  case BiomeId::Hills:
+    profile.baseOffsetBlocks = 4.f;
+    profile.amplitudeMultiplier = 1.6f;
+    profile.volatilityMultiplier = 1.2f;
+    break;
+  case BiomeId::Forest:
+    profile.baseOffsetBlocks = 0.f;
+    profile.amplitudeMultiplier = 1.0f;
+    profile.volatilityMultiplier = 1.0f;
+    break;
+  case BiomeId::Tundra:
+    profile.baseOffsetBlocks = 1.f;
+    profile.amplitudeMultiplier = 0.7f;
+    profile.volatilityMultiplier = 0.8f;
+    break;
+  case BiomeId::Plains:
+  default:
+    profile.baseOffsetBlocks = 0.f;
+    profile.amplitudeMultiplier = 0.85f;
+    profile.volatilityMultiplier = 0.9f;
+    break;
+  }
+  return profile;
+}
+
+int ApplyBiomeHeightProfile(int coarseY, int seaLevel, int maxHeight,
+                            const BiomeHeightProfile &profile)
+{
+  const float delta = static_cast<float>(coarseY - seaLevel);
+  const float scaled =
+      delta * profile.amplitudeMultiplier + profile.baseOffsetBlocks;
+  int y = seaLevel + static_cast<int>(std::lround(scaled));
+  return std::clamp(y, 1, maxHeight);
+}
+
+void ComputeBiomeClimate(int x, int z, uint32_t seed, float &temperature,
+                         float &moisture)
+{
+  const float tempRaw =
+      FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
+            seed + 1000, 3, 0.5f, 2.0f);
+  const float moistRaw =
+      FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
+            seed + 2000, 3, 0.5f, 2.0f);
+  temperature = (tempRaw + 1.0f) * 0.5f;
+  moisture = (moistRaw + 1.0f) * 0.5f;
+}
 
 BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm)
 {
@@ -77,6 +231,178 @@ float BiomeTuningWeight(BiomeId biome, const WorldGenTuning &tuning)
   default:
     return tuning.biomePlainsWeight;
   }
+}
+
+BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
+                                   int maxHeight, uint32_t seed,
+                                   const WorldGenTuning &tuning)
+{
+  float temperature = 0.5f;
+  float moisture = 0.5f;
+  ComputeBiomeClimate(x, z, seed, temperature, moisture);
+  const float denom = static_cast<float>(std::max(1, maxHeight - seaLevel));
+  const float localHeightNorm =
+      std::clamp(static_cast<float>(coarseY - seaLevel) / denom, 0.0f, 1.0f);
+  const BiomeId primary =
+      ClassifyBiome(temperature, moisture, localHeightNorm);
+
+  BiomeWeightSet result;
+  float total = 0.0f;
+  for (int i = 0; i < kBiomeCount; ++i)
+  {
+    const BiomeId biome = BiomeFromIndex(i);
+    const float tuningWeight = BiomeTuningWeight(biome, tuning);
+    if (tuningWeight <= 0.0f)
+    {
+      result.weights[i] = 0.0f;
+      continue;
+    }
+    float w = BiomeAffinity(biome, temperature, moisture, localHeightNorm) *
+              tuningWeight;
+    if (biome == primary)
+    {
+      w *= 2.0f;
+    }
+    result.weights[i] = w;
+    total += w;
+  }
+  if (total > 0.0f)
+  {
+    for (float &w : result.weights)
+    {
+      w /= total;
+    }
+  }
+  else
+  {
+    result.weights[BiomeIndex(primary)] = 1.0f;
+  }
+  return result;
+}
+
+BiomeWeightSet BlendedBiomeWeights(int x, int z, int coarseY, int seaLevel,
+                                   int maxHeight, uint32_t seed,
+                                   const WorldGenTuning &tuning)
+{
+  const int radius =
+      std::clamp(static_cast<int>(std::lround(tuning.biomeBlendRadius)), 0, 16);
+  if (radius <= 0)
+  {
+    return ComputeBiomeWeights(x, z, coarseY, seaLevel, maxHeight, seed,
+                               tuning);
+  }
+
+  BiomeWeightSet blended;
+  float totalKernel = 0.0f;
+  const int step = std::max(1, radius / 3);
+  for (int dx = -radius; dx <= radius; dx += step)
+  {
+    for (int dz = -radius; dz <= radius; dz += step)
+    {
+      const float dist = std::sqrt(static_cast<float>(dx * dx + dz * dz));
+      if (dist > static_cast<float>(radius))
+      {
+        continue;
+      }
+      const float kernel = 1.0f - dist / static_cast<float>(radius + 1);
+      const BiomeWeightSet local = ComputeBiomeWeights(
+          x + dx, z + dz, coarseY, seaLevel, maxHeight, seed, tuning);
+      for (int i = 0; i < kBiomeCount; ++i)
+      {
+        blended.weights[i] += local.weights[i] * kernel;
+      }
+      totalKernel += kernel;
+    }
+  }
+  if (totalKernel > 0.0f)
+  {
+    for (float &w : blended.weights)
+    {
+      w /= totalKernel;
+    }
+  }
+  return blended;
+}
+
+BiomeId DominantBiome(const BiomeWeightSet &weights)
+{
+  int best = 0;
+  float bestW = -1.0f;
+  for (int i = 0; i < kBiomeCount; ++i)
+  {
+    if (weights.weights[i] > bestW)
+    {
+      bestW = weights.weights[i];
+      best = i;
+    }
+  }
+  return BiomeFromIndex(best);
+}
+
+BiomeId PickSurfaceBiome(int x, int z, const BiomeWeightSet &weights)
+{
+  const uint32_t pick =
+      BiomePickHash(x, z, 7711) % 1000;
+  float cursor = static_cast<float>(pick) / 1000.0f;
+  for (int i = 0; i < kBiomeCount; ++i)
+  {
+    if (weights.weights[i] <= 0.0f)
+    {
+      continue;
+    }
+    cursor -= weights.weights[i];
+    if (cursor <= 0.0f)
+    {
+      return BiomeFromIndex(i);
+    }
+  }
+  return DominantBiome(weights);
+}
+
+SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
+{
+  const float n =
+      FBM2D(static_cast<float>(x) * 0.01f, static_cast<float>(z) * 0.01f,
+            seed + 5500 + BiomeIndex(biome) * 17, 2, 0.5f, 2.0f);
+  const float t = (n + 1.0f) * 0.5f;
+  switch (biome)
+  {
+  case BiomeId::Forest:
+    if (t < 0.33f)
+    {
+      return SubBiomeId::SparseForest;
+    }
+    if (t < 0.66f)
+    {
+      return SubBiomeId::Woodland;
+    }
+    return SubBiomeId::DenseForest;
+  case BiomeId::Desert:
+    return t < 0.5f ? SubBiomeId::ScrubDesert : SubBiomeId::Dunes;
+  default:
+    return SubBiomeId::Default;
+  }
+}
+
+int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
+                             const ProceduralSettings &settings, uint32_t seed,
+                             const WorldGenTuning &tuning)
+{
+  const BiomeWeightSet weights = BlendedBiomeWeights(
+      x, z, coarseY, settings.SeaLevel, settings.MaxHeight, seed, tuning);
+  float blendedDelta = 0.0f;
+  for (int i = 0; i < kBiomeCount; ++i)
+  {
+    const BiomeHeightProfile profile = BiomeHeightProfileFor(BiomeFromIndex(i));
+    const float delta = static_cast<float>(coarseY - settings.SeaLevel);
+    blendedDelta += weights.weights[i] *
+                    (delta * profile.amplitudeMultiplier +
+                     profile.baseOffsetBlocks);
+  }
+  int y = settings.SeaLevel + static_cast<int>(std::lround(blendedDelta));
+  y = ApplyRiverCarve(x, z, y, weights, settings);
+  y = ApplyErosionLite(x, z, y, seed, settings);
+  return std::clamp(y, 1, settings.MaxHeight);
 }
 
 BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
@@ -140,19 +466,19 @@ UBiomeSampler::UBiomeSampler(uint32_t Seed, const WorldGenTuning &tuning)
 BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int SeaLevel,
                           int MaxHeight) const
 {
-  const float tempRaw =
-      FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
-            Seed + 1000, 3, 0.5f, 2.0f);
-  const float moistRaw =
-      FBM2D(static_cast<float>(x) * 0.002f, static_cast<float>(z) * 0.002f,
-            Seed + 2000, 3, 0.5f, 2.0f);
-  const float temperature = (tempRaw + 1.0f) * 0.5f;
-  const float moisture = (moistRaw + 1.0f) * 0.5f;
-  const float denom = static_cast<float>(std::max(1, MaxHeight - SeaLevel));
-  const float localHeightNorm =
-      std::clamp(static_cast<float>(surfaceY - SeaLevel) / denom, 0.0f, 1.0f);
-  return PickWeightedBiome(x, z, Seed, temperature, moisture, localHeightNorm,
-                           Tuning);
+  return DominantBiome(WeightsAt(x, z, surfaceY, SeaLevel, MaxHeight));
+}
+
+BiomeWeightSet UBiomeSampler::WeightsAt(int x, int z, int surfaceY,
+                                        int SeaLevel, int MaxHeight) const
+{
+  return BlendedBiomeWeights(x, z, surfaceY, SeaLevel, MaxHeight, Seed, Tuning);
+}
+
+int UBiomeSampler::RefineSurfaceY(int x, int z, int coarseY,
+                                  const ProceduralSettings &settings) const
+{
+  return RefineSurfaceYWithBiomes(x, z, coarseY, settings, Seed, Tuning);
 }
 
 BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,
@@ -180,6 +506,50 @@ BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,
     rule.subsurface = ctx.Dirt;
     break;
   }
+  return rule;
+}
+
+BiomeSurfaceRule UBiomeSampler::BlendedSurfaceRule(
+    int x, int z, const BiomeWeightSet &weights, const WorldGenContext &ctx,
+    int surfaceY) const
+{
+  const BiomeId pick = PickSurfaceBiome(x, z, weights);
+  BiomeSurfaceRule rule = SurfaceRule(pick, ctx);
+
+  if (ctx.Settings.FillWater &&
+      surfaceY <= ctx.Settings.SeaLevel + 2 &&
+      surfaceY >= ctx.Settings.SeaLevel - 1)
+  {
+    const float land =
+        weights.weights[BiomeIndex(BiomeId::Plains)] +
+        weights.weights[BiomeIndex(BiomeId::Forest)] +
+        weights.weights[BiomeIndex(BiomeId::Hills)];
+    if (land > 0.2f)
+    {
+      rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : rule.surface;
+      rule.subsurface =
+          ctx.Gravel != BLOCK_AIR ? ctx.Gravel : rule.subsurface;
+    }
+  }
+
+  const SubBiomeId sub = SubBiomeFor(x, z, pick, Seed);
+  if (pick == BiomeId::Desert && sub == SubBiomeId::Dunes)
+  {
+    rule.subsurface = ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : ctx.Sand;
+  }
+  if (pick == BiomeId::Forest && sub == SubBiomeId::DenseForest)
+  {
+    rule.subsurface = ctx.Dirt;
+  }
+
+  const float erosion = std::clamp(ctx.Settings.Tuning.terrainErosion, 0.0f, 1.0f);
+  if (erosion > 0.2f &&
+      SampleHeightGradient(x, z, surfaceY, Seed) > 2.5f * erosion)
+  {
+    rule.surface = ctx.Stone;
+    rule.subsurface = ctx.Gravel != BLOCK_AIR ? ctx.Gravel : ctx.Stone;
+  }
+
   return rule;
 }
 

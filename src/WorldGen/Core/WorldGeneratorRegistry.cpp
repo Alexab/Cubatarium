@@ -15,6 +15,7 @@ void ApplyFlatDefaults(ProceduralSettings &s)
   s.FillFire = false;
   s.EnableTrees = false;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyHeightmapDefaults(ProceduralSettings &s)
@@ -24,6 +25,7 @@ void ApplyHeightmapDefaults(ProceduralSettings &s)
   s.FillFire = false;
   s.EnableTrees = false;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyOverworldDefaults(ProceduralSettings &s)
@@ -32,6 +34,7 @@ void ApplyOverworldDefaults(ProceduralSettings &s)
   ApplyGeneratorTierDefaults(s);
   s.EnableTrees = false;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyHillsDefaults(ProceduralSettings &s)
@@ -40,6 +43,7 @@ void ApplyHillsDefaults(ProceduralSettings &s)
   ApplyGeneratorTierDefaults(s);
   s.EnableTrees = false;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyMountainsDefaults(ProceduralSettings &s)
@@ -48,6 +52,7 @@ void ApplyMountainsDefaults(ProceduralSettings &s)
   ApplyGeneratorTierDefaults(s);
   s.EnableTrees = false;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyBiomesDefaults(ProceduralSettings &s)
@@ -56,6 +61,7 @@ void ApplyBiomesDefaults(ProceduralSettings &s)
   ApplyGeneratorTierDefaults(s);
   s.EnableTrees = true;
   s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 void ApplyFullDefaults(ProceduralSettings &s)
@@ -64,6 +70,29 @@ void ApplyFullDefaults(ProceduralSettings &s)
   ApplyGeneratorTierDefaults(s);
   s.EnableTrees = true;
   s.EnableCaves = true;
+  s.EnableOres = true;
+}
+
+void ApplyBetaRetroDefaults(ProceduralSettings &s)
+{
+  s.Generator = ProceduralGenerator::BetaRetro;
+  ApplyGeneratorTierDefaults(s);
+  s.EnableTrees = true;
+  s.EnableCaves = false;
+  s.EnableOres = false;
+  s.Tuning.biomeHillsWeight = 0.6f;
+  s.Tuning.vegetationDensity = 0.85f;
+  s.Tuning.decorationDensity = 0.6f;
+}
+
+void ApplyIndevRetroDefaults(ProceduralSettings &s)
+{
+  s.Generator = ProceduralGenerator::IndevRetro;
+  s.FillWater = false;
+  s.FillFire = false;
+  s.EnableTrees = false;
+  s.EnableCaves = false;
+  s.EnableOres = false;
 }
 
 std::unique_ptr<IWorldGenPipeline> CreateFlat(WorldGenContext ctx)
@@ -132,11 +161,35 @@ std::unique_ptr<IWorldGenPipeline> CreateFull(WorldGenContext ctx)
   config.UseBiomeSurface = true;
   config.Fluids = true;
   config.Caves = true;
+  config.Ores = true;
   config.Vegetation = true;
   config.Decoration = true;
   config.Structures = true;
   config.LavaPools = true;
   config.FirePatch = true;
+  return std::make_unique<UComposableWorldGenerator>(ctx, config);
+}
+
+std::unique_ptr<IWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
+{
+  ComposableWorldGenConfig config;
+  config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
+  config.HeightPreset = HeightPreset::BetaRetro;
+  config.UseBiomeSurface = true;
+  config.Fluids = true;
+  config.Vegetation = true;
+  config.Decoration = true;
+  config.Structures = true;
+  config.LavaPools = true;
+  config.FirePatch = true;
+  return std::make_unique<UComposableWorldGenerator>(ctx, config);
+}
+
+std::unique_ptr<IWorldGenPipeline> CreateIndevRetro(WorldGenContext ctx)
+{
+  ComposableWorldGenConfig config;
+  config.TerrainMode = ComposableTerrainMode::IndevRetro;
+  config.Fluids = ctx.Settings.FillWater;
   return std::make_unique<UComposableWorldGenerator>(ctx, config);
 }
 
@@ -180,11 +233,24 @@ constexpr WorldGeneratorDescriptor kDescriptors[] = {
      CreateBiomes},
     {ProceduralGenerator::OverworldFull,
      "Overworld (Full)",
-     "Biomes, caves, vegetation, decor and structures.",
+     "Biomes, caves, ores, vegetation, decor and structures.",
      kFeatureBiomes | kFeatureTrees | kFeatureStructures | kFeatureCaves |
-         kFeatureFluids | kFeatureVertical | kFeatureTuning,
+         kFeatureOres | kFeatureFluids | kFeatureVertical | kFeatureTuning,
      ApplyFullDefaults,
      CreateFull},
+    {ProceduralGenerator::BetaRetro,
+     "Beta Retro",
+     "Classic beta-style cliffs with biomes and sparse decor.",
+     kFeatureBiomes | kFeatureTrees | kFeatureStructures | kFeatureFluids |
+         kFeatureVertical | kFeatureTuning,
+     ApplyBetaRetroDefaults,
+     CreateBetaRetro},
+    {ProceduralGenerator::IndevRetro,
+     "Indev Retro",
+     "Early heightmap hills with rare floating islands.",
+     kFeatureFluids | kFeatureVertical,
+     ApplyIndevRetroDefaults,
+     CreateIndevRetro},
 };
 
 } // namespace

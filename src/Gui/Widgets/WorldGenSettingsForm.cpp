@@ -146,9 +146,50 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
     BiomeDesertInput->SetText(
         std::to_string(FormSettings.Tuning.biomeDesertWeight));
   }
+  if (BiomePlainsInput)
+  {
+    BiomePlainsInput->SetText(
+        std::to_string(FormSettings.Tuning.biomePlainsWeight));
+  }
+  if (BiomeHillsInput)
+  {
+    BiomeHillsInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeHillsWeight));
+  }
+  if (BiomeTundraInput)
+  {
+    BiomeTundraInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeTundraWeight));
+  }
+  if (BiomeBlendInput)
+  {
+    BiomeBlendInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeBlendRadius));
+  }
+  if (OreDensityInput)
+  {
+    OreDensityInput->SetText(std::to_string(FormSettings.Tuning.oreDensity));
+  }
+  if (TerrainErosionInput)
+  {
+    TerrainErosionInput->SetText(
+        std::to_string(FormSettings.Tuning.terrainErosion));
+  }
+  if (CaveThresholdInput)
+  {
+    CaveThresholdInput->SetText(std::to_string(FormSettings.Caves.threshold));
+  }
+  if (CaveStyleInput)
+  {
+    CaveStyleInput->SetText(CaveStyleToString(FormSettings.Caves.style));
+  }
   if (CavesBox)
   {
     CavesBox->SetChecked(FormSettings.EnableCaves);
+  }
+  if (OresBox)
+  {
+    OresBox->SetChecked(FormSettings.EnableOres);
   }
   if (TreesBox)
   {
@@ -219,9 +260,52 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
     s.Tuning.biomeDesertWeight =
         ParseFloatOr(BiomeDesertInput->GetText(), s.Tuning.biomeDesertWeight);
   }
+  if (BiomePlainsInput)
+  {
+    s.Tuning.biomePlainsWeight =
+        ParseFloatOr(BiomePlainsInput->GetText(), s.Tuning.biomePlainsWeight);
+  }
+  if (BiomeHillsInput)
+  {
+    s.Tuning.biomeHillsWeight =
+        ParseFloatOr(BiomeHillsInput->GetText(), s.Tuning.biomeHillsWeight);
+  }
+  if (BiomeTundraInput)
+  {
+    s.Tuning.biomeTundraWeight =
+        ParseFloatOr(BiomeTundraInput->GetText(), s.Tuning.biomeTundraWeight);
+  }
+  if (BiomeBlendInput)
+  {
+    s.Tuning.biomeBlendRadius =
+        ParseFloatOr(BiomeBlendInput->GetText(), s.Tuning.biomeBlendRadius);
+  }
+  if (OreDensityInput)
+  {
+    s.Tuning.oreDensity =
+        ParseFloatOr(OreDensityInput->GetText(), s.Tuning.oreDensity);
+  }
+  if (TerrainErosionInput)
+  {
+    s.Tuning.terrainErosion =
+        ParseFloatOr(TerrainErosionInput->GetText(), s.Tuning.terrainErosion);
+  }
+  if (CaveThresholdInput)
+  {
+    s.Caves.threshold =
+        ParseFloatOr(CaveThresholdInput->GetText(), s.Caves.threshold);
+  }
+  if (CaveStyleInput)
+  {
+    s.Caves.style = CaveStyleFromString(CaveStyleInput->GetText());
+  }
   if (CavesBox)
   {
     s.EnableCaves = CavesBox->IsChecked();
+  }
+  if (OresBox)
+  {
+    s.EnableOres = OresBox->IsChecked();
   }
   if (TreesBox)
   {
@@ -284,6 +368,7 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   const bool showTuning = (flags & kFeatureTuning) != 0;
   const bool showBiomeTuning = (flags & kFeatureBiomes) != 0;
   const bool showStructures = (flags & kFeatureStructures) != 0;
+  const bool showOres = (flags & kFeatureOres) != 0;
 
   SetWidgetVisible(FlatYLabel, showFlat);
   SetWidgetVisible(FlatYInput, showFlat);
@@ -304,6 +389,23 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(BiomeForestInput, showBiomeTuning);
   SetWidgetVisible(BiomeDesertLabel, showBiomeTuning);
   SetWidgetVisible(BiomeDesertInput, showBiomeTuning);
+  SetWidgetVisible(BiomePlainsLabel, showBiomeTuning);
+  SetWidgetVisible(BiomePlainsInput, showBiomeTuning);
+  SetWidgetVisible(BiomeHillsLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeHillsInput, showBiomeTuning);
+  SetWidgetVisible(BiomeTundraLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeTundraInput, showBiomeTuning);
+  SetWidgetVisible(BiomeBlendLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeBlendInput, showBiomeTuning);
+  SetWidgetVisible(TerrainErosionLabel, showBiomeTuning);
+  SetWidgetVisible(TerrainErosionInput, showBiomeTuning);
+  SetWidgetVisible(OreDensityLabel, showOres);
+  SetWidgetVisible(OreDensityInput, showOres);
+  SetWidgetVisible(OresBox, showOres);
+  SetWidgetVisible(CaveThresholdLabel, showCaves);
+  SetWidgetVisible(CaveThresholdInput, showCaves);
+  SetWidgetVisible(CaveStyleLabel, showCaves);
+  SetWidgetVisible(CaveStyleInput, showCaves);
 }
 
 void UWorldGenSettingsForm::CycleVertical()
@@ -458,11 +560,81 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   desertIn->SetText(std::to_string(FormSettings.Tuning.biomeDesertWeight));
   panel.AddChild(std::move(desertIn));
 
+  auto plainsLabel = std::make_unique<UGuiLabel>(Theme, "Plains biome weight:");
+  BiomePlainsLabel = plainsLabel.get();
+  panel.AddChild(std::move(plainsLabel));
+  auto plainsIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomePlainsInput = plainsIn.get();
+  plainsIn->SetText(std::to_string(FormSettings.Tuning.biomePlainsWeight));
+  panel.AddChild(std::move(plainsIn));
+
+  auto hillsLabel = std::make_unique<UGuiLabel>(Theme, "Hills biome weight:");
+  BiomeHillsLabel = hillsLabel.get();
+  panel.AddChild(std::move(hillsLabel));
+  auto hillsIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeHillsInput = hillsIn.get();
+  hillsIn->SetText(std::to_string(FormSettings.Tuning.biomeHillsWeight));
+  panel.AddChild(std::move(hillsIn));
+
+  auto tundraLabel = std::make_unique<UGuiLabel>(Theme, "Tundra biome weight:");
+  BiomeTundraLabel = tundraLabel.get();
+  panel.AddChild(std::move(tundraLabel));
+  auto tundraIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeTundraInput = tundraIn.get();
+  tundraIn->SetText(std::to_string(FormSettings.Tuning.biomeTundraWeight));
+  panel.AddChild(std::move(tundraIn));
+
+  auto blendLabel = std::make_unique<UGuiLabel>(Theme, "Biome blend radius:");
+  BiomeBlendLabel = blendLabel.get();
+  panel.AddChild(std::move(blendLabel));
+  auto blendIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeBlendInput = blendIn.get();
+  blendIn->SetText(std::to_string(FormSettings.Tuning.biomeBlendRadius));
+  panel.AddChild(std::move(blendIn));
+
+  auto erosionLabel = std::make_unique<UGuiLabel>(Theme, "Terrain erosion (0-1):");
+  TerrainErosionLabel = erosionLabel.get();
+  panel.AddChild(std::move(erosionLabel));
+  auto erosionIn = std::make_unique<UGuiTextInput>(Theme);
+  TerrainErosionInput = erosionIn.get();
+  erosionIn->SetText(std::to_string(FormSettings.Tuning.terrainErosion));
+  panel.AddChild(std::move(erosionIn));
+
+  auto oreLabel = std::make_unique<UGuiLabel>(Theme, "Ore density (0-2):");
+  OreDensityLabel = oreLabel.get();
+  panel.AddChild(std::move(oreLabel));
+  auto oreIn = std::make_unique<UGuiTextInput>(Theme);
+  OreDensityInput = oreIn.get();
+  oreIn->SetText(std::to_string(FormSettings.Tuning.oreDensity));
+  panel.AddChild(std::move(oreIn));
+
+  auto caveThrLabel = std::make_unique<UGuiLabel>(Theme, "Cave threshold:");
+  CaveThresholdLabel = caveThrLabel.get();
+  panel.AddChild(std::move(caveThrLabel));
+  auto caveThrIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveThresholdInput = caveThrIn.get();
+  caveThrIn->SetText(std::to_string(FormSettings.Caves.threshold));
+  panel.AddChild(std::move(caveThrIn));
+
+  auto caveStyleLabel = std::make_unique<UGuiLabel>(Theme, "Cave style (noise/worm):");
+  CaveStyleLabel = caveStyleLabel.get();
+  panel.AddChild(std::move(caveStyleLabel));
+  auto caveStyleIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveStyleInput = caveStyleIn.get();
+  caveStyleIn->SetText(CaveStyleToString(FormSettings.Caves.style));
+  panel.AddChild(std::move(caveStyleIn));
+
   auto caves = std::make_unique<UGuiCheckbox>(Theme, "Caves");
   CavesBox = caves.get();
   caves->SetChecked(FormSettings.EnableCaves);
   caves->SetOnChanged([this](bool v) { FormSettings.EnableCaves = v; });
   panel.AddChild(std::move(caves));
+
+  auto ores = std::make_unique<UGuiCheckbox>(Theme, "Ores");
+  OresBox = ores.get();
+  ores->SetChecked(FormSettings.EnableOres);
+  ores->SetOnChanged([this](bool v) { FormSettings.EnableOres = v; });
+  panel.AddChild(std::move(ores));
 
   auto trees = std::make_unique<UGuiCheckbox>(Theme, "Trees");
   TreesBox = trees.get();
@@ -518,11 +690,28 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({BiomeForestInput, 12, 1, 1, 1, 32});
   items.push_back({BiomeDesertLabel, 13, 0, 1, 1, 28});
   items.push_back({BiomeDesertInput, 13, 1, 1, 1, 32});
-  items.push_back({CavesBox, 14, 0, 1, 1, 30});
-  items.push_back({TreesBox, 14, 1, 1, 1, 30});
-  items.push_back({WaterBox, 15, 0, 1, 1, 30});
-  items.push_back({LavaBox, 15, 1, 1, 1, 30});
-  items.push_back({FireBox, 16, 0, 1, 2, 30});
+  items.push_back({BiomePlainsLabel, 14, 0, 1, 1, 28});
+  items.push_back({BiomePlainsInput, 14, 1, 1, 1, 32});
+  items.push_back({BiomeHillsLabel, 15, 0, 1, 1, 28});
+  items.push_back({BiomeHillsInput, 15, 1, 1, 1, 32});
+  items.push_back({BiomeTundraLabel, 16, 0, 1, 1, 28});
+  items.push_back({BiomeTundraInput, 16, 1, 1, 1, 32});
+  items.push_back({BiomeBlendLabel, 17, 0, 1, 1, 28});
+  items.push_back({BiomeBlendInput, 17, 1, 1, 1, 32});
+  items.push_back({TerrainErosionLabel, 18, 0, 1, 1, 28});
+  items.push_back({TerrainErosionInput, 18, 1, 1, 1, 32});
+  items.push_back({OreDensityLabel, 19, 0, 1, 1, 28});
+  items.push_back({OreDensityInput, 19, 1, 1, 1, 32});
+  items.push_back({CaveThresholdLabel, 20, 0, 1, 1, 28});
+  items.push_back({CaveThresholdInput, 20, 1, 1, 1, 32});
+  items.push_back({CaveStyleLabel, 21, 0, 1, 1, 28});
+  items.push_back({CaveStyleInput, 21, 1, 1, 1, 32});
+  items.push_back({CavesBox, 22, 0, 1, 1, 30});
+  items.push_back({OresBox, 22, 1, 1, 1, 30});
+  items.push_back({TreesBox, 23, 0, 1, 1, 30});
+  items.push_back({WaterBox, 23, 1, 1, 1, 30});
+  items.push_back({LavaBox, 24, 0, 1, 1, 30});
+  items.push_back({FireBox, 24, 1, 1, 1, 30});
   return items;
 }
 

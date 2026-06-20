@@ -130,21 +130,19 @@ set(SOURCES
     src/WorldGen/Core/ProceduralSettings.cpp
     src/WorldGen/Core/ProceduralConfigIO.cpp
     src/WorldGen/Core/WorldGeneratorRegistry.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
     src/World/Prefabs/PrefabUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/IWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
-    src/WorldGen/Pipelines/FlatPipeline.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
-    src/WorldGen/Pipelines/OverworldPipeline.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
-    src/WorldGen/Pipelines/OverworldBiomesPipeline.cpp
     src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/PrefabFeatureConfig.cpp
     src/WorldGen/Features/PrefabFeaturePlacer.cpp
-    src/WorldGen/Pipelines/OverworldFullPipeline.cpp
     src/WorldGen/Core/ProceduralWorldGenFactory.cpp
     src/World/Raycast/BlockRaycast.cpp
     src/World/Chunks/Chunk.cpp
@@ -241,6 +239,7 @@ set(HEADERS
     src/Render/Engine/AnimationClock.h
     src/World/Core/BlockWorld.h
     src/WorldGen/Core/WorldGeneratorDescriptor.h
+    src/WorldGen/Core/WorldGenPack.h
     src/WorldGen/Pipelines/ComposableWorldGenerator.h
     src/WorldGen/Core/Noise.h
     src/WorldGen/Core/ProceduralSettings.h

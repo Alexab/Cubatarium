@@ -1,0 +1,8 @@
+{
+  "id": "desert",
+  "height": {
+    "base_offset": -2,
+    "amplitude_mul": 0.45,
+    "volatility_mul": 0.5
+  }
+}
