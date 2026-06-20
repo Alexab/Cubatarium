@@ -21,6 +21,7 @@ class UWorldResourcePacksScreen : public UGuiScreenBase
 public:
   UWorldResourcePacksScreen(IGuiMenuHost *host,
                             std::function<void()> onClose);
+  ~UWorldResourcePacksScreen();
 
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;

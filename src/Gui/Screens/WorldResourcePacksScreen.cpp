@@ -30,6 +30,8 @@ UWorldResourcePacksScreen::UWorldResourcePacksScreen(
 {
 }
 
+UWorldResourcePacksScreen::~UWorldResourcePacksScreen() = default;
+
 void UWorldResourcePacksScreen::OnApply()
 {
   if (!Host || !PackForm)
