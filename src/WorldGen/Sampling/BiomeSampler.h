@@ -1,5 +1,6 @@
 #pragma once
 
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include <cstdint>
 
@@ -24,15 +25,21 @@ struct BiomeSurfaceRule
 class UBiomeSampler
 {
 public:
-  explicit UBiomeSampler(uint32_t Seed);
+  UBiomeSampler(uint32_t Seed, const WorldGenTuning &tuning);
 
   BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;
   BiomeSurfaceRule SurfaceRule(BiomeId biome, const WorldGenContext &ctx) const;
 
 private:
   uint32_t Seed;
+  WorldGenTuning Tuning;
 };
 
 BiomeId ClassifyBiome(float temperature, float moisture, float localHeightNorm);
+BiomeId PickWeightedBiome(int x, int z, uint32_t seed,
+                          float temperature, float moisture,
+                          float localHeightNorm, const WorldGenTuning &tuning);
+
+float BiomeTuningWeight(BiomeId biome, const WorldGenTuning &tuning);
 
 } // namespace cutum

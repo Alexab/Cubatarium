@@ -41,10 +41,14 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int MaxHeight)
 
 UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
                                                  int MaxHeight,
-                                                 HeightPreset preset)
+                                                 HeightPreset preset,
+                                                 float terrainRoughness)
     : Seed(Seed), SeaLevel(SeaLevel), MaxHeight(MaxHeight),
       Params(ParamsForPreset(preset, MaxHeight))
 {
+  const float roughness = std::max(0.25f, terrainRoughness);
+  Params.amplitudeBlocks *= roughness;
+  Params.detailWeight *= roughness;
   if (preset == HeightPreset::Mountains)
   {
     Params.stoneSurfaceAboveY =

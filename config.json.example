@@ -2,18 +2,9 @@
     "default_user": "Username",
     "default_world": "World_001",
     "world_seed": 12345,
-    "terrain": "heightmap",
+    "terrain": "overworld_biomes",
     "procedural": {
-        "generator": "overworld_biomes",
-        "vertical": "compact",
-        "sea_level": 4,
-        "max_height": 12,
-        "caves": false,
-        "trees": false,
-        "flat_surface_y": 3,
-        "fill_water": true,
-        "fill_lava": false,
-        "fill_fire": true
+        "generator": "overworld_biomes"
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,

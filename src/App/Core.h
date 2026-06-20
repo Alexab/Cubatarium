@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "App/Settings/AppSettingsSnapshot.h"
@@ -158,6 +159,7 @@ private:
   std::vector<std::string> ActiveResourcePacksEnabled;
   std::vector<std::string> PendingNewWorldResourcePacks;
   ResourcePackSelection PendingNewWorldPackSelection;
+  std::optional<ProceduralSettings> PendingNewWorldSettings;
   ResourcePackSelection ActivePackSelection;
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;

@@ -1,10 +1,73 @@
 #include "WorldGen/Core/ProceduralConfigIO.h"
+#include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "App/Settings/UiSettings.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 
 namespace cutum
 {
+
+namespace
+{
+
+void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
+{
+  if (!tuning.is_object())
+  {
+    return;
+  }
+  if (tuning.contains("vegetation_density"))
+  {
+    out.vegetationDensity = tuning["vegetation_density"].get<float>();
+  }
+  if (tuning.contains("decoration_density"))
+  {
+    out.decorationDensity = tuning["decoration_density"].get<float>();
+  }
+  if (tuning.contains("structure_density"))
+  {
+    out.structureDensity = tuning["structure_density"].get<float>();
+  }
+  if (tuning.contains("biome_plains_weight"))
+  {
+    out.biomePlainsWeight = tuning["biome_plains_weight"].get<float>();
+  }
+  if (tuning.contains("biome_forest_weight"))
+  {
+    out.biomeForestWeight = tuning["biome_forest_weight"].get<float>();
+  }
+  if (tuning.contains("biome_desert_weight"))
+  {
+    out.biomeDesertWeight = tuning["biome_desert_weight"].get<float>();
+  }
+  if (tuning.contains("biome_hills_weight"))
+  {
+    out.biomeHillsWeight = tuning["biome_hills_weight"].get<float>();
+  }
+  if (tuning.contains("biome_tundra_weight"))
+  {
+    out.biomeTundraWeight = tuning["biome_tundra_weight"].get<float>();
+  }
+  if (tuning.contains("terrain_roughness"))
+  {
+    out.terrainRoughness = tuning["terrain_roughness"].get<float>();
+  }
+}
+
+void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
+{
+  out["vegetation_density"] = tuning.vegetationDensity;
+  out["decoration_density"] = tuning.decorationDensity;
+  out["structure_density"] = tuning.structureDensity;
+  out["biome_plains_weight"] = tuning.biomePlainsWeight;
+  out["biome_forest_weight"] = tuning.biomeForestWeight;
+  out["biome_desert_weight"] = tuning.biomeDesertWeight;
+  out["biome_hills_weight"] = tuning.biomeHillsWeight;
+  out["biome_tundra_weight"] = tuning.biomeTundraWeight;
+  out["terrain_roughness"] = tuning.terrainRoughness;
+}
+
+} // namespace
 
 ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 {
@@ -57,6 +120,10 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("fill_fire"))
     {
       settings.FillFire = p["fill_fire"].get<bool>();
+    }
+    if (p.contains("tuning") && p["tuning"].is_object())
+    {
+      ParseTuning(p["tuning"], settings.Tuning);
     }
   }
   else if (root.contains("terrain") && root["terrain"].is_string())
@@ -119,6 +186,32 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
   return settings;
 }
 
+ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
+{
+  ProceduralSettings settings;
+  settings.Seed = root.value("world_seed", 12345u);
+
+  const bool hasProcedural =
+      root.contains("procedural") && root["procedural"].is_object();
+  if (hasProcedural)
+  {
+    const nlohmann::json &p = root["procedural"];
+    if (p.contains("generator") && p["generator"].is_string())
+    {
+      settings.Generator =
+          ProceduralGeneratorFromString(p["generator"].get<std::string>());
+    }
+  }
+  else if (root.contains("terrain") && root["terrain"].is_string())
+  {
+    settings.Generator =
+        ProceduralGeneratorFromString(root["terrain"].get<std::string>());
+  }
+
+  ResetToGeneratorDefaults(settings);
+  return settings;
+}
+
 void WriteProceduralSettings(nlohmann::json &root,
                              const ProceduralSettings &settings)
 {
@@ -133,6 +226,19 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["fill_water"] = settings.FillWater;
   procedural["fill_lava"] = settings.FillLava;
   procedural["fill_fire"] = settings.FillFire;
+  nlohmann::json tuning;
+  WriteTuning(settings.Tuning, tuning);
+  procedural["tuning"] = tuning;
+  root["procedural"] = procedural;
+  root["terrain"] = ProceduralGeneratorToString(settings.Generator);
+  root["world_seed"] = settings.Seed;
+}
+
+void WriteProceduralTemplateConfig(nlohmann::json &root,
+                                   const ProceduralSettings &settings)
+{
+  nlohmann::json procedural;
+  procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;

@@ -107,7 +107,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   DialogFrame = frame.get();
 
   auto scroll = std::make_unique<UGuiScrollView>(&theme);
-  scroll->SetScrollbarMode(GuiScrollbarMode::Hidden);
+  scroll->SetScrollbarMode(GuiScrollbarMode::Auto);
   BodyScroll = scroll.get();
   scroll->SetAfterScrollLayout(
       [this](UGuiScrollView &sv) { LayoutWorldPageInScroll(sv); });
@@ -118,6 +118,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
 
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
+  WorldForm->SetForNewWorldDefaults();
   WorldForm->BuildInto(*body);
 
   auto packSection = std::make_unique<UGuiLabel>(&theme, "Resource packs:");

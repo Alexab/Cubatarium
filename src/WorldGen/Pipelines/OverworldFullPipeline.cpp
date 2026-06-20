@@ -9,8 +9,9 @@ namespace cutum
 UOverworldFullPipeline::UOverworldFullPipeline(WorldGenContext ctx)
     : IWorldGenPipeline(ctx),
       HeightSampler(ctx.Settings.Seed, ctx.Settings.SeaLevel,
-                    ctx.Settings.MaxHeight, HeightPreset::Overworld),
-      UBiomeSampler(ctx.Settings.Seed)
+                    ctx.Settings.MaxHeight, HeightPreset::Overworld,
+                    ctx.Settings.Tuning.terrainRoughness),
+      UBiomeSampler(ctx.Settings.Seed, ctx.Settings.Tuning)
 {
 }
 

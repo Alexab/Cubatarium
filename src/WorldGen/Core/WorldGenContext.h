@@ -14,6 +14,7 @@ class UPrefabLibrary;
 class UChunkMeshCache;
 class UChunkManager;
 
+/// World generation context: blocks and prefab placement only (no creatures).
 struct WorldGenContext
 {
   UBlockWorld &World;

@@ -23,21 +23,37 @@ enum class VerticalMode
   Extended,
 };
 
+struct WorldGenTuning
+{
+  float vegetationDensity{1.0f};
+  float decorationDensity{1.0f};
+  float structureDensity{1.0f};
+  float biomePlainsWeight{1.0f};
+  float biomeForestWeight{1.0f};
+  float biomeDesertWeight{1.0f};
+  float biomeHillsWeight{1.0f};
+  float biomeTundraWeight{1.0f};
+  float terrainRoughness{1.0f};
+};
+
 struct ProceduralSettings
 {
-  ProceduralGenerator Generator{ProceduralGenerator::Heightmap};
-  VerticalMode Vertical{VerticalMode::Compact};
+  ProceduralGenerator Generator{ProceduralGenerator::OverworldBiomes};
+  VerticalMode Vertical{VerticalMode::Extended};
   uint32_t Seed{12345};
-  int SeaLevel{4};
-  int MaxHeight{12};
+  int SeaLevel{48};
+  int MaxHeight{128};
   int BedrockTopY{0};
   bool EnableCaves{false};
-  bool EnableTrees{false};
+  bool EnableTrees{true};
   int FlatSurfaceY{3};
   bool FillWater{false};
   bool FillLava{false};
   bool FillFire{false};
+  WorldGenTuning Tuning;
 };
+
+float ClampTuningValue(float value);
 
 ProceduralGenerator ProceduralGeneratorFromString(const std::string &s);
 const char *ProceduralGeneratorToString(ProceduralGenerator g);
@@ -47,5 +63,9 @@ const char *VerticalModeToString(VerticalMode m);
 
 void ResolveProceduralDefaults(ProceduralSettings &s);
 void ApplyGeneratorTierDefaults(ProceduralSettings &s);
+void ApplyGeneratorDescriptorDefaults(ProceduralSettings &s);
+void ApplyVerticalModeDefaults(ProceduralSettings &s);
+void ApplyGeneratorVerticalDefaults(ProceduralSettings &s);
+void ResetToGeneratorDefaults(ProceduralSettings &s);
 
 } // namespace cutum

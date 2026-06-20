@@ -131,7 +131,10 @@ void USettingsScreen::OnSave()
 
   ProceduralSettings proc =
       WorldForm ? WorldForm->ReadSettings() : Host->LoadProceduralTemplate();
-  Host->SaveAppAndTemplateSettings(app, proc);
+  ProceduralSettings templateOnly;
+  templateOnly.Generator = proc.Generator;
+  templateOnly.Seed = proc.Seed;
+  Host->SaveAppAndTemplateSettings(app, templateOnly);
   Host->ReturnToMainMenu();
 }
 

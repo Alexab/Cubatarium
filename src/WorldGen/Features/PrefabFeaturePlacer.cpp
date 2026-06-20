@@ -3,6 +3,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
+#include <climits>
 #include <cstdint>
 
 namespace cutum
@@ -28,6 +29,32 @@ bool BiomeMatches(BiomeId biome, const std::vector<BiomeId> &allowed)
   return false;
 }
 
+int EffectiveSpacing(int spacing, float density)
+{
+  if (density <= 0.0f)
+  {
+    return INT_MAX;
+  }
+  if (spacing <= 0)
+  {
+    return spacing;
+  }
+  return std::max(1, static_cast<int>(static_cast<float>(spacing) / density));
+}
+
+int EffectiveChance(int chancePerColumn, float density)
+{
+  if (density <= 0.0f)
+  {
+    return INT_MAX;
+  }
+  if (chancePerColumn <= 0)
+  {
+    return chancePerColumn;
+  }
+  return std::max(1, static_cast<int>(static_cast<float>(chancePerColumn) / density));
+}
+
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
                             const PrefabFeatureRule &rule)
 {
@@ -51,7 +78,7 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                         BiomeId biome,
                         const std::vector<PrefabFeatureRule> &rules,
                         uint32_t pickSeedOffset, bool useChanceOnly,
-                        bool requireTreesEnabled)
+                        bool requireTreesEnabled, float densityMultiplier)
 {
   if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || !ctx.Prefabs ||
       rules.empty())
@@ -82,16 +109,16 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     const uint32_t h = FeatureHash(x, z, seed + rule.SeedOffset);
     if (useChanceOnly)
     {
-      if (rule.ChancePerColumn <= 0 ||
-          h % static_cast<uint32_t>(rule.ChancePerColumn) != 0)
+      const int chance = EffectiveChance(rule.ChancePerColumn, densityMultiplier);
+      if (chance <= 0 || h % static_cast<uint32_t>(chance) != 0)
       {
         continue;
       }
     }
     else
     {
-      if (rule.Spacing <= 0 ||
-          h % static_cast<uint32_t>(rule.Spacing) != 0)
+      const int spacing = EffectiveSpacing(rule.Spacing, densityMultiplier);
+      if (spacing <= 0 || h % static_cast<uint32_t>(spacing) != 0)
       {
         continue;
       }
@@ -226,7 +253,7 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Vegetation, 5000,
-                            false, true);
+                            false, true, ctx.Settings.Tuning.vegetationDensity);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
@@ -238,7 +265,7 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Decoration, 6000,
-                            false, true);
+                            false, true, ctx.Settings.Tuning.decorationDensity);
 }
 
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
@@ -250,7 +277,7 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Structures, 7000,
-                            true, false);
+                            true, false, ctx.Settings.Tuning.structureDensity);
 }
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,

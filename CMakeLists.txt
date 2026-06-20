@@ -126,10 +126,10 @@ set(SOURCES
     src/ResourcePacks/CreaturePackMerge.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
-    src/WorldGen/Core/WorldGenerator.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
     src/WorldGen/Core/ProceduralConfigIO.cpp
+    src/WorldGen/Core/WorldGeneratorRegistry.cpp
     src/World/Prefabs/PrefabUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -138,6 +138,7 @@ set(SOURCES
     src/WorldGen/Pipelines/FlatPipeline.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Pipelines/OverworldPipeline.cpp
+    src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Pipelines/OverworldBiomesPipeline.cpp
     src/WorldGen/Features/CaveCarver.cpp
@@ -239,7 +240,8 @@ set(HEADERS
     src/ResourcePacks/PlaceholderTextureCache.h
     src/Render/Engine/AnimationClock.h
     src/World/Core/BlockWorld.h
-    src/WorldGen/Core/WorldGenerator.h
+    src/WorldGen/Core/WorldGeneratorDescriptor.h
+    src/WorldGen/Pipelines/ComposableWorldGenerator.h
     src/WorldGen/Core/Noise.h
     src/WorldGen/Core/ProceduralSettings.h
     src/WorldGen/Core/ProceduralConfigIO.h

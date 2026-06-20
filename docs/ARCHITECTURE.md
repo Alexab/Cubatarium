@@ -85,7 +85,27 @@ Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; 
 | Hills | stone | gravel (fallback stone) |
 | Tundra | snow (fallback stone) | dirt |
 
-Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome). Requires `procedural.trees: true` for vegetation/decoration; structures place independently. Legacy prefabs `tree_small` / `tree_large` remain for hotbar compatibility. See [`docs/PREFAB_CATALOG.md`](PREFAB_CATALOG.md) and [`docs/PREFAB_ATTRIBUTION.md`](PREFAB_ATTRIBUTION.md).
+Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome). Requires `procedural.trees: true` for vegetation/decoration; structures place independently. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `structure_density`, biome weights). Legacy prefabs `tree_small` / `tree_large` remain for hotbar compatibility. See [`docs/PREFAB_CATALOG.md`](PREFAB_CATALOG.md) and [`docs/PREFAB_ATTRIBUTION.md`](PREFAB_ATTRIBUTION.md).
+
+## World generation
+
+Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorRegistry` (`WorldGeneratorDescriptor.h`). Factory entry: `UProceduralWorldGenFactory::Create`.
+
+| Generator id | Description |
+|--------------|-------------|
+| `flat` | Flat grass platform |
+| `heightmap` | Legacy hash hills |
+| `overworld` / `hills` / `mountains` | Noise terrain presets |
+| `overworld_biomes` | Biomes, trees, decor, structures (default) |
+| `overworld_full` | Biomes + caves + full feature set |
+
+`UComposableWorldGenerator` composes column stages: terrain, fluids, caves, prefab features. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
+
+Defaults (Extended): `sea_level` 48, `max_height` 128, `generator` `overworld_biomes`. Compact mode remains available (`sea_level` ~5, `max_height` ~15).
+
+Settings persist in `config.json` (template: **generator + seed only**) and per-world `world_data.json` under full `procedural` + `procedural.tuning`. Sea level, height, and tuning are reset from generator defaults on each app start; per-world overrides live only in `world_data.json`.
+
+New World UI: generator list picker, context-sensitive options, density/biome tuning fields.
 
 ### Animated blocks and fluids
 
@@ -149,9 +169,7 @@ Default: `streaming_enabled: true` in `config.json`.
 `ChunkStreamer` around the camera each frame:
 
 1. For each chunk in render radius — try `chunks/cx_cy_cz.json` on disk.
-2. If missing — generate columns for that chunk using the world's **terrain** mode:
-   - `heightmap` — noise height column (`GenerateColumn`)
-   - `flat` — bedrock / stone / grass at fixed height (`GenerateFlatColumn`)
+2. If missing — generate columns for that chunk using the world's procedural pipeline (`IWorldGenPipeline::GenerateColumn` via `UWorldGeneratorRegistry`).
 3. Unload distant chunks (save to disk, drop from memory).
 
 Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
@@ -163,7 +181,7 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 ## Config (`<exe_dir>/config.json`)
 
 - `default_world` — folder name under `worlds/` (e.g. `World_001`)
-- `default_user`, `world_seed`, `terrain` (`heightmap` | `flat`)
+- `default_user`, `world_seed`, `procedural` (generator, vertical, sea_level, max_height, tuning, …)
 - `render_distance_chunks`, `streaming_enabled`
 - Autosave every 60s; exit saves world + config
 

@@ -312,7 +312,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       DefaultUserName = d.value("default_user", "");
       WorldSeed = d.value("world_seed", 12345u);
       TerrainType = d.value("terrain", "heightmap");
-      ProceduralTemplate = ParseProceduralSettings(d);
+      ProceduralTemplate = ParseProceduralTemplateFromConfig(d);
       WorldSeed = ProceduralTemplate.Seed;
       TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
       RenderDistanceChunks = d.value("render_distance_chunks", 4);
@@ -386,6 +386,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       TerrainType = "heightmap";
       ProceduralTemplate = ProceduralSettings{};
       ProceduralTemplate.Seed = WorldSeed;
+      ResetToGeneratorDefaults(ProceduralTemplate);
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
       Render = RenderSettings::Default();
@@ -593,7 +594,7 @@ void UCore::SaveConfigFile()
   system_data["default_world"] = DefaultWorldName;
   system_data["default_user"] = DefaultUserName;
   system_data["world_seed"] = WorldSeed;
-  WriteProceduralSettings(system_data, ProceduralTemplate);
+  WriteProceduralTemplateConfig(system_data, ProceduralTemplate);
   system_data["render_distance_chunks"] = RenderDistanceChunks;
   system_data["streaming_enabled"] = StreamingEnabled;
   json gameplay;
@@ -708,20 +709,20 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
 
 void UCore::SetProceduralTemplate(const ProceduralSettings &settings)
 {
-  ProceduralTemplate = settings;
+  ProceduralTemplate.Generator = settings.Generator;
+  ProceduralTemplate.Seed = settings.Seed;
   WorldSeed = settings.Seed;
+  ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-  ResolveProceduralDefaults(ProceduralTemplate);
-  ApplyGeneratorTierDefaults(ProceduralTemplate);
 }
 
 void UCore::CreateNewWorldFromTemplate()
 {
   WorldSeed += 1;
   ProceduralTemplate.Seed = WorldSeed;
-  ResolveProceduralDefaults(ProceduralTemplate);
-  ApplyGeneratorTierDefaults(ProceduralTemplate);
+  ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
+  PendingNewWorldSettings.reset();
   CreateNewWorldWithCurrentSettings();
 }
 
@@ -746,9 +747,9 @@ void UCore::CreateWorld(const std::string &terrain_type)
     ProceduralTemplate.Generator = ProceduralGeneratorFromString(terrain_type);
   }
   ProceduralTemplate.Seed = WorldSeed;
-  ResolveProceduralDefaults(ProceduralTemplate);
-  ApplyGeneratorTierDefaults(ProceduralTemplate);
+  ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
+  PendingNewWorldSettings.reset();
   CreateNewWorldWithCurrentSettings();
 }
 
@@ -764,7 +765,7 @@ void UCore::CreateWorldFromProceduralConfig()
       try
       {
         const json d = json::parse(buffer.str());
-        ProceduralTemplate = ParseProceduralSettings(d);
+        ProceduralTemplate = ParseProceduralTemplateFromConfig(d);
         WorldSeed = ProceduralTemplate.Seed;
       }
       catch (const json::exception &e)
@@ -777,14 +778,14 @@ void UCore::CreateWorldFromProceduralConfig()
 
   WorldSeed += 1;
   ProceduralTemplate.Seed = WorldSeed;
-  ResolveProceduralDefaults(ProceduralTemplate);
-  ApplyGeneratorTierDefaults(ProceduralTemplate);
+  ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
 
   std::cout << "Core::CreateWorldFromProceduralConfig: " << TerrainType << " ("
             << VerticalModeToString(ProceduralTemplate.Vertical)
             << ", Seed=" << ProceduralTemplate.Seed << ")" << std::endl;
 
+  PendingNewWorldSettings.reset();
   CreateNewWorldWithCurrentSettings();
 }
 
@@ -827,7 +828,21 @@ void UCore::CreateNewWorldWithCurrentSettings()
   std::cout << "Core::CreateWorld: new world '" << new_world_name << "' at "
             << ActiveWorldFolder.string() << std::endl;
 
-  WorldInstance->SetProceduralSettings(ProceduralTemplate);
+  ProceduralSettings worldSettings = ProceduralTemplate;
+  if (PendingNewWorldSettings.has_value())
+  {
+    worldSettings = *PendingNewWorldSettings;
+    PendingNewWorldSettings.reset();
+  }
+  else
+  {
+    worldSettings.Seed = WorldSeed;
+    ResetToGeneratorDefaults(worldSettings);
+  }
+  ResolveProceduralDefaults(worldSettings);
+  ApplyGeneratorTierDefaults(worldSettings);
+
+  WorldInstance->SetProceduralSettings(worldSettings);
   WorldInstance->Create(new_world_name);
   WorldInstance->GenerateUsers();
   SaveWorld(new_world_name);
@@ -1139,12 +1154,16 @@ void UCore::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const ResourcePackSelection &resourcePacks)
 {
-  SetProceduralTemplate(settings);
-  WorldSeed += 1;
+  PendingNewWorldSettings = settings;
+  PendingNewWorldSettings->Seed = settings.Seed;
+  WorldSeed = settings.Seed + 1;
+  PendingNewWorldSettings->Seed = WorldSeed;
+
+  ProceduralTemplate.Generator = settings.Generator;
   ProceduralTemplate.Seed = WorldSeed;
-  ResolveProceduralDefaults(ProceduralTemplate);
-  ApplyGeneratorTierDefaults(ProceduralTemplate);
+  ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
+
   PendingNewWorldPackSelection = resourcePacks;
   CreateNewWorldWithCurrentSettings();
 }

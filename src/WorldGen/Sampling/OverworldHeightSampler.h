@@ -27,7 +27,7 @@ class UOverworldHeightSampler
 {
 public:
   UOverworldHeightSampler(uint32_t Seed, int SeaLevel, int MaxHeight,
-                          HeightPreset preset);
+                          HeightPreset preset, float terrainRoughness = 1.0f);
 
   int SurfaceYAt(int x, int z) const;
   HeightSampleParams params() const { return Params; }
