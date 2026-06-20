@@ -43,6 +43,9 @@ public:
   virtual ResourcePackSelection GetDefaultResourcePackSelection() const = 0;
   virtual std::vector<std::string>
   PeekWorldResourcePacks(const std::string &worldName) const = 0;
+  virtual ResourcePackSelection GetCurrentWorldResourcePackSelection() const = 0;
+  virtual bool
+  ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection) = 0;
 };
 
 } // namespace cutum

@@ -40,11 +40,13 @@ class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UMainMenuScreen;
+class UWorldResourcePacksScreen;
 
 enum class MenuSubview
 {
   Main,
   Settings,
+  WorldSettings,
   LoadWorld,
   NewWorld
 };
@@ -126,8 +128,12 @@ public:
   ResourcePackSelection GetDefaultResourcePackSelection() const override;
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &worldName) const override;
+  ResourcePackSelection GetCurrentWorldResourcePackSelection() const override;
+  bool ApplyResourcePacksToCurrentWorld(
+      const ResourcePackSelection &selection) override;
 
   void ShowSettings();
+  void ShowWorldSettings();
   void ShowNewWorld();
   void ShowLoadWorld();
 

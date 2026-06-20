@@ -410,7 +410,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
     const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
                                        glm::vec3(0.42f, 0.29f, 0.62f));
     PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
-        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
+        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg,
+        static_cast<size_t>(ResourcePacks.PlaceholderCacheMaxEntries));
     BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
                                         ResourcePacks.PlaceholderTileSize);
 
@@ -564,7 +565,15 @@ bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
   }
   const BlockId id =
       BlockMergeRegistryInstance->RegisterRuntimeBlock(def, textureStems);
-  if (id == BLOCK_AIR)
+  BlockMergeRegistryInstance->FlushRuntimeOverlay();
+  if (id == BLOCK_AIR &&
+      BlockMergeRegistryInstance->GetNameToId().count(def.Name) == 0)
+  {
+    return false;
+  }
+  const BlockId resolved =
+      BlockMergeRegistryInstance->ResolveName(def.Name);
+  if (resolved == BLOCK_AIR)
   {
     return false;
   }
@@ -611,6 +620,7 @@ void UCore::SaveConfigFile()
   json placeholder;
   placeholder["tile_size"] = ResourcePacks.PlaceholderTileSize;
   placeholder["background"] = ResourcePacks.PlaceholderBackground;
+  placeholder["max_entries"] = ResourcePacks.PlaceholderCacheMaxEntries;
   resource_packs["placeholder"] = placeholder;
   system_data["resource_packs"] = resource_packs;
 
@@ -1039,7 +1049,8 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
     const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
                                        glm::vec3(0.42f, 0.29f, 0.62f));
     PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
-        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg);
+        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg,
+        static_cast<size_t>(ResourcePacks.PlaceholderCacheMaxEntries));
   }
 
   BlockMergeRegistryInstance->SetPrimaryPackIds(selection.Primary);
@@ -1060,8 +1071,8 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
 
   if (PrefabLibraryInstance && WorldInstance)
   {
-    PrefabLibraryInstance->Load(PrefabsPath.string(),
-                                WorldInstance->GetBlockRegistry());
+    PrefabLibraryInstance->LoadMerged(PrefabsPath, packs,
+                                      WorldInstance->GetBlockRegistry());
     WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
   }
 
@@ -1086,6 +1097,7 @@ void UCore::ReloadCreatureCatalog(
     return;
   }
   ApplyCreaturePackOverlays(*defs, *CreatureTextureStorageInstance,
+                            WorldInstance->GetSkinDefinitionStorage().get(),
                             WorkDir / "models" / "creatures",
                             WorkDir / "models" / "skins", packs);
   WorldInstance->OnCreatureCatalogChanged();
@@ -1175,6 +1187,49 @@ UCore::PeekWorldResourcePacks(const std::string &world_name) const
     std::cerr << "PeekWorldResourcePacks: " << e.what() << std::endl;
     return {};
   }
+}
+
+ResourcePackSelection UCore::GetCurrentWorldResourcePackSelection() const
+{
+  ResourcePackSelection selection;
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return selection;
+  }
+  selection.Primary = WorldInstance->GetResourcePacksPrimary();
+  selection.Secondary = WorldInstance->GetResourcePacksSecondary();
+  selection.WorldgenOwner = WorldInstance->GetWorldgenOwnerPackId();
+  if (selection.Primary.empty())
+  {
+    selection.Primary = WorldInstance->GetResourcePacksEnabled();
+  }
+  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  return selection;
+}
+
+bool UCore::ApplyResourcePacksToCurrentWorld(
+    const ResourcePackSelection &selectionIn)
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  ResourcePackSelection selection = selectionIn;
+  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  {
+    selection.WorldgenOwner = selection.Primary.front();
+  }
+  if (!ApplyResourcePacks(selection))
+  {
+    return false;
+  }
+  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
+                                          selection.WorldgenOwner);
+  SaveWorld(WorldInstance->GetWorldName());
+  return true;
 }
 
 } // namespace cutum

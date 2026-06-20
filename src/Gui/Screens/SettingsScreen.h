@@ -15,6 +15,7 @@ class UGuiPanel;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
+class UResourcePackPickerForm;
 class UGuiTextInput;
 class UGuiCheckbox;
 class UGuiLabel;
@@ -39,13 +40,17 @@ private:
   std::vector<GuiGridItem> BuildAppGridItems(const GuiGridSpec &spec) const;
   int MeasureWorldPageHeight(const GuiRect &area) const;
   void LayoutWorldPage(const GuiRect &area) const;
+  int MeasurePacksPageHeight(const GuiRect &area) const;
+  void LayoutPacksPage(const GuiRect &area) const;
 
   IGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiPanel *AppPanel{nullptr};
   UGuiPanel *WorldPanel{nullptr};
+  UGuiPanel *PacksPanel{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
+  std::unique_ptr<UResourcePackPickerForm> PackForm;
 
   UGuiLabel *DefaultUserLabel{nullptr};
   UGuiLabel *DefaultWorldLabel{nullptr};

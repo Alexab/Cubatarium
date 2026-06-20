@@ -44,12 +44,40 @@ glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
 
 UPlaceholderTextureCache::UPlaceholderTextureCache(std::filesystem::path cacheDir,
                                                    int tileSize,
-                                                   glm::vec3 background)
+                                                   glm::vec3 background,
+                                                   size_t maxEntries)
     : CacheDir(std::move(cacheDir)), Background(background),
-      DefaultTileSize(tileSize)
+      DefaultTileSize(tileSize), MaxEntries(std::max<size_t>(1, maxEntries))
 {
   std::error_code ec;
   std::filesystem::create_directories(CacheDir, ec);
+}
+
+void UPlaceholderTextureCache::TouchLru(const std::string &key)
+{
+  const auto it = LruIt.find(key);
+  if (it != LruIt.end())
+  {
+    LruOrder.erase(it->second);
+  }
+  LruOrder.push_front(key);
+  LruIt[key] = LruOrder.begin();
+}
+
+void UPlaceholderTextureCache::EvictIfNeeded()
+{
+  while (KeyToStem.size() > MaxEntries && !LruOrder.empty())
+  {
+    const std::string victim = LruOrder.back();
+    LruOrder.pop_back();
+    LruIt.erase(victim);
+    const auto stemIt = KeyToStem.find(victim);
+    if (stemIt != KeyToStem.end())
+    {
+      StemPixels.erase(stemIt->second);
+      KeyToStem.erase(stemIt);
+    }
+  }
 }
 
 std::string UPlaceholderTextureCache::MakeKey(const std::string &blockName,
@@ -129,11 +157,14 @@ std::string UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockNa
   const auto it = KeyToStem.find(key);
   if (it != KeyToStem.end())
   {
+    TouchLru(key);
     return it->second;
   }
   const std::string stem = MakeStem(key);
   KeyToStem[key] = stem;
   StemPixels[stem] = Rasterize(blockName, faceIndex, tileSize);
+  TouchLru(key);
+  EvictIfNeeded();
   return stem;
 }
 

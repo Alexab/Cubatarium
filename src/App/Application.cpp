@@ -26,6 +26,7 @@
 #include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
@@ -354,6 +355,23 @@ void UApplication::ShowSettings()
   SyncCursorVisibility();
 }
 
+void UApplication::ShowWorldSettings()
+{
+  if (!HasWorldSession())
+  {
+    return;
+  }
+  ConsoleOpen = false;
+  SuppressConsoleToggleChar = false;
+  PaletteOpen = false;
+  FreeCursor = false;
+  MainMenuScreen = nullptr;
+  MenuSubview = MenuSubview::WorldSettings;
+  GuiContext->SetScreen(std::make_unique<UWorldResourcePacksScreen>(
+      this, [this]() { ShowMainMenu(); }));
+  SyncCursorVisibility();
+}
+
 void UApplication::ShowNewWorld()
 {
   ConsoleOpen = false;
@@ -536,6 +554,28 @@ UApplication::PeekWorldResourcePacks(const std::string &worldName) const
               : std::vector<std::string>{};
 }
 
+ResourcePackSelection
+UApplication::GetCurrentWorldResourcePackSelection() const
+{
+  return Core ? Core->GetCurrentWorldResourcePackSelection()
+              : ResourcePackSelection{};
+}
+
+bool UApplication::ApplyResourcePacksToCurrentWorld(
+    const ResourcePackSelection &selection)
+{
+  if (!Core)
+  {
+    return false;
+  }
+  if (!Core->ApplyResourcePacksToCurrentWorld(selection))
+  {
+    return false;
+  }
+  RefreshBlockCatalog();
+  return true;
+}
+
 void UApplication::LoadSelectedWorld(const std::string &worldName)
 {
   if (!Core)
@@ -645,8 +685,7 @@ void UApplication::ShowInGameHud()
 
 bool UApplication::UsesUiPointer() const
 {
-  return State == AppState::MainMenu || FreeCursor || ConsoleOpen ||
-         PaletteOpen;
+  return State == AppState::MainMenu || FreeCursor || ConsoleOpen || PaletteOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
@@ -1134,7 +1173,7 @@ bool UApplication::WantsCaptureKeyboard() const
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
-  return State == AppState::InGame && !PaletteOpen && !ConsoleOpen;
+  return State == AppState::InGame && !ConsoleOpen && !PaletteOpen;
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

@@ -1,7 +1,9 @@
 #ifndef PREFAB_H
 #define PREFAB_H
 
+#include "ResourcePacks/ResourcePack.h"
 #include "World/Math/BlockTypes.h"
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
@@ -31,11 +33,18 @@ class UPrefabLibrary
 {
 public:
   void Load(const std::string &prefabs_folder, UBlockRegistry &registry);
+  void LoadMerged(const std::filesystem::path &baseFolder,
+                  const std::vector<ResourcePackManifest> &packs,
+                  UBlockRegistry &registry);
   const Prefab *Get(const std::string &Name) const;
   std::vector<std::string> ListNames() const;
 
 private:
-  bool LoadFile(const std::string &path, UBlockRegistry &registry);
+  bool LoadFile(const std::string &path, UBlockRegistry &registry,
+                const std::string &registerName = {});
+  void LoadDirectory(const std::filesystem::path &folder,
+                     const std::string &namePrefix,
+                     UBlockRegistry &registry);
 
   std::unordered_map<std::string, Prefab> Prefabs;
 };

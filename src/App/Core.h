@@ -125,6 +125,8 @@ public:
                                   const ResourcePackSelection &selection);
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &world_name) const;
+  ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
+  bool ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection);
 
 private:
   std::vector<std::string> WorldList;

@@ -6,19 +6,41 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-001 | 1.4 | Android `AssetExtractor`: version stamp / re-sync `files/game/` on APK update | MVP: reinstall or clear app data | 2 or 4 |
-| TD-002 | 1.5 | `RegisterRuntimeBlock`: incremental atlas + dirty chunks instead of full `Rebuild()` | MVP: full rebuild is simpler | backlog |
-| TD-003 | 1.1 | Hotbar: validate block `Id` on assign | Not blocking core flow | backlog |
-| TD-004 | 1.1 | Resource packs for creatures/skins/prefabs | Out of scope stage 1 (I11) | backlog |
-| TD-005 | 1.1 | Placeholder cache: LRU / size limit for `.placeholder_cache/` | Few names per typical world | backlog |
-| TD-006 | 1.1 | Android: selective asset extraction | Large pipeline refactor | backlog |
-| TD-008 | 1.1 | Archive `tools/import_blocks.ps1` | Deprecated; kept for migrate script | 4 |
-| TD-009 | 1.1 | Simplify `WorldGenContext` stone-fallback after I8 | Redundant but harmless | backlog |
-| TD-011 | 4.2 | In-game Settings: switch packs for the **current** world without restart | Per-world save exists; hot-reload API exists; UI deferred | backlog |
+| TD-002 | 1.5 | `RegisterRuntimeBlock`: incremental atlas + dirty chunks instead of full `Rebuild()` | Deferred rebuild batches overlay flush; full incremental atlas still backlog | backlog |
+| TD-005 | 1.1 | Placeholder cache: LRU / size limit for `.placeholder_cache/` | In-memory LRU added; disk cache still unused | backlog |
+| TD-006 | 1.1 | Android: selective asset extraction | Whitelist after TD-001; manifest+checksums deferred | backlog |
 
 ## Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-001 | 2025-06 | `AssetExtractor`: re-extract when APK `versionCode` changes (SharedPreferences stamp) |
+| TD-003 | 2025-06 | Hotbar: reject unknown block ids on assign (creative + survival) |
+| TD-004 | 2025-06 | Creatures/skins/prefabs from packs: overlay merge, example pack, live visual refresh; prefabs via `LoadMerged` |
 | TD-007 | 4.1 | Core always loads blocks via resource pack resolver; legacy models/blocks path removed |
+| TD-008 | 2025-06 | `tools/import_blocks.ps1` archived to `tools/archive/` |
+| TD-009 | 2025-06 | `WorldGenContext` stone/gravel/snow/sand fallbacks removed; slots use `worldgen_refs.json` only |
 | TD-010 | backlog | `tools/smoke_resource_packs.py`, GitHub workflow `resource-packs-smoke.yml`, `Cubatarium --smoke-packs` |
+| TD-011 | 2025-06 | Main menu → World settings UI; Settings → default packs; `ApplyResourcePacksToCurrentWorld` + save (Escape → main menu, no pause overlay) |
+
+## TD-004 sub-items
+
+| Area | Status |
+|------|--------|
+| `creatures/` overlay | done |
+| `skins/` overlay | done |
+| `prefabs/` merge | done |
+| Live creature visual refresh | done |
+| Example pack in repo | `_example_creature_demo` |
+
+## Manual verify (TD-003 / TD-011)
+
+- [ ] Assign unknown block name to hotbar → rejected / slot cleared
+- [ ] Main menu → World settings → change primary → blocks/textures update on Resume
+- [ ] Settings → Resource packs → save → New World uses new defaults
+- [ ] Enable `_example_creature_demo` → pig display name / texture changes in-world
+
+## Perf notes (TD-002 / TD-005)
+
+- Runtime block overlay: `FlushRuntimeOverlay()` coalesces rebuild per registration batch
+- Placeholder cache: default max 256 entries (`resource_packs.placeholder.max_entries` in config)

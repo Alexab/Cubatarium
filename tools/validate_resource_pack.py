@@ -10,6 +10,66 @@ from pathlib import Path
 
 RESERVED_NAMES = {"__missing__", "__air__"}
 FACE_COUNT = 6
+CREATURE_REQUIRED_FIELDS = ("id", "display_name", "role")
+
+
+def validate_creatures(pack_dir: Path, pack_id: str) -> int:
+    """Optional creatures/ overlay validation (warnings only)."""
+    creatures_dir = pack_dir / "creatures"
+    if not creatures_dir.is_dir():
+        return 0
+    errors = 0
+    for species_dir in sorted(creatures_dir.iterdir()):
+        if not species_dir.is_dir():
+            continue
+        json_path = species_dir / "creature.json"
+        if not json_path.is_file():
+            warn(f"{species_dir}: missing creature.json")
+            continue
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as e:
+            warn(f"{json_path}: {e}")
+            errors += 1
+            continue
+        for key in CREATURE_REQUIRED_FIELDS:
+            if key not in data:
+                warn(f"{json_path}: missing recommended field '{key}'")
+        cid = data.get("id", species_dir.name)
+        if cid != species_dir.name:
+            warn(f"{json_path}: id '{cid}' != folder '{species_dir.name}'")
+        tex_dir = species_dir / "textures"
+        if tex_dir.is_dir():
+            pngs = list(tex_dir.glob("*.png"))
+            if not pngs:
+                warn(f"{tex_dir}: no PNG textures")
+    if creatures_dir.is_dir():
+        print(f"  creatures/: optional overlay OK ({pack_id})")
+    return errors
+
+
+def validate_skins(pack_dir: Path, pack_id: str) -> int:
+    skins_dir = pack_dir / "skins"
+    if not skins_dir.is_dir():
+        return 0
+    errors = 0
+    for skin_dir in sorted(skins_dir.iterdir()):
+        if not skin_dir.is_dir():
+            continue
+        json_path = skin_dir / "skin.json"
+        if not json_path.is_file():
+            warn(f"{skin_dir}: missing skin.json")
+            continue
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as e:
+            warn(f"{json_path}: {e}")
+            errors += 1
+            continue
+        if "id" not in data:
+            warn(f"{json_path}: missing id")
+    print(f"  skins/: optional overlay OK ({pack_id})")
+    return errors
 
 
 def err(msg: str) -> None:
@@ -129,6 +189,9 @@ def validate_pack(pack_dir: Path) -> int:
         if len(widths) > 1:
             err(f"{block_path}: face PNG widths differ: {widths}")
             errors += 1
+
+    errors += validate_creatures(pack_dir, pack_id)
+    errors += validate_skins(pack_dir, pack_id)
 
     if errors:
         err(f"{pack_dir}: {errors} error(s)")

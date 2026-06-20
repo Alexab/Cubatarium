@@ -47,6 +47,32 @@ void USkinDefinitionStorage::Load(const std::string &folder)
             << " skins" << std::endl;
 }
 
+void USkinDefinitionStorage::LoadOverlay(const std::string &folder)
+{
+  if (!std::filesystem::exists(folder))
+  {
+    return;
+  }
+  size_t overlayCount = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(folder))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::filesystem::path jsonPath = entry.path() / "skin.json";
+    if (std::filesystem::exists(jsonPath) && LoadFile(jsonPath.string()))
+    {
+      ++overlayCount;
+    }
+  }
+  if (overlayCount > 0)
+  {
+    std::cout << "USkinDefinitionStorage: applied " << overlayCount
+              << " skin overlay(s)" << std::endl;
+  }
+}
+
 bool USkinDefinitionStorage::LoadFile(const std::string &path)
 {
   try

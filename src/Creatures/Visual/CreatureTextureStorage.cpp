@@ -132,6 +132,34 @@ void UCreatureTextureStorage::MergeCreatureRoot(
   }
 }
 
+void UCreatureTextureStorage::MergeSkinRoot(const std::string &skinsRoot)
+{
+  if (!std::filesystem::exists(skinsRoot))
+  {
+    return;
+  }
+  size_t merged = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(skinsRoot))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::string skinId = entry.path().filename().string();
+    const size_t before = Textures.size();
+    IndexPngTextures(entry.path() / "textures", "skin/" + skinId, Textures);
+    if (Textures.size() > before)
+    {
+      ++merged;
+    }
+  }
+  if (merged > 0)
+  {
+    std::cout << "UCreatureTextureStorage: merged skin textures from "
+              << skinsRoot << " (" << merged << " skins)" << std::endl;
+  }
+}
+
 GLuint UCreatureTextureStorage::GetTexture(const std::string &assetKey) const
 {
   const auto it = Textures.find(assetKey);

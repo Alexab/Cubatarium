@@ -1,6 +1,6 @@
 # Resource packs
 
-Cubatarium loads blocks, block textures, and optional prefabs from **resource packs** instead of a fixed `models/blocks` tree in the repository.
+Cubatarium loads blocks and block textures from **resource packs** instead of a fixed `models/blocks` tree in the repository. Optional pack overlays also cover **creatures** (partial) and **skins**; **prefabs from packs** are supported via merged load (see below).
 
 ## Directory layout
 
@@ -10,7 +10,11 @@ resource_packs/<pack_id>/
   LICENSE.txt
   blocks/<name>.json
   textures/blocks/<stem>.png
-  prefabs/                 # optional
+  creatures/<species_id>/creature.json
+  creatures/<species_id>/textures/*.png
+  skins/<skin_id>/skin.json
+  skins/<skin_id>/textures/*.png
+  prefabs/<name>.json      # optional; registered as pack_id::name
 ```
 
 ## pack.json
@@ -96,7 +100,9 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with l
 - **default_primary** / **default_secondary**: defaults for **New World** UI.
 - Legacy `default_enabled` / `enabled` arrays migrate to `primary` on read.
 
-Edit defaults in **Settings → Application → Default resource packs**. This does **not** change packs for the currently loaded world.
+Edit defaults in **Settings → Resource packs** (saved to `config.json`). This does **not** change packs for the currently loaded world.
+
+To change packs for the **loaded world** (after Escape to main menu): **Main menu → World settings → Apply** (persists to `world_data.json`, hot-reloads packs).
 
 ### Per-world — `worlds/World_NNN/world_data.json`
 
@@ -114,9 +120,20 @@ Legacy `"enabled": [...]` is read as `primary`. `worldgen_owner` defaults to `pr
 
 | Screen | Purpose |
 |--------|---------|
-| **Settings → Application** | Default primary/secondary pack lists |
+| **Settings → Resource packs** | Default primary/secondary pack lists → `config.json` |
 | **New World** | Primary (required) + secondary pack lists → `world_data.json` |
+| **Main menu → World settings** | Change packs for the paused/loaded world → hot-reload + save |
 | **Load World** | Subtitle shows saved pack ids (debug) |
+
+## Creatures and skins overlay
+
+Base definitions live under `models/creatures/` and `models/skins/`. Enabled packs may overlay JSON and PNG from `creatures/` and `skins/` (later packs win). Example demo: `resource_packs/_example_creature_demo/` (secondary pack; add to world pack list to see pig rename).
+
+After pack apply, live creatures refresh visuals from the updated catalog.
+
+## Prefabs from packs
+
+`WorkDir/prefabs/` is loaded first (short names). Each enabled pack may add `prefabs/*.json`; names are registered as `pack_id::local_name` (same pattern as duplicate blocks).
 
 Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority. Missing `depends` / active `conflicts` show a **WARN** line under the lists.
 

@@ -55,6 +55,7 @@ public:
 
   BlockId RegisterRuntimeBlock(const BlockDefinition &def,
                                const std::array<std::string, 6> &stems);
+  void FlushRuntimeOverlay();
   void UnregisterRuntimeBlock(const std::string &name);
 
   void PopulateBlockDefinitionStorage(UBlockDefinitionStorage &out) const;
@@ -106,6 +107,7 @@ private:
   std::vector<MergedCubeDesc> CubeDescs;
   std::vector<std::pair<BlockDefinition, std::array<std::string, 6>>>
       RuntimeOverlay;
+  bool RuntimeOverlayDirty{false};
   std::shared_ptr<UPlaceholderTextureCache> PlaceholderCache;
   int PlaceholderTileSize{16};
   static const std::unordered_set<std::string> kTierAWorldgenNames;

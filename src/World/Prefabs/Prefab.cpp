@@ -1,5 +1,7 @@
 #include "World/Prefabs/Prefab.h"
 #include "Blocks/BlockRegistry.h"
+#include "ResourcePacks/BlockNameUtil.h"
+#include "ResourcePacks/ResourcePack.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -11,47 +13,51 @@ using json = nlohmann::json;
 namespace cutum
 {
 
-void UPrefabLibrary::Load(const std::string &prefabs_folder,
-                          UBlockRegistry &registry)
+void UPrefabLibrary::LoadDirectory(const std::filesystem::path &folder,
+                                  const std::string &namePrefix,
+                                  UBlockRegistry &registry)
 {
-  Prefabs.clear();
-  if (!std::filesystem::exists(prefabs_folder))
+  if (!std::filesystem::exists(folder))
   {
-    std::cerr << "UPrefabLibrary: folder not found: " << prefabs_folder
-              << std::endl;
     return;
   }
-
-  for (const auto &entry : std::filesystem::directory_iterator(prefabs_folder))
+  for (const auto &entry : std::filesystem::directory_iterator(folder))
   {
-    if (!entry.is_regular_file())
+    if (!entry.is_regular_file() || entry.path().extension() != ".json")
     {
       continue;
     }
-    if (entry.path().extension() != ".json")
-    {
-      continue;
-    }
-    LoadFile(entry.path().string(), registry);
+    const std::string localName = entry.path().stem().string();
+    const std::string registerName =
+        namePrefix.empty() ? localName
+                           : MakeQualifiedBlockName(namePrefix, localName);
+    LoadFile(entry.path().string(), registry, registerName);
   }
+}
 
-  const auto userFolder = std::filesystem::path(prefabs_folder) / "user";
-  if (std::filesystem::exists(userFolder))
+void UPrefabLibrary::LoadMerged(
+    const std::filesystem::path &baseFolder,
+    const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
+{
+  Prefabs.clear();
+  LoadDirectory(baseFolder, "", registry);
+  LoadDirectory(baseFolder / "user", "", registry);
+  for (const auto &pack : packs)
   {
-    for (const auto &entry : std::filesystem::directory_iterator(userFolder))
-    {
-      if (entry.is_regular_file() && entry.path().extension() == ".json")
-      {
-        LoadFile(entry.path().string(), registry);
-      }
-    }
+    LoadDirectory(pack.Root / "prefabs", pack.Id, registry);
   }
-
   std::cout << "UPrefabLibrary: loaded " << Prefabs.size() << " prefabs"
             << std::endl;
 }
 
-bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
+void UPrefabLibrary::Load(const std::string &prefabs_folder,
+                          UBlockRegistry &registry)
+{
+  LoadMerged(std::filesystem::path(prefabs_folder), {}, registry);
+}
+
+bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
+                              const std::string &registerName)
 {
   std::ifstream file(path);
   if (!file.is_open())
@@ -63,8 +69,10 @@ bool UPrefabLibrary::LoadFile(const std::string &path, UBlockRegistry &registry)
   {
     json data = json::parse(file);
     Prefab prefab;
-    prefab.Name =
-        data.value("name", std::filesystem::path(path).stem().string());
+    prefab.Name = registerName.empty()
+                      ? data.value("name",
+                                   std::filesystem::path(path).stem().string())
+                      : registerName;
 
     if (data.contains("anchor") && data["anchor"].is_array() &&
         data["anchor"].size() == 3)

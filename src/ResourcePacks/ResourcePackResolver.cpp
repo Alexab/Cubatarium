@@ -149,6 +149,7 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
       const auto &ph = rp["placeholder"];
       cfg.PlaceholderTileSize = ph.value("tile_size", 16);
       cfg.PlaceholderBackground = ph.value("background", "#6b4a9e");
+      cfg.PlaceholderCacheMaxEntries = ph.value("max_entries", 256);
     }
   }
   if (cfg.DefaultPrimary.empty() && cfg.DefaultEnabled.empty())

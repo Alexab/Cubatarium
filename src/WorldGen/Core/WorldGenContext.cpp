@@ -71,7 +71,7 @@ void WorldGenContext::ResolveBlockIds()
     if (out == BLOCK_AIR)
     {
       std::cerr << "WorldGen: missing block type for slot '" << slotName
-                << "', fallback stone/air" << std::endl;
+                << "' (check worldgen_refs and active packs)" << std::endl;
     }
   };
 
@@ -96,22 +96,6 @@ void WorldGenContext::ResolveBlockIds()
     std::cerr << "WorldGen: block type 'water' not loaded — fill_water will "
                  "have no effect"
               << std::endl;
-  }
-  if (Gravel == BLOCK_AIR)
-  {
-    Gravel = Stone;
-  }
-  if (Snow == BLOCK_AIR)
-  {
-    Snow = Stone;
-  }
-  if (Sand == BLOCK_AIR)
-  {
-    Sand = Sandstone != BLOCK_AIR ? Sandstone : Stone;
-  }
-  if (Dirt == BLOCK_AIR)
-  {
-    Dirt = Stone;
   }
 }
 

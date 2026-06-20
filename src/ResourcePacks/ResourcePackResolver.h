@@ -17,6 +17,7 @@ struct ResourcePacksConfig
   std::vector<std::string> DefaultEnabled;
   int PlaceholderTileSize{16};
   std::string PlaceholderBackground{"#6b4a9e"};
+  int PlaceholderCacheMaxEntries{256};
 };
 
 struct ResourcePackSelection

@@ -60,6 +60,7 @@ void UBlockMergeRegistry::Rebuild(
   }
 
   AssignRuntimeIds();
+  RuntimeOverlayDirty = false;
 }
 
 void UBlockMergeRegistry::MergeBlockCatalog(
@@ -351,11 +352,22 @@ BlockId UBlockMergeRegistry::RegisterRuntimeBlock(
                      [&](const auto &p) { return p.first.Name == def.Name; }),
       RuntimeOverlay.end());
   RuntimeOverlay.push_back({def, stems});
-  if (PlaceholderCache)
+  RuntimeOverlayDirty = true;
+  if (NameToId.count(def.Name))
   {
-    Rebuild(ActivePacks, PlaceholderCache, PlaceholderTileSize);
+    return NameToId.at(def.Name);
   }
-  return NameToId.count(def.Name) ? NameToId.at(def.Name) : BLOCK_AIR;
+  return BLOCK_AIR;
+}
+
+void UBlockMergeRegistry::FlushRuntimeOverlay()
+{
+  if (!RuntimeOverlayDirty || !PlaceholderCache)
+  {
+    return;
+  }
+  Rebuild(ActivePacks, PlaceholderCache, PlaceholderTileSize);
+  RuntimeOverlayDirty = false;
 }
 
 void UBlockMergeRegistry::UnregisterRuntimeBlock(const std::string &name)
@@ -365,10 +377,7 @@ void UBlockMergeRegistry::UnregisterRuntimeBlock(const std::string &name)
                      [&](const auto &p) { return p.first.Name == name; }),
       RuntimeOverlay.end());
   BlocksByName.erase(name);
-  if (PlaceholderCache)
-  {
-    Rebuild(ActivePacks, PlaceholderCache, PlaceholderTileSize);
-  }
+  RuntimeOverlayDirty = true;
 }
 
 void UBlockMergeRegistry::PopulateBlockDefinitionStorage(

@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Content/ContentType.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -435,6 +436,14 @@ void UGameSession::OpenSettings()
   }
 }
 
+void UGameSession::OpenWorldSettings()
+{
+  if (Application)
+  {
+    Application->ShowWorldSettings();
+  }
+}
+
 bool UGameSession::HasPausedSession() const
 {
   return Application && Application->HasWorldSession();
@@ -769,6 +778,29 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   if (entry.empty || slotIndex >= 10)
   {
     return false;
+  }
+  if (World)
+  {
+    if (entry.kind == InventoryEntryKind::Block)
+    {
+      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+      {
+        std::cerr << "GameSession: block not in registry, hotbar assign rejected: "
+                  << entry.Id << std::endl;
+        return false;
+      }
+    }
+    else if (entry.kind == InventoryEntryKind::UObject)
+    {
+      const auto entries =
+          ContentCatalog.GetEntries(ContentKind::UObject, entry.Id);
+      if (entries.empty())
+      {
+        std::cerr << "GameSession: prefab not in catalog, hotbar assign rejected: "
+                  << entry.Id << std::endl;
+        return false;
+      }
+    }
   }
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
   if (!creatureInv)

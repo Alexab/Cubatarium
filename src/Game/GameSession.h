@@ -47,6 +47,7 @@ public:
   void OpenNewWorld() override;
   void QuitApplication() override;
   void OpenSettings() override;
+  void OpenWorldSettings() override;
   bool HasPausedSession() const override;
   int GetHotbarCountSetting() const override;
   void SetHotbarCountSetting(int count) override;

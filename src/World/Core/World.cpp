@@ -306,10 +306,26 @@ void UWorld::OnBlockRegistryChanged()
 
 void UWorld::OnCreatureCatalogChanged()
 {
+  ReloadAllCreatureVisuals();
   if (OnCreatureCatalogChangedCallback)
   {
     OnCreatureCatalogChangedCallback();
   }
+}
+
+void UWorld::ReloadAllCreatureVisuals()
+{
+  ForEachCreature(
+      [this](UCreature &creature)
+      {
+        const CreatureDefinition *def =
+            GetCreatureDefinition(creature.GetTypeId());
+        if (!def)
+        {
+          return;
+        }
+        creature.SetVisual(CreateCreatureVisual(*def));
+      });
 }
 
 void UWorld::RefreshBlockRegistry()

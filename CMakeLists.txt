@@ -196,6 +196,7 @@ set(SOURCES
     src/Gui/Screens/SettingsScreen.cpp
     src/Gui/Screens/NewWorldScreen.cpp
     src/Gui/Screens/LoadWorldScreen.cpp
+    src/Gui/Screens/WorldResourcePacksScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp

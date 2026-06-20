@@ -1,6 +1,7 @@
 #include "Gui/Screens/SettingsScreen.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/UiSettings.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -13,6 +14,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
 
 namespace cutum
@@ -112,6 +114,16 @@ void USettingsScreen::OnSave()
   }
   app.Ui.HotbarCount = std::clamp(HotbarCount, 1, 2);
   app.Ui.ControlScheme = SelectedControlScheme;
+  if (PackForm)
+  {
+    app.DefaultResourcePacks = PackForm->ReadSelection();
+    if (app.DefaultResourcePacks.WorldgenOwner.empty() &&
+        !app.DefaultResourcePacks.Primary.empty())
+    {
+      app.DefaultResourcePacks.WorldgenOwner =
+          app.DefaultResourcePacks.Primary.front();
+    }
+  }
   if (app.Render.GreedyMeshing && !app.Render.FaceQuads)
   {
     app.Render.FaceQuads = true;
@@ -162,7 +174,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
   DialogFrame = frame.get();
   frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
-  frame->CreateTabBar({"Application", "World defaults"},
+  frame->CreateTabBar({"Application", "World defaults", "Resource packs"},
                       [this](int tab) { ShowTab(tab); });
 
   UGuiPanel &app = frame->AddScrollPage();
@@ -298,12 +310,27 @@ void USettingsScreen::Build(UGuiContext &ctx)
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
   WorldForm->BuildInto(world);
+
+  UGuiPanel &packs = frame->AddScrollPage();
+  PacksPanel = &packs;
+  PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
+  PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
+                          : std::vector<InstalledPackInfo>{});
+  PackForm->SetSelection(appSnap.DefaultResourcePacks.Primary.empty()
+                             ? (Host ? Host->GetDefaultResourcePackSelection()
+                                     : ResourcePackSelection{})
+                             : appSnap.DefaultResourcePacks);
+  PackForm->BuildInto(packs);
+
   frame->SetScrollPageLayout(
       0, [this](const GuiRect &area) { return MeasureAppPageHeight(area); },
       [this](const GuiRect &area) { LayoutAppPage(area); });
   frame->SetScrollPageLayout(
       1, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
       [this](const GuiRect &area) { LayoutWorldPage(area); });
+  frame->SetScrollPageLayout(
+      2, [this](const GuiRect &area) { return MeasurePacksPageHeight(area); },
+      [this](const GuiRect &area) { LayoutPacksPage(area); });
 
   auto saveBtn = std::make_unique<UGuiButton>(&theme, "Save");
   saveBtn->SetOnClick([this]() { OnSave(); });
@@ -439,6 +466,24 @@ void USettingsScreen::LayoutWorldPage(const GuiRect &area) const
     return;
   }
   WorldForm->LayoutGrid(area, BuildTwoColumnSpec(area.W));
+}
+
+int USettingsScreen::MeasurePacksPageHeight(const GuiRect &area) const
+{
+  if (!PackForm)
+  {
+    return 0;
+  }
+  return PackForm->MeasureHeight(area);
+}
+
+void USettingsScreen::LayoutPacksPage(const GuiRect &area) const
+{
+  if (!PackForm)
+  {
+    return;
+  }
+  PackForm->Layout({area.X, area.Y, area.W, PackForm->MeasureHeight(area)});
 }
 
 } // namespace cutum

@@ -106,6 +106,7 @@ public:
     OnBlockRegistryChangedCallback = std::move(callback);
   }
   void OnCreatureCatalogChanged();
+  void ReloadAllCreatureVisuals();
   void SetOnCreatureCatalogChanged(std::function<void()> callback)
   {
     OnCreatureCatalogChangedCallback = std::move(callback);

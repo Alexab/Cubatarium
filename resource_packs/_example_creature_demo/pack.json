@@ -1,0 +1,14 @@
+{
+  "id": "_example_creature_demo",
+  "name": "Example Creature Demo",
+  "pack_format": 1,
+  "version": 1,
+  "license": "CC0-1.0",
+  "resolution": 16,
+  "priority": 5,
+  "worldgen_role": "secondary",
+  "merge_mode": "skip_existing",
+  "depends": [],
+  "conflicts": [],
+  "min_game_version": "0.1.0"
+}

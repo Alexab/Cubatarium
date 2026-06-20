@@ -1,6 +1,9 @@
 package com.cubatarium;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 
 import java.io.File;
@@ -8,28 +11,75 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public final class AssetExtractor {
+    private static final String PREFS = "cubatarium_asset_extractor";
+    private static final String KEY_VERSION_CODE = "last_extracted_version_code";
+
+    /** Top-level asset folders copied into files/game/ (TD-006 selective extract). */
+    private static final Set<String> GAME_ASSET_WHITELIST = new HashSet<>(Arrays.asList(
+            "config.json",
+            "config.json.example",
+            "content",
+            "models",
+            "prefabs",
+            "resource_packs",
+            "shaders",
+            "textures",
+            "worlds"
+    ));
+
     private AssetExtractor() {}
 
     public static void extractIfNeeded(Context context) {
-        File flag = new File(context.getFilesDir(), ".assets_extracted");
-        if (flag.exists()) {
+        final int versionCode = getVersionCode(context);
+        final SharedPreferences prefs =
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        final int stored = prefs.getInt(KEY_VERSION_CODE, -1);
+        final File flag = new File(context.getFilesDir(), ".assets_extracted");
+        if (stored == versionCode && flag.exists()) {
             return;
         }
         File gameDir = new File(context.getFilesDir(), "game");
         try {
             copyAssetFolder(context.getAssets(), "", gameDir);
-            if (!flag.createNewFile()) {
+            if (!flag.exists() && !flag.createNewFile()) {
                 flag.createNewFile();
             }
+            prefs.edit().putInt(KEY_VERSION_CODE, versionCode).apply();
         } catch (IOException e) {
             throw new RuntimeException("Failed to extract game assets", e);
         }
     }
 
+    private static int getVersionCode(Context context) {
+        try {
+            PackageInfo info = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            return info.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            return 0;
+        }
+    }
+
+    private static boolean shouldExtractRoot(String assetPath) {
+        if (assetPath == null || assetPath.isEmpty()) {
+            return true;
+        }
+        final String top = assetPath.contains("/")
+                ? assetPath.substring(0, assetPath.indexOf('/'))
+                : assetPath;
+        return GAME_ASSET_WHITELIST.contains(top);
+    }
+
     private static void copyAssetFolder(AssetManager assets, String assetPath, File destDir)
             throws IOException {
+        if (!shouldExtractRoot(assetPath)) {
+            return;
+        }
         String[] list = assets.list(assetPath);
         if (list == null || list.length == 0) {
             return;
@@ -37,6 +87,9 @@ public final class AssetExtractor {
         if (list.length == 1) {
             String only = list[0];
             String childPath = assetPath.isEmpty() ? only : assetPath + "/" + only;
+            if (!shouldExtractRoot(childPath)) {
+                return;
+            }
             String[] nested = assets.list(childPath);
             if (nested != null && nested.length > 0) {
                 File childDir = new File(destDir, only);
@@ -52,6 +105,9 @@ public final class AssetExtractor {
         }
         for (String name : list) {
             String childPath = assetPath.isEmpty() ? name : assetPath + "/" + name;
+            if (!shouldExtractRoot(childPath)) {
+                continue;
+            }
             String[] nested = assets.list(childPath);
             if (nested != null && nested.length > 0) {
                 copyAssetFolder(assets, childPath, new File(destDir, name));

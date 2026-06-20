@@ -36,6 +36,6 @@
         "default_primary": ["minetest_default_16"],
         "default_secondary": [],
         "default_enabled": ["minetest_default_16"],
-        "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
+        "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
     }
 }

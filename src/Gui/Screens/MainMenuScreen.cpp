@@ -121,6 +121,20 @@ void UMainMenuScreen::Build(UGuiContext &ctx)
         }
       });
 
+  std::unique_ptr<UGuiButton> worldSettings;
+  if (resume)
+  {
+    worldSettings = std::make_unique<UGuiButton>(&theme, "World settings");
+    worldSettings->SetOnClick(
+        [this]()
+        {
+          if (Actions)
+          {
+            Actions->OpenWorldSettings();
+          }
+        });
+  }
+
   auto newWorld = std::make_unique<UGuiButton>(&theme, "New World");
   newWorld->SetOnClick(
       [this]()
@@ -146,6 +160,10 @@ void UMainMenuScreen::Build(UGuiContext &ctx)
 
   Buttons.clear();
   Buttons.push_back(primary.get());
+  if (worldSettings)
+  {
+    Buttons.push_back(worldSettings.get());
+  }
   Buttons.push_back(loadWorld.get());
   Buttons.push_back(newWorld.get());
   Buttons.push_back(settings.get());
@@ -195,6 +213,10 @@ void UMainMenuScreen::Build(UGuiContext &ctx)
   panel->AddChild(std::move(title));
   panel->AddChild(std::move(version));
   panel->AddChild(std::move(primary));
+  if (worldSettings)
+  {
+    panel->AddChild(std::move(worldSettings));
+  }
   panel->AddChild(std::move(loadWorld));
   panel->AddChild(std::move(newWorld));
   panel->AddChild(std::move(settings));
