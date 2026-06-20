@@ -30,7 +30,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [tundra], spacing: 26, weight: 2, seed_offset: 4004 }
   tree_jungle:
     source_mts: mtg/jungle_tree_from_sapling.mts
     category: plants
@@ -117,6 +116,22 @@ prefabs:
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
     worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 32, weight: 2, seed_offset: 4008 }
+  tree_pine_snowy_mapgen:
+    source_mts: mtg/snowy_pine_tree_from_sapling.mts
+    category: plants
+    displayName: Snowy Pine Tree (mapgen)
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [tundra], spacing: 26, weight: 2, seed_offset: 4004 }
+  tree_pine_snowy_small_mapgen:
+    source_mts: mtg/snowy_small_pine_tree_from_sapling.mts
+    category: plants
+    displayName: Small Snowy Pine (mapgen)
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
+    worldgen: { pool: vegetation, biomes: [tundra], spacing: 24, weight: 2, seed_offset: 4009 }
   tree_pine_snowy_small:
     source_mts: mtg/snowy_small_pine_tree_from_sapling.mts
     category: plants
@@ -124,7 +139,6 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [tundra], spacing: 24, weight: 2, seed_offset: 4009 }
 
   # --- Bushes ---
   bush_common:
@@ -185,6 +199,64 @@ prefabs:
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
     worldgen: { pool: decoration, biomes: [desert], spacing: 80, weight: 1, seed_offset: 4203 }
+
+  flower_patch_common:
+    category: plants
+    displayName: Common Flower Patch
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 14, weight: 2, seed_offset: 4110 }
+  tall_grass_patch:
+    category: plants
+    displayName: Tall Grass Patch
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: vegetation, biomes: [plains], spacing: 10, weight: 3, seed_offset: 4111 }
+  mushroom_brown_pair:
+    category: plants
+    displayName: Brown Mushrooms
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 24, weight: 1, seed_offset: 4112, sub_biomes: [woodland] }
+  mushroom_red_pair:
+    category: plants
+    displayName: Red Mushrooms
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 28, weight: 1, seed_offset: 4113 }
+  dry_grass_clump:
+    category: plants
+    displayName: Dry Grass Clump
+    import_status: ready
+    placement: { y_offset: -1 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: vegetation, biomes: [desert], spacing: 8, weight: 2, seed_offset: 4114 }
+  lily_pad_pair:
+    category: plants
+    displayName: Lily Pads
+    import_status: ready
+    placement: { y_offset: 0 }
+    source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
+    worldgen: { pool: decoration, biomes: [plains, forest], spacing: 48, weight: 1, seed_offset: 4210 }
+  flower_scatter_plains:
+    category: plants
+    displayName: Plains Flower Scatter
+    import_status: ready
+    source: { mod: cubatarium/procedural, license: CC0 }
+    worldgen:
+      pool: vegetation
+      mode: scatter_blocks
+      block: rose
+      attempts: 5
+      radius: 3
+      biomes: [plains]
+      spacing: 12
+      weight: 2
+      seed_offset: 4120
 
   # --- Fallen logs (decoration) ---
   deco_log_apple:
@@ -329,6 +401,7 @@ prefabs:
     displayName: Cobble Path
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
+    worldgen: { pool: decoration, biomes: [plains, forest, hills], spacing: 160, weight: 1, seed_offset: 9205 }
   pillar_sandstone:
     category: decorative
     displayName: Sandstone Pillar

@@ -94,6 +94,8 @@ private:
   UGuiCheckbox *CavesBox{nullptr};
   UGuiCheckbox *OresBox{nullptr};
   UGuiCheckbox *TreesBox{nullptr};
+  UGuiCheckbox *DecorationBox{nullptr};
+  UGuiCheckbox *StructuresBox{nullptr};
   UGuiCheckbox *WaterBox{nullptr};
   UGuiCheckbox *LavaBox{nullptr};
   UGuiCheckbox *FireBox{nullptr};

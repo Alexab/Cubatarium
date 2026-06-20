@@ -101,6 +101,14 @@
       "EnableCaves"
     ],
     [
+      "enableDecoration",
+      "EnableDecoration"
+    ],
+    [
+      "enableStructures",
+      "EnableStructures"
+    ],
+    [
       "enableTrees",
       "EnableTrees"
     ],

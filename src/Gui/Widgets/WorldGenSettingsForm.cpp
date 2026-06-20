@@ -209,6 +209,14 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     TreesBox->SetChecked(FormSettings.EnableTrees);
   }
+  if (DecorationBox)
+  {
+    DecorationBox->SetChecked(FormSettings.EnableDecoration);
+  }
+  if (StructuresBox)
+  {
+    StructuresBox->SetChecked(FormSettings.EnableStructures);
+  }
   if (WaterBox)
   {
     WaterBox->SetChecked(FormSettings.FillWater);
@@ -350,6 +358,14 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     s.EnableTrees = TreesBox->IsChecked();
   }
+  if (DecorationBox)
+  {
+    s.EnableDecoration = DecorationBox->IsChecked();
+  }
+  if (StructuresBox)
+  {
+    s.EnableStructures = StructuresBox->IsChecked();
+  }
   if (WaterBox)
   {
     s.FillWater = WaterBox->IsChecked();
@@ -412,6 +428,8 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(FlatYInput, showFlat);
   SetWidgetVisible(CavesBox, showCaves);
   SetWidgetVisible(TreesBox, showTrees);
+  SetWidgetVisible(DecorationBox, showTrees);
+  SetWidgetVisible(StructuresBox, showStructures);
   SetWidgetVisible(WaterBox, showFluids);
   SetWidgetVisible(LavaBox, showFluids);
   SetWidgetVisible(FireBox, showFluids);
@@ -706,6 +724,20 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   trees->SetOnChanged([this](bool v) { FormSettings.EnableTrees = v; });
   panel.AddChild(std::move(trees));
 
+  auto decoration = std::make_unique<UGuiCheckbox>(Theme, "Decoration");
+  DecorationBox = decoration.get();
+  decoration->SetChecked(FormSettings.EnableDecoration);
+  decoration->SetOnChanged(
+      [this](bool v) { FormSettings.EnableDecoration = v; });
+  panel.AddChild(std::move(decoration));
+
+  auto structures = std::make_unique<UGuiCheckbox>(Theme, "Structures");
+  StructuresBox = structures.get();
+  structures->SetChecked(FormSettings.EnableStructures);
+  structures->SetOnChanged(
+      [this](bool v) { FormSettings.EnableStructures = v; });
+  panel.AddChild(std::move(structures));
+
   auto water = std::make_unique<UGuiCheckbox>(Theme, "Fill water");
   WaterBox = water.get();
   water->SetChecked(FormSettings.FillWater);
@@ -787,11 +819,13 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({CavesBox, 25, 0, 1, 1, 30});
   items.push_back({OresBox, 25, 1, 1, 1, 30});
   items.push_back({TreesBox, 26, 0, 1, 1, 30});
-  items.push_back({WaterBox, 26, 1, 1, 1, 30});
-  items.push_back({LavaBox, 27, 0, 1, 1, 30});
-  items.push_back({FireBox, 27, 1, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 28, 0, 1, 1, 28});
-  items.push_back({WorldGenPackIdInput, 28, 1, 1, 1, 32});
+  items.push_back({DecorationBox, 26, 1, 1, 1, 30});
+  items.push_back({StructuresBox, 27, 0, 1, 1, 30});
+  items.push_back({WaterBox, 27, 1, 1, 1, 30});
+  items.push_back({LavaBox, 28, 0, 1, 1, 30});
+  items.push_back({FireBox, 28, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 29, 0, 1, 1, 28});
+  items.push_back({WorldGenPackIdInput, 29, 1, 1, 1, 32});
   return items;
 }
 

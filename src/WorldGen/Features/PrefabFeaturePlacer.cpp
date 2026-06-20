@@ -1,11 +1,15 @@
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include <climits>
+#include <cmath>
 #include <cstdint>
+#include <iostream>
 
 namespace cutum
 {
@@ -78,6 +82,154 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
 bool PrefabRequiresNearWater(const std::string &prefabName)
 {
   return prefabName.rfind("reeds_", 0) == 0;
+}
+
+bool PrefabRequiresWaterSurface(const std::string &prefabName)
+{
+  return prefabName.rfind("lily_pad", 0) == 0;
+}
+
+bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z, int &anchorY)
+{
+  if (ctx.Water == BLOCK_AIR)
+  {
+    return false;
+  }
+  const int maxY =
+      std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 1);
+  for (int y = maxY; y >= 1; --y)
+  {
+    if (ctx.World.GetBlock(glm::ivec3(x, y, z)) != ctx.Water)
+    {
+      continue;
+    }
+    if (!ctx.World.IsAir(glm::ivec3(x, y + 1, z)))
+    {
+      continue;
+    }
+    anchorY = y + 1;
+    return true;
+  }
+  return false;
+}
+
+bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
+                            glm::ivec3 &anchorOut)
+{
+  for (int radius = 0; radius <= 3; ++radius)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int dx = -radius; dx <= radius; ++dx)
+      {
+        if (radius > 0 && std::max(std::abs(dx), std::abs(dz)) != radius)
+        {
+          continue;
+        }
+        int anchorY = 0;
+        if (TryWaterSurfaceAnchorAt(ctx, x + dx, z + dz, anchorY))
+        {
+          anchorOut = glm::ivec3(x + dx, anchorY, z + dz);
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool PlacePrefabAtWaterSurface(WorldGenContext &ctx, const std::string &prefabName,
+                               glm::ivec3 anchorWorldPos)
+{
+  if (!ctx.Prefabs)
+  {
+    return false;
+  }
+  const Prefab *prefab = ctx.Prefabs->Get(prefabName);
+  if (!prefab)
+  {
+    return false;
+  }
+  if (!CanPlacePrefabAt(ctx.World, *prefab, anchorWorldPos))
+  {
+    return false;
+  }
+  const PrefabPlacementStats stats =
+      PlacePrefabAt(ctx.World, *prefab, anchorWorldPos, false);
+  if (stats.placedCount == 0)
+  {
+    return false;
+  }
+  ctx.MarkDirtyColumn(anchorWorldPos.x, anchorWorldPos.z, stats.minY,
+                      stats.maxY);
+  return true;
+}
+
+BlockId ResolveScatterBlockId(const WorldGenContext &ctx,
+                              const std::string &blockName)
+{
+  if (blockName.empty())
+  {
+    return BLOCK_AIR;
+  }
+  if (!ctx.WorldgenOwnerPackId.empty())
+  {
+    const BlockId qualified = ctx.Registry.GetIdByTypeName(
+        MakeQualifiedBlockName(ctx.WorldgenOwnerPackId, blockName));
+    if (qualified != BLOCK_AIR)
+    {
+      return qualified;
+    }
+  }
+  return ctx.Registry.GetIdByTypeName(blockName);
+}
+
+bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
+                           const PrefabFeatureRule &rule)
+{
+  const BlockId blockId = ResolveScatterBlockId(ctx, rule.Scatter.BlockName);
+  if (blockId == BLOCK_AIR)
+  {
+    return false;
+  }
+
+  const uint32_t seed = ctx.Settings.Seed;
+  const int radius = std::max(0, rule.Scatter.Radius);
+  const int span = radius * 2 + 1;
+  int placed = 0;
+  int minY = surfaceY;
+  int maxY = surfaceY + 1;
+
+  for (int attempt = 0; attempt < rule.Scatter.Attempts; ++attempt)
+  {
+    const uint32_t h =
+        FeatureHash(x, z, seed + rule.SeedOffset + static_cast<uint32_t>(attempt * 17));
+    const int ox = static_cast<int>(h % static_cast<uint32_t>(span)) - radius;
+    const int oz =
+        static_cast<int>((h / 31U) % static_cast<uint32_t>(span)) - radius;
+    const int y = surfaceY + 1 + rule.Scatter.DyOffset;
+    const glm::ivec3 pos(x + ox, y, z + oz);
+    if (!ctx.World.IsAir(pos))
+    {
+      continue;
+    }
+    const BlockId below = ctx.World.GetBlock(glm::ivec3(pos.x, surfaceY, pos.z));
+    if (below == BLOCK_AIR)
+    {
+      continue;
+    }
+    ctx.World.SetBlock(pos, blockId);
+    ++placed;
+    minY = std::min(minY, y);
+    maxY = std::max(maxY, y);
+  }
+
+  if (placed <= 0)
+  {
+    return false;
+  }
+  ctx.MarkDirtyColumn(x, z, minY, maxY);
+  return true;
 }
 
 bool IsNearSurfaceWater(const WorldGenContext &ctx, int x, int z, int surfaceY,
@@ -200,7 +352,15 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       continue;
     }
-    if (!ctx.Prefabs->Get(rule.PrefabName))
+    if (rule.Mode == PrefabPlacementMode::ScatterBlocks)
+    {
+      if (rule.Scatter.BlockName.empty() ||
+          ResolveScatterBlockId(ctx, rule.Scatter.BlockName) == BLOCK_AIR)
+      {
+        continue;
+      }
+    }
+    else if (!ctx.Prefabs->Get(rule.PrefabName))
     {
       continue;
     }
@@ -221,8 +381,11 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    const float packMul = UWorldGenPack::FeatureWeightMultiplier(
-        BiomeIdToString(biome), rule.PrefabName);
+    const std::string &featureKey =
+        rule.Mode == PrefabPlacementMode::ScatterBlocks ? rule.Scatter.BlockName
+                                                        : rule.PrefabName;
+    const float packMul =
+        UWorldGenPack::FeatureWeightMultiplier(BiomeIdToString(biome), featureKey);
     const int weight = std::max(
         1, static_cast<int>(static_cast<float>(std::max(1, rule.Weight)) *
                             subMul * packMul));
@@ -253,6 +416,23 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
 
   const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
+  if (chosen->Mode == PrefabPlacementMode::ScatterBlocks)
+  {
+    return TryPlaceScatterBlocks(ctx, x, z, surfaceY, *chosen);
+  }
+  if (PrefabRequiresWaterSurface(chosen->PrefabName))
+  {
+    if (!IsNearSurfaceWater(ctx, x, z, surfaceY))
+    {
+      return false;
+    }
+    glm::ivec3 waterAnchor;
+    if (!FindWaterSurfaceAnchor(ctx, x, z, waterAnchor))
+    {
+      return false;
+    }
+    return PlacePrefabAtWaterSurface(ctx, chosen->PrefabName, waterAnchor);
+  }
   const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
   if (PrefabRequiresNearWater(chosen->PrefabName) &&
       !IsNearSurfaceWater(ctx, x, z, surfaceY))
@@ -311,60 +491,20 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
   return true;
 }
 
-bool TryPlaceTree(WorldGenContext &ctx, int x, int z, int surfaceY,
-                  BiomeId biome, const FeatureParams &params)
-{
-  if (UPrefabFeatureConfigStorage::IsLoaded())
-  {
-    return TryPlaceVegetationFeatures(ctx, x, z, surfaceY, biome);
-  }
-
-  if (!ctx.Settings.EnableTrees || !ctx.Prefabs)
-  {
-    return false;
-  }
-  if (biome != BiomeId::Forest && biome != BiomeId::Plains)
-  {
-    return false;
-  }
-
-  const glm::ivec3 anchor(x, surfaceY + 1, z);
-  const uint32_t Seed = ctx.Settings.Seed;
-
-  if (biome == BiomeId::Forest)
-  {
-    if (FeatureHash(x, z, Seed + params.treeLargeSeedOffset) %
-            static_cast<uint32_t>(params.treeLargeSpacingModForest) ==
-        0)
-    {
-      return PlacePrefabAt(ctx, params.treeLargePrefabName, anchor, surfaceY);
-    }
-    if (FeatureHash(x, z, Seed + params.treeSeedOffset) %
-            static_cast<uint32_t>(params.treeSmallSpacingModForest) ==
-        0)
-    {
-      return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor, surfaceY);
-    }
-    return false;
-  }
-
-  if (FeatureHash(x, z, Seed + params.treeSeedOffset) %
-          static_cast<uint32_t>(params.treeSmallSpacingModPlains) !=
-      0)
-  {
-    return false;
-  }
-  if (FeatureHash(x, z, Seed + params.treeSeedOffset + 7) % 5 != 0)
-  {
-    return false;
-  }
-  return PlacePrefabAt(ctx, params.treeSmallPrefabName, anchor, surfaceY);
-}
-
 bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
                                 int surfaceY, BiomeId biome)
 {
   if (!UPrefabFeatureConfigStorage::IsLoaded())
+  {
+    static bool warnedMissingFeatures = false;
+    if (!warnedMissingFeatures)
+    {
+      std::cerr << "prefab_features missing, vegetation disabled" << std::endl;
+      warnedMissingFeatures = true;
+    }
+    return false;
+  }
+  if (!ctx.Settings.EnableTrees)
   {
     return false;
   }
@@ -377,7 +517,8 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
                                 int surfaceY, BiomeId biome)
 {
-  if (!UPrefabFeatureConfigStorage::IsLoaded())
+  if (!UPrefabFeatureConfigStorage::IsLoaded() ||
+      !ctx.Settings.EnableDecoration)
   {
     return false;
   }
@@ -390,7 +531,8 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
                                int surfaceY, BiomeId biome)
 {
-  if (!UPrefabFeatureConfigStorage::IsLoaded())
+  if (!UPrefabFeatureConfigStorage::IsLoaded() ||
+      !ctx.Settings.EnableStructures)
   {
     return false;
   }

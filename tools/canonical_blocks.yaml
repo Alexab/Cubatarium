@@ -498,6 +498,114 @@ tier_b:
       transparent: true
       style: cross
     display_name: Reeds
+  rose:
+    types:
+    - natural
+    - plants
+    textures:
+    - rose
+    - rose
+    - rose
+    - rose
+    - rose
+    - rose
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Rose
+  tall_grass:
+    types:
+    - natural
+    - plants
+    textures:
+    - tallgrass
+    - tallgrass
+    - tallgrass
+    - tallgrass
+    - tallgrass
+    - tallgrass
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Tall Grass
+  brown_mushroom:
+    types:
+    - natural
+    - plants
+    textures:
+    - mushroom_brown
+    - mushroom_brown
+    - mushroom_brown
+    - mushroom_brown
+    - mushroom_brown
+    - mushroom_brown
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Brown Mushroom
+  red_mushroom:
+    types:
+    - natural
+    - plants
+    textures:
+    - mushroom_red
+    - mushroom_red
+    - mushroom_red
+    - mushroom_red
+    - mushroom_red
+    - mushroom_red
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Red Mushroom
+  lily_pad:
+    types:
+    - natural
+    - plants
+    textures:
+    - waterlily
+    - waterlily
+    - waterlily
+    - waterlily
+    - waterlily
+    - waterlily
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Lily Pad
+  mtg_dry_grass_1:
+    types:
+    - natural
+    - plants
+    textures:
+    - mtg_dry_grass_1_default_dry_grass_1
+    - mtg_dry_grass_1_default_dry_grass_1
+    - mtg_dry_grass_1_default_dry_grass_1
+    - mtg_dry_grass_1_default_dry_grass_1
+    - mtg_dry_grass_1_default_dry_grass_1
+    - mtg_dry_grass_1_default_dry_grass_1
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    display_name: Dry Grass
   wheat:
     types:
     - natural

@@ -1,7 +1,8 @@
 {
   "name": "mtg_dry_grass_1",
   "types": [
-    "building"
+    "natural",
+    "plants"
   ],
   "textures": [
     "mtg_dry_grass_1_default_dry_grass_1",
@@ -11,5 +12,14 @@
     "mtg_dry_grass_1_default_dry_grass_1",
     "mtg_dry_grass_1_default_dry_grass_1"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Dry Grass"
 }

@@ -12,7 +12,37 @@
     {
       "dx": -1,
       "dy": 0,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
       "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
       "type": "tree_leaves"
     },
     {
@@ -25,7 +55,7 @@
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "tree_leaves"
+      "type": "tree_log"
     },
     {
       "dx": 0,
@@ -34,9 +64,57 @@
       "type": "tree_leaves"
     },
     {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
       "dx": 1,
       "dy": 0,
       "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
       "type": "tree_leaves"
     }
   ],
@@ -46,5 +124,8 @@
     "authors": [
       "random-geek"
     ]
+  },
+  "placement": {
+    "y_offset": -1
   }
 }

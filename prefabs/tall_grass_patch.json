@@ -1,0 +1,50 @@
+{
+  "name": "tall_grass_patch",
+  "version": 2,
+  "category": "plants",
+  "displayName": "Tall Grass Patch",
+  "source": {
+    "mod": "minetest-game/default",
+    "license": "CC-BY-SA-3.0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "tall_grass"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "tall_grass"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "tall_grass"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 2,
+      "type": "tall_grass"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "tall_grass"
+    }
+  ],
+  "placement": {
+    "y_offset": -1
+  }
+}

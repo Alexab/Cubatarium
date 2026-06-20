@@ -24,6 +24,7 @@
 | 4 | Biome JSON: `palette`, `sub_biomes` (веса + subsurface) | done |
 | 5 | `pack.json` optional `biome_blend_radius` default | done |
 | 6 | Убрать `pipeline.yaml`, `prefab_features.yaml` из content | done |
+| 7 | Валидация prefabs / prefab_features в CI (`smoke_resource_packs.py`) | done |
 
 ## Ограничения hot-reload
 
@@ -31,7 +32,6 @@
 
 ## Дальнейшие улучшения (не блокеры)
 
-- Валидация worldgen packs / prefab_features в CI
 - Выбор pack из выпадающего списка с описанием (сканирование `pack.json`)
 - Полный перенос `SubBiomeFor` noise-порогов в JSON
 - Доп. UX: пресеты генераторов и tooltips для чекбоксов стадий Overworld

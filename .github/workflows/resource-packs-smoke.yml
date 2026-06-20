@@ -7,13 +7,18 @@ on:
       - "resource_packs/**"
       - "tools/**"
       - "content/**"
+      - "prefabs/**"
       - "docs/RESOURCE_PACKS.md"
+      - "docs/PREFAB_CATALOG.md"
   pull_request:
     branches: [main, master, resource_packs]
     paths:
       - "resource_packs/**"
       - "tools/**"
       - "content/**"
+      - "prefabs/**"
+      - "docs/RESOURCE_PACKS.md"
+      - "docs/PREFAB_CATALOG.md"
   workflow_dispatch:
 
 jobs:

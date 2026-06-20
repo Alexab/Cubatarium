@@ -8,6 +8,8 @@ from pathlib import Path
 
 import yaml
 
+from prefab_bounds import format_size, prefab_bounds
+
 REPO = Path(__file__).resolve().parents[1]
 PREFABS = REPO / "prefabs"
 MANIFEST = REPO / "tools" / "prefab_manifest.yaml"
@@ -18,17 +20,25 @@ def main() -> int:
     manifest = yaml.safe_load(MANIFEST.read_text(encoding="utf-8")) or {}
     meta_by_name = manifest.get("prefabs") or {}
 
-    rows: list[tuple[str, str, str, int, str, str]] = []
+    rows: list[tuple[str, str, str, int, str, str, str, str]] = []
     for path in sorted(PREFABS.rglob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         name = data.get("name") or path.stem
         meta = meta_by_name.get(name, {})
+        blocks = data.get("blocks") or []
+        bounds = prefab_bounds(blocks)
+        wg = meta.get("worldgen") or {}
+        pool = wg.get("pool") or "—"
+        if wg.get("mode") == "scatter_blocks":
+            pool = f"scatter:{wg.get('block', '?')}"
         rows.append(
             (
                 name,
                 data.get("displayName") or meta.get("displayName") or name,
                 data.get("category") or meta.get("category") or "misc",
-                len(data.get("blocks") or []),
+                len(blocks),
+                format_size(bounds),
+                pool,
                 (meta.get("source") or {}).get("license", ""),
                 meta.get("import_status", "ready"),
             )
@@ -41,12 +51,12 @@ def main() -> int:
         "",
         f"Total prefabs: **{len(rows)}**",
         "",
-        "| Name | Display | Category | Blocks | License | Status |",
-        "|------|---------|----------|--------|---------|--------|",
+        "| Name | Display | Category | Blocks | Size (WxHxD) | Worldgen | License | Status |",
+        "|------|---------|----------|--------|--------------|----------|---------|--------|",
     ]
-    for name, display, category, count, license_, status in rows:
+    for name, display, category, count, size, pool, license_, status in rows:
         lines.append(
-            f"| `{name}` | {display} | {category} | {count} | {license_} | {status} |"
+            f"| `{name}` | {display} | {category} | {count} | {size} | {pool} | {license_} | {status} |"
         )
     lines.append("")
     OUT.parent.mkdir(parents=True, exist_ok=True)

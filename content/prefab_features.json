@@ -63,6 +63,72 @@
       ]
     },
     {
+      "prefab": "dry_grass_clump",
+      "biomes": [
+        "desert"
+      ],
+      "weight": 2,
+      "seed_offset": 4114,
+      "spacing": 8,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "flower_patch_common",
+      "biomes": [
+        "plains",
+        "forest"
+      ],
+      "weight": 2,
+      "seed_offset": 4110,
+      "spacing": 14,
+      "placement_y_offset": -1
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "rose",
+      "attempts": 5,
+      "radius": 3,
+      "biomes": [
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 4120,
+      "spacing": 12
+    },
+    {
+      "prefab": "mushroom_brown_pair",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4112,
+      "spacing": 24,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "woodland"
+      ]
+    },
+    {
+      "prefab": "mushroom_red_pair",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4113,
+      "spacing": 28,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tall_grass_patch",
+      "biomes": [
+        "plains"
+      ],
+      "weight": 3,
+      "seed_offset": 4111,
+      "spacing": 10,
+      "placement_y_offset": -1
+    },
+    {
       "prefab": "tree_acacia_mapgen",
       "biomes": [
         "plains",
@@ -140,7 +206,7 @@
       "placement_y_offset": -1
     },
     {
-      "prefab": "tree_pine_snowy",
+      "prefab": "tree_pine_snowy_mapgen",
       "biomes": [
         "tundra"
       ],
@@ -150,7 +216,7 @@
       "placement_y_offset": -1
     },
     {
-      "prefab": "tree_pine_snowy_small",
+      "prefab": "tree_pine_snowy_small_mapgen",
       "biomes": [
         "tundra"
       ],
@@ -233,6 +299,17 @@
       "spacing": 150
     },
     {
+      "prefab": "lily_pad_pair",
+      "biomes": [
+        "plains",
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4210,
+      "spacing": 48,
+      "placement_y_offset": 0
+    },
+    {
       "prefab": "obelisk_stone",
       "biomes": [
         "desert",
@@ -242,6 +319,17 @@
       "weight": 1,
       "seed_offset": 9202,
       "spacing": 200
+    },
+    {
+      "prefab": "path_cobble_3x3",
+      "biomes": [
+        "plains",
+        "forest",
+        "hills"
+      ],
+      "weight": 1,
+      "seed_offset": 9205,
+      "spacing": 160
     },
     {
       "prefab": "pillar_sandstone",

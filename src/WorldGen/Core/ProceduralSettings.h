@@ -44,6 +44,8 @@ struct ProceduralSettings
   std::string WorldGenPackId{"default"};
   bool EnableCaves{false};
   bool EnableTrees{true};
+  bool EnableDecoration{true};
+  bool EnableStructures{true};
   bool EnableOres{false};
   int FlatSurfaceY{3};
   bool FillWater{false};

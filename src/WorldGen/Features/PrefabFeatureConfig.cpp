@@ -17,6 +17,34 @@ BiomeId ParseBiome(const std::string &name)
   return BiomeIdFromString(name);
 }
 
+void ParseBiomeArray(const nlohmann::json &item, PrefabFeatureRule &rule)
+{
+  if (item.contains("biomes") && item["biomes"].is_array())
+  {
+    for (const auto &b : item["biomes"])
+    {
+      if (b.is_string())
+      {
+        rule.Biomes.push_back(ParseBiome(b.get<std::string>()));
+      }
+    }
+  }
+}
+
+void ParseSubBiomeArray(const nlohmann::json &item, PrefabFeatureRule &rule)
+{
+  if (item.contains("sub_biomes") && item["sub_biomes"].is_array())
+  {
+    for (const auto &sub : item["sub_biomes"])
+    {
+      if (sub.is_string())
+      {
+        rule.SubBiomes.push_back(SubBiomeIdFromString(sub.get<std::string>()));
+      }
+    }
+  }
+}
+
 bool ParseRuleArray(const nlohmann::json &arr,
                     std::vector<PrefabFeatureRule> &out)
 {
@@ -31,36 +59,34 @@ bool ParseRuleArray(const nlohmann::json &arr,
       continue;
     }
     PrefabFeatureRule rule;
-    rule.PrefabName = item.value("prefab", "");
-    if (rule.PrefabName.empty())
+    const std::string mode = item.value("mode", "prefab");
+    if (mode == "scatter_blocks")
     {
-      continue;
+      rule.Mode = PrefabPlacementMode::ScatterBlocks;
+      rule.Scatter.BlockName = item.value("block", "");
+      rule.Scatter.Attempts = std::max(1, item.value("attempts", 4));
+      rule.Scatter.Radius = std::max(0, item.value("radius", 2));
+      rule.Scatter.DyOffset = item.value("dy_offset", 0);
+      if (rule.Scatter.BlockName.empty())
+      {
+        continue;
+      }
+    }
+    else
+    {
+      rule.PrefabName = item.value("prefab", "");
+      if (rule.PrefabName.empty())
+      {
+        continue;
+      }
     }
     rule.Spacing = item.value("spacing", 0);
     rule.Weight = std::max(1, item.value("weight", 1));
     rule.ChancePerColumn = item.value("chance_per_column", 0);
     rule.SeedOffset = item.value("seed_offset", 0);
     rule.PlacementYOffset = item.value("placement_y_offset", 0);
-    if (item.contains("biomes") && item["biomes"].is_array())
-    {
-      for (const auto &b : item["biomes"])
-      {
-        if (b.is_string())
-        {
-          rule.Biomes.push_back(ParseBiome(b.get<std::string>()));
-        }
-      }
-    }
-    if (item.contains("sub_biomes") && item["sub_biomes"].is_array())
-    {
-      for (const auto &sub : item["sub_biomes"])
-      {
-        if (sub.is_string())
-        {
-          rule.SubBiomes.push_back(SubBiomeIdFromString(sub.get<std::string>()));
-        }
-      }
-    }
+    ParseBiomeArray(item, rule);
+    ParseSubBiomeArray(item, rule);
     if (rule.Biomes.empty())
     {
       continue;

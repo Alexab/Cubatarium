@@ -16,6 +16,20 @@ enum class PrefabFeaturePool
   Structures
 };
 
+enum class PrefabPlacementMode
+{
+  Prefab,
+  ScatterBlocks,
+};
+
+struct ScatterBlockSpec
+{
+  std::string BlockName;
+  int Attempts{4};
+  int Radius{2};
+  int DyOffset{0};
+};
+
 struct PrefabFeatureRule
 {
   std::string PrefabName;
@@ -26,6 +40,8 @@ struct PrefabFeatureRule
   uint32_t SeedOffset{0};
   int PlacementYOffset{0};
   std::vector<SubBiomeId> SubBiomes;
+  PrefabPlacementMode Mode{PrefabPlacementMode::Prefab};
+  ScatterBlockSpec Scatter;
 };
 
 struct PrefabFeatureConfig

@@ -165,6 +165,8 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     bool hasMaxHeight = false;
     bool hasCaves = false;
     bool hasTrees = false;
+    bool hasDecoration = false;
+    bool hasStructures = false;
     bool hasOres = false;
     bool hasFillWater = false;
     bool hasFillLava = false;
@@ -211,6 +213,24 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.EnableTrees = p["trees"].get<bool>();
       hasTrees = true;
+    }
+    if (p.contains("decoration"))
+    {
+      settings.EnableDecoration = p["decoration"].get<bool>();
+      hasDecoration = true;
+    }
+    if (p.contains("structures"))
+    {
+      settings.EnableStructures = p["structures"].get<bool>();
+      hasStructures = true;
+    }
+    if (hasTrees && !hasDecoration)
+    {
+      settings.EnableDecoration = settings.EnableTrees;
+    }
+    if (hasTrees && !hasStructures)
+    {
+      settings.EnableStructures = settings.EnableTrees;
     }
     if (p.contains("flat_surface_y"))
     {
@@ -345,6 +365,8 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["caves"] = settings.EnableCaves;
   procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
+  procedural["decoration"] = settings.EnableDecoration;
+  procedural["structures"] = settings.EnableStructures;
   procedural["flat_surface_y"] = settings.FlatSurfaceY;
   procedural["fill_water"] = settings.FillWater;
   procedural["fill_lava"] = settings.FillLava;

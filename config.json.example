@@ -4,7 +4,10 @@
     "world_seed": 12345,
     "terrain": "overworld",
     "procedural": {
-        "generator": "overworld"
+        "generator": "overworld",
+        "trees": true,
+        "decoration": true,
+        "structures": true
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,

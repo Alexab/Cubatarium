@@ -116,8 +116,8 @@ std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Caves = ctx.Settings.EnableCaves;
   config.Ores = ctx.Settings.EnableOres;
   config.Vegetation = ctx.Settings.EnableTrees;
-  config.Decoration = ctx.Settings.EnableTrees;
-  config.Structures = ctx.Settings.EnableTrees;
+  config.Decoration = ctx.Settings.EnableDecoration;
+  config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;
   config.FirePatch = ctx.Settings.FillFire;
   return MakeComposable(ctx, config);

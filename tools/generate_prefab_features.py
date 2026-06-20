@@ -32,6 +32,25 @@ def main() -> int:
         pool = wg.get("pool")
         if pool not in pools:
             continue
+
+        mode = wg.get("mode", "prefab")
+        if mode == "scatter_blocks":
+            entry = {
+                "mode": "scatter_blocks",
+                "block": wg.get("block", ""),
+                "attempts": wg.get("attempts", 4),
+                "radius": wg.get("radius", 2),
+                "biomes": wg.get("biomes", []),
+                "weight": wg.get("weight", 1),
+                "seed_offset": wg.get("seed_offset", 0),
+            }
+            if wg.get("spacing"):
+                entry["spacing"] = wg["spacing"]
+            if wg.get("sub_biomes"):
+                entry["sub_biomes"] = wg["sub_biomes"]
+            pools[pool].append(entry)
+            continue
+
         entry = {
             "prefab": name,
             "biomes": wg.get("biomes", []),
