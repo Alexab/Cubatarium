@@ -124,6 +124,14 @@ bool SubBiomeMatches(SubBiomeId subBiome,
 float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
                                    PrefabFeaturePool pool)
 {
+  const std::string biomeId = BiomeIdToString(biome);
+  const BiomePackDefinition *packDef =
+      UWorldGenPack::BiomeDefinitionFor(biomeId);
+  if (packDef &&
+      packDef->SubBiomes.count(SubBiomeIdToString(subBiome)) > 0)
+  {
+    return UWorldGenPack::SubBiomePoolWeightMultiplier(biomeId, subBiome, pool);
+  }
   if (pool == PrefabFeaturePool::Structures)
   {
     return 1.0f;

@@ -5,6 +5,22 @@
     "amplitude_mul": 1.0,
     "volatility_mul": 1.0
   },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "dirt"
+  },
+  "sub_biomes": {
+    "dense_forest": {
+      "subsurface": "dirt",
+      "vegetation_weight_mul": 1.35
+    },
+    "sparse_forest": {
+      "vegetation_weight_mul": 0.75
+    },
+    "woodland": {
+      "vegetation_weight_mul": 1.1
+    }
+  },
   "features": {
     "vegetation": {
       "tree_pine_mapgen": 1.25,

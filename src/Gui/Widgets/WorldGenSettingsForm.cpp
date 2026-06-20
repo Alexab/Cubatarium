@@ -100,6 +100,10 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     VerticalBtn->SetLabel(VerticalLabel(FormSettings.Vertical));
   }
+  if (WorldGenPackIdInput)
+  {
+    WorldGenPackIdInput->SetText(FormSettings.WorldGenPackId);
+  }
   if (SeedInput)
   {
     SeedInput->SetText(std::to_string(FormSettings.Seed));
@@ -231,6 +235,14 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
 ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
 {
   ProceduralSettings s = FormSettings;
+  if (WorldGenPackIdInput)
+  {
+    const std::string packId = WorldGenPackIdInput->GetText();
+    if (!packId.empty())
+    {
+      s.WorldGenPackId = packId;
+    }
+  }
   if (SeedInput)
   {
     s.Seed = ParseSeedOr(SeedInput->GetText(), s.Seed);
@@ -429,6 +441,8 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(BiomeHillsInput, showBiomeTuning);
   SetWidgetVisible(BiomeTundraLabel, showBiomeTuning);
   SetWidgetVisible(BiomeTundraInput, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackIdLabel, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackIdInput, showBiomeTuning);
   SetWidgetVisible(BiomeBlendLabel, showBiomeTuning);
   SetWidgetVisible(BiomeBlendInput, showBiomeTuning);
   SetWidgetVisible(TerrainErosionLabel, showBiomeTuning);
@@ -735,6 +749,14 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   fire->SetChecked(FormSettings.FillFire);
   fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
+
+  auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack id:");
+  WorldGenPackIdLabel = packLabel.get();
+  panel.AddChild(std::move(packLabel));
+  auto packIn = std::make_unique<UGuiTextInput>(Theme);
+  WorldGenPackIdInput = packIn.get();
+  packIn->SetText(FormSettings.WorldGenPackId);
+  panel.AddChild(std::move(packIn));
 }
 
 std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
@@ -796,6 +818,8 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({WaterBox, 27, 1, 1, 1, 30});
   items.push_back({LavaBox, 28, 0, 1, 1, 30});
   items.push_back({FireBox, 28, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 29, 0, 1, 1, 28});
+  items.push_back({WorldGenPackIdInput, 29, 1, 1, 1, 32});
   return items;
 }
 

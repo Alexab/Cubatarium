@@ -48,6 +48,7 @@ private:
   UGuiLabel *GeneratorDescLabel{nullptr};
   UGuiListView *GeneratorList{nullptr};
   UGuiLabel *VerticalCaption{nullptr};
+  UGuiLabel *WorldGenPackIdLabel{nullptr};
   UGuiLabel *SeedLabel{nullptr};
   UGuiLabel *SeaLevelLabel{nullptr};
   UGuiLabel *MaxHeightLabel{nullptr};
@@ -71,6 +72,7 @@ private:
   UGuiLabel *CaveStyleLabel{nullptr};
   UGuiLabel *BedrockTopYLabel{nullptr};
   UGuiButton *VerticalBtn{nullptr};
+  UGuiTextInput *WorldGenPackIdInput{nullptr};
   UGuiTextInput *SeedInput{nullptr};
   UGuiTextInput *SeaLevelInput{nullptr};
   UGuiTextInput *MaxHeightInput{nullptr};

@@ -4,5 +4,9 @@
     "base_offset": 4,
     "amplitude_mul": 1.6,
     "volatility_mul": 1.2
+  },
+  "palette": {
+    "surface": "stone",
+    "subsurface": "gravel"
   }
 }

@@ -4,5 +4,9 @@
     "base_offset": 0,
     "amplitude_mul": 0.85,
     "volatility_mul": 0.9
+  },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "dirt"
   }
 }

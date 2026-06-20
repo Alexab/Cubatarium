@@ -1,25 +1,36 @@
-# Worldgen — out of scope / future work
+# Worldgen — закрытый план (data-driven)
 
-Items explicitly deferred from the worldgen enhancement roadmap (phase 5 and partial phase 4).
+> Формат runtime-данных в `content/`: **только JSON** (парсер `nlohmann::json` в движке).
+> YAML остаётся в `tools/` для authoring (manifest, canonical blocks) и не читается игрой.
 
-## Not planned (research only)
+## Политика форматов
 
-- **Terrain Diffusion / Mindcraft** — GPU diffusion or text-prompt terrain; incompatible with deterministic column streaming.
-- **Full hydraulic erosion** on CPU for infinite streaming worlds.
-- **Runtime `.mca` / gemblocks import** as live generators.
+| Область | Формат | Кто читает |
+|---------|--------|------------|
+| `content/worldgen_packs/**` | JSON | C++ (`UWorldGenPack`) |
+| `content/prefab_features.json` | JSON | C++ |
+| `tools/prefab_manifest.yaml` | YAML | Python (генерация) |
+| `tools/*.yaml` | YAML | Python / CI |
 
-## Phase 4 — remaining data-driven work
+Дублирование `prefab_features.yaml` **не используется** — артефакт генератора удалён.
 
-- **Pipeline YAML loader** — `content/worldgen_packs/*/pipeline.yaml` is a reference stub; stages are still selected via `ComposableWorldGenConfig` in C++.
-- **Hot-reload** of worldgen packs without restart.
-- **Per-generator pack overrides in UI** — `worldgen_pack_id` is serialized; UI field not exposed yet (descriptor default: `default`).
-- **Biome JSON** — height + optional `features` weight multipliers; palette/smooth_radius and structure queues not migrated from C++.
+## План (закрытие техдолга)
 
-## Completed roadmap gaps (2026-06)
+| # | Задача | Статус |
+|---|--------|--------|
+| 1 | `pipeline.json` loader + пересечение стадий с генератором | done |
+| 2 | Hot-reload: `/worldgen reload` (pack + prefab_features) | done |
+| 3 | UI + JSON: `worldgen_pack_id` | done |
+| 4 | Biome JSON: `palette`, `sub_biomes` (веса + subsurface) | done |
+| 5 | `pack.json` optional `biome_blend_radius` default | done |
+| 6 | Убрать `pipeline.yaml`, `prefab_features.yaml` из content | done |
 
-- Tundra structures/decoration in prefab pools
-- Sub-biome filters and weight multipliers for prefab placement
-- Coast shelf height adjustment near water
-- Cave GUI (min Y, scale, max depth) and `bedrock_top_y`
-- `WorldGenPack::LoadPackId`, descriptor `PackId`, biome `features` in pack JSON
-- Example `image_demo` pack with PNG biome map
+## Ограничения hot-reload
+
+Перезагрузка влияет только на **вновь генерируемые** чанки. Уже загруженные колонки не пересчитываются автоматически.
+
+## Дальнейшие улучшения (не блокеры)
+
+- Валидация worldgen packs / prefab_features в CI
+- Выбор pack из выпадающего списка с описанием (сканирование `pack.json`)
+- Полный перенос `SubBiomeFor` noise-порогов в JSON

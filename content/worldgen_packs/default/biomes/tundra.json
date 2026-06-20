@@ -4,5 +4,9 @@
     "base_offset": 1,
     "amplitude_mul": 0.7,
     "volatility_mul": 0.8
+  },
+  "palette": {
+    "surface": "snow",
+    "subsurface": "dirt"
   }
 }

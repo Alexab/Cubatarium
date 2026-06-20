@@ -14,6 +14,7 @@
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Prefabs/Prefab.h"
+#include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
 #include <iostream>
@@ -93,7 +94,25 @@ void UGameSession::RegisterCommands()
       {
         return CommandResult{true, "Commands: help, give, tp, fly, time, "
                                    "spawn, select_skin, apply_skin, possess, "
-                                   "depossess, select_appearance"};
+                                   "depossess, select_appearance, worldgen"};
+      });
+
+  UCommandRegistry.Register(
+      "worldgen",
+      [](const std::vector<std::string> &args)
+      {
+        if (args.empty() || args[0] != "reload")
+        {
+          return CommandResult{
+              false, "Usage: worldgen reload — reload pack + prefab_features "
+                     "(new chunks only)"};
+        }
+        if (!ReloadWorldGenContent())
+        {
+          return CommandResult{false, "Worldgen reload failed"};
+        }
+        return CommandResult{true,
+                            "Worldgen content reloaded (affects new chunks)"};
       });
 
   UCommandRegistry.Register(

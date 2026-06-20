@@ -131,6 +131,7 @@ set(SOURCES
     src/WorldGen/Core/ProceduralConfigIO.cpp
     src/WorldGen/Core/WorldGeneratorRegistry.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentReload.cpp
     src/World/Prefabs/PrefabUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -138,6 +139,7 @@ set(SOURCES
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
+    src/WorldGen/Pipelines/ComposableWorldGenPipeline.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp

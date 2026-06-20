@@ -11,7 +11,6 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 MANIFEST = REPO / "tools" / "prefab_manifest.yaml"
 OUT_JSON = REPO / "content" / "prefab_features.json"
-OUT_YAML = REPO / "content" / "prefab_features.yaml"
 
 
 def main() -> int:
@@ -53,10 +52,6 @@ def main() -> int:
     doc = {"schema_version": 1, **pools}
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
-    OUT_YAML.write_text(
-        yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
-        encoding="utf-8",
-    )
     total = sum(len(v) for v in pools.values())
     print(f"Wrote {OUT_JSON} ({total} rules)")
     return 0

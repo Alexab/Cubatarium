@@ -2,6 +2,7 @@
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "World/Math/BlockTypes.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -11,6 +12,61 @@ namespace cutum
 
 namespace
 {
+
+BlockId ResolveSlotBlock(const WorldGenContext &ctx, const std::string &slot,
+                         BlockId fallback)
+{
+  if (slot == "grass")
+  {
+    return ctx.Grass;
+  }
+  if (slot == "dirt")
+  {
+    return ctx.Dirt;
+  }
+  if (slot == "sand")
+  {
+    return ctx.Sand != BLOCK_AIR ? ctx.Sand : fallback;
+  }
+  if (slot == "sandstone")
+  {
+    return ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : fallback;
+  }
+  if (slot == "gravel")
+  {
+    return ctx.Gravel != BLOCK_AIR ? ctx.Gravel : fallback;
+  }
+  if (slot == "snow")
+  {
+    return ctx.Snow != BLOCK_AIR ? ctx.Snow : fallback;
+  }
+  if (slot == "stone")
+  {
+    return ctx.Stone;
+  }
+  return fallback;
+}
+
+BiomeSurfaceRule ApplyPackPalette(BiomeId biome, BiomeSurfaceRule rule,
+                                  const WorldGenContext &ctx)
+{
+  const BiomePackDefinition *packDef =
+      UWorldGenPack::BiomeDefinitionFor(BiomeIdToString(biome));
+  if (!packDef)
+  {
+    return rule;
+  }
+  if (!packDef->SurfaceSlot.empty())
+  {
+    rule.surface = ResolveSlotBlock(ctx, packDef->SurfaceSlot, rule.surface);
+  }
+  if (!packDef->SubsurfaceSlot.empty())
+  {
+    rule.subsurface =
+        ResolveSlotBlock(ctx, packDef->SubsurfaceSlot, rule.subsurface);
+  }
+  return rule;
+}
 
 uint32_t BiomePickHash(int x, int z, uint32_t seed)
 {
@@ -545,7 +601,7 @@ BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,
     rule.subsurface = ctx.Dirt;
     break;
   }
-  return rule;
+  return ApplyPackPalette(biome, rule, ctx);
 }
 
 BiomeSurfaceRule UBiomeSampler::BlendedSurfaceRule(
@@ -572,11 +628,23 @@ BiomeSurfaceRule UBiomeSampler::BlendedSurfaceRule(
   }
 
   const SubBiomeId sub = SubBiomeFor(x, z, pick, Seed);
-  if (pick == BiomeId::Desert && sub == SubBiomeId::Dunes)
+  const BiomePackDefinition *packDef =
+      UWorldGenPack::BiomeDefinitionFor(BiomeIdToString(pick));
+  if (packDef)
+  {
+    const auto subIt = packDef->SubBiomes.find(SubBiomeIdToString(sub));
+    if (subIt != packDef->SubBiomes.end() &&
+        !subIt->second.SubsurfaceSlot.empty())
+    {
+      rule.subsurface = ResolveSlotBlock(ctx, subIt->second.SubsurfaceSlot,
+                                         rule.subsurface);
+    }
+  }
+  else if (pick == BiomeId::Desert && sub == SubBiomeId::Dunes)
   {
     rule.subsurface = ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : ctx.Sand;
   }
-  if (pick == BiomeId::Forest && sub == SubBiomeId::DenseForest)
+  else if (pick == BiomeId::Forest && sub == SubBiomeId::DenseForest)
   {
     rule.subsurface = ctx.Dirt;
   }

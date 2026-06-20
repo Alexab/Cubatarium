@@ -29,6 +29,10 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
   {
     UWorldGenPack::LoadPackId("default");
   }
+  if (UWorldGenPack::Get().BiomeBlendRadius >= 0.0f)
+  {
+    ctx.Settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
+  }
 
   auto pipeline = UWorldGeneratorRegistry::Create(ctx);
   std::cout << "WorldGen: created pipeline "
