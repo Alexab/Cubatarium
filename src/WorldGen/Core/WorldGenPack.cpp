@@ -357,7 +357,12 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
 bool UWorldGenPack::LoadPackId(const std::string &packId)
 {
   const std::string id = packId.empty() ? "default" : packId;
-  return LoadFromDirectory("content/worldgen_packs/" + id);
+  const std::string dir = "content/worldgen_packs/" + id;
+  if (ActivePackDir == dir && ActivePack.Id == id && !ActivePack.Biomes.empty())
+  {
+    return true;
+  }
+  return LoadFromDirectory(dir);
 }
 
 bool UWorldGenPack::ReloadActive()

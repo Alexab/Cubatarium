@@ -63,7 +63,8 @@ public:
   void SetSpawnPoint(glm::vec3 value);
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
-  void SetProceduralSettings(const ProceduralSettings &settings);
+  void SetProceduralSettings(const ProceduralSettings &settings,
+                             bool rebuildPipeline = true);
   const ProceduralSettings &GetProceduralSettings() const
   {
     return ProceduralTemplate;

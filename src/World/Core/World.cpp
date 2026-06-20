@@ -164,7 +164,8 @@ void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
   }
 }
 
-void UWorld::SetProceduralSettings(const ProceduralSettings &settings)
+void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
+                                   bool rebuildPipeline)
 {
   ProceduralTemplate = settings;
   WorldSeed = settings.Seed;
@@ -174,7 +175,10 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings)
     Streamer = std::make_unique<UChunkStreamer>(BlockWorld, *BlockRegistry,
                                                 WorldSeed, 0, 8);
   }
-  RebuildWorldGenPipeline();
+  if (rebuildPipeline)
+  {
+    RebuildWorldGenPipeline();
+  }
 }
 
 void UWorld::RebuildWorldGenPipeline()
@@ -2502,6 +2506,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
       (MovementDiag.feetIsAir || !MovementDiag.feetChunkLoaded) &&
       MovementDiag.meshDrawCount > 0;
 
+#ifdef CUBATARIUM_DEBUG
   if (MovementDiag.hitchDetected || MovementDiag.fallThroughSuspected ||
       MovementDiag.playerYDrop > 2.0f)
   {
@@ -2517,6 +2522,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
               << " unloads=" << MovementDiag.streamingUnloads
               << " feetUnloaded=" << MovementDiag.feetInUnloadList << std::endl;
   }
+#endif
 }
 
 void UWorld::UpdateStreaming()

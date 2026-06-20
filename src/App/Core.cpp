@@ -154,6 +154,13 @@ bool ParseWorldNumberSuffix(const std::string &Name, int &outNumber)
   return true;
 }
 
+bool ResourcePackSelectionEqual(const ResourcePackSelection &a,
+                                const ResourcePackSelection &b)
+{
+  return a.Primary == b.Primary && a.Secondary == b.Secondary &&
+         a.WorldgenOwner == b.WorldgenOwner;
+}
+
 } // namespace
 
 std::filesystem::path GetExecutableDirectory()
@@ -440,6 +447,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
                                             defaultPacks.Secondary,
                                             defaultPacks.WorldgenOwner);
+    WorldInstance->SetProceduralSettings(ProceduralTemplate, false);
     if (!ApplyResourcePacks(defaultPacks))
     {
       BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
@@ -458,7 +466,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
                                              static_cast<size_t>(Ui.HotbarCount));
     }
 
-    WorldInstance->SetProceduralSettings(ProceduralTemplate);
     std::cout << "Procedural: "
               << ProceduralGeneratorToString(ProceduralTemplate.Generator)
               << " (Seed=" << ProceduralTemplate.Seed
@@ -822,7 +829,10 @@ void UCore::CreateNewWorldWithCurrentSettings()
 
   WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
                                           selection.WorldgenOwner);
-  ApplyResourcePacks(selection);
+  if (!ResourcePackSelectionEqual(selection, ActivePackSelection))
+  {
+    ApplyResourcePacks(selection);
+  }
 
   const std::string new_world_name = AllocateNextWorldName();
   DefaultWorldName = new_world_name;

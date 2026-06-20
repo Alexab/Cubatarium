@@ -207,7 +207,6 @@ bool UObjectStorage::LoadJson(const std::string &file_name, std::string &Name,
     buffer << file.rdbuf();
     val = buffer.str();
     file.close();
-    std::cout << val << std::endl;
   }
   else
   {
