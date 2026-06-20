@@ -203,7 +203,7 @@ void UApplication::Startup(const std::string &configPath)
     {
       CubatariumLogInfo("App", "prefab_features.json not loaded — legacy tree placement only");
     }
-    if (!UWorldGenPack::LoadFromDirectory("content/worldgen_packs/default"))
+    if (!UWorldGenPack::LoadPackId("default"))
     {
       CubatariumLogInfo("App", "worldgen pack not loaded — built-in biome defaults only");
     }

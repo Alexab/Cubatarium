@@ -51,6 +51,16 @@ bool ParseRuleArray(const nlohmann::json &arr,
         }
       }
     }
+    if (item.contains("sub_biomes") && item["sub_biomes"].is_array())
+    {
+      for (const auto &sub : item["sub_biomes"])
+      {
+        if (sub.is_string())
+        {
+          rule.SubBiomes.push_back(SubBiomeIdFromString(sub.get<std::string>()));
+        }
+      }
+    }
     if (rule.Biomes.empty())
     {
       continue;
@@ -98,6 +108,51 @@ const char *BiomeIdToString(BiomeId biome)
   case BiomeId::Plains:
   default:
     return "plains";
+  }
+}
+
+SubBiomeId SubBiomeIdFromString(const std::string &name)
+{
+  if (name == "woodland")
+  {
+    return SubBiomeId::Woodland;
+  }
+  if (name == "dense_forest")
+  {
+    return SubBiomeId::DenseForest;
+  }
+  if (name == "sparse_forest")
+  {
+    return SubBiomeId::SparseForest;
+  }
+  if (name == "scrub_desert")
+  {
+    return SubBiomeId::ScrubDesert;
+  }
+  if (name == "dunes")
+  {
+    return SubBiomeId::Dunes;
+  }
+  return SubBiomeId::Default;
+}
+
+const char *SubBiomeIdToString(SubBiomeId subBiome)
+{
+  switch (subBiome)
+  {
+  case SubBiomeId::Woodland:
+    return "woodland";
+  case SubBiomeId::DenseForest:
+    return "dense_forest";
+  case SubBiomeId::SparseForest:
+    return "sparse_forest";
+  case SubBiomeId::ScrubDesert:
+    return "scrub_desert";
+  case SubBiomeId::Dunes:
+    return "dunes";
+  case SubBiomeId::Default:
+  default:
+    return "default";
   }
 }
 

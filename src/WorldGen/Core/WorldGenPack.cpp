@@ -1,5 +1,6 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "ThirdParty/stb_image.h"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -80,6 +81,32 @@ void ParseBiomeHeight(const nlohmann::json &height, BiomeHeightProfile &out)
   }
 }
 
+void ParseBiomeFeatures(const nlohmann::json &features,
+                        const std::string &biomeId, WorldGenPack &pack)
+{
+  if (!features.is_object())
+  {
+    return;
+  }
+  for (const auto &[poolName, poolJson] : features.items())
+  {
+    (void)poolName;
+    if (!poolJson.is_object())
+    {
+      continue;
+    }
+    for (const auto &[prefabName, weightJson] : poolJson.items())
+    {
+      if (!weightJson.is_number())
+      {
+        continue;
+      }
+      pack.BiomeFeatureWeights[biomeId][prefabName] =
+          weightJson.get<float>();
+    }
+  }
+}
+
 } // namespace
 
 bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
@@ -135,6 +162,10 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
           ParseBiomeHeight(biomeJson["height"], profile);
         }
         ActivePack.BiomeHeightProfiles[biomeId] = profile;
+        if (biomeJson.contains("features"))
+        {
+          ParseBiomeFeatures(biomeJson["features"], biomeId, ActivePack);
+        }
       }
       catch (const std::exception &e)
       {
@@ -162,6 +193,12 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   return true;
 }
 
+bool UWorldGenPack::LoadPackId(const std::string &packId)
+{
+  const std::string id = packId.empty() ? "default" : packId;
+  return LoadFromDirectory("content/worldgen_packs/" + id);
+}
+
 const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
@@ -173,6 +210,22 @@ const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
     return nullptr;
   }
   return &it->second;
+}
+
+float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
+                                             const std::string &prefabName)
+{
+  const auto biomeIt = ActivePack.BiomeFeatureWeights.find(biomeId);
+  if (biomeIt == ActivePack.BiomeFeatureWeights.end())
+  {
+    return 1.0f;
+  }
+  const auto prefabIt = biomeIt->second.find(prefabName);
+  if (prefabIt == biomeIt->second.end())
+  {
+    return 1.0f;
+  }
+  return std::max(0.1f, prefabIt->second);
 }
 
 BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)

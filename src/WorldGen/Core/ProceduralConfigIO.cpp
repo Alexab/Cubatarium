@@ -112,6 +112,14 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.MaxHeight = p["max_height"].get<int>();
     }
+    if (p.contains("bedrock_top_y"))
+    {
+      settings.BedrockTopY = p["bedrock_top_y"].get<int>();
+    }
+    if (p.contains("worldgen_pack_id") && p["worldgen_pack_id"].is_string())
+    {
+      settings.WorldGenPackId = p["worldgen_pack_id"].get<std::string>();
+    }
     if (p.contains("caves") && p["caves"].is_boolean())
     {
       settings.EnableCaves = p["caves"].get<bool>();
@@ -269,6 +277,8 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["vertical"] = VerticalModeToString(settings.Vertical);
   procedural["sea_level"] = settings.SeaLevel;
   procedural["max_height"] = settings.MaxHeight;
+  procedural["bedrock_top_y"] = settings.BedrockTopY;
+  procedural["worldgen_pack_id"] = settings.WorldGenPackId;
   procedural["caves"] = settings.EnableCaves;
   procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;

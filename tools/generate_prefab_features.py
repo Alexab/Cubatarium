@@ -46,6 +46,8 @@ def main() -> int:
         placement = meta.get("placement") or {}
         if placement.get("y_offset") is not None:
             entry["placement_y_offset"] = placement["y_offset"]
+        if wg.get("sub_biomes"):
+            entry["sub_biomes"] = wg["sub_biomes"]
         pools[pool].append(entry)
 
     doc = {"schema_version": 1, **pools}

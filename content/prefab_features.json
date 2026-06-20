@@ -21,7 +21,11 @@
       "weight": 1,
       "seed_offset": 4104,
       "spacing": 22,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "bush_common",
@@ -53,7 +57,10 @@
       "weight": 3,
       "seed_offset": 4201,
       "spacing": 12,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "scrub_desert"
+      ]
     },
     {
       "prefab": "tree_acacia_mapgen",
@@ -96,7 +103,10 @@
       "weight": 1,
       "seed_offset": 4006,
       "spacing": 90,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "dense_forest"
+      ]
     },
     {
       "prefab": "tree_jungle_mapgen",
@@ -156,7 +166,8 @@
       "biomes": [
         "plains",
         "forest",
-        "hills"
+        "hills",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9201,
@@ -225,7 +236,8 @@
       "prefab": "obelisk_stone",
       "biomes": [
         "desert",
-        "hills"
+        "hills",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9202,
@@ -238,7 +250,10 @@
       ],
       "weight": 1,
       "seed_offset": 9203,
-      "spacing": 100
+      "spacing": 100,
+      "sub_biomes": [
+        "dunes"
+      ]
     },
     {
       "prefab": "reeds_on_dirt",
@@ -267,7 +282,8 @@
       "prefab": "house_stone_cottage",
       "biomes": [
         "plains",
-        "hills"
+        "hills",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9102,
@@ -341,7 +357,8 @@
     {
       "prefab": "ruin_stonehenge",
       "biomes": [
-        "plains"
+        "plains",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9007,
@@ -361,7 +378,8 @@
       "prefab": "shed_wood",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9105,
@@ -371,7 +389,8 @@
       "prefab": "tower_stone",
       "biomes": [
         "hills",
-        "forest"
+        "forest",
+        "tundra"
       ],
       "weight": 1,
       "seed_offset": 9104,

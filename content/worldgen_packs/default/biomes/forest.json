@@ -4,5 +4,11 @@
     "base_offset": 0,
     "amplitude_mul": 1.0,
     "volatility_mul": 1.0
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine_mapgen": 1.25,
+      "tree_jungle_mapgen": 1.15
+    }
   }
 }

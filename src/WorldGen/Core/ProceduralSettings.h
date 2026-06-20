@@ -51,6 +51,7 @@ struct ProceduralSettings
   int SeaLevel{48};
   int MaxHeight{128};
   int BedrockTopY{0};
+  std::string WorldGenPackId{"default"};
   bool EnableCaves{false};
   bool EnableTrees{true};
   bool EnableOres{false};

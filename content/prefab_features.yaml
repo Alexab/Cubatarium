@@ -16,6 +16,9 @@ vegetation:
   seed_offset: 4104
   spacing: 22
   placement_y_offset: -1
+  sub_biomes:
+  - sparse_forest
+  - woodland
 - prefab: bush_common
   biomes:
   - plains
@@ -39,6 +42,8 @@ vegetation:
   seed_offset: 4201
   spacing: 12
   placement_y_offset: -1
+  sub_biomes:
+  - scrub_desert
 - prefab: tree_acacia_mapgen
   biomes:
   - plains
@@ -70,6 +75,8 @@ vegetation:
   seed_offset: 4006
   spacing: 90
   placement_y_offset: -1
+  sub_biomes:
+  - dense_forest
 - prefab: tree_jungle_mapgen
   biomes:
   - forest
@@ -112,6 +119,7 @@ decoration:
   - plains
   - forest
   - hills
+  - tundra
   weight: 1
   seed_offset: 9201
   spacing: 120
@@ -160,6 +168,7 @@ decoration:
   biomes:
   - desert
   - hills
+  - tundra
   weight: 1
   seed_offset: 9202
   spacing: 200
@@ -169,6 +178,8 @@ decoration:
   weight: 1
   seed_offset: 9203
   spacing: 100
+  sub_biomes:
+  - dunes
 - prefab: reeds_on_dirt
   biomes:
   - plains
@@ -189,6 +200,7 @@ structures:
   biomes:
   - plains
   - hills
+  - tundra
   weight: 1
   seed_offset: 9102
   chance_per_column: 1400
@@ -239,6 +251,7 @@ structures:
 - prefab: ruin_stonehenge
   biomes:
   - plains
+  - tundra
   weight: 1
   seed_offset: 9007
   chance_per_column: 800
@@ -253,6 +266,7 @@ structures:
   biomes:
   - plains
   - forest
+  - tundra
   weight: 1
   seed_offset: 9105
   chance_per_column: 1100
@@ -260,6 +274,7 @@ structures:
   biomes:
   - hills
   - forest
+  - tundra
   weight: 1
   seed_offset: 9104
   chance_per_column: 900

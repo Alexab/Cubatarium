@@ -1,0 +1,13 @@
+# Reference pipeline for composable worldgen (documentation / future loader).
+# Runtime today uses UComposableWorldGenerator stage flags in C++.
+schema_version: 1
+stages:
+  - terrain
+  - fluids
+  - ores
+  - caves
+  - vegetation
+  - decoration
+  - structures
+  - lava_pools
+  - fire_patch

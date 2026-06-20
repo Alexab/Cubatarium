@@ -202,6 +202,10 @@ void ResetToGeneratorDefaults(ProceduralSettings &s)
     {
       descriptor->ApplyDefaults(s);
     }
+    if (descriptor->PackId && descriptor->PackId[0] != '\0')
+    {
+      s.WorldGenPackId = descriptor->PackId;
+    }
   }
   else
   {
@@ -241,6 +245,7 @@ void ResolveProceduralDefaults(ProceduralSettings &s)
     s.SeaLevel = std::clamp(s.SeaLevel, 4, s.MaxHeight - 4);
   }
   s.FlatSurfaceY = std::clamp(s.FlatSurfaceY, 1, s.MaxHeight);
+  s.BedrockTopY = std::clamp(s.BedrockTopY, 0, s.MaxHeight);
   ClampTuning(s.Tuning);
 }
 

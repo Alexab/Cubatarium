@@ -1,5 +1,6 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include <iostream>
 #include <memory>
 
@@ -11,9 +12,28 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
 {
   ctx.ResolveBlockIds();
 
+  std::string packId = ctx.Settings.WorldGenPackId;
+  if (packId.empty())
+  {
+    if (const WorldGeneratorDescriptor *descriptor =
+            UWorldGeneratorRegistry::Find(ctx.Settings.Generator))
+    {
+      packId = descriptor->PackId ? descriptor->PackId : "default";
+    }
+    else
+    {
+      packId = "default";
+    }
+  }
+  if (!UWorldGenPack::LoadPackId(packId))
+  {
+    UWorldGenPack::LoadPackId("default");
+  }
+
   auto pipeline = UWorldGeneratorRegistry::Create(ctx);
   std::cout << "WorldGen: created pipeline "
-            << ProceduralGeneratorToString(ctx.Settings.Generator) << std::endl;
+            << ProceduralGeneratorToString(ctx.Settings.Generator)
+            << " (pack " << UWorldGenPack::Get().Id << ")" << std::endl;
   return pipeline;
 }
 

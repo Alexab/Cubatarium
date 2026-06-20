@@ -112,6 +112,10 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     MaxHeightInput->SetText(std::to_string(FormSettings.MaxHeight));
   }
+  if (BedrockTopYInput)
+  {
+    BedrockTopYInput->SetText(std::to_string(FormSettings.BedrockTopY));
+  }
   if (FlatYInput)
   {
     FlatYInput->SetText(std::to_string(FormSettings.FlatSurfaceY));
@@ -179,6 +183,19 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     CaveThresholdInput->SetText(std::to_string(FormSettings.Caves.threshold));
   }
+  if (CaveMinYInput)
+  {
+    CaveMinYInput->SetText(std::to_string(FormSettings.Caves.minY));
+  }
+  if (CaveScaleInput)
+  {
+    CaveScaleInput->SetText(std::to_string(FormSettings.Caves.scale));
+  }
+  if (CaveMaxDepthInput)
+  {
+    CaveMaxDepthInput->SetText(
+        std::to_string(FormSettings.Caves.maxDepthBelowSurface));
+  }
   if (CaveStyleInput)
   {
     CaveStyleInput->SetText(CaveStyleToString(FormSettings.Caves.style));
@@ -225,6 +242,10 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   if (MaxHeightInput)
   {
     s.MaxHeight = ParseIntOr(MaxHeightInput->GetText(), s.MaxHeight);
+  }
+  if (BedrockTopYInput)
+  {
+    s.BedrockTopY = ParseIntOr(BedrockTopYInput->GetText(), s.BedrockTopY);
   }
   if (FlatYInput)
   {
@@ -294,6 +315,19 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     s.Caves.threshold =
         ParseFloatOr(CaveThresholdInput->GetText(), s.Caves.threshold);
+  }
+  if (CaveMinYInput)
+  {
+    s.Caves.minY = ParseIntOr(CaveMinYInput->GetText(), s.Caves.minY);
+  }
+  if (CaveScaleInput)
+  {
+    s.Caves.scale = ParseFloatOr(CaveScaleInput->GetText(), s.Caves.scale);
+  }
+  if (CaveMaxDepthInput)
+  {
+    s.Caves.maxDepthBelowSurface = ParseIntOr(CaveMaxDepthInput->GetText(),
+                                              s.Caves.maxDepthBelowSurface);
   }
   if (CaveStyleInput)
   {
@@ -402,8 +436,16 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(OreDensityLabel, showOres);
   SetWidgetVisible(OreDensityInput, showOres);
   SetWidgetVisible(OresBox, showOres);
+  SetWidgetVisible(BedrockTopYLabel, showTuning);
+  SetWidgetVisible(BedrockTopYInput, showTuning);
   SetWidgetVisible(CaveThresholdLabel, showCaves);
   SetWidgetVisible(CaveThresholdInput, showCaves);
+  SetWidgetVisible(CaveMinYLabel, showCaves);
+  SetWidgetVisible(CaveMinYInput, showCaves);
+  SetWidgetVisible(CaveScaleLabel, showCaves);
+  SetWidgetVisible(CaveScaleInput, showCaves);
+  SetWidgetVisible(CaveMaxDepthLabel, showCaves);
+  SetWidgetVisible(CaveMaxDepthInput, showCaves);
   SetWidgetVisible(CaveStyleLabel, showCaves);
   SetWidgetVisible(CaveStyleInput, showCaves);
 }
@@ -499,6 +541,15 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   MaxHeightInput = maxIn.get();
   maxIn->SetText(std::to_string(FormSettings.MaxHeight));
   panel.AddChild(std::move(maxIn));
+
+  auto bedrockLabel =
+      std::make_unique<UGuiLabel>(Theme, "Bedrock top Y (0=single layer):");
+  BedrockTopYLabel = bedrockLabel.get();
+  panel.AddChild(std::move(bedrockLabel));
+  auto bedrockIn = std::make_unique<UGuiTextInput>(Theme);
+  BedrockTopYInput = bedrockIn.get();
+  bedrockIn->SetText(std::to_string(FormSettings.BedrockTopY));
+  panel.AddChild(std::move(bedrockIn));
 
   auto flatLabel = std::make_unique<UGuiLabel>(Theme, "Flat surface Y:");
   FlatYLabel = flatLabel.get();
@@ -616,6 +667,31 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   caveThrIn->SetText(std::to_string(FormSettings.Caves.threshold));
   panel.AddChild(std::move(caveThrIn));
 
+  auto caveMinLabel = std::make_unique<UGuiLabel>(Theme, "Cave min Y:");
+  CaveMinYLabel = caveMinLabel.get();
+  panel.AddChild(std::move(caveMinLabel));
+  auto caveMinIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveMinYInput = caveMinIn.get();
+  caveMinIn->SetText(std::to_string(FormSettings.Caves.minY));
+  panel.AddChild(std::move(caveMinIn));
+
+  auto caveScaleLabel = std::make_unique<UGuiLabel>(Theme, "Cave noise scale:");
+  CaveScaleLabel = caveScaleLabel.get();
+  panel.AddChild(std::move(caveScaleLabel));
+  auto caveScaleIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveScaleInput = caveScaleIn.get();
+  caveScaleIn->SetText(std::to_string(FormSettings.Caves.scale));
+  panel.AddChild(std::move(caveScaleIn));
+
+  auto caveDepthLabel =
+      std::make_unique<UGuiLabel>(Theme, "Cave max depth below surface:");
+  CaveMaxDepthLabel = caveDepthLabel.get();
+  panel.AddChild(std::move(caveDepthLabel));
+  auto caveDepthIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveMaxDepthInput = caveDepthIn.get();
+  caveDepthIn->SetText(std::to_string(FormSettings.Caves.maxDepthBelowSurface));
+  panel.AddChild(std::move(caveDepthIn));
+
   auto caveStyleLabel = std::make_unique<UGuiLabel>(Theme, "Cave style (noise/worm):");
   CaveStyleLabel = caveStyleLabel.get();
   panel.AddChild(std::move(caveStyleLabel));
@@ -676,42 +752,50 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({SeaLevelInput, 5, 1, 1, 1, 32});
   items.push_back({MaxHeightLabel, 6, 0, 1, 1, 28});
   items.push_back({MaxHeightInput, 6, 1, 1, 1, 32});
-  items.push_back({FlatYLabel, 7, 0, 1, 1, 28});
-  items.push_back({FlatYInput, 7, 1, 1, 1, 32});
-  items.push_back({VegetationDensityLabel, 8, 0, 1, 1, 28});
-  items.push_back({VegetationDensityInput, 8, 1, 1, 1, 32});
-  items.push_back({DecorationDensityLabel, 9, 0, 1, 1, 28});
-  items.push_back({DecorationDensityInput, 9, 1, 1, 1, 32});
-  items.push_back({StructureDensityLabel, 10, 0, 1, 1, 28});
-  items.push_back({StructureDensityInput, 10, 1, 1, 1, 32});
-  items.push_back({TerrainRoughnessLabel, 11, 0, 1, 1, 28});
-  items.push_back({TerrainRoughnessInput, 11, 1, 1, 1, 32});
-  items.push_back({BiomeForestLabel, 12, 0, 1, 1, 28});
-  items.push_back({BiomeForestInput, 12, 1, 1, 1, 32});
-  items.push_back({BiomeDesertLabel, 13, 0, 1, 1, 28});
-  items.push_back({BiomeDesertInput, 13, 1, 1, 1, 32});
-  items.push_back({BiomePlainsLabel, 14, 0, 1, 1, 28});
-  items.push_back({BiomePlainsInput, 14, 1, 1, 1, 32});
-  items.push_back({BiomeHillsLabel, 15, 0, 1, 1, 28});
-  items.push_back({BiomeHillsInput, 15, 1, 1, 1, 32});
-  items.push_back({BiomeTundraLabel, 16, 0, 1, 1, 28});
-  items.push_back({BiomeTundraInput, 16, 1, 1, 1, 32});
-  items.push_back({BiomeBlendLabel, 17, 0, 1, 1, 28});
-  items.push_back({BiomeBlendInput, 17, 1, 1, 1, 32});
-  items.push_back({TerrainErosionLabel, 18, 0, 1, 1, 28});
-  items.push_back({TerrainErosionInput, 18, 1, 1, 1, 32});
-  items.push_back({OreDensityLabel, 19, 0, 1, 1, 28});
-  items.push_back({OreDensityInput, 19, 1, 1, 1, 32});
-  items.push_back({CaveThresholdLabel, 20, 0, 1, 1, 28});
-  items.push_back({CaveThresholdInput, 20, 1, 1, 1, 32});
-  items.push_back({CaveStyleLabel, 21, 0, 1, 1, 28});
-  items.push_back({CaveStyleInput, 21, 1, 1, 1, 32});
-  items.push_back({CavesBox, 22, 0, 1, 1, 30});
-  items.push_back({OresBox, 22, 1, 1, 1, 30});
-  items.push_back({TreesBox, 23, 0, 1, 1, 30});
-  items.push_back({WaterBox, 23, 1, 1, 1, 30});
-  items.push_back({LavaBox, 24, 0, 1, 1, 30});
-  items.push_back({FireBox, 24, 1, 1, 1, 30});
+  items.push_back({BedrockTopYLabel, 7, 0, 1, 1, 28});
+  items.push_back({BedrockTopYInput, 7, 1, 1, 1, 32});
+  items.push_back({FlatYLabel, 8, 0, 1, 1, 28});
+  items.push_back({FlatYInput, 8, 1, 1, 1, 32});
+  items.push_back({VegetationDensityLabel, 9, 0, 1, 1, 28});
+  items.push_back({VegetationDensityInput, 9, 1, 1, 1, 32});
+  items.push_back({DecorationDensityLabel, 10, 0, 1, 1, 28});
+  items.push_back({DecorationDensityInput, 10, 1, 1, 1, 32});
+  items.push_back({StructureDensityLabel, 11, 0, 1, 1, 28});
+  items.push_back({StructureDensityInput, 11, 1, 1, 1, 32});
+  items.push_back({TerrainRoughnessLabel, 12, 0, 1, 1, 28});
+  items.push_back({TerrainRoughnessInput, 12, 1, 1, 1, 32});
+  items.push_back({BiomeForestLabel, 13, 0, 1, 1, 28});
+  items.push_back({BiomeForestInput, 13, 1, 1, 1, 32});
+  items.push_back({BiomeDesertLabel, 14, 0, 1, 1, 28});
+  items.push_back({BiomeDesertInput, 14, 1, 1, 1, 32});
+  items.push_back({BiomePlainsLabel, 15, 0, 1, 1, 28});
+  items.push_back({BiomePlainsInput, 15, 1, 1, 1, 32});
+  items.push_back({BiomeHillsLabel, 16, 0, 1, 1, 28});
+  items.push_back({BiomeHillsInput, 16, 1, 1, 1, 32});
+  items.push_back({BiomeTundraLabel, 17, 0, 1, 1, 28});
+  items.push_back({BiomeTundraInput, 17, 1, 1, 1, 32});
+  items.push_back({BiomeBlendLabel, 18, 0, 1, 1, 28});
+  items.push_back({BiomeBlendInput, 18, 1, 1, 1, 32});
+  items.push_back({TerrainErosionLabel, 19, 0, 1, 1, 28});
+  items.push_back({TerrainErosionInput, 19, 1, 1, 1, 32});
+  items.push_back({OreDensityLabel, 20, 0, 1, 1, 28});
+  items.push_back({OreDensityInput, 20, 1, 1, 1, 32});
+  items.push_back({CaveThresholdLabel, 21, 0, 1, 1, 28});
+  items.push_back({CaveThresholdInput, 21, 1, 1, 1, 32});
+  items.push_back({CaveMinYLabel, 22, 0, 1, 1, 28});
+  items.push_back({CaveMinYInput, 22, 1, 1, 1, 32});
+  items.push_back({CaveScaleLabel, 23, 0, 1, 1, 28});
+  items.push_back({CaveScaleInput, 23, 1, 1, 1, 32});
+  items.push_back({CaveMaxDepthLabel, 24, 0, 1, 1, 28});
+  items.push_back({CaveMaxDepthInput, 24, 1, 1, 1, 32});
+  items.push_back({CaveStyleLabel, 25, 0, 1, 1, 28});
+  items.push_back({CaveStyleInput, 25, 1, 1, 1, 32});
+  items.push_back({CavesBox, 26, 0, 1, 1, 30});
+  items.push_back({OresBox, 26, 1, 1, 1, 30});
+  items.push_back({TreesBox, 27, 0, 1, 1, 30});
+  items.push_back({WaterBox, 27, 1, 1, 1, 30});
+  items.push_back({LavaBox, 28, 0, 1, 1, 30});
+  items.push_back({FireBox, 28, 1, 1, 1, 30});
   return items;
 }
 

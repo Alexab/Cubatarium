@@ -100,7 +100,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 90, weight: 1, seed_offset: 4006 }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 90, weight: 1, seed_offset: 4006, sub_biomes: [dense_forest] }
   tree_acacia_mapgen:
     source_mts: mtg/acacia_tree.mts
     category: plants
@@ -158,7 +158,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [random-geek] }
-    worldgen: { pool: vegetation, biomes: [forest, plains], spacing: 22, weight: 1, seed_offset: 4104 }
+    worldgen: { pool: vegetation, biomes: [forest, plains], spacing: 22, weight: 1, seed_offset: 4104, sub_biomes: [sparse_forest, woodland] }
 
   # --- Plants ---
   cactus_large:
@@ -168,7 +168,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [desert], spacing: 12, weight: 3, seed_offset: 4201 }
+    worldgen: { pool: vegetation, biomes: [desert], spacing: 12, weight: 3, seed_offset: 4201, sub_biomes: [scrub_desert] }
   reeds_on_dirt:
     source_mts: mtg/papyrus_on_dirt.mts
     category: plants
@@ -272,7 +272,7 @@ prefabs:
     displayName: Stonehenge
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [plains], chance_per_column: 800, seed_offset: 9007 }
+    worldgen: { pool: structures, biomes: [plains, tundra], chance_per_column: 800, seed_offset: 9007 }
   ruin_temple:
     source_mts: ruined_structures/temple.mts
     category: building
@@ -293,7 +293,7 @@ prefabs:
     displayName: Stone Cottage
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, hills], chance_per_column: 1400, seed_offset: 9102 }
+    worldgen: { pool: structures, biomes: [plains, hills, tundra], chance_per_column: 1400, seed_offset: 9102 }
   well_stone:
     category: building
     displayName: Stone Well
@@ -305,25 +305,25 @@ prefabs:
     displayName: Stone Tower
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [hills, forest], chance_per_column: 900, seed_offset: 9104 }
+    worldgen: { pool: structures, biomes: [hills, forest, tundra], chance_per_column: 900, seed_offset: 9104 }
   shed_wood:
     category: building
     displayName: Wood Shed
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, forest], chance_per_column: 1100, seed_offset: 9105 }
+    worldgen: { pool: structures, biomes: [plains, forest, tundra], chance_per_column: 1100, seed_offset: 9105 }
   campfire_ring:
     category: decorative
     displayName: Campfire Ring
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: decoration, biomes: [plains, forest, hills], spacing: 120, weight: 1, seed_offset: 9201 }
+    worldgen: { pool: decoration, biomes: [plains, forest, hills, tundra], spacing: 120, weight: 1, seed_offset: 9201 }
   obelisk_stone:
     category: decorative
     displayName: Stone Obelisk
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: decoration, biomes: [desert, hills], spacing: 200, weight: 1, seed_offset: 9202 }
+    worldgen: { pool: decoration, biomes: [desert, hills, tundra], spacing: 200, weight: 1, seed_offset: 9202 }
   path_cobble_3x3:
     category: decorative
     displayName: Cobble Path
@@ -334,7 +334,7 @@ prefabs:
     displayName: Sandstone Pillar
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: decoration, biomes: [desert], spacing: 100, weight: 1, seed_offset: 9203 }
+    worldgen: { pool: decoration, biomes: [desert], spacing: 100, weight: 1, seed_offset: 9203, sub_biomes: [dunes] }
   wall_ruin_segment:
     category: decorative
     displayName: Ruin Wall Segment

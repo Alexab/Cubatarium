@@ -3,6 +3,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include <climits>
 #include <cstdint>
 
@@ -103,11 +104,65 @@ bool IsNearSurfaceWater(const WorldGenContext &ctx, int x, int z, int surfaceY,
   return false;
 }
 
+bool SubBiomeMatches(SubBiomeId subBiome,
+                     const std::vector<SubBiomeId> &allowed)
+{
+  if (allowed.empty())
+  {
+    return true;
+  }
+  for (SubBiomeId allowedSub : allowed)
+  {
+    if (allowedSub == subBiome)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
+                                   PrefabFeaturePool pool)
+{
+  if (pool == PrefabFeaturePool::Structures)
+  {
+    return 1.0f;
+  }
+  if (biome == BiomeId::Forest)
+  {
+    switch (subBiome)
+    {
+    case SubBiomeId::DenseForest:
+      return 1.35f;
+    case SubBiomeId::SparseForest:
+      return 0.75f;
+    case SubBiomeId::Woodland:
+      return 1.1f;
+    default:
+      return 1.0f;
+    }
+  }
+  if (biome == BiomeId::Desert)
+  {
+    switch (subBiome)
+    {
+    case SubBiomeId::Dunes:
+      return 0.85f;
+    case SubBiomeId::ScrubDesert:
+      return 1.15f;
+    default:
+      return 1.0f;
+    }
+  }
+  return 1.0f;
+}
+
 bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                         BiomeId biome,
                         const std::vector<PrefabFeatureRule> &rules,
-                        uint32_t pickSeedOffset, bool useChanceOnly,
-                        bool requireTreesEnabled, float densityMultiplier)
+                        PrefabFeaturePool pool, uint32_t pickSeedOffset,
+                        bool useChanceOnly, bool requireTreesEnabled,
+                        float densityMultiplier)
 {
   if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || !ctx.Prefabs ||
       rules.empty())
@@ -124,10 +179,16 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   std::vector<Candidate> candidates;
   candidates.reserve(rules.size());
   const uint32_t seed = ctx.Settings.Seed;
+  const SubBiomeId subBiome = SubBiomeFor(x, z, biome, seed);
+  const float subMul = SubBiomePoolWeightMultiplier(subBiome, biome, pool);
 
   for (const PrefabFeatureRule &rule : rules)
   {
     if (!BiomeMatches(biome, rule.Biomes))
+    {
+      continue;
+    }
+    if (!SubBiomeMatches(subBiome, rule.SubBiomes))
     {
       continue;
     }
@@ -152,7 +213,12 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    candidates.push_back({&rule, std::max(1, rule.Weight)});
+    const float packMul = UWorldGenPack::FeatureWeightMultiplier(
+        BiomeIdToString(biome), rule.PrefabName);
+    const int weight = std::max(
+        1, static_cast<int>(static_cast<float>(std::max(1, rule.Weight)) *
+                            subMul * packMul));
+    candidates.push_back({&rule, weight});
   }
 
   if (candidates.empty())
@@ -295,8 +361,9 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
     return false;
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
-                            UPrefabFeatureConfigStorage::Get().Vegetation, 5000,
-                            false, true, ctx.Settings.Tuning.vegetationDensity);
+                            UPrefabFeatureConfigStorage::Get().Vegetation,
+                            PrefabFeaturePool::Vegetation, 5000, false, true,
+                            ctx.Settings.Tuning.vegetationDensity);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
@@ -307,8 +374,9 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
     return false;
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
-                            UPrefabFeatureConfigStorage::Get().Decoration, 6000,
-                            false, false, ctx.Settings.Tuning.decorationDensity);
+                            UPrefabFeatureConfigStorage::Get().Decoration,
+                            PrefabFeaturePool::Decoration, 6000, false, false,
+                            ctx.Settings.Tuning.decorationDensity);
 }
 
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
@@ -319,8 +387,9 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
     return false;
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
-                            UPrefabFeatureConfigStorage::Get().Structures, 7000,
-                            true, false, ctx.Settings.Tuning.structureDensity);
+                            UPrefabFeatureConfigStorage::Get().Structures,
+                            PrefabFeaturePool::Structures, 7000, true, false,
+                            ctx.Settings.Tuning.structureDensity);
 }
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,

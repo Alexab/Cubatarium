@@ -25,6 +25,7 @@ struct PrefabFeatureRule
   int ChancePerColumn{0};
   uint32_t SeedOffset{0};
   int PlacementYOffset{0};
+  std::vector<SubBiomeId> SubBiomes;
 };
 
 struct PrefabFeatureConfig
@@ -48,5 +49,7 @@ private:
 
 BiomeId BiomeIdFromString(const std::string &name);
 const char *BiomeIdToString(BiomeId biome);
+SubBiomeId SubBiomeIdFromString(const std::string &name);
+const char *SubBiomeIdToString(SubBiomeId subBiome);
 
 } // namespace cutum

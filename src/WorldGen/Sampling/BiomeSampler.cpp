@@ -98,6 +98,44 @@ int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
   return surfaceY;
 }
 
+int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settings,
+                    uint32_t seed)
+{
+  const int sea = settings.SeaLevel;
+  if (surfaceY < sea - 1 || surfaceY > sea + 5)
+  {
+    return surfaceY;
+  }
+  int wetNeighbors = 0;
+  for (int dz = -4; dz <= 4; ++dz)
+  {
+    for (int dx = -4; dx <= 4; ++dx)
+    {
+      if (dx == 0 && dz == 0)
+      {
+        continue;
+      }
+      const float nh =
+          FBM2D(static_cast<float>(x + dx) * 0.01f,
+                static_cast<float>(z + dz) * 0.01f, seed, 4, 0.5f, 2.0f);
+      const int ny = sea + static_cast<int>((nh - 0.5f) * 6.0f);
+      if (ny <= sea - 1)
+      {
+        ++wetNeighbors;
+      }
+    }
+  }
+  if (wetNeighbors >= 10 && surfaceY > sea)
+  {
+    return std::max(sea, surfaceY - (wetNeighbors >= 18 ? 2 : 1));
+  }
+  if (wetNeighbors <= 2 && surfaceY == sea)
+  {
+    return sea + 1;
+  }
+  return surfaceY;
+}
+
 float SampleHeightGradient(int x, int z, int coarseY, uint32_t seed)
 {
   const int hx =
@@ -401,6 +439,7 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
   }
   int y = settings.SeaLevel + static_cast<int>(std::lround(blendedDelta));
   y = ApplyRiverCarve(x, z, y, weights, settings);
+  y = ApplyCoastShelf(x, z, y, settings, seed);
   y = ApplyErosionLite(x, z, y, seed, settings);
   return std::clamp(y, 1, settings.MaxHeight);
 }

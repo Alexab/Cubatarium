@@ -27,6 +27,7 @@ struct WorldGeneratorDescriptor
   ProceduralGenerator Id;
   const char *DisplayName;
   const char *Description;
+  const char *PackId;
   uint32_t FeatureFlags;
   void (*ApplyDefaults)(ProceduralSettings &settings);
   std::unique_ptr<IWorldGenPipeline> (*Create)(WorldGenContext ctx);

@@ -65,11 +65,16 @@ private:
   UGuiLabel *OreDensityLabel{nullptr};
   UGuiLabel *TerrainErosionLabel{nullptr};
   UGuiLabel *CaveThresholdLabel{nullptr};
+  UGuiLabel *CaveMinYLabel{nullptr};
+  UGuiLabel *CaveScaleLabel{nullptr};
+  UGuiLabel *CaveMaxDepthLabel{nullptr};
   UGuiLabel *CaveStyleLabel{nullptr};
+  UGuiLabel *BedrockTopYLabel{nullptr};
   UGuiButton *VerticalBtn{nullptr};
   UGuiTextInput *SeedInput{nullptr};
   UGuiTextInput *SeaLevelInput{nullptr};
   UGuiTextInput *MaxHeightInput{nullptr};
+  UGuiTextInput *BedrockTopYInput{nullptr};
   UGuiTextInput *FlatYInput{nullptr};
   UGuiTextInput *VegetationDensityInput{nullptr};
   UGuiTextInput *DecorationDensityInput{nullptr};
@@ -84,6 +89,9 @@ private:
   UGuiTextInput *OreDensityInput{nullptr};
   UGuiTextInput *TerrainErosionInput{nullptr};
   UGuiTextInput *CaveThresholdInput{nullptr};
+  UGuiTextInput *CaveMinYInput{nullptr};
+  UGuiTextInput *CaveScaleInput{nullptr};
+  UGuiTextInput *CaveMaxDepthInput{nullptr};
   UGuiTextInput *CaveStyleInput{nullptr};
   UGuiCheckbox *CavesBox{nullptr};
   UGuiCheckbox *OresBox{nullptr};
