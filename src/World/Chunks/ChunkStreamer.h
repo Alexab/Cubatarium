@@ -42,6 +42,8 @@ public:
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
+  using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
+  using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
 
   UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t Seed,
                  int baseY, int MaxHeight);
@@ -50,6 +52,10 @@ public:
   void SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
                     MarkDirtyFn markDirtyFn, GenerateColumnFn generateColumnFn,
                     UnloadChunkFn unloadFn = nullptr);
+  void SetAsyncGeneration(bool enabled) { AsyncGeneration = enabled; }
+  void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
+                         IsChunkCommittedFn isCommittedFn);
+  void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
@@ -68,7 +74,7 @@ public:
   }
 
 private:
-  bool EnsureChunkLoaded(glm::ivec3 chunkCoord);
+  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
                            const glm::vec3 &eyePos, const PlayerCapsule &cap);
   bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
@@ -92,6 +98,9 @@ private:
   MarkDirtyFn OnMarkDirty;
   UnloadChunkFn OnUnloadChunk;
   GenerateColumnFn OnGenerateColumn;
+  RequestAsyncChunkFn OnRequestAsyncChunk;
+  IsChunkCommittedFn OnIsChunkCommitted;
+  bool AsyncGeneration{false};
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
   StreamingFrameStats LastFrameStats;

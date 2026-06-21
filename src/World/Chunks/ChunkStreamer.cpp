@@ -79,7 +79,20 @@ void UChunkStreamer::SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
   OnUnloadChunk = std::move(unloadFn);
 }
 
-bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
+void UChunkStreamer::SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
+                                       IsChunkCommittedFn isCommittedFn)
+{
+  OnRequestAsyncChunk = std::move(requestFn);
+  OnIsChunkCommitted = std::move(isCommittedFn);
+}
+
+void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
+{
+  ProcedurallyGenerated.insert(chunkCoord);
+  MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
+}
+
+bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
 {
   // UTerrain columns are generated at world Y=0..surface; only fill ground
   // layer chunks.
@@ -89,6 +102,17 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   }
 
   const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
+  if (existing != nullptr && !forceSync && AsyncGeneration &&
+      OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord))
+  {
+    ProcedurallyGenerated.insert(chunkCoord);
+    return true;
+  }
+  if (existing != nullptr && !OnGenerateColumn && !AsyncGeneration)
+  {
+    return false;
+  }
+
   if (existing == nullptr)
   {
     if (OnLoadChunk && OnLoadChunk(chunkCoord))
@@ -97,6 +121,13 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
       MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
       return true;
     }
+    if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
+    {
+      const int priority =
+          std::abs(chunkCoord.x) + std::abs(chunkCoord.z);
+      OnRequestAsyncChunk(chunkCoord, priority);
+      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord);
+    }
     if (!OnGenerateColumn)
     {
       return false;
@@ -104,6 +135,11 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord)
   }
   else if (!OnGenerateColumn)
   {
+    if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
+    {
+      OnRequestAsyncChunk(chunkCoord, 0);
+      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord);
+    }
     return false;
   }
 
@@ -192,7 +228,7 @@ void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
       for (int dy = -1; dy <= 1; ++dy)
       {
         const glm::ivec3 coord = feetChunk + glm::ivec3(dx, dy, dz);
-        EnsureChunkLoaded(coord);
+        EnsureChunkLoaded(coord, true);
       }
     }
   }

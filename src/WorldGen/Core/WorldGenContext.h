@@ -11,7 +11,6 @@ namespace cutum
 class UBlockWorld;
 class UBlockRegistry;
 class UPrefabLibrary;
-class UChunkMeshCache;
 class UChunkManager;
 
 /// World generation context: blocks and prefab placement only (no creatures).
@@ -21,7 +20,6 @@ struct WorldGenContext
   UBlockRegistry &Registry;
   ProceduralSettings Settings;
   UPrefabLibrary *Prefabs{nullptr};
-  UChunkMeshCache *MeshCache{nullptr};
   /// Primary pack that owns worldgen block definitions (from world_data / config).
   std::string WorldgenOwnerPackId;
 

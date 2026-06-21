@@ -24,13 +24,16 @@
 #include "Storage/Object.h"
 #include "Storage/ObjectStorage.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/IO/AsyncChunkIO.h"
 #include "World/Math/GridMath.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IChunkPopulator.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
@@ -189,7 +192,7 @@ void UWorld::RebuildWorldGenPipeline()
     return;
   }
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                      PrefabLibrary, &MeshCache};
+                      PrefabLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
@@ -204,12 +207,74 @@ void UWorld::SetRenderDistanceChunks(int distance)
   MeshCache.SetRenderDistanceChunks(distance);
 }
 
+void UWorld::InitChunkScheduler()
+{
+  if (!BlockRegistry)
+  {
+    ChunkPopulator.reset();
+    ChunkScheduler.reset();
+    return;
+  }
+  ChunkPopulator = std::make_unique<PipelineChunkPopulator>(
+      *BlockRegistry, PrefabLibrary.get(), WorldgenOwnerPackId);
+  ChunkScheduler =
+      std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
+  ChunkScheduler->SetMarkDirtyFn(
+      [this](glm::ivec3 coord)
+      {
+        if (Streamer)
+        {
+          Streamer->NotifyChunkCommitted(coord);
+        }
+        else
+        {
+          MeshCache.MarkDirty(coord);
+        }
+      });
+  if (!AsyncChunkIo)
+  {
+    AsyncChunkIo = std::make_unique<UAsyncChunkIO>();
+  }
+}
+
+void UWorld::TickAsyncChunkSystems()
+{
+  if (ChunkScheduler && ProceduralTemplate.AsyncChunkGeneration)
+  {
+    ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame);
+  }
+  if (AsyncChunkIo && ProceduralTemplate.AsyncChunkIo)
+  {
+    for (AsyncChunkLoadResult &load : AsyncChunkIo->DrainLoads())
+    {
+      if (!load.success ||
+          !load.token.IsValidFor(load.coord, load.token.sequence))
+      {
+        continue;
+      }
+      ChunkBuffer buffer =
+          ParseChunkJsonToBuffer(load.jsonText, load.coord, *BlockRegistry);
+      if (buffer.IsEmpty())
+      {
+        continue;
+      }
+      buffer.ApplyTo(BlockWorld);
+      if (Streamer)
+      {
+        Streamer->NotifyChunkCommitted(load.coord);
+      }
+    }
+    AsyncChunkIo->TickSaves();
+  }
+}
+
 void UWorld::InitStreamerCallbacks()
 {
   if (!Streamer || !BlockRegistry)
   {
     return;
   }
+  InitChunkScheduler();
   Streamer->SetRenderDistance(RenderDistanceChunks);
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(WorldFolderPath);
@@ -227,11 +292,25 @@ void UWorld::InitStreamerCallbacks()
       [this](glm::ivec3 coord)
       {
         const auto t0 = std::chrono::high_resolution_clock::now();
-        SaveChunkToFile(coord, WorldFolderPath);
+        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
+        {
+          AsyncChunkIo->RequestSave(coord, WorldFolderPath, BlockWorld,
+                                    *BlockRegistry,
+                                    ChunkGenTokens.Current(coord));
+        }
+        else
+        {
+          SaveChunkToFile(coord, WorldFolderPath);
+        }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
+        ChunkGenTokens.Bump(coord);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(coord);
+        }
       },
       [this](glm::ivec3 coord) { MeshCache.MarkDirty(coord); },
       [this](int x, int z)
@@ -248,6 +327,17 @@ void UWorld::InitStreamerCallbacks()
                 .count();
       },
       [this](glm::ivec3 coord) { MeshCache.RemoveChunk(coord); });
+  Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
+  Streamer->SetAsyncCallbacks(
+      [this](glm::ivec3 coord, int priority)
+      {
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->RequestLoad(coord, priority, ProceduralTemplate);
+        }
+      },
+      [this](glm::ivec3 coord)
+      { return BlockWorld.GetChunkManager().HasChunk(coord); });
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -285,7 +375,7 @@ void UWorld::GenerateWorldBlocks()
   if (ProceduralTemplate.FillFire && PrefabLibrary && BlockRegistry)
   {
     WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                        PrefabLibrary, &MeshCache};
+                        PrefabLibrary};
     ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
     ctx.ResolveBlockIds();
     const int surfaceY = WorldGen->SurfaceYAt(8, 8);
@@ -2456,6 +2546,7 @@ void UWorld::DoMovement()
   if (camera)
   {
     UpdateStreaming();
+    TickAsyncChunkSystems();
     BlockWorldReady = true;
   }
 

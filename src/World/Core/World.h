@@ -14,12 +14,14 @@
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "World/Chunks/ChunkManager.h"
-#include "World/Chunks/ChunkStreamer.h"
+#include "World/Chunks/ChunkGenerationToken.h"
+#include "World/Chunks/ChunkLoadScheduler.h"
+#include "WorldGen/Core/IChunkPopulator.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/CollisionVolume.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "WorldGen/Core/WorldGenContext.h"
+#include "World/IO/AsyncChunkIO.h"
 #include <array>
 #include <functional>
 #include <glm/glm.hpp>
@@ -447,6 +449,8 @@ private:
   void GenerateWorldBlocks();
   void RebuildBlockMesh();
   void InitStreamerCallbacks();
+  void InitChunkScheduler();
+  void TickAsyncChunkSystems();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);
   bool IsReasonablePlayerPosition(const glm::vec3 &position) const;
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
@@ -498,6 +502,10 @@ private:
   UBlockWorld BlockWorld;
   UChunkMeshCache MeshCache;
   std::unique_ptr<UChunkStreamer> Streamer;
+  std::unique_ptr<PipelineChunkPopulator> ChunkPopulator;
+  std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
+  UChunkGenerationRegistry ChunkGenTokens;
+  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   bool StreamingEnabled{true};
   bool StepUpEnabled{true};
   bool EntityCollisionEnabled{true};
