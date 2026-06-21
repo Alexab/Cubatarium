@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/WorldGenRefs.h"
+#include <algorithm>
 #include <iostream>
 #include <unordered_set>
 
@@ -101,6 +102,37 @@ void WorldGenContext::ResolveBlockIds()
   }
 }
 
+void WorldGenContext::ResetColumnDirty(int world_x, int world_z)
+{
+  ColumnDirtyActive = true;
+  ColumnDirtyWorldX = world_x;
+  ColumnDirtyWorldZ = world_z;
+  ColumnDirtyMinY = 0;
+  ColumnDirtyMaxY = -1;
+}
+
+void WorldGenContext::AccumulateDirtyColumn(int min_y, int max_y)
+{
+  if (!ColumnDirtyActive)
+  {
+    return;
+  }
+  ColumnDirtyMinY = std::min(ColumnDirtyMinY, min_y);
+  ColumnDirtyMaxY = std::max(ColumnDirtyMaxY, max_y);
+}
+
+void WorldGenContext::FlushColumnDirty()
+{
+  if (!ColumnDirtyActive || ColumnDirtyMaxY < ColumnDirtyMinY)
+  {
+    ColumnDirtyActive = false;
+    return;
+  }
+  MarkDirtyColumn(ColumnDirtyWorldX, ColumnDirtyWorldZ, ColumnDirtyMinY,
+                  ColumnDirtyMaxY);
+  ColumnDirtyActive = false;
+}
+
 void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y,
                                       int max_y) const
 {
@@ -108,15 +140,18 @@ void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y,
   {
     return;
   }
+  const glm::ivec3 base =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
+  const glm::ivec3 top =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
   std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
   for (int dx = -1; dx <= 1; ++dx)
   {
     for (int dz = -1; dz <= 1; ++dz)
     {
-      for (int y = min_y; y <= max_y; ++y)
+      for (int cy = base.y; cy <= top.y; ++cy)
       {
-        dirty_chunks.insert(UChunkManager::WorldToChunk(
-            glm::ivec3(world_x + dx, y, world_z + dz)));
+        dirty_chunks.insert(glm::ivec3(base.x + dx, cy, base.z + dz));
       }
     }
   }
