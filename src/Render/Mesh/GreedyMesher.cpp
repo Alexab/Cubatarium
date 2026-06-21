@@ -46,7 +46,23 @@ bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
     return true;
   }
 
-  if (!faceTransparent && neighborTransparent)
+  const BlockRenderStyle neighborRenderStyle =
+      registry.GetRenderStyle(neighbor);
+
+  // Fluid↔opaque: solid draws the shared face (sand/stone texture); fluid side
+  // is culled so water does not paint a translucent skin on cliff blocks.
+  if (faceStyle == BlockRenderStyle::Fluid && !neighborTransparent)
+  {
+    return true;
+  }
+  if (!faceTransparent && neighborRenderStyle == BlockRenderStyle::Fluid)
+  {
+    return false;
+  }
+
+  // Two-hop for opaque ↔ solid transparent cubes (glass, ice), not fluids.
+  if (!faceTransparent && neighborTransparent &&
+      registry.BlocksMovement(neighbor))
   {
     const glm::ivec3 beyondPos = neighborPos + neighborOffset;
     const glm::ivec3 beforePos = blockPos - neighborOffset;

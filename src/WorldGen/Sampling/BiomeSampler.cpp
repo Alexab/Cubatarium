@@ -611,6 +611,21 @@ BiomeSurfaceRule UBiomeSampler::BlendedSurfaceRule(
   const BiomeId pick = PickSurfaceBiome(x, z, weights);
   BiomeSurfaceRule rule = SurfaceRule(pick, ctx);
 
+  if (ctx.Settings.FillWater && surfaceY < ctx.Settings.SeaLevel)
+  {
+    if (rule.surface == ctx.Grass)
+    {
+      rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : ctx.Stone;
+    }
+    if (rule.subsurface == ctx.Grass || rule.subsurface == ctx.Dirt)
+    {
+      rule.subsurface =
+          ctx.Gravel != BLOCK_AIR ? ctx.Gravel
+                                  : (ctx.Sand != BLOCK_AIR ? ctx.Sand
+                                                           : ctx.Stone);
+    }
+  }
+
   if (ctx.Settings.FillWater &&
       surfaceY <= ctx.Settings.SeaLevel + 2 &&
       surfaceY >= ctx.Settings.SeaLevel - 1)

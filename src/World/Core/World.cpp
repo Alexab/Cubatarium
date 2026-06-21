@@ -2645,7 +2645,7 @@ const std::vector<FaceInstance> &UWorld::GetBlockRenderInstances()
 {
   if (BlockRegistry && MeshCache.HasPendingDirty())
   {
-    const int rebuildBudget = Render.GreedyMeshing ? 128 : 32;
+    const int rebuildBudget = Render.GreedyMeshing ? 256 : 64;
     MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, rebuildBudget);
     if (!MeshCache.HasPendingDirty())
     {

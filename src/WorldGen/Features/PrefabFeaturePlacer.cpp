@@ -423,6 +423,10 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
   if (chosen->Mode == PrefabPlacementMode::ScatterBlocks)
   {
+    if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+    {
+      return false;
+    }
     return TryPlaceScatterBlocks(ctx, x, z, surfaceY, *chosen);
   }
   if (PrefabRequiresWaterSurface(chosen->PrefabName))
@@ -441,6 +445,10 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
   if (PrefabRequiresNearWater(chosen->PrefabName) &&
       !IsNearSurfaceWater(ctx, x, z, surfaceY))
+  {
+    return false;
+  }
+  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
   {
     return false;
   }
@@ -514,6 +522,10 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
+  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+  {
+    return false;
+  }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Vegetation,
                             PrefabFeaturePool::Vegetation, 5000, false, true,
@@ -525,6 +537,10 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
 {
   if (!UPrefabFeatureConfigStorage::IsLoaded() ||
       !ctx.Settings.EnableDecoration)
+  {
+    return false;
+  }
+  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
   {
     return false;
   }

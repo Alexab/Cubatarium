@@ -38,7 +38,30 @@ bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
   {
     return false;
   }
-  return IsSolidPlantGround(world, registry, worldPos - glm::ivec3(0, 1, 0));
+  const glm::ivec3 ground = worldPos - glm::ivec3(0, 1, 0);
+  if (!IsSolidPlantGround(world, registry, ground))
+  {
+    return false;
+  }
+  for (int y = ground.y + 1; y < worldPos.y; ++y)
+  {
+    const BlockId between = world.GetBlock(glm::ivec3(worldPos.x, y, worldPos.z));
+    if (between != BLOCK_AIR && !registry.BlocksMovement(between))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+                          int x, int z, int surfaceY)
+{
+  if (!IsSolidPlantGround(world, registry, glm::ivec3(x, surfaceY, z)))
+  {
+    return false;
+  }
+  return world.IsAir(glm::ivec3(x, surfaceY + 1, z));
 }
 
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
@@ -96,6 +119,10 @@ bool CanPlacePrefabAtForWorldGen(const UBlockWorld &world,
         return false;
       }
       continue;
+    }
+    if (!world.IsAir(glm::ivec3(worldPos.x, localSurface + 1, worldPos.z)))
+    {
+      return false;
     }
     const BlockId existing = world.GetBlock(worldPos);
     if (existing == BLOCK_AIR)

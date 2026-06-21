@@ -22,6 +22,8 @@ bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
                         glm::ivec3 groundPos);
 bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
                      glm::ivec3 worldPos);
+bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+                          int x, int z, int surfaceY);
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
                          int x, int z, int maxY);
 
