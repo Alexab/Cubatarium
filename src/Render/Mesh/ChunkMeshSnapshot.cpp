@@ -30,7 +30,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
   }
   snapshot.blocks = chunk->GetData();
 
-  const glm::ivec3 origin = ChunkOrigin();
+  const glm::ivec3 origin = snapshot.ChunkOrigin();
   for (int axis = 0; axis < 3; ++axis)
   {
     for (int sign = -1; sign <= 1; sign += 2)

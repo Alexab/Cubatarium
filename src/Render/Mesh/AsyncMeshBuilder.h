@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
-#include "Render/Mesh/GreedyMeshVertex.h"
+#include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <vector>

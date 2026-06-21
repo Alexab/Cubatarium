@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <array>
 #include <glm/glm.hpp>

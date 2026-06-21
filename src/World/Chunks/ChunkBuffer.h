@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Core/IBlockWriter.h"
+#include "World/Chunks/ChunkManager.h"
 #include <unordered_map>
 
 namespace cutum

@@ -16,6 +16,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/ChunkStreamer.h"
 #include "WorldGen/Core/IChunkPopulator.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/CollisionVolume.h"

@@ -149,6 +149,7 @@ set(SOURCES
     src/WorldGen/Features/PrefabFeatureConfig.cpp
     src/WorldGen/Features/PrefabFeaturePlacer.cpp
     src/WorldGen/Core/PipelineChunkPopulator.cpp
+    src/WorldGen/Core/ProceduralWorldGenFactory.cpp
     src/World/Raycast/BlockRaycast.cpp
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp
@@ -263,6 +264,7 @@ set(HEADERS
     src/Render/Mesh/ChunkMeshCache.h
     src/World/Chunks/ChunkStreamer.h
     src/Render/Mesh/GreedyMesher.h
+    src/Render/Mesh/GreedyMeshBatch.h
     src/App/Platform/InputManager.h
     src/Render/Engine/ShaderManager.h
     src/Render/Engine/TextRenderer.h

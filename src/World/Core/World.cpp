@@ -216,7 +216,7 @@ void UWorld::InitChunkScheduler()
     return;
   }
   ChunkPopulator = std::make_unique<PipelineChunkPopulator>(
-      *BlockRegistry, PrefabLibrary.get(), WorldgenOwnerPackId);
+      *BlockRegistry, PrefabLibrary, WorldgenOwnerPackId);
   ChunkScheduler =
       std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
   ChunkScheduler->SetMarkDirtyFn(

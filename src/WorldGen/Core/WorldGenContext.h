@@ -41,6 +41,9 @@ struct WorldGenContext
   BlockId OreCoal{BLOCK_AIR};
   BlockId OreIron{BLOCK_AIR};
 
+  WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
+                  ProceduralSettings settings, UPrefabLibrary *prefabs = nullptr);
+
   void ResolveBlockIds();
 
   void ResetColumnDirty(int world_x, int world_z);

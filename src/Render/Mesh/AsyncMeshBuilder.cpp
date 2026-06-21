@@ -3,6 +3,8 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "World/Math/GridMath.h"
+#include <mutex>
 
 namespace cutum
 {
@@ -63,10 +65,10 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
           }
         }
         result.batches.reserve(byBlockId.size());
-        for (auto &pair : byBlockId)
+        for (auto &entry : byBlockId)
         {
-          pair.second.blockId = pair.first;
-          result.batches.push_back(std::move(pair.second));
+          entry.second.blockId = entry.first;
+          result.batches.push_back(std::move(entry.second));
         }
         Completed.Push(std::move(result));
       });

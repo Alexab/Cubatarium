@@ -3,7 +3,7 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveCarver.h"
-#include "World/Prefabs/PrefabLibrary.h"
+#include "World/Prefabs/Prefab.h"
 
 namespace cutum
 {

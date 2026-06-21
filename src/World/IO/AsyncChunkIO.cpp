@@ -1,4 +1,5 @@
 #include "World/IO/AsyncChunkIO.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include <fstream>

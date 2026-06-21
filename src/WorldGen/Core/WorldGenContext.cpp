@@ -61,6 +61,14 @@ BlockId ResolveSlot(UBlockRegistry &registry, const std::string &worldgenOwner,
 
 } // namespace
 
+WorldGenContext::WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
+                                 ProceduralSettings settings,
+                                 UPrefabLibrary *prefabs)
+    : World(world), Registry(registry), Settings(std::move(settings)),
+      Prefabs(prefabs)
+{
+}
+
 void WorldGenContext::ResolveBlockIds()
 {
   const auto resolve = [this](const char *slotName, BlockId &out)

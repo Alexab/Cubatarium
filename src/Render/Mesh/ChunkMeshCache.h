@@ -1,6 +1,8 @@
 #ifndef CHUNKMESHCACHE_H
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
+#include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
@@ -14,7 +16,6 @@ namespace cutum
 {
 struct Frustum;
 struct MeshBuildResult;
-class UAsyncMeshBuilder;
 struct FaceInstance
 {
   glm::mat4 model{1.0f};
@@ -23,14 +24,6 @@ struct FaceInstance
   glm::vec2 quadSize{1.0f, 1.0f};
 };
 using BlockInstance = FaceInstance;
-struct GreedyMeshBatch
-{
-  BlockId blockId{BLOCK_AIR};
-  bool Transparent{false};
-  bool AlphaCutout{false};
-  std::vector<GreedyMeshVertex> vertices;
-  std::vector<uint32_t> indices;
-};
 class UBlockRegistry;
 class UBlockWorld;
 class UChunkMeshCache
