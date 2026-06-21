@@ -270,6 +270,8 @@ void UWorld::GenerateWorldBlocks()
     const int surfaceY = WorldGen->SurfaceYAt(8, 8);
     PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
   }
+
+  RebuildBlockMesh();
 }
 
 void UWorld::SetBlockDefinitionStorage(

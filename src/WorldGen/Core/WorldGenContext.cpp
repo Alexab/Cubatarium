@@ -109,10 +109,16 @@ void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y,
     return;
   }
   std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
-  for (int y = min_y; y <= max_y; ++y)
+  for (int dx = -1; dx <= 1; ++dx)
   {
-    dirty_chunks.insert(
-        UChunkManager::WorldToChunk(glm::ivec3(world_x, y, world_z)));
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int y = min_y; y <= max_y; ++y)
+      {
+        dirty_chunks.insert(UChunkManager::WorldToChunk(
+            glm::ivec3(world_x + dx, y, world_z + dz)));
+      }
+    }
   }
   for (const glm::ivec3 &coord : dirty_chunks)
   {

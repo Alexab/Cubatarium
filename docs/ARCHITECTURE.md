@@ -116,7 +116,7 @@ Block metadata lives in `resource_packs/*/blocks/*.json` (`animation`, `render`,
 | `AnimationClock` | Global elapsed time; per-block `frametime` from block JSON (20 ticks/s) drives `uAnimFrame` |
 | `BlockPhysicsProfile` | `occupancy`, drag, sink/rise; presets `water`, `lava`, `fire` |
 | `BlockRegistry::BlocksMovement` | Collision and raycast (only `occupancy >= 1`) |
-| Greedy mesh | Opaque pass (solid, then cutout), then multi-pass transparent (see below); fluid–fluid faces kept; opaque↔transparent and opaque↔cutout face rules (below) |
+| Greedy mesh | Opaque pass (solid, then cutout), then multi-pass transparent (see below); fluid–fluid faces kept; opaque↔transparent face rules (below) |
 | Worldgen | `fill_water`, `fill_lava`, `fill_fire` in `ProceduralSettings`; `FillFluidColumn` to `sea_level`; with `fill_water`, `AdjustSurfaceYForSpawnIsland` raises terrain in a ~48-block-radius disk (+16-block blend) around spawn (0,0) so the player starts on dry land |
 
 ### Block alpha taxonomy (resource packs)
@@ -130,20 +130,21 @@ Block metadata lives in `resource_packs/*/blocks/*.json` (`animation`, `render`,
 
 Name heuristics in [`tools/canonical_blocks.yaml`](../tools/canonical_blocks.yaml): `cutout_name_patterns` (`*leaves*`, `web`) and `blend_name_patterns` (`*glass*`, `*_ice`, `ice`). Applied to pack JSON by [`tools/apply_canonical_types.py`](../tools/apply_canonical_types.py). **Do not** mark leaf cubes as `render.transparent: true` — that sends them to the blend pass and causes x-ray through the world.
 
-### Greedy mesh: opaque ↔ transparent / cutout culling
+### Greedy mesh: opaque ↔ transparent culling
 
 Implementation: [`GreedyMesher.cpp`](../src/Render/Mesh/GreedyMesher.cpp) (`NeighborHidesFace`).
 
-Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ transparent** boundaries (glass, ice, fluids) and **opaque ↔ cutout** boundaries (leaves against stone) an extra **two-hop** check avoids x-ray into open air volumes:
+Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ solid transparent** boundaries (glass, ice) an extra **two-hop** check avoids x-ray into open air volumes. Fluids and cross plants do not occlude opaque faces — no two-hop on those edges.
 
 - `stone | glass | air` (window) — opaque face toward glass stays culled; room stays visible through the pane.
 - `air | glass | stone` (glass on a solid facade) — opaque face toward glass is **kept** so depth/color behind glass is the adjacent stone, not sky or distant caves.
 - `stone | glass | stone` (embedded glass) — opaque faces kept on both sides.
-- `stone | leaves | air` — same two-hop as glass when leaves use `style: cutout` and `occupancy: 0`.
 
-**Cutout** blocks (`render.style: cutout`, e.g. `tree_leaves`) use the opaque pass with alpha discard (`uAlphaCutout`); **shared faces between cutout neighbors are kept** so leaf clusters are not hollow shells. The cutout pass draws with face culling disabled. **Cross** plants (`render.style: cross`, e.g. `reeds`, `fire`) are billboards in the transparent pass.
+**Cutout** blocks (`render.style: cutout`, e.g. `tree_leaves`) use the opaque pass with alpha discard (`uAlphaCutout`); **shared faces between cutout neighbors are kept** so leaf clusters are not hollow shells. Opaque faces toward cutout neighbors (logs, stone, sand) are **kept** — cutout blocks do not block movement, so the mesher does not treat them as solid occluders. The cutout pass draws with face culling disabled. **Cross** plants (`render.style: cross`, e.g. `reeds`, `fire`) are billboards in the transparent pass.
 
 Transparent↔transparent shared faces are culled. Audit: [`tools/audit_resource_packs.py`](../tools/audit_resource_packs.py) flags cube blend on alpha-hole blocks and cutout blocks missing `occupancy: 0`.
+
+Greedy mesh culling at **column** boundaries depends on both columns (e.g. cave carved in column B must remesh column A). [`WorldGenContext::MarkDirtyColumn`](../src/WorldGen/Core/WorldGenContext.cpp) marks dirty a **3×3 column neighborhood** (±1 X/Z). [`UWorld::GenerateWorldBlocks`](../src/World/Core/World.cpp) finishes with `RebuildBlockMesh()` so the spawn patch is fully consistent before the first frame.
 
 ### Greedy transparent passes
 

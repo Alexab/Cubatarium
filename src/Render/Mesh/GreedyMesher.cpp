@@ -46,29 +46,10 @@ bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
     return true;
   }
 
-  if (!faceTransparent && neighborTransparent)
-  {
-    const glm::ivec3 beyondPos = neighborPos + neighborOffset;
-    const glm::ivec3 beforePos = blockPos - neighborOffset;
-    const BlockId beyond = world.GetBlock(beyondPos);
-    const BlockId before = world.GetBlock(beforePos);
-    const bool beyondOpen =
-        (beyond == BLOCK_AIR || !registry.BlocksMovement(beyond));
-    const bool beforeSolid =
-        (before != BLOCK_AIR && registry.BlocksMovement(before));
-    if (beyondOpen && beforeSolid)
-    {
-      return false;
-    }
-    if (beyondOpen)
-    {
-      return true;
-    }
-    return false;
-  }
-
-  if (!faceTransparent &&
-      registry.GetRenderStyle(neighbor) == BlockRenderStyle::Cutout)
+  // Two-hop only for solid transparent cubes (glass, ice). Fluids and cross
+  // plants stay non-occluding — opaque faces toward them are always kept.
+  if (!faceTransparent && neighborTransparent &&
+      registry.BlocksMovement(neighbor))
   {
     const glm::ivec3 beyondPos = neighborPos + neighborOffset;
     const glm::ivec3 beforePos = blockPos - neighborOffset;
