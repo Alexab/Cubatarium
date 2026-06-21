@@ -12,6 +12,7 @@ namespace cutum
 enum class PrefabFeaturePool
 {
   Vegetation,
+  GroundCover,
   Decoration,
   Structures
 };
@@ -47,8 +48,12 @@ struct PrefabFeatureRule
 struct PrefabFeatureConfig
 {
   std::vector<PrefabFeatureRule> Vegetation;
+  std::vector<PrefabFeatureRule> GroundCover;
   std::vector<PrefabFeatureRule> Decoration;
   std::vector<PrefabFeatureRule> Structures;
+  int structureCellSize{64};
+  int structureChancePerCell{12};
+  int structureMinSpacing{128};
 };
 
 class UPrefabFeatureConfigStorage

@@ -1,6 +1,123 @@
 {
   "schema_version": 1,
+  "structure_placement": {
+    "cell_size": 64,
+    "chance_per_cell": 12,
+    "min_spacing": 128
+  },
   "vegetation": [
+    {
+      "prefab": "cactus_large",
+      "biomes": [
+        "desert"
+      ],
+      "weight": 3,
+      "seed_offset": 4201,
+      "spacing": 12,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "scrub_desert"
+      ]
+    },
+    {
+      "prefab": "tree_acacia_mapgen",
+      "biomes": [
+        "plains",
+        "desert"
+      ],
+      "weight": 2,
+      "seed_offset": 4007,
+      "spacing": 30,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_apple_mapgen",
+      "biomes": [
+        "plains",
+        "forest"
+      ],
+      "weight": 3,
+      "seed_offset": 4001,
+      "spacing": 42,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_aspen_mapgen",
+      "biomes": [
+        "plains",
+        "forest"
+      ],
+      "weight": 2,
+      "seed_offset": 4008,
+      "spacing": 48,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_jungle_emergent_mapgen",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4006,
+      "spacing": 90,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "dense_forest"
+      ]
+    },
+    {
+      "prefab": "tree_jungle_mapgen",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 2,
+      "seed_offset": 4005,
+      "spacing": 52,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_mapgen",
+      "biomes": [
+        "forest",
+        "tundra"
+      ],
+      "weight": 2,
+      "seed_offset": 4002,
+      "spacing": 48,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_small_mapgen",
+      "biomes": [
+        "tundra"
+      ],
+      "weight": 3,
+      "seed_offset": 4003,
+      "spacing": 22,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_snowy_mapgen",
+      "biomes": [
+        "tundra"
+      ],
+      "weight": 2,
+      "seed_offset": 4004,
+      "spacing": 26,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_snowy_small_mapgen",
+      "biomes": [
+        "tundra"
+      ],
+      "weight": 2,
+      "seed_offset": 4009,
+      "spacing": 24,
+      "placement_y_offset": -1
+    }
+  ],
+  "ground_cover": [
     {
       "prefab": "bush_acacia",
       "biomes": [
@@ -35,7 +152,7 @@
       ],
       "weight": 2,
       "seed_offset": 4101,
-      "spacing": 16,
+      "spacing": 28,
       "placement_y_offset": -1
     },
     {
@@ -48,19 +165,6 @@
       "seed_offset": 4103,
       "spacing": 18,
       "placement_y_offset": -1
-    },
-    {
-      "prefab": "cactus_large",
-      "biomes": [
-        "desert"
-      ],
-      "weight": 3,
-      "seed_offset": 4201,
-      "spacing": 12,
-      "placement_y_offset": -1,
-      "sub_biomes": [
-        "scrub_desert"
-      ]
     },
     {
       "prefab": "dry_grass_clump",
@@ -80,14 +184,11 @@
       ],
       "weight": 2,
       "seed_offset": 4110,
-      "spacing": 14,
+      "spacing": 24,
       "placement_y_offset": -1
     },
     {
-      "mode": "scatter_blocks",
-      "block": "rose",
-      "attempts": 5,
-      "radius": 3,
+      "prefab": "flower_scatter_plains",
       "biomes": [
         "plains"
       ],
@@ -125,104 +226,7 @@
       ],
       "weight": 3,
       "seed_offset": 4111,
-      "spacing": 10,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_acacia_mapgen",
-      "biomes": [
-        "plains",
-        "desert"
-      ],
-      "weight": 2,
-      "seed_offset": 4007,
-      "spacing": 30,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_apple_mapgen",
-      "biomes": [
-        "plains",
-        "forest"
-      ],
-      "weight": 3,
-      "seed_offset": 4001,
-      "spacing": 28,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_aspen_mapgen",
-      "biomes": [
-        "plains",
-        "forest"
-      ],
-      "weight": 2,
-      "seed_offset": 4008,
-      "spacing": 32,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_jungle_emergent_mapgen",
-      "biomes": [
-        "forest"
-      ],
-      "weight": 1,
-      "seed_offset": 4006,
-      "spacing": 90,
-      "placement_y_offset": -1,
-      "sub_biomes": [
-        "dense_forest"
-      ]
-    },
-    {
-      "prefab": "tree_jungle_mapgen",
-      "biomes": [
-        "forest"
-      ],
-      "weight": 2,
-      "seed_offset": 4005,
-      "spacing": 35,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_pine_mapgen",
-      "biomes": [
-        "forest",
-        "tundra"
-      ],
-      "weight": 2,
-      "seed_offset": 4002,
-      "spacing": 32,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_pine_small_mapgen",
-      "biomes": [
-        "tundra"
-      ],
-      "weight": 3,
-      "seed_offset": 4003,
-      "spacing": 22,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_pine_snowy_mapgen",
-      "biomes": [
-        "tundra"
-      ],
-      "weight": 2,
-      "seed_offset": 4004,
-      "spacing": 26,
-      "placement_y_offset": -1
-    },
-    {
-      "prefab": "tree_pine_snowy_small_mapgen",
-      "biomes": [
-        "tundra"
-      ],
-      "weight": 2,
-      "seed_offset": 4009,
-      "spacing": 24,
+      "spacing": 18,
       "placement_y_offset": -1
     }
   ],
@@ -375,7 +379,7 @@
       ],
       "weight": 1,
       "seed_offset": 9102,
-      "chance_per_column": 1400
+      "chance_per_column": 8000
     },
     {
       "prefab": "house_wood_small",
@@ -385,7 +389,7 @@
       ],
       "weight": 1,
       "seed_offset": 9101,
-      "chance_per_column": 1200
+      "chance_per_column": 6000
     },
     {
       "prefab": "ruin_desert",
@@ -394,7 +398,7 @@
       ],
       "weight": 1,
       "seed_offset": 9001,
-      "chance_per_column": 600
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_egypt_a",
@@ -403,7 +407,7 @@
       ],
       "weight": 1,
       "seed_offset": 9002,
-      "chance_per_column": 900
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_egypt_b",
@@ -412,7 +416,7 @@
       ],
       "weight": 1,
       "seed_offset": 9003,
-      "chance_per_column": 950
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_house_a",
@@ -421,7 +425,7 @@
       ],
       "weight": 1,
       "seed_offset": 9004,
-      "chance_per_column": 700
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_house_b",
@@ -430,7 +434,7 @@
       ],
       "weight": 1,
       "seed_offset": 9005,
-      "chance_per_column": 750
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_sandstone",
@@ -440,7 +444,7 @@
       ],
       "weight": 1,
       "seed_offset": 9006,
-      "chance_per_column": 650
+      "chance_per_column": 4000
     },
     {
       "prefab": "ruin_stonehenge",
@@ -450,7 +454,7 @@
       ],
       "weight": 1,
       "seed_offset": 9007,
-      "chance_per_column": 800
+      "chance_per_column": 5000
     },
     {
       "prefab": "ruin_temple",
@@ -460,7 +464,7 @@
       ],
       "weight": 1,
       "seed_offset": 9008,
-      "chance_per_column": 850
+      "chance_per_column": 5000
     },
     {
       "prefab": "shed_wood",
@@ -471,7 +475,7 @@
       ],
       "weight": 1,
       "seed_offset": 9105,
-      "chance_per_column": 1100
+      "chance_per_column": 7000
     },
     {
       "prefab": "tower_stone",
@@ -482,7 +486,7 @@
       ],
       "weight": 1,
       "seed_offset": 9104,
-      "chance_per_column": 900
+      "chance_per_column": 6000
     },
     {
       "prefab": "well_stone",
@@ -493,7 +497,7 @@
       ],
       "weight": 1,
       "seed_offset": 9103,
-      "chance_per_column": 512
+      "chance_per_column": 5000
     }
   ]
 }

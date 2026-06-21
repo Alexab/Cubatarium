@@ -16,6 +16,8 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
 
 bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
                                 int surfaceY, BiomeId biome);
+bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z, int surfaceY,
+                                 BiomeId biome, bool skipIfTreeNearby);
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
                                 int surfaceY, BiomeId biome);
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,

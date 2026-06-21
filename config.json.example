@@ -2,6 +2,7 @@
     "default_user": "Username",
     "default_world": "World_001",
     "world_seed": 12345,
+    "world_seed_text": "demo",
     "terrain": "overworld",
     "procedural": {
         "generator": "overworld",

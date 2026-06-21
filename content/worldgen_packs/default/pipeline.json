@@ -2,10 +2,12 @@
   "schema_version": 1,
   "stages": [
     "terrain",
+    "ravines",
     "fluids",
-    "ores",
     "caves",
+    "ores",
     "vegetation",
+    "ground_cover",
     "decoration",
     "structures",
     "lava_pools",

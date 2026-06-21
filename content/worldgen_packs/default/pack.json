@@ -2,6 +2,6 @@
   "schema_version": 1,
   "id": "default",
   "biome_mode": "procedural",
-  "biome_blend_radius": 6,
+  "biome_blend_radius": 14,
   "biome_map_block_scale": 4
 }

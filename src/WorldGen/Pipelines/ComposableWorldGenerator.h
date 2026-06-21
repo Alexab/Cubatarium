@@ -23,9 +23,11 @@ struct ComposableWorldGenConfig
   HeightPreset HeightPreset{HeightPreset::Overworld};
   bool UseBiomeSurface{false};
   bool Fluids{true};
+  bool Ravines{false};
   bool Caves{false};
   bool Ores{false};
   bool Vegetation{false};
+  bool GroundCover{false};
   bool Decoration{false};
   bool Structures{false};
   bool LavaPools{false};

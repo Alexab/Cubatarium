@@ -67,7 +67,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 28, weight: 3, seed_offset: 4001 }
+    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 42, weight: 3, seed_offset: 4001 }
   tree_pine_mapgen:
     source_mts: mtg/pine_tree.mts
     category: plants
@@ -75,7 +75,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest, tundra], spacing: 32, weight: 2, seed_offset: 4002 }
+    worldgen: { pool: vegetation, biomes: [forest, tundra], spacing: 48, weight: 2, seed_offset: 4002 }
   tree_pine_small_mapgen:
     source_mts: mtg/small_pine_tree.mts
     category: plants
@@ -91,7 +91,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 35, weight: 2, seed_offset: 4005 }
+    worldgen: { pool: vegetation, biomes: [forest], spacing: 52, weight: 2, seed_offset: 4005 }
   tree_jungle_emergent_mapgen:
     source_mts: mtg/emergent_jungle_tree.mts
     category: plants
@@ -115,7 +115,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 32, weight: 2, seed_offset: 4008 }
+    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 48, weight: 2, seed_offset: 4008 }
   tree_pine_snowy_mapgen:
     source_mts: mtg/snowy_pine_tree_from_sapling.mts
     category: plants
@@ -148,7 +148,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 16, weight: 2, seed_offset: 4101 }
+    worldgen: { pool: ground_cover, biomes: [plains, forest], spacing: 28, weight: 2, seed_offset: 4101 }
   bush_acacia:
     source_mts: mtg/acacia_bush.mts
     category: plants
@@ -156,7 +156,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: vegetation, biomes: [desert, plains], spacing: 20, weight: 2, seed_offset: 4102 }
+    worldgen: { pool: ground_cover, biomes: [desert, plains], spacing: 20, weight: 2, seed_offset: 4102 }
   bush_pine:
     source_mts: mtg/pine_bush.mts
     category: plants
@@ -164,7 +164,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [TumeniNodes] }
-    worldgen: { pool: vegetation, biomes: [tundra, forest], spacing: 18, weight: 2, seed_offset: 4103 }
+    worldgen: { pool: ground_cover, biomes: [tundra, forest], spacing: 18, weight: 2, seed_offset: 4103 }
   bush_blueberry:
     source_mts: mtg/blueberry_bush.mts
     category: plants
@@ -172,7 +172,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [random-geek] }
-    worldgen: { pool: vegetation, biomes: [forest, plains], spacing: 22, weight: 1, seed_offset: 4104, sub_biomes: [sparse_forest, woodland] }
+    worldgen: { pool: ground_cover, biomes: [forest, plains], spacing: 22, weight: 1, seed_offset: 4104, sub_biomes: [sparse_forest, woodland] }
 
   # --- Plants ---
   cactus_large:
@@ -206,35 +206,35 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
-    worldgen: { pool: vegetation, biomes: [plains, forest], spacing: 14, weight: 2, seed_offset: 4110 }
+    worldgen: { pool: ground_cover, biomes: [plains, forest], spacing: 24, weight: 2, seed_offset: 4110 }
   tall_grass_patch:
     category: plants
     displayName: Tall Grass Patch
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
-    worldgen: { pool: vegetation, biomes: [plains], spacing: 10, weight: 3, seed_offset: 4111 }
+    worldgen: { pool: ground_cover, biomes: [plains], spacing: 18, weight: 3, seed_offset: 4111 }
   mushroom_brown_pair:
     category: plants
     displayName: Brown Mushrooms
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 24, weight: 1, seed_offset: 4112, sub_biomes: [woodland] }
+    worldgen: { pool: ground_cover, biomes: [forest], spacing: 24, weight: 1, seed_offset: 4112, sub_biomes: [woodland] }
   mushroom_red_pair:
     category: plants
     displayName: Red Mushrooms
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
-    worldgen: { pool: vegetation, biomes: [forest], spacing: 28, weight: 1, seed_offset: 4113 }
+    worldgen: { pool: ground_cover, biomes: [forest], spacing: 28, weight: 1, seed_offset: 4113 }
   dry_grass_clump:
     category: plants
     displayName: Dry Grass Clump
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0 }
-    worldgen: { pool: vegetation, biomes: [desert], spacing: 8, weight: 2, seed_offset: 4114 }
+    worldgen: { pool: ground_cover, biomes: [desert], spacing: 8, weight: 2, seed_offset: 4114 }
   lily_pad_pair:
     category: plants
     displayName: Lily Pads
@@ -248,9 +248,7 @@ prefabs:
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
     worldgen:
-      pool: vegetation
-      mode: scatter_blocks
-      block: rose
+      pool: ground_cover
       attempts: 5
       radius: 3
       biomes: [plains]
@@ -302,56 +300,56 @@ prefabs:
     displayName: Desert Ruin
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [desert], chance_per_column: 600, seed_offset: 9001 }
+    worldgen: { pool: structures, biomes: [desert], chance_per_column: 4000, seed_offset: 9001 }
   ruin_egypt_a:
     source_mts: ruined_structures/egypt.mts
     category: building
     displayName: Egypt Ruin A
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [desert], chance_per_column: 900, seed_offset: 9002 }
+    worldgen: { pool: structures, biomes: [desert], chance_per_column: 4000, seed_offset: 9002 }
   ruin_egypt_b:
     source_mts: ruined_structures/egypt2.mts
     category: building
     displayName: Egypt Ruin B
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [desert], chance_per_column: 950, seed_offset: 9003 }
+    worldgen: { pool: structures, biomes: [desert], chance_per_column: 4000, seed_offset: 9003 }
   ruin_house_a:
     source_mts: ruined_structures/ruined_house.mts
     category: building
     displayName: Ruined House A
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [forest], chance_per_column: 700, seed_offset: 9004 }
+    worldgen: { pool: structures, biomes: [forest], chance_per_column: 4000, seed_offset: 9004 }
   ruin_house_b:
     source_mts: ruined_structures/ruined_house2.mts
     category: building
     displayName: Ruined House B
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [forest], chance_per_column: 750, seed_offset: 9005 }
+    worldgen: { pool: structures, biomes: [forest], chance_per_column: 4000, seed_offset: 9005 }
   ruin_sandstone:
     source_mts: ruined_structures/sandstone.mts
     category: building
     displayName: Sandstone Ruin
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [desert, hills], chance_per_column: 650, seed_offset: 9006 }
+    worldgen: { pool: structures, biomes: [desert, hills], chance_per_column: 4000, seed_offset: 9006 }
   ruin_stonehenge:
     source_mts: ruined_structures/stonehenge.mts
     category: building
     displayName: Stonehenge
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [plains, tundra], chance_per_column: 800, seed_offset: 9007 }
+    worldgen: { pool: structures, biomes: [plains, tundra], chance_per_column: 5000, seed_offset: 9007 }
   ruin_temple:
     source_mts: ruined_structures/temple.mts
     category: building
     displayName: Ruined Temple
     import_status: ready
     source: { mod: ruined_structures, license: CC-BY-SA-4.0, authors: [X-DE1] }
-    worldgen: { pool: structures, biomes: [forest, hills], chance_per_column: 850, seed_offset: 9008 }
+    worldgen: { pool: structures, biomes: [forest, hills], chance_per_column: 5000, seed_offset: 9008 }
 
   # --- Procedural CC0 (no source_mts; generated by generate_simple_prefabs.py) ---
   house_wood_small:
@@ -359,31 +357,31 @@ prefabs:
     displayName: Small Wood House
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, forest], chance_per_column: 1200, seed_offset: 9101 }
+    worldgen: { pool: structures, biomes: [plains, forest], chance_per_column: 6000, seed_offset: 9101 }
   house_stone_cottage:
     category: building
     displayName: Stone Cottage
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, hills, tundra], chance_per_column: 1400, seed_offset: 9102 }
+    worldgen: { pool: structures, biomes: [plains, hills, tundra], chance_per_column: 8000, seed_offset: 9102 }
   well_stone:
     category: building
     displayName: Stone Well
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, forest, desert], chance_per_column: 512, seed_offset: 9103 }
+    worldgen: { pool: structures, biomes: [plains, forest, desert], chance_per_column: 5000, seed_offset: 9103 }
   tower_stone:
     category: building
     displayName: Stone Tower
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [hills, forest, tundra], chance_per_column: 900, seed_offset: 9104 }
+    worldgen: { pool: structures, biomes: [hills, forest, tundra], chance_per_column: 6000, seed_offset: 9104 }
   shed_wood:
     category: building
     displayName: Wood Shed
     import_status: ready
     source: { mod: cubatarium/procedural, license: CC0 }
-    worldgen: { pool: structures, biomes: [plains, forest, tundra], chance_per_column: 1100, seed_offset: 9105 }
+    worldgen: { pool: structures, biomes: [plains, forest, tundra], chance_per_column: 7000, seed_offset: 9105 }
   campfire_ring:
     category: decorative
     displayName: Campfire Ring

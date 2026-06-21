@@ -19,6 +19,7 @@ def main() -> int:
 
     pools: dict[str, list] = {
         "vegetation": [],
+        "ground_cover": [],
         "decoration": [],
         "structures": [],
     }

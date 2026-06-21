@@ -14,7 +14,11 @@ enum class BiomeId
   Forest,
   Desert,
   Hills,
-  Tundra
+  Tundra,
+  Savanna,
+  Foothills,
+  Scrubland,
+  ColdSteppe,
 };
 
 enum class SubBiomeId
@@ -27,7 +31,7 @@ enum class SubBiomeId
   Dunes,
 };
 
-constexpr int kBiomeCount = 5;
+constexpr int kBiomeCount = 9;
 
 struct BiomeSurfaceRule
 {

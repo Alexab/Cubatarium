@@ -19,4 +19,9 @@ float FBM2D(float x, float z, uint32_t Seed, int octaves, float persistence,
 float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
             float persistence, float lacunarity);
 
+float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
+                      float persistence, float lacunarity);
+float Smoothstep(float edge0, float edge1, float x);
+float TriangularYFactor(int y, int yMin, int yPeak, int yMax);
+
 } // namespace cutum

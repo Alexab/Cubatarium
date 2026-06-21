@@ -109,6 +109,10 @@ void ClampTuning(WorldGenTuning &t)
   t.biomeBlendRadius = std::clamp(t.biomeBlendRadius, 0.0f, 16.0f);
   t.oreDensity = ClampTuningValue(t.oreDensity);
   t.terrainErosion = std::clamp(t.terrainErosion, 0.0f, 1.0f);
+  t.riverWidth = std::clamp(t.riverWidth, 0.5f, 1.5f);
+  t.thermalErosionIterations = std::clamp(t.thermalErosionIterations, 0, 8);
+  t.hydraulicErosionIterations = std::clamp(t.hydraulicErosionIterations, 0, 32);
+  t.erosionStrength = std::clamp(t.erosionStrength, 0.0f, 1.0f);
   if (t.terrainRoughness < 0.25f)
   {
     t.terrainRoughness = 0.25f;
@@ -222,6 +226,8 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
   {
     s.EnableCaves = true;
     s.EnableOres = true;
+    s.Caves.useDensityField = true;
+    s.Ravines.enabled = true;
   }
   if (s.Generator == ProceduralGenerator::BetaRetro)
   {
@@ -237,6 +243,32 @@ void ApplyGeneratorDescriptorDefaults(ProceduralSettings &s)
 {
   ResolveProceduralDefaults(s);
   ApplyGeneratorTierDefaults(s);
+}
+
+void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
+{
+  if (presetId == "realistic")
+  {
+    s.Tuning.terrainRoughness = 0.7f;
+    s.Tuning.terrainErosion = 0.28f;
+    s.Tuning.structureDensity = 0.25f;
+    s.Tuning.vegetationDensity = 0.8f;
+    s.Tuning.biomeBlendRadius = 16.0f;
+  }
+  else if (presetId == "sparse_structures")
+  {
+    s.Tuning.structureDensity = 0.2f;
+    s.Tuning.vegetationDensity = 0.75f;
+  }
+  else
+  {
+    s.Tuning.terrainRoughness = 0.75f;
+    s.Tuning.terrainErosion = 0.22f;
+    s.Tuning.structureDensity = 0.35f;
+    s.Tuning.vegetationDensity = 0.85f;
+    s.Tuning.biomeBlendRadius = 14.0f;
+  }
+  ClampTuning(s.Tuning);
 }
 
 } // namespace cutum

@@ -132,6 +132,10 @@ void ParseSubBiomes(const nlohmann::json &subBiomes, BiomePackDefinition &biomeD
     {
       rule.DecorationWeightMul = subJson["decoration_weight_mul"].get<float>();
     }
+    if (subJson.contains("noise_threshold"))
+    {
+      rule.NoiseThreshold = subJson["noise_threshold"].get<float>();
+    }
     biomeDef.SubBiomes[subId] = rule;
   }
 }
@@ -163,6 +167,11 @@ bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline
     pipeline.Fluids = true;
     return true;
   }
+  if (stage == "ravines")
+  {
+    pipeline.Ravines = true;
+    return true;
+  }
   if (stage == "ores")
   {
     pipeline.Ores = true;
@@ -176,6 +185,11 @@ bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline
   if (stage == "vegetation")
   {
     pipeline.Vegetation = true;
+    return true;
+  }
+  if (stage == "ground_cover")
+  {
+    pipeline.GroundCover = true;
     return true;
   }
   if (stage == "decoration")

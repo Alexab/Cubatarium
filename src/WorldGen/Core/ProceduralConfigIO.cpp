@@ -1,5 +1,6 @@
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldSeedParser.h"
 #include "App/Settings/UiSettings.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -129,6 +130,23 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.terrainErosion = tuning["terrain_erosion"].get<float>();
   }
+  if (tuning.contains("river_width"))
+  {
+    out.riverWidth = tuning["river_width"].get<float>();
+  }
+  if (tuning.contains("thermal_erosion_iterations"))
+  {
+    out.thermalErosionIterations = tuning["thermal_erosion_iterations"].get<int>();
+  }
+  if (tuning.contains("hydraulic_erosion_iterations"))
+  {
+    out.hydraulicErosionIterations =
+        tuning["hydraulic_erosion_iterations"].get<int>();
+  }
+  if (tuning.contains("erosion_strength"))
+  {
+    out.erosionStrength = tuning["erosion_strength"].get<float>();
+  }
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
@@ -145,6 +163,10 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["biome_blend_radius"] = tuning.biomeBlendRadius;
   out["ore_density"] = tuning.oreDensity;
   out["terrain_erosion"] = tuning.terrainErosion;
+  out["river_width"] = tuning.riverWidth;
+  out["thermal_erosion_iterations"] = tuning.thermalErosionIterations;
+  out["hydraulic_erosion_iterations"] = tuning.hydraulicErosionIterations;
+  out["erosion_strength"] = tuning.erosionStrength;
 }
 
 } // namespace
@@ -152,7 +174,20 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
 ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 {
   ProceduralSettings settings;
-  settings.Seed = root.value("world_seed", 12345u);
+  if (root.contains("world_seed_text") && root["world_seed_text"].is_string())
+  {
+    const std::string seedText = root["world_seed_text"].get<std::string>();
+    const WorldSeedResolution resolved = ResolveWorldSeed(seedText);
+    settings.Seed = resolved.resolved;
+    settings.SeedText = resolved.raw;
+    settings.SeedKind = resolved.kind;
+  }
+  else
+  {
+    settings.Seed = root.value("world_seed", 12345u);
+    settings.SeedText = std::to_string(settings.Seed);
+    settings.SeedKind = WorldSeedKind::Numeric;
+  }
 
   const bool hasProcedural =
       root.contains("procedural") && root["procedural"].is_object();
@@ -385,6 +420,11 @@ void WriteProceduralSettings(nlohmann::json &root,
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
+  if (!settings.SeedText.empty())
+  {
+    root["world_seed_text"] = settings.SeedText;
+    root["world_seed_kind"] = WorldSeedKindToString(settings.SeedKind);
+  }
 }
 
 void WriteProceduralTemplateConfig(nlohmann::json &root,
@@ -395,6 +435,11 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
+  if (!settings.SeedText.empty())
+  {
+    root["world_seed_text"] = settings.SeedText;
+    root["world_seed_kind"] = WorldSeedKindToString(settings.SeedKind);
+  }
 }
 
 void WriteUiSettings(nlohmann::json &root, const UiSettings &settings)

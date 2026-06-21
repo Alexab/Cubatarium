@@ -7,6 +7,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldSeedParser.h"
 #include <algorithm>
 #include <sstream>
 
@@ -30,14 +31,12 @@ int ParseIntOr(const std::string &text, int fallback)
 
 uint32_t ParseSeedOr(const std::string &text, uint32_t fallback)
 {
-  try
-  {
-    return static_cast<uint32_t>(std::stoul(text));
-  }
-  catch (...)
+  if (text.empty())
   {
     return fallback;
   }
+  const WorldSeedResolution resolved = ResolveWorldSeed(text);
+  return resolved.resolved;
 }
 
 float ParseFloatOr(const std::string &text, float fallback)
@@ -104,7 +103,9 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   }
   if (SeedInput)
   {
-    SeedInput->SetText(std::to_string(FormSettings.Seed));
+    SeedInput->SetText(FormSettings.SeedText.empty()
+                           ? std::to_string(FormSettings.Seed)
+                           : FormSettings.SeedText);
   }
   if (SeaLevelInput)
   {
@@ -255,7 +256,10 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   }
   if (SeedInput)
   {
-    s.Seed = ParseSeedOr(SeedInput->GetText(), s.Seed);
+    const WorldSeedResolution resolved = ResolveWorldSeed(SeedInput->GetText());
+    s.Seed = resolved.resolved;
+    s.SeedText = resolved.raw;
+    s.SeedKind = resolved.kind;
   }
   if (SeaLevelInput)
   {

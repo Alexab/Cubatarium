@@ -11,13 +11,16 @@
   },
   "sub_biomes": {
     "dense_forest": {
+      "noise_threshold": 0.66,
       "subsurface": "dirt",
-      "vegetation_weight_mul": 1.35
+      "vegetation_weight_mul": 1.15
     },
     "sparse_forest": {
+      "noise_threshold": 0.33,
       "vegetation_weight_mul": 0.75
     },
     "woodland": {
+      "noise_threshold": 0.5,
       "vegetation_weight_mul": 1.1
     }
   },

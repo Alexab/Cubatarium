@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "dimensions": [
+    "temperature",
+    "moisture",
+    "continentalness",
+    "erosion",
+    "weirdness"
+  ],
+  "continentalness": { "scale": 0.0015, "octaves": 2, "seed_offset": 3000 },
+  "erosion": { "scale": 0.002, "octaves": 3, "seed_offset": 4000 },
+  "weirdness": { "scale": 0.003, "octaves": 2, "seed_offset": 5000 }
+}

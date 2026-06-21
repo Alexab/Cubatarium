@@ -23,6 +23,7 @@ struct HeightSampleParams
   float detailWeight{0.15f};
   int stoneSurfaceAboveY{-1};
   bool useRidgeNoise{false};
+  float seaBias{0.45f};
 };
 
 class UOverworldHeightSampler
@@ -39,6 +40,12 @@ private:
   int SeaLevel;
   int MaxHeight;
   HeightSampleParams Params;
+  HeightPreset Preset;
 };
+
+float SampleLayeredHeight01(int x, int z, uint32_t seed,
+                            const HeightSampleParams &params,
+                            HeightPreset preset);
+float SeaBiasForPreset(HeightPreset preset);
 
 } // namespace cutum

@@ -115,7 +115,9 @@ std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Fluids = ctx.Settings.FillWater;
   config.Caves = ctx.Settings.EnableCaves;
   config.Ores = ctx.Settings.EnableOres;
+  config.Ravines = ctx.Settings.Ravines.enabled;
   config.Vegetation = ctx.Settings.EnableTrees;
+  config.GroundCover = ctx.Settings.EnableTrees;
   config.Decoration = ctx.Settings.EnableDecoration;
   config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;

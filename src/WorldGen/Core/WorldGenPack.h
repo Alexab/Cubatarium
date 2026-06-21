@@ -20,6 +20,7 @@ struct BiomeSubBiomePackRule
   std::string SubsurfaceSlot;
   float VegetationWeightMul{1.0f};
   float DecorationWeightMul{1.0f};
+  float NoiseThreshold{-1.0f};
 };
 
 struct BiomePackDefinition
@@ -35,9 +36,11 @@ struct WorldGenPackPipeline
 {
   bool Loaded{false};
   bool Fluids{false};
+  bool Ravines{false};
   bool Ores{false};
   bool Caves{false};
   bool Vegetation{false};
+  bool GroundCover{false};
   bool Decoration{false};
   bool Structures{false};
   bool LavaPools{false};

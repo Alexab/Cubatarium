@@ -201,4 +201,51 @@ float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
   return value;
 }
 
+float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
+                      float persistence, float lacunarity)
+{
+  const auto perm = PermutationForSeed(Seed);
+  float value = 0.0f;
+  float amplitude = 1.0f;
+  float frequency = 1.0f;
+  float maxAmplitude = 0.0f;
+  for (int i = 0; i < octaves; ++i)
+  {
+    value += SamplePerlin2D(x * frequency, z * frequency, perm) * amplitude;
+    maxAmplitude += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+  if (maxAmplitude <= 0.0f)
+  {
+    return 0.0f;
+  }
+  return value / maxAmplitude;
+}
+
+float Smoothstep(float edge0, float edge1, float x)
+{
+  if (edge0 == edge1)
+  {
+    return x < edge0 ? 0.0f : 1.0f;
+  }
+  const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+  return t * t * (3.0f - 2.0f * t);
+}
+
+float TriangularYFactor(int y, int yMin, int yPeak, int yMax)
+{
+  if (y < yMin || y > yMax)
+  {
+    return 0.0f;
+  }
+  if (y <= yPeak)
+  {
+    const float denom = static_cast<float>(std::max(1, yPeak - yMin));
+    return static_cast<float>(y - yMin) / denom;
+  }
+  const float denom = static_cast<float>(std::max(1, yMax - yPeak));
+  return static_cast<float>(yMax - y) / denom;
+}
+
 } // namespace cutum

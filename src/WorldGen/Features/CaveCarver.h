@@ -15,14 +15,16 @@ enum class CaveStyle
 
 struct CaveParams
 {
-  float threshold{0.72f};
+  float threshold{0.64f};
   int minY{4};
-  int maxDepthBelowSurface{2};
-  int octaves{3};
+  int maxDepthBelowSurface{8};
+  int octaves{4};
   float persistence{0.5f};
   float lacunarity{2.f};
-  float scale{0.05f};
+  float scale{0.04f};
   CaveStyle style{CaveStyle::Noise};
+  bool useDensityField{false};
+  float densityCaveAmplitude{0.15f};
 };
 
 bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,

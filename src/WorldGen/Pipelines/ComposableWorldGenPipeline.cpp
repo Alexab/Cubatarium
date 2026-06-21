@@ -27,10 +27,13 @@ ComposableWorldGenConfig ApplyPackPipelineMask(ComposableWorldGenConfig config)
     return config;
   }
   config.Fluids = StageEnabled(pipeline, config.Fluids, pipeline.Fluids);
+  config.Ravines = StageEnabled(pipeline, config.Ravines, pipeline.Ravines);
   config.Ores = StageEnabled(pipeline, config.Ores, pipeline.Ores);
   config.Caves = StageEnabled(pipeline, config.Caves, pipeline.Caves);
   config.Vegetation =
       StageEnabled(pipeline, config.Vegetation, pipeline.Vegetation);
+  config.GroundCover =
+      StageEnabled(pipeline, config.GroundCover, pipeline.GroundCover);
   config.Decoration =
       StageEnabled(pipeline, config.Decoration, pipeline.Decoration);
   config.Structures =
