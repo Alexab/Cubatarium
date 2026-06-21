@@ -393,6 +393,7 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  void RefreshStreamerSettings();
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
@@ -441,6 +442,8 @@ private:
   void SaveChunkToFile(glm::ivec3 chunkCoord, const std::string &world_folder);
   /// Returns voxels placed (>=0), or -1 if the file could not be read/parsed.
   int LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string &world_folder);
+  int LoadTerrainColumnFromFile(glm::ivec3 groundCoord,
+                                const std::string &world_folder);
   void MigrateMonolithicChunksJson(const std::string &chunks_file,
                                    const std::string &world_folder);
 

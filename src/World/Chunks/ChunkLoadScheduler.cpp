@@ -29,10 +29,12 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
     return;
   }
   const auto stateIt = States.find(coord);
-  if (stateIt != States.end() &&
-      stateIt->second != ChunkLoadState::Absent)
+  if (stateIt != States.end())
   {
-    return;
+    if (stateIt->second != ChunkLoadState::Absent)
+    {
+      return;
+    }
   }
   PendingRequest pending;
   pending.coord = coord;

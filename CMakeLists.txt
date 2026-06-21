@@ -155,6 +155,7 @@ set(SOURCES
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/World/Chunks/ChunkStreamer.cpp
+    src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Chunks/ChunkBuffer.cpp
     src/World/Chunks/ChunkGenerationToken.cpp
     src/World/Chunks/ChunkLoadScheduler.cpp

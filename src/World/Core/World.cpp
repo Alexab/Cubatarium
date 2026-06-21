@@ -27,6 +27,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/Math/GridMath.h"
 #include "World/Prefabs/Prefab.h"
@@ -284,13 +285,15 @@ void UWorld::InitStreamerCallbacks()
   }
   InitChunkScheduler();
   Streamer->SetRenderDistance(RenderDistanceChunks);
+  Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(WorldFolderPath);
   Streamer->SetCallbacks(
       [this](glm::ivec3 coord)
       {
         const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded = LoadChunkFromFile(coord, WorldFolderPath) >= 0;
+        const bool loaded =
+            LoadTerrainColumnFromFile(coord, WorldFolderPath) > 0;
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
@@ -334,7 +337,14 @@ void UWorld::InitStreamerCallbacks()
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
       },
-      [this](glm::ivec3 coord) { MeshCache.RemoveChunk(coord); });
+      [this](glm::ivec3 coord)
+      {
+        MeshCache.RemoveChunk(coord);
+        if (coord.y == 0 && ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(coord);
+        }
+      });
   Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
   Streamer->SetAsyncCallbacks(
       [this](glm::ivec3 coord, int priority)
@@ -346,8 +356,27 @@ void UWorld::InitStreamerCallbacks()
       },
       [this](glm::ivec3 coord)
       {
-        return ChunkScheduler && ChunkScheduler->IsCommitted(coord);
+        if (ChunkScheduler && ChunkScheduler->IsPending(coord))
+        {
+          return false;
+        }
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          return false;
+        }
+        return IsTerrainChunkComplete(BlockWorld, coord,
+                                      ProceduralTemplate.MaxHeight);
       });
+}
+
+void UWorld::RefreshStreamerSettings()
+{
+  if (!Streamer)
+  {
+    return;
+  }
+  Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
+  Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -3166,6 +3195,29 @@ int UWorld::LoadChunkFromFile(glm::ivec3 chunkCoord,
               << e.what() << std::endl;
     return -1;
   }
+}
+
+int UWorld::LoadTerrainColumnFromFile(glm::ivec3 groundCoord,
+                                      const std::string &world_folder)
+{
+  if (groundCoord.y != 0)
+  {
+    return -1;
+  }
+  int total = 0;
+  const int maxCy =
+      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    const int placed =
+        LoadChunkFromFile(glm::ivec3(groundCoord.x, cy, groundCoord.z),
+                          world_folder);
+    if (placed > 0)
+    {
+      total += placed;
+    }
+  }
+  return total;
 }
 
 void UWorld::MigrateMonolithicChunksJson(const std::string & /*chunks_file*/,

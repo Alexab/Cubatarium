@@ -857,18 +857,38 @@ void UCore::CreateNewWorldWithCurrentSettings()
   }
   ResolveProceduralDefaults(worldSettings);
   ApplyGeneratorTierDefaults(worldSettings);
+  worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
+  worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
+  worldSettings.MaxChunkCommitsPerFrame = ProceduralTemplate.MaxChunkCommitsPerFrame;
 
   WorldInstance->SetProceduralSettings(worldSettings);
+  WorldInstance->SetRenderSettings(Render);
   WorldInstance->Create(new_world_name);
   WorldInstance->GenerateUsers();
   SaveWorld(new_world_name);
   LoadWorldList(WorldPath.string());
 }
 
+void UCore::ApplyRuntimeStreamingToWorld()
+{
+  if (!WorldInstance)
+  {
+    return;
+  }
+  ProceduralSettings worldSettings = WorldInstance->GetProceduralSettings();
+  worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
+  worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
+  worldSettings.MaxChunkCommitsPerFrame = ProceduralTemplate.MaxChunkCommitsPerFrame;
+  WorldInstance->SetProceduralSettings(worldSettings, false);
+  WorldInstance->SetRenderSettings(Render);
+  WorldInstance->RefreshStreamerSettings();
+}
+
 void UCore::LoadWorld(const std::string &world_name)
 {
   ActiveWorldFolder = WorldFolderPath(world_name);
   WorldInstance->Load(ActiveWorldFolder.string());
+  ApplyRuntimeStreamingToWorld();
   if (!DefaultUserName.empty())
   {
     if (!WorldInstance->SetCurrentUserName(DefaultUserName))

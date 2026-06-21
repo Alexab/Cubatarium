@@ -57,6 +57,7 @@ public:
                          IsChunkCommittedFn isCommittedFn);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
+  void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }

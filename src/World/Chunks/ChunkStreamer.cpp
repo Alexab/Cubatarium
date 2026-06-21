@@ -1,6 +1,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -34,9 +35,10 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
          pz1 >= cz0;
 }
 
-bool TerrainColumnIsEmpty(const UBlockWorld &world, int worldX, int worldZ)
+bool TerrainColumnNeedsGeneration(const UBlockWorld &world, int worldX,
+                                  int worldZ, int maxWorldY)
 {
-  return world.GetBlock(glm::ivec3(worldX, 0, worldZ)) == BLOCK_AIR;
+  return TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY);
 }
 
 void MarkChunkAndNeighborsDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
@@ -103,7 +105,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
 
   const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
   if (existing != nullptr && !forceSync && AsyncGeneration &&
-      OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord))
+      OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
+      IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
   {
     ProcedurallyGenerated.insert(chunkCoord);
     return true;
@@ -117,16 +120,20 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   {
     if (OnLoadChunk && OnLoadChunk(chunkCoord))
     {
-      ProcedurallyGenerated.insert(chunkCoord);
-      MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
-      return true;
+      if (IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
+      {
+        ProcedurallyGenerated.insert(chunkCoord);
+        MarkChunkAndNeighborsDirty(OnMarkDirty, chunkCoord);
+        return true;
+      }
     }
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
       const int priority =
           std::abs(chunkCoord.x) + std::abs(chunkCoord.z);
       OnRequestAsyncChunk(chunkCoord, priority);
-      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord);
+      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
+             IsTerrainChunkComplete(World, chunkCoord, MaxHeight);
     }
     if (!OnGenerateColumn)
     {
@@ -138,7 +145,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
       OnRequestAsyncChunk(chunkCoord, 0);
-      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord);
+      return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
+             IsTerrainChunkComplete(World, chunkCoord, MaxHeight);
     }
     return false;
   }
@@ -151,7 +159,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     {
       const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
       const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
-      if (onlyEmptyColumns && !TerrainColumnIsEmpty(World, worldX, worldZ))
+      if (onlyEmptyColumns &&
+          !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight))
       {
         continue;
       }
@@ -162,7 +171,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
 
   if (!generated)
   {
-    if (existing != nullptr)
+    if (existing != nullptr &&
+        IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
     {
       ProcedurallyGenerated.insert(chunkCoord);
     }
@@ -221,16 +231,25 @@ void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
   }
 
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
+  const glm::ivec3 groundCenter(feetChunk.x, 0, feetChunk.z);
+
   for (int dx = -1; dx <= 1; ++dx)
   {
     for (int dz = -1; dz <= 1; ++dz)
     {
-      for (int dy = -1; dy <= 1; ++dy)
+      if (dx == 0 && dz == 0)
       {
-        const glm::ivec3 coord = feetChunk + glm::ivec3(dx, dy, dz);
-        EnsureChunkLoaded(coord, true);
+        continue;
       }
+      const glm::ivec3 coord(groundCenter.x + dx, 0, groundCenter.z + dz);
+      EnsureChunkLoaded(coord, false);
     }
+  }
+
+  const bool centerReady = EnsureChunkLoaded(groundCenter, false);
+  if (!centerReady && OnGenerateColumn)
+  {
+    EnsureChunkLoaded(groundCenter, true);
   }
 }
 
@@ -273,7 +292,14 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 centerChunk,
       ++LastFrameStats.savesThisFrame;
     }
     World.GetChunkManager().RemoveChunk(coord);
-    ProcedurallyGenerated.erase(coord);
+    if (coord.y == 0)
+    {
+      ProcedurallyGenerated.erase(coord);
+    }
+    else
+    {
+      ProcedurallyGenerated.erase(glm::ivec3(coord.x, 0, coord.z));
+    }
     if (OnUnloadChunk)
     {
       OnUnloadChunk(coord);

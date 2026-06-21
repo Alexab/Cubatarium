@@ -129,6 +129,8 @@ public:
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
   bool ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection);
 
+  void ApplyRuntimeStreamingToWorld();
+
 private:
   std::vector<std::string> WorldList;
 
