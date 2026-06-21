@@ -26,7 +26,7 @@ Scatter rules place individual blocks (e.g. `rose`) via hash-derived offsets; pa
 ## Creative vs worldgen
 
 - **Creative**: any prefab in the library; full collision via `CanPlacePrefabAt`.
-- **Worldgen**: manifest + `prefab_features.json` only; trees often use `*_mapgen` copies; vegetation may require solid ground under the anchor (`CanPlacePrefabAtForWorldGen`).
+- **Worldgen**: manifest + `prefab_features.json` only; trees often use `*_mapgen` copies; vegetation requires air voxels with solid non-fluid ground (`CanPlacePrefabAtForWorldGen` / `CanPlacePlantAt`).
 - **Water features**: `reeds_*` require water near the column; `lily_pad*` anchor on the **water surface** (air above the topmost water block in the column, searching up to 3 blocks horizontally).
 
 Legacy `tree_small` / `tree_large` (category `misc`) stay in the library for creative; they are not in worldgen pools.

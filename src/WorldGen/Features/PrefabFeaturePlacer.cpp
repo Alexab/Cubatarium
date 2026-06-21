@@ -207,14 +207,19 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     const int ox = static_cast<int>(h % static_cast<uint32_t>(span)) - radius;
     const int oz =
         static_cast<int>((h / 31U) % static_cast<uint32_t>(span)) - radius;
-    const int y = surfaceY + 1 + rule.Scatter.DyOffset;
-    const glm::ivec3 pos(x + ox, y, z + oz);
-    if (!ctx.World.IsAir(pos))
+    const int wx = x + ox;
+    const int wz = z + oz;
+    const int maxScanY =
+        std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4);
+    const int localSurface =
+        FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+    if (localSurface < 0)
     {
       continue;
     }
-    const BlockId below = ctx.World.GetBlock(glm::ivec3(pos.x, surfaceY, pos.z));
-    if (below == BLOCK_AIR)
+    const int y = localSurface + 1 + rule.Scatter.DyOffset;
+    const glm::ivec3 pos(wx, y, wz);
+    if (!CanPlacePlantAt(ctx.World, ctx.Registry, pos))
     {
       continue;
     }
@@ -473,8 +478,9 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
   }
   const bool canPlace =
       surfaceY >= 0
-          ? CanPlacePrefabAtForWorldGen(ctx.World, *prefab, anchorWorldPos,
-                                        surfaceY)
+          ? CanPlacePrefabAtForWorldGen(
+                ctx.World, ctx.Registry, *prefab, anchorWorldPos,
+                std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4))
           : CanPlacePrefabAt(ctx.World, *prefab, anchorWorldPos);
   if (!canPlace)
   {

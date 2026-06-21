@@ -46,10 +46,7 @@ bool NeighborHidesFace(const UBlockWorld &world, UBlockRegistry &registry,
     return true;
   }
 
-  // Two-hop only for solid transparent cubes (glass, ice). Fluids and cross
-  // plants stay non-occluding — opaque faces toward them are always kept.
-  if (!faceTransparent && neighborTransparent &&
-      registry.BlocksMovement(neighbor))
+  if (!faceTransparent && neighborTransparent)
   {
     const glm::ivec3 beyondPos = neighborPos + neighborOffset;
     const glm::ivec3 beforePos = blockPos - neighborOffset;

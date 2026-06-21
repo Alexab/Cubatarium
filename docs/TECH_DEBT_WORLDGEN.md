@@ -35,3 +35,4 @@
 - Выбор pack из выпадающего списка с описанием (сканирование `pack.json`)
 - Полный перенос `SubBiomeFor` noise-порогов в JSON
 - Доп. UX: пресеты генераторов и tooltips для чекбоксов стадий Overworld
+- ~~Scatter/prefab на воде~~ — `CanPlacePlantAt` / локальный `FindTopSolidSurfaceY` (done)

@@ -134,7 +134,7 @@ Name heuristics in [`tools/canonical_blocks.yaml`](../tools/canonical_blocks.yam
 
 Implementation: [`GreedyMesher.cpp`](../src/Render/Mesh/GreedyMesher.cpp) (`NeighborHidesFace`).
 
-Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ solid transparent** boundaries (glass, ice) an extra **two-hop** check avoids x-ray into open air volumes. Fluids and cross plants do not occlude opaque faces — no two-hop on those edges.
+Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ transparent** boundaries (glass, ice, water) an extra **two-hop** check avoids x-ray into open air volumes:
 
 - `stone | glass | air` (window) — opaque face toward glass stays culled; room stays visible through the pane.
 - `air | glass | stone` (glass on a solid facade) — opaque face toward glass is **kept** so depth/color behind glass is the adjacent stone, not sky or distant caves.
