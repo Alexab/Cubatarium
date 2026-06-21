@@ -6,28 +6,33 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-CS-002 | 2026-06 | MarkDirtyColumn called per-stage, per-Y loop | Deferred dirty batching not yet applied | Phase A2 |
-| TD-CS-003 | 2026-06 | No frame timing breakdown for gen/mesh/io | Profiler fields not wired yet | Phase A3 |
-| TD-CS-004 | 2026-06 | Greedy mesh rebuild blocks render thread | Async meshing not integrated | Phase B |
-| TD-CS-005 | 2026-06 | Worldgen blocks movement thread during streaming | Async populate not wired | Phase C |
-| TD-CS-006 | 2026-06 | Sync JSON chunk I/O on load/unload | Background I/O not implemented | Phase D |
-| TD-CS-007 | 2026-06 | FBM3D per-voxel in caves without gating | Cave gate / micro-opt pending | Phase A4/E3 |
-| TD-CS-008 | 2026-06 | WorldGenContext holds MeshCache pointer | Decouple on async commit path | Phase C6 |
-| TD-CS-009 | 2026-06 | No generation token / stale async results | Token registry not added | Phase C2 |
+| TD-CS-010 | 2026-06 | Async meshing defaults off; needs in-game validation | Enable via `Render.AsyncMeshing` after manual fly-through | backlog |
+| TD-CS-011 | 2026-06 | Async chunk generation defaults off | Enable via `ProceduralSettings.AsyncChunkGeneration` | backlog |
+| TD-CS-012 | 2026-06 | Async chunk I/O defaults off | Enable via `ProceduralSettings.AsyncChunkIo` | backlog |
+| TD-CS-013 | 2026-06 | CI smoke uses synthetic latency budgets only | Hook real MovementDiagnostics export | backlog |
 
 ## Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
 | TD-CS-001 | 2026-06 | `MarkDirty` bumps revision only when chunk newly enters dirty set |
+| TD-CS-002 | 2026-06 | Deferred `AccumulateDirtyColumn` + chunk-slice `MarkDirtyColumn` iteration |
+| TD-CS-003 | 2026-06 | `MovementDiagnostics` exposes gen/mesh/io/dirty breakdown |
+| TD-CS-004 | 2026-06 | `UAsyncMeshBuilder` + `RenderSettings.AsyncMeshing` |
+| TD-CS-005 | 2026-06 | `UChunkLoadScheduler` + sync collision ring (`forceSync`) |
+| TD-CS-006 | 2026-06 | `UAsyncChunkIO` background save/load with main-thread commit |
+| TD-CS-007 | 2026-06 | Cave carve early-continue + chunk-level cave density gate in populator |
+| TD-CS-008 | 2026-06 | `MeshCache` removed from `WorldGenContext`; dirty on commit/streamer |
+| TD-CS-009 | 2026-06 | `UChunkGenerationRegistry` + token validation on async results |
 
 ## Phase tracker
 
 | Phase | Status | Last commit |
 |-------|--------|-------------|
 | Setup | done | docs: add chunk streaming tech debt tracker |
-| A | in progress | — |
-| B | pending | — |
-| C | pending | — |
-| D | pending | — |
-| E | pending | — |
+| A | done | feat(diag): add gen/mesh/io timing breakdown |
+| B | done | feat(mesh): integrate async mesh builder |
+| C | done | feat(streaming): wire scheduler into chunk streamer |
+| D | done | feat(io): async chunk save on unload |
+| E | done | perf(mesh): skip empty sky layers in greedy mesher |
+| Metrics | done | test: extend smoke_worldgen_metrics with latency budgets |

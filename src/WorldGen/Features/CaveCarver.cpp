@@ -64,17 +64,24 @@ bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed)
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
                       uint32_t Seed, const CaveParams &params)
 {
-  for (int y = params.minY; y <= surfaceY - params.maxDepthBelowSurface; ++y)
+  const int yMax = surfaceY - params.maxDepthBelowSurface;
+  if (yMax < params.minY)
+  {
+    return;
+  }
+  for (int y = params.minY; y <= yMax; ++y)
   {
     const bool carve = params.style == CaveStyle::Worm
                            ? ShouldCarveWorm(x, y, z, surfaceY, Seed)
                            : ShouldCarve(x, y, z, surfaceY, Seed, params);
-    if (carve)
+    if (!carve)
     {
-      if (!ctx.World.IsAir(glm::ivec3(x, y, z)))
-      {
-        ctx.World.SetBlock(glm::ivec3(x, y, z), BLOCK_AIR);
-      }
+      continue;
+    }
+    const glm::ivec3 pos(x, y, z);
+    if (!ctx.World.IsAir(pos))
+    {
+      ctx.World.SetBlock(pos, BLOCK_AIR);
     }
   }
   ctx.AccumulateDirtyColumn(params.minY, surfaceY);
