@@ -100,10 +100,11 @@ void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 }
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
-  if (DirtyChunkSet.insert(chunkCoord).second)
+  if (!DirtyChunkSet.insert(chunkCoord).second)
   {
-    DirtyChunks.push_back(chunkCoord);
+    return;
   }
+  DirtyChunks.push_back(chunkCoord);
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
