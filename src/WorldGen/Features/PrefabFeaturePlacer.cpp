@@ -160,8 +160,7 @@ bool PlacePrefabAtWaterSurface(WorldGenContext &ctx, const std::string &prefabNa
   {
     return false;
   }
-  ctx.MarkDirtyColumn(anchorWorldPos.x, anchorWorldPos.z, stats.minY,
-                      stats.maxY);
+  ctx.AccumulateDirtyColumn(stats.minY, stats.maxY);
   return true;
 }
 
@@ -233,7 +232,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
-  ctx.MarkDirtyColumn(x, z, minY, maxY);
+  ctx.AccumulateDirtyColumn(minY, maxY);
   return true;
 }
 
@@ -290,6 +289,10 @@ float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
     return UWorldGenPack::SubBiomePoolWeightMultiplier(biomeId, subBiome, pool);
   }
   if (pool == PrefabFeaturePool::Structures)
+  {
+    return 1.0f;
+  }
+  if (pool == PrefabFeaturePool::GroundCover)
   {
     return 1.0f;
   }
@@ -500,8 +503,7 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  ctx.MarkDirtyColumn(anchorWorldPos.x, anchorWorldPos.z, stats.minY,
-                      stats.maxY);
+  ctx.AccumulateDirtyColumn(stats.minY, stats.maxY);
   return true;
 }
 
@@ -526,10 +528,48 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
+  for (int dx = -2; dx <= 2; ++dx)
+  {
+    for (int dz = -2; dz <= 2; ++dz)
+    {
+      if (dx == 0 && dz == 0)
+      {
+        continue;
+      }
+      const uint32_t neighborHash =
+          FeatureHash(x + dx, z + dz, ctx.Settings.Seed + 5000);
+      if (neighborHash % 48u == 0u)
+      {
+        return false;
+      }
+    }
+  }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
                             UPrefabFeatureConfigStorage::Get().Vegetation,
                             PrefabFeaturePool::Vegetation, 5000, false, true,
                             ctx.Settings.Tuning.vegetationDensity);
+}
+
+bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
+                                 int surfaceY, BiomeId biome,
+                                 bool skipIfTreeNearby)
+{
+  if (!UPrefabFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableTrees)
+  {
+    return false;
+  }
+  if (skipIfTreeNearby)
+  {
+    return false;
+  }
+  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+  {
+    return false;
+  }
+  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
+                            UPrefabFeatureConfigStorage::Get().GroundCover,
+                            PrefabFeaturePool::GroundCover, 5500, false, true,
+                            ctx.Settings.Tuning.vegetationDensity * 0.85f);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
@@ -558,9 +598,35 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
-                            UPrefabFeatureConfigStorage::Get().Structures,
-                            PrefabFeaturePool::Structures, 7000, true, false,
+
+  const PrefabFeatureConfig &cfg = UPrefabFeatureConfigStorage::Get();
+  const int cellSize = std::max(16, cfg.structureCellSize);
+  const int cellX = (x >= 0 ? x : x - cellSize + 1) / cellSize;
+  const int cellZ = (z >= 0 ? z : z - cellSize + 1) / cellSize;
+  const int anchorX = cellX * cellSize + cellSize / 2;
+  const int anchorZ = cellZ * cellSize + cellSize / 2;
+  if (x != anchorX || z != anchorZ)
+  {
+    return false;
+  }
+
+  const int spacingCells =
+      std::max(1, cfg.structureMinSpacing / std::max(1, cellSize));
+  if ((cellX / spacingCells) != (cellZ / spacingCells))
+  {
+    return false;
+  }
+
+  const int chance = EffectiveChance(cfg.structureChancePerCell,
+                                     ctx.Settings.Tuning.structureDensity);
+  const uint32_t h = FeatureHash(cellX, cellZ, ctx.Settings.Seed + 7000);
+  if (chance <= 0 || h % static_cast<uint32_t>(chance) != 0)
+  {
+    return false;
+  }
+
+  return TryPlacePrefabPool(ctx, x, z, surfaceY, biome, cfg.Structures,
+                            PrefabFeaturePool::Structures, 7001, true, false,
                             ctx.Settings.Tuning.structureDensity);
 }
 
@@ -595,7 +661,7 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       ctx.World.SetBlock(pos, ctx.Lava);
     }
   }
-  ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
+  ctx.AccumulateDirtyColumn(surfaceY, surfaceY + 2);
   return true;
 }
 
@@ -623,7 +689,7 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
   ctx.World.SetBlock(firePos, ctx.Fire);
-  ctx.MarkDirtyColumn(x, z, surfaceY, surfaceY + 2);
+  ctx.AccumulateDirtyColumn(surfaceY, surfaceY + 2);
   return true;
 }
 

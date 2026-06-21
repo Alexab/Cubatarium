@@ -14,6 +14,17 @@ bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
   {
     return false;
   }
+  if (params.useDensityField)
+  {
+    float density = static_cast<float>(surfaceY - y);
+    const float caveNoise = FBM3D(static_cast<float>(x) * params.scale,
+                                  static_cast<float>(y) * params.scale,
+                                  static_cast<float>(z) * params.scale,
+                                  Seed + 3000, params.octaves, params.persistence,
+                                  params.lacunarity);
+    density += caveNoise * params.densityCaveAmplitude * 24.0f;
+    return density < 0.0f;
+  }
   const float n = FBM3D(static_cast<float>(x) * params.scale,
                         static_cast<float>(y) * params.scale,
                         static_cast<float>(z) * params.scale, Seed + 3000,
@@ -66,7 +77,7 @@ void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
   }
-  ctx.MarkDirtyColumn(x, z, params.minY, surfaceY);
+  ctx.AccumulateDirtyColumn(params.minY, surfaceY);
 }
 
 } // namespace cutum

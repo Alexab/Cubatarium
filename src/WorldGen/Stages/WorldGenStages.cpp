@@ -14,7 +14,7 @@ namespace
 constexpr int kSpawnIslandFlatRadius = 48;
 constexpr int kSpawnIslandBlendRadius = 16;
 
-float Smoothstep(float edge0, float edge1, float x)
+float SpawnSmoothstep(float edge0, float edge1, float x)
 {
   const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
   return t * t * (3.0f - 2.0f * t);
@@ -43,7 +43,7 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
   else if (dist <
            static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius))
   {
-    const float u = Smoothstep(
+    const float u = SpawnSmoothstep(
         static_cast<float>(kSpawnIslandFlatRadius),
         static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius),
         dist);
@@ -89,7 +89,7 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
     ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
   const int maxY = std::max(surfaceY, ctx.Settings.SeaLevel);
-  ctx.MarkDirtyColumn(x, z, 0, maxY);
+  ctx.AccumulateDirtyColumn(0, maxY);
 }
 
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
@@ -111,7 +111,7 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
       ctx.World.SetBlock(pos, ctx.Water);
     }
   }
-  ctx.MarkDirtyColumn(x, z, surfaceY, sea);
+  ctx.AccumulateDirtyColumn(surfaceY, sea);
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
@@ -159,6 +159,7 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
     ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
   FillFluidColumn(ctx, x, z, surfaceY);
+  ctx.AccumulateDirtyColumn(0, surfaceY);
 }
 
 void FillFlatColumn(WorldGenContext &ctx, int x, int z)
@@ -173,7 +174,7 @@ void FillFlatColumn(WorldGenContext &ctx, int x, int z)
   ctx.World.SetBlock(glm::ivec3(x, 1, z), ctx.Stone);
   ctx.World.SetBlock(glm::ivec3(x, 2, z), ctx.Stone);
   ctx.World.SetBlock(glm::ivec3(x, surfaceY, z), ctx.Grass);
-  ctx.MarkDirtyColumn(x, z, 0, surfaceY);
+  ctx.AccumulateDirtyColumn(0, surfaceY);
 }
 
 } // namespace cutum

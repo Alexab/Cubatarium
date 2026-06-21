@@ -116,6 +116,22 @@ BiomeId BiomeIdFromString(const std::string &name)
   {
     return BiomeId::Tundra;
   }
+  if (name == "savanna")
+  {
+    return BiomeId::Savanna;
+  }
+  if (name == "foothills")
+  {
+    return BiomeId::Foothills;
+  }
+  if (name == "scrubland")
+  {
+    return BiomeId::Scrubland;
+  }
+  if (name == "cold_steppe")
+  {
+    return BiomeId::ColdSteppe;
+  }
   return BiomeId::Plains;
 }
 
@@ -131,6 +147,14 @@ const char *BiomeIdToString(BiomeId biome)
     return "hills";
   case BiomeId::Tundra:
     return "tundra";
+  case BiomeId::Savanna:
+    return "savanna";
+  case BiomeId::Foothills:
+    return "foothills";
+  case BiomeId::Scrubland:
+    return "scrubland";
+  case BiomeId::ColdSteppe:
+    return "cold_steppe";
   case BiomeId::Plains:
   default:
     return "plains";
@@ -198,10 +222,19 @@ bool UPrefabFeatureConfigStorage::LoadFromFile(
     const nlohmann::json root = nlohmann::json::parse(in);
     ParseRuleArray(root.value("vegetation", nlohmann::json::array()),
                    Config.Vegetation);
+    ParseRuleArray(root.value("ground_cover", nlohmann::json::array()),
+                   Config.GroundCover);
     ParseRuleArray(root.value("decoration", nlohmann::json::array()),
                    Config.Decoration);
     ParseRuleArray(root.value("structures", nlohmann::json::array()),
                    Config.Structures);
+    if (root.contains("structure_placement") && root["structure_placement"].is_object())
+    {
+      const auto &sp = root["structure_placement"];
+      Config.structureCellSize = std::max(16, sp.value("cell_size", 64));
+      Config.structureChancePerCell = std::max(1, sp.value("chance_per_cell", 12));
+      Config.structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
+    }
   }
   catch (const nlohmann::json::exception &e)
   {
@@ -211,7 +244,8 @@ bool UPrefabFeatureConfigStorage::LoadFromFile(
   }
   Loaded = true;
   std::cout << "PrefabFeatureConfig: loaded "
-            << Config.Vegetation.size() + Config.Decoration.size() +
+            << Config.Vegetation.size() + Config.GroundCover.size() +
+                   Config.Decoration.size() +
                    Config.Structures.size()
             << " rules from " << path << std::endl;
   return true;

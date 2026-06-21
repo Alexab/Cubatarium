@@ -3,6 +3,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Features/RavineCarver.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 namespace cutum
@@ -110,14 +111,17 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRule(
 
 void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
 {
+  Ctx.ResetColumnDirty(worldX, worldZ);
   if (Config.TerrainMode == ComposableTerrainMode::Flat)
   {
     FillFlatColumn(Ctx, worldX, worldZ);
+    Ctx.FlushColumnDirty();
     return;
   }
   if (Config.TerrainMode == ComposableTerrainMode::LegacyHash)
   {
     FillLegacyHashColumn(Ctx, worldX, worldZ);
+    Ctx.FlushColumnDirty();
     return;
   }
 
@@ -130,10 +134,10 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
       BuildTerrainRule(worldX, worldZ, surfaceY, biome, weights);
 
   FillTerrainColumn(Ctx, worldX, worldZ, surfaceY, rule);
-  if (Config.Ores && Ctx.Settings.EnableOres)
+  if (Config.Ravines && Ctx.Settings.Ravines.enabled)
   {
-    FillOreVeins(Ctx, worldX, worldZ, surfaceY, Ctx.Settings.Seed,
-                 Ctx.Settings.Tuning.oreDensity);
+    CarveColumnRavines(Ctx, worldX, worldZ, surfaceY, Ctx.Settings.Seed,
+                       Ctx.Settings.Ravines);
   }
   if (Config.Fluids)
   {
@@ -144,9 +148,21 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
     CarveColumnCaves(Ctx, worldX, worldZ, surfaceY, Ctx.Settings.Seed,
                      Ctx.Settings.Caves);
   }
+  if (Config.Ores && Ctx.Settings.EnableOres)
+  {
+    FillOreVeins(Ctx, worldX, worldZ, surfaceY, Ctx.Settings.Seed,
+                 Ctx.Settings.Tuning.oreDensity);
+  }
+  bool placedTree = false;
   if (Config.Vegetation && Ctx.Settings.EnableTrees)
   {
-    TryPlaceVegetationFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome);
+    placedTree =
+        TryPlaceVegetationFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome);
+  }
+  if (Config.GroundCover && Ctx.Settings.EnableTrees)
+  {
+    TryPlaceGroundCoverFeatures(Ctx, worldX, worldZ, surfaceY, featureBiome,
+                                placedTree);
   }
   if (Config.Decoration)
   {
@@ -164,6 +180,7 @@ void UComposableWorldGenerator::GenerateColumn(int worldX, int worldZ)
   {
     TryPlaceFirePatch(Ctx, worldX, worldZ, surfaceY, featureBiome, Ctx.Grass);
   }
+  Ctx.FlushColumnDirty();
 }
 
 int UComposableWorldGenerator::SurfaceYAt(int worldX, int worldZ) const

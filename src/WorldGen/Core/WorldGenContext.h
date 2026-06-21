@@ -44,7 +44,19 @@ struct WorldGenContext
   BlockId OreIron{BLOCK_AIR};
 
   void ResolveBlockIds();
+
+  void ResetColumnDirty(int world_x, int world_z);
+  void AccumulateDirtyColumn(int min_y, int max_y);
+  void FlushColumnDirty();
+
   void MarkDirtyColumn(int world_x, int world_z, int min_y, int max_y) const;
+
+private:
+  mutable bool ColumnDirtyActive{false};
+  mutable int ColumnDirtyWorldX{0};
+  mutable int ColumnDirtyWorldZ{0};
+  mutable int ColumnDirtyMinY{0};
+  mutable int ColumnDirtyMaxY{-1};
 };
 
 } // namespace cutum
