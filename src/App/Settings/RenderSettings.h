@@ -9,6 +9,7 @@ namespace cutum
 struct RenderSettings
 {
   bool GreedyMeshing{true};
+  bool AsyncMeshing{false};
   bool FaceQuads{true};
   bool FrustumCulling{true};
   bool BatchCache{true};

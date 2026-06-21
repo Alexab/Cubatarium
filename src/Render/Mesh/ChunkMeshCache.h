@@ -6,12 +6,15 @@
 #include "World/Math/BlockTypes.h"
 #include <climits>
 #include <glm/glm.hpp>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 namespace cutum
 {
 struct Frustum;
+struct MeshBuildResult;
+class UAsyncMeshBuilder;
 struct FaceInstance
 {
   glm::mat4 model{1.0f};
@@ -72,6 +75,8 @@ private:
   };
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
+  void ApplyMeshResult(const UBlockWorld &world, MeshBuildResult &&result);
+  void EnsureAsyncBuilder();
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,
                           std::vector<FaceInstance> &chunkInstances);
@@ -97,6 +102,7 @@ private:
   uint64_t LastCullMeshRevision{0};
   int RenderDistanceChunks{4};
   RenderSettings Render;
+  std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
 };
 } // namespace cutum
 #endif

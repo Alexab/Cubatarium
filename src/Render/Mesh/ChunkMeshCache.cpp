@@ -1,5 +1,7 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Blocks/BlockRegistry.h"
+#include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
@@ -224,10 +226,73 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
     }
   }
 }
+void UChunkMeshCache::EnsureAsyncBuilder()
+{
+  if (!AsyncBuilder)
+  {
+    AsyncBuilder = std::make_unique<UAsyncMeshBuilder>();
+  }
+}
+
+void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
+                                      MeshBuildResult &&result)
+{
+  if (!world.GetChunkManager().HasChunk(result.coord))
+  {
+    return;
+  }
+  ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
+  chunkMesh.batches = std::move(result.batches);
+  ++MeshRevision;
+  InstancesDirty = true;
+  GreedyBatchesDirty = true;
+  InvalidateVisibleList();
+}
+
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
                                          UBlockRegistry &registry,
                                          int maxChunksPerFrame)
 {
+  if (Render.AsyncMeshing && Render.GreedyMeshing)
+  {
+    EnsureAsyncBuilder();
+    for (MeshBuildResult &result :
+         AsyncBuilder->DrainCompleted(maxChunksPerFrame))
+    {
+      ApplyMeshResult(world, std::move(result));
+    }
+
+    int scheduled = 0;
+    for (auto it = DirtyChunks.begin();
+         it != DirtyChunks.end() && scheduled < maxChunksPerFrame;)
+    {
+      if (AsyncBuilder->IsInFlight(*it))
+      {
+        ++it;
+        continue;
+      }
+      if (!world.GetChunkManager().HasChunk(*it))
+      {
+        DirtyChunkSet.erase(*it);
+        it = DirtyChunks.erase(it);
+        continue;
+      }
+      ChunkMeshSnapshot snapshot =
+          ChunkMeshSnapshot::Capture(world, *it, MeshRevision);
+      AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      DirtyChunkSet.erase(*it);
+      it = DirtyChunks.erase(it);
+      ++scheduled;
+    }
+    if (InstancesDirty || GreedyBatchesDirty)
+    {
+      RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
+      LastCullCameraChunk = glm::ivec3(INT32_MAX, INT32_MAX, INT32_MAX);
+      LastCullMeshRevision = 0;
+    }
+    return;
+  }
+
   int rebuilt = 0;
   for (auto it = DirtyChunks.begin();
        it != DirtyChunks.end() && rebuilt < maxChunksPerFrame;)
