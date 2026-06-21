@@ -38,7 +38,8 @@ public:
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
-  bool HasPendingDirty() const { return !DirtyChunks.empty(); }
+  bool HasPendingDirty() const;
+  bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const { return DirtyChunks.size(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;

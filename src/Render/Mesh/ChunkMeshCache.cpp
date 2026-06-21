@@ -99,6 +99,29 @@ void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 {
   MarkAllDirtyFromWorld(world);
   RebuildDirtyChunks(world, registry, 10000);
+  if (Render.AsyncMeshing && Render.GreedyMeshing)
+  {
+    EnsureAsyncBuilder();
+    while (HasPendingAsyncMeshWork())
+    {
+      RebuildDirtyChunks(world, registry, 10000);
+      AsyncBuilder->WaitIdle();
+    }
+  }
+}
+
+bool UChunkMeshCache::HasPendingAsyncMeshWork() const
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return false;
+  }
+  return AsyncBuilder->HasPendingWork();
+}
+
+bool UChunkMeshCache::HasPendingDirty() const
+{
+  return !DirtyChunks.empty() || HasPendingAsyncMeshWork();
 }
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {

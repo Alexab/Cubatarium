@@ -122,4 +122,16 @@ bool UAsyncMeshBuilder::IsInFlight(glm::ivec3 coord) const
   return InFlight.find(coord) != InFlight.end();
 }
 
+bool UAsyncMeshBuilder::HasPendingWork() const
+{
+  if (!Completed.Empty())
+  {
+    return true;
+  }
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  return !InFlight.empty();
+}
+
+void UAsyncMeshBuilder::WaitIdle() { Pool.WaitIdle(); }
+
 } // namespace cutum

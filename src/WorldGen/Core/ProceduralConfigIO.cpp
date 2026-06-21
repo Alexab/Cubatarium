@@ -2,6 +2,7 @@
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldSeedParser.h"
 #include "App/Settings/UiSettings.h"
+#include <algorithm>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -147,6 +148,40 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.erosionStrength = tuning["erosion_strength"].get<float>();
   }
+}
+
+void ParseProceduralStreamingOptions(const nlohmann::json &p,
+                                     ProceduralSettings &settings)
+{
+  if (!p.is_object())
+  {
+    return;
+  }
+  if (p.contains("async_chunk_generation"))
+  {
+    settings.AsyncChunkGeneration = p["async_chunk_generation"].get<bool>();
+  }
+  if (p.contains("async_chunk_io"))
+  {
+    settings.AsyncChunkIo = p["async_chunk_io"].get<bool>();
+  }
+  if (p.contains("max_chunk_commits_per_frame"))
+  {
+    settings.MaxChunkCommitsPerFrame =
+        std::clamp(p["max_chunk_commits_per_frame"].get<int>(), 1, 32);
+  }
+  if (p.contains("streaming") && p["streaming"].is_object())
+  {
+    ParseProceduralStreamingOptions(p["streaming"], settings);
+  }
+}
+
+void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
+                                     nlohmann::json &procedural)
+{
+  procedural["async_chunk_generation"] = settings.AsyncChunkGeneration;
+  procedural["async_chunk_io"] = settings.AsyncChunkIo;
+  procedural["max_chunk_commits_per_frame"] = settings.MaxChunkCommitsPerFrame;
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
@@ -321,6 +356,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       ParseTuning(p["tuning"], settings.Tuning);
     }
+    ParseProceduralStreamingOptions(p, settings);
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
                             hasMaxHeight);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
@@ -385,6 +421,10 @@ ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
   ResetToGeneratorDefaults(settings);
   ApplyLegacyOverworldProfile(legacyGeneratorId, settings, false, false, false,
                               false, false, false);
+  if (hasProcedural)
+  {
+    ParseProceduralStreamingOptions(root["procedural"], settings);
+  }
   return settings;
 }
 
@@ -417,6 +457,7 @@ void WriteProceduralSettings(nlohmann::json &root,
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);
   procedural["tuning"] = tuning;
+  WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
@@ -432,6 +473,7 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
 {
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
+  WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;

@@ -339,6 +339,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         const json &r = d["render"];
         Render.GreedyMeshing = r.value("greedy_meshing", true);
+        Render.AsyncMeshing = r.value("async_meshing", false);
         Render.FaceQuads = r.value("face_quads", true);
         Render.FrustumCulling = r.value("frustum_culling", true);
         Render.BatchCache = r.value("batch_cache", true);
@@ -615,6 +616,7 @@ void UCore::SaveConfigFile()
   system_data["gameplay"] = gameplay;
   json render_json;
   render_json["greedy_meshing"] = Render.GreedyMeshing;
+  render_json["async_meshing"] = Render.AsyncMeshing;
   render_json["face_quads"] = Render.FaceQuads;
   render_json["frustum_culling"] = Render.FrustumCulling;
   render_json["batch_cache"] = Render.BatchCache;

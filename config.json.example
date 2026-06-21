@@ -8,7 +8,10 @@
         "generator": "overworld",
         "trees": true,
         "decoration": true,
-        "structures": true
+        "structures": true,
+        "async_chunk_generation": false,
+        "async_chunk_io": false,
+        "max_chunk_commits_per_frame": 3
     },
     "render_distance_chunks": 4,
     "streaming_enabled": true,
@@ -18,6 +21,7 @@
     },
     "render": {
         "greedy_meshing": true,
+        "async_meshing": false,
         "face_quads": true,
         "frustum_culling": true,
         "batch_cache": true
