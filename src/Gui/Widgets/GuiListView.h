@@ -21,7 +21,13 @@ public:
   int GetSelectedIndex() const { return SelectedIndex; }
   void SetOnSelectionChanged(std::function<void(int)> handler);
   void SetAcceptKeyNavigation(bool enabled) { AcceptKeyNavigation = enabled; }
+  void SetVisibleRowCount(int rows);
   void ScrollToEnd();
+
+  void SetBounds(const GuiRect &bounds) override;
+  int GetPreferredHeight() const override;
+  void UpdateLayout(const GuiRect &parentClientArea) override;
+  bool ConsumesScrollDragAt(int x, int y) const override;
 
   bool CanFocus() const override;
   void RevealFocused();
@@ -37,7 +43,10 @@ public:
 private:
   int ContentHeight() const;
   int MaxScrollY() const;
+  int MinHeight() const;
   void ClampScroll();
+  void ApplyMinimumBounds();
+  void ApplySelectionScrollPolicy();
   GuiRect ScrollbarTrackRect() const;
   GuiRect ScrollbarThumbRect() const;
   GuiRect ListAreaRect() const;
@@ -51,6 +60,7 @@ private:
   int SelectedIndex{-1};
   int ScrollOffsetPx{0};
   int RowHeight{20};
+  int VisibleRowCount{5};
   std::function<void(int)> OnSelectionChanged;
   bool AcceptKeyNavigation{true};
   bool DragActive{false};
@@ -58,6 +68,8 @@ private:
   int DragStartY{0};
   int DragStartScroll{0};
   int PendingSelectIndex{-1};
+  bool HasLayoutBounds{false};
+  GuiRect LayoutBounds{};
   static constexpr int kScrollbarWidth = 10;
 };
 

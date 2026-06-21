@@ -42,12 +42,13 @@ int UGuiCheckList::MinHeight() const
 
 void UGuiCheckList::ApplyMinimumBounds()
 {
+  const int minH = MinHeight();
   if (HasLayoutBounds)
   {
+    LayoutBounds.H = std::max(LayoutBounds.H, minH);
     Bounds = LayoutBounds;
     return;
   }
-  const int minH = MinHeight();
   if (Bounds.H < minH)
   {
     Bounds.H = minH;
@@ -101,6 +102,45 @@ void UGuiCheckList::SetCheckedIds(const std::vector<std::string> &ids)
   {
     item.Checked = ContainsId(ids, item.Id);
   }
+  ApplyCheckedScrollPolicy();
+}
+
+void UGuiCheckList::ScrollToEnd()
+{
+  ScrollOffsetPx = MaxScrollY();
+  ClampScroll();
+}
+
+void UGuiCheckList::ApplyCheckedScrollPolicy()
+{
+  int maxChecked = -1;
+  for (size_t i = 0; i < Items.size(); ++i)
+  {
+    if (Items[i].Checked)
+    {
+      maxChecked = static_cast<int>(i);
+    }
+  }
+  if (maxChecked < 0)
+  {
+    return;
+  }
+  const int count = static_cast<int>(Items.size());
+  const int visibleRows = std::max(1, VisibleRowCount);
+  if (maxChecked >= count - visibleRows)
+  {
+    ScrollToEnd();
+  }
+  else
+  {
+    FocusedIndex = maxChecked;
+    EnsureFocusedVisible();
+  }
+}
+
+bool UGuiCheckList::ConsumesScrollDragAt(int x, int y) const
+{
+  return Visible && MaxScrollY() > 0 && ListAreaRect().Contains(x, y);
 }
 
 std::vector<std::string> UGuiCheckList::GetCheckedIds() const
@@ -482,7 +522,7 @@ bool UGuiCheckList::OnScroll(const GuiScrollEvent &event)
 
 bool UGuiCheckList::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!Visible || !Bounds.Contains(x, y))
+  if (!Visible || !ListAreaRect().Contains(x, y))
   {
     return false;
   }

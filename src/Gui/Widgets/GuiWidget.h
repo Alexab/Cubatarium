@@ -62,6 +62,9 @@ public:
   /// Route mouse wheel to widget under cursor (depth-first).
   virtual bool ScrollAtPoint(int x, int y, const GuiScrollEvent &event);
 
+  /// Inner scrollable lists: skip outer deferred drag when pointer is here.
+  virtual bool ConsumesScrollDragAt(int x, int y) const { return false; }
+
   UGuiWidget *AddChild(std::unique_ptr<UGuiWidget> child);
   void ClearChildren();
 

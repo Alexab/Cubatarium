@@ -411,14 +411,20 @@ bool UGuiScrollView::HandleKeyScroll(const GuiKeyEvent &event)
 
 bool UGuiScrollView::OnScroll(const GuiScrollEvent &event)
 {
-  if (!Visible || Bounds.H <= 0 || !IsScrollInteractionEnabled(ScrollbarMode))
+  if (!Visible || Bounds.H <= 0 || !IsScrollInteractionEnabled(ScrollbarMode) ||
+      MaxScrollY() <= 0)
   {
     return false;
   }
+  const int before = ScrollY;
   ScrollY -= static_cast<int>(event.Yoffset * 24);
   ClampScroll();
-  LayoutContent();
-  return true;
+  if (ScrollY != before)
+  {
+    LayoutContent();
+    return true;
+  }
+  return false;
 }
 
 bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
@@ -427,11 +433,16 @@ bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
   {
     return false;
   }
+  if (ScrollbarTrackRect().Contains(x, y))
+  {
+    return OnScroll(event);
+  }
   if (ContentPanel.ScrollAtPoint(x, y, event))
   {
     return true;
   }
-  if (!IsScrollInteractionEnabled(ScrollbarMode))
+  if (!ViewportRect().Contains(x, y) ||
+      !IsScrollInteractionEnabled(ScrollbarMode))
   {
     return false;
   }

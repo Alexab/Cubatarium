@@ -119,6 +119,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
   WorldForm->SetForNewWorldDefaults();
+  WorldForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   WorldForm->BuildInto(*body);
 
   auto packSection = std::make_unique<UGuiLabel>(&theme, "Resource packs:");
@@ -129,6 +130,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
                           : std::vector<InstalledPackInfo>{});
   PackForm->SetSelection(Host ? Host->GetDefaultResourcePackSelection()
                               : ResourcePackSelection{});
+  PackForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   PackForm->BuildInto(*body);
 
   scroll->Content().AddChild(std::move(body));
@@ -154,16 +156,28 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
 
 void UNewWorldScreen::OnViewportChanged(int width, int height)
 {
+  const int prevW = ViewportW;
+  const int prevH = ViewportH;
   UGuiScreenBase::OnViewportChanged(width, height);
+  if (ViewportW == prevW && ViewportH == prevH)
+  {
+    return;
+  }
   Relayout();
 }
 
 void UNewWorldScreen::Update(double /*dt*/)
 {
-  if (BodyScroll)
+  if (NeedsBodyRelayout && BodyScroll)
   {
+    NeedsBodyRelayout = false;
     BodyScroll->LayoutContent(0, 0);
   }
+}
+
+void UNewWorldScreen::RequestBodyRelayout()
+{
+  NeedsBodyRelayout = true;
 }
 
 void UNewWorldScreen::Relayout()
@@ -209,13 +223,13 @@ void UNewWorldScreen::LayoutWorldPageInScroll(UGuiScrollView &scroll) const
     return;
   }
   const GuiRect vp = scroll.GetBounds();
-  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad,
+  const int scrollY = scroll.GetScrollY();
+  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad - scrollY,
                            std::max(0, vp.W - 2 * kContentPad),
                            std::max(0, vp.H - 2 * kContentPad)};
   const int contentH = MeasureWorldPageContentHeight(layoutArea.W);
   const int pageH = std::max(vp.H, contentH + 2 * kContentPad);
-  WorldPage->SetBounds(
-      {vp.X, vp.Y - scroll.GetScrollY(), vp.W, pageH});
+  WorldPage->SetBounds({vp.X, vp.Y - scrollY, vp.W, pageH});
   LayoutWorldPage(layoutArea);
 }
 

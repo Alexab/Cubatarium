@@ -81,6 +81,11 @@ void UWorldGenSettingsForm::SetForNewWorldDefaults()
   SetHintText("Choose generator and tuning for this new world.");
 }
 
+void UWorldGenSettingsForm::SetOnLayoutChanged(std::function<void()> handler)
+{
+  OnLayoutChanged = std::move(handler);
+}
+
 void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
 {
   FormSettings = settings;
@@ -231,6 +236,10 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   }
   RefreshGeneratorDescription();
   UpdateFieldVisibility();
+  if (OnLayoutChanged)
+  {
+    OnLayoutChanged();
+  }
 }
 
 ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
@@ -515,6 +524,7 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
     names.push_back(UWorldGeneratorRegistry::Get(i).DisplayName);
   }
   genList->SetItems(std::move(names));
+  genList->SetVisibleRowCount(6);
   genList->SetSelectedIndex(
       UWorldGeneratorRegistry::IndexOf(FormSettings.Generator));
   genList->SetOnSelectionChanged([this](int index) { OnGeneratorSelected(index); });

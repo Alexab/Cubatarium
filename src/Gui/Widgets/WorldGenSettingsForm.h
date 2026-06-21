@@ -3,6 +3,7 @@
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -24,6 +25,7 @@ public:
   void SetSettings(const ProceduralSettings &settings);
   void SetHintText(const std::string &text);
   void SetForNewWorldDefaults();
+  void SetOnLayoutChanged(std::function<void()> handler);
   ProceduralSettings ReadSettings() const;
 
   void BuildInto(UGuiPanel &panel);
@@ -40,6 +42,7 @@ private:
   ProceduralSettings FormSettings;
   bool Built{false};
   bool ForNewWorldScreen{false};
+  std::function<void()> OnLayoutChanged;
 
   UGuiLabel *HintLabel{nullptr};
   UGuiLabel *GeneratorCaption{nullptr};

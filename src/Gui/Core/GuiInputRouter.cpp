@@ -175,13 +175,21 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
   {
     return false;
   }
-  if (UGuiScrollView *scroll = FindDeepestScrollView(Root, event.X, event.Y))
+  bool innerListHandlesDrag = false;
+  if (UGuiWidget *hit = Root->HitTest(event.X, event.Y))
   {
-    if (scroll->BeginDeferredTouch(event))
+    innerListHandlesDrag = hit->ConsumesScrollDragAt(event.X, event.Y);
+  }
+  if (!innerListHandlesDrag)
+  {
+    if (UGuiScrollView *scroll = FindDeepestScrollView(Root, event.X, event.Y))
     {
-      CaptureMouse = true;
-      MousePressedWidget = scroll;
-      return true;
+      if (scroll->BeginDeferredTouch(event))
+      {
+        CaptureMouse = true;
+        MousePressedWidget = scroll;
+        return true;
+      }
     }
   }
   UGuiWidget *hit = Root->HitTest(event.X, event.Y);
@@ -320,7 +328,7 @@ bool UGuiInputRouter::OnScroll(const GuiScrollEvent &event, int mouseX,
   {
     return Root->ScrollAtPoint(LastMouseX, LastMouseY, event);
   }
-  return Root->OnScroll(event);
+  return false;
 }
 
 bool UGuiInputRouter::WantsCaptureMouse() const

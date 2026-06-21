@@ -45,6 +45,7 @@ public:
   bool OnKey(const GuiKeyEvent &event) override;
   bool OnScroll(const GuiScrollEvent &event) override;
   bool ScrollAtPoint(int x, int y, const GuiScrollEvent &event) override;
+  bool ConsumesScrollDragAt(int x, int y) const override;
 
 private:
   int ContentHeight() const;
@@ -60,6 +61,8 @@ private:
   bool HandleKeyNavigation(const GuiKeyEvent &event);
   void NotifyChanged();
   void ApplyMinimumBounds();
+  void ApplyCheckedScrollPolicy();
+  void ScrollToEnd();
   int MinHeight() const;
 
   const GuiTheme *Theme;

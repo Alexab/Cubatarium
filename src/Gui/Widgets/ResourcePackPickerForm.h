@@ -3,6 +3,7 @@
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Widgets/GuiCheckList.h"
 #include "ResourcePacks/ResourcePackResolver.h"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,6 +25,7 @@ public:
   void SetSelection(const std::vector<std::string> &selectedIds);
   ResourcePackSelection ReadSelection() const;
   bool HasValidPrimarySelection() const;
+  void SetOnLayoutChanged(std::function<void()> handler);
 
   void BuildInto(UGuiPanel &panel);
   int MeasureHeight(const GuiRect &area) const;
@@ -42,6 +44,7 @@ private:
   std::vector<InstalledPackInfo> InstalledPacks;
   ResourcePackSelection Selection;
   bool Built{false};
+  std::function<void()> OnLayoutChanged;
   mutable bool HasLastLayoutArea{false};
   mutable GuiRect LastLayoutArea{};
 

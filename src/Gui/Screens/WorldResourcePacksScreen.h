@@ -30,6 +30,7 @@ public:
 
 private:
   void Relayout();
+  void RequestBodyRelayout();
   void LayoutBody(UGuiScrollView &scroll) const;
   int MeasureBodyHeight(int width) const;
   void OnApply();
@@ -42,6 +43,7 @@ private:
   UGuiPanel *BodyPanel{nullptr};
   UGuiLabel *WarningLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
+  bool NeedsBodyRelayout{false};
 };
 
 } // namespace cutum

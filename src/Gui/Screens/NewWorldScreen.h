@@ -28,6 +28,7 @@ public:
 
 private:
   void Relayout();
+  void RequestBodyRelayout();
   void OnCreate();
   int MeasureWorldPageContentHeight(int width) const;
   void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
@@ -41,6 +42,7 @@ private:
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
   UGuiLabel *PackSectionLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
+  bool NeedsBodyRelayout{false};
 };
 
 } // namespace cutum

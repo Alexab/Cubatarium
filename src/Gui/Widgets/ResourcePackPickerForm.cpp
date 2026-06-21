@@ -114,6 +114,11 @@ bool UResourcePackPickerForm::HasValidPrimarySelection() const
   return !ReadSelection().Primary.empty();
 }
 
+void UResourcePackPickerForm::SetOnLayoutChanged(std::function<void()> handler)
+{
+  OnLayoutChanged = std::move(handler);
+}
+
 void UResourcePackPickerForm::SyncListItems()
 {
   const auto primaryPacks =
@@ -251,6 +256,10 @@ void UResourcePackPickerForm::UpdateWarnings()
   if (HasLastLayoutArea && LastLayoutArea.W > 0)
   {
     Layout(LastLayoutArea);
+  }
+  if (OnLayoutChanged)
+  {
+    OnLayoutChanged();
   }
 }
 

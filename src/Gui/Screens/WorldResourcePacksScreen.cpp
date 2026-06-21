@@ -98,6 +98,7 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
                           : std::vector<InstalledPackInfo>{});
   PackForm->SetSelection(Host ? Host->GetCurrentWorldResourcePackSelection()
                               : ResourcePackSelection{});
+  PackForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   PackForm->BuildInto(*body);
 
   scroll->Content().AddChild(std::move(body));
@@ -121,16 +122,28 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
 
 void UWorldResourcePacksScreen::OnViewportChanged(int width, int height)
 {
+  const int prevW = ViewportW;
+  const int prevH = ViewportH;
   UGuiScreenBase::OnViewportChanged(width, height);
+  if (ViewportW == prevW && ViewportH == prevH)
+  {
+    return;
+  }
   Relayout();
 }
 
 void UWorldResourcePacksScreen::Update(double /*dt*/)
 {
-  if (BodyScroll)
+  if (NeedsBodyRelayout && BodyScroll)
   {
+    NeedsBodyRelayout = false;
     BodyScroll->LayoutContent(0, 0);
   }
+}
+
+void UWorldResourcePacksScreen::RequestBodyRelayout()
+{
+  NeedsBodyRelayout = true;
 }
 
 void UWorldResourcePacksScreen::Relayout()
@@ -171,12 +184,13 @@ void UWorldResourcePacksScreen::LayoutBody(UGuiScrollView &scroll) const
     return;
   }
   const GuiRect vp = scroll.GetBounds();
-  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad,
+  const int scrollY = scroll.GetScrollY();
+  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad - scrollY,
                            std::max(0, vp.W - 2 * kContentPad),
                            std::max(0, vp.H - 2 * kContentPad)};
   const int contentH = MeasureBodyHeight(layoutArea.W);
   const int pageH = std::max(vp.H, contentH + 2 * kContentPad);
-  BodyPanel->SetBounds({vp.X, vp.Y - scroll.GetScrollY(), vp.W, pageH});
+  BodyPanel->SetBounds({vp.X, vp.Y - scrollY, vp.W, pageH});
 
   constexpr int kWarnH = 48;
   constexpr int kGap = 12;

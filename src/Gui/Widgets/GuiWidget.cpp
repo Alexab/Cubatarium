@@ -226,7 +226,7 @@ bool UGuiWidget::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
       return true;
     }
   }
-  return OnScroll(event);
+  return false;
 }
 
 } // namespace cutum

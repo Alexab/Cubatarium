@@ -18,6 +18,66 @@ UGuiListView::UGuiListView(const GuiTheme *theme) : Theme(theme)
   }
 }
 
+void UGuiListView::SetVisibleRowCount(int rows)
+{
+  VisibleRowCount = std::max(1, rows);
+  ApplyMinimumBounds();
+}
+
+int UGuiListView::MinHeight() const
+{
+  return std::max(RowHeight, VisibleRowCount * RowHeight);
+}
+
+void UGuiListView::ApplyMinimumBounds()
+{
+  const int minH = MinHeight();
+  if (HasLayoutBounds)
+  {
+    LayoutBounds.H = std::max(LayoutBounds.H, minH);
+    Bounds = LayoutBounds;
+    return;
+  }
+  if (Bounds.H < minH)
+  {
+    Bounds.H = minH;
+  }
+  if (Bounds.W < 1)
+  {
+    Bounds.W = 1;
+  }
+}
+
+void UGuiListView::SetBounds(const GuiRect &bounds)
+{
+  GuiRect b = bounds;
+  const int minH = MinHeight();
+  if (b.H < minH)
+  {
+    b.H = minH;
+  }
+  b.W = std::max(1, b.W);
+  UGuiWidget::SetBounds(b);
+  LayoutBounds = b;
+  HasLayoutBounds = true;
+}
+
+void UGuiListView::UpdateLayout(const GuiRect &parentClientArea)
+{
+  (void)parentClientArea;
+  ApplyMinimumBounds();
+}
+
+int UGuiListView::GetPreferredHeight() const
+{
+  return MinHeight();
+}
+
+bool UGuiListView::ConsumesScrollDragAt(int x, int y) const
+{
+  return Visible && MaxScrollY() > 0 && ListAreaRect().Contains(x, y);
+}
+
 void UGuiListView::SetItems(std::vector<std::string> items)
 {
   Items = std::move(items);
@@ -26,13 +86,14 @@ void UGuiListView::SetItems(std::vector<std::string> items)
     SelectedIndex = Items.empty() ? -1 : 0;
   }
   ClampScroll();
-  EnsureSelectedVisible();
+  ApplySelectionScrollPolicy();
+  ApplyMinimumBounds();
 }
 
 void UGuiListView::SetSelectedIndex(int index)
 {
   SelectedIndex = index;
-  EnsureSelectedVisible();
+  ApplySelectionScrollPolicy();
 }
 
 void UGuiListView::SetOnSelectionChanged(std::function<void(int)> handler)
@@ -50,7 +111,7 @@ void UGuiListView::RevealFocused()
   if (SelectedIndex < 0 && !Items.empty())
   {
     SelectedIndex = 0;
-    EnsureSelectedVisible();
+    ApplySelectionScrollPolicy();
   }
 }
 
@@ -69,7 +130,11 @@ void UGuiListView::ClampScroll()
   ScrollOffsetPx = std::clamp(ScrollOffsetPx, 0, MaxScrollY());
 }
 
-void UGuiListView::ScrollToEnd() { ScrollOffsetPx = MaxScrollY(); }
+void UGuiListView::ScrollToEnd()
+{
+  ScrollOffsetPx = MaxScrollY();
+  ClampScroll();
+}
 
 void UGuiListView::EnsureSelectedVisible()
 {
@@ -88,6 +153,24 @@ void UGuiListView::EnsureSelectedVisible()
     ScrollOffsetPx = rowBottom - Bounds.H;
   }
   ClampScroll();
+}
+
+void UGuiListView::ApplySelectionScrollPolicy()
+{
+  if (SelectedIndex < 0 || Items.empty())
+  {
+    return;
+  }
+  const int count = static_cast<int>(Items.size());
+  const int visibleRows = std::max(1, Bounds.H / RowHeight);
+  if (SelectedIndex >= count - visibleRows)
+  {
+    ScrollToEnd();
+  }
+  else
+  {
+    EnsureSelectedVisible();
+  }
 }
 
 GuiRect UGuiListView::ScrollbarTrackRect() const
@@ -145,6 +228,7 @@ void UGuiListView::Draw(UGuiRenderer &renderer)
   {
     return;
   }
+  ApplyMinimumBounds();
   renderer.DrawFilledRect(Bounds, Theme->ButtonNormal);
   const GuiRect listArea = ListAreaRect();
   renderer.PushClipRect(listArea);
@@ -238,7 +322,7 @@ bool UGuiListView::SelectIndex(int index)
       OnSelectionChanged(index);
     }
   }
-  EnsureSelectedVisible();
+  ApplySelectionScrollPolicy();
   return true;
 }
 
@@ -296,18 +380,19 @@ bool UGuiListView::OnKey(const GuiKeyEvent &event)
 
 bool UGuiListView::OnScroll(const GuiScrollEvent &event)
 {
-  if (!Visible || Bounds.H <= 0)
+  if (!Visible || Bounds.H <= 0 || MaxScrollY() <= 0)
   {
     return false;
   }
+  const int before = ScrollOffsetPx;
   ScrollOffsetPx -= static_cast<int>(event.Yoffset * RowHeight);
   ClampScroll();
-  return true;
+  return ScrollOffsetPx != before;
 }
 
 bool UGuiListView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!Visible || !Bounds.Contains(x, y))
+  if (!Visible || !ListAreaRect().Contains(x, y))
   {
     return false;
   }
