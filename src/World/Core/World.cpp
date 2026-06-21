@@ -215,8 +215,24 @@ void UWorld::InitStreamerCallbacks()
   Streamer->SetWorldFolder(WorldFolderPath);
   Streamer->SetCallbacks(
       [this](glm::ivec3 coord)
-      { return LoadChunkFromFile(coord, WorldFolderPath) >= 0; },
-      [this](glm::ivec3 coord) { SaveChunkToFile(coord, WorldFolderPath); },
+      {
+        const auto t0 = std::chrono::high_resolution_clock::now();
+        const bool loaded = LoadChunkFromFile(coord, WorldFolderPath) >= 0;
+        FrameStreamingIoMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t0)
+                .count();
+        return loaded;
+      },
+      [this](glm::ivec3 coord)
+      {
+        const auto t0 = std::chrono::high_resolution_clock::now();
+        SaveChunkToFile(coord, WorldFolderPath);
+        FrameStreamingIoMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t0)
+                .count();
+      },
       [this](glm::ivec3 coord) { MeshCache.MarkDirty(coord); },
       [this](int x, int z)
       {
@@ -224,7 +240,12 @@ void UWorld::InitStreamerCallbacks()
         {
           return;
         }
+        const auto t0 = std::chrono::high_resolution_clock::now();
         WorldGen->GenerateColumn(x, z);
+        FrameStreamingGenMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t0)
+                .count();
       },
       [this](glm::ivec3 coord) { MeshCache.RemoveChunk(coord); });
 }
@@ -2341,6 +2362,8 @@ void UWorld::DoMovement()
   }
 
   auto t_begin = std::chrono::high_resolution_clock::now();
+  FrameStreamingGenMs = 0.0;
+  FrameStreamingIoMs = 0.0;
 
   auto camera = GetCurrentUserCamera();
   UCreature *controlled = GetControlledCreature();
@@ -2471,6 +2494,10 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   MovementDiag.feetIsAir = BlockWorld.IsAir(MovementDiag.feetBlock);
   MovementDiag.meshDrawCount = GetRenderInstanceCount();
   MovementDiag.deltaTime = camera->GetDeltaTime();
+  MovementDiag.streamingGenMs = FrameStreamingGenMs;
+  MovementDiag.streamingIoMs = FrameStreamingIoMs;
+  MovementDiag.dirtyChunksPending =
+      static_cast<int>(MeshCache.GetDirtyCount());
 
   if (HasLastPlayerY)
   {
@@ -2646,7 +2673,17 @@ const std::vector<FaceInstance> &UWorld::GetBlockRenderInstances()
   if (BlockRegistry && MeshCache.HasPendingDirty())
   {
     const int rebuildBudget = Render.GreedyMeshing ? 256 : 64;
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    const size_t dirtyBefore = MeshCache.GetDirtyCount();
     MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, rebuildBudget);
+    MovementDiag.meshRebuildMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t0)
+            .count();
+    MovementDiag.meshRebuildsThisFrame =
+        static_cast<int>(dirtyBefore - MeshCache.GetDirtyCount());
+    MovementDiag.dirtyChunksPending =
+        static_cast<int>(MeshCache.GetDirtyCount());
     if (!MeshCache.HasPendingDirty())
     {
       CachedBlockCount = BlockWorld.CountNonAir();

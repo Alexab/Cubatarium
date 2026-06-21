@@ -372,6 +372,11 @@ public:
     bool hitchDetected{false};
     bool fallThroughSuspected{false};
     size_t meshDrawCount{0};
+    double streamingGenMs{0.0};
+    double streamingIoMs{0.0};
+    double meshRebuildMs{0.0};
+    int dirtyChunksPending{0};
+    int meshRebuildsThisFrame{0};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -521,6 +526,8 @@ private:
 
   uint64_t DurationDoMovementMks;
   MovementDiagnostics MovementDiag;
+  double FrameStreamingGenMs{0.0};
+  double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};
   bool HasLastPlayerY{false};
 };

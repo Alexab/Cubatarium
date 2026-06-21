@@ -1358,6 +1358,16 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
 
   const auto &md = WorldInstance->GetMovementDiagnostics();
+  if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 || md.streamingIoMs > 0.01)
+  {
+    performanceLines.push_back(
+        "Gen: " + std::to_string(md.streamingGenMs).substr(0, 5) + " ms" +
+        " Mesh: " + std::to_string(md.meshRebuildMs).substr(0, 5) + " ms" +
+        " IO: " + std::to_string(md.streamingIoMs).substr(0, 5) + " ms");
+    performanceLines.push_back(
+        "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
+        std::to_string(md.meshRebuildsThisFrame));
+  }
   if (md.hitchDetected || md.fallThroughSuspected || md.streamingUnloads > 0)
   {
     performanceLines.push_back(
