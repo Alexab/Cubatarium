@@ -129,6 +129,7 @@ set(SOURCES
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
     src/WorldGen/Core/ProceduralConfigIO.cpp
+    src/WorldGen/Core/WorldSeedParser.cpp
     src/WorldGen/Core/WorldGeneratorRegistry.cpp
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/WorldGenContentReload.cpp
@@ -138,19 +139,29 @@ set(SOURCES
     src/WorldGen/Core/IWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/ComposableWorldGenPipeline.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/PrefabFeatureConfig.cpp
     src/WorldGen/Features/PrefabFeaturePlacer.cpp
-    src/WorldGen/Core/ProceduralWorldGenFactory.cpp
+    src/WorldGen/Core/PipelineChunkPopulator.cpp
     src/World/Raycast/BlockRaycast.cpp
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/World/Chunks/ChunkStreamer.cpp
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Chunks/ChunkGenerationToken.cpp
+    src/World/Chunks/ChunkLoadScheduler.cpp
+    src/World/Core/IBlockWriter.cpp
+    src/World/IO/AsyncChunkIO.cpp
+    src/Core/Jobs/JobThreadPool.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/App/Platform/InputManager.cpp
     src/Creatures/Locomotion/LocomotionTypes.cpp

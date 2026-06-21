@@ -23,6 +23,8 @@ public:
   void ClearDirty() { Dirty = false; }
   void MarkDirty() { Dirty = true; }
 
+  const std::array<BlockId, CHUNK_VOLUME> &GetData() const { return Data; }
+
   static int LocalIndex(glm::ivec3 local);
 
 private:
