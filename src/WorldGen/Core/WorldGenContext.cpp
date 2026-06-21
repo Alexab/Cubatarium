@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Chunks/ChunkManager.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include <algorithm>
 #include <iostream>
@@ -129,16 +130,22 @@ void WorldGenContext::AccumulateDirtyColumn(int min_y, int max_y)
 
 void WorldGenContext::FlushColumnDirty()
 {
+  if (ColumnDirtyActive && ColumnDirtyMaxY >= ColumnDirtyMinY)
+  {
+    MarkDirtyColumn(ColumnDirtyWorldX, ColumnDirtyWorldZ, ColumnDirtyMinY,
+                    ColumnDirtyMaxY);
+  }
   ColumnDirtyActive = false;
 }
 
 void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y,
                                       int max_y) const
 {
-  (void)world_x;
-  (void)world_z;
-  (void)min_y;
-  (void)max_y;
+  if (!OnColumnMeshDirty)
+  {
+    return;
+  }
+  OnColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 
 } // namespace cutum

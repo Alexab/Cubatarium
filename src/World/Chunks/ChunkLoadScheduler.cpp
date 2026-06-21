@@ -16,6 +16,11 @@ void UChunkLoadScheduler::SetMarkDirtyFn(MarkChunkDirtyFn fn)
   MarkDirty = std::move(fn);
 }
 
+void UChunkLoadScheduler::SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn)
+{
+  ColumnMeshDirty = std::move(fn);
+}
+
 void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
                                       const ProceduralSettings &settings)
 {
@@ -100,6 +105,11 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame)
     pending.result.buffer.ApplyTo(world);
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
+    if (ColumnMeshDirty && pending.result.buffer.HasYBounds())
+    {
+      ColumnMeshDirty(pending.result.coord, pending.result.buffer.GetMinY(),
+                      pending.result.buffer.GetMaxY());
+    }
     if (MarkDirty)
     {
       MarkDirty(pending.result.coord);

@@ -1,5 +1,6 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/BlockWorld.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -24,6 +25,15 @@ void ChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
     return;
   }
   Blocks[worldPos] = id;
+  if (!HasBounds)
+  {
+    HasBounds = true;
+    MinY = worldPos.y;
+    MaxY = worldPos.y;
+    return;
+  }
+  MinY = std::min(MinY, worldPos.y);
+  MaxY = std::max(MaxY, worldPos.y);
 }
 
 BlockId ChunkBuffer::GetBlock(glm::ivec3 worldPos) const
@@ -44,6 +54,12 @@ void ChunkBuffer::ApplyTo(UBlockWorld &world) const
   }
 }
 
-void ChunkBuffer::Clear() { Blocks.clear(); }
+void ChunkBuffer::Clear()
+{
+  Blocks.clear();
+  HasBounds = false;
+  MinY = 0;
+  MaxY = -1;
+}
 
 } // namespace cutum

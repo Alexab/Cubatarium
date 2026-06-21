@@ -2,6 +2,7 @@
 
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include <functional>
 #include <glm/glm.hpp>
 #include <unordered_set>
 
@@ -45,6 +46,10 @@ struct WorldGenContext
                   ProceduralSettings settings, UPrefabLibrary *prefabs = nullptr);
 
   void ResolveBlockIds();
+
+  using ColumnMeshDirtyFn =
+      std::function<void(int world_x, int world_z, int min_y, int max_y)>;
+  ColumnMeshDirtyFn OnColumnMeshDirty;
 
   void ResetColumnDirty(int world_x, int world_z);
   void AccumulateDirtyColumn(int min_y, int max_y);

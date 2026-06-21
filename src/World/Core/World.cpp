@@ -194,6 +194,11 @@ void UWorld::RebuildWorldGenPipeline()
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                       PrefabLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
+  ctx.OnColumnMeshDirty =
+      [this](int world_x, int world_z, int min_y, int max_y)
+  {
+    MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
+  };
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
 
@@ -231,6 +236,9 @@ void UWorld::InitChunkScheduler()
           MeshCache.MarkDirty(coord);
         }
       });
+  ChunkScheduler->SetColumnMeshDirtyFn(
+      [this](glm::ivec3 groundCoord, int min_y, int max_y)
+      { MarkTerrainChunkMeshDirty(groundCoord, min_y, max_y); });
   if (!AsyncChunkIo)
   {
     AsyncChunkIo = std::make_unique<UAsyncChunkIO>();
@@ -337,7 +345,9 @@ void UWorld::InitStreamerCallbacks()
         }
       },
       [this](glm::ivec3 coord)
-      { return BlockWorld.GetChunkManager().HasChunk(coord); });
+      {
+        return ChunkScheduler && ChunkScheduler->IsCommitted(coord);
+      });
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -2805,6 +2815,47 @@ size_t UWorld::GetGreedyVertexCount() const
 uint64_t UWorld::GetMeshRevision() const { return MeshCache.GetMeshRevision(); }
 
 uint64_t UWorld::GetCullRevision() const { return MeshCache.GetCullRevision(); }
+
+void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
+                                 int max_y)
+{
+  const glm::ivec3 base =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
+  const glm::ivec3 top =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
+  std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int cy = base.y; cy <= top.y; ++cy)
+      {
+        dirty_chunks.insert(glm::ivec3(base.x + dx, cy, base.z + dz));
+      }
+    }
+  }
+  for (const glm::ivec3 &coord : dirty_chunks)
+  {
+    MeshCache.MarkDirty(coord);
+  }
+}
+
+void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
+                                       int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cx = groundChunkCoord.x - 1; cx <= groundChunkCoord.x + 1; ++cx)
+  {
+    for (int cz = groundChunkCoord.z - 1; cz <= groundChunkCoord.z + 1; ++cz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        MeshCache.MarkDirty(glm::ivec3(cx, cy, cz));
+      }
+    }
+  }
+}
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {

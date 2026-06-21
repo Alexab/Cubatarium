@@ -28,11 +28,14 @@ class UChunkLoadScheduler
 {
 public:
   using MarkChunkDirtyFn = std::function<void(glm::ivec3)>;
+  using ColumnMeshDirtyFn =
+      std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 
   UChunkLoadScheduler(IChunkPopulator &populator,
                       UChunkGenerationRegistry &tokens);
 
   void SetMarkDirtyFn(MarkChunkDirtyFn fn);
+  void SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn);
   void RequestLoad(glm::ivec3 coord, int priority,
                    const ProceduralSettings &settings);
   void Cancel(glm::ivec3 coord);
@@ -71,6 +74,7 @@ private:
   UJobThreadPool Pool;
   CompletedJobQueue<PendingResult> Completed;
   MarkChunkDirtyFn MarkDirty;
+  ColumnMeshDirtyFn ColumnMeshDirty;
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,
                       RequestCompare>
       Queue;

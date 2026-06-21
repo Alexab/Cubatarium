@@ -457,6 +457,9 @@ private:
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
+  void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
+                                 int max_y);
   void UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
                                  float prevPlayerY);
   void RebuildWorldGenPipeline();
