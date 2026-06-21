@@ -611,7 +611,8 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   roughIn->SetText(std::to_string(FormSettings.Tuning.terrainRoughness));
   panel.AddChild(std::move(roughIn));
 
-  auto forestLabel = std::make_unique<UGuiLabel>(Theme, "Forest biome weight:");
+  auto forestLabel =
+      std::make_unique<UGuiLabel>(Theme, "Forest biome weight (0-2):");
   BiomeForestLabel = forestLabel.get();
   panel.AddChild(std::move(forestLabel));
   auto forestIn = std::make_unique<UGuiTextInput>(Theme);
@@ -619,7 +620,8 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   forestIn->SetText(std::to_string(FormSettings.Tuning.biomeForestWeight));
   panel.AddChild(std::move(forestIn));
 
-  auto desertLabel = std::make_unique<UGuiLabel>(Theme, "Desert biome weight:");
+  auto desertLabel =
+      std::make_unique<UGuiLabel>(Theme, "Desert biome weight (0-2):");
   BiomeDesertLabel = desertLabel.get();
   panel.AddChild(std::move(desertLabel));
   auto desertIn = std::make_unique<UGuiTextInput>(Theme);
@@ -627,7 +629,8 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   desertIn->SetText(std::to_string(FormSettings.Tuning.biomeDesertWeight));
   panel.AddChild(std::move(desertIn));
 
-  auto plainsLabel = std::make_unique<UGuiLabel>(Theme, "Plains biome weight:");
+  auto plainsLabel =
+      std::make_unique<UGuiLabel>(Theme, "Plains biome weight (0-2):");
   BiomePlainsLabel = plainsLabel.get();
   panel.AddChild(std::move(plainsLabel));
   auto plainsIn = std::make_unique<UGuiTextInput>(Theme);
@@ -635,7 +638,8 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   plainsIn->SetText(std::to_string(FormSettings.Tuning.biomePlainsWeight));
   panel.AddChild(std::move(plainsIn));
 
-  auto hillsLabel = std::make_unique<UGuiLabel>(Theme, "Hills biome weight:");
+  auto hillsLabel =
+      std::make_unique<UGuiLabel>(Theme, "Hills biome weight (0-2):");
   BiomeHillsLabel = hillsLabel.get();
   panel.AddChild(std::move(hillsLabel));
   auto hillsIn = std::make_unique<UGuiTextInput>(Theme);
@@ -643,7 +647,8 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   hillsIn->SetText(std::to_string(FormSettings.Tuning.biomeHillsWeight));
   panel.AddChild(std::move(hillsIn));
 
-  auto tundraLabel = std::make_unique<UGuiLabel>(Theme, "Tundra biome weight:");
+  auto tundraLabel =
+      std::make_unique<UGuiLabel>(Theme, "Tundra biome weight (0-2):");
   BiomeTundraLabel = tundraLabel.get();
   panel.AddChild(std::move(tundraLabel));
   auto tundraIn = std::make_unique<UGuiTextInput>(Theme);

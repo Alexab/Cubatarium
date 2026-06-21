@@ -276,7 +276,6 @@ bool UGuiTextInput::OnMouseDown(const GuiMouseEvent &event)
   }
   if (event.Button == GuiMouseButton::Left && Bounds.Contains(event.X, event.Y))
   {
-    Focused = true;
 #ifdef __ANDROID__
     AndroidSoftKeyboardSetTarget(this);
 #endif

@@ -126,17 +126,20 @@ UGuiWidget *UGuiWidget::HitTestFocusable(int x, int y)
   {
     return nullptr;
   }
-  UGuiWidget *found = nullptr;
+  std::vector<UGuiWidget *> sorted;
   for (auto &child : Children)
+  {
+    sorted.push_back(child.get());
+  }
+  std::sort(sorted.begin(), sorted.end(),
+            [](const UGuiWidget *a, const UGuiWidget *b)
+            { return a->GetZOrder() > b->GetZOrder(); });
+  for (UGuiWidget *child : sorted)
   {
     if (UGuiWidget *hit = child->HitTestFocusable(x, y))
     {
-      found = hit;
+      return hit;
     }
-  }
-  if (found)
-  {
-    return found;
   }
   return CanFocus() ? this : nullptr;
 }

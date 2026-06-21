@@ -175,8 +175,19 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
   {
     return false;
   }
+  UGuiWidget *hit = Root->HitTest(event.X, event.Y);
+  UGuiWidget *focusHit = Root->HitTestFocusable(event.X, event.Y);
+  if (focusHit)
+  {
+    SetKeyboardFocus(focusHit, false);
+  }
+  else
+  {
+    SetKeyboardFocus(nullptr, false);
+  }
+
   bool innerListHandlesDrag = false;
-  if (UGuiWidget *hit = Root->HitTest(event.X, event.Y))
+  if (hit)
   {
     innerListHandlesDrag = hit->ConsumesScrollDragAt(event.X, event.Y);
   }
@@ -191,16 +202,6 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
         return true;
       }
     }
-  }
-  UGuiWidget *hit = Root->HitTest(event.X, event.Y);
-  UGuiWidget *focusHit = Root->HitTestFocusable(event.X, event.Y);
-  if (focusHit)
-  {
-    SetKeyboardFocus(focusHit, false);
-  }
-  else if (!hit)
-  {
-    SetKeyboardFocus(nullptr, false);
   }
   if (hit)
   {
