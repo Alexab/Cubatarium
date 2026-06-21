@@ -440,6 +440,8 @@ private:
   void LoadChunks(const std::string &file_name);
   void SaveChunks(const std::string &file_name);
   void SaveChunkToFile(glm::ivec3 chunkCoord, const std::string &world_folder);
+  void SaveTerrainColumnToFile(glm::ivec3 groundCoord,
+                               const std::string &world_folder);
   /// Returns voxels placed (>=0), or -1 if the file could not be read/parsed.
   int LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string &world_folder);
   int LoadTerrainColumnFromFile(glm::ivec3 groundCoord,

@@ -10,7 +10,11 @@ class UBlockWorld;
 
 bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
                             int maxWorldY);
+bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
+                                  glm::ivec3 groundCoord, int maxWorldY);
 bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
                             int maxWorldY);
+void ClearTerrainColumnChunks(UBlockWorld &world, glm::ivec3 groundCoord,
+                              int maxWorldY);
 
 } // namespace cutum

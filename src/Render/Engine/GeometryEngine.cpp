@@ -1368,7 +1368,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
         "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
         std::to_string(md.meshRebuildsThisFrame));
   }
-  if (md.hitchDetected || md.fallThroughSuspected || md.streamingUnloads > 0)
+  if (md.fallThroughSuspected || md.feetInUnloadList)
   {
     performanceLines.push_back(
         "Dt: " + std::to_string(md.deltaTime).substr(0, 5) +

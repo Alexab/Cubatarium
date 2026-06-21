@@ -302,28 +302,25 @@ void UWorld::InitStreamerCallbacks()
       },
       [this](glm::ivec3 coord)
       {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
         const auto t0 = std::chrono::high_resolution_clock::now();
-        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
-        {
-          AsyncChunkIo->RequestSave(coord, WorldFolderPath, BlockWorld,
-                                    *BlockRegistry,
-                                    ChunkGenTokens.Current(coord));
-        }
-        else
-        {
-          SaveChunkToFile(coord, WorldFolderPath);
-        }
+        // Unload must persist before RemoveChunk; async IO can race on reload.
+        SaveTerrainColumnToFile(ground, WorldFolderPath);
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
-        ChunkGenTokens.Bump(coord);
+        ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
         {
-          ChunkScheduler->Invalidate(coord);
+          ChunkScheduler->Invalidate(ground);
         }
       },
-      [this](glm::ivec3 coord) { MeshCache.MarkDirty(coord); },
+      [this](glm::ivec3 coord)
+      {
+        MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
+                                  ProceduralTemplate.MaxHeight);
+      },
       [this](int x, int z)
       {
         if (!AllowProceduralFill || !WorldGen)
@@ -1007,6 +1004,10 @@ void UWorld::Load(const std::string &world_folder_path)
   }
 
   InitStreamerCallbacks();
+  if (Streamer && StreamingEnabled && LoadedFromChunkSave)
+  {
+    Streamer->MarkPersistedColumnsFromWorld();
+  }
 
   RebuildBlockMesh();
   FinalizePlayerAfterWorldLoad();
@@ -2619,8 +2620,10 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   MovementDiag.feetBlock = WorldPosToBlock(
       glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
   MovementDiag.feetChunk = UChunkManager::WorldToChunk(MovementDiag.feetBlock);
+  const glm::ivec3 feetGround(MovementDiag.feetChunk.x, 0,
+                              MovementDiag.feetChunk.z);
   MovementDiag.feetChunkLoaded =
-      BlockWorld.GetChunkManager().HasChunk(MovementDiag.feetChunk);
+      BlockWorld.GetChunkManager().HasChunk(feetGround);
   MovementDiag.feetIsAir = BlockWorld.IsAir(MovementDiag.feetBlock);
   MovementDiag.meshDrawCount = GetRenderInstanceCount();
   MovementDiag.deltaTime = camera->GetDeltaTime();
@@ -2647,7 +2650,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
     MovementDiag.streamingUnloads = stats.unloadsThisFrame;
     for (const glm::ivec3 &coord : stats.unloadedCoords)
     {
-      if (coord == MovementDiag.feetChunk)
+      if (coord.x == feetGround.x && coord.z == feetGround.z)
       {
         MovementDiag.feetInUnloadList = true;
         break;
@@ -3142,6 +3145,22 @@ void UWorld::SaveChunkToFile(glm::ivec3 chunkCoord,
   if (file.is_open())
   {
     file << data.dump(4);
+  }
+}
+
+void UWorld::SaveTerrainColumnToFile(glm::ivec3 groundCoord,
+                                     const std::string &world_folder)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const int maxCy =
+      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    SaveChunkToFile(glm::ivec3(groundCoord.x, cy, groundCoord.z),
+                    world_folder);
   }
 }
 

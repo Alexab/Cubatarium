@@ -23,10 +23,46 @@ bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
   return true;
 }
 
+bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
+                                  glm::ivec3 groundCoord, int maxWorldY)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  int highestLoadedCy = -1;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    if (world.GetChunkManager().HasChunk(
+            glm::ivec3(groundCoord.x, cy, groundCoord.z)))
+    {
+      highestLoadedCy = cy;
+    }
+  }
+  if (highestLoadedCy < 0)
+  {
+    return false;
+  }
+  for (int cy = 0; cy <= highestLoadedCy; ++cy)
+  {
+    if (!world.GetChunkManager().HasChunk(
+            glm::ivec3(groundCoord.x, cy, groundCoord.z)))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
                             int maxWorldY)
 {
   if (groundCoord.y != 0)
+  {
+    return false;
+  }
+  if (!AreTerrainColumnSlicesLoaded(world, groundCoord, maxWorldY))
   {
     return false;
   }
@@ -43,6 +79,21 @@ bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
     }
   }
   return true;
+}
+
+void ClearTerrainColumnChunks(UBlockWorld &world, glm::ivec3 groundCoord,
+                              int maxWorldY)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    world.GetChunkManager().RemoveChunk(
+        glm::ivec3(groundCoord.x, cy, groundCoord.z));
+  }
 }
 
 } // namespace cutum

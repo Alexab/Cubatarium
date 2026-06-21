@@ -56,6 +56,7 @@ public:
   void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
                          IsChunkCommittedFn isCommittedFn);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
+  void MarkPersistedColumnsFromWorld();
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
