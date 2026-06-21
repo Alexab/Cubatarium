@@ -10,6 +10,7 @@ namespace cutum
 
 class UBlockRegistry;
 class UBlockWorld;
+struct ChunkMeshSnapshot;
 
 struct GreedyQuad
 {
@@ -28,6 +29,8 @@ class UGreedyMesher
 public:
   static std::vector<GreedyQuad> BuildChunkMesh(const UBlockWorld &world,
                                                 glm::ivec3 chunkCoord,
+                                                UBlockRegistry &registry);
+  static std::vector<GreedyQuad> BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
                                                 UBlockRegistry &registry);
 };
 
