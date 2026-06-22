@@ -27,6 +27,7 @@ public:
   void SetUseSecondaryColor(bool use) { UseSecondaryColor = use; }
 
   void Draw(UGuiRenderer &renderer) override;
+  int GetPreferredHeight() const override;
 
 private:
   const GuiTheme *Theme;

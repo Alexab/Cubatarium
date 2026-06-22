@@ -1,11 +1,14 @@
 #pragma once
 
 #include "WorldGen/Core/WorldGenContext.h"
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 
 namespace cutum
 {
+
+using WorldGenColumnProgressFn = std::function<void(int done, int total)>;
 
 class IWorldGenPipeline
 {
@@ -17,8 +20,10 @@ public:
 
   virtual glm::vec3 DefaultSpawnPosition(int worldX, int worldZ,
                                          float eyeHeight = 1.62f) const;
-  virtual void GenerateSpawnPatch(int centerX, int centerZ, int radiusBlocks);
-  virtual void GenerateFullPatch(int centerX, int centerZ, int halfExtent);
+  virtual void GenerateSpawnPatch(int centerX, int centerZ, int radiusBlocks,
+                                  WorldGenColumnProgressFn onProgress = nullptr);
+  virtual void GenerateFullPatch(int centerX, int centerZ, int halfExtent,
+                                 WorldGenColumnProgressFn onProgress = nullptr);
 
 protected:
   explicit IWorldGenPipeline(WorldGenContext ctx);

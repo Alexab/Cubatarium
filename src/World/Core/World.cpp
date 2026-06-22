@@ -26,7 +26,8 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
-#include "World/Chunks/ChunkStreamer.h"
+#include "Core/Progress/IProgressSink.h"
+#include "World/Core/WorldCooperativeOps.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
@@ -1101,234 +1102,88 @@ void UWorld::ApplyUserToCamera(const std::shared_ptr<UUser> &user)
 
 void UWorld::Create(const std::string &world_name)
 {
-  ClearCreaturesAndUsers();
-  BlockWorldReady = false;
-  HasPersistedSave = false;
-  LoadedFromChunkSave = false;
-  AllowProceduralFill = true;
-  RefreshBlockRegistry();
-  BlockWorld.Clear();
-  ModifiedChunks.clear();
-  GenerateWorldBlocks();
-  WorldName = world_name;
-  AllowProceduralFill = StreamingEnabled;
-  InitStreamerCallbacks();
-  RebuildBlockMesh();
-  FinalizePlayerAfterWorldLoad();
+  NullProgressSink sink;
+  BeginCooperativeCreate(world_name);
+  while (!TickCooperativeCreate(sink, 64))
+  {
+  }
 }
 
 void UWorld::Load(const std::string &world_folder_path)
 {
-  WorldFolderPath = world_folder_path;
-  BlockWorldReady = false;
-  LoadedFromChunkSave = false;
-  BlockWorld.Clear();
-  ModifiedChunks.clear();
-
-  const std::string users_file_name = WorldFolderPath + "/users.json";
-  const std::string world_data_file_name = WorldFolderPath + "/world_data.json";
-  const std::string chunks_file_name = WorldFolderPath + "/chunks.json";
-  const std::string blocks_file_name = WorldFolderPath + "/blocks.json";
-  const std::string objects_file_name = WorldFolderPath + "/objects.json";
-  const std::string chunks_dir = WorldFolderPath + "/chunks";
-  MovementDiagHistory.clear();
-
-  HasPersistedSave = HasPersistedTerrainOnDisk(WorldFolderPath);
-  AllowProceduralFill = !HasPersistedSave;
-
-  LoadWorldData(world_data_file_name);
-  if (OnAfterWorldDataLoaded)
+  NullProgressSink sink;
+  BeginCooperativeLoad(world_folder_path);
+  while (!TickCooperativeLoad(sink, 64))
   {
-    OnAfterWorldDataLoaded();
   }
-  Creatures.clear();
-  NextCreatureId = 1;
-  PlayerCreatureId = 0;
-  ControlledCreatureId = 0;
-
-  LoadUsers(users_file_name);
-  LoadCreatures(WorldFolderPath + "/creatures.json");
-  LinkUsersToPlayerCreatures();
-
-  RefreshBlockRegistry();
-  if (ChunkStorage)
-  {
-    ChunkStorage->ApplyStorageMarkerFromDisk(WorldFolderPath);
-  }
-
-  const bool spatialStreamingLoad = StreamingEnabled && HasPersistedSave;
-  int chunkFilesRead = 0;
-  size_t voxelsFromChunkFiles = 0;
-  if (!spatialStreamingLoad && std::filesystem::exists(chunks_dir))
-  {
-    for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
-    {
-      const auto ext = entry.path().extension();
-      if (ext != ".json" && ext != ".cchunk")
-      {
-        continue;
-      }
-      const std::string stem = entry.path().stem().string();
-      const size_t u1 = stem.find('_');
-      const size_t u2 = stem.find('_', u1 + 1);
-      if (u1 == std::string::npos || u2 == std::string::npos)
-      {
-        continue;
-      }
-      try
-      {
-        const int cx = std::stoi(stem.substr(0, u1));
-        const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
-        const int cz = std::stoi(stem.substr(u2 + 1));
-        if (!ChunkStorage)
-        {
-          continue;
-        }
-        const int placed = ChunkStorage->LoadChunk(
-            glm::ivec3(cx, cy, cz), BlockWorld, WorldFolderPath, *BlockRegistry);
-        if (placed >= 0)
-        {
-          ++chunkFilesRead;
-          voxelsFromChunkFiles += static_cast<size_t>(placed);
-        }
-      }
-      catch (const std::exception &e)
-      {
-        std::cerr << "Skipping chunk file " << entry.path().string() << ": "
-                  << e.what() << std::endl;
-      }
-    }
-  }
-  else if (!spatialStreamingLoad &&
-           std::filesystem::exists(chunks_file_name))
-  {
-    LoadChunks(chunks_file_name);
-    MigrateMonolithicChunksJson(chunks_file_name, WorldFolderPath);
-    chunkFilesRead = 1;
-    voxelsFromChunkFiles = BlockWorld.CountNonAir();
-  }
-
-  if (!HasPersistedSave && BlockWorld.CountNonAir() == 0 &&
-      std::filesystem::exists(blocks_file_name))
-  {
-    LoadBlocks(blocks_file_name);
-  }
-  if (!HasPersistedSave && BlockWorld.CountNonAir() == 0 &&
-      std::filesystem::exists(objects_file_name))
-  {
-    MigrateObjectsFromJson(objects_file_name);
-  }
-
-  const size_t blocksInWorld = BlockWorld.CountNonAir();
-  LoadedFromChunkSave = HasPersistedSave || chunkFilesRead > 0 ||
-                        voxelsFromChunkFiles > 0 || blocksInWorld > 0;
-  AllowProceduralFill = StreamingEnabled;
-
-  if (spatialStreamingLoad && LoadedFromChunkSave && ChunkStorage)
-  {
-    LoadInitialStreamingChunks();
-    CachedBlockCount = BlockWorld.CountNonAir();
-  }
-
-  const size_t blocksAfterSpatial = BlockWorld.CountNonAir();
-
-  std::cout << "World::Load: folder=" << WorldFolderPath << std::endl;
-  std::cout << "World::Load: chunk files=" << chunkFilesRead
-            << " voxels from chunks=" << voxelsFromChunkFiles
-            << " blocks in world=" << blocksAfterSpatial
-            << " loadedFromChunkSave=" << (LoadedFromChunkSave ? "yes" : "no")
-            << " spatialStreaming=" << (spatialStreamingLoad ? "yes" : "no")
-            << std::endl;
-
-  if (blocksAfterSpatial == 0 && !LoadedFromChunkSave && BlockRegistry)
-  {
-    std::cout
-        << "World::Load: empty world folder, generating procedural terrain."
-        << std::endl;
-    GenerateWorldBlocks();
-  }
-  else if (blocksAfterSpatial == 0 && LoadedFromChunkSave)
-  {
-    if (chunkFilesRead == 0 && voxelsFromChunkFiles == 0)
-    {
-      std::cerr << "World::Load: chunk files on disk are empty — regenerating "
-                   "procedural terrain."
-                << std::endl;
-      HasPersistedSave = false;
-      LoadedFromChunkSave = false;
-      AllowProceduralFill = true;
-      GenerateWorldBlocks();
-    }
-    else
-    {
-      std::cerr << "World::Load: chunk save on disk but 0 blocks loaded — no "
-                   "procedural fill."
-                << std::endl;
-    }
-  }
-
-  InitStreamerCallbacks();
-  if (spatialStreamingLoad && LoadedFromChunkSave)
-  {
-    if (Streamer)
-    {
-      Streamer->MarkPersistedColumnsFromWorld();
-    }
-  }
-  else if (Streamer && StreamingEnabled && LoadedFromChunkSave)
-  {
-    Streamer->MarkPersistedColumnsFromWorld();
-    RebuildBlockMesh();
-  }
-  else
-  {
-    RebuildBlockMesh();
-  }
-  FinalizePlayerAfterWorldLoad();
 }
 
 void UWorld::Save(const std::string &world_folder_path)
 {
-  RefreshBlockRegistry();
-  std::filesystem::create_directories(world_folder_path);
-  WorldFolderPath = world_folder_path;
-  const std::string users_file_name = world_folder_path + "/users.json";
-  const std::string world_data_file_name =
-      world_folder_path + "/world_data.json";
-  const std::string chunks_dir = world_folder_path + "/chunks";
-
-  std::filesystem::create_directories(chunks_dir);
-  if (ChunkStorage && BlockRegistry)
+  NullProgressSink sink;
+  BeginCooperativeSave(world_folder_path);
+  while (!TickCooperativeSave(sink, 64))
   {
-    const auto saveChunkCoord = [&](glm::ivec3 coord)
-    {
-      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk)
-      {
-        return;
-      }
-      ChunkStorage->SaveChunk(coord, *chunk, world_folder_path, *BlockRegistry);
-    };
-    if (ModifiedChunks.empty())
-    {
-      BlockWorld.GetChunkManager().ForEachChunk(
-          [&](const UChunk &chunk) { saveChunkCoord(chunk.GetCoord()); });
-    }
-    else
-    {
-      for (const glm::ivec3 &coord : ModifiedChunks)
-      {
-        saveChunkCoord(coord);
-      }
-    }
-    ChunkStorage->WriteStorageMarker(world_folder_path);
   }
+}
 
-  SaveUsers(users_file_name);
-  SaveCreatures(world_folder_path + "/creatures.json");
-  SaveWorldData(world_data_file_name);
-  SaveMovementDiagnostics(world_folder_path + "/movement_diagnostics.json");
-  ModifiedChunks.clear();
+void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
+{
+  if (!CoopSession)
+  {
+    CoopSession = std::make_unique<UWorldCooperativeSession>();
+  }
+  CoopSession->BeginLoad(*this, world_folder_path);
+}
+
+bool UWorld::TickCooperativeLoad(IProgressSink &sink, int chunkBudget)
+{
+  if (!CoopSession)
+  {
+    return true;
+  }
+  return CoopSession->Tick(*this, sink, chunkBudget);
+}
+
+void UWorld::BeginCooperativeSave(const std::string &world_folder_path)
+{
+  if (!CoopSession)
+  {
+    CoopSession = std::make_unique<UWorldCooperativeSession>();
+  }
+  CoopSession->BeginSave(*this, world_folder_path);
+}
+
+bool UWorld::TickCooperativeSave(IProgressSink &sink, int chunkBudget)
+{
+  if (!CoopSession)
+  {
+    return true;
+  }
+  return CoopSession->Tick(*this, sink, chunkBudget);
+}
+
+void UWorld::BeginCooperativeCreate(const std::string &world_name)
+{
+  if (!CoopSession)
+  {
+    CoopSession = std::make_unique<UWorldCooperativeSession>();
+  }
+  CoopSession->BeginCreate(*this, world_name);
+}
+
+bool UWorld::TickCooperativeCreate(IProgressSink &sink, int columnBudget)
+{
+  if (!CoopSession)
+  {
+    return true;
+  }
+  return CoopSession->Tick(*this, sink, columnBudget);
+}
+
+bool UWorld::HasActiveCooperativeOperation() const
+{
+  return CoopSession && CoopSession->Active;
 }
 
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)

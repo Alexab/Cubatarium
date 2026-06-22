@@ -24,7 +24,8 @@
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
-#include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Screens/WorldProgressScreen.h"
+#include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -253,30 +254,78 @@ void UApplication::RequestEnterGame()
 
   if (!WorldSessionActive)
   {
-    State = AppState::Loading;
-    if (Core)
-    {
-      Core->EnterGame();
-    }
-    if (World)
-    {
-      if (auto user = World->GetCurrentUser())
-      {
-        World->EnsurePlayerHotbarCount(user,
-                                       static_cast<size_t>(Ui.HotbarCount));
-      }
-    }
-    RefreshBlockCatalog();
-    WorldSessionActive = true;
-    ShowInGameHud();
+    WorldRunnerRequest request;
+    request.op = WorldRunnerOp::EnterGame;
+    request.enterGameAfter = true;
+    BeginWorldOperation(std::move(request));
+    return;
+  }
+
+  GuiContext->SetScreen(nullptr);
+  State = AppState::InGame;
+  EnterInGameInputState();
+}
+
+void UApplication::ShowWorldProgressScreen()
+{
+  ConsoleOpen = false;
+  PaletteOpen = false;
+  FreeCursor = true;
+  auto screen = std::make_unique<UWorldProgressScreen>();
+  ProgressScreen = screen.get();
+  GuiContext->SetScreen(std::move(screen));
+  SyncCursorVisibility();
+}
+
+void UApplication::BeginWorldOperation(WorldRunnerRequest request,
+                                     std::function<void()> onComplete)
+{
+  if (!Core || !World)
+  {
+    return;
+  }
+  WorldOpOnComplete = std::move(onComplete);
+  if (!WorldOpRunner)
+  {
+    WorldOpRunner = std::make_unique<UWorldOperationRunner>(*Core, *World);
+  }
+  State = AppState::Loading;
+  ShowWorldProgressScreen();
+  ProgressSink.Begin(WorldOperationKind::Load);
+  ProgressSink.Report("init", 0.f, "Starting...");
+  if (ProgressScreen)
+  {
+    ProgressScreen->ApplySnapshot(ProgressSink.Get());
+  }
+  WorldOpRunner->Start(std::move(request));
+}
+
+void UApplication::OnWorldOperationFinished()
+{
+  const bool success = WorldOpRunner && WorldOpRunner->Succeeded();
+  if (!success)
+  {
+    ShowMainMenu();
+    State = AppState::MainMenu;
+    WorldOpOnComplete = nullptr;
+    return;
+  }
+
+  if (WorldOpRunner && WorldOpRunner->ShouldEnterGame())
+  {
+    EnterGameAfterWorldChange();
+  }
+  else if (WorldOpOnComplete)
+  {
+    auto callback = std::move(WorldOpOnComplete);
+    WorldOpOnComplete = nullptr;
+    callback();
   }
   else
   {
-    GuiContext->SetScreen(nullptr);
+    ShowMainMenu();
+    State = AppState::MainMenu;
   }
-
-  State = AppState::InGame;
-  EnterInGameInputState();
 }
 
 void UApplication::RequestQuit()
@@ -296,6 +345,7 @@ void UApplication::RequestQuit()
 
 void UApplication::ShowMainMenu()
 {
+  ProgressScreen = nullptr;
   ConsoleOpen = false;
   SuppressConsoleToggleChar = false;
   PaletteOpen = false;
@@ -474,7 +524,6 @@ void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
   {
     return;
   }
-  SaveActiveWorldIfNeeded();
   ScheduleDeferredMenuAction(std::move(proceed));
 }
 
@@ -534,9 +583,15 @@ void UApplication::CreateNewWorldWithSettings(
   {
     return;
   }
-  Core->CreateNewWorldWithSettings(settings, selection);
-  Core->SaveConfigFile();
-  EnterGameAfterWorldChange();
+  WorldRunnerRequest request;
+  request.op = WorldSessionActive && World && !World->GetWorldName().empty()
+                   ? WorldRunnerOp::SaveThenCreate
+                   : WorldRunnerOp::Create;
+  request.settings = settings;
+  request.packs = selection;
+  request.enterGameAfter = true;
+  request.saveConfigAfter = true;
+  BeginWorldOperation(std::move(request));
 }
 
 std::vector<InstalledPackInfo> UApplication::ListInstalledResourcePacks() const
@@ -592,9 +647,14 @@ void UApplication::LoadSelectedWorld(const std::string &worldName)
   {
     return;
   }
-  Core->LoadWorldByName(worldName);
-  Core->SaveConfigFile();
-  EnterGameAfterWorldChange();
+  WorldRunnerRequest request;
+  request.op = WorldSessionActive && World && !World->GetWorldName().empty()
+                   ? WorldRunnerOp::SaveThenLoad
+                   : WorldRunnerOp::Load;
+  request.worldName = worldName;
+  request.enterGameAfter = true;
+  request.saveConfigAfter = true;
+  BeginWorldOperation(std::move(request));
 }
 
 void UApplication::RefreshWorldList()
@@ -613,6 +673,7 @@ const std::vector<std::string> &UApplication::GetWorldNames() const
 
 void UApplication::ShowInGameHud()
 {
+  ProgressScreen = nullptr;
 #ifndef __ANDROID__
   if (Window && !Clipboard)
   {
@@ -695,7 +756,8 @@ void UApplication::ShowInGameHud()
 
 bool UApplication::UsesUiPointer() const
 {
-  return State == AppState::MainMenu || FreeCursor || ConsoleOpen || PaletteOpen;
+  return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
+         ConsoleOpen || PaletteOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
@@ -986,6 +1048,21 @@ void UApplication::Update(double dt)
     Action();
   }
 
+  if (State == AppState::Loading)
+  {
+    if (WorldOpRunner && WorldOpRunner->Tick(ProgressSink, 8))
+    {
+      OnWorldOperationFinished();
+    }
+    if (ProgressScreen)
+    {
+      ProgressScreen->ApplySnapshot(ProgressSink.Get());
+    }
+    GuiContext->Update(dt);
+    SyncCursorVisibility();
+    return;
+  }
+
   if (State == AppState::MainMenu)
   {
     GuiContext->Update(dt);
@@ -1094,7 +1171,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     glViewport(0, 0, width, height);
   }
-  if (State == AppState::MainMenu)
+  if (State == AppState::MainMenu || State == AppState::Loading)
   {
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -1161,7 +1238,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
 
 bool UApplication::WantsCaptureMouse() const
 {
-  if (State == AppState::MainMenu)
+  if (State == AppState::MainMenu || State == AppState::Loading)
   {
     return true;
   }
@@ -1174,7 +1251,7 @@ bool UApplication::WantsCaptureMouse() const
 
 bool UApplication::WantsCaptureKeyboard() const
 {
-  if (State == AppState::MainMenu)
+  if (State == AppState::MainMenu || State == AppState::Loading)
   {
     return true;
   }

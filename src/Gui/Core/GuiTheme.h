@@ -24,7 +24,11 @@ struct GuiTheme
   glm::vec4 SlotDisabledFill{0.0f, 0.0f, 0.0f, 0.55f};
   /// Keyboard focus ring (Tab navigation).
   glm::vec4 FocusRing{0.75f, 0.88f, 0.28f, 1.0f};
+  glm::vec4 ProgressTrack{0.18f, 0.18f, 0.2f, 1.0f};
+  glm::vec4 ProgressFill{0.45f, 0.62f, 0.22f, 1.0f};
+  glm::vec4 ProgressIndeterminate{0.55f, 0.72f, 0.28f, 1.0f};
   int FocusRingThickness{2};
+  int ProgressBarHeight{14};
   int SlotSelectedBorderThickness{3};
   int FontSizeBody{16};
   int Padding{8};

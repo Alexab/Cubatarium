@@ -105,6 +105,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/WorldCooperativeOps.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Pipeline/GlStateScope.cpp
@@ -166,6 +167,7 @@ set(SOURCES
     src/World/IO/BinaryChunkSerializer.cpp
     src/World/IO/ChunkStorageService.cpp
     src/Core/Jobs/JobThreadPool.cpp
+    src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/GreedyMesher.cpp
@@ -175,6 +177,7 @@ set(SOURCES
     src/Render/Engine/ShaderManager.cpp
     src/Render/Engine/TextRenderer.cpp
     src/App/Application.cpp
+    src/App/WorldOperationRunner.cpp
     src/App/Platform/CursorCapture.cpp
     src/Game/GameSession.cpp
     src/Content/ContentTypeRegistry.cpp
@@ -199,6 +202,7 @@ set(SOURCES
     src/Gui/Widgets/GuiPanel.cpp
     src/Gui/Widgets/GuiButton.cpp
     src/Gui/Widgets/GuiLabel.cpp
+    src/Gui/Widgets/GuiProgressBar.cpp
     src/Gui/Widgets/GuiTextInput.cpp
     src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
@@ -219,6 +223,7 @@ set(SOURCES
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
+    src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
     src/App/Platform/DesktopPlatformPaths.cpp
     src/App/Platform/DesktopPlatformWindow.cpp
@@ -241,6 +246,7 @@ set(HEADERS
     src/Creatures/Player/User.h
     src/Render/Engine/ViewEngine.h
     src/World/Core/World.h
+    src/World/Core/WorldCooperativeOps.h
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
     src/Render/Engine/GeometryEngine.h
@@ -301,6 +307,7 @@ set(HEADERS
     src/Gui/Widgets/GuiPanel.h
     src/Gui/Widgets/GuiButton.h
     src/Gui/Widgets/GuiLabel.h
+    src/Gui/Widgets/GuiProgressBar.h
     src/Gui/Widgets/GuiTextInput.h
     src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h
@@ -326,6 +333,10 @@ set(HEADERS
     src/Gui/Screens/InGameHudScreen.h
     src/Gui/Screens/ConsoleScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
+    src/Gui/Screens/WorldProgressScreen.h
+    src/Core/Progress/ProgressTypes.h
+    src/Core/Progress/IProgressSink.h
+    src/App/WorldOperationRunner.h
 )
 
 if(WIN32)

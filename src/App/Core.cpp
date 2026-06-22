@@ -44,6 +44,7 @@
 #include "Version.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Prefabs/Prefab.h"
+#include "Creatures/Core/Creature.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
@@ -843,6 +844,83 @@ void UCore::CreateWorldFromProceduralConfig()
 
 void UCore::CreateNewWorldWithCurrentSettings()
 {
+  const std::string new_world_name = SetupNewWorldForCreation();
+  WorldInstance->Create(new_world_name);
+  WorldInstance->GenerateUsers();
+  SaveWorld(new_world_name);
+  LoadWorldList(WorldPath.string());
+}
+
+void UCore::PrepareStartupWorldCreation()
+{
+  WorldSeed += 1;
+  ProceduralTemplate.Seed = WorldSeed;
+  ResetToGeneratorDefaults(ProceduralTemplate);
+  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
+  PendingNewWorldSettings.reset();
+  PendingNewWorldPackSelection = GetDefaultResourcePackSelection();
+}
+
+void UCore::PrepareEnterGameWorldList()
+{
+  std::filesystem::create_directories(WorldPath);
+  LoadWorldList(WorldPath.string());
+}
+
+bool UCore::NeedsCreateWorldOnStartup() const
+{
+  return ShouldCreateWorldOnStartup();
+}
+
+void UCore::PrepareLoadWorld(const std::string &world_name)
+{
+  DefaultWorldName = world_name;
+  ActiveWorldFolder = WorldFolderPath(world_name);
+}
+
+void UCore::FinalizeLoadedWorld()
+{
+  ApplyRuntimeStreamingToWorld();
+  if (!DefaultUserName.empty())
+  {
+    if (!WorldInstance->SetCurrentUserName(DefaultUserName))
+    {
+      std::cerr << "Core::FinalizeLoadedWorld: user '" << DefaultUserName
+                << "' not found." << std::endl;
+    }
+  }
+  if (WorldInstance->GetCurrentUser() == nullptr)
+  {
+    WorldInstance->GenerateUsers();
+  }
+}
+
+void UCore::FinalizeEnterGameSession()
+{
+  if (DefaultUserName.empty())
+  {
+    DefaultUserName = WorldInstance->GetCurrentUserName();
+  }
+  if (WorldInstance->GetCurrentUser() == nullptr)
+  {
+    WorldInstance->GenerateUsers();
+  }
+  if (UCreature *player = WorldInstance->GetPlayerCreature())
+  {
+    if (player->GetInventory().GetActiveEntryRef() == nullptr)
+    {
+      player->GetInventory().SetActiveSlot(0, 1);
+    }
+  }
+}
+
+void UCore::RefreshWorldListAfterSave()
+{
+  LoadWorldList(WorldPath.string());
+}
+
+std::string UCore::SetupNewWorldForCreation()
+{
   ResourcePackSelection selection = PendingNewWorldPackSelection;
   const std::vector<std::string> legacyPacks = PendingNewWorldResourcePacks;
   PendingNewWorldPackSelection = {};
@@ -898,14 +976,12 @@ void UCore::CreateNewWorldWithCurrentSettings()
   ApplyGeneratorTierDefaults(worldSettings);
   worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
   worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
-  worldSettings.MaxChunkCommitsPerFrame = ProceduralTemplate.MaxChunkCommitsPerFrame;
+  worldSettings.MaxChunkCommitsPerFrame =
+      ProceduralTemplate.MaxChunkCommitsPerFrame;
 
   WorldInstance->SetProceduralSettings(worldSettings);
   WorldInstance->SetRenderSettings(Render);
-  WorldInstance->Create(new_world_name);
-  WorldInstance->GenerateUsers();
-  SaveWorld(new_world_name);
-  LoadWorldList(WorldPath.string());
+  return new_world_name;
 }
 
 void UCore::ApplyRuntimeStreamingToWorld()
@@ -1231,6 +1307,14 @@ void UCore::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const ResourcePackSelection &resourcePacks)
 {
+  ApplyNewWorldCreationRequest(settings, resourcePacks);
+  CreateNewWorldWithCurrentSettings();
+}
+
+void UCore::ApplyNewWorldCreationRequest(
+    const ProceduralSettings &settings,
+    const ResourcePackSelection &resourcePacks)
+{
   PendingNewWorldSettings = settings;
   PendingNewWorldSettings->Seed = settings.Seed;
   WorldSeed = settings.Seed + 1;
@@ -1242,7 +1326,6 @@ void UCore::CreateNewWorldWithSettings(
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
 
   PendingNewWorldPackSelection = resourcePacks;
-  CreateNewWorldWithCurrentSettings();
 }
 
 std::vector<std::string>

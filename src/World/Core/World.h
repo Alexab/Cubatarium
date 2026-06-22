@@ -25,6 +25,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/Core/WorldCooperativeOps.h"
 #include <array>
 #include <functional>
 #include <glm/glm.hpp>
@@ -80,6 +81,14 @@ public:
   void Create(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
+
+  void BeginCooperativeLoad(const std::string &world_folder_path);
+  bool TickCooperativeLoad(class IProgressSink &sink, int chunkBudget);
+  void BeginCooperativeSave(const std::string &world_folder_path);
+  bool TickCooperativeSave(class IProgressSink &sink, int chunkBudget);
+  void BeginCooperativeCreate(const std::string &world_name);
+  bool TickCooperativeCreate(class IProgressSink &sink, int columnBudget);
+  bool HasActiveCooperativeOperation() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
   bool AddUser(const std::string &Name);
@@ -418,6 +427,7 @@ public:
   void ClearCreaturesAndUsers();
 
 private:
+  friend class UWorldCooperativeSession;
   bool CheckRayIntersection(
       const glm::vec3 &position, const glm::vec3 &front,
       std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
@@ -557,6 +567,7 @@ private:
   uint64_t DurationDoMovementMks;
   MovementDiagnostics MovementDiag;
   std::vector<MovementDiagnostics> MovementDiagHistory;
+  std::unique_ptr<UWorldCooperativeSession> CoopSession;
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};

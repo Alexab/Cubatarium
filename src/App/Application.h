@@ -10,6 +10,9 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Screens/WorldProgressScreen.h"
+#include "App/WorldOperationRunner.h"
+#include "Core/Progress/IProgressSink.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -136,8 +139,12 @@ public:
   void ShowWorldSettings();
   void ShowNewWorld();
   void ShowLoadWorld();
+  void BeginWorldOperation(WorldRunnerRequest request,
+                           std::function<void()> onComplete = nullptr);
+  void OnWorldOperationFinished();
 
 private:
+  void ShowWorldProgressScreen();
   void ShowMainMenu();
   void SaveActiveWorldIfNeeded();
   void ScheduleDeferredMenuAction(std::function<void()> Action);
@@ -194,7 +201,12 @@ private:
   bool PendingEnterGame{false};
   bool PendingQuit{false};
   std::function<void()> PendingMenuAction;
+  std::function<void()> WorldOpOnComplete;
   bool QuitRequested{false};
+
+  UWorldProgressScreen *ProgressScreen{nullptr};
+  std::unique_ptr<UWorldOperationRunner> WorldOpRunner;
+  LatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
   std::unique_ptr<UInGameHudScreen> HudScreen;

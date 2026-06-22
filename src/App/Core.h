@@ -133,6 +133,21 @@ public:
 
   void ApplyRuntimeStreamingToWorld();
 
+  void PrepareEnterGameWorldList();
+  void PrepareStartupWorldCreation();
+  void PrepareLoadWorld(const std::string &world_name);
+  void FinalizeLoadedWorld();
+  void FinalizeEnterGameSession();
+  std::string SetupNewWorldForCreation();
+  void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,
+                                    const ResourcePackSelection &selection);
+  bool NeedsCreateWorldOnStartup() const;
+  const std::filesystem::path &GetActiveWorldFolder() const
+  {
+    return ActiveWorldFolder;
+  }
+  void RefreshWorldListAfterSave();
+
 private:
   std::vector<std::string> WorldList;
 

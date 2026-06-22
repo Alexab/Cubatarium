@@ -10,6 +10,15 @@ UGuiLabel::UGuiLabel(const GuiTheme *theme, std::string text)
 {
 }
 
+int UGuiLabel::GetPreferredHeight() const
+{
+  if (!Theme)
+  {
+    return UGuiWidget::GetPreferredHeight();
+  }
+  return Theme->FontSizeBody + Theme->Padding;
+}
+
 void UGuiLabel::Draw(UGuiRenderer &renderer)
 {
   if (!Visible || !Theme || Text.empty())
