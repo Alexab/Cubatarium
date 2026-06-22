@@ -1,19 +1,23 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Static CRT (/MT) and vcpkg libs for MSVC Windows. Runtime output goes to bin/.
-if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
-    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
-    set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
-endif()
-
 if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
-if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+# Static CRT (/MT) and vcpkg libs for MSVC Windows. Runtime output goes to bin/.
+if(WIN32)
+    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
+    set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
+    set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg manifest mode" FORCE)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CACHE STRING "MSVC runtime library (/MT)" FORCE)
 endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
+
+if(WIN32)
+    include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
+endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
 cubatarium_resolve_version(CUBATARIUM_VERSION_STRING)
@@ -449,6 +453,11 @@ if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
+if(MSVC)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CUBATARIUM_GENERATED_DIR}
@@ -464,7 +473,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 if(WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32" GLEW_STATIC)
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -564,5 +573,15 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/resources/branding/icon-64.png")
             "${CMAKE_SOURCE_DIR}/resources/branding/icon-64.png"
             "${CUBATARIUM_RUN_DIR}/icon.png"
         COMMENT "Copying window icon to runtime directory"
+    )
+endif()
+
+if(WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND PowerShell -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_SOURCE_DIR}/scripts/build/verify-windows-exe.ps1"
+            -ExePath "$<TARGET_FILE:${PROJECT_NAME}>"
+        COMMENT "Verifying static Windows executable (no vcpkg/VC++ DLL deps)"
+        VERBATIM
     )
 endif()

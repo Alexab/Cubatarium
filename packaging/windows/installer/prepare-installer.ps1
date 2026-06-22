@@ -29,6 +29,11 @@ Write-Host "Staging installer files into $out ..."
 
 Copy-Item (Join-Path $srcBin "Cubatarium.exe") $outBin -Force
 
+$iconPng = Join-Path $srcBin "icon.png"
+if (Test-Path $iconPng) {
+    Copy-Item $iconPng $outBin -Force
+}
+
 # Remove stale DLLs from a previous dynamic staging
 Get-ChildItem $outBin -Filter "*.dll" -ErrorAction SilentlyContinue | Remove-Item -Force
 

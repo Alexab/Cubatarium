@@ -3,18 +3,14 @@
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
     "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
-    "cmake.generator": "Visual Studio 17 2022",
     "cmake.buildDirectory": "${workspaceFolder}/build/desktop-msvc",
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.parallelJobs": 8,
+    "cmake.useCMakePresets": "always",
+    "cmake.configurePreset": "windows-msvc",
+    "cmake.buildPreset": "windows-msvc-debug",
     "cmake.configureOnOpen": true,
     "cmake.configureOnEdit": false,
-    "cmake.buildType": "Debug",
-    "cmake.platform": "x64",
-    "cmake.toolset": "v143",
-    "cmake.configureArgs": [
-        "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-    ],
     "cmake.environment": {
         "VCPKG_ROOT": "E:/vcpkg",
         "VCToolsVersion": ""

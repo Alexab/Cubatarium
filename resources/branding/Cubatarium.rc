@@ -1,1 +1,2 @@
-IDI_ICON1 ICON "Cubatarium.ico"
+// Application icon (resource ID 1) — used by Windows shell for shortcuts and taskbar.
+1 ICON "Cubatarium.ico"

@@ -5,13 +5,13 @@ GUID={4E882EBA-970C-E877-051C-CA31D9346389}
 AppName=Cubatarium
 AppEdition=
 AppVersion=0.0.2.0
-GetVerFromExe=0
+GetVerFromExe=1
 AppDescription=
 CompanyName=
 WebSite=
 SupportLink=
 Copyright=Copyright © <Year> <Publisher>
-GetCopyrightFromExe=0
+GetCopyrightFromExe=1
 InstallLevel=2
 UpgradeMode=0
 IfInstalled=1
@@ -37,9 +37,6 @@ Internet=0
 CloseApp=0
 CloseAppFile=iexplore.exe
 CloseAppText=Internet Explorer
-VisualCpp=0
-VisualCppVersion=6
-LinkVisualCpp=https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
 PackageType=0
 SetupFolder=.
 SetupFileName=Cubatarium-<AppVersion>
@@ -166,8 +163,8 @@ ShowMsgAfterInstall=0
 ShowMsgText=
 INISkipOnUpdate=0
 TotalFiles=1
-SourceDirFiles=478
-SourceDirSize=10289292
+SourceDirFiles=3338
+SourceDirSize=18173655
 
 [GUI]
 FontName=Verdana
@@ -186,6 +183,6 @@ LogoTransparent=1
 
 [Shortcuts]
 0=<ProgramGroup>*?Uninstall <AppName>*?<InstallDir>\Uninstall.exe*?*?*?<InstallDir>*?*?0*?Normal*?No
-1=<ProgramGroup>*?<AppName>*?<InstallDir>\bin\Cubatarium.exe*?*?*?<InstallDir>\bin*?*?0*?Normal*?No
-2=<Desktop>*?<AppName>*?<InstallDir>\bin\Cubatarium.exe*?*?*?<InstallDir>\bin*?*?0*?Normal*?No
+1=<ProgramGroup>*?<AppName>*?<InstallDir>\bin\Cubatarium.exe*?<InstallDir>\bin\Cubatarium.exe*?0*?<InstallDir>\bin*?*?0*?Normal*?No
+2=<Desktop>*?<AppName>*?<InstallDir>\bin\Cubatarium.exe*?<InstallDir>\bin\Cubatarium.exe*?0*?<InstallDir>\bin*?*?0*?Normal*?No
 

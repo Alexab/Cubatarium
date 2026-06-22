@@ -8,10 +8,19 @@
   "configurePresets": [
     {
       "name": "windows-msvc",
-      "displayName": "Windows MSVC",
+      "displayName": "Windows MSVC (static)",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/build/desktop-msvc"
+      "binaryDir": "${sourceDir}/build/desktop-msvc",
+      "toolchainFile": "E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_MODE": "ON",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static",
+        "VCPKG_APPLOCAL_DEPS": "OFF"
+      },
+      "environment": {
+        "VCPKG_ROOT": "E:/vcpkg"
+      }
     },
     {
       "name": "linux-ninja",

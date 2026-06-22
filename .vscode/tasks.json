@@ -14,11 +14,14 @@
                 "Visual Studio 17 2022",
                 "-A",
                 "x64",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
             ],
             "group": "build",
             "options": {
                 "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
                     "VCToolsVersion": ""
                 }
             },
@@ -147,7 +150,9 @@
                 "Visual Studio 17 2022",
                 "-A",
                 "x64",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
             ],
             "group": "build",
             "dependsOrder": "sequence",
@@ -156,6 +161,7 @@
             ],
             "options": {
                 "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
                     "VCToolsVersion": ""
                 }
             },

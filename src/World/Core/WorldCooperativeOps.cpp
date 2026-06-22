@@ -297,10 +297,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     SpatialRadius = world.RenderDistanceChunks + 1;
     const glm::ivec3 spawnBlock = WorldPosToBlock(world.SpawnPoint);
     SpatialCenter = UChunkManager::WorldToChunk(spawnBlock);
-    ScanChunkFiles(world);
-    CurrentPhase = Phase::LoadChunks;
+    CurrentPhase = Phase::ScanChunks;
     Report(sink, "entities", kPhaseWeightMetadata + kPhaseWeightEntities,
            "Loading entities...");
+    break;
+  }
+  case Phase::ScanChunks:
+  {
+    ScanChunkFiles(world);
+    CurrentPhase = Phase::LoadChunks;
+    Report(sink, "scan", kPhaseWeightMetadata + kPhaseWeightEntities,
+           "Scanning chunk files...");
     break;
   }
   case Phase::LoadChunks:

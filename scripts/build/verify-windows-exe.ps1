@@ -78,9 +78,12 @@ if ($bad.Count -gt 0) {
 Cubatarium.exe is not a static desktop build. Forbidden DLL dependencies:
   $($bad -join ', ')
 
-Rebuild with x64-windows-static triplet and /MT CRT:
+Reconfigure with x64-windows-static triplet and /MT CRT, then rebuild:
   .\configure.ps1 -Config Release -Fresh
   cmake --build build\desktop-msvc --config Release
+
+VS Code / Cursor: Ctrl+Shift+P -> CMake: Delete Cache and Reconfigure
+  (preset must be 'windows-msvc', then Build)
 "@
 }
 

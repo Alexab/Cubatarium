@@ -50,15 +50,59 @@ function New-LauncherPng {
 }
 
 function Save-IconFile {
-    param([System.Drawing.Bitmap]$Bitmap, [string]$Path)
-    $icon = [System.Drawing.Icon]::FromHandle($Bitmap.GetHicon())
-    $fs = [System.IO.File]::Create($Path)
-    try {
-        $icon.Save($fs)
-    } finally {
-        $fs.Close()
-        $icon.Dispose()
+    param(
+        [System.Drawing.Bitmap]$Bitmap,
+        [string]$Path,
+        [int[]]$Sizes = @(16, 24, 32, 48, 64, 128, 256)
+    )
+    $ms = New-Object System.IO.MemoryStream
+    $bw = New-Object System.IO.BinaryWriter $ms
+    $bw.Write([uint16]0)
+    $bw.Write([uint16]1)
+    $bw.Write([uint16]$Sizes.Count)
+
+    $offset = 6 + (16 * $Sizes.Count)
+    $imageBytes = New-Object System.Collections.Generic.List[byte[]]
+    foreach ($size in $Sizes) {
+        $resized = New-Object System.Drawing.Bitmap $size, $size
+        $graphics = [System.Drawing.Graphics]::FromImage($resized)
+        try {
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.DrawImage($Bitmap, 0, 0, $size, $size)
+        } finally {
+            $graphics.Dispose()
+        }
+
+        $imgStream = New-Object System.IO.MemoryStream
+        try {
+            $resized.Save($imgStream, [System.Drawing.Imaging.ImageFormat]::Png)
+            $bytes = $imgStream.ToArray()
+        } finally {
+            $imgStream.Dispose()
+            $resized.Dispose()
+        }
+        $imageBytes.Add($bytes) | Out-Null
+
+        $dim = if ($size -ge 256) { [byte]0 } else { [byte]$size }
+        $bw.Write($dim)
+        $bw.Write($dim)
+        $bw.Write([byte]0)
+        $bw.Write([byte]0)
+        $bw.Write([uint16]1)
+        $bw.Write([uint16]32)
+        $bw.Write([uint32]$bytes.Length)
+        $bw.Write([uint32]$offset)
+        $offset += $bytes.Length
     }
+
+    foreach ($bytes in $imageBytes) {
+        $bw.Write($bytes)
+    }
+
+    $bw.Flush()
+    [System.IO.File]::WriteAllBytes($Path, $ms.ToArray())
+    $bw.Dispose()
+    $ms.Dispose()
 }
 
 New-Item -ItemType Directory -Force -Path $brandingDir | Out-Null
