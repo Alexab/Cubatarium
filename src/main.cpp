@@ -28,6 +28,12 @@ int main(int argc, char *argv[])
       cutum::IPlatformPaths::SetGlobal(paths);
       return cutum::RunValidateLoad();
     }
+    if (std::strcmp(argv[i], "--bench-io") == 0)
+    {
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IPlatformPaths::SetGlobal(paths);
+      return cutum::RunBenchChunkIo();
+    }
   }
 
   auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();

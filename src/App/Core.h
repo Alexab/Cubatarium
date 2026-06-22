@@ -155,6 +155,7 @@ private:
   ProceduralSettings ProceduralTemplate;
   int RenderDistanceChunks{4};
   bool StreamingEnabled{true};
+  std::string ChunkStorageFormat{"binary"};
   bool StepUpEnabled{true};
   bool EntityCollisionEnabled{true};
   RenderSettings Render;

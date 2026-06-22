@@ -1,5 +1,6 @@
 #include "App/Utils.h"
 
+#include <chrono>
 #include <iostream>
 #include <memory>
 
@@ -13,7 +14,11 @@
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "Storage/ObjectStorage.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/World.h"
+#include "World/IO/BinaryChunkSerializer.h"
+#include "World/IO/JsonChunkSerializer.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/WorldGenRefs.h"
@@ -163,6 +168,80 @@ int RunValidateLoad()
   glfwDestroyWindow(ctx);
   glfwTerminate();
   return 0;
+}
+
+int RunBenchChunkIo()
+{
+  auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+  auto texture_cube_instance =
+      std::make_shared<UTextureCubeStorage>(texture_base_instance);
+  UBlockRegistry registry(texture_cube_instance, nullptr);
+
+  BinaryChunkSerializer binary;
+  JsonChunkSerializer json;
+
+  UChunk chunk(glm::ivec3(0, 0, 0));
+  constexpr BlockId kStone = 7;
+  constexpr BlockId kDirt = 8;
+  for (int z = 0; z < CHUNK_SIZE; ++z)
+  {
+    for (int y = 0; y < CHUNK_SIZE; ++y)
+    {
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        BlockId id = BLOCK_AIR;
+        if (y < 4)
+        {
+          id = kStone;
+        }
+        else if (y < 8)
+        {
+          id = kDirt;
+        }
+        chunk.SetBlockLocal(glm::ivec3(x, y, z), id);
+      }
+    }
+  }
+
+  const auto bench = [](auto fn)
+  {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    fn();
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::micro>(t1 - t0).count();
+  };
+
+  SerializedChunk binaryBlob;
+  const double binarySaveUs = bench(
+      [&]()
+      { binaryBlob = binary.Serialize(glm::ivec3(0, 0, 0), chunk, registry); });
+  ChunkBuffer binaryBuf;
+  const double binaryLoadUs = bench(
+      [&]()
+      {
+        binaryBuf = binary.Deserialize(binaryBlob.bytes, glm::ivec3(0, 0, 0),
+                                       registry);
+      });
+
+  SerializedChunk jsonBlob;
+  const double jsonSaveUs = bench(
+      [&]()
+      { jsonBlob = json.Serialize(glm::ivec3(0, 0, 0), chunk, registry); });
+  ChunkBuffer jsonBuf;
+  const double jsonLoadUs = bench(
+      [&]()
+      {
+        jsonBuf = json.Deserialize(jsonBlob.bytes, glm::ivec3(0, 0, 0), registry);
+      });
+
+  const bool ok = !binaryBuf.IsEmpty() && !jsonBuf.IsEmpty();
+  std::cout << "BENCH_IO ok=" << (ok ? 1 : 0) << " binary_bytes="
+            << binaryBlob.bytes.size() << " json_bytes=" << jsonBlob.bytes.size()
+            << " binary_save_us=" << binarySaveUs
+            << " binary_load_us=" << binaryLoadUs
+            << " json_save_us=" << jsonSaveUs << " json_load_us=" << jsonLoadUs
+            << std::endl;
+  return ok ? 0 : 1;
 }
 
 } // namespace cutum

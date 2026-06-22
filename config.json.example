@@ -11,8 +11,11 @@
         "structures": true,
         "async_chunk_generation": true,
         "async_chunk_io": true,
-        "max_chunk_commits_per_frame": 3
+        "max_chunk_commits_per_frame": 3,
+        "max_load_ops_per_frame": 4,
+        "max_unload_ops_per_frame": 2
     },
+    "chunk_storage": "binary",
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "gameplay": {

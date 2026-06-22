@@ -85,10 +85,43 @@ void UChunkStreamer::SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
   OnIsChunkCommitted = std::move(isCommittedFn);
 }
 
+void UChunkStreamer::SetColumnPendingCallback(IsColumnPendingFn fn)
+{
+  OnIsColumnPending = std::move(fn);
+}
+
 void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
 {
-  ProcedurallyGenerated.insert(chunkCoord);
-  MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+  glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+  InvalidateTerrainCompleteCache(ground);
+  ProcedurallyGenerated.insert(ground);
+  MarkTerrainColumnMeshDirty(OnMarkDirty, ground);
+}
+
+bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const auto cached = TerrainCompleteCache.find(groundCoord);
+  if (cached != TerrainCompleteCache.end())
+  {
+    return cached->second;
+  }
+  const bool complete =
+      IsTerrainChunkComplete(World, groundCoord, MaxHeight);
+  TerrainCompleteCache.emplace(groundCoord, complete);
+  return complete;
+}
+
+void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  TerrainCompleteCache.erase(groundCoord);
 }
 
 void UChunkStreamer::MarkPersistedColumnsFromWorld()
@@ -102,7 +135,7 @@ void UChunkStreamer::MarkPersistedColumnsFromWorld()
       });
   for (const glm::ivec3 &ground : columns)
   {
-    if (IsTerrainChunkComplete(World, ground, MaxHeight))
+    if (IsTerrainChunkCompleteCached(ground))
     {
       ProcedurallyGenerated.insert(ground);
     }
@@ -118,10 +151,15 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     return false;
   }
 
+  if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
+  {
+    return IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
   const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
   bool clearedPartialDiskLoad = false;
   if (existing != nullptr &&
-      IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
+      IsTerrainChunkCompleteCached(chunkCoord))
   {
     ProcedurallyGenerated.insert(chunkCoord);
     return true;
@@ -141,13 +179,14 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   {
     if (OnLoadChunk && OnLoadChunk(chunkCoord))
     {
-      if (IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
+      if (IsTerrainChunkCompleteCached(chunkCoord))
       {
         ProcedurallyGenerated.insert(chunkCoord);
         MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
         return true;
       }
       ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+      InvalidateTerrainCompleteCache(chunkCoord);
       clearedPartialDiskLoad = true;
     }
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
@@ -156,7 +195,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
           std::abs(chunkCoord.x) + std::abs(chunkCoord.z);
       OnRequestAsyncChunk(chunkCoord, priority);
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
-             IsTerrainChunkComplete(World, chunkCoord, MaxHeight);
+             IsTerrainChunkCompleteCached(chunkCoord);
     }
     if (!OnGenerateColumn)
     {
@@ -169,7 +208,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     {
       OnRequestAsyncChunk(chunkCoord, 0);
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
-             IsTerrainChunkComplete(World, chunkCoord, MaxHeight);
+             IsTerrainChunkCompleteCached(chunkCoord);
     }
     return false;
   }
@@ -195,7 +234,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   if (!generated)
   {
     if (existing != nullptr &&
-        IsTerrainChunkComplete(World, chunkCoord, MaxHeight))
+        IsTerrainChunkCompleteCached(chunkCoord))
     {
       ProcedurallyGenerated.insert(chunkCoord);
     }
@@ -348,6 +387,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       ++LastFrameStats.unloadsThisFrame;
     }
     ProcedurallyGenerated.erase(ground);
+    InvalidateTerrainCompleteCache(ground);
     ++unloadOps;
   }
 }

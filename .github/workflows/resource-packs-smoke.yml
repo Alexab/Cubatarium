@@ -40,3 +40,6 @@ jobs:
 
       - name: Worldgen runtime metrics smoke
         run: python tools/smoke_worldgen_metrics.py --preset overworld --render-distance 4
+
+      - name: Chunk storage format smoke
+        run: python tools/test_chunk_storage.py

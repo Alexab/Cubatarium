@@ -29,6 +29,8 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/IO/AsyncChunkIO.h"
+#include "World/IO/ChunkStorageService.h"
+#include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
@@ -79,6 +81,24 @@ bool HasChunkJsonFiles(const std::string &chunks_dir)
   return false;
 }
 
+bool HasChunkDataFiles(const std::string &chunks_dir)
+{
+  if (!std::filesystem::exists(chunks_dir) ||
+      !std::filesystem::is_directory(chunks_dir))
+  {
+    return false;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  {
+    const auto ext = entry.path().extension();
+    if (ext == ".json" || ext == ".cchunk")
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
@@ -91,7 +111,8 @@ bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
   }
 
   const std::string chunks_dir = world_folder_path + "/chunks";
-  if (HasChunkJsonFiles(chunks_dir))
+  if (HasChunkDataFiles(chunks_dir) ||
+      UChunkStorageService::HasChunkFilesOnDisk(world_folder_path))
   {
     return true;
   }
@@ -110,9 +131,10 @@ bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
       return false;
     }
     const json data = json::parse(file);
-    if (data.value("storage", "") == "per_file")
+    const std::string storage = data.value("storage", "");
+    if (storage == "per_file" || storage == "binary" || storage == "json")
     {
-      return false;
+      return true;
     }
     return data.contains("chunks") && data["chunks"].is_array() &&
            !data["chunks"].empty();
@@ -135,6 +157,7 @@ UWorld::UWorld(std::shared_ptr<UObjectStorage> object_storage,
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
   RegisterDefaultCreaturePosePresenters(PosePresenterRegistry);
+  ChunkStorage = std::make_unique<UChunkStorageService>();
 }
 
 void UWorld::GenerateUsers()
@@ -174,6 +197,8 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
   ProceduralTemplate = settings;
   WorldSeed = settings.Seed;
   TerrainType = ProceduralGeneratorToString(settings.Generator);
+  MaxLoadOpsPerFrame = settings.MaxLoadOpsPerFrame;
+  MaxUnloadOpsPerFrame = settings.MaxUnloadOpsPerFrame;
   if (BlockRegistry && !Streamer)
   {
     Streamer = std::make_unique<UChunkStreamer>(BlockWorld, *BlockRegistry,
@@ -213,6 +238,21 @@ void UWorld::SetRenderDistanceChunks(int distance)
   MeshCache.SetRenderDistanceChunks(distance);
 }
 
+void UWorld::SetChunkWriteFormat(ChunkWriteFormat format)
+{
+  if (!ChunkStorage)
+  {
+    ChunkStorage = std::make_unique<UChunkStorageService>();
+  }
+  ChunkStorage->SetWriteFormat(format);
+}
+
+ChunkWriteFormat UWorld::GetChunkWriteFormat() const
+{
+  return ChunkStorage ? ChunkStorage->GetSettings().writeFormat
+                    : ChunkWriteFormat::Binary;
+}
+
 void UWorld::InitChunkScheduler()
 {
   if (!BlockRegistry)
@@ -244,6 +284,10 @@ void UWorld::InitChunkScheduler()
   {
     AsyncChunkIo = std::make_unique<UAsyncChunkIO>();
   }
+  if (!ChunkStorage)
+  {
+    ChunkStorage = std::make_unique<UChunkStorageService>();
+  }
 }
 
 void UWorld::TickAsyncChunkSystems()
@@ -252,28 +296,74 @@ void UWorld::TickAsyncChunkSystems()
   {
     ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame);
   }
+  if (!ChunkStorage)
+  {
+    return;
+  }
+
   if (AsyncChunkIo && ProceduralTemplate.AsyncChunkIo)
   {
     for (AsyncChunkLoadResult &load : AsyncChunkIo->DrainLoads())
     {
-      if (!load.success ||
-          !load.token.IsValidFor(load.coord, load.token.sequence))
+      const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
+      bool columnCompleted = false;
+      const auto pendingIt = PendingAsyncColumnLoadSlices.find(ground);
+      if (pendingIt != PendingAsyncColumnLoadSlices.end())
       {
-        continue;
+        const int remaining = --pendingIt->second;
+        if (remaining <= 0)
+        {
+          PendingAsyncColumnLoadSlices.erase(pendingIt);
+          columnCompleted = true;
+        }
       }
-      ChunkBuffer buffer =
-          ParseChunkJsonToBuffer(load.jsonText, load.coord, *BlockRegistry);
-      if (buffer.IsEmpty())
+      else
       {
-        continue;
+        columnCompleted = true;
       }
-      buffer.ApplyTo(BlockWorld);
-      if (Streamer)
+
+      if (load.success &&
+          load.token.IsValidFor(load.coord, load.token.sequence))
       {
-        Streamer->NotifyChunkCommitted(load.coord);
+        const ChunkBuffer buffer = ChunkStorage->DeserializeChunk(
+            load.payload, load.coord, load.format, *BlockRegistry);
+        if (!buffer.IsEmpty())
+        {
+          buffer.ApplyTo(BlockWorld);
+        }
+      }
+
+      if (columnCompleted && Streamer)
+      {
+        Streamer->NotifyChunkCommitted(ground);
       }
     }
-    AsyncChunkIo->TickSaves();
+
+    for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
+    {
+      if (ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
+          ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
+      {
+        const std::string legacyJson = ChunkStorage->ChunkFilePath(
+            WorldFolderPath, save.coord, ChunkDiskFormat::Json);
+        std::error_code ec;
+        std::filesystem::remove(legacyJson, ec);
+      }
+      auto pendingIt = PendingAsyncColumnSaveSlices.find(save.groundCoord);
+      if (pendingIt != PendingAsyncColumnSaveSlices.end())
+      {
+        --pendingIt->second;
+        if (pendingIt->second <= 0)
+        {
+          PendingAsyncColumnSaveSlices.erase(pendingIt);
+          ChunkStorage->ClearColumnSavePending(save.groundCoord);
+        }
+      }
+      else
+      {
+        ChunkStorage->ClearColumnSavePending(save.groundCoord);
+      }
+    }
   }
 }
 
@@ -285,15 +375,35 @@ void UWorld::InitStreamerCallbacks()
   }
   InitChunkScheduler();
   Streamer->SetRenderDistance(RenderDistanceChunks);
+  Streamer->SetMaxLoadOpsPerFrame(MaxLoadOpsPerFrame);
+  Streamer->SetMaxUnloadOpsPerFrame(MaxUnloadOpsPerFrame);
   Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(WorldFolderPath);
   Streamer->SetCallbacks(
       [this](glm::ivec3 coord)
       {
+        if (!ChunkStorage)
+        {
+          return false;
+        }
+        if (ChunkStorage->IsColumnSavePending(coord))
+        {
+          return false;
+        }
+        if (IsTerrainColumnDiskLoadPending(coord))
+        {
+          return false;
+        }
+        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
+        {
+          RequestAsyncTerrainColumnLoad(coord);
+          return false;
+        }
         const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded =
-            LoadTerrainColumnFromFile(coord, WorldFolderPath) > 0;
+        const bool loaded = ChunkStorage->LoadTerrainColumn(
+                                coord, BlockWorld, WorldFolderPath, *BlockRegistry,
+                                ProceduralTemplate.MaxHeight) > 0;
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
@@ -302,10 +412,22 @@ void UWorld::InitStreamerCallbacks()
       },
       [this](glm::ivec3 coord)
       {
+        if (!ChunkStorage)
+        {
+          return;
+        }
         const glm::ivec3 ground(coord.x, 0, coord.z);
         const auto t0 = std::chrono::high_resolution_clock::now();
-        // Unload must persist before RemoveChunk; async IO can race on reload.
-        SaveTerrainColumnToFile(ground, WorldFolderPath);
+        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
+        {
+          RequestAsyncTerrainColumnSave(ground);
+        }
+        else
+        {
+          ChunkStorage->SaveTerrainColumn(ground, BlockWorld, WorldFolderPath,
+                                          *BlockRegistry,
+                                          ProceduralTemplate.MaxHeight);
+        }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
@@ -364,6 +486,9 @@ void UWorld::InitStreamerCallbacks()
         return IsTerrainChunkComplete(BlockWorld, coord,
                                       ProceduralTemplate.MaxHeight);
       });
+  Streamer->SetColumnPendingCallback(
+      [this](glm::ivec3 coord)
+      { return IsTerrainColumnDiskLoadPending(coord); });
 }
 
 void UWorld::RefreshStreamerSettings()
@@ -374,6 +499,112 @@ void UWorld::RefreshStreamerSettings()
   }
   Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
   Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
+  Streamer->SetMaxLoadOpsPerFrame(MaxLoadOpsPerFrame);
+  Streamer->SetMaxUnloadOpsPerFrame(MaxUnloadOpsPerFrame);
+}
+
+void UWorld::RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord)
+{
+  if (!AsyncChunkIo || !ChunkStorage || !BlockRegistry)
+  {
+    return;
+  }
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  if (ChunkStorage->IsColumnSavePending(groundCoord) ||
+      PendingAsyncColumnLoadSlices.count(groundCoord) > 0)
+  {
+    return;
+  }
+  const int maxCy =
+      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int sliceCount = maxCy + 1;
+  PendingAsyncColumnLoadSlices[groundCoord] = sliceCount;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    AsyncChunkIo->RequestLoad(slice, *ChunkStorage, WorldFolderPath,
+                              ChunkGenTokens.Current(groundCoord));
+  }
+}
+
+void UWorld::RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord)
+{
+  if (!AsyncChunkIo || !ChunkStorage || !BlockRegistry)
+  {
+    return;
+  }
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  if (ChunkStorage->IsColumnSavePending(groundCoord) ||
+      PendingAsyncColumnSaveSlices.count(groundCoord) > 0)
+  {
+    return;
+  }
+  const int maxCy =
+      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  int saveCount = 0;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    if (!BlockWorld.GetChunkManager().HasChunk(slice))
+    {
+      continue;
+    }
+    ++saveCount;
+  }
+  if (saveCount == 0)
+  {
+    return;
+  }
+  ChunkStorage->MarkColumnSavePending(groundCoord);
+  PendingAsyncColumnSaveSlices[groundCoord] = saveCount;
+  for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    if (!BlockWorld.GetChunkManager().HasChunk(slice))
+    {
+      continue;
+    }
+    AsyncChunkIo->RequestSave(slice, *ChunkStorage, WorldFolderPath, BlockWorld,
+                              *BlockRegistry, ChunkGenTokens.Current(groundCoord));
+  }
+}
+
+bool UWorld::IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  return PendingAsyncColumnLoadSlices.count(groundCoord) > 0;
+}
+
+void UWorld::LoadInitialStreamingChunks()
+{
+  if (!ChunkStorage || !BlockRegistry)
+  {
+    return;
+  }
+  const glm::ivec3 spawnBlock = WorldPosToBlock(SpawnPoint);
+  const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(spawnBlock);
+  const int radius = RenderDistanceChunks + 1;
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      ChunkStorage->LoadTerrainColumn(
+          glm::ivec3(centerChunk.x + dx, 0, centerChunk.z + dz), BlockWorld,
+          WorldFolderPath, *BlockRegistry, ProceduralTemplate.MaxHeight);
+    }
+  }
+  CachedBlockCount = BlockWorld.CountNonAir();
+  BlockWorld.GetChunkManager().ForEachChunk(
+      [this](const UChunk &chunk) { MeshCache.MarkDirty(chunk.GetCoord()); });
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -919,14 +1150,20 @@ void UWorld::Load(const std::string &world_folder_path)
   LinkUsersToPlayerCreatures();
 
   RefreshBlockRegistry();
+  if (ChunkStorage)
+  {
+    ChunkStorage->ApplyStorageMarkerFromDisk(WorldFolderPath);
+  }
 
+  const bool spatialStreamingLoad = StreamingEnabled && HasPersistedSave;
   int chunkFilesRead = 0;
   size_t voxelsFromChunkFiles = 0;
-  if (std::filesystem::exists(chunks_dir))
+  if (!spatialStreamingLoad && std::filesystem::exists(chunks_dir))
   {
     for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
     {
-      if (entry.path().extension() != ".json")
+      const auto ext = entry.path().extension();
+      if (ext != ".json" && ext != ".cchunk")
       {
         continue;
       }
@@ -942,8 +1179,12 @@ void UWorld::Load(const std::string &world_folder_path)
         const int cx = std::stoi(stem.substr(0, u1));
         const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
         const int cz = std::stoi(stem.substr(u2 + 1));
-        const int placed =
-            LoadChunkFromFile(glm::ivec3(cx, cy, cz), WorldFolderPath);
+        if (!ChunkStorage)
+        {
+          continue;
+        }
+        const int placed = ChunkStorage->LoadChunk(
+            glm::ivec3(cx, cy, cz), BlockWorld, WorldFolderPath, *BlockRegistry);
         if (placed >= 0)
         {
           ++chunkFilesRead;
@@ -957,7 +1198,8 @@ void UWorld::Load(const std::string &world_folder_path)
       }
     }
   }
-  else if (std::filesystem::exists(chunks_file_name))
+  else if (!spatialStreamingLoad &&
+           std::filesystem::exists(chunks_file_name))
   {
     LoadChunks(chunks_file_name);
     MigrateMonolithicChunksJson(chunks_file_name, WorldFolderPath);
@@ -981,21 +1223,30 @@ void UWorld::Load(const std::string &world_folder_path)
                         voxelsFromChunkFiles > 0 || blocksInWorld > 0;
   AllowProceduralFill = StreamingEnabled;
 
+  if (spatialStreamingLoad && LoadedFromChunkSave && ChunkStorage)
+  {
+    LoadInitialStreamingChunks();
+    CachedBlockCount = BlockWorld.CountNonAir();
+  }
+
+  const size_t blocksAfterSpatial = BlockWorld.CountNonAir();
+
   std::cout << "World::Load: folder=" << WorldFolderPath << std::endl;
   std::cout << "World::Load: chunk files=" << chunkFilesRead
             << " voxels from chunks=" << voxelsFromChunkFiles
-            << " blocks in world=" << blocksInWorld
+            << " blocks in world=" << blocksAfterSpatial
             << " loadedFromChunkSave=" << (LoadedFromChunkSave ? "yes" : "no")
+            << " spatialStreaming=" << (spatialStreamingLoad ? "yes" : "no")
             << std::endl;
 
-  if (blocksInWorld == 0 && !LoadedFromChunkSave && BlockRegistry)
+  if (blocksAfterSpatial == 0 && !LoadedFromChunkSave && BlockRegistry)
   {
     std::cout
         << "World::Load: empty world folder, generating procedural terrain."
         << std::endl;
     GenerateWorldBlocks();
   }
-  else if (blocksInWorld == 0 && LoadedFromChunkSave)
+  else if (blocksAfterSpatial == 0 && LoadedFromChunkSave)
   {
     if (chunkFilesRead == 0 && voxelsFromChunkFiles == 0)
     {
@@ -1016,12 +1267,22 @@ void UWorld::Load(const std::string &world_folder_path)
   }
 
   InitStreamerCallbacks();
-  if (Streamer && StreamingEnabled && LoadedFromChunkSave)
+  if (spatialStreamingLoad && LoadedFromChunkSave)
+  {
+    if (Streamer)
+    {
+      Streamer->MarkPersistedColumnsFromWorld();
+    }
+  }
+  else if (Streamer && StreamingEnabled && LoadedFromChunkSave)
   {
     Streamer->MarkPersistedColumnsFromWorld();
+    RebuildBlockMesh();
   }
-
-  RebuildBlockMesh();
+  else
+  {
+    RebuildBlockMesh();
+  }
   FinalizePlayerAfterWorldLoad();
 }
 
@@ -1033,21 +1294,33 @@ void UWorld::Save(const std::string &world_folder_path)
   const std::string users_file_name = world_folder_path + "/users.json";
   const std::string world_data_file_name =
       world_folder_path + "/world_data.json";
-  const std::string chunks_file_name = world_folder_path + "/chunks.json";
   const std::string chunks_dir = world_folder_path + "/chunks";
 
   std::filesystem::create_directories(chunks_dir);
-  BlockWorld.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
-      { SaveChunkToFile(chunk.GetCoord(), world_folder_path); });
-
-  json marker;
-  marker["format_version"] = 3;
-  marker["storage"] = "per_file";
-  std::ofstream markerFile(chunks_file_name);
-  if (markerFile.is_open())
+  if (ChunkStorage && BlockRegistry)
   {
-    markerFile << marker.dump(4);
+    const auto saveChunkCoord = [&](glm::ivec3 coord)
+    {
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!chunk)
+      {
+        return;
+      }
+      ChunkStorage->SaveChunk(coord, *chunk, world_folder_path, *BlockRegistry);
+    };
+    if (ModifiedChunks.empty())
+    {
+      BlockWorld.GetChunkManager().ForEachChunk(
+          [&](const UChunk &chunk) { saveChunkCoord(chunk.GetCoord()); });
+    }
+    else
+    {
+      for (const glm::ivec3 &coord : ModifiedChunks)
+      {
+        saveChunkCoord(coord);
+      }
+    }
+    ChunkStorage->WriteStorageMarker(world_folder_path);
   }
 
   SaveUsers(users_file_name);
@@ -3145,164 +3418,20 @@ void UWorld::SaveChunks(const std::string &file_name)
   }
 }
 
-void UWorld::SaveChunkToFile(glm::ivec3 chunkCoord,
-                             const std::string &world_folder)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunkCoord);
-  if (!chunk)
-  {
-    return;
-  }
-
-  json data;
-  data["format_version"] = 2;
-  data["cx"] = chunkCoord.x;
-  data["cy"] = chunkCoord.y;
-  data["cz"] = chunkCoord.z;
-  json voxels = json::array();
-
-  for (int z = 0; z < CHUNK_SIZE; ++z)
-  {
-    for (int y = 0; y < CHUNK_SIZE; ++y)
-    {
-      for (int x = 0; x < CHUNK_SIZE; ++x)
-      {
-        const glm::ivec3 local(x, y, z);
-        const BlockId Id = chunk->GetBlockLocal(local);
-        if (Id == BLOCK_AIR)
-        {
-          continue;
-        }
-        const std::string &type = BlockRegistry->GetTypeNameById(Id);
-        if (type.empty())
-        {
-          continue;
-        }
-        voxels.push_back({
-            {"lx", x},
-            {"ly", y},
-            {"lz", z},
-            {"type", type},
-        });
-      }
-    }
-  }
-
-  data["voxels"] = voxels;
-  const std::string chunks_dir = world_folder + "/chunks";
-  std::filesystem::create_directories(chunks_dir);
-  const std::string file_name = chunks_dir + "/" +
-                                std::to_string(chunkCoord.x) + "_" +
-                                std::to_string(chunkCoord.y) + "_" +
-                                std::to_string(chunkCoord.z) + ".json";
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << data.dump(4);
-  }
-}
-
-void UWorld::SaveTerrainColumnToFile(glm::ivec3 groundCoord,
-                                     const std::string &world_folder)
-{
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  const int maxCy =
-      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
-  {
-    SaveChunkToFile(glm::ivec3(groundCoord.x, cy, groundCoord.z),
-                    world_folder);
-  }
-}
-
-int UWorld::LoadChunkFromFile(glm::ivec3 chunkCoord,
-                              const std::string &world_folder)
-{
-  if (!BlockRegistry)
-  {
-    return -1;
-  }
-  const std::string file_name = world_folder + "/chunks/" +
-                                std::to_string(chunkCoord.x) + "_" +
-                                std::to_string(chunkCoord.y) + "_" +
-                                std::to_string(chunkCoord.z) + ".json";
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return -1;
-  }
-
-  try
-  {
-    json data = json::parse(file);
-    int placed = 0;
-    for (const auto &voxel : data.at("voxels"))
-    {
-      const int lx = voxel.at("lx").get<int>();
-      const int ly = voxel.at("ly").get<int>();
-      const int lz = voxel.at("lz").get<int>();
-      const std::string type = voxel.at("type").get<std::string>();
-      if (type.empty())
-      {
-        continue;
-      }
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-      const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
-                                chunkCoord.y * CHUNK_SIZE + ly,
-                                chunkCoord.z * CHUNK_SIZE + lz);
-      BlockWorld.SetBlock(worldPos, Id);
-      ++placed;
-    }
-    if (placed == 0)
-    {
-      return -1;
-    }
-    return placed;
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadChunkFromFile " << file_name << ": "
-              << e.what() << std::endl;
-    return -1;
-  }
-}
-
-int UWorld::LoadTerrainColumnFromFile(glm::ivec3 groundCoord,
-                                      const std::string &world_folder)
-{
-  if (groundCoord.y != 0)
-  {
-    return -1;
-  }
-  int total = 0;
-  const int maxCy =
-      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
-  {
-    const int placed =
-        LoadChunkFromFile(glm::ivec3(groundCoord.x, cy, groundCoord.z),
-                          world_folder);
-    if (placed > 0)
-    {
-      total += placed;
-    }
-  }
-  return total;
-}
-
 void UWorld::MigrateMonolithicChunksJson(const std::string & /*chunks_file*/,
                                          const std::string &world_folder)
 {
+  if (!ChunkStorage || !BlockRegistry)
+  {
+    return;
+  }
   BlockWorld.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
-      { SaveChunkToFile(chunk.GetCoord(), world_folder); });
+      {
+        ChunkStorage->SaveChunk(chunk.GetCoord(), chunk, world_folder,
+                                *BlockRegistry);
+      });
+  ChunkStorage->WriteStorageMarker(world_folder);
 }
 
 void UWorld::MigrateObjectsFromJson(const std::string &file_name)

@@ -3,6 +3,7 @@
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
+#include "World/IO/ChunkStorageTypes.h"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -12,34 +13,37 @@ namespace cutum
 
 class UBlockRegistry;
 class UBlockWorld;
-class UChunk;
+class UChunkStorageService;
 
 struct AsyncChunkLoadResult
 {
   glm::ivec3 coord;
   ChunkGenerationToken token;
-  std::string jsonText;
+  std::vector<uint8_t> payload;
+  ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
 };
 
 struct AsyncChunkSaveRequest
 {
   glm::ivec3 coord;
-  std::string jsonText;
+  glm::ivec3 groundCoord;
+  std::vector<uint8_t> payload;
   std::string filePath;
+  ChunkDiskFormat format{ChunkDiskFormat::Binary};
 };
 
 class UAsyncChunkIO
 {
 public:
-  void RequestLoad(glm::ivec3 coord, const std::string &worldFolder,
-                   ChunkGenerationToken token);
-  void RequestSave(glm::ivec3 coord, const std::string &worldFolder,
-                   const UBlockWorld &world, UBlockRegistry &registry,
-                   ChunkGenerationToken token);
+  void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
+                   const std::string &worldFolder, ChunkGenerationToken token);
+  void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
+                   const std::string &worldFolder, const UBlockWorld &world,
+                   UBlockRegistry &registry, ChunkGenerationToken token);
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
-  void TickSaves();
+  std::vector<AsyncChunkSaveRequest> DrainSaves();
 
 private:
   UJobThreadPool Pool;

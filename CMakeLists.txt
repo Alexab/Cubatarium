@@ -161,6 +161,10 @@ set(SOURCES
     src/World/Chunks/ChunkLoadScheduler.cpp
     src/World/Core/IBlockWriter.cpp
     src/World/IO/AsyncChunkIO.cpp
+    src/World/IO/ChunkStorageTypes.cpp
+    src/World/IO/JsonChunkSerializer.cpp
+    src/World/IO/BinaryChunkSerializer.cpp
+    src/World/IO/ChunkStorageService.cpp
     src/Core/Jobs/JobThreadPool.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp

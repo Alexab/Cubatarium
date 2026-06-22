@@ -80,6 +80,8 @@ struct ProceduralSettings
   bool AsyncChunkGeneration{true};
   bool AsyncChunkIo{true};
   int MaxChunkCommitsPerFrame{3};
+  int MaxLoadOpsPerFrame{4};
+  int MaxUnloadOpsPerFrame{2};
   int FlatSurfaceY{3};
   bool FillWater{false};
   bool FillLava{false};

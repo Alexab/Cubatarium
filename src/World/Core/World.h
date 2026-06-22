@@ -23,6 +23,8 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "World/IO/AsyncChunkIO.h"
+#include "World/IO/ChunkStorageService.h"
+#include "World/IO/ChunkStorageTypes.h"
 #include <array>
 #include <functional>
 #include <glm/glm.hpp>
@@ -390,6 +392,12 @@ public:
 
   void SetStreamingEnabled(bool enabled) { StreamingEnabled = enabled; }
   void SetRenderDistanceChunks(int distance);
+  void SetChunkWriteFormat(ChunkWriteFormat format);
+  ChunkWriteFormat GetChunkWriteFormat() const;
+  void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
+  void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
+  UChunkStorageService &GetChunkStorage() { return *ChunkStorage; }
+  const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
   bool IsStreamingEnabled() const { return StreamingEnabled; }
 
   void SetRenderSettings(const RenderSettings &settings);
@@ -440,13 +448,10 @@ private:
   void SaveBlocks(const std::string &file_name);
   void LoadChunks(const std::string &file_name);
   void SaveChunks(const std::string &file_name);
-  void SaveChunkToFile(glm::ivec3 chunkCoord, const std::string &world_folder);
-  void SaveTerrainColumnToFile(glm::ivec3 groundCoord,
-                               const std::string &world_folder);
-  /// Returns voxels placed (>=0), or -1 if the file could not be read/parsed.
-  int LoadChunkFromFile(glm::ivec3 chunkCoord, const std::string &world_folder);
-  int LoadTerrainColumnFromFile(glm::ivec3 groundCoord,
-                                const std::string &world_folder);
+  void LoadInitialStreamingChunks();
+  void RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord);
+  void RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord);
+  bool IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const;
   void MigrateMonolithicChunksJson(const std::string &chunks_file,
                                    const std::string &world_folder);
 
@@ -518,11 +523,16 @@ private:
   std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
   UChunkGenerationRegistry ChunkGenTokens;
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
+  std::unique_ptr<UChunkStorageService> ChunkStorage;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
   bool StreamingEnabled{true};
   bool StepUpEnabled{true};
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   int RenderDistanceChunks{4};
+  int MaxLoadOpsPerFrame{4};
+  int MaxUnloadOpsPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> ModifiedChunks;
   std::string WorldFolderPath;
   bool IsIntersectionExists;

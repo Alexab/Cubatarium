@@ -170,6 +170,16 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
     settings.MaxChunkCommitsPerFrame =
         std::clamp(p["max_chunk_commits_per_frame"].get<int>(), 1, 32);
   }
+  if (p.contains("max_load_ops_per_frame"))
+  {
+    settings.MaxLoadOpsPerFrame =
+        std::clamp(p["max_load_ops_per_frame"].get<int>(), 1, 32);
+  }
+  if (p.contains("max_unload_ops_per_frame"))
+  {
+    settings.MaxUnloadOpsPerFrame =
+        std::clamp(p["max_unload_ops_per_frame"].get<int>(), 1, 32);
+  }
   if (p.contains("streaming") && p["streaming"].is_object())
   {
     ParseProceduralStreamingOptions(p["streaming"], settings);
@@ -182,6 +192,8 @@ void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
   procedural["async_chunk_generation"] = settings.AsyncChunkGeneration;
   procedural["async_chunk_io"] = settings.AsyncChunkIo;
   procedural["max_chunk_commits_per_frame"] = settings.MaxChunkCommitsPerFrame;
+  procedural["max_load_ops_per_frame"] = settings.MaxLoadOpsPerFrame;
+  procedural["max_unload_ops_per_frame"] = settings.MaxUnloadOpsPerFrame;
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)

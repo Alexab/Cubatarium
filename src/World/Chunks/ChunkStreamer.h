@@ -7,6 +7,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -44,6 +45,7 @@ public:
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
+  using IsColumnPendingFn = std::function<bool(glm::ivec3)>;
 
   UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t Seed,
                  int baseY, int MaxHeight);
@@ -55,6 +57,7 @@ public:
   void SetAsyncGeneration(bool enabled) { AsyncGeneration = enabled; }
   void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
                          IsChunkCommittedFn isCommittedFn);
+  void SetColumnPendingCallback(IsColumnPendingFn fn);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void MarkPersistedColumnsFromWorld();
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
@@ -77,6 +80,8 @@ public:
 
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
+  void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
                            const glm::vec3 &eyePos, const PlayerCapsule &cap);
   bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
@@ -102,9 +107,11 @@ private:
   GenerateColumnFn OnGenerateColumn;
   RequestAsyncChunkFn OnRequestAsyncChunk;
   IsChunkCommittedFn OnIsChunkCommitted;
+  IsColumnPendingFn OnIsColumnPending;
   bool AsyncGeneration{false};
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   StreamingFrameStats LastFrameStats;
 };
 

@@ -42,7 +42,7 @@
 #include "Render/Textures/TextureCube.h"
 #include "Storage/ObjectStorage.h"
 #include "Version.h"
-#include "World/Core/World.h"
+#include "World/IO/ChunkStorageTypes.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -324,6 +324,14 @@ void UCore::LoadConfig(const std::string &config_file_name)
       TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
       RenderDistanceChunks = d.value("render_distance_chunks", 4);
       StreamingEnabled = d.value("streaming_enabled", true);
+      if (d.contains("chunk_storage") && d["chunk_storage"].is_string())
+      {
+        ChunkStorageFormat = d["chunk_storage"].get<std::string>();
+      }
+      else
+      {
+        ChunkStorageFormat = "binary";
+      }
       if (d.contains("gameplay") && d["gameplay"].is_object())
       {
         const json &gameplay = d["gameplay"];
@@ -477,6 +485,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
               << ")" << std::endl;
     WorldInstance->SetStreamingEnabled(StreamingEnabled);
     WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
+    WorldInstance->SetChunkWriteFormat(
+        ChunkWriteFormatFromString(ChunkStorageFormat));
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
     WorldInstance->SetRenderSettings(Render);
@@ -636,6 +646,7 @@ void UCore::SaveConfigFile()
   WriteProceduralTemplateConfig(system_data, ProceduralTemplate);
   system_data["render_distance_chunks"] = RenderDistanceChunks;
   system_data["streaming_enabled"] = StreamingEnabled;
+  system_data["chunk_storage"] = ChunkStorageFormat;
   json gameplay;
   gameplay["step_up"] = StepUpEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
@@ -736,6 +747,8 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
 
   WorldInstance->SetStreamingEnabled(StreamingEnabled);
   WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
+  WorldInstance->SetChunkWriteFormat(
+      ChunkWriteFormatFromString(ChunkStorageFormat));
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
   WorldInstance->SetRenderSettings(Render);
