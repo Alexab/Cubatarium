@@ -33,7 +33,8 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     const int initH = fbSize.y > 0 ? fbSize.y : 720;
     if (!window.Initialize(initW, initH, "Cubatarium"))
     {
-      CubatariumLogError("App", "Failed to initialize platform window");
+      CubatariumLogError("App",
+                         "Failed to initialize platform window (OpenGL/GLFW)");
       return -1;
     }
 
@@ -51,7 +52,8 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
 
     if (!text_renderer->Initialize(16))
     {
-      CubatariumLogError("App", "Failed to initialize text renderer");
+      CubatariumLogError("App",
+                         "Failed to initialize text renderer (FreeType/fonts)");
       return -1;
     }
 
@@ -62,7 +64,8 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
         text_renderer);
     if (!geometry_engine->InitEngine())
     {
-      CubatariumLogError("App", "Failed to initialize geometry engine");
+      CubatariumLogError("App",
+                         "Failed to initialize geometry engine (shaders/GPU)");
       return -1;
     }
 

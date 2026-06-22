@@ -2,6 +2,7 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/InputManager.h"
+#include "App/Platform/Log.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
@@ -14,6 +15,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ThirdParty/stb_image.h"
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -87,28 +89,42 @@ UWindowManager::~UWindowManager() { Shutdown(); }
 
 bool UWindowManager::Initialize(int width, int height, const char *title)
 {
-  // GLFW initialization
+  glfwSetErrorCallback(ErrorCallback);
+
   if (!glfwInit())
   {
-    std::cerr << "Failed to initialize GLFW" << std::endl;
+    CubatariumLogError("Window", "Failed to initialize GLFW");
     return false;
   }
 
-  // GLFW configuration
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  glfwWindowHint(GLFW_SAMPLES, 4); // MSAA
-
+  auto createWindow = [&](bool multisample) -> GLFWwindow * {
+    glfwDefaultWindowHints();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    if (multisample)
+    {
+      glfwWindowHint(GLFW_SAMPLES, 4);
+    }
 #ifdef __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+    return glfwCreateWindow(width, height, title, nullptr, nullptr);
+  };
 
-  // Window creation
-  Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+  Window = createWindow(true);
   if (!Window)
   {
-    std::cerr << "Failed to create GLFW window" << std::endl;
+    CubatariumLogInfo("Window",
+                      "OpenGL window with MSAA failed, retrying without MSAA");
+    Window = createWindow(false);
+  }
+  if (!Window)
+  {
+    CubatariumLogError(
+        "Window",
+        "Failed to create OpenGL 3.3 window. Install or update your GPU "
+        "driver (OpenGL 3.3 Core required).");
     glfwTerminate();
     return false;
   }
@@ -125,7 +141,10 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
 #ifndef __ANDROID__
   if (glewInit() != GLEW_OK)
   {
-    std::cerr << "Failed to initialize GLEW" << std::endl;
+    CubatariumLogError("Window", "Failed to initialize GLEW");
+    glfwDestroyWindow(Window);
+    Window = nullptr;
+    glfwTerminate();
     return false;
   }
 #endif
@@ -850,7 +869,10 @@ void UWindowManager::ScrollCallback(GLFWwindow *window, double Xoffset,
 
 void UWindowManager::ErrorCallback(int error, const char *description)
 {
-  std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+  std::ostringstream oss;
+  oss << "GLFW error " << error << ": "
+      << (description ? description : "(no description)");
+  CubatariumLogInfo("GLFW", oss.str());
 }
 
 void UWindowManager::WindowCloseCallback(GLFWwindow *w)

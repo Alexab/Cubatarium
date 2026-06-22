@@ -445,6 +445,10 @@ endif()
 
 add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
 
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CUBATARIUM_GENERATED_DIR}

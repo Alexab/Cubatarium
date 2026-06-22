@@ -28,6 +28,8 @@ $cmakeArgs = @(
     '-S', $Root,
     "-DCMAKE_BUILD_TYPE=$Config",
     "-DCMAKE_TOOLCHAIN_FILE=$VcpkgToolchain",
+    '-DVCPKG_MANIFEST_MODE=ON',
+    '-DVCPKG_TARGET_TRIPLET=x64-windows-static',
     '-DCMAKE_GENERATOR_PLATFORM=x64',
     '-G', 'Visual Studio 17 2022'
 )

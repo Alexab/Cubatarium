@@ -19,6 +19,7 @@
 *.pro.user
 *.exe
 *.dll
+/packaging/windows/installer/InstallSources
 /packaging/windows/installer/InstallSourcesQt
 /worlds
 /bin/worlds/
