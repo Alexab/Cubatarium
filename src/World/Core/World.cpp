@@ -730,8 +730,11 @@ void UWorld::ReloadAllCreatureVisuals()
       });
 }
 
+void UWorld::WaitForPendingMeshJobs() { MeshCache.WaitForAsyncMeshIdle(); }
+
 void UWorld::RefreshBlockRegistry()
 {
+  WaitForPendingMeshJobs();
   if (BlockRegistry)
   {
     if (BlockMergeRegistry)

@@ -518,6 +518,10 @@ void UCore::RebuildBlockTexturesFromMergeRegistry()
   {
     return;
   }
+  if (WorldInstance)
+  {
+    WorldInstance->WaitForPendingMeshJobs();
+  }
   BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
       *BlockDefinitionsInstance);
   TextureBaseStorageInstance->Clear();

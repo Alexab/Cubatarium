@@ -119,6 +119,14 @@ bool UChunkMeshCache::HasPendingAsyncMeshWork() const
   return AsyncBuilder->HasPendingWork();
 }
 
+void UChunkMeshCache::WaitForAsyncMeshIdle()
+{
+  if (Render.AsyncMeshing && Render.GreedyMeshing && AsyncBuilder)
+  {
+    AsyncBuilder->WaitIdle();
+  }
+}
+
 bool UChunkMeshCache::HasPendingDirty() const
 {
   return !DirtyChunks.empty() || HasPendingAsyncMeshWork();

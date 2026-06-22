@@ -114,6 +114,7 @@ public:
   UBlockRegistry &GetBlockRegistry() { return *BlockRegistry; }
   const UBlockRegistry &GetBlockRegistry() const { return *BlockRegistry; }
 
+  void WaitForPendingMeshJobs();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
   void OnBlockRegistryRuntimeOverlayChanged();

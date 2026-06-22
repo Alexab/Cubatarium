@@ -40,6 +40,7 @@ public:
                              glm::ivec3 chunkCoord);
   bool HasPendingDirty() const;
   bool HasPendingAsyncMeshWork() const;
+  void WaitForAsyncMeshIdle();
   size_t GetDirtyCount() const { return DirtyChunks.size(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;
