@@ -24,8 +24,8 @@ jobs:
 
       - name: Install NDK and CMake
         run: |
-          sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1"
-          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
+          sdkmanager --install "ndk;30.0.14904198" "cmake;3.22.1"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/30.0.14904198" >> $GITHUB_ENV
 
       - name: Assemble debug APK
         working-directory: platforms/android

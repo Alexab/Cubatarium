@@ -59,8 +59,12 @@ bin/console_history.txt
 platforms/android/app/src/main/assets/
 platforms/android/.gradle/
 platforms/android/app/build/
+platforms/android/app/.cxx/
 platforms/android/build/
 platforms/android/local.properties
+platforms/android/keystore.properties
+platforms/android/version.properties
+platforms/android/*.jks
 platforms/android/gradle/gradle-daemon-jvm.properties
 
 # Local Minecraft-derived pack (generate via tools/migrate_to_resource_pack.ps1)

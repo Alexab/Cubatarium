@@ -38,12 +38,24 @@ cd platforms\android
 .\gradlew.bat assembleDebug
 ```
 
-APK: `platforms/android/app/build/outputs/apk/debug/app-debug.apk`
+APK: `platforms/android/app/build/outputs/apk/debug/cubatarium-<version>.apk`
+
+## Release AAB (Google Play)
+
+```powershell
+.\build-android-release.ps1
+```
+
+Подпись: `platforms/android/setup-release-keystore.ps1` → `keystore.properties` (см. `keystore.properties.example`).
+
+AAB: `platforms/android/app/build/outputs/bundle/release/cubatarium-<version>.aab`
+
+Полная инструкция выкладки: [`docs/GOOGLE_PLAY.md`](../../docs/GOOGLE_PLAY.md).
 
 ## Установка и запуск (adb)
 
 ```powershell
-adb install -r platforms\android\app\build\outputs\apk\debug\app-debug.apk
+adb install -r platforms\android\app\build\outputs\apk\debug\cubatarium-*.apk
 adb logcat -c
 adb shell am start -n com.cubatarium/.MainActivity
 adb logcat -s App:E EGL:E Android:E Asset:E AndroidRuntime:E libc:F DEBUG:F

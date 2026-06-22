@@ -1,5 +1,38 @@
 // Mirrors cmake/GetVersionFromGit.cmake for Android versionName / APK filename.
 
+ext.resolveCubatariumVersionCode = { File repoRoot ->
+    def gitRun = { List<String> args ->
+        def proc = ["git"] + args
+        def pb = new ProcessBuilder(proc)
+        pb.directory(repoRoot)
+        pb.redirectErrorStream(true)
+        def process = pb.start()
+        def output = process.inputStream.getText("UTF-8").trim()
+        def rc = process.waitFor()
+        return [rc, output]
+    }
+
+    def propsFile = new File(repoRoot, "platforms/android/version.properties")
+    if (propsFile.exists()) {
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        def override = props.getProperty("versionCode")
+        if (override != null && override.isInteger()) {
+            return override.toInteger()
+        }
+    }
+
+    def (insideRc, insideOut) = gitRun(["rev-parse", "--is-inside-work-tree"])
+    if (insideRc == 0 && insideOut == "true") {
+        def (countRc, countOut) = gitRun(["rev-list", "--count", "HEAD"])
+        if (countRc == 0 && countOut.isInteger()) {
+            return countOut.toInteger()
+        }
+    }
+
+    return 1
+}
+
 ext.resolveCubatariumVersion = { File repoRoot ->
     final String fallback = "0.0.1.1"
     String resolved = fallback

@@ -10,6 +10,10 @@ configurations.configureEach {
 def repoRoot = file("../../..").absolutePath
 apply from: "../version.gradle"
 def appVersion = resolveCubatariumVersion(file("../../.."))
+def appVersionCode = resolveCubatariumVersionCode(file("../../.."))
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def hasReleaseKeystore = keystorePropertiesFile.exists()
 
 android {
     namespace 'com.cubatarium'
@@ -20,13 +24,33 @@ android {
         applicationId "com.cubatarium"
         minSdk 24
         targetSdk 35
-        versionCode 1
+        versionCode appVersionCode
         versionName appVersion
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17 -frtti -fexceptions"
                 arguments "-DANDROID_STL=c++_shared"
-                abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
+                abiFilters "armeabi-v7a", "arm64-v8a"
+            }
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseKeystore) {
+                def props = new Properties()
+                keystorePropertiesFile.withInputStream { props.load(it) }
+                def keystoreProp = { String key ->
+                    def value = props.getProperty(key)
+                    if (value == null) {
+                        throw new GradleException("keystore.properties missing '${key}'")
+                    }
+                    return value.trim()
+                }
+                storeFile rootProject.file(keystoreProp('storeFile'))
+                storePassword keystoreProp('storePassword')
+                keyAlias keystoreProp('keyAlias')
+                keyPassword keystoreProp('keyPassword')
             }
         }
     }
@@ -37,10 +61,16 @@ android {
             jniDebuggable true
             ndk {
                 debugSymbolLevel 'FULL'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
             }
         }
         release {
             minifyEnabled false
+            debuggable false
+            jniDebuggable false
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -99,5 +129,27 @@ dependencies {
 android.applicationVariants.configureEach { variant ->
     variant.outputs.configureEach { output ->
         output.outputFileName = "cubatarium-${variant.versionName}.apk"
+    }
+}
+
+tasks.register("printVersionCode") {
+    doLast {
+        println android.defaultConfig.versionCode.get()
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleRelease") {
+        task.doLast {
+            def bundleDir = file("${buildDir}/outputs/bundle/release")
+            def defaultBundle = new File(bundleDir, "app-release.aab")
+            if (defaultBundle.exists()) {
+                def renamed = new File(bundleDir, "cubatarium-${appVersion}.aab")
+                if (renamed.exists()) {
+                    renamed.delete()
+                }
+                defaultBundle.renameTo(renamed)
+            }
+        }
     }
 }
