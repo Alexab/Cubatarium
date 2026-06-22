@@ -14,7 +14,7 @@ try {
     }
     & .\gradlew.bat assembleDebug @args
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    $apk = Get-ChildItem -Recurse -Filter "app-debug.apk" "app\build\outputs\apk\debug" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $apk = Get-ChildItem -Recurse -Filter "cubatarium-*.apk" "app\build\outputs\apk\debug" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($apk) {
         Write-Host "APK: $($apk.FullName)"
     }
