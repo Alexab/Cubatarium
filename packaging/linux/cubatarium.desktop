@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Cubatarium
+Comment=Offline voxel sandbox game
+Exec=bin/Cubatarium
+Icon=cubatarium
+Terminal=false
+Categories=Game;
+StartupWMClass=Cubatarium

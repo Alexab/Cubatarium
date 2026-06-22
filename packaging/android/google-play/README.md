@@ -7,8 +7,8 @@
 ### Keystore (upload key)
 
 ```powershell
+.\scripts\android\setup-release-keystore.ps1
 cd platforms\android
-.\setup-release-keystore.ps1
 copy keystore.properties.example keystore.properties
 # Отредактировать keystore.properties: пароли и путь к .jks
 ```
@@ -27,8 +27,8 @@ copy keystore.properties.example keystore.properties
 
 ### Store assets
 
-- **Иконка 512×512:** [`platforms/android/store-assets/icon-512.png`](../platforms/android/store-assets/icon-512.png) (перегенерация: `platforms/android/generate-launcher-icons.ps1`)
-- Минимум 2 скриншота (landscape, с эмулятора или устройства)
+- **Иконка 512×512:** [`../store-assets/icon-512.png`](../store-assets/icon-512.png) (перегенерация: `scripts/branding/generate-app-icons.ps1`)
+- Минимум 2 скриншота (landscape, с эмулятора или устройства) → `packaging/android/store-assets/screenshots/`
 - Опционально: feature graphic 1024×500
 
 ---

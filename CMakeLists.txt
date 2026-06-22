@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Static CRT (/MT) and vcpkg libs for MSVC Windows (Release family + Debug in bin/).
+# Static CRT (/MT) and vcpkg libs for MSVC Windows. Runtime output goes to bin/.
 if(WIN32 AND (MSVC OR CMAKE_GENERATOR MATCHES "Visual Studio"))
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -340,7 +340,7 @@ set(HEADERS
 )
 
 if(WIN32)
-    set(ICON_RESOURCE resources/Cubatarium.ico)
+    set(CUBATARIUM_WIN_RC "${CMAKE_SOURCE_DIR}/resources/branding/Cubatarium.rc")
 endif()
 
 # --- Android native library ---
@@ -435,9 +435,15 @@ if(ANDROID)
     return()
 endif()
 
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+set(CUBATARIUM_RUN_DIR "${CMAKE_SOURCE_DIR}/bin" CACHE PATH "Runtime directory (executable + game data)")
+file(MAKE_DIRECTORY "${CUBATARIUM_RUN_DIR}")
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${ICON_RESOURCE})
+set(CUBATARIUM_DESKTOP_SOURCES ${SOURCES} ${HEADERS})
+if(WIN32 AND EXISTS "${CUBATARIUM_WIN_RC}")
+    list(APPEND CUBATARIUM_DESKTOP_SOURCES "${CUBATARIUM_WIN_RC}")
+endif()
+
+add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
@@ -462,18 +468,18 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY ${CUBATARIUM_RUN_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CUBATARIUM_RUN_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CUBATARIUM_RUN_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CUBATARIUM_RUN_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CUBATARIUM_RUN_DIR}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/shaders"
-        "${CMAKE_BINARY_DIR}/shaders"
-    COMMENT "Copying shaders to output directory"
+        "${CUBATARIUM_RUN_DIR}/shaders"
+    COMMENT "Copying shaders to runtime directory"
 )
 
 # Seed bin/config.json from template only on first run (never overwrite runtime config).
@@ -481,7 +487,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/config.json.example")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND}
             -DCONFIG_SRC="${CMAKE_SOURCE_DIR}/config.json.example"
-            -DCONFIG_DST="${CMAKE_BINARY_DIR}/config.json"
+            -DCONFIG_DST="${CUBATARIUM_RUN_DIR}/config.json"
             -P "${CMAKE_SOURCE_DIR}/cmake/copy_config_if_missing.cmake"
         COMMENT "Seeding config.json next to executable if missing"
     )
@@ -491,7 +497,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/prefabs")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/prefabs"
-            "${CMAKE_BINARY_DIR}/prefabs"
+            "${CUBATARIUM_RUN_DIR}/prefabs"
         COMMENT "Copying prefabs to output directory"
     )
 endif()
@@ -500,7 +506,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/models")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/models"
-            "${CMAKE_BINARY_DIR}/models"
+            "${CUBATARIUM_RUN_DIR}/models"
         COMMENT "Copying models to output directory"
     )
 endif()
@@ -509,7 +515,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/textures"
-            "${CMAKE_BINARY_DIR}/textures"
+            "${CUBATARIUM_RUN_DIR}/textures"
         COMMENT "Copying textures to output directory"
     )
 endif()
@@ -518,7 +524,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/content")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/content"
-            "${CMAKE_BINARY_DIR}/content"
+            "${CUBATARIUM_RUN_DIR}/content"
         COMMENT "Copying content data to output directory"
     )
 endif()
@@ -527,7 +533,25 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/resource_packs"
-            "${CMAKE_BINARY_DIR}/resource_packs"
-        COMMENT "Copying resource packs to output directory"
+            "${CUBATARIUM_RUN_DIR}/resource_packs"
+        COMMENT "Copying resource packs to runtime directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/fonts")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/fonts"
+            "${CUBATARIUM_RUN_DIR}/fonts"
+        COMMENT "Copying fonts to runtime directory"
+    )
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/resources/branding/icon-64.png")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/resources/branding/icon-64.png"
+            "${CUBATARIUM_RUN_DIR}/icon.png"
+        COMMENT "Copying window icon to runtime directory"
     )
 endif()

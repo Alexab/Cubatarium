@@ -9,7 +9,7 @@
   session so changes apply without restarting the terminal.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File platforms/windows/setup-android-env.ps1
+  powershell -ExecutionPolicy Bypass -File scripts/env/setup-android-env.ps1
 #>
 param(
     [switch]$WhatIf
@@ -232,5 +232,5 @@ Write-Host 'Done. User environment variables updated.' -ForegroundColor Green
 Write-Host 'Open a NEW cmd/PowerShell window for a clean PATH.'
 Write-Host ''
 Write-Host 'If "java -version" still shows Java 8 in cmd, run as Administrator:'
-Write-Host '  powershell -ExecutionPolicy Bypass -File platforms\windows\fix-java-precedence.ps1'
+Write-Host '  powershell -ExecutionPolicy Bypass -File scripts\env\fix-java-precedence.ps1'
 Write-Host 'Gradle/Android builds use JAVA_HOME regardless.'

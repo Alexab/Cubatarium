@@ -12,6 +12,7 @@
 #include "Render/Engine/ViewEngine.h"
 #include "World/Core/World.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "ThirdParty/stb_image.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -41,6 +42,33 @@ glm::ivec2 CursorToFramebufferPixels(GLFWwindow *window, float x, float y)
   const float sx = static_cast<float>(fb_w) / static_cast<float>(win_w);
   const float sy = static_cast<float>(fb_h) / static_cast<float>(win_h);
   return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
+}
+
+void TrySetWindowIcon(GLFWwindow *window)
+{
+  if (!window)
+  {
+    return;
+  }
+  const char *paths[] = {"icon.png", "resources/branding/icon-64.png"};
+  for (const char *path : paths)
+  {
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char *pixels = stbi_load(path, &width, &height, &channels, 4);
+    if (!pixels || width <= 0 || height <= 0)
+    {
+      continue;
+    }
+    GLFWimage image{};
+    image.width = width;
+    image.height = height;
+    image.pixels = pixels;
+    glfwSetWindowIcon(window, 1, &image);
+    stbi_image_free(pixels);
+    return;
+  }
 }
 
 } // namespace
@@ -84,6 +112,8 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
     glfwTerminate();
     return false;
   }
+
+  TrySetWindowIcon(Window);
 
   WindowWidth = width;
   WindowHeight = height;

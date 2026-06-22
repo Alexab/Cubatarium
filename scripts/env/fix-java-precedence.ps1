@@ -5,7 +5,7 @@
   Removes Oracle Java 8 shims from SYSTEM Path so Android Studio JBR (User Path) wins.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File platforms/windows/fix-java-precedence.ps1
+  powershell -ExecutionPolicy Bypass -File scripts/env/fix-java-precedence.ps1
 #>
 param([switch]$WhatIf)
 

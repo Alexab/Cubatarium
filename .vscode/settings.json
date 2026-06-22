@@ -4,7 +4,7 @@
     "editor.detectIndentation": false,
     "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
     "cmake.generator": "Visual Studio 17 2022",
-    "cmake.buildDirectory": "${workspaceFolder}/bin",
+    "cmake.buildDirectory": "${workspaceFolder}/build/desktop-msvc",
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.parallelJobs": 8,
     "cmake.configureOnOpen": true,

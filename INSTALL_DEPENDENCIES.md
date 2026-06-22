@@ -29,7 +29,7 @@ vcpkg install glfw3 glew glm freetype nlohmann-json --triplet x64-windows-static
 vcpkg integrate install
 ```
 
-После смены triplet удалите `bin/CMakeCache.txt` (или задачу clean-cache) и перезапустите configure.
+После смены triplet удалите `build/desktop-msvc/CMakeCache.txt` (или задачу clean-cache) и перезапустите configure.
 
 ### Вариант 2: Ручная установка
 
@@ -151,18 +151,19 @@ int main() {
 
 ## Сборка проекта
 
+Desktop: CMake build tree в `build/desktop-*`, запуск из `bin/`. Подробнее: [platforms/desktop/README.md](platforms/desktop/README.md).
+
 ```bash
-# Создание директории сборки
-mkdir build
-cd build
+# Linux
+./scripts/build/linux-configure.sh Release
+cmake --build build/desktop-linux
+./bin/Cubatarium
+```
 
-# Конфигурация CMake
-cmake ..
-
-# Сборка
-make -j$(nproc)  # Linux/macOS
-# или
-cmake --build . --config Release  # Windows
+```powershell
+# Windows
+.\configure.ps1 -Config Release
+cmake --build build\desktop-msvc --config Release
 ```
 
 ## Устранение проблем

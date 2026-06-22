@@ -1,6 +1,7 @@
-# Create upload keystore and keystore.properties for Play Store release signing.
+# Create upload keystore and keystore.properties for store release signing.
 $ErrorActionPreference = "Stop"
-$androidDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$androidDir = Join-Path $repoRoot "platforms\android"
 $keystorePath = Join-Path $androidDir "cubatarium-upload.jks"
 $propsPath = Join-Path $androidDir "keystore.properties"
 
@@ -16,7 +17,7 @@ if (-not $keytool) {
 
 if (-not (Test-Path $keystorePath)) {
     Write-Host "Generating upload keystore at $keystorePath"
-    Write-Host "You will be prompted for keystore and key passwords (remember them for Play upload key)."
+    Write-Host "You will be prompted for keystore and key passwords (remember them for upload key)."
     & keytool -genkeypair -v `
         -keystore $keystorePath `
         -keyalg RSA `
@@ -28,5 +29,6 @@ if (-not (Test-Path $keystorePath)) {
 
 Write-Host ""
 Write-Host "Create keystore.properties manually from keystore.properties.example"
+Write-Host "  cd platforms\android"
 Write-Host "  copy keystore.properties.example keystore.properties"
 Write-Host "Then set storePassword and keyPassword to match your keystore."

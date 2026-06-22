@@ -1,6 +1,8 @@
-# Generate legacy mipmap launcher PNGs (API 24-25 fallback; adaptive icon used on API 26+).
+# Generate app icons for desktop (Windows/Linux), Android, and store listings.
 $ErrorActionPreference = "Stop"
-$resRoot = Join-Path $PSScriptRoot "app\src\main\res"
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$brandingDir = Join-Path $repoRoot "resources\branding"
+$resRoot = Join-Path $repoRoot "platforms\android\app\src\main\res"
 Add-Type -AssemblyName System.Drawing
 
 function New-LauncherPng {
@@ -44,10 +46,43 @@ function New-LauncherPng {
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $bmp.Save($OutPath, [System.Drawing.Imaging.ImageFormat]::Png)
     $g.Dispose()
-    $bmp.Dispose()
+    return $bmp
 }
 
-$sizes = @{
+function Save-IconFile {
+    param([System.Drawing.Bitmap]$Bitmap, [string]$Path)
+    $icon = [System.Drawing.Icon]::FromHandle($Bitmap.GetHicon())
+    $fs = [System.IO.File]::Create($Path)
+    try {
+        $icon.Save($fs)
+    } finally {
+        $fs.Close()
+        $icon.Dispose()
+    }
+}
+
+New-Item -ItemType Directory -Force -Path $brandingDir | Out-Null
+
+$icon512Path = Join-Path $brandingDir "icon-512.png"
+$bmp512 = New-LauncherPng -Size 512 -OutPath $icon512Path
+Write-Host "Wrote $icon512Path"
+
+$icon256Path = Join-Path $brandingDir "icon-256.png"
+$bmp256 = New-LauncherPng -Size 256 -OutPath $icon256Path
+Write-Host "Wrote $icon256Path"
+$bmp256.Dispose()
+
+$icon64Path = Join-Path $brandingDir "icon-64.png"
+$bmp64 = New-LauncherPng -Size 64 -OutPath $icon64Path
+Write-Host "Wrote $icon64Path"
+$bmp64.Dispose()
+
+$icoPath = Join-Path $brandingDir "Cubatarium.ico"
+Save-IconFile -Bitmap $bmp512 -Path $icoPath
+$bmp512.Dispose()
+Write-Host "Wrote $icoPath"
+
+$mipmapSizes = @{
     "mipmap-mdpi"    = 48
     "mipmap-hdpi"    = 72
     "mipmap-xhdpi"   = 96
@@ -55,14 +90,23 @@ $sizes = @{
     "mipmap-xxxhdpi" = 192
 }
 
-foreach ($entry in $sizes.GetEnumerator()) {
+foreach ($entry in $mipmapSizes.GetEnumerator()) {
     $out = Join-Path $resRoot "$($entry.Key)\ic_launcher.png"
-    New-LauncherPng -Size $entry.Value -OutPath $out
+    $bmp = New-LauncherPng -Size $entry.Value -OutPath $out
+    $bmp.Dispose()
     Copy-Item $out (Join-Path $resRoot "$($entry.Key)\ic_launcher_round.png") -Force
     Write-Host "Wrote $out"
 }
 
-$storeDir = Join-Path $PSScriptRoot "store-assets"
-$storeIcon = Join-Path $storeDir "icon-512.png"
-New-LauncherPng -Size 512 -OutPath $storeIcon
-Write-Host "Wrote $storeIcon (Play Store listing)"
+$storeIcon = Join-Path $repoRoot "packaging\android\store-assets\icon-512.png"
+Copy-Item $icon512Path $storeIcon -Force
+Write-Host "Wrote $storeIcon"
+
+$fdroidIcon = Join-Path $repoRoot "packaging\android\fdroid\metadata\en-US\images\icon.png"
+Copy-Item $icon512Path $fdroidIcon -Force
+Write-Host "Wrote $fdroidIcon"
+
+$linuxIcon = Join-Path $repoRoot "packaging\linux\hicolor\256x256\apps\cubatarium.png"
+New-Item -ItemType Directory -Force -Path (Split-Path $linuxIcon -Parent) | Out-Null
+Copy-Item $icon256Path $linuxIcon -Force
+Write-Host "Wrote $linuxIcon"

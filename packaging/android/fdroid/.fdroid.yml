@@ -1,0 +1,37 @@
+# Draft F-Droid metadata for Cubatarium.
+# Fill commit and versionName before use. See README.md for blockers.
+
+Categories:
+  - Game
+License: MIT
+AuthorName: Alexandr Bakhshiev
+WebSite: https://github.com/YOUR_ORG/Cubatarium
+SourceCode: https://github.com/YOUR_ORG/Cubatarium
+IssueTracker: https://github.com/YOUR_ORG/Cubatarium/issues
+RepoType: git
+
+AutoName: Cubatarium
+Summary: Voxel sandbox game (offline)
+Description: |
+  Cubatarium is an offline voxel sandbox game with procedural worlds,
+  resource packs, and creatures. No network permissions.
+
+Builds:
+  - versionName: '0.0.0'
+    commit: v0.0.0.0
+    subdir: platforms/android
+    gradle:
+      - assembleRelease
+    prebuild:
+      - cd ../.. && git submodule update --init --recursive || true
+    scandelete:
+      - app/.cxx
+      - app/build
+    buildjni:
+      - yes
+
+ArchivePolicy: 0
+AntiFeatures: []
+
+# CC BY-SA asset packs are allowed with attribution (see THIRD_PARTY_NOTICES.md).
+# Set NonFreeAssets if NC/ND licensed assets are included.

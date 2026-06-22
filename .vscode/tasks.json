@@ -9,7 +9,7 @@
                 "-S",
                 "${workspaceFolder}",
                 "-B",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-G",
                 "Visual Studio 17 2022",
                 "-A",
@@ -38,7 +38,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Debug",
                 "--parallel",
@@ -69,7 +69,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Release",
                 "--parallel",
@@ -97,7 +97,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--target",
                 "clean"
             ],
@@ -119,7 +119,7 @@
             "args": [
                 "-Recurse",
                 "-Force",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-ErrorAction",
                 "SilentlyContinue"
             ],
@@ -142,7 +142,7 @@
                 "-S",
                 "${workspaceFolder}",
                 "-B",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-G",
                 "Visual Studio 17 2022",
                 "-A",

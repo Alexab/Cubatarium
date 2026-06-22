@@ -40,17 +40,17 @@ cd platforms\android
 
 APK: `platforms/android/app/build/outputs/apk/debug/cubatarium-<version>.apk`
 
-## Release AAB (Google Play)
+## Release AAB (Google Play / AppGallery / stores)
 
 ```powershell
 .\build-android-release.ps1
 ```
 
-Подпись: `platforms/android/setup-release-keystore.ps1` → `keystore.properties` (см. `keystore.properties.example`).
+Подпись: `scripts/android/setup-release-keystore.ps1` → `platforms/android/keystore.properties` (см. `keystore.properties.example`).
 
 AAB: `platforms/android/app/build/outputs/bundle/release/cubatarium-<version>.aab`
 
-Полная инструкция выкладки: [`docs/GOOGLE_PLAY.md`](../../docs/GOOGLE_PLAY.md).
+Инструкции: [`packaging/README.md`](../../packaging/README.md), [`docs/DISTRIBUTION.md`](../../docs/DISTRIBUTION.md).
 
 ## Установка и запуск (adb)
 
