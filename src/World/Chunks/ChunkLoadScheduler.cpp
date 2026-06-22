@@ -1,6 +1,7 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -31,7 +32,15 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   const auto stateIt = States.find(coord);
   if (stateIt != States.end())
   {
-    if (stateIt->second != ChunkLoadState::Absent)
+    if (stateIt->second == ChunkLoadState::Requested)
+    {
+      const auto prioIt = RequestPriorities.find(coord);
+      if (prioIt != RequestPriorities.end() && priority >= prioIt->second)
+      {
+        return;
+      }
+    }
+    else if (stateIt->second != ChunkLoadState::Absent)
     {
       return;
     }
@@ -43,6 +52,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.settings = settings;
   States[coord] = ChunkLoadState::Requested;
   ActiveTokens[coord] = pending.token;
+  RequestPriorities[coord] = priority;
   Queue.push(pending);
 }
 
@@ -50,6 +60,7 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
 {
   States.erase(coord);
   ActiveTokens.erase(coord);
+  RequestPriorities.erase(coord);
 }
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
@@ -65,28 +76,42 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
   populateRequest.settings = request.settings;
+  const int priority = request.priority;
   Pool.Enqueue(
-      [this, populateRequest]()
+      [this, populateRequest, priority]()
       {
         PendingResult pending;
+        pending.priority = priority;
         pending.result = Populator.Populate(populateRequest);
         Completed.Push(std::move(pending));
       });
 }
 
-void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame)
+void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
+                               int maxGenerationStartsPerFrame)
 {
-  while (!Queue.empty())
+  int generationStarts = 0;
+  while (!Queue.empty() && generationStarts < maxGenerationStartsPerFrame)
   {
     const PendingRequest next = Queue.top();
     Queue.pop();
-    if (States[next.coord] == ChunkLoadState::Requested)
+    if (States[next.coord] != ChunkLoadState::Requested)
     {
-      ScheduleWorker(next);
+      continue;
     }
+    const auto prioIt = RequestPriorities.find(next.coord);
+    if (prioIt != RequestPriorities.end() && next.priority > prioIt->second)
+    {
+      continue;
+    }
+    ScheduleWorker(next);
+    ++generationStarts;
   }
 
   std::vector<PendingResult> ready = Completed.DrainAll();
+  std::sort(ready.begin(), ready.end(),
+            [](const PendingResult &a, const PendingResult &b)
+            { return a.priority < b.priority; });
   int committed = 0;
   for (PendingResult &pending : ready)
   {
@@ -97,6 +122,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame)
                                          tokenIt->second.sequence))
     {
       States.erase(pending.result.coord);
+      RequestPriorities.erase(pending.result.coord);
       continue;
     }
     if (committed >= maxCommitsPerFrame)
@@ -107,6 +133,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame)
     pending.result.buffer.ApplyTo(world);
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
+    RequestPriorities.erase(pending.result.coord);
     if (ColumnMeshDirty && pending.result.buffer.HasYBounds())
     {
       ColumnMeshDirty(pending.result.coord, pending.result.buffer.GetMinY(),

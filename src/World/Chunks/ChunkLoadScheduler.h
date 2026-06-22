@@ -40,7 +40,8 @@ public:
                    const ProceduralSettings &settings);
   void Cancel(glm::ivec3 coord);
   void Invalidate(glm::ivec3 coord);
-  void Tick(UBlockWorld &world, int maxCommitsPerFrame);
+  void Tick(UBlockWorld &world, int maxCommitsPerFrame,
+            int maxGenerationStartsPerFrame = 4);
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;
@@ -57,6 +58,7 @@ private:
   struct PendingResult
   {
     ChunkPopulateResult result;
+    int priority{0};
   };
 
   struct RequestCompare
@@ -80,6 +82,7 @@ private:
       Queue;
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
 };
 
 } // namespace cutum

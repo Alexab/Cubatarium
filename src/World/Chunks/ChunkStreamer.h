@@ -87,6 +87,7 @@ private:
   bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
                              const glm::vec3 &eyePos,
                              const PlayerCapsule &cap) const;
+  int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
 
   UBlockWorld &World;
   UBlockRegistry &Registry;
@@ -112,6 +113,7 @@ private:
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
   std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
+  glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;
 };
 

@@ -294,7 +294,8 @@ void UWorld::TickAsyncChunkSystems()
 {
   if (ChunkScheduler && ProceduralTemplate.AsyncChunkGeneration)
   {
-    ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame);
+    ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame,
+                       MaxLoadOpsPerFrame);
   }
   if (!ChunkStorage)
   {
