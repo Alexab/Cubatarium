@@ -100,6 +100,8 @@ public:
   }
   bool RegisterRuntimeBlock(const BlockDefinition &def,
                             const std::array<std::string, 6> &textureStems);
+  void BeginRuntimeBlockBatch();
+  void EndRuntimeBlockBatch();
   std::shared_ptr<UTextureCubeStorage> GetTextureCubeStorage() const
   {
     return TextureCubeStorageInstance;
@@ -185,6 +187,9 @@ private:
   void ReloadCreatureCatalog(const std::vector<ResourcePackManifest> &packs);
   std::vector<std::string>
   NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
+  void FlushRuntimeBlockOverlay();
+  int RuntimeBlockBatchDepth{0};
+  bool RuntimeBlockFlushPending{false};
 };
 
 } // namespace cutum

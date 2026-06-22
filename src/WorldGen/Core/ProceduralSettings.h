@@ -71,13 +71,14 @@ struct ProceduralSettings
   int MaxHeight{128};
   int BedrockTopY{0};
   std::string WorldGenPackId{"default"};
+  std::string WorldGenPresetId{"balanced"};
   bool EnableCaves{false};
   bool EnableTrees{true};
   bool EnableDecoration{true};
   bool EnableStructures{true};
   bool EnableOres{false};
-  bool AsyncChunkGeneration{false};
-  bool AsyncChunkIo{false};
+  bool AsyncChunkGeneration{true};
+  bool AsyncChunkIo{true};
   int MaxChunkCommitsPerFrame{3};
   int FlatSurfaceY{3};
   bool FillWater{false};

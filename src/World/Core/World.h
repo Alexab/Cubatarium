@@ -105,6 +105,7 @@ public:
 
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
+  void OnBlockRegistryRuntimeOverlayChanged();
   void SetOnBlockRegistryChanged(std::function<void()> callback)
   {
     OnBlockRegistryChangedCallback = std::move(callback);
@@ -467,6 +468,8 @@ private:
                                  int max_y);
   void UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
                                  float prevPlayerY);
+  void SaveMovementDiagnostics(const std::string &file_name) const;
+  void AppendMovementDiagnosticsSample();
   void RebuildWorldGenPipeline();
 
   std::string WorldName;
@@ -543,6 +546,7 @@ private:
 
   uint64_t DurationDoMovementMks;
   MovementDiagnostics MovementDiag;
+  std::vector<MovementDiagnostics> MovementDiagHistory;
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};

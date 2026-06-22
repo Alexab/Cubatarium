@@ -47,7 +47,9 @@ private:
   UGuiLabel *HintLabel{nullptr};
   UGuiLabel *GeneratorCaption{nullptr};
   UGuiLabel *GeneratorDescLabel{nullptr};
+  UGuiLabel *PresetLabel{nullptr};
   UGuiListView *GeneratorList{nullptr};
+  UGuiListView *PresetList{nullptr};
   UGuiLabel *WorldGenPackIdLabel{nullptr};
   UGuiLabel *SeedLabel{nullptr};
   UGuiLabel *SeaLevelLabel{nullptr};

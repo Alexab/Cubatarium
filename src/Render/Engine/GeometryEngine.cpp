@@ -22,6 +22,8 @@
 #include "Storage/ObjectImplementation.h"
 #include "Storage/ObjectStorage.h"
 #include "World/Math/GridMath.h"
+#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -1367,6 +1369,22 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     performanceLines.push_back(
         "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
         std::to_string(md.meshRebuildsThisFrame));
+  }
+  {
+    float temperature = 0.0f;
+    float moisture = 0.0f;
+    const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
+    ComputeBiomeClimate(md.feetBlock.x, md.feetBlock.z, settings.Seed,
+                        temperature, moisture);
+    const float localHeightNorm =
+        std::clamp(static_cast<float>(md.feetBlock.y - settings.SeaLevel) /
+                       static_cast<float>(std::max(1, settings.MaxHeight - settings.SeaLevel)),
+                   0.0f, 1.0f);
+    const BiomeId biome = ClassifyBiome(temperature, moisture, localHeightNorm);
+    performanceLines.push_back(
+        std::string("Biome: ") + BiomeIdToString(biome) +
+        " T:" + std::to_string(temperature).substr(0, 4) +
+        " M:" + std::to_string(moisture).substr(0, 4));
   }
   if (md.fallThroughSuspected || md.feetInUnloadList)
   {

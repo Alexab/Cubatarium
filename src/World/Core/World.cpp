@@ -462,6 +462,17 @@ void UWorld::OnBlockRegistryChanged()
   }
 }
 
+void UWorld::OnBlockRegistryRuntimeOverlayChanged()
+{
+  RefreshBlockRegistry();
+  RebuildWorldGenPipeline();
+  MeshCache.MarkAllDirtyFromWorld(BlockWorld);
+  if (OnBlockRegistryChangedCallback)
+  {
+    OnBlockRegistryChangedCallback();
+  }
+}
+
 void UWorld::OnCreatureCatalogChanged()
 {
   ReloadAllCreatureVisuals();
@@ -888,6 +899,7 @@ void UWorld::Load(const std::string &world_folder_path)
   const std::string blocks_file_name = WorldFolderPath + "/blocks.json";
   const std::string objects_file_name = WorldFolderPath + "/objects.json";
   const std::string chunks_dir = WorldFolderPath + "/chunks";
+  MovementDiagHistory.clear();
 
   HasPersistedSave = HasPersistedTerrainOnDisk(WorldFolderPath);
   AllowProceduralFill = !HasPersistedSave;
@@ -1041,6 +1053,7 @@ void UWorld::Save(const std::string &world_folder_path)
   SaveUsers(users_file_name);
   SaveCreatures(world_folder_path + "/creatures.json");
   SaveWorldData(world_data_file_name);
+  SaveMovementDiagnostics(world_folder_path + "/movement_diagnostics.json");
   ModifiedChunks.clear();
 }
 
@@ -2479,6 +2492,50 @@ void UWorld::SaveWorldData(const std::string &file_name)
   }
 }
 
+void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
+{
+  json root;
+  root["schema"] = "movement_diagnostics.v1";
+  root["world_name"] = WorldName;
+  root["sample_count"] = MovementDiagHistory.size();
+  json samples = json::array();
+  for (const MovementDiagnostics &sample : MovementDiagHistory)
+  {
+    samples.push_back({
+        {"delta_time", sample.deltaTime},
+        {"player_y_drop", sample.playerYDrop},
+        {"streaming_loads", sample.streamingLoads},
+        {"streaming_unloads", sample.streamingUnloads},
+        {"streaming_gen_ms", sample.streamingGenMs},
+        {"streaming_io_ms", sample.streamingIoMs},
+        {"mesh_rebuild_ms", sample.meshRebuildMs},
+        {"dirty_chunks_pending", sample.dirtyChunksPending},
+        {"mesh_rebuilds_this_frame", sample.meshRebuildsThisFrame},
+        {"hitch_detected", sample.hitchDetected},
+        {"fall_through_suspected", sample.fallThroughSuspected},
+    });
+  }
+  root["samples"] = std::move(samples);
+  std::ofstream file(file_name);
+  if (file.is_open())
+  {
+    file << root.dump(2);
+  }
+}
+
+void UWorld::AppendMovementDiagnosticsSample()
+{
+  constexpr size_t kMaxSamples = 4096;
+  MovementDiagHistory.push_back(MovementDiag);
+  if (MovementDiagHistory.size() > kMaxSamples)
+  {
+    const size_t trim = MovementDiagHistory.size() - kMaxSamples;
+    MovementDiagHistory.erase(MovementDiagHistory.begin(),
+                              MovementDiagHistory.begin() +
+                                  static_cast<std::ptrdiff_t>(trim));
+  }
+}
+
 void UWorld::DoMovement()
 {
   if (!BlockWorldReady)
@@ -2685,6 +2742,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
               << " feetUnloaded=" << MovementDiag.feetInUnloadList << std::endl;
   }
 #endif
+  AppendMovementDiagnosticsSample();
 }
 
 void UWorld::UpdateStreaming()

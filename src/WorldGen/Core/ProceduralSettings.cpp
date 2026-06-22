@@ -247,6 +247,7 @@ void ApplyGeneratorDescriptorDefaults(ProceduralSettings &s)
 
 void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
 {
+  s.WorldGenPresetId = presetId.empty() ? "balanced" : presetId;
   if (presetId == "realistic")
   {
     s.Tuning.terrainRoughness = 0.7f;
@@ -262,6 +263,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
   }
   else
   {
+    s.WorldGenPresetId = "balanced";
     s.Tuning.terrainRoughness = 0.75f;
     s.Tuning.terrainErosion = 0.22f;
     s.Tuning.structureDensity = 0.35f;

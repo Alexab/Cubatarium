@@ -339,7 +339,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         const json &r = d["render"];
         Render.GreedyMeshing = r.value("greedy_meshing", true);
-        Render.AsyncMeshing = r.value("async_meshing", false);
+        Render.AsyncMeshing = r.value("async_meshing", true);
         Render.FaceQuads = r.value("face_quads", true);
         Render.FrustumCulling = r.value("frustum_culling", true);
         Render.BatchCache = r.value("batch_cache", true);
@@ -579,7 +579,8 @@ bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
   }
   const BlockId id =
       BlockMergeRegistryInstance->RegisterRuntimeBlock(def, textureStems);
-  BlockMergeRegistryInstance->FlushRuntimeOverlay();
+  RuntimeBlockFlushPending = true;
+  FlushRuntimeBlockOverlay();
   if (id == BLOCK_AIR &&
       BlockMergeRegistryInstance->GetNameToId().count(def.Name) == 0)
   {
@@ -591,9 +592,34 @@ bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
   {
     return false;
   }
-  RebuildBlockTexturesFromMergeRegistry();
-  WorldInstance->OnBlockRegistryChanged();
   return true;
+}
+
+void UCore::BeginRuntimeBlockBatch()
+{
+  ++RuntimeBlockBatchDepth;
+}
+
+void UCore::EndRuntimeBlockBatch()
+{
+  RuntimeBlockBatchDepth = std::max(0, RuntimeBlockBatchDepth - 1);
+  FlushRuntimeBlockOverlay();
+}
+
+void UCore::FlushRuntimeBlockOverlay()
+{
+  if (!RuntimeBlockFlushPending || RuntimeBlockBatchDepth > 0 ||
+      !BlockMergeRegistryInstance)
+  {
+    return;
+  }
+  BlockMergeRegistryInstance->FlushRuntimeOverlay();
+  RuntimeBlockFlushPending = false;
+  RebuildBlockTexturesFromMergeRegistry();
+  if (WorldInstance)
+  {
+    WorldInstance->OnBlockRegistryRuntimeOverlayChanged();
+  }
 }
 
 void UCore::SaveConfigFile()

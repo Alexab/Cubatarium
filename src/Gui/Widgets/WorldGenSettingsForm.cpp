@@ -16,6 +16,32 @@ namespace cutum
 
 namespace
 {
+int PresetIndexFromId(const std::string &id)
+{
+  if (id == "realistic")
+  {
+    return 1;
+  }
+  if (id == "sparse_structures")
+  {
+    return 2;
+  }
+  return 0;
+}
+
+std::string PresetIdFromIndex(int index)
+{
+  switch (index)
+  {
+  case 1:
+    return "realistic";
+  case 2:
+    return "sparse_structures";
+  default:
+    return "balanced";
+  }
+}
+
 
 int ParseIntOr(const std::string &text, int fallback)
 {
@@ -96,6 +122,10 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     GeneratorList->SetSelectedIndex(
         UWorldGeneratorRegistry::IndexOf(FormSettings.Generator));
+  }
+  if (PresetList)
+  {
+    PresetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
   }
   if (WorldGenPackIdInput)
   {
@@ -391,6 +421,11 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     s.FillFire = FireBox->IsChecked();
   }
+  if (PresetList)
+  {
+    const int selected = PresetList->GetSelectedIndex();
+    ApplyWorldGenPreset(s, PresetIdFromIndex(selected));
+  }
   ResolveProceduralDefaults(s);
   return s;
 }
@@ -537,6 +572,16 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   auto genDesc = std::make_unique<UGuiLabel>(Theme, "");
   GeneratorDescLabel = genDesc.get();
   panel.AddChild(std::move(genDesc));
+
+  auto presetLabel = std::make_unique<UGuiLabel>(Theme, "Preset:");
+  PresetLabel = presetLabel.get();
+  panel.AddChild(std::move(presetLabel));
+  auto presetList = std::make_unique<UGuiListView>(Theme);
+  PresetList = presetList.get();
+  presetList->SetItems({"Balanced", "Realistic", "Sparse structures"});
+  presetList->SetVisibleRowCount(3);
+  presetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
+  panel.AddChild(std::move(presetList));
 
   auto seedLabel = std::make_unique<UGuiLabel>(Theme, "World Seed:");
   SeedLabel = seedLabel.get();
@@ -791,60 +836,62 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({GeneratorCaption, 1, 0, 1, 1, 28});
   items.push_back({GeneratorList, 1, 1, 1, 1, 150});
   items.push_back({GeneratorDescLabel, 2, 0, 1, 2, 36});
-  items.push_back({SeedLabel, 3, 0, 1, 1, 28});
-  items.push_back({SeedInput, 3, 1, 1, 1, 32});
-  items.push_back({SeaLevelLabel, 4, 0, 1, 1, 28});
-  items.push_back({SeaLevelInput, 4, 1, 1, 1, 32});
-  items.push_back({MaxHeightLabel, 5, 0, 1, 1, 28});
-  items.push_back({MaxHeightInput, 5, 1, 1, 1, 32});
-  items.push_back({BedrockTopYLabel, 6, 0, 1, 1, 28});
-  items.push_back({BedrockTopYInput, 6, 1, 1, 1, 32});
-  items.push_back({FlatYLabel, 7, 0, 1, 1, 28});
-  items.push_back({FlatYInput, 7, 1, 1, 1, 32});
-  items.push_back({VegetationDensityLabel, 8, 0, 1, 1, 28});
-  items.push_back({VegetationDensityInput, 8, 1, 1, 1, 32});
-  items.push_back({DecorationDensityLabel, 9, 0, 1, 1, 28});
-  items.push_back({DecorationDensityInput, 9, 1, 1, 1, 32});
-  items.push_back({StructureDensityLabel, 10, 0, 1, 1, 28});
-  items.push_back({StructureDensityInput, 10, 1, 1, 1, 32});
-  items.push_back({TerrainRoughnessLabel, 11, 0, 1, 1, 28});
-  items.push_back({TerrainRoughnessInput, 11, 1, 1, 1, 32});
-  items.push_back({BiomeForestLabel, 12, 0, 1, 1, 28});
-  items.push_back({BiomeForestInput, 12, 1, 1, 1, 32});
-  items.push_back({BiomeDesertLabel, 13, 0, 1, 1, 28});
-  items.push_back({BiomeDesertInput, 13, 1, 1, 1, 32});
-  items.push_back({BiomePlainsLabel, 14, 0, 1, 1, 28});
-  items.push_back({BiomePlainsInput, 14, 1, 1, 1, 32});
-  items.push_back({BiomeHillsLabel, 15, 0, 1, 1, 28});
-  items.push_back({BiomeHillsInput, 15, 1, 1, 1, 32});
-  items.push_back({BiomeTundraLabel, 16, 0, 1, 1, 28});
-  items.push_back({BiomeTundraInput, 16, 1, 1, 1, 32});
-  items.push_back({BiomeBlendLabel, 17, 0, 1, 1, 28});
-  items.push_back({BiomeBlendInput, 17, 1, 1, 1, 32});
-  items.push_back({TerrainErosionLabel, 18, 0, 1, 1, 28});
-  items.push_back({TerrainErosionInput, 18, 1, 1, 1, 32});
-  items.push_back({OreDensityLabel, 19, 0, 1, 1, 28});
-  items.push_back({OreDensityInput, 19, 1, 1, 1, 32});
-  items.push_back({CaveThresholdLabel, 20, 0, 1, 1, 28});
-  items.push_back({CaveThresholdInput, 20, 1, 1, 1, 32});
-  items.push_back({CaveMinYLabel, 21, 0, 1, 1, 28});
-  items.push_back({CaveMinYInput, 21, 1, 1, 1, 32});
-  items.push_back({CaveScaleLabel, 22, 0, 1, 1, 28});
-  items.push_back({CaveScaleInput, 22, 1, 1, 1, 32});
-  items.push_back({CaveMaxDepthLabel, 23, 0, 1, 1, 28});
-  items.push_back({CaveMaxDepthInput, 23, 1, 1, 1, 32});
-  items.push_back({CaveStyleLabel, 24, 0, 1, 1, 28});
-  items.push_back({CaveStyleInput, 24, 1, 1, 1, 32});
-  items.push_back({CavesBox, 25, 0, 1, 1, 30});
-  items.push_back({OresBox, 25, 1, 1, 1, 30});
-  items.push_back({TreesBox, 26, 0, 1, 1, 30});
-  items.push_back({DecorationBox, 26, 1, 1, 1, 30});
-  items.push_back({StructuresBox, 27, 0, 1, 1, 30});
-  items.push_back({WaterBox, 27, 1, 1, 1, 30});
-  items.push_back({LavaBox, 28, 0, 1, 1, 30});
-  items.push_back({FireBox, 28, 1, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 29, 0, 1, 1, 28});
-  items.push_back({WorldGenPackIdInput, 29, 1, 1, 1, 32});
+  items.push_back({PresetLabel, 3, 0, 1, 1, 28});
+  items.push_back({PresetList, 3, 1, 1, 1, 90});
+  items.push_back({SeedLabel, 4, 0, 1, 1, 28});
+  items.push_back({SeedInput, 4, 1, 1, 1, 32});
+  items.push_back({SeaLevelLabel, 5, 0, 1, 1, 28});
+  items.push_back({SeaLevelInput, 5, 1, 1, 1, 32});
+  items.push_back({MaxHeightLabel, 6, 0, 1, 1, 28});
+  items.push_back({MaxHeightInput, 6, 1, 1, 1, 32});
+  items.push_back({BedrockTopYLabel, 7, 0, 1, 1, 28});
+  items.push_back({BedrockTopYInput, 7, 1, 1, 1, 32});
+  items.push_back({FlatYLabel, 8, 0, 1, 1, 28});
+  items.push_back({FlatYInput, 8, 1, 1, 1, 32});
+  items.push_back({VegetationDensityLabel, 9, 0, 1, 1, 28});
+  items.push_back({VegetationDensityInput, 9, 1, 1, 1, 32});
+  items.push_back({DecorationDensityLabel, 10, 0, 1, 1, 28});
+  items.push_back({DecorationDensityInput, 10, 1, 1, 1, 32});
+  items.push_back({StructureDensityLabel, 11, 0, 1, 1, 28});
+  items.push_back({StructureDensityInput, 11, 1, 1, 1, 32});
+  items.push_back({TerrainRoughnessLabel, 12, 0, 1, 1, 28});
+  items.push_back({TerrainRoughnessInput, 12, 1, 1, 1, 32});
+  items.push_back({BiomeForestLabel, 13, 0, 1, 1, 28});
+  items.push_back({BiomeForestInput, 13, 1, 1, 1, 32});
+  items.push_back({BiomeDesertLabel, 14, 0, 1, 1, 28});
+  items.push_back({BiomeDesertInput, 14, 1, 1, 1, 32});
+  items.push_back({BiomePlainsLabel, 15, 0, 1, 1, 28});
+  items.push_back({BiomePlainsInput, 15, 1, 1, 1, 32});
+  items.push_back({BiomeHillsLabel, 16, 0, 1, 1, 28});
+  items.push_back({BiomeHillsInput, 16, 1, 1, 1, 32});
+  items.push_back({BiomeTundraLabel, 17, 0, 1, 1, 28});
+  items.push_back({BiomeTundraInput, 17, 1, 1, 1, 32});
+  items.push_back({BiomeBlendLabel, 18, 0, 1, 1, 28});
+  items.push_back({BiomeBlendInput, 18, 1, 1, 1, 32});
+  items.push_back({TerrainErosionLabel, 19, 0, 1, 1, 28});
+  items.push_back({TerrainErosionInput, 19, 1, 1, 1, 32});
+  items.push_back({OreDensityLabel, 20, 0, 1, 1, 28});
+  items.push_back({OreDensityInput, 20, 1, 1, 1, 32});
+  items.push_back({CaveThresholdLabel, 21, 0, 1, 1, 28});
+  items.push_back({CaveThresholdInput, 21, 1, 1, 1, 32});
+  items.push_back({CaveMinYLabel, 22, 0, 1, 1, 28});
+  items.push_back({CaveMinYInput, 22, 1, 1, 1, 32});
+  items.push_back({CaveScaleLabel, 23, 0, 1, 1, 28});
+  items.push_back({CaveScaleInput, 23, 1, 1, 1, 32});
+  items.push_back({CaveMaxDepthLabel, 24, 0, 1, 1, 28});
+  items.push_back({CaveMaxDepthInput, 24, 1, 1, 1, 32});
+  items.push_back({CaveStyleLabel, 25, 0, 1, 1, 28});
+  items.push_back({CaveStyleInput, 25, 1, 1, 1, 32});
+  items.push_back({CavesBox, 26, 0, 1, 1, 30});
+  items.push_back({OresBox, 26, 1, 1, 1, 30});
+  items.push_back({TreesBox, 27, 0, 1, 1, 30});
+  items.push_back({DecorationBox, 27, 1, 1, 1, 30});
+  items.push_back({StructuresBox, 28, 0, 1, 1, 30});
+  items.push_back({WaterBox, 28, 1, 1, 1, 30});
+  items.push_back({LavaBox, 29, 0, 1, 1, 30});
+  items.push_back({FireBox, 29, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 30, 0, 1, 1, 28});
+  items.push_back({WorldGenPackIdInput, 30, 1, 1, 1, 32});
   return items;
 }
 

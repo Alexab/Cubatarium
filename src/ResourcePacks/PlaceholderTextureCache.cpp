@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <sstream>
@@ -42,6 +43,70 @@ glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
 
 } // namespace
 
+namespace
+{
+
+std::filesystem::path PlaceholderFilePath(const std::filesystem::path &cacheDir,
+                                          const std::string &stem)
+{
+  return cacheDir / (stem + ".rgba");
+}
+
+bool SavePlaceholderFile(const std::filesystem::path &path,
+                         const TexturePixelData &pixels)
+{
+  std::ofstream out(path, std::ios::binary);
+  if (!out.is_open())
+  {
+    return false;
+  }
+  const uint32_t width = static_cast<uint32_t>(pixels.Width);
+  const uint32_t height = static_cast<uint32_t>(pixels.Height);
+  const uint32_t size = static_cast<uint32_t>(pixels.Rgba.size());
+  out.write(reinterpret_cast<const char *>(&width), sizeof(width));
+  out.write(reinterpret_cast<const char *>(&height), sizeof(height));
+  out.write(reinterpret_cast<const char *>(&size), sizeof(size));
+  if (size > 0)
+  {
+    out.write(reinterpret_cast<const char *>(pixels.Rgba.data()), size);
+  }
+  return out.good();
+}
+
+bool LoadPlaceholderFile(const std::filesystem::path &path, TexturePixelData &out)
+{
+  std::ifstream in(path, std::ios::binary);
+  if (!in.is_open())
+  {
+    return false;
+  }
+  uint32_t width = 0;
+  uint32_t height = 0;
+  uint32_t size = 0;
+  in.read(reinterpret_cast<char *>(&width), sizeof(width));
+  in.read(reinterpret_cast<char *>(&height), sizeof(height));
+  in.read(reinterpret_cast<char *>(&size), sizeof(size));
+  if (!in.good())
+  {
+    return false;
+  }
+  std::vector<uint8_t> rgba(size);
+  if (size > 0)
+  {
+    in.read(reinterpret_cast<char *>(rgba.data()), size);
+    if (!in.good())
+    {
+      return false;
+    }
+  }
+  out.Width = static_cast<int>(width);
+  out.Height = static_cast<int>(height);
+  out.Rgba = std::move(rgba);
+  return true;
+}
+
+} // namespace
+
 UPlaceholderTextureCache::UPlaceholderTextureCache(std::filesystem::path cacheDir,
                                                    int tileSize,
                                                    glm::vec3 background,
@@ -74,6 +139,8 @@ void UPlaceholderTextureCache::EvictIfNeeded()
     const auto stemIt = KeyToStem.find(victim);
     if (stemIt != KeyToStem.end())
     {
+      std::error_code ec;
+      std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second), ec);
       StemPixels.erase(stemIt->second);
       KeyToStem.erase(stemIt);
     }
@@ -162,7 +229,13 @@ std::string UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockNa
   }
   const std::string stem = MakeStem(key);
   KeyToStem[key] = stem;
-  StemPixels[stem] = Rasterize(blockName, faceIndex, tileSize);
+  TexturePixelData pixels;
+  if (!LoadPlaceholderFile(PlaceholderFilePath(CacheDir, stem), pixels))
+  {
+    pixels = Rasterize(blockName, faceIndex, tileSize);
+    SavePlaceholderFile(PlaceholderFilePath(CacheDir, stem), pixels);
+  }
+  StemPixels[stem] = std::move(pixels);
   TouchLru(key);
   EvictIfNeeded();
   return stem;
