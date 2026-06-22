@@ -100,6 +100,12 @@ Assert-StagedRuntimeFiles
 
 & $doctorScript -BinDir $outBin
 
+# Smoke tests create a writable runtime cache next to the exe; do not ship it.
+$placeholderCache = Join-Path $outBin ".placeholder_cache"
+if (Test-Path $placeholderCache) {
+    Remove-Item $placeholderCache -Recurse -Force
+}
+
 if ($StageOnly) {
     Write-Host "Staging complete (StageOnly)."
     exit 0
