@@ -1,17 +1,21 @@
-{
-  "name": "wood",
-  "types": [
-    "natural",
-    "building"
-  ],
-  "textures": [
-    "tree_side",
-    "tree_side",
-    "tree_side",
-    "tree_side",
-    "tree_top",
-    "tree_top"
-  ],
-  "displayName": "Wood",
-  "render": {}
+﻿{
+    "name":  "wood",
+    "id":  22,
+    "types":  [
+                  "natural",
+                  "building"
+              ],
+    "textures":  [
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_top",
+                     "tree_top"
+                 ],
+    "displayName":  "Wood",
+    "render":  {
+
+               }
 }
+

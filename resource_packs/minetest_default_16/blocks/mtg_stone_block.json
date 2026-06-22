@@ -1,15 +1,19 @@
-{
-  "name": "mtg_stone_block",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_stone_block_default_stone_block",
-    "mtg_stone_block_default_stone_block",
-    "mtg_stone_block_default_stone_block",
-    "mtg_stone_block_default_stone_block",
-    "mtg_stone_block_default_stone_block",
-    "mtg_stone_block_default_stone_block"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_stone_block",
+    "id":  504,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_stone_block_default_stone_block",
+                     "mtg_stone_block_default_stone_block",
+                     "mtg_stone_block_default_stone_block",
+                     "mtg_stone_block_default_stone_block",
+                     "mtg_stone_block_default_stone_block",
+                     "mtg_stone_block_default_stone_block"
+                 ],
+    "render":  {
+
+               }
 }
+

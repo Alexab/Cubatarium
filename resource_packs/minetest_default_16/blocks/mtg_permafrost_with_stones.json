@@ -1,15 +1,19 @@
-{
-  "name": "mtg_permafrost_with_stones",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_permafrost_with_stones_composite_0",
-    "mtg_permafrost_with_stones_composite_0",
-    "mtg_permafrost_with_stones_composite_0",
-    "mtg_permafrost_with_stones_composite_0",
-    "mtg_permafrost_with_stones_composite_1",
-    "mtg_permafrost_with_stones_default_permafrost"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_permafrost_with_stones",
+    "id":  481,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_permafrost_with_stones_composite_0",
+                     "mtg_permafrost_with_stones_composite_0",
+                     "mtg_permafrost_with_stones_composite_0",
+                     "mtg_permafrost_with_stones_composite_0",
+                     "mtg_permafrost_with_stones_composite_1",
+                     "mtg_permafrost_with_stones_default_permafrost"
+                 ],
+    "render":  {
+
+               }
 }
+

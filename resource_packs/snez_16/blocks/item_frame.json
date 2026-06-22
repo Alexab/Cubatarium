@@ -1,15 +1,19 @@
-{
-  "name": "item_frame",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "itemframe_back",
-    "itemframe_back",
-    "itemframe_back",
-    "itemframe_back",
-    "itemframe_back",
-    "itemframe_back"
-  ],
-  "render": {}
+﻿{
+    "name":  "item_frame",
+    "id":  912,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back"
+                 ],
+    "render":  {
+
+               }
 }
+

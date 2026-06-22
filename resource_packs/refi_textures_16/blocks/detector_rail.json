@@ -1,15 +1,19 @@
-{
-  "name": "detector_rail",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "detectorRail",
-    "detectorRail",
-    "detectorRail",
-    "detectorRail",
-    "detectorRail",
-    "detectorRail"
-  ],
-  "render": {}
+﻿{
+    "name":  "detector_rail",
+    "id":  750,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail",
+                     "detectorRail"
+                 ],
+    "render":  {
+
+               }
 }
+

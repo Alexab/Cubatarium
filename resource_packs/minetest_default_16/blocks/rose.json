@@ -1,25 +1,27 @@
-{
-  "name": "rose",
-  "types": [
-    "natural",
-    "plants"
-  ],
-  "textures": [
-    "rose",
-    "rose",
-    "rose",
-    "rose",
-    "rose",
-    "rose"
-  ],
-  "render": {
-    "transparent": true,
-    "style": "cross"
-  },
-  "physics": {
-    "movement": {
-      "occupancy": 0
-    }
-  },
-  "displayName": "Rose"
+﻿{
+    "name":  "rose",
+    "id":  548,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose"
+                 ],
+    "render":  {
+                   "transparent":  true,
+                   "style":  "cross"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                },
+    "displayName":  "Rose"
 }
+

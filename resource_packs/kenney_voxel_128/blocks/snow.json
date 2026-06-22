@@ -1,16 +1,20 @@
-{
-  "name": "snow",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "snow",
-    "snow",
-    "snow",
-    "snow",
-    "snow",
-    "snow"
-  ],
-  "displayName": "Snow",
-  "render": {}
+﻿{
+    "name":  "snow",
+    "id":  82,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "snow",
+                     "snow",
+                     "snow",
+                     "snow",
+                     "snow",
+                     "snow"
+                 ],
+    "displayName":  "Snow",
+    "render":  {
+
+               }
 }
+

@@ -1,15 +1,19 @@
-{
-  "name": "tall_grass",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "tallgrass",
-    "tallgrass",
-    "tallgrass",
-    "tallgrass",
-    "tallgrass",
-    "tallgrass"
-  ],
-  "render": {}
+﻿{
+    "name":  "tall_grass",
+    "id":  955,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass",
+                     "tallgrass"
+                 ],
+    "render":  {
+
+               }
 }
+

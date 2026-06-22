@@ -1,16 +1,20 @@
-{
-  "name": "sand",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "sand",
-    "sand",
-    "sand",
-    "sand",
-    "sand",
-    "sand"
-  ],
-  "displayName": "Sand",
-  "render": {}
+﻿{
+    "name":  "sand",
+    "id":  684,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand",
+                     "sand"
+                 ],
+    "displayName":  "Sand",
+    "render":  {
+
+               }
 }
+

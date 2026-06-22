@@ -1,15 +1,19 @@
-{
-  "name": "iron_bars",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "fenceIron",
-    "fenceIron",
-    "fenceIron",
-    "fenceIron",
-    "fenceIron",
-    "fenceIron"
-  ],
-  "render": {}
+﻿{
+    "name":  "iron_bars",
+    "id":  642,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron"
+                 ],
+    "render":  {
+
+               }
 }
+

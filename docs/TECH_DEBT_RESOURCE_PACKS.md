@@ -14,6 +14,7 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-012 | 2026-06 | Stable pack block ids in JSON (`tools/assign_pack_block_ids.ps1`), runtime reads ids, `catalog_fingerprint` in world saves, POST_BUILD sync replaces stale `bin/` trees |
 | TD-001 | 2025-06 | `AssetExtractor`: re-extract when APK `versionCode` changes (SharedPreferences stamp) |
 | TD-003 | 2025-06 | Hotbar: reject unknown block ids on assign (creative + survival) |
 | TD-004 | 2025-06 | Creatures/skins/prefabs from packs: overlay merge, example pack, live visual refresh; prefabs via `LoadMerged` |

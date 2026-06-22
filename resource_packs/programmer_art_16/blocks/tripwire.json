@@ -1,15 +1,19 @@
-{
-  "name": "tripwire",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "tripWire",
-    "tripWire",
-    "tripWire",
-    "tripWire",
-    "tripWire",
-    "tripWire"
-  ],
-  "render": {}
+﻿{
+    "name":  "tripwire",
+    "id":  707,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire",
+                     "tripWire"
+                 ],
+    "render":  {
+
+               }
 }
+

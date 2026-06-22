@@ -1,15 +1,19 @@
-{
-  "name": "mtg_pine_wood",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_pine_wood_default_pine_wood",
-    "mtg_pine_wood_default_pine_wood",
-    "mtg_pine_wood_default_pine_wood",
-    "mtg_pine_wood_default_pine_wood",
-    "mtg_pine_wood_default_pine_wood",
-    "mtg_pine_wood_default_pine_wood"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_pine_wood",
+    "id":  488,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_pine_wood_default_pine_wood",
+                     "mtg_pine_wood_default_pine_wood",
+                     "mtg_pine_wood_default_pine_wood",
+                     "mtg_pine_wood_default_pine_wood",
+                     "mtg_pine_wood_default_pine_wood",
+                     "mtg_pine_wood_default_pine_wood"
+                 ],
+    "render":  {
+
+               }
 }
+

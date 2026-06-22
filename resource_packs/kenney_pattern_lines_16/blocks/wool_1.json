@@ -1,16 +1,20 @@
-{
-  "name": "wool_1",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_1",
-    "cloth_1",
-    "cloth_1",
-    "cloth_1",
-    "cloth_1",
-    "cloth_1"
-  ],
-  "displayName": "Orange Wool",
-  "render": {}
+﻿{
+    "name":  "wool_1",
+    "id":  33,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_1",
+                     "cloth_1",
+                     "cloth_1",
+                     "cloth_1",
+                     "cloth_1",
+                     "cloth_1"
+                 ],
+    "displayName":  "Orange Wool",
+    "render":  {
+
+               }
 }
+

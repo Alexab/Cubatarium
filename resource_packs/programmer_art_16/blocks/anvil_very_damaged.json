@@ -1,15 +1,19 @@
-{
-  "name": "anvil_very_damaged",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "anvil_base",
-    "anvil_base",
-    "anvil_base",
-    "anvil_base",
-    "anvil_top_damaged_2",
-    "anvil_base"
-  ],
-  "render": {}
+﻿{
+    "name":  "anvil_very_damaged",
+    "id":  604,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_top_damaged_2",
+                     "anvil_base"
+                 ],
+    "render":  {
+
+               }
 }
+

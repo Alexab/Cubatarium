@@ -1,15 +1,19 @@
-{
-  "name": "activator_rail_on",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "activatorRail_powered",
-    "activatorRail_powered",
-    "activatorRail_powered",
-    "activatorRail_powered",
-    "activatorRail_powered",
-    "activatorRail_powered"
-  ],
-  "render": {}
+﻿{
+    "name":  "activator_rail_on",
+    "id":  732,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "activatorRail_powered",
+                     "activatorRail_powered",
+                     "activatorRail_powered",
+                     "activatorRail_powered",
+                     "activatorRail_powered",
+                     "activatorRail_powered"
+                 ],
+    "render":  {
+
+               }
 }
+

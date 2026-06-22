@@ -1,15 +1,19 @@
-{
-  "name": "tree_birch",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "tree_birch",
-    "tree_birch",
-    "tree_birch",
-    "tree_birch",
-    "tree_birch",
-    "tree_birch"
-  ],
-  "render": {}
+﻿{
+    "name":  "tree_birch",
+    "id":  704,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "tree_birch",
+                     "tree_birch",
+                     "tree_birch",
+                     "tree_birch",
+                     "tree_birch",
+                     "tree_birch"
+                 ],
+    "render":  {
+
+               }
 }
+

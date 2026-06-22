@@ -2575,6 +2575,14 @@ void UWorld::LoadWorldData(const std::string &file_name)
                                   ResourcePacksSecondary.begin(),
                                   ResourcePacksSecondary.end());
     }
+    if (d.contains("catalog_fingerprint") && d["catalog_fingerprint"].is_string())
+    {
+      CatalogFingerprint = d["catalog_fingerprint"].get<std::string>();
+    }
+    else
+    {
+      CatalogFingerprint.clear();
+    }
   }
   catch (const json::exception &e)
   {
@@ -2614,6 +2622,11 @@ void UWorld::SaveWorldData(const std::string &file_name)
   else if (!ResourcePacksEnabled.empty())
   {
     world_data["resource_packs"]["primary"] = ResourcePacksEnabled;
+  }
+
+  if (!CatalogFingerprint.empty())
+  {
+    world_data["catalog_fingerprint"] = CatalogFingerprint;
   }
 
   std::ofstream file(file_name);

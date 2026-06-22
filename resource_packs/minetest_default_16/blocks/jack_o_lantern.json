@@ -1,15 +1,19 @@
-{
-  "name": "jack_o_lantern",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "pumpkin_side",
-    "pumpkin_jack",
-    "pumpkin_side",
-    "pumpkin_jack",
-    "pumpkin_top",
-    "pumpkin_side"
-  ],
-  "render": {}
+﻿{
+    "name":  "jack_o_lantern",
+    "id":  385,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "pumpkin_side",
+                     "pumpkin_jack",
+                     "pumpkin_side",
+                     "pumpkin_jack",
+                     "pumpkin_top",
+                     "pumpkin_side"
+                 ],
+    "render":  {
+
+               }
 }
+

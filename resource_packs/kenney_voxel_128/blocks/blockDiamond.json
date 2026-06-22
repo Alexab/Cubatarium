@@ -1,16 +1,20 @@
-{
-  "name": "blockDiamond",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "blockDiamond",
-    "blockDiamond",
-    "blockDiamond",
-    "blockDiamond",
-    "blockDiamond",
-    "blockDiamond"
-  ],
-  "displayName": "Diamond Block",
-  "render": {}
+﻿{
+    "name":  "blockDiamond",
+    "id":  53,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond",
+                     "blockDiamond"
+                 ],
+    "displayName":  "Diamond Block",
+    "render":  {
+
+               }
 }
+

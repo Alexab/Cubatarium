@@ -149,6 +149,11 @@ public:
   {
     return WorldgenOwnerPackId;
   }
+  const std::string &GetCatalogFingerprint() const { return CatalogFingerprint; }
+  void SetCatalogFingerprint(std::string fingerprint)
+  {
+    CatalogFingerprint = std::move(fingerprint);
+  }
   void SetResourcePacksEnabled(const std::vector<std::string> &enabled)
   {
     ResourcePacksEnabled = enabled;
@@ -505,6 +510,7 @@ private:
   std::vector<std::string> ResourcePacksPrimary;
   std::vector<std::string> ResourcePacksSecondary;
   std::string WorldgenOwnerPackId;
+  std::string CatalogFingerprint;
   std::function<void()> OnAfterWorldDataLoaded;
   std::function<void()> OnBlockRegistryChangedCallback;
   std::function<void()> OnCreatureCatalogChangedCallback;

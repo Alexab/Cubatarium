@@ -1,15 +1,19 @@
-{
-  "name": "wooden_door_upper",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "doorWood_upper",
-    "doorWood_upper",
-    "doorWood_upper",
-    "doorWood_upper",
-    "doorWood_upper",
-    "doorWood_upper"
-  ],
-  "render": {}
+﻿{
+    "name":  "wooden_door_upper",
+    "id":  580,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "doorWood_upper",
+                     "doorWood_upper",
+                     "doorWood_upper",
+                     "doorWood_upper",
+                     "doorWood_upper",
+                     "doorWood_upper"
+                 ],
+    "render":  {
+
+               }
 }
+

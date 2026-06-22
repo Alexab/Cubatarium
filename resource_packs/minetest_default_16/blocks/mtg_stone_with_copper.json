@@ -1,15 +1,19 @@
-{
-  "name": "mtg_stone_with_copper",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_stone_with_copper_composite_0",
-    "mtg_stone_with_copper_composite_0",
-    "mtg_stone_with_copper_composite_0",
-    "mtg_stone_with_copper_composite_0",
-    "mtg_stone_with_copper_composite_0",
-    "mtg_stone_with_copper_composite_0"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_stone_with_copper",
+    "id":  506,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_stone_with_copper_composite_0",
+                     "mtg_stone_with_copper_composite_0",
+                     "mtg_stone_with_copper_composite_0",
+                     "mtg_stone_with_copper_composite_0",
+                     "mtg_stone_with_copper_composite_0",
+                     "mtg_stone_with_copper_composite_0"
+                 ],
+    "render":  {
+
+               }
 }
+

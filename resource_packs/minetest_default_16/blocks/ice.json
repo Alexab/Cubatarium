@@ -1,18 +1,20 @@
-{
-  "name": "ice",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "ice",
-    "ice",
-    "ice",
-    "ice",
-    "ice",
-    "ice"
-  ],
-  "displayName": "Ice",
-  "render": {
-    "transparent": true
-  }
+﻿{
+    "name":  "ice",
+    "id":  382,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "ice",
+                     "ice",
+                     "ice",
+                     "ice",
+                     "ice",
+                     "ice"
+                 ],
+    "displayName":  "Ice",
+    "render":  {
+                   "transparent":  true
+               }
 }
+

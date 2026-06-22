@@ -1,15 +1,19 @@
-{
-  "name": "mtg_gravel",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_gravel_default_gravel",
-    "mtg_gravel_default_gravel",
-    "mtg_gravel_default_gravel",
-    "mtg_gravel_default_gravel",
-    "mtg_gravel_default_gravel",
-    "mtg_gravel_default_gravel"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_gravel",
+    "id":  458,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_gravel_default_gravel",
+                     "mtg_gravel_default_gravel",
+                     "mtg_gravel_default_gravel",
+                     "mtg_gravel_default_gravel",
+                     "mtg_gravel_default_gravel",
+                     "mtg_gravel_default_gravel"
+                 ],
+    "render":  {
+
+               }
 }
+

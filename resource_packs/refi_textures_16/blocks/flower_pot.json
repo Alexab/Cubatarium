@@ -1,15 +1,19 @@
-{
-  "name": "flower_pot",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "flowerPot",
-    "flowerPot",
-    "flowerPot",
-    "flowerPot",
-    "flowerPot",
-    "flowerPot"
-  ],
-  "render": {}
+﻿{
+    "name":  "flower_pot",
+    "id":  761,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot",
+                     "flowerPot"
+                 ],
+    "render":  {
+
+               }
 }
+

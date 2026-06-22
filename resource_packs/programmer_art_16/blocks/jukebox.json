@@ -1,15 +1,19 @@
-{
-  "name": "jukebox",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "wood",
-    "wood",
-    "wood",
-    "wood",
-    "jukebox_top",
-    "wood"
-  ],
-  "render": {}
+﻿{
+    "name":  "jukebox",
+    "id":  644,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "wood",
+                     "wood",
+                     "wood",
+                     "wood",
+                     "jukebox_top",
+                     "wood"
+                 ],
+    "render":  {
+
+               }
 }
+

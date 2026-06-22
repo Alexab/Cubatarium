@@ -1,16 +1,20 @@
-{
-  "name": "blockEmerald",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "blockEmerald",
-    "blockEmerald",
-    "blockEmerald",
-    "blockEmerald",
-    "blockEmerald",
-    "blockEmerald"
-  ],
-  "displayName": "Emerald Block",
-  "render": {}
+﻿{
+    "name":  "blockEmerald",
+    "id":  970,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "blockEmerald",
+                     "blockEmerald",
+                     "blockEmerald",
+                     "blockEmerald",
+                     "blockEmerald",
+                     "blockEmerald"
+                 ],
+    "displayName":  "Emerald Block",
+    "render":  {
+
+               }
 }
+

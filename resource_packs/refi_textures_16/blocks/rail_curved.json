@@ -1,15 +1,19 @@
-{
-  "name": "rail_curved",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "rail_turn",
-    "rail_turn",
-    "rail_turn",
-    "rail_turn",
-    "rail_turn",
-    "rail_turn"
-  ],
-  "render": {}
+﻿{
+    "name":  "rail_curved",
+    "id":  795,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn",
+                     "rail_turn"
+                 ],
+    "render":  {
+
+               }
 }
+

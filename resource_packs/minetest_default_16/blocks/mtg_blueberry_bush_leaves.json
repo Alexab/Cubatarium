@@ -1,22 +1,24 @@
-{
-  "name": "mtg_blueberry_bush_leaves",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
-    "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves"
-  ],
-  "render": {
-    "style": "cutout"
-  },
-  "physics": {
-    "movement": {
-      "occupancy": 0
-    }
-  }
+﻿{
+    "name":  "mtg_blueberry_bush_leaves",
+    "id":  413,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
+                     "mtg_blueberry_bush_leaves_default_blueberry_bush_leaves"
+                 ],
+    "render":  {
+                   "style":  "cutout"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                }
 }
+

@@ -1,15 +1,19 @@
-{
-  "name": "planks_spruce",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "wood_spruce",
-    "wood_spruce",
-    "wood_spruce",
-    "wood_spruce",
-    "wood_spruce",
-    "wood_spruce"
-  ],
-  "render": {}
+﻿{
+    "name":  "planks_spruce",
+    "id":  532,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "wood_spruce",
+                     "wood_spruce",
+                     "wood_spruce",
+                     "wood_spruce",
+                     "wood_spruce",
+                     "wood_spruce"
+                 ],
+    "render":  {
+
+               }
 }
+

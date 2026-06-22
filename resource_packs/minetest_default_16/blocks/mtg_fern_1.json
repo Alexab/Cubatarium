@@ -1,15 +1,19 @@
-{
-  "name": "mtg_fern_1",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_fern_1_default_fern_1",
-    "mtg_fern_1_default_fern_1",
-    "mtg_fern_1_default_fern_1",
-    "mtg_fern_1_default_fern_1",
-    "mtg_fern_1_default_fern_1",
-    "mtg_fern_1_default_fern_1"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_fern_1",
+    "id":  454,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_fern_1_default_fern_1",
+                     "mtg_fern_1_default_fern_1",
+                     "mtg_fern_1_default_fern_1",
+                     "mtg_fern_1_default_fern_1",
+                     "mtg_fern_1_default_fern_1",
+                     "mtg_fern_1_default_fern_1"
+                 ],
+    "render":  {
+
+               }
 }
+

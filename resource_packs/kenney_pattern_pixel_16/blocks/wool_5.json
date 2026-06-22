@@ -1,16 +1,20 @@
-{
-  "name": "wool_5",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_5",
-    "cloth_5",
-    "cloth_5",
-    "cloth_5",
-    "cloth_5",
-    "cloth_5"
-  ],
-  "displayName": "Lime Wool",
-  "render": {}
+﻿{
+    "name":  "wool_5",
+    "id":  49,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_5",
+                     "cloth_5",
+                     "cloth_5",
+                     "cloth_5",
+                     "cloth_5",
+                     "cloth_5"
+                 ],
+    "displayName":  "Lime Wool",
+    "render":  {
+
+               }
 }
+

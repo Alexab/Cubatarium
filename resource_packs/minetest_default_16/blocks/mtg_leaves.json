@@ -1,22 +1,24 @@
-{
-  "name": "mtg_leaves",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_leaves_default_leaves",
-    "mtg_leaves_default_leaves",
-    "mtg_leaves_default_leaves",
-    "mtg_leaves_default_leaves",
-    "mtg_leaves_default_leaves",
-    "mtg_leaves_default_leaves"
-  ],
-  "render": {
-    "style": "cutout"
-  },
-  "physics": {
-    "movement": {
-      "occupancy": 0
-    }
-  }
+﻿{
+    "name":  "mtg_leaves",
+    "id":  469,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_leaves_default_leaves",
+                     "mtg_leaves_default_leaves",
+                     "mtg_leaves_default_leaves",
+                     "mtg_leaves_default_leaves",
+                     "mtg_leaves_default_leaves",
+                     "mtg_leaves_default_leaves"
+                 ],
+    "render":  {
+                   "style":  "cutout"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                }
 }
+

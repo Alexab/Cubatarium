@@ -1,16 +1,20 @@
-{
-  "name": "wool_7",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_7",
-    "cloth_7",
-    "cloth_7",
-    "cloth_7",
-    "cloth_7",
-    "cloth_7"
-  ],
-  "displayName": "Gray Wool",
-  "render": {}
+﻿{
+    "name":  "wool_7",
+    "id":  594,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_7",
+                     "cloth_7",
+                     "cloth_7",
+                     "cloth_7",
+                     "cloth_7",
+                     "cloth_7"
+                 ],
+    "displayName":  "Gray Wool",
+    "render":  {
+
+               }
 }
+

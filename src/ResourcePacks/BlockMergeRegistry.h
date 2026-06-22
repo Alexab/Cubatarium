@@ -79,6 +79,8 @@ public:
     return nullptr;
   }
 
+  std::string ComputeCatalogFingerprint() const;
+
 private:
   struct MergedEntry
   {
@@ -97,6 +99,7 @@ private:
                                 const ResourcePackManifest &pack) const;
   void AssignRuntimeIds();
   BlockId CreateSyntheticBlock(const std::string &name);
+  static bool IsPackOwnedEntry(const MergedEntry &entry);
 
   std::vector<ResourcePackManifest> ActivePacks;
   std::vector<std::string> PrimaryPackIds;

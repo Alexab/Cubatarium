@@ -1,15 +1,19 @@
-{
-  "name": "mycelium",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "mycel_side",
-    "mycel_side",
-    "mycel_side",
-    "mycel_side",
-    "mycel_top",
-    "dirt"
-  ],
-  "render": {}
+﻿{
+    "name":  "mycelium",
+    "id":  518,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_side",
+                     "mycel_top",
+                     "dirt"
+                 ],
+    "render":  {
+
+               }
 }
+

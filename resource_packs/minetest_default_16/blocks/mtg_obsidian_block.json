@@ -1,15 +1,19 @@
-{
-  "name": "mtg_obsidian_block",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_obsidian_block_default_obsidian_block",
-    "mtg_obsidian_block_default_obsidian_block",
-    "mtg_obsidian_block_default_obsidian_block",
-    "mtg_obsidian_block_default_obsidian_block",
-    "mtg_obsidian_block_default_obsidian_block",
-    "mtg_obsidian_block_default_obsidian_block"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_obsidian_block",
+    "id":  475,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_obsidian_block_default_obsidian_block",
+                     "mtg_obsidian_block_default_obsidian_block",
+                     "mtg_obsidian_block_default_obsidian_block",
+                     "mtg_obsidian_block_default_obsidian_block",
+                     "mtg_obsidian_block_default_obsidian_block",
+                     "mtg_obsidian_block_default_obsidian_block"
+                 ],
+    "render":  {
+
+               }
 }
+

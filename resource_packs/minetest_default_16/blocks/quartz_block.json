@@ -1,15 +1,19 @@
-{
-  "name": "quartz_block",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "quartzblock_side",
-    "quartzblock_side",
-    "quartzblock_side",
-    "quartzblock_side",
-    "quartzblock_top",
-    "quartzblock_bottom"
-  ],
-  "render": {}
+﻿{
+    "name":  "quartz_block",
+    "id":  535,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_side",
+                     "quartzblock_top",
+                     "quartzblock_bottom"
+                 ],
+    "render":  {
+
+               }
 }
+

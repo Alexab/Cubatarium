@@ -1,15 +1,19 @@
-{
-  "name": "mtg_emergent_jungle_sapling",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
-    "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_emergent_jungle_sapling",
+    "id":  453,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
+                     "mtg_emergent_jungle_sapling_default_emergent_jungle_sapling"
+                 ],
+    "render":  {
+
+               }
 }
+

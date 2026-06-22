@@ -35,6 +35,10 @@ jobs:
       - name: Install Python deps
         run: pip install pyyaml
 
+      - name: Block id assignment check
+        shell: pwsh
+        run: ./tools/assign_pack_block_ids.ps1 -Check
+
       - name: Resource pack smoke checks
         run: python tools/smoke_resource_packs.py
 

@@ -1,15 +1,19 @@
-{
-  "name": "mtg_sand_with_kelp",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_sand_with_kelp_default_sand",
-    "mtg_sand_with_kelp_default_sand",
-    "mtg_sand_with_kelp_default_sand",
-    "mtg_sand_with_kelp_default_sand",
-    "mtg_sand_with_kelp_default_sand",
-    "mtg_sand_with_kelp_default_sand"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_sand_with_kelp",
+    "id":  491,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_sand_with_kelp_default_sand",
+                     "mtg_sand_with_kelp_default_sand",
+                     "mtg_sand_with_kelp_default_sand",
+                     "mtg_sand_with_kelp_default_sand",
+                     "mtg_sand_with_kelp_default_sand",
+                     "mtg_sand_with_kelp_default_sand"
+                 ],
+    "render":  {
+
+               }
 }
+

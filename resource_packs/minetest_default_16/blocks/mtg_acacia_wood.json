@@ -1,15 +1,19 @@
-{
-  "name": "mtg_acacia_wood",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_acacia_wood_default_acacia_wood",
-    "mtg_acacia_wood_default_acacia_wood",
-    "mtg_acacia_wood_default_acacia_wood",
-    "mtg_acacia_wood_default_acacia_wood",
-    "mtg_acacia_wood_default_acacia_wood",
-    "mtg_acacia_wood_default_acacia_wood"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_acacia_wood",
+    "id":  407,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_acacia_wood_default_acacia_wood",
+                     "mtg_acacia_wood_default_acacia_wood",
+                     "mtg_acacia_wood_default_acacia_wood",
+                     "mtg_acacia_wood_default_acacia_wood",
+                     "mtg_acacia_wood_default_acacia_wood",
+                     "mtg_acacia_wood_default_acacia_wood"
+                 ],
+    "render":  {
+
+               }
 }
+

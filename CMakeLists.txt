@@ -476,10 +476,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/shaders"
-        "${CUBATARIUM_RUN_DIR}/shaders"
-    COMMENT "Copying shaders to runtime directory"
+    COMMAND ${CMAKE_COMMAND}
+        -DSYNC_SRC="${CMAKE_SOURCE_DIR}/shaders"
+        -DSYNC_DST="${CUBATARIUM_RUN_DIR}/shaders"
+        -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+    COMMENT "Syncing shaders to runtime directory"
 )
 
 # Seed bin/config.json from template only on first run (never overwrite runtime config).
@@ -495,55 +496,61 @@ endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/prefabs")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/prefabs"
-            "${CUBATARIUM_RUN_DIR}/prefabs"
-        COMMENT "Copying prefabs to output directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/prefabs"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/prefabs"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing prefabs to runtime directory"
     )
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/models")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/models"
-            "${CUBATARIUM_RUN_DIR}/models"
-        COMMENT "Copying models to output directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/models"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/models"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing models to runtime directory"
     )
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/textures"
-            "${CUBATARIUM_RUN_DIR}/textures"
-        COMMENT "Copying textures to output directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/textures"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/textures"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing textures to runtime directory"
     )
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/content")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/content"
-            "${CUBATARIUM_RUN_DIR}/content"
-        COMMENT "Copying content data to output directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/content"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/content"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing content data to runtime directory"
     )
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/resource_packs"
-            "${CUBATARIUM_RUN_DIR}/resource_packs"
-        COMMENT "Copying resource packs to runtime directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/resource_packs"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/resource_packs"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing resource packs to runtime directory"
     )
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/fonts")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/fonts"
-            "${CUBATARIUM_RUN_DIR}/fonts"
-        COMMENT "Copying fonts to runtime directory"
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/fonts"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/fonts"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing fonts to runtime directory"
     )
 endif()
 

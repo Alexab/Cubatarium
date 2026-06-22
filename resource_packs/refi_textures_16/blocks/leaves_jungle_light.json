@@ -1,19 +1,21 @@
-{
-  "name": "leaves_jungle_light",
-  "types": [
-    "natural",
-    "plants"
-  ],
-  "textures": [
-    "leaves_jungle",
-    "leaves_jungle",
-    "leaves_jungle",
-    "leaves_jungle",
-    "leaves_jungle",
-    "leaves_jungle"
-  ],
-  "render": {
-    "transparent": true
-  },
-  "displayName": "Jungle Leaves"
+﻿{
+    "name":  "leaves_jungle_light",
+    "id":  777,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "leaves_jungle",
+                     "leaves_jungle",
+                     "leaves_jungle",
+                     "leaves_jungle",
+                     "leaves_jungle",
+                     "leaves_jungle"
+                 ],
+    "render":  {
+                   "transparent":  true
+               },
+    "displayName":  "Jungle Leaves"
 }
+

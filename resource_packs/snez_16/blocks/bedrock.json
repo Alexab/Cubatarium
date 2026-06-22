@@ -1,17 +1,21 @@
-{
-  "name": "bedrock",
-  "types": [
-    "building",
-    "natural"
-  ],
-  "textures": [
-    "bedrock",
-    "bedrock",
-    "bedrock",
-    "bedrock",
-    "bedrock",
-    "bedrock"
-  ],
-  "displayName": "Bedrock",
-  "render": {}
+﻿{
+    "name":  "bedrock",
+    "id":  885,
+    "types":  [
+                  "building",
+                  "natural"
+              ],
+    "textures":  [
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock"
+                 ],
+    "displayName":  "Bedrock",
+    "render":  {
+
+               }
 }
+

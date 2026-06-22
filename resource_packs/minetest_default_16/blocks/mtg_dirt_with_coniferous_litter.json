@@ -1,15 +1,19 @@
-{
-  "name": "mtg_dirt_with_coniferous_litter",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_dirt_with_coniferous_litter_composite_0",
-    "mtg_dirt_with_coniferous_litter_composite_0",
-    "mtg_dirt_with_coniferous_litter_composite_0",
-    "mtg_dirt_with_coniferous_litter_composite_0",
-    "mtg_dirt_with_coniferous_litter_default_coniferous_litter",
-    "mtg_dirt_with_coniferous_litter_default_dirt"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_dirt_with_coniferous_litter",
+    "id":  443,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_dirt_with_coniferous_litter_composite_0",
+                     "mtg_dirt_with_coniferous_litter_composite_0",
+                     "mtg_dirt_with_coniferous_litter_composite_0",
+                     "mtg_dirt_with_coniferous_litter_composite_0",
+                     "mtg_dirt_with_coniferous_litter_default_coniferous_litter",
+                     "mtg_dirt_with_coniferous_litter_default_dirt"
+                 ],
+    "render":  {
+
+               }
 }
+

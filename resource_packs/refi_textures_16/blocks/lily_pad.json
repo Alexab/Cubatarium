@@ -1,15 +1,19 @@
-{
-  "name": "lily_pad",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "waterlily",
-    "waterlily",
-    "waterlily",
-    "waterlily",
-    "waterlily",
-    "waterlily"
-  ],
-  "render": {}
+﻿{
+    "name":  "lily_pad",
+    "id":  782,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily",
+                     "waterlily"
+                 ],
+    "render":  {
+
+               }
 }
+

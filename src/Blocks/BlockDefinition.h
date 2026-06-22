@@ -83,7 +83,7 @@ struct ParsedBlockJson
 bool IsReservedBlockName(const std::string &name);
 
 ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
-                                   bool warnLegacyId = true);
+                                   bool useStablePackId = false);
 
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json &j);
 BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j);

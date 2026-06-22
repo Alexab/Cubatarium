@@ -1,15 +1,19 @@
-{
-  "name": "mtg_sand",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_sand_default_sand",
-    "mtg_sand_default_sand",
-    "mtg_sand_default_sand",
-    "mtg_sand_default_sand",
-    "mtg_sand_default_sand",
-    "mtg_sand_default_sand"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_sand",
+    "id":  490,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_sand_default_sand",
+                     "mtg_sand_default_sand",
+                     "mtg_sand_default_sand",
+                     "mtg_sand_default_sand",
+                     "mtg_sand_default_sand",
+                     "mtg_sand_default_sand"
+                 ],
+    "render":  {
+
+               }
 }
+

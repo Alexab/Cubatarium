@@ -1,17 +1,21 @@
-{
-  "name": "whiteStone",
-  "types": [
-    "natural",
-    "building"
-  ],
-  "textures": [
-    "whiteStone",
-    "whiteStone",
-    "whiteStone",
-    "whiteStone",
-    "whiteStone",
-    "whiteStone"
-  ],
-  "displayName": "Quartz Block",
-  "render": {}
+﻿{
+    "name":  "whiteStone",
+    "id":  577,
+    "types":  [
+                  "natural",
+                  "building"
+              ],
+    "textures":  [
+                     "whiteStone",
+                     "whiteStone",
+                     "whiteStone",
+                     "whiteStone",
+                     "whiteStone",
+                     "whiteStone"
+                 ],
+    "displayName":  "Quartz Block",
+    "render":  {
+
+               }
 }
+

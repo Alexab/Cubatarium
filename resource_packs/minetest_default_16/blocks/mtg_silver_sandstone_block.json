@@ -1,15 +1,19 @@
-{
-  "name": "mtg_silver_sandstone_block",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_silver_sandstone_block_default_silver_sandstone_block",
-    "mtg_silver_sandstone_block_default_silver_sandstone_block",
-    "mtg_silver_sandstone_block_default_silver_sandstone_block",
-    "mtg_silver_sandstone_block_default_silver_sandstone_block",
-    "mtg_silver_sandstone_block_default_silver_sandstone_block",
-    "mtg_silver_sandstone_block_default_silver_sandstone_block"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_silver_sandstone_block",
+    "id":  498,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block",
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block",
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block",
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block",
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block",
+                     "mtg_silver_sandstone_block_default_silver_sandstone_block"
+                 ],
+    "render":  {
+
+               }
 }
+

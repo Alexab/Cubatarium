@@ -1,15 +1,19 @@
-{
-  "name": "quartz_chiseled",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "quartzblock_chiseled",
-    "quartzblock_chiseled",
-    "quartzblock_chiseled",
-    "quartzblock_chiseled",
-    "quartzblock_chiseled_top",
-    "quartzblock_bottom"
-  ],
-  "render": {}
+﻿{
+    "name":  "quartz_chiseled",
+    "id":  536,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "quartzblock_chiseled",
+                     "quartzblock_chiseled",
+                     "quartzblock_chiseled",
+                     "quartzblock_chiseled",
+                     "quartzblock_chiseled_top",
+                     "quartzblock_bottom"
+                 ],
+    "render":  {
+
+               }
 }
+

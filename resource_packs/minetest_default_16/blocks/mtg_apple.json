@@ -1,15 +1,19 @@
-{
-  "name": "mtg_apple",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_apple_default_apple",
-    "mtg_apple_default_apple",
-    "mtg_apple_default_apple",
-    "mtg_apple_default_apple",
-    "mtg_apple_default_apple",
-    "mtg_apple_default_apple"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_apple",
+    "id":  408,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_apple_default_apple",
+                     "mtg_apple_default_apple",
+                     "mtg_apple_default_apple",
+                     "mtg_apple_default_apple",
+                     "mtg_apple_default_apple",
+                     "mtg_apple_default_apple"
+                 ],
+    "render":  {
+
+               }
 }
+

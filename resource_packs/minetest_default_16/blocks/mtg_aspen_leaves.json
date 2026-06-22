@@ -1,22 +1,24 @@
-{
-  "name": "mtg_aspen_leaves",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_aspen_leaves_default_aspen_leaves",
-    "mtg_aspen_leaves_default_aspen_leaves",
-    "mtg_aspen_leaves_default_aspen_leaves",
-    "mtg_aspen_leaves_default_aspen_leaves",
-    "mtg_aspen_leaves_default_aspen_leaves",
-    "mtg_aspen_leaves_default_aspen_leaves"
-  ],
-  "render": {
-    "style": "cutout"
-  },
-  "physics": {
-    "movement": {
-      "occupancy": 0
-    }
-  }
+﻿{
+    "name":  "mtg_aspen_leaves",
+    "id":  409,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_aspen_leaves_default_aspen_leaves",
+                     "mtg_aspen_leaves_default_aspen_leaves",
+                     "mtg_aspen_leaves_default_aspen_leaves",
+                     "mtg_aspen_leaves_default_aspen_leaves",
+                     "mtg_aspen_leaves_default_aspen_leaves",
+                     "mtg_aspen_leaves_default_aspen_leaves"
+                 ],
+    "render":  {
+                   "style":  "cutout"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                }
 }
+

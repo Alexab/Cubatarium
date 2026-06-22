@@ -1,16 +1,20 @@
-{
-  "name": "wool_14",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_14",
-    "cloth_14",
-    "cloth_14",
-    "cloth_14",
-    "cloth_14",
-    "cloth_14"
-  ],
-  "displayName": "Red Wool",
-  "render": {}
+﻿{
+    "name":  "wool_14",
+    "id":  100,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_14",
+                     "cloth_14",
+                     "cloth_14",
+                     "cloth_14",
+                     "cloth_14",
+                     "cloth_14"
+                 ],
+    "displayName":  "Red Wool",
+    "render":  {
+
+               }
 }
+

@@ -1,15 +1,19 @@
-{
-  "name": "mtg_desert_stone",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_desert_stone_default_desert_stone",
-    "mtg_desert_stone_default_desert_stone",
-    "mtg_desert_stone_default_desert_stone",
-    "mtg_desert_stone_default_desert_stone",
-    "mtg_desert_stone_default_desert_stone",
-    "mtg_desert_stone_default_desert_stone"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_desert_stone",
+    "id":  438,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_desert_stone_default_desert_stone",
+                     "mtg_desert_stone_default_desert_stone",
+                     "mtg_desert_stone_default_desert_stone",
+                     "mtg_desert_stone_default_desert_stone",
+                     "mtg_desert_stone_default_desert_stone",
+                     "mtg_desert_stone_default_desert_stone"
+                 ],
+    "render":  {
+
+               }
 }
+

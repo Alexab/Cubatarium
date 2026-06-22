@@ -1,15 +1,19 @@
-{
-  "name": "nether_quartz_ore",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "netherquartz",
-    "netherquartz",
-    "netherquartz",
-    "netherquartz",
-    "netherquartz",
-    "netherquartz"
-  ],
-  "render": {}
+﻿{
+    "name":  "nether_quartz_ore",
+    "id":  660,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz",
+                     "netherquartz"
+                 ],
+    "render":  {
+
+               }
 }
+

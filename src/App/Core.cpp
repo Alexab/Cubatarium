@@ -90,30 +90,32 @@ namespace
 
 constexpr int kMaxProjectRootSearchDepth = 8;
 
+bool IsGameDataRoot(const std::filesystem::path &candidate)
+{
+  const bool hasResourcePacks =
+      std::filesystem::exists(candidate / "resource_packs");
+  const bool hasPrefabs = std::filesystem::exists(candidate / "prefabs");
+  const bool hasShaders = std::filesystem::exists(candidate / "shaders" /
+                                                "vshader_greedy.glsl");
+  if (hasResourcePacks && hasPrefabs && hasShaders)
+  {
+    return true;
+  }
+  const bool hasTextures =
+      std::filesystem::exists(candidate / "textures" / "blocks");
+  const bool hasModels =
+      std::filesystem::exists(candidate / "models" / "blocks");
+  return hasTextures && hasModels && hasPrefabs && hasShaders;
+}
+
 std::optional<std::filesystem::path>
 TryFindProjectRoot(std::filesystem::path start)
 {
-  std::optional<std::filesystem::path> best;
   for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth)
   {
-    const auto textures_dir = start / "textures" / "blocks";
-    const auto models_blocks_dir = start / "models" / "blocks";
-    const auto resource_packs_dir = start / "resource_packs";
-    const auto prefabs_dir = start / "prefabs";
-    const auto shaders_dir = start / "shaders";
-    const bool hasTextures = std::filesystem::exists(textures_dir);
-    const bool hasModels = std::filesystem::exists(models_blocks_dir);
-    const bool hasResourcePacks = std::filesystem::exists(resource_packs_dir);
-    const bool hasPrefabs = std::filesystem::exists(prefabs_dir);
-    const bool hasShaders =
-        std::filesystem::exists(shaders_dir / "vshader_greedy.glsl");
-    if (hasResourcePacks && hasPrefabs && hasShaders)
+    if (IsGameDataRoot(start))
     {
-      best = start;
-    }
-    else if (hasTextures && hasModels && hasPrefabs && hasShaders)
-    {
-      best = start;
+      return start;
     }
     if (!start.has_parent_path())
     {
@@ -121,7 +123,7 @@ TryFindProjectRoot(std::filesystem::path start)
     }
     start = start.parent_path();
   }
-  return best;
+  return std::nullopt;
 }
 
 std::filesystem::path FindProjectRoot(std::filesystem::path start)
@@ -1054,6 +1056,11 @@ void UCore::SaveWorld(const std::string &world_name)
   {
     ActiveWorldFolder = WorldFolderPath(world_name);
   }
+  if (WorldInstance && BlockMergeRegistryInstance)
+  {
+    WorldInstance->SetCatalogFingerprint(
+        BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+  }
   WorldInstance->Save(ActiveWorldFolder.string());
 }
 
@@ -1253,6 +1260,11 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
     RebuildBlockTexturesFromMergeRegistry();
   }
   ReloadCreatureCatalog(packs);
+  if (WorldInstance && BlockMergeRegistryInstance)
+  {
+    WorldInstance->SetCatalogFingerprint(
+        BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+  }
   return true;
 }
 
@@ -1291,7 +1303,20 @@ void UCore::ApplyResourcePacksAfterWorldDataLoaded()
     WorldInstance->SetResourcePackSelection(
         selection.Primary, selection.Secondary, selection.WorldgenOwner);
   }
+  const std::string storedFingerprint = WorldInstance->GetCatalogFingerprint();
   ApplyResourcePacks(selection);
+  if (BlockMergeRegistryInstance && !storedFingerprint.empty())
+  {
+    const std::string currentFingerprint =
+        BlockMergeRegistryInstance->ComputeCatalogFingerprint();
+    if (storedFingerprint != currentFingerprint)
+    {
+      std::cerr << "WARNING: block catalog fingerprint mismatch for world '"
+                << WorldInstance->GetWorldName()
+                << "'. Blocks/textures may not match the saved terrain."
+                << std::endl;
+    }
+  }
 }
 
 void UCore::CreateNewWorldWithSettings(

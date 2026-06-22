@@ -1,16 +1,20 @@
-{
-  "name": "wool_12",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_12",
-    "cloth_12",
-    "cloth_12",
-    "cloth_12",
-    "cloth_12",
-    "cloth_12"
-  ],
-  "displayName": "Brown Wool",
-  "render": {}
+﻿{
+    "name":  "wool_12",
+    "id":  156,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_12",
+                     "cloth_12",
+                     "cloth_12",
+                     "cloth_12",
+                     "cloth_12",
+                     "cloth_12"
+                 ],
+    "displayName":  "Brown Wool",
+    "render":  {
+
+               }
 }
+

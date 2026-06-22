@@ -1,15 +1,19 @@
-{
-  "name": "log_jungle",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "tree_jungle",
-    "tree_jungle",
-    "tree_jungle",
-    "tree_jungle",
-    "wood_jungle",
-    "wood_jungle"
-  ],
-  "render": {}
+﻿{
+    "name":  "log_jungle",
+    "id":  655,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "tree_jungle",
+                     "tree_jungle",
+                     "tree_jungle",
+                     "tree_jungle",
+                     "wood_jungle",
+                     "wood_jungle"
+                 ],
+    "render":  {
+
+               }
 }
+

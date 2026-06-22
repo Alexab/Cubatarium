@@ -1,15 +1,19 @@
-{
-  "name": "mtg_dirt",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_dirt_default_dirt",
-    "mtg_dirt_default_dirt",
-    "mtg_dirt_default_dirt",
-    "mtg_dirt_default_dirt",
-    "mtg_dirt_default_dirt",
-    "mtg_dirt_default_dirt"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_dirt",
+    "id":  442,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_dirt_default_dirt",
+                     "mtg_dirt_default_dirt",
+                     "mtg_dirt_default_dirt",
+                     "mtg_dirt_default_dirt",
+                     "mtg_dirt_default_dirt",
+                     "mtg_dirt_default_dirt"
+                 ],
+    "render":  {
+
+               }
 }
+

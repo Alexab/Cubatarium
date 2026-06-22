@@ -1,15 +1,19 @@
-{
-  "name": "snow_layer",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "snow_side",
-    "snow_side",
-    "snow_side",
-    "snow_side",
-    "snow_side",
-    "snow_side"
-  ],
-  "render": {}
+﻿{
+    "name":  "snow_layer",
+    "id":  812,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "snow_side",
+                     "snow_side",
+                     "snow_side",
+                     "snow_side",
+                     "snow_side",
+                     "snow_side"
+                 ],
+    "render":  {
+
+               }
 }
+

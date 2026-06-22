@@ -8,6 +8,47 @@
 namespace cutum
 {
 
+namespace
+{
+
+bool IsGameDataRoot(const std::filesystem::path &candidate)
+{
+  const bool hasResourcePacks =
+      std::filesystem::exists(candidate / "resource_packs");
+  const bool hasPrefabs = std::filesystem::exists(candidate / "prefabs");
+  const bool hasShaders = std::filesystem::exists(candidate / "shaders" /
+                                                "vshader_greedy.glsl");
+  if (hasResourcePacks && hasPrefabs && hasShaders)
+  {
+    return true;
+  }
+  const bool hasTextures =
+      std::filesystem::exists(candidate / "textures" / "blocks");
+  const bool hasModels =
+      std::filesystem::exists(candidate / "models" / "blocks");
+  return hasTextures && hasModels && hasPrefabs && hasShaders;
+}
+
+std::filesystem::path FindGameDataRoot(const std::filesystem::path &start)
+{
+  auto path = start;
+  for (int depth = 0; depth < 8; ++depth)
+  {
+    if (IsGameDataRoot(path))
+    {
+      return path;
+    }
+    if (!path.has_parent_path())
+    {
+      break;
+    }
+    path = path.parent_path();
+  }
+  return start;
+}
+
+} // namespace
+
 std::filesystem::path UDesktopPlatformPaths::ProjectRoot() const
 {
   if (!CachedRoot.empty())
@@ -18,22 +59,11 @@ std::filesystem::path UDesktopPlatformPaths::ProjectRoot() const
   const auto cwd = std::filesystem::current_path();
   for (const auto &start : {exeDir, cwd})
   {
-    auto path = start;
-    for (int depth = 0; depth < 8; ++depth)
+    const auto root = FindGameDataRoot(start);
+    if (IsGameDataRoot(root))
     {
-      if (std::filesystem::exists(path / "textures" / "blocks") &&
-          std::filesystem::exists(path / "models" / "blocks") &&
-          std::filesystem::exists(path / "prefabs") &&
-          std::filesystem::exists(path / "shaders" / "vshader_greedy.glsl"))
-      {
-        CachedRoot = path;
-        return CachedRoot;
-      }
-      if (!path.has_parent_path())
-      {
-        break;
-      }
-      path = path.parent_path();
+      CachedRoot = root;
+      return CachedRoot;
     }
   }
   CachedRoot = exeDir;

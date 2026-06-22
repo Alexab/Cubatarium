@@ -1,15 +1,19 @@
-{
-  "name": "sponge",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "sponge",
-    "sponge",
-    "sponge",
-    "sponge",
-    "sponge",
-    "sponge"
-  ],
-  "render": {}
+﻿{
+    "name":  "sponge",
+    "id":  693,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sponge",
+                     "sponge",
+                     "sponge",
+                     "sponge",
+                     "sponge",
+                     "sponge"
+                 ],
+    "render":  {
+
+               }
 }
+

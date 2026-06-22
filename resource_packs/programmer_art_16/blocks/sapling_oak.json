@@ -1,15 +1,19 @@
-{
-  "name": "sapling_oak",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "sapling",
-    "sapling",
-    "sapling",
-    "sapling",
-    "sapling",
-    "sapling"
-  ],
-  "render": {}
+﻿{
+    "name":  "sapling_oak",
+    "id":  690,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling",
+                     "sapling"
+                 ],
+    "render":  {
+
+               }
 }
+

@@ -1,15 +1,19 @@
-{
-  "name": "rose",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "rose",
-    "rose",
-    "rose",
-    "rose",
-    "rose",
-    "rose"
-  ],
-  "render": {}
+﻿{
+    "name":  "rose",
+    "id":  802,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose",
+                     "rose"
+                 ],
+    "render":  {
+
+               }
 }
+

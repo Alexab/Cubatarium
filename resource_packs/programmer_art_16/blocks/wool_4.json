@@ -1,16 +1,20 @@
-{
-  "name": "wool_4",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_4",
-    "cloth_4",
-    "cloth_4",
-    "cloth_4",
-    "cloth_4",
-    "cloth_4"
-  ],
-  "displayName": "Yellow Wool",
-  "render": {}
+﻿{
+    "name":  "wool_4",
+    "id":  725,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_4",
+                     "cloth_4",
+                     "cloth_4",
+                     "cloth_4",
+                     "cloth_4",
+                     "cloth_4"
+                 ],
+    "displayName":  "Yellow Wool",
+    "render":  {
+
+               }
 }
+

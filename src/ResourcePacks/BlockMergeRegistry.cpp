@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <set>
 #include <unordered_set>
 
@@ -238,32 +239,125 @@ void UBlockMergeRegistry::AssignRuntimeIds()
   IdToName.clear();
   CubeDescs.clear();
 
-  std::set<std::string> names;
-  for (const auto &pair : BlocksByName)
+  const auto registerBlock =
+      [this](const std::string &name, MergedEntry &entry, BlockId id) -> bool
   {
-    names.insert(pair.first);
-  }
-
-  BlockId nextId = 1;
-  for (const auto &name : names)
-  {
-    const auto it = BlocksByName.find(name);
-    if (it == BlocksByName.end())
+    if (IdToName.count(id))
     {
-      continue;
+      std::cerr << "BlockMergeRegistry: duplicate block id " << id << " for '"
+                << name << "' and '" << IdToName.at(id) << "'" << std::endl;
+      return false;
     }
-    it->second.Definition.Id = nextId;
-    NameToId[name] = nextId;
-    IdToName[nextId] = name;
+    entry.Definition.Id = id;
+    NameToId[name] = id;
+    IdToName[id] = name;
 
     MergedCubeDesc desc;
     desc.Name = name;
-    desc.Id = nextId;
-    desc.Stems = it->second.Stems;
-    desc.AnimFrames = std::max(1, it->second.Definition.Animation.FrameCount);
+    desc.Id = id;
+    desc.Stems = entry.Stems;
+    desc.AnimFrames = std::max(1, entry.Definition.Animation.FrameCount);
     CubeDescs.push_back(desc);
-    ++nextId;
+    return true;
+  };
+
+  for (auto &pair : BlocksByName)
+  {
+    if (!IsPackOwnedEntry(pair.second))
+    {
+      continue;
+    }
+    const BlockId id = pair.second.Definition.Id;
+    if (id >= kPackBlockIdMin && id <= kPackBlockIdMax)
+    {
+      registerBlock(pair.first, pair.second, id);
+    }
   }
+
+  std::vector<std::string> missingPackIds;
+  for (const auto &pair : BlocksByName)
+  {
+    if (!IsPackOwnedEntry(pair.second))
+    {
+      continue;
+    }
+    if (NameToId.count(pair.first))
+    {
+      continue;
+    }
+    missingPackIds.push_back(pair.first);
+  }
+  std::sort(missingPackIds.begin(), missingPackIds.end());
+
+  BlockId fallbackId = kPackBlockIdMin;
+  for (const auto &idPair : IdToName)
+  {
+    fallbackId = std::max(fallbackId, static_cast<BlockId>(idPair.first + 1));
+  }
+  for (const std::string &name : missingPackIds)
+  {
+    while (IdToName.count(fallbackId))
+    {
+      ++fallbackId;
+    }
+    if (fallbackId > kPackBlockIdMax)
+    {
+      std::cerr << "BlockMergeRegistry: no pack id available for '" << name
+                << "'" << std::endl;
+      continue;
+    }
+    std::cerr << "BlockMergeRegistry: missing stable id for '" << name
+              << "', assigned fallback " << fallbackId << std::endl;
+    registerBlock(name, BlocksByName[name], fallbackId);
+    ++fallbackId;
+  }
+
+  for (auto &pair : BlocksByName)
+  {
+    if (IsPackOwnedEntry(pair.second) || NameToId.count(pair.first))
+    {
+      continue;
+    }
+    BlockId runtimeId = kRuntimeBlockIdMin;
+    for (const auto &idPair : IdToName)
+    {
+      runtimeId = std::max(runtimeId, static_cast<BlockId>(idPair.first + 1));
+    }
+    registerBlock(pair.first, pair.second, runtimeId);
+  }
+}
+
+bool UBlockMergeRegistry::IsPackOwnedEntry(const MergedEntry &entry)
+{
+  return entry.OwnerPackId != "runtime" && entry.OwnerPackId != "synthetic";
+}
+
+std::string UBlockMergeRegistry::ComputeCatalogFingerprint() const
+{
+  nlohmann::json root;
+  nlohmann::json packs = nlohmann::json::array();
+  for (const ResourcePackManifest &pack : ActivePacks)
+  {
+    packs.push_back({{"id", pack.Id}, {"version", pack.Version}});
+  }
+  root["packs"] = packs;
+
+  nlohmann::json blocks = nlohmann::json::array();
+  std::vector<std::pair<std::string, BlockId>> sorted;
+  sorted.reserve(NameToId.size());
+  for (const auto &pair : NameToId)
+  {
+    sorted.emplace_back(pair.first, pair.second);
+  }
+  std::sort(sorted.begin(), sorted.end());
+  for (const auto &entry : sorted)
+  {
+    blocks.push_back({{"name", entry.first}, {"id", entry.second}});
+  }
+  root["blocks"] = blocks;
+
+  const std::string payload = root.dump();
+  return std::to_string(std::hash<std::string>{}(payload));
 }
 
 namespace
@@ -313,7 +407,7 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
     }
   }
   BlocksByName[name] = entry;
-  BlockId nextId = 1;
+  BlockId nextId = kRuntimeBlockIdMin;
   for (const auto &pair : IdToName)
   {
     nextId = std::max(nextId, static_cast<BlockId>(pair.first + 1));

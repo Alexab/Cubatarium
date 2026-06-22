@@ -1,15 +1,19 @@
-{
-  "name": "carrots",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "carrots_3",
-    "carrots_3",
-    "carrots_3",
-    "carrots_3",
-    "carrots_3",
-    "carrots_3"
-  ],
-  "render": {}
+﻿{
+    "name":  "carrots",
+    "id":  355,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3",
+                     "carrots_3"
+                 ],
+    "render":  {
+
+               }
 }
+

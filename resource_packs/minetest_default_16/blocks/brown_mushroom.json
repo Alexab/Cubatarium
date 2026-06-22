@@ -1,25 +1,27 @@
-{
-  "name": "brown_mushroom",
-  "types": [
-    "natural",
-    "plants"
-  ],
-  "textures": [
-    "mushroom_brown",
-    "mushroom_brown",
-    "mushroom_brown",
-    "mushroom_brown",
-    "mushroom_brown",
-    "mushroom_brown"
-  ],
-  "render": {
-    "transparent": true,
-    "style": "cross"
-  },
-  "physics": {
-    "movement": {
-      "occupancy": 0
-    }
-  },
-  "displayName": "Brown Mushroom"
+﻿{
+    "name":  "brown_mushroom",
+    "id":  351,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown",
+                     "mushroom_brown"
+                 ],
+    "render":  {
+                   "transparent":  true,
+                   "style":  "cross"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                },
+    "displayName":  "Brown Mushroom"
 }
+

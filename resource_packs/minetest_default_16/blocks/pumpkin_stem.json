@@ -1,15 +1,19 @@
-{
-  "name": "pumpkin_stem",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "stem_bent",
-    "stem_bent",
-    "stem_bent",
-    "stem_bent",
-    "stem_bent",
-    "stem_bent"
-  ],
-  "render": {}
+﻿{
+    "name":  "pumpkin_stem",
+    "id":  534,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent",
+                     "stem_bent"
+                 ],
+    "render":  {
+
+               }
 }
+

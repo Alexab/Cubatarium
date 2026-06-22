@@ -1,15 +1,19 @@
-{
-  "name": "mtg_steelblock",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_steelblock_default_steel_block",
-    "mtg_steelblock_default_steel_block",
-    "mtg_steelblock_default_steel_block",
-    "mtg_steelblock_default_steel_block",
-    "mtg_steelblock_default_steel_block",
-    "mtg_steelblock_default_steel_block"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_steelblock",
+    "id":  502,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_steelblock_default_steel_block",
+                     "mtg_steelblock_default_steel_block",
+                     "mtg_steelblock_default_steel_block",
+                     "mtg_steelblock_default_steel_block",
+                     "mtg_steelblock_default_steel_block",
+                     "mtg_steelblock_default_steel_block"
+                 ],
+    "render":  {
+
+               }
 }
+

@@ -1,16 +1,20 @@
-{
-  "name": "wool_9",
-  "types": [
-    "decorative"
-  ],
-  "textures": [
-    "cloth_9",
-    "cloth_9",
-    "cloth_9",
-    "cloth_9",
-    "cloth_9",
-    "cloth_9"
-  ],
-  "displayName": "Cyan Wool",
-  "render": {}
+﻿{
+    "name":  "wool_9",
+    "id":  109,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_9",
+                     "cloth_9",
+                     "cloth_9",
+                     "cloth_9",
+                     "cloth_9",
+                     "cloth_9"
+                 ],
+    "displayName":  "Cyan Wool",
+    "render":  {
+
+               }
 }
+

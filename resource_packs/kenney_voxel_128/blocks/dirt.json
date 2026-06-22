@@ -1,16 +1,20 @@
-{
-  "name": "dirt",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "dirt",
-    "dirt",
-    "dirt",
-    "dirt",
-    "dirt",
-    "dirt"
-  ],
-  "displayName": "Dirt",
-  "render": {}
+﻿{
+    "name":  "dirt",
+    "id":  62,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt"
+                 ],
+    "displayName":  "Dirt",
+    "render":  {
+
+               }
 }
+

@@ -1,16 +1,20 @@
-{
-  "name": "oreGold",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "oreGold",
-    "oreGold",
-    "oreGold",
-    "oreGold",
-    "oreGold",
-    "oreGold"
-  ],
-  "displayName": "Gold Ore",
-  "render": {}
+﻿{
+    "name":  "oreGold",
+    "id":  525,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "oreGold",
+                     "oreGold",
+                     "oreGold",
+                     "oreGold",
+                     "oreGold",
+                     "oreGold"
+                 ],
+    "displayName":  "Gold Ore",
+    "render":  {
+
+               }
 }
+

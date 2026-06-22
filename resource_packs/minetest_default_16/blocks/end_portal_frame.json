@@ -1,15 +1,19 @@
-{
-  "name": "end_portal_frame",
-  "types": [
-    "natural"
-  ],
-  "textures": [
-    "endframe_side",
-    "endframe_side",
-    "endframe_side",
-    "endframe_side",
-    "endframe_top",
-    "endframe_side"
-  ],
-  "render": {}
+﻿{
+    "name":  "end_portal_frame",
+    "id":  366,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_top",
+                     "endframe_side"
+                 ],
+    "render":  {
+
+               }
 }
+

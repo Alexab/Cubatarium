@@ -1,15 +1,19 @@
-{
-  "name": "mtg_snow",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_snow_default_snow",
-    "mtg_snow_default_snow",
-    "mtg_snow_default_snow",
-    "mtg_snow_default_snow",
-    "mtg_snow_default_snow",
-    "mtg_snow_default_snow"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_snow",
+    "id":  500,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_snow_default_snow",
+                     "mtg_snow_default_snow",
+                     "mtg_snow_default_snow",
+                     "mtg_snow_default_snow",
+                     "mtg_snow_default_snow",
+                     "mtg_snow_default_snow"
+                 ],
+    "render":  {
+
+               }
 }
+

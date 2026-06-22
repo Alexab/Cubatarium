@@ -1,15 +1,19 @@
-{
-  "name": "mtg_sandstonebrick",
-  "types": [
-    "building"
-  ],
-  "textures": [
-    "mtg_sandstonebrick_default_sandstone_brick",
-    "mtg_sandstonebrick_default_sandstone_brick",
-    "mtg_sandstonebrick_default_sandstone_brick",
-    "mtg_sandstonebrick_default_sandstone_brick",
-    "mtg_sandstonebrick_default_sandstone_brick",
-    "mtg_sandstonebrick_default_sandstone_brick"
-  ],
-  "render": {}
+﻿{
+    "name":  "mtg_sandstonebrick",
+    "id":  494,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_sandstonebrick_default_sandstone_brick",
+                     "mtg_sandstonebrick_default_sandstone_brick",
+                     "mtg_sandstonebrick_default_sandstone_brick",
+                     "mtg_sandstonebrick_default_sandstone_brick",
+                     "mtg_sandstonebrick_default_sandstone_brick",
+                     "mtg_sandstonebrick_default_sandstone_brick"
+                 ],
+    "render":  {
+
+               }
 }
+

@@ -257,7 +257,7 @@ bool IsReservedBlockName(const std::string &name)
   return name == "__missing__" || name == "__air__";
 }
 
-ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool warnLegacyId)
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId)
 {
   ParsedBlockJson out;
   if (!j.is_object())
@@ -275,7 +275,24 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool warnLegacyId)
   }
   if (j.contains("id"))
   {
-    if (warnLegacyId)
+    if (useStablePackId)
+    {
+      if (!j["id"].is_number_unsigned() && !j["id"].is_number_integer())
+      {
+        std::cerr << "ParseBlockFromJson: invalid id for block '"
+                  << out.Definition.Name << "'" << std::endl;
+        return out;
+      }
+      const uint64_t raw = j["id"].get<uint64_t>();
+      if (raw < kPackBlockIdMin || raw > kPackBlockIdMax)
+      {
+        std::cerr << "ParseBlockFromJson: id " << raw << " out of pack range for '"
+                  << out.Definition.Name << "'" << std::endl;
+        return out;
+      }
+      out.Definition.Id = static_cast<BlockId>(raw);
+    }
+    else
     {
       std::cerr << "ParseBlockFromJson: ignoring legacy id field for block '"
                 << out.Definition.Name << "'" << std::endl;

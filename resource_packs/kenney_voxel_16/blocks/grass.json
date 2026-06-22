@@ -1,17 +1,21 @@
-{
-  "name": "grass",
-  "types": [
-    "natural",
-    "plants"
-  ],
-  "textures": [
-    "grass_side",
-    "grass_side",
-    "grass_side",
-    "grass_side",
-    "grass_top",
-    "dirt"
-  ],
-  "displayName": "Grass Block",
-  "render": {}
+﻿{
+    "name":  "grass",
+    "id":  123,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "grass_side",
+                     "grass_side",
+                     "grass_side",
+                     "grass_side",
+                     "grass_top",
+                     "dirt"
+                 ],
+    "displayName":  "Grass Block",
+    "render":  {
+
+               }
 }
+
