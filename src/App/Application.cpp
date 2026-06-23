@@ -851,6 +851,12 @@ void UApplication::ClearGameplayKeyboard()
   {
     camera->ResetAllKeyStatus();
   }
+#if defined(__ANDROID__)
+  if (TouchBridge)
+  {
+    TouchBridge->ResetSprint();
+  }
+#endif
 }
 
 void UApplication::HandleWindowFocus(bool focused)

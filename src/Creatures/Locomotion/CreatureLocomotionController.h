@@ -22,8 +22,14 @@ public:
   void SetCollisionProfile(const glm::vec3 &sizeBlocks, float eyeHeight);
 
   float GetWalkSpeed() const { return Caps.walkSpeed; }
-  float GetFlySpeed() const { return Caps.flySpeed; }
+  float GetFlySpeed() const
+  {
+    return Caps.walkSpeed * Caps.flySpeedMultiplier;
+  }
   const CreatureLocomotionCapabilities &GetCapabilities() const { return Caps; }
+
+  float ResolveHorizontalSpeed(const CreatureInput &input) const;
+  bool IsSprinting(const CreatureInput &input) const;
 
   CreatureMovementMode GetMode() const { return Mode; }
   void SetMode(CreatureMovementMode mode);

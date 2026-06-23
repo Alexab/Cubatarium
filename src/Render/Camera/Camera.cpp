@@ -235,7 +235,15 @@ PlayerInput UCamera::BuildPlayerInput(bool spaceJustPressed) const
   input.jumpHeld = keyDown(GLFW_KEY_SPACE);
   input.jumpPressed = spaceJustPressed;
   input.crouchHeld = IsShiftDown();
+  input.sprintHeld =
+      SprintActive || keyDown(GLFW_KEY_LEFT_CONTROL) ||
+      keyDown(GLFW_KEY_RIGHT_CONTROL);
   return input;
+}
+
+PlayerInput UCamera::GetMovementInput() const
+{
+  return BuildPlayerInput(false);
 }
 
 void UCamera::SetViewEngine(UViewEngine *view_engine)
@@ -245,7 +253,8 @@ void UCamera::SetViewEngine(UViewEngine *view_engine)
 
 glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 {
-  const float velocity = Locomotion.GetWalkSpeed() * deltaTime;
+  const PlayerInput input = BuildPlayerInput(false);
+  const float velocity = Locomotion.ResolveHorizontalSpeed(input) * deltaTime;
   glm::vec3 shift(0.0f);
   if (KeysStatus[GLFW_KEY_W])
   {
@@ -432,8 +441,8 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
                               float deltaTime,
                               const PlayerCapsule &collisionCap)
 {
-  const float speed =
-      FreeMove ? Locomotion.GetFlySpeed() : Locomotion.GetWalkSpeed();
+  const PlayerInput input = BuildPlayerInput(false);
+  const float speed = Locomotion.ResolveHorizontalSpeed(input);
   const float velocity = speed * deltaTime;
   glm::vec3 shift(0.0f);
 
@@ -615,6 +624,7 @@ void UCamera::ResetAllKeyStatus()
 {
   for (auto I = KeysStatus.begin(); I != KeysStatus.end(); ++I)
     I->second = false;
+  SprintActive = false;
 }
 
 void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos,

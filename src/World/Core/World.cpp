@@ -2769,15 +2769,17 @@ void UWorld::DoMovement()
     const UCreatureLocomotionController &camLoc =
         camera->GetLocomotionController();
     const LocomotionState camState = camLoc.GetLocomotionState();
-    if (camState == LocomotionState::Walk || camState == LocomotionState::Run)
+    const PlayerInput moveInput = camera->GetMovementInput();
+    if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
+        camState == LocomotionState::Crouch)
     {
-      horizontalSpeed = camLoc.GetWalkSpeed();
+      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
     }
     else if (camState == LocomotionState::Fly ||
              camState == LocomotionState::Glide ||
              camState == LocomotionState::Hover)
     {
-      horizontalSpeed = camLoc.GetFlySpeed();
+      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
     }
     controlled->RebuildLocomotionFactsFromController(
         camLoc, controlled->GetLocomotion().GetCapabilities(),

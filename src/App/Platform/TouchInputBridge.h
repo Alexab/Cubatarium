@@ -46,6 +46,11 @@ public:
   void AddLookDelta(float dx, float dy);
   void ResetJoystick();
 
+  void ToggleSprint();
+  void SetSprintActive(bool active);
+  bool IsSprintActive() const { return SprintActive; }
+  void ResetSprint() { SprintActive = false; }
+
   bool ConsumePendingPlaceTap(glm::vec2 &outPos);
   bool ConsumeCameraBaseline(float &outX, float &outY);
   bool ConsumeBlockInputCancel();
@@ -137,6 +142,7 @@ private:
   bool MouseJustReleased[8]{};
   bool ManualKeys[512]{};
   bool JoystickActive{false};
+  bool SprintActive{false};
   bool PendingPlaceTap{false};
   bool CameraBaselinePending{false};
   bool BlockInputCancelPending{false};

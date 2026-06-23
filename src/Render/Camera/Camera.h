@@ -100,6 +100,8 @@ public:
   void UpdateMouseScroll(double Xoffset, double Yoffset);
 
   void ClearShiftKeyState();
+  void SetSprintActive(bool active) { SprintActive = active; }
+  PlayerInput GetMovementInput() const;
 
 private:
   glm::vec3 ComputeHorizontalShift(float deltaTime);
@@ -169,6 +171,8 @@ private:
     float Elapsed{0.0f};
   };
   StepUpAnimation StepUpAnim;
+
+  bool SprintActive{false};
 
   CameraPerspective Perspective{CameraPerspective::FirstPerson};
   float ThirdPersonDistance{4.0f};

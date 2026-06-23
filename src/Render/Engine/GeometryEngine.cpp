@@ -1546,6 +1546,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
 
   const std::vector<std::string> helpLines = {
       "WASD - Movement",
+      "Ctrl - Sprint (hold)",
       "Space - Jump / Fly up",
       "Shift - Crouch / Fly down",
       "2xSpace - Toggle flight",

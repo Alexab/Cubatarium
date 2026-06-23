@@ -65,6 +65,8 @@ struct CreatureInput
   bool jumpHeld{false};
   bool jumpPressed{false};
   bool crouchHeld{false};
+  /// Desktop: hold Ctrl; Android: sprint toggle button state.
+  bool sprintHeld{false};
 };
 
 struct CreatureLocomotionCapabilities
@@ -72,11 +74,16 @@ struct CreatureLocomotionCapabilities
   bool canFly{true};
   bool canCrouch{true};
   bool canJump{true};
+  bool canSprint{true};
   /// Feet rise in blocks at Jump apex (used with shared gravity to derive Jump
   /// speed).
   float jumpHeightBlocks{1.25f};
   float walkSpeed{3.0f};
   float flySpeed{3.0f};
+  /// Multipliers relative to walk_speed (physics, not animation).
+  float sprintSpeedMultiplier{1.3f};
+  float crouchSpeedMultiplier{0.3f};
+  float flySpeedMultiplier{2.0f};
 };
 
 } // namespace cutum

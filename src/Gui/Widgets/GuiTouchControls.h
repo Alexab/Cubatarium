@@ -40,6 +40,7 @@ private:
   UGuiWidget *LookPad{nullptr};
   UGuiWidget *JumpButton{nullptr};
   UGuiWidget *SneakButton{nullptr};
+  UGuiWidget *SprintButton{nullptr};
   UGuiWidget *InventoryButton{nullptr};
   UGuiWidget *MenuButton{nullptr};
   UGuiWidget *ConsoleButton{nullptr};

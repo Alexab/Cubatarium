@@ -16,11 +16,55 @@ ClampCapabilities(CreatureLocomotionCapabilities caps)
 {
   caps.jumpHeightBlocks = std::clamp(caps.jumpHeightBlocks, 0.25f, 3.0f);
   caps.walkSpeed = std::clamp(caps.walkSpeed, 0.5f, 20.0f);
-  caps.flySpeed = std::clamp(caps.flySpeed, 0.5f, 20.0f);
+  caps.sprintSpeedMultiplier =
+      std::clamp(caps.sprintSpeedMultiplier, 0.1f, 5.0f);
+  caps.crouchSpeedMultiplier =
+      std::clamp(caps.crouchSpeedMultiplier, 0.1f, 5.0f);
+  caps.flySpeedMultiplier = std::clamp(caps.flySpeedMultiplier, 0.1f, 5.0f);
+  caps.flySpeed = caps.walkSpeed * caps.flySpeedMultiplier;
   return caps;
 }
 
+bool IsMovingInput(const CreatureInput &input)
+{
+  return input.MoveForward || input.MoveBack || input.MoveLeft ||
+         input.MoveRight;
+}
+
 } // namespace
+
+bool UCreatureLocomotionController::IsSprinting(
+    const CreatureInput &input) const
+{
+  if (Mode == CreatureMovementMode::Flying || !Caps.canSprint ||
+      !input.sprintHeld || !IsMovingInput(input))
+  {
+    return false;
+  }
+  if (Caps.canCrouch && input.crouchHeld)
+  {
+    return false;
+  }
+  return true;
+}
+
+float UCreatureLocomotionController::ResolveHorizontalSpeed(
+    const CreatureInput &input) const
+{
+  if (Mode == CreatureMovementMode::Flying)
+  {
+    return Caps.walkSpeed * Caps.flySpeedMultiplier;
+  }
+  if (Caps.canCrouch && input.crouchHeld)
+  {
+    return Caps.walkSpeed * Caps.crouchSpeedMultiplier;
+  }
+  if (IsSprinting(input))
+  {
+    return Caps.walkSpeed * Caps.sprintSpeedMultiplier;
+  }
+  return Caps.walkSpeed;
+}
 
 void UCreatureLocomotionController::SetCapabilities(
     const CreatureLocomotionCapabilities &caps)
@@ -94,11 +138,11 @@ void UCreatureLocomotionController::updateLocomotionState(
     LocomotionState = LocomotionState::Jump;
     return;
   }
-  const bool moving =
-      input.MoveForward || input.MoveBack || input.MoveLeft || input.MoveRight;
+  const bool moving = IsMovingInput(input);
   if (OnGround && moving)
   {
-    LocomotionState = LocomotionState::Walk;
+    LocomotionState =
+        IsSprinting(input) ? LocomotionState::Run : LocomotionState::Walk;
     return;
   }
   LocomotionState = LocomotionState::Idle;

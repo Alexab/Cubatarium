@@ -94,6 +94,7 @@ void UTouchInputBridge::Reset()
     pointer = PointerState{};
   }
   ResetJoystick();
+  ResetSprint();
   MouseDelta = {0.f, 0.f};
   PendingPlaceTap = false;
   CameraBaselinePending = false;
@@ -114,6 +115,16 @@ void UTouchInputBridge::ResetJoystick()
 {
   Joystick = {0.f, 0.f};
   JoystickActive = false;
+}
+
+void UTouchInputBridge::ToggleSprint()
+{
+  SprintActive = !SprintActive;
+}
+
+void UTouchInputBridge::SetSprintActive(bool active)
+{
+  SprintActive = active;
 }
 
 void UTouchInputBridge::SetJoystickActive(bool Active)

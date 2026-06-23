@@ -161,18 +161,38 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
       def.locomotion.canFly = loc.value("can_fly", true);
       def.locomotion.canCrouch = loc.value("can_crouch", true);
       def.locomotion.canJump = loc.value("can_jump", true);
+      def.locomotion.canSprint = loc.value("can_sprint", true);
       def.locomotion.jumpHeightBlocks =
           loc.value("jump_height", def.locomotion.jumpHeightBlocks);
       const bool hasWalkSpeed = loc.contains("walk_speed");
       def.locomotion.walkSpeed =
           loc.value("walk_speed", hasWalkSpeed ? def.locomotion.walkSpeed
                                                : def.behavior.moveSpeed);
+      def.locomotion.sprintSpeedMultiplier =
+          loc.value("sprint_speed_multiplier", 1.3f);
+      def.locomotion.crouchSpeedMultiplier =
+          loc.value("crouch_speed_multiplier", 0.3f);
+      if (loc.contains("fly_speed_multiplier"))
+      {
+        def.locomotion.flySpeedMultiplier =
+            loc.value("fly_speed_multiplier", 2.0f);
+      }
+      else
+      {
+        const float flySpeedAbs =
+            loc.value("fly_speed", def.locomotion.walkSpeed);
+        def.locomotion.flySpeedMultiplier =
+            def.locomotion.walkSpeed > 0.01f
+                ? flySpeedAbs / def.locomotion.walkSpeed
+                : 2.0f;
+      }
       def.locomotion.flySpeed =
-          loc.value("fly_speed", def.locomotion.walkSpeed);
+          def.locomotion.walkSpeed * def.locomotion.flySpeedMultiplier;
     }
     else
     {
       def.locomotion.walkSpeed = def.behavior.moveSpeed;
+      def.locomotion.flySpeedMultiplier = 1.0f;
       def.locomotion.flySpeed = def.locomotion.walkSpeed;
     }
     if (data.contains("visual") && data["visual"].is_object())

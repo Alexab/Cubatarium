@@ -316,6 +316,11 @@ void UWindowManager::ProcessInput()
       const bool shift_down =
           InputManager->IsKeyPressed(KeyCode::Key_Shift) ||
           (Window && glfwGetKey(Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+      const bool left_ctrl_down =
+          InputManager->IsKeyPressed(KeyCode::Key_Ctrl);
+      const bool right_ctrl_down =
+          Window &&
+          glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
                               InputManager->IsKeyPressed(KeyCode::Key_W));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
@@ -328,6 +333,8 @@ void UWindowManager::ProcessInput()
                               InputManager->IsKeyPressed(KeyCode::Key_Space));
       camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shift_down);
       camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shift_down);
+      camera->UpdateKeyStatus(GLFW_KEY_LEFT_CONTROL, left_ctrl_down);
+      camera->UpdateKeyStatus(GLFW_KEY_RIGHT_CONTROL, right_ctrl_down);
     }
   }
 }

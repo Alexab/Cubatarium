@@ -122,6 +122,43 @@ private:
   int capturePointerId_{-1};
 };
 
+class UTouchToggleButton : public UGuiButton
+{
+public:
+  UTouchToggleButton(const GuiTheme *theme, std::string label,
+                     UTouchInputBridge *bridge)
+      : UGuiButton(theme, std::move(label)), Bridge(bridge)
+  {
+  }
+
+  bool OnMouseDown(const GuiMouseEvent &event) override
+  {
+    if (!UGuiButton::OnMouseDown(event))
+    {
+      return false;
+    }
+    toggled_ = !toggled_;
+    if (Bridge)
+    {
+      Bridge->SetSprintActive(toggled_);
+    }
+    return true;
+  }
+
+  void ForceRelease()
+  {
+    toggled_ = false;
+    if (Bridge)
+    {
+      Bridge->SetSprintActive(false);
+    }
+  }
+
+private:
+  UTouchInputBridge *Bridge;
+  bool toggled_{false};
+};
+
 class UTouchVirtualJoystick : public UGuiWidget
 {
 public:
@@ -454,6 +491,12 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   SneakButton = sneakWidget;
   Root->AddChild(std::move(Sneak));
 
+  auto Sprint = std::make_unique<UTouchToggleButton>(Theme, "Sprint", Bridge);
+  auto *sprintWidget = Sprint.get();
+  Sprint->SetZOrder(kTouchControlsZOrder + 2);
+  SprintButton = sprintWidget;
+  Root->AddChild(std::move(Sprint));
+
   auto inventory = std::make_unique<UGuiButton>(Theme, "Inv");
   inventory->SetOnClick(
       [this]()
@@ -512,16 +555,19 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   };
   OnReleaseJoystickCapture = [joystickWidget]()
   { joystickWidget->ForceRelease(); };
-  OnReleaseHoldButtons = [jumpWidget, sneakWidget]()
+  OnReleaseHoldButtons = [jumpWidget, sneakWidget, sprintWidget]()
   {
     jumpWidget->ForceRelease();
     sneakWidget->ForceRelease();
+    sprintWidget->ForceRelease();
   };
-  OnReleaseAllCaptures = [joystickWidget, jumpWidget, sneakWidget]()
+  OnReleaseAllCaptures = [joystickWidget, jumpWidget, sneakWidget,
+                          sprintWidget]()
   {
     joystickWidget->ForceRelease();
     jumpWidget->ForceRelease();
     sneakWidget->ForceRelease();
+    sprintWidget->ForceRelease();
   };
 }
 
@@ -615,6 +661,11 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   {
     SneakButton->SetBounds({rightColX, bottomRowY, buttonSize, buttonSize});
   }
+  if (SprintButton)
+  {
+    SprintButton->SetBounds({rightColX, bottomRowY - buttonSize - buttonGap,
+                             buttonSize, buttonSize});
+  }
   if (MenuButton)
   {
     MenuButton->SetBounds(
@@ -652,11 +703,13 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
             offsetY + topRightY - margin / 2, buttonSize + margin * 2,
             topRightStackH});
     const int actionPad = ScalePx(4, uiScale);
+    const int actionRowH = buttonSize * 2 + buttonGap;
     Bridge->SetBlockedGameRegion(2,
                                  {offsetX + std::max(0, jumpX - actionPad),
-                                  offsetY + std::max(0, bottomRowY - actionPad),
+                                  offsetY + std::max(0, bottomRowY - actionRowH -
+                                                                  actionPad),
                                   buttonSize * 2 + buttonGap + actionPad * 2,
-                                  buttonSize + actionPad * 2});
+                                  actionRowH + actionPad * 2});
   }
 
   if (JoystickWidget && Bridge)

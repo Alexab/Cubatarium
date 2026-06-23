@@ -357,6 +357,7 @@ void UAndroidPlatformWindow::ProcessInput()
     const bool shiftDown = Touch.IsKeyPressed(KeyCode::Key_Shift);
     camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shiftDown);
     camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shiftDown);
+    camera->SetSprintActive(Touch.IsSprintActive());
     if (lookDelta.x != 0.f || lookDelta.y != 0.f)
     {
       if (!Application->WantsCaptureMouse())
