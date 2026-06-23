@@ -1,9 +1,9 @@
 #ifndef GREEDYMESHMATH_H
 #define GREEDYMESHMATH_H
 
-#include "World/Chunks/Chunk.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "World/Chunks/Chunk.h"
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace cutum
@@ -70,7 +70,7 @@ inline FaceInstance MakeFaceInstanceFromQuad(const GreedyQuad &q,
                                       static_cast<float>(quadHeight), 1.0f));
 
   FaceInstance fi;
-  fi.id = q.id;
+  fi.Id = q.Id;
   fi.model = model;
   fi.faceIndex = FaceIndexFromGreedy(q.axis, q.faceSign);
   fi.quadSize =

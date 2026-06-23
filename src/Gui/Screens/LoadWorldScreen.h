@@ -11,6 +11,7 @@ class UGuiDialogFrame;
 class UGuiListView;
 class UGuiLabel;
 class UGuiButton;
+class UGuiPanel;
 
 class ULoadWorldScreen : public UGuiScreenBase
 {
@@ -24,12 +25,14 @@ private:
   void Relayout();
   void OnLoad();
 
-  IGuiMenuHost *host_{nullptr};
+  IGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
-  UGuiDialogFrame *dialogFrame_{nullptr};
-  UGuiListView *list_{nullptr};
-  UGuiLabel *emptyLabel_{nullptr};
-  UGuiButton *loadBtn_{nullptr};
+  UGuiDialogFrame *DialogFrame{nullptr};
+  UGuiListView *List{nullptr};
+  UGuiLabel *EmptyLabel{nullptr};
+  UGuiLabel *PackSubtitle{nullptr};
+  UGuiPanel *BodyPanel{nullptr};
+  UGuiButton *LoadBtn{nullptr};
 };
 
 } // namespace cutum

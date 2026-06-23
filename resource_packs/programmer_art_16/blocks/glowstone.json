@@ -1,0 +1,19 @@
+﻿{
+    "name":  "glowstone",
+    "id":  635,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem",
+                     "lightgem"
+                 ],
+    "render":  {
+
+               }
+}
+

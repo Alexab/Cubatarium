@@ -10,28 +10,28 @@ void UCreatureActivityDirector::RegisterAgent(
   {
     return;
   }
-  agentsByBehaviorId_[agent->GetBehaviorId()] = agent.get();
-  agents_.push_back(std::move(agent));
+  AgentsByBehaviorId[agent->GetBehaviorId()] = agent.get();
+  Agents.push_back(std::move(agent));
 }
 
 void UCreatureActivityDirector::Clear()
 {
   std::vector<CreatureId> ids;
-  ids.reserve(membership_.size());
-  for (const auto &entry : membership_)
+  ids.reserve(Membership.size());
+  for (const auto &entry : Membership)
   {
     ids.push_back(entry.first);
   }
-  for (const CreatureId id : ids)
+  for (const CreatureId Id : ids)
   {
-    OnCreatureRemoved(id);
+    OnCreatureRemoved(Id);
   }
 }
 
-void UCreatureActivityDirector::OnCreatureAdded(CreatureId id,
+void UCreatureActivityDirector::OnCreatureAdded(CreatureId Id,
                                                 const std::string &behaviorId)
 {
-  if (id == 0 || behaviorId.empty() || behaviorId == "none")
+  if (Id == 0 || behaviorId.empty() || behaviorId == "none")
   {
     return;
   }
@@ -40,30 +40,30 @@ void UCreatureActivityDirector::OnCreatureAdded(CreatureId id,
   {
     return;
   }
-  OnCreatureRemoved(id);
-  agent->OnCreatureAdded(id);
-  membership_[id] = agent;
+  OnCreatureRemoved(Id);
+  agent->OnCreatureAdded(Id);
+  Membership[Id] = agent;
 }
 
-void UCreatureActivityDirector::OnCreatureRemoved(CreatureId id)
+void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
 {
-  const auto it = membership_.find(id);
-  if (it == membership_.end())
+  const auto it = Membership.find(Id);
+  if (it == Membership.end())
   {
     return;
   }
   if (it->second)
   {
-    it->second->OnCreatureRemoved(id);
+    it->second->OnCreatureRemoved(Id);
   }
-  membership_.erase(it);
+  Membership.erase(it);
 }
 
 void UCreatureActivityDirector::TickAgents(IWorldPerception &perception,
                                            ICreatureActivitySink &sink,
                                            float dt)
 {
-  for (const auto &agent : agents_)
+  for (const auto &agent : Agents)
   {
     agent->Tick(perception, sink, dt);
   }
@@ -72,8 +72,8 @@ void UCreatureActivityDirector::TickAgents(IWorldPerception &perception,
 ICreatureActivityAgent *
 UCreatureActivityDirector::FindAgent(const std::string &behaviorId) const
 {
-  const auto it = agentsByBehaviorId_.find(behaviorId);
-  return it != agentsByBehaviorId_.end() ? it->second : nullptr;
+  const auto it = AgentsByBehaviorId.find(behaviorId);
+  return it != AgentsByBehaviorId.end() ? it->second : nullptr;
 }
 
 } // namespace cutum

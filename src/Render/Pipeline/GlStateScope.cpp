@@ -1,6 +1,6 @@
 #include "Render/Pipeline/GlStateScope.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {
@@ -15,73 +15,73 @@ bool HasBit(GlStateMask mask, GlStateBit bit)
 
 } // namespace
 
-UGlStateScope::UGlStateScope(GlStateMask mask) : mask_(mask)
+UGlStateScope::UGlStateScope(GlStateMask mask) : Mask(mask)
 {
-  if (HasBit(mask_, GlStateBit::ViewportFb))
+  if (HasBit(Mask, GlStateBit::ViewportFb))
   {
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer_);
-    glGetIntegerv(GL_VIEWPORT, viewport_);
-    glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture_);
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &Framebuffer);
+    glGetIntegerv(GL_VIEWPORT, Viewport);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &ActiveTexture);
     glActiveTexture(GL_TEXTURE0);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture_);
-    glGetIntegerv(GL_CURRENT_PROGRAM, &program_);
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao_);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &BoundTexture);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &Program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &Vao);
   }
-  if (HasBit(mask_, GlStateBit::DepthTest))
+  if (HasBit(Mask, GlStateBit::DepthTest))
   {
-    glGetBooleanv(GL_DEPTH_TEST, &depthTest_);
+    glGetBooleanv(GL_DEPTH_TEST, &DepthTest);
   }
-  if (HasBit(mask_, GlStateBit::DepthFunc))
+  if (HasBit(Mask, GlStateBit::DepthFunc))
   {
-    glGetIntegerv(GL_DEPTH_FUNC, &depthFunc_);
+    glGetIntegerv(GL_DEPTH_FUNC, &DepthFunc);
   }
-  if (HasBit(mask_, GlStateBit::DepthMask))
+  if (HasBit(Mask, GlStateBit::DepthMask))
   {
-    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask_);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &DepthMask);
   }
-  if (HasBit(mask_, GlStateBit::Blend))
+  if (HasBit(Mask, GlStateBit::Blend))
   {
-    glGetBooleanv(GL_BLEND, &blend_);
+    glGetBooleanv(GL_BLEND, &Blend);
   }
-  if (HasBit(mask_, GlStateBit::CullFace))
+  if (HasBit(Mask, GlStateBit::CullFace))
   {
-    glGetBooleanv(GL_CULL_FACE, &cullFace_);
+    glGetBooleanv(GL_CULL_FACE, &CullFace);
   }
-  if (HasBit(mask_, GlStateBit::StencilTest))
+  if (HasBit(Mask, GlStateBit::StencilTest))
   {
-    glGetBooleanv(GL_STENCIL_TEST, &stencilTest_);
+    glGetBooleanv(GL_STENCIL_TEST, &StencilTest);
   }
-  if (HasBit(mask_, GlStateBit::StencilOps))
+  if (HasBit(Mask, GlStateBit::StencilOps))
   {
-    glGetIntegerv(GL_STENCIL_FUNC, &stencilFunc_);
-    glGetIntegerv(GL_STENCIL_REF, &stencilRef_);
-    glGetIntegerv(GL_STENCIL_VALUE_MASK, &stencilValueMask_);
-    glGetIntegerv(GL_STENCIL_WRITEMASK, &stencilWriteMask_);
-    glGetIntegerv(GL_STENCIL_FAIL, &stencilFail_);
-    glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL, &stencilZFail_);
-    glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS, &stencilZPass_);
+    glGetIntegerv(GL_STENCIL_FUNC, &StencilFunc);
+    glGetIntegerv(GL_STENCIL_REF, &StencilRef);
+    glGetIntegerv(GL_STENCIL_VALUE_MASK, &StencilValueMask);
+    glGetIntegerv(GL_STENCIL_WRITEMASK, &StencilWriteMask);
+    glGetIntegerv(GL_STENCIL_FAIL, &StencilFail);
+    glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL, &StencilZFail);
+    glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS, &StencilZPass);
   }
-  if (HasBit(mask_, GlStateBit::ColorMask))
+  if (HasBit(Mask, GlStateBit::ColorMask))
   {
-    glGetBooleanv(GL_COLOR_WRITEMASK, colorMask_);
+    glGetBooleanv(GL_COLOR_WRITEMASK, ColorMask);
   }
 }
 
 UGlStateScope::~UGlStateScope()
 {
-  if (HasBit(mask_, GlStateBit::ColorMask))
+  if (HasBit(Mask, GlStateBit::ColorMask))
   {
-    glColorMask(colorMask_[0], colorMask_[1], colorMask_[2], colorMask_[3]);
+    glColorMask(ColorMask[0], ColorMask[1], ColorMask[2], ColorMask[3]);
   }
-  if (HasBit(mask_, GlStateBit::StencilOps))
+  if (HasBit(Mask, GlStateBit::StencilOps))
   {
-    glStencilFunc(stencilFunc_, stencilRef_, stencilValueMask_);
-    glStencilOp(stencilFail_, stencilZFail_, stencilZPass_);
-    glStencilMask(stencilWriteMask_);
+    glStencilFunc(StencilFunc, StencilRef, StencilValueMask);
+    glStencilOp(StencilFail, StencilZFail, StencilZPass);
+    glStencilMask(StencilWriteMask);
   }
-  if (HasBit(mask_, GlStateBit::StencilTest))
+  if (HasBit(Mask, GlStateBit::StencilTest))
   {
-    if (stencilTest_)
+    if (StencilTest)
     {
       glEnable(GL_STENCIL_TEST);
     }
@@ -90,17 +90,17 @@ UGlStateScope::~UGlStateScope()
       glDisable(GL_STENCIL_TEST);
     }
   }
-  if (HasBit(mask_, GlStateBit::DepthMask))
+  if (HasBit(Mask, GlStateBit::DepthMask))
   {
-    glDepthMask(depthMask_);
+    glDepthMask(DepthMask);
   }
-  if (HasBit(mask_, GlStateBit::DepthFunc))
+  if (HasBit(Mask, GlStateBit::DepthFunc))
   {
-    glDepthFunc(static_cast<GLenum>(depthFunc_));
+    glDepthFunc(static_cast<GLenum>(DepthFunc));
   }
-  if (HasBit(mask_, GlStateBit::DepthTest))
+  if (HasBit(Mask, GlStateBit::DepthTest))
   {
-    if (depthTest_)
+    if (DepthTest)
     {
       glEnable(GL_DEPTH_TEST);
     }
@@ -109,9 +109,9 @@ UGlStateScope::~UGlStateScope()
       glDisable(GL_DEPTH_TEST);
     }
   }
-  if (HasBit(mask_, GlStateBit::CullFace))
+  if (HasBit(Mask, GlStateBit::CullFace))
   {
-    if (cullFace_)
+    if (CullFace)
     {
       glEnable(GL_CULL_FACE);
     }
@@ -120,9 +120,9 @@ UGlStateScope::~UGlStateScope()
       glDisable(GL_CULL_FACE);
     }
   }
-  if (HasBit(mask_, GlStateBit::Blend))
+  if (HasBit(Mask, GlStateBit::Blend))
   {
-    if (blend_)
+    if (Blend)
     {
       glEnable(GL_BLEND);
     }
@@ -131,14 +131,14 @@ UGlStateScope::~UGlStateScope()
       glDisable(GL_BLEND);
     }
   }
-  if (HasBit(mask_, GlStateBit::ViewportFb))
+  if (HasBit(Mask, GlStateBit::ViewportFb))
   {
-    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(framebuffer_));
-    glViewport(viewport_[0], viewport_[1], viewport_[2], viewport_[3]);
-    glActiveTexture(static_cast<GLenum>(activeTexture_));
-    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture_));
-    glUseProgram(static_cast<GLuint>(program_));
-    glBindVertexArray(static_cast<GLuint>(vao_));
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(Framebuffer));
+    glViewport(Viewport[0], Viewport[1], Viewport[2], Viewport[3]);
+    glActiveTexture(static_cast<GLenum>(ActiveTexture));
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(BoundTexture));
+    glUseProgram(static_cast<GLuint>(Program));
+    glBindVertexArray(static_cast<GLuint>(Vao));
   }
 }
 

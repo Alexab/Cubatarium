@@ -1,11 +1,15 @@
-#include <algorithm>
-#include <cmath>
-#define GLFW_INCLUDE_NONE
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/GlIncludes.h"
 #include "World/Core/World.h"
-#include <GL/glew.h>
+#include <algorithm>
+#include <cmath>
+#if defined(__ANDROID__)
+#include "App/Platform/GlfwKeyCompat.h"
+#else
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -158,46 +162,47 @@ void UCamera::SetAspectRatio(float value)
 
 bool UCamera::GetFreeMove() const
 {
-  return locomotion_.GetMode() == PlayerMovementMode::Flying;
+  return Locomotion.GetMode() == PlayerMovementMode::Flying;
 }
 
 void UCamera::SyncFreeMoveFromController() { FreeMove = GetFreeMove(); }
 
 void UCamera::SetFreeMove(bool value)
 {
-  locomotion_.SetMode(value ? PlayerMovementMode::Flying
-                            : PlayerMovementMode::Walking);
+  Locomotion.SetMode(value ? PlayerMovementMode::Flying
+                           : PlayerMovementMode::Walking);
   SyncFreeMoveFromController();
   UpdatePose();
 }
 
 PlayerCapsule UCamera::GetPlayerCapsule() const
 {
-  return locomotion_.GetCapsule();
+  if (Locomotion.GetStanceBlend() > 0.05f)
+  {
+    return Locomotion.GetCollisionCapsule();
+  }
+  return Locomotion.GetCapsule();
 }
 
-float UCamera::GetAnchoredFeetY() const { return locomotion_.GetFeetY(); }
+float UCamera::GetAnchoredFeetY() const { return Locomotion.GetFeetY(); }
 
-bool UCamera::HasAnchoredFeet() const { return locomotion_.IsFeetAnchored(); }
+bool UCamera::HasAnchoredFeet() const { return Locomotion.IsFeetAnchored(); }
 
-float UCamera::GetStanceBlend() const { return locomotion_.GetStanceBlend(); }
+float UCamera::GetStanceBlend() const { return Locomotion.GetStanceBlend(); }
 
-bool UCamera::IsCrouching() const
-{
-  return locomotion_.GetStanceBlend() > 0.5f;
-}
+bool UCamera::IsCrouching() const { return Locomotion.GetStanceBlend() > 0.5f; }
 
-bool UCamera::IsOnGround() const { return locomotion_.IsOnGround(); }
+bool UCamera::IsOnGround() const { return Locomotion.IsOnGround(); }
 
 bool UCamera::IsShiftDown() const
 {
-  const auto pressed = [](const std::map<size_t, bool> &keys, size_t code)
+  const auto Pressed = [](const std::map<size_t, bool> &keys, size_t code)
   {
     const auto it = keys.find(code);
     return it != keys.end() && it->second;
   };
-  return pressed(KeysStatus, GLFW_KEY_LEFT_SHIFT) ||
-         pressed(KeysStatus, GLFW_KEY_RIGHT_SHIFT);
+  return Pressed(KeysStatus, GLFW_KEY_LEFT_SHIFT) ||
+         Pressed(KeysStatus, GLFW_KEY_RIGHT_SHIFT);
 }
 
 void UCamera::ClearShiftKeyState()
@@ -208,7 +213,7 @@ void UCamera::ClearShiftKeyState()
 
 bool UCamera::OnSpacePressed()
 {
-  const bool toggled = locomotion_.OnSpacePressed();
+  const bool toggled = Locomotion.OnSpacePressed();
   SyncFreeMoveFromController();
   return toggled;
 }
@@ -223,10 +228,10 @@ PlayerInput UCamera::BuildPlayerInput(bool spaceJustPressed) const
     const auto it = KeysStatus.find(key);
     return it != KeysStatus.end() && it->second;
   };
-  input.moveForward = keyDown(GLFW_KEY_W);
-  input.moveBack = keyDown(GLFW_KEY_S);
-  input.moveLeft = keyDown(GLFW_KEY_A);
-  input.moveRight = keyDown(GLFW_KEY_D);
+  input.MoveForward = keyDown(GLFW_KEY_W);
+  input.MoveBack = keyDown(GLFW_KEY_S);
+  input.MoveLeft = keyDown(GLFW_KEY_A);
+  input.MoveRight = keyDown(GLFW_KEY_D);
   input.jumpHeld = keyDown(GLFW_KEY_SPACE);
   input.jumpPressed = spaceJustPressed;
   input.crouchHeld = IsShiftDown();
@@ -240,7 +245,7 @@ void UCamera::SetViewEngine(UViewEngine *view_engine)
 
 glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 {
-  const float velocity = locomotion_.GetWalkSpeed() * deltaTime;
+  const float velocity = Locomotion.GetWalkSpeed() * deltaTime;
   glm::vec3 shift(0.0f);
   if (KeysStatus[GLFW_KEY_W])
   {
@@ -271,9 +276,9 @@ void UCamera::UpdateMoveIntentFromKeys()
   {
     return;
   }
-  lastMoveIntentDir_ = shift / std::sqrt(glm::dot(shift, shift));
-  lastMoveIntentValid_ = true;
-  lastMoveIntentTime_ = std::chrono::steady_clock::now();
+  LastMoveIntentDir = shift / std::sqrt(glm::dot(shift, shift));
+  LastMoveIntentValid = true;
+  LastMoveIntentTime = std::chrono::steady_clock::now();
 }
 
 glm::vec3 UCamera::GetMoveIntentDir() const
@@ -305,15 +310,15 @@ glm::vec3 UCamera::GetMoveIntentDir() const
   {
     return shift / std::sqrt(glm::dot(shift, shift));
   }
-  if (lastMoveIntentValid_)
+  if (LastMoveIntentValid)
   {
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now() - lastMoveIntentTime_)
+                        std::chrono::steady_clock::now() - LastMoveIntentTime)
                         .count();
     if (ms >= 0 &&
         ms < static_cast<long long>(kStepUpIntentRetainSec * 1000.0f))
     {
-      return lastMoveIntentDir_;
+      return LastMoveIntentDir;
     }
   }
   return glm::vec3(0.0f);
@@ -321,18 +326,18 @@ glm::vec3 UCamera::GetMoveIntentDir() const
 
 bool UCamera::TickStepUpAnimation(const UWorld *world, float dt)
 {
-  if (!stepUpAnim_.active)
+  if (!StepUpAnim.Active)
   {
     return false;
   }
 
-  stepUpAnim_.elapsed += dt;
-  float t = stepUpAnim_.elapsed / kStepUpAnimDuration;
+  StepUpAnim.Elapsed += dt;
+  float t = StepUpAnim.Elapsed / kStepUpAnimDuration;
   if (t >= 1.0f)
   {
-    Position = stepUpAnim_.targetPos;
-    stepUpAnim_.active = false;
-    locomotion_.SyncAfterStepLanding(Position, world);
+    Position = StepUpAnim.TargetPos;
+    StepUpAnim.Active = false;
+    Locomotion.SyncAfterStepLanding(Position, world);
     UpdatePose();
     return true;
   }
@@ -340,8 +345,8 @@ bool UCamera::TickStepUpAnimation(const UWorld *world, float dt)
   t = std::min(1.0f, t);
   const float ease = 1.0f - (1.0f - t) * (1.0f - t);
   const float arc = std::sin(t * 3.14159265f) * 0.14f;
-  glm::vec3 desired = stepUpAnim_.startPos +
-                      (stepUpAnim_.targetPos - stepUpAnim_.startPos) * ease;
+  glm::vec3 desired =
+      StepUpAnim.StartPos + (StepUpAnim.TargetPos - StepUpAnim.StartPos) * ease;
   desired.y += arc;
   Position = desired;
   UpdatePose();
@@ -366,7 +371,7 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   if (hasShift && fluid.inFluid)
   {
     const float drag =
-        1.0f - std::min(0.95f, fluid.dragHorizontal * deltaTime * 8.0f);
+        1.0f - std::min(0.95f, fluid.DragHorizontal * deltaTime * 8.0f);
     shift.x *= drag;
     shift.z *= drag;
   }
@@ -379,31 +384,31 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   }
 
   const bool grounded =
-      world->HasGroundSupport(Position, cap) || locomotion_.IsOnGround();
+      world->HasGroundSupport(Position, cap) || Locomotion.IsOnGround();
   const glm::vec3 intent = GetMoveIntentDir();
   const PlayerInput stepInput = BuildPlayerInput(false);
 
   bool stepped = false;
   if (world->IsStepUpEnabled() && !fluid.inFluid && grounded &&
-      locomotion_.IsOnGround() && locomotion_.IsFeetAnchored() &&
-      !stepInput.jumpHeld && locomotion_.GetVerticalVelocity() <= 0.05f &&
+      Locomotion.IsOnGround() && Locomotion.IsFeetAnchored() &&
+      !stepInput.jumpHeld && Locomotion.GetVerticalVelocity() <= 0.05f &&
       glm::dot(intent, intent) > 1e-10f)
   {
     const UWorld::StepUpProbe probe =
         world->ProbeStepUp(newPos, intent, cap, kStepUpTriggerDistance);
-    if (probe.valid)
+    if (probe.Valid)
     {
       glm::vec3 landing = newPos;
       if (!world->GetStepUpLanding(newPos, intent, cap, kStepUpTriggerDistance,
                                    landing))
       {
-        landing = probe.targetPos - glm::vec3(probe.moveDir.x * 0.18f, 0.0f,
-                                              probe.moveDir.z * 0.18f);
+        landing = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
+                                              probe.MoveDir.z * 0.18f);
       }
-      stepUpAnim_.active = true;
-      stepUpAnim_.startPos = newPos;
-      stepUpAnim_.targetPos = landing;
-      stepUpAnim_.elapsed = 0.0f;
+      StepUpAnim.Active = true;
+      StepUpAnim.StartPos = newPos;
+      StepUpAnim.TargetPos = landing;
+      StepUpAnim.Elapsed = 0.0f;
       stepped = true;
     }
   }
@@ -428,7 +433,7 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
                               const PlayerCapsule &collisionCap)
 {
   const float speed =
-      FreeMove ? locomotion_.GetFlySpeed() : locomotion_.GetWalkSpeed();
+      FreeMove ? Locomotion.GetFlySpeed() : Locomotion.GetWalkSpeed();
   const float velocity = speed * deltaTime;
   glm::vec3 shift(0.0f);
 
@@ -483,14 +488,14 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
 
 // Processes input received from a mouse input system. Expects the offset value
 // in both the x and y direction.
-void UCamera::ProcessMouseMovement(float xoffset, float yoffset,
+void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
                                    bool constrainPitch)
 {
-  xoffset *= this->MouseSensitivity;
-  yoffset *= this->MouseSensitivity;
+  Xoffset *= this->MouseSensitivity;
+  Yoffset *= this->MouseSensitivity;
 
-  this->Yaw += xoffset;
-  this->Pitch += yoffset;
+  this->Yaw += Xoffset;
+  this->Pitch += Yoffset;
 
   // Make sure that when pitch is out of bounds, screen doesn't get flipped
   if (constrainPitch)
@@ -506,11 +511,11 @@ void UCamera::ProcessMouseMovement(float xoffset, float yoffset,
 }
 
 // Processes input received from a mouse scroll-wheel event. Only requires input
-// on the vertical wheel-axis
-void UCamera::ProcessMouseScroll(float yoffset)
+// on the Vertical wheel-axis
+void UCamera::ProcessMouseScroll(float Yoffset)
 {
   if (this->Zoom >= 1.0f && this->Zoom <= 45.0f)
-    this->Zoom -= yoffset;
+    this->Zoom -= Yoffset;
   if (this->Zoom <= 1.0f)
     this->Zoom = 1.0f;
   if (this->Zoom >= 45.0f)
@@ -571,20 +576,20 @@ void UCamera::UpdateCameraVectors()
 
 glm::vec3 UCamera::ComputeCameraWorldPosition() const
 {
-  if (perspective_ == CameraPerspective::FirstPerson)
+  if (Perspective == CameraPerspective::FirstPerson)
   {
     return Position;
   }
-  if (perspective_ == CameraPerspective::ThirdPersonBack)
+  if (Perspective == CameraPerspective::ThirdPersonBack)
   {
-    return Position - Front * thirdPersonDistance_ + Up * thirdPersonHeight_;
+    return Position - Front * ThirdPersonDistance + Up * ThirdPersonHeight;
   }
-  return Position + Front * thirdPersonDistance_;
+  return Position + Front * ThirdPersonDistance;
 }
 
 void UCamera::CyclePerspective()
 {
-  perspective_ = CycleCameraPerspective(perspective_);
+  Perspective = CycleCameraPerspective(Perspective);
   UpdatePose();
 }
 
@@ -622,15 +627,15 @@ void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos,
     FirstMouseCoords = false;
   }
 
-  const double xoffset = xpos - LastMouseX;
-  const double yoffset =
+  const double Xoffset = xpos - LastMouseX;
+  const double Yoffset =
       LastMouseY - ypos; // Reversed since y-coordinates go from bottom to left
 
   LastMouseX = xpos;
   LastMouseY = ypos;
 
-  ProcessMouseMovement(static_cast<float>(xoffset),
-                       static_cast<float>(yoffset));
+  ProcessMouseMovement(static_cast<float>(Xoffset),
+                       static_cast<float>(Yoffset));
   world->UpdateIntersection(GetPosition(), GetFront());
 }
 
@@ -641,9 +646,14 @@ void UCamera::ResetMouseMove(double xpos, double ypos)
   FirstMouseCoords = true;
 }
 
-void UCamera::UpdateMouseScroll(double xoffset, double yoffset)
+void UCamera::ApplyRelativeMouseMove(float Xoffset, float Yoffset)
 {
-  ProcessMouseScroll(static_cast<float>(yoffset));
+  ProcessMouseMovement(Xoffset, Yoffset);
+}
+
+void UCamera::UpdateMouseScroll(double Xoffset, double Yoffset)
+{
+  ProcessMouseScroll(static_cast<float>(Yoffset));
 }
 
 void UCamera::UpdateFrameTime()
@@ -657,7 +667,7 @@ void UCamera::UpdateFrameTime()
 void UCamera::InitLocomotionCollisionProfile()
 {
   const PlayerCapsule stand = PlayerCapsule::Standing();
-  locomotion_.SetCollisionProfile(
+  Locomotion.SetCollisionProfile(
       glm::vec3(stand.halfWidth * 2.0f, stand.height, stand.halfWidth * 2.0f),
       stand.eyeHeight);
 }
@@ -666,19 +676,19 @@ void UCamera::ApplyCreatureLocomotion(
     const CreatureLocomotionCapabilities &caps,
     const CreatureBoundsProfile &bounds, float eyeHeight)
 {
-  locomotion_.SetCapabilities(caps);
+  Locomotion.SetCapabilities(caps);
   const glm::vec3 size = bounds.restSizeBlocks.x > 0.0f
                              ? bounds.restSizeBlocks
                              : glm::vec3(0.6f, 1.8f, 0.6f);
-  locomotion_.SetCollisionProfile(size, eyeHeight);
+  Locomotion.SetCollisionProfile(size, eyeHeight);
   MovementSpeed = caps.walkSpeed;
 }
 
 void UCamera::ResetVerticalPhysics()
 {
-  locomotion_.Reset();
+  Locomotion.Reset();
   InitLocomotionCollisionProfile();
-  stepUpAnim_.active = false;
+  StepUpAnim.Active = false;
   SyncFreeMoveFromController();
   UpdatePose();
 }
@@ -687,6 +697,10 @@ bool UCamera::DoMovement(const UWorld *world)
 {
   const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
+  if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
+  {
+    ClearShiftKeyState();
+  }
   const PlayerInput input = BuildPlayerInput(false);
 
   bool is_moved(false);
@@ -702,7 +716,7 @@ bool UCamera::DoMovement(const UWorld *world)
       {
         ClearShiftKeyState();
       }
-      locomotion_.OnLandedFromFlight(world, Position, false);
+      Locomotion.OnLandedFromFlight(world, Position, false);
       SyncFreeMoveFromController();
     }
     else
@@ -740,7 +754,7 @@ bool UCamera::DoMovement(const UWorld *world)
       }
       if (!input.jumpHeld)
       {
-        locomotion_.NotifySpaceReleased();
+        Locomotion.NotifySpaceReleased();
       }
     }
   }
@@ -765,12 +779,8 @@ bool UCamera::DoMovement(const UWorld *world)
       return is_moved;
     }
 
-    locomotion_.UpdateLocomotion(world, Position, input, dt,
-                                 world->GetMovementCollisionSkipId());
-    if (locomotion_.ConsumeClearShiftRequest())
-    {
-      ClearShiftKeyState();
-    }
+    Locomotion.UpdateLocomotion(world, Position, input, dt,
+                                world->GetMovementCollisionSkipId());
     is_moved = true;
     UpdatePose();
   }

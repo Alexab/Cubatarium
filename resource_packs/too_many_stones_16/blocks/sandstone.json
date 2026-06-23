@@ -1,0 +1,21 @@
+﻿{
+    "name":  "sandstone",
+    "id":  992,
+    "types":  [
+                  "natural",
+                  "building"
+              ],
+    "textures":  [
+                     "sandstone_side",
+                     "sandstone_side",
+                     "sandstone_side",
+                     "sandstone_side",
+                     "sandstone_top",
+                     "sandstone_bottom"
+                 ],
+    "displayName":  "Sandstone",
+    "render":  {
+
+               }
+}
+

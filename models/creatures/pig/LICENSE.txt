@@ -1,0 +1,4 @@
+Source file: awildboar.png
+Upstream: animalworld/textures/awildboar.png
+License: MIT
+Attribution: animalworld — Skandarella / Liil (wild boar as pig stand-in)

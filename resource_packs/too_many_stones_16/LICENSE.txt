@@ -1,0 +1,3 @@
+Too Many Stones textures (CC0).
+Source: https://github.com/asuna-mt/Too_Many_Stones
+Partial mapping to Cubatarium stone/ore blocks.

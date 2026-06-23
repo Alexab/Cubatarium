@@ -1,0 +1,21 @@
+﻿{
+    "name":  "thin_glass",
+    "id":  569,
+    "types":  [
+                  "building",
+                  "decorative"
+              ],
+    "textures":  [
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top",
+                     "thinglass_top"
+                 ],
+    "render":  {
+                   "transparent":  true
+               },
+    "displayName":  "Thin Glass"
+}
+

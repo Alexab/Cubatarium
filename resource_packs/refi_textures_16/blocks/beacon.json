@@ -1,0 +1,19 @@
+﻿{
+    "name":  "beacon",
+    "id":  736,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon",
+                     "beacon"
+                 ],
+    "render":  {
+
+               }
+}
+

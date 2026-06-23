@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "stages": [
+    "terrain",
+    "ravines",
+    "fluids",
+    "caves",
+    "ores",
+    "vegetation",
+    "ground_cover",
+    "decoration",
+    "structures",
+    "lava_pools",
+    "fire_patch"
+  ]
+}

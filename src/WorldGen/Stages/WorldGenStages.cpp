@@ -14,7 +14,7 @@ namespace
 constexpr int kSpawnIslandFlatRadius = 48;
 constexpr int kSpawnIslandBlendRadius = 16;
 
-float Smoothstep(float edge0, float edge1, float x)
+float SpawnSmoothstep(float edge0, float edge1, float x)
 {
   const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
   return t * t * (3.0f - 2.0f * t);
@@ -26,14 +26,14 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,
                                  int centerX, int centerZ)
 {
-  if (!settings.fillWater)
+  if (!settings.FillWater)
   {
     return naturalSurfaceY;
   }
   const float dx = static_cast<float>(worldX - centerX);
   const float dz = static_cast<float>(worldZ - centerZ);
   const float dist = std::sqrt(dx * dx + dz * dz);
-  const int minLandY = settings.seaLevel + 1;
+  const int minLandY = settings.SeaLevel + 1;
 
   int adjusted = naturalSurfaceY;
   if (dist <= static_cast<float>(kSpawnIslandFlatRadius))
@@ -43,7 +43,7 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
   else if (dist <
            static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius))
   {
-    const float u = Smoothstep(
+    const float u = SpawnSmoothstep(
         static_cast<float>(kSpawnIslandFlatRadius),
         static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius),
         dist);
@@ -52,7 +52,7 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
     adjusted =
         std::max(naturalSurfaceY, static_cast<int>(std::lround(minFloor)));
   }
-  return std::clamp(adjusted, 1, settings.maxHeight);
+  return std::clamp(adjusted, 1, settings.MaxHeight);
 }
 
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
@@ -62,42 +62,43 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return;
   }
+  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
   for (int y = 0; y <= surfaceY; ++y)
   {
-    BlockId id = rule.fillerBlock;
-    if (y == 0)
+    BlockId Id = rule.fillerBlock;
+    if (y <= bedrockTop)
     {
-      id = ctx.Bedrock;
+      Id = ctx.Bedrock;
     }
     else if (y < surfaceY - rule.dirtDepth - rule.stoneDepthBelowDirt)
     {
-      id = rule.fillerBlock;
+      Id = rule.fillerBlock;
     }
     else if (y < surfaceY - rule.dirtDepth)
     {
-      id = rule.fillerBlock;
+      Id = rule.fillerBlock;
     }
     else if (y < surfaceY)
     {
-      id = rule.subsurfaceBlock;
+      Id = rule.subsurfaceBlock;
     }
     else
     {
-      id = rule.surfaceBlock;
+      Id = rule.surfaceBlock;
     }
-    ctx.World.SetBlock(glm::ivec3(x, y, z), id);
+    ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
-  const int maxY = std::max(surfaceY, ctx.Settings.seaLevel);
-  ctx.MarkDirtyColumn(x, z, 0, maxY);
+  const int maxY = std::max(surfaceY, ctx.Settings.SeaLevel);
+  ctx.AccumulateDirtyColumn(0, maxY);
 }
 
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
 {
-  if (!ctx.Settings.fillWater || ctx.Water == BLOCK_AIR)
+  if (!ctx.Settings.FillWater || ctx.Water == BLOCK_AIR)
   {
     return;
   }
-  const int sea = ctx.Settings.seaLevel;
+  const int sea = ctx.Settings.SeaLevel;
   if (surfaceY >= sea)
   {
     return;
@@ -110,19 +111,15 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
       ctx.World.SetBlock(pos, ctx.Water);
     }
   }
-  ctx.MarkDirtyColumn(x, z, surfaceY, sea);
+  ctx.AccumulateDirtyColumn(surfaceY, sea);
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
 {
-  if (settings.vertical == VerticalMode::Compact)
-  {
-    return LegacyHeightAt(x, z, settings.seed, 0, 8);
-  }
-  const int range = std::max(1, settings.maxHeight - settings.seaLevel);
+  const int range = std::max(1, settings.MaxHeight - settings.SeaLevel);
   const int surfaceY =
-      LegacyHeightAt(x, z, settings.seed, settings.seaLevel, range);
-  return std::clamp(surfaceY, 1, settings.maxHeight);
+      LegacyHeightAt(x, z, settings.Seed, settings.SeaLevel, range);
+  return std::clamp(surfaceY, 1, settings.MaxHeight);
 }
 
 void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
@@ -132,7 +129,7 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
   const BlockId grass = ctx.Grass;
   if (bedrock == BLOCK_AIR || stone == BLOCK_AIR || grass == BLOCK_AIR)
   {
-    std::cerr << "WorldGen: missing block types for legacy column" << std::endl;
+    std::cerr << "WorldGen: missing block Types for legacy column" << std::endl;
     return;
   }
   const BlockId dirtOrStone = ctx.Dirt != BLOCK_AIR ? ctx.Dirt : stone;
@@ -142,31 +139,32 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
 
   for (int y = 0; y <= surfaceY; ++y)
   {
-    BlockId id = stone;
+    BlockId Id = stone;
     if (y == 0)
     {
-      id = bedrock;
+      Id = bedrock;
     }
     else if (y < surfaceY - 1)
     {
-      id = stone;
+      Id = stone;
     }
     else if (y == surfaceY - 1)
     {
-      id = dirtOrStone;
+      Id = dirtOrStone;
     }
     else if (y == surfaceY)
     {
-      id = grass;
+      Id = grass;
     }
-    ctx.World.SetBlock(glm::ivec3(x, y, z), id);
+    ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
   FillFluidColumn(ctx, x, z, surfaceY);
+  ctx.AccumulateDirtyColumn(0, surfaceY);
 }
 
 void FillFlatColumn(WorldGenContext &ctx, int x, int z)
 {
-  const int surfaceY = ctx.Settings.flatSurfaceY;
+  const int surfaceY = ctx.Settings.FlatSurfaceY;
   if (ctx.Bedrock == BLOCK_AIR || ctx.Stone == BLOCK_AIR ||
       ctx.Grass == BLOCK_AIR)
   {
@@ -176,7 +174,7 @@ void FillFlatColumn(WorldGenContext &ctx, int x, int z)
   ctx.World.SetBlock(glm::ivec3(x, 1, z), ctx.Stone);
   ctx.World.SetBlock(glm::ivec3(x, 2, z), ctx.Stone);
   ctx.World.SetBlock(glm::ivec3(x, surfaceY, z), ctx.Grass);
-  ctx.MarkDirtyColumn(x, z, 0, surfaceY);
+  ctx.AccumulateDirtyColumn(0, surfaceY);
 }
 
 } // namespace cutum

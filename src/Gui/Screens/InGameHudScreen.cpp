@@ -1,13 +1,19 @@
-#include "InGameHudScreen.h"
+#include "Gui/Screens/InGameHudScreen.h"
 #include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
+#include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
-#include "Game/Inventory/SlotInteraction.h"
+
+#if defined(__ANDROID__)
+#include "Gui/Widgets/GuiTouchControls.h"
+#endif
 
 namespace cutum
 {
@@ -16,7 +22,6 @@ namespace
 {
 
 constexpr int kHotbarMarginBottom = 24;
-constexpr int kTooltipHeight = 22;
 constexpr int kSecondaryMarginRight = 16;
 constexpr int kSecondaryMarginBottom = 24;
 
@@ -24,27 +29,29 @@ constexpr int kSecondaryMarginBottom = 24;
 
 UInGameHudScreen::UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
                                    IGuiIconSource *icons)
-    : session_(session), theme_(theme), icons_(icons)
+    : Session(session), Theme(theme), Icons(icons)
 {
 }
 
+UInGameHudScreen::~UInGameHudScreen() = default;
+
 bool UInGameHudScreen::PickSlot(int x, int y, SlotAddress &out)
 {
-  if (!rootPanel_ || !theme_)
+  if (!RootPanel || !Theme)
   {
     return false;
   }
   EnsureHotbarWidgets();
   LayoutHotbar();
 
-  UGuiWidget *hit = rootPanel_->HitTest(x, y);
+  UGuiWidget *hit = RootPanel->HitTest(x, y);
   if (!hit)
   {
     return false;
   }
-  for (size_t i = 0; i < primarySlots_.size(); ++i)
+  for (size_t i = 0; i < PrimarySlots.size(); ++i)
   {
-    if (primarySlots_[i] == hit)
+    if (PrimarySlots[i] == hit)
     {
       out.surface = SlotSurface::Hotbar;
       out.bar = 0;
@@ -52,9 +59,9 @@ bool UInGameHudScreen::PickSlot(int x, int y, SlotAddress &out)
       return true;
     }
   }
-  for (size_t i = 0; i < secondarySlots_.size(); ++i)
+  for (size_t i = 0; i < SecondarySlots.size(); ++i)
   {
-    UGuiSlot *slot = secondarySlots_[i];
+    UGuiSlot *slot = SecondarySlots[i];
     if (slot && slot == hit && slot->IsVisible())
     {
       out.surface = SlotSurface::Hotbar;
@@ -68,38 +75,86 @@ bool UInGameHudScreen::PickSlot(int x, int y, SlotAddress &out)
 
 void UInGameHudScreen::Build(UGuiContext &ctx)
 {
-  (void)ctx;
-  auto panel = std::make_unique<UGuiPanel>(theme_);
+  Renderer = &ctx.GetRenderer();
+  auto panel = std::make_unique<UGuiPanel>(Theme);
   panel->SetDrawBackground(false);
-  rootPanel_ = panel.get();
-  root_ = std::move(panel);
-  hotbarBuilt_ = false;
+  RootPanel = panel.get();
+  Root = std::move(panel);
+  HotbarBuilt = false;
+#if defined(__ANDROID__)
+  if (TouchControls)
+  {
+    TouchControls->Build(RootPanel);
+  }
+#endif
 }
+
+#if defined(__ANDROID__)
+void UInGameHudScreen::ConfigureTouchControls(UTouchInputBridge *bridge,
+                                              std::function<void()> onMenu,
+                                              std::function<void()> onInventory,
+                                              std::function<void()> onConsole,
+                                              std::function<void()> onJumpPress)
+{
+  TouchControls = std::make_unique<UGuiTouchControls>(
+      Theme, bridge, std::move(onMenu), std::move(onInventory),
+      std::move(onConsole), std::move(onJumpPress));
+}
+
+bool UInGameHudScreen::RouteTouchMove(int PointerId, int x, int y)
+{
+  return TouchControls && TouchControls->RouteCapturedMove(PointerId, x, y);
+}
+
+void UInGameHudScreen::ReleaseJoystickCapture()
+{
+  if (TouchControls)
+  {
+    TouchControls->ReleaseJoystickCapture();
+  }
+}
+
+void UInGameHudScreen::ReleaseTouchCaptures()
+{
+  if (TouchControls)
+  {
+    TouchControls->ReleaseAllCaptures();
+  }
+}
+#endif
 
 void UInGameHudScreen::OnViewportChanged(int width, int height)
 {
   UGuiScreenBase::OnViewportChanged(width, height);
   LayoutHotbar();
+#if defined(__ANDROID__)
+  if (TouchControls)
+  {
+    const float uiScale = static_cast<float>(Theme->FontSizeBody) / 16.f;
+    TouchControls->Layout(ViewportW, ViewportH, GetContentOffsetX(),
+                          GetContentOffsetY(), uiScale);
+  }
+#endif
 }
 
 void UInGameHudScreen::SetPointerPosition(int x, int y)
 {
-  pointerX_ = x;
-  pointerY_ = y;
+  PointerX = x;
+  PointerY = y;
 }
 
 void UInGameHudScreen::EnsureHotbarWidgets()
 {
-  if (hotbarBuilt_ || !rootPanel_ || !session_ || !theme_)
+  if (HotbarBuilt || !RootPanel || !Session || !Theme)
   {
     return;
   }
 
-  const int slotSize = theme_->hotbarSlotSize;
+  const int slotSize = Theme->HotbarSlotSize;
 
   for (size_t i = 0; i < 10; ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(theme_, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
     const size_t index = i;
     SlotAddress address;
     address.surface = SlotSurface::Hotbar;
@@ -108,30 +163,30 @@ void UInGameHudScreen::EnsureHotbarWidgets()
     slot->SetOnClick(
         [this, index]()
         {
-          if (!session_->ApplyPendingAssignment(0, index))
+          if (!Session->ApplyPendingAssignment(0, index))
           {
-            session_->SelectSlot(0, index);
+            Session->SelectSlot(0, index);
           }
         });
     slot->SetOnBeginDrag(
         [this, address]()
         {
           const InventoryEntryRef entry =
-              session_->GetHotbarEntryRef(address.bar, address.slot);
+              Session->GetHotbarEntryRef(address.bar, address.slot);
           if (!entry.empty)
           {
-            session_->BeginDragFromSlot(address, entry);
+            Session->BeginDragFromSlot(address, entry);
           }
         });
     const int hotkeyNumber = (index < 9) ? static_cast<int>(index + 1) : 0;
     slot->SetCornerHint(std::to_string(hotkeyNumber));
     UGuiSlot *ptr =
-        static_cast<UGuiSlot *>(rootPanel_->AddChild(std::move(slot)));
-    primarySlots_.push_back(ptr);
+        static_cast<UGuiSlot *>(RootPanel->AddChild(std::move(slot)));
+    PrimarySlots.push_back(ptr);
   }
   for (size_t i = 0; i < 10; ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(theme_, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
     const size_t index = i;
     SlotAddress address;
     address.surface = SlotSurface::Hotbar;
@@ -140,54 +195,55 @@ void UInGameHudScreen::EnsureHotbarWidgets()
     slot->SetOnClick(
         [this, index]()
         {
-          if (!session_->ApplyPendingAssignment(1, index))
+          if (!Session->ApplyPendingAssignment(1, index))
           {
-            session_->SelectSlot(1, index);
+            Session->SelectSlot(1, index);
           }
         });
     slot->SetOnBeginDrag(
         [this, address]()
         {
           const InventoryEntryRef entry =
-              session_->GetHotbarEntryRef(address.bar, address.slot);
+              Session->GetHotbarEntryRef(address.bar, address.slot);
           if (!entry.empty)
           {
-            session_->BeginDragFromSlot(address, entry);
+            Session->BeginDragFromSlot(address, entry);
           }
         });
     UGuiSlot *ptr =
-        static_cast<UGuiSlot *>(rootPanel_->AddChild(std::move(slot)));
-    secondarySlots_.push_back(ptr);
+        static_cast<UGuiSlot *>(RootPanel->AddChild(std::move(slot)));
+    SecondarySlots.push_back(ptr);
   }
 
-  auto tip = std::make_unique<UGuiLabel>(theme_, "");
+  auto tip = std::make_unique<UGuiLabel>(Theme, "");
   tip->SetTextAlign(GuiTextAlign::Center);
   tip->SetDrawBackground(true);
   tip->SetVisible(false);
-  tooltip_ = tip.get();
-  rootPanel_->AddChild(std::move(tip));
+  Tooltip = tip.get();
+  RootPanel->AddChild(std::move(tip));
 
-  hotbarBuilt_ = true;
+  HotbarBuilt = true;
   LayoutHotbar();
 }
 
 void UInGameHudScreen::LayoutHotbar()
 {
-  if (!hotbarBuilt_ || !theme_)
+  if (!HotbarBuilt || !Theme)
   {
     return;
   }
-  rootPanel_->SetBounds({0, 0, viewportW_, viewportH_});
+  RootPanel->SetBounds(
+      {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
 
-  const int slotSize = theme_->hotbarSlotSize;
-  const int gap = theme_->hotbarSlotGap;
-  const int totalW = static_cast<int>(primarySlots_.size()) * slotSize +
-                     (static_cast<int>(primarySlots_.size()) - 1) * gap;
-  const int startX = (viewportW_ - totalW) / 2;
-  const int rowY = viewportH_ - kHotbarMarginBottom - slotSize;
+  const int slotSize = Theme->HotbarSlotSize;
+  const int gap = Theme->HotbarSlotGap;
+  const int totalW = static_cast<int>(PrimarySlots.size()) * slotSize +
+                     (static_cast<int>(PrimarySlots.size()) - 1) * gap;
+  const int startX = (ViewportW - totalW) / 2;
+  const int rowY = ViewportH - kHotbarMarginBottom - slotSize;
 
   int x = startX;
-  for (UGuiSlot *slot : primarySlots_)
+  for (UGuiSlot *slot : PrimarySlots)
   {
     if (slot)
     {
@@ -196,10 +252,10 @@ void UInGameHudScreen::LayoutHotbar()
     }
   }
 
-  const bool showSecondary = session_->GetBarCount() > 1;
-  const int secX = viewportW_ - kSecondaryMarginRight - slotSize;
-  int secY = viewportH_ - kSecondaryMarginBottom - slotSize;
-  for (UGuiSlot *slot : secondarySlots_)
+  const bool showSecondary = Session->GetBarCount() > 1;
+  const int secX = ViewportW - kSecondaryMarginRight - slotSize;
+  int secY = ViewportH - kSecondaryMarginBottom - slotSize;
+  for (UGuiSlot *slot : SecondarySlots)
   {
     if (!slot)
     {
@@ -217,152 +273,163 @@ void UInGameHudScreen::LayoutHotbar()
     }
   }
 
-  if (tooltip_)
+  if (Tooltip)
   {
-    tooltip_->SetBounds(
-        {startX, rowY - gap - kTooltipHeight, totalW, kTooltipHeight});
+    Tooltip->SetVisible(false);
   }
 }
 
 void UInGameHudScreen::UpdateSlotData()
 {
-  if (!session_)
+  if (!Session)
   {
     return;
   }
-  const auto primary = session_->GetBarSlots(0);
-  for (size_t i = 0; i < primarySlots_.size() && i < primary.size(); ++i)
+  const auto primary = Session->GetBarSlots(0);
+  for (size_t i = 0; i < PrimarySlots.size() && i < primary.size(); ++i)
   {
-    primarySlots_[i]->SetLabel(primary[i].label);
-    primarySlots_[i]->SetSelected(primary[i].selected);
+    PrimarySlots[i]->SetLabel(primary[i].label);
+    PrimarySlots[i]->SetSelected(primary[i].selected);
   }
-  const auto secondary = session_->GetBarSlots(1);
-  for (size_t i = 0; i < secondarySlots_.size() && i < secondary.size(); ++i)
+  const auto secondary = Session->GetBarSlots(1);
+  for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
   {
-    secondarySlots_[i]->SetLabel(secondary[i].label);
-    secondarySlots_[i]->SetSelected(secondary[i].selected);
+    SecondarySlots[i]->SetLabel(secondary[i].label);
+    SecondarySlots[i]->SetSelected(secondary[i].selected);
   }
 }
 
 void UInGameHudScreen::SyncSlotIcons()
 {
-  if (!session_ || !icons_)
+  if (!Session || !Icons)
   {
     return;
   }
-  const auto primary = session_->GetBarSlots(0);
-  for (size_t i = 0; i < primarySlots_.size() && i < primary.size(); ++i)
+  const auto primary = Session->GetBarSlots(0);
+  for (size_t i = 0; i < PrimarySlots.size() && i < primary.size(); ++i)
   {
     GLuint tex = 0;
-    if (!primary[i].id.empty())
+    if (!primary[i].Id.empty())
     {
       switch (primary[i].entryKind)
       {
       case InventoryEntryKind::Block:
-        tex = icons_->GetBlockIconTexture(primary[i].id);
+        tex = Icons->GetBlockIconTexture(primary[i].Id);
         break;
       case InventoryEntryKind::UObject:
-        tex = icons_->GetPrefabIconTexture(primary[i].id);
+        tex = Icons->GetPrefabIconTexture(primary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
-        tex = icons_->GetCreatureIconTexture(primary[i].id);
+        tex = Icons->GetCreatureIconTexture(primary[i].Id);
         break;
       case InventoryEntryKind::Skin:
-        tex = icons_->GetSkinIconTexture(primary[i].id);
+        tex = Icons->GetSkinIconTexture(primary[i].Id);
         break;
       }
     }
-    primarySlots_[i]->SetIconTexture(tex);
+    PrimarySlots[i]->SetIconTexture(tex);
   }
-  const auto secondary = session_->GetBarSlots(1);
-  for (size_t i = 0; i < secondarySlots_.size() && i < secondary.size(); ++i)
+  const auto secondary = Session->GetBarSlots(1);
+  for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
   {
     GLuint tex = 0;
-    if (!secondary[i].id.empty())
+    if (!secondary[i].Id.empty())
     {
       switch (secondary[i].entryKind)
       {
       case InventoryEntryKind::Block:
-        tex = icons_->GetBlockIconTexture(secondary[i].id);
+        tex = Icons->GetBlockIconTexture(secondary[i].Id);
         break;
       case InventoryEntryKind::UObject:
-        tex = icons_->GetPrefabIconTexture(secondary[i].id);
+        tex = Icons->GetPrefabIconTexture(secondary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
-        tex = icons_->GetCreatureIconTexture(secondary[i].id);
+        tex = Icons->GetCreatureIconTexture(secondary[i].Id);
         break;
       case InventoryEntryKind::Skin:
-        tex = icons_->GetSkinIconTexture(secondary[i].id);
+        tex = Icons->GetSkinIconTexture(secondary[i].Id);
         break;
       }
     }
-    secondarySlots_[i]->SetIconTexture(tex);
+    SecondarySlots[i]->SetIconTexture(tex);
   }
 }
 
 void UInGameHudScreen::UpdateTooltips()
 {
-  if (!session_)
+  if (!Session || !Tooltip || !Theme)
   {
     return;
   }
 
-  const auto primary = session_->GetBarSlots(0);
-  const auto secondary = session_->GetBarSlots(1);
+  const GuiRect viewport{GetContentOffsetX(), GetContentOffsetY(), ViewportW,
+                         ViewportH};
+  const auto primary = Session->GetBarSlots(0);
+  const auto secondary = Session->GetBarSlots(1);
 
-  auto showTip = [&](const std::string &text)
+  auto positionTip = [&](const std::string &text, int tipX, int tipY)
   {
-    if (tooltip_)
+    if (text.empty())
     {
-      tooltip_->SetText(text);
-      tooltip_->SetVisible(!text.empty());
+      Tooltip->SetVisible(false);
+      return;
     }
+    const int textW =
+        MeasureTooltipTextWidth(text, *Theme, Renderer);
+    LayoutTooltipNearPointer(*Tooltip, text, tipX, tipY, viewport, *Theme,
+                             textW);
   };
 
-  showTip("");
-
-  if (pointerX_ >= 0 && pointerY_ >= 0 && rootPanel_)
+  if (PointerX >= 0 && PointerY >= 0 && RootPanel)
   {
-    if (UGuiWidget *hit = rootPanel_->HitTest(pointerX_, pointerY_))
+    if (UGuiWidget *hit = RootPanel->HitTest(PointerX, PointerY))
     {
-      for (size_t i = 0; i < primarySlots_.size(); ++i)
+      for (size_t i = 0; i < PrimarySlots.size(); ++i)
       {
-        if (hit == primarySlots_[i] && i < primary.size() &&
+        if (hit == PrimarySlots[i] && i < primary.size() &&
             !primary[i].label.empty())
         {
-          showTip(primary[i].label);
+          positionTip(primary[i].label, PointerX, PointerY);
           return;
         }
       }
-      for (size_t i = 0; i < secondarySlots_.size(); ++i)
+      for (size_t i = 0; i < SecondarySlots.size(); ++i)
       {
-        if (hit == secondarySlots_[i] && i < secondary.size() &&
+        if (hit == SecondarySlots[i] && i < secondary.size() &&
             !secondary[i].label.empty())
         {
-          showTip(secondary[i].label);
+          positionTip(secondary[i].label, PointerX, PointerY);
           return;
         }
       }
     }
   }
 
-  const size_t activePrimary = session_->GetSelectedSlot(0);
+  const size_t activePrimary = Session->GetSelectedSlot(0);
   if (activePrimary < primary.size() && !primary[activePrimary].label.empty())
   {
-    showTip(primary[activePrimary].label);
+    UGuiSlot *slot = PrimarySlots[activePrimary];
+    const GuiRect b = slot ? slot->GetBounds() : GuiRect{};
+    positionTip(primary[activePrimary].label, b.X + b.W / 2, b.Y + b.H / 2);
     return;
   }
-  const size_t activeSecondary = session_->GetSelectedSlot(1);
+  const size_t activeSecondary = Session->GetSelectedSlot(1);
   if (activeSecondary < secondary.size() &&
       !secondary[activeSecondary].label.empty())
   {
-    showTip(secondary[activeSecondary].label);
+    UGuiSlot *slot = SecondarySlots[activeSecondary];
+    const GuiRect b = slot ? slot->GetBounds() : GuiRect{};
+    positionTip(secondary[activeSecondary].label, b.X + b.W / 2,
+                b.Y + b.H / 2);
+    return;
   }
+
+  Tooltip->SetVisible(false);
 }
 
 void UInGameHudScreen::Update(double /*dt*/)
 {
-  if (!rootPanel_ || !session_ || !theme_)
+  if (!RootPanel || !Session || !Theme)
   {
     return;
   }

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_acacia_sapling",
+    "id":  405,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_acacia_sapling_default_acacia_sapling",
+                     "mtg_acacia_sapling_default_acacia_sapling",
+                     "mtg_acacia_sapling_default_acacia_sapling",
+                     "mtg_acacia_sapling_default_acacia_sapling",
+                     "mtg_acacia_sapling_default_acacia_sapling",
+                     "mtg_acacia_sapling_default_acacia_sapling"
+                 ],
+    "render":  {
+
+               }
+}
+

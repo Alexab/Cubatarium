@@ -5,63 +5,150 @@
 namespace cutum
 {
 
-void UWanderActivityAgent::OnCreatureAdded(CreatureId id)
+namespace
 {
-  members_.insert(id);
-  ResetWanderState(id, 2.0f, 4.0f);
+
+constexpr int kMaxDirectionAttempts = 12;
+constexpr float kWanderProbeDistance = 1.25f;
+
+glm::vec3 RandomWanderDirection(CreatureHabitat habitat)
+{
+  const float angle = static_cast<float>(std::rand() % 628) / 100.0f;
+  glm::vec3 dir(std::cos(angle), 0.0f, std::sin(angle));
+  if (habitat == CreatureHabitat::Aquatic ||
+      habitat == CreatureHabitat::Amphibious)
+  {
+    const float pitch =
+        static_cast<float>((std::rand() % 201) - 100) / 100.0f * 0.45f;
+    dir.y = pitch;
+  }
+  else if (habitat == CreatureHabitat::Lava)
+  {
+    const float pitch =
+        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.25f;
+    dir.y = pitch;
+  }
+  else if (habitat == CreatureHabitat::Aerial)
+  {
+    const float pitch =
+        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.35f;
+    dir.y = pitch;
+  }
+  if (glm::length(dir) > 1e-4f)
+  {
+    dir = glm::normalize(dir);
+  }
+  return dir;
 }
 
-void UWanderActivityAgent::OnCreatureRemoved(CreatureId id)
+bool PickWanderDirection(IWorldPerception &perception,
+                         const CreatureActivityView &view,
+                         CreatureHabitat habitat, const glm::vec3 &boundsSize,
+                         glm::vec3 &outDirection)
 {
-  members_.erase(id);
-  State.erase(id);
+  if (habitat == CreatureHabitat::Aerial)
+  {
+    outDirection = RandomWanderDirection(CreatureHabitat::Aerial);
+    return glm::length(outDirection) > 1e-4f;
+  }
+  for (int attempt = 0; attempt < kMaxDirectionAttempts; ++attempt)
+  {
+    const glm::vec3 dir = RandomWanderDirection(habitat);
+    const glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
+    if (perception.HabitatAllowsMovementAt(habitat, probe, boundsSize))
+    {
+      outDirection = dir;
+      return true;
+    }
+  }
+  return false;
 }
 
-void UWanderActivityAgent::ResetWanderState(CreatureId id, float intervalMin,
+} // namespace
+
+void UWanderActivityAgent::OnCreatureAdded(CreatureId Id)
+{
+  Members.insert(Id);
+  ResetWanderState(Id, 2.0f, 4.0f);
+  State[Id].timer = 0.0f;
+}
+
+void UWanderActivityAgent::OnCreatureRemoved(CreatureId Id)
+{
+  Members.erase(Id);
+  State.erase(Id);
+}
+
+void UWanderActivityAgent::ResetWanderState(CreatureId Id, float intervalMin,
                                             float intervalMax)
 {
   const float span = intervalMax - intervalMin;
-  WanderAgentState &st = State[id];
+  WanderAgentState &st = State[Id];
   st.timer =
       intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
 }
 
-void UWanderActivityAgent::Tick(IWorldPerception & /*perception*/,
+void UWanderActivityAgent::Tick(IWorldPerception &perception,
                                 ICreatureActivitySink &sink, float dt)
 {
-  for (const CreatureId id : members_)
+  for (const CreatureId Id : Members)
   {
-    const std::optional<CreatureActivityView> view = sink.GetCreatureView(id);
+    const std::optional<CreatureActivityView> view = sink.GetCreatureView(Id);
     if (!view || view->possessed || view->isPlayerCharacter)
     {
       continue;
     }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
-        sink.GetBehaviorSnapshot(id);
+        sink.GetBehaviorSnapshot(Id);
     if (!snapshot)
     {
       continue;
     }
 
-    WanderAgentState &st = State[id];
+    WanderAgentState &st = State[Id];
     const float intervalMin = snapshot->behavior.wanderIntervalMin;
     const float intervalMax = snapshot->behavior.wanderIntervalMax;
     st.timer -= dt;
     if (st.timer <= 0.0f)
     {
-      ResetWanderState(id, intervalMin, intervalMax);
-      const float angle = static_cast<float>(std::rand() % 628) / 100.0f;
-      st.direction =
-          glm::normalize(glm::vec3(std::cos(angle), 0.0f, std::sin(angle)));
+      ResetWanderState(Id, intervalMin, intervalMax);
+      glm::vec3 nextDir = st.direction;
+      if (!PickWanderDirection(perception, *view, snapshot->habitat,
+                               snapshot->boundsSize, nextDir))
+      {
+        if (snapshot->habitat == CreatureHabitat::Aerial)
+        {
+          nextDir = RandomWanderDirection(CreatureHabitat::Aerial);
+        }
+        else
+        {
+          nextDir = glm::vec3(0.0f);
+        }
+      }
+      st.direction = nextDir;
     }
 
     CreatureIntent intent;
     intent.moveDirWorld = st.direction;
-    const float walkSpeed = snapshot->locomotion.walkSpeed;
-    intent.moveSpeed =
-        walkSpeed > 0.0f ? walkSpeed : snapshot->behavior.moveSpeed;
+    float moveSpeed = snapshot->behavior.moveSpeed;
+    if (snapshot->habitat == CreatureHabitat::Aerial)
+    {
+      if (snapshot->locomotion.flySpeed > 0.0f)
+      {
+        moveSpeed = snapshot->locomotion.flySpeed;
+      }
+      else if (snapshot->locomotion.walkSpeed > 0.0f)
+      {
+        moveSpeed = snapshot->locomotion.walkSpeed;
+      }
+    }
+    else if (snapshot->locomotion.walkSpeed > 0.0f)
+    {
+      moveSpeed = snapshot->locomotion.walkSpeed;
+    }
+    intent.moveSpeed = moveSpeed;
     intent.clearOnApply = false;
-    sink.SetIntent(id, intent);
+    sink.SetIntent(Id, intent);
   }
 }
 

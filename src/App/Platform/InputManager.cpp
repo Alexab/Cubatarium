@@ -55,19 +55,19 @@ void UInputManager::Shutdown()
 void UInputManager::Update()
 {
   // Update key states
-  for (auto &[key, pressed] : KeyStates)
+  for (auto &[key, Pressed] : KeyStates)
   {
-    PreviousKeyStates[key] = pressed;
+    PreviousKeyStates[key] = Pressed;
     KeyJustPressed[key] = false;
     KeyJustReleased[key] = false;
   }
 
-  // Update mouse button states
-  for (auto &[button, pressed] : MouseButtonStates)
+  // Update mouse Button states
+  for (auto &[Button, Pressed] : MouseButtonStates)
   {
-    PreviousMouseButtonStates[button] = pressed;
-    MouseButtonJustPressed[button] = false;
-    MouseButtonJustReleased[button] = false;
+    PreviousMouseButtonStates[Button] = Pressed;
+    MouseButtonJustPressed[Button] = false;
+    MouseButtonJustReleased[Button] = false;
   }
 
   // Update mouse position
@@ -93,21 +93,21 @@ bool UInputManager::IsKeyJustReleased(KeyCode key) const
   return it != KeyJustReleased.end() && it->second;
 }
 
-bool UInputManager::IsMouseButtonPressed(MouseButton button) const
+bool UInputManager::IsMouseButtonPressed(MouseButton Button) const
 {
-  auto it = MouseButtonStates.find(static_cast<int>(button));
+  auto it = MouseButtonStates.find(static_cast<int>(Button));
   return it != MouseButtonStates.end() && it->second;
 }
 
-bool UInputManager::IsMouseButtonJustPressed(MouseButton button) const
+bool UInputManager::IsMouseButtonJustPressed(MouseButton Button) const
 {
-  auto it = MouseButtonJustPressed.find(static_cast<int>(button));
+  auto it = MouseButtonJustPressed.find(static_cast<int>(Button));
   return it != MouseButtonJustPressed.end() && it->second;
 }
 
-bool UInputManager::IsMouseButtonJustReleased(MouseButton button) const
+bool UInputManager::IsMouseButtonJustReleased(MouseButton Button) const
 {
-  auto it = MouseButtonJustReleased.find(static_cast<int>(button));
+  auto it = MouseButtonJustReleased.find(static_cast<int>(Button));
   return it != MouseButtonJustReleased.end() && it->second;
 }
 
@@ -161,7 +161,7 @@ void UInputManager::ResetAllKeyStatus()
 
 // GLFW callback functions
 void UInputManager::GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
-                                    int action, int mods)
+                                    int Action, int Mods)
 {
   if (!instance)
   {
@@ -169,16 +169,16 @@ void UInputManager::GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
     return;
   }
 
-  KeyState state = static_cast<KeyState>(action);
-  KeyCode keyCode = static_cast<KeyCode>(key);
+  KeyState state = static_cast<KeyState>(Action);
+  KeyCode key_code = static_cast<KeyCode>(key);
 
   // Update key state
-  if (action == GLFW_PRESS)
+  if (Action == GLFW_PRESS)
   {
     instance->KeyStates[key] = true;
     instance->KeyJustPressed[key] = true;
   }
-  else if (action == GLFW_RELEASE)
+  else if (Action == GLFW_RELEASE)
   {
     instance->KeyStates[key] = false;
     instance->KeyJustReleased[key] = true;
@@ -189,7 +189,7 @@ void UInputManager::GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
   {
     try
     {
-      instance->KeyCallback(keyCode, state, mods);
+      instance->KeyCallback(key_code, state, Mods);
     }
     catch (const std::exception &e)
     {
@@ -202,25 +202,25 @@ void UInputManager::GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
   }
 }
 
-void UInputManager::GLFWMouseButtonCallback(GLFWwindow *window, int button,
-                                            int action, int mods)
+void UInputManager::GLFWMouseButtonCallback(GLFWwindow *window, int Button,
+                                            int Action, int Mods)
 {
   if (!instance)
     return;
 
-  MouseButton mouseButton = static_cast<MouseButton>(button);
-  bool pressed = (action == GLFW_PRESS);
+  MouseButton mouseButton = static_cast<MouseButton>(Button);
+  bool Pressed = (Action == GLFW_PRESS);
 
-  // Update mouse button state
-  if (pressed)
+  // Update mouse Button state
+  if (Pressed)
   {
-    instance->MouseButtonStates[button] = true;
-    instance->MouseButtonJustPressed[button] = true;
+    instance->MouseButtonStates[Button] = true;
+    instance->MouseButtonJustPressed[Button] = true;
   }
   else
   {
-    instance->MouseButtonStates[button] = false;
-    instance->MouseButtonJustReleased[button] = true;
+    instance->MouseButtonStates[Button] = false;
+    instance->MouseButtonJustReleased[Button] = true;
   }
 
   double x = 0.0;
@@ -231,7 +231,7 @@ void UInputManager::GLFWMouseButtonCallback(GLFWwindow *window, int button,
 
   if (instance->MouseButtonCallback)
   {
-    instance->MouseButtonCallback(mouseButton, pressed, pos);
+    instance->MouseButtonCallback(mouseButton, Pressed, pos);
   }
 }
 
@@ -253,13 +253,13 @@ void UInputManager::GLFWCursorPosCallback(GLFWwindow *window, double xpos,
   }
 }
 
-void UInputManager::GLFWScrollCallback(GLFWwindow *window, double xoffset,
-                                       double yoffset)
+void UInputManager::GLFWScrollCallback(GLFWwindow *window, double Xoffset,
+                                       double Yoffset)
 {
   if (!instance || !instance->MouseScrollCallback)
     return;
 
-  instance->MouseScrollCallback(xoffset, yoffset);
+  instance->MouseScrollCallback(Xoffset, Yoffset);
 }
 
 void UInputManager::GLFWFramebufferSizeCallback(GLFWwindow *window, int width,

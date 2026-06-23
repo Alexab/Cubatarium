@@ -4,12 +4,12 @@
 #include "Commands/CommandRegistry.h"
 #include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGameCommandContext.h"
 #include "Gui/Interfaces/IGuiGameActions.h"
 #include "Gui/Interfaces/IHotbarViewModel.h"
 #include "Gui/Interfaces/IInventoryViewModel.h"
-#include "Game/Inventory/SlotInteraction.h"
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -33,11 +33,13 @@ public:
   void InitializeCatalog(const std::string &typesJsonPath,
                          const UBlockDefinitionStorage &blocks,
                          const UPrefabLibrary &prefabs);
+  void ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
+                           const UPrefabLibrary &prefabs);
   void RegisterCommands();
 
-  UCommandRegistry &GetCommandRegistry() { return commandRegistry_; }
-  UContentTypeRegistry &GetContentCatalog() { return contentCatalog_; }
-  IContentCatalog &AsContentCatalog() { return contentCatalog_; }
+  UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }
+  UContentTypeRegistry &GetContentCatalog() { return ContentCatalog; }
+  IContentCatalog &AsContentCatalog() { return ContentCatalog; }
 
   void LoadLastWorld() override;
   void ResumeGame() override;
@@ -45,6 +47,7 @@ public:
   void OpenNewWorld() override;
   void QuitApplication() override;
   void OpenSettings() override;
+  void OpenWorldSettings() override;
   bool HasPausedSession() const override;
   int GetHotbarCountSetting() const override;
   void SetHotbarCountSetting(int count) override;
@@ -64,7 +67,7 @@ public:
   void BeginDragFromSlot(const SlotAddress &source,
                          const InventoryEntryRef &entry);
   bool IsDragging() const;
-  const DragState &GetDrag() const { return drag_; }
+  const DragState &GetDrag() const { return Drag; }
   bool DropOnSlot(const SlotAddress &target);
   void CancelDrag();
   InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
@@ -78,31 +81,33 @@ public:
                          size_t slotIndex) const override;
   bool AssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
                       size_t slotIndex) override;
+  bool CanSpawnCreatureByView(const std::string &speciesId) const;
+  std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
   InventoryMode GetInventoryMode() const override;
   void SetInventoryMode(InventoryMode mode) override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
   void AddChatLine(const std::string &line) override;
-  const std::vector<std::string> &GetChatLog() const { return chatLog_; }
+  const std::vector<std::string> &GetChatLog() const { return ChatLog; }
 
-  UConsoleCommandHistory &GetCommandHistory() { return commandHistory_; }
+  UConsoleCommandHistory &GetCommandHistory() { return CommandHistory; }
   const UConsoleCommandHistory &GetCommandHistory() const
   {
-    return commandHistory_;
+    return CommandHistory;
   }
   void InitCommandHistory(const std::filesystem::path &filePath);
   void SaveCommandHistory();
 
 private:
-  UApplication *application_;
+  UApplication *Application;
   std::shared_ptr<UWorld> World;
-  UCommandRegistry commandRegistry_;
-  UContentTypeRegistry contentCatalog_;
-  std::vector<std::string> chatLog_;
-  UConsoleCommandHistory commandHistory_;
-  InventoryMode inventoryMode_{InventoryMode::Creative};
-  std::optional<InventoryEntryRef> pendingAssignment_;
-  DragState drag_;
+  UCommandRegistry UCommandRegistry;
+  UContentTypeRegistry ContentCatalog;
+  std::vector<std::string> ChatLog;
+  UConsoleCommandHistory CommandHistory;
+  InventoryMode ActiveInventoryMode{InventoryMode::Creative};
+  std::optional<InventoryEntryRef> PendingAssignment;
+  DragState Drag;
 };
 
 } // namespace cutum

@@ -35,29 +35,31 @@ public:
 
   GLuint GetBlockIconTexture(const std::string &blockName);
 
+  void ClearBlockIconCache();
+
 private:
   GLuint RenderPrefabIcon(const std::string &prefabName);
   GLuint RenderBlockIcon(BlockId blockId);
   GLuint GetBlockTexture(BlockId blockId) const;
   bool InitCubeMesh();
 
-  std::shared_ptr<UPrefabLibrary> prefabs_;
-  std::shared_ptr<UTextureCubeStorage> textures_;
-  std::shared_ptr<UBlockDefinitionStorage> blockDefs_;
+  std::shared_ptr<UPrefabLibrary> Prefabs;
+  std::shared_ptr<UTextureCubeStorage> Textures;
+  std::shared_ptr<UBlockDefinitionStorage> BlockDefs;
   std::shared_ptr<UShaderManager> ShaderManager;
-  std::shared_ptr<class UShaderProgram> shader_;
+  std::shared_ptr<class UShaderProgram> Shader;
 
-  std::unordered_map<std::string, GLuint> cache_;
-  std::unordered_map<BlockId, GLuint> blockCache_;
-  std::vector<std::string> warmupQueue_;
-  size_t warmupIndex_{0};
+  std::unordered_map<std::string, GLuint> Cache;
+  std::unordered_map<BlockId, GLuint> BlockCache;
+  std::vector<std::string> WarmupQueue;
+  size_t WarmupIndex{0};
 
-  GLuint cubeVao_{0};
-  GLuint cubeVbo_{0};
-  GLuint cubeEbo_{0};
-  GLuint fbo_{0};
-  GLuint colorTex_{0};
-  GLuint depthRbo_{0};
+  GLuint CubeVao{0};
+  GLuint CubeVbo{0};
+  GLuint CubeEbo{0};
+  GLuint Fbo{0};
+  GLuint ColorTex{0};
+  GLuint DepthRbo{0};
   static constexpr int kIconSize = 64;
 };
 

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "deadbush",
+    "id":  622,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush",
+                     "deadbush"
+                 ],
+    "render":  {
+
+               }
+}
+

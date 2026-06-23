@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_dry_shrub",
+    "id":  452,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_dry_shrub_default_dry_shrub",
+                     "mtg_dry_shrub_default_dry_shrub",
+                     "mtg_dry_shrub_default_dry_shrub",
+                     "mtg_dry_shrub_default_dry_shrub",
+                     "mtg_dry_shrub_default_dry_shrub",
+                     "mtg_dry_shrub_default_dry_shrub"
+                 ],
+    "render":  {
+
+               }
+}
+

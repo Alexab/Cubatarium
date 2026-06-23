@@ -1,0 +1,21 @@
+﻿{
+    "name":  "melon",
+    "id":  920,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "melon_side",
+                     "melon_side",
+                     "melon_side",
+                     "melon_side",
+                     "melon_top",
+                     "melon_side"
+                 ],
+    "displayName":  "Melon",
+    "render":  {
+
+               }
+}
+

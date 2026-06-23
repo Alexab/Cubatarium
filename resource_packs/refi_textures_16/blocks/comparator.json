@@ -1,0 +1,19 @@
+﻿{
+    "name":  "comparator",
+    "id":  748,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator",
+                     "comparator"
+                 ],
+    "render":  {
+
+               }
+}
+

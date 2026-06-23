@@ -1,0 +1,20 @@
+﻿{
+    "name":  "oreEmerald",
+    "id":  524,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald",
+                     "oreEmerald"
+                 ],
+    "displayName":  "Emerald Ore",
+    "render":  {
+
+               }
+}
+

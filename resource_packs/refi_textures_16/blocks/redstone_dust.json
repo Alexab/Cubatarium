@@ -1,0 +1,19 @@
+﻿{
+    "name":  "redstone_dust",
+    "id":  797,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "redstoneDust_cross",
+                     "redstoneDust_cross",
+                     "redstoneDust_cross",
+                     "redstoneDust_cross",
+                     "redstoneDust_cross",
+                     "redstoneDust_cross"
+                 ],
+    "render":  {
+
+               }
+}
+

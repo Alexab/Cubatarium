@@ -9,7 +9,7 @@ namespace cutum
 
 using CreatureId = uint64_t;
 
-/// Session identity: camera cache, view id, link to player creature. Inventory
+/// Session identity: camera cache, view Id, link to player creature. Inventory
 /// lives on UCreature.
 class UUser
 {
@@ -29,7 +29,7 @@ public:
   void SetViewId(size_t value);
 
   CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
-  void SetPlayerCreatureId(CreatureId id) { PlayerCreatureId = id; }
+  void SetPlayerCreatureId(CreatureId Id) { PlayerCreatureId = Id; }
 
   const std::string &GetSelectedAppearanceTypeId() const;
   void SetSelectedAppearanceTypeId(const std::string &typeId);

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_cloud",
+    "id":  423,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_cloud_default_cloud",
+                     "mtg_cloud_default_cloud",
+                     "mtg_cloud_default_cloud",
+                     "mtg_cloud_default_cloud",
+                     "mtg_cloud_default_cloud",
+                     "mtg_cloud_default_cloud"
+                 ],
+    "render":  {
+
+               }
+}
+

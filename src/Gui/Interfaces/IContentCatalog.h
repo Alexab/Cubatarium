@@ -17,7 +17,7 @@ enum class ContentKind
 
 struct CatalogEntry
 {
-  std::string id;
+  std::string Id;
   std::string displayName;
 };
 

@@ -1,0 +1,399 @@
+license: CC-BY-SA-3.0
+license_text: 'Snez texture pack (CC BY-SA). Author: TheFrugalGamer. Source: https://github.com/FrugalGamer/snez-texture-pack'
+blocks:
+  sand: sand
+  dirt: dirt
+  gravel: gravel
+  glass: glass
+  clay: clay
+  obsidian: obsidian
+  ice: ice
+  snow: snow
+  hellsand: hellsand
+  whiteStone: whiteStone
+  bookshelf: bookshelf
+  oreDiamond: oreDiamond
+  oreRedstone: oreRedstone
+  blockDiamond: blockDiamond
+  blockRedstone: blockRedstone
+  stoneMoss: stoneMoss
+  stonebricksmooth: stonebricksmooth
+  stonebricksmooth_carved: stonebricksmooth_carved
+  stonebricksmooth_cracked: stonebricksmooth_cracked
+  stonebricksmooth_mossy: stonebricksmooth_mossy
+  melon:
+    faces:
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_side
+    - melon_top
+    - melon_side
+    types:
+    - natural
+  wool_0: cloth_0
+  tree_log:
+    faces:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_top
+    - tree_top
+    types:
+    - natural
+  planks_birch: wood_birch
+  planks_spruce: wood_spruce
+  planks_jungle: wood_jungle
+  log_birch:
+    faces:
+    - tree_birch
+    - tree_birch
+    - tree_birch
+    - tree_birch
+    - wood_birch
+    - wood_birch
+    types:
+    - natural
+  log_spruce:
+    faces:
+    - tree_spruce
+    - tree_spruce
+    - tree_spruce
+    - tree_spruce
+    - wood_spruce
+    - wood_spruce
+    types:
+    - natural
+  log_jungle:
+    faces:
+    - tree_jungle
+    - tree_jungle
+    - tree_jungle
+    - tree_jungle
+    - wood_jungle
+    - wood_jungle
+    types:
+    - natural
+  leaves_transparent: leaves
+  nether_brick: netherBrick
+  command_block: commandBlock
+  sandstone_carved: sandstone_carved
+  sandstone_smooth: sandstone_smooth
+  furnace:
+    faces:
+    - furnace_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  furnace_lit:
+    faces:
+    - furnace_front_lit
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  crafting_table:
+    faces:
+    - workbench_front
+    - workbench_side
+    - workbench_side
+    - workbench_side
+    - workbench_top
+    - workbench_side
+    types:
+    - natural
+  hopper:
+    faces:
+    - hopper
+    - hopper
+    - hopper
+    - hopper
+    - hopper_top
+    - hopper_inside
+    types:
+    - natural
+  anvil:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top
+    - anvil_base
+    types:
+    - natural
+  cake:
+    faces:
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_side
+    - cake_top
+    - cake_bottom
+    types:
+    - natural
+  dispenser:
+    faces:
+    - dispenser_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  dropper:
+    faces:
+    - dropper_front
+    - furnace_side
+    - furnace_side
+    - furnace_side
+    - furnace_top
+    - furnace_top
+    types:
+    - natural
+  sapling_oak: sapling
+  sapling_birch: sapling_birch
+  sapling_spruce: sapling_spruce
+  sapling_jungle: sapling_jungle
+  tall_grass: tallgrass
+  fern: fern
+  flower: flower
+  reeds: reeds
+  rail: rail
+  rail_curved: rail_turn
+  golden_rail: goldenRail
+  golden_rail_powered: goldenRail_powered
+  detector_rail: detectorRail
+  detector_rail_on: detectorRail_on
+  activator_rail: activatorRail
+  activator_rail_on: activatorRail_powered
+  torch: torch
+  ladder: ladder
+  lever: lever
+  trapdoor: trapdoor
+  redstone_lamp: redstoneLight
+  redstone_lamp_on: redstoneLight_lit
+  redstone_dust: redstoneDust_cross
+  wooden_door: doorWood_lower
+  brown_mushroom: mushroom_brown
+  red_mushroom: mushroom_red
+  snow_layer: snow_side
+  stone_slab: stoneslab_side
+  stone_slab_top: stoneslab_top
+  thin_glass: thinglass_top
+  item_frame: itemframe_back
+  anvil_slightly_damaged:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top_damaged_1
+    - anvil_base
+    types:
+    - natural
+  anvil_very_damaged:
+    faces:
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_base
+    - anvil_top_damaged_2
+    - anvil_base
+    types:
+    - natural
+  wooden_door_upper: doorWood_upper
+  redstone_dust_line: redstoneDust_line
+  water:
+    faces:
+    - water
+    - water
+    - water
+    - water
+    - water
+    - water
+    types:
+    - natural
+    physics:
+      preset: water
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 16
+      frametime: 6
+  lava:
+    faces:
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    - lava
+    types:
+    - natural
+    physics:
+      preset: lava
+    render:
+      transparent: true
+      style: fluid
+    animation:
+      frame_count: 8
+      frametime: 6
+  bedrock: bedrock
+  brick: brick
+  sandstone:
+    faces:
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_top
+    - sandstone_bottom
+    types:
+    - natural
+  stone: stone
+  stonebrick: stonebrick
+  tnt:
+    faces:
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_side
+    - tnt_top
+    - tnt_bottom
+    types:
+    - natural
+  tree_birch: tree_birch
+  wood: wood
+  grass:
+    faces:
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_side
+    - grass_top
+    - dirt
+    types:
+    - natural
+textures:
+  sand: default_sand.png
+  dirt: default_dirt.png
+  gravel: default_gravel.png
+  glass: default_glass.png
+  clay: default_clay.png
+  obsidian: default_obsidian.png
+  ice: default_ice.png
+  snow: default_snow.png
+  hellsand: default_sand.png
+  whiteStone: default_stone.png
+  bookshelf: default_bookshelf.png
+  oreDiamond: default_diamond.png
+  oreRedstone: default_stone.png
+  blockDiamond: default_diamond.png
+  blockRedstone: default_stone.png
+  stoneMoss: default_stone.png
+  stonebricksmooth: default_brick.png
+  stonebricksmooth_carved: default_brick.png
+  stonebricksmooth_cracked: default_brick.png
+  stonebricksmooth_mossy: default_brick.png
+  melon_side: farming_melon_side.png
+  melon_top: farming_melon_top.png
+  cloth_0: wool_white.png
+  tree_top: default_tree_top.png
+  tree_side: default_tree.png
+  wood_birch: default_wood.png
+  wood_spruce: default_wood.png
+  wood_jungle: default_wood.png
+  tree_birch: default_tree.png
+  tree_spruce: default_tree.png
+  tree_jungle: default_tree.png
+  leaves: default_jungleleaves.png
+  netherBrick: default_brick.png
+  commandBlock: jeija_commandblock_off.png
+  sandstone_carved: default_sand.png
+  sandstone_smooth: default_sand.png
+  furnace_front: default_furnace_front.png
+  furnace_side: default_furnace_side.png
+  furnace_top: default_furnace_top.png
+  furnace_front_lit: default_furnace_front.png
+  workbench_top: crafting_workbench_top.png
+  workbench_front: crafting_workbench_front.png
+  workbench_side: crafting_workbench_side.png
+  hopper_inside: mcl_hoppers_hopper_inside.png
+  hopper_top: mcl_hoppers_hopper_top.png
+  hopper: mcl_hoppers_hopper_inside.png
+  anvil_top: mcl_anvils_anvil_top_damaged_0.png
+  anvil_base: mcl_anvils_anvil_base.png
+  cake_side: cake_side.png
+  cake_bottom: cake_bottom.png
+  cake_top: cake_top.png
+  dispenser_front: mcl_dispensers_dispenser_front_horizontal.png
+  dropper_front: mcl_droppers_dropper_front_horizontal.png
+  sapling: default_sapling.png
+  sapling_birch: default_sapling.png
+  sapling_spruce: default_sapling.png
+  sapling_jungle: default_sapling.png
+  tallgrass: mcl_flowers_tallgrass.png
+  fern: mcl_flowers_double_plant_fern_bottom.png
+  flower: flowers_dandelion_yellow.png
+  reeds: mcl_core_reeds.png
+  rail: default_rail.png
+  rail_turn: default_rail.png
+  goldenRail: default_rail.png
+  goldenRail_powered: default_rail.png
+  detectorRail: default_rail.png
+  detectorRail_on: default_rail.png
+  activatorRail: default_rail.png
+  activatorRail_powered: default_rail.png
+  torch: default_torch_on_floor.png
+  ladder: default_ladder.png
+  lever: jeija_wall_lever.png
+  trapdoor: doors_trapdoor.png
+  redstoneLight: default_stone.png
+  redstoneLight_lit: default_stone.png
+  redstoneDust_cross: default_stone.png
+  doorWood_lower: default_wood.png
+  mushroom_brown: farming_mushroom_brown.png
+  mushroom_red: farming_mushroom_red.png
+  snow_side: default_snow.png
+  stoneslab_side: default_stone.png
+  stoneslab_top: default_stone.png
+  thinglass_top: default_glass.png
+  itemframe_back: mcl_itemframes_itemframe_background.png
+  anvil_top_damaged_1: mcl_anvils_anvil_top_damaged_1.png
+  anvil_top_damaged_2: mcl_anvils_anvil_top_damaged_2.png
+  doorWood_upper: default_wood.png
+  redstoneDust_line: default_stone.png
+  water: default_water_source_animated.png
+  lava: default_lava_source_animated.png
+  bedrock: mcl_core_bedrock.png
+  brick: default_brick.png
+  sandstone_bottom: default_sand.png
+  sandstone_side: default_sand.png
+  sandstone_top: default_sand.png
+  stone: default_stone.png
+  stonebrick: default_brick.png
+  tnt_top: default_tnt_top.png
+  tnt_bottom: default_tnt_bottom.png
+  tnt_side: default_tnt_side.png
+  wood: default_wood.png
+  grass_side:
+    composite:
+      base: default_dirt.png
+      overlay: mcl_core_grass_block_side_overlay.png
+  grass_top: mcl_core_grass_block_top.png
+animated:
+  water:
+  - default_water_source_animated.png
+  lava:
+  - default_lava_source_animated.png

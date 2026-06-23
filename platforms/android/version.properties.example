@@ -1,0 +1,3 @@
+# Optional override for Play Store versionCode (must increase on every upload).
+# Copy to version.properties (gitignored) or rely on git commit count from version.gradle.
+# versionCode=42

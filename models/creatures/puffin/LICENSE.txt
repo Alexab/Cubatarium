@@ -1,0 +1,4 @@
+Source file: texturepuffin.png
+Upstream: animalworld/textures/texturepuffin.png
+License: MIT
+Attribution: animalworld — Skandarella

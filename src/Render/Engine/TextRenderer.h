@@ -1,7 +1,7 @@
 #ifndef TEXTRENDERER_H
 #define TEXTRENDERER_H
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <filesystem>
 #include <ft2build.h>
 #include <glm/glm.hpp>

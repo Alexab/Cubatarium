@@ -1,8 +1,8 @@
 #ifndef CREATUREPOSEPRESENTERREGISTRY_H
 #define CREATUREPOSEPRESENTERREGISTRY_H
 
-#include "Pose/ICreaturePosePresenter.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Pose/ICreaturePosePresenter.h"
 #include <array>
 #include <memory>
 
@@ -17,7 +17,7 @@ public:
   void Clear();
 
 private:
-  std::array<std::unique_ptr<ICreaturePosePresenter>, 5> presenters_{};
+  std::array<std::unique_ptr<ICreaturePosePresenter>, 5> Presenters{};
 };
 
 void RegisterDefaultCreaturePosePresenters(

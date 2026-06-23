@@ -1,0 +1,19 @@
+﻿{
+    "name":  "ladder",
+    "id":  913,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "ladder",
+                     "ladder",
+                     "ladder",
+                     "ladder",
+                     "ladder",
+                     "ladder"
+                 ],
+    "render":  {
+
+               }
+}
+

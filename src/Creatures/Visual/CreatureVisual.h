@@ -3,8 +3,8 @@
 
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
-#include "Pose/CreaturePoseParams.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Pose/CreaturePoseParams.h"
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -24,13 +24,13 @@ public:
                           const CreatureDefinition &animDef, float dt) = 0;
   virtual void SetAppearance(const ResolvedCreatureAppearance &appearance)
   {
-    appearance_ = appearance;
+    Appearance = appearance;
   }
   virtual void SubmitDraw(UGeometryEngine &engine,
                           const glm::mat4 &viewProj) = 0;
 
 protected:
-  ResolvedCreatureAppearance appearance_{};
+  ResolvedCreatureAppearance Appearance{};
 };
 
 } // namespace cutum

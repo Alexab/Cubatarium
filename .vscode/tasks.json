@@ -9,16 +9,19 @@
                 "-S",
                 "${workspaceFolder}",
                 "-B",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-G",
                 "Visual Studio 17 2022",
                 "-A",
                 "x64",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
             ],
             "group": "build",
             "options": {
                 "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
                     "VCToolsVersion": ""
                 }
             },
@@ -38,7 +41,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Debug",
                 "--parallel",
@@ -69,7 +72,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Release",
                 "--parallel",
@@ -97,7 +100,7 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--target",
                 "clean"
             ],
@@ -119,7 +122,7 @@
             "args": [
                 "-Recurse",
                 "-Force",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-ErrorAction",
                 "SilentlyContinue"
             ],
@@ -142,12 +145,14 @@
                 "-S",
                 "${workspaceFolder}",
                 "-B",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-G",
                 "Visual Studio 17 2022",
                 "-A",
                 "x64",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
             ],
             "group": "build",
             "dependsOrder": "sequence",
@@ -156,6 +161,7 @@
             ],
             "options": {
                 "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
                     "VCToolsVersion": ""
                 }
             },

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "sapling_jungle",
+    "id":  554,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sapling_jungle",
+                     "sapling_jungle",
+                     "sapling_jungle",
+                     "sapling_jungle",
+                     "sapling_jungle",
+                     "sapling_jungle"
+                 ],
+    "render":  {
+
+               }
+}
+

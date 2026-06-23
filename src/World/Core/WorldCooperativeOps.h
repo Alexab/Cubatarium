@@ -1,0 +1,101 @@
+#pragma once
+
+#include "Core/Progress/IProgressSink.h"
+#include <filesystem>
+#include <glm/glm.hpp>
+#include <string>
+#include <vector>
+
+namespace cutum
+{
+
+class UWorld;
+
+enum class WorldCoopKind
+{
+  Load,
+  Save,
+  Create
+};
+
+class UWorldCooperativeSession
+{
+public:
+  WorldCoopKind Kind{WorldCoopKind::Load};
+  bool Active{false};
+
+  void BeginLoad(UWorld &world, const std::string &world_folder_path);
+  void BeginSave(UWorld &world, const std::string &world_folder_path);
+  void BeginCreate(UWorld &world, const std::string &world_name);
+  /// @return true when the operation finished successfully.
+  bool Tick(UWorld &world, IProgressSink &sink, int chunkBudget);
+  void Cancel();
+
+private:
+  enum class Phase
+  {
+    Init,
+    Metadata,
+    Entities,
+    ScanChunks,
+    LoadChunks,
+    LegacyData,
+    SpatialChunks,
+    PostLoadAnalysis,
+    ProceduralFill,
+    FinalizeWorld,
+    ScanSaveChunks,
+    SaveChunks,
+    SaveMetadata,
+    GenerateColumns,
+    PostCreate,
+    Done
+  };
+
+  void Report(IProgressSink &sink, const std::string &phaseId, float fraction,
+              const std::string &message) const;
+  void ScanChunkFiles(UWorld &world);
+  void ScanSaveChunkCoords(UWorld &world);
+  void InitGenerationGrid(UWorld &world);
+  bool LoadOneChunkFile(UWorld &world, const std::filesystem::path &path);
+  bool AdvanceGeneration(UWorld &world, int budget);
+
+  Phase CurrentPhase{Phase::Init};
+  std::string FolderPath;
+  std::string TargetWorldName;
+
+  std::vector<std::filesystem::path> ChunkFiles;
+  size_t ChunkFileIndex{0};
+  std::vector<glm::ivec3> SaveChunkCoords;
+  size_t SaveChunkIndex{0};
+
+  bool SpatialStreamingLoad{false};
+  bool UseMonolithicChunks{false};
+  std::string ChunksFileName;
+  std::string BlocksFileName;
+  std::string ObjectsFileName;
+
+  int SpatialRadius{0};
+  glm::ivec3 SpatialCenter{0};
+  int SpatialDx{0};
+  int SpatialDz{0};
+
+  int GenMinCx{0};
+  int GenMaxCx{0};
+  int GenMinCz{0};
+  int GenMaxCz{0};
+  int GenCx{0};
+  int GenCz{0};
+  int GenLx{0};
+  int GenLz{0};
+  int GenTotalColumns{0};
+  int GenDoneColumns{0};
+
+  int ChunkFilesRead{0};
+  size_t VoxelsFromChunkFiles{0};
+  bool NeedsProceduralFill{false};
+  bool Failed{false};
+  std::string ErrorMessage;
+};
+
+} // namespace cutum

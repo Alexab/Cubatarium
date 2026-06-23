@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_goldblock",
+    "id":  456,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_goldblock_default_gold_block",
+                     "mtg_goldblock_default_gold_block",
+                     "mtg_goldblock_default_gold_block",
+                     "mtg_goldblock_default_gold_block",
+                     "mtg_goldblock_default_gold_block",
+                     "mtg_goldblock_default_gold_block"
+                 ],
+    "render":  {
+
+               }
+}
+

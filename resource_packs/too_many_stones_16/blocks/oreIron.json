@@ -1,0 +1,20 @@
+﻿{
+    "name":  "oreIron",
+    "id":  988,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "oreIron",
+                     "oreIron",
+                     "oreIron",
+                     "oreIron",
+                     "oreIron",
+                     "oreIron"
+                 ],
+    "displayName":  "Iron Ore",
+    "render":  {
+
+               }
+}
+

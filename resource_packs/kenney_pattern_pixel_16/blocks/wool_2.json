@@ -1,0 +1,20 @@
+﻿{
+    "name":  "wool_2",
+    "id":  46,
+    "types":  [
+                  "decorative"
+              ],
+    "textures":  [
+                     "cloth_2",
+                     "cloth_2",
+                     "cloth_2",
+                     "cloth_2",
+                     "cloth_2",
+                     "cloth_2"
+                 ],
+    "displayName":  "Magenta Wool",
+    "render":  {
+
+               }
+}
+

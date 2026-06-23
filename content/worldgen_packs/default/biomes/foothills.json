@@ -1,0 +1,12 @@
+{
+  "id": "foothills",
+  "height": {
+    "base_offset": 2,
+    "amplitude_mul": 1.1,
+    "volatility_mul": 1.0
+  },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "gravel"
+  }
+}

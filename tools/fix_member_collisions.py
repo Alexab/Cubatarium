@@ -45,6 +45,34 @@ REPLACEMENTS = [
     ("ctx.app", "ctx.App"),
 ]
 
+# File-specific fixes (avoid breaking other translation units).
+FILE_REPLACEMENTS: dict[str, list[tuple[str, str]]] = {
+    "Gui/Widgets/GuiTouchControls.h": [
+        ("UGuiWidget *Joystick;", "UGuiWidget *JoystickWidget;"),
+        ("Joystick{nullptr}", "JoystickWidget{nullptr}"),
+    ],
+    "Gui/Widgets/GuiTouchControls.cpp": [
+        ("Joystick =", "JoystickWidget ="),
+        ("Joystick->", "JoystickWidget->"),
+        ("Joystick.", "JoystickWidget."),
+        ("Joystick,", "JoystickWidget,"),
+        ("Joystick)", "JoystickWidget)"),
+        ("Joystick;", "JoystickWidget;"),
+        ("Joystick{", "JoystickWidget{"),
+        ("&Joystick", "&JoystickWidget"),
+    ],
+    "Gui/Widgets/WorldGenSettingsForm.h": [
+        ("ProceduralSettings Settings;", "ProceduralSettings FormSettings;"),
+    ],
+    "Gui/Widgets/WorldGenSettingsForm.cpp": [
+        ("Settings =", "FormSettings ="),
+        ("Settings.", "FormSettings."),
+        ("return Settings;", "return FormSettings;"),
+        ("SetSettings(Settings)", "SetSettings(FormSettings)"),
+        ("ProceduralSettings s = Settings;", "ProceduralSettings s = FormSettings;"),
+    ],
+}
+
 
 def main():
     n = 0
@@ -54,6 +82,9 @@ def main():
         text = fp.read_text(encoding="utf-8")
         orig = text
         for old, new in REPLACEMENTS:
+            text = text.replace(old, new)
+        rel = str(fp.relative_to(ROOT)).replace("\\", "/")
+        for old, new in FILE_REPLACEMENTS.get(rel, []):
             text = text.replace(old, new)
         if text != orig:
             fp.write_text(text, encoding="utf-8", newline="\n")

@@ -2,7 +2,9 @@
 
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -17,6 +19,8 @@ struct AppSettingsSnapshot
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   UiSettings Ui;
+  std::vector<std::string> DefaultResourcePacksEnabled;
+  ResourcePackSelection DefaultResourcePacks;
 };
 
 } // namespace cutum

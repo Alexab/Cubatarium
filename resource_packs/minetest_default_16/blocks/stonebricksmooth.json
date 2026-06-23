@@ -1,0 +1,20 @@
+﻿{
+    "name":  "stonebricksmooth",
+    "id":  563,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "stonebricksmooth",
+                     "stonebricksmooth",
+                     "stonebricksmooth",
+                     "stonebricksmooth",
+                     "stonebricksmooth",
+                     "stonebricksmooth"
+                 ],
+    "displayName":  "Stone Bricks",
+    "render":  {
+
+               }
+}
+

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_tinblock",
+    "id":  513,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_tinblock_default_tin_block",
+                     "mtg_tinblock_default_tin_block",
+                     "mtg_tinblock_default_tin_block",
+                     "mtg_tinblock_default_tin_block",
+                     "mtg_tinblock_default_tin_block",
+                     "mtg_tinblock_default_tin_block"
+                 ],
+    "render":  {
+
+               }
+}
+

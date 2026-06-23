@@ -1,9 +1,9 @@
 #ifndef GREEDYMESHEMITTER_H
 #define GREEDYMESHEMITTER_H
 
-#include "World/Chunks/Chunk.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "World/Chunks/Chunk.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>

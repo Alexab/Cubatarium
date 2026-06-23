@@ -1,0 +1,19 @@
+﻿{
+    "name":  "planks_jungle",
+    "id":  531,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "wood_jungle",
+                     "wood_jungle",
+                     "wood_jungle",
+                     "wood_jungle",
+                     "wood_jungle",
+                     "wood_jungle"
+                 ],
+    "render":  {
+
+               }
+}
+

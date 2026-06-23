@@ -1,0 +1,4 @@
+Source file: mobs_land_guard.png
+Upstream: mobs_monster/textures/mobs_land_guard.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

@@ -1,0 +1,172 @@
+# Extra wave texture imports (merged with mob_sources() in import_luanti_creature_textures.py)
+# path is relative to research root; license/attribution required.
+
+mobs:
+  bunny:
+    path: mobs_animal/textures/mobs_bunny_grey.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  rat:
+    path: mobs_animal/textures/mobs_rat.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  panda:
+    path: mobs_animal/textures/mobs_panda.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  kitten:
+    path: mobs_animal/textures/mobs_kitten.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  penguin:
+    path: mobs_animal/textures/mobs_penguin.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  bee:
+    path: mobs_animal/textures/mobs_bee.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  warthog:
+    path: mobs_animal/textures/mobs_warthog.png
+    license: MIT
+    attribution: mobs_animal — TenPlus1
+  spider:
+    path: mobs_monster/textures/mobs_spider_grey.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  stone_monster:
+    path: mobs_monster/textures/mobs_stone_monster.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  tree_monster:
+    path: mobs_monster/textures/mobs_tree_monster.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  mese_monster:
+    path: mobs_monster/textures/mobs_mese_monster.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  dirt_monster:
+    path: mobs_monster/textures/mobs_dirt_monster.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  dungeon_master:
+    path: mobs_monster/textures/mobs_dungeon_master.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  fire_spirit:
+    path: mobs_monster/textures/mobs_fire_spirit.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  land_guard:
+    path: mobs_monster/textures/mobs_land_guard.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  lava_flan:
+    path: mobs_monster/textures/mobs_lava_flan.png
+    license: MIT
+    attribution: mobs_monster — TenPlus1
+  fox:
+    path: dmobs/textures/dmobs_fox.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  badger:
+    path: dmobs/textures/dmobs_badger.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  hedgehog:
+    path: dmobs/textures/dmobs_hedgehog.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  tortoise:
+    path: dmobs/textures/dmobs_tortoise.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  orc:
+    path: dmobs/textures/dmobs_orc.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  ogre:
+    path: dmobs/textures/dmobs_ogre.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  golem:
+    path: dmobs/textures/dmobs_golem.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  treeman:
+    path: dmobs/textures/dmobs_treeman.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  butterfly:
+    path: dmobs/textures/dmobs_butterfly1.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  owl:
+    path: dmobs/textures/dmobs_owl.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  wasp:
+    path: dmobs/textures/dmobs_wasp.png
+    license: CC BY-SA 3.0
+    attribution: dmobs — D00Med
+  trout:
+    path: animalworld/textures/texturetrout.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  shark:
+    path: animalworld/textures/textureshark.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  squid:
+    path: animalworld/textures/texturesquid.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  stingray:
+    path: animalworld/textures/texturestingray.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  seahorse:
+    path: animalworld/textures/textureseahorse.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  manatee:
+    path: animalworld/textures/texturemanatee.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  lobster:
+    path: animalworld/textures/texturelobster.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  hermitcrab:
+    path: animalworld/textures/texturehermitcrab.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  seal:
+    path: animalworld/textures/textureseal.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  dolphin:
+    path: animalworld/textures/texturedolphin.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  whale:
+    path: animalworld/textures/texturewhale.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  water_dragon:
+    path: animalworld/textures/texturewaterdragon.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  crab:
+    path: animalworld/textures/texturecrab.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  octopus:
+    path: animalworld/textures/textureoctopus.png
+    license: MIT
+    attribution: animalworld — Skandarella
+  puffin:
+    path: animalworld/textures/texturepuffin.png
+    license: MIT
+    attribution: animalworld — Skandarella

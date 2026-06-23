@@ -1,0 +1,13 @@
+{
+  "id": "programmer_art_16",
+  "name": "ProgrammerArt 16",
+  "version": 1,
+  "license": "CC-BY-4.0",
+  "resolution": 16,
+  "priority": 5,
+  "depends": [],
+  "conflicts": [],
+  "worldgen_role": "primary",
+  "min_game_version": "0.1.0",
+  "pack_format": 1
+}

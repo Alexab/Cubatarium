@@ -1,0 +1,71 @@
+name: Windows release smoke
+
+on:
+  push:
+    branches: [main, master, thread_chunks]
+    paths:
+      - "CMakeLists.txt"
+      - "vcpkg.json"
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/doctor-windows.ps1"
+      - "resource_packs/**"
+      - "tools/assign_pack_block_ids.ps1"
+  pull_request:
+    branches: [main, master, thread_chunks]
+    paths:
+      - "CMakeLists.txt"
+      - "vcpkg.json"
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/doctor-windows.ps1"
+      - "resource_packs/**"
+      - "tools/assign_pack_block_ids.ps1"
+  workflow_dispatch:
+
+jobs:
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block id assignment check
+        shell: pwsh
+        run: ./tools/assign_pack_block_ids.ps1 -Check
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path C:\vcpkg\vcpkg.exe)) {
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            C:\vcpkg\bootstrap-vcpkg.bat
+          }
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      - name: Configure (Release, static)
+        shell: pwsh
+        run: ./scripts/build/windows-configure.ps1 -Config Release
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build/desktop-msvc --config Release --parallel 4
+
+      - name: Verify static exe dependencies
+        shell: pwsh
+        run: ./scripts/build/verify-windows-exe.ps1
+
+      - name: Doctor smoke (assets, no GUI)
+        shell: pwsh
+        run: ./scripts/doctor-windows.ps1
+
+      - name: Upload desktop runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubatarium-windows-bin
+          path: |
+            bin/Cubatarium.exe
+            bin/shaders/**
+            bin/resource_packs/**
+            bin/prefabs/**
+            bin/content/**
+          if-no-files-found: error

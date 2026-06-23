@@ -1,0 +1,169 @@
+{
+  "id": "butterfly",
+  "display_name": "Butterfly",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 58
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.5,
+      0.35,
+      0.5
+    ],
+    "max": [
+      0.5,
+      0.35,
+      0.5
+    ],
+    "min": [
+      0.5,
+      0.25,
+      0.5
+    ]
+  },
+  "eye_height": 0.2,
+  "habitat": "aerial",
+  "locomotion_archetype": "aerial",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "texture_layout": "rigid_crop",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 25,
+      "arm_swing_deg": 15,
+      "fly_body_pitch_deg": 10,
+      "body_bob_blocks": 0.025,
+      "tail_swing_deg": 12,
+      "run_speed_multiplier": 1.3,
+      "crouch_leg_bend_deg": 25,
+      "wing_idle_swing_deg": 5
+    },
+    "default_texture": "body",
+    "parts": [
+      {
+        "id": "torso",
+        "offset": [
+          0.0,
+          0.38,
+          0.0
+        ],
+        "size": [
+          0.08,
+          0.28,
+          0.08
+        ],
+        "texture": "body"
+      },
+      {
+        "id": "head",
+        "offset": [
+          0.0,
+          0.48,
+          0.06
+        ],
+        "size": [
+          0.1,
+          0.1,
+          0.1
+        ],
+        "texture": "face"
+      },
+      {
+        "id": "wing_l",
+        "offset": [
+          -0.28,
+          0.42,
+          0.0
+        ],
+        "size": [
+          0.26,
+          0.04,
+          0.36
+        ],
+        "texture": "wing",
+        "pivot": [
+          -0.08,
+          0.42,
+          0.0
+        ],
+        "limb": "arm"
+      },
+      {
+        "id": "wing_r",
+        "offset": [
+          0.28,
+          0.42,
+          0.0
+        ],
+        "size": [
+          0.26,
+          0.04,
+          0.36
+        ],
+        "texture": "wing",
+        "pivot": [
+          0.08,
+          0.42,
+          0.0
+        ],
+        "limb": "arm"
+      },
+      {
+        "id": "leg_fl",
+        "offset": [
+          -0.05,
+          0.22,
+          0.02
+        ],
+        "size": [
+          0.04,
+          0.14,
+          0.04
+        ],
+        "texture": "leg"
+      },
+      {
+        "id": "leg_fr",
+        "offset": [
+          0.05,
+          0.22,
+          0.02
+        ],
+        "size": [
+          0.04,
+          0.14,
+          0.04
+        ],
+        "texture": "leg"
+      }
+    ],
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.75,
+        0.45,
+        0.85,
+        1.0
+      ]
+    }
+  }
+}

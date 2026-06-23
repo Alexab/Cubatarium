@@ -6,8 +6,10 @@
 // #include <QFile>
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
+#include "Render/GlIncludes.h"
 #include "ThirdParty/stb_image.h"
-#include <GL/glew.h>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -26,9 +28,9 @@ UTextureCube::UTextureCube()
 {
 }
 
-UTextureCube::UTextureCube(const std::string &name, size_t type_id,
+UTextureCube::UTextureCube(const std::string &Name, size_t type_id,
                            const std::vector<std::string> &texture_names)
-    : Name(name), TypeId(type_id), TextureNames(texture_names),
+    : Name(Name), TypeId(type_id), TextureNames(texture_names),
       NumTextureFrames((TextureNames.size() / 6) < 1 ? 1
                                                      : TextureNames.size() / 6),
       TextureId(0), Texture(0)
@@ -90,28 +92,28 @@ void UTextureCubeStorage::Load(const std::string &textures_path)
       auto ext = entry.path().extension();
       if (ext.string() == ".json")
       {
-        std::string name;
-        size_t id;
+        std::string Name;
+        size_t Id;
         std::vector<std::string> textures;
-        if (LoadJson(entry.path().string(), name, id, textures))
+        if (LoadJson(entry.path().string(), Name, Id, textures))
         {
           int stripFrames = 0;
           if (BlockDefinitions)
           {
-            if (const BlockDefinition *def = BlockDefinitions->GetByName(name))
+            if (const BlockDefinition *def = BlockDefinitions->GetByName(Name))
             {
-              if (textures.size() == 6 && def->animation.frameCount > 1)
+              if (textures.size() == 6 && def->Animation.FrameCount > 1)
               {
-                stripFrames = def->animation.frameCount;
+                stripFrames = def->Animation.FrameCount;
               }
             }
           }
           UTextureCube descr =
-              CreateCubeTexture(name, id, textures, stripFrames);
+              CreateCubeTexture(Name, Id, textures, stripFrames);
           Textures[descr.GetTypeId()] = descr;
           loaded_count++;
 #ifdef CUBATARIUM_DEBUG
-          std::cout << "UTextureCubeStorage::Load: Added texture '" << name
+          std::cout << "UTextureCubeStorage::Load: Added texture '" << Name
                     << "'" << std::endl;
 #endif
         }
@@ -134,9 +136,9 @@ const std::map<size_t, UTextureCube> &UTextureCubeStorage::GetTextures() const
   return Textures;
 }
 
-size_t UTextureCubeStorage::GetTypeIdByName(const std::string &name) const
+size_t UTextureCubeStorage::GetTypeIdByName(const std::string &Name) const
 {
-  const auto it = TexturesNames.find(name);
+  const auto it = TexturesNames.find(Name);
   if (it != TexturesNames.end())
   {
     return it->second;
@@ -144,8 +146,91 @@ size_t UTextureCubeStorage::GetTypeIdByName(const std::string &name) const
   return 0;
 }
 
+void UTextureCubeStorage::Clear()
+{
+  for (auto &entry : Textures)
+  {
+    const GLuint tex = entry.second.GetTexture();
+    if (tex != 0)
+    {
+      glDeleteTextures(1, &tex);
+    }
+  }
+  Textures.clear();
+  TexturesNames.clear();
+}
+
+void UTextureCubeStorage::BuildFromDescriptors(
+    const std::vector<MergedCubeDesc> &descriptors)
+{
+  Clear();
+  for (const auto &desc : descriptors)
+  {
+    std::vector<std::string> stems(desc.Stems.begin(), desc.Stems.end());
+    int stripFrames = 0;
+    if (BlockDefinitions)
+    {
+      if (const BlockDefinition *def = BlockDefinitions->GetById(desc.Id))
+      {
+        if (stems.size() == 6 && def->Animation.FrameCount > 1)
+        {
+          stripFrames = def->Animation.FrameCount;
+        }
+      }
+    }
+    else if (desc.AnimFrames > 1 && stems.size() == 6)
+    {
+      stripFrames = desc.AnimFrames;
+    }
+    UTextureCube cube =
+        CreateCubeTexture(desc.Name, static_cast<size_t>(desc.Id), stems,
+                          stripFrames);
+    Textures[cube.GetTypeId()] = cube;
+  }
+}
+
 namespace
 {
+
+struct LoadedStem
+{
+  int Width{0};
+  int Height{0};
+  std::vector<unsigned char> Rgba;
+  bool Ok{false};
+};
+
+LoadedStem LoadStemRgba(const UTextureBase &base)
+{
+  LoadedStem out;
+  if (base.HasPixelData())
+  {
+    if (const TexturePixelData *px = base.GetPixelData())
+    {
+      out.Width = px->Width;
+      out.Height = px->Height;
+      out.Rgba = px->Rgba;
+      out.Ok = !out.Rgba.empty();
+      return out;
+    }
+  }
+  if (base.GetFileName().empty())
+  {
+    return out;
+  }
+  int channels = 0;
+  unsigned char *data =
+      stbi_load(base.GetFileName().c_str(), &out.Width, &out.Height, &channels,
+                4);
+  if (!data)
+  {
+    return out;
+  }
+  out.Rgba.assign(data, data + static_cast<size_t>(out.Width * out.Height * 4));
+  stbi_image_free(data);
+  out.Ok = true;
+  return out;
+}
 
 void CopyRegion(unsigned char *dst, int dstX, int dstY, int dstStride,
                 int dstTotalW, const unsigned char *src, int srcX, int srcY,
@@ -198,17 +283,17 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
         << texture_names[0] << "' for " << cube_type_name << std::endl;
     return result;
   }
-  std::string first_texture_path = firstTexIt->second.GetFileName();
-  int width, height, channels;
-  int fullWidth = 0;
-  int fullHeight = 0;
-  unsigned char *data = stbi_load(first_texture_path.c_str(), &fullWidth,
-                                  &fullHeight, &channels, 4);
-  if (!data)
+  const LoadedStem firstLoaded = LoadStemRgba(firstTexIt->second);
+  if (!firstLoaded.Ok)
   {
-    std::cerr << "Failed to load texture: " << first_texture_path << std::endl;
+    std::cerr << "UTextureCubeStorage::CreateCubeTexture: failed to load '"
+              << texture_names[0] << "' for " << cube_type_name << std::endl;
     return result;
   }
+  int fullWidth = firstLoaded.Width;
+  int fullHeight = firstLoaded.Height;
+  int width = 0;
+  int height = 0;
   if (useVerticalStrip)
   {
     width = fullWidth;
@@ -239,19 +324,16 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
         {
           continue;
         }
-        const std::string &texture_path = texIt->second.GetFileName();
-        int tex_width = 0, tex_height = 0, tex_channels = 0;
-        unsigned char *tex_data = stbi_load(texture_path.c_str(), &tex_width,
-                                            &tex_height, &tex_channels, 4);
-        if (!tex_data)
+        const LoadedStem texLoaded = LoadStemRgba(texIt->second);
+        if (!texLoaded.Ok)
         {
           continue;
         }
         const int frameH = height;
         CopyRegion(combined_data.data(), static_cast<int>(i) * width,
-                   j * frameH, total_width, total_width, tex_data, 0,
-                   j * frameH, tex_width, tex_height, width, frameH);
-        stbi_image_free(tex_data);
+                   j * frameH, total_width, total_width, texLoaded.Rgba.data(),
+                   0, j * frameH, texLoaded.Width, texLoaded.Height, width,
+                   frameH);
       }
     }
   }
@@ -273,28 +355,28 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
             ++k;
             continue;
           }
-          std::string texture_path = texIt->second.GetFileName();
-          int tex_width = 0, tex_height = 0, tex_channels = 0;
-          unsigned char *tex_data = stbi_load(texture_path.c_str(), &tex_width,
-                                              &tex_height, &tex_channels, 4);
-          if (tex_data)
+          const LoadedStem texLoaded = LoadStemRgba(texIt->second);
+          if (texLoaded.Ok)
           {
             for (int y = 0; y < height; y++)
             {
               for (int x = 0; x < width; x++)
               {
-                int src_idx = (y * width + x) * 4;
-                int dst_idx =
+                const int src_idx = (y * width + x) * 4;
+                const int dst_idx =
                     ((static_cast<int>(j) * height + y) * total_width +
                      (static_cast<int>(i) * width + x)) *
                     4;
-                combined_data[dst_idx] = tex_data[src_idx];
-                combined_data[dst_idx + 1] = tex_data[src_idx + 1];
-                combined_data[dst_idx + 2] = tex_data[src_idx + 2];
-                combined_data[dst_idx + 3] = tex_data[src_idx + 3];
+                if (src_idx + 3 < static_cast<int>(texLoaded.Rgba.size()) &&
+                    dst_idx + 3 < static_cast<int>(combined_data.size()))
+                {
+                  combined_data[dst_idx] = texLoaded.Rgba[src_idx];
+                  combined_data[dst_idx + 1] = texLoaded.Rgba[src_idx + 1];
+                  combined_data[dst_idx + 2] = texLoaded.Rgba[src_idx + 2];
+                  combined_data[dst_idx + 3] = texLoaded.Rgba[src_idx + 3];
+                }
               }
             }
-            stbi_image_free(tex_data);
           }
         }
         ++k;
@@ -317,7 +399,6 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
   result.SetTexture(textureId);
   TexturesNames[cube_type_name] = cube_type_id;
 
-  stbi_image_free(data);
   return result;
 }
 
@@ -350,7 +431,7 @@ GLuint UTextureCubeStorage::LoadTexture(const std::string &image_path)
 }
 
 bool UTextureCubeStorage::LoadJson(const std::string &file_name,
-                                   std::string &name, size_t &id,
+                                   std::string &Name, size_t &Id,
                                    std::vector<std::string> &textures)
 {
   std::string val;
@@ -378,8 +459,8 @@ bool UTextureCubeStorage::LoadJson(const std::string &file_name,
     if (name_value.empty() || id_value == 0 || textures_value.empty())
       return false;
 
-    name = name_value;
-    id = id_value;
+    Name = name_value;
+    Id = id_value;
 
     if (!textures_value.is_array())
       return false;

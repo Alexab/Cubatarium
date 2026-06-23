@@ -1,0 +1,30 @@
+license: CC0-1.0
+license_text: |
+  Goncalo Pixel Patterns (CC0). https://goncalomcoliveira.itch.io/pixel-patterns
+blocks:
+  dirt: dirt
+  stone: stone
+  brick: brick
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  gravel: gravel
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+textures:
+  dirt: 16x16/Individual Sprites/16x16_checkerboardSmall.png
+  stone: 16x16/Individual Sprites/16x16_brickSmall.png
+  brick: 16x16/Individual Sprites/16x16_brickLarge.png
+  tree_side: 16x16/Individual Sprites/16x16_diagonalSmall.png
+  tree_top: 16x16/Individual Sprites/16x16_squaresSmall.png
+  grass_side: 16x16/Individual Sprites/16x16_waveSmall.png
+  grass_top: 16x16/Individual Sprites/16x16_checkerboardLarge.png
+  sand: 16x16/Individual Sprites/16x16_sparkle.png
+  gravel: 16x16/Individual Sprites/16x16_metaBall.png
+  cloth_0: 16x16/Individual Sprites/16x16_diamonds.png
+  cloth_1: 16x16/Individual Sprites/16x16_cross.png
+  cloth_2: 16x16/Individual Sprites/16x16_hexagons.png

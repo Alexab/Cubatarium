@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_lava_flowing",
+    "id":  468,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_lava_flowing_default_lava",
+                     "mtg_lava_flowing_default_lava",
+                     "mtg_lava_flowing_default_lava",
+                     "mtg_lava_flowing_default_lava",
+                     "mtg_lava_flowing_default_lava",
+                     "mtg_lava_flowing_default_lava"
+                 ],
+    "render":  {
+
+               }
+}
+

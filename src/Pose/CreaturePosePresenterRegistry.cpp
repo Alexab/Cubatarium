@@ -1,5 +1,9 @@
 #include "Pose/CreaturePosePresenterRegistry.h"
+#include "Pose/AerialPosePresenter.h"
+#include "Pose/AquaticPosePresenter.h"
+#include "Pose/SerpentinePosePresenter.h"
 #include "Pose/TerrestrialBipedPosePresenter.h"
+#include "Pose/TerrestrialQuadrupedPosePresenter.h"
 
 namespace cutum
 {
@@ -12,9 +16,9 @@ void UCreaturePosePresenterRegistry::Register(
     return;
   }
   const size_t index = static_cast<size_t>(presenter->GetArchetype());
-  if (index < presenters_.size())
+  if (index < Presenters.size())
   {
-    presenters_[index] = std::move(presenter);
+    Presenters[index] = std::move(presenter);
   }
 }
 
@@ -22,16 +26,16 @@ ICreaturePosePresenter *
 UCreaturePosePresenterRegistry::Get(LocomotionArchetype archetype) const
 {
   const size_t index = static_cast<size_t>(archetype);
-  if (index >= presenters_.size())
+  if (index >= Presenters.size())
   {
     return nullptr;
   }
-  return presenters_[index].get();
+  return Presenters[index].get();
 }
 
 void UCreaturePosePresenterRegistry::Clear()
 {
-  for (auto &entry : presenters_)
+  for (auto &entry : Presenters)
   {
     entry.reset();
   }
@@ -41,6 +45,10 @@ void RegisterDefaultCreaturePosePresenters(
     UCreaturePosePresenterRegistry &registry)
 {
   registry.Register(std::make_unique<UTerrestrialBipedPosePresenter>());
+  registry.Register(std::make_unique<UTerrestrialQuadrupedPosePresenter>());
+  registry.Register(std::make_unique<UAerialPosePresenter>());
+  registry.Register(std::make_unique<UAquaticPosePresenter>());
+  registry.Register(std::make_unique<USerpentinePosePresenter>());
 }
 
 } // namespace cutum

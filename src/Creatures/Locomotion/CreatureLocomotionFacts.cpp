@@ -40,7 +40,14 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
   if (input.dt > 1e-6f)
   {
     const glm::vec3 delta = input.bodyOriginAfter - input.bodyOriginBefore;
-    out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
+    if (archetype == LocomotionArchetype::Aerial)
+    {
+      out.horizontalSpeed = glm::length(delta) / input.dt;
+    }
+    else
+    {
+      out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
+    }
   }
   else
   {
@@ -54,8 +61,16 @@ void FinalizeLocomotionFacts(CreatureLocomotionFacts &facts,
                              float walkCycleHz, float dt)
 {
   facts.state = DeriveLocomotionState(facts.archetype, facts, caps, &input);
-  facts.animPhase = AdvanceAnimPhase(facts.animPhase, facts.horizontalSpeed,
-                                     walkCycleHz, caps.walkSpeed, dt);
+  constexpr float kTwoPi = 6.283185307f;
+  if (facts.horizontalSpeed < 0.05f && dt > 0.0f)
+  {
+    facts.animPhase += kTwoPi * 0.35f * dt;
+  }
+  else
+  {
+    facts.animPhase = AdvanceAnimPhase(facts.animPhase, facts.horizontalSpeed,
+                                       walkCycleHz, caps.walkSpeed, dt);
+  }
 }
 
 } // namespace cutum

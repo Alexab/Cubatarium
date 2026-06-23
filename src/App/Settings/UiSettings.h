@@ -14,18 +14,19 @@ enum class ControlScheme
 
 struct UiSettings
 {
-  bool legacyHud{false};
-  std::string consoleKey{"grave"};
-  std::string paletteKey{"b"};
-  std::string inventoryKey{"e"};
-  int hotbarCount{1};
+  bool LegacyHud{false};
+  bool ShowPerformance{true};
+  std::string ConsoleKey{"grave"};
+  std::string PaletteKey{"b"};
+  std::string InventoryKey{"e"};
+  int HotbarCount{1};
 
-  ControlScheme controlScheme{ControlScheme::Classic};
-  float placeClickMaxSeconds{0.20f};
-  float breakHoldMinSeconds{0.50f};
-  float breakDurationSeconds{0.25f};
+  ControlScheme ControlScheme{ControlScheme::Classic};
+  float PlaceClickMaxSeconds{0.20f};
+  float BreakHoldMinSeconds{0.50f};
+  float BreakDurationSeconds{0.25f};
   /// Cubatarium only: RMB drag distance before treating as camera look.
-  int rmbDragThresholdPx{4};
+  int RmbDragThresholdPx{4};
 };
 
 ControlScheme ControlSchemeFromString(const std::string &value);

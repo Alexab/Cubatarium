@@ -1,0 +1,21 @@
+﻿{
+    "name":  "bedrock",
+    "id":  737,
+    "types":  [
+                  "building",
+                  "natural"
+              ],
+    "textures":  [
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock",
+                     "bedrock"
+                 ],
+    "displayName":  "Bedrock",
+    "render":  {
+
+               }
+}
+

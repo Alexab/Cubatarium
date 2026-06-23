@@ -1,11 +1,15 @@
 #include "Gui/Core/GuiInputRouter.h"
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWidget.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
+#ifdef __ANDROID__
+#include "android_soft_keyboard.h"
+#endif
 
 namespace cutum
 {
@@ -15,121 +19,149 @@ namespace
 
 bool IsTabKey(const GuiKeyEvent &event)
 {
-  return event.keyCode == GLFW_KEY_TAB && event.action == GuiKeyAction::Press;
+  return event.KeyCode == GuiKey::Tab && event.Action == GuiKeyAction::Press;
 }
 
 bool IsActivationKey(const GuiKeyEvent &event)
 {
-  return event.action == GuiKeyAction::Press &&
-         (event.keyCode == GLFW_KEY_ENTER ||
-          event.keyCode == GLFW_KEY_KP_ENTER ||
-          event.keyCode == GLFW_KEY_SPACE);
+  return event.Action == GuiKeyAction::Press &&
+         (event.KeyCode == GuiKey::Enter || event.KeyCode == GuiKey::KpEnter ||
+          event.KeyCode == GuiKey::Space);
+}
+
+UGuiScrollView *FindDeepestScrollView(UGuiWidget *node, int x, int y)
+{
+  if (!node || !node->IsVisible() || !node->GetBounds().Contains(x, y))
+  {
+    return nullptr;
+  }
+  for (const auto &child : node->GetChildren())
+  {
+    if (UGuiScrollView *hit = FindDeepestScrollView(child.get(), x, y))
+    {
+      return hit;
+    }
+  }
+  if (auto *scroll = dynamic_cast<UGuiScrollView *>(node))
+  {
+    if (scroll->MaxScrollY() > 0)
+    {
+      return scroll;
+    }
+  }
+  return nullptr;
 }
 
 } // namespace
 
 void UGuiInputRouter::SetRoot(UGuiWidget *root)
 {
-  root_ = root;
+  Root = root;
   ReleaseFocusWithoutNotify();
 }
 
 void UGuiInputRouter::ReleaseFocusWithoutNotify()
 {
-  keyboardFocus_ = nullptr;
-  mousePressedWidget_ = nullptr;
-  hoveredWidget_ = nullptr;
-  captureMouse_ = false;
-  modalKeyboard_ = false;
-  focusOrder_.clear();
+  KeyboardFocus = nullptr;
+  MousePressedWidget = nullptr;
+  HoveredWidget = nullptr;
+  CaptureMouse = false;
+  ModalKeyboard = false;
+  FocusOrder.clear();
 }
 
 void UGuiInputRouter::SetActiveScreen(UGuiScreenBase *screen)
 {
-  screen_ = screen;
+  Screen = screen;
 }
 
 void UGuiInputRouter::ClearInteractionState()
 {
   SetKeyboardFocus(nullptr, false);
-  mousePressedWidget_ = nullptr;
-  hoveredWidget_ = nullptr;
-  captureMouse_ = false;
-  modalKeyboard_ = false;
+  MousePressedWidget = nullptr;
+  HoveredWidget = nullptr;
+  CaptureMouse = false;
+  ModalKeyboard = false;
 }
 
 void UGuiInputRouter::SetKeyboardFocus(UGuiWidget *widget, bool reveal)
 {
-  if (keyboardFocus_ != nullptr && keyboardFocus_ != widget)
+  if (KeyboardFocus != nullptr && KeyboardFocus != widget)
   {
-    keyboardFocus_->SetFocusHighlight(false);
-    if (auto *text = dynamic_cast<UGuiTextInput *>(keyboardFocus_))
+    KeyboardFocus->SetFocusHighlight(false);
+    if (auto *text = dynamic_cast<UGuiTextInput *>(KeyboardFocus))
     {
       text->SetFocused(false);
+#ifdef __ANDROID__
+      AndroidSoftKeyboardClearTarget();
+#endif
     }
   }
-  keyboardFocus_ = widget;
-  if (keyboardFocus_)
+  KeyboardFocus = widget;
+  if (KeyboardFocus)
   {
-    keyboardFocus_->SetFocusHighlight(true);
-    if (auto *text = dynamic_cast<UGuiTextInput *>(keyboardFocus_))
+    KeyboardFocus->SetFocusHighlight(true);
+    if (auto *text = dynamic_cast<UGuiTextInput *>(KeyboardFocus))
     {
       text->SetFocused(true);
+#ifdef __ANDROID__
+      AndroidSoftKeyboardSetTarget(text);
+#endif
     }
     if (reveal)
     {
-      RevealWidgetForKeyboardFocus(root_, keyboardFocus_);
+      RevealWidgetForKeyboardFocus(Root, KeyboardFocus);
     }
-    modalKeyboard_ = dynamic_cast<UGuiTextInput *>(keyboardFocus_) != nullptr;
+    ModalKeyboard = dynamic_cast<UGuiTextInput *>(KeyboardFocus) != nullptr;
   }
   else
   {
-    modalKeyboard_ = false;
+    ModalKeyboard = false;
   }
 }
 
 void UGuiInputRouter::CollectFocusOrder()
 {
-  focusOrder_.clear();
-  if (root_)
+  FocusOrder.clear();
+  if (Root)
   {
-    root_->CollectFocusables(focusOrder_);
+    Root->CollectFocusables(FocusOrder);
   }
 }
 
 void UGuiInputRouter::FocusNext(bool reverse)
 {
   CollectFocusOrder();
-  if (focusOrder_.empty())
+  if (FocusOrder.empty())
   {
     SetKeyboardFocus(nullptr, false);
     return;
   }
-  if (!keyboardFocus_)
+  if (!KeyboardFocus)
   {
-    SetKeyboardFocus(reverse ? focusOrder_.back() : focusOrder_.front(), true);
+    SetKeyboardFocus(reverse ? FocusOrder.back() : FocusOrder.front(), true);
     return;
   }
-  auto it = std::find(focusOrder_.begin(), focusOrder_.end(), keyboardFocus_);
-  if (it == focusOrder_.end())
+  auto it = std::find(FocusOrder.begin(), FocusOrder.end(), KeyboardFocus);
+  if (it == FocusOrder.end())
   {
-    SetKeyboardFocus(focusOrder_.front(), true);
+    SetKeyboardFocus(FocusOrder.front(), true);
     return;
   }
   if (reverse)
   {
-    if (it == focusOrder_.begin())
+    if (it == FocusOrder.begin())
     {
-      SetKeyboardFocus(focusOrder_.back(), true);
+      SetKeyboardFocus(FocusOrder.back(), true);
     }
     else
     {
       SetKeyboardFocus(*(--it), true);
     }
   }
-  else if (it + 1 == focusOrder_.end())
+  else if (it + 1 == FocusOrder.end())
   {
-    SetKeyboardFocus(focusOrder_.front(), true);
+    SetKeyboardFocus(FocusOrder.front(), true);
   }
   else
   {
@@ -139,68 +171,94 @@ void UGuiInputRouter::FocusNext(bool reverse)
 
 bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!root_)
+  if (!Root)
   {
     return false;
   }
-  UGuiWidget *hit = root_->HitTest(event.x, event.y);
-  UGuiWidget *focusHit = root_->HitTestFocusable(event.x, event.y);
+  UGuiWidget *hit = Root->HitTest(event.X, event.Y);
+  UGuiWidget *focusHit = Root->HitTestFocusable(event.X, event.Y);
   if (focusHit)
   {
     SetKeyboardFocus(focusHit, false);
   }
-  else if (!hit)
+  else
   {
     SetKeyboardFocus(nullptr, false);
+  }
+
+  bool innerListHandlesDrag = false;
+  if (hit)
+  {
+    innerListHandlesDrag = hit->ConsumesScrollDragAt(event.X, event.Y);
+  }
+  if (!innerListHandlesDrag)
+  {
+    if (UGuiScrollView *scroll = FindDeepestScrollView(Root, event.X, event.Y))
+    {
+      if (scroll->BeginDeferredTouch(event))
+      {
+        CaptureMouse = true;
+        MousePressedWidget = scroll;
+        return true;
+      }
+    }
   }
   if (hit)
   {
     if (hit->OnMouseDown(event))
     {
-      captureMouse_ = true;
-      mousePressedWidget_ = hit;
+      CaptureMouse = true;
+      MousePressedWidget = hit;
       return true;
     }
     return false;
   }
-  captureMouse_ = false;
-  mousePressedWidget_ = nullptr;
+  CaptureMouse = false;
+  MousePressedWidget = nullptr;
   return false;
 }
 
 bool UGuiInputRouter::OnMouseUp(const GuiMouseEvent &event)
 {
   bool consumed = false;
-  if (root_)
+  if (Root)
   {
-    if (mousePressedWidget_)
+    if (auto *scroll = dynamic_cast<UGuiScrollView *>(MousePressedWidget))
     {
-      consumed = mousePressedWidget_->OnMouseUp(event);
+      consumed = scroll->OnDeferredUp(event);
     }
-    else if (UGuiWidget *hit = root_->HitTest(event.x, event.y))
+    else if (MousePressedWidget)
+    {
+      consumed = MousePressedWidget->OnMouseUp(event);
+    }
+    else if (UGuiWidget *hit = Root->HitTest(event.X, event.Y))
     {
       consumed = hit->OnMouseUp(event);
     }
   }
-  captureMouse_ = false;
-  mousePressedWidget_ = nullptr;
+  CaptureMouse = false;
+  MousePressedWidget = nullptr;
   return consumed;
 }
 
 bool UGuiInputRouter::OnMouseMove(const GuiMouseEvent &event)
 {
-  lastMouseX_ = event.x;
-  lastMouseY_ = event.y;
-  if (captureMouse_ && mousePressedWidget_)
+  LastMouseX = event.X;
+  LastMouseY = event.Y;
+  if (CaptureMouse && MousePressedWidget)
   {
-    return mousePressedWidget_->OnMouseMove(event);
+    if (auto *scroll = dynamic_cast<UGuiScrollView *>(MousePressedWidget))
+    {
+      return scroll->OnDeferredMove(event);
+    }
+    return MousePressedWidget->OnMouseMove(event);
   }
-  if (!root_)
+  if (!Root)
   {
     return false;
   }
-  UGuiWidget *hit = root_->HitTest(event.x, event.y);
-  hoveredWidget_ = hit;
+  UGuiWidget *hit = Root->HitTest(event.X, event.Y);
+  HoveredWidget = hit;
   if (hit)
   {
     return hit->OnMouseMove(event);
@@ -212,46 +270,46 @@ bool UGuiInputRouter::OnKey(const GuiKeyEvent &event)
 {
   if (IsTabKey(event))
   {
-    const bool reverse = (event.mods & GLFW_MOD_SHIFT) != 0;
+    const bool reverse = (event.Mods & GLFW_MOD_SHIFT) != 0;
     FocusNext(reverse);
     return true;
   }
 
-  if (keyboardFocus_ && IsActivationKey(event))
+  if (KeyboardFocus && IsActivationKey(event))
   {
-    if (auto *text = dynamic_cast<UGuiTextInput *>(keyboardFocus_))
+    if (auto *text = dynamic_cast<UGuiTextInput *>(KeyboardFocus))
     {
-      if (event.keyCode == GLFW_KEY_SPACE)
+      if (event.KeyCode == GuiKey::Space)
       {
         return text->OnKey(event);
       }
     }
-    else if (keyboardFocus_->Activate())
+    else if (KeyboardFocus->Activate())
     {
       return true;
     }
   }
 
-  if (keyboardFocus_ && keyboardFocus_->OnKey(event))
+  if (KeyboardFocus && KeyboardFocus->OnKey(event))
   {
     return true;
   }
-  if (root_)
+  if (Root)
   {
-    return root_->OnKey(event);
+    return Root->OnKey(event);
   }
   return false;
 }
 
 bool UGuiInputRouter::OnChar(const GuiCharEvent &event)
 {
-  if (keyboardFocus_ && keyboardFocus_->OnChar(event))
+  if (KeyboardFocus && KeyboardFocus->OnChar(event))
   {
     return true;
   }
-  if (root_)
+  if (Root)
   {
-    return root_->OnChar(event);
+    return Root->OnChar(event);
   }
   return false;
 }
@@ -259,31 +317,30 @@ bool UGuiInputRouter::OnChar(const GuiCharEvent &event)
 bool UGuiInputRouter::OnScroll(const GuiScrollEvent &event, int mouseX,
                                int mouseY)
 {
-  if (!root_)
+  if (!Root)
   {
     return false;
   }
   if (mouseX >= 0 && mouseY >= 0)
   {
-    return root_->ScrollAtPoint(mouseX, mouseY, event);
+    return Root->ScrollAtPoint(mouseX, mouseY, event);
   }
-  if (lastMouseX_ >= 0 && lastMouseY_ >= 0)
+  if (LastMouseX >= 0 && LastMouseY >= 0)
   {
-    return root_->ScrollAtPoint(lastMouseX_, lastMouseY_, event);
+    return Root->ScrollAtPoint(LastMouseX, LastMouseY, event);
   }
-  return root_->OnScroll(event);
+  return false;
 }
 
 bool UGuiInputRouter::WantsCaptureMouse() const
 {
-  return captureMouse_ || modalKeyboard_ ||
-         (screen_ && screen_->BlocksGameInput());
+  return CaptureMouse || ModalKeyboard || (Screen && Screen->BlocksGameInput());
 }
 
 bool UGuiInputRouter::WantsCaptureKeyboard() const
 {
-  return modalKeyboard_ || keyboardFocus_ != nullptr ||
-         (screen_ && screen_->BlocksGameInput());
+  return ModalKeyboard || KeyboardFocus != nullptr ||
+         (Screen && Screen->BlocksGameInput());
 }
 
 } // namespace cutum

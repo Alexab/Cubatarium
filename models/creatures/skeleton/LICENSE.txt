@@ -1,0 +1,4 @@
+Source file: dmobs_skeleton.png
+Upstream: dmobs/textures/dmobs_skeleton.png
+License: CC BY-SA 3.0
+Attribution: dmobs — D00Med

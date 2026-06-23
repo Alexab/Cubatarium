@@ -1,0 +1,19 @@
+﻿{
+    "name":  "anvil_slightly_damaged",
+    "id":  883,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_base",
+                     "anvil_top_damaged_1",
+                     "anvil_base"
+                 ],
+    "render":  {
+
+               }
+}
+

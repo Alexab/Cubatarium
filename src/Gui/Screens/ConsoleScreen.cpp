@@ -1,4 +1,4 @@
-#include "ConsoleScreen.h"
+#include "Gui/Screens/ConsoleScreen.h"
 #include "Game/GameSession.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -7,68 +7,92 @@
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiTextInput.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
+#ifdef __ANDROID__
+#include "android_soft_keyboard.h"
+#endif
 
 namespace cutum
 {
 
-UConsoleScreen::UConsoleScreen(UGameSession *session) : session_(session) {}
+UConsoleScreen::UConsoleScreen(UGameSession *session) : Session(session) {}
 
 void UConsoleScreen::SetVisible(bool visible)
 {
-  visible_ = visible;
-  if (root_)
+  Visible = visible;
+  if (Root)
   {
-    root_->SetVisible(visible);
+    Root->SetVisible(visible);
   }
-  if (input_)
+  if (Input)
   {
-    input_->SetFocused(visible);
+    Input->SetFocused(visible);
+#ifdef __ANDROID__
+    if (visible)
+    {
+      AndroidSoftKeyboardSetTarget(Input);
+    }
+    else
+    {
+      AndroidSoftKeyboardClearTarget();
+    }
+#endif
   }
   if (!visible)
   {
-    historyBrowseFromEnd_ = -1;
-    draftValid_ = false;
-    if (popup_)
+    HistoryBrowseFromEnd = -1;
+    DraftValid = false;
+    if (Popup)
     {
-      popup_->Close();
+      Popup->Close();
     }
   }
 }
 
-void UConsoleScreen::Toggle() { SetVisible(!visible_); }
+void UConsoleScreen::SetKeyboardInsetBottom(int bottom)
+{
+  const int inset = std::max(0, bottom);
+  if (KeyboardInsetBottom == inset)
+  {
+    return;
+  }
+  KeyboardInsetBottom = inset;
+  Relayout();
+}
 
-void UConsoleScreen::AttachPopup(UGuiPopupMenu *popup) { popup_ = popup; }
+void UConsoleScreen::Toggle() { SetVisible(!Visible); }
+
+void UConsoleScreen::AttachPopup(UGuiPopupMenu *popup) { Popup = popup; }
 
 void UConsoleScreen::OnInputEdited()
 {
-  historyBrowseFromEnd_ = -1;
-  draftValid_ = false;
+  HistoryBrowseFromEnd = -1;
+  DraftValid = false;
 }
 
 void UConsoleScreen::Build(UGuiContext &ctx)
 {
-  consoleTheme_ = ctx.GetTheme();
-  consoleTheme_.panelBackground = {0.06f, 0.06f, 0.09f, 0.45f};
-  consoleTheme_.panelBorder = {0.45f, 0.45f, 0.5f, 0.55f};
-  consoleTheme_.buttonNormal = {0.18f, 0.18f, 0.2f, 0.5f};
-  consoleTheme_.buttonHover = {0.28f, 0.28f, 0.31f, 0.55f};
+  ConsoleTheme = ctx.GetTheme();
+  ConsoleTheme.PanelBackground = {0.06f, 0.06f, 0.09f, 0.45f};
+  ConsoleTheme.PanelBorder = {0.45f, 0.45f, 0.5f, 0.55f};
+  ConsoleTheme.ButtonNormal = {0.18f, 0.18f, 0.2f, 0.5f};
+  ConsoleTheme.ButtonHover = {0.28f, 0.28f, 0.31f, 0.55f};
 
-  auto panel = std::make_unique<UGuiPanel>(&consoleTheme_);
+  auto panel = std::make_unique<UGuiPanel>(&ConsoleTheme);
   panel->SetVisible(false);
 
-  auto log = std::make_unique<UGuiListView>(&consoleTheme_);
+  auto log = std::make_unique<UGuiListView>(&ConsoleTheme);
   log->SetAcceptKeyNavigation(false);
-  logView_ = log.get();
+  LogView = log.get();
 
-  auto input = std::make_unique<UGuiTextInput>(&consoleTheme_);
+  auto input = std::make_unique<UGuiTextInput>(&ConsoleTheme);
   input->SetClipboard(ctx.GetClipboard());
   input->SetOnEdited([this]() { OnInputEdited(); });
-  input_ = input.get();
+  Input = input.get();
 
   panel->AddChild(std::move(log));
   panel->AddChild(std::move(input));
-  root_ = std::move(panel);
+  Root = std::move(panel);
   Relayout();
 }
 
@@ -80,78 +104,109 @@ void UConsoleScreen::OnViewportChanged(int width, int height)
 
 void UConsoleScreen::Relayout()
 {
-  if (!root_)
+  if (!Root)
   {
     return;
   }
-  const int panelH = viewportH_ * 40 / 100;
-  const int panelY = viewportH_ - panelH;
-  root_->SetBounds({0, panelY, viewportW_, panelH});
-  if (logView_)
+  const int ox = GetContentOffsetX();
+  const int oy = GetContentOffsetY();
+  constexpr int Padding = 8;
+  const int inputH = std::max(48, 40);
+
+  if (KeyboardInsetBottom > 0)
   {
-    logView_->SetBounds({8, panelY + 8, viewportW_ - 16, panelH - 48});
+    const int inputY = oy + ViewportH - KeyboardInsetBottom - Padding - inputH;
+    const int logH = std::max(72, inputH + 24);
+    const int logY = inputY - 4 - logH;
+    const int panelY = std::max(oy, logY - Padding);
+    const int panelH = inputY + inputH + Padding - panelY;
+    Root->SetBounds({ox, panelY, ViewportW, panelH});
+    if (LogView)
+    {
+      LogView->SetBounds({ox + Padding, logY, ViewportW - 2 * Padding, logH});
+      LogView->ScrollToEnd();
+    }
+    if (Input)
+    {
+      Input->SetBounds({ox + Padding, inputY, ViewportW - 2 * Padding, inputH});
+    }
+    return;
   }
-  if (input_)
+
+  const int panelH = std::max(inputH + 96, ViewportH * 42 / 100);
+  const int panelY = oy + std::max(0, ViewportH - panelH);
+  Root->SetBounds({ox, panelY, ViewportW, panelH});
+  if (LogView)
   {
-    input_->SetBounds({8, panelY + panelH - 40, viewportW_ - 16, 32});
+    LogView->SetBounds({ox + Padding, panelY + Padding, ViewportW - 2 * Padding,
+                        std::max(32, panelH - inputH - 20)});
+  }
+  if (Input)
+  {
+    Input->SetBounds({ox + Padding, panelY + panelH - inputH - Padding,
+                      ViewportW - 2 * Padding, inputH});
   }
 }
 
 void UConsoleScreen::Update(double /*dt*/)
 {
-  if (!root_ || !visible_)
+  if (!Root || !Visible)
   {
     return;
   }
-  if (session_ && logView_)
+  if (Session && LogView)
   {
-    logView_->SetItems(session_->GetChatLog());
+    LogView->SetItems(Session->GetChatLog());
+    if (KeyboardInsetBottom > 0)
+    {
+      LogView->ScrollToEnd();
+    }
   }
 }
 
 bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
 {
-  if (!session_ || !input_)
+  if (!Session || !Input)
   {
     return false;
   }
-  if (event.action != GuiKeyAction::Press &&
-      event.action != GuiKeyAction::Repeat)
+  if (event.Action != GuiKeyAction::Press &&
+      event.Action != GuiKeyAction::Repeat)
   {
     return false;
   }
-  auto &history = session_->GetCommandHistory();
-  if (event.keyCode == GLFW_KEY_UP)
+  auto &history = Session->GetCommandHistory();
+  if (event.KeyCode == GuiKey::Up)
   {
-    if (historyBrowseFromEnd_ == -1)
+    if (HistoryBrowseFromEnd == -1)
     {
-      draftLine_ = input_->GetText();
-      draftValid_ = true;
+      DraftLine = Input->GetText();
+      DraftValid = true;
     }
-    const size_t next = static_cast<size_t>(historyBrowseFromEnd_ + 1);
+    const size_t next = static_cast<size_t>(HistoryBrowseFromEnd + 1);
     if (next < history.Size())
     {
-      historyBrowseFromEnd_ = static_cast<int>(next);
-      input_->SetText(
-          history.GetFromEnd(static_cast<size_t>(historyBrowseFromEnd_)));
-      input_->ClearSelection();
+      HistoryBrowseFromEnd = static_cast<int>(next);
+      Input->SetText(
+          history.GetFromEnd(static_cast<size_t>(HistoryBrowseFromEnd)));
+      Input->ClearSelection();
     }
     return true;
   }
-  if (event.keyCode == GLFW_KEY_DOWN)
+  if (event.KeyCode == GuiKey::Down)
   {
-    if (historyBrowseFromEnd_ > 0)
+    if (HistoryBrowseFromEnd > 0)
     {
-      --historyBrowseFromEnd_;
-      input_->SetText(
-          history.GetFromEnd(static_cast<size_t>(historyBrowseFromEnd_)));
-      input_->ClearSelection();
+      --HistoryBrowseFromEnd;
+      Input->SetText(
+          history.GetFromEnd(static_cast<size_t>(HistoryBrowseFromEnd)));
+      Input->ClearSelection();
     }
-    else if (historyBrowseFromEnd_ == 0)
+    else if (HistoryBrowseFromEnd == 0)
     {
-      historyBrowseFromEnd_ = -1;
-      input_->SetText(draftValid_ ? draftLine_ : "");
-      input_->ClearSelection();
+      HistoryBrowseFromEnd = -1;
+      Input->SetText(DraftValid ? DraftLine : "");
+      Input->ClearSelection();
     }
     return true;
   }
@@ -160,12 +215,12 @@ bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
 
 bool UConsoleScreen::RouteKey(const GuiKeyEvent &event)
 {
-  if (!visible_ || !input_)
+  if (!Visible || !Input)
   {
     return false;
   }
-  input_->SetFocused(true);
-  if (input_->HandleEditShortcut(event))
+  Input->SetFocused(true);
+  if (Input->HandleEditShortcut(event))
   {
     return true;
   }
@@ -173,73 +228,76 @@ bool UConsoleScreen::RouteKey(const GuiKeyEvent &event)
   {
     return true;
   }
-  return input_->OnKey(event);
+  return Input->OnKey(event);
 }
 
 bool UConsoleScreen::RouteChar(const GuiCharEvent &event)
 {
-  if (!visible_ || !input_)
+  if (!Visible || !Input)
   {
     return false;
   }
-  input_->SetFocused(true);
-  return input_->OnChar(event);
+  Input->SetFocused(true);
+  return Input->OnChar(event);
 }
 
 void UConsoleScreen::OpenContextMenu(int x, int y)
 {
-  if (!popup_ || !input_)
+  if (!Popup || !Input)
   {
     return;
   }
-  popup_->SetItems({
-      {"Copy", [this]() { input_->CopySelectionToClipboard(); }},
-      {"Paste", [this]() { input_->PasteFromClipboard(); }},
-      {"Cut", [this]() { input_->CutSelectionToClipboard(); }},
-      {"Select all", [this]() { input_->SelectAll(); }},
+  Popup->SetItems({
+      {"Copy", [this]() { Input->CopySelectionToClipboard(); }},
+      {"Paste", [this]() { Input->PasteFromClipboard(); }},
+      {"Cut", [this]() { Input->CutSelectionToClipboard(); }},
+      {"Select all", [this]() { Input->SelectAll(); }},
   });
-  popup_->OpenAt(x, y, viewportW_, viewportH_);
+  Popup->OpenAt(x, y, ViewportW, ViewportH);
 }
 
-bool UConsoleScreen::IsPopupOpen() const { return popup_ && popup_->IsOpen(); }
+bool UConsoleScreen::IsPopupOpen() const { return Popup && Popup->IsOpen(); }
 
 bool UConsoleScreen::RouteMouseButton(const GuiMouseEvent &event,
                                       UGuiRenderer &renderer)
 {
-  if (!visible_)
+  if (!Visible)
   {
     return false;
   }
-  if (popup_ && popup_->IsOpen())
+  if (Popup && Popup->IsOpen())
   {
-    if (popup_->OnMouseDown(event))
+    if (Popup->OnMouseDown(event))
     {
       return true;
     }
   }
-  if (event.pressed && event.button == GuiMouseButton::Right && input_ &&
-      input_->GetBounds().Contains(event.x, event.y))
+  if (event.Pressed && event.Button == GuiMouseButton::Right && Input &&
+      Input->GetBounds().Contains(event.X, event.Y))
   {
-    input_->SetFocused(true);
-    OpenContextMenu(event.x, event.y);
+    Input->SetFocused(true);
+    OpenContextMenu(event.X, event.Y);
     return true;
   }
-  if (input_ && input_->GetBounds().Contains(event.x, event.y))
+  if (Input && Input->GetBounds().Contains(event.X, event.Y))
   {
-    if (event.pressed && event.button == GuiMouseButton::Left)
+    if (event.Pressed && event.Button == GuiMouseButton::Left)
     {
-      input_->PointerDown(event, renderer);
+      Input->PointerDown(event, renderer);
+#ifdef __ANDROID__
+      AndroidSoftKeyboardSetTarget(Input);
+#endif
       return true;
     }
-    if (!event.pressed && event.button == GuiMouseButton::Left)
+    if (!event.Pressed && event.Button == GuiMouseButton::Left)
     {
-      input_->OnMouseUp(event);
+      Input->OnMouseUp(event);
       return true;
     }
   }
-  if (popup_ && popup_->IsOpen() && event.pressed)
+  if (Popup && Popup->IsOpen() && event.Pressed)
   {
-    popup_->Close();
+    Popup->Close();
     return true;
   }
   return false;
@@ -248,18 +306,18 @@ bool UConsoleScreen::RouteMouseButton(const GuiMouseEvent &event,
 bool UConsoleScreen::RouteMouseMove(const GuiMouseEvent &event,
                                     UGuiRenderer &renderer)
 {
-  if (!visible_ || !input_)
+  if (!Visible || !Input)
   {
     return false;
   }
-  if (popup_ && popup_->IsOpen())
+  if (Popup && Popup->IsOpen())
   {
-    if (popup_->OnMouseMove(event))
+    if (Popup->OnMouseMove(event))
     {
       return true;
     }
   }
-  if (input_->PointerMove(event, renderer))
+  if (Input->PointerMove(event, renderer))
   {
     return true;
   }
@@ -268,22 +326,22 @@ bool UConsoleScreen::RouteMouseMove(const GuiMouseEvent &event,
 
 void UConsoleScreen::SubmitCommand()
 {
-  if (!session_ || !input_)
+  if (!Session || !Input)
   {
     return;
   }
-  const std::string line = input_->GetText();
+  const std::string line = Input->GetText();
   if (line.empty())
   {
     return;
   }
-  session_->GetCommandHistory().Append(line);
-  session_->AddChatLine("> " + line);
-  const auto result = session_->GetCommandRegistry().ExecuteLine(line);
-  session_->AddChatLine(result.text);
-  input_->SetText("");
-  historyBrowseFromEnd_ = -1;
-  draftValid_ = false;
+  Session->GetCommandHistory().Append(line);
+  Session->AddChatLine("> " + line);
+  const auto result = Session->GetCommandRegistry().ExecuteLine(line);
+  Session->AddChatLine(result.text);
+  Input->SetText("");
+  HistoryBrowseFromEnd = -1;
+  DraftValid = false;
 }
 
 } // namespace cutum

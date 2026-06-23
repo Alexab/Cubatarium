@@ -1,0 +1,35 @@
+{
+  "id": "wolf_snow",
+  "display_name": "Snow Wolf",
+  "creature_id": "wolf",
+  "catalog": {
+    "tags": [
+      "outfits"
+    ],
+    "equippable": true,
+    "sort_order": 0
+  },
+  "visual": {
+    "texture": "body",
+    "texture_map": {
+      "body": "body",
+      "face": "face",
+      "leg": "leg"
+    },
+    "wireframe_color": [
+      0.8,
+      0.85,
+      0.9,
+      1.0
+    ],
+    "icon": {
+      "mode": "skin_texture",
+      "fallback_color": [
+        0.8,
+        0.85,
+        0.9,
+        1.0
+      ]
+    }
+  }
+}

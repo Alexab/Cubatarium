@@ -4,39 +4,40 @@
 namespace cutum
 {
 
-/// Runtime render toggles (config.json "render" section). Use to bisect FPS
+/// Runtime Render toggles (config.json "Render" section). Use to bisect FPS
 /// optimizations.
 struct RenderSettings
 {
-  bool greedyMeshing{true};
-  bool faceQuads{true};
-  bool frustumCulling{true};
-  bool batchCache{true};
+  bool GreedyMeshing{true};
+  bool AsyncMeshing{true};
+  bool FaceQuads{true};
+  bool FrustumCulling{true};
+  bool BatchCache{true};
   /// Draw creature current/max collision AABB wireframes (in addition to mob
   /// visual).
-  bool creatureDebugBounds{false};
+  bool CreatureDebugBounds{false};
   /// Draw rigid_voxels as textured multi-part cubes (when false, wireframe
   /// fallback per part).
-  bool creatureTexturedParts{true};
-  bool creatureWireframeOverlay{false};
+  bool CreatureTexturedParts{true};
+  bool CreatureWireframeOverlay{false};
 
   static RenderSettings Legacy()
   {
     RenderSettings s;
-    s.greedyMeshing = false;
-    s.faceQuads = false;
-    s.frustumCulling = false;
-    s.batchCache = false;
+    s.GreedyMeshing = false;
+    s.FaceQuads = false;
+    s.FrustumCulling = false;
+    s.BatchCache = false;
     return s;
   }
 
-  /// All render optimizations on (greedy mesh, face quads, frustum culling,
+  /// All Render optimizations on (greedy mesh, face quads, frustum culling,
   /// batch cache).
   static RenderSettings Default() { return RenderSettings{}; }
 
   /// Greedy merged quads drawn as world-space mesh with baked atlas UV
-  /// (requires greedyMeshing and faceQuads).
-  bool UseFaceQuadDraw() const { return greedyMeshing && faceQuads; }
+  /// (requires GreedyMeshing and FaceQuads).
+  bool UseFaceQuadDraw() const { return GreedyMeshing && FaceQuads; }
 };
 
 } // namespace cutum

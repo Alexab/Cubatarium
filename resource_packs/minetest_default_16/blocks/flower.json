@@ -1,0 +1,19 @@
+﻿{
+    "name":  "flower",
+    "id":  372,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "flower",
+                     "flower",
+                     "flower",
+                     "flower",
+                     "flower",
+                     "flower"
+                 ],
+    "render":  {
+
+               }
+}
+

@@ -14,14 +14,25 @@ namespace cutum
 namespace
 {
 
-bool IsLegPart(const std::string &partId)
+bool IsLegLimb(const ResolvedCreaturePart &part)
 {
-  return partId == "leg_l" || partId == "leg_r";
+  if (part.LimbKind == "leg")
+  {
+    return true;
+  }
+  const std::string &id = part.partId;
+  return id == "leg_l" || id == "leg_r" || id == "leg_fl" || id == "leg_fr" ||
+         id == "leg_bl" || id == "leg_br";
 }
 
-bool IsArmPart(const std::string &partId)
+bool IsArmLimb(const ResolvedCreaturePart &part)
 {
-  return partId == "arm_l" || partId == "arm_r";
+  if (part.LimbKind == "arm")
+  {
+    return true;
+  }
+  const std::string &id = part.partId;
+  return id == "arm_l" || id == "arm_r";
 }
 
 float CrouchUpperBodyDrop(const UCreature &creature, float stanceBlend01)
@@ -34,23 +45,32 @@ float CrouchUpperBodyDrop(const UCreature &creature, float stanceBlend01)
                           creature.GetLocomotion().GetViewEyeHeight());
 }
 
-CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part)
+CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
+                             CreatureTextureLayout layout)
 {
-  if (part.partId == "head")
+  if (layout == CreatureTextureLayout::PlayerSkinAtlas)
   {
-    return CreaturePartMesh::Head;
+    if (part.partId == "head")
+    {
+      return CreaturePartMesh::Head;
+    }
+    if (part.partId == "torso")
+    {
+      return CreaturePartMesh::Body;
+    }
   }
-  if (part.partId == "torso")
+  else if (layout == CreatureTextureLayout::RigidCrop &&
+           UsesRigidFaceTexture(part.textureAssetKey))
   {
-    return CreaturePartMesh::Body;
+    return CreaturePartMesh::RigidHead;
   }
   return CreaturePartMesh::Box;
 }
 
 std::optional<float>
-TorsoBottomY(const std::vector<ResolvedCreaturePart> &parts)
+TorsoBottomY(const std::vector<ResolvedCreaturePart> &Parts)
 {
-  for (const ResolvedCreaturePart &part : parts)
+  for (const ResolvedCreaturePart &part : Parts)
   {
     if (part.partId == "torso")
     {
@@ -87,7 +107,6 @@ glm::mat4 BuildRigidPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
   return model;
 }
 
-/// Limb rotates about pivot (hip / shoulder); mesh center is offset from pivot.
 glm::mat4 BuildLimbPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
                              const glm::vec3 &pivot,
                              const glm::vec3 &meshCenter,
@@ -117,6 +136,19 @@ glm::mat4 BuildLimbPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
   return model;
 }
 
+glm::vec3 DefaultLegPivot(const ResolvedCreaturePart &part,
+                          float torsoBottomY)
+{
+  return glm::vec3(part.offsetBlocks.x, torsoBottomY, part.offsetBlocks.z);
+}
+
+glm::vec3 DefaultArmPivot(const ResolvedCreaturePart &part)
+{
+  return glm::vec3(part.offsetBlocks.x,
+                   part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
+                   part.offsetBlocks.z);
+}
+
 } // namespace
 
 void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
@@ -126,18 +158,13 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
                                       float /*dt*/)
 {
   BodyOrigin = creature.GetFeetPosition();
-  bodyYaw_ = creature.GetYaw();
+  BodyYaw = creature.GetYaw();
   const float blend = pose.crouchUpperDrop > 0.0f
                           ? pose.crouchUpperDrop
                           : creature.GetLocomotion().GetStanceBlend();
-  crouchUpperDrop_ = CrouchUpperBodyDrop(creature, blend);
-  sizeBlocks_ = creature.GetBounds().currentSizeBlocks;
-  partPoses_ = pose.parts;
-  headYaw_ = 0.0f;
-  if (const auto it = partPoses_.find("head"); it != partPoses_.end())
-  {
-    headYaw_ = it->second.offsetDelta.z;
-  }
+  CrouchUpperDrop = CrouchUpperBodyDrop(creature, blend);
+  SizeBlocks = creature.GetBounds().currentSizeBlocks;
+  PartPoses = pose.Parts;
 }
 
 void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
@@ -145,77 +172,78 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
 {
   const RenderSettings &settings = engine.GetRenderSettings();
   const bool drawTextured =
-      settings.creatureTexturedParts && !appearance_.parts.empty();
+      settings.CreatureTexturedParts && !Appearance.Parts.empty();
   auto creatureTextures = engine.GetCreatureTextureStorage();
-  const std::optional<float> torsoBottomY = TorsoBottomY(appearance_.parts);
+  const std::optional<float> torsoBottomY = TorsoBottomY(Appearance.Parts);
 
   auto drawPart = [&](const ResolvedCreaturePart &part)
   {
     glm::vec3 offset = part.offsetBlocks;
-    if (!IsLegPart(part.partId))
+    if (!IsLegLimb(part))
     {
-      offset.y -= crouchUpperDrop_;
+      offset.y -= CrouchUpperDrop;
     }
     const CreaturePartPose *partPose = nullptr;
-    if (const auto it = partPoses_.find(part.partId); it != partPoses_.end())
+    if (const auto it = PartPoses.find(part.partId); it != PartPoses.end())
     {
       partPose = &it->second;
-      if (part.partId == "head" && headYaw_ != 0.0f)
-      {
-        offset.z += headYaw_ * 0.15f;
-      }
     }
 
-    if (IsLegPart(part.partId) && torsoBottomY)
+    if (part.HasPivot)
     {
-      const glm::vec3 pivot(part.offsetBlocks.x, *torsoBottomY,
-                            part.offsetBlocks.z);
-      return BuildLimbPartModel(BodyOrigin, bodyYaw_, pivot, part.offsetBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, part.PivotBlocks,
+                                part.offsetBlocks, part.sizeBlocks, partPose);
+    }
+    if (IsLegLimb(part) && torsoBottomY)
+    {
+      const glm::vec3 pivot = DefaultLegPivot(part, *torsoBottomY);
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
-    if (IsArmPart(part.partId))
+    if (IsArmLimb(part))
     {
-      const glm::vec3 pivot(part.offsetBlocks.x,
-                            part.offsetBlocks.y + part.sizeBlocks.y * 0.5f,
-                            part.offsetBlocks.z);
-      return BuildLimbPartModel(BodyOrigin, bodyYaw_, pivot, part.offsetBlocks,
+      const glm::vec3 pivot = DefaultArmPivot(part);
+      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
-    return BuildRigidPartModel(BodyOrigin, bodyYaw_, offset, part.sizeBlocks,
+    return BuildRigidPartModel(BodyOrigin, BodyYaw, offset, part.sizeBlocks,
                                partPose);
   };
 
+  const CreatureTextureLayout textureLayout =
+      ParseCreatureTextureLayout(Appearance.textureLayout);
+
   if (drawTextured && creatureTextures)
   {
-    for (const ResolvedCreaturePart &part : appearance_.parts)
+    for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       const glm::mat4 model = drawPart(part);
       const GLuint tex = creatureTextures->GetTexture(part.textureAssetKey);
       if (tex != 0)
       {
         engine.DrawCreatureTexturedPart(viewProj * model, tex,
-                                        MeshForPart(part));
+                                        MeshForPart(part, textureLayout));
       }
-      else if (settings.creatureWireframeOverlay)
+      else if (settings.CreatureWireframeOverlay)
       {
-        engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
+        engine.DrawBoxWireframe(viewProj * model, Appearance.wireframeColor);
       }
     }
   }
-  else if (appearance_.useWireframeFallback || !drawTextured)
+  else if (Appearance.useWireframeFallback || !drawTextured)
   {
-    const glm::vec3 localCenter(0.0f, sizeBlocks_.y * 0.5f, 0.0f);
+    const glm::vec3 localCenter(0.0f, SizeBlocks.y * 0.5f, 0.0f);
     const glm::mat4 model = BuildRigidPartModel(
-        BodyOrigin, bodyYaw_, localCenter, sizeBlocks_, nullptr);
-    engine.DrawBoxWireframe(viewProj * model, appearance_.wireframeColor);
+        BodyOrigin, BodyYaw, localCenter, SizeBlocks, nullptr);
+    engine.DrawBoxWireframe(viewProj * model, Appearance.wireframeColor);
   }
 
-  if (settings.creatureWireframeOverlay && drawTextured)
+  if (settings.CreatureWireframeOverlay && drawTextured)
   {
-    for (const ResolvedCreaturePart &part : appearance_.parts)
+    for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       engine.DrawBoxWireframe(viewProj * drawPart(part),
-                              appearance_.wireframeColor);
+                              Appearance.wireframeColor);
     }
   }
 }

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "stonebrick",
+    "id":  999,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "stonebrick",
+                     "stonebrick",
+                     "stonebrick",
+                     "stonebrick",
+                     "stonebrick",
+                     "stonebrick"
+                 ],
+    "render":  {
+
+               }
+}
+

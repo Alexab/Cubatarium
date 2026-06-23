@@ -31,12 +31,12 @@ inline constexpr GlStateMask operator|(GlStateMask a, GlStateBit b)
   return a | static_cast<GlStateMask>(b);
 }
 
-/// FBO icon render (UPrefabIconCache).
+/// FBO icon Render (UPrefabIconCache).
 inline constexpr GlStateMask kGlMaskIconFbo =
     GlStateBit::ViewportFb | GlStateBit::DepthTest | GlStateBit::Blend |
     GlStateBit::CullFace;
 
-/// Greedy transparent multi-pass (depth/stencil/color mask only).
+/// Greedy Transparent multi-pass (depth/stencil/color mask only).
 inline constexpr GlStateMask kGlMaskTransparentPipeline =
     GlStateBit::DepthFunc | GlStateBit::DepthMask | GlStateBit::StencilTest |
     GlStateBit::StencilOps | GlStateBit::ColorMask;

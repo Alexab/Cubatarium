@@ -1,0 +1,20 @@
+﻿{
+    "name":  "oreLapis",
+    "id":  78,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "oreLapis",
+                     "oreLapis",
+                     "oreLapis",
+                     "oreLapis",
+                     "oreLapis",
+                     "oreLapis"
+                 ],
+    "displayName":  "Lapis Ore",
+    "render":  {
+
+               }
+}
+

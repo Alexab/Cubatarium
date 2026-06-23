@@ -1,0 +1,13 @@
+{
+  "id": "refi_textures_16",
+  "name": "REFI Textures 16",
+  "version": 1,
+  "license": "CC-BY-SA-4.0",
+  "resolution": 16,
+  "priority": 5,
+  "depends": [],
+  "conflicts": [],
+  "worldgen_role": "secondary",
+  "min_game_version": "0.1.0",
+  "pack_format": 1
+}

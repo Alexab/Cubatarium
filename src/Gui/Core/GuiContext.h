@@ -27,13 +27,16 @@ public:
   void Shutdown();
 
   void SetScreen(std::unique_ptr<UGuiScreenBase> screen);
-  UGuiScreenBase *GetScreen() { return activeScreen_.get(); }
+  UGuiScreenBase *GetScreen() { return ActiveScreen.get(); }
 
   void Update(double dt);
-  void Render(int WindowWidth, int WindowHeight);
+  void NotifyViewport(int WindowWidth, int WindowHeight, int insetLeft = 0,
+                      int insetTop = 0, int insetRight = 0,
+                      int insetBottom = 0);
+  void Render(int WindowWidth, int WindowHeight, int insetLeft = 0,
+              int insetTop = 0, int insetRight = 0, int insetBottom = 0);
   void RenderOverlay(UGuiWidget &root, int WindowWidth, int WindowHeight,
                      bool expandRootToViewport = true);
-  void NotifyViewport(int WindowWidth, int WindowHeight);
 
   bool RouteKey(const GuiKeyEvent &event);
   bool RouteChar(const GuiCharEvent &event);
@@ -46,18 +49,23 @@ public:
   bool WantsCaptureKeyboard() const;
   void ClearInputState();
 
-  UGuiRenderer &GetRenderer() { return *renderer_; }
-  const GuiTheme &GetTheme() const { return theme_; }
+  UGuiRenderer &GetRenderer() { return *Renderer; }
+  const GuiTheme &GetTheme() const { return Theme; }
 
   void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
   IGuiClipboard *GetClipboard() const { return Clipboard; }
 
+  void ApplyUiScale(float scale);
+  float GetUiScale() const { return UiScale; }
+
 private:
+  GuiTheme BaseTheme;
+  float UiScale{1.f};
   IGuiClipboard *Clipboard{nullptr};
-  GuiTheme theme_;
-  std::unique_ptr<UGuiRenderer> renderer_;
-  std::unique_ptr<UGuiInputRouter> inputRouter_;
-  std::unique_ptr<UGuiScreenBase> activeScreen_;
+  GuiTheme Theme;
+  std::unique_ptr<UGuiRenderer> Renderer;
+  std::unique_ptr<UGuiInputRouter> InputRouter;
+  std::unique_ptr<UGuiScreenBase> ActiveScreen;
 };
 
 } // namespace cutum

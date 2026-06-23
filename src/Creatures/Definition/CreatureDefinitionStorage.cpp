@@ -1,4 +1,5 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include <algorithm>
 #include <filesystem>
@@ -33,11 +34,21 @@ glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
                    arr[2].get<float>(), arr[3].get<float>());
 }
 
+CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
+{
+  CreatureAnimationClipDef clip;
+  clip.startSec = clipJson.value("start", clip.startSec);
+  clip.endSec = clipJson.value("end", clip.endSec);
+  clip.loop = clipJson.value("loop", clip.loop);
+  clip.speed = clipJson.value("speed", clip.speed);
+  return clip;
+}
+
 } // namespace
 
 void UCreatureDefinitionStorage::Load(const std::string &folder)
 {
-  definitions_.clear();
+  Definitions.clear();
   if (!std::filesystem::exists(folder))
   {
     return;
@@ -54,8 +65,34 @@ void UCreatureDefinitionStorage::Load(const std::string &folder)
       LoadFile(jsonPath.string());
     }
   }
-  std::cout << "UCreatureDefinitionStorage: loaded " << definitions_.size()
+  std::cout << "UCreatureDefinitionStorage: loaded " << Definitions.size()
             << " definitions" << std::endl;
+}
+
+void UCreatureDefinitionStorage::LoadOverlay(const std::string &folder)
+{
+  if (!std::filesystem::exists(folder))
+  {
+    return;
+  }
+  size_t overlayCount = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(folder))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::filesystem::path jsonPath = entry.path() / "creature.json";
+    if (std::filesystem::exists(jsonPath) && LoadFile(jsonPath.string()))
+    {
+      ++overlayCount;
+    }
+  }
+  if (overlayCount > 0)
+  {
+    std::cout << "UCreatureDefinitionStorage: overlay " << overlayCount
+              << " definition(s) from " << folder << std::endl;
+  }
 }
 
 bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
@@ -70,12 +107,12 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     nlohmann::json data;
     file >> data;
     CreatureDefinition def;
-    def.id = data.value("id", "");
-    if (def.id.empty())
+    def.Id = data.value("id", "");
+    if (def.Id.empty())
     {
       return false;
     }
-    def.displayName = data.value("display_name", def.id);
+    def.displayName = data.value("display_name", def.Id);
     if (data.contains("catalog") && data["catalog"].is_object())
     {
       const auto &catalog = data["catalog"];
@@ -106,7 +143,9 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
-    def.behavior.id = data.value("behavior", def.behavior.id);
+    def.habitat =
+        ParseCreatureHabitat(data.value("habitat", "terrestrial"));
+    def.behavior.Id = data.value("behavior", def.behavior.Id);
     if (data.contains("behavior_params") && data["behavior_params"].is_object())
     {
       const auto &bp = data["behavior_params"];
@@ -140,7 +179,13 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     {
       const auto &vis = data["visual"];
       def.visual.backend = vis.value("backend", def.visual.backend);
+      def.visual.fallbackBackend = vis.value("fallback_backend", "");
+      const CreatureVisualBackend parsedBackend =
+          ParseCreatureVisualBackend(def.visual.backend);
+      def.visual.backend = ToString(parsedBackend);
       def.visual.modelYawOffsetDeg = vis.value("model_yaw_offset_deg", 0.f);
+      def.visual.textureLayout =
+          vis.value("texture_layout", def.visual.textureLayout);
       def.visual.defaultTextureKey =
           vis.value("default_texture", def.visual.defaultTextureKey);
       if (vis.contains("icon") && vis["icon"].is_object())
@@ -154,14 +199,62 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
       if (vis.contains("animation") && vis["animation"].is_object())
       {
         const auto &anim = vis["animation"];
-        def.visual.animation.walkCycleHz =
-            anim.value("walk_cycle_hz", def.visual.animation.walkCycleHz);
-        def.visual.animation.legSwingDeg =
-            anim.value("leg_swing_deg", def.visual.animation.legSwingDeg);
-        def.visual.animation.armSwingDeg =
-            anim.value("arm_swing_deg", def.visual.animation.armSwingDeg);
-        def.visual.animation.flyBodyPitchDeg = anim.value(
-            "fly_body_pitch_deg", def.visual.animation.flyBodyPitchDeg);
+        def.visual.Animation.walkCycleHz =
+            anim.value("walk_cycle_hz", def.visual.Animation.walkCycleHz);
+        def.visual.Animation.legSwingDeg =
+            anim.value("leg_swing_deg", def.visual.Animation.legSwingDeg);
+        def.visual.Animation.armSwingDeg =
+            anim.value("arm_swing_deg", def.visual.Animation.armSwingDeg);
+        def.visual.Animation.flyBodyPitchDeg = anim.value(
+            "fly_body_pitch_deg", def.visual.Animation.flyBodyPitchDeg);
+        def.visual.Animation.bodyBobBlocks =
+            anim.value("body_bob_blocks", def.visual.Animation.bodyBobBlocks);
+        def.visual.Animation.tailSwingDeg =
+            anim.value("tail_swing_deg", def.visual.Animation.tailSwingDeg);
+        def.visual.Animation.runSpeedMultiplier = anim.value(
+            "run_speed_multiplier", def.visual.Animation.runSpeedMultiplier);
+        def.visual.Animation.crouchLegBendDeg = anim.value(
+            "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
+        def.visual.Animation.wingIdleSwingDeg = anim.value(
+            "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
+        if (anim.contains("clips") && anim["clips"].is_object())
+        {
+          for (const auto &[clipId, clipJson] : anim["clips"].items())
+          {
+            if (clipJson.is_object())
+            {
+              def.visual.Animation.clips[clipId] = ReadClipDef(clipJson);
+            }
+          }
+        }
+        if (anim.contains("state_map") && anim["state_map"].is_object())
+        {
+          for (const auto &[stateName, clipId] : anim["state_map"].items())
+          {
+            if (clipId.is_string())
+            {
+              def.visual.Animation.stateMap[stateName] = clipId.get<std::string>();
+            }
+          }
+        }
+      }
+      if (vis.contains("gltf") && vis["gltf"].is_object())
+      {
+        const auto &gltf = vis["gltf"];
+        def.visual.gltf.modelPath = gltf.value("model", "");
+        def.visual.gltf.modelScale = gltf.value("model_scale", 1.f);
+        def.visual.gltf.modelYawOffsetDeg =
+            gltf.value("model_yaw_offset_deg", 0.f);
+        if (gltf.contains("textures") && gltf["textures"].is_array())
+        {
+          for (const auto &tex : gltf["textures"])
+          {
+            if (tex.is_string())
+            {
+              def.visual.gltf.texturePaths.push_back(tex.get<std::string>());
+            }
+          }
+        }
       }
       if (vis.contains("rig") && vis["rig"].is_object())
       {
@@ -184,7 +277,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         for (const auto &partJson : vis["parts"])
         {
           CreatureVisualPartDef part;
-          part.id = partJson.value("id", "");
+          part.Id = partJson.value("id", "");
           part.textureStem =
               partJson.value("texture", def.visual.defaultTextureKey);
           if (part.textureStem.empty())
@@ -196,11 +289,27 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
                        part.offsetBlocks);
           part.sizeBlocks = ReadVec3(
               partJson.value("size", nlohmann::json::array()), part.sizeBlocks);
-          def.visual.parts.push_back(part);
+          part.HasPivot = partJson.contains("pivot");
+          if (part.HasPivot)
+          {
+            part.PivotBlocks =
+                ReadVec3(partJson.value("pivot", nlohmann::json::array()),
+                         part.PivotBlocks);
+          }
+          part.LimbKind = partJson.value("limb", "");
+          part.LimbAxis = partJson.value("limb_axis", "x");
+          def.visual.Parts.push_back(part);
         }
       }
+      if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
+          def.visual.gltf.modelPath.empty())
+      {
+        std::cerr << "UCreatureDefinitionStorage: " << path
+                  << ": gltf_skeleton without visual.gltf.model for "
+                  << def.Id << std::endl;
+      }
     }
-    definitions_[def.id] = def;
+    Definitions[def.Id] = def;
     return true;
   }
   catch (const std::exception &e)
@@ -212,10 +321,10 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
 }
 
 const CreatureDefinition *
-UCreatureDefinitionStorage::Get(const std::string &id) const
+UCreatureDefinitionStorage::Get(const std::string &Id) const
 {
-  const auto it = definitions_.find(id);
-  if (it == definitions_.end())
+  const auto it = Definitions.find(Id);
+  if (it == Definitions.end())
   {
     return nullptr;
   }
@@ -225,11 +334,11 @@ UCreatureDefinitionStorage::Get(const std::string &id) const
 std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
 {
   std::vector<std::string> ids;
-  ids.reserve(definitions_.size());
-  for (const auto &[id, def] : definitions_)
+  ids.reserve(Definitions.size());
+  for (const auto &[Id, def] : Definitions)
   {
     (void)def;
-    ids.push_back(id);
+    ids.push_back(Id);
   }
   std::sort(ids.begin(), ids.end(),
             [this](const std::string &a, const std::string &b)
@@ -250,11 +359,11 @@ std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
 std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
 {
   std::vector<std::string> ids;
-  for (const auto &[id, def] : definitions_)
+  for (const auto &[Id, def] : Definitions)
   {
     if (def.catalog.spawnable)
     {
-      ids.push_back(id);
+      ids.push_back(Id);
     }
   }
   std::sort(ids.begin(), ids.end(),
@@ -275,11 +384,11 @@ std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
 
 std::string UCreatureDefinitionStorage::GetControlledDefaultSpeciesId() const
 {
-  for (const auto &[id, def] : definitions_)
+  for (const auto &[Id, def] : Definitions)
   {
     if (def.role == CreatureRole::ControlledDefault)
     {
-      return id;
+      return Id;
     }
   }
   return {};

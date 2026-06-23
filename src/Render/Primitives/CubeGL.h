@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 // GLEW will be included in .cpp file after GLFW initialization
-// Forward declaration for OpenGL types
+// Forward declaration for OpenGL Types
 typedef unsigned int GLuint;
 typedef unsigned short GLushort;
 #include "Render/Primitives/Cube.h"

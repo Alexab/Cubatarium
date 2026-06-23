@@ -1,4 +1,4 @@
-#include "GuiPanel.h"
+#include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
@@ -6,18 +6,21 @@
 namespace cutum
 {
 
-UGuiPanel::UGuiPanel(const GuiTheme *theme) : theme_(theme) {}
-
-void UGuiPanel::SetStackLayout(int spacing, int padding)
+UGuiPanel::UGuiPanel(const GuiTheme *theme) : Theme(theme)
 {
-  stackSpacing_ = spacing;
-  stackPadding_ = padding;
+  SetClipChildren(true);
+}
+
+void UGuiPanel::SetStackLayout(int spacing, int Padding)
+{
+  StackSpacing = spacing;
+  StackPadding = Padding;
 }
 
 int UGuiPanel::GetPreferredHeight() const
 {
   std::vector<UGuiWidget *> kids;
-  for (const auto &child : children_)
+  for (const auto &child : Children)
   {
     if (child->IsVisible())
     {
@@ -28,22 +31,21 @@ int UGuiPanel::GetPreferredHeight() const
   {
     return UGuiWidget::GetPreferredHeight();
   }
-  const int w = bounds_.w > 0 ? bounds_.w : 400;
-  return UGuiLayout::StackVerticalMeasure({0, 0, w, 100000}, stackSpacing_,
-                                          stackPadding_, kids);
+  const int w = Bounds.W > 0 ? Bounds.W : 400;
+  return UGuiLayout::StackVerticalMeasure({0, 0, w, 100000}, StackSpacing,
+                                          StackPadding, kids);
 }
 
 void UGuiPanel::Draw(UGuiRenderer &renderer)
 {
-  if (!visible_ || !theme_)
+  if (!Visible || !Theme)
   {
     return;
   }
-  if (drawBackground_)
+  if (DrawBackground)
   {
-    renderer.DrawFilledRect(bounds_, theme_->panelBackground);
-    renderer.DrawBorderRect(bounds_, theme_->panelBorder,
-                            theme_->borderThickness);
+    renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
+    renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
   }
   UGuiWidget::Draw(renderer);
 }

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_acacia_bush_stem",
+    "id":  403,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem",
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem",
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem",
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem",
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem",
+                     "mtg_acacia_bush_stem_default_acacia_bush_stem"
+                 ],
+    "render":  {
+
+               }
+}
+

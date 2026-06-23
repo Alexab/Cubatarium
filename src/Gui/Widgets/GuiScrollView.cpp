@@ -1,9 +1,10 @@
-#include "GuiScrollView.h"
+#include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
 
-#include <GLFW/glfw3.h>
+#include "Gui/Core/GuiKeyCodes.h"
 #include <algorithm>
 
 namespace cutum
@@ -51,190 +52,212 @@ bool IsScrollInteractionEnabled(GuiScrollbarMode mode)
   return mode != GuiScrollbarMode::Hidden;
 }
 
+int MeasureVisibleContentExtent(const UGuiPanel &content, int contentTop)
+{
+  int maxBottom = 0;
+  for (const auto &child : content.GetChildren())
+  {
+    if (!child || !child->IsVisible())
+    {
+      continue;
+    }
+    const GuiRect &b = child->GetBounds();
+    maxBottom = std::max(maxBottom, b.Y + b.H - contentTop);
+  }
+  return maxBottom;
+}
+
 } // namespace
 
 UGuiScrollView::UGuiScrollView(const GuiTheme *theme)
-    : theme_(theme), content_(theme)
+    : Theme(theme), ContentPanel(theme)
 {
-  content_.SetDrawBackground(false);
+  ContentPanel.SetDrawBackground(false);
 }
 
-UGuiPanel &UGuiScrollView::Content() { return content_; }
+UGuiPanel &UGuiScrollView::Content() { return ContentPanel; }
 
-const UGuiPanel &UGuiScrollView::Content() const { return content_; }
+const UGuiPanel &UGuiScrollView::Content() const { return ContentPanel; }
 
 GuiRect UGuiScrollView::ViewportRect() const
 {
   const int bar =
-      ShouldShowScrollbar(scrollbarMode_, MaxScrollY()) ? kScrollbarWidth : 0;
-  return {bounds_.x, bounds_.y, std::max(0, bounds_.w - bar), bounds_.h};
+      ShouldShowScrollbar(ScrollbarMode, MaxScrollY()) ? kScrollbarWidth : 0;
+  return {Bounds.X, Bounds.Y, std::max(0, Bounds.W - bar), Bounds.H};
 }
 
 GuiRect UGuiScrollView::ScrollbarTrackRect() const
 {
-  if (!ShouldShowScrollbar(scrollbarMode_, MaxScrollY()))
+  if (!ShouldShowScrollbar(ScrollbarMode, MaxScrollY()))
   {
     return {0, 0, 0, 0};
   }
-  return {bounds_.x + bounds_.w - kScrollbarWidth, bounds_.y, kScrollbarWidth,
-          bounds_.h};
+  return {Bounds.X + Bounds.W - kScrollbarWidth, Bounds.Y, kScrollbarWidth,
+          Bounds.H};
 }
 
 GuiRect UGuiScrollView::ScrollbarThumbRect() const
 {
   const GuiRect track = ScrollbarTrackRect();
-  if (track.h <= 0 || contentHeight_ <= 0)
+  if (track.H <= 0 || ScrollContentHeight <= 0)
   {
     return track;
   }
   const int maxScroll = MaxScrollY();
   const float ratio =
-      static_cast<float>(bounds_.h) / static_cast<float>(contentHeight_);
-  const int thumbH = std::max(16, static_cast<int>(track.h * ratio));
+      static_cast<float>(Bounds.H) / static_cast<float>(ScrollContentHeight);
+  const int thumbH = std::max(16, static_cast<int>(track.H * ratio));
   if (maxScroll > 0)
   {
-    const int thumbY = track.y + (scrollY_ * (track.h - thumbH)) / maxScroll;
-    return {track.x + 1, thumbY, track.w - 2, thumbH};
+    const int thumbY = track.Y + (ScrollY * (track.H - thumbH)) / maxScroll;
+    return {track.X + 1, thumbY, track.W - 2, thumbH};
   }
-  return {track.x + 1, track.y, track.w - 2, thumbH};
+  return {track.X + 1, track.Y, track.W - 2, thumbH};
 }
 
 int UGuiScrollView::MaxScrollY() const
 {
-  return std::max(0, contentHeight_ - bounds_.h);
+  return std::max(0, ScrollContentHeight - Bounds.H);
 }
 
 void UGuiScrollView::ClampScroll()
 {
-  scrollY_ = std::clamp(scrollY_, 0, MaxScrollY());
+  ScrollY = std::clamp(ScrollY, 0, MaxScrollY());
 }
 
 void UGuiScrollView::SetScrollY(int y)
 {
-  scrollY_ = y;
+  ScrollY = y;
   ClampScroll();
 }
 
 void UGuiScrollView::SetAfterScrollLayout(AfterScrollLayoutFn callback)
 {
-  afterScrollLayout_ = std::move(callback);
+  AfterScrollLayout = std::move(callback);
 }
 
 bool UGuiScrollView::ContainsWidget(const UGuiWidget *widget) const
 {
-  return IsDescendantOf(&content_, widget);
+  return IsDescendantOf(&ContentPanel, widget);
 }
 
 void UGuiScrollView::EnsureWidgetVisible(const UGuiWidget &widget)
 {
-  if (!IsScrollInteractionEnabled(scrollbarMode_))
+  if (!IsScrollInteractionEnabled(ScrollbarMode))
   {
     return;
   }
   const GuiRect &b = widget.GetBounds();
   const GuiRect vp = ViewportRect();
-  if (b.h <= 0 || vp.h <= 0)
+  if (b.H <= 0 || vp.H <= 0)
   {
     return;
   }
-  if (b.y < vp.y)
+  if (b.Y < vp.Y)
   {
-    scrollY_ -= vp.y - b.y;
+    ScrollY -= vp.Y - b.Y;
   }
-  else if (b.y + b.h > vp.y + vp.h)
+  else if (b.Y + b.H > vp.Y + vp.H)
   {
-    scrollY_ += (b.y + b.h) - (vp.y + vp.h);
+    ScrollY += (b.Y + b.H) - (vp.Y + vp.H);
   }
   ClampScroll();
-  LayoutContent(layoutSpacing_, layoutPadding_);
+  LayoutContent(LayoutSpacing, LayoutPadding);
 }
 
-void UGuiScrollView::LayoutContent(int spacing, int padding)
+void UGuiScrollView::LayoutContent(int spacing, int Padding)
 {
-  layoutSpacing_ = spacing;
-  layoutPadding_ = padding;
+  LayoutSpacing = spacing;
+  LayoutPadding = Padding;
   const GuiRect vp = ViewportRect();
-  const int vpW = std::max(1, vp.w);
+  const int vpW = std::max(1, vp.W);
 
-  if (afterScrollLayout_)
+  if (AfterScrollLayout)
   {
-    if (contentHeight_ <= 0)
+    if (ScrollContentHeight <= 0)
     {
-      contentHeight_ = std::max(1, vp.h);
+      ScrollContentHeight = std::max(1, vp.H);
     }
-    content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
-    afterScrollLayout_(*this);
-    contentHeight_ = std::max(vp.h, content_.GetBounds().h);
+    ContentPanel.SetBounds({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight});
+    AfterScrollLayout(*this);
+    const int contentTop = vp.Y - ScrollY;
+    ScrollContentHeight =
+        std::max(vp.H, MeasureVisibleContentExtent(ContentPanel, contentTop));
     ClampScroll();
-    content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
-    afterScrollLayout_(*this);
+    ContentPanel.SetBounds({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight});
+    AfterScrollLayout(*this);
     return;
   }
 
   std::vector<UGuiWidget *> kids;
-  for (const auto &child : content_.GetChildren())
+  for (const auto &child : ContentPanel.GetChildren())
   {
     kids.push_back(child.get());
   }
-  contentHeight_ = UGuiLayout::StackVerticalMeasure({0, 0, vpW, 100000},
-                                                    spacing, padding, kids);
+  ScrollContentHeight = UGuiLayout::StackVerticalMeasure({0, 0, vpW, 100000}, spacing,
+                                                   Padding, kids);
 
-  content_.SetBounds({vp.x, vp.y - scrollY_, vpW, contentHeight_});
-  UGuiLayout::StackVertical({vp.x, vp.y - scrollY_, vpW, contentHeight_},
-                            spacing, padding, kids);
+  ContentPanel.SetBounds({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight});
+  UGuiLayout::StackVertical({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight}, spacing,
+                            Padding, kids);
   ClampScroll();
-  if (afterScrollLayout_)
-  {
-    afterScrollLayout_(*this);
-  }
 }
 
 void UGuiScrollView::DrawScrollbar(UGuiRenderer &renderer)
 {
-  if (!theme_ || MaxScrollY() <= 0)
+  if (!Theme || MaxScrollY() <= 0)
   {
     return;
   }
   const GuiRect track = ScrollbarTrackRect();
-  renderer.DrawFilledRect(track, theme_->buttonNormal);
-  renderer.DrawFilledRect(ScrollbarThumbRect(), theme_->buttonHover);
-  renderer.DrawBorderRect(track, theme_->panelBorder, theme_->borderThickness);
+  renderer.DrawFilledRect(track, Theme->ButtonNormal);
+  renderer.DrawFilledRect(ScrollbarThumbRect(), Theme->ButtonHover);
+  renderer.DrawBorderRect(track, Theme->PanelBorder, Theme->BorderThickness);
 }
 
 void UGuiScrollView::Draw(UGuiRenderer &renderer)
 {
-  if (!visible_ || !theme_)
+  if (!Visible || !Theme)
   {
     return;
   }
   const GuiRect vp = ViewportRect();
-  renderer.DrawFilledRect(bounds_, theme_->buttonNormal);
+  renderer.DrawFilledRect(Bounds, Theme->ButtonNormal);
   renderer.PushClipRect(vp);
-  content_.Draw(renderer);
+  ContentPanel.Draw(renderer);
   renderer.PopClipRect();
   DrawScrollbar(renderer);
-  renderer.DrawBorderRect(bounds_, theme_->panelBorder,
-                          theme_->borderThickness);
+  renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
 }
 
 UGuiWidget *UGuiScrollView::HitTestFocusable(int x, int y)
 {
-  if (!visible_ || !bounds_.Contains(x, y))
+  if (!Visible || !Bounds.Contains(x, y))
   {
     return nullptr;
   }
-  return content_.HitTestFocusable(x, y);
+  const GuiRect vp = ViewportRect();
+  if (!vp.Contains(x, y))
+  {
+    return nullptr;
+  }
+  return ContentPanel.HitTestFocusable(x, y);
 }
 
 UGuiWidget *UGuiScrollView::HitTest(int x, int y)
 {
-  if (!visible_ || !bounds_.Contains(x, y))
+  if (!Visible || !Bounds.Contains(x, y))
   {
     return nullptr;
   }
-  if (UGuiWidget *hit = content_.HitTest(x, y))
+  const GuiRect vp = ViewportRect();
+  if (UGuiWidget *hit = ContentPanel.HitTest(x, y))
   {
-    return hit;
+    if (vp.Contains(x, y))
+    {
+      return hit;
+    }
+    return nullptr;
   }
   if (ViewportRect().Contains(x, y) || ScrollbarTrackRect().Contains(x, y))
   {
@@ -243,24 +266,98 @@ UGuiWidget *UGuiScrollView::HitTest(int x, int y)
   return nullptr;
 }
 
+bool UGuiScrollView::BeginDeferredTouch(const GuiMouseEvent &event)
+{
+  if (!ViewportRect().Contains(event.X, event.Y) &&
+      !ScrollbarTrackRect().Contains(event.X, event.Y))
+  {
+    return false;
+  }
+  if (MaxScrollY() <= 0)
+  {
+    return false;
+  }
+  DeferredTouchActive = true;
+  DeferredDragged = false;
+  DeferredDown = event;
+  DeferredDragStartY = event.Y;
+  DeferredDragStartScroll = ScrollY;
+  return true;
+}
+
+bool UGuiScrollView::OnDeferredMove(const GuiMouseEvent &event)
+{
+  if (!DeferredTouchActive)
+  {
+    return false;
+  }
+  const int dy = event.Y - DeferredDragStartY;
+  if (!DeferredDragged && std::abs(dy) > kGuiTouchDragSlopPx)
+  {
+    DeferredDragged = true;
+  }
+  if (DeferredDragged)
+  {
+    ScrollY = DeferredDragStartScroll - dy;
+    ClampScroll();
+    LayoutContent(LayoutSpacing, LayoutPadding);
+    return true;
+  }
+  return false;
+}
+
+bool UGuiScrollView::OnDeferredUp(const GuiMouseEvent &event)
+{
+  if (!DeferredTouchActive)
+  {
+    return false;
+  }
+  DeferredTouchActive = false;
+  if (!DeferredDragged)
+  {
+    ContentPanel.OnMouseDown(DeferredDown);
+    ContentPanel.OnMouseUp(event);
+    return true;
+  }
+  DeferredDragged = false;
+  return true;
+}
+
 bool UGuiScrollView::OnMouseDown(const GuiMouseEvent &event)
 {
-  return content_.OnMouseDown(event);
+  if (ContentPanel.HitTest(event.X, event.Y) &&
+      ContentPanel.OnMouseDown(event))
+  {
+    return true;
+  }
+  if (BeginDeferredTouch(event))
+  {
+    return true;
+  }
+  return ContentPanel.OnMouseDown(event);
 }
 
 bool UGuiScrollView::OnMouseUp(const GuiMouseEvent &event)
 {
-  return content_.OnMouseUp(event);
+  if (DeferredTouchActive)
+  {
+    return OnDeferredUp(event);
+  }
+  return ContentPanel.OnMouseUp(event);
 }
 
 bool UGuiScrollView::OnMouseMove(const GuiMouseEvent &event)
 {
-  return content_.OnMouseMove(event);
+  if (DeferredTouchActive)
+  {
+    return OnDeferredMove(event);
+  }
+  return ContentPanel.OnMouseMove(event);
 }
 
 bool UGuiScrollView::OnKey(const GuiKeyEvent &event)
 {
-  if (content_.OnKey(event))
+  if (ContentPanel.OnKey(event))
   {
     return true;
   }
@@ -269,40 +366,40 @@ bool UGuiScrollView::OnKey(const GuiKeyEvent &event)
 
 bool UGuiScrollView::OnChar(const GuiCharEvent &event)
 {
-  return content_.OnChar(event);
+  return ContentPanel.OnChar(event);
 }
 
 bool UGuiScrollView::HandleKeyScroll(const GuiKeyEvent &event)
 {
-  if (!visible_ || !IsScrollInteractionEnabled(scrollbarMode_))
+  if (!Visible || !IsScrollInteractionEnabled(ScrollbarMode))
   {
     return false;
   }
-  if (event.action != GuiKeyAction::Press &&
-      event.action != GuiKeyAction::Repeat)
+  if (event.Action != GuiKeyAction::Press &&
+      event.Action != GuiKeyAction::Repeat)
   {
     return false;
   }
   const int step = 24;
-  switch (event.keyCode)
+  switch (event.KeyCode)
   {
-  case GLFW_KEY_UP:
-    scrollY_ -= step;
+  case GuiKey::Up:
+    ScrollY -= step;
     break;
-  case GLFW_KEY_DOWN:
-    scrollY_ += step;
+  case GuiKey::Down:
+    ScrollY += step;
     break;
-  case GLFW_KEY_PAGE_UP:
-    scrollY_ -= bounds_.h;
+  case GuiKey::PageUp:
+    ScrollY -= Bounds.H;
     break;
-  case GLFW_KEY_PAGE_DOWN:
-    scrollY_ += bounds_.h;
+  case GuiKey::PageDown:
+    ScrollY += Bounds.H;
     break;
-  case GLFW_KEY_HOME:
-    scrollY_ = 0;
+  case GuiKey::Home:
+    ScrollY = 0;
     break;
-  case GLFW_KEY_END:
-    scrollY_ = MaxScrollY();
+  case GuiKey::End:
+    ScrollY = MaxScrollY();
     break;
   default:
     return false;
@@ -314,21 +411,38 @@ bool UGuiScrollView::HandleKeyScroll(const GuiKeyEvent &event)
 
 bool UGuiScrollView::OnScroll(const GuiScrollEvent &event)
 {
-  if (!visible_ || bounds_.h <= 0 ||
-      !IsScrollInteractionEnabled(scrollbarMode_))
+  if (!Visible || Bounds.H <= 0 || !IsScrollInteractionEnabled(ScrollbarMode) ||
+      MaxScrollY() <= 0)
   {
     return false;
   }
-  scrollY_ -= static_cast<int>(event.yoffset * 24);
+  const int before = ScrollY;
+  ScrollY -= static_cast<int>(event.Yoffset * 24);
   ClampScroll();
-  LayoutContent();
-  return true;
+  if (ScrollY != before)
+  {
+    LayoutContent();
+    return true;
+  }
+  return false;
 }
 
 bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!visible_ || !bounds_.Contains(x, y) ||
-      !IsScrollInteractionEnabled(scrollbarMode_))
+  if (!Visible || !Bounds.Contains(x, y))
+  {
+    return false;
+  }
+  if (ScrollbarTrackRect().Contains(x, y))
+  {
+    return OnScroll(event);
+  }
+  if (ContentPanel.ScrollAtPoint(x, y, event))
+  {
+    return true;
+  }
+  if (!ViewportRect().Contains(x, y) ||
+      !IsScrollInteractionEnabled(ScrollbarMode))
   {
     return false;
   }
@@ -337,11 +451,11 @@ bool UGuiScrollView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 
 void UGuiScrollView::CollectFocusables(std::vector<UGuiWidget *> &out)
 {
-  if (!visible_ || !enabled_)
+  if (!Visible || !Enabled)
   {
     return;
   }
-  content_.CollectFocusables(out);
+  ContentPanel.CollectFocusables(out);
 }
 
 } // namespace cutum

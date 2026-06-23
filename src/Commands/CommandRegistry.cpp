@@ -1,4 +1,4 @@
-#include "CommandRegistry.h"
+#include "Commands/CommandRegistry.h"
 
 #include <algorithm>
 #include <cctype>
@@ -7,9 +7,9 @@
 namespace cutum
 {
 
-void UCommandRegistry::Register(const std::string &name, CommandHandler handler)
+void UCommandRegistry::Register(const std::string &Name, CommandHandler handler)
 {
-  handlers_[name] = std::move(handler);
+  Handlers[Name] = std::move(handler);
 }
 
 std::vector<std::string> UCommandRegistry::Tokenize(const std::string &line)
@@ -34,8 +34,8 @@ CommandResult UCommandRegistry::ExecuteLine(const std::string &line) const
   std::string cmd = tokens[0];
   std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](unsigned char c)
                  { return static_cast<char>(std::tolower(c)); });
-  const auto it = handlers_.find(cmd);
-  if (it == handlers_.end())
+  const auto it = Handlers.find(cmd);
+  if (it == Handlers.end())
   {
     return {false, "Unknown command: " + cmd};
   }

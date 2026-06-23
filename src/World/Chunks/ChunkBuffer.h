@@ -1,0 +1,43 @@
+#pragma once
+
+#include "World/Core/IBlockWriter.h"
+#include "World/Chunks/ChunkManager.h"
+#include <unordered_map>
+
+namespace cutum
+{
+
+class UBlockWorld;
+
+class BlockWorldWriter : public IBlockWriter
+{
+public:
+  explicit BlockWorldWriter(UBlockWorld &world);
+
+  void SetBlock(glm::ivec3 worldPos, BlockId id) override;
+  BlockId GetBlock(glm::ivec3 worldPos) const override;
+
+private:
+  UBlockWorld &World;
+};
+
+class ChunkBuffer : public IBlockWriter
+{
+public:
+  void SetBlock(glm::ivec3 worldPos, BlockId id) override;
+  BlockId GetBlock(glm::ivec3 worldPos) const override;
+  bool IsEmpty() const { return Blocks.empty(); }
+  bool HasYBounds() const { return HasBounds; }
+  int GetMinY() const { return MinY; }
+  int GetMaxY() const { return MaxY; }
+  void ApplyTo(UBlockWorld &world) const;
+  void Clear();
+
+private:
+  std::unordered_map<glm::ivec3, BlockId, IVec3Hash> Blocks;
+  bool HasBounds{false};
+  int MinY{0};
+  int MaxY{-1};
+};
+
+} // namespace cutum

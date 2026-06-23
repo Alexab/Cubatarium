@@ -18,14 +18,14 @@ public:
   bool Save() const;
 
   void Append(std::string line);
-  const std::vector<std::string> &Entries() const { return entries_; }
+  const std::vector<std::string> &Entries() const { return History; }
 
-  size_t Size() const { return entries_.size(); }
+  size_t Size() const { return History.size(); }
   std::string GetFromEnd(size_t indexFromEnd) const;
 
 private:
-  std::filesystem::path filePath_;
-  std::vector<std::string> entries_;
+  std::filesystem::path FilePath;
+  std::vector<std::string> History;
 };
 
 } // namespace cutum

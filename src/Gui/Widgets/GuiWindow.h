@@ -1,7 +1,7 @@
 #ifndef GUI_WINDOW_H
 #define GUI_WINDOW_H
 
-#include "GuiPanel.h"
+#include "Gui/Widgets/GuiPanel.h"
 #include <string>
 
 namespace cutum
@@ -16,7 +16,7 @@ public:
   void Draw(UGuiRenderer &renderer) override;
 
 private:
-  std::string title_;
+  std::string Title;
   static constexpr int kTitleBarHeight = 24;
 };
 

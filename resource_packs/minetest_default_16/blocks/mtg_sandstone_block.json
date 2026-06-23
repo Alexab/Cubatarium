@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_sandstone_block",
+    "id":  493,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_sandstone_block_default_sandstone_block",
+                     "mtg_sandstone_block_default_sandstone_block",
+                     "mtg_sandstone_block_default_sandstone_block",
+                     "mtg_sandstone_block_default_sandstone_block",
+                     "mtg_sandstone_block_default_sandstone_block",
+                     "mtg_sandstone_block_default_sandstone_block"
+                 ],
+    "render":  {
+
+               }
+}
+

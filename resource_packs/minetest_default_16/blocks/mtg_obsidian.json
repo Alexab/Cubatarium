@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_obsidian",
+    "id":  474,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_obsidian_default_obsidian",
+                     "mtg_obsidian_default_obsidian",
+                     "mtg_obsidian_default_obsidian",
+                     "mtg_obsidian_default_obsidian",
+                     "mtg_obsidian_default_obsidian",
+                     "mtg_obsidian_default_obsidian"
+                 ],
+    "render":  {
+
+               }
+}
+

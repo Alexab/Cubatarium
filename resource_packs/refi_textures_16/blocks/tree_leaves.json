@@ -1,0 +1,21 @@
+﻿{
+    "name":  "tree_leaves",
+    "id":  829,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque",
+                     "leaves_opaque"
+                 ],
+    "displayName":  "Leaves",
+    "render":  {
+                   "style":  "cutout"
+               }
+}
+

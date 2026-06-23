@@ -1,15 +1,17 @@
-#include "Render/Camera/Camera.h"
-#include "Creatures/Core/Creature.h"
-#include "Creatures/Visual/CreatureAppearance.h"
-#include "Creatures/Definition/CreatureDefinitionStorage.h"
-#include "Creatures/Visual/CreatureVisualFactory.h"
-#include "World/Math/GridMath.h"
-#include "Creatures/Player/Player.h"
-#include "Creatures/Definition/SkinDefinitionStorage.h"
-#include "Creatures/Player/User.h"
-#include "Render/Engine/ViewEngine.h"
-#include "World/Core/World.h"
 #include "Activity/CreatureActivityRegistry.h"
+#include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Player/Player.h"
+#include "Creatures/Player/User.h"
+#include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Render/Engine/ViewEngine.h"
+#include "Render/Camera/Camera.h"
+#include "World/Core/World.h"
+#include "World/Math/CollisionVolume.h"
+#include "World/Math/GridMath.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -31,8 +33,28 @@ void UWorld::SetCreatureDefinitionStorage(
 
 void UWorld::RegisterDefaultActivityAgents()
 {
+  std::vector<std::pair<CreatureId, std::string>> rebind;
+  for (const auto &entry : Creatures)
+  {
+    if (!entry.second)
+    {
+      continue;
+    }
+    const CreatureDefinition *def =
+        GetCreatureDefinition(entry.second->GetTypeId());
+    if (!def || def->role == CreatureRole::ControlledDefault ||
+        def->behavior.Id.empty() || def->behavior.Id == "none")
+    {
+      continue;
+    }
+    rebind.emplace_back(entry.first, def->behavior.Id);
+  }
   ActivityDirector.Clear();
   RegisterDefaultCreatureActivityAgents(ActivityDirector);
+  for (const auto &pair : rebind)
+  {
+    ActivityDirector.OnCreatureAdded(pair.first, pair.second);
+  }
 }
 
 std::optional<ControlledCreatureInfo>
@@ -48,7 +70,7 @@ UWorld::QueryControlledCreatureInfo() const
     return std::nullopt;
   }
   ControlledCreatureInfo info;
-  info.id = ControlledCreatureId;
+  info.Id = ControlledCreatureId;
   info.eyePosition = controlled->GetEyePosition();
   return info;
 }
@@ -75,21 +97,53 @@ std::vector<CreatureId> UWorld::CreaturesInRadius(const glm::vec3 &center,
   return out;
 }
 
+bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
+                                 const glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks) const
+{
+  return cutum::CanCreatureOccupyAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+bool UWorld::HabitatAllowsAt(CreatureHabitat habitat,
+                             const glm::vec3 &bodyOrigin,
+                             const glm::vec3 &sizeBlocks) const
+{
+  return cutum::HabitatAllowsAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+bool UWorld::HabitatAllowsMovementAt(CreatureHabitat habitat,
+                                     const glm::vec3 &bodyOrigin,
+                                     const glm::vec3 &sizeBlocks) const
+{
+  return cutum::HabitatAllowsMovementAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+void UWorld::ClearCreaturesAndUsers()
+{
+  ActivityDirector.Clear();
+  Creatures.clear();
+  NextCreatureId = 1;
+  PlayerCreatureId = 0;
+  ControlledCreatureId = 0;
+  CurrentUserName.clear();
+  Users.clear();
+}
+
 void UWorld::SetSkinDefinitionStorage(
     std::shared_ptr<USkinDefinitionStorage> storage)
 {
   SkinDefinitions = std::move(storage);
 }
 
-UCreature *UWorld::GetCreature(CreatureId id)
+UCreature *UWorld::GetCreature(CreatureId Id)
 {
-  const auto it = Creatures.find(id);
+  const auto it = Creatures.find(Id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
 
-const UCreature *UWorld::GetCreature(CreatureId id) const
+const UCreature *UWorld::GetCreature(CreatureId Id) const
 {
-  const auto it = Creatures.find(id);
+  const auto it = Creatures.find(Id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
 
@@ -105,9 +159,14 @@ const UCreature *UWorld::GetControlledCreature() const
 
 UCreature *UWorld::GetPlayerCreature() { return GetCreature(PlayerCreatureId); }
 
-bool UWorld::SetControlledCreature(CreatureId id)
+const UCreature *UWorld::GetPlayerCreature() const
 {
-  if (id == 0 || !GetCreature(id))
+  return GetCreature(PlayerCreatureId);
+}
+
+bool UWorld::SetControlledCreature(CreatureId Id)
+{
+  if (Id == 0 || !GetCreature(Id))
   {
     return false;
   }
@@ -118,8 +177,8 @@ bool UWorld::SetControlledCreature(CreatureId id)
       prev->SetPossessed(false);
     }
   }
-  ControlledCreatureId = id;
-  if (UCreature *c = GetCreature(id))
+  ControlledCreatureId = Id;
+  if (UCreature *c = GetCreature(Id))
   {
     c->SetPossessed(true);
     if (const CreatureDefinition *def = GetCreatureDefinition(c->GetTypeId()))
@@ -163,18 +222,39 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
     return 0;
   }
 
-  const CreatureId id = NextCreatureId++;
+  const glm::vec3 spawnOrigin =
+      AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
+  const glm::vec3 spawnSize = def->bounds.restSizeBlocks;
+  if (def->role != CreatureRole::ControlledDefault)
+  {
+    if (!cutum::HabitatAllowsAtForSpawn(*this, def->habitat, spawnOrigin,
+                                        spawnSize))
+    {
+      std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
+                << std::endl;
+      return 0;
+    }
+    const CollisionVolume vol = CollisionVolumeFromBody(spawnOrigin, spawnSize);
+    if (CheckCreatureCollisionVolume(vol, 0) || CheckBlockCollisionVolume(vol))
+    {
+      std::cerr << "SpawnCreature: no space for '" << speciesId << "'"
+                << std::endl;
+      return 0;
+    }
+  }
+
+  const CreatureId Id = NextCreatureId++;
   const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
 
   std::unique_ptr<UCreature> creature;
   if (def->role == CreatureRole::ControlledDefault)
   {
-    creature = std::make_unique<UPlayer>(id, speciesId, bodyOrigin);
+    creature = std::make_unique<UPlayer>(Id, speciesId, spawnOrigin);
   }
   else
   {
     creature =
-        std::make_unique<UCreature>(id, speciesId, bodyOrigin, eyeOffset);
+        std::make_unique<UCreature>(Id, speciesId, spawnOrigin, eyeOffset);
   }
 
   creature->GetBoundsMutable().profile = def->bounds;
@@ -185,35 +265,52 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   creature->SetCapabilities(def->locomotion);
   creature->SetLocomotionArchetype(def->locomotionArchetype);
   creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-  creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
+  creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
       creature->GetBounds().currentSizeBlocks, def->eyeHeight);
+  if (def->habitat != CreatureHabitat::Terrestrial)
+  {
+    creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
+  }
   if (!skinId.empty())
   {
     creature->SetSkinId(skinId);
   }
   creature->SetVisual(CreateCreatureVisual(*def));
-  Creatures[id] = std::move(creature);
-  SnapCreatureFeetToGround(*Creatures[id]);
+  Creatures[Id] = std::move(creature);
+  if (def->habitat == CreatureHabitat::Terrestrial)
+  {
+    SnapCreatureFeetToGround(*Creatures[Id]);
+  }
+  else if (def->habitat == CreatureHabitat::Amphibious)
+  {
+    const EnvironmentSample env = ProbeEnvironmentAt(
+        *this, Creatures[Id]->GetBodyOrigin(),
+        def->bounds.restSizeBlocks);
+    if (!env.inWater)
+    {
+      SnapCreatureFeetToGround(*Creatures[Id]);
+    }
+  }
   if (def->role != CreatureRole::ControlledDefault)
   {
-    ActivityDirector.OnCreatureAdded(id, def->behavior.id);
+    ActivityDirector.OnCreatureAdded(Id, def->behavior.Id);
   }
-  return id;
+  return Id;
 }
 
-void UWorld::RemoveCreature(CreatureId id)
+void UWorld::RemoveCreature(CreatureId Id)
 {
-  if (ControlledCreatureId == id)
+  if (ControlledCreatureId == Id)
   {
     ControlledCreatureId = PlayerCreatureId;
   }
-  if (PlayerCreatureId == id)
+  if (PlayerCreatureId == Id)
   {
     PlayerCreatureId = 0;
   }
-  ActivityDirector.OnCreatureRemoved(id);
-  Creatures.erase(id);
+  ActivityDirector.OnCreatureRemoved(Id);
+  Creatures.erase(Id);
 }
 
 void UWorld::ForEachCreature(const std::function<void(UCreature &)> &fn)
@@ -331,8 +428,9 @@ bool RayIntersectsAabb(const glm::vec3 &origin, const glm::vec3 &dir,
   return tmin >= 0.0f && tmin <= maxDistance;
 }
 
-glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float eyeHeight)
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
 {
+  const float eyeHeight = ResolveViewerEyeHeight(world);
   const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
   glm::vec3 bodyOrigin = world.GetSpawnPoint();
   bodyOrigin.y -= eyeOffset.y;
@@ -358,6 +456,12 @@ glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float eyeHeight)
   return bodyOrigin;
 }
 
+glm::vec3 ComputeSpawnProbeOrigin(UWorld &world, const CreatureDefinition &def)
+{
+  const glm::vec3 viewProbe = ComputeSpawnBodyOriginAhead(world);
+  return SnapSpawnProbeToHabitat(world, def, viewProbe);
+}
+
 } // namespace
 
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
@@ -372,9 +476,45 @@ bool UWorld::SpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin =
-      ComputeSpawnBodyOriginAhead(*this, def->eyeHeight);
-  return SpawnCreature(speciesId, bodyOrigin) != 0;
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  if (!CanSpawnCreatureAt(*this, *def, bodyOrigin))
+  {
+    return false;
+  }
+  const glm::vec3 adjusted = AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
+  return SpawnCreature(speciesId, adjusted) != 0;
+}
+
+bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
+{
+  const CreatureDefinition *def =
+      CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
+  if (!def)
+  {
+    return false;
+  }
+  if (!def->catalog.spawnable && def->role != CreatureRole::ControlledDefault)
+  {
+    return false;
+  }
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  return CanSpawnCreatureAt(*this, *def, bodyOrigin);
+}
+
+std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
+{
+  const CreatureDefinition *def =
+      CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
+  if (!def)
+  {
+    return u8"Неизвестный вид";
+  }
+  if (!def->catalog.spawnable && def->role != CreatureRole::ControlledDefault)
+  {
+    return u8"Нельзя спавнить";
+  }
+  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  return ::cutum::GetCreatureSpawnBlockedHint(*this, *def, bodyOrigin);
 }
 
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,
@@ -468,6 +608,43 @@ void UWorld::LinkUsersToPlayerCreatures()
   }
 }
 
+namespace
+{
+
+void RemapLegacySpeciesType(std::string &type)
+{
+  if (type == "test_mob" || type == "scout")
+  {
+    type = "sheep";
+  }
+  else if (type == "brute")
+  {
+    type = "sand_monster";
+  }
+  else if (type == "drifter")
+  {
+    type = "wolf";
+  }
+}
+
+void RemapLegacySkinId(std::string &skinId)
+{
+  if (skinId == "scout_golden")
+  {
+    skinId = "sheep_wool_golden";
+  }
+  else if (skinId == "drifter_ice")
+  {
+    skinId = "wolf_snow";
+  }
+  else if (skinId == "brute_rust")
+  {
+    skinId.clear();
+  }
+}
+
+} // namespace
+
 void UWorld::LoadCreatures(const std::string &file_name)
 {
   if (!std::filesystem::exists(file_name))
@@ -491,16 +668,14 @@ void UWorld::LoadCreatures(const std::string &file_name)
       {
         continue;
       }
-      std::string type = c.value("type", "scout");
-      if (type == "test_mob")
-      {
-        type = "scout";
-      }
+      std::string type = c.value("type", "sheep");
+      RemapLegacySpeciesType(type);
       if (type == "player")
       {
         continue;
       }
-      const std::string skin = c.value("skin_id", "");
+      std::string skin = c.value("skin_id", "");
+      RemapLegacySkinId(skin);
       glm::vec3 bodyOrigin(0.0f);
       if (c.contains("body_origin") && c["body_origin"].is_array() &&
           c["body_origin"].size() == 3)
@@ -510,6 +685,13 @@ void UWorld::LoadCreatures(const std::string &file_name)
                                c["body_origin"][2].get<float>());
       }
       const CreatureDefinition *def = CreatureDefinitions->Get(type);
+      if (!def)
+      {
+        std::cerr << "LoadCreatures: unknown type '" << type
+                  << "', falling back to sheep" << std::endl;
+        type = "sheep";
+      }
+      def = CreatureDefinitions->Get(type);
       if (!def)
       {
         continue;
@@ -523,7 +705,7 @@ void UWorld::LoadCreatures(const std::string &file_name)
       creature->SetCapabilities(def->locomotion);
       creature->SetLocomotionArchetype(def->locomotionArchetype);
       creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-      creature->SetWalkCycleHz(def->visual.animation.walkCycleHz);
+      creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
       creature->GetLocomotion().SetCollisionProfile(
           creature->GetBounds().currentSizeBlocks, def->eyeHeight);
       if (!skin.empty())
@@ -532,14 +714,18 @@ void UWorld::LoadCreatures(const std::string &file_name)
       }
       creature->SetVisual(CreateCreatureVisual(*def));
       creature->SetOrientation(c.value("yaw", 0.0f), c.value("pitch", 0.0f));
-      if (c.value("movement_mode", "walking") == "flying")
+      if (def->habitat != CreatureHabitat::Terrestrial ||
+          c.value("movement_mode", "walking") == "flying")
       {
         creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
       }
       creature->GetInventory().DeserializeFromJson(c);
-      SnapCreatureFeetToGround(*creature);
+      if (def->habitat == CreatureHabitat::Terrestrial)
+      {
+        SnapCreatureFeetToGround(*creature);
+      }
       Creatures[id] = std::move(creature);
-      ActivityDirector.OnCreatureAdded(id, def->behavior.id);
+      ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
       NextCreatureId = std::max(NextCreatureId, id + 1);
     }
     if (PlayerCreatureId != 0 && ControlledCreatureId == 0)

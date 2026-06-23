@@ -1,0 +1,19 @@
+﻿{
+    "name":  "brewing_stand",
+    "id":  350,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "wood",
+                     "wood",
+                     "wood",
+                     "wood",
+                     "brewingStand",
+                     "brewingStand_base"
+                 ],
+    "render":  {
+
+               }
+}
+

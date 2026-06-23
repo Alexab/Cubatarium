@@ -1,8 +1,8 @@
 #ifndef CREATUREVISUALRIGID_H
 #define CREATUREVISUALRIGID_H
 
-#include "Pose/CreaturePoseParams.h"
 #include "Creatures/Visual/CreatureVisual.h"
+#include "Pose/CreaturePoseParams.h"
 #include <unordered_map>
 
 namespace cutum
@@ -18,12 +18,11 @@ public:
   void SubmitDraw(UGeometryEngine &engine, const glm::mat4 &viewProj) override;
 
 private:
-  float headYaw_{0.0f};
-  std::unordered_map<std::string, CreaturePartPose> partPoses_;
-  float bodyYaw_{-90.0f};
-  float crouchUpperDrop_{0.0f};
+  std::unordered_map<std::string, CreaturePartPose> PartPoses;
+  float BodyYaw{-90.0f};
+  float CrouchUpperDrop{0.0f};
   glm::vec3 BodyOrigin{0.0f};
-  glm::vec3 sizeBlocks_{0.8f, 1.6f, 0.8f};
+  glm::vec3 SizeBlocks{0.8f, 1.6f, 0.8f};
 };
 
 } // namespace cutum

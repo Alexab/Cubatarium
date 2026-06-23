@@ -1,0 +1,19 @@
+﻿{
+    "name":  "farmland_dry",
+    "id":  757,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "dirt",
+                     "farmland_dry",
+                     "dirt"
+                 ],
+    "render":  {
+
+               }
+}
+

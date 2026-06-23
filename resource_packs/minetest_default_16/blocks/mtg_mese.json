@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_mese",
+    "id":  471,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_mese_default_mese_block",
+                     "mtg_mese_default_mese_block",
+                     "mtg_mese_default_mese_block",
+                     "mtg_mese_default_mese_block",
+                     "mtg_mese_default_mese_block",
+                     "mtg_mese_default_mese_block"
+                 ],
+    "render":  {
+
+               }
+}
+

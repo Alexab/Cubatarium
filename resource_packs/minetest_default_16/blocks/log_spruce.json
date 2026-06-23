@@ -1,0 +1,19 @@
+﻿{
+    "name":  "log_spruce",
+    "id":  398,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "tree_spruce",
+                     "tree_spruce",
+                     "tree_spruce",
+                     "tree_spruce",
+                     "wood_spruce",
+                     "wood_spruce"
+                 ],
+    "render":  {
+
+               }
+}
+

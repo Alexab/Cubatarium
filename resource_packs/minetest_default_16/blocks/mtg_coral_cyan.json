@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_coral_cyan",
+    "id":  428,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_coral_cyan_default_coral_skeleton",
+                     "mtg_coral_cyan_default_coral_skeleton",
+                     "mtg_coral_cyan_default_coral_skeleton",
+                     "mtg_coral_cyan_default_coral_skeleton",
+                     "mtg_coral_cyan_default_coral_skeleton",
+                     "mtg_coral_cyan_default_coral_skeleton"
+                 ],
+    "render":  {
+
+               }
+}
+

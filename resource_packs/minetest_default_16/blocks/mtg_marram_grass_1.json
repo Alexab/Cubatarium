@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_marram_grass_1",
+    "id":  470,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_marram_grass_1_default_marram_grass_1",
+                     "mtg_marram_grass_1_default_marram_grass_1",
+                     "mtg_marram_grass_1_default_marram_grass_1",
+                     "mtg_marram_grass_1_default_marram_grass_1",
+                     "mtg_marram_grass_1_default_marram_grass_1",
+                     "mtg_marram_grass_1_default_marram_grass_1"
+                 ],
+    "render":  {
+
+               }
+}
+

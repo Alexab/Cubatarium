@@ -1,0 +1,74 @@
+license: CC0-1.0
+license_text: |
+  Seamless Pattern Pack (CC0). Ragnar Random / OpenGameArt.
+  https://opengameart.org/content/seamless-pattern-pack
+  Curated terrain/decorative subset for Cubatarium.
+blocks:
+  dirt: dirt
+  stone: stone
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  gravel: gravel
+  snow: snow
+  clay: clay
+  brick: brick
+  obsidian: obsidian
+  ice: ice
+  glass:
+    faces: [glass, glass, glass, glass, glass, glass]
+    types: [building]
+    render: { transparent: true }
+  hellrock: hellrock
+  bedrock: bedrock
+  sandstone: sandstone
+  stoneMoss: stoneMoss
+  stonebricksmooth: stonebricksmooth
+  stonebricksmooth_carved: stonebricksmooth_carved
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  tree_log:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+    types: [natural]
+  tree_leaves:
+    faces: [leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque, leaves_opaque]
+    types: [natural]
+  oreCoal: oreCoal
+  oreIron: oreIron
+  oreGold: oreGold
+  oreDiamond: oreDiamond
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+  wool_3: cloth_3
+textures:
+  dirt: dirt.png
+  stone: cobblestone.png
+  grass_side: grass_vert_00.png
+  grass_top: grass.png
+  sand: beach_sand.png
+  gravel: gravel_16x16_00.png
+  snow: snow.png
+  clay: dirt.png
+  brick: bricks.png
+  obsidian: metal.png
+  ice: snow.png
+  glass: blue_textile.png
+  hellrock: stone.png
+  bedrock: stone.png
+  sandstone: sand.png
+  stoneMoss: grass.png
+  stonebricksmooth: stone.png
+  stonebricksmooth_carved: bricks2.png
+  tree_side: dirt.png
+  tree_top: dirt.png
+  leaves_opaque: grass.png
+  oreCoal: blue_coal.png
+  oreIron: metal.png
+  oreGold: metal.png
+  oreDiamond: metal.png
+  cloth_0: blue_textile.png
+  cloth_1: red_textile.png
+  cloth_2: blue_textile.png
+  cloth_3: green_textile.png

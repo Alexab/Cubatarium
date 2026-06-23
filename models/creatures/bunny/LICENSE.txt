@@ -1,0 +1,4 @@
+Source file: mobs_bunny_grey.png
+Upstream: mobs_animal/textures/mobs_bunny_grey.png
+License: MIT
+Attribution: mobs_animal — TenPlus1

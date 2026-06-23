@@ -8,14 +8,14 @@
 namespace cutum
 {
 
-class Terrain : public UObject
+class UTerrain : public UObject
 {
 public:
-  Terrain() = default;
+  UTerrain() = default;
   virtual void Generate() = 0;
 };
 
-class UTerrainPlane : public Terrain
+class UTerrainPlane : public UTerrain
 {
 public:
   UTerrainPlane();

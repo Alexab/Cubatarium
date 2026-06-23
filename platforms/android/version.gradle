@@ -1,0 +1,119 @@
+// Mirrors cmake/GetVersionFromGit.cmake for Android versionName / APK filename.
+
+ext.resolveCubatariumVersionCode = { File repoRoot ->
+    def gitRun = { List<String> args ->
+        def proc = ["git"] + args
+        def pb = new ProcessBuilder(proc)
+        pb.directory(repoRoot)
+        pb.redirectErrorStream(true)
+        def process = pb.start()
+        def output = process.inputStream.getText("UTF-8").trim()
+        def rc = process.waitFor()
+        return [rc, output]
+    }
+
+    def propsFile = new File(repoRoot, "platforms/android/version.properties")
+    if (propsFile.exists()) {
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        def override = props.getProperty("versionCode")
+        if (override != null && override.isInteger()) {
+            return override.toInteger()
+        }
+    }
+
+    def (insideRc, insideOut) = gitRun(["rev-parse", "--is-inside-work-tree"])
+    if (insideRc == 0 && insideOut == "true") {
+        def (countRc, countOut) = gitRun(["rev-list", "--count", "HEAD"])
+        if (countRc == 0 && countOut.isInteger()) {
+            return countOut.toInteger()
+        }
+    }
+
+    return 1
+}
+
+ext.resolveCubatariumVersion = { File repoRoot ->
+    final String fallback = "0.0.1.1"
+    String resolved = fallback
+
+    def gitRun = { List<String> args ->
+        def proc = ["git"] + args
+        def pb = new ProcessBuilder(proc)
+        pb.directory(repoRoot)
+        pb.redirectErrorStream(true)
+        def process = pb.start()
+        def output = process.inputStream.getText("UTF-8").trim()
+        def rc = process.waitFor()
+        return [rc, output]
+    }
+
+    def normalizeSemverTag = { String tag ->
+        String t = tag
+        if (t ==~ /^v(.+)$/) {
+            t = (t =~ /^v(.+)$/)[0][1]
+        }
+        if (t ==~ /^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$/) {
+            return t
+        }
+        return null
+    }
+
+    def nearestTagName = { String describe ->
+        def semver = normalizeSemverTag(describe)
+        if (semver) {
+            return semver
+        }
+        def matcher = (describe =~ /^([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)-[0-9]+-g[0-9a-fA-F]+$/)
+        if (matcher.matches()) {
+            return matcher[0][1]
+        }
+        int dash = describe.indexOf('-')
+        if (dash > 0) {
+            def prefix = describe.substring(0, dash)
+            def prefixSemver = normalizeSemverTag(prefix)
+            if (prefixSemver) {
+                return prefixSemver
+            }
+        }
+        return null
+    }
+
+    def sanitize = { String version ->
+        return version
+            .replace('\\', '_')
+            .replace('"', '_')
+            .replaceAll(/[\r\n]/, '')
+    }
+
+    def (insideRc, insideOut) = gitRun(["rev-parse", "--is-inside-work-tree"])
+    if (insideRc != 0 || insideOut != "true") {
+        return sanitize(resolved)
+    }
+
+    def (exactRc, exactOut) = gitRun(["describe", "--tags", "--exact-match", "HEAD"])
+    if (exactRc == 0) {
+        def exactSemver = normalizeSemverTag(exactOut)
+        if (exactSemver) {
+            return sanitize(exactSemver)
+        }
+    }
+
+    String nearestTag = null
+    def (describeRc, describeOut) = gitRun(["describe", "--tags", "--abbrev=0", "HEAD"])
+    if (describeRc == 0) {
+        nearestTag = nearestTagName(describeOut)
+    }
+
+    def (branchRc, branchOut) = gitRun(["rev-parse", "--abbrev-ref", "HEAD"])
+    String branch = branchRc == 0 ? branchOut.replace('/', '-') : "unknown"
+
+    def (hashRc, hashOut) = gitRun(["rev-parse", "--short=7", "HEAD"])
+    String hash = hashRc == 0 ? hashOut : "0000000"
+
+    if (nearestTag) {
+        resolved = "${nearestTag}-${branch}-${hash}"
+    }
+
+    return sanitize(resolved)
+}

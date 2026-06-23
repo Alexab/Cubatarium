@@ -20,15 +20,15 @@ class UWanderActivityAgent : public ICreatureActivityAgent
 {
 public:
   const char *GetBehaviorId() const override { return "wander"; }
-  void OnCreatureAdded(CreatureId id) override;
-  void OnCreatureRemoved(CreatureId id) override;
+  void OnCreatureAdded(CreatureId Id) override;
+  void OnCreatureRemoved(CreatureId Id) override;
   void Tick(IWorldPerception &perception, ICreatureActivitySink &sink,
             float dt) override;
 
 private:
-  void ResetWanderState(CreatureId id, float intervalMin, float intervalMax);
+  void ResetWanderState(CreatureId Id, float intervalMin, float intervalMax);
 
-  std::unordered_set<CreatureId> members_;
+  std::unordered_set<CreatureId> Members;
   std::unordered_map<CreatureId, WanderAgentState> State;
 };
 

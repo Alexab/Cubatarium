@@ -1,0 +1,10 @@
+{
+  "grass": [
+    {
+      "faces": [
+        "top"
+      ],
+      "stem": "grass_top"
+    }
+  ]
+}

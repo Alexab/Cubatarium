@@ -1,4 +1,5 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
+#include <functional>
 #include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
 
@@ -10,12 +11,16 @@ namespace
 
 void GenerateAllColumnsInChunkRange(IWorldGenPipeline &pipeline, int centerX,
                                     int centerZ, int minWorldX, int maxWorldX,
-                                    int minWorldZ, int maxWorldZ)
+                                    int minWorldZ, int maxWorldZ,
+                                    WorldGenColumnProgressFn onProgress)
 {
   const int minCx = FloorDiv(minWorldX, CHUNK_SIZE);
   const int maxCx = FloorDiv(maxWorldX, CHUNK_SIZE);
   const int minCz = FloorDiv(minWorldZ, CHUNK_SIZE);
   const int maxCz = FloorDiv(maxWorldZ, CHUNK_SIZE);
+  const int totalColumns = (maxCx - minCx + 1) * CHUNK_SIZE *
+                           (maxCz - minCz + 1) * CHUNK_SIZE;
+  int done = 0;
   for (int cx = minCx; cx <= maxCx; ++cx)
   {
     for (int cz = minCz; cz <= maxCz; ++cz)
@@ -25,6 +30,11 @@ void GenerateAllColumnsInChunkRange(IWorldGenPipeline &pipeline, int centerX,
         for (int lz = 0; lz < CHUNK_SIZE; ++lz)
         {
           pipeline.GenerateColumn(cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz);
+          ++done;
+          if (onProgress)
+          {
+            onProgress(done, totalColumns);
+          }
         }
       }
     }
@@ -33,7 +43,7 @@ void GenerateAllColumnsInChunkRange(IWorldGenPipeline &pipeline, int centerX,
 
 } // namespace
 
-IWorldGenPipeline::IWorldGenPipeline(WorldGenContext ctx) : ctx_(ctx) {}
+IWorldGenPipeline::IWorldGenPipeline(WorldGenContext ctx) : Ctx(ctx) {}
 
 glm::vec3 IWorldGenPipeline::DefaultSpawnPosition(int worldX, int worldZ,
                                                   float eyeHeight) const
@@ -45,19 +55,21 @@ glm::vec3 IWorldGenPipeline::DefaultSpawnPosition(int worldX, int worldZ,
 }
 
 void IWorldGenPipeline::GenerateSpawnPatch(int centerX, int centerZ,
-                                           int radiusBlocks)
+                                           int radiusBlocks,
+                                           WorldGenColumnProgressFn onProgress)
 {
   GenerateAllColumnsInChunkRange(
       *this, centerX, centerZ, centerX - radiusBlocks, centerX + radiusBlocks,
-      centerZ - radiusBlocks, centerZ + radiusBlocks);
+      centerZ - radiusBlocks, centerZ + radiusBlocks, std::move(onProgress));
 }
 
 void IWorldGenPipeline::GenerateFullPatch(int centerX, int centerZ,
-                                          int halfExtent)
+                                          int halfExtent,
+                                          WorldGenColumnProgressFn onProgress)
 {
   GenerateAllColumnsInChunkRange(*this, centerX, centerZ, centerX - halfExtent,
                                  centerX + halfExtent, centerZ - halfExtent,
-                                 centerZ + halfExtent);
+                                 centerZ + halfExtent, std::move(onProgress));
 }
 
 } // namespace cutum

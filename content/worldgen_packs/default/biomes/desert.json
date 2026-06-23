@@ -1,0 +1,21 @@
+{
+  "id": "desert",
+  "height": {
+    "base_offset": -1,
+    "amplitude_mul": 0.55,
+    "volatility_mul": 0.5
+  },
+  "palette": {
+    "surface": "sand",
+    "subsurface": "sandstone"
+  },
+  "sub_biomes": {
+    "dunes": {
+      "subsurface": "sandstone",
+      "vegetation_weight_mul": 0.85
+    },
+    "scrub_desert": {
+      "vegetation_weight_mul": 1.15
+    }
+  }
+}

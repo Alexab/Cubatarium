@@ -1,10 +1,13 @@
 #ifndef IN_GAME_HUD_SCREEN_H
 #define IN_GAME_HUD_SCREEN_H
 
-#include "Gui/Core/GuiScreenBase.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include <memory>
 #include <vector>
+#if defined(__ANDROID__)
+#include <functional>
+#endif
 
 namespace cutum
 {
@@ -14,6 +17,7 @@ class IGuiIconSource;
 class UGuiSlot;
 class UGuiPanel;
 class UGuiLabel;
+class UGuiRenderer;
 struct GuiTheme;
 
 class UInGameHudScreen : public UGuiScreenBase
@@ -21,6 +25,7 @@ class UInGameHudScreen : public UGuiScreenBase
 public:
   UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
                    IGuiIconSource *icons);
+  ~UInGameHudScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out);
 
@@ -28,6 +33,16 @@ public:
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;
   void SetPointerPosition(int x, int y);
+#if defined(__ANDROID__)
+  void ConfigureTouchControls(class UTouchInputBridge *bridge,
+                              std::function<void()> onMenu,
+                              std::function<void()> onInventory,
+                              std::function<void()> onConsole,
+                              std::function<void()> onJumpPress);
+  bool RouteTouchMove(int PointerId, int x, int y);
+  void ReleaseJoystickCapture();
+  void ReleaseTouchCaptures();
+#endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).
   void SyncSlotIcons();
@@ -38,16 +53,20 @@ private:
   void UpdateSlotData();
   void UpdateTooltips();
 
-  UGameSession *session_{nullptr};
-  IGuiIconSource *icons_{nullptr};
-  const GuiTheme *theme_;
-  UGuiPanel *rootPanel_{nullptr};
-  std::vector<UGuiSlot *> primarySlots_;
-  std::vector<UGuiSlot *> secondarySlots_;
-  UGuiLabel *tooltip_{nullptr};
-  int pointerX_{-1};
-  int pointerY_{-1};
-  bool hotbarBuilt_{false};
+  UGameSession *Session{nullptr};
+  IGuiIconSource *Icons{nullptr};
+  const GuiTheme *Theme;
+  UGuiPanel *RootPanel{nullptr};
+  std::vector<UGuiSlot *> PrimarySlots;
+  std::vector<UGuiSlot *> SecondarySlots;
+  UGuiLabel *Tooltip{nullptr};
+  UGuiRenderer *Renderer{nullptr};
+  int PointerX{-1};
+  int PointerY{-1};
+  bool HotbarBuilt{false};
+#if defined(__ANDROID__)
+  std::unique_ptr<class UGuiTouchControls> TouchControls;
+#endif
 };
 
 } // namespace cutum

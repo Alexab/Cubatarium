@@ -2,6 +2,7 @@
 #define BLOCKDEFINITION_H
 
 #include "World/Math/BlockTypes.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
@@ -13,24 +14,24 @@ namespace cutum
 
 struct BlockAnimationSpec
 {
-  int frameCount{1};
-  int frametimeTicks{2};
-  bool interpolate{false};
+  int FrameCount{1};
+  int FrametimeTicks{2};
+  bool Interpolate{false};
 };
 
 struct BlockMovementPhysics
 {
-  float occupancy{1.0f};
-  float dragHorizontal{0.0f};
-  float dragVertical{0.0f};
-  float sinkSpeed{0.0f};
-  float riseSpeed{0.0f};
-  bool damageOnContact{false};
+  float Occupancy{1.0f};
+  float DragHorizontal{0.0f};
+  float DragVertical{0.0f};
+  float SinkSpeed{0.0f};
+  float RiseSpeed{0.0f};
+  bool DamageOnContact{false};
 };
 
 struct BlockPhysicsProfile
 {
-  BlockMovementPhysics movement;
+  BlockMovementPhysics Movement;
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);
 };
@@ -40,40 +41,54 @@ enum class BlockRenderStyle
   UCube,
   Fluid,
   Cross,
+  Cutout,
 };
 
 struct FluidViewProfile
 {
-  glm::vec3 fogColor{0.02f, 0.12f, 0.22f};
-  float fogStart{0.0f};
-  float fogEnd{24.0f};
-  float fogMinBlend{0.0f};
-  glm::vec3 overlayColor{0.0f};
-  float overlayAlpha{0.0f};
+  glm::vec3 FogColor{0.02f, 0.12f, 0.22f};
+  float FogStart{0.0f};
+  float FogEnd{24.0f};
+  float FogMinBlend{0.0f};
+  glm::vec3 OverlayColor{0.0f};
+  float OverlayAlpha{0.0f};
 };
 
 struct BlockRenderProfile
 {
-  bool transparent{false};
-  bool doubleSided{false};
-  BlockRenderStyle style{BlockRenderStyle::UCube};
-  FluidViewProfile fluidView;
+  bool Transparent{false};
+  bool DoubleSided{false};
+  BlockRenderStyle Style{BlockRenderStyle::UCube};
+  FluidViewProfile FluidView;
 };
 
 struct BlockDefinition
 {
-  std::string name;
-  BlockId id{BLOCK_AIR};
-  BlockAnimationSpec animation;
-  BlockPhysicsProfile physics;
-  BlockRenderProfile render;
-  std::vector<std::string> types;
+  std::string Name;
+  std::string DisplayName;
+  BlockId Id{BLOCK_AIR};
+  BlockAnimationSpec Animation;
+  BlockPhysicsProfile Physics;
+  BlockRenderProfile Render;
+  std::vector<std::string> Types;
 };
+
+struct ParsedBlockJson
+{
+  BlockDefinition Definition;
+  std::array<std::string, 6> TextureStems{};
+  bool Valid{false};
+};
+
+bool IsReservedBlockName(const std::string &name);
+
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
+                                   bool useStablePackId = false);
 
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json &j);
 BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j);
 BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j);
-void ApplyRenderPresetDefaults(BlockRenderProfile &render,
+void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
                                const std::string &physicsPreset);
 
 } // namespace cutum

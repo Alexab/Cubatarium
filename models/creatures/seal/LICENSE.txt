@@ -1,0 +1,4 @@
+Source file: textureseal.png
+Upstream: animalworld/textures/textureseal.png
+License: MIT
+Attribution: animalworld — Skandarella

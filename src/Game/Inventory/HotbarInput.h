@@ -1,8 +1,12 @@
 #ifndef HOTBAR_INPUT_H
 #define HOTBAR_INPUT_H
 
+#if defined(__ANDROID__)
+#include "App/Platform/GlfwKeyCompat.h"
+#else
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 
 namespace cutum
 {

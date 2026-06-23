@@ -1,0 +1,19 @@
+﻿{
+    "name":  "red_mushroom_block",
+    "id":  540,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red",
+                     "mushroom_skin_red"
+                 ],
+    "render":  {
+
+               }
+}
+

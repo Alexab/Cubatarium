@@ -8,7 +8,7 @@ namespace cutum
 
 struct ContentType
 {
-  std::string id;
+  std::string Id;
   std::string displayName;
   int sortOrder{0};
 };

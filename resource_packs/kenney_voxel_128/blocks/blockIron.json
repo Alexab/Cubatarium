@@ -1,0 +1,20 @@
+﻿{
+    "name":  "blockIron",
+    "id":  56,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "blockIron",
+                     "blockIron",
+                     "blockIron",
+                     "blockIron",
+                     "blockIron",
+                     "blockIron"
+                 ],
+    "displayName":  "Iron Block",
+    "render":  {
+
+               }
+}
+

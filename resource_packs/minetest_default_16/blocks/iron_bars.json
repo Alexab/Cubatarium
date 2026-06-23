@@ -1,0 +1,19 @@
+﻿{
+    "name":  "iron_bars",
+    "id":  383,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron",
+                     "fenceIron"
+                 ],
+    "render":  {
+
+               }
+}
+

@@ -1,0 +1,24 @@
+﻿{
+    "name":  "mtg_acacia_leaves",
+    "id":  404,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_acacia_leaves_default_acacia_leaves",
+                     "mtg_acacia_leaves_default_acacia_leaves",
+                     "mtg_acacia_leaves_default_acacia_leaves",
+                     "mtg_acacia_leaves_default_acacia_leaves",
+                     "mtg_acacia_leaves_default_acacia_leaves",
+                     "mtg_acacia_leaves_default_acacia_leaves"
+                 ],
+    "render":  {
+                   "style":  "cutout"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                }
+}
+

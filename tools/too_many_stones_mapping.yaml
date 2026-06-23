@@ -1,0 +1,97 @@
+license: CC0-1.0
+license_text: 'Too Many Stones textures (CC0).
+
+  Source: https://github.com/asuna-mt/Too_Many_Stones
+
+  Partial mapping to Cubatarium stone/ore blocks.
+
+  '
+blocks:
+  bedrock: bedrock
+  blockDiamond: blockDiamond
+  blockEmerald: blockEmerald
+  blockGold: blockGold
+  blockIron: blockIron
+  blockLapis: blockLapis
+  blockRedstone: blockRedstone
+  brick: brick
+  clay: clay
+  dirt: dirt
+  glowstone: lightgem
+  gravel: gravel
+  hellrock: hellrock
+  ice: ice
+  nether_brick: netherBrick
+  obsidian: obsidian
+  oreCoal: oreCoal
+  oreDiamond: oreDiamond
+  oreEmerald: oreEmerald
+  oreGold: oreGold
+  oreIron: oreIron
+  oreLapis: oreLapis
+  oreRedstone: oreRedstone
+  sand: sand
+  sandstone:
+    faces:
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_side
+    - sandstone_top
+    - sandstone_bottom
+    types:
+    - natural
+  sandstone_carved: sandstone_carved
+  sandstone_smooth: sandstone_smooth
+  snow: snow
+  stone: stone
+  stoneMoss: stoneMoss
+  stone_slab: stoneslab_side
+  stone_slab_top: stoneslab_top
+  stonebrick: stonebrick
+  stonebricksmooth: stonebricksmooth
+  stonebricksmooth_carved: stonebricksmooth_carved
+  stonebricksmooth_cracked: stonebricksmooth_cracked
+  stonebricksmooth_mossy: stonebricksmooth_mossy
+  whiteStone: whiteStone
+textures:
+  bedrock: tms_basalt_block.png
+  blockDiamond: tms_amethyst_block.png
+  blockEmerald: tms_jade_block.png
+  blockGold: tms_pyrite_block.png
+  blockIron: tms_ilvaite_block.png
+  blockLapis: tms_lapis_lazuli_block.png
+  blockRedstone: tms_erythrite_block.png
+  brick: tms_marble_brick.png
+  clay: tms_amber.png
+  dirt: tms_amber.png
+  lightgem: tms_glow_calcite.png
+  gravel: tms_basalt_cobble.png
+  hellrock: tms_basalt_block.png
+  ice: tms_amethyst.png
+  netherBrick: tms_basalt_brick.png
+  obsidian: tms_basalt.png
+  oreCoal: tms_galena.png
+  oreDiamond: tms_amethyst.png
+  oreEmerald: tms_jade.png
+  oreGold: tms_pyrite.png
+  oreIron: tms_ilvaite.png
+  oreLapis: tms_lapis_lazuli.png
+  oreRedstone: tms_erythrite.png
+  sand: tms_desert_sandstone.png
+  sandstone_top: tms_sandstone.png
+  sandstone_side: tms_sandstone.png
+  sandstone_bottom: tms_sandstone.png
+  sandstone_carved: tms_desert_sandstone.png
+  sandstone_smooth: tms_silver_sandstone.png
+  snow: tms_pumice.png
+  stone: tms_andesite_block.png
+  stoneMoss: tms_agate_moss.png
+  stoneslab_side: tms_andesite_block.png
+  stoneslab_top: tms_andesite_block.png
+  stonebrick: tms_basalt_brick.png
+  stonebricksmooth: tms_marble_block.png
+  stonebricksmooth_carved: tms_marble_brick.png
+  stonebricksmooth_cracked: tms_marble_cracked_brick.png
+  stonebricksmooth_mossy: tms_agate_moss.png
+  whiteStone: tms_pumice_block.png

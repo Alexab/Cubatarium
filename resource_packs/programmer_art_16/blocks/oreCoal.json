@@ -1,0 +1,20 @@
+﻿{
+    "name":  "oreCoal",
+    "id":  663,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal",
+                     "oreCoal"
+                 ],
+    "displayName":  "Coal Ore",
+    "render":  {
+
+               }
+}
+

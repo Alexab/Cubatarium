@@ -2,19 +2,20 @@
     "default_user": "Username",
     "default_world": "World_001",
     "world_seed": 12345,
-    "terrain": "heightmap",
+    "world_seed_text": "demo",
+    "terrain": "overworld",
     "procedural": {
-        "generator": "overworld_biomes",
-        "vertical": "compact",
-        "sea_level": 4,
-        "max_height": 12,
-        "caves": false,
-        "trees": false,
-        "flat_surface_y": 3,
-        "fill_water": true,
-        "fill_lava": false,
-        "fill_fire": true
+        "generator": "overworld",
+        "trees": true,
+        "decoration": true,
+        "structures": true,
+        "async_chunk_generation": true,
+        "async_chunk_io": true,
+        "max_chunk_commits_per_frame": 3,
+        "max_load_ops_per_frame": 4,
+        "max_unload_ops_per_frame": 2
     },
+    "chunk_storage": "binary",
     "render_distance_chunks": 4,
     "streaming_enabled": true,
     "gameplay": {
@@ -23,6 +24,7 @@
     },
     "render": {
         "greedy_meshing": true,
+        "async_meshing": true,
         "face_quads": true,
         "frustum_culling": true,
         "batch_cache": true
@@ -31,5 +33,11 @@
         "legacy_hud": false,
         "console_key": "grave",
         "palette_key": "b"
+    },
+    "resource_packs": {
+        "default_primary": ["minetest_default_16"],
+        "default_secondary": [],
+        "default_enabled": ["minetest_default_16"],
+        "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
     }
 }

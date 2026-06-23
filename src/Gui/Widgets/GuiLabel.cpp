@@ -1,4 +1,4 @@
-#include "GuiLabel.h"
+#include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
@@ -6,30 +6,39 @@ namespace cutum
 {
 
 UGuiLabel::UGuiLabel(const GuiTheme *theme, std::string text)
-    : theme_(theme), text_(std::move(text))
+    : Theme(theme), Text(std::move(text))
 {
+}
+
+int UGuiLabel::GetPreferredHeight() const
+{
+  if (!Theme)
+  {
+    return UGuiWidget::GetPreferredHeight();
+  }
+  return Theme->FontSizeBody + Theme->Padding;
 }
 
 void UGuiLabel::Draw(UGuiRenderer &renderer)
 {
-  if (!visible_ || !theme_ || text_.empty())
+  if (!Visible || !Theme || Text.empty())
   {
     return;
   }
-  if (drawBackground_)
+  if (DrawBackground)
   {
-    renderer.DrawFilledRect(bounds_, theme_->tooltipBackground);
+    renderer.DrawFilledRect(Bounds, Theme->TooltipBackground);
   }
   const glm::vec3 &color =
-      useSecondaryColor_ ? theme_->textSecondary : theme_->textPrimary;
-  if (textAlign_ == GuiTextAlign::Center)
+      UseSecondaryColor ? Theme->TextSecondary : Theme->TextPrimary;
+  if (TextAlign == GuiTextAlign::Center)
   {
-    renderer.DrawTextCenteredInRect(bounds_, text_, color);
+    renderer.DrawTextCenteredInRect(Bounds, Text, color);
   }
   else
   {
-    renderer.DrawText(text_, bounds_.x + theme_->padding,
-                      bounds_.y + theme_->padding, color);
+    renderer.DrawText(Text, Bounds.X + Theme->Padding,
+                      Bounds.Y + Theme->Padding, color);
   }
 }
 

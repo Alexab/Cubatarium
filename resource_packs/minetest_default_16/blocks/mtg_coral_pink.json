@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_coral_pink",
+    "id":  431,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_coral_pink_default_coral_skeleton",
+                     "mtg_coral_pink_default_coral_skeleton",
+                     "mtg_coral_pink_default_coral_skeleton",
+                     "mtg_coral_pink_default_coral_skeleton",
+                     "mtg_coral_pink_default_coral_skeleton",
+                     "mtg_coral_pink_default_coral_skeleton"
+                 ],
+    "render":  {
+
+               }
+}
+

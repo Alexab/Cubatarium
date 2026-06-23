@@ -1,20 +1,25 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
-#include "App/Platform/CursorCapture.h"
+#include "App/Settings/UiSettings.h"
 #include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Screens/WorldProgressScreen.h"
+#include "App/WorldOperationRunner.h"
+#include "Core/Progress/IProgressSink.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "Game/Inventory/SlotInteraction.h"
-#include "App/Settings/UiSettings.h"
+#include <array>
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -24,6 +29,8 @@ struct GLFWwindow;
 
 namespace cutum
 {
+
+class UTouchInputBridge;
 
 class UCore;
 class UWorld;
@@ -36,11 +43,13 @@ class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UMainMenuScreen;
+class UWorldResourcePacksScreen;
 
 enum class MenuSubview
 {
   Main,
   Settings,
+  WorldSettings,
   LoadWorld,
   NewWorld
 };
@@ -63,17 +72,30 @@ public:
   void ScheduleQuit();
   void RequestQuit();
   void SetWindow(GLFWwindow *window) { Window = window; }
+  void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
+  UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
+  bool IsQuitRequested() const { return QuitRequested; }
   void HandleWindowFocus(bool focused);
 
   void Update(double dt);
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
+  void SetViewportInsets(int left, int top, int right, int bottom);
+  void SetKeyboardInsetBottom(int bottom);
+  void SetUiScale(float scale);
+  float GetUiScale() const { return UiScale; }
 
-  bool RouteKey(int key, int action, int mods);
-  bool RouteChar(unsigned int codepoint);
-  bool RouteMouseButton(int button, bool pressed, int x, int y);
-  bool RouteMouseMove(int x, int y);
-  bool RouteScroll(double xoffset, double yoffset, int mouseX, int mouseY);
+  bool RouteKey(int key, int Action, int Mods);
+  bool RouteChar(unsigned int Codepoint);
+  bool RouteMouseButton(int Button, bool Pressed, int x, int y,
+                        int PointerId = -1);
+  bool RouteMouseMove(int x, int y, int PointerId = -1);
+  bool RouteScroll(double Xoffset, double Yoffset, int mouseX, int mouseY);
+#if defined(__ANDROID__)
+  void ReleaseHudJoystickCapture();
+  void TryToggleFlightOnJumpPress();
+  void SubmitConsoleCommand();
+#endif
 
   AppState GetState() const { return State; }
   bool HasWorldSession() const { return WorldSessionActive; }
@@ -85,7 +107,7 @@ public:
   /// т.ч. с видимым курсором (Left Alt).
   bool AllowsWorldMousePlacement() const;
   const UiSettings &GetUiSettings() const { return Ui; }
-  int GetHotbarCountSetting() const { return Ui.hotbarCount; }
+  int GetHotbarCountSetting() const { return Ui.HotbarCount; }
   void SetHotbarCountSetting(int count);
 
   void ReturnToMainMenu() override;
@@ -95,29 +117,50 @@ public:
   void
   SaveAppAndTemplateSettings(const AppSettingsSnapshot &app,
                              const ProceduralSettings &procedural) override;
-  void CreateNewWorldWithSettings(const ProceduralSettings &settings) override;
+  void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const std::vector<std::string> &resourcePacksEnabled) override;
+  void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const ResourcePackSelection &selection) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
+  std::vector<InstalledPackInfo> ListInstalledResourcePacks() const override;
+  std::vector<std::string> GetDefaultEnabledResourcePacks() const override;
+  ResourcePackSelection GetDefaultResourcePackSelection() const override;
+  std::vector<std::string>
+  PeekWorldResourcePacks(const std::string &worldName) const override;
+  ResourcePackSelection GetCurrentWorldResourcePackSelection() const override;
+  bool ApplyResourcePacksToCurrentWorld(
+      const ResourcePackSelection &selection) override;
 
   void ShowSettings();
+  void ShowWorldSettings();
   void ShowNewWorld();
   void ShowLoadWorld();
+  void BeginWorldOperation(WorldRunnerRequest request,
+                           std::function<void()> onComplete = nullptr);
+  void OnWorldOperationFinished();
 
 private:
+  void ShowWorldProgressScreen();
   void ShowMainMenu();
   void SaveActiveWorldIfNeeded();
-  void ScheduleDeferredMenuAction(std::function<void()> action);
+  void ScheduleDeferredMenuAction(std::function<void()> Action);
   void EnterGameAfterWorldChange();
+  void RefreshBlockCatalog();
   void ShowInGameHud();
   void SyncCursorVisibility();
+  void SyncGameplayLookCapture();
   AppCursorPolicy GetCursorPolicy() const;
   void EnterInGameInputState();
   /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.
   void RecaptureMouseForLook();
   bool UsesUiPointer() const;
   bool BlocksGameMouseLook() const;
-  bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool pressed);
+  bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool Pressed);
+  bool HasAnyOverlayCapture() const;
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
@@ -149,14 +192,21 @@ private:
     Console,
     Hud
   };
-  OverlayPointerCapture ActiveOverlayCapture{OverlayPointerCapture::None};
+  static constexpr int kMaxOverlayPointers = 10;
+  std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
+  int NormalizeOverlayPointer(int PointerId) const;
   int DragCursorX{0};
   int DragCursorY{0};
   bool WorldSessionActive{false};
   bool PendingEnterGame{false};
   bool PendingQuit{false};
   std::function<void()> PendingMenuAction;
+  std::function<void()> WorldOpOnComplete;
   bool QuitRequested{false};
+
+  UWorldProgressScreen *ProgressScreen{nullptr};
+  std::unique_ptr<UWorldOperationRunner> WorldOpRunner;
+  LatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
   std::unique_ptr<UInGameHudScreen> HudScreen;
@@ -167,6 +217,14 @@ private:
 
   MenuSubview MenuSubview{MenuSubview::Main};
   UMainMenuScreen *MainMenuScreen{nullptr};
+  UTouchInputBridge *TouchBridge{nullptr};
+  float UiScale{1.f};
+  int ViewportInsetLeft{0};
+  int ViewportInsetTop{0};
+  int ViewportInsetRight{0};
+  int ViewportInsetBottom{0};
+  int KeyboardInsetBottom{0};
+  AppCursorPolicy LastCursorPolicy{AppCursorPolicy::Free};
 };
 
 } // namespace cutum

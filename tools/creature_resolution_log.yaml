@@ -1,0 +1,1796 @@
+species:
+  badger:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  bee:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  bunny:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  butterfly:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  chicken:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  cow:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  crab:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  dirt_monster:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  dolphin:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  dungeon_master:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  fire_spirit:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  fox:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  golem:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  hedgehog:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  hermitcrab:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  human:
+    spawnable: false
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: ''
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: ''
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed: []
+    last_updated: '2026-06-19'
+  kitten:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  land_guard:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  lava_flan:
+    spawnable: true
+    habitat: lava
+    spawn:
+      status: pending
+      scenario: lava_pool
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: lava_pool
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  lobster:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  manatee:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  mese_monster:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  octopus:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  oerkki:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  ogre:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  orc:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  owl:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  panda:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  penguin:
+    spawnable: true
+    habitat: amphibious
+    spawn:
+      status: pending
+      scenario: beach_or_water
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: beach_or_water
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  pig:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  puffin:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  rat:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  sand_monster:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  seahorse:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  seal:
+    spawnable: true
+    habitat: amphibious
+    spawn:
+      status: pending
+      scenario: beach_or_water
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: beach_or_water
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  shark:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  sheep:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  skeleton:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  spider:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  squid:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  stingray:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  stone_monster:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  tortoise:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  tree_monster:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  treeman:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open: []
+    issues_closed:
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  trout:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_habitat
+    issues_closed:
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  warthog:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  wasp:
+    spawnable: true
+    habitat: aerial
+    spawn:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: open_sky
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - aerial_lift
+    issues_closed:
+    - id: aerial_lift
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  water_dragon:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - aquatic_depth
+    - spawn_habitat
+    issues_closed:
+    - id: aquatic_depth
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  whale:
+    spawnable: true
+    habitat: aquatic
+    spawn:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: ocean_deep
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+      score: null
+    icon:
+      status: pending
+      scenario: ''
+      verified_at: null
+      note: ''
+    issues_open:
+    - aquatic_depth
+    - spawn_habitat
+    issues_closed:
+    - id: aquatic_depth
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_habitat
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'
+  wolf:
+    spawnable: true
+    habitat: terrestrial
+    spawn:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    wander:
+      status: pending
+      scenario: terrestrial_grass
+      verified_at: null
+      note: needs in-game verify after hotfix 2026-06-19
+    silhouette:
+      status: pass
+      score: 4
+      verified_at: '2026-06-19'
+      note: rigid_tune bake
+    icon:
+      status: pass
+      verified_at: '2026-06-19'
+      note: baked atlas
+    issues_open:
+    - spawn_probe
+    issues_closed:
+    - id: spawn_probe
+      closed_at: '2026-06-19'
+      note: code fix
+    - id: spawn_occupy_mismatch
+      closed_at: '2026-06-19'
+      note: code hotfix
+    - id: aerial_wander_clearance
+      closed_at: '2026-06-19'
+      note: code hotfix
+    last_updated: '2026-06-19'

@@ -1,7 +1,7 @@
 #ifndef GUI_SLOT_H
 #define GUI_SLOT_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -16,19 +16,20 @@ class UGuiSlot : public UGuiWidget
 public:
   UGuiSlot(const GuiTheme *theme, int size);
 
-  void SetSelected(bool selected) { selected_ = selected; }
-  void SetLabel(const std::string &label) { label_ = label; }
-  void SetIconTexture(unsigned int texture) { iconTexture_ = texture; }
-  void SetCornerHint(const std::string &hint) { cornerHint_ = hint; }
+  void SetSelected(bool selected) { Selected = selected; }
+  void SetLabel(const std::string &label) { Label = label; }
+  void SetIconTexture(unsigned int texture) { IconTexture = texture; }
+  void SetCornerHint(const std::string &hint) { CornerHint = hint; }
+  void SetDimmed(bool dimmed) { Dimmed = dimmed; }
   void SetOnClick(std::function<void()> handler)
   {
-    onClick_ = std::move(handler);
+    OnClick = std::move(handler);
   }
   void SetOnBeginDrag(std::function<void()> handler)
   {
-    onBeginDrag_ = std::move(handler);
+    OnBeginDrag = std::move(handler);
   }
-  const std::string &GetLabel() const { return label_; }
+  const std::string &GetLabel() const { return Label; }
 
   void Draw(UGuiRenderer &renderer) override;
   bool OnMouseDown(const GuiMouseEvent &event) override;
@@ -39,18 +40,19 @@ public:
   int GetPreferredHeight() const override;
 
 private:
-  const GuiTheme *theme_;
-  int slotSize_;
-  bool selected_{false};
-  std::string label_;
-  std::string cornerHint_;
-  unsigned int iconTexture_{0};
-  bool pressed_{false};
-  bool dragStarted_{false};
-  int pressX_{0};
-  int pressY_{0};
-  std::function<void()> onClick_;
-  std::function<void()> onBeginDrag_;
+  const GuiTheme *Theme;
+  int SlotSize;
+  bool Selected{false};
+  bool Dimmed{false};
+  std::string Label;
+  std::string CornerHint;
+  unsigned int IconTexture{0};
+  bool Pressed{false};
+  bool DragStarted{false};
+  int PressX{0};
+  int PressY{0};
+  std::function<void()> OnClick;
+  std::function<void()> OnBeginDrag;
 };
 
 } // namespace cutum

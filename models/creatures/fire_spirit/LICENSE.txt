@@ -1,0 +1,4 @@
+Source file: mobs_fire_spirit.png
+Upstream: mobs_monster/textures/mobs_fire_spirit.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

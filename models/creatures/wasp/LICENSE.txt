@@ -1,0 +1,4 @@
+Source file: dmobs_wasp.png
+Upstream: dmobs/textures/dmobs_wasp.png
+License: CC BY-SA 3.0
+Attribution: dmobs — D00Med

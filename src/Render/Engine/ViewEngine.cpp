@@ -15,7 +15,7 @@ void UViewEngine::GenerateSimpleCamera()
   // Above default flat terrain (top layer y=3)
   std::shared_ptr<UCamera> view = std::make_shared<UCamera>(
       glm::vec3(0.0f, 6.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
-  view->SetFreeMove(false); // Disable free movement to enable collisions
+  view->SetFreeMove(false); // Disable free Movement to enable collisions
   AddCamera(view);
 }
 

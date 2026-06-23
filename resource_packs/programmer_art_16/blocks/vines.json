@@ -1,0 +1,19 @@
+﻿{
+    "name":  "vines",
+    "id":  708,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "vine",
+                     "vine",
+                     "vine",
+                     "vine",
+                     "vine",
+                     "vine"
+                 ],
+    "render":  {
+
+               }
+}
+

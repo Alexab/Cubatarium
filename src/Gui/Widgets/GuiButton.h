@@ -1,7 +1,7 @@
 #ifndef GUI_BUTTON_H
 #define GUI_BUTTON_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -26,9 +26,9 @@ public:
 
   void SetOnClick(std::function<void()> handler)
   {
-    onClick_ = std::move(handler);
+    OnClick = std::move(handler);
   }
-  void SetLabel(const std::string &label) { label_ = label; }
+  void SetLabel(const std::string &label) { Label = label; }
 
   bool CanFocus() const override;
   bool Activate() override;
@@ -43,11 +43,14 @@ public:
 private:
   glm::vec4 StateColor() const;
 
-  const GuiTheme *theme_;
-  std::string label_;
+  const GuiTheme *Theme;
+  std::string Label;
   GuiButtonState State{GuiButtonState::Normal};
-  bool pressedInside_{false};
-  std::function<void()> onClick_;
+  bool PressedInside{false};
+  int DownX{0};
+  int DownY{0};
+  bool Dragged{false};
+  std::function<void()> OnClick;
 };
 
 } // namespace cutum

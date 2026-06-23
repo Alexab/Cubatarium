@@ -1,4 +1,4 @@
-#include "GuiPopupMenu.h"
+#include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
@@ -7,7 +7,7 @@
 namespace cutum
 {
 
-UGuiPopupMenu::UGuiPopupMenu(const GuiTheme *theme) : theme_(theme)
+UGuiPopupMenu::UGuiPopupMenu(const GuiTheme *theme) : Theme(theme)
 {
   SetVisible(false);
   SetZOrder(1000);
@@ -15,25 +15,25 @@ UGuiPopupMenu::UGuiPopupMenu(const GuiTheme *theme) : theme_(theme)
 
 void UGuiPopupMenu::SetItems(std::vector<GuiPopupMenuItem> items)
 {
-  items_ = std::move(items);
+  Items = std::move(items);
 }
 
 int UGuiPopupMenu::ItemHeight() const
 {
-  return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 28;
+  return Theme ? Theme->FontSizeBody + Theme->Padding * 2 : 28;
 }
 
 int UGuiPopupMenu::MenuWidth(int viewportW) const
 {
-  if (!theme_)
+  if (!Theme)
   {
     return 120;
   }
   int maxW = 80;
-  for (const auto &item : items_)
+  for (const auto &item : Items)
   {
-    const int w = theme_->padding * 2 + static_cast<int>(item.label.size()) *
-                                            (theme_->fontSizeBody / 2 + 4);
+    const int w = Theme->Padding * 2 + static_cast<int>(item.label.size()) *
+                                           (Theme->FontSizeBody / 2 + 4);
     maxW = std::max(maxW, w);
   }
   return std::min(maxW, viewportW - 8);
@@ -41,12 +41,12 @@ int UGuiPopupMenu::MenuWidth(int viewportW) const
 
 void UGuiPopupMenu::OpenAt(int x, int y, int viewportW, int viewportH)
 {
-  if (items_.empty() || !theme_)
+  if (Items.empty() || !Theme)
   {
     return;
   }
   const int w = MenuWidth(viewportW);
-  const int h = static_cast<int>(items_.size()) * ItemHeight();
+  const int h = static_cast<int>(Items.size()) * ItemHeight();
   int px = x;
   int py = y;
   if (px + w > viewportW)
@@ -58,27 +58,27 @@ void UGuiPopupMenu::OpenAt(int x, int y, int viewportW, int viewportH)
     py = std::max(0, viewportH - h);
   }
   SetBounds({px, py, w, h});
-  hoverIndex_ = -1;
-  open_ = true;
+  HoverIndex = -1;
+  Open = true;
   SetVisible(true);
 }
 
 void UGuiPopupMenu::Close()
 {
-  open_ = false;
+  Open = false;
   SetVisible(false);
-  hoverIndex_ = -1;
+  HoverIndex = -1;
 }
 
 int UGuiPopupMenu::ItemIndexAt(int x, int y) const
 {
-  if (!open_ || !bounds_.Contains(x, y))
+  if (!Open || !Bounds.Contains(x, y))
   {
     return -1;
   }
-  const int localY = y - bounds_.y;
+  const int localY = y - Bounds.Y;
   const int idx = localY / ItemHeight();
-  if (idx < 0 || idx >= static_cast<int>(items_.size()))
+  if (idx < 0 || idx >= static_cast<int>(Items.size()))
   {
     return -1;
   }
@@ -87,11 +87,11 @@ int UGuiPopupMenu::ItemIndexAt(int x, int y) const
 
 UGuiWidget *UGuiPopupMenu::HitTest(int x, int y)
 {
-  if (!open_ || !visible_)
+  if (!Open || !Visible)
   {
     return nullptr;
   }
-  if (bounds_.Contains(x, y))
+  if (Bounds.Contains(x, y))
   {
     return this;
   }
@@ -100,32 +100,32 @@ UGuiWidget *UGuiPopupMenu::HitTest(int x, int y)
 
 bool UGuiPopupMenu::OnMouseMove(const GuiMouseEvent &event)
 {
-  if (!open_)
+  if (!Open)
   {
     return false;
   }
-  hoverIndex_ = ItemIndexAt(event.x, event.y);
-  return bounds_.Contains(event.x, event.y);
+  HoverIndex = ItemIndexAt(event.X, event.Y);
+  return Bounds.Contains(event.X, event.Y);
 }
 
 bool UGuiPopupMenu::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!open_ || event.button != GuiMouseButton::Left)
+  if (!Open || event.Button != GuiMouseButton::Left)
   {
     return false;
   }
-  if (!bounds_.Contains(event.x, event.y))
+  if (!Bounds.Contains(event.X, event.Y))
   {
     Close();
     return true;
   }
-  const int idx = ItemIndexAt(event.x, event.y);
-  if (idx >= 0 && idx < static_cast<int>(items_.size()) &&
-      items_[static_cast<size_t>(idx)].enabled)
+  const int idx = ItemIndexAt(event.X, event.Y);
+  if (idx >= 0 && idx < static_cast<int>(Items.size()) &&
+      Items[static_cast<size_t>(idx)].enabled)
   {
-    if (items_[static_cast<size_t>(idx)].action)
+    if (Items[static_cast<size_t>(idx)].Action)
     {
-      items_[static_cast<size_t>(idx)].action();
+      Items[static_cast<size_t>(idx)].Action();
     }
     Close();
     return true;
@@ -136,26 +136,25 @@ bool UGuiPopupMenu::OnMouseDown(const GuiMouseEvent &event)
 
 void UGuiPopupMenu::Draw(UGuiRenderer &renderer)
 {
-  if (!open_ || !visible_ || !theme_)
+  if (!Open || !Visible || !Theme)
   {
     return;
   }
-  renderer.DrawFilledRect(bounds_, theme_->panelBackground);
-  renderer.DrawBorderRect(bounds_, theme_->panelBorder,
-                          theme_->borderThickness);
-  int y = bounds_.y;
+  renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
+  renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
+  int y = Bounds.Y;
   const int rowH = ItemHeight();
-  for (size_t i = 0; i < items_.size(); ++i)
+  for (size_t i = 0; i < Items.size(); ++i)
   {
-    GuiRect row{bounds_.x, y, bounds_.w, rowH};
-    if (static_cast<int>(i) == hoverIndex_)
+    GuiRect row{Bounds.X, y, Bounds.W, rowH};
+    if (static_cast<int>(i) == HoverIndex)
     {
-      renderer.DrawFilledRect(row, theme_->buttonHover);
+      renderer.DrawFilledRect(row, Theme->ButtonHover);
     }
     const glm::vec3 color =
-        items_[i].enabled ? theme_->textPrimary : theme_->textSecondary;
-    renderer.DrawText(items_[i].label, row.x + theme_->padding,
-                      row.y + theme_->padding, color);
+        Items[i].enabled ? Theme->TextPrimary : Theme->TextSecondary;
+    renderer.DrawText(Items[i].label, row.X + Theme->Padding,
+                      row.Y + Theme->Padding, color);
     y += rowH;
   }
 }

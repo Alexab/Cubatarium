@@ -1,0 +1,21 @@
+﻿{
+    "name":  "stoneMoss",
+    "id":  88,
+    "types":  [
+                  "natural",
+                  "building"
+              ],
+    "textures":  [
+                     "stoneMoss",
+                     "stoneMoss",
+                     "stoneMoss",
+                     "stoneMoss",
+                     "stoneMoss",
+                     "stoneMoss"
+                 ],
+    "displayName":  "Mossy Stone",
+    "render":  {
+
+               }
+}
+

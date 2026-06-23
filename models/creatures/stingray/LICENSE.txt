@@ -1,0 +1,4 @@
+Source file: texturestingray.png
+Upstream: animalworld/textures/texturestingray.png
+License: MIT
+Attribution: animalworld — Skandarella

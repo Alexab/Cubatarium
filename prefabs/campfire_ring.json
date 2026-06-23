@@ -1,0 +1,47 @@
+{
+  "name": "campfire_ring",
+  "version": 2,
+  "category": "decorative",
+  "displayName": "Campfire Ring",
+  "source": {
+    "mod": "cubatarium/procedural",
+    "license": "CC0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "fire"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    }
+  ]
+}

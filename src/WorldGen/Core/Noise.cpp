@@ -9,21 +9,21 @@ namespace cutum
 namespace
 {
 
-uint32_t Hash2D(int x, int z, uint32_t seed)
+uint32_t Hash2D(int x, int z, uint32_t Seed)
 {
-  uint32_t h = static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ seed;
+  uint32_t h = static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ Seed;
   h = (h ^ (h >> 13)) * 1274126177u;
   return h;
 }
 
-void BuildPermutation(uint32_t seed, std::array<int, 512> &perm)
+void BuildPermutation(uint32_t Seed, std::array<int, 512> &perm)
 {
   std::array<int, 256> p{};
   for (int i = 0; i < 256; ++i)
   {
     p[i] = i;
   }
-  uint32_t state = seed * 747796405u + 2891336453u;
+  uint32_t state = Seed * 747796405u + 2891336453u;
   for (int i = 255; i > 0; --i)
   {
     state = state * 1664525u + 1013904223u;
@@ -123,49 +123,55 @@ float SamplePerlin3D(float x, float y, float z,
   return Lerp(y1, y2, w);
 }
 
-std::array<int, 512> PermutationForSeed(uint32_t seed)
+std::array<int, 512> PermutationForSeed(uint32_t Seed)
 {
   std::array<int, 512> perm{};
-  BuildPermutation(seed, perm);
+  BuildPermutation(Seed, perm);
   return perm;
 }
 
 } // namespace
 
-float HashNoise2D(int x, int z, uint32_t seed)
+float HashNoise2D(int x, int z, uint32_t Seed)
 {
-  return Hash2D(x, z, seed) / 4294967295.0f;
+  return Hash2D(x, z, Seed) / 4294967295.0f;
 }
 
-int LegacyHeightAt(int x, int z, uint32_t seed, int baseY, int maxHeight)
+int LegacyHeightAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight)
 {
-  const float n = HashNoise2D(x, z, seed);
-  return baseY + static_cast<int>(n * maxHeight);
+  const float xf = static_cast<float>(x) * 0.075f;
+  const float zf = static_cast<float>(z) * 0.075f;
+  const float low = FBM2D(xf, zf, Seed ^ 0x9E3779B9u, 3, 0.55f, 2.0f);
+  const float detail =
+      FBM2D(xf * 2.4f, zf * 2.4f, Seed ^ 0x85EBCA6Bu, 2, 0.5f, 2.0f);
+  float normalized = 0.5f + 0.5f * ((low * 0.8f + detail * 0.2f) / 1.35f);
+  normalized = std::clamp(normalized, 0.0f, 1.0f);
+  return baseY + static_cast<int>(normalized * static_cast<float>(MaxHeight));
 }
 
-float Noise2D(int x, int z, uint32_t seed) { return HashNoise2D(x, z, seed); }
+float Noise2D(int x, int z, uint32_t Seed) { return HashNoise2D(x, z, Seed); }
 
-int HeightAt(int x, int z, uint32_t seed, int baseY, int maxHeight)
+int HeightAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight)
 {
-  return LegacyHeightAt(x, z, seed, baseY, maxHeight);
+  return LegacyHeightAt(x, z, Seed, baseY, MaxHeight);
 }
 
-float Perlin2D(float x, float z, uint32_t seed)
+float Perlin2D(float x, float z, uint32_t Seed)
 {
-  const auto perm = PermutationForSeed(seed);
+  const auto perm = PermutationForSeed(Seed);
   return SamplePerlin2D(x, z, perm);
 }
 
-float Perlin3D(float x, float y, float z, uint32_t seed)
+float Perlin3D(float x, float y, float z, uint32_t Seed)
 {
-  const auto perm = PermutationForSeed(seed);
+  const auto perm = PermutationForSeed(Seed);
   return SamplePerlin3D(x, y, z, perm);
 }
 
-float FBM2D(float x, float z, uint32_t seed, int octaves, float persistence,
+float FBM2D(float x, float z, uint32_t Seed, int octaves, float persistence,
             float lacunarity)
 {
-  const auto perm = PermutationForSeed(seed);
+  const auto perm = PermutationForSeed(Seed);
   float value = 0.0f;
   float amplitude = 1.0f;
   float frequency = 1.0f;
@@ -178,10 +184,10 @@ float FBM2D(float x, float z, uint32_t seed, int octaves, float persistence,
   return value;
 }
 
-float FBM3D(float x, float y, float z, uint32_t seed, int octaves,
+float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
             float persistence, float lacunarity)
 {
-  const auto perm = PermutationForSeed(seed);
+  const auto perm = PermutationForSeed(Seed);
   float value = 0.0f;
   float amplitude = 1.0f;
   float frequency = 1.0f;
@@ -193,6 +199,53 @@ float FBM3D(float x, float y, float z, uint32_t seed, int octaves,
     frequency *= lacunarity;
   }
   return value;
+}
+
+float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
+                      float persistence, float lacunarity)
+{
+  const auto perm = PermutationForSeed(Seed);
+  float value = 0.0f;
+  float amplitude = 1.0f;
+  float frequency = 1.0f;
+  float maxAmplitude = 0.0f;
+  for (int i = 0; i < octaves; ++i)
+  {
+    value += SamplePerlin2D(x * frequency, z * frequency, perm) * amplitude;
+    maxAmplitude += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+  if (maxAmplitude <= 0.0f)
+  {
+    return 0.0f;
+  }
+  return value / maxAmplitude;
+}
+
+float Smoothstep(float edge0, float edge1, float x)
+{
+  if (edge0 == edge1)
+  {
+    return x < edge0 ? 0.0f : 1.0f;
+  }
+  const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+  return t * t * (3.0f - 2.0f * t);
+}
+
+float TriangularYFactor(int y, int yMin, int yPeak, int yMax)
+{
+  if (y < yMin || y > yMax)
+  {
+    return 0.0f;
+  }
+  if (y <= yPeak)
+  {
+    const float denom = static_cast<float>(std::max(1, yPeak - yMin));
+    return static_cast<float>(y - yMin) / denom;
+  }
+  const float denom = static_cast<float>(std::max(1, yMax - yPeak));
+  return static_cast<float>(yMax - y) / denom;
 }
 
 } // namespace cutum

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_cactus",
+    "id":  420,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_cactus_default_cactus_side",
+                     "mtg_cactus_default_cactus_side",
+                     "mtg_cactus_default_cactus_side",
+                     "mtg_cactus_default_cactus_side",
+                     "mtg_cactus_default_cactus_top",
+                     "mtg_cactus_default_cactus_top"
+                 ],
+    "render":  {
+
+               }
+}
+

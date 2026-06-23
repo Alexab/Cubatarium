@@ -2,6 +2,7 @@
 
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include <functional>
 #include <glm/glm.hpp>
 #include <unordered_set>
 
@@ -11,16 +12,17 @@ namespace cutum
 class UBlockWorld;
 class UBlockRegistry;
 class UPrefabLibrary;
-class UChunkMeshCache;
 class UChunkManager;
 
+/// World generation context: blocks and prefab placement only (no creatures).
 struct WorldGenContext
 {
   UBlockWorld &World;
   UBlockRegistry &Registry;
   ProceduralSettings Settings;
   UPrefabLibrary *Prefabs{nullptr};
-  UChunkMeshCache *MeshCache{nullptr};
+  /// Primary pack that owns worldgen block definitions (from world_data / config).
+  std::string WorldgenOwnerPackId;
 
   BlockId Bedrock{BLOCK_AIR};
   BlockId Stone{BLOCK_AIR};
@@ -37,9 +39,30 @@ struct WorldGenContext
   BlockId Water{BLOCK_AIR};
   BlockId Lava{BLOCK_AIR};
   BlockId Fire{BLOCK_AIR};
+  BlockId OreCoal{BLOCK_AIR};
+  BlockId OreIron{BLOCK_AIR};
+
+  WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
+                  ProceduralSettings settings, UPrefabLibrary *prefabs = nullptr);
 
   void ResolveBlockIds();
+
+  using ColumnMeshDirtyFn =
+      std::function<void(int world_x, int world_z, int min_y, int max_y)>;
+  ColumnMeshDirtyFn OnColumnMeshDirty;
+
+  void ResetColumnDirty(int world_x, int world_z);
+  void AccumulateDirtyColumn(int min_y, int max_y);
+  void FlushColumnDirty();
+
   void MarkDirtyColumn(int world_x, int world_z, int min_y, int max_y) const;
+
+private:
+  mutable bool ColumnDirtyActive{false};
+  mutable int ColumnDirtyWorldX{0};
+  mutable int ColumnDirtyWorldZ{0};
+  mutable int ColumnDirtyMinY{0};
+  mutable int ColumnDirtyMaxY{-1};
 };
 
 } // namespace cutum

@@ -26,7 +26,7 @@ public:
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;
 
-  void SetModalKeyboard(bool modal) { modalKeyboard_ = modal; }
+  void SetModalKeyboard(bool modal) { ModalKeyboard = modal; }
   /// Сброс фокуса/захвата (обязательно при смене экрана — виджеты
   /// уничтожаются).
   void ClearInteractionState();
@@ -38,16 +38,16 @@ private:
   void CollectFocusOrder();
   void FocusNext(bool reverse);
 
-  UGuiWidget *root_{nullptr};
-  UGuiScreenBase *screen_{nullptr};
-  UGuiWidget *keyboardFocus_{nullptr};
-  UGuiWidget *mousePressedWidget_{nullptr};
-  UGuiWidget *hoveredWidget_{nullptr};
-  std::vector<UGuiWidget *> focusOrder_;
-  bool captureMouse_{false};
-  bool modalKeyboard_{false};
-  int lastMouseX_{-1};
-  int lastMouseY_{-1};
+  UGuiWidget *Root{nullptr};
+  UGuiScreenBase *Screen{nullptr};
+  UGuiWidget *KeyboardFocus{nullptr};
+  UGuiWidget *MousePressedWidget{nullptr};
+  UGuiWidget *HoveredWidget{nullptr};
+  std::vector<UGuiWidget *> FocusOrder;
+  bool CaptureMouse{false};
+  bool ModalKeyboard{false};
+  int LastMouseX{-1};
+  int LastMouseY{-1};
 };
 
 } // namespace cutum

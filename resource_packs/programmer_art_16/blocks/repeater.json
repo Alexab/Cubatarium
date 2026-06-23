@@ -1,0 +1,19 @@
+﻿{
+    "name":  "repeater",
+    "id":  682,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater",
+                     "repeater"
+                 ],
+    "render":  {
+
+               }
+}
+

@@ -13,23 +13,23 @@ namespace cutum
 
 class UShaderProgram;
 
-class UiQuadBatch
+class UGuiQuadBatch
 {
 public:
-  UiQuadBatch();
-  ~UiQuadBatch();
+  UGuiQuadBatch();
+  ~UGuiQuadBatch();
 
   bool Initialize(std::shared_ptr<UShaderProgram> shader);
   void Shutdown();
 
-  void Begin(int WindowWidth, int WindowHeight);
+  void Begin(int window_width, int window_height);
   void DrawFilledRect(const GuiRect &rect, const glm::vec4 &color);
   void DrawBorderRect(const GuiRect &rect, const glm::vec4 &color,
                       int thicknessPx);
   void Flush();
   void End();
 
-  bool IsReady() const { return initialized_; }
+  bool IsReady() const { return Initialized; }
 
 private:
   void AddQuad(float x0, float y0, float x1, float y1, const glm::vec4 &color);
@@ -37,22 +37,22 @@ private:
   void GuiRectToShaderCoords(const GuiRect &rect, float &x0, float &y0,
                              float &x1, float &y1) const;
 
-  std::shared_ptr<UShaderProgram> shader_;
-  GLuint vao_{0};
-  GLuint vbo_{0};
-  int windowWidth_{0};
-  int windowHeight_{0};
-  bool initialized_{false};
-  bool depthTestWasEnabled_{false};
-  bool blendWasEnabled_{false};
+  std::shared_ptr<UShaderProgram> Shader;
+  GLuint Vao{0};
+  GLuint Vbo{0};
+  int WindowWidth{0};
+  int WindowHeight{0};
+  bool Initialized{false};
+  bool DepthTestWasEnabled{false};
+  bool BlendWasEnabled{false};
 
   struct Vertex
   {
     float x;
     float y;
   };
-  std::vector<Vertex> vertices_;
-  glm::vec4 currentColor_{1.0f};
+  std::vector<Vertex> Vertices;
+  glm::vec4 CurrentColor{1.0f};
 };
 
 } // namespace cutum

@@ -1,8 +1,13 @@
 #ifndef INPUTMANAGER_H
 #define INPUTMANAGER_H
 
+#if defined(__ANDROID__)
+#include "App/Platform/GlfwKeyCompat.h"
+struct GLFWwindow;
+#else
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 #include <functional>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -62,7 +67,7 @@ enum class KeyCode
   Key_Right = GLFW_KEY_RIGHT
 };
 
-// Mouse button codes
+// Mouse Button codes
 enum class MouseButton
 {
   Left = GLFW_MOUSE_BUTTON_LEFT,
@@ -78,7 +83,7 @@ enum class KeyState
   Repeated = GLFW_REPEAT
 };
 
-// Event types
+// Event Types
 enum class EventType
 {
   KeyPress,
@@ -134,9 +139,9 @@ public:
   bool IsKeyJustReleased(KeyCode key) const;
 
   // Проверка состояния мыши
-  bool IsMouseButtonPressed(MouseButton button) const;
-  bool IsMouseButtonJustPressed(MouseButton button) const;
-  bool IsMouseButtonJustReleased(MouseButton button) const;
+  bool IsMouseButtonPressed(MouseButton Button) const;
+  bool IsMouseButtonJustPressed(MouseButton Button) const;
+  bool IsMouseButtonJustReleased(MouseButton Button) const;
 
   // Получение позиции мыши
   glm::vec2 GetMousePosition() const;
@@ -151,13 +156,13 @@ public:
 
   // GLFW callback функции (статичные)
   static void GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
-                              int action, int mods);
-  static void GLFWMouseButtonCallback(GLFWwindow *window, int button,
-                                      int action, int mods);
+                              int Action, int Mods);
+  static void GLFWMouseButtonCallback(GLFWwindow *window, int Button,
+                                      int Action, int Mods);
   static void GLFWCursorPosCallback(GLFWwindow *window, double xpos,
                                     double ypos);
-  static void GLFWScrollCallback(GLFWwindow *window, double xoffset,
-                                 double yoffset);
+  static void GLFWScrollCallback(GLFWwindow *window, double Xoffset,
+                                 double Yoffset);
   static void GLFWFramebufferSizeCallback(GLFWwindow *window, int width,
                                           int height);
 

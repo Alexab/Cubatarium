@@ -2,8 +2,8 @@
 #define ICREATUREPOSEPRESENTER_H
 
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
-#include "Pose/CreaturePoseParams.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Pose/CreaturePoseParams.h"
 
 namespace cutum
 {

@@ -1,8 +1,9 @@
-#include "ContentTypeRegistry.h"
+#include "Content/ContentTypeRegistry.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
-#include "World/Prefabs/Prefab.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "World/Prefabs/Prefab.h"
 
 #include <algorithm>
 #include <fstream>
@@ -22,17 +23,17 @@ constexpr const char *kMiscType = "misc";
 
 void UContentTypeRegistry::EnsureDefaultTypes()
 {
-  if (!typeById_.count(kMiscType))
+  if (!TypeById.count(kMiscType))
   {
-    types_.push_back({kMiscType, "Misc", 999});
-    typeById_[kMiscType] = types_.back();
+    Types.push_back({kMiscType, "Misc", 999});
+    TypeById[kMiscType] = Types.back();
   }
 }
 
 void UContentTypeRegistry::LoadTypes(const std::string &typesJsonPath)
 {
-  types_.clear();
-  typeById_.clear();
+  Types.clear();
+  TypeById.clear();
   std::ifstream file(typesJsonPath);
   if (!file.is_open())
   {
@@ -49,11 +50,11 @@ void UContentTypeRegistry::LoadTypes(const std::string &typesJsonPath)
       for (const auto &item : j["types"])
       {
         ContentType t;
-        t.id = item.value("id", kMiscType);
-        t.displayName = item.value("displayName", t.id);
+        t.Id = item.value("id", kMiscType);
+        t.displayName = item.value("displayName", t.Id);
         t.sortOrder = item.value("sortOrder", 0);
-        types_.push_back(t);
-        typeById_[t.id] = t;
+        Types.push_back(t);
+        TypeById[t.Id] = t;
       }
     }
   }
@@ -62,7 +63,7 @@ void UContentTypeRegistry::LoadTypes(const std::string &typesJsonPath)
     std::cerr << "UContentTypeRegistry: " << e.what() << std::endl;
   }
   EnsureDefaultTypes();
-  std::sort(types_.begin(), types_.end(),
+  std::sort(Types.begin(), Types.end(),
             [](const ContentType &a, const ContentType &b)
             { return a.sortOrder < b.sortOrder; });
 }
@@ -79,120 +80,129 @@ std::vector<std::string> UContentTypeRegistry::GetTypesForTags(
 
 void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage &storage)
 {
-  blockEntries_.clear();
+  BlockEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : types_)
+  for (const auto &type : Types)
   {
-    blockEntries_[type.id] = {};
+    BlockEntries[type.Id] = {};
   }
   for (const auto &pair : storage.GetAll())
   {
     const BlockDefinition &def = pair.second;
-    const auto typeIds = GetTypesForTags(def.types);
-    CatalogEntry entry{def.name, def.name};
+    const auto typeIds = GetTypesForTags(def.Types);
+    const std::string label =
+        def.DisplayName.empty() ? HumanizeBlockName(def.Name) : def.DisplayName;
+    CatalogEntry entry{def.Name, label};
     for (const auto &typeId : typeIds)
     {
-      if (!blockEntries_.count(typeId))
+      if (!BlockEntries.count(typeId))
       {
-        blockEntries_[typeId] = {};
+        BlockEntries[typeId] = {};
       }
-      blockEntries_[typeId].push_back(entry);
+      BlockEntries[typeId].push_back(entry);
     }
   }
-  for (auto &pair : blockEntries_)
+  for (auto &pair : BlockEntries)
   {
     std::sort(pair.second.begin(), pair.second.end(),
               [](const CatalogEntry &a, const CatalogEntry &b)
-              { return a.id < b.id; });
+              { return a.Id < b.Id; });
   }
 }
 
 void UContentTypeRegistry::IndexCreatures(
     const UCreatureDefinitionStorage &storage)
 {
-  creatureEntries_.clear();
+  CreatureEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : types_)
+  for (const auto &type : Types)
   {
-    creatureEntries_[type.id] = {};
+    CreatureEntries[type.Id] = {};
   }
-  for (const std::string &id : storage.ListSpawnable())
+  for (const std::string &Id : storage.ListSpawnable())
   {
-    const CreatureDefinition *def = storage.Get(id);
+    const CreatureDefinition *def = storage.Get(Id);
     if (!def)
     {
       continue;
     }
     const auto typeIds = GetTypesForTags(def->catalog.tags);
-    const CatalogEntry entry{id,
-                             def->displayName.empty() ? id : def->displayName};
+    const CatalogEntry entry{Id,
+                             def->displayName.empty() ? Id : def->displayName};
     for (const auto &typeId : typeIds)
     {
-      if (!creatureEntries_.count(typeId))
+      if (!CreatureEntries.count(typeId))
       {
-        creatureEntries_[typeId] = {};
+        CreatureEntries[typeId] = {};
       }
-      creatureEntries_[typeId].push_back(entry);
+      CreatureEntries[typeId].push_back(entry);
     }
   }
-  for (auto &pair : creatureEntries_)
+  for (auto &pair : CreatureEntries)
   {
     std::sort(pair.second.begin(), pair.second.end(),
               [](const CatalogEntry &a, const CatalogEntry &b)
-              { return a.id < b.id; });
+              { return a.Id < b.Id; });
   }
 }
 
 void UContentTypeRegistry::IndexSkins(const USkinDefinitionStorage &storage)
 {
-  skinEntries_.clear();
+  SkinEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : types_)
+  for (const auto &type : Types)
   {
-    skinEntries_[type.id] = {};
+    SkinEntries[type.Id] = {};
   }
-  for (const std::string &id : storage.ListEquippable())
+  for (const std::string &Id : storage.ListEquippable())
   {
-    const SkinDefinition *def = storage.Get(id);
+    const SkinDefinition *def = storage.Get(Id);
     if (!def)
     {
       continue;
     }
     const auto typeIds = GetTypesForTags(def->catalog.tags);
-    const CatalogEntry entry{id,
-                             def->displayName.empty() ? id : def->displayName};
+    const CatalogEntry entry{Id,
+                             def->displayName.empty() ? Id : def->displayName};
     for (const auto &typeId : typeIds)
     {
-      if (!skinEntries_.count(typeId))
+      if (!SkinEntries.count(typeId))
       {
-        skinEntries_[typeId] = {};
+        SkinEntries[typeId] = {};
       }
-      skinEntries_[typeId].push_back(entry);
+      SkinEntries[typeId].push_back(entry);
     }
   }
-  for (auto &pair : skinEntries_)
+  for (auto &pair : SkinEntries)
   {
     std::sort(pair.second.begin(), pair.second.end(),
               [](const CatalogEntry &a, const CatalogEntry &b)
-              { return a.id < b.id; });
+              { return a.Id < b.Id; });
   }
 }
 
 void UContentTypeRegistry::IndexPrefabs(const UPrefabLibrary &prefabs)
 {
-  objectEntries_.clear();
+  ObjectEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : types_)
+  for (const auto &type : Types)
   {
-    objectEntries_[type.id] = {};
+    ObjectEntries[type.Id] = {};
   }
-  for (const std::string &name : prefabs.ListNames())
+  for (const std::string &Name : prefabs.ListNames())
   {
-    const auto typeIds = std::vector<std::string>{kMiscType};
-    CatalogEntry entry{name, name};
+    const std::string category = prefabs.GetCategory(Name);
+    const std::string label = prefabs.GetDisplayName(Name);
+    const auto typeIds =
+        GetTypesForTags({category == "misc" ? kMiscType : category});
+    CatalogEntry entry{Name, label};
     for (const auto &typeId : typeIds)
     {
-      objectEntries_[typeId].push_back(entry);
+      if (!ObjectEntries.count(typeId))
+      {
+        ObjectEntries[typeId] = {};
+      }
+      ObjectEntries[typeId].push_back(entry);
     }
   }
 }
@@ -202,24 +212,24 @@ UContentTypeRegistry::GetTypeIds(ContentKind kind) const
 {
   std::vector<std::string> ids;
   const std::unordered_map<std::string, std::vector<CatalogEntry>> *map =
-      &blockEntries_;
+      &BlockEntries;
   if (kind == ContentKind::UObject)
   {
-    map = &objectEntries_;
+    map = &ObjectEntries;
   }
   else if (kind == ContentKind::UCreature)
   {
-    map = &creatureEntries_;
+    map = &CreatureEntries;
   }
   else if (kind == ContentKind::Skin)
   {
-    map = &skinEntries_;
+    map = &SkinEntries;
   }
-  for (const auto &type : types_)
+  for (const auto &type : Types)
   {
-    if (map->count(type.id) && !map->at(type.id).empty())
+    if (map->count(type.Id) && !map->at(type.Id).empty())
     {
-      ids.push_back(type.id);
+      ids.push_back(type.Id);
     }
   }
   if (ids.empty())
@@ -232,8 +242,8 @@ UContentTypeRegistry::GetTypeIds(ContentKind kind) const
 std::string
 UContentTypeRegistry::GetTypeDisplayName(const std::string &typeId) const
 {
-  const auto it = typeById_.find(typeId);
-  if (it != typeById_.end())
+  const auto it = TypeById.find(typeId);
+  if (it != TypeById.end())
   {
     return it->second.displayName;
   }
@@ -245,18 +255,18 @@ UContentTypeRegistry::GetEntries(ContentKind kind,
                                  const std::string &typeId) const
 {
   const std::unordered_map<std::string, std::vector<CatalogEntry>> *map =
-      &blockEntries_;
+      &BlockEntries;
   if (kind == ContentKind::UObject)
   {
-    map = &objectEntries_;
+    map = &ObjectEntries;
   }
   else if (kind == ContentKind::UCreature)
   {
-    map = &creatureEntries_;
+    map = &CreatureEntries;
   }
   else if (kind == ContentKind::Skin)
   {
-    map = &skinEntries_;
+    map = &SkinEntries;
   }
   const auto it = map->find(typeId);
   if (it != map->end())

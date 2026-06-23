@@ -1,0 +1,19 @@
+﻿{
+    "name":  "command_block",
+    "id":  620,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock",
+                     "commandBlock"
+                 ],
+    "render":  {
+
+               }
+}
+

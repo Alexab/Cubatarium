@@ -1,0 +1,4 @@
+Source file: mobs_spider_grey.png
+Upstream: mobs_monster/textures/mobs_spider_grey.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

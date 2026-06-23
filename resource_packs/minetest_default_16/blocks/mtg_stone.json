@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_stone",
+    "id":  503,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_stone_default_stone",
+                     "mtg_stone_default_stone",
+                     "mtg_stone_default_stone",
+                     "mtg_stone_default_stone",
+                     "mtg_stone_default_stone",
+                     "mtg_stone_default_stone"
+                 ],
+    "render":  {
+
+               }
+}
+

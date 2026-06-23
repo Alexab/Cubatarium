@@ -1,14 +1,16 @@
 #include "Blocks/Input/BlockInputController.h"
 
 #include "App/Application.h"
-#include "Render/Camera/Camera.h"
+#if defined(__ANDROID__)
+#include "App/Platform/TouchInputBridge.h"
+#endif
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
-#include "Render/Engine/GeometryEngine.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Render/Engine/GeometryEngine.h"
+#include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 
-#include <GLFW/glfw3.h>
 #include <cmath>
 
 namespace cutum
@@ -22,6 +24,21 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
   const float dx = a.x - b.x;
   const float dy = a.y - b.y;
   return std::sqrt(dx * dx + dy * dy);
+}
+
+bool ShouldBlockBreakByMovement(const BlockInputContext &ctx)
+{
+#if defined(__ANDROID__)
+  if (!ctx.App)
+  {
+    return false;
+  }
+  const auto *touch = ctx.App->GetTouchInputBridge();
+  return touch && touch->IsMovementBlockingBreak();
+#else
+  (void)ctx;
+  return false;
+#endif
 }
 
 } // namespace
@@ -40,63 +57,29 @@ UBlockInputController::GetActiveEntry(const BlockInputContext &ctx) const
   return nullptr;
 }
 
-bool UBlockInputController::ActiveSlotBlocksWorldInteraction(
-    const BlockInputContext &ctx) const
-{
-  const InventoryEntryRef *active = GetActiveEntry(ctx);
-  if (!active)
-  {
-    return false;
-  }
-  if (active->kind == InventoryEntryKind::UCreature && !active->id.empty())
-  {
-    return true;
-  }
-  if (active->kind == InventoryEntryKind::Skin && !active->id.empty())
-  {
-    return true;
-  }
-  return false;
-}
-
-void UBlockInputController::TryPlaceFromActiveSlot(const BlockInputContext &ctx)
+void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
 {
   if (!ctx.World)
   {
     return;
   }
-  const InventoryEntryRef *active = GetActiveEntry(ctx);
-  if (active && active->kind == InventoryEntryKind::UObject &&
-      !active->id.empty())
+  const InventoryEntryRef *Active = GetActiveEntry(ctx);
+  if (!Active || Active->empty || Active->Id.empty())
   {
+    return;
+  }
+  switch (Active->kind)
+  {
+  case InventoryEntryKind::UObject:
     ctx.World->PlaceActivePrefabByView();
-  }
-  else
-  {
-    ctx.World->AddObjectByView();
-  }
-}
-
-void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext &ctx)
-{
-  if (!ctx.World)
-  {
-    return;
-  }
-  const InventoryEntryRef *active = GetActiveEntry(ctx);
-  if (!active)
-  {
-    return;
-  }
-  if (active->kind == InventoryEntryKind::UCreature && !active->id.empty())
-  {
-    if (!ctx.World->SpawnCreatureByView(active->id) && ctx.Geometries)
+    break;
+  case InventoryEntryKind::UCreature:
+    if (!ctx.World->SpawnCreatureByView(Active->Id) && ctx.Geometries)
     {
-      ctx.Geometries->ShowTransientMessage("Cannot spawn " + active->id, 2.0);
+      ctx.Geometries->ShowTransientMessage("Cannot spawn " + Active->Id, 2.0);
     }
-    return;
-  }
-  if (active->kind == InventoryEntryKind::Skin && !active->id.empty())
+    break;
+  case InventoryEntryKind::Skin:
   {
     auto camera = ctx.World->GetCurrentUserCamera();
     if (!camera)
@@ -104,9 +87,9 @@ void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext &ctx)
       return;
     }
     const auto target = ctx.World->PickCreatureByView(camera->GetPosition(),
-                                                      camera->GetFront(), 8.0f);
+                                                    camera->GetFront(), 8.0f);
     std::string error;
-    if (target && ctx.World->TryApplySkin(*target, active->id, &error))
+    if (target && ctx.World->TryApplySkin(*target, Active->Id, &error))
     {
       return;
     }
@@ -115,6 +98,12 @@ void UBlockInputController::TrySpawnCreatureOrSkin(const BlockInputContext &ctx)
       ctx.Geometries->ShowTransientMessage(
           error.empty() ? "No creature in view" : error, 2.0);
     }
+    break;
+  }
+  case InventoryEntryKind::Block:
+  default:
+    ctx.World->AddObjectByView();
+    break;
   }
 }
 
@@ -127,6 +116,28 @@ void UBlockInputController::TryInstantBreak(const BlockInputContext &ctx)
   }
 }
 
+void UBlockInputController::CancelPointerInteraction(
+    const BlockInputContext &ctx)
+{
+  LeftHeld = false;
+  if (ctx.World)
+  {
+    ctx.World->CancelBreakSession();
+  }
+}
+
+void UBlockInputController::OnQuickTap(const BlockInputContext &ctx)
+{
+  if (!ctx.Ui || !ctx.World)
+  {
+    return;
+  }
+  // Touch: Classic = RMB place/use; Cubatarium = LMB short tap place/use.
+  ctx.World->CancelBreakSession();
+  TryUseActiveSlot(ctx);
+  LeftHeld = false;
+}
+
 void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
 {
   if (!ctx.Ui || !ctx.World)
@@ -136,16 +147,11 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   LeftDownTime = std::chrono::steady_clock::now();
   LeftHeld = true;
 
-  if (ctx.Ui->controlScheme == ControlScheme::Classic)
+  // Classic: LMB down starts break immediately (independent of hotbar slot).
+  if (ctx.Ui->ControlScheme == ControlScheme::Classic &&
+      ctx.World->GetIsBlockIntersectionExists())
   {
-    if (ActiveSlotBlocksWorldInteraction(ctx))
-    {
-      return;
-    }
-    if (ctx.World->GetIsBlockIntersectionExists())
-    {
-      ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
-    }
+    ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
   }
 }
 
@@ -158,60 +164,34 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
     return;
   }
 
-  const InventoryEntryRef *active = GetActiveEntry(ctx);
-
-  if (ctx.Ui->controlScheme == ControlScheme::Cubatarium)
+  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
   {
-    if (active && active->kind == InventoryEntryKind::UCreature &&
-        !active->id.empty())
-    {
-      TrySpawnCreatureOrSkin(ctx);
-      LeftHeld = false;
-      return;
-    }
-    if (active && active->kind == InventoryEntryKind::Skin &&
-        !active->id.empty())
-    {
-      TrySpawnCreatureOrSkin(ctx);
-      LeftHeld = false;
-      return;
-    }
-
-    // Cubatarium dead zone: placeClickMaxSeconds <= hold < breakHoldMinSeconds
-    // => noop.
-    const float placeMax = ctx.Ui->placeClickMaxSeconds;
-    const float breakMin = ctx.Ui->breakHoldMinSeconds;
+    const float placeMax = ctx.Ui->PlaceClickMaxSeconds;
+    const float breakMin = ctx.Ui->BreakHoldMinSeconds;
 
     if (holdSeconds < placeMax)
     {
+      // Short tap: place/use active slot (block, prefab, creature, skin).
       ctx.World->CancelBreakSession();
-      TryPlaceFromActiveSlot(ctx);
+      TryUseActiveSlot(ctx);
     }
     else if (holdSeconds < breakMin)
     {
+      // Dead zone: no place, no break.
       ctx.World->CancelBreakSession();
     }
-    else
+    else if (!ctx.World->HasBreakSession() &&
+             ctx.World->GetIsBlockIntersectionExists() &&
+             !ShouldBlockBreakByMovement(ctx))
     {
-      if (!ctx.World->HasBreakSession() &&
-          ctx.World->GetIsBlockIntersectionExists())
-      {
-        ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
-      }
+      // Long press release without Tick having started break yet.
+      ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
     }
     LeftHeld = false;
     return;
   }
 
-  // Classic
-  if (ActiveSlotBlocksWorldInteraction(ctx))
-  {
-    TrySpawnCreatureOrSkin(ctx);
-    ctx.World->CancelBreakSession();
-    LeftHeld = false;
-    return;
-  }
-
+  // Classic: release ends break if still in progress (completed breaks already cleared).
   if (ctx.World->HasBreakSession())
   {
     ctx.World->CancelBreakSession();
@@ -227,7 +207,7 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
   RightDragExceeded = false;
   RightLookActive = false;
 
-  if (!ctx.Ui || ctx.Ui->controlScheme != ControlScheme::Cubatarium)
+  if (!ctx.Ui || ctx.Ui->ControlScheme != ControlScheme::Cubatarium)
   {
     return;
   }
@@ -253,29 +233,26 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
   RightPressed = false;
   RightLookActive = false;
 
-  if (ctx.Ui->controlScheme == ControlScheme::Cubatarium)
+  // Cubatarium: RMB is look only.
+  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
   {
     return;
   }
 
-  if (ActiveSlotBlocksWorldInteraction(ctx))
-  {
-    return;
-  }
-
-  TryPlaceFromActiveSlot(ctx);
+  // Classic: RMB click places/uses active slot (independent of LMB break).
+  TryUseActiveSlot(ctx);
 }
 
-void UBlockInputController::OnMouseButton(MouseButton button, bool pressed,
+void UBlockInputController::OnMouseButton(MouseButton Button, bool Pressed,
                                           glm::vec2 pos,
                                           const BlockInputContext &ctx)
 {
-  if (button == MouseButton::Right)
+  if (Button == MouseButton::Right)
   {
-    if (pressed)
+    if (Pressed)
     {
       HandleRightPress(pos, ctx);
-      if (ctx.Ui && ctx.Ui->controlScheme == ControlScheme::Cubatarium)
+      if (ctx.Ui && ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
       {
         RightLookActive = true;
       }
@@ -287,12 +264,12 @@ void UBlockInputController::OnMouseButton(MouseButton button, bool pressed,
     return;
   }
 
-  if (button != MouseButton::Left)
+  if (Button != MouseButton::Left)
   {
     return;
   }
 
-  if (pressed)
+  if (Pressed)
   {
     HandleLeftPress(ctx);
   }
@@ -315,7 +292,7 @@ void UBlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta,
     return;
   }
 
-  if (ctx.Ui->controlScheme == ControlScheme::Classic)
+  if (ctx.Ui->ControlScheme == ControlScheme::Classic)
   {
     if (auto camera = ctx.World->GetCurrentUserCamera())
     {
@@ -329,7 +306,7 @@ void UBlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta,
     return;
   }
 
-  const int threshold = ctx.Ui->rmbDragThresholdPx;
+  const int threshold = ctx.Ui->RmbDragThresholdPx;
   if (!RightDragExceeded &&
       CursorDragDistancePx(pos, RightDownPos) > static_cast<float>(threshold))
   {
@@ -361,7 +338,7 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 
   if (ctx.World->HasBreakSession())
   {
-    ctx.World->TickBreakSession(dt, ctx.Ui->breakDurationSeconds);
+    ctx.World->TickBreakSession(dt, ctx.Ui->BreakDurationSeconds);
     if (ctx.World->GetBreakProgress() >= 1.0f)
     {
       ctx.World->CompleteBreakSession();
@@ -370,29 +347,30 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
     return;
   }
 
-  if (!LeftHeld || ActiveSlotBlocksWorldInteraction(ctx))
+  if (!LeftHeld || !ctx.World->GetIsBlockIntersectionExists())
   {
     return;
   }
 
-  if (!ctx.World->GetIsBlockIntersectionExists())
+  // Cubatarium: hold LMB past breakMin to start break (any hotbar slot).
+  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
   {
-    return;
-  }
-
-  if (ctx.Ui->controlScheme == ControlScheme::Cubatarium)
-  {
+    if (ShouldBlockBreakByMovement(ctx))
+    {
+      return;
+    }
     const float holdSeconds =
         std::chrono::duration<float>(std::chrono::steady_clock::now() -
                                      LeftDownTime)
             .count();
-    if (holdSeconds >= ctx.Ui->breakHoldMinSeconds)
+    if (holdSeconds >= ctx.Ui->BreakHoldMinSeconds)
     {
       ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
     }
     return;
   }
 
+  // Classic: break already started on press; Tick is a fallback if needed.
   ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
 }
 

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "end_portal_frame_eye",
+    "id":  367,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_side",
+                     "endframe_eye",
+                     "endframe_side"
+                 ],
+    "render":  {
+
+               }
+}
+

@@ -1,0 +1,12 @@
+{
+  "id": "scrubland",
+  "height": {
+    "base_offset": -1,
+    "amplitude_mul": 0.75,
+    "volatility_mul": 0.7
+  },
+  "palette": {
+    "surface": "sand",
+    "subsurface": "dirt"
+  }
+}

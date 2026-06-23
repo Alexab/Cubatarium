@@ -1,0 +1,19 @@
+﻿{
+    "name":  "item_frame",
+    "id":  772,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back",
+                     "itemframe_back"
+                 ],
+    "render":  {
+
+               }
+}
+

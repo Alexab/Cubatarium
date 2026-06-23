@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_dry_dirt",
+    "id":  449,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_dry_dirt_default_dry_dirt",
+                     "mtg_dry_dirt_default_dry_dirt",
+                     "mtg_dry_dirt_default_dry_dirt",
+                     "mtg_dry_dirt_default_dry_dirt",
+                     "mtg_dry_dirt_default_dry_dirt",
+                     "mtg_dry_dirt_default_dry_dirt"
+                 ],
+    "render":  {
+
+               }
+}
+

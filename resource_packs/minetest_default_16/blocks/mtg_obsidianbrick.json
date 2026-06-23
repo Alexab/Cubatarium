@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_obsidianbrick",
+    "id":  477,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_obsidianbrick_default_obsidian_brick",
+                     "mtg_obsidianbrick_default_obsidian_brick",
+                     "mtg_obsidianbrick_default_obsidian_brick",
+                     "mtg_obsidianbrick_default_obsidian_brick",
+                     "mtg_obsidianbrick_default_obsidian_brick",
+                     "mtg_obsidianbrick_default_obsidian_brick"
+                 ],
+    "render":  {
+
+               }
+}
+

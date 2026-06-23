@@ -1,10 +1,13 @@
-#include "WorldGenSettingsForm.h"
+#include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Core/GuiTheme.h"
-#include "GuiButton.h"
-#include "GuiCheckbox.h"
-#include "GuiLabel.h"
-#include "GuiPanel.h"
-#include "GuiTextInput.h"
+#include "Gui/Widgets/GuiCheckbox.h"
+#include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiListView.h"
+#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiTextInput.h"
+#include "Gui/Widgets/GuiWidget.h"
+#include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldSeedParser.h"
 #include <algorithm>
 #include <sstream>
 
@@ -13,13 +16,32 @@ namespace cutum
 
 namespace
 {
-
-std::string GeneratorLabel(ProceduralGenerator g)
+int PresetIndexFromId(const std::string &id)
 {
-  return ProceduralGeneratorToString(g);
+  if (id == "realistic")
+  {
+    return 1;
+  }
+  if (id == "sparse_structures")
+  {
+    return 2;
+  }
+  return 0;
 }
 
-std::string VerticalLabel(VerticalMode m) { return VerticalModeToString(m); }
+std::string PresetIdFromIndex(int index)
+{
+  switch (index)
+  {
+  case 1:
+    return "realistic";
+  case 2:
+    return "sparse_structures";
+  default:
+    return "balanced";
+  }
+}
+
 
 int ParseIntOr(const std::string &text, int fallback)
 {
@@ -35,9 +57,19 @@ int ParseIntOr(const std::string &text, int fallback)
 
 uint32_t ParseSeedOr(const std::string &text, uint32_t fallback)
 {
+  if (text.empty())
+  {
+    return fallback;
+  }
+  const WorldSeedResolution resolved = ResolveWorldSeed(text);
+  return resolved.resolved;
+}
+
+float ParseFloatOr(const std::string &text, float fallback)
+{
   try
   {
-    return static_cast<uint32_t>(std::stoul(text));
+    return std::stof(text);
   }
   catch (...)
   {
@@ -45,154 +77,459 @@ uint32_t ParseSeedOr(const std::string &text, uint32_t fallback)
   }
 }
 
+void SetWidgetVisible(UGuiWidget *widget, bool visible)
+{
+  if (widget)
+  {
+    widget->SetVisible(visible);
+  }
+}
+
 } // namespace
 
 UWorldGenSettingsForm::UWorldGenSettingsForm(const GuiTheme *theme)
-    : theme_(theme)
+    : Theme(theme)
 {
+}
+
+void UWorldGenSettingsForm::SetHintText(const std::string &text)
+{
+  if (HintLabel)
+  {
+    HintLabel->SetText(text);
+  }
+}
+
+void UWorldGenSettingsForm::SetForNewWorldDefaults()
+{
+  ForNewWorldScreen = true;
+  SetHintText("Choose generator and tuning for this new world.");
+}
+
+void UWorldGenSettingsForm::SetOnLayoutChanged(std::function<void()> handler)
+{
+  OnLayoutChanged = std::move(handler);
 }
 
 void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
 {
-  settings_ = settings;
-  if (hintLabel_)
+  FormSettings = settings;
+  if (HintLabel && !ForNewWorldScreen)
   {
-    hintLabel_->SetText("Defaults for the next new worlds.");
+    HintLabel->SetText("Defaults for the next new worlds.");
   }
-  if (generatorBtn_)
+  if (GeneratorList)
   {
-    generatorBtn_->SetLabel(GeneratorLabel(settings_.generator));
+    GeneratorList->SetSelectedIndex(
+        UWorldGeneratorRegistry::IndexOf(FormSettings.Generator));
   }
-  if (verticalBtn_)
+  if (PresetList)
   {
-    verticalBtn_->SetLabel(VerticalLabel(settings_.vertical));
+    PresetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
   }
-  if (seedInput_)
+  if (WorldGenPackIdInput)
   {
-    seedInput_->SetText(std::to_string(settings_.seed));
+    WorldGenPackIdInput->SetText(FormSettings.WorldGenPackId);
   }
-  if (seaLevelInput_)
+  if (SeedInput)
   {
-    seaLevelInput_->SetText(std::to_string(settings_.seaLevel));
+    SeedInput->SetText(FormSettings.SeedText.empty()
+                           ? std::to_string(FormSettings.Seed)
+                           : FormSettings.SeedText);
   }
-  if (maxHeightInput_)
+  if (SeaLevelInput)
   {
-    maxHeightInput_->SetText(std::to_string(settings_.maxHeight));
+    SeaLevelInput->SetText(std::to_string(FormSettings.SeaLevel));
   }
-  if (flatYInput_)
+  if (MaxHeightInput)
   {
-    flatYInput_->SetText(std::to_string(settings_.flatSurfaceY));
+    MaxHeightInput->SetText(std::to_string(FormSettings.MaxHeight));
   }
-  if (cavesBox_)
+  if (BedrockTopYInput)
   {
-    cavesBox_->SetChecked(settings_.enableCaves);
+    BedrockTopYInput->SetText(std::to_string(FormSettings.BedrockTopY));
   }
-  if (treesBox_)
+  if (FlatYInput)
   {
-    treesBox_->SetChecked(settings_.enableTrees);
+    FlatYInput->SetText(std::to_string(FormSettings.FlatSurfaceY));
   }
-  if (waterBox_)
+  if (VegetationDensityInput)
   {
-    waterBox_->SetChecked(settings_.fillWater);
+    VegetationDensityInput->SetText(
+        std::to_string(FormSettings.Tuning.vegetationDensity));
   }
-  if (lavaBox_)
+  if (DecorationDensityInput)
   {
-    lavaBox_->SetChecked(settings_.fillLava);
+    DecorationDensityInput->SetText(
+        std::to_string(FormSettings.Tuning.decorationDensity));
   }
-  if (fireBox_)
+  if (StructureDensityInput)
   {
-    fireBox_->SetChecked(settings_.fillFire);
+    StructureDensityInput->SetText(
+        std::to_string(FormSettings.Tuning.structureDensity));
+  }
+  if (TerrainRoughnessInput)
+  {
+    TerrainRoughnessInput->SetText(
+        std::to_string(FormSettings.Tuning.terrainRoughness));
+  }
+  if (BiomeForestInput)
+  {
+    BiomeForestInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeForestWeight));
+  }
+  if (BiomeDesertInput)
+  {
+    BiomeDesertInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeDesertWeight));
+  }
+  if (BiomePlainsInput)
+  {
+    BiomePlainsInput->SetText(
+        std::to_string(FormSettings.Tuning.biomePlainsWeight));
+  }
+  if (BiomeHillsInput)
+  {
+    BiomeHillsInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeHillsWeight));
+  }
+  if (BiomeTundraInput)
+  {
+    BiomeTundraInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeTundraWeight));
+  }
+  if (BiomeBlendInput)
+  {
+    BiomeBlendInput->SetText(
+        std::to_string(FormSettings.Tuning.biomeBlendRadius));
+  }
+  if (OreDensityInput)
+  {
+    OreDensityInput->SetText(std::to_string(FormSettings.Tuning.oreDensity));
+  }
+  if (TerrainErosionInput)
+  {
+    TerrainErosionInput->SetText(
+        std::to_string(FormSettings.Tuning.terrainErosion));
+  }
+  if (CaveThresholdInput)
+  {
+    CaveThresholdInput->SetText(std::to_string(FormSettings.Caves.threshold));
+  }
+  if (CaveMinYInput)
+  {
+    CaveMinYInput->SetText(std::to_string(FormSettings.Caves.minY));
+  }
+  if (CaveScaleInput)
+  {
+    CaveScaleInput->SetText(std::to_string(FormSettings.Caves.scale));
+  }
+  if (CaveMaxDepthInput)
+  {
+    CaveMaxDepthInput->SetText(
+        std::to_string(FormSettings.Caves.maxDepthBelowSurface));
+  }
+  if (CaveStyleInput)
+  {
+    CaveStyleInput->SetText(CaveStyleToString(FormSettings.Caves.style));
+  }
+  if (CavesBox)
+  {
+    CavesBox->SetChecked(FormSettings.EnableCaves);
+  }
+  if (OresBox)
+  {
+    OresBox->SetChecked(FormSettings.EnableOres);
+  }
+  if (TreesBox)
+  {
+    TreesBox->SetChecked(FormSettings.EnableTrees);
+  }
+  if (DecorationBox)
+  {
+    DecorationBox->SetChecked(FormSettings.EnableDecoration);
+  }
+  if (StructuresBox)
+  {
+    StructuresBox->SetChecked(FormSettings.EnableStructures);
+  }
+  if (WaterBox)
+  {
+    WaterBox->SetChecked(FormSettings.FillWater);
+  }
+  if (LavaBox)
+  {
+    LavaBox->SetChecked(FormSettings.FillLava);
+  }
+  if (FireBox)
+  {
+    FireBox->SetChecked(FormSettings.FillFire);
+  }
+  RefreshGeneratorDescription();
+  UpdateFieldVisibility();
+  if (OnLayoutChanged)
+  {
+    OnLayoutChanged();
   }
 }
 
 ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
 {
-  ProceduralSettings s = settings_;
-  if (seedInput_)
+  ProceduralSettings s = FormSettings;
+  if (WorldGenPackIdInput)
   {
-    s.seed = ParseSeedOr(seedInput_->GetText(), s.seed);
+    const std::string packId = WorldGenPackIdInput->GetText();
+    if (!packId.empty())
+    {
+      s.WorldGenPackId = packId;
+    }
   }
-  if (seaLevelInput_)
+  if (SeedInput)
   {
-    s.seaLevel = ParseIntOr(seaLevelInput_->GetText(), s.seaLevel);
+    const WorldSeedResolution resolved = ResolveWorldSeed(SeedInput->GetText());
+    s.Seed = resolved.resolved;
+    s.SeedText = resolved.raw;
+    s.SeedKind = resolved.kind;
   }
-  if (maxHeightInput_)
+  if (SeaLevelInput)
   {
-    s.maxHeight = ParseIntOr(maxHeightInput_->GetText(), s.maxHeight);
+    s.SeaLevel = ParseIntOr(SeaLevelInput->GetText(), s.SeaLevel);
   }
-  if (flatYInput_)
+  if (MaxHeightInput)
   {
-    s.flatSurfaceY = ParseIntOr(flatYInput_->GetText(), s.flatSurfaceY);
+    s.MaxHeight = ParseIntOr(MaxHeightInput->GetText(), s.MaxHeight);
   }
-  if (cavesBox_)
+  if (BedrockTopYInput)
   {
-    s.enableCaves = cavesBox_->IsChecked();
+    s.BedrockTopY = ParseIntOr(BedrockTopYInput->GetText(), s.BedrockTopY);
   }
-  if (treesBox_)
+  if (FlatYInput)
   {
-    s.enableTrees = treesBox_->IsChecked();
+    s.FlatSurfaceY = ParseIntOr(FlatYInput->GetText(), s.FlatSurfaceY);
   }
-  if (waterBox_)
+  if (VegetationDensityInput)
   {
-    s.fillWater = waterBox_->IsChecked();
+    s.Tuning.vegetationDensity =
+        ParseFloatOr(VegetationDensityInput->GetText(), s.Tuning.vegetationDensity);
   }
-  if (lavaBox_)
+  if (DecorationDensityInput)
   {
-    s.fillLava = lavaBox_->IsChecked();
+    s.Tuning.decorationDensity =
+        ParseFloatOr(DecorationDensityInput->GetText(), s.Tuning.decorationDensity);
   }
-  if (fireBox_)
+  if (StructureDensityInput)
   {
-    s.fillFire = fireBox_->IsChecked();
+    s.Tuning.structureDensity =
+        ParseFloatOr(StructureDensityInput->GetText(), s.Tuning.structureDensity);
+  }
+  if (TerrainRoughnessInput)
+  {
+    s.Tuning.terrainRoughness =
+        ParseFloatOr(TerrainRoughnessInput->GetText(), s.Tuning.terrainRoughness);
+  }
+  if (BiomeForestInput)
+  {
+    s.Tuning.biomeForestWeight =
+        ParseFloatOr(BiomeForestInput->GetText(), s.Tuning.biomeForestWeight);
+  }
+  if (BiomeDesertInput)
+  {
+    s.Tuning.biomeDesertWeight =
+        ParseFloatOr(BiomeDesertInput->GetText(), s.Tuning.biomeDesertWeight);
+  }
+  if (BiomePlainsInput)
+  {
+    s.Tuning.biomePlainsWeight =
+        ParseFloatOr(BiomePlainsInput->GetText(), s.Tuning.biomePlainsWeight);
+  }
+  if (BiomeHillsInput)
+  {
+    s.Tuning.biomeHillsWeight =
+        ParseFloatOr(BiomeHillsInput->GetText(), s.Tuning.biomeHillsWeight);
+  }
+  if (BiomeTundraInput)
+  {
+    s.Tuning.biomeTundraWeight =
+        ParseFloatOr(BiomeTundraInput->GetText(), s.Tuning.biomeTundraWeight);
+  }
+  if (BiomeBlendInput)
+  {
+    s.Tuning.biomeBlendRadius =
+        ParseFloatOr(BiomeBlendInput->GetText(), s.Tuning.biomeBlendRadius);
+  }
+  if (OreDensityInput)
+  {
+    s.Tuning.oreDensity =
+        ParseFloatOr(OreDensityInput->GetText(), s.Tuning.oreDensity);
+  }
+  if (TerrainErosionInput)
+  {
+    s.Tuning.terrainErosion =
+        ParseFloatOr(TerrainErosionInput->GetText(), s.Tuning.terrainErosion);
+  }
+  if (CaveThresholdInput)
+  {
+    s.Caves.threshold =
+        ParseFloatOr(CaveThresholdInput->GetText(), s.Caves.threshold);
+  }
+  if (CaveMinYInput)
+  {
+    s.Caves.minY = ParseIntOr(CaveMinYInput->GetText(), s.Caves.minY);
+  }
+  if (CaveScaleInput)
+  {
+    s.Caves.scale = ParseFloatOr(CaveScaleInput->GetText(), s.Caves.scale);
+  }
+  if (CaveMaxDepthInput)
+  {
+    s.Caves.maxDepthBelowSurface = ParseIntOr(CaveMaxDepthInput->GetText(),
+                                              s.Caves.maxDepthBelowSurface);
+  }
+  if (CaveStyleInput)
+  {
+    s.Caves.style = CaveStyleFromString(CaveStyleInput->GetText());
+  }
+  if (CavesBox)
+  {
+    s.EnableCaves = CavesBox->IsChecked();
+  }
+  if (OresBox)
+  {
+    s.EnableOres = OresBox->IsChecked();
+  }
+  if (TreesBox)
+  {
+    s.EnableTrees = TreesBox->IsChecked();
+  }
+  if (DecorationBox)
+  {
+    s.EnableDecoration = DecorationBox->IsChecked();
+  }
+  if (StructuresBox)
+  {
+    s.EnableStructures = StructuresBox->IsChecked();
+  }
+  if (WaterBox)
+  {
+    s.FillWater = WaterBox->IsChecked();
+  }
+  if (LavaBox)
+  {
+    s.FillLava = LavaBox->IsChecked();
+  }
+  if (FireBox)
+  {
+    s.FillFire = FireBox->IsChecked();
+  }
+  if (PresetList)
+  {
+    const int selected = PresetList->GetSelectedIndex();
+    ApplyWorldGenPreset(s, PresetIdFromIndex(selected));
   }
   ResolveProceduralDefaults(s);
-  ApplyGeneratorTierDefaults(s);
   return s;
 }
 
-void UWorldGenSettingsForm::CycleGenerator()
+void UWorldGenSettingsForm::OnGeneratorSelected(int index)
 {
-  static constexpr ProceduralGenerator kOrder[] = {
-      ProceduralGenerator::Flat,          ProceduralGenerator::Heightmap,
-      ProceduralGenerator::Overworld,     ProceduralGenerator::Hills,
-      ProceduralGenerator::Mountains,     ProceduralGenerator::OverworldBiomes,
-      ProceduralGenerator::OverworldFull,
-  };
-  int idx = 0;
-  for (int i = 0; i < static_cast<int>(sizeof(kOrder) / sizeof(kOrder[0])); ++i)
+  if (index < 0 || index >= static_cast<int>(UWorldGeneratorRegistry::Count()))
   {
-    if (kOrder[i] == settings_.generator)
-    {
-      idx = i;
-      break;
-    }
+    return;
   }
-  idx = (idx + 1) % static_cast<int>(sizeof(kOrder) / sizeof(kOrder[0]));
-  settings_.generator = kOrder[idx];
-  if (generatorBtn_)
+  const uint32_t seed = FormSettings.Seed;
+  FormSettings.Generator =
+      UWorldGeneratorRegistry::Get(static_cast<size_t>(index)).Id;
+  ResetToGeneratorDefaults(FormSettings);
+  FormSettings.Seed = seed;
+  SetSettings(FormSettings);
+}
+
+void UWorldGenSettingsForm::RefreshGeneratorDescription()
+{
+  if (!GeneratorDescLabel)
   {
-    generatorBtn_->SetLabel(GeneratorLabel(settings_.generator));
+    return;
+  }
+  if (const WorldGeneratorDescriptor *descriptor =
+          UWorldGeneratorRegistry::Find(FormSettings.Generator))
+  {
+    GeneratorDescLabel->SetText(descriptor->Description);
   }
 }
 
-void UWorldGenSettingsForm::CycleVertical()
+void UWorldGenSettingsForm::UpdateFieldVisibility()
 {
-  settings_.vertical = settings_.vertical == VerticalMode::Compact
-                           ? VerticalMode::Extended
-                           : VerticalMode::Compact;
-  if (verticalBtn_)
-  {
-    verticalBtn_->SetLabel(VerticalLabel(settings_.vertical));
-  }
+  const WorldGeneratorDescriptor *descriptor =
+      UWorldGeneratorRegistry::Find(FormSettings.Generator);
+  const uint32_t flags = descriptor ? descriptor->FeatureFlags : 0u;
+
+  const bool showFlat = (flags & kFeatureFlatSurfaceY) != 0;
+  const bool showCaves = (flags & kFeatureCaves) != 0;
+  const bool showTrees = (flags & kFeatureTrees) != 0;
+  const bool showFluids = (flags & kFeatureFluids) != 0;
+  const bool showTuning = (flags & kFeatureTuning) != 0;
+  const bool showBiomeTuning = (flags & kFeatureBiomes) != 0;
+  const bool showStructures = (flags & kFeatureStructures) != 0;
+  const bool showOres = (flags & kFeatureOres) != 0;
+
+  SetWidgetVisible(FlatYLabel, showFlat);
+  SetWidgetVisible(FlatYInput, showFlat);
+  SetWidgetVisible(CavesBox, showCaves);
+  SetWidgetVisible(TreesBox, showTrees);
+  SetWidgetVisible(DecorationBox, showTrees);
+  SetWidgetVisible(StructuresBox, showStructures);
+  SetWidgetVisible(WaterBox, showFluids);
+  SetWidgetVisible(LavaBox, showFluids);
+  SetWidgetVisible(FireBox, showFluids);
+  SetWidgetVisible(VegetationDensityLabel, showTrees);
+  SetWidgetVisible(VegetationDensityInput, showTrees);
+  SetWidgetVisible(DecorationDensityLabel, showTrees);
+  SetWidgetVisible(DecorationDensityInput, showTrees);
+  SetWidgetVisible(StructureDensityLabel, showStructures);
+  SetWidgetVisible(StructureDensityInput, showStructures);
+  SetWidgetVisible(TerrainRoughnessLabel, showTuning);
+  SetWidgetVisible(TerrainRoughnessInput, showTuning);
+  SetWidgetVisible(BiomeForestLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeForestInput, showBiomeTuning);
+  SetWidgetVisible(BiomeDesertLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeDesertInput, showBiomeTuning);
+  SetWidgetVisible(BiomePlainsLabel, showBiomeTuning);
+  SetWidgetVisible(BiomePlainsInput, showBiomeTuning);
+  SetWidgetVisible(BiomeHillsLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeHillsInput, showBiomeTuning);
+  SetWidgetVisible(BiomeTundraLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeTundraInput, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackIdLabel, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackIdInput, showBiomeTuning);
+  SetWidgetVisible(BiomeBlendLabel, showBiomeTuning);
+  SetWidgetVisible(BiomeBlendInput, showBiomeTuning);
+  SetWidgetVisible(TerrainErosionLabel, showBiomeTuning);
+  SetWidgetVisible(TerrainErosionInput, showBiomeTuning);
+  SetWidgetVisible(OreDensityLabel, showOres);
+  SetWidgetVisible(OreDensityInput, showOres);
+  SetWidgetVisible(OresBox, showOres);
+  SetWidgetVisible(BedrockTopYLabel, showTuning);
+  SetWidgetVisible(BedrockTopYInput, showTuning);
+  SetWidgetVisible(CaveThresholdLabel, showCaves);
+  SetWidgetVisible(CaveThresholdInput, showCaves);
+  SetWidgetVisible(CaveMinYLabel, showCaves);
+  SetWidgetVisible(CaveMinYInput, showCaves);
+  SetWidgetVisible(CaveScaleLabel, showCaves);
+  SetWidgetVisible(CaveScaleInput, showCaves);
+  SetWidgetVisible(CaveMaxDepthLabel, showCaves);
+  SetWidgetVisible(CaveMaxDepthInput, showCaves);
+  SetWidgetVisible(CaveStyleLabel, showCaves);
+  SetWidgetVisible(CaveStyleInput, showCaves);
 }
 
 void UWorldGenSettingsForm::BuildInto(UGuiPanel &panel)
 {
-  if (!built_)
+  if (!Built)
   {
     AddWidgetsTo(panel);
-    built_ = true;
+    Built = true;
   }
-  SetSettings(settings_);
+  SetSettings(FormSettings);
 }
 
 int UWorldGenSettingsForm::MeasureGridHeight(const GuiRect &area,
@@ -210,114 +547,351 @@ void UWorldGenSettingsForm::LayoutGrid(const GuiRect &area,
 void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
 {
   auto hint =
-      std::make_unique<UGuiLabel>(theme_, "Defaults for the next new worlds.");
-  hintLabel_ = hint.get();
+      std::make_unique<UGuiLabel>(Theme, "Defaults for the next new worlds.");
+  HintLabel = hint.get();
   panel.AddChild(std::move(hint));
 
-  auto genLabel = std::make_unique<UGuiLabel>(theme_, "Generator:");
-  generatorLabel_ = genLabel.get();
+  auto genLabel = std::make_unique<UGuiLabel>(Theme, "Generator:");
+  GeneratorCaption = genLabel.get();
   panel.AddChild(std::move(genLabel));
-  auto genBtn =
-      std::make_unique<UGuiButton>(theme_, GeneratorLabel(settings_.generator));
-  generatorBtn_ = genBtn.get();
-  genBtn->SetOnClick([this]() { CycleGenerator(); });
-  panel.AddChild(std::move(genBtn));
 
-  auto vertLabel = std::make_unique<UGuiLabel>(theme_, "Vertical:");
-  verticalLabel_ = vertLabel.get();
-  panel.AddChild(std::move(vertLabel));
-  auto vertBtn =
-      std::make_unique<UGuiButton>(theme_, VerticalLabel(settings_.vertical));
-  verticalBtn_ = vertBtn.get();
-  vertBtn->SetOnClick([this]() { CycleVertical(); });
-  panel.AddChild(std::move(vertBtn));
+  auto genList = std::make_unique<UGuiListView>(Theme);
+  GeneratorList = genList.get();
+  std::vector<std::string> names;
+  for (size_t i = 0; i < UWorldGeneratorRegistry::Count(); ++i)
+  {
+    names.push_back(UWorldGeneratorRegistry::Get(i).DisplayName);
+  }
+  genList->SetItems(std::move(names));
+  genList->SetVisibleRowCount(6);
+  genList->SetSelectedIndex(
+      UWorldGeneratorRegistry::IndexOf(FormSettings.Generator));
+  genList->SetOnSelectionChanged([this](int index) { OnGeneratorSelected(index); });
+  panel.AddChild(std::move(genList));
 
-  auto seedLabel = std::make_unique<UGuiLabel>(theme_, "World seed:");
-  seedLabel_ = seedLabel.get();
+  auto genDesc = std::make_unique<UGuiLabel>(Theme, "");
+  GeneratorDescLabel = genDesc.get();
+  panel.AddChild(std::move(genDesc));
+
+  auto presetLabel = std::make_unique<UGuiLabel>(Theme, "Preset:");
+  PresetLabel = presetLabel.get();
+  panel.AddChild(std::move(presetLabel));
+  auto presetList = std::make_unique<UGuiListView>(Theme);
+  PresetList = presetList.get();
+  presetList->SetItems({"Balanced", "Realistic", "Sparse structures"});
+  presetList->SetVisibleRowCount(3);
+  presetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
+  panel.AddChild(std::move(presetList));
+
+  auto seedLabel = std::make_unique<UGuiLabel>(Theme, "World Seed:");
+  SeedLabel = seedLabel.get();
   panel.AddChild(std::move(seedLabel));
-  auto seedIn = std::make_unique<UGuiTextInput>(theme_);
-  seedInput_ = seedIn.get();
-  seedIn->SetText(std::to_string(settings_.seed));
+  auto seedIn = std::make_unique<UGuiTextInput>(Theme);
+  SeedInput = seedIn.get();
+  seedIn->SetText(std::to_string(FormSettings.Seed));
   panel.AddChild(std::move(seedIn));
 
-  auto seaLabel = std::make_unique<UGuiLabel>(theme_, "Sea level:");
-  seaLevelLabel_ = seaLabel.get();
+  auto seaLabel = std::make_unique<UGuiLabel>(Theme, "Sea level:");
+  SeaLevelLabel = seaLabel.get();
   panel.AddChild(std::move(seaLabel));
-  auto seaIn = std::make_unique<UGuiTextInput>(theme_);
-  seaLevelInput_ = seaIn.get();
-  seaIn->SetText(std::to_string(settings_.seaLevel));
+  auto seaIn = std::make_unique<UGuiTextInput>(Theme);
+  SeaLevelInput = seaIn.get();
+  seaIn->SetText(std::to_string(FormSettings.SeaLevel));
   panel.AddChild(std::move(seaIn));
 
-  auto maxLabel = std::make_unique<UGuiLabel>(theme_, "Max height:");
-  maxHeightLabel_ = maxLabel.get();
+  auto maxLabel = std::make_unique<UGuiLabel>(Theme, "Max height:");
+  MaxHeightLabel = maxLabel.get();
   panel.AddChild(std::move(maxLabel));
-  auto maxIn = std::make_unique<UGuiTextInput>(theme_);
-  maxHeightInput_ = maxIn.get();
-  maxIn->SetText(std::to_string(settings_.maxHeight));
+  auto maxIn = std::make_unique<UGuiTextInput>(Theme);
+  MaxHeightInput = maxIn.get();
+  maxIn->SetText(std::to_string(FormSettings.MaxHeight));
   panel.AddChild(std::move(maxIn));
 
-  auto flatLabel = std::make_unique<UGuiLabel>(theme_, "Flat surface Y:");
-  flatYLabel_ = flatLabel.get();
+  auto bedrockLabel =
+      std::make_unique<UGuiLabel>(Theme, "Bedrock top Y (0=single layer):");
+  BedrockTopYLabel = bedrockLabel.get();
+  panel.AddChild(std::move(bedrockLabel));
+  auto bedrockIn = std::make_unique<UGuiTextInput>(Theme);
+  BedrockTopYInput = bedrockIn.get();
+  bedrockIn->SetText(std::to_string(FormSettings.BedrockTopY));
+  panel.AddChild(std::move(bedrockIn));
+
+  auto flatLabel = std::make_unique<UGuiLabel>(Theme, "Flat surface Y:");
+  FlatYLabel = flatLabel.get();
   panel.AddChild(std::move(flatLabel));
-  auto flatIn = std::make_unique<UGuiTextInput>(theme_);
-  flatYInput_ = flatIn.get();
-  flatIn->SetText(std::to_string(settings_.flatSurfaceY));
+  auto flatIn = std::make_unique<UGuiTextInput>(Theme);
+  FlatYInput = flatIn.get();
+  flatIn->SetText(std::to_string(FormSettings.FlatSurfaceY));
   panel.AddChild(std::move(flatIn));
 
-  auto caves = std::make_unique<UGuiCheckbox>(theme_, "Caves");
-  cavesBox_ = caves.get();
-  caves->SetChecked(settings_.enableCaves);
-  caves->SetOnChanged([this](bool v) { settings_.enableCaves = v; });
+  auto vegLabel =
+      std::make_unique<UGuiLabel>(Theme, "Vegetation density (0-2):");
+  VegetationDensityLabel = vegLabel.get();
+  panel.AddChild(std::move(vegLabel));
+  auto vegIn = std::make_unique<UGuiTextInput>(Theme);
+  VegetationDensityInput = vegIn.get();
+  vegIn->SetText(std::to_string(FormSettings.Tuning.vegetationDensity));
+  panel.AddChild(std::move(vegIn));
+
+  auto decorLabel =
+      std::make_unique<UGuiLabel>(Theme, "Decoration density (0-2):");
+  DecorationDensityLabel = decorLabel.get();
+  panel.AddChild(std::move(decorLabel));
+  auto decorIn = std::make_unique<UGuiTextInput>(Theme);
+  DecorationDensityInput = decorIn.get();
+  decorIn->SetText(std::to_string(FormSettings.Tuning.decorationDensity));
+  panel.AddChild(std::move(decorIn));
+
+  auto structLabel =
+      std::make_unique<UGuiLabel>(Theme, "Structure density (0-2):");
+  StructureDensityLabel = structLabel.get();
+  panel.AddChild(std::move(structLabel));
+  auto structIn = std::make_unique<UGuiTextInput>(Theme);
+  StructureDensityInput = structIn.get();
+  structIn->SetText(std::to_string(FormSettings.Tuning.structureDensity));
+  panel.AddChild(std::move(structIn));
+
+  auto roughLabel =
+      std::make_unique<UGuiLabel>(Theme, "Terrain roughness (0.25-2):");
+  TerrainRoughnessLabel = roughLabel.get();
+  panel.AddChild(std::move(roughLabel));
+  auto roughIn = std::make_unique<UGuiTextInput>(Theme);
+  TerrainRoughnessInput = roughIn.get();
+  roughIn->SetText(std::to_string(FormSettings.Tuning.terrainRoughness));
+  panel.AddChild(std::move(roughIn));
+
+  auto forestLabel =
+      std::make_unique<UGuiLabel>(Theme, "Forest biome weight (0-2):");
+  BiomeForestLabel = forestLabel.get();
+  panel.AddChild(std::move(forestLabel));
+  auto forestIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeForestInput = forestIn.get();
+  forestIn->SetText(std::to_string(FormSettings.Tuning.biomeForestWeight));
+  panel.AddChild(std::move(forestIn));
+
+  auto desertLabel =
+      std::make_unique<UGuiLabel>(Theme, "Desert biome weight (0-2):");
+  BiomeDesertLabel = desertLabel.get();
+  panel.AddChild(std::move(desertLabel));
+  auto desertIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeDesertInput = desertIn.get();
+  desertIn->SetText(std::to_string(FormSettings.Tuning.biomeDesertWeight));
+  panel.AddChild(std::move(desertIn));
+
+  auto plainsLabel =
+      std::make_unique<UGuiLabel>(Theme, "Plains biome weight (0-2):");
+  BiomePlainsLabel = plainsLabel.get();
+  panel.AddChild(std::move(plainsLabel));
+  auto plainsIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomePlainsInput = plainsIn.get();
+  plainsIn->SetText(std::to_string(FormSettings.Tuning.biomePlainsWeight));
+  panel.AddChild(std::move(plainsIn));
+
+  auto hillsLabel =
+      std::make_unique<UGuiLabel>(Theme, "Hills biome weight (0-2):");
+  BiomeHillsLabel = hillsLabel.get();
+  panel.AddChild(std::move(hillsLabel));
+  auto hillsIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeHillsInput = hillsIn.get();
+  hillsIn->SetText(std::to_string(FormSettings.Tuning.biomeHillsWeight));
+  panel.AddChild(std::move(hillsIn));
+
+  auto tundraLabel =
+      std::make_unique<UGuiLabel>(Theme, "Tundra biome weight (0-2):");
+  BiomeTundraLabel = tundraLabel.get();
+  panel.AddChild(std::move(tundraLabel));
+  auto tundraIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeTundraInput = tundraIn.get();
+  tundraIn->SetText(std::to_string(FormSettings.Tuning.biomeTundraWeight));
+  panel.AddChild(std::move(tundraIn));
+
+  auto blendLabel = std::make_unique<UGuiLabel>(Theme, "Biome blend radius:");
+  BiomeBlendLabel = blendLabel.get();
+  panel.AddChild(std::move(blendLabel));
+  auto blendIn = std::make_unique<UGuiTextInput>(Theme);
+  BiomeBlendInput = blendIn.get();
+  blendIn->SetText(std::to_string(FormSettings.Tuning.biomeBlendRadius));
+  panel.AddChild(std::move(blendIn));
+
+  auto erosionLabel = std::make_unique<UGuiLabel>(Theme, "Terrain erosion (0-1):");
+  TerrainErosionLabel = erosionLabel.get();
+  panel.AddChild(std::move(erosionLabel));
+  auto erosionIn = std::make_unique<UGuiTextInput>(Theme);
+  TerrainErosionInput = erosionIn.get();
+  erosionIn->SetText(std::to_string(FormSettings.Tuning.terrainErosion));
+  panel.AddChild(std::move(erosionIn));
+
+  auto oreLabel = std::make_unique<UGuiLabel>(Theme, "Ore density (0-2):");
+  OreDensityLabel = oreLabel.get();
+  panel.AddChild(std::move(oreLabel));
+  auto oreIn = std::make_unique<UGuiTextInput>(Theme);
+  OreDensityInput = oreIn.get();
+  oreIn->SetText(std::to_string(FormSettings.Tuning.oreDensity));
+  panel.AddChild(std::move(oreIn));
+
+  auto caveThrLabel = std::make_unique<UGuiLabel>(Theme, "Cave threshold:");
+  CaveThresholdLabel = caveThrLabel.get();
+  panel.AddChild(std::move(caveThrLabel));
+  auto caveThrIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveThresholdInput = caveThrIn.get();
+  caveThrIn->SetText(std::to_string(FormSettings.Caves.threshold));
+  panel.AddChild(std::move(caveThrIn));
+
+  auto caveMinLabel = std::make_unique<UGuiLabel>(Theme, "Cave min Y:");
+  CaveMinYLabel = caveMinLabel.get();
+  panel.AddChild(std::move(caveMinLabel));
+  auto caveMinIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveMinYInput = caveMinIn.get();
+  caveMinIn->SetText(std::to_string(FormSettings.Caves.minY));
+  panel.AddChild(std::move(caveMinIn));
+
+  auto caveScaleLabel = std::make_unique<UGuiLabel>(Theme, "Cave noise scale:");
+  CaveScaleLabel = caveScaleLabel.get();
+  panel.AddChild(std::move(caveScaleLabel));
+  auto caveScaleIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveScaleInput = caveScaleIn.get();
+  caveScaleIn->SetText(std::to_string(FormSettings.Caves.scale));
+  panel.AddChild(std::move(caveScaleIn));
+
+  auto caveDepthLabel =
+      std::make_unique<UGuiLabel>(Theme, "Cave max depth below surface:");
+  CaveMaxDepthLabel = caveDepthLabel.get();
+  panel.AddChild(std::move(caveDepthLabel));
+  auto caveDepthIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveMaxDepthInput = caveDepthIn.get();
+  caveDepthIn->SetText(std::to_string(FormSettings.Caves.maxDepthBelowSurface));
+  panel.AddChild(std::move(caveDepthIn));
+
+  auto caveStyleLabel = std::make_unique<UGuiLabel>(Theme, "Cave style (noise/worm):");
+  CaveStyleLabel = caveStyleLabel.get();
+  panel.AddChild(std::move(caveStyleLabel));
+  auto caveStyleIn = std::make_unique<UGuiTextInput>(Theme);
+  CaveStyleInput = caveStyleIn.get();
+  caveStyleIn->SetText(CaveStyleToString(FormSettings.Caves.style));
+  panel.AddChild(std::move(caveStyleIn));
+
+  auto caves = std::make_unique<UGuiCheckbox>(Theme, "Caves");
+  CavesBox = caves.get();
+  caves->SetChecked(FormSettings.EnableCaves);
+  caves->SetOnChanged([this](bool v) { FormSettings.EnableCaves = v; });
   panel.AddChild(std::move(caves));
 
-  auto trees = std::make_unique<UGuiCheckbox>(theme_, "Trees");
-  treesBox_ = trees.get();
-  trees->SetChecked(settings_.enableTrees);
-  trees->SetOnChanged([this](bool v) { settings_.enableTrees = v; });
+  auto ores = std::make_unique<UGuiCheckbox>(Theme, "Ores");
+  OresBox = ores.get();
+  ores->SetChecked(FormSettings.EnableOres);
+  ores->SetOnChanged([this](bool v) { FormSettings.EnableOres = v; });
+  panel.AddChild(std::move(ores));
+
+  auto trees = std::make_unique<UGuiCheckbox>(Theme, "Trees");
+  TreesBox = trees.get();
+  trees->SetChecked(FormSettings.EnableTrees);
+  trees->SetOnChanged([this](bool v) { FormSettings.EnableTrees = v; });
   panel.AddChild(std::move(trees));
 
-  auto water = std::make_unique<UGuiCheckbox>(theme_, "Fill water");
-  waterBox_ = water.get();
-  water->SetChecked(settings_.fillWater);
-  water->SetOnChanged([this](bool v) { settings_.fillWater = v; });
+  auto decoration = std::make_unique<UGuiCheckbox>(Theme, "Decoration");
+  DecorationBox = decoration.get();
+  decoration->SetChecked(FormSettings.EnableDecoration);
+  decoration->SetOnChanged(
+      [this](bool v) { FormSettings.EnableDecoration = v; });
+  panel.AddChild(std::move(decoration));
+
+  auto structures = std::make_unique<UGuiCheckbox>(Theme, "Structures");
+  StructuresBox = structures.get();
+  structures->SetChecked(FormSettings.EnableStructures);
+  structures->SetOnChanged(
+      [this](bool v) { FormSettings.EnableStructures = v; });
+  panel.AddChild(std::move(structures));
+
+  auto water = std::make_unique<UGuiCheckbox>(Theme, "Fill water");
+  WaterBox = water.get();
+  water->SetChecked(FormSettings.FillWater);
+  water->SetOnChanged([this](bool v) { FormSettings.FillWater = v; });
   panel.AddChild(std::move(water));
 
-  auto lava = std::make_unique<UGuiCheckbox>(theme_, "Fill lava");
-  lavaBox_ = lava.get();
-  lava->SetChecked(settings_.fillLava);
-  lava->SetOnChanged([this](bool v) { settings_.fillLava = v; });
+  auto lava = std::make_unique<UGuiCheckbox>(Theme, "Fill lava");
+  LavaBox = lava.get();
+  lava->SetChecked(FormSettings.FillLava);
+  lava->SetOnChanged([this](bool v) { FormSettings.FillLava = v; });
   panel.AddChild(std::move(lava));
 
-  auto fire = std::make_unique<UGuiCheckbox>(theme_, "Fill fire");
-  fireBox_ = fire.get();
-  fire->SetChecked(settings_.fillFire);
-  fire->SetOnChanged([this](bool v) { settings_.fillFire = v; });
+  auto fire = std::make_unique<UGuiCheckbox>(Theme, "Fill fire");
+  FireBox = fire.get();
+  fire->SetChecked(FormSettings.FillFire);
+  fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
+
+  auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack id:");
+  WorldGenPackIdLabel = packLabel.get();
+  panel.AddChild(std::move(packLabel));
+  auto packIn = std::make_unique<UGuiTextInput>(Theme);
+  WorldGenPackIdInput = packIn.get();
+  packIn->SetText(FormSettings.WorldGenPackId);
+  panel.AddChild(std::move(packIn));
 }
 
 std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
 {
   std::vector<GuiGridItem> items;
-  items.push_back({hintLabel_, 0, 0, 1, 2, 28});
-
-  items.push_back({generatorLabel_, 1, 0, 1, 1, 28});
-  items.push_back({generatorBtn_, 1, 1, 1, 1, 32});
-  items.push_back({verticalLabel_, 2, 0, 1, 1, 28});
-  items.push_back({verticalBtn_, 2, 1, 1, 1, 32});
-  items.push_back({seedLabel_, 3, 0, 1, 1, 28});
-  items.push_back({seedInput_, 3, 1, 1, 1, 32});
-  items.push_back({seaLevelLabel_, 4, 0, 1, 1, 28});
-  items.push_back({seaLevelInput_, 4, 1, 1, 1, 32});
-  items.push_back({maxHeightLabel_, 5, 0, 1, 1, 28});
-  items.push_back({maxHeightInput_, 5, 1, 1, 1, 32});
-  items.push_back({flatYLabel_, 6, 0, 1, 1, 28});
-  items.push_back({flatYInput_, 6, 1, 1, 1, 32});
-
-  items.push_back({cavesBox_, 7, 0, 1, 1, 30});
-  items.push_back({treesBox_, 7, 1, 1, 1, 30});
-  items.push_back({waterBox_, 8, 0, 1, 1, 30});
-  items.push_back({lavaBox_, 8, 1, 1, 1, 30});
-  items.push_back({fireBox_, 9, 0, 1, 2, 30});
+  items.push_back({HintLabel, 0, 0, 1, 2, 28});
+  items.push_back({GeneratorCaption, 1, 0, 1, 1, 28});
+  items.push_back({GeneratorList, 1, 1, 1, 1, 150});
+  items.push_back({GeneratorDescLabel, 2, 0, 1, 2, 36});
+  items.push_back({PresetLabel, 3, 0, 1, 1, 28});
+  items.push_back({PresetList, 3, 1, 1, 1, 90});
+  items.push_back({SeedLabel, 4, 0, 1, 1, 28});
+  items.push_back({SeedInput, 4, 1, 1, 1, 32});
+  items.push_back({SeaLevelLabel, 5, 0, 1, 1, 28});
+  items.push_back({SeaLevelInput, 5, 1, 1, 1, 32});
+  items.push_back({MaxHeightLabel, 6, 0, 1, 1, 28});
+  items.push_back({MaxHeightInput, 6, 1, 1, 1, 32});
+  items.push_back({BedrockTopYLabel, 7, 0, 1, 1, 28});
+  items.push_back({BedrockTopYInput, 7, 1, 1, 1, 32});
+  items.push_back({FlatYLabel, 8, 0, 1, 1, 28});
+  items.push_back({FlatYInput, 8, 1, 1, 1, 32});
+  items.push_back({VegetationDensityLabel, 9, 0, 1, 1, 28});
+  items.push_back({VegetationDensityInput, 9, 1, 1, 1, 32});
+  items.push_back({DecorationDensityLabel, 10, 0, 1, 1, 28});
+  items.push_back({DecorationDensityInput, 10, 1, 1, 1, 32});
+  items.push_back({StructureDensityLabel, 11, 0, 1, 1, 28});
+  items.push_back({StructureDensityInput, 11, 1, 1, 1, 32});
+  items.push_back({TerrainRoughnessLabel, 12, 0, 1, 1, 28});
+  items.push_back({TerrainRoughnessInput, 12, 1, 1, 1, 32});
+  items.push_back({BiomeForestLabel, 13, 0, 1, 1, 28});
+  items.push_back({BiomeForestInput, 13, 1, 1, 1, 32});
+  items.push_back({BiomeDesertLabel, 14, 0, 1, 1, 28});
+  items.push_back({BiomeDesertInput, 14, 1, 1, 1, 32});
+  items.push_back({BiomePlainsLabel, 15, 0, 1, 1, 28});
+  items.push_back({BiomePlainsInput, 15, 1, 1, 1, 32});
+  items.push_back({BiomeHillsLabel, 16, 0, 1, 1, 28});
+  items.push_back({BiomeHillsInput, 16, 1, 1, 1, 32});
+  items.push_back({BiomeTundraLabel, 17, 0, 1, 1, 28});
+  items.push_back({BiomeTundraInput, 17, 1, 1, 1, 32});
+  items.push_back({BiomeBlendLabel, 18, 0, 1, 1, 28});
+  items.push_back({BiomeBlendInput, 18, 1, 1, 1, 32});
+  items.push_back({TerrainErosionLabel, 19, 0, 1, 1, 28});
+  items.push_back({TerrainErosionInput, 19, 1, 1, 1, 32});
+  items.push_back({OreDensityLabel, 20, 0, 1, 1, 28});
+  items.push_back({OreDensityInput, 20, 1, 1, 1, 32});
+  items.push_back({CaveThresholdLabel, 21, 0, 1, 1, 28});
+  items.push_back({CaveThresholdInput, 21, 1, 1, 1, 32});
+  items.push_back({CaveMinYLabel, 22, 0, 1, 1, 28});
+  items.push_back({CaveMinYInput, 22, 1, 1, 1, 32});
+  items.push_back({CaveScaleLabel, 23, 0, 1, 1, 28});
+  items.push_back({CaveScaleInput, 23, 1, 1, 1, 32});
+  items.push_back({CaveMaxDepthLabel, 24, 0, 1, 1, 28});
+  items.push_back({CaveMaxDepthInput, 24, 1, 1, 1, 32});
+  items.push_back({CaveStyleLabel, 25, 0, 1, 1, 28});
+  items.push_back({CaveStyleInput, 25, 1, 1, 1, 32});
+  items.push_back({CavesBox, 26, 0, 1, 1, 30});
+  items.push_back({OresBox, 26, 1, 1, 1, 30});
+  items.push_back({TreesBox, 27, 0, 1, 1, 30});
+  items.push_back({DecorationBox, 27, 1, 1, 1, 30});
+  items.push_back({StructuresBox, 28, 0, 1, 1, 30});
+  items.push_back({WaterBox, 28, 1, 1, 1, 30});
+  items.push_back({LavaBox, 29, 0, 1, 1, 30});
+  items.push_back({FireBox, 29, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 30, 0, 1, 1, 28});
+  items.push_back({WorldGenPackIdInput, 30, 1, 1, 1, 32});
   return items;
 }
 

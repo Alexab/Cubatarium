@@ -1,0 +1,20 @@
+﻿{
+    "name":  "hellrock",
+    "id":  842,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock",
+                     "hellrock"
+                 ],
+    "displayName":  "Hellrock",
+    "render":  {
+
+               }
+}
+

@@ -1,0 +1,26 @@
+﻿{
+    "name":  "web",
+    "id":  710,
+    "types":  [
+                  "decorative",
+                  "misc"
+              ],
+    "textures":  [
+                     "web",
+                     "web",
+                     "web",
+                     "web",
+                     "web",
+                     "web"
+                 ],
+    "displayName":  "Cobweb",
+    "render":  {
+                   "style":  "cutout"
+               },
+    "physics":  {
+                    "movement":  {
+                                     "occupancy":  0
+                                 }
+                }
+}
+

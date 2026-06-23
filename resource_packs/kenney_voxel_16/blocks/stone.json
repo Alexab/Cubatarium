@@ -1,0 +1,21 @@
+﻿{
+    "name":  "stone",
+    "id":  141,
+    "types":  [
+                  "natural",
+                  "building"
+              ],
+    "textures":  [
+                     "stone",
+                     "stone",
+                     "stone",
+                     "stone",
+                     "stone",
+                     "stone"
+                 ],
+    "displayName":  "Stone",
+    "render":  {
+
+               }
+}
+

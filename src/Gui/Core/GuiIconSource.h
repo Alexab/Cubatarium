@@ -2,8 +2,8 @@
 #define GUI_ICON_SOURCE_H
 
 #include "Gui/Cache/CreatureIconCache.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
 #include "Gui/Cache/PrefabIconCache.h"
+#include "Gui/Interfaces/IGuiIconSource.h"
 #include <memory>
 
 namespace cutum
@@ -25,14 +25,16 @@ public:
   GLuint GetCreatureIconTexture(const std::string &speciesId) override;
   GLuint GetSkinIconTexture(const std::string &skinId) override;
 
-  UPrefabIconCache &GetPrefabCache() { return *prefabCache_; }
+  UPrefabIconCache &GetPrefabCache() { return *PrefabCache; }
+  void ClearBlockIconCache();
+  void ClearCreatureIconCache();
   void WarmupPrefabIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
 
 private:
-  std::shared_ptr<UTextureCubeStorage> textures_;
-  std::unique_ptr<UPrefabIconCache> prefabCache_;
-  std::unique_ptr<UCreatureIconCache> creatureCache_;
+  std::shared_ptr<UTextureCubeStorage> Textures;
+  std::unique_ptr<UPrefabIconCache> PrefabCache;
+  std::unique_ptr<UCreatureIconCache> CreatureCache;
 };
 
 } // namespace cutum

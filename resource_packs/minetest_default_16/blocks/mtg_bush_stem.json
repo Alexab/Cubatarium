@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_bush_stem",
+    "id":  419,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_bush_stem_default_bush_stem",
+                     "mtg_bush_stem_default_bush_stem",
+                     "mtg_bush_stem_default_bush_stem",
+                     "mtg_bush_stem_default_bush_stem",
+                     "mtg_bush_stem_default_bush_stem",
+                     "mtg_bush_stem_default_bush_stem"
+                 ],
+    "render":  {
+
+               }
+}
+

@@ -1,0 +1,19 @@
+﻿{
+    "name":  "cake",
+    "id":  744,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "cake_side",
+                     "cake_side",
+                     "cake_side",
+                     "cake_side",
+                     "cake_top",
+                     "cake_bottom"
+                 ],
+    "render":  {
+
+               }
+}
+

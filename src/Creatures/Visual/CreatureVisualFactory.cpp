@@ -1,9 +1,11 @@
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Creatures/Visual/CreatureVisualGltf.h"
 #include "Creatures/Visual/CreatureVisualRigid.h"
 #include <iostream>
 #include <memory>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -11,13 +13,21 @@ namespace cutum
 std::unique_ptr<ICreatureVisual>
 CreateCreatureVisual(const CreatureDefinition &def)
 {
-  if (def.visual.backend == "gltf_skeleton")
+  switch (ParseCreatureVisualBackend(def.visual.backend))
   {
-    std::cout << "UCreatureVisual: gltf_skeleton stub for " << def.id
-              << std::endl;
+  case CreatureVisualBackend::GltfSkeleton:
+  {
+    static std::unordered_set<std::string> logged;
+    if (logged.insert(def.Id).second)
+    {
+      std::cerr << "UCreatureVisual: gltf_skeleton stub for " << def.Id
+                << std::endl;
+    }
     return std::make_unique<UCreatureVisualGltf>();
   }
-  return std::make_unique<UCreatureVisualRigid>();
+  default:
+    return std::make_unique<UCreatureVisualRigid>();
+  }
 }
 
 } // namespace cutum

@@ -5,12 +5,17 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "App/Settings/AppSettingsSnapshot.h"
-#include "WorldGen/Core/ProceduralSettings.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "Blocks/BlockDefinition.h"
+#include <array>
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "ResourcePacks/ResourcePackResolver.h"
+#include <functional>
 #include <vector>
 
 namespace cutum
@@ -26,6 +31,9 @@ class UObjectStorage;
 class UPrefabLibrary;
 class UGeometryEngine;
 class UViewEngine;
+class UBlockDefinitionStorage;
+class UBlockMergeRegistry;
+class UPlaceholderTextureCache;
 
 class UCore
 {
@@ -82,6 +90,18 @@ public:
   {
     return PrefabLibraryInstance;
   }
+  std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
+  {
+    return BlockDefinitionsInstance;
+  }
+  std::shared_ptr<UBlockMergeRegistry> GetBlockMergeRegistry() const
+  {
+    return BlockMergeRegistryInstance;
+  }
+  bool RegisterRuntimeBlock(const BlockDefinition &def,
+                            const std::array<std::string, 6> &textureStems);
+  void BeginRuntimeBlockBatch();
+  void EndRuntimeBlockBatch();
   std::shared_ptr<UTextureCubeStorage> GetTextureCubeStorage() const
   {
     return TextureCubeStorageInstance;
@@ -90,6 +110,43 @@ public:
   {
     return CreatureTextureStorageInstance;
   }
+
+  std::vector<std::string> GetDefaultEnabledResourcePacks() const;
+  ResourcePackSelection GetDefaultResourcePackSelection() const;
+  void SetDefaultEnabledResourcePacks(const std::vector<std::string> &ids);
+  void SetDefaultResourcePackSelection(const ResourcePackSelection &selection);
+  std::vector<std::string> GetActiveResourcePacksEnabled() const
+  {
+    return ActiveResourcePacksEnabled;
+  }
+  std::vector<InstalledPackInfo> ListInstalledResourcePacks() const;
+  bool ApplyResourcePacks(const std::vector<std::string> &enabledIds);
+  bool ApplyResourcePacks(const ResourcePackSelection &selection);
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const std::vector<std::string> &resourcePacks);
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection);
+  std::vector<std::string>
+  PeekWorldResourcePacks(const std::string &world_name) const;
+  ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
+  bool ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection);
+
+  void ApplyRuntimeStreamingToWorld();
+
+  void PrepareEnterGameWorldList();
+  void PrepareStartupWorldCreation();
+  void PrepareLoadWorld(const std::string &world_name);
+  void FinalizeLoadedWorld();
+  void FinalizeEnterGameSession();
+  std::string SetupNewWorldForCreation();
+  void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,
+                                    const ResourcePackSelection &selection);
+  bool NeedsCreateWorldOnStartup() const;
+  const std::filesystem::path &GetActiveWorldFolder() const
+  {
+    return ActiveWorldFolder;
+  }
+  void RefreshWorldListAfterSave();
 
 private:
   std::vector<std::string> WorldList;
@@ -113,11 +170,21 @@ private:
   ProceduralSettings ProceduralTemplate;
   int RenderDistanceChunks{4};
   bool StreamingEnabled{true};
+  std::string ChunkStorageFormat{"binary"};
   bool StepUpEnabled{true};
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   UiSettings Ui;
+  ResourcePacksConfig ResourcePacks;
+  std::vector<std::string> ActiveResourcePacksEnabled;
+  std::vector<std::string> PendingNewWorldResourcePacks;
+  ResourcePackSelection PendingNewWorldPackSelection;
+  std::optional<ProceduralSettings> PendingNewWorldSettings;
+  ResourcePackSelection ActivePackSelection;
 
+  std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
+  std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;
+  std::shared_ptr<UPlaceholderTextureCache> PlaceholderCacheInstance;
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
@@ -131,6 +198,14 @@ private:
   std::filesystem::path WorldFolderPath(const std::string &world_name) const;
   std::string AllocateNextWorldName() const;
   void CreateNewWorldWithCurrentSettings();
+  void RebuildBlockTexturesFromMergeRegistry();
+  void ApplyResourcePacksAfterWorldDataLoaded();
+  void ReloadCreatureCatalog(const std::vector<ResourcePackManifest> &packs);
+  std::vector<std::string>
+  NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
+  void FlushRuntimeBlockOverlay();
+  int RuntimeBlockBatchDepth{0};
+  bool RuntimeBlockFlushPending{false};
 };
 
 } // namespace cutum

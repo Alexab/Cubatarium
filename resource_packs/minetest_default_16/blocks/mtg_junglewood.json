@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_junglewood",
+    "id":  464,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_junglewood_default_junglewood",
+                     "mtg_junglewood_default_junglewood",
+                     "mtg_junglewood_default_junglewood",
+                     "mtg_junglewood_default_junglewood",
+                     "mtg_junglewood_default_junglewood",
+                     "mtg_junglewood_default_junglewood"
+                 ],
+    "render":  {
+
+               }
+}
+

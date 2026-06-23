@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_aspen_tree",
+    "id":  411,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_aspen_tree_default_aspen_tree",
+                     "mtg_aspen_tree_default_aspen_tree",
+                     "mtg_aspen_tree_default_aspen_tree",
+                     "mtg_aspen_tree_default_aspen_tree",
+                     "mtg_aspen_tree_default_aspen_tree_top",
+                     "mtg_aspen_tree_default_aspen_tree_top"
+                 ],
+    "render":  {
+
+               }
+}
+

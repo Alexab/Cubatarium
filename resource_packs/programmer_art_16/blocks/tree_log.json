@@ -1,0 +1,21 @@
+﻿{
+    "name":  "tree_log",
+    "id":  706,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_top",
+                     "tree_top"
+                 ],
+    "displayName":  "Tree Log",
+    "render":  {
+
+               }
+}
+

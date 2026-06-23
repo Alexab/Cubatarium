@@ -1,24 +1,88 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "Blocks/BlockRegistry.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Chunks/ChunkManager.h"
-#include "Render/Mesh/ChunkMeshCache.h"
+#include "WorldGen/Core/WorldGenRefs.h"
+#include <algorithm>
 #include <iostream>
+#include <unordered_set>
 
 namespace cutum
 {
 
+namespace
+{
+
+BlockId ResolveSlotName(UBlockRegistry &registry,
+                        const std::string &worldgenOwner,
+                        const std::string &blockName)
+{
+  if (!worldgenOwner.empty())
+  {
+    const BlockId qualified = registry.GetIdByTypeName(
+        MakeQualifiedBlockName(worldgenOwner, blockName));
+    if (qualified != BLOCK_AIR)
+    {
+      return qualified;
+    }
+  }
+  return registry.GetIdByTypeName(blockName);
+}
+
+BlockId ResolveSlot(UBlockRegistry &registry, const std::string &worldgenOwner,
+                    const std::string &slotName,
+                    std::unordered_set<std::string> &visited)
+{
+  if (!visited.insert(slotName).second)
+  {
+    return BLOCK_AIR;
+  }
+
+  const WorldGenSlotSpec *spec = UWorldGenRefs::GetSlot(slotName);
+  if (spec)
+  {
+    for (const std::string &blockName : spec->BlockNames)
+    {
+      const BlockId id = ResolveSlotName(registry, worldgenOwner, blockName);
+      if (id != BLOCK_AIR)
+      {
+        return id;
+      }
+    }
+    if (!spec->FallbackSlot.empty())
+    {
+      return ResolveSlot(registry, worldgenOwner, spec->FallbackSlot, visited);
+    }
+    return BLOCK_AIR;
+  }
+
+  return ResolveSlotName(registry, worldgenOwner, slotName);
+}
+
+} // namespace
+
+WorldGenContext::WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
+                                 ProceduralSettings settings,
+                                 UPrefabLibrary *prefabs)
+    : World(world), Registry(registry), Settings(std::move(settings)),
+      Prefabs(prefabs)
+{
+}
+
 void WorldGenContext::ResolveBlockIds()
 {
-  auto resolve = [this](const char *name, BlockId &out)
+  const auto resolve = [this](const char *slotName, BlockId &out)
   {
-    out = Registry.GetIdByTypeName(name);
+    std::unordered_set<std::string> visited;
+    out = ResolveSlot(Registry, WorldgenOwnerPackId, slotName, visited);
     if (out == BLOCK_AIR)
     {
-      std::cerr << "WorldGen: missing block type '" << name
-                << "', fallback stone/air" << std::endl;
+      std::cerr << "WorldGen: missing block type for slot '" << slotName
+                << "' (check worldgen_refs and active packs)" << std::endl;
     }
   };
+
   resolve("bedrock", Bedrock);
   resolve("stone", Stone);
   resolve("dirt", Dirt);
@@ -34,47 +98,54 @@ void WorldGenContext::ResolveBlockIds()
   resolve("water", Water);
   resolve("lava", Lava);
   resolve("fire", Fire);
-  if (Settings.fillWater && Water == BLOCK_AIR)
+  resolve("ore_coal", OreCoal);
+  resolve("ore_iron", OreIron);
+
+  if (Settings.FillWater && Water == BLOCK_AIR)
   {
     std::cerr << "WorldGen: block type 'water' not loaded — fill_water will "
                  "have no effect"
               << std::endl;
   }
-  if (Gravel == BLOCK_AIR)
+}
+
+void WorldGenContext::ResetColumnDirty(int world_x, int world_z)
+{
+  ColumnDirtyActive = true;
+  ColumnDirtyWorldX = world_x;
+  ColumnDirtyWorldZ = world_z;
+  ColumnDirtyMinY = 0;
+  ColumnDirtyMaxY = -1;
+}
+
+void WorldGenContext::AccumulateDirtyColumn(int min_y, int max_y)
+{
+  if (!ColumnDirtyActive)
   {
-    Gravel = Stone;
+    return;
   }
-  if (Snow == BLOCK_AIR)
+  ColumnDirtyMinY = std::min(ColumnDirtyMinY, min_y);
+  ColumnDirtyMaxY = std::max(ColumnDirtyMaxY, max_y);
+}
+
+void WorldGenContext::FlushColumnDirty()
+{
+  if (ColumnDirtyActive && ColumnDirtyMaxY >= ColumnDirtyMinY)
   {
-    Snow = Stone;
+    MarkDirtyColumn(ColumnDirtyWorldX, ColumnDirtyWorldZ, ColumnDirtyMinY,
+                    ColumnDirtyMaxY);
   }
-  if (Sand == BLOCK_AIR)
-  {
-    Sand = Sandstone != BLOCK_AIR ? Sandstone : Stone;
-  }
-  if (Dirt == BLOCK_AIR)
-  {
-    Dirt = Stone;
-  }
+  ColumnDirtyActive = false;
 }
 
 void WorldGenContext::MarkDirtyColumn(int world_x, int world_z, int min_y,
                                       int max_y) const
 {
-  if (!MeshCache)
+  if (!OnColumnMeshDirty)
   {
     return;
   }
-  std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
-  for (int y = min_y; y <= max_y; ++y)
-  {
-    dirty_chunks.insert(
-        UChunkManager::WorldToChunk(glm::ivec3(world_x, y, world_z)));
-  }
-  for (const glm::ivec3 &coord : dirty_chunks)
-  {
-    MeshCache->MarkDirty(coord);
-  }
+  OnColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 
 } // namespace cutum

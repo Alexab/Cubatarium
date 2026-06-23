@@ -1,0 +1,20 @@
+﻿{
+    "name":  "obsidian",
+    "id":  599,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian",
+                     "obsidian"
+                 ],
+    "displayName":  "Obsidian",
+    "render":  {
+
+               }
+}
+

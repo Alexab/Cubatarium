@@ -9,29 +9,40 @@ namespace cutum
 namespace
 {
 
-HeightSampleParams ParamsForPreset(HeightPreset preset, int maxHeight)
+HeightSampleParams ParamsForPreset(HeightPreset preset, int MaxHeight)
 {
   HeightSampleParams p;
   const float scale =
-      maxHeight > 15 ? static_cast<float>(maxHeight) / 12.0f : 1.0f;
+      MaxHeight > 15 ? static_cast<float>(MaxHeight) / 12.0f : 1.0f;
   switch (preset)
   {
   case HeightPreset::Hills:
     p.octavesBase = 5;
     p.amplitudeBlocks = 4.0f * scale;
-    p.detailWeight = 0.22f;
+    p.detailWeight = 0.18f;
+    p.seaBias = 0.46f;
     break;
   case HeightPreset::Mountains:
     p.octavesBase = 4;
-    p.amplitudeBlocks = 8.0f * scale;
-    p.detailWeight = 0.10f;
+    p.amplitudeBlocks = 7.0f * scale;
+    p.detailWeight = 0.08f;
     p.stoneSurfaceAboveY = -1;
+    p.seaBias = 0.44f;
+    break;
+  case HeightPreset::BetaRetro:
+    p.octavesBase = 5;
+    p.amplitudeBlocks = 6.0f * scale;
+    p.detailWeight = 0.08f;
+    p.lacunarity = 2.4f;
+    p.useRidgeNoise = true;
+    p.seaBias = 0.46f;
     break;
   case HeightPreset::Overworld:
   default:
     p.octavesBase = 4;
-    p.amplitudeBlocks = 6.0f * scale;
-    p.detailWeight = 0.15f;
+    p.amplitudeBlocks = 4.5f * scale;
+    p.detailWeight = 0.12f;
+    p.seaBias = 0.45f;
     break;
   }
   return p;
@@ -39,33 +50,70 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int maxHeight)
 
 } // namespace
 
-UOverworldHeightSampler::UOverworldHeightSampler(uint32_t seed, int seaLevel,
-                                                 int maxHeight,
-                                                 HeightPreset preset)
-    : seed_(seed), seaLevel_(seaLevel), maxHeight_(maxHeight),
-      params_(ParamsForPreset(preset, maxHeight))
+float SeaBiasForPreset(HeightPreset preset)
 {
+  return ParamsForPreset(preset, 128).seaBias;
+}
+
+float SampleLayeredHeight01(int x, int z, uint32_t seed,
+                            const HeightSampleParams &params,
+                            HeightPreset preset)
+{
+  const float wx = static_cast<float>(x);
+  const float wz = static_cast<float>(z);
+
+  float continental =
+      NormalizedFBM2D(wx * 0.003f, wz * 0.003f, seed, 2, params.persistence,
+                      params.lacunarity);
+  float regional =
+      NormalizedFBM2D(wx * 0.010f, wz * 0.010f, seed + 10, 4, params.persistence,
+                      params.lacunarity);
+  float detail =
+      NormalizedFBM2D(wx * 0.040f, wz * 0.040f, seed + 20, 2, params.persistence,
+                      params.lacunarity);
+
+  if (preset == HeightPreset::BetaRetro && params.useRidgeNoise)
+  {
+    regional = 1.0f - std::fabs(regional);
+  }
+
+  continental = (continental + 1.0f) * 0.5f;
+  regional = (regional + 1.0f) * 0.5f;
+  detail = (detail + 1.0f) * 0.5f;
+
+  float h01 = 0.55f * continental + 0.35f * regional + 0.10f * detail;
+  h01 = std::clamp(h01, 0.0f, 1.0f);
+  if (preset == HeightPreset::Overworld)
+  {
+    h01 = std::pow(h01, 1.08f);
+  }
+  return h01;
+}
+
+UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
+                                                 int MaxHeight,
+                                                 HeightPreset preset,
+                                                 float terrainRoughness)
+    : Seed(Seed), SeaLevel(SeaLevel), MaxHeight(MaxHeight),
+      Params(ParamsForPreset(preset, MaxHeight)), Preset(preset)
+{
+  const float roughness = std::max(0.25f, terrainRoughness);
+  Params.amplitudeBlocks *= roughness;
+  Params.detailWeight *= roughness;
   if (preset == HeightPreset::Mountains)
   {
-    params_.stoneSurfaceAboveY =
-        seaLevel +
-        static_cast<int>(12.0f * (maxHeight > 15 ? maxHeight / 96.0f : 1.0f));
+    Params.stoneSurfaceAboveY =
+        SeaLevel +
+        static_cast<int>(12.0f * (MaxHeight > 15 ? MaxHeight / 96.0f : 1.0f));
   }
 }
 
 int UOverworldHeightSampler::SurfaceYAt(int x, int z) const
 {
-  const float sx = static_cast<float>(x) * 0.01f;
-  const float sz = static_cast<float>(z) * 0.01f;
-  const float h = FBM2D(sx, sz, seed_, params_.octavesBase, params_.persistence,
-                        params_.lacunarity);
-  const float detail =
-      FBM2D(sx * params_.detailScale, sz * params_.detailScale, seed_ + 1, 2,
-            params_.persistence, params_.lacunarity) *
-      params_.detailWeight;
-  int surfaceY = seaLevel_ + static_cast<int>((h + detail - 0.5f) *
-                                              params_.amplitudeBlocks);
-  surfaceY = std::clamp(surfaceY, 1, maxHeight_);
+  const float h01 = SampleLayeredHeight01(x, z, Seed, Params, Preset);
+  const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks;
+  int surfaceY = SeaLevel + static_cast<int>(std::lround(delta));
+  surfaceY = std::clamp(surfaceY, 1, MaxHeight);
   return surfaceY;
 }
 

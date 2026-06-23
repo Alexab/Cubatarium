@@ -1,18 +1,21 @@
 #include "App/Platform/WindowManager.h"
-#include "App/Settings/AppState.h"
 #include "App/Application.h"
-#include "Blocks/Input/BlockInputController.h"
 #include "App/Core.h"
+#include "App/Platform/InputManager.h"
+#include "App/Platform/Log.h"
+#include "App/Settings/AppState.h"
+#include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
-#include "Render/Engine/GeometryEngine.h"
-#include "App/Platform/InputManager.h"
-#include "Game/Inventory/InventoryTypes.h"
-#include "WorldGen/Core/ProceduralSettings.h"
 #include "Creatures/Player/User.h"
+#include "Game/Inventory/InventoryTypes.h"
+#include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/Core/World.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "ThirdParty/stb_image.h"
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -43,6 +46,33 @@ glm::ivec2 CursorToFramebufferPixels(GLFWwindow *window, float x, float y)
   return {static_cast<int>(x * sx), static_cast<int>(y * sy)};
 }
 
+void TrySetWindowIcon(GLFWwindow *window)
+{
+  if (!window)
+  {
+    return;
+  }
+  const char *paths[] = {"icon.png", "resources/branding/icon-64.png"};
+  for (const char *path : paths)
+  {
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char *pixels = stbi_load(path, &width, &height, &channels, 4);
+    if (!pixels || width <= 0 || height <= 0)
+    {
+      continue;
+    }
+    GLFWimage image{};
+    image.width = width;
+    image.height = height;
+    image.pixels = pixels;
+    glfwSetWindowIcon(window, 1, &image);
+    stbi_image_free(pixels);
+    return;
+  }
+}
+
 } // namespace
 
 UWindowManager::UWindowManager()
@@ -59,31 +89,47 @@ UWindowManager::~UWindowManager() { Shutdown(); }
 
 bool UWindowManager::Initialize(int width, int height, const char *title)
 {
-  // GLFW initialization
+  glfwSetErrorCallback(ErrorCallback);
+
   if (!glfwInit())
   {
-    std::cerr << "Failed to initialize GLFW" << std::endl;
+    CubatariumLogError("Window", "Failed to initialize GLFW");
     return false;
   }
 
-  // GLFW configuration
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  glfwWindowHint(GLFW_SAMPLES, 4); // MSAA
-
+  auto createWindow = [&](bool multisample) -> GLFWwindow * {
+    glfwDefaultWindowHints();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    if (multisample)
+    {
+      glfwWindowHint(GLFW_SAMPLES, 4);
+    }
 #ifdef __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+    return glfwCreateWindow(width, height, title, nullptr, nullptr);
+  };
 
-  // Window creation
-  Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+  Window = createWindow(true);
   if (!Window)
   {
-    std::cerr << "Failed to create GLFW window" << std::endl;
+    CubatariumLogInfo("Window",
+                      "OpenGL window with MSAA failed, retrying without MSAA");
+    Window = createWindow(false);
+  }
+  if (!Window)
+  {
+    CubatariumLogError(
+        "Window",
+        "Failed to create OpenGL 3.3 window. Install or update your GPU "
+        "driver (OpenGL 3.3 Core required).");
     glfwTerminate();
     return false;
   }
+
+  TrySetWindowIcon(Window);
 
   WindowWidth = width;
   WindowHeight = height;
@@ -92,11 +138,16 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
   glfwMakeContextCurrent(Window);
 
   // GLEW initialization (must be after context creation)
+#ifndef __ANDROID__
   if (glewInit() != GLEW_OK)
   {
-    std::cerr << "Failed to initialize GLEW" << std::endl;
+    CubatariumLogError("Window", "Failed to initialize GLEW");
+    glfwDestroyWindow(Window);
+    Window = nullptr;
+    glfwTerminate();
     return false;
   }
+#endif
 
   // Настройка OpenGL
   InitializeOpenGL();
@@ -161,12 +212,12 @@ void UWindowManager::SetupCallbacks()
       });
 
   // Configure callbacks for InputManager
-  InputManager->SetKeyCallback([this](KeyCode key, KeyState state, int mods)
-                               { HandleKeyEvent(key, state, mods); });
+  InputManager->SetKeyCallback([this](KeyCode key, KeyState state, int Mods)
+                               { HandleKeyEvent(key, state, Mods); });
 
   InputManager->SetMouseButtonCallback(
-      [this](MouseButton button, bool pressed, glm::vec2 pos)
-      { HandleMouseButtonEvent(button, pressed, pos); });
+      [this](MouseButton Button, bool Pressed, glm::vec2 pos)
+      { HandleMouseButtonEvent(Button, Pressed, pos); });
 
   InputManager->SetMouseMoveCallback([this](glm::vec2 pos, glm::vec2 delta)
                                      { HandleMouseMoveEvent(pos, delta); });
@@ -176,7 +227,7 @@ void UWindowManager::SetupCallbacks()
       { HandleWindowResizeEvent(width, height); });
 
   InputManager->SetMouseScrollCallback(
-      [this](double xoffset, double yoffset)
+      [this](double Xoffset, double Yoffset)
       {
         if (!Application)
         {
@@ -185,20 +236,20 @@ void UWindowManager::SetupCallbacks()
         const glm::vec2 pos = InputManager->GetMousePosition();
         const glm::ivec2 fbPos =
             CursorToFramebufferPixels(Window, pos.x, pos.y);
-        if (Application->RouteScroll(xoffset, yoffset, fbPos.x, fbPos.y))
+        if (Application->RouteScroll(Xoffset, Yoffset, fbPos.x, fbPos.y))
         {
           return;
         }
       });
 
   glfwSetCharCallback(Window,
-                      [](GLFWwindow *win, unsigned int codepoint)
+                      [](GLFWwindow *win, unsigned int Codepoint)
                       {
                         auto *self = static_cast<UWindowManager *>(
                             glfwGetWindowUserPointer(win));
                         if (self && self->Application)
                         {
-                          self->Application->RouteChar(codepoint);
+                          self->Application->RouteChar(Codepoint);
                         }
                       });
 }
@@ -353,7 +404,7 @@ void UWindowManager::Render()
   }
 }
 
-void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods)
+void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
 {
   const int glfw_key = static_cast<int>(key);
   int glfw_action = GLFW_RELEASE;
@@ -365,7 +416,7 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int mods)
   {
     glfw_action = GLFW_REPEAT;
   }
-  if (Application && Application->RouteKey(glfw_key, glfw_action, mods))
+  if (Application && Application->RouteKey(glfw_key, glfw_action, Mods))
   {
     return;
   }
@@ -505,17 +556,17 @@ void UWindowManager::ResetGameplayMouseCapture()
   }
 }
 
-void UWindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed,
+void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
                                             glm::vec2 pos)
 {
   const glm::ivec2 fbPos = CursorToFramebufferPixels(Window, pos.x, pos.y);
-  const int glfwButton = button == MouseButton::Left ? GLFW_MOUSE_BUTTON_LEFT
-                         : button == MouseButton::Right
+  const int glfwButton = Button == MouseButton::Left ? GLFW_MOUSE_BUTTON_LEFT
+                         : Button == MouseButton::Right
                              ? GLFW_MOUSE_BUTTON_RIGHT
                              : GLFW_MOUSE_BUTTON_MIDDLE;
 
   if (Application &&
-      Application->RouteMouseButton(glfwButton, pressed, fbPos.x, fbPos.y))
+      Application->RouteMouseButton(glfwButton, Pressed, fbPos.x, fbPos.y))
   {
     return;
   }
@@ -531,7 +582,7 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed,
 
   if (Application && Application->WantsCaptureMouse())
   {
-    const bool allowPlace = button == MouseButton::Left && !pressed &&
+    const bool allowPlace = Button == MouseButton::Left && !Pressed &&
                             Application->AllowsWorldMousePlacement();
     if (!allowPlace)
     {
@@ -545,7 +596,7 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton button, bool pressed,
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseButton(button, pressed, pos, ctx);
+  BlockInput->OnMouseButton(Button, Pressed, pos, ctx);
 }
 
 void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
@@ -793,15 +844,15 @@ void UWindowManager::FramebufferSizeCallback(GLFWwindow *window, int width,
 }
 
 void UWindowManager::KeyCallback(GLFWwindow *window, int key, int scancode,
-                                 int action, int mods)
+                                 int Action, int Mods)
 {
-  UInputManager::GLFWKeyCallback(window, key, scancode, action, mods);
+  UInputManager::GLFWKeyCallback(window, key, scancode, Action, Mods);
 }
 
-void UWindowManager::MouseButtonCallback(GLFWwindow *window, int button,
-                                         int action, int mods)
+void UWindowManager::MouseButtonCallback(GLFWwindow *window, int Button,
+                                         int Action, int Mods)
 {
-  UInputManager::GLFWMouseButtonCallback(window, button, action, mods);
+  UInputManager::GLFWMouseButtonCallback(window, Button, Action, Mods);
 }
 
 void UWindowManager::CursorPosCallback(GLFWwindow *window, double xpos,
@@ -810,15 +861,18 @@ void UWindowManager::CursorPosCallback(GLFWwindow *window, double xpos,
   UInputManager::GLFWCursorPosCallback(window, xpos, ypos);
 }
 
-void UWindowManager::ScrollCallback(GLFWwindow *window, double xoffset,
-                                    double yoffset)
+void UWindowManager::ScrollCallback(GLFWwindow *window, double Xoffset,
+                                    double Yoffset)
 {
-  UInputManager::GLFWScrollCallback(window, xoffset, yoffset);
+  UInputManager::GLFWScrollCallback(window, Xoffset, Yoffset);
 }
 
 void UWindowManager::ErrorCallback(int error, const char *description)
 {
-  std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+  std::ostringstream oss;
+  oss << "GLFW error " << error << ": "
+      << (description ? description : "(no description)");
+  CubatariumLogInfo("GLFW", oss.str());
 }
 
 void UWindowManager::WindowCloseCallback(GLFWwindow *w)

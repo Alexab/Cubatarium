@@ -8,17 +8,17 @@ namespace cutum
 
 void UConsoleCommandHistory::SetFilePath(std::filesystem::path path)
 {
-  filePath_ = std::move(path);
+  FilePath = std::move(path);
 }
 
 bool UConsoleCommandHistory::Load()
 {
-  entries_.clear();
-  if (filePath_.empty())
+  History.clear();
+  if (FilePath.empty())
   {
     return false;
   }
-  std::ifstream file(filePath_);
+  std::ifstream file(FilePath);
   if (!file.is_open())
   {
     return false;
@@ -33,28 +33,28 @@ bool UConsoleCommandHistory::Load()
     line = SanitizeConsoleLine(std::move(line));
     if (!line.empty())
     {
-      entries_.push_back(line);
+      History.push_back(line);
     }
   }
-  while (entries_.size() > kMaxEntries)
+  while (History.size() > kMaxEntries)
   {
-    entries_.erase(entries_.begin());
+    History.erase(History.begin());
   }
   return true;
 }
 
 bool UConsoleCommandHistory::Save() const
 {
-  if (filePath_.empty())
+  if (FilePath.empty())
   {
     return false;
   }
-  std::ofstream file(filePath_);
+  std::ofstream file(FilePath);
   if (!file.is_open())
   {
     return false;
   }
-  for (const std::string &entry : entries_)
+  for (const std::string &entry : History)
   {
     file << entry << '\n';
   }
@@ -68,25 +68,25 @@ void UConsoleCommandHistory::Append(std::string line)
   {
     return;
   }
-  if (!entries_.empty() && entries_.back() == line)
+  if (!History.empty() && History.back() == line)
   {
     return;
   }
-  entries_.push_back(line);
-  while (entries_.size() > kMaxEntries)
+  History.push_back(line);
+  while (History.size() > kMaxEntries)
   {
-    entries_.erase(entries_.begin());
+    History.erase(History.begin());
   }
   Save();
 }
 
 std::string UConsoleCommandHistory::GetFromEnd(size_t indexFromEnd) const
 {
-  if (indexFromEnd >= entries_.size())
+  if (indexFromEnd >= History.size())
   {
     return {};
   }
-  return entries_[entries_.size() - 1 - indexFromEnd];
+  return History[History.size() - 1 - indexFromEnd];
 }
 
 } // namespace cutum

@@ -13,8 +13,8 @@ using json = nlohmann::json;
 
 void UBlockDefinitionStorage::Load(const std::string &modelsPath)
 {
-  byId_.clear();
-  nameToId_.clear();
+  ById.clear();
+  NameToId.clear();
   try
   {
     for (const auto &entry : fs::directory_iterator(modelsPath))
@@ -42,27 +42,27 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
         continue;
       }
       BlockDefinition def;
-      def.name = d.value("name", "");
-      def.id = static_cast<BlockId>(d.value("id", 0));
-      if (def.name.empty() || def.id == BLOCK_AIR)
+      def.Name = d.value("name", "");
+      def.Id = static_cast<BlockId>(d.value("id", 0));
+      if (def.Name.empty() || def.Id == BLOCK_AIR)
       {
         continue;
       }
       if (d.contains("animation"))
       {
-        def.animation = ParseAnimationFromJson(d["animation"]);
+        def.Animation = ParseAnimationFromJson(d["animation"]);
       }
       if (d.contains("physics"))
       {
-        def.physics = ParsePhysicsFromJson(d["physics"]);
+        def.Physics = ParsePhysicsFromJson(d["physics"]);
       }
       else
       {
-        def.physics = BlockPhysicsProfile::Solid();
+        def.Physics = BlockPhysicsProfile::Solid();
       }
       if (d.contains("render"))
       {
-        def.render = ParseRenderFromJson(d["render"]);
+        def.Render = ParseRenderFromJson(d["render"]);
       }
       if (d.contains("types") && d["types"].is_array())
       {
@@ -70,18 +70,18 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
         {
           if (t.is_string())
           {
-            def.types.push_back(t.get<std::string>());
+            def.Types.push_back(t.get<std::string>());
           }
         }
       }
       if (d.contains("physics") && d["physics"].is_object() &&
           d["physics"].contains("preset") && d["physics"]["preset"].is_string())
       {
-        ApplyRenderPresetDefaults(def.render,
+        ApplyRenderPresetDefaults(def.Render,
                                   d["physics"]["preset"].get<std::string>());
       }
-      byId_[def.id] = def;
-      nameToId_[def.name] = def.id;
+      ById[def.Id] = def;
+      NameToId[def.Name] = def.Id;
     }
   }
   catch (const fs::filesystem_error &ex)
@@ -90,10 +90,10 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
   }
 }
 
-const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId id) const
+const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 {
-  const auto it = byId_.find(id);
-  if (it != byId_.end())
+  const auto it = ById.find(Id);
+  if (it != ById.end())
   {
     return &it->second;
   }
@@ -101,14 +101,22 @@ const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId id) const
 }
 
 const BlockDefinition *
-UBlockDefinitionStorage::GetByName(const std::string &name) const
+UBlockDefinitionStorage::GetByName(const std::string &Name) const
 {
-  const auto it = nameToId_.find(name);
-  if (it == nameToId_.end())
+  const auto it = NameToId.find(Name);
+  if (it == NameToId.end())
   {
     return nullptr;
   }
   return GetById(it->second);
+}
+
+void UBlockDefinitionStorage::ReplaceAll(
+    std::unordered_map<BlockId, BlockDefinition> newById,
+    std::unordered_map<std::string, BlockId> newNameToId)
+{
+  ById = std::move(newById);
+  NameToId = std::move(newNameToId);
 }
 
 } // namespace cutum

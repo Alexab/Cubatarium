@@ -1,0 +1,19 @@
+﻿{
+    "name":  "fern",
+    "id":  630,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "fern",
+                     "fern",
+                     "fern",
+                     "fern",
+                     "fern",
+                     "fern"
+                 ],
+    "render":  {
+
+               }
+}
+

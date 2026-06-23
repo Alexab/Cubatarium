@@ -1,0 +1,19 @@
+﻿{
+    "name":  "sandstone_smooth",
+    "id":  687,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth",
+                     "sandstone_smooth"
+                 ],
+    "render":  {
+
+               }
+}
+

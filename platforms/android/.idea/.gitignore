@@ -1,0 +1,6 @@
+# Ignore all IDE state except shared team files (see repo docs).
+*
+!.gitignore
+!vcs.xml
+!runConfigurations/
+!runConfigurations/**

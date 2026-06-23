@@ -1,0 +1,19 @@
+﻿{
+    "name":  "lever",
+    "id":  394,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever",
+                     "lever"
+                 ],
+    "render":  {
+
+               }
+}
+

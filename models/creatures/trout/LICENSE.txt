@@ -1,0 +1,4 @@
+Source file: texturetrout.png
+Upstream: animalworld/textures/texturetrout.png
+License: MIT
+Attribution: animalworld — Skandarella

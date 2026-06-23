@@ -1,7 +1,7 @@
 #ifndef GUI_TAB_BAR_H
 #define GUI_TAB_BAR_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -17,7 +17,7 @@ public:
   UGuiTabBar(const GuiTheme *theme);
 
   void SetTabs(std::vector<std::string> labels);
-  int GetActiveTab() const { return activeTab_; }
+  int GetActiveTab() const { return ActiveTab; }
   void SetActiveTab(int tab);
   void SetOnTabChanged(std::function<void(int)> handler);
 
@@ -27,10 +27,10 @@ public:
   int GetPreferredHeight() const override;
 
 private:
-  const GuiTheme *theme_;
-  std::vector<std::string> labels_;
-  int activeTab_{0};
-  std::function<void(int)> onTabChanged_;
+  const GuiTheme *Theme;
+  std::vector<std::string> Labels;
+  int ActiveTab{0};
+  std::function<void(int)> OnTabChanged;
 };
 
 } // namespace cutum

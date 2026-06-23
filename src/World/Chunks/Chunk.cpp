@@ -3,9 +3,9 @@
 namespace cutum
 {
 
-UChunk::UChunk(glm::ivec3 chunkCoord) : coord_(chunkCoord)
+UChunk::UChunk(glm::ivec3 chunkCoord) : Coord(chunkCoord)
 {
-  data_.fill(BLOCK_AIR);
+  Data.fill(BLOCK_AIR);
 }
 
 int UChunk::LocalIndex(glm::ivec3 local)
@@ -20,18 +20,18 @@ BlockId UChunk::GetBlockLocal(glm::ivec3 local) const
   {
     return BLOCK_AIR;
   }
-  return data_[static_cast<size_t>(LocalIndex(local))];
+  return Data[static_cast<size_t>(LocalIndex(local))];
 }
 
-void UChunk::SetBlockLocal(glm::ivec3 local, BlockId id)
+void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
 {
   if (local.x < 0 || local.x >= CHUNK_SIZE || local.y < 0 ||
       local.y >= CHUNK_SIZE || local.z < 0 || local.z >= CHUNK_SIZE)
   {
     return;
   }
-  data_[static_cast<size_t>(LocalIndex(local))] = id;
-  dirty_ = true;
+  Data[static_cast<size_t>(LocalIndex(local))] = Id;
+  Dirty = true;
 }
 
 } // namespace cutum

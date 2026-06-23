@@ -1,8 +1,8 @@
 #ifndef CREATUREBOUNDS_H
 #define CREATUREBOUNDS_H
 
-#include "World/Math/CollisionVolume.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "World/Math/CollisionVolume.h"
 #include <glm/glm.hpp>
 
 namespace cutum

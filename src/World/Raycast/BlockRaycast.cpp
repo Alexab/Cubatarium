@@ -32,8 +32,8 @@ float NextBoundaryT(const glm::vec3 &origin, const glm::vec3 &direction,
 bool IsRaycastTarget(const UBlockWorld &world, const UBlockRegistry &registry,
                      glm::ivec3 pos)
 {
-  const BlockId id = world.GetBlock(pos);
-  return registry.BlocksMovement(id);
+  const BlockId Id = world.GetBlock(pos);
+  return registry.BlocksMovement(Id);
 }
 
 } // namespace

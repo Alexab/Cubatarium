@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_permafrost_with_moss",
+    "id":  480,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_permafrost_with_moss_composite_0",
+                     "mtg_permafrost_with_moss_composite_0",
+                     "mtg_permafrost_with_moss_composite_0",
+                     "mtg_permafrost_with_moss_composite_0",
+                     "mtg_permafrost_with_moss_default_moss",
+                     "mtg_permafrost_with_moss_default_permafrost"
+                 ],
+    "render":  {
+
+               }
+}
+

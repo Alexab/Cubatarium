@@ -1,0 +1,4 @@
+Source file: texturecrab.png
+Upstream: animalworld/textures/texturecrab.png
+License: MIT
+Attribution: animalworld — Skandarella

@@ -1,0 +1,2 @@
+Placeholder procedural textures for Cubatarium.
+Replace with CC-licensed Luanti assets when imported.

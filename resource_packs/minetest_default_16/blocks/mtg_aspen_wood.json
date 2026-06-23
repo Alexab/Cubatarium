@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_aspen_wood",
+    "id":  412,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_aspen_wood_default_aspen_wood",
+                     "mtg_aspen_wood_default_aspen_wood",
+                     "mtg_aspen_wood_default_aspen_wood",
+                     "mtg_aspen_wood_default_aspen_wood",
+                     "mtg_aspen_wood_default_aspen_wood",
+                     "mtg_aspen_wood_default_aspen_wood"
+                 ],
+    "render":  {
+
+               }
+}
+

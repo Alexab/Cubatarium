@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Audit ported creature catalog: assets, habitat, parts, textures, icons."""
+
+from __future__ import annotations
+
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+
+import yaml
+
+TOOLS = Path(__file__).resolve().parent
+ROOT = TOOLS.parent
+MODELS = ROOT / "models" / "creatures"
+DOCS = ROOT / "docs"
+STATUS_PATH = TOOLS / "creature_audit_status.yaml"
+
+try:
+    from PIL import Image
+except ImportError:
+    raise SystemExit("Pillow required: pip install pillow")
+
+SHIP_SET = {
+    "human", "sheep", "wolf", "pig", "cow", "chicken", "oerkki", "skeleton", "sand_monster",
+}
+
+CUSTOM_PARTS_SPECIES: set[str] = set()
+
+
+def load_custom_parts() -> set[str]:
+    path = TOOLS / "creature_rigid_parts.yaml"
+    if not path.is_file():
+        return set()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return {k for k in data if k != "default" and isinstance(data[k], dict)}
+
+
+def load_bake_species() -> set[str]:
+    path = TOOLS / "creature_luanti_sources.yaml"
+    if not path.is_file():
+        return set()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return set((data.get("species") or {}).keys())
+
+
+def alpha_fraction(path: Path) -> float:
+    im = Image.open(path).convert("RGBA")
+    px = list(im.getdata())
+    if not px:
+        return 0.0
+    return sum(1 for *_, a in px if a < 250) / len(px)
+
+
+def is_solid_placeholder(path: Path, tol: int = 8) -> bool:
+    im = Image.open(path).convert("RGBA")
+    px = list(im.getdata())
+    if len(px) < 4:
+        return True
+    opaque = [p for p in px if p[3] > 200]
+    if len(opaque) < len(px) * 0.5:
+        return False
+    r0, g0, b0, _ = opaque[0]
+    for r, g, b, a in opaque[1:]:
+        if abs(r - r0) > tol or abs(g - g0) > tol or abs(b - b0) > tol:
+            return False
+    return True
+
+
+def license_tier(species_dir: Path) -> str:
+    lic = species_dir / "LICENSE.txt"
+    if not lic.is_file():
+        return "unknown"
+    text = lic.read_text(encoding="utf-8", errors="ignore")
+    if "Placeholder procedural" in text:
+        return "placeholder"
+    if "Luanti" in text or "MIT" in text or "CC BY" in text:
+        return "imported"
+    return "procedural"
+
+
+def icon_quality(species_dir: Path) -> str:
+    icon = species_dir / "textures" / "icon.png"
+    if not icon.is_file():
+        return "missing"
+    if is_solid_placeholder(icon):
+        return "solid_color"
+    if alpha_fraction(icon) > 0.35:
+        return "high_alpha"
+    w, h = Image.open(icon).size
+    if w <= 32 and h <= 32 and alpha_fraction(icon) > 0.15:
+        return "atlas_thumb"
+    return "ok"
+
+
+def parts_signature(creature: dict) -> str:
+    parts = creature.get("visual", {}).get("parts", [])
+    sig = tuple((p.get("id"), p.get("texture"), tuple(p.get("size", []))) for p in parts)
+    return str(sig)
+
+
+def audit_species(species_id: str, baked: set[str], custom_parts: set[str]) -> dict:
+    species_dir = MODELS / species_id
+    creature = json.loads((species_dir / "creature.json").read_text(encoding="utf-8"))
+    lic = license_tier(species_dir)
+    stems = {p.get("texture", "") for p in creature.get("visual", {}).get("parts", [])}
+    stems.discard("")
+    missing_stems = [
+        s for s in stems if not (species_dir / "textures" / f"{s}.png").is_file()
+    ]
+    body = species_dir / "textures" / "body.png"
+    body_alpha = alpha_fraction(body) if body.is_file() else 1.0
+    if species_id in baked and lic != "placeholder":
+        if body_alpha > 0.001:
+            asset_tier = "imported_only"
+        else:
+            asset_tier = "baked"
+    elif lic == "placeholder":
+        asset_tier = "placeholder"
+    elif species_id in baked:
+        asset_tier = "baked_yaml"
+    else:
+        asset_tier = "imported_only"
+
+    icon_mode = creature.get("visual", {}).get("icon", {}).get("mode", "")
+    anim = creature.get("visual", {}).get("animation", {})
+    walk_hz = anim.get("walk_cycle_hz", 0)
+
+    return {
+        "id": species_id,
+        "wave": "ship" if species_id in SHIP_SET else "luanti",
+        "habitat": creature.get("habitat", ""),
+        "archetype": creature.get("locomotion_archetype", ""),
+        "spawnable": creature.get("catalog", {}).get("spawnable", True),
+        "asset_tier": asset_tier,
+        "license_tier": lic,
+        "in_bake_yaml": species_id in baked,
+        "parts_profile": "custom" if species_id in custom_parts else "template",
+        "parts_count": len(creature.get("visual", {}).get("parts", [])),
+        "missing_texture_stems": missing_stems,
+        "body_alpha_frac": round(body_alpha, 4),
+        "icon_quality": icon_quality(species_dir),
+        "icon_mode": icon_mode,
+        "has_walk_hz": walk_hz > 0,
+        "parts_sig": parts_signature(creature),
+    }
+
+
+def write_report(rows: list[dict], summary: dict) -> None:
+    lines = [
+        "# Creature catalog audit report",
+        "",
+        "Auto-generated by `tools/audit_creature_catalog.py`.",
+        "",
+        "## Summary",
+        "",
+        f"- Species audited: **{summary['total']}**",
+        f"- Placeholder license: **{summary['placeholder']}**",
+        f"- In bake yaml: **{summary['in_bake_yaml']}**",
+        f"- Custom parts profile: **{summary['custom_parts']}**",
+        f"- Icon issues (not ok): **{summary['icon_issues']}**",
+        f"- High body alpha (unbaked atlas): **{summary['high_body_alpha']}**",
+        f"- Shared template signatures: **{summary['duplicate_templates']}**",
+        "",
+        "## By habitat",
+        "",
+    ]
+    for habitat, count in sorted(summary["by_habitat"].items()):
+        lines.append(f"- `{habitat}`: {count}")
+    lines.extend(["", "## Species table", ""])
+    lines.append(
+        "| id | wave | habitat | archetype | asset | icon | parts | body α | bake yaml |"
+    )
+    lines.append("|----|------|---------|-----------|-------|------|-------|--------|-----------|")
+    for r in sorted(rows, key=lambda x: x["id"]):
+        issues = []
+        if r["missing_texture_stems"]:
+            issues.append("missing_tex")
+        if r["icon_quality"] != "ok":
+            issues.append(r["icon_quality"])
+        if r["body_alpha_frac"] > 0.01:
+            issues.append("body_alpha")
+        flag = ", ".join(issues) if issues else "—"
+        lines.append(
+            f"| {r['id']} | {r['wave']} | {r['habitat']} | {r['archetype']} | "
+            f"{r['asset_tier']} | {r['icon_quality']} | {r['parts_profile']} | "
+            f"{r['body_alpha_frac']:.3f} | {r['in_bake_yaml']} |"
+        )
+    lines.append("")
+    lines.append(f"Row flags (issues column notes): see missing_texture_stems in yaml status.")
+    path = DOCS / "CREATURE_AUDIT_REPORT.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {path}")
+
+
+def main() -> int:
+    custom_parts = load_custom_parts()
+    baked = load_bake_species()
+    species_ids = sorted(
+        p.name for p in MODELS.iterdir() if (p / "creature.json").is_file()
+    )
+    rows = [audit_species(sid, baked, custom_parts) for sid in species_ids]
+    # duplicate template detection
+    sig_map: dict[str, list[str]] = {}
+    for r in rows:
+        if r["parts_profile"] == "template":
+            sig_map.setdefault(r["parts_sig"], []).append(r["id"])
+    dup_groups = [ids for ids in sig_map.values() if len(ids) > 3]
+
+    summary = {
+        "total": len(rows),
+        "placeholder": sum(1 for r in rows if r["license_tier"] == "placeholder"),
+        "in_bake_yaml": sum(1 for r in rows if r["in_bake_yaml"]),
+        "custom_parts": sum(1 for r in rows if r["parts_profile"] == "custom"),
+        "icon_issues": sum(1 for r in rows if r["icon_quality"] != "ok"),
+        "high_body_alpha": sum(1 for r in rows if r["body_alpha_frac"] > 0.01),
+        "duplicate_templates": len(dup_groups),
+        "by_habitat": dict(Counter(r["habitat"] for r in rows if r["id"] != "human")),
+    }
+
+    status = {
+        "summary": summary,
+        "duplicate_template_groups": dup_groups,
+        "species": {r["id"]: r for r in rows},
+    }
+    STATUS_PATH.write_text(
+        yaml.safe_dump(status, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    print(f"wrote {STATUS_PATH}")
+    write_report(rows, summary)
+
+    fail = summary["placeholder"] + summary["icon_issues"]
+    if fail:
+        print(f"audit: {fail} issue(s) to fix (placeholder + bad icons)")
+    else:
+        print("audit: all species pass icon/placeholder checks")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

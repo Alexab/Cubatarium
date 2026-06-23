@@ -1,0 +1,19 @@
+﻿{
+    "name":  "sandstone_carved",
+    "id":  551,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "sandstone_carved",
+                     "sandstone_carved",
+                     "sandstone_carved",
+                     "sandstone_carved",
+                     "sandstone_carved",
+                     "sandstone_carved"
+                 ],
+    "render":  {
+
+               }
+}
+

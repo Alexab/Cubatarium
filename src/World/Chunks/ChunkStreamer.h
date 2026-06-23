@@ -1,12 +1,13 @@
 #ifndef CHUNKSTREAMER_H
 #define CHUNKSTREAMER_H
 
-#include "World/Math/BlockTypes.h"
-#include "World/Chunks/ChunkManager.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Math/BlockTypes.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -42,59 +43,78 @@ public:
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
+  using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
+  using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
+  using IsColumnPendingFn = std::function<bool(glm::ivec3)>;
 
-  UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t seed,
-                 int baseY, int maxHeight);
+  UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t Seed,
+                 int baseY, int MaxHeight);
 
   void SetWorldFolder(const std::string &path);
   void SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
                     MarkDirtyFn markDirtyFn, GenerateColumnFn generateColumnFn,
                     UnloadChunkFn unloadFn = nullptr);
-  void SetRenderDistance(int chunks) { renderDistance_ = chunks; }
-  void SetEnabled(bool enabled) { enabled_ = enabled; }
-  void SetMaxLoadOpsPerFrame(int value) { maxLoadOpsPerFrame_ = value; }
-  void SetMaxUnloadOpsPerFrame(int value) { maxUnloadOpsPerFrame_ = value; }
+  void SetAsyncGeneration(bool enabled) { AsyncGeneration = enabled; }
+  void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
+                         IsChunkCommittedFn isCommittedFn);
+  void SetColumnPendingCallback(IsColumnPendingFn fn);
+  void NotifyChunkCommitted(glm::ivec3 chunkCoord);
+  void MarkPersistedColumnsFromWorld();
+  void SetRenderDistance(int chunks) { RenderDistance = chunks; }
+  void SetMaxTerrainHeight(int height) { MaxHeight = height; }
+  void SetEnabled(bool enabled) { Enabled = enabled; }
+  void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
+  void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
 
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
 
-  /// Full streaming pass after movement: load/unload with per-frame budget.
+  /// Full streaming pass after Movement: load/unload with per-frame budget.
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
 
   const StreamingFrameStats &GetLastFrameStats() const
   {
-    return lastFrameStats_;
+    return LastFrameStats;
   }
 
 private:
-  bool EnsureChunkLoaded(glm::ivec3 chunkCoord);
+  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
+  void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
                            const glm::vec3 &eyePos, const PlayerCapsule &cap);
   bool ShouldKeepChunkLoaded(glm::ivec3 chunkCoord, glm::ivec3 feetBlockPos,
                              const glm::vec3 &eyePos,
                              const PlayerCapsule &cap) const;
+  int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
 
   UBlockWorld &World;
-  UBlockRegistry &registry_;
-  uint32_t seed_;
-  int baseY_;
-  int maxHeight_;
-  int renderDistance_{4};
-  int unloadMargin_{1};
-  int maxLoadOpsPerFrame_{4};
-  int maxUnloadOpsPerFrame_{2};
-  bool enabled_{true};
-  std::string worldFolder_;
+  UBlockRegistry &Registry;
+  uint32_t Seed;
+  int BaseY;
+  int MaxHeight;
+  int RenderDistance{4};
+  int UnloadMargin{1};
+  int MaxLoadOpsPerFrame{4};
+  int MaxUnloadOpsPerFrame{2};
+  bool Enabled{true};
+  std::string WorldFolder;
 
-  LoadChunkFn loadChunkFn_;
-  SaveChunkFn saveChunkFn_;
-  MarkDirtyFn markDirtyFn_;
-  UnloadChunkFn unloadChunkFn_;
-  GenerateColumnFn generateColumnFn_;
+  LoadChunkFn OnLoadChunk;
+  SaveChunkFn OnSaveChunk;
+  MarkDirtyFn OnMarkDirty;
+  UnloadChunkFn OnUnloadChunk;
+  GenerateColumnFn OnGenerateColumn;
+  RequestAsyncChunkFn OnRequestAsyncChunk;
+  IsChunkCommittedFn OnIsChunkCommitted;
+  IsColumnPendingFn OnIsColumnPending;
+  bool AsyncGeneration{false};
 
-  std::unordered_set<glm::ivec3, IVec3Hash> procedurallyGenerated_;
-  StreamingFrameStats lastFrameStats_;
+  std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
+  glm::ivec3 LoadPriorityCenter{0};
+  StreamingFrameStats LastFrameStats;
 };
 
 } // namespace cutum

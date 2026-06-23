@@ -1,4 +1,4 @@
-#include "GuiSlot.h"
+#include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
@@ -13,102 +13,116 @@ constexpr int kDragThresholdPx = 8;
 }
 
 UGuiSlot::UGuiSlot(const GuiTheme *theme, int size)
-    : theme_(theme), slotSize_(size)
+    : Theme(theme), SlotSize(size)
 {
-  bounds_.w = size;
-  bounds_.h = size;
+  Bounds.W = size;
+  Bounds.H = size;
 }
 
-int UGuiSlot::GetPreferredWidth() const { return slotSize_; }
-int UGuiSlot::GetPreferredHeight() const { return slotSize_; }
+int UGuiSlot::GetPreferredWidth() const { return SlotSize; }
+int UGuiSlot::GetPreferredHeight() const { return SlotSize; }
 
 void UGuiSlot::Draw(UGuiRenderer &renderer)
 {
-  if (!visible_ || !theme_)
+  if (!Visible || !Theme)
   {
     return;
   }
-  renderer.DrawFilledRect(bounds_, theme_->slotBackground);
-  if (selected_)
+  renderer.DrawFilledRect(Bounds, Theme->SlotBackground);
+  if (Selected)
   {
-    renderer.DrawFilledRect(bounds_, theme_->slotSelectedFill);
+    renderer.DrawFilledRect(Bounds, Theme->SlotSelectedFill);
   }
 
-  if (iconTexture_ != 0)
+  if (IconTexture != 0)
   {
     const int inset = 4;
-    const GuiRect iconRect{bounds_.x + inset, bounds_.y + inset,
-                           bounds_.w - inset * 2, bounds_.h - inset * 2};
-    renderer.DrawTexturedRect(iconRect, iconTexture_);
+    const GuiRect iconRect{Bounds.X + inset, Bounds.Y + inset,
+                           Bounds.W - inset * 2, Bounds.H - inset * 2};
+    renderer.DrawTexturedRect(iconRect, IconTexture);
+  }
+  else if (!Label.empty())
+  {
+    std::string text = Label;
+    if (text.size() > 8)
+    {
+      text = text.substr(0, 8);
+    }
+    renderer.DrawText(text, Bounds.X + 3, Bounds.Y + Bounds.H / 2 - 6,
+                      Theme->TextSecondary);
   }
 
-  if (selected_)
+  if (Selected)
   {
-    renderer.DrawBorderRect(bounds_, theme_->slotSelected,
-                            theme_->slotSelectedBorderThickness);
-    const GuiRect inner = bounds_.Inset(2);
-    renderer.DrawBorderRect(inner, theme_->slotSelectedInner, 1);
+    renderer.DrawBorderRect(Bounds, Theme->SlotSelected,
+                            Theme->SlotSelectedBorderThickness);
+    const GuiRect inner = Bounds.Inset(2);
+    renderer.DrawBorderRect(inner, Theme->SlotSelectedInner, 1);
   }
   else
   {
-    renderer.DrawBorderRect(bounds_, theme_->panelBorder,
-                            theme_->borderThickness);
+    renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
   }
 
-  if (!cornerHint_.empty())
+  if (!CornerHint.empty())
   {
     const glm::vec3 textColor =
-        selected_ ? glm::vec3(0.95f, 0.95f, 0.95f) : theme_->textSecondary;
-    renderer.DrawText(cornerHint_, bounds_.x + 4, bounds_.y + 2, textColor);
+        Selected ? glm::vec3(0.95f, 0.95f, 0.95f) : Theme->TextSecondary;
+    renderer.DrawText(CornerHint, Bounds.X + 4, Bounds.Y + 2, textColor);
+  }
+
+  if (Dimmed)
+  {
+    renderer.DrawFilledRect(Bounds, Theme->SlotDisabledFill);
   }
 }
 
 bool UGuiSlot::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y))
+  if (!Enabled || !Visible || !Bounds.Contains(event.X, event.Y))
   {
     return false;
   }
-  pressed_ = true;
-  dragStarted_ = false;
-  pressX_ = event.x;
-  pressY_ = event.y;
+  Pressed = true;
+  DragStarted = false;
+  PressX = event.X;
+  PressY = event.Y;
   return true;
 }
 
 bool UGuiSlot::OnMouseUp(const GuiMouseEvent &event)
 {
-  if (!enabled_ || !pressed_)
+  if (!Enabled || !Pressed)
   {
     return false;
   }
-  const int dx = event.x - pressX_;
-  const int dy = event.y - pressY_;
+  const int dx = event.X - PressX;
+  const int dy = event.Y - PressY;
   const bool isClickGesture =
       (dx * dx + dy * dy) <= (kDragThresholdPx * kDragThresholdPx);
-  if (isClickGesture && onClick_)
+  if (isClickGesture && OnClick)
   {
-    onClick_();
+    OnClick();
   }
-  pressed_ = false;
-  dragStarted_ = false;
+  Pressed = false;
+  DragStarted = false;
   return true;
 }
 
 bool UGuiSlot::OnMouseMove(const GuiMouseEvent &event)
 {
-  if (!pressed_ || dragStarted_)
+  if (!Pressed || DragStarted)
   {
-    return pressed_;
+    return Pressed;
   }
-  const int dx = event.x - pressX_;
-  const int dy = event.y - pressY_;
+  const int dx = event.X - PressX;
+  const int dy = event.Y - PressY;
   if ((dx * dx + dy * dy) > (kDragThresholdPx * kDragThresholdPx))
   {
-    dragStarted_ = true;
-    if (onBeginDrag_)
+    DragStarted = true;
+    if (OnBeginDrag)
     {
-      onBeginDrag_();
+      OnBeginDrag();
     }
   }
   return true;

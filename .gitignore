@@ -19,33 +19,27 @@
 *.pro.user
 *.exe
 *.dll
-/installer/InstallSourcesQt
+/packaging/windows/installer/InstallSources
+/packaging/windows/installer/InstallSourcesQt
 /worlds
 /bin/worlds/
 
-# Post-build copies into CMAKE_BINARY_DIR (bin/) — sources live in repo root
+# Runtime directory (exe + copied game data) — sources live in repo root
 /bin/shaders/
 /bin/models/
 /bin/textures/
 /bin/prefabs/
 /bin/resources/
 /bin/content/
+/bin/resource_packs/
+/bin/fonts/
 /bin/config.json
+/bin/icon.png
+/bin/Cubatarium
 
-# CMake/MSBuild output in bin/ (CMAKE_BINARY_DIR)
-/bin/Cubatarium.dir/
-/bin/x64/
-/bin/CMakeCache.txt
-/bin/cmake_install.cmake
-/bin/CMakeFiles/
-/bin/.cmake/
-/bin/*.vcxproj
-/bin/*.vcxproj.filters
-/bin/*.sln
-/bin/*.vcxproj.user
-/bin/*.rsp
-/bin/generated/
-/validate_log.txt
+# Desktop CMake build trees
+/build/desktop-msvc/
+/build/desktop-linux/
 
 CMakeFiles
 Debug
@@ -53,3 +47,34 @@ Debug
 
 
 bin/console_history.txt
+
+# Gradle syncAssets output (sources are in repo root)
+platforms/android/app/src/main/assets/
+platforms/android/.gradle/
+platforms/android/app/build/
+platforms/android/app/.cxx/
+platforms/android/build/
+platforms/android/local.properties
+platforms/android/keystore.properties
+platforms/android/version.properties
+platforms/android/*.jks
+platforms/android/gradle/gradle-daemon-jvm.properties
+
+# Local Minecraft-derived pack (generate via tools/migrate_to_resource_pack.ps1)
+resource_packs/minecraft_legacy_16/
+resource_packs/_build_staging_*/
+.placeholder_cache/
+
+# Local dev / debug artifacts
+/emulator-logcat*.txt
+/emulator-*.png
+tools/__pycache__/
+tools/_members_out.txt
+tools/debug_uv_overlays/
+/_tmp_*.png
+/audit_report.json
+/build*/
+
+# Deprecated legacy block assets (use resource_packs/ instead)
+/models/blocks/
+/textures/

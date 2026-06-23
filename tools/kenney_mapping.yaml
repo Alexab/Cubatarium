@@ -1,0 +1,35 @@
+license: CC0-1.0
+license_text: |
+  Kenney Voxel Pack (CC0). See https://kenney.nl/assets/voxel-pack
+  DEPRECATED: unused by build scripts. Legacy minimal mapping — use kenney_full_mapping.yaml for release builds.
+blocks:
+  dirt: dirt
+  stone: stone
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  gravel: gravel
+  snow: snow
+  clay: clay
+  ice: ice
+  hellrock: hellrock
+  bedrock: bedrock
+  sandstone: sandstone
+  water:
+    faces: [water, water, water, water, water, water]
+    physics: { preset: water }
+    render: { transparent: true, style: fluid }
+    animation: { frame_count: 4, frametime: 6 }
+  lava:
+    faces: [lava, lava, lava, lava, lava, lava]
+    physics: { preset: lava }
+    render: { transparent: true, style: fluid }
+    animation: { frame_count: 4, frametime: 6 }
+  fire:
+    faces: [fire_0, fire_0, fire_0, fire_0, fire_0, fire_0]
+    physics: { preset: fire }
+    render: { transparent: true }
+    animation: { frame_count: 2, frametime: 6 }

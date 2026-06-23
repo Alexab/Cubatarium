@@ -1,0 +1,4 @@
+Source file: mobs_rat.png
+Upstream: mobs_animal/textures/mobs_rat.png
+License: MIT
+Attribution: mobs_animal — TenPlus1

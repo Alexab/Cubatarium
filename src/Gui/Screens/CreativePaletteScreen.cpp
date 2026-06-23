@@ -1,13 +1,18 @@
-#include "CreativePaletteScreen.h"
+#include "Gui/Screens/CreativePaletteScreen.h"
+#include "Content/ContentTypeRegistry.h"
 #include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
-#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
-#include "Game/Inventory/SlotInteraction.h"
+
+#include "ResourcePacks/BlockNameUtil.h"
 
 #include <algorithm>
 
@@ -17,30 +22,30 @@ namespace cutum
 UCreativePaletteScreen::UCreativePaletteScreen(IContentCatalog *catalog,
                                                UGameSession *session,
                                                IGuiIconSource *icons)
-    : catalog_(catalog), session_(session), icons_(icons)
+    : Catalog(catalog), Session(session), Icons(icons)
 {
 }
 
 bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 {
-  if (!visible_)
+  if (!Visible)
   {
     return false;
   }
-  for (size_t i = 0; i < gridSlots_.size(); ++i)
+  for (size_t i = 0; i < GridSlots.size(); ++i)
   {
-    const UGuiSlot *slot = gridSlots_[i];
+    const UGuiSlot *slot = GridSlots[i];
     if (!slot || !slot->IsVisible() || !slot->GetBounds().Contains(x, y))
     {
       continue;
     }
-    if (i >= gridEntryIds_.size())
+    if (i >= GridEntryIds.size())
     {
       return false;
     }
     out.surface = SlotSurface::PaletteGrid;
-    out.paletteKind = kind_;
-    out.entryId = gridEntryIds_[i];
+    out.paletteKind = Kind;
+    out.entryId = GridEntryIds[i];
     out.bar = 0;
     out.slot = 0;
     return true;
@@ -50,79 +55,85 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 
 void UCreativePaletteScreen::SetVisible(bool visible)
 {
-  visible_ = visible;
-  if (root_)
+  Visible = visible;
+  if (Root)
   {
-    root_->SetVisible(visible);
+    Root->SetVisible(visible);
   }
 }
 
-void UCreativePaletteScreen::Toggle() { SetVisible(!visible_); }
+void UCreativePaletteScreen::Toggle() { SetVisible(!Visible); }
 
 void UCreativePaletteScreen::Build(UGuiContext &ctx)
 {
-  theme_ = &ctx.GetTheme();
-  auto panel = std::make_unique<UGuiPanel>(theme_);
+  Theme = &ctx.GetTheme();
+  Renderer = &ctx.GetRenderer();
+  auto panel = std::make_unique<UGuiPanel>(Theme);
   panel->SetVisible(false);
-  panel_ = panel.get();
+  Panel = panel.get();
 
-  auto mainTabs = std::make_unique<UGuiTabBar>(theme_);
+  auto mainTabs = std::make_unique<UGuiTabBar>(Theme);
   mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
-  mainTabs_ = mainTabs.get();
+  MainTabs = mainTabs.get();
   mainTabs->SetOnTabChanged(
       [this](int tab)
       {
         switch (tab)
         {
         case 0:
-          kind_ = ContentKind::Block;
+          Kind = ContentKind::Block;
           break;
         case 1:
-          kind_ = ContentKind::UObject;
+          Kind = ContentKind::UObject;
           break;
         case 2:
-          kind_ = ContentKind::UCreature;
+          Kind = ContentKind::UCreature;
           break;
         default:
-          kind_ = ContentKind::Skin;
+          Kind = ContentKind::Skin;
           break;
         }
-        if (catalog_)
+        if (Catalog)
         {
-          const auto types = catalog_->GetTypeIds(kind_);
-          activeTypeId_ = types.empty() ? "misc" : types.front();
+          const auto Types = Catalog->GetTypeIds(Kind);
+          ActiveTypeId = Types.empty() ? "misc" : Types.front();
         }
-        selectedEntryId_.clear();
-        built_ = false;
+        SelectedEntryId.clear();
+        Built = false;
       });
 
-  auto subTabs = std::make_unique<UGuiTabBar>(theme_);
-  subTabs_ = subTabs.get();
+  auto subTabs = std::make_unique<UGuiTabBar>(Theme);
+  SubTabs = subTabs.get();
   subTabs->SetOnTabChanged(
       [this](int tab)
       {
-        if (catalog_)
+        if (Catalog)
         {
-          const auto types = catalog_->GetTypeIds(kind_);
-          if (tab >= 0 && tab < static_cast<int>(types.size()))
+          const auto Types = Catalog->GetTypeIds(Kind);
+          if (tab >= 0 && tab < static_cast<int>(Types.size()))
           {
-            activeTypeId_ = types[static_cast<size_t>(tab)];
+            ActiveTypeId = Types[static_cast<size_t>(tab)];
           }
         }
-        selectedEntryId_.clear();
-        built_ = false;
+        SelectedEntryId.clear();
+        Built = false;
       });
 
-  auto scroll = std::make_unique<UGuiScrollView>(theme_);
-  scroll_ = scroll.get();
+  auto scroll = std::make_unique<UGuiScrollView>(Theme);
+  Scroll = scroll.get();
+
+  auto tooltip = std::make_unique<UGuiLabel>(Theme, "");
+  tooltip->SetVisible(false);
+  TooltipLabel = tooltip.get();
+  panel->AddChild(std::move(tooltip));
 
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
-  root_ = std::move(panel);
-  kind_ = ContentKind::Block;
-  activeTypeId_ = "misc";
-  built_ = false;
+  Root = std::move(panel);
+  Kind = ContentKind::Block;
+  ActiveTypeId = "misc";
+  Built = false;
 }
 
 void UCreativePaletteScreen::OnViewportChanged(int width, int height)
@@ -133,128 +144,260 @@ void UCreativePaletteScreen::OnViewportChanged(int width, int height)
 
 void UCreativePaletteScreen::RelayoutPanel()
 {
-  if (!panel_)
+  if (!Panel)
   {
     return;
   }
-  const int panelW = viewportW_ * 60 / 100;
-  const int panelH = viewportH_ * 70 / 100;
-  const int panelX = (viewportW_ - panelW) / 2;
-  const int panelY = (viewportH_ - panelH) / 2;
-  panel_->SetBounds({panelX, panelY, panelW, panelH});
+  const int panelW = ViewportW * 60 / 100;
+  const int slotSize = Theme ? Theme->HotbarSlotSize : 48;
+  const int hotbarReserve = slotSize + 24 + 16;
+  const int maxPanelH = std::max(120, ViewportH - hotbarReserve - ViewportH / 12);
+  const int panelH = std::min(ViewportH * 70 / 100, maxPanelH);
+  const int panelX = (ViewportW - panelW) / 2;
+  const int panelY = (ViewportH - panelH) / 2;
+  Panel->SetBounds({panelX, panelY, panelW, panelH});
 
-  if (mainTabs_)
+  if (MainTabs)
   {
-    mainTabs_->SetBounds({panelX + 8, panelY + 8, panelW - 16, 28});
+    MainTabs->SetBounds({panelX + 8, panelY + 8, panelW - 16, 28});
   }
-  if (subTabs_)
+  if (SubTabs)
   {
-    subTabs_->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
+    SubTabs->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
   }
-  if (scroll_)
+  if (Scroll)
   {
     const int scrollH = std::max(0, panelH - 84);
-    scroll_->SetBounds({panelX + 8, panelY + 76, panelW - 16, scrollH});
-    if (built_)
+    Scroll->SetBounds({panelX + 8, panelY + 76, panelW - 16, scrollH});
+    if (Built)
     {
-      scroll_->LayoutContent();
+      Scroll->LayoutContent();
       LayoutGridInScroll();
     }
   }
 }
 
-void UCreativePaletteScreen::Update(double /*dt*/)
+void UCreativePaletteScreen::SetPointerPosition(int x, int y)
 {
-  if (!visible_ || !panel_ || !catalog_ || !theme_)
+  PointerX = x;
+  PointerY = y;
+}
+
+void UCreativePaletteScreen::SetPointerPressed(bool pressed)
+{
+  if (!pressed)
+  {
+    HoldTimer = 0.0;
+    HoldSlotIndex = -1;
+  }
+  PointerPressed = pressed;
+}
+
+void UCreativePaletteScreen::UpdateTooltip()
+{
+  if (!TooltipLabel || !Theme)
+  {
+    return;
+  }
+  std::string text;
+  int tipX = PointerX;
+  int tipY = PointerY;
+  auto labelAt = [this](size_t index) -> std::string {
+    if (index < GridEntryLabels.size() && !GridEntryLabels[index].empty())
+    {
+      return GridEntryLabels[index];
+    }
+    if (index < GridEntryIds.size())
+    {
+      return HumanizeBlockName(GridEntryIds[index]);
+    }
+    return {};
+  };
+
+  if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0 &&
+      static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
+  {
+    text = labelAt(static_cast<size_t>(HoldSlotIndex));
+    if (Kind == ContentKind::UCreature &&
+        static_cast<size_t>(HoldSlotIndex) < GridSpawnHints.size() &&
+        !GridSpawnHints[static_cast<size_t>(HoldSlotIndex)].empty())
+    {
+      text += "\n" + GridSpawnHints[static_cast<size_t>(HoldSlotIndex)];
+    }
+    if (PointerX < 0 || PointerY < 0)
+    {
+      UGuiSlot *slot = static_cast<size_t>(HoldSlotIndex) < GridSlots.size()
+                           ? GridSlots[static_cast<size_t>(HoldSlotIndex)]
+                           : nullptr;
+      if (slot)
+      {
+        const GuiRect b = slot->GetBounds();
+        tipX = b.X + b.W / 2;
+        tipY = b.Y + b.H / 2;
+      }
+    }
+  }
+  else if (PointerX >= 0 && PointerY >= 0 && Scroll)
+  {
+    for (size_t i = 0; i < GridSlots.size(); ++i)
+    {
+      UGuiSlot *slot = GridSlots[i];
+      if (slot && slot->IsVisible() &&
+          slot->GetBounds().Contains(PointerX, PointerY) &&
+          i < GridEntryIds.size())
+      {
+        text = labelAt(i);
+        if (Kind == ContentKind::UCreature &&
+            static_cast<size_t>(i) < GridSpawnHints.size() &&
+            !GridSpawnHints[i].empty())
+        {
+          text += "\n" + GridSpawnHints[i];
+        }
+        break;
+      }
+    }
+  }
+
+  if (text.empty() || tipX < 0 || tipY < 0)
+  {
+    TooltipLabel->SetVisible(false);
+    return;
+  }
+
+  const GuiRect viewport{GetContentOffsetX(), GetContentOffsetY(), ViewportW,
+                         ViewportH};
+  const int textW = MeasureTooltipTextWidth(text, *Theme, Renderer);
+  LayoutTooltipNearPointer(*TooltipLabel, text, tipX, tipY, viewport, *Theme,
+                             textW);
+}
+
+void UCreativePaletteScreen::Update(double dt)
+{
+  if (!Visible || !Panel || !Catalog || !Theme)
   {
     return;
   }
   RelayoutPanel();
 
-  if (subTabs_)
+  if (PointerPressed && PointerX >= 0 && PointerY >= 0)
   {
-    const auto types = catalog_->GetTypeIds(kind_);
-    std::vector<std::string> labels;
-    for (const auto &id : types)
+    int slotUnderPointer = -1;
+    for (size_t i = 0; i < GridSlots.size(); ++i)
     {
-      labels.push_back(catalog_->GetTypeDisplayName(id));
+      UGuiSlot *slot = GridSlots[i];
+      if (slot && slot->IsVisible() &&
+          slot->GetBounds().Contains(PointerX, PointerY))
+      {
+        slotUnderPointer = static_cast<int>(i);
+        break;
+      }
+    }
+    if (slotUnderPointer >= 0)
+    {
+      if (slotUnderPointer != HoldSlotIndex)
+      {
+        HoldSlotIndex = slotUnderPointer;
+        HoldTimer = 0.0;
+      }
+      else
+      {
+        HoldTimer += dt;
+      }
+    }
+    else
+    {
+      HoldSlotIndex = -1;
+      HoldTimer = 0.0;
+    }
+  }
+
+  if (SubTabs)
+  {
+    const auto Types = Catalog->GetTypeIds(Kind);
+    std::vector<std::string> labels;
+    for (const auto &Id : Types)
+    {
+      labels.push_back(Catalog->GetTypeDisplayName(Id));
     }
     if (labels.empty())
     {
       labels.push_back("Misc");
     }
-    subTabs_->SetTabs(labels);
-    if (!types.empty())
+    SubTabs->SetTabs(labels);
+    if (!Types.empty())
     {
-      auto it = std::find(types.begin(), types.end(), activeTypeId_);
-      if (it == types.end())
+      auto it = std::find(Types.begin(), Types.end(), ActiveTypeId);
+      if (it == Types.end())
       {
-        activeTypeId_ = types.front();
-        subTabs_->SetActiveTab(0);
+        ActiveTypeId = Types.front();
+        SubTabs->SetActiveTab(0);
       }
       else
       {
-        subTabs_->SetActiveTab(
-            static_cast<int>(std::distance(types.begin(), it)));
+        SubTabs->SetActiveTab(
+            static_cast<int>(std::distance(Types.begin(), it)));
       }
     }
     else
     {
-      activeTypeId_.clear();
-      subTabs_->SetActiveTab(0);
+      ActiveTypeId.clear();
+      SubTabs->SetActiveTab(0);
     }
   }
 
-  if (!built_)
+  if (!Built)
   {
     RebuildGrid();
   }
+  UpdateTooltip();
 }
 
 void UCreativePaletteScreen::RebuildGrid()
 {
-  if (!scroll_ || !catalog_ || !session_ || !theme_)
+  if (!Scroll || !Catalog || !Session || !Theme)
   {
     return;
   }
-  scroll_->Content().ClearChildren();
-  gridSlots_.clear();
-  gridEntryIds_.clear();
+  Scroll->Content().ClearChildren();
+  GridSlots.clear();
+  GridEntryIds.clear();
+  GridEntryLabels.clear();
+  GridSpawnHints.clear();
 
-  const auto entries = catalog_->GetEntries(
-      kind_, activeTypeId_.empty() ? "misc" : activeTypeId_);
-  const int slotSize = theme_->hotbarSlotSize;
+  const auto entries =
+      Catalog->GetEntries(Kind, ActiveTypeId.empty() ? "misc" : ActiveTypeId);
+  const int slotSize = Theme->HotbarSlotSize;
   for (size_t i = 0; i < entries.size(); ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(theme_, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
     slot->SetBounds({0, 0, slotSize, slotSize});
-    const std::string entryId = entries[i].id;
-    slot->SetSelected(entryId == selectedEntryId_);
-    if (icons_)
+    const std::string entryId = entries[i].Id;
+    slot->SetSelected(entryId == SelectedEntryId);
+    if (Icons)
     {
       GLuint tex = 0;
-      if (kind_ == ContentKind::Block)
+      if (Kind == ContentKind::Block)
       {
-        tex = icons_->GetBlockIconTexture(entryId);
+        tex = Icons->GetBlockIconTexture(entryId);
       }
-      else if (kind_ == ContentKind::UObject)
+      else if (Kind == ContentKind::UObject)
       {
-        tex = icons_->GetPrefabIconTexture(entryId);
+        tex = Icons->GetPrefabIconTexture(entryId);
       }
-      else if (kind_ == ContentKind::UCreature)
+      else if (Kind == ContentKind::UCreature)
       {
-        tex = icons_->GetCreatureIconTexture(entryId);
+        tex = Icons->GetCreatureIconTexture(entryId);
       }
-      else if (kind_ == ContentKind::Skin)
+      else if (Kind == ContentKind::Skin)
       {
-        tex = icons_->GetSkinIconTexture(entryId);
+        tex = Icons->GetSkinIconTexture(entryId);
       }
       slot->SetIconTexture(tex);
     }
     InventoryEntryRef entry;
     entry.empty = false;
-    entry.id = entryId;
-    switch (kind_)
+    entry.Id = entryId;
+    switch (Kind)
     {
     case ContentKind::Block:
       entry.kind = InventoryEntryKind::Block;
@@ -272,61 +415,82 @@ void UCreativePaletteScreen::RebuildGrid()
 
     SlotAddress address;
     address.surface = SlotSurface::PaletteGrid;
-    address.paletteKind = kind_;
+    address.paletteKind = Kind;
     address.entryId = entryId;
 
     slot->SetOnClick(
         [this, entry]()
         {
-          if (!session_)
+          if (!Session)
           {
             return;
           }
-          selectedEntryId_ = entry.id;
-          session_->BeginPendingAssignment(entry);
-          built_ = false;
+          SelectedEntryId = entry.Id;
+          const size_t bar = 0;
+          const size_t slot = Session->GetSelectedSlot(bar);
+          if (Session->AssignToHotbar(entry, bar, slot))
+          {
+            Session->ClearPendingAssignment();
+          }
+          else
+          {
+            Session->BeginPendingAssignment(entry);
+          }
+          Built = false;
         });
     slot->SetOnBeginDrag(
         [this, address, entry]()
         {
-          if (session_)
+          if (Session)
           {
-            session_->BeginDragFromSlot(address, entry);
+            Session->BeginDragFromSlot(address, entry);
           }
         });
+    std::string spawnHint;
+    if (Kind == ContentKind::UCreature && Session)
+    {
+      const bool canSpawn = Session->CanSpawnCreatureByView(entryId);
+      slot->SetDimmed(!canSpawn);
+      if (!canSpawn)
+      {
+        spawnHint = Session->GetCreatureSpawnBlockedHint(entryId);
+      }
+    }
     UGuiSlot *ptr =
-        static_cast<UGuiSlot *>(scroll_->Content().AddChild(std::move(slot)));
-    gridSlots_.push_back(ptr);
-    gridEntryIds_.push_back(entryId);
+        static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
+    GridSlots.push_back(ptr);
+    GridEntryIds.push_back(entryId);
+    GridEntryLabels.push_back(entries[i].displayName);
+    GridSpawnHints.push_back(std::move(spawnHint));
   }
 
-  scroll_->SetAfterScrollLayout([this](UGuiScrollView &)
-                                { LayoutGridInScroll(); });
-  scroll_->LayoutContent();
+  Scroll->SetAfterScrollLayout([this](UGuiScrollView &)
+                               { LayoutGridInScroll(); });
+  Scroll->LayoutContent();
   LayoutGridInScroll();
-  built_ = true;
+  Built = true;
 }
 
 void UCreativePaletteScreen::LayoutGridInScroll()
 {
-  if (!scroll_ || !theme_)
+  if (!Scroll || !Theme)
   {
     return;
   }
-  const GuiRect contentRect = scroll_->Content().GetBounds();
-  const int slotSize = theme_->hotbarSlotSize;
-  const int gap = theme_->hotbarSlotGap;
-  const int viewportW = contentRect.w;
-  const int viewportH = std::max(1, scroll_->GetBounds().h);
+  const GuiRect contentRect = Scroll->Content().GetBounds();
+  const int slotSize = Theme->HotbarSlotSize;
+  const int gap = Theme->HotbarSlotGap;
+  const int viewportW = contentRect.W;
+  const int viewportH = std::max(1, Scroll->GetBounds().H);
   const int denom = std::max(1, slotSize + gap);
   const int cols = std::max(1, (viewportW + gap) / denom);
-  const int contentTop = contentRect.y;
+  const int contentTop = contentRect.Y;
 
-  int x = contentRect.x;
+  int x = contentRect.X;
   int y = contentTop;
-  for (size_t i = 0; i < gridSlots_.size(); ++i)
+  for (size_t i = 0; i < GridSlots.size(); ++i)
   {
-    UGuiSlot *slot = gridSlots_[i];
+    UGuiSlot *slot = GridSlots[i];
     if (!slot)
     {
       continue;
@@ -334,7 +498,7 @@ void UCreativePaletteScreen::LayoutGridInScroll()
     slot->SetBounds({x, y, slotSize, slotSize});
     if ((i + 1) % static_cast<size_t>(cols) == 0)
     {
-      x = contentRect.x;
+      x = contentRect.X;
       y += slotSize + gap;
     }
     else
@@ -343,14 +507,13 @@ void UCreativePaletteScreen::LayoutGridInScroll()
     }
   }
 
-  const int rows =
-      gridSlots_.empty()
-          ? 0
-          : static_cast<int>((gridSlots_.size() + cols - 1) / cols);
+  const int rows = GridSlots.empty()
+                       ? 0
+                       : static_cast<int>((GridSlots.size() + cols - 1) / cols);
   const int contentHeight =
       std::max(viewportH, rows * (slotSize + gap) - (rows > 0 ? gap : 0) + 8);
-  scroll_->Content().SetBounds(
-      {contentRect.x, contentTop, viewportW, contentHeight});
+  Scroll->Content().SetBounds(
+      {contentRect.X, contentTop, viewportW, contentHeight});
 }
 
 } // namespace cutum

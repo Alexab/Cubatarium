@@ -16,7 +16,7 @@ class UBlockRegistry;
 
 float GreedyBatchViewDistance(const GreedyMeshBatch &batch,
                               const glm::vec3 &cameraPos);
-int TransparentBatchLayer(BlockRenderStyle style);
+int TransparentBatchLayer(BlockRenderStyle Style);
 void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch> &batches,
                                   const glm::vec3 &cameraPos,
                                   const UBlockRegistry &registry);

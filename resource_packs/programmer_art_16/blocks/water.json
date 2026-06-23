@@ -1,0 +1,29 @@
+﻿{
+    "name":  "water",
+    "id":  709,
+    "types":  [
+                  "fluid",
+                  "natural"
+              ],
+    "textures":  [
+                     "water",
+                     "water",
+                     "water",
+                     "water",
+                     "water",
+                     "water"
+                 ],
+    "physics":  {
+                    "preset":  "water"
+                },
+    "render":  {
+                   "transparent":  true,
+                   "style":  "fluid"
+               },
+    "animation":  {
+                      "frame_count":  4,
+                      "frametime":  6
+                  },
+    "displayName":  "Water"
+}
+

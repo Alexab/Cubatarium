@@ -1,0 +1,10 @@
+[
+  {
+    "source": "third_party\\schematics\\mtg\\pine_bush.mts",
+    "prefab": "bush_pine",
+    "output": "prefabs\\bush_pine.json",
+    "block_count": 18,
+    "unmapped": [],
+    "unmapped_ratio": 0.0
+  }
+]

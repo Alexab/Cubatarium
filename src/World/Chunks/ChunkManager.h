@@ -1,8 +1,8 @@
 #ifndef CHUNKMANAGER_H
 #define CHUNKMANAGER_H
 
-#include "World/Math/BlockTypes.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Math/BlockTypes.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -26,7 +26,7 @@ class UChunkManager
 {
 public:
   BlockId GetBlock(glm::ivec3 worldPos) const;
-  void SetBlock(glm::ivec3 worldPos, BlockId id);
+  void SetBlock(glm::ivec3 worldPos, BlockId Id);
   void Clear();
   void ForEachBlock(const std::function<void(glm::ivec3, BlockId)> &fn) const;
 

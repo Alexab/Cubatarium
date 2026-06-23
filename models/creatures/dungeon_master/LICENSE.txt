@@ -1,0 +1,4 @@
+Source file: mobs_dungeon_master.png
+Upstream: mobs_monster/textures/mobs_dungeon_master.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

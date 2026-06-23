@@ -1,4 +1,8 @@
 #include "Render/Engine/TextRenderer.h"
+
+#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/Log.h"
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -16,30 +20,28 @@ UTextRenderer::~UTextRenderer() { Shutdown(); }
 
 bool UTextRenderer::Initialize(int fontSize)
 {
-  // Find available font automatically
   std::string fontPath = FindAvailableFont();
   if (fontPath.empty())
   {
-    std::cerr << "No available fonts found" << std::endl;
+    CubatariumLogError("Text", "No available fonts found");
     return false;
   }
 
+  CubatariumLogInfo("Text", "Using font: " + fontPath);
   return Initialize(fontPath, fontSize);
 }
 
 bool UTextRenderer::Initialize(const std::string &fontPath, int fontSize)
 {
-  // Initialize FreeType
   if (!InitializeFreeType())
   {
-    std::cerr << "Failed to initialize FreeType" << std::endl;
+    CubatariumLogError("Text", "Failed to initialize FreeType");
     return false;
   }
 
-  // Create shader
   if (!CreateShader())
   {
-    std::cerr << "Failed to create text shader" << std::endl;
+    CubatariumLogError("Text", "Failed to create text shader");
     return false;
   }
 
@@ -61,7 +63,7 @@ bool UTextRenderer::Initialize(const std::string &fontPath, int fontSize)
   // Load characters using FreeType
   if (!LoadCharacters(fontPath, fontSize))
   {
-    std::cerr << "Failed to load characters from: " << fontPath << std::endl;
+    CubatariumLogError("Text", "Failed to load characters from: " + fontPath);
     return false;
   }
 
@@ -135,8 +137,32 @@ void UTextRenderer::Shutdown()
 
 bool UTextRenderer::CreateShader()
 {
-  const char *vertexShaderSource = R"(
-#version 330 core
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  const char *vertexShaderSource = R"(#version 300 es
+layout(location = 0) in vec4 vertex;
+out vec2 TexCoords;
+uniform mat4 projection;
+void main()
+{
+    gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);
+    TexCoords = vertex.zw;
+}
+)";
+
+  const char *fragmentShaderSource = R"(#version 300 es
+precision mediump float;
+in vec2 TexCoords;
+out vec4 color;
+uniform sampler2D text;
+uniform vec3 textColor;
+void main()
+{
+    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
+    color = vec4(textColor, 1.0) * sampled;
+}
+)";
+#else
+  const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec4 vertex;
 out vec2 TexCoords;
 
@@ -149,8 +175,7 @@ void main()
 }
 )";
 
-  const char *fragmentShaderSource = R"(
-#version 330 core
+  const char *fragmentShaderSource = R"(#version 330 core
 out vec4 color;
 
 in vec2 TexCoords;
@@ -164,6 +189,7 @@ void main()
     color = vec4(textColor, 1.0) * sampled;
 }
 )";
+#endif
 
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -176,8 +202,7 @@ void main()
   if (!success)
   {
     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
+    CubatariumLogError("Text", std::string("Vertex shader: ") + infoLog);
     return false;
   }
 
@@ -190,8 +215,7 @@ void main()
   if (!success)
   {
     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
+    CubatariumLogError("Text", std::string("Fragment shader: ") + infoLog);
     return false;
   }
 
@@ -205,8 +229,7 @@ void main()
   if (!success)
   {
     glGetProgramInfoLog(TextShader, 512, NULL, infoLog);
-    std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-              << infoLog << std::endl;
+    CubatariumLogError("Text", std::string("Program link: ") + infoLog);
     return false;
   }
 
@@ -395,7 +418,39 @@ void UTextRenderer::SetWindowSize(int width, int height)
 
 std::string UTextRenderer::FindAvailableFont()
 {
-  // First try to find fonts in local fonts directory
+  if (auto *paths = IPlatformPaths::TryGet())
+  {
+    const auto fontsDir = paths->AssetRoot() / "fonts";
+    if (std::filesystem::exists(fontsDir))
+    {
+      try
+      {
+        for (const auto &entry : std::filesystem::directory_iterator(fontsDir))
+        {
+          if (!entry.is_regular_file())
+          {
+            continue;
+          }
+          const auto ext = entry.path().extension().string();
+          if (ext == ".ttf" || ext == ".TTF" || ext == ".otf" || ext == ".OTF")
+          {
+            return entry.path().string();
+          }
+        }
+      }
+      catch (const std::exception &e)
+      {
+        CubatariumLogError("Text",
+                           std::string("Font scan failed: ") + e.what());
+      }
+    }
+    const auto bundled = paths->AssetRoot() / "fonts/arial.ttf";
+    if (std::filesystem::exists(bundled))
+    {
+      return bundled.string();
+    }
+  }
+
   std::vector<std::string> localFonts = ScanFontsDirectory();
   for (const auto &font : localFonts)
   {
@@ -405,7 +460,6 @@ std::string UTextRenderer::FindAvailableFont()
     }
   }
 
-  // Fallback to system font
   return GetSystemFontPath();
 }
 
@@ -451,8 +505,10 @@ std::string UTextRenderer::GetSystemFontPath()
   return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 #elif defined(__APPLE__)
   return "/System/Library/Fonts/Arial.ttf";
+#elif defined(__ANDROID__)
+  return "fonts/arial.ttf";
 #else
-  return "fonts/arial.ttf"; // Default fallback
+  return "fonts/arial.ttf";
 #endif
 }
 

@@ -1,19 +1,21 @@
-#include "GameSession.h"
+#include "Game/GameSession.h"
+#include "Content/ContentType.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "Render/Camera/Camera.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
-#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureInventory.h"
-#include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Creatures/Player/Player.h"
-#include "World/Prefabs/Prefab.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+#include "World/Prefabs/Prefab.h"
+#include "WorldGen/Core/WorldGenContentReload.h"
 
-#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -54,7 +56,7 @@ const UCreatureInventory *GetControlledInventory(const UWorld *world)
 
 UGameSession::UGameSession(UApplication *application,
                            std::shared_ptr<UWorld> world)
-    : application_(application), World(std::move(world))
+    : Application(application), World(std::move(world))
 {
 }
 
@@ -62,38 +64,62 @@ void UGameSession::InitializeCatalog(const std::string &typesJsonPath,
                                      const UBlockDefinitionStorage &blocks,
                                      const UPrefabLibrary &prefabs)
 {
-  contentCatalog_.LoadTypes(typesJsonPath);
-  contentCatalog_.IndexBlocks(blocks);
-  contentCatalog_.IndexPrefabs(prefabs);
+  ContentCatalog.LoadTypes(typesJsonPath);
+  ReindexBlockCatalog(blocks, prefabs);
+}
+
+void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
+                                       const UPrefabLibrary &prefabs)
+{
+  ContentCatalog.IndexBlocks(blocks);
+  ContentCatalog.IndexPrefabs(prefabs);
   if (World)
   {
     if (const auto &creatureDefs = World->GetCreatureDefinitionStorage())
     {
-      contentCatalog_.IndexCreatures(*creatureDefs);
+      ContentCatalog.IndexCreatures(*creatureDefs);
     }
     if (const auto &skinDefs = World->GetSkinDefinitionStorage())
     {
-      contentCatalog_.IndexSkins(*skinDefs);
+      ContentCatalog.IndexSkins(*skinDefs);
     }
   }
 }
 
 void UGameSession::RegisterCommands()
 {
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "help",
       [](const std::vector<std::string> &)
       {
         return CommandResult{true, "Commands: help, give, tp, fly, time, "
                                    "spawn, select_skin, apply_skin, possess, "
-                                   "depossess, select_appearance"};
+                                   "depossess, select_appearance, worldgen"};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
+      "worldgen",
+      [](const std::vector<std::string> &args)
+      {
+        if (args.empty() || args[0] != "reload")
+        {
+          return CommandResult{
+              false, "Usage: worldgen reload — reload pack + prefab_features "
+                     "(new chunks only)"};
+        }
+        if (!ReloadWorldGenContent())
+        {
+          return CommandResult{false, "Worldgen reload failed"};
+        }
+        return CommandResult{true,
+                            "Worldgen content reloaded (affects new chunks)"};
+      });
+
+  UCommandRegistry.Register(
       "time", [](const std::vector<std::string> &)
       { return CommandResult{true, "Time of day is not implemented yet."}; });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "give",
       [this](const std::vector<std::string> &args)
       {
@@ -112,7 +138,7 @@ void UGameSession::RegisterCommands()
         return CommandResult{true, "Added " + args[1]};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "tp",
       [this](const std::vector<std::string> &args)
       {
@@ -148,7 +174,7 @@ void UGameSession::RegisterCommands()
         }
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "fly",
       [this](const std::vector<std::string> &args)
       {
@@ -171,7 +197,7 @@ void UGameSession::RegisterCommands()
         return CommandResult{true, enable ? "Flight on" : "Flight off"};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "spawn",
       [this](const std::vector<std::string> &args)
       {
@@ -220,16 +246,16 @@ void UGameSession::RegisterCommands()
                 camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
           }
         }
-        const CreatureId id = World->SpawnCreature(species, bodyOrigin, skin);
-        if (id == 0)
+        const CreatureId Id = World->SpawnCreature(species, bodyOrigin, skin);
+        if (Id == 0)
         {
           return CommandResult{false, "Spawn failed"};
         }
         return CommandResult{true, "Spawned " + species +
-                                       " id=" + std::to_string(id)};
+                                       " Id=" + std::to_string(Id)};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "select_skin",
       [this](const std::vector<std::string> &args)
       {
@@ -252,7 +278,7 @@ void UGameSession::RegisterCommands()
         return CommandResult{true, "Skin set to " + args[1]};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "apply_skin",
       [this](const std::vector<std::string> &args)
       {
@@ -283,7 +309,7 @@ void UGameSession::RegisterCommands()
         return CommandResult{true, "Applied skin " + args[1]};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "possess",
       [this](const std::vector<std::string> &args)
       {
@@ -300,7 +326,7 @@ void UGameSession::RegisterCommands()
           }
           catch (...)
           {
-            return CommandResult{false, "Invalid creature id"};
+            return CommandResult{false, "Invalid creature Id"};
           }
         }
         else
@@ -327,10 +353,10 @@ void UGameSession::RegisterCommands()
                                 c->GetPitch());
           }
         }
-        return CommandResult{true, "Possessing id=" + std::to_string(target)};
+        return CommandResult{true, "Possessing Id=" + std::to_string(target)};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "depossess",
       [this](const std::vector<std::string> &)
       {
@@ -355,7 +381,7 @@ void UGameSession::RegisterCommands()
         return CommandResult{true, "Returned to player"};
       });
 
-  commandRegistry_.Register(
+  UCommandRegistry.Register(
       "select_appearance",
       [this](const std::vector<std::string> &args)
       {
@@ -383,67 +409,75 @@ void UGameSession::RegisterCommands()
 
 void UGameSession::LoadLastWorld()
 {
-  if (application_)
+  if (Application)
   {
-    application_->ScheduleEnterGame();
+    Application->ScheduleEnterGame();
   }
 }
 
 void UGameSession::ResumeGame()
 {
-  if (application_)
+  if (Application)
   {
-    application_->RequestEnterGame();
+    Application->RequestEnterGame();
   }
 }
 
 void UGameSession::OpenLoadWorld()
 {
-  if (application_)
+  if (Application)
   {
-    application_->ShowLoadWorld();
+    Application->ShowLoadWorld();
   }
 }
 
 void UGameSession::OpenNewWorld()
 {
-  if (application_)
+  if (Application)
   {
-    application_->ShowNewWorld();
+    Application->ShowNewWorld();
   }
 }
 
 void UGameSession::QuitApplication()
 {
-  if (application_)
+  if (Application)
   {
-    application_->ScheduleQuit();
+    Application->ScheduleQuit();
   }
 }
 
 void UGameSession::OpenSettings()
 {
-  if (application_)
+  if (Application)
   {
-    application_->ShowSettings();
+    Application->ShowSettings();
+  }
+}
+
+void UGameSession::OpenWorldSettings()
+{
+  if (Application)
+  {
+    Application->ShowWorldSettings();
   }
 }
 
 bool UGameSession::HasPausedSession() const
 {
-  return application_ && application_->HasWorldSession();
+  return Application && Application->HasWorldSession();
 }
 
 int UGameSession::GetHotbarCountSetting() const
 {
-  return application_ ? application_->GetHotbarCountSetting() : 1;
+  return Application ? Application->GetHotbarCountSetting() : 1;
 }
 
 void UGameSession::SetHotbarCountSetting(int count)
 {
-  if (application_)
+  if (Application)
   {
-    application_->SetHotbarCountSetting(count);
+    Application->SetHotbarCountSetting(count);
   }
 }
 
@@ -472,10 +506,10 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
   for (size_t i = 0; i < slots.size(); ++i)
   {
     const HotbarSlot &slot = bar.slots[i];
-    if (!slot.entry.id.empty())
+    if (!slot.entry.Id.empty())
     {
-      slots[i].id = slot.entry.id;
-      slots[i].label = slot.entry.id;
+      slots[i].Id = slot.entry.Id;
+      slots[i].label = HumanizeBlockName(slot.entry.Id);
       slots[i].entryKind = slot.entry.kind;
       slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
     }
@@ -491,7 +525,12 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
 size_t UGameSession::GetSelectedSlot(size_t barIndex) const
 {
   const UCreatureInventory *inv = GetControlledInventory(World.get());
-  return inv ? inv->GetActiveSlotIndex(barIndex) : 10;
+  if (!inv)
+  {
+    return 0;
+  }
+  const size_t slot = inv->GetActiveSlotIndex(barIndex);
+  return slot < 10 ? slot : 0;
 }
 
 void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
@@ -505,43 +544,45 @@ void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
 bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
                               const InventoryEntryRef &entry)
 {
-  if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
   {
-    return inv->AssignToHotbar(barIndex, slotIndex, entry);
+    return false;
   }
-  return false;
+  inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  return inv->AssignToHotbar(barIndex, slotIndex, entry);
 }
 
 void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
 {
-  pendingAssignment_ = entry;
+  PendingAssignment = entry;
 }
 
 bool UGameSession::HasPendingAssignment() const
 {
-  return pendingAssignment_.has_value() && !pendingAssignment_->empty;
+  return PendingAssignment.has_value() && !PendingAssignment->empty;
 }
 
 bool UGameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
 {
-  if (!pendingAssignment_.has_value())
+  if (!PendingAssignment.has_value())
   {
     return false;
   }
-  if (!CanAssignToHotbar(*pendingAssignment_, barIndex, slotIndex))
+  if (!CanAssignToHotbar(*PendingAssignment, barIndex, slotIndex))
   {
     return false;
   }
-  const bool ok = AssignSlot(barIndex, slotIndex, *pendingAssignment_);
+  const bool ok = AssignSlot(barIndex, slotIndex, *PendingAssignment);
   if (ok)
   {
     SelectSlot(barIndex, slotIndex);
-    pendingAssignment_.reset();
+    PendingAssignment.reset();
   }
   return ok;
 }
 
-void UGameSession::ClearPendingAssignment() { pendingAssignment_.reset(); }
+void UGameSession::ClearPendingAssignment() { PendingAssignment.reset(); }
 
 namespace
 {
@@ -603,29 +644,29 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   {
     return;
   }
-  drag_.active = true;
-  drag_.entry = entry;
-  drag_.source = source;
+  Drag.Active = true;
+  Drag.entry = entry;
+  Drag.source = source;
 }
 
-bool UGameSession::IsDragging() const { return drag_.active; }
+bool UGameSession::IsDragging() const { return Drag.Active; }
 
-void UGameSession::CancelDrag() { drag_ = DragState{}; }
+void UGameSession::CancelDrag() { Drag = DragState{}; }
 
 bool UGameSession::DropOnSlot(const SlotAddress &target)
 {
-  if (!drag_.active || target.surface == SlotSurface::None)
+  if (!Drag.Active || target.surface == SlotSurface::None)
   {
     return false;
   }
-  if (SameSlotAddress(target, drag_.source))
+  if (SameSlotAddress(target, Drag.source))
   {
     CancelDrag();
     return true;
   }
 
-  const SlotAddress source = drag_.source;
-  const InventoryEntryRef entry = drag_.entry;
+  const SlotAddress source = Drag.source;
+  const InventoryEntryRef entry = Drag.entry;
 
   if (target.surface == SlotSurface::Hotbar)
   {
@@ -668,22 +709,22 @@ std::vector<InventoryGroupView>
 UGameSession::GetGroups(ContentKind tab, InventoryMode mode) const
 {
   std::vector<InventoryGroupView> groups;
-  const auto ids = contentCatalog_.GetTypeIds(tab);
-  for (const std::string &id : ids)
+  const auto ids = ContentCatalog.GetTypeIds(tab);
+  for (const std::string &Id : ids)
   {
-    const auto entries = contentCatalog_.GetEntries(tab, id);
+    const auto entries = ContentCatalog.GetEntries(tab, Id);
     if (mode == InventoryMode::Owned && entries.empty())
     {
       continue;
     }
-    groups.push_back({id, contentCatalog_.GetTypeDisplayName(id), 0});
+    groups.push_back({Id, ContentCatalog.GetTypeDisplayName(Id), 0});
   }
   std::stable_sort(groups.begin(), groups.end(),
                    [](const InventoryGroupView &a, const InventoryGroupView &b)
                    {
-                     if (a.id == "misc")
+                     if (a.Id == "misc")
                        return false;
-                     if (b.id == "misc")
+                     if (b.Id == "misc")
                        return true;
                      return a.label < b.label;
                    });
@@ -695,7 +736,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
                          InventoryMode mode) const
 {
   std::vector<InventoryEntryView> result;
-  auto entries = contentCatalog_.GetEntries(tab, groupId);
+  auto entries = ContentCatalog.GetEntries(tab, groupId);
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
   const std::map<std::string, int> *inv =
       creatureInv ? &creatureInv->GetStorage() : nullptr;
@@ -717,7 +758,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
       ref.kind = InventoryEntryKind::Skin;
       break;
     }
-    ref.id = e.id;
+    ref.Id = e.Id;
     ref.empty = false;
     if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
     {
@@ -728,7 +769,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     ref.count = 0;
     if (inv)
     {
-      const auto it = inv->find(e.id);
+      const auto it = inv->find(e.Id);
       if (it != inv->end())
       {
         ref.count = it->second;
@@ -744,7 +785,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
             [](const InventoryEntryView &a, const InventoryEntryView &b)
             {
               if (a.label == b.label)
-                return a.ref.id < b.ref.id;
+                return a.ref.Id < b.ref.Id;
               return a.label < b.label;
             });
   return result;
@@ -757,17 +798,46 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   {
     return false;
   }
+  if (World)
+  {
+    if (entry.kind == InventoryEntryKind::Block)
+    {
+      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+      {
+        std::cerr << "GameSession: block not in registry, hotbar assign rejected: "
+                  << entry.Id << std::endl;
+        return false;
+      }
+    }
+    else if (entry.kind == InventoryEntryKind::UObject)
+    {
+      const auto entries =
+          ContentCatalog.GetEntries(ContentKind::UObject, entry.Id);
+      if (entries.empty())
+      {
+        std::cerr << "GameSession: prefab not in catalog, hotbar assign rejected: "
+                  << entry.Id << std::endl;
+        return false;
+      }
+    }
+  }
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
-  if (!creatureInv || barIndex >= creatureInv->GetHotbarCount())
+  if (!creatureInv)
   {
     return false;
   }
-  if (inventoryMode_ == InventoryMode::Creative)
+  const_cast<UCreatureInventory *>(creatureInv)->EnsureHotbarCount(
+      static_cast<size_t>(GetHotbarCountSetting()));
+  if (barIndex >= creatureInv->GetHotbarCount())
+  {
+    return false;
+  }
+  if (ActiveInventoryMode == InventoryMode::Creative)
   {
     return true;
   }
   const auto &inv = creatureInv->GetStorage();
-  const auto it = inv.find(entry.id);
+  const auto it = inv.find(entry.Id);
   return it != inv.end() && it->second > 0;
 }
 
@@ -781,11 +851,26 @@ bool UGameSession::AssignToHotbar(const InventoryEntryRef &entry,
   return AssignSlot(barIndex, slotIndex, entry);
 }
 
-InventoryMode UGameSession::GetInventoryMode() const { return inventoryMode_; }
+bool UGameSession::CanSpawnCreatureByView(const std::string &speciesId) const
+{
+  return World && World->CanSpawnCreatureByView(speciesId);
+}
+
+std::string UGameSession::GetCreatureSpawnBlockedHint(
+    const std::string &speciesId) const
+{
+  if (!World)
+  {
+    return {};
+  }
+  return World->GetCreatureSpawnBlockedHint(speciesId);
+}
+
+InventoryMode UGameSession::GetInventoryMode() const { return ActiveInventoryMode; }
 
 void UGameSession::SetInventoryMode(InventoryMode mode)
 {
-  inventoryMode_ = mode;
+  ActiveInventoryMode = mode;
 }
 
 CommandResult UGameSession::Execute(const std::vector<std::string> &args)
@@ -803,24 +888,24 @@ CommandResult UGameSession::Execute(const std::vector<std::string> &args)
     }
     line += args[i];
   }
-  return commandRegistry_.ExecuteLine(line);
+  return UCommandRegistry.ExecuteLine(line);
 }
 
 void UGameSession::AddChatLine(const std::string &line)
 {
-  chatLog_.push_back(line);
-  if (chatLog_.size() > 200)
+  ChatLog.push_back(line);
+  if (ChatLog.size() > 200)
   {
-    chatLog_.erase(chatLog_.begin());
+    ChatLog.erase(ChatLog.begin());
   }
 }
 
 void UGameSession::InitCommandHistory(const std::filesystem::path &filePath)
 {
-  commandHistory_.SetFilePath(filePath);
-  commandHistory_.Load();
+  CommandHistory.SetFilePath(filePath);
+  CommandHistory.Load();
 }
 
-void UGameSession::SaveCommandHistory() { commandHistory_.Save(); }
+void UGameSession::SaveCommandHistory() { CommandHistory.Save(); }
 
 } // namespace cutum

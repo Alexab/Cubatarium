@@ -4,7 +4,7 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/TransparentPass.h"
 
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 #include <iostream>
 
 namespace cutum
@@ -56,7 +56,7 @@ void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend &backend,
   {
     if (settings.logPassNames)
     {
-      std::cout << "[transparent] " << pass.debugName << std::endl;
+      std::cout << "[Transparent] " << pass.debugName << std::endl;
     }
     ApplyPassGlState(pass);
     backend.DrawPreparedTransparent(pass.shaderMode, settings.shellAlpha);

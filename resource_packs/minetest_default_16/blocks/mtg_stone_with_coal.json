@@ -1,0 +1,19 @@
+﻿{
+    "name":  "mtg_stone_with_coal",
+    "id":  505,
+    "types":  [
+                  "building"
+              ],
+    "textures":  [
+                     "mtg_stone_with_coal_composite_0",
+                     "mtg_stone_with_coal_composite_0",
+                     "mtg_stone_with_coal_composite_0",
+                     "mtg_stone_with_coal_composite_0",
+                     "mtg_stone_with_coal_composite_0",
+                     "mtg_stone_with_coal_composite_0"
+                 ],
+    "render":  {
+
+               }
+}
+

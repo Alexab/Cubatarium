@@ -1,0 +1,19 @@
+﻿{
+    "name":  "torch",
+    "id":  570,
+    "types":  [
+                  "natural"
+              ],
+    "textures":  [
+                     "torch",
+                     "torch",
+                     "torch",
+                     "torch",
+                     "torch",
+                     "torch"
+                 ],
+    "render":  {
+
+               }
+}
+

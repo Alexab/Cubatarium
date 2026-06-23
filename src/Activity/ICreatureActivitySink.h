@@ -14,6 +14,8 @@ struct CreatureBehaviorSnapshot
 {
   CreatureBehaviorParams behavior;
   CreatureLocomotionCapabilities locomotion;
+  CreatureHabitat habitat{CreatureHabitat::Terrestrial};
+  glm::vec3 boundsSize{0.6f, 1.8f, 0.6f};
 };
 
 class ICreatureActivitySink
@@ -21,10 +23,10 @@ class ICreatureActivitySink
 public:
   virtual ~ICreatureActivitySink() = default;
   virtual std::optional<CreatureActivityView>
-  GetCreatureView(CreatureId id) const = 0;
+  GetCreatureView(CreatureId Id) const = 0;
   virtual std::optional<CreatureBehaviorSnapshot>
-  GetBehaviorSnapshot(CreatureId id) const = 0;
-  virtual void SetIntent(CreatureId id, const CreatureIntent &intent) = 0;
+  GetBehaviorSnapshot(CreatureId Id) const = 0;
+  virtual void SetIntent(CreatureId Id, const CreatureIntent &intent) = 0;
 };
 
 } // namespace cutum

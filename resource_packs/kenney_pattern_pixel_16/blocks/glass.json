@@ -1,0 +1,21 @@
+﻿{
+    "name":  "glass",
+    "id":  37,
+    "types":  [
+                  "building",
+                  "decorative"
+              ],
+    "textures":  [
+                     "glass",
+                     "glass",
+                     "glass",
+                     "glass",
+                     "glass",
+                     "glass"
+                 ],
+    "render":  {
+                   "transparent":  true
+               },
+    "displayName":  "Glass"
+}
+
