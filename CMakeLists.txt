@@ -368,7 +368,6 @@ if(ANDROID)
         src/App/Platform/AndroidPlatformWindow.cpp
         src/App/Platform/TouchInputBridge.cpp
         src/Gui/Widgets/GuiTouchControls.cpp
-        src/App/Platform/Log.cpp
         src/App/Platform/IPlatformPaths.cpp
     )
     set(CUBATARIUM_COMMON_SOURCES ${SOURCES})

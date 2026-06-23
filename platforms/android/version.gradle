@@ -53,7 +53,10 @@ ext.resolveCubatariumVersion = { File repoRoot ->
         if (t ==~ /^v(.+)$/) {
             t = (t =~ /^v(.+)$/)[0][1]
         }
-        if (t ==~ /^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$/) {
+        if (t ==~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z]?$/) {
+            return t
+        }
+        if (t ==~ /^[0-9]+\.[0-9]+\.[0-9]+$/) {
             return t
         }
         return null
@@ -64,7 +67,15 @@ ext.resolveCubatariumVersion = { File repoRoot ->
         if (semver) {
             return semver
         }
-        def matcher = (describe =~ /^([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)-[0-9]+-g[0-9a-fA-F]+$/)
+        def matcher = (describe =~ /^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z]?)-[0-9]+-g[0-9a-fA-F]+$/)
+        if (matcher.matches()) {
+            return matcher[0][1]
+        }
+        matcher = (describe =~ /^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-[0-9]+-g[0-9a-fA-F]+$/)
+        if (matcher.matches()) {
+            return matcher[0][1]
+        }
+        matcher = (describe =~ /^([0-9]+\.[0-9]+\.[0-9]+)-[0-9]+-g[0-9a-fA-F]+$/)
         if (matcher.matches()) {
             return matcher[0][1]
         }

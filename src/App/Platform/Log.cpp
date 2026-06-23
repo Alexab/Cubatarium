@@ -132,16 +132,14 @@ void WriteLogLine(const char *tag, const std::string &msg, bool isError)
 
 } // namespace
 
+#ifdef _WIN32
 void CubatariumInstallWindowsDiagnostics()
 {
-#ifdef _WIN32
   SetUnhandledExceptionFilter(UnhandledExceptionFilter);
-#endif
 }
 
 void CubatariumAttachParentConsole()
 {
-#ifdef _WIN32
   if (!AttachConsole(ATTACH_PARENT_PROCESS))
   {
     return;
@@ -152,12 +150,10 @@ void CubatariumAttachParentConsole()
   FILE *out = nullptr;
   freopen_s(&out, "CONOUT$", "w", stdout);
   (void)out;
-#endif
 }
 
 void CubatariumAttachWindowsConsole()
 {
-#ifdef _WIN32
   if (!AllocConsole())
   {
     return;
@@ -169,8 +165,8 @@ void CubatariumAttachWindowsConsole()
   freopen_s(&out, "CONOUT$", "w", stdout);
   (void)out;
   std::cerr << "Cubatarium debug console attached." << std::endl;
-#endif
 }
+#endif
 
 void CubatariumLogInfo(const char *tag, const std::string &msg)
 {
