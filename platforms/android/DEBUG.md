@@ -22,7 +22,7 @@
    - Java: `MainActivity.java`, `AssetExtractor.java`
    - C++: `platforms/android/native/android_main.cpp`, `src/App/Platform/AppRunner.cpp`, `egl_context.cpp`
 
-Logcat откроется автоматически. Нативные логи идут с тегами **`App`**, **`EGL`**, **`Android`**, **`Asset`** (не `Cubatarium`).
+Logcat откроется автоматически. Нативные логи идут с тегами **`App`**, **`EGL`**, **`Android`**, **`Asset`**, **`Text`** (не `Cubatarium`).
 
 ### Если Studio не видит C++ исходники
 
@@ -58,7 +58,7 @@ AAB: `platforms/android/app/build/outputs/bundle/release/cubatarium-<version>.aa
 adb install -r platforms\android\app\build\outputs\apk\debug\cubatarium-*.apk
 adb logcat -c
 adb shell am start -n com.cubatarium/.MainActivity
-adb logcat -s App:E EGL:E Android:E Asset:E AndroidRuntime:E libc:F DEBUG:F
+adb logcat -s App:E EGL:E Android:E Asset:E Text:E Text:I AndroidRuntime:E libc:F DEBUG:F
 ```
 
 ## Отладка из Cursor (lldb, запасной вариант)
@@ -79,6 +79,7 @@ adb logcat -s App:E EGL:E Android:E Asset:E AndroidRuntime:E libc:F DEBUG:F
 | Чёрный экран | Logcat: `App`, `EGL`, `Text`; частая причина — нет `files/game/fonts/Roboto-Regular.ttf` |
 | Нет текстур | `files/game/` на устройстве после `AssetExtractor` |
 | Нет шрифта / UI не стартует | `adb shell run-as com.cubatarium ls files/game/fonts/`; должен быть `Roboto-Regular.ttf` |
+| Текст не виден (меню пустое) | Logcat `Text:I` — ожидается `Loaded N glyphs (M textured)`; `Text:E` — `glTexImage2D failed` или `No textured glyphs` |
 | Native breakpoints серые | Debug, не Run; rebuild debug; Refresh Linked C++ Projects |
 | «Приложение не установлено» | ABI: `armeabi-v7a`, `arm64-v8a`, `x86_64` в APK |
 | Первый запуск долго | Копирование ассетов в `files/game/` (сотни MB) |

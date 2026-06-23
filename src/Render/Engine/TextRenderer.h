@@ -61,6 +61,7 @@ private:
   // Cached uniform locations for performance
   GLint textColorLocation;
   GLint projectionLocation;
+  GLint textSamplerLocation;
 
   bool CreateShader();
   bool LoadCharacters(const std::string &fontPath, int fontSize);

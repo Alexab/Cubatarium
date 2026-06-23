@@ -11,9 +11,33 @@
 namespace cutum
 {
 
+namespace
+{
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+constexpr GLint kGlyphInternalFormat = GL_R8;
+#else
+constexpr GLint kGlyphInternalFormat = GL_RED;
+#endif
+
+void ConfigureGlyphTextureParameters()
+{
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+#endif
+}
+
+} // namespace
+
 UTextRenderer::UTextRenderer()
     : TextShader(0), VAO(0), VBO(0), WindowWidth(1280), WindowHeight(720),
-      ft(nullptr), face(nullptr), ftInitialized(false)
+      ft(nullptr), face(nullptr), ftInitialized(false), textColorLocation(-1),
+      projectionLocation(-1), textSamplerLocation(-1)
 {
 }
 
@@ -128,7 +152,10 @@ void UTextRenderer::Shutdown()
   // Delete character textures
   for (auto &[c, ch] : characters)
   {
-    glDeleteTextures(1, &ch.textureID);
+    if (ch.textureID != 0)
+    {
+      glDeleteTextures(1, &ch.textureID);
+    }
   }
   characters.clear();
 
@@ -158,8 +185,8 @@ uniform sampler2D text;
 uniform vec3 textColor;
 void main()
 {
-    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
-    color = vec4(textColor, 1.0) * sampled;
+    float alpha = texture(text, TexCoords).r;
+    color = vec4(textColor, alpha);
 }
 )";
 #else
@@ -186,8 +213,8 @@ uniform vec3 textColor;
 
 void main()
 {    
-    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
-    color = vec4(textColor, 1.0) * sampled;
+    float alpha = texture(text, TexCoords).r;
+    color = vec4(textColor, alpha);
 }
 )";
 #endif
@@ -240,6 +267,7 @@ void main()
   // Cache uniform locations
   textColorLocation = glGetUniformLocation(TextShader, "textColor");
   projectionLocation = glGetUniformLocation(TextShader, "projection");
+  textSamplerLocation = glGetUniformLocation(TextShader, "text");
 
   return TextShader != 0;
 }
@@ -266,38 +294,54 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
   // Disable byte alignment
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
+  int texturedGlyphs = 0;
+  bool loggedGlError = false;
+
   // Load first 128 ASCII characters
   for (unsigned char c = 0; c < 128; c++)
   {
     // Load character glyph
     if (FT_Load_Char(face, c, FT_LOAD_RENDER))
     {
-      std::cerr << "ERROR::FREETYPE: Failed to load Glyph: " << c << std::endl;
+      CubatariumLogError("Text",
+                         std::string("Failed to load glyph: ") +
+                             std::to_string(static_cast<unsigned int>(c)));
       continue;
     }
 
-    // Generate texture
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    const auto bitmapWidth = static_cast<int>(face->glyph->bitmap.width);
+    const auto bitmapRows = static_cast<int>(face->glyph->bitmap.rows);
 
-    // Load glyph data into texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width,
-                 face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE,
-                 face->glyph->bitmap.buffer);
+    GLuint texture = 0;
+    if (bitmapWidth > 0 && bitmapRows > 0)
+    {
+      glGenTextures(1, &texture);
+      glBindTexture(GL_TEXTURE_2D, texture);
 
-    // Configure texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexImage2D(GL_TEXTURE_2D, 0, kGlyphInternalFormat, bitmapWidth,
+                   bitmapRows, 0, GL_RED, GL_UNSIGNED_BYTE,
+                   face->glyph->bitmap.buffer);
+      ConfigureGlyphTextureParameters();
 
-    // Save character information
-    Character character = {
-        texture,
-        glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-        glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-        static_cast<GLuint>(face->glyph->advance.x)};
+      if (!loggedGlError)
+      {
+        const GLenum glError = glGetError();
+        if (glError != GL_NO_ERROR)
+        {
+          CubatariumLogError(
+              "Text", "glTexImage2D failed with GL error " +
+                          std::to_string(static_cast<unsigned int>(glError)));
+          loggedGlError = true;
+        }
+      }
+      ++texturedGlyphs;
+    }
+
+    Character character = {texture,
+                           glm::ivec2(bitmapWidth, bitmapRows),
+                           glm::ivec2(face->glyph->bitmap_left,
+                                      face->glyph->bitmap_top),
+                           static_cast<GLuint>(face->glyph->advance.x)};
 
     characters.insert(std::pair<char, Character>(c, character));
   }
@@ -305,8 +349,17 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
   // Restore byte alignment
   glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-  std::cout << "Loaded " << characters.size()
-            << " characters from font: " << fontPath << std::endl;
+  CubatariumLogInfo("Text",
+                    "Loaded " + std::to_string(characters.size()) +
+                        " glyphs (" + std::to_string(texturedGlyphs) +
+                        " textured) from font: " + fontPath);
+
+  if (texturedGlyphs == 0)
+  {
+    CubatariumLogError("Text", "No textured glyphs loaded from font");
+    return false;
+  }
+
   return true;
 }
 
@@ -336,7 +389,13 @@ void UTextRenderer::RenderText(const std::string &text, float x, float y,
     std::cerr << "TextRenderer: projectionLocation is invalid!" << std::endl;
     return;
   }
+  if (textSamplerLocation == -1)
+  {
+    CubatariumLogError("Text", "text sampler uniform location is invalid");
+    return;
+  }
 
+  glUniform1i(textSamplerLocation, 0);
   glUniform3f(textColorLocation, color.x, color.y, color.z);
   glBindVertexArray(VAO);
 
@@ -357,6 +416,12 @@ void UTextRenderer::RenderText(const std::string &text, float x, float y,
     }
 
     Character ch = characters[*c];
+
+    if (ch.textureID == 0)
+    {
+      x += (ch.advance >> 6) * scale;
+      continue;
+    }
 
     float xpos = x + ch.bearing.x * scale;
     float ypos = y - (ch.size.y - ch.bearing.y) * scale;
@@ -403,7 +468,12 @@ glm::vec2 UTextRenderer::GetTextSize(const std::string &text, float scale)
   std::string::const_iterator c;
   for (c = text.begin(); c != text.end(); c++)
   {
-    Character ch = characters[*c];
+    const auto it = characters.find(*c);
+    if (it == characters.end())
+    {
+      continue;
+    }
+    const Character &ch = it->second;
     width += (ch.advance >> 6) * scale;
     height = std::max(height, static_cast<float>(ch.size.y) * scale);
   }
