@@ -4,8 +4,8 @@ AIEdition=1
 GUID={4E882EBA-970C-E877-051C-CA31D9346389}
 AppName=Cubatarium
 AppEdition=
-AppVersion=0.0.2.0
-GetVerFromExe=1
+AppVersion=0.0.2.1
+GetVerFromExe=0
 AppDescription=
 CompanyName=
 WebSite=
@@ -163,8 +163,8 @@ ShowMsgAfterInstall=0
 ShowMsgText=
 INISkipOnUpdate=0
 TotalFiles=1
-SourceDirFiles=3338
-SourceDirSize=18173655
+SourceDirFiles=3339
+SourceDirSize=9181205
 
 [GUI]
 FontName=Verdana
