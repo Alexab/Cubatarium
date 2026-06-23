@@ -27,7 +27,11 @@
         "async_meshing": true,
         "face_quads": true,
         "frustum_culling": true,
-        "batch_cache": true
+        "batch_cache": true,
+        "distance_fog": true,
+        "distance_fog_start_ratio": 0.85,
+        "distance_fog_horizontal": true,
+        "gradient_sky": true
     },
     "ui": {
         "legacy_hud": false,

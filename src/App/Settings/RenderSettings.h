@@ -20,6 +20,14 @@ struct RenderSettings
   /// fallback per part).
   bool CreatureTexturedParts{true};
   bool CreatureWireframeOverlay{false};
+  /// Linear fog at chunk render-distance boundary (greedy shader path).
+  bool DistanceFog{true};
+  /// Fraction of render distance (blocks) where distance fog begins.
+  float DistanceFogStartRatio{0.85f};
+  /// Use horizontal (XZ) distance for distance fog, like Minecraft render fog.
+  bool DistanceFogHorizontal{true};
+  /// Gradient sky pass before world geometry (greedy path).
+  bool GradientSky{true};
 
   static RenderSettings Legacy()
   {

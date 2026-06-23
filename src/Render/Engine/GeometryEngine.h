@@ -70,6 +70,7 @@ public:
   glm::vec4 GetSkyColor() const;            // Replace QVector4D with glm::vec4
   void SetGradientSky(bool useGradient);
   bool IsGradientSky() const;
+  void DrawSkyGradient();
 
   // Debug/Logging
   void SetVerboseLogging(bool enabled) { VerboseLogging = enabled; }
@@ -125,8 +126,8 @@ private:
   void SetBlockAnimUniforms(const std::shared_ptr<UShaderProgram> &shader,
                             BlockId blockId,
                             const std::map<size_t, UTextureCube> &textures);
-  void ApplyFluidFogUniforms(const std::shared_ptr<UShaderProgram> &shader,
-                             const glm::vec3 &cameraPos);
+  void ApplyFogUniforms(const std::shared_ptr<UShaderProgram> &shader,
+                        const glm::vec3 &cameraPos);
   void RenderFluidOverlay(int width, int height);
   bool InitOverlayBuffers();
   void DestroyOverlayBuffers();
@@ -174,7 +175,6 @@ private:
                 GLuint texture); // Replace QOpenGLTexture with GLuint
   void DrawObject(std::shared_ptr<UObject> object,
                   const std::map<size_t, UTextureCube> &textures);
-  void DrawSkyGradient();
   void DrawSkyGradientSimple(); // Simple version without VBO
 
   // New optimized methods
@@ -243,6 +243,7 @@ private:
   float FogEnd{1000.0f};
   float FogMinBlend{0.0f};
   float FogEnabled{0.0f};
+  float FogHorizontal{0.0f};
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

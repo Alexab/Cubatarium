@@ -407,6 +407,7 @@ public:
 
   void SetStreamingEnabled(bool enabled) { StreamingEnabled = enabled; }
   void SetRenderDistanceChunks(int distance);
+  int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }

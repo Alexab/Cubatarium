@@ -112,6 +112,7 @@ set(SOURCES
     src/World/Core/WorldCooperativeOps.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
+    src/Render/Engine/DistanceFog.cpp
     src/Render/Pipeline/GlStateScope.cpp
     src/Render/Pipeline/GreedyShaderMode.cpp
     src/Render/Pipeline/GreedyTransparentSort.cpp
@@ -254,6 +255,7 @@ set(HEADERS
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
     src/Render/Engine/GeometryEngine.h
+    src/Render/Engine/DistanceFog.h
     src/World/Math/BlockTypes.h
     src/World/Math/GridMath.h
     src/Blocks/BlockRegistry.h

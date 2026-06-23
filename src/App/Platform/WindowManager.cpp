@@ -78,7 +78,7 @@ void TrySetWindowIcon(GLFWwindow *window)
 UWindowManager::UWindowManager()
     : Window(nullptr), WindowWidth(1280), WindowHeight(720), IsRunning(false),
       IsInitialized(false), DeltaTime(0.0), SkyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      UseGradientSky(false),
+      UseGradientSky(true),
       BlockInput(std::make_unique<UBlockInputController>())
 {
   LastFrameTime = std::chrono::high_resolution_clock::now();

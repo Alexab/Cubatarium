@@ -358,6 +358,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.CreatureTexturedParts = r.value("creature_textured_parts", true);
         Render.CreatureWireframeOverlay =
             r.value("creature_wireframe_overlay", false);
+        Render.DistanceFog = r.value("distance_fog", true);
+        Render.DistanceFogStartRatio =
+            r.value("distance_fog_start_ratio", 0.85f);
+        Render.DistanceFogHorizontal =
+            r.value("distance_fog_horizontal", true);
+        Render.GradientSky = r.value("gradient_sky", true);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -667,6 +673,10 @@ void UCore::SaveConfigFile()
   render_json["creature_debug_bounds"] = Render.CreatureDebugBounds;
   render_json["creature_textured_parts"] = Render.CreatureTexturedParts;
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
+  render_json["distance_fog"] = Render.DistanceFog;
+  render_json["distance_fog_start_ratio"] = Render.DistanceFogStartRatio;
+  render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
+  render_json["gradient_sky"] = Render.GradientSky;
   system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;

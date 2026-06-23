@@ -23,6 +23,7 @@ uniform float uFogStart;
 uniform float uFogEnd;
 uniform float uFogMinBlend;
 uniform float uFogEnabled;
+uniform float uFogHorizontal;
 
 const int kCrossFaceIndex = 127;
 
@@ -109,7 +110,13 @@ void main()
         discard;
     }
     if (uFogEnabled > 0.5) {
-        float dist = length(vWorldPos - uCameraPos);
+        float dist;
+        if (uFogHorizontal > 0.5) {
+            vec2 delta_xz = vWorldPos.xz - uCameraPos.xz;
+            dist = length(delta_xz);
+        } else {
+            dist = length(vWorldPos - uCameraPos);
+        }
         float fogRange = max(uFogEnd - uFogStart, 0.001);
         float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
         fogFactor = max(fogFactor, uFogMinBlend);

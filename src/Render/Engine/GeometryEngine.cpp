@@ -1,5 +1,6 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/DistanceFog.h"
 #include "App/Core.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -48,7 +49,7 @@ UGeometryEngine::UGeometryEngine(
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
       BaseSkyColor(0.5f, 0.7f, 1.0f), SmoothedSkyTint(0.5f, 0.7f, 1.0f),
-      useGradientSky(false) // Use simple color by default
+      useGradientSky(true)
 {
 }
 
@@ -461,6 +462,7 @@ void UGeometryEngine::ShowTransientMessage(const std::string &msg,
 void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
 {
   Render = settings;
+  SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
   DestroyGreedyGpuBatches();
   DestroyFaceQuadBuffers();
@@ -759,6 +761,7 @@ void UGeometryEngine::PrepareFrameRendering()
 
   glm::vec3 targetSky = BaseSkyColor;
   FogEnabled = 0.0f;
+  FogHorizontal = 0.0f;
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
@@ -777,6 +780,19 @@ void UGeometryEngine::PrepareFrameRendering()
         targetSky = fv->FogColor;
       }
     }
+  }
+  else if (Render.DistanceFog)
+  {
+    const DistanceFogParams distance_fog = ComputeDistanceFog(
+        WorldInstance->GetRenderDistanceChunks(), SmoothedSkyTint,
+        Render.DistanceFogStartRatio);
+    FogEnabled = 1.0f;
+    FogStart = distance_fog.Start;
+    FogEnd = distance_fog.End;
+    FogMinBlend = 0.0f;
+    FogHorizontal = Render.DistanceFogHorizontal ? 1.0f : 0.0f;
+    SmoothedFogColor =
+        glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
   }
   if (fluid.inFluid)
   {
@@ -797,7 +813,7 @@ void UGeometryEngine::PrepareFrameRendering()
   skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
 }
 
-void UGeometryEngine::ApplyFluidFogUniforms(
+void UGeometryEngine::ApplyFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos)
 {
   shader->SetVec3("uCameraPos", cameraPos);
@@ -806,6 +822,7 @@ void UGeometryEngine::ApplyFluidFogUniforms(
   shader->SetFloat("uFogEnd", FogEnd);
   shader->SetFloat("uFogMinBlend", FogMinBlend);
   shader->SetFloat("uFogEnabled", FogEnabled);
+  shader->SetFloat("uFogHorizontal", FogHorizontal);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -850,7 +867,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
                       shellAlphaThreshold);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFluidFogUniforms(greedyShader, camera->GetPosition());
+    ApplyFogUniforms(greedyShader, camera->GetPosition());
   }
   glActiveTexture(GL_TEXTURE0);
 

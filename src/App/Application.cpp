@@ -1203,6 +1203,10 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     const glm::vec4 clearColor = Geometry->GetSkyColor();
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    if (Geometry->IsGradientSky())
+    {
+      Geometry->DrawSkyGradient();
+    }
     Geometry->Paint(width, height, viewDuration);
   }
 
