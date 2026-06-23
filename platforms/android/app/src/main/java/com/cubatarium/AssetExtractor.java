@@ -26,6 +26,7 @@ public final class AssetExtractor {
             "config.json",
             "config.json.example",
             "content",
+            "fonts",
             "models",
             "prefabs",
             "resource_packs",

@@ -30,11 +30,15 @@ void HandleAppCmd(android_app *app, int32_t cmd)
   state->window->OnAppCmd(cmd);
 }
 
+bool GameAssetsReady(const IPlatformPaths &paths)
+{
+  const auto font = paths.AssetRoot() / "fonts" / kBundledUiFontFileName;
+  return std::filesystem::exists(font);
+}
+
 bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
 {
-  const auto flag = paths.WritableRoot() / ".assets_extracted";
-  const auto font = paths.AssetRoot() / "fonts" / kBundledUiFontFileName;
-  if (std::filesystem::exists(flag) || std::filesystem::exists(font))
+  if (GameAssetsReady(paths))
   {
     return true;
   }
@@ -42,7 +46,7 @@ bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
   CubatariumLogInfo("Android", "Waiting for game assets extraction...");
   while (app->destroyRequested == 0)
   {
-    if (std::filesystem::exists(flag) || std::filesystem::exists(font))
+    if (GameAssetsReady(paths))
     {
       return true;
     }
@@ -132,6 +136,7 @@ extern "C" void android_main(struct android_app *app)
 
   if (!WaitForGameAssets(app, *pathsPtr))
   {
+    CubatariumLogError("Android", "Game assets not ready before destroy");
     return;
   }
 
@@ -142,5 +147,10 @@ extern "C" void android_main(struct android_app *app)
   }
 
   std::filesystem::current_path(pathsPtr->AssetRoot());
-  RunCubatarium(window, *pathsPtr);
+  const int result = RunCubatarium(window, *pathsPtr);
+  if (result != 0)
+  {
+    CubatariumLogError("Android",
+                       "RunCubatarium failed with code " + std::to_string(result));
+  }
 }

@@ -76,8 +76,9 @@ adb logcat -s App:E EGL:E Android:E Asset:E AndroidRuntime:E libc:F DEBUG:F
 | Симптом | Проверка |
 |---------|----------|
 | Gradle Sync failed | `local.properties` → `sdk.dir`; JDK 17+ (Studio JBR) |
-| Чёрный экран | Logcat: `App`, `EGL`; шейдеры / surface |
+| Чёрный экран | Logcat: `App`, `EGL`, `Text`; частая причина — нет `files/game/fonts/Roboto-Regular.ttf` |
 | Нет текстур | `files/game/` на устройстве после `AssetExtractor` |
+| Нет шрифта / UI не стартует | `adb shell run-as com.cubatarium ls files/game/fonts/`; должен быть `Roboto-Regular.ttf` |
 | Native breakpoints серые | Debug, не Run; rebuild debug; Refresh Linked C++ Projects |
 | «Приложение не установлено» | ABI: `armeabi-v7a`, `arm64-v8a`, `x86_64` в APK |
 | Первый запуск долго | Копирование ассетов в `files/game/` (сотни MB) |
