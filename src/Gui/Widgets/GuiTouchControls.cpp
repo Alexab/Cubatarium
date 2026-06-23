@@ -646,6 +646,7 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   const int leftControlsH = std::max(1, height - leftControlsTop);
   const int rightColX = width - margin - buttonSize;
   const int jumpX = rightColX - buttonSize - buttonGap;
+  const int sprintX = jumpX - buttonSize - buttonGap;
   const int topRightY = margin + ScalePx(kTopRightStackOffsetBase, uiScale);
   const int topRightStackH = buttonSize * 3 + buttonGap * 2 + margin;
   if (JoystickWidget)
@@ -657,14 +658,13 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   {
     JumpButton->SetBounds({jumpX, bottomRowY, buttonSize, buttonSize});
   }
+  if (SprintButton)
+  {
+    SprintButton->SetBounds({sprintX, bottomRowY, buttonSize, buttonSize});
+  }
   if (SneakButton)
   {
     SneakButton->SetBounds({rightColX, bottomRowY, buttonSize, buttonSize});
-  }
-  if (SprintButton)
-  {
-    SprintButton->SetBounds({rightColX, bottomRowY - buttonSize - buttonGap,
-                             buttonSize, buttonSize});
   }
   if (MenuButton)
   {
@@ -688,7 +688,9 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   {
     const int lookSize = std::max(joystickSize, buttonSize * 2 + buttonGap);
     const int lookX = width - margin - lookSize;
-    const int lookY = bottomRowY - lookSize - controlLift;
+    const int lookBottomMax = bottomRowY - buttonGap;
+    const int lookY =
+        std::max(controlLift, lookBottomMax - lookSize - controlLift);
     LookPad->SetBounds({lookX, lookY, lookSize, lookSize});
   }
 
@@ -703,13 +705,12 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
             offsetY + topRightY - margin / 2, buttonSize + margin * 2,
             topRightStackH});
     const int actionPad = ScalePx(4, uiScale);
-    const int actionRowH = buttonSize * 2 + buttonGap;
+    const int actionRowW = buttonSize * 3 + buttonGap * 2;
     Bridge->SetBlockedGameRegion(2,
-                                 {offsetX + std::max(0, jumpX - actionPad),
-                                  offsetY + std::max(0, bottomRowY - actionRowH -
-                                                                  actionPad),
-                                  buttonSize * 2 + buttonGap + actionPad * 2,
-                                  actionRowH + actionPad * 2});
+                                 {offsetX + std::max(0, sprintX - actionPad),
+                                  offsetY + std::max(0, bottomRowY - actionPad),
+                                  actionRowW + actionPad * 2,
+                                  buttonSize + actionPad * 2});
   }
 
   if (JoystickWidget && Bridge)
