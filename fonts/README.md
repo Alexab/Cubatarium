@@ -1,53 +1,28 @@
 # Шрифты для Cubatarium
 
-Эта папка содержит шрифты, используемые в проекте Cubatarium.
+В дистрибутив (Windows installer, Android APK/AAB) входит один открытый UI-шрифт.
 
-## Текущие шрифты
+## Текущий шрифт
 
-- `arial.ttf` - Arial шрифт (скопирован из системной папки Windows)
-- `calibri.ttf` - Calibri шрифт (скопирован из системной папки Windows)
+| Файл | Лицензия | Назначение |
+|------|----------|------------|
+| `Roboto-Regular.ttf` | [Apache 2.0](LICENSE-Roboto.txt) | Основной UI-шрифт (меню, HUD, отладочный текст) |
 
-## Добавление новых шрифтов
+Источник: [googlefonts/roboto](https://github.com/googlefonts/roboto) (`src/hinted/Roboto-Regular.ttf`).
 
-### Рекомендуемые открытые шрифты
+Код ищет шрифт по пути `fonts/Roboto-Regular.ttf` (константа `kBundledUiFontRelPath` в `src/App/Platform/GameAssets.h`). При сборке папка `fonts/` копируется в runtime (`CMakeLists.txt`, Android `syncAssets`, Windows installer).
 
-Для кроссплатформенности рекомендуется использовать открытые шрифты:
+## Замена или добавление шрифта
 
-1. **Roboto** - шрифт от Google
-   - Скачать: https://github.com/google/fonts/tree/main/apache/roboto
-   - Файл: `Roboto-Regular.ttf`
+1. Положите `.ttf` / `.otf` в эту папку.
+2. Обновите `kBundledUiFontFileName` и `kBundledUiFontRelPath` в `GameAssets.h`, если меняете основной шрифт.
+3. Добавьте файл лицензии (`LICENSE-*.txt`) и запись в [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
 
-2. **DejaVu Sans** - популярный открытый шрифт
-   - Скачать: https://dejavu-fonts.github.io/
-   - Файл: `DejaVuSans.ttf`
+Используйте только шрифты с лицензией, разрешающей распространение (Apache 2.0, OFL, CC0 и т.п.). **Не добавляйте** проприетарные системные шрифты (Arial, Calibri, Segoe UI).
 
-3. **Liberation Sans** - шрифт от Red Hat
-   - Скачать: https://github.com/liberationfonts/liberation-fonts
-   - Файл: `LiberationSans-Regular.ttf`
+## Повторная загрузка Roboto
 
-### Инструкции по добавлению
-
-1. Скачайте шрифт в формате TTF
-2. Поместите файл в папку `fonts/`
-3. Обновите код в `src/main.cpp`:
-   - Добавьте путь к новому шрифту в массив `localFonts` в функции `GetFontPath()`
-   - Добавьте путь в массив `alternativeFonts` в функции `main()`
-
-### Пример обновления кода
-
-```cpp
-std::vector<std::string> localFonts = {
-    "fonts/arial.ttf",
-    "fonts/calibri.ttf",
-    "fonts/Roboto-Regular.ttf"  // Новый шрифт
-};
+```powershell
+curl.exe -fsSL -o fonts/Roboto-Regular.ttf `
+  "https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf"
 ```
-
-## Примечания
-
-- Все шрифты должны быть в формате TTF
-- Имена файлов должны быть в нижнем регистре
-- Код автоматически проверит существование файла перед загрузкой
-- Система имеет fallback на системные шрифты, если локальные недоступны
-
-

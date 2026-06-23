@@ -8,6 +8,14 @@ Blocks and block textures ship as **resource packs** under `resource_packs/`. Se
 
 Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base` (Kenney Voxel Pack, CC0). Regenerate textures with `python tools/rebuild_release_resource_packs.py`. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Licensing
+
+- **Code license:** Cubatarium engine/game code is licensed under [MIT](LICENSE).
+- **Bundled content licenses:** shipped assets include MIT, Apache-2.0, CC0, CC BY 4.0, and CC BY-SA (3.0/4.0), depending on pack/asset.
+- **Compliance source:** attribution and per-component license details are maintained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+This means the project code stays MIT, while asset files keep their original licenses.
+
 For full Minecraft-parity visuals, generate a local pack (gitignored):
 
 ```powershell

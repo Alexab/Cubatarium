@@ -1,5 +1,6 @@
 #include "Render/Engine/TextRenderer.h"
 
+#include "App/Platform/GameAssets.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "App/Platform/Log.h"
 
@@ -420,6 +421,13 @@ std::string UTextRenderer::FindAvailableFont()
 {
   if (auto *paths = IPlatformPaths::TryGet())
   {
+    const auto preferred =
+        paths->AssetRoot() / "fonts" / kBundledUiFontFileName;
+    if (std::filesystem::exists(preferred))
+    {
+      return preferred.string();
+    }
+
     const auto fontsDir = paths->AssetRoot() / "fonts";
     if (std::filesystem::exists(fontsDir))
     {
@@ -443,11 +451,6 @@ std::string UTextRenderer::FindAvailableFont()
         CubatariumLogError("Text",
                            std::string("Font scan failed: ") + e.what());
       }
-    }
-    const auto bundled = paths->AssetRoot() / "fonts/arial.ttf";
-    if (std::filesystem::exists(bundled))
-    {
-      return bundled.string();
     }
   }
 
@@ -499,17 +502,14 @@ std::vector<std::string> UTextRenderer::ScanFontsDirectory()
 
 std::string UTextRenderer::GetSystemFontPath()
 {
-#ifdef _WIN32
-  return "C:/Windows/Fonts/arial.ttf";
-#elif defined(__linux__)
-  return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-#elif defined(__APPLE__)
-  return "/System/Library/Fonts/Arial.ttf";
-#elif defined(__ANDROID__)
-  return "fonts/arial.ttf";
-#else
-  return "fonts/arial.ttf";
+#if defined(__linux__) && !defined(__ANDROID__)
+  const char *linuxOpen = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+  if (std::filesystem::exists(linuxOpen))
+  {
+    return linuxOpen;
+  }
 #endif
+  return kBundledUiFontRelPath;
 }
 
 } // namespace cutum

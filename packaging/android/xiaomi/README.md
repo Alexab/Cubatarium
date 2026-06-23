@@ -40,6 +40,7 @@
    - CPU-адаптация: 32/64 compatible или 64-bit
 4. Заполните store listing: название, описание, категория (Game)
 5. Иконка и скриншоты из [`../store-assets/`](../store-assets/)
+6. Текст по лицензиям/атрибуции: [`../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md`](../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md)
 
 ## 4. Модерация и тестирование
 

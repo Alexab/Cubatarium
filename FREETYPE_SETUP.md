@@ -44,16 +44,16 @@ brew install freetype
 После установки FreeType проект должен собираться без ошибок. При запуске вы увидите:
 
 ```
-Loaded 128 characters from font: C:/Windows/Fonts/arial.ttf
+Loaded 128 characters from font: fonts/Roboto-Regular.ttf
 ```
 
 ## Использование
 
 Теперь `TextRenderer` автоматически использует FreeType для рендеринга текста. Вы можете:
 
-1. Изменить шрифт в `main.cpp`
-2. Изменить размер шрифта
-3. Использовать различные стили текста
+1. Заменить bundled-шрифт в `fonts/` и обновить `kBundledUiFontRelPath` в `src/App/Platform/GameAssets.h`
+2. Изменить размер шрифта при вызове `Initialize(fontSize)`
+3. Передать явный путь: `Initialize("fonts/Roboto-Regular.ttf", 24)`
 
 ## Поддерживаемые форматы шрифтов
 

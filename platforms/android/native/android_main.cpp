@@ -1,6 +1,7 @@
 #include "App/Platform/AndroidPlatformWindow.h"
 #include "App/Platform/AndroidPlatformPaths.h"
 #include "App/Platform/AppRunner.h"
+#include "App/Platform/GameAssets.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "App/Platform/Log.h"
 #include "android_jni.h"
@@ -32,7 +33,7 @@ void HandleAppCmd(android_app *app, int32_t cmd)
 bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
 {
   const auto flag = paths.WritableRoot() / ".assets_extracted";
-  const auto font = paths.AssetRoot() / "fonts/arial.ttf";
+  const auto font = paths.AssetRoot() / "fonts" / kBundledUiFontFileName;
   if (std::filesystem::exists(flag) || std::filesystem::exists(font))
   {
     return true;

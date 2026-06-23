@@ -17,6 +17,13 @@ Cubatarium ships on multiple platforms. Build scripts live in [`scripts/`](../sc
 - Icons and screenshots: [`android/store-assets/`](android/store-assets/)
 - Regenerate icons: `scripts/branding/generate-app-icons.ps1`
 - Privacy policy template: [`android/store-assets/PRIVACY_POLICY.md`](android/store-assets/PRIVACY_POLICY.md)
+- Third-party notices (for attribution/store links): [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md)
+
+## Licensing notes
+
+- Cubatarium source code is MIT-licensed (`../LICENSE`).
+- Release bundles also contain third-party libraries/assets under additional licenses (for example Apache-2.0, CC0, CC BY, CC BY-SA).
+- Use `THIRD_PARTY_NOTICES.md` as the canonical attribution file for Windows/Linux/Android distributions.
 
 ## Quick commands (from repo root)
 

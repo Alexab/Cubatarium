@@ -18,7 +18,11 @@ Game worlds, settings, and progress are saved **locally** on your device. This d
 
 ## Third-party content
 
-The game may include open-source libraries and community resource packs. See [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) in the project repository.
+The game includes open-source libraries and community resource packs with different licenses.
+
+- Cubatarium source code: MIT.
+- Bundled assets/libraries: may include MIT, Apache-2.0, CC0, CC BY, and CC BY-SA components.
+- Full attribution and license mapping: [THIRD_PARTY_NOTICES.md](../../../THIRD_PARTY_NOTICES.md).
 
 ## Children
 

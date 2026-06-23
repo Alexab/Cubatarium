@@ -30,6 +30,7 @@ copy keystore.properties.example keystore.properties
 - **Иконка 512×512:** [`../store-assets/icon-512.png`](../store-assets/icon-512.png) (перегенерация: `scripts/branding/generate-app-icons.ps1`)
 - Минимум 2 скриншота (landscape, с эмулятора или устройства) → `packaging/android/store-assets/screenshots/`
 - Опционально: feature graphic 1024×500
+- Шаблон текста для лицензий/атрибуции: [`../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md`](../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md)
 
 ---
 

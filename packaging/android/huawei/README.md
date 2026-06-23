@@ -31,6 +31,7 @@ Huawei-устройства без Google Mobile Services всё равно мо
 
 1. **App information** → загрузить AAB (или APK при необходимости)
 2. Store listing: иконка и скриншоты из [`../store-assets/`](../store-assets/)
+3. Текст по лицензиям/атрибуции: [`../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md`](../store-assets/LICENSE_ATTRIBUTION_TEMPLATE.md)
 3. **Content rating** и **Privacy** — аналог Play: данные не собираются, офлайн-игра
 4. **Release management** → внутреннее / закрытое тестирование перед публикацией
 

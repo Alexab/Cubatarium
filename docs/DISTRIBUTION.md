@@ -16,6 +16,13 @@ Index of release and store deployment documentation.
 | Android debugging | [platforms/android/DEBUG.md](../platforms/android/DEBUG.md) |
 | Third-party licenses | [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) |
 
+## Licensing checklist for releases
+
+- Code remains licensed under MIT (`LICENSE`).
+- Distribution bundles include third-party assets/libraries with their own licenses (MIT/Apache/CC0/CC BY/CC BY-SA).
+- Include and publish [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for every release channel (installer, APK/AAB, store listing links).
+- Do not relabel CC BY / CC BY-SA assets as MIT; preserve attribution and upstream license terms.
+
 ## Android release builds
 
 ```powershell
