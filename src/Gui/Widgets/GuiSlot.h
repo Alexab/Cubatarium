@@ -14,7 +14,7 @@ struct GuiTheme;
 class UGuiSlot : public UGuiWidget
 {
 public:
-  UGuiSlot(const GuiTheme *theme, int size);
+  explicit UGuiSlot(const GuiTheme *theme);
 
   void SetSelected(bool selected) { Selected = selected; }
   void SetLabel(const std::string &label) { Label = label; }
@@ -40,8 +40,10 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  int SlotSizePx() const;
+  int DragThresholdPx() const;
+
   const GuiTheme *Theme;
-  int SlotSize;
   bool Selected{false};
   bool Dimmed{false};
   std::string Label;

@@ -20,7 +20,9 @@
 #include "Gui/Cache/PrefabIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
@@ -191,6 +193,13 @@ void UApplication::Startup(const std::string &configPath)
     {
       TextRenderer->SetWindowSize(fbW, fbH);
     }
+    float content_scale_x = 1.f;
+    float content_scale_y = 1.f;
+    glfwGetWindowContentScale(Window, &content_scale_x, &content_scale_y);
+    PlatformUiMetrics platform;
+    platform.ContentScaleX = content_scale_x;
+    platform.ContentScaleY = content_scale_y;
+    UpdateUiScale(fbW > 0 ? fbW : 1280, fbH > 0 ? fbH : 720, platform);
 #endif
   }
   if (Core && BlockDefinitions)
@@ -548,6 +557,7 @@ void UApplication::SaveAppAndTemplateSettings(
   Core->SetProceduralTemplate(procedural);
   Core->SaveConfigFile();
   Ui = Core->GetUiSettings();
+  UpdateUiScale(LastFramebufferWidth, LastFramebufferHeight, LastPlatformMetrics);
   if (Geometry)
   {
     Geometry->SetShowHud(Ui.LegacyHud);
@@ -736,18 +746,21 @@ void UApplication::ShowInGameHud()
         [this]() { TryToggleFlightOnJumpPress(); });
   }
 #endif
+  hud->OnAttach(*GuiContext);
   hud->Build(*GuiContext);
   HudScreen = std::move(hud);
 
   OverlayPopup = std::make_unique<UGuiPopupMenu>(&GuiContext->GetTheme());
 
   ConsoleScreen = std::make_unique<UConsoleScreen>(GameSession.get());
+  ConsoleScreen->OnAttach(*GuiContext);
   ConsoleScreen->Build(*GuiContext);
   ConsoleScreen->AttachPopup(OverlayPopup.get());
   ConsoleScreen->SetVisible(false);
 
   PaletteScreen = std::make_unique<UCreativePaletteScreen>(
       &GameSession->GetContentCatalog(), GameSession.get(), icons);
+  PaletteScreen->OnAttach(*GuiContext);
   PaletteScreen->Build(*GuiContext);
   PaletteScreen->SetVisible(false);
 
@@ -1152,6 +1165,7 @@ void UApplication::SetUiScale(float scale)
   if (GuiContext)
   {
     GuiContext->ApplyUiScale(UiScale);
+    NotifyAllScreensMetricsChanged(GuiContext->GetMetrics());
   }
 #ifdef __ANDROID__
   if (TouchBridge)
@@ -1159,6 +1173,51 @@ void UApplication::SetUiScale(float scale)
     TouchBridge->SetUiScale(UiScale);
   }
 #endif
+}
+
+void UApplication::UpdateUiScale(int fb_w, int fb_h,
+                                 const PlatformUiMetrics &platform)
+{
+  LastPlatformMetrics = platform;
+  LastFramebufferWidth = fb_w;
+  LastFramebufferHeight = fb_h;
+  PlatformUiMetrics metrics = platform;
+  metrics.ScreenWidthPx = fb_w;
+  metrics.ScreenHeightPx = fb_h;
+  const float effective =
+      ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
+  SetUiScale(effective);
+}
+
+void UApplication::ApplyLiveUiScale(float user_scale)
+{
+  Ui.UiScaleUser = std::clamp(user_scale, kGuiMinUserScale, kGuiMaxUserScale);
+  PlatformUiMetrics metrics = LastPlatformMetrics;
+  metrics.ScreenWidthPx = LastFramebufferWidth;
+  metrics.ScreenHeightPx = LastFramebufferHeight;
+  const float effective =
+      ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
+  SetUiScale(effective);
+}
+
+void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
+{
+  if (HudScreen)
+  {
+    HudScreen->OnMetricsChanged(metrics);
+  }
+  if (ConsoleScreen)
+  {
+    ConsoleScreen->OnMetricsChanged(metrics);
+  }
+  if (PaletteScreen)
+  {
+    PaletteScreen->OnMetricsChanged(metrics);
+  }
+  if (GuiContext && GuiContext->GetScreen())
+  {
+    GuiContext->GetScreen()->OnMetricsChanged(metrics);
+  }
 }
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)

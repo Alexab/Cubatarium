@@ -8,6 +8,7 @@
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -84,6 +85,8 @@ public:
   void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);
   float GetUiScale() const { return UiScale; }
+  void UpdateUiScale(int fb_w, int fb_h, const PlatformUiMetrics &platform);
+  void ApplyLiveUiScale(float user_scale) override;
 
   bool RouteKey(int key, int Action, int Mods);
   bool RouteChar(unsigned int Codepoint);
@@ -164,6 +167,7 @@ private:
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
+  void NotifyAllScreensMetricsChanged(const GuiMetrics &metrics);
 
   std::shared_ptr<UCore> Core;
   std::shared_ptr<UWorld> World;
@@ -219,6 +223,9 @@ private:
   UMainMenuScreen *MainMenuScreen{nullptr};
   UTouchInputBridge *TouchBridge{nullptr};
   float UiScale{1.f};
+  PlatformUiMetrics LastPlatformMetrics{};
+  int LastFramebufferWidth{0};
+  int LastFramebufferHeight{0};
   int ViewportInsetLeft{0};
   int ViewportInsetTop{0};
   int ViewportInsetRight{0};

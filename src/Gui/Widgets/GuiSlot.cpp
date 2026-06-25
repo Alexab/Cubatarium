@@ -7,20 +7,25 @@
 namespace cutum
 {
 
-namespace
+UGuiSlot::UGuiSlot(const GuiTheme *theme) : Theme(theme)
 {
-constexpr int kDragThresholdPx = 8;
-}
-
-UGuiSlot::UGuiSlot(const GuiTheme *theme, int size)
-    : Theme(theme), SlotSize(size)
-{
+  const int size = SlotSizePx();
   Bounds.W = size;
   Bounds.H = size;
 }
 
-int UGuiSlot::GetPreferredWidth() const { return SlotSize; }
-int UGuiSlot::GetPreferredHeight() const { return SlotSize; }
+int UGuiSlot::SlotSizePx() const
+{
+  return Theme ? Theme->HotbarSlotSize : 48;
+}
+
+int UGuiSlot::DragThresholdPx() const
+{
+  return Theme ? Theme->SlotDragThresholdPx : 8;
+}
+
+int UGuiSlot::GetPreferredWidth() const { return SlotSizePx(); }
+int UGuiSlot::GetPreferredHeight() const { return SlotSizePx(); }
 
 void UGuiSlot::Draw(UGuiRenderer &renderer)
 {
@@ -36,7 +41,7 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
 
   if (IconTexture != 0)
   {
-    const int inset = 4;
+    const int inset = Theme->SlotIconInset;
     const GuiRect iconRect{Bounds.X + inset, Bounds.Y + inset,
                            Bounds.W - inset * 2, Bounds.H - inset * 2};
     renderer.DrawTexturedRect(iconRect, IconTexture);
@@ -48,7 +53,8 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
     {
       text = text.substr(0, 8);
     }
-    renderer.DrawText(text, Bounds.X + 3, Bounds.Y + Bounds.H / 2 - 6,
+    renderer.DrawText(text, Bounds.X + Theme->Padding / 2,
+                      Bounds.Y + Bounds.H / 2 - Theme->FontSizeBody / 2,
                       Theme->TextSecondary);
   }
 
@@ -68,7 +74,8 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
   {
     const glm::vec3 textColor =
         Selected ? glm::vec3(0.95f, 0.95f, 0.95f) : Theme->TextSecondary;
-    renderer.DrawText(CornerHint, Bounds.X + 4, Bounds.Y + 2, textColor);
+    renderer.DrawText(CornerHint, Bounds.X + Theme->Padding / 2,
+                      Bounds.Y + Theme->Padding / 4, textColor);
   }
 
   if (Dimmed)
@@ -98,8 +105,9 @@ bool UGuiSlot::OnMouseUp(const GuiMouseEvent &event)
   }
   const int dx = event.X - PressX;
   const int dy = event.Y - PressY;
+  const int threshold = DragThresholdPx();
   const bool isClickGesture =
-      (dx * dx + dy * dy) <= (kDragThresholdPx * kDragThresholdPx);
+      (dx * dx + dy * dy) <= (threshold * threshold);
   if (isClickGesture && OnClick)
   {
     OnClick();
@@ -117,7 +125,8 @@ bool UGuiSlot::OnMouseMove(const GuiMouseEvent &event)
   }
   const int dx = event.X - PressX;
   const int dy = event.Y - PressY;
-  if ((dx * dx + dy * dy) > (kDragThresholdPx * kDragThresholdPx))
+  const int threshold = DragThresholdPx();
+  if ((dx * dx + dy * dy) > (threshold * threshold))
   {
     DragStarted = true;
     if (OnBeginDrag)

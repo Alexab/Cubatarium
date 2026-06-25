@@ -20,6 +20,7 @@ class UGuiTextInput;
 class UGuiCheckbox;
 class UGuiLabel;
 class UGuiButton;
+class UGuiSlider;
 
 class USettingsScreen : public UGuiScreenBase
 {
@@ -59,6 +60,9 @@ private:
   UGuiLabel *PaletteKeyLabel{nullptr};
   UGuiLabel *HotbarCountLabel{nullptr};
   UGuiLabel *HotbarCountValueLabel{nullptr};
+  UGuiLabel *UiScaleLabel{nullptr};
+  UGuiLabel *UiScaleValueLabel{nullptr};
+  UGuiSlider *UiScaleSlider{nullptr};
   UGuiLabel *ControlSchemeLabel{nullptr};
   UGuiButton *ControlSchemeButton{nullptr};
   ControlScheme SelectedControlScheme{ControlScheme::Classic};
@@ -79,6 +83,7 @@ private:
   UGuiButton *HotbarMinusButton{nullptr};
   UGuiButton *HotbarPlusButton{nullptr};
   int HotbarCount{1};
+  float UiScaleUser{1.f};
 };
 
 } // namespace cutum

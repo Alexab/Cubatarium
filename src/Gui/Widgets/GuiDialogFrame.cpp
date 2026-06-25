@@ -211,7 +211,8 @@ void UGuiDialogFrame::LayoutFrame()
     bodyY += tabH + kTabGap;
   }
 
-  const int footerY = area.Y + area.H - kFooterHeight;
+  const int footer_h = Theme ? Theme->FooterHeight : 44;
+  const int footerY = area.Y + area.H - footer_h;
   const int bodyH = std::max(0, footerY - bodyY);
   const GuiRect bodyArea{area.X + 4, bodyY, std::max(0, area.W - 8), bodyH};
 
@@ -226,7 +227,8 @@ void UGuiDialogFrame::LayoutFrame()
 
   if (!FooterButtons.empty())
   {
-    GuiRect footer{area.X + 8, footerY + 4, area.W - 16, kFooterHeight - 8};
+    GuiRect footer{area.X + Theme->Padding, footerY + Theme->Padding / 2,
+                   area.W - Theme->Padding * 2, footer_h - Theme->Padding};
     std::vector<UGuiWidget *> btns;
     for (UGuiButton *btn : FooterButtons)
     {

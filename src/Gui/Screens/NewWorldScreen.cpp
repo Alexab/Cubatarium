@@ -1,4 +1,5 @@
 #include "Gui/Screens/NewWorldScreen.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -19,33 +20,22 @@ namespace cutum
 namespace
 {
 
-constexpr int kNewWorldWinW = 1040;
-constexpr int kNewWorldWinH = 720;
-constexpr int kNewWorldMargin = 32;
-constexpr int kContentPad = 8;
-
-GuiGridSpec BuildWorldGridSpec(int width)
+GuiGridSpec BuildWorldGridSpec(const GuiMetrics &metrics, int width)
 {
   GuiGridSpec spec;
-  if (width < 680)
-  {
-    spec.columns = 1;
-  }
-  else
-  {
-    spec.columns = 2;
-  }
-  spec.hGap = 12;
-  spec.vGap = 8;
-  spec.Padding = 4;
+  spec.columns = width < metrics.Dp(680) ? 1 : 2;
+  spec.hGap = metrics.Dp(12);
+  spec.vGap = metrics.Dp(8);
+  spec.Padding = metrics.Dp(4);
   spec.columnWeights = {1, 1};
   return spec;
 }
 
-std::pair<int, int> NewWorldWindowSize(int viewportW, int viewportH)
+std::pair<int, int> NewWorldWindowSize(const GuiTheme &theme, int viewportW,
+                                       int viewportH)
 {
-  return {std::min(kNewWorldWinW, viewportW - kNewWorldMargin),
-          std::min(kNewWorldWinH, viewportH - kNewWorldMargin)};
+  return {std::min(theme.DialogDefaultWidth, viewportW - theme.DialogMargin),
+          std::min(theme.DialogDefaultHeight, viewportH - theme.DialogMargin)};
 }
 
 } // namespace
@@ -97,7 +87,7 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const auto [winW, winH] = NewWorldWindowSize(ViewportW, ViewportH);
+  const auto [winW, winH] = NewWorldWindowSize(theme, ViewportW, ViewportH);
   auto window = std::make_unique<UGuiWindow>(&theme, "New World");
   Window = window.get();
   window->SetBounds(
@@ -186,7 +176,12 @@ void UNewWorldScreen::Relayout()
   {
     return;
   }
-  const auto [winW, winH] = NewWorldWindowSize(ViewportW, ViewportH);
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
+  const auto [winW, winH] = NewWorldWindowSize(*theme, ViewportW, ViewportH);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -205,13 +200,14 @@ int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
     return 0;
   }
   const GuiRect area{0, 0, width, 100000};
-  const GuiGridSpec spec = BuildWorldGridSpec(width);
+  const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), width);
+  const GuiTheme *theme = GetMetrics().Theme;
   int height = WorldForm->MeasureGridHeight(area, spec);
-  if (PackForm)
+  if (PackForm && theme)
   {
-    constexpr int kSectionGap = 12;
-    constexpr int kLabelH = 28;
-    height += kSectionGap + kLabelH + PackForm->MeasureHeight(area);
+    const int section_gap = Scaled(12);
+    const int label_h = theme->TabBarHeight;
+    height += section_gap + label_h + PackForm->MeasureHeight(area);
   }
   return height;
 }
@@ -224,11 +220,13 @@ void UNewWorldScreen::LayoutWorldPageInScroll(UGuiScrollView &scroll) const
   }
   const GuiRect vp = scroll.GetBounds();
   const int scrollY = scroll.GetScrollY();
-  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad - scrollY,
-                           std::max(0, vp.W - 2 * kContentPad),
-                           std::max(0, vp.H - 2 * kContentPad)};
+  const GuiTheme *theme = GetMetrics().Theme;
+  const int content_pad = theme ? theme->ContentPad : 8;
+  const GuiRect layoutArea{vp.X + content_pad, vp.Y + content_pad - scrollY,
+                           std::max(0, vp.W - 2 * content_pad),
+                           std::max(0, vp.H - 2 * content_pad)};
   const int contentH = MeasureWorldPageContentHeight(layoutArea.W);
-  const int pageH = std::max(vp.H, contentH + 2 * kContentPad);
+  const int pageH = std::max(vp.H, contentH + 2 * content_pad);
   WorldPage->SetBounds({vp.X, vp.Y - scrollY, vp.W, pageH});
   LayoutWorldPage(layoutArea);
 }
@@ -239,20 +237,21 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
   {
     return;
   }
-  const GuiGridSpec spec = BuildWorldGridSpec(area.W);
+  const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), area.W);
   const int gridH = WorldForm->MeasureGridHeight(area, spec);
   WorldForm->LayoutGrid({area.X, area.Y, area.W, gridH}, spec);
   if (!PackForm)
   {
     return;
   }
-  constexpr int kSectionGap = 12;
-  constexpr int kLabelH = 28;
-  int y = area.Y + gridH + kSectionGap;
+  const GuiTheme *theme = GetMetrics().Theme;
+  const int section_gap = Scaled(12);
+  const int label_h = theme ? theme->TabBarHeight : 28;
+  int y = area.Y + gridH + section_gap;
   if (PackSectionLabel)
   {
-    PackSectionLabel->SetBounds({area.X, y, area.W, kLabelH});
-    y += kLabelH;
+    PackSectionLabel->SetBounds({area.X, y, area.W, label_h});
+    y += label_h;
   }
   PackForm->Layout({area.X, y, area.W, PackForm->MeasureHeight(area)});
 }

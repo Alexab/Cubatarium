@@ -67,6 +67,9 @@ private:
   void ClampScroll();
   void DrawScrollbar(UGuiRenderer &renderer);
 
+  int ScrollbarWidthPx() const;
+  int TouchSlopPx() const;
+
   const GuiTheme *Theme;
   UGuiPanel ContentPanel;
   int ScrollY{0};
@@ -80,7 +83,6 @@ private:
   GuiMouseEvent DeferredDown{};
   int DeferredDragStartY{0};
   int DeferredDragStartScroll{0};
-  static constexpr int kScrollbarWidth = 10;
 };
 
 } // namespace cutum

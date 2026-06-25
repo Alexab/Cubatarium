@@ -219,14 +219,17 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 |-------|------|
 | `GuiWidget` / layout / primitives | Panels, buttons, text input, lists, tabs, scroll, slots |
 | `GuiLayout` | Anchors (`TopCenter`, `BottomCenter`, …), `LayoutHotbarRows` for dual hotbar |
-| `GuiContext` | Active screen, input router, render pass; `OnViewportChanged` on resize |
+| `GuiContext` | Active screen, input router, render pass; `OnViewportChanged` on resize; `ApplyUiScale` updates `GuiMetrics` |
+| `GuiMetrics` / `GuiScale` | Design px → device px; auto scale from DPI/resolution × user `ui_scale` multiplier |
 | `GuiRenderer` | Solid quads (`UiQuadBatch`) + textured quads (`UiTexturedQuadBatch`) + FreeType text |
 | `GuiIconSource` / `PrefabIconCache` | Block icons from `TextureCubeStorage`; prefab icons via FBO voxel preview (cached) |
 | `Application` | `AppState`, main menu vs in-game, console/palette overlays |
 | `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
 | `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
 
-**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`. Main menu title uses `TopCenter` + centered label text; in-game HUD places the **block** row above the **prefab** row, both bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`; `OnMetricsChanged` triggers relayout when UI scale changes. Sizes come from scaled `GuiTheme` fields (design px at 720p/160dpi baseline). Main menu title uses `TopCenter` + centered label text; in-game HUD places hotbar bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+
+**UI scale:** `Application::UpdateUiScale` computes `EffectiveScale = AutoScale × ui_scale` (Android: DPI + short edge; desktop: GLFW content scale + resolution). User multiplier `ui_scale` (0.5–2.0, default 1.0) is editable in Settings with live preview.
 
 **Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
 
@@ -234,7 +237,7 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 
 **Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
 
-**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`). Saved from Settings together with other app keys.
+**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`), `ui_scale` (interface scale multiplier, default `1.0`). Saved from Settings together with other app keys.
 
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` in `Application::RouteKey`. Left Alt toggles free cursor for HUD.
 

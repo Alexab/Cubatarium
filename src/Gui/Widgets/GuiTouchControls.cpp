@@ -21,10 +21,6 @@ namespace cutum
 namespace
 {
 
-constexpr int kButtonSizeBase = 64;
-constexpr int kMarginBase = 16;
-constexpr int kJoystickSizeBase = 200;
-constexpr int kTopRightStackOffsetBase = 132;
 constexpr int kTouchControlsZOrder = 100;
 
 class UTouchControlPanel : public UGuiPanel
@@ -600,16 +596,17 @@ void UGuiTouchControls::ReleaseAllCaptures()
   }
 }
 
-void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
-                               float uiScale)
+void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
 {
-  if (!Root)
+  if (!Root || !Theme)
   {
     return;
   }
+  const float ui_scale =
+      static_cast<float>(Theme->TouchButtonSize) / 64.f;
   if (width == lastLayoutWidth_ && height == lastLayoutHeight_ &&
       offsetX == lastLayoutOffsetX_ && offsetY == lastLayoutOffsetY_ &&
-      std::fabs(uiScale - lastLayoutUiScale_) < 0.01f)
+      std::fabs(ui_scale - lastLayoutUiScale_) < 0.01f)
   {
     return;
   }
@@ -618,36 +615,37 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
   lastLayoutHeight_ = height;
   lastLayoutOffsetX_ = offsetX;
   lastLayoutOffsetY_ = offsetY;
-  lastLayoutUiScale_ = uiScale;
+  lastLayoutUiScale_ = ui_scale;
   if (hadLayout && OnReleaseHoldButtons)
   {
     OnReleaseHoldButtons();
   }
 
-  UiScale = uiScale;
+  UiScale = ui_scale;
   Root->SetBounds({0, 0, width, height});
 
-  const int buttonSize = ScalePx(kButtonSizeBase, uiScale);
+  const int buttonSize = Theme->TouchButtonSize;
   const int margin =
-      std::max(ScalePx(24, uiScale), ScalePx(kMarginBase, uiScale));
+      std::max(Theme->Padding * 3, Theme->TouchMargin);
   const int shortEdge = std::min(width, height);
-  const int joystickTarget = ScalePx(kJoystickSizeBase, uiScale);
+  const int joystickTarget = Theme->TouchJoystickSize;
   const int joystickMax =
-      std::max(ScalePx(120, uiScale), static_cast<int>(shortEdge * 0.20f));
+      std::max(Theme->TouchJoystickSize * 3 / 5,
+               static_cast<int>(shortEdge * 0.20f));
   const int joystickSize = std::min(joystickTarget, joystickMax);
-  const int buttonGap = ScalePx(8, uiScale);
-  const int controlLift = ScalePx(8, uiScale);
+  const int buttonGap = Theme->TouchButtonGap;
+  const int controlLift = Theme->TouchControlLift;
 
   const int bottomRowY = height - buttonSize - margin;
   const int joystickY = bottomRowY - joystickSize - controlLift;
-  const int leftMargin = std::max(margin, offsetX + ScalePx(12, uiScale));
+  const int leftMargin = std::max(margin, offsetX + Theme->Padding);
   const int leftControlsW = leftMargin + joystickSize + margin;
   const int leftControlsTop = std::max(0, joystickY - controlLift);
   const int leftControlsH = std::max(1, height - leftControlsTop);
   const int rightColX = width - margin - buttonSize;
   const int jumpX = rightColX - buttonSize - buttonGap;
   const int sprintX = jumpX - buttonSize - buttonGap;
-  const int topRightY = margin + ScalePx(kTopRightStackOffsetBase, uiScale);
+  const int topRightY = margin + Theme->TouchTopRightStackOffset;
   const int topRightStackH = buttonSize * 3 + buttonGap * 2 + margin;
   if (JoystickWidget)
   {
@@ -704,7 +702,7 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY,
         1, {offsetX + std::max(0, width - buttonSize - margin * 2),
             offsetY + topRightY - margin / 2, buttonSize + margin * 2,
             topRightStackH});
-    const int actionPad = ScalePx(4, uiScale);
+    const int actionPad = Theme->SlotIconInset;
     const int actionRowW = buttonSize * 3 + buttonGap * 2;
     Bridge->SetBlockedGameRegion(2,
                                  {offsetX + std::max(0, sprintX - actionPad),

@@ -515,6 +515,7 @@ void WriteUiSettings(nlohmann::json &root, const UiSettings &settings)
   ui["break_hold_min_seconds"] = settings.BreakHoldMinSeconds;
   ui["break_duration_seconds"] = settings.BreakDurationSeconds;
   ui["rmb_drag_threshold_px"] = settings.RmbDragThresholdPx;
+  ui["ui_scale"] = settings.UiScaleUser;
   root["ui"] = ui;
 }
 

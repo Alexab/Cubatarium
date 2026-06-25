@@ -24,7 +24,6 @@ public:
   using PageMeasureFn = std::function<int(const GuiRect &)>;
   using PageLayoutFn = std::function<void(const GuiRect &)>;
 
-  static constexpr int kFooterHeight = 44;
   static constexpr int kTabGap = 4;
 
   explicit UGuiDialogFrame(const GuiTheme *theme);

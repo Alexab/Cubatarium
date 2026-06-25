@@ -191,18 +191,37 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
   {
     innerListHandlesDrag = hit->ConsumesScrollDragAt(event.X, event.Y);
   }
+
+  UGuiScrollView *scroll = nullptr;
   if (!innerListHandlesDrag)
   {
-    if (UGuiScrollView *scroll = FindDeepestScrollView(Root, event.X, event.Y))
+    scroll = FindDeepestScrollView(Root, event.X, event.Y);
+  }
+
+  // Interactive children inside a scroll view must capture the mouse, not the
+  // scroll view's deferred drag handler.
+  if (hit && scroll && hit != scroll &&
+      dynamic_cast<UGuiScrollView *>(hit) == nullptr)
+  {
+    if (hit->OnMouseDown(event))
     {
-      if (scroll->BeginDeferredTouch(event))
-      {
-        CaptureMouse = true;
-        MousePressedWidget = scroll;
-        return true;
-      }
+      CaptureMouse = true;
+      MousePressedWidget = hit;
+      return true;
     }
   }
+
+  if (scroll)
+  {
+    if (scroll->OnMouseDown(event))
+    {
+      CaptureMouse = true;
+      MousePressedWidget = scroll;
+      return true;
+    }
+    return false;
+  }
+
   if (hit)
   {
     if (hit->OnMouseDown(event))

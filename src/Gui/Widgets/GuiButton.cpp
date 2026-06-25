@@ -133,7 +133,9 @@ bool UGuiButton::OnMouseMove(const GuiMouseEvent &event)
   {
     const int dx = event.X - DownX;
     const int dy = event.Y - DownY;
-    if (dx * dx + dy * dy > kGuiTouchDragSlopPx * kGuiTouchDragSlopPx)
+    if (dx * dx + dy * dy >
+        static_cast<int>(Theme->TouchDragSlopPx) *
+            static_cast<int>(Theme->TouchDragSlopPx))
     {
       Dragged = true;
     }

@@ -110,25 +110,27 @@ void UConsoleScreen::Relayout()
   }
   const int ox = GetContentOffsetX();
   const int oy = GetContentOffsetY();
-  constexpr int Padding = 8;
-  const int inputH = std::max(48, 40);
+  const GuiTheme &theme =
+      GetContext() ? GetContext()->GetTheme() : ConsoleTheme;
+  const int padding = theme.Padding;
+  const int inputH = std::max(Scaled(48), Scaled(40));
 
   if (KeyboardInsetBottom > 0)
   {
-    const int inputY = oy + ViewportH - KeyboardInsetBottom - Padding - inputH;
-    const int logH = std::max(72, inputH + 24);
+    const int inputY = oy + ViewportH - KeyboardInsetBottom - padding - inputH;
+    const int logH = std::max(Scaled(72), inputH + Scaled(24));
     const int logY = inputY - 4 - logH;
-    const int panelY = std::max(oy, logY - Padding);
-    const int panelH = inputY + inputH + Padding - panelY;
+    const int panelY = std::max(oy, logY - padding);
+    const int panelH = inputY + inputH + padding - panelY;
     Root->SetBounds({ox, panelY, ViewportW, panelH});
     if (LogView)
     {
-      LogView->SetBounds({ox + Padding, logY, ViewportW - 2 * Padding, logH});
+      LogView->SetBounds({ox + padding, logY, ViewportW - 2 * padding, logH});
       LogView->ScrollToEnd();
     }
     if (Input)
     {
-      Input->SetBounds({ox + Padding, inputY, ViewportW - 2 * Padding, inputH});
+      Input->SetBounds({ox + padding, inputY, ViewportW - 2 * padding, inputH});
     }
     return;
   }
@@ -138,13 +140,13 @@ void UConsoleScreen::Relayout()
   Root->SetBounds({ox, panelY, ViewportW, panelH});
   if (LogView)
   {
-    LogView->SetBounds({ox + Padding, panelY + Padding, ViewportW - 2 * Padding,
+    LogView->SetBounds({ox + padding, panelY + padding, ViewportW - 2 * padding,
                         std::max(32, panelH - inputH - 20)});
   }
   if (Input)
   {
-    Input->SetBounds({ox + Padding, panelY + panelH - inputH - Padding,
-                      ViewportW - 2 * Padding, inputH});
+    Input->SetBounds({ox + padding, panelY + panelH - inputH - padding,
+                      ViewportW - 2 * padding, inputH});
   }
 }
 

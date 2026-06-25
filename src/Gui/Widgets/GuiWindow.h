@@ -17,7 +17,6 @@ public:
 
 private:
   std::string Title;
-  static constexpr int kTitleBarHeight = 24;
 };
 
 } // namespace cutum

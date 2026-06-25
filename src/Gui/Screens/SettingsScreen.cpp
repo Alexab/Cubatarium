@@ -4,6 +4,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScale.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -11,11 +12,13 @@
 #include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiSlider.h"
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
+#include <cmath>
 
 namespace cutum
 {
@@ -35,13 +38,13 @@ int ParseIntOr(const std::string &text, int fallback)
   }
 }
 
-GuiGridSpec BuildTwoColumnSpec(int width)
+GuiGridSpec BuildTwoColumnSpec(const GuiMetrics &metrics, int width)
 {
   GuiGridSpec spec;
-  spec.columns = width < 720 ? 1 : 2;
-  spec.hGap = 12;
-  spec.vGap = 8;
-  spec.Padding = 4;
+  spec.columns = metrics.IsNarrow(width) ? 1 : 2;
+  spec.hGap = metrics.Dp(12);
+  spec.vGap = metrics.Dp(8);
+  spec.Padding = metrics.Dp(4);
   spec.columnWeights = {1, 1};
   return spec;
 }
@@ -113,6 +116,7 @@ void USettingsScreen::OnSave()
     app.Ui.PaletteKey = PaletteKeyInput->GetText();
   }
   app.Ui.HotbarCount = std::clamp(HotbarCount, 1, 2);
+  app.Ui.UiScaleUser = std::clamp(UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   app.Ui.ControlScheme = SelectedControlScheme;
   if (PackForm)
   {
@@ -162,13 +166,16 @@ void USettingsScreen::Build(UGuiContext &ctx)
   const ProceduralSettings procSnap =
       Host ? Host->LoadProceduralTemplate() : ProceduralSettings{};
   HotbarCount = std::clamp(appSnap.Ui.HotbarCount, 1, 2);
+  UiScaleUser =
+      std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int winW = std::min(860, ViewportW - 32);
-  const int winH = std::min(540, ViewportH - 32);
+  const int winW =
+      std::min(theme.DialogDefaultWidth, ViewportW - theme.DialogMargin);
+  const int winH = std::min(Scaled(540), ViewportH - theme.DialogMargin);
   auto window = std::make_unique<UGuiWindow>(&theme, "Settings");
   Window = window.get();
   window->SetBounds(
@@ -176,12 +183,53 @@ void USettingsScreen::Build(UGuiContext &ctx)
 
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
   DialogFrame = frame.get();
-  frame->SetScrollbarMode(GuiScrollbarMode::Hidden);
+  frame->SetScrollbarMode(GuiScrollbarMode::Auto);
   frame->CreateTabBar({"Application", "World defaults", "Resource packs"},
                       [this](int tab) { ShowTab(tab); });
 
   UGuiPanel &app = frame->AddScrollPage();
   AppPanel = &app;
+
+  auto uiScaleLbl =
+      std::make_unique<UGuiLabel>(&theme, "Interface scale:");
+  UiScaleLabel = uiScaleLbl.get();
+  app.AddChild(std::move(uiScaleLbl));
+  auto uiScaleValue = std::make_unique<UGuiLabel>(
+      &theme, std::to_string(static_cast<int>(std::lround(UiScaleUser * 100))) +
+                  "%");
+  uiScaleValue->SetTextAlign(GuiTextAlign::Center);
+  UiScaleValueLabel = uiScaleValue.get();
+  app.AddChild(std::move(uiScaleValue));
+  auto uiScaleSlider = std::make_unique<UGuiSlider>(&theme);
+  uiScaleSlider->SetRange(kGuiMinUserScale, kGuiMaxUserScale);
+  uiScaleSlider->SetStep(0.05f);
+  uiScaleSlider->SetValue(UiScaleUser);
+  uiScaleSlider->SetOnValueChanged(
+      [this](float value)
+      {
+        UiScaleUser = value;
+        if (UiScaleValueLabel)
+        {
+          UiScaleValueLabel->SetText(
+              std::to_string(static_cast<int>(std::lround(UiScaleUser * 100))) +
+              "%");
+        }
+        if (UiScaleSlider)
+        {
+          UiScaleSlider->SetValue(UiScaleUser);
+        }
+      });
+  uiScaleSlider->SetOnCommit(
+      [this](float /*value*/)
+      {
+        if (Host)
+        {
+          Host->ApplyLiveUiScale(UiScaleUser);
+        }
+      });
+  UiScaleSlider = uiScaleSlider.get();
+  app.AddChild(std::move(uiScaleSlider));
+
   auto defaultUserLbl = std::make_unique<UGuiLabel>(&theme, "Default user:");
   DefaultUserLabel = defaultUserLbl.get();
   app.AddChild(std::move(defaultUserLbl));
@@ -369,8 +417,14 @@ void USettingsScreen::Relayout()
   {
     return;
   }
-  const int winW = std::min(860, ViewportW - 32);
-  const int winH = std::min(540, ViewportH - 32);
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
+  const int winW =
+      std::min(theme->DialogDefaultWidth, ViewportW - theme->DialogMargin);
+  const int winH = std::min(Scaled(540), ViewportH - theme->DialogMargin);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -380,31 +434,42 @@ void USettingsScreen::Relayout()
 std::vector<GuiGridItem>
 USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
 {
-  const int hotbarValueRow = spec.columns > 1 ? 10 : 11;
+  const int hotbarValueRow = spec.columns > 1 ? 12 : 14;
   const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
+  const int controlSchemeRow = spec.columns > 1 ? 13 : 17;
+  const int uiScaleSliderRow = spec.columns > 1 ? 1 : 2;
+  const int uiScaleValueRow = spec.columns > 1 ? 0 : 1;
+  const int uiScaleValueCol = spec.columns > 1 ? 1 : 0;
+  const int labelH = Scaled(28);
+  const int fieldH = Scaled(32);
+  const int checkH = Scaled(30);
+  const int sliderH = Scaled(28);
   return {
-      {DefaultUserLabel, 0, 0, 1, 1, 28},
-      {DefaultUserInput, 0, 1, 1, 1, 32},
-      {DefaultWorldLabel, 1, 0, 1, 1, 28},
-      {DefaultWorldInput, 1, 1, 1, 1, 32},
-      {RenderDistLabel, 2, 0, 1, 1, 28},
-      {RenderDistInput, 2, 1, 1, 1, 32},
-      {StreamingBox, 3, 0, 1, 1, 30},
-      {StepUpBox, 3, 1, 1, 1, 30},
-      {GreedyBox, 4, 0, 1, 1, 30},
-      {FaceQuadsBox, 4, 1, 1, 1, 30},
-      {FrustumBox, 5, 0, 1, 1, 30},
-      {BatchCacheBox, 5, 1, 1, 1, 30},
-      {LegacyHudBox, 6, 0, 1, 2, 30},
-      {ShowPerformanceBox, 7, 0, 1, 2, 30},
-      {ConsoleKeyLabel, 8, 0, 1, 1, 28},
-      {ConsoleKeyInput, 8, 1, 1, 1, 32},
-      {PaletteKeyLabel, 9, 0, 1, 1, 28},
-      {PaletteKeyInput, 9, 1, 1, 1, 32},
-      {HotbarCountLabel, 10, 0, 1, 1, 28},
-      {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, 32},
-      {ControlSchemeLabel, 11, 0, 1, 1, 28},
-      {ControlSchemeButton, 11, 1, 1, 1, 32},
+      {UiScaleLabel, 0, 0, 1, 1, labelH},
+      {UiScaleValueLabel, uiScaleValueRow, uiScaleValueCol, 1, 1, fieldH},
+      {UiScaleSlider, uiScaleSliderRow, 0, 1, spec.columns, sliderH},
+      {DefaultUserLabel, 2, 0, 1, 1, labelH},
+      {DefaultUserInput, 2, 1, 1, 1, fieldH},
+      {DefaultWorldLabel, 3, 0, 1, 1, labelH},
+      {DefaultWorldInput, 3, 1, 1, 1, fieldH},
+      {RenderDistLabel, 4, 0, 1, 1, labelH},
+      {RenderDistInput, 4, 1, 1, 1, fieldH},
+      {StreamingBox, 5, 0, 1, 1, checkH},
+      {StepUpBox, 5, 1, 1, 1, checkH},
+      {GreedyBox, 6, 0, 1, 1, checkH},
+      {FaceQuadsBox, 6, 1, 1, 1, checkH},
+      {FrustumBox, 7, 0, 1, 1, checkH},
+      {BatchCacheBox, 7, 1, 1, 1, checkH},
+      {LegacyHudBox, 8, 0, 1, 2, checkH},
+      {ShowPerformanceBox, 9, 0, 1, 2, checkH},
+      {ConsoleKeyLabel, 10, 0, 1, 1, labelH},
+      {ConsoleKeyInput, 10, 1, 1, 1, fieldH},
+      {PaletteKeyLabel, 11, 0, 1, 1, labelH},
+      {PaletteKeyInput, 11, 1, 1, 1, fieldH},
+      {HotbarCountLabel, 12, 0, 1, 1, labelH},
+      {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, fieldH},
+      {ControlSchemeLabel, controlSchemeRow, 0, 1, 1, labelH},
+      {ControlSchemeButton, controlSchemeRow, 1, 1, 1, fieldH},
   };
 }
 
@@ -415,9 +480,9 @@ void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec &spec) const
     return;
   }
 
-  constexpr int btnSize = 32;
-  constexpr int valueW = 28;
-  constexpr int gap = 6;
+  const int btnSize = Scaled(32);
+  const int valueW = Scaled(28);
+  const int gap = Scaled(6);
 
   if (spec.columns <= 1)
   {
@@ -442,13 +507,13 @@ void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec &spec) const
 
 int USettingsScreen::MeasureAppPageHeight(const GuiRect &area) const
 {
-  const GuiGridSpec spec = BuildTwoColumnSpec(area.W);
+  const GuiGridSpec spec = BuildTwoColumnSpec(GetMetrics(), area.W);
   return UGuiLayout::GridMeasure(area, spec, BuildAppGridItems(spec));
 }
 
 void USettingsScreen::LayoutAppPage(const GuiRect &area) const
 {
-  const GuiGridSpec spec = BuildTwoColumnSpec(area.W);
+  const GuiGridSpec spec = BuildTwoColumnSpec(GetMetrics(), area.W);
   UGuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
   LayoutHotbarCountControls(spec);
 }
@@ -459,7 +524,7 @@ int USettingsScreen::MeasureWorldPageHeight(const GuiRect &area) const
   {
     return 0;
   }
-  return WorldForm->MeasureGridHeight(area, BuildTwoColumnSpec(area.W));
+  return WorldForm->MeasureGridHeight(area, BuildTwoColumnSpec(GetMetrics(), area.W));
 }
 
 void USettingsScreen::LayoutWorldPage(const GuiRect &area) const
@@ -468,7 +533,7 @@ void USettingsScreen::LayoutWorldPage(const GuiRect &area) const
   {
     return;
   }
-  WorldForm->LayoutGrid(area, BuildTwoColumnSpec(area.W));
+  WorldForm->LayoutGrid(area, BuildTwoColumnSpec(GetMetrics(), area.W));
 }
 
 int USettingsScreen::MeasurePacksPageHeight(const GuiRect &area) const

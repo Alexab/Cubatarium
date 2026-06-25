@@ -47,9 +47,10 @@ bool ShouldShowScrollbar(GuiScrollbarMode mode, int maxScrollY)
   }
 }
 
-bool IsScrollInteractionEnabled(GuiScrollbarMode mode)
+bool IsScrollInteractionEnabled(GuiScrollbarMode /*mode*/)
 {
-  return mode != GuiScrollbarMode::Hidden;
+  // Hidden only suppresses the scrollbar chrome; wheel, keys, and drag still scroll.
+  return true;
 }
 
 int MeasureVisibleContentExtent(const UGuiPanel &content, int contentTop)
@@ -75,6 +76,16 @@ UGuiScrollView::UGuiScrollView(const GuiTheme *theme)
   ContentPanel.SetDrawBackground(false);
 }
 
+int UGuiScrollView::ScrollbarWidthPx() const
+{
+  return Theme ? Theme->ScrollbarWidth : 10;
+}
+
+int UGuiScrollView::TouchSlopPx() const
+{
+  return Theme ? Theme->TouchDragSlopPx : 14;
+}
+
 UGuiPanel &UGuiScrollView::Content() { return ContentPanel; }
 
 const UGuiPanel &UGuiScrollView::Content() const { return ContentPanel; }
@@ -82,7 +93,7 @@ const UGuiPanel &UGuiScrollView::Content() const { return ContentPanel; }
 GuiRect UGuiScrollView::ViewportRect() const
 {
   const int bar =
-      ShouldShowScrollbar(ScrollbarMode, MaxScrollY()) ? kScrollbarWidth : 0;
+      ShouldShowScrollbar(ScrollbarMode, MaxScrollY()) ? ScrollbarWidthPx() : 0;
   return {Bounds.X, Bounds.Y, std::max(0, Bounds.W - bar), Bounds.H};
 }
 
@@ -92,7 +103,8 @@ GuiRect UGuiScrollView::ScrollbarTrackRect() const
   {
     return {0, 0, 0, 0};
   }
-  return {Bounds.X + Bounds.W - kScrollbarWidth, Bounds.Y, kScrollbarWidth,
+  const int bar_w = ScrollbarWidthPx();
+  return {Bounds.X + Bounds.W - bar_w, Bounds.Y, bar_w,
           Bounds.H};
 }
 
@@ -292,7 +304,7 @@ bool UGuiScrollView::OnDeferredMove(const GuiMouseEvent &event)
     return false;
   }
   const int dy = event.Y - DeferredDragStartY;
-  if (!DeferredDragged && std::abs(dy) > kGuiTouchDragSlopPx)
+  if (!DeferredDragged && std::abs(dy) > TouchSlopPx())
   {
     DeferredDragged = true;
   }

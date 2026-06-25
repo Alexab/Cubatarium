@@ -18,6 +18,16 @@ UGuiListView::UGuiListView(const GuiTheme *theme) : Theme(theme)
   }
 }
 
+int UGuiListView::ScrollbarWidthPx() const
+{
+  return Theme ? Theme->ScrollbarWidth : 10;
+}
+
+int UGuiListView::TouchSlopPx() const
+{
+  return Theme ? Theme->TouchDragSlopPx : 14;
+}
+
 void UGuiListView::SetVisibleRowCount(int rows)
 {
   VisibleRowCount = std::max(1, rows);
@@ -179,7 +189,7 @@ GuiRect UGuiListView::ScrollbarTrackRect() const
   {
     return {0, 0, 0, 0};
   }
-  return {Bounds.X + Bounds.W - kScrollbarWidth, Bounds.Y, kScrollbarWidth,
+  return {Bounds.X + Bounds.W - ScrollbarWidthPx(), Bounds.Y, ScrollbarWidthPx(),
           Bounds.H};
 }
 
@@ -206,7 +216,7 @@ GuiRect UGuiListView::ScrollbarThumbRect() const
 
 GuiRect UGuiListView::ListAreaRect() const
 {
-  const int bar = MaxScrollY() > 0 ? kScrollbarWidth : 0;
+  const int bar = MaxScrollY() > 0 ? ScrollbarWidthPx() : 0;
   return {Bounds.X, Bounds.Y, std::max(0, Bounds.W - bar), Bounds.H};
 }
 
@@ -280,7 +290,7 @@ bool UGuiListView::OnMouseMove(const GuiMouseEvent &event)
     return false;
   }
   const int dy = event.Y - DragStartY;
-  if (!DragMoved && std::abs(dy) > kGuiTouchDragSlopPx)
+  if (!DragMoved && std::abs(dy) > TouchSlopPx())
   {
     DragMoved = true;
   }

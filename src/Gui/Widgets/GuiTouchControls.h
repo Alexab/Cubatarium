@@ -21,8 +21,7 @@ public:
                     std::function<void()> onJumpPress);
 
   void Build(UGuiPanel *parent);
-  void Layout(int width, int height, int offsetX, int offsetY,
-              float uiScale = 1.f);
+  void Layout(int width, int height, int offsetX, int offsetY);
   bool RouteCapturedMove(int PointerId, int x, int y);
   void ReleaseJoystickCapture();
   void ReleaseAllCaptures();

@@ -400,6 +400,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Ui.BreakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
         Ui.BreakDurationSeconds = u.value("break_duration_seconds", 0.25f);
         Ui.RmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
+        Ui.UiScaleUser = u.value("ui_scale", 1.f);
       }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
     }

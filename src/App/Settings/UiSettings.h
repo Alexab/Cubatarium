@@ -27,6 +27,8 @@ struct UiSettings
   float BreakDurationSeconds{0.25f};
   /// Cubatarium only: RMB drag distance before treating as camera look.
   int RmbDragThresholdPx{4};
+  /// User multiplier applied on top of automatic UI scale (0.5–2.0).
+  float UiScaleUser{1.f};
 };
 
 ControlScheme ControlSchemeFromString(const std::string &value);

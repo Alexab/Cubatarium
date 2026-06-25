@@ -191,6 +191,7 @@ set(SOURCES
     src/Console/ConsoleInputSanitize.cpp
     src/Gui/Core/GuiTheme.cpp
     src/Gui/Core/GuiScale.cpp
+    src/Gui/Core/GuiMetrics.cpp
     src/Gui/Core/GuiRenderer.cpp
     src/Gui/Batch/UiQuadBatch.cpp
     src/Gui/Batch/UiTexturedQuadBatch.cpp
@@ -208,6 +209,7 @@ set(SOURCES
     src/Gui/Widgets/GuiButton.cpp
     src/Gui/Widgets/GuiLabel.cpp
     src/Gui/Widgets/GuiProgressBar.cpp
+    src/Gui/Widgets/GuiSlider.cpp
     src/Gui/Widgets/GuiTextInput.cpp
     src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
@@ -297,6 +299,8 @@ set(HEADERS
     src/Console/ConsoleInputSanitize.h
     src/Gui/Core/GuiTypes.h
     src/Gui/Core/GuiTheme.h
+    src/Gui/Core/GuiMetrics.h
+    src/Gui/Core/GuiBreakpoints.h
     src/Gui/Core/GuiRenderer.h
     src/Gui/Batch/UiQuadBatch.h
     src/Gui/Batch/UiTexturedQuadBatch.h
@@ -314,6 +318,7 @@ set(HEADERS
     src/Gui/Widgets/GuiButton.h
     src/Gui/Widgets/GuiLabel.h
     src/Gui/Widgets/GuiProgressBar.h
+    src/Gui/Widgets/GuiSlider.h
     src/Gui/Widgets/GuiTextInput.h
     src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h

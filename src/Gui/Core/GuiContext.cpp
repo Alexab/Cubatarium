@@ -20,6 +20,7 @@ bool UGuiContext::Initialize(std::shared_ptr<UShaderManager> shaderManager,
   Theme = DefaultGuiTheme();
   BaseTheme = Theme;
   UiScale = 1.f;
+  Metrics = MakeGuiMetrics(UiScale, Theme);
   Renderer = std::make_unique<UGuiRenderer>();
   InputRouter = std::make_unique<UGuiInputRouter>();
   return Renderer->Initialize(std::move(shaderManager),
@@ -181,9 +182,39 @@ void UGuiContext::ApplyUiScale(float scale)
 {
   UiScale = scale;
   Theme = ScaleGuiTheme(BaseTheme, UiScale);
+  Metrics = MakeGuiMetrics(UiScale, Theme);
   if (Renderer)
   {
     Renderer->SetTextScale(UiScale);
+  }
+  NotifyMetricsChanged();
+}
+
+void UGuiContext::AddMetricsChangedListener(MetricsChangedFn listener)
+{
+  if (listener)
+  {
+    MetricsListeners.push_back(std::move(listener));
+  }
+}
+
+void UGuiContext::ClearMetricsChangedListeners()
+{
+  MetricsListeners.clear();
+}
+
+void UGuiContext::NotifyMetricsChanged()
+{
+  if (ActiveScreen)
+  {
+    ActiveScreen->OnMetricsChanged(Metrics);
+  }
+  for (const MetricsChangedFn &listener : MetricsListeners)
+  {
+    if (listener)
+    {
+      listener(Metrics);
+    }
   }
 }
 

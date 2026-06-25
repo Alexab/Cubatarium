@@ -12,8 +12,9 @@ UGuiWindow::UGuiWindow(const GuiTheme *theme, std::string title)
 
 GuiRect UGuiWindow::GetClientArea() const
 {
-  return {Bounds.X, Bounds.Y + kTitleBarHeight, Bounds.W,
-          std::max(0, Bounds.H - kTitleBarHeight)};
+  const int title_h = Theme ? Theme->TitleBarHeight : 24;
+  return {Bounds.X, Bounds.Y + title_h, Bounds.W,
+          std::max(0, Bounds.H - title_h)};
 }
 
 void UGuiWindow::Draw(UGuiRenderer &renderer)
@@ -27,10 +28,11 @@ void UGuiWindow::Draw(UGuiRenderer &renderer)
     renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
     renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
   }
-  const GuiRect titleBar{Bounds.X, Bounds.Y, Bounds.W, kTitleBarHeight};
+  const int title_h = Theme->TitleBarHeight;
+  const GuiRect titleBar{Bounds.X, Bounds.Y, Bounds.W, title_h};
   renderer.DrawFilledRect(titleBar, Theme->ButtonPressed);
-  renderer.DrawText(Title, titleBar.X + Theme->Padding, titleBar.Y + 4,
-                    Theme->TextPrimary);
+  renderer.DrawText(Title, titleBar.X + Theme->Padding,
+                    titleBar.Y + Theme->Padding / 2, Theme->TextPrimary);
 
   const GuiRect client = GetClientArea();
   const bool clipClient = client.W > 0 && client.H > 0;

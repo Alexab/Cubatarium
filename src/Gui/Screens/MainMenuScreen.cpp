@@ -239,20 +239,27 @@ void UMainMenuScreen::RelayoutQuitDialog()
   {
     return;
   }
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
   QuitBackdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  constexpr int dialogW = 360;
-  constexpr int dialogH = 160;
+  const int dialogW = Scaled(360);
+  const int dialogH = Scaled(160);
   const int dialogX = (ViewportW - dialogW) / 2;
   const int dialogY = (ViewportH - dialogH) / 2;
   QuitDialog->SetBounds({dialogX, dialogY, dialogW, dialogH});
 
-  QuitMessage->SetBounds({dialogX + 16, dialogY + 16, dialogW - 32, 40});
+  QuitMessage->SetBounds(
+      {dialogX + theme->Padding * 2, dialogY + theme->Padding * 2,
+       dialogW - theme->Padding * 4, Scaled(40)});
 
-  constexpr int btnW = 120;
-  constexpr int btnH = 40;
-  constexpr int btnGap = 16;
-  const int btnY = dialogY + dialogH - btnH - 20;
+  const int btnW = Scaled(120);
+  const int btnH = Scaled(40);
+  const int btnGap = Scaled(16);
+  const int btnY = dialogY + dialogH - btnH - Scaled(20);
   const int totalBtnW = btnW * 2 + btnGap;
   const int btnStartX = dialogX + (dialogW - totalBtnW) / 2;
   QuitYesButton->SetBounds({btnStartX, btnY, btnW, btnH});
@@ -265,30 +272,41 @@ void UMainMenuScreen::Relayout()
   {
     return;
   }
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
   const GuiRect full{0, 0, ViewportW, ViewportH};
   Root->SetBounds(full);
 
   if (Title)
   {
-    UGuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, 20, Title);
+    UGuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, Scaled(20), Title);
   }
 
   if (VersionLabel)
   {
-    constexpr int margin = 8;
-    constexpr int labelH = 24;
-    constexpr int labelW = 360;
+    const int margin = theme->Padding;
+    const int labelH = theme->TitleBarHeight;
+    const int labelW = Scaled(360);
     VersionLabel->SetBounds(
         {margin, ViewportH - labelH - margin, labelW, labelH});
   }
 
   if (!Buttons.empty())
   {
-    const int btnW = 300;
-    const int btnH = 44;
-    const int spacing = 12;
-    const int stackH = static_cast<int>(Buttons.size()) * btnH +
-                       static_cast<int>(Buttons.size() - 1) * spacing;
+    const int btnW = theme->MenuButtonWidth;
+    const int spacing = theme->MenuButtonSpacing;
+    int stackH = 0;
+    for (UGuiButton *btn : Buttons)
+    {
+      if (btn)
+      {
+        stackH += btn->GetPreferredHeight();
+      }
+    }
+    stackH += static_cast<int>(Buttons.size() - 1) * spacing;
     GuiRect stackArea{(ViewportW - btnW) / 2, (ViewportH - stackH) / 2, btnW,
                       stackH};
     std::vector<UGuiWidget *> children;

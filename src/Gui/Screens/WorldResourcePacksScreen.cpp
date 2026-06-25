@@ -1,4 +1,5 @@
 #include "Gui/Screens/WorldResourcePacksScreen.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
@@ -16,11 +17,6 @@ namespace cutum
 
 namespace
 {
-
-constexpr int kWinW = 920;
-constexpr int kWinH = 620;
-constexpr int kMargin = 32;
-constexpr int kContentPad = 8;
 
 } // namespace
 
@@ -68,8 +64,10 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int winW = std::min(kWinW, ViewportW - kMargin);
-  const int winH = std::min(kWinH, ViewportH - kMargin);
+  const int winW =
+      std::min(theme.DialogResourcePacksWidth, ViewportW - theme.DialogMargin);
+  const int winH = std::min(theme.DialogResourcePacksHeight,
+                              ViewportH - theme.DialogMargin);
   auto window = std::make_unique<UGuiWindow>(&theme, "World settings");
   Window = window.get();
   window->SetBounds(
@@ -152,8 +150,15 @@ void UWorldResourcePacksScreen::Relayout()
   {
     return;
   }
-  const int winW = std::min(kWinW, ViewportW - kMargin);
-  const int winH = std::min(kWinH, ViewportH - kMargin);
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
+  const int winW =
+      std::min(theme->DialogResourcePacksWidth, ViewportW - theme->DialogMargin);
+  const int winH = std::min(theme->DialogResourcePacksHeight,
+                              ViewportH - theme->DialogMargin);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -167,9 +172,10 @@ void UWorldResourcePacksScreen::Relayout()
 
 int UWorldResourcePacksScreen::MeasureBodyHeight(int width) const
 {
-  constexpr int kWarnH = 48;
-  constexpr int kGap = 12;
-  int h = kWarnH + kGap;
+  const GuiTheme *theme = GetMetrics().Theme;
+  const int warn_h = theme ? Scaled(48) : 48;
+  const int gap = Scaled(12);
+  int h = warn_h + gap;
   if (PackForm)
   {
     h += PackForm->MeasureHeight({0, 0, width, 100000});
@@ -185,20 +191,22 @@ void UWorldResourcePacksScreen::LayoutBody(UGuiScrollView &scroll) const
   }
   const GuiRect vp = scroll.GetBounds();
   const int scrollY = scroll.GetScrollY();
-  const GuiRect layoutArea{vp.X + kContentPad, vp.Y + kContentPad - scrollY,
-                           std::max(0, vp.W - 2 * kContentPad),
-                           std::max(0, vp.H - 2 * kContentPad)};
+  const GuiTheme *theme = GetMetrics().Theme;
+  const int content_pad = theme ? theme->ContentPad : 8;
+  const GuiRect layoutArea{vp.X + content_pad, vp.Y + content_pad - scrollY,
+                           std::max(0, vp.W - 2 * content_pad),
+                           std::max(0, vp.H - 2 * content_pad)};
   const int contentH = MeasureBodyHeight(layoutArea.W);
-  const int pageH = std::max(vp.H, contentH + 2 * kContentPad);
+  const int pageH = std::max(vp.H, contentH + 2 * content_pad);
   BodyPanel->SetBounds({vp.X, vp.Y - scrollY, vp.W, pageH});
 
-  constexpr int kWarnH = 48;
-  constexpr int kGap = 12;
+  const int warn_h = theme ? Scaled(48) : 48;
+  const int gap = Scaled(12);
   int y = layoutArea.Y;
   if (WarningLabel)
   {
-    WarningLabel->SetBounds({layoutArea.X, y, layoutArea.W, kWarnH});
-    y += kWarnH + kGap;
+    WarningLabel->SetBounds({layoutArea.X, y, layoutArea.W, warn_h});
+    y += warn_h + gap;
   }
   if (PackForm)
   {

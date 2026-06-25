@@ -18,15 +18,6 @@
 namespace cutum
 {
 
-namespace
-{
-
-constexpr int kHotbarMarginBottom = 24;
-constexpr int kSecondaryMarginRight = 16;
-constexpr int kSecondaryMarginBottom = 24;
-
-} // namespace
-
 UInGameHudScreen::UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
                                    IGuiIconSource *icons)
     : Session(session), Theme(theme), Icons(icons)
@@ -130,9 +121,8 @@ void UInGameHudScreen::OnViewportChanged(int width, int height)
 #if defined(__ANDROID__)
   if (TouchControls)
   {
-    const float uiScale = static_cast<float>(Theme->FontSizeBody) / 16.f;
     TouchControls->Layout(ViewportW, ViewportH, GetContentOffsetX(),
-                          GetContentOffsetY(), uiScale);
+                          GetContentOffsetY());
   }
 #endif
 }
@@ -154,7 +144,7 @@ void UInGameHudScreen::EnsureHotbarWidgets()
 
   for (size_t i = 0; i < 10; ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme);
     const size_t index = i;
     SlotAddress address;
     address.surface = SlotSurface::Hotbar;
@@ -186,7 +176,7 @@ void UInGameHudScreen::EnsureHotbarWidgets()
   }
   for (size_t i = 0; i < 10; ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme);
     const size_t index = i;
     SlotAddress address;
     address.surface = SlotSurface::Hotbar;
@@ -240,7 +230,7 @@ void UInGameHudScreen::LayoutHotbar()
   const int totalW = static_cast<int>(PrimarySlots.size()) * slotSize +
                      (static_cast<int>(PrimarySlots.size()) - 1) * gap;
   const int startX = (ViewportW - totalW) / 2;
-  const int rowY = ViewportH - kHotbarMarginBottom - slotSize;
+  const int rowY = ViewportH - Theme->HotbarMarginBottom - slotSize;
 
   int x = startX;
   for (UGuiSlot *slot : PrimarySlots)
@@ -253,8 +243,8 @@ void UInGameHudScreen::LayoutHotbar()
   }
 
   const bool showSecondary = Session->GetBarCount() > 1;
-  const int secX = ViewportW - kSecondaryMarginRight - slotSize;
-  int secY = ViewportH - kSecondaryMarginBottom - slotSize;
+  const int secX = ViewportW - Theme->HotbarSecondaryMarginRight - slotSize;
+  int secY = ViewportH - Theme->HotbarSecondaryMarginBottom - slotSize;
   for (UGuiSlot *slot : SecondarySlots)
   {
     if (!slot)

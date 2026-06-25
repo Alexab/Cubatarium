@@ -29,6 +29,16 @@ UGuiCheckList::UGuiCheckList(const GuiTheme *theme) : Theme(theme)
   }
 }
 
+int UGuiCheckList::ScrollbarWidthPx() const
+{
+  return Theme ? Theme->ScrollbarWidth : 10;
+}
+
+int UGuiCheckList::TouchSlopPx() const
+{
+  return Theme ? Theme->TouchDragSlopPx : 14;
+}
+
 void UGuiCheckList::SetVisibleRowCount(int rows)
 {
   VisibleRowCount = std::max(1, rows);
@@ -251,7 +261,7 @@ GuiRect UGuiCheckList::ScrollbarTrackRect() const
   {
     return {0, 0, 0, 0};
   }
-  return {Bounds.X + Bounds.W - kScrollbarWidth, Bounds.Y, kScrollbarWidth,
+  return {Bounds.X + Bounds.W - ScrollbarWidthPx(), Bounds.Y, ScrollbarWidthPx(),
           Bounds.H};
 }
 
@@ -278,7 +288,7 @@ GuiRect UGuiCheckList::ScrollbarThumbRect() const
 
 GuiRect UGuiCheckList::ListAreaRect() const
 {
-  const int bar = MaxScrollY() > 0 ? kScrollbarWidth : 0;
+  const int bar = MaxScrollY() > 0 ? ScrollbarWidthPx() : 0;
   return {Bounds.X, Bounds.Y, std::max(0, Bounds.W - bar), Bounds.H};
 }
 
@@ -368,7 +378,7 @@ bool UGuiCheckList::OnMouseMove(const GuiMouseEvent &event)
     return false;
   }
   const int dy = event.Y - DragStartY;
-  if (!DragMoved && std::abs(dy) > kGuiTouchDragSlopPx)
+  if (!DragMoved && std::abs(dy) > TouchSlopPx())
   {
     DragMoved = true;
     if (PendingToggleIndex >= 0)

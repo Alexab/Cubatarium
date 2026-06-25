@@ -144,31 +144,38 @@ void UCreativePaletteScreen::OnViewportChanged(int width, int height)
 
 void UCreativePaletteScreen::RelayoutPanel()
 {
-  if (!Panel)
+  if (!Panel || !Theme)
   {
     return;
   }
   const int panelW = ViewportW * 60 / 100;
-  const int slotSize = Theme ? Theme->HotbarSlotSize : 48;
-  const int hotbarReserve = slotSize + 24 + 16;
-  const int maxPanelH = std::max(120, ViewportH - hotbarReserve - ViewportH / 12);
+  const int slotSize = Theme->HotbarSlotSize;
+  const int hotbarReserve =
+      slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
+  const int maxPanelH =
+      std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
   const int panelH = std::min(ViewportH * 70 / 100, maxPanelH);
   const int panelX = (ViewportW - panelW) / 2;
   const int panelY = (ViewportH - panelH) / 2;
   Panel->SetBounds({panelX, panelY, panelW, panelH});
 
+  const int pad = Theme->Padding;
+  const int tabH = Theme->TabBarHeight;
   if (MainTabs)
   {
-    MainTabs->SetBounds({panelX + 8, panelY + 8, panelW - 16, 28});
+    MainTabs->SetBounds(
+        {panelX + pad, panelY + pad, panelW - pad * 2, tabH});
   }
   if (SubTabs)
   {
-    SubTabs->SetBounds({panelX + 8, panelY + 40, panelW - 16, 28});
+    SubTabs->SetBounds({panelX + pad, panelY + pad + tabH + pad, panelW - pad * 2,
+                        tabH});
   }
   if (Scroll)
   {
-    const int scrollH = std::max(0, panelH - 84);
-    Scroll->SetBounds({panelX + 8, panelY + 76, panelW - 16, scrollH});
+    const int scrollTop = panelY + pad + tabH + pad + tabH + pad;
+    const int scrollH = std::max(0, panelH - (scrollTop - panelY) - pad);
+    Scroll->SetBounds({panelX + pad, scrollTop, panelW - pad * 2, scrollH});
     if (Built)
     {
       Scroll->LayoutContent();
@@ -369,7 +376,7 @@ void UCreativePaletteScreen::RebuildGrid()
   const int slotSize = Theme->HotbarSlotSize;
   for (size_t i = 0; i < entries.size(); ++i)
   {
-    auto slot = std::make_unique<UGuiSlot>(Theme, slotSize);
+    auto slot = std::make_unique<UGuiSlot>(Theme);
     slot->SetBounds({0, 0, slotSize, slotSize});
     const std::string entryId = entries[i].Id;
     slot->SetSelected(entryId == SelectedEntryId);

@@ -46,6 +46,7 @@ public:
   virtual ResourcePackSelection GetCurrentWorldResourcePackSelection() const = 0;
   virtual bool
   ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection) = 0;
+  virtual void ApplyLiveUiScale(float user_scale) = 0;
 };
 
 } // namespace cutum

@@ -442,10 +442,14 @@ void UAndroidPlatformWindow::Render()
   static int last_ui_width = 0;
   static int last_ui_height = 0;
   const int densityDpi = QueryDensityDpi(App);
+  PlatformUiMetrics platform;
+  platform.DensityDpi = densityDpi;
+  platform.ScreenWidthPx = Width;
+  platform.ScreenHeightPx = Height;
   if (densityDpi != lastDensityDpi || Width != last_ui_width ||
       Height != last_ui_height)
   {
-    Application->SetUiScale(ComputeUiScale(densityDpi, Width, Height));
+    Application->UpdateUiScale(Width, Height, platform);
     lastDensityDpi = densityDpi;
     last_ui_width = Width;
     last_ui_height = Height;

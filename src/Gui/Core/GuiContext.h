@@ -1,9 +1,12 @@
 #ifndef GUI_CONTEXT_H
 #define GUI_CONTEXT_H
 
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
+#include <functional>
 #include <memory>
+#include <vector>
 
 namespace cutum
 {
@@ -19,6 +22,8 @@ class UTextRenderer;
 class UGuiContext
 {
 public:
+  using MetricsChangedFn = std::function<void(const GuiMetrics &)>;
+
   UGuiContext();
   ~UGuiContext();
 
@@ -51,6 +56,7 @@ public:
 
   UGuiRenderer &GetRenderer() { return *Renderer; }
   const GuiTheme &GetTheme() const { return Theme; }
+  const GuiMetrics &GetMetrics() const { return Metrics; }
 
   void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
   IGuiClipboard *GetClipboard() const { return Clipboard; }
@@ -58,14 +64,21 @@ public:
   void ApplyUiScale(float scale);
   float GetUiScale() const { return UiScale; }
 
+  void AddMetricsChangedListener(MetricsChangedFn listener);
+  void ClearMetricsChangedListeners();
+
 private:
+  void NotifyMetricsChanged();
+
   GuiTheme BaseTheme;
   float UiScale{1.f};
+  GuiMetrics Metrics;
   IGuiClipboard *Clipboard{nullptr};
   GuiTheme Theme;
   std::unique_ptr<UGuiRenderer> Renderer;
   std::unique_ptr<UGuiInputRouter> InputRouter;
   std::unique_ptr<UGuiScreenBase> ActiveScreen;
+  std::vector<MetricsChangedFn> MetricsListeners;
 };
 
 } // namespace cutum

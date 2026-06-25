@@ -2,6 +2,7 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/InputManager.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "App/Platform/Log.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
@@ -390,6 +391,13 @@ void UWindowManager::Render()
         WindowWidth = fb_w;
         WindowHeight = fb_h;
       }
+      float content_scale_x = 1.f;
+      float content_scale_y = 1.f;
+      glfwGetWindowContentScale(Window, &content_scale_x, &content_scale_y);
+      PlatformUiMetrics platform;
+      platform.ContentScaleX = content_scale_x;
+      platform.ContentScaleY = content_scale_y;
+      Application->UpdateUiScale(fb_w, fb_h, platform);
     }
     Application->RenderFrame(fb_w, fb_h,
                              Views ? Views->GetDurationUpdateMks() : 0.0);
