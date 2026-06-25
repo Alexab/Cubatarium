@@ -639,7 +639,8 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
   const int bottomRowY = height - buttonSize - margin;
   const int joystickY = bottomRowY - joystickSize - controlLift;
   const int leftMargin = std::max(margin, offsetX + Theme->Padding);
-  const int leftControlsW = leftMargin + joystickSize + margin;
+  const int joystickX = leftMargin + buttonSize;
+  const int leftControlsW = joystickX + joystickSize + margin;
   const int leftControlsTop = std::max(0, joystickY - controlLift);
   const int leftControlsH = std::max(1, height - leftControlsTop);
   const int rightColX = width - margin - buttonSize;
@@ -650,7 +651,7 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
   if (JoystickWidget)
   {
     JoystickWidget->SetBounds(
-        {leftMargin, joystickY, joystickSize, joystickSize});
+        {joystickX, joystickY, joystickSize, joystickSize});
   }
   if (JumpButton)
   {
@@ -685,7 +686,7 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
   if (LookPad)
   {
     const int lookSize = std::max(joystickSize, buttonSize * 2 + buttonGap);
-    const int lookX = width - margin - lookSize;
+    const int lookX = width - margin - lookSize - buttonSize;
     const int lookBottomMax = bottomRowY - buttonGap;
     const int lookY =
         std::max(controlLift, lookBottomMax - lookSize - controlLift);
