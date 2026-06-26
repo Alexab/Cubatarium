@@ -173,12 +173,6 @@
     },
     {
       "dx": 0,
-      "dy": -1,
-      "dz": 0,
-      "type": "tree_log"
-    },
-    {
-      "dx": 0,
       "dy": 0,
       "dz": 0,
       "type": "tree_log"

@@ -223,6 +223,7 @@
     { "name": "piston_inner", "id": 166, "uniform": "piston_inner_top" },
     { "name": "flower_pot", "id": 167, "uniform": "flowerPot" },
     { "name": "leaves_spruce_light", "id": 168, "uniform": "leaves_spruce" },
-    { "name": "leaves_jungle_light", "id": 169, "uniform": "leaves_jungle" }
+    { "name": "leaves_jungle_light", "id": 169, "uniform": "leaves_jungle" },
+    { "name": "tree_bark", "id": 170, "uniform": "tree_side" }
   ]
 }

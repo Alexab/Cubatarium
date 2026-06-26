@@ -13,19 +13,19 @@
       "dx": -1,
       "dy": 0,
       "dz": 0,
-      "type": "tree_log"
+      "type": "tree_bark"
     },
     {
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "tree_log"
+      "type": "tree_bark"
     },
     {
       "dx": 1,
       "dy": 0,
       "dz": 0,
-      "type": "tree_log"
+      "type": "tree_bark"
     }
   ],
   "source": {

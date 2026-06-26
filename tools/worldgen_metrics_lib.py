@@ -97,26 +97,89 @@ def count_spawn_vegetation_blocks(
     return dict(counts)
 
 
+def terrain_surface_y(
+    columns: dict[tuple[int, int, int], int],
+    wx: int,
+    wz: int,
+    *,
+    air_id: int = 0,
+) -> int | None:
+    """Top solid block with air above (worldgen ground), not canopy top."""
+    heights = [wy for (x, wy, z), bid in columns.items() if x == wx and z == wz and bid != air_id]
+    if not heights:
+        return None
+    for wy in sorted(heights, reverse=True):
+        above = columns.get((wx, wy + 1, wz), air_id)
+        if above == air_id:
+            return wy
+    return None
+
+
 def count_spawn_ground_logs(
     world_dir: Path,
     id_to_name: dict[int, str],
     spawn_radius: int,
     surface: dict[tuple[int, int], tuple[int, int]],
 ) -> int:
-    """tree_log blocks placed at column surface (deco_log footprint)."""
+    """tree_log blocks placed at column terrain surface (tree bases, bush centers)."""
     chunk_dir = world_dir / "chunks"
     if not chunk_dir.is_dir():
         return 0
-    count = 0
+    columns: dict[tuple[int, int, int], int] = {}
     for path in chunk_dir.glob("*.cchunk"):
-        for (wx, wy, wz), bid in decode_chunk(path).items():
-            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
-                continue
-            if id_to_name.get(bid, "") != "tree_log":
-                continue
-            surface_y = surface.get((wx, wz))
-            if surface_y is not None and wy == surface_y[0]:
-                count += 1
+        columns.update(decode_chunk(path))
+    count = 0
+    for (wx, wy, wz), bid in columns.items():
+        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+            continue
+        if id_to_name.get(bid, "") != "tree_log":
+            continue
+        ground_y = terrain_surface_y(columns, wx, wz)
+        if ground_y is not None and wy == ground_y:
+            count += 1
+    return count
+
+
+def count_bush_common_footprints(
+    world_dir: Path,
+    id_to_name: dict[int, str],
+    spawn_radius: int,
+    surface: dict[tuple[int, int], tuple[int, int]],
+) -> int:
+    """tree_log with a ring of tree_leaves on the same Y (bush_common)."""
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return 0
+    columns: dict[tuple[int, int, int], int] = {}
+    for path in chunk_dir.glob("*.cchunk"):
+        columns.update(decode_chunk(path))
+    logs: list[tuple[int, int, int]] = []
+    leaves: set[tuple[int, int, int]] = set()
+    for (wx, wy, wz), bid in columns.items():
+        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+            continue
+        name = id_to_name.get(bid, "")
+        if name == "tree_log":
+            logs.append((wx, wy, wz))
+        elif name == "tree_leaves":
+            leaves.add((wx, wy, wz))
+    count = 0
+    for wx, wy, wz in logs:
+        ring = 0
+        for dx, dz in (
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+        ):
+            if (wx + dx, wy, wz + dz) in leaves:
+                ring += 1
+        if ring >= 6:
+            count += 1
     return count
 
 
@@ -366,6 +429,9 @@ def analyze_world(
     metrics["spawn_ground_logs"] = count_spawn_ground_logs(
         world_dir, id_to_name, spawn_radius, surface
     )
+    metrics["spawn_bush_common_footprints"] = count_bush_common_footprints(
+        world_dir, id_to_name, spawn_radius, surface
+    )
     metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
         world_dir, id_to_name, spawn_radius
     )
@@ -439,6 +505,12 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         ground_logs = metrics.get("spawn_ground_logs", 0)
         if ground_logs > ground_log_max:
             fail(f"spawn ground_logs={ground_logs} > {ground_log_max}")
+
+    bush_max = thresholds.get("spawn_bush_common_footprints_max")
+    if bush_max is not None:
+        bush_count = metrics.get("spawn_bush_common_footprints", 0)
+        if bush_count > bush_max:
+            fail(f"spawn bush_common_footprints={bush_count} > {bush_max}")
 
     fire_max = thresholds.get("spawn_fire_blocks_max")
     if fire_max is not None:

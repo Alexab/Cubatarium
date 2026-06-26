@@ -294,6 +294,19 @@ tier_a:
     - tree_log
     reference_pack: kenney_voxel_16
     display_name: Tree Log
+  tree_bark:
+    types:
+    - natural
+    - plants
+    textures:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    reference_pack: minetest_default_16
+    display_name: Tree Bark
   tree_leaves:
     types:
     - natural

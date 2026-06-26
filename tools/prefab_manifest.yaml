@@ -148,7 +148,7 @@ prefabs:
     import_status: ready
     placement: { y_offset: -1 }
     source: { mod: minetest-game/default, license: CC-BY-SA-3.0, authors: [paramat] }
-    worldgen: { pool: ground_cover, biomes: [plains, forest], spacing: 28, weight: 2, seed_offset: 4101 }
+    worldgen: { pool: ground_cover, biomes: [plains], spacing: 28, weight: 2, seed_offset: 4101 }
   bush_acacia:
     source_mts: mtg/acacia_bush.mts
     category: plants

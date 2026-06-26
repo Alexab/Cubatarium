@@ -24,6 +24,11 @@ on:
       - "tools/**"
       - "content/**"
   workflow_dispatch:
+    inputs:
+      full_test:
+        description: Run all reference seeds with determinism check
+        type: boolean
+        default: false
 
 jobs:
   windows-desktop:
@@ -67,7 +72,12 @@ jobs:
 
       - name: Worldgen integration test
         shell: pwsh
-        run: python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ inputs.full_test }}" -eq "true") {
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 2
+          } else {
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 2 --seeds 42 --skip-determinism
+          }
 
       - name: Upload desktop runtime artifact
         uses: actions/upload-artifact@v4

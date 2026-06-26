@@ -199,20 +199,6 @@
       "placement_y_offset": -1
     },
     {
-      "prefab": "bush_common",
-      "biomes": [
-        "forest"
-      ],
-      "weight": 1,
-      "seed_offset": 4108,
-      "spacing": 44,
-      "placement_y_offset": -1,
-      "sub_biomes": [
-        "sparse_forest",
-        "woodland"
-      ]
-    },
-    {
       "prefab": "bush_pine",
       "biomes": [
         "tundra"

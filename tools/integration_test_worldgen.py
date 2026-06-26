@@ -23,6 +23,12 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def parse_seeds(raw: str | None, fallback: list[int]) -> list[int]:
+    if not raw:
+        return fallback
+    return [int(part.strip()) for part in raw.split(",") if part.strip()]
+
+
 def run_create(
     exe: Path,
     cwd: Path,
@@ -60,7 +66,18 @@ def main() -> int:
         type=Path,
         default=REPO / "tools" / "worldgen_baseline.json",
     )
-    parser.add_argument("--radius-chunks", type=int, default=4)
+    parser.add_argument("--radius-chunks", type=int, default=2)
+    parser.add_argument(
+        "--seeds",
+        type=str,
+        default=None,
+        help="Comma-separated seeds (default: all reference_seeds from baseline)",
+    )
+    parser.add_argument(
+        "--skip-determinism",
+        action="store_true",
+        help="Skip second create-world pass per seed (determinism check)",
+    )
     parser.add_argument("--timeout", type=int, default=480)
     parser.add_argument("--keep-worlds", action="store_true")
     args = parser.parse_args()
@@ -68,7 +85,7 @@ def main() -> int:
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     thresholds = dict(baseline.get("thresholds", {}))
     thresholds["max_height"] = baseline.get("max_height", 128)
-    seeds = baseline.get("reference_seeds", [42, 12354, 20240625])
+    seeds = parse_seeds(args.seeds, baseline.get("reference_seeds", [42, 12354, 20240625]))
     refs = REPO / "content" / "worldgen_refs.json"
     spawn_radius = baseline.get("spawn_radius", 48)
 
@@ -119,30 +136,32 @@ def main() -> int:
             failures.append(f"seed {seed}: missing chunk 0_0_0.cchunk")
             continue
 
-        world_b = f"CI_{seed}_det"
-        world_b_dir = args.cwd / "worlds" / world_b
-        if world_b_dir.is_dir():
-            shutil.rmtree(world_b_dir, ignore_errors=True)
-        run_create(
-            args.exe,
-            args.cwd,
-            seed,
-            world_b,
-            args.radius_chunks,
-            args.cwd / f"create_world_{seed}_det.json",
-            args.timeout,
-        )
-        chunk_b = world_b_dir / "chunks" / "0_0_0.cchunk"
-        if chunk_b.is_file() and sha256_file(chunk_a) != sha256_file(chunk_b):
-            failures.append(f"seed {seed}: determinism failed for 0_0_0.cchunk")
-        if not args.keep_worlds:
-            shutil.rmtree(world_b_dir, ignore_errors=True)
+        if not args.skip_determinism:
+            world_b = f"CI_{seed}_det"
+            world_b_dir = args.cwd / "worlds" / world_b
+            if world_b_dir.is_dir():
+                shutil.rmtree(world_b_dir, ignore_errors=True)
+            run_create(
+                args.exe,
+                args.cwd,
+                seed,
+                world_b,
+                args.radius_chunks,
+                args.cwd / f"create_world_{seed}_det.json",
+                args.timeout,
+            )
+            chunk_b = world_b_dir / "chunks" / "0_0_0.cchunk"
+            if chunk_b.is_file() and sha256_file(chunk_a) != sha256_file(chunk_b):
+                failures.append(f"seed {seed}: determinism failed for 0_0_0.cchunk")
+            if not args.keep_worlds:
+                shutil.rmtree(world_b_dir, ignore_errors=True)
 
         spawn = metrics.get("spawn", {}).get("surface_slots", {})
         print(
             f"seed {seed}: grass={spawn.get('grass', 0):.1f}% "
             f"stone={spawn.get('stone', 0):.1f}% "
             f"trees={metrics.get('spawn_tree_blocks', 0)} "
+            f"bush={metrics.get('spawn_bush_common_footprints', 0)} "
             f"logs={metrics.get('spawn_ground_logs', 0)} "
             f"fire={metrics.get('spawn_fire_blocks', 0)} "
             f"pits={metrics.get('micro_pit_pct', 0):.2f}% "

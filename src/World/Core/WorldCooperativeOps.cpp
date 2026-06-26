@@ -569,7 +569,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
         ctx.WorldgenOwnerPackId = world.WorldgenOwnerPackId;
         ctx.ResolveBlockIds();
         const int surfaceY = world.WorldGen->SurfaceYAt(8, 8);
-        PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
+        PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8), surfaceY);
       }
       CurrentPhase = Phase::PostCreate;
     }
