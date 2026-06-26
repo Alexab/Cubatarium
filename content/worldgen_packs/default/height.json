@@ -1,10 +1,10 @@
-{
-  "schema_version": 1,
-  "layers": {
-    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.68 },
-    "regional": { "scale": 0.008, "octaves": 3, "weight": 0.26 },
-    "detail": { "scale": 0.025, "octaves": 2, "weight": 0.06 }
-  },
-  "overworld": { "sea_bias": 0.45, "curve_exponent": 1.08 },
-  "jitter": { "scale": 0.03, "amplitude": 0.45, "erosion_damp": 0.85 }
-}
+{
+  "schema_version": 1,
+  "layers": {
+    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.68 },
+    "regional": { "scale": 0.008, "octaves": 3, "weight": 0.26 },
+    "detail": { "scale": 0.025, "octaves": 2, "weight": 0.06 }
+  },
+  "overworld": { "sea_bias": 0.45, "curve_exponent": 1.08 },
+  "jitter": { "scale": 0.03, "amplitude": 0.28, "erosion_damp": 0.85 }
+}

@@ -181,7 +181,7 @@
       ],
       "weight": 1,
       "seed_offset": 4104,
-      "spacing": 22,
+      "spacing": 32,
       "placement_y_offset": -1,
       "sub_biomes": [
         "sparse_forest",
@@ -191,8 +191,7 @@
     {
       "prefab": "bush_common",
       "biomes": [
-        "plains",
-        "forest"
+        "plains"
       ],
       "weight": 2,
       "seed_offset": 4101,
@@ -200,15 +199,42 @@
       "placement_y_offset": -1
     },
     {
+      "prefab": "bush_common",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4108,
+      "spacing": 44,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
+    },
+    {
       "prefab": "bush_pine",
       "biomes": [
-        "tundra",
-        "forest"
+        "tundra"
       ],
       "weight": 2,
       "seed_offset": 4103,
       "spacing": 18,
       "placement_y_offset": -1
+    },
+    {
+      "prefab": "bush_pine",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4109,
+      "spacing": 40,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "dry_grass_clump",
@@ -326,13 +352,11 @@
       "prefab": "campfire_ring",
       "biomes": [
         "plains",
-        "forest",
-        "hills",
-        "tundra"
+        "forest"
       ],
       "weight": 1,
       "seed_offset": 9201,
-      "spacing": 120
+      "spacing": 960
     },
     {
       "prefab": "deco_log_acacia",
@@ -347,22 +371,46 @@
     {
       "prefab": "deco_log_apple",
       "biomes": [
-        "forest",
         "plains"
       ],
       "weight": 1,
       "seed_offset": 4301,
-      "spacing": 80
+      "spacing": 120
+    },
+    {
+      "prefab": "deco_log_apple",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4311,
+      "spacing": 300,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "deco_log_aspen",
       "biomes": [
-        "plains",
-        "forest"
+        "plains"
       ],
       "weight": 1,
       "seed_offset": 4305,
       "spacing": 88
+    },
+    {
+      "prefab": "deco_log_aspen",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4315,
+      "spacing": 320,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "deco_log_jungle",
@@ -371,17 +419,33 @@
       ],
       "weight": 1,
       "seed_offset": 4303,
-      "spacing": 90
+      "spacing": 320,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "deco_log_pine",
       "biomes": [
-        "forest",
         "tundra"
       ],
       "weight": 1,
       "seed_offset": 4302,
       "spacing": 85
+    },
+    {
+      "prefab": "deco_log_pine",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4312,
+      "spacing": 280,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland"
+      ]
     },
     {
       "prefab": "farm_plot_small",

@@ -3,7 +3,7 @@
   "height": {
     "base_offset": 0,
     "amplitude_mul": 1.0,
-    "volatility_mul": 0.55
+    "volatility_mul": 0.42
   },
   "palette": {
     "surface": "grass",
@@ -28,6 +28,17 @@
     "vegetation": {
       "tree_pine_mapgen": 1.25,
       "tree_jungle_mapgen": 1.15
+    },
+    "decoration": {
+      "deco_log_apple": 0.22,
+      "deco_log_aspen": 0.22,
+      "deco_log_jungle": 0.20,
+      "deco_log_pine": 0.22
+    },
+    "ground_cover": {
+      "bush_common": 0.55,
+      "bush_pine": 0.50,
+      "bush_blueberry": 0.70
     }
   }
 }

@@ -97,6 +97,73 @@ def count_spawn_vegetation_blocks(
     return dict(counts)
 
 
+def count_spawn_ground_logs(
+    world_dir: Path,
+    id_to_name: dict[int, str],
+    spawn_radius: int,
+    surface: dict[tuple[int, int], tuple[int, int]],
+) -> int:
+    """tree_log blocks placed at column surface (deco_log footprint)."""
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return 0
+    count = 0
+    for path in chunk_dir.glob("*.cchunk"):
+        for (wx, wy, wz), bid in decode_chunk(path).items():
+            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+                continue
+            if id_to_name.get(bid, "") != "tree_log":
+                continue
+            surface_y = surface.get((wx, wz))
+            if surface_y is not None and wy == surface_y[0]:
+                count += 1
+    return count
+
+
+def count_spawn_fire_blocks(
+    world_dir: Path,
+    id_to_name: dict[int, str],
+    spawn_radius: int,
+) -> int:
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return 0
+    count = 0
+    for path in chunk_dir.glob("*.cchunk"):
+        for (wx, _wy, wz), bid in decode_chunk(path).items():
+            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+                continue
+            if id_to_name.get(bid, "") == "fire":
+                count += 1
+    return count
+
+
+def micro_pit_stats(surface: dict[tuple[int, int], tuple[int, int]]) -> dict:
+    pits = 0
+    flat_columns = 0
+    for (x, z), (y, _) in surface.items():
+        neighbors: list[int] = []
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbor = surface.get((x + dx, z + dz))
+            if neighbor is None:
+                continue
+            neighbors.append(neighbor[0])
+        if len(neighbors) < 4:
+            continue
+        local_range = max(neighbors + [y]) - min(neighbors + [y])
+        if local_range > 2:
+            continue
+        flat_columns += 1
+        min_neighbor = min(neighbors)
+        if y <= min_neighbor - 1 and (min_neighbor - y) <= 2:
+            pits += 1
+    return {
+        "flat_columns": flat_columns,
+        "micro_pits": pits,
+        "micro_pit_pct": 100.0 * pits / max(1, flat_columns),
+    }
+
+
 def load_world_columns(world_dir: Path) -> dict[tuple[int, int], tuple[int, int]]:
     """Return (surface_y, surface_block_id) per (wx, wz)."""
     chunk_dir = world_dir / "chunks"
@@ -236,7 +303,9 @@ def analyze_surface(
     cliff16 = sum(1 for d in deltas if d >= 16)
     cliff8 = sum(1 for d in deltas if d >= 8)
     cliff4 = sum(1 for d in deltas if d >= 4)
+    cliff1 = sum(1 for d in deltas if d >= 1)
     max_violations = sum(1 for y in heights if y > max_height)
+    pits = micro_pit_stats(surface)
 
     result: dict = {
         "columns": len(surface),
@@ -245,11 +314,14 @@ def analyze_surface(
         "height_mean": sum(heights) / len(heights),
         "delta_mean": sum(deltas) / max(1, len(deltas)),
         "delta_p95": deltas[int(len(deltas) * 0.95)] if deltas else 0,
+        "delta_ge_1_pct": 100.0 * cliff1 / max(1, len(deltas)),
         "delta_ge_4_pct": 100.0 * cliff4 / max(1, len(deltas)),
         "delta_ge_8_pct": 100.0 * cliff8 / max(1, len(deltas)),
         "delta_ge_16_pct": 100.0 * cliff16 / max(1, len(deltas)),
         "max_height_violations": max_violations,
         "top_block_ids": top_blocks.most_common(8),
+        "micro_pit_pct": pits["micro_pit_pct"],
+        "micro_pits": pits["micro_pits"],
     }
 
     if id_to_name is not None and slot_map is not None:
@@ -291,6 +363,12 @@ def analyze_world(
     veg = count_spawn_vegetation_blocks(world_dir, id_to_name, spawn_radius)
     metrics["spawn_vegetation"] = veg
     metrics["spawn_tree_blocks"] = veg.get("tree_log", 0) + veg.get("tree_leaves", 0)
+    metrics["spawn_ground_logs"] = count_spawn_ground_logs(
+        world_dir, id_to_name, spawn_radius, surface
+    )
+    metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
+        world_dir, id_to_name, spawn_radius
+    )
     meta_path = world_dir / "world_data.json"
     if meta_path.is_file():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -355,5 +433,23 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         tree_blocks = metrics.get("spawn_tree_blocks", 0)
         if tree_blocks < tree_min:
             fail(f"spawn tree_blocks={tree_blocks} < {tree_min}")
+
+    ground_log_max = thresholds.get("spawn_ground_logs_max")
+    if ground_log_max is not None:
+        ground_logs = metrics.get("spawn_ground_logs", 0)
+        if ground_logs > ground_log_max:
+            fail(f"spawn ground_logs={ground_logs} > {ground_log_max}")
+
+    fire_max = thresholds.get("spawn_fire_blocks_max")
+    if fire_max is not None:
+        fire_blocks = metrics.get("spawn_fire_blocks", 0)
+        if fire_blocks > fire_max:
+            fail(f"spawn fire_blocks={fire_blocks} > {fire_max}")
+
+    micro_pit_max = thresholds.get("micro_pit_pct_max")
+    if micro_pit_max is not None:
+        micro_pit_pct = metrics.get("micro_pit_pct", 0.0)
+        if micro_pit_pct > micro_pit_max:
+            fail(f"micro_pit_pct={micro_pit_pct:.2f}% > {micro_pit_max}%")
 
     return failures

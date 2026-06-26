@@ -86,6 +86,22 @@ bool PrefabRequiresNearWater(const std::string &prefabName)
   return prefabName.rfind("reeds_", 0) == 0;
 }
 
+bool PrefabRequiresGrassSurface(const std::string &prefabName)
+{
+  return prefabName == "campfire_ring" ||
+         prefabName.rfind("deco_log_", 0) == 0;
+}
+
+bool IsGrassLandSurface(const WorldGenContext &ctx, int x, int z, int surfaceY)
+{
+  if (ctx.Grass == BLOCK_AIR)
+  {
+    return false;
+  }
+  return ctx.World.GetBlock(glm::ivec3(x, surfaceY, z)) == ctx.Grass &&
+         ctx.World.IsAir(glm::ivec3(x, surfaceY + 1, z));
+}
+
 bool PrefabRequiresWaterSurface(const std::string &prefabName)
 {
   return prefabName.rfind("lily_pad", 0) == 0;
@@ -457,6 +473,11 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
+  if (PrefabRequiresGrassSurface(chosen->PrefabName) &&
+      !IsGrassLandSurface(ctx, x, z, surfaceY))
+  {
+    return false;
+  }
   return PlacePrefabAt(ctx, chosen->PrefabName, anchor, surfaceY);
 }
 
@@ -699,7 +720,7 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
   const uint32_t Seed = ctx.Settings.Seed;
-  if (FeatureHash(x, z, Seed + 12007) % 512 != 0)
+  if (FeatureHash(x, z, Seed + 12007) % 4096 != 0)
   {
     return false;
   }

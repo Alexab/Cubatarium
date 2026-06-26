@@ -143,6 +143,9 @@ def main() -> int:
             f"seed {seed}: grass={spawn.get('grass', 0):.1f}% "
             f"stone={spawn.get('stone', 0):.1f}% "
             f"trees={metrics.get('spawn_tree_blocks', 0)} "
+            f"logs={metrics.get('spawn_ground_logs', 0)} "
+            f"fire={metrics.get('spawn_fire_blocks', 0)} "
+            f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
             f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}%"
         )
 
