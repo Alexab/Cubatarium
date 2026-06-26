@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <string>
 #include <unordered_map>
@@ -83,6 +84,7 @@ struct WorldGenPackPipeline
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  std::vector<WorldGenStageId> StageOrder;
 };
 
 struct WorldGenPack

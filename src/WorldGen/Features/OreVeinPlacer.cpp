@@ -14,7 +14,7 @@ namespace
 bool IsStoneLike(WorldGenContext &ctx, const glm::ivec3 &pos)
 {
   const BlockId id = ctx.World.GetBlock(pos);
-  return id == ctx.Stone || id == ctx.Gravel || id == ctx.Dirt;
+  return id == ctx.Blocks.Stone || id == ctx.Blocks.Gravel || id == ctx.Blocks.Dirt;
 }
 
 bool HasAdjacentAir(const WorldGenContext &ctx, const glm::ivec3 &pos)
@@ -40,7 +40,7 @@ void FillOreVeins(WorldGenContext &ctx, int x, int z, int surfaceY, uint32_t see
   {
     return;
   }
-  if (ctx.OreCoal == BLOCK_AIR && ctx.OreIron == BLOCK_AIR)
+  if (ctx.Blocks.OreCoal == BLOCK_AIR && ctx.Blocks.OreIron == BLOCK_AIR)
   {
     return;
   }
@@ -63,18 +63,18 @@ void FillOreVeins(WorldGenContext &ctx, int x, int z, int surfaceY, uint32_t see
     }
 
     const float coalY = TriangularYFactor(y, 8, 42, 80);
-    if (ctx.OreCoal != BLOCK_AIR && y < surfaceY - 5 &&
+    if (ctx.Blocks.OreCoal != BLOCK_AIR && y < surfaceY - 5 &&
         n01 * coalY > 1.0f - 0.12f * density)
     {
-      ctx.World.SetBlock(pos, ctx.OreCoal);
+      ctx.World.SetBlock(pos, ctx.Blocks.OreCoal);
       continue;
     }
 
     const float ironY = TriangularYFactor(y, 4, 24, 56);
-    if (ctx.OreIron != BLOCK_AIR && y < ctx.Settings.SeaLevel &&
+    if (ctx.Blocks.OreIron != BLOCK_AIR && y < ctx.Settings.SeaLevel &&
         n01 * ironY > 1.0f - 0.08f * density && (y + seed) % 3 == 0)
     {
-      ctx.World.SetBlock(pos, ctx.OreIron);
+      ctx.World.SetBlock(pos, ctx.Blocks.OreIron);
     }
   }
   ctx.AccumulateDirtyColumn(minY, maxY);

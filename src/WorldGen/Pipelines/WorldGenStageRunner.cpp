@@ -1,10 +1,14 @@
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
+#include "WorldGen/Features/BuiltinWorldGenFeatures.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <unordered_map>
 
 namespace cutum
 {
@@ -19,61 +23,156 @@ void RunTerrainStage(UComposableWorldGenerator &generator,
                     rule);
 }
 
+namespace
+{
+
+struct PostTerrainState
+{
+  bool placed_tree{false};
+};
+
+using PostTerrainStageFn = void (*)(UComposableWorldGenerator &,
+                                    const ColumnSampleContext &, int, int,
+                                    PostTerrainState &);
+
+void RunRavinesStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x,
+                     int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  CarveColumnRavines(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                     ctx.Settings.Ravines);
+}
+
+void RunCavesStage(UComposableWorldGenerator &generator,
+                   const ColumnSampleContext &sample, int world_x, int world_z,
+                   PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  CarveColumnCaves(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                   ctx.Settings.Caves);
+}
+
+void RunFluidsStage(UComposableWorldGenerator &generator,
+                    const ColumnSampleContext &sample, int world_x, int world_z,
+                    PostTerrainState &)
+{
+  FillFluidColumn(generator.GetContext(), world_x, world_z, sample.SurfaceY);
+}
+
+void RunOresStage(UComposableWorldGenerator &generator,
+                  const ColumnSampleContext &sample, int world_x, int world_z,
+                  PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  FillOreVeins(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+               ctx.Settings.Tuning.oreDensity);
+}
+
+void RunVegetationStage(UComposableWorldGenerator &generator,
+                        const ColumnSampleContext &sample, int world_x,
+                        int world_z, PostTerrainState &state)
+{
+  state.placed_tree = TryPlaceVegetationFeatures(
+      generator.GetContext(), world_x, world_z, sample.SurfaceY,
+      sample.DominantBiome);
+}
+
+void RunGroundCoverStage(UComposableWorldGenerator &generator,
+                         const ColumnSampleContext &sample, int world_x,
+                         int world_z, PostTerrainState &state)
+{
+  TryPlaceGroundCoverFeatures(generator.GetContext(), world_x, world_z,
+                              sample.SurfaceY, sample.SurfaceBiome,
+                              state.placed_tree);
+}
+
+void RunDecorationStage(UComposableWorldGenerator &generator,
+                        const ColumnSampleContext &sample, int world_x,
+                        int world_z, PostTerrainState &)
+{
+  TryPlaceDecorationFeatures(generator.GetContext(), world_x, world_z,
+                             sample.SurfaceY, sample.DominantBiome);
+}
+
+void RunStructuresStage(UComposableWorldGenerator &generator,
+                        const ColumnSampleContext &sample, int world_x,
+                        int world_z, PostTerrainState &)
+{
+  TryPlaceStructureFeatures(generator.GetContext(), world_x, world_z,
+                            sample.SurfaceY, sample.DominantBiome);
+}
+
+void RunBuiltinStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x, int world_z,
+                     PostTerrainState &, WorldGenStageId stage_id)
+{
+  if (const IBuiltinWorldGenFeature *feature =
+          BuiltinWorldGenFeatureFor(stage_id))
+  {
+    feature->TryPlace(generator.GetContext(), sample, world_x, world_z);
+  }
+}
+
+const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
+{
+  static const std::unordered_map<WorldGenStageId, PostTerrainStageFn> map = {
+      {WorldGenStageId::Ravines, RunRavinesStage},
+      {WorldGenStageId::Caves, RunCavesStage},
+      {WorldGenStageId::Fluids, RunFluidsStage},
+      {WorldGenStageId::Ores, RunOresStage},
+      {WorldGenStageId::Vegetation, RunVegetationStage},
+      {WorldGenStageId::GroundCover, RunGroundCoverStage},
+      {WorldGenStageId::Decoration, RunDecorationStage},
+      {WorldGenStageId::Structures, RunStructuresStage},
+  };
+  return map;
+}
+
+void RunStage(UComposableWorldGenerator &generator,
+              const ColumnSampleContext &sample, int world_x, int world_z,
+              PostTerrainState &state, WorldGenStageId stage_id)
+{
+  if (BuiltinWorldGenFeatureFor(stage_id))
+  {
+    RunBuiltinStage(generator, sample, world_x, world_z, state, stage_id);
+    return;
+  }
+  const auto &map = StageFnMap();
+  const auto it = map.find(stage_id);
+  if (it != map.end())
+  {
+    it->second(generator, sample, world_x, world_z, state);
+  }
+}
+
+const std::vector<WorldGenStageId> &ResolvedStageOrder()
+{
+  const WorldGenPackPipeline &pipeline = UWorldGenPack::Get().Pipeline;
+  if (pipeline.Loaded && !pipeline.StageOrder.empty())
+  {
+    return pipeline.StageOrder;
+  }
+  static const std::vector<WorldGenStageId> kDefault =
+      DefaultPostTerrainStageOrder();
+  return kDefault;
+}
+
+} // namespace
+
 void RunPostTerrainStages(UComposableWorldGenerator &generator,
                           const ColumnSampleContext &sample, int world_x,
                           int world_z)
 {
-  WorldGenContext &ctx = generator.GetContext();
-  const ComposableWorldGenConfig &config = generator.GetConfig();
-  const int surface_y = sample.SurfaceY;
-  const BiomeId biome = sample.DominantBiome;
-  const BiomeId ground_cover_biome = sample.SurfaceBiome;
-
-  if (config.Ravines && ctx.Settings.Ravines.enabled)
+  const WorldGenStageMask &mask = generator.GetStageMask();
+  PostTerrainState state;
+  for (WorldGenStageId stage_id : ResolvedStageOrder())
   {
-    CarveColumnRavines(ctx, world_x, world_z, surface_y, ctx.Settings.Seed,
-                       ctx.Settings.Ravines);
-  }
-  if (config.Caves && ctx.Settings.EnableCaves)
-  {
-    CarveColumnCaves(ctx, world_x, world_z, surface_y, ctx.Settings.Seed,
-                     ctx.Settings.Caves);
-  }
-  if (config.Fluids)
-  {
-    FillFluidColumn(ctx, world_x, world_z, surface_y);
-  }
-  if (config.Ores && ctx.Settings.EnableOres)
-  {
-    FillOreVeins(ctx, world_x, world_z, surface_y, ctx.Settings.Seed,
-                 ctx.Settings.Tuning.oreDensity);
-  }
-  bool placed_tree = false;
-  if (config.Vegetation && ctx.Settings.EnableTrees)
-  {
-    placed_tree =
-        TryPlaceVegetationFeatures(ctx, world_x, world_z, surface_y, biome);
-  }
-  if (config.GroundCover && ctx.Settings.EnableGroundCover)
-  {
-    TryPlaceGroundCoverFeatures(ctx, world_x, world_z, surface_y,
-                                ground_cover_biome, placed_tree);
-  }
-  if (config.Decoration)
-  {
-    TryPlaceDecorationFeatures(ctx, world_x, world_z, surface_y, biome);
-  }
-  if (config.Structures)
-  {
-    TryPlaceStructureFeatures(ctx, world_x, world_z, surface_y, biome);
-  }
-  if (config.LavaPools)
-  {
-    TryPlaceLavaPool(ctx, world_x, world_z, surface_y, biome);
-  }
-  if (config.FirePatch)
-  {
-    TryPlaceFirePatch(ctx, world_x, world_z, surface_y, biome, ctx.Grass);
+    if (!mask.IsEnabled(stage_id))
+    {
+      continue;
+    }
+    RunStage(generator, sample, world_x, world_z, state, stage_id);
   }
 }
 

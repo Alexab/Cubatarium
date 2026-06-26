@@ -1,4 +1,5 @@
 #include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -85,6 +86,16 @@ bool ParseRuleArray(const nlohmann::json &arr,
     rule.ChancePerColumn = item.value("chance_per_column", 0);
     rule.SeedOffset = item.value("seed_offset", 0);
     rule.PlacementYOffset = item.value("placement_y_offset", 0);
+    if (item.contains("surface_constraint") && item["surface_constraint"].is_string())
+    {
+      rule.Surface.Kind = SurfaceConstraintKindFromString(
+          item["surface_constraint"].get<std::string>());
+    }
+    if (item.contains("near_water_radius"))
+    {
+      rule.Surface.NearWaterRadius =
+          std::max(1, item["near_water_radius"].get<int>());
+    }
     ParseBiomeArray(item, rule);
     ParseSubBiomeArray(item, rule);
     if (rule.Biomes.empty())
@@ -98,66 +109,36 @@ bool ParseRuleArray(const nlohmann::json &arr,
 
 } // namespace
 
-BiomeId BiomeIdFromString(const std::string &name)
+SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
 {
-  if (name == "forest")
+  if (name == "grass")
   {
-    return BiomeId::Forest;
+    return SurfaceConstraintKind::Grass;
   }
-  if (name == "desert")
+  if (name == "near_water")
   {
-    return BiomeId::Desert;
+    return SurfaceConstraintKind::NearWater;
   }
-  if (name == "hills")
+  if (name == "water_surface")
   {
-    return BiomeId::Hills;
+    return SurfaceConstraintKind::WaterSurface;
   }
-  if (name == "tundra")
-  {
-    return BiomeId::Tundra;
-  }
-  if (name == "savanna")
-  {
-    return BiomeId::Savanna;
-  }
-  if (name == "foothills")
-  {
-    return BiomeId::Foothills;
-  }
-  if (name == "scrubland")
-  {
-    return BiomeId::Scrubland;
-  }
-  if (name == "cold_steppe")
-  {
-    return BiomeId::ColdSteppe;
-  }
-  return BiomeId::Plains;
+  return SurfaceConstraintKind::AnyLand;
 }
 
-const char *BiomeIdToString(BiomeId biome)
+const char *SurfaceConstraintKindToString(SurfaceConstraintKind kind)
 {
-  switch (biome)
+  switch (kind)
   {
-  case BiomeId::Forest:
-    return "forest";
-  case BiomeId::Desert:
-    return "desert";
-  case BiomeId::Hills:
-    return "hills";
-  case BiomeId::Tundra:
-    return "tundra";
-  case BiomeId::Savanna:
-    return "savanna";
-  case BiomeId::Foothills:
-    return "foothills";
-  case BiomeId::Scrubland:
-    return "scrubland";
-  case BiomeId::ColdSteppe:
-    return "cold_steppe";
-  case BiomeId::Plains:
+  case SurfaceConstraintKind::Grass:
+    return "grass";
+  case SurfaceConstraintKind::NearWater:
+    return "near_water";
+  case SurfaceConstraintKind::WaterSurface:
+    return "water_surface";
+  case SurfaceConstraintKind::AnyLand:
   default:
-    return "plains";
+    return "any_land";
   }
 }
 

@@ -8,8 +8,6 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
-#include "WorldGen/Core/WorldGenContext.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -560,16 +558,6 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
       if (world.WorldGen)
       {
         world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
-      }
-      if (world.ProceduralTemplate.FillFire && world.PrefabLibrary &&
-          world.BlockRegistry)
-      {
-        WorldGenContext ctx{world.BlockWorld, *world.BlockRegistry,
-                            world.ProceduralTemplate, world.PrefabLibrary};
-        ctx.WorldgenOwnerPackId = world.WorldgenOwnerPackId;
-        ctx.ResolveBlockIds();
-        const int surfaceY = world.WorldGen->SurfaceYAt(8, 8);
-        PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8), surfaceY);
       }
       CurrentPhase = Phase::PostCreate;
     }

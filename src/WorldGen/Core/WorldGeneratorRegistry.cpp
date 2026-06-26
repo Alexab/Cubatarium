@@ -1,6 +1,6 @@
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
-#include "WorldGen/Pipelines/ComposableWorldGenPipeline.h"
 #include <array>
 
 namespace cutum
@@ -68,7 +68,6 @@ void ApplyBetaRetroDefaults(ProceduralSettings &s)
 std::unique_ptr<IWorldGenPipeline> MakeComposable(WorldGenContext ctx,
                                                   ComposableWorldGenConfig config)
 {
-  config = ApplyPackPipelineMask(config);
   return std::make_unique<UComposableWorldGenerator>(ctx, config);
 }
 

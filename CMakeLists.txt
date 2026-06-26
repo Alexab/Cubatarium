@@ -142,6 +142,10 @@ set(SOURCES
     src/WorldGen/Core/WorldGenContentReload.cpp
     src/World/Prefabs/PrefabUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/BlockWorldColumnWriter.cpp
+    src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/IWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
@@ -149,15 +153,18 @@ set(SOURCES
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
-    src/WorldGen/Pipelines/ComposableWorldGenPipeline.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
+    src/WorldGen/Pipelines/ColumnGenerationService.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/PrefabFeatureConfig.cpp
+    src/WorldGen/Features/PrefabPlacementConstraints.cpp
     src/WorldGen/Features/PrefabFeaturePlacer.cpp
+    src/WorldGen/Features/BuiltinWorldGenFeatures.cpp
     src/WorldGen/Core/PipelineChunkPopulator.cpp
     src/WorldGen/Core/ProceduralWorldGenFactory.cpp
     src/World/Raycast/BlockRaycast.cpp
@@ -277,6 +284,17 @@ set(HEADERS
     src/World/Core/BlockWorld.h
     src/WorldGen/Core/WorldGeneratorDescriptor.h
     src/WorldGen/Core/WorldGenPack.h
+    src/WorldGen/Core/WorldGenStageId.h
+    src/WorldGen/Core/WorldGenStageMask.h
+    src/WorldGen/Core/ColumnHash.h
+    src/WorldGen/Core/IColumnWriter.h
+    src/WorldGen/Core/BlockWorldColumnWriter.h
+    src/WorldGen/Core/WorldGenBlockResolver.h
+    src/WorldGen/Core/ColumnWriteContext.h
+    src/WorldGen/Pipelines/ColumnGenerationService.h
+    src/WorldGen/Features/PrefabPlacementConstraints.h
+    src/WorldGen/Features/BuiltinWorldGenFeatures.h
+    src/WorldGen/Sampling/BiomeRegistry.h
     src/WorldGen/Pipelines/ComposableWorldGenerator.h
     src/WorldGen/Core/Noise.h
     src/WorldGen/Core/ProceduralSettings.h

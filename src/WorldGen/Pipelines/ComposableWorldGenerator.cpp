@@ -1,5 +1,7 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
+#include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
@@ -15,7 +17,9 @@ namespace cutum
 // structures -> lava -> fire.
 UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
                                                    ComposableWorldGenConfig config)
-    : IWorldGenPipeline(ctx), Config(config)
+    : IWorldGenPipeline(ctx), Config(ApplyPackPipelineMask(config)),
+      StageMask(BuildWorldGenStageMask(config, ctx.Settings,
+                                       UWorldGenPack::Get().Pipeline))
 {
   if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
   {
@@ -127,7 +131,7 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
     int world_x, int world_z, const ColumnSampleContext &sample) const
 {
   ColumnLayerRule rule;
-  rule.fillerBlock = Ctx.Stone;
+  rule.fillerBlock = Ctx.Blocks.Stone;
 
   if (Config.UseBiomeSurface && BiomeSampler)
   {
@@ -138,16 +142,16 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
     return rule;
   }
 
-  rule.surfaceBlock = Ctx.Grass;
-  rule.subsurfaceBlock = Ctx.Dirt;
+  rule.surfaceBlock = Ctx.Blocks.Grass;
+  rule.subsurfaceBlock = Ctx.Blocks.Dirt;
   if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap &&
       Config.HeightPreset == HeightPreset::Mountains && HeightSampler)
   {
     const int stone_above = HeightSampler->params().stoneSurfaceAboveY;
     if (stone_above > 0 && sample.SurfaceY >= stone_above)
     {
-      rule.surfaceBlock = Ctx.Stone;
-      rule.subsurfaceBlock = Ctx.Stone;
+      rule.surfaceBlock = Ctx.Blocks.Stone;
+      rule.subsurfaceBlock = Ctx.Blocks.Stone;
     }
   }
   return rule;
@@ -172,24 +176,7 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRule(
 
 void UComposableWorldGenerator::GenerateColumn(int world_x, int world_z)
 {
-  Ctx.ResetColumnDirty(world_x, world_z);
-  if (Config.TerrainMode == ComposableTerrainMode::Flat)
-  {
-    FillFlatColumn(Ctx, world_x, world_z);
-    Ctx.FlushColumnDirty();
-    return;
-  }
-  if (Config.TerrainMode == ComposableTerrainMode::LegacyHash)
-  {
-    FillLegacyHashColumn(Ctx, world_x, world_z);
-    Ctx.FlushColumnDirty();
-    return;
-  }
-
-  const ColumnSampleContext sample = BuildColumnSample(world_x, world_z);
-  RunTerrainStage(*this, sample, world_x, world_z);
-  RunPostTerrainStages(*this, sample, world_x, world_z);
-  Ctx.FlushColumnDirty();
+  UColumnGenerationService::GenerateColumn(*this, world_x, world_z);
 }
 
 int UComposableWorldGenerator::SurfaceYAt(int world_x, int world_z) const

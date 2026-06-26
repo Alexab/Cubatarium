@@ -1,4 +1,6 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "ThirdParty/stb_image.h"
 #include <algorithm>
 #include <filesystem>
@@ -236,7 +238,13 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
     {
       if (stage.is_string())
       {
-        ParsePipelineStage(stage.get<std::string>(), pack.Pipeline);
+        const std::string stage_name = stage.get<std::string>();
+        ParsePipelineStage(stage_name, pack.Pipeline);
+        if (const std::optional<WorldGenStageId> stage_id =
+                WorldGenStageIdFromPipelineString(stage_name))
+        {
+          pack.Pipeline.StageOrder.push_back(*stage_id);
+        }
       }
     }
   }
@@ -460,7 +468,13 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
       {
         if (stage.is_string())
         {
-          ParsePipelineStage(stage.get<std::string>(), ActivePack.Pipeline);
+          const std::string stage_name = stage.get<std::string>();
+          ParsePipelineStage(stage_name, ActivePack.Pipeline);
+          if (const std::optional<WorldGenStageId> stage_id =
+                  WorldGenStageIdFromPipelineString(stage_name))
+          {
+            ActivePack.Pipeline.StageOrder.push_back(*stage_id);
+          }
         }
       }
     }
@@ -515,6 +529,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   std::cout << "WorldGenPack: loaded '" << ActivePack.Id << "' with "
             << ActivePack.Biomes.size() << " biome profile(s)"
             << (ActivePack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
+  GetActiveBiomeRegistry().LoadFromPack(ActivePack);
   return true;
 }
 

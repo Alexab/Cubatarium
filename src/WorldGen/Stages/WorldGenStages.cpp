@@ -68,7 +68,7 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
     BlockId Id = rule.fillerBlock;
     if (y <= bedrockTop)
     {
-      Id = ctx.Bedrock;
+      Id = ctx.Blocks.Bedrock;
     }
     else if (y < surfaceY - rule.dirtDepth - rule.stoneDepthBelowDirt)
     {
@@ -94,7 +94,7 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
 {
-  if (!ctx.Settings.FillWater || ctx.Water == BLOCK_AIR)
+  if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
     return;
   }
@@ -108,7 +108,7 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
     const glm::ivec3 pos(x, y, z);
     if (ctx.World.GetBlock(pos) == BLOCK_AIR)
     {
-      ctx.World.SetBlock(pos, ctx.Water);
+      ctx.World.SetBlock(pos, ctx.Blocks.Water);
     }
   }
   ctx.AccumulateDirtyColumn(surfaceY, sea);
@@ -124,15 +124,15 @@ int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
 
 void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
 {
-  const BlockId bedrock = ctx.Bedrock;
-  const BlockId stone = ctx.Stone;
-  const BlockId grass = ctx.Grass;
+  const BlockId bedrock = ctx.Blocks.Bedrock;
+  const BlockId stone = ctx.Blocks.Stone;
+  const BlockId grass = ctx.Blocks.Grass;
   if (bedrock == BLOCK_AIR || stone == BLOCK_AIR || grass == BLOCK_AIR)
   {
     std::cerr << "WorldGen: missing block Types for legacy column" << std::endl;
     return;
   }
-  const BlockId dirtOrStone = ctx.Dirt != BLOCK_AIR ? ctx.Dirt : stone;
+  const BlockId dirtOrStone = ctx.Blocks.Dirt != BLOCK_AIR ? ctx.Blocks.Dirt : stone;
   const int naturalY = LegacyHashSurfaceY(x, z, ctx.Settings);
   const int surfaceY =
       AdjustSurfaceYForSpawnIsland(x, z, naturalY, ctx.Settings);
@@ -165,15 +165,15 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
 void FillFlatColumn(WorldGenContext &ctx, int x, int z)
 {
   const int surfaceY = ctx.Settings.FlatSurfaceY;
-  if (ctx.Bedrock == BLOCK_AIR || ctx.Stone == BLOCK_AIR ||
-      ctx.Grass == BLOCK_AIR)
+  if (ctx.Blocks.Bedrock == BLOCK_AIR || ctx.Blocks.Stone == BLOCK_AIR ||
+      ctx.Blocks.Grass == BLOCK_AIR)
   {
     return;
   }
-  ctx.World.SetBlock(glm::ivec3(x, 0, z), ctx.Bedrock);
-  ctx.World.SetBlock(glm::ivec3(x, 1, z), ctx.Stone);
-  ctx.World.SetBlock(glm::ivec3(x, 2, z), ctx.Stone);
-  ctx.World.SetBlock(glm::ivec3(x, surfaceY, z), ctx.Grass);
+  ctx.World.SetBlock(glm::ivec3(x, 0, z), ctx.Blocks.Bedrock);
+  ctx.World.SetBlock(glm::ivec3(x, 1, z), ctx.Blocks.Stone);
+  ctx.World.SetBlock(glm::ivec3(x, 2, z), ctx.Blocks.Stone);
+  ctx.World.SetBlock(glm::ivec3(x, surfaceY, z), ctx.Blocks.Grass);
   ctx.AccumulateDirtyColumn(0, surfaceY);
 }
 

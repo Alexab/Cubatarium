@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
@@ -48,6 +49,7 @@ public:
       int world_x, int world_z, const ColumnSampleContext &sample) const;
 
   const ComposableWorldGenConfig &GetConfig() const { return Config; }
+  const WorldGenStageMask &GetStageMask() const { return StageMask; }
   WorldGenContext &GetContext() { return Ctx; }
 
 private:
@@ -60,6 +62,7 @@ private:
                                    const BiomeWeightSet &weights) const;
 
   ComposableWorldGenConfig Config;
+  WorldGenStageMask StageMask;
   std::optional<UOverworldHeightSampler> HeightSampler;
   std::optional<UBiomeSampler> BiomeSampler;
   std::optional<UColumnSampleBuilder> SampleBuilder;

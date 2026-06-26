@@ -641,16 +641,6 @@ void UWorld::GenerateWorldBlocks()
   }
   SpawnPoint = WorldGen->DefaultSpawnPosition(0, 0);
 
-  if (ProceduralTemplate.FillFire && PrefabLibrary && BlockRegistry)
-  {
-    WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                        PrefabLibrary};
-    ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
-    ctx.ResolveBlockIds();
-    const int surfaceY = WorldGen->SurfaceYAt(8, 8);
-    PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8), surfaceY);
-  }
-
   RebuildBlockMesh();
 }
 

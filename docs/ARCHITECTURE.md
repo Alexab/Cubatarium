@@ -99,7 +99,7 @@ Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorR
 | `hills` / `mountains` | Noise terrain presets |
 | `beta_retro` | Overworld (BetaRetro): beta-style cliffs with biomes |
 
-`UComposableWorldGenerator` composes column stages: terrain, fluids, caves, prefab features. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
+`UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
 Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 

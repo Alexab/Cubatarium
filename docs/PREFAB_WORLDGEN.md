@@ -23,6 +23,8 @@ Player and worldgen share one `UPrefabLibrary`. Worldgen uses a subset: entries 
 
 Scatter rules place individual blocks (e.g. `rose`) via hash-derived offsets; patch prefabs remain for dense clumps.
 
+Optional `surface_constraint` per rule: `any_land` (default), `grass`, `near_water`, `water_surface`. Authoring source: `worldgen.surface_constraint` in [`tools/prefab_manifest.yaml`](../tools/prefab_manifest.yaml). Rules tuned only in JSON may set `"calibrated": true`.
+
 ## Creative vs worldgen
 
 - **Creative**: any prefab in the library; full collision via `CanPlacePrefabAt`.

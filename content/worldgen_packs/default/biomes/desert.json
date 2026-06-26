@@ -11,10 +11,12 @@
   },
   "sub_biomes": {
     "dunes": {
+      "noise_threshold": 1.0,
       "subsurface": "sandstone",
       "vegetation_weight_mul": 0.85
     },
     "scrub_desert": {
+      "noise_threshold": 0.5,
       "vegetation_weight_mul": 1.15
     }
   }

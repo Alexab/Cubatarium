@@ -17,7 +17,8 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "scrub_desert"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "tree_acacia_mapgen",
@@ -63,7 +64,8 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "dense_forest"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "tree_jungle_mapgen",
@@ -148,7 +150,8 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "dense_forest"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "cactus_large",
@@ -186,7 +189,8 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "bush_common",
@@ -220,7 +224,8 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "dry_grass_clump",
@@ -263,7 +268,8 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "woodland"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "mushroom_red_pair",
@@ -342,7 +348,9 @@
       ],
       "weight": 1,
       "seed_offset": 9201,
-      "spacing": 960
+      "spacing": 960,
+      "surface_constraint": "grass",
+      "calibrated": true
     },
     {
       "prefab": "deco_log_acacia",
@@ -352,7 +360,8 @@
       ],
       "weight": 1,
       "seed_offset": 4304,
-      "spacing": 90
+      "spacing": 90,
+      "surface_constraint": "grass"
     },
     {
       "prefab": "deco_log_apple",
@@ -361,7 +370,8 @@
       ],
       "weight": 1,
       "seed_offset": 4301,
-      "spacing": 120
+      "spacing": 120,
+      "surface_constraint": "grass"
     },
     {
       "prefab": "deco_log_apple",
@@ -374,7 +384,9 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "surface_constraint": "grass",
+      "calibrated": true
     },
     {
       "prefab": "deco_log_aspen",
@@ -383,7 +395,8 @@
       ],
       "weight": 1,
       "seed_offset": 4305,
-      "spacing": 88
+      "spacing": 88,
+      "surface_constraint": "grass"
     },
     {
       "prefab": "deco_log_aspen",
@@ -396,7 +409,9 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "surface_constraint": "grass",
+      "calibrated": true
     },
     {
       "prefab": "deco_log_jungle",
@@ -409,7 +424,9 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "surface_constraint": "grass",
+      "calibrated": true
     },
     {
       "prefab": "deco_log_pine",
@@ -418,7 +435,8 @@
       ],
       "weight": 1,
       "seed_offset": 4302,
-      "spacing": 85
+      "spacing": 85,
+      "surface_constraint": "grass"
     },
     {
       "prefab": "deco_log_pine",
@@ -431,7 +449,9 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "surface_constraint": "grass",
+      "calibrated": true
     },
     {
       "prefab": "farm_plot_small",
@@ -452,7 +472,8 @@
       "weight": 1,
       "seed_offset": 4210,
       "spacing": 48,
-      "placement_y_offset": 0
+      "placement_y_offset": 0,
+      "surface_constraint": "water_surface"
     },
     {
       "prefab": "obelisk_stone",
@@ -486,7 +507,8 @@
       "spacing": 100,
       "sub_biomes": [
         "dunes"
-      ]
+      ],
+      "calibrated": true
     },
     {
       "prefab": "reeds_on_dirt",
@@ -497,7 +519,8 @@
       "weight": 1,
       "seed_offset": 4202,
       "spacing": 72,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "surface_constraint": "near_water"
     },
     {
       "prefab": "reeds_on_dry_dirt",
@@ -507,7 +530,8 @@
       "weight": 1,
       "seed_offset": 4203,
       "spacing": 80,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "surface_constraint": "near_water"
     }
   ],
   "structures": [

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -23,6 +24,20 @@ enum class PrefabPlacementMode
   ScatterBlocks,
 };
 
+enum class SurfaceConstraintKind
+{
+  AnyLand,
+  Grass,
+  NearWater,
+  WaterSurface,
+};
+
+struct SurfaceConstraint
+{
+  SurfaceConstraintKind Kind{SurfaceConstraintKind::AnyLand};
+  int NearWaterRadius{5};
+};
+
 struct ScatterBlockSpec
 {
   std::string BlockName;
@@ -43,6 +58,7 @@ struct PrefabFeatureRule
   std::vector<SubBiomeId> SubBiomes;
   PrefabPlacementMode Mode{PrefabPlacementMode::Prefab};
   ScatterBlockSpec Scatter;
+  SurfaceConstraint Surface;
 };
 
 struct PrefabFeatureConfig
@@ -68,9 +84,9 @@ private:
   static bool Loaded;
 };
 
-BiomeId BiomeIdFromString(const std::string &name);
-const char *BiomeIdToString(BiomeId biome);
 SubBiomeId SubBiomeIdFromString(const std::string &name);
 const char *SubBiomeIdToString(SubBiomeId subBiome);
+SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name);
+const char *SurfaceConstraintKindToString(SurfaceConstraintKind kind);
 
 } // namespace cutum

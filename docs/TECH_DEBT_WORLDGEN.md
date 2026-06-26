@@ -24,7 +24,8 @@
 | 4 | Biome JSON: `palette`, `sub_biomes` (веса + subsurface) | done |
 | 5 | `pack.json` optional `biome_blend_radius` default | done |
 | 6 | Убрать `pipeline.yaml`, `prefab_features.yaml` из content | done |
-| 7 | Валидация prefabs / prefab_features в CI (`smoke_resource_packs.py`) | done |
+| 7 | Валидация prefabs / prefab_features в CI (`smoke_resource_packs.py`, `--strict`) | done |
+| 8 | `WorldGenStageMask` + `UColumnGenerationService` + `UBiomeRegistry` + `surface_constraint` | done |
 
 ## Ограничения hot-reload
 
@@ -33,7 +34,8 @@
 ## Дальнейшие улучшения (не блокеры)
 
 - Выбор pack из выпадающего списка с описанием (сканирование `pack.json`)
-- ~~Полный перенос `SubBiomeFor` noise-порогов в JSON~~ — `noise_threshold` в sub_biomes (done)
+- ~~Полный перенос `SubBiomeFor` noise-порогов в JSON~~ — pack-driven `noise_threshold` (done)
+- ~~Единая маска стадий / column service / biome registry~~ — `WorldGenStageMask`, `UColumnGenerationService`, `UBiomeRegistry` (done)
 - Доп. UX: пресеты генераторов (`ApplyWorldGenPreset`: realistic / balanced / sparse_structures)
 - Debug overlay биомов/climate в рендере (заготовка: `worldgen debug on` в консоли)
 - ~~Scatter/prefab на воде~~ — `CanPlacePlantAt` / локальный `FindTopSolidSurfaceY` (done)

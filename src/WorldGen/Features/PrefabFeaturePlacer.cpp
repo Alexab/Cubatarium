@@ -1,4 +1,6 @@
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Features/PrefabPlacementConstraints.h"
+#include "WorldGen/Core/ColumnHash.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -19,7 +21,7 @@ namespace
 
 uint32_t FeatureHash(int x, int z, uint32_t Seed)
 {
-  return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ Seed;
+  return ColumnHash(x, z, Seed);
 }
 
 bool BiomeMatches(BiomeId biome, const std::vector<BiomeId> &allowed)
@@ -79,81 +81,6 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
     return 0;
   }
   return prefab->PlacementYOffset;
-}
-
-bool PrefabRequiresNearWater(const std::string &prefabName)
-{
-  return prefabName.rfind("reeds_", 0) == 0;
-}
-
-bool PrefabRequiresGrassSurface(const std::string &prefabName)
-{
-  return prefabName == "campfire_ring" ||
-         prefabName.rfind("deco_log_", 0) == 0;
-}
-
-bool IsGrassLandSurface(const WorldGenContext &ctx, int x, int z, int surfaceY)
-{
-  if (ctx.Grass == BLOCK_AIR)
-  {
-    return false;
-  }
-  return ctx.World.GetBlock(glm::ivec3(x, surfaceY, z)) == ctx.Grass &&
-         ctx.World.IsAir(glm::ivec3(x, surfaceY + 1, z));
-}
-
-bool PrefabRequiresWaterSurface(const std::string &prefabName)
-{
-  return prefabName.rfind("lily_pad", 0) == 0;
-}
-
-bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z, int &anchorY)
-{
-  if (ctx.Water == BLOCK_AIR)
-  {
-    return false;
-  }
-  const int maxY =
-      std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 1);
-  for (int y = maxY; y >= 1; --y)
-  {
-    if (ctx.World.GetBlock(glm::ivec3(x, y, z)) != ctx.Water)
-    {
-      continue;
-    }
-    if (!ctx.World.IsAir(glm::ivec3(x, y + 1, z)))
-    {
-      continue;
-    }
-    anchorY = y + 1;
-    return true;
-  }
-  return false;
-}
-
-bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
-                            glm::ivec3 &anchorOut)
-{
-  for (int radius = 0; radius <= 3; ++radius)
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      for (int dx = -radius; dx <= radius; ++dx)
-      {
-        if (radius > 0 && std::max(std::abs(dx), std::abs(dz)) != radius)
-        {
-          continue;
-        }
-        int anchorY = 0;
-        if (TryWaterSurfaceAnchorAt(ctx, x + dx, z + dz, anchorY))
-        {
-          anchorOut = glm::ivec3(x + dx, anchorY, z + dz);
-          return true;
-        }
-      }
-    }
-  }
-  return false;
 }
 
 bool PlacePrefabAtWaterSurface(WorldGenContext &ctx, const std::string &prefabName,
@@ -254,40 +181,16 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   return true;
 }
 
-bool IsNearSurfaceWater(const WorldGenContext &ctx, int x, int z, int surfaceY,
-                        int radius = 5)
-{
-  if (ctx.Water == BLOCK_AIR)
-  {
-    return false;
-  }
-  for (int dz = -radius; dz <= radius; ++dz)
-  {
-    for (int dx = -radius; dx <= radius; ++dx)
-    {
-      for (int dy = -1; dy <= 1; ++dy)
-      {
-        if (ctx.World.GetBlock(glm::ivec3(x + dx, surfaceY + dy, z + dz)) ==
-            ctx.Water)
-        {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-bool SubBiomeMatches(SubBiomeId subBiome,
+bool SubBiomeMatches(SubBiomeId sub_biome,
                      const std::vector<SubBiomeId> &allowed)
 {
   if (allowed.empty())
   {
     return true;
   }
-  for (SubBiomeId allowedSub : allowed)
+  for (SubBiomeId allowed_sub : allowed)
   {
-    if (allowedSub == subBiome)
+    if (allowed_sub == sub_biome)
     {
       return true;
     }
@@ -305,40 +208,6 @@ float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
       packDef->SubBiomes.count(SubBiomeIdToString(subBiome)) > 0)
   {
     return UWorldGenPack::SubBiomePoolWeightMultiplier(biomeId, subBiome, pool);
-  }
-  if (pool == PrefabFeaturePool::Structures)
-  {
-    return 1.0f;
-  }
-  if (pool == PrefabFeaturePool::GroundCover)
-  {
-    return 1.0f;
-  }
-  if (biome == BiomeId::Forest)
-  {
-    switch (subBiome)
-    {
-    case SubBiomeId::DenseForest:
-      return 1.35f;
-    case SubBiomeId::SparseForest:
-      return 0.75f;
-    case SubBiomeId::Woodland:
-      return 1.1f;
-    default:
-      return 1.0f;
-    }
-  }
-  if (biome == BiomeId::Desert)
-  {
-    switch (subBiome)
-    {
-    case SubBiomeId::Dunes:
-      return 0.85f;
-    case SubBiomeId::ScrubDesert:
-      return 1.15f;
-    default:
-      return 1.0f;
-    }
   }
   return 1.0f;
 }
@@ -450,31 +319,27 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     return TryPlaceScatterBlocks(ctx, x, z, surfaceY, *chosen);
   }
-  if (PrefabRequiresWaterSurface(chosen->PrefabName))
+  if (chosen->Surface.Kind == SurfaceConstraintKind::WaterSurface)
   {
-    if (!IsNearSurfaceWater(ctx, x, z, surfaceY))
+    if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->PrefabName, x,
+                                    z, surfaceY))
     {
       return false;
     }
-    glm::ivec3 waterAnchor;
-    if (!FindWaterSurfaceAnchor(ctx, x, z, waterAnchor))
+    glm::ivec3 water_anchor;
+    if (!FindWaterSurfaceAnchorForPlacement(ctx, x, z, water_anchor))
     {
       return false;
     }
-    return PlacePrefabAtWaterSurface(ctx, chosen->PrefabName, waterAnchor);
+    return PlacePrefabAtWaterSurface(ctx, chosen->PrefabName, water_anchor);
   }
   const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
-  if (PrefabRequiresNearWater(chosen->PrefabName) &&
-      !IsNearSurfaceWater(ctx, x, z, surfaceY))
+  if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->PrefabName, x, z,
+                                  surfaceY))
   {
     return false;
   }
   if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
-  {
-    return false;
-  }
-  if (PrefabRequiresGrassSurface(chosen->PrefabName) &&
-      !IsGrassLandSurface(ctx, x, z, surfaceY))
   {
     return false;
   }
@@ -669,7 +534,7 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome)
 {
-  if (!ctx.Settings.FillLava || ctx.Lava == BLOCK_AIR ||
+  if (!ctx.Settings.FillLava || ctx.Blocks.Lava == BLOCK_AIR ||
       biome != BiomeId::Hills)
   {
     return false;
@@ -686,7 +551,7 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       const glm::ivec3 pos(x + dx, surfaceY + 1, z + dz);
       const BlockId below =
           ctx.World.GetBlock(glm::ivec3(x + dx, surfaceY, z + dz));
-      if (below != ctx.Stone && below != ctx.Gravel)
+      if (below != ctx.Blocks.Stone && below != ctx.Blocks.Gravel)
       {
         return false;
       }
@@ -694,7 +559,7 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       {
         return false;
       }
-      ctx.World.SetBlock(pos, ctx.Lava);
+      ctx.World.SetBlock(pos, ctx.Blocks.Lava);
     }
   }
   ctx.AccumulateDirtyColumn(surfaceY, surfaceY + 2);
@@ -704,7 +569,7 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
                        BiomeId biome, BlockId grassId)
 {
-  if (!ctx.Settings.FillFire || ctx.Fire == BLOCK_AIR)
+  if (!ctx.Settings.FillFire || ctx.Blocks.Fire == BLOCK_AIR)
   {
     return false;
   }
@@ -724,7 +589,7 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
-  ctx.World.SetBlock(firePos, ctx.Fire);
+  ctx.World.SetBlock(firePos, ctx.Blocks.Fire);
   ctx.AccumulateDirtyColumn(surfaceY, surfaceY + 2);
   return true;
 }

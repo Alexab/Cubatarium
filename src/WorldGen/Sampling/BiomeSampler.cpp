@@ -1,4 +1,5 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <vector>
 
 namespace cutum
 {
@@ -22,31 +24,31 @@ BlockId ResolveSlotBlock(const WorldGenContext &ctx, const std::string &slot,
 {
   if (slot == "grass")
   {
-    return ctx.Grass;
+    return ctx.Blocks.Grass;
   }
   if (slot == "dirt")
   {
-    return ctx.Dirt;
+    return ctx.Blocks.Dirt;
   }
   if (slot == "sand")
   {
-    return ctx.Sand != BLOCK_AIR ? ctx.Sand : fallback;
+    return ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : fallback;
   }
   if (slot == "sandstone")
   {
-    return ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : fallback;
+    return ctx.Blocks.Sandstone != BLOCK_AIR ? ctx.Blocks.Sandstone : fallback;
   }
   if (slot == "gravel")
   {
-    return ctx.Gravel != BLOCK_AIR ? ctx.Gravel : fallback;
+    return ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : fallback;
   }
   if (slot == "snow")
   {
-    return ctx.Snow != BLOCK_AIR ? ctx.Snow : fallback;
+    return ctx.Blocks.Snow != BLOCK_AIR ? ctx.Blocks.Snow : fallback;
   }
   if (slot == "stone")
   {
-    return ctx.Stone;
+    return ctx.Blocks.Stone;
   }
   return fallback;
 }
@@ -74,7 +76,7 @@ BiomeSurfaceRule ApplyPackPalette(BiomeId biome, BiomeSurfaceRule rule,
 
 uint32_t BiomePickHash(int x, int z, uint32_t seed)
 {
-  return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ seed;
+  return ColumnHash(x, z, seed);
 }
 
 } // namespace
@@ -719,91 +721,58 @@ SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
       FBM2D(static_cast<float>(x) * 0.01f, static_cast<float>(z) * 0.01f,
             seed + 5500 + BiomeIndex(biome) * 17, 2, 0.5f, 2.0f);
   const float t = (n + 1.0f) * 0.5f;
-  const BiomePackDefinition *packDef =
+  const BiomePackDefinition *pack_def =
       UWorldGenPack::BiomeDefinitionFor(BiomeIdToString(biome));
-  if (packDef && biome == BiomeId::Forest)
+  if (!pack_def || pack_def->SubBiomes.empty())
   {
-    const auto sparseIt = packDef->SubBiomes.find("sparse_forest");
-    const auto denseIt = packDef->SubBiomes.find("dense_forest");
-    const float sparseT =
-        sparseIt != packDef->SubBiomes.end() && sparseIt->second.NoiseThreshold >= 0.0f
-            ? sparseIt->second.NoiseThreshold
-            : 0.33f;
-    const float denseT =
-        denseIt != packDef->SubBiomes.end() && denseIt->second.NoiseThreshold >= 0.0f
-            ? denseIt->second.NoiseThreshold
-            : 0.66f;
-    if (t < sparseT)
-    {
-      return SubBiomeId::SparseForest;
-    }
-    if (t < denseT)
-    {
-      return SubBiomeId::Woodland;
-    }
-    return SubBiomeId::DenseForest;
-  }
-  if (packDef && biome == BiomeId::Savanna)
-  {
-    const auto dryIt = packDef->SubBiomes.find("dry");
-    const auto wetIt = packDef->SubBiomes.find("wet");
-    const float dryT =
-        dryIt != packDef->SubBiomes.end() && dryIt->second.NoiseThreshold >= 0.0f
-            ? dryIt->second.NoiseThreshold
-            : 0.5f;
-    const float wetT =
-        wetIt != packDef->SubBiomes.end() && wetIt->second.NoiseThreshold >= 0.0f
-            ? wetIt->second.NoiseThreshold
-            : 0.7f;
-    if (t < dryT)
-    {
-      return SubBiomeId::SavannaDry;
-    }
-    if (t < wetT)
-    {
-      return SubBiomeId::Default;
-    }
-    return SubBiomeId::SavannaWet;
-  }
-  if (packDef && biome == BiomeId::Scrubland)
-  {
-    const auto dryIt = packDef->SubBiomes.find("scrub_dry");
-    const auto wetIt = packDef->SubBiomes.find("scrub_wet");
-    const float dryT =
-        dryIt != packDef->SubBiomes.end() && dryIt->second.NoiseThreshold >= 0.0f
-            ? dryIt->second.NoiseThreshold
-            : 0.5f;
-    const float wetT =
-        wetIt != packDef->SubBiomes.end() && wetIt->second.NoiseThreshold >= 0.0f
-            ? wetIt->second.NoiseThreshold
-            : 0.7f;
-    if (t < dryT)
-    {
-      return SubBiomeId::ScrubDry;
-    }
-    if (t < wetT)
-    {
-      return SubBiomeId::Default;
-    }
-    return SubBiomeId::ScrubWet;
-  }
-  switch (biome)
-  {
-  case BiomeId::Forest:
-    if (t < 0.33f)
-    {
-      return SubBiomeId::SparseForest;
-    }
-    if (t < 0.66f)
-    {
-      return SubBiomeId::Woodland;
-    }
-    return SubBiomeId::DenseForest;
-  case BiomeId::Desert:
-    return t < 0.5f ? SubBiomeId::ScrubDesert : SubBiomeId::Dunes;
-  default:
     return SubBiomeId::Default;
   }
+
+  struct ThresholdEntry
+  {
+    float Threshold;
+    SubBiomeId Id;
+  };
+  std::vector<ThresholdEntry> entries;
+  entries.reserve(pack_def->SubBiomes.size());
+  for (const auto &entry : pack_def->SubBiomes)
+  {
+    if (entry.second.NoiseThreshold < 0.0f)
+    {
+      continue;
+    }
+    entries.push_back(
+        {entry.second.NoiseThreshold, SubBiomeIdFromString(entry.first)});
+  }
+  if (entries.empty())
+  {
+    return SubBiomeId::Default;
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const ThresholdEntry &a, const ThresholdEntry &b)
+            { return a.Threshold < b.Threshold; });
+
+  if (entries.size() == 1)
+  {
+    return t < entries.front().Threshold ? entries.front().Id
+                                         : SubBiomeId::Default;
+  }
+  if (entries.size() == 2)
+  {
+    return t < entries.front().Threshold ? entries.front().Id : entries.back().Id;
+  }
+
+  const float low = entries.front().Threshold;
+  const float high = entries.back().Threshold;
+  if (t < low)
+  {
+    return entries.front().Id;
+  }
+  if (t < high)
+  {
+    return entries[entries.size() - 2].Id;
+  }
+  return entries.back().Id;
 }
 
 int BiomeBlendedBaseY(int x, int z, int coarseY, const BiomeWeightSet &weights,
@@ -984,38 +953,38 @@ BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,
   switch (biome)
   {
   case BiomeId::Desert:
-    rule.surface = ctx.Sand;
-    rule.subsurface = ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : ctx.Sand;
+    rule.surface = ctx.Blocks.Sand;
+    rule.subsurface = ctx.Blocks.Sandstone != BLOCK_AIR ? ctx.Blocks.Sandstone : ctx.Blocks.Sand;
     break;
   case BiomeId::Tundra:
-    rule.surface = ctx.Snow != BLOCK_AIR ? ctx.Snow : ctx.Stone;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Snow != BLOCK_AIR ? ctx.Blocks.Snow : ctx.Blocks.Stone;
+    rule.subsurface = ctx.Blocks.Dirt;
     break;
   case BiomeId::Hills:
-    rule.surface = ctx.Grass;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
     break;
   case BiomeId::Savanna:
-    rule.surface = ctx.Grass;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
     break;
   case BiomeId::Foothills:
-    rule.surface = ctx.Grass;
-    rule.subsurface = ctx.Gravel != BLOCK_AIR ? ctx.Gravel : ctx.Dirt;
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Dirt;
     break;
   case BiomeId::Scrubland:
-    rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : ctx.Grass;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
     break;
   case BiomeId::ColdSteppe:
-    rule.surface = ctx.Dirt;
-    rule.subsurface = ctx.Gravel != BLOCK_AIR ? ctx.Gravel : ctx.Dirt;
+    rule.surface = ctx.Blocks.Dirt;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Dirt;
     break;
   case BiomeId::Forest:
   case BiomeId::Plains:
   default:
-    rule.surface = ctx.Grass;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
     break;
   }
   return ApplyPackPalette(biome, rule, ctx);
@@ -1028,8 +997,8 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   if (sample.SpawnSurfaceOverride)
   {
     BiomeSurfaceRule rule;
-    rule.surface = ctx.Grass;
-    rule.subsurface = ctx.Dirt;
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
     return rule;
   }
 
@@ -1045,8 +1014,8 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   {
     if (sample.MacroHeight01 < 0.88f)
     {
-      rule.surface = ctx.Grass;
-      rule.subsurface = ctx.Dirt;
+      rule.surface = ctx.Blocks.Grass;
+      rule.subsurface = ctx.Blocks.Dirt;
     }
   }
 
@@ -1068,30 +1037,30 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
     if (mix < 35)
     {
       rule.subsurface =
-          ctx.Gravel != BLOCK_AIR ? ctx.Gravel : rule.subsurface;
+          ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : rule.subsurface;
     }
     if ((dominant == BiomeId::Desert && pick == BiomeId::Forest) ||
         (dominant == BiomeId::Forest && pick == BiomeId::Desert))
     {
       if (mix < 30)
       {
-        rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : rule.surface;
+        rule.surface = ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : rule.surface;
       }
     }
   }
 
   if (ctx.Settings.FillWater && surface_y < ctx.Settings.SeaLevel)
   {
-    if (rule.surface == ctx.Grass)
+    if (rule.surface == ctx.Blocks.Grass)
     {
-      rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : ctx.Stone;
+      rule.surface = ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : ctx.Blocks.Stone;
     }
-    if (rule.subsurface == ctx.Grass || rule.subsurface == ctx.Dirt)
+    if (rule.subsurface == ctx.Blocks.Grass || rule.subsurface == ctx.Blocks.Dirt)
     {
       rule.subsurface =
-          ctx.Gravel != BLOCK_AIR ? ctx.Gravel
-                                  : (ctx.Sand != BLOCK_AIR ? ctx.Sand
-                                                           : ctx.Stone);
+          ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel
+                                  : (ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand
+                                                           : ctx.Blocks.Stone);
     }
   }
 
@@ -1104,9 +1073,9 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
         weights.weights[BiomeIndex(BiomeId::Hills)];
     if (land > 0.2f)
     {
-      rule.surface = ctx.Sand != BLOCK_AIR ? ctx.Sand : rule.surface;
+      rule.surface = ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : rule.surface;
       rule.subsurface =
-          ctx.Gravel != BLOCK_AIR ? ctx.Gravel : rule.subsurface;
+          ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : rule.subsurface;
     }
   }
 
@@ -1126,11 +1095,11 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   }
   else if (pick == BiomeId::Desert && sub == SubBiomeId::Dunes)
   {
-    rule.subsurface = ctx.Sandstone != BLOCK_AIR ? ctx.Sandstone : ctx.Sand;
+    rule.subsurface = ctx.Blocks.Sandstone != BLOCK_AIR ? ctx.Blocks.Sandstone : ctx.Blocks.Sand;
   }
   else if (pick == BiomeId::Forest && sub == SubBiomeId::DenseForest)
   {
-    rule.subsurface = ctx.Dirt;
+    rule.subsurface = ctx.Blocks.Dirt;
   }
 
   const float erosion =
@@ -1140,8 +1109,8 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   if (erosion > 0.2f && sample.MacroHeight01 >= 0.75f && spawn_dist > 48.f &&
       sample.SurfaceGradient > 8.0f + erosion * 4.0f)
   {
-    rule.surface = ctx.Stone;
-    rule.subsurface = ctx.Gravel != BLOCK_AIR ? ctx.Gravel : ctx.Stone;
+    rule.surface = ctx.Blocks.Stone;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Stone;
   }
 
   return rule;

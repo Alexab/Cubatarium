@@ -102,9 +102,9 @@ def check_texture_overrides_sync() -> None:
 
 
 def check_prefabs() -> None:
-    run([sys.executable, "tools/generate_prefab_features.py"])
+    run([sys.executable, "tools/generate_prefab_features.py", "--merge-calibrated"])
     run([sys.executable, "tools/validate_prefabs.py"])
-    run([sys.executable, "tools/validate_prefab_features.py"])
+    run([sys.executable, "tools/validate_prefab_features.py", "--strict"])
     run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 

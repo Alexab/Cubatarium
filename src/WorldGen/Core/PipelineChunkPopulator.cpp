@@ -1,4 +1,7 @@
+#include "WorldGen/Pipelines/ColumnGenerationService.h"
+#include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IChunkPopulator.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
@@ -140,7 +143,19 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
   {
     const int lx = columns[i].first;
     const int lz = columns[i].second;
-    pipeline->GenerateColumn(base_x + lx, base_z + lz);
+    const int world_x = base_x + lx;
+    const int world_z = base_z + lz;
+    if (auto *composable =
+            dynamic_cast<UComposableWorldGenerator *>(pipeline))
+    {
+      UBlockWorldColumnWriter writer(genWorld, Registry);
+      UColumnGenerationService::GenerateColumn(*composable, writer, world_x,
+                                                 world_z);
+    }
+    else
+    {
+      pipeline->GenerateColumn(world_x, world_z);
+    }
   }
 
   genWorld.ForEachBlock(
