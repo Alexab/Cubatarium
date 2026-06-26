@@ -90,6 +90,9 @@ struct ProceduralSettings
   int MaxChunkCommitsPerFrame{3};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
+  int MaxChunkCommitsPerFrameBoost{6};
+  int MaxLoadOpsPerFrameBoost{8};
+  float MovementSpeedBoostThreshold{6.0f};
   int FlatSurfaceY{3};
   bool FillWater{false};
   bool FillLava{false};

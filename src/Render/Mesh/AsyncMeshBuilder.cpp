@@ -4,10 +4,40 @@
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Math/GridMath.h"
+#include <algorithm>
 #include <mutex>
 
 namespace cutum
 {
+
+namespace
+{
+constexpr int kCrossScanBelow = 2;
+constexpr int kCrossScanAbove = 4;
+
+int MaxSolidLocalYSnapshot(const ChunkMeshSnapshot &snapshot,
+                           const UBlockRegistry &registry)
+{
+  int max_y = 0;
+  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+  {
+    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+    {
+      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      {
+        const BlockId id = snapshot.GetBlockLocal(glm::ivec3(lx, ly, lz));
+        if (id == BLOCK_AIR ||
+            registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
+        {
+          continue;
+        }
+        max_y = std::max(max_y, ly);
+      }
+    }
+  }
+  return max_y;
+}
+} // namespace
 
 void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
@@ -40,9 +70,14 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
               registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
           AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
         }
+        const int max_local_y =
+            MaxSolidLocalYSnapshot(snapshot, *registryPtr);
+        const int y_min = std::max(0, max_local_y - kCrossScanBelow);
+        const int y_max =
+            std::min(CHUNK_SIZE - 1, max_local_y + kCrossScanAbove);
         for (int lx = 0; lx < CHUNK_SIZE; ++lx)
         {
-          for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+          for (int ly = y_min; ly <= y_max; ++ly)
           {
             for (int lz = 0; lz < CHUNK_SIZE; ++lz)
             {
@@ -58,7 +93,8 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                         snapshot.coord.z * CHUNK_SIZE + lz);
               GreedyMeshBatch &batch = byBlockId[id];
               batch.blockId = id;
-              batch.Transparent = true;
+              batch.Transparent = false;
+              batch.AlphaCutout = true;
               AppendCrossSprite(BlockCenter(worldPos), batch.vertices,
                                 batch.indices);
             }
@@ -120,6 +156,12 @@ bool UAsyncMeshBuilder::IsInFlight(glm::ivec3 coord) const
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);
   return InFlight.find(coord) != InFlight.end();
+}
+
+int UAsyncMeshBuilder::GetInFlightCount() const
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  return static_cast<int>(InFlight.size());
 }
 
 bool UAsyncMeshBuilder::HasPendingWork() const

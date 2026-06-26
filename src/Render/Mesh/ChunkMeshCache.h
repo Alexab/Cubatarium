@@ -41,6 +41,11 @@ public:
   bool HasPendingDirty() const;
   bool HasPendingAsyncMeshWork() const;
   void WaitForAsyncMeshIdle();
+  void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
+                             int max_per_frame);
+  double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
+  int GetAsyncInFlightCount() const;
+  size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   size_t GetDirtyCount() const { return DirtyChunks.size(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;
@@ -98,6 +103,7 @@ private:
   int RenderDistanceChunks{4};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
+  double LastFlatRebuildMs{0.0};
 };
 } // namespace cutum
 #endif

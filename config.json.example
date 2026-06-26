@@ -23,7 +23,10 @@
         "async_chunk_generation": true,
         "async_chunk_io": true,
         "max_chunk_commits_per_frame": 3,
+        "max_chunk_commits_per_frame_boost": 6,
         "max_load_ops_per_frame": 4,
+        "max_load_ops_per_frame_boost": 8,
+        "movement_speed_boost_threshold": 6.0,
         "max_unload_ops_per_frame": 2
     },
     "chunk_storage": "binary",
@@ -42,6 +45,9 @@
         "distance_fog": true,
         "distance_fog_start_ratio": 0.85,
         "distance_fog_horizontal": true,
+        "altitude_adaptive_fog": true,
+        "altitude_fog_threshold_blocks": 32,
+        "altitude_fog_penalty_per_16_blocks": 0.05,
         "gradient_sky": true
     },
     "ui": {

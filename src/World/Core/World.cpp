@@ -232,6 +232,7 @@ void UWorld::RebuildWorldGenPipeline()
 void UWorld::SetRenderDistanceChunks(int distance)
 {
   RenderDistanceChunks = distance;
+  EffectiveRenderDistance = distance;
   if (Streamer)
   {
     Streamer->SetRenderDistance(distance);
@@ -295,8 +296,15 @@ void UWorld::TickAsyncChunkSystems()
 {
   if (ChunkScheduler && ProceduralTemplate.AsyncChunkGeneration)
   {
-    ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame,
-                       MaxLoadOpsPerFrame);
+    const int commits =
+        LastMovementSpeed > ProceduralTemplate.MovementSpeedBoostThreshold
+            ? ProceduralTemplate.MaxChunkCommitsPerFrameBoost
+            : ProceduralTemplate.MaxChunkCommitsPerFrame;
+    const int load_ops =
+        LastMovementSpeed > ProceduralTemplate.MovementSpeedBoostThreshold
+            ? ProceduralTemplate.MaxLoadOpsPerFrameBoost
+            : MaxLoadOpsPerFrame;
+    ChunkScheduler->Tick(BlockWorld, commits, load_ops);
   }
   if (!ChunkStorage)
   {
@@ -472,7 +480,20 @@ void UWorld::InitStreamerCallbacks()
       {
         if (ChunkScheduler)
         {
-          ChunkScheduler->RequestLoad(coord, priority, ProceduralTemplate);
+          glm::ivec2 column_origin(0);
+          bool has_origin = false;
+          if (auto camera = GetCurrentUserCamera())
+          {
+            const PlayerCapsule cap = camera->GetPlayerCapsule();
+            const glm::vec3 feet(camera->GetPosition().x,
+                                 cap.feetY(camera->GetPosition()) + 0.01f,
+                                 camera->GetPosition().z);
+            const glm::ivec3 feet_block = WorldPosToBlock(feet);
+            column_origin = glm::ivec2(feet_block.x, feet_block.z);
+            has_origin = true;
+          }
+          ChunkScheduler->RequestLoad(coord, priority, ProceduralTemplate,
+                                      column_origin, has_origin);
         }
       },
       [this](glm::ivec3 coord)
@@ -1023,6 +1044,8 @@ void UWorld::EnsurePlayerOnGround()
 
 void UWorld::FinalizePlayerAfterWorldLoad()
 {
+  ResetMeshLoadDiagnostics();
+  BlockCounter.MarkNeedsRecount();
   BlockWorldReady = CachedBlockCount > 0;
   PhysicsSuspendFrames = 3;
 
@@ -2630,7 +2653,7 @@ void UWorld::SaveWorldData(const std::string &file_name)
 void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
 {
   json root;
-  root["schema"] = "movement_diagnostics.v1";
+  root["schema"] = "movement_diagnostics.v2";
   root["world_name"] = WorldName;
   root["sample_count"] = MovementDiagHistory.size();
   json samples = json::array();
@@ -2646,6 +2669,12 @@ void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
         {"mesh_rebuild_ms", sample.meshRebuildMs},
         {"dirty_chunks_pending", sample.dirtyChunksPending},
         {"mesh_rebuilds_this_frame", sample.meshRebuildsThisFrame},
+        {"flat_rebuild_ms", sample.flatRebuildMs},
+        {"count_non_air_ms", sample.countNonAirMs},
+        {"async_mesh_in_flight", sample.asyncMeshInFlight},
+        {"greedy_cache_entries", sample.greedyCacheEntries},
+        {"frames_since_load", sample.framesSinceLoad},
+        {"mesh_backlog_cleared", sample.meshBacklogCleared},
         {"hitch_detected", sample.hitchDetected},
         {"fall_through_suspected", sample.fallThroughSuspected},
     });
@@ -2709,6 +2738,12 @@ void UWorld::DoMovement()
     }
     const glm::ivec3 feetBlock =
         WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
+    glm::vec3 forward = camera->GetFront();
+    forward.y = 0.0f;
+    if (glm::length(forward) > 0.01f)
+    {
+      Streamer->SetViewForward(forward);
+    }
     Streamer->EnsureCollisionChunks(feetBlock);
   }
 
@@ -2825,6 +2860,13 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   MovementDiag.streamingIoMs = FrameStreamingIoMs;
   MovementDiag.dirtyChunksPending =
       static_cast<int>(MeshCache.GetDirtyCount());
+  MovementDiag.flatRebuildMs = MeshCache.GetLastFlatRebuildMs();
+  MovementDiag.asyncMeshInFlight = MeshCache.GetAsyncInFlightCount();
+  MovementDiag.greedyCacheEntries =
+      static_cast<int>(MeshCache.GetGreedyCacheSize());
+  MovementDiag.framesSinceLoad = FramesSinceLoad;
+  MovementDiag.meshBacklogCleared = MeshBacklogClearedLatch;
+  TickMeshLoadDiagnostics();
 
   if (HasLastPlayerY)
   {
@@ -2882,6 +2924,36 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   AppendMovementDiagnosticsSample();
 }
 
+void UWorld::ResetMeshLoadDiagnostics()
+{
+  FramesSinceLoad = 0;
+  MeshBacklogClearedLatch = false;
+  MeshLoadDiagActive = true;
+}
+
+void UWorld::TickMeshLoadDiagnostics()
+{
+  if (!MeshLoadDiagActive)
+  {
+    return;
+  }
+  if (FramesSinceLoad < 600 ||
+      MeshCache.HasPendingDirty() || MeshCache.HasPendingAsyncMeshWork())
+  {
+    ++FramesSinceLoad;
+  }
+  if (!MeshBacklogClearedLatch && !MeshCache.HasPendingDirty() &&
+      !MeshCache.HasPendingAsyncMeshWork())
+  {
+    MeshBacklogClearedLatch = true;
+  }
+  if (MeshBacklogClearedLatch && FramesSinceLoad >= 600 &&
+      !MeshCache.HasPendingDirty())
+  {
+    MeshLoadDiagActive = false;
+  }
+}
+
 void UWorld::UpdateStreaming()
 {
   if (!Streamer || !StreamingEnabled)
@@ -2891,8 +2963,40 @@ void UWorld::UpdateStreaming()
   if (auto camera = GetCurrentUserCamera())
   {
     const PlayerCapsule cap = camera->GetPlayerCapsule();
-    Streamer->Update(WorldPosToBlock(camera->GetPosition()),
-                     camera->GetPosition(), cap);
+    const glm::vec3 eye = camera->GetPosition();
+    glm::vec3 forward = camera->GetFront();
+    forward.y = 0.0f;
+    if (glm::length(forward) > 0.01f)
+    {
+      Streamer->SetViewForward(forward);
+    }
+    if (Render.AltitudeAdaptiveFog)
+    {
+      AltitudeParams.AltitudeThresholdBlocks = Render.AltitudeFogThresholdBlocks;
+      AltitudeParams.RenderDistancePenaltyPerChunk = 1;
+      AltitudeParams.FogStartRatioBoost =
+          std::max(0.15f, Render.AltitudeFogPenaltyPer16Blocks * 4.0f);
+      const StreamingAltitudeSnapshot alt = ComputeStreamingAltitude(
+          RenderDistanceChunks, eye.y, cap.feetY(eye),
+          Render.DistanceFogStartRatio, AltitudeParams);
+      EffectiveRenderDistance = alt.EffectiveRenderDistance;
+      EffectiveFogStartRatio = alt.EffectiveFogStartRatio;
+    }
+    else
+    {
+      EffectiveRenderDistance = RenderDistanceChunks;
+      EffectiveFogStartRatio = Render.DistanceFogStartRatio;
+    }
+    Streamer->SetRenderDistance(EffectiveRenderDistance);
+    MeshCache.SetRenderDistanceChunks(EffectiveRenderDistance);
+
+    const float dt = std::max(0.0001f, camera->GetDeltaTime());
+    const glm::vec3 delta = eye - LastCameraPosition;
+    LastMovementSpeed =
+        glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    LastCameraPosition = eye;
+
+    Streamer->Update(WorldPosToBlock(eye), eye, cap);
   }
 }
 
@@ -3014,16 +3118,27 @@ const std::vector<FaceInstance> &UWorld::GetBlockRenderInstances()
         static_cast<int>(MeshCache.GetDirtyCount());
     if (!MeshCache.HasPendingDirty())
     {
-      CachedBlockCount = BlockWorld.CountNonAir();
+      const auto t0 = std::chrono::high_resolution_clock::now();
+      BlockCounter.TickRecount(BlockWorld, 4);
+      if (!BlockCounter.NeedsRecount())
+      {
+        CachedBlockCount = BlockCounter.GetCount();
+      }
+      MovementDiag.countNonAirMs =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - t0)
+              .count();
     }
   }
   if (auto camera = GetCurrentUserCamera())
   {
+    const auto flat_t0 = std::chrono::high_resolution_clock::now();
     const glm::mat4 view = camera->GetViewMatrix();
     const glm::mat4 proj = camera->GetProjection();
     const glm::mat4 vp = proj * view;
     MeshCache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
                                      camera->GetPosition());
+    MovementDiag.flatRebuildMs = MeshCache.GetLastFlatRebuildMs();
   }
   return MeshCache.GetFaceInstances();
 }

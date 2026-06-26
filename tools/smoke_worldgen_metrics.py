@@ -16,6 +16,9 @@ DEFAULT_BUDGETS = {
     "mesh_rebuild_ms_p95": 16.0,
     "streaming_io_ms_p95": 8.0,
     "hitch_rate_pct": 5.0,
+    "flat_rebuild_ms_p95": 8.0,
+    "count_non_air_ms_max": 50.0,
+    "mesh_backlog_clear_frames_max": 300.0,
 }
 
 
@@ -62,12 +65,24 @@ def read_runtime_metrics(path: Path) -> dict[str, float] | None:
     gen = [float(s.get("streaming_gen_ms", 0.0)) for s in samples]
     mesh = [float(s.get("mesh_rebuild_ms", 0.0)) for s in samples]
     io = [float(s.get("streaming_io_ms", 0.0)) for s in samples]
+    flat = [float(s.get("flat_rebuild_ms", 0.0)) for s in samples]
+    count_non_air = [float(s.get("count_non_air_ms", 0.0)) for s in samples]
+    frames = [float(s.get("frames_since_load", 0.0)) for s in samples]
+    backlog = [bool(s.get("mesh_backlog_cleared", False)) for s in samples]
     hitch_flags = [bool(s.get("hitch_detected", False)) for s in samples]
     hitch_rate = (sum(1 for v in hitch_flags if v) / len(hitch_flags)) * 100.0
+    backlog_clear_frame = 0.0
+    for i, cleared in enumerate(backlog):
+        if cleared:
+            backlog_clear_frame = frames[i]
+            break
     return {
         "streaming_gen_ms_p95": percentile(gen, 0.95),
         "mesh_rebuild_ms_p95": percentile(mesh, 0.95),
         "streaming_io_ms_p95": percentile(io, 0.95),
+        "flat_rebuild_ms_p95": percentile(flat, 0.95),
+        "count_non_air_ms_max": max(count_non_air) if count_non_air else 0.0,
+        "mesh_backlog_clear_frames": backlog_clear_frame,
         "hitch_rate_pct": hitch_rate,
         "sample_count": float(len(samples)),
     }
@@ -111,6 +126,7 @@ def main() -> int:
             f"gen_p95={runtime['streaming_gen_ms_p95']:.3f} "
             f"mesh_p95={runtime['mesh_rebuild_ms_p95']:.3f} "
             f"io_p95={runtime['streaming_io_ms_p95']:.3f} "
+            f"flat_p95={runtime['flat_rebuild_ms_p95']:.3f} "
             f"hitch_rate={runtime['hitch_rate_pct']:.2f}%"
         )
         print(
@@ -118,6 +134,7 @@ def main() -> int:
             f"gen_p95<={DEFAULT_BUDGETS['streaming_gen_ms_p95']} "
             f"mesh_p95<={DEFAULT_BUDGETS['mesh_rebuild_ms_p95']} "
             f"io_p95<={DEFAULT_BUDGETS['streaming_io_ms_p95']} "
+            f"flat_p95<={DEFAULT_BUDGETS['flat_rebuild_ms_p95']} "
             f"hitch_rate_pct<={DEFAULT_BUDGETS['hitch_rate_pct']}"
         )
         if runtime["streaming_gen_ms_p95"] > DEFAULT_BUDGETS["streaming_gen_ms_p95"]:
@@ -131,6 +148,19 @@ def main() -> int:
             failed = True
         if runtime["hitch_rate_pct"] > DEFAULT_BUDGETS["hitch_rate_pct"]:
             print("WARN: runtime hitch_rate_pct budget exceeded", file=sys.stderr)
+            failed = True
+        if runtime["flat_rebuild_ms_p95"] > DEFAULT_BUDGETS["flat_rebuild_ms_p95"]:
+            print("WARN: runtime flat_rebuild_ms_p95 budget exceeded", file=sys.stderr)
+            failed = True
+        if runtime["count_non_air_ms_max"] > DEFAULT_BUDGETS["count_non_air_ms_max"]:
+            print("WARN: runtime count_non_air_ms_max budget exceeded", file=sys.stderr)
+            failed = True
+        if (
+            runtime["mesh_backlog_clear_frames"] > 0
+            and runtime["mesh_backlog_clear_frames"]
+            > DEFAULT_BUDGETS["mesh_backlog_clear_frames_max"]
+        ):
+            print("WARN: mesh backlog clear frames budget exceeded", file=sys.stderr)
             failed = True
     if failed:
         return 1

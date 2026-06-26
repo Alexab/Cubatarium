@@ -41,6 +41,7 @@ private:
     LoadChunks,
     LegacyData,
     SpatialChunks,
+    MeshWarmup,
     PostLoadAnalysis,
     ProceduralFill,
     FinalizeWorld,
@@ -79,6 +80,7 @@ private:
   glm::ivec3 SpatialCenter{0};
   int SpatialDx{0};
   int SpatialDz{0};
+  int MeshWarmupTicks{0};
 
   int GenCenterX{0};
   int GenCenterZ{0};

@@ -22,7 +22,9 @@ constexpr float kPhaseWeightMetadata = 0.05f;
 constexpr float kPhaseWeightEntities = 0.05f;
 constexpr float kPhaseWeightChunks = 0.55f;
 constexpr float kPhaseWeightSpatial = 0.15f;
+constexpr float kPhaseWeightMeshWarmup = 0.05f;
 constexpr float kPhaseWeightGenerate = 0.12f;
+constexpr int kMeshWarmupMaxTicks = 600;
 constexpr float kPhaseWeightFinalize = 0.08f;
 
 } // namespace
@@ -385,11 +387,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     {
       if (SpatialDx > SpatialRadius)
       {
-        world.CachedBlockCount = world.BlockWorld.CountNonAir();
+        world.BlockCounter.MarkNeedsRecount();
         world.BlockWorld.GetChunkManager().ForEachChunk(
             [&](const UChunk &chunk)
             { world.MeshCache.MarkDirty(chunk.GetCoord()); });
-        CurrentPhase = Phase::PostLoadAnalysis;
+        MeshWarmupTicks = 0;
+        CurrentPhase = Phase::MeshWarmup;
         break;
       }
       if (world.ChunkStorage && world.BlockRegistry)
@@ -420,6 +423,33 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
                            static_cast<float>(std::max(1, total)));
       Report(sink, "spatial", frac, "Loading nearby terrain...");
       (void)doneBefore;
+    }
+    break;
+  }
+  case Phase::MeshWarmup:
+  {
+    if (world.BlockRegistry)
+    {
+      const int mesh_budget = std::min(64, std::max(budget * 4, 16));
+      world.MeshCache.RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
+                                         mesh_budget);
+      world.MeshCache.DrainAsyncMeshResults(world.BlockWorld,
+                                            *world.BlockRegistry, mesh_budget);
+    }
+    ++MeshWarmupTicks;
+    const bool mesh_done = !world.MeshCache.HasPendingDirty() &&
+                           !world.MeshCache.HasPendingAsyncMeshWork();
+    const float mesh_frac =
+        kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
+        kPhaseWeightSpatial +
+        kPhaseWeightMeshWarmup *
+            (mesh_done ? 1.0f
+                       : std::min(1.0f, static_cast<float>(MeshWarmupTicks) /
+                                            static_cast<float>(kMeshWarmupMaxTicks)));
+    Report(sink, "mesh_warmup", mesh_frac, "Building terrain meshes...");
+    if (mesh_done || MeshWarmupTicks >= kMeshWarmupMaxTicks)
+    {
+      CurrentPhase = Phase::PostLoadAnalysis;
     }
     break;
   }

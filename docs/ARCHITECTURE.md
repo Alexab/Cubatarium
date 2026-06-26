@@ -181,10 +181,26 @@ Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 Default: `streaming_enabled: true` in `config.json`.
 
+Pipeline per frame:
+
+```
+UChunkStreamer (view-biased priority via ChunkLoadPriority)
+  → UChunkLoadScheduler (async Populate, column origin sort)
+  → commit → MarkDirty → UChunkMeshCache (async greedy + cross cutout)
+```
+
+`ChunkLoadPriority` — Chebyshev ring + view dot product + feet-neighborhood bonus; optional ring gate (inner ring before outer).
+
+`UChunkLoadScheduler` commits with `max_chunk_commits_per_frame` (boosted when movement speed exceeds `movement_speed_boost_threshold`).
+
+Altitude: `ComputeStreamingAltitude` shrinks effective `render_distance_chunks` and fog start when the camera rises (`render.altitude_adaptive_fog`).
+
+Spatial load: cooperative `MeshWarmup` phase builds meshes on the loading screen before gameplay.
+
 `ChunkStreamer` around the camera each frame:
 
 1. For each chunk in render radius — try `chunks/cx_cy_cz.json` on disk.
-2. If missing — generate columns for that chunk using the world's procedural pipeline (`IWorldGenPipeline::GenerateColumn` via `UWorldGeneratorRegistry`).
+2. If missing — generate columns for that chunk using the world's procedural pipeline (`PipelineChunkPopulator` / `IWorldGenPipeline::GenerateColumn`).
 3. Unload distant chunks (save to disk, drop from memory).
 
 Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
@@ -192,6 +208,17 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 `terrain` and `world_seed` are stored in `world_data.json` per world so reload uses the same generator as creation.
 
 `render_distance_chunks` — radius in chunks (default 4).
+
+### Greedy draw categories
+
+| Category | Blocks | Pass |
+|----------|--------|------|
+| Opaque | solid terrain | opaque |
+| Cutout | leaves, glass discard | opaque + alpha cutout |
+| CrossCutout | tall_grass, reeds | opaque cutout (not 4-pass stencil) |
+| TransparentFluid | water, lava | `GreedyTransparentPipeline` |
+
+Cross batches merge by `blockId` in `RebuildFlatGreedyBatches`. Scatter vegetation capped via `max_per_chunk` in `prefab_features.json`.
 
 ## Config (`<exe_dir>/config.json`)
 

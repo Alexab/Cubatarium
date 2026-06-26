@@ -3,6 +3,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 
@@ -18,6 +19,9 @@ struct ChunkPopulateRequest
   glm::ivec3 chunkCoord;
   ChunkGenerationToken token;
   ProceduralSettings settings;
+  glm::ivec2 columnOrigin{0};
+  bool hasColumnOrigin{false};
+  std::function<bool()> shouldCancel;
 };
 
 struct ChunkPopulateResult

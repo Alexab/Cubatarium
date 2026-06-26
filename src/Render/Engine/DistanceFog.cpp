@@ -13,12 +13,16 @@ constexpr float kMinFogStartBlocks = 32.0f;
 }
 
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
-                                     glm::vec3 sky_color, float start_ratio)
+                                     glm::vec3 sky_color, float start_ratio,
+                                     float effective_fog_start_ratio)
 {
+  const float ratio = effective_fog_start_ratio >= 0.0f
+                          ? effective_fog_start_ratio
+                          : start_ratio;
   const float render_blocks =
       static_cast<float>(std::max(1, render_distance_chunks)) *
       static_cast<float>(CHUNK_SIZE);
-  const float clamped_ratio = std::clamp(start_ratio, 0.0f, 1.0f);
+  const float clamped_ratio = std::clamp(ratio, 0.0f, 1.0f);
   DistanceFogParams params;
   params.End = render_blocks;
   params.Start = std::max(render_blocks * clamped_ratio, kMinFogStartBlocks);

@@ -37,7 +37,9 @@ public:
   void SetMarkDirtyFn(MarkChunkDirtyFn fn);
   void SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn);
   void RequestLoad(glm::ivec3 coord, int priority,
-                   const ProceduralSettings &settings);
+                   const ProceduralSettings &settings,
+                   glm::ivec2 column_origin = glm::ivec2(0),
+                   bool has_column_origin = false);
   void Cancel(glm::ivec3 coord);
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
@@ -53,6 +55,8 @@ private:
     int priority{0};
     ChunkGenerationToken token;
     ProceduralSettings settings;
+    glm::ivec2 columnOrigin{0};
+    bool hasColumnOrigin{false};
   };
 
   struct PendingResult

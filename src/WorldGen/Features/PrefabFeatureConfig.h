@@ -44,6 +44,7 @@ struct ScatterBlockSpec
   int Attempts{4};
   int Radius{2};
   int DyOffset{0};
+  int MaxPerChunk{0};
 };
 
 struct PrefabFeatureRule

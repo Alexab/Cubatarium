@@ -28,4 +28,6 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
                        BiomeId biome, BlockId grassId);
 
+void ResetScatterChunkCounts();
+
 } // namespace cutum

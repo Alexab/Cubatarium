@@ -1,4 +1,5 @@
 #include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "World/Chunks/ChunkManager.h"
 #include "WorldGen/Features/PrefabPlacementConstraints.h"
 #include "WorldGen/Core/ColumnHash.h"
 #include "Blocks/BlockRegistry.h"
@@ -12,12 +13,21 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <unordered_map>
 
 namespace cutum
 {
 
 namespace
 {
+
+thread_local std::unordered_map<uint64_t, int> ScatterChunkCounts;
+
+uint64_t ChunkXZKey(int chunk_x, int chunk_z)
+{
+  return (static_cast<uint64_t>(static_cast<uint32_t>(chunk_x)) << 32) ^
+         static_cast<uint64_t>(static_cast<uint32_t>(chunk_z));
+}
 
 uint32_t FeatureHash(int x, int z, uint32_t Seed)
 {
@@ -167,7 +177,21 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       continue;
     }
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(pos);
+    const uint64_t chunk_key = ChunkXZKey(chunk_coord.x, chunk_coord.z);
+    if (rule.Scatter.MaxPerChunk > 0)
+    {
+      const int chunk_count = ScatterChunkCounts[chunk_key];
+      if (chunk_count >= rule.Scatter.MaxPerChunk)
+      {
+        continue;
+      }
+    }
     ctx.World.SetBlock(pos, blockId);
+    if (rule.Scatter.MaxPerChunk > 0)
+    {
+      ++ScatterChunkCounts[chunk_key];
+    }
     ++placed;
     minY = std::min(minY, y);
     maxY = std::max(maxY, y);
@@ -347,6 +371,11 @@ bool TryPlacePrefabPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 }
 
 } // namespace
+
+void ResetScatterChunkCounts()
+{
+  ScatterChunkCounts.clear();
+}
 
 bool CanPlacePrefabAt(const WorldGenContext &ctx, const std::string &prefabName,
                       glm::ivec3 anchorWorldPos)

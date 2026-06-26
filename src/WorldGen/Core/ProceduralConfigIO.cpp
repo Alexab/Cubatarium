@@ -209,6 +209,21 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
     settings.MaxUnloadOpsPerFrame =
         std::clamp(p["max_unload_ops_per_frame"].get<int>(), 1, 32);
   }
+  if (p.contains("max_chunk_commits_per_frame_boost"))
+  {
+    settings.MaxChunkCommitsPerFrameBoost =
+        std::clamp(p["max_chunk_commits_per_frame_boost"].get<int>(), 1, 32);
+  }
+  if (p.contains("max_load_ops_per_frame_boost"))
+  {
+    settings.MaxLoadOpsPerFrameBoost =
+        std::clamp(p["max_load_ops_per_frame_boost"].get<int>(), 1, 32);
+  }
+  if (p.contains("movement_speed_boost_threshold"))
+  {
+    settings.MovementSpeedBoostThreshold =
+        p["movement_speed_boost_threshold"].get<float>();
+  }
   if (p.contains("streaming") && p["streaming"].is_object())
   {
     ParseProceduralStreamingOptions(p["streaming"], settings);
@@ -223,6 +238,11 @@ void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
   procedural["max_chunk_commits_per_frame"] = settings.MaxChunkCommitsPerFrame;
   procedural["max_load_ops_per_frame"] = settings.MaxLoadOpsPerFrame;
   procedural["max_unload_ops_per_frame"] = settings.MaxUnloadOpsPerFrame;
+  procedural["max_chunk_commits_per_frame_boost"] =
+      settings.MaxChunkCommitsPerFrameBoost;
+  procedural["max_load_ops_per_frame_boost"] = settings.MaxLoadOpsPerFrameBoost;
+  procedural["movement_speed_boost_threshold"] =
+      settings.MovementSpeedBoostThreshold;
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)

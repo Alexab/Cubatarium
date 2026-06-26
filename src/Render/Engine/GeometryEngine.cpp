@@ -784,8 +784,8 @@ void UGeometryEngine::PrepareFrameRendering()
   else if (Render.DistanceFog)
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
-        WorldInstance->GetRenderDistanceChunks(), SmoothedSkyTint,
-        Render.DistanceFogStartRatio);
+        WorldInstance->GetEffectiveRenderDistance(), SmoothedSkyTint,
+        Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio());
     FogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
@@ -964,10 +964,16 @@ void UGeometryEngine::PrepareTransparent(
   filtered.reserve(ctx.allBatches.size());
   for (const GreedyMeshBatch &batch : ctx.allBatches)
   {
-    if (batch.Transparent)
+    if (!batch.Transparent)
     {
-      filtered.push_back(batch);
+      continue;
     }
+    if (ctx.blockRegistry.GetRenderStyle(batch.blockId) ==
+        BlockRenderStyle::Cross)
+    {
+      continue;
+    }
+    filtered.push_back(batch);
   }
   if (filtered.empty())
   {
@@ -1386,6 +1392,10 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     performanceLines.push_back(
         "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
         std::to_string(md.meshRebuildsThisFrame));
+    performanceLines.push_back(
+        "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
+        " Cache: " + std::to_string(md.greedyCacheEntries) +
+        " Dirty: " + std::to_string(md.dirtyChunksPending));
   }
   {
     float temperature = 0.0f;

@@ -363,6 +363,11 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("distance_fog_start_ratio", 0.85f);
         Render.DistanceFogHorizontal =
             r.value("distance_fog_horizontal", true);
+        Render.AltitudeAdaptiveFog = r.value("altitude_adaptive_fog", true);
+        Render.AltitudeFogThresholdBlocks =
+            r.value("altitude_fog_threshold_blocks", 32);
+        Render.AltitudeFogPenaltyPer16Blocks =
+            r.value("altitude_fog_penalty_per_16_blocks", 0.05f);
         Render.GradientSky = r.value("gradient_sky", true);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
@@ -677,6 +682,11 @@ void UCore::SaveConfigFile()
   render_json["distance_fog"] = Render.DistanceFog;
   render_json["distance_fog_start_ratio"] = Render.DistanceFogStartRatio;
   render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
+  render_json["altitude_adaptive_fog"] = Render.AltitudeAdaptiveFog;
+  render_json["altitude_fog_threshold_blocks"] =
+      Render.AltitudeFogThresholdBlocks;
+  render_json["altitude_fog_penalty_per_16_blocks"] =
+      Render.AltitudeFogPenaltyPer16Blocks;
   render_json["gradient_sky"] = Render.GradientSky;
   system_data["render"] = render_json;
   WriteUiSettings(system_data, Ui);

@@ -17,8 +17,10 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/Chunks/StreamingAltitudePolicy.h"
 #include "WorldGen/Core/IChunkPopulator.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/BlockCountTracker.h"
 #include "World/Math/CollisionVolume.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -398,6 +400,12 @@ public:
     double meshRebuildMs{0.0};
     int dirtyChunksPending{0};
     int meshRebuildsThisFrame{0};
+    double flatRebuildMs{0.0};
+    double countNonAirMs{0.0};
+    int asyncMeshInFlight{0};
+    int greedyCacheEntries{0};
+    int framesSinceLoad{0};
+    bool meshBacklogCleared{false};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -408,6 +416,8 @@ public:
   void SetStreamingEnabled(bool enabled) { StreamingEnabled = enabled; }
   void SetRenderDistanceChunks(int distance);
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
+  int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
+  float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
@@ -492,6 +502,8 @@ private:
                                  float prevPlayerY);
   void SaveMovementDiagnostics(const std::string &file_name) const;
   void AppendMovementDiagnosticsSample();
+  void ResetMeshLoadDiagnostics();
+  void TickMeshLoadDiagnostics();
   void RebuildWorldGenPipeline();
 
   std::string WorldName;
@@ -535,6 +547,7 @@ private:
   std::shared_ptr<class UBlockMergeRegistry> BlockMergeRegistry;
   std::unique_ptr<UBlockRegistry> BlockRegistry;
   UBlockWorld BlockWorld;
+  UBlockCountTracker BlockCounter;
   UChunkMeshCache MeshCache;
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<PipelineChunkPopulator> ChunkPopulator;
@@ -549,6 +562,11 @@ private:
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   int RenderDistanceChunks{4};
+  int EffectiveRenderDistance{4};
+  float EffectiveFogStartRatio{0.85f};
+  StreamingAltitudePolicyParams AltitudeParams;
+  glm::vec3 LastCameraPosition{0.0f};
+  float LastMovementSpeed{0.0f};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> ModifiedChunks;
@@ -580,6 +598,9 @@ private:
   double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};
   bool HasLastPlayerY{false};
+  int FramesSinceLoad{0};
+  bool MeshBacklogClearedLatch{false};
+  bool MeshLoadDiagActive{false};
 };
 
 } // namespace cutum

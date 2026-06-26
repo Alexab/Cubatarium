@@ -2,6 +2,7 @@
 #define CHUNKSTREAMER_H
 
 #include "Creatures/Player/PlayerCapsule.h"
+#include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <functional>
@@ -65,6 +66,8 @@ public:
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
+  void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
+  void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
 
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
@@ -88,6 +91,8 @@ private:
                              const glm::vec3 &eyePos,
                              const PlayerCapsule &cap) const;
   int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
+  int ChunkLoadPriorityFor(glm::ivec3 groundCoord) const;
+  bool RingPrerequisitesMet(glm::ivec3 coord);
 
   UBlockWorld &World;
   UBlockRegistry &Registry;
@@ -110,6 +115,9 @@ private:
   IsChunkCommittedFn OnIsChunkCommitted;
   IsColumnPendingFn OnIsColumnPending;
   bool AsyncGeneration{false};
+  bool RingGateEnabled{false};
+  glm::vec3 ViewForwardXz{0.0f, 0.0f, 1.0f};
+  ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
   std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;

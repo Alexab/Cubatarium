@@ -14,7 +14,8 @@ struct DistanceFogParams
 };
 
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
-                                     glm::vec3 sky_color, float start_ratio);
+                                     glm::vec3 sky_color, float start_ratio,
+                                     float effective_fog_start_ratio = -1.0f);
 
 } // namespace cutum
 

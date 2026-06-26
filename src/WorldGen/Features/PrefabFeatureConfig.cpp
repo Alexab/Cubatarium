@@ -68,6 +68,7 @@ bool ParseRuleArray(const nlohmann::json &arr,
       rule.Scatter.Attempts = std::max(1, item.value("attempts", 4));
       rule.Scatter.Radius = std::max(0, item.value("radius", 2));
       rule.Scatter.DyOffset = item.value("dy_offset", 0);
+      rule.Scatter.MaxPerChunk = std::max(0, item.value("max_per_chunk", 0));
       if (rule.Scatter.BlockName.empty())
       {
         continue;

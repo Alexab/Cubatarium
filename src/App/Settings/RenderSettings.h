@@ -26,6 +26,9 @@ struct RenderSettings
   float DistanceFogStartRatio{0.85f};
   /// Use horizontal (XZ) distance for distance fog, like Minecraft render fog.
   bool DistanceFogHorizontal{true};
+  bool AltitudeAdaptiveFog{true};
+  int AltitudeFogThresholdBlocks{32};
+  float AltitudeFogPenaltyPer16Blocks{0.05f};
   /// Gradient sky pass before world geometry (greedy path).
   bool GradientSky{true};
 

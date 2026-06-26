@@ -119,6 +119,7 @@ set(SOURCES
     src/Render/Pipeline/GreedyTransparentSort.cpp
     src/Render/Pipeline/TransparentPass.cpp
     src/Render/Pipeline/GreedyTransparentPipeline.cpp
+    src/Render/Pipeline/GreedyDrawCategory.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
@@ -133,6 +134,7 @@ set(SOURCES
     src/ResourcePacks/CreaturePackMerge.cpp
     src/Render/Engine/AnimationClock.cpp
     src/World/Core/BlockWorld.cpp
+    src/World/Core/BlockCountTracker.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
     src/WorldGen/Core/ProceduralConfigIO.cpp
@@ -176,6 +178,8 @@ set(SOURCES
     src/World/Chunks/ChunkBuffer.cpp
     src/World/Chunks/ChunkGenerationToken.cpp
     src/World/Chunks/ChunkLoadScheduler.cpp
+    src/World/Chunks/ChunkLoadPriority.cpp
+    src/World/Chunks/StreamingAltitudePolicy.cpp
     src/World/Core/IBlockWriter.cpp
     src/World/IO/AsyncChunkIO.cpp
     src/World/IO/ChunkStorageTypes.cpp
@@ -477,6 +481,13 @@ if(WIN32 AND EXISTS "${CUBATARIUM_WIN_RC}")
 endif()
 
 add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
+
+add_executable(chunk_load_priority_test
+    src/World/Chunks/ChunkLoadPriority.cpp
+    src/Test/ChunkLoadPriorityTest.cpp)
+target_include_directories(chunk_load_priority_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_load_priority_test glm::glm)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

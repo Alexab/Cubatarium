@@ -1,3 +1,4 @@
+#include "WorldGen/Features/PrefabFeaturePlacer.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IChunkPopulator.h"
@@ -109,11 +110,16 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
 
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
+  ResetScatterChunkCounts();
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;
   const int center_x = base_x + CHUNK_SIZE / 2;
   const int center_z = base_z + CHUNK_SIZE / 2;
+  const int origin_x =
+      request.hasColumnOrigin ? request.columnOrigin.x : center_x;
+  const int origin_z =
+      request.hasColumnOrigin ? request.columnOrigin.y : center_z;
 
   std::array<std::pair<int, int>, CHUNK_SIZE * CHUNK_SIZE> columns;
   size_t column_count = 0;
@@ -125,22 +131,26 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
     }
   }
   std::sort(columns.begin(), columns.begin() + static_cast<ptrdiff_t>(column_count),
-            [base_x, base_z, center_x, center_z](const std::pair<int, int> &a,
+            [base_x, base_z, origin_x, origin_z](const std::pair<int, int> &a,
                                                  const std::pair<int, int> &b)
             {
               const int ax = base_x + a.first;
               const int az = base_z + a.second;
               const int bx = base_x + b.first;
               const int bz = base_z + b.second;
-              const int da = (ax - center_x) * (ax - center_x) +
-                             (az - center_z) * (az - center_z);
-              const int db = (bx - center_x) * (bx - center_x) +
-                             (bz - center_z) * (bz - center_z);
+              const int da = (ax - origin_x) * (ax - origin_x) +
+                             (az - origin_z) * (az - origin_z);
+              const int db = (bx - origin_x) * (bx - origin_x) +
+                             (bz - origin_z) * (bz - origin_z);
               return da < db;
             });
 
   for (size_t i = 0; i < column_count; ++i)
   {
+    if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
+    {
+      break;
+    }
     const int lx = columns[i].first;
     const int lz = columns[i].second;
     const int world_x = base_x + lx;

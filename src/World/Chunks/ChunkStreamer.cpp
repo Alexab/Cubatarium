@@ -1,6 +1,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -126,12 +127,56 @@ void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
 
 int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
 {
-  if (groundCoord.y != 0)
+  return ChunkChebyshevDistance(groundCoord, LoadPriorityCenter);
+}
+
+int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
+{
+  return ComputeChunkLoadPriority(groundCoord, LoadPriorityCenter, ViewForwardXz,
+                                  PriorityParams);
+}
+
+bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
+{
+  if (!RingGateEnabled)
   {
-    groundCoord.y = 0;
+    return true;
   }
-  return std::max(std::abs(groundCoord.x - LoadPriorityCenter.x),
-                  std::abs(groundCoord.z - LoadPriorityCenter.z));
+  const int ring = ChunkHorizontalDistance(coord);
+  if (ring <= 1)
+  {
+    return true;
+  }
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      if (dx == 0 && dz == 0)
+      {
+        continue;
+      }
+      const glm::ivec3 neighbor(coord.x + dx, 0, coord.z + dz);
+      const int neighbor_ring = ChunkHorizontalDistance(neighbor);
+      if (neighbor_ring >= ring)
+      {
+        continue;
+      }
+      if (!ProcedurallyGenerated.count(neighbor) ||
+          !IsTerrainChunkCompleteCached(neighbor))
+      {
+        if (OnIsChunkCommitted && !OnIsChunkCommitted(neighbor))
+        {
+          return false;
+        }
+        if (!ProcedurallyGenerated.count(neighbor) ||
+            !IsTerrainChunkCompleteCached(neighbor))
+        {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 void UChunkStreamer::MarkPersistedColumnsFromWorld()
@@ -201,7 +246,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     }
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
-      const int priority = ChunkHorizontalDistance(chunkCoord);
+      const int priority = ChunkLoadPriorityFor(chunkCoord);
       OnRequestAsyncChunk(chunkCoord, priority);
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
@@ -215,7 +260,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   {
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkHorizontalDistance(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
     }
@@ -448,7 +493,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   std::sort(toLoad.begin(), toLoad.end(),
             [this](const glm::ivec3 &a, const glm::ivec3 &b)
             {
-              return ChunkHorizontalDistance(a) < ChunkHorizontalDistance(b);
+              return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b);
             });
 
   int loadOps = 0;
@@ -457,6 +502,10 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     if (loadOps >= MaxLoadOpsPerFrame)
     {
       break;
+    }
+    if (!RingPrerequisitesMet(coord))
+    {
+      continue;
     }
     if (EnsureChunkLoaded(coord))
     {

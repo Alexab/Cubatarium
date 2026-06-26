@@ -23,7 +23,9 @@ void UChunkLoadScheduler::SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn)
 }
 
 void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
-                                      const ProceduralSettings &settings)
+                                      const ProceduralSettings &settings,
+                                      glm::ivec2 column_origin,
+                                      bool has_column_origin)
 {
   if (coord.y != 0)
   {
@@ -50,6 +52,8 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.priority = priority;
   pending.token = Tokens.Current(coord);
   pending.settings = settings;
+  pending.columnOrigin = column_origin;
+  pending.hasColumnOrigin = has_column_origin;
   States[coord] = ChunkLoadState::Requested;
   ActiveTokens[coord] = pending.token;
   RequestPriorities[coord] = priority;
@@ -76,6 +80,12 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
   populateRequest.settings = request.settings;
+  populateRequest.columnOrigin = request.columnOrigin;
+  populateRequest.hasColumnOrigin = request.hasColumnOrigin;
+  const glm::ivec3 coord = request.coord;
+  const uint64_t start_sequence = request.token.sequence;
+  populateRequest.shouldCancel = [this, coord, start_sequence]()
+  { return Tokens.Current(coord).sequence != start_sequence; };
   const int priority = request.priority;
   Pool.Enqueue(
       [this, populateRequest, priority]()

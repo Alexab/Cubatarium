@@ -27,6 +27,7 @@ public:
   void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
+  int GetInFlightCount() const;
   bool HasPendingWork() const;
   void WaitIdle();
 
