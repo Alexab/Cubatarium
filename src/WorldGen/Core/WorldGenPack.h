@@ -32,6 +32,44 @@ struct BiomePackDefinition
   std::unordered_map<std::string, BiomeSubBiomePackRule> SubBiomes;
 };
 
+struct HeightLayerPackConfig
+{
+  float Scale{0.003f};
+  int Octaves{2};
+  float Weight{0.63f};
+};
+
+struct PackHeightConfig
+{
+  HeightLayerPackConfig Continental;
+  HeightLayerPackConfig Regional;
+  HeightLayerPackConfig Detail;
+  float SeaBias{0.45f};
+  float CurveExponent{1.12f};
+  float JitterScale{0.03f};
+  float JitterAmplitude{1.0f};
+  float JitterErosionDamp{0.85f};
+  bool Loaded{false};
+};
+
+struct ClimateAxisPackConfig
+{
+  float Scale{0.002f};
+  int Octaves{3};
+  int SeedOffset{0};
+};
+
+struct PackClimateConfig
+{
+  ClimateAxisPackConfig Temperature;
+  ClimateAxisPackConfig Moisture;
+  ClimateAxisPackConfig Continentalness;
+  ClimateAxisPackConfig Erosion;
+  ClimateAxisPackConfig Weirdness;
+  ClimateAxisPackConfig Ridge;
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
@@ -55,6 +93,8 @@ struct WorldGenPack
   int BiomeMapBlockScale{4};
   float BiomeBlendRadius{-1.0f};
   WorldGenPackPipeline Pipeline;
+  PackHeightConfig Height;
+  PackClimateConfig Climate;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -66,6 +106,8 @@ public:
   static bool ReloadActive();
   static std::vector<std::string> ListPackIds();
   static const WorldGenPack &Get();
+  static const PackHeightConfig &HeightConfig();
+  static const PackClimateConfig &ClimateConfig();
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,

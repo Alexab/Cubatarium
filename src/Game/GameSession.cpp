@@ -99,20 +99,42 @@ void UGameSession::RegisterCommands()
 
   UCommandRegistry.Register(
       "worldgen",
-      [](const std::vector<std::string> &args)
+      [this](const std::vector<std::string> &args)
       {
-        if (args.empty() || args[0] != "reload")
+        if (args.empty())
         {
           return CommandResult{
-              false, "Usage: worldgen reload — reload pack + prefab_features "
-                     "(new chunks only)"};
+              false, "Usage: worldgen reload | worldgen debug [on|off]"};
         }
-        if (!ReloadWorldGenContent())
+        if (args[0] == "reload")
         {
-          return CommandResult{false, "Worldgen reload failed"};
+          if (!ReloadWorldGenContent())
+          {
+            return CommandResult{false, "Worldgen reload failed"};
+          }
+          return CommandResult{true,
+                              "Worldgen content reloaded (affects new chunks)"};
         }
-        return CommandResult{true,
-                            "Worldgen content reloaded (affects new chunks)"};
+        if (args[0] == "debug")
+        {
+          bool enable = true;
+          if (args.size() >= 2)
+          {
+            enable = args[1] == "on" || args[1] == "1" || args[1] == "true";
+          }
+          if (!World)
+          {
+            return CommandResult{false, "No active world"};
+          }
+          ProceduralSettings settings = World->GetProceduralSettings();
+          settings.DebugWorldGenOverlay = enable;
+          World->SetProceduralSettings(settings);
+          return CommandResult{
+              true, std::string("Worldgen debug overlay ") +
+                        (enable ? "enabled" : "disabled") +
+                        " (flag stored; visual overlay not wired yet)"};
+        }
+        return CommandResult{false, "Unknown worldgen subcommand"};
       });
 
   UCommandRegistry.Register(

@@ -20,22 +20,29 @@ enum class ProceduralGenerator
 
 struct WorldGenTuning
 {
-  float vegetationDensity{0.85f};
-  float decorationDensity{1.0f};
+  float vegetationDensity{0.68f};
+  float decorationDensity{0.85f};
   float structureDensity{0.35f};
   float biomePlainsWeight{1.0f};
   float biomeForestWeight{1.0f};
   float biomeDesertWeight{1.0f};
   float biomeHillsWeight{1.0f};
   float biomeTundraWeight{1.0f};
-  float terrainRoughness{0.75f};
+  float biomeSavannaWeight{1.0f};
+  float biomeFoothillsWeight{1.0f};
+  float biomeScrublandWeight{1.0f};
+  float biomeColdSteppeWeight{1.0f};
+  float terrainRoughness{0.58f};
   float biomeBlendRadius{14.0f};
   float oreDensity{1.0f};
-  float terrainErosion{0.22f};
+  float terrainErosion{0.32f};
   float riverWidth{1.0f};
-  int thermalErosionIterations{2};
-  int hydraulicErosionIterations{8};
-  float erosionStrength{0.35f};
+  int thermalErosionIterations{3};
+  int hydraulicErosionIterations{4};
+  float erosionStrength{0.25f};
+  bool heightSmoothing{true};
+  int heightSmoothingRadius{1};
+  float jitterAmplitude{1.0f};
 };
 
 struct RavineParams
@@ -74,6 +81,7 @@ struct ProceduralSettings
   std::string WorldGenPresetId{"balanced"};
   bool EnableCaves{false};
   bool EnableTrees{true};
+  bool EnableGroundCover{true};
   bool EnableDecoration{true};
   bool EnableStructures{true};
   bool EnableOres{false};
@@ -86,6 +94,7 @@ struct ProceduralSettings
   bool FillWater{false};
   bool FillLava{false};
   bool FillFire{false};
+  bool DebugWorldGenOverlay{false};
   CaveParams Caves;
   RavineParams Ravines;
   WorldGenTuning Tuning;

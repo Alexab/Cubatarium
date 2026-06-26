@@ -59,6 +59,15 @@ int main(int argc, char *argv[])
       cutum::IPlatformPaths::SetGlobal(paths);
       return cutum::RunBenchChunkIo();
     }
+    if (std::strcmp(argv[i], "--create-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IPlatformPaths::SetGlobal(paths);
+      return cutum::RunCreateWorld(argc, argv, i + 1);
+    }
   }
 
   auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();

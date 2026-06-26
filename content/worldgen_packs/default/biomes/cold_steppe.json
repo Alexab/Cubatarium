@@ -3,10 +3,15 @@
   "height": {
     "base_offset": 0,
     "amplitude_mul": 0.8,
-    "volatility_mul": 0.75
+    "volatility_mul": 0.45
   },
   "palette": {
     "surface": "dirt",
     "subsurface": "gravel"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine_mapgen": 0.7
+    }
   }
 }

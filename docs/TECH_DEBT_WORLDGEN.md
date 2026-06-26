@@ -35,7 +35,7 @@
 - Выбор pack из выпадающего списка с описанием (сканирование `pack.json`)
 - ~~Полный перенос `SubBiomeFor` noise-порогов в JSON~~ — `noise_threshold` в sub_biomes (done)
 - Доп. UX: пресеты генераторов (`ApplyWorldGenPreset`: realistic / balanced / sparse_structures)
-- Debug overlay биомов/climate в рендере (заготовка в roadmap)
+- Debug overlay биомов/climate в рендере (заготовка: `worldgen debug on` в консоли)
 - ~~Scatter/prefab на воде~~ — `CanPlacePlantAt` / локальный `FindTopSolidSurfaceY` (done)
 
 ## Performance / streaming
@@ -49,3 +49,4 @@
 | A — калибровка tuning/caves/prefab | done |
 | B — layered height, биомы, реки, ravines, структуры grid, ground_cover, руды, string seed | done |
 | C — climate sampler, переходные биомы, erosion lite, 3D caves, ores.json, presets, smoke CI | done |
+| D — Overworld terrain smoothing, climate height, height.json, biome prefab coverage | done |

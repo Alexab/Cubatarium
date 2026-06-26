@@ -10,7 +10,8 @@ on:
       - "scripts/build/**"
       - "scripts/doctor-windows.ps1"
       - "resource_packs/**"
-      - "tools/assign_pack_block_ids.ps1"
+      - "tools/**"
+      - "content/**"
   pull_request:
     branches: [main, master, thread_chunks]
     paths:
@@ -20,7 +21,8 @@ on:
       - "scripts/build/**"
       - "scripts/doctor-windows.ps1"
       - "resource_packs/**"
-      - "tools/assign_pack_block_ids.ps1"
+      - "tools/**"
+      - "content/**"
   workflow_dispatch:
 
 jobs:
@@ -57,6 +59,15 @@ jobs:
       - name: Doctor smoke (assets, no GUI)
         shell: pwsh
         run: ./scripts/doctor-windows.ps1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Worldgen integration test
+        shell: pwsh
+        run: python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin
 
       - name: Upload desktop runtime artifact
         uses: actions/upload-artifact@v4

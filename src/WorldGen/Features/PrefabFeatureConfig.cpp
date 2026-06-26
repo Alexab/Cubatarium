@@ -183,6 +183,22 @@ SubBiomeId SubBiomeIdFromString(const std::string &name)
   {
     return SubBiomeId::Dunes;
   }
+  if (name == "dry")
+  {
+    return SubBiomeId::SavannaDry;
+  }
+  if (name == "wet")
+  {
+    return SubBiomeId::SavannaWet;
+  }
+  if (name == "scrub_dry")
+  {
+    return SubBiomeId::ScrubDry;
+  }
+  if (name == "scrub_wet")
+  {
+    return SubBiomeId::ScrubWet;
+  }
   return SubBiomeId::Default;
 }
 
@@ -200,6 +216,14 @@ const char *SubBiomeIdToString(SubBiomeId subBiome)
     return "scrub_desert";
   case SubBiomeId::Dunes:
     return "dunes";
+  case SubBiomeId::SavannaDry:
+    return "dry";
+  case SubBiomeId::SavannaWet:
+    return "wet";
+  case SubBiomeId::ScrubDry:
+    return "scrub_dry";
+  case SubBiomeId::ScrubWet:
+    return "scrub_wet";
   case SubBiomeId::Default:
   default:
     return "default";

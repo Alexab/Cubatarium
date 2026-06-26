@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 
+#include "App/CreateWorldCli.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
@@ -126,6 +127,8 @@ public:
                                   const std::vector<std::string> &resourcePacks);
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const ResourcePackSelection &selection);
+  bool CreateWorldHeadless(const CreateWorldCliArgs &args,
+                           CreateWorldReport &report);
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &world_name) const;
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const;

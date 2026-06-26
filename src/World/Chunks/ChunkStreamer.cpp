@@ -251,8 +251,16 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   }
 
   MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
-  ProcedurallyGenerated.insert(chunkCoord);
-  return true;
+  const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
+  if (complete)
+  {
+    ProcedurallyGenerated.insert(chunkCoord);
+  }
+  else
+  {
+    ProcedurallyGenerated.erase(chunkCoord);
+  }
+  return complete;
 }
 
 bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
@@ -417,18 +425,20 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
       WorldPosToBlock(glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   LoadPriorityCenter = glm::ivec3(feetChunk.x, 0, feetChunk.z);
+  const glm::ivec3 loadCenter = LoadPriorityCenter;
 
   std::vector<glm::ivec3> toLoad;
   toLoad.reserve(static_cast<size_t>((2 * RenderDistance + 1) *
                                      (2 * RenderDistance + 1)));
-  for (int cx = centerChunk.x - RenderDistance;
-       cx <= centerChunk.x + RenderDistance; ++cx)
+  for (int cx = loadCenter.x - RenderDistance;
+       cx <= loadCenter.x + RenderDistance; ++cx)
   {
-    for (int cz = centerChunk.z - RenderDistance;
-         cz <= centerChunk.z + RenderDistance; ++cz)
+    for (int cz = loadCenter.z - RenderDistance;
+         cz <= loadCenter.z + RenderDistance; ++cz)
     {
       const glm::ivec3 coord(cx, 0, cz);
-      if (ProcedurallyGenerated.count(coord))
+      if (ProcedurallyGenerated.count(coord) &&
+          IsTerrainChunkCompleteCached(coord))
       {
         continue;
       }
@@ -456,7 +466,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     }
   }
 
-  UnloadDistantChunks(centerChunk, feetBlockPos, eyePos, cap);
+  UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
 }
 
 } // namespace cutum

@@ -80,14 +80,15 @@ private:
   int SpatialDx{0};
   int SpatialDz{0};
 
-  int GenMinCx{0};
-  int GenMaxCx{0};
-  int GenMinCz{0};
-  int GenMaxCz{0};
-  int GenCx{0};
-  int GenCz{0};
-  int GenLx{0};
-  int GenLz{0};
+  int GenCenterX{0};
+  int GenCenterZ{0};
+  struct GenColumnEntry
+  {
+    int X;
+    int Z;
+  };
+  std::vector<GenColumnEntry> GenColumnQueue;
+  size_t GenColumnIndex{0};
   int GenTotalColumns{0};
   int GenDoneColumns{0};
 

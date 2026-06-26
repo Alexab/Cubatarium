@@ -23,11 +23,11 @@
       "prefab": "tree_acacia_mapgen",
       "biomes": [
         "plains",
-        "desert"
+        "savanna"
       ],
       "weight": 2,
       "seed_offset": 4007,
-      "spacing": 30,
+      "spacing": 28,
       "placement_y_offset": -1
     },
     {
@@ -38,7 +38,7 @@
       ],
       "weight": 3,
       "seed_offset": 4001,
-      "spacing": 42,
+      "spacing": 32,
       "placement_y_offset": -1
     },
     {
@@ -49,7 +49,7 @@
       ],
       "weight": 2,
       "seed_offset": 4008,
-      "spacing": 48,
+      "spacing": 36,
       "placement_y_offset": -1
     },
     {
@@ -115,6 +115,50 @@
       "seed_offset": 4009,
       "spacing": 24,
       "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_mapgen",
+      "biomes": [
+        "foothills",
+        "cold_steppe"
+      ],
+      "weight": 2,
+      "seed_offset": 4011,
+      "spacing": 40,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_mapgen",
+      "biomes": [
+        "hills"
+      ],
+      "weight": 2,
+      "seed_offset": 4012,
+      "spacing": 48,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "tree_pine_mapgen",
+      "biomes": [
+        "forest"
+      ],
+      "weight": 2,
+      "seed_offset": 4014,
+      "spacing": 32,
+      "placement_y_offset": -1,
+      "sub_biomes": [
+        "dense_forest"
+      ]
+    },
+    {
+      "prefab": "cactus_large",
+      "biomes": [
+        "scrubland"
+      ],
+      "weight": 1,
+      "seed_offset": 4210,
+      "spacing": 80,
+      "placement_y_offset": -1
     }
   ],
   "ground_cover": [
@@ -173,7 +217,7 @@
       ],
       "weight": 2,
       "seed_offset": 4114,
-      "spacing": 8,
+      "spacing": 22,
       "placement_y_offset": -1
     },
     {
@@ -194,7 +238,7 @@
       ],
       "weight": 2,
       "seed_offset": 4120,
-      "spacing": 12
+      "spacing": 26
     },
     {
       "prefab": "mushroom_brown_pair",
@@ -226,7 +270,54 @@
       ],
       "weight": 3,
       "seed_offset": 4111,
-      "spacing": 18,
+      "spacing": 28,
+      "placement_y_offset": -1
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "tall_grass",
+      "biomes": [
+        "plains",
+        "forest"
+      ],
+      "weight": 1,
+      "seed_offset": 4130,
+      "chance_per_column": 6,
+      "spacing": 1,
+      "attempts": 4,
+      "radius": 2
+    },
+    {
+      "prefab": "dry_grass_clump",
+      "biomes": [
+        "savanna",
+        "cold_steppe"
+      ],
+      "weight": 2,
+      "seed_offset": 4115,
+      "spacing": 24,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "dry_grass_clump",
+      "biomes": [
+        "scrubland"
+      ],
+      "weight": 2,
+      "seed_offset": 4116,
+      "spacing": 28,
+      "placement_y_offset": -1
+    },
+    {
+      "prefab": "bush_common",
+      "biomes": [
+        "foothills",
+        "scrubland",
+        "savanna"
+      ],
+      "weight": 2,
+      "seed_offset": 4117,
+      "spacing": 30,
       "placement_y_offset": -1
     }
   ],

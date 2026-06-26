@@ -1,12 +1,12 @@
-{
-  "id": "hills",
-  "height": {
-    "base_offset": 2,
-    "amplitude_mul": 1.25,
-    "volatility_mul": 1.2
-  },
-  "palette": {
-    "surface": "stone",
-    "subsurface": "gravel"
-  }
-}
+{
+  "id": "hills",
+  "height": {
+    "base_offset": 1,
+    "amplitude_mul": 1.05,
+    "volatility_mul": 0.50
+  },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "dirt"
+  }
+}

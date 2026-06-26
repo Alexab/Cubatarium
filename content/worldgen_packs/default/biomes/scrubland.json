@@ -3,10 +3,28 @@
   "height": {
     "base_offset": -1,
     "amplitude_mul": 0.75,
-    "volatility_mul": 0.7
+    "volatility_mul": 0.40
   },
   "palette": {
     "surface": "sand",
     "subsurface": "dirt"
+  },
+  "sub_biomes": {
+    "scrub_dry": {
+      "noise_threshold": 0.5,
+      "vegetation_weight_mul": 0.8
+    },
+    "scrub_wet": {
+      "noise_threshold": 0.7,
+      "vegetation_weight_mul": 1.1
+    }
+  },
+  "features": {
+    "vegetation": {
+      "cactus_large": 0.6
+    },
+    "ground_cover": {
+      "bush_acacia": 1.2
+    }
   }
 }

@@ -1,5 +1,7 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
+#include <algorithm>
 #include <functional>
+#include <vector>
 #include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
 
@@ -14,29 +16,37 @@ void GenerateAllColumnsInChunkRange(IWorldGenPipeline &pipeline, int centerX,
                                     int minWorldZ, int maxWorldZ,
                                     WorldGenColumnProgressFn onProgress)
 {
-  const int minCx = FloorDiv(minWorldX, CHUNK_SIZE);
-  const int maxCx = FloorDiv(maxWorldX, CHUNK_SIZE);
-  const int minCz = FloorDiv(minWorldZ, CHUNK_SIZE);
-  const int maxCz = FloorDiv(maxWorldZ, CHUNK_SIZE);
-  const int totalColumns = (maxCx - minCx + 1) * CHUNK_SIZE *
-                           (maxCz - minCz + 1) * CHUNK_SIZE;
-  int done = 0;
-  for (int cx = minCx; cx <= maxCx; ++cx)
+  struct ColumnCoord
   {
-    for (int cz = minCz; cz <= maxCz; ++cz)
+    int x;
+    int z;
+    int dist2;
+  };
+  std::vector<ColumnCoord> columns;
+  columns.reserve(static_cast<size_t>((maxWorldX - minWorldX + 1) *
+                                    (maxWorldZ - minWorldZ + 1)));
+  for (int x = minWorldX; x <= maxWorldX; ++x)
+  {
+    for (int z = minWorldZ; z <= maxWorldZ; ++z)
     {
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-      {
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-        {
-          pipeline.GenerateColumn(cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz);
-          ++done;
-          if (onProgress)
-          {
-            onProgress(done, totalColumns);
-          }
-        }
-      }
+      const int dx = x - centerX;
+      const int dz = z - centerZ;
+      columns.push_back({x, z, dx * dx + dz * dz});
+    }
+  }
+  std::sort(columns.begin(), columns.end(),
+            [](const ColumnCoord &a, const ColumnCoord &b)
+            { return a.dist2 < b.dist2; });
+
+  const int totalColumns = static_cast<int>(columns.size());
+  int done = 0;
+  for (const ColumnCoord &column : columns)
+  {
+    pipeline.GenerateColumn(column.x, column.z);
+    ++done;
+    if (onProgress)
+    {
+      onProgress(done, totalColumns);
     }
   }
 }

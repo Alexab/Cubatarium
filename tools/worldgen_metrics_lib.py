@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+"""Shared metrics for procedural worldgen (.cchunk analysis)."""
+
+from __future__ import annotations
+
+import json
+import struct
+from collections import Counter, defaultdict
+from pathlib import Path
+
+CHUNK_SIZE = 16
+CHUNK_VOLUME = CHUNK_SIZE**3
+MAGIC = b"CCHK"
+
+
+def read_u16(data: bytes, off: int) -> tuple[int, int]:
+    return struct.unpack_from("<H", data, off)[0], off + 2
+
+
+def read_u32(data: bytes, off: int) -> tuple[int, int]:
+    return struct.unpack_from("<I", data, off)[0], off + 4
+
+
+def read_i32(data: bytes, off: int) -> tuple[int, int]:
+    return struct.unpack_from("<i", data, off)[0], off + 4
+
+
+def decode_chunk(path: Path) -> dict[tuple[int, int, int], int]:
+    data = path.read_bytes()
+    if len(data) < 20 or data[:4] != MAGIC:
+        return {}
+    off = 5
+    _, off = read_i32(data, off)
+    _, off = read_i32(data, off)
+    _, off = read_i32(data, off)
+    palette_count, off = read_u16(data, off)
+    palette: list[int] = []
+    for _ in range(palette_count):
+        bid, off = read_u16(data, off)
+        palette.append(bid)
+    run_count, off = read_u32(data, off)
+    blocks: dict[tuple[int, int, int], int] = {}
+    lx = ly = lz = 0
+
+    def advance() -> None:
+        nonlocal lx, ly, lz
+        lx += 1
+        if lx >= CHUNK_SIZE:
+            lx = 0
+            ly += 1
+            if ly >= CHUNK_SIZE:
+                ly = 0
+                lz += 1
+
+    stem = path.stem
+    cx_s, cy_s, cz_s = stem.split("_")
+    cx, cy, cz = int(cx_s), int(cy_s), int(cz_s)
+    filled = 0
+    for _ in range(run_count):
+        length, off = read_u16(data, off)
+        palette_idx, off = read_u16(data, off)
+        if palette_idx >= len(palette):
+            return {}
+        bid = palette[palette_idx]
+        for _ in range(length):
+            if filled >= CHUNK_VOLUME or lz >= CHUNK_SIZE:
+                return {}
+            if bid != 0:
+                wx = cx * CHUNK_SIZE + lx
+                wy = cy * CHUNK_SIZE + ly
+                wz = cz * CHUNK_SIZE + lz
+                blocks[(wx, wy, wz)] = bid
+            advance()
+            filled += 1
+    return blocks
+
+
+VEGETATION_BLOCK_NAMES = ("tree_log", "tree_leaves")
+
+
+def count_spawn_vegetation_blocks(
+    world_dir: Path,
+    id_to_name: dict[int, str],
+    spawn_radius: int,
+) -> dict[str, int]:
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return {}
+    counts: Counter[str] = Counter()
+    for path in chunk_dir.glob("*.cchunk"):
+        for (wx, _wy, wz), bid in decode_chunk(path).items():
+            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+                continue
+            name = id_to_name.get(bid, "")
+            if name in VEGETATION_BLOCK_NAMES:
+                counts[name] += 1
+    return dict(counts)
+
+
+def load_world_columns(world_dir: Path) -> dict[tuple[int, int], tuple[int, int]]:
+    """Return (surface_y, surface_block_id) per (wx, wz)."""
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return {}
+
+    columns: dict[tuple[int, int, int], int] = {}
+    for path in chunk_dir.glob("*.cchunk"):
+        columns.update(decode_chunk(path))
+
+    surface: dict[tuple[int, int], tuple[int, int]] = {}
+    by_xz: dict[tuple[int, int], list[tuple[int, int]]] = defaultdict(list)
+    for (wx, wy, wz), bid in columns.items():
+        by_xz[(wx, wz)].append((wy, bid))
+
+    for xz, entries in by_xz.items():
+        wy, bid = max(entries, key=lambda t: t[0])
+        surface[xz] = (wy, bid)
+    return surface
+
+
+def load_slot_map(refs_path: Path) -> dict[str, list[str]]:
+    data = json.loads(refs_path.read_text(encoding="utf-8"))
+    slots = data.get("slots", {})
+    result: dict[str, list[str]] = {}
+    for slot_name, entry in slots.items():
+        names = entry.get("block_names", [])
+        if isinstance(names, list):
+            result[slot_name] = [str(n) for n in names]
+    return result
+
+
+def load_pack_blocks(pack_dir: Path) -> dict[str, int]:
+    """block name -> pack id from resource_packs/*/blocks/*.json."""
+    blocks_dir = pack_dir / "blocks"
+    if not blocks_dir.is_dir():
+        return {}
+    out: dict[str, int] = {}
+    for path in blocks_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        name = data.get("name")
+        bid = data.get("id")
+        if name and isinstance(bid, int):
+            out[str(name)] = bid
+    return out
+
+
+def build_id_to_name_from_world(world_dir: Path, repo_root: Path) -> dict[int, str]:
+    meta_path = world_dir / "world_data.json"
+    if not meta_path.is_file():
+        return {}
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    packs_cfg = meta.get("resource_packs", {})
+    primary = packs_cfg.get("primary", [])
+    if not isinstance(primary, list):
+        primary = []
+    id_to_name: dict[int, str] = {}
+    packs_root = repo_root / "resource_packs"
+    for pack_id in primary:
+        pack_blocks = load_pack_blocks(packs_root / str(pack_id))
+        for name, bid in pack_blocks.items():
+            id_to_name[bid] = name
+    return id_to_name
+
+
+def name_to_slot(block_name: str, slot_map: dict[str, list[str]]) -> str | None:
+    for slot, names in slot_map.items():
+        if block_name in names:
+            return slot
+    return None
+
+
+def block_id_to_slot(
+    block_id: int,
+    id_to_name: dict[int, str],
+    slot_map: dict[str, list[str]],
+) -> str:
+    name = id_to_name.get(block_id)
+    if not name:
+        return f"unknown_{block_id}"
+    slot = name_to_slot(name, slot_map)
+    return slot if slot else name
+
+
+def _height_deltas(surface: dict[tuple[int, int], tuple[int, int]]) -> list[int]:
+    deltas: list[int] = []
+    by_x: dict[int, dict[int, int]] = defaultdict(dict)
+    for (x, z), (y, _) in surface.items():
+        by_x[x][z] = y
+    for x, zmap in by_x.items():
+        for z, y in zmap.items():
+            if x + 1 in by_x and z in by_x[x + 1]:
+                deltas.append(abs(y - by_x[x + 1][z]))
+            if z + 1 in zmap:
+                deltas.append(abs(y - zmap[z + 1]))
+    deltas.sort()
+    return deltas
+
+
+def _spawn_slot_fractions(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    spawn_radius: int,
+    id_to_name: dict[int, str],
+    slot_map: dict[str, list[str]],
+) -> dict[str, float]:
+    counts: Counter[str] = Counter()
+    total = 0
+    for (x, z), (_, bid) in surface.items():
+        if abs(x) > spawn_radius or abs(z) > spawn_radius:
+            continue
+        slot = block_id_to_slot(bid, id_to_name, slot_map)
+        counts[slot] += 1
+        total += 1
+    if total == 0:
+        return {}
+    return {slot: 100.0 * count / total for slot, count in counts.items()}
+
+
+def analyze_surface(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    spawn_radius: int = 48,
+    max_height: int = 128,
+    id_to_name: dict[int, str] | None = None,
+    slot_map: dict[str, list[str]] | None = None,
+) -> dict:
+    if not surface:
+        return {"columns": 0}
+
+    heights = [y for y, _ in surface.values()]
+    top_blocks = Counter(bid for _, bid in surface.values())
+    deltas = _height_deltas(surface)
+
+    cliff16 = sum(1 for d in deltas if d >= 16)
+    cliff8 = sum(1 for d in deltas if d >= 8)
+    cliff4 = sum(1 for d in deltas if d >= 4)
+    max_violations = sum(1 for y in heights if y > max_height)
+
+    result: dict = {
+        "columns": len(surface),
+        "height_min": min(heights),
+        "height_max": max(heights),
+        "height_mean": sum(heights) / len(heights),
+        "delta_mean": sum(deltas) / max(1, len(deltas)),
+        "delta_p95": deltas[int(len(deltas) * 0.95)] if deltas else 0,
+        "delta_ge_4_pct": 100.0 * cliff4 / max(1, len(deltas)),
+        "delta_ge_8_pct": 100.0 * cliff8 / max(1, len(deltas)),
+        "delta_ge_16_pct": 100.0 * cliff16 / max(1, len(deltas)),
+        "max_height_violations": max_violations,
+        "top_block_ids": top_blocks.most_common(8),
+    }
+
+    if id_to_name is not None and slot_map is not None:
+        spawn_slots = _spawn_slot_fractions(
+            surface, spawn_radius, id_to_name, slot_map
+        )
+        spawn_heights = [
+            y
+            for (x, z), (y, _) in surface.items()
+            if abs(x) <= spawn_radius and abs(z) <= spawn_radius
+        ]
+        result["spawn"] = {
+            "columns": len(spawn_heights),
+            "height_mean": sum(spawn_heights) / max(1, len(spawn_heights)),
+            "surface_slots": spawn_slots,
+        }
+    return result
+
+
+def analyze_world(
+    world_dir: Path,
+    refs_path: Path,
+    *,
+    repo_root: Path | None = None,
+    spawn_radius: int = 48,
+    max_height: int = 128,
+) -> dict:
+    repo = repo_root or refs_path.parent.parent
+    slot_map = load_slot_map(refs_path)
+    id_to_name = build_id_to_name_from_world(world_dir, repo)
+    surface = load_world_columns(world_dir)
+    metrics = analyze_surface(
+        surface,
+        spawn_radius=spawn_radius,
+        max_height=max_height,
+        id_to_name=id_to_name,
+        slot_map=slot_map,
+    )
+    veg = count_spawn_vegetation_blocks(world_dir, id_to_name, spawn_radius)
+    metrics["spawn_vegetation"] = veg
+    metrics["spawn_tree_blocks"] = veg.get("tree_log", 0) + veg.get("tree_leaves", 0)
+    meta_path = world_dir / "world_data.json"
+    if meta_path.is_file():
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        metrics["seed"] = meta.get("world_seed")
+        metrics["world_name"] = meta.get("world_name")
+    return metrics
+
+
+def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
+    failures: list[str] = []
+
+    def fail(msg: str) -> None:
+        failures.append(msg)
+
+    if metrics.get("columns", 0) == 0:
+        fail("no terrain columns")
+        return failures
+
+    if metrics.get("delta_ge_16_pct", 0) > thresholds.get("delta_ge_16_pct_max", 0.5):
+        fail(
+            f"delta_ge_16_pct={metrics['delta_ge_16_pct']:.3f} > "
+            f"{thresholds['delta_ge_16_pct_max']}"
+        )
+    if metrics.get("delta_ge_8_pct", 0) > thresholds.get("delta_ge_8_pct_max", 5.0):
+        fail(
+            f"delta_ge_8_pct={metrics['delta_ge_8_pct']:.3f} > "
+            f"{thresholds['delta_ge_8_pct_max']}"
+        )
+
+    mean_y = metrics.get("height_mean", 0)
+    if mean_y < thresholds.get("height_mean_min", 48.0):
+        fail(f"height_mean={mean_y:.2f} < {thresholds['height_mean_min']}")
+    if mean_y > thresholds.get("height_mean_max", 65.0):
+        fail(f"height_mean={mean_y:.2f} > {thresholds['height_mean_max']}")
+
+    slack = thresholds.get("height_max_slack", 1)
+    max_h = thresholds.get("max_height", 128)
+    if metrics.get("height_max", 0) > max_h + slack:
+        fail(f"height_max={metrics['height_max']} > {max_h + slack}")
+
+    if metrics.get("max_height_violations", 0) > thresholds.get(
+        "max_height_violations_max", 0
+    ):
+        fail(f"max_height_violations={metrics['max_height_violations']}")
+
+    spawn = metrics.get("spawn", {})
+    slots = spawn.get("surface_slots", {})
+    grass_pct = slots.get("grass", 0.0)
+    meadow_pct = grass_pct + slots.get("tall_grass", 0.0)
+    stone_pct = slots.get("stone", 0.0)
+    meadow_min = thresholds.get("spawn_meadow_min_pct")
+    if meadow_min is not None:
+        if meadow_pct < meadow_min:
+            fail(f"spawn meadow (grass+tall_grass)={meadow_pct:.1f}% < {meadow_min}%")
+    elif grass_pct < thresholds.get("spawn_grass_min_pct", 30.0):
+        fail(f"spawn grass={grass_pct:.1f}% < {thresholds['spawn_grass_min_pct']}%")
+    if stone_pct > thresholds.get("spawn_stone_max_pct", 45.0):
+        fail(f"spawn stone={stone_pct:.1f}% > {thresholds['spawn_stone_max_pct']}%")
+
+    tree_min = thresholds.get("spawn_tree_blocks_min")
+    if tree_min is not None:
+        tree_blocks = metrics.get("spawn_tree_blocks", 0)
+        if tree_blocks < tree_min:
+            fail(f"spawn tree_blocks={tree_blocks} < {tree_min}")
+
+    return failures

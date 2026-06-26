@@ -4,6 +4,8 @@
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "World/Prefabs/Prefab.h"
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 
@@ -105,16 +107,40 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
 
-  const int baseX = request.chunkCoord.x * CHUNK_SIZE;
-  const int baseZ = request.chunkCoord.z * CHUNK_SIZE;
+  const int base_x = request.chunkCoord.x * CHUNK_SIZE;
+  const int base_z = request.chunkCoord.z * CHUNK_SIZE;
+  const int center_x = base_x + CHUNK_SIZE / 2;
+  const int center_z = base_z + CHUNK_SIZE / 2;
 
+  std::array<std::pair<int, int>, CHUNK_SIZE * CHUNK_SIZE> columns;
+  size_t column_count = 0;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
     {
-      (void)pipeline->SurfaceYAt(baseX + lx, baseZ + lz);
-      pipeline->GenerateColumn(baseX + lx, baseZ + lz);
+      columns[column_count++] = {lx, lz};
     }
+  }
+  std::sort(columns.begin(), columns.begin() + static_cast<ptrdiff_t>(column_count),
+            [base_x, base_z, center_x, center_z](const std::pair<int, int> &a,
+                                                 const std::pair<int, int> &b)
+            {
+              const int ax = base_x + a.first;
+              const int az = base_z + a.second;
+              const int bx = base_x + b.first;
+              const int bz = base_z + b.second;
+              const int da = (ax - center_x) * (ax - center_x) +
+                             (az - center_z) * (az - center_z);
+              const int db = (bx - center_x) * (bx - center_x) +
+                             (bz - center_z) * (bz - center_z);
+              return da < db;
+            });
+
+  for (size_t i = 0; i < column_count; ++i)
+  {
+    const int lx = columns[i].first;
+    const int lz = columns[i].second;
+    pipeline->GenerateColumn(base_x + lx, base_z + lz);
   }
 
   genWorld.ForEachBlock(

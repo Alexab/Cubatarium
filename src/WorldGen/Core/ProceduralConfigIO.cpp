@@ -1,4 +1,5 @@
 #include "WorldGen/Core/ProceduralConfigIO.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldSeedParser.h"
 #include "App/Settings/UiSettings.h"
@@ -115,6 +116,22 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.biomeTundraWeight = tuning["biome_tundra_weight"].get<float>();
   }
+  if (tuning.contains("biome_savanna_weight"))
+  {
+    out.biomeSavannaWeight = tuning["biome_savanna_weight"].get<float>();
+  }
+  if (tuning.contains("biome_foothills_weight"))
+  {
+    out.biomeFoothillsWeight = tuning["biome_foothills_weight"].get<float>();
+  }
+  if (tuning.contains("biome_scrubland_weight"))
+  {
+    out.biomeScrublandWeight = tuning["biome_scrubland_weight"].get<float>();
+  }
+  if (tuning.contains("biome_cold_steppe_weight"))
+  {
+    out.biomeColdSteppeWeight = tuning["biome_cold_steppe_weight"].get<float>();
+  }
   if (tuning.contains("terrain_roughness"))
   {
     out.terrainRoughness = tuning["terrain_roughness"].get<float>();
@@ -147,6 +164,18 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   if (tuning.contains("erosion_strength"))
   {
     out.erosionStrength = tuning["erosion_strength"].get<float>();
+  }
+  if (tuning.contains("height_smoothing"))
+  {
+    out.heightSmoothing = tuning["height_smoothing"].get<bool>();
+  }
+  if (tuning.contains("height_smoothing_radius"))
+  {
+    out.heightSmoothingRadius = tuning["height_smoothing_radius"].get<int>();
+  }
+  if (tuning.contains("jitter_amplitude"))
+  {
+    out.jitterAmplitude = tuning["jitter_amplitude"].get<float>();
   }
 }
 
@@ -206,6 +235,10 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["biome_desert_weight"] = tuning.biomeDesertWeight;
   out["biome_hills_weight"] = tuning.biomeHillsWeight;
   out["biome_tundra_weight"] = tuning.biomeTundraWeight;
+  out["biome_savanna_weight"] = tuning.biomeSavannaWeight;
+  out["biome_foothills_weight"] = tuning.biomeFoothillsWeight;
+  out["biome_scrubland_weight"] = tuning.biomeScrublandWeight;
+  out["biome_cold_steppe_weight"] = tuning.biomeColdSteppeWeight;
   out["terrain_roughness"] = tuning.terrainRoughness;
   out["biome_blend_radius"] = tuning.biomeBlendRadius;
   out["ore_density"] = tuning.oreDensity;
@@ -214,6 +247,9 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["thermal_erosion_iterations"] = tuning.thermalErosionIterations;
   out["hydraulic_erosion_iterations"] = tuning.hydraulicErosionIterations;
   out["erosion_strength"] = tuning.erosionStrength;
+  out["height_smoothing"] = tuning.heightSmoothing;
+  out["height_smoothing_radius"] = tuning.heightSmoothingRadius;
+  out["jitter_amplitude"] = tuning.jitterAmplitude;
 }
 
 } // namespace
@@ -259,6 +295,15 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.Generator =
           ProceduralGeneratorFromString(legacyGeneratorId);
     }
+    {
+      const uint32_t savedSeed = settings.Seed;
+      const std::string savedSeedText = settings.SeedText;
+      const WorldSeedKind savedSeedKind = settings.SeedKind;
+      ResetToGeneratorDefaults(settings);
+      settings.Seed = savedSeed;
+      settings.SeedText = savedSeedText;
+      settings.SeedKind = savedSeedKind;
+    }
     if (p.contains("vertical") && p["vertical"].is_string())
     {
       legacyVerticalMode = p["vertical"].get<std::string>();
@@ -284,6 +329,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("preset") && p["preset"].is_string())
     {
       settings.WorldGenPresetId = p["preset"].get<std::string>();
+      ApplyWorldGenPreset(settings, settings.WorldGenPresetId);
     }
     if (p.contains("caves") && p["caves"].is_boolean())
     {
@@ -299,6 +345,10 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.EnableTrees = p["trees"].get<bool>();
       hasTrees = true;
+    }
+    if (p.contains("ground_cover"))
+    {
+      settings.EnableGroundCover = p["ground_cover"].get<bool>();
     }
     if (p.contains("decoration"))
     {
@@ -411,37 +461,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 
 ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
 {
-  ProceduralSettings settings;
-  settings.Seed = root.value("world_seed", 12345u);
-  std::string legacyGeneratorId;
-
-  const bool hasProcedural =
-      root.contains("procedural") && root["procedural"].is_object();
-  if (hasProcedural)
-  {
-    const nlohmann::json &p = root["procedural"];
-    if (p.contains("generator") && p["generator"].is_string())
-    {
-      legacyGeneratorId = p["generator"].get<std::string>();
-      settings.Generator =
-          ProceduralGeneratorFromString(legacyGeneratorId);
-    }
-  }
-  else if (root.contains("terrain") && root["terrain"].is_string())
-  {
-    legacyGeneratorId = root["terrain"].get<std::string>();
-    settings.Generator =
-        ProceduralGeneratorFromString(legacyGeneratorId);
-  }
-
-  ResetToGeneratorDefaults(settings);
-  ApplyLegacyOverworldProfile(legacyGeneratorId, settings, false, false, false,
-                              false, false, false);
-  if (hasProcedural)
-  {
-    ParseProceduralStreamingOptions(root["procedural"], settings);
-  }
-  return settings;
+  return ParseProceduralSettings(root);
 }
 
 void WriteProceduralSettings(nlohmann::json &root,
@@ -457,6 +477,7 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["caves"] = settings.EnableCaves;
   procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
+  procedural["ground_cover"] = settings.EnableGroundCover;
   procedural["decoration"] = settings.EnableDecoration;
   procedural["structures"] = settings.EnableStructures;
   procedural["flat_surface_y"] = settings.FlatSurfaceY;
@@ -490,6 +511,14 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
 {
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
+  procedural["preset"] = settings.WorldGenPresetId;
+  procedural["trees"] = settings.EnableTrees;
+  procedural["ground_cover"] = settings.EnableGroundCover;
+  procedural["decoration"] = settings.EnableDecoration;
+  procedural["structures"] = settings.EnableStructures;
+  nlohmann::json tuning;
+  WriteTuning(settings.Tuning, tuning);
+  procedural["tuning"] = tuning;
   WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
   root["terrain"] = ProceduralGeneratorToString(settings.Generator);

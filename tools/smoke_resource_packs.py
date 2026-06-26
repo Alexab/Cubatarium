@@ -105,6 +105,7 @@ def check_prefabs() -> None:
     run([sys.executable, "tools/generate_prefab_features.py"])
     run([sys.executable, "tools/validate_prefabs.py"])
     run([sys.executable, "tools/validate_prefab_features.py"])
+    run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 
 def main() -> int:

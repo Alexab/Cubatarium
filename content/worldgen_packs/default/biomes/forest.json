@@ -3,7 +3,7 @@
   "height": {
     "base_offset": 0,
     "amplitude_mul": 1.0,
-    "volatility_mul": 1.0
+    "volatility_mul": 0.55
   },
   "palette": {
     "surface": "grass",

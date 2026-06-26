@@ -245,6 +245,10 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     TreesBox->SetChecked(FormSettings.EnableTrees);
   }
+  if (GroundCoverBox)
+  {
+    GroundCoverBox->SetChecked(FormSettings.EnableGroundCover);
+  }
   if (DecorationBox)
   {
     DecorationBox->SetChecked(FormSettings.EnableDecoration);
@@ -401,6 +405,10 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     s.EnableTrees = TreesBox->IsChecked();
   }
+  if (GroundCoverBox)
+  {
+    s.EnableGroundCover = GroundCoverBox->IsChecked();
+  }
   if (DecorationBox)
   {
     s.EnableDecoration = DecorationBox->IsChecked();
@@ -476,6 +484,7 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(FlatYInput, showFlat);
   SetWidgetVisible(CavesBox, showCaves);
   SetWidgetVisible(TreesBox, showTrees);
+  SetWidgetVisible(GroundCoverBox, showTrees);
   SetWidgetVisible(DecorationBox, showTrees);
   SetWidgetVisible(StructuresBox, showStructures);
   SetWidgetVisible(WaterBox, showFluids);
@@ -788,6 +797,13 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   trees->SetOnChanged([this](bool v) { FormSettings.EnableTrees = v; });
   panel.AddChild(std::move(trees));
 
+  auto groundCover = std::make_unique<UGuiCheckbox>(Theme, "Ground cover");
+  GroundCoverBox = groundCover.get();
+  groundCover->SetChecked(FormSettings.EnableGroundCover);
+  groundCover->SetOnChanged(
+      [this](bool v) { FormSettings.EnableGroundCover = v; });
+  panel.AddChild(std::move(groundCover));
+
   auto decoration = std::make_unique<UGuiCheckbox>(Theme, "Decoration");
   DecorationBox = decoration.get();
   decoration->SetChecked(FormSettings.EnableDecoration);
@@ -885,13 +901,14 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({CavesBox, 26, 0, 1, 1, 30});
   items.push_back({OresBox, 26, 1, 1, 1, 30});
   items.push_back({TreesBox, 27, 0, 1, 1, 30});
-  items.push_back({DecorationBox, 27, 1, 1, 1, 30});
-  items.push_back({StructuresBox, 28, 0, 1, 1, 30});
-  items.push_back({WaterBox, 28, 1, 1, 1, 30});
-  items.push_back({LavaBox, 29, 0, 1, 1, 30});
-  items.push_back({FireBox, 29, 1, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 30, 0, 1, 1, 28});
-  items.push_back({WorldGenPackIdInput, 30, 1, 1, 1, 32});
+  items.push_back({GroundCoverBox, 27, 1, 1, 1, 30});
+  items.push_back({DecorationBox, 28, 0, 1, 1, 30});
+  items.push_back({StructuresBox, 28, 1, 1, 1, 30});
+  items.push_back({WaterBox, 29, 0, 1, 1, 30});
+  items.push_back({LavaBox, 29, 1, 1, 1, 30});
+  items.push_back({FireBox, 30, 0, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 30, 1, 1, 1, 28});
+  items.push_back({WorldGenPackIdInput, 31, 0, 1, 2, 32});
   return items;
 }
 

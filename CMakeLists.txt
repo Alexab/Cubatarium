@@ -67,6 +67,7 @@ set(SOURCES
     src/ThirdParty/stb_image.cpp
     src/main.cpp
     src/App/Utils.cpp
+    src/App/CreateWorldCli.cpp
     src/Render/Camera/Camera.cpp
     src/Creatures/Core/CreatureBounds.cpp
     src/Creatures/Core/CreatureCatalogTypes.cpp
@@ -146,9 +147,12 @@ set(SOURCES
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/ComposableWorldGenPipeline.cpp
+    src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
@@ -359,6 +363,7 @@ if(ANDROID)
     set(CUBATARIUM_DESKTOP_ONLY
         src/main.cpp
         src/App/Utils.cpp
+    src/App/CreateWorldCli.cpp
         src/App/Platform/WindowManager.cpp
         src/App/Platform/InputManager.cpp
         src/App/Platform/CursorCapture.cpp

@@ -122,19 +122,38 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
   {
     world.RebuildWorldGenPipeline();
   }
-  const int patchRadiusBlocks =
+  GenCenterX = 0;
+  GenCenterZ = 0;
+  const int patch_radius_blocks =
       std::max(1, world.RenderDistanceChunks) * CHUNK_SIZE;
-  const int half = patchRadiusBlocks;
-  GenMinCx = FloorDiv(0 - half, CHUNK_SIZE);
-  GenMaxCx = FloorDiv(0 + half, CHUNK_SIZE);
-  GenMinCz = FloorDiv(0 - half, CHUNK_SIZE);
-  GenMaxCz = FloorDiv(0 + half, CHUNK_SIZE);
-  GenCx = GenMinCx;
-  GenCz = GenMinCz;
-  GenLx = 0;
-  GenLz = 0;
-  GenTotalColumns = (GenMaxCx - GenMinCx + 1) * CHUNK_SIZE *
-                    (GenMaxCz - GenMinCz + 1) * CHUNK_SIZE;
+  const int half = patch_radius_blocks;
+  const int min_x = GenCenterX - half;
+  const int max_x = GenCenterX + half;
+  const int min_z = GenCenterZ - half;
+  const int max_z = GenCenterZ + half;
+
+  GenColumnQueue.clear();
+  GenColumnQueue.reserve(static_cast<size_t>((max_x - min_x + 1) *
+                                             (max_z - min_z + 1)));
+  for (int x = min_x; x <= max_x; ++x)
+  {
+    for (int z = min_z; z <= max_z; ++z)
+    {
+      GenColumnQueue.push_back({x, z});
+    }
+  }
+  std::sort(GenColumnQueue.begin(), GenColumnQueue.end(),
+            [this](const GenColumnEntry &a, const GenColumnEntry &b)
+            {
+              const int da = (a.X - GenCenterX) * (a.X - GenCenterX) +
+                             (a.Z - GenCenterZ) * (a.Z - GenCenterZ);
+              const int db = (b.X - GenCenterX) * (b.X - GenCenterX) +
+                             (b.Z - GenCenterZ) * (b.Z - GenCenterZ);
+              return da < db;
+            });
+
+  GenColumnIndex = 0;
+  GenTotalColumns = static_cast<int>(GenColumnQueue.size());
   GenDoneColumns = 0;
 }
 
@@ -182,35 +201,14 @@ bool UWorldCooperativeSession::AdvanceGeneration(UWorld &world, int budget)
     return true;
   }
   int processed = 0;
-  while (processed < budget)
+  while (processed < budget && GenColumnIndex < GenColumnQueue.size())
   {
-    if (GenCx > GenMaxCx)
-    {
-      return true;
-    }
-    const int worldX = GenCx * CHUNK_SIZE + GenLx;
-    const int worldZ = GenCz * CHUNK_SIZE + GenLz;
-    world.WorldGen->GenerateColumn(worldX, worldZ);
+    const GenColumnEntry &entry = GenColumnQueue[GenColumnIndex++];
+    world.WorldGen->GenerateColumn(entry.X, entry.Z);
     ++GenDoneColumns;
     ++processed;
-    ++GenLz;
-    if (GenLz >= CHUNK_SIZE)
-    {
-      GenLz = 0;
-      ++GenLx;
-      if (GenLx >= CHUNK_SIZE)
-      {
-        GenLx = 0;
-        ++GenCz;
-        if (GenCz > GenMaxCz)
-        {
-          GenCz = GenMinCz;
-          ++GenCx;
-        }
-      }
-    }
   }
-  return GenCx > GenMaxCx;
+  return GenColumnIndex >= GenColumnQueue.size();
 }
 
 bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,

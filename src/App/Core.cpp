@@ -1451,4 +1451,104 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   return true;
 }
 
+bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,
+                                CreateWorldReport &report)
+{
+  report = CreateWorldReport{};
+  report.WorldName = args.WorldName;
+  report.Seed = args.Seed;
+  report.Generator = ProceduralGeneratorToString(args.Generator);
+  report.Preset = args.Preset;
+  report.RadiusChunks = args.RadiusChunks;
+
+  if (!WorldInstance)
+  {
+    report.Error = "World instance is not initialized.";
+    return false;
+  }
+
+  ResourcePackSelection selection = GetDefaultResourcePackSelection();
+  if (!args.PrimaryPacks.empty())
+  {
+    selection.Primary = NormalizeEnabledPackIds(args.PrimaryPacks);
+    selection.WorldgenOwner = args.WorldgenOwnerPack.empty()
+                                  ? selection.Primary.front()
+                                  : args.WorldgenOwnerPack;
+  }
+  selection.Primary = NormalizeEnabledPackIds(selection.Primary);
+  selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
+  if (!ApplyResourcePacks(selection))
+  {
+    report.Error = "Failed to apply resource packs.";
+    return false;
+  }
+
+  ProceduralSettings settings = ProceduralTemplate;
+  settings.Generator = args.Generator;
+  settings.Seed = args.Seed;
+  ResetToGeneratorDefaults(settings);
+  settings.Generator = args.Generator;
+  settings.Seed = args.Seed;
+  ApplyWorldGenPreset(settings, args.Preset);
+  settings.AsyncChunkGeneration = false;
+  settings.AsyncChunkIo = false;
+  ResolveProceduralDefaults(settings);
+  ApplyGeneratorTierDefaults(settings);
+
+  RenderDistanceChunks = std::max(1, args.RadiusChunks);
+  WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
+  WorldInstance->SetStreamingEnabled(false);
+
+  const std::filesystem::path output_root =
+      args.OutputRoot.is_absolute() ? args.OutputRoot : (ExeDir / args.OutputRoot);
+  std::error_code ec;
+  std::filesystem::create_directories(output_root, ec);
+  ActiveWorldFolder = output_root / args.WorldName;
+  std::filesystem::create_directories(ActiveWorldFolder, ec);
+  std::filesystem::create_directories(ActiveWorldFolder / "chunks", ec);
+  DefaultWorldName = args.WorldName;
+  WorldPath = output_root;
+
+  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
+                                          selection.WorldgenOwner);
+  WorldInstance->SetProceduralSettings(settings);
+  WorldInstance->SetRenderSettings(Render);
+
+  try
+  {
+    WorldInstance->Create(args.WorldName);
+    WorldInstance->GenerateUsers();
+    if (BlockMergeRegistryInstance)
+    {
+      WorldInstance->SetCatalogFingerprint(
+          BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+    }
+    WorldInstance->Save(ActiveWorldFolder.string());
+  }
+  catch (const std::exception &e)
+  {
+    report.Error = e.what();
+    return false;
+  }
+
+  const std::filesystem::path chunks_dir = ActiveWorldFolder / "chunks";
+  int chunk_files = 0;
+  if (std::filesystem::exists(chunks_dir))
+  {
+    for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+    {
+      if (entry.path().extension() == ".cchunk")
+      {
+        ++chunk_files;
+      }
+    }
+  }
+
+  report.Success = true;
+  report.WorldPath = ActiveWorldFolder.string();
+  report.ChunkFiles = chunk_files;
+  report.SpawnY = WorldInstance->GetSpawnPoint().y;
+  return true;
+}
+
 } // namespace cutum

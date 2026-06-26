@@ -44,7 +44,8 @@ int EffectiveSpacing(int spacing, float density)
   {
     return spacing;
   }
-  return std::max(1, static_cast<int>(static_cast<float>(spacing) / density));
+  const float multiplier = std::max(0.25f, 2.0f - density);
+  return std::max(1, static_cast<int>(static_cast<float>(spacing) * multiplier));
 }
 
 int EffectiveChance(int chancePerColumn, float density)
@@ -57,7 +58,8 @@ int EffectiveChance(int chancePerColumn, float density)
   {
     return chancePerColumn;
   }
-  return std::max(1, static_cast<int>(static_cast<float>(chancePerColumn) / density));
+  const float multiplier = std::max(0.25f, 2.0f - density);
+  return std::max(1, static_cast<int>(static_cast<float>(chancePerColumn) * multiplier));
 }
 
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
@@ -487,11 +489,15 @@ bool PlacePrefabAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
+  const int maxScanY =
+      surfaceY >= 0
+          ? std::min(ctx.Settings.MaxHeight - 1,
+                     std::max(surfaceY + 24, ctx.Settings.SeaLevel + 4))
+          : std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4);
   const bool canPlace =
       surfaceY >= 0
-          ? CanPlacePrefabAtForWorldGen(
-                ctx.World, ctx.Registry, *prefab, anchorWorldPos,
-                std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4))
+          ? CanPlacePrefabAtForWorldGen(ctx.World, ctx.Registry, *prefab,
+                                        anchorWorldPos, maxScanY)
           : CanPlacePrefabAt(ctx.World, *prefab, anchorWorldPos);
   if (!canPlace)
   {
@@ -528,20 +534,29 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  for (int dx = -2; dx <= 2; ++dx)
+  if (biome == BiomeId::Hills)
   {
-    for (int dz = -2; dz <= 2; ++dz)
+    const int range =
+        std::max(1, ctx.Settings.MaxHeight - ctx.Settings.SeaLevel);
+    const float heightNorm = std::clamp(
+        static_cast<float>(surfaceY - ctx.Settings.SeaLevel) /
+            static_cast<float>(range),
+        0.0f, 1.0f);
+    if (heightNorm > 0.82f)
     {
-      if (dx == 0 && dz == 0)
-      {
-        continue;
-      }
-      const uint32_t neighborHash =
-          FeatureHash(x + dx, z + dz, ctx.Settings.Seed + 5000);
-      if (neighborHash % 48u == 0u)
-      {
-        return false;
-      }
+      return false;
+    }
+  }
+  const int minTreeSpacing = EffectiveSpacing(24, ctx.Settings.Tuning.vegetationDensity);
+  constexpr int kDx[] = {-1, 1, 0, 0};
+  constexpr int kDz[] = {0, 0, -1, 1};
+  for (int i = 0; i < 4; ++i)
+  {
+    const uint32_t neighborHash =
+        FeatureHash(x + kDx[i], z + kDz[i], ctx.Settings.Seed + 5000);
+    if (neighborHash % static_cast<uint32_t>(std::max(1, minTreeSpacing)) == 0u)
+    {
+      return false;
     }
   }
   return TryPlacePrefabPool(ctx, x, z, surfaceY, biome,
@@ -554,7 +569,7 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
                                  int surfaceY, BiomeId biome,
                                  bool skipIfTreeNearby)
 {
-  if (!UPrefabFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableTrees)
+  if (!UPrefabFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableGroundCover)
   {
     return false;
   }

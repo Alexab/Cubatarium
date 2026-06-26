@@ -1,12 +1,20 @@
-{
-  "id": "foothills",
-  "height": {
-    "base_offset": 2,
-    "amplitude_mul": 1.1,
-    "volatility_mul": 1.0
-  },
-  "palette": {
-    "surface": "grass",
-    "subsurface": "gravel"
-  }
-}
+{
+  "id": "foothills",
+  "height": {
+    "base_offset": 1,
+    "amplitude_mul": 1.0,
+    "volatility_mul": 0.50
+  },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "gravel"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine_mapgen": 0.8
+    },
+    "ground_cover": {
+      "bush_common": 1.1
+    }
+  }
+}

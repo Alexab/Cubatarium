@@ -6,9 +6,20 @@
     "terrain": "overworld",
     "procedural": {
         "generator": "overworld",
+        "preset": "balanced",
         "trees": true,
+        "ground_cover": true,
         "decoration": true,
         "structures": true,
+        "tuning": {
+            "terrain_roughness": 0.58,
+            "terrain_erosion": 0.32,
+            "vegetation_density": 0.68,
+            "decoration_density": 0.85,
+            "height_smoothing": true,
+            "height_smoothing_radius": 1,
+            "jitter_amplitude": 1.0
+        },
         "async_chunk_generation": true,
         "async_chunk_io": true,
         "max_chunk_commits_per_frame": 3,

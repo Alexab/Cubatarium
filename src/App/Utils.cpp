@@ -1,5 +1,6 @@
 #include "App/Utils.h"
 
+#include "App/CreateWorldCli.h"
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -22,6 +23,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/WorldGenRefs.h"
+#include "WorldGen/Features/PrefabFeatureConfig.h"
 
 namespace cutum
 {
@@ -168,6 +170,106 @@ int RunValidateLoad()
   glfwDestroyWindow(ctx);
   glfwTerminate();
   return 0;
+}
+
+namespace
+{
+
+std::shared_ptr<UCore> MakeHeadlessCore()
+{
+  auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+  auto texture_cube_instance =
+      std::make_shared<UTextureCubeStorage>(texture_base_instance);
+  auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
+  auto object_storage = std::make_shared<UObjectStorage>(texture_cube_instance);
+  auto prefab_library = std::make_shared<UPrefabLibrary>();
+  auto view_engine = std::make_shared<UViewEngine>();
+  auto world = std::make_shared<UWorld>(object_storage, view_engine);
+  auto core = std::make_shared<UCore>(
+      texture_base_instance, texture_cube_instance, object_storage,
+      prefab_library, world, nullptr, view_engine);
+
+  block_definitions->Load("models/blocks");
+  texture_cube_instance->SetBlockDefinitions(block_definitions);
+  world->SetBlockDefinitionStorage(block_definitions);
+  return core;
+}
+
+} // namespace
+
+int RunCreateWorld(int argc, char **argv, int create_world_index)
+{
+  CreateWorldCliArgs cli_args;
+  std::string parse_error;
+  if (!ParseCreateWorldCliArgs(argc, argv, create_world_index, cli_args,
+                               parse_error))
+  {
+    if (parse_error == "help")
+    {
+      std::cout
+          << "Usage: Cubatarium --console --create-world [options]\n"
+          << "  --name <world>       World folder name\n"
+          << "  --seed <n>           World seed (default 42)\n"
+          << "  --generator <id>     overworld|flat|hills|...\n"
+          << "  --preset <id>        balanced|realistic|sparse_structures\n"
+          << "  --radius-chunks <n>  Generation radius (default 4)\n"
+          << "  --pack <id>          Primary resource pack\n"
+          << "  --output <dir>       Worlds root (default worlds)\n"
+          << "  --report-json <path> Write JSON report\n";
+      return 0;
+    }
+    std::cerr << "create-world: " << parse_error << std::endl;
+    return 1;
+  }
+
+  if (!glfwInit())
+  {
+    std::cerr << "create-world: glfwInit failed" << std::endl;
+    return 1;
+  }
+  glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  GLFWwindow *ctx = glfwCreateWindow(64, 64, "create-world", nullptr, nullptr);
+  if (!ctx)
+  {
+    std::cerr << "create-world: failed to create GL context" << std::endl;
+    glfwTerminate();
+    return 1;
+  }
+  glfwMakeContextCurrent(ctx);
+  if (glewInit() != GLEW_OK)
+  {
+    std::cerr << "create-world: glewInit failed" << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
+  }
+
+  if (!UWorldGenRefs::LoadFromFile("content/worldgen_refs.json"))
+  {
+    std::cerr << "create-world: worldgen_refs.json not loaded" << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
+  }
+  if (!UPrefabFeatureConfigStorage::LoadFromFile("content/prefab_features.json"))
+  {
+    std::cerr << "create-world: prefab_features.json not loaded — vegetation disabled"
+              << std::endl;
+  }
+
+  auto core = MakeHeadlessCore();
+  core->LoadConfig("config.json");
+
+  CreateWorldReport report;
+  const bool ok = core->CreateWorldHeadless(cli_args, report);
+  WriteCreateWorldReport(report, cli_args.ReportJsonPath);
+
+  glfwDestroyWindow(ctx);
+  glfwTerminate();
+  return ok ? 0 : 1;
 }
 
 int RunBenchChunkIo()

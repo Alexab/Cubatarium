@@ -247,6 +247,154 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
 }
 
+void ParseHeightLayer(const nlohmann::json &layer, HeightLayerPackConfig &out)
+{
+  if (!layer.is_object())
+  {
+    return;
+  }
+  if (layer.contains("scale"))
+  {
+    out.Scale = layer["scale"].get<float>();
+  }
+  if (layer.contains("octaves"))
+  {
+    out.Octaves = layer["octaves"].get<int>();
+  }
+  if (layer.contains("weight"))
+  {
+    out.Weight = layer["weight"].get<float>();
+  }
+}
+
+void ParseClimateAxis(const nlohmann::json &axis, ClimateAxisPackConfig &out)
+{
+  if (!axis.is_object())
+  {
+    return;
+  }
+  if (axis.contains("scale"))
+  {
+    out.Scale = axis["scale"].get<float>();
+  }
+  if (axis.contains("octaves"))
+  {
+    out.Octaves = axis["octaves"].get<int>();
+  }
+  if (axis.contains("seed_offset"))
+  {
+    out.SeedOffset = axis["seed_offset"].get<int>();
+  }
+}
+
+void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path heightJson = root / "height.json";
+  if (!std::filesystem::exists(heightJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(heightJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("continental"))
+      {
+        ParseHeightLayer(layers["continental"], pack.Height.Continental);
+      }
+      if (layers.contains("regional"))
+      {
+        ParseHeightLayer(layers["regional"], pack.Height.Regional);
+      }
+      if (layers.contains("detail"))
+      {
+        ParseHeightLayer(layers["detail"], pack.Height.Detail);
+      }
+    }
+    if (json.contains("overworld") && json["overworld"].is_object())
+    {
+      const auto &ow = json["overworld"];
+      if (ow.contains("sea_bias"))
+      {
+        pack.Height.SeaBias = ow["sea_bias"].get<float>();
+      }
+      if (ow.contains("curve_exponent"))
+      {
+        pack.Height.CurveExponent = ow["curve_exponent"].get<float>();
+      }
+    }
+    if (json.contains("jitter") && json["jitter"].is_object())
+    {
+      const auto &j = json["jitter"];
+      if (j.contains("scale"))
+      {
+        pack.Height.JitterScale = j["scale"].get<float>();
+      }
+      if (j.contains("amplitude"))
+      {
+        pack.Height.JitterAmplitude = j["amplitude"].get<float>();
+      }
+      if (j.contains("erosion_damp"))
+      {
+        pack.Height.JitterErosionDamp = j["erosion_damp"].get<float>();
+      }
+    }
+    pack.Height.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: height.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path climateJson = root / "climate.json";
+  if (!std::filesystem::exists(climateJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(climateJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("temperature"))
+    {
+      ParseClimateAxis(json["temperature"], pack.Climate.Temperature);
+    }
+    if (json.contains("moisture"))
+    {
+      ParseClimateAxis(json["moisture"], pack.Climate.Moisture);
+    }
+    if (json.contains("continentalness"))
+    {
+      ParseClimateAxis(json["continentalness"], pack.Climate.Continentalness);
+    }
+    if (json.contains("erosion"))
+    {
+      ParseClimateAxis(json["erosion"], pack.Climate.Erosion);
+    }
+    if (json.contains("weirdness"))
+    {
+      ParseClimateAxis(json["weirdness"], pack.Climate.Weirdness);
+    }
+    if (json.contains("ridge"))
+    {
+      ParseClimateAxis(json["ridge"], pack.Climate.Ridge);
+    }
+    pack.Climate.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: climate.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
 BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
                                      const std::string &biomeId)
 {
@@ -324,6 +472,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   }
 
   LoadPipelineJson(root, ActivePack);
+  LoadHeightJson(root, ActivePack);
+  LoadClimateJson(root, ActivePack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -412,6 +562,10 @@ std::vector<std::string> UWorldGenPack::ListPackIds()
 }
 
 const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
+
+const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height; }
+
+const PackClimateConfig &UWorldGenPack::ClimateConfig() { return ActivePack.Climate; }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
     const std::string &biomeId)

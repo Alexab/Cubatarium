@@ -93,7 +93,11 @@ bool CanPlacePrefabAtForWorldGen(const UBlockWorld &world,
         FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
     if (localSurface < 0)
     {
-      return false;
+      if (!world.IsAir(worldPos))
+      {
+        return false;
+      }
+      continue;
     }
     if (worldPos.y > localSurface + 1)
     {

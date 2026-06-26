@@ -3,6 +3,7 @@
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <optional>
@@ -42,10 +43,18 @@ public:
   void GenerateColumn(int worldX, int worldZ) override;
   int SurfaceYAt(int worldX, int worldZ) const override;
 
+  ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
+  ColumnLayerRule BuildTerrainRuleFromSample(
+      int world_x, int world_z, const ColumnSampleContext &sample) const;
+
+  const ComposableWorldGenConfig &GetConfig() const { return Config; }
+  WorldGenContext &GetContext() { return Ctx; }
+
 private:
   int SampleSurfaceY(int worldX, int worldZ) const;
-  BiomeId SampleBiome(int worldX, int worldZ, int surfaceY) const;
-  BiomeWeightSet SampleBiomeWeights(int worldX, int worldZ, int surfaceY) const;
+  int SampleCoarseSurfaceY(int worldX, int worldZ) const;
+  BiomeId SampleBiome(int worldX, int worldZ, int coarseY) const;
+  BiomeWeightSet SampleBiomeWeights(int worldX, int worldZ, int coarseY) const;
   ColumnLayerRule BuildTerrainRule(int worldX, int worldZ, int surfaceY,
                                    BiomeId biome,
                                    const BiomeWeightSet &weights) const;
@@ -53,6 +62,7 @@ private:
   ComposableWorldGenConfig Config;
   std::optional<UOverworldHeightSampler> HeightSampler;
   std::optional<UBiomeSampler> BiomeSampler;
+  std::optional<UColumnSampleBuilder> SampleBuilder;
 };
 
 } // namespace cutum

@@ -3,10 +3,25 @@
   "height": {
     "base_offset": 0,
     "amplitude_mul": 0.9,
-    "volatility_mul": 0.85
+    "volatility_mul": 0.50
   },
   "palette": {
     "surface": "grass",
     "subsurface": "dirt"
+  },
+  "sub_biomes": {
+    "dry": {
+      "noise_threshold": 0.5,
+      "vegetation_weight_mul": 0.8
+    },
+    "wet": {
+      "noise_threshold": 0.7,
+      "vegetation_weight_mul": 1.1
+    }
+  },
+  "features": {
+    "vegetation": {
+      "tree_acacia_mapgen": 1.2
+    }
   }
 }

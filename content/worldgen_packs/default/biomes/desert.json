@@ -3,7 +3,7 @@
   "height": {
     "base_offset": -1,
     "amplitude_mul": 0.55,
-    "volatility_mul": 0.5
+    "volatility_mul": 0.35
   },
   "palette": {
     "surface": "sand",
