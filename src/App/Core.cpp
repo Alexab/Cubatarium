@@ -26,11 +26,9 @@
 #include <windows.h>
 #endif
 #include "App/Core.h"
+#include "App/Platform/GameDataRoot.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
-#include "ResourcePacks/PlaceholderTextureCache.h"
-#include "ResourcePacks/CreaturePackMerge.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -40,11 +38,13 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
+#include "ResourcePacks/CreaturePackMerge.h"
+#include "ResourcePacks/PlaceholderTextureCache.h"
 #include "Storage/ObjectStorage.h"
 #include "Version.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Prefabs/Prefab.h"
-#include "Creatures/Core/Creature.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
@@ -59,7 +59,8 @@ glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
   {
     return fallback;
   }
-  auto nib = [&](size_t i) -> int {
+  auto nib = [&](size_t i) -> int
+  {
     const char c = hex[i];
     if (c >= '0' && c <= '9')
     {
@@ -87,53 +88,6 @@ namespace cutum
 
 namespace
 {
-
-constexpr int kMaxProjectRootSearchDepth = 8;
-
-bool IsGameDataRoot(const std::filesystem::path &candidate)
-{
-  const bool hasResourcePacks =
-      std::filesystem::exists(candidate / "resource_packs");
-  const bool hasPrefabs = std::filesystem::exists(candidate / "prefabs");
-  const bool hasShaders = std::filesystem::exists(candidate / "shaders" /
-                                                "vshader_greedy.glsl");
-  if (hasResourcePacks && hasPrefabs && hasShaders)
-  {
-    return true;
-  }
-  const bool hasTextures =
-      std::filesystem::exists(candidate / "textures" / "blocks");
-  const bool hasModels =
-      std::filesystem::exists(candidate / "models" / "blocks");
-  return hasTextures && hasModels && hasPrefabs && hasShaders;
-}
-
-std::optional<std::filesystem::path>
-TryFindProjectRoot(std::filesystem::path start)
-{
-  for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth)
-  {
-    if (IsGameDataRoot(start))
-    {
-      return start;
-    }
-    if (!start.has_parent_path())
-    {
-      break;
-    }
-    start = start.parent_path();
-  }
-  return std::nullopt;
-}
-
-std::filesystem::path FindProjectRoot(std::filesystem::path start)
-{
-  if (auto root = TryFindProjectRoot(start))
-  {
-    return *root;
-  }
-  return start;
-}
 
 bool ParseWorldNumberSuffix(const std::string &Name, int &outNumber)
 {
@@ -362,8 +316,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.DistanceFogStartRatio =
             r.value("distance_fog_start_ratio", 0.55f);
         Render.DistanceFogDensity = r.value("distance_fog_density", 0.85f);
-        Render.DistanceFogHorizontal =
-            r.value("distance_fog_horizontal", true);
+        Render.DistanceFogHorizontal = r.value("distance_fog_horizontal", true);
         Render.AltitudeAdaptiveFog = r.value("altitude_adaptive_fog", true);
         Render.AltitudeFogThresholdBlocks =
             r.value("altitude_fog_threshold_blocks", 32);
@@ -468,7 +421,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     ObjectStorageInstance->Load(ObjectStorageFileName.string());
 
-    const ResourcePackSelection defaultPacks = GetDefaultResourcePackSelection();
+    const ResourcePackSelection defaultPacks =
+        GetDefaultResourcePackSelection();
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
                                             defaultPacks.Secondary,
                                             defaultPacks.WorldgenOwner);
@@ -487,8 +441,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
     }
     else if (auto user = WorldInstance->GetCurrentUser())
     {
-      WorldInstance->EnsurePlayerHotbarCount(user,
-                                             static_cast<size_t>(Ui.HotbarCount));
+      WorldInstance->EnsurePlayerHotbarCount(
+          user, static_cast<size_t>(Ui.HotbarCount));
     }
 
     std::cout << "Procedural: "
@@ -616,8 +570,7 @@ bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
   {
     return false;
   }
-  const BlockId resolved =
-      BlockMergeRegistryInstance->ResolveName(def.Name);
+  const BlockId resolved = BlockMergeRegistryInstance->ResolveName(def.Name);
   if (resolved == BLOCK_AIR)
   {
     return false;
@@ -625,10 +578,7 @@ bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
   return true;
 }
 
-void UCore::BeginRuntimeBlockBatch()
-{
-  ++RuntimeBlockBatchDepth;
-}
+void UCore::BeginRuntimeBlockBatch() { ++RuntimeBlockBatchDepth; }
 
 void UCore::EndRuntimeBlockBatch()
 {
@@ -943,10 +893,7 @@ void UCore::FinalizeEnterGameSession()
   }
 }
 
-void UCore::RefreshWorldListAfterSave()
-{
-  LoadWorldList(WorldPath.string());
-}
+void UCore::RefreshWorldListAfterSave() { LoadWorldList(WorldPath.string()); }
 
 std::string UCore::SetupNewWorldForCreation()
 {
@@ -975,8 +922,8 @@ std::string UCore::SetupNewWorldForCreation()
     selection.WorldgenOwner = selection.Primary.front();
   }
 
-  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
-                                          selection.WorldgenOwner);
+  WorldInstance->SetResourcePackSelection(
+      selection.Primary, selection.Secondary, selection.WorldgenOwner);
   if (!ResourcePackSelectionEqual(selection, ActivePackSelection))
   {
     ApplyResourcePacks(selection);
@@ -1022,7 +969,8 @@ void UCore::ApplyRuntimeStreamingToWorld()
   ProceduralSettings worldSettings = WorldInstance->GetProceduralSettings();
   worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
   worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
-  worldSettings.MaxChunkCommitsPerFrame = ProceduralTemplate.MaxChunkCommitsPerFrame;
+  worldSettings.MaxChunkCommitsPerFrame =
+      ProceduralTemplate.MaxChunkCommitsPerFrame;
   WorldInstance->SetProceduralSettings(worldSettings, false);
   WorldInstance->SetRenderSettings(Render);
   WorldInstance->RefreshStreamerSettings();
@@ -1148,8 +1096,7 @@ ResourcePackSelection UCore::GetDefaultResourcePackSelection() const
   return selection;
 }
 
-void UCore::SetDefaultEnabledResourcePacks(
-    const std::vector<std::string> &ids)
+void UCore::SetDefaultEnabledResourcePacks(const std::vector<std::string> &ids)
 {
   ResourcePacks.DefaultEnabled = ids;
   ResourcePacks.DefaultPrimary = ids;
@@ -1457,8 +1404,8 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   {
     return false;
   }
-  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
-                                          selection.WorldgenOwner);
+  WorldInstance->SetResourcePackSelection(
+      selection.Primary, selection.Secondary, selection.WorldgenOwner);
   SaveWorld(WorldInstance->GetWorldName());
   return true;
 }
@@ -1511,8 +1458,9 @@ bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,
   WorldInstance->SetRenderDistanceChunks(RenderDistanceChunks);
   WorldInstance->SetStreamingEnabled(false);
 
-  const std::filesystem::path output_root =
-      args.OutputRoot.is_absolute() ? args.OutputRoot : (ExeDir / args.OutputRoot);
+  const std::filesystem::path output_root = args.OutputRoot.is_absolute()
+                                                ? args.OutputRoot
+                                                : (ExeDir / args.OutputRoot);
   std::error_code ec;
   std::filesystem::create_directories(output_root, ec);
   ActiveWorldFolder = output_root / args.WorldName;
@@ -1521,8 +1469,8 @@ bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,
   DefaultWorldName = args.WorldName;
   WorldPath = output_root;
 
-  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
-                                          selection.WorldgenOwner);
+  WorldInstance->SetResourcePackSelection(
+      selection.Primary, selection.Secondary, selection.WorldgenOwner);
   WorldInstance->SetProceduralSettings(settings);
   WorldInstance->SetRenderSettings(Render);
 

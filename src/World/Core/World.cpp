@@ -66,23 +66,6 @@ constexpr float kMaxReasonablePlayerY = 512.0f;
 
 constexpr float kMinReasonablePlayerY = -32.0f;
 
-bool HasChunkJsonFiles(const std::string &chunks_dir)
-{
-  if (!std::filesystem::exists(chunks_dir) ||
-      !std::filesystem::is_directory(chunks_dir))
-  {
-    return false;
-  }
-  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
-  {
-    if (entry.path().extension() == ".json")
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool HasChunkDataFiles(const std::string &chunks_dir)
 {
   if (!std::filesystem::exists(chunks_dir) ||
@@ -2033,61 +2016,6 @@ constexpr float kCollisionMaxStep = 0.25f;
 constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
-glm::vec3 ResolveMovementAxisEye(const UWorld &world, const glm::vec3 &fromEye,
-                                 float axisDelta, int axis,
-                                 const PlayerCapsule &cap,
-                                 CreatureId skipCreatureId)
-{
-  if (std::abs(axisDelta) < 1e-8f)
-  {
-    return fromEye;
-  }
-  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
-  float remaining = std::abs(axisDelta);
-  glm::vec3 pos = fromEye;
-  glm::vec3 axisUnit(0.0f);
-  axisUnit[axis] = 1.0f;
-
-  int iterations = 0;
-  while (remaining > 1e-6f && iterations < kCollisionMaxIterations)
-  {
-    const float step = std::min(remaining, kCollisionMaxStep);
-    const glm::vec3 next = pos + axisUnit * step * sign;
-    if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap),
-                                   skipCreatureId))
-    {
-      glm::vec3 lo = pos;
-      glm::vec3 hi = next;
-      for (int i = 0; i < 8; ++i)
-      {
-        const glm::vec3 mid = (lo + hi) * 0.5f;
-        if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap),
-                                       skipCreatureId))
-        {
-          hi = mid;
-        }
-        else
-        {
-          lo = mid;
-        }
-      }
-      if (axis == 1)
-      {
-        pos = lo;
-      }
-      else
-      {
-        pos = lo - axisUnit * kCollisionEpsilon * sign;
-      }
-      break;
-    }
-    pos = next;
-    remaining -= step;
-    ++iterations;
-  }
-  return pos;
-}
-
 glm::vec3 ResolveMovementAxisBody(const UWorld &world,
                                   const glm::vec3 &fromBody, float axisDelta,
                                   int axis, const glm::vec3 &currentSizeBlocks,
@@ -2632,6 +2560,7 @@ void UWorld::LoadWorldData(const std::string &file_name)
         {
           return;
         }
+        out.reserve(arr.size());
         for (const auto &id : arr)
         {
           if (id.is_string())

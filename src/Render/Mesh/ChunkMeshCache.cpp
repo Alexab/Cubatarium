@@ -256,6 +256,7 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
 {
   const auto t0 = std::chrono::high_resolution_clock::now();
   GreedyBatches.clear();
+  GreedyBatches.reserve(GreedyCache.size() * 4);
   std::unordered_map<BlockId, GreedyMeshBatch> merged_cross;
   for (const auto &entry : GreedyCache)
   {

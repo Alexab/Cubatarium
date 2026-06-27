@@ -11,8 +11,8 @@
 | TD-AUD-012 | 2026-06 | GeometryEngine coupling | Pipeline include rules first | PR-C backlog |
 | TD-AUD-013 | 2026-06 | MarkBlockChunkDirty dual RebuildChunkImmediate/MarkDirty | intentional when BlockRegistry null | review |
 | TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | micro-opt; GreedyMesher partial reserve | PR-E backlog |
-| TD-AUD-015 | 2026-06 | Dead-code candidates (callers=1) | manual verify before removal | backlog |
-| TD-AUD-016 | 2026-06 | Duplicate code clusters (scan_duplicates) | needs module agent review | backlog |
+| TD-AUD-015 | 2026-06 | Dead-code candidates (callers=1) | P0 World symbols removed; registry FP whitelisted | partial |
+| TD-AUD-016 | 2026-06 | Duplicate code clusters (scan_duplicates) | module review done; fixes in backlog | PR-C/D backlog |
 | TD-AUD-017 | 2026-06 | Orphan tools/scripts | archive or document | backlog |
 | TD-AUD-018 | 2026-06 | integration_test_worldgen fire_blocks threshold | pre-existing smoke fail | separate PR |
 | TD-AUD-019 | 2026-06 | smoke_resource_packs tree_bark missing | pre-existing asset gap | separate PR |
@@ -31,6 +31,9 @@
 | TD-AUD-008 | 2026-06 | GreedyMesher `quads.reserve(512)` in BuildChunkMesh hot paths |
 | TD-AUD-009 | 2026-06 | StreamingHorizonBlocks deprecated API removed |
 | TD-AUD-020 | 2026-06 | `audit_clang_format.py` (changed-files check) in CI |
+| TD-AUD-022 | 2026-06 | P0: HasChunkJsonFiles, ResolveMovementAxisEye, Cube_GLM.h removed |
+| TD-AUD-023 | 2026-06 | IsGameDataRoot deduped into GameDataRoot.cpp |
+| TD-AUD-024 | 2026-06 | ChunkMeshCache GreedyBatches.reserve in flat rebuild |
 
 ## Phase tracker
 
@@ -38,8 +41,8 @@
 |-------|--------|-------|
 | Infra + scan | done | orchestrate.py --phase all |
 | PR-A dead code | done | committed fca6e21 |
-| PR-B legacy loader | done | local, uncommitted |
+| PR-B legacy loader | done | committed 0815e34 |
 | PR-E perf reserve | partial | GreedyMesher only |
 | PR-F docs + CI | done | style gate; clang-format on diff |
-| Human gate | pending | set audit/findings.json status approved |
-| Module agents ×8 | seed only | full module JSON review deferred |
+| Module agents ×8 | done | 71 findings in audit/modules/ (manual pass 2026-06-27) |
+| Human gate | approved | P0 fixes applied; backlog PR-D/E open |

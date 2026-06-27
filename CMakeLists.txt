@@ -249,6 +249,7 @@ set(SOURCES
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
     src/App/Platform/DesktopPlatformPaths.cpp
+    src/App/Platform/GameDataRoot.cpp
     src/App/Platform/DesktopPlatformWindow.cpp
     src/App/Platform/IPlatformPaths.cpp
     src/App/Platform/Log.cpp
@@ -391,6 +392,7 @@ if(ANDROID)
         src/App/Platform/InputManager.cpp
         src/App/Platform/CursorCapture.cpp
         src/App/Platform/DesktopPlatformPaths.cpp
+        src/App/Platform/GameDataRoot.cpp
         src/App/Platform/DesktopPlatformWindow.cpp
     )
     set(CUBATARIUM_ANDROID_SOURCES

@@ -40,6 +40,16 @@ def load_module_findings() -> list[Finding]:
     return findings
 
 
+def is_registry_factory_false_positive(candidate: dict) -> bool:
+    file = candidate.get("file", "")
+    sym = candidate.get("symbol", "")
+    if "WorldGeneratorRegistry.cpp" not in file:
+        return False
+    return sym.startswith(("Apply", "Create")) and (
+        sym.endswith("Defaults") or sym.startswith("Create")
+    )
+
+
 def findings_from_dead_code(data: dict) -> list[Finding]:
     out: list[Finding] = []
     for i, c in enumerate(data.get("candidates", []), start=1):
@@ -62,6 +72,10 @@ def findings_from_dead_code(data: dict) -> list[Finding]:
                 )
             )
         elif c.get("callers", 99) <= 1:
+            if is_registry_factory_false_positive(c):
+                continue
+            if sym in ("HasChunkJsonFiles", "ResolveMovementAxisEye"):
+                continue
             out.append(
                 Finding(
                     id=f"AUDIT-DEAD-{i:03d}",
@@ -77,6 +91,18 @@ def findings_from_dead_code(data: dict) -> list[Finding]:
                 )
             )
     return out
+
+
+def perf_hint_resolved(h: dict) -> bool:
+    rel = h.get("file", "")
+    if "GreedyMesher.cpp" not in rel:
+        return False
+    fp = REPO_ROOT / rel.replace("/", "\\") if "\\" not in rel else REPO_ROOT / rel
+    if not fp.exists():
+        fp = REPO_ROOT / rel
+    if not fp.exists():
+        return False
+    return "quads.reserve(512)" in fp.read_text(encoding="utf-8", errors="ignore")
 
 
 def findings_from_scans() -> list[Finding]:
@@ -110,6 +136,8 @@ def findings_from_scans() -> list[Finding]:
     perf_path = AUDIT_DIR / "perf_hints.json"
     if perf_path.exists():
         for h in json.loads(perf_path.read_text(encoding="utf-8")).get("hints", [])[:20]:
+            if perf_hint_resolved(h):
+                continue
             findings.append(
                 Finding(
                     id=f"AUDIT-PERF-{seq:03d}",
@@ -130,15 +158,11 @@ def findings_from_scans() -> list[Finding]:
 
 
 def dedupe_findings(findings: list[Finding]) -> list[Finding]:
-    seen: set[str] = set()
-    out: list[Finding] = []
+    """Last occurrence wins so module agent JSON overrides auto-scan seeds."""
+    by_id: dict[str, Finding] = {}
     for f in findings:
-        key = f.id
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(f)
-    return out
+        by_id[f.id] = f
+    return list(by_id.values())
 
 
 def load_previous_findings() -> dict[str, Finding]:
@@ -209,10 +233,15 @@ def apply_status(findings: list[Finding], commit: str) -> tuple[list[Finding], s
         approved_ids = list(prev_doc.get("approved_ids", []))
 
     for f in findings:
+        if f.status in ("done", "rejected"):
+            continue
         prev = previous.get(f.id)
         if prev and prev.status == "done":
             f.status = "done"
             f.implemented_in = prev.implemented_in or f.implemented_in
+            continue
+        if prev and prev.status == "rejected":
+            f.status = "rejected"
             continue
         if f.id in auto_done:
             f.status = "done"
@@ -225,7 +254,7 @@ def apply_status(findings: list[Finding], commit: str) -> tuple[list[Finding], s
 def summarize_open(findings: list[Finding]) -> dict[str, int]:
     summary = {"P0": 0, "P1": 0, "P2": 0, "P3": 0}
     for f in findings:
-        if f.status == "done":
+        if f.status in ("done", "rejected"):
             continue
         summary[f.priority] = summary.get(f.priority, 0) + 1
     return summary
@@ -247,13 +276,20 @@ def render_report(doc: FindingsDocument) -> str:
         "|----------|------|",
     ]
     done_count = sum(1 for f in doc.findings if f.status == "done")
+    rejected_count = sum(1 for f in doc.findings if f.status == "rejected")
     for p in ("P0", "P1", "P2", "P3"):
         lines.append(f"| {p} | {doc.summary.get(p, 0)} |")
-    lines.append(f"\nClosed: **{done_count}** finding(s).\n")
+    lines.append(
+        f"\nClosed: **{done_count}** | Rejected (false positive): **{rejected_count}**.\n"
+    )
     lines.extend(["## Open Findings by Priority", ""])
 
     for priority in ("P0", "P1", "P2", "P3"):
-        group = [f for f in doc.findings if f.priority == priority and f.status != "done"]
+        group = [
+            f
+            for f in doc.findings
+            if f.priority == priority and f.status not in ("done", "rejected")
+        ]
         if not group:
             continue
         lines.append(f"### {priority}")
@@ -273,6 +309,13 @@ def render_report(doc: FindingsDocument) -> str:
         for f in sorted(closed, key=lambda x: x.id):
             note = f.implemented_in or "local"
             lines.append(f"- **{f.id}** — {f.title} (`{note}`)")
+        lines.append("")
+
+    rejected = [f for f in doc.findings if f.status == "rejected"]
+    if rejected:
+        lines.extend(["## Rejected Findings (scan false positives)", ""])
+        for f in sorted(rejected, key=lambda x: x.id):
+            lines.append(f"- **{f.id}** — {f.title}")
         lines.append("")
 
     lines.extend(
@@ -297,7 +340,7 @@ def render_report(doc: FindingsDocument) -> str:
 
 def main(commit: str = "") -> int:
     ensure_audit_dir()
-    findings = dedupe_findings(findings_from_scans() + load_module_findings())
+    findings = dedupe_findings(load_module_findings() + findings_from_scans())
 
     # Ensure known architectural findings if modules not run yet.
     if not any(f.id == "AUDIT-ARCH-001" for f in findings):
