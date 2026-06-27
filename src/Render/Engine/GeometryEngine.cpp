@@ -293,6 +293,10 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   }
   (void)view_duration;
   DrawCubeGeometry();
+  if (WorldInstance)
+  {
+    WorldInstance->UpdateFrameHitchDiagnostics(DurationDrawSceneMks, view_duration);
+  }
   if (OverlayTintAlpha > 0.01f)
   {
     RenderFluidOverlay(width_size, height_size);
@@ -688,7 +692,9 @@ void UGeometryEngine::RefreshGreedyGpuBatches(
     }
     GreedyGpuBatch gpu;
     gpu.blockId = batch.blockId;
-    gpu.indexCount = static_cast<GLsizei>(batch.indices.size());
+    gpu.vertexCount = batch.vertices.size();
+    gpu.indexCount = batch.indices.size();
+    gpu.indexCountGl = static_cast<GLsizei>(batch.indices.size());
     glGenBuffers(1, &gpu.vbo);
     glGenBuffers(1, &gpu.ebo);
     glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
@@ -762,6 +768,7 @@ void UGeometryEngine::PrepareFrameRendering()
   glm::vec3 targetSky = BaseSkyColor;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
+  FogHorizonBlend = 0.0f;
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
@@ -785,12 +792,15 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
         WorldInstance->GetEffectiveRenderDistance(), SmoothedSkyTint,
-        Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio());
+        Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
+        Render.DistanceFogDensity);
     FogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
+    FogDensity = distance_fog.Density;
     FogMinBlend = 0.0f;
     FogHorizontal = Render.DistanceFogHorizontal ? 1.0f : 0.0f;
+    FogHorizonBlend = 1.0f;
     SmoothedFogColor =
         glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
   }
@@ -823,6 +833,7 @@ void UGeometryEngine::ApplyFogUniforms(
   shader->SetFloat("uFogMinBlend", FogMinBlend);
   shader->SetFloat("uFogEnabled", FogEnabled);
   shader->SetFloat("uFogHorizontal", FogHorizontal);
+  shader->SetFloat("uFogDensity", FogDensity);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -876,7 +887,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   for (const GreedyGpuBatch &gpu : cache.batches)
   {
     SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCount <= 0)
+    if (gpu.indexCountGl <= 0 || gpu.vbo == 0 || gpu.ebo == 0)
     {
       continue;
     }
@@ -901,7 +912,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
                           (void *)(offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
-    glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
   }
 
   glBindVertexArray(0);
@@ -1165,6 +1176,8 @@ void UGeometryEngine::DrawSkyGradientSimple()
 
   // Pass sky color to shader
   skyShader->SetVec4("skyColor", skyColor);
+  skyShader->SetVec3("uFogColor", SmoothedFogColor);
+  skyShader->SetFloat("uFogHorizonBlend", FogHorizonBlend);
 
   // Create simple rectangle for sky (full screen)
   static const GLfloat skyVertices[] = {
@@ -1383,6 +1396,10 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
 
   const auto &md = WorldInstance->GetMovementDiagnostics();
+  performanceLines.push_back(
+      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
+      " rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
+      " hitch: " + (md.hitchDetected ? "yes" : "no"));
   if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 || md.streamingIoMs > 0.01)
   {
     performanceLines.push_back(

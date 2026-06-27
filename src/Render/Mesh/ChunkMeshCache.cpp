@@ -1,4 +1,5 @@
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Engine/DistanceFog.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -105,8 +106,17 @@ void MergeGreedyBatch(GreedyMeshBatch &dst, const GreedyMeshBatch &src)
 } // namespace
 float UChunkMeshCache::MaxCullDistance() const
 {
-  return static_cast<float>(RenderDistanceChunks + 2) *
-         static_cast<float>(CHUNK_SIZE);
+  return RenderHorizonBlocks(RenderDistanceChunks);
+}
+void UChunkMeshCache::BumpMeshRevisionIfNeeded()
+{
+  if (!PendingMeshRevisionBump)
+  {
+    return;
+  }
+  ++MeshRevision;
+  PendingMeshRevisionBump = false;
+  InvalidateVisibleList();
 }
 void UChunkMeshCache::InvalidateVisibleList()
 {
@@ -155,13 +165,13 @@ void UChunkMeshCache::MarkAllDirtyFromWorld(const UBlockWorld &world)
 void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 {
   MarkAllDirtyFromWorld(world);
-  RebuildDirtyChunks(world, registry, 10000);
+  RebuildDirtyChunks(world, registry, 10000, 10000);
   if (Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
     while (HasPendingAsyncMeshWork())
     {
-      RebuildDirtyChunks(world, registry, 10000);
+      RebuildDirtyChunks(world, registry, 10000, 10000);
       AsyncBuilder->WaitIdle();
     }
   }
@@ -195,10 +205,9 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     return;
   }
   DirtyChunks.push_back(chunkCoord);
-  ++MeshRevision;
+  PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateVisibleList();
 }
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
@@ -305,9 +314,9 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const glm::ivec3 cameraChunk =
       UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
   const float maxCullDistance = MaxCullDistance();
+  const bool camera_moved = cameraChunk != LastCullCameraChunk;
   if (!InstancesDirty && !GreedyBatchesDirty &&
-      cameraChunk == LastCullCameraChunk &&
-      MeshRevision == LastCullMeshRevision &&
+      MeshRevision == LastCullMeshRevision && !camera_moved &&
       !(Render.GreedyMeshing && GreedyBatches.empty() && !GreedyCache.empty()))
   {
     return;
@@ -362,20 +371,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
                                          UBlockRegistry &registry,
-                                         int maxChunksPerFrame)
+                                         int max_drain_per_frame,
+                                         int max_schedule_per_frame)
 {
   if (Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
     for (MeshBuildResult &result :
-         AsyncBuilder->DrainCompleted(maxChunksPerFrame))
+         AsyncBuilder->DrainCompleted(max_drain_per_frame))
     {
       ApplyMeshResult(world, std::move(result));
     }
 
     int scheduled = 0;
     for (auto it = DirtyChunks.begin();
-         it != DirtyChunks.end() && scheduled < maxChunksPerFrame;)
+         it != DirtyChunks.end() && scheduled < max_schedule_per_frame;)
     {
       if (AsyncBuilder->IsInFlight(*it))
       {
@@ -400,12 +410,14 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
       InstancesDirty = false;
     }
     GreedyBatchesDirty = true;
+    BumpMeshRevisionIfNeeded();
     return;
   }
 
   int rebuilt = 0;
+  const int sync_budget = std::max(max_drain_per_frame, max_schedule_per_frame);
   for (auto it = DirtyChunks.begin();
-       it != DirtyChunks.end() && rebuilt < maxChunksPerFrame;)
+       it != DirtyChunks.end() && rebuilt < sync_budget;)
   {
     RebuildChunk(world, registry, *it);
     DirtyChunkSet.erase(*it);
@@ -417,6 +429,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
     InstancesDirty = false;
   }
   GreedyBatchesDirty = true;
+  BumpMeshRevisionIfNeeded();
 }
 
 int UChunkMeshCache::GetAsyncInFlightCount() const

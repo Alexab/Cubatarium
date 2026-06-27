@@ -20,14 +20,35 @@ namespace
 
 constexpr float kPhaseWeightMetadata = 0.05f;
 constexpr float kPhaseWeightEntities = 0.05f;
-constexpr float kPhaseWeightChunks = 0.55f;
-constexpr float kPhaseWeightSpatial = 0.15f;
-constexpr float kPhaseWeightMeshWarmup = 0.05f;
+constexpr float kPhaseWeightChunks = 0.50f;
+constexpr float kPhaseWeightSpatial = 0.12f;
+constexpr float kPhaseWeightMeshWarmup = 0.20f;
 constexpr float kPhaseWeightGenerate = 0.12f;
-constexpr int kMeshWarmupMaxTicks = 600;
-constexpr float kPhaseWeightFinalize = 0.08f;
+constexpr int kMeshWarmupMaxTicks = 50000;
 
 } // namespace
+
+void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
+{
+  world.BlockCounter.MarkNeedsRecount();
+  if (world.MeshCache.GetDirtyCount() == 0 &&
+      !world.MeshCache.HasPendingAsyncMeshWork())
+  {
+    world.BlockWorld.GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        { world.MeshCache.MarkDirty(chunk.GetCoord()); });
+  }
+  MeshWarmupTicks = 0;
+  MeshWarmupStartPending =
+      world.MeshCache.GetDirtyCount() +
+      static_cast<size_t>(world.MeshCache.GetAsyncInFlightCount());
+  if (MeshWarmupStartPending == 0)
+  {
+    MeshWarmupStartPending = 1;
+  }
+  CurrentPhase = Phase::MeshWarmup;
+  MeshWarmupFinalizeOnly = false;
+}
 
 void UWorldCooperativeSession::Report(IProgressSink &sink,
                                       const std::string &phaseId, float fraction,
@@ -387,12 +408,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     {
       if (SpatialDx > SpatialRadius)
       {
-        world.BlockCounter.MarkNeedsRecount();
-        world.BlockWorld.GetChunkManager().ForEachChunk(
-            [&](const UChunk &chunk)
-            { world.MeshCache.MarkDirty(chunk.GetCoord()); });
-        MeshWarmupTicks = 0;
-        CurrentPhase = Phase::MeshWarmup;
+        BeginMeshWarmup(world);
         break;
       }
       if (world.ChunkStorage && world.BlockRegistry)
@@ -430,26 +446,69 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   {
     if (world.BlockRegistry)
     {
-      const int mesh_budget = std::min(64, std::max(budget * 4, 16));
+      const int mesh_budget = std::min(128, std::max(budget * 8, 32));
       world.MeshCache.RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
-                                         mesh_budget);
+                                         mesh_budget, mesh_budget);
       world.MeshCache.DrainAsyncMeshResults(world.BlockWorld,
                                             *world.BlockRegistry, mesh_budget);
     }
     ++MeshWarmupTicks;
     const bool mesh_done = !world.MeshCache.HasPendingDirty() &&
                            !world.MeshCache.HasPendingAsyncMeshWork();
+    const size_t pending_now =
+        world.MeshCache.GetDirtyCount() +
+        static_cast<size_t>(world.MeshCache.GetAsyncInFlightCount());
+    const float mesh_inner =
+        mesh_done ? 1.0f
+                  : 1.0f - static_cast<float>(pending_now) /
+                                static_cast<float>(MeshWarmupStartPending);
+    const float mesh_base =
+        Kind == WorldCoopKind::Create
+            ? (0.05f + 0.75f)
+            : (kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
+               kPhaseWeightSpatial);
     const float mesh_frac =
-        kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
-        kPhaseWeightSpatial +
-        kPhaseWeightMeshWarmup *
-            (mesh_done ? 1.0f
-                       : std::min(1.0f, static_cast<float>(MeshWarmupTicks) /
-                                            static_cast<float>(kMeshWarmupMaxTicks)));
-    Report(sink, "mesh_warmup", mesh_frac, "Building terrain meshes...");
-    if (mesh_done || MeshWarmupTicks >= kMeshWarmupMaxTicks)
+        mesh_base + kPhaseWeightMeshWarmup * std::clamp(mesh_inner, 0.0f, 1.0f);
+    Report(sink, "mesh_warmup", mesh_frac,
+           mesh_done ? "Terrain meshes ready."
+                     : "Building terrain meshes...");
+    if (mesh_done)
     {
-      CurrentPhase = Phase::PostLoadAnalysis;
+      if (Kind == WorldCoopKind::Create)
+      {
+        world.FinalizePlayerAfterWorldLoad();
+        CurrentPhase = Phase::Done;
+        Active = false;
+        Report(sink, "done", 1.f, "World created.");
+      }
+      else if (MeshWarmupFinalizeOnly)
+      {
+        world.FinalizePlayerAfterWorldLoad();
+        CurrentPhase = Phase::Done;
+        Active = false;
+        Report(sink, "done", 1.f, "World loaded.");
+      }
+      else
+      {
+        CurrentPhase = Phase::PostLoadAnalysis;
+      }
+    }
+    else if (MeshWarmupTicks >= kMeshWarmupMaxTicks)
+    {
+      std::cerr << "MeshWarmup: timeout with pending dirty="
+                << world.MeshCache.GetDirtyCount() << std::endl;
+      if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
+      {
+        world.FinalizePlayerAfterWorldLoad();
+        CurrentPhase = Phase::Done;
+        Active = false;
+        Report(sink, "done", 1.f,
+               Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
+      }
+      else
+      {
+        CurrentPhase = Phase::PostLoadAnalysis;
+      }
     }
     break;
   }
@@ -502,22 +561,19 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   case Phase::FinalizeWorld:
   {
     world.InitStreamerCallbacks();
-    if (SpatialStreamingLoad && world.LoadedFromChunkSave)
-    {
-      if (world.Streamer)
-      {
-        world.Streamer->MarkPersistedColumnsFromWorld();
-      }
-    }
-    else if (world.Streamer && world.StreamingEnabled &&
-             world.LoadedFromChunkSave)
+    if (world.Streamer && world.LoadedFromChunkSave)
     {
       world.Streamer->MarkPersistedColumnsFromWorld();
-      world.RebuildBlockMesh();
     }
-    else
+    if (world.MeshCache.HasPendingDirty() ||
+        world.MeshCache.HasPendingAsyncMeshWork())
     {
-      world.RebuildBlockMesh();
+      MeshWarmupFinalizeOnly = true;
+      BeginMeshWarmup(world);
+      Report(sink, "mesh_warmup",
+             kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks,
+             "Building terrain meshes...");
+      break;
     }
     world.FinalizePlayerAfterWorldLoad();
     CurrentPhase = Phase::Done;
@@ -602,11 +658,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     world.WorldName = TargetWorldName;
     world.AllowProceduralFill = world.StreamingEnabled;
     world.InitStreamerCallbacks();
-    world.RebuildBlockMesh();
-    world.FinalizePlayerAfterWorldLoad();
-    CurrentPhase = Phase::Done;
-    Active = false;
-    Report(sink, "done", 1.f, "World created.");
+    BeginMeshWarmup(world);
+    Report(sink, "mesh_warmup", 0.82f, "Building terrain meshes...");
     break;
   }
   case Phase::Done:

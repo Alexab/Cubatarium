@@ -21,6 +21,8 @@
 | TD-CS-014 | 2026-06 | GPU instancing for Cross vegetation | Requires retained instance buffer + single draw | backlog |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `UChunkStreamer::SetRingGateEnabled` exists | backlog |
+| TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip is conservative | backlog |
+| TD-CS-019 | 2026-06 | Sky horizon fog uses fixed band; true radial sky fog optional | horizon blend shipped | backlog |
 
 ## Closed
 
@@ -37,6 +39,7 @@
 | TD-CS-009 | 2026-06 | `UChunkGenerationRegistry` + token validation on async results |
 | TD-CS-013 | 2026-06 | Smoke reads `movement_diagnostics.v2` with flat/count/backlog budgets |
 | TD-CS-015 | 2026-06 | Cooperative cancel in `PipelineChunkPopulator` via `shouldCancel` token check |
+| TD-CS-020 | 2026-06 | Dedupe mesh dirty on async chunk commit (`ColumnMeshDirty` only) |
 
 ## Phase tracker
 

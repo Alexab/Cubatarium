@@ -34,7 +34,8 @@ public:
   void MarkDirty(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
-                          int maxChunksPerFrame = 8);
+                          int max_drain_per_frame = 8,
+                          int max_schedule_per_frame = 8);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -104,6 +105,8 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
+  bool PendingMeshRevisionBump{false};
+  void BumpMeshRevisionIfNeeded();
 };
 } // namespace cutum
 #endif

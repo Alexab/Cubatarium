@@ -75,6 +75,8 @@ public:
   /// Full streaming pass after Movement: load/unload with per-frame budget.
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
+                     float movement_speed, float speed_threshold);
 
   const StreamingFrameStats &GetLastFrameStats() const
   {

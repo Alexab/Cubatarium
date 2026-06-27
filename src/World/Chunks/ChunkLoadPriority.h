@@ -10,6 +10,7 @@ struct ChunkLoadPriorityParams
   int ChebyshevScale{100};
   int ViewBiasWeight{24};
   int FeetRingBonus{1000};
+  int ViewAheadBonus{500};
 };
 
 int ChunkChebyshevDistance(glm::ivec3 chunk_ground, glm::ivec3 feet_chunk);

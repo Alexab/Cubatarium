@@ -28,7 +28,7 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
   return WorldOperationKind::Load;
 }
 
-constexpr int kChunkBudgetPerFrame = 8;
+constexpr int kChunkBudgetPerFrame = 16;
 
 } // namespace
 

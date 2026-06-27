@@ -50,6 +50,10 @@ int ComputeChunkLoadPriority(glm::ivec3 chunk_ground, glm::ivec3 feet_chunk,
       const float view_dot = glm::dot(chunk_dir, forward);
       priority -= static_cast<int>(std::max(0.0f, view_dot) *
                                    static_cast<float>(params.ViewBiasWeight));
+      if (view_dot > 0.7f && !IsFeetNeighborhood(chunk_ground, feet_chunk))
+      {
+        priority -= params.ViewAheadBonus;
+      }
     }
   }
 

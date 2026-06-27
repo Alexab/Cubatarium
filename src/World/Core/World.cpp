@@ -17,6 +17,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Primitives/Cube.h"
 #include "Render/Camera/Camera.h"
@@ -1046,7 +1047,11 @@ void UWorld::FinalizePlayerAfterWorldLoad()
 {
   ResetMeshLoadDiagnostics();
   BlockCounter.MarkNeedsRecount();
-  BlockWorldReady = CachedBlockCount > 0;
+  bool has_terrain_chunks = false;
+  BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &)
+      { has_terrain_chunks = true; });
+  BlockWorldReady = has_terrain_chunks || CachedBlockCount > 0;
   PhysicsSuspendFrames = 3;
 
   if (CurrentUserName.empty() && !Users.empty())
@@ -2898,7 +2903,8 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
       (DurationDoMovementMks +
        (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) /
       1000.0;
-  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
+  MovementDiag.hitchDetected =
+      frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
   MovementDiag.fallThroughSuspected =
       MovementDiag.playerYDrop > 2.0f &&
       (MovementDiag.feetIsAir || !MovementDiag.feetChunkLoaded) &&
@@ -2922,6 +2928,21 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   }
 #endif
   AppendMovementDiagnosticsSample();
+}
+
+float UWorld::GetStreamingHorizonBlocks() const
+{
+  return StreamingHorizonBlocks(EffectiveRenderDistance);
+}
+
+void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
+                                         double view_update_mks)
+{
+  DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
+  const double frameMs =
+      (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
+  MovementDiag.hitchDetected =
+      frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()
@@ -2997,6 +3018,11 @@ void UWorld::UpdateStreaming()
     LastCameraPosition = eye;
 
     Streamer->Update(WorldPosToBlock(eye), eye, cap);
+    Streamer->PrefetchAhead(
+        UChunkManager::WorldToChunk(WorldPosToBlock(glm::vec3(
+            eye.x, cap.feetY(eye) + 0.01f, eye.z))),
+        forward,
+        LastMovementSpeed, ProceduralTemplate.MovementSpeedBoostThreshold);
   }
 }
 
@@ -3104,10 +3130,9 @@ const std::vector<FaceInstance> &UWorld::GetBlockRenderInstances()
 {
   if (BlockRegistry && MeshCache.HasPendingDirty())
   {
-    const int rebuildBudget = Render.GreedyMeshing ? 256 : 64;
     const auto t0 = std::chrono::high_resolution_clock::now();
     const size_t dirtyBefore = MeshCache.GetDirtyCount();
-    MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, rebuildBudget);
+    MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, 8, 8);
     MovementDiag.meshRebuildMs =
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - t0)

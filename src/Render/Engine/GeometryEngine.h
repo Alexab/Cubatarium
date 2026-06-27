@@ -244,6 +244,8 @@ private:
   float FogMinBlend{0.0f};
   float FogEnabled{0.0f};
   float FogHorizontal{0.0f};
+  float FogDensity{1.0f};
+  float FogHorizonBlend{0.0f};
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};
@@ -270,9 +272,11 @@ private:
   struct GreedyGpuBatch
   {
     BlockId blockId{BLOCK_AIR};
+    size_t vertexCount{0};
+    size_t indexCount{0};
     GLuint vbo{0};
     GLuint ebo{0};
-    GLsizei indexCount{0};
+    GLsizei indexCountGl{0};
   };
   struct GreedyGpuPassCache
   {

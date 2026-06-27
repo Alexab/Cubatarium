@@ -418,6 +418,8 @@ public:
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
+  float GetStreamingHorizonBlocks() const;
+  void UpdateFrameHitchDiagnostics(double draw_scene_mks, double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
@@ -591,6 +593,7 @@ private:
   std::optional<BlockBreakSession> BreakSession;
 
   uint64_t DurationDoMovementMks;
+  uint64_t DurationDrawSceneMks{0};
   MovementDiagnostics MovementDiag;
   std::vector<MovementDiagnostics> MovementDiagHistory;
   std::unique_ptr<UWorldCooperativeSession> CoopSession;

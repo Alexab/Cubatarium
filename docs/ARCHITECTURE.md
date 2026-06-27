@@ -220,6 +220,20 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 
 Cross batches merge by `blockId` in `RebuildFlatGreedyBatches`. Scatter vegetation capped via `max_per_chunk` in `prefab_features.json`.
 
+### Fog vs cull vs streaming
+
+Distance fog uses horizontal (XZ) distance from the camera — not view direction. The sky gradient applies horizon fog (`uFogHorizonBlend`) so unloaded void ahead matches terrain fog on the sides.
+
+| System | Horizon |
+|--------|---------|
+| `ComputeDistanceFog` | `effective_render_distance × CHUNK_SIZE` |
+| `ChunkMeshCache::MaxCullDistance` | same (no +2 chunk margin) |
+| `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
+
+Asymmetric horizon (clear sky ahead, foggy sides) usually means streaming lag in the movement direction, not a fixed fog direction bug.
+
+Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
+
 ## Config (`<exe_dir>/config.json`)
 
 - `default_world` — folder name under `worlds/` (e.g. `World_001`)

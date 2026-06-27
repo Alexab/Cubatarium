@@ -96,7 +96,6 @@ void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
   glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   InvalidateTerrainCompleteCache(ground);
   ProcedurallyGenerated.insert(ground);
-  MarkTerrainColumnMeshDirty(OnMarkDirty, ground);
 }
 
 bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
@@ -516,6 +515,45 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   }
 
   UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+}
+
+void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
+                                   glm::vec3 view_forward_xz,
+                                   float movement_speed, float speed_threshold)
+{
+  if (!Enabled || !AsyncGeneration || !OnRequestAsyncChunk ||
+      movement_speed < speed_threshold)
+  {
+    return;
+  }
+  view_forward_xz.y = 0.0f;
+  if (glm::length(view_forward_xz) < 0.01f)
+  {
+    return;
+  }
+  const glm::vec3 forward = glm::normalize(view_forward_xz);
+  const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
+  for (int step = 1; step <= 2; ++step)
+  {
+    const float ahead_blocks =
+        static_cast<float>(step * CHUNK_SIZE) + static_cast<float>(CHUNK_SIZE) * 0.5f;
+    const glm::vec2 ahead_xz(forward.x * ahead_blocks, forward.z * ahead_blocks);
+    const int cx = feet_ground.x +
+                   static_cast<int>(std::round(ahead_xz.x / static_cast<float>(CHUNK_SIZE)));
+    const int cz = feet_ground.z +
+                   static_cast<int>(std::round(ahead_xz.y / static_cast<float>(CHUNK_SIZE)));
+    const glm::ivec3 coord(cx, 0, cz);
+    if (ProcedurallyGenerated.count(coord) &&
+        IsTerrainChunkCompleteCached(coord))
+    {
+      continue;
+    }
+    if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+    {
+      continue;
+    }
+    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord) - PriorityParams.ViewAheadBonus);
+  }
 }
 
 } // namespace cutum

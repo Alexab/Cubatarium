@@ -81,7 +81,10 @@ private:
   int SpatialDx{0};
   int SpatialDz{0};
   int MeshWarmupTicks{0};
+  size_t MeshWarmupStartPending{0};
+  bool MeshWarmupFinalizeOnly{false};
 
+  void BeginMeshWarmup(UWorld &world);
   int GenCenterX{0};
   int GenCenterZ{0};
   struct GenColumnEntry

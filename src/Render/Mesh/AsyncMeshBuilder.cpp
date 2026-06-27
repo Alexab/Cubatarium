@@ -112,35 +112,14 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
 
 std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
 {
-  std::vector<MeshBuildResult> all = Completed.DrainAll();
-  if (maxPerFrame > 0 &&
-      static_cast<int>(all.size()) > maxPerFrame)
-  {
-    std::vector<MeshBuildResult> kept;
-    kept.reserve(static_cast<std::size_t>(maxPerFrame));
-    std::vector<MeshBuildResult> rest;
-    rest.reserve(all.size() - static_cast<std::size_t>(maxPerFrame));
-    for (std::size_t i = 0; i < all.size(); ++i)
-    {
-      if (static_cast<int>(i) < maxPerFrame)
-      {
-        kept.push_back(std::move(all[i]));
-      }
-      else
-      {
-        rest.push_back(std::move(all[i]));
-      }
-    }
-    for (MeshBuildResult &pending : rest)
-    {
-      Completed.Push(std::move(pending));
-    }
-    all = std::move(kept);
-  }
+  const std::size_t limit =
+      maxPerFrame > 0 ? static_cast<std::size_t>(maxPerFrame) : 0;
+  std::vector<MeshBuildResult> drained =
+      limit > 0 ? Completed.DrainUpTo(limit) : std::vector<MeshBuildResult>{};
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    for (const MeshBuildResult &result : all)
+    for (const MeshBuildResult &result : drained)
     {
       const auto it = InFlight.find(result.coord);
       if (it != InFlight.end() && it->second == result.jobId)
@@ -149,7 +128,7 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       }
     }
   }
-  return all;
+  return drained;
 }
 
 bool UAsyncMeshBuilder::IsInFlight(glm::ivec3 coord) const

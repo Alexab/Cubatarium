@@ -360,7 +360,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("creature_wireframe_overlay", false);
         Render.DistanceFog = r.value("distance_fog", true);
         Render.DistanceFogStartRatio =
-            r.value("distance_fog_start_ratio", 0.85f);
+            r.value("distance_fog_start_ratio", 0.55f);
+        Render.DistanceFogDensity = r.value("distance_fog_density", 0.85f);
         Render.DistanceFogHorizontal =
             r.value("distance_fog_horizontal", true);
         Render.AltitudeAdaptiveFog = r.value("altitude_adaptive_fog", true);
@@ -681,6 +682,7 @@ void UCore::SaveConfigFile()
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   render_json["distance_fog"] = Render.DistanceFog;
   render_json["distance_fog_start_ratio"] = Render.DistanceFogStartRatio;
+  render_json["distance_fog_density"] = Render.DistanceFogDensity;
   render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
   render_json["altitude_adaptive_fog"] = Render.AltitudeAdaptiveFog;
   render_json["altitude_fog_threshold_blocks"] =

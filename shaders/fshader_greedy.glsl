@@ -24,6 +24,7 @@ uniform float uFogEnd;
 uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
+uniform float uFogDensity;
 
 const int kCrossFaceIndex = 127;
 
@@ -119,6 +120,7 @@ void main()
         }
         float fogRange = max(uFogEnd - uFogStart, 0.001);
         float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
+        fogFactor = pow(fogFactor, max(uFogDensity, 0.1));
         fogFactor = max(fogFactor, uFogMinBlend);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
     }

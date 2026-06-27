@@ -6,16 +6,20 @@ precision mediump float;
 
 varying vec2 v_texcoord;
 
-uniform vec4 skyColor; // Цвет неба, передаваемый из C++
+uniform vec4 skyColor;
+uniform float uFogHorizonBlend;
+uniform vec3 uFogColor;
 
 void main()
 {
-    // Создаем градиент от основного цвета вверху к более светлому внизу
-    vec3 skyTop = skyColor.rgb;    // Основной цвет вверху
-    vec3 skyBottom = skyColor.rgb * 1.3; // Более светлый цвет внизу (увеличиваем яркость)
-
-    // Интерполируем цвет на основе Y координаты текстуры
+    vec3 skyTop = skyColor.rgb;
+    vec3 skyBottom = skyColor.rgb * 1.3;
     vec3 finalColor = mix(skyBottom, skyTop, v_texcoord.y);
+
+    if (uFogHorizonBlend > 0.001) {
+        float horizon = 1.0 - smoothstep(0.0, 0.45, v_texcoord.y);
+        finalColor = mix(finalColor, uFogColor, horizon * uFogHorizonBlend);
+    }
 
     gl_FragColor = vec4(finalColor, 1.0);
 }
