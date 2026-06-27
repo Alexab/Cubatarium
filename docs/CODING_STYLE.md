@@ -33,6 +33,7 @@
 
 ```bash
 python tools/audit_style.py
+python tools/audit_clang_format.py
 python tools/audit/orchestrate.py --phase baseline
 python tools/audit/orchestrate.py --phase scan
 python tools/refactor_style.py --classes
@@ -43,7 +44,7 @@ python tools/fix_includes.py
 python tools/fix_member_collisions.py
 ```
 
-CI (Windows smoke workflow) also runs `python tools/audit_style.py` and `chunk_load_priority_test`.
+CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, and `chunk_load_priority_test`.
 
 ## Render Pipeline includes
 

@@ -1,37 +1,26 @@
 # Cubatarium Audit Report 2026
 
-- **Commit:** `fa49ec059efaa488458f1f92b2b6f48999db66d9`
-- **Generated:** 2026-06-27T13:09:38+00:00
+- **Commit:** `fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`
+- **Generated:** 2026-06-27T14:36:46+00:00
 - **Status:** pending_review
 
 ## Executive Summary
 
-| Priority | Count |
-|----------|-------|
-| P0 | 2 |
-| P1 | 12 |
-| P2 | 20 |
+Open findings (done excluded):
+
+| Priority | Open |
+|----------|------|
+| P0 | 0 |
+| P1 | 10 |
+| P2 | 18 |
 | P3 | 13 |
 
-## Findings by Priority
+Closed: **3** finding(s).
 
-### P0
-
-- **AUDIT-DEAD-015** [dead_code] UWorld::SaveBlocks has no callers
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: remove unused save methods; keep Load/Migrate paths
-  - Evidence: definition only; save uses ChunkStorageService
-- **AUDIT-DEAD-016** [dead_code] UWorld::SaveChunks has no callers
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: remove unused save methods; keep Load/Migrate paths
-  - Evidence: definition only; save uses ChunkStorageService
+## Open Findings by Priority
 
 ### P1
 
-- **AUDIT-DUP-001** [duplication] Duplicate #include ChunkStorageService.h in World.cpp
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: remove duplicate include
-  - Evidence: two consecutive identical includes
 - **AUDIT-PERF-001** [performance] push_back in loop without nearby reserve()
   - Module: Render; Files: src/Render/Mesh/GreedyMesher.cpp
   - Action: add reserve() or unify dirty path
@@ -68,10 +57,6 @@
   - Module: Render; Files: src/World/Core/World.cpp
   - Action: add reserve() or unify dirty path
   - Evidence: both RebuildChunkImmediate and MarkDirty paths present
-- **AUDIT-WORLD-001** [duplication] JSON voxel parsing duplicated across LoadBlocks/LoadChunks
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: extract ULegacyChunkJsonLoader shared parser
-  - Evidence: separate JSON parse loops for blocks and monolithic chunks
 - **AUDIT-WORLD-002** [performance] MarkBlockChunkDirty uses RebuildChunkImmediate vs MarkDirty branches
   - Module: World; Files: src/World/Core/World.cpp
   - Action: unify dirty chunk + neighbor propagation
@@ -151,14 +136,6 @@
   - Module: Render; Files: src/Render/Engine/GeometryEngine.cpp
   - Action: enforce Pipeline include rules; incremental backend extraction
   - Evidence: god-class size from baseline
-- **AUDIT-RENDER-002** [architecture] StreamingHorizonBlocks deprecated but still used
-  - Module: Render; Files: src/Render/Engine/DistanceFog.h, src/World/Core/World.cpp
-  - Action: migrate callers to FogHorizonBlocks/RenderHorizonBlocks
-  - Evidence: @deprecated on StreamingHorizonBlocks; UWorld::GetStreamingHorizonBlocks calls it
-- **AUDIT-TEST-001** [architecture] chunk_load_priority_test not in CI
-  - Module: Test; Files: CMakeLists.txt, .github/workflows/windows-release-smoke.yml
-  - Action: add to CI in PR-F
-  - Evidence: single C++ test target exists but not run in workflow
 
 ### P3
 
@@ -214,6 +191,12 @@
   - Module: WorldGen; Files: src/WorldGen/Core/ProceduralConfigIO.cpp
   - Action: document; keep for migration
   - Evidence: legacy generator id migration
+
+## Closed Findings
+
+- **AUDIT-RENDER-002** — StreamingHorizonBlocks deprecated but still used (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
+- **AUDIT-TEST-001** — chunk_load_priority_test not in CI (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
+- **AUDIT-WORLD-001** — JSON voxel parsing duplicated across LoadBlocks/LoadChunks (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
 
 ## Recommended PR Sequence
 

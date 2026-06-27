@@ -35,8 +35,7 @@ private:
   bool Stop{false};
 };
 
-template <typename T>
-class CompletedJobQueue
+template <typename T> class UCompletedJobQueue
 {
 public:
   void Push(T value)
@@ -67,7 +66,8 @@ public:
     {
       drained.push_back(std::move(Items[i]));
     }
-    Items.erase(Items.begin(), Items.begin() + static_cast<std::ptrdiff_t>(take));
+    Items.erase(Items.begin(),
+                Items.begin() + static_cast<std::ptrdiff_t>(take));
     return drained;
   }
 

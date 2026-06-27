@@ -34,9 +34,9 @@ namespace
 bool TierABlocksResolved(UBlockRegistry &registry)
 {
   static const char *kTierA[] = {
-      "bedrock", "stone",  "dirt",   "grass",   "sand",    "sandstone",
-      "gravel",  "snow",   "clay",   "ice",     "hellrock",  "water",
-      "lava",    "fire",   "wood",   "tree_log", "tree_leaves"};
+      "bedrock", "stone", "dirt", "grass",    "sand",       "sandstone",
+      "gravel",  "snow",  "clay", "ice",      "hellrock",   "water",
+      "lava",    "fire",  "wood", "tree_log", "tree_leaves"};
   for (const char *name : kTierA)
   {
     if (registry.GetIdByTypeName(name) == BLOCK_AIR)
@@ -254,10 +254,12 @@ int RunCreateWorld(int argc, char **argv, int create_world_index)
     glfwTerminate();
     return 1;
   }
-  if (!UPrefabFeatureConfigStorage::LoadFromFile("content/prefab_features.json"))
+  if (!UPrefabFeatureConfigStorage::LoadFromFile(
+          "content/prefab_features.json"))
   {
-    std::cerr << "create-world: prefab_features.json not loaded — vegetation disabled"
-              << std::endl;
+    std::cerr
+        << "create-world: prefab_features.json not loaded — vegetation disabled"
+        << std::endl;
   }
 
   auto core = MakeHeadlessCore();
@@ -279,8 +281,8 @@ int RunBenchChunkIo()
       std::make_shared<UTextureCubeStorage>(texture_base_instance);
   UBlockRegistry registry(texture_cube_instance, nullptr);
 
-  BinaryChunkSerializer binary;
-  JsonChunkSerializer json;
+  UBinaryChunkSerializer binary;
+  UJsonChunkSerializer json;
 
   UChunk chunk(glm::ivec3(0, 0, 0));
   constexpr BlockId kStone = 7;
@@ -317,28 +319,30 @@ int RunBenchChunkIo()
   const double binarySaveUs = bench(
       [&]()
       { binaryBlob = binary.Serialize(glm::ivec3(0, 0, 0), chunk, registry); });
-  ChunkBuffer binaryBuf;
+  UChunkBuffer binaryBuf;
   const double binaryLoadUs = bench(
       [&]()
       {
-        binaryBuf = binary.Deserialize(binaryBlob.bytes, glm::ivec3(0, 0, 0),
-                                       registry);
+        binaryBuf =
+            binary.Deserialize(binaryBlob.bytes, glm::ivec3(0, 0, 0), registry);
       });
 
   SerializedChunk jsonBlob;
   const double jsonSaveUs = bench(
       [&]()
       { jsonBlob = json.Serialize(glm::ivec3(0, 0, 0), chunk, registry); });
-  ChunkBuffer jsonBuf;
+  UChunkBuffer jsonBuf;
   const double jsonLoadUs = bench(
       [&]()
       {
-        jsonBuf = json.Deserialize(jsonBlob.bytes, glm::ivec3(0, 0, 0), registry);
+        jsonBuf =
+            json.Deserialize(jsonBlob.bytes, glm::ivec3(0, 0, 0), registry);
       });
 
   const bool ok = !binaryBuf.IsEmpty() && !jsonBuf.IsEmpty();
-  std::cout << "BENCH_IO ok=" << (ok ? 1 : 0) << " binary_bytes="
-            << binaryBlob.bytes.size() << " json_bytes=" << jsonBlob.bytes.size()
+  std::cout << "BENCH_IO ok=" << (ok ? 1 : 0)
+            << " binary_bytes=" << binaryBlob.bytes.size()
+            << " json_bytes=" << jsonBlob.bytes.size()
             << " binary_save_us=" << binarySaveUs
             << " binary_load_us=" << binaryLoadUs
             << " json_save_us=" << jsonSaveUs << " json_load_us=" << jsonLoadUs

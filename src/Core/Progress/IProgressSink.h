@@ -17,7 +17,7 @@ public:
   virtual void End(bool success, const std::string &errorMessage = {}) = 0;
 };
 
-class NullProgressSink : public IProgressSink
+class UNullProgressSink : public IProgressSink
 {
 public:
   void Begin(WorldOperationKind /*kind*/) override {}
@@ -28,7 +28,7 @@ public:
   void End(bool /*success*/, const std::string & /*errorMessage*/) override {}
 };
 
-class LatestProgressSink : public IProgressSink
+class ULatestProgressSink : public IProgressSink
 {
 public:
   void Begin(WorldOperationKind kind) override;

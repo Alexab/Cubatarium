@@ -141,6 +141,96 @@ def dedupe_findings(findings: list[Finding]) -> list[Finding]:
     return out
 
 
+def load_previous_findings() -> dict[str, Finding]:
+    path = AUDIT_DIR / "findings.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {raw["id"]: Finding(**raw) for raw in data.get("findings", [])}
+
+
+def has_duplicate_chunk_storage_include() -> bool:
+    world_cpp = REPO_ROOT / "src/World/Core/World.cpp"
+    if not world_cpp.exists():
+        return False
+    includes = [
+        line.strip()
+        for line in world_cpp.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if "ChunkStorageService.h" in line and line.strip().startswith("#include")
+    ]
+    return len(includes) > 1
+
+
+def auto_resolved_ids() -> dict[str, str]:
+    """Map finding id -> resolution note when fix is detected in tree."""
+    resolved: dict[str, str] = {}
+    world_cpp = REPO_ROOT / "src/World/Core/World.cpp"
+    world_text = (
+        world_cpp.read_text(encoding="utf-8", errors="ignore") if world_cpp.exists() else ""
+    )
+
+    if not has_duplicate_chunk_storage_include():
+        resolved["AUDIT-DUP-001"] = "duplicate ChunkStorageService include removed"
+
+    if "ULegacyChunkJsonLoader" in world_text:
+        resolved["AUDIT-WORLD-001"] = "extracted to src/World/IO/LegacyChunkJsonLoader.*"
+
+    fog_h = REPO_ROOT / "src/Render/Engine/DistanceFog.h"
+    if fog_h.exists() and "StreamingHorizonBlocks" not in fog_h.read_text(
+        encoding="utf-8", errors="ignore"
+    ):
+        resolved["AUDIT-RENDER-002"] = "StreamingHorizonBlocks removed"
+
+    ci = REPO_ROOT / ".github/workflows/windows-release-smoke.yml"
+    if ci.exists() and "chunk_load_priority_test" in ci.read_text(encoding="utf-8", errors="ignore"):
+        resolved["AUDIT-TEST-001"] = "chunk_load_priority_test in windows-release-smoke CI"
+
+    style_proc = __import__("subprocess").run(
+        [__import__("sys").executable, str(REPO_ROOT / "tools" / "audit_style.py")],
+        cwd=REPO_ROOT,
+        capture_output=True,
+    )
+    if style_proc.returncode == 0:
+        resolved["AUDIT-STYLE-001"] = "audit_style.py reports 0 violations"
+
+    return resolved
+
+
+def apply_status(findings: list[Finding], commit: str) -> tuple[list[Finding], str, list[str]]:
+    previous = load_previous_findings()
+    auto_done = auto_resolved_ids()
+    doc_status = "pending_review"
+    approved_ids: list[str] = []
+
+    prev_path = AUDIT_DIR / "findings.json"
+    if prev_path.exists():
+        prev_doc = json.loads(prev_path.read_text(encoding="utf-8"))
+        doc_status = prev_doc.get("status", doc_status)
+        approved_ids = list(prev_doc.get("approved_ids", []))
+
+    for f in findings:
+        prev = previous.get(f.id)
+        if prev and prev.status == "done":
+            f.status = "done"
+            f.implemented_in = prev.implemented_in or f.implemented_in
+            continue
+        if f.id in auto_done:
+            f.status = "done"
+            f.implemented_in = commit or f.implemented_in
+            f.evidence = f"{f.evidence}; resolved: {auto_done[f.id]}".strip("; ")
+
+    return findings, doc_status, approved_ids
+
+
+def summarize_open(findings: list[Finding]) -> dict[str, int]:
+    summary = {"P0": 0, "P1": 0, "P2": 0, "P3": 0}
+    for f in findings:
+        if f.status == "done":
+            continue
+        summary[f.priority] = summary.get(f.priority, 0) + 1
+    return summary
+
+
 def render_report(doc: FindingsDocument) -> str:
     lines = [
         "# Cubatarium Audit Report 2026",
@@ -151,15 +241,19 @@ def render_report(doc: FindingsDocument) -> str:
         "",
         "## Executive Summary",
         "",
-        "| Priority | Count |",
-        "|----------|-------|",
+        "Open findings (done excluded):",
+        "",
+        "| Priority | Open |",
+        "|----------|------|",
     ]
+    done_count = sum(1 for f in doc.findings if f.status == "done")
     for p in ("P0", "P1", "P2", "P3"):
         lines.append(f"| {p} | {doc.summary.get(p, 0)} |")
-    lines.extend(["", "## Findings by Priority", ""])
+    lines.append(f"\nClosed: **{done_count}** finding(s).\n")
+    lines.extend(["## Open Findings by Priority", ""])
 
     for priority in ("P0", "P1", "P2", "P3"):
-        group = [f for f in doc.findings if f.priority == priority]
+        group = [f for f in doc.findings if f.priority == priority and f.status != "done"]
         if not group:
             continue
         lines.append(f"### {priority}")
@@ -171,6 +265,14 @@ def render_report(doc: FindingsDocument) -> str:
             lines.append(f"  - Action: {f.action or 'review'}")
             if f.evidence:
                 lines.append(f"  - Evidence: {f.evidence[:200]}")
+        lines.append("")
+
+    closed = [f for f in doc.findings if f.status == "done"]
+    if closed:
+        lines.extend(["## Closed Findings", ""])
+        for f in sorted(closed, key=lambda x: x.id):
+            note = f.implemented_in or "local"
+            lines.append(f"- **{f.id}** — {f.title} (`{note}`)")
         lines.append("")
 
     lines.extend(
@@ -212,7 +314,9 @@ def main(commit: str = "") -> int:
                 risk="medium",
             )
         )
-    if not any(f.id == "AUDIT-DUP-001" for f in findings):
+    if has_duplicate_chunk_storage_include() and not any(
+        f.id == "AUDIT-DUP-001" for f in findings
+    ):
         findings.append(
             Finding(
                 id="AUDIT-DUP-001",
@@ -230,17 +334,25 @@ def main(commit: str = "") -> int:
             )
         )
 
+    findings, doc_status, approved_ids = apply_status(findings, commit)
+    open_count = sum(1 for f in findings if f.status != "done")
+    done_count = sum(1 for f in findings if f.status == "done")
+
     doc = FindingsDocument(
-        status="pending_review",
+        status=doc_status,
         commit=commit,
         generated_at=utc_now_iso(),
-        summary=summarize_priorities(findings),
+        summary=summarize_open(findings),
+        approved_ids=approved_ids,
         findings=sorted(findings, key=lambda f: (f.priority, f.id)),
     )
     write_json(AUDIT_DIR / "findings.json", doc.to_dict())
     report = render_report(doc)
     (REPO_ROOT / "docs" / "AUDIT_REPORT_2026.md").write_text(report, encoding="utf-8")
-    print(f"findings: {len(findings)} total; report written to docs/AUDIT_REPORT_2026.md")
+    print(
+        f"findings: {len(findings)} total ({open_count} open, {done_count} done); "
+        "report written to docs/AUDIT_REPORT_2026.md"
+    )
     return 0
 
 

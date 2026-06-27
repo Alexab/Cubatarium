@@ -1,13 +1,13 @@
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
-#include "WorldGen/Pipelines/ColumnGenerationService.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IChunkPopulator.h"
-#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
-#include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveCarver.h"
-#include "World/Prefabs/Prefab.h"
+#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Pipelines/ColumnGenerationService.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -24,9 +24,9 @@ bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
 {
   const float cx = static_cast<float>(chunkWorldX) + CHUNK_SIZE * 0.5f;
   const float cz = static_cast<float>(chunkWorldZ) + CHUNK_SIZE * 0.5f;
-  const float gate = NormalizedFBM2D(cx * params.scale * 0.25f,
-                                     cz * params.scale * 0.25f, seed + 3000, 2,
-                                     0.5f, 2.0f);
+  const float gate =
+      NormalizedFBM2D(cx * params.scale * 0.25f, cz * params.scale * 0.25f,
+                      seed + 3000, 2, 0.5f, 2.0f);
   return gate > 0.42f;
 }
 
@@ -77,16 +77,16 @@ IWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
 
 } // namespace
 
-PipelineChunkPopulator::PipelineChunkPopulator(UBlockRegistry &registry,
-                                               UPrefabLibrary *prefabs,
-                                               std::string worldgenOwnerPackId)
+UPipelineChunkPopulator::UPipelineChunkPopulator(
+    UBlockRegistry &registry, UPrefabLibrary *prefabs,
+    std::string worldgenOwnerPackId)
     : Registry(registry), Prefabs(prefabs),
       WorldgenOwnerPackId(std::move(worldgenOwnerPackId))
 {
 }
 
-ChunkPopulateResult PipelineChunkPopulator::Populate(
-    const ChunkPopulateRequest &request)
+ChunkPopulateResult
+UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 {
   ChunkPopulateResult result;
   result.coord = request.chunkCoord;
@@ -101,8 +101,8 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
     settings.EnableCaves = false;
   }
 
-  IWorldGenPipeline *pipeline =
-      EnsureThreadLocalPipeline(Registry, Prefabs, WorldgenOwnerPackId, settings);
+  IWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
+      Registry, Prefabs, WorldgenOwnerPackId, settings);
   if (!pipeline)
   {
     return result;
@@ -130,7 +130,8 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
       columns[column_count++] = {lx, lz};
     }
   }
-  std::sort(columns.begin(), columns.begin() + static_cast<ptrdiff_t>(column_count),
+  std::sort(columns.begin(),
+            columns.begin() + static_cast<ptrdiff_t>(column_count),
             [base_x, base_z, origin_x, origin_z](const std::pair<int, int> &a,
                                                  const std::pair<int, int> &b)
             {
@@ -155,12 +156,11 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
     const int lz = columns[i].second;
     const int world_x = base_x + lx;
     const int world_z = base_z + lz;
-    if (auto *composable =
-            dynamic_cast<UComposableWorldGenerator *>(pipeline))
+    if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
     {
       UBlockWorldColumnWriter writer(genWorld, Registry);
       UColumnGenerationService::GenerateColumn(*composable, writer, world_x,
-                                                 world_z);
+                                               world_z);
     }
     else
     {
@@ -168,9 +168,8 @@ ChunkPopulateResult PipelineChunkPopulator::Populate(
     }
   }
 
-  genWorld.ForEachBlock(
-      [&](glm::ivec3 pos, BlockId id)
-      { result.buffer.SetBlock(pos, id); });
+  genWorld.ForEachBlock([&](glm::ivec3 pos, BlockId id)
+                        { result.buffer.SetBlock(pos, id); });
   return result;
 }
 

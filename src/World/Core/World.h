@@ -13,21 +13,21 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Mesh/ChunkMeshCache.h"
-#include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
-#include "WorldGen/Core/IChunkPopulator.h"
-#include "World/Core/BlockWorld.h"
 #include "World/Core/BlockCountTracker.h"
-#include "World/Math/CollisionVolume.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
-#include "WorldGen/Core/ProceduralSettings.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Core/WorldCooperativeOps.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
-#include "World/Core/WorldCooperativeOps.h"
+#include "World/Math/CollisionVolume.h"
+#include "WorldGen/Core/IChunkPopulator.h"
+#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
 #include <functional>
 #include <glm/glm.hpp>
@@ -151,7 +151,10 @@ public:
   {
     return WorldgenOwnerPackId;
   }
-  const std::string &GetCatalogFingerprint() const { return CatalogFingerprint; }
+  const std::string &GetCatalogFingerprint() const
+  {
+    return CatalogFingerprint;
+  }
   void SetCatalogFingerprint(std::string fingerprint)
   {
     CatalogFingerprint = std::move(fingerprint);
@@ -420,7 +423,8 @@ public:
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
-  void UpdateFrameHitchDiagnostics(double draw_scene_mks, double view_update_mks);
+  void UpdateFrameHitchDiagnostics(double draw_scene_mks,
+                                   double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
@@ -459,8 +463,7 @@ private:
 
   bool CheckPositionFree(const glm::vec3 &position, float size = 1.0) const;
   std::optional<glm::vec3>
-  FindNearestFreeCubePosition(const glm::vec3 &position,
-                              const glm::vec3 &front,
+  FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
 
   bool AddObjectByView(const glm::vec3 &position, const glm::vec3 &front);
@@ -551,7 +554,7 @@ private:
   UBlockCountTracker BlockCounter;
   UChunkMeshCache MeshCache;
   std::unique_ptr<UChunkStreamer> Streamer;
-  std::unique_ptr<PipelineChunkPopulator> ChunkPopulator;
+  std::unique_ptr<UPipelineChunkPopulator> ChunkPopulator;
   std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
   UChunkGenerationRegistry ChunkGenTokens;
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;

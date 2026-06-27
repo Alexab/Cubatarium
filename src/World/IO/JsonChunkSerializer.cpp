@@ -33,9 +33,9 @@ BlockId ResolveVoxelId(const json &voxel, UBlockRegistry &registry)
 
 } // namespace
 
-SerializedChunk JsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
-                                               const UChunk &chunk,
-                                               UBlockRegistry &registry) const
+SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
+                                                const UChunk &chunk,
+                                                UBlockRegistry &registry) const
 {
   SerializedChunk out;
   out.format = ChunkDiskFormat::Json;
@@ -68,11 +68,12 @@ SerializedChunk JsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
   return out;
 }
 
-ChunkBuffer JsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
-                                             glm::ivec3 chunkCoord,
-                                             UBlockRegistry &registry) const
+UChunkBuffer
+UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
+                                  glm::ivec3 chunkCoord,
+                                  UBlockRegistry &registry) const
 {
-  ChunkBuffer buffer;
+  UChunkBuffer buffer;
   if (bytes.empty())
   {
     return buffer;

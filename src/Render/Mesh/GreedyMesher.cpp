@@ -176,7 +176,8 @@ int MaxSolidLocalY(const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry)
       for (int x = 0; x < CHUNK_SIZE; ++x)
       {
         const BlockId id = snapshot.GetBlockLocal(glm::ivec3(x, y, z));
-        if (id != BLOCK_AIR && registry.GetRenderStyle(id) != BlockRenderStyle::Cross)
+        if (id != BLOCK_AIR &&
+            registry.GetRenderStyle(id) != BlockRenderStyle::Cross)
         {
           maxY = std::max(maxY, y);
         }
@@ -193,6 +194,7 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                                       UBlockRegistry &registry)
 {
   std::vector<GreedyQuad> quads;
+  quads.reserve(512);
   const UChunk *chunk = world.GetChunkManager().GetChunk(chunkCoord);
   if (!chunk)
   {
@@ -259,7 +261,8 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
             glm::ivec3 neighborOffset(0);
             neighborOffset[axis] = sign;
             glm::ivec3 neighborPos = worldPos + neighborOffset;
-            if (NeighborHidesFace(world, registry, Id, worldPos, neighborOffset))
+            if (NeighborHidesFace(world, registry, Id, worldPos,
+                                  neighborOffset))
             {
               continue;
             }
@@ -329,10 +332,12 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
   return quads;
 }
 
-std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(
-    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry)
+std::vector<GreedyQuad>
+UGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
+                              UBlockRegistry &registry)
 {
   std::vector<GreedyQuad> quads;
+  quads.reserve(512);
   const glm::ivec3 chunkCoord = snapshot.coord;
   const int maxSolidY = MaxSolidLocalY(snapshot, registry);
 

@@ -183,6 +183,7 @@ set(SOURCES
     src/World/Core/IBlockWriter.cpp
     src/World/IO/AsyncChunkIO.cpp
     src/World/IO/ChunkStorageTypes.cpp
+    src/World/IO/LegacyChunkJsonLoader.cpp
     src/World/IO/JsonChunkSerializer.cpp
     src/World/IO/BinaryChunkSerializer.cpp
     src/World/IO/ChunkStorageService.cpp

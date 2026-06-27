@@ -3,7 +3,7 @@
 namespace cutum
 {
 
-void LatestProgressSink::Begin(WorldOperationKind kind)
+void ULatestProgressSink::Begin(WorldOperationKind kind)
 {
   Snapshot = ProgressSnapshot{};
   Snapshot.kind = kind;
@@ -12,8 +12,8 @@ void LatestProgressSink::Begin(WorldOperationKind kind)
   Snapshot.fraction = -1.f;
 }
 
-void LatestProgressSink::Report(const std::string &phaseId, float fraction,
-                                const std::string &message)
+void ULatestProgressSink::Report(const std::string &phaseId, float fraction,
+                                 const std::string &message)
 {
   Snapshot.phaseId = phaseId;
   Snapshot.message = message;
@@ -21,7 +21,7 @@ void LatestProgressSink::Report(const std::string &phaseId, float fraction,
   Snapshot.active = true;
 }
 
-void LatestProgressSink::End(bool success, const std::string &errorMessage)
+void ULatestProgressSink::End(bool success, const std::string &errorMessage)
 {
   Snapshot.active = false;
   Snapshot.succeeded = success;

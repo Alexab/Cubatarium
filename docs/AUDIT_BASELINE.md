@@ -1,22 +1,22 @@
 # Audit Baseline
 
-- Commit: `fa49ec059efaa488458f1f92b2b6f48999db66d9`
-- Generated: 2026-06-27T12:59:12+00:00
-- Style violations: **13**
+- Commit: `fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`
+- Generated: 2026-06-27T14:34:32+00:00
+- Style violations: **0**
 - Smoke: skipped (run doctor-windows separately for full baseline)
 
 ## God-class LOC
 
-- `src/World/Core/World.cpp`: 3549 lines
+- `src/World/Core/World.cpp`: 3390 lines
 - `src/Render/Engine/GeometryEngine.cpp`: 2618 lines
 - `src/App/Application.cpp`: 1788 lines
 
 ## LOC by module (top 10)
 
 - Gui: 14373
-- Render: 9423
+- Render: 9418
 - App: 8810
-- World: 8798
+- World: 8762
 - WorldGen: 8177
 - Creatures: 5975
 - ResourcePacks: 2253

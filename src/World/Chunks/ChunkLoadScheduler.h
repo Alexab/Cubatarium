@@ -78,7 +78,7 @@ private:
   IChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   UJobThreadPool Pool;
-  CompletedJobQueue<PendingResult> Completed;
+  UCompletedJobQueue<PendingResult> Completed;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,

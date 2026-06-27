@@ -28,7 +28,7 @@ struct ChunkPopulateResult
 {
   glm::ivec3 coord;
   ChunkGenerationToken token;
-  ChunkBuffer buffer;
+  UChunkBuffer buffer;
 };
 
 class IChunkPopulator
@@ -38,11 +38,11 @@ public:
   virtual ChunkPopulateResult Populate(const ChunkPopulateRequest &request) = 0;
 };
 
-class PipelineChunkPopulator : public IChunkPopulator
+class UPipelineChunkPopulator : public IChunkPopulator
 {
 public:
-  PipelineChunkPopulator(UBlockRegistry &registry, UPrefabLibrary *prefabs,
-                         std::string worldgenOwnerPackId);
+  UPipelineChunkPopulator(UBlockRegistry &registry, UPrefabLibrary *prefabs,
+                          std::string worldgenOwnerPackId);
 
   ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override;
 

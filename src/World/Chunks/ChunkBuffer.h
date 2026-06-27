@@ -1,7 +1,7 @@
 #pragma once
 
-#include "World/Core/IBlockWriter.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/IBlockWriter.h"
 #include <unordered_map>
 
 namespace cutum
@@ -9,10 +9,10 @@ namespace cutum
 
 class UBlockWorld;
 
-class BlockWorldWriter : public IBlockWriter
+class UBlockWorldWriter : public IBlockWriter
 {
 public:
-  explicit BlockWorldWriter(UBlockWorld &world);
+  explicit UBlockWorldWriter(UBlockWorld &world);
 
   void SetBlock(glm::ivec3 worldPos, BlockId id) override;
   BlockId GetBlock(glm::ivec3 worldPos) const override;
@@ -21,7 +21,7 @@ private:
   UBlockWorld &World;
 };
 
-class ChunkBuffer : public IBlockWriter
+class UChunkBuffer : public IBlockWriter
 {
 public:
   void SetBlock(glm::ivec3 worldPos, BlockId id) override;

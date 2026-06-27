@@ -69,9 +69,9 @@ bool ReadI32(const std::vector<uint8_t> &bytes, size_t &offset, int32_t &value)
 
 } // namespace
 
-SerializedChunk BinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord,
-                                                 const UChunk &chunk,
-                                                 UBlockRegistry & /*registry*/) const
+SerializedChunk
+UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
+                                  UBlockRegistry & /*registry*/) const
 {
   SerializedChunk out;
   out.format = ChunkDiskFormat::Binary;
@@ -153,11 +153,12 @@ SerializedChunk BinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord,
   return out;
 }
 
-ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
-                                               glm::ivec3 chunkCoord,
-                                               UBlockRegistry & /*registry*/) const
+UChunkBuffer
+UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
+                                    glm::ivec3 chunkCoord,
+                                    UBlockRegistry & /*registry*/) const
 {
-  ChunkBuffer buffer;
+  UChunkBuffer buffer;
   if (bytes.size() < 4 + 1 + 12 + 2)
   {
     return buffer;
@@ -255,8 +256,8 @@ ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes
       if (id != BLOCK_AIR)
       {
         const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
-                                chunkCoord.y * CHUNK_SIZE + ly,
-                                chunkCoord.z * CHUNK_SIZE + lz);
+                                  chunkCoord.y * CHUNK_SIZE + ly,
+                                  chunkCoord.z * CHUNK_SIZE + lz);
         buffer.SetBlock(worldPos, id);
       }
       advanceLocal();

@@ -47,13 +47,13 @@ public:
 
 private:
   UJobThreadPool Pool;
-  CompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
-  CompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
+  UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
+  UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
 };
 
-ChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
-                                   glm::ivec3 chunkCoord,
-                                   UBlockRegistry &registry);
+UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
+                                    glm::ivec3 chunkCoord,
+                                    UBlockRegistry &registry);
 
 std::string SerializeChunkToJson(glm::ivec3 chunkCoord, const UChunk &chunk,
                                  UBlockRegistry &registry);

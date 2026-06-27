@@ -69,6 +69,10 @@ jobs:
         shell: pwsh
         run: python tools/audit_style.py
 
+      - name: clang-format (changed src files)
+        shell: pwsh
+        run: python tools/audit_clang_format.py
+
       - name: C++ unit test (chunk load priority)
         shell: pwsh
         run: ./build/desktop-msvc/Release/chunk_load_priority_test.exe

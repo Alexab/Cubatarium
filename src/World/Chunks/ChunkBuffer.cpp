@@ -5,19 +5,19 @@
 namespace cutum
 {
 
-BlockWorldWriter::BlockWorldWriter(UBlockWorld &world) : World(world) {}
+UBlockWorldWriter::UBlockWorldWriter(UBlockWorld &world) : World(world) {}
 
-void BlockWorldWriter::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UBlockWorldWriter::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
   World.SetBlock(worldPos, id);
 }
 
-BlockId BlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
+BlockId UBlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
 {
   return World.GetBlock(worldPos);
 }
 
-void ChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
   if (id == BLOCK_AIR)
   {
@@ -36,7 +36,7 @@ void ChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
   MaxY = std::max(MaxY, worldPos.y);
 }
 
-BlockId ChunkBuffer::GetBlock(glm::ivec3 worldPos) const
+BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 {
   const auto it = Blocks.find(worldPos);
   if (it == Blocks.end())
@@ -46,7 +46,7 @@ BlockId ChunkBuffer::GetBlock(glm::ivec3 worldPos) const
   return it->second;
 }
 
-void ChunkBuffer::ApplyTo(UBlockWorld &world) const
+void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
   for (const auto &entry : Blocks)
   {
@@ -54,7 +54,7 @@ void ChunkBuffer::ApplyTo(UBlockWorld &world) const
   }
 }
 
-void ChunkBuffer::Clear()
+void UChunkBuffer::Clear()
 {
   Blocks.clear();
   HasBounds = false;

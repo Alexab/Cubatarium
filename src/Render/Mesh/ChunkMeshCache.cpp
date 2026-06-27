@@ -1,12 +1,12 @@
 #include "Render/Mesh/ChunkMeshCache.h"
-#include "Render/Engine/DistanceFog.h"
 #include "Blocks/BlockRegistry.h"
+#include "Render/Camera/Frustum.h"
+#include "Render/Engine/DistanceFog.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
-#include "Render/Camera/Frustum.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -57,9 +57,9 @@ int MaxSolidLocalY(const UChunk &chunk, const UBlockRegistry &registry)
   return max_y;
 }
 
-void AppendCrossBlocksInBand(const UChunk &chunk, glm::ivec3 chunk_coord,
-                             const UBlockRegistry &registry, int max_local_y,
-                             std::unordered_map<BlockId, GreedyMeshBatch> &by_block_id)
+void AppendCrossBlocksInBand(
+    const UChunk &chunk, glm::ivec3 chunk_coord, const UBlockRegistry &registry,
+    int max_local_y, std::unordered_map<BlockId, GreedyMeshBatch> &by_block_id)
 {
   const int y_min = std::max(0, max_local_y - kCrossScanBelow);
   const int y_max = std::min(CHUNK_SIZE - 1, max_local_y + kCrossScanAbove);
@@ -83,7 +83,8 @@ void AppendCrossBlocksInBand(const UChunk &chunk, glm::ivec3 chunk_coord,
         batch.blockId = id;
         batch.Transparent = false;
         batch.AlphaCutout = true;
-        AppendCrossSprite(BlockCenter(world_pos), batch.vertices, batch.indices);
+        AppendCrossSprite(BlockCenter(world_pos), batch.vertices,
+                          batch.indices);
       }
     }
   }
@@ -301,10 +302,9 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
   }
   GreedyBatchesDirty = false;
   ++CullRevision;
-  LastFlatRebuildMs =
-      std::chrono::duration<double, std::milli>(
-          std::chrono::high_resolution_clock::now() - t0)
-          .count();
+  LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
+                          std::chrono::high_resolution_clock::now() - t0)
+                          .count();
 }
 void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::mat4 &viewProj,
@@ -445,8 +445,7 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   {
     return;
   }
-  for (MeshBuildResult &result :
-       AsyncBuilder->DrainCompleted(max_per_frame))
+  for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {
     ApplyMeshResult(world, std::move(result));
   }
@@ -530,7 +529,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       AppendGreedyQuad(q, chunkCoord, batch.vertices, batch.indices);
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);
-    AppendCrossBlocksInBand(*chunk, chunkCoord, registry, max_local_y, byBlockId);
+    AppendCrossBlocksInBand(*chunk, chunkCoord, registry, max_local_y,
+                            byBlockId);
     ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
     chunkMesh.batches.clear();
     chunkMesh.batches.reserve(byBlockId.size());
@@ -544,6 +544,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   {
     GreedyCache.erase(chunkCoord);
     std::vector<FaceInstance> chunkInstances;
+    chunkInstances.reserve(256);
     RebuildChunkLegacy(world, registry, chunkCoord, chunkInstances);
     Cache[chunkCoord] = std::move(chunkInstances);
   }

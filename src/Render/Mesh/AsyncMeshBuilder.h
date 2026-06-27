@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
-#include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -33,7 +33,7 @@ public:
 
 private:
   UJobThreadPool Pool;
-  CompletedJobQueue<MeshBuildResult> Completed;
+  UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
   uint64_t NextJobId{1};

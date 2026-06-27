@@ -5,22 +5,22 @@
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "App/Settings/UiSettings.h"
+#include "App/WorldOperationRunner.h"
+#include "Core/Progress/IProgressSink.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IGuiClipboard.h"
 #include "Gui/Interfaces/IGuiMenuHost.h"
-#include "Gui/Screens/WorldProgressScreen.h"
-#include "App/WorldOperationRunner.h"
-#include "Core/Progress/IProgressSink.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
-#include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -123,9 +123,9 @@ public:
   void CreateNewWorldWithSettings(
       const ProceduralSettings &settings,
       const std::vector<std::string> &resourcePacksEnabled) override;
-  void CreateNewWorldWithSettings(
-      const ProceduralSettings &settings,
-      const ResourcePackSelection &selection) override;
+  void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
@@ -210,7 +210,7 @@ private:
 
   UWorldProgressScreen *ProgressScreen{nullptr};
   std::unique_ptr<UWorldOperationRunner> WorldOpRunner;
-  LatestProgressSink ProgressSink;
+  ULatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
   std::unique_ptr<UInGameHudScreen> HudScreen;

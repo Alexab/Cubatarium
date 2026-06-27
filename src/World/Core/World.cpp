@@ -5,9 +5,9 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
+#include "Core/Progress/IProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -17,27 +17,28 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Render/Camera/Camera.h"
+#include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Primitives/Cube.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Camera/Frustum.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Storage/Object.h"
 #include "Storage/ObjectStorage.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
-#include "Core/Progress/IProgressSink.h"
-#include "World/Core/WorldCooperativeOps.h"
 #include "World/Chunks/TerrainColumnUtil.h"
+#include "World/Core/WorldCooperativeOps.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/IO/LegacyChunkJsonLoader.h"
 #include "World/Math/GridMath.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
 #include "World/Raycast/BlockRaycast.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/IChunkPopulator.h"
+#include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
@@ -221,11 +222,8 @@ void UWorld::RebuildWorldGenPipeline()
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                       PrefabLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
-  ctx.OnColumnMeshDirty =
-      [this](int world_x, int world_z, int min_y, int max_y)
-  {
-    MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
-  };
+  ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
+  { MarkColumnMeshDirty(world_x, world_z, min_y, max_y); };
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
 
@@ -252,7 +250,7 @@ void UWorld::SetChunkWriteFormat(ChunkWriteFormat format)
 ChunkWriteFormat UWorld::GetChunkWriteFormat() const
 {
   return ChunkStorage ? ChunkStorage->GetSettings().writeFormat
-                    : ChunkWriteFormat::Binary;
+                      : ChunkWriteFormat::Binary;
 }
 
 void UWorld::InitChunkScheduler()
@@ -263,7 +261,7 @@ void UWorld::InitChunkScheduler()
     ChunkScheduler.reset();
     return;
   }
-  ChunkPopulator = std::make_unique<PipelineChunkPopulator>(
+  ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
       *BlockRegistry, PrefabLibrary, WorldgenOwnerPackId);
   ChunkScheduler =
       std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
@@ -335,7 +333,7 @@ void UWorld::TickAsyncChunkSystems()
       if (load.success &&
           load.token.IsValidFor(load.coord, load.token.sequence))
       {
-        const ChunkBuffer buffer = ChunkStorage->DeserializeChunk(
+        const UChunkBuffer buffer = ChunkStorage->DeserializeChunk(
             load.payload, load.coord, load.format, *BlockRegistry);
         if (!buffer.IsEmpty())
         {
@@ -411,9 +409,10 @@ void UWorld::InitStreamerCallbacks()
           return false;
         }
         const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded = ChunkStorage->LoadTerrainColumn(
-                                coord, BlockWorld, WorldFolderPath, *BlockRegistry,
-                                ProceduralTemplate.MaxHeight) > 0;
+        const bool loaded =
+            ChunkStorage->LoadTerrainColumn(coord, BlockWorld, WorldFolderPath,
+                                            *BlockRegistry,
+                                            ProceduralTemplate.MaxHeight) > 0;
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
@@ -594,7 +593,8 @@ void UWorld::RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord)
       continue;
     }
     AsyncChunkIo->RequestSave(slice, *ChunkStorage, WorldFolderPath, BlockWorld,
-                              *BlockRegistry, ChunkGenTokens.Current(groundCoord));
+                              *BlockRegistry,
+                              ChunkGenTokens.Current(groundCoord));
   }
 }
 
@@ -1075,8 +1075,8 @@ void UWorld::WarmupSpawnAreaForEnterGame()
 
   const int prev_load_ops = MaxLoadOpsPerFrame;
   const int warmup_load_ops =
-      std::max(prev_load_ops, (2 * RenderDistanceChunks + 1) *
-                                   (2 * RenderDistanceChunks + 1));
+      std::max(prev_load_ops,
+               (2 * RenderDistanceChunks + 1) * (2 * RenderDistanceChunks + 1));
   MaxLoadOpsPerFrame = warmup_load_ops;
   if (Streamer)
   {
@@ -1090,7 +1090,8 @@ void UWorld::WarmupSpawnAreaForEnterGame()
     TickAsyncChunkSystems();
     MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, kMeshFlushBudget,
                                  kMeshFlushBudget);
-    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry, kMeshFlushBudget);
+    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                                    kMeshFlushBudget);
     if (!MeshCache.HasPendingDirty() && !MeshCache.HasPendingAsyncMeshWork())
     {
       break;
@@ -1102,7 +1103,8 @@ void UWorld::WarmupSpawnAreaForEnterGame()
   {
     MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, kMeshFlushBudget,
                                  kMeshFlushBudget);
-    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry, kMeshFlushBudget);
+    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                                    kMeshFlushBudget);
   }
 
   MaxLoadOpsPerFrame = prev_load_ops;
@@ -1115,9 +1117,8 @@ void UWorld::FinalizePlayerAfterWorldLoad()
   ResetMeshLoadDiagnostics();
   BlockCounter.MarkNeedsRecount();
   bool has_terrain_chunks = false;
-  BlockWorld.GetChunkManager().ForEachChunk(
-      [&](const UChunk &)
-      { has_terrain_chunks = true; });
+  BlockWorld.GetChunkManager().ForEachChunk([&](const UChunk &)
+                                            { has_terrain_chunks = true; });
   BlockWorldReady = has_terrain_chunks || CachedBlockCount > 0;
   PhysicsSuspendFrames = 3;
 
@@ -1190,7 +1191,7 @@ void UWorld::ApplyUserToCamera(const std::shared_ptr<UUser> &user)
 
 void UWorld::Create(const std::string &world_name)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeCreate(world_name);
   while (!TickCooperativeCreate(sink, 64))
   {
@@ -1199,7 +1200,7 @@ void UWorld::Create(const std::string &world_name)
 
 void UWorld::Load(const std::string &world_folder_path)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeLoad(world_folder_path);
   while (!TickCooperativeLoad(sink, 64))
   {
@@ -1208,7 +1209,7 @@ void UWorld::Load(const std::string &world_folder_path)
 
 void UWorld::Save(const std::string &world_folder_path)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeSave(world_folder_path);
   while (!TickCooperativeSave(sink, 64))
   {
@@ -2466,8 +2467,8 @@ void UWorld::LoadUsers(const std::string &file_name)
       if (playerCreature)
       {
         UCreatureInventory &inv = playerCreature->GetInventory();
-        const bool hadHotbars = user_data.contains("hotbars") &&
-                                user_data["hotbars"].is_array();
+        const bool hadHotbars =
+            user_data.contains("hotbars") && user_data["hotbars"].is_array();
         inv.DeserializeFromJson(user_data, HotbarCount);
         if (inv.GetStorage().empty())
         {
@@ -2624,8 +2625,9 @@ void UWorld::LoadWorldData(const std::string &file_name)
     if (d.contains("resource_packs") && d["resource_packs"].is_object())
     {
       const auto &rp = d["resource_packs"];
-      auto parseIds = [](const nlohmann::json &arr,
-                         std::vector<std::string> &out) {
+      auto parseIds =
+          [](const nlohmann::json &arr, std::vector<std::string> &out)
+      {
         if (!arr.is_array())
         {
           return;
@@ -2660,7 +2662,8 @@ void UWorld::LoadWorldData(const std::string &file_name)
                                   ResourcePacksSecondary.begin(),
                                   ResourcePacksSecondary.end());
     }
-    if (d.contains("catalog_fingerprint") && d["catalog_fingerprint"].is_string())
+    if (d.contains("catalog_fingerprint") &&
+        d["catalog_fingerprint"].is_string())
     {
       CatalogFingerprint = d["catalog_fingerprint"].get<std::string>();
     }
@@ -2930,8 +2933,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   MovementDiag.deltaTime = camera->GetDeltaTime();
   MovementDiag.streamingGenMs = FrameStreamingGenMs;
   MovementDiag.streamingIoMs = FrameStreamingIoMs;
-  MovementDiag.dirtyChunksPending =
-      static_cast<int>(MeshCache.GetDirtyCount());
+  MovementDiag.dirtyChunksPending = static_cast<int>(MeshCache.GetDirtyCount());
   MovementDiag.flatRebuildMs = MeshCache.GetLastFlatRebuildMs();
   MovementDiag.asyncMeshInFlight = MeshCache.GetAsyncInFlightCount();
   MovementDiag.greedyCacheEntries =
@@ -2970,8 +2972,7 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
       (DurationDoMovementMks +
        (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) /
       1000.0;
-  MovementDiag.hitchDetected =
-      frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
+  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
   MovementDiag.fallThroughSuspected =
       MovementDiag.playerYDrop > 2.0f &&
       (MovementDiag.feetIsAir || !MovementDiag.feetChunkLoaded) &&
@@ -3003,8 +3004,7 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
   DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
   const double frameMs =
       (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
-  MovementDiag.hitchDetected =
-      frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
+  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()
@@ -3020,8 +3020,8 @@ void UWorld::TickMeshLoadDiagnostics()
   {
     return;
   }
-  if (FramesSinceLoad < 600 ||
-      MeshCache.HasPendingDirty() || MeshCache.HasPendingAsyncMeshWork())
+  if (FramesSinceLoad < 600 || MeshCache.HasPendingDirty() ||
+      MeshCache.HasPendingAsyncMeshWork())
   {
     ++FramesSinceLoad;
   }
@@ -3055,7 +3055,8 @@ void UWorld::UpdateStreaming()
     }
     if (Render.AltitudeAdaptiveFog)
     {
-      AltitudeParams.AltitudeThresholdBlocks = Render.AltitudeFogThresholdBlocks;
+      AltitudeParams.AltitudeThresholdBlocks =
+          Render.AltitudeFogThresholdBlocks;
       AltitudeParams.RenderDistancePenaltyPerChunk = 1;
       AltitudeParams.FogStartRatioBoost =
           std::max(0.15f, Render.AltitudeFogPenaltyPer16Blocks * 4.0f);
@@ -3075,16 +3076,15 @@ void UWorld::UpdateStreaming()
 
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - LastCameraPosition;
-    LastMovementSpeed =
-        glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    LastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
     LastCameraPosition = eye;
 
     Streamer->Update(WorldPosToBlock(eye), eye, cap);
     Streamer->PrefetchAhead(
-        UChunkManager::WorldToChunk(WorldPosToBlock(glm::vec3(
-            eye.x, cap.feetY(eye) + 0.01f, eye.z))),
-        forward,
-        LastMovementSpeed, ProceduralTemplate.MovementSpeedBoostThreshold);
+        UChunkManager::WorldToChunk(
+            WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z))),
+        forward, LastMovementSpeed,
+        ProceduralTemplate.MovementSpeedBoostThreshold);
   }
 }
 
@@ -3245,8 +3245,7 @@ uint64_t UWorld::GetMeshRevision() const { return MeshCache.GetMeshRevision(); }
 
 uint64_t UWorld::GetCullRevision() const { return MeshCache.GetCullRevision(); }
 
-void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
-                                 int max_y)
+void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y)
 {
   const glm::ivec3 base =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
@@ -3317,33 +3316,7 @@ void UWorld::LoadBlocks(const std::string &file_name)
   {
     return;
   }
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json data = json::parse(file);
-    const json &blocks = data.at("blocks");
-    for (const auto &entry : blocks)
-    {
-      const int x = entry.at("x").get<int>();
-      const int y = entry.at("y").get<int>();
-      const int z = entry.at("z").get<int>();
-      const std::string type = entry.at("type").get<std::string>();
-      if (type.empty())
-      {
-        continue;
-      }
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-      BlockWorld.SetBlock(glm::ivec3(x, y, z), Id);
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadBlocks: " << e.what() << std::endl;
-  }
+  ULegacyChunkJsonLoader::LoadBlocksFile(BlockWorld, *BlockRegistry, file_name);
 }
 
 void UWorld::LoadChunks(const std::string &file_name)
@@ -3352,49 +3325,8 @@ void UWorld::LoadChunks(const std::string &file_name)
   {
     return;
   }
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json data = json::parse(file);
-    if (data.value("storage", "") == "per_file")
-    {
-      return;
-    }
-    if (!data.contains("chunks") || !data["chunks"].is_array())
-    {
-      return;
-    }
-    for (const auto &chunkEntry : data["chunks"])
-    {
-      const int cx = chunkEntry.at("cx").get<int>();
-      const int cy = chunkEntry.at("cy").get<int>();
-      const int cz = chunkEntry.at("cz").get<int>();
-      const glm::ivec3 chunkCoord(cx, cy, cz);
-      for (const auto &voxel : chunkEntry.at("voxels"))
-      {
-        const int lx = voxel.at("lx").get<int>();
-        const int ly = voxel.at("ly").get<int>();
-        const int lz = voxel.at("lz").get<int>();
-        const std::string type = voxel.at("type").get<std::string>();
-        if (type.empty())
-        {
-          continue;
-        }
-        const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-        const glm::ivec3 worldPos(cx * CHUNK_SIZE + lx, cy * CHUNK_SIZE + ly,
-                                  cz * CHUNK_SIZE + lz);
-        BlockWorld.SetBlock(worldPos, Id);
-      }
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadChunks: " << e.what() << std::endl;
-  }
+  ULegacyChunkJsonLoader::LoadMonolithicChunksFile(BlockWorld, *BlockRegistry,
+                                                   file_name);
 }
 
 void UWorld::MigrateMonolithicChunksJson(const std::string & /*chunks_file*/,

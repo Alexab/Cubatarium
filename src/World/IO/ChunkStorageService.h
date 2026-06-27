@@ -22,7 +22,10 @@ public:
 
   void SetSettings(const ChunkStorageSettings &settings);
   const ChunkStorageSettings &GetSettings() const { return Settings; }
-  void SetWriteFormat(ChunkWriteFormat format) { Settings.writeFormat = format; }
+  void SetWriteFormat(ChunkWriteFormat format)
+  {
+    Settings.writeFormat = format;
+  }
 
   static bool HasChunkFilesOnDisk(const std::string &worldFolder);
   static std::string ChunksDir(const std::string &worldFolder);
@@ -46,11 +49,10 @@ public:
 
   SerializedChunk SerializeChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                                  UBlockRegistry &registry) const;
-  ChunkBuffer DeserializeChunk(const std::vector<uint8_t> &bytes,
-                               glm::ivec3 chunkCoord,
-                               ChunkDiskFormat format,
-                               UBlockRegistry &registry) const;
-  int ApplyBufferToWorld(const ChunkBuffer &buffer, UBlockWorld &world) const;
+  UChunkBuffer DeserializeChunk(const std::vector<uint8_t> &bytes,
+                                glm::ivec3 chunkCoord, ChunkDiskFormat format,
+                                UBlockRegistry &registry) const;
+  int ApplyBufferToWorld(const UChunkBuffer &buffer, UBlockWorld &world) const;
 
   bool WriteBytesAtomically(const std::string &filePath,
                             const std::vector<uint8_t> &bytes) const;
@@ -71,8 +73,8 @@ private:
   IChunkSerializer &MutableSerializer(ChunkDiskFormat format);
 
   ChunkStorageSettings Settings;
-  JsonChunkSerializer JsonSerializer;
-  BinaryChunkSerializer BinarySerializer;
+  UJsonChunkSerializer JsonSerializer;
+  UBinaryChunkSerializer BinarySerializer;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingSaveColumns;
 };
 
