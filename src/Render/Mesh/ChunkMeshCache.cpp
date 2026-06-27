@@ -311,17 +311,14 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::vec3 &cameraPos)
 {
   (void)viewProj;
-  const glm::ivec3 cameraChunk =
-      UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
   const float maxCullDistance = MaxCullDistance();
-  const bool camera_moved = cameraChunk != LastCullCameraChunk;
   if (!InstancesDirty && !GreedyBatchesDirty &&
-      MeshRevision == LastCullMeshRevision && !camera_moved &&
+      MeshRevision == LastCullMeshRevision &&
       !(Render.GreedyMeshing && GreedyBatches.empty() && !GreedyCache.empty()))
   {
     return;
   }
-  LastCullCameraChunk = cameraChunk;
+  LastCullCameraChunk = UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
   LastCullMeshRevision = MeshRevision;
   if (Render.GreedyMeshing)
   {
@@ -366,7 +363,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateVisibleList();
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,

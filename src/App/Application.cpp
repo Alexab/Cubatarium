@@ -515,6 +515,16 @@ void UApplication::EnterGameAfterWorldChange()
       Geometry->SetShowHud(Ui.LegacyHud);
     }
     World->FinalizePlayerAfterWorldLoad();
+    if (ProgressScreen)
+    {
+      ProgressSink.Report("mesh_warmup", 0.97f, "Preparing view...");
+      ProgressScreen->ApplySnapshot(ProgressSink.Get());
+    }
+    World->WarmupSpawnAreaForEnterGame();
+    if (Geometry)
+    {
+      Geometry->WarmupGreedyGpuFromWorld();
+    }
   }
   RefreshBlockCatalog();
   ShowInGameHud();

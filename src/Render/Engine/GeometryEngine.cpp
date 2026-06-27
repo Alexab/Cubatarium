@@ -921,6 +921,41 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->Unuse();
 }
 
+void UGeometryEngine::WarmupGreedyGpuFromWorld()
+{
+  if (!WorldInstance || !TextureCubeStorageInstance ||
+      !Render.UseFaceQuadDraw())
+  {
+    return;
+  }
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+
+  const auto &greedyBatches = WorldInstance->GetGreedyRenderBatches();
+  const uint64_t meshRevision = WorldInstance->GetMeshRevision();
+  const uint64_t cullRev = WorldInstance->GetCullRevision();
+  const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+  const auto textures = TextureCubeStorageInstance->GetTextures();
+
+  DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
+
+  GreedyTransparentDrawContext tctx{greedyBatches,
+                                    vp,
+                                    meshRevision,
+                                    cullRev,
+                                    camera->GetPosition(),
+                                    WorldInstance->GetBlockRegistry(),
+                                    textures};
+  PrepareTransparent(tctx);
+
+  CachedInstanceCount = greedyBatches.size();
+  CachedMeshRevision = meshRevision;
+  BlockBatchesValid = true;
+}
+
 void UGeometryEngine::DrawGreedyOpaqueBatches(
     const std::vector<GreedyMeshBatch> &batches, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,

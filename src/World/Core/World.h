@@ -195,6 +195,8 @@ public:
                            BlockId *outFluid = nullptr) const;
   void ApplySpawnToCamera();
   void FinalizePlayerAfterWorldLoad();
+  void WarmupSpawnAreaForEnterGame();
+  void WarmupVisibleListAtCamera();
   bool IsBlockWorldReady() const { return BlockWorldReady; }
   void InvalidateBlockMesh();
   const std::vector<FaceInstance> &GetBlockRenderInstances();

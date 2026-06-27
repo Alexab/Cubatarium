@@ -1043,6 +1043,74 @@ void UWorld::EnsurePlayerOnGround()
   camera->ResetVerticalPhysics();
 }
 
+void UWorld::WarmupVisibleListAtCamera()
+{
+  auto camera = GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 vp = proj * view;
+  MeshCache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
+                                   camera->GetPosition());
+}
+
+void UWorld::WarmupSpawnAreaForEnterGame()
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+
+  InitStreamerCallbacks();
+  if (auto user = GetCurrentUser())
+  {
+    ApplyUserToCamera(user);
+  }
+  else
+  {
+    ApplySpawnToCamera();
+  }
+
+  const int prev_load_ops = MaxLoadOpsPerFrame;
+  const int warmup_load_ops =
+      std::max(prev_load_ops, (2 * RenderDistanceChunks + 1) *
+                                   (2 * RenderDistanceChunks + 1));
+  MaxLoadOpsPerFrame = warmup_load_ops;
+  if (Streamer)
+  {
+    Streamer->SetMaxLoadOpsPerFrame(warmup_load_ops);
+  }
+
+  constexpr int kMeshFlushBudget = 256;
+  for (int pass = 0; pass < 48; ++pass)
+  {
+    UpdateStreaming();
+    TickAsyncChunkSystems();
+    MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, kMeshFlushBudget,
+                                 kMeshFlushBudget);
+    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry, kMeshFlushBudget);
+    if (!MeshCache.HasPendingDirty() && !MeshCache.HasPendingAsyncMeshWork())
+    {
+      break;
+    }
+  }
+
+  MeshCache.WaitForAsyncMeshIdle();
+  while (MeshCache.HasPendingDirty())
+  {
+    MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, kMeshFlushBudget,
+                                 kMeshFlushBudget);
+    MeshCache.DrainAsyncMeshResults(BlockWorld, *BlockRegistry, kMeshFlushBudget);
+  }
+
+  MaxLoadOpsPerFrame = prev_load_ops;
+  RefreshStreamerSettings();
+  WarmupVisibleListAtCamera();
+}
+
 void UWorld::FinalizePlayerAfterWorldLoad()
 {
   ResetMeshLoadDiagnostics();
