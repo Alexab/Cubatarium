@@ -65,6 +65,14 @@ jobs:
         shell: pwsh
         run: ./scripts/doctor-windows.ps1
 
+      - name: Style audit
+        shell: pwsh
+        run: python tools/audit_style.py
+
+      - name: C++ unit test (chunk load priority)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/chunk_load_priority_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

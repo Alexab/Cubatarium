@@ -26,11 +26,6 @@ float FogHorizonBlocks(int render_distance_chunks)
   return std::max(kMinHorizonBlocks, full - kHorizonMarginBlocks);
 }
 
-float StreamingHorizonBlocks(int render_distance_chunks)
-{
-  return FogHorizonBlocks(render_distance_chunks);
-}
-
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio,

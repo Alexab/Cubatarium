@@ -91,3 +91,15 @@ Legacy config key `ui.block_input_profile` is still read; saves write `ui.contro
 World autosaves every **60 seconds**. Closing the window saves config and world.
 
 ## Architecture
+
+Cubatarium is a C++17 voxel sandbox. High-level data flow:
+
+```
+BlockWorld -> ChunkMeshCache (GreedyMesher) -> GeometryEngine -> GLSL shaders
+```
+
+- **World / streaming:** chunk load/save via `UChunkStorageService` (`.cchunk` binary); legacy JSON migration on load only.
+- **Worldgen:** data-driven packs under `content/worldgen_packs/`.
+- **Assets:** resource packs in `resource_packs/` (blocks, textures, creatures).
+
+Full details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), render pipeline: [src/Render/Pipeline/README.md](src/Render/Pipeline/README.md).

@@ -32,7 +32,6 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
-#include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
 #include "World/Prefabs/Prefab.h"
 #include "World/Prefabs/PrefabUtil.h"
@@ -2998,11 +2997,6 @@ void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
   AppendMovementDiagnosticsSample();
 }
 
-float UWorld::GetStreamingHorizonBlocks() const
-{
-  return StreamingHorizonBlocks(EffectiveRenderDistance);
-}
-
 void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                          double view_update_mks)
 {
@@ -3297,23 +3291,23 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
   const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
   ModifiedChunks.insert(chunkCoord);
 
-  if (BlockRegistry)
+  const bool immediate = BlockRegistry != nullptr;
+  auto mark_coord = [&](glm::ivec3 coord)
   {
-    MeshCache.RebuildChunkImmediate(BlockWorld, *BlockRegistry, chunkCoord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    if (immediate)
     {
-      MeshCache.RebuildChunkImmediate(
-          BlockWorld, *BlockRegistry,
-          UChunkManager::WorldToChunk(blockPos + offset));
+      MeshCache.RebuildChunkImmediate(BlockWorld, *BlockRegistry, coord);
     }
-  }
-  else
+    else
+    {
+      MeshCache.MarkDirty(coord);
+    }
+  };
+
+  mark_coord(chunkCoord);
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
-    MeshCache.MarkDirty(chunkCoord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      MeshCache.MarkDirty(UChunkManager::WorldToChunk(blockPos + offset));
-    }
+    mark_coord(UChunkManager::WorldToChunk(blockPos + offset));
   }
 }
 
@@ -3349,38 +3343,6 @@ void UWorld::LoadBlocks(const std::string &file_name)
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error in LoadBlocks: " << e.what() << std::endl;
-  }
-}
-
-void UWorld::SaveBlocks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  json data;
-  data["format_version"] = 1;
-  json blocks = json::array();
-  BlockWorld.ForEachBlock(
-      [&](glm::ivec3 pos, BlockId Id)
-      {
-        const std::string &type = BlockRegistry->GetTypeNameById(Id);
-        if (type.empty())
-        {
-          return;
-        }
-        blocks.push_back({
-            {"x", pos.x},
-            {"y", pos.y},
-            {"z", pos.z},
-            {"type", type},
-        });
-      });
-  data["blocks"] = blocks;
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << data.dump(4);
   }
 }
 
@@ -3432,61 +3394,6 @@ void UWorld::LoadChunks(const std::string &file_name)
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error in LoadChunks: " << e.what() << std::endl;
-  }
-}
-
-void UWorld::SaveChunks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  json data;
-  data["format_version"] = 2;
-  data["chunk_size"] = CHUNK_SIZE;
-  json chunks = json::array();
-
-  std::map<std::string, json> chunkMap;
-  BlockWorld.ForEachBlock(
-      [&](glm::ivec3 worldPos, BlockId Id)
-      {
-        const std::string &type = BlockRegistry->GetTypeNameById(Id);
-        if (type.empty())
-        {
-          return;
-        }
-        const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(worldPos);
-        const glm::ivec3 local = UChunkManager::WorldToLocal(worldPos);
-        const std::string key = std::to_string(chunkCoord.x) + "," +
-                                std::to_string(chunkCoord.y) + "," +
-                                std::to_string(chunkCoord.z);
-        if (chunkMap.find(key) == chunkMap.end())
-        {
-          chunkMap[key] = json::object({
-              {"cx", chunkCoord.x},
-              {"cy", chunkCoord.y},
-              {"cz", chunkCoord.z},
-              {"voxels", json::array()},
-          });
-        }
-        chunkMap[key]["voxels"].push_back({
-            {"lx", local.x},
-            {"ly", local.y},
-            {"lz", local.z},
-            {"type", type},
-        });
-      });
-
-  for (auto &entry : chunkMap)
-  {
-    chunks.push_back(std::move(entry.second));
-  }
-  data["chunks"] = chunks;
-
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << data.dump(4);
   }
 }
 

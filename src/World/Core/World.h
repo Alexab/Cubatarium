@@ -420,7 +420,6 @@ public:
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
-  float GetStreamingHorizonBlocks() const;
   void UpdateFrameHitchDiagnostics(double draw_scene_mks, double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
@@ -476,9 +475,7 @@ private:
   void MigrateObjectsFromJson(const std::string &file_name);
 
   void LoadBlocks(const std::string &file_name);
-  void SaveBlocks(const std::string &file_name);
   void LoadChunks(const std::string &file_name);
-  void SaveChunks(const std::string &file_name);
   void LoadInitialStreamingChunks();
   void RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord);
   void RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord);

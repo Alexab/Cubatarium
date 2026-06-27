@@ -8,16 +8,16 @@ BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] → GeometryE
 
 Legacy path (`greedy_meshing: false`): instanced cubes via `vshader_instanced.glsl`.
 
-World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below). Default in `config.json.example` is legacy (all `false`).
+World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below).
 
 | Flag | Effect |
 |------|--------|
 | `greedy_meshing` | `true` (default): GreedyMesher merged quads; **required** for water, lava, fire. `false`: legacy instanced cubes (solids only). |
 | `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
-| `frustum_culling` | `true` (default): skip chunks outside view frustum. |
-| `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged. |
-| `frustum_culling` | Skip off-screen chunks in the instance list. Skips near plane; chunk AABB expanded by 2 blocks. |
-| `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged (legacy instanced path only). |
+| `frustum_culling` | `true` (default): skip chunks outside view frustum. Chunk AABB expanded by 2 blocks. |
+| `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged (legacy instanced path). |
+| `async_meshing` | Background mesh rebuild; see `RenderSettings.AsyncMeshing`. |
+| `distance_fog` | Distance fog using `FogHorizonBlocks` / `RenderHorizonBlocks`. |
 
 **Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy mesh uses `vshader.glsl` with vertices in world space and atlas UV baked on the CPU (`BlockAtlasUV.h`, same layout as `CubeGL`).
 
@@ -36,7 +36,7 @@ Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo
 
 | File | Content |
 |------|---------|
-| `chunks/` | Per-chunk JSON (`cx_cy_cz.json`), format_version 2, sparse voxels |
+| `chunks/` | Per-chunk binary `cx_cy_cz.cchunk` (primary); legacy `*.json` read for migration |
 | `chunks.json` | Marker `{ "format_version": 3, "storage": "per_file" }` |
 | `users.json` | Per user: `position[3]`, `yaw`, `pitch` |
 | `world_data.json` | `world_name`, `spawn_point` |

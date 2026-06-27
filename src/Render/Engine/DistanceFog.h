@@ -20,9 +20,6 @@ float RenderHorizonBlocks(int render_distance_chunks);
 /// Fog fade horizon — slightly inside render horizon to hide streaming edge.
 float FogHorizonBlocks(int render_distance_chunks);
 
-/// @deprecated Use FogHorizonBlocks for fog; RenderHorizonBlocks for cull.
-float StreamingHorizonBlocks(int render_distance_chunks);
-
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio = -1.0f,

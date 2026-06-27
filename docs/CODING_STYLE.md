@@ -33,6 +33,8 @@
 
 ```bash
 python tools/audit_style.py
+python tools/audit/orchestrate.py --phase baseline
+python tools/audit/orchestrate.py --phase scan
 python tools/refactor_style.py --classes
 python tools/refactor_style.py --members
 python tools/fix_struct_fields.py
@@ -40,5 +42,11 @@ python tools/fix_bare_includes.py
 python tools/fix_includes.py
 python tools/fix_member_collisions.py
 ```
+
+CI (Windows smoke workflow) also runs `python tools/audit_style.py` and `chunk_load_priority_test`.
+
+## Render Pipeline includes
+
+See [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md): Pipeline code must not `#include` `GeometryEngine.h`, `Gui/*`, or `Application.h`.
 
 После массовых переименований: `clang-format` на `src/**/*.h` и `src/**/*.cpp` (кроме `ThirdParty/stb_image.h`).

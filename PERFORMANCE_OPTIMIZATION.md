@@ -1,137 +1,49 @@
-# Оптимизация производительности Cubatarium
+# Performance — Cubatarium
 
-## Внесенные изменения
+This document describes **implemented** runtime optimizations in the current codebase. For streaming/mesh backlog work see [docs/TECH_DEBT_CHUNK_STREAMING.md](docs/TECH_DEBT_CHUNK_STREAMING.md).
 
-### 1. Пространственное разбиение (Octree)
+## Render path
 
-**Проблема:** Поиск объектов и ray-casting выполнялись за O(n) времени, что приводило к медленной работе при большом количестве объектов.
+| Feature | Config flag | Module |
+|---------|-------------|--------|
+| Greedy meshing (merged quads) | `render.greedy_meshing` | `GreedyMesher`, `ChunkMeshCache` |
+| Face quads (world-space UV) | `render.face_quads` | `GreedyMeshBatch` |
+| Frustum culling | `render.frustum_culling` | `GeometryEngine`, `Frustum` |
+| Batch cache (instanced legacy path) | `render.batch_cache` | `GeometryEngine` |
+| Async mesh build | `render.async_meshing` | `UAsyncMeshBuilder` |
+| Transparent 4-pass pipeline | (always when greedy) | `GreedyTransparentPipeline` |
 
-**Решение:** Реализован Octree для пространственного разбиения мира.
+Legacy instanced cubes (`greedy_meshing: false`) remain for bisect/debug; fluids require greedy meshing.
 
-**Преимущества:**
-- Поиск объектов в радиусе: O(log n) вместо O(n)
-- Ray-casting: O(log n) вместо O(n)
-- Автоматическое обновление при добавлении/удалении объектов
+## World streaming
 
-**Использование:**
-```cpp
-// Поиск объектов в радиусе
-std::vector<std::shared_ptr<Object>> nearbyObjects = world->GetObjectsInRadius(position, radius);
+| Feature | Config / API | Notes |
+|---------|--------------|-------|
+| Chunk streaming | `UChunkStreamer` | Ring gate, priority load |
+| Async chunk I/O | `ProceduralSettings.AsyncChunkIo` | Background save/load, main-thread commit |
+| Async chunk generation | `ProceduralSettings.AsyncChunkGeneration` | Defaults off; see tech debt |
+| Load scheduler | `UChunkLoadScheduler` | Sync collision ring |
+| Movement diagnostics | `movement_diagnostics.json` | Gen/mesh/io breakdown (`movement_diagnostics.v2`) |
 
-// Автоматическое обновление при изменении объектов
-world->UpdateSpatialIndex();
+## Profiling bisect
+
+1. HUD: `ui.show_performance: true` in `config.json`.
+2. Toggle one flag at a time under `render` and `procedural`.
+3. Export: `worlds/World_NNN/movement_diagnostics.json`.
+4. CI: `python tools/smoke_worldgen_metrics.py --metrics-json <path>`.
+
+## Smoke / regression
+
+```powershell
+./scripts/doctor-windows.ps1
+python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin
+python tools/audit/orchestrate.py --phase scan
 ```
 
-### 2. Batch-рендеринг
+## Deferred (not yet default)
 
-**Проблема:** Каждый куб отрисовывался отдельно, что приводило к множественным вызовам OpenGL функций.
+- GPU instancing for cross vegetation (TD-CS-014)
+- Persistent GPU VBO pooling (TD-CS-016)
+- Full incremental resource-pack atlas rebuild (TD-002)
 
-**Решение:** Группировка объектов по текстурам для batch-рендеринга.
-
-**Преимущества:**
-- Уменьшение количества переключений текстур
-- Более эффективное использование GPU
-- Снижение overhead от вызовов OpenGL
-
-### 3. Frustum Culling
-
-**Проблема:** Отрисовывались все объекты, даже те, которые не видны камере.
-
-**Решение:** Добавлена проверка видимости объектов через frustum culling.
-
-**Преимущества:**
-- Отрисовка только видимых объектов
-- Значительное снижение нагрузки на GPU
-- Улучшение FPS при большом количестве объектов
-
-### 4. Оптимизация поиска коллизий
-
-**Проблема:** Проверка коллизий выполнялась для всех объектов.
-
-**Решение:** Использование Octree для быстрого поиска потенциальных коллизий.
-
-**Преимущества:**
-- Проверка только близлежащих объектов
-- Ускорение обработки физики
-- Масштабируемость при росте количества объектов
-
-## Дополнительные рекомендации
-
-### 1. Instanced Rendering
-
-Для дальнейшей оптимизации рендеринга рекомендуется реализовать instanced rendering:
-
-```cpp
-// В GeometryEngine добавить поддержку instanced rendering
-void DrawInstancedBatch(const RenderBatch& batch, const QMatrix4x4& mvp_matrix);
-```
-
-### 2. Level of Detail (LOD)
-
-Добавить систему LOD для объектов на большом расстоянии:
-
-```cpp
-class LODSystem {
-    void UpdateLOD(const QVector3D& cameraPosition);
-    std::vector<std::shared_ptr<Object>> GetVisibleObjects();
-};
-```
-
-### 3. Многопоточность
-
-Использовать многопоточность для:
-- Обновления физики
-- Обработки AI
-- Загрузки ресурсов
-
-```cpp
-#include <thread>
-#include <future>
-
-// Обновление физики в отдельном потоке
-std::future<void> physicsFuture = std::async(std::launch::async, [&]() {
-    world->UpdatePhysics();
-});
-```
-
-### 4. Оптимизация памяти
-
-- Использовать object pooling для часто создаваемых объектов
-- Кэшировать результаты вычислений
-- Минимизировать динамические аллокации
-
-### 5. Профилирование
-
-Добавить систему профилирования для мониторинга производительности:
-
-```cpp
-class PerformanceProfiler {
-    void BeginFrame();
-    void EndFrame();
-    void BeginSection(const std::string& name);
-    void EndSection();
-    void PrintStats();
-};
-```
-
-## Ожидаемые улучшения
-
-После внедрения всех оптимизаций ожидается:
-
-1. **Увеличение FPS на 50-200%** при большом количестве объектов
-2. **Снижение задержки** при ray-casting операциях
-3. **Улучшение масштабируемости** при росте размера мира
-4. **Более стабильная производительность** при движении камеры
-
-## Тестирование
-
-Для проверки эффективности оптимизаций:
-
-1. Создать сцену с 1000+ объектами
-2. Измерить FPS до и после оптимизаций
-3. Протестировать ray-casting производительность
-4. Проверить использование памяти
-
-## Заключение
-
-Внесенные изменения значительно улучшают производительность проекта Cubatarium, особенно при работе с большими мирами и множеством объектов. Рекомендуется постепенное внедрение дополнительных оптимизаций в зависимости от конкретных требований проекта.
+See [docs/TECH_DEBT_*.md](docs/) for the full backlog.
