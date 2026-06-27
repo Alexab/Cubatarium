@@ -2660,7 +2660,8 @@ void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
   root["schema"] = "movement_diagnostics.v2";
   root["world_name"] = WorldName;
   root["sample_count"] = MovementDiagHistory.size();
-  json samples = json::array();
+  std::vector<json> samples;
+  samples.reserve(MovementDiagHistory.size());
   for (const MovementDiagnostics &sample : MovementDiagHistory)
   {
     samples.push_back({
@@ -2683,7 +2684,7 @@ void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
         {"fall_through_suspected", sample.fallThroughSuspected},
     });
   }
-  root["samples"] = std::move(samples);
+  root["samples"] = json(samples);
   std::ofstream file(file_name);
   if (file.is_open())
   {
@@ -3216,6 +3217,10 @@ void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
+  // When BlockRegistry is available (normal gameplay), rebuild mesh
+  // synchronously so block edits appear immediately. During headless load /
+  // pre-registry init, defer via MarkDirty and let the frame budget rebuild
+  // later.
   const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
   ModifiedChunks.insert(chunkCoord);
 

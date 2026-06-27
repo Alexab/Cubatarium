@@ -38,6 +38,7 @@ public:
   void RegisterCommands();
 
   UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }
+  std::shared_ptr<UWorld> GetWorld() const { return World; }
   UContentTypeRegistry &GetContentCatalog() { return ContentCatalog; }
   IContentCatalog &AsContentCatalog() { return ContentCatalog; }
 

@@ -46,6 +46,18 @@ python tools/fix_member_collisions.py
 
 CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, and `chunk_load_priority_test`.
 
+## Tools (manual-only scripts)
+
+Scripts under `tools/` that are **not** in CI — run locally when debugging:
+
+| Script | When to use |
+|--------|-------------|
+| `profile_worldgen.py` | Deep worldgen timing / column stats |
+| `debug_worldgen_seed.py` | Inspect a single seed layout |
+| `validate_resource_pack.py` | Pack JSON/texture audit (also used by smoke) |
+
+CI gates and generators are listed in [`tools/README.md`](../tools/README.md). One-off migrations live in `tools/archive/`.
+
 ## Render Pipeline includes
 
 See [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md): Pipeline code must not `#include` `GeometryEngine.h`, `Gui/*`, or `Application.h`.

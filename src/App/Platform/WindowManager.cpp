@@ -2,7 +2,6 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/InputManager.h"
-#include "Gui/Core/GuiMetrics.h"
 #include "App/Platform/Log.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
@@ -10,11 +9,14 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Player/User.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Pipeline/GlStateMask.h"
+#include "Render/Pipeline/GlStateScope.h"
+#include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "ThirdParty/stb_image.h"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -98,7 +100,8 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
     return false;
   }
 
-  auto createWindow = [&](bool multisample) -> GLFWwindow * {
+  auto createWindow = [&](bool multisample) -> GLFWwindow *
+  {
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -317,11 +320,9 @@ void UWindowManager::ProcessInput()
       const bool shift_down =
           InputManager->IsKeyPressed(KeyCode::Key_Shift) ||
           (Window && glfwGetKey(Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-      const bool left_ctrl_down =
-          InputManager->IsKeyPressed(KeyCode::Key_Ctrl);
+      const bool left_ctrl_down = InputManager->IsKeyPressed(KeyCode::Key_Ctrl);
       const bool right_ctrl_down =
-          Window &&
-          glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+          Window && glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
                               InputManager->IsKeyPressed(KeyCode::Key_W));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
@@ -725,38 +726,13 @@ void UWindowManager::RenderUI()
     return;
   }
 
-  // Save current OpenGL state
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
-  // Configure OpenGL for 2D rendering
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // Display hints
   RenderHelpText();
-
-  // Restore OpenGL state
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 }
 
 void UWindowManager::RenderHelpText()

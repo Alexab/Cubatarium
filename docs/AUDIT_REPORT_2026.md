@@ -1,8 +1,8 @@
 # Cubatarium Audit Report 2026
 
-- **Commit:** `0815e347d08d14b4654c728a0207ead45c2ba633`
-- **Generated:** 2026-06-27T16:34:04+00:00
-- **Status:** approved (human gate 2026-06-27; P0 quick fixes applied)
+- **Commit:** `9bf664f57d289c3d68a94bf598d4613201e97b9c`
+- **Generated:** 2026-06-27T17:19:26+00:00
+- **Status:** approved
 
 ## Executive Summary
 
@@ -11,60 +11,13 @@ Open findings (done excluded):
 | Priority | Open |
 |----------|------|
 | P0 | 0 |
-| P1 | 11 |
-| P2 | 17 |
-| P3 | 38 |
+| P1 | 0 |
+| P2 | 15 |
+| P3 | 37 |
 
-Closed: **12** | Rejected (false positive): **1**.
+Closed: **19** | Rejected (false positive): **1**.
 
 ## Open Findings by Priority
-
-### P1
-
-- **AUDIT-PERF-001** [performance] push_back in loop without nearby reserve()
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: push_back in loop without nearby reserve()
-- **AUDIT-PERF-002** [performance] push_back in loop without nearby reserve()
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: push_back in loop without nearby reserve()
-- **AUDIT-PERF-003** [performance] push_back in loop without nearby reserve()
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: push_back in loop without nearby reserve()
-- **AUDIT-PERF-004** [performance] both RebuildChunkImmediate and MarkDirty paths present
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: both RebuildChunkImmediate and MarkDirty paths present
-- **AUDIT-PERF-005** [performance] push_back in loop without nearby reserve()
-  - Module: Render; Files: src/World/Core/World.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: push_back in loop without nearby reserve()
-- **AUDIT-PERF-006** [performance] push_back in loop without nearby reserve()
-  - Module: Render; Files: src/World/Core/World.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: push_back in loop without nearby reserve()
-- **AUDIT-PERF-007** [performance] both RebuildChunkImmediate and MarkDirty paths present
-  - Module: Render; Files: src/World/Core/World.cpp
-  - Action: add reserve() or unify dirty path
-  - Evidence: both RebuildChunkImmediate and MarkDirty paths present
-- **AUDIT-RENDER-005** [performance] RebuildChunkLegacy face loop push_back with partial reserve
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp
-  - Action: Tune reserve heuristic (e.g. 512) or skip legacy path when GreedyMeshing always on.
-  - Evidence: perf_hints line 497. Triple nested loop chunkInstances.push_back. Caller reserves 256 (547) but dense chunks may reallocate.
-- **AUDIT-RENDER-006** [performance] ChunkMeshCache dual RebuildChunkImmediate and MarkDirty paths
-  - Module: Render; Files: src/Render/Mesh/ChunkMeshCache.cpp, src/Render/Mesh/ChunkMeshCache.h
-  - Action: Keep intentional split; document when each path is used; align with TD-AUD-013 review.
-  - Evidence: perf_hints file-level hint. MarkDirty queues dirty set; RebuildChunkImmediate calls RebuildChunk synchronously. World::MarkBlockChunkDirty selects path. Async path in RebuildDirtyChunks when Render.As
-- **AUDIT-RENDER-008** [duplication] FaceIndexFromGreedy duplicated in GreedyMeshEmitter and GreedyMeshMath
-  - Module: Render; Files: src/Render/Mesh/GreedyMeshEmitter.h, src/Render/Mesh/GreedyMeshMath.h
-  - Action: Move to GreedyMesher.h or shared GreedyMeshCommon.h; include from both emitters.
-  - Evidence: duplicates.json clusters 6b612f97 and 9b687a17. Identical inline FaceIndexFromGreedy in anonymous namespaces of both headers.
-- **AUDIT-WORLD-002** [performance] MarkBlockChunkDirty uses RebuildChunkImmediate vs MarkDirty branches
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: Document contract (sync mesh when registry ready, defer when null); consider unifying to MarkDirty + frame budget if hitches appear on block edit.
-  - Evidence: MarkBlockChunkDirty sets immediate=BlockRegistry!=nullptr; immediate path calls MeshCache.RebuildChunkImmediate, else MeshCache.MarkDirty; propagates to chunk + NEIGHBOR_OFFSETS. perf_hints flagged du
 
 ### P2
 
@@ -84,10 +37,6 @@ Closed: **12** | Rejected (false positive): **1**.
   - Module: App; Files: src/App/Platform/WindowManager.cpp, src/App/Platform/WindowManager.h
   - Action: move help overlay to Gui screen or dev-only overlay; share GL state scope guard with Render; slim WindowManager to platform callbacks only
   - Evidence: ~907 LOC; Run/Update/Render/ProcessInput/HandleKeyEvent coordinate Core+Application+GeometryEngine; RenderHelpText embeds hard-coded F-key shortcuts; duplicates OpenGL depth/blend save-restore blocks 
-- **AUDIT-APP-006** [duplication] OpenGL 2D overlay state save/restore duplicated with GeometryEngine
-  - Module: App; Files: src/App/Platform/WindowManager.cpp, src/Render/Engine/GeometryEngine.cpp
-  - Action: extract small GlScopedBlend2D or reuse existing render util; one implementation for HUD/help/text passes
-  - Evidence: duplicate clusters a47f0843 and dc5b4bbe span WindowManager.cpp:743-759 and GeometryEngine.cpp:433-434, 1584-1586 (glGetBooleanv depth/blend, disable depth, enable blend, restore)
 - **AUDIT-ARCH-001** [architecture] UWorld combines persistence, streaming, mesh, creatures
   - Module: World; Files: src/World/Core/World.cpp, src/World/Core/World.h
   - Action: incremental extract UWorldPersistence / UWorldStreaming facades
@@ -116,10 +65,6 @@ Closed: **12** | Rejected (false positive): **1**.
   - Module: Render; Files: src/Render/Engine/GeometryEngine.cpp
   - Action: Deferred: persistent GPU VBO / vertex pooling per TD-CS-016.
   - Evidence: UploadGreedyGpuBatches glGenBuffers + glBufferData GL_STATIC_DRAW per batch on rebuild. Per-draw instance path also glBufferData each batch (620-628). No persistent VBO pool.
-- **AUDIT-RENDER-015** [duplication] OpenGL depth/blend state restore duplicated with WindowManager
-  - Module: Render; Files: src/Render/Engine/GeometryEngine.cpp, src/App/Platform/WindowManager.cpp
-  - Action: Extract GlStateScope restore helper shared with Render/Pipeline/GlStateScope.
-  - Evidence: duplicates.json clusters a47f0843/dc5b4bbe: identical if(depthTestEnabled) glEnable/Disable GL_DEPTH_TEST and blend blocks in GeometryEngine::DrawScene and UI draw teardown.
 - **AUDIT-WG-003** [architecture] UBiomeSampler translation unit ~1137 LOC — per-column hot path god-module
   - Module: WorldGen; Files: src/WorldGen/Sampling/BiomeSampler.cpp, src/WorldGen/Sampling/BiomeSampler.h
   - Action: split into BiomeClassifier, BiomeHeightRefiner, BiomeSurfaceRules; keep UBiomeSampler as facade; profile before micro-opts
@@ -279,10 +224,6 @@ Closed: **12** | Rejected (false positive): **1**.
   - Module: WorldGen; Files: docs/TECH_DEBT_AUDIT.md
   - Action: fix threshold or tune generator in dedicated PR; not part of dead-code cleanup
   - Evidence: TD-AUD-018: pre-existing integration_test_worldgen fire_blocks threshold failure tracked separately from module refactor
-- **AUDIT-WORLD-008** [performance] push_back in SaveMovementDiagnostics sample loop without reserve
-  - Module: World; Files: src/World/Core/World.cpp
-  - Action: samples.reserve(MovementDiagHistory.size()) before loop.
-  - Evidence: perf_hints.json line 2735. samples.push_back in loop over MovementDiagHistory; diagnostic export only.
 - **AUDIT-WORLD-009** [performance] Chunk streamer ring gate disabled by default; tuning undocumented in-game
   - Module: World; Files: src/World/Chunks/ChunkStreamer.h, src/World/Chunks/ChunkStreamer.cpp
   - Action: Expose config toggle; profile fly-through with ring gate on/off; document in TECH_DEBT_CHUNK_STREAMING profiling bisect.
@@ -295,17 +236,24 @@ Closed: **12** | Rejected (false positive): **1**.
 ## Closed Findings
 
 - **AUDIT-APP-005** — IsGameDataRoot / project-root search duplicated in Core and DesktopPlatformPaths (`local-p0-fix`)
+- **AUDIT-APP-006** — OpenGL 2D overlay state save/restore duplicated with GeometryEngine (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
 - **AUDIT-RENDER-002** — StreamingHorizonBlocks deprecated API (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
 - **AUDIT-RENDER-003** — GreedyMesher quads.reserve in BuildChunkMesh hot paths (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
 - **AUDIT-RENDER-004** — RebuildFlatGreedyBatches push_back without vector reserve (`local-p0-fix`)
+- **AUDIT-RENDER-005** — RebuildChunkLegacy face loop push_back with partial reserve (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
+- **AUDIT-RENDER-006** — ChunkMeshCache dual RebuildChunkImmediate and MarkDirty paths (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
 - **AUDIT-RENDER-007** — Orphan header Cube_GLM.h not in build (`local-p0-fix`)
+- **AUDIT-RENDER-008** — FaceIndexFromGreedy duplicated in GreedyMeshEmitter and GreedyMeshMath (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
+- **AUDIT-RENDER-015** — OpenGL depth/blend state restore duplicated with WindowManager (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
 - **AUDIT-TEST-001** — chunk_load_priority_test not in CI (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
 - **AUDIT-TOOL-DEV-001** — tools/audit/ pipeline is documented dev tooling (not orphan) (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
 - **AUDIT-TOOL-LIB-001** — Internal library modules falsely flagged as orphans (filename-only scan) (`local`)
 - **AUDIT-WORLD-001** — Monolithic world JSON migration parsing (LoadBlocks/LoadChunks; not per-chunk JSON) (`fca6e21cdcb71f42f9e880bd02cbf3fbccea753e`)
+- **AUDIT-WORLD-002** — MarkBlockChunkDirty uses RebuildChunkImmediate vs MarkDirty branches (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
 - **AUDIT-WORLD-003** — Unused HasChunkJsonFiles helper (`local-p0-fix`)
 - **AUDIT-WORLD-004** — Unused ResolveMovementAxisEye collision helper (`local-p0-fix`)
 - **AUDIT-WORLD-007** — push_back in LoadWorldData resource-pack parse loop without reserve (`local-p0-fix`)
+- **AUDIT-WORLD-008** — push_back in SaveMovementDiagnostics sample loop without reserve (`9bf664f57d289c3d68a94bf598d4613201e97b9c`)
 
 ## Rejected Findings (scan false positives)
 

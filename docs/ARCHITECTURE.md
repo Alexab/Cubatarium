@@ -266,7 +266,19 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 | `GuiIconSource` / `PrefabIconCache` | Block icons from `TextureCubeStorage`; prefab icons via FBO voxel preview (cached) |
 | `Application` | `AppState`, main menu vs in-game, console/palette overlays |
 | `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
-| `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
+| `CommandRegistry` | In-game console; world commands in `RegisterWorldCommands` (`src/Commands/WorldCommands.cpp`) |
+
+## Console / Commands
+
+| Piece | Role |
+|-------|------|
+| `UCommandRegistry` | Name → handler map; `ExecuteLine` tokenizes input; `FormatHelpText()` lists registered names |
+| `RegisterWorldCommands` | Registers gameplay commands (`give`, `tp`, `fly`, `spawn`, skin/possess, `worldgen`) on session init |
+| `help` | Built after world commands; text comes from the registry, not a hardcoded list |
+| `UGameSession` | Owns registry + `Execute()` for the in-game console overlay |
+| History | `UConsoleCommandHistory` persists to `console_history.txt` under the game data root |
+
+Console is toggled via `ui.console_key` (default grave). Chat log lines are appended by `GameSession::AddChatLine`.
 
 **Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`; `OnMetricsChanged` triggers relayout when UI scale changes. Sizes come from scaled `GuiTheme` fields (design px at 720p/160dpi baseline). Main menu title uses `TopCenter` + centered label text; in-game HUD places hotbar bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
 

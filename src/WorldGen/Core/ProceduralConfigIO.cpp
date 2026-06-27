@@ -1,8 +1,9 @@
 #include "WorldGen/Core/ProceduralConfigIO.h"
+#include "App/LegacyConfigAdapter.h"
+#include "App/Settings/UiSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldSeedParser.h"
-#include "App/Settings/UiSettings.h"
 #include <algorithm>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -14,8 +15,8 @@ namespace
 {
 
 void ApplyLegacyVerticalMode(ProceduralSettings &settings,
-                             const std::string &verticalMode,
-                             bool hasSeaLevel, bool hasMaxHeight)
+                             const std::string &verticalMode, bool hasSeaLevel,
+                             bool hasMaxHeight)
 {
   if (hasSeaLevel || hasMaxHeight)
   {
@@ -154,7 +155,8 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   }
   if (tuning.contains("thermal_erosion_iterations"))
   {
-    out.thermalErosionIterations = tuning["thermal_erosion_iterations"].get<int>();
+    out.thermalErosionIterations =
+        tuning["thermal_erosion_iterations"].get<int>();
   }
   if (tuning.contains("hydraulic_erosion_iterations"))
   {
@@ -312,8 +314,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("generator") && p["generator"].is_string())
     {
       legacyGeneratorId = p["generator"].get<std::string>();
-      settings.Generator =
-          ProceduralGeneratorFromString(legacyGeneratorId);
+      settings.Generator = ProceduralGeneratorFromString(legacyGeneratorId);
     }
     {
       const uint32_t savedSeed = settings.Seed;
@@ -446,31 +447,17 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
                             hasMaxHeight);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
-                                hasOres, hasFillWater, hasFillLava, hasFillFire);
+                                hasOres, hasFillWater, hasFillLava,
+                                hasFillFire);
   }
   else if (root.contains("terrain") && root["terrain"].is_string())
   {
-    const std::string terrain = root["terrain"].get<std::string>();
-    if (terrain == "flat")
-    {
-      settings.Generator = ProceduralGenerator::Flat;
-    }
-    else
-    {
-      settings.Generator = ProceduralGenerator::Heightmap;
-    }
+    settings.Generator = ReadLegacyTerrainGenerator(root);
   }
 
-  if (hasProcedural && root.contains("terrain") && root["terrain"].is_string())
+  if (hasProcedural)
   {
-    const std::string legacy = root["terrain"].get<std::string>();
-    const std::string fromProc =
-        ProceduralGeneratorToString(settings.Generator);
-    if (legacy != fromProc)
-    {
-      std::cerr << "WARN: procedural.Generator (" << fromProc
-                << ") overrides legacy terrain (" << legacy << ")" << std::endl;
-    }
+    WarnIfLegacyTerrainOverridden(root, settings, hasProcedural);
   }
 
   ResolveProceduralDefaults(settings);
@@ -553,18 +540,7 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
 void WriteUiSettings(nlohmann::json &root, const UiSettings &settings)
 {
   nlohmann::json ui;
-  ui["legacy_hud"] = settings.LegacyHud;
-  ui["show_performance"] = settings.ShowPerformance;
-  ui["console_key"] = settings.ConsoleKey;
-  ui["palette_key"] = settings.PaletteKey;
-  ui["inventory_key"] = settings.InventoryKey;
-  ui["hotbar_count"] = settings.HotbarCount;
-  ui["control_scheme"] = ControlSchemeToString(settings.ControlScheme);
-  ui["place_click_max_seconds"] = settings.PlaceClickMaxSeconds;
-  ui["break_hold_min_seconds"] = settings.BreakHoldMinSeconds;
-  ui["break_duration_seconds"] = settings.BreakDurationSeconds;
-  ui["rmb_drag_threshold_px"] = settings.RmbDragThresholdPx;
-  ui["ui_scale"] = settings.UiScaleUser;
+  WriteLegacyUiSettings(ui, settings);
   root["ui"] = ui;
 }
 

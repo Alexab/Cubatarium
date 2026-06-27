@@ -7,17 +7,25 @@
 1. Enable HUD: `ui.show_performance: true` in `config.json`.
 2. Watch `Gen`, `Mesh`, `Flat`, `Dirty`, `Cache` lines while flying through forest / after load.
 3. Toggle flags one at a time in `render`: `async_meshing`, `greedy_meshing`, `frustum_culling`, `distance_fog`, `altitude_adaptive_fog`.
-4. Toggle `procedural.async_chunk_generation`, `max_chunk_commits_per_frame`, `max_load_ops_per_frame`.
+4. Toggle `procedural.async_chunk_generation`, `procedural.async_chunk_io`, `max_chunk_commits_per_frame`, `max_load_ops_per_frame`.
 5. Export: `worlds/World_NNN/movement_diagnostics.json` (schema `movement_diagnostics.v2`).
 6. CI: `python tools/smoke_worldgen_metrics.py --metrics-json <path>`.
+
+**Async defaults (2026-06):** `ProceduralSettings.AsyncChunkGeneration` and `AsyncChunkIo` default **true** in code and `bin/config.json`. TD-CS-011/012 doc drift corrected; headless worldgen CLI still forces sync generation for determinism.
+
+**Ring gate (TD-CS-017):** `UChunkStreamer::RingGateEnabled` defaults **false** (conservative load ordering). Bisect: temporarily call `Streamer->SetRingGateEnabled(true)` in `World.cpp` after streamer init, or add `procedural.ring_gate_enabled` when exposing config. No runtime toggle in Settings yet.
+
+**MarkBlockChunkDirty contract (TD-AUD-013):** when `BlockRegistry != nullptr` (normal gameplay), block edits call `MeshCache.RebuildChunkImmediate` on the chunk + neighbors; during headless load before registry init, `MarkDirty` defers rebuild to the frame budget / async mesh path.
+
+**In-game validation (async mesh):** with `ui.show_performance: true`, fly through loaded terrain; toggle `render.async_meshing` in `config.json` and compare `mesh_rebuild_ms` / hitch lines in HUD. Export `movement_diagnostics.v2` before/after.
 
 ## Open
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-CS-010 | 2026-06 | Async meshing defaults off; needs in-game validation | Enable via `Render.AsyncMeshing` after manual fly-through | backlog |
-| TD-CS-011 | 2026-06 | Async chunk generation defaults off | Enable via `ProceduralSettings.AsyncChunkGeneration` | backlog |
-| TD-CS-012 | 2026-06 | Async chunk I/O defaults off | Enable via `ProceduralSettings.AsyncChunkIo` | backlog |
+| TD-CS-010 | 2026-06 | Async meshing defaults off; needs in-game validation | Enable via `Render.AsyncMeshing`; manual checklist in profiling bisect above | backlog |
+| TD-CS-011 | 2026-06 | ~~Async chunk generation defaults off~~ | Defaults **on** since 2026-06 (`ProceduralSettings`, `config.json`) | closed |
+| TD-CS-012 | 2026-06 | ~~Async chunk I/O defaults off~~ | Defaults **on** since 2026-06 | closed |
 | TD-CS-014 | 2026-06 | GPU instancing for Cross vegetation | Requires retained instance buffer + single draw | backlog |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `UChunkStreamer::SetRingGateEnabled` exists | backlog |

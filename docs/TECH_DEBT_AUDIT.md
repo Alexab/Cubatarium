@@ -9,13 +9,10 @@
 | TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | incremental facade extract | PR-D backlog |
 | TD-AUD-011 | 2026-06 | UApplication god-class (~1800 LOC) | screen helpers extract | PR-D backlog |
 | TD-AUD-012 | 2026-06 | GeometryEngine coupling | Pipeline include rules first | PR-C backlog |
-| TD-AUD-013 | 2026-06 | MarkBlockChunkDirty dual RebuildChunkImmediate/MarkDirty | intentional when BlockRegistry null | review |
-| TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | micro-opt; GreedyMesher partial reserve | PR-E backlog |
+| TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | ChunkMeshCache reserve(512), diagnostics reserve; GreedyMesher done | partial |
 | TD-AUD-015 | 2026-06 | Dead-code candidates (callers=1) | P0 World symbols removed; registry FP whitelisted | partial |
 | TD-AUD-016 | 2026-06 | Duplicate code clusters (scan_duplicates) | module review done; fixes in backlog | PR-C/D backlog |
-| TD-AUD-017 | 2026-06 | Orphan tools/scripts | archive or document | backlog |
-| TD-AUD-018 | 2026-06 | integration_test_worldgen fire_blocks threshold | pre-existing smoke fail | separate PR |
-| TD-AUD-019 | 2026-06 | smoke_resource_packs tree_bark missing | pre-existing asset gap | separate PR |
+| TD-AUD-017 | 2026-06 | Orphan tools/scripts | fix_*.py archived; tools/README + scan_tools_usage improved | closed |
 
 ## Closed
 
@@ -34,6 +31,9 @@
 | TD-AUD-022 | 2026-06 | P0: HasChunkJsonFiles, ResolveMovementAxisEye, Cube_GLM.h removed |
 | TD-AUD-023 | 2026-06 | IsGameDataRoot deduped into GameDataRoot.cpp |
 | TD-AUD-024 | 2026-06 | ChunkMeshCache GreedyBatches.reserve in flat rebuild |
+| TD-AUD-013 | 2026-06 | MarkBlockChunkDirty dual path documented (immediate vs deferred) |
+| TD-AUD-018 | 2026-06 | spawn_fire_blocks_max=8; seed 42 decorative fire documented |
+| TD-AUD-019 | 2026-06 | tree_bark in cubatarium_cc0_base for merge smoke |
 
 ## Phase tracker
 

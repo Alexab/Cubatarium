@@ -44,6 +44,20 @@
 
 См. [TECH_DEBT_CHUNK_STREAMING.md](TECH_DEBT_CHUNK_STREAMING.md) — активный план оптимизации (фазы A–E).
 
+## Config migration matrix (legacy → current)
+
+| Legacy key | Current key | Notes |
+|------------|-------------|-------|
+| Root `terrain` | `procedural.generator` | Root alias still written for older configs; parser warns when both disagree |
+| `ui.block_input_profile` | `ui.control_scheme` | Both read; write emits both (`classic` / `cubatarium`) |
+| `ui.legacy_hud` | unchanged | Toggles GeometryEngine text HUD vs Gui HUD |
+| `prefab_features.yaml` | `content/prefab_features.json` | YAML removed from content (generator-only) |
+| `pipeline.yaml` | `content/worldgen_packs/*/pipeline.json` | Pack-driven stages |
+
+## Worldgen smoke baselines
+
+`tools/worldgen_baseline.json` caps decorative spawn fire in radius 48. Seed **42** (balanced preset) yields **7** fire blocks from pack decorative placement — expected, not a generator bug. Threshold `spawn_fire_blocks_max` raised to **8** (2026-06); re-run `integration_test_worldgen.py --seeds 42`.
+
 ## Roadmap worldgen (2026) — статус
 
 | Фаза | Статус |

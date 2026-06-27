@@ -1,4 +1,5 @@
 #include "ResourcePacks/PlaceholderTextureCache.h"
+#include "Core/ColorUtil.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -9,39 +10,6 @@
 
 namespace cutum
 {
-
-namespace
-{
-
-glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
-{
-  if (hex.size() != 7 || hex[0] != '#')
-  {
-    return fallback;
-  }
-  auto hexByte = [&](size_t i) -> int {
-    const char c = hex[i];
-    if (c >= '0' && c <= '9')
-    {
-      return c - '0';
-    }
-    if (c >= 'a' && c <= 'f')
-    {
-      return 10 + (c - 'a');
-    }
-    if (c >= 'A' && c <= 'F')
-    {
-      return 10 + (c - 'A');
-    }
-    return 0;
-  };
-  const float r = (hexByte(1) * 16 + hexByte(2)) / 255.0f;
-  const float g = (hexByte(3) * 16 + hexByte(4)) / 255.0f;
-  const float b = (hexByte(5) * 16 + hexByte(6)) / 255.0f;
-  return glm::vec3(r, g, b);
-}
-
-} // namespace
 
 namespace
 {
@@ -73,7 +41,8 @@ bool SavePlaceholderFile(const std::filesystem::path &path,
   return out.good();
 }
 
-bool LoadPlaceholderFile(const std::filesystem::path &path, TexturePixelData &out)
+bool LoadPlaceholderFile(const std::filesystem::path &path,
+                         TexturePixelData &out)
 {
   std::ifstream in(path, std::ios::binary);
   if (!in.is_open())
@@ -107,10 +76,9 @@ bool LoadPlaceholderFile(const std::filesystem::path &path, TexturePixelData &ou
 
 } // namespace
 
-UPlaceholderTextureCache::UPlaceholderTextureCache(std::filesystem::path cacheDir,
-                                                   int tileSize,
-                                                   glm::vec3 background,
-                                                   size_t maxEntries)
+UPlaceholderTextureCache::UPlaceholderTextureCache(
+    std::filesystem::path cacheDir, int tileSize, glm::vec3 background,
+    size_t maxEntries)
     : CacheDir(std::move(cacheDir)), Background(background),
       DefaultTileSize(tileSize), MaxEntries(std::max<size_t>(1, maxEntries))
 {
@@ -140,7 +108,8 @@ void UPlaceholderTextureCache::EvictIfNeeded()
     if (stemIt != KeyToStem.end())
     {
       std::error_code ec;
-      std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second), ec);
+      std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second),
+                              ec);
       StemPixels.erase(stemIt->second);
       KeyToStem.erase(stemIt);
     }
@@ -154,8 +123,7 @@ std::string UPlaceholderTextureCache::MakeKey(const std::string &blockName,
          std::to_string(tileSize);
 }
 
-std::string
-UPlaceholderTextureCache::MakeStem(const std::string &key) const
+std::string UPlaceholderTextureCache::MakeStem(const std::string &key) const
 {
   const size_t h = std::hash<std::string>{}(key);
   std::ostringstream oss;
@@ -164,9 +132,9 @@ UPlaceholderTextureCache::MakeStem(const std::string &key) const
   return oss.str();
 }
 
-TexturePixelData UPlaceholderTextureCache::Rasterize(const std::string &blockName,
-                                                     int faceIndex,
-                                                     int tileSize) const
+TexturePixelData
+UPlaceholderTextureCache::Rasterize(const std::string &blockName, int faceIndex,
+                                    int tileSize) const
 {
   TexturePixelData out;
   out.Width = tileSize;
@@ -216,9 +184,9 @@ TexturePixelData UPlaceholderTextureCache::Rasterize(const std::string &blockNam
   return out;
 }
 
-std::string UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockName,
-                                                      int faceIndex,
-                                                      int tileSize)
+std::string
+UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockName,
+                                          int faceIndex, int tileSize)
 {
   const std::string key = MakeKey(blockName, faceIndex, tileSize);
   const auto it = KeyToStem.find(key);

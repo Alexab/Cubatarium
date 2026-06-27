@@ -42,4 +42,28 @@ CommandResult UCommandRegistry::ExecuteLine(const std::string &line) const
   return it->second(tokens);
 }
 
+std::vector<std::string> UCommandRegistry::GetCommandNames() const
+{
+  std::vector<std::string> names;
+  names.reserve(Handlers.size());
+  for (const auto &[name, handler] : Handlers)
+  {
+    (void)handler;
+    names.push_back(name);
+  }
+  std::sort(names.begin(), names.end());
+  return names;
+}
+
+std::string UCommandRegistry::FormatHelpText() const
+{
+  std::ostringstream oss;
+  oss << "Commands:";
+  for (const std::string &name : GetCommandNames())
+  {
+    oss << ' ' << name;
+  }
+  return oss.str();
+}
+
 } // namespace cutum

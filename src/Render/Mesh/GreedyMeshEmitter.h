@@ -1,6 +1,7 @@
 #ifndef GREEDYMESHEMITTER_H
 #define GREEDYMESHEMITTER_H
 
+#include "Render/Mesh/GreedyMeshCommon.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/Chunk.h"
@@ -10,22 +11,6 @@
 
 namespace cutum
 {
-
-namespace
-{
-
-inline int FaceIndexFromGreedy(int axis, int faceSign)
-{
-  if (axis == 2)
-  {
-    return faceSign > 0 ? 0 : 2;
-  }
-  if (axis == 0)
-  {
-    return faceSign > 0 ? 1 : 3;
-  }
-  return faceSign > 0 ? 4 : 5;
-}
 
 inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
 {
@@ -38,8 +23,6 @@ inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
   v.v = 0.0f;
   return v;
 }
-
-} // namespace
 
 inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
                              std::vector<GreedyMeshVertex> &vertices,

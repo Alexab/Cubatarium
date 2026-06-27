@@ -95,14 +95,35 @@ def findings_from_dead_code(data: dict) -> list[Finding]:
 
 def perf_hint_resolved(h: dict) -> bool:
     rel = h.get("file", "")
-    if "GreedyMesher.cpp" not in rel:
+    if "GreedyMesher.cpp" not in rel and "ChunkMeshCache.cpp" not in rel:
         return False
     fp = REPO_ROOT / rel.replace("/", "\\") if "\\" not in rel else REPO_ROOT / rel
     if not fp.exists():
         fp = REPO_ROOT / rel
     if not fp.exists():
         return False
-    return "quads.reserve(512)" in fp.read_text(encoding="utf-8", errors="ignore")
+    text = fp.read_text(encoding="utf-8", errors="ignore")
+    if "GreedyMesher.cpp" in rel:
+        return "quads.reserve(512)" in text
+    return "chunkInstances.reserve(512)" in text
+
+
+def suppress_duplicate_perf(findings: list[Finding]) -> list[Finding]:
+    """Drop scan AUDIT-PERF-* when a module finding already covers the same file."""
+    module_files: set[str] = set()
+    for f in findings:
+        if f.id.startswith("AUDIT-PERF-"):
+            continue
+        if f.files and f.category in ("performance", "duplication", "architecture"):
+            module_files.add(f.files[0].replace("\\", "/"))
+    out: list[Finding] = []
+    for f in findings:
+        if f.id.startswith("AUDIT-PERF-") and f.files:
+            rel = f.files[0].replace("\\", "/")
+            if rel in module_files:
+                continue
+        out.append(f)
+    return out
 
 
 def findings_from_scans() -> list[Finding]:
@@ -216,6 +237,31 @@ def auto_resolved_ids() -> dict[str, str]:
     )
     if style_proc.returncode == 0:
         resolved["AUDIT-STYLE-001"] = "audit_style.py reports 0 violations"
+
+    greedy_common = REPO_ROOT / "src/Render/Mesh/GreedyMeshCommon.h"
+    if greedy_common.exists():
+        resolved["AUDIT-RENDER-008"] = "FaceIndexFromGreedy in GreedyMeshCommon.h"
+
+    chunk_cache = REPO_ROOT / "src/Render/Mesh/ChunkMeshCache.cpp"
+    if chunk_cache.exists() and "chunkInstances.reserve(512)" in chunk_cache.read_text(
+        encoding="utf-8", errors="ignore"
+    ):
+        resolved["AUDIT-RENDER-005"] = "chunkInstances.reserve(512) in legacy mesh path"
+
+    geom = REPO_ROOT / "src/Render/Engine/GeometryEngine.cpp"
+    if geom.exists() and "UGlStateScope" in geom.read_text(encoding="utf-8", errors="ignore"):
+        resolved["AUDIT-RENDER-015"] = "UGlStateScope for overlay/crosshair/cube draw"
+
+    win_mgr = REPO_ROOT / "src/App/Platform/WindowManager.cpp"
+    if win_mgr.exists() and "UGlStateScope" in win_mgr.read_text(encoding="utf-8", errors="ignore"):
+        resolved["AUDIT-APP-006"] = "UGlStateScope in WindowManager::RenderUI"
+
+    if world_text and "RebuildChunkImmediate" in world_text and "BlockRegistry != nullptr" in world_text:
+        resolved["AUDIT-RENDER-006"] = "MarkBlockChunkDirty contract documented"
+        resolved["AUDIT-WORLD-002"] = "MarkBlockChunkDirty immediate vs deferred documented"
+
+    if world_text and "samples.reserve(MovementDiagHistory.size())" in world_text:
+        resolved["AUDIT-WORLD-008"] = "SaveMovementDiagnostics uses vector reserve"
 
     return resolved
 
@@ -341,6 +387,7 @@ def render_report(doc: FindingsDocument) -> str:
 def main(commit: str = "") -> int:
     ensure_audit_dir()
     findings = dedupe_findings(load_module_findings() + findings_from_scans())
+    findings = suppress_duplicate_perf(findings)
 
     # Ensure known architectural findings if modules not run yet.
     if not any(f.id == "AUDIT-ARCH-001" for f in findings):

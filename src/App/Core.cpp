@@ -26,9 +26,11 @@
 #include <windows.h>
 #endif
 #include "App/Core.h"
+#include "App/LegacyConfigAdapter.h"
 #include "App/Platform/GameDataRoot.h"
 #include "App/Platform/IPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Core/ColorUtil.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -46,42 +48,8 @@
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
-#include "WorldGen/Core/ProceduralSettings.h"
 
 using json = nlohmann::json;
-
-namespace
-{
-
-glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
-{
-  if (hex.size() != 7 || hex[0] != '#')
-  {
-    return fallback;
-  }
-  auto nib = [&](size_t i) -> int
-  {
-    const char c = hex[i];
-    if (c >= '0' && c <= '9')
-    {
-      return c - '0';
-    }
-    if (c >= 'a' && c <= 'f')
-    {
-      return 10 + (c - 'a');
-    }
-    if (c >= 'A' && c <= 'F')
-    {
-      return 10 + (c - 'A');
-    }
-    return 0;
-  };
-  return glm::vec3((nib(1) * 16 + nib(2)) / 255.0f,
-                   (nib(3) * 16 + nib(4)) / 255.0f,
-                   (nib(5) * 16 + nib(6)) / 255.0f);
-}
-
-} // namespace
 
 namespace cutum
 {
@@ -337,29 +305,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       }
       if (d.contains("ui") && d["ui"].is_object())
       {
-        const json &u = d["ui"];
-        Ui.LegacyHud = u.value("legacy_hud", false);
-        Ui.ShowPerformance = u.value("show_performance", true);
-        Ui.ConsoleKey = u.value("console_key", "grave");
-        Ui.PaletteKey = u.value("palette_key", "b");
-        Ui.InventoryKey = u.value("inventory_key", "e");
-        Ui.HotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
-        std::string schemeStr = "classic";
-        if (u.contains("control_scheme") && u["control_scheme"].is_string())
-        {
-          schemeStr = u["control_scheme"].get<std::string>();
-        }
-        else if (u.contains("block_input_profile") &&
-                 u["block_input_profile"].is_string())
-        {
-          schemeStr = u["block_input_profile"].get<std::string>();
-        }
-        Ui.ControlScheme = ControlSchemeFromString(schemeStr);
-        Ui.PlaceClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
-        Ui.BreakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
-        Ui.BreakDurationSeconds = u.value("break_duration_seconds", 0.25f);
-        Ui.RmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
-        Ui.UiScaleUser = u.value("ui_scale", 1.f);
+        ReadLegacyUiSettings(d["ui"], Ui);
       }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
     }

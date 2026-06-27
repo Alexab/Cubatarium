@@ -41,6 +41,14 @@ inline constexpr GlStateMask kGlMaskTransparentPipeline =
     GlStateBit::DepthFunc | GlStateBit::DepthMask | GlStateBit::StencilTest |
     GlStateBit::StencilOps | GlStateBit::ColorMask;
 
+/// Saves depth test + blend for 2D HUD/help/text overlay passes.
+inline constexpr GlStateMask kGlMaskOverlay2D =
+    GlStateBit::DepthTest | GlStateBit::Blend;
+
+/// Saves depth/blend/cull around world cube draw setup.
+inline constexpr GlStateMask kGlMaskDrawCubeRestore =
+    GlStateBit::DepthTest | GlStateBit::Blend | GlStateBit::CullFace;
+
 } // namespace cutum
 
 #endif

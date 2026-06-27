@@ -1,5 +1,6 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Definition/CatalogSortUtil.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include <algorithm>
 #include <filesystem>
@@ -143,8 +144,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
-    def.habitat =
-        ParseCreatureHabitat(data.value("habitat", "terrestrial"));
+    def.habitat = ParseCreatureHabitat(data.value("habitat", "terrestrial"));
     def.behavior.Id = data.value("behavior", def.behavior.Id);
     if (data.contains("behavior_params") && data["behavior_params"].is_object())
     {
@@ -253,7 +253,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           {
             if (clipId.is_string())
             {
-              def.visual.Animation.stateMap[stateName] = clipId.get<std::string>();
+              def.visual.Animation.stateMap[stateName] =
+                  clipId.get<std::string>();
             }
           }
         }
@@ -325,8 +326,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           def.visual.gltf.modelPath.empty())
       {
         std::cerr << "UCreatureDefinitionStorage: " << path
-                  << ": gltf_skeleton without visual.gltf.model for "
-                  << def.Id << std::endl;
+                  << ": gltf_skeleton without visual.gltf.model for " << def.Id
+                  << std::endl;
       }
     }
     Definitions[def.Id] = def;
@@ -360,19 +361,12 @@ std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
     (void)def;
     ids.push_back(Id);
   }
-  std::sort(ids.begin(), ids.end(),
-            [this](const std::string &a, const std::string &b)
-            {
-              const auto *defA = Get(a);
-              const auto *defB = Get(b);
-              const int orderA = defA ? defA->catalog.sortOrder : 0;
-              const int orderB = defB ? defB->catalog.sortOrder : 0;
-              if (orderA != orderB)
-              {
-                return orderA < orderB;
-              }
-              return a < b;
-            });
+  SortDefinitionIdsByCatalogOrder(ids,
+                                  [this](const std::string &id) -> int
+                                  {
+                                    const auto *def = Get(id);
+                                    return def ? def->catalog.sortOrder : 0;
+                                  });
   return ids;
 }
 
@@ -386,19 +380,12 @@ std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
       ids.push_back(Id);
     }
   }
-  std::sort(ids.begin(), ids.end(),
-            [this](const std::string &a, const std::string &b)
-            {
-              const auto *defA = Get(a);
-              const auto *defB = Get(b);
-              const int orderA = defA ? defA->catalog.sortOrder : 0;
-              const int orderB = defB ? defB->catalog.sortOrder : 0;
-              if (orderA != orderB)
-              {
-                return orderA < orderB;
-              }
-              return a < b;
-            });
+  SortDefinitionIdsByCatalogOrder(ids,
+                                  [this](const std::string &id) -> int
+                                  {
+                                    const auto *def = Get(id);
+                                    return def ? def->catalog.sortOrder : 0;
+                                  });
   return ids;
 }
 

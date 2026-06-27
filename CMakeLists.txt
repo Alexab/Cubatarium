@@ -97,6 +97,7 @@ set(SOURCES
     src/Pose/AquaticPosePresenter.cpp
     src/Pose/SerpentinePosePresenter.cpp
     src/App/Core.cpp
+    src/App/LegacyConfigAdapter.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
     src/Render/Primitives/Cube.cpp
@@ -203,6 +204,7 @@ set(SOURCES
     src/Game/GameSession.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
+    src/Commands/WorldCommands.cpp
     src/Console/ConsoleCommandHistory.cpp
     src/Console/ConsoleInputSanitize.cpp
     src/Gui/Core/GuiTheme.cpp

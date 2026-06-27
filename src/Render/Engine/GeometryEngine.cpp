@@ -1,6 +1,5 @@
 
 #include "Render/Engine/GeometryEngine.h"
-#include "Render/Engine/DistanceFog.h"
 #include "App/Core.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -13,13 +12,15 @@
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/ICreaturePosePresenter.h"
-#include "Render/Engine/ShaderManager.h"
-#include "Render/GlIncludes.h"
-#include "Render/Pipeline/GreedyShaderMode.h"
-#include "Render/Pipeline/GreedyTransparentPipeline.h"
-#include "Render/Pipeline/GreedyTransparentSort.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
+#include "Render/Engine/DistanceFog.h"
+#include "Render/Engine/ShaderManager.h"
+#include "Render/GlIncludes.h"
+#include "Render/Pipeline/GlStateMask.h"
+#include "Render/Pipeline/GlStateScope.h"
+#include "Render/Pipeline/GreedyTransparentPipeline.h"
+#include "Render/Pipeline/GreedyTransparentSort.h"
 #include "Storage/ObjectImplementation.h"
 #include "Storage/ObjectStorage.h"
 #include "World/Math/GridMath.h"
@@ -295,7 +296,8 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   DrawCubeGeometry();
   if (WorldInstance)
   {
-    WorldInstance->UpdateFrameHitchDiagnostics(DurationDrawSceneMks, view_duration);
+    WorldInstance->UpdateFrameHitchDiagnostics(DurationDrawSceneMks,
+                                               view_duration);
   }
   if (OverlayTintAlpha > 0.01f)
   {
@@ -333,13 +335,7 @@ void UGeometryEngine::DrawCubeGeometry()
     return;
   }
 
-  // Save OpenGL state
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-  GLboolean cullFaceEnabled;
-  glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+  UGlStateScope glGuard(kGlMaskDrawCubeRestore);
 
   // Ensure instanced resources are ready
   if (cubeVAO == 0)
@@ -420,32 +416,6 @@ void UGeometryEngine::DrawCubeGeometry()
   RenderCreatures();
 
   // Active object preview disabled to avoid per-frame resource churn
-
-  // Restore state
-  if (cullFaceEnabled)
-  {
-    glEnable(GL_CULL_FACE);
-  }
-  else
-  {
-    glDisable(GL_CULL_FACE);
-  }
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDrawSceneMks =
@@ -792,8 +762,8 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
         WorldInstance->GetEffectiveRenderDistance(), SmoothedSkyTint,
-        Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
-        Render.DistanceFogDensity);
+        Render.DistanceFogStartRatio,
+        WorldInstance->GetEffectiveFogStartRatio(), Render.DistanceFogDensity);
     FogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
@@ -801,8 +771,7 @@ void UGeometryEngine::PrepareFrameRendering()
     FogMinBlend = 0.0f;
     FogHorizontal = Render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
-    SmoothedFogColor =
-        glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
+    SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
   }
   if (fluid.inFluid)
   {
@@ -1329,11 +1298,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
     return;
   }
 
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1349,19 +1314,6 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   overlayShader->Unuse();
-
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-  if (!blendEnabled)
-  {
-    glDisable(GL_BLEND);
-  }
 }
 
 // Methods for sky color management
@@ -1435,15 +1387,16 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
       " rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
       " hitch: " + (md.hitchDetected ? "yes" : "no"));
-  if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 || md.streamingIoMs > 0.01)
+  if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 ||
+      md.streamingIoMs > 0.01)
   {
     performanceLines.push_back(
         "Gen: " + std::to_string(md.streamingGenMs).substr(0, 5) + " ms" +
         " Mesh: " + std::to_string(md.meshRebuildMs).substr(0, 5) + " ms" +
         " IO: " + std::to_string(md.streamingIoMs).substr(0, 5) + " ms");
     performanceLines.push_back(
-        "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
-        std::to_string(md.meshRebuildsThisFrame));
+        "Dirty: " + std::to_string(md.dirtyChunksPending) +
+        " rebuilt: " + std::to_string(md.meshRebuildsThisFrame));
     performanceLines.push_back(
         "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
         " Cache: " + std::to_string(md.greedyCacheEntries) +
@@ -1457,7 +1410,8 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
                         temperature, moisture);
     const float localHeightNorm =
         std::clamp(static_cast<float>(md.feetBlock.y - settings.SeaLevel) /
-                       static_cast<float>(std::max(1, settings.MaxHeight - settings.SeaLevel)),
+                       static_cast<float>(
+                           std::max(1, settings.MaxHeight - settings.SeaLevel)),
                    0.0f, 1.0f);
     const BiomeId biome = ClassifyBiome(temperature, moisture, localHeightNorm);
     performanceLines.push_back(
@@ -1503,13 +1457,7 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
     return;
   }
 
-  // Сохраняем состояние OpenGL
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
-  // Отключаем тест глубины для 2D рендеринга
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
 
   // Используем UI шейдер
@@ -1579,25 +1527,6 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
 
   // Отключаем шейдер
   uiShader->Unuse();
-
-  // Восстанавливаем состояние OpenGL
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 }
 
 void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
@@ -2335,8 +2264,8 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
 }
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(const glm::mat4 & /*mvp*/,
-                                            GLuint /*meshVao*/,
-                                            GLuint /*texture*/)
+                                              GLuint /*meshVao*/,
+                                              GLuint /*texture*/)
 {
   // glTF skinned mesh draw — TD-CRE-001
 }

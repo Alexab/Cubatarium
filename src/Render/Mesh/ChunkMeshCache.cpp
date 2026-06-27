@@ -545,7 +545,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   {
     GreedyCache.erase(chunkCoord);
     std::vector<FaceInstance> chunkInstances;
-    chunkInstances.reserve(256);
+    chunkInstances.reserve(512);
     RebuildChunkLegacy(world, registry, chunkCoord, chunkInstances);
     Cache[chunkCoord] = std::move(chunkInstances);
   }

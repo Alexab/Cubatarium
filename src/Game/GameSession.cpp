@@ -1,8 +1,8 @@
 #include "Game/GameSession.h"
-#include "Content/ContentType.h"
-#include "ResourcePacks/BlockNameUtil.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Commands/WorldCommands.h"
+#include "Content/ContentType.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -12,6 +12,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Render/Camera/Camera.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
 #include "World/Prefabs/Prefab.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
@@ -88,345 +89,10 @@ void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
 
 void UGameSession::RegisterCommands()
 {
+  RegisterWorldCommands(*this, UCommandRegistry);
   UCommandRegistry.Register(
-      "help",
-      [](const std::vector<std::string> &)
-      {
-        return CommandResult{true, "Commands: help, give, tp, fly, time, "
-                                   "spawn, select_skin, apply_skin, possess, "
-                                   "depossess, select_appearance, worldgen"};
-      });
-
-  UCommandRegistry.Register(
-      "worldgen",
-      [this](const std::vector<std::string> &args)
-      {
-        if (args.empty())
-        {
-          return CommandResult{
-              false, "Usage: worldgen reload | worldgen debug [on|off]"};
-        }
-        if (args[0] == "reload")
-        {
-          if (!ReloadWorldGenContent())
-          {
-            return CommandResult{false, "Worldgen reload failed"};
-          }
-          return CommandResult{true,
-                              "Worldgen content reloaded (affects new chunks)"};
-        }
-        if (args[0] == "debug")
-        {
-          bool enable = true;
-          if (args.size() >= 2)
-          {
-            enable = args[1] == "on" || args[1] == "1" || args[1] == "true";
-          }
-          if (!World)
-          {
-            return CommandResult{false, "No active world"};
-          }
-          ProceduralSettings settings = World->GetProceduralSettings();
-          settings.DebugWorldGenOverlay = enable;
-          World->SetProceduralSettings(settings);
-          return CommandResult{
-              true, std::string("Worldgen debug overlay ") +
-                        (enable ? "enabled" : "disabled") +
-                        " (flag stored; visual overlay not wired yet)"};
-        }
-        return CommandResult{false, "Unknown worldgen subcommand"};
-      });
-
-  UCommandRegistry.Register(
-      "time", [](const std::vector<std::string> &)
-      { return CommandResult{true, "Time of day is not implemented yet."}; });
-
-  UCommandRegistry.Register(
-      "give",
-      [this](const std::vector<std::string> &args)
-      {
-        if (args.size() < 2)
-        {
-          return CommandResult{false, "Usage: give <block>"};
-        }
-        if (UCreatureInventory *inv = GetControlledInventory(World.get()))
-        {
-          inv->AddToInventory(args[1]);
-        }
-        else
-        {
-          return CommandResult{false, "No controlled creature"};
-        }
-        return CommandResult{true, "Added " + args[1]};
-      });
-
-  UCommandRegistry.Register(
-      "tp",
-      [this](const std::vector<std::string> &args)
-      {
-        if (args.size() < 4)
-        {
-          return CommandResult{false, "Usage: tp <x> <y> <z>"};
-        }
-        auto user = World->GetCurrentUser();
-        auto camera = World->GetCurrentUserCamera();
-        UCreature *controlled = World->GetControlledCreature();
-        if (!user || !camera)
-        {
-          return CommandResult{false, "No user/camera"};
-        }
-        try
-        {
-          const float x = std::stof(args[1]);
-          const float y = std::stof(args[2]);
-          const float z = std::stof(args[3]);
-          const glm::vec3 eye{x, y, z};
-          user->SetPosition(eye);
-          camera->SetPosition(eye);
-          if (controlled)
-          {
-            controlled->SetBodyOrigin(glm::vec3(
-                eye.x, FeetYFromEye(eye, controlled->GetEyeOffset().y), eye.z));
-          }
-          return CommandResult{true, "Teleported"};
-        }
-        catch (...)
-        {
-          return CommandResult{false, "Invalid coordinates"};
-        }
-      });
-
-  UCommandRegistry.Register(
-      "fly",
-      [this](const std::vector<std::string> &args)
-      {
-        auto camera = World->GetCurrentUserCamera();
-        if (!camera)
-        {
-          return CommandResult{false, "No camera"};
-        }
-        bool enable = true;
-        if (args.size() >= 2)
-        {
-          enable = args[1] == "on" || args[1] == "1" || args[1] == "true";
-        }
-        camera->SetFreeMove(enable);
-        if (UCreature *c = World->GetControlledCreature())
-        {
-          c->GetLocomotion().SetMode(enable ? CreatureMovementMode::Flying
-                                            : CreatureMovementMode::Walking);
-        }
-        return CommandResult{true, enable ? "Flight on" : "Flight off"};
-      });
-
-  UCommandRegistry.Register(
-      "spawn",
-      [this](const std::vector<std::string> &args)
-      {
-        if (!World)
-        {
-          return CommandResult{false, "No world"};
-        }
-        if (args.size() < 2)
-        {
-          return CommandResult{false, "Usage: spawn <species> [skin]"};
-        }
-        const std::string &species = args[1];
-        const CreatureDefinition *def = World->GetCreatureDefinition(species);
-        if (!def)
-        {
-          return CommandResult{false, "Unknown species: " + species};
-        }
-        if (!def->catalog.spawnable)
-        {
-          return CommandResult{false, "Species is not spawnable: " + species};
-        }
-        const std::string skin = args.size() >= 3 ? args[2] : "";
-        if (!skin.empty())
-        {
-          const auto &skinStorage = World->GetSkinDefinitionStorage();
-          if (!skinStorage || !skinStorage->IsCompatible(skin, species))
-          {
-            return CommandResult{false, "Skin is not compatible with species"};
-          }
-        }
-        const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
-        glm::vec3 bodyOrigin = World->GetSpawnPoint();
-        bodyOrigin.y -= eyeOffset.y;
-        if (auto camera = World->GetCurrentUserCamera())
-        {
-          glm::vec3 forward = camera->GetFront();
-          forward.y = 0.0f;
-          if (glm::length(forward) > 0.01f)
-          {
-            bodyOrigin = camera->GetPosition() - eyeOffset +
-                         glm::normalize(forward) * 3.0f;
-          }
-          else
-          {
-            bodyOrigin =
-                camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
-          }
-        }
-        const CreatureId Id = World->SpawnCreature(species, bodyOrigin, skin);
-        if (Id == 0)
-        {
-          return CommandResult{false, "Spawn failed"};
-        }
-        return CommandResult{true, "Spawned " + species +
-                                       " Id=" + std::to_string(Id)};
-      });
-
-  UCommandRegistry.Register(
-      "select_skin",
-      [this](const std::vector<std::string> &args)
-      {
-        if (args.size() < 2)
-        {
-          return CommandResult{false, "Usage: select_skin <skin_id>"};
-        }
-        auto user = World->GetCurrentUser();
-        UCreature *controlled = World->GetControlledCreature();
-        if (!user || !controlled)
-        {
-          return CommandResult{false, "No controlled creature"};
-        }
-        std::string error;
-        if (!World->TryApplySkin(controlled->GetId(), args[1], &error))
-        {
-          return CommandResult{false, error};
-        }
-        user->SetSelectedSkinId(args[1]);
-        return CommandResult{true, "Skin set to " + args[1]};
-      });
-
-  UCommandRegistry.Register(
-      "apply_skin",
-      [this](const std::vector<std::string> &args)
-      {
-        if (!World)
-        {
-          return CommandResult{false, "No world"};
-        }
-        if (args.size() < 2)
-        {
-          return CommandResult{false, "Usage: apply_skin <skin_id>"};
-        }
-        auto camera = World->GetCurrentUserCamera();
-        if (!camera)
-        {
-          return CommandResult{false, "No camera"};
-        }
-        const auto target = World->PickCreatureByView(camera->GetPosition(),
-                                                      camera->GetFront(), 8.0f);
-        if (!target)
-        {
-          return CommandResult{false, "No creature in view"};
-        }
-        std::string error;
-        if (!World->TryApplySkin(*target, args[1], &error))
-        {
-          return CommandResult{false, error};
-        }
-        return CommandResult{true, "Applied skin " + args[1]};
-      });
-
-  UCommandRegistry.Register(
-      "possess",
-      [this](const std::vector<std::string> &args)
-      {
-        if (!World)
-        {
-          return CommandResult{false, "No world"};
-        }
-        CreatureId target = 0;
-        if (args.size() >= 2)
-        {
-          try
-          {
-            target = static_cast<CreatureId>(std::stoull(args[1]));
-          }
-          catch (...)
-          {
-            return CommandResult{false, "Invalid creature Id"};
-          }
-        }
-        else
-        {
-          World->ForEachCreature(
-              [&](UCreature &c)
-              {
-                if (target == 0 && !c.IsPlayerCharacter())
-                {
-                  target = c.GetId();
-                }
-              });
-        }
-        if (target == 0 || !World->SetControlledCreature(target))
-        {
-          return CommandResult{false, "Cannot possess"};
-        }
-        if (auto cam = World->GetCurrentUserCamera())
-        {
-          if (UCreature *c = World->GetCreature(target))
-          {
-            cam->SetPosition(c->GetEyePosition());
-            cam->SetOrientation(CameraYawFromModelYaw(c->GetYaw()),
-                                c->GetPitch());
-          }
-        }
-        return CommandResult{true, "Possessing Id=" + std::to_string(target)};
-      });
-
-  UCommandRegistry.Register(
-      "depossess",
-      [this](const std::vector<std::string> &)
-      {
-        if (!World)
-        {
-          return CommandResult{false, "No world"};
-        }
-        const CreatureId playerId = World->GetPlayerCreatureId();
-        if (playerId == 0 || !World->SetControlledCreature(playerId))
-        {
-          return CommandResult{false, "No player creature"};
-        }
-        if (auto cam = World->GetCurrentUserCamera())
-        {
-          if (UCreature *c = World->GetPlayerCreature())
-          {
-            cam->SetPosition(c->GetEyePosition());
-            cam->SetOrientation(CameraYawFromModelYaw(c->GetYaw()),
-                                c->GetPitch());
-          }
-        }
-        return CommandResult{true, "Returned to player"};
-      });
-
-  UCommandRegistry.Register(
-      "select_appearance",
-      [this](const std::vector<std::string> &args)
-      {
-        if (args.size() < 2)
-        {
-          return CommandResult{
-              false, "Usage: select_appearance <skin_id> (alias: select_skin)"};
-        }
-        auto user = World->GetCurrentUser();
-        UCreature *controlled = World->GetControlledCreature();
-        if (!user || !controlled)
-        {
-          return CommandResult{false, "No controlled creature"};
-        }
-        std::string error;
-        if (!World->TryApplySkin(controlled->GetId(), args[1], &error))
-        {
-          return CommandResult{false, error};
-        }
-        user->SetSelectedSkinId(args[1]);
-        user->SetSelectedAppearanceTypeId(args[1]);
-        return CommandResult{true, "Appearance set to " + args[1]};
-      });
+      "help", [this](const std::vector<std::string> &)
+      { return CommandResult{true, UCommandRegistry.FormatHelpText()}; });
 }
 
 void UGameSession::LoadLastWorld()
@@ -826,8 +492,9 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
     {
       if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
       {
-        std::cerr << "GameSession: block not in registry, hotbar assign rejected: "
-                  << entry.Id << std::endl;
+        std::cerr
+            << "GameSession: block not in registry, hotbar assign rejected: "
+            << entry.Id << std::endl;
         return false;
       }
     }
@@ -837,8 +504,9 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
           ContentCatalog.GetEntries(ContentKind::UObject, entry.Id);
       if (entries.empty())
       {
-        std::cerr << "GameSession: prefab not in catalog, hotbar assign rejected: "
-                  << entry.Id << std::endl;
+        std::cerr
+            << "GameSession: prefab not in catalog, hotbar assign rejected: "
+            << entry.Id << std::endl;
         return false;
       }
     }
@@ -848,8 +516,8 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   {
     return false;
   }
-  const_cast<UCreatureInventory *>(creatureInv)->EnsureHotbarCount(
-      static_cast<size_t>(GetHotbarCountSetting()));
+  const_cast<UCreatureInventory *>(creatureInv)
+      ->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
   if (barIndex >= creatureInv->GetHotbarCount())
   {
     return false;
@@ -878,8 +546,8 @@ bool UGameSession::CanSpawnCreatureByView(const std::string &speciesId) const
   return World && World->CanSpawnCreatureByView(speciesId);
 }
 
-std::string UGameSession::GetCreatureSpawnBlockedHint(
-    const std::string &speciesId) const
+std::string
+UGameSession::GetCreatureSpawnBlockedHint(const std::string &speciesId) const
 {
   if (!World)
   {
@@ -888,7 +556,10 @@ std::string UGameSession::GetCreatureSpawnBlockedHint(
   return World->GetCreatureSpawnBlockedHint(speciesId);
 }
 
-InventoryMode UGameSession::GetInventoryMode() const { return ActiveInventoryMode; }
+InventoryMode UGameSession::GetInventoryMode() const
+{
+  return ActiveInventoryMode;
+}
 
 void UGameSession::SetInventoryMode(InventoryMode mode)
 {

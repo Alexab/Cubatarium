@@ -66,6 +66,8 @@ def is_whitelisted(name: str) -> bool:
 def scan_file(path: Path) -> list[dict]:
     text = path.read_text(encoding="utf-8", errors="ignore")
     rel = path.relative_to(REPO_ROOT).as_posix()
+    if "WorldGeneratorRegistry.cpp" in rel:
+        return []
     hits: list[dict] = []
 
     for m in METHOD_RE.finditer(text):

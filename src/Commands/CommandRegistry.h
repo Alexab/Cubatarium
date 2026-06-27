@@ -18,6 +18,8 @@ public:
 
   void Register(const std::string &Name, CommandHandler handler);
   CommandResult ExecuteLine(const std::string &line) const;
+  std::vector<std::string> GetCommandNames() const;
+  std::string FormatHelpText() const;
 
 private:
   static std::vector<std::string> Tokenize(const std::string &line);
