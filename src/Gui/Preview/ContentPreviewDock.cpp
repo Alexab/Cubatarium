@@ -93,11 +93,13 @@ void UContentPreviewDock::ClearSelection()
   SyncVisibility();
 }
 
-void UContentPreviewDock::SetOnChange(std::function<void()> handler)
+void UContentPreviewDock::SetOnChange(std::function<void()> handler,
+                                     const std::string &buttonLabel)
 {
   OnChange = std::move(handler);
   if (ChangeButton)
   {
+    ChangeButton->SetLabel(buttonLabel);
     ChangeButton->SetVisible(static_cast<bool>(OnChange));
   }
 }

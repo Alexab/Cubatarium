@@ -32,6 +32,31 @@ const char *kTerrainSlots[] = {"surface", "subsurface", "stone", "water",
 const char *kOreSlots[] = {"ore_coal", "ore_iron"};
 constexpr int kPickerZOrder = 100;
 
+const char *DefaultBlockForTerrainSlot(const std::string &slotName)
+{
+  if (slotName == "surface")
+  {
+    return "grass";
+  }
+  if (slotName == "subsurface")
+  {
+    return "dirt";
+  }
+  if (slotName == "stone")
+  {
+    return "stone";
+  }
+  if (slotName == "water")
+  {
+    return "water";
+  }
+  if (slotName == "lava")
+  {
+    return "lava";
+  }
+  return nullptr;
+}
+
 std::string EntryHint(const WorldGenObjectEntry &entry)
 {
   std::ostringstream oss;
@@ -68,6 +93,7 @@ void UWorldGenPaletteScreen::SetVisible(bool visible)
     ClosePicker();
     SelectedEntryId.clear();
     SelectedTerrainSlot.clear();
+    SelectedOreSlot.clear();
     if (PreviewDock)
     {
       PreviewDock->ClearSelection();
@@ -112,6 +138,7 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
         ClosePicker();
         SelectedEntryId.clear();
         SelectedTerrainSlot.clear();
+        SelectedOreSlot.clear();
         SyncPreviewDock();
         ContentDirty = true;
       });
@@ -403,13 +430,71 @@ GLuint UWorldGenPaletteScreen::IconForEntry(ContentKind kind,
 
 void UWorldGenPaletteScreen::SelectEntry(ContentKind kind, const std::string &id,
                                          const std::string &displayName,
-                                         const std::string &terrainSlot)
+                                         const std::string &terrainSlot,
+                                         const std::string &oreSlot)
 {
   SelectedKind = kind;
   SelectedEntryId = id;
   SelectedTerrainSlot = terrainSlot;
+  SelectedOreSlot = oreSlot;
   SyncPreviewDock();
   ApplySlotSelection();
+}
+
+std::string
+UWorldGenPaletteScreen::StoredTerrainBlock(const std::string &slotName) const
+{
+  if (!World)
+  {
+    return {};
+  }
+  const auto it = World->GetWorldGenSets().Terrain.find(slotName);
+  if (it == World->GetWorldGenSets().Terrain.end())
+  {
+    return {};
+  }
+  return it->second.Block;
+}
+
+std::string
+UWorldGenPaletteScreen::EffectiveTerrainBlock(const std::string &slotName) const
+{
+  const std::string stored = StoredTerrainBlock(slotName);
+  if (!stored.empty())
+  {
+    return stored;
+  }
+  const char *fallback = DefaultBlockForTerrainSlot(slotName);
+  return fallback ? std::string(fallback) : std::string();
+}
+
+std::string
+UWorldGenPaletteScreen::TerrainSlotTooltip(const std::string &slotName) const
+{
+  const std::string stored = StoredTerrainBlock(slotName);
+  const std::string effective = EffectiveTerrainBlock(slotName);
+  std::string text = slotName;
+  if (stored.empty())
+  {
+    text += "\n(pack default";
+    if (!effective.empty())
+    {
+      text += ": " + DisplayNameForId(ContentKind::Block, effective);
+    }
+    text += ")";
+  }
+  else
+  {
+    text += "\n" + DisplayNameForId(ContentKind::Block, stored);
+  }
+  return text;
+}
+
+std::string UWorldGenPaletteScreen::OreSlotTooltip(const std::string &oreSlot,
+                                                   bool enabled) const
+{
+  return oreSlot + "\n" + DisplayNameForId(ContentKind::Block, oreSlot) + "\n" +
+         (enabled ? "Enabled" : "Disabled");
 }
 
 void UWorldGenPaletteScreen::ApplySlotSelection()
@@ -424,8 +509,11 @@ void UWorldGenPaletteScreen::ApplySlotSelection()
     bool selected = false;
     if (ActiveTab == 1 && i < ContentSlotTerrainSlots.size())
     {
-      selected = ContentSlotTerrainSlots[i] == SelectedTerrainSlot &&
-                 ContentSlotIds[i] == SelectedEntryId;
+      selected = ContentSlotTerrainSlots[i] == SelectedTerrainSlot;
+    }
+    else if (ActiveTab == 2)
+    {
+      selected = ContentSlotIds[i] == SelectedOreSlot;
     }
     else
     {
@@ -452,11 +540,21 @@ void UWorldGenPaletteScreen::SyncPreviewDock()
   }
   if (ActiveTab == 1 && !SelectedTerrainSlot.empty())
   {
-    if (!SelectedEntryId.empty())
+    const std::string previewBlock = EffectiveTerrainBlock(SelectedTerrainSlot);
+    std::string title = SelectedTerrainSlot;
+    const std::string stored = StoredTerrainBlock(SelectedTerrainSlot);
+    if (!stored.empty())
     {
-      PreviewDock->SetSelection(
-          SelectedKind, SelectedEntryId,
-          DisplayNameForId(SelectedKind, SelectedEntryId));
+      title = SelectedTerrainSlot + ": " +
+              DisplayNameForId(ContentKind::Block, stored);
+    }
+    else if (!previewBlock.empty())
+    {
+      title = SelectedTerrainSlot + " (pack default)";
+    }
+    if (!previewBlock.empty())
+    {
+      PreviewDock->SetSelection(ContentKind::Block, previewBlock, title);
     }
     else
     {
@@ -464,6 +562,27 @@ void UWorldGenPaletteScreen::SyncPreviewDock()
     }
     PreviewDock->SetOnChange(
         [this]() { OpenTerrainPicker(SelectedTerrainSlot); });
+    return;
+  }
+  if (ActiveTab == 2 && !SelectedOreSlot.empty() && World)
+  {
+    const std::string blockId = SelectedOreSlot;
+    PreviewDock->SetSelection(
+        ContentKind::Block, blockId,
+        DisplayNameForId(ContentKind::Block, blockId));
+    PreviewDock->SetOnChange(
+        [this]()
+        {
+          if (!World || SelectedOreSlot.empty())
+          {
+            return;
+          }
+          WorldGenOreSlot &ore = World->GetWorldGenSets().Ores[SelectedOreSlot];
+          ore.Enabled = !ore.Enabled;
+          SaveSets();
+          ContentDirty = true;
+        },
+        "Toggle enabled");
     return;
   }
   PreviewDock->SetOnChange(nullptr);
@@ -813,47 +932,26 @@ void UWorldGenPaletteScreen::RebuildMainContent()
     const WorldGenSets &sets = World->GetWorldGenSets();
     for (const char *slotName : kTerrainSlots)
     {
-      std::string blockId;
-      const auto it = sets.Terrain.find(slotName);
-      if (it != sets.Terrain.end())
-      {
-        blockId = it->second.Block;
-      }
-      std::string label = std::string(slotName) + ": ";
+      const std::string terrainSlot = slotName;
+      const std::string blockIdCopy = StoredTerrainBlock(terrainSlot);
+      const std::string iconBlockId = EffectiveTerrainBlock(terrainSlot);
+      const std::string tooltip = TerrainSlotTooltip(terrainSlot);
       auto slot = std::make_unique<UGuiSlot>(Theme);
       slot->SetBounds({0, 0, slotSize, slotSize});
-      ContentKind kind = ContentKind::Block;
-      std::string blockIdCopy = blockId;
-      if (!blockId.empty())
+      if (!iconBlockId.empty())
       {
-        label += DisplayNameForId(ContentKind::Block, blockId);
-        const GLuint tex = IconForEntry(ContentKind::Block, blockId);
-        slot->SetIconTexture(tex);
-        if (tex == 0)
-        {
-          slot->SetLabel(label);
-        }
+        slot->SetIconTexture(IconForEntry(ContentKind::Block, iconBlockId));
       }
-      else
-      {
-        label += "(pack default)";
-        slot->SetLabel(label);
-        kind = ContentKind::Block;
-      }
-      const std::string terrainSlot = slotName;
-      const bool selected =
-          SelectedTerrainSlot == terrainSlot && SelectedEntryId == blockIdCopy;
-      slot->SetSelected(selected);
-      const std::string displayLabel = label;
-      slot->SetOnClick([this, terrainSlot, blockIdCopy, displayLabel]() {
-        SelectEntry(ContentKind::Block, blockIdCopy, displayLabel, terrainSlot);
+      slot->SetSelected(SelectedTerrainSlot == terrainSlot);
+      slot->SetOnClick([this, terrainSlot, blockIdCopy, tooltip]() {
+        SelectEntry(ContentKind::Block, blockIdCopy, tooltip, terrainSlot);
       });
       UGuiSlot *ptr =
           static_cast<UGuiSlot *>(content.AddChild(std::move(slot)));
       ContentSlots.push_back(ptr);
-      ContentSlotLabels.push_back(label);
+      ContentSlotLabels.push_back(tooltip);
       ContentSlotHints.push_back("");
-      ContentSlotKinds.push_back(kind);
+      ContentSlotKinds.push_back(ContentKind::Block);
       ContentSlotIds.push_back(blockIdCopy);
       ContentSlotTerrainSlots.push_back(terrainSlot);
     }
@@ -877,32 +975,20 @@ void UWorldGenPaletteScreen::RebuildMainContent()
     {
       const auto it = sets.Ores.find(slotName);
       const bool enabled = it == sets.Ores.end() ? true : it->second.Enabled;
-      const std::string label =
-          std::string(slotName) + (enabled ? " ON" : " OFF");
+      const std::string oreSlot = slotName;
+      const std::string tooltip = OreSlotTooltip(oreSlot, enabled);
       auto slot = std::make_unique<UGuiSlot>(Theme);
       slot->SetBounds({0, 0, slotSize, slotSize});
-      slot->SetLabel(label);
+      slot->SetIconTexture(IconForEntry(ContentKind::Block, oreSlot));
       slot->SetDimmed(!enabled);
-      const std::string oreSlot = slotName;
-      slot->SetOnClick(
-          [this, oreSlot, label]()
-          {
-            SelectedEntryId.clear();
-            SelectedTerrainSlot.clear();
-            SyncPreviewDock();
-            if (!World)
-            {
-              return;
-            }
-            WorldGenOreSlot &ore = World->GetWorldGenSets().Ores[oreSlot];
-            ore.Enabled = !ore.Enabled;
-            SaveSets();
-            ContentDirty = true;
-          });
+      slot->SetSelected(SelectedOreSlot == oreSlot);
+      slot->SetOnClick([this, oreSlot, tooltip]() {
+        SelectEntry(ContentKind::Block, oreSlot, tooltip, "", oreSlot);
+      });
       UGuiSlot *ptr =
           static_cast<UGuiSlot *>(content.AddChild(std::move(slot)));
       ContentSlots.push_back(ptr);
-      ContentSlotLabels.push_back(label);
+      ContentSlotLabels.push_back(tooltip);
       ContentSlotHints.push_back("");
       ContentSlotKinds.push_back(ContentKind::Block);
       ContentSlotIds.push_back(oreSlot);

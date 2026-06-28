@@ -28,7 +28,8 @@ public:
   void SetSelection(ContentKind kind, const std::string &id,
                     const std::string &displayName);
   void ClearSelection();
-  void SetOnChange(std::function<void()> handler);
+  void SetOnChange(std::function<void()> handler,
+                   const std::string &buttonLabel = "Change...");
   void Relayout(const GuiRect &bounds);
   void Update(double dt);
   void RenderIfDirty();

@@ -75,7 +75,12 @@ private:
   void AddPickerSlot(const CatalogEntry &entry, ContentKind kind);
   void SelectEntry(ContentKind kind, const std::string &id,
                    const std::string &displayName,
-                   const std::string &terrainSlot = "");
+                   const std::string &terrainSlot = "",
+                   const std::string &oreSlot = "");
+  std::string StoredTerrainBlock(const std::string &slotName) const;
+  std::string EffectiveTerrainBlock(const std::string &slotName) const;
+  std::string TerrainSlotTooltip(const std::string &slotName) const;
+  std::string OreSlotTooltip(const std::string &oreSlot, bool enabled) const;
   void SyncPreviewDock();
   void ApplySlotSelection();
   std::string LabelAt(size_t index, bool picker) const;
@@ -120,6 +125,7 @@ private:
   std::string SelectedEntryId;
   ContentKind SelectedKind{ContentKind::Object};
   std::string SelectedTerrainSlot;
+  std::string SelectedOreSlot;
   bool Visible{false};
   bool Built{false};
   bool ContentDirty{true};
