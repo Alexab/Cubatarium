@@ -2,7 +2,7 @@
 """Remove or soften tree_log voxels in tree crown areas of mapgen prefabs.
 
 Central trunk keeps tree_log only below the lowest leaf layer.
-Offset tree_log at/above crown height becomes tree_leaves (branches read as foliage).
+Offset tree_log at/above crown height becomes tree_branch (cross sprite).
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFABS = ROOT / "prefabs"
+BRANCH_BLOCK = "tree_branch"
 
 
 def load_blocks(path: Path) -> tuple[dict, list[dict]]:
@@ -57,10 +58,11 @@ def fix_blocks(blocks: list[dict]) -> tuple[list[dict], dict]:
         if dy >= crown_start:
             converted_branch += 1
             key = (dx, dy, dz)
-            if key_to_type.get(key) == "tree_leaves":
+            existing = key_to_type.get(key)
+            if existing in (BRANCH_BLOCK, "tree_leaves"):
                 continue
             new_blocks.append(
-                {"dx": dx, "dy": dy, "dz": dz, "type": "tree_leaves"}
+                {"dx": dx, "dy": dy, "dz": dz, "type": BRANCH_BLOCK}
             )
             continue
 
@@ -76,6 +78,26 @@ def fix_blocks(blocks: list[dict]) -> tuple[list[dict], dict]:
     return new_blocks, stats
 
 
+def add_pine_crown_branches(
+    blocks: list[dict], crown_start: int | None
+) -> tuple[list[dict], int]:
+    """Add cardinal tree_branch sprites at crown base for conifers."""
+    if crown_start is None or crown_start < 1:
+        return blocks, 0
+    occupied = {(b["dx"], b["dy"], b["dz"]) for b in blocks}
+    branch_dy = crown_start - 1
+    added = 0
+    out = list(blocks)
+    for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        key = (dx, branch_dy, dz)
+        if key in occupied:
+            continue
+        out.append({"dx": dx, "dy": branch_dy, "dz": dz, "type": BRANCH_BLOCK})
+        occupied.add(key)
+        added += 1
+    return out, added
+
+
 def audit(path: Path) -> dict:
     _, blocks = load_blocks(path)
     crown_start = min_leaf_dy(blocks)
@@ -83,6 +105,13 @@ def audit(path: Path) -> dict:
         b
         for b in blocks
         if b.get("type") == "tree_log"
+        and crown_start is not None
+        and b["dy"] >= crown_start
+    ]
+    branch_blocks = [
+        b
+        for b in blocks
+        if b.get("type") == BRANCH_BLOCK
         and crown_start is not None
         and b["dy"] >= crown_start
     ]
@@ -94,6 +123,7 @@ def audit(path: Path) -> dict:
         "crown_log_total": len(crown_logs),
         "center_crown_logs": len(center_crown),
         "branch_crown_logs": len(branch_crown),
+        "branch_sprites": len(branch_blocks),
     }
 
 
@@ -127,7 +157,8 @@ def main() -> int:
         print(
             f"{row['file']:36} crown@dy={row['crown_start']} "
             f"logs={row['crown_log_total']:3} "
-            f"(center={row['center_crown_logs']}, branch={row['branch_crown_logs']})"
+            f"(center={row['center_crown_logs']}, branch={row['branch_crown_logs']}) "
+            f"branch_sprites={row['branch_sprites']}"
         )
 
     if args.audit_only:
@@ -144,10 +175,17 @@ def main() -> int:
         if stats.get("skipped"):
             print(f"  {path.name}: skipped ({stats['reason']})")
             continue
+        if "pine" in path.name:
+            fixed, pine_branches = add_pine_crown_branches(
+                fixed, stats.get("crown_start")
+            )
+            stats["pine_branches"] = pine_branches
+            stats["blocks_after"] = len(fixed)
         print(
             f"  {path.name}: crown@dy={stats['crown_start']} "
             f"removed_center={stats['removed_center']} "
             f"converted_branch={stats['converted_branch']} "
+            f"pine_branches={stats.get('pine_branches', 0)} "
             f"blocks {stats['blocks_before']} -> {stats['blocks_after']}"
         )
         if args.write:

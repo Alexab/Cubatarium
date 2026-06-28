@@ -61,9 +61,8 @@ void AppendCrossBlocksInBand(
     const UChunk &chunk, glm::ivec3 chunk_coord, const UBlockRegistry &registry,
     int max_local_y, std::unordered_map<BlockId, GreedyMeshBatch> &by_block_id)
 {
-  const int y_min = std::max(0, max_local_y - kCrossScanBelow);
-  const int y_max = std::min(CHUNK_SIZE - 1, max_local_y + kCrossScanAbove);
-  for (int ly = y_min; ly <= y_max; ++ly)
+  (void)max_local_y;
+  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
   {
     for (int lz = 0; lz < CHUNK_SIZE; ++lz)
     {

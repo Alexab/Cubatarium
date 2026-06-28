@@ -307,6 +307,25 @@ tier_a:
     - tree_side
     reference_pack: minetest_default_16
     display_name: Tree Bark
+  tree_branch:
+    types:
+    - natural
+    - plants
+    textures:
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    - tree_side
+    physics:
+      movement:
+        occupancy: 0
+    render:
+      transparent: true
+      style: cross
+    reference_pack: kenney_voxel_16
+    display_name: Tree Branch
   tree_leaves:
     types:
     - natural

@@ -72,12 +72,10 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         }
         const int max_local_y =
             MaxSolidLocalYSnapshot(snapshot, *registryPtr);
-        const int y_min = std::max(0, max_local_y - kCrossScanBelow);
-        const int y_max =
-            std::min(CHUNK_SIZE - 1, max_local_y + kCrossScanAbove);
+        (void)max_local_y;
         for (int lx = 0; lx < CHUNK_SIZE; ++lx)
         {
-          for (int ly = y_min; ly <= y_max; ++ly)
+          for (int ly = 0; ly < CHUNK_SIZE; ++ly)
           {
             for (int lz = 0; lz < CHUNK_SIZE; ++lz)
             {

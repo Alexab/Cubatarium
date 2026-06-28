@@ -151,7 +151,7 @@
       "dx": -2,
       "dy": 7,
       "dz": 2,
-      "type": "tree_leaves"
+      "type": "tree_branch"
     },
     {
       "dx": -2,
@@ -415,7 +415,7 @@
       "dx": 2,
       "dy": 7,
       "dz": -2,
-      "type": "tree_leaves"
+      "type": "tree_branch"
     },
     {
       "dx": 2,

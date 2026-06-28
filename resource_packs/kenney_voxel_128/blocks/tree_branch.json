@@ -1,0 +1,25 @@
+{
+  "name": "tree_branch",
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Tree Branch"
+}

@@ -90,6 +90,11 @@
         "tree_bark"
       ]
     },
+    "tree_branch": {
+      "block_names": [
+        "tree_branch"
+      ]
+    },
     "tree_leaves": {
       "block_names": [
         "tree_leaves"

@@ -566,6 +566,30 @@
       "dy": 13,
       "dz": 2,
       "type": "tree_leaves"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": 0,
+      "type": "tree_branch"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": 0,
+      "type": "tree_branch"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 1,
+      "type": "tree_branch"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": -1,
+      "type": "tree_branch"
     }
   ],
   "source": {
