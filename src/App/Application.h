@@ -45,6 +45,7 @@ class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UContentPreviewRenderer;
+class UCreaturePreviewRenderer;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -217,6 +218,7 @@ private:
   ULatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
+  std::shared_ptr<UCreaturePreviewRenderer> CreaturePreviewRenderer;
   std::unique_ptr<UContentPreviewRenderer> ContentPreviewRenderer;
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;

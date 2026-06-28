@@ -1,6 +1,8 @@
 #include "Gui/Preview/ContentPreviewRenderer.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Preview/ObjectPreviewLayout.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -28,9 +30,11 @@ UContentPreviewRenderer::UContentPreviewRenderer(
     std::shared_ptr<UObjectLibrary> objects,
     std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UBlockDefinitionStorage> blockDefs,
-    std::shared_ptr<UShaderManager> shader_manager)
+    std::shared_ptr<UShaderManager> shader_manager,
+    std::shared_ptr<UCreaturePreviewRenderer> creatures)
     : Objects(std::move(objects)), Textures(std::move(textures)),
-      BlockDefs(std::move(blockDefs)), ShaderManager(std::move(shader_manager))
+      BlockDefs(std::move(blockDefs)), ShaderManager(std::move(shader_manager)),
+      Creatures(std::move(creatures))
 {
 }
 
@@ -89,7 +93,8 @@ void UContentPreviewRenderer::Shutdown()
 
 bool UContentPreviewRenderer::SupportsKind(ContentKind kind) const
 {
-  return kind == ContentKind::Block || kind == ContentKind::Object;
+  return kind == ContentKind::Block || kind == ContentKind::Object ||
+         kind == ContentKind::UCreature || kind == ContentKind::Skin;
 }
 
 bool UContentPreviewRenderer::EnsureFboSize(int size)
@@ -231,7 +236,29 @@ GLuint UContentPreviewRenderer::Render(ContentKind kind, const std::string &id,
   {
     return RenderBlock(id, size, yawDeg, pitchDeg);
   }
-  return RenderObject(id, size, yawDeg, pitchDeg);
+  if (kind == ContentKind::Object)
+  {
+    return RenderObject(id, size, yawDeg, pitchDeg);
+  }
+  if (!Creatures)
+  {
+    return 0;
+  }
+  if (kind == ContentKind::UCreature)
+  {
+    return Creatures->Render(id, "", size, yawDeg, pitchDeg);
+  }
+  if (kind == ContentKind::Skin)
+  {
+    UCreatureDefinitionStorage *species = Creatures->GetSpecies();
+    if (!species)
+    {
+      return 0;
+    }
+    return Creatures->Render(species->GetControlledDefaultSpeciesId(), id, size,
+                             yawDeg, pitchDeg);
+  }
+  return 0;
 }
 
 GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,

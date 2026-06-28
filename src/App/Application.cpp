@@ -21,6 +21,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
@@ -153,6 +154,10 @@ UApplication::UApplication(
                                          {
                                            IconSource->ClearCreatureIconCache();
                                          }
+                                         if (CreaturePreviewRenderer)
+                                         {
+                                           CreaturePreviewRenderer->Invalidate();
+                                         }
                                          if (PaletteScreen)
                                          {
                                            PaletteScreen->InvalidateGrid();
@@ -226,17 +231,29 @@ void UApplication::Startup(const std::string &configPath)
   if (Core && BlockDefinitions && ShaderManager)
   {
     auto textures = Core->GetTextureCubeStorage();
+    std::shared_ptr<UCreaturePreviewRenderer> creaturePreview;
+    if (World)
+    {
+      creaturePreview = std::make_shared<UCreaturePreviewRenderer>(
+          World->GetCreatureDefinitionStorage(),
+          World->GetSkinDefinitionStorage(), Core->GetCreatureTextureStorage(),
+          ShaderManager);
+      if (!creaturePreview->Initialize())
+      {
+        creaturePreview.reset();
+      }
+    }
+    CreaturePreviewRenderer = creaturePreview;
+
     auto objectCache = std::make_unique<UObjectIconCache>(
         Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager);
     if (objectCache->Initialize())
     {
       std::unique_ptr<UCreatureIconCache> creatureCache;
-      if (World)
+      if (creaturePreview)
       {
-        creatureCache = std::make_unique<UCreatureIconCache>(
-            World->GetCreatureDefinitionStorage(),
-            World->GetSkinDefinitionStorage(),
-            Core->GetCreatureTextureStorage(), ShaderManager);
+        creatureCache =
+            std::make_unique<UCreatureIconCache>(creaturePreview);
         if (!creatureCache->Initialize())
         {
           creatureCache.reset();
@@ -246,7 +263,8 @@ void UApplication::Startup(const std::string &configPath)
           textures, std::move(objectCache), std::move(creatureCache));
     }
     auto previewRenderer = std::make_unique<UContentPreviewRenderer>(
-        Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager);
+        Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager,
+        creaturePreview);
     if (previewRenderer->Initialize())
     {
       ContentPreviewRenderer = std::move(previewRenderer);
