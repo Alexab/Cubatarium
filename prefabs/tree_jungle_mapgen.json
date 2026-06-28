@@ -133,7 +133,7 @@
       "dx": -1,
       "dy": 9,
       "dz": 1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": -1,
@@ -151,7 +151,7 @@
       "dx": -1,
       "dy": 10,
       "dz": -1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": -1,
@@ -169,7 +169,7 @@
       "dx": -1,
       "dy": 14,
       "dz": -1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": -1,
@@ -181,7 +181,7 @@
       "dx": -1,
       "dy": 14,
       "dz": 1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": -1,
@@ -324,12 +324,6 @@
     {
       "dx": 0,
       "dy": 8,
-      "dz": 0,
-      "type": "tree_log"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
       "dz": 1,
       "type": "tree_leaves"
     },
@@ -338,12 +332,6 @@
       "dy": 8,
       "dz": 2,
       "type": "tree_leaves"
-    },
-    {
-      "dx": 0,
-      "dy": 9,
-      "dz": 0,
-      "type": "tree_log"
     },
     {
       "dx": 0,
@@ -371,12 +359,6 @@
     },
     {
       "dx": 0,
-      "dy": 10,
-      "dz": 0,
-      "type": "tree_log"
-    },
-    {
-      "dx": 0,
       "dy": 11,
       "dz": -2,
       "type": "tree_leaves"
@@ -389,18 +371,6 @@
     },
     {
       "dx": 0,
-      "dy": 11,
-      "dz": 0,
-      "type": "tree_log"
-    },
-    {
-      "dx": 0,
-      "dy": 12,
-      "dz": 0,
-      "type": "tree_log"
-    },
-    {
-      "dx": 0,
       "dy": 12,
       "dz": 1,
       "type": "tree_leaves"
@@ -410,12 +380,6 @@
       "dy": 12,
       "dz": 2,
       "type": "tree_leaves"
-    },
-    {
-      "dx": 0,
-      "dy": 13,
-      "dz": 0,
-      "type": "tree_log"
     },
     {
       "dx": 0,
@@ -523,7 +487,7 @@
       "dx": 1,
       "dy": 8,
       "dz": 1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": 1,
@@ -541,7 +505,7 @@
       "dx": 1,
       "dy": 11,
       "dz": -1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": 1,
@@ -559,7 +523,7 @@
       "dx": 1,
       "dy": 12,
       "dz": 1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": 1,
@@ -577,7 +541,7 @@
       "dx": 1,
       "dy": 14,
       "dz": -1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": 1,
@@ -589,7 +553,7 @@
       "dx": 1,
       "dy": 14,
       "dz": 1,
-      "type": "tree_log"
+      "type": "tree_leaves"
     },
     {
       "dx": 1,
