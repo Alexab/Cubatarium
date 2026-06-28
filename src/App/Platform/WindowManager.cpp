@@ -522,11 +522,11 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     }
     else if (key == KeyCode::Key_F7)
     {
-      if (auto anchor = World->FindPrefabAnchorFromView(
+      if (auto anchor = World->FindObjectAnchorFromView(
               World->GetCurrentUserCamera()->GetPosition(),
               World->GetCurrentUserCamera()->GetFront()))
       {
-        World->PlacePrefab("tree_small", anchor.value());
+        World->PlaceObject("tree_small", anchor.value());
       }
     }
     else if (key == KeyCode::Key_F8)

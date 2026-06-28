@@ -6,16 +6,16 @@ namespace cutum
 
 UGuiIconSource::UGuiIconSource(
     std::shared_ptr<UTextureCubeStorage> textures,
-    std::unique_ptr<UPrefabIconCache> prefabCache,
+    std::unique_ptr<UObjectIconCache> objectCache,
     std::unique_ptr<UCreatureIconCache> creatureCache)
-    : Textures(std::move(textures)), PrefabCache(std::move(prefabCache)),
+    : Textures(std::move(textures)), ObjectCache(std::move(objectCache)),
       CreatureCache(std::move(creatureCache))
 {
 }
 
 GLuint UGuiIconSource::GetBlockIconTexture(const std::string &blockName)
 {
-  if (!PrefabCache)
+  if (!ObjectCache)
   {
     if (!Textures || blockName.empty())
     {
@@ -31,26 +31,26 @@ GLuint UGuiIconSource::GetBlockIconTexture(const std::string &blockName)
     }
     return 0;
   }
-  return PrefabCache->GetBlockIconTexture(blockName);
+  return ObjectCache->GetBlockIconTexture(blockName);
 }
 
-GLuint UGuiIconSource::GetPrefabIconTexture(const std::string &prefabName)
+GLuint UGuiIconSource::GetObjectIconTexture(const std::string &objectName)
 {
-  if (!PrefabCache || prefabName.empty())
+  if (!ObjectCache || objectName.empty())
   {
     return 0;
   }
-  return PrefabCache->GetIcon(prefabName);
+  return ObjectCache->GetIcon(objectName);
 }
 
-GLuint UGuiIconSource::GetPrefabIconTextureIfCached(
-    const std::string &prefabName) const
+GLuint UGuiIconSource::GetObjectIconTextureIfCached(
+    const std::string &objectName) const
 {
-  if (!PrefabCache || prefabName.empty())
+  if (!ObjectCache || objectName.empty())
   {
     return 0;
   }
-  return PrefabCache->GetIconIfCached(prefabName);
+  return ObjectCache->GetIconIfCached(objectName);
 }
 
 GLuint UGuiIconSource::GetCreatureIconTexture(const std::string &speciesId)
@@ -79,19 +79,19 @@ void UGuiIconSource::WarmupCreatureIcons(size_t maxPerFrame)
   }
 }
 
-void UGuiIconSource::WarmupPrefabIcons(size_t maxPerFrame)
+void UGuiIconSource::WarmupObjectIcons(size_t maxPerFrame)
 {
-  if (PrefabCache)
+  if (ObjectCache)
   {
-    PrefabCache->WarmupNext(maxPerFrame);
+    ObjectCache->WarmupNext(maxPerFrame);
   }
 }
 
 void UGuiIconSource::ClearBlockIconCache()
 {
-  if (PrefabCache)
+  if (ObjectCache)
   {
-    PrefabCache->ClearBlockIconCache();
+    ObjectCache->ClearBlockIconCache();
   }
 }
 

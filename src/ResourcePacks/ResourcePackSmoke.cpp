@@ -8,7 +8,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 
@@ -131,20 +131,20 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   UBlockRegistry blockRegistry(nullptr, nullptr);
   blockRegistry.SetMergeRegistry(registry);
 
-  UPrefabLibrary prefabs;
-  prefabs.LoadMerged(assetRoot / "prefabs", packs, blockRegistry);
+  UObjectLibrary objects;
+  objects.LoadMerged(assetRoot / "objects", packs, blockRegistry);
 
   // Simulate worldgen slot resolution creating synthetic blocks (e.g. ore_coal).
   (void)blockRegistry.GetIdByTypeName("ore_coal");
   (void)blockRegistry.GetIdByTypeName("ore_iron");
 
-  UBlockDefinitionStorage defsAfterPrefabs;
-  registry->PopulateBlockDefinitionStorage(defsAfterPrefabs);
+  UBlockDefinitionStorage defsAfterObjects;
+  registry->PopulateBlockDefinitionStorage(defsAfterObjects);
   for (const char *fluid : {"water", "lava", "fire"})
   {
     const BlockId id = registry->ResolveBlockName(fluid);
-    const BlockDefinition *def = defsAfterPrefabs.GetById(id);
-    const BlockDefinition *defByName = defsAfterPrefabs.GetByName(fluid);
+    const BlockDefinition *def = defsAfterObjects.GetById(id);
+    const BlockDefinition *defByName = defsAfterObjects.GetByName(fluid);
     if (!def || !defByName || def != defByName ||
         def->Physics.Movement.Occupancy >= 1.0f)
     {
@@ -154,16 +154,16 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
     }
   }
 
-  const size_t prefabCount = prefabs.ListNames().size();
-  constexpr size_t kMinPrefabs = 45;
-  if (prefabCount < kMinPrefabs)
+  const size_t objectCount = objects.ListNames().size();
+  constexpr size_t kMinObjects = 45;
+  if (objectCount < kMinObjects)
   {
-    std::cerr << "ResourcePackSmoke: startup init loaded only " << prefabCount
-              << " prefab(s), expected >= " << kMinPrefabs << std::endl;
+    std::cerr << "ResourcePackSmoke: startup init loaded only " << objectCount
+              << " object(s), expected >= " << kMinObjects << std::endl;
     return false;
   }
-  std::cout << "ResourcePackSmoke: startup init OK (" << prefabCount
-            << " prefabs after pack merge)" << std::endl;
+  std::cout << "ResourcePackSmoke: startup init OK (" << objectCount
+            << " objects after pack merge)" << std::endl;
   return true;
 }
 

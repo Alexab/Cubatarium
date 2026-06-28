@@ -15,6 +15,7 @@
 #include "Gui/Interfaces/IGuiMenuHost.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
@@ -43,6 +44,7 @@ class UGuiContext;
 class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
+class UContentPreviewRenderer;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -185,6 +187,7 @@ private:
   GLFWwindow *Window{nullptr};
   bool ConsoleOpen{false};
   bool PaletteOpen{false};
+  bool WorldGenOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).
@@ -194,7 +197,8 @@ private:
     None,
     Palette,
     Console,
-    Hud
+    Hud,
+    WorldGen
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
@@ -213,9 +217,11 @@ private:
   ULatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
+  std::unique_ptr<UContentPreviewRenderer> ContentPreviewRenderer;
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
+  std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
   std::unique_ptr<IGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;
 

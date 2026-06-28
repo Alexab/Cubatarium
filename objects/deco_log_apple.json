@@ -1,0 +1,41 @@
+{
+  "name": "deco_log_apple",
+  "version": 2,
+  "displayName": "Fallen Apple Log",
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_bark"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "tree_bark"
+    }
+  ],
+  "source": {
+    "mod": "minetest-game/default",
+    "license": "CC-BY-SA-3.0",
+    "authors": [
+      "Shara RedCat"
+    ]
+  },
+  "tags": [
+    "decorative",
+    "paths"
+  ]
+}

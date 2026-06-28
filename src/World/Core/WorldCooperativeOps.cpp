@@ -114,9 +114,6 @@ void UWorldCooperativeSession::ScanChunkFiles(UWorld &world)
     }
     std::sort(ChunkFiles.begin(), ChunkFiles.end());
   }
-  UseMonolithicChunks =
-      !SpatialStreamingLoad && ChunkFiles.empty() &&
-      std::filesystem::exists(ChunksFileName);
   (void)world;
 }
 
@@ -255,8 +252,6 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
       world.ModifiedChunks.clear();
       world.MovementDiagHistory.clear();
       ChunksFileName = FolderPath + "/chunks.json";
-      BlocksFileName = FolderPath + "/blocks.json";
-      ObjectsFileName = FolderPath + "/objects.json";
       world.HasPersistedSave = UWorld::HasPersistedTerrainOnDisk(FolderPath);
       world.AllowProceduralFill = !world.HasPersistedSave;
       CurrentPhase = Phase::Metadata;
@@ -331,18 +326,6 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   }
   case Phase::LoadChunks:
   {
-    if (UseMonolithicChunks)
-    {
-      world.LoadChunks(ChunksFileName);
-      world.MigrateMonolithicChunksJson(ChunksFileName, FolderPath);
-      ChunkFilesRead = 1;
-      VoxelsFromChunkFiles = world.BlockWorld.CountNonAir();
-      CurrentPhase = Phase::LegacyData;
-      Report(sink, "chunks", kPhaseWeightMetadata + kPhaseWeightEntities +
-                                 kPhaseWeightChunks,
-             "Loading chunks...");
-      break;
-    }
     int loaded = 0;
     while (ChunkFileIndex < ChunkFiles.size() && loaded < budget)
     {
@@ -363,38 +346,23 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     }
     if (ChunkFileIndex >= ChunkFiles.size())
     {
-      CurrentPhase = Phase::LegacyData;
-    }
-    break;
-  }
-  case Phase::LegacyData:
-  {
-    if (!world.HasPersistedSave && world.BlockWorld.CountNonAir() == 0 &&
-        std::filesystem::exists(BlocksFileName))
-    {
-      world.LoadBlocks(BlocksFileName);
-    }
-    if (!world.HasPersistedSave && world.BlockWorld.CountNonAir() == 0 &&
-        std::filesystem::exists(ObjectsFileName))
-    {
-      world.MigrateObjectsFromJson(ObjectsFileName);
-    }
-    const size_t blocksInWorld = world.BlockWorld.CountNonAir();
-    world.LoadedFromChunkSave = world.HasPersistedSave || ChunkFilesRead > 0 ||
-                                VoxelsFromChunkFiles > 0 || blocksInWorld > 0;
-    world.AllowProceduralFill = world.StreamingEnabled;
-    if (SpatialStreamingLoad && world.LoadedFromChunkSave)
-    {
-      SpatialDx = -SpatialRadius;
-      SpatialDz = -SpatialRadius;
-      CurrentPhase = Phase::SpatialChunks;
-      Report(sink, "spatial", kPhaseWeightMetadata + kPhaseWeightEntities +
-                                  kPhaseWeightChunks,
-             "Loading nearby terrain...");
-    }
-    else
-    {
-      CurrentPhase = Phase::PostLoadAnalysis;
+      const size_t blocksInWorld = world.BlockWorld.CountNonAir();
+      world.LoadedFromChunkSave = world.HasPersistedSave || ChunkFilesRead > 0 ||
+                                  VoxelsFromChunkFiles > 0 || blocksInWorld > 0;
+      world.AllowProceduralFill = world.StreamingEnabled;
+      if (SpatialStreamingLoad && world.LoadedFromChunkSave)
+      {
+        SpatialDx = -SpatialRadius;
+        SpatialDz = -SpatialRadius;
+        CurrentPhase = Phase::SpatialChunks;
+        Report(sink, "spatial", kPhaseWeightMetadata + kPhaseWeightEntities +
+                                    kPhaseWeightChunks,
+               "Loading nearby terrain...");
+      }
+      else
+      {
+        CurrentPhase = Phase::PostLoadAnalysis;
+      }
     }
     break;
   }
@@ -656,6 +624,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   case Phase::PostCreate:
   {
     world.WorldName = TargetWorldName;
+    world.WorldGenSetsData = BuildDefaultWorldGenSets();
+    world.RebuildResolvedObjectFeatures();
     world.AllowProceduralFill = world.StreamingEnabled;
     world.InitStreamerCallbacks();
     BeginMeshWarmup(world);

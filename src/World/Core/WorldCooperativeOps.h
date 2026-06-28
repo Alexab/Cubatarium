@@ -39,7 +39,6 @@ private:
     Entities,
     ScanChunks,
     LoadChunks,
-    LegacyData,
     SpatialChunks,
     MeshWarmup,
     PostLoadAnalysis,
@@ -71,10 +70,7 @@ private:
   size_t SaveChunkIndex{0};
 
   bool SpatialStreamingLoad{false};
-  bool UseMonolithicChunks{false};
   std::string ChunksFileName;
-  std::string BlocksFileName;
-  std::string ObjectsFileName;
 
   int SpatialRadius{0};
   glm::ivec3 SpatialCenter{0};

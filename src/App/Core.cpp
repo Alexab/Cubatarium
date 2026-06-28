@@ -43,10 +43,9 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/CreaturePackMerge.h"
 #include "ResourcePacks/PlaceholderTextureCache.h"
-#include "Storage/ObjectStorage.h"
 #include "Version.h"
 #include "World/IO/ChunkStorageTypes.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 
 using json = nlohmann::json;
@@ -105,15 +104,13 @@ std::filesystem::path GetExecutableDirectory()
 
 UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UTextureCubeStorage> texture_cube_storage_,
-             std::shared_ptr<UObjectStorage> object_storage_,
-             std::shared_ptr<UPrefabLibrary> prefab_library_,
+             std::shared_ptr<UObjectLibrary> object_library_,
              std::shared_ptr<UWorld> World,
              std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
-      ObjectStorageInstance(object_storage_),
-      PrefabLibraryInstance(prefab_library_), WorldInstance(World),
+      ObjectLibraryInstance(object_library_), WorldInstance(World),
       GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
 }
@@ -332,8 +329,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
     TextureCubeStorageFileName = WorkDir / "models" / "blocks";
-    ObjectStorageFileName = WorkDir / "models" / "objects";
-    PrefabsPath = WorkDir / "prefabs";
+    ObjectsPath = WorkDir / "objects";
 
     BlockDefinitionsInstance = std::make_shared<UBlockDefinitionStorage>();
     BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
@@ -365,8 +361,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
         (WorkDir / "models" / "creatures").string(),
         (WorkDir / "models" / "skins").string());
 
-    ObjectStorageInstance->Load(ObjectStorageFileName.string());
-
     const ResourcePackSelection defaultPacks =
         GetDefaultResourcePackSelection();
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
@@ -378,11 +372,11 @@ void UCore::LoadConfig(const std::string &config_file_name)
       BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
                                           ResourcePacks.PlaceholderTileSize);
       WorldInstance->RefreshBlockRegistry();
-      if (PrefabLibraryInstance)
+      if (ObjectLibraryInstance)
       {
-        PrefabLibraryInstance->Load(PrefabsPath.string(),
+        ObjectLibraryInstance->Load(ObjectsPath.string(),
                                     WorldInstance->GetBlockRegistry());
-        WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+        WorldInstance->SetObjectLibrary(ObjectLibraryInstance.get());
       }
     }
     else if (auto user = WorldInstance->GetCurrentUser())
@@ -1153,11 +1147,11 @@ bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
   ActivePackSelection = selection;
   ActiveResourcePacksEnabled = selection.AllIds();
 
-  if (PrefabLibraryInstance && WorldInstance)
+  if (ObjectLibraryInstance && WorldInstance)
   {
-    PrefabLibraryInstance->LoadMerged(PrefabsPath, packs,
+    ObjectLibraryInstance->LoadMerged(ObjectsPath, packs,
                                       WorldInstance->GetBlockRegistry());
-    WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
+    WorldInstance->SetObjectLibrary(ObjectLibraryInstance.get());
   }
 
   RebuildBlockTexturesFromMergeRegistry();

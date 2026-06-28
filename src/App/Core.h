@@ -28,8 +28,7 @@ class UWorld;
 class UTextureBaseStorage;
 class UTextureCubeStorage;
 class UCreatureTextureStorage;
-class UObjectStorage;
-class UPrefabLibrary;
+class UObjectLibrary;
 class UGeometryEngine;
 class UViewEngine;
 class UBlockDefinitionStorage;
@@ -41,8 +40,7 @@ class UCore
 public:
   UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
         std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
-        std::shared_ptr<UObjectStorage> object_storage,
-        std::shared_ptr<UPrefabLibrary> prefab_library,
+        std::shared_ptr<UObjectLibrary> object_library,
         std::shared_ptr<UWorld> world,
         std::shared_ptr<UGeometryEngine> geometries,
         std::shared_ptr<UViewEngine> views);
@@ -87,9 +85,9 @@ public:
   }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
-  std::shared_ptr<UPrefabLibrary> GetPrefabLibrary() const
+  std::shared_ptr<UObjectLibrary> GetObjectLibrary() const
   {
-    return PrefabLibraryInstance;
+    return ObjectLibraryInstance;
   }
   std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
   {
@@ -159,8 +157,7 @@ private:
 
   std::filesystem::path TextureBaseStorageFileName;
   std::filesystem::path TextureCubeStorageFileName;
-  std::filesystem::path ObjectStorageFileName;
-  std::filesystem::path PrefabsPath;
+  std::filesystem::path ObjectsPath;
   std::filesystem::path WorldPath;
   std::filesystem::path ActiveWorldFolder;
   std::filesystem::path ConfigFilePath;
@@ -191,8 +188,7 @@ private:
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
-  std::shared_ptr<UPrefabLibrary> PrefabLibraryInstance;
+  std::shared_ptr<UObjectLibrary> ObjectLibraryInstance;
   std::shared_ptr<UGeometryEngine> GeometryEngineInstance;
   std::shared_ptr<UViewEngine> ViewEngineInstance;
   std::shared_ptr<UWorld> WorldInstance;

@@ -5,7 +5,7 @@
 #include "WorldGen/Features/BuiltinWorldGenFeatures.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <unordered_map>

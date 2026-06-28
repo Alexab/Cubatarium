@@ -6,7 +6,7 @@
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPack.h"
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
 #include <array>

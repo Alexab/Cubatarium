@@ -14,6 +14,7 @@ void ReadLegacyUiSettings(const nlohmann::json &ui, UiSettings &out)
   out.ShowPerformance = ui.value("show_performance", true);
   out.ConsoleKey = ui.value("console_key", "grave");
   out.PaletteKey = ui.value("palette_key", "b");
+  out.WorldGenKey = ui.value("worldgen_key", "g");
   out.InventoryKey = ui.value("inventory_key", "e");
   out.HotbarCount = std::clamp(ui.value("hotbar_count", 1), 1, 2);
 
@@ -41,6 +42,7 @@ void WriteLegacyUiSettings(nlohmann::json &ui, const UiSettings &settings)
   ui["show_performance"] = settings.ShowPerformance;
   ui["console_key"] = settings.ConsoleKey;
   ui["palette_key"] = settings.PaletteKey;
+  ui["worldgen_key"] = settings.WorldGenKey;
   ui["inventory_key"] = settings.InventoryKey;
   ui["hotbar_count"] = settings.HotbarCount;
   const std::string scheme = ControlSchemeToString(settings.ControlScheme);

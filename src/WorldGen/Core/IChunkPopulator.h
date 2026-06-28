@@ -11,7 +11,7 @@ namespace cutum
 {
 
 class UBlockRegistry;
-class UPrefabLibrary;
+class UObjectLibrary;
 class IWorldGenPipeline;
 
 struct ChunkPopulateRequest
@@ -41,14 +41,14 @@ public:
 class UPipelineChunkPopulator : public IChunkPopulator
 {
 public:
-  UPipelineChunkPopulator(UBlockRegistry &registry, UPrefabLibrary *prefabs,
+  UPipelineChunkPopulator(UBlockRegistry &registry, UObjectLibrary *prefabs,
                           std::string worldgenOwnerPackId);
 
   ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override;
 
 private:
   UBlockRegistry &Registry;
-  UPrefabLibrary *Prefabs;
+  UObjectLibrary *Objects;
   std::string WorldgenOwnerPackId;
 };
 

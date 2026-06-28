@@ -7,7 +7,7 @@ bool IsGameDataRoot(const std::filesystem::path &candidate)
 {
   const bool hasResourcePacks =
       std::filesystem::exists(candidate / "resource_packs");
-  const bool hasPrefabs = std::filesystem::exists(candidate / "prefabs");
+  const bool hasPrefabs = std::filesystem::exists(candidate / "objects");
   const bool hasShaders =
       std::filesystem::exists(candidate / "shaders" / "vshader_greedy.glsl");
   if (hasResourcePacks && hasPrefabs && hasShaders)

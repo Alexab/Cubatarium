@@ -39,18 +39,16 @@ Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo
 | `chunks/` | Per-chunk binary `cx_cy_cz.cchunk` (primary); legacy `*.json` read for migration |
 | `chunks.json` | Marker `{ "format_version": 3, "storage": "per_file" }` |
 | `users.json` | Per user: `position[3]`, `yaw`, `pitch` |
-| `world_data.json` | `world_name`, `spawn_point` |
-| `objects.json` | Legacy; read-only migration source |
-| `blocks.json` | Legacy flat block list (import if chunks empty) |
+| `world_data.json` | `world_name`, `spawn_point`, `procedural`, `worldgen_sets` |
 
-## Load order (`World::Load`)
+## Load order (`WorldCooperativeOps`)
 
-1. `world_data.json`, `users.json`
-2. `chunks/` directory if present, else monolithic `chunks.json` (+ migrate to per-file)
-3. If `CountNonAir == 0`: `blocks.json`
-4. If still empty: `MigrateObjectsFromJson(objects.json)`
-5. If still empty: procedural terrain (`GenerateHeightmap` or `GenerateFlat`)
-6. `RebuildBlockMesh`; camera restored from user data (not spawn reset)
+1. `world_data.json` (requires `worldgen_sets`), `users.json`, `creatures.json`
+2. `chunks.json` storage marker → scan `chunks/` per-file (`.cchunk` / `.json`)
+3. If no persisted terrain and world is new: procedural fill
+4. `RebuildBlockMesh`; camera restored from user data (not spawn reset)
+
+Legacy `blocks.json`, monolithic `chunks.json` arrays, and save `objects.json` are **not** read.
 
 ## Blocks
 
@@ -85,7 +83,7 @@ Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; 
 | Hills | stone | gravel (fallback stone) |
 | Tundra | snow (fallback stone) | dirt |
 
-Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Runtime data under `content/` is **JSON only** (C++ uses `nlohmann::json`; YAML in `tools/` is for authoring scripts). Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome; optional `sub_biomes` per rule; scatter mode for single-block ground cover). See [PREFAB_WORLDGEN.md](PREFAB_WORLDGEN.md). Feature toggles: `procedural.trees` (vegetation), `procedural.decoration`, `procedural.structures`. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `decoration_density`, `structure_density`, `biome_*_weight`, `biome_blend_radius`, `ore_density`, `terrain_erosion`). Biome height, surface `palette`, `sub_biomes`, feature weights, and pipeline stages load from [`content/worldgen_packs/<pack_id>/`](content/worldgen_packs/default/) (`pack.json`, `pipeline.json`, `biomes/*.json`; `WorldGenPack`, `procedural.worldgen_pack_id`). Hot-reload: console `worldgen reload` (new chunks only). Cave tuning: `procedural.cave_params` (`threshold`, `min_y`, `scale`, `max_depth_below_surface`, `style`: `noise` or `worm`). Bedrock thickness: `procedural.bedrock_top_y`.
+Trees and structures: world objects in [`objects/`](../objects/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Runtime data under `content/` is **JSON only** (C++ uses `nlohmann::json`; YAML in `tools/` is for authoring scripts). Global defaults live in [`content/object_features.json`](../content/object_features.json); per-world overrides in `world_data.json` → `worldgen_sets` (edited in-game with **G**). See [OBJECT_WORLDGEN.md](OBJECT_WORLDGEN.md). Feature toggles: `procedural.trees` (vegetation), `procedural.decoration`, `procedural.structures`. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `decoration_density`, `structure_density`, `biome_*_weight`, `biome_blend_radius`, `ore_density`, `terrain_erosion`). Biome height, surface `palette`, `sub_biomes`, feature weights, and pipeline stages load from [`content/worldgen_packs/<pack_id>/`](content/worldgen_packs/default/) (`pack.json`, `pipeline.json`, `biomes/*.json`; `WorldGenPack`, `procedural.worldgen_pack_id`). Hot-reload: console `worldgen reload` (new chunks only). Cave tuning: `procedural.cave_params` (`threshold`, `min_y`, `scale`, `max_depth_below_surface`, `style`: `noise` or `worm`). Bedrock thickness: `procedural.bedrock_top_y`.
 
 ## World generation
 
@@ -164,18 +162,17 @@ Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 1
 | Path | Role |
 |------|------|
 | `resource_packs/` | Block packs (definitions + textures); copied to `bin/resource_packs/` on build |
-| `models/objects/` | Legacy brush prototypes (`SingleCube` only) |
 | `textures/` | Non-block textures (creatures, UI, etc.) |
-| `prefabs/` | Multi-block templates → `PrefabLibrary` |
-| `prefabs/user/` | Drop-in user prefabs (optional) |
+| `objects/` | Multi-block templates → `UObjectLibrary` |
+| `objects/user/` | Drop-in user objects (optional) |
 
-Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in world saves — placed blocks persist in chunk files only.
+Object assets load at startup via `Core::LoadSystem`. They are **not** stored in world saves — placed blocks persist in chunk files only.
 
-## PrefabLibrary vs ObjectStorage
+## UObjectLibrary
 
-- **ObjectStorage** — legacy single-block brush catalog (`TakeObject` deprecated).
-- **PrefabLibrary** — JSON templates with sparse `blocks[]`, optional `category`, `displayName`, `placement.y_offset`; loaded from `prefabs/`, `prefabs/imported/`, `prefabs/user/`, and optional `resource_packs/*/prefabs/`; placement via `World::PlacePrefab`.
-- **Hotbar** — `0–9` primary bar; second bar (prefabs) via HUD when `hotbar_count` is 2 (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
+- **UObjectLibrary** — JSON templates with sparse voxels, `tags[]`, optional `displayName`, `placement.y_offset`; loaded from `objects/`, `objects/imported/`, `objects/user/`, and optional `resource_packs/*/objects/`; placement via `World::PlaceObject`.
+- **Hotbar** — `0–9` primary bar; second bar (objects) via HUD when `hotbar_count` is 2 (`SetObjectHotbar` from `UObjectLibrary::ListNames()`).
+- **Worldgen UI** — **G** opens `WorldGenPaletteScreen` to edit per-world `worldgen_sets` (objects, terrain slots, ores).
 
 ## Streaming
 

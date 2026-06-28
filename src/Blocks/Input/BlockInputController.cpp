@@ -70,8 +70,8 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
   }
   switch (Active->kind)
   {
-  case InventoryEntryKind::UObject:
-    ctx.World->PlaceActivePrefabByView();
+  case InventoryEntryKind::Object:
+    ctx.World->PlaceActiveObjectByView();
     break;
   case InventoryEntryKind::UCreature:
     if (!ctx.World->SpawnCreatureByView(Active->Id) && ctx.Geometries)

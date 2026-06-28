@@ -28,6 +28,8 @@
 #include "WorldGen/Core/IChunkPopulator.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenSets.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <array>
 #include <functional>
 #include <glm/glm.hpp>
@@ -51,15 +53,15 @@ class USkinDefinitionStorage;
 struct CreatureDefinition;
 
 class UViewEngine;
-class UObjectStorage;
-class UPrefabLibrary;
+class UTextureCubeStorage;
+class UObjectLibrary;
 class UUser;
 class UCamera;
 
 class UWorld : public IWorldPerception
 {
 public:
-  UWorld(std::shared_ptr<UObjectStorage> object_storage,
+  UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
          std::shared_ptr<UViewEngine> views);
 
   void GenerateUsers();
@@ -207,7 +209,7 @@ public:
   size_t GetGreedyVertexCount() const;
 
   bool AddObjectByView();
-  bool PlaceActivePrefabByView();
+  bool PlaceActiveObjectByView();
   bool DelObjectByView();
   bool DelBlockAt(glm::ivec3 blockPos);
 
@@ -221,14 +223,24 @@ public:
 
   bool AddObject(const std::string type_id, const glm::vec3 &position);
 
-  bool PlacePrefab(const std::string &prefab_name, glm::ivec3 anchorWorldPos);
-  bool CanPlacePrefab(const std::string &prefab_name,
+  bool PlaceObject(const std::string &prefab_name, glm::ivec3 anchorWorldPos);
+  bool CanPlaceObject(const std::string &prefab_name,
                       glm::ivec3 anchorWorldPos) const;
   std::optional<glm::ivec3>
-  FindPrefabAnchorFromView(const glm::vec3 &position,
+  FindObjectAnchorFromView(const glm::vec3 &position,
                            const glm::vec3 &front) const;
 
-  void SetPrefabLibrary(UPrefabLibrary *library) { PrefabLibrary = library; }
+  void SetObjectLibrary(UObjectLibrary *library) { ObjectLibrary = library; }
+
+  WorldGenSets &GetWorldGenSets() { return WorldGenSetsData; }
+  const WorldGenSets &GetWorldGenSets() const { return WorldGenSetsData; }
+  void SetWorldGenSets(WorldGenSets sets);
+  void SaveWorldGenSetsToDisk();
+  const ObjectFeatureConfig &GetResolvedObjectFeatures() const
+  {
+    return ResolvedObjectFeatures;
+  }
+  void RebuildResolvedObjectFeatures();
 
   void SetCreatureDefinitionStorage(
       std::shared_ptr<UCreatureDefinitionStorage> storage);
@@ -467,7 +479,7 @@ private:
                               const PlayerCapsule &cap) const;
 
   bool AddObjectByView(const glm::vec3 &position, const glm::vec3 &front);
-  bool PlaceActivePrefabByView(const glm::vec3 &position,
+  bool PlaceActiveObjectByView(const glm::vec3 &position,
                                const glm::vec3 &front);
   bool DelObjectByView(const glm::vec3 &position, const glm::vec3 &front);
 
@@ -475,16 +487,10 @@ private:
   void SaveUsers(const std::string &file_name);
   void LinkUsersToPlayerCreatures();
 
-  void MigrateObjectsFromJson(const std::string &file_name);
-
-  void LoadBlocks(const std::string &file_name);
-  void LoadChunks(const std::string &file_name);
   void LoadInitialStreamingChunks();
   void RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord);
   void RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const;
-  void MigrateMonolithicChunksJson(const std::string &chunks_file,
-                                   const std::string &world_folder);
 
   void LoadWorldData(const std::string &file_name);
   void SaveWorldData(const std::string &file_name);
@@ -543,9 +549,11 @@ private:
   UCreatureActivityDirector ActivityDirector;
   UCreaturePosePresenterRegistry PosePresenterRegistry;
 
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
+  std::shared_ptr<UTextureCubeStorage> TextureCubeInstance;
   std::shared_ptr<UViewEngine> ViewInstance;
-  UPrefabLibrary *PrefabLibrary{nullptr};
+  UObjectLibrary *ObjectLibrary{nullptr};
+  WorldGenSets WorldGenSetsData;
+  ObjectFeatureConfig ResolvedObjectFeatures;
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;
   std::shared_ptr<class UBlockMergeRegistry> BlockMergeRegistry;

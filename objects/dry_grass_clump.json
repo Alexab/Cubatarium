@@ -1,0 +1,46 @@
+{
+  "name": "dry_grass_clump",
+  "version": 2,
+  "displayName": "Dry Grass Clump",
+  "source": {
+    "mod": "minetest-game/default",
+    "license": "CC-BY-SA-3.0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "mtg_dry_grass_1"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "mtg_dry_grass_1"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "mtg_dry_grass_1"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "mtg_dry_grass_1"
+    }
+  ],
+  "placement": {
+    "y_offset": -1
+  },
+  "tags": [
+    "plants"
+  ]
+}

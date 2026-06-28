@@ -14,16 +14,15 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Storage/ObjectStorage.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/World.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Math/BlockTypes.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/WorldGenRefs.h"
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 
 namespace cutum
 {
@@ -90,13 +89,12 @@ int RunValidateLoad()
   auto texture_cube_instance =
       std::make_shared<UTextureCubeStorage>(texture_base_instance);
   auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
-  auto object_storage = std::make_shared<UObjectStorage>(texture_cube_instance);
-  auto prefab_library = std::make_shared<UPrefabLibrary>();
+  auto object_library = std::make_shared<UObjectLibrary>();
   auto view_engine = std::make_shared<UViewEngine>();
-  auto world = std::make_shared<UWorld>(object_storage, view_engine);
+  auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
   auto core = std::make_shared<UCore>(
-      texture_base_instance, texture_cube_instance, object_storage,
-      prefab_library, world, nullptr, view_engine);
+      texture_base_instance, texture_cube_instance, object_library, world,
+      nullptr, view_engine);
 
   block_definitions->Load("models/blocks");
   texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -153,19 +151,19 @@ int RunValidateLoad()
               << std::endl;
   }
 
-  const size_t prefabCount = prefab_library->ListNames().size();
-  constexpr size_t kMinPrefabs = 45;
-  if (prefabCount < kMinPrefabs)
+  const size_t objectCount = object_library->ListNames().size();
+  constexpr size_t kMinObjects = 45;
+  if (objectCount < kMinObjects)
   {
-    std::cerr << "validate-load: loaded only " << prefabCount
-              << " prefab(s), expected >= " << kMinPrefabs << std::endl;
+    std::cerr << "validate-load: loaded only " << objectCount
+              << " object(s), expected >= " << kMinObjects << std::endl;
     glfwDestroyWindow(ctx);
     glfwTerminate();
     return 1;
   }
 
   std::cout << "validate-load: blocks=" << world->GetCachedBlockCount()
-            << " prefabs=" << prefabCount << std::endl;
+            << " objects=" << objectCount << std::endl;
 
   glfwDestroyWindow(ctx);
   glfwTerminate();
@@ -181,13 +179,12 @@ std::shared_ptr<UCore> MakeHeadlessCore()
   auto texture_cube_instance =
       std::make_shared<UTextureCubeStorage>(texture_base_instance);
   auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
-  auto object_storage = std::make_shared<UObjectStorage>(texture_cube_instance);
-  auto prefab_library = std::make_shared<UPrefabLibrary>();
+  auto object_library = std::make_shared<UObjectLibrary>();
   auto view_engine = std::make_shared<UViewEngine>();
-  auto world = std::make_shared<UWorld>(object_storage, view_engine);
+  auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
   auto core = std::make_shared<UCore>(
-      texture_base_instance, texture_cube_instance, object_storage,
-      prefab_library, world, nullptr, view_engine);
+      texture_base_instance, texture_cube_instance, object_library, world,
+      nullptr, view_engine);
 
   block_definitions->Load("models/blocks");
   texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -254,11 +251,11 @@ int RunCreateWorld(int argc, char **argv, int create_world_index)
     glfwTerminate();
     return 1;
   }
-  if (!UPrefabFeatureConfigStorage::LoadFromFile(
-          "content/prefab_features.json"))
+  if (!UObjectFeatureConfigStorage::LoadFromFile(
+          "content/object_features.json"))
   {
     std::cerr
-        << "create-world: prefab_features.json not loaded — vegetation disabled"
+        << "create-world: object_features.json not loaded — vegetation disabled"
         << std::endl;
   }
 

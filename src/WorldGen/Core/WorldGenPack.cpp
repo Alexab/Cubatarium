@@ -622,7 +622,7 @@ float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
 
 float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
                                                   SubBiomeId subBiome,
-                                                  PrefabFeaturePool pool)
+                                                  ObjectFeaturePool pool)
 {
   const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
   if (!def)
@@ -634,11 +634,11 @@ float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
   {
     return 1.0f;
   }
-  if (pool == PrefabFeaturePool::Vegetation)
+  if (pool == ObjectFeaturePool::Vegetation)
   {
     return std::max(0.1f, subIt->second.VegetationWeightMul);
   }
-  if (pool == PrefabFeaturePool::Decoration)
+  if (pool == ObjectFeaturePool::Decoration)
   {
     return std::max(0.1f, subIt->second.DecorationWeightMul);
   }

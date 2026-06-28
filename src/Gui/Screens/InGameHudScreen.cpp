@@ -306,8 +306,8 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Block:
         tex = Icons->GetBlockIconTexture(primary[i].Id);
         break;
-      case InventoryEntryKind::UObject:
-        tex = Icons->GetPrefabIconTexture(primary[i].Id);
+      case InventoryEntryKind::Object:
+        tex = Icons->GetObjectIconTexture(primary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
         tex = Icons->GetCreatureIconTexture(primary[i].Id);
@@ -330,8 +330,8 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Block:
         tex = Icons->GetBlockIconTexture(secondary[i].Id);
         break;
-      case InventoryEntryKind::UObject:
-        tex = Icons->GetPrefabIconTexture(secondary[i].Id);
+      case InventoryEntryKind::Object:
+        tex = Icons->GetObjectIconTexture(secondary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
         tex = Icons->GetCreatureIconTexture(secondary[i].Id);

@@ -10,7 +10,7 @@ namespace cutum
 enum class ContentKind
 {
   Block,
-  UObject,
+  Object,
   UCreature,
   Skin
 };

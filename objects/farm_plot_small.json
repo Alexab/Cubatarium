@@ -1,0 +1,223 @@
+{
+  "name": "farm_plot_small",
+  "version": 2,
+  "displayName": "Small Farm Plot",
+  "source": {
+    "mod": "cubatarium/procedural",
+    "license": "CC0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": -1,
+      "dz": -2,
+      "type": "dirt"
+    },
+    {
+      "dx": -2,
+      "dy": -1,
+      "dz": -1,
+      "type": "dirt"
+    },
+    {
+      "dx": -2,
+      "dy": -1,
+      "dz": 0,
+      "type": "dirt"
+    },
+    {
+      "dx": -2,
+      "dy": -1,
+      "dz": 1,
+      "type": "dirt"
+    },
+    {
+      "dx": -2,
+      "dy": -1,
+      "dz": 2,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": -1,
+      "dz": -2,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": -1,
+      "dz": -1,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": -1,
+      "dz": 0,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": -1,
+      "dz": 1,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": -1,
+      "dz": 2,
+      "type": "dirt"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "wheat"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "wheat"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "wheat"
+    },
+    {
+      "dx": 0,
+      "dy": -1,
+      "dz": -2,
+      "type": "dirt"
+    },
+    {
+      "dx": 0,
+      "dy": -1,
+      "dz": -1,
+      "type": "dirt"
+    },
+    {
+      "dx": 0,
+      "dy": -1,
+      "dz": 0,
+      "type": "dirt"
+    },
+    {
+      "dx": 0,
+      "dy": -1,
+      "dz": 1,
+      "type": "dirt"
+    },
+    {
+      "dx": 0,
+      "dy": -1,
+      "dz": 2,
+      "type": "dirt"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "wheat"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "wheat"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "wheat"
+    },
+    {
+      "dx": 1,
+      "dy": -1,
+      "dz": -2,
+      "type": "dirt"
+    },
+    {
+      "dx": 1,
+      "dy": -1,
+      "dz": -1,
+      "type": "dirt"
+    },
+    {
+      "dx": 1,
+      "dy": -1,
+      "dz": 0,
+      "type": "dirt"
+    },
+    {
+      "dx": 1,
+      "dy": -1,
+      "dz": 1,
+      "type": "dirt"
+    },
+    {
+      "dx": 1,
+      "dy": -1,
+      "dz": 2,
+      "type": "dirt"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "wheat"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "wheat"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "wheat"
+    },
+    {
+      "dx": 2,
+      "dy": -1,
+      "dz": -2,
+      "type": "dirt"
+    },
+    {
+      "dx": 2,
+      "dy": -1,
+      "dz": -1,
+      "type": "dirt"
+    },
+    {
+      "dx": 2,
+      "dy": -1,
+      "dz": 0,
+      "type": "dirt"
+    },
+    {
+      "dx": 2,
+      "dy": -1,
+      "dz": 1,
+      "type": "dirt"
+    },
+    {
+      "dx": 2,
+      "dy": -1,
+      "dz": 2,
+      "type": "dirt"
+    }
+  ],
+  "tags": [
+    "decorative"
+  ]
+}

@@ -5,7 +5,10 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Interfaces/IContentCatalog.h"
 #include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Preview/ContentPreviewDock.h"
+#include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiScrollView.h"
@@ -21,10 +24,14 @@ namespace cutum
 
 UCreativePaletteScreen::UCreativePaletteScreen(IContentCatalog *catalog,
                                                UGameSession *session,
-                                               IGuiIconSource *icons)
-    : Catalog(catalog), Session(session), Icons(icons)
+                                               IGuiIconSource *icons,
+                                               UContentPreviewRenderer *previewRenderer)
+    : Catalog(catalog), Session(session), Icons(icons),
+      PreviewRenderer(previewRenderer)
 {
 }
+
+UCreativePaletteScreen::~UCreativePaletteScreen() = default;
 
 bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 {
@@ -60,47 +67,97 @@ void UCreativePaletteScreen::SetVisible(bool visible)
   {
     Root->SetVisible(visible);
   }
+  if (!visible)
+  {
+    SelectedEntryId.clear();
+    if (PreviewDock)
+    {
+      PreviewDock->ClearSelection();
+    }
+  }
 }
 
 void UCreativePaletteScreen::Toggle() { SetVisible(!Visible); }
+
+void UCreativePaletteScreen::ApplyMainTab(int tab)
+{
+  switch (tab)
+  {
+  case 0:
+    Kind = ContentKind::Block;
+    break;
+  case 1:
+    Kind = ContentKind::Object;
+    break;
+  case 2:
+    Kind = ContentKind::UCreature;
+    break;
+  default:
+    Kind = ContentKind::Skin;
+    break;
+  }
+  if (MainTabs)
+  {
+    MainTabs->SetActiveTab(tab);
+  }
+  if (Catalog)
+  {
+    const auto Types = Catalog->GetTypeIds(Kind);
+    ActiveTypeId = Types.empty() ? "misc" : Types.front();
+  }
+  SelectedEntryId.clear();
+  if (PreviewDock)
+  {
+    PreviewDock->ClearSelection();
+  }
+  Built = false;
+}
+
+void UCreativePaletteScreen::OpenWithMainTab(int tab)
+{
+  ApplyMainTab(tab);
+  SetVisible(true);
+}
+
+int UCreativePaletteScreen::GetActiveMainTab() const
+{
+  if (MainTabs)
+  {
+    return MainTabs->GetActiveTab();
+  }
+  switch (Kind)
+  {
+  case ContentKind::Block:
+    return 0;
+  case ContentKind::Object:
+    return 1;
+  case ContentKind::UCreature:
+    return 2;
+  default:
+    return 3;
+  }
+}
 
 void UCreativePaletteScreen::Build(UGuiContext &ctx)
 {
   Theme = &ctx.GetTheme();
   Renderer = &ctx.GetRenderer();
+
+  auto rootShell = std::make_unique<UGuiPanel>(Theme);
+  rootShell->SetDrawBackground(false);
+  rootShell->SetClipChildren(false);
+  RootShell = rootShell.get();
+
   auto panel = std::make_unique<UGuiPanel>(Theme);
-  panel->SetVisible(false);
+  panel->SetDrawBackground(true);
+  panel->SetZOrder(10);
   Panel = panel.get();
 
   auto mainTabs = std::make_unique<UGuiTabBar>(Theme);
   mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
   MainTabs = mainTabs.get();
   mainTabs->SetOnTabChanged(
-      [this](int tab)
-      {
-        switch (tab)
-        {
-        case 0:
-          Kind = ContentKind::Block;
-          break;
-        case 1:
-          Kind = ContentKind::UObject;
-          break;
-        case 2:
-          Kind = ContentKind::UCreature;
-          break;
-        default:
-          Kind = ContentKind::Skin;
-          break;
-        }
-        if (Catalog)
-        {
-          const auto Types = Catalog->GetTypeIds(Kind);
-          ActiveTypeId = Types.empty() ? "misc" : Types.front();
-        }
-        SelectedEntryId.clear();
-        Built = false;
-      });
+      [this](int tab) { ApplyMainTab(tab); });
 
   auto subTabs = std::make_unique<UGuiTabBar>(Theme);
   SubTabs = subTabs.get();
@@ -116,6 +173,10 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
           }
         }
         SelectedEntryId.clear();
+        if (PreviewDock)
+        {
+          PreviewDock->ClearSelection();
+        }
         Built = false;
       });
 
@@ -130,7 +191,13 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
-  Root = std::move(panel);
+  rootShell->AddChild(std::move(panel));
+
+  PreviewDock =
+      std::make_unique<UContentPreviewDock>(Theme, PreviewRenderer);
+  rootShell->AddChild(PreviewDock->ReleasePanel());
+
+  Root = std::move(rootShell);
   Kind = ContentKind::Block;
   ActiveTypeId = "misc";
   Built = false;
@@ -148,16 +215,30 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     return;
   }
-  const int panelW = ViewportW * 60 / 100;
+  const DockedLayout layout = DockedOverlayLayout::Compute(
+      ViewportW, ViewportH, GetContentOffsetX(), GetContentOffsetY(), 70, 28,
+      *Theme);
+  if (RootShell)
+  {
+    RootShell->SetBounds(
+        {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
+  }
+  Panel->SetBounds(layout.main);
+  if (PreviewDock)
+  {
+    PreviewDock->Relayout(layout.preview);
+  }
+
+  const int panelX = layout.main.X;
+  const int panelY = layout.main.Y;
+  const int panelW = layout.main.W;
+  const int panelH = layout.main.H;
   const int slotSize = Theme->HotbarSlotSize;
   const int hotbarReserve =
       slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
   const int maxPanelH =
       std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
-  const int panelH = std::min(ViewportH * 70 / 100, maxPanelH);
-  const int panelX = (ViewportW - panelW) / 2;
-  const int panelY = (ViewportH - panelH) / 2;
-  Panel->SetBounds({panelX, panelY, panelW, panelH});
+  (void)maxPanelH;
 
   const int pad = Theme->Padding;
   const int tabH = Theme->TabBarHeight;
@@ -356,7 +437,45 @@ void UCreativePaletteScreen::Update(double dt)
   {
     RebuildGrid();
   }
+  if (PreviewDock)
+  {
+    PreviewDock->Update(dt);
+  }
   UpdateTooltip();
+}
+
+void UCreativePaletteScreen::SyncPreviewDock()
+{
+  if (!PreviewDock)
+  {
+    return;
+  }
+  PreviewDock->SetOnChange(nullptr);
+  if (SelectedEntryId.empty() || !PreviewRenderer ||
+      !PreviewRenderer->SupportsKind(Kind))
+  {
+    PreviewDock->ClearSelection();
+    return;
+  }
+  std::string label = SelectedEntryId;
+  for (size_t i = 0; i < GridEntryIds.size(); ++i)
+  {
+    if (GridEntryIds[i] == SelectedEntryId &&
+        i < GridEntryLabels.size())
+    {
+      label = GridEntryLabels[i];
+      break;
+    }
+  }
+  PreviewDock->SetSelection(Kind, SelectedEntryId, label);
+}
+
+void UCreativePaletteScreen::RenderPreview()
+{
+  if (PreviewDock)
+  {
+    PreviewDock->RenderIfDirty();
+  }
 }
 
 void UCreativePaletteScreen::RebuildGrid()
@@ -387,9 +506,9 @@ void UCreativePaletteScreen::RebuildGrid()
       {
         tex = Icons->GetBlockIconTexture(entryId);
       }
-      else if (Kind == ContentKind::UObject)
+      else if (Kind == ContentKind::Object)
       {
-        tex = Icons->GetPrefabIconTexture(entryId);
+        tex = Icons->GetObjectIconTexture(entryId);
       }
       else if (Kind == ContentKind::UCreature)
       {
@@ -409,8 +528,8 @@ void UCreativePaletteScreen::RebuildGrid()
     case ContentKind::Block:
       entry.kind = InventoryEntryKind::Block;
       break;
-    case ContentKind::UObject:
-      entry.kind = InventoryEntryKind::UObject;
+    case ContentKind::Object:
+      entry.kind = InventoryEntryKind::Object;
       break;
     case ContentKind::UCreature:
       entry.kind = InventoryEntryKind::UCreature;
@@ -433,6 +552,7 @@ void UCreativePaletteScreen::RebuildGrid()
             return;
           }
           SelectedEntryId = entry.Id;
+          SyncPreviewDock();
           const size_t bar = 0;
           const size_t slot = Session->GetSelectedSlot(bar);
           if (Session->AssignToHotbar(entry, bar, slot))
@@ -475,6 +595,7 @@ void UCreativePaletteScreen::RebuildGrid()
                                { LayoutGridInScroll(); });
   Scroll->LayoutContent();
   LayoutGridInScroll();
+  SyncPreviewDock();
   Built = true;
 }
 

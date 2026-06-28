@@ -1,5 +1,5 @@
 #include "WorldGen/Features/BuiltinWorldGenFeatures.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include <array>
 
 namespace cutum
@@ -35,10 +35,10 @@ public:
   bool TryPlace(WorldGenContext &ctx, const ColumnSampleContext &sample,
                 int world_x, int world_z) const override
   {
-    if (ctx.Settings.FillFire && ctx.Prefabs && world_x == 8 && world_z == 8)
+    if (ctx.Settings.FillFire && ctx.Objects && world_x == 8 && world_z == 8)
     {
       const glm::ivec3 anchor(world_x, sample.SurfaceY + 1, world_z);
-      if (PlacePrefabAt(ctx, "fire_patch", anchor, sample.SurfaceY))
+      if (PlaceObjectAt(ctx, "fire_patch", anchor, sample.SurfaceY))
       {
         return true;
       }

@@ -1,7 +1,0 @@
-
-{
- "name" : "terrain_plane",
- "id" : 1000,
- "class" : "TerrainPlane",
- "cube_textures" : ["grass"]
-}

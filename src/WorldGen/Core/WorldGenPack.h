@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <string>
@@ -116,7 +116,7 @@ public:
                                        const std::string &prefabName);
   static float SubBiomePoolWeightMultiplier(const std::string &biomeId,
                                             SubBiomeId subBiome,
-                                            PrefabFeaturePool pool);
+                                            ObjectFeaturePool pool);
   static BiomeId BiomeAtImage(int worldX, int worldZ);
 
 private:

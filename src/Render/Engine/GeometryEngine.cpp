@@ -21,10 +21,8 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
-#include "Storage/ObjectImplementation.h"
-#include "Storage/ObjectStorage.h"
 #include "World/Math/GridMath.h"
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
 #include <chrono>
@@ -40,12 +38,11 @@ namespace cutum
 {
 
 UGeometryEngine::UGeometryEngine(
-    std::shared_ptr<UObjectStorage> object_storage,
     std::shared_ptr<UWorld> world,
     std::shared_ptr<UTextureBaseStorage> texture_base_storage,
     std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
     std::shared_ptr<UTextRenderer> text_renderer)
-    : ObjectStorageInstance(object_storage), WorldInstance(world),
+    : WorldInstance(world),
       TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
@@ -485,7 +482,7 @@ void UGeometryEngine::RenderBatches(const glm::mat4 &mvp_matrix)
 void UGeometryEngine::DrawBatch(const RenderBatch &batch,
                                 const glm::mat4 &mvp_matrix)
 {
-  if (batch.ModelMatrices.empty() && batch.objects.empty())
+  if (batch.ModelMatrices.empty())
   {
     if (VerboseLogging)
       std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
@@ -494,7 +491,7 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
 
   if (VerboseLogging)
     std::cout << "DrawBatch: Drawing " << batch.ModelMatrices.size()
-              << " objects" << std::endl;
+              << " instances" << std::endl;
 
   glBindTexture(GL_TEXTURE_2D, batch.textureID);
 
@@ -503,35 +500,14 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   if (!camera)
     return;
 
-  if (!batch.objects.empty())
+  instanceMVPs.reserve(batch.ModelMatrices.size());
+  for (const auto &model : batch.ModelMatrices)
   {
-    instanceMVPs.reserve(batch.objects.size());
-    for (size_t i = 0; i < batch.cubeIndices.size(); ++i)
-    {
-      auto &object = batch.objects[i];
-      if (!object)
-        continue;
-      size_t cubeIdx = batch.cubeIndices[i];
-      if (cubeIdx >= object->GetCubes().size())
-        continue;
-      auto &cube = object->GetCubes()[cubeIdx];
-      glm::mat4 model = object->GetPose() * cube->GetInitialPose();
-      glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
-      instanceMVPs.push_back(mvp);
-    }
-  }
-  else
-  {
-    instanceMVPs.reserve(batch.ModelMatrices.size());
-    for (const auto &model : batch.ModelMatrices)
-    {
-      instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
-                             model);
-    }
+    instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
+                           model);
   }
 
-  const bool isBlockBatch =
-      batch.objects.empty() && !batch.ModelMatrices.empty();
+  const bool isBlockBatch = !batch.ModelMatrices.empty();
   const bool drawFaceQuads =
       isBlockBatch && Render.UseFaceQuadDraw() &&
       batch.faceIndices.size() == batch.ModelMatrices.size();
@@ -1142,17 +1118,6 @@ void UGeometryEngine::DrawCube(std::shared_ptr<UCube> icube, GLuint texture)
   defaultShader->Unuse();
 }
 
-void UGeometryEngine::DrawObject(std::shared_ptr<UObject> object,
-                                 const std::map<size_t, UTextureCube> &textures)
-{
-  for (size_t i = 0; i < object->GetCubes().size(); i++)
-  {
-    auto &cube = object->GetCubes()[i];
-    GLuint texture = textures.at(cube->GetTypeId()).GetTextureId();
-    DrawCube(cube, texture);
-  }
-}
-
 void UGeometryEngine::DrawSkyGradient()
 {
   // Use simple version which is more reliable
@@ -1615,7 +1580,7 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   std::string prefabName;
   if (UCreature *controlled = WorldInstance->GetControlledCreature())
   {
-    prefabName = controlled->GetInventory().GetActivePrefabName();
+    prefabName = controlled->GetInventory().GetActiveObjectName();
   }
   if (!prefabName.empty())
   {

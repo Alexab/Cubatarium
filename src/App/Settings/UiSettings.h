@@ -17,8 +17,9 @@ struct UiSettings
   bool LegacyHud{false};
   bool ShowPerformance{true};
   std::string ConsoleKey{"grave"};
-  std::string PaletteKey{"b"};
-  std::string InventoryKey{"e"};
+  std::string PaletteKey{"b"};      // creative palette, Blocks tab
+  std::string WorldGenKey{"g"};     // world generation sets
+  std::string InventoryKey{"e"};    // creative palette, Objects tab
   int HotbarCount{1};
 
   ControlScheme ControlScheme{ControlScheme::Classic};

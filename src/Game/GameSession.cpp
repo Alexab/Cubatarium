@@ -14,7 +14,7 @@
 #include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
@@ -63,17 +63,17 @@ UGameSession::UGameSession(UApplication *application,
 
 void UGameSession::InitializeCatalog(const std::string &typesJsonPath,
                                      const UBlockDefinitionStorage &blocks,
-                                     const UPrefabLibrary &prefabs)
+                                     const UObjectLibrary &prefabs)
 {
   ContentCatalog.LoadTypes(typesJsonPath);
   ReindexBlockCatalog(blocks, prefabs);
 }
 
 void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
-                                       const UPrefabLibrary &prefabs)
+                                       const UObjectLibrary &prefabs)
 {
   ContentCatalog.IndexBlocks(blocks);
-  ContentCatalog.IndexPrefabs(prefabs);
+  ContentCatalog.IndexObjects(prefabs);
   if (World)
   {
     if (const auto &creatureDefs = World->GetCreatureDefinitionStorage())
@@ -436,8 +436,8 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     case ContentKind::Block:
       ref.kind = InventoryEntryKind::Block;
       break;
-    case ContentKind::UObject:
-      ref.kind = InventoryEntryKind::UObject;
+    case ContentKind::Object:
+      ref.kind = InventoryEntryKind::Object;
       break;
     case ContentKind::UCreature:
       ref.kind = InventoryEntryKind::UCreature;
@@ -498,10 +498,10 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
         return false;
       }
     }
-    else if (entry.kind == InventoryEntryKind::UObject)
+    else if (entry.kind == InventoryEntryKind::Object)
     {
       const auto entries =
-          ContentCatalog.GetEntries(ContentKind::UObject, entry.Id);
+          ContentCatalog.GetEntries(ContentKind::Object, entry.Id);
       if (entries.empty())
       {
         std::cerr

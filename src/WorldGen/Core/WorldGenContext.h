@@ -12,7 +12,8 @@ namespace cutum
 
 class UBlockWorld;
 class UBlockRegistry;
-class UPrefabLibrary;
+class UObjectLibrary;
+struct ObjectFeatureConfig;
 
 /// World generation context: blocks and prefab placement only (no creatures).
 struct WorldGenContext
@@ -20,13 +21,14 @@ struct WorldGenContext
   UBlockWorld &World;
   UBlockRegistry &Registry;
   ProceduralSettings Settings;
-  UPrefabLibrary *Prefabs{nullptr};
+  UObjectLibrary *Objects{nullptr};
+  const ObjectFeatureConfig *ObjectFeatures{nullptr};
   std::string WorldgenOwnerPackId;
 
   WorldGenBlockResolver Blocks;
 
   WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
-                  ProceduralSettings settings, UPrefabLibrary *prefabs = nullptr);
+                  ProceduralSettings settings, UObjectLibrary *objects = nullptr);
 
   void ResolveBlockIds();
 

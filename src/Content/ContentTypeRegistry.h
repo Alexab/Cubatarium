@@ -11,7 +11,7 @@ namespace cutum
 
 class UBlockDefinitionStorage;
 class UCreatureDefinitionStorage;
-class UPrefabLibrary;
+class UObjectLibrary;
 class USkinDefinitionStorage;
 
 class UContentTypeRegistry : public IContentCatalog
@@ -19,7 +19,7 @@ class UContentTypeRegistry : public IContentCatalog
 public:
   void LoadTypes(const std::string &typesJsonPath);
   void IndexBlocks(const UBlockDefinitionStorage &storage);
-  void IndexPrefabs(const UPrefabLibrary &prefabs);
+  void IndexObjects(const UObjectLibrary &prefabs);
   void IndexCreatures(const UCreatureDefinitionStorage &storage);
   void IndexSkins(const USkinDefinitionStorage &storage);
 
@@ -33,8 +33,12 @@ private:
   std::vector<std::string>
   GetTypesForTags(const std::vector<std::string> &tags) const;
 
-  std::vector<ContentType> Types;
-  std::unordered_map<std::string, ContentType> TypeById;
+  std::vector<ContentType> BlockTypes;
+  std::vector<ContentType> ObjectTypes;
+  std::vector<ContentType> CreatureTypes;
+  std::unordered_map<std::string, ContentType> BlockTypeById;
+  std::unordered_map<std::string, ContentType> ObjectTypeById;
+  std::unordered_map<std::string, ContentType> CreatureTypeById;
   std::unordered_map<std::string, std::vector<CatalogEntry>> BlockEntries;
   std::unordered_map<std::string, std::vector<CatalogEntry>> ObjectEntries;
   std::unordered_map<std::string, std::vector<CatalogEntry>> CreatureEntries;

@@ -20,7 +20,6 @@ typedef int GLint;
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Storage/Object.h"
 #include "World/Core/World.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -42,18 +41,15 @@ struct RenderBatch
   GLuint textureID; // Replace QOpenGLTexture with GLuint
   size_t blockTypeId{0};
   std::vector<glm::mat4>
-      ModelMatrices; // Per-instance model (blocks) or unused for objects
+      ModelMatrices; // Per-instance model (blocks)
   std::vector<float> faceIndices;
   std::vector<glm::vec2> quadSizes;
-  std::vector<std::shared_ptr<UObject>> objects;
-  std::vector<size_t> cubeIndices;
 };
 
 class UGeometryEngine : public IGreedyTransparentBackend
 {
 public:
-  UGeometryEngine(std::shared_ptr<UObjectStorage> object_storage,
-                  std::shared_ptr<UWorld> world,
+  UGeometryEngine(std::shared_ptr<UWorld> world,
                   std::shared_ptr<UTextureBaseStorage> texture_base_storage,
                   std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
                   std::shared_ptr<UTextRenderer> text_renderer = nullptr);
@@ -174,8 +170,6 @@ private:
   void DrawCubeGeometry();
   void DrawCube(std::shared_ptr<UCube> icube,
                 GLuint texture); // Replace QOpenGLTexture with GLuint
-  void DrawObject(std::shared_ptr<UObject> object,
-                  const std::map<size_t, UTextureCube> &textures);
   void DrawSkyGradientSimple(); // Simple version without VBO
 
   // New optimized methods
@@ -229,7 +223,6 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorage;
   std::shared_ptr<UWorld> WorldInstance;
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
   std::shared_ptr<UTextRenderer> textRenderer;
 
   // performance data

@@ -1,11 +1,11 @@
 #include "World/Core/BlockWorld.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IChunkPopulator.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveCarver.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include <algorithm>
@@ -53,7 +53,7 @@ ThreadLocalPipelineState &GetThreadLocalPipeline()
 }
 
 IWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
-                                             UPrefabLibrary *prefabs,
+                                             UObjectLibrary *prefabs,
                                              const std::string &ownerPackId,
                                              const ProceduralSettings &settings)
 {
@@ -78,9 +78,9 @@ IWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
 } // namespace
 
 UPipelineChunkPopulator::UPipelineChunkPopulator(
-    UBlockRegistry &registry, UPrefabLibrary *prefabs,
+    UBlockRegistry &registry, UObjectLibrary *prefabs,
     std::string worldgenOwnerPackId)
-    : Registry(registry), Prefabs(prefabs),
+    : Registry(registry), Objects(prefabs),
       WorldgenOwnerPackId(std::move(worldgenOwnerPackId))
 {
 }
@@ -102,7 +102,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   }
 
   IWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
-      Registry, Prefabs, WorldgenOwnerPackId, settings);
+      Registry, Objects, WorldgenOwnerPackId, settings);
   if (!pipeline)
   {
     return result;

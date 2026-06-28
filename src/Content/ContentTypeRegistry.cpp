@@ -3,7 +3,7 @@
 #include "ResourcePacks/BlockNameUtil.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 
 #include <algorithm>
 #include <fstream>
@@ -19,21 +19,54 @@ namespace
 
 constexpr const char *kMiscType = "misc";
 
+void ParseTypeArray(const nlohmann::json &arr,
+                    std::vector<ContentType> &out,
+                    std::unordered_map<std::string, ContentType> &typeById)
+{
+  if (!arr.is_array())
+  {
+    return;
+  }
+  for (const auto &item : arr)
+  {
+    ContentType t;
+    t.Id = item.value("id", kMiscType);
+    t.displayName = item.value("displayName", t.Id);
+    t.sortOrder = item.value("sortOrder", 0);
+    out.push_back(t);
+    typeById[t.Id] = t;
+  }
+}
+
 } // namespace
 
 void UContentTypeRegistry::EnsureDefaultTypes()
 {
-  if (!TypeById.count(kMiscType))
+  if (!BlockTypeById.count(kMiscType))
   {
-    Types.push_back({kMiscType, "Misc", 999});
-    TypeById[kMiscType] = Types.back();
+    BlockTypes.push_back({kMiscType, "Misc", 999});
+    BlockTypeById[kMiscType] = BlockTypes.back();
+  }
+  if (!ObjectTypeById.count(kMiscType))
+  {
+    ObjectTypes.push_back({kMiscType, "Misc", 999});
+    ObjectTypeById[kMiscType] = ObjectTypes.back();
+  }
+  if (!CreatureTypeById.count(kMiscType))
+  {
+    CreatureTypes.push_back({kMiscType, "Misc", 999});
+    CreatureTypeById[kMiscType] = CreatureTypes.back();
   }
 }
 
 void UContentTypeRegistry::LoadTypes(const std::string &typesJsonPath)
 {
-  Types.clear();
-  TypeById.clear();
+  BlockTypes.clear();
+  ObjectTypes.clear();
+  CreatureTypes.clear();
+  BlockTypeById.clear();
+  ObjectTypeById.clear();
+  CreatureTypeById.clear();
   std::ifstream file(typesJsonPath);
   if (!file.is_open())
   {
@@ -45,27 +78,27 @@ void UContentTypeRegistry::LoadTypes(const std::string &typesJsonPath)
   try
   {
     const auto j = nlohmann::json::parse(buffer.str());
-    if (j.contains("types") && j["types"].is_array())
-    {
-      for (const auto &item : j["types"])
-      {
-        ContentType t;
-        t.Id = item.value("id", kMiscType);
-        t.displayName = item.value("displayName", t.Id);
-        t.sortOrder = item.value("sortOrder", 0);
-        Types.push_back(t);
-        TypeById[t.Id] = t;
-      }
-    }
+    ParseTypeArray(j.value("blockTypes", nlohmann::json::array()), BlockTypes,
+                   BlockTypeById);
+    ParseTypeArray(j.value("objectTypes", nlohmann::json::array()), ObjectTypes,
+                   ObjectTypeById);
+    ParseTypeArray(j.value("creatureTypes", nlohmann::json::array()),
+                   CreatureTypes, CreatureTypeById);
   }
   catch (const std::exception &e)
   {
     std::cerr << "UContentTypeRegistry: " << e.what() << std::endl;
   }
   EnsureDefaultTypes();
-  std::sort(Types.begin(), Types.end(),
-            [](const ContentType &a, const ContentType &b)
-            { return a.sortOrder < b.sortOrder; });
+  auto sortTypes = [](std::vector<ContentType> &types)
+  {
+    std::sort(types.begin(), types.end(),
+              [](const ContentType &a, const ContentType &b)
+              { return a.sortOrder < b.sortOrder; });
+  };
+  sortTypes(BlockTypes);
+  sortTypes(ObjectTypes);
+  sortTypes(CreatureTypes);
 }
 
 std::vector<std::string> UContentTypeRegistry::GetTypesForTags(
@@ -82,7 +115,7 @@ void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage &storage)
 {
   BlockEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : Types)
+  for (const auto &type : BlockTypes)
   {
     BlockEntries[type.Id] = {};
   }
@@ -115,7 +148,7 @@ void UContentTypeRegistry::IndexCreatures(
 {
   CreatureEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : Types)
+  for (const auto &type : CreatureTypes)
   {
     CreatureEntries[type.Id] = {};
   }
@@ -150,7 +183,7 @@ void UContentTypeRegistry::IndexSkins(const USkinDefinitionStorage &storage)
 {
   SkinEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : Types)
+  for (const auto &type : CreatureTypes)
   {
     SkinEntries[type.Id] = {};
   }
@@ -181,20 +214,18 @@ void UContentTypeRegistry::IndexSkins(const USkinDefinitionStorage &storage)
   }
 }
 
-void UContentTypeRegistry::IndexPrefabs(const UPrefabLibrary &prefabs)
+void UContentTypeRegistry::IndexObjects(const UObjectLibrary &objects)
 {
   ObjectEntries.clear();
   EnsureDefaultTypes();
-  for (const auto &type : Types)
+  for (const auto &type : ObjectTypes)
   {
     ObjectEntries[type.Id] = {};
   }
-  for (const std::string &Name : prefabs.ListNames())
+  for (const std::string &Name : objects.ListNames())
   {
-    const std::string category = prefabs.GetCategory(Name);
-    const std::string label = prefabs.GetDisplayName(Name);
-    const auto typeIds =
-        GetTypesForTags({category == "misc" ? kMiscType : category});
+    const auto typeIds = GetTypesForTags(objects.GetTags(Name));
+    const std::string label = objects.GetDisplayName(Name);
     CatalogEntry entry{Name, label};
     for (const auto &typeId : typeIds)
     {
@@ -205,6 +236,12 @@ void UContentTypeRegistry::IndexPrefabs(const UPrefabLibrary &prefabs)
       ObjectEntries[typeId].push_back(entry);
     }
   }
+  for (auto &pair : ObjectEntries)
+  {
+    std::sort(pair.second.begin(), pair.second.end(),
+              [](const CatalogEntry &a, const CatalogEntry &b)
+              { return a.Id < b.Id; });
+  }
 }
 
 std::vector<std::string>
@@ -213,19 +250,23 @@ UContentTypeRegistry::GetTypeIds(ContentKind kind) const
   std::vector<std::string> ids;
   const std::unordered_map<std::string, std::vector<CatalogEntry>> *map =
       &BlockEntries;
-  if (kind == ContentKind::UObject)
+  const std::vector<ContentType> *types = &BlockTypes;
+  if (kind == ContentKind::Object)
   {
     map = &ObjectEntries;
+    types = &ObjectTypes;
   }
   else if (kind == ContentKind::UCreature)
   {
     map = &CreatureEntries;
+    types = &CreatureTypes;
   }
   else if (kind == ContentKind::Skin)
   {
     map = &SkinEntries;
+    types = &CreatureTypes;
   }
-  for (const auto &type : Types)
+  for (const auto &type : *types)
   {
     if (map->count(type.Id) && !map->at(type.Id).empty())
     {
@@ -242,8 +283,16 @@ UContentTypeRegistry::GetTypeIds(ContentKind kind) const
 std::string
 UContentTypeRegistry::GetTypeDisplayName(const std::string &typeId) const
 {
-  const auto it = TypeById.find(typeId);
-  if (it != TypeById.end())
+  if (const auto it = BlockTypeById.find(typeId); it != BlockTypeById.end())
+  {
+    return it->second.displayName;
+  }
+  if (const auto it = ObjectTypeById.find(typeId); it != ObjectTypeById.end())
+  {
+    return it->second.displayName;
+  }
+  if (const auto it = CreatureTypeById.find(typeId);
+      it != CreatureTypeById.end())
   {
     return it->second.displayName;
   }
@@ -256,7 +305,7 @@ UContentTypeRegistry::GetEntries(ContentKind kind,
 {
   const std::unordered_map<std::string, std::vector<CatalogEntry>> *map =
       &BlockEntries;
-  if (kind == ContentKind::UObject)
+  if (kind == ContentKind::Object)
   {
     map = &ObjectEntries;
   }

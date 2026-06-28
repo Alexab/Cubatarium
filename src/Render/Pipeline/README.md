@@ -9,7 +9,7 @@ flowchart TD
   App[Application::RenderFrame]
   Clear[glClear color depth stencil]
   Paint[GeometryEngine::Paint]
-  Icons[PrefabIconCache warmup]
+  Icons[ObjectIconCache warmup]
   GUI[GuiContext overlay]
   App --> Clear --> Paint --> Icons --> GUI
 ```
@@ -51,7 +51,7 @@ flowchart TD
 | Вода видна **сквозь камень** | `BehindShell` + stencil (должен быть EQUAL 1, не рисовать где stencil 0) |
 | Нет **затемнения** между водой/стеклом | `ShellDepth` + `ShellSurface` |
 | Не видно **стекло за водой** | `BehindShell` (GREATER) + сортировка в `GreedyTransparentSort.cpp` |
-| Мир «ломается» после HUD/иконок | `GlStateScope` в `PrefabIconCache`, `Application` clear stencil |
+| Мир «ломается» после HUD/иконок | `GlStateScope` в `ObjectIconCache`, `Application` clear stencil |
 
 Включить лог проходов: `GreedyTransparentSettings settings; settings.logPassNames = true;` перед `GreedyTransparentPipeline::Draw`.
 

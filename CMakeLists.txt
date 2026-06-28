@@ -102,10 +102,7 @@ set(SOURCES
     src/Blocks/Input/BlockInputController.cpp
     src/Render/Primitives/Cube.cpp
     src/Render/Primitives/CubeGL.cpp
-    src/Storage/Object.cpp
-    src/Storage/ObjectImplementation.cpp
-    src/Storage/ObjectStorage.cpp
-    src/World/Prefabs/Prefab.cpp
+    src/World/Objects/ObjectLibrary.cpp
     src/Render/Textures/TextureBase.cpp
     src/Render/Textures/TextureCube.cpp
     src/Creatures/Player/User.cpp
@@ -141,15 +138,16 @@ set(SOURCES
     src/WorldGen/Core/ProceduralConfigIO.cpp
     src/WorldGen/Core/WorldSeedParser.cpp
     src/WorldGen/Core/WorldGeneratorRegistry.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenSets.cpp
     src/WorldGen/Core/WorldGenContentReload.cpp
-    src/World/Prefabs/PrefabUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/BlockWorldColumnWriter.cpp
     src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/IWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
@@ -164,9 +162,9 @@ set(SOURCES
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
-    src/WorldGen/Features/PrefabFeatureConfig.cpp
-    src/WorldGen/Features/PrefabPlacementConstraints.cpp
-    src/WorldGen/Features/PrefabFeaturePlacer.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Features/ObjectPlacementConstraints.cpp
+    src/WorldGen/Features/ObjectFeaturePlacer.cpp
     src/WorldGen/Features/BuiltinWorldGenFeatures.cpp
     src/WorldGen/Core/PipelineChunkPopulator.cpp
     src/WorldGen/Core/ProceduralWorldGenFactory.cpp
@@ -184,7 +182,6 @@ set(SOURCES
     src/World/Core/IBlockWriter.cpp
     src/World/IO/AsyncChunkIO.cpp
     src/World/IO/ChunkStorageTypes.cpp
-    src/World/IO/LegacyChunkJsonLoader.cpp
     src/World/IO/JsonChunkSerializer.cpp
     src/World/IO/BinaryChunkSerializer.cpp
     src/World/IO/ChunkStorageService.cpp
@@ -214,7 +211,10 @@ set(SOURCES
     src/Gui/Batch/UiQuadBatch.cpp
     src/Gui/Batch/UiTexturedQuadBatch.cpp
     src/Gui/Core/GuiIconSource.cpp
-    src/Gui/Cache/PrefabIconCache.cpp
+    src/Gui/Preview/ContentPreviewRenderer.cpp
+    src/Gui/Preview/ContentPreviewDock.cpp
+    src/Gui/Layout/DockedOverlayLayout.cpp
+    src/Gui/Cache/ObjectIconCache.cpp
     src/Gui/Cache/CreatureIconCache.cpp
     src/Gui/Core/GuiInputRouter.cpp
     src/Gui/Core/GuiFocus.cpp
@@ -237,6 +237,7 @@ set(SOURCES
     src/Gui/Widgets/GuiDialogFrame.cpp
     src/Gui/Widgets/GuiWindow.cpp
     src/Gui/Widgets/GuiSlot.cpp
+    src/Gui/Widgets/GuiPreviewViewport.cpp
     src/Gui/Widgets/GuiCheckbox.cpp
     src/Gui/Widgets/WorldGenSettingsForm.cpp
     src/Gui/Widgets/ResourcePackPickerForm.cpp
@@ -248,6 +249,7 @@ set(SOURCES
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
+    src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
     src/App/Platform/DesktopPlatformPaths.cpp
@@ -263,10 +265,8 @@ set(HEADERS
     src/App/Core.h
     src/Render/Primitives/Cube.h
     src/Render/Primitives/CubeGL.h
-    src/Storage/Object.h
-    src/Storage/ObjectImplementation.h
-    src/Storage/ObjectStorage.h
-    src/World/Prefabs/Prefab.h
+    src/World/Objects/ObjectLibrary.h
+    src/World/Objects/ObjectUtil.h
     src/Render/Textures/TextureBase.h
     src/Render/Textures/TextureCube.h
     src/Creatures/Player/User.h
@@ -291,6 +291,7 @@ set(HEADERS
     src/Render/Engine/AnimationClock.h
     src/World/Core/BlockWorld.h
     src/WorldGen/Core/WorldGeneratorDescriptor.h
+    src/WorldGen/Core/WorldGenSets.h
     src/WorldGen/Core/WorldGenPack.h
     src/WorldGen/Core/WorldGenStageId.h
     src/WorldGen/Core/WorldGenStageMask.h
@@ -300,7 +301,7 @@ set(HEADERS
     src/WorldGen/Core/WorldGenBlockResolver.h
     src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Pipelines/ColumnGenerationService.h
-    src/WorldGen/Features/PrefabPlacementConstraints.h
+    src/WorldGen/Features/ObjectPlacementConstraints.h
     src/WorldGen/Features/BuiltinWorldGenFeatures.h
     src/WorldGen/Sampling/BiomeRegistry.h
     src/WorldGen/Pipelines/ComposableWorldGenerator.h
@@ -335,7 +336,10 @@ set(HEADERS
     src/Gui/Batch/UiQuadBatch.h
     src/Gui/Batch/UiTexturedQuadBatch.h
     src/Gui/Core/GuiIconSource.h
-    src/Gui/Cache/PrefabIconCache.h
+    src/Gui/Preview/ContentPreviewRenderer.h
+    src/Gui/Preview/ContentPreviewDock.h
+    src/Gui/Layout/DockedOverlayLayout.h
+    src/Gui/Cache/ObjectIconCache.h
     src/Gui/Interfaces/IGuiIconSource.h
     src/Gui/Core/GuiInputRouter.h
     src/Gui/Core/GuiFocus.h
@@ -358,6 +362,7 @@ set(HEADERS
     src/Gui/Widgets/GuiDialogFrame.h
     src/Gui/Widgets/GuiWindow.h
     src/Gui/Widgets/GuiSlot.h
+    src/Gui/Widgets/GuiPreviewViewport.h
     src/Gui/Widgets/GuiCheckbox.h
     src/Gui/Widgets/WorldGenSettingsForm.h
     src/Gui/Widgets/ResourcePackPickerForm.h
@@ -373,6 +378,7 @@ set(HEADERS
     src/Gui/Screens/LoadWorldScreen.h
     src/Gui/Screens/InGameHudScreen.h
     src/Gui/Screens/ConsoleScreen.h
+    src/Gui/Screens/WorldGenPaletteScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h

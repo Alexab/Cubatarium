@@ -10,7 +10,7 @@ namespace cutum
 enum class InventoryEntryKind
 {
   Block,
-  UObject,
+  Object,
   UCreature,
   Skin
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 
 namespace cutum
 {

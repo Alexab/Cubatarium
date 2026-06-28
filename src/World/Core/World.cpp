@@ -23,8 +23,7 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Primitives/Cube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
-#include "Storage/Object.h"
-#include "Storage/ObjectStorage.h"
+#include "Render/Textures/TextureCube.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
@@ -32,17 +31,17 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
-#include "World/IO/LegacyChunkJsonLoader.h"
 #include "World/Math/GridMath.h"
-#include "World/Prefabs/Prefab.h"
-#include "World/Prefabs/PrefabUtil.h"
+#include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "WorldGen/Core/IChunkPopulator.h"
 #include "WorldGen/Core/IWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Core/WorldGenSets.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -88,13 +87,6 @@ bool HasChunkDataFiles(const std::string &chunks_dir)
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
-  const std::string blocks_file = world_folder_path + "/blocks.json";
-  if (std::filesystem::exists(blocks_file) &&
-      std::filesystem::file_size(blocks_file) > 2)
-  {
-    return true;
-  }
-
   const std::string chunks_dir = world_folder_path + "/chunks";
   if (HasChunkDataFiles(chunks_dir) ||
       UChunkStorageService::HasChunkFilesOnDisk(world_folder_path))
@@ -117,12 +109,7 @@ bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
     }
     const json data = json::parse(file);
     const std::string storage = data.value("storage", "");
-    if (storage == "per_file" || storage == "binary" || storage == "json")
-    {
-      return true;
-    }
-    return data.contains("chunks") && data["chunks"].is_array() &&
-           !data["chunks"].empty();
+    return storage == "per_file" || storage == "binary" || storage == "json";
   }
   catch (const json::exception &)
   {
@@ -130,14 +117,14 @@ bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
   }
 }
 
-UWorld::UWorld(std::shared_ptr<UObjectStorage> object_storage,
+UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
                std::shared_ptr<UViewEngine> views)
-    : ObjectStorageInstance(object_storage), ViewInstance(views)
+    : TextureCubeInstance(texture_cube), ViewInstance(views)
 {
-  if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage())
+  if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(
-        ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
+    BlockRegistry = std::make_unique<UBlockRegistry>(TextureCubeInstance,
+                                                     BlockDefinitions);
   }
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
@@ -195,6 +182,31 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
   }
 }
 
+void UWorld::SetWorldGenSets(WorldGenSets sets)
+{
+  WorldGenSetsData = std::move(sets);
+  RebuildResolvedObjectFeatures();
+  RebuildWorldGenPipeline();
+}
+
+void UWorld::SaveWorldGenSetsToDisk()
+{
+  if (WorldFolderPath.empty())
+  {
+    return;
+  }
+  SaveWorldData(WorldFolderPath + "/world_data.json");
+}
+
+void UWorld::RebuildResolvedObjectFeatures()
+{
+  if (UObjectFeatureConfigStorage::IsLoaded())
+  {
+    ResolvedObjectFeatures = ResolveObjectFeatures(
+        WorldGenSetsData, UObjectFeatureConfigStorage::Get());
+  }
+}
+
 void UWorld::RebuildWorldGenPipeline()
 {
   if (!BlockRegistry)
@@ -202,9 +214,11 @@ void UWorld::RebuildWorldGenPipeline()
     WorldGen.reset();
     return;
   }
+  RebuildResolvedObjectFeatures();
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                      PrefabLibrary};
+                      ObjectLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
+  ctx.ObjectFeatures = &ResolvedObjectFeatures;
   ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
   { MarkColumnMeshDirty(world_x, world_z, min_y, max_y); };
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
@@ -245,7 +259,7 @@ void UWorld::InitChunkScheduler()
     return;
   }
   ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
-      *BlockRegistry, PrefabLibrary, WorldgenOwnerPackId);
+      *BlockRegistry, ObjectLibrary, WorldgenOwnerPackId);
   ChunkScheduler =
       std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
   ChunkScheduler->SetMarkDirtyFn(
@@ -656,11 +670,10 @@ void UWorld::SetBlockDefinitionStorage(
   {
     BlockRegistry->SetDefinitions(BlockDefinitions);
   }
-  else if (ObjectStorageInstance &&
-           ObjectStorageInstance->GetTextureCubeStorage())
+  else if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(
-        ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
+    BlockRegistry = std::make_unique<UBlockRegistry>(TextureCubeInstance,
+                                                     BlockDefinitions);
     if (BlockMergeRegistry)
     {
       BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
@@ -1287,21 +1300,21 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   return true;
 }
 
-bool UWorld::PlacePrefab(const std::string &prefab_name,
+bool UWorld::PlaceObject(const std::string &prefab_name,
                          glm::ivec3 anchorWorldPos)
 {
-  if (!PrefabLibrary || !BlockRegistry)
+  if (!ObjectLibrary || !BlockRegistry)
   {
     return false;
   }
-  const Prefab *prefab = PrefabLibrary->Get(prefab_name);
+  const WorldObjectDefinition *prefab = ObjectLibrary->Get(prefab_name);
   if (!prefab)
   {
     return false;
   }
 
-  const PrefabPlacementStats stats =
-      PlacePrefabAt(BlockWorld, *prefab, anchorWorldPos, true);
+  const ObjectPlacementStats stats =
+      PlaceObjectAt(BlockWorld, *prefab, anchorWorldPos, true);
   if (stats.placedCount == 0)
   {
     return false;
@@ -1317,23 +1330,23 @@ bool UWorld::PlacePrefab(const std::string &prefab_name,
   return true;
 }
 
-bool UWorld::CanPlacePrefab(const std::string &prefab_name,
+bool UWorld::CanPlaceObject(const std::string &prefab_name,
                             glm::ivec3 anchorWorldPos) const
 {
-  if (!PrefabLibrary || !BlockRegistry)
+  if (!ObjectLibrary || !BlockRegistry)
   {
     return false;
   }
-  const Prefab *prefab = PrefabLibrary->Get(prefab_name);
+  const WorldObjectDefinition *prefab = ObjectLibrary->Get(prefab_name);
   if (!prefab)
   {
     return false;
   }
-  return CanPlacePrefabAt(BlockWorld, *prefab, anchorWorldPos);
+  return CanPlaceObjectAt(BlockWorld, *prefab, anchorWorldPos);
 }
 
 std::optional<glm::ivec3>
-UWorld::FindPrefabAnchorFromView(const glm::vec3 &position,
+UWorld::FindObjectAnchorFromView(const glm::vec3 &position,
                                  const glm::vec3 &front) const
 {
   const auto hit =
@@ -1678,13 +1691,13 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   return false;
 }
 
-bool UWorld::PlaceActivePrefabByView()
+bool UWorld::PlaceActiveObjectByView()
 {
-  return PlaceActivePrefabByView(GetCurrentUserCamera()->GetPosition(),
+  return PlaceActiveObjectByView(GetCurrentUserCamera()->GetPosition(),
                                  GetCurrentUserCamera()->GetFront());
 }
 
-bool UWorld::PlaceActivePrefabByView(const glm::vec3 &position,
+bool UWorld::PlaceActiveObjectByView(const glm::vec3 &position,
                                      const glm::vec3 &front)
 {
   auto user = GetCurrentUser();
@@ -1699,18 +1712,18 @@ bool UWorld::PlaceActivePrefabByView(const glm::vec3 &position,
     return false;
   }
   const std::string &prefabName =
-      controlled->GetInventory().GetActivePrefabName();
+      controlled->GetInventory().GetActiveObjectName();
   if (prefabName.empty())
   {
     return false;
   }
 
-  const auto anchor = FindPrefabAnchorFromView(position, front);
+  const auto anchor = FindObjectAnchorFromView(position, front);
   if (!anchor.has_value())
   {
     return false;
   }
-  if (PlacePrefab(prefabName, anchor.value()))
+  if (PlaceObject(prefabName, anchor.value()))
   {
     UpdateIntersection(position, front);
     return true;
@@ -2600,6 +2613,29 @@ void UWorld::LoadWorldData(const std::string &file_name)
     {
       CatalogFingerprint.clear();
     }
+    if (d.contains("worldgen_sets") && d["worldgen_sets"].is_object())
+    {
+      std::string wgError;
+      if (!ParseWorldGenSets(d["worldgen_sets"], WorldGenSetsData, wgError))
+      {
+        std::cerr << "LoadWorldData: worldgen_sets error: " << wgError
+                  << std::endl;
+      }
+      else
+      {
+        std::string valError;
+        if (!ValidateWorldGenSets(WorldGenSetsData, valError))
+        {
+          std::cerr << "LoadWorldData: worldgen_sets validation: " << valError
+                    << std::endl;
+        }
+        RebuildResolvedObjectFeatures();
+      }
+    }
+    else
+    {
+      std::cerr << "LoadWorldData: missing required worldgen_sets" << std::endl;
+    }
   }
   catch (const json::exception &e)
   {
@@ -2645,6 +2681,7 @@ void UWorld::SaveWorldData(const std::string &file_name)
   {
     world_data["catalog_fingerprint"] = CatalogFingerprint;
   }
+  WriteWorldGenSets(world_data, WorldGenSetsData);
 
   std::ofstream file(file_name);
   if (file.is_open())
@@ -3241,81 +3278,6 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
     mark_coord(UChunkManager::WorldToChunk(blockPos + offset));
-  }
-}
-
-void UWorld::LoadBlocks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  ULegacyChunkJsonLoader::LoadBlocksFile(BlockWorld, *BlockRegistry, file_name);
-}
-
-void UWorld::LoadChunks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  ULegacyChunkJsonLoader::LoadMonolithicChunksFile(BlockWorld, *BlockRegistry,
-                                                   file_name);
-}
-
-void UWorld::MigrateMonolithicChunksJson(const std::string & /*chunks_file*/,
-                                         const std::string &world_folder)
-{
-  if (!ChunkStorage || !BlockRegistry)
-  {
-    return;
-  }
-  BlockWorld.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
-      {
-        ChunkStorage->SaveChunk(chunk.GetCoord(), chunk, world_folder,
-                                *BlockRegistry);
-      });
-  ChunkStorage->WriteStorageMarker(world_folder);
-}
-
-void UWorld::MigrateObjectsFromJson(const std::string &file_name)
-{
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json objects = json::parse(file);
-    for (const auto &object_data : objects)
-    {
-      const std::string type_name = object_data.value("type_name", "");
-      if (type_name == "terrain_plane" || type_name.empty())
-      {
-        continue;
-      }
-      const auto position_value = object_data.value("position", json::array());
-      if (!position_value.is_array() || position_value.size() != 3)
-      {
-        continue;
-      }
-      const glm::ivec3 blockPos(
-          static_cast<int>(std::round(position_value[0].get<float>())),
-          static_cast<int>(std::round(position_value[1].get<float>())),
-          static_cast<int>(std::round(position_value[2].get<float>())));
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type_name);
-      if (Id != BLOCK_AIR)
-      {
-        BlockWorld.SetBlock(blockPos, Id);
-      }
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in MigrateObjectsFromJson: " << e.what()
-              << std::endl;
   }
 }
 

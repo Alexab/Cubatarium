@@ -11,10 +11,8 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Storage/Object.h"
-#include "Storage/ObjectStorage.h"
 #include "World/Core/World.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Objects/ObjectLibrary.h"
 
 #include <iostream>
 
@@ -43,11 +41,9 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
 
-    auto object_storage =
-        std::make_shared<UObjectStorage>(texture_cube_instance);
-    auto prefab_library = std::make_shared<UPrefabLibrary>();
+    auto object_library = std::make_shared<UObjectLibrary>();
     auto view_engine = std::make_shared<UViewEngine>();
-    auto world = std::make_shared<UWorld>(object_storage, view_engine);
+    auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
 
     if (!text_renderer->Initialize(16))
@@ -60,8 +56,7 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     text_renderer->SetWindowSize(initW, initH);
 
     auto geometry_engine = std::make_shared<UGeometryEngine>(
-        object_storage, world, texture_base_instance, texture_cube_instance,
-        text_renderer);
+        world, texture_base_instance, texture_cube_instance, text_renderer);
     if (!geometry_engine->InitEngine())
     {
       CubatariumLogError("App",
@@ -70,8 +65,8 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_storage,
-        prefab_library, world, geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library, world,
+        geometry_engine, view_engine);
 
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
