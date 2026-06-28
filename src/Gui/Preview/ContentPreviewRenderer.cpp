@@ -1,6 +1,7 @@
 #include "Gui/Preview/ContentPreviewRenderer.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Gui/Preview/ObjectPreviewLayout.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -253,22 +254,7 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
   glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glm::vec3 minB(1e6f);
-  glm::vec3 maxB(-1e6f);
-  for (const ObjectVoxel &voxel : object->voxels)
-  {
-    if (voxel.Id == BLOCK_AIR)
-    {
-      continue;
-    }
-    const glm::vec3 p(voxel.offset);
-    minB = glm::min(minB, p);
-    maxB = glm::max(maxB, p);
-  }
-  const glm::vec3 center = (minB + maxB) * 0.5f;
-  const glm::vec3 voxelSize = maxB - minB;
-  const float extent = std::max({voxelSize.x, voxelSize.y, voxelSize.z});
-  const float fitScale = extent > 0.01f ? 1.8f / extent : 1.0f;
+  const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
 
   const glm::mat4 projection =
       glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);
@@ -295,9 +281,7 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
 
-    const glm::vec3 local = (glm::vec3(voxel.offset) - center) * fitScale;
-    const glm::mat4 model = glm::translate(glm::mat4(1.0f), local) *
-                            glm::scale(glm::mat4(1.0f), glm::vec3(0.88f));
+    const glm::mat4 model = ObjectPreviewVoxelModel(fit, voxel.offset);
     const glm::mat4 mvp = projection * view * model;
     Shader->SetMat4("mvp_matrix", mvp);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);

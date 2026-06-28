@@ -212,6 +212,7 @@ set(SOURCES
     src/Gui/Batch/UiTexturedQuadBatch.cpp
     src/Gui/Core/GuiIconSource.cpp
     src/Gui/Preview/ContentPreviewRenderer.cpp
+    src/Gui/Preview/ObjectPreviewLayout.cpp
     src/Gui/Preview/ContentPreviewDock.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp
     src/Gui/Cache/ObjectIconCache.cpp
@@ -337,6 +338,7 @@ set(HEADERS
     src/Gui/Batch/UiTexturedQuadBatch.h
     src/Gui/Core/GuiIconSource.h
     src/Gui/Preview/ContentPreviewRenderer.h
+    src/Gui/Preview/ObjectPreviewLayout.h
     src/Gui/Preview/ContentPreviewDock.h
     src/Gui/Layout/DockedOverlayLayout.h
     src/Gui/Cache/ObjectIconCache.h
