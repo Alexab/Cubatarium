@@ -110,6 +110,16 @@ jobs:
           ./bin/Cubatarium.exe --creature-step-up-smoke
           ./bin/Cubatarium.exe --creature-stack-smoke
 
+      - name: Creature UV validate (tier A)
+        shell: pwsh
+        run: python tools/validate_creature_uv.py --tier-a --fail-on-threshold
+
+      - name: Creature preview smoke (tier A)
+        shell: pwsh
+        run: |
+          ./bin/Cubatarium.exe --creature-preview-smoke --tier-a
+          python tools/compare_creature_preview.py --tier-a --fail-on-diff
+
       - name: Upload desktop runtime artifact
         uses: actions/upload-artifact@v4
         with:

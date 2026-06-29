@@ -123,6 +123,15 @@ int main(int argc, char *argv[])
       cutum::IPlatformPaths::SetGlobal(paths);
       return cutum::RunCreatureStepUpSmoke();
     }
+    if (std::strcmp(argv[i], "--creature-preview-smoke") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IPlatformPaths::SetGlobal(paths);
+      return cutum::RunCreaturePreviewSmoke(argc, argv, i);
+    }
     if (std::strcmp(argv[i], "--bench-io") == 0)
     {
 #ifdef _WIN32

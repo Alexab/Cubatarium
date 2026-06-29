@@ -386,6 +386,13 @@ def main() -> None:
     check_b3d_samples()
     check_hotbar_legacy_id_remap()
     check_hotbar_creature_persistence()
+    print("=== running UV validate (tier A) ===")
+    proc = subprocess.run(
+        [sys.executable, str(TOOLS / "validate_creature_uv.py"), "--tier-a", "--fail-on-threshold"],
+        cwd=ROOT,
+    )
+    if proc.returncode != 0:
+        raise SystemExit("FAIL validate_creature_uv --tier-a")
     print("=== all creature fidelity smoke checks passed ===")
     print(
         "Manual: spawn sheep/cow/chicken/skeleton; F5 human walk/crouch; "

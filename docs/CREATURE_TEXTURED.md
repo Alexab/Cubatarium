@@ -182,3 +182,22 @@ World/collision/spawn/palette behavior is unchanged.
 - Animated pose on palette icons (static parts preview only)
 
 See also: [CREATURE_CATALOG.md](CREATURE_CATALOG.md).
+
+## UV quality metrics
+
+Automated validation for `texture_layout: box_uv` (rigid voxels v3: one unfold PNG per part).
+
+| Tool | Purpose |
+|------|---------|
+| `tools/validate_creature_uv.py` | Per-species metrics: layout, PNG dims, face coverage, b3d assignment, snout front |
+| `tools/run_creature_uv_wave.py` | Full pipeline: derive → bake → validate → checklist |
+| `docs/CREATURE_UV_CHECKLIST.yaml` | Gate status G01–G13 per species |
+| `tools/compare_uv_baseline.py` | Regression vs `tools/uv_quality_baseline.yaml` |
+| `Cubatarium.exe --creature-preview-smoke` | Headless 4×yaw BMP previews |
+
+```powershell
+python tools/validate_creature_uv.py --tier-a --fail-on-threshold
+python tools/run_creature_uv_wave.py --wave W1 --commit-wave
+```
+
+Thresholds: `tools/creature_uv_thresholds.yaml`.

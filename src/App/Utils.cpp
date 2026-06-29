@@ -30,6 +30,8 @@
 #include "Creatures/Movement/CreaturePlacement.h"
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Render/Engine/ShaderManager.h"
 #include "App/Core.h"
 #include "App/Platform/GameDataRoot.h"
 #include "App/Platform/IPlatformPaths.h"
@@ -1626,6 +1628,221 @@ int RunCreatureStepUpSmoke()
                     std::string("creature-step-up-smoke: done failures=") +
                         std::to_string(failures));
 
+  glfwDestroyWindow(ctx);
+  glfwTerminate();
+  return failures > 0 ? 1 : 0;
+}
+
+namespace
+{
+
+bool WriteBmpRgb(const std::filesystem::path &path, const std::vector<uint8_t> &rgba,
+                 int width, int height)
+{
+  const int rowBytes = ((width * 3 + 3) / 4) * 4;
+  std::vector<uint8_t> pixels(static_cast<size_t>(rowBytes * height), 0);
+  for (int y = 0; y < height; ++y)
+  {
+    const int srcY = height - 1 - y;
+    for (int x = 0; x < width; ++x)
+    {
+      const size_t src = static_cast<size_t>((srcY * width + x) * 4);
+      const size_t dst = static_cast<size_t>(y * rowBytes + x * 3);
+      pixels[dst + 0] = rgba[src + 0];
+      pixels[dst + 1] = rgba[src + 1];
+      pixels[dst + 2] = rgba[src + 2];
+    }
+  }
+  const uint32_t fileSize =
+      14u + 40u + static_cast<uint32_t>(pixels.size());
+  std::ofstream out(path, std::ios::binary);
+  if (!out)
+  {
+    return false;
+  }
+  auto write32 = [&](uint32_t v) {
+    out.put(static_cast<char>(v & 0xff));
+    out.put(static_cast<char>((v >> 8) & 0xff));
+    out.put(static_cast<char>((v >> 16) & 0xff));
+    out.put(static_cast<char>((v >> 24) & 0xff));
+  };
+  auto write16 = [&](uint16_t v) {
+    out.put(static_cast<char>(v & 0xff));
+    out.put(static_cast<char>((v >> 8) & 0xff));
+  };
+  out.put('B');
+  out.put('M');
+  write32(fileSize);
+  write16(0);
+  write16(0);
+  write32(14u + 40u);
+  write32(40u);
+  write32(static_cast<uint32_t>(width));
+  write32(static_cast<uint32_t>(height));
+  write16(1);
+  write16(24);
+  write32(0);
+  write32(static_cast<uint32_t>(pixels.size()));
+  write32(0);
+  write32(0);
+  write32(0);
+  write32(0);
+  out.write(reinterpret_cast<const char *>(pixels.data()),
+            static_cast<std::streamsize>(pixels.size()));
+  return static_cast<bool>(out);
+}
+
+bool CapturePreviewBmp(GLuint colorTex, int size,
+                       const std::filesystem::path &path)
+{
+  std::vector<uint8_t> rgba(static_cast<size_t>(size * size * 4));
+  glBindTexture(GL_TEXTURE_2D, colorTex);
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return WriteBmpRgb(path, rgba, size, size);
+}
+
+} // namespace
+
+int RunCreaturePreviewSmoke(int argc, char **argv, int preview_index)
+{
+  if (auto *paths = IPlatformPaths::TryGet())
+  {
+    std::error_code ec;
+    std::filesystem::current_path(paths->AssetRoot(), ec);
+  }
+  else
+  {
+    const auto exeDir = GetExecutableDirectory();
+    if (auto root = TryFindProjectRoot(exeDir))
+    {
+      std::error_code ec;
+      std::filesystem::current_path(*root, ec);
+    }
+  }
+
+  std::vector<std::string> speciesFilter;
+  bool tierA = false;
+  std::filesystem::path outDir = GetExecutableDirectory() / "uv_preview";
+  for (int i = preview_index + 1; i < argc; ++i)
+  {
+    if (std::strcmp(argv[i], "--species") == 0 && i + 1 < argc)
+    {
+      speciesFilter.push_back(argv[++i]);
+    }
+    else if (std::strcmp(argv[i], "--tier-a") == 0)
+    {
+      tierA = true;
+    }
+    else if (std::strcmp(argv[i], "--out-dir") == 0 && i + 1 < argc)
+    {
+      outDir = argv[++i];
+    }
+  }
+
+  if (!glfwInit())
+  {
+    std::cerr << "creature-preview-smoke: glfwInit failed" << std::endl;
+    return 1;
+  }
+  glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  GLFWwindow *ctx =
+      glfwCreateWindow(256, 256, "creature-preview-smoke", nullptr, nullptr);
+  if (!ctx)
+  {
+    std::cerr << "creature-preview-smoke: failed to create GL context" << std::endl;
+    glfwTerminate();
+    return 1;
+  }
+  glfwMakeContextCurrent(ctx);
+  if (glewInit() != GLEW_OK)
+  {
+    std::cerr << "creature-preview-smoke: glewInit failed" << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
+  }
+
+  auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
+  creatureDefinitions->Load("models/creatures");
+  auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
+  skinDefinitions->Load("models/skins");
+  auto creatureTextures = std::make_shared<UCreatureTextureStorage>();
+  creatureTextures->LoadFromCreatureAndSkinRoots("models/creatures",
+                                                 "models/skins");
+  auto shaderManager = std::make_shared<UShaderManager>();
+  if (!shaderManager->Initialize())
+  {
+    std::cerr << "creature-preview-smoke: shader init failed" << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
+  }
+  UCreaturePreviewRenderer preview(creatureDefinitions, skinDefinitions,
+                                   creatureTextures, shaderManager);
+  if (!preview.Initialize())
+  {
+    std::cerr << "creature-preview-smoke: preview init failed" << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
+  }
+
+  std::vector<std::string> speciesList;
+  if (!speciesFilter.empty())
+  {
+    speciesList = speciesFilter;
+  }
+  else if (tierA)
+  {
+    static const char *kTierA[] = {"sheep", "wolf", "pig", "cow", "chicken",
+                                   "oerkki", "skeleton", "sand_monster"};
+    speciesList.assign(std::begin(kTierA), std::end(kTierA));
+  }
+  else
+  {
+    speciesList = creatureDefinitions->ListSpawnable();
+  }
+
+  constexpr int kSize = 256;
+  constexpr float kPitch = 15.0f;
+  const float yaws[] = {0.0f, 90.0f, 180.0f, 270.0f};
+  int failures = 0;
+  for (const std::string &speciesId : speciesList)
+  {
+    if (speciesId == "human")
+    {
+      continue;
+    }
+    const auto speciesDir = outDir / speciesId;
+    std::error_code ec;
+    std::filesystem::create_directories(speciesDir, ec);
+    for (float yaw : yaws)
+    {
+      const GLuint tex = preview.Render(speciesId, "", kSize, yaw, kPitch);
+      if (tex == 0)
+      {
+        std::cerr << "creature-preview-smoke: render failed " << speciesId
+                  << " yaw=" << yaw << std::endl;
+        ++failures;
+        continue;
+      }
+      const auto path =
+          speciesDir / ("yaw_" + std::to_string(static_cast<int>(yaw)) + ".bmp");
+      if (!CapturePreviewBmp(tex, kSize, path))
+      {
+        std::cerr << "creature-preview-smoke: write failed " << path << std::endl;
+        ++failures;
+      }
+    }
+  }
+
+  std::cout << "creature-preview-smoke: species=" << speciesList.size()
+            << " failures=" << failures << std::endl;
+  preview.Shutdown();
   glfwDestroyWindow(ctx);
   glfwTerminate();
   return failures > 0 ? 1 : 0;

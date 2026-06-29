@@ -34,6 +34,9 @@ int RunCreatureStackSmoke();
 /// Serializer throughput smoke for chunk I/O backends.
 int RunBenchChunkIo();
 
+/// Headless creature preview PNG export for UV regression (CI).
+int RunCreaturePreviewSmoke(int argc, char **argv, int preview_index);
+
 } // namespace cutum
 
 #endif
