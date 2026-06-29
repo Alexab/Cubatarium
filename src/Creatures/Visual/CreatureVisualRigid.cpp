@@ -59,8 +59,12 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
       return CreaturePartMesh::Body;
     }
   }
-  else if (layout == CreatureTextureLayout::RigidCrop &&
-           UsesRigidFaceTexture(part.textureAssetKey))
+  if (layout == CreatureTextureLayout::BoxUv)
+  {
+    return CreaturePartMesh::Box;
+  }
+  if (layout == CreatureTextureLayout::RigidCrop &&
+      UsesRigidFaceTexture(part.textureAssetKey))
   {
     return CreaturePartMesh::RigidHead;
   }
@@ -171,7 +175,7 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
                                       const glm::mat4 &viewProj)
 {
   const RenderSettings &settings = engine.GetRenderSettings();
-  const bool drawTextured =
+  bool drawTextured =
       settings.CreatureTexturedParts && !Appearance.Parts.empty();
   auto creatureTextures = engine.GetCreatureTextureStorage();
   const std::optional<float> torsoBottomY = TorsoBottomY(Appearance.Parts);
@@ -215,19 +219,36 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
 
   if (drawTextured && creatureTextures)
   {
+    bool drewTexturedPart = false;
     for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       const glm::mat4 model = drawPart(part);
       const GLuint tex = creatureTextures->GetTexture(part.textureAssetKey);
       if (tex != 0)
       {
-        engine.DrawCreatureTexturedPart(viewProj * model, tex,
-                                        MeshForPart(part, textureLayout));
+        const CreaturePartMesh mesh = MeshForPart(part, textureLayout);
+        float boxUvCoords[48];
+        const float *dynamicUv = nullptr;
+        if (textureLayout == CreatureTextureLayout::BoxUv)
+        {
+          BuildCreatureBoxUvTexCoords(part.sizeBlocks.x, part.sizeBlocks.y,
+                                      part.sizeBlocks.z, boxUvCoords);
+          dynamicUv = boxUvCoords;
+        }
+        if (engine.DrawCreatureTexturedPart(viewProj * model, tex, mesh,
+                                            dynamicUv))
+        {
+          drewTexturedPart = true;
+        }
       }
       else if (settings.CreatureWireframeOverlay)
       {
         engine.DrawBoxWireframe(viewProj * model, Appearance.wireframeColor);
       }
+    }
+    if (!drewTexturedPart)
+    {
+      drawTextured = false;
     }
   }
   else if (Appearance.useWireframeFallback || !drawTextured)

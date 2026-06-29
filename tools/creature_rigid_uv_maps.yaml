@@ -32,11 +32,14 @@ default_part_groups:
       stem: arm
   aerial:
     body:
-      part_ids: [torso, neck, wing_l, wing_r, comb]
+      part_ids: [torso, neck, comb]
       stem: body
     face:
       part_ids: [head, beak]
       stem: face
+    wing:
+      part_ids: [wing_l, wing_r]
+      stem: wing
     leg:
       part_ids: [leg_l, leg_r]
       stem: leg
@@ -112,6 +115,8 @@ species_archetype:
 
 output_size: 64
 icon_size: 32
+texels_per_block: 16
+box_uv_pad_px: 1
 uv_pad: 0.02
 uv_match_margin: 0.15
 uv_leg_match_margin: 0.35

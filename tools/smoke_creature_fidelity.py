@@ -14,6 +14,8 @@ sys.path.insert(0, str(TOOLS))
 
 from PIL import Image
 
+from creature_tier_a import TIER_A_MOBS, TIER_A_SPECIES
+
 RESEARCH = Path(r"E:/Work/Home/CubatariumTextureResearch")
 MODELS = ROOT / "models" / "creatures"
 
@@ -292,6 +294,47 @@ def check_wave_baked(species: str) -> None:
     print(f"OK wave bake {species}")
 
 
+def check_box_uv_layout(species: str) -> None:
+    creature = load_creature(species)
+    layout = creature.get("visual", {}).get("texture_layout", "")
+    if species == "human":
+        if layout != "player_skin_atlas":
+            raise SystemExit(f"FAIL {species}: expected player_skin_atlas, got {layout!r}")
+        print(f"OK {species} layout {layout}")
+        return
+    if species in TIER_A_MOBS:
+        if layout not in ("box_uv", "rigid_crop"):
+            raise SystemExit(f"FAIL {species}: unexpected layout {layout!r}")
+        print(f"OK {species} layout {layout}")
+        return
+    if layout == "box_uv":
+        print(f"OK {species} layout box_uv")
+
+
+def check_chicken_wing_stem() -> None:
+    chicken = load_creature("chicken")
+    for wing_id in ("wing_l", "wing_r"):
+        part = next(p for p in chicken["visual"]["parts"] if p["id"] == wing_id)
+        if part["texture"] != "wing":
+            raise SystemExit(f"FAIL chicken: {wing_id}.texture={part['texture']!r}")
+    wing_path = MODELS / "chicken" / "textures" / "wing.png"
+    if not wing_path.is_file():
+        raise SystemExit("FAIL chicken: missing wing.png")
+    print("OK chicken wing stem + wing.png")
+
+
+def check_box_uv_sidecar(species: str) -> None:
+    creature = load_creature(species)
+    if creature.get("visual", {}).get("texture_layout") != "box_uv":
+        return
+    body_uv = MODELS / species / "textures" / "body.uv.json"
+    if body_uv.is_file():
+        data = json.loads(body_uv.read_text(encoding="utf-8"))
+        if data.get("layout") != "box_uv":
+            raise SystemExit(f"FAIL {species}: body.uv.json layout")
+        print(f"OK {species} box_uv sidecar")
+
+
 def main() -> None:
     print("=== creature fidelity smoke ===")
     check_opaque("sheep", ("body", "face", "ear", "tail"))
@@ -310,6 +353,11 @@ def main() -> None:
     print("OK chicken head uses face texture")
     for species in ("sheep", "cow", "pig", "wolf", "chicken"):
         check_no_orphan_arm(species)
+    check_chicken_wing_stem()
+    for species in TIER_A_SPECIES:
+        check_box_uv_layout(species)
+    for species in ("sheep", "cow", "chicken", "skeleton", "oerkki"):
+        check_box_uv_sidecar(species)
     check_human_atlas()
     check_proportions()
     check_animation_fields()

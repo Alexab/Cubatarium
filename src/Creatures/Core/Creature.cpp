@@ -1,6 +1,11 @@
 #include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Movement/CreatureBodyProbe.h"
+#include "Creatures/Movement/CreatureBodySeparation.h"
+#include "Creatures/Movement/CreatureHabitatPolicy.h"
 #include "Creatures/Core/Creature.h"
-#include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Movement/CreatureFootprint.h"
+#include "Creatures/Movement/CreatureBodyStepUp.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
@@ -162,7 +167,50 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 {
   const glm::vec3 bodyOriginBefore = BodyOrigin;
 
-  if (!Possessed && Locomotion.GetMode() == CreatureMovementMode::Walking)
+  const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
+  const CreatureHabitat habitat =
+      def ? def->habitat : CreatureHabitat::Terrestrial;
+  const bool airMobility =
+      Locomotion.GetMode() == CreatureMovementMode::Flying ||
+      habitat == CreatureHabitat::Aerial;
+  const bool npcGroundSnap =
+      !Possessed && Locomotion.GetMode() == CreatureMovementMode::Walking &&
+      (habitat == CreatureHabitat::Terrestrial ||
+       habitat == CreatureHabitat::Amphibious);
+
+  if (npcGroundSnap)
+  {
+    SeparateFromBlocksAndCreatures(world, *this, 3);
+    const glm::vec3 size = Bounds.profile.restSizeBlocks;
+    const FootprintSample footprint =
+        SampleCreatureFootprint(world, BodyOrigin, size);
+    if (!CreatureHasGroundSupport(footprint))
+    {
+      const CollisionVolume vol = GetCollisionVolume();
+      const float refFeetY = vol.center.y - vol.halfExtents.y;
+      const int gx = WorldCoordToBlockIndex(BodyOrigin.x);
+      const int gz = WorldCoordToBlockIndex(BodyOrigin.z);
+      if (const std::optional<float> groundY =
+              world.QueryGroundFeetYUnder(gx, gz, refFeetY))
+      {
+        BodyOrigin.y = *groundY;
+      }
+    }
+    DepenetrateCreatureFromGround(world, BodyOrigin, size, Id);
+    if (IsInDepression(world, BodyOrigin))
+    {
+      const EnvironmentSample env =
+          ProbeEnvironmentAt(world, BodyOrigin, size);
+      glm::vec3 escaped = BodyOrigin;
+      if (TryCreatureEscapeStepUp(world, Id, escaped, size, habitat,
+                                  env.inFluid))
+      {
+        BodyOrigin = escaped;
+      }
+    }
+    SyncBoundsFromStance();
+  }
+  else if (!Possessed && Locomotion.GetMode() == CreatureMovementMode::Walking)
   {
     glm::vec3 eye = GetLocomotionEye();
     CreatureInput emptyInput;
@@ -182,12 +230,6 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   if (Intent.moveDirWorld != glm::vec3(0.0f))
   {
-    const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
-    const CreatureHabitat habitat =
-        def ? def->habitat : CreatureHabitat::Terrestrial;
-    const bool airMobility =
-        Locomotion.GetMode() == CreatureMovementMode::Flying ||
-        habitat == CreatureHabitat::Aerial;
     glm::vec3 delta = Intent.moveDirWorld * Intent.moveSpeed * dt;
     if (habitat == CreatureHabitat::Terrestrial && !airMobility)
     {
@@ -203,10 +245,10 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
       }
     }
     const glm::vec3 size = Bounds.profile.restSizeBlocks;
-    const glm::vec3 candidate =
-        world.ResolveMovementBody(BodyOrigin, delta, size, Id);
     if (airMobility)
     {
+      const glm::vec3 candidate =
+          world.ResolveMovementBody(BodyOrigin, delta, size, Id);
       const CollisionVolume vol = CollisionVolumeFromBody(candidate, size);
       if (!world.CheckBlockCollisionVolume(vol))
       {
@@ -215,15 +257,50 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     }
     else
     {
-      const bool habitatOk =
-          (habitat == CreatureHabitat::Aquatic ||
-           habitat == CreatureHabitat::Amphibious ||
-           habitat == CreatureHabitat::Lava)
-              ? world.HabitatAllowsMovementAt(habitat, candidate, size)
-              : HabitatAllowsAt(world, habitat, candidate, size);
-      if (habitatOk)
+      const BodyMoveResult move = world.ProbeBodyMove(
+          Id, BodyOrigin, delta, habitat, size, HabitatContext::MoveApply);
+      if (!move.blockedGeometry && move.habitatOk)
       {
-        BodyOrigin = candidate;
+        BodyOrigin = move.resolvedOrigin;
+      }
+      else if (move.habitatOk &&
+               (move.resolvedOrigin.y < BodyOrigin.y - 0.45f ||
+                move.movedXZ >= kMinMoveApplyXZ))
+      {
+        BodyOrigin = move.resolvedOrigin;
+      }
+      else if (IsInDepression(world, BodyOrigin))
+      {
+        const EnvironmentSample env =
+            ProbeEnvironmentAt(world, BodyOrigin, size);
+        if (TryCreatureEscapeStepUp(world, Id, BodyOrigin, size, habitat,
+                                    env.inFluid))
+        {
+          SyncBoundsFromStance();
+        }
+      }
+      else if (IsOnRaisedFooting(world, BodyOrigin))
+      {
+        glm::vec3 lowered = BodyOrigin;
+        if (!TryCreatureLedgeDrop(world, Id, lowered, delta, size))
+        {
+          lowered = SnapBodyToColumnGround(world, BodyOrigin, size, Id, 1.05f);
+        }
+        if (lowered.y < BodyOrigin.y - 0.02f)
+        {
+          BodyOrigin = lowered;
+          SyncBoundsFromStance();
+        }
+      }
+      else
+      {
+        const EnvironmentSample env =
+            ProbeEnvironmentAt(world, BodyOrigin, size);
+        if (TryCreatureEscapeStepUp(world, Id, BodyOrigin, size, habitat,
+                                    env.inFluid))
+        {
+          SyncBoundsFromStance();
+        }
       }
     }
   }

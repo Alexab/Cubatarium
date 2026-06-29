@@ -71,6 +71,7 @@ std::string CreatureVisualBackendToString(CreatureVisualBackend backend);
 enum class CreatureTextureLayout : uint8_t
 {
   RigidCrop,
+  BoxUv,
   PlayerSkinAtlas,
 };
 

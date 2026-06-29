@@ -82,6 +82,13 @@ set(SOURCES
     src/Activity/Agents/WanderActivityAgent.cpp
     src/Creatures/Core/WorldCreatures.cpp
     src/Creatures/Environment/CreatureEnvironment.cpp
+    src/Creatures/Movement/CreatureBodyProbe.cpp
+    src/Creatures/Movement/CreatureBodySeparation.cpp
+    src/Creatures/Movement/CreatureBodyStepUp.cpp
+    src/Creatures/Movement/CreatureFootprint.cpp
+    src/Creatures/Movement/CreatureHabitatPolicy.cpp
+    src/Creatures/Movement/CreaturePlacement.cpp
+    src/Creatures/Movement/CreatureMovementLog.cpp
     src/Creatures/Definition/CreatureDefinitionStorage.cpp
     src/Creatures/Visual/CreatureTextureStorage.cpp
     src/Creatures/Definition/SkinDefinitionStorage.cpp
@@ -505,6 +512,44 @@ add_executable(chunk_load_priority_test
 target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
+
+add_executable(creature_habitat_policy_test
+    src/Creatures/Movement/CreatureHabitatPolicy.cpp
+    src/Test/CreatureHabitatPolicyTest.cpp)
+target_include_directories(creature_habitat_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_habitat_policy_test glm::glm)
+
+add_executable(creature_body_probe_test
+    src/Creatures/Movement/CreatureHabitatPolicy.cpp
+    src/Test/CreatureBodyProbeTest.cpp)
+target_include_directories(creature_body_probe_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_body_probe_test glm::glm)
+
+add_executable(creature_footprint_test
+    src/Test/CreatureFootprintTest.cpp)
+target_include_directories(creature_footprint_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_footprint_test glm::glm)
+
+add_executable(creature_step_up_test
+    src/Test/CreatureStepUpTest.cpp)
+target_include_directories(creature_step_up_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_step_up_test glm::glm)
+
+add_executable(creature_placement_test
+    src/Test/CreaturePlacementTest.cpp)
+target_include_directories(creature_placement_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_placement_test glm::glm)
+
+add_executable(creature_separation_test
+    src/Test/CreatureSeparationTest.cpp)
+target_include_directories(creature_separation_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_separation_test glm::glm)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

@@ -29,7 +29,7 @@
   },
   "eye_height": 0.55,
   "habitat": "terrestrial",
-  "locomotion_archetype": "aerial",
+  "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {
     "can_fly": false,
     "can_crouch": false,
@@ -45,7 +45,7 @@
   },
   "visual": {
     "backend": "rigid_voxels",
-    "texture_layout": "rigid_crop",
+    "texture_layout": "box_uv",
     "animation": {
       "walk_cycle_hz": 2.0,
       "leg_swing_deg": 25,
@@ -141,7 +141,7 @@
           0.1,
           0.4
         ],
-        "texture": "body",
+        "texture": "wing",
         "pivot": [
           -0.18,
           0.44,
@@ -161,7 +161,7 @@
           0.1,
           0.4
         ],
-        "texture": "body",
+        "texture": "wing",
         "pivot": [
           0.18,
           0.44,

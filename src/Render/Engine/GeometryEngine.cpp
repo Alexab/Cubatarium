@@ -2013,7 +2013,8 @@ namespace
 {
 
 bool UploadCreaturePartMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
-                            const float *texCoords)
+                            const float *texCoords,
+                            GLenum bufferUsage = GL_STATIC_DRAW)
 {
   float vertices[24 * 5];
   for (int v = 0; v < 24; ++v)
@@ -2033,7 +2034,7 @@ bool UploadCreaturePartMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
   }
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, bufferUsage);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
                kCreaturePartIndices, GL_STATIC_DRAW);
@@ -2046,6 +2047,27 @@ bool UploadCreaturePartMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
   return vao != 0;
 }
 
+bool UploadCreaturePartDynamicVertices(GLuint vbo, const float *texCoords)
+{
+  if (vbo == 0 || texCoords == nullptr)
+  {
+    return false;
+  }
+  float vertices[24 * 5];
+  for (int v = 0; v < 24; ++v)
+  {
+    vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+    vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+    vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+    vertices[v * 5 + 3] = texCoords[v * 2 + 0];
+    vertices[v * 5 + 4] = texCoords[v * 2 + 1];
+  }
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  return true;
+}
+
 } // namespace
 
 bool UGeometryEngine::InitCreaturePartBuffers()
@@ -2056,8 +2078,8 @@ bool UGeometryEngine::InitCreaturePartBuffers()
   }
   float texCoords[48];
   BuildCreatureBoxTexCoords(texCoords);
-  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO,
-                                creaturePartEBO, texCoords);
+  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO, creaturePartEBO,
+                                texCoords, GL_DYNAMIC_DRAW);
 }
 
 bool UGeometryEngine::InitCreatureHeadPartBuffers()
@@ -2095,6 +2117,41 @@ bool UGeometryEngine::InitCreatureRigidHeadPartBuffers()
   return UploadCreaturePartMesh(creatureRigidHeadPartVAO,
                                 creatureRigidHeadPartVBO,
                                 creatureRigidHeadPartEBO, texCoords);
+}
+
+bool UGeometryEngine::InitCreatureDynamicPartBuffers()
+{
+  if (creatureDynamicPartVAO != 0)
+  {
+    return true;
+  }
+  float texCoords[48];
+  BuildCreatureBoxTexCoords(texCoords);
+  float vertices[24 * 5];
+  for (int v = 0; v < 24; ++v)
+  {
+    vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+    vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+    vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+    vertices[v * 5 + 3] = texCoords[v * 2 + 0];
+    vertices[v * 5 + 4] = texCoords[v * 2 + 1];
+  }
+  glGenVertexArrays(1, &creatureDynamicPartVAO);
+  glGenBuffers(1, &creatureDynamicPartVBO);
+  glGenBuffers(1, &creatureDynamicPartEBO);
+  glBindVertexArray(creatureDynamicPartVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, creatureDynamicPartVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, creatureDynamicPartEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
+               kCreaturePartIndices, GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glBindVertexArray(0);
+  return creatureDynamicPartVAO != 0;
 }
 
 void UGeometryEngine::DestroyCreaturePartBuffers()
@@ -2159,15 +2216,31 @@ void UGeometryEngine::DestroyCreaturePartBuffers()
     glDeleteVertexArrays(1, &creaturePartVAO);
     creaturePartVAO = 0;
   }
+  if (creatureDynamicPartEBO)
+  {
+    glDeleteBuffers(1, &creatureDynamicPartEBO);
+    creatureDynamicPartEBO = 0;
+  }
+  if (creatureDynamicPartVBO)
+  {
+    glDeleteBuffers(1, &creatureDynamicPartVBO);
+    creatureDynamicPartVBO = 0;
+  }
+  if (creatureDynamicPartVAO)
+  {
+    glDeleteVertexArrays(1, &creatureDynamicPartVAO);
+    creatureDynamicPartVAO = 0;
+  }
 }
 
-void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
+bool UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
                                                GLuint texture,
-                                               CreaturePartMesh mesh)
+                                               CreaturePartMesh mesh,
+                                               const float *dynamicTexCoords)
 {
   if (texture == 0 || !defaultShader || !defaultShader->IsValid())
   {
-    return;
+    return false;
   }
   GLuint vao = 0;
   switch (mesh)
@@ -2175,29 +2248,35 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
   case CreaturePartMesh::Head:
     if (creatureHeadPartVAO == 0 && !InitCreatureHeadPartBuffers())
     {
-      return;
+      return false;
     }
     vao = creatureHeadPartVAO;
     break;
   case CreaturePartMesh::Body:
     if (creatureBodyPartVAO == 0 && !InitCreatureBodyPartBuffers())
     {
-      return;
+      return false;
     }
     vao = creatureBodyPartVAO;
     break;
   case CreaturePartMesh::RigidHead:
     if (creatureRigidHeadPartVAO == 0 && !InitCreatureRigidHeadPartBuffers())
     {
-      return;
+      return false;
     }
     vao = creatureRigidHeadPartVAO;
     break;
+  case CreaturePartMesh::BoxDynamic:
   case CreaturePartMesh::Box:
   default:
     if (creaturePartVAO == 0 && !InitCreaturePartBuffers())
     {
-      return;
+      return false;
+    }
+    if (dynamicTexCoords != nullptr &&
+        !UploadCreaturePartDynamicVertices(creaturePartVBO, dynamicTexCoords))
+    {
+      return false;
     }
     vao = creaturePartVAO;
     break;
@@ -2226,6 +2305,7 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
   {
     glDisable(GL_DEPTH_TEST);
   }
+  return true;
 }
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(const glm::mat4 & /*mvp*/,

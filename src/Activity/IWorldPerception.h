@@ -3,6 +3,8 @@
 
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Movement/CreatureBodyProbe.h"
+#include "Creatures/Movement/CreatureHabitatPolicy.h"
 #include <glm/glm.hpp>
 #include <optional>
 #include <vector>
@@ -21,12 +23,14 @@ public:
   virtual bool CanCreatureOccupyAt(CreatureHabitat habitat,
                                    const glm::vec3 &bodyOrigin,
                                    const glm::vec3 &sizeBlocks) const = 0;
-  virtual bool HabitatAllowsAt(CreatureHabitat habitat,
-                               const glm::vec3 &bodyOrigin,
-                               const glm::vec3 &sizeBlocks) const = 0;
-  virtual bool HabitatAllowsMovementAt(CreatureHabitat habitat,
-                                       const glm::vec3 &bodyOrigin,
-                                       const glm::vec3 &sizeBlocks) const = 0;
+  virtual bool HabitatAllows(HabitatContext ctx, CreatureHabitat habitat,
+                             const glm::vec3 &bodyOrigin,
+                             const glm::vec3 &sizeBlocks) const = 0;
+  virtual BodyMoveResult ProbeBodyMove(CreatureId id, const glm::vec3 &origin,
+                                       const glm::vec3 &delta,
+                                       CreatureHabitat habitat,
+                                       const glm::vec3 &sizeBlocks,
+                                       HabitatContext targetContext) const = 0;
 };
 
 } // namespace cutum

@@ -1,4 +1,6 @@
 #include "Creatures/Core/CreatureInventory.h"
+#include <algorithm>
+#include <cctype>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -7,6 +9,14 @@ namespace cutum
 namespace
 {
 constexpr size_t kHotbarSlots = 10;
+
+std::string TrimInventoryEntryId(std::string id)
+{
+  auto notSpace = [](unsigned char c) { return !std::isspace(c); };
+  id.erase(id.begin(), std::find_if(id.begin(), id.end(), notSpace));
+  id.erase(std::find_if(id.rbegin(), id.rend(), notSpace).base(), id.end());
+  return id;
+}
 
 void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
 {
@@ -307,7 +317,7 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
           {
             break;
           }
-          const std::string id = slotJson.value("id", "");
+          const std::string id = TrimInventoryEntryId(slotJson.value("id", ""));
           const bool slotEmpty =
               slotJson.contains("empty") ? slotJson["empty"].get<bool>() : id.empty();
           bar.slots[si].empty = slotEmpty;

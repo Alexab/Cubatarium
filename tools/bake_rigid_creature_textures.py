@@ -213,7 +213,50 @@ def prune_orphan_stems(tex_dir: Path, stem_rects: dict[str, tuple]) -> None:
             print(f"  removed orphan {path.name}")
 
 
-def bake_species(
+def compute_stem_rects(
+    species_id: str,
+    sources: dict,
+    maps: dict,
+    research: Path,
+    models_root: Path,
+    pad: float,
+    match_margin: float,
+    leg_margin: float,
+) -> dict[str, tuple[float, float, float, float]]:
+    spec = sources["species"][species_id]
+    creature_path = models_root / "creatures" / species_id / "creature.json"
+    creature = json.loads(creature_path.read_text(encoding="utf-8"))
+    part_defs = creature["visual"]["parts"]
+    rest = creature["bounds"]["rest"]
+    archetype = maps["species_archetype"][species_id]
+    groups = maps["default_part_groups"][archetype]
+    manual = spec.get("manual_uv", {})
+    stem_rects: dict[str, tuple[float, float, float, float]] = {}
+    for stem, rect in manual.items():
+        if len(rect) == 4:
+            stem_rects[stem] = tuple(rect)
+    model_rel = spec.get("model")
+    if model_rel and any(g["stem"] not in stem_rects for g in groups.values()):
+        verts = load_b3d_vertices(research / model_rel)
+        bounds = mesh_bounds(verts)
+        assignments = assign_vertex_parts(
+            verts, bounds, rest, part_defs, match_margin, leg_margin
+        )
+        for group in groups.values():
+            stem = group["stem"]
+            if stem in stem_rects:
+                continue
+            rect = uv_bbox_from_parts(
+                verts, bounds, rest, part_defs, group["part_ids"], pad, match_margin, assignments
+            )
+            if rect:
+                stem_rects[stem] = rect
+    elif not model_rel and not stem_rects:
+        raise ValueError(f"{species_id}: no model or manual_uv")
+    return stem_rects
+
+
+def bake_species_legacy_crop(
     species_id: str,
     sources: dict,
     maps: dict,
@@ -286,9 +329,170 @@ def bake_species(
 
     patch_creature_icon_mode(models_root, species_id)
 
-    for stem in ("body", "leg", "arm", "face"):
-        if stem not in stem_rects and (tex_dir / f"{stem}.png").exists():
-            pass
+
+def bake_species_box_uv(
+    species_id: str,
+    sources: dict,
+    maps: dict,
+    research: Path,
+    models_root: Path,
+    icon_size: int,
+    match_margin: float,
+    leg_margin: float,
+    texels_per_block: int,
+    uv_pad_px: int,
+) -> None:
+    from b3d_face_groups import bake_stem_box_unfold, write_uv_sidecar
+
+    spec = sources["species"][species_id]
+    creature_path = models_root / "creatures" / species_id / "creature.json"
+    creature = json.loads(creature_path.read_text(encoding="utf-8"))
+    part_defs = creature["visual"]["parts"]
+    rest = creature["bounds"]["rest"]
+    archetype = maps["species_archetype"][species_id]
+    groups = maps["default_part_groups"][archetype]
+    atlas = load_atlas(spec, research)
+    model_rel = spec.get("model")
+    if not model_rel:
+        raise ValueError(f"{species_id}: box_uv bake requires model")
+    verts = load_b3d_vertices(research / model_rel)
+    bounds = mesh_bounds(verts)
+    assignments = assign_vertex_parts(
+        verts, bounds, rest, part_defs, match_margin, leg_margin
+    )
+    tex_dir = models_root / "creatures" / species_id / "textures"
+    tex_dir.mkdir(parents=True, exist_ok=True)
+    stem_rects: dict[str, tuple] = {}
+    pad_f = float(maps.get("uv_pad", 0.02))
+    legacy_rects = compute_stem_rects(
+        species_id, sources, maps, research, models_root, pad_f, match_margin, leg_margin
+    )
+    for group in groups.values():
+        stem = group["stem"]
+        try:
+            baked = opaque_fill(
+                bake_stem_box_unfold(
+                    atlas,
+                    verts,
+                    bounds,
+                    rest,
+                    part_defs,
+                    group["part_ids"],
+                    assignments,
+                    texels_per_block=texels_per_block,
+                    pad=uv_pad_px,
+                )
+            )
+        except ValueError as exc:
+            print(f"  SKIP {species_id}/{stem}: {exc}")
+            if stem in legacy_rects:
+                baked = opaque_fill(
+                    crop_uv(atlas, legacy_rects[stem], int(maps.get("output_size", 64)))
+                )
+            else:
+                continue
+        opaque_frac = sum(1 for p in baked.getdata() if p[3] >= 250) / max(
+            1, baked.size[0] * baked.size[1]
+        )
+        if opaque_frac < 0.05 and stem in legacy_rects:
+            baked = opaque_fill(crop_uv(atlas, legacy_rects[stem], int(maps.get("output_size", 64))))
+            print(f"  {species_id}/{stem}.png legacy fallback (unfold sparse)")
+        else:
+            print(f"  {species_id}/{stem}.png box_uv {baked.size}")
+            ref_part = next(
+                (p for p in part_defs if p["id"] in group["part_ids"]),
+                part_defs[0],
+            )
+            write_uv_sidecar(
+                tex_dir / f"{stem}.uv.json",
+                ref_part["size"][0],
+                ref_part["size"][1],
+                ref_part["size"][2],
+            )
+        baked.save(tex_dir / f"{stem}.png")
+        stem_rects[stem] = (0.0, 0.0, 1.0, 1.0)
+    prune_orphan_stems(tex_dir, stem_rects)
+    icon_path = spec.get("icon")
+    if icon_path:
+        src = research / icon_path
+        if src.is_file():
+            icon_img = Image.open(src).convert("RGBA").resize(
+                (icon_size, icon_size), Image.NEAREST
+            )
+            icon_img.transpose(Image.FLIP_TOP_BOTTOM).save(tex_dir / "icon.png")
+    else:
+        stem_rects_atlas = compute_stem_rects(
+            species_id,
+            sources,
+            maps,
+            research,
+            models_root,
+            float(maps.get("uv_pad", 0.02)),
+            match_margin,
+            leg_margin,
+        )
+        if stem_rects_atlas:
+            u0 = min(r[0] for r in stem_rects_atlas.values())
+            v0 = min(r[1] for r in stem_rects_atlas.values())
+            u1 = max(r[2] for r in stem_rects_atlas.values())
+            v1 = max(r[3] for r in stem_rects_atlas.values())
+            crop_uv(atlas, (u0, v0, u1, v1), icon_size).save(tex_dir / "icon.png")
+    patch_creature_icon_mode(models_root, species_id)
+
+
+def bake_species(
+    species_id: str,
+    sources: dict,
+    maps: dict,
+    research: Path,
+    models_root: Path,
+    out_size: int,
+    icon_size: int,
+    pad: float,
+    match_margin: float,
+    leg_margin: float,
+    layout: str = "box_uv",
+) -> None:
+    if layout == "box_uv":
+        if not sources["species"][species_id].get("model"):
+            bake_species_legacy_crop(
+                species_id,
+                sources,
+                maps,
+                research,
+                models_root,
+                out_size,
+                icon_size,
+                pad,
+                match_margin,
+                leg_margin,
+            )
+            return
+        bake_species_box_uv(
+            species_id,
+            sources,
+            maps,
+            research,
+            models_root,
+            icon_size,
+            match_margin,
+            leg_margin,
+            int(maps.get("texels_per_block", 16)),
+            int(maps.get("box_uv_pad_px", 1)),
+        )
+        return
+    bake_species_legacy_crop(
+        species_id,
+        sources,
+        maps,
+        research,
+        models_root,
+        out_size,
+        icon_size,
+        pad,
+        match_margin,
+        leg_margin,
+    )
 
 
 def bake_skin(
@@ -393,8 +597,13 @@ def patch_creature_icon_mode(models_root: Path, species_id: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--research", type=Path, default=RESEARCH_DEFAULT)
-    parser.add_argument("--species", action="append")
+    parser.add_argument("--species", action="append", nargs="+")
     parser.add_argument("--skin", action="append")
+    parser.add_argument(
+        "--legacy-crop",
+        action="store_true",
+        help="Use rigid_crop square atlas crops instead of box_uv unfold",
+    )
     args = parser.parse_args()
 
     sources = load_yaml(TOOLS / "creature_luanti_sources.yaml")
@@ -404,20 +613,42 @@ def main() -> None:
     pad = float(maps.get("uv_pad", 0.02))
     match_margin = float(maps.get("uv_match_margin", 0.15))
     leg_margin = float(maps.get("uv_leg_match_margin", 0.35))
+    mob_layout = "rigid_crop" if args.legacy_crop else "box_uv"
 
-    species_list = args.species or list(sources["species"].keys())
+    species_list: list[str] = []
+    if args.species:
+        for group in args.species:
+            species_list.extend(group)
+    else:
+        species_list = list(sources["species"].keys())
     for species_id in species_list:
         print(f"bake {species_id}")
-        layout = "player_skin_atlas" if species_id == "human" else "rigid_crop"
+        if species_id == "human":
+            layout = "player_skin_atlas"
+        elif args.legacy_crop:
+            layout = "rigid_crop"
+        elif sources["species"].get(species_id, {}).get("model"):
+            layout = "box_uv"
+        else:
+            layout = "rigid_crop"
         patch_creature_json_layout(ROOT / "models", species_id, layout)
         if species_id == "human":
             continue
         try:
             bake_species(
-                species_id, sources, maps, args.research.resolve(),
-                ROOT / "models", out_size, icon_size, pad, match_margin, leg_margin,
+                species_id,
+                sources,
+                maps,
+                args.research.resolve(),
+                ROOT / "models",
+                out_size,
+                icon_size,
+                pad,
+                match_margin,
+                leg_margin,
+                layout=layout,
             )
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, ValueError) as exc:
             print(f"SKIP {species_id}: {exc}")
 
     skin_list = args.skin or list(sources.get("skins", {}).keys())

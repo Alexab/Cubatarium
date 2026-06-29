@@ -45,6 +45,10 @@ CreatureTextureLayout ParseCreatureTextureLayout(const std::string &s)
   {
     return CreatureTextureLayout::PlayerSkinAtlas;
   }
+  if (s == "box_uv")
+  {
+    return CreatureTextureLayout::BoxUv;
+  }
   if (s == "rigid_crop" || s.empty())
   {
     return CreatureTextureLayout::RigidCrop;
@@ -60,6 +64,8 @@ const char *ToString(CreatureTextureLayout layout)
   {
   case CreatureTextureLayout::PlayerSkinAtlas:
     return "player_skin_atlas";
+  case CreatureTextureLayout::BoxUv:
+    return "box_uv";
   case CreatureTextureLayout::RigidCrop:
     return "rigid_crop";
   }

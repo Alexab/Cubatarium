@@ -77,6 +77,16 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/chunk_load_priority_test.exe
 
+      - name: Creature unit tests
+        shell: pwsh
+        run: |
+          ./build/desktop-msvc/Release/creature_habitat_policy_test.exe
+          ./build/desktop-msvc/Release/creature_body_probe_test.exe
+          ./build/desktop-msvc/Release/creature_footprint_test.exe
+          ./build/desktop-msvc/Release/creature_step_up_test.exe
+          ./build/desktop-msvc/Release/creature_placement_test.exe
+          ./build/desktop-msvc/Release/creature_separation_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -90,6 +100,15 @@ jobs:
           } else {
             python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 2 --seeds 42 --skip-determinism
           }
+
+      - name: Creature integration smoke
+        shell: pwsh
+        run: |
+          ./bin/Cubatarium.exe --creature-spawn-smoke
+          ./bin/Cubatarium.exe --creature-wander-smoke
+          ./bin/Cubatarium.exe --creature-movement-smoke
+          ./bin/Cubatarium.exe --creature-step-up-smoke
+          ./bin/Cubatarium.exe --creature-stack-smoke
 
       - name: Upload desktop runtime artifact
         uses: actions/upload-artifact@v4

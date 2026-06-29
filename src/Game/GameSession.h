@@ -35,6 +35,7 @@ public:
                          const UObjectLibrary &prefabs);
   void ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
                            const UObjectLibrary &prefabs);
+  void ReindexCreatureCatalog();
   void RegisterCommands();
 
   UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }

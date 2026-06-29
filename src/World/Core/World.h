@@ -10,6 +10,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Movement/CreaturePlacement.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Mesh/ChunkMeshCache.h"
@@ -285,23 +286,28 @@ public:
   /// Stand cell is column top with standing clearance (step-up / landing
   /// validation).
   bool IsValidStandCell(const glm::ivec3 &cell, const PlayerCapsule &cap) const;
+  bool IsValidStandCellForCreature(const glm::ivec3 &cell,
+                                   const glm::vec3 &sizeBlocks) const;
   /// Enough footprint samples on valid stand cells at `feetY` (blocks corner
   /// ledge / wall lip landings).
   bool IsValidStandFootprint(const glm::vec3 &eyePos, const PlayerCapsule &cap,
                              float feetY) const;
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,
-                           const std::string &skinId = "");
+                           const std::string &skinId = "",
+                           SpawnCollisionPolicy policy = SpawnCollisionPolicy::Full);
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
   bool CanCreatureOccupyAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
                            const glm::vec3 &sizeBlocks) const override;
-  bool HabitatAllowsAt(CreatureHabitat habitat, const glm::vec3 &bodyOrigin,
-                       const glm::vec3 &sizeBlocks) const override;
-  bool HabitatAllowsMovementAt(CreatureHabitat habitat,
-                               const glm::vec3 &bodyOrigin,
-                               const glm::vec3 &sizeBlocks) const override;
+  bool HabitatAllows(HabitatContext ctx, CreatureHabitat habitat,
+                     const glm::vec3 &bodyOrigin,
+                     const glm::vec3 &sizeBlocks) const override;
+  BodyMoveResult ProbeBodyMove(CreatureId id, const glm::vec3 &origin,
+                               const glm::vec3 &delta, CreatureHabitat habitat,
+                               const glm::vec3 &sizeBlocks,
+                               HabitatContext targetContext) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;
@@ -337,7 +343,8 @@ public:
   glm::vec3 ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                 const glm::vec3 &delta,
                                 const glm::vec3 &currentSizeBlocks,
-                                CreatureId skipCreatureId = 0) const;
+                                CreatureId skipCreatureId = 0,
+                                bool blocksOnly = false) const;
   SampledFluidState SampleFluidPhysicsVolume(const CollisionVolume &vol) const;
 
   /// `eyePos` is camera/eye position; collision AABB derived from `cap`.
@@ -379,6 +386,7 @@ public:
   bool TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
                  const PlayerCapsule &cap, float maxTriggerDistance) const;
   void DoMovement();
+  void TickCreatureBehaviors(float dt);
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;

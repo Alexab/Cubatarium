@@ -150,6 +150,10 @@ UApplication::UApplication(
     World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
     World->SetOnCreatureCatalogChanged([this]()
                                        {
+                                         if (GameSession)
+                                         {
+                                           GameSession->ReindexCreatureCatalog();
+                                         }
                                          if (IconSource)
                                          {
                                            IconSource->ClearCreatureIconCache();

@@ -25,7 +25,7 @@ constexpr float kOrbitDistance = 3.8f;
 constexpr float kFovDeg = 35.0f;
 
 void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
-                        const float *texCoords)
+                        const float *texCoords, GLenum usage = GL_STATIC_DRAW)
 {
   float vertices[24 * 5];
   for (int v = 0; v < 24; ++v)
@@ -41,7 +41,7 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
   glGenBuffers(1, &ebo);
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, usage);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
                kCreaturePartIndices, GL_STATIC_DRAW);
@@ -81,7 +81,7 @@ bool UCreaturePreviewRenderer::InitCubeMesh()
   BuildCreatureHeadTexCoords(headUv);
   BuildCreatureBodyTexCoords(bodyUv);
   BuildCreatureRigidHeadTexCoords(rigidHeadUv);
-  UploadIconCubeMesh(CubeVao, CubeVbo, CubeEbo, boxUv);
+  UploadIconCubeMesh(CubeVao, CubeVbo, CubeEbo, boxUv, GL_DYNAMIC_DRAW);
   UploadIconCubeMesh(HeadCubeVao, HeadCubeVbo, HeadCubeEbo, headUv);
   UploadIconCubeMesh(BodyCubeVao, BodyCubeVbo, BodyCubeEbo, bodyUv);
   UploadIconCubeMesh(RigidHeadCubeVao, RigidHeadCubeVbo, RigidHeadCubeEbo,
@@ -358,8 +358,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     GLuint partVao = CubeVao;
-    if (ParseCreatureTextureLayout(appearance.textureLayout) ==
-        CreatureTextureLayout::PlayerSkinAtlas)
+    const CreatureTextureLayout layout =
+        ParseCreatureTextureLayout(appearance.textureLayout);
+    if (layout == CreatureTextureLayout::PlayerSkinAtlas)
     {
       if (part.partId == "head")
       {
@@ -369,6 +370,25 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       {
         partVao = BodyCubeVao;
       }
+    }
+    else if (layout == CreatureTextureLayout::BoxUv)
+    {
+      float boxUvCoords[48];
+      BuildCreatureBoxUvTexCoords(part.sizeBlocks.x, part.sizeBlocks.y,
+                                  part.sizeBlocks.z, boxUvCoords);
+      float vertices[24 * 5];
+      for (int v = 0; v < 24; ++v)
+      {
+        vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
+        vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
+        vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
+        vertices[v * 5 + 3] = boxUvCoords[v * 2 + 0];
+        vertices[v * 5 + 4] = boxUvCoords[v * 2 + 1];
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, CubeVbo);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      partVao = CubeVao;
     }
     else if (UsesRigidFaceTexture(part.textureAssetKey))
     {

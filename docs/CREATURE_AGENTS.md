@@ -71,6 +71,8 @@ flowchart TB
 - **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IWorldPerception` + **запись intent** в подчинённых `Creature`.
 - **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` / locomotion исполняет движение через `World::ResolveMovement`.
 
+See also [`CREATURE_MOVEMENT.md`](CREATURE_MOVEMENT.md).
+
 ### Где живёт ИИ
 
 | Слой | Где | Частота |

@@ -92,8 +92,9 @@ public:
   {
     return CreatureTextureStorage;
   }
-  void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
-                                CreaturePartMesh mesh = CreaturePartMesh::Box);
+  bool DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
+                                CreaturePartMesh mesh = CreaturePartMesh::Box,
+                                const float *dynamicTexCoords = nullptr);
   void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint meshVao,
                                GLuint texture);
 
@@ -155,6 +156,9 @@ private:
   GLuint creatureRigidHeadPartVAO = 0;
   GLuint creatureRigidHeadPartVBO = 0;
   GLuint creatureRigidHeadPartEBO = 0;
+  GLuint creatureDynamicPartVAO = 0;
+  GLuint creatureDynamicPartVBO = 0;
+  GLuint creatureDynamicPartEBO = 0;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
@@ -162,6 +166,7 @@ private:
   bool InitCreatureHeadPartBuffers();
   bool InitCreatureBodyPartBuffers();
   bool InitCreatureRigidHeadPartBuffers();
+  bool InitCreatureDynamicPartBuffers();
   void DestroyCreaturePartBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();

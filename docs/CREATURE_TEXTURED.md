@@ -11,20 +11,28 @@ skin.json texture_map       →  per-part texture keys      →  CreatureTexture
 
 Wireframe is **not** drawn in normal play. Use debug settings for bounds or overlay.
 
-## Luanti mesh atlas vs `rigid_crop`
+## Luanti mesh atlas vs texture layouts
 
 Luanti mobs use `visual = "mesh"`: a single PNG atlas (often 128×128) with per-vertex UV from `.b3d`. Cubatarium `rigid_voxels` draws axis-aligned boxes with one texture stem per part.
 
 | Layout | Species | UV in renderer | PNG source |
 |--------|---------|----------------|------------|
-| `player_skin_atlas` | `human` | `Head` / `Body` VAO crops (face on +X only) | 64×32 skin sliced into player-atlas layout |
-| `rigid_crop` | mobs | `Box` for body/leg/ear/tail; `RigidHead` for `face` stem (`snout`/`beak`/aerial `head`/`comb`) — морда только на +Z | 64×64 bake per stem (`body`, `face`, `leg`, `ear`, `tail`, …) |
+| `player_skin_atlas` | `human` | `Head` / `Body` VAO crops (face on +Z) | 64×32 skin sliced into player-atlas layout |
+| `box_uv` | mobs with `.b3d` model | `BoxDynamic` — per-face regions from `BuildCreatureBoxUvTexCoords(size)` | Box-unfold PNG per stem from bake v2 |
+| `rigid_crop` | mobs without `.b3d` (e.g. wolf/pig manual atlas) | `Box` full 0–1; `RigidHead` for `/face` on +Z only | 64×64 square crop per stem (legacy) |
 
-**Without bake:** importing a mesh atlas into every stem and applying player UV to mob `head`/`torso` produces stretched “face on torso” artifacts.
+**Without bake:** importing a mesh atlas into every stem and applying full UV on all cube faces produces stretched “face on torso” artifacts.
 
-**Bake pipeline:** `tools/bake_rigid_creature_textures.py` composites Luanti layers (e.g. sheep `base ^ wool`), parses `.b3d` UV (`tools/b3d_read.py`), maps rigid JSON part AABBs to atlas regions, applies **`opaque_fill`** (dilate transparent atlas pixels — fixes semi-transparent sheep/skeleton), and writes `models/creatures/<id>/textures/<stem>.png`. Orphan stems (e.g. old `arm.png` on quadrupeds) are removed after bake. Override failed auto-crops via `manual_uv` in `tools/creature_luanti_sources.yaml`. UV validation: `python tools/debug_creature_uv_crops.py --species sheep`.
+**Bake pipeline (default):** `python tools/bake_rigid_creature_textures.py`
 
-Set in JSON: `"texture_layout": "rigid_crop"` (mobs) or `"player_skin_atlas"` (human). Runtime: `CreatureVisualRigid::MeshForPart` uses `Head`/`Body` for human; mob parts with `/face` texture use `RigidHead` (full crop on +Z, plain corner on sides).
+- Species **with** Luanti `.b3d`: `box_uv` unfold via `tools/b3d_face_groups.py` (`texels_per_block` in `creature_rigid_uv_maps.yaml`).
+- Species **without** model (manual `manual_uv` only): falls back to `rigid_crop` square crops.
+- `--legacy-crop` forces square crops for all mobs.
+- Sidecar `textures/<stem>.uv.json` documents unfold metadata (validation only).
+
+Override failed auto-crops via `manual_uv` in `tools/creature_luanti_sources.yaml`. UV validation: `python tools/debug_creature_uv_crops.py --tier-a --auto`.
+
+Set in JSON: `"texture_layout": "box_uv"` | `"rigid_crop"` | `"player_skin_atlas"` (human). Runtime: `CreatureVisualRigid::MeshForPart` — human uses Head/Body; `box_uv` uses dynamic box unfold; `rigid_crop` uses Box / RigidHead.
 
 ### Quadruped face parts
 
@@ -36,9 +44,9 @@ Per-species geometry in [`tools/creature_rigid_parts.yaml`](../../tools/creature
 - `tail` — optional (`tail` texture stem)
 - Chicken: `neck`, `head` + `comb` + `beak` (`face` stem), wings, legs
 
-Part geometry source: [`tools/creature_rigid_parts.yaml`](../../tools/creature_rigid_parts.yaml). Proportion hints: `python tools/derive_rigid_proportions.py`.
+Part geometry source: [`tools/creature_rigid_parts.yaml`](../../tools/creature_rigid_parts.yaml). Proportion hints: `python tools/derive_rigid_proportions.py`; refine from `.b3d`: `python tools/derive_rigid_parts_v2.py --species <id>` (use `--write` only after review).
 
-Regenerate JSON: `python tools/generate_luanti_creature_catalog.py`
+Tier A baseline gallery: `python tools/render_creature_tier_a_gallery.py`
 
 ## `visual.parts` in `creature.json`
 

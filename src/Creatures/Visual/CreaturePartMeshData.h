@@ -92,6 +92,30 @@ inline void BuildCreatureBoxTexCoords(float *out)
   }
 }
 
+// Minecraft-style box unfold (+Z forward, +Y up). sx/sy/sz = part size in blocks.
+inline void BuildCreatureBoxUvTexCoords(float sx, float sy, float sz, float *out)
+{
+  const float texW = 2.f * sx + 2.f * sz;
+  const float texH = sy + 2.f * sz;
+  if (texW < 1e-6f || texH < 1e-6f)
+  {
+    BuildCreatureBoxTexCoords(out);
+    return;
+  }
+  auto glRect = [&](float ix0, float iy0, float ix1, float iy1) -> CreatureFaceUv
+  {
+    return {ix0 / texW, 1.f - iy1 / texH, ix1 / texW, 1.f - iy0 / texH};
+  };
+  int idx = 0;
+  AppendFaceUv(out, idx, glRect(sz, sz, sz + sx, sz + sy));                 // +Z
+  AppendFaceUv(out, idx, glRect(sz + sx + sz, sz, sz + sx + sz + sz, sz + sy)); // +X
+  AppendFaceUv(out, idx,
+               glRect(sz + sx + sz + sx, sz, sz + sx + sz + sx + sx, sz + sy)); // -Z
+  AppendFaceUv(out, idx, glRect(0.f, sz, sz, sz + sy));                      // -X
+  AppendFaceUv(out, idx, glRect(sz, 0.f, sz + sx, sz));                      // +Y
+  AppendFaceUv(out, idx, glRect(sz, sz + sy, sz + sx, sz + sy + sz));       // -Y
+}
+
 inline void BuildCreatureHeadTexCoords(float *out)
 {
   int i = 0;
@@ -129,6 +153,7 @@ inline void BuildCreatureRigidHeadTexCoords(float *out)
 enum class CreaturePartMesh
 {
   Box,
+  BoxDynamic,
   Head,
   Body,
   RigidHead,

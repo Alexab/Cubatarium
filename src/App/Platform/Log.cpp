@@ -122,9 +122,9 @@ void WriteLogLine(const char *tag, const std::string &msg, bool isError)
 #endif
 
 #ifdef _WIN32
+  AppendLogLine(text);
   if (isError)
   {
-    AppendLogLine(text);
     ShowWindowsErrorDialog(msg);
   }
 #endif

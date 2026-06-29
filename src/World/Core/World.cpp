@@ -9,6 +9,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Core/Progress/IProgressSink.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Movement/CreatureFootprint.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -894,6 +895,34 @@ bool UWorld::IsValidStandCell(const glm::ivec3 &cell,
     return false;
   }
   const int layers = static_cast<int>(std::ceil(cap.height));
+  for (int dy = 1; dy <= layers; ++dy)
+  {
+    const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
+    if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(above)))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool UWorld::IsValidStandCellForCreature(const glm::ivec3 &cell,
+                                         const glm::vec3 &sizeBlocks) const
+{
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  if (!BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)))
+  {
+    return false;
+  }
+  const std::optional<int> columnTopY = FindHighestSolidY(cell.x, cell.z);
+  if (!columnTopY || *columnTopY != cell.y)
+  {
+    return false;
+  }
+  const int layers = static_cast<int>(std::ceil(sizeBlocks.y));
   for (int dy = 1; dy <= layers; ++dy)
   {
     const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
@@ -2005,14 +2034,12 @@ bool UWorld::DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {
-  if (!BlockRegistry)
-  {
-    return false;
-  }
-  const FootprintStandSampleStats stats = SampleFootprintAtFeet(
-      *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      vol.halfExtents.x, PlayerCapsule{}, false);
-  return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
+  (void)feetY;
+  const glm::vec3 sizeBlocks(vol.halfExtents.x * 2.0f, vol.halfExtents.y * 2.0f,
+                             vol.halfExtents.z * 2.0f);
+  const glm::vec3 bodyOrigin(vol.center.x, vol.center.y, vol.center.z);
+  const FootprintSample sample = SampleCreatureFootprint(*this, bodyOrigin, sizeBlocks);
+  return CreatureHasGroundSupport(sample);
 }
 
 bool UWorld::HasGroundSupport(const glm::vec3 &eyePos,
@@ -2032,7 +2059,7 @@ constexpr int kCollisionMaxIterations = 64;
 glm::vec3 ResolveMovementAxisBody(const UWorld &world,
                                   const glm::vec3 &fromBody, float axisDelta,
                                   int axis, const glm::vec3 &currentSizeBlocks,
-                                  CreatureId skipCreatureId)
+                                  CreatureId skipCreatureId, bool blocksOnly)
 {
   if (std::abs(axisDelta) < 1e-8f)
   {
@@ -2049,18 +2076,23 @@ glm::vec3 ResolveMovementAxisBody(const UWorld &world,
   {
     const float step = std::min(remaining, kCollisionMaxStep);
     const glm::vec3 nextBody = body + axisUnit * step * sign;
-    if (world.CheckCollisionVolume(
-            CollisionVolumeFromBody(nextBody, currentSizeBlocks),
-            skipCreatureId))
+    const CollisionVolume vol = CollisionVolumeFromBody(nextBody, currentSizeBlocks);
+    const bool blocked =
+        blocksOnly ? world.CheckBlockCollisionVolume(vol)
+                   : world.CheckCollisionVolume(vol, skipCreatureId);
+    if (blocked)
     {
       glm::vec3 lo = body;
       glm::vec3 hi = nextBody;
       for (int i = 0; i < 8; ++i)
       {
         const glm::vec3 mid = (lo + hi) * 0.5f;
-        if (world.CheckCollisionVolume(
-                CollisionVolumeFromBody(mid, currentSizeBlocks),
-                skipCreatureId))
+        const CollisionVolume midVol =
+            CollisionVolumeFromBody(mid, currentSizeBlocks);
+        const bool midBlocked =
+            blocksOnly ? world.CheckBlockCollisionVolume(midVol)
+                       : world.CheckCollisionVolume(midVol, skipCreatureId);
+        if (midBlocked)
         {
           hi = mid;
         }
@@ -2091,7 +2123,8 @@ glm::vec3 ResolveMovementAxisBody(const UWorld &world,
 glm::vec3 UWorld::ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                       const glm::vec3 &delta,
                                       const glm::vec3 &currentSizeBlocks,
-                                      CreatureId skipCreatureId) const
+                                      CreatureId skipCreatureId,
+                                      bool blocksOnly) const
 {
   if (glm::dot(delta, delta) < 1e-10f)
   {
@@ -2099,11 +2132,11 @@ glm::vec3 UWorld::ResolveMovementBody(const glm::vec3 &bodyOrigin,
   }
   glm::vec3 body = bodyOrigin;
   body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks,
-                                 skipCreatureId);
+                                 skipCreatureId, blocksOnly);
   body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks,
-                                 skipCreatureId);
+                                 skipCreatureId, blocksOnly);
   body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks,
-                                 skipCreatureId);
+                                 skipCreatureId, blocksOnly);
   return body;
 }
 
@@ -2740,6 +2773,30 @@ void UWorld::AppendMovementDiagnosticsSample()
                               MovementDiagHistory.begin() +
                                   static_cast<std::ptrdiff_t>(trim));
   }
+}
+
+void UWorld::TickCreatureBehaviors(float dt)
+{
+  if (!BlockWorldReady)
+  {
+    return;
+  }
+  UWorldCreatureActivitySink activitySink(*this);
+  ActivityDirector.TickAgents(*this, activitySink, dt);
+  ForEachCreature(
+      [&](UCreature &creature)
+      {
+        if (ControlledCreatureId != 0 &&
+            creature.GetId() == ControlledCreatureId)
+        {
+          return;
+        }
+        if (creature.IsPossessed())
+        {
+          return;
+        }
+        creature.ExecuteIntent(*this, dt);
+      });
 }
 
 void UWorld::DoMovement()

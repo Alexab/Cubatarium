@@ -1,4 +1,5 @@
-#include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Movement/CreatureFootprint.h"
+#include "Creatures/Core/CreatureBounds.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -208,8 +209,9 @@ EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
   SampleHabitatFluidsInVolume(world, vol, env.inWater, env.inLava);
   env.inFluid = env.inWater || env.inLava;
-  env.onSolidGround =
-      world.HasGroundSupportVolume(vol, BoundsFeetY(bodyOrigin));
+  const FootprintSample footprint =
+      SampleCreatureFootprint(world, bodyOrigin, sizeBlocks);
+  env.onSolidGround = CreatureHasGroundSupport(footprint);
   env.bodyBlocked = world.CheckCollisionVolume(vol, 0);
   const bool clearance = HasAerialClearance(world, vol, aerialClearance);
   env.inOpenAir = !env.inFluid && !env.onSolidGround && !env.bodyBlocked &&
@@ -224,24 +226,6 @@ EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
                                      const glm::vec3 &sizeBlocks)
 {
   return ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
-}
-
-bool HabitatMatches(CreatureHabitat habitat, const EnvironmentSample &env)
-{
-  switch (habitat)
-  {
-  case CreatureHabitat::Terrestrial:
-    return env.onSolidGround && !env.inFluid;
-  case CreatureHabitat::Aquatic:
-    return env.inWater;
-  case CreatureHabitat::Aerial:
-    return env.inOpenAir && !env.inFluid;
-  case CreatureHabitat::Amphibious:
-    return (env.onSolidGround && !env.inFluid) || env.inWater;
-  case CreatureHabitat::Lava:
-    return env.inLava;
-  }
-  return false;
 }
 
 float ResolveViewerEyeHeight(const UWorld &world)

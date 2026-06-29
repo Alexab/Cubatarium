@@ -87,6 +87,22 @@ void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
   }
 }
 
+void UGameSession::ReindexCreatureCatalog()
+{
+  if (!World)
+  {
+    return;
+  }
+  if (const auto &creatureDefs = World->GetCreatureDefinitionStorage())
+  {
+    ContentCatalog.IndexCreatures(*creatureDefs);
+  }
+  if (const auto &skinDefs = World->GetSkinDefinitionStorage())
+  {
+    ContentCatalog.IndexSkins(*skinDefs);
+  }
+}
+
 void UGameSession::RegisterCommands()
 {
   RegisterWorldCommands(*this, UCommandRegistry);

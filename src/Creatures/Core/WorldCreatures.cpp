@@ -1,3 +1,9 @@
+#include "Creatures/Movement/CreatureFootprint.h"
+#include "Creatures/Movement/CreatureBodyProbe.h"
+#include "Creatures/Movement/CreatureBodySeparation.h"
+#include "Creatures/Movement/CreatureHabitatPolicy.h"
+#include "Creatures/Movement/CreatureMovementLog.h"
+#include "Creatures/Movement/CreaturePlacement.h"
 #include "Activity/CreatureActivityRegistry.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Core/Creature.h"
@@ -104,18 +110,25 @@ bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
   return cutum::CanCreatureOccupyAt(*this, habitat, bodyOrigin, sizeBlocks);
 }
 
-bool UWorld::HabitatAllowsAt(CreatureHabitat habitat,
-                             const glm::vec3 &bodyOrigin,
-                             const glm::vec3 &sizeBlocks) const
+bool UWorld::HabitatAllows(HabitatContext ctx, CreatureHabitat habitat,
+                           const glm::vec3 &bodyOrigin,
+                           const glm::vec3 &sizeBlocks) const
 {
-  return cutum::HabitatAllowsAt(*this, habitat, bodyOrigin, sizeBlocks);
+  if (ctx == HabitatContext::Spawn)
+  {
+    return cutum::HabitatAllowsAtForSpawn(*this, habitat, bodyOrigin, sizeBlocks);
+  }
+  const EnvironmentSample env = ProbeEnvironmentAt(*this, bodyOrigin, sizeBlocks);
+  return cutum::HabitatAllows(habitat, ctx, env);
 }
 
-bool UWorld::HabitatAllowsMovementAt(CreatureHabitat habitat,
-                                     const glm::vec3 &bodyOrigin,
-                                     const glm::vec3 &sizeBlocks) const
+BodyMoveResult UWorld::ProbeBodyMove(CreatureId id, const glm::vec3 &origin,
+                                     const glm::vec3 &delta,
+                                     CreatureHabitat habitat,
+                                     const glm::vec3 &sizeBlocks,
+                                     HabitatContext targetContext) const
 {
-  return cutum::HabitatAllowsMovementAt(*this, habitat, bodyOrigin, sizeBlocks);
+  return ProbeMove(*this, id, origin, delta, habitat, sizeBlocks, targetContext);
 }
 
 void UWorld::ClearCreaturesAndUsers()
@@ -205,13 +218,17 @@ void UWorld::SnapCreatureFeetToGround(UCreature &creature) const
   const int gz = WorldCoordToBlockIndex(origin.z);
   if (const std::optional<float> feetY = QueryGroundFeetYColumn(gx, gz))
   {
-    creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
+    glm::vec3 snapped(origin.x, *feetY, origin.z);
+    const glm::vec3 size = creature.GetBounds().profile.restSizeBlocks;
+    DepenetrateCreatureFromGround(*this, snapped, size, creature.GetId());
+    creature.SetBodyOrigin(snapped);
   }
 }
 
 CreatureId UWorld::SpawnCreature(const std::string &speciesId,
                                  const glm::vec3 &bodyOrigin,
-                                 const std::string &skinId)
+                                 const std::string &skinId,
+                                 SpawnCollisionPolicy policy)
 {
   const CreatureDefinition *def =
       CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
@@ -227,18 +244,11 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   const glm::vec3 spawnSize = def->bounds.restSizeBlocks;
   if (def->role != CreatureRole::ControlledDefault)
   {
-    if (!cutum::HabitatAllowsAtForSpawn(*this, def->habitat, spawnOrigin,
-                                        spawnSize))
+    const SpawnFailureReason placementFailure =
+        ClassifySpawnFailureAt(*this, *def, spawnOrigin, policy);
+    if (placementFailure != SpawnFailureReason::None)
     {
-      std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
-                << std::endl;
-      return 0;
-    }
-    const CollisionVolume vol = CollisionVolumeFromBody(spawnOrigin, spawnSize);
-    if (CheckCreatureCollisionVolume(vol, 0) || CheckBlockCollisionVolume(vol))
-    {
-      std::cerr << "SpawnCreature: no space for '" << speciesId << "'"
-                << std::endl;
+      LogCreatureSpawnFailed(speciesId, placementFailure);
       return 0;
     }
   }
@@ -294,7 +304,28 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   }
   if (def->role != CreatureRole::ControlledDefault)
   {
+    SeparateFromBlocksAndCreatures(*this, *Creatures[Id], 3);
+    if (policy == SpawnCollisionPolicy::Full &&
+        CreatureOverlapsOthers(*this, *Creatures[Id]))
+    {
+      LogCreatureSpawnOverlapRejected(speciesId);
+      Creatures.erase(Id);
+      return 0;
+    }
+    if (policy == SpawnCollisionPolicy::Full &&
+        CheckBlockCollisionVolume(
+            CollisionVolumeFromBody(Creatures[Id]->GetBodyOrigin(), spawnSize)))
+    {
+      LogCreatureSpawnBlockedAfterPlacement(speciesId,
+                                            SpawnFailureReason::Blocks);
+      Creatures.erase(Id);
+      return 0;
+    }
     ActivityDirector.OnCreatureAdded(Id, def->behavior.Id);
+  }
+  if (def->role != CreatureRole::ControlledDefault)
+  {
+    LogCreatureSpawnOk(Id, speciesId, def->visual.textureLayout);
   }
   return Id;
 }
@@ -476,13 +507,15 @@ bool UWorld::SpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
-  if (!CanSpawnCreatureAt(*this, *def, bodyOrigin))
+  const glm::vec3 viewProbe = ComputeSpawnProbeOrigin(*this, *def);
+  const PlacementResult placement =
+      FindSpawnOrigin(*this, *def, viewProbe, SpawnCollisionPolicy::Creative);
+  if (placement.failure != SpawnFailureReason::None)
   {
     return false;
   }
-  const glm::vec3 adjusted = AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
-  return SpawnCreature(speciesId, adjusted) != 0;
+  return SpawnCreature(speciesId, placement.bodyOrigin, "",
+                       SpawnCollisionPolicy::Creative) != 0;
 }
 
 bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
@@ -497,8 +530,10 @@ bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
-  return CanSpawnCreatureAt(*this, *def, bodyOrigin);
+  const glm::vec3 viewProbe = ComputeSpawnProbeOrigin(*this, *def);
+  const PlacementResult placement =
+      FindSpawnOrigin(*this, *def, viewProbe, SpawnCollisionPolicy::Creative);
+  return placement.failure == SpawnFailureReason::None;
 }
 
 std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
@@ -724,6 +759,7 @@ void UWorld::LoadCreatures(const std::string &file_name)
       {
         SnapCreatureFeetToGround(*creature);
       }
+      SeparateFromBlocksAndCreatures(*this, *creature, 8);
       Creatures[id] = std::move(creature);
       ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
       NextCreatureId = std::max(NextCreatureId, id + 1);
