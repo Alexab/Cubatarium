@@ -35,7 +35,7 @@ def apply_validation(entry: dict[str, Any], result: dict[str, Any]) -> None:
     elif all(
         gates.get(g, {}).get("status") in ("pass", "skip")
         for g in GATE_IDS
-        if g not in ("G11", "G12", "G13")
+        if g != "G13" and (g != "G12" or gates.get("G12", {}).get("status") == "skip")
     ):
         gates["G13"] = {"status": "pending"}
     if result.get("failures"):

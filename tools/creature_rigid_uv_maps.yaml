@@ -1,4 +1,5 @@
 # Maps rigid creature.json parts to baked texture stems.
+# default_part_groups: LEGACY only for bake --no-v3 (stem-group unfold). v3 bake uses 1 part = 1 PNG.
 
 default_part_groups:
   quadruped:

@@ -40,6 +40,31 @@ from creature_uv_common import (
 TEXELS_PER_BLOCK = 16
 UV_PAD_PX = 1
 
+PREVIEW_BASELINE_DIR = TOOLS / "uv_preview_baseline"
+PREVIEW_CURRENT_DIR = ROOT / "bin" / "uv_preview"
+
+
+def icon_gate_status(species_id: str) -> str:
+    from audit_creature_catalog import icon_quality
+
+    iq = icon_quality(MODELS / species_id)
+    if iq in ("solid_color", "missing"):
+        return "fail"
+    return "pass"
+
+
+def preview_gate_status(species_id: str, max_hamming: int = 12) -> str:
+    from compare_creature_preview import compare_dir
+
+    baseline = PREVIEW_BASELINE_DIR / species_id
+    if not baseline.is_dir():
+        return "skip"
+    current = PREVIEW_CURRENT_DIR / species_id
+    if not current.is_dir():
+        return "skip"
+    ok, _ = compare_dir(species_id, current, baseline, max_hamming)
+    return "pass" if ok else "fail"
+
 
 def rgb_to_lab(r: int, g: int, b: int) -> tuple[float, float, float]:
     def f(c: float) -> float:
@@ -184,11 +209,16 @@ def validate_species(species_id: str, research: Path = RESEARCH_DEFAULT) -> dict
             elif gid == "G10":
                 gates[gid] = g10
             elif gid == "G11":
-                gates[gid] = "skip"
+                gates[gid] = icon_gate_status(species_id)
+            elif gid == "G12":
+                gates[gid] = preview_gate_status(species_id)
             else:
                 gates[gid] = "skip"
-        core = tuple(g for g in GATE_IDS if g not in ("G11", "G12", "G13"))
-        g_pass = all(gates.get(g, "skip") in ("pass", "skip") for g in core)
+        g_pass = all(
+            gates.get(g, "skip") in ("pass", "skip")
+            for g in GATE_IDS
+            if g != "G13" and (g != "G12" or gates.get("G12") != "skip")
+        )
         gates["G13"] = "pass" if g_pass else "pending"
         metrics["skipped_v3"] = True
         return {
@@ -321,10 +351,14 @@ def validate_species(species_id: str, research: Path = RESEARCH_DEFAULT) -> dict
     gates["G10"] = "pass" if lic.is_file() and "Placeholder procedural" not in lic.read_text(encoding="utf-8", errors="ignore") else "fail"
     if is_placeholder(species_id) and not lic.is_file():
         gates["G10"] = "fail"
-    gates["G11"] = "skip"
-    gates["G12"] = "skip"
-    core = ("G01", "G02", "G03", "G04", "G05", "G06", "G07", "G08", "G09", "G10")
+    gates["G11"] = icon_gate_status(species_id)
+    gates["G12"] = preview_gate_status(
+        species_id, int(thr.get("preview_max_hamming", 12))
+    )
+    core = ("G01", "G02", "G03", "G04", "G05", "G06", "G07", "G08", "G09", "G10", "G11")
     g_pass = all(gates.get(g, "skip") in ("pass", "skip") for g in core)
+    if gates["G12"] != "skip":
+        g_pass = g_pass and gates["G12"] == "pass"
     gates["G13"] = "pass" if g_pass else "pending"
 
     return {

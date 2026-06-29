@@ -127,7 +127,8 @@ def gate_g11(species_id: str) -> tuple[bool, str]:
     from audit_creature_catalog import icon_quality
 
     iq = icon_quality(ROOT / "models" / "creatures" / species_id)
-    return iq != "solid_color", "pass" if iq != "solid_color" else "warn"
+    ok = iq not in ("solid_color", "missing")
+    return ok, "pass" if ok else "fail"
 
 
 def gate_g12(species_id: str, skip_preview: bool) -> tuple[bool, str]:
@@ -202,7 +203,14 @@ def run_species(
         if fail_fast:
             return False
 
+    ok, _ = gate_g11(species_id)
+    if not ok and fail_fast:
+        print(f"FAIL G11 {species_id}")
+        return False
+
     gate_g12(species_id, skip_preview)
+
+    result = validate_species(species_id, research)
 
     checklist_path = ROOT / "docs" / "CREATURE_UV_CHECKLIST.yaml"
     checklist: dict = {}
@@ -210,7 +218,7 @@ def run_species(
         checklist = yaml.safe_load(checklist_path.read_text(encoding="utf-8")) or {}
     entry = build_entry(species_id, checklist.get(species_id))
     apply_validation(entry, result)
-    if result["pass"] and gate_g10(species_id)[0]:
+    if result["pass"] and gate_g10(species_id)[0] and gate_g11(species_id)[0]:
         entry["gates"]["G13"] = {"status": "pass", "at": entry["gates"].get("G06", {}).get("at", "")}
     checklist[species_id] = entry
     checklist["summary"] = summary(checklist)
