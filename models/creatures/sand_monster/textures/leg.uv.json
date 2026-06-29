@@ -5,6 +5,7 @@
     0.65,
     0.2
   ],
+  "manual_fallback": false,
   "faces": {
     "pz": [
       0.25,
