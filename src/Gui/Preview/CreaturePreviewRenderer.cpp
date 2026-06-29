@@ -371,7 +371,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
         partVao = BodyCubeVao;
       }
     }
-    else if (layout == CreatureTextureLayout::BoxUv)
+    else if (layout == CreatureTextureLayout::BoxUv ||
+             layout == CreatureTextureLayout::RigidCrop)
     {
       float boxUvCoords[48];
       BuildCreatureBoxUvTexCoords(part.sizeBlocks.x, part.sizeBlocks.y,
@@ -390,9 +391,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       glBindBuffer(GL_ARRAY_BUFFER, 0);
       partVao = CubeVao;
     }
-    else if (UsesRigidFaceTexture(part.textureAssetKey))
+    else
     {
-      partVao = RigidHeadCubeVao;
+      partVao = CubeVao;
     }
     glBindVertexArray(partVao);
     const glm::mat4 model = CreaturePreviewPartModel(fit, part);

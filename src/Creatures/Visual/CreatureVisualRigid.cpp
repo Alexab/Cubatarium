@@ -63,11 +63,7 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
   {
     return CreaturePartMesh::Box;
   }
-  if (layout == CreatureTextureLayout::RigidCrop &&
-      UsesRigidFaceTexture(part.textureAssetKey))
-  {
-    return CreaturePartMesh::RigidHead;
-  }
+  // Legacy rigid_crop: use box_uv mesh (all mobs migrated to box_uv in content).
   return CreaturePartMesh::Box;
 }
 
