@@ -45,7 +45,7 @@
   },
   "visual": {
     "backend": "rigid_voxels",
-    "texture_layout": "rigid_crop",
+    "texture_layout": "box_uv",
     "animation": {
       "walk_cycle_hz": 2.0,
       "leg_swing_deg": 25,
@@ -119,7 +119,7 @@
           0.05,
           0.34
         ],
-        "texture": "wing",
+        "texture": "wing_r",
         "pivot": [
           0.16,
           0.44,
@@ -139,7 +139,7 @@
           0.06,
           0.16
         ],
-        "texture": "body"
+        "texture": "stinger"
       },
       {
         "id": "leg_fl",
