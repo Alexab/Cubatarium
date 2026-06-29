@@ -1,2 +1,4 @@
-Placeholder procedural textures for Cubatarium.
-Replace with CC-licensed Luanti assets when imported.
+Luanti mob texture (proxy import for Cubatarium).
+Source mod textures per tools/creature_luanti_sources.yaml.
+License: MIT / CC BY-SA as stated in upstream TenPlus1 / Skandarella mods.
+See docs/CREDITS.md.
