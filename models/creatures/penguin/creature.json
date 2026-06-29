@@ -99,7 +99,7 @@
           0.08,
           0.14
         ],
-        "texture": "face"
+        "texture": "beak"
       },
       {
         "id": "fin_l",
@@ -133,7 +133,7 @@
           0.22,
           0.32
         ],
-        "texture": "leg",
+        "texture": "fin_r",
         "pivot": [
           0.22,
           0.28,
@@ -153,7 +153,7 @@
           0.18,
           0.08
         ],
-        "texture": "leg",
+        "texture": "leg_l",
         "pivot": [
           -0.1,
           0.17,
@@ -173,7 +173,7 @@
           0.18,
           0.08
         ],
-        "texture": "leg",
+        "texture": "leg_r",
         "pivot": [
           0.1,
           0.17,
