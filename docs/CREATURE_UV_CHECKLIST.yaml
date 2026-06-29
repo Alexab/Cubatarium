@@ -276,8 +276,6 @@ chicken:
       status: pass
       at: '2026-06-29T17:16:35+00:00'
   command: python tools/run_creature_uv_wave.py --species chicken --fail-fast
-  last_failures:
-  - snout_front_score
 cow:
   wave: W1
   tier: A
@@ -332,10 +330,6 @@ cow:
       status: pass
       at: '2026-06-29T17:16:36+00:00'
   command: python tools/run_creature_uv_wave.py --species cow --fail-fast
-  last_failures:
-  - face_bleed_score
-  - snout_front_score
-  - b3d_assignment_rate
 crab:
   wave: W8
   tier: B
@@ -450,11 +444,6 @@ dirt_monster:
       status: pass
       at: '2026-06-29T17:16:37+00:00'
   command: python tools/run_creature_uv_wave.py --species dirt_monster --fail-fast
-  last_failures:
-  - opaque:arm
-  - face_coverage:arm
-  - opaque:arm_r
-  - face_coverage:arm_r
 dolphin:
   wave: W8
   tier: B
@@ -513,11 +502,6 @@ dolphin:
       status: pass
       at: '2026-06-29T17:16:38+00:00'
   command: python tools/run_creature_uv_wave.py --species dolphin --fail-fast
-  last_failures:
-  - opaque:face
-  - face_coverage:face
-  - opaque:leg
-  - face_coverage:leg
 dungeon_master:
   wave: W6
   tier: B
@@ -632,19 +616,6 @@ fire_spirit:
       status: pass
       at: '2026-06-29T17:16:39+00:00'
   command: python tools/run_creature_uv_wave.py --species fire_spirit --fail-fast
-  last_failures:
-  - opaque:body
-  - face_coverage:body
-  - opaque:arm
-  - face_coverage:arm
-  - opaque:arm_r
-  - face_coverage:arm_r
-  - opaque:face
-  - face_coverage:face
-  - opaque:leg
-  - face_coverage:leg
-  - opaque:leg_r
-  - face_coverage:leg_r
 fox:
   wave: W4
   tier: B
@@ -812,8 +783,6 @@ hedgehog:
       status: pass
       at: '2026-06-29T17:16:41+00:00'
   command: python tools/run_creature_uv_wave.py --species hedgehog --fail-fast
-  last_failures:
-  - b3d_assignment_rate
 hermitcrab:
   wave: W8
   tier: B
@@ -1164,11 +1133,6 @@ lobster:
       status: pass
       at: '2026-06-29T17:16:45+00:00'
   command: python tools/run_creature_uv_wave.py --species lobster --fail-fast
-  last_failures:
-  - opaque:face
-  - face_coverage:face
-  - opaque:claw_r
-  - face_coverage:claw_r
 manatee:
   wave: W8
   tier: B
@@ -1226,11 +1190,6 @@ manatee:
       status: pass
       at: '2026-06-29T17:16:45+00:00'
   command: python tools/run_creature_uv_wave.py --species manatee --fail-fast
-  last_failures:
-  - opaque:face
-  - face_coverage:face
-  - opaque:leg
-  - face_coverage:leg
 mese_monster:
   wave: W6
   tier: B
@@ -1289,11 +1248,6 @@ mese_monster:
       status: pass
       at: '2026-06-29T17:16:46+00:00'
   command: python tools/run_creature_uv_wave.py --species mese_monster --fail-fast
-  last_failures:
-  - opaque:arm
-  - face_coverage:arm
-  - opaque:arm_r
-  - face_coverage:arm_r
 octopus:
   wave: W8
   tier: B
@@ -1407,9 +1361,6 @@ oerkki:
       status: pass
       at: '2026-06-29T17:16:47+00:00'
   command: python tools/run_creature_uv_wave.py --species oerkki --fail-fast
-  last_failures:
-  - face_bleed_score
-  - b3d_assignment_rate
 ogre:
   wave: W6
   tier: B
@@ -1748,8 +1699,6 @@ pig:
       status: pass
       at: '2026-06-29T17:16:51+00:00'
   command: python tools/run_creature_uv_wave.py --species pig --fail-fast
-  last_failures:
-  - face_coverage:head
 puffin:
   wave: W7
   tier: B
@@ -1806,12 +1755,6 @@ puffin:
       status: pass
       at: '2026-06-29T17:16:52+00:00'
   command: python tools/run_creature_uv_wave.py --species puffin --fail-fast
-  last_failures:
-  - opaque:leg
-  - face_coverage:leg
-  - opaque:leg_r
-  - face_coverage:leg_r
-  - snout_front_score
 rat:
   wave: W5
   tier: B
@@ -1924,8 +1867,6 @@ sand_monster:
       status: pass
       at: '2026-06-29T17:16:53+00:00'
   command: python tools/run_creature_uv_wave.py --species sand_monster --fail-fast
-  last_failures:
-  - b3d_assignment_rate
 seahorse:
   wave: W8
   tier: B
@@ -2152,9 +2093,6 @@ sheep:
       status: pass
       at: '2026-06-29T17:16:55+00:00'
   command: python tools/run_creature_uv_wave.py --species sheep --fail-fast
-  last_failures:
-  - face_coverage:body
-  - snout_front_score
 skeleton:
   wave: W3
   tier: A
@@ -2210,8 +2148,6 @@ skeleton:
       status: pass
       at: '2026-06-29T17:16:56+00:00'
   command: python tools/run_creature_uv_wave.py --species skeleton --fail-fast
-  last_failures:
-  - face_bleed_score
 spider:
   wave: W4
   tier: B
@@ -2267,9 +2203,6 @@ spider:
       status: pass
       at: '2026-06-29T17:16:57+00:00'
   command: python tools/run_creature_uv_wave.py --species spider --fail-fast
-  last_failures:
-  - face_bleed_score
-  - b3d_assignment_rate
 squid:
   wave: W8
   tier: B
@@ -2327,9 +2260,6 @@ squid:
       status: pass
       at: '2026-06-29T17:16:57+00:00'
   command: python tools/run_creature_uv_wave.py --species squid --fail-fast
-  last_failures:
-  - opaque:face
-  - face_coverage:face
 stingray:
   wave: W8
   tier: B
@@ -2444,11 +2374,6 @@ stone_monster:
       status: pass
       at: '2026-06-29T17:16:59+00:00'
   command: python tools/run_creature_uv_wave.py --species stone_monster --fail-fast
-  last_failures:
-  - opaque:arm
-  - face_coverage:arm
-  - opaque:arm_r
-  - face_coverage:arm_r
 tortoise:
   wave: W4
   tier: B
@@ -2504,8 +2429,6 @@ tortoise:
       status: pass
       at: '2026-06-29T17:16:59+00:00'
   command: python tools/run_creature_uv_wave.py --species tortoise --fail-fast
-  last_failures:
-  - face_bleed_score
 tree_monster:
   wave: W6
   tier: B
@@ -2677,11 +2600,6 @@ trout:
       status: pass
       at: '2026-06-29T17:17:01+00:00'
   command: python tools/run_creature_uv_wave.py --species trout --fail-fast
-  last_failures:
-  - opaque:face
-  - face_coverage:face
-  - opaque:leg
-  - face_coverage:leg
 warthog:
   wave: W5
   tier: B
