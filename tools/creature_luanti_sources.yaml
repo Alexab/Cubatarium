@@ -1,425 +1,1127 @@
-# Luanti research paths and texture composites for rigid_voxels bake.
-# research_root defaults to E:/Work/Home/CubatariumTextureResearch
-
 species:
   sheep:
     model: mobs_animal/models/mobs_sheep.b3d
     composite:
-      - mod: mobs_animal
-        file: textures/mobs_sheep_base.png
-      - mod: mobs_animal
-        file: textures/mobs_sheep_wool.png
+    - mod: mobs_animal
+      file: textures/mobs_sheep_base.png
+    - mod: mobs_animal
+      file: textures/mobs_sheep_wool.png
     icon: mobs_animal/textures/mobs_sheep_inv.png
     manual_uv:
-      body: [0.50, 0.25, 0.88, 0.62]
-      face: [0.70, 0.0, 0.95, 0.40]
-      ear: [0.55, 0.02, 0.70, 0.18]
-      tail: [0.02, 0.35, 0.18, 0.55]
-      leg: [0.00, 0.66, 0.55, 1.00]
-
+      body:
+      - 0.5
+      - 0.25
+      - 0.88
+      - 0.62
+      face:
+      - 0.7
+      - 0.0
+      - 0.95
+      - 0.4
+      ear:
+      - 0.55
+      - 0.02
+      - 0.7
+      - 0.18
+      tail:
+      - 0.02
+      - 0.35
+      - 0.18
+      - 0.55
+      leg:
+      - 0.0
+      - 0.66
+      - 0.55
+      - 1.0
   cow:
     model: mobs_animal/models/mobs_cow.b3d
     texture: mobs_animal/textures/mobs_cow.png
     icon: mobs_animal/textures/mobs_cow_inv.png
     manual_uv:
-      body: [0.25, 0.33, 0.75, 0.88]
-      face: [0.38, 0.0, 0.62, 0.28]
-      ear: [0.62, 0.02, 0.78, 0.16]
-      tail: [0.02, 0.40, 0.22, 0.65]
-      leg: [0.00, 0.00, 0.38, 0.38]
-
+      body:
+      - 0.25
+      - 0.33
+      - 0.75
+      - 0.88
+      face:
+      - 0.38
+      - 0.0
+      - 0.62
+      - 0.28
+      ear:
+      - 0.62
+      - 0.02
+      - 0.78
+      - 0.16
+      tail:
+      - 0.02
+      - 0.4
+      - 0.22
+      - 0.65
+      leg:
+      - 0.0
+      - 0.0
+      - 0.38
+      - 0.38
   chicken:
     model: mobs_animal/models/mobs_chicken.b3d
     texture: mobs_animal/textures/mobs_chicken.png
     icon: mobs_animal/textures/mobs_chicken_inv.png
     manual_uv:
-      body: [0.25, 0.50, 0.75, 0.88]
-      face: [0.62, 0.0, 0.88, 0.32]
-      leg: [0.00, 0.66, 0.25, 1.00]
-
+      body:
+      - 0.25
+      - 0.5
+      - 0.75
+      - 0.88
+      face:
+      - 0.62
+      - 0.0
+      - 0.88
+      - 0.32
+      leg:
+      - 0.0
+      - 0.66
+      - 0.25
+      - 1.0
   wolf:
-  # No mobs_animal b3d — manual UV rects on animalworld texture.
     texture: animalworld/textures/awolf.png
     icon: animalworld/textures/awolf.png
     manual_uv:
-      body: [0.05, 0.15, 0.55, 0.55]
-      face: [0.55, 0.12, 0.92, 0.42]
-      ear: [0.55, 0.02, 0.75, 0.18]
-      tail: [0.05, 0.12, 0.25, 0.35]
-      leg: [0.08, 0.55, 0.45, 0.92]
-
+      body:
+      - 0.05
+      - 0.15
+      - 0.55
+      - 0.55
+      face:
+      - 0.55
+      - 0.12
+      - 0.92
+      - 0.42
+      ear:
+      - 0.55
+      - 0.02
+      - 0.75
+      - 0.18
+      tail:
+      - 0.05
+      - 0.12
+      - 0.25
+      - 0.35
+      leg:
+      - 0.08
+      - 0.55
+      - 0.45
+      - 0.92
   pig:
     texture: animalworld/textures/awildboar.png
     icon: animalworld/textures/awildboar.png
     manual_uv:
-      body: [0.08, 0.20, 0.58, 0.58]
-      face: [0.58, 0.18, 0.95, 0.48]
-      ear: [0.05, 0.05, 0.20, 0.22]
-      tail: [0.58, 0.55, 0.75, 0.72]
-      leg: [0.10, 0.58, 0.48, 0.95]
-
+      body:
+      - 0.08
+      - 0.2
+      - 0.58
+      - 0.58
+      face:
+      - 0.58
+      - 0.18
+      - 0.95
+      - 0.48
+      ear:
+      - 0.05
+      - 0.05
+      - 0.2
+      - 0.22
+      tail:
+      - 0.58
+      - 0.55
+      - 0.75
+      - 0.72
+      leg:
+      - 0.1
+      - 0.58
+      - 0.48
+      - 0.95
   oerkki:
     model: mobs_monster/models/mobs_oerkki.b3d
     texture: mobs_monster/textures/mobs_oerkki.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   skeleton:
     model: dmobs/models/skeleton.b3d
     texture: dmobs/textures/dmobs_skeleton.png
     manual_uv:
-      body: [0.25, 0.50, 0.50, 0.75]
-      face: [0.38, 0.12, 0.62, 0.38]
-      leg: [0.00, 0.50, 0.25, 0.75]
-      arm: [0.50, 0.12, 0.75, 0.38]
-
+      body:
+      - 0.25
+      - 0.5
+      - 0.5
+      - 0.75
+      face:
+      - 0.38
+      - 0.12
+      - 0.62
+      - 0.38
+      leg:
+      - 0.0
+      - 0.5
+      - 0.25
+      - 0.75
+      arm:
+      - 0.5
+      - 0.12
+      - 0.75
+      - 0.38
   sand_monster:
     model: mobs_monster/models/mobs_sand_monster.b3d
     texture: mobs_monster/textures/mobs_sand_monster.png
     manual_uv:
-      body: [0.50, 0.00, 1.00, 0.52]
-      face: [0.12, 0.00, 0.48, 0.35]
-      leg: [0.00, 0.50, 0.35, 0.95]
-      arm: [0.55, 0.00, 0.95, 0.45]
-
+      body:
+      - 0.5
+      - 0.0
+      - 1.0
+      - 0.52
+      face:
+      - 0.12
+      - 0.0
+      - 0.48
+      - 0.35
+      leg:
+      - 0.0
+      - 0.5
+      - 0.35
+      - 0.95
+      arm:
+      - 0.55
+      - 0.0
+      - 0.95
+      - 0.45
   bunny:
     model: mobs_animal/models/mobs_bunny.b3d
     texture: mobs_animal/textures/mobs_bunny_grey.png
     manual_uv:
-      body: [0.20, 0.35, 0.75, 0.85]
-      face: [0.55, 0.05, 0.90, 0.40]
-      ear: [0.05, 0.05, 0.25, 0.25]
-      tail: [0.05, 0.40, 0.20, 0.58]
-      leg: [0.00, 0.65, 0.45, 1.00]
-
+      body:
+      - 0.2
+      - 0.35
+      - 0.75
+      - 0.85
+      face:
+      - 0.55
+      - 0.05
+      - 0.9
+      - 0.4
+      ear:
+      - 0.05
+      - 0.05
+      - 0.25
+      - 0.25
+      tail:
+      - 0.05
+      - 0.4
+      - 0.2
+      - 0.58
+      leg:
+      - 0.0
+      - 0.65
+      - 0.45
+      - 1.0
   rat:
     texture: mobs_animal/textures/mobs_rat.png
     manual_uv:
-      body: [0.15, 0.40, 0.70, 0.85]
-      face: [0.55, 0.10, 0.90, 0.42]
-      tail: [0.05, 0.15, 0.25, 0.40]
-      leg: [0.00, 0.65, 0.40, 1.00]
-
+      body:
+      - 0.15
+      - 0.4
+      - 0.7
+      - 0.85
+      face:
+      - 0.55
+      - 0.1
+      - 0.9
+      - 0.42
+      tail:
+      - 0.05
+      - 0.15
+      - 0.25
+      - 0.4
+      leg:
+      - 0.0
+      - 0.65
+      - 0.4
+      - 1.0
   penguin:
     model: mobs_animal/models/mobs_penguin.b3d
     texture: mobs_animal/textures/mobs_penguin.png
     manual_uv:
-      body: [0.20, 0.25, 0.75, 0.88]
-      face: [0.55, 0.02, 0.92, 0.35]
-      leg: [0.00, 0.65, 0.35, 1.00]
-
+      body:
+      - 0.2
+      - 0.25
+      - 0.75
+      - 0.88
+      face:
+      - 0.55
+      - 0.02
+      - 0.92
+      - 0.35
+      leg:
+      - 0.0
+      - 0.65
+      - 0.35
+      - 1.0
   spider:
     model: mobs_monster/models/mobs_spider.b3d
     texture: mobs_monster/textures/mobs_spider_grey.png
     manual_uv:
-      body: [0.25, 0.35, 0.75, 0.80]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.00, 0.45, 0.45]
-
+      body:
+      - 0.25
+      - 0.35
+      - 0.75
+      - 0.8
+      face:
+      - 0.55
+      - 0.05
+      - 0.92
+      - 0.38
+      leg:
+      - 0.0
+      - 0.0
+      - 0.45
+      - 0.45
   trout:
     texture: animalworld/textures/texturetrout.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
   fox:
     model: dmobs/models/fox.b3d
     texture: dmobs/textures/dmobs_fox.png
     manual_uv:
-      body: [0.15, 0.30, 0.70, 0.80]
-      face: [0.55, 0.05, 0.92, 0.38]
-      tail: [0.05, 0.10, 0.25, 0.35]
-      leg: [0.00, 0.60, 0.42, 1.00]
-
+      body:
+      - 0.15
+      - 0.3
+      - 0.7
+      - 0.8
+      face:
+      - 0.55
+      - 0.05
+      - 0.92
+      - 0.38
+      tail:
+      - 0.05
+      - 0.1
+      - 0.25
+      - 0.35
+      leg:
+      - 0.0
+      - 0.6
+      - 0.42
+      - 1.0
   tortoise:
     model: dmobs/models/tortoise.b3d
     texture: dmobs/textures/dmobs_tortoise.png
     manual_uv:
-      body: [0.10, 0.30, 0.90, 0.85]
-      face: [0.55, 0.05, 0.90, 0.35]
-      leg: [0.00, 0.00, 0.40, 0.40]
-
+      body:
+      - 0.1
+      - 0.3
+      - 0.9
+      - 0.85
+      face:
+      - 0.55
+      - 0.05
+      - 0.9
+      - 0.35
+      leg:
+      - 0.0
+      - 0.0
+      - 0.4
+      - 0.4
   panda:
     texture: mobs_animal/textures/mobs_panda.png
     icon: mobs_animal/textures/mobs_panda_inv.png
     manual_uv:
-      body: [0.20, 0.35, 0.75, 0.85]
-      face: [0.55, 0.05, 0.90, 0.40]
-      ear: [0.05, 0.05, 0.25, 0.25]
-      leg: [0.00, 0.65, 0.45, 1.00]
-
+      body:
+      - 0.2
+      - 0.35
+      - 0.75
+      - 0.85
+      face:
+      - 0.55
+      - 0.05
+      - 0.9
+      - 0.4
+      ear:
+      - 0.05
+      - 0.05
+      - 0.25
+      - 0.25
+      leg:
+      - 0.0
+      - 0.65
+      - 0.45
+      - 1.0
   kitten:
-    texture: mobs_animal/textures/mobs_kitten.png
+    texture: mobs_animal/textures/mobs_bunny_grey.png
     manual_uv:
-      body: [0.15, 0.40, 0.70, 0.85]
-      face: [0.55, 0.10, 0.90, 0.42]
-      tail: [0.05, 0.15, 0.25, 0.40]
-      leg: [0.00, 0.65, 0.40, 1.00]
-
+      body:
+      - 0.15
+      - 0.4
+      - 0.7
+      - 0.85
+      face:
+      - 0.55
+      - 0.1
+      - 0.9
+      - 0.42
+      tail:
+      - 0.05
+      - 0.15
+      - 0.25
+      - 0.4
+      leg:
+      - 0.0
+      - 0.65
+      - 0.4
+      - 1.0
+    proxy_note: placeholder proxy -> mobs_animal/textures/mobs_bunny_grey.png
   warthog:
-    texture: mobs_animal/textures/mobs_warthog.png
+    texture: animalworld/textures/awildboar.png
     manual_uv:
-      body: [0.08, 0.20, 0.58, 0.58]
-      face: [0.58, 0.18, 0.95, 0.48]
-      tail: [0.58, 0.55, 0.75, 0.72]
-      leg: [0.10, 0.58, 0.48, 0.95]
-
+      body:
+      - 0.08
+      - 0.2
+      - 0.58
+      - 0.58
+      face:
+      - 0.58
+      - 0.18
+      - 0.95
+      - 0.48
+      tail:
+      - 0.58
+      - 0.55
+      - 0.75
+      - 0.72
+      leg:
+      - 0.1
+      - 0.58
+      - 0.48
+      - 0.95
+    proxy_note: placeholder proxy -> animalworld/textures/awildboar.png
   bee:
     texture: mobs_animal/textures/mobs_bee.png
     manual_uv:
-      body: [0.22, 0.38, 0.78, 0.82]
-      face: [0.52, 0.08, 0.88, 0.36]
-      wing: [0.05, 0.05, 0.45, 0.35]
-      leg: [0.00, 0.58, 0.35, 0.92]
-
+      body:
+      - 0.22
+      - 0.38
+      - 0.78
+      - 0.82
+      face:
+      - 0.52
+      - 0.08
+      - 0.88
+      - 0.36
+      wing:
+      - 0.05
+      - 0.05
+      - 0.45
+      - 0.35
+      leg:
+      - 0.0
+      - 0.58
+      - 0.35
+      - 0.92
   stone_monster:
     texture: mobs_monster/textures/mobs_stone_monster.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   tree_monster:
     texture: mobs_monster/textures/mobs_tree_monster.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   mese_monster:
-    texture: mobs_monster/textures/mobs_mese_monster.png
+    texture: mobs_monster/textures/mobs_stone_monster.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
+    proxy_note: placeholder proxy -> mobs_monster/textures/mobs_stone_monster.png
   dirt_monster:
     texture: mobs_monster/textures/mobs_dirt_monster.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   dungeon_master:
     texture: mobs_monster/textures/mobs_dungeon_master.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   fire_spirit:
     texture: mobs_monster/textures/mobs_fire_spirit.png
     manual_uv:
-      body: [0.20, 0.35, 0.80, 0.85]
-      face: [0.55, 0.05, 0.92, 0.38]
-      leg: [0.00, 0.55, 0.40, 0.95]
-
+      body:
+      - 0.2
+      - 0.35
+      - 0.8
+      - 0.85
+      face:
+      - 0.55
+      - 0.05
+      - 0.92
+      - 0.38
+      leg:
+      - 0.0
+      - 0.55
+      - 0.4
+      - 0.95
   land_guard:
     texture: mobs_monster/textures/mobs_land_guard.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   lava_flan:
-    texture: mobs_monster/textures/mobs_lava_flan.png
+    texture: mobs_monster/textures/mobs_dirt_monster.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
+    proxy_note: placeholder proxy -> mobs_monster/textures/mobs_dirt_monster.png
   badger:
     model: dmobs/models/badger.b3d
     texture: dmobs/textures/dmobs_badger.png
     manual_uv:
-      body: [0.15, 0.30, 0.70, 0.80]
-      face: [0.55, 0.05, 0.92, 0.38]
-      tail: [0.05, 0.10, 0.25, 0.35]
-      leg: [0.00, 0.60, 0.42, 1.00]
-
+      body:
+      - 0.15
+      - 0.3
+      - 0.7
+      - 0.8
+      face:
+      - 0.55
+      - 0.05
+      - 0.92
+      - 0.38
+      tail:
+      - 0.05
+      - 0.1
+      - 0.25
+      - 0.35
+      leg:
+      - 0.0
+      - 0.6
+      - 0.42
+      - 1.0
   hedgehog:
     model: dmobs/models/hedgehog.b3d
     texture: dmobs/textures/dmobs_hedgehog.png
     manual_uv:
-      body: [0.15, 0.40, 0.70, 0.85]
-      face: [0.55, 0.10, 0.90, 0.42]
-      leg: [0.00, 0.65, 0.40, 1.00]
-
+      body:
+      - 0.15
+      - 0.4
+      - 0.7
+      - 0.85
+      face:
+      - 0.55
+      - 0.1
+      - 0.9
+      - 0.42
+      leg:
+      - 0.0
+      - 0.65
+      - 0.4
+      - 1.0
   orc:
     texture: dmobs/textures/dmobs_orc.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   ogre:
     texture: dmobs/textures/dmobs_ogre.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   golem:
     texture: dmobs/textures/dmobs_golem.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   treeman:
     texture: dmobs/textures/dmobs_treeman.png
     manual_uv:
-      body: [0.06, 0.45, 0.55, 0.95]
-      face: [0.12, 0.00, 0.55, 0.45]
-      leg: [0.08, 0.00, 0.45, 0.50]
-      arm: [0.85, 0.46, 1.00, 0.99]
-
+      body:
+      - 0.06
+      - 0.45
+      - 0.55
+      - 0.95
+      face:
+      - 0.12
+      - 0.0
+      - 0.55
+      - 0.45
+      leg:
+      - 0.08
+      - 0.0
+      - 0.45
+      - 0.5
+      arm:
+      - 0.85
+      - 0.46
+      - 1.0
+      - 0.99
   butterfly:
     texture: dmobs/textures/dmobs_butterfly1.png
     manual_uv:
-      body: [0.40, 0.42, 0.62, 0.58]
-      face: [0.48, 0.35, 0.58, 0.48]
-      wing: [0.05, 0.05, 0.95, 0.45]
-      leg: [0.42, 0.55, 0.58, 0.72]
-
+      body:
+      - 0.4
+      - 0.42
+      - 0.62
+      - 0.58
+      face:
+      - 0.48
+      - 0.35
+      - 0.58
+      - 0.48
+      wing:
+      - 0.05
+      - 0.05
+      - 0.95
+      - 0.45
+      leg:
+      - 0.42
+      - 0.55
+      - 0.58
+      - 0.72
   owl:
     texture: dmobs/textures/dmobs_owl.png
     manual_uv:
-      body: [0.28, 0.32, 0.72, 0.78]
-      face: [0.38, 0.05, 0.72, 0.38]
-      wing: [0.05, 0.12, 0.35, 0.55]
-      leg: [0.35, 0.72, 0.65, 0.95]
-
+      body:
+      - 0.28
+      - 0.32
+      - 0.72
+      - 0.78
+      face:
+      - 0.38
+      - 0.05
+      - 0.72
+      - 0.38
+      wing:
+      - 0.05
+      - 0.12
+      - 0.35
+      - 0.55
+      leg:
+      - 0.35
+      - 0.72
+      - 0.65
+      - 0.95
   wasp:
     texture: dmobs/textures/dmobs_wasp.png
     manual_uv:
-      body: [0.25, 0.35, 0.75, 0.80]
-      face: [0.55, 0.08, 0.88, 0.35]
-      wing: [0.05, 0.02, 0.48, 0.32]
-      leg: [0.00, 0.55, 0.38, 0.92]
-
+      body:
+      - 0.25
+      - 0.35
+      - 0.75
+      - 0.8
+      face:
+      - 0.55
+      - 0.08
+      - 0.88
+      - 0.35
+      wing:
+      - 0.05
+      - 0.02
+      - 0.48
+      - 0.32
+      leg:
+      - 0.0
+      - 0.55
+      - 0.38
+      - 0.92
   puffin:
     texture: animalworld/textures/texturepuffin.png
     manual_uv:
-      body: [0.22, 0.30, 0.78, 0.82]
-      face: [0.48, 0.05, 0.82, 0.38]
-      wing: [0.05, 0.15, 0.42, 0.48]
-      leg: [0.38, 0.72, 0.62, 0.95]
-
+      body:
+      - 0.22
+      - 0.3
+      - 0.78
+      - 0.82
+      face:
+      - 0.48
+      - 0.05
+      - 0.82
+      - 0.38
+      wing:
+      - 0.05
+      - 0.15
+      - 0.42
+      - 0.48
+      leg:
+      - 0.38
+      - 0.72
+      - 0.62
+      - 0.95
   shark:
     texture: animalworld/textures/textureshark.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
   squid:
     texture: animalworld/textures/texturesquid.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
   stingray:
     texture: animalworld/textures/texturestingray.png
     manual_uv:
-      body: [0.10, 0.35, 0.90, 0.75]
-      face: [0.70, 0.20, 0.95, 0.50]
-      leg: [0.05, 0.55, 0.45, 0.90]
-
+      body:
+      - 0.1
+      - 0.35
+      - 0.9
+      - 0.75
+      face:
+      - 0.7
+      - 0.2
+      - 0.95
+      - 0.5
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.9
   seahorse:
     texture: animalworld/textures/textureseahorse.png
     manual_uv:
-      body: [0.35, 0.12, 0.72, 0.88]
-      face: [0.55, 0.02, 0.88, 0.28]
-      leg: [0.08, 0.55, 0.42, 0.92]
-      tail: [0.05, 0.35, 0.32, 0.95]
-
+      body:
+      - 0.35
+      - 0.12
+      - 0.72
+      - 0.88
+      face:
+      - 0.55
+      - 0.02
+      - 0.88
+      - 0.28
+      leg:
+      - 0.08
+      - 0.55
+      - 0.42
+      - 0.92
+      tail:
+      - 0.05
+      - 0.35
+      - 0.32
+      - 0.95
   manatee:
     texture: animalworld/textures/texturemanatee.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
   lobster:
     texture: animalworld/textures/texturelobster.png
     manual_uv:
-      body: [0.12, 0.28, 0.88, 0.72]
-      face: [0.62, 0.10, 0.95, 0.42]
-      leg: [0.02, 0.02, 0.48, 0.28]
-      claw_l: [0.02, 0.55, 0.35, 0.88]
-      claw_r: [0.65, 0.55, 0.98, 0.88]
-
+      body:
+      - 0.12
+      - 0.28
+      - 0.88
+      - 0.72
+      face:
+      - 0.62
+      - 0.1
+      - 0.95
+      - 0.42
+      leg:
+      - 0.02
+      - 0.02
+      - 0.48
+      - 0.28
+      claw_l:
+      - 0.02
+      - 0.55
+      - 0.35
+      - 0.88
+      claw_r:
+      - 0.65
+      - 0.55
+      - 0.98
+      - 0.88
   hermitcrab:
     texture: animalworld/textures/texturehermitcrab.png
     manual_uv:
-      body: [0.15, 0.30, 0.85, 0.80]
-      face: [0.60, 0.15, 0.92, 0.45]
-      leg: [0.00, 0.55, 0.48, 0.95]
-
+      body:
+      - 0.15
+      - 0.3
+      - 0.85
+      - 0.8
+      face:
+      - 0.6
+      - 0.15
+      - 0.92
+      - 0.45
+      leg:
+      - 0.0
+      - 0.55
+      - 0.48
+      - 0.95
   seal:
     texture: animalworld/textures/textureseal.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
   dolphin:
-    texture: animalworld/textures/texturedolphin.png
+    texture: animalworld/textures/texturetrout.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
+    proxy_note: placeholder proxy -> animalworld/textures/texturetrout.png
   whale:
-    texture: animalworld/textures/texturewhale.png
+    texture: animalworld/textures/textureshark.png
     manual_uv:
-      body: [0.05, 0.15, 0.95, 0.85]
-      face: [0.65, 0.10, 0.95, 0.40]
-      leg: [0.05, 0.50, 0.45, 0.90]
-
+      body:
+      - 0.05
+      - 0.15
+      - 0.95
+      - 0.85
+      face:
+      - 0.65
+      - 0.1
+      - 0.95
+      - 0.4
+      leg:
+      - 0.05
+      - 0.5
+      - 0.45
+      - 0.9
+    proxy_note: placeholder proxy -> animalworld/textures/textureshark.png
   water_dragon:
-    texture: animalworld/textures/texturewaterdragon.png
+    texture: animalworld/textures/textureshark.png
     manual_uv:
-      body: [0.10, 0.20, 0.90, 0.80]
-      face: [0.70, 0.15, 0.95, 0.45]
-      leg: [0.05, 0.55, 0.45, 0.95]
-
+      body:
+      - 0.1
+      - 0.2
+      - 0.9
+      - 0.8
+      face:
+      - 0.7
+      - 0.15
+      - 0.95
+      - 0.45
+      leg:
+      - 0.05
+      - 0.55
+      - 0.45
+      - 0.95
+    proxy_note: placeholder proxy -> animalworld/textures/textureshark.png
   crab:
     texture: animalworld/textures/texturecrab.png
     manual_uv:
-      body: [0.15, 0.30, 0.85, 0.80]
-      face: [0.60, 0.15, 0.92, 0.45]
-      leg: [0.00, 0.55, 0.48, 0.95]
-
+      body:
+      - 0.15
+      - 0.3
+      - 0.85
+      - 0.8
+      face:
+      - 0.6
+      - 0.15
+      - 0.92
+      - 0.45
+      leg:
+      - 0.0
+      - 0.55
+      - 0.48
+      - 0.95
   octopus:
-    texture: animalworld/textures/textureoctopus.png
+    texture: animalworld/textures/texturesquid.png
     manual_uv:
-      body: [0.20, 0.25, 0.80, 0.75]
-      face: [0.55, 0.10, 0.90, 0.40]
-      leg: [0.05, 0.50, 0.45, 0.95]
-
+      body:
+      - 0.2
+      - 0.25
+      - 0.8
+      - 0.75
+      face:
+      - 0.55
+      - 0.1
+      - 0.9
+      - 0.4
+      leg:
+      - 0.05
+      - 0.5
+      - 0.45
+      - 0.95
+    proxy_note: placeholder proxy -> animalworld/textures/texturesquid.png
 skins:
   sheep_wool_black:
     creature_id: sheep
-    multiply: "#28282D"
+    multiply: '#28282D'
   sheep_wool_golden:
     creature_id: sheep
-    multiply: "#FFDC50"
+    multiply: '#FFDC50'
   wolf_snow:
     creature_id: wolf
     texture: animalworld/textures/texturewolf3.png

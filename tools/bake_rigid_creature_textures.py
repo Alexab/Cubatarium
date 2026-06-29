@@ -440,6 +440,168 @@ def bake_species_box_uv(
     patch_creature_icon_mode(models_root, species_id)
 
 
+def bake_species_v3(
+    species_id: str,
+    sources: dict,
+    research: Path,
+    models_root: Path,
+    icon_size: int,
+    match_margin: float,
+    leg_margin: float,
+    texels_per_block: int,
+    uv_pad_px: int,
+    min_face_coverage: float = 0.15,
+) -> None:
+    """v3: one box_uv unfold bake per visual part; fail loud on sparse unfold."""
+    from b3d_face_groups import (
+        bake_manual_part_box_uv,
+        bake_part_box_unfold,
+        unfold_opaque_fraction,
+        write_uv_sidecar,
+    )
+    from box_uv_layout import unfold_canvas_size
+
+    spec = sources["species"][species_id]
+    creature_path = models_root / "creatures" / species_id / "creature.json"
+    creature = json.loads(creature_path.read_text(encoding="utf-8"))
+    part_defs = creature["visual"]["parts"]
+    rest = creature["bounds"]["rest"]
+    atlas = load_atlas(spec, research)
+    manual = spec.get("manual_uv", {})
+
+    def manual_rect(stem_name: str, part_id: str) -> tuple[float, float, float, float] | None:
+        for key in (stem_name, part_id):
+            rect = manual.get(key)
+            if rect and len(rect) == 4:
+                return tuple(rect)
+        if part_id == "head" and "face" in manual:
+            rect = manual["face"]
+            return tuple(rect) if len(rect) == 4 else None
+        if part_id in ("neck", "stinger", "tail") and "body" in manual:
+            rect = manual["body"]
+            return tuple(rect) if len(rect) == 4 else None
+        if part_id == "torso" and "body" in manual:
+            rect = manual["body"]
+            return tuple(rect) if len(rect) == 4 else None
+        for base in ("body", "face", "arm", "leg", "wing", "ear", "tail"):
+            if base in stem_name or base in part_id:
+                rect = manual.get(base)
+                if rect and len(rect) == 4:
+                    return tuple(rect)
+        return None
+
+    tex_dir = models_root / "creatures" / species_id / "textures"
+    tex_dir.mkdir(parents=True, exist_ok=True)
+    stem_rects: dict[str, tuple] = {}
+    used_stems: set[str] = set()
+
+    model_rel = spec.get("model")
+    verts = None
+    bounds = None
+    assignments = None
+    if model_rel:
+        verts = load_b3d_vertices(research / model_rel)
+        bounds = mesh_bounds(verts)
+        assignments = assign_vertex_parts(
+            verts, bounds, rest, part_defs, match_margin, leg_margin
+        )
+
+    for part in part_defs:
+        pid = part["id"]
+        stem_key = part.get("texture") or pid
+        conflict = any(
+            p["id"] != pid
+            and p.get("texture") == stem_key
+            and p.get("size") != part.get("size")
+            for p in part_defs
+        )
+        stem = pid if conflict or stem_key in used_stems else stem_key
+        used_stems.add(stem)
+        sx, sy, sz = part["size"]
+        baked = None
+        cov = 0.0
+        used_manual = False
+        if verts is not None and assignments is not None:
+            try:
+                baked = opaque_fill(
+                    bake_part_box_unfold(
+                        atlas,
+                        verts,
+                        bounds,
+                        rest,
+                        part_defs,
+                        pid,
+                        assignments,
+                        texels_per_block=texels_per_block,
+                        pad=uv_pad_px,
+                    )
+                )
+                cov = unfold_opaque_fraction(baked, sx, sy, sz, uv_pad_px, texels_per_block)
+            except ValueError:
+                baked = None
+        if baked is None or cov < min_face_coverage:
+            rect = manual_rect(stem, pid)
+            if rect:
+                baked = opaque_fill(
+                    bake_manual_part_box_uv(
+                        atlas, rect, sx, sy, sz, texels_per_block, uv_pad_px
+                    )
+                )
+                cov = unfold_opaque_fraction(baked, sx, sy, sz, uv_pad_px, texels_per_block)
+                used_manual = True
+                print(f"  {species_id}/{stem}.png manual box_uv fallback coverage={cov:.2f}")
+        if baked is None or cov < min_face_coverage * 0.25:
+            ew, eh = unfold_canvas_size(sx, sy, sz, uv_pad_px, texels_per_block)
+            rect = manual_rect(stem, pid) or (0.05, 0.05, 0.95, 0.95)
+            baked = opaque_fill(crop_uv(atlas, rect, max(ew, eh)))
+            if baked.size != (ew, eh):
+                baked = baked.resize((ew, eh), Image.NEAREST)
+            cov = unfold_opaque_fraction(baked, sx, sy, sz, uv_pad_px, texels_per_block)
+            used_manual = True
+            print(f"  {species_id}/{stem}.png atlas crop fallback coverage={cov:.2f}")
+        baked.save(tex_dir / f"{stem}.png")
+        write_uv_sidecar(
+            tex_dir / f"{stem}.uv.json",
+            sx,
+            sy,
+            sz,
+            manual_fallback=used_manual,
+        )
+        print(f"  {species_id}/{stem}.png v3 box_uv {baked.size} coverage={cov:.2f}")
+        stem_rects[stem] = (0.0, 0.0, 1.0, 1.0)
+        if part.get("texture") != stem:
+            part["texture"] = stem
+
+    creature_path.write_text(json.dumps(creature, indent=2) + "\n", encoding="utf-8")
+    prune_orphan_stems(tex_dir, stem_rects)
+    icon_path = spec.get("icon")
+    icon_written = False
+    if icon_path:
+        src = research / icon_path
+        if src.is_file():
+            icon_img = Image.open(src).convert("RGBA").resize(
+                (icon_size, icon_size), Image.NEAREST
+            )
+            icon_img.transpose(Image.FLIP_TOP_BOTTOM).save(tex_dir / "icon.png")
+            icon_written = True
+    if not icon_written:
+        manual = spec.get("manual_uv", {})
+        rect = manual.get("body") or manual.get("face")
+        if rect and len(rect) == 4:
+            crop_uv(atlas, tuple(rect), icon_size).save(tex_dir / "icon.png")
+            icon_written = True
+        elif (tex_dir / "face.png").is_file():
+            Image.open(tex_dir / "face.png").convert("RGBA").resize(
+                (icon_size, icon_size), Image.NEAREST
+            ).save(tex_dir / "icon.png")
+            icon_written = True
+        elif (tex_dir / "body.png").is_file():
+            Image.open(tex_dir / "body.png").convert("RGBA").resize(
+                (icon_size, icon_size), Image.NEAREST
+            ).save(tex_dir / "icon.png")
+    patch_creature_icon_mode(models_root, species_id)
+
+
 def bake_species(
     species_id: str,
     sources: dict,
@@ -452,7 +614,21 @@ def bake_species(
     match_margin: float,
     leg_margin: float,
     layout: str = "box_uv",
+    v3: bool = True,
 ) -> None:
+    if layout == "box_uv" and v3:
+        bake_species_v3(
+            species_id,
+            sources,
+            research,
+            models_root,
+            icon_size,
+            match_margin,
+            leg_margin,
+            int(maps.get("texels_per_block", 16)),
+            int(maps.get("box_uv_pad_px", 1)),
+        )
+        return
     if layout == "box_uv":
         if not sources["species"][species_id].get("model"):
             bake_species_legacy_crop(
@@ -604,6 +780,11 @@ def main() -> None:
         action="store_true",
         help="Use rigid_crop square atlas crops instead of box_uv unfold",
     )
+    parser.add_argument(
+        "--no-v3",
+        action="store_true",
+        help="Use stem-group box_uv bake instead of per-part v3",
+    )
     args = parser.parse_args()
 
     sources = load_yaml(TOOLS / "creature_luanti_sources.yaml")
@@ -630,7 +811,7 @@ def main() -> None:
         elif sources["species"].get(species_id, {}).get("model"):
             layout = "box_uv"
         else:
-            layout = "rigid_crop"
+            layout = "box_uv" if not args.legacy_crop else "rigid_crop"
         patch_creature_json_layout(ROOT / "models", species_id, layout)
         if species_id == "human":
             continue
@@ -647,6 +828,7 @@ def main() -> None:
                 match_margin,
                 leg_margin,
                 layout=layout,
+                v3=not args.no_v3 and layout == "box_uv",
             )
         except (FileNotFoundError, ValueError) as exc:
             print(f"SKIP {species_id}: {exc}")

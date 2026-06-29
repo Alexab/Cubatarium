@@ -110,12 +110,30 @@ def derive_species(
     ]
 
 
+def compare_parts(creature_parts: list[dict], derived: list[dict], epsilon: float = 0.08) -> tuple[bool, float]:
+    by_id = {p["id"]: p for p in derived}
+    max_drift = 0.0
+    for cp in creature_parts:
+        dp = by_id.get(cp["id"])
+        if not dp:
+            return False, float("inf")
+        for i in range(3):
+            max_drift = max(max_drift, abs(cp["offset"][i] - dp["offset"][i]))
+            max_drift = max(max_drift, abs(cp["size"][i] - dp["size"][i]))
+    return max_drift <= epsilon, max_drift
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--research", type=Path, default=RESEARCH_DEFAULT)
     parser.add_argument("--species", action="append")
     parser.add_argument("--tier-a", action="store_true")
     parser.add_argument("--write", action="store_true", help="Update creature_rigid_parts.yaml")
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Exit 1 if derived parts drift from creature.json by more than 0.08 blocks",
+    )
     args = parser.parse_args()
 
     sources = load_yaml(TOOLS / "creature_luanti_sources.yaml")
@@ -135,6 +153,7 @@ def main() -> int:
             sid for sid, spec in sources["species"].items() if spec.get("model")
         ]
 
+    compare_failures = 0
     for species_id in species_list:
         try:
             parts = derive_species(
@@ -142,7 +161,18 @@ def main() -> int:
             )
         except (FileNotFoundError, ValueError) as exc:
             print(f"skip {species_id}: {exc}")
+            if args.compare:
+                compare_failures += 1
             continue
+        creature = json.loads(
+            (ROOT / "models" / "creatures" / species_id / "creature.json").read_text(encoding="utf-8")
+        )
+        creature_parts = creature["visual"]["parts"]
+        if args.compare:
+            ok, drift = compare_parts(creature_parts, parts)
+            print(f"compare {species_id}: drift={drift:.3f} {'OK' if ok else 'FAIL'}")
+            if not ok:
+                compare_failures += 1
         print(f"\n=== {species_id} ({len(parts)} parts) ===")
         for part in parts:
             print(
@@ -158,6 +188,8 @@ def main() -> int:
             encoding="utf-8",
         )
         print(f"\nwrote {rigid_path}")
+    if args.compare and compare_failures:
+        return 1
     return 0
 
 

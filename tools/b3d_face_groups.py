@@ -184,7 +184,83 @@ def bake_stem_box_unfold(    atlas: Image.Image,
     return out
 
 
-def write_uv_sidecar(path: Path, sx: float, sy: float, sz: float) -> None:
+def bake_part_box_unfold(
+    atlas: Image.Image,
+    verts: list[B3DVertex],
+    bounds: tuple[float, float, float, float, float, float],
+    rest: list[float],
+    part_defs: list[dict],
+    part_id: str,
+    assignments: dict[int, str],
+    texels_per_block: int = 16,
+    pad: int = 1,
+) -> Image.Image:
+    """Bake box_uv unfold for a single rigid part."""
+    return bake_stem_box_unfold(
+        atlas,
+        verts,
+        bounds,
+        rest,
+        part_defs,
+        [part_id],
+        assignments,
+        texels_per_block=texels_per_block,
+        pad=pad,
+    )
+
+
+def unfold_opaque_fraction(img: Image.Image, sx: float, sy: float, sz: float, pad: int, tpb: int) -> float:
+    total = 0
+    opaque = 0
+    for face in FACE_ORDER:
+        x0, y0, x1, y1 = face_pixel_rect(face, sx, sy, sz, pad, tpb)
+        crop = img.crop((x0, y0, x1 + 1, y1 + 1))
+        px = list(crop.getdata())
+        total += len(px)
+        opaque += sum(1 for *_, a in px if a >= 250)
+    return opaque / max(1, total)
+
+
+def bake_manual_part_box_uv(
+    atlas: Image.Image,
+    rect: tuple[float, float, float, float],
+    sx: float,
+    sy: float,
+    sz: float,
+    texels_per_block: int = 16,
+    pad: int = 1,
+) -> Image.Image:
+    """Map a manual atlas rect onto box unfold (front face from crop, sides from edge bleed)."""
+    from bake_rigid_creature_textures import crop_uv, opaque_fill
+
+    cw, ch = unfold_canvas_size(sx, sy, sz, pad, texels_per_block)
+    out = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    front = crop_uv(atlas, rect, max(8, int(max(sx, sy, sz) * texels_per_block)))
+    front = opaque_fill(front)
+    x0, y0, x1, y1 = face_pixel_rect("pz", sx, sy, sz, pad, texels_per_block)
+    fw, fh = x1 - x0 + 1, y1 - y0 + 1
+    resized = front.resize((fw, fh), Image.NEAREST)
+    out.paste(resized, (x0, y0))
+    px = out.load()
+    for face in FACE_ORDER:
+        if face == "pz":
+            continue
+        fx0, fy0, fx1, fy1 = face_pixel_rect(face, sx, sy, sz, pad, texels_per_block)
+        denom_x = max(1, fx1 - fx0)
+        denom_y = max(1, fy1 - fy0)
+        for y in range(fy0, min(ch, fy1 + 1)):
+            for x in range(fx0, min(cw, fx1 + 1)):
+                src_x = x0 + (x - fx0) * max(1, fw - 1) // denom_x
+                src_y = y0 + (y - fy0) * max(1, fh - 1) // denom_y
+                src_x = min(cw - 1, max(0, src_x))
+                src_y = min(ch - 1, max(0, src_y))
+                px[x, y] = px[src_x, src_y]
+    return out
+
+
+def write_uv_sidecar(
+    path: Path, sx: float, sy: float, sz: float, *, manual_fallback: bool = False
+) -> None:
     import json
 
     from box_uv_layout import box_face_uvs
@@ -193,6 +269,7 @@ def write_uv_sidecar(path: Path, sx: float, sy: float, sz: float) -> None:
     data = {
         "layout": "box_uv",
         "size_blocks": [sx, sy, sz],
+        "manual_fallback": manual_fallback,
         "faces": {
             name: [faces[name].u0, faces[name].v0, faces[name].u1, faces[name].v1]
             for name in FACE_ORDER
