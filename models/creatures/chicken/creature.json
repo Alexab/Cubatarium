@@ -48,14 +48,14 @@
     "texture_layout": "box_uv",
     "animation": {
       "walk_cycle_hz": 2.0,
-      "leg_swing_deg": 25,
+      "leg_swing_deg": 30,
       "arm_swing_deg": 15,
       "fly_body_pitch_deg": 10,
       "body_bob_blocks": 0.025,
       "tail_swing_deg": 12,
       "run_speed_multiplier": 1.3,
       "crouch_leg_bend_deg": 25,
-      "wing_idle_swing_deg": 5
+      "wing_idle_swing_deg": 30
     },
     "default_texture": "body",
     "parts": [
@@ -85,7 +85,7 @@
           0.14,
           0.14
         ],
-        "texture": "body"
+        "texture": "neck"
       },
       {
         "id": "head",
@@ -113,7 +113,7 @@
           0.06,
           0.1
         ],
-        "texture": "face"
+        "texture": "comb"
       },
       {
         "id": "beak",
@@ -127,7 +127,7 @@
           0.08,
           0.12
         ],
-        "texture": "face"
+        "texture": "beak"
       },
       {
         "id": "wing_l",
@@ -201,7 +201,7 @@
           0.22,
           0.07
         ],
-        "texture": "leg",
+        "texture": "leg_r",
         "pivot": [
           0.08,
           0.27,

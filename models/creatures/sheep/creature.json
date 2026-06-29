@@ -85,7 +85,7 @@
           0.34,
           0.32
         ],
-        "texture": "body"
+        "texture": "head"
       },
       {
         "id": "snout",
@@ -127,7 +127,7 @@
           0.16,
           0.08
         ],
-        "texture": "ear"
+        "texture": "ear_r"
       },
       {
         "id": "neck",
@@ -141,7 +141,7 @@
           0.25,
           0.22
         ],
-        "texture": "body"
+        "texture": "neck"
       },
       {
         "id": "tail",
@@ -189,7 +189,7 @@
           0.42,
           0.14
         ],
-        "texture": "leg",
+        "texture": "leg_fr",
         "pivot": [
           0.24,
           0.5,
@@ -209,7 +209,7 @@
           0.42,
           0.14
         ],
-        "texture": "leg",
+        "texture": "leg_bl",
         "pivot": [
           -0.24,
           0.5,
@@ -229,7 +229,7 @@
           0.42,
           0.14
         ],
-        "texture": "leg",
+        "texture": "leg_br",
         "pivot": [
           0.24,
           0.5,
