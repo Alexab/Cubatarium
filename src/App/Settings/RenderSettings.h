@@ -26,7 +26,7 @@ struct RenderSettings
   float DistanceFogStartRatio{0.55f};
   /// Exponent for fog blend; values below 1.0 thicken fog nearer the start.
   float DistanceFogDensity{0.85f};
-  /// Use horizontal (XZ) distance for distance fog, like Minecraft render fog.
+  /// Use horizontal (XZ) distance for distance fog (classic render fog).
   bool DistanceFogHorizontal{true};
   bool AltitudeAdaptiveFog{true};
   int AltitudeFogThresholdBlocks{32};

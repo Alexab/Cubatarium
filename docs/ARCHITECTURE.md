@@ -64,7 +64,7 @@ Block types and face textures load from **resource packs** under `resource_packs
 
 Face order in block JSON: **[+Z, +X, −Z, −X, +Y, −Y]** (same as `BlockAtlasUV.h`).
 
-Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base`. For full Minecraft-parity visuals, generate a local legacy pack (gitignored):
+Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base`. For full legacy block visuals (`minecraft_legacy_16`), generate a local pack (gitignored):
 
 ```powershell
 .\tools\migrate_to_resource_pack.ps1

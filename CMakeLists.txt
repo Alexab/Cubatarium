@@ -87,8 +87,13 @@ set(SOURCES
     src/Creatures/Definition/SkinDefinitionStorage.cpp
     src/Creatures/Visual/CreatureAppearance.cpp
     src/Creatures/Visual/CreatureVisualRigid.cpp
+    src/Creatures/Visual/CreatureVisualSkeletalGeo.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
+    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.cpp
+    src/Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.cpp
+    src/Creatures/Visual/Skeletal/CreatureBoneHierarchy.cpp
+    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.cpp
     src/Creatures/Player/PlayerController.cpp
     src/Pose/CreaturePosePresenterRegistry.cpp
     src/Pose/TerrestrialBipedPosePresenter.cpp
@@ -96,6 +101,8 @@ set(SOURCES
     src/Pose/AerialPosePresenter.cpp
     src/Pose/AquaticPosePresenter.cpp
     src/Pose/SerpentinePosePresenter.cpp
+    src/Pose/Skeletal/SkeletalAnimationProfiles.cpp
+    src/Pose/Skeletal/SkeletalBonePoseEngine.cpp
     src/App/Core.cpp
     src/App/LegacyConfigAdapter.cpp
     src/App/Settings/UiSettings.cpp
@@ -505,6 +512,15 @@ add_executable(chunk_load_priority_test
 target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
+
+add_executable(creature_skeletal_geo_loader_test
+    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.cpp
+    src/Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.cpp
+    src/Creatures/Visual/Skeletal/CreatureBoneHierarchy.cpp
+    src/Test/CreatureSkeletalGeoLoaderTest.cpp)
+target_include_directories(creature_skeletal_geo_loader_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_skeletal_geo_loader_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

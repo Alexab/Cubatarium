@@ -59,6 +59,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   DestroyCreaturePartBuffers();
+  DestroySkeletalMeshGpuCache();
   DestroyOverlayBuffers();
 }
 
@@ -2226,6 +2227,117 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
   {
     glDisable(GL_DEPTH_TEST);
   }
+}
+
+void UGeometryEngine::DestroySkeletalMeshGpuCache()
+{
+  for (auto &[key, buffers] : skeletalMeshGpuCache)
+  {
+    (void)key;
+    if (buffers.ebo)
+    {
+      glDeleteBuffers(1, &buffers.ebo);
+    }
+    if (buffers.vbo)
+    {
+      glDeleteBuffers(1, &buffers.vbo);
+    }
+    if (buffers.vao)
+    {
+      glDeleteVertexArrays(1, &buffers.vao);
+    }
+  }
+  skeletalMeshGpuCache.clear();
+}
+
+GLuint UGeometryEngine::GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh)
+{
+  size_t hash = 0;
+  for (float v : mesh.interleavedPosUv)
+  {
+    hash = hash * 31 + std::hash<float>{}(v);
+  }
+  for (unsigned int idx : mesh.indices)
+  {
+    hash = hash * 31 + idx;
+  }
+
+  auto it = skeletalMeshGpuCache.find(hash);
+  if (it != skeletalMeshGpuCache.end() && it->second.vao != 0)
+  {
+    return it->second.vao;
+  }
+
+  SkeletalMeshGpuBuffers buffers;
+  const size_t vertexCount = mesh.interleavedPosUv.size() / 5;
+  std::vector<float> vertices(mesh.interleavedPosUv);
+  glGenVertexArrays(1, &buffers.vao);
+  glGenBuffers(1, &buffers.vbo);
+  glGenBuffers(1, &buffers.ebo);
+  glBindVertexArray(buffers.vao);
+  glBindBuffer(GL_ARRAY_BUFFER, buffers.vbo);
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+               vertices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned int)),
+               mesh.indices.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glBindVertexArray(0);
+  (void)vertexCount;
+  skeletalMeshGpuCache[hash] = buffers;
+  return buffers.vao;
+}
+
+void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp, GLuint texture,
+                                              const SkeletalCubeMeshCpu &mesh)
+{
+  if (texture == 0 || mesh.interleavedPosUv.empty() || mesh.indices.empty() ||
+      !defaultShader || !defaultShader->IsValid())
+  {
+    return;
+  }
+
+  const GLuint vao = GetOrCreateSkeletalMeshVao(mesh);
+  if (vao == 0)
+  {
+    return;
+  }
+
+  GLboolean depthEnabled = GL_TRUE;
+  glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+  GLint frontFace = GL_CCW;
+  glGetIntegerv(GL_FRONT_FACE, &frontFace);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  // SkeletalEntityConventionMatrix() negates Z and inverts triangle winding in clip space.
+  glFrontFace(GL_CW);
+
+  glBindTexture(GL_TEXTURE_2D, texture);
+  defaultShader->Use();
+  defaultShader->SetInt("texture0", 0);
+  defaultShader->SetInt("uAnimFrame", 0);
+  defaultShader->SetInt("uAnimFrameCount", 1);
+  defaultShader->SetMat4("mvp_matrix", mvp);
+
+  glBindVertexArray(vao);
+  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
+                 GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
+
+  defaultShader->Unuse();
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  if (!depthEnabled)
+  {
+    glDisable(GL_DEPTH_TEST);
+  }
+  glFrontFace(frontFace);
 }
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(const glm::mat4 & /*mvp*/,

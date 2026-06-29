@@ -748,7 +748,7 @@ void UWindowManager::RenderHelpText()
   std::vector<std::string> help_lines = {
       "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, "
       "RMB hold - Look, ` - Console",
-      "Classic (Minecraft): mouse look, LMB break, RMB place; Cubatarium: RMB "
+      "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",
       "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, "
       "Shift+F11 - Flat",

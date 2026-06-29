@@ -150,6 +150,7 @@ UApplication::UApplication(
     World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
     World->SetOnCreatureCatalogChanged([this]()
                                        {
+                                         RefreshCreatureCatalog();
                                          if (IconSource)
                                          {
                                            IconSource->ClearCreatureIconCache();
@@ -523,6 +524,23 @@ void UApplication::RefreshBlockCatalog()
   {
     PaletteScreen->InvalidateGrid();
   }
+}
+
+void UApplication::RefreshCreatureCatalog()
+{
+  if (!GameSession || !Core)
+  {
+    return;
+  }
+  if (auto defs = Core->GetBlockDefinitionStorage())
+  {
+    BlockDefinitions = defs;
+  }
+  if (!BlockDefinitions)
+  {
+    return;
+  }
+  GameSession->ReindexBlockCatalog(*BlockDefinitions, *Core->GetObjectLibrary());
 }
 
 void UApplication::EnterGameAfterWorldChange()

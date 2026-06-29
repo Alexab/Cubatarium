@@ -1,6 +1,6 @@
 # Creature — post-B: коллизии существ и камера
 
-Краткое руководство после итерации B: entity–entity collision и три режима камеры (Minecraft Java, F5).
+Краткое руководство после итерации B: entity–entity collision и три режима камеры (classic F5 cycle).
 
 Каталог существ и скинов (палитра, spawn, `skin_id`): [CREATURE_CATALOG.md](CREATURE_CATALOG.md).
 

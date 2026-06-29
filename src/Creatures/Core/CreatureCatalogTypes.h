@@ -61,6 +61,7 @@ struct CreatureBehaviorParams
 enum class CreatureVisualBackend : uint8_t
 {
   RigidVoxels,
+  SkeletalGeo,
   GltfSkeleton,
 };
 
@@ -108,8 +109,18 @@ struct CreatureAnimationParams
   float runSpeedMultiplier{1.3f};
   float crouchLegBendDeg{25.0f};
   float wingIdleSwingDeg{5.0f};
+  float lookAtDeg{30.0f};
   std::unordered_map<std::string, CreatureAnimationClipDef> clips;
   std::unordered_map<std::string, std::string> stateMap;
+};
+
+struct CreatureSkeletalGeoSpec
+{
+  std::string geometryId;
+  std::string geometryFile{"geometry.geo.json"};
+  std::string textureStem{"diffuse"};
+  glm::ivec2 textureSize{64, 32};
+  std::string animationProfile;
 };
 
 struct CreatureGltfSpec
@@ -139,6 +150,7 @@ struct CreatureVisualSpec
   std::string iconMode{"bounds_wireframe"};
   CreatureRigSpec rig;
   CreatureAnimationParams Animation;
+  CreatureSkeletalGeoSpec skeletal;
   CreatureGltfSpec gltf;
   std::vector<CreatureVisualPartDef> Parts;
 };

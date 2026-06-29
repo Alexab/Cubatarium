@@ -2,6 +2,7 @@
 #define GEOMETRYENGINE_H
 
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL Types
@@ -94,6 +95,8 @@ public:
   }
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
+  void DrawCreatureSkeletalMesh(const glm::mat4 &mvp, GLuint texture,
+                               const SkeletalCubeMeshCpu &mesh);
   void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint meshVao,
                                GLuint texture);
 
@@ -155,6 +158,13 @@ private:
   GLuint creatureRigidHeadPartVAO = 0;
   GLuint creatureRigidHeadPartVBO = 0;
   GLuint creatureRigidHeadPartEBO = 0;
+  struct SkeletalMeshGpuBuffers
+  {
+    GLuint vao{0};
+    GLuint vbo{0};
+    GLuint ebo{0};
+  };
+  std::unordered_map<size_t, SkeletalMeshGpuBuffers> skeletalMeshGpuCache;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
@@ -163,6 +173,8 @@ private:
   bool InitCreatureBodyPartBuffers();
   bool InitCreatureRigidHeadPartBuffers();
   void DestroyCreaturePartBuffers();
+  void DestroySkeletalMeshGpuCache();
+  GLuint GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh);
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
   void RenderCreatures();

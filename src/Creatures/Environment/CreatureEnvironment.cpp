@@ -23,6 +23,18 @@ constexpr float kDefaultViewerEyeHeight = 1.62f;
 constexpr float kSpawnAheadBlocks = 3.0f;
 constexpr int kFluidColumnSearchRadius = 4;
 
+std::optional<float> ResolveTerrestrialGroundFeetY(const UWorld &world, int gx,
+                                                   int gz,
+                                                   float referenceFeetY)
+{
+  if (const std::optional<float> feetY =
+          world.QueryGroundFeetYUnder(gx, gz, referenceFeetY))
+  {
+    return feetY;
+  }
+  return world.QueryGroundFeetYColumn(gx, gz);
+}
+
 bool IsPassableBlock(const UBlockRegistry &registry, BlockId id)
 {
   return id != BLOCK_AIR && !registry.BlocksMovement(id);
@@ -301,7 +313,7 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
     if (const std::optional<float> feetY =
-            world.QueryGroundFeetYColumn(probeGx, probeGz))
+            ResolveTerrestrialGroundFeetY(world, probeGx, probeGz, viewProbe.y))
     {
       return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
@@ -400,9 +412,9 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
         return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
     }
-    if (const std::optional<float> feetY =
-            world.QueryGroundFeetYColumn(WorldCoordToBlockIndex(viewProbe.x),
-                                         WorldCoordToBlockIndex(viewProbe.z)))
+    if (const std::optional<float> feetY = ResolveTerrestrialGroundFeetY(
+            world, WorldCoordToBlockIndex(viewProbe.x),
+            WorldCoordToBlockIndex(viewProbe.z), viewProbe.y))
     {
       return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
@@ -452,13 +464,13 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &sizeBlocks)
 {
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
-  if (world.CheckCollisionVolume(vol, 0))
+  if (world.CheckBlockCollisionVolume(vol))
   {
     return false;
   }
   if (habitat == CreatureHabitat::Aerial)
   {
-    return !world.CheckCollisionVolume(vol, 0);
+    return !world.CheckBlockCollisionVolume(vol);
   }
   if (habitat == CreatureHabitat::Aquatic)
   {
@@ -481,6 +493,23 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
       return true;
     }
     return env.onSolidGround && !env.inFluid;
+  }
+  if (habitat == CreatureHabitat::Terrestrial)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    if (env.onSolidGround && !env.inFluid)
+    {
+      return true;
+    }
+    const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
+    const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
+    if (const std::optional<float> feetY =
+            world.QueryGroundFeetYUnder(gx, gz, bodyOrigin.y))
+    {
+      return std::abs(*feetY - bodyOrigin.y) <= 0.75f;
+    }
+    return false;
   }
   return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
 }
@@ -508,7 +537,11 @@ bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
   {
     return false;
   }
-  const CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
+  CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
+  // Slightly shrink spawn AABB so tall mobs (zombie) fit under low ceilings.
+  constexpr float kSpawnCollisionInset = 0.05f;
+  vol.halfExtents -= glm::vec3(kSpawnCollisionInset);
+  vol.halfExtents = glm::max(vol.halfExtents, glm::vec3(0.05f));
   if (world.CheckCreatureCollisionVolume(vol, 0))
   {
     return false;
@@ -670,6 +703,16 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
       }
     }
     return base;
+  }
+  if (def.habitat == CreatureHabitat::Terrestrial)
+  {
+    const int gx = WorldCoordToBlockIndex(probeOrigin.x);
+    const int gz = WorldCoordToBlockIndex(probeOrigin.z);
+    if (const std::optional<float> feetY =
+            ResolveTerrestrialGroundFeetY(world, gx, gz, probeOrigin.y))
+    {
+      return glm::vec3(probeOrigin.x, *feetY, probeOrigin.z);
+    }
   }
   return probeOrigin;
 }

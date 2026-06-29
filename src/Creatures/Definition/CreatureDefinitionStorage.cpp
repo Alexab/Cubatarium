@@ -237,6 +237,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
             "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
         def.visual.Animation.wingIdleSwingDeg = anim.value(
             "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
+        def.visual.Animation.lookAtDeg =
+            anim.value("look_at_deg", def.visual.Animation.lookAtDeg);
         if (anim.contains("clips") && anim["clips"].is_object())
         {
           for (const auto &[clipId, clipJson] : anim["clips"].items())
@@ -322,11 +324,35 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           def.visual.Parts.push_back(part);
         }
       }
+      if (vis.contains("geometry") || vis.contains("geometry_file") ||
+          vis.contains("texture_size") || vis.contains("animation_profile"))
+      {
+        def.visual.skeletal.geometryId = vis.value("geometry", "");
+        def.visual.skeletal.geometryFile =
+            vis.value("geometry_file", def.visual.skeletal.geometryFile);
+        def.visual.skeletal.textureStem =
+            vis.value("texture", def.visual.skeletal.textureStem);
+        def.visual.skeletal.animationProfile =
+            vis.value("animation_profile", "");
+        if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
+            vis["texture_size"].size() >= 2)
+        {
+          def.visual.skeletal.textureSize.x = vis["texture_size"][0].get<int>();
+          def.visual.skeletal.textureSize.y = vis["texture_size"][1].get<int>();
+        }
+      }
       if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
           def.visual.gltf.modelPath.empty())
       {
         std::cerr << "UCreatureDefinitionStorage: " << path
                   << ": gltf_skeleton without visual.gltf.model for " << def.Id
+                  << std::endl;
+      }
+      if (parsedBackend == CreatureVisualBackend::SkeletalGeo &&
+          def.visual.skeletal.geometryId.empty())
+      {
+        std::cerr << "UCreatureDefinitionStorage: " << path
+                  << ": skeletal_geo without visual.geometry for " << def.Id
                   << std::endl;
       }
     }

@@ -4,7 +4,7 @@
 namespace cutum
 {
 
-/// Global elapsed time for block texture animation (Minecraft-style 20 ticks/s).
+/// Global elapsed time for block texture animation (20 ticks/s style).
 class UAnimationClock
 {
 public:

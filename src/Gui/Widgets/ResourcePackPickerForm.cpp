@@ -182,7 +182,7 @@ void UResourcePackPickerForm::SyncListItems()
   if (PriorityHintLabel)
   {
     PriorityHintLabel->SetText(
-        "Higher in the list = higher priority (like Minecraft). "
+        "Higher in the list = higher priority. "
         "Drag rows or Ctrl+Up/Down to reorder.");
   }
 }
@@ -273,7 +273,7 @@ void UResourcePackPickerForm::BuildInto(UGuiPanel &panel)
     UGuiPanel &root = *ContainerPanel;
 
     auto priorityHint =
-        std::make_unique<UGuiLabel>(Theme, "Higher in the list = higher priority (like Minecraft).");
+        std::make_unique<UGuiLabel>(Theme, "Higher in the list = higher priority.");
     PriorityHintLabel = priorityHint.get();
     root.AddChild(std::move(priorityHint));
 

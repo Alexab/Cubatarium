@@ -2012,7 +2012,16 @@ bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
   const FootprintStandSampleStats stats = SampleFootprintAtFeet(
       *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
       vol.halfExtents.x, PlayerCapsule{}, false);
-  return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
+  int minSamples = kFootprintMinSolidSamples;
+  if (vol.halfExtents.x < 0.30f)
+  {
+    minSamples = 1;
+  }
+  else if (vol.halfExtents.x < 0.45f)
+  {
+    minSamples = 2;
+  }
+  return stats.centerSolid && stats.solidSamples >= minSamples;
 }
 
 bool UWorld::HasGroundSupport(const glm::vec3 &eyePos,

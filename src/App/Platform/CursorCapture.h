@@ -12,7 +12,7 @@ enum class AppCursorPolicy
   Free,
   /// Видимый курсор, не выходит за клиентскую область окна (Cubatarium).
   ConfinedVisible,
-  /// Скрытый курсор, относительное движение (Classic / Minecraft).
+  /// Скрытый курсор, относительное движение (classic controls).
   CapturedHidden,
 };
 

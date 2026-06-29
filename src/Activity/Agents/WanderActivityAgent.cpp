@@ -116,14 +116,9 @@ void UWanderActivityAgent::Tick(IWorldPerception &perception,
       if (!PickWanderDirection(perception, *view, snapshot->habitat,
                                snapshot->boundsSize, nextDir))
       {
-        if (snapshot->habitat == CreatureHabitat::Aerial)
-        {
-          nextDir = RandomWanderDirection(CreatureHabitat::Aerial);
-        }
-        else
-        {
-          nextDir = glm::vec3(0.0f);
-        }
+        // Keep non-aerial mobs trying movement even when probe validation is
+        // conservative for a specific surface sample.
+        nextDir = RandomWanderDirection(snapshot->habitat);
       }
       st.direction = nextDir;
     }

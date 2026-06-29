@@ -18,6 +18,7 @@
 #include <iostream>
 #include <limits>
 #include <nlohmann/json.hpp>
+#include <vector>
 
 namespace cutum
 {
@@ -203,7 +204,11 @@ void UWorld::SnapCreatureFeetToGround(UCreature &creature) const
   const glm::vec3 origin = creature.GetBodyOrigin();
   const int gx = WorldCoordToBlockIndex(origin.x);
   const int gz = WorldCoordToBlockIndex(origin.z);
-  if (const std::optional<float> feetY = QueryGroundFeetYColumn(gx, gz))
+  if (const std::optional<float> feetY = QueryGroundFeetYUnder(gx, gz, origin.y))
+  {
+    creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
+  }
+  else if (const std::optional<float> feetY = QueryGroundFeetYColumn(gx, gz))
   {
     creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
   }
@@ -235,7 +240,12 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
       return 0;
     }
     const CollisionVolume vol = CollisionVolumeFromBody(spawnOrigin, spawnSize);
-    if (CheckCreatureCollisionVolume(vol, 0) || CheckBlockCollisionVolume(vol))
+    CollisionVolume spawnVol = vol;
+    constexpr float kSpawnCollisionInset = 0.05f;
+    spawnVol.halfExtents -= glm::vec3(kSpawnCollisionInset);
+    spawnVol.halfExtents = glm::max(spawnVol.halfExtents, glm::vec3(0.05f));
+    if (CheckCreatureCollisionVolume(spawnVol, 0) ||
+        CheckBlockCollisionVolume(spawnVol))
     {
       std::cerr << "SpawnCreature: no space for '" << speciesId << "'"
                 << std::endl;
@@ -462,6 +472,35 @@ glm::vec3 ComputeSpawnProbeOrigin(UWorld &world, const CreatureDefinition &def)
   return SnapSpawnProbeToHabitat(world, def, viewProbe);
 }
 
+std::vector<glm::vec3> BuildSpawnProbeCandidates(const glm::vec3 &baseOrigin)
+{
+  return {
+      baseOrigin,
+      baseOrigin + glm::vec3(1.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(-1.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, 1.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, -1.0f),
+      baseOrigin + glm::vec3(2.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(-2.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, 2.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, -2.0f),
+      baseOrigin + glm::vec3(3.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(-3.0f, 0.0f, 0.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, 3.0f),
+      baseOrigin + glm::vec3(0.0f, 0.0f, -3.0f),
+      baseOrigin + glm::vec3(1.0f, 0.0f, 1.0f),
+      baseOrigin + glm::vec3(-1.0f, 0.0f, 1.0f),
+      baseOrigin + glm::vec3(1.0f, 0.0f, -1.0f),
+      baseOrigin + glm::vec3(-1.0f, 0.0f, -1.0f),
+      baseOrigin + glm::vec3(0.0f, 1.0f, 0.0f),
+      baseOrigin + glm::vec3(0.0f, 2.0f, 0.0f),
+      baseOrigin + glm::vec3(1.0f, 1.0f, 0.0f),
+      baseOrigin + glm::vec3(-1.0f, 1.0f, 0.0f),
+      baseOrigin + glm::vec3(0.0f, 1.0f, 1.0f),
+      baseOrigin + glm::vec3(0.0f, 1.0f, -1.0f),
+  };
+}
+
 } // namespace
 
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
@@ -476,13 +515,15 @@ bool UWorld::SpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
-  if (!CanSpawnCreatureAt(*this, *def, bodyOrigin))
+  const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
   {
-    return false;
+    if (SpawnCreature(speciesId, probe) != 0)
+    {
+      return true;
+    }
   }
-  const glm::vec3 adjusted = AdjustSpawnBodyOrigin(*this, *def, bodyOrigin);
-  return SpawnCreature(speciesId, adjusted) != 0;
+  return false;
 }
 
 bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
@@ -497,8 +538,15 @@ bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
-  return CanSpawnCreatureAt(*this, *def, bodyOrigin);
+  const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
+  {
+    if (CanSpawnCreatureAt(*this, *def, probe))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
@@ -513,8 +561,15 @@ std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
   {
     return u8"Нельзя спавнить";
   }
-  const glm::vec3 bodyOrigin = ComputeSpawnProbeOrigin(*this, *def);
-  return ::cutum::GetCreatureSpawnBlockedHint(*this, *def, bodyOrigin);
+  const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(*this, *def);
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
+  {
+    if (CanSpawnCreatureAt(*this, *def, probe))
+    {
+      return {};
+    }
+  }
+  return ::cutum::GetCreatureSpawnBlockedHint(*this, *def, baseOrigin);
 }
 
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,

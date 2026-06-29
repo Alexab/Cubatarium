@@ -271,7 +271,48 @@ WAVE_BAKE_MARINE = (
 )
 
 
+def check_bedrock_migrated() -> None:
+    bedrock_species = (
+        "cow",
+        "pig",
+        "sheep",
+        "wolf",
+        "chicken",
+        "skeleton",
+        "human",
+        "zombie",
+        "bee",
+        "fox",
+        "spider",
+        "dolphin",
+        "squid",
+        "bunny",
+        "trout",
+        "tortoise",
+    )
+    for species in bedrock_species:
+        creature = load_creature(species)
+        visual = creature.get("visual", {})
+        if visual.get("backend") != "bedrock_geo":
+            raise SystemExit(f"FAIL {species}: expected bedrock_geo backend")
+        geo = MODELS / species / visual.get("geometry_file", "geometry.geo.json")
+        if not geo.is_file():
+            raise SystemExit(f"FAIL {species}: missing geometry file")
+        tex = MODELS / species / "textures" / f"{visual.get('texture', 'diffuse')}.png"
+        if not tex.is_file():
+            raise SystemExit(f"FAIL {species}: missing diffuse atlas")
+    print(f"OK bedrock_geo migrated species ({len(bedrock_species)})")
+
+
+def is_bedrock_geo(species: str) -> bool:
+    creature = load_creature(species)
+    return creature.get("visual", {}).get("backend") == "bedrock_geo"
+
+
 def check_wave_baked(species: str) -> None:
+    if is_bedrock_geo(species):
+        print(f"SKIP wave bake {species}: bedrock_geo")
+        return
     lic = MODELS / species / "LICENSE.txt"
     if lic.is_file() and "Placeholder procedural" in lic.read_text(encoding="utf-8"):
         print(f"SKIP wave bake {species}: placeholder (upstream texture missing)")
@@ -294,23 +335,32 @@ def check_wave_baked(species: str) -> None:
 
 def main() -> None:
     print("=== creature fidelity smoke ===")
-    check_opaque("sheep", ("body", "face", "ear", "tail"))
-    check_opaque("skeleton", ("body", "face", "leg"))
-    check_opaque("cow", ("body", "face"))
-    check_parts(
-        "sheep",
-        {"snout", "ear_l", "ear_r", "tail", "leg_fl", "leg_fr", "leg_bl", "leg_br"},
-    )
-    check_parts("wolf", {"ear_l", "ear_r", "tail", "snout"})
-    check_parts("chicken", {"neck", "comb", "head", "beak", "wing_l", "wing_r"})
-    chicken = load_creature("chicken")
-    head = next(p for p in chicken["visual"]["parts"] if p["id"] == "head")
-    if head["texture"] != "face":
-        raise SystemExit(f"FAIL chicken: head.texture={head['texture']!r}")
-    print("OK chicken head uses face texture")
+    check_bedrock_migrated()
+    if not is_bedrock_geo("sheep"):
+        check_opaque("sheep", ("body", "face", "ear", "tail"))
+    if not is_bedrock_geo("skeleton"):
+        check_opaque("skeleton", ("body", "face", "leg"))
+    if not is_bedrock_geo("cow"):
+        check_opaque("cow", ("body", "face"))
+    if not is_bedrock_geo("sheep"):
+        check_parts(
+            "sheep",
+            {"snout", "ear_l", "ear_r", "tail", "leg_fl", "leg_fr", "leg_bl", "leg_br"},
+        )
+    if not is_bedrock_geo("wolf"):
+        check_parts("wolf", {"ear_l", "ear_r", "tail", "snout"})
+    if not is_bedrock_geo("chicken"):
+        check_parts("chicken", {"neck", "comb", "head", "beak", "wing_l", "wing_r"})
+        chicken = load_creature("chicken")
+        head = next(p for p in chicken["visual"]["parts"] if p["id"] == "head")
+        if head["texture"] != "face":
+            raise SystemExit(f"FAIL chicken: head.texture={head['texture']!r}")
+        print("OK chicken head uses face texture")
     for species in ("sheep", "cow", "pig", "wolf", "chicken"):
-        check_no_orphan_arm(species)
-    check_human_atlas()
+        if not is_bedrock_geo(species):
+            check_no_orphan_arm(species)
+    if not is_bedrock_geo("human"):
+        check_human_atlas()
     check_proportions()
     check_animation_fields()
     check_parts(

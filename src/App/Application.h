@@ -156,6 +156,7 @@ private:
   void ScheduleDeferredMenuAction(std::function<void()> Action);
   void EnterGameAfterWorldChange();
   void RefreshBlockCatalog();
+  void RefreshCreatureCatalog();
   void ShowInGameHud();
   void SyncCursorVisibility();
   void SyncGameplayLookCapture();

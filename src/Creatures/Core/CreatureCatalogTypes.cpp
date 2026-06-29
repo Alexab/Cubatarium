@@ -10,6 +10,10 @@ CreatureVisualBackend ParseCreatureVisualBackend(const std::string &s)
   {
     return CreatureVisualBackend::RigidVoxels;
   }
+  if (s == "skeletal_geo" || s == "bedrock_geo")
+  {
+    return CreatureVisualBackend::SkeletalGeo;
+  }
   if (s == "gltf_skeleton")
   {
     return CreatureVisualBackend::GltfSkeleton;
@@ -28,6 +32,8 @@ const char *ToString(CreatureVisualBackend backend)
   {
   case CreatureVisualBackend::RigidVoxels:
     return "rigid_voxels";
+  case CreatureVisualBackend::SkeletalGeo:
+    return "skeletal_geo";
   case CreatureVisualBackend::GltfSkeleton:
     return "gltf_skeleton";
   }

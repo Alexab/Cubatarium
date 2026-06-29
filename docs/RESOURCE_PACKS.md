@@ -39,17 +39,17 @@ resource_packs/<pack_id>/
 - **priority**: tiebreaker within the same UI tier and list position.
 - **worldgen_role**: `primary` (worldgen-capable) or `secondary` (decorative / partial).
 - Primary candidates are **whitelisted** in `tools/pack_dependencies.yaml` (not auto-promoted when tier A is complete). Run `python tools/update_pack_metadata.py` after rebuilding packs.
-- **animation.frametime**: game ticks per frame (20 ticks = 1 second), same as Minecraft `.mcmeta` / Minetest. Canonical tier A fluids/fire use `frametime: 6` (~0.3 s per frame).
+- **animation.frametime**: game ticks per frame (20 ticks = 1 second), same as classic `.mcmeta` / Minetest. Canonical tier A fluids/fire use `frametime: 6` (~0.3 s per frame).
 - **merge_mode**: `skip_existing` (default), `override`, or `duplicate` (`pack_id::local_name`).
 - **id**: must match the folder name under `resource_packs/`.
 
-## Merge rules (3 layers, Bedrock-style)
+## Merge rules (3 layers, layered override)
 
 1. **Block catalog** — union of block names from enabled packs; `merge_mode` controls collisions.
 2. **Block definition** — physics/render/types from the **owner pack** only.
 3. **Texture atlas** — stems resolved in the owner pack; atlas keys remain `pack_id/stem`.
 
-**Selection order:** `primary[]` then `secondary[]`. **Higher in each list = higher priority** (like Minecraft). Effective priority:
+**Selection order:** `primary[]` then `secondary[]`. **Higher in each list = higher priority**. Effective priority:
 
 `tier * 1000 + inverted_selection_index * 10 + pack.priority`
 
@@ -65,7 +65,7 @@ resource_packs/<pack_id>/
 
 See also `docs/block-semantics-audit.md` and `tools/audit_resource_packs.py`.
 
-### Comparison with Minecraft / Minetest
+### Comparison with Minetest / classic pack merge
 
 | Pattern | Cubatarium |
 |---------|------------|
