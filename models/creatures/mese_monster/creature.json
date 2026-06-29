@@ -45,7 +45,7 @@
   },
   "visual": {
     "backend": "rigid_voxels",
-    "texture_layout": "rigid_crop",
+    "texture_layout": "box_uv",
     "animation": {
       "walk_cycle_hz": 2.0,
       "leg_swing_deg": 25,
@@ -105,7 +105,7 @@
           0.52,
           0.16
         ],
-        "texture": "arm",
+        "texture": "arm_r",
         "pivot": [
           0.34,
           1.28,
@@ -159,7 +159,7 @@
           0.65,
           0.2
         ],
-        "texture": "leg",
+        "texture": "leg_r",
         "pivot": [
           0.14,
           0.65,
@@ -169,7 +169,7 @@
       }
     ],
     "icon": {
-      "mode": "parts_preview",
+      "mode": "species_texture",
       "color": [
         0.39215686274509803,
         0.23529411764705882,

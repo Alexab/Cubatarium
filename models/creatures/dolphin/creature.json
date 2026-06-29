@@ -45,7 +45,7 @@
   },
   "visual": {
     "backend": "rigid_voxels",
-    "texture_layout": "rigid_crop",
+    "texture_layout": "box_uv",
     "animation": {
       "walk_cycle_hz": 2.0,
       "leg_swing_deg": 25,
@@ -71,7 +71,7 @@
           0.28,
           1.15
         ],
-        "texture": "body"
+        "texture": "torso"
       },
       {
         "id": "head",
@@ -129,7 +129,7 @@
       }
     ],
     "icon": {
-      "mode": "parts_preview",
+      "mode": "species_texture",
       "color": [
         0.5098039215686274,
         0.5490196078431373,
