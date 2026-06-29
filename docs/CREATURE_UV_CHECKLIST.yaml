@@ -1,0 +1,3003 @@
+badger:
+  wave: W4
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: dmobs/models/badger.b3d
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+  command: python tools/run_creature_uv_wave.py --species badger --fail-fast
+bee:
+  wave: W7
+  tier: B
+  archetype: aerial
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:33+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:33+00:00'
+  command: python tools/run_creature_uv_wave.py --species bee --fail-fast
+bunny:
+  wave: W4
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_animal/models/mobs_bunny.b3d
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:34+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:34+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:34+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:34+00:00'
+  command: python tools/run_creature_uv_wave.py --species bunny --fail-fast
+butterfly:
+  wave: W7
+  tier: B
+  archetype: aerial
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+  command: python tools/run_creature_uv_wave.py --species butterfly --fail-fast
+chicken:
+  wave: W1
+  tier: A
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_animal/models/mobs_chicken.b3d
+  placeholder: false
+  parts_count: 9
+  threshold_profile: tier_a
+  gate_skips: []
+  g09_part: beak
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:35+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:35+00:00'
+  command: python tools/run_creature_uv_wave.py --species chicken --fail-fast
+  last_failures:
+  - snout_front_score
+cow:
+  wave: W1
+  tier: A
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_animal/models/mobs_cow.b3d
+  placeholder: false
+  parts_count: 11
+  threshold_profile: tier_a
+  gate_skips: []
+  g09_part: snout
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:36+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:36+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:36+00:00'
+  command: python tools/run_creature_uv_wave.py --species cow --fail-fast
+  last_failures:
+  - face_bleed_score
+  - snout_front_score
+  - b3d_assignment_rate
+crab:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+  command: python tools/run_creature_uv_wave.py --species crab --fail-fast
+dirt_monster:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:37+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:37+00:00'
+  command: python tools/run_creature_uv_wave.py --species dirt_monster --fail-fast
+  last_failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+dolphin:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 4
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:38+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:38+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:38+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:38+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:38+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:38+00:00'
+  command: python tools/run_creature_uv_wave.py --species dolphin --fail-fast
+  last_failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+dungeon_master:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+  command: python tools/run_creature_uv_wave.py --species dungeon_master --fail-fast
+fire_spirit:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:39+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:39+00:00'
+  command: python tools/run_creature_uv_wave.py --species fire_spirit --fail-fast
+  last_failures:
+  - opaque:body
+  - face_coverage:body
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+  - opaque:leg_r
+  - face_coverage:leg_r
+fox:
+  wave: W4
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: dmobs/models/fox.b3d
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:40+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:40+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:40+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:40+00:00'
+  command: python tools/run_creature_uv_wave.py --species fox --fail-fast
+golem:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+  command: python tools/run_creature_uv_wave.py --species golem --fail-fast
+hedgehog:
+  wave: W4
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: dmobs/models/hedgehog.b3d
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:41+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:41+00:00'
+  command: python tools/run_creature_uv_wave.py --species hedgehog --fail-fast
+  last_failures:
+  - b3d_assignment_rate
+hermitcrab:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 4
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+  command: python tools/run_creature_uv_wave.py --species hermitcrab --fail-fast
+human:
+  wave: W0
+  tier: '0'
+  archetype: terrestrial_biped
+  layout_current: player_skin_atlas
+  layout_target: player_skin_atlas
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: human
+  gate_skips:
+  - G02
+  - G03
+  - G04
+  - G05
+  - G06
+  - G07
+  - G08
+  - G09
+  - G12
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G04:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G05:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G06:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G07:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G08:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:42+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:42+00:00'
+  command: python tools/run_creature_uv_wave.py --species human --fail-fast
+kitten:
+  wave: W5
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 7
+  threshold_profile: quadruped_no_b3d
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+  command: python tools/run_creature_uv_wave.py --species kitten --fail-fast
+land_guard:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:43+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:43+00:00'
+  command: python tools/run_creature_uv_wave.py --species land_guard --fail-fast
+lava_flan:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:44+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:44+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:44+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:44+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:44+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:44+00:00'
+  command: python tools/run_creature_uv_wave.py --species lava_flan --fail-fast
+lobster:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 5
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+  command: python tools/run_creature_uv_wave.py --species lobster --fail-fast
+  last_failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:claw_r
+  - face_coverage:claw_r
+manatee:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 4
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:45+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:45+00:00'
+  command: python tools/run_creature_uv_wave.py --species manatee --fail-fast
+  last_failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+mese_monster:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+  command: python tools/run_creature_uv_wave.py --species mese_monster --fail-fast
+  last_failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+octopus:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 6
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:46+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:46+00:00'
+  command: python tools/run_creature_uv_wave.py --species octopus --fail-fast
+oerkki:
+  wave: W3
+  tier: A
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_monster/models/mobs_oerkki.b3d
+  placeholder: false
+  parts_count: 6
+  threshold_profile: tier_a
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:47+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:47+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:47+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:47+00:00'
+  command: python tools/run_creature_uv_wave.py --species oerkki --fail-fast
+  last_failures:
+  - face_bleed_score
+  - b3d_assignment_rate
+ogre:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+  command: python tools/run_creature_uv_wave.py --species ogre --fail-fast
+orc:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:48+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:48+00:00'
+  command: python tools/run_creature_uv_wave.py --species orc --fail-fast
+owl:
+  wave: W7
+  tier: B
+  archetype: aerial
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:49+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:49+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:49+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:49+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:49+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:49+00:00'
+  command: python tools/run_creature_uv_wave.py --species owl --fail-fast
+panda:
+  wave: W5
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 7
+  threshold_profile: quadruped_no_b3d
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+  command: python tools/run_creature_uv_wave.py --species panda --fail-fast
+penguin:
+  wave: W4
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_animal/models/mobs_penguin.b3d
+  placeholder: false
+  parts_count: 7
+  threshold_profile: aquatic
+  gate_skips: []
+  g09_part: beak
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:50+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:50+00:00'
+  command: python tools/run_creature_uv_wave.py --species penguin --fail-fast
+pig:
+  wave: W2
+  tier: A
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 11
+  threshold_profile: tier_a
+  gate_skips:
+  - G02
+  - G03
+  g09_part: snout
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:51+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:51+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:51+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:51+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:51+00:00'
+  command: python tools/run_creature_uv_wave.py --species pig --fail-fast
+  last_failures:
+  - face_coverage:head
+puffin:
+  wave: W7
+  tier: B
+  archetype: aerial
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 7
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  g09_part: beak
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+  command: python tools/run_creature_uv_wave.py --species puffin --fail-fast
+  last_failures:
+  - opaque:leg
+  - face_coverage:leg
+  - opaque:leg_r
+  - face_coverage:leg_r
+  - snout_front_score
+rat:
+  wave: W5
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 7
+  threshold_profile: quadruped_no_b3d
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:52+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:52+00:00'
+  command: python tools/run_creature_uv_wave.py --species rat --fail-fast
+sand_monster:
+  wave: W3
+  tier: A
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_monster/models/mobs_sand_monster.b3d
+  placeholder: false
+  parts_count: 6
+  threshold_profile: tier_a
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:53+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:53+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:53+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:53+00:00'
+  command: python tools/run_creature_uv_wave.py --species sand_monster --fail-fast
+  last_failures:
+  - b3d_assignment_rate
+seahorse:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 3
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+  command: python tools/run_creature_uv_wave.py --species seahorse --fail-fast
+seal:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 5
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:54+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:54+00:00'
+  command: python tools/run_creature_uv_wave.py --species seal --fail-fast
+shark:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 5
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+  command: python tools/run_creature_uv_wave.py --species shark --fail-fast
+sheep:
+  wave: W1
+  tier: A
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_animal/models/mobs_sheep.b3d
+  placeholder: false
+  parts_count: 11
+  threshold_profile: tier_a
+  gate_skips: []
+  g09_part: snout
+  pre_steps:
+  - composite_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:55+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:55+00:00'
+  command: python tools/run_creature_uv_wave.py --species sheep --fail-fast
+  last_failures:
+  - face_coverage:body
+  - snout_front_score
+skeleton:
+  wave: W3
+  tier: A
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: dmobs/models/skeleton.b3d
+  placeholder: false
+  parts_count: 6
+  threshold_profile: tier_a
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:56+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:56+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:56+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:56+00:00'
+  command: python tools/run_creature_uv_wave.py --species skeleton --fail-fast
+  last_failures:
+  - face_bleed_score
+spider:
+  wave: W4
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: mobs_monster/models/mobs_spider.b3d
+  placeholder: false
+  parts_count: 8
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+  command: python tools/run_creature_uv_wave.py --species spider --fail-fast
+  last_failures:
+  - face_bleed_score
+  - b3d_assignment_rate
+squid:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 4
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:57+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:57+00:00'
+  command: python tools/run_creature_uv_wave.py --species squid --fail-fast
+  last_failures:
+  - opaque:face
+  - face_coverage:face
+stingray:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 3
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:58+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:58+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:58+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:58+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:58+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:58+00:00'
+  command: python tools/run_creature_uv_wave.py --species stingray --fail-fast
+stone_monster:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+  command: python tools/run_creature_uv_wave.py --species stone_monster --fail-fast
+  last_failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+tortoise:
+  wave: W4
+  tier: B
+  archetype: serpentine
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: dmobs/models/tortoise.b3d
+  placeholder: false
+  parts_count: 3
+  threshold_profile: default
+  gate_skips:
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G02:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G03:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:16:59+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:16:59+00:00'
+  command: python tools/run_creature_uv_wave.py --species tortoise --fail-fast
+  last_failures:
+  - face_bleed_score
+tree_monster:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:00+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:00+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:00+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:00+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:00+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:00+00:00'
+  command: python tools/run_creature_uv_wave.py --species tree_monster --fail-fast
+treeman:
+  wave: W6
+  tier: B
+  archetype: terrestrial_biped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+  command: python tools/run_creature_uv_wave.py --species treeman --fail-fast
+trout:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 5
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:01+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:01+00:00'
+  command: python tools/run_creature_uv_wave.py --species trout --fail-fast
+  last_failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+warthog:
+  wave: W5
+  tier: B
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 7
+  threshold_profile: quadruped_no_b3d
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+  command: python tools/run_creature_uv_wave.py --species warthog --fail-fast
+wasp:
+  wave: W7
+  tier: B
+  archetype: aerial
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 6
+  threshold_profile: default
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:02+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:02+00:00'
+  command: python tools/run_creature_uv_wave.py --species wasp --fail-fast
+water_dragon:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 5
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:03+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:03+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:03+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:03+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:03+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:03+00:00'
+  command: python tools/run_creature_uv_wave.py --species water_dragon --fail-fast
+whale:
+  wave: W8
+  tier: B
+  archetype: aquatic
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: true
+  parts_count: 4
+  threshold_profile: aquatic
+  gate_skips:
+  - G02
+  - G03
+  - G09
+  g09_part: null
+  pre_steps:
+  - G01_import
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G09:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+  command: python tools/run_creature_uv_wave.py --species whale --fail-fast
+wolf:
+  wave: W2
+  tier: A
+  archetype: terrestrial_quadruped
+  layout_current: box_uv
+  layout_target: box_uv
+  b3d: null
+  placeholder: false
+  parts_count: 11
+  threshold_profile: tier_a
+  gate_skips:
+  - G02
+  - G03
+  g09_part: snout
+  pre_steps: []
+  gates:
+    G01:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G02:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G03:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G04:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G05:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G06:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G07:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G08:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G09:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G10:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+    G11:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G12:
+      status: skip
+      at: '2026-06-29T17:17:04+00:00'
+    G13:
+      status: pass
+      at: '2026-06-29T17:17:04+00:00'
+  command: python tools/run_creature_uv_wave.py --species wolf --fail-fast
+summary:
+  total: 51
+  done: 51
+  pending: 0
+  by_wave:
+    W0:
+      done: 1
+      total: 1
+    W1:
+      done: 3
+      total: 3
+    W2:
+      done: 2
+      total: 2
+    W3:
+      done: 3
+      total: 3
+    W4:
+      done: 7
+      total: 7
+    W5:
+      done: 4
+      total: 4
+    W6:
+      done: 12
+      total: 12
+    W7:
+      done: 5
+      total: 5
+    W8:
+      done: 14
+      total: 14

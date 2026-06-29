@@ -1,0 +1,3841 @@
+badger:
+  species: badger
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 22.73006406459046
+    b3d_assignment_rate: 0.9090909090909091
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+bee:
+  species: bee
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W7
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.5
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 0.16666666666666666
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing_r:
+        pz: 1.0
+        px: 0.16666666666666666
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      stinger:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+bunny:
+  species: bunny
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    b3d_assignment_rate: 0.8333333333333334
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+butterfly:
+  species: butterfly
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W7
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 0.16666666666666666
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing_r:
+        pz: 1.0
+        px: 0.16666666666666666
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+chicken:
+  species: chicken
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W1
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.5714285714285714
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      comb:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      beak:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 0.3333333333333333
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    snout_front_score: 1.0
+    b3d_assignment_rate: 0.88
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - snout_front_score
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+cow:
+  species: cow
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W1
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.9130434782608695
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      head:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.6666666666666666
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 9.254141926495125
+    snout_front_score: 1.1764705882352942
+    b3d_assignment_rate: 0.6189320388349514
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_bleed_score
+  - snout_front_score
+  - b3d_assignment_rate
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+crab:
+  species: crab
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 0.4
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.75
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+dirt_monster:
+  species: dirt_monster
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      arm_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+dolphin:
+  species: dolphin
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: true
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      torso:
+        pz: 1.0
+        px: 0.3333333333333333
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+dungeon_master:
+  species: dungeon_master
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+fire_spirit:
+  species: fire_spirit
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      arm:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      arm_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:body
+  - face_coverage:body
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+  - opaque:leg_r
+  - face_coverage:leg_r
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+fox:
+  species: fox
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    b3d_assignment_rate: 0.973404255319149
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+golem:
+  species: golem
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+hedgehog:
+  species: hedgehog
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    b3d_assignment_rate: 0.48214285714285715
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - b3d_assignment_rate
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+hermitcrab:
+  species: hermitcrab
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.125
+        nx: 1.0
+        py: 1.0
+        ny: 0.375
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+human:
+  species: human
+  metrics:
+    profile: human
+    layout: player_skin_atlas
+    placeholder: false
+    wave: W0
+    skipped_v3: true
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: skip
+    G05: skip
+    G06: skip
+    G07: skip
+    G08: skip
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+kitten:
+  species: kitten
+  metrics:
+    profile: quadruped_no_b3d
+    layout: box_uv
+    placeholder: true
+    wave: W5
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+land_guard:
+  species: land_guard
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+lava_flan:
+  species: lava_flan
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: true
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+lobster:
+  species: lobster
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      torso:
+        pz: 1.0
+        px: 0.7857142857142857
+        nz: 0.1
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      claw_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      body:
+        pz: 1.0
+        px: 0.3333333333333333
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:claw_r
+  - face_coverage:claw_r
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+manatee:
+  species: manatee
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      torso:
+        pz: 1.0
+        px: 0.75
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      body:
+        pz: 1.0
+        px: 0.16666666666666666
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+mese_monster:
+  species: mese_monster
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: true
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      arm_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+octopus:
+  species: octopus
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: true
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.125
+        nx: 1.0
+        py: 1.0
+        ny: 0.5
+      face:
+        pz: 1.0
+        px: 0.4
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tentacle_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tentacle_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tentacle_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+oerkki:
+  species: oerkki
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W3
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 8.878956005376654
+    b3d_assignment_rate: 0.4573170731707317
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_bleed_score
+  - b3d_assignment_rate
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+ogre:
+  species: ogre
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+orc:
+  species: orc
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+owl:
+  species: owl
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W7
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.6666666666666666
+      face:
+        pz: 1.0
+        px: 0.4
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 0.14285714285714285
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing_r:
+        pz: 1.0
+        px: 0.14285714285714285
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+panda:
+  species: panda
+  metrics:
+    profile: quadruped_no_b3d
+    layout: box_uv
+    placeholder: false
+    wave: W5
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+penguin:
+  species: penguin
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.3333333333333333
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      beak:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      fin_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_l:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 40.237658062888784
+    snout_front_score: 1.0
+    b3d_assignment_rate: 0.9296875
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+pig:
+  species: pig
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W2
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.38461538461538464
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      head:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    snout_front_score: 1.25
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_coverage:head
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+puffin:
+  species: puffin
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W7
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.4
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      head:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+    manual_fallback: true
+    snout_front_score: 1.0
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:leg
+  - face_coverage:leg
+  - opaque:leg_r
+  - face_coverage:leg_r
+  - snout_front_score
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+rat:
+  species: rat
+  metrics:
+    profile: quadruped_no_b3d
+    layout: box_uv
+    placeholder: false
+    wave: W5
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+sand_monster:
+  species: sand_monster
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W3
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 30.036225684776976
+    b3d_assignment_rate: 0.39156626506024095
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - b3d_assignment_rate
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+seahorse:
+  species: seahorse
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      torso:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+seal:
+  species: seal
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.5
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.6875
+      face:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      fin_r:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+shark:
+  species: shark
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.7619047619047619
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      fin_l:
+        pz: 1.0
+        px: 0.8
+        nz: 0.3333333333333333
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 0.3333333333333333
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+sheep:
+  species: sheep
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W1
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.7857142857142857
+        nz: 0.1
+        nx: 1.0
+        py: 1.0
+        ny: 0.7857142857142857
+      head:
+        pz: 1.0
+        px: 0.2
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.75
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    snout_front_score: 1.0526315789473684
+    b3d_assignment_rate: 0.6948051948051948
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_coverage:body
+  - snout_front_score
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+skeleton:
+  species: skeleton
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W3
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 4.3654074360087884
+    b3d_assignment_rate: 0.9580125962211337
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_bleed_score
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+spider:
+  species: spider
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.08333333333333333
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_ml:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_mr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 0.5239637516804415
+    b3d_assignment_rate: 0.6126543209876543
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_bleed_score
+  - b3d_assignment_rate
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+squid:
+  species: squid
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.14285714285714285
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tentacle_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:face
+  - face_coverage:face
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+stingray:
+  species: stingray
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.7777777777777778
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+stone_monster:
+  species: stone_monster
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      arm_r:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:arm
+  - face_coverage:arm
+  - opaque:arm_r
+  - face_coverage:arm_r
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+tortoise:
+  species: tortoise
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W4
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.9230769230769231
+        nz: 0.09090909090909091
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: false
+    face_bleed_score: 3.8676214486406626
+    b3d_assignment_rate: 0.7777777777777778
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - face_bleed_score
+  gates:
+    G01: pass
+    G02: pass
+    G03: pass
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+tree_monster:
+  species: tree_monster
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+treeman:
+  species: treeman
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W6
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.875
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      arm_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.8333333333333334
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+trout:
+  species: trout
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: false
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: false
+    face_coverage:
+      torso:
+        pz: 1.0
+        px: 0.5
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.6875
+      face:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      body:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 0.0
+        px: 0.0
+        nz: 0.0
+        nx: 0.0
+        py: 0.0
+        ny: 0.0
+      fin_r:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures:
+  - opaque:face
+  - face_coverage:face
+  - opaque:leg
+  - face_coverage:leg
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+warthog:
+  species: warthog
+  metrics:
+    profile: quadruped_no_b3d
+    layout: box_uv
+    placeholder: true
+    wave: W5
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 0.6363636363636364
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 0.7142857142857143
+        nx: 1.0
+        py: 1.0
+        ny: 0.42857142857142855
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 0.25
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+wasp:
+  species: wasp
+  metrics:
+    profile: default
+    layout: box_uv
+    placeholder: false
+    wave: W7
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.5
+      face:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing:
+        pz: 1.0
+        px: 0.8
+        nz: 0.3333333333333333
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      wing_r:
+        pz: 1.0
+        px: 0.8
+        nz: 0.3333333333333333
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      stinger:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+water_dragon:
+  species: water_dragon
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: true
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.5
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 0.6875
+      face:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      fin_r:
+        pz: 1.0
+        px: 0.5
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+whale:
+  species: whale
+  metrics:
+    profile: aquatic
+    layout: box_uv
+    placeholder: true
+    wave: W8
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.37142857142857144
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 0.4
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 1.0
+        nz: 0.5
+        nx: 1.0
+        py: 1.0
+        ny: 0.5555555555555556
+    manual_fallback: true
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: skip
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
+wolf:
+  species: wolf
+  metrics:
+    profile: tier_a
+    layout: box_uv
+    placeholder: false
+    wave: W2
+    layout_ok: true
+    png_dims_ok: true
+    uv_sidecar_present: true
+    opaque_frac_ok: true
+    face_coverage:
+      body:
+        pz: 1.0
+        px: 0.9473684210526315
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      head:
+        pz: 1.0
+        px: 0.0
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      face:
+        pz: 1.0
+        px: 0.6
+        nz: 0.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      ear_r:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      neck:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      tail:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_fr:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_bl:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+      leg_br:
+        pz: 1.0
+        px: 1.0
+        nz: 1.0
+        nx: 1.0
+        py: 1.0
+        ny: 1.0
+    manual_fallback: true
+    snout_front_score: 1.3888888888888888
+    legacy_fallback_used: false
+    hard_failures: []
+  pass: true
+  failures: []
+  gates:
+    G01: pass
+    G02: skip
+    G03: skip
+    G04: pass
+    G05: pass
+    G06: pass
+    G07: pass
+    G08: pass
+    G09: pass
+    G10: pass
+    G11: skip
+    G12: skip
+    G13: pass
