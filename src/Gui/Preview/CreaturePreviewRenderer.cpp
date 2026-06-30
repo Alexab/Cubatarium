@@ -5,10 +5,13 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Creatures/Visual/CreatureRootTransform.h"
+#include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
-#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
 #include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
@@ -70,125 +73,18 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
 GLuint GetOrCreatePreviewSkeletalVao(const cutum::SkeletalCubeMeshCpu &mesh,
                                      std::unordered_map<size_t, GLuint> &cache)
 {
-  size_t hash = 0;
-  for (float v : mesh.interleavedPosUv)
-  {
-    hash = hash * 31 + std::hash<float>{}(v);
-  }
-  for (unsigned int idx : mesh.indices)
-  {
-    hash = hash * 31 + idx;
-  }
-  if (const auto it = cache.find(hash); it != cache.end())
-  {
-    return it->second;
-  }
-  GLuint vao = 0;
-  GLuint vbo = 0;
-  GLuint ebo = 0;
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(
-      GL_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
-      mesh.interleavedPosUv.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(
-      GL_ELEMENT_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned int)),
-      mesh.indices.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  cache[hash] = vao;
-  return vao;
+  (void)cache;
+  return cutum::CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(
+      mesh);
 }
 
 GLuint GetOrCreatePreviewSkinnedVao(const cutum::GltfPrimitiveCpu &mesh,
                                     std::unordered_map<size_t, GLuint> &cache)
 {
-  size_t hash = 0;
-  for (float v : mesh.mesh.interleavedPosUv)
-  {
-    hash = hash * 31 + std::hash<float>{}(v);
-  }
-  for (uint8_t j : mesh.jointIndices)
-  {
-    hash = hash * 31 + j;
-  }
-  for (float w : mesh.jointWeights)
-  {
-    hash = hash * 31 + std::hash<float>{}(w);
-  }
-  if (const auto it = cache.find(hash); it != cache.end())
-  {
-    return it->second;
-  }
-
-  const size_t vertCount = mesh.mesh.interleavedPosUv.size() / 5;
-  struct SkinnedVertex
-  {
-    float pos[3];
-    float uv[2];
-    uint8_t joints[4];
-    float weights[4];
-  };
-  std::vector<SkinnedVertex> vertices(vertCount);
-  for (size_t i = 0; i < vertCount; ++i)
-  {
-    vertices[i].pos[0] = mesh.mesh.interleavedPosUv[i * 5 + 0];
-    vertices[i].pos[1] = mesh.mesh.interleavedPosUv[i * 5 + 1];
-    vertices[i].pos[2] = mesh.mesh.interleavedPosUv[i * 5 + 2];
-    vertices[i].uv[0] = mesh.mesh.interleavedPosUv[i * 5 + 3];
-    vertices[i].uv[1] = mesh.mesh.interleavedPosUv[i * 5 + 4];
-    for (int j = 0; j < 4; ++j)
-    {
-      vertices[i].joints[j] =
-          (i * 4 + j < mesh.jointIndices.size()) ? mesh.jointIndices[i * 4 + j]
-                                                 : 0;
-      vertices[i].weights[j] =
-          (i * 4 + j < mesh.jointWeights.size()) ? mesh.jointWeights[i * 4 + j]
-                                                 : 0.f;
-    }
-  }
-
-  GLuint vao = 0;
-  GLuint vbo = 0;
-  GLuint ebo = 0;
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(vertices.size() * sizeof(SkinnedVertex)),
-               vertices.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(mesh.mesh.indices.size() *
-                                       sizeof(unsigned int)),
-               mesh.mesh.indices.data(), GL_STATIC_DRAW);
-  constexpr GLsizei stride = static_cast<GLsizei>(sizeof(SkinnedVertex));
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribIPointer(2, 4, GL_UNSIGNED_BYTE, stride,
-                         (void *)(5 * sizeof(float)));
-  glEnableVertexAttribArray(2);
-  glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, stride,
-                        (void *)(5 * sizeof(float) + 4 * sizeof(uint8_t)));
-  glEnableVertexAttribArray(3);
-  glBindVertexArray(0);
-  cache[hash] = vao;
-  return vao;
+  (void)cache;
+  size_t indexCount = 0;
+  return cutum::CreatureMeshGpuCache::Instance().GetOrCreateGltfSkinnedMeshVao(
+      mesh, indexCount);
 }
 
 } // namespace
@@ -234,8 +130,9 @@ bool UCreaturePreviewRenderer::Initialize()
   {
     return false;
   }
-  Shader = ShaderManager->CreateShader(
-      "creature_preview", "shaders/vshader.glsl", "shaders/fshader_creature.glsl");
+  Shader =
+      ShaderManager->CreateShader("creature_preview", "shaders/vshader.glsl",
+                                  "shaders/fshader_creature.glsl");
   SkinnedShader = ShaderManager->CreateShader(
       "creature_preview_skinned", "shaders/vshader_creature_skinned.glsl",
       "shaders/fshader_creature_skinned.glsl");
@@ -523,24 +420,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     std::vector<std::string> missingTextureStems;
     for (const GltfPrimitiveCpu &prim : meshAsset->primitives)
     {
-      const std::string texKeys[] = {
-          speciesId + "/" + prim.textureStem,
-          speciesId + "/diffuse",
-          speciesId + "/" + defaultTex,
-          speciesId + "/body",
-      };
-      GLuint tex = 0;
-      for (const std::string &key : texKeys)
-      {
-        if (!key.empty() && key.back() != '/')
-        {
-          tex = Textures->GetTexture(key);
-          if (tex != 0)
-          {
-            break;
-          }
-        }
-      }
+      const GLuint tex = cutum::ResolveCreatureSpeciesTexture(
+          *Textures, speciesId, prim.textureStem, defaultTex);
       if (tex == 0)
       {
         missingTextureStems.push_back(prim.textureStem);
@@ -647,39 +528,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     const std::string defaultTex = def->visual.defaultTextureKey.empty()
                                        ? "body"
                                        : def->visual.defaultTextureKey;
-    GLuint tex = 0;
-    if (!skinId.empty())
-    {
-      const std::string skinKeys[] = {
-          "skin/" + skinId + "/" + texStem,
-          "skin/" + skinId + "/diffuse",
-      };
-      for (const std::string &key : skinKeys)
-      {
-        tex = Textures->GetTexture(key);
-        if (tex != 0)
-        {
-          break;
-        }
-      }
-    }
-    const std::string texKeys[] = {
-        speciesId + "/" + texStem,
-        speciesId + "/diffuse",
-        speciesId + "/" + defaultTex,
-        speciesId + "/body",
-    };
-    for (const std::string &key : texKeys)
-    {
-      if (tex != 0)
-      {
-        break;
-      }
-      if (key.back() != '/')
-      {
-        tex = Textures->GetTexture(key);
-      }
-    }
+    GLuint tex = cutum::ResolveCreatureSpeciesTexture(
+        *Textures, speciesId, texStem, defaultTex, skinId);
     if (!meshAsset || tex == 0)
     {
       const std::string key = speciesId + "|" + geoFile + "|" +

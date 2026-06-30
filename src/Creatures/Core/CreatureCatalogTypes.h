@@ -154,6 +154,8 @@ struct CreatureVisualSpec
   CreatureAnimationParams Animation;
   CreatureSkeletalGeoSpec skeletal;
   CreatureGltfSpec gltf;
+  /// Relative path under species dir (e.g. rigid_model.json).
+  std::string rigidModelPath;
   std::vector<CreatureVisualPartDef> Parts;
 };
 
@@ -174,6 +176,7 @@ struct ResolvedCreatureAppearance
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string visualBackend{"rigid_voxels"};
   std::string textureLayout{"rigid_crop"};
+  std::string defaultTextureKey{"body"};
   std::vector<ResolvedCreaturePart> Parts;
   bool useWireframeFallback{false};
 };

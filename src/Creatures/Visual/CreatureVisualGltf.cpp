@@ -3,6 +3,9 @@
 #include "App/Settings/RenderSettings.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Visual/CreatureDrawRequest.h"
+#include "Creatures/Visual/CreatureRootTransform.h"
+#include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureAnimationClipMap.h"
 #include "Creatures/Visual/Gltf/CreatureGltfAnimPlayer.h"
@@ -13,42 +16,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
-#include <unordered_set>
 
 namespace cutum
 {
-
-namespace
-{
-
-std::unordered_set<std::string> gMissingGltfMeshLogged;
-std::unordered_set<std::string> gMissingGltfTextureLogged;
-
-GLuint ResolveGltfSpeciesTexture(const UCreatureTextureStorage &textures,
-                                 const std::string &speciesId,
-                                 const std::string &stem,
-                                 const std::string &defaultStem)
-{
-  const std::string keys[] = {
-      speciesId + "/" + stem,
-      speciesId + "/diffuse",
-      speciesId + "/" + defaultStem,
-      speciesId + "/body",
-  };
-  for (const std::string &key : keys)
-  {
-    if (!key.empty() && key.back() != '/')
-    {
-      if (const GLuint tex = textures.GetTexture(key))
-      {
-        return tex;
-      }
-    }
-  }
-  return 0;
-}
-
-} // namespace
 
 std::unique_ptr<ICreatureVisual> CreateCreatureVisualGltf()
 {
@@ -65,8 +35,12 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
   BodyYaw = creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
   SpeciesId = animDef.Id;
   DefaultTextureKey = animDef.visual.defaultTextureKey.empty()
-                          ? "body"
+                          ? Appearance.defaultTextureKey
                           : animDef.visual.defaultTextureKey;
+  if (DefaultTextureKey.empty())
+  {
+    DefaultTextureKey = "body";
+  }
   ModelFile = animDef.visual.gltf.modelPath.empty()
                   ? "model.gltf"
                   : animDef.visual.gltf.modelPath;
@@ -79,11 +53,9 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
     if (!MeshAsset)
     {
       const std::string key = SpeciesId + "|" + ModelFile;
-      if (gMissingGltfMeshLogged.insert(key).second)
-      {
-        std::cerr << "UCreatureVisualGltf: missing mesh for species="
-                  << SpeciesId << " model=" << ModelFile << std::endl;
-      }
+      LogCreatureMissingTextureOnce(
+          key, "UCreatureVisualGltf: missing mesh for species=" + SpeciesId +
+                   " model=" + ModelFile);
     }
   }
   if (MeshAsset)
@@ -120,7 +92,7 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       if (MeshAsset->hasSkin)
       {
         BoneMatrices = ComputeGltfSkinMatrices(*MeshAsset, ActiveAnimation,
-                                                 AnimTimeSec, loop);
+                                               AnimTimeSec, loop);
       }
       else
       {
@@ -151,44 +123,39 @@ void UCreatureVisualGltf::SubmitDraw(UGeometryEngine &engine,
     return;
   }
 
-  glm::mat4 bodyMat = glm::translate(glm::mat4(1.f), BodyOrigin);
-  if (ModelFeetOffsetY != 0.f)
-  {
-    bodyMat =
-        glm::translate(bodyMat, glm::vec3(0.f, ModelFeetOffsetY, 0.f));
-  }
-  bodyMat =
-      glm::rotate(bodyMat, glm::radians(BodyYaw), glm::vec3(0.f, 1.f, 0.f));
-  bodyMat = bodyMat * GltfEntityConventionMatrix();
-  if (ModelScale != 1.f)
-  {
-    bodyMat = bodyMat * glm::scale(glm::mat4(1.f), glm::vec3(ModelScale));
-  }
-  bodyMat = bodyMat * RootAnimMatrix;
+  const glm::mat4 bodyMat = BuildCreatureRootMatrix(
+      BodyOrigin, BodyYaw, ModelFeetOffsetY, []()
+      { return GltfEntityConventionMatrix(); }, ModelScale, RootAnimMatrix);
 
+  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
   for (const GltfPrimitiveCpu &prim : MeshAsset->primitives)
   {
-    GLuint tex = ResolveGltfSpeciesTexture(*creatureTextures, SpeciesId,
-                                           prim.textureStem, DefaultTextureKey);
+    const GLuint tex = ResolveCreatureSpeciesTexture(
+        *creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey);
     if (tex == 0)
     {
       const std::string key = SpeciesId + "|" + prim.textureStem;
-      if (gMissingGltfTextureLogged.insert(key).second)
-      {
-        std::cerr << "UCreatureVisualGltf: missing texture species="
-                  << SpeciesId << " stem=" << prim.textureStem << std::endl;
-      }
+      LogCreatureMissingTextureOnce(
+          key, "UCreatureVisualGltf: missing texture species=" + SpeciesId +
+                   " stem=" + prim.textureStem);
       continue;
     }
     const glm::mat4 mvp = viewProj * bodyMat;
+    CreatureDrawRequest req;
+    req.Mvp = mvp;
+    req.Texture = tex;
     if (prim.skinned && !BoneMatrices.empty())
     {
-      engine.DrawCreatureSkinnedMesh(mvp, tex, prim, BoneMatrices);
+      req.Kind = CreatureDrawKind::SkinnedMesh;
+      req.SkinnedPrimitive = &prim;
+      req.BoneMatrices = BoneMatrices;
     }
     else
     {
-      engine.DrawCreatureGltfMesh(mvp, tex, prim.mesh);
+      req.Kind = CreatureDrawKind::SkeletalMesh;
+      req.SkeletalMesh = &prim.mesh;
     }
+    queue.Push(std::move(req));
   }
 }
 

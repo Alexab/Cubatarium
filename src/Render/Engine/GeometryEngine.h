@@ -1,7 +1,9 @@
 #ifndef GEOMETRYENGINE_H
 #define GEOMETRYENGINE_H
 
+#include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Creatures/Visual/CreatureRenderStats.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
@@ -104,6 +106,11 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  const CreatureRenderStats &GetCreatureRenderStats() const
+  {
+    return CreatureStats;
+  }
+  CreatureDrawQueue &GetCreatureDrawQueue() { return CreatureQueue; }
   std::shared_ptr<UShaderManager> GetShaderManager() const
   {
     return shaderManager;
@@ -160,23 +167,10 @@ private:
   GLuint creatureRigidHeadPartVAO = 0;
   GLuint creatureRigidHeadPartVBO = 0;
   GLuint creatureRigidHeadPartEBO = 0;
-  struct SkeletalMeshGpuBuffers
-  {
-    GLuint vao{0};
-    GLuint vbo{0};
-    GLuint ebo{0};
-  };
-  std::unordered_map<size_t, SkeletalMeshGpuBuffers> skeletalMeshGpuCache;
-  struct GltfSkinnedMeshGpuBuffers
-  {
-    GLuint vao{0};
-    GLuint vbo{0};
-    GLuint ebo{0};
-    size_t indexCount{0};
-  };
-  std::unordered_map<size_t, GltfSkinnedMeshGpuBuffers> gltfSkinnedMeshGpuCache;
   std::shared_ptr<class UShaderProgram> creatureShader;
   std::shared_ptr<class UShaderProgram> creatureSkinnedShader;
+  CreatureRenderStats CreatureStats;
+  CreatureDrawQueue CreatureQueue;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
@@ -185,10 +179,6 @@ private:
   bool InitCreatureBodyPartBuffers();
   bool InitCreatureRigidHeadPartBuffers();
   void DestroyCreaturePartBuffers();
-  void DestroySkeletalMeshGpuCache();
-  void DestroyGltfSkinnedMeshGpuCache();
-  GLuint GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh);
-  GLuint GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh);
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
   void RenderCreatures();

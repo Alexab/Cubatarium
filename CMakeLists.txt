@@ -86,6 +86,12 @@ set(SOURCES
     src/Creatures/Visual/CreatureTextureStorage.cpp
     src/Creatures/Definition/SkinDefinitionStorage.cpp
     src/Creatures/Visual/CreatureAppearance.cpp
+    src/Creatures/Visual/CreatureTextureResolver.cpp
+    src/Creatures/Visual/CreatureRootTransform.cpp
+    src/Creatures/Visual/CreatureDrawQueue.cpp
+    src/Creatures/Visual/CreatureMeshGpuCache.cpp
+    src/Creatures/Visual/CreatureBonePaletteGpu.cpp
+    src/Creatures/Visual/CreatureRigidModelLoader.cpp
     src/Creatures/Visual/CreatureVisualRigid.cpp
     src/Creatures/Visual/CreatureVisualSkeletalGeo.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp

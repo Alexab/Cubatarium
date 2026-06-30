@@ -1,0 +1,48 @@
+{
+  "parts": [
+    {
+      "id": "torso",
+      "offset": [0.0, 0.55, 0.0],
+      "size": [0.55, 0.45, 0.9],
+      "texture": "body"
+    },
+    {
+      "id": "head",
+      "offset": [0.0, 0.72, 0.5],
+      "size": [0.35, 0.35, 0.35],
+      "texture": "face"
+    },
+    {
+      "id": "leg_fl",
+      "offset": [-0.22, 0.22, 0.28],
+      "size": [0.15, 0.45, 0.15],
+      "texture": "leg",
+      "pivot": [-0.22, 0.45, 0.28],
+      "limb": "leg"
+    },
+    {
+      "id": "leg_fr",
+      "offset": [0.22, 0.22, 0.28],
+      "size": [0.15, 0.45, 0.15],
+      "texture": "leg",
+      "pivot": [0.22, 0.45, 0.28],
+      "limb": "leg"
+    },
+    {
+      "id": "leg_bl",
+      "offset": [-0.22, 0.22, -0.28],
+      "size": [0.15, 0.45, 0.15],
+      "texture": "leg",
+      "pivot": [-0.22, 0.45, -0.28],
+      "limb": "leg"
+    },
+    {
+      "id": "leg_br",
+      "offset": [0.22, 0.22, -0.28],
+      "size": [0.15, 0.45, 0.15],
+      "texture": "leg",
+      "pivot": [0.22, 0.45, -0.28],
+      "limb": "leg"
+    }
+  ]
+}

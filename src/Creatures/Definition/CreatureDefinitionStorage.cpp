@@ -2,6 +2,7 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CatalogSortUtil.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -208,6 +209,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           vis.value("texture_layout", def.visual.textureLayout);
       def.visual.defaultTextureKey =
           vis.value("default_texture", def.visual.defaultTextureKey);
+      def.visual.rigidModelPath = vis.value("rigid_model", "");
       if (vis.contains("icon") && vis["icon"].is_object())
       {
         const auto &icon = vis["icon"];
@@ -327,6 +329,17 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           part.LimbKind = partJson.value("limb", "");
           part.LimbAxis = partJson.value("limb_axis", "x");
           def.visual.Parts.push_back(part);
+        }
+      }
+      if (!def.visual.rigidModelPath.empty())
+      {
+        const std::string speciesDir =
+            std::filesystem::path(path).parent_path().string();
+        std::vector<CreatureVisualPartDef> rigidParts;
+        if (CreatureRigidModelCache::Instance().LoadParts(
+                speciesDir, def.visual.rigidModelPath, rigidParts))
+        {
+          def.visual.Parts = std::move(rigidParts);
         }
       }
       if (vis.contains("geometry") || vis.contains("geometry_file") ||

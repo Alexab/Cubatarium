@@ -4,24 +4,26 @@
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Player/User.h"
-#include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/ICreaturePosePresenter.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
+#include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
-#include <cstdint>
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -29,6 +31,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -59,8 +62,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   DestroyCreaturePartBuffers();
-  DestroySkeletalMeshGpuCache();
-  DestroyGltfSkinnedMeshGpuCache();
+  CreatureMeshGpuCache::Instance().DestroyAll();
   DestroyOverlayBuffers();
 }
 
@@ -1366,6 +1368,13 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
           " ms",
       "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
 
+  performanceLines.push_back(
+      "Creatures: " + std::to_string(CreatureStats.CreaturesDrawn) + "/" +
+      std::to_string(CreatureStats.CreaturesConsidered) +
+      " culled: " + std::to_string(CreatureStats.CreaturesCulled) + " draws: " +
+      std::to_string(CreatureStats.CreatureDrawCalls) + " bone uploads: " +
+      std::to_string(CreatureStats.CreatureBoneMatrixUploads));
+
   const auto &md = WorldInstance->GetMovementDiagnostics();
   performanceLines.push_back(
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
@@ -2222,8 +2231,6 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
     break;
   }
 
-  GLboolean depthEnabled = GL_TRUE;
-  glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
 
@@ -2240,78 +2247,7 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
 
   creatureShader->Unuse();
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  if (!depthEnabled)
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-}
-
-void UGeometryEngine::DestroySkeletalMeshGpuCache()
-{
-  for (auto &[key, buffers] : skeletalMeshGpuCache)
-  {
-    (void)key;
-    if (buffers.ebo)
-    {
-      glDeleteBuffers(1, &buffers.ebo);
-    }
-    if (buffers.vbo)
-    {
-      glDeleteBuffers(1, &buffers.vbo);
-    }
-    if (buffers.vao)
-    {
-      glDeleteVertexArrays(1, &buffers.vao);
-    }
-  }
-  skeletalMeshGpuCache.clear();
-}
-
-GLuint
-UGeometryEngine::GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh)
-{
-  size_t hash = 0;
-  for (float v : mesh.interleavedPosUv)
-  {
-    hash = hash * 31 + std::hash<float>{}(v);
-  }
-  for (unsigned int idx : mesh.indices)
-  {
-    hash = hash * 31 + idx;
-  }
-
-  auto it = skeletalMeshGpuCache.find(hash);
-  if (it != skeletalMeshGpuCache.end() && it->second.vao != 0)
-  {
-    return it->second.vao;
-  }
-
-  SkeletalMeshGpuBuffers buffers;
-  const size_t vertexCount = mesh.interleavedPosUv.size() / 5;
-  std::vector<float> vertices(mesh.interleavedPosUv);
-  glGenVertexArrays(1, &buffers.vao);
-  glGenBuffers(1, &buffers.vbo);
-  glGenBuffers(1, &buffers.ebo);
-  glBindVertexArray(buffers.vao);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers.vbo);
-  glBufferData(GL_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-               vertices.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ebo);
-  glBufferData(
-      GL_ELEMENT_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned int)),
-      mesh.indices.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  (void)vertexCount;
-  skeletalMeshGpuCache[hash] = buffers;
-  return buffers.vao;
+  ++CreatureStats.CreatureDrawCalls;
 }
 
 void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp,
@@ -2324,14 +2260,13 @@ void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp,
     return;
   }
 
-  const GLuint vao = GetOrCreateSkeletalMeshVao(mesh);
+  const GLuint vao =
+      CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(mesh);
   if (vao == 0)
   {
     return;
   }
 
-  GLboolean depthEnabled = GL_TRUE;
-  glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
@@ -2349,11 +2284,7 @@ void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp,
 
   creatureShader->Unuse();
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  if (!depthEnabled)
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
+  ++CreatureStats.CreatureDrawCalls;
 }
 
 void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
@@ -2362,120 +2293,26 @@ void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
   DrawCreatureSkeletalMesh(mvp, texture, mesh);
 }
 
-void UGeometryEngine::DestroyGltfSkinnedMeshGpuCache()
-{
-  for (auto &entry : gltfSkinnedMeshGpuCache)
-  {
-    if (entry.second.ebo)
-    {
-      glDeleteBuffers(1, &entry.second.ebo);
-    }
-    if (entry.second.vbo)
-    {
-      glDeleteBuffers(1, &entry.second.vbo);
-    }
-    if (entry.second.vao)
-    {
-      glDeleteVertexArrays(1, &entry.second.vao);
-    }
-  }
-  gltfSkinnedMeshGpuCache.clear();
-}
-
-GLuint UGeometryEngine::GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh)
-{
-  size_t hash = 0;
-  for (float v : mesh.mesh.interleavedPosUv)
-  {
-    hash = hash * 31 + std::hash<float>{}(v);
-  }
-  for (uint8_t j : mesh.jointIndices)
-  {
-    hash = hash * 31 + j;
-  }
-  for (float w : mesh.jointWeights)
-  {
-    hash = hash * 31 + std::hash<float>{}(w);
-  }
-  if (const auto it = gltfSkinnedMeshGpuCache.find(hash); it != gltfSkinnedMeshGpuCache.end())
-  {
-    return it->second.vao;
-  }
-
-  const size_t vertCount = mesh.mesh.interleavedPosUv.size() / 5;
-  struct SkinnedVertex
-  {
-    float pos[3];
-    float uv[2];
-    uint8_t joints[4];
-    float weights[4];
-  };
-  std::vector<SkinnedVertex> vertices(vertCount);
-  for (size_t i = 0; i < vertCount; ++i)
-  {
-    vertices[i].pos[0] = mesh.mesh.interleavedPosUv[i * 5 + 0];
-    vertices[i].pos[1] = mesh.mesh.interleavedPosUv[i * 5 + 1];
-    vertices[i].pos[2] = mesh.mesh.interleavedPosUv[i * 5 + 2];
-    vertices[i].uv[0] = mesh.mesh.interleavedPosUv[i * 5 + 3];
-    vertices[i].uv[1] = mesh.mesh.interleavedPosUv[i * 5 + 4];
-    for (int j = 0; j < 4; ++j)
-    {
-      vertices[i].joints[j] =
-          (i * 4 + j < mesh.jointIndices.size()) ? mesh.jointIndices[i * 4 + j] : 0;
-      vertices[i].weights[j] =
-          (i * 4 + j < mesh.jointWeights.size()) ? mesh.jointWeights[i * 4 + j] : 0.f;
-    }
-  }
-
-  GltfSkinnedMeshGpuBuffers buffers;
-  glGenVertexArrays(1, &buffers.vao);
-  glGenBuffers(1, &buffers.vbo);
-  glGenBuffers(1, &buffers.ebo);
-  glBindVertexArray(buffers.vao);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers.vbo);
-  glBufferData(GL_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(vertices.size() * sizeof(SkinnedVertex)),
-               vertices.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(mesh.mesh.indices.size() * sizeof(unsigned int)),
-               mesh.mesh.indices.data(), GL_STATIC_DRAW);
-  constexpr GLsizei stride = static_cast<GLsizei>(sizeof(SkinnedVertex));
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribIPointer(2, 4, GL_UNSIGNED_BYTE, stride,
-                         (void *)(5 * sizeof(float)));
-  glEnableVertexAttribArray(2);
-  glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, stride,
-                        (void *)(5 * sizeof(float) + 4 * sizeof(uint8_t)));
-  glEnableVertexAttribArray(3);
-  glBindVertexArray(0);
-  buffers.indexCount = mesh.mesh.indices.size();
-  gltfSkinnedMeshGpuCache[hash] = buffers;
-  return buffers.vao;
-}
-
 void UGeometryEngine::DrawCreatureSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
     const std::vector<glm::mat4> &boneMatrices)
 {
-  if (texture == 0 || mesh.mesh.interleavedPosUv.empty() || mesh.mesh.indices.empty() ||
-      !creatureSkinnedShader || !creatureSkinnedShader->IsValid())
+  if (texture == 0 || mesh.mesh.interleavedPosUv.empty() ||
+      mesh.mesh.indices.empty() || !creatureSkinnedShader ||
+      !creatureSkinnedShader->IsValid())
   {
     return;
   }
 
-  const GLuint vao = GetOrCreateGltfSkinnedMeshVao(mesh);
+  size_t indexCount = 0;
+  const GLuint vao =
+      CreatureMeshGpuCache::Instance().GetOrCreateGltfSkinnedMeshVao(
+          mesh, indexCount);
   if (vao == 0)
   {
     return;
   }
 
-  GLboolean depthEnabled = GL_TRUE;
-  glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
@@ -2490,19 +2327,16 @@ void UGeometryEngine::DrawCreatureSkinnedMesh(
     creatureSkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",
                                    boneMatrices[static_cast<size_t>(i)]);
   }
+  ++CreatureStats.CreatureBoneMatrixUploads;
 
   glBindVertexArray(vao);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.mesh.indices.size()),
+  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                  GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
 
   creatureSkinnedShader->Unuse();
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  if (!depthEnabled)
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
+  ++CreatureStats.CreatureDrawCalls;
 }
 
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
@@ -2563,16 +2397,37 @@ void UGeometryEngine::RenderCreatures()
   const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
   const float dt = static_cast<float>(camera->GetDeltaTime());
   const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
+  CreatureStats.Reset();
+  CreatureQueue.Clear();
+
+  const Frustum frustum = Frustum::FromViewProjection(viewProj);
+  const glm::vec3 cameraPos = camera->GetPosition();
+  const float maxDistBlocks =
+      static_cast<float>(WorldInstance->GetEffectiveRenderDistance()) *
+      static_cast<float>(CHUNK_SIZE);
+
   WorldInstance->ForEachCreature(
       [&](UCreature &creature)
       {
+        ++CreatureStats.CreaturesConsidered;
         if (creature.GetId() == controlledId)
         {
           if (camera->GetPerspective() == CameraPerspective::FirstPerson)
           {
+            ++CreatureStats.CreaturesCulled;
             return;
           }
         }
+        const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
+        if (!CreatureBoundsIntersectsFrustum(
+                frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
+                maxDistBlocks, Render.FrustumCulling))
+        {
+          ++CreatureStats.CreaturesCulled;
+          return;
+        }
+        ++CreatureStats.CreaturesDrawn;
+
         const std::string animType =
             WorldInstance->ResolveAnimationTypeId(creature);
         const CreatureDefinition *def =
@@ -2587,12 +2442,16 @@ void UGeometryEngine::RenderCreatures()
         {
           visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
           const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
-          ICreaturePosePresenter *presenter =
-              WorldInstance->GetPosePresenterRegistry().Get(facts.archetype);
           CreaturePoseParams pose;
-          if (presenter)
+          if (ParseCreatureVisualBackend(def->visual.backend) ==
+              CreatureVisualBackend::RigidVoxels)
           {
-            pose = presenter->Compute(facts, *def, dt);
+            if (ICreaturePosePresenter *presenter =
+                    WorldInstance->GetPosePresenterRegistry().Get(
+                        facts.archetype))
+            {
+              pose = presenter->Compute(facts, *def, dt);
+            }
           }
           visual->UpdatePose(creature, facts, pose, *def, dt);
           visual->SubmitDraw(*this, viewProj);
@@ -2644,6 +2503,7 @@ void UGeometryEngine::RenderCreatures()
           }
         }
       });
+  CreatureQueue.Flush(*this);
 }
 
 namespace

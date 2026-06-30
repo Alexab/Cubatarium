@@ -2,15 +2,49 @@
   "id": "rigid_demo_flyer",
   "display_name": "Rigid Demo Flyer",
   "catalog": {
-    "tags": ["mobs", "demo", "rigid_reference"],
+    "tags": [
+      "mobs",
+      "demo",
+      "rigid_reference"
+    ],
     "spawnable": true,
     "sort_order": 901
   },
   "role": "mob",
   "bounds": {
-    "rest": [0.6, 0.35, 0.6],
-    "max": [0.6, 0.35, 0.6],
-    "min": [0.6, 0.25, 0.6]
+    "rest": [
+      0.92,
+      0.28,
+      0.4
+    ],
+    "max": [
+      0.92,
+      0.28,
+      0.4
+    ],
+    "min": [
+      0.92,
+      0.238,
+      0.4
+    ],
+    "_derived": {
+      "rest": [
+        0.92,
+        0.28,
+        0.4
+      ],
+      "max": [
+        0.92,
+        0.28,
+        0.4
+      ],
+      "min": [
+        0.92,
+        0.238,
+        0.4
+      ]
+    },
+    "source": "parts_aabb"
   },
   "eye_height": 0.22,
   "habitat": "aerial",
@@ -38,39 +72,15 @@
       "fly_body_pitch_deg": 8
     },
     "default_texture": "body",
-    "parts": [
-      {
-        "id": "torso",
-        "offset": [0.0, 0.35, 0.0],
-        "size": [0.12, 0.28, 0.12],
-        "texture": "body"
-      },
-      {
-        "id": "head",
-        "offset": [0.0, 0.42, 0.08],
-        "size": [0.1, 0.1, 0.1],
-        "texture": "face"
-      },
-      {
-        "id": "wing_l",
-        "offset": [-0.32, 0.38, 0.0],
-        "size": [0.28, 0.04, 0.4],
-        "texture": "wing",
-        "pivot": [-0.08, 0.38, 0.0],
-        "limb": "arm"
-      },
-      {
-        "id": "wing_r",
-        "offset": [0.32, 0.38, 0.0],
-        "size": [0.28, 0.04, 0.4],
-        "texture": "wing",
-        "pivot": [0.08, 0.38, 0.0],
-        "limb": "arm"
-      }
-    ],
+    "rigid_model": "rigid_model.json",
     "icon": {
       "mode": "species_texture",
-      "color": [0.78, 0.31, 0.78, 1.0]
+      "color": [
+        0.78,
+        0.31,
+        0.78,
+        1.0
+      ]
     }
   }
 }

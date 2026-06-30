@@ -896,3 +896,29 @@ void SetIntent(CreatureIntent);  // already
 
 - `gameplay.entity_collision` — коллизии AABB между всеми `creatures_` (default on).
 - F5 — цикл First / Third back / Third front; eye остаётся в `Camera::Position`.
+
+---
+
+## 18. Визуализация и FPS (рефакторинг 2026-06)
+
+### Архитектура
+
+Три бэкенда (`rigid_voxels`, `skeletal_geo`, `gltf_skeleton`) собирают `CreatureDrawRequest` в `CreatureDrawQueue`; один `Flush` в конце `UGeometryEngine::RenderCreatures`.
+
+Общий слой: `CreatureTextureResolver`, `CreatureRootTransform`, `CreatureMeshGpuCache`, `CreatureBonePaletteGpu`, `CreatureVisibility` (frustum + distance culling).
+
+### Метрики (performance HUD)
+
+Строка `Creatures: drawn/considered culled draws bone uploads` — baseline для сравнения до/после оптимизаций.
+
+### Perf smoke-сцена
+
+1. Создать мир, заспавнить 10× `kitten` (glTF) или `fox` (skeletal) в радиусе видимости.
+2. Включить performance overlay.
+3. Сравнить `draws` и `bone uploads`; цель — ≤1 bone upload на skinned primitive (UBO вместо 64× `SetMat4`).
+
+### Rigid demo
+
+Геометрия в `rigid_model.json`; bounds: `python tools/derive_creature_bounds.py models/creatures/<id>/creature.json`.
+
+См. также [`CREATURE_BACKENDS.md`](CREATURE_BACKENDS.md).

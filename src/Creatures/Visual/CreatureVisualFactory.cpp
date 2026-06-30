@@ -9,10 +9,26 @@
 namespace cutum
 {
 
-std::unique_ptr<ICreatureVisual>
-CreateCreatureVisual(const CreatureDefinition &def)
+namespace
 {
-  switch (ParseCreatureVisualBackend(def.visual.backend))
+
+bool BackendAssetsAvailable(const CreatureDefinition &def,
+                            CreatureVisualBackend backend)
+{
+  switch (backend)
+  {
+  case CreatureVisualBackend::GltfSkeleton:
+    return !def.visual.gltf.modelPath.empty();
+  case CreatureVisualBackend::SkeletalGeo:
+    return !def.visual.skeletal.geometryId.empty();
+  default:
+    return true;
+  }
+}
+
+std::unique_ptr<ICreatureVisual> CreateForBackend(CreatureVisualBackend backend)
+{
+  switch (backend)
   {
   case CreatureVisualBackend::SkeletalGeo:
     return CreateCreatureVisualSkeletalGeo();
@@ -21,6 +37,21 @@ CreateCreatureVisual(const CreatureDefinition &def)
   default:
     return std::make_unique<UCreatureVisualRigid>();
   }
+}
+
+} // namespace
+
+std::unique_ptr<ICreatureVisual>
+CreateCreatureVisual(const CreatureDefinition &def)
+{
+  CreatureVisualBackend backend =
+      ParseCreatureVisualBackend(def.visual.backend);
+  if (!BackendAssetsAvailable(def, backend) &&
+      !def.visual.fallbackBackend.empty())
+  {
+    backend = ParseCreatureVisualBackend(def.visual.fallbackBackend);
+  }
+  return CreateForBackend(backend);
 }
 
 } // namespace cutum

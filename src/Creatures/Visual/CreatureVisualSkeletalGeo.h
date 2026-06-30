@@ -3,8 +3,10 @@
 
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include <glm/glm.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -20,8 +22,7 @@ public:
                   const CreatureLocomotionFacts &facts,
                   const CreaturePoseParams & /*pose*/,
                   const CreatureDefinition &animDef, float dt) override;
-  void SubmitDraw(UGeometryEngine &engine,
-                  const glm::mat4 &viewProj) override;
+  void SubmitDraw(UGeometryEngine &engine, const glm::mat4 &viewProj) override;
 
 private:
   glm::vec3 BodyOrigin{0.f};
@@ -32,6 +33,7 @@ private:
   std::string TextureStem{"diffuse"};
   std::string DefaultTextureKey{"body"};
   SkeletalCreaturePose BonePose;
+  std::vector<glm::mat4> CachedBoneMatrices;
   std::shared_ptr<const CreatureSkeletalMeshAsset> MeshAsset;
   std::unique_ptr<CreatureBoneHierarchy> Hierarchy;
 };

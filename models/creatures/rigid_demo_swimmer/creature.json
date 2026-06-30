@@ -2,15 +2,49 @@
   "id": "rigid_demo_swimmer",
   "display_name": "Rigid Demo Swimmer",
   "catalog": {
-    "tags": ["mobs", "demo", "rigid_reference"],
+    "tags": [
+      "mobs",
+      "demo",
+      "rigid_reference"
+    ],
     "spawnable": true,
     "sort_order": 902
   },
   "role": "mob",
   "bounds": {
-    "rest": [0.7, 0.4, 1.0],
-    "max": [0.7, 0.4, 1.0],
-    "min": [0.7, 0.4, 1.0]
+    "rest": [
+      0.76,
+      0.34,
+      1.435
+    ],
+    "max": [
+      0.76,
+      0.34,
+      1.435
+    ],
+    "min": [
+      0.76,
+      0.289,
+      1.435
+    ],
+    "_derived": {
+      "rest": [
+        0.76,
+        0.34,
+        1.435
+      ],
+      "max": [
+        0.76,
+        0.34,
+        1.435
+      ],
+      "min": [
+        0.76,
+        0.289,
+        1.435
+      ]
+    },
+    "source": "parts_aabb"
   },
   "eye_height": 0.28,
   "habitat": "aquatic",
@@ -38,43 +72,15 @@
       "body_bob_blocks": 0.02
     },
     "default_texture": "body",
-    "parts": [
-      {
-        "id": "torso",
-        "offset": [0.0, 0.28, 0.0],
-        "size": [0.5, 0.32, 0.85],
-        "texture": "body"
-      },
-      {
-        "id": "head",
-        "offset": [0.0, 0.32, 0.55],
-        "size": [0.32, 0.28, 0.32],
-        "texture": "face"
-      },
-      {
-        "id": "tail",
-        "offset": [0.0, 0.3, -0.55],
-        "size": [0.18, 0.12, 0.35],
-        "texture": "tail",
-        "pivot": [0.0, 0.3, -0.38],
-        "limb": "arm"
-      },
-      {
-        "id": "fin_l",
-        "offset": [-0.32, 0.25, 0.0],
-        "size": [0.12, 0.22, 0.04],
-        "texture": "fin"
-      },
-      {
-        "id": "fin_r",
-        "offset": [0.32, 0.25, 0.0],
-        "size": [0.12, 0.22, 0.04],
-        "texture": "fin"
-      }
-    ],
+    "rigid_model": "rigid_model.json",
     "icon": {
       "mode": "species_texture",
-      "color": [0.24, 0.47, 0.78, 1.0]
+      "color": [
+        0.24,
+        0.47,
+        0.78,
+        1.0
+      ]
     }
   }
 }

@@ -2,50 +2,20 @@
 
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
-#include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
+#include "Creatures/Visual/CreatureDrawRequest.h"
+#include "Creatures/Visual/CreatureRootTransform.h"
+#include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
+#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
+#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
 #include "Pose/Skeletal/SkeletalBonePoseEngine.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-#include <unordered_set>
 
 namespace cutum
 {
-
-namespace
-{
-
-std::unordered_set<std::string> gMissingSkeletalMeshLogged;
-std::unordered_set<std::string> gMissingSkeletalTextureLogged;
-
-GLuint ResolveSkeletalSpeciesTexture(const UCreatureTextureStorage &textures,
-                                    const std::string &speciesId,
-                                    const std::string &stem,
-                                    const std::string &defaultStem)
-{
-  const std::string keys[] = {
-      speciesId + "/" + stem,
-      speciesId + "/diffuse",
-      speciesId + "/" + defaultStem,
-      speciesId + "/body",
-  };
-  for (const std::string &key : keys)
-  {
-    if (!key.empty() && key.back() != '/')
-    {
-      if (const GLuint tex = textures.GetTexture(key))
-      {
-        return tex;
-      }
-    }
-  }
-  return 0;
-}
-
-} // namespace
 
 UCreatureVisualSkeletalGeo::~UCreatureVisualSkeletalGeo() = default;
 
@@ -54,11 +24,10 @@ std::unique_ptr<ICreatureVisual> CreateCreatureVisualSkeletalGeo()
   return std::make_unique<UCreatureVisualSkeletalGeo>();
 }
 
-void UCreatureVisualSkeletalGeo::UpdatePose(const UCreature &creature,
-                                          const CreatureLocomotionFacts &facts,
-                                          const CreaturePoseParams & /*pose*/,
-                                          const CreatureDefinition &animDef,
-                                          float dt)
+void UCreatureVisualSkeletalGeo::UpdatePose(
+    const UCreature &creature, const CreatureLocomotionFacts &facts,
+    const CreaturePoseParams & /*pose*/, const CreatureDefinition &animDef,
+    float dt)
 {
   BodyOrigin = creature.GetFeetPosition();
   BodyYaw = creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
@@ -72,13 +41,17 @@ void UCreatureVisualSkeletalGeo::UpdatePose(const UCreature &creature,
                     ? "diffuse"
                     : animDef.visual.skeletal.textureStem;
   DefaultTextureKey = animDef.visual.defaultTextureKey.empty()
-                          ? "body"
+                          ? Appearance.defaultTextureKey
                           : animDef.visual.defaultTextureKey;
+  if (DefaultTextureKey.empty())
+  {
+    DefaultTextureKey = "body";
+  }
 
   if (!MeshAsset || MeshAsset->geometry.identifier != GeometryId)
   {
     MeshAsset = CreatureSkeletalGeoCache::Instance().Load(SpeciesId, geoFile,
-                                                       GeometryId);
+                                                          GeometryId);
     if (MeshAsset)
     {
       Hierarchy = std::make_unique<CreatureBoneHierarchy>(MeshAsset->geometry);
@@ -86,22 +59,30 @@ void UCreatureVisualSkeletalGeo::UpdatePose(const UCreature &creature,
     else
     {
       const std::string key = SpeciesId + "|" + geoFile + "|" + GeometryId;
-      if (gMissingSkeletalMeshLogged.insert(key).second)
-      {
-        std::cerr << "UCreatureVisualSkeletalGeo: missing mesh asset for species="
-                  << SpeciesId << " geoFile=" << geoFile
-                  << " geometryId=" << GeometryId << std::endl;
-      }
+      LogCreatureMissingTextureOnce(
+          key, "UCreatureVisualSkeletalGeo: missing mesh asset for species=" +
+                   SpeciesId + " geoFile=" + geoFile +
+                   " geometryId=" + GeometryId);
     }
   }
 
   BonePose = SkeletalBonePoseEngine::Compute(facts, animDef, dt);
+  CachedBoneMatrices.clear();
+  if (MeshAsset && Hierarchy)
+  {
+    CachedBoneMatrices.resize(MeshAsset->boneMeshes.size());
+    for (size_t boneIdx = 0; boneIdx < CachedBoneMatrices.size(); ++boneIdx)
+    {
+      CachedBoneMatrices[boneIdx] =
+          Hierarchy->ComputeBoneMatrix(boneIdx, BonePose);
+    }
+  }
 }
 
 void UCreatureVisualSkeletalGeo::SubmitDraw(UGeometryEngine &engine,
-                                           const glm::mat4 &viewProj)
+                                            const glm::mat4 &viewProj)
 {
-  if (!MeshAsset || !Hierarchy)
+  if (!MeshAsset || !Hierarchy || CachedBoneMatrices.empty())
   {
     return;
   }
@@ -113,38 +94,27 @@ void UCreatureVisualSkeletalGeo::SubmitDraw(UGeometryEngine &engine,
     return;
   }
 
-  GLuint tex = ResolveSkeletalSpeciesTexture(*creatureTextures, SpeciesId,
-                                            TextureStem, DefaultTextureKey);
-  if (tex == 0 && !SkinId.empty())
-  {
-    tex = creatureTextures->GetTexture("skin/" + SkinId + "/" + TextureStem);
-  }
-  if (tex == 0 && !SkinId.empty())
-  {
-    tex = creatureTextures->GetTexture("skin/" + SkinId + "/diffuse");
-  }
+  const GLuint tex = ResolveCreatureSpeciesTexture(
+      *creatureTextures, SpeciesId, TextureStem, DefaultTextureKey, SkinId);
   if (tex == 0)
   {
-    const std::string key = SpeciesId + "|" + TextureStem + "|" + DefaultTextureKey;
-    if (gMissingSkeletalTextureLogged.insert(key).second)
-    {
-      std::cerr << "UCreatureVisualSkeletalGeo: missing texture for species="
-                << SpeciesId << " stem=" << TextureStem
-                << " default=" << DefaultTextureKey << " skin=" << SkinId
-                << std::endl;
-    }
+    const std::string key =
+        SpeciesId + "|" + TextureStem + "|" + DefaultTextureKey;
+    LogCreatureMissingTextureOnce(
+        key, "UCreatureVisualSkeletalGeo: missing texture for species=" +
+                 SpeciesId + " stem=" + TextureStem +
+                 " default=" + DefaultTextureKey + " skin=" + SkinId);
     return;
   }
 
-  glm::mat4 bodyMat = glm::translate(glm::mat4(1.f), BodyOrigin);
-  bodyMat =
-      glm::rotate(bodyMat, glm::radians(BodyYaw), glm::vec3(0.f, 1.f, 0.f));
-  bodyMat = bodyMat * SkeletalEntityConventionMatrix();
+  const glm::mat4 bodyMat =
+      BuildCreatureRootMatrix(BodyOrigin, BodyYaw, 0.f, []()
+                              { return SkeletalEntityConventionMatrix(); });
 
+  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
   for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
   {
-    const glm::mat4 boneMat =
-        bodyMat * Hierarchy->ComputeBoneMatrix(boneIdx, BonePose);
+    const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
     const SkeletalBoneMeshCpu &boneMesh = MeshAsset->boneMeshes[boneIdx];
     for (const SkeletalCubeMeshCpu &cube : boneMesh.cubes)
     {
@@ -152,8 +122,12 @@ void UCreatureVisualSkeletalGeo::SubmitDraw(UGeometryEngine &engine,
       {
         continue;
       }
-      const glm::mat4 mvp = viewProj * boneMat * cube.restLocalMatrix;
-      engine.DrawCreatureSkeletalMesh(mvp, tex, cube);
+      CreatureDrawRequest req;
+      req.Kind = CreatureDrawKind::SkeletalMesh;
+      req.Mvp = viewProj * boneMat * cube.restLocalMatrix;
+      req.Texture = tex;
+      req.SkeletalMesh = &cube;
+      queue.Push(std::move(req));
     }
   }
 
@@ -161,8 +135,7 @@ void UCreatureVisualSkeletalGeo::SubmitDraw(UGeometryEngine &engine,
   {
     for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
     {
-      const glm::mat4 boneMat =
-          bodyMat * Hierarchy->ComputeBoneMatrix(boneIdx, BonePose);
+      const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
       const SkeletalBoneMeshCpu &boneMesh = MeshAsset->boneMeshes[boneIdx];
       for (const SkeletalCubeMeshCpu &cube : boneMesh.cubes)
       {
@@ -170,8 +143,11 @@ void UCreatureVisualSkeletalGeo::SubmitDraw(UGeometryEngine &engine,
         {
           continue;
         }
-        engine.DrawBoxWireframe(viewProj * boneMat * cube.restLocalMatrix,
-                                Appearance.wireframeColor);
+        CreatureDrawRequest req;
+        req.Kind = CreatureDrawKind::WireframeBox;
+        req.Mvp = viewProj * boneMat * cube.restLocalMatrix;
+        req.WireColor = Appearance.wireframeColor;
+        queue.Push(std::move(req));
       }
     }
   }
