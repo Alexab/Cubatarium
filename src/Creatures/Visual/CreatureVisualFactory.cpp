@@ -3,7 +3,7 @@
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Creatures/Visual/CreatureVisualGltf.h"
 #include "Creatures/Visual/CreatureVisualRigid.h"
-#include "Creatures/Visual/CreatureVisualSkeletalGeo.h"
+#include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
 #include <memory>
 
 namespace cutum
@@ -19,8 +19,8 @@ bool BackendAssetsAvailable(const CreatureDefinition &def,
   {
   case CreatureVisualBackend::GltfSkeleton:
     return !def.visual.gltf.modelPath.empty();
-  case CreatureVisualBackend::SkeletalGeo:
-    return !def.visual.skeletal.geometryId.empty();
+  case CreatureVisualBackend::BoneSkeleton:
+    return !def.visual.boneSkeleton.geometryId.empty();
   default:
     return true;
   }
@@ -30,8 +30,8 @@ std::unique_ptr<ICreatureVisual> CreateForBackend(CreatureVisualBackend backend)
 {
   switch (backend)
   {
-  case CreatureVisualBackend::SkeletalGeo:
-    return CreateCreatureVisualSkeletalGeo();
+  case CreatureVisualBackend::BoneSkeleton:
+    return CreateCreatureVisualBoneSkeleton();
   case CreatureVisualBackend::GltfSkeleton:
     return CreateCreatureVisualGltf();
   default:

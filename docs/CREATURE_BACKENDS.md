@@ -6,7 +6,7 @@ Cubatarium supports three equal visual backends selected by `visual.backend` in
 | Backend | JSON key | Runtime class | Purpose |
 |---------|----------|---------------|---------|
 | Rigid voxels | `rigid_voxels` | `UCreatureVisualRigid` | Lightweight box parts; **3 canonical demo mobs** + future custom content |
-| Skeletal geo | `skeletal_geo` | `UCreatureVisualSkeletalGeo` | Tier A/B box-UV geometry (16 species) |
+| Bone skeleton | `bone_skeleton` | `UCreatureVisualBoneSkeleton` | Tier A/B box-UV geometry (16 species) |
 | glTF skeleton | `gltf_skeleton` | `UCreatureVisualGltf` | Skinned/static glTF mesh; **former rigid catalog (36 species)** |
 
 Factory entry point: `CreateCreatureVisual()` in
@@ -22,7 +22,7 @@ After migration:
 
 - **3** species on `rigid_voxels`: `rigid_demo_walker`, `rigid_demo_flyer`,
   `rigid_demo_swimmer`
-- **16** species on `skeletal_geo` (unchanged)
+- **16** species on `bone_skeleton` (unchanged)
 - **36** former rigid species on `gltf_skeleton`
 
 See [CREATURE_MIGRATION_GLTF.md](CREATURE_MIGRATION_GLTF.md) for per-species
@@ -48,7 +48,7 @@ These mobs document the rigid pipeline (`visual.parts[]`, pose presenters,
 ## Related docs
 
 - [CREATURE_GLTF.md](CREATURE_GLTF.md) — glTF asset layout and runtime
-- [CREATURE_SKELETAL_GEO.md](CREATURE_SKELETAL_GEO.md) — skeletal backend
+- [CREATURE_BONE_SKELETON.md](CREATURE_BONE_SKELETON.md) — bone_skeleton backend
 - [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md) — rigid parts and textures
 - [CREATURE_IMPLEMENTATION.md](CREATURE_IMPLEMENTATION.md) — architecture §11
 - [CREATURE_BACKEND_MATRIX.md](CREATURE_BACKEND_MATRIX.md) — per-species backend audit

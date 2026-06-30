@@ -1,7 +1,7 @@
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.h"
-#include "Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.h"
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
-#include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
@@ -31,28 +31,28 @@ float InsetNormV1(int px, float texHeight)
   return (static_cast<float>(px) - kUvInsetPx) / texHeight;
 }
 
-glm::vec3 MeshCenter(const cutum::CreatureBoneHierarchy &hierarchy,
-                     const cutum::CreatureSkeletalMeshAsset &asset,
-                     size_t boneIdx, const cutum::SkeletalCreaturePose &pose)
+glm::vec3 MeshCenter(const cutum::BoneSkeletonHierarchy &hierarchy,
+                     const cutum::CreatureBoneSkeletonMeshAsset &asset,
+                     size_t boneIdx, const cutum::BoneSkeletonPose &pose)
 {
   const glm::mat4 boneMat = hierarchy.ComputeBoneMatrix(boneIdx, pose);
-  const cutum::SkeletalCubeMeshCpu &cube = asset.boneMeshes[boneIdx].cubes[0];
+  const cutum::BoneSkeletonCubeMeshCpu &cube = asset.boneMeshes[boneIdx].cubes[0];
   return glm::vec3(
       boneMat * cube.restLocalMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f));
 }
 
-glm::vec3 ExpectedCenter(const cutum::SkeletalCubeDef &cube)
+glm::vec3 ExpectedCenter(const cutum::BoneSkeletonCubeDef &cube)
 {
   return cube.originBlocks + cube.sizeBlocks * 0.5f;
 }
 
-bool TestHumanoidGeometry(const cutum::CreatureSkeletalGeometry &geometry,
+bool TestHumanoidGeometry(const cutum::CreatureBoneSkeletonGeometry &geometry,
                           const std::string &label)
 {
-  const cutum::CreatureSkeletalMeshAsset asset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(geometry);
-  cutum::CreatureBoneHierarchy hierarchy(geometry);
-  const cutum::SkeletalCreaturePose idlePose;
+  const cutum::CreatureBoneSkeletonMeshAsset asset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(geometry);
+  cutum::BoneSkeletonHierarchy hierarchy(geometry);
+  const cutum::BoneSkeletonPose idlePose;
 
   const size_t headIdx = geometry.boneIndexByName.at("head");
   const size_t bodyIdx = geometry.boneIndexByName.at("body");
@@ -67,7 +67,7 @@ bool TestHumanoidGeometry(const cutum::CreatureSkeletalGeometry &geometry,
     return false;
   }
 
-  const cutum::SkeletalCubeDef &headCubeDef = geometry.bones[headIdx].cubes[0];
+  const cutum::BoneSkeletonCubeDef &headCubeDef = geometry.bones[headIdx].cubes[0];
   const glm::vec3 headCenter = MeshCenter(hierarchy, asset, headIdx, idlePose);
   const glm::vec3 headExpected = ExpectedCenter(headCubeDef);
   if (!NearlyEqual(headCenter.x, headExpected.x) ||
@@ -104,9 +104,9 @@ bool TestHumanoidGeometry(const cutum::CreatureSkeletalGeometry &geometry,
     return false;
   }
 
-  cutum::SkeletalCreaturePose walkPose;
+  cutum::BoneSkeletonPose walkPose;
   constexpr float kBob = 0.05f;
-  cutum::SkeletalBonePose waistBob;
+  cutum::BoneSkeletonBonePose waistBob;
   waistBob.offsetBlocks.y = kBob;
   walkPose.bones["waist"] = waistBob;
 
@@ -133,7 +133,7 @@ bool TestHumanoidGeometry(const cutum::CreatureSkeletalGeometry &geometry,
 
 int main()
 {
-  const auto geometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto geometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       kCowGeo, "geometry.cow.v1.8");
   if (!geometry)
   {
@@ -163,7 +163,7 @@ int main()
     return 1;
   }
 
-  const cutum::SkeletalBoneDef &body = geometry->bones[bodyIt->second];
+  const cutum::BoneSkeletonBoneDef &body = geometry->bones[bodyIt->second];
   if (!NearlyEqual(body.bindPoseRotationDeg.x, 90.f))
   {
     std::cerr << "FAIL: body bind rotation x=" << body.bindPoseRotationDeg.x
@@ -171,15 +171,15 @@ int main()
     return 1;
   }
 
-  const cutum::CreatureSkeletalMeshAsset asset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(*geometry);
+  const cutum::CreatureBoneSkeletonMeshAsset asset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*geometry);
   if (asset.boneMeshes.empty() || asset.boneMeshes[0].cubes.empty())
   {
     std::cerr << "FAIL: mesh asset empty\n";
     return 1;
   }
 
-  const cutum::SkeletalCubeMeshCpu &cube = asset.boneMeshes[0].cubes[0];
+  const cutum::BoneSkeletonCubeMeshCpu &cube = asset.boneMeshes[0].cubes[0];
   if (cube.interleavedPosUv.size() != 24u * 5u)
   {
     std::cerr << "FAIL: cube vertex layout size="
@@ -187,9 +187,9 @@ int main()
     return 1;
   }
 
-  cutum::CreatureBoneHierarchy hierarchy(*geometry);
-  cutum::SkeletalCreaturePose pose;
-  cutum::SkeletalBonePose legPose;
+  cutum::BoneSkeletonHierarchy hierarchy(*geometry);
+  cutum::BoneSkeletonPose pose;
+  cutum::BoneSkeletonBonePose legPose;
   legPose.rotationDeg.x = 30.f;
   pose.bones["leg0"] = legPose;
   const glm::mat4 legMat =
@@ -201,8 +201,8 @@ int main()
     return 1;
   }
 
-  cutum::SkeletalCreaturePose idlePose;
-  const cutum::SkeletalBoneDef &leg0Bone = geometry->bones[leg0It->second];
+  cutum::BoneSkeletonPose idlePose;
+  const cutum::BoneSkeletonBoneDef &leg0Bone = geometry->bones[leg0It->second];
   const glm::mat4 leg0Idle =
       hierarchy.ComputeBoneMatrix(leg0It->second, idlePose);
   const glm::mat3 legRot = glm::mat3(leg0Idle);
@@ -217,14 +217,14 @@ int main()
     return 1;
   }
 
-  const auto pigGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto pigGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/pig/geometry.geo.json", "geometry.pig.v1.8");
   if (!pigGeometry)
   {
     std::cerr << "FAIL: could not load pig geometry\n";
     return 1;
   }
-  cutum::CreatureBoneHierarchy pigHierarchy(*pigGeometry);
+  cutum::BoneSkeletonHierarchy pigHierarchy(*pigGeometry);
   const size_t pigBodyIdx = pigGeometry->boneIndexByName.at("body");
   const size_t pigHeadIdx = pigGeometry->boneIndexByName.at("head");
   const glm::mat4 pigBodyMat =
@@ -243,13 +243,13 @@ int main()
     return 1;
   }
 
-  const cutum::CreatureSkeletalMeshAsset pigAsset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(*pigGeometry);
-  const cutum::SkeletalCubeMeshCpu &pigHeadCube =
+  const cutum::CreatureBoneSkeletonMeshAsset pigAsset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*pigGeometry);
+  const cutum::BoneSkeletonCubeMeshCpu &pigHeadCube =
       pigAsset.boneMeshes[pigHeadIdx].cubes[0];
   const glm::vec3 pigHeadCenter = glm::vec3(
       pigHeadMat * pigHeadCube.restLocalMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f));
-  const cutum::SkeletalCubeDef &pigHeadCubeDef =
+  const cutum::BoneSkeletonCubeDef &pigHeadCubeDef =
       pigGeometry->bones[pigHeadIdx].cubes[0];
   const glm::vec3 pigHeadExpected =
       (pigHeadCubeDef.originBlocks + pigHeadCubeDef.sizeBlocks * 0.5f);
@@ -264,11 +264,11 @@ int main()
     return 1;
   }
 
-  const cutum::SkeletalCubeMeshCpu &pigBodyCube =
+  const cutum::BoneSkeletonCubeMeshCpu &pigBodyCube =
       pigAsset.boneMeshes[pigBodyIdx].cubes[0];
   const glm::vec3 pigBodyCenter = glm::vec3(
       pigBodyMat * pigBodyCube.restLocalMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f));
-  const cutum::SkeletalCubeDef &pigBodyCubeDef =
+  const cutum::BoneSkeletonCubeDef &pigBodyCubeDef =
       pigGeometry->bones[pigBodyIdx].cubes[0];
   const glm::vec3 pigBodyOrigin = pigBodyCubeDef.originBlocks;
   const glm::vec3 pigBodySize = pigBodyCubeDef.sizeBlocks;
@@ -277,7 +277,7 @@ int main()
       (pigBodyOrigin + pigBodySize * 0.5f) - pigBodyPivot;
   const glm::mat4 pigBodyRot =
       glm::translate(glm::mat4(1.f), pigBodyPivot) *
-      cutum::SkeletalEulerDegToMat(cutum::SkeletalBindPoseRotationDeg(
+      cutum::BoneSkeletonEulerDegToMat(cutum::BoneSkeletonBindPoseRotationDeg(
           pigGeometry->bones[pigBodyIdx].bindPoseRotationDeg));
   const glm::vec3 pigBodyExpected =
       glm::vec3(pigBodyRot * glm::vec4(pigBodyMeshOffset, 1.f));
@@ -299,25 +299,25 @@ int main()
     return 1;
   }
 
-  std::cout << "OK creature_skeletal_geo_loader_test: bones="
+  std::cout << "OK creature_bone_skeleton_loader_test: bones="
             << geometry->bones.size() << " cubes="
             << asset.boneMeshes[0].cubes.size() << "\n";
 
-  const auto beeGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto beeGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/bee/geometry.geo.json", "geometry.bee");
   if (!beeGeometry)
   {
     std::cerr << "FAIL: could not load bee geometry\n";
     return 1;
   }
-  const cutum::CreatureSkeletalMeshAsset beeAsset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(*beeGeometry);
+  const cutum::CreatureBoneSkeletonMeshAsset beeAsset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*beeGeometry);
   size_t beeCubeCount = 0;
   size_t beeRenderedFaces = 0;
-  for (const cutum::SkeletalBoneMeshCpu &boneMesh : beeAsset.boneMeshes)
+  for (const cutum::BoneSkeletonBoneMeshCpu &boneMesh : beeAsset.boneMeshes)
   {
     beeCubeCount += boneMesh.cubes.size();
-    for (const cutum::SkeletalCubeMeshCpu &cube : boneMesh.cubes)
+    for (const cutum::BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
     {
       if (!cube.interleavedPosUv.empty())
       {
@@ -337,9 +337,9 @@ int main()
     return 1;
   }
 
-  const cutum::SkeletalBoneMeshCpu &beeBody =
+  const cutum::BoneSkeletonBoneMeshCpu &beeBody =
       beeAsset.boneMeshes[beeGeometry->boneIndexByName.at("body")];
-  const cutum::SkeletalCubeMeshCpu &beeTorso = beeBody.cubes[0];
+  const cutum::BoneSkeletonCubeMeshCpu &beeTorso = beeBody.cubes[0];
   // Face 1 (+X east), first vertex (BL): u0 / v1 with half-texel inset.
   const float eastU = beeTorso.interleavedPosUv[4u * 5u + 3u];
   const float eastV = beeTorso.interleavedPosUv[4u * 5u + 4u];
@@ -360,7 +360,7 @@ int main()
   std::cout << "OK bee: bones=7 cubes=9 rendered_face_groups="
             << beeRenderedFaces << "\n";
 
-  const auto humanGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto humanGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/human/geometry.geo.json", "geometry.zombie.v1.8");
   if (!humanGeometry)
   {
@@ -372,7 +372,7 @@ int main()
     return 1;
   }
 
-  const auto zombieGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto zombieGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/zombie/geometry.geo.json", "geometry.zombie.v1.8");
   if (!zombieGeometry)
   {
@@ -384,18 +384,18 @@ int main()
     return 1;
   }
 
-  const auto bunnyGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto bunnyGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/bunny/geometry.geo.json", "geometry.rabbit.v1.8");
   if (!bunnyGeometry)
   {
     std::cerr << "FAIL: could not load bunny geometry\n";
     return 1;
   }
-  const cutum::CreatureSkeletalMeshAsset bunnyAsset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(*bunnyGeometry);
-  const cutum::SkeletalBoneMeshCpu &bunnyBody =
+  const cutum::CreatureBoneSkeletonMeshAsset bunnyAsset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*bunnyGeometry);
+  const cutum::BoneSkeletonBoneMeshCpu &bunnyBody =
       bunnyAsset.boneMeshes[bunnyGeometry->boneIndexByName.at("body")];
-  const cutum::SkeletalCubeMeshCpu &bunnyTorso = bunnyBody.cubes[0];
+  const cutum::BoneSkeletonCubeMeshCpu &bunnyTorso = bunnyBody.cubes[0];
   const float bunnyEastU = bunnyTorso.interleavedPosUv[4u * 5u + 3u];
   const float bunnyEastV = bunnyTorso.interleavedPosUv[4u * 5u + 4u];
   if (!NearlyEqual(bunnyEastU, (25.5f / 64.f)) ||
@@ -406,18 +406,18 @@ int main()
     return 1;
   }
 
-  const auto foxGeometry = cutum::CreatureSkeletalGeoLoader::LoadFromFile(
+  const auto foxGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/fox/geometry.geo.json", "geometry.fox");
   if (!foxGeometry)
   {
     std::cerr << "FAIL: could not load fox geometry\n";
     return 1;
   }
-  const cutum::CreatureSkeletalMeshAsset foxAsset =
-      cutum::SkeletalCubeMeshBuilder::BuildMeshAsset(*foxGeometry);
-  for (const cutum::SkeletalBoneMeshCpu &boneMesh : foxAsset.boneMeshes)
+  const cutum::CreatureBoneSkeletonMeshAsset foxAsset =
+      cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*foxGeometry);
+  for (const cutum::BoneSkeletonBoneMeshCpu &boneMesh : foxAsset.boneMeshes)
   {
-    for (const cutum::SkeletalCubeMeshCpu &cube : boneMesh.cubes)
+    for (const cutum::BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
     {
       for (size_t i = 3; i + 1 < cube.interleavedPosUv.size(); i += 5)
       {

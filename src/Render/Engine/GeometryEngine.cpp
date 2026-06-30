@@ -2250,9 +2250,9 @@ void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
   ++CreatureStats.CreatureDrawCalls;
 }
 
-void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp,
+void UGeometryEngine::DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp,
                                                GLuint texture,
-                                               const SkeletalCubeMeshCpu &mesh)
+                                               const BoneSkeletonCubeMeshCpu &mesh)
 {
   if (texture == 0 || mesh.interleavedPosUv.empty() || mesh.indices.empty() ||
       !creatureShader || !creatureShader->IsValid())
@@ -2288,9 +2288,9 @@ void UGeometryEngine::DrawCreatureSkeletalMesh(const glm::mat4 &mvp,
 }
 
 void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                                           const SkeletalCubeMeshCpu &mesh)
+                                           const BoneSkeletonCubeMeshCpu &mesh)
 {
-  DrawCreatureSkeletalMesh(mvp, texture, mesh);
+  DrawCreatureBoneSkeletonMesh(mvp, texture, mesh);
 }
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(

@@ -96,10 +96,10 @@ public:
   }
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
-  void DrawCreatureSkeletalMesh(const glm::mat4 &mvp, GLuint texture,
-                                const SkeletalCubeMeshCpu &mesh);
+  void DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
+                                const BoneSkeletonCubeMeshCpu &mesh);
   void DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                            const SkeletalCubeMeshCpu &mesh);
+                            const BoneSkeletonCubeMeshCpu &mesh);
   void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
                                const GltfPrimitiveCpu &mesh,
                                const std::vector<glm::mat4> &boneMatrices);

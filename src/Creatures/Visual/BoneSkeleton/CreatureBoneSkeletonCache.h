@@ -1,7 +1,7 @@
-#ifndef CREATURE_SKELETAL_GEO_CACHE_H
-#define CREATURE_SKELETAL_GEO_CACHE_H
+#ifndef CREATURE_BONE_SKELETON_CACHE_H
+#define CREATURE_BONE_SKELETON_CACHE_H
 
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -11,22 +11,22 @@
 namespace cutum
 {
 
-class CreatureSkeletalGeoCache
+class CreatureBoneSkeletonCache
 {
 public:
-  static CreatureSkeletalGeoCache &Instance();
+  static CreatureBoneSkeletonCache &Instance();
 
   void SetCreaturesRoot(const std::string &root);
   std::string GetCreaturesRoot() const { return creaturesRoot; }
 
-  std::shared_ptr<const CreatureSkeletalMeshAsset>
+  std::shared_ptr<const CreatureBoneSkeletonMeshAsset>
   Load(const std::string &speciesId, const std::string &geometryFile,
        const std::string &geometryId = {});
 
 private:
   std::string creaturesRoot;
   std::mutex mutex;
-  std::unordered_map<std::string, std::weak_ptr<const CreatureSkeletalMeshAsset>>
+  std::unordered_map<std::string, std::weak_ptr<const CreatureBoneSkeletonMeshAsset>>
       cache;
 };
 

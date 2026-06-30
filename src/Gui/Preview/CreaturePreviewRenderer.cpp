@@ -13,11 +13,11 @@
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
-#include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Gui/Preview/CreaturePreviewLayout.h"
-#include "Pose/Skeletal/SkeletalBonePoseEngine.h"
+#include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -70,7 +70,7 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
   glBindVertexArray(0);
 }
 
-GLuint GetOrCreatePreviewSkeletalVao(const cutum::SkeletalCubeMeshCpu &mesh,
+GLuint GetOrCreatePreviewSkeletalVao(const cutum::BoneSkeletonCubeMeshCpu &mesh,
                                      std::unordered_map<size_t, GLuint> &cache)
 {
   (void)cache;
@@ -428,7 +428,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         continue;
       }
 
-      const SkeletalCubeMeshCpu &cube = prim.mesh;
+      const BoneSkeletonCubeMeshCpu &cube = prim.mesh;
       if (cube.interleavedPosUv.empty() || cube.indices.empty())
       {
         continue;
@@ -515,16 +515,16 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
   }
 
   if (ParseCreatureVisualBackend(def->visual.backend) ==
-      CreatureVisualBackend::SkeletalGeo)
+      CreatureVisualBackend::BoneSkeleton)
   {
-    const std::string geoFile = def->visual.skeletal.geometryFile.empty()
+    const std::string geoFile = def->visual.boneSkeleton.geometryFile.empty()
                                     ? "geometry.geo.json"
-                                    : def->visual.skeletal.geometryFile;
-    const auto meshAsset = CreatureSkeletalGeoCache::Instance().Load(
-        speciesId, geoFile, def->visual.skeletal.geometryId);
-    const std::string texStem = def->visual.skeletal.textureStem.empty()
+                                    : def->visual.boneSkeleton.geometryFile;
+    const auto meshAsset = CreatureBoneSkeletonCache::Instance().Load(
+        speciesId, geoFile, def->visual.boneSkeleton.geometryId);
+    const std::string texStem = def->visual.boneSkeleton.textureStem.empty()
                                     ? "diffuse"
-                                    : def->visual.skeletal.textureStem;
+                                    : def->visual.boneSkeleton.textureStem;
     const std::string defaultTex = def->visual.defaultTextureKey.empty()
                                        ? "body"
                                        : def->visual.defaultTextureKey;
@@ -533,13 +533,13 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     if (!meshAsset || tex == 0)
     {
       const std::string key = speciesId + "|" + geoFile + "|" +
-                              def->visual.skeletal.geometryId + "|" + texStem;
+                              def->visual.boneSkeleton.geometryId + "|" + texStem;
       if (gPreviewSkeletalMissingLogged.insert(key).second)
       {
-        std::cerr << "CreaturePreviewRenderer: missing skeletal "
+        std::cerr << "CreaturePreviewRenderer: missing bone_skeleton "
                   << (!meshAsset ? "mesh" : "texture")
                   << " for species=" << speciesId << " geoFile=" << geoFile
-                  << " geometryId=" << def->visual.skeletal.geometryId
+                  << " geometryId=" << def->visual.boneSkeleton.geometryId
                   << " texStem=" << texStem << " skin=" << skinId << std::endl;
       }
       return false;
@@ -553,14 +553,14 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 30.0f);
     const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kOrbitDistance);
     const glm::mat4 bodyMat =
-        SkeletalPreviewRootMatrix(meshAsset->geometry, 1.2f);
+        BoneSkeletonPreviewRootMatrix(meshAsset->geometry, 1.2f);
 
     CreatureLocomotionFacts facts;
     facts.state = LocomotionState::Idle;
     facts.animPhase = 0.f;
-    const SkeletalCreaturePose pose =
-        SkeletalBonePoseEngine::Compute(facts, *def, 0.f);
-    CreatureBoneHierarchy hierarchy(meshAsset->geometry);
+    const BoneSkeletonPose pose =
+        BoneSkeletonPoseEngine::Compute(facts, *def, 0.f);
+    BoneSkeletonHierarchy hierarchy(meshAsset->geometry);
 
     static std::unordered_map<size_t, GLuint> previewSkeletalVaoCache;
     Shader->Use();
@@ -573,7 +573,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     {
       const glm::mat4 boneMat =
           bodyMat * hierarchy.ComputeBoneMatrix(boneIdx, pose);
-      for (const SkeletalCubeMeshCpu &cube :
+      for (const BoneSkeletonCubeMeshCpu &cube :
            meshAsset->boneMeshes[boneIdx].cubes)
       {
         if (cube.interleavedPosUv.empty() || cube.indices.empty())

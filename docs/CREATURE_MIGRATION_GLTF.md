@@ -43,7 +43,7 @@ All eight species now have research atlas paths (`sync_luanti_research_textures.
 
 | Backend | Species |
 |---------|---------|
-| `skeletal_geo` | 16 Tier A/B (cow, sheep, human, …) |
+| `bone_skeleton` | 16 Tier A/B (cow, sheep, human, …) |
 | `rigid_voxels` | `rigid_demo_walker`, `rigid_demo_flyer`, `rigid_demo_swimmer` |
 
 ## Per-species checklist

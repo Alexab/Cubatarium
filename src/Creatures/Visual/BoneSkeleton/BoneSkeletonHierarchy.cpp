@@ -1,6 +1,6 @@
-#include "Creatures/Visual/Skeletal/CreatureBoneHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace cutum
@@ -20,11 +20,11 @@ glm::mat4 BoneLocalMatrix(const glm::vec3 &pivotBlocks,
       glm::translate(glm::mat4(1.f), pivotBlocks + animOffset);
   if (glm::length(bindRotationDeg) > 0.001f)
   {
-    local = local * SkeletalEulerDegToMat(bindRotationDeg);
+    local = local * BoneSkeletonEulerDegToMat(bindRotationDeg);
   }
   if (glm::length(poseRotationDeg) > 0.001f)
   {
-    local = local * SkeletalEulerDegToMat(poseRotationDeg);
+    local = local * BoneSkeletonEulerDegToMat(poseRotationDeg);
   }
   return local;
 }
@@ -46,20 +46,20 @@ glm::mat4 BonePoseOnlyMatrix(const glm::vec3 &pivotBlocks,
   if (glm::length(rotationDeg) > 0.001f)
   {
     pose = glm::translate(pose, pivotBlocks);
-    pose = pose * SkeletalEulerDegToMat(rotationDeg);
+    pose = pose * BoneSkeletonEulerDegToMat(rotationDeg);
     pose = glm::translate(pose, -pivotBlocks);
   }
   return pose;
 }
 
 bool AncestorHasBindPoseRotation(
-    const CreatureSkeletalGeometry &geometry,
+    const CreatureBoneSkeletonGeometry &geometry,
     const std::vector<int> &parentIndices, size_t boneIndex)
 {
   int idx = static_cast<int>(boneIndex);
   while (idx >= 0)
   {
-    const SkeletalBoneDef &bone = geometry.bones[static_cast<size_t>(idx)];
+    const BoneSkeletonBoneDef &bone = geometry.bones[static_cast<size_t>(idx)];
     if (glm::length(bone.bindPoseRotationDeg) > 0.001f)
     {
       return true;
@@ -70,7 +70,7 @@ bool AncestorHasBindPoseRotation(
 }
 
 bool UsesAbsolutePivotPlacement(
-    const CreatureSkeletalGeometry &geometry,
+    const CreatureBoneSkeletonGeometry &geometry,
     const std::vector<int> &parentIndices, size_t boneIndex)
 {
   const int parentIdx = parentIndices[boneIndex];
@@ -88,8 +88,8 @@ bool UsesAbsolutePivotPlacement(
 
 } // namespace
 
-CreatureBoneHierarchy::CreatureBoneHierarchy(
-    const CreatureSkeletalGeometry &geometry)
+BoneSkeletonHierarchy::BoneSkeletonHierarchy(
+    const CreatureBoneSkeletonGeometry &geometry)
     : Geometry(geometry)
 {
   parentIndices.resize(geometry.bones.size(), -1);
@@ -108,19 +108,19 @@ CreatureBoneHierarchy::CreatureBoneHierarchy(
   }
 }
 
-glm::mat4 CreatureBoneHierarchy::ComputeBoneMatrix(
-    size_t boneIndex, const SkeletalCreaturePose &pose) const
+glm::mat4 BoneSkeletonHierarchy::ComputeBoneMatrix(
+    size_t boneIndex, const BoneSkeletonPose &pose) const
 {
   if (boneIndex >= Geometry.bones.size())
   {
     return glm::mat4(1.f);
   }
 
-  const SkeletalBoneDef &bone = Geometry.bones[boneIndex];
+  const BoneSkeletonBoneDef &bone = Geometry.bones[boneIndex];
   const int parentIdx = parentIndices[boneIndex];
 
   const glm::vec3 bindRot =
-      SkeletalBindPoseRotationDeg(bone.bindPoseRotationDeg) + bone.boneRotationDeg;
+      BoneSkeletonBindPoseRotationDeg(bone.bindPoseRotationDeg) + bone.boneRotationDeg;
   glm::vec3 poseRot{0.f};
   glm::vec3 animOffset{0.f};
   if (const auto it = pose.bones.find(bone.name); it != pose.bones.end())
@@ -148,19 +148,19 @@ glm::mat4 CreatureBoneHierarchy::ComputeBoneMatrix(
   glm::mat4 local = glm::translate(glm::mat4(1.f), delta + animOffset);
   if (glm::length(bindRot) > 0.001f)
   {
-    local = local * SkeletalEulerDegToMat(bindRot);
+    local = local * BoneSkeletonEulerDegToMat(bindRot);
   }
   if (glm::length(poseRot) > 0.001f)
   {
-    local = local * SkeletalEulerDegToMat(poseRot);
+    local = local * BoneSkeletonEulerDegToMat(poseRot);
   }
   return parentMat * local;
 }
 
-glm::mat4 CreatureBoneHierarchy::ComputeBonePoseChain(
-    size_t boneIndex, const SkeletalCreaturePose &pose) const
+glm::mat4 BoneSkeletonHierarchy::ComputeBonePoseChain(
+    size_t boneIndex, const BoneSkeletonPose &pose) const
 {
-  const SkeletalBoneDef &bone = Geometry.bones[boneIndex];
+  const BoneSkeletonBoneDef &bone = Geometry.bones[boneIndex];
   glm::mat4 chain(1.f);
   const int parentIdx = parentIndices[boneIndex];
   if (parentIdx >= 0)

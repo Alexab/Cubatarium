@@ -1,7 +1,7 @@
 #ifndef CREATUREGLTFTYPES_H
 #define CREATUREGLTFTYPES_H
 
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <glm/gtc/quaternion.hpp>
 #include <cstdint>
 #include <string>
@@ -28,7 +28,7 @@ struct GltfSkinCpu
 
 struct GltfPrimitiveCpu
 {
-  SkeletalCubeMeshCpu mesh;
+  BoneSkeletonCubeMeshCpu mesh;
   std::vector<uint8_t> jointIndices;
   std::vector<float> jointWeights;
   std::string textureStem;

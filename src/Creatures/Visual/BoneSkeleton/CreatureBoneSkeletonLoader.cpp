@@ -1,6 +1,6 @@
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
 
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -12,7 +12,7 @@ namespace cutum
 namespace
 {
 
-constexpr float kSkeletalUnitsPerBlock = 16.f;
+constexpr float kBoneSkeletonUnitsPerBlock = 16.f;
 
 glm::vec3 ReadSkeletalVec3Blocks(const nlohmann::json &arr, const glm::vec3 &fb)
 {
@@ -20,7 +20,7 @@ glm::vec3 ReadSkeletalVec3Blocks(const nlohmann::json &arr, const glm::vec3 &fb)
   {
     return fb;
   }
-  return SkeletalUnitsToBlocks(glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
+  return BoneSkeletonUnitsToBlocks(glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
                                         arr[2].get<float>()));
 }
 
@@ -34,9 +34,9 @@ glm::ivec2 ReadUvPixels(const nlohmann::json &arr)
           static_cast<int>(std::lround(arr[1].get<float>()))};
 }
 
-SkeletalCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
+BoneSkeletonCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
 {
-  SkeletalCubeDef cube;
+  BoneSkeletonCubeDef cube;
   cube.originBlocks =
       ReadSkeletalVec3Blocks(cubeJson.value("origin", nlohmann::json::array()),
                             cube.originBlocks);
@@ -44,7 +44,7 @@ SkeletalCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
       cubeJson["size"].size() >= 3)
   {
     const auto &sz = cubeJson["size"];
-    cube.sizeBlocks = SkeletalUnitsToBlocks(
+    cube.sizeBlocks = BoneSkeletonUnitsToBlocks(
         glm::vec3(std::abs(sz[0].get<float>()), std::abs(sz[1].get<float>()),
                   std::abs(sz[2].get<float>())));
   }
@@ -66,14 +66,14 @@ SkeletalCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
     }
   }
   cube.inflateBlocks =
-      cubeJson.value("inflate", 0.f) / kSkeletalUnitsPerBlock;
+      cubeJson.value("inflate", 0.f) / kBoneSkeletonUnitsPerBlock;
   cube.mirror = cubeJson.value("mirror", boneMirror);
   return cube;
 }
 
-SkeletalBoneDef ReadBone(const nlohmann::json &boneJson)
+BoneSkeletonBoneDef ReadBone(const nlohmann::json &boneJson)
 {
-  SkeletalBoneDef bone;
+  BoneSkeletonBoneDef bone;
   bone.name = boneJson.value("name", "");
   bone.parent = boneJson.value("parent", "");
   bone.pivotBlocks =
@@ -115,7 +115,7 @@ SkeletalBoneDef ReadBone(const nlohmann::json &boneJson)
   return bone;
 }
 
-void FinalizeBoneIndices(CreatureSkeletalGeometry &geometry)
+void FinalizeBoneIndices(CreatureBoneSkeletonGeometry &geometry)
 {
   geometry.boneIndexByName.clear();
   for (size_t i = 0; i < geometry.bones.size(); ++i)
@@ -125,7 +125,7 @@ void FinalizeBoneIndices(CreatureSkeletalGeometry &geometry)
 }
 
 bool ParseGeometryObject(const nlohmann::json &geoObj,
-                         CreatureSkeletalGeometry &out)
+                         CreatureBoneSkeletonGeometry &out)
 {
   if (!geoObj.is_object())
   {
@@ -140,7 +140,7 @@ bool ParseGeometryObject(const nlohmann::json &geoObj,
     const auto &off = geoObj["visible_bounds_offset"];
     if (off.is_array() && off.size() >= 3)
     {
-      out.visibleBoundsOffsetBlocks = SkeletalVisibleBoundsOffsetBlocks(
+      out.visibleBoundsOffsetBlocks = BoneSkeletonVisibleBoundsOffsetBlocks(
           glm::vec3(off[0].get<float>(), off[1].get<float>(), off[2].get<float>()));
     }
   }
@@ -160,7 +160,7 @@ bool ParseGeometryObject(const nlohmann::json &geoObj,
     {
       continue;
     }
-    SkeletalBoneDef bone = ReadBone(boneJson);
+    BoneSkeletonBoneDef bone = ReadBone(boneJson);
     if (!bone.name.empty())
     {
       out.bones.push_back(std::move(bone));
@@ -172,8 +172,8 @@ bool ParseGeometryObject(const nlohmann::json &geoObj,
 
 } // namespace
 
-std::optional<CreatureSkeletalGeometry>
-CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
+std::optional<CreatureBoneSkeletonGeometry>
+CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
                                        const std::string &expectedId)
 {
   try
@@ -181,13 +181,13 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
     std::ifstream file(path);
     if (!file.is_open())
     {
-      std::cerr << "CreatureSkeletalGeoLoader: cannot open " << path << std::endl;
+      std::cerr << "CreatureBoneSkeletonLoader: cannot open " << path << std::endl;
       return std::nullopt;
     }
     nlohmann::json root;
     file >> root;
 
-    CreatureSkeletalGeometry geometry;
+    CreatureBoneSkeletonGeometry geometry;
 
     if (root.contains("minecraft:geometry") && root["minecraft:geometry"].is_array())
     {
@@ -210,7 +210,7 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
             const auto &off = entry["description"]["visible_bounds_offset"];
             if (off.is_array() && off.size() >= 3)
             {
-              geometry.visibleBoundsOffsetBlocks = SkeletalVisibleBoundsOffsetBlocks(
+              geometry.visibleBoundsOffsetBlocks = BoneSkeletonVisibleBoundsOffsetBlocks(
                   glm::vec3(off[0].get<float>(), off[1].get<float>(),
                             off[2].get<float>()));
             }
@@ -227,7 +227,7 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
           continue;
         }
         geometry.identifier = id;
-        CreatureSkeletalGeometry parsed;
+        CreatureBoneSkeletonGeometry parsed;
         parsed.identifier = id;
         parsed.textureSize = geometry.textureSize;
         parsed.visibleBoundsOffsetBlocks = geometry.visibleBoundsOffsetBlocks;
@@ -239,7 +239,7 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
           {
             if (boneJson.is_object())
             {
-              SkeletalBoneDef bone = ReadBone(boneJson);
+              BoneSkeletonBoneDef bone = ReadBone(boneJson);
               if (!bone.name.empty())
               {
                 parsed.bones.push_back(std::move(bone));
@@ -265,7 +265,7 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
       {
         continue;
       }
-      CreatureSkeletalGeometry parsed;
+      CreatureBoneSkeletonGeometry parsed;
       parsed.identifier = key;
       if (ParseGeometryObject(value, parsed))
       {
@@ -274,12 +274,12 @@ CreatureSkeletalGeoLoader::LoadFromFile(const std::string &path,
       }
     }
 
-    std::cerr << "CreatureSkeletalGeoLoader: no geometry in " << path << std::endl;
+    std::cerr << "CreatureBoneSkeletonLoader: no geometry in " << path << std::endl;
     return std::nullopt;
   }
   catch (const std::exception &e)
   {
-    std::cerr << "CreatureSkeletalGeoLoader: " << path << ": " << e.what()
+    std::cerr << "CreatureBoneSkeletonLoader: " << path << ": " << e.what()
               << std::endl;
     return std::nullopt;
   }

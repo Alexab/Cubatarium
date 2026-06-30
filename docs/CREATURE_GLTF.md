@@ -52,8 +52,8 @@ models/creatures/<id>/
 ```
 
 Meshes are exported in **block space** (Y-up, 1 unit = 1 block). Luanti b3d
-glTF uses `GltfEntityConventionMatrix()` (identity); Bedrock `bedrock_geo` keeps
-`SkeletalEntityConventionMatrix()` Z-flip at draw time.
+glTF uses `GltfEntityConventionMatrix()` (identity); `bone_skeleton` keeps
+`BoneSkeletonEntityConventionMatrix()` Z-flip at draw time.
 
 ## Offline toolchain
 

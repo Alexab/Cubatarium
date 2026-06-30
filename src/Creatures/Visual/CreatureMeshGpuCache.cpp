@@ -15,7 +15,7 @@ CreatureMeshGpuCache &CreatureMeshGpuCache::Instance()
 }
 
 GLuint CreatureMeshGpuCache::GetOrCreateSkeletalMeshVao(
-    const SkeletalCubeMeshCpu &mesh)
+    const BoneSkeletonCubeMeshCpu &mesh)
 {
   size_t hash = 0;
   for (float v : mesh.interleavedPosUv)

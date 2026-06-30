@@ -93,17 +93,17 @@ set(SOURCES
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp
     src/Creatures/Visual/CreatureRigidModelLoader.cpp
     src/Creatures/Visual/CreatureVisualRigid.cpp
-    src/Creatures/Visual/CreatureVisualSkeletalGeo.cpp
+    src/Creatures/Visual/CreatureVisualBoneSkeleton.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
     src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
     src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
     src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
     src/Creatures/Visual/Gltf/CreatureGltfCache.cpp
-    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.cpp
-    src/Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.cpp
-    src/Creatures/Visual/Skeletal/CreatureBoneHierarchy.cpp
-    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.cpp
+    src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+    src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.cpp
     src/Creatures/Player/PlayerController.cpp
     src/Pose/CreaturePosePresenterRegistry.cpp
     src/Pose/TerrestrialBipedPosePresenter.cpp
@@ -111,8 +111,8 @@ set(SOURCES
     src/Pose/AerialPosePresenter.cpp
     src/Pose/AquaticPosePresenter.cpp
     src/Pose/SerpentinePosePresenter.cpp
-    src/Pose/Skeletal/SkeletalAnimationProfiles.cpp
-    src/Pose/Skeletal/SkeletalBonePoseEngine.cpp
+    src/Pose/BoneSkeleton/SkeletalAnimationProfiles.cpp
+    src/Pose/BoneSkeleton/BoneSkeletonPoseEngine.cpp
     src/App/Core.cpp
     src/App/LegacyConfigAdapter.cpp
     src/App/Settings/UiSettings.cpp
@@ -523,14 +523,14 @@ target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
 
-add_executable(creature_skeletal_geo_loader_test
-    src/Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.cpp
-    src/Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.cpp
-    src/Creatures/Visual/Skeletal/CreatureBoneHierarchy.cpp
-    src/Test/CreatureSkeletalGeoLoaderTest.cpp)
-target_include_directories(creature_skeletal_geo_loader_test PRIVATE
+add_executable(creature_bone_skeleton_loader_test
+    src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+    src/Test/CreatureBoneSkeletonLoaderTest.cpp)
+target_include_directories(creature_bone_skeleton_loader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_skeletal_geo_loader_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(creature_bone_skeleton_loader_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(creature_gltf_loader_test
     src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp

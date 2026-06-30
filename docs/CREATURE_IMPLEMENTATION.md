@@ -903,7 +903,7 @@ void SetIntent(CreatureIntent);  // already
 
 ### Архитектура
 
-Три бэкенда (`rigid_voxels`, `skeletal_geo`, `gltf_skeleton`) собирают `CreatureDrawRequest` в `CreatureDrawQueue`; один `Flush` в конце `UGeometryEngine::RenderCreatures`.
+Три бэкенда (`rigid_voxels`, `bone_skeleton`, `gltf_skeleton`) собирают `CreatureDrawRequest` в `CreatureDrawQueue`; один `Flush` в конце `UGeometryEngine::RenderCreatures`.
 
 Общий слой: `CreatureTextureResolver`, `CreatureRootTransform`, `CreatureMeshGpuCache`, `CreatureBonePaletteGpu`, `CreatureVisibility` (frustum + distance culling).
 

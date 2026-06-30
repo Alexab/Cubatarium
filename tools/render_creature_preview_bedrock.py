@@ -8,15 +8,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+TOOLS = Path(__file__).resolve().parent
 MODELS = ROOT / "models" / "creatures"
 OUT = ROOT / "bin" / "uv_preview"
+sys.path.insert(0, str(TOOLS))
+from creature_backend import is_bone_skeleton_backend  # noqa: E402
 
 
 def main() -> int:
     species = sys.argv[1] if len(sys.argv) > 1 else "cow"
     creature = json.loads((MODELS / species / "creature.json").read_text(encoding="utf-8"))
-    if creature.get("visual", {}).get("backend") != "bedrock_geo":
-        raise SystemExit(f"{species} is not bedrock_geo")
+    if not is_bone_skeleton_backend(creature.get("visual", {}).get("backend")):
+        raise SystemExit(f"{species} is not bone_skeleton")
     geo = MODELS / species / creature["visual"].get("geometry_file", "geometry.geo.json")
     tex = MODELS / species / "textures" / f"{creature['visual'].get('texture', 'diffuse')}.png"
     print(f"bedrock preview inputs: {geo.name} + {tex.name}")

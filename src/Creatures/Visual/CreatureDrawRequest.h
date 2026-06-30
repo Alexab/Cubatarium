@@ -25,7 +25,7 @@ struct CreatureDrawRequest
   glm::mat4 Mvp{1.f};
   GLuint Texture{0};
   CreaturePartMesh PartMesh{CreaturePartMesh::Box};
-  const SkeletalCubeMeshCpu *SkeletalMesh{nullptr};
+  const BoneSkeletonCubeMeshCpu *SkeletalMesh{nullptr};
   const GltfPrimitiveCpu *SkinnedPrimitive{nullptr};
   std::vector<glm::mat4> BoneMatrices;
   glm::vec4 WireColor{1.f};

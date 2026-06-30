@@ -1,5 +1,5 @@
-#ifndef CREATURE_SKELETAL_TYPES_H
-#define CREATURE_SKELETAL_TYPES_H
+#ifndef CREATURE_BONE_SKELETON_TYPES_H
+#define CREATURE_BONE_SKELETON_TYPES_H
 
 #include <glm/glm.hpp>
 #include <string>
@@ -9,7 +9,7 @@
 namespace cutum
 {
 
-struct SkeletalCubeDef
+struct BoneSkeletonCubeDef
 {
   glm::vec3 originBlocks{0.f};
   glm::vec3 sizeBlocks{0.f};
@@ -21,7 +21,7 @@ struct SkeletalCubeDef
   bool hasPivot{false};
 };
 
-struct SkeletalBoneDef
+struct BoneSkeletonBoneDef
 {
   std::string name;
   std::string parent;
@@ -31,48 +31,48 @@ struct SkeletalBoneDef
   /// geometry bone `rotation` field (bee wings, etc.).
   glm::vec3 boneRotationDeg{0.f};
   bool mirror{false};
-  std::vector<SkeletalCubeDef> cubes;
+  std::vector<BoneSkeletonCubeDef> cubes;
 };
 
-struct CreatureSkeletalGeometry
+struct CreatureBoneSkeletonGeometry
 {
   std::string identifier;
   glm::ivec2 textureSize{64, 32};
   glm::vec3 visibleBoundsOffsetBlocks{0.f};
   float visibleBoundsWidthBlocks{1.f};
   float visibleBoundsHeightBlocks{1.f};
-  std::vector<SkeletalBoneDef> bones;
+  std::vector<BoneSkeletonBoneDef> bones;
   std::unordered_map<std::string, size_t> boneIndexByName;
 };
 
-struct SkeletalBonePose
+struct BoneSkeletonBonePose
 {
   glm::vec3 rotationDeg{0.f};
   glm::vec3 offsetBlocks{0.f};
 };
 
-struct SkeletalCreaturePose
+struct BoneSkeletonPose
 {
-  std::unordered_map<std::string, SkeletalBonePose> bones;
+  std::unordered_map<std::string, BoneSkeletonBonePose> bones;
 };
 
-struct SkeletalCubeMeshCpu
+struct BoneSkeletonCubeMeshCpu
 {
   std::vector<float> interleavedPosUv;
   std::vector<unsigned int> indices;
   glm::mat4 restLocalMatrix{1.f};
 };
 
-struct SkeletalBoneMeshCpu
+struct BoneSkeletonBoneMeshCpu
 {
   std::string boneName;
-  std::vector<SkeletalCubeMeshCpu> cubes;
+  std::vector<BoneSkeletonCubeMeshCpu> cubes;
 };
 
-struct CreatureSkeletalMeshAsset
+struct CreatureBoneSkeletonMeshAsset
 {
-  CreatureSkeletalGeometry geometry;
-  std::vector<SkeletalBoneMeshCpu> boneMeshes;
+  CreatureBoneSkeletonGeometry geometry;
+  std::vector<BoneSkeletonBoneMeshCpu> boneMeshes;
 };
 
 } // namespace cutum

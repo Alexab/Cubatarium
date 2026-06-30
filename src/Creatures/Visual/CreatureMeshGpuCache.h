@@ -2,7 +2,7 @@
 #define CREATUREMESHGPUCACHE_H
 
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <cstddef>
 #include <unordered_map>
 
@@ -16,7 +16,7 @@ class CreatureMeshGpuCache
 public:
   static CreatureMeshGpuCache &Instance();
 
-  GLuint GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh);
+  GLuint GetOrCreateSkeletalMeshVao(const BoneSkeletonCubeMeshCpu &mesh);
   GLuint GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh,
                                        size_t &outIndexCount);
   void DestroyAll();

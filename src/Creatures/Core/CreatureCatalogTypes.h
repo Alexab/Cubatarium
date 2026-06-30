@@ -61,7 +61,7 @@ struct CreatureBehaviorParams
 enum class CreatureVisualBackend : uint8_t
 {
   RigidVoxels,
-  SkeletalGeo,
+  BoneSkeleton,
   GltfSkeleton,
 };
 
@@ -114,7 +114,7 @@ struct CreatureAnimationParams
   std::unordered_map<std::string, std::string> stateMap;
 };
 
-struct CreatureSkeletalGeoSpec
+struct CreatureBoneSkeletonSpec
 {
   std::string geometryId;
   std::string geometryFile{"geometry.geo.json"};
@@ -152,7 +152,7 @@ struct CreatureVisualSpec
   std::string iconMode{"bounds_wireframe"};
   CreatureRigSpec rig;
   CreatureAnimationParams Animation;
-  CreatureSkeletalGeoSpec skeletal;
+  CreatureBoneSkeletonSpec boneSkeleton;
   CreatureGltfSpec gltf;
   /// Relative path under species dir (e.g. rigid_model.json).
   std::string rigidModelPath;

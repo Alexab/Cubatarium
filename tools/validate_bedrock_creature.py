@@ -9,6 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS = ROOT / "models" / "creatures"
+TOOLS = Path(__file__).resolve().parent
+sys.path.insert(0, str(TOOLS))
+from creature_backend import is_bone_skeleton_backend  # noqa: E402
 
 try:
     import yaml
@@ -29,7 +32,7 @@ def validate_species(species_id: str) -> None:
         raise SystemExit(f"FAIL {species_id}: missing creature.json")
     creature = json.loads(creature_path.read_text(encoding="utf-8"))
     visual = creature.get("visual", {})
-    if visual.get("backend") != "bedrock_geo":
+    if not is_bone_skeleton_backend(visual.get("backend")):
         raise SystemExit(f"FAIL {species_id}: backend={visual.get('backend')}")
     geo_file = visual.get("geometry_file", "geometry.geo.json")
     geo_path = MODELS / species_id / geo_file

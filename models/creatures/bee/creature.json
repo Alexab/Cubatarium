@@ -44,7 +44,7 @@
     "wander_interval_max": 4.0
   },
   "visual": {
-    "backend": "bedrock_geo",
+    "backend": "bone_skeleton",
     "texture_layout": "rigid_crop",
     "animation": {
       "walk_cycle_hz": 2.0,

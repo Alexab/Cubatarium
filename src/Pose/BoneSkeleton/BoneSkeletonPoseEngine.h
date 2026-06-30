@@ -1,17 +1,17 @@
-#ifndef SKELETAL_BONE_POSE_ENGINE_H
-#define SKELETAL_BONE_POSE_ENGINE_H
+#ifndef BONE_SKELETON_POSE_ENGINE_H
+#define BONE_SKELETON_POSE_ENGINE_H
 
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 
 namespace cutum
 {
 
-class SkeletalBonePoseEngine
+class BoneSkeletonPoseEngine
 {
 public:
-  static SkeletalCreaturePose Compute(const CreatureLocomotionFacts &facts,
+  static BoneSkeletonPose Compute(const CreatureLocomotionFacts &facts,
                                      const CreatureDefinition &def, float dt);
 };
 

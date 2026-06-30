@@ -345,18 +345,18 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
       if (vis.contains("geometry") || vis.contains("geometry_file") ||
           vis.contains("texture_size") || vis.contains("animation_profile"))
       {
-        def.visual.skeletal.geometryId = vis.value("geometry", "");
-        def.visual.skeletal.geometryFile =
-            vis.value("geometry_file", def.visual.skeletal.geometryFile);
-        def.visual.skeletal.textureStem =
-            vis.value("texture", def.visual.skeletal.textureStem);
-        def.visual.skeletal.animationProfile =
+        def.visual.boneSkeleton.geometryId = vis.value("geometry", "");
+        def.visual.boneSkeleton.geometryFile =
+            vis.value("geometry_file", def.visual.boneSkeleton.geometryFile);
+        def.visual.boneSkeleton.textureStem =
+            vis.value("texture", def.visual.boneSkeleton.textureStem);
+        def.visual.boneSkeleton.animationProfile =
             vis.value("animation_profile", "");
         if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
             vis["texture_size"].size() >= 2)
         {
-          def.visual.skeletal.textureSize.x = vis["texture_size"][0].get<int>();
-          def.visual.skeletal.textureSize.y = vis["texture_size"][1].get<int>();
+          def.visual.boneSkeleton.textureSize.x = vis["texture_size"][0].get<int>();
+          def.visual.boneSkeleton.textureSize.y = vis["texture_size"][1].get<int>();
         }
       }
       if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
@@ -366,11 +366,11 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
                   << ": gltf_skeleton without visual.gltf.model for " << def.Id
                   << std::endl;
       }
-      if (parsedBackend == CreatureVisualBackend::SkeletalGeo &&
-          def.visual.skeletal.geometryId.empty())
+      if (parsedBackend == CreatureVisualBackend::BoneSkeleton &&
+          def.visual.boneSkeleton.geometryId.empty())
       {
         std::cerr << "UCreatureDefinitionStorage: " << path
-                  << ": skeletal_geo without visual.geometry for " << def.Id
+                  << ": bone_skeleton without visual.geometry for " << def.Id
                   << std::endl;
       }
     }

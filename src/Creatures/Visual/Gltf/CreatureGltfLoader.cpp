@@ -177,7 +177,7 @@ ReadIndexAccessor(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
   return out;
 }
 
-void BuildInterleavedMesh(SkeletalCubeMeshCpu &mesh,
+void BuildInterleavedMesh(BoneSkeletonCubeMeshCpu &mesh,
                           const std::vector<float> &positions,
                           const std::vector<float> &uvs)
 {
@@ -485,7 +485,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
   float bindMinY = 1e9f;
   for (const GltfPrimitiveCpu &prim : asset->primitives)
   {
-    const SkeletalCubeMeshCpu &mesh = prim.mesh;
+    const BoneSkeletonCubeMeshCpu &mesh = prim.mesh;
     for (size_t i = 0; i + 2 < mesh.interleavedPosUv.size(); i += 5)
     {
       bindMinY = std::min(bindMinY, mesh.interleavedPosUv[i + 1]);

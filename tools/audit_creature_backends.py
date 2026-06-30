@@ -17,6 +17,7 @@ DOCS = ROOT / "docs"
 YAML_SOURCES = TOOLS / "creature_luanti_sources.yaml"
 
 sys.path.insert(0, str(TOOLS))
+from creature_backend import is_bone_skeleton_backend  # noqa: E402
 from luanti_mob_animation import (  # noqa: E402
     find_species_lua,
     load_mob_properties,
@@ -87,7 +88,7 @@ def audit_species(species_id: str, yaml_entry: dict) -> dict:
     issues: list[str] = []
     if backend == "gltf_skeleton" and not has_gltf:
         issues.append("missing_model_gltf")
-    if backend in ("skeletal_geo", "bedrock_geo") and not has_geo:
+    if is_bone_skeleton_backend(backend) and not has_geo:
         issues.append("missing_geometry_geo")
     if backend == "gltf_skeleton" and skinned and "inverseBindMatrices" not in json.dumps(
         json.loads((species_dir / "model.gltf").read_text(encoding="utf-8"))
@@ -103,7 +104,7 @@ def audit_species(species_id: str, yaml_entry: dict) -> dict:
         issues.append("sprite_visual_policy")
 
     mesh_source = "none"
-    if backend == "skeletal_geo":
+    if is_bone_skeleton_backend(backend):
         mesh_source = "bedrock_geo"
     elif skinned:
         mesh_source = "b3d_skinned"
@@ -139,7 +140,7 @@ def write_matrix(rows: list[dict], summary: dict) -> None:
         "## Summary",
         "",
         f"- Species: **{summary['total']}**",
-        f"- `bedrock_geo`: **{summary['bedrock_geo']}**",
+        f"- `bone_skeleton`: **{summary['bone_skeleton']}**",
         f"- `gltf_skeleton`: **{summary['gltf_skeleton']}**",
         f"- `rigid_voxels`: **{summary['rigid_voxels']}**",
         f"- Skinned glTF (BONE weights): **{summary['skinned']}**",
@@ -186,8 +187,8 @@ def main() -> int:
     issue_rows = sum(1 for r in rows if r["issues"])
     summary = {
         "total": len(rows),
-        "bedrock_geo": sum(
-            1 for r in rows if r["backend"] in ("bedrock_geo", "skeletal_geo")
+        "bone_skeleton": sum(
+            1 for r in rows if is_bone_skeleton_backend(r["backend"])
         ),
         "gltf_skeleton": sum(1 for r in rows if r["backend"] == "gltf_skeleton"),
         "rigid_voxels": sum(1 for r in rows if r["backend"] == "rigid_voxels"),

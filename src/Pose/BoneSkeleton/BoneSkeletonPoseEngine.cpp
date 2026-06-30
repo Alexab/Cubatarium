@@ -1,6 +1,6 @@
-#include "Pose/Skeletal/SkeletalBonePoseEngine.h"
+#include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 
-#include "Pose/Skeletal/SkeletalAnimationProfiles.h"
+#include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
 #include <algorithm>
 #include <cmath>
 
@@ -26,7 +26,7 @@ float WalkSwingScale(const CreatureLocomotionFacts &facts,
   return swingScale;
 }
 
-void ApplyQuadruped(SkeletalCreaturePose &pose,
+void ApplyQuadruped(BoneSkeletonPose &pose,
                     const CreatureLocomotionFacts &facts,
                     const CreatureDefinition &def)
 {
@@ -37,34 +37,34 @@ void ApplyQuadruped(SkeletalCreaturePose &pose,
   const float sinP = std::sin(facts.animPhase);
   const float legTilt = sinP * legSwing * swingScale;
 
-  SkeletalBonePose leg0;
+  BoneSkeletonBonePose leg0;
   leg0.rotationDeg.x = legTilt;
   pose.bones["leg0"] = leg0;
-  SkeletalBonePose leg1;
+  BoneSkeletonBonePose leg1;
   leg1.rotationDeg.x = legTilt;
   pose.bones["leg1"] = leg1;
-  SkeletalBonePose leg2;
+  BoneSkeletonBonePose leg2;
   leg2.rotationDeg.x = -legTilt;
   pose.bones["leg2"] = leg2;
-  SkeletalBonePose leg3;
+  BoneSkeletonBonePose leg3;
   leg3.rotationDeg.x = -legTilt;
   pose.bones["leg3"] = leg3;
 
-  SkeletalBonePose body;
+  BoneSkeletonBonePose body;
   body.offsetBlocks.y =
       std::sin(facts.animPhase * 2.f + 0.18f * kPi) * bodyBob * swingScale;
   pose.bones["body"] = body;
 
-  SkeletalBonePose head;
+  BoneSkeletonBonePose head;
   head.rotationDeg.x = std::sin(facts.animPhase * 0.5f) * 5.f;
   pose.bones["head"] = head;
 
-  SkeletalBonePose tail;
+  BoneSkeletonBonePose tail;
   tail.rotationDeg.x = std::sin(facts.animPhase + kPi * 0.5f) * tailSwing;
   pose.bones["tail"] = tail;
 }
 
-void ApplyFox(SkeletalCreaturePose &pose, const CreatureLocomotionFacts &facts,
+void ApplyFox(BoneSkeletonPose &pose, const CreatureLocomotionFacts &facts,
               const CreatureDefinition &def)
 {
   // Start from the default quadruped body/head placement, then override fox-specific gait.
@@ -77,26 +77,26 @@ void ApplyFox(SkeletalCreaturePose &pose, const CreatureLocomotionFacts &facts,
   const float legTilt = sinP * legSwing * swingScale;
 
   // Fox: rear-left + front-right swing together, opposite diagonal counters.
-  SkeletalBonePose leg0;
+  BoneSkeletonBonePose leg0;
   leg0.rotationDeg.x = legTilt;
   pose.bones["leg0"] = leg0;
-  SkeletalBonePose leg1;
+  BoneSkeletonBonePose leg1;
   leg1.rotationDeg.x = -legTilt;
   pose.bones["leg1"] = leg1;
-  SkeletalBonePose leg2;
+  BoneSkeletonBonePose leg2;
   leg2.rotationDeg.x = -legTilt;
   pose.bones["leg2"] = leg2;
-  SkeletalBonePose leg3;
+  BoneSkeletonBonePose leg3;
   leg3.rotationDeg.x = legTilt;
   pose.bones["leg3"] = leg3;
 
-  SkeletalBonePose tail;
+  BoneSkeletonBonePose tail;
   tail.rotationDeg.x = -35.0f + std::sin(facts.animPhase + kPi * 0.5f) *
                                     tailSwing * 0.45f;
   pose.bones["tail"] = tail;
 }
 
-void ApplyHumanoid(SkeletalCreaturePose &pose,
+void ApplyHumanoid(BoneSkeletonPose &pose,
                    const CreatureLocomotionFacts &facts,
                    const CreatureDefinition &def)
 {
@@ -107,27 +107,27 @@ void ApplyHumanoid(SkeletalCreaturePose &pose,
   const float armTilt = sinP * armSwing * swingScale;
   const float legTilt = sinP * legSwing * swingScale;
 
-  SkeletalBonePose rightArm;
+  BoneSkeletonBonePose rightArm;
   rightArm.rotationDeg.x = -armTilt;
   pose.bones["rightArm"] = rightArm;
-  SkeletalBonePose leftArm;
+  BoneSkeletonBonePose leftArm;
   leftArm.rotationDeg.x = armTilt;
   pose.bones["leftArm"] = leftArm;
-  SkeletalBonePose rightLeg;
+  BoneSkeletonBonePose rightLeg;
   rightLeg.rotationDeg.x = legTilt;
   pose.bones["rightLeg"] = rightLeg;
-  SkeletalBonePose leftLeg;
+  BoneSkeletonBonePose leftLeg;
   leftLeg.rotationDeg.x = -legTilt;
   pose.bones["leftLeg"] = leftLeg;
 
-  SkeletalBonePose waist;
+  BoneSkeletonBonePose waist;
   waist.offsetBlocks.y =
       std::sin(facts.animPhase * 2.f) * def.visual.Animation.bodyBobBlocks *
       swingScale;
   pose.bones["waist"] = waist;
 }
 
-void ApplyChicken(SkeletalCreaturePose &pose,
+void ApplyChicken(BoneSkeletonPose &pose,
                   const CreatureLocomotionFacts &facts,
                   const CreatureDefinition &def)
 {
@@ -137,75 +137,75 @@ void ApplyChicken(SkeletalCreaturePose &pose,
   const float sinP = std::sin(facts.animPhase);
   const float legTilt = sinP * legSwing * swingScale;
 
-  SkeletalBonePose leg0;
+  BoneSkeletonBonePose leg0;
   leg0.rotationDeg.x = legTilt;
   pose.bones["leg0"] = leg0;
-  SkeletalBonePose leg1;
+  BoneSkeletonBonePose leg1;
   leg1.rotationDeg.x = -legTilt;
   pose.bones["leg1"] = leg1;
 
-  SkeletalBonePose wing0;
+  BoneSkeletonBonePose wing0;
   wing0.rotationDeg.z = -wingSwing;
   pose.bones["wing0"] = wing0;
-  SkeletalBonePose wing1;
+  BoneSkeletonBonePose wing1;
   wing1.rotationDeg.z = wingSwing;
   pose.bones["wing1"] = wing1;
 
   if (facts.state == LocomotionState::Idle)
   {
-    SkeletalBonePose head;
+    BoneSkeletonBonePose head;
     head.rotationDeg.x = std::sin(facts.animPhase * 3.f) * 12.f;
     pose.bones["head"] = head;
   }
 }
 
-void ApplyAerial(SkeletalCreaturePose &pose,
+void ApplyAerial(BoneSkeletonPose &pose,
                  const CreatureLocomotionFacts &facts,
                  const CreatureDefinition &def)
 {
   const float pitch = def.visual.Animation.flyBodyPitchDeg;
-  SkeletalBonePose body;
+  BoneSkeletonBonePose body;
   body.rotationDeg.x = pitch;
   pose.bones["body"] = body;
   const float flap = std::sin(facts.animPhase * 4.f) * 25.f;
-  SkeletalBonePose wing0;
+  BoneSkeletonBonePose wing0;
   wing0.rotationDeg.z = flap;
   pose.bones["wing0"] = wing0;
-  SkeletalBonePose wing1;
+  BoneSkeletonBonePose wing1;
   wing1.rotationDeg.z = -flap;
   pose.bones["wing1"] = wing1;
 }
 
-void ApplyAquatic(SkeletalCreaturePose &pose,
+void ApplyAquatic(BoneSkeletonPose &pose,
                   const CreatureLocomotionFacts &facts,
                   const CreatureDefinition &def)
 {
   const float swingScale = WalkSwingScale(facts, def);
-  SkeletalBonePose body;
+  BoneSkeletonBonePose body;
   body.rotationDeg.y = std::sin(facts.animPhase) * 8.f * swingScale;
   pose.bones["body"] = body;
-  SkeletalBonePose tail;
+  BoneSkeletonBonePose tail;
   tail.rotationDeg.y = std::sin(facts.animPhase + kPi * 0.5f) * 15.f * swingScale;
   pose.bones["tail"] = tail;
 }
 
-void ApplySerpentine(SkeletalCreaturePose &pose,
+void ApplySerpentine(BoneSkeletonPose &pose,
                      const CreatureLocomotionFacts &facts,
                      const CreatureDefinition &def)
 {
   const float swingScale = WalkSwingScale(facts, def);
-  SkeletalBonePose body;
+  BoneSkeletonBonePose body;
   body.rotationDeg.z = std::sin(facts.animPhase) * 6.f * swingScale;
   pose.bones["body"] = body;
 }
 
 } // namespace
 
-SkeletalCreaturePose
-SkeletalBonePoseEngine::Compute(const CreatureLocomotionFacts &facts,
+BoneSkeletonPose
+BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
                                const CreatureDefinition &def, float /*dt*/)
 {
-  SkeletalCreaturePose pose;
+  BoneSkeletonPose pose;
   const std::string profile = SkeletalAnimationProfiles::ResolveProfileId(def);
 
   switch (facts.state)
@@ -256,7 +256,7 @@ SkeletalBonePoseEngine::Compute(const CreatureLocomotionFacts &facts,
     }
     else if (profile == "humanoid")
     {
-      SkeletalBonePose head;
+      BoneSkeletonBonePose head;
       head.rotationDeg.x = std::sin(facts.animPhase * 0.3f) * 8.f;
       pose.bones["head"] = head;
     }

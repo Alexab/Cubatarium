@@ -36,7 +36,7 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
@@ -351,7 +351,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
     creatureDefinitions->Load((WorkDir / "models" / "creatures").string());
-    CreatureSkeletalGeoCache::Instance().SetCreaturesRoot(
+    CreatureBoneSkeletonCache::Instance().SetCreaturesRoot(
         (WorkDir / "models" / "creatures").string());
     CreatureGltfCache::Instance().SetCreaturesRoot(
         (WorkDir / "models" / "creatures").string());

@@ -1,8 +1,8 @@
-#ifndef CREATURE_VISUAL_SKELETAL_GEO_H
-#define CREATURE_VISUAL_SKELETAL_GEO_H
+#ifndef CREATURE_VISUAL_BONE_SKELETON_H
+#define CREATURE_VISUAL_BONE_SKELETON_H
 
 #include "Creatures/Visual/CreatureVisual.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -11,12 +11,12 @@
 namespace cutum
 {
 
-class CreatureBoneHierarchy;
+class BoneSkeletonHierarchy;
 
-class UCreatureVisualSkeletalGeo : public ICreatureVisual
+class UCreatureVisualBoneSkeleton : public ICreatureVisual
 {
 public:
-  ~UCreatureVisualSkeletalGeo() override;
+  ~UCreatureVisualBoneSkeleton() override;
 
   void UpdatePose(const UCreature &creature,
                   const CreatureLocomotionFacts &facts,
@@ -32,13 +32,13 @@ private:
   std::string GeometryId;
   std::string TextureStem{"diffuse"};
   std::string DefaultTextureKey{"body"};
-  SkeletalCreaturePose BonePose;
+  BoneSkeletonPose BonePose;
   std::vector<glm::mat4> CachedBoneMatrices;
-  std::shared_ptr<const CreatureSkeletalMeshAsset> MeshAsset;
-  std::unique_ptr<CreatureBoneHierarchy> Hierarchy;
+  std::shared_ptr<const CreatureBoneSkeletonMeshAsset> MeshAsset;
+  std::unique_ptr<BoneSkeletonHierarchy> Hierarchy;
 };
 
-std::unique_ptr<ICreatureVisual> CreateCreatureVisualSkeletalGeo();
+std::unique_ptr<ICreatureVisual> CreateCreatureVisualBoneSkeleton();
 
 } // namespace cutum
 

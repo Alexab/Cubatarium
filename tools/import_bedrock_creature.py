@@ -60,7 +60,7 @@ def download_texture(url: str, dest: Path, texture_size: list[int] | None) -> bo
 def patch_creature_json(path: Path, entry: dict, defaults: dict) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     visual = data.setdefault("visual", {})
-    visual["backend"] = "bedrock_geo"
+    visual["backend"] = "bone_skeleton"
     visual["geometry"] = entry["geometry"]
     visual["geometry_file"] = entry.get("geometry_file", defaults.get("geometry_file", "geometry.geo.json"))
     visual["texture"] = entry.get("texture_stem", defaults.get("texture_stem", "diffuse"))

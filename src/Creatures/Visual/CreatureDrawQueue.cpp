@@ -36,7 +36,7 @@ void CreatureDrawQueue::Flush(UGeometryEngine &engine)
     case CreatureDrawKind::SkeletalMesh:
       if (req.SkeletalMesh != nullptr)
       {
-        engine.DrawCreatureSkeletalMesh(req.Mvp, req.Texture,
+        engine.DrawCreatureBoneSkeletonMesh(req.Mvp, req.Texture,
                                         *req.SkeletalMesh);
       }
       break;

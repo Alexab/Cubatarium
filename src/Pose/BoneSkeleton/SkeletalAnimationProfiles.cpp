@@ -1,13 +1,13 @@
-#include "Pose/Skeletal/SkeletalAnimationProfiles.h"
+#include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
 
 namespace cutum
 {
 
 std::string SkeletalAnimationProfiles::ResolveProfileId(const CreatureDefinition &def)
 {
-  if (!def.visual.skeletal.animationProfile.empty())
+  if (!def.visual.boneSkeleton.animationProfile.empty())
   {
-    return def.visual.skeletal.animationProfile;
+    return def.visual.boneSkeleton.animationProfile;
   }
   switch (def.locomotionArchetype)
   {

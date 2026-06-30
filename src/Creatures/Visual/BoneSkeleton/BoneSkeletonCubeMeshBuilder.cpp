@@ -1,6 +1,6 @@
-#include "Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 
-#include "Creatures/Visual/Skeletal/SkeletalModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -37,7 +37,7 @@ constexpr UvCorner kFaceUvCorners[6][4] = {
 
 int PixelDim(float blocks)
 {
-  return std::max(1, static_cast<int>(std::lround(blocks * kSkeletalUnitsPerBlock)));
+  return std::max(1, static_cast<int>(std::lround(blocks * kBoneSkeletonUnitsPerBlock)));
 }
 
 FaceUvPixels FacePixels(int faceIndex, int u, int v, int w, int h, int d)
@@ -120,7 +120,7 @@ void PushFaceIndices(std::vector<unsigned int> &indices, unsigned int vertBase)
 glm::vec3 RenderSizeBlocks(const glm::vec3 &logicalSize)
 {
   glm::vec3 render = logicalSize;
-  const float thin = SkeletalThinAxisBlocks();
+  const float thin = BoneSkeletonThinAxisBlocks();
   if (render.x <= 0.f)
   {
     render.x = thin;
@@ -136,7 +136,7 @@ glm::vec3 RenderSizeBlocks(const glm::vec3 &logicalSize)
   return render;
 }
 
-glm::mat4 BuildCubeRestMatrix(const SkeletalCubeDef &cube,
+glm::mat4 BuildCubeRestMatrix(const BoneSkeletonCubeDef &cube,
                               const glm::vec3 &bonePivotBlocks,
                               const glm::vec3 &logicalSize,
                               const glm::vec3 &renderSize)
@@ -169,7 +169,7 @@ glm::mat4 BuildCubeRestMatrix(const SkeletalCubeDef &cube,
   if (glm::length(cube.rotationDeg) > 0.001f)
   {
     local = glm::translate(local, boneLocalRotPivot);
-    local = local * SkeletalEulerDegToMat(cube.rotationDeg);
+    local = local * BoneSkeletonEulerDegToMat(cube.rotationDeg);
     local = glm::translate(local, -boneLocalRotPivot);
   }
   return glm::scale(local, renderSize);
@@ -177,13 +177,13 @@ glm::mat4 BuildCubeRestMatrix(const SkeletalCubeDef &cube,
 
 } // namespace
 
-SkeletalCubeMeshCpu
-SkeletalCubeMeshBuilder::BuildCubeMesh(const SkeletalCubeDef &cube,
+BoneSkeletonCubeMeshCpu
+BoneSkeletonCubeMeshBuilder::BuildCubeMesh(const BoneSkeletonCubeDef &cube,
                                       const glm::vec3 &bonePivotBlocks,
                                       const glm::ivec2 &textureSize,
                                       bool mirrorUv)
 {
-  SkeletalCubeMeshCpu mesh;
+  BoneSkeletonCubeMeshCpu mesh;
   glm::vec3 logicalSize = cube.sizeBlocks;
   if (cube.inflateBlocks > 0.f)
   {
@@ -212,7 +212,7 @@ SkeletalCubeMeshBuilder::BuildCubeMesh(const SkeletalCubeDef &cube,
   unsigned int vertBase = 0;
   for (int face = 0; face < 6; ++face)
   {
-    if (!SkeletalCubeFaceVisible(face, logicalSize))
+    if (!BoneSkeletonCubeFaceVisible(face, logicalSize))
     {
       continue;
     }
@@ -229,7 +229,7 @@ SkeletalCubeMeshBuilder::BuildCubeMesh(const SkeletalCubeDef &cube,
   }
   mesh.interleavedPosUv.assign(posUv, posUv + idx);
 
-  SkeletalCubeDef cubeForMatrix = cube;
+  BoneSkeletonCubeDef cubeForMatrix = cube;
   if (cube.inflateBlocks > 0.f)
   {
     cubeForMatrix.originBlocks -= glm::vec3(cube.inflateBlocks);
@@ -240,17 +240,17 @@ SkeletalCubeMeshBuilder::BuildCubeMesh(const SkeletalCubeDef &cube,
   return mesh;
 }
 
-CreatureSkeletalMeshAsset
-SkeletalCubeMeshBuilder::BuildMeshAsset(const CreatureSkeletalGeometry &geometry)
+CreatureBoneSkeletonMeshAsset
+BoneSkeletonCubeMeshBuilder::BuildMeshAsset(const CreatureBoneSkeletonGeometry &geometry)
 {
-  CreatureSkeletalMeshAsset asset;
+  CreatureBoneSkeletonMeshAsset asset;
   asset.geometry = geometry;
   asset.boneMeshes.reserve(geometry.bones.size());
-  for (const SkeletalBoneDef &bone : geometry.bones)
+  for (const BoneSkeletonBoneDef &bone : geometry.bones)
   {
-    SkeletalBoneMeshCpu boneMesh;
+    BoneSkeletonBoneMeshCpu boneMesh;
     boneMesh.boneName = bone.name;
-    for (const SkeletalCubeDef &cube : bone.cubes)
+    for (const BoneSkeletonCubeDef &cube : bone.cubes)
     {
       const bool mirrorUv = bone.mirror || cube.mirror;
       boneMesh.cubes.push_back(

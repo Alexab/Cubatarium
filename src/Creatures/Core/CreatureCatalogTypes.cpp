@@ -4,15 +4,36 @@
 namespace cutum
 {
 
+namespace
+{
+
+void WarnLegacyBackendOnce(const std::string &legacy, const std::string &canonical)
+{
+  static bool warned = false;
+  if (!warned)
+  {
+    warned = true;
+    std::cerr << "ParseCreatureVisualBackend: legacy backend '" << legacy
+              << "' is deprecated; use '" << canonical << "'" << std::endl;
+  }
+}
+
+} // namespace
+
 CreatureVisualBackend ParseCreatureVisualBackend(const std::string &s)
 {
   if (s == "rigid_voxels")
   {
     return CreatureVisualBackend::RigidVoxels;
   }
-  if (s == "skeletal_geo" || s == "bedrock_geo")
+  if (s == "bone_skeleton")
   {
-    return CreatureVisualBackend::SkeletalGeo;
+    return CreatureVisualBackend::BoneSkeleton;
+  }
+  if (s == "skeletal_geo" || s == "bedrock_geo" || s == "skeletal")
+  {
+    WarnLegacyBackendOnce(s, "bone_skeleton");
+    return CreatureVisualBackend::BoneSkeleton;
   }
   if (s == "gltf_skeleton")
   {
@@ -32,8 +53,8 @@ const char *ToString(CreatureVisualBackend backend)
   {
   case CreatureVisualBackend::RigidVoxels:
     return "rigid_voxels";
-  case CreatureVisualBackend::SkeletalGeo:
-    return "skeletal_geo";
+  case CreatureVisualBackend::BoneSkeleton:
+    return "bone_skeleton";
   case CreatureVisualBackend::GltfSkeleton:
     return "gltf_skeleton";
   }

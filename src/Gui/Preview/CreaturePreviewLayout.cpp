@@ -74,7 +74,7 @@ glm::mat4 GltfPreviewRootMatrix(const CreatureGltfMeshAsset &asset,
   glm::vec3 maxB(-1e6f);
   for (const GltfPrimitiveCpu &prim : asset.primitives)
   {
-    const SkeletalCubeMeshCpu &mesh = prim.mesh;
+    const BoneSkeletonCubeMeshCpu &mesh = prim.mesh;
     for (size_t i = 0; i + 2 < mesh.interleavedPosUv.size(); i += 5)
     {
       const glm::vec3 p(mesh.interleavedPosUv[i], mesh.interleavedPosUv[i + 1],

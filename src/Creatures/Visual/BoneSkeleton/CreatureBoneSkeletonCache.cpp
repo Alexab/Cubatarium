@@ -1,26 +1,26 @@
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoCache.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 
-#include "Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
 #include <filesystem>
 
 namespace cutum
 {
 
-CreatureSkeletalGeoCache &CreatureSkeletalGeoCache::Instance()
+CreatureBoneSkeletonCache &CreatureBoneSkeletonCache::Instance()
 {
-  static CreatureSkeletalGeoCache instance;
+  static CreatureBoneSkeletonCache instance;
   return instance;
 }
 
-void CreatureSkeletalGeoCache::SetCreaturesRoot(const std::string &root)
+void CreatureBoneSkeletonCache::SetCreaturesRoot(const std::string &root)
 {
   std::lock_guard<std::mutex> lock(mutex);
   creaturesRoot = root;
 }
 
-std::shared_ptr<const CreatureSkeletalMeshAsset>
-CreatureSkeletalGeoCache::Load(const std::string &speciesId,
+std::shared_ptr<const CreatureBoneSkeletonMeshAsset>
+CreatureBoneSkeletonCache::Load(const std::string &speciesId,
                               const std::string &geometryFile,
                               const std::string &geometryId)
 {
@@ -37,13 +37,13 @@ CreatureSkeletalGeoCache::Load(const std::string &speciesId,
   }
 
   const auto geometry =
-      CreatureSkeletalGeoLoader::LoadFromFile(geoPath.string(), geometryId);
+      CreatureBoneSkeletonLoader::LoadFromFile(geoPath.string(), geometryId);
   if (!geometry)
   {
     return nullptr;
   }
-  auto asset = std::make_shared<CreatureSkeletalMeshAsset>(
-      SkeletalCubeMeshBuilder::BuildMeshAsset(*geometry));
+  auto asset = std::make_shared<CreatureBoneSkeletonMeshAsset>(
+      BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*geometry));
   cache[cacheKey] = asset;
   return asset;
 }
