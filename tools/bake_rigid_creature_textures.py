@@ -213,6 +213,25 @@ def prune_orphan_stems(tex_dir: Path, stem_rects: dict[str, tuple]) -> None:
             print(f"  removed orphan {path.name}")
 
 
+def should_skip_rigid_bake(
+    species_id: str,
+    creature: dict,
+    spec: dict,
+    research: Path,
+) -> str | None:
+    """glTF/b3d mobs use full atlas import + mesh UVs, not per-part UV crops."""
+    visual = creature.get("visual", {})
+    backend = visual.get("backend", "")
+    if backend != "gltf_skeleton":
+        return None
+    model_rel = spec.get("model")
+    if model_rel and (research / model_rel).is_file():
+        return "b3d-backed glTF (mesh UVs)"
+    if visual.get("gltf"):
+        return "gltf_skeleton (import full atlas)"
+    return None
+
+
 def bake_species(
     species_id: str,
     sources: dict,
@@ -228,7 +247,7 @@ def bake_species(
     spec = sources["species"][species_id]
     creature_path = models_root / "creatures" / species_id / "creature.json"
     creature = json.loads(creature_path.read_text(encoding="utf-8"))
-    part_defs = creature["visual"]["parts"]
+    part_defs = creature.get("visual", {}).get("parts") or []
     rest = creature["bounds"]["rest"]
 
     archetype = maps["species_archetype"][species_id]
@@ -407,6 +426,19 @@ def main() -> None:
 
     species_list = args.species or list(sources["species"].keys())
     for species_id in species_list:
+        creature_path = ROOT / "models" / "creatures" / species_id / "creature.json"
+        creature = (
+            json.loads(creature_path.read_text(encoding="utf-8"))
+            if creature_path.is_file()
+            else {}
+        )
+        skip = should_skip_rigid_bake(
+            species_id, creature, sources["species"].get(species_id, {}),
+            args.research.resolve(),
+        )
+        if skip:
+            print(f"SKIP bake {species_id}: {skip}")
+            continue
         print(f"bake {species_id}")
         layout = "player_skin_atlas" if species_id == "human" else "rigid_crop"
         patch_creature_json_layout(ROOT / "models", species_id, layout)

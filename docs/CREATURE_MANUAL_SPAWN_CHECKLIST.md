@@ -21,3 +21,14 @@
 | 5 | Лавовое озеро | lava_flan |
 
 Автоматическая матрица: `docs/CREATURE_SPAWN_MATRIX.md`, журнал: `docs/CREATURE_RESOLUTION_LOG.md`.
+
+Backend audit (bedrock_geo vs gltf_skeleton): `docs/CREATURE_BACKEND_MATRIX.md`
+(`python tools/audit_creature_backends.py`).
+
+## Backend verification reps (2026-06-30)
+
+| Backend | Species | Verify |
+|---------|---------|--------|
+| bedrock_geo | chicken, sheep, wolf, dolphin | spawn + silhouette + icon |
+| gltf skinned | oerkki, badger, penguin | spawn + walk clip + icon |
+| gltf parts / special | rat, whale, fire_spirit | spawn + icon; fire_spirit = sprite policy |

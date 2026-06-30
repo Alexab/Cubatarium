@@ -129,6 +129,8 @@ struct CreatureGltfSpec
   std::vector<std::string> texturePaths;
   float modelScale{1.f};
   float modelYawOffsetDeg{0.f};
+  /// Extra Y offset (blocks) after automatic feet alignment from bindMinY.
+  float modelOffsetY{0.f};
 };
 
 struct CreatureRigSpec

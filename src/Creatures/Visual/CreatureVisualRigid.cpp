@@ -136,8 +136,7 @@ glm::mat4 BuildLimbPartModel(const glm::vec3 &bodyOrigin, float bodyYaw,
   return model;
 }
 
-glm::vec3 DefaultLegPivot(const ResolvedCreaturePart &part,
-                          float torsoBottomY)
+glm::vec3 DefaultLegPivot(const ResolvedCreaturePart &part, float torsoBottomY)
 {
   return glm::vec3(part.offsetBlocks.x, torsoBottomY, part.offsetBlocks.z);
 }
@@ -158,7 +157,7 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
                                       float /*dt*/)
 {
   BodyOrigin = creature.GetFeetPosition();
-  BodyYaw = creature.GetYaw();
+  BodyYaw = creature.GetYaw() + creature.GetModelYawOffsetDeg();
   const float blend = pose.crouchUpperDrop > 0.0f
                           ? pose.crouchUpperDrop
                           : creature.GetLocomotion().GetStanceBlend();

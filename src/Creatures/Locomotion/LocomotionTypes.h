@@ -54,6 +54,8 @@ LocomotionArchetype ParseLocomotionArchetype(const std::string &s);
 CreatureHabitat ParseCreatureHabitat(const std::string &s);
 const char *ToString(CreatureHabitat habitat);
 const char *ToString(LocomotionState state);
+/// Keys used in creature.json `animation.state_map` (PascalCase).
+const char *LocomotionStateCatalogKey(LocomotionState state);
 const char *ToString(LocomotionArchetype archetype);
 
 struct CreatureInput

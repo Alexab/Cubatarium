@@ -90,6 +90,10 @@ set(SOURCES
     src/Creatures/Visual/CreatureVisualSkeletalGeo.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfCache.cpp
     src/Creatures/Visual/Skeletal/CreatureSkeletalGeoLoader.cpp
     src/Creatures/Visual/Skeletal/SkeletalCubeMeshBuilder.cpp
     src/Creatures/Visual/Skeletal/CreatureBoneHierarchy.cpp
@@ -521,6 +525,15 @@ add_executable(creature_skeletal_geo_loader_test
 target_include_directories(creature_skeletal_geo_loader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_skeletal_geo_loader_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(creature_gltf_loader_test
+    src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+    src/Test/CreatureGltfLoaderTest.cpp)
+target_include_directories(creature_gltf_loader_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_gltf_loader_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

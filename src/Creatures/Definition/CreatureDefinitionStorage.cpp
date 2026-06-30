@@ -268,6 +268,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         def.visual.gltf.modelScale = gltf.value("model_scale", 1.f);
         def.visual.gltf.modelYawOffsetDeg =
             gltf.value("model_yaw_offset_deg", 0.f);
+        def.visual.gltf.modelOffsetY = gltf.value("model_offset_y", 0.f);
         if (gltf.contains("textures") && gltf["textures"].is_array())
         {
           for (const auto &tex : gltf["textures"])
@@ -277,6 +278,10 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
               def.visual.gltf.texturePaths.push_back(tex.get<std::string>());
             }
           }
+        }
+        if (gltf.contains("model_yaw_offset_deg"))
+        {
+          def.visual.modelYawOffsetDeg = def.visual.gltf.modelYawOffsetDeg;
         }
       }
       if (vis.contains("rig") && vis["rig"].is_object())

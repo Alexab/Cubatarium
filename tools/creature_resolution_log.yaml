@@ -33,7 +33,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_skinned audit rep
   bee:
     spawnable: true
     habitat: aerial
@@ -175,7 +179,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: bedrock_geo audit rep
   cow:
     spawnable: true
     habitat: terrestrial
@@ -315,7 +323,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: bedrock_geo audit rep
   dungeon_master:
     spawnable: true
     habitat: terrestrial
@@ -385,7 +397,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_sprite_policy rep
   fox:
     spawnable: true
     habitat: terrestrial
@@ -834,7 +850,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_skinned audit rep
   ogre:
     spawnable: true
     habitat: terrestrial
@@ -1009,7 +1029,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_skinned audit rep
   pig:
     spawnable: true
     habitat: terrestrial
@@ -1116,7 +1140,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_skinned audit rep
   sand_monster:
     spawnable: true
     habitat: terrestrial
@@ -1291,7 +1319,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: bedrock_geo audit rep
   skeleton:
     spawnable: true
     habitat: terrestrial
@@ -1758,7 +1790,11 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: gltf_skinned audit rep
   wolf:
     spawnable: true
     habitat: terrestrial
@@ -1793,4 +1829,8 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-06-19'
+    last_updated: '2026-06-30'
+    backend_audit:
+      status: tooling_pass
+      verified_at: '2026-06-30'
+      note: bedrock_geo audit rep

@@ -60,6 +60,7 @@ private:
   std::shared_ptr<UCreatureTextureStorage> Textures;
   std::shared_ptr<UShaderManager> ShaderManager;
   std::shared_ptr<class UShaderProgram> Shader;
+  std::shared_ptr<class UShaderProgram> SkinnedShader;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};

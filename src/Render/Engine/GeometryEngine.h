@@ -2,7 +2,7 @@
 #define GEOMETRYENGINE_H
 
 #include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Creatures/Visual/Skeletal/CreatureSkeletalTypes.h"
+#include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL Types
@@ -41,8 +41,7 @@ struct RenderBatch
 {
   GLuint textureID; // Replace QOpenGLTexture with GLuint
   size_t blockTypeId{0};
-  std::vector<glm::mat4>
-      ModelMatrices; // Per-instance model (blocks)
+  std::vector<glm::mat4> ModelMatrices; // Per-instance model (blocks)
   std::vector<float> faceIndices;
   std::vector<glm::vec2> quadSizes;
 };
@@ -96,9 +95,12 @@ public:
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
   void DrawCreatureSkeletalMesh(const glm::mat4 &mvp, GLuint texture,
-                               const SkeletalCubeMeshCpu &mesh);
-  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint meshVao,
-                               GLuint texture);
+                                const SkeletalCubeMeshCpu &mesh);
+  void DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
+                            const SkeletalCubeMeshCpu &mesh);
+  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
+                               const GltfPrimitiveCpu &mesh,
+                               const std::vector<glm::mat4> &boneMatrices);
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
@@ -165,6 +167,16 @@ private:
     GLuint ebo{0};
   };
   std::unordered_map<size_t, SkeletalMeshGpuBuffers> skeletalMeshGpuCache;
+  struct GltfSkinnedMeshGpuBuffers
+  {
+    GLuint vao{0};
+    GLuint vbo{0};
+    GLuint ebo{0};
+    size_t indexCount{0};
+  };
+  std::unordered_map<size_t, GltfSkinnedMeshGpuBuffers> gltfSkinnedMeshGpuCache;
+  std::shared_ptr<class UShaderProgram> creatureShader;
+  std::shared_ptr<class UShaderProgram> creatureSkinnedShader;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
@@ -174,7 +186,9 @@ private:
   bool InitCreatureRigidHeadPartBuffers();
   void DestroyCreaturePartBuffers();
   void DestroySkeletalMeshGpuCache();
+  void DestroyGltfSkinnedMeshGpuCache();
   GLuint GetOrCreateSkeletalMeshVao(const SkeletalCubeMeshCpu &mesh);
+  GLuint GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh);
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
   void RenderCreatures();
@@ -182,7 +196,7 @@ private:
   void DrawCubeGeometry();
   void DrawCube(std::shared_ptr<UCube> icube,
                 GLuint texture); // Replace QOpenGLTexture with GLuint
-  void DrawSkyGradientSimple(); // Simple version without VBO
+  void DrawSkyGradientSimple();  // Simple version without VBO
 
   // New optimized methods
   void PrepareRenderBatchesFromBlocks(

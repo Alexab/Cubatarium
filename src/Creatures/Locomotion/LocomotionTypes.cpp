@@ -69,6 +69,44 @@ const char *ToString(LocomotionState state)
   return "unknown";
 }
 
+const char *LocomotionStateCatalogKey(LocomotionState state)
+{
+  switch (state)
+  {
+  case LocomotionState::Idle:
+    return "Idle";
+  case LocomotionState::Walk:
+    return "Walk";
+  case LocomotionState::Run:
+    return "Run";
+  case LocomotionState::Jump:
+    return "Jump";
+  case LocomotionState::Fall:
+    return "Fall";
+  case LocomotionState::Crouch:
+    return "Crouch";
+  case LocomotionState::Fly:
+    return "Fly";
+  case LocomotionState::Glide:
+    return "Glide";
+  case LocomotionState::Hover:
+    return "Hover";
+  case LocomotionState::Swim:
+    return "Swim";
+  case LocomotionState::Tread:
+    return "Tread";
+  case LocomotionState::Slither:
+    return "Slither";
+  case LocomotionState::Coil:
+    return "Coil";
+  case LocomotionState::Action:
+    return "Action";
+  case LocomotionState::Count:
+    return "Count";
+  }
+  return "Unknown";
+}
+
 CreatureHabitat ParseCreatureHabitat(const std::string &s)
 {
   if (s == "aquatic")

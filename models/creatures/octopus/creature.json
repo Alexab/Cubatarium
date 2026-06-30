@@ -44,138 +44,59 @@
     "wander_interval_max": 4.0
   },
   "visual": {
-    "backend": "rigid_voxels",
+    "backend": "gltf_skeleton",
     "texture_layout": "rigid_crop",
-    "animation": {
-      "walk_cycle_hz": 2.0,
-      "leg_swing_deg": 25,
-      "arm_swing_deg": 15,
-      "fly_body_pitch_deg": 10,
-      "body_bob_blocks": 0.025,
-      "tail_swing_deg": 12,
-      "run_speed_multiplier": 1.3,
-      "crouch_leg_bend_deg": 25,
-      "wing_idle_swing_deg": 5
-    },
     "default_texture": "body",
-    "parts": [
-      {
-        "id": "torso",
-        "offset": [
-          0.0,
-          0.32,
-          0.0
-        ],
-        "size": [
-          0.5,
-          0.32,
-          0.5
-        ],
-        "texture": "body"
-      },
-      {
-        "id": "head",
-        "offset": [
-          0.0,
-          0.36,
-          0.18
-        ],
-        "size": [
-          0.34,
-          0.24,
-          0.34
-        ],
-        "texture": "face"
-      },
-      {
-        "id": "tentacle_fl",
-        "offset": [
-          -0.22,
-          0.1,
-          0.22
-        ],
-        "size": [
-          0.1,
-          0.18,
-          0.1
-        ],
-        "texture": "leg",
-        "pivot": [
-          -0.22,
-          0.2,
-          0.22
-        ],
-        "limb": "arm"
-      },
-      {
-        "id": "tentacle_fr",
-        "offset": [
-          0.22,
-          0.1,
-          0.22
-        ],
-        "size": [
-          0.1,
-          0.18,
-          0.1
-        ],
-        "texture": "leg",
-        "pivot": [
-          0.22,
-          0.2,
-          0.22
-        ],
-        "limb": "arm"
-      },
-      {
-        "id": "tentacle_bl",
-        "offset": [
-          -0.22,
-          0.1,
-          -0.22
-        ],
-        "size": [
-          0.1,
-          0.18,
-          0.1
-        ],
-        "texture": "leg",
-        "pivot": [
-          -0.22,
-          0.2,
-          -0.22
-        ],
-        "limb": "arm"
-      },
-      {
-        "id": "tentacle_br",
-        "offset": [
-          0.22,
-          0.1,
-          -0.22
-        ],
-        "size": [
-          0.1,
-          0.18,
-          0.1
-        ],
-        "texture": "leg",
-        "pivot": [
-          0.22,
-          0.2,
-          -0.22
-        ],
-        "limb": "arm"
-      }
-    ],
     "icon": {
-      "mode": "parts_preview",
+      "mode": "species_texture",
       "color": [
         0.6274509803921569,
         0.23529411764705882,
         0.39215686274509803,
         1.0
       ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 1,
+          "loop": true
+        },
+        "walk": {
+          "start": 0,
+          "end": 1,
+          "loop": true,
+          "speed": 1.0
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Crouch": "idle",
+        "Action": "walk"
+      }
     }
   }
 }

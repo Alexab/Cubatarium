@@ -1,0 +1,92 @@
+{
+  "id": "rigid_demo_walker",
+  "display_name": "Rigid Demo Walker",
+  "catalog": {
+    "tags": ["mobs", "demo", "rigid_reference"],
+    "spawnable": true,
+    "sort_order": 900
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [0.5, 0.6, 0.9],
+    "max": [0.5, 0.6, 0.9],
+    "min": [0.5, 0.45, 0.9]
+  },
+  "eye_height": 0.45,
+  "habitat": "terrestrial",
+  "locomotion_archetype": "terrestrial_quadruped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "texture_layout": "rigid_crop",
+    "model_yaw_offset_deg": 0,
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 28,
+      "body_bob_blocks": 0.03
+    },
+    "default_texture": "body",
+    "parts": [
+      {
+        "id": "torso",
+        "offset": [0.0, 0.55, 0.0],
+        "size": [0.55, 0.45, 0.9],
+        "texture": "body"
+      },
+      {
+        "id": "head",
+        "offset": [0.0, 0.72, 0.5],
+        "size": [0.35, 0.35, 0.35],
+        "texture": "face"
+      },
+      {
+        "id": "leg_fl",
+        "offset": [-0.22, 0.22, 0.28],
+        "size": [0.15, 0.45, 0.15],
+        "texture": "leg",
+        "pivot": [-0.22, 0.45, 0.28],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_fr",
+        "offset": [0.22, 0.22, 0.28],
+        "size": [0.15, 0.45, 0.15],
+        "texture": "leg",
+        "pivot": [0.22, 0.45, 0.28],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_bl",
+        "offset": [-0.22, 0.22, -0.28],
+        "size": [0.15, 0.45, 0.15],
+        "texture": "leg",
+        "pivot": [-0.22, 0.45, -0.28],
+        "limb": "leg"
+      },
+      {
+        "id": "leg_br",
+        "offset": [0.22, 0.22, -0.28],
+        "size": [0.15, 0.45, 0.15],
+        "texture": "leg",
+        "pivot": [0.22, 0.45, -0.28],
+        "limb": "leg"
+      }
+    ],
+    "icon": {
+      "mode": "species_texture",
+      "color": [0.47, 0.35, 0.24, 1.0]
+    }
+  }
+}

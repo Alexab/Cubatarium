@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -388,12 +389,54 @@ def export_skin_player_parts(
     opaque_fill(torso).save(out_dir / "diffuse.png")
 
 
-def export_mob_texture(src: Path, out_dir: Path) -> None:
+def is_effectively_empty_texture(img: Image.Image) -> bool:
+    return all(
+        px[3] == 0 and px[0] + px[1] + px[2] < 8 for px in img.convert("RGBA").getdata()
+    )
+
+
+def export_sprite_fallback_textures(species_id: str, out_dir: Path) -> None:
+    """Luanti sprite mobs ship empty PNGs; solid tint + alpha cutout in shader."""
+    color = (255, 140, 40, 255)
+    creature_path = ROOT / "models" / "creatures" / species_id / "creature.json"
+    if creature_path.is_file():
+        creature = json.loads(creature_path.read_text(encoding="utf-8"))
+        icon = creature.get("visual", {}).get("icon", {}).get("color")
+        if isinstance(icon, list) and len(icon) >= 3:
+            color = (
+                int(icon[0] * 255),
+                int(icon[1] * 255),
+                int(icon[2] * 255),
+                255,
+            )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    body = Image.new("RGBA", (64, 64), color)
+    face = Image.new(
+        "RGBA",
+        (64, 64),
+        (min(255, color[0] + 40), min(255, color[1] + 60), min(255, color[2] + 20), 255),
+    )
+    limb = Image.new(
+        "RGBA",
+        (64, 64),
+        (max(0, color[0] - 30), max(0, color[1] - 20), color[2], 255),
+    )
+    for stem, img in (("body", body), ("face", face), ("arm", limb), ("leg", limb)):
+        img.save(out_dir / f"{stem}.png")
+    body.resize((32, 32), Image.NEAREST).save(out_dir / "icon.png")
+
+
+def export_mob_texture(src: Path, out_dir: Path, species_id: str = "") -> None:
+    """Copy Luanti mob atlas to all part slots (b3d UVs index into one texture)."""
     img = Image.open(src).convert("RGBA")
     out_dir.mkdir(parents=True, exist_ok=True)
+    if species_id and is_effectively_empty_texture(img):
+        export_sprite_fallback_textures(species_id, out_dir)
+        return
+    filled = opaque_fill(img)
     for stem in ("body", "leg", "arm", "face"):
-        shutil.copy2(src, out_dir / f"{stem}.png")
-    img.resize((32, 32), Image.NEAREST).save(out_dir / "icon.png")
+        filled.save(out_dir / f"{stem}.png")
+    filled.resize((32, 32), Image.NEAREST).save(out_dir / "icon.png")
 
 
 def export_mob_skin_texture(src: Path, out_dir: Path, tint: tuple[int, int, int] | None) -> None:
@@ -417,6 +460,18 @@ def write_license(path: Path, source: TextureSource, src_file: Path) -> None:
     )
 
 
+def sync_runtime_creature_textures(species_id: str) -> None:
+    src = ROOT / "models" / "creatures" / species_id / "textures"
+    dst = ROOT / "bin" / "models" / "creatures" / species_id / "textures"
+    if not src.is_dir() or not (ROOT / "bin" / "models").is_dir():
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    print(f"synced runtime textures -> {dst}")
+
+
 def import_mobs(research: Path, only: set[str] | None) -> None:
     for entry in mob_sources(research):
         if only and entry.species_id not in only:
@@ -429,13 +484,14 @@ def import_mobs(research: Path, only: set[str] | None) -> None:
         if entry.species_id == "human":
             export_player_parts(src, out, None)
         else:
-            export_mob_texture(src, out)
+            export_mob_texture(src, out, entry.species_id)
         write_license(
             ROOT / "models" / "creatures" / entry.species_id / "LICENSE.txt",
             entry.texture,
             src,
         )
         print(f"imported creature {entry.species_id} <- {entry.texture.path}")
+        sync_runtime_creature_textures(entry.species_id)
 
 
 def import_skins(research: Path, only: set[str] | None) -> None:

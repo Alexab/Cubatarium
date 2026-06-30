@@ -167,10 +167,31 @@ World/collision/spawn/palette behavior is unchanged.
 
 ## Out of scope (later)
 
-- Full glTF backend — see [CREATURE_GLTF.md](CREATURE_GLTF.md), [TECH_DEBT_CREATURES.md](TECH_DEBT_CREATURES.md) TD-CRE-001
+- Full glTF backend — see [CREATURE_GLTF.md](CREATURE_GLTF.md), [CREATURE_BACKENDS.md](CREATURE_BACKENDS.md)
 - Skeletal animation, normal maps
 - GPU instancing of all creature parts
 - User skins under `models/skins/user/`
 - Animated pose on palette icons (static parts preview only)
+
+## Canonical rigid reference mobs (`rigid_demo_*`)
+
+Three spawnable species document the **rigid_voxels** pipeline while the main catalog uses
+`gltf_skeleton`. See [CREATURE_BACKENDS.md](CREATURE_BACKENDS.md).
+
+| id | Habitat | Archetype | Presenter |
+|----|---------|-----------|-----------|
+| `rigid_demo_walker` | terrestrial | `terrestrial_quadruped` | `TerrestrialQuadrupedPosePresenter` |
+| `rigid_demo_flyer` | aerial | `aerial` | `AerialPosePresenter` |
+| `rigid_demo_swimmer` | aquatic | `aquatic` | `AquaticPosePresenter` |
+
+Assets: `models/creatures/rigid_demo_<role>/creature.json` with inline `visual.parts[]` and
+placeholder PNGs under `textures/`. `model_yaw_offset_deg` is applied in
+`CreatureVisualRigid` via `creature.GetModelYawOffsetDeg()`.
+
+Smoke (offline):
+
+```powershell
+python tools/smoke_creature_rigid_demo.py
+```
 
 See also: [CREATURE_CATALOG.md](CREATURE_CATALOG.md).

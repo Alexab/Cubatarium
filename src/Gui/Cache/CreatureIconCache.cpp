@@ -156,6 +156,12 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     return 0;
   }
 
+  if (const GLuint direct = Preview->TryGetDirectSpeciesIcon(speciesId))
+  {
+    SpeciesCache[speciesId] = direct;
+    return direct;
+  }
+
   GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize, kIconYaw,
                                               kIconPitch);
   if (tex == 0)

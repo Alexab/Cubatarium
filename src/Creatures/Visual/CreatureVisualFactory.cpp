@@ -1,12 +1,10 @@
-#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureVisual.h"
-#include "Creatures/Visual/CreatureVisualSkeletalGeo.h"
 #include "Creatures/Visual/CreatureVisualGltf.h"
 #include "Creatures/Visual/CreatureVisualRigid.h"
-#include <iostream>
+#include "Creatures/Visual/CreatureVisualSkeletalGeo.h"
 #include <memory>
-#include <unordered_set>
 
 namespace cutum
 {
@@ -19,15 +17,7 @@ CreateCreatureVisual(const CreatureDefinition &def)
   case CreatureVisualBackend::SkeletalGeo:
     return CreateCreatureVisualSkeletalGeo();
   case CreatureVisualBackend::GltfSkeleton:
-  {
-    static std::unordered_set<std::string> logged;
-    if (logged.insert(def.Id).second)
-    {
-      std::cerr << "UCreatureVisual: gltf_skeleton stub for " << def.Id
-                << std::endl;
-    }
-    return std::make_unique<UCreatureVisualGltf>();
-  }
+    return CreateCreatureVisualGltf();
   default:
     return std::make_unique<UCreatureVisualRigid>();
   }

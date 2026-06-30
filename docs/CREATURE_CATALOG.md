@@ -52,6 +52,16 @@ models/skins/<skin_id>/textures/diffuse.png
 
 Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 
+## Visual backends (ship set)
+
+| Backend | Count | Species | Notes |
+|---------|-------|---------|-------|
+| `gltf_skeleton` | 36 | Luanti mobs migrated from rigid boxes | `model.gltf` + `model.bin`; 5 yaml `.b3d` species use skinned mesh export |
+| `skeletal_geo` | 16 | Tier A/B (cow, sheep, human, zombie, …) | Bedrock-style `geometry.geo.json` |
+| `rigid_voxels` | 3 | `rigid_demo_walker`, `rigid_demo_flyer`, `rigid_demo_swimmer` | Canonical rigid reference; see [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md) |
+
+Regenerate glTF from b3d: `python tools/convert_creature_mesh_to_gltf.py --all-with-b3d`. Smoke: `python tools/smoke_creature_rigid_demo.py`, `python tools/render_creature_preview_gltf.py`.
+
 ## JSON reference
 
 ### `creature.json`

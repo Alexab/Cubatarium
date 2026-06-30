@@ -1,4 +1,5 @@
 #include "Activity/Agents/WanderActivityAgent.h"
+#include "Creatures/Core/CreatureIntent.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -142,6 +143,17 @@ void UWanderActivityAgent::Tick(IWorldPerception &perception,
       moveSpeed = snapshot->locomotion.walkSpeed;
     }
     intent.moveSpeed = moveSpeed;
+    if (glm::length(st.direction) > 1e-4f)
+    {
+      if (snapshot->habitat == CreatureHabitat::Aerial)
+      {
+        intent.suggestedAnim = LocomotionState::Fly;
+      }
+      else
+      {
+        intent.suggestedAnim = LocomotionState::Walk;
+      }
+    }
     intent.clearOnApply = false;
     sink.SetIntent(Id, intent);
   }
