@@ -65,13 +65,13 @@ void ApplyBetaRetroDefaults(ProceduralSettings &s)
   s.Tuning.decorationDensity = 0.6f;
 }
 
-std::unique_ptr<IWorldGenPipeline> MakeComposable(WorldGenContext ctx,
+std::unique_ptr<IUWorldGenPipeline> MakeComposable(WorldGenContext ctx,
                                                   ComposableWorldGenConfig config)
 {
   return std::make_unique<UComposableWorldGenerator>(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateFlat(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateFlat(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::Flat;
@@ -79,7 +79,7 @@ std::unique_ptr<IWorldGenPipeline> CreateFlat(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::LegacyHash;
@@ -87,7 +87,7 @@ std::unique_ptr<IWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateHills(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateHills(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -96,7 +96,7 @@ std::unique_ptr<IWorldGenPipeline> CreateHills(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateMountains(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateMountains(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -105,7 +105,7 @@ std::unique_ptr<IWorldGenPipeline> CreateMountains(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -124,7 +124,7 @@ std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -230,7 +230,7 @@ int UWorldGeneratorRegistry::IndexOf(ProceduralGenerator id)
   return 0;
 }
 
-std::unique_ptr<IWorldGenPipeline> UWorldGeneratorRegistry::Create(
+std::unique_ptr<IUWorldGenPipeline> UWorldGeneratorRegistry::Create(
     WorldGenContext ctx)
 {
   const WorldGeneratorDescriptor *descriptor = Find(ctx.Settings.Generator);

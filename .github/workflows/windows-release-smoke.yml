@@ -69,6 +69,10 @@ jobs:
         shell: pwsh
         run: python tools/audit_style.py
 
+      - name: Module include rules
+        shell: pwsh
+        run: python tools/audit/check_include_rules.py
+
       - name: clang-format (changed src files)
         shell: pwsh
         run: python tools/audit_clang_format.py

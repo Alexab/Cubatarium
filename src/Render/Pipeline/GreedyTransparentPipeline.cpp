@@ -38,7 +38,7 @@ void ApplyPassGlState(const TransparentPassDesc &pass)
 
 } // namespace
 
-void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend &backend,
+void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
                                       const GreedyTransparentDrawContext &ctx,
                                       const GreedyTransparentSettings &settings)
 {

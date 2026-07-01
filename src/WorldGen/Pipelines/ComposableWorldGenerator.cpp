@@ -17,7 +17,7 @@ namespace cutum
 // structures -> lava -> fire.
 UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
                                                    ComposableWorldGenConfig config)
-    : IWorldGenPipeline(ctx), Config(ApplyPackPipelineMask(config)),
+    : IUWorldGenPipeline(ctx), Config(ApplyPackPipelineMask(config)),
       StageMask(BuildWorldGenStageMask(config, ctx.Settings,
                                        UWorldGenPack::Get().Pipeline))
 {

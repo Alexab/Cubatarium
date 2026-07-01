@@ -29,7 +29,7 @@ UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
 
 UCreature::~UCreature() = default;
 
-void UCreature::SetVisual(std::unique_ptr<ICreatureVisual> visual)
+void UCreature::SetVisual(std::unique_ptr<IUCreatureVisual> visual)
 {
   Visual = std::move(visual);
 }

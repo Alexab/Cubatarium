@@ -1,13 +1,16 @@
 #include "World/Core/WorldCooperativeOps.h"
+#include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -31,17 +34,17 @@ constexpr int kMeshWarmupMaxTicks = 50000;
 void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
 {
   world.BlockCounter.MarkNeedsRecount();
-  if (world.MeshCache.GetDirtyCount() == 0 &&
-      !world.MeshCache.HasPendingAsyncMeshWork())
+  if (world.MeshService->GetDirtyCount() == 0 &&
+      !world.MeshService->HasPendingAsyncMeshWork())
   {
     world.BlockWorld.GetChunkManager().ForEachChunk(
         [&](const UChunk &chunk)
-        { world.MeshCache.MarkDirty(chunk.GetCoord()); });
+        { world.MeshService->MarkDirty(chunk.GetCoord()); });
   }
   MeshWarmupTicks = 0;
   MeshWarmupStartPending =
-      world.MeshCache.GetDirtyCount() +
-      static_cast<size_t>(world.MeshCache.GetAsyncInFlightCount());
+      world.MeshService->GetDirtyCount() +
+      static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
   if (MeshWarmupStartPending == 0)
   {
     MeshWarmupStartPending = 1;
@@ -50,7 +53,7 @@ void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
   MeshWarmupFinalizeOnly = false;
 }
 
-void UWorldCooperativeSession::Report(IProgressSink &sink,
+void UWorldCooperativeSession::Report(IUProgressSink &sink,
                                       const std::string &phaseId, float fraction,
                                       const std::string &message) const
 {
@@ -190,11 +193,11 @@ bool UWorldCooperativeSession::LoadOneChunkFile(
     const int cx = std::stoi(stem.substr(0, u1));
     const int cy = std::stoi(stem.substr(u1 + 1, u2 - u1 - 1));
     const int cz = std::stoi(stem.substr(u2 + 1));
-    if (!world.ChunkStorage || !world.BlockRegistry)
+    if (!world.BlockRegistry)
     {
       return false;
     }
-    const int placed = world.ChunkStorage->LoadChunk(
+    const int placed = world.GetChunkStorage().LoadChunk(
         glm::ivec3(cx, cy, cz), world.BlockWorld, FolderPath,
         *world.BlockRegistry);
     if (placed >= 0)
@@ -229,7 +232,7 @@ bool UWorldCooperativeSession::AdvanceGeneration(UWorld &world, int budget)
   return GenColumnIndex >= GenColumnQueue.size();
 }
 
-bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
+bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                     int chunkBudget)
 {
   if (!Active || Failed)
@@ -245,7 +248,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   {
     if (Kind == WorldCoopKind::Load)
     {
-      world.WorldFolderPath = FolderPath;
+      world.SetWorldFolderPath(FolderPath);
       world.BlockWorldReady = false;
       world.LoadedFromChunkSave = false;
       world.BlockWorld.Clear();
@@ -261,7 +264,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     {
       world.RefreshBlockRegistry();
       std::filesystem::create_directories(FolderPath);
-      world.WorldFolderPath = FolderPath;
+      world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
       CurrentPhase = Phase::ScanSaveChunks;
       Report(sink, "init", 0.f, "Preparing save...");
@@ -295,19 +298,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   }
   case Phase::Entities:
   {
-    world.Creatures.clear();
-    world.NextCreatureId = 1;
-    world.PlayerCreatureId = 0;
-    world.ControlledCreatureId = 0;
+    world.ResetCreaturesBeforeEntityLoad();
     world.LoadUsers(FolderPath + "/users.json");
     world.LoadCreatures(FolderPath + "/creatures.json");
     world.LinkUsersToPlayerCreatures();
     world.RefreshBlockRegistry();
-    if (world.ChunkStorage)
-    {
-      world.ChunkStorage->ApplyStorageMarkerFromDisk(FolderPath);
-    }
-    SpatialStreamingLoad = world.StreamingEnabled && world.HasPersistedSave;
+    world.GetChunkStorage().ApplyStorageMarkerFromDisk(FolderPath);
+    SpatialStreamingLoad = world.IsStreamingEnabled() && world.HasPersistedSave;
     SpatialRadius = world.RenderDistanceChunks + 1;
     const glm::ivec3 spawnBlock = WorldPosToBlock(world.SpawnPoint);
     SpatialCenter = UChunkManager::WorldToChunk(spawnBlock);
@@ -349,7 +346,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
       const size_t blocksInWorld = world.BlockWorld.CountNonAir();
       world.LoadedFromChunkSave = world.HasPersistedSave || ChunkFilesRead > 0 ||
                                   VoxelsFromChunkFiles > 0 || blocksInWorld > 0;
-      world.AllowProceduralFill = world.StreamingEnabled;
+      world.AllowProceduralFill = world.IsStreamingEnabled();
       if (SpatialStreamingLoad && world.LoadedFromChunkSave)
       {
         SpatialDx = -SpatialRadius;
@@ -379,9 +376,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
         BeginMeshWarmup(world);
         break;
       }
-      if (world.ChunkStorage && world.BlockRegistry)
+      if (world.BlockRegistry)
       {
-        world.ChunkStorage->LoadTerrainColumn(
+        world.GetChunkStorage().LoadTerrainColumn(
             glm::ivec3(SpatialCenter.x + SpatialDx, 0,
                        SpatialCenter.z + SpatialDz),
             world.BlockWorld, FolderPath, *world.BlockRegistry,
@@ -414,18 +411,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   {
     if (world.BlockRegistry)
     {
-      const int mesh_budget = std::min(128, std::max(budget * 8, 32));
-      world.MeshCache.RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
-                                         mesh_budget, mesh_budget);
-      world.MeshCache.DrainAsyncMeshResults(world.BlockWorld,
-                                            *world.BlockRegistry, mesh_budget);
+      const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+          UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
+      world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
+                                            mesh_budget.MaxMeshDrain,
+                                            mesh_budget.MaxMeshSchedule);
+      world.MeshService->DrainAsyncMeshResults(world.BlockWorld,
+                                               *world.BlockRegistry,
+                                               mesh_budget.MaxMeshDrain);
     }
     ++MeshWarmupTicks;
-    const bool mesh_done = !world.MeshCache.HasPendingDirty() &&
-                           !world.MeshCache.HasPendingAsyncMeshWork();
+    const bool mesh_done = !world.MeshService->HasPendingDirty() &&
+                           !world.MeshService->HasPendingAsyncMeshWork();
     const size_t pending_now =
-        world.MeshCache.GetDirtyCount() +
-        static_cast<size_t>(world.MeshCache.GetAsyncInFlightCount());
+        world.MeshService->GetDirtyCount() +
+        static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
     const float mesh_inner =
         mesh_done ? 1.0f
                   : 1.0f - static_cast<float>(pending_now) /
@@ -464,7 +464,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     else if (MeshWarmupTicks >= kMeshWarmupMaxTicks)
     {
       std::cerr << "MeshWarmup: timeout with pending dirty="
-                << world.MeshCache.GetDirtyCount() << std::endl;
+                << world.MeshService->GetDirtyCount() << std::endl;
       if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
       {
         world.FinalizePlayerAfterWorldLoad();
@@ -529,12 +529,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   case Phase::FinalizeWorld:
   {
     world.InitStreamerCallbacks();
-    if (world.Streamer && world.LoadedFromChunkSave)
+    if (world.Streaming->HasStreamer() && world.LoadedFromChunkSave)
     {
-      world.Streamer->MarkPersistedColumnsFromWorld();
+      world.Streaming->MarkPersistedColumnsFromWorld();
     }
-    if (world.MeshCache.HasPendingDirty() ||
-        world.MeshCache.HasPendingAsyncMeshWork())
+    if (world.MeshService->HasPendingDirty() ||
+        world.MeshService->HasPendingAsyncMeshWork())
     {
       MeshWarmupFinalizeOnly = true;
       BeginMeshWarmup(world);
@@ -558,7 +558,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   }
   case Phase::SaveChunks:
   {
-    if (!world.ChunkStorage || !world.BlockRegistry)
+    if (!world.BlockRegistry)
     {
       CurrentPhase = Phase::SaveMetadata;
       break;
@@ -570,8 +570,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
       const UChunk *chunk = world.BlockWorld.GetChunkManager().GetChunk(coord);
       if (chunk)
       {
-        world.ChunkStorage->SaveChunk(coord, *chunk, FolderPath,
-                                      *world.BlockRegistry);
+        world.GetChunkStorage().SaveChunk(coord, *chunk, FolderPath,
+                                          *world.BlockRegistry);
       }
       ++saved;
     }
@@ -591,10 +591,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
   }
   case Phase::SaveMetadata:
   {
-    if (world.ChunkStorage)
-    {
-      world.ChunkStorage->WriteStorageMarker(FolderPath);
-    }
+    world.GetChunkStorage().WriteStorageMarker(FolderPath);
     world.SaveUsers(FolderPath + "/users.json");
     world.SaveCreatures(FolderPath + "/creatures.json");
     world.SaveWorldData(FolderPath + "/world_data.json");
@@ -626,7 +623,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IProgressSink &sink,
     world.WorldName = TargetWorldName;
     world.WorldGenSetsData = BuildDefaultWorldGenSets();
     world.RebuildResolvedObjectFeatures();
-    world.AllowProceduralFill = world.StreamingEnabled;
+    world.AllowProceduralFill = world.IsStreamingEnabled();
     world.InitStreamerCallbacks();
     BeginMeshWarmup(world);
     Report(sink, "mesh_warmup", 0.82f, "Building terrain meshes...");

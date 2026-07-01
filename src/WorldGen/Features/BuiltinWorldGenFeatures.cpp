@@ -8,7 +8,7 @@ namespace cutum
 namespace
 {
 
-class ULavaPoolBuiltinFeature : public IBuiltinWorldGenFeature
+class ULavaPoolBuiltinFeature : public IUBuiltinWorldGenFeature
 {
 public:
   WorldGenStageId StageId() const override
@@ -24,7 +24,7 @@ public:
   }
 };
 
-class UFirePatchBuiltinFeature : public IBuiltinWorldGenFeature
+class UFirePatchBuiltinFeature : public IUBuiltinWorldGenFeature
 {
 public:
   WorldGenStageId StageId() const override
@@ -51,14 +51,14 @@ public:
 ULavaPoolBuiltinFeature gLavaPoolFeature;
 UFirePatchBuiltinFeature gFirePatchFeature;
 
-const std::array<const IBuiltinWorldGenFeature *, 2> kBuiltinFeatures = {
+const std::array<const IUBuiltinWorldGenFeature *, 2> kBuiltinFeatures = {
     &gLavaPoolFeature, &gFirePatchFeature};
 
 } // namespace
 
-const IBuiltinWorldGenFeature *BuiltinWorldGenFeatureFor(WorldGenStageId id)
+const IUBuiltinWorldGenFeature *BuiltinWorldGenFeatureFor(WorldGenStageId id)
 {
-  for (const IBuiltinWorldGenFeature *feature : kBuiltinFeatures)
+  for (const IUBuiltinWorldGenFeature *feature : kBuiltinFeatures)
   {
     if (feature->StageId() == id)
     {

@@ -5,7 +5,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiCheckbox.h"
@@ -51,7 +51,7 @@ GuiGridSpec BuildTwoColumnSpec(const GuiMetrics &metrics, int width)
 
 } // namespace
 
-USettingsScreen::USettingsScreen(IGuiMenuHost *host) : Host(host) {}
+USettingsScreen::USettingsScreen(IUGuiMenuHost *host) : Host(host) {}
 
 USettingsScreen::~USettingsScreen() = default;
 

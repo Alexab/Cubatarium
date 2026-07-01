@@ -107,7 +107,7 @@ void RunBuiltinStage(UComposableWorldGenerator &generator,
                      const ColumnSampleContext &sample, int world_x, int world_z,
                      PostTerrainState &, WorldGenStageId stage_id)
 {
-  if (const IBuiltinWorldGenFeature *feature =
+  if (const IUBuiltinWorldGenFeature *feature =
           BuiltinWorldGenFeatureFor(stage_id))
   {
     feature->TryPlace(generator.GetContext(), sample, world_x, world_z);

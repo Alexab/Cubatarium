@@ -60,25 +60,25 @@ flowchart TB
 | Модуль | Ответственность |
 |--------|----------------|
 | **`Creature`** | Состояние тела, bounds, инвентарь, `CreatureLocomotionController`, визуал. **Не** содержит стратегический ИИ (только применяет `Intent` / player input). |
-| **`ICreatureActivityAgent`** (напр. `WanderActivityAgent`) | Владеет списком `CreatureId` с одним `behavior` из каталога; в `Tick` строит решение и вызывает `ICreatureActivitySink::SetIntent`. |
+| **`IUCreatureActivityAgent`** (напр. `WanderActivityAgent`) | Владеет списком `CreatureId` с одним `behavior` из каталога; в `Tick` строит решение и вызывает `IUCreatureActivitySink::SetIntent`. |
 | **`CreatureActivityDirector`** | Реестр агентов по `behaviorId`; membership при spawn/load; **`TickAgents(perception, sink, dt)`**. |
-| **`World`** | Реализует **`IWorldPerception`**; в `DoMovement` создаёт **`WorldCreatureActivitySink`** и тикает директор **перед** `ExecuteIntent`. |
+| **`World`** | Реализует **`IUWorldPerception`**; в `DoMovement` создаёт **`WorldCreatureActivitySink`** и тикает директор **перед** `ExecuteIntent`. |
 | **Управляемая сущность** | При `possess` / ввод игрока агент **не** перезаписывает intent (или агент снимает существо с своего списка на время possess). |
 
 ### Направление данных
 
 - **Мир → агенты:** вызов `agent->Tick(perception, dt)` (pull со стороны мира, как вы описали: «мир опрашивает агентов»).
-- **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IWorldPerception` + **запись intent** в подчинённых `Creature`.
+- **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IUWorldPerception` + **запись intent** в подчинённых `Creature`.
 - **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` / locomotion исполняет движение через `World::ResolveMovement`.
 
 ### Где живёт ИИ
 
 | Слой | Где | Частота |
 |------|-----|---------|
-| Стратегия (куда патрулировать, агро) | **`ICreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
+| Стратегия (куда патрулировать, агро) | **`IUCreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
 | Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + `World`** | каждый кадр |
-| Presentation (поза частей, walk cycle) | **`src/Pose/*` + `ICreatureVisual`** | каждый кадр (render) |
+| Presentation (поза частей, walk cycle) | **`src/Pose/*` + `IUCreatureVisual`** | каждый кадр (render) |
 
 ИИ **не** внутри `Creature` как монолит; **мозг** — у агента (или у plug-in мозга агента). Существо — **исполнитель** намерений + особый случай **player input** для controlled.
 
@@ -99,9 +99,9 @@ flowchart TB
 | Тип | Файл | Назначение |
 |-----|------|------------|
 | `CreatureActivityTypes` | `CreatureActivityTypes.h` | `CreatureId`, `CreatureActivityView`, `ControlledCreatureInfo` |
-| `IWorldPerception` | `IWorldPerception.h` | `QueryControlledCreatureInfo()`, `CreaturesInRadius()` |
-| `ICreatureActivitySink` | `ICreatureActivitySink.h` | `GetCreatureView`, `GetBehaviorSnapshot`, `SetIntent` |
-| `ICreatureActivityAgent` | `ICreatureActivityAgent.h` | `GetBehaviorId()`, membership, `Tick` |
+| `IUWorldPerception` | `IUWorldPerception.h` | `QueryControlledCreatureInfo()`, `CreaturesInRadius()` |
+| `IUCreatureActivitySink` | `IUCreatureActivitySink.h` | `GetCreatureView`, `GetBehaviorSnapshot`, `SetIntent` |
+| `IUCreatureActivityAgent` | `IUCreatureActivityAgent.h` | `GetBehaviorId()`, membership, `Tick` |
 | `CreatureActivityDirector` | `CreatureActivityDirector.*` | Реестр агентов, `OnCreatureAdded/Removed`, `TickAgents` |
 | `WorldCreatureActivitySink` | `WorldCreatureActivitySink.*` | Адаптер к `World` / `Creature` |
 | `RegisterDefaultCreatureActivityAgents` | `CreatureActivityRegistry.*` | Регистрация `WanderActivityAgent` для `behavior: wander` |
@@ -132,9 +132,9 @@ Controlled и possessed **не** получают intent от агентов в 
 ```
 src/Activity/
   CreatureActivityTypes.h
-  ICreatureActivitySink.h
-  IWorldPerception.h
-  ICreatureActivityAgent.h
+  IUCreatureActivitySink.h
+  IUWorldPerception.h
+  IUCreatureActivityAgent.h
   CreatureActivityDirector.h
   CreatureActivityDirector.cpp
   WorldCreatureActivitySink.h
@@ -152,9 +152,9 @@ src/Activity/
 
 1. ~~`CreatureIntent` + `ExecuteIntent`~~ — сделано.
 2. ~~`CreatureActivityDirector` + `WanderActivityAgent`~~ — сделано.
-3. ~~`IWorldPerception` (controlled + существа в радиусе)~~ — сделано.
+3. ~~`IUWorldPerception` (controlled + существа в радиусе)~~ — сделано.
 4. Региональные агенты по чанкам; лимит существ на агент.
-5. `SampleBlocks` в `IWorldPerception`; pluggable `IAgentBrain`; throttle `Tick`.
+5. `SampleBlocks` в `IUWorldPerception`; pluggable `IAgentBrain`; throttle `Tick`.
 6. Долгосрочно: локальные belief / gossip.
 
 ---

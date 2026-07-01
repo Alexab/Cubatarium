@@ -8,7 +8,7 @@
 namespace cutum
 {
 
-class IGuiMenuHost;
+class IUGuiMenuHost;
 class UResourcePackPickerForm;
 class UGuiPanel;
 class UGuiWindow;
@@ -19,7 +19,7 @@ class UGuiLabel;
 class UWorldResourcePacksScreen : public UGuiScreenBase
 {
 public:
-  UWorldResourcePacksScreen(IGuiMenuHost *host,
+  UWorldResourcePacksScreen(IUGuiMenuHost *host,
                             std::function<void()> onClose);
   ~UWorldResourcePacksScreen();
 
@@ -35,7 +35,7 @@ private:
   int MeasureBodyHeight(int width) const;
   void OnApply();
 
-  IGuiMenuHost *Host{nullptr};
+  IUGuiMenuHost *Host{nullptr};
   std::function<void()> OnClose;
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};

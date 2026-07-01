@@ -5,6 +5,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRenderStats.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Game/Interfaces/IUGameContent.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL Types
@@ -14,12 +15,14 @@ typedef int GLint;
 
 #include "App/Settings/RenderSettings.h"
 #include "Render/Engine/AnimationClock.h"
+#include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
-#include "Render/Pipeline/IGreedyTransparentBackend.h"
+#include "Render/Pipeline/IUGreedyTransparentBackend.h"
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
@@ -35,7 +38,7 @@ typedef int GLint;
 namespace cutum
 {
 
-class UCore;
+class IUGameContent;
 class UCreatureTextureStorage;
 
 // Structure for batch rendering
@@ -48,7 +51,7 @@ struct RenderBatch
   std::vector<glm::vec2> quadSizes;
 };
 
-class UGeometryEngine : public IGreedyTransparentBackend
+class UGeometryEngine : public IUGreedyTransparentBackend
 {
 public:
   UGeometryEngine(std::shared_ptr<UWorld> world,
@@ -88,8 +91,9 @@ public:
   /// Unit cube wireframe (1x1 centered) with given MVP and color.
   void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color);
 
-  void
-  SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
+  void SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
+  void SetGameContent(const IUGameContent *content) { GameContent = content; }
+  const IUGameContent *GetGameContent() const { return GameContent; }
   std::shared_ptr<UCreatureTextureStorage> GetCreatureTextureStorage() const
   {
     return CreatureTextureStorage;
@@ -131,7 +135,6 @@ private:
   void DestroyFaceQuadBuffers();
   bool InitGreedyMeshBuffers();
   void DestroyGreedyMeshBuffers();
-  struct GreedyGpuPassCache;
   void SetBlockAnimUniforms(const std::shared_ptr<UShaderProgram> &shader,
                             BlockId blockId,
                             const std::map<size_t, UTextureCube> &textures);
@@ -229,6 +232,8 @@ private:
       instancedFaceShader; // Instanced greedy face quads
   std::shared_ptr<UShaderProgram>
       greedyShader; // Greedy world mesh (UV in fragment shader)
+  std::shared_ptr<UShaderProgram>
+      crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
       outlineShader; // Shader for block selection outline
@@ -239,6 +244,7 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorage;
   std::shared_ptr<UWorld> WorldInstance;
+  const IUGameContent *GameContent{nullptr};
   std::shared_ptr<UTextRenderer> textRenderer;
 
   // performance data
@@ -279,31 +285,22 @@ private:
   RenderSettings Render;
   UAnimationClock AnimationClock;
 
-  struct GreedyGpuBatch
-  {
-    BlockId blockId{BLOCK_AIR};
-    size_t vertexCount{0};
-    size_t indexCount{0};
-    GLuint vbo{0};
-    GLuint ebo{0};
-    GLsizei indexCountGl{0};
-  };
-  struct GreedyGpuPassCache
-  {
-    std::vector<GreedyGpuBatch> batches;
-    uint64_t meshRevision{0};
-    uint64_t cullRevision{0};
-    uint64_t sortRevision{0};
-  };
+  UGreedyGpuBackend GreedyGpuBackend;
+  UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
+  CrossGpuPassCache CrossGpuPass;
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   void DrawGreedyOpaqueBatches(const std::vector<GreedyMeshBatch> &batches,
                                const glm::mat4 &vp,
                                const std::map<size_t, UTextureCube> &textures,
                                uint64_t meshRevision, uint64_t cullRevision);
+  void DrawCrossInstancedBatches(
+      const std::vector<CrossInstanceBatch> &batches, const glm::mat4 &vp,
+      const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+      uint64_t cullRevision);
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);
@@ -312,12 +309,6 @@ private:
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
-  void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch> &batches,
-                               uint64_t meshRevision, uint64_t cullRevision,
-                               GreedyGpuPassCache &cache,
-                               uint64_t sortRevision);
-  void DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache);
-  void DestroyGreedyGpuBatches();
 
   std::string TransientMessage;
   double TransientMessageUntil{0.0};

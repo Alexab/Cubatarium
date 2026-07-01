@@ -1,6 +1,6 @@
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
-#include "WorldGen/Core/IColumnWriter.h"
+#include "WorldGen/Core/IUColumnWriter.h"
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
@@ -16,7 +16,7 @@ void UColumnGenerationService::GenerateColumn(
 }
 
 void UColumnGenerationService::GenerateColumn(
-    UComposableWorldGenerator &generator, IColumnWriter &writer, int world_x,
+    UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
     int world_z)
 {
   WorldGenContext &ctx = generator.GetContext();

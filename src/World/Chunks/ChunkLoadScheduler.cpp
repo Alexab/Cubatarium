@@ -6,7 +6,7 @@
 namespace cutum
 {
 
-UChunkLoadScheduler::UChunkLoadScheduler(IChunkPopulator &populator,
+UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
     : Populator(populator), Tokens(tokens)
 {

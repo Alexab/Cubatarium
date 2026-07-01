@@ -9,9 +9,9 @@
 namespace cutum
 {
 
-std::unique_ptr<ICreatureVisual> CreateCreatureVisualGltf();
+std::unique_ptr<IUCreatureVisual> CreateCreatureVisualGltf();
 
-class UCreatureVisualGltf : public ICreatureVisual
+class UCreatureVisualGltf : public IUCreatureVisual
 {
 public:
   void UpdatePose(const UCreature &creature,

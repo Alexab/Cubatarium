@@ -7,15 +7,15 @@
 namespace cutum
 {
 
-class IBuiltinWorldGenFeature
+class IUBuiltinWorldGenFeature
 {
 public:
-  virtual ~IBuiltinWorldGenFeature() = default;
+  virtual ~IUBuiltinWorldGenFeature() = default;
   virtual WorldGenStageId StageId() const = 0;
   virtual bool TryPlace(WorldGenContext &ctx, const ColumnSampleContext &sample,
                         int world_x, int world_z) const = 0;
 };
 
-const IBuiltinWorldGenFeature *BuiltinWorldGenFeatureFor(WorldGenStageId id);
+const IUBuiltinWorldGenFeature *BuiltinWorldGenFeatureFor(WorldGenStageId id);
 
 } // namespace cutum

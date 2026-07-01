@@ -26,7 +26,7 @@ bool BackendAssetsAvailable(const CreatureDefinition &def,
   }
 }
 
-std::unique_ptr<ICreatureVisual> CreateForBackend(CreatureVisualBackend backend)
+std::unique_ptr<IUCreatureVisual> CreateForBackend(CreatureVisualBackend backend)
 {
   switch (backend)
   {
@@ -41,7 +41,7 @@ std::unique_ptr<ICreatureVisual> CreateForBackend(CreatureVisualBackend backend)
 
 } // namespace
 
-std::unique_ptr<ICreatureVisual>
+std::unique_ptr<IUCreatureVisual>
 CreateCreatureVisual(const CreatureDefinition &def)
 {
   CreatureVisualBackend backend =

@@ -1,5 +1,6 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "App/Core.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -12,7 +13,7 @@
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
-#include "Pose/ICreaturePosePresenter.h"
+#include "Pose/IUCreaturePosePresenter.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
@@ -25,6 +26,7 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
@@ -283,6 +285,15 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  crossInstancedShader = shaderManager->CreateShader(
+      "cross_instanced", "shaders/vshader_cross_instanced.glsl",
+      "shaders/fshader_greedy.glsl");
+  if (!crossInstancedShader || !crossInstancedShader->IsValid())
+  {
+    std::cerr << "Failed to create cross instanced shader" << std::endl;
+    return false;
+  }
+
   outlineShader = shaderManager->CreateShader("outline", "shaders/vshader.glsl",
                                               "shaders/fshader_2d.glsl");
   if (!outlineShader || !outlineShader->IsValid())
@@ -367,35 +378,46 @@ void UGeometryEngine::DrawCubeGeometry()
   }
 
   auto textures = TextureCubeStorageInstance->GetTextures();
-  const uint64_t meshRevision = WorldInstance->GetMeshRevision();
+  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
+  const uint64_t meshRevision = mesh_service.GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
-      useGreedyMesh ? WorldInstance->GetGreedyVertexCount()
-                    : WorldInstance->GetBlockRenderInstances().size();
+      useGreedyMesh
+          ? mesh_service.GetGreedyVertexCount()
+          : mesh_service
+                .PrepareFaceInstances(WorldInstance->GetBlockWorld(),
+                                      WorldInstance->GetBlockRegistry(), camera)
+                .size();
   const bool useBatchCache = Render.BatchCache && !useGreedyMesh;
 
   if (useGreedyMesh)
   {
-    const auto &greedyBatches = WorldInstance->GetGreedyRenderBatches();
+    const UWorldMeshService::GreedyDrawSnapshot draw =
+        mesh_service.PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                       WorldInstance->GetBlockRegistry(),
+                                       camera);
+    const auto &greedyBatches = draw.batches;
     if (!useBatchCache || !BlockBatchesValid ||
         greedyBatches.size() != CachedInstanceCount ||
-        meshRevision != CachedMeshRevision)
+        draw.meshRevision != CachedMeshRevision)
     {
       CachedInstanceCount = greedyBatches.size();
-      CachedMeshRevision = meshRevision;
+      CachedMeshRevision = draw.meshRevision;
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    const uint64_t cullRev = WorldInstance->GetCullRevision();
-    DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
+    DrawGreedyOpaqueBatches(greedyBatches, vp, textures, draw.meshRevision,
+                            draw.cullRevision);
+    DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+                              draw.meshRevision, draw.cullRevision);
     GLboolean blendWasEnabled;
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     GreedyTransparentDrawContext tctx{greedyBatches,
                                       vp,
-                                      meshRevision,
-                                      cullRev,
+                                      draw.meshRevision,
+                                      draw.cullRevision,
                                       camera->GetPosition(),
                                       WorldInstance->GetBlockRegistry(),
                                       textures};
@@ -415,7 +437,9 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = WorldInstance->GetBlockRenderInstances();
+    const auto &blockInstances = mesh_service.PrepareFaceInstances(
+        WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
+        camera);
     if (!useBatchCache || !BlockBatchesValid ||
         renderCount != CachedInstanceCount ||
         meshRevision != CachedMeshRevision)
@@ -456,7 +480,8 @@ void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
   Render = settings;
   SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
-  DestroyGreedyGpuBatches();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
   DestroyFaceQuadBuffers();
 }
 
@@ -608,78 +633,6 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   activeShader->Unuse();
-}
-
-void UGeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache)
-{
-  for (GreedyGpuBatch &batch : cache.batches)
-  {
-    if (batch.ebo)
-    {
-      glDeleteBuffers(1, &batch.ebo);
-      batch.ebo = 0;
-    }
-    if (batch.vbo)
-    {
-      glDeleteBuffers(1, &batch.vbo);
-      batch.vbo = 0;
-    }
-  }
-  cache.batches.clear();
-  cache.meshRevision = 0;
-  cache.cullRevision = 0;
-  cache.sortRevision = 0;
-}
-
-void UGeometryEngine::DestroyGreedyGpuBatches()
-{
-  DestroyGreedyGpuPassCache(GreedyGpuOpaque);
-  DestroyGreedyGpuPassCache(GreedyGpuCutout);
-  DestroyGreedyGpuPassCache(GreedyGpuTransparent);
-}
-
-void UGeometryEngine::RefreshGreedyGpuBatches(
-    const std::vector<GreedyMeshBatch> &batches, uint64_t meshRevision,
-    uint64_t cullRevision, GreedyGpuPassCache &cache, uint64_t sortRevision)
-{
-  if (meshRevision == cache.meshRevision &&
-      cullRevision == cache.cullRevision && sortRevision == cache.sortRevision)
-  {
-    return;
-  }
-
-  DestroyGreedyGpuPassCache(cache);
-  cache.batches.reserve(batches.size());
-
-  for (const GreedyMeshBatch &batch : batches)
-  {
-    if (batch.vertices.empty() || batch.indices.empty())
-    {
-      continue;
-    }
-    GreedyGpuBatch gpu;
-    gpu.blockId = batch.blockId;
-    gpu.vertexCount = batch.vertices.size();
-    gpu.indexCount = batch.indices.size();
-    gpu.indexCountGl = static_cast<GLsizei>(batch.indices.size());
-    glGenBuffers(1, &gpu.vbo);
-    glGenBuffers(1, &gpu.ebo);
-    glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 batch.vertices.size() * sizeof(GreedyMeshVertex),
-                 batch.vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 batch.indices.size() * sizeof(uint32_t), batch.indices.data(),
-                 GL_STATIC_DRAW);
-    cache.batches.push_back(gpu);
-  }
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  cache.meshRevision = meshRevision;
-  cache.cullRevision = cullRevision;
-  cache.sortRevision = sortRevision;
 }
 
 void UGeometryEngine::SetBlockAnimUniforms(
@@ -900,26 +853,112 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
     return;
   }
 
-  const auto &greedyBatches = WorldInstance->GetGreedyRenderBatches();
-  const uint64_t meshRevision = WorldInstance->GetMeshRevision();
-  const uint64_t cullRev = WorldInstance->GetCullRevision();
+  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
+  const UWorldMeshService::GreedyDrawSnapshot draw =
+      mesh_service.PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                     WorldInstance->GetBlockRegistry(),
+                                     camera);
+  const auto &greedyBatches = draw.batches;
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
+  DrawGreedyOpaqueBatches(greedyBatches, vp, textures, draw.meshRevision,
+                          draw.cullRevision);
+  DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
+                            draw.cullRevision);
 
   GreedyTransparentDrawContext tctx{greedyBatches,
                                     vp,
-                                    meshRevision,
-                                    cullRev,
+                                    draw.meshRevision,
+                                    draw.cullRevision,
                                     camera->GetPosition(),
                                     WorldInstance->GetBlockRegistry(),
                                     textures};
   PrepareTransparent(tctx);
 
   CachedInstanceCount = greedyBatches.size();
-  CachedMeshRevision = meshRevision;
+  CachedMeshRevision = draw.meshRevision;
   BlockBatchesValid = true;
+}
+
+void UGeometryEngine::DrawCrossInstancedBatches(
+    const std::vector<CrossInstanceBatch> &batches, const glm::mat4 &vp,
+    const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+    uint64_t cullRevision)
+{
+  if (batches.empty())
+  {
+    return;
+  }
+  if (!CrossGpuBackend.EnsureTemplateMesh())
+  {
+    return;
+  }
+  if (!crossInstancedShader || !crossInstancedShader->IsValid())
+  {
+    return;
+  }
+
+  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision, cullRevision);
+  if (CrossGpuPass.batches.empty())
+  {
+    return;
+  }
+
+  GLboolean cullWasEnabled;
+  glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+  glDisable(GL_CULL_FACE);
+
+  crossInstancedShader->Use();
+  crossInstancedShader->SetMat4("mvp_matrix", vp);
+  crossInstancedShader->SetInt("texture0", 0);
+  SetGreedyShaderMode(crossInstancedShader, true, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    ApplyFogUniforms(crossInstancedShader, camera->GetPosition());
+  }
+  glActiveTexture(GL_TEXTURE0);
+
+  glBindVertexArray(CrossGpuBackend.GetTemplateVao());
+  const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
+  glEnableVertexAttribArray(3);
+  glVertexAttribDivisor(3, 1);
+  for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
+  {
+    if (gpu.instanceCount == 0 || gpu.instanceVbo == 0)
+    {
+      continue;
+    }
+    const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+    if (texIt == textures.end())
+    {
+      continue;
+    }
+    const GLuint textureId = texIt->second.GetTextureId();
+    if (textureId == 0)
+    {
+      continue;
+    }
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
+    glBindBuffer(GL_ARRAY_BUFFER, gpu.instanceVbo);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3),
+                          (void *)0);
+    glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr,
+                            static_cast<GLsizei>(gpu.instanceCount));
+  }
+  glVertexAttribDivisor(3, 0);
+  glDisableVertexAttribArray(3);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+  crossInstancedShader->Unuse();
+
+  if (cullWasEnabled)
+  {
+    glEnable(GL_CULL_FACE);
+  }
 }
 
 void UGeometryEngine::DrawGreedyOpaqueBatches(
@@ -948,8 +987,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
   if (!solid.empty())
   {
-    RefreshGreedyGpuBatches(solid, meshRevision, cullRevision, GreedyGpuOpaque,
-                            0);
+    GreedyGpuBackend.RefreshPass(GreedyGpuOpaque, solid, meshRevision,
+                                 cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
   }
@@ -958,8 +997,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
-    RefreshGreedyGpuBatches(cutout, meshRevision, cullRevision, GreedyGpuCutout,
-                            0);
+    GreedyGpuBackend.RefreshPass(GreedyGpuCutout, cutout, meshRevision,
+                                 cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
     if (cullWasEnabled)
@@ -989,14 +1028,14 @@ void UGeometryEngine::PrepareTransparent(
   }
   if (filtered.empty())
   {
-    GreedyGpuTransparent.batches.clear();
+    GreedyGpuBackend.DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
     return;
   }
   SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  RefreshGreedyGpuBatches(filtered, ctx.meshRevision, ctx.cullRevision,
-                          GreedyGpuTransparent, sortRevision);
+  GreedyGpuBackend.RefreshPass(GreedyGpuTransparent, filtered, ctx.meshRevision,
+                               ctx.cullRevision, sortRevision);
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }
@@ -1044,7 +1083,9 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
 
 void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
-  DestroyGreedyGpuBatches();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
+  CrossGpuBackend.DestroyAll(CrossGpuPass);
   if (greedyMeshEBO)
   {
     glDeleteBuffers(1, &greedyMeshEBO);
@@ -2438,7 +2479,7 @@ void UGeometryEngine::RenderCreatures()
           fallback.Id = animType;
           def = &fallback;
         }
-        if (ICreatureVisual *visual = creature.GetVisual())
+        if (IUCreatureVisual *visual = creature.GetVisual())
         {
           visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
           const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
@@ -2446,7 +2487,7 @@ void UGeometryEngine::RenderCreatures()
           if (ParseCreatureVisualBackend(def->visual.backend) ==
               CreatureVisualBackend::RigidVoxels)
           {
-            if (ICreaturePosePresenter *presenter =
+            if (IUCreaturePosePresenter *presenter =
                     WorldInstance->GetPosePresenterRegistry().Get(
                         facts.archetype))
             {

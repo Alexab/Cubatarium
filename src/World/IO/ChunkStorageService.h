@@ -66,11 +66,11 @@ public:
   void MarkColumnSavePending(glm::ivec3 groundCoord);
   void ClearColumnSavePending(glm::ivec3 groundCoord);
 
-  const IChunkSerializer &GetSerializer(ChunkDiskFormat format) const;
-  const IChunkSerializer &GetWriteSerializer() const;
+  const IUChunkSerializer &GetSerializer(ChunkDiskFormat format) const;
+  const IUChunkSerializer &GetWriteSerializer() const;
 
 private:
-  IChunkSerializer &MutableSerializer(ChunkDiskFormat format);
+  IUChunkSerializer &MutableSerializer(ChunkDiskFormat format);
 
   ChunkStorageSettings Settings;
   UJsonChunkSerializer JsonSerializer;

@@ -1,0 +1,232 @@
+#include "World/Mesh/WorldMeshService.h"
+#include "Render/Camera/Camera.h"
+#include "Render/Camera/Frustum.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Math/GridMath.h"
+#include <unordered_set>
+
+namespace cutum
+{
+
+UWorldMeshService::UWorldMeshService() = default;
+
+void UWorldMeshService::SetRenderSettings(const RenderSettings &settings)
+{
+  Cache.SetRenderSettings(settings);
+}
+
+void UWorldMeshService::SetRenderDistanceChunks(int distance)
+{
+  Cache.SetRenderDistanceChunks(distance);
+}
+
+void UWorldMeshService::NotifyChunkBlocksChanged(glm::ivec3 chunk_coord)
+{
+  if (MeshSink)
+  {
+    MeshSink->OnChunkBlocksChanged(chunk_coord);
+  }
+}
+
+void UWorldMeshService::NotifyChunkUnloaded(glm::ivec3 chunk_coord)
+{
+  if (MeshSink)
+  {
+    MeshSink->OnChunkUnloaded(chunk_coord);
+  }
+}
+
+void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
+{
+  Cache.MarkDirty(chunk_coord);
+  NotifyChunkBlocksChanged(chunk_coord);
+}
+
+void UWorldMeshService::MarkAllDirtyFromWorld(const UBlockWorld &world)
+{
+  Cache.MarkAllDirtyFromWorld(world);
+}
+
+void UWorldMeshService::RemoveChunk(glm::ivec3 chunk_coord)
+{
+  Cache.RemoveChunk(chunk_coord);
+  NotifyChunkUnloaded(chunk_coord);
+}
+
+void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
+                                            int max_y)
+{
+  const glm::ivec3 base =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
+  const glm::ivec3 top =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
+  std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int cy = base.y; cy <= top.y; ++cy)
+      {
+        dirty_chunks.insert(glm::ivec3(base.x + dx, cy, base.z + dz));
+      }
+    }
+  }
+  for (const glm::ivec3 &coord : dirty_chunks)
+  {
+    MarkDirty(coord);
+  }
+}
+
+void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
+                                                int min_y, int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cx = ground_chunk_coord.x - 1; cx <= ground_chunk_coord.x + 1; ++cx)
+  {
+    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1; ++cz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        MarkDirty(glm::ivec3(cx, cy, cz));
+      }
+    }
+  }
+}
+
+void UWorldMeshService::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
+{
+  Cache.RebuildAll(world, registry);
+}
+
+void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
+                                           UBlockRegistry &registry,
+                                           int max_drain_per_frame,
+                                           int max_schedule_per_frame)
+{
+  Cache.RebuildDirtyChunks(world, registry, max_drain_per_frame,
+                           max_schedule_per_frame);
+}
+
+void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
+                                              UBlockRegistry &registry,
+                                              int max_per_frame)
+{
+  Cache.DrainAsyncMeshResults(world, registry, max_per_frame);
+}
+
+void UWorldMeshService::RebuildChunkImmediate(const UBlockWorld &world,
+                                             UBlockRegistry &registry,
+                                             glm::ivec3 chunk_coord)
+{
+  Cache.RebuildChunkImmediate(world, registry, chunk_coord);
+}
+
+void UWorldMeshService::WaitForAsyncMeshIdle() { Cache.WaitForAsyncMeshIdle(); }
+
+bool UWorldMeshService::HasPendingDirty() const
+{
+  return Cache.HasPendingDirty();
+}
+
+bool UWorldMeshService::HasPendingAsyncMeshWork() const
+{
+  return Cache.HasPendingAsyncMeshWork();
+}
+
+size_t UWorldMeshService::GetDirtyCount() const { return Cache.GetDirtyCount(); }
+
+int UWorldMeshService::GetAsyncInFlightCount() const
+{
+  return Cache.GetAsyncInFlightCount();
+}
+
+double UWorldMeshService::GetLastFlatRebuildMs() const
+{
+  return Cache.GetLastFlatRebuildMs();
+}
+
+size_t UWorldMeshService::GetGreedyCacheSize() const
+{
+  return Cache.GetGreedyCacheSize();
+}
+
+uint64_t UWorldMeshService::GetMeshRevision() const
+{
+  return Cache.GetMeshRevision();
+}
+
+uint64_t UWorldMeshService::GetCullRevision() const
+{
+  return Cache.GetCullRevision();
+}
+
+size_t UWorldMeshService::GetGreedyVertexCount() const
+{
+  return Cache.GetGreedyVertexCount();
+}
+
+size_t UWorldMeshService::GetInstanceCount() const
+{
+  return Cache.GetInstanceCount();
+}
+
+void UWorldMeshService::UpdateVisibleInstances(const Frustum &frustum,
+                                             const glm::mat4 &view_proj,
+                                             const glm::vec3 &camera_pos)
+{
+  Cache.UpdateVisibleInstances(frustum, view_proj, camera_pos);
+}
+
+const std::vector<FaceInstance> &
+UWorldMeshService::PrepareFaceInstances(UBlockWorld &world,
+                                      UBlockRegistry &registry,
+                                      const std::shared_ptr<UCamera> &camera,
+                                      int max_drain_per_frame,
+                                      int max_schedule_per_frame)
+{
+  (void)world;
+  (void)registry;
+  (void)max_drain_per_frame;
+  (void)max_schedule_per_frame;
+  if (camera)
+  {
+    const glm::mat4 view = camera->GetViewMatrix();
+    const glm::mat4 proj = camera->GetProjection();
+    const glm::mat4 vp = proj * view;
+    Cache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
+                               camera->GetPosition());
+  }
+  return Cache.GetFaceInstances();
+}
+
+const std::vector<GreedyMeshBatch> &
+UWorldMeshService::GetGreedyRenderBatches(UBlockWorld &world,
+                                        UBlockRegistry &registry,
+                                        const std::shared_ptr<UCamera> &camera)
+{
+  PrepareFaceInstances(world, registry, camera);
+  return Cache.GetGreedyBatches();
+}
+
+UWorldMeshService::GreedyDrawSnapshot
+UWorldMeshService::PrepareGreedyDraw(UBlockWorld &world,
+                                     UBlockRegistry &registry,
+                                     const std::shared_ptr<UCamera> &camera)
+{
+  PrepareFaceInstances(world, registry, camera);
+  return GreedyDrawSnapshot{Cache.GetGreedyBatches(), Cache.GetCrossBatches(),
+                            Cache.GetMeshRevision(), Cache.GetCullRevision()};
+}
+
+const std::vector<CrossInstanceBatch> &
+UWorldMeshService::GetCrossRenderBatches(UBlockWorld &world,
+                                         UBlockRegistry &registry,
+                                         const std::shared_ptr<UCamera> &camera)
+{
+  PrepareFaceInstances(world, registry, camera);
+  return Cache.GetCrossBatches();
+}
+
+} // namespace cutum

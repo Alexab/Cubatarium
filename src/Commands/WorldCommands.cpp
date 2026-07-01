@@ -39,6 +39,11 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
   const std::shared_ptr<UWorld> world = session.GetWorld();
 
   registry.Register(
+      "help",
+      [&registry](const std::vector<std::string> &)
+      { return CommandResult{true, registry.FormatHelpText()}; });
+
+  registry.Register(
       "worldgen",
       [&session](const std::vector<std::string> &args)
       {

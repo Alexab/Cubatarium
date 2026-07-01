@@ -2,7 +2,7 @@
 #define CONTENT_PREVIEW_DOCK_H
 
 #include "Gui/Core/GuiTypes.h"
-#include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 #include <functional>
 #include <memory>
 #include <string>

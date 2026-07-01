@@ -3,8 +3,8 @@
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
-#include "Gui/Interfaces/IContentCatalog.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
 #include "Gui/Preview/ContentPreviewDock.h"
@@ -22,9 +22,9 @@
 namespace cutum
 {
 
-UCreativePaletteScreen::UCreativePaletteScreen(IContentCatalog *catalog,
+UCreativePaletteScreen::UCreativePaletteScreen(IUContentCatalog *catalog,
                                                UGameSession *session,
-                                               IGuiIconSource *icons,
+                                               IUGuiIconSource *icons,
                                                UContentPreviewRenderer *previewRenderer)
     : Catalog(catalog), Session(session), Icons(icons),
       PreviewRenderer(previewRenderer)

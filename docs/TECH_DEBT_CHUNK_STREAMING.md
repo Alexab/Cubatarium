@@ -17,16 +17,20 @@
 
 **MarkBlockChunkDirty contract (TD-AUD-013):** when `BlockRegistry != nullptr` (normal gameplay), block edits call `MeshCache.RebuildChunkImmediate` on the chunk + neighbors; during headless load before registry init, `MarkDirty` defers rebuild to the frame budget / async mesh path.
 
-**In-game validation (async mesh):** with `ui.show_performance: true`, fly through loaded terrain; toggle `render.async_meshing` in `config.json` and compare `mesh_rebuild_ms` / hitch lines in HUD. Export `movement_diagnostics.v2` before/after.
+**In-game validation (async mesh):** with `ui.show_performance: true`, fly through loaded terrain; toggle `render.async_meshing` in `config.json` and compare `mesh_rebuild_ms` / hitch lines in HUD. Export `movement_diagnostics.v2` before/after — each sample includes `async_meshing_enabled` for bisect correlation.
+
+**Cross vegetation (TD-CS-014):** cross blocks store per-chunk centers in `ChunkMeshCache`; flat merge builds `CrossInstanceBatch[]`; `GeometryEngine` draws via `UCrossGpuBackend` (one `glDrawElementsInstanced` per block type).
+
+**Perf regression fix (2026-07):** `RebuildDirtyChunks` no longer marks flat batches dirty every frame; GPU backends use `glBufferSubData` when buffer capacity suffices (no per-frame orphan); render uses single `PrepareGreedyDraw` per frame.
 
 ## Open
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-CS-010 | 2026-06 | Async meshing defaults off; needs in-game validation | Enable via `Render.AsyncMeshing`; manual checklist in profiling bisect above | backlog |
+| TD-CS-010 | 2026-06 | ~~Async meshing defaults off; needs in-game validation~~ | Default **on** (`RenderSettings.AsyncMeshing`); bisect in profiling section; `movement_diagnostics.v2` exports `async_meshing_enabled` | closed |
 | TD-CS-011 | 2026-06 | ~~Async chunk generation defaults off~~ | Defaults **on** since 2026-06 (`ProceduralSettings`, `config.json`) | closed |
 | TD-CS-012 | 2026-06 | ~~Async chunk I/O defaults off~~ | Defaults **on** since 2026-06 | closed |
-| TD-CS-014 | 2026-06 | GPU instancing for Cross vegetation | Requires retained instance buffer + single draw | backlog |
+| TD-CS-014 | 2026-06 | ~~GPU instancing for Cross vegetation~~ | `UCrossGpuBackend` + `CrossInstanceBatch`; one instanced draw per block type | closed |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `UChunkStreamer::SetRingGateEnabled` exists | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip is conservative | backlog |
@@ -47,6 +51,8 @@
 | TD-CS-009 | 2026-06 | `UChunkGenerationRegistry` + token validation on async results |
 | TD-CS-013 | 2026-06 | Smoke reads `movement_diagnostics.v2` with flat/count/backlog budgets |
 | TD-CS-015 | 2026-06 | Cooperative cancel in `PipelineChunkPopulator` via `shouldCancel` token check |
+| TD-CS-014 | 2026-07 | `UCrossGpuBackend` retained instance VBO + `glDrawElementsInstanced` per block type |
+| TD-CS-010 | 2026-07 | Async meshing default on; bisect documented; diagnostics export `async_meshing_enabled` |
 | TD-CS-020 | 2026-06 | Dedupe mesh dirty on async chunk commit (`ColumnMeshDirty` only) |
 
 ## Phase tracker

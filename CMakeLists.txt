@@ -125,9 +125,17 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Collision/WorldCollision.cpp
     src/World/Core/WorldCooperativeOps.cpp
+    src/World/Environment/WorldEnvironment.cpp
+    src/World/Persistence/WorldPersistence.cpp
+    src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Mesh/WorldMeshService.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
+    src/Render/Engine/GreedyGpuBackend.cpp
+    src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Pipeline/GlStateScope.cpp
     src/Render/Pipeline/GreedyShaderMode.cpp
@@ -165,7 +173,7 @@ set(SOURCES
     src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/IWorldGenPipeline.cpp
+    src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -196,7 +204,7 @@ set(SOURCES
     src/World/Chunks/ChunkLoadScheduler.cpp
     src/World/Chunks/ChunkLoadPriority.cpp
     src/World/Chunks/StreamingAltitudePolicy.cpp
-    src/World/Core/IBlockWriter.cpp
+    src/World/Core/IUBlockWriter.cpp
     src/World/IO/AsyncChunkIO.cpp
     src/World/IO/ChunkStorageTypes.cpp
     src/World/IO/JsonChunkSerializer.cpp
@@ -213,6 +221,8 @@ set(SOURCES
     src/Render/Engine/ShaderManager.cpp
     src/Render/Engine/TextRenderer.cpp
     src/App/Application.cpp
+    src/App/Navigation/ScreenNavigator.cpp
+    src/App/Input/InputRouter.cpp
     src/App/WorldOperationRunner.cpp
     src/App/Platform/CursorCapture.cpp
     src/Game/GameSession.cpp
@@ -275,7 +285,7 @@ set(SOURCES
     src/App/Platform/DesktopPlatformPaths.cpp
     src/App/Platform/GameDataRoot.cpp
     src/App/Platform/DesktopPlatformWindow.cpp
-    src/App/Platform/IPlatformPaths.cpp
+    src/App/Platform/IUPlatformPaths.cpp
     src/App/Platform/Log.cpp
 )
 
@@ -292,10 +302,19 @@ set(HEADERS
     src/Creatures/Player/User.h
     src/Render/Engine/ViewEngine.h
     src/World/Core/World.h
+    src/World/Collision/WorldCollision.h
     src/World/Core/WorldCooperativeOps.h
+    src/World/Environment/WorldEnvironment.h
+    src/World/Persistence/WorldPersistence.h
+    src/World/Streaming/WorldStreaming.h
+    src/World/Streaming/ChunkEmergeCoordinator.h
+    src/World/Interfaces/IUWorldMeshSink.h
+    src/World/Mesh/WorldMeshService.h
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
     src/Render/Engine/GeometryEngine.h
+    src/Render/Engine/GreedyGpuBackend.h
+    src/Render/Engine/CrossGpuBackend.h
     src/Render/Engine/DistanceFog.h
     src/World/Math/BlockTypes.h
     src/World/Math/GridMath.h
@@ -316,7 +335,7 @@ set(HEADERS
     src/WorldGen/Core/WorldGenStageId.h
     src/WorldGen/Core/WorldGenStageMask.h
     src/WorldGen/Core/ColumnHash.h
-    src/WorldGen/Core/IColumnWriter.h
+    src/WorldGen/Core/IUColumnWriter.h
     src/WorldGen/Core/BlockWorldColumnWriter.h
     src/WorldGen/Core/WorldGenBlockResolver.h
     src/WorldGen/Core/ColumnWriteContext.h
@@ -334,13 +353,17 @@ set(HEADERS
     src/Render/Mesh/ChunkMeshCache.h
     src/World/Chunks/ChunkStreamer.h
     src/Render/Mesh/GreedyMesher.h
+    src/Render/Mesh/IUChunkMeshReader.h
     src/Render/Mesh/GreedyMeshBatch.h
     src/App/Platform/InputManager.h
     src/Render/Engine/ShaderManager.h
     src/Render/Engine/TextRenderer.h
     src/ThirdParty/stb_image.h
     src/App/Application.h
+    src/App/Navigation/ScreenNavigator.h
+    src/App/Input/InputRouter.h
     src/App/Platform/CursorCapture.h
+    src/Game/Interfaces/IUGameContent.h
     src/Game/GameSession.h
     src/Content/ContentType.h
     src/Content/ContentTypeRegistry.h
@@ -363,7 +386,7 @@ set(HEADERS
     src/Gui/Preview/ContentPreviewDock.h
     src/Gui/Layout/DockedOverlayLayout.h
     src/Gui/Cache/ObjectIconCache.h
-    src/Gui/Interfaces/IGuiIconSource.h
+    src/Gui/Interfaces/IUGuiIconSource.h
     src/Gui/Core/GuiInputRouter.h
     src/Gui/Core/GuiFocus.h
     src/Gui/Core/GuiContext.h
@@ -389,12 +412,12 @@ set(HEADERS
     src/Gui/Widgets/GuiCheckbox.h
     src/Gui/Widgets/WorldGenSettingsForm.h
     src/Gui/Widgets/ResourcePackPickerForm.h
-    src/Gui/Interfaces/IGuiMenuHost.h
-    src/Gui/Interfaces/IGuiGameActions.h
-    src/Gui/Interfaces/IHotbarViewModel.h
-    src/Gui/Interfaces/IContentCatalog.h
-    src/Gui/Interfaces/IGameCommandContext.h
-    src/Gui/Interfaces/IGuiClipboard.h
+    src/Gui/Interfaces/IUGuiMenuHost.h
+    src/Gui/Interfaces/IUGuiGameActions.h
+    src/Gui/Interfaces/IUHotbarViewModel.h
+    src/Gui/Interfaces/IUContentCatalog.h
+    src/Gui/Interfaces/IUGameCommandContext.h
+    src/Gui/Interfaces/IUGuiClipboard.h
     src/Gui/Screens/MainMenuScreen.h
     src/Gui/Screens/SettingsScreen.h
     src/Gui/Screens/NewWorldScreen.h
@@ -405,7 +428,7 @@ set(HEADERS
     src/Gui/Screens/CreativePaletteScreen.h
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h
-    src/Core/Progress/IProgressSink.h
+    src/Core/Progress/IUProgressSink.h
     src/App/WorldOperationRunner.h
 )
 
@@ -436,7 +459,7 @@ if(ANDROID)
         src/App/Platform/AndroidPlatformWindow.cpp
         src/App/Platform/TouchInputBridge.cpp
         src/Gui/Widgets/GuiTouchControls.cpp
-        src/App/Platform/IPlatformPaths.cpp
+        src/App/Platform/IUPlatformPaths.cpp
     )
     set(CUBATARIUM_COMMON_SOURCES ${SOURCES})
     foreach(_desktop_only ${CUBATARIUM_DESKTOP_ONLY})

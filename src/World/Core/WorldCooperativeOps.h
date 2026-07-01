@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Progress/IProgressSink.h"
+#include "Core/Progress/IUProgressSink.h"
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
@@ -28,7 +28,7 @@ public:
   void BeginSave(UWorld &world, const std::string &world_folder_path);
   void BeginCreate(UWorld &world, const std::string &world_name);
   /// @return true when the operation finished successfully.
-  bool Tick(UWorld &world, IProgressSink &sink, int chunkBudget);
+  bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
   void Cancel();
 
 private:
@@ -52,7 +52,7 @@ private:
     Done
   };
 
-  void Report(IProgressSink &sink, const std::string &phaseId, float fraction,
+  void Report(IUProgressSink &sink, const std::string &phaseId, float fraction,
               const std::string &message) const;
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);

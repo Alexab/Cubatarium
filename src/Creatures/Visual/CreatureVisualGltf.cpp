@@ -20,7 +20,7 @@
 namespace cutum
 {
 
-std::unique_ptr<ICreatureVisual> CreateCreatureVisualGltf()
+std::unique_ptr<IUCreatureVisual> CreateCreatureVisualGltf()
 {
   return std::make_unique<UCreatureVisualGltf>();
 }

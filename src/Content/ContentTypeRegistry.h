@@ -2,7 +2,7 @@
 #define CONTENT_TYPE_REGISTRY_H
 
 #include "Content/ContentType.h"
-#include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 #include <unordered_map>
 #include <vector>
 
@@ -14,7 +14,7 @@ class UCreatureDefinitionStorage;
 class UObjectLibrary;
 class USkinDefinitionStorage;
 
-class UContentTypeRegistry : public IContentCatalog
+class UContentTypeRegistry : public IUContentCatalog
 {
 public:
   void LoadTypes(const std::string &typesJsonPath);

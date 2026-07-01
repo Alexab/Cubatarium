@@ -2,7 +2,7 @@
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiDialogFrame.h"
@@ -40,7 +40,7 @@ std::pair<int, int> NewWorldWindowSize(const GuiTheme &theme, int viewportW,
 
 } // namespace
 
-UNewWorldScreen::UNewWorldScreen(IGuiMenuHost *host) : Host(host) {}
+UNewWorldScreen::UNewWorldScreen(IUGuiMenuHost *host) : Host(host) {}
 
 UNewWorldScreen::~UNewWorldScreen() = default;
 

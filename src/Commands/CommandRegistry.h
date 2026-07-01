@@ -1,7 +1,7 @@
 #ifndef COMMAND_REGISTRY_H
 #define COMMAND_REGISTRY_H
 
-#include "Gui/Interfaces/IGameCommandContext.h"
+#include "Gui/Interfaces/IUGameCommandContext.h"
 #include <functional>
 #include <string>
 #include <unordered_map>

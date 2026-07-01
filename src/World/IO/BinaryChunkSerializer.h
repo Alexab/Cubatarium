@@ -1,11 +1,11 @@
 #pragma once
 
-#include "World/IO/IChunkSerializer.h"
+#include "World/IO/IUChunkSerializer.h"
 
 namespace cutum
 {
 
-class UBinaryChunkSerializer : public IChunkSerializer
+class UBinaryChunkSerializer : public IUChunkSerializer
 {
 public:
   static constexpr char kMagic[4] = {'C', 'C', 'H', 'K'};

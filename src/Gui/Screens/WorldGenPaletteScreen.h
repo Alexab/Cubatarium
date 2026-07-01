@@ -2,8 +2,8 @@
 #define WORLD_GEN_PALETTE_SCREEN_H
 
 #include "Gui/Core/GuiScreenBase.h"
-#include "Gui/Interfaces/IContentCatalog.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include <memory>
 #include <string>
@@ -14,7 +14,7 @@ namespace cutum
 {
 
 class UWorld;
-class IGuiIconSource;
+class IUGuiIconSource;
 class UContentPreviewRenderer;
 class UContentPreviewDock;
 class UGuiTabBar;
@@ -29,8 +29,8 @@ struct GuiTheme;
 class UWorldGenPaletteScreen : public UGuiScreenBase
 {
 public:
-  UWorldGenPaletteScreen(UWorld *world, IContentCatalog *catalog,
-                         IGuiIconSource *icons,
+  UWorldGenPaletteScreen(UWorld *world, IUContentCatalog *catalog,
+                         IUGuiIconSource *icons,
                          UContentPreviewRenderer *previewRenderer);
   ~UWorldGenPaletteScreen();
 
@@ -86,8 +86,8 @@ private:
   std::string LabelAt(size_t index, bool picker) const;
 
   UWorld *World{nullptr};
-  IContentCatalog *Catalog{nullptr};
-  IGuiIconSource *Icons{nullptr};
+  IUContentCatalog *Catalog{nullptr};
+  IUGuiIconSource *Icons{nullptr};
   UContentPreviewRenderer *PreviewRenderer{nullptr};
   std::unique_ptr<UContentPreviewDock> PreviewDock;
   UGuiPanel *RootShell{nullptr};

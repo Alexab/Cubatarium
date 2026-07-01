@@ -1,6 +1,6 @@
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Blocks/BlockRegistry.h"
-#include "Render/Mesh/CrossMeshEmitter.h"
+#include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Math/GridMath.h"
@@ -73,31 +73,8 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         const int max_local_y =
             MaxSolidLocalYSnapshot(snapshot, *registryPtr);
         (void)max_local_y;
-        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-        {
-          for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-          {
-            for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-            {
-              const glm::ivec3 local(lx, ly, lz);
-              const BlockId id = snapshot.GetBlockLocal(local);
-              if (id == BLOCK_AIR ||
-                  registryPtr->GetRenderStyle(id) != BlockRenderStyle::Cross)
-              {
-                continue;
-              }
-              const glm::ivec3 worldPos(snapshot.coord.x * CHUNK_SIZE + lx,
-                                        snapshot.coord.y * CHUNK_SIZE + ly,
-                                        snapshot.coord.z * CHUNK_SIZE + lz);
-              GreedyMeshBatch &batch = byBlockId[id];
-              batch.blockId = id;
-              batch.Transparent = false;
-              batch.AlphaCutout = true;
-              AppendCrossSprite(BlockCenter(worldPos), batch.vertices,
-                                batch.indices);
-            }
-          }
-        }
+        CollectCrossCentersFromSnapshot(snapshot, *registryPtr,
+                                        result.crossCenters);
         result.batches.reserve(byBlockId.size());
         for (auto &entry : byBlockId)
         {

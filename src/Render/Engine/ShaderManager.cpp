@@ -1,5 +1,5 @@
 #include "Render/Engine/ShaderManager.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "Render/GlIncludes.h"
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
@@ -218,7 +218,7 @@ std::string ResolveShaderPath(const std::string &filepath)
   const std::string fileName =
       slash == std::string::npos ? filepath : filepath.substr(slash + 1);
   const std::string glesRel = "shaders/gles/" + fileName;
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     if (paths->AssetExists(glesRel))
     {
@@ -236,7 +236,7 @@ std::string ResolveShaderPath(const std::string &filepath)
 std::string UShaderProgram::ReadFile(const std::string &filepath)
 {
   const std::string resolved = ResolveShaderPath(filepath);
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     std::string text;
     if (paths->ReadAssetText(resolved, text))

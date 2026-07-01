@@ -1,8 +1,8 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
-#include "WorldGen/Core/IChunkPopulator.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
@@ -43,7 +43,7 @@ struct ThreadLocalPipelineState
 {
   uint32_t key{0};
   UBlockWorld world;
-  std::unique_ptr<IWorldGenPipeline> pipeline;
+  std::unique_ptr<IUWorldGenPipeline> pipeline;
 };
 
 ThreadLocalPipelineState &GetThreadLocalPipeline()
@@ -52,7 +52,7 @@ ThreadLocalPipelineState &GetThreadLocalPipeline()
   return state;
 }
 
-IWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
+IUWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
                                              UObjectLibrary *prefabs,
                                              const std::string &ownerPackId,
                                              const ProceduralSettings &settings)
@@ -101,7 +101,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     settings.EnableCaves = false;
   }
 
-  IWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
+  IUWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
       Registry, Objects, WorldgenOwnerPackId, settings);
   if (!pipeline)
   {

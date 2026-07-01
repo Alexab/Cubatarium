@@ -213,7 +213,7 @@ Closed: **19** | Rejected (false positive): **1**.
   - Action: optional split PackJsonLoader vs runtime ActivePack cache; low urgency — load-time not hot path
   - Evidence: WorldGenPack.cpp ~669 LOC; parses pack.json, pipeline.json stage order, biomes, height/climate layers; push_back on StageOrder without reserve (small arrays, load-time only)
 - **AUDIT-WG-007** [performance] Column generation sorts full patch before pipeline.GenerateColumn
-  - Module: WorldGen; Files: src/WorldGen/Core/IWorldGenPipeline.cpp, src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
+  - Module: WorldGen; Files: src/WorldGen/Core/IUWorldGenPipeline.cpp, src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
   - Action: defer unless profiling shows sort overhead; prefer optimizing BiomeSampler hot path first; see TECH_DEBT_CHUNK_STREAMING for streaming context
   - Evidence: GenerateAllColumnsInChunkRange builds vector of all columns, sorts by dist2, then calls GenerateColumn per entry; for 16-chunk radius patch this is O(n log n) setup per batch — acceptable but BiomeSam
 - **AUDIT-WG-008** [architecture] Deferred worldgen UX and debug features per TECH_DEBT_WORLDGEN

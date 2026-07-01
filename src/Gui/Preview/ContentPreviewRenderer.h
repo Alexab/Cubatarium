@@ -1,7 +1,7 @@
 #ifndef CONTENT_PREVIEW_RENDERER_H
 #define CONTENT_PREVIEW_RENDERER_H
 
-#include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 #include "World/Math/BlockTypes.h"
 #include <glm/mat4x4.hpp>
 #include <memory>

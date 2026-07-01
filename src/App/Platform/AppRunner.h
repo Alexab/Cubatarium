@@ -4,10 +4,10 @@
 namespace cutum
 {
 
-class IPlatformPaths;
-class IPlatformWindow;
+class IUPlatformPaths;
+class IUPlatformWindow;
 
-int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths);
+int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths);
 
 } // namespace cutum
 

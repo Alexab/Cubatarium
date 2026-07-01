@@ -4,7 +4,7 @@ namespace cutum
 {
 
 void UCreatureActivityDirector::RegisterAgent(
-    std::unique_ptr<ICreatureActivityAgent> agent)
+    std::unique_ptr<IUCreatureActivityAgent> agent)
 {
   if (!agent)
   {
@@ -35,7 +35,7 @@ void UCreatureActivityDirector::OnCreatureAdded(CreatureId Id,
   {
     return;
   }
-  ICreatureActivityAgent *agent = FindAgent(behaviorId);
+  IUCreatureActivityAgent *agent = FindAgent(behaviorId);
   if (!agent)
   {
     return;
@@ -59,8 +59,8 @@ void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
   Membership.erase(it);
 }
 
-void UCreatureActivityDirector::TickAgents(IWorldPerception &perception,
-                                           ICreatureActivitySink &sink,
+void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
+                                           IUCreatureActivitySink &sink,
                                            float dt)
 {
   for (const auto &agent : Agents)
@@ -69,7 +69,7 @@ void UCreatureActivityDirector::TickAgents(IWorldPerception &perception,
   }
 }
 
-ICreatureActivityAgent *
+IUCreatureActivityAgent *
 UCreatureActivityDirector::FindAgent(const std::string &behaviorId) const
 {
   const auto it = AgentsByBehaviorId.find(behaviorId);

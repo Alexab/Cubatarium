@@ -1,4 +1,4 @@
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include <iostream>
@@ -7,7 +7,7 @@
 namespace cutum
 {
 
-std::unique_ptr<IWorldGenPipeline>
+std::unique_ptr<IUWorldGenPipeline>
 UProceduralWorldGenFactory::Create(WorldGenContext ctx)
 {
   ctx.ResolveBlockIds();

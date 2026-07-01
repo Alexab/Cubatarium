@@ -756,7 +756,7 @@ MODULES: dict[str, list[dict]] = {
             "module": "WorldGen",
             "title": "Column generation sorts full patch before pipeline.GenerateColumn",
             "files": [
-                "src/WorldGen/Core/IWorldGenPipeline.cpp",
+                "src/WorldGen/Core/IUWorldGenPipeline.cpp",
                 "src/WorldGen/Pipelines/ComposableWorldGenerator.cpp"
             ],
             "evidence": "GenerateAllColumnsInChunkRange builds vector of all columns, sorts by dist2, then calls GenerateColumn per entry; for 16-chunk radius patch this is O(n log n) setup per batch — acceptable but BiomeSampler per-column work dominates; no perf_hints hits in WorldGen module",

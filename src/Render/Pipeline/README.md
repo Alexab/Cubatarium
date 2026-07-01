@@ -62,7 +62,7 @@ flowchart TD
 | GLEW, glm, `ChunkMeshCache.h`, `Render/Pipeline/*.h` | `GeometryEngine.h` |
 | `ShaderProgram` (forward declare) | `Gui/*`, `Application.h` |
 
-`GreedyTransparentPipeline` знает только **`IGreedyTransparentBackend`** — реализация в `GeometryEngine`.
+`GreedyTransparentPipeline` знает только **`IUGreedyTransparentBackend`** — реализация в `GeometryEngine`.
 
 ## Файлы
 
@@ -72,5 +72,5 @@ flowchart TD
 | `GreedyTransparentSort` | Сортировка прозрачных батчей (fluid → default → cross) |
 | `TransparentPass` | Имена и параметры 4 проходов |
 | `GreedyTransparentPipeline` | Цикл проходов + blend/cull |
-| `IGreedyTransparentBackend` | `PrepareTransparent` + `DrawPreparedTransparent` |
+| `IUGreedyTransparentBackend` | `PrepareTransparent` + `DrawPreparedTransparent` |
 | `GreedyShaderMode` | Режимы fragment shader (`uGreedyShaderMode`) |

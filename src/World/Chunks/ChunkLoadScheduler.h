@@ -3,7 +3,7 @@
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
-#include "WorldGen/Core/IChunkPopulator.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
 #include <functional>
 #include <queue>
 #include <unordered_map>
@@ -31,7 +31,7 @@ public:
   using ColumnMeshDirtyFn =
       std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 
-  UChunkLoadScheduler(IChunkPopulator &populator,
+  UChunkLoadScheduler(IUChunkPopulator &populator,
                       UChunkGenerationRegistry &tokens);
 
   void SetMarkDirtyFn(MarkChunkDirtyFn fn);
@@ -75,7 +75,7 @@ private:
 
   void ScheduleWorker(const PendingRequest &request);
 
-  IChunkPopulator &Populator;
+  IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   UJobThreadPool Pool;
   UCompletedJobQueue<PendingResult> Completed;

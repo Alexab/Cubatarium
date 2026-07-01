@@ -87,4 +87,45 @@ void WarnIfLegacyTerrainOverridden(const nlohmann::json &root,
   }
 }
 
+std::vector<std::string> ParseLegacyPackIdArray(const nlohmann::json &arr)
+{
+  std::vector<std::string> result;
+  if (!arr.is_array())
+  {
+    return result;
+  }
+  result.reserve(arr.size());
+  for (const auto &id : arr)
+  {
+    if (id.is_string())
+    {
+      result.push_back(id.get<std::string>());
+    }
+  }
+  return result;
+}
+
+std::vector<std::string>
+ReadLegacyEnabledPackList(const nlohmann::json &resourcePacksNode)
+{
+  if (!resourcePacksNode.is_object() ||
+      !resourcePacksNode.contains("enabled") ||
+      !resourcePacksNode["enabled"].is_array())
+  {
+    return {};
+  }
+  return ParseLegacyPackIdArray(resourcePacksNode["enabled"]);
+}
+
+std::vector<std::string>
+ReadLegacyWorldEnabledPacks(const nlohmann::json &worldDataRoot)
+{
+  if (!worldDataRoot.contains("resource_packs") ||
+      !worldDataRoot["resource_packs"].is_object())
+  {
+    return {};
+  }
+  return ReadLegacyEnabledPackList(worldDataRoot["resource_packs"]);
+}
+
 } // namespace cutum

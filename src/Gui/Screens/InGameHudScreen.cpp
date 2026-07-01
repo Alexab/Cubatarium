@@ -2,7 +2,7 @@
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -19,7 +19,7 @@ namespace cutum
 {
 
 UInGameHudScreen::UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
-                                   IGuiIconSource *icons)
+                                   IUGuiIconSource *icons)
     : Session(session), Theme(theme), Icons(icons)
 {
 }

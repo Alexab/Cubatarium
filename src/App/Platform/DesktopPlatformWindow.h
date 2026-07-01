@@ -1,13 +1,13 @@
 #ifndef DESKTOP_PLATFORM_WINDOW_H
 #define DESKTOP_PLATFORM_WINDOW_H
 
-#include "App/Platform/IPlatformWindow.h"
+#include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/WindowManager.h"
 
 namespace cutum
 {
 
-class UDesktopPlatformWindow : public IPlatformWindow
+class UDesktopPlatformWindow : public IUPlatformWindow
 {
 public:
   bool Initialize(int width, int height, const char *title) override;

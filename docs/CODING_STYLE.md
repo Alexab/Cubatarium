@@ -7,14 +7,22 @@
 | Категория | Правило | Пример |
 |---|---|---|
 | Конкретный класс | префикс `U` | `UWindowManager` |
-| Интерфейс | префикс `I` | `IPlatformWindow` |
+| Интерфейс | префикс **`IU`** (`I` + `U`) | `IUWorldMeshSink`, `IUGameContent` |
 | Enum / enum class | без префикса | `AppState`, `KeyCode` |
-| Имя файла | **не менять** при U-rename | `WindowManager.h` |
+| Имя файла (класс `U*`) | **не менять** при U-rename | `WindowManager.h` |
+| Имя файла (интерфейс `IU*`) | совпадает с типом | `IUWorldMeshSink.h` |
 | Член класса | PascalCase, без `_` | `WindowWidth`, `TouchBridge` |
 | Метод | PascalCase | `SetInstances`, `PollEvents` |
 | Поле struct | PascalCase | `SeaLevel`, `GuiRect::W` |
 | Локальная / аргумент | snake_case | `last_ui_width` |
 | `#include` проекта | от корня `src/` | `"Gui/Widgets/GuiButton.h"` |
+
+### Интерфейсы (`IU*`)
+
+Интерфейс = `I` (interface) + `U` (общий префикс классов) + `Имя` → `IU<Имя>`.
+
+- Все интерфейсы — только `IU*` (`IUPlatformWindow`, `IUGameContent`, `IUWorldMeshSink`, …).
+- Имя файла совпадает с типом: `IUWorldPerception.h` → `class IUWorldPerception`.
 
 ## Форматирование
 
@@ -34,6 +42,7 @@
 ```bash
 python tools/audit_style.py
 python tools/audit_clang_format.py
+python tools/audit/check_include_rules.py
 python tools/audit/orchestrate.py --phase baseline
 python tools/audit/orchestrate.py --phase scan
 python tools/refactor_style.py --classes
@@ -44,7 +53,7 @@ python tools/fix_includes.py
 python tools/fix_member_collisions.py
 ```
 
-CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, and `chunk_load_priority_test`.
+CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, `python tools/audit/check_include_rules.py`, and `chunk_load_priority_test`.
 
 ## Tools (manual-only scripts)
 

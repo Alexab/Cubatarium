@@ -42,7 +42,7 @@ glm::vec3 RandomWanderDirection(CreatureHabitat habitat)
   return dir;
 }
 
-bool PickWanderDirection(IWorldPerception &perception,
+bool PickWanderDirection(IUWorldPerception &perception,
                          const CreatureActivityView &view,
                          CreatureHabitat habitat, const glm::vec3 &boundsSize,
                          glm::vec3 &outDirection)
@@ -89,8 +89,8 @@ void UWanderActivityAgent::ResetWanderState(CreatureId Id, float intervalMin,
       intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
 }
 
-void UWanderActivityAgent::Tick(IWorldPerception &perception,
-                                ICreatureActivitySink &sink, float dt)
+void UWanderActivityAgent::Tick(IUWorldPerception &perception,
+                                IUCreatureActivitySink &sink, float dt)
 {
   for (const CreatureId Id : Members)
   {

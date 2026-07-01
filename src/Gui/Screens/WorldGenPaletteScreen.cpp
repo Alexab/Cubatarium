@@ -2,7 +2,7 @@
 
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
 #include "Gui/Preview/ContentPreviewDock.h"
@@ -71,8 +71,8 @@ std::string EntryHint(const WorldGenObjectEntry &entry)
 } // namespace
 
 UWorldGenPaletteScreen::UWorldGenPaletteScreen(UWorld *world,
-                                               IContentCatalog *catalog,
-                                               IGuiIconSource *icons,
+                                               IUContentCatalog *catalog,
+                                               IUGuiIconSource *icons,
                                                UContentPreviewRenderer *previewRenderer)
     : World(world), Catalog(catalog), Icons(icons),
       PreviewRenderer(previewRenderer)

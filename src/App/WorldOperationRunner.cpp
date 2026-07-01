@@ -80,7 +80,7 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   }
 }
 
-void UWorldOperationRunner::Fail(const std::string &message, IProgressSink &sink)
+void UWorldOperationRunner::Fail(const std::string &message, IUProgressSink &sink)
 {
   Error = message;
   Success = false;
@@ -90,7 +90,7 @@ void UWorldOperationRunner::Fail(const std::string &message, IProgressSink &sink
   std::cerr << "World operation failed: " << message << std::endl;
 }
 
-bool UWorldOperationRunner::TickWorldOp(IProgressSink &sink, int chunkBudget)
+bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
 {
   const int budget = std::max(1, chunkBudget);
   switch (PendingWorldOp)
@@ -159,7 +159,7 @@ void UWorldOperationRunner::PrepareCreateWorld()
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
-bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
+bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 {
   if (!Active || CurrentStage == Stage::Done || CurrentStage == Stage::Failed)
   {

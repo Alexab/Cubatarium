@@ -13,7 +13,7 @@ namespace cutum
 {
 
 class UGameSession;
-class IGuiIconSource;
+class IUGuiIconSource;
 class UGuiSlot;
 class UGuiPanel;
 class UGuiLabel;
@@ -24,7 +24,7 @@ class UInGameHudScreen : public UGuiScreenBase
 {
 public:
   UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
-                   IGuiIconSource *icons);
+                   IUGuiIconSource *icons);
   ~UInGameHudScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out);
@@ -54,7 +54,7 @@ private:
   void UpdateTooltips();
 
   UGameSession *Session{nullptr};
-  IGuiIconSource *Icons{nullptr};
+  IUGuiIconSource *Icons{nullptr};
   const GuiTheme *Theme;
   UGuiPanel *RootPanel{nullptr};
   std::vector<UGuiSlot *> PrimarySlots;

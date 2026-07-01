@@ -13,7 +13,7 @@ namespace cutum
 
 class BoneSkeletonHierarchy;
 
-class UCreatureVisualBoneSkeleton : public ICreatureVisual
+class UCreatureVisualBoneSkeleton : public IUCreatureVisual
 {
 public:
   ~UCreatureVisualBoneSkeleton() override;
@@ -38,7 +38,7 @@ private:
   std::unique_ptr<BoneSkeletonHierarchy> Hierarchy;
 };
 
-std::unique_ptr<ICreatureVisual> CreateCreatureVisualBoneSkeleton();
+std::unique_ptr<IUCreatureVisual> CreateCreatureVisualBoneSkeleton();
 
 } // namespace cutum
 

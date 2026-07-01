@@ -3,7 +3,7 @@
 
 #include "Gui/Cache/CreatureIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include <memory>
 
 namespace cutum
@@ -11,7 +11,7 @@ namespace cutum
 
 class UTextureCubeStorage;
 
-class UGuiIconSource : public IGuiIconSource
+class UGuiIconSource : public IUGuiIconSource
 {
 public:
   UGuiIconSource(std::shared_ptr<UTextureCubeStorage> textures,

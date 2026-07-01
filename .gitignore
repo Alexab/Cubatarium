@@ -83,3 +83,4 @@ tools/debug_uv_overlays/
 # Deprecated legacy block assets (use resource_packs/ instead)
 /models/blocks/
 /textures/
+*.log

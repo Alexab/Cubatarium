@@ -90,27 +90,27 @@ UChunkStorageService::DetectFormatOnDisk(const std::string &worldFolder,
   return ChunkDiskFormat::Absent;
 }
 
-const IChunkSerializer &
+const IUChunkSerializer &
 UChunkStorageService::GetSerializer(ChunkDiskFormat format) const
 {
   return format == ChunkDiskFormat::Json
-             ? static_cast<const IChunkSerializer &>(JsonSerializer)
-             : static_cast<const IChunkSerializer &>(BinarySerializer);
+             ? static_cast<const IUChunkSerializer &>(JsonSerializer)
+             : static_cast<const IUChunkSerializer &>(BinarySerializer);
 }
 
-IChunkSerializer &
+IUChunkSerializer &
 UChunkStorageService::MutableSerializer(ChunkDiskFormat format)
 {
   return format == ChunkDiskFormat::Json
-             ? static_cast<IChunkSerializer &>(JsonSerializer)
-             : static_cast<IChunkSerializer &>(BinarySerializer);
+             ? static_cast<IUChunkSerializer &>(JsonSerializer)
+             : static_cast<IUChunkSerializer &>(BinarySerializer);
 }
 
-const IChunkSerializer &UChunkStorageService::GetWriteSerializer() const
+const IUChunkSerializer &UChunkStorageService::GetWriteSerializer() const
 {
   return Settings.writeFormat == ChunkWriteFormat::Json
-             ? static_cast<const IChunkSerializer &>(JsonSerializer)
-             : static_cast<const IChunkSerializer &>(BinarySerializer);
+             ? static_cast<const IUChunkSerializer &>(JsonSerializer)
+             : static_cast<const IUChunkSerializer &>(BinarySerializer);
 }
 
 SerializedChunk

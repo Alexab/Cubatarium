@@ -192,7 +192,7 @@ python tools/generate_creature_assets.py
 1. Motor: `Creature::ExecuteIntent` / `Camera::DoMovement` → `CreatureLocomotionFacts` (скорость, grounded, stance).
 2. `DeriveLocomotionState` → `LocomotionState` (Idle, Walk, Run, Jump, Fall, Crouch, Fly, …).
 3. `CreaturePosePresenterRegistry` → biped / quadruped / aerial presenters → `CreaturePoseParams` по part id.
-4. `ICreatureVisual::UpdatePose` → `CreatureVisualRigid` рисует части.
+4. `IUCreatureVisual::UpdatePose` → `CreatureVisualRigid` рисует части.
 
 Опционально в `CreatureIntent`: `lookAtWorld`, `lookAtWeight` (IK головы).
 
@@ -207,7 +207,7 @@ python tools/generate_creature_assets.py
 
 Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`.
 
-Параметры wander читаются агентом через `ICreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
+Параметры wander читаются агентом через `IUCreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
 
 ## Code map
 

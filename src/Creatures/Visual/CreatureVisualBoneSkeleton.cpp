@@ -19,7 +19,7 @@ namespace cutum
 
 UCreatureVisualBoneSkeleton::~UCreatureVisualBoneSkeleton() = default;
 
-std::unique_ptr<ICreatureVisual> CreateCreatureVisualBoneSkeleton()
+std::unique_ptr<IUCreatureVisual> CreateCreatureVisualBoneSkeleton()
 {
   return std::make_unique<UCreatureVisualBoneSkeleton>();
 }

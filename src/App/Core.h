@@ -13,6 +13,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
 #include "Blocks/BlockDefinition.h"
+#include "Game/Interfaces/IUGameContent.h"
 #include <array>
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -28,6 +29,7 @@ class UWorld;
 class UTextureBaseStorage;
 class UTextureCubeStorage;
 class UCreatureTextureStorage;
+class UCreatureDefinitionStorage;
 class UObjectLibrary;
 class UGeometryEngine;
 class UViewEngine;
@@ -35,7 +37,7 @@ class UBlockDefinitionStorage;
 class UBlockMergeRegistry;
 class UPlaceholderTextureCache;
 
-class UCore
+class UCore : public IUGameContent
 {
 public:
   UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
@@ -89,6 +91,11 @@ public:
   {
     return ObjectLibraryInstance;
   }
+  const UBlockDefinitionStorage &Blocks() const override;
+  const UObjectLibrary &Objects() const override;
+  const UCreatureDefinitionStorage &Creatures() const override;
+  const WorldGenPack &ActiveWorldGenPack() const override;
+
   std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
   {
     return BlockDefinitionsInstance;

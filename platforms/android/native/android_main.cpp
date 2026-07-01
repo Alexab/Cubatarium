@@ -2,7 +2,7 @@
 #include "App/Platform/AndroidPlatformPaths.h"
 #include "App/Platform/AppRunner.h"
 #include "App/Platform/GameAssets.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 #include "android_jni.h"
 
@@ -30,13 +30,13 @@ void HandleAppCmd(android_app *app, int32_t cmd)
   state->window->OnAppCmd(cmd);
 }
 
-bool GameAssetsReady(const IPlatformPaths &paths)
+bool GameAssetsReady(const IUPlatformPaths &paths)
 {
   const auto font = paths.AssetRoot() / "fonts" / kBundledUiFontFileName;
   return std::filesystem::exists(font);
 }
 
-bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
+bool WaitForGameAssets(android_app *app, const IUPlatformPaths &paths)
 {
   if (GameAssetsReady(paths))
   {
@@ -129,7 +129,7 @@ extern "C" void android_main(struct android_app *app)
       std::make_shared<UAndroidPlatformPaths>(
           CubatariumAndroidGetAssetManager());
   pathsPtr->EnsureWritableConfig();
-  IPlatformPaths::SetGlobal(pathsPtr);
+  IUPlatformPaths::SetGlobal(pathsPtr);
 
   if (app->window != nullptr)
   {

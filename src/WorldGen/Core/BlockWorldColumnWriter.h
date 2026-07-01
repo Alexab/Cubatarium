@@ -1,11 +1,11 @@
 #pragma once
 
-#include "WorldGen/Core/IColumnWriter.h"
+#include "WorldGen/Core/IUColumnWriter.h"
 
 namespace cutum
 {
 
-class UBlockWorldColumnWriter : public IColumnWriter
+class UBlockWorldColumnWriter : public IUColumnWriter
 {
 public:
   UBlockWorldColumnWriter(UBlockWorld &world, UBlockRegistry &registry);

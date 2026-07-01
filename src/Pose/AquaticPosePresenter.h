@@ -1,12 +1,12 @@
 #ifndef AQUATICPOSEPRESENTER_H
 #define AQUATICPOSEPRESENTER_H
 
-#include "Pose/ICreaturePosePresenter.h"
+#include "Pose/IUCreaturePosePresenter.h"
 
 namespace cutum
 {
 
-class UAquaticPosePresenter : public ICreaturePosePresenter
+class UAquaticPosePresenter : public IUCreaturePosePresenter
 {
 public:
   LocomotionArchetype GetArchetype() const override;

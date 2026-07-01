@@ -1,12 +1,12 @@
 #ifndef SERPENTINEPOSEPRESENTER_H
 #define SERPENTINEPOSEPRESENTER_H
 
-#include "Pose/ICreaturePosePresenter.h"
+#include "Pose/IUCreaturePosePresenter.h"
 
 namespace cutum
 {
 
-class USerpentinePosePresenter : public ICreaturePosePresenter
+class USerpentinePosePresenter : public IUCreaturePosePresenter
 {
 public:
   LocomotionArchetype GetArchetype() const override;

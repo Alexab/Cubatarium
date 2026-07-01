@@ -10,7 +10,7 @@
 namespace cutum
 {
 
-class IGuiMenuHost;
+class IUGuiMenuHost;
 class UGuiPanel;
 class UGuiWindow;
 class UGuiDialogFrame;
@@ -25,7 +25,7 @@ class UGuiSlider;
 class USettingsScreen : public UGuiScreenBase
 {
 public:
-  explicit USettingsScreen(IGuiMenuHost *host);
+  explicit USettingsScreen(IUGuiMenuHost *host);
   ~USettingsScreen();
 
   void Build(UGuiContext &ctx) override;
@@ -44,7 +44,7 @@ private:
   int MeasurePacksPageHeight(const GuiRect &area) const;
   void LayoutPacksPage(const GuiRect &area) const;
 
-  IGuiMenuHost *Host{nullptr};
+  IUGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiPanel *AppPanel{nullptr};

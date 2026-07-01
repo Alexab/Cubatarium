@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -36,7 +36,7 @@ struct ComposableWorldGenConfig
   bool FirePatch{false};
 };
 
-class UComposableWorldGenerator : public IWorldGenPipeline
+class UComposableWorldGenerator : public IUWorldGenPipeline
 {
 public:
   UComposableWorldGenerator(WorldGenContext ctx, ComposableWorldGenConfig config);

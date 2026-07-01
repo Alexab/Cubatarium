@@ -2,7 +2,7 @@
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -21,7 +21,7 @@ namespace
 } // namespace
 
 UWorldResourcePacksScreen::UWorldResourcePacksScreen(
-    IGuiMenuHost *host, std::function<void()> onClose)
+    IUGuiMenuHost *host, std::function<void()> onClose)
     : Host(host), OnClose(std::move(onClose))
 {
 }

@@ -1,7 +1,7 @@
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
-#include "Gui/Interfaces/IGuiGameActions.h"
+#include "Gui/Interfaces/IUGuiGameActions.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -17,7 +17,7 @@ namespace
 constexpr int kQuitModalZOrder = 100;
 }
 
-UMainMenuScreen::UMainMenuScreen(IGuiGameActions *actions) : Actions(actions) {}
+UMainMenuScreen::UMainMenuScreen(IUGuiGameActions *actions) : Actions(actions) {}
 
 void UMainMenuScreen::ShowQuitConfirmation(bool visible)
 {

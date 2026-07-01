@@ -1,12 +1,12 @@
 #ifndef DESKTOP_PLATFORM_PATHS_H
 #define DESKTOP_PLATFORM_PATHS_H
 
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 
 namespace cutum
 {
 
-class UDesktopPlatformPaths : public IPlatformPaths
+class UDesktopPlatformPaths : public IUPlatformPaths
 {
 public:
   std::filesystem::path WritableRoot() const override;

@@ -1,4 +1,4 @@
-#include "Core/Progress/IProgressSink.h"
+#include "Core/Progress/IUProgressSink.h"
 
 namespace cutum
 {

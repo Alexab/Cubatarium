@@ -1,8 +1,7 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include "Activity/CreatureActivityDirector.h"
-#include "Activity/IWorldPerception.h"
+#include "Activity/IUWorldPerception.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -11,22 +10,16 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
-#include "Pose/CreaturePosePresenterRegistry.h"
-#include "Render/Mesh/ChunkMeshCache.h"
-#include "World/Chunks/ChunkGenerationToken.h"
-#include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
-#include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
+#include "World/Collision/WorldCollision.h"
 #include "World/Core/BlockCountTracker.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/WorldCooperativeOps.h"
-#include "World/IO/AsyncChunkIO.h"
-#include "World/IO/ChunkStorageService.h"
+#include "World/Environment/WorldEnvironment.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
-#include "WorldGen/Core/IChunkPopulator.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -57,12 +50,17 @@ class UTextureCubeStorage;
 class UObjectLibrary;
 class UUser;
 class UCamera;
+class UWorldMeshService;
+class UChunkStorageService;
+class UWorldPersistence;
+class UWorldStreaming;
 
-class UWorld : public IWorldPerception
+class UWorld : public IUWorldPerception
 {
 public:
   UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
          std::shared_ptr<UViewEngine> views);
+  ~UWorld();
 
   void GenerateUsers();
 
@@ -87,11 +85,11 @@ public:
   void Save(const std::string &world_folder_path);
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
-  bool TickCooperativeLoad(class IProgressSink &sink, int chunkBudget);
+  bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
   void BeginCooperativeSave(const std::string &world_folder_path);
-  bool TickCooperativeSave(class IProgressSink &sink, int chunkBudget);
+  bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
   void BeginCooperativeCreate(const std::string &world_name);
-  bool TickCooperativeCreate(class IProgressSink &sink, int columnBudget);
+  bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
@@ -117,6 +115,9 @@ public:
   UBlockWorld &GetBlockWorld() { return BlockWorld; }
   UBlockRegistry &GetBlockRegistry() { return *BlockRegistry; }
   const UBlockRegistry &GetBlockRegistry() const { return *BlockRegistry; }
+
+  UWorldMeshService &GetMeshService();
+  const UWorldMeshService &GetMeshService() const;
 
   void WaitForPendingMeshJobs();
   void RefreshBlockRegistry();
@@ -204,9 +205,6 @@ public:
   void WarmupVisibleListAtCamera();
   bool IsBlockWorldReady() const { return BlockWorldReady; }
   void InvalidateBlockMesh();
-  const std::vector<FaceInstance> &GetBlockRenderInstances();
-  const std::vector<GreedyMeshBatch> &GetGreedyRenderBatches();
-  size_t GetGreedyVertexCount() const;
 
   bool AddObjectByView();
   bool PlaceActiveObjectByView();
@@ -249,12 +247,12 @@ public:
   const std::shared_ptr<UCreatureDefinitionStorage> &
   GetCreatureDefinitionStorage() const
   {
-    return CreatureDefinitions;
+    return Environment.GetCreatureDefinitionStorage();
   }
   const std::shared_ptr<USkinDefinitionStorage> &
   GetSkinDefinitionStorage() const
   {
-    return SkinDefinitions;
+    return Environment.GetSkinDefinitionStorage();
   }
 
   UCreature *GetCreature(CreatureId Id);
@@ -263,8 +261,14 @@ public:
   const UCreature *GetControlledCreature() const;
   UCreature *GetPlayerCreature();
   const UCreature *GetPlayerCreature() const;
-  CreatureId GetControlledCreatureId() const { return ControlledCreatureId; }
-  CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
+  CreatureId GetControlledCreatureId() const
+  {
+    return Environment.GetControlledCreatureId();
+  }
+  CreatureId GetPlayerCreatureId() const
+  {
+    return Environment.GetPlayerCreatureId();
+  }
   bool SetControlledCreature(CreatureId Id);
   void ApplyLocomotionDefinitionToCamera(UCamera &camera,
                                          const CreatureDefinition &def) const;
@@ -315,11 +319,11 @@ public:
   GetCreatureDefinition(const std::string &typeId) const;
   UCreaturePosePresenterRegistry &GetPosePresenterRegistry()
   {
-    return PosePresenterRegistry;
+    return Environment.GetPosePresenterRegistry();
   }
   const UCreaturePosePresenterRegistry &GetPosePresenterRegistry() const
   {
-    return PosePresenterRegistry;
+    return Environment.GetPosePresenterRegistry();
   }
   ResolvedCreatureAppearance
   GetResolvedAppearance(const UCreature &creature) const;
@@ -357,15 +361,12 @@ public:
                             const PlayerCapsule &cap,
                             CreatureId skipCreatureId = 0) const;
 
-  CreatureId GetMovementCollisionSkipId() const { return ControlledCreatureId; }
-
-  struct StepUpProbe
+  CreatureId GetMovementCollisionSkipId() const
   {
-    bool Valid{false};
-    float DistanceToLedge{0.0f};
-    glm::vec3 TargetPos{0.0f};
-    glm::vec3 MoveDir{0.0f};
-  };
+    return Environment.GetControlledCreatureId();
+  }
+
+  using StepUpProbe = UWorldCollision::StepUpProbe;
   StepUpProbe ProbeStepUp(const glm::vec3 &eyePos, const glm::vec3 &horiz,
                           const PlayerCapsule &cap,
                           float maxTriggerDistance) const;
@@ -382,8 +383,6 @@ public:
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;
-  uint64_t GetMeshRevision() const;
-  uint64_t GetCullRevision() const;
   size_t GetCachedBlockCount() const { return CachedBlockCount; }
 
   bool GetIsIntersectionExists() const;
@@ -420,6 +419,7 @@ public:
     double flatRebuildMs{0.0};
     double countNonAirMs{0.0};
     int asyncMeshInFlight{0};
+    bool asyncMeshingEnabled{true};
     int greedyCacheEntries{0};
     int framesSinceLoad{0};
     bool meshBacklogCleared{false};
@@ -430,7 +430,7 @@ public:
     return MovementDiag;
   }
 
-  void SetStreamingEnabled(bool enabled) { StreamingEnabled = enabled; }
+  void SetStreamingEnabled(bool enabled);
   void SetRenderDistanceChunks(int distance);
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
@@ -441,9 +441,11 @@ public:
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
-  UChunkStorageService &GetChunkStorage() { return *ChunkStorage; }
-  const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
-  bool IsStreamingEnabled() const { return StreamingEnabled; }
+  UChunkStorageService &GetChunkStorage();
+  const UChunkStorageService &GetChunkStorage() const;
+  const std::string &GetWorldFolderPath() const;
+  void SetWorldFolderPath(const std::string &path);
+  bool IsStreamingEnabled() const;
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
@@ -454,9 +456,12 @@ public:
 
   void SetEntityCollisionEnabled(bool enabled)
   {
-    EntityCollisionEnabled = enabled;
+    Collision.SetEntityCollisionEnabled(enabled);
   }
-  bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
+  bool IsEntityCollisionEnabled() const
+  {
+    return Collision.IsEntityCollisionEnabled();
+  }
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
 
@@ -464,6 +469,8 @@ public:
 
 private:
   friend class UWorldCooperativeSession;
+  friend class UWorldStreaming;
+  friend class UWorldPersistence;
   bool CheckRayIntersection(
       const glm::vec3 &position, const glm::vec3 &front,
       std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
@@ -486,11 +493,9 @@ private:
   void LoadUsers(const std::string &file_name);
   void SaveUsers(const std::string &file_name);
   void LinkUsersToPlayerCreatures();
+  void ResetCreaturesBeforeEntityLoad();
 
   void LoadInitialStreamingChunks();
-  void RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord);
-  void RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord);
-  bool IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const;
 
   void LoadWorldData(const std::string &file_name);
   void SaveWorldData(const std::string &file_name);
@@ -498,8 +503,8 @@ private:
   void GenerateWorldBlocks();
   void RebuildBlockMesh();
   void InitStreamerCallbacks();
-  void InitChunkScheduler();
   void TickAsyncChunkSystems();
+  void TickMeshEmerge();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);
   bool IsReasonablePlayerPosition(const glm::vec3 &position) const;
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
@@ -522,7 +527,7 @@ private:
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};
   ProceduralSettings ProceduralTemplate;
-  std::unique_ptr<IWorldGenPipeline> WorldGen;
+  std::unique_ptr<IUWorldGenPipeline> WorldGen;
   size_t CachedBlockCount{0};
   bool BlockWorldReady{false};
   int PhysicsSuspendFrames{0};
@@ -540,14 +545,7 @@ private:
 
   std::map<std::string, std::shared_ptr<UUser>> Users;
 
-  std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
-  CreatureId NextCreatureId{1};
-  CreatureId PlayerCreatureId{0};
-  CreatureId ControlledCreatureId{0};
-  std::shared_ptr<UCreatureDefinitionStorage> CreatureDefinitions;
-  std::shared_ptr<USkinDefinitionStorage> SkinDefinitions;
-  UCreatureActivityDirector ActivityDirector;
-  UCreaturePosePresenterRegistry PosePresenterRegistry;
+  UWorldEnvironment Environment;
 
   std::shared_ptr<UTextureCubeStorage> TextureCubeInstance;
   std::shared_ptr<UViewEngine> ViewInstance;
@@ -559,19 +557,12 @@ private:
   std::shared_ptr<class UBlockMergeRegistry> BlockMergeRegistry;
   std::unique_ptr<UBlockRegistry> BlockRegistry;
   UBlockWorld BlockWorld;
+  UWorldCollision Collision;
   UBlockCountTracker BlockCounter;
-  UChunkMeshCache MeshCache;
-  std::unique_ptr<UChunkStreamer> Streamer;
-  std::unique_ptr<UPipelineChunkPopulator> ChunkPopulator;
-  std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
-  UChunkGenerationRegistry ChunkGenTokens;
-  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
-  std::unique_ptr<UChunkStorageService> ChunkStorage;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
-  bool StreamingEnabled{true};
+  std::unique_ptr<UWorldMeshService> MeshService;
+  std::unique_ptr<UWorldStreaming> Streaming;
+  std::unique_ptr<UWorldPersistence> Persistence;
   bool StepUpEnabled{true};
-  bool EntityCollisionEnabled{true};
   RenderSettings Render;
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
@@ -582,7 +573,6 @@ private:
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> ModifiedChunks;
-  std::string WorldFolderPath;
   bool IsIntersectionExists;
   glm::vec3 Intersection;
   float IntersectionDistance;
@@ -607,8 +597,6 @@ private:
   MovementDiagnostics MovementDiag;
   std::vector<MovementDiagnostics> MovementDiagHistory;
   std::unique_ptr<UWorldCooperativeSession> CoopSession;
-  double FrameStreamingGenMs{0.0};
-  double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};
   bool HasLastPlayerY{false};
   int FramesSinceLoad{0};

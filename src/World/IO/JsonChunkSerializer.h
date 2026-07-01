@@ -1,11 +1,11 @@
 #pragma once
 
-#include "World/IO/IChunkSerializer.h"
+#include "World/IO/IUChunkSerializer.h"
 
 namespace cutum
 {
 
-class UJsonChunkSerializer : public IChunkSerializer
+class UJsonChunkSerializer : public IUChunkSerializer
 {
 public:
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Json; }

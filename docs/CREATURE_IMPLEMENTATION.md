@@ -741,17 +741,17 @@ CMake: копия `models/` уже включает подпапку `creatures/
 
 | Файл | Назначение |
 |------|------------|
-| `CreatureVisual.h` | `ICreatureVisual` |
+| `CreatureVisual.h` | `IUCreatureVisual` |
 | `CreatureVisualFactory.cpp` | по `visual.backend` |
 | `CreatureVisualRigid.cpp` | parts + pose |
 | `CreatureVisualGltf.cpp` | stub `SubmitDraw` empty |
 
-### 11.2 `ICreatureVisual`
+### 11.2 `IUCreatureVisual`
 
 ```cpp
-class ICreatureVisual {
+class IUCreatureVisual {
 public:
-  virtual ~ICreatureVisual() = default;
+  virtual ~IUCreatureVisual() = default;
   virtual void UpdatePose(const Creature&, LocomotionState,
                           const CreatureDefinition& animDef, float dt) = 0;
   virtual void SubmitDraw(GeometryEngine&, const glm::mat4& viewProj) = 0;

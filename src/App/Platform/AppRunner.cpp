@@ -2,8 +2,8 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
-#include "App/Platform/IPlatformPaths.h"
-#include "App/Platform/IPlatformWindow.h"
+#include "App/Platform/IUPlatformPaths.h"
+#include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -19,12 +19,12 @@
 namespace cutum
 {
 
-int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
+int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
 {
   try
   {
-    IPlatformPaths::SetGlobal(
-        std::shared_ptr<IPlatformPaths>(&paths, [](IPlatformPaths *) {}));
+    IUPlatformPaths::SetGlobal(
+        std::shared_ptr<IUPlatformPaths>(&paths, [](IUPlatformPaths *) {}));
 
     const glm::ivec2 fbSize = window.GetFramebufferSize();
     const int initW = fbSize.x > 0 ? fbSize.x : 1280;
@@ -67,6 +67,7 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     auto core = std::make_shared<UCore>(
         texture_base_instance, texture_cube_instance, object_library, world,
         geometry_engine, view_engine);
+    geometry_engine->SetGameContent(core.get());
 
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);

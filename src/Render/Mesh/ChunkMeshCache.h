@@ -2,6 +2,7 @@
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
@@ -68,11 +69,16 @@ public:
   {
     return GreedyBatches;
   }
+  const std::vector<CrossInstanceBatch> &GetCrossBatches() const
+  {
+    return CrossBatches;
+  }
 
 private:
   struct ChunkGreedyMesh
   {
     std::vector<GreedyMeshBatch> batches;
+    std::unordered_map<BlockId, std::vector<glm::vec3>> crossCenters;
   };
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
@@ -87,6 +93,9 @@ private:
   void RebuildFlatGreedyBatches(const Frustum *frustum,
                                 const glm::vec3 *cameraPos,
                                 float maxCullDistance);
+  void RebuildFlatCrossInstances(const Frustum *frustum,
+                               const glm::vec3 *cameraPos,
+                               float maxCullDistance);
   void InvalidateVisibleList();
   float MaxCullDistance() const;
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
@@ -95,8 +104,10 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> DirtyChunkSet;
   std::vector<FaceInstance> Instances;
   std::vector<GreedyMeshBatch> GreedyBatches;
+  std::vector<CrossInstanceBatch> CrossBatches;
   bool InstancesDirty{true};
   bool GreedyBatchesDirty{true};
+  bool CrossBatchesDirty{true};
   uint64_t MeshRevision{0};
   uint64_t CullRevision{0};
   glm::ivec3 LastCullCameraChunk{INT32_MAX, INT32_MAX, INT32_MAX};

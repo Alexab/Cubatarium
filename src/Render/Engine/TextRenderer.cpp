@@ -1,7 +1,7 @@
 #include "Render/Engine/TextRenderer.h"
 
 #include "App/Platform/GameAssets.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -489,7 +489,7 @@ void UTextRenderer::SetWindowSize(int width, int height)
 
 std::string UTextRenderer::FindAvailableFont()
 {
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     const auto preferred =
         paths->AssetRoot() / "fonts" / kBundledUiFontFileName;

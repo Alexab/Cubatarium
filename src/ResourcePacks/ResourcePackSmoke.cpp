@@ -1,6 +1,6 @@
 #include "ResourcePacks/ResourcePackSmoke.h"
 
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -169,7 +169,7 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
 
 } // namespace
 
-int RunResourcePackSmoke(IPlatformPaths &paths)
+int RunResourcePackSmoke(IUPlatformPaths &paths)
 {
   const fs::path assetRoot = paths.AssetRoot();
   const fs::path writableRoot = paths.WritableRoot();

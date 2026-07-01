@@ -87,7 +87,7 @@ Trees and structures: world objects in [`objects/`](../objects/) use canonical b
 
 ## World generation
 
-Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorRegistry` (`WorldGeneratorDescriptor.h`). Factory entry: `UProceduralWorldGenFactory::Create`.
+Generators implement `IUWorldGenPipeline` and are registered in `UWorldGeneratorRegistry` (`WorldGeneratorDescriptor.h`). Factory entry: `UProceduralWorldGenFactory::Create`.
 
 | Generator id | Description |
 |--------------|-------------|
@@ -97,7 +97,7 @@ Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorR
 | `hills` / `mountains` | Noise terrain presets |
 | `beta_retro` | Overworld (BetaRetro): beta-style cliffs with biomes |
 
-`UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
+`UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IUBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
 Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 
@@ -197,7 +197,7 @@ Spatial load: cooperative `MeshWarmup` phase builds meshes on the loading screen
 `ChunkStreamer` around the camera each frame:
 
 1. For each chunk in render radius — try `chunks/cx_cy_cz.json` on disk.
-2. If missing — generate columns for that chunk using the world's procedural pipeline (`PipelineChunkPopulator` / `IWorldGenPipeline::GenerateColumn`).
+2. If missing — generate columns for that chunk using the world's procedural pipeline (`PipelineChunkPopulator` / `IUWorldGenPipeline::GenerateColumn`).
 3. Unload distant chunks (save to disk, drop from memory).
 
 Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
@@ -292,3 +292,45 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` in `Application::RouteKey`. Left Alt toggles free cursor for HUD.
 
 **Manual check (GUI):** resize main menu and in-game window; verify hotbar centering and row order; block/prefab icons and tooltips on hover and slot selection; F9 palette and console panel edges on resize.
+
+## Module boundaries
+
+Layer dependency rules (enforced by `tools/audit/check_include_rules.py` in CI):
+
+```
+App → Game, Gui, World (facade), Render (facade), Core
+World → Blocks, WorldGen, Creatures (IU-interfaces only)
+Render → World (IUBlockWorld read-only), Blocks (defs)
+World ↛ Render   (no #include Render/* from World headers)
+```
+
+| Module | May include | Must not include |
+|--------|-------------|------------------|
+| `src/World/` | Blocks, WorldGen, Creatures, Core | `Render/*` except `src/World/Mesh/` adapter |
+| `src/Render/` | Blocks, World interfaces | `Gui/*`, `App/Application.h` (Pipeline: see [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md)) |
+| `src/App/` | all facades | — |
+| `src/Gui/` | App interfaces, Blocks icons | direct `World.h` (use view-models) |
+
+New interfaces use **`IU*`** naming (`IUWorldMeshSink`, `IUGameContent`); see [`CODING_STYLE.md`](CODING_STYLE.md).
+
+### World facades (2026-07)
+
+| Module | Class | Role |
+|--------|-------|------|
+| `World/Mesh/` | `UWorldMeshService` | Chunk mesh cache, dirty API (`IUWorldMeshSink`) |
+| `World/Persistence/` | `UWorldPersistence` | users/world_data/chunk I/O |
+| `World/Streaming/` | `UWorldStreaming` | `UChunkStreamer`, scheduler, emerge |
+| `World/Streaming/` | `UChunkEmergeCoordinator` | Per-frame chunk/mesh budgets |
+| `World/Environment/` | `UWorldEnvironment` | Creatures, activity, poses |
+| `World/Collision/` | `UWorldCollision` | Movement, collision, step-up |
+| `Game/Interfaces/` | `IUGameContent` | Read-only defs (blocks, objects, creatures) |
+
+## Console / Commands module layout
+
+| Path | Role |
+|------|------|
+| `src/Commands/` | `UCommandRegistry`, `RegisterWorldCommands`, command handlers |
+| `src/Console/` | Input history (`UConsoleCommandHistory`), sanitization |
+| `src/Gui/Screens/ConsoleScreen.cpp` | Console overlay UI only |
+
+Gameplay commands register in `src/Commands/WorldCommands.cpp` on session init; `UGameSession` owns the registry and delegates `Execute()` to the overlay.

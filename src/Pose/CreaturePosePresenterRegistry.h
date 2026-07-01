@@ -2,7 +2,7 @@
 #define CREATUREPOSEPRESENTERREGISTRY_H
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
-#include "Pose/ICreaturePosePresenter.h"
+#include "Pose/IUCreaturePosePresenter.h"
 #include <array>
 #include <memory>
 
@@ -12,12 +12,12 @@ namespace cutum
 class UCreaturePosePresenterRegistry
 {
 public:
-  void Register(std::unique_ptr<ICreaturePosePresenter> presenter);
-  ICreaturePosePresenter *Get(LocomotionArchetype archetype) const;
+  void Register(std::unique_ptr<IUCreaturePosePresenter> presenter);
+  IUCreaturePosePresenter *Get(LocomotionArchetype archetype) const;
   void Clear();
 
 private:
-  std::array<std::unique_ptr<ICreaturePosePresenter>, 5> Presenters{};
+  std::array<std::unique_ptr<IUCreaturePosePresenter>, 5> Presenters{};
 };
 
 void RegisterDefaultCreaturePosePresenters(

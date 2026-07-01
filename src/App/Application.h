@@ -1,18 +1,20 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "App/Navigation/ScreenNavigator.h"
+#include "App/Input/InputRouter.h"
 #include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "App/Settings/UiSettings.h"
 #include "App/WorldOperationRunner.h"
-#include "Core/Progress/IProgressSink.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiMetrics.h"
-#include "Gui/Interfaces/IGuiClipboard.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiClipboard.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
@@ -58,8 +60,10 @@ enum class MenuSubview
   NewWorld
 };
 
-class UApplication : public IGuiMenuHost
+class UApplication : public IUGuiMenuHost
 {
+  friend class UScreenNavigator;
+
 public:
   UApplication(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
                std::shared_ptr<UGeometryEngine> geometry,
@@ -173,6 +177,8 @@ private:
   void ClearGameplayKeyboard();
   void NotifyAllScreensMetricsChanged(const GuiMetrics &metrics);
 
+  UScreenNavigator ScreenNav;
+
   std::shared_ptr<UCore> Core;
   std::shared_ptr<UWorld> World;
   std::shared_ptr<UGeometryEngine> Geometry;
@@ -225,7 +231,7 @@ private:
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
-  std::unique_ptr<IGuiClipboard> Clipboard;
+  std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;
 
   MenuSubview MenuSubview{MenuSubview::Main};

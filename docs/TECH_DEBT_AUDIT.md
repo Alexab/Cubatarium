@@ -34,6 +34,7 @@
 | TD-AUD-013 | 2026-06 | MarkBlockChunkDirty dual path documented (immediate vs deferred) |
 | TD-AUD-018 | 2026-06 | spawn_fire_blocks_max=8; seed 42 decorative fire documented |
 | TD-AUD-019 | 2026-06 | tree_bark in cubatarium_cc0_base for merge smoke |
+| TD-AUD-025 | 2026-07 | Legacy `I*` interfaces → `IU*` (PR-IU-1..6): platform, world IO, worldgen, creatures, GUI, render/progress |
 
 ## Phase tracker
 
@@ -45,4 +46,4 @@
 | PR-E perf reserve | partial | GreedyMesher only |
 | PR-F docs + CI | done | style gate; clang-format on diff |
 | Module agents ×8 | done | 71 findings in audit/modules/ (manual pass 2026-06-27) |
-| Human gate | approved | P0 fixes applied; backlog PR-D/E open |
+| Human gate | approved | P0 fixes applied; arch refactor phases 0–5 landed 2026-07 |

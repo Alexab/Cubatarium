@@ -3,16 +3,16 @@
 
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
-#include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 #include <memory>
 #include <string>
 
 namespace cutum
 {
 
-class IContentCatalog;
+class IUContentCatalog;
 class UGameSession;
-class IGuiIconSource;
+class IUGuiIconSource;
 class UContentPreviewRenderer;
 class UContentPreviewDock;
 class UGuiTabBar;
@@ -26,8 +26,8 @@ struct GuiTheme;
 class UCreativePaletteScreen : public UGuiScreenBase
 {
 public:
-  UCreativePaletteScreen(IContentCatalog *catalog, UGameSession *session,
-                         IGuiIconSource *icons,
+  UCreativePaletteScreen(IUContentCatalog *catalog, UGameSession *session,
+                         IUGuiIconSource *icons,
                          UContentPreviewRenderer *previewRenderer);
   ~UCreativePaletteScreen();
 
@@ -56,9 +56,9 @@ private:
   void LayoutGridInScroll();
   void SyncPreviewDock();
 
-  IContentCatalog *Catalog{nullptr};
+  IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
-  IGuiIconSource *Icons{nullptr};
+  IUGuiIconSource *Icons{nullptr};
   UContentPreviewRenderer *PreviewRenderer{nullptr};
   std::unique_ptr<UContentPreviewDock> PreviewDock;
   UGuiPanel *RootShell{nullptr};

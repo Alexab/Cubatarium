@@ -28,7 +28,7 @@
 #include "App/Core.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/GameDataRoot.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Core/ColorUtil.h"
 #include "Creatures/Core/Creature.h"
@@ -49,6 +49,7 @@
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
+#include "WorldGen/Core/WorldGenPack.h"
 
 using json = nlohmann::json;
 
@@ -88,6 +89,45 @@ bool ResourcePackSelectionEqual(const ResourcePackSelection &a,
 }
 
 } // namespace
+
+const UBlockDefinitionStorage &UCore::Blocks() const
+{
+  static const UBlockDefinitionStorage kEmpty;
+  if (BlockDefinitionsInstance)
+  {
+    return *BlockDefinitionsInstance;
+  }
+  return kEmpty;
+}
+
+const UObjectLibrary &UCore::Objects() const
+{
+  static const UObjectLibrary kEmpty;
+  if (ObjectLibraryInstance)
+  {
+    return *ObjectLibraryInstance;
+  }
+  return kEmpty;
+}
+
+const UCreatureDefinitionStorage &UCore::Creatures() const
+{
+  static const UCreatureDefinitionStorage kEmpty;
+  if (WorldInstance)
+  {
+    const auto &storage = WorldInstance->GetCreatureDefinitionStorage();
+    if (storage)
+    {
+      return *storage;
+    }
+  }
+  return kEmpty;
+}
+
+const WorldGenPack &UCore::ActiveWorldGenPack() const
+{
+  return UWorldGenPack::Get();
+}
 
 std::filesystem::path GetExecutableDirectory()
 {
@@ -181,7 +221,7 @@ bool UCore::ShouldCreateWorldOnStartup() const
 void UCore::LoadConfig(const std::string &config_file_name)
 {
 #ifdef __ANDROID__
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     ExeDir = paths->WritableRoot();
     ConfigFilePath = std::filesystem::path(config_file_name);
@@ -242,7 +282,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
       DefaultWorldName = d.value("default_world", "");
       DefaultUserName = d.value("default_user", "");
       WorldSeed = d.value("world_seed", 12345u);
-      TerrainType = d.value("terrain", "heightmap");
       ProceduralTemplate = ParseProceduralTemplateFromConfig(d);
       WorldSeed = ProceduralTemplate.Seed;
       TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
@@ -1287,24 +1326,7 @@ UCore::PeekWorldResourcePacks(const std::string &world_name) const
   try
   {
     const json d = json::parse(buffer.str());
-    if (!d.contains("resource_packs") || !d["resource_packs"].is_object())
-    {
-      return {};
-    }
-    const auto &rp = d["resource_packs"];
-    if (!rp.contains("enabled") || !rp["enabled"].is_array())
-    {
-      return {};
-    }
-    std::vector<std::string> result;
-    for (const auto &id : rp["enabled"])
-    {
-      if (id.is_string())
-      {
-        result.push_back(id.get<std::string>());
-      }
-    }
-    return result;
+    return ReadLegacyWorldEnabledPacks(d);
   }
   catch (const json::exception &e)
   {

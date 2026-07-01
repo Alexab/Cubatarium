@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Commands/WorldCommands.h"
@@ -62,24 +63,19 @@ UGameSession::UGameSession(UApplication *application,
 }
 
 void UGameSession::InitializeCatalog(const std::string &typesJsonPath,
-                                     const UBlockDefinitionStorage &blocks,
-                                     const UObjectLibrary &prefabs)
+                                     const IUGameContent &content)
 {
   ContentCatalog.LoadTypes(typesJsonPath);
-  ReindexBlockCatalog(blocks, prefabs);
+  ReindexBlockCatalog(content);
 }
 
-void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
-                                       const UObjectLibrary &prefabs)
+void UGameSession::ReindexBlockCatalog(const IUGameContent &content)
 {
-  ContentCatalog.IndexBlocks(blocks);
-  ContentCatalog.IndexObjects(prefabs);
+  ContentCatalog.IndexBlocks(content.Blocks());
+  ContentCatalog.IndexObjects(content.Objects());
   if (World)
   {
-    if (const auto &creatureDefs = World->GetCreatureDefinitionStorage())
-    {
-      ContentCatalog.IndexCreatures(*creatureDefs);
-    }
+    ContentCatalog.IndexCreatures(content.Creatures());
     if (const auto &skinDefs = World->GetSkinDefinitionStorage())
     {
       ContentCatalog.IndexSkins(*skinDefs);
@@ -90,9 +86,6 @@ void UGameSession::ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
 void UGameSession::RegisterCommands()
 {
   RegisterWorldCommands(*this, UCommandRegistry);
-  UCommandRegistry.Register(
-      "help", [this](const std::vector<std::string> &)
-      { return CommandResult{true, UCommandRegistry.FormatHelpText()}; });
 }
 
 void UGameSession::LoadLastWorld()

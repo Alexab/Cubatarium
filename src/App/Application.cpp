@@ -26,8 +26,8 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiTypes.h"
-#include "Gui/Interfaces/IGuiClipboard.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUGuiClipboard.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
@@ -76,7 +76,7 @@ UWindowManager *GetWindowManager(GLFWwindow *window)
   return static_cast<UWindowManager *>(glfwGetWindowUserPointer(window));
 }
 
-class UGlfwClipboard : public IGuiClipboard
+class UGlfwClipboard : public IUGuiClipboard
 {
 public:
   explicit UGlfwClipboard(GLFWwindow *window) : Window(window) {}
@@ -103,7 +103,7 @@ private:
   GLFWwindow *Window;
 };
 #else
-class UNullClipboard : public IGuiClipboard
+class UNullClipboard : public IUGuiClipboard
 {
 public:
   std::string GetString() const override { return {}; }
@@ -141,7 +141,7 @@ UApplication::UApplication(
       Geometry(std::move(geometry)), Views(std::move(views)),
       TextRenderer(std::move(text_renderer)),
       ShaderManager(std::move(shader_manager)),
-      BlockDefinitions(std::move(block_definitions))
+      BlockDefinitions(std::move(block_definitions)), ScreenNav(this)
 {
   GuiContext = std::make_unique<UGuiContext>();
   GameSession = std::make_unique<UGameSession>(this, World);
@@ -224,8 +224,7 @@ void UApplication::Startup(const std::string &configPath)
     {
       CubatariumLogInfo("App", "worldgen pack not loaded — built-in biome defaults only");
     }
-    GameSession->InitializeCatalog(typesPath, *BlockDefinitions,
-                                    *Core->GetObjectLibrary());
+    GameSession->InitializeCatalog(typesPath, *Core);
   }
   GameSession->RegisterCommands();
 
@@ -380,16 +379,7 @@ void UApplication::RequestQuit()
 
 void UApplication::ShowMainMenu()
 {
-  ProgressScreen = nullptr;
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  auto menu = std::make_unique<UMainMenuScreen>(GameSession.get());
-  MainMenuScreen = menu.get();
-  MenuSubview = MenuSubview::Main;
-  GuiContext->SetScreen(std::move(menu));
-  SyncCursorVisibility();
+  ScreenNav.ShowMainMenu();
 }
 
 void UApplication::SetHotbarCountSetting(int count)
@@ -515,7 +505,7 @@ void UApplication::RefreshBlockCatalog()
   {
     return;
   }
-  GameSession->ReindexBlockCatalog(*BlockDefinitions, *Core->GetObjectLibrary());
+  GameSession->ReindexBlockCatalog(*Core);
   if (IconSource)
   {
     IconSource->ClearBlockIconCache();
@@ -540,7 +530,7 @@ void UApplication::RefreshCreatureCatalog()
   {
     return;
   }
-  GameSession->ReindexBlockCatalog(*BlockDefinitions, *Core->GetObjectLibrary());
+  GameSession->ReindexBlockCatalog(*Core);
 }
 
 void UApplication::EnterGameAfterWorldChange()
@@ -754,7 +744,7 @@ void UApplication::ShowInGameHud()
   GameSession->InitCommandHistory(GetExecutableDirectory() /
                                    "console_history.txt");
 
-  IGuiIconSource *icons = IconSource.get();
+  IUGuiIconSource *icons = IconSource.get();
   UContentPreviewRenderer *preview = ContentPreviewRenderer.get();
   auto hud = std::make_unique<UInGameHudScreen>(
       GameSession.get(), &GuiContext->GetTheme(), icons);
@@ -1423,13 +1413,7 @@ bool UApplication::AllowsWorldMousePlacement() const
 
 bool UApplication::RouteKey(int key, int Action, int Mods)
 {
-  GuiKeyEvent event;
-  event.KeyCode = key;
-  event.Action = Action == GLFW_REPEAT
-                     ? GuiKeyAction::Repeat
-                     : (Action == GLFW_PRESS ? GuiKeyAction::Press
-                                             : GuiKeyAction::Release);
-  event.Mods = Mods;
+  GuiKeyEvent event = UInputRouter::MakeGuiKeyEvent(key, Action, Mods);
 
   if (Action == GLFW_PRESS && State == AppState::InGame)
   {

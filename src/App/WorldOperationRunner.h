@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Progress/IProgressSink.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <functional>
@@ -40,7 +40,7 @@ public:
   void Start(WorldRunnerRequest request);
   bool IsActive() const { return Active; }
   /// @return true when the operation has finished (success or failure).
-  bool Tick(IProgressSink &sink, int chunkBudgetPerFrame);
+  bool Tick(IUProgressSink &sink, int chunkBudgetPerFrame);
   bool Succeeded() const { return Success; }
   const std::string &ErrorMessage() const { return Error; }
   bool ShouldEnterGame() const { return Request.enterGameAfter; }
@@ -62,8 +62,8 @@ private:
     Failed
   };
 
-  void Fail(const std::string &message, IProgressSink &sink);
-  bool TickWorldOp(IProgressSink &sink, int chunkBudget);
+  void Fail(const std::string &message, IUProgressSink &sink);
+  bool TickWorldOp(IUProgressSink &sink, int chunkBudget);
   void PrepareCreateWorld();
 
   UCore &Core;
