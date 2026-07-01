@@ -4,6 +4,8 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Navigation/NavigationTypes.h"
+#include "Navigation/WorldNavigationQueries.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Primitives/Cube.h"
 #include "World/Core/BlockWorld.h"
@@ -13,6 +15,7 @@
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace cutum
 {
@@ -450,6 +453,104 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
   return !world.CheckCollisionVolume(vol, 0);
 }
 
+namespace
+{
+
+bool TerrestrialMobStandValid(const UWorld &world, const glm::vec3 &body_origin,
+                            const glm::vec3 &size_blocks,
+                            uint64_t skip_creature_id)
+{
+  const UWorldNavigationQueries navigation(world);
+  const NavigationStandNode node =
+      NavigationStandNodeFromBody(body_origin);
+  if (!navigation.IsTerrestrialStandNode(node, size_blocks.y))
+  {
+    return false;
+  }
+  if (!HabitatAllowsMovementAt(world, CreatureHabitat::Terrestrial, body_origin,
+                               size_blocks))
+  {
+    return false;
+  }
+  const CollisionVolume vol =
+      CollisionVolumeFromBody(body_origin, size_blocks);
+  return !world.CheckCreatureCollisionVolume(vol, skip_creature_id);
+}
+
+} // namespace
+
+glm::vec3 ResolveTerrestrialMobMovement(const UWorld &world,
+                                        const glm::vec3 &bodyOrigin,
+                                        const glm::vec3 &horizontalDelta,
+                                        const glm::vec3 &sizeBlocks,
+                                        uint64_t skip_creature_id,
+                                        float max_step_up, float max_step_down)
+{
+  const glm::vec3 horiz(horizontalDelta.x, 0.0f, horizontalDelta.z);
+  if (glm::dot(horiz, horiz) < 1e-10f)
+  {
+    return bodyOrigin;
+  }
+
+  std::vector<float> y_offsets;
+  y_offsets.push_back(0.0f);
+  if (max_step_up > 0.01f)
+  {
+    y_offsets.push_back(max_step_up);
+  }
+  const int drop_steps =
+      static_cast<int>(std::ceil(std::max(max_step_down, 1.0f)));
+  for (int step = 1; step <= drop_steps; ++step)
+  {
+    y_offsets.push_back(-static_cast<float>(step));
+  }
+
+  glm::vec3 best = bodyOrigin;
+  float best_travel_sq = 0.0f;
+  for (const float y_offset : y_offsets)
+  {
+    glm::vec3 trial = bodyOrigin;
+    trial.y += y_offset;
+    const glm::vec3 moved =
+        world.ResolveMovementBody(trial, horiz, sizeBlocks, skip_creature_id);
+    const glm::vec2 xz_delta(moved.x - bodyOrigin.x, moved.z - bodyOrigin.z);
+    const float travel_sq = glm::dot(xz_delta, xz_delta);
+    if (travel_sq < 1e-8f)
+    {
+      continue;
+    }
+
+    const int gx = WorldCoordToBlockIndex(moved.x);
+    const int gz = WorldCoordToBlockIndex(moved.z);
+    const std::optional<float> feet_y =
+        ResolveTerrestrialGroundFeetY(world, gx, gz, moved.y);
+    if (!feet_y)
+    {
+      continue;
+    }
+
+    const float climb = *feet_y - bodyOrigin.y;
+    const float drop = bodyOrigin.y - *feet_y;
+    if (climb > max_step_up + 0.05f || drop > max_step_down + 0.05f)
+    {
+      continue;
+    }
+
+    const glm::vec3 snapped(moved.x, *feet_y, moved.z);
+    if (!TerrestrialMobStandValid(world, snapped, sizeBlocks, skip_creature_id))
+    {
+      continue;
+    }
+
+    if (travel_sq > best_travel_sq)
+    {
+      best_travel_sq = travel_sq;
+      best = snapped;
+    }
+  }
+  return best;
+}
+
 bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
                      const glm::vec3 &bodyOrigin,
                      const glm::vec3 &sizeBlocks)
@@ -465,20 +566,30 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
 {
   if (habitat == CreatureHabitat::Terrestrial)
   {
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
-    if (env.onSolidGround && !env.inFluid)
-    {
-      return true;
-    }
+    glm::vec3 feet_origin = bodyOrigin;
     const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
     const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
-    if (const std::optional<float> feetY =
-            world.QueryGroundFeetYUnder(gx, gz, bodyOrigin.y))
+    if (const std::optional<float> feet_y =
+            ResolveTerrestrialGroundFeetY(world, gx, gz, bodyOrigin.y))
     {
-      return std::abs(*feetY - bodyOrigin.y) <= 0.75f;
+      const float climb = *feet_y - bodyOrigin.y;
+      const float drop = bodyOrigin.y - *feet_y;
+      if (climb > 1.25f || drop > 1.25f)
+      {
+        return false;
+      }
+      feet_origin.y = *feet_y;
     }
-    return false;
+    const UWorldNavigationQueries navigation(world);
+    const NavigationStandNode node =
+        NavigationStandNodeFromBody(feet_origin);
+    if (!navigation.IsTerrestrialStandNode(node, sizeBlocks.y))
+    {
+      return false;
+    }
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, feet_origin, sizeBlocks);
+    return env.onSolidGround && !env.inFluid;
   }
   if (habitat == CreatureHabitat::Amphibious)
   {

@@ -203,8 +203,26 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
       }
     }
     const glm::vec3 size = Bounds.profile.restSizeBlocks;
-    const glm::vec3 candidate =
-        world.ResolveMovementBody(BodyOrigin, delta, size, Id);
+    glm::vec3 candidate = BodyOrigin;
+    const bool use_terrestrial_steps =
+        !airMobility &&
+        (habitat == CreatureHabitat::Terrestrial ||
+         (habitat == CreatureHabitat::Amphibious &&
+          !ProbeEnvironmentAt(world, BodyOrigin, size).inWater));
+    if (use_terrestrial_steps)
+    {
+      const float max_step_up =
+          def && def->locomotion.jumpHeightBlocks > 0.01f
+              ? def->locomotion.jumpHeightBlocks
+              : 1.0f;
+      const float max_step_down = std::max(max_step_up, 1.0f);
+      candidate = ResolveTerrestrialMobMovement(world, BodyOrigin, delta, size,
+                                                Id, max_step_up, max_step_down);
+    }
+    else
+    {
+      candidate = world.ResolveMovementBody(BodyOrigin, delta, size, Id);
+    }
     if (airMobility)
     {
       const CollisionVolume vol = CollisionVolumeFromBody(candidate, size);
@@ -213,9 +231,17 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         BodyOrigin = candidate;
       }
     }
+    else if (use_terrestrial_steps)
+    {
+      if (glm::length(candidate - BodyOrigin) > 1e-5f)
+      {
+        BodyOrigin = candidate;
+      }
+    }
     else
     {
-      const bool habitatOk = world.HabitatAllowsMovementAt(habitat, candidate, size);
+      const bool habitatOk =
+          world.HabitatAllowsMovementAt(habitat, candidate, size);
       if (habitatOk)
       {
         BodyOrigin = candidate;
