@@ -4,10 +4,18 @@
 namespace cutum
 {
 
+enum class PerformancePreset
+{
+  Balanced,
+  Fast,
+  Quality
+};
+
 /// Runtime Render toggles (config.json "Render" section). Use to bisect FPS
 /// optimizations.
 struct RenderSettings
 {
+  PerformancePreset Preset{PerformancePreset::Balanced};
   bool GreedyMeshing{true};
   bool AsyncMeshing{true};
   bool FaceQuads{true};
@@ -51,6 +59,8 @@ struct RenderSettings
   /// Greedy merged quads drawn as world-space mesh with baked atlas UV
   /// (requires GreedyMeshing and FaceQuads).
   bool UseFaceQuadDraw() const { return GreedyMeshing && FaceQuads; }
+
+  static RenderSettings FromPreset(PerformancePreset preset);
 };
 
 } // namespace cutum

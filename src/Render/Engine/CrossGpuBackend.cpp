@@ -3,6 +3,7 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include <cstddef>
+#include <glm/glm.hpp>
 #include <vector>
 
 namespace cutum
@@ -90,6 +91,11 @@ void UCrossGpuBackend::UploadBuffer(GLuint &buffer, size_t &capacity_bytes,
 
 void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
 {
+  if (batch.vao != 0)
+  {
+    glDeleteVertexArrays(1, &batch.vao);
+    batch.vao = 0;
+  }
   if (batch.instanceVbo != 0)
   {
     glDeleteBuffers(1, &batch.instanceVbo);
@@ -97,6 +103,37 @@ void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
   }
   batch.instanceCapacityBytes = 0;
   batch.instanceCount = 0;
+}
+
+void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
+{
+  if (!EnsureTemplateMesh() || gpu.instanceVbo == 0)
+  {
+    return;
+  }
+  if (gpu.vao == 0)
+  {
+    glGenVertexArrays(1, &gpu.vao);
+  }
+  glBindVertexArray(gpu.vao);
+  glBindBuffer(kArrayBuffer, TemplateVbo);
+  constexpr GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, faceIndex)));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, u)));
+  glEnableVertexAttribArray(2);
+  glBindBuffer(kElementArrayBuffer, TemplateEbo);
+  glBindBuffer(kArrayBuffer, gpu.instanceVbo);
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+  glEnableVertexAttribArray(3);
+  glVertexAttribDivisor(3, 1);
+  glBindVertexArray(0);
+  glBindBuffer(kArrayBuffer, 0);
+  glBindBuffer(kElementArrayBuffer, 0);
 }
 
 void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
@@ -107,6 +144,7 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
   const size_t byte_size = batch.centers.size() * sizeof(glm::vec3);
   UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
                batch.centers.data(), byte_size);
+  EnsureBatchVao(gpu);
 }
 
 void UCrossGpuBackend::RefreshPass(

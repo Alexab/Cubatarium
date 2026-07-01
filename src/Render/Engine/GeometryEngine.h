@@ -1,11 +1,11 @@
 #ifndef GEOMETRYENGINE_H
 #define GEOMETRYENGINE_H
 
-#include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRenderStats.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Interfaces/IUGameContent.h"
+#include "Render/Engine/CreatureDrawPass.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL Types
@@ -110,11 +110,12 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  void InvalidateBlockBatchCache() { BlockBatchesValid = false; }
   const CreatureRenderStats &GetCreatureRenderStats() const
   {
-    return CreatureStats;
+    return CreatureDraw_.GetStats();
   }
-  CreatureDrawQueue &GetCreatureDrawQueue() { return CreatureQueue; }
+  CreatureDrawQueue &GetCreatureDrawQueue() { return CreatureDraw_.GetDrawQueue(); }
   std::shared_ptr<UShaderManager> GetShaderManager() const
   {
     return shaderManager;
@@ -158,33 +159,11 @@ private:
   GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
   GLuint previewTexture = 0;                             // Preview texture
   GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
-  GLuint creaturePartVAO = 0;
-  GLuint creaturePartVBO = 0;
-  GLuint creaturePartEBO = 0;
-  GLuint creatureHeadPartVAO = 0;
-  GLuint creatureHeadPartVBO = 0;
-  GLuint creatureHeadPartEBO = 0;
-  GLuint creatureBodyPartVAO = 0;
-  GLuint creatureBodyPartVBO = 0;
-  GLuint creatureBodyPartEBO = 0;
-  GLuint creatureRigidHeadPartVAO = 0;
-  GLuint creatureRigidHeadPartVBO = 0;
-  GLuint creatureRigidHeadPartEBO = 0;
-  std::shared_ptr<class UShaderProgram> creatureShader;
-  std::shared_ptr<class UShaderProgram> creatureSkinnedShader;
-  CreatureRenderStats CreatureStats;
-  CreatureDrawQueue CreatureQueue;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
-  bool InitCreaturePartBuffers();
-  bool InitCreatureHeadPartBuffers();
-  bool InitCreatureBodyPartBuffers();
-  bool InitCreatureRigidHeadPartBuffers();
-  void DestroyCreaturePartBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
-  void RenderCreatures();
 
   void DrawCubeGeometry();
   void DrawCube(std::shared_ptr<UCube> icube,
@@ -285,6 +264,7 @@ private:
   RenderSettings Render;
   UAnimationClock AnimationClock;
 
+  UCreatureDrawPass CreatureDraw_;
   UGreedyGpuBackend GreedyGpuBackend;
   UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;

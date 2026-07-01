@@ -112,12 +112,17 @@ private:
   uint64_t CullRevision{0};
   glm::ivec3 LastCullCameraChunk{INT32_MAX, INT32_MAX, INT32_MAX};
   uint64_t LastCullMeshRevision{0};
+  uint64_t LastVisibleMeshRevision{0};
+  std::vector<glm::ivec3> LastVisibleChunks;
   int RenderDistanceChunks{4};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
   void BumpMeshRevisionIfNeeded();
+  bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,
+                                          const glm::vec3 *cameraPos,
+                                          float maxCullDistance);
 };
 } // namespace cutum
 #endif

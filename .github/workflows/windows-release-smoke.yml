@@ -81,6 +81,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/chunk_load_priority_test.exe
 
+      - name: C++ unit test (world mesh service)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

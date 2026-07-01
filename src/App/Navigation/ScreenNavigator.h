@@ -6,14 +6,18 @@ namespace cutum
 
 class UApplication;
 
-/// Menu and screen transitions (extracted incrementally from UApplication).
+/// Menu and screen transitions (extracted from UApplication).
 class UScreenNavigator
 {
 public:
   explicit UScreenNavigator(UApplication *application);
 
   void ShowMainMenu();
-  // TODO: extract ShowSettings, ShowWorldSettings, ShowLoadWorld, ShowNewWorld
+  void ShowSettings();
+  void ShowWorldSettings();
+  void ShowNewWorld();
+  void ShowLoadWorld();
+  void ReturnToMainMenu();
 
 private:
   UApplication *Application;

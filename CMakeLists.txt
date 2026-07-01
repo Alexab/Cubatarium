@@ -114,7 +114,10 @@ set(SOURCES
     src/Pose/BoneSkeleton/SkeletalAnimationProfiles.cpp
     src/Pose/BoneSkeleton/BoneSkeletonPoseEngine.cpp
     src/App/Core.cpp
+    src/App/WorldLifecycleFacade.cpp
+    src/App/ResourcePackBootstrap.cpp
     src/App/LegacyConfigAdapter.cpp
+    src/App/Settings/RenderSettings.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
     src/Render/Primitives/Cube.cpp
@@ -131,9 +134,12 @@ set(SOURCES
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
+    src/Render/Engine/CreatureDrawPass.cpp
+    src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Engine/DistanceFog.cpp
@@ -293,6 +299,8 @@ set(HEADERS
     src/Render/Camera/Camera.h
     src/App/Settings/AppSettingsSnapshot.h
     src/App/Core.h
+    src/App/WorldLifecycleFacade.h
+    src/App/ResourcePackBootstrap.h
     src/Render/Primitives/Cube.h
     src/Render/Primitives/CubeGL.h
     src/World/Objects/ObjectLibrary.h
@@ -546,6 +554,12 @@ add_executable(chunk_load_priority_test
 target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
+
+add_executable(world_mesh_service_test
+    src/Test/WorldMeshServiceTest.cpp)
+target_include_directories(world_mesh_service_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(world_mesh_service_test glm::glm)
 
 add_executable(creature_bone_skeleton_loader_test
     src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp

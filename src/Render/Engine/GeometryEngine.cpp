@@ -1,7 +1,7 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/CreatureDrawPass.h"
 #include "Render/Engine/GreedyGpuBackend.h"
-#include "App/Core.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -63,7 +63,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyGreedyMeshBuffers();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
-  DestroyCreaturePartBuffers();
+  CreatureDraw_.DestroyBuffers();
   CreatureMeshGpuCache::Instance().DestroyAll();
   DestroyOverlayBuffers();
 }
@@ -99,11 +99,9 @@ bool UGeometryEngine::InitEngine()
   // Initialize preview buffers
   InitPreviewBuffers();
 
-  DestroyCreaturePartBuffers();
-  if (!InitCreaturePartBuffers() || !InitCreatureHeadPartBuffers() ||
-      !InitCreatureBodyPartBuffers())
+  if (!CreatureDraw_.InitBuffers(*shaderManager))
   {
-    std::cerr << "Failed to initialize creature part buffers" << std::endl;
+    std::cerr << "Failed to initialize creature draw pass" << std::endl;
     return false;
   }
 
@@ -124,23 +122,6 @@ bool UGeometryEngine::InitShaders()
   if (!defaultShader || !defaultShader->IsValid())
   {
     std::cerr << "Failed to create default shader" << std::endl;
-    return false;
-  }
-
-  creatureShader = shaderManager->CreateShader(
-      "creature", "shaders/vshader.glsl", "shaders/fshader_creature.glsl");
-  if (!creatureShader || !creatureShader->IsValid())
-  {
-    std::cerr << "Failed to create creature shader" << std::endl;
-    return false;
-  }
-
-  creatureSkinnedShader = shaderManager->CreateShader(
-      "creature_skinned", "shaders/vshader_creature_skinned.glsl",
-      "shaders/fshader_creature_skinned.glsl");
-  if (!creatureSkinnedShader || !creatureSkinnedShader->IsValid())
-  {
-    std::cerr << "Failed to create creature skinned shader" << std::endl;
     return false;
   }
 
@@ -455,7 +436,10 @@ void UGeometryEngine::DrawCubeGeometry()
 
   RenderSelectionOutline();
   RenderBlockCrackOverlay();
-  RenderCreatures();
+  if (WorldInstance)
+  {
+    CreatureDraw_.Render(*WorldInstance, *this, Render);
+  }
 
   // Active object preview disabled to avoid per-frame resource churn
 
@@ -920,13 +904,10 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   }
   glActiveTexture(GL_TEXTURE0);
 
-  glBindVertexArray(CrossGpuBackend.GetTemplateVao());
   const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
-  glEnableVertexAttribArray(3);
-  glVertexAttribDivisor(3, 1);
   for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
   {
-    if (gpu.instanceCount == 0 || gpu.instanceVbo == 0)
+    if (gpu.instanceCount == 0 || gpu.instanceVbo == 0 || gpu.vao == 0)
     {
       continue;
     }
@@ -942,16 +923,10 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
     SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
-    glBindBuffer(GL_ARRAY_BUFFER, gpu.instanceVbo);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3),
-                          (void *)0);
+    glBindVertexArray(gpu.vao);
     glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr,
                             static_cast<GLsizei>(gpu.instanceCount));
   }
-  glVertexAttribDivisor(3, 0);
-  glDisableVertexAttribArray(3);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
   crossInstancedShader->Unuse();
 
@@ -1410,11 +1385,11 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
 
   performanceLines.push_back(
-      "Creatures: " + std::to_string(CreatureStats.CreaturesDrawn) + "/" +
-      std::to_string(CreatureStats.CreaturesConsidered) +
-      " culled: " + std::to_string(CreatureStats.CreaturesCulled) + " draws: " +
-      std::to_string(CreatureStats.CreatureDrawCalls) + " bone uploads: " +
-      std::to_string(CreatureStats.CreatureBoneMatrixUploads));
+      "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) + "/" +
+      std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
+      " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) + " draws: " +
+      std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) + " bone uploads: " +
+      std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads));
 
   const auto &md = WorldInstance->GetMovementDiagnostics();
   performanceLines.push_back(
@@ -2078,306 +2053,30 @@ void UGeometryEngine::DestroyOutlineBuffers()
   }
 }
 
-namespace
-{
-
-bool UploadCreaturePartMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
-                            const float *texCoords)
-{
-  float vertices[24 * 5];
-  for (int v = 0; v < 24; ++v)
-  {
-    vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
-    vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
-    vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
-    vertices[v * 5 + 3] = texCoords[v * 2 + 0];
-    vertices[v * 5 + 4] = texCoords[v * 2 + 1];
-  }
-
-  if (vao == 0)
-  {
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-  }
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
-               kCreaturePartIndices, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  return vao != 0;
-}
-
-} // namespace
-
-bool UGeometryEngine::InitCreaturePartBuffers()
-{
-  if (creaturePartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureBoxTexCoords(texCoords);
-  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO,
-                                creaturePartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureHeadPartBuffers()
-{
-  if (creatureHeadPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureHeadTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureHeadPartVAO, creatureHeadPartVBO,
-                                creatureHeadPartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureBodyPartBuffers()
-{
-  if (creatureBodyPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureBodyTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureBodyPartVAO, creatureBodyPartVBO,
-                                creatureBodyPartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureRigidHeadPartBuffers()
-{
-  if (creatureRigidHeadPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureRigidHeadTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureRigidHeadPartVAO,
-                                creatureRigidHeadPartVBO,
-                                creatureRigidHeadPartEBO, texCoords);
-}
-
-void UGeometryEngine::DestroyCreaturePartBuffers()
-{
-  if (creatureRigidHeadPartEBO)
-  {
-    glDeleteBuffers(1, &creatureRigidHeadPartEBO);
-    creatureRigidHeadPartEBO = 0;
-  }
-  if (creatureRigidHeadPartVBO)
-  {
-    glDeleteBuffers(1, &creatureRigidHeadPartVBO);
-    creatureRigidHeadPartVBO = 0;
-  }
-  if (creatureRigidHeadPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureRigidHeadPartVAO);
-    creatureRigidHeadPartVAO = 0;
-  }
-  if (creatureBodyPartEBO)
-  {
-    glDeleteBuffers(1, &creatureBodyPartEBO);
-    creatureBodyPartEBO = 0;
-  }
-  if (creatureBodyPartVBO)
-  {
-    glDeleteBuffers(1, &creatureBodyPartVBO);
-    creatureBodyPartVBO = 0;
-  }
-  if (creatureBodyPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureBodyPartVAO);
-    creatureBodyPartVAO = 0;
-  }
-  if (creatureHeadPartEBO)
-  {
-    glDeleteBuffers(1, &creatureHeadPartEBO);
-    creatureHeadPartEBO = 0;
-  }
-  if (creatureHeadPartVBO)
-  {
-    glDeleteBuffers(1, &creatureHeadPartVBO);
-    creatureHeadPartVBO = 0;
-  }
-  if (creatureHeadPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureHeadPartVAO);
-    creatureHeadPartVAO = 0;
-  }
-  if (creaturePartEBO)
-  {
-    glDeleteBuffers(1, &creaturePartEBO);
-    creaturePartEBO = 0;
-  }
-  if (creaturePartVBO)
-  {
-    glDeleteBuffers(1, &creaturePartVBO);
-    creaturePartVBO = 0;
-  }
-  if (creaturePartVAO)
-  {
-    glDeleteVertexArrays(1, &creaturePartVAO);
-    creaturePartVAO = 0;
-  }
-}
-
 void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
                                                GLuint texture,
                                                CreaturePartMesh mesh)
 {
-  if (texture == 0 || !creatureShader || !creatureShader->IsValid())
-  {
-    return;
-  }
-  GLuint vao = 0;
-  switch (mesh)
-  {
-  case CreaturePartMesh::Head:
-    if (creatureHeadPartVAO == 0 && !InitCreatureHeadPartBuffers())
-    {
-      return;
-    }
-    vao = creatureHeadPartVAO;
-    break;
-  case CreaturePartMesh::Body:
-    if (creatureBodyPartVAO == 0 && !InitCreatureBodyPartBuffers())
-    {
-      return;
-    }
-    vao = creatureBodyPartVAO;
-    break;
-  case CreaturePartMesh::RigidHead:
-    if (creatureRigidHeadPartVAO == 0 && !InitCreatureRigidHeadPartBuffers())
-    {
-      return;
-    }
-    vao = creatureRigidHeadPartVAO;
-    break;
-  case CreaturePartMesh::Box:
-  default:
-    if (creaturePartVAO == 0 && !InitCreaturePartBuffers())
-    {
-      return;
-    }
-    vao = creaturePartVAO;
-    break;
-  }
-
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-
-  glBindTexture(GL_TEXTURE_2D, texture);
-  creatureShader->Use();
-  creatureShader->SetInt("texture0", 0);
-  creatureShader->SetInt("uAnimFrame", 0);
-  creatureShader->SetInt("uAnimFrameCount", 1);
-  creatureShader->SetMat4("mvp_matrix", mvp);
-
-  glBindVertexArray(vao);
-  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
-
-  creatureShader->Unuse();
-  glBindTexture(GL_TEXTURE_2D, 0);
-  ++CreatureStats.CreatureDrawCalls;
+  CreatureDraw_.DrawTexturedPart(mvp, texture, mesh);
 }
 
-void UGeometryEngine::DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp,
-                                               GLuint texture,
-                                               const BoneSkeletonCubeMeshCpu &mesh)
+void UGeometryEngine::DrawCreatureBoneSkeletonMesh(
+    const glm::mat4 &mvp, GLuint texture, const BoneSkeletonCubeMeshCpu &mesh)
 {
-  if (texture == 0 || mesh.interleavedPosUv.empty() || mesh.indices.empty() ||
-      !creatureShader || !creatureShader->IsValid())
-  {
-    return;
-  }
-
-  const GLuint vao =
-      CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(mesh);
-  if (vao == 0)
-  {
-    return;
-  }
-
-  glEnable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-
-  glBindTexture(GL_TEXTURE_2D, texture);
-  creatureShader->Use();
-  creatureShader->SetInt("texture0", 0);
-  creatureShader->SetInt("uAnimFrame", 0);
-  creatureShader->SetInt("uAnimFrameCount", 1);
-  creatureShader->SetMat4("mvp_matrix", mvp);
-
-  glBindVertexArray(vao);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
-                 GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
-
-  creatureShader->Unuse();
-  glBindTexture(GL_TEXTURE_2D, 0);
-  ++CreatureStats.CreatureDrawCalls;
+  CreatureDraw_.DrawBoneSkeletonMesh(mvp, texture, mesh);
 }
 
 void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
                                            const BoneSkeletonCubeMeshCpu &mesh)
 {
-  DrawCreatureBoneSkeletonMesh(mvp, texture, mesh);
+  CreatureDraw_.DrawGltfMesh(mvp, texture, mesh);
 }
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
     const std::vector<glm::mat4> &boneMatrices)
 {
-  if (texture == 0 || mesh.mesh.interleavedPosUv.empty() ||
-      mesh.mesh.indices.empty() || !creatureSkinnedShader ||
-      !creatureSkinnedShader->IsValid())
-  {
-    return;
-  }
-
-  size_t indexCount = 0;
-  const GLuint vao =
-      CreatureMeshGpuCache::Instance().GetOrCreateGltfSkinnedMeshVao(
-          mesh, indexCount);
-  if (vao == 0)
-  {
-    return;
-  }
-
-  glEnable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-
-  glBindTexture(GL_TEXTURE_2D, texture);
-  creatureSkinnedShader->Use();
-  creatureSkinnedShader->SetInt("texture0", 0);
-  creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
-  const int boneCount =
-      static_cast<int>(std::min<size_t>(boneMatrices.size(), 64));
-  for (int i = 0; i < boneCount; ++i)
-  {
-    creatureSkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",
-                                   boneMatrices[static_cast<size_t>(i)]);
-  }
-  ++CreatureStats.CreatureBoneMatrixUploads;
-
-  glBindVertexArray(vao);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
-                 GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
-
-  creatureSkinnedShader->Unuse();
-  glBindTexture(GL_TEXTURE_2D, 0);
-  ++CreatureStats.CreatureDrawCalls;
+  CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
 }
 
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
@@ -2422,129 +2121,6 @@ void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
   {
     glDisable(GL_CULL_FACE);
   }
-}
-
-void UGeometryEngine::RenderCreatures()
-{
-  if (!WorldInstance)
-  {
-    return;
-  }
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
-  {
-    return;
-  }
-  const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
-  const float dt = static_cast<float>(camera->GetDeltaTime());
-  const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
-  CreatureStats.Reset();
-  CreatureQueue.Clear();
-
-  const Frustum frustum = Frustum::FromViewProjection(viewProj);
-  const glm::vec3 cameraPos = camera->GetPosition();
-  const float maxDistBlocks =
-      static_cast<float>(WorldInstance->GetEffectiveRenderDistance()) *
-      static_cast<float>(CHUNK_SIZE);
-
-  WorldInstance->ForEachCreature(
-      [&](UCreature &creature)
-      {
-        ++CreatureStats.CreaturesConsidered;
-        if (creature.GetId() == controlledId)
-        {
-          if (camera->GetPerspective() == CameraPerspective::FirstPerson)
-          {
-            ++CreatureStats.CreaturesCulled;
-            return;
-          }
-        }
-        const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
-        if (!CreatureBoundsIntersectsFrustum(
-                frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
-                maxDistBlocks, Render.FrustumCulling))
-        {
-          ++CreatureStats.CreaturesCulled;
-          return;
-        }
-        ++CreatureStats.CreaturesDrawn;
-
-        const std::string animType =
-            WorldInstance->ResolveAnimationTypeId(creature);
-        const CreatureDefinition *def =
-            WorldInstance->GetCreatureDefinition(animType);
-        CreatureDefinition fallback;
-        if (!def)
-        {
-          fallback.Id = animType;
-          def = &fallback;
-        }
-        if (IUCreatureVisual *visual = creature.GetVisual())
-        {
-          visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
-          const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
-          CreaturePoseParams pose;
-          if (ParseCreatureVisualBackend(def->visual.backend) ==
-              CreatureVisualBackend::RigidVoxels)
-          {
-            if (IUCreaturePosePresenter *presenter =
-                    WorldInstance->GetPosePresenterRegistry().Get(
-                        facts.archetype))
-            {
-              pose = presenter->Compute(facts, *def, dt);
-            }
-          }
-          visual->UpdatePose(creature, facts, pose, *def, dt);
-          visual->SubmitDraw(*this, viewProj);
-        }
-
-        if (Render.CreatureDebugBounds)
-        {
-          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-          const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
-          const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
-          glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
-          model = glm::scale(model, maxSize);
-          DrawBoxWireframe(viewProj * model,
-                           glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
-
-          const int gx = static_cast<int>(std::floor(bodyOrigin.x));
-          const int gz = static_cast<int>(std::floor(bodyOrigin.z));
-          const float feetY = BoundsFeetY(bodyOrigin);
-          float groundY = feetY;
-          float delta = 0.0f;
-          if (const std::optional<float> queryY =
-                  WorldInstance->QueryGroundFeetYUnder(gx, gz, feetY))
-          {
-            groundY = *queryY;
-            delta = feetY - groundY;
-          }
-          const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
-                                       static_cast<float>(gz) + 0.5f);
-          glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
-          groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
-          const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
-          DrawBoxWireframe(
-              viewProj * groundModel,
-              glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
-
-          static auto lastPoseLog = std::chrono::steady_clock::now();
-          const auto now = std::chrono::steady_clock::now();
-          if (now - lastPoseLog >= std::chrono::seconds(2))
-          {
-            lastPoseLog = now;
-            const float eyeY = creature.GetLocomotionEye().y;
-            const bool isControlled = creature.GetId() == controlledId;
-            if (isControlled || controlledId == 0)
-            {
-              std::cerr << "[creature_pose] Id=" << creature.GetId()
-                        << " feetY=" << feetY << " groundY=" << groundY
-                        << " delta=" << delta << " eyeY=" << eyeY << std::endl;
-            }
-          }
-        }
-      });
-  CreatureQueue.Flush(*this);
 }
 
 namespace

@@ -17,6 +17,7 @@ struct CrossGpuBatch
 {
   BlockId blockId{BLOCK_AIR};
   size_t instanceCount{0};
+  GLuint vao{0};
   GLuint instanceVbo{0};
   size_t instanceCapacityBytes{0};
 };
@@ -44,6 +45,7 @@ public:
 
 private:
   void UploadInstances(CrossGpuBatch &gpu, const CrossInstanceBatch &batch);
+  void EnsureBatchVao(CrossGpuBatch &gpu);
   void DestroyInstanceBuffer(CrossGpuBatch &batch);
   void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);

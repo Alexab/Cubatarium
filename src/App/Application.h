@@ -63,6 +63,7 @@ enum class MenuSubview
 class UApplication : public IUGuiMenuHost
 {
   friend class UScreenNavigator;
+  friend class UInputRouter;
 
 public:
   UApplication(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
@@ -178,6 +179,7 @@ private:
   void NotifyAllScreensMetricsChanged(const GuiMetrics &metrics);
 
   UScreenNavigator ScreenNav;
+  UInputRouter InputRouter;
 
   std::shared_ptr<UCore> Core;
   std::shared_ptr<UWorld> World;

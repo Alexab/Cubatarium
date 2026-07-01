@@ -9,9 +9,12 @@
 #include <string>
 
 #include "App/CreateWorldCli.h"
+#include "App/ResourcePackBootstrap.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "App/WorldLifecycleFacade.h"
+#include "Render/Engine/RenderMeshSink.h"
 #include "Blocks/BlockDefinition.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include <array>
@@ -39,6 +42,9 @@ class UPlaceholderTextureCache;
 
 class UCore : public IUGameContent
 {
+  friend class UWorldLifecycleFacade;
+  friend class UResourcePackBootstrap;
+
 public:
   UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
         std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
@@ -46,6 +52,8 @@ public:
         std::shared_ptr<UWorld> world,
         std::shared_ptr<UGeometryEngine> geometries,
         std::shared_ptr<UViewEngine> views);
+
+  ~UCore();
 
 public:
   void LoadConfig(const std::string &config_file_name);
@@ -200,18 +208,17 @@ private:
   std::shared_ptr<UViewEngine> ViewEngineInstance;
   std::shared_ptr<UWorld> WorldInstance;
 
+  URenderMeshSink RenderMeshSink;
+  void WireRenderMeshSink();
+  void UnwireRenderMeshSink();
+
   bool ShouldCreateWorldOnStartup() const;
   std::filesystem::path WorldFolderPath(const std::string &world_name) const;
-  std::string AllocateNextWorldName() const;
-  void CreateNewWorldWithCurrentSettings();
-  void RebuildBlockTexturesFromMergeRegistry();
-  void ApplyResourcePacksAfterWorldDataLoaded();
-  void ReloadCreatureCatalog(const std::vector<ResourcePackManifest> &packs);
-  std::vector<std::string>
-  NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
-  void FlushRuntimeBlockOverlay();
   int RuntimeBlockBatchDepth{0};
   bool RuntimeBlockFlushPending{false};
+
+  UWorldLifecycleFacade WorldLifecycle;
+  UResourcePackBootstrap ResourcePackBootstrap;
 };
 
 } // namespace cutum

@@ -52,6 +52,65 @@ void UWorldStreaming::SetStreamerMaxLoadOpsPerFrame(int value)
   }
 }
 
+void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
+{
+  if (!world.BlockRegistry)
+  {
+    return;
+  }
+
+  world.InitStreamerCallbacks();
+  if (auto user = world.GetCurrentUser())
+  {
+    world.ApplyUserToCamera(user);
+  }
+  else
+  {
+    world.ApplySpawnToCamera();
+  }
+
+  const int prev_load_ops = world.MaxLoadOpsPerFrame;
+  const int warmup_load_ops =
+      std::max(prev_load_ops,
+               (2 * world.RenderDistanceChunks + 1) *
+                   (2 * world.RenderDistanceChunks + 1));
+  world.MaxLoadOpsPerFrame = warmup_load_ops;
+  SetStreamerMaxLoadOpsPerFrame(warmup_load_ops);
+
+  constexpr int kMeshFlushBudget = UChunkEmergeCoordinator::kWarmupMeshFlush;
+  const UChunkEmergeCoordinator::FrameBudget warmup_budget =
+      UChunkEmergeCoordinator::WarmupBudget(kMeshFlushBudget);
+  for (int pass = 0; pass < 48; ++pass)
+  {
+    world.UpdateStreaming();
+    world.TickAsyncChunkSystems();
+    world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
+                                          warmup_budget.MaxMeshDrain,
+                                          warmup_budget.MaxMeshSchedule);
+    world.MeshService->DrainAsyncMeshResults(world.BlockWorld, *world.BlockRegistry,
+                                             warmup_budget.MaxMeshDrain);
+    if (!world.MeshService->HasPendingDirty() &&
+        !world.MeshService->HasPendingAsyncMeshWork())
+    {
+      break;
+    }
+  }
+
+  world.MeshService->WaitForAsyncMeshIdle();
+  while (world.MeshService->HasPendingDirty())
+  {
+    world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
+                                          warmup_budget.MaxMeshDrain,
+                                          warmup_budget.MaxMeshSchedule);
+    world.MeshService->DrainAsyncMeshResults(world.BlockWorld, *world.BlockRegistry,
+                                             warmup_budget.MaxMeshDrain);
+  }
+
+  world.MaxLoadOpsPerFrame = prev_load_ops;
+  world.RefreshStreamerSettings();
+  world.WarmupVisibleListAtCamera();
+}
+
 void UWorldStreaming::InitChunkScheduler(UWorld &world)
 {
   if (!world.BlockRegistry)
@@ -252,6 +311,7 @@ void UWorldStreaming::RefreshStreamerSettings(const ProceduralSettings &settings
   Streamer->SetMaxTerrainHeight(settings.MaxHeight);
   Streamer->SetMaxLoadOpsPerFrame(maxLoadOpsPerFrame);
   Streamer->SetMaxUnloadOpsPerFrame(maxUnloadOpsPerFrame);
+  Streamer->SetRingGateEnabled(settings.RingGateEnabled);
 }
 
 void UWorldStreaming::UpdateStreaming(UWorld &world,

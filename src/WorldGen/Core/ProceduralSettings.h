@@ -87,6 +87,7 @@ struct ProceduralSettings
   bool EnableOres{false};
   bool AsyncChunkGeneration{true};
   bool AsyncChunkIo{true};
+  bool RingGateEnabled{false};
   int MaxChunkCommitsPerFrame{3};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};

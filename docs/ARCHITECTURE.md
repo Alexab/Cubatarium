@@ -16,6 +16,7 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 | `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
 | `frustum_culling` | `true` (default): skip chunks outside view frustum. Chunk AABB expanded by 2 blocks. |
 | `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged (legacy instanced path). |
+| `performance_preset` | `fast` / `balanced` (default) / `quality` — seeds `async_meshing`, `distance_fog`, `gradient_sky`; individual `render.*` keys override the preset. |
 | `async_meshing` | Background mesh rebuild; see `RenderSettings.AsyncMeshing`. |
 | `distance_fog` | Distance fog using `FogHorizonBlocks` / `RenderHorizonBlocks`. |
 

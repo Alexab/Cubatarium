@@ -5,6 +5,7 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
+#include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
@@ -567,59 +568,7 @@ void UWorld::WarmupVisibleListAtCamera()
 
 void UWorld::WarmupSpawnAreaForEnterGame()
 {
-  if (!BlockRegistry)
-  {
-    return;
-  }
-
-  InitStreamerCallbacks();
-  if (auto user = GetCurrentUser())
-  {
-    ApplyUserToCamera(user);
-  }
-  else
-  {
-    ApplySpawnToCamera();
-  }
-
-  const int prev_load_ops = MaxLoadOpsPerFrame;
-  const int warmup_load_ops =
-      std::max(prev_load_ops,
-               (2 * RenderDistanceChunks + 1) * (2 * RenderDistanceChunks + 1));
-  MaxLoadOpsPerFrame = warmup_load_ops;
-  Streaming->SetStreamerMaxLoadOpsPerFrame(warmup_load_ops);
-
-  constexpr int kMeshFlushBudget = UChunkEmergeCoordinator::kWarmupMeshFlush;
-  const UChunkEmergeCoordinator::FrameBudget warmup_budget =
-      UChunkEmergeCoordinator::WarmupBudget(kMeshFlushBudget);
-  for (int pass = 0; pass < 48; ++pass)
-  {
-    UpdateStreaming();
-    TickAsyncChunkSystems();
-    MeshService->RebuildDirtyChunks(BlockWorld, *BlockRegistry,
-                                    warmup_budget.MaxMeshDrain,
-                                    warmup_budget.MaxMeshSchedule);
-    MeshService->DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
-                                       warmup_budget.MaxMeshDrain);
-    if (!MeshService->HasPendingDirty() && !MeshService->HasPendingAsyncMeshWork())
-    {
-      break;
-    }
-  }
-
-  MeshService->WaitForAsyncMeshIdle();
-  while (MeshService->HasPendingDirty())
-  {
-    MeshService->RebuildDirtyChunks(BlockWorld, *BlockRegistry,
-                                    warmup_budget.MaxMeshDrain,
-                                    warmup_budget.MaxMeshSchedule);
-    MeshService->DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
-                                       warmup_budget.MaxMeshDrain);
-  }
-
-  MaxLoadOpsPerFrame = prev_load_ops;
-  RefreshStreamerSettings();
-  WarmupVisibleListAtCamera();
+  Streaming->WarmupSpawnAreaForEnterGame(*this);
 }
 
 void UWorld::FinalizePlayerAfterWorldLoad()
@@ -1477,54 +1426,7 @@ void UWorld::SaveWorldData(const std::string &file_name)
 
 void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
 {
-  json root;
-  root["schema"] = "movement_diagnostics.v2";
-  root["world_name"] = WorldName;
-  root["sample_count"] = MovementDiagHistory.size();
-  std::vector<json> samples;
-  samples.reserve(MovementDiagHistory.size());
-  for (const MovementDiagnostics &sample : MovementDiagHistory)
-  {
-    samples.push_back({
-        {"delta_time", sample.deltaTime},
-        {"player_y_drop", sample.playerYDrop},
-        {"streaming_loads", sample.streamingLoads},
-        {"streaming_unloads", sample.streamingUnloads},
-        {"streaming_gen_ms", sample.streamingGenMs},
-        {"streaming_io_ms", sample.streamingIoMs},
-        {"mesh_rebuild_ms", sample.meshRebuildMs},
-        {"dirty_chunks_pending", sample.dirtyChunksPending},
-        {"mesh_rebuilds_this_frame", sample.meshRebuildsThisFrame},
-        {"flat_rebuild_ms", sample.flatRebuildMs},
-        {"count_non_air_ms", sample.countNonAirMs},
-        {"async_mesh_in_flight", sample.asyncMeshInFlight},
-        {"async_meshing_enabled", sample.asyncMeshingEnabled},
-        {"greedy_cache_entries", sample.greedyCacheEntries},
-        {"frames_since_load", sample.framesSinceLoad},
-        {"mesh_backlog_cleared", sample.meshBacklogCleared},
-        {"hitch_detected", sample.hitchDetected},
-        {"fall_through_suspected", sample.fallThroughSuspected},
-    });
-  }
-  root["samples"] = json(samples);
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << root.dump(2);
-  }
-}
-
-void UWorld::AppendMovementDiagnosticsSample()
-{
-  constexpr size_t kMaxSamples = 4096;
-  MovementDiagHistory.push_back(MovementDiag);
-  if (MovementDiagHistory.size() > kMaxSamples)
-  {
-    const size_t trim = MovementDiagHistory.size() - kMaxSamples;
-    MovementDiagHistory.erase(MovementDiagHistory.begin(),
-                              MovementDiagHistory.begin() +
-                                  static_cast<std::ptrdiff_t>(trim));
-  }
+  UMovementDiagnosticsRecorder::SaveToFile(*this, file_name);
 }
 
 void UWorld::DoMovement()
@@ -1655,95 +1557,7 @@ void UWorld::DoMovement()
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
-  UpdateMovementDiagnostics(camera, prevPlayerY);
-}
-
-void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
-                                       float prevPlayerY)
-{
-  MovementDiag = MovementDiagnostics{};
-  if (!camera)
-  {
-    return;
-  }
-
-  const glm::vec3 playerPos = camera->GetPosition();
-  const PlayerCapsule cap = camera->GetPlayerCapsule();
-  MovementDiag.feetBlock = WorldPosToBlock(
-      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
-  MovementDiag.feetChunk = UChunkManager::WorldToChunk(MovementDiag.feetBlock);
-  const glm::ivec3 feetGround(MovementDiag.feetChunk.x, 0,
-                              MovementDiag.feetChunk.z);
-  MovementDiag.feetChunkLoaded =
-      BlockWorld.GetChunkManager().HasChunk(feetGround);
-  MovementDiag.feetIsAir = BlockWorld.IsAir(MovementDiag.feetBlock);
-  MovementDiag.meshDrawCount = GetRenderInstanceCount();
-  MovementDiag.deltaTime = camera->GetDeltaTime();
-  MovementDiag.streamingGenMs = Streaming->GetFrameStreamingGenMs();
-  MovementDiag.streamingIoMs = Streaming->GetFrameStreamingIoMs();
-  MovementDiag.dirtyChunksPending = static_cast<int>(MeshService->GetDirtyCount());
-  MovementDiag.flatRebuildMs = MeshService->GetLastFlatRebuildMs();
-  MovementDiag.asyncMeshInFlight = MeshService->GetAsyncInFlightCount();
-  MovementDiag.asyncMeshingEnabled = Render.AsyncMeshing;
-  MovementDiag.greedyCacheEntries =
-      static_cast<int>(MeshService->GetGreedyCacheSize());
-  MovementDiag.framesSinceLoad = FramesSinceLoad;
-  MovementDiag.meshBacklogCleared = MeshBacklogClearedLatch;
-  TickMeshLoadDiagnostics();
-
-  if (HasLastPlayerY)
-  {
-    MovementDiag.playerYDrop = prevPlayerY - playerPos.y;
-  }
-  else
-  {
-    MovementDiag.playerYDrop = 0.0f;
-  }
-  HasLastPlayerY = true;
-  LastPlayerY = playerPos.y;
-
-  if (const StreamingFrameStats *stats = Streaming->GetLastFrameStats())
-  {
-    MovementDiag.streamingLoads = stats->loadsThisFrame;
-    MovementDiag.streamingUnloads = stats->unloadsThisFrame;
-    for (const glm::ivec3 &coord : stats->unloadedCoords)
-    {
-      if (coord.x == feetGround.x && coord.z == feetGround.z)
-      {
-        MovementDiag.feetInUnloadList = true;
-        break;
-      }
-    }
-  }
-
-  const double frameMs =
-      (DurationDoMovementMks +
-       (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) /
-      1000.0;
-  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
-  MovementDiag.fallThroughSuspected =
-      MovementDiag.playerYDrop > 2.0f &&
-      (MovementDiag.feetIsAir || !MovementDiag.feetChunkLoaded) &&
-      MovementDiag.meshDrawCount > 0;
-
-#ifdef CUBATARIUM_DEBUG
-  if (MovementDiag.hitchDetected || MovementDiag.fallThroughSuspected ||
-      MovementDiag.playerYDrop > 2.0f)
-  {
-    std::cerr << "[Movement-debug] cameraDt=" << MovementDiag.deltaTime
-              << " frameMs=" << frameMs << " yDrop=" << MovementDiag.playerYDrop
-              << " feetChunk=(" << MovementDiag.feetChunk.x << ","
-              << MovementDiag.feetChunk.y << "," << MovementDiag.feetChunk.z
-              << ")"
-              << " hasChunk=" << MovementDiag.feetChunkLoaded
-              << " feetAir=" << MovementDiag.feetIsAir
-              << " meshDraw=" << MovementDiag.meshDrawCount
-              << " loads=" << MovementDiag.streamingLoads
-              << " unloads=" << MovementDiag.streamingUnloads
-              << " feetUnloaded=" << MovementDiag.feetInUnloadList << std::endl;
-  }
-#endif
-  AppendMovementDiagnosticsSample();
+  UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
 
 void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,

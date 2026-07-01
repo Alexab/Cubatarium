@@ -13,7 +13,7 @@
 
 **Async defaults (2026-06):** `ProceduralSettings.AsyncChunkGeneration` and `AsyncChunkIo` default **true** in code and `bin/config.json`. TD-CS-011/012 doc drift corrected; headless worldgen CLI still forces sync generation for determinism.
 
-**Ring gate (TD-CS-017):** `UChunkStreamer::RingGateEnabled` defaults **false** (conservative load ordering). Bisect: temporarily call `Streamer->SetRingGateEnabled(true)` in `World.cpp` after streamer init, or add `procedural.ring_gate_enabled` when exposing config. No runtime toggle in Settings yet.
+**Ring gate (TD-CS-017):** `procedural.ring_gate_enabled` in `config.json` (default **false**). Applied via `UWorldStreaming::RefreshStreamerSettings` → `UChunkStreamer::SetRingGateEnabled`.
 
 **MarkBlockChunkDirty contract (TD-AUD-013):** when `BlockRegistry != nullptr` (normal gameplay), block edits call `MeshCache.RebuildChunkImmediate` on the chunk + neighbors; during headless load before registry init, `MarkDirty` defers rebuild to the frame budget / async mesh path.
 
@@ -32,7 +32,7 @@
 | TD-CS-012 | 2026-06 | ~~Async chunk I/O defaults off~~ | Defaults **on** since 2026-06 | closed |
 | TD-CS-014 | 2026-06 | ~~GPU instancing for Cross vegetation~~ | `UCrossGpuBackend` + `CrossInstanceBatch`; one instanced draw per block type | closed |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
-| TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `UChunkStreamer::SetRingGateEnabled` exists | backlog |
+| TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `procedural.ring_gate_enabled` in config | closed |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip is conservative | backlog |
 | TD-CS-019 | 2026-06 | Sky horizon fog uses fixed band; true radial sky fog optional | horizon blend shipped | backlog |
 

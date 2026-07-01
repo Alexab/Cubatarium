@@ -232,10 +232,56 @@ void UChunkMeshCache::RebuildFlatInstanceList(const Frustum *frustum,
   InstancesDirty = false;
   ++CullRevision;
 }
+bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
+    const Frustum *frustum, const glm::vec3 *cameraPos, float maxCullDistance)
+{
+  if (!frustum || !cameraPos)
+  {
+    return false;
+  }
+  std::vector<glm::ivec3> visible;
+  visible.reserve(GreedyCache.size());
+  for (const auto &entry : GreedyCache)
+  {
+    if (!frustum->IntersectsChunkAABB(ChunkAABBMin(entry.first),
+                                      ChunkAABBMax(entry.first), *cameraPos,
+                                      maxCullDistance))
+    {
+      continue;
+    }
+    visible.push_back(entry.first);
+  }
+  std::sort(visible.begin(), visible.end(),
+            [](const glm::ivec3 &a, const glm::ivec3 &b)
+            {
+              if (a.x != b.x)
+              {
+                return a.x < b.x;
+              }
+              if (a.y != b.y)
+              {
+                return a.y < b.y;
+              }
+              return a.z < b.z;
+            });
+  if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision)
+  {
+    return true;
+  }
+  LastVisibleChunks = std::move(visible);
+  LastVisibleMeshRevision = MeshRevision;
+  return false;
+}
 void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
                                                const glm::vec3 *cameraPos,
                                                float maxCullDistance)
 {
+  if (frustum && cameraPos &&
+      TrySkipFlatRebuildForVisibleChunks(frustum, cameraPos, maxCullDistance))
+  {
+    GreedyBatchesDirty = false;
+    return;
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   std::vector<GreedyMeshBatch> merged;
   merged.reserve(GreedyCache.size() * 4);
@@ -294,6 +340,12 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
                                                 const glm::vec3 *cameraPos,
                                                 float maxCullDistance)
 {
+  if (frustum && cameraPos &&
+      TrySkipFlatRebuildForVisibleChunks(frustum, cameraPos, maxCullDistance))
+  {
+    CrossBatchesDirty = false;
+    return;
+  }
   std::unordered_map<BlockId, std::vector<glm::vec3>> merged;
   for (const auto &entry : GreedyCache)
   {
@@ -333,14 +385,16 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
 {
   (void)viewProj;
   const float maxCullDistance = MaxCullDistance();
+  const glm::ivec3 camera_chunk =
+      UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
+  // Trade-off: camera rotation inside the same chunk does not rebuild flat lists.
   if (!InstancesDirty && !GreedyBatchesDirty && !CrossBatchesDirty &&
       MeshRevision == LastCullMeshRevision &&
+      camera_chunk == LastCullCameraChunk &&
       !(Render.GreedyMeshing && GreedyBatches.empty() && !GreedyCache.empty()))
   {
     return;
   }
-  LastCullCameraChunk = UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
-  LastCullMeshRevision = MeshRevision;
   if (Render.GreedyMeshing)
   {
     if (Render.FrustumCulling)
@@ -365,6 +419,8 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       RebuildFlatInstanceList(nullptr, nullptr, 0.0f);
     }
   }
+  LastCullCameraChunk = camera_chunk;
+  LastCullMeshRevision = MeshRevision;
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
 {

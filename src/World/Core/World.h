@@ -467,6 +467,8 @@ public:
 
   void ClearCreaturesAndUsers();
 
+  friend class UMovementDiagnosticsRecorder;
+
 private:
   friend class UWorldCooperativeSession;
   friend class UWorldStreaming;
@@ -513,10 +515,7 @@ private:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);
-  void UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
-                                 float prevPlayerY);
   void SaveMovementDiagnostics(const std::string &file_name) const;
-  void AppendMovementDiagnosticsSample();
   void ResetMeshLoadDiagnostics();
   void TickMeshLoadDiagnostics();
   void RebuildWorldGenPipeline();

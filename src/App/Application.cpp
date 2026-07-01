@@ -403,82 +403,27 @@ void UApplication::SetHotbarCountSetting(int count)
 
 void UApplication::ReturnToMainMenu()
 {
-  if (State == AppState::InGame)
-  {
-    if (GameSession)
-    {
-      GameSession->SaveCommandHistory();
-    }
-#ifndef __ANDROID__
-    if (auto *wm = GetWindowManager(Window))
-    {
-      wm->ResetGameplayMouseCapture();
-    }
-#endif
-    GuiContext->ClearInputState();
-#ifndef __ANDROID__
-    ReleasePlatformCursorClip();
-#endif
-  }
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  State = AppState::MainMenu;
-  ShowMainMenu();
+  ScreenNav.ReturnToMainMenu();
 }
 
 void UApplication::ShowSettings()
 {
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  MainMenuScreen = nullptr;
-  MenuSubview = MenuSubview::Settings;
-  GuiContext->SetScreen(std::make_unique<USettingsScreen>(this));
-  SyncCursorVisibility();
+  ScreenNav.ShowSettings();
 }
 
 void UApplication::ShowWorldSettings()
 {
-  if (!HasWorldSession())
-  {
-    return;
-  }
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  MainMenuScreen = nullptr;
-  MenuSubview = MenuSubview::WorldSettings;
-  GuiContext->SetScreen(std::make_unique<UWorldResourcePacksScreen>(
-      this, [this]() { ShowMainMenu(); }));
-  SyncCursorVisibility();
+  ScreenNav.ShowWorldSettings();
 }
 
 void UApplication::ShowNewWorld()
 {
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  MainMenuScreen = nullptr;
-  MenuSubview = MenuSubview::NewWorld;
-  GuiContext->SetScreen(std::make_unique<UNewWorldScreen>(this));
-  SyncCursorVisibility();
+  ScreenNav.ShowNewWorld();
 }
 
 void UApplication::ShowLoadWorld()
 {
-  ConsoleOpen = false;
-  SuppressConsoleToggleChar = false;
-  PaletteOpen = false;
-  FreeCursor = false;
-  MainMenuScreen = nullptr;
-  MenuSubview = MenuSubview::LoadWorld;
-  GuiContext->SetScreen(std::make_unique<ULoadWorldScreen>(this));
-  SyncCursorVisibility();
+  ScreenNav.ShowLoadWorld();
 }
 
 void UApplication::SaveActiveWorldIfNeeded()
@@ -1413,455 +1358,23 @@ bool UApplication::AllowsWorldMousePlacement() const
 
 bool UApplication::RouteKey(int key, int Action, int Mods)
 {
-  GuiKeyEvent event = UInputRouter::MakeGuiKeyEvent(key, Action, Mods);
-
-  if (Action == GLFW_PRESS && State == AppState::InGame)
-  {
-    if (key == GLFW_KEY_ESCAPE)
-    {
-      if (ConsoleOpen && ConsoleScreen && ConsoleScreen->IsPopupOpen())
-      {
-        if (OverlayPopup)
-        {
-          OverlayPopup->Close();
-        }
-        return true;
-      }
-      if (ConsoleOpen)
-      {
-        ConsoleOpen = false;
-        SuppressConsoleToggleChar = false;
-        if (ConsoleScreen)
-        {
-          ConsoleScreen->SetVisible(false);
-        }
-        ClearGameplayKeyboard();
-        SyncCursorVisibility();
-        return true;
-      }
-      if (PaletteOpen)
-      {
-        PaletteOpen = false;
-        if (PaletteScreen)
-        {
-          PaletteScreen->SetVisible(false);
-        }
-        SyncCursorVisibility();
-        return true;
-      }
-      if (WorldGenOpen)
-      {
-        WorldGenOpen = false;
-        if (WorldGenScreen)
-        {
-          WorldGenScreen->SetVisible(false);
-        }
-        SyncCursorVisibility();
-        return true;
-      }
-      ReturnToMainMenu();
-      return true;
-    }
-    if (!ConsoleOpen && key == GLFW_KEY_LEFT_ALT)
-    {
-#ifndef __ANDROID__
-      FreeCursor = !FreeCursor;
-      if (FreeCursor)
-      {
-        if (auto *wm = GetWindowManager(Window))
-        {
-          wm->ResetGameplayMouseCapture();
-        }
-        if (World && Window)
-        {
-          double x = 0.0;
-          double y = 0.0;
-          glfwGetCursorPos(Window, &x, &y);
-          if (auto camera = World->GetCurrentUserCamera())
-          {
-            camera->ResetMouseMove(x, y);
-          }
-        }
-      }
-      else
-      {
-        RecaptureMouseForLook();
-      }
-      SyncCursorVisibility();
-#endif
-      return true;
-    }
-    if (KeyNameIs(Ui.ConsoleKey, key))
-    {
-      ConsoleOpen = !ConsoleOpen;
-#if defined(__ANDROID__)
-      if (ConsoleOpen && HudScreen)
-      {
-        HudScreen->ReleaseTouchCaptures();
-      }
-#endif
-      if (ConsoleScreen)
-      {
-        ConsoleScreen->SetVisible(ConsoleOpen);
-      }
-      if (ConsoleOpen)
-      {
-        ClearGameplayKeyboard();
-        SuppressConsoleToggleChar = true;
-      }
-      else
-      {
-        SuppressConsoleToggleChar = false;
-      }
-      SyncCursorVisibility();
-      return true;
-    }
-    if (!ConsoleOpen && key == GLFW_KEY_F5 && World)
-    {
-      if (auto cam = World->GetCurrentUserCamera())
-      {
-        cam->CyclePerspective();
-        if (Geometry)
-        {
-          Geometry->ShowTransientMessage(
-              CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
-        }
-      }
-      return true;
-    }
-    if (!ConsoleOpen && KeyNameIs(Ui.PaletteKey, key))
-    {
-      const bool sameTabOpen = PaletteOpen && PaletteScreen &&
-                               PaletteScreen->GetActiveMainTab() == 0;
-      if (sameTabOpen)
-      {
-        PaletteOpen = false;
-        if (PaletteScreen)
-        {
-          PaletteScreen->SetVisible(false);
-        }
-      }
-      else
-      {
-        PaletteOpen = true;
-        WorldGenOpen = false;
-        if (WorldGenScreen)
-        {
-          WorldGenScreen->SetVisible(false);
-        }
-        if (PaletteScreen)
-        {
-          PaletteScreen->OpenWithMainTab(0);
-        }
-      }
-#if defined(__ANDROID__)
-      if (PaletteOpen && HudScreen)
-      {
-        HudScreen->ReleaseTouchCaptures();
-      }
-#endif
-      SyncCursorVisibility();
-      return true;
-    }
-    if (!ConsoleOpen && KeyNameIs(Ui.InventoryKey, key))
-    {
-      const bool sameTabOpen = PaletteOpen && PaletteScreen &&
-                               PaletteScreen->GetActiveMainTab() == 1;
-      if (sameTabOpen)
-      {
-        PaletteOpen = false;
-        if (PaletteScreen)
-        {
-          PaletteScreen->SetVisible(false);
-        }
-      }
-      else
-      {
-        PaletteOpen = true;
-        WorldGenOpen = false;
-        if (WorldGenScreen)
-        {
-          WorldGenScreen->SetVisible(false);
-        }
-        if (PaletteScreen)
-        {
-          PaletteScreen->OpenWithMainTab(1);
-        }
-      }
-#if defined(__ANDROID__)
-      if (PaletteOpen && HudScreen)
-      {
-        HudScreen->ReleaseTouchCaptures();
-      }
-#endif
-      SyncCursorVisibility();
-      return true;
-    }
-    if (!ConsoleOpen && KeyNameIs(Ui.WorldGenKey, key))
-    {
-      WorldGenOpen = !WorldGenOpen;
-      if (WorldGenOpen)
-      {
-        PaletteOpen = false;
-        if (PaletteScreen)
-        {
-          PaletteScreen->SetVisible(false);
-        }
-      }
-      if (WorldGenScreen)
-      {
-        WorldGenScreen->SetVisible(WorldGenOpen);
-      }
-      SyncCursorVisibility();
-      return true;
-    }
-    if (ConsoleOpen && key == GLFW_KEY_ENTER && ConsoleScreen)
-    {
-      ConsoleScreen->SubmitCommand();
-      return true;
-    }
-    if (!ConsoleOpen)
-    {
-      const int hotbarSlot = PrimaryHotbarIndexFromGlfwKey(key);
-      if (hotbarSlot >= 0 && GameSession)
-      {
-        if ((Mods & GLFW_MOD_ALT) != 0)
-        {
-          return true;
-        }
-        GameSession->OnPrimaryHotbarKey(hotbarSlot);
-        return true;
-      }
-    }
-  }
-
-  if (Action == GLFW_PRESS && State == AppState::MainMenu &&
-      key == GLFW_KEY_ESCAPE)
-  {
-    if (MainMenuScreen && MainMenuScreen->IsQuitConfirmationVisible())
-    {
-      MainMenuScreen->ShowQuitConfirmation(false);
-      return true;
-    }
-    if (MenuSubview != MenuSubview::Main)
-    {
-      ShowMainMenu();
-      return true;
-    }
-    if (HasWorldSession() && GameSession)
-    {
-      GameSession->ResumeGame();
-      return true;
-    }
-    if (MainMenuScreen)
-    {
-      MainMenuScreen->ShowQuitConfirmation(true);
-      return true;
-    }
-  }
-
-  if (State == AppState::InGame && ConsoleOpen && ConsoleScreen)
-  {
-    if (KeyNameIs(Ui.ConsoleKey, key))
-    {
-      return true;
-    }
-    ConsoleScreen->RouteKey(event);
-    return true;
-  }
-
-  if (GuiContext->RouteKey(event))
-  {
-    return true;
-  }
-  return false;
+  return InputRouter.RouteKey(*this, key, Action, Mods);
 }
 
 bool UApplication::RouteChar(unsigned int Codepoint)
 {
-  if (State == AppState::InGame && ConsoleOpen && ConsoleScreen)
-  {
-    if (SuppressConsoleToggleChar)
-    {
-      SuppressConsoleToggleChar = false;
-      return true;
-    }
-    ConsoleScreen->RouteChar(GuiCharEvent{Codepoint});
-    return true;
-  }
-  SuppressConsoleToggleChar = false;
-  return GuiContext->RouteChar(GuiCharEvent{Codepoint});
+  return InputRouter.RouteChar(*this, Codepoint);
 }
 
 bool UApplication::RouteMouseButton(int Button, bool Pressed, int x, int y,
                                     int PointerId)
 {
-  GuiMouseEvent event;
-  event.X = x;
-  event.Y = y;
-  event.PointerId = PointerId;
-  event.Button = Button == GLFW_MOUSE_BUTTON_RIGHT    ? GuiMouseButton::Right
-                 : Button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
-                                                      : GuiMouseButton::Left;
-  event.Pressed = Pressed;
-
-  if (PaletteOpen && PaletteScreen && event.Button == GuiMouseButton::Left)
-  {
-    PaletteScreen->SetPointerPressed(Pressed);
-  }
-  if (WorldGenOpen && WorldGenScreen && event.Button == GuiMouseButton::Left)
-  {
-    WorldGenScreen->SetPointerPressed(Pressed);
-  }
-
-  if (State == AppState::InGame)
-  {
-    DragCursorX = x;
-    DragCursorY = y;
-    if (event.Button == GuiMouseButton::Left && !Pressed && GameSession &&
-        GameSession->IsDragging())
-    {
-      SlotAddress target;
-      const bool hasTarget = ResolveSlotAt(x, y, target);
-      if (hasTarget)
-      {
-        if (!GameSession->DropOnSlot(target))
-        {
-          GameSession->CancelDrag();
-        }
-      }
-      else
-      {
-        GameSession->CancelDrag();
-      }
-      if (HasAnyOverlayCapture())
-      {
-        TryRouteInGameOverlay(event, false);
-      }
-      return true;
-    }
-    if ((OverlayPopup && OverlayPopup->IsOpen()) || ConsoleOpen)
-    {
-      if (ConsoleScreen &&
-          ConsoleScreen->RouteMouseButton(event, GuiContext->GetRenderer()))
-      {
-        return true;
-      }
-    }
-    if (event.Button == GuiMouseButton::Left)
-    {
-      if (TryRouteInGameOverlay(event, Pressed))
-      {
-        return true;
-      }
-      if (FreeCursor && Pressed)
-      {
-        RecaptureMouseForLook();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  return Pressed ? GuiContext->RouteMouseDown(event)
-                 : GuiContext->RouteMouseUp(event);
+  return InputRouter.RouteMouseButton(*this, Button, Pressed, x, y, PointerId);
 }
 
 bool UApplication::RouteMouseMove(int x, int y, int PointerId)
 {
-  GuiMouseEvent event;
-  event.X = x;
-  event.Y = y;
-  event.PointerId = PointerId;
-  if (State == AppState::InGame && HudScreen)
-  {
-    HudScreen->SetPointerPosition(x, y);
-  }
-  if (PaletteOpen && PaletteScreen)
-  {
-    PaletteScreen->SetPointerPosition(x, y);
-  }
-  if (WorldGenOpen && WorldGenScreen)
-  {
-    WorldGenScreen->SetPointerPosition(x, y);
-  }
-  if (State == AppState::InGame)
-  {
-    DragCursorX = x;
-    DragCursorY = y;
-    if (GameSession && GameSession->IsDragging())
-    {
-      return true;
-    }
-    const int pointerIndex = NormalizeOverlayPointer(PointerId);
-    const OverlayPointerCapture capture = OverlayCaptures[pointerIndex];
-    if (capture != OverlayPointerCapture::None)
-    {
-      auto routeCapturedMove = [&](UGuiWidget *root) -> bool
-      { return root && root->OnMouseMove(event); };
-      switch (capture)
-      {
-      case OverlayPointerCapture::Palette:
-        if (PaletteOpen && routeCapturedMove(PaletteScreen->GetRoot()))
-        {
-          return true;
-        }
-        break;
-      case OverlayPointerCapture::Console:
-        if (ConsoleOpen && routeCapturedMove(ConsoleScreen->GetRoot()))
-        {
-          return true;
-        }
-        break;
-      case OverlayPointerCapture::WorldGen:
-        if (WorldGenOpen && routeCapturedMove(WorldGenScreen->GetRoot()))
-        {
-          return true;
-        }
-        break;
-      case OverlayPointerCapture::Hud:
-        if (routeCapturedMove(HudScreen ? HudScreen->GetRoot() : nullptr))
-        {
-          return true;
-        }
-        break;
-      default:
-        break;
-      }
-    }
-    if (OverlayPopup && OverlayPopup->IsOpen())
-    {
-      if (OverlayPopup->OnMouseMove(event))
-      {
-        return true;
-      }
-    }
-    if (ConsoleOpen && ConsoleScreen &&
-        ConsoleScreen->RouteMouseMove(event, GuiContext->GetRenderer()))
-    {
-      return true;
-    }
-#if defined(__ANDROID__)
-    if (HudScreen && HudScreen->RouteTouchMove(PointerId, x, y))
-    {
-      return true;
-    }
-#endif
-    auto routeMove = [&](UGuiWidget *root) -> bool
-    { return root && root->OnMouseMove(event); };
-    bool handled = false;
-    if (PaletteOpen)
-    {
-      handled |= routeMove(PaletteScreen->GetRoot());
-    }
-    if (WorldGenOpen)
-    {
-      handled |= routeMove(WorldGenScreen->GetRoot());
-    }
-    handled |= routeMove(HudScreen ? HudScreen->GetRoot() : nullptr);
-    return handled;
-  }
-  return GuiContext->RouteMouseMove(event);
+  return InputRouter.RouteMouseMove(*this, x, y, PointerId);
 }
 
 #if defined(__ANDROID__)
@@ -1905,34 +1418,7 @@ void UApplication::SubmitConsoleCommand()
 bool UApplication::RouteScroll(double Xoffset, double Yoffset, int mouseX,
                                int mouseY)
 {
-  if (State == AppState::InGame)
-  {
-    GuiScrollEvent event{Xoffset, Yoffset};
-    auto routeScroll = [&](UGuiWidget *root) -> bool
-    { return root && root->ScrollAtPoint(mouseX, mouseY, event); };
-    if (WorldGenOpen &&
-        routeScroll(WorldGenScreen ? WorldGenScreen->GetRoot() : nullptr))
-    {
-      return true;
-    }
-    if (PaletteOpen &&
-        routeScroll(PaletteScreen ? PaletteScreen->GetRoot() : nullptr))
-    {
-      return true;
-    }
-    if (ConsoleOpen &&
-        routeScroll(ConsoleScreen ? ConsoleScreen->GetRoot() : nullptr))
-    {
-      return true;
-    }
-    if (routeScroll(HudScreen ? HudScreen->GetRoot() : nullptr))
-    {
-      return true;
-    }
-    return false;
-  }
-  return GuiContext->RouteScroll(GuiScrollEvent{Xoffset, Yoffset}, mouseX,
-                                  mouseY);
+  return InputRouter.RouteScroll(*this, Xoffset, Yoffset, mouseX, mouseY);
 }
 
 } // namespace cutum
