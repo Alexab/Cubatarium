@@ -112,6 +112,8 @@ extern "C" void android_main(struct android_app *app)
 {
   using namespace cutum;
 
+  CubatariumInstallWindowsDiagnostics();
+
   UAndroidPlatformWindow window(app);
   AndroidAppState state;
   state.window = &window;

@@ -708,6 +708,18 @@ void UWindowManager::Shutdown()
     InputManager->Shutdown();
   }
 
+  if (IsInitialized && Window)
+  {
+    glfwMakeContextCurrent(Window);
+  }
+
+  Application.reset();
+  TextRenderer.reset();
+  Geometries.reset();
+  Views.reset();
+  World.reset();
+  Core.reset();
+
   if (Window)
   {
     glfwDestroyWindow(Window);

@@ -83,6 +83,12 @@ int RunCubatarium(IPlatformWindow &window, IPlatformPaths &paths)
     window.Run();
 
     core->SaveSystem(paths.ResolveWritable("config.json").string());
+    application.reset();
+    text_renderer.reset();
+    geometry_engine.reset();
+    view_engine.reset();
+    core.reset();
+    world.reset();
     window.Shutdown();
     return 0;
   }

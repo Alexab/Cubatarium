@@ -502,6 +502,7 @@ if(ANDROID)
         ${egl-lib}
         ${glesv3-lib}
     )
+    target_link_options(cubatarium PRIVATE -rdynamic)
 
     return()
 endif()
@@ -555,7 +556,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CUBATARIUM_GENERATED_DIR}
 )
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenGL::GL
     glfw
     glm::glm
@@ -566,6 +567,11 @@ target_link_libraries(${PROJECT_NAME}
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32" GLEW_STATIC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dbghelp)
+endif()
+
+if(UNIX AND NOT ANDROID)
+    target_link_options(${PROJECT_NAME} PRIVATE -rdynamic)
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

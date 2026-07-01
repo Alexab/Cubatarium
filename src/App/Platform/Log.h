@@ -9,12 +9,13 @@ namespace cutum
 void CubatariumLogInfo(const char *tag, const std::string &msg);
 void CubatariumLogError(const char *tag, const std::string &msg);
 
-#ifdef _WIN32
+/// Installs native crash logging (stack trace to cubatarium.log / logcat).
 void CubatariumInstallWindowsDiagnostics();
+
+#ifdef _WIN32
 void CubatariumAttachParentConsole();
 void CubatariumAttachWindowsConsole();
 #else
-inline void CubatariumInstallWindowsDiagnostics() {}
 inline void CubatariumAttachParentConsole() {}
 inline void CubatariumAttachWindowsConsole() {}
 #endif
