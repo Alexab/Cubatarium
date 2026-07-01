@@ -28,6 +28,8 @@ public:
   void FinalizeLoadedWorld(UCore &core);
   void FinalizeEnterGameSession(UCore &core);
 
+  void EnterGameWorld(UCore &core);
+
   void PrepareEnterGameWorldList(UCore &core);
   void LoadWorldList(UCore &core, const std::string &world_path);
   void RefreshWorldList(UCore &core);

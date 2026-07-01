@@ -202,6 +202,7 @@ set(SOURCES
     src/World/Raycast/BlockRaycast.cpp
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp
+    src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/World/Chunks/ChunkStreamer.cpp
     src/World/Chunks/TerrainColumnUtil.cpp
@@ -556,6 +557,7 @@ target_include_directories(chunk_load_priority_test PRIVATE
 target_link_libraries(chunk_load_priority_test glm::glm)
 
 add_executable(world_mesh_service_test
+    src/Render/Mesh/ChunkDirtySet.cpp
     src/Test/WorldMeshServiceTest.cpp)
 target_include_directories(world_mesh_service_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

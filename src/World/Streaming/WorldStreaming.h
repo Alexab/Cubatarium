@@ -25,7 +25,7 @@ public:
   ~UWorldStreaming();
 
   void EnsureStreamer(class UBlockWorld &blockWorld, class UBlockRegistry &registry,
-                      uint32_t seed, int maxHeight);
+                      uint32_t seed, const ProceduralSettings &settings);
   bool HasStreamer() const { return Streamer != nullptr; }
   UChunkStreamer *GetStreamer() { return Streamer.get(); }
   const UChunkStreamer *GetStreamer() const { return Streamer.get(); }

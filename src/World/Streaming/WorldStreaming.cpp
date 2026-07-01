@@ -27,12 +27,13 @@ UWorldStreaming::~UWorldStreaming() = default;
 
 void UWorldStreaming::EnsureStreamer(UBlockWorld &blockWorld,
                                      UBlockRegistry &registry, uint32_t seed,
-                                     int maxHeight)
+                                     const ProceduralSettings &settings)
 {
   if (!Streamer)
   {
     Streamer = std::make_unique<UChunkStreamer>(blockWorld, registry, seed, 0,
-                                                maxHeight);
+                                                settings.MaxHeight);
+    Streamer->SetRingGateEnabled(settings.RingGateEnabled);
   }
 }
 

@@ -2,6 +2,7 @@
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/ChunkDirtySet.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
@@ -48,7 +49,7 @@ public:
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   int GetAsyncInFlightCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
-  size_t GetDirtyCount() const { return DirtyChunks.size(); }
+  size_t GetDirtyCount() const { return Dirty.GetCount(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;
   uint64_t GetMeshRevision() const { return MeshRevision; }
@@ -100,8 +101,7 @@ private:
   float MaxCullDistance() const;
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
-  std::vector<glm::ivec3> DirtyChunks;
-  std::unordered_set<glm::ivec3, IVec3Hash> DirtyChunkSet;
+  UChunkDirtySet Dirty;
   std::vector<FaceInstance> Instances;
   std::vector<GreedyMeshBatch> GreedyBatches;
   std::vector<CrossInstanceBatch> CrossBatches;

@@ -14,6 +14,7 @@
 #include "Creatures/Core/Creature.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Core/World.h"
+#include "Version.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 
 using json = nlohmann::json;
@@ -212,6 +213,30 @@ void UWorldLifecycleFacade::FinalizeEnterGameSession(UCore &core)
       player->GetInventory().SetActiveSlot(0, 1);
     }
   }
+}
+
+void UWorldLifecycleFacade::EnterGameWorld(UCore &core)
+{
+  PrepareEnterGameWorldList(core);
+
+  if (core.ShouldCreateWorldOnStartup())
+  {
+    if (!core.DefaultWorldName.empty())
+    {
+      std::cout << "Core::EnterGame: world '" << core.DefaultWorldName
+                << "' not found, creating a new one." << std::endl;
+    }
+    CreateWorld(core);
+    core.SaveSystem(core.ConfigFilePath.filename().string());
+  }
+  else
+  {
+    LoadLastWorld(core);
+  }
+
+  FinalizeEnterGameSession(core);
+  std::cout << kCubatariumVersion << " (feet snap: BlockTopY)" << std::endl;
+  core.WireRenderMeshSink();
 }
 
 void UWorldLifecycleFacade::PrepareEnterGameWorldList(UCore &core)

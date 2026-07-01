@@ -449,41 +449,7 @@ void UCore::EnterGame()
 {
   try
   {
-    std::filesystem::create_directories(WorldPath);
-    LoadWorldList(WorldPath.string());
-
-    if (ShouldCreateWorldOnStartup())
-    {
-      if (!DefaultWorldName.empty())
-      {
-        std::cout << "Core::EnterGame: world '" << DefaultWorldName
-                  << "' not found, creating a new one." << std::endl;
-      }
-      CreateWorld();
-      SaveSystem(ConfigFilePath.filename().string());
-    }
-    else
-    {
-      LoadLastWorld();
-    }
-
-    if (DefaultUserName.empty())
-    {
-      DefaultUserName = WorldInstance->GetCurrentUserName();
-    }
-    if (WorldInstance->GetCurrentUser() == nullptr)
-    {
-      WorldInstance->GenerateUsers();
-    }
-    if (UCreature *player = WorldInstance->GetPlayerCreature())
-    {
-      if (player->GetInventory().GetActiveEntryRef() == nullptr)
-      {
-        player->GetInventory().SetActiveSlot(0, 1);
-      }
-    }
-    std::cout << kCubatariumVersion << " (feet snap: BlockTopY)" << std::endl;
-    WireRenderMeshSink();
+    WorldLifecycle.EnterGameWorld(*this);
   }
   catch (const std::exception &e)
   {

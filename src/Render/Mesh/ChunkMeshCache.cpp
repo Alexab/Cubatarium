@@ -125,8 +125,7 @@ void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 }
 void UChunkMeshCache::MarkAllDirty()
 {
-  DirtyChunks.clear();
-  DirtyChunkSet.clear();
+  Dirty.Clear();
   Cache.clear();
   GreedyCache.clear();
   Instances.clear();
@@ -177,15 +176,16 @@ void UChunkMeshCache::WaitForAsyncMeshIdle()
 
 bool UChunkMeshCache::HasPendingDirty() const
 {
-  return !DirtyChunks.empty() || HasPendingAsyncMeshWork();
+  return !Dirty.empty() || HasPendingAsyncMeshWork();
 }
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
-  if (!DirtyChunkSet.insert(chunkCoord).second)
+  const size_t before = Dirty.GetCount();
+  Dirty.MarkDirty(chunkCoord);
+  if (Dirty.GetCount() == before)
   {
     return;
   }
-  DirtyChunks.push_back(chunkCoord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -195,7 +195,7 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
-  DirtyChunkSet.erase(chunkCoord);
+  Dirty.Erase(chunkCoord);
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -463,8 +463,8 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
     }
 
     int scheduled = 0;
-    for (auto it = DirtyChunks.begin();
-         it != DirtyChunks.end() && scheduled < max_schedule_per_frame;)
+    for (auto it = Dirty.begin();
+         it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
       if (AsyncBuilder->IsInFlight(*it))
       {
@@ -473,15 +473,13 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
-        DirtyChunkSet.erase(*it);
-        it = DirtyChunks.erase(it);
+        it = Dirty.RemoveAt(it);
         continue;
       }
       ChunkMeshSnapshot snapshot =
           ChunkMeshSnapshot::Capture(world, *it, MeshRevision);
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
-      DirtyChunkSet.erase(*it);
-      it = DirtyChunks.erase(it);
+      it = Dirty.RemoveAt(it);
       ++scheduled;
     }
     if (InstancesDirty)
@@ -499,12 +497,11 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 
   int rebuilt = 0;
   const int sync_budget = std::max(max_drain_per_frame, max_schedule_per_frame);
-  for (auto it = DirtyChunks.begin();
-       it != DirtyChunks.end() && rebuilt < sync_budget;)
+  for (auto it = Dirty.begin();
+       it != Dirty.end() && rebuilt < sync_budget;)
   {
     RebuildChunk(world, registry, *it);
-    DirtyChunkSet.erase(*it);
-    it = DirtyChunks.erase(it);
+    it = Dirty.RemoveAt(it);
     ++rebuilt;
   }
   if (InstancesDirty)
@@ -547,10 +544,7 @@ void UChunkMeshCache::RebuildChunkImmediate(const UBlockWorld &world,
                                             glm::ivec3 chunkCoord)
 {
   RebuildChunk(world, registry, chunkCoord);
-  DirtyChunkSet.erase(chunkCoord);
-  DirtyChunks.erase(
-      std::remove(DirtyChunks.begin(), DirtyChunks.end(), chunkCoord),
-      DirtyChunks.end());
+  Dirty.Erase(chunkCoord);
   InvalidateVisibleList();
 }
 void UChunkMeshCache::RebuildChunkLegacy(

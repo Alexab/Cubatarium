@@ -142,7 +142,7 @@ void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
   if (BlockRegistry)
   {
     Streaming->EnsureStreamer(BlockWorld, *BlockRegistry, WorldSeed,
-                              ProceduralTemplate.MaxHeight);
+                              ProceduralTemplate);
   }
 }
 
@@ -157,7 +157,7 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
   if (BlockRegistry)
   {
     Streaming->EnsureStreamer(BlockWorld, *BlockRegistry, WorldSeed,
-                              ProceduralTemplate.MaxHeight);
+                              ProceduralTemplate);
   }
   if (rebuildPipeline)
   {
