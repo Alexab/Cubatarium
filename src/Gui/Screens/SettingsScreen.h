@@ -72,6 +72,7 @@ private:
   UGuiTextInput *RenderDistInput{nullptr};
   UGuiCheckbox *StreamingBox{nullptr};
   UGuiCheckbox *StepUpBox{nullptr};
+  UGuiCheckbox *FoliageClimbBox{nullptr};
   UGuiCheckbox *GreedyBox{nullptr};
   UGuiCheckbox *FaceQuadsBox{nullptr};
   UGuiCheckbox *FrustumBox{nullptr};

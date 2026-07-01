@@ -180,6 +180,10 @@ private:
 
   static constexpr float kMinReasonablePlayerY = -32.0f;
   static constexpr float kMaxPhysicsDelta = 1.0f / 30.0f;
+  static constexpr float kFixedPhysicsDt = 1.0f / 60.0f;
+  static constexpr float kMaxFrameDelta = 0.25f;
+  static constexpr int kMaxPhysicsSubsteps = 5;
+  float PhysicsAccumulator{0.0f};
 };
 
 } // namespace cutum

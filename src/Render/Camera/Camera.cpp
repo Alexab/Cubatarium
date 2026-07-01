@@ -699,13 +699,15 @@ void UCamera::ResetVerticalPhysics()
   Locomotion.Reset();
   InitLocomotionCollisionProfile();
   StepUpAnim.Active = false;
+  PhysicsAccumulator = 0.0f;
   SyncFreeMoveFromController();
   UpdatePose();
 }
 
 bool UCamera::DoMovement(const UWorld *world)
 {
-  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
+  const float frameDt =
+      std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
   if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
   {
@@ -718,6 +720,7 @@ bool UCamera::DoMovement(const UWorld *world)
 
   if (GetFreeMove())
   {
+    const float dt = std::min(frameDt, kMaxPhysicsDelta);
     const bool groundedInFlight =
         world && world->HasGroundSupport(Position, flightCap);
     if (groundedInFlight)
@@ -770,29 +773,36 @@ bool UCamera::DoMovement(const UWorld *world)
   }
   else if (world)
   {
-    if (ApplyHorizontalMovement(world, dt))
+    PhysicsAccumulator += frameDt;
+    int substeps = 0;
+    while (PhysicsAccumulator >= kFixedPhysicsDt &&
+           substeps < kMaxPhysicsSubsteps)
     {
-      is_moved = true;
-    }
-  }
+      PhysicsAccumulator -= kFixedPhysicsDt;
+      ++substeps;
 
-  if (!GetFreeMove() && world)
-  {
-    if (IsStepUpAnimationActive())
-    {
+      if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
+      {
+        is_moved = true;
+      }
+
+      if (IsStepUpAnimationActive())
+      {
+        is_moved = true;
+        UpdatePose();
+        return is_moved;
+      }
+
+      if (Position.y < kMinReasonablePlayerY)
+      {
+        break;
+      }
+
+      Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
+                                  world->GetMovementCollisionSkipId());
       is_moved = true;
       UpdatePose();
-      return is_moved;
     }
-    if (Position.y < kMinReasonablePlayerY)
-    {
-      return is_moved;
-    }
-
-    Locomotion.UpdateLocomotion(world, Position, input, dt,
-                                world->GetMovementCollisionSkipId());
-    is_moved = true;
-    UpdatePose();
   }
 
   return is_moved;

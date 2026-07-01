@@ -94,6 +94,7 @@ public:
     return ProceduralTemplate;
   }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
+  bool IsFoliageClimbEnabled() const { return FoliageClimbEnabled; }
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
   std::shared_ptr<UObjectLibrary> GetObjectLibrary() const
   {
@@ -187,6 +188,7 @@ private:
   bool StreamingEnabled{true};
   std::string ChunkStorageFormat{"binary"};
   bool StepUpEnabled{true};
+  bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   UiSettings Ui;

@@ -257,11 +257,13 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         const json &gameplay = d["gameplay"];
         StepUpEnabled = gameplay.value("step_up", true);
+        FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
       }
       else
       {
         StepUpEnabled = true;
+        FoliageClimbEnabled = true;
         EntityCollisionEnabled = true;
       }
       if (d.contains("render") && d["render"].is_object())
@@ -423,6 +425,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetChunkWriteFormat(
         ChunkWriteFormatFromString(ChunkStorageFormat));
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
+    WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
     WorldInstance->SetRenderSettings(Render);
     if (GeometryEngineInstance)
@@ -436,6 +439,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
               << " frustum=" << Render.FrustumCulling
               << " batch_cache=" << Render.BatchCache << std::endl;
     std::cout << "Gameplay: step_up=" << (StepUpEnabled ? "1" : "0")
+              << " foliage_climb=" << (FoliageClimbEnabled ? "1" : "0")
               << " entity_collision=" << (EntityCollisionEnabled ? "1" : "0")
               << std::endl;
   }
@@ -497,6 +501,7 @@ void UCore::SaveConfigFile()
   system_data["chunk_storage"] = ChunkStorageFormat;
   json gameplay;
   gameplay["step_up"] = StepUpEnabled;
+  gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
   system_data["gameplay"] = gameplay;
   json render_json;
@@ -591,6 +596,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.RenderDistanceChunks = RenderDistanceChunks;
   snapshot.StreamingEnabled = StreamingEnabled;
   snapshot.StepUpEnabled = StepUpEnabled;
+  snapshot.FoliageClimbEnabled = FoliageClimbEnabled;
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
@@ -606,6 +612,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   RenderDistanceChunks = settings.RenderDistanceChunks;
   StreamingEnabled = settings.StreamingEnabled;
   StepUpEnabled = settings.StepUpEnabled;
+  FoliageClimbEnabled = settings.FoliageClimbEnabled;
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
   Render = settings.Render;
   Ui = settings.Ui;
@@ -623,6 +630,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetChunkWriteFormat(
       ChunkWriteFormatFromString(ChunkStorageFormat));
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
+  WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
   WorldInstance->SetRenderSettings(Render);
   if (GeometryEngineInstance)

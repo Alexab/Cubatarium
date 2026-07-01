@@ -1310,6 +1310,17 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
   return state;
 }
 
+bool UWorld::IsFoliageFluidBlock(BlockId id) const
+{
+  if (!BlockRegistry || id == BLOCK_AIR)
+  {
+    return false;
+  }
+  const auto &mov = BlockRegistry->Physics(id).Movement;
+  return mov.Occupancy < 1.0f && mov.SinkSpeed == 0.0f &&
+         mov.RiseSpeed == 0.0f && mov.DragHorizontal == 0.0f;
+}
+
 UWorld::SampledFluidState
 UWorld::SampleFluidPhysics(const glm::vec3 &eyePos,
                            const PlayerCapsule &cap) const

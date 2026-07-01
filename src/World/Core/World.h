@@ -454,6 +454,10 @@ public:
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
 
+  void SetFoliageClimbEnabled(bool enabled) { FoliageClimbEnabled = enabled; }
+  bool IsFoliageClimbEnabled() const { return FoliageClimbEnabled; }
+  bool IsFoliageFluidBlock(BlockId id) const;
+
   void SetEntityCollisionEnabled(bool enabled)
   {
     Collision.SetEntityCollisionEnabled(enabled);
@@ -562,6 +566,7 @@ private:
   std::unique_ptr<UWorldStreaming> Streaming;
   std::unique_ptr<UWorldPersistence> Persistence;
   bool StepUpEnabled{true};
+  bool FoliageClimbEnabled{true};
   RenderSettings Render;
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};

@@ -16,6 +16,7 @@ struct AppSettingsSnapshot
   int RenderDistanceChunks{4};
   bool StreamingEnabled{true};
   bool StepUpEnabled{true};
+  bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
   RenderSettings Render;
   UiSettings Ui;
