@@ -22,6 +22,8 @@ public:
   void OnCreatureRemoved(CreatureId Id);
   void TickAgents(IUWorldPerception &perception, IUCreatureActivitySink &sink,
                   float dt);
+  void SetActivityTickInterval(float seconds);
+  float GetActivityTickInterval() const { return ActivityTickInterval; }
 
 private:
   IUCreatureActivityAgent *FindAgent(const std::string &behaviorId) const;
@@ -29,6 +31,8 @@ private:
   std::vector<std::unique_ptr<IUCreatureActivityAgent>> Agents;
   std::unordered_map<std::string, IUCreatureActivityAgent *> AgentsByBehaviorId;
   std::unordered_map<CreatureId, IUCreatureActivityAgent *> Membership;
+  float ActivityTickInterval{0.05f};
+  float AccumulatedTickDt{0.0f};
 };
 
 } // namespace cutum

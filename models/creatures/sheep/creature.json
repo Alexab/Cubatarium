@@ -37,11 +37,12 @@
     "jump_height": 1.0,
     "walk_speed": 2.0
   },
-  "behavior": "wander",
+  "behavior": "flee",
   "behavior_params": {
     "move_speed": 2.0,
-    "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "flee_radius": 8.0,
+    "flee_speed_multiplier": 1.3,
+    "safe_distance": 14.0
   },
   "visual": {
     "backend": "bone_skeleton",

@@ -1,4 +1,5 @@
 #include "Activity/CreatureActivityDirector.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -63,10 +64,22 @@ void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
                                            IUCreatureActivitySink &sink,
                                            float dt)
 {
+  AccumulatedTickDt += dt;
+  if (AccumulatedTickDt < ActivityTickInterval)
+  {
+    return;
+  }
+  const float cognitive_dt = AccumulatedTickDt;
+  AccumulatedTickDt = 0.0f;
   for (const auto &agent : Agents)
   {
-    agent->Tick(perception, sink, dt);
+    agent->Tick(perception, sink, cognitive_dt);
   }
+}
+
+void UCreatureActivityDirector::SetActivityTickInterval(float seconds)
+{
+  ActivityTickInterval = std::max(seconds, 0.01f);
 }
 
 IUCreatureActivityAgent *

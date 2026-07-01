@@ -10,6 +10,8 @@
 namespace cutum
 {
 
+class UWorld;
+
 struct CreatureBehaviorSnapshot
 {
   CreatureBehaviorParams behavior;
@@ -27,6 +29,7 @@ public:
   virtual std::optional<CreatureBehaviorSnapshot>
   GetBehaviorSnapshot(CreatureId Id) const = 0;
   virtual void SetIntent(CreatureId Id, const CreatureIntent &intent) = 0;
+  virtual const UWorld &GetWorld() const = 0;
 };
 
 } // namespace cutum

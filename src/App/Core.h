@@ -96,6 +96,7 @@ public:
   bool IsStepUpEnabled() const { return StepUpEnabled; }
   bool IsFoliageClimbEnabled() const { return FoliageClimbEnabled; }
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
+  float GetActivityTickHz() const { return ActivityTickHz; }
   std::shared_ptr<UObjectLibrary> GetObjectLibrary() const
   {
     return ObjectLibraryInstance;
@@ -190,6 +191,7 @@ private:
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
+  float ActivityTickHz{20.0f};
   RenderSettings Render;
   UiSettings Ui;
   ResourcePacksConfig ResourcePacks;

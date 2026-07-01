@@ -1,7 +1,7 @@
 #include "Activity/Agents/WanderActivityAgent.h"
+#include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include <cmath>
-#include <cstdlib>
 
 namespace cutum
 {
@@ -9,60 +9,23 @@ namespace cutum
 namespace
 {
 
-constexpr int kMaxDirectionAttempts = 12;
-constexpr float kWanderProbeDistance = 1.25f;
+constexpr float kStuckTimeout = 0.6f;
+constexpr float kStuckMinSpeed = 0.05f;
+constexpr float kSeparationWeight = 0.5f;
+constexpr float kIdleBlockDuration = 0.2f;
 
-glm::vec3 RandomWanderDirection(CreatureHabitat habitat)
+void RepickWanderDirection(IUWorldPerception &perception,
+                           const CreatureActivityView &view,
+                           const CreatureBehaviorSnapshot &snapshot,
+                           WanderAgentState &st)
 {
-  const float angle = static_cast<float>(std::rand() % 628) / 100.0f;
-  glm::vec3 dir(std::cos(angle), 0.0f, std::sin(angle));
-  if (habitat == CreatureHabitat::Aquatic ||
-      habitat == CreatureHabitat::Amphibious)
+  glm::vec3 next_dir = st.direction;
+  if (!PickLocomotionDirection(perception, view, snapshot.habitat,
+                               snapshot.boundsSize, next_dir))
   {
-    const float pitch =
-        static_cast<float>((std::rand() % 201) - 100) / 100.0f * 0.45f;
-    dir.y = pitch;
+    next_dir = RandomLocomotionDirection(snapshot.habitat);
   }
-  else if (habitat == CreatureHabitat::Lava)
-  {
-    const float pitch =
-        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.25f;
-    dir.y = pitch;
-  }
-  else if (habitat == CreatureHabitat::Aerial)
-  {
-    const float pitch =
-        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.35f;
-    dir.y = pitch;
-  }
-  if (glm::length(dir) > 1e-4f)
-  {
-    dir = glm::normalize(dir);
-  }
-  return dir;
-}
-
-bool PickWanderDirection(IUWorldPerception &perception,
-                         const CreatureActivityView &view,
-                         CreatureHabitat habitat, const glm::vec3 &boundsSize,
-                         glm::vec3 &outDirection)
-{
-  if (habitat == CreatureHabitat::Aerial)
-  {
-    outDirection = RandomWanderDirection(CreatureHabitat::Aerial);
-    return glm::length(outDirection) > 1e-4f;
-  }
-  for (int attempt = 0; attempt < kMaxDirectionAttempts; ++attempt)
-  {
-    const glm::vec3 dir = RandomWanderDirection(habitat);
-    const glm::vec3 probe = view.bodyOrigin + dir * kWanderProbeDistance;
-    if (perception.HabitatAllowsMovementAt(habitat, probe, boundsSize))
-    {
-      outDirection = dir;
-      return true;
-    }
-  }
-  return false;
+  st.direction = next_dir;
 }
 
 } // namespace
@@ -71,7 +34,11 @@ void UWanderActivityAgent::OnCreatureAdded(CreatureId Id)
 {
   Members.insert(Id);
   ResetWanderState(Id, 2.0f, 4.0f);
-  State[Id].timer = 0.0f;
+  WanderAgentState &st = State[Id];
+  st.timer = 0.0f;
+  st.forceRepick = true;
+  st.stuckTimer = 0.0f;
+  st.idleTimer = 0.0f;
 }
 
 void UWanderActivityAgent::OnCreatureRemoved(CreatureId Id)
@@ -99,6 +66,10 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     {
       continue;
     }
+    if (!perception.IsWithinActivityRange(view->bodyOrigin))
+    {
+      continue;
+    }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
         sink.GetBehaviorSnapshot(Id);
     if (!snapshot)
@@ -109,41 +80,105 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     WanderAgentState &st = State[Id];
     const float intervalMin = snapshot->behavior.wanderIntervalMin;
     const float intervalMax = snapshot->behavior.wanderIntervalMax;
+
+    const bool volume_blocked = !perception.CreatureVolumeClearAt(
+        view->bodyOrigin, snapshot->boundsSize, view->Id);
+    if (st.forceRepick || volume_blocked)
+    {
+      st.forceRepick = false;
+      st.timer = 0.0f;
+    }
+
+    if (glm::length(st.direction) > 1e-4f &&
+        IsLocomotionStuck(st.lastBodyOrigin, view->bodyOrigin, dt,
+                          kStuckMinSpeed))
+    {
+      st.stuckTimer += dt;
+    }
+    else
+    {
+      st.stuckTimer = 0.0f;
+    }
+    if (st.stuckTimer >= kStuckTimeout)
+    {
+      st.stuckTimer = 0.0f;
+      st.timer = 0.0f;
+    }
+
     st.timer -= dt;
     if (st.timer <= 0.0f)
     {
       ResetWanderState(Id, intervalMin, intervalMax);
-      glm::vec3 nextDir = st.direction;
-      if (!PickWanderDirection(perception, *view, snapshot->habitat,
-                               snapshot->boundsSize, nextDir))
-      {
-        // Keep non-aerial mobs trying movement even when probe validation is
-        // conservative for a specific surface sample.
-        nextDir = RandomWanderDirection(snapshot->habitat);
-      }
-      st.direction = nextDir;
+      RepickWanderDirection(perception, *view, *snapshot, st);
     }
 
+    const float sep_radius = SeparationQueryRadius(snapshot->boundsSize);
+    const std::vector<CreatureNeighborView> neighbors =
+        perception.QueryCreatureNeighborsInRadius(view->bodyOrigin, sep_radius,
+                                                  view->Id);
+    const float min_sep = std::max(snapshot->boundsSize.x, snapshot->boundsSize.z) *
+                          0.85f;
+    const glm::vec3 separation = ComputeSeparationDirection(
+        view->bodyOrigin, snapshot->boundsSize, neighbors, min_sep);
+    glm::vec3 move_dir =
+        BlendLocomotionDirection(st.direction, separation, kSeparationWeight);
+
     CreatureIntent intent;
-    intent.moveDirWorld = st.direction;
-    float moveSpeed = snapshot->behavior.moveSpeed;
+    intent.moveDirWorld = move_dir;
+    float move_speed = snapshot->behavior.moveSpeed;
     if (snapshot->habitat == CreatureHabitat::Aerial)
     {
       if (snapshot->locomotion.flySpeed > 0.0f)
       {
-        moveSpeed = snapshot->locomotion.flySpeed;
+        move_speed = snapshot->locomotion.flySpeed;
       }
       else if (snapshot->locomotion.walkSpeed > 0.0f)
       {
-        moveSpeed = snapshot->locomotion.walkSpeed;
+        move_speed = snapshot->locomotion.walkSpeed;
       }
     }
     else if (snapshot->locomotion.walkSpeed > 0.0f)
     {
-      moveSpeed = snapshot->locomotion.walkSpeed;
+      move_speed = snapshot->locomotion.walkSpeed;
     }
-    intent.moveSpeed = moveSpeed;
-    if (glm::length(st.direction) > 1e-4f)
+
+    const glm::vec3 probe = view->bodyOrigin + move_dir * 1.25f;
+    const bool forward_clear =
+        glm::length(move_dir) < 1e-4f ||
+        (perception.CreatureVolumeClearAt(probe, snapshot->boundsSize,
+                                          view->Id) &&
+         (snapshot->habitat == CreatureHabitat::Aerial ||
+          perception.HabitatAllowsMovementAt(snapshot->habitat, probe,
+                                             snapshot->boundsSize)));
+
+    if (!forward_clear && glm::length(separation) > 1e-4f)
+    {
+      move_dir = separation;
+      intent.moveDirWorld = move_dir;
+    }
+    else if (!forward_clear)
+    {
+      st.idleTimer += dt;
+      if (st.idleTimer >= kIdleBlockDuration)
+      {
+        st.idleTimer = 0.0f;
+        st.timer = 0.0f;
+      }
+      intent.moveDirWorld = glm::vec3(0.0f);
+      intent.moveSpeed = 0.0f;
+      intent.suggestedAnim = LocomotionState::Idle;
+      intent.clearOnApply = false;
+      sink.SetIntent(Id, intent);
+      st.lastBodyOrigin = view->bodyOrigin;
+      continue;
+    }
+    else
+    {
+      st.idleTimer = 0.0f;
+    }
+
+    intent.moveSpeed = move_speed;
+    if (glm::length(move_dir) > 1e-4f)
     {
       if (snapshot->habitat == CreatureHabitat::Aerial)
       {
@@ -156,6 +191,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     intent.clearOnApply = false;
     sink.SetIntent(Id, intent);
+    st.lastBodyOrigin = view->bodyOrigin;
   }
 }
 

@@ -69,6 +69,10 @@ public:
   void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
   void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
 
+  bool IsPositionInActiveRing(const glm::vec3 &worldPos, glm::ivec3 feetBlockPos,
+                            const glm::vec3 &eyePos,
+                            const PlayerCapsule &cap) const;
+
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
 

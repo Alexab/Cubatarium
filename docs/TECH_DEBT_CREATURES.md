@@ -8,7 +8,6 @@
 |----|----------|------|--------------|--------|
 | TD-CRE-003 | 0 | `visual.rig` parsed but does not select pose presenter | `locomotion_archetype` is sufficient | backlog |
 | TD-CRE-006 | 1 | `AerialPosePresenter` — full b3d clip playback for flying birds | Ground chicken walk+peck done; fly IK deferred | backlog |
-| TD-CRE-008 | 2 | `FleeActivityAgent`, `MeleeAttackActivityAgent` | Visual scope, not AI | backlog |
 | TD-CRE-009 | 2 | Spider / 8 legs rigid approximation | 6-leg template (`leg_ml`/`leg_mr`) + quadruped pose | done |
 | TD-CRE-010 | 3 | FP viewmodel arms (`fp_parts[]`) | Not a blocker | backlog |
 | TD-CRE-015 | habitat | Amphibious habitat (`penguin`, `seal`) | `CreatureHabitat::Amphibious` + spawn/move rules | done |
@@ -25,6 +24,12 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-CRE-030 | AI-2 | Incremental `CreatureSpatialIndex` (`Upsert`/`Remove`/`PruneExcept`) |
+| TD-CRE-031 | AI-2 | `gameplay.activity_tick_hz` в `config.json` + `UWorld::SetActivityTickHz` |
+| TD-CRE-032 | AI-2 | Activity culling через `UChunkStreamer::IsPositionInActiveRing` |
+| TD-CRE-033 | AI-3 | Flee steering в `USimpleFsmBrain`; hostile JSON: skeleton, dungeon_master |
+| TD-CRE-008 | AI | `FleeActivityAgent`, `MeleeAttackActivityAgent`, `IUAgentBrain` / `USimpleFsmBrain` |
+| TD-CRE-029 | AI | Wander mob crowding: `CreatureActivitySteering` + `TryDepenetrateSpawnOrigin` |
 | TD-CRE-023 | gltf-audit | mobs_redo animation parser: run/fly/punch/die + idle fallback | `luanti_mob_animation.py` |
 | TD-CRE-024 | gltf-audit | Batch b3d → glTF re-export for yaml `model:` species | `convert_creature_mesh_to_gltf.py --all-with-b3d` (34 skinned) |
 | TD-CRE-025 | gltf-audit | `state_map` Run/Fly/Swim from habitat + Luanti clips | `sync_gltf_creature_animation.py` + runtime `ResolveAnimationClipId` |

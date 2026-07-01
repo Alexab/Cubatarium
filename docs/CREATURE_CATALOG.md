@@ -203,6 +203,8 @@ python tools/generate_creature_assets.py
 | `behavior` | При spawn / load | Движение каждый кадр |
 |------------|------------------|----------------------|
 | `wander` | `OnCreatureAdded` → **`WanderActivityAgent`** (таймер, направление в агенте) | Агент `SetIntent` в `DoMovement`, затем `Creature::ExecuteIntent` |
+| `flee` | **`FleeActivityAgent`** + `USimpleFsmBrain` | Убегание от controlled; navigation + steering |
+| `melee_attack` | **`MeleeAttackActivityAgent`** + `USimpleFsmBrain` | zombie, skeleton, dungeon_master — преследование и `attackTargetId` в intent |
 | `none` | Нет membership в директоре | Только `ExecuteIntent` (гравитация, коллизии; intent пустой, если не задан иначе) |
 
 Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`.

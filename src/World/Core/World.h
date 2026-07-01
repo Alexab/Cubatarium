@@ -279,6 +279,13 @@ public:
   QueryControlledCreatureInfo() const override;
   std::vector<CreatureId> CreaturesInRadius(const glm::vec3 &center,
                                             float radius) const override;
+  std::vector<CreatureNeighborView>
+  QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
+                                 CreatureId skip_id) const override;
+  bool CreatureVolumeClearAt(const glm::vec3 &body_origin,
+                             const glm::vec3 &size_blocks,
+                             CreatureId skip_id) const override;
+  std::optional<glm::vec3> GetCreatureBodyOrigin(CreatureId id) const override;
   /// Top face under feet: highest solid in column at or below referenceFeetY
   /// (runtime pose).
   std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ,
@@ -306,6 +313,7 @@ public:
   bool HabitatAllowsMovementAt(CreatureHabitat habitat,
                                const glm::vec3 &bodyOrigin,
                                const glm::vec3 &sizeBlocks) const override;
+  bool IsWithinActivityRange(const glm::vec3 &body_origin) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;
@@ -466,6 +474,8 @@ public:
   {
     return Collision.IsEntityCollisionEnabled();
   }
+
+  void SetActivityTickHz(float hz);
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
 

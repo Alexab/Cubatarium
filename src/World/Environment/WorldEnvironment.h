@@ -7,7 +7,7 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
-#include "World/Math/CollisionVolume.h"
+#include "World/Environment/CreatureSpatialIndex.h"
 #include <functional>
 #include <map>
 #include <memory>
@@ -66,6 +66,9 @@ public:
   std::optional<ControlledCreatureInfo> QueryControlledCreatureInfo() const;
   std::vector<CreatureId> CreaturesInRadius(const glm::vec3 &center,
                                             float radius) const;
+  std::vector<CreatureNeighborView>
+  QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
+                                 CreatureId skip_id) const;
 
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,
@@ -120,6 +123,8 @@ public:
   }
 
 private:
+  void SyncCreatureSpatialIndex();
+
   UWorld &Owner;
 
   std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
@@ -130,6 +135,8 @@ private:
   std::shared_ptr<USkinDefinitionStorage> SkinDefinitions;
   UCreatureActivityDirector ActivityDirector;
   UCreaturePosePresenterRegistry PosePresenterRegistry;
+  UCreatureSpatialIndex CreatureSpatialIndex;
+  bool CreatureSpatialIndexReady{false};
 };
 
 } // namespace cutum

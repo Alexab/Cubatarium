@@ -259,12 +259,14 @@ void UCore::LoadConfig(const std::string &config_file_name)
         StepUpEnabled = gameplay.value("step_up", true);
         FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
+        ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
       }
       else
       {
         StepUpEnabled = true;
         FoliageClimbEnabled = true;
         EntityCollisionEnabled = true;
+        ActivityTickHz = 20.0f;
       }
       if (d.contains("render") && d["render"].is_object())
       {
@@ -427,6 +429,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
     WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+    WorldInstance->SetActivityTickHz(ActivityTickHz);
     WorldInstance->SetRenderSettings(Render);
     if (GeometryEngineInstance)
     {
@@ -441,7 +444,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     std::cout << "Gameplay: step_up=" << (StepUpEnabled ? "1" : "0")
               << " foliage_climb=" << (FoliageClimbEnabled ? "1" : "0")
               << " entity_collision=" << (EntityCollisionEnabled ? "1" : "0")
-              << std::endl;
+              << " activity_tick_hz=" << ActivityTickHz << std::endl;
   }
   catch (const json::exception &e)
   {
@@ -503,6 +506,7 @@ void UCore::SaveConfigFile()
   gameplay["step_up"] = StepUpEnabled;
   gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
+  gameplay["activity_tick_hz"] = ActivityTickHz;
   system_data["gameplay"] = gameplay;
   json render_json;
   const char *preset_name = "balanced";
@@ -598,6 +602,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.StepUpEnabled = StepUpEnabled;
   snapshot.FoliageClimbEnabled = FoliageClimbEnabled;
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
+  snapshot.ActivityTickHz = ActivityTickHz;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
   snapshot.DefaultResourcePacks = GetDefaultResourcePackSelection();
@@ -614,6 +619,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   StepUpEnabled = settings.StepUpEnabled;
   FoliageClimbEnabled = settings.FoliageClimbEnabled;
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
+  ActivityTickHz = settings.ActivityTickHz;
   Render = settings.Render;
   Ui = settings.Ui;
   if (!settings.DefaultResourcePacks.Primary.empty())
@@ -632,6 +638,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
   WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+  WorldInstance->SetActivityTickHz(ActivityTickHz);
   WorldInstance->SetRenderSettings(Render);
   if (GeometryEngineInstance)
   {

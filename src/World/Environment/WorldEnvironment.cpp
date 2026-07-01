@@ -1,5 +1,7 @@
 #include "World/Environment/WorldEnvironment.h"
+#include <unordered_set>
 
+#include "Activity/CreatureActivityTypes.h"
 #include "Activity/CreatureActivityRegistry.h"
 #include "Activity/IUWorldPerception.h"
 #include "Activity/WorldCreatureActivitySink.h"
@@ -94,12 +96,35 @@ UWorldEnvironment::QueryControlledCreatureInfo() const
   return info;
 }
 
+void UWorldEnvironment::SyncCreatureSpatialIndex()
+{
+  std::unordered_set<CreatureId> alive;
+  ForEachCreature(
+      [&](const UCreature &creature)
+      {
+        if (creature.IsPlayerCharacter())
+        {
+          return;
+        }
+        const CreatureId id = creature.GetId();
+        alive.insert(id);
+        const CollisionVolume vol = creature.GetCollisionVolume();
+        CreatureSpatialIndex.Upsert(id, creature.GetBodyOrigin(), vol.halfExtents);
+      });
+  CreatureSpatialIndex.PruneExcept(alive);
+  CreatureSpatialIndexReady = true;
+}
+
 std::vector<CreatureId>
 UWorldEnvironment::CreaturesInRadius(const glm::vec3 &center,
                                      float radius) const
 {
+  if (CreatureSpatialIndexReady)
+  {
+    return CreatureSpatialIndex.QueryRadius(center, radius, 0);
+  }
   std::vector<CreatureId> out;
-  const float radiusSq = radius * radius;
+  const float radius_sq = radius * radius;
   ForEachCreature(
       [&](const UCreature &creature)
       {
@@ -108,10 +133,42 @@ UWorldEnvironment::CreaturesInRadius(const glm::vec3 &center,
           return;
         }
         const glm::vec3 delta = creature.GetBodyOrigin() - center;
-        const float distSq = delta.x * delta.x + delta.z * delta.z;
-        if (distSq <= radiusSq)
+        const float dist_sq = delta.x * delta.x + delta.z * delta.z;
+        if (dist_sq <= radius_sq)
         {
           out.push_back(creature.GetId());
+        }
+      });
+  return out;
+}
+
+std::vector<CreatureNeighborView>
+UWorldEnvironment::QueryCreatureNeighborsInRadius(const glm::vec3 &center,
+                                                  float radius,
+                                                  CreatureId skip_id) const
+{
+  if (CreatureSpatialIndexReady)
+  {
+    return CreatureSpatialIndex.QueryNeighbors(center, radius, skip_id);
+  }
+  std::vector<CreatureNeighborView> out;
+  const float radius_sq = radius * radius;
+  ForEachCreature(
+      [&](const UCreature &creature)
+      {
+        if (creature.GetId() == skip_id || creature.IsPlayerCharacter())
+        {
+          return;
+        }
+        const glm::vec3 origin = creature.GetBodyOrigin();
+        const glm::vec3 delta = origin - center;
+        const float dist_sq = delta.x * delta.x + delta.z * delta.z;
+        if (dist_sq <= radius_sq)
+        {
+          CreatureNeighborView neighbor;
+          neighbor.Id = creature.GetId();
+          neighbor.bodyOrigin = origin;
+          out.push_back(neighbor);
         }
       });
   return out;
@@ -121,6 +178,8 @@ void UWorldEnvironment::ClearCreatures()
 {
   ActivityDirector.Clear();
   Creatures.clear();
+  CreatureSpatialIndex.Clear();
+  CreatureSpatialIndexReady = false;
   NextCreatureId = 1;
   PlayerCreatureId = 0;
   ControlledCreatureId = 0;
@@ -221,16 +280,20 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
 
   const glm::vec3 spawnOrigin = AdjustSpawnBodyOrigin(Owner, *def, bodyOrigin);
   const glm::vec3 spawnSize = def->bounds.restSizeBlocks;
+  glm::vec3 resolvedSpawn =
+      cutum::TryDepenetrateSpawnOrigin(Owner, def->habitat, spawnOrigin,
+                                       spawnSize, 0);
   if (def->role != CreatureRole::ControlledDefault)
   {
-    if (!cutum::HabitatAllowsAtForSpawn(Owner, def->habitat, spawnOrigin,
+    if (!cutum::HabitatAllowsAtForSpawn(Owner, def->habitat, resolvedSpawn,
                                         spawnSize))
     {
       std::cerr << "SpawnCreature: invalid habitat for '" << speciesId << "'"
                 << std::endl;
       return 0;
     }
-    const CollisionVolume vol = CollisionVolumeFromBody(spawnOrigin, spawnSize);
+    const CollisionVolume vol =
+        CollisionVolumeFromBody(resolvedSpawn, spawnSize);
     CollisionVolume spawnVol = vol;
     constexpr float kSpawnCollisionInset = 0.05f;
     spawnVol.halfExtents -= glm::vec3(kSpawnCollisionInset);
@@ -250,11 +313,12 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   std::unique_ptr<UCreature> creature;
   if (def->role == CreatureRole::ControlledDefault)
   {
-    creature = std::make_unique<UPlayer>(id, speciesId, spawnOrigin);
+    creature = std::make_unique<UPlayer>(id, speciesId, resolvedSpawn);
   }
   else
   {
-    creature = std::make_unique<UCreature>(id, speciesId, spawnOrigin, eyeOffset);
+    creature =
+        std::make_unique<UCreature>(id, speciesId, resolvedSpawn, eyeOffset);
   }
 
   creature->GetBoundsMutable().profile = def->bounds;
@@ -295,6 +359,12 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   {
     ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
   }
+  if (!Creatures[id]->IsPlayerCharacter())
+  {
+    const CollisionVolume vol = Creatures[id]->GetCollisionVolume();
+    CreatureSpatialIndex.Upsert(id, Creatures[id]->GetBodyOrigin(), vol.halfExtents);
+    CreatureSpatialIndexReady = true;
+  }
   return id;
 }
 
@@ -309,6 +379,7 @@ void UWorldEnvironment::RemoveCreature(CreatureId id)
     PlayerCreatureId = 0;
   }
   ActivityDirector.OnCreatureRemoved(id);
+  CreatureSpatialIndex.Remove(id);
   Creatures.erase(id);
 }
 
@@ -765,6 +836,10 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
         creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
       }
       creature->GetInventory().DeserializeFromJson(c);
+      glm::vec3 loaded_origin = creature->GetBodyOrigin();
+      loaded_origin = cutum::TryDepenetrateSpawnOrigin(
+          Owner, def->habitat, loaded_origin, def->bounds.restSizeBlocks, id);
+      creature->SetBodyOrigin(loaded_origin);
       if (def->habitat == CreatureHabitat::Terrestrial)
       {
         SnapCreatureFeetToGround(*creature);
@@ -777,6 +852,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
     {
       ControlledCreatureId = PlayerCreatureId;
     }
+    SyncCreatureSpatialIndex();
   }
   catch (const std::exception &e)
   {
@@ -837,12 +913,17 @@ void UWorldEnvironment::TickActivity(IUWorldPerception &perception,
                                      UWorldCreatureActivitySink &sink,
                                      float dt)
 {
+  SyncCreatureSpatialIndex();
   ActivityDirector.TickAgents(perception, sink, dt);
 }
 
 bool UWorldEnvironment::CheckCreatureCollisionVolume(
     const CollisionVolume &vol, CreatureId skipCreatureId) const
 {
+  if (CreatureSpatialIndexReady)
+  {
+    return CreatureSpatialIndex.AnyCreatureVolumeOverlaps(vol, skipCreatureId);
+  }
   for (const auto &entry : Creatures)
   {
     if (entry.first == skipCreatureId)

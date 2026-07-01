@@ -53,7 +53,7 @@ python tools/fix_includes.py
 python tools/fix_member_collisions.py
 ```
 
-CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, `python tools/audit/check_include_rules.py`, and `chunk_load_priority_test`.
+CI (Windows smoke workflow) also runs `python tools/audit_style.py`, `python tools/audit_clang_format.py`, `python tools/audit/check_include_rules.py`, `audit_creature_catalog.py`, `audit_creature_backends.py`, `chunk_load_priority_test`, `creature_activity_steering_test`, and `navigation_pathfinder_test`.
 
 ## Tools (manual-only scripts)
 

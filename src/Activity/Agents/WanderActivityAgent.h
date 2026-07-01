@@ -14,6 +14,10 @@ struct WanderAgentState
 {
   float timer{0.0f};
   glm::vec3 direction{1.0f, 0.0f, 0.0f};
+  glm::vec3 lastBodyOrigin{};
+  float stuckTimer{0.0f};
+  float idleTimer{0.0f};
+  bool forceRepick{false};
 };
 
 class UWanderActivityAgent : public IUCreatureActivityAgent

@@ -56,6 +56,12 @@ struct CreatureBehaviorParams
   float moveSpeed{2.f};
   float wanderIntervalMin{2.f};
   float wanderIntervalMax{4.f};
+  float fleeRadius{8.f};
+  float fleeSpeedMultiplier{1.2f};
+  float safeDistance{12.f};
+  float aggroRadius{10.f};
+  float attackRange{2.f};
+  float attackCooldown{1.5f};
 };
 
 enum class CreatureVisualBackend : uint8_t

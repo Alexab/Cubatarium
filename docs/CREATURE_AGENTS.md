@@ -159,6 +159,42 @@ src/Activity/
 
 ---
 
+## Steering / mob separation (фаза 0)
+
+Общая тактика для activity-агентов: [`CreatureActivitySteering`](../../src/Activity/Helpers/CreatureActivitySteering.h).
+
+| API perception | Назначение |
+|----------------|------------|
+| `CreatureVolumeClearAt` | Probe без пересечения AABB других существ |
+| `QueryCreatureNeighborsInRadius` | Соседи с `bodyOrigin` для separation |
+| `GetCreatureBodyOrigin` | Позиция по `CreatureId` |
+
+`WanderActivityAgent` использует:
+
+- `PickLocomotionDirection` — habitat + creature probe
+- `ComputeSeparationDirection` / `BlendLocomotionDirection` — разъезд в толпе
+- `IsLocomotionStuck` — repick направления при залипании
+- `TryDepenetrateSpawnOrigin` (spawn/load) — XZ-сдвиг при overlap в [`CreatureEnvironment`](../../src/Creatures/Environment/CreatureEnvironment.cpp)
+
+## Navigation (фаза 1)
+
+Модуль [`src/Navigation/`](../src/Navigation/): `UNavigationPathfinder` (A* по stand-nodes), `UWaypointFollower`, `SteerCreatureAlongPath` в [`CreatureActivityNavigation`](../../src/Activity/Helpers/CreatureActivityNavigation.h).
+
+## Масштаб (фаза 2)
+
+- [`CreatureSpatialIndex`](../../src/World/Environment/CreatureSpatialIndex.cpp) — инкрементальный `Upsert`/`Remove`/`PruneExcept`; `SyncCreatureSpatialIndex` перед `TickActivity` обновляет только сдвинувшихся мобов
+- Throttle когнитивного слоя: `gameplay.activity_tick_hz` в `config.json` → `UCreatureActivityDirector::SetActivityTickInterval` (default 20 Гц)
+- `IsWithinActivityRange` — моб тикается только если его ground-chunk в активном кольце `UChunkStreamer` (тот же критерий, что `ShouldKeepChunkLoaded`)
+
+## Brain + новые behaviors (фаза 3)
+
+- [`IUAgentBrain`](../../src/Activity/Brain/IUAgentBrain.h), [`USimpleFsmBrain`](../../src/Activity/Brain/SimpleFsmBrain.cpp)
+- `flee` → [`FleeActivityAgent`](../../src/Activity/Agents/FleeActivityAgent.cpp) (sheep); steering фазы 0 (separation + `PickLocomotionDirection`) в flee-ветке brain
+- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master)
+- `CreatureIntent.attackTargetId` — задел под combat (урон вне activity)
+
+---
+
 ## Альтернативы, если агенты окажутся избыточны
 
 - **Только ECS-системы** без класса Agent: `WanderSystem` обрабатывает все существа с тегом `MobTag` — по сути один агент на весь мир.

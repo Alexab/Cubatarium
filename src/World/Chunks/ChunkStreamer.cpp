@@ -344,6 +344,21 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
   return false;
 }
 
+bool UChunkStreamer::IsPositionInActiveRing(const glm::vec3 &worldPos,
+                                            glm::ivec3 feetBlockPos,
+                                            const glm::vec3 &eyePos,
+                                            const PlayerCapsule &cap) const
+{
+  if (!Enabled)
+  {
+    return true;
+  }
+  const glm::ivec3 blockPos = WorldPosToBlock(worldPos);
+  const glm::ivec3 groundChunk =
+      UChunkManager::WorldToChunk(glm::ivec3(blockPos.x, 0, blockPos.z));
+  return ShouldKeepChunkLoaded(groundChunk, feetBlockPos, eyePos, cap);
+}
+
 void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
 {
   if (!Enabled)

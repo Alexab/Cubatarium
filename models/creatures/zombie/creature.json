@@ -37,11 +37,12 @@
     "jump_height": 1.0,
     "walk_speed": 2.2
   },
-  "behavior": "wander",
+  "behavior": "melee_attack",
   "behavior_params": {
     "move_speed": 2.2,
-    "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "aggro_radius": 12.0,
+    "attack_range": 2.0,
+    "attack_cooldown": 1.5
   },
   "visual": {
     "backend": "bone_skeleton",

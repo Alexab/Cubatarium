@@ -80,6 +80,15 @@ set(SOURCES
     src/Activity/WorldCreatureActivitySink.cpp
     src/Activity/CreatureActivityRegistry.cpp
     src/Activity/Agents/WanderActivityAgent.cpp
+    src/Activity/Helpers/CreatureActivitySteering.cpp
+    src/Activity/Helpers/CreatureActivityNavigation.cpp
+    src/Activity/Agents/FleeActivityAgent.cpp
+    src/Activity/Agents/MeleeAttackActivityAgent.cpp
+    src/Activity/Brain/SimpleFsmBrain.cpp
+    src/Navigation/WorldNavigationQueries.cpp
+    src/Navigation/UNavigationPathfinder.cpp
+    src/Navigation/UWaypointFollower.cpp
+    src/World/Environment/CreatureSpatialIndex.cpp
     src/Creatures/Core/WorldCreatures.cpp
     src/Creatures/Environment/CreatureEnvironment.cpp
     src/Creatures/Definition/CreatureDefinitionStorage.cpp
@@ -562,6 +571,21 @@ add_executable(world_mesh_service_test
 target_include_directories(world_mesh_service_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(world_mesh_service_test glm::glm)
+
+add_executable(navigation_pathfinder_test
+    src/Navigation/UNavigationPathfinder.cpp
+    src/Navigation/UWaypointFollower.cpp
+    src/Test/NavigationPathfinderTest.cpp)
+target_include_directories(navigation_pathfinder_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(navigation_pathfinder_test glm::glm)
+
+add_executable(creature_activity_steering_test
+    src/Activity/Helpers/CreatureActivitySteering.cpp
+    src/Test/CreatureActivitySteeringTest.cpp)
+target_include_directories(creature_activity_steering_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_activity_steering_test glm::glm)
 
 add_executable(creature_bone_skeleton_loader_test
     src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp

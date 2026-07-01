@@ -155,6 +155,18 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           bp.value("wander_interval_min", def.behavior.wanderIntervalMin);
       def.behavior.wanderIntervalMax =
           bp.value("wander_interval_max", def.behavior.wanderIntervalMax);
+      def.behavior.fleeRadius =
+          bp.value("flee_radius", def.behavior.fleeRadius);
+      def.behavior.fleeSpeedMultiplier =
+          bp.value("flee_speed_multiplier", def.behavior.fleeSpeedMultiplier);
+      def.behavior.safeDistance =
+          bp.value("safe_distance", def.behavior.safeDistance);
+      def.behavior.aggroRadius =
+          bp.value("aggro_radius", def.behavior.aggroRadius);
+      def.behavior.attackRange =
+          bp.value("attack_range", def.behavior.attackRange);
+      def.behavior.attackCooldown =
+          bp.value("attack_cooldown", def.behavior.attackCooldown);
     }
     if (data.contains("locomotion"))
     {

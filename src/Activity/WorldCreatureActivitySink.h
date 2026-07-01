@@ -18,6 +18,7 @@ public:
   std::optional<CreatureBehaviorSnapshot>
   GetBehaviorSnapshot(CreatureId Id) const override;
   void SetIntent(CreatureId Id, const CreatureIntent &intent) override;
+  const UWorld &GetWorld() const override { return World; }
 
 private:
   UWorld &World;

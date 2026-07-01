@@ -3,6 +3,10 @@
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Render/Camera/Camera.h"
+#include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Player/PlayerCapsule.h"
+#include "World/Math/GridMath.h"
+#include "World/Streaming/WorldStreaming.h"
 #include "World/Core/World.h"
 
 namespace cutum
@@ -31,6 +35,30 @@ std::vector<CreatureId> UWorld::CreaturesInRadius(const glm::vec3 &center,
   return Environment.CreaturesInRadius(center, radius);
 }
 
+std::vector<CreatureNeighborView> UWorld::QueryCreatureNeighborsInRadius(
+    const glm::vec3 &center, float radius, CreatureId skip_id) const
+{
+  return Environment.QueryCreatureNeighborsInRadius(center, radius, skip_id);
+}
+
+bool UWorld::CreatureVolumeClearAt(const glm::vec3 &body_origin,
+                                   const glm::vec3 &size_blocks,
+                                   CreatureId skip_id) const
+{
+  const CollisionVolume vol = CollisionVolumeFromBody(body_origin, size_blocks);
+  return !CheckCreatureCollisionVolume(vol, skip_id);
+}
+
+std::optional<glm::vec3> UWorld::GetCreatureBodyOrigin(CreatureId id) const
+{
+  const UCreature *creature = GetCreature(id);
+  if (!creature)
+  {
+    return std::nullopt;
+  }
+  return creature->GetBodyOrigin();
+}
+
 bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
                                const glm::vec3 &bodyOrigin,
                                const glm::vec3 &sizeBlocks) const
@@ -50,6 +78,39 @@ bool UWorld::HabitatAllowsMovementAt(CreatureHabitat habitat,
                                      const glm::vec3 &sizeBlocks) const
 {
   return cutum::HabitatAllowsMovementAt(*this, habitat, bodyOrigin, sizeBlocks);
+}
+
+bool UWorld::IsWithinActivityRange(const glm::vec3 &body_origin) const
+{
+  if (!Streaming || !Streaming->HasStreamer() ||
+      !Streaming->IsStreamingEnabled())
+  {
+    return true;
+  }
+  const UCreature *controlled = Environment.GetControlledCreature();
+  const auto camera = GetCurrentUserCamera();
+  if (!controlled || !camera)
+  {
+    return true;
+  }
+  const glm::vec3 eyePos = camera->GetPosition();
+  float feetY =
+      FeetYFromEye(eyePos, controlled->GetEyeOffset().y);
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
+  {
+    feetY = BoundsFeetY(controlled->GetBodyOrigin());
+  }
+  const glm::ivec3 feetBlock =
+      WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
+  const PlayerCapsule cap = camera->GetPlayerCapsule();
+  return Streaming->GetStreamer()->IsPositionInActiveRing(
+      body_origin, feetBlock, eyePos, cap);
+}
+
+void UWorld::SetActivityTickHz(float hz)
+{
+  const float clamped_hz = std::max(hz, 1.0f);
+  Environment.GetActivityDirector().SetActivityTickInterval(1.0f / clamped_hz);
 }
 
 void UWorld::ClearCreaturesAndUsers()

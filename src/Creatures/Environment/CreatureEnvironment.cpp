@@ -717,6 +717,42 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
   return probeOrigin;
 }
 
+glm::vec3 TryDepenetrateSpawnOrigin(const UWorld &world, CreatureHabitat habitat,
+                                    const glm::vec3 &bodyOrigin,
+                                    const glm::vec3 &sizeBlocks,
+                                    uint64_t skip_creature_id)
+{
+  CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+  if (!world.CheckCreatureCollisionVolume(vol, skip_creature_id))
+  {
+    return bodyOrigin;
+  }
+  constexpr float kStep = 0.25f;
+  const glm::vec2 dirs[] = {{1.0f, 0.0f},  {-1.0f, 0.0f}, {0.0f, 1.0f},
+                            {0.0f, -1.0f}, {0.707f, 0.707f}, {-0.707f, 0.707f},
+                            {0.707f, -0.707f}, {-0.707f, -0.707f}};
+  for (int ring = 1; ring <= 3; ++ring)
+  {
+    const float offset = kStep * static_cast<float>(ring);
+    for (const glm::vec2 &dir : dirs)
+    {
+      const glm::vec3 candidate =
+          bodyOrigin + glm::vec3(dir.x * offset, 0.0f, dir.y * offset);
+      vol = CollisionVolumeFromBody(candidate, sizeBlocks);
+      if (world.CheckCreatureCollisionVolume(vol, skip_creature_id))
+      {
+        continue;
+      }
+      if (!HabitatAllowsAt(world, habitat, candidate, sizeBlocks))
+      {
+        continue;
+      }
+      return candidate;
+    }
+  }
+  return bodyOrigin;
+}
+
 void ApplyEnvironmentLocomotionFacts(const UWorld &world,
                                      const glm::vec3 &bodyOrigin,
                                      const glm::vec3 &sizeBlocks,
