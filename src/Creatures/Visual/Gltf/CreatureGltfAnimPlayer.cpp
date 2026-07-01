@@ -69,7 +69,7 @@ glm::mat4 SampleGltfRootTransform(const GltfAnimationCpu &anim, float timeSec,
     }
   }
 
-  glm::mat4 m = glm::translate(glm::mat4(1.f), translation);
+  glm::mat4 m = glm::mat4(1.f);
   m = m * glm::mat4_cast(rotation);
   m = glm::scale(m, scale);
   return m;

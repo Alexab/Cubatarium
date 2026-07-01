@@ -215,12 +215,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     }
     else
     {
-      const bool habitatOk =
-          (habitat == CreatureHabitat::Aquatic ||
-           habitat == CreatureHabitat::Amphibious ||
-           habitat == CreatureHabitat::Lava)
-              ? world.HabitatAllowsMovementAt(habitat, candidate, size)
-              : HabitatAllowsAt(world, habitat, candidate, size);
+      const bool habitatOk = world.HabitatAllowsMovementAt(habitat, candidate, size);
       if (habitatOk)
       {
         BodyOrigin = candidate;

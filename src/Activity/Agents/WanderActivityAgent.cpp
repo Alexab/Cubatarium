@@ -158,6 +158,17 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     else if (!forward_clear)
     {
+      if (glm::length(separation) > 1e-4f)
+      {
+        st.idleTimer = 0.0f;
+        intent.moveDirWorld = separation;
+        intent.moveSpeed = move_speed * 0.5f;
+        intent.suggestedAnim = LocomotionState::Walk;
+        intent.clearOnApply = false;
+        sink.SetIntent(Id, intent);
+        st.lastBodyOrigin = view->bodyOrigin;
+        continue;
+      }
       st.idleTimer += dt;
       if (st.idleTimer >= kIdleBlockDuration)
       {

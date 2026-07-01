@@ -82,23 +82,36 @@ bool UWorld::HabitatAllowsMovementAt(CreatureHabitat habitat,
 
 bool UWorld::IsWithinActivityRange(const glm::vec3 &body_origin) const
 {
+  const std::optional<ControlledCreatureInfo> controlled =
+      QueryControlledCreatureInfo();
+  if (controlled)
+  {
+    const glm::vec3 delta = body_origin - controlled->eyePosition;
+    const float dist_sq = delta.x * delta.x + delta.z * delta.z;
+    const float activity_radius =
+        static_cast<float>(GetEffectiveRenderDistance() * CHUNK_SIZE) + 16.0f;
+    if (dist_sq <= activity_radius * activity_radius)
+    {
+      return true;
+    }
+  }
   if (!Streaming || !Streaming->HasStreamer() ||
       !Streaming->IsStreamingEnabled())
   {
     return true;
   }
-  const UCreature *controlled = Environment.GetControlledCreature();
+  const UCreature *controlled_creature = Environment.GetControlledCreature();
   const auto camera = GetCurrentUserCamera();
-  if (!controlled || !camera)
+  if (!controlled_creature || !camera)
   {
     return true;
   }
   const glm::vec3 eyePos = camera->GetPosition();
   float feetY =
-      FeetYFromEye(eyePos, controlled->GetEyeOffset().y);
+      FeetYFromEye(eyePos, controlled_creature->GetEyeOffset().y);
   if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
   {
-    feetY = BoundsFeetY(controlled->GetBodyOrigin());
+    feetY = BoundsFeetY(controlled_creature->GetBodyOrigin());
   }
   const glm::ivec3 feetBlock =
       WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));

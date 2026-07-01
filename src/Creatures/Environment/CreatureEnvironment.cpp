@@ -463,37 +463,6 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
                              const glm::vec3 &sizeBlocks)
 {
-  const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
-  if (world.CheckBlockCollisionVolume(vol))
-  {
-    return false;
-  }
-  if (habitat == CreatureHabitat::Aerial)
-  {
-    return !world.CheckBlockCollisionVolume(vol);
-  }
-  if (habitat == CreatureHabitat::Aquatic)
-  {
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
-    return env.inWater;
-  }
-  if (habitat == CreatureHabitat::Lava)
-  {
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
-    return env.inLava;
-  }
-  if (habitat == CreatureHabitat::Amphibious)
-  {
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
-    if (env.inWater)
-    {
-      return true;
-    }
-    return env.onSolidGround && !env.inFluid;
-  }
   if (habitat == CreatureHabitat::Terrestrial)
   {
     const EnvironmentSample env =
@@ -510,6 +479,37 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
       return std::abs(*feetY - bodyOrigin.y) <= 0.75f;
     }
     return false;
+  }
+  if (habitat == CreatureHabitat::Amphibious)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    if (env.inWater)
+    {
+      return true;
+    }
+    return env.onSolidGround && !env.inFluid;
+  }
+  if (habitat == CreatureHabitat::Aquatic)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    return env.inWater;
+  }
+  if (habitat == CreatureHabitat::Lava)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+    return env.inLava;
+  }
+  const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+  if (world.CheckBlockCollisionVolume(vol))
+  {
+    return false;
+  }
+  if (habitat == CreatureHabitat::Aerial)
+  {
+    return !world.CheckBlockCollisionVolume(vol);
   }
   return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
 }
