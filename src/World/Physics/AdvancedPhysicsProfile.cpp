@@ -10,6 +10,7 @@ void UAdvancedPhysicsProfile::Configure(UWorldBlockPhysicsService &service,
   flags.EnableBlockEvents = true;
   flags.EnableFalling = true;
   flags.EnableFluids = true;
+  flags.EnableMaterialRules = true;
   service.SetFeatureFlags(flags);
 }
 

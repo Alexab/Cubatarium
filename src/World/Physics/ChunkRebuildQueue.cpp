@@ -1,4 +1,6 @@
 #include "World/Physics/ChunkRebuildQueue.h"
+#include "World/Physics/PhysicsChunkDistance.h"
+#include "World/Physics/PhysicsQueuePurge.h"
 #include <algorithm>
 
 namespace cutum
@@ -11,14 +13,83 @@ void UChunkRebuildQueue::SetLimits(int per_tick_max, int soft_limit, int hard_li
   HardLimit = std::max(SoftLimit, hard_limit);
 }
 
+bool UChunkRebuildQueue::TryEvictOne()
+{
+  if (Queue.empty())
+  {
+    return false;
+  }
+  std::vector<Request> items;
+  items.reserve(Queue.size());
+  while (!Queue.empty())
+  {
+    items.push_back(Queue.top());
+    Queue.pop();
+  }
+  size_t evict_index = items.size();
+  for (size_t i = 0; i < items.size(); ++i)
+  {
+    if (ProtectLowPriorities && items[i].Priority <= 2)
+    {
+      continue;
+    }
+    if (evict_index == items.size())
+    {
+      evict_index = i;
+      continue;
+    }
+    const Request &candidate = items[i];
+    const Request &worst = items[evict_index];
+    if (candidate.DistanceToFocus > worst.DistanceToFocus)
+    {
+      evict_index = i;
+      continue;
+    }
+    if (candidate.DistanceToFocus < worst.DistanceToFocus)
+    {
+      continue;
+    }
+    if (candidate.Priority > worst.Priority)
+    {
+      evict_index = i;
+      continue;
+    }
+    if (candidate.Priority == worst.Priority &&
+        candidate.LocalOrder > worst.LocalOrder)
+    {
+      evict_index = i;
+    }
+  }
+  if (evict_index == items.size())
+  {
+    for (const Request &request : items)
+    {
+      Queue.push(request);
+    }
+    return false;
+  }
+  Keys.erase(items[evict_index].ChunkCoord);
+  items.erase(items.begin() + static_cast<std::ptrdiff_t>(evict_index));
+  for (const Request &request : items)
+  {
+    Queue.push(request);
+  }
+  ++Stats.Purged;
+  WarnOncePhysicsQueuePurge("chunk_rebuild");
+  return true;
+}
+
 bool UChunkRebuildQueue::Enqueue(glm::ivec3 chunk_coord, int priority,
                                  uint64_t local_order)
 {
-  if (Queue.size() >= static_cast<size_t>(HardLimit))
+  while (Queue.size() >= static_cast<size_t>(HardLimit))
   {
-    ++Stats.Dropped;
-    Stats.Depth = Queue.size();
-    return false;
+    if (!TryEvictOne())
+    {
+      ++Stats.Dropped;
+      Stats.Depth = Queue.size();
+      return false;
+    }
   }
   if (Queue.size() >= static_cast<size_t>(SoftLimit) && priority > 2)
   {
@@ -35,6 +106,7 @@ bool UChunkRebuildQueue::Enqueue(glm::ivec3 chunk_coord, int priority,
   request.ChunkCoord = chunk_coord;
   request.Priority = priority;
   request.LocalOrder = local_order;
+  request.DistanceToFocus = ChebyshevChunkDistance(chunk_coord, FocusChunk);
   Queue.push(request);
   ++Stats.Enqueued;
   Stats.Depth = Queue.size();

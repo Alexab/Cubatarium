@@ -37,6 +37,7 @@ struct BlockPhysicsProfile
   float LiquidViscosity{1.0f};
   bool LiquidRenewable{false};
   bool Floodable{false};
+  bool Flammable{false};
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);
 };

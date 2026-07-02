@@ -56,6 +56,14 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"physics_liquid_queue_depth", sample.physicsLiquidQueueDepth},
         {"physics_deferred_updates", sample.physicsDeferredUpdates},
         {"physics_dropped_updates", sample.physicsDroppedUpdates},
+        {"physics_purged_updates", sample.physicsPurgedUpdates},
+        {"physics_collision_broadphase_rejects",
+         sample.physicsCollisionBroadphaseRejects},
+        {"physics_collision_broadphase_fallbacks",
+         sample.physicsCollisionBroadphaseFallbacks},
+        {"physics_collision_ready_wait_ms", sample.physicsCollisionReadyWaitMs},
+        {"physics_collision_ready_transitions",
+         sample.physicsCollisionReadyTransitions},
         {"physics_visual_remesh_backlog", sample.physicsVisualRemeshBacklog},
         {"physics_collision_rebuild_backlog",
          sample.physicsCollisionRebuildBacklog},
@@ -109,6 +117,15 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
   world.MovementDiag.physicsLiquidQueueDepth = physicsTelemetry.LiquidQueueDepth;
   world.MovementDiag.physicsDeferredUpdates = physicsTelemetry.DeferredUpdates;
   world.MovementDiag.physicsDroppedUpdates = physicsTelemetry.DroppedUpdates;
+  world.MovementDiag.physicsPurgedUpdates = physicsTelemetry.PurgedUpdates;
+  world.MovementDiag.physicsCollisionBroadphaseRejects =
+      physicsTelemetry.CollisionBroadphaseRejects;
+  world.MovementDiag.physicsCollisionBroadphaseFallbacks =
+      physicsTelemetry.CollisionBroadphaseFallbacks;
+  world.MovementDiag.physicsCollisionReadyWaitMs =
+      physicsTelemetry.CollisionReadyWaitMs;
+  world.MovementDiag.physicsCollisionReadyTransitions =
+      physicsTelemetry.CollisionReadyTransitions;
   world.MovementDiag.physicsVisualRemeshBacklog =
       physicsTelemetry.VisualRemeshBacklog;
   world.MovementDiag.physicsCollisionRebuildBacklog =

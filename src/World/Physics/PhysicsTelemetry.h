@@ -18,6 +18,7 @@ struct PhysicsTelemetry
   uint64_t VisualRemeshBacklog{0};
   uint64_t DeferredUpdates{0};
   uint64_t DroppedUpdates{0};
+  uint64_t PurgedUpdates{0};
   uint64_t CollisionBroadphaseRejects{0};
   uint64_t CollisionBroadphaseFallbacks{0};
   uint64_t CollisionReadyTransitions{0};

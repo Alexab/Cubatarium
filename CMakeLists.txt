@@ -161,6 +161,13 @@ set(SOURCES
     src/World/Physics/AdvancedPhysicsProfile.cpp
     src/World/Physics/PhysicsProfileFactory.cpp
     src/World/Physics/CollisionReadiness.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/World/Physics/ChunkPhysicsSeed.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/App/Platform/WindowManager.cpp
@@ -623,8 +630,37 @@ target_include_directories(creature_gltf_loader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_gltf_loader_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(block_update_queue_purge_test
+    src/World/Physics/BlockUpdateQueue.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/GridMath.cpp
+    src/Test/BlockUpdateQueuePurgeTest.cpp)
+target_include_directories(block_update_queue_purge_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(block_update_queue_purge_test glm::glm)
+
+add_executable(liquid_queue_priority_test
+    src/World/Physics/LiquidUpdateQueue.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/GridMath.cpp
+    src/Test/LiquidQueuePriorityTest.cpp)
+target_include_directories(liquid_queue_priority_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(liquid_queue_priority_test glm::glm)
+
 add_executable(chunk_rebuild_queue_test
     src/World/Physics/ChunkRebuildQueue.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/GridMath.cpp
     src/Test/ChunkRebuildQueueTest.cpp)
 target_include_directories(chunk_rebuild_queue_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -660,7 +696,10 @@ set(PHYSICS_REPLAY_TEST_SOURCES
     src/World/Physics/BlockUpdateQueue.cpp
     src/World/Physics/LiquidUpdateQueue.cpp
     src/World/Physics/ChunkRebuildQueue.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
     src/World/Physics/Replay/ReplayInputLog.cpp
+    src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Physics/Replay/WorldStateHasher.cpp
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES})
 
@@ -710,6 +749,126 @@ add_executable(falling_blocks_stability_test
 target_include_directories(falling_blocks_stability_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(falling_blocks_stability_test glm::glm nlohmann_json::nlohmann_json)
+
+set(PHYSICS_REGISTRY_TEST_SOURCES
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockRegistry.cpp
+    src/Render/Textures/TextureBase.cpp
+    src/Render/Textures/TextureCube.cpp)
+
+add_executable(liquid_viscosity_gate_test
+    src/Test/LiquidViscosityGateTest.cpp)
+target_include_directories(liquid_viscosity_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(liquid_viscosity_gate_test glm::glm)
+
+add_executable(physics_integration_test
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/LiquidSimulationSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/PhysicsIntegrationTest.cpp)
+target_include_directories(physics_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(physics_integration_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(physics_profile_hash_test
+    ${PHYSICS_REPLAY_TEST_SOURCES}
+    src/Test/PhysicsProfileHashTest.cpp)
+target_include_directories(physics_profile_hash_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(physics_profile_hash_test glm::glm)
+
+set(PHYSICS_LIGHT_REGISTRY_DEF CUTUM_PHYSICS_LIGHT_REGISTRY)
+
+set(PHYSICS_COLLISION_UNIT_SOURCES
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockRegistry.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/World/Collision/WorldCollision.cpp
+    src/World/Collision/VoxelDdaTraversal.cpp
+    src/World/Physics/CollisionReadiness.cpp
+    src/World/Raycast/BlockRaycast.cpp
+    src/Creatures/Core/CreatureBounds.cpp
+    src/Render/Primitives/Cube.cpp)
+
+set(PHYSICS_MATERIAL_UNIT_SOURCES
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockRegistry.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp)
+
+set(PHYSICS_UWORLD_TEST_SOURCES
+    ${PHYSICS_REGISTRY_TEST_SOURCES}
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Collision/WorldCollision.cpp
+    src/World/Collision/VoxelDdaTraversal.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/World/Physics/CollisionReadiness.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    src/World/Physics/PhysicsProfileFactory.cpp
+    src/World/Physics/PrimitivePhysicsProfile.cpp
+    src/World/Physics/StandardPhysicsProfile.cpp
+    src/World/Physics/AdvancedPhysicsProfile.cpp
+    src/World/Physics/WorldPhysicsScheduler.cpp
+    src/World/Physics/WorldMovementPhysicsService.cpp
+    src/World/Physics/WorldBlockPhysicsService.cpp
+    src/World/Physics/WorldChunkDirtyService.cpp
+    src/World/Physics/BlockUpdateQueue.cpp
+    src/World/Physics/LiquidUpdateQueue.cpp
+    src/World/Physics/ChunkRebuildQueue.cpp
+    src/World/Physics/FallingBlockRules.cpp
+    src/World/Physics/FallingBlockRulesRegistry.cpp
+    src/World/Physics/FallingBlocksSystem.cpp
+    src/World/Physics/LiquidSimulationSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/World/Physics/ChunkPhysicsSeed.cpp
+    src/Render/Primitives/Cube.cpp
+    src/Creatures/Core/CreatureBounds.cpp
+    src/World/Raycast/BlockRaycast.cpp
+    src/World/Core/World.cpp
+    src/World/Environment/WorldEnvironment.cpp
+    src/World/Mesh/WorldMeshService.cpp
+    src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Persistence/WorldPersistence.cpp
+    src/World/Core/WorldCooperativeOps.cpp
+    src/World/Diagnostics/MovementDiagnosticsRecorder.cpp)
+
+add_executable(collision_broadphase_subchunk_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/CollisionBroadphaseSubchunkTest.cpp)
+target_include_directories(collision_broadphase_subchunk_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(collision_broadphase_subchunk_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(collision_broadphase_subchunk_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(material_reaction_rules_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Test/MaterialReactionRulesTest.cpp)
+target_include_directories(material_reaction_rules_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(material_reaction_rules_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(material_reaction_rules_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(movement_integration_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/MovementIntegrationTest.cpp)
+target_include_directories(movement_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(movement_integration_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(movement_integration_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

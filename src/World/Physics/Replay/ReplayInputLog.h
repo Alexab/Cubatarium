@@ -6,6 +6,7 @@
 #include "World/Physics/ChunkRebuildQueue.h"
 #include "World/Physics/LiquidUpdateQueue.h"
 #include "World/Physics/PhysicsProfile.h"
+#include "World/Physics/Replay/IUReplayWorld.h"
 #include "World/Physics/Replay/WorldStateHasher.h"
 #include <cstddef>
 #include <vector>
@@ -14,6 +15,7 @@ namespace cutum
 {
 
 class UBlockWorld;
+class IUReplayWorld;
 
 enum class ReplayActionType : uint8_t
 {
@@ -50,12 +52,16 @@ public:
 
   std::vector<ReplayTickHash> Run(const UBlockWorld *world, glm::ivec3 world_min,
                                   glm::ivec3 world_max);
+  std::vector<ReplayTickHash> Run(IUReplayWorld *world, glm::ivec3 world_min,
+                                  glm::ivec3 world_max);
 
   const UBlockUpdateQueue &GetBlockQueue() const { return BlockQueue; }
   const ULiquidUpdateQueue &GetLiquidQueue() const { return LiquidQueue; }
 
 private:
   uint64_t TickQueuesAndHash(const UBlockWorld *world, glm::ivec3 world_min,
+                             glm::ivec3 world_max);
+  uint64_t TickQueuesAndHash(IUReplayWorld *world, glm::ivec3 world_min,
                              glm::ivec3 world_max);
 
   PhysicsBudgets Budgets;

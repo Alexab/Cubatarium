@@ -68,6 +68,8 @@ public:
   void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
   void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
   void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
+  void SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
+                              bool urgent);
 
   bool IsPositionInActiveRing(const glm::vec3 &worldPos, glm::ivec3 feetBlockPos,
                             const glm::vec3 &eyePos,
@@ -123,6 +125,9 @@ private:
   IsColumnPendingFn OnIsColumnPending;
   bool AsyncGeneration{false};
   bool RingGateEnabled{false};
+  bool CollisionUrgent{false};
+  glm::ivec3 CollisionUrgentCenter{0};
+  int CollisionUrgentRadius{0};
   glm::vec3 ViewForwardXz{0.0f, 0.0f, 1.0f};
   ChunkLoadPriorityParams PriorityParams;
 

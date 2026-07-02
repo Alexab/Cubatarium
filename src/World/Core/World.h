@@ -420,8 +420,13 @@ public:
   void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
   void SetPhysicsBudgets(const PhysicsBudgets &budgets);
   const PhysicsTelemetry &GetPhysicsTelemetry() const { return PhysicsTelemetryData; }
+  const PhysicsBudgets &GetPhysicsBudgets() const { return PhysicsBudgetConfig; }
+  uint64_t GetPhysicsTickCounter() const { return PhysicsTickCounter; }
   void PublishBlockPhysicsEvent(glm::ivec3 blockPos);
   void PublishNeighborPhysicsEvents(glm::ivec3 blockPos);
+  void TryEnqueueLiquidAt(glm::ivec3 blockPos);
+  void TrySeedFallingAt(glm::ivec3 blockPos);
+  const PhysicsFeatureFlags &GetPhysicsFeatureFlags() const { return PhysicsFlags; }
   bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
 
   struct MovementDiagnostics
@@ -455,6 +460,11 @@ public:
     uint64_t physicsLiquidQueueDepth{0};
     uint64_t physicsDeferredUpdates{0};
     uint64_t physicsDroppedUpdates{0};
+    uint64_t physicsPurgedUpdates{0};
+    uint64_t physicsCollisionBroadphaseRejects{0};
+    uint64_t physicsCollisionBroadphaseFallbacks{0};
+    uint64_t physicsCollisionReadyTransitions{0};
+    double physicsCollisionReadyWaitMs{0.0};
     uint64_t physicsVisualRemeshBacklog{0};
     uint64_t physicsCollisionRebuildBacklog{0};
   };
@@ -559,7 +569,6 @@ private:
   void AccumulateLiquidStats(const LiquidSimulationStats &stats);
   void ConfigurePhysicsServices();
   bool IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const;
-  void TryEnqueueLiquidAt(glm::ivec3 blockPos);
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);

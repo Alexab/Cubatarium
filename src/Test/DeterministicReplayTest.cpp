@@ -1,4 +1,5 @@
 #include "World/Physics/Replay/ReplayInputLog.h"
+#include "World/Physics/Replay/ReplayWorldFixture.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -29,34 +30,54 @@ static bool CompareRuns(const std::vector<cutum::ReplayTickHash> &lhs,
   return true;
 }
 
+static std::vector<cutum::ReplayTickHash> RunScenario(bool extended)
+{
+  cutum::UReplayWorldFixture fixture;
+  fixture.GetBlockWorld().SetBlock(glm::ivec3(3, 2, 1), 5);
+
+  cutum::UReplayInputLog log;
+  log.LoadGoldenScenario();
+  if (extended)
+  {
+    cutum::ReplayAction tick;
+    tick.Type = cutum::ReplayActionType::TickQueues;
+    for (int i = 0; i < 100; ++i)
+    {
+      log.Enqueue(tick);
+    }
+  }
+
+  return log.Run(&fixture.GetBlockWorld(), glm::ivec3(-16, -16, -16),
+                 glm::ivec3(16, 16, 16));
+}
+
 int main()
 {
-  cutum::UReplayInputLog log_a;
-  log_a.LoadGoldenScenario();
-  const std::vector<cutum::ReplayTickHash> run_a =
-      log_a.Run(nullptr, glm::ivec3(0), glm::ivec3(0));
+  const bool extended = std::getenv("EXTENDED") != nullptr;
 
-  cutum::UReplayInputLog log_b;
-  log_b.LoadGoldenScenario();
-  const std::vector<cutum::ReplayTickHash> run_b =
-      log_b.Run(nullptr, glm::ivec3(0), glm::ivec3(0));
+  const std::vector<cutum::ReplayTickHash> run_a = RunScenario(extended);
+  const std::vector<cutum::ReplayTickHash> run_b = RunScenario(extended);
 
   Expect(!run_a.empty(), "golden scenario must produce tick hashes");
   Expect(CompareRuns(run_a, run_b),
          "replay must be deterministic across repeated runs");
 
-  static const uint64_t kExpectedHashes[] = {
-      0x2e7ce5c5cd70b4d4ULL, 0xa51f3ae64de36444ULL, 0x15d9afeb8c5536f5ULL,
-      0xe745f5231fa13f02ULL, 0xb3f5e18bab7c0c67ULL, 0x2d6937f9abeed648ULL,
-      0x2475e9a074dc0249ULL, 0xb3d86de138867448ULL, 0x5fe438e56b7c4834ULL,
-      0xcb8b5237c7deeacaULL, 0x4b3f76bfec2fd937ULL, 0x593bc8db0bcdeb88ULL,
-      0xbff2a2c2938df5e4ULL,
-  };
-  Expect(run_a.size() == sizeof(kExpectedHashes) / sizeof(kExpectedHashes[0]),
-         "golden hash count mismatch");
-  for (size_t i = 0; i < run_a.size(); ++i)
+  if (!extended)
   {
-    Expect(run_a[i].StateHash == kExpectedHashes[i], "golden hash mismatch at tick");
+    static const uint64_t kExpectedHashes[] = {
+        0x93468bdf1f619622ULL, 0x182554fc9ff246b2ULL, 0xa8e3c1f15e441403ULL,
+        0x5a7f9b39cdb01df4ULL, 0x0ecf8f91796d2e91ULL, 0x905359e379fff4beULL,
+        0x994f87baa6cd20bfULL, 0x0ee203fbea9756beULL, 0xe2de56ffb96d6ac2ULL,
+        0x76b13c2d15cfc83cULL, 0xf60518a53e3efbc1ULL, 0xe401a6c1d9dcc97eULL,
+        0x02c8ccd8419cd712ULL,
+    };
+    Expect(run_a.size() == sizeof(kExpectedHashes) / sizeof(kExpectedHashes[0]),
+           "golden hash count mismatch");
+    for (size_t i = 0; i < run_a.size(); ++i)
+    {
+      Expect(run_a[i].StateHash == kExpectedHashes[i],
+             "golden hash mismatch at tick");
+    }
   }
 
   std::cout << "deterministic_replay_test: OK (" << run_a.size()

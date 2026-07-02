@@ -133,6 +133,42 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/voxel_dda_traversal_test.exe
 
+      - name: C++ unit test (chunk rebuild queue)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/chunk_rebuild_queue_test.exe
+
+      - name: C++ unit test (physics profile parse)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_profile_parse_test.exe
+
+      - name: C++ unit test (block update queue purge)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/block_update_queue_purge_test.exe
+
+      - name: C++ unit test (liquid queue priority)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/liquid_queue_priority_test.exe
+
+      - name: C++ unit test (physics integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_integration_test.exe
+
+      - name: C++ unit test (physics profile hash)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_profile_hash_test.exe
+
+      - name: C++ unit test (collision broadphase subchunk)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/collision_broadphase_subchunk_test.exe
+
+      - name: C++ unit test (material reaction rules)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/material_reaction_rules_test.exe
+
+      - name: C++ unit test (movement integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/movement_integration_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

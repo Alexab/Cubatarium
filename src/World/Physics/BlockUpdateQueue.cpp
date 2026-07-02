@@ -1,4 +1,6 @@
 #include "World/Physics/BlockUpdateQueue.h"
+#include "World/Physics/PhysicsChunkDistance.h"
+#include "World/Physics/PhysicsQueuePurge.h"
 #include <algorithm>
 #include <tuple>
 
@@ -34,13 +36,68 @@ UBlockUpdateQueue::BuildKey(const BlockUpdateEvent &event) const
                   event.TriggerTick};
 }
 
+bool UBlockUpdateQueue::TryEvictOne()
+{
+  if (Queue.empty())
+  {
+    return false;
+  }
+  std::vector<BlockUpdateEvent> items;
+  items.reserve(Queue.size());
+  while (!Queue.empty())
+  {
+    items.push_back(Queue.top());
+    Queue.pop();
+  }
+  size_t evict_index = 0;
+  for (size_t i = 1; i < items.size(); ++i)
+  {
+    const BlockUpdateEvent &candidate = items[i];
+    const BlockUpdateEvent &worst = items[evict_index];
+    const int candidate_dist =
+        ChebyshevChunkDistance(candidate.ChunkCoord, FocusChunk);
+    const int worst_dist = ChebyshevChunkDistance(worst.ChunkCoord, FocusChunk);
+    if (candidate_dist > worst_dist)
+    {
+      evict_index = i;
+      continue;
+    }
+    if (candidate_dist < worst_dist)
+    {
+      continue;
+    }
+    if (static_cast<int>(candidate.Priority) < static_cast<int>(worst.Priority))
+    {
+      evict_index = i;
+      continue;
+    }
+    if (static_cast<int>(candidate.Priority) == static_cast<int>(worst.Priority) &&
+        candidate.LocalOrder > worst.LocalOrder)
+    {
+      evict_index = i;
+    }
+  }
+  Keys.erase(BuildKey(items[evict_index]));
+  items.erase(items.begin() + static_cast<std::ptrdiff_t>(evict_index));
+  for (const BlockUpdateEvent &event : items)
+  {
+    Queue.push(event);
+  }
+  ++Stats.Purged;
+  WarnOncePhysicsQueuePurge("block_update");
+  return true;
+}
+
 bool UBlockUpdateQueue::Enqueue(const BlockUpdateEvent &event)
 {
-  if (Queue.size() >= static_cast<size_t>(Budgets.BlockQueueHardLimit))
+  while (Queue.size() >= static_cast<size_t>(Budgets.BlockQueueHardLimit))
   {
-    ++Stats.Dropped;
-    Stats.Depth = Queue.size();
-    return false;
+    if (!TryEvictOne())
+    {
+      ++Stats.Dropped;
+      Stats.Depth = Queue.size();
+      return false;
+    }
   }
   if (Queue.size() >= static_cast<size_t>(Budgets.BlockQueueSoftLimit) &&
       event.Priority == BlockUpdatePriority::Low)
@@ -87,7 +144,7 @@ void UBlockUpdateQueue::Clear()
 {
   Queue = {};
   Keys.clear();
-  Stats.Depth = 0;
+  Stats = BlockUpdateQueueStats{};
 }
 
 } // namespace cutum

@@ -3,6 +3,7 @@
 
 #include "World/Physics/BlockUpdateEvent.h"
 #include "World/Physics/PhysicsProfile.h"
+#include <glm/glm.hpp>
 #include <queue>
 #include <unordered_set>
 #include <vector>
@@ -16,6 +17,7 @@ struct BlockUpdateQueueStats
   uint64_t Processed{0};
   uint64_t Deferred{0};
   uint64_t Dropped{0};
+  uint64_t Purged{0};
   size_t Depth{0};
 };
 
@@ -23,6 +25,7 @@ class UBlockUpdateQueue
 {
 public:
   void SetBudgets(const PhysicsBudgets &budgets) { Budgets = budgets; }
+  void SetFocusChunk(glm::ivec3 focus_chunk) { FocusChunk = focus_chunk; }
   bool Enqueue(const BlockUpdateEvent &event);
   std::vector<BlockUpdateEvent> PopBudgeted();
   void Clear();
@@ -57,8 +60,10 @@ private:
   };
 
   EventKey BuildKey(const BlockUpdateEvent &event) const;
+  bool TryEvictOne();
 
   PhysicsBudgets Budgets;
+  glm::ivec3 FocusChunk{0};
   std::priority_queue<BlockUpdateEvent, std::vector<BlockUpdateEvent>, EventOrder>
       Queue;
   std::unordered_set<EventKey, EventKeyHash> Keys;

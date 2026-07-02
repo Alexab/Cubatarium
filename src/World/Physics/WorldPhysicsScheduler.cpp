@@ -1,13 +1,16 @@
 #include "World/Physics/WorldPhysicsScheduler.h"
 #include "World/Physics/IUBlockPhysicsService.h"
+#include "World/Physics/IUChunkDirtyService.h"
 #include "World/Physics/IUMovementPhysicsService.h"
 
 namespace cutum
 {
 
 UWorldPhysicsScheduler::UWorldPhysicsScheduler(
-    IUMovementPhysicsService *movementService, IUBlockPhysicsService *blockService)
-    : MovementService(movementService), BlockService(blockService)
+    IUMovementPhysicsService *movementService, IUBlockPhysicsService *blockService,
+    IUChunkDirtyService *chunkDirtyService)
+    : MovementService(movementService), BlockService(blockService),
+      ChunkDirtyService(chunkDirtyService)
 {
 }
 
@@ -20,6 +23,10 @@ void UWorldPhysicsScheduler::Tick(UWorld &world)
   if (BlockService)
   {
     BlockService->TickBlockPhysics(world);
+  }
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->DrainRebuildQueues(world);
   }
 }
 

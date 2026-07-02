@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Physics/ChunkPhysicsSeed.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -135,6 +136,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           world.GetMeshService().MarkDirty(coord);
         }
+        ChunkPhysicsSeedBudgets seed_budgets;
+        SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)

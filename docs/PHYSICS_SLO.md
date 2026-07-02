@@ -31,12 +31,20 @@ Diagnostics are exported via:
 
 ## Rollout stages
 
+| Subsystem | Stage | Config |
+|-----------|-------|--------|
+| Code fallback (no `physics` section) | Primitive | `World.h` default |
+| Example config | Standard | `config.json.example` `profile: standard` |
+| Falling | active (example) | `falling_shadow_mode: false` |
+| Liquids | active (example) | `liquid_shadow_mode: false` |
+| Rollout stage | **C** | see `docs/PHYSICS_ROLLOUT.md` |
+
 1. **Primitive** — scheduler on, falling/fluids off (legacy parity).
 2. **Standard observe (default)** — `profile=standard`, block events + collision
    optimizations on; falling/fluids in **shadow mode** (candidates only).
-3. **Standard active** — set `falling_shadow_mode=false` and/or
-   `liquid_shadow_mode=false` in limited worlds.
-4. **Advanced** — full block/fluid budgets; monitor queue backlogs daily.
+3. **Standard active** — `falling_shadow_mode=false` and `liquid_shadow_mode=false`
+   (see `docs/PHYSICS_ROLLOUT.md` for QA checklist).
+4. **Advanced** — full block/fluid budgets + material rules; monitor queue backlogs daily.
 
 ## Rollback order (incident)
 
@@ -55,6 +63,11 @@ PR-gated CI runs:
 - `collision_readiness_gate_test`
 - `movement_chunk_boundary_test`
 - `falling_blocks_stability_test`
+- `chunk_rebuild_queue_test`
+- `physics_profile_parse_test`
+- `block_update_queue_purge_test`
+- `liquid_queue_priority_test`
+- `physics_integration_test`
 
 Local smoke:
 

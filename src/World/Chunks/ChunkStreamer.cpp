@@ -132,8 +132,28 @@ int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
 
 int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
 {
-  return ComputeChunkLoadPriority(groundCoord, LoadPriorityCenter, ViewForwardXz,
-                                  PriorityParams);
+  int priority = ComputeChunkLoadPriority(groundCoord, LoadPriorityCenter, ViewForwardXz,
+                                          PriorityParams);
+  if (CollisionUrgent)
+  {
+    const int dist = std::max(
+        {std::abs(groundCoord.x - CollisionUrgentCenter.x),
+         std::abs(groundCoord.y - CollisionUrgentCenter.y),
+         std::abs(groundCoord.z - CollisionUrgentCenter.z)});
+    if (dist <= CollisionUrgentRadius)
+    {
+      priority += 10000;
+    }
+  }
+  return priority;
+}
+
+void UChunkStreamer::SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
+                                            bool urgent)
+{
+  CollisionUrgent = urgent;
+  CollisionUrgentCenter = feet_chunk;
+  CollisionUrgentRadius = radius_chunks;
 }
 
 bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)

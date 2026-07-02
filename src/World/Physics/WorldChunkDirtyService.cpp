@@ -15,9 +15,11 @@ void UWorldChunkDirtyService::SetBudgets(const PhysicsBudgets &budgets)
   VisualQueue.SetLimits(budgets.VisualRemeshPerTickMax,
                         budgets.VisualRemeshQueueSoftLimit,
                         budgets.VisualRemeshQueueHardLimit);
+  VisualQueue.SetProtectLowPriorities(false);
   CollisionQueue.SetLimits(budgets.CollisionRebuildPerTickMax,
                            budgets.CollisionRebuildQueueSoftLimit,
                            budgets.CollisionRebuildQueueHardLimit);
+  CollisionQueue.SetProtectLowPriorities(true);
 }
 
 void UWorldChunkDirtyService::EnqueueAffectedChunks(UWorld &world,
@@ -73,6 +75,10 @@ void UWorldChunkDirtyService::MarkCollisionRebuild(UWorld &world,
 
 void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
 {
+  const glm::ivec3 focus = world.MovementDiag.feetChunk;
+  VisualQueue.SetFocusChunk(focus);
+  CollisionQueue.SetFocusChunk(focus);
+
   const std::vector<glm::ivec3> collisionChunks = CollisionQueue.PopBudgeted();
   for (glm::ivec3 chunk_coord : collisionChunks)
   {
@@ -103,6 +109,8 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
       visualStats.Deferred + collisionStats.Deferred;
   world.PhysicsTelemetryData.DroppedUpdates +=
       visualStats.Dropped + collisionStats.Dropped;
+  world.PhysicsTelemetryData.PurgedUpdates +=
+      visualStats.Purged + collisionStats.Purged;
 }
 
 } // namespace cutum

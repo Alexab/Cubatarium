@@ -49,6 +49,9 @@ struct PhysicsFeatureFlags
   bool EnableCollisionReadinessGate{false};
   bool FallingShadowMode{true};
   bool LiquidShadowMode{true};
+  bool LiquidDebugTrace{false};
+  bool EnableCollisionDda{false};
+  bool EnableMaterialRules{false};
 };
 
 struct PhysicsBudgets
@@ -68,6 +71,7 @@ struct PhysicsBudgets
   int CollisionRebuildQueueSoftLimit{512};
   int CollisionRebuildQueueHardLimit{4096};
   int LiquidUpdateRadiusChunks{2};
+  int FallingScanRadiusChunks{2};
 };
 
 } // namespace cutum

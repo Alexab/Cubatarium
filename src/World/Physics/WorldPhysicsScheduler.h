@@ -9,18 +9,21 @@ namespace cutum
 
 class IUMovementPhysicsService;
 class IUBlockPhysicsService;
+class IUChunkDirtyService;
 
 class UWorldPhysicsScheduler : public IUPhysicsScheduler
 {
 public:
   UWorldPhysicsScheduler(IUMovementPhysicsService *movementService,
-                         IUBlockPhysicsService *blockService);
+                         IUBlockPhysicsService *blockService,
+                         IUChunkDirtyService *chunkDirtyService);
 
   void Tick(UWorld &world) override;
 
 private:
   IUMovementPhysicsService *MovementService{nullptr};
   IUBlockPhysicsService *BlockService{nullptr};
+  IUChunkDirtyService *ChunkDirtyService{nullptr};
 };
 
 } // namespace cutum

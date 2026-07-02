@@ -1,4 +1,5 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
+#include "World/Physics/PhysicsChunkDistance.h"
 #include "World/Core/World.h"
 #include <algorithm>
 
@@ -17,6 +18,8 @@ void UWorldBlockPhysicsService::SetFeatureFlags(const PhysicsFeatureFlags &flags
   Flags = flags;
   FallingSystem.ShadowMode = !flags.EnableFalling || flags.FallingShadowMode;
   LiquidSystem.ShadowMode = !flags.EnableFluids || flags.LiquidShadowMode;
+  LiquidSystem.DebugTraceEnabled = flags.LiquidDebugTrace;
+  MaterialRules.ShadowMode = !flags.EnableMaterialRules;
 }
 
 bool UWorldBlockPhysicsService::ShouldCheckFalling(const BlockUpdateEvent &event)
@@ -102,11 +105,25 @@ void UWorldBlockPhysicsService::PublishLiquid(glm::ivec3 blockPos)
 
 void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
 {
+  const glm::ivec3 focus_chunk = world.GetMovementDiagnostics().feetChunk;
+  BlockQueue.SetFocusChunk(focus_chunk);
+  LiquidQueue.SetFocusChunk(focus_chunk);
+
   int fallingBudget = std::max(0, Budgets.FallingEventsPerTickMax);
   const std::vector<BlockUpdateEvent> events = BlockQueue.PopBudgeted();
   for (const BlockUpdateEvent &event : events)
   {
     if (!Flags.EnableFalling || fallingBudget <= 0 || !ShouldCheckFalling(event))
+    {
+      if (Flags.EnableMaterialRules)
+      {
+        MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
+                                        world.GetBlockRegistry(), event.BlockPos);
+      }
+      continue;
+    }
+    if (ChebyshevChunkDistance(event.ChunkCoord, focus_chunk) >
+        Budgets.FallingScanRadiusChunks)
     {
       continue;
     }
@@ -121,6 +138,11 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
       world.MarkBlockChunkDirtyFromPhysics(below);
       world.PublishBlockPhysicsEvent(below);
       world.PublishNeighborPhysicsEvents(below);
+    }
+    if (Flags.EnableMaterialRules)
+    {
+      MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
+                                      world.GetBlockRegistry(), event.BlockPos);
     }
   }
 

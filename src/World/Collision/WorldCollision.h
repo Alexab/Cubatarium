@@ -12,6 +12,8 @@
 namespace cutum
 {
 
+struct PhysicsTelemetry;
+
 class UBlockRegistry;
 class UBlockWorld;
 class UWorldEnvironment;
@@ -19,7 +21,8 @@ class UWorldEnvironment;
 class UWorldCollision
 {
 public:
-  UWorldCollision(UBlockWorld &blockWorld, UWorldEnvironment &environment);
+  explicit UWorldCollision(UBlockWorld &blockWorld,
+                           UWorldEnvironment *environment = nullptr);
 
   void SetBlockRegistry(UBlockRegistry *registry) { BlockRegistry = registry; }
   void SetEntityCollisionEnabled(bool enabled)
@@ -29,6 +32,9 @@ public:
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
   void SetBroadphaseEnabled(bool enabled) { BroadphaseEnabled = enabled; }
   bool IsBroadphaseEnabled() const { return BroadphaseEnabled; }
+  void SetCollisionDdaEnabled(bool enabled) { CollisionDdaEnabled = enabled; }
+  bool IsCollisionDdaEnabled() const { return CollisionDdaEnabled; }
+  void SetTelemetry(PhysicsTelemetry *telemetry) { Telemetry = telemetry; }
 
   struct StepUpProbe
   {
@@ -88,13 +94,20 @@ public:
 
 private:
   bool QueryChunkMovementSolid(glm::ivec3 chunk_coord) const;
+  uint64_t QueryChunkOccupancyMask(glm::ivec3 chunk_coord) const;
   bool MayContainSolid(const CollisionVolume &vol) const;
   UBlockWorld &BlockWorld;
-  UWorldEnvironment &Environment;
+  UWorldEnvironment *Environment{nullptr};
   UBlockRegistry *BlockRegistry{nullptr};
+  PhysicsTelemetry *Telemetry{nullptr};
   bool EntityCollisionEnabled{true};
   bool BroadphaseEnabled{false};
-  mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> ChunkMovementSolid;
+  bool CollisionDdaEnabled{false};
+  static constexpr int SubchunkSize = 4;
+  static constexpr int SubchunksPerAxis = CHUNK_SIZE / SubchunkSize;
+  static constexpr int SubchunkCount =
+      SubchunksPerAxis * SubchunksPerAxis * SubchunksPerAxis;
+  mutable std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ChunkOccupancyMask;
 };
 
 } // namespace cutum

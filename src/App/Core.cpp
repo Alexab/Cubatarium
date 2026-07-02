@@ -296,6 +296,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
             physics.value("falling_shadow_mode", true);
         PhysicsFlags.LiquidShadowMode =
             physics.value("liquid_shadow_mode", false);
+        PhysicsFlags.LiquidDebugTrace =
+            physics.value("liquid_debug_trace", false);
+        PhysicsFlags.EnableCollisionDda =
+            physics.value("enable_collision_dda", false);
         PhysicsBudgetsConfig.BlockEventsPerTickMax =
             physics.value("block_events_per_tick_max", 128);
         PhysicsBudgetsConfig.BlockQueueSoftLimit =
@@ -326,6 +330,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             physics.value("collision_rebuild_queue_hard_limit", 4096);
         PhysicsBudgetsConfig.LiquidUpdateRadiusChunks =
             physics.value("liquid_update_radius_chunks", 2);
+        PhysicsBudgetsConfig.FallingScanRadiusChunks =
+            physics.value("falling_scan_radius_chunks", 2);
       }
       else
       {
@@ -586,6 +592,8 @@ void UCore::SaveConfigFile()
       PhysicsFlags.EnableCollisionReadinessGate;
   physics["falling_shadow_mode"] = PhysicsFlags.FallingShadowMode;
   physics["liquid_shadow_mode"] = PhysicsFlags.LiquidShadowMode;
+  physics["liquid_debug_trace"] = PhysicsFlags.LiquidDebugTrace;
+  physics["enable_collision_dda"] = PhysicsFlags.EnableCollisionDda;
   physics["block_events_per_tick_max"] =
       PhysicsBudgetsConfig.BlockEventsPerTickMax;
   physics["block_queue_soft_limit"] = PhysicsBudgetsConfig.BlockQueueSoftLimit;
@@ -612,6 +620,8 @@ void UCore::SaveConfigFile()
       PhysicsBudgetsConfig.CollisionRebuildQueueHardLimit;
   physics["liquid_update_radius_chunks"] =
       PhysicsBudgetsConfig.LiquidUpdateRadiusChunks;
+  physics["falling_scan_radius_chunks"] =
+      PhysicsBudgetsConfig.FallingScanRadiusChunks;
   system_data["physics"] = physics;
   json render_json;
   const char *preset_name = "balanced";

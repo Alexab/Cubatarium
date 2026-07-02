@@ -1,4 +1,5 @@
 #include "World/Collision/WorldCollision.h"
+#include "World/Collision/VoxelDdaTraversal.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Render/Primitives/Cube.h"
@@ -6,6 +7,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/PhysicsTelemetry.h"
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
@@ -17,6 +19,24 @@ namespace
 {
 
 constexpr int kFootprintMinSolidSamples = 4;
+constexpr int kSubchunkSize = 4;
+
+int SubchunkBitIndex(glm::ivec3 local)
+{
+  const int sx = local.x / kSubchunkSize;
+  const int sy = local.y / kSubchunkSize;
+  const int sz = local.z / kSubchunkSize;
+  return sx + sy * 4 + sz * 16;
+}
+
+bool MaskHasSubchunk(uint64_t mask, int bit_index)
+{
+  if (bit_index < 0 || bit_index >= 64)
+  {
+    return false;
+  }
+  return (mask & (1ull << bit_index)) != 0;
+}
 
 struct FootprintStandSampleStats
 {
@@ -78,6 +98,82 @@ constexpr float kCollisionMaxStep = 0.25f;
 constexpr float kCollisionEpsilon = 0.01f;
 constexpr int kCollisionMaxIterations = 64;
 
+glm::vec3 ResolveMovementAxisDda(const UWorldCollision &collision,
+                                  const glm::vec3 &fromBody, float axisDelta,
+                                  int axis, const glm::vec3 &currentSizeBlocks,
+                                  CreatureId skipCreatureId)
+{
+  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
+  const float remaining = std::abs(axisDelta);
+  glm::vec3 axisUnit(0.0f);
+  axisUnit[axis] = sign;
+
+  const glm::vec3 targetBody = fromBody + axisUnit * axisDelta;
+  if (!collision.CheckCollisionVolume(
+          CollisionVolumeFromBody(targetBody, currentSizeBlocks),
+          skipCreatureId))
+  {
+    return targetBody;
+  }
+
+  glm::vec3 body = fromBody;
+  const glm::vec3 half = currentSizeBlocks * 0.5f;
+  glm::vec3 rayOrigin = fromBody;
+  rayOrigin[axis] += half[axis] * sign;
+
+  float traveled = 0.0f;
+  bool blocked = false;
+  TraverseVoxelRay(rayOrigin, axisUnit * sign, remaining,
+                   [&](glm::ivec3 /*cell*/)
+                   {
+                     traveled += 1.0f;
+                     if (traveled > remaining)
+                     {
+                       return true;
+                     }
+                     const glm::vec3 testBody = fromBody + axisUnit * traveled * sign;
+                     if (collision.CheckCollisionVolume(
+                             CollisionVolumeFromBody(testBody, currentSizeBlocks),
+                             skipCreatureId))
+                     {
+                       blocked = true;
+                       glm::vec3 lo = body;
+                       glm::vec3 hi = testBody;
+                       for (int i = 0; i < 8; ++i)
+                       {
+                         const glm::vec3 mid = (lo + hi) * 0.5f;
+                         if (collision.CheckCollisionVolume(
+                                 CollisionVolumeFromBody(mid, currentSizeBlocks),
+                                 skipCreatureId))
+                         {
+                           hi = mid;
+                         }
+                         else
+                         {
+                           lo = mid;
+                         }
+                       }
+                       if (axis == 1 && sign < 0.0f)
+                       {
+                         body = lo;
+                       }
+                       else
+                       {
+                         body = lo - axisUnit * kCollisionEpsilon * sign;
+                       }
+                       return true;
+                     }
+                     body = testBody;
+                     return false;
+                   });
+
+  if (!blocked)
+  {
+    return targetBody;
+  }
+  return body;
+}
+
 glm::vec3 ResolveMovementAxisBody(const UWorldCollision &collision,
                                   const glm::vec3 &fromBody, float axisDelta,
                                   int axis, const glm::vec3 &currentSizeBlocks,
@@ -87,16 +183,22 @@ glm::vec3 ResolveMovementAxisBody(const UWorldCollision &collision,
   {
     return fromBody;
   }
+  const float remaining = std::abs(axisDelta);
+  if (collision.IsCollisionDdaEnabled() && remaining >= 1.0f)
+  {
+    return ResolveMovementAxisDda(collision, fromBody, axisDelta, axis,
+                                  currentSizeBlocks, skipCreatureId);
+  }
   const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
-  float remaining = std::abs(axisDelta);
+  float movable = remaining;
   glm::vec3 body = fromBody;
   glm::vec3 axisUnit(0.0f);
   axisUnit[axis] = 1.0f;
 
   int iterations = 0;
-  while (remaining > 1e-6f && iterations < kCollisionMaxIterations)
+  while (movable > 1e-6f && iterations < kCollisionMaxIterations)
   {
-    const float step = std::min(remaining, kCollisionMaxStep);
+    const float step = std::min(movable, kCollisionMaxStep);
     const glm::vec3 nextBody = body + axisUnit * step * sign;
     if (collision.CheckCollisionVolume(
             CollisionVolumeFromBody(nextBody, currentSizeBlocks),
@@ -129,7 +231,7 @@ glm::vec3 ResolveMovementAxisBody(const UWorldCollision &collision,
       break;
     }
     body = nextBody;
-    remaining -= step;
+    movable -= step;
     ++iterations;
   }
   return body;
@@ -204,7 +306,7 @@ float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
 } // namespace
 
 UWorldCollision::UWorldCollision(UBlockWorld &blockWorld,
-                               UWorldEnvironment &environment)
+                               UWorldEnvironment *environment)
     : BlockWorld(blockWorld), Environment(environment)
 {
 }
@@ -308,6 +410,10 @@ bool UWorldCollision::CheckBlockCollisionVolume(const CollisionVolume &vol) cons
   }
   if (BroadphaseEnabled && !MayContainSolid(vol))
   {
+    if (Telemetry)
+    {
+      ++Telemetry->CollisionBroadphaseRejects;
+    }
     return false;
   }
   const glm::vec3 center = vol.center;
@@ -341,28 +447,56 @@ bool UWorldCollision::CheckBlockCollisionVolume(const CollisionVolume &vol) cons
 
 bool UWorldCollision::MayContainSolid(const CollisionVolume &vol) const
 {
-  const glm::vec3 minPos = vol.center - vol.halfExtents;
-  const glm::vec3 maxPos = vol.center + vol.halfExtents;
-  const glm::ivec3 minCell = WorldPosToBlock(minPos);
-  const glm::ivec3 maxCell = WorldPosToBlock(maxPos);
-  const int minChunkX = std::min(minCell.x, maxCell.x) / CHUNK_SIZE;
-  const int maxChunkX = std::max(minCell.x, maxCell.x) / CHUNK_SIZE;
-  const int minChunkY = std::min(minCell.y, maxCell.y) / CHUNK_SIZE;
-  const int maxChunkY = std::max(minCell.y, maxCell.y) / CHUNK_SIZE;
-  const int minChunkZ = std::min(minCell.z, maxCell.z) / CHUNK_SIZE;
-  const int maxChunkZ = std::max(minCell.z, maxCell.z) / CHUNK_SIZE;
+  const glm::vec3 min_pos = vol.center - vol.halfExtents;
+  const glm::vec3 max_pos = vol.center + vol.halfExtents;
+  const glm::ivec3 min_cell = WorldPosToBlock(min_pos);
+  const glm::ivec3 max_cell = WorldPosToBlock(max_pos);
+  const int min_chunk_x = FloorDiv(std::min(min_cell.x, max_cell.x), CHUNK_SIZE);
+  const int max_chunk_x = FloorDiv(std::max(min_cell.x, max_cell.x), CHUNK_SIZE);
+  const int min_chunk_y = FloorDiv(std::min(min_cell.y, max_cell.y), CHUNK_SIZE);
+  const int max_chunk_y = FloorDiv(std::max(min_cell.y, max_cell.y), CHUNK_SIZE);
+  const int min_chunk_z = FloorDiv(std::min(min_cell.z, max_cell.z), CHUNK_SIZE);
+  const int max_chunk_z = FloorDiv(std::max(min_cell.z, max_cell.z), CHUNK_SIZE);
 
-  for (int cx = minChunkX; cx <= maxChunkX; ++cx)
+  for (int cx = min_chunk_x; cx <= max_chunk_x; ++cx)
   {
-    for (int cy = minChunkY; cy <= maxChunkY; ++cy)
+    for (int cy = min_chunk_y; cy <= max_chunk_y; ++cy)
     {
-      for (int cz = minChunkZ; cz <= maxChunkZ; ++cz)
+      for (int cz = min_chunk_z; cz <= max_chunk_z; ++cz)
       {
-        if (!QueryChunkMovementSolid(glm::ivec3(cx, cy, cz)))
+        const glm::ivec3 chunk_coord(cx, cy, cz);
+        const uint64_t mask = QueryChunkOccupancyMask(chunk_coord);
+        if (mask == 0)
         {
           continue;
         }
-        return true;
+        const glm::ivec3 chunk_origin(cx * CHUNK_SIZE, cy * CHUNK_SIZE,
+                                      cz * CHUNK_SIZE);
+        const glm::ivec3 local_min = glm::clamp(min_cell - chunk_origin,
+                                                glm::ivec3(0), glm::ivec3(CHUNK_SIZE - 1));
+        const glm::ivec3 local_max = glm::clamp(max_cell - chunk_origin,
+                                                glm::ivec3(0), glm::ivec3(CHUNK_SIZE - 1));
+        const int min_sx = local_min.x / kSubchunkSize;
+        const int max_sx = local_max.x / kSubchunkSize;
+        const int min_sy = local_min.y / kSubchunkSize;
+        const int max_sy = local_max.y / kSubchunkSize;
+        const int min_sz = local_min.z / kSubchunkSize;
+        const int max_sz = local_max.z / kSubchunkSize;
+        for (int sx = min_sx; sx <= max_sx; ++sx)
+        {
+          for (int sy = min_sy; sy <= max_sy; ++sy)
+          {
+            for (int sz = min_sz; sz <= max_sz; ++sz)
+            {
+              const int bit = sx + sy * SubchunksPerAxis +
+                              sz * SubchunksPerAxis * SubchunksPerAxis;
+              if (MaskHasSubchunk(mask, bit))
+              {
+                return true;
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -371,71 +505,107 @@ bool UWorldCollision::MayContainSolid(const CollisionVolume &vol) const
 
 void UWorldCollision::InvalidateChunkMovementSolid(glm::ivec3 chunk_coord)
 {
-  ChunkMovementSolid.erase(chunk_coord);
+  ChunkOccupancyMask.erase(chunk_coord);
 }
 
 void UWorldCollision::RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord)
 {
-  ChunkMovementSolid.erase(chunk_coord);
+  ChunkOccupancyMask.erase(chunk_coord);
 }
 
 void UWorldCollision::RebuildChunkMovementSolid(glm::ivec3 chunk_coord)
 {
   if (!BlockRegistry)
   {
-    ChunkMovementSolid.erase(chunk_coord);
+    ChunkOccupancyMask.erase(chunk_coord);
     return;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   if (!chunk)
   {
-    ChunkMovementSolid.erase(chunk_coord);
+    ChunkOccupancyMask.erase(chunk_coord);
     return;
   }
-  bool has_movement_solid = false;
-  for (const BlockId block_id : chunk->GetData())
+  uint64_t mask = 0;
+  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
+  for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
-    if (BlockRegistry->BlocksMovement(block_id))
+    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
     {
-      has_movement_solid = true;
-      break;
+      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      {
+        const glm::ivec3 block_pos = origin + glm::ivec3(lx, ly, lz);
+        const BlockId id = BlockWorld.GetBlock(block_pos);
+        if (!BlockRegistry->BlocksMovement(id))
+        {
+          continue;
+        }
+        const int bit = SubchunkBitIndex(glm::ivec3(lx, ly, lz));
+        mask |= (1ull << bit);
+      }
     }
   }
-  ChunkMovementSolid[chunk_coord] = has_movement_solid;
+  ChunkOccupancyMask[chunk_coord] = mask;
 }
 
 bool UWorldCollision::QueryChunkMovementSolid(glm::ivec3 chunk_coord) const
 {
-  if (const auto it = ChunkMovementSolid.find(chunk_coord);
-      it != ChunkMovementSolid.end())
+  return QueryChunkOccupancyMask(chunk_coord) != 0;
+}
+
+uint64_t UWorldCollision::QueryChunkOccupancyMask(glm::ivec3 chunk_coord) const
+{
+  if (const auto it = ChunkOccupancyMask.find(chunk_coord);
+      it != ChunkOccupancyMask.end())
   {
     return it->second;
   }
   if (!BlockRegistry)
   {
-    return false;
+    return 0;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   if (!chunk)
   {
-    return false;
+    return 0;
   }
+  if (Telemetry)
+  {
+    ++Telemetry->CollisionBroadphaseFallbacks;
+  }
+  uint64_t mask = 0;
+  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
+  int index = 0;
   for (const BlockId block_id : chunk->GetData())
   {
     if (BlockRegistry->BlocksMovement(block_id))
     {
-      ChunkMovementSolid[chunk_coord] = true;
-      return true;
+      const int lx = index % CHUNK_SIZE;
+      const int ly = (index / CHUNK_SIZE) % CHUNK_SIZE;
+      const int lz = index / (CHUNK_SIZE * CHUNK_SIZE);
+      const int bit = SubchunkBitIndex(glm::ivec3(lx, ly, lz));
+      mask |= (1ull << bit);
     }
+    ++index;
   }
-  ChunkMovementSolid[chunk_coord] = false;
-  return false;
+  ChunkOccupancyMask[chunk_coord] = mask;
+  return mask;
 }
 
 bool UWorldCollision::CheckCreatureCollisionVolume(
     const CollisionVolume &vol, CreatureId skipCreatureId) const
 {
-  return Environment.CheckCreatureCollisionVolume(vol, skipCreatureId);
+#if defined(CUTUM_PHYSICS_LIGHT_REGISTRY)
+  (void)vol;
+  (void)skipCreatureId;
+  return false;
+#else
+  if (!Environment)
+  {
+    return false;
+  }
+  return Environment->CheckCreatureCollisionVolume(vol, skipCreatureId);
+#endif
 }
 
 bool UWorldCollision::CheckCollisionVolume(const CollisionVolume &vol,
@@ -571,7 +741,8 @@ UWorldCollision::ProbeStepUp(const glm::vec3 &eyePos, const glm::vec3 &horiz,
   const glm::vec3 dir = horizFlat / horizLen;
   glm::ivec3 stepCell(0);
   if (!FindSteppableLedge(*this, BlockWorld, *BlockRegistry, eyePos, dir, cap,
-                          Environment.GetControlledCreatureId(), stepCell))
+                          Environment ? Environment->GetControlledCreatureId() : 0,
+                          stepCell))
   {
     return probe;
   }
@@ -607,7 +778,8 @@ bool UWorldCollision::GetStepUpLanding(const glm::vec3 &eyePos,
   }
   const glm::vec3 dir = horizFlat / horizLen;
   if (!FindSteppableLedge(*this, BlockWorld, *BlockRegistry, eyePos, dir, cap,
-                          Environment.GetControlledCreatureId(), stepCell))
+                          Environment ? Environment->GetControlledCreatureId() : 0,
+                          stepCell))
   {
     return false;
   }
@@ -621,7 +793,8 @@ bool UWorldCollision::GetStepUpLanding(const glm::vec3 &eyePos,
 
   outLanding = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
                                            probe.MoveDir.z * 0.18f);
-  return !CheckCollision(outLanding, cap, Environment.GetControlledCreatureId());
+  return !CheckCollision(outLanding, cap,
+                         Environment ? Environment->GetControlledCreatureId() : 0);
 }
 
 bool UWorldCollision::TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,

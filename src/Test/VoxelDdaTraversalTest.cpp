@@ -39,6 +39,20 @@ int main()
       [&](glm::ivec3 cell) { return solids.count(cell) != 0; });
   Expect(!miss, "ray expected to miss");
 
+  bool blocked_movement = false;
+  const bool movement_hit = cutum::TraverseVoxelRay(
+      glm::vec3(0.2f, 0.5f, 0.2f), glm::vec3(1.0f, 0.0f, 0.0f), 6.0f,
+      [&](glm::ivec3 cell) {
+        if (cell.x >= 3)
+        {
+          blocked_movement = true;
+          return true;
+        }
+        return false;
+      });
+  Expect(movement_hit && blocked_movement,
+         "axis movement sweep should stop at blocking voxel");
+
   std::cout << "voxel_dda_traversal_test: OK" << std::endl;
   return 0;
 }

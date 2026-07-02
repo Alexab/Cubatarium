@@ -1,5 +1,6 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "World/Physics/LiquidDebugTrace.h"
 #include "Render/Engine/CreatureDrawPass.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Blocks/BlockRegistry.h"
@@ -1441,6 +1442,39 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     {
       performanceLines.emplace_back("!! fall-through suspected !!");
     }
+  }
+  {
+  const bool collision_ready =
+      md.feetChunkLoaded && !md.feetInUnloadList && !md.fallThroughSuspected;
+  performanceLines.push_back(
+      std::string("Phys: ") + cutum::ToString(WorldInstance->GetPhysicsProfile()) +
+      " CollReady: " + (collision_ready ? "yes" : "no"));
+  performanceLines.push_back(
+      "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) + " LiqQ: " +
+      std::to_string(md.physicsLiquidQueueDepth) + " Purged: " +
+      std::to_string(md.physicsPurgedUpdates));
+  performanceLines.push_back(
+      "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
+      " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +
+      " wait: " + std::to_string(md.physicsCollisionReadyWaitMs).substr(0, 6) +
+      "ms");
+  if (WorldInstance->GetPhysicsFeatureFlags().LiquidDebugTrace)
+  {
+    std::vector<cutum::LiquidDebugEntry> liquid_trace;
+    cutum::ULiquidDebugTrace::Instance().CopyRecent(liquid_trace);
+    const size_t start =
+        liquid_trace.size() > 3 ? liquid_trace.size() - 3 : 0;
+    for (size_t i = start; i < liquid_trace.size(); ++i)
+    {
+      const cutum::LiquidDebugEntry &entry = liquid_trace[i];
+      performanceLines.push_back(
+          "Liq " + std::string(entry.Reason) + " (" +
+          std::to_string(entry.From.x) + "," + std::to_string(entry.From.y) +
+          "," + std::to_string(entry.From.z) + ")->(" +
+          std::to_string(entry.To.x) + "," + std::to_string(entry.To.y) + "," +
+          std::to_string(entry.To.z) + ")");
+    }
+  }
   }
 
   // Display text in top right corner

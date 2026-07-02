@@ -25,6 +25,11 @@ public:
   void SetMergeRegistry(std::shared_ptr<UBlockMergeRegistry> merge_registry);
   void Reload();
 
+  const UBlockDefinitionStorage *GetDefinitions() const
+  {
+    return Definitions.get();
+  }
+
   BlockId GetIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
 
@@ -34,6 +39,9 @@ public:
   bool IsLiquid(BlockId Id) const;
   bool IsLiquidRenewable(BlockId Id) const;
   bool IsFloodable(BlockId Id) const;
+  bool IsFlammable(BlockId Id) const;
+  bool IsFireBlock(BlockId Id) const;
+  float GetLiquidViscosity(BlockId Id) const;
   bool IsTransparent(BlockId Id) const;
   BlockRenderStyle GetRenderStyle(BlockId Id) const;
   const FluidViewProfile *GetFluidView(BlockId Id) const;

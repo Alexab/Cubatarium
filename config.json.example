@@ -43,8 +43,10 @@
         "enable_block_events": true,
         "enable_collision_broadphase": true,
         "enable_collision_readiness_gate": true,
-        "falling_shadow_mode": true,
+        "falling_shadow_mode": false,
         "liquid_shadow_mode": false,
+        "liquid_debug_trace": false,
+        "enable_collision_dda": false,
         "block_events_per_tick_max": 128,
         "block_queue_soft_limit": 2048,
         "block_queue_hard_limit": 8192,
@@ -59,7 +61,8 @@
         "visual_remesh_queue_hard_limit": 4096,
         "collision_rebuild_queue_soft_limit": 512,
         "collision_rebuild_queue_hard_limit": 4096,
-        "liquid_update_radius_chunks": 2
+        "liquid_update_radius_chunks": 2,
+        "falling_scan_radius_chunks": 2
     },
     "render": {
         "greedy_meshing": true,

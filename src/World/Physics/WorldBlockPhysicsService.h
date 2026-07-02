@@ -6,6 +6,7 @@
 #include "World/Physics/FallingBlocksSystem.h"
 #include "World/Physics/LiquidSimulationSystem.h"
 #include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/MaterialReactionRules.h"
 #include "World/Physics/PhysicsProfile.h"
 
 namespace cutum
@@ -44,6 +45,7 @@ private:
   ULiquidUpdateQueue LiquidQueue;
   UFallingBlocksSystem FallingSystem;
   ULiquidSimulationSystem LiquidSystem;
+  UMaterialReactionRules MaterialRules;
 };
 
 } // namespace cutum

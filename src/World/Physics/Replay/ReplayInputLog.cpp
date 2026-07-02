@@ -127,6 +127,14 @@ uint64_t UReplayInputLog::TickQueuesAndHash(const UBlockWorld *world,
               : 0ULL);
 }
 
+uint64_t UReplayInputLog::TickQueuesAndHash(IUReplayWorld *world,
+                                            glm::ivec3 world_min,
+                                            glm::ivec3 world_max)
+{
+  return TickQueuesAndHash(world != nullptr ? &world->GetBlockWorld() : nullptr,
+                           world_min, world_max);
+}
+
 std::vector<ReplayTickHash> UReplayInputLog::Run(const UBlockWorld *world,
                                                  glm::ivec3 world_min,
                                                  glm::ivec3 world_max)
@@ -171,6 +179,14 @@ std::vector<ReplayTickHash> UReplayInputLog::Run(const UBlockWorld *world,
     }
   }
   return hashes;
+}
+
+std::vector<ReplayTickHash> UReplayInputLog::Run(IUReplayWorld *world,
+                                                 glm::ivec3 world_min,
+                                                 glm::ivec3 world_max)
+{
+  return Run(world != nullptr ? &world->GetBlockWorld() : nullptr, world_min,
+             world_max);
 }
 
 } // namespace cutum
