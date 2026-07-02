@@ -4,7 +4,7 @@
 #include "World/Physics/BlockUpdateEvent.h"
 #include "World/Physics/BlockUpdateQueue.h"
 #include "World/Physics/ChunkRebuildQueue.h"
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidUpdateSet.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/Replay/IUReplayWorld.h"
 #include "World/Physics/Replay/WorldStateHasher.h"
@@ -56,7 +56,7 @@ public:
                                   glm::ivec3 world_max);
 
   const UBlockUpdateQueue &GetBlockQueue() const { return BlockQueue; }
-  const ULiquidUpdateQueue &GetLiquidQueue() const { return LiquidQueue; }
+  const UFluidUpdateSet &GetFluidQueue() const { return FluidQueue; }
 
 private:
   uint64_t TickQueuesAndHash(const UBlockWorld *world, glm::ivec3 world_min,
@@ -66,7 +66,7 @@ private:
 
   PhysicsBudgets Budgets;
   UBlockUpdateQueue BlockQueue;
-  ULiquidUpdateQueue LiquidQueue;
+  UFluidUpdateSet FluidQueue;
   UChunkRebuildQueue VisualQueue;
   UChunkRebuildQueue CollisionQueue;
   std::vector<ReplayAction> Actions;

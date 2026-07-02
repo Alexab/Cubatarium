@@ -195,18 +195,6 @@ bool UBlockRegistry::IsLiquid(BlockId Id) const
   return false;
 }
 
-bool UBlockRegistry::IsLiquidRenewable(BlockId Id) const
-{
-  if (Definitions)
-  {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
-    {
-      return def->Physics.LiquidRenewable;
-    }
-  }
-  return false;
-}
-
 bool UBlockRegistry::IsFloodable(BlockId Id) const
 {
   if (Definitions)

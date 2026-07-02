@@ -1,4 +1,4 @@
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidUpdateSet.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -14,25 +14,9 @@ static void Expect(bool cond, const char *message)
 
 int main()
 {
-  {
-    cutum::ULiquidUpdateQueue soft_queue;
-    cutum::PhysicsBudgets soft_budgets;
-    soft_budgets.LiquidEventsPerTickMax = 2;
-    soft_budgets.LiquidQueueSoftLimit = 2;
-    soft_budgets.LiquidQueueHardLimit = 16;
-    soft_queue.SetBudgets(soft_budgets);
-
-    Expect(soft_queue.Enqueue(glm::ivec3(0, 0, 0)), "first enqueue should succeed");
-    Expect(soft_queue.Enqueue(glm::ivec3(1, 0, 0)), "second enqueue should succeed");
-    Expect(!soft_queue.Enqueue(glm::ivec3(2, 0, 0)),
-           "third enqueue should defer at soft limit");
-    Expect(soft_queue.GetStats().Deferred > 0,
-           "soft limit should increment deferred");
-  }
-
-  cutum::ULiquidUpdateQueue queue;
+  cutum::UFluidUpdateSet queue;
   cutum::PhysicsBudgets budgets;
-  budgets.LiquidEventsPerTickMax = 2;
+  budgets.FluidBlocksPerTickMax = 2;
   budgets.LiquidQueueSoftLimit = 6;
   budgets.LiquidQueueHardLimit = 6;
   queue.SetBudgets(budgets);

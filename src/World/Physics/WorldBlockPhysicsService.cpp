@@ -1,24 +1,42 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Physics/PhysicsChunkDistance.h"
 #include "World/Core/World.h"
+#include "World/Math/GridMath.h"
 #include <algorithm>
+#include <array>
 
 namespace cutum
 {
+
+namespace
+{
+
+constexpr std::array<glm::ivec3, 6> kNeighborOffsets = {
+    glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),  glm::ivec3(0, -1, 0),
+    glm::ivec3(0, 1, 0),  glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1)};
+
+void EnqueueFluidNeighbors(UWorld &world, glm::ivec3 block_pos)
+{
+  for (const glm::ivec3 &offset : kNeighborOffsets)
+  {
+    world.TryEnqueueFluidAt(block_pos + offset);
+  }
+}
+
+} // namespace
 
 void UWorldBlockPhysicsService::SetBudgets(const PhysicsBudgets &budgets)
 {
   Budgets = budgets;
   BlockQueue.SetBudgets(budgets);
-  LiquidQueue.SetBudgets(budgets);
+  FluidQueue.SetBudgets(budgets);
 }
 
 void UWorldBlockPhysicsService::SetFeatureFlags(const PhysicsFeatureFlags &flags)
 {
   Flags = flags;
   FallingSystem.ShadowMode = !flags.EnableFalling || flags.FallingShadowMode;
-  LiquidSystem.ShadowMode = !flags.EnableFluids || flags.LiquidShadowMode;
-  LiquidSystem.DebugTraceEnabled = flags.LiquidDebugTrace;
+  FluidSystem.ShadowMode = !flags.EnableFluids || flags.LiquidShadowMode;
   MaterialRules.ShadowMode = !flags.EnableMaterialRules;
 }
 
@@ -94,20 +112,52 @@ void UWorldBlockPhysicsService::PublishSupportLost(glm::ivec3 blockPos,
   BlockQueue.Enqueue(ev);
 }
 
-void UWorldBlockPhysicsService::PublishLiquid(glm::ivec3 blockPos)
+void UWorldBlockPhysicsService::PublishFluid(glm::ivec3 blockPos)
 {
   if (!Flags.EnableFluids)
   {
     return;
   }
-  LiquidQueue.Enqueue(blockPos);
+  FluidQueue.Enqueue(blockPos);
+}
+
+void UWorldBlockPhysicsService::ProcessFluidChange(UWorld &world,
+                                                   const FluidSpreadChange &change)
+{
+  world.MarkFluidRegionDirty(change.BlockPos, 1);
+  world.MarkFluidRegionDirty(change.NeighborPos, 1);
+  if (change.RemovedFluid)
+  {
+    world.PublishBlockPhysicsEvent(change.NeighborPos);
+    world.PublishNeighborPhysicsEvents(change.NeighborPos);
+    EnqueueFluidNeighbors(world, change.NeighborPos);
+    if (world.GetBlockWorld().IsAir(change.BlockPos))
+    {
+      world.PublishNeighborPhysicsEvents(change.BlockPos);
+      EnqueueFluidNeighbors(world, change.BlockPos);
+    }
+  }
+  else
+  {
+    PublishFluid(change.NeighborPos);
+    PublishFluid(change.BlockPos);
+    EnqueueFluidNeighbors(world, change.NeighborPos);
+    EnqueueFluidNeighbors(world, change.BlockPos);
+  }
+  if (Flags.EnableMaterialRules)
+  {
+    MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
+                                    world.GetBlockRegistry(), change.BlockPos);
+    MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
+                                    world.GetBlockRegistry(),
+                                    change.NeighborPos);
+  }
 }
 
 void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
 {
   const glm::ivec3 focus_chunk = world.GetMovementDiagnostics().feetChunk;
   BlockQueue.SetFocusChunk(focus_chunk);
-  LiquidQueue.SetFocusChunk(focus_chunk);
 
   int fallingBudget = std::max(0, Budgets.FallingEventsPerTickMax);
   const std::vector<BlockUpdateEvent> events = BlockQueue.PopBudgeted();
@@ -146,36 +196,32 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
     }
   }
 
-  const std::vector<glm::ivec3> liquidEvents = LiquidQueue.PopBudgeted();
-  for (glm::ivec3 pos : liquidEvents)
+  const std::vector<glm::ivec3> fluid_events = FluidQueue.PopBudgeted();
+  const UBlockDefinitionStorage *definitions =
+      world.GetBlockRegistry().GetDefinitions();
+  for (glm::ivec3 pos : fluid_events)
   {
-    if (Flags.EnableFluids)
+    if (!Flags.EnableFluids || definitions == nullptr)
     {
-      const LiquidSimulationStats stats = LiquidSystem.Tick(world, pos);
-      world.AccumulateLiquidStats(stats);
-      if (stats.Applied > 0 && stats.HasAppliedDest)
+      continue;
+    }
+    const FluidSpreadStats stats = FluidSystem.Tick(world, pos);
+    world.AccumulateFluidStats(stats);
+    if (!stats.Changes.empty())
+    {
+      for (const FluidSpreadChange &change : stats.Changes)
       {
-        const glm::ivec3 dest = stats.AppliedDest;
-        world.MarkBlockChunkDirtyFromPhysics(pos);
-        world.MarkBlockChunkDirtyFromPhysics(dest);
-        if (stats.SourceCleared)
-        {
-          world.PublishBlockPhysicsEvent(dest);
-          world.PublishNeighborPhysicsEvents(dest);
-          if (world.GetBlockWorld().IsAir(pos))
-          {
-            world.PublishNeighborPhysicsEvents(pos);
-          }
-        }
-        else
-        {
-          PublishLiquid(dest);
-        }
+        ProcessFluidChange(world, change);
       }
+    }
+    else if (UFluidSpreadSystem::HasSpreadTarget(world.GetBlockWorld(),
+                                                 *definitions, pos))
+    {
+      PublishFluid(pos);
     }
   }
 
-  world.UpdatePhysicsQueueStats(BlockQueue.GetStats(), LiquidQueue.GetStats());
+  world.UpdatePhysicsQueueStats(BlockQueue.GetStats(), FluidQueue.GetStats());
 }
 
 } // namespace cutum

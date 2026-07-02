@@ -61,9 +61,9 @@ class UWorldBlockPhysicsService;
 class UWorldMovementPhysicsService;
 class UWorldChunkDirtyService;
 struct BlockUpdateQueueStats;
-struct LiquidUpdateQueueStats;
+struct FluidUpdateSetStats;
 struct FallingBlocksStats;
-struct LiquidSimulationStats;
+struct FluidSpreadStats;
 
 class UWorld : public IUWorldPerception
 {
@@ -424,7 +424,10 @@ public:
   uint64_t GetPhysicsTickCounter() const { return PhysicsTickCounter; }
   void PublishBlockPhysicsEvent(glm::ivec3 blockPos);
   void PublishNeighborPhysicsEvents(glm::ivec3 blockPos);
-  void TryEnqueueLiquidAt(glm::ivec3 blockPos);
+  void TryEnqueueFluidAt(glm::ivec3 blockPos);
+  void ForceEnqueueFluidAt(glm::ivec3 blockPos);
+  void WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks = 2);
+  void MarkFluidRegionDirty(glm::ivec3 center, int block_radius = 1);
   void TrySeedFallingAt(glm::ivec3 blockPos);
   const PhysicsFeatureFlags &GetPhysicsFeatureFlags() const { return PhysicsFlags; }
   bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
@@ -564,9 +567,9 @@ private:
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
-                               const LiquidUpdateQueueStats &liquidStats);
+                               const FluidUpdateSetStats &fluidStats);
   void AccumulateFallingStats(const FallingBlocksStats &stats);
-  void AccumulateLiquidStats(const LiquidSimulationStats &stats);
+  void AccumulateFluidStats(const FluidSpreadStats &stats);
   void ConfigurePhysicsServices();
   bool IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const;
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);

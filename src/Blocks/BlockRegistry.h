@@ -37,7 +37,6 @@ public:
   bool BlocksMovement(BlockId Id) const;
   bool IsFallingBlock(BlockId Id) const;
   bool IsLiquid(BlockId Id) const;
-  bool IsLiquidRenewable(BlockId Id) const;
   bool IsFloodable(BlockId Id) const;
   bool IsFlammable(BlockId Id) const;
   bool IsFireBlock(BlockId Id) const;

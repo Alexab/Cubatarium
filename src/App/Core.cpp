@@ -308,6 +308,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
             physics.value("block_queue_hard_limit", 8192);
         PhysicsBudgetsConfig.LiquidEventsPerTickMax =
             physics.value("liquid_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.FluidBlocksPerTickMax =
+            physics.value("fluid_blocks_per_tick_max",
+                          PhysicsBudgetsConfig.LiquidEventsPerTickMax);
         PhysicsBudgetsConfig.LiquidQueueSoftLimit =
             physics.value("liquid_queue_soft_limit", 2048);
         PhysicsBudgetsConfig.LiquidQueueHardLimit =
@@ -600,6 +603,8 @@ void UCore::SaveConfigFile()
   physics["block_queue_hard_limit"] = PhysicsBudgetsConfig.BlockQueueHardLimit;
   physics["liquid_events_per_tick_max"] =
       PhysicsBudgetsConfig.LiquidEventsPerTickMax;
+  physics["fluid_blocks_per_tick_max"] =
+      PhysicsBudgetsConfig.FluidBlocksPerTickMax;
   physics["liquid_queue_soft_limit"] = PhysicsBudgetsConfig.LiquidQueueSoftLimit;
   physics["liquid_queue_hard_limit"] = PhysicsBudgetsConfig.LiquidQueueHardLimit;
   physics["falling_events_per_tick_max"] =

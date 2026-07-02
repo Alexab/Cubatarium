@@ -60,6 +60,7 @@ struct PhysicsBudgets
   int BlockQueueSoftLimit{2048};
   int BlockQueueHardLimit{8192};
   int LiquidEventsPerTickMax{128};
+  int FluidBlocksPerTickMax{512};
   int LiquidQueueSoftLimit{2048};
   int LiquidQueueHardLimit{8192};
   int FallingEventsPerTickMax{128};

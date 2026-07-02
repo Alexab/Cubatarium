@@ -29,10 +29,38 @@ BlockId UChunkManager::GetBlock(glm::ivec3 worldPos) const
   return it->second->GetBlockLocal(WorldToLocal(worldPos));
 }
 
+FluidCellState UChunkManager::GetFluidState(glm::ivec3 worldPos) const
+{
+  const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
+  auto it = Chunks.find(chunkCoord);
+  if (it == Chunks.end())
+  {
+    return {};
+  }
+  return it->second->GetFluidLocal(WorldToLocal(worldPos));
+}
+
 void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId Id)
 {
   UChunk &chunk = GetOrCreateChunk(WorldToChunk(worldPos));
   chunk.SetBlockLocal(WorldToLocal(worldPos), Id);
+}
+
+void UChunkManager::SetFluidState(glm::ivec3 worldPos, FluidCellState state)
+{
+  UChunk &chunk = GetOrCreateChunk(WorldToChunk(worldPos));
+  chunk.SetFluidLocal(WorldToLocal(worldPos), state);
+}
+
+void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
+{
+  const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
+  auto it = Chunks.find(chunkCoord);
+  if (it == Chunks.end())
+  {
+    return;
+  }
+  it->second->ClearFluidLocal(WorldToLocal(worldPos));
 }
 
 void UChunkManager::Clear() { Chunks.clear(); }

@@ -35,8 +35,9 @@ struct BlockPhysicsProfile
   bool Falling{false};
   bool IsLiquid{false};
   float LiquidViscosity{1.0f};
-  bool LiquidRenewable{false};
   bool Floodable{false};
+  int FluidSpreadPeriodTicks{5};
+  int FluidMaxLevel{7};
   bool Flammable{false};
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);

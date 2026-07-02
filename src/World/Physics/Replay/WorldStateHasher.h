@@ -3,7 +3,7 @@
 
 #include "World/Physics/BlockUpdateQueue.h"
 #include "World/Physics/ChunkRebuildQueue.h"
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidUpdateSet.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 
@@ -16,7 +16,7 @@ struct PhysicsReplayState
 {
   uint64_t Tick{0};
   BlockUpdateQueueStats BlockQueueStats;
-  LiquidUpdateQueueStats LiquidQueueStats;
+  FluidUpdateSetStats FluidQueueStats;
   ChunkRebuildQueueStats VisualQueueStats;
   ChunkRebuildQueueStats CollisionQueueStats;
 };

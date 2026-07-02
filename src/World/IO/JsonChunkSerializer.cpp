@@ -1,6 +1,7 @@
 #include "World/IO/JsonChunkSerializer.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Math/FluidCellState.h"
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -58,7 +59,14 @@ SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
         {
           continue;
         }
-        voxels.push_back({{"lx", x}, {"ly", y}, {"lz", z}, {"id", id}});
+        json voxel = {{"lx", x}, {"ly", y}, {"lz", z}, {"id", id}};
+        const uint8_t fluid_packed =
+            PackFluidCellState(chunk.GetFluidLocal(local));
+        if (fluid_packed != 0)
+        {
+          voxel["fluid"] = fluid_packed;
+        }
+        voxels.push_back(std::move(voxel));
       }
     }
   }
@@ -96,6 +104,15 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                 chunkCoord.y * CHUNK_SIZE + ly,
                                 chunkCoord.z * CHUNK_SIZE + lz);
       buffer.SetBlock(worldPos, id);
+      if (voxel.contains("fluid"))
+      {
+        buffer.SetFluidPacked(worldPos,
+                              static_cast<uint8_t>(voxel.at("fluid").get<int>()));
+      }
+      else if (registry.IsLiquid(id))
+      {
+        buffer.SetFluidPacked(worldPos, PackFluidCellState(FluidCellState::Source()));
+      }
     }
   }
   catch (const json::exception &)

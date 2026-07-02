@@ -1,5 +1,6 @@
 #include "World/Physics/Replay/WorldStateHasher.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
 
 namespace cutum
 {
@@ -35,6 +36,9 @@ uint64_t UWorldStateHasher::HashBlockWorldRegion(const UBlockWorld &world,
       {
         const BlockId id = world.GetBlock(glm::ivec3(x, y, z));
         hash = HashCombine(hash, static_cast<uint64_t>(id));
+        hash = HashCombine(
+            hash, static_cast<uint64_t>(
+                      PackFluidCellState(world.GetFluidState(glm::ivec3(x, y, z)))));
       }
     }
   }
@@ -49,11 +53,10 @@ uint64_t UWorldStateHasher::HashPhysicsReplayState(const PhysicsReplayState &sta
   hash = HashCombine(hash, state.BlockQueueStats.Deferred);
   hash = HashCombine(hash, state.BlockQueueStats.Dropped);
   hash = HashCombine(hash, state.BlockQueueStats.Depth);
-  hash = HashCombine(hash, state.LiquidQueueStats.Enqueued);
-  hash = HashCombine(hash, state.LiquidQueueStats.Processed);
-  hash = HashCombine(hash, state.LiquidQueueStats.Deferred);
-  hash = HashCombine(hash, state.LiquidQueueStats.Dropped);
-  hash = HashCombine(hash, state.LiquidQueueStats.Depth);
+  hash = HashCombine(hash, state.FluidQueueStats.Enqueued);
+  hash = HashCombine(hash, state.FluidQueueStats.Processed);
+  hash = HashCombine(hash, state.FluidQueueStats.Dropped);
+  hash = HashCombine(hash, state.FluidQueueStats.Depth);
   hash = HashCombine(hash, state.VisualQueueStats.Depth);
   hash = HashCombine(hash, state.CollisionQueueStats.Depth);
   return hash;

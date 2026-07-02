@@ -862,13 +862,22 @@ std::optional<glm::vec3> UWorldCollision::FindNearestFreeCubePosition(
     return std::nullopt;
   }
 
-  const CollisionVolume vol = CollisionVolumeFromEye(position, cap);
-  const glm::vec3 blockCenter = BlockCenter(placePos);
-  const glm::vec3 blockHalf(0.5f);
-  if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, blockCenter,
-                                blockHalf))
+  const glm::ivec3 feet_block = WorldPosToBlock(position);
+  const bool placing_into_pit =
+      placePos.y < feet_block.y &&
+      std::abs(placePos.x - feet_block.x) <= 1 &&
+      std::abs(placePos.z - feet_block.z) <= 1;
+
+  if (!placing_into_pit)
   {
-    return std::nullopt;
+    const CollisionVolume vol = CollisionVolumeFromEye(position, cap);
+    const glm::vec3 blockCenter = BlockCenter(placePos);
+    const glm::vec3 blockHalf(0.5f);
+    if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, blockCenter,
+                                  blockHalf))
+    {
+      return std::nullopt;
+    }
   }
 
   return res_position;

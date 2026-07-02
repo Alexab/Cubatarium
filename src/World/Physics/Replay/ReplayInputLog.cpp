@@ -7,7 +7,7 @@ void UReplayInputLog::SetBudgets(const PhysicsBudgets &budgets)
 {
   Budgets = budgets;
   BlockQueue.SetBudgets(budgets);
-  LiquidQueue.SetBudgets(budgets);
+  FluidQueue.SetBudgets(budgets);
   VisualQueue.SetLimits(budgets.VisualRemeshPerTickMax,
                         budgets.VisualRemeshQueueSoftLimit,
                         budgets.VisualRemeshQueueHardLimit);
@@ -19,8 +19,8 @@ void UReplayInputLog::SetBudgets(const PhysicsBudgets &budgets)
 void UReplayInputLog::Reset()
 {
   BlockQueue.Clear();
-  LiquidQueue.Clear();
-  LiquidQueue.SetBudgets(Budgets);
+  FluidQueue.Clear();
+  FluidQueue.SetBudgets(Budgets);
   VisualQueue.Clear();
   CollisionQueue.Clear();
   VisualQueue.SetLimits(Budgets.VisualRemeshPerTickMax,
@@ -110,14 +110,14 @@ uint64_t UReplayInputLog::TickQueuesAndHash(const UBlockWorld *world,
 {
   ++TickCounter;
   BlockQueue.PopBudgeted();
-  LiquidQueue.PopBudgeted();
+  FluidQueue.PopBudgeted();
   VisualQueue.PopBudgeted();
   CollisionQueue.PopBudgeted();
 
   PhysicsReplayState state;
   state.Tick = TickCounter;
   state.BlockQueueStats = BlockQueue.GetStats();
-  state.LiquidQueueStats = LiquidQueue.GetStats();
+  state.FluidQueueStats = FluidQueue.GetStats();
   state.VisualQueueStats = VisualQueue.GetStats();
   state.CollisionQueueStats = CollisionQueue.GetStats();
   return UWorldStateHasher::HashPhysicsReplayState(state) ^
@@ -153,7 +153,7 @@ std::vector<ReplayTickHash> UReplayInputLog::Run(const UBlockWorld *world,
       break;
     }
     case ReplayActionType::EnqueueLiquid:
-      LiquidQueue.Enqueue(action.BlockPos);
+      FluidQueue.Enqueue(action.BlockPos);
       break;
     case ReplayActionType::EnqueueVisualRemesh:
       VisualQueue.Enqueue(glm::ivec3(0, 0, 0), action.ChunkPriority, ++LocalOrder);

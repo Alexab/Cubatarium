@@ -4,8 +4,8 @@
 #include "World/Physics/IUBlockPhysicsService.h"
 #include "World/Physics/BlockUpdateQueue.h"
 #include "World/Physics/FallingBlocksSystem.h"
-#include "World/Physics/LiquidSimulationSystem.h"
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidSpreadSystem.h"
+#include "World/Physics/FluidUpdateSet.h"
 #include "World/Physics/MaterialReactionRules.h"
 #include "World/Physics/PhysicsProfile.h"
 
@@ -24,27 +24,28 @@ public:
                               uint64_t triggerTick, uint64_t localOrder);
   void PublishSupportLost(glm::ivec3 blockPos, glm::ivec3 chunkCoord,
                           uint64_t triggerTick, uint64_t localOrder);
-  void PublishLiquid(glm::ivec3 blockPos);
+  void PublishFluid(glm::ivec3 blockPos);
 
   void TickBlockPhysics(UWorld &world) override;
   const BlockUpdateQueueStats &GetBlockQueueStats() const
   {
     return BlockQueue.GetStats();
   }
-  const LiquidUpdateQueueStats &GetLiquidQueueStats() const
+  const FluidUpdateSetStats &GetFluidQueueStats() const
   {
-    return LiquidQueue.GetStats();
+    return FluidQueue.GetStats();
   }
 
 private:
   static bool ShouldCheckFalling(const BlockUpdateEvent &event);
+  void ProcessFluidChange(UWorld &world, const FluidSpreadChange &change);
 
   PhysicsFeatureFlags Flags;
   PhysicsBudgets Budgets;
   UBlockUpdateQueue BlockQueue;
-  ULiquidUpdateQueue LiquidQueue;
+  UFluidUpdateSet FluidQueue;
   UFallingBlocksSystem FallingSystem;
-  ULiquidSimulationSystem LiquidSystem;
+  UFluidSpreadSystem FluidSystem;
   UMaterialReactionRules MaterialRules;
 };
 

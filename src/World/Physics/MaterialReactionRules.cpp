@@ -1,4 +1,5 @@
 #include "World/Physics/MaterialReactionRules.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Physics/MaterialReactionRulesRegistry.h"
@@ -29,13 +30,22 @@ bool TryWaterMeetsLava(UBlockWorld &block_world, const UBlockRegistry &registry,
     {
       continue;
     }
-    if (registry.IsLiquidRenewable(id))
+    if (registry.IsLiquid(id))
     {
-      has_water = true;
-    }
-    else if (registry.IsLiquid(id))
-    {
-      has_lava = true;
+      if (const UBlockDefinitionStorage *definitions = registry.GetDefinitions())
+      {
+        if (const BlockDefinition *def = definitions->GetById(id))
+        {
+          if (def->Physics.FluidMaxLevel >= 7)
+          {
+            has_water = true;
+          }
+          else
+          {
+            has_lava = true;
+          }
+        }
+      }
     }
   }
   if (!has_water || !has_lava)

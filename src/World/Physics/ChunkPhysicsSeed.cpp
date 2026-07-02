@@ -2,6 +2,8 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/PhysicsChunkDistance.h"
 
 namespace cutum
@@ -50,10 +52,21 @@ void SeedPhysicsOnChunkCommitted(UWorld &world, glm::ivec3 chunk_coord,
         continue;
       }
       const glm::ivec3 top_pos = origin + glm::ivec3(lx, top_y, lz);
-      if (registry.IsLiquid(top_id) && liquid_enqueued < budgets.MaxLiquidEnqueuePerCommit)
+      if (registry.IsLiquid(top_id) &&
+          liquid_enqueued < budgets.MaxLiquidEnqueuePerCommit)
       {
-        world.TryEnqueueLiquidAt(top_pos);
-        ++liquid_enqueued;
+        FluidCellState fluid_state = block_world.GetFluidState(top_pos);
+        if (PackFluidCellState(fluid_state) == 0)
+        {
+          fluid_state = FluidCellState::Source();
+        }
+        if (fluid_state.IsSource() ||
+            UFluidSpreadSystem::HasSpreadTarget(block_world, *registry.GetDefinitions(),
+                                                top_pos))
+        {
+          world.TryEnqueueFluidAt(top_pos);
+          ++liquid_enqueued;
+        }
       }
       else if (registry.IsFallingBlock(top_id))
       {

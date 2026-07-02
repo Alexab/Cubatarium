@@ -29,6 +29,24 @@ If movement regressions persist:
 - [ ] Fast run into unloaded chunks — no fall-through (`CollReady` gate holds)
 - [ ] Large horizontal move with `enable_collision_dda` — no tunneling
 
+### Liquids (level-based model, 2026-07)
+
+- [ ] 1×1 pit: place water/lava — fills center; source `Level=0` at placement
+- [ ] 2×2 pit + one water source — four cells water; source cell stable
+- [ ] Lava 2×2: source does not move (no block ping-pong)
+- [ ] Shore: break block — fill within ~1 s in 7-block radius
+- [ ] Lava pit: top + side faces visible; remesh ≤ 2 frames near player
+- [ ] Old worlds load; ocean stable
+
+See [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md) and [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md).
+
+### Liquids (legacy checklist)
+- [ ] Break one block in sea floor above a cave — water fills the gap and drains downward
+- [ ] Break a block in a water wall — neighbors refill the gap within a few seconds
+- [ ] Place one lava block on flat stone — lava spreads slowly without ping-pong; volume does not duplicate
+- [ ] Lava over air with stone sides — falls down without breaking adjacent blocks
+- [ ] Watch `physics_visual_remesh_backlog` in debug overlay during spread — backlog should drain, edge textures should appear within ~2 frames
+
 ## Observability
 
 - In-game debug overlay: `Phys profile`, queue depths, broadphase counters, collision readiness wait

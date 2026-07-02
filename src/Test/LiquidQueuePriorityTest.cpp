@@ -1,4 +1,4 @@
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidUpdateSet.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -14,20 +14,19 @@ static void Expect(bool cond, const char *message)
 
 int main()
 {
-  cutum::ULiquidUpdateQueue queue;
+  cutum::UFluidUpdateSet queue;
   cutum::PhysicsBudgets budgets;
   budgets.LiquidEventsPerTickMax = 4;
   budgets.LiquidQueueSoftLimit = 16;
   budgets.LiquidQueueHardLimit = 32;
   queue.SetBudgets(budgets);
-  queue.SetFocusChunk(glm::ivec3(0, 0, 0));
 
   Expect(queue.Enqueue(glm::ivec3(50, 0, 0)), "enqueue far");
   Expect(queue.Enqueue(glm::ivec3(0, 0, 0)), "enqueue near");
 
   const std::vector<glm::ivec3> popped = queue.PopBudgeted();
   Expect(popped.size() == 2, "expected two entries");
-  Expect(popped[0] == glm::ivec3(0, 0, 0), "near liquid should pop first");
+  Expect(popped[0] == glm::ivec3(50, 0, 0), "fifo fluid queue order");
 
   std::cout << "liquid_queue_priority_test: OK" << std::endl;
   return 0;

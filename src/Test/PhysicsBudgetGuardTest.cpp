@@ -1,6 +1,6 @@
 #include "World/Physics/BlockUpdateQueue.h"
 #include "World/Physics/ChunkRebuildQueue.h"
-#include "World/Physics/LiquidUpdateQueue.h"
+#include "World/Physics/FluidUpdateSet.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -32,7 +32,7 @@ int main()
   budgets.CollisionRebuildQueueHardLimit = 8;
 
   cutum::UBlockUpdateQueue block_queue;
-  cutum::ULiquidUpdateQueue liquid_queue;
+  cutum::UFluidUpdateSet liquid_queue;
   cutum::UChunkRebuildQueue visual_queue;
   cutum::UChunkRebuildQueue collision_queue;
   block_queue.SetBudgets(budgets);

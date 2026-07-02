@@ -1,6 +1,6 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Physics/LiquidSimulationSystem.h"
+#include "World/Physics/FluidSpreadSystem.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -27,7 +27,6 @@ int main()
   cutum::BlockDefinition water;
   water.Name = "water";
   water.Physics.IsLiquid = true;
-  water.Physics.LiquidRenewable = true;
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kWater] = water;
@@ -47,7 +46,7 @@ int main()
   }
   world.SetBlock(glm::ivec3(0, 10, 2), cutum::BLOCK_AIR);
 
-  cutum::ULiquidSimulationSystem liquid;
+  cutum::UFluidSpreadSystem liquid;
   liquid.ShadowMode = false;
 
   for (uint64_t tick = 0; tick < 20; ++tick)

@@ -26,7 +26,10 @@ class UChunkManager
 {
 public:
   BlockId GetBlock(glm::ivec3 worldPos) const;
+  FluidCellState GetFluidState(glm::ivec3 worldPos) const;
   void SetBlock(glm::ivec3 worldPos, BlockId Id);
+  void SetFluidState(glm::ivec3 worldPos, FluidCellState state);
+  void ClearFluidState(glm::ivec3 worldPos);
   void Clear();
   void ForEachBlock(const std::function<void(glm::ivec3, BlockId)> &fn) const;
 

@@ -151,11 +151,12 @@ set(SOURCES
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/IUChunkDirtyService.cpp
     src/World/Physics/BlockUpdateQueue.cpp
-    src/World/Physics/LiquidUpdateQueue.cpp
+    src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/FallingBlockRules.cpp
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
-    src/World/Physics/LiquidSimulationSystem.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Math/FluidCellState.cpp
     src/World/Physics/PrimitivePhysicsProfile.cpp
     src/World/Physics/StandardPhysicsProfile.cpp
     src/World/Physics/AdvancedPhysicsProfile.cpp
@@ -630,25 +631,47 @@ target_include_directories(creature_gltf_loader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_gltf_loader_test glm::glm nlohmann_json::nlohmann_json)
 
+set(PHYSICS_BLOCKWORLD_TEST_SOURCES
+    src/World/Core/BlockWorld.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/GridMath.cpp
+    src/World/Math/FluidCellState.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp)
+
+set(PHYSICS_LIGHT_REGISTRY_DEF CUTUM_PHYSICS_LIGHT_REGISTRY)
+
+set(PHYSICS_COLLISION_UNIT_SOURCES
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Blocks/BlockRegistry.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/World/Collision/WorldCollision.cpp
+    src/World/Collision/VoxelDdaTraversal.cpp
+    src/World/Physics/CollisionReadiness.cpp
+    src/World/Raycast/BlockRaycast.cpp
+    src/Creatures/Core/CreatureBounds.cpp
+    src/Render/Primitives/Cube.cpp)
+
+set(PHYSICS_MATERIAL_UNIT_SOURCES
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Blocks/BlockRegistry.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp)
+
 add_executable(block_update_queue_purge_test
     src/World/Physics/BlockUpdateQueue.cpp
     src/World/Physics/PhysicsChunkDistance.cpp
     src/World/Physics/PhysicsQueuePurge.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/Chunk.cpp
-    src/World/Math/GridMath.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/BlockUpdateQueuePurgeTest.cpp)
 target_include_directories(block_update_queue_purge_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(block_update_queue_purge_test glm::glm)
 
 add_executable(liquid_queue_priority_test
-    src/World/Physics/LiquidUpdateQueue.cpp
-    src/World/Physics/PhysicsChunkDistance.cpp
-    src/World/Physics/PhysicsQueuePurge.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/Chunk.cpp
-    src/World/Math/GridMath.cpp
+    src/World/Physics/FluidUpdateSet.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/LiquidQueuePriorityTest.cpp)
 target_include_directories(liquid_queue_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -658,9 +681,7 @@ add_executable(chunk_rebuild_queue_test
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/PhysicsChunkDistance.cpp
     src/World/Physics/PhysicsQueuePurge.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/Chunk.cpp
-    src/World/Math/GridMath.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/ChunkRebuildQueueTest.cpp)
 target_include_directories(chunk_rebuild_queue_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -668,6 +689,9 @@ target_link_libraries(chunk_rebuild_queue_test glm::glm)
 
 add_executable(block_update_queue_order_test
     src/World/Physics/BlockUpdateQueue.cpp
+    src/World/Physics/PhysicsChunkDistance.cpp
+    src/World/Physics/PhysicsQueuePurge.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/BlockUpdateQueueOrderTest.cpp)
 target_include_directories(block_update_queue_order_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -686,15 +710,9 @@ target_include_directories(physics_profile_parse_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(physics_profile_parse_test glm::glm)
 
-set(PHYSICS_BLOCKWORLD_TEST_SOURCES
-    src/World/Core/BlockWorld.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/Chunk.cpp
-    src/World/Math/GridMath.cpp)
-
 set(PHYSICS_REPLAY_TEST_SOURCES
     src/World/Physics/BlockUpdateQueue.cpp
-    src/World/Physics/LiquidUpdateQueue.cpp
+    src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/PhysicsChunkDistance.cpp
     src/World/Physics/PhysicsQueuePurge.cpp
@@ -718,7 +736,8 @@ target_include_directories(physics_budget_guard_test PRIVATE
 target_link_libraries(physics_budget_guard_test glm::glm)
 
 add_executable(liquid_queue_backpressure_test
-    src/World/Physics/LiquidUpdateQueue.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidUpdateSet.cpp
     src/Test/LiquidQueueBackpressureTest.cpp)
 target_include_directories(liquid_queue_backpressure_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -741,8 +760,6 @@ target_link_libraries(movement_chunk_boundary_test glm::glm)
 
 add_executable(falling_blocks_stability_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Blocks/BlockDefinition.cpp
     src/World/Physics/FallingBlockRules.cpp
     src/World/Physics/Replay/WorldStateHasher.cpp
     src/Test/FallingBlocksStabilityTest.cpp)
@@ -751,23 +768,79 @@ target_include_directories(falling_blocks_stability_test PRIVATE
 target_link_libraries(falling_blocks_stability_test glm::glm nlohmann_json::nlohmann_json)
 
 set(PHYSICS_REGISTRY_TEST_SOURCES
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Blocks/BlockDefinition.cpp
     src/Blocks/BlockRegistry.cpp
     src/Render/Textures/TextureBase.cpp
     src/Render/Textures/TextureCube.cpp)
 
+add_executable(fluid_state_pack_test
+    src/Test/FluidStatePackTest.cpp
+    src/World/Math/FluidCellState.cpp)
+target_include_directories(fluid_state_pack_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_state_pack_test glm::glm)
+
+add_executable(fluid_chunk_io_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/IO/BinaryChunkSerializer.cpp
+    src/Test/FluidChunkIoTest.cpp)
+target_include_directories(fluid_chunk_io_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_chunk_io_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_chunk_io_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_spread_level_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidSpreadLevelTest.cpp)
+target_include_directories(fluid_spread_level_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_spread_level_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_mesh_faces_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/Test/FluidMeshFacesTest.cpp)
+target_include_directories(fluid_mesh_faces_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_mesh_faces_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(liquid_viscosity_gate_test
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/LiquidViscosityGateTest.cpp)
 target_include_directories(liquid_viscosity_gate_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(liquid_viscosity_gate_test glm::glm)
 
-add_executable(physics_integration_test
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Blocks/BlockDefinition.cpp
+add_executable(liquid_non_renewable_flow_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/LiquidSimulationSystem.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/LiquidNonRenewableFlowTest.cpp)
+target_include_directories(liquid_non_renewable_flow_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(liquid_non_renewable_flow_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(liquid_flow_scenarios_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/LiquidFlowScenariosTest.cpp)
+target_include_directories(liquid_flow_scenarios_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(liquid_flow_scenarios_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(physics_integration_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/PhysicsIntegrationTest.cpp)
 target_include_directories(physics_integration_test PRIVATE
@@ -780,29 +853,6 @@ add_executable(physics_profile_hash_test
 target_include_directories(physics_profile_hash_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(physics_profile_hash_test glm::glm)
-
-set(PHYSICS_LIGHT_REGISTRY_DEF CUTUM_PHYSICS_LIGHT_REGISTRY)
-
-set(PHYSICS_COLLISION_UNIT_SOURCES
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockRegistry.cpp
-    src/World/Physics/MaterialReactionRulesRegistry.cpp
-    src/World/Collision/WorldCollision.cpp
-    src/World/Collision/VoxelDdaTraversal.cpp
-    src/World/Physics/CollisionReadiness.cpp
-    src/World/Raycast/BlockRaycast.cpp
-    src/Creatures/Core/CreatureBounds.cpp
-    src/Render/Primitives/Cube.cpp)
-
-set(PHYSICS_MATERIAL_UNIT_SOURCES
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockRegistry.cpp
-    src/World/Physics/MaterialReactionRules.cpp
-    src/World/Physics/MaterialReactionRulesRegistry.cpp)
 
 set(PHYSICS_UWORLD_TEST_SOURCES
     ${PHYSICS_REGISTRY_TEST_SOURCES}
@@ -823,12 +873,12 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Physics/WorldBlockPhysicsService.cpp
     src/World/Physics/WorldChunkDirtyService.cpp
     src/World/Physics/BlockUpdateQueue.cpp
-    src/World/Physics/LiquidUpdateQueue.cpp
+    src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/FallingBlockRules.cpp
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
-    src/World/Physics/LiquidSimulationSystem.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/World/Physics/ChunkPhysicsSeed.cpp
     src/Render/Primitives/Cube.cpp
@@ -851,6 +901,15 @@ target_include_directories(collision_broadphase_subchunk_test PRIVATE
 target_compile_definitions(collision_broadphase_subchunk_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(collision_broadphase_subchunk_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_placement_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/FluidPlacementTest.cpp)
+target_include_directories(fluid_placement_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_placement_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_placement_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(material_reaction_rules_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}

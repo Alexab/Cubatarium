@@ -1,5 +1,6 @@
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
 #include "WorldGen/Core/Noise.h"
 #include <algorithm>
 #include <cmath>
@@ -109,6 +110,7 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
     if (ctx.World.GetBlock(pos) == BLOCK_AIR)
     {
       ctx.World.SetBlock(pos, ctx.Blocks.Water);
+      ctx.World.SetFluidState(pos, FluidCellState::Source());
     }
   }
   ctx.AccumulateDirtyColumn(surfaceY, sea);

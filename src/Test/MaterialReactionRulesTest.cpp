@@ -24,14 +24,12 @@ static void InstallReactionBlocks(
   water.Name = "water";
   water.Id = 10;
   water.Physics.IsLiquid = true;
-  water.Physics.LiquidRenewable = true;
-
+  water.Physics.FluidMaxLevel = 7;
   cutum::BlockDefinition lava;
   lava.Name = "lava";
   lava.Id = 11;
   lava.Physics.IsLiquid = true;
-  lava.Physics.LiquidRenewable = false;
-
+  lava.Physics.FluidMaxLevel = 3;
   cutum::BlockDefinition stone;
   stone.Name = "stone";
   stone.Id = 12;
