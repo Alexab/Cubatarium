@@ -75,6 +75,7 @@ public:
 
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
+  bool IsCollisionReady(glm::ivec3 feetBlockPos, int radiusChunks) const;
 
   /// Full streaming pass after Movement: load/unload with per-frame budget.
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,

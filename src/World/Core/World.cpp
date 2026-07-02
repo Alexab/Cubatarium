@@ -30,7 +30,14 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
+#include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/WorldCooperativeOps.h"
+#include "World/Physics/PhysicsProfileFactory.h"
+#include "World/Physics/LiquidSimulationSystem.h"
+#include "World/Physics/WorldBlockPhysicsService.h"
+#include "World/Physics/WorldChunkDirtyService.h"
+#include "World/Physics/WorldMovementPhysicsService.h"
+#include "World/Physics/WorldPhysicsScheduler.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Persistence/WorldPersistence.h"
@@ -86,6 +93,7 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
   Environment.Initialize();
+  ConfigurePhysicsServices();
 }
 
 UWorld::~UWorld() = default;
@@ -760,6 +768,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   ++CachedBlockCount;
   BlockWorldReady = true;
   MarkBlockChunkDirty(blockPos);
+  PublishBlockPhysicsEvent(blockPos);
+  PublishNeighborPhysicsEvents(blockPos);
   return true;
 }
 
@@ -1163,6 +1173,8 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
     --CachedBlockCount;
   }
   MarkBlockChunkDirty(blockPos);
+  PublishBlockPhysicsEvent(blockPos);
+  PublishNeighborPhysicsEvents(blockPos);
   if (auto camera = GetCurrentUserCamera())
   {
     UpdateIntersection(camera->GetPosition(), camera->GetFront());
@@ -1440,7 +1452,180 @@ void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
   UMovementDiagnosticsRecorder::SaveToFile(*this, file_name);
 }
 
+void UWorld::ConfigurePhysicsServices()
+{
+  BlockPhysicsService = std::make_unique<UWorldBlockPhysicsService>();
+  MovementPhysicsService = std::make_unique<UWorldMovementPhysicsService>();
+  ChunkDirtyService = std::make_unique<UWorldChunkDirtyService>();
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->SetBudgets(PhysicsBudgetConfig);
+    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
+                                             *BlockPhysicsService, PhysicsFlags);
+  }
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->SetBudgets(PhysicsBudgetConfig);
+  }
+  PhysicsScheduler = std::make_unique<UWorldPhysicsScheduler>(
+      MovementPhysicsService.get(), BlockPhysicsService.get());
+}
+
+void UWorld::SetPhysicsProfile(PhysicsProfile profile)
+{
+  ActivePhysicsProfile = profile;
+  if (BlockPhysicsService)
+  {
+    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
+                                             *BlockPhysicsService, PhysicsFlags);
+  }
+}
+
+void UWorld::SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags)
+{
+  PhysicsFlags = flags;
+  Collision.SetBroadphaseEnabled(flags.EnableCollisionBroadphase);
+  if (BlockPhysicsService)
+  {
+    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
+                                             *BlockPhysicsService, PhysicsFlags);
+  }
+}
+
+void UWorld::SetPhysicsBudgets(const PhysicsBudgets &budgets)
+{
+  PhysicsBudgetConfig = budgets;
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->SetBudgets(budgets);
+  }
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->SetBudgets(budgets);
+  }
+}
+
+void UWorld::UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
+                                     const LiquidUpdateQueueStats &liquidStats)
+{
+  PhysicsTelemetryData.BlockQueueDepth = blockStats.Depth;
+  PhysicsTelemetryData.LiquidQueueDepth = liquidStats.Depth;
+  PhysicsTelemetryData.DeferredUpdates =
+      blockStats.Deferred + liquidStats.Deferred;
+  PhysicsTelemetryData.DroppedUpdates =
+      blockStats.Dropped + liquidStats.Dropped;
+}
+
+void UWorld::AccumulateFallingStats(const FallingBlocksStats &stats)
+{
+  PhysicsTelemetryData.DeferredUpdates += stats.Deferred;
+  PhysicsTelemetryData.DroppedUpdates += stats.Dropped;
+}
+
+void UWorld::AccumulateLiquidStats(const LiquidSimulationStats &stats)
+{
+  PhysicsTelemetryData.DeferredUpdates += stats.Deferred;
+  PhysicsTelemetryData.DroppedUpdates += stats.Dropped;
+}
+
+bool UWorld::IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const
+{
+  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
+  const glm::ivec3 focus = MovementDiag.feetChunk;
+  const int radius = std::max(
+      {std::abs(chunkCoord.x - focus.x), std::abs(chunkCoord.y - focus.y),
+       std::abs(chunkCoord.z - focus.z)});
+  return radius <= PhysicsBudgetConfig.LiquidUpdateRadiusChunks;
+}
+
+void UWorld::TryEnqueueLiquidAt(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService || !BlockRegistry || !PhysicsFlags.EnableFluids)
+  {
+    return;
+  }
+  if (!BlockRegistry->IsLiquid(BlockWorld.GetBlock(blockPos)))
+  {
+    return;
+  }
+  if (!ULiquidSimulationSystem::HasFlowTarget(*this, blockPos))
+  {
+    return;
+  }
+  if (!IsWithinLiquidUpdateRadius(blockPos))
+  {
+    return;
+  }
+  BlockPhysicsService->PublishLiquid(blockPos);
+}
+
+void UWorld::PublishBlockPhysicsEvent(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService)
+  {
+    return;
+  }
+  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
+  BlockPhysicsService->PublishBlockChanged(blockPos, chunkCoord, PhysicsTickCounter,
+                                           ++PhysicsEventOrderCounter);
+  TryEnqueueLiquidAt(blockPos);
+}
+
+void UWorld::PublishNeighborPhysicsEvents(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService)
+  {
+    return;
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 pos = blockPos + offset;
+    const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(pos);
+    BlockPhysicsService->PublishNeighborChanged(
+        pos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
+    TryEnqueueLiquidAt(pos);
+  }
+  const glm::ivec3 above(blockPos.x, blockPos.y + 1, blockPos.z);
+  const glm::ivec3 aboveChunk = UChunkManager::WorldToChunk(above);
+  BlockPhysicsService->PublishSupportLost(above, aboveChunk, PhysicsTickCounter,
+                                          ++PhysicsEventOrderCounter);
+}
+
+bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
+{
+  if (!PhysicsFlags.EnableCollisionReadinessGate || !Streaming ||
+      !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  if (const auto *streamer = Streaming->GetStreamer())
+  {
+    return streamer->IsCollisionReady(feetBlock,
+                                      PhysicsBudgetConfig.CollisionSafetyRadiusChunks);
+  }
+  return false;
+}
+
 void UWorld::DoMovement()
+{
+  ++PhysicsTickCounter;
+  if (PhysicsScheduler)
+  {
+    auto t_begin = std::chrono::high_resolution_clock::now();
+    PhysicsScheduler->Tick(*this);
+    if (ChunkDirtyService)
+    {
+      ChunkDirtyService->DrainRebuildQueues(*this);
+    }
+    auto t_end = std::chrono::high_resolution_clock::now();
+    PhysicsTelemetryData.PhysicsStepMs =
+        std::chrono::duration<double, std::milli>(t_end - t_begin).count();
+    return;
+  }
+  RunLegacyPhysicsFrame();
+}
+
+void UWorld::RunLegacyPhysicsFrame()
 {
   if (!BlockWorldReady)
   {
@@ -1465,6 +1650,8 @@ void UWorld::DoMovement()
   }
   const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
+  glm::ivec3 feetBlockForReadiness(0);
+  bool hasFeetBlockForReadiness = false;
 
   if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
   {
@@ -1477,6 +1664,8 @@ void UWorld::DoMovement()
     }
     const glm::ivec3 feetBlock =
         WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
+    feetBlockForReadiness = feetBlock;
+    hasFeetBlockForReadiness = true;
     glm::vec3 forward = camera->GetFront();
     forward.y = 0.0f;
     Streaming->EnsureCollisionChunks(feetBlock, forward);
@@ -1501,6 +1690,12 @@ void UWorld::DoMovement()
       });
 
   bool is_moved = camera && camera->DoMovement(this);
+  if (camera && hasFeetBlockForReadiness &&
+      !IsCollisionReadyAtFeet(feetBlockForReadiness))
+  {
+    camera->ResetVerticalPhysics();
+    is_moved = true;
+  }
 
   if (controlled && camera)
   {
@@ -1568,6 +1763,8 @@ void UWorld::DoMovement()
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
+  PhysicsTelemetryData.MovementStepMs =
+      std::chrono::duration<double, std::milli>(t_end - t_begin).count();
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
 
@@ -1633,8 +1830,21 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   IsIntersectionExists = CheckRayIntersection(
       position, front, Intersection, IntersectionDistance,
       IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
+  bool maybeSolidAlongRay = false;
+  if (BlockRegistry)
+  {
+    maybeSolidAlongRay =
+        TraverseVoxelRay(position, front, 8.0f,
+                         [&](glm::ivec3 cell)
+                         {
+                           return BlockRegistry->BlocksMovement(
+                               BlockWorld.GetBlock(cell));
+                         });
+  }
+  const auto hit = maybeSolidAlongRay
+                       ? RaycastSolidBlocks(BlockWorld, *BlockRegistry, position,
+                                            front)
+                       : std::nullopt;
   HasIntersectionBlock = hit.has_value();
   PlaceTargetActive = false;
   if (hit)
@@ -1760,6 +1970,17 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
   {
     mark_coord(UChunkManager::WorldToChunk(blockPos + offset));
   }
+}
+
+void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
+{
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->MarkVisualRemesh(*this, blockPos);
+    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+    return;
+  }
+  MarkBlockChunkDirty(blockPos);
 }
 
 } // namespace cutum

@@ -50,6 +50,24 @@ using json = nlohmann::json;
 namespace cutum
 {
 
+namespace
+{
+
+void ApplyStandardPhysicsDefaults(PhysicsProfile &profile,
+                                  PhysicsFeatureFlags &flags)
+{
+  profile = PhysicsProfile::Standard;
+  flags.EnableBlockEvents = true;
+  flags.EnableFalling = true;
+  flags.EnableFluids = true;
+  flags.EnableCollisionBroadphase = true;
+  flags.EnableCollisionReadinessGate = true;
+  flags.FallingShadowMode = true;
+  flags.LiquidShadowMode = false;
+}
+
+} // namespace
+
 const UBlockDefinitionStorage &UCore::Blocks() const
 {
   static const UBlockDefinitionStorage kEmpty;
@@ -261,12 +279,57 @@ void UCore::LoadConfig(const std::string &config_file_name)
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
       }
+      if (d.contains("physics") && d["physics"].is_object())
+      {
+        const json &physics = d["physics"];
+        ActivePhysicsProfile =
+            PhysicsProfileFromString(physics.value("profile", "standard"));
+        PhysicsFlags.EnableFalling = physics.value("enable_falling", true);
+        PhysicsFlags.EnableFluids = physics.value("enable_fluids", true);
+        PhysicsFlags.EnableBlockEvents =
+            physics.value("enable_block_events", true);
+        PhysicsFlags.EnableCollisionBroadphase =
+            physics.value("enable_collision_broadphase", true);
+        PhysicsFlags.EnableCollisionReadinessGate =
+            physics.value("enable_collision_readiness_gate", true);
+        PhysicsFlags.FallingShadowMode =
+            physics.value("falling_shadow_mode", true);
+        PhysicsFlags.LiquidShadowMode =
+            physics.value("liquid_shadow_mode", false);
+        PhysicsBudgetsConfig.BlockEventsPerTickMax =
+            physics.value("block_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.BlockQueueSoftLimit =
+            physics.value("block_queue_soft_limit", 2048);
+        PhysicsBudgetsConfig.BlockQueueHardLimit =
+            physics.value("block_queue_hard_limit", 8192);
+        PhysicsBudgetsConfig.LiquidEventsPerTickMax =
+            physics.value("liquid_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.LiquidQueueSoftLimit =
+            physics.value("liquid_queue_soft_limit", 2048);
+        PhysicsBudgetsConfig.LiquidQueueHardLimit =
+            physics.value("liquid_queue_hard_limit", 8192);
+        PhysicsBudgetsConfig.FallingEventsPerTickMax =
+            physics.value("falling_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.CollisionSafetyRadiusChunks =
+            physics.value("collision_safety_radius_chunks", 1);
+        PhysicsBudgetsConfig.VisualRemeshPerTickMax =
+            physics.value("visual_remesh_per_tick_max", 8);
+        PhysicsBudgetsConfig.CollisionRebuildPerTickMax =
+            physics.value("collision_rebuild_per_tick_max", 16);
+        PhysicsBudgetsConfig.VisualRemeshQueueSoftLimit =
+            physics.value("visual_remesh_queue_soft_limit", 512);
+        PhysicsBudgetsConfig.VisualRemeshQueueHardLimit =
+            physics.value("visual_remesh_queue_hard_limit", 4096);
+        PhysicsBudgetsConfig.CollisionRebuildQueueSoftLimit =
+            physics.value("collision_rebuild_queue_soft_limit", 512);
+        PhysicsBudgetsConfig.CollisionRebuildQueueHardLimit =
+            physics.value("collision_rebuild_queue_hard_limit", 4096);
+        PhysicsBudgetsConfig.LiquidUpdateRadiusChunks =
+            physics.value("liquid_update_radius_chunks", 2);
+      }
       else
       {
-        StepUpEnabled = true;
-        FoliageClimbEnabled = true;
-        EntityCollisionEnabled = true;
-        ActivityTickHz = 20.0f;
+        ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
       }
       if (d.contains("render") && d["render"].is_object())
       {
@@ -348,6 +411,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       StreamingEnabled = true;
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
+      ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
       {
         const ResourcePackSelection defaults = DefaultResourcePackSelection();
         ResourcePacks.DefaultPrimary = defaults.Primary;
@@ -430,6 +494,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
     WorldInstance->SetActivityTickHz(ActivityTickHz);
+    WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+    WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+    WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
     WorldInstance->SetRenderSettings(Render);
     if (GeometryEngineInstance)
     {
@@ -508,6 +575,44 @@ void UCore::SaveConfigFile()
   gameplay["entity_collision"] = EntityCollisionEnabled;
   gameplay["activity_tick_hz"] = ActivityTickHz;
   system_data["gameplay"] = gameplay;
+  json physics;
+  physics["profile"] = ToString(ActivePhysicsProfile);
+  physics["enable_falling"] = PhysicsFlags.EnableFalling;
+  physics["enable_fluids"] = PhysicsFlags.EnableFluids;
+  physics["enable_block_events"] = PhysicsFlags.EnableBlockEvents;
+  physics["enable_collision_broadphase"] =
+      PhysicsFlags.EnableCollisionBroadphase;
+  physics["enable_collision_readiness_gate"] =
+      PhysicsFlags.EnableCollisionReadinessGate;
+  physics["falling_shadow_mode"] = PhysicsFlags.FallingShadowMode;
+  physics["liquid_shadow_mode"] = PhysicsFlags.LiquidShadowMode;
+  physics["block_events_per_tick_max"] =
+      PhysicsBudgetsConfig.BlockEventsPerTickMax;
+  physics["block_queue_soft_limit"] = PhysicsBudgetsConfig.BlockQueueSoftLimit;
+  physics["block_queue_hard_limit"] = PhysicsBudgetsConfig.BlockQueueHardLimit;
+  physics["liquid_events_per_tick_max"] =
+      PhysicsBudgetsConfig.LiquidEventsPerTickMax;
+  physics["liquid_queue_soft_limit"] = PhysicsBudgetsConfig.LiquidQueueSoftLimit;
+  physics["liquid_queue_hard_limit"] = PhysicsBudgetsConfig.LiquidQueueHardLimit;
+  physics["falling_events_per_tick_max"] =
+      PhysicsBudgetsConfig.FallingEventsPerTickMax;
+  physics["collision_safety_radius_chunks"] =
+      PhysicsBudgetsConfig.CollisionSafetyRadiusChunks;
+  physics["visual_remesh_per_tick_max"] =
+      PhysicsBudgetsConfig.VisualRemeshPerTickMax;
+  physics["collision_rebuild_per_tick_max"] =
+      PhysicsBudgetsConfig.CollisionRebuildPerTickMax;
+  physics["visual_remesh_queue_soft_limit"] =
+      PhysicsBudgetsConfig.VisualRemeshQueueSoftLimit;
+  physics["visual_remesh_queue_hard_limit"] =
+      PhysicsBudgetsConfig.VisualRemeshQueueHardLimit;
+  physics["collision_rebuild_queue_soft_limit"] =
+      PhysicsBudgetsConfig.CollisionRebuildQueueSoftLimit;
+  physics["collision_rebuild_queue_hard_limit"] =
+      PhysicsBudgetsConfig.CollisionRebuildQueueHardLimit;
+  physics["liquid_update_radius_chunks"] =
+      PhysicsBudgetsConfig.LiquidUpdateRadiusChunks;
+  system_data["physics"] = physics;
   json render_json;
   const char *preset_name = "balanced";
   switch (Render.Preset)
@@ -639,6 +744,9 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
   WorldInstance->SetActivityTickHz(ActivityTickHz);
+  WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+  WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+  WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
   WorldInstance->SetRenderSettings(Render);
   if (GeometryEngineInstance)
   {
@@ -744,6 +852,9 @@ void UCore::ApplyRuntimeStreamingToWorld()
   worldSettings.MaxChunkCommitsPerFrame =
       ProceduralTemplate.MaxChunkCommitsPerFrame;
   WorldInstance->SetProceduralSettings(worldSettings, false);
+  WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+  WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+  WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
   WorldInstance->SetRenderSettings(Render);
   WorldInstance->RefreshStreamerSettings();
 }

@@ -4,8 +4,10 @@
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
 #include <optional>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -25,6 +27,8 @@ public:
     EntityCollisionEnabled = enabled;
   }
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
+  void SetBroadphaseEnabled(bool enabled) { BroadphaseEnabled = enabled; }
+  bool IsBroadphaseEnabled() const { return BroadphaseEnabled; }
 
   struct StepUpProbe
   {
@@ -78,11 +82,19 @@ public:
   FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
 
+  void InvalidateChunkMovementSolid(glm::ivec3 chunk_coord);
+  void RebuildChunkMovementSolid(glm::ivec3 chunk_coord);
+  void RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord);
+
 private:
+  bool QueryChunkMovementSolid(glm::ivec3 chunk_coord) const;
+  bool MayContainSolid(const CollisionVolume &vol) const;
   UBlockWorld &BlockWorld;
   UWorldEnvironment &Environment;
   UBlockRegistry *BlockRegistry{nullptr};
   bool EntityCollisionEnabled{true};
+  bool BroadphaseEnabled{false};
+  mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> ChunkMovementSolid;
 };
 
 } // namespace cutum

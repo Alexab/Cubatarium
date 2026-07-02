@@ -18,6 +18,7 @@
 #include "Blocks/BlockDefinition.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include <array>
+#include "World/Physics/PhysicsProfile.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
@@ -192,6 +193,9 @@ private:
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
   float ActivityTickHz{20.0f};
+  PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Standard};
+  PhysicsFeatureFlags PhysicsFlags;
+  PhysicsBudgets PhysicsBudgetsConfig;
   RenderSettings Render;
   UiSettings Ui;
   ResourcePacksConfig ResourcePacks;

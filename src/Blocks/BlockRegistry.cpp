@@ -135,6 +135,54 @@ bool UBlockRegistry::BlocksMovement(BlockId Id) const
 
 bool UBlockRegistry::IsSolid(BlockId Id) const { return BlocksMovement(Id); }
 
+bool UBlockRegistry::IsFallingBlock(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.Falling;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsLiquid(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.IsLiquid;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsLiquidRenewable(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.LiquidRenewable;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsFloodable(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.Floodable;
+    }
+  }
+  return false;
+}
+
 bool UBlockRegistry::IsTransparent(BlockId Id) const
 {
   if (Id == BLOCK_AIR)

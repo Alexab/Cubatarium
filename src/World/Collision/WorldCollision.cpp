@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Render/Primitives/Cube.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/Math/GridMath.h"
@@ -305,6 +306,10 @@ bool UWorldCollision::CheckBlockCollisionVolume(const CollisionVolume &vol) cons
   {
     return false;
   }
+  if (BroadphaseEnabled && !MayContainSolid(vol))
+  {
+    return false;
+  }
   const glm::vec3 center = vol.center;
   const glm::vec3 half = vol.halfExtents;
   const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
@@ -331,6 +336,99 @@ bool UWorldCollision::CheckBlockCollisionVolume(const CollisionVolume &vol) cons
       }
     }
   }
+  return false;
+}
+
+bool UWorldCollision::MayContainSolid(const CollisionVolume &vol) const
+{
+  const glm::vec3 minPos = vol.center - vol.halfExtents;
+  const glm::vec3 maxPos = vol.center + vol.halfExtents;
+  const glm::ivec3 minCell = WorldPosToBlock(minPos);
+  const glm::ivec3 maxCell = WorldPosToBlock(maxPos);
+  const int minChunkX = std::min(minCell.x, maxCell.x) / CHUNK_SIZE;
+  const int maxChunkX = std::max(minCell.x, maxCell.x) / CHUNK_SIZE;
+  const int minChunkY = std::min(minCell.y, maxCell.y) / CHUNK_SIZE;
+  const int maxChunkY = std::max(minCell.y, maxCell.y) / CHUNK_SIZE;
+  const int minChunkZ = std::min(minCell.z, maxCell.z) / CHUNK_SIZE;
+  const int maxChunkZ = std::max(minCell.z, maxCell.z) / CHUNK_SIZE;
+
+  for (int cx = minChunkX; cx <= maxChunkX; ++cx)
+  {
+    for (int cy = minChunkY; cy <= maxChunkY; ++cy)
+    {
+      for (int cz = minChunkZ; cz <= maxChunkZ; ++cz)
+      {
+        if (!QueryChunkMovementSolid(glm::ivec3(cx, cy, cz)))
+        {
+          continue;
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void UWorldCollision::InvalidateChunkMovementSolid(glm::ivec3 chunk_coord)
+{
+  ChunkMovementSolid.erase(chunk_coord);
+}
+
+void UWorldCollision::RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord)
+{
+  ChunkMovementSolid.erase(chunk_coord);
+}
+
+void UWorldCollision::RebuildChunkMovementSolid(glm::ivec3 chunk_coord)
+{
+  if (!BlockRegistry)
+  {
+    ChunkMovementSolid.erase(chunk_coord);
+    return;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    ChunkMovementSolid.erase(chunk_coord);
+    return;
+  }
+  bool has_movement_solid = false;
+  for (const BlockId block_id : chunk->GetData())
+  {
+    if (BlockRegistry->BlocksMovement(block_id))
+    {
+      has_movement_solid = true;
+      break;
+    }
+  }
+  ChunkMovementSolid[chunk_coord] = has_movement_solid;
+}
+
+bool UWorldCollision::QueryChunkMovementSolid(glm::ivec3 chunk_coord) const
+{
+  if (const auto it = ChunkMovementSolid.find(chunk_coord);
+      it != ChunkMovementSolid.end())
+  {
+    return it->second;
+  }
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return false;
+  }
+  for (const BlockId block_id : chunk->GetData())
+  {
+    if (BlockRegistry->BlocksMovement(block_id))
+    {
+      ChunkMovementSolid[chunk_coord] = true;
+      return true;
+    }
+  }
+  ChunkMovementSolid[chunk_coord] = false;
   return false;
 }
 

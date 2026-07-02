@@ -19,6 +19,8 @@
 #include "World/Environment/WorldEnvironment.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Physics/PhysicsProfile.h"
+#include "World/Physics/PhysicsTelemetry.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -54,6 +56,14 @@ class UWorldMeshService;
 class UChunkStorageService;
 class UWorldPersistence;
 class UWorldStreaming;
+class IUPhysicsScheduler;
+class UWorldBlockPhysicsService;
+class UWorldMovementPhysicsService;
+class UWorldChunkDirtyService;
+struct BlockUpdateQueueStats;
+struct LiquidUpdateQueueStats;
+struct FallingBlocksStats;
+struct LiquidSimulationStats;
 
 class UWorld : public IUWorldPerception
 {
@@ -388,6 +398,7 @@ public:
   bool TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
                  const PlayerCapsule &cap, float maxTriggerDistance) const;
   void DoMovement();
+  void RunLegacyPhysicsFrame();
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;
@@ -404,6 +415,14 @@ public:
   glm::ivec3 GetPlaceBlockPos() const { return PlaceBlockPos; }
 
   uint64_t GetDurationDoMovementMks() const;
+  void SetPhysicsProfile(PhysicsProfile profile);
+  PhysicsProfile GetPhysicsProfile() const { return ActivePhysicsProfile; }
+  void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
+  void SetPhysicsBudgets(const PhysicsBudgets &budgets);
+  const PhysicsTelemetry &GetPhysicsTelemetry() const { return PhysicsTelemetryData; }
+  void PublishBlockPhysicsEvent(glm::ivec3 blockPos);
+  void PublishNeighborPhysicsEvents(glm::ivec3 blockPos);
+  bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
 
   struct MovementDiagnostics
   {
@@ -431,6 +450,13 @@ public:
     int greedyCacheEntries{0};
     int framesSinceLoad{0};
     bool meshBacklogCleared{false};
+    double physicsStepMs{0.0};
+    uint64_t physicsBlockQueueDepth{0};
+    uint64_t physicsLiquidQueueDepth{0};
+    uint64_t physicsDeferredUpdates{0};
+    uint64_t physicsDroppedUpdates{0};
+    uint64_t physicsVisualRemeshBacklog{0};
+    uint64_t physicsCollisionRebuildBacklog{0};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -526,6 +552,14 @@ private:
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
+  void UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
+                               const LiquidUpdateQueueStats &liquidStats);
+  void AccumulateFallingStats(const FallingBlocksStats &stats);
+  void AccumulateLiquidStats(const LiquidSimulationStats &stats);
+  void ConfigurePhysicsServices();
+  bool IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const;
+  void TryEnqueueLiquidAt(glm::ivec3 blockPos);
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);
@@ -616,6 +650,19 @@ private:
   int FramesSinceLoad{0};
   bool MeshBacklogClearedLatch{false};
   bool MeshLoadDiagActive{false};
+  PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Primitive};
+  PhysicsFeatureFlags PhysicsFlags;
+  PhysicsBudgets PhysicsBudgetConfig;
+  PhysicsTelemetry PhysicsTelemetryData;
+  uint64_t PhysicsTickCounter{0};
+  uint64_t PhysicsEventOrderCounter{0};
+  std::unique_ptr<class UWorldBlockPhysicsService> BlockPhysicsService;
+  std::unique_ptr<class UWorldMovementPhysicsService> MovementPhysicsService;
+  std::unique_ptr<class UWorldChunkDirtyService> ChunkDirtyService;
+  std::unique_ptr<IUPhysicsScheduler> PhysicsScheduler;
+
+  friend class UWorldChunkDirtyService;
+  friend class UWorldBlockPhysicsService;
 };
 
 } // namespace cutum

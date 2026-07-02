@@ -30,6 +30,10 @@ public:
 
   bool IsSolid(BlockId Id) const;
   bool BlocksMovement(BlockId Id) const;
+  bool IsFallingBlock(BlockId Id) const;
+  bool IsLiquid(BlockId Id) const;
+  bool IsLiquidRenewable(BlockId Id) const;
+  bool IsFloodable(BlockId Id) const;
   bool IsTransparent(BlockId Id) const;
   BlockRenderStyle GetRenderStyle(BlockId Id) const;
   const FluidViewProfile *GetFluidView(BlockId Id) const;

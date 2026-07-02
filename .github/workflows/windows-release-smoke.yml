@@ -101,6 +101,38 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
 
+      - name: C++ unit test (physics deterministic replay)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/deterministic_replay_test.exe
+
+      - name: C++ unit test (physics budget guard)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_budget_guard_test.exe
+
+      - name: C++ unit test (liquid queue backpressure)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/liquid_queue_backpressure_test.exe
+
+      - name: C++ unit test (collision readiness gate)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/collision_readiness_gate_test.exe
+
+      - name: C++ unit test (movement chunk boundary)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/movement_chunk_boundary_test.exe
+
+      - name: C++ unit test (falling blocks stability)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/falling_blocks_stability_test.exe
+
+      - name: C++ unit test (block update queue order)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/block_update_queue_order_test.exe
+
+      - name: C++ unit test (voxel dda traversal)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/voxel_dda_traversal_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

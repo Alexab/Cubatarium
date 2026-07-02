@@ -5,6 +5,7 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/CollisionReadiness.h"
 #include <algorithm>
 #include <cmath>
 
@@ -388,6 +389,12 @@ void UChunkStreamer::EnsureCollisionChunks(glm::ivec3 feetBlockPos)
   {
     EnsureChunkLoaded(groundCenter, true);
   }
+}
+
+bool UChunkStreamer::IsCollisionReady(glm::ivec3 feetBlockPos,
+                                      int radiusChunks) const
+{
+  return IsCollisionRingReady(World, feetBlockPos, radiusChunks);
 }
 
 void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,

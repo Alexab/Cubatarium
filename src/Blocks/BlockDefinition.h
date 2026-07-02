@@ -32,6 +32,11 @@ struct BlockMovementPhysics
 struct BlockPhysicsProfile
 {
   BlockMovementPhysics Movement;
+  bool Falling{false};
+  bool IsLiquid{false};
+  float LiquidViscosity{1.0f};
+  bool LiquidRenewable{false};
+  bool Floodable{false};
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);
 };

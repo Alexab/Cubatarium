@@ -21,6 +21,10 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
   if (preset == "water")
   {
     p.Movement.Occupancy = 0.0f;
+    p.IsLiquid = true;
+    p.Floodable = true;
+    p.LiquidRenewable = true;
+    p.LiquidViscosity = 1.0f;
     p.Movement.DragHorizontal = 0.55f;
     p.Movement.DragVertical = 0.35f;
     p.Movement.SinkSpeed = 1.2f;
@@ -29,6 +33,9 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
   else if (preset == "lava")
   {
     p.Movement.Occupancy = 0.0f;
+    p.IsLiquid = true;
+    p.Floodable = true;
+    p.LiquidViscosity = 2.0f;
     p.Movement.DragHorizontal = 0.65f;
     p.Movement.DragVertical = 0.45f;
     p.Movement.SinkSpeed = 0.8f;
@@ -99,6 +106,26 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
         p.Movement.DamageOnContact = m["damage_on_contact"].get<bool>();
       }
     }
+    if (j.contains("falling"))
+    {
+      p.Falling = j["falling"].get<bool>();
+    }
+    if (j.contains("liquid"))
+    {
+      p.IsLiquid = j["liquid"].get<bool>();
+    }
+    if (j.contains("floodable"))
+    {
+      p.Floodable = j["floodable"].get<bool>();
+    }
+    if (j.contains("liquid_viscosity"))
+    {
+      p.LiquidViscosity = j["liquid_viscosity"].get<float>();
+    }
+    if (j.contains("liquid_renewable"))
+    {
+      p.LiquidRenewable = j["liquid_renewable"].get<bool>();
+    }
     return p;
   }
   BlockPhysicsProfile p = BlockPhysicsProfile::Solid();
@@ -129,6 +156,26 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
     {
       p.Movement.DamageOnContact = m["damage_on_contact"].get<bool>();
     }
+  }
+  if (j.contains("falling"))
+  {
+    p.Falling = j["falling"].get<bool>();
+  }
+  if (j.contains("liquid"))
+  {
+    p.IsLiquid = j["liquid"].get<bool>();
+  }
+  if (j.contains("floodable"))
+  {
+    p.Floodable = j["floodable"].get<bool>();
+  }
+  if (j.contains("liquid_viscosity"))
+  {
+    p.LiquidViscosity = j["liquid_viscosity"].get<float>();
+  }
+  if (j.contains("liquid_renewable"))
+  {
+    p.LiquidRenewable = j["liquid_renewable"].get<bool>();
   }
   return p;
 }

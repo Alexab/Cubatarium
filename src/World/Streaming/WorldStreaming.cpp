@@ -255,6 +255,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [this, &world](glm::ivec3 coord)
       {
         world.GetMeshService().RemoveChunk(coord);
+        world.Collision.RemoveChunkMovementSolidCache(coord);
         if (coord.y == 0 && ChunkScheduler)
         {
           ChunkScheduler->Invalidate(coord);

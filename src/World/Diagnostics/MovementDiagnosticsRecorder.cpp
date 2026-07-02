@@ -9,6 +9,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/WorldStreaming.h"
 #include <chrono>
 #include <fstream>
@@ -50,6 +51,14 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"mesh_backlog_cleared", sample.meshBacklogCleared},
         {"hitch_detected", sample.hitchDetected},
         {"fall_through_suspected", sample.fallThroughSuspected},
+        {"physics_step_ms", sample.physicsStepMs},
+        {"physics_block_queue_depth", sample.physicsBlockQueueDepth},
+        {"physics_liquid_queue_depth", sample.physicsLiquidQueueDepth},
+        {"physics_deferred_updates", sample.physicsDeferredUpdates},
+        {"physics_dropped_updates", sample.physicsDroppedUpdates},
+        {"physics_visual_remesh_backlog", sample.physicsVisualRemeshBacklog},
+        {"physics_collision_rebuild_backlog",
+         sample.physicsCollisionRebuildBacklog},
     });
   }
   root["samples"] = json(samples);
@@ -94,6 +103,16 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
       static_cast<int>(world.MeshService->GetGreedyCacheSize());
   world.MovementDiag.framesSinceLoad = world.FramesSinceLoad;
   world.MovementDiag.meshBacklogCleared = world.MeshBacklogClearedLatch;
+  const PhysicsTelemetry &physicsTelemetry = world.GetPhysicsTelemetry();
+  world.MovementDiag.physicsStepMs = physicsTelemetry.PhysicsStepMs;
+  world.MovementDiag.physicsBlockQueueDepth = physicsTelemetry.BlockQueueDepth;
+  world.MovementDiag.physicsLiquidQueueDepth = physicsTelemetry.LiquidQueueDepth;
+  world.MovementDiag.physicsDeferredUpdates = physicsTelemetry.DeferredUpdates;
+  world.MovementDiag.physicsDroppedUpdates = physicsTelemetry.DroppedUpdates;
+  world.MovementDiag.physicsVisualRemeshBacklog =
+      physicsTelemetry.VisualRemeshBacklog;
+  world.MovementDiag.physicsCollisionRebuildBacklog =
+      physicsTelemetry.CollisionRebuildBacklog;
   world.TickMeshLoadDiagnostics();
 
   if (world.HasLastPlayerY)
