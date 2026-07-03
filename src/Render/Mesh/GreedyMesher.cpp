@@ -14,6 +14,7 @@
 #include "World/Core/BlockWorld.h"
 
 #include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidSpreadSystem.h"
 
 #include <algorithm>
 
@@ -279,12 +280,10 @@ BlockId PrimaryLiquidBlockId(UBlockRegistry &registry)
   {
     return BLOCK_AIR;
   }
-  for (const auto &entry : definitions->GetAll())
+  const BlockId water_id = UFluidSpreadSystem::ResolveWaterBlockId(*definitions);
+  if (water_id != BLOCK_AIR)
   {
-    if (entry.second.Physics.IsLiquid)
-    {
-      return entry.first;
-    }
+    return water_id;
   }
   return registry.GetIdByTypeName("water");
 }

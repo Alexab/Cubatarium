@@ -69,11 +69,13 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeGameplayDefinitions()
   return definitions;
 }
 
-static cutum::FluidFloodOptions GameplayFloodOptions(cutum::BlockId water_id)
+static cutum::FluidFloodOptions GameplayFloodOptions(cutum::BlockId water_id,
+                                                     int sea_level = -1)
 {
   cutum::FluidFloodOptions options;
   options.water_id = water_id;
   options.source_for_air = false;
+  options.sea_level = sea_level;
   options.max_passes = 8;
   return options;
 }
@@ -122,15 +124,51 @@ static void TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(
   world.SetFluidState(glm::ivec3(0, 62, 0), cutum::FluidCellState::Source());
   world.SetBlock(glm::ivec3(1, 63, 0), cutum::BLOCK_AIR);
 
-  cutum::FluidFloodOptions options;
-  options.water_id = kWater;
-  options.fluid_id = kWater;
-  options.source_for_air = false;
+  cutum::FluidFloodOptions options = GameplayFloodOptions(kWater, 63);
   const int filled = cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
       world, *definitions, glm::ivec3(1, 63, 0), options);
   FluidTest::Expect(filled > 0, kTestName, "below-sea break flood fills");
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 63, 0)) == kWater, kTestName,
                     "below-sea break flood uses water not lava");
+}
+
+static void TestResolveFluidKindPrefersWater(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
+{
+  cutum::UBlockWorld world;
+  world.SetBlock(glm::ivec3(0, 63, 0), kLava);
+  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(1, 63, 0), kWater);
+  world.SetFluidState(glm::ivec3(1, 63, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(2, 63, 0), kTallGrass);
+  world.SetFluidState(glm::ivec3(2, 63, 0), cutum::FluidCellState::Flowing(1));
+
+  const cutum::BlockId kind = cutum::UFluidSpreadSystem::ResolveFluidKind(
+      world, *definitions, glm::ivec3(2, 63, 0), kTallGrass);
+  FluidTest::Expect(kind == kWater, kTestName,
+                    "waterlogged decor resolves water over lava");
+}
+
+static void TestFloodSpillBelowSeaUsesWaterDespiteLavaNeighbor(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
+{
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  world.SetBlock(glm::ivec3(0, 63, 0), kLava);
+  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(1, 63, 0), cutum::BLOCK_AIR);
+  world.SetBlock(glm::ivec3(1, 64, 0), kTallGrass);
+
+  cutum::FluidFloodOptions options = GameplayFloodOptions(kWater, 63);
+  cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(1, 64, 0), options);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(1, 63, 0)) == kWater, kTestName,
+                    "spill below break site uses water not lava");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(1, 64, 0)) == kTallGrass,
+                    kTestName, "shore decor preserved during spill flood");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(1, 64, 0))) != 0,
+      kTestName, "shore decor waterlogged during spill flood");
 }
 
 static void TestGameplayFloodFillsBrokenCell(
@@ -332,6 +370,8 @@ int main()
   TestGameplayFloodShoreGrass(definitions);
   TestWaterPriorityOverLava(definitions);
   TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(definitions);
+  TestResolveFluidKindPrefersWater(definitions);
+  TestFloodSpillBelowSeaUsesWaterDespiteLavaNeighbor(definitions);
   TestCellTouchesWetAir(definitions);
   TestBreakSiteDoesNotFillLargeAirPocket(definitions);
   TestSourceFlowingMeshNoInternalFace(definitions);

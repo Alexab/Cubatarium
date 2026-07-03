@@ -2,6 +2,7 @@
 
 #include "World/Physics/FluidReflowScan.h"
 
+#include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
@@ -39,6 +40,22 @@ bool ShouldEnqueueFluidCell(const UBlockWorld &block_world,
 void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
 {
   const UBlockRegistry &registry = world.GetBlockRegistry();
+  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
+  if (definitions != nullptr && world.GetProceduralSettings().FillWater &&
+      pos.y <= world.GetProceduralSettings().SeaLevel)
+  {
+    const BlockId id = world.GetBlockWorld().GetBlock(pos);
+    if (registry.IsLiquid(id))
+    {
+      if (const BlockDefinition *def = definitions->GetById(id))
+      {
+        if (def->Physics.IsLiquid && def->Physics.FluidMaxLevel < 7)
+        {
+          return;
+        }
+      }
+    }
+  }
   if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos))
   {
     world.ForceEnqueueFluidAt(pos);

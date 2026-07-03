@@ -1,4 +1,5 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Chunks/ChunkManager.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
@@ -598,8 +599,14 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       for (int y = ctx.Settings.SeaLevel; y <= surfaceY + 2; ++y)
       {
-        if (ctx.World.GetBlock(glm::ivec3(x + dx, y, z + dz)) ==
-            ctx.Blocks.Water)
+        const glm::ivec3 pos(x + dx, y, z + dz);
+        if (ctx.World.GetBlock(pos) == ctx.Blocks.Water)
+        {
+          return false;
+        }
+        const BlockId id = ctx.World.GetBlock(pos);
+        if (ctx.Registry.IsFluidPermeable(id) &&
+            PackFluidCellState(ctx.World.GetFluidState(pos)) != 0)
         {
           return false;
         }

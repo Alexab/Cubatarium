@@ -195,26 +195,33 @@ static void TestSealSeabedDecorWithWaterAbove()
       kTestName, "seabed decor waterlogged when water is above");
 }
 
-static void TestSealShoreDecorOneBlockBelowSea()
+static void TestRestoreWaterColumnReplacesPrefabDirt()
 {
   cutum::UBlockWorld world;
   constexpr cutum::BlockId kSand = 11;
+  constexpr cutum::BlockId kDirt = 12;
   constexpr cutum::BlockId kTallGrass = 10;
-  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDecorDefinitions());
+  auto definitions = FluidTest::MakeTestFluidDecorDefinitions();
+  cutum::UBlockRegistry registry(nullptr, definitions);
   auto ctx = MakeSealContext(world, registry, 63);
+  ctx.Blocks.Sand = kSand;
+  ctx.Blocks.Dirt = kDirt;
   FillStoneColumn(world, 0, 0, 60);
-  world.SetBlock(glm::ivec3(0, 61, 0), kSand);
-  world.SetBlock(glm::ivec3(0, 62, 0), kTallGrass);
-  world.SetBlock(glm::ivec3(0, 63, 0), kWater);
-  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(0, 61, 0), kStone);
+  world.SetBlock(glm::ivec3(0, 62, 0), kSand);
+  world.SetBlock(glm::ivec3(0, 63, 0), kDirt);
+  world.SetBlock(glm::ivec3(0, 64, 0), kTallGrass);
 
   cutum::SealFluidPermeableDecorInChunk(ctx, 0, 0);
-  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 62, 0)) == kTallGrass,
-                    kTestName, "shore decor one block below sea preserved");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 63, 0)) == kWater, kTestName,
+                    "prefab dirt in water column becomes water");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 62, 0)) == kSand, kTestName,
+                    "shore sand floor preserved");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 64, 0)) == kTallGrass,
+                    kTestName, "reeds above sea preserved");
   FluidTest::Expect(
-      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 62, 0))) != 0,
-      kTestName,
-      "shore decor one block below sea waterlogged without wet neighbor");
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 64, 0))) != 0,
+      kTestName, "reeds above sea waterlogged");
 }
 
 static void TestSealAirAboveWaterloggedDecor()
@@ -254,7 +261,7 @@ int main()
   TestSealChunkBoundaryIsolated();
   TestSealPermeableDecorPocket();
   TestSealSeabedDecorWithWaterAbove();
-  TestSealShoreDecorOneBlockBelowSea();
+  TestRestoreWaterColumnReplacesPrefabDirt();
   TestSealAirAboveWaterloggedDecor();
 
   std::cout << kTestName << ": OK" << std::endl;

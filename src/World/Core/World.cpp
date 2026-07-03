@@ -96,10 +96,13 @@ FluidFloodOptions MakeBreakSiteFloodOptions(const UBlockRegistry &registry,
   FluidFloodOptions options;
   options.water_id = ResolveWaterBlockId(registry, worldgen_owner_pack_id);
   options.source_for_air = false;
-  if (settings.FillWater && options.water_id != BLOCK_AIR &&
-      break_pos.y <= settings.SeaLevel)
+  if (settings.FillWater && options.water_id != BLOCK_AIR)
   {
-    options.fluid_id = options.water_id;
+    options.sea_level = settings.SeaLevel;
+    if (break_pos.y <= settings.SeaLevel)
+    {
+      options.fluid_id = options.water_id;
+    }
   }
   return options;
 }
@@ -1255,7 +1258,11 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   }
   const std::vector<glm::ivec3> broken_above =
       BreakUnsupportedBlocksAbove(BlockWorld, *BlockRegistry, blockPos);
-  MarkBlockChunkDirty(blockPos);
+  std::vector<glm::ivec3> mesh_touch_blocks;
+  mesh_touch_blocks.reserve(1 + broken_above.size());
+  mesh_touch_blocks.push_back(blockPos);
+  mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_above.begin(),
+                           broken_above.end());
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   for (const glm::ivec3 &above_pos : broken_above)
@@ -1264,7 +1271,6 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
     {
       --CachedBlockCount;
     }
-    MarkBlockChunkDirty(above_pos);
     PublishBlockPhysicsEvent(above_pos);
     PublishNeighborPhysicsEvents(above_pos);
   }
@@ -1280,10 +1286,10 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
       std::vector<glm::ivec3> flood_changed;
       UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
           BlockWorld, *definitions, blockPos, flood_options, &flood_changed);
-      MarkFluidFloodMeshDirty(blockPos, flood_changed);
+      mesh_touch_blocks.insert(mesh_touch_blocks.end(), flood_changed.begin(),
+                               flood_changed.end());
     }
     EnqueueFluidFrontierAt(*this, blockPos);
-    MarkBlockChunkDirty(blockPos);
     if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
     {
       BlockPhysicsService->PublishFluid(blockPos);
@@ -1293,10 +1299,11 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
       const glm::ivec3 neighbor = blockPos + offset;
       if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(neighbor)))
       {
-        MarkBlockChunkDirty(neighbor);
+        mesh_touch_blocks.push_back(neighbor);
       }
     }
   }
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (auto camera = GetCurrentUserCamera())
   {
     UpdateIntersection(camera->GetPosition(), camera->GetFront());
@@ -2258,6 +2265,37 @@ void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                        int max_y)
 {
   MeshService->MarkTerrainChunkMeshDirty(groundChunkCoord, min_y, max_y);
+}
+
+void UWorld::MarkBlocksChunkDirtyBatch(
+    const std::vector<glm::ivec3> &block_positions)
+{
+  if (block_positions.empty())
+  {
+    return;
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
+    }
+  }
+  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
+  if (!BlockRegistry)
+  {
+    for (const glm::ivec3 &chunk_coord : chunk_coords)
+    {
+      MeshService->MarkDirty(chunk_coord);
+    }
+    return;
+  }
+  for (const glm::ivec3 &chunk_coord : chunk_coords)
+  {
+    MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry, chunk_coord);
+  }
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)

@@ -150,39 +150,83 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   return filled > 0;
 }
 
-bool ColumnHasLiquidAbove(const UBlockWorld &world, UBlockRegistry &registry,
-                          glm::ivec3 pos, int sea)
+namespace
 {
-  for (int y = pos.y + 1; y <= sea; ++y)
+
+bool IsWaterColumnSlotBlock(const WorldGenContext &ctx, UBlockRegistry &registry,
+                            BlockId id, int y, int floor_y)
+{
+  if (id == BLOCK_AIR)
   {
-    if (registry.IsLiquid(world.GetBlock(glm::ivec3(pos.x, y, pos.z))))
-    {
-      return true;
-    }
+    return true;
+  }
+  if (id == ctx.Blocks.Water || registry.IsLiquid(id))
+  {
+    return true;
+  }
+  if (registry.IsFluidPermeable(id))
+  {
+    return true;
+  }
+  if (y > floor_y && id == ctx.Blocks.Dirt)
+  {
+    return true;
   }
   return false;
 }
 
-bool ShouldWaterlogPermeableDecor(const UBlockWorld &world,
-                                  UBlockRegistry &registry,
-                                  const UBlockDefinitionStorage &definitions,
-                                  glm::ivec3 pos, int sea)
+int FindWaterColumnFloorY(const WorldGenContext &ctx, int x, int z, int sea)
 {
-  const BlockId block_id = world.GetBlock(pos);
-  if (!registry.IsFluidPermeable(block_id))
+  int floor_y = -1;
+  for (int y = 1; y < sea; ++y)
   {
+    const glm::ivec3 ground(x, y, z);
+    if (!IsSolidPlantGround(ctx.World, ctx.Registry, ground))
+    {
+      continue;
+    }
+    bool column_above = true;
+    for (int wy = y + 1; wy <= sea; ++wy)
+    {
+      const BlockId above_id = ctx.World.GetBlock(glm::ivec3(x, wy, z));
+      if (!IsWaterColumnSlotBlock(ctx, ctx.Registry, above_id, wy, y))
+      {
+        column_above = false;
+        break;
+      }
+    }
+    if (column_above)
+    {
+      floor_y = y;
+    }
+  }
+  return floor_y;
+}
+
+bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
+                            int sea)
+{
+  const BlockId water = ctx.Blocks.Water;
+  BlockId id = ctx.World.GetBlock(pos);
+  if (id == water)
+  {
+    if (PackFluidCellState(ctx.World.GetFluidState(pos)) == 0)
+    {
+      ctx.World.SetFluidState(pos, FluidCellState::Source());
+      return true;
+    }
     return false;
   }
-  if (PackFluidCellState(world.GetFluidState(pos)) != 0)
+  if (ctx.Registry.IsFluidPermeable(id))
   {
-    return false;
-  }
-  if (UFluidSpreadSystem::CellTouchesWet(world, definitions, pos))
-  {
+    if (PackFluidCellState(ctx.World.GetFluidState(pos)) != 0)
+    {
+      return false;
+    }
+    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
     return true;
   }
-  const glm::ivec3 ground = pos - glm::ivec3(0, 1, 0);
-  if (!IsSolidPlantGround(world, registry, ground))
+  if (pos.y <= floor_y)
   {
     return false;
   }
@@ -190,13 +234,80 @@ bool ShouldWaterlogPermeableDecor(const UBlockWorld &world,
   {
     return false;
   }
-  // First block above a sub-sea floor belongs to the water column (shore seabed).
-  if (ground.y < sea)
+  if (id == BLOCK_AIR || id == ctx.Blocks.Dirt)
   {
+    ctx.World.SetBlock(pos, water);
+    ctx.World.SetFluidState(pos, FluidCellState::Source());
     return true;
   }
-  return ColumnHasLiquidAbove(world, registry, pos, sea);
+  if (ctx.Registry.BlocksMovement(id))
+  {
+    ctx.World.SetBlock(pos, water);
+    ctx.World.SetFluidState(pos, FluidCellState::Source());
+    return true;
+  }
+  return false;
 }
+
+bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
+                                   int floor_y, int sea)
+{
+  if (floor_y < 0 || floor_y >= sea)
+  {
+    return false;
+  }
+  const int max_y =
+      std::min(ctx.Settings.MaxHeight - 1, sea + 8);
+  bool changed = false;
+  for (int y = floor_y + 1; y <= max_y; ++y)
+  {
+    const glm::ivec3 pos(x, y, z);
+    const BlockId id = ctx.World.GetBlock(pos);
+    if (id == BLOCK_AIR)
+    {
+      break;
+    }
+    if (ctx.Registry.IsLiquid(id))
+    {
+      continue;
+    }
+    if (!ctx.Registry.IsFluidPermeable(id))
+    {
+      break;
+    }
+    if (PackFluidCellState(ctx.World.GetFluidState(pos)) != 0)
+    {
+      continue;
+    }
+    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
+    changed = true;
+  }
+  return changed;
+}
+
+bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea)
+{
+  const int floor_y = FindWaterColumnFloorY(ctx, x, z, sea);
+  if (floor_y < 0 || floor_y >= sea)
+  {
+    return false;
+  }
+  bool changed = false;
+  for (int y = floor_y + 1; y <= sea; ++y)
+  {
+    if (RestoreWaterColumnCell(ctx, glm::ivec3(x, y, z), floor_y, sea))
+    {
+      changed = true;
+    }
+  }
+  if (WaterlogCoastalPermeableStack(ctx, x, z, floor_y, sea))
+  {
+    changed = true;
+  }
+  return changed;
+}
+
+} // namespace
 
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
@@ -205,32 +316,20 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
     return false;
   }
   const int sea = ctx.Settings.SeaLevel;
-  const UBlockDefinitionStorage *definitions = ctx.Registry.GetDefinitions();
-  if (definitions == nullptr)
-  {
-    return false;
-  }
   bool any_filled = false;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
     {
-      for (int y = 1; y <= sea; ++y)
+      if (RestoreWaterColumnAt(ctx, base_x + lx, base_z + lz, sea))
       {
-        const glm::ivec3 pos(base_x + lx, y, base_z + lz);
-        if (!ShouldWaterlogPermeableDecor(ctx.World, ctx.Registry, *definitions,
-                                          pos, sea))
-        {
-          continue;
-        }
-        ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
         any_filled = true;
       }
     }
   }
   if (any_filled)
   {
-    ctx.AccumulateDirtyColumn(0, sea);
+    ctx.AccumulateDirtyColumn(0, sea + 8);
   }
   return any_filled;
 }

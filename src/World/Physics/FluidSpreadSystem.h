@@ -20,6 +20,7 @@ struct FluidFloodOptions
   BlockId water_id{BLOCK_AIR};
   bool source_for_air{false};
   int max_passes{8};
+  int sea_level{-1};
 };
 
 class UFluidSpreadSystem
@@ -33,6 +34,11 @@ public:
   static BlockId ResolveFloodFluidId(
       const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
       glm::ivec3 pos, const FluidFloodOptions &options);
+  static BlockId ResolveWaterBlockId(
+      const UBlockDefinitionStorage &definitions);
+  static BlockId ResolveFluidKind(
+      const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+      glm::ivec3 block_pos, BlockId block_id);
   static int FloodWetPocketsInBox(UBlockWorld &blockWorld,
                                   const UBlockDefinitionStorage &definitions,
                                   glm::ivec3 box_min, glm::ivec3 box_max,
@@ -71,7 +77,8 @@ public:
                              uint64_t physics_tick, glm::ivec3 block_pos);
   FluidSpreadStats TickBlock(UBlockWorld &blockWorld,
                              const UBlockDefinitionStorage &definitions,
-                             uint64_t physics_tick, glm::ivec3 block_pos);
+                             uint64_t physics_tick, glm::ivec3 block_pos,
+                             int sea_level = -1);
 
   static bool ShouldProcessFluidTick(uint64_t physics_tick,
                                      glm::ivec3 block_pos, int spread_period);

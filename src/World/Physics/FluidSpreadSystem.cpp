@@ -35,6 +35,8 @@ bool IsLiquidId(const UBlockDefinitionStorage &definitions, BlockId id)
   return false;
 }
 
+bool IsWaterKind(const UBlockDefinitionStorage &definitions, BlockId id);
+
 bool IsFluidPermeableId(const UBlockDefinitionStorage &definitions, BlockId id)
 {
   if (id == BLOCK_AIR || IsLiquidId(definitions, id))
@@ -254,9 +256,40 @@ bool HorizontalSpreadAllowed(const UBlockWorld &blockWorld,
   return below.y < 0 || !CanReceiveFluidImpl(blockWorld, definitions, below);
 }
 
-BlockId ResolveFluidKind(const UBlockWorld &blockWorld,
-                         const UBlockDefinitionStorage &definitions,
-                         glm::ivec3 block_pos, BlockId block_id)
+BlockId ResolveWaterBlockIdImpl(const UBlockDefinitionStorage &definitions)
+{
+  for (const auto &entry : definitions.GetAll())
+  {
+    if (IsWaterKind(definitions, entry.first))
+    {
+      return entry.first;
+    }
+  }
+  return BLOCK_AIR;
+}
+
+void ConsiderLiquidNeighbor(const UBlockDefinitionStorage &definitions,
+                            BlockId id, BlockId &water_liquid,
+                            BlockId &other_liquid)
+{
+  if (!IsLiquidId(definitions, id))
+  {
+    return;
+  }
+  if (IsWaterKind(definitions, id))
+  {
+    water_liquid = id;
+    return;
+  }
+  if (other_liquid == BLOCK_AIR)
+  {
+    other_liquid = id;
+  }
+}
+
+BlockId ResolveFluidKindImpl(const UBlockWorld &blockWorld,
+                             const UBlockDefinitionStorage &definitions,
+                             glm::ivec3 block_pos, BlockId block_id)
 {
   if (IsLiquidId(definitions, block_id))
   {
@@ -265,37 +298,46 @@ BlockId ResolveFluidKind(const UBlockWorld &blockWorld,
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
       glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+  BlockId water_liquid = BLOCK_AIR;
+  BlockId other_liquid = BLOCK_AIR;
   if (CellHasActiveFluid(blockWorld, definitions, block_pos))
   {
     for (const glm::ivec3 &offset : kDirs)
     {
-      const BlockId neighbor_id = blockWorld.GetBlock(block_pos + offset);
-      if (IsLiquidId(definitions, neighbor_id))
-      {
-        return neighbor_id;
-      }
+      ConsiderLiquidNeighbor(definitions,
+                             blockWorld.GetBlock(block_pos + offset),
+                             water_liquid, other_liquid);
     }
   }
   for (const glm::ivec3 &offset : kDirs)
   {
     const glm::ivec3 neighbor_pos = block_pos + offset;
+    ConsiderLiquidNeighbor(definitions, blockWorld.GetBlock(neighbor_pos),
+                           water_liquid, other_liquid);
     const BlockId neighbor_id = blockWorld.GetBlock(neighbor_pos);
-    if (IsLiquidId(definitions, neighbor_id))
-    {
-      return neighbor_id;
-    }
     if (IsFluidPermeableId(definitions, neighbor_id) &&
         CellHasActiveFluid(blockWorld, definitions, neighbor_pos))
     {
-      const BlockId kind =
-          ResolveFluidKind(blockWorld, definitions, neighbor_pos, neighbor_id);
-      if (kind != BLOCK_AIR)
+      for (const glm::ivec3 &inner_offset : kDirs)
       {
-        return kind;
+        ConsiderLiquidNeighbor(
+            definitions, blockWorld.GetBlock(neighbor_pos + inner_offset),
+            water_liquid, other_liquid);
       }
     }
   }
-  return BLOCK_AIR;
+  if (water_liquid != BLOCK_AIR)
+  {
+    return water_liquid;
+  }
+  return other_liquid;
+}
+
+BlockId ResolveFluidKind(const UBlockWorld &blockWorld,
+                         const UBlockDefinitionStorage &definitions,
+                         glm::ivec3 block_pos, BlockId block_id)
+{
+  return ResolveFluidKindImpl(blockWorld, definitions, block_pos, block_id);
 }
 
 bool NeighborProvidesFluid(const UBlockWorld &blockWorld,
@@ -310,8 +352,17 @@ bool NeighborProvidesFluid(const UBlockWorld &blockWorld,
   if (IsFluidPermeableId(definitions, neighbor_id) &&
       CellHasActiveFluid(blockWorld, definitions, neighbor_pos))
   {
-    return ResolveFluidKind(blockWorld, definitions, neighbor_pos,
-                            neighbor_id) == fluid_id;
+    static constexpr std::array<glm::ivec3, 6> kDirs = {
+        glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+        glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+    for (const glm::ivec3 &offset : kDirs)
+    {
+      if (blockWorld.GetBlock(neighbor_pos + offset) == fluid_id)
+      {
+        return true;
+      }
+    }
+    return false;
   }
   return false;
 }
@@ -370,6 +421,20 @@ BlockId ResolveFloodFluidIdImpl(const UBlockWorld &blockWorld,
   if (options.fluid_id != BLOCK_AIR)
   {
     return options.fluid_id;
+  }
+  if (options.water_id != BLOCK_AIR && options.sea_level >= 0 &&
+      pos.y <= options.sea_level)
+  {
+    return options.water_id;
+  }
+  if (options.water_id != BLOCK_AIR && options.sea_level >= 0 &&
+      pos.y <= options.sea_level + 8)
+  {
+    const BlockId block_id = blockWorld.GetBlock(pos);
+    if (IsFluidPermeableId(definitions, block_id))
+    {
+      return options.water_id;
+    }
   }
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
@@ -482,6 +547,45 @@ int FloodBreakSiteFromWetNeighborsImpl(
     for (const glm::ivec3 &spill_offset : kSpillDirs)
     {
       try_fill(wet_pos + spill_offset);
+    }
+  }
+
+  if (options.water_id != BLOCK_AIR && options.sea_level >= 0 &&
+      break_pos.y <= options.sea_level + 1)
+  {
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+      for (int dy = 0; dy <= 6; ++dy)
+      {
+        for (int dz = -1; dz <= 1; ++dz)
+        {
+          const glm::ivec3 pos = break_pos + glm::ivec3(dx, dy, dz);
+          if (pos.y <= options.sea_level || pos.y > options.sea_level + 8)
+          {
+            continue;
+          }
+          if (!CellTouchesWetImpl(blockWorld, definitions, pos))
+          {
+            continue;
+          }
+          const BlockId block_id = blockWorld.GetBlock(pos);
+          if (!IsFluidPermeableId(definitions, block_id))
+          {
+            continue;
+          }
+          if (PackFluidCellState(blockWorld.GetFluidState(pos)) != 0)
+          {
+            continue;
+          }
+          ApplyFluidFill(blockWorld, definitions, pos, options.water_id,
+                         FluidCellState::Flowing(1));
+          ++filled;
+          if (out_changed != nullptr)
+          {
+            out_changed->push_back(pos);
+          }
+        }
+      }
     }
   }
   return filled;
@@ -768,7 +872,10 @@ FluidSpreadStats UFluidSpreadSystem::Tick(UWorld &world, glm::ivec3 block_pos)
     return {};
   }
   return TickBlock(world.GetBlockWorld(), *definitions,
-                   world.GetPhysicsTickCounter(), block_pos);
+                   world.GetPhysicsTickCounter(), block_pos,
+                   world.GetProceduralSettings().FillWater
+                       ? world.GetProceduralSettings().SeaLevel
+                       : -1);
 }
 
 FluidSpreadStats UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
@@ -781,13 +888,14 @@ FluidSpreadStats UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
   {
     return {};
   }
-  return TickBlock(blockWorld, *definitions, physics_tick, block_pos);
+  return TickBlock(blockWorld, *definitions, physics_tick, block_pos, -1);
 }
 
 FluidSpreadStats
 UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
                               const UBlockDefinitionStorage &definitions,
-                              uint64_t physics_tick, glm::ivec3 block_pos)
+                              uint64_t physics_tick, glm::ivec3 block_pos,
+                              int sea_level)
 {
   FluidSpreadStats stats;
   ++stats.Candidates;
@@ -808,8 +916,28 @@ UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
     return stats;
   }
 
-  const BlockId fluid_id =
-      ResolveFluidKind(blockWorld, definitions, block_pos, block_id);
+  BlockId fluid_id =
+      ResolveFluidKindImpl(blockWorld, definitions, block_pos, block_id);
+  if (fluid_id == BLOCK_AIR &&
+      is_waterlogged_permeable &&
+      sea_level >= 0 && block_pos.y <= sea_level + 8)
+  {
+    fluid_id = ResolveWaterBlockIdImpl(definitions);
+  }
+  if (sea_level >= 0 && block_pos.y <= sea_level && is_liquid &&
+      !IsWaterKind(definitions, fluid_id))
+  {
+    return stats;
+  }
+  if (sea_level >= 0 && is_waterlogged_permeable &&
+      block_pos.y <= sea_level + 8)
+  {
+    const BlockId water_id = ResolveWaterBlockIdImpl(definitions);
+    if (water_id != BLOCK_AIR)
+    {
+      fluid_id = water_id;
+    }
+  }
   if (fluid_id == BLOCK_AIR)
   {
     return stats;
@@ -977,6 +1105,19 @@ UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
   RecordChange(stats, block_pos, block_pos, fluid_id, new_state, false,
                is_liquid ? "transform_flow" : "transform_flood");
   return stats;
+}
+
+BlockId UFluidSpreadSystem::ResolveWaterBlockId(
+    const UBlockDefinitionStorage &definitions)
+{
+  return ResolveWaterBlockIdImpl(definitions);
+}
+
+BlockId UFluidSpreadSystem::ResolveFluidKind(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos, BlockId block_id)
+{
+  return ResolveFluidKindImpl(blockWorld, definitions, block_pos, block_id);
 }
 
 } // namespace cutum

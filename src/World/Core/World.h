@@ -574,6 +574,7 @@ private:
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
