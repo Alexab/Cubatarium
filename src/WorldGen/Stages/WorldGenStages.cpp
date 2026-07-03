@@ -3,6 +3,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidSpreadSystem.h"
 #include "WorldGen/Core/Noise.h"
 #include <algorithm>
 #include <array>
@@ -119,31 +120,6 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
   ctx.AccumulateDirtyColumn(surfaceY, sea);
 }
 
-namespace
-{
-
-bool CellTouchesWet(const WorldGenContext &ctx, glm::ivec3 pos)
-{
-  static constexpr std::array<glm::ivec3, 6> kNeighborOffsets = {
-      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
-      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
-  for (const glm::ivec3 &offset : kNeighborOffsets)
-  {
-    const glm::ivec3 neighbor = pos + offset;
-    if (ctx.World.GetBlock(neighbor) == ctx.Blocks.Water)
-    {
-      return true;
-    }
-    if (PackFluidCellState(ctx.World.GetFluidState(neighbor)) != 0)
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
-} // namespace
-
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
@@ -151,60 +127,26 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
     return false;
   }
   const int sea = ctx.Settings.SeaLevel;
-
-  bool any_filled = false;
-  bool changed = true;
-  for (int pass = 0; changed && pass < 8; ++pass)
+  const UBlockDefinitionStorage *definitions = ctx.Registry.GetDefinitions();
+  if (definitions == nullptr)
   {
-    changed = false;
-    std::vector<glm::ivec3> to_fill_air;
-    std::vector<glm::ivec3> to_fill_permeable;
-    to_fill_air.reserve(64);
-    to_fill_permeable.reserve(64);
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-    {
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-      {
-        for (int y = 1; y <= sea; ++y)
-        {
-          const glm::ivec3 pos(base_x + lx, y, base_z + lz);
-          const BlockId block_id = ctx.World.GetBlock(pos);
-          if (!CellTouchesWet(ctx, pos))
-          {
-            continue;
-          }
-          if (block_id == BLOCK_AIR)
-          {
-            to_fill_air.push_back(pos);
-            continue;
-          }
-          if (ctx.Registry.IsFluidPermeable(block_id) &&
-              PackFluidCellState(ctx.World.GetFluidState(pos)) == 0)
-          {
-            to_fill_permeable.push_back(pos);
-          }
-        }
-      }
-    }
-    for (const glm::ivec3 &pos : to_fill_air)
-    {
-      ctx.World.SetBlock(pos, ctx.Blocks.Water);
-      ctx.World.SetFluidState(pos, FluidCellState::Source());
-      changed = true;
-      any_filled = true;
-    }
-    for (const glm::ivec3 &pos : to_fill_permeable)
-    {
-      ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
-      changed = true;
-      any_filled = true;
-    }
+    return false;
   }
-  if (any_filled)
+
+  FluidFloodOptions options;
+  options.fluid_id = ctx.Blocks.Water;
+  options.source_for_air = true;
+  options.max_passes = 8;
+  const int filled = UFluidSpreadSystem::FloodWetPocketsInBox(
+      ctx.World, *definitions,
+      glm::ivec3(base_x, 1, base_z),
+      glm::ivec3(base_x + CHUNK_SIZE - 1, sea, base_z + CHUNK_SIZE - 1),
+      options);
+  if (filled > 0)
   {
     ctx.AccumulateDirtyColumn(0, sea);
   }
-  return any_filled;
+  return filled > 0;
 }
 
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z)
@@ -214,6 +156,11 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
     return false;
   }
   const int sea = ctx.Settings.SeaLevel;
+  const UBlockDefinitionStorage *definitions = ctx.Registry.GetDefinitions();
+  if (definitions == nullptr)
+  {
+    return false;
+  }
   bool any_filled = false;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
@@ -231,7 +178,7 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
         {
           continue;
         }
-        if (!CellTouchesWet(ctx, pos))
+        if (!UFluidSpreadSystem::CellTouchesWet(ctx.World, *definitions, pos))
         {
           continue;
         }

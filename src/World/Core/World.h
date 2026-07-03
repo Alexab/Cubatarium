@@ -576,6 +576,8 @@ private:
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
+  void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
+                               const std::vector<glm::ivec3> &filled_blocks);
   void UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
                                const FluidUpdateSetStats &fluidStats);
   void AccumulateFallingStats(const FallingBlocksStats &stats);

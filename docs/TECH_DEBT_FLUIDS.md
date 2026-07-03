@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 22 | Open: 6
+> Total closed: 23 | Open: 5
 
 ## Open
 
@@ -11,7 +11,6 @@
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
 | TD-FL-021 | R3 | Manual QA checklist in `PHYSICS_ROLLOUT.md` (liquids) | Requires in-game verification | R3 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
-| TD-FL-025 | shore-tests | `SealFluidPocketsInChunk` depth capped at 8 BFS passes per chunk | Long air pockets >8 from shore stay dry until gameplay fill | backlog |
 | TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Solid replace implemented; liquid needs separate policy | backlog |
 
 ## Closed
@@ -42,6 +41,7 @@
 | TD-FL-024 | R3 | `fluid_queue_integration_test` via `UFluidUpdateSet` + budget 128 |
 | TD-FL-026 | worldgen-pit-placement | Solid hotbar blocks replace liquid cells (`IsPlaceableForSolidBlock` in `CanPlaceClassic` + `AddObject`) |
 | TD-FL-028 | waterlogging | Permeable decor waterlogging (`IsFluidPermeable`, `fluid_data` without block replace; seal/spread/mesh) | `IsFluidPermeable`, `CanReceiveFluid` / `ShouldReplaceBlockWithFluid`, `SealFluidPermeableDecorInChunk`, GreedyMesher waterlogged pass, `fluid_permeable_decor_test` |
+| TD-FL-025 | gameplay-flood | `FloodWetPockets` on `DelBlockAt` + shared seal; submerged-air physics; mesh fluid↔fluid culling | `UFluidSpreadSystem::FloodWetPockets*`, `fluid_gameplay_fixes_test` |
 
 ## Phase tracker
 

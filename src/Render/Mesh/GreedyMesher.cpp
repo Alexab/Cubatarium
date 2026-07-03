@@ -123,6 +123,22 @@ private:
   const ChunkMeshSnapshot &Snapshot;
 };
 
+bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
+                            glm::ivec3 world_pos)
+{
+  const BlockId id = reader.GetBlock(world_pos);
+  if (registry.IsLiquid(id))
+  {
+    return true;
+  }
+  if (registry.IsFluidPermeable(id) &&
+      PackFluidCellState(reader.GetFluid(world_pos)) != 0)
+  {
+    return true;
+  }
+  return false;
+}
+
 bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
                        BlockId face_id, glm::ivec3 block_pos,
@@ -157,6 +173,14 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   }
 
   if (neighbor == face_id && !registry.BlocksMovement(face_id))
+
+  {
+
+    return true;
+  }
+
+  if (face_style == BlockRenderStyle::Fluid &&
+      CellHasRenderableFluid(reader, registry, neighbor_pos))
 
   {
 
@@ -263,22 +287,6 @@ BlockId PrimaryLiquidBlockId(UBlockRegistry &registry)
     }
   }
   return registry.GetIdByTypeName("water");
-}
-
-bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
-                            glm::ivec3 world_pos)
-{
-  const BlockId id = reader.GetBlock(world_pos);
-  if (registry.IsLiquid(id))
-  {
-    return true;
-  }
-  if (registry.IsFluidPermeable(id) &&
-      PackFluidCellState(reader.GetFluid(world_pos)) != 0)
-  {
-    return true;
-  }
-  return false;
 }
 
 bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
@@ -566,7 +574,10 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
             mask[v][u] = id;
 
-            fluid_mask[v][u] = PackFluidCellState(reader.GetFluid(world_pos));
+            fluid_mask[v][u] =
+                registry.IsLiquid(id)
+                    ? static_cast<uint8_t>(1)
+                    : PackFluidCellState(reader.GetFluid(world_pos));
           }
         }
 

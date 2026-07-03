@@ -588,6 +588,24 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return false;
   }
+  if (surfaceY <= ctx.Settings.SeaLevel + 2)
+  {
+    return false;
+  }
+  for (int dx = -2; dx <= 2; ++dx)
+  {
+    for (int dz = -2; dz <= 2; ++dz)
+    {
+      for (int y = ctx.Settings.SeaLevel; y <= surfaceY + 2; ++y)
+      {
+        if (ctx.World.GetBlock(glm::ivec3(x + dx, y, z + dz)) ==
+            ctx.Blocks.Water)
+        {
+          return false;
+        }
+      }
+    }
+  }
   const uint32_t Seed = ctx.Settings.Seed;
   if (FeatureHash(x, z, Seed + 9001) % 400 != 0)
   {

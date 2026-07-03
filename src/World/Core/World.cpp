@@ -39,7 +39,6 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidReflowScan.h"
-#include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/PhysicsProfileFactory.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Physics/WorldChunkDirtyService.h"
@@ -1242,6 +1241,22 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   }
   if (BlockRegistry && PhysicsFlags.EnableFluids)
   {
+    const UBlockDefinitionStorage *definitions =
+        BlockRegistry->GetDefinitions();
+    if (definitions != nullptr &&
+        UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions, blockPos))
+    {
+      FluidFloodOptions flood_options;
+      flood_options.water_id = BlockRegistry->GetIdByTypeName("water");
+      flood_options.source_for_air = false;
+      flood_options.max_passes = 8;
+      constexpr int kFloodRadius = 8;
+      std::vector<glm::ivec3> flood_changed;
+      UFluidSpreadSystem::FloodWetPocketsLocal(
+          BlockWorld, *definitions, blockPos, kFloodRadius, flood_options,
+          &flood_changed);
+      MarkFluidFloodMeshDirty(blockPos, flood_changed);
+    }
     EnqueueFluidFrontierAt(*this, blockPos);
     MarkBlockChunkDirty(blockPos);
     if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
@@ -1331,7 +1346,29 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   const bool waterlogged =
       BlockRegistry->IsFluidPermeable(Id) &&
       PackFluidCellState(BlockWorld.GetFluidState(cell)) != 0;
-  if (Id == BLOCK_AIR || (BlockRegistry->BlocksMovement(Id) && !waterlogged))
+  if (Id == BLOCK_AIR)
+  {
+    const UBlockDefinitionStorage *definitions =
+        BlockRegistry->GetDefinitions();
+    if (definitions == nullptr ||
+        !UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions, cell))
+    {
+      return false;
+    }
+    const glm::vec3 center = BlockCenter(cell);
+    const glm::vec3 rel = eye - center;
+    if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f ||
+        std::abs(rel.z) > 0.5f)
+    {
+      return false;
+    }
+    if (outFluid)
+    {
+      *outFluid = BlockRegistry->GetIdByTypeName("water");
+    }
+    return true;
+  }
+  if (BlockRegistry->BlocksMovement(Id) && !waterlogged)
   {
     return false;
   }
@@ -1386,7 +1423,14 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
         const bool waterlogged =
             BlockRegistry->IsFluidPermeable(Id) &&
             PackFluidCellState(BlockWorld.GetFluidState(blockPos)) != 0;
-        if (Id == BLOCK_AIR || (BlockRegistry->BlocksMovement(Id) && !waterlogged))
+        const UBlockDefinitionStorage *definitions =
+            BlockRegistry->GetDefinitions();
+        const bool submerged_air =
+            Id == BLOCK_AIR && definitions != nullptr &&
+            UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions,
+                                               blockPos);
+        if ((Id == BLOCK_AIR && !submerged_air) ||
+            (BlockRegistry->BlocksMovement(Id) && !waterlogged))
         {
           continue;
         }
@@ -1398,8 +1442,9 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
         const BlockId physicsId =
             BlockRegistry->IsLiquid(Id)
                 ? Id
-                : (waterlogged ? BlockRegistry->GetIdByTypeName("water")
-                               : Id);
+                : (waterlogged || submerged_air
+                       ? BlockRegistry->GetIdByTypeName("water")
+                       : Id);
         if (physicsId == BLOCK_AIR)
         {
           continue;
@@ -1705,6 +1750,49 @@ void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
   else
   {
     MarkBlockChunkDirtyFromPhysics(blockPos);
+  }
+}
+
+void UWorld::MarkFluidFloodMeshDirty(
+    glm::ivec3 blockPos, const std::vector<glm::ivec3> &filled_blocks)
+{
+  if (filled_blocks.empty() || !BlockRegistry)
+  {
+    return;
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
+  const auto add_block = [&](glm::ivec3 pos)
+  {
+    chunk_coords.insert(UChunkManager::WorldToChunk(pos));
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      chunk_coords.insert(UChunkManager::WorldToChunk(pos + offset));
+    }
+  };
+  add_block(blockPos);
+  for (const glm::ivec3 &pos : filled_blocks)
+  {
+    add_block(pos);
+  }
+  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
+  const glm::ivec3 center_chunk = UChunkManager::WorldToChunk(blockPos);
+  const bool immediate = IsWithinLiquidUpdateRadius(blockPos);
+  for (const glm::ivec3 &chunk_coord : chunk_coords)
+  {
+    if (immediate)
+    {
+      const int dist =
+          std::max({std::abs(chunk_coord.x - center_chunk.x),
+                    std::abs(chunk_coord.y - center_chunk.y),
+                    std::abs(chunk_coord.z - center_chunk.z)});
+      if (dist <= 1)
+      {
+        MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
+                                           chunk_coord);
+        continue;
+      }
+    }
+    MeshService->MarkDirty(chunk_coord);
   }
 }
 

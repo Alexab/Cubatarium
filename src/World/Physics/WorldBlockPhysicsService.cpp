@@ -19,7 +19,7 @@ void EnqueueFluidNeighbors(UWorld &world, glm::ivec3 block_pos)
 {
   for (const glm::ivec3 &offset : kNeighborOffsets)
   {
-    world.TryEnqueueFluidAt(block_pos + offset);
+    world.ForceEnqueueFluidAt(block_pos + offset);
   }
 }
 

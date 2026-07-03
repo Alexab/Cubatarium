@@ -48,10 +48,25 @@ Placement: `SetBlock(liquid)` → `Source()`; player `AddObject` uses `CanReceiv
 
 `IsFluidPermeable` is derived from render style + occupancy (no JSON flag yet). Mesh: GreedyMesher emits fluid quads from `fluid_data` on permeable cells; cross pass unchanged (both visible). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` after decoration stage.
 
+## Gameplay flood (`FloodWetPockets`)
+
+Shared BFS (up to 8 passes) used by worldgen seal and `DelBlockAt`:
+
+| Context | AIR fill | Permeable decor | Fluid id |
+|---------|----------|-----------------|----------|
+| Worldgen `SealFluidPocketsInChunk` | `SetBlock(water)` + `Source()` | `SetFluidState` only | fixed water |
+| Gameplay `DelBlockAt` | `SetBlock(water)` + `Flowing(1)` | `SetFluidState` only | water if any water neighbor, else other liquid |
+
+A cell is filled when `CellTouchesWet` (6-neighbor liquid block or permeable with `fluid_data≠0`). Gameplay flood runs in radius 8 around the broken block, then `EnqueueFluidFrontierAt` wakes the tick queue.
+
+## Material reactions (water + lava)
+
+`UMaterialReactionRules::TryWaterMeetsLava`: AIR cell with water and lava neighbors → **stone** (not lava). Shore “lava” sightings are usually worldgen `TryPlaceLavaPool` (Hills, above sea) or `ResolveFluidKind` filling air next to exposed lava; gameplay flood prefers water when both touch.
+
 ## Render (phase R1 — current)
 
 - **Full-block cubes** for all fluid cells (`FluidCellHeight` returns 1.0).
-- **Culling:** fluid→opaque hidden; opaque→fluid shown; fluid→air shown; fluid↔fluid hidden.
+- **Culling:** fluid→opaque hidden; opaque→fluid shown; fluid→air shown; fluid↔fluid hidden (any renderable fluid neighbor, level-independent).
 - **Shell transparency:** four-pass `GreedyTransparentPipeline` on full faces.
 - Level-based mesh deferred to phase R4 (see [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md)).
 
