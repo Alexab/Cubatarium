@@ -189,4 +189,30 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
   return stats;
 }
 
+std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
+                                                      UBlockRegistry &registry,
+                                                      glm::ivec3 groundPos,
+                                                      int maxY)
+{
+  std::vector<glm::ivec3> broken;
+  glm::ivec3 pos(groundPos.x, groundPos.y + 1, groundPos.z);
+  while (pos.y <= maxY)
+  {
+    const BlockId id = world.GetBlock(pos);
+    if (id == BLOCK_AIR)
+    {
+      break;
+    }
+    if (registry.IsLiquid(id) || registry.BlocksMovement(id))
+    {
+      break;
+    }
+    world.SetBlock(pos, BLOCK_AIR);
+    world.ClearFluidState(pos);
+    broken.push_back(pos);
+    ++pos.y;
+  }
+  return broken;
+}
+
 } // namespace cutum

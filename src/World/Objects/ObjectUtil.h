@@ -40,4 +40,9 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    glm::ivec3 anchorWorldPos,
                                    bool skipOccupied);
 
+std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
+                                                      UBlockRegistry &registry,
+                                                      glm::ivec3 groundPos,
+                                                      int maxY = 320);
+
 } // namespace cutum

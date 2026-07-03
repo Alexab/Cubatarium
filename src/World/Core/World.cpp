@@ -1225,9 +1225,21 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   {
     --CachedBlockCount;
   }
+  const std::vector<glm::ivec3> broken_above =
+      BreakUnsupportedBlocksAbove(BlockWorld, *BlockRegistry, blockPos);
   MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
+  for (const glm::ivec3 &above_pos : broken_above)
+  {
+    if (CachedBlockCount > 0)
+    {
+      --CachedBlockCount;
+    }
+    MarkBlockChunkDirty(above_pos);
+    PublishBlockPhysicsEvent(above_pos);
+    PublishNeighborPhysicsEvents(above_pos);
+  }
   if (BlockRegistry && PhysicsFlags.EnableFluids)
   {
     EnqueueFluidFrontierAt(*this, blockPos);
