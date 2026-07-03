@@ -57,7 +57,7 @@ Shared BFS (up to 8 passes) used by worldgen seal and `DelBlockAt`:
 | Worldgen `SealFluidPocketsInChunk` | `SetBlock(water)` + `Source()` | `SetFluidState` only | fixed water |
 | Gameplay `DelBlockAt` | `SetBlock(water)` + `Flowing(1)` | `SetFluidState` only | water if any water neighbor, else other liquid |
 
-A cell is filled when `CellTouchesWet` (6-neighbor liquid block or permeable with `fluid_data≠0`). Gameplay flood runs in radius 8 around the broken block, then `EnqueueFluidFrontierAt` wakes the tick queue.
+Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the broken cell (if wet-adjacent) plus each wet neighbor’s four horizontal and downward spill targets (max ~30 cells). No BFS/radius scan. Worldgen still uses `FloodWetPocketsInBox` (8 passes). Simulation uses Luanti transform only (no active horizontal push).
 
 ## Material reactions (water + lava)
 

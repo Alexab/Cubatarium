@@ -19,7 +19,7 @@ void EnqueueFluidNeighbors(UWorld &world, glm::ivec3 block_pos)
 {
   for (const glm::ivec3 &offset : kNeighborOffsets)
   {
-    world.ForceEnqueueFluidAt(block_pos + offset);
+    world.TryEnqueueFluidAt(block_pos + offset);
   }
 }
 
@@ -233,7 +233,6 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
     {
       PublishFluid(pos);
     }
-    EnqueueFluidNeighbors(world, pos);
   }
 
   world.UpdatePhysicsQueueStats(BlockQueue.GetStats(), FluidQueue.GetStats());

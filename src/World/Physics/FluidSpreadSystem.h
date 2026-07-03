@@ -43,6 +43,10 @@ public:
                                   glm::ivec3 center, int radius,
                                   const FluidFloodOptions &options,
                                   std::vector<glm::ivec3> *out_changed = nullptr);
+  static int FloodBreakSiteFromWetNeighbors(
+      UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+      glm::ivec3 break_pos, const FluidFloodOptions &options,
+      std::vector<glm::ivec3> *out_changed = nullptr);
 
   static bool HasSpreadTarget(const UBlockWorld &world,
                               const UBlockDefinitionStorage &definitions,

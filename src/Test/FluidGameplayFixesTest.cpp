@@ -92,9 +92,8 @@ static void TestGameplayFloodFillsBrokenCell(
   world.SetFluidState(glm::ivec3(1, 10, 0), cutum::FluidCellState::Source());
   world.SetBlock(glm::ivec3(0, 10, 0), cutum::BLOCK_AIR);
 
-  const int filled = cutum::UFluidSpreadSystem::FloodWetPocketsLocal(
-      world, *definitions, glm::ivec3(0, 10, 0), 4,
-      GameplayFloodOptions(kWater));
+  const int filled = cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(0, 10, 0), GameplayFloodOptions(kWater));
   FluidTest::Expect(filled > 0, kTestName, "gameplay flood fills broken cell");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 10, 0)) == kWater, kTestName,
                     "broken cell becomes water");
@@ -115,9 +114,8 @@ static void TestGameplayFloodVerticalPit(
     world.SetFluidState(glm::ivec3(1, y, 0), cutum::FluidCellState::Source());
   }
   world.SetBlock(glm::ivec3(1, 7, 0), cutum::BLOCK_AIR);
-  const int filled = cutum::UFluidSpreadSystem::FloodWetPocketsLocal(
-      world, *definitions, glm::ivec3(1, 7, 0), 4,
-      GameplayFloodOptions(kWater));
+  const int filled = cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(1, 7, 0), GameplayFloodOptions(kWater));
   FluidTest::Expect(filled > 0, kTestName, "vertical pit flood applies");
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 7, 0)) == kWater, kTestName,
                     "dug floor under water column fills");
@@ -133,9 +131,8 @@ static void TestGameplayFloodShoreGrass(
   world.SetBlock(glm::ivec3(1, 10, 0), cutum::BLOCK_AIR);
   world.SetBlock(glm::ivec3(1, 11, 0), kTallGrass);
 
-  cutum::UFluidSpreadSystem::FloodWetPocketsLocal(
-      world, *definitions, glm::ivec3(1, 10, 0), 4,
-      GameplayFloodOptions(kWater));
+  cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(1, 10, 0), GameplayFloodOptions(kWater));
 
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 10, 0)) == kWater, kTestName,
                     "shore pocket air becomes water");
@@ -157,9 +154,8 @@ static void TestWaterPriorityOverLava(
   world.SetFluidState(glm::ivec3(0, 9, 0), cutum::FluidCellState::Source());
   world.SetBlock(glm::ivec3(1, 10, 0), cutum::BLOCK_AIR);
 
-  cutum::UFluidSpreadSystem::FloodWetPocketsLocal(
-      world, *definitions, glm::ivec3(1, 10, 0), 2,
-      GameplayFloodOptions(kWater));
+  cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(1, 10, 0), GameplayFloodOptions(kWater));
 
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 10, 0)) == kWater, kTestName,
                     "water neighbor wins over lava in gameplay flood");
@@ -178,6 +174,34 @@ static void TestCellTouchesWetAir(
       cutum::UFluidSpreadSystem::CellTouchesWet(world, *definitions,
                                                 glm::ivec3(1, 10, 0)),
       kTestName, "air between water blocks touches wet");
+}
+
+static void TestBreakSiteDoesNotFillLargeAirPocket(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
+{
+  cutum::UBlockWorld world;
+  world.SetBlock(glm::ivec3(0, 10, 0), kWater);
+  world.SetFluidState(glm::ivec3(0, 10, 0), cutum::FluidCellState::Source());
+  for (int dx = 1; dx <= 6; ++dx)
+  {
+    for (int dy = 0; dy <= 4; ++dy)
+    {
+      for (int dz = -2; dz <= 2; ++dz)
+      {
+        world.SetBlock(glm::ivec3(dx, 10 + dy, dz), cutum::BLOCK_AIR);
+      }
+    }
+  }
+  world.SetBlock(glm::ivec3(3, 10, 0), kStone);
+  world.SetBlock(glm::ivec3(3, 10, 0), cutum::BLOCK_AIR);
+
+  const int filled = cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(3, 10, 0), GameplayFloodOptions(kWater));
+  FluidTest::Expect(filled <= 8, kTestName, "break-site flood stays local");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(3, 10, 0)) == kWater, kTestName,
+                    "broken cell fills");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(6, 12, 0)) == cutum::BLOCK_AIR,
+                    kTestName, "distant air in pocket stays dry");
 }
 
 static void TestTrenchSpread(
@@ -256,6 +280,7 @@ int main()
   TestGameplayFloodShoreGrass(definitions);
   TestWaterPriorityOverLava(definitions);
   TestCellTouchesWetAir(definitions);
+  TestBreakSiteDoesNotFillLargeAirPocket(definitions);
   TestSourceFlowingMeshNoInternalFace(definitions);
   TestTrenchSpread(definitions, registry, fluid);
 

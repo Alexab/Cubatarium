@@ -1243,18 +1243,14 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   {
     const UBlockDefinitionStorage *definitions =
         BlockRegistry->GetDefinitions();
-    if (definitions != nullptr &&
-        UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions, blockPos))
+    if (definitions != nullptr)
     {
       FluidFloodOptions flood_options;
       flood_options.water_id = BlockRegistry->GetIdByTypeName("water");
       flood_options.source_for_air = false;
-      flood_options.max_passes = 8;
-      constexpr int kFloodRadius = 8;
       std::vector<glm::ivec3> flood_changed;
-      UFluidSpreadSystem::FloodWetPocketsLocal(
-          BlockWorld, *definitions, blockPos, kFloodRadius, flood_options,
-          &flood_changed);
+      UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+          BlockWorld, *definitions, blockPos, flood_options, &flood_changed);
       MarkFluidFloodMeshDirty(blockPos, flood_changed);
     }
     EnqueueFluidFrontierAt(*this, blockPos);
