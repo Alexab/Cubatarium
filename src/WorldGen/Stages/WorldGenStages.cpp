@@ -118,17 +118,18 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
   ctx.AccumulateDirtyColumn(surfaceY, sea);
 }
 
-void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
+bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
-    return;
+    return false;
   }
   const int sea = ctx.Settings.SeaLevel;
   static constexpr std::array<glm::ivec3, 6> kNeighborOffsets = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
       glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
 
+  bool any_filled = false;
   bool changed = true;
   for (int pass = 0; changed && pass < 8; ++pass)
   {
@@ -167,30 +168,35 @@ void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
       ctx.World.SetBlock(pos, ctx.Blocks.Water);
       ctx.World.SetFluidState(pos, FluidCellState::Source());
       changed = true;
+      any_filled = true;
     }
   }
-  ctx.AccumulateDirtyColumn(0, sea);
+  if (any_filled)
+  {
+    ctx.AccumulateDirtyColumn(0, sea);
+  }
+  return any_filled;
 }
 
-void SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
+bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
                                     glm::ivec3 chunk_coord)
 {
   if (!settings.FillWater)
   {
-    return;
+    return false;
   }
   WorldGenContext ctx(world, registry, settings);
   ctx.WorldgenOwnerPackId = worldgen_owner_pack_id;
   ctx.ResolveBlockIds();
   if (ctx.Blocks.Water == BLOCK_AIR)
   {
-    return;
+    return false;
   }
   const int base_x = chunk_coord.x * CHUNK_SIZE;
   const int base_z = chunk_coord.z * CHUNK_SIZE;
-  SealFluidPocketsInChunk(ctx, base_x, base_z);
+  return SealFluidPocketsInChunk(ctx, base_x, base_z);
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)

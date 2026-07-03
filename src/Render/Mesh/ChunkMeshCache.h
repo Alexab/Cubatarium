@@ -120,6 +120,7 @@ private:
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
   void BumpMeshRevisionIfNeeded();
+  size_t TotalCrossCenterCount() const;
   bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,
                                           const glm::vec3 *cameraPos,
                                           float maxCullDistance);

@@ -34,7 +34,7 @@ inline void CollectCrossCentersFromChunk(
         const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + lx,
                                    chunk_coord.y * CHUNK_SIZE + ly,
                                    chunk_coord.z * CHUNK_SIZE + lz);
-        out[id].push_back(BlockVisualCenter(world_pos));
+        out[id].push_back(BlockCenter(world_pos));
       }
     }
   }
@@ -60,7 +60,7 @@ inline void CollectCrossCentersFromSnapshot(
         const glm::ivec3 world_pos(snapshot.coord.x * CHUNK_SIZE + lx,
                                    snapshot.coord.y * CHUNK_SIZE + ly,
                                    snapshot.coord.z * CHUNK_SIZE + lz);
-        out[id].push_back(BlockVisualCenter(world_pos));
+        out[id].push_back(BlockCenter(world_pos));
       }
     }
   }

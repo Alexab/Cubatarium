@@ -139,11 +139,15 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
         ChunkPhysicsSeedBudgets seed_budgets;
         SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
-        SealFluidShoreOnChunkCommitted(
-            world.BlockWorld, *world.BlockRegistry,
-            world.GetProceduralSettings(), world.WorldgenOwnerPackId, coord);
-        world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
-                                        world.GetProceduralSettings().MaxHeight);
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        if (SealFluidShoreOnChunkCommitted(
+                world.BlockWorld, *world.BlockRegistry, settings,
+                world.WorldgenOwnerPackId, coord))
+        {
+          const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE;
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
+                                          remesh_max_y);
+        }
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)

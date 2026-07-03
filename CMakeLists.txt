@@ -863,6 +863,22 @@ target_compile_definitions(fluid_sim_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_sim_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(decor_mesh_integration_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/Render/Engine/DistanceFog.cpp
+    src/Render/Mesh/AsyncMeshBuilder.cpp
+    src/Render/Mesh/ChunkDirtySet.cpp
+    src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/Test/DecorMeshIntegrationTest.cpp)
+target_include_directories(decor_mesh_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(decor_mesh_integration_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp

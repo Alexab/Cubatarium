@@ -81,7 +81,32 @@ void MergeGreedyBatch(GreedyMeshBatch &dst, const GreedyMeshBatch &src)
     dst.indices.push_back(base + index);
   }
 }
+
+bool ChunkPassesFrustum(const Frustum *frustum, const glm::vec3 *cameraPos,
+                        float maxCullDistance, glm::ivec3 chunk_coord)
+{
+  if (!frustum || !cameraPos)
+  {
+    return true;
+  }
+  return frustum->IntersectsChunkAABB(ChunkAABBMin(chunk_coord),
+                                      ChunkAABBMax(chunk_coord), *cameraPos,
+                                      maxCullDistance);
+}
 } // namespace
+
+size_t UChunkMeshCache::TotalCrossCenterCount() const
+{
+  size_t count = 0;
+  for (const auto &entry : GreedyCache)
+  {
+    for (const auto &pair : entry.second.crossCenters)
+    {
+      count += pair.second.size();
+    }
+  }
+  return count;
+}
 float UChunkMeshCache::MaxCullDistance() const
 {
   return RenderHorizonBlocks(RenderDistanceChunks);
@@ -283,49 +308,57 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
     return;
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
-  std::vector<GreedyMeshBatch> merged;
-  merged.reserve(GreedyCache.size() * 4);
-  std::unordered_map<BlockId, GreedyMeshBatch> merged_cutout;
-  for (const auto &entry : GreedyCache)
+  const auto merge_from_cache =
+      [&](const Frustum *cull_frustum, const glm::vec3 *cull_camera,
+          float cull_distance) -> std::vector<GreedyMeshBatch>
   {
-    if (frustum && cameraPos)
+    std::vector<GreedyMeshBatch> merged;
+    merged.reserve(GreedyCache.size() * 4);
+    std::unordered_map<BlockId, GreedyMeshBatch> merged_cutout;
+    for (const auto &entry : GreedyCache)
     {
-      if (!frustum->IntersectsChunkAABB(ChunkAABBMin(entry.first),
-                                        ChunkAABBMax(entry.first), *cameraPos,
-                                        maxCullDistance))
+      if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
+                              entry.first))
       {
         continue;
+      }
+      for (const GreedyMeshBatch &chunk_batch : entry.second.batches)
+      {
+        if (chunk_batch.vertices.empty())
+        {
+          continue;
+        }
+        if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
+        {
+          GreedyMeshBatch &dst = merged_cutout[chunk_batch.blockId];
+          if (dst.vertices.empty())
+          {
+            dst = chunk_batch;
+          }
+          else
+          {
+            MergeGreedyBatch(dst, chunk_batch);
+          }
+          continue;
+        }
+        merged.push_back(chunk_batch);
       }
     }
-    for (const GreedyMeshBatch &chunk_batch : entry.second.batches)
+    for (auto &pair : merged_cutout)
     {
-      if (chunk_batch.vertices.empty())
-      {
-        continue;
-      }
-      if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
-      {
-        GreedyMeshBatch &dst = merged_cutout[chunk_batch.blockId];
-        if (dst.vertices.empty())
-        {
-          dst = chunk_batch;
-        }
-        else
-        {
-          MergeGreedyBatch(dst, chunk_batch);
-        }
-        continue;
-      }
-      merged.push_back(chunk_batch);
+      merged.push_back(std::move(pair.second));
     }
-  }
-  for (auto &pair : merged_cutout)
+    return merged;
+  };
+
+  std::vector<GreedyMeshBatch> merged =
+      merge_from_cache(frustum, cameraPos, maxCullDistance);
+  if (frustum && cameraPos && merged.empty() && !GreedyCache.empty() &&
+      (GreedyBatchesDirty || GreedyBatches.empty()))
   {
-    merged.push_back(std::move(pair.second));
+    merged = merge_from_cache(nullptr, nullptr, 0.0f);
   }
-  // Conservative fallback: keep prior visible batches instead of full unculled
-  // merge when frustum state is transiently empty.
-  if (frustum && cameraPos && merged.empty() && !GreedyCache.empty())
+  else if (frustum && cameraPos && merged.empty() && !GreedyCache.empty())
   {
     return;
   }
@@ -340,31 +373,36 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
                                                 const glm::vec3 *cameraPos,
                                                 float maxCullDistance)
 {
-  if (frustum && cameraPos &&
-      TrySkipFlatRebuildForVisibleChunks(frustum, cameraPos, maxCullDistance))
+  const auto merge_from_cache =
+      [&](const Frustum *cull_frustum, const glm::vec3 *cull_camera,
+          float cull_distance)
+      -> std::unordered_map<BlockId, std::vector<glm::vec3>>
   {
-    CrossBatchesDirty = false;
-    return;
-  }
-  std::unordered_map<BlockId, std::vector<glm::vec3>> merged;
-  for (const auto &entry : GreedyCache)
-  {
-    if (frustum && cameraPos)
+    std::unordered_map<BlockId, std::vector<glm::vec3>> merged;
+    for (const auto &entry : GreedyCache)
     {
-      if (!frustum->IntersectsChunkAABB(ChunkAABBMin(entry.first),
-                                        ChunkAABBMax(entry.first), *cameraPos,
-                                        maxCullDistance))
+      if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
+                              entry.first))
       {
         continue;
       }
+      for (const auto &pair : entry.second.crossCenters)
+      {
+        std::vector<glm::vec3> &dst = merged[pair.first];
+        dst.insert(dst.end(), pair.second.begin(), pair.second.end());
+      }
     }
-    for (const auto &pair : entry.second.crossCenters)
-    {
-      std::vector<glm::vec3> &dst = merged[pair.first];
-      dst.insert(dst.end(), pair.second.begin(), pair.second.end());
-    }
+    return merged;
+  };
+
+  std::unordered_map<BlockId, std::vector<glm::vec3>> merged =
+      merge_from_cache(frustum, cameraPos, maxCullDistance);
+  if (frustum && cameraPos && merged.empty() && !GreedyCache.empty() &&
+      (CrossBatchesDirty || CrossBatches.empty()))
+  {
+    merged = merge_from_cache(nullptr, nullptr, 0.0f);
   }
-  if (frustum && cameraPos && merged.empty() && !GreedyCache.empty())
+  else if (frustum && cameraPos && merged.empty() && !GreedyCache.empty())
   {
     return;
   }
@@ -387,11 +425,16 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const float maxCullDistance = MaxCullDistance();
   const glm::ivec3 camera_chunk =
       UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
+  const bool needs_greedy_rebuild =
+      GreedyBatchesDirty ||
+      (GreedyBatches.empty() && !GreedyCache.empty());
+  const bool needs_cross_rebuild =
+      CrossBatchesDirty ||
+      (CrossBatches.empty() && TotalCrossCenterCount() > 0);
   // Trade-off: camera rotation inside the same chunk does not rebuild flat lists.
-  if (!InstancesDirty && !GreedyBatchesDirty && !CrossBatchesDirty &&
+  if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
       MeshRevision == LastCullMeshRevision &&
-      camera_chunk == LastCullCameraChunk &&
-      !(Render.GreedyMeshing && GreedyBatches.empty() && !GreedyCache.empty()))
+      camera_chunk == LastCullCameraChunk)
   {
     return;
   }
@@ -399,13 +442,25 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   {
     if (Render.FrustumCulling)
     {
-      RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
-      RebuildFlatCrossInstances(&frustum, &cameraPos, maxCullDistance);
+      if (needs_greedy_rebuild)
+      {
+        RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
+      }
+      if (needs_cross_rebuild)
+      {
+        RebuildFlatCrossInstances(&frustum, &cameraPos, maxCullDistance);
+      }
     }
     else
     {
-      RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
-      RebuildFlatCrossInstances(nullptr, nullptr, 0.0f);
+      if (needs_greedy_rebuild)
+      {
+        RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
+      }
+      if (needs_cross_rebuild)
+      {
+        RebuildFlatCrossInstances(nullptr, nullptr, 0.0f);
+      }
     }
   }
   else

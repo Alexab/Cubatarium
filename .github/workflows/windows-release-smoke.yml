@@ -173,6 +173,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_sim_mesh_integration_test.exe
 
+      - name: C++ unit test (decor mesh integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/decor_mesh_integration_test.exe
+
       - name: C++ unit test (fluid worldgen seal)
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_worldgen_seal_test.exe
