@@ -20,6 +20,8 @@ constexpr cutum::BlockId kStone = 8;
 constexpr cutum::BlockId kWater = 9;
 constexpr cutum::BlockId kLava = 11;
 constexpr cutum::BlockId kTallGrass = 10;
+constexpr cutum::BlockId kSand = 12;
+constexpr cutum::BlockId kGrassBlock = 13;
 
 static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeGameplayDefinitions()
 {
@@ -38,6 +40,12 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeGameplayDefinitions()
   grass.Physics.Movement.Occupancy = 0.0f;
   grass.Render.Style = cutum::BlockRenderStyle::Cross;
   grass.Render.Transparent = true;
+  cutum::BlockDefinition sand;
+  sand.Name = "sand";
+  sand.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition grass_block;
+  grass_block.Name = "grass";
+  grass_block.Physics = cutum::BlockPhysicsProfile::Solid();
   cutum::BlockDefinition lava;
   lava.Name = "lava";
   lava.Physics = cutum::BlockPhysicsProfile::FromPreset("lava");
@@ -47,11 +55,15 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeGameplayDefinitions()
   by_id[kStone] = stone;
   by_id[kWater] = water;
   by_id[kTallGrass] = grass;
+  by_id[kSand] = sand;
+  by_id[kGrassBlock] = grass_block;
   by_id[kLava] = lava;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["water"] = kWater;
   name_to_id["tall_grass"] = kTallGrass;
+  name_to_id["sand"] = kSand;
+  name_to_id["grass"] = kGrassBlock;
   name_to_id["lava"] = kLava;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
@@ -80,6 +92,45 @@ static void TestBreakRemovesDecorAbove()
                     kTestName, "grass cell is air");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 10, 0)) == kStone, kTestName,
                     "ground untouched");
+}
+
+static void TestBreakSandRemovesGrassSurfaceAndDecor()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeGameplayDefinitions());
+  world.SetBlock(glm::ivec3(0, 10, 0), kStone);
+  world.SetBlock(glm::ivec3(0, 11, 0), kSand);
+  world.SetBlock(glm::ivec3(0, 12, 0), kGrassBlock);
+  world.SetBlock(glm::ivec3(0, 13, 0), kTallGrass);
+
+  const std::vector<glm::ivec3> broken =
+      cutum::BreakUnsupportedBlocksAbove(world, registry, glm::ivec3(0, 11, 0));
+  FluidTest::Expect(broken.size() == 2, kTestName,
+                    "sand break removes grass surface and decor above");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 12, 0)) == cutum::BLOCK_AIR,
+                    kTestName, "grass surface removed with sand");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 13, 0)) == cutum::BLOCK_AIR,
+                    kTestName, "decor removed with sand");
+}
+
+static void TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
+{
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  world.SetBlock(glm::ivec3(0, 62, 0), kLava);
+  world.SetFluidState(glm::ivec3(0, 62, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(1, 63, 0), cutum::BLOCK_AIR);
+
+  cutum::FluidFloodOptions options;
+  options.water_id = kWater;
+  options.fluid_id = kWater;
+  options.source_for_air = false;
+  const int filled = cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+      world, *definitions, glm::ivec3(1, 63, 0), options);
+  FluidTest::Expect(filled > 0, kTestName, "below-sea break flood fills");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(1, 63, 0)) == kWater, kTestName,
+                    "below-sea break flood uses water not lava");
 }
 
 static void TestGameplayFloodFillsBrokenCell(
@@ -270,6 +321,7 @@ static void TestSourceFlowingMeshNoInternalFace(
 int main()
 {
   TestBreakRemovesDecorAbove();
+  TestBreakSandRemovesGrassSurfaceAndDecor();
 
   const auto definitions = MakeGameplayDefinitions();
   cutum::UBlockRegistry registry(nullptr, definitions);
@@ -279,6 +331,7 @@ int main()
   TestGameplayFloodVerticalPit(definitions);
   TestGameplayFloodShoreGrass(definitions);
   TestWaterPriorityOverLava(definitions);
+  TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(definitions);
   TestCellTouchesWetAir(definitions);
   TestBreakSiteDoesNotFillLargeAirPocket(definitions);
   TestSourceFlowingMeshNoInternalFace(definitions);

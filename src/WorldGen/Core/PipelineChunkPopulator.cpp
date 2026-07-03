@@ -1,4 +1,5 @@
 #include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
@@ -174,12 +175,25 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     if (settings.FillWater)
     {
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
-      SealFluidPermeableDecorInChunk(composable->GetContext(), base_x, base_z);
+      if (SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
+                                         base_z))
+      {
+        SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+      }
     }
   }
 
-  genWorld.ForEachBlock([&](glm::ivec3 pos, BlockId id)
-                        { result.buffer.SetBlock(pos, id); });
+  genWorld.ForEachBlock(
+      [&](glm::ivec3 pos, BlockId id)
+      {
+        result.buffer.SetBlock(pos, id);
+        const uint8_t packed =
+            PackFluidCellState(genWorld.GetFluidState(pos));
+        if (packed != 0)
+        {
+          result.buffer.SetFluidPacked(pos, packed);
+        }
+      });
   return result;
 }
 

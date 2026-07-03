@@ -176,6 +176,71 @@ static void TestSealPermeableDecorPocket()
       kTestName, "permeable decor receives fluid_data during seal");
 }
 
+static void TestSealSeabedDecorWithWaterAbove()
+{
+  cutum::UBlockWorld world;
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDecorDefinitions());
+  auto ctx = MakeSealContext(world, registry);
+  FillStoneColumn(world, 0, 0, 58);
+  world.SetBlock(glm::ivec3(0, 61, 0), kTallGrass);
+  world.SetBlock(glm::ivec3(0, 62, 0), kWater);
+  world.SetFluidState(glm::ivec3(0, 62, 0), cutum::FluidCellState::Source());
+
+  cutum::SealFluidPermeableDecorInChunk(ctx, 0, 0);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 61, 0)) == kTallGrass,
+                    kTestName, "seabed decor block preserved");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 61, 0))) != 0,
+      kTestName, "seabed decor waterlogged when water is above");
+}
+
+static void TestSealShoreDecorOneBlockBelowSea()
+{
+  cutum::UBlockWorld world;
+  constexpr cutum::BlockId kSand = 11;
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDecorDefinitions());
+  auto ctx = MakeSealContext(world, registry, 63);
+  FillStoneColumn(world, 0, 0, 60);
+  world.SetBlock(glm::ivec3(0, 61, 0), kSand);
+  world.SetBlock(glm::ivec3(0, 62, 0), kTallGrass);
+  world.SetBlock(glm::ivec3(0, 63, 0), kWater);
+  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+
+  cutum::SealFluidPermeableDecorInChunk(ctx, 0, 0);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 62, 0)) == kTallGrass,
+                    kTestName, "shore decor one block below sea preserved");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 62, 0))) != 0,
+      kTestName,
+      "shore decor one block below sea waterlogged without wet neighbor");
+}
+
+static void TestSealAirAboveWaterloggedDecor()
+{
+  cutum::UBlockWorld world;
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDecorDefinitions());
+  auto ctx = MakeSealContext(world, registry);
+  FillStoneColumn(world, 0, 0, 58);
+  world.SetBlock(glm::ivec3(0, 61, 0), kTallGrass);
+  world.SetBlock(glm::ivec3(0, 62, 0), cutum::BLOCK_AIR);
+  world.SetBlock(glm::ivec3(0, 63, 0), kWater);
+  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+
+  cutum::SealFluidPocketsInChunk(ctx, 0, 0);
+  cutum::SealFluidPermeableDecorInChunk(ctx, 0, 0);
+  cutum::SealFluidPocketsInChunk(ctx, 0, 0);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 61, 0)) == kTallGrass,
+                    kTestName, "decor preserved when sealing air gap above");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 61, 0))) != 0,
+      kTestName, "decor waterlogged before air gap seals");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 62, 0)) == kWater, kTestName,
+                    "air above waterlogged decor seals to water");
+}
+
 } // namespace
 
 int main()
@@ -188,6 +253,9 @@ int main()
   TestSealChunkBoundarySameWorld();
   TestSealChunkBoundaryIsolated();
   TestSealPermeableDecorPocket();
+  TestSealSeabedDecorWithWaterAbove();
+  TestSealShoreDecorOneBlockBelowSea();
+  TestSealAirAboveWaterloggedDecor();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

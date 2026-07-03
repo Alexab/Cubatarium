@@ -3,6 +3,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "WorldGen/Core/Noise.h"
 #include <algorithm>
@@ -149,6 +150,54 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   return filled > 0;
 }
 
+bool ColumnHasLiquidAbove(const UBlockWorld &world, UBlockRegistry &registry,
+                          glm::ivec3 pos, int sea)
+{
+  for (int y = pos.y + 1; y <= sea; ++y)
+  {
+    if (registry.IsLiquid(world.GetBlock(glm::ivec3(pos.x, y, pos.z))))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ShouldWaterlogPermeableDecor(const UBlockWorld &world,
+                                  UBlockRegistry &registry,
+                                  const UBlockDefinitionStorage &definitions,
+                                  glm::ivec3 pos, int sea)
+{
+  const BlockId block_id = world.GetBlock(pos);
+  if (!registry.IsFluidPermeable(block_id))
+  {
+    return false;
+  }
+  if (PackFluidCellState(world.GetFluidState(pos)) != 0)
+  {
+    return false;
+  }
+  if (UFluidSpreadSystem::CellTouchesWet(world, definitions, pos))
+  {
+    return true;
+  }
+  const glm::ivec3 ground = pos - glm::ivec3(0, 1, 0);
+  if (!IsSolidPlantGround(world, registry, ground))
+  {
+    return false;
+  }
+  if (pos.y > sea)
+  {
+    return false;
+  }
+  // First block above a sub-sea floor belongs to the water column (shore seabed).
+  if (ground.y < sea)
+  {
+    return true;
+  }
+  return ColumnHasLiquidAbove(world, registry, pos, sea);
+}
+
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
@@ -169,16 +218,8 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
       for (int y = 1; y <= sea; ++y)
       {
         const glm::ivec3 pos(base_x + lx, y, base_z + lz);
-        const BlockId block_id = ctx.World.GetBlock(pos);
-        if (!ctx.Registry.IsFluidPermeable(block_id))
-        {
-          continue;
-        }
-        if (PackFluidCellState(ctx.World.GetFluidState(pos)) != 0)
-        {
-          continue;
-        }
-        if (!UFluidSpreadSystem::CellTouchesWet(ctx.World, *definitions, pos))
+        if (!ShouldWaterlogPermeableDecor(ctx.World, ctx.Registry, *definitions,
+                                          pos, sea))
         {
           continue;
         }
@@ -214,7 +255,9 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   const int base_z = chunk_coord.z * CHUNK_SIZE;
   const bool sealed = SealFluidPocketsInChunk(ctx, base_x, base_z);
   const bool permeable = SealFluidPermeableDecorInChunk(ctx, base_x, base_z);
-  return sealed || permeable;
+  const bool sealed_after_permeable =
+      permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z) : false;
+  return sealed || permeable || sealed_after_permeable;
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)

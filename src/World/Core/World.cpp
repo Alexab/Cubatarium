@@ -24,6 +24,7 @@
 #include "Render/Primitives/Cube.h"
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
@@ -74,6 +75,34 @@ namespace
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
+
+BlockId ResolveWaterBlockId(const UBlockRegistry &registry,
+                            const std::string &worldgen_owner_pack_id)
+{
+  BlockId water_id = registry.GetIdByTypeName("water");
+  if (water_id == BLOCK_AIR && !worldgen_owner_pack_id.empty())
+  {
+    water_id = registry.GetIdByTypeName(
+        MakeQualifiedBlockName(worldgen_owner_pack_id, "water"));
+  }
+  return water_id;
+}
+
+FluidFloodOptions MakeBreakSiteFloodOptions(const UBlockRegistry &registry,
+                                            const ProceduralSettings &settings,
+                                            const std::string &worldgen_owner_pack_id,
+                                            glm::ivec3 break_pos)
+{
+  FluidFloodOptions options;
+  options.water_id = ResolveWaterBlockId(registry, worldgen_owner_pack_id);
+  options.source_for_air = false;
+  if (settings.FillWater && options.water_id != BLOCK_AIR &&
+      break_pos.y <= settings.SeaLevel)
+  {
+    options.fluid_id = options.water_id;
+  }
+  return options;
+}
 
 } // namespace
 
@@ -1245,9 +1274,9 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
         BlockRegistry->GetDefinitions();
     if (definitions != nullptr)
     {
-      FluidFloodOptions flood_options;
-      flood_options.water_id = BlockRegistry->GetIdByTypeName("water");
-      flood_options.source_for_air = false;
+      FluidFloodOptions flood_options =
+          MakeBreakSiteFloodOptions(*BlockRegistry, GetProceduralSettings(),
+                                    WorldgenOwnerPackId, blockPos);
       std::vector<glm::ivec3> flood_changed;
       UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
           BlockWorld, *definitions, blockPos, flood_options, &flood_changed);

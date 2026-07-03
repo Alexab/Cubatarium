@@ -2,9 +2,38 @@
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
 #include <algorithm>
+#include <array>
 
 namespace cutum
 {
+
+namespace
+{
+
+bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+                          glm::ivec3 pos)
+{
+  const glm::ivec3 below(pos.x, pos.y - 1, pos.z);
+  const BlockId below_id = world.GetBlock(below);
+  if (below_id != BLOCK_AIR && registry.BlocksMovement(below_id))
+  {
+    return true;
+  }
+  static constexpr std::array<glm::ivec3, 4> kBelowOffsets = {
+      glm::ivec3(1, -1, 0), glm::ivec3(-1, -1, 0), glm::ivec3(0, -1, 1),
+      glm::ivec3(0, -1, -1)};
+  for (const glm::ivec3 &offset : kBelowOffsets)
+  {
+    const BlockId id = world.GetBlock(pos + offset);
+    if (id != BLOCK_AIR && registry.BlocksMovement(id))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
 
 bool CanPlaceObjectAt(const UBlockWorld &world,
                       const WorldObjectDefinition &object,
@@ -203,7 +232,12 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
     {
       break;
     }
-    if (registry.IsLiquid(id) || registry.BlocksMovement(id))
+    if (registry.IsLiquid(id))
+    {
+      break;
+    }
+    if (registry.BlocksMovement(id) &&
+        HasBlockSupportBelow(world, registry, pos))
     {
       break;
     }
