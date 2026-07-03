@@ -133,6 +133,8 @@ void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   for (int pass = 0; changed && pass < 8; ++pass)
   {
     changed = false;
+    std::vector<glm::ivec3> to_fill;
+    to_fill.reserve(64);
     for (int lz = 0; lz < CHUNK_SIZE; ++lz)
     {
       for (int lx = 0; lx < CHUNK_SIZE; ++lx)
@@ -155,15 +157,40 @@ void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
           }
           if (touches_water)
           {
-            ctx.World.SetBlock(pos, ctx.Blocks.Water);
-            ctx.World.SetFluidState(pos, FluidCellState::Source());
-            changed = true;
+            to_fill.push_back(pos);
           }
         }
       }
     }
+    for (const glm::ivec3 &pos : to_fill)
+    {
+      ctx.World.SetBlock(pos, ctx.Blocks.Water);
+      ctx.World.SetFluidState(pos, FluidCellState::Source());
+      changed = true;
+    }
   }
   ctx.AccumulateDirtyColumn(0, sea);
+}
+
+void SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
+                                    const ProceduralSettings &settings,
+                                    const std::string &worldgen_owner_pack_id,
+                                    glm::ivec3 chunk_coord)
+{
+  if (!settings.FillWater)
+  {
+    return;
+  }
+  WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = worldgen_owner_pack_id;
+  ctx.ResolveBlockIds();
+  if (ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return;
+  }
+  const int base_x = chunk_coord.x * CHUNK_SIZE;
+  const int base_z = chunk_coord.z * CHUNK_SIZE;
+  SealFluidPocketsInChunk(ctx, base_x, base_z);
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)

@@ -169,6 +169,14 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/movement_integration_test.exe
 
+      - name: C++ unit test (fluid sim mesh integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_sim_mesh_integration_test.exe
+
+      - name: C++ unit test (fluid worldgen seal)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_worldgen_seal_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

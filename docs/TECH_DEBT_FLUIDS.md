@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 20 | Open: 4
+> Total closed: 21 | Open: 6
 
 ## Open
 
@@ -11,6 +11,8 @@
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
 | TD-FL-021 | R3 | Manual QA checklist in `PHYSICS_ROLLOUT.md` (liquids) | Requires in-game verification | R3 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
+| TD-FL-025 | shore-tests | `SealFluidPocketsInChunk` depth capped at 8 BFS passes per chunk | Long air pockets >8 from shore stay dry until gameplay fill | backlog |
+| TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Solid replace implemented; liquid needs separate policy | backlog |
 
 ## Closed
 
@@ -29,7 +31,7 @@
 | TD-FL-011 | classic-placement | Superseded by unified Classic placement in `AddObjectByView` + `UpdateIntersection` |
 | TD-FL-012 | audit → R1 | Level height stub (reverted R1; see Open) |
 | TD-FL-013 | audit | `fluid_blocks_per_tick_max` in `config.json.example` + `Core.cpp` |
-| TD-FL-014 | classic-placement | `fluid_placement_test` + `block_placement_raycast_test` cover Classic pit/wall scenarios |
+| TD-FL-014 | classic-placement | `fluid_placement_test` + `block_placement_raycast_test` cover Classic pit/wall/ravine/water-pit scenarios |
 | TD-FL-015 | audit | `fluid_mesh_faces_test` counts GreedyMesher fluid faces |
 | TD-FL-016 | audit | `ChunkMeshSnapshot` shell fluid layer + `GetFluid()` |
 | TD-FL-017 | audit | `UBlockWorld::SetBlock(liquid)` auto-`Source()` via definitions hook |
@@ -38,6 +40,7 @@
 | TD-FL-020 | audit | `ARCHITECTURE.md` flow-level opaque↔fluid section updated |
 | TD-FL-023 | R2 | Luanti-style `TransformFluidCell` in `UFluidSpreadSystem` |
 | TD-FL-024 | R3 | `fluid_queue_integration_test` via `UFluidUpdateSet` + budget 128 |
+| TD-FL-026 | worldgen-pit-placement | Solid hotbar blocks replace liquid cells (`IsPlaceableForSolidBlock` in `CanPlaceClassic` + `AddObject`) |
 
 ## Phase tracker
 

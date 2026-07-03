@@ -164,6 +164,7 @@ def main() -> int:
             f"bush={metrics.get('spawn_bush_common_footprints', 0)} "
             f"logs={metrics.get('spawn_ground_logs', 0)} "
             f"fire={metrics.get('spawn_fire_blocks', 0)} "
+            f"gaps={metrics.get('shore_air_gaps', 0)} "
             f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
             f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}%"
         )

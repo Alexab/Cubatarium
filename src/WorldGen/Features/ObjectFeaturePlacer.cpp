@@ -165,7 +165,8 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     const int wx = x + ox;
     const int wz = z + oz;
     const int maxScanY =
-        std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4);
+        std::min(ctx.Settings.MaxHeight - 1,
+                 std::max(surfaceY + 24, ctx.Settings.SeaLevel + 4));
     const int localSurface =
         FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
     if (localSurface < 0)
@@ -173,6 +174,10 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
       continue;
     }
     const int y = localSurface + 1 + rule.Scatter.DyOffset;
+    if (y <= surfaceY)
+    {
+      continue;
+    }
     const glm::ivec3 pos(wx, y, wz);
     if (!CanPlacePlantAt(ctx.World, ctx.Registry, pos))
     {

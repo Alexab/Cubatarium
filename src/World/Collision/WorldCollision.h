@@ -104,8 +104,10 @@ public:
   void RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord);
 
 private:
+  bool IsPlaceableForSolidBlock(glm::ivec3 pos) const;
   bool CanPlaceClassic(glm::ivec3 place_pos, const glm::vec3 &eye,
-                       const glm::vec3 &front, const PlayerCapsule &cap) const;
+                       const glm::vec3 &front, const PlayerCapsule &cap,
+                       float max_distance) const;
   bool QueryChunkMovementSolid(glm::ivec3 chunk_coord) const;
   uint64_t QueryChunkOccupancyMask(glm::ivec3 chunk_coord) const;
   bool MayContainSolid(const CollisionVolume &vol) const;

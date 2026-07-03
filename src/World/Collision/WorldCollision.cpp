@@ -813,14 +813,35 @@ bool UWorldCollision::TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
 bool UWorldCollision::CheckPositionFree(const glm::vec3 &position,
                                         float /*size*/) const
 {
-  return BlockWorld.IsAir(WorldPosToBlock(position));
+  return IsPlaceableForSolidBlock(WorldPosToBlock(position));
+}
+
+bool UWorldCollision::IsPlaceableForSolidBlock(glm::ivec3 pos) const
+{
+  const BlockId id = BlockWorld.GetBlock(pos);
+  if (id == BLOCK_AIR)
+  {
+    return true;
+  }
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  if (BlockRegistry->IsLiquid(id))
+  {
+    return true;
+  }
+  // Worldgen scatter / cross plants (occupancy 0) sit in carved pits and must
+  // be replaceable like air for hotbar solids.
+  return !BlockRegistry->BlocksMovement(id);
 }
 
 bool UWorldCollision::CanPlaceClassic(glm::ivec3 place_pos, const glm::vec3 &eye,
                                       const glm::vec3 &front,
-                                      const PlayerCapsule &cap) const
+                                      const PlayerCapsule &cap,
+                                      float max_distance) const
 {
-  if (!BlockWorld.IsAir(place_pos))
+  if (!IsPlaceableForSolidBlock(place_pos))
   {
     return false;
   }
@@ -832,10 +853,9 @@ bool UWorldCollision::CanPlaceClassic(glm::ivec3 place_pos, const glm::vec3 &eye
 
   const glm::ivec3 feet_block = WorldPosToBlock(
       glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z));
-  const float front_len = glm::length(front);
-  const bool look_down =
-      front_len > 1e-6f && (front.y / front_len) < -0.1f;
-  const int xz_radius = look_down ? 2 : 1;
+  const int xz_radius = place_pos.y <= feet_block.y
+                            ? std::max(4, static_cast<int>(max_distance))
+                            : 1;
   const bool placing_into_pit =
       place_pos.y <= feet_block.y &&
       std::abs(place_pos.x - feet_block.x) <= xz_radius &&
@@ -868,15 +888,6 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
 
   constexpr float kRaycastDistance = 128.0f;
 
-  const bool maybe_solid = TraverseVoxelRay(
-      eye, front, max_distance,
-      [&](glm::ivec3 cell)
-      { return BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)); });
-  if (!maybe_solid)
-  {
-    return result;
-  }
-
   const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, eye, front,
                                       kRaycastDistance);
   if (!hit)
@@ -884,9 +895,21 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
     return result;
   }
 
-  result.break_hit = hit;
   const glm::ivec3 place_pos = hit->blockPos + InferPlacementNormal(*hit, eye);
-  if (CanPlaceClassic(place_pos, eye, front, cap))
+  const glm::ivec3 feet_block = WorldPosToBlock(
+      glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z));
+  const int pit_xz_radius = std::max(4, static_cast<int>(max_distance));
+  const bool pit_placement =
+      place_pos.y <= feet_block.y &&
+      std::abs(place_pos.x - feet_block.x) <= pit_xz_radius &&
+      std::abs(place_pos.z - feet_block.z) <= pit_xz_radius;
+  if (!pit_placement && hit->distance > max_distance)
+  {
+    return result;
+  }
+
+  result.break_hit = hit;
+  if (CanPlaceClassic(place_pos, eye, front, cap, max_distance))
   {
     result.place_block_pos = place_pos;
   }

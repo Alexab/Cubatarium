@@ -31,10 +31,18 @@ If movement regressions persist:
 
 ### Liquids (level-based model, 2026-07)
 
-Automated gates: `fluid_mesh_faces_test`, `liquid_flow_scenarios_test`, `fluid_queue_integration_test`, `physics_integration_test`.
+#### Automated shore gates
+
+C++ (physics-nightly / smoke): `fluid_sim_mesh_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `liquid_flow_scenarios_test`, `physics_integration_test`.
+
+Python (worldgen smoke): `shore_air_gaps_max: 0` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
+
+Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_mesh_faces_test`, `fluid_sim_mesh_integration_test`, `fluid_queue_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `liquid_flow_scenarios_test`, `physics_integration_test`. Python CI: `shore_air_gaps_max` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
 
 Manual QA (required before closing TD-FL-021):
 
+- [ ] Wide worldgen ravine (7×7): look down from rim → green target in center; click places block
+- [ ] Water-filled worldgen pit: aim at floor → green in water cell; stone replaces water
 - [ ] 1×1 pit: aim at pit floor (classic `hit+normal`); source on floor face; fluid spreads to fill center; source `Level=0` at placement
 - [ ] 2×2 pit + one water source — four cells water; source cell stable
 - [ ] Lava 2×2: source does not move (no block ping-pong)

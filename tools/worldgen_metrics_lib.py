@@ -201,6 +201,33 @@ def count_spawn_fire_blocks(
     return count
 
 
+def count_shore_air_gaps(
+    columns: dict[tuple[int, int, int], int],
+    *,
+    water_id: int,
+    sea_level: int,
+    air_id: int = 0,
+) -> int:
+    """AIR at y<=sea with a 6-neighbor water block (shore seal gap)."""
+    dirs = (
+        (0, 1, 0),
+        (-1, 0, 0),
+        (1, 0, 0),
+        (0, 0, -1),
+        (0, 0, 1),
+        (0, -1, 0),
+    )
+    gaps = 0
+    for (wx, wy, wz), bid in columns.items():
+        if bid != air_id or wy < 1 or wy > sea_level:
+            continue
+        for dx, dy, dz in dirs:
+            if columns.get((wx + dx, wy + dy, wz + dz), air_id) == water_id:
+                gaps += 1
+                break
+    return gaps
+
+
 def micro_pit_stats(surface: dict[tuple[int, int], tuple[int, int]]) -> dict:
     pits = 0
     flat_columns = 0
@@ -436,10 +463,28 @@ def analyze_world(
         world_dir, id_to_name, spawn_radius
     )
     meta_path = world_dir / "world_data.json"
+    sea_level = 48
     if meta_path.is_file():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         metrics["seed"] = meta.get("world_seed")
         metrics["world_name"] = meta.get("world_name")
+        if meta.get("sea_level") is not None:
+            sea_level = int(meta["sea_level"])
+    water_id = next(
+        (bid for bid, name in id_to_name.items() if name == "water"),
+        None,
+    )
+    if water_id is not None:
+        chunk_dir = world_dir / "chunks"
+        columns: dict[tuple[int, int, int], int] = {}
+        if chunk_dir.is_dir():
+            for path in chunk_dir.glob("*.cchunk"):
+                columns.update(decode_chunk(path))
+        metrics["shore_air_gaps"] = count_shore_air_gaps(
+            columns,
+            water_id=water_id,
+            sea_level=sea_level,
+        )
     return metrics
 
 
@@ -523,5 +568,11 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         micro_pit_pct = metrics.get("micro_pit_pct", 0.0)
         if micro_pit_pct > micro_pit_max:
             fail(f"micro_pit_pct={micro_pit_pct:.2f}% > {micro_pit_max}%")
+
+    shore_gaps_max = thresholds.get("shore_air_gaps_max")
+    if shore_gaps_max is not None:
+        shore_gaps = metrics.get("shore_air_gaps", 0)
+        if shore_gaps > shore_gaps_max:
+            fail(f"shore_air_gaps={shore_gaps} > {shore_gaps_max}")
 
     return failures

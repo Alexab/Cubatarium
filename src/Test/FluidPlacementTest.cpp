@@ -65,7 +65,7 @@ int main()
   const glm::ivec3 pit_center(1, 10, 1);
   BuildPit(world, 10, pit_center);
 
-  const glm::vec3 feet(1.5f, 11.5f, 1.5f);
+  const glm::vec3 feet(1.0f, 11.5f, 1.0f);
   const glm::vec3 front(0.0f, -1.0f, 0.0f);
   const cutum::PlayerCapsule cap = cutum::PlayerCapsule::Standing();
   const auto resolved =

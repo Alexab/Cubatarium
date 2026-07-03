@@ -759,9 +759,20 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
     return false;
   }
   const glm::ivec3 blockPos = WorldPosToBlock(position);
-  if (!BlockWorld.IsAir(blockPos))
+  const BlockId existing = BlockWorld.GetBlock(blockPos);
+  if (BlockRegistry->IsLiquid(Id))
   {
-    return false;
+    if (!BlockWorld.IsAir(blockPos))
+    {
+      return false;
+    }
+  }
+  else if (existing != BLOCK_AIR && !BlockRegistry->IsLiquid(existing))
+  {
+    if (BlockRegistry->BlocksMovement(existing))
+    {
+      return false;
+    }
   }
   BlockWorld.SetBlock(blockPos, Id);
   if (BlockWorld.GetBlock(blockPos) != Id)

@@ -58,7 +58,8 @@ int main()
     collision_queue.Enqueue(glm::ivec3(i, 0, 0), 0, static_cast<uint64_t>(i));
   }
 
-  Expect(block_queue.GetStats().Dropped > 0, "block queue must drop at hard limit");
+  Expect(block_queue.GetStats().Purged > 0,
+         "block queue must purge at hard limit");
   Expect(liquid_queue.GetStats().Dropped > 0,
          "liquid queue must drop at hard limit");
   Expect(block_queue.Size() <= static_cast<size_t>(budgets.BlockQueueHardLimit),

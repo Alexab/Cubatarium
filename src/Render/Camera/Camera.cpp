@@ -550,23 +550,23 @@ void UCamera::UpdateCameraVectors()
   }
   this->Front = front;
 
-  // Avoid gimbal lock when looking near straight up/down (cross(Front, Up) ->
-  // NaN).
   glm::vec3 worldUp = WorldUp;
   if (std::abs(glm::dot(Front, worldUp)) > 0.98f)
   {
     worldUp = glm::vec3(0.0f, 0.0f, Front.y > 0.0f ? -1.0f : 1.0f);
   }
 
-  this->Right = glm::cross(Front, worldUp);
-  const float rightLen = glm::length(Right);
-  if (rightLen > 1.0e-6f)
+  glm::vec3 right = glm::cross(Front, worldUp);
+  const float rightLen = glm::length(right);
+  if (rightLen < 1e-6f)
   {
-    this->Right /= rightLen;
+    this->Right =
+        glm::normalize(glm::vec3(-std::sin(radians(this->Yaw)), 0.0f,
+                                   std::cos(radians(this->Yaw))));
   }
   else
   {
-    this->Right = glm::vec3(1.0f, 0.0f, 0.0f);
+    this->Right = right / rightLen;
   }
 
   this->Up = glm::cross(Right, Front);

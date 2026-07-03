@@ -14,6 +14,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Stages/WorldGenStages.h"
 #include <chrono>
 
 namespace cutum
@@ -138,6 +139,11 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
         ChunkPhysicsSeedBudgets seed_budgets;
         SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
+        SealFluidShoreOnChunkCommitted(
+            world.BlockWorld, *world.BlockRegistry,
+            world.GetProceduralSettings(), world.WorldgenOwnerPackId, coord);
+        world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
+                                        world.GetProceduralSettings().MaxHeight);
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)

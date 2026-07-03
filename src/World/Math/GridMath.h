@@ -11,6 +11,11 @@ int FloorDiv(int a, int b);
 int PositiveMod(int a, int b);
 
 glm::vec3 BlockCenter(const glm::ivec3 &blockPos);
+/// Geometric center of a unit block cell (for rendering billboards/sprites).
+inline glm::vec3 BlockVisualCenter(const glm::ivec3 &blockPos)
+{
+  return BlockCenter(blockPos) + glm::vec3(0.5f);
+}
 /// World Y of the top face of a 1×1 block whose center is at integer `blockY`.
 inline float BlockTopY(int blockY) { return static_cast<float>(blockY) + 0.5f; }
 /// Initial upward speed for a Jump that reaches `heightBlocks` under constant

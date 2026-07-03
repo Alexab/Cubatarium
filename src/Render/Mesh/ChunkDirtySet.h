@@ -19,6 +19,7 @@ public:
 
   size_t GetCount() const { return Queue.size(); }
   bool empty() const { return Queue.empty(); }
+  bool Contains(glm::ivec3 coord) const { return Set.find(coord) != Set.end(); }
 
   using iterator = std::vector<glm::ivec3>::iterator;
   using const_iterator = std::vector<glm::ivec3>::const_iterator;

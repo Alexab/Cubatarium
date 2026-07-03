@@ -849,6 +849,90 @@ target_include_directories(fluid_queue_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(fluid_queue_integration_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_sim_mesh_integration_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidUpdateSet.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidSimMeshIntegrationTest.cpp)
+target_include_directories(fluid_sim_mesh_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_sim_mesh_integration_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_sim_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_worldgen_seal_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/Test/FluidWorldGenSealTest.cpp)
+target_include_directories(fluid_worldgen_seal_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_worldgen_seal_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
+
+set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/Render/Textures/TextureBase.cpp
+    src/ResourcePacks/ResourcePack.cpp
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/ResourcePacks/TextureOverrides.cpp
+    src/ThirdParty/stb_image.cpp
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Chunks/ChunkGenerationToken.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/Objects/ObjectLibrary.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Core/ProceduralSettings.cpp
+    src/WorldGen/Core/WorldSeedParser.cpp
+    src/WorldGen/Core/WorldGeneratorRegistry.cpp
+    src/WorldGen/Core/WorldGenSets.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/BlockWorldColumnWriter.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/IUWorldGenPipeline.cpp
+    src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
+    src/WorldGen/Pipelines/WorldGenStageRunner.cpp
+    src/WorldGen/Pipelines/ColumnGenerationService.cpp
+    src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/RavineCarver.cpp
+    src/WorldGen/Features/OreVeinPlacer.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Features/ObjectPlacementConstraints.cpp
+    src/WorldGen/Features/ObjectFeaturePlacer.cpp
+    src/WorldGen/Features/BuiltinWorldGenFeatures.cpp
+    src/WorldGen/Core/PipelineChunkPopulator.cpp
+    src/WorldGen/Core/ProceduralWorldGenFactory.cpp)
+
+add_executable(fluid_worldgen_chunk_test
+    ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+    src/Test/FluidWorldGenChunkTest.cpp)
+target_include_directories(fluid_worldgen_chunk_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_worldgen_chunk_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
