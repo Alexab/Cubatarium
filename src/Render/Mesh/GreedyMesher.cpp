@@ -18,58 +18,42 @@
 
 #include <cstring>
 
-
-
 namespace cutum
 
 {
 
-
-
 namespace
 
 {
-
-
 
 class UBlockWorldChunkReader : public IUChunkMeshReader
 
 {
 
 public:
-
   UBlockWorldChunkReader(const UBlockWorld &world, glm::ivec3 chunk_coord,
 
-                        const UChunk *chunk)
+                         const UChunk *chunk)
 
       : World(world), ChunkCoordValue(chunk_coord), Chunk(chunk)
 
   {
-
   }
 
-
-
   glm::ivec3 ChunkCoord() const override { return ChunkCoordValue; }
-
-
 
   BlockId GetBlockLocal(glm::ivec3 local) const override
 
   {
 
     return Chunk ? Chunk->GetBlockLocal(local) : BLOCK_AIR;
-
   }
-
-
 
   BlockId GetBlock(glm::ivec3 world_pos) const override
 
   {
 
     return World.GetBlock(world_pos);
-
   }
 
   uint8_t GetFluidPackedLocal(glm::ivec3 local) const override
@@ -77,79 +61,47 @@ public:
   {
 
     return Chunk ? PackFluidCellState(Chunk->GetFluidLocal(local)) : 0;
-
   }
 
   FluidCellState GetFluid(glm::ivec3 world_pos) const override
-
   {
-
-    const glm::ivec3 local = world_pos - ChunkCoordValue * CHUNK_SIZE;
-
-    if (local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
-
-        local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE && Chunk)
-
-    {
-
-      return Chunk->GetFluidLocal(local);
-
-    }
-
-    return {};
-
+    return World.GetFluidState(world_pos);
   }
 
-
-
 private:
-
   const UBlockWorld &World;
 
   glm::ivec3 ChunkCoordValue;
 
   const UChunk *Chunk;
-
 };
-
-
 
 class USnapshotChunkReader : public IUChunkMeshReader
 
 {
 
 public:
-
   explicit USnapshotChunkReader(const ChunkMeshSnapshot &snapshot)
 
       : Snapshot(snapshot)
 
   {
-
   }
 
-
-
   glm::ivec3 ChunkCoord() const override { return Snapshot.coord; }
-
-
 
   BlockId GetBlockLocal(glm::ivec3 local) const override
 
   {
 
     return Snapshot.GetBlockLocal(local);
-
   }
-
-
 
   BlockId GetBlock(glm::ivec3 world_pos) const override
 
   {
 
     return Snapshot.GetBlock(world_pos);
-
   }
 
   uint8_t GetFluidPackedLocal(glm::ivec3 local) const override
@@ -157,7 +109,6 @@ public:
   {
 
     return Snapshot.GetFluidPackedLocal(local);
-
   }
 
   FluidCellState GetFluid(glm::ivec3 world_pos) const override
@@ -165,18 +116,11 @@ public:
   {
 
     return Snapshot.GetFluid(world_pos);
-
   }
 
-
-
 private:
-
   const ChunkMeshSnapshot &Snapshot;
-
 };
-
-
 
 bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
@@ -190,17 +134,14 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   const BlockId neighbor = reader.GetBlock(neighbor_pos);
 
+  const BlockRenderStyle face_style = registry.GetRenderStyle(face_id);
+
   if (neighbor == BLOCK_AIR)
 
   {
 
     return false;
-
   }
-
-
-
-  const BlockRenderStyle face_style = registry.GetRenderStyle(face_id);
 
   if (face_style == BlockRenderStyle::Cutout)
 
@@ -211,119 +152,36 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     {
 
       return false;
-
     }
-
   }
-
-
 
   if (neighbor == face_id && !registry.BlocksMovement(face_id))
 
   {
 
-    if (registry.GetRenderStyle(face_id) == BlockRenderStyle::Fluid)
-
-    {
-
-      const FluidCellState self_state = reader.GetFluid(block_pos);
-
-      const FluidCellState neighbor_state = reader.GetFluid(neighbor_pos);
-
-      const uint8_t self_level = self_state.Falling ? 0 : self_state.Level;
-
-      const uint8_t neighbor_level =
-
-          neighbor_state.Falling ? 0 : neighbor_state.Level;
-
-      return neighbor_level >= self_level;
-
-    }
-
     return true;
-
   }
-
-
 
   const bool face_transparent = registry.IsTransparent(face_id);
 
   const bool neighbor_transparent = registry.IsTransparent(neighbor);
-
-
 
   if (face_transparent && neighbor_transparent)
 
   {
 
     return true;
-
   }
-
-
 
   const BlockRenderStyle neighbor_render_style =
 
       registry.GetRenderStyle(neighbor);
 
-
-
   if (face_style == BlockRenderStyle::Fluid && !neighbor_transparent)
 
   {
 
-    if (neighbor_offset.y == 0)
-
-    {
-
-      static constexpr std::array<glm::ivec3, 4> kHorizontal = {
-
-          glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
-
-          glm::ivec3(0, 0, 1)};
-
-      bool enclosed = true;
-
-      for (const glm::ivec3 &offset : kHorizontal)
-
-      {
-
-        const BlockId side_id = reader.GetBlock(block_pos + offset);
-
-        if (side_id == BLOCK_AIR)
-
-        {
-
-          enclosed = false;
-
-          break;
-
-        }
-
-      }
-
-      if (enclosed)
-
-      {
-
-        return false;
-
-      }
-
-    }
-
-    const FluidCellState self_state = reader.GetFluid(block_pos);
-
-    if (self_state.Level > 0 || self_state.Falling)
-
-    {
-
-      return false;
-
-    }
-
     return true;
-
   }
 
   if (!face_transparent && neighbor_render_style == BlockRenderStyle::Fluid)
@@ -331,16 +189,20 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   {
 
     return false;
-
   }
-
-
 
   if (!face_transparent && neighbor_transparent &&
 
       registry.BlocksMovement(neighbor))
 
   {
+
+    if (neighbor_render_style == BlockRenderStyle::Fluid)
+
+    {
+
+      return false;
+    }
 
     const glm::ivec3 beyond_pos = neighbor_pos + neighbor_offset;
 
@@ -363,7 +225,6 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     {
 
       return false;
-
     }
 
     if (beyond_open)
@@ -371,30 +232,22 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     {
 
       return true;
-
     }
 
     return false;
-
   }
-
-
 
   if (registry.BlocksMovement(neighbor))
 
   {
 
     return true;
-
   }
 
   return false;
-
 }
 
-
-
-int MaxSolidLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
+int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
 
 {
 
@@ -421,20 +274,13 @@ int MaxSolidLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
         {
 
           max_y = std::max(max_y, y);
-
         }
-
       }
-
     }
-
   }
 
   return max_y;
-
 }
-
-
 
 std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
@@ -448,15 +294,11 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
   const glm::ivec3 chunk_coord = reader.ChunkCoord();
 
-  const int max_solid_y = MaxSolidLocalY(reader, registry);
-
-
+  const int max_mesh_y = MaxMeshLocalY(reader, registry);
 
   BlockId mask[CHUNK_SIZE][CHUNK_SIZE];
 
   uint8_t fluid_mask[CHUNK_SIZE][CHUNK_SIZE];
-
-
 
   for (int axis = 0; axis < 3; ++axis)
 
@@ -466,8 +308,6 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
     const int v_axis = (axis + 2) % 3;
 
-
-
     for (int sign = -1; sign <= 1; sign += 2)
 
     {
@@ -476,19 +316,16 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
       {
 
-        if (axis == 1 && max_solid_y >= 0 && slice > max_solid_y)
+        if (axis == 1 && max_mesh_y >= 0 && slice > max_mesh_y)
 
         {
 
           continue;
-
         }
 
         std::memset(mask, 0, sizeof(mask));
 
         std::memset(fluid_mask, 0, sizeof(fluid_mask));
-
-
 
         for (int v = 0; v < CHUNK_SIZE; ++v)
 
@@ -506,15 +343,11 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
             local[v_axis] = v;
 
-
-
             const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + local.x,
 
                                        chunk_coord.y * CHUNK_SIZE + local.y,
 
                                        chunk_coord.z * CHUNK_SIZE + local.z);
-
-
 
             const BlockId id = reader.GetBlockLocal(local);
 
@@ -523,7 +356,6 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             {
 
               continue;
-
             }
 
             if (registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
@@ -531,10 +363,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             {
 
               continue;
-
             }
-
-
 
             glm::ivec3 neighbor_offset(0);
 
@@ -547,20 +376,13 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             {
 
               continue;
-
             }
-
-
 
             mask[v][u] = id;
 
-            fluid_mask[v][u] = reader.GetFluidPackedLocal(local);
-
+            fluid_mask[v][u] = PackFluidCellState(reader.GetFluid(world_pos));
           }
-
         }
-
-
 
         for (int v = 0; v < CHUNK_SIZE; ++v)
 
@@ -577,10 +399,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             {
 
               continue;
-
             }
-
-
 
             int width = 1;
 
@@ -591,10 +410,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             {
 
               ++width;
-
             }
-
-
 
             int height = 1;
 
@@ -617,9 +433,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
                   done = true;
 
                   break;
-
                 }
-
               }
 
               if (!done)
@@ -627,12 +441,8 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
               {
 
                 ++height;
-
               }
-
             }
-
-
 
             GreedyQuad quad;
 
@@ -656,8 +466,6 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
             quads.push_back(quad);
 
-
-
             for (int dv = 0; dv < height; ++dv)
 
             {
@@ -667,32 +475,18 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
               {
 
                 mask[v + dv][u + du] = BLOCK_AIR;
-
               }
-
             }
-
           }
-
         }
-
       }
-
     }
-
   }
 
-
-
   return quads;
-
 }
 
-
-
 } // namespace
-
-
 
 std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
 
@@ -709,16 +503,12 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
   {
 
     return {};
-
   }
 
   UBlockWorldChunkReader reader(world, chunk_coord, chunk);
 
   return BuildChunkMeshImpl(reader, registry);
-
 }
-
-
 
 std::vector<GreedyQuad>
 
@@ -731,10 +521,6 @@ UGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
   USnapshotChunkReader reader(snapshot);
 
   return BuildChunkMeshImpl(reader, registry);
-
 }
 
-
-
 } // namespace cutum
-

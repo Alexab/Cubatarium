@@ -1,6 +1,6 @@
 # Fluid architecture (flow-level model)
 
-> Minecraft/DwarfCorp-style source + flowing fluids with discrete levels 0–7.
+> Minecraft/Luanti-style source + flowing fluids with discrete levels 0–7.
 > Related: [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md), [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md), [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Glossary
@@ -8,11 +8,11 @@
 | Term | Meaning |
 |------|---------|
 | **source** | Infinite fluid at level 0; block never removed on spread |
-| **flowing** | Finite fluid at level 1–7 |
-| **falling** | Flowing fluid that spreads only downward (vertical stream) |
-| **level** | 0 = source; 1 = full block height; 7 = thinnest layer |
+| **flowing** | Finite fluid at level 1–7 (1 = thickest, 7 = thinnest) |
+| **falling** | Flowing fluid with `Falling` bit; spreads downward first |
+| **level** | 0 = source; 1–7 = flowing depth |
 | **wake** | Enqueue neighbors after a fluid change |
-| **frontier** | Active set of liquid cells scheduled for spread ticks |
+| **frontier** | Active liquid/air boundary cells (`FluidReflowScan`) |
 
 ## FluidCellState
 
@@ -20,77 +20,44 @@ Packed in one byte per chunk cell (`fluid_data[i]`):
 
 ```
 bits 0–2: Level (0–7)
-bit  3  : Falling (1 = spread down only)
+bit  3  : Falling (1 = vertical stream)
 bits 4–7: Reserved
 ```
 
-**Invariants:**
+## Transform rules (`UFluidSpreadSystem::TickBlock`)
 
-- `Level == 0` only when `BlockId` is a liquid in the same cell
-- Non-liquid block → fluid byte must be 0
-- `SetFluidState` only on liquid cells (debug assert)
+Per queued cell (Luanti `transformLiquidsLocal`-style rebalance):
 
-## Spread rules (water)
+1. **Down first:** floodable below → `Flowing(1, falling=true)`; source stays.
+2. **Renewable source:** ≥2 horizontal sources → `Source()` at cell.
+3. **Adjacent source (not below):** `Flowing(1)`.
+4. **Else:** max level from neighbors (upper drop boost +4, horizontal `nb+1` only if `sideBelow` blocked).
+5. **Range cutoff:** level `< min_survive` or `> FluidMaxLevel` → remove block.
+6. **Viscosity:** lava steps level by `LiquidViscosity` per tick.
 
-Tick rate: 1 spread attempt / 5 physics ticks (configurable via `FluidSpreadPeriodTicks`).
+Placement: `SetBlock(liquid)` → `Source()`; player `AddObject` uses same path.
 
-Pseudocode per tick (one direction per block per tick, MC-style):
+## Render (phase R1 — current)
 
-```
-if not liquid: return
-if not ShouldProcessFluidTick(tick, pos, period=5): return
-state = GetFluidState(pos)
+- **Full-block cubes** for all fluid cells (`FluidCellHeight` returns 1.0).
+- **Culling:** fluid→opaque hidden; opaque→fluid shown; fluid→air shown; fluid↔fluid hidden.
+- **Shell transparency:** four-pass `GreedyTransparentPipeline` on full faces.
+- Level-based mesh deferred to phase R4 (see [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md)).
 
-// Down first
-if CanAccept(below) and below is air/floodable:
-  SetBlock(below, id)
-  SetFluidState(below, Flowing(1, falling=true))
-  record change; source stays at pos
-  return
-
-// Horizontal (only if not falling)
-if state.Falling: return
-for side in 4 horizontal neighbors:
-  new_level = state.Level + 1
-  if new_level > FluidMaxLevel: continue
-  if neighbor not air: continue
-  if neighbor fluid level <= new_level: continue
-  SetBlock(side, id)
-  SetFluidState(side, Flowing(new_level))
-  record change; source stays
-  return after first success
-```
-
-## Spread rules (lava)
-
-- `FluidMaxLevel = 3`
-- `FluidSpreadPeriodTicks = 30`
-- Same algorithm; source remains stable in pits
-
-## Render height table
-
-| Level | Mesh Y extent (fraction of block) |
-|-------|-----------------------------------|
-| 0 (source) | 1.0 |
-| 1 | 7/8 |
-| 2 | 6/8 |
-| … | … |
-| 7 | 1/8 |
-| falling | 1.0 |
-
-Formula: `height = 1.0f - level * (1.0f / 8.0f)`; falling → 1.0f.
-
-## Face visibility matrix
+## Face visibility matrix (R1)
 
 | Neighbor | Fluid face drawn? |
 |----------|-------------------|
 | AIR | yes |
-| FLUID same id, neighbor level ≥ self | no (hidden) |
-| FLUID same id, neighbor level < self | yes (step) |
-| SOLID opaque, enclosed basin | yes (truncated side) |
-| SOLID opaque, open cliff | hide if source at cliff edge |
+| FLUID same id | no |
+| SOLID opaque | no (terrain face kept) |
+| SOLID toward fluid | yes |
 
-**Enclosed basin:** all 4 horizontal neighbors are solid or fluid → draw fluid sides against solid (pit visibility).
+## Frontier queue (`FluidReflowScan`)
+
+- `EnqueueFluidFrontierAt` on block removal / placement wake.
+- `ScanChunkFluidFrontier` on chunk commit — column scan, chunk-edge neighbors.
+- `UFluidUpdateSet` budget: `fluid_blocks_per_tick_max` (default 128).
 
 ## Migration (binary chunk)
 
@@ -99,18 +66,12 @@ Formula: `height = 1.0f - level * (1.0f / 8.0f)`; falling → 1.0f.
 
 ## Deprecated
 
-- `BlockedReturnCells`, move/copy whole block semantics
-- `ULiquidSimulationSystem`, `ULiquidUpdateQueue` (replaced by `UFluidSpreadSystem`, `UFluidUpdateSet`)
-- `liquid_renewable` JSON field (ignored; use source model + `FluidMaxLevel` presets)
+- `ULiquidSimulationSystem`, `ULiquidUpdateQueue` (move/copy model)
+- Incremental one-neighbor-only spread without rebalance
 
 ## Acceptance criteria
 
-- Water/lava place in 1×1 pit (new and old with stone floor)
-- 2×2 + 1 source water → 4 cells ≤ 2 s; source Level=0 at place position
-- Lava 2×2: source does not move; no block position ping-pong
-- Shore: break block → fill ≤ 1 s within 7 blocks
-- Lava pit: top + 1–4 side faces to air; remesh ≤ 2 frames
-- Old worlds load; ocean stable
+See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `liquid_flow_scenarios_test`, `fluid_queue_integration_test`.
 
 ## Related docs
 

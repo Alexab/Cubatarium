@@ -1,11 +1,11 @@
 #ifndef WORLDBLOCKPHYSICSSERVICE_H
 #define WORLDBLOCKPHYSICSSERVICE_H
 
-#include "World/Physics/IUBlockPhysicsService.h"
 #include "World/Physics/BlockUpdateQueue.h"
 #include "World/Physics/FallingBlocksSystem.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidUpdateSet.h"
+#include "World/Physics/IUBlockPhysicsService.h"
 #include "World/Physics/MaterialReactionRules.h"
 #include "World/Physics/PhysicsProfile.h"
 
@@ -25,6 +25,9 @@ public:
   void PublishSupportLost(glm::ivec3 blockPos, glm::ivec3 chunkCoord,
                           uint64_t triggerTick, uint64_t localOrder);
   void PublishFluid(glm::ivec3 blockPos);
+  void WakeNearbyFluids(const UBlockWorld &blockWorld,
+                        const UBlockDefinitionStorage &definitions,
+                        glm::ivec3 center, int radius_blocks);
 
   void TickBlockPhysics(UWorld &world) override;
   const BlockUpdateQueueStats &GetBlockQueueStats() const

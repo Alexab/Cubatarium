@@ -5,8 +5,6 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
-#include "World/Diagnostics/MovementDiagnosticsRecorder.h"
-#include "World/Mesh/WorldMeshService.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Core/Progress/IUProgressSink.h"
@@ -24,29 +22,32 @@
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Primitives/Cube.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Render/Textures/TextureCube.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/WorldCooperativeOps.h"
-#include "World/Physics/PhysicsProfileFactory.h"
+#include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
+#include "World/Persistence/WorldPersistence.h"
+#include "World/Physics/FluidReflowScan.h"
 #include "World/Physics/FluidSpreadSystem.h"
+#include "World/Physics/PhysicsProfileFactory.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldMovementPhysicsService.h"
 #include "World/Physics/WorldPhysicsScheduler.h"
-#include "World/Streaming/WorldStreaming.h"
-#include "World/Streaming/ChunkEmergeCoordinator.h"
-#include "World/Persistence/WorldPersistence.h"
-#include "World/IO/ChunkStorageService.h"
-#include "World/Math/GridMath.h"
-#include "World/Objects/ObjectLibrary.h"
-#include "World/Objects/ObjectUtil.h"
 #include "World/Raycast/BlockRaycast.h"
+#include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -87,8 +88,8 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
 {
   if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(TextureCubeInstance,
-                                                     BlockDefinitions);
+    BlockRegistry =
+        std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
   IsIntersectionExists = false;
@@ -278,7 +279,8 @@ void UWorld::LoadInitialStreamingChunks()
                                          RenderDistanceChunks);
   CachedBlockCount = BlockWorld.CountNonAir();
   BlockWorld.GetChunkManager().ForEachChunk(
-      [this](const UChunk &chunk) { MeshService->MarkDirty(chunk.GetCoord()); });
+      [this](const UChunk &chunk)
+      { MeshService->MarkDirty(chunk.GetCoord()); });
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -326,8 +328,8 @@ void UWorld::SetBlockDefinitionStorage(
   }
   else if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(TextureCubeInstance,
-                                                     BlockDefinitions);
+    BlockRegistry =
+        std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
     if (BlockMergeRegistry)
     {
       BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
@@ -573,7 +575,7 @@ void UWorld::WarmupVisibleListAtCamera()
   const glm::mat4 proj = camera->GetProjection();
   const glm::mat4 vp = proj * view;
   MeshService->UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
-                                   camera->GetPosition());
+                                      camera->GetPosition());
 }
 
 void UWorld::WarmupSpawnAreaForEnterGame()
@@ -767,25 +769,15 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   {
     return false;
   }
-  if (BlockRegistry->IsLiquid(Id))
-  {
-    BlockWorld.SetFluidState(blockPos, FluidCellState::Source());
-  }
   ++CachedBlockCount;
   BlockWorldReady = true;
-  if (BlockRegistry->IsLiquid(Id))
-  {
-    MarkFluidRegionDirty(blockPos, 1);
-  }
-  else
-  {
-    MarkBlockChunkDirty(blockPos);
-  }
+  MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
-  if (BlockRegistry && BlockRegistry->IsLiquid(Id))
+  if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
   {
-    ForceEnqueueFluidAt(blockPos);
+    EnqueueFluidFrontierAt(*this, blockPos);
+    MarkFluidChangeDirty(blockPos);
   }
   return true;
 }
@@ -1203,8 +1195,19 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
-  WakeFluidFrontier(blockPos, 3);
-  MarkFluidRegionDirty(blockPos, 2);
+  if (BlockRegistry && PhysicsFlags.EnableFluids)
+  {
+    EnqueueFluidFrontierAt(*this, blockPos);
+    MarkFluidChangeDirty(blockPos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 neighbor = blockPos + offset;
+      if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(neighbor)))
+      {
+        MarkBlockChunkDirty(neighbor);
+      }
+    }
+  }
   if (auto camera = GetCurrentUserCamera())
   {
     UpdateIntersection(camera->GetPosition(), camera->GetFront());
@@ -1435,9 +1438,9 @@ glm::vec3 UWorld::ResolveMovement(const glm::vec3 &eyePos,
 }
 
 UWorldCollision::StepUpProbe UWorld::ProbeStepUp(const glm::vec3 &eyePos,
-                                        const glm::vec3 &horiz,
-                                        const PlayerCapsule &cap,
-                                        float maxTriggerDistance) const
+                                                 const glm::vec3 &horiz,
+                                                 const PlayerCapsule &cap,
+                                                 float maxTriggerDistance) const
 {
   return Collision.ProbeStepUp(eyePos, horiz, cap, maxTriggerDistance);
 }
@@ -1490,8 +1493,8 @@ void UWorld::ConfigurePhysicsServices()
   if (BlockPhysicsService)
   {
     BlockPhysicsService->SetBudgets(PhysicsBudgetConfig);
-    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
-                                             *BlockPhysicsService, PhysicsFlags);
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
   if (ChunkDirtyService)
   {
@@ -1508,8 +1511,8 @@ void UWorld::SetPhysicsProfile(PhysicsProfile profile)
   ActivePhysicsProfile = profile;
   if (BlockPhysicsService)
   {
-    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
-                                             *BlockPhysicsService, PhysicsFlags);
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
 }
 
@@ -1521,8 +1524,8 @@ void UWorld::SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags)
   Collision.SetTelemetry(&PhysicsTelemetryData);
   if (BlockPhysicsService)
   {
-    UPhysicsProfileFactory::ConfigureService(ActivePhysicsProfile,
-                                             *BlockPhysicsService, PhysicsFlags);
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
 }
 
@@ -1545,8 +1548,7 @@ void UWorld::UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
   PhysicsTelemetryData.BlockQueueDepth = blockStats.Depth;
   PhysicsTelemetryData.LiquidQueueDepth = fluidStats.Depth;
   PhysicsTelemetryData.DeferredUpdates = blockStats.Deferred;
-  PhysicsTelemetryData.DroppedUpdates =
-      blockStats.Dropped + fluidStats.Dropped;
+  PhysicsTelemetryData.DroppedUpdates = blockStats.Dropped + fluidStats.Dropped;
   PhysicsTelemetryData.PurgedUpdates = blockStats.Purged;
 }
 
@@ -1558,6 +1560,8 @@ void UWorld::AccumulateFallingStats(const FallingBlocksStats &stats)
 
 void UWorld::AccumulateFluidStats(const FluidSpreadStats &stats)
 {
+  PhysicsTelemetryData.DeferredUpdates += stats.Candidates - stats.Applied;
+  PhysicsTelemetryData.DroppedUpdates += 0;
   (void)stats;
 }
 
@@ -1565,30 +1569,68 @@ bool UWorld::IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const
 {
   const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
   const glm::ivec3 focus = MovementDiag.feetChunk;
-  const int radius = std::max(
-      {std::abs(chunkCoord.x - focus.x), std::abs(chunkCoord.y - focus.y),
-       std::abs(chunkCoord.z - focus.z)});
+  const int radius = std::max({std::abs(chunkCoord.x - focus.x),
+                               std::abs(chunkCoord.y - focus.y),
+                               std::abs(chunkCoord.z - focus.z)});
   return radius <= PhysicsBudgetConfig.LiquidUpdateRadiusChunks;
 }
 
 void UWorld::MarkFluidRegionDirty(glm::ivec3 center, int block_radius)
 {
   const int radius = std::max(0, block_radius);
-  if (IsWithinLiquidUpdateRadius(center))
+  if (!IsWithinLiquidUpdateRadius(center))
   {
-    for (int dx = -radius; dx <= radius; ++dx)
-    {
-      for (int dy = -radius; dy <= radius; ++dy)
-      {
-        for (int dz = -radius; dz <= radius; ++dz)
-        {
-          MarkBlockChunkDirty(center + glm::ivec3(dx, dy, dz));
-        }
-      }
-    }
+    MarkBlockChunkDirtyFromPhysics(center);
     return;
   }
-  MarkBlockChunkDirtyFromPhysics(center);
+
+  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
+  const auto add_block = [&](glm::ivec3 block_pos)
+  {
+    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
+    }
+  };
+
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dy = -radius; dy <= radius; ++dy)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        add_block(center + glm::ivec3(dx, dy, dz));
+      }
+    }
+  }
+
+  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
+  const bool immediate = BlockRegistry != nullptr;
+  for (const glm::ivec3 &chunk_coord : chunk_coords)
+  {
+    if (immediate)
+    {
+      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
+                                         chunk_coord);
+    }
+    else
+    {
+      MeshService->MarkDirty(chunk_coord);
+    }
+  }
+}
+
+void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
+{
+  if (IsWithinLiquidUpdateRadius(blockPos))
+  {
+    MarkBlockChunkDirty(blockPos);
+  }
+  else
+  {
+    MarkBlockChunkDirtyFromPhysics(blockPos);
+  }
 }
 
 void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
@@ -1597,17 +1639,9 @@ void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
   {
     return;
   }
-  if (!BlockRegistry->IsLiquid(BlockWorld.GetBlock(blockPos)))
-  {
-    return;
-  }
   const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
   if (definitions == nullptr ||
       !UFluidSpreadSystem::HasSpreadTarget(BlockWorld, *definitions, blockPos))
-  {
-    return;
-  }
-  if (!IsWithinLiquidUpdateRadius(blockPos))
   {
     return;
   }
@@ -1620,15 +1654,17 @@ void UWorld::ForceEnqueueFluidAt(glm::ivec3 blockPos)
   {
     return;
   }
-  if (!BlockRegistry->IsLiquid(BlockWorld.GetBlock(blockPos)))
+  if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(blockPos)))
   {
+    BlockPhysicsService->PublishFluid(blockPos);
     return;
   }
-  if (!IsWithinLiquidUpdateRadius(blockPos))
+  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
+  if (definitions != nullptr &&
+      UFluidSpreadSystem::HasSpreadTarget(BlockWorld, *definitions, blockPos))
   {
-    return;
+    BlockPhysicsService->PublishFluid(blockPos);
   }
-  BlockPhysicsService->PublishFluid(blockPos);
 }
 
 void UWorld::WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks)
@@ -1670,8 +1706,8 @@ void UWorld::TrySeedFallingAt(glm::ivec3 blockPos)
     return;
   }
   const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(blockPos);
-  BlockPhysicsService->PublishSupportLost(blockPos, chunk_coord, PhysicsTickCounter,
-                                          ++PhysicsEventOrderCounter);
+  BlockPhysicsService->PublishSupportLost(
+      blockPos, chunk_coord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
 }
 
 void UWorld::PublishBlockPhysicsEvent(glm::ivec3 blockPos)
@@ -1681,8 +1717,8 @@ void UWorld::PublishBlockPhysicsEvent(glm::ivec3 blockPos)
     return;
   }
   const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
-  BlockPhysicsService->PublishBlockChanged(blockPos, chunkCoord, PhysicsTickCounter,
-                                           ++PhysicsEventOrderCounter);
+  BlockPhysicsService->PublishBlockChanged(
+      blockPos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
   TryEnqueueFluidAt(blockPos);
 }
 
@@ -1715,8 +1751,8 @@ bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
   }
   if (const auto *streamer = Streaming->GetStreamer())
   {
-    return streamer->IsCollisionReady(feetBlock,
-                                      PhysicsBudgetConfig.CollisionSafetyRadiusChunks);
+    return streamer->IsCollisionReady(
+        feetBlock, PhysicsBudgetConfig.CollisionSafetyRadiusChunks);
   }
   return false;
 }
@@ -1802,8 +1838,8 @@ void UWorld::RunLegacyPhysicsFrame()
 
   bool is_moved = camera && camera->DoMovement(this);
   static bool was_collision_ready = true;
-  const bool collision_ready =
-      !hasFeetBlockForReadiness || IsCollisionReadyAtFeet(feetBlockForReadiness);
+  const bool collision_ready = !hasFeetBlockForReadiness ||
+                               IsCollisionReadyAtFeet(feetBlockForReadiness);
   if (!collision_ready && camera)
   {
     PhysicsTelemetryData.CollisionReadyWaitMs +=
@@ -1824,7 +1860,8 @@ void UWorld::RunLegacyPhysicsFrame()
     const glm::ivec3 feet_chunk =
         UChunkManager::WorldToChunk(feetBlockForReadiness);
     Streaming->GetStreamer()->SetCollisionUrgentRing(
-        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks, !collision_ready);
+        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
+        !collision_ready);
   }
 
   if (controlled && camera)
@@ -1963,81 +2000,68 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   bool maybeSolidAlongRay = false;
   if (BlockRegistry)
   {
-    maybeSolidAlongRay =
-        TraverseVoxelRay(position, front, 8.0f,
-                         [&](glm::ivec3 cell)
-                         {
-                           return BlockRegistry->BlocksMovement(
-                               BlockWorld.GetBlock(cell));
-                         });
+    maybeSolidAlongRay = TraverseVoxelRay(
+        position, front, 8.0f, [&](glm::ivec3 cell)
+        { return BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)); });
   }
-  const auto hit = maybeSolidAlongRay
-                       ? RaycastSolidBlocks(BlockWorld, *BlockRegistry, position,
-                                            front)
-                       : std::nullopt;
+  const auto hit =
+      maybeSolidAlongRay
+          ? RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front)
+          : std::nullopt;
   HasIntersectionBlock = hit.has_value();
   PlaceTargetActive = false;
-  if (BlockRegistry)
-  {
-    const auto fluid_target = RaycastFluidPlacementTarget(
-        BlockWorld, *BlockRegistry, position, front, 8.0f);
-    if (fluid_target.has_value())
-    {
-      const auto camera = GetCurrentUserCamera();
-      const PlayerCapsule cap =
-          camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
-      const auto free_pos = FindNearestFreeCubePosition(position, front, cap);
-      if (!free_pos.has_value() ||
-          WorldPosToBlock(*free_pos) == fluid_target->block_pos ||
-          fluid_target->via_fluid_volume)
-      {
-        PlaceTargetActive = true;
-        PlaceBlockPos = fluid_target->block_pos;
-        if (hit)
-        {
-          IntersectionBlockPos = hit->blockPos;
-        }
-      }
-    }
-  }
-  if (hit && !PlaceTargetActive)
+  PlaceBlockPos = glm::ivec3(0);
+  if (hit)
   {
     IntersectionBlockPos = hit->blockPos;
     const auto camera = GetCurrentUserCamera();
     const PlayerCapsule cap =
         camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
-    if (FindNearestFreeCubePosition(position, front, cap).has_value())
+    const auto free_pos = FindNearestFreeCubePosition(position, front, cap);
+    glm::ivec3 normal = hit->faceNormal;
+    if (normal == glm::ivec3(0))
     {
-      glm::ivec3 normal = hit->faceNormal;
-      if (normal == glm::ivec3(0))
+      const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
+      if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
+          std::abs(toCamera.x) >= std::abs(toCamera.z))
       {
-        const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
-        if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
-            std::abs(toCamera.x) >= std::abs(toCamera.z))
-        {
-          normal.x = toCamera.x > 0.0f ? 1 : -1;
-        }
-        else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
-        {
-          normal.y = toCamera.y > 0.0f ? 1 : -1;
-        }
-        else
-        {
-          normal.z = toCamera.z > 0.0f ? 1 : -1;
-        }
+        normal.x = toCamera.x > 0.0f ? 1 : -1;
       }
-      const glm::ivec3 placePos = hit->blockPos + normal;
-      if (BlockWorld.IsAir(placePos))
+      else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
       {
-        PlaceTargetActive = true;
-        PlaceBlockPos = placePos;
+        normal.y = toCamera.y > 0.0f ? 1 : -1;
+      }
+      else
+      {
+        normal.z = toCamera.z > 0.0f ? 1 : -1;
+      }
+    }
+    const glm::ivec3 place_pos = hit->blockPos + normal;
+    if (free_pos.has_value() && WorldPosToBlock(*free_pos) == place_pos &&
+        BlockWorld.IsAir(place_pos))
+    {
+      PlaceTargetActive = true;
+      PlaceBlockPos = place_pos;
+    }
+    else if (BlockRegistry)
+    {
+      const auto fluid_target = RaycastFluidPlacementTarget(
+          BlockWorld, *BlockRegistry, position, front, 8.0f);
+      if (fluid_target.has_value() && BlockWorld.IsAir(fluid_target->block_pos))
+      {
+        if (!free_pos.has_value() ||
+            WorldPosToBlock(*free_pos) == fluid_target->block_pos ||
+            fluid_target->via_fluid_volume)
+        {
+          PlaceTargetActive = true;
+          PlaceBlockPos = fluid_target->block_pos;
+        }
       }
     }
   }
   else
   {
     IntersectionBlockPos = glm::ivec3(0);
-    PlaceBlockPos = glm::ivec3(0);
   }
 
   if (auto user = GetCurrentUser())

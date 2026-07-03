@@ -31,11 +31,17 @@ If movement regressions persist:
 
 ### Liquids (level-based model, 2026-07)
 
+Automated gates: `fluid_mesh_faces_test`, `liquid_flow_scenarios_test`, `fluid_queue_integration_test`, `physics_integration_test`.
+
+Manual QA (required before closing TD-FL-021):
+
 - [ ] 1×1 pit: place water/lava — fills center; source `Level=0` at placement
 - [ ] 2×2 pit + one water source — four cells water; source cell stable
 - [ ] Lava 2×2: source does not move (no block ping-pong)
 - [ ] Shore: break block — fill within ~1 s in 7-block radius
-- [ ] Lava pit: top + side faces visible; remesh ≤ 2 frames near player
+- [ ] Water block on flat ground: top + 4 sides, semi-transparent shell
+- [ ] Underwater / shore slope: no seafloor bleed-through, no co-planar flicker
+- [ ] Pit connected to ocean: transparent water, bottom visible
 - [ ] Old worlds load; ocean stable
 
 See [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md) and [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md).

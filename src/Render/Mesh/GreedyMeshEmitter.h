@@ -5,7 +5,6 @@
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/Chunk.h"
-#include "World/Math/FluidCellState.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
@@ -13,18 +12,12 @@
 namespace cutum
 {
 
+// Phase R1: full-block fluid cubes. Level-based height deferred (see
+// FLUID_ARCHITECTURE).
 inline float FluidCellHeight(uint8_t packed)
 {
-  if (packed == 0)
-  {
-    return 1.0f;
-  }
-  const FluidCellState state = UnpackFluidCellState(packed);
-  if (state.Falling != 0 || state.IsSource())
-  {
-    return 1.0f;
-  }
-  return 1.0f - static_cast<float>(state.Level) * (1.0f / 8.0f);
+  (void)packed;
+  return 1.0f;
 }
 
 inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
@@ -53,47 +46,19 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
   vDir[vAxis] = 1.0f;
   nDir[q.axis] = static_cast<float>(q.faceSign);
 
-  float width = static_cast<float>(q.width);
-  float height = static_cast<float>(q.height);
-  const float fluid_height =
-      q.FluidPacked != 0 ? FluidCellHeight(q.FluidPacked) : 1.0f;
+  const float width = static_cast<float>(q.width);
+  const float height = static_cast<float>(q.height);
 
   const glm::vec3 chunkOrigin(static_cast<float>(chunkCoord.x * CHUNK_SIZE),
                               static_cast<float>(chunkCoord.y * CHUNK_SIZE),
                               static_cast<float>(chunkCoord.z * CHUNK_SIZE));
 
   glm::vec3 corner = chunkOrigin;
-  if (q.FluidPacked != 0)
-  {
-    if (q.axis == 1 && q.faceSign > 0)
-    {
-      corner.y = chunkOrigin.y + static_cast<float>(q.slice) - 0.5f +
-                 fluid_height;
-    }
-    else
-    {
-      corner[q.axis] +=
-          static_cast<float>(q.slice) + (q.faceSign > 0 ? 0.5f : -0.5f);
-      corner[uAxis] += static_cast<float>(q.u) - 0.5f;
-      corner[vAxis] += static_cast<float>(q.v) - 0.5f;
-      if (uAxis == 1)
-      {
-        const float full_width = width;
-        width = full_width * fluid_height;
-      }
-      if (vAxis == 1)
-      {
-        height = height * fluid_height;
-      }
-    }
-  }
-  else
-  {
-    corner[q.axis] +=
-        static_cast<float>(q.slice) + (q.faceSign > 0 ? 0.5f : -0.5f);
-    corner[uAxis] += static_cast<float>(q.u) - 0.5f;
-    corner[vAxis] += static_cast<float>(q.v) - 0.5f;
-  }
+  corner[q.axis] +=
+      static_cast<float>(q.slice) + (q.faceSign > 0 ? 0.5f : -0.5f);
+  corner[uAxis] += static_cast<float>(q.u) - 0.5f;
+  corner[vAxis] += static_cast<float>(q.v) - 0.5f;
+
   const glm::vec3 p0 = corner;
   const glm::vec3 p1 = corner + uDir * width;
   const glm::vec3 p2 = corner + uDir * width + vDir * height;

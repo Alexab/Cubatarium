@@ -51,7 +51,7 @@
         "block_queue_soft_limit": 2048,
         "block_queue_hard_limit": 8192,
         "liquid_events_per_tick_max": 128,
-        "fluid_blocks_per_tick_max": 512,
+        "fluid_blocks_per_tick_max": 128,
         "liquid_queue_soft_limit": 2048,
         "liquid_queue_hard_limit": 8192,
         "falling_events_per_tick_max": 128,

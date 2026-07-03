@@ -26,7 +26,7 @@ int main()
   stone.Physics = cutum::BlockPhysicsProfile::Solid();
   cutum::BlockDefinition water;
   water.Name = "water";
-  water.Physics.IsLiquid = true;
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kWater] = water;

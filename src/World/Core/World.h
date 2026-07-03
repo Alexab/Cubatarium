@@ -419,8 +419,14 @@ public:
   PhysicsProfile GetPhysicsProfile() const { return ActivePhysicsProfile; }
   void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
   void SetPhysicsBudgets(const PhysicsBudgets &budgets);
-  const PhysicsTelemetry &GetPhysicsTelemetry() const { return PhysicsTelemetryData; }
-  const PhysicsBudgets &GetPhysicsBudgets() const { return PhysicsBudgetConfig; }
+  const PhysicsTelemetry &GetPhysicsTelemetry() const
+  {
+    return PhysicsTelemetryData;
+  }
+  const PhysicsBudgets &GetPhysicsBudgets() const
+  {
+    return PhysicsBudgetConfig;
+  }
   uint64_t GetPhysicsTickCounter() const { return PhysicsTickCounter; }
   void PublishBlockPhysicsEvent(glm::ivec3 blockPos);
   void PublishNeighborPhysicsEvents(glm::ivec3 blockPos);
@@ -429,7 +435,10 @@ public:
   void WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks = 2);
   void MarkFluidRegionDirty(glm::ivec3 center, int block_radius = 1);
   void TrySeedFallingAt(glm::ivec3 blockPos);
-  const PhysicsFeatureFlags &GetPhysicsFeatureFlags() const { return PhysicsFlags; }
+  const PhysicsFeatureFlags &GetPhysicsFeatureFlags() const
+  {
+    return PhysicsFlags;
+  }
   bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
 
   struct MovementDiagnostics
@@ -566,6 +575,7 @@ private:
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
+  void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
                                const FluidUpdateSetStats &fluidStats);
   void AccumulateFallingStats(const FallingBlocksStats &stats);

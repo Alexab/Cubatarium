@@ -1,7 +1,7 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
-#include "World/Physics/PhysicsChunkDistance.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/PhysicsChunkDistance.h"
 #include <algorithm>
 #include <array>
 
@@ -32,7 +32,8 @@ void UWorldBlockPhysicsService::SetBudgets(const PhysicsBudgets &budgets)
   FluidQueue.SetBudgets(budgets);
 }
 
-void UWorldBlockPhysicsService::SetFeatureFlags(const PhysicsFeatureFlags &flags)
+void UWorldBlockPhysicsService::SetFeatureFlags(
+    const PhysicsFeatureFlags &flags)
 {
   Flags = flags;
   FallingSystem.ShadowMode = !flags.EnableFalling || flags.FallingShadowMode;
@@ -40,7 +41,8 @@ void UWorldBlockPhysicsService::SetFeatureFlags(const PhysicsFeatureFlags &flags
   MaterialRules.ShadowMode = !flags.EnableMaterialRules;
 }
 
-bool UWorldBlockPhysicsService::ShouldCheckFalling(const BlockUpdateEvent &event)
+bool UWorldBlockPhysicsService::ShouldCheckFalling(
+    const BlockUpdateEvent &event)
 {
   switch (event.Type)
   {
@@ -121,11 +123,23 @@ void UWorldBlockPhysicsService::PublishFluid(glm::ivec3 blockPos)
   FluidQueue.Enqueue(blockPos);
 }
 
-void UWorldBlockPhysicsService::ProcessFluidChange(UWorld &world,
-                                                   const FluidSpreadChange &change)
+void UWorldBlockPhysicsService::WakeNearbyFluids(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 center, int radius_blocks)
 {
-  world.MarkFluidRegionDirty(change.BlockPos, 1);
-  world.MarkFluidRegionDirty(change.NeighborPos, 1);
+  if (!Flags.EnableFluids)
+  {
+    return;
+  }
+  FluidQueue.EnqueueFrontier(blockWorld, definitions, center, radius_blocks);
+  PublishFluid(center);
+}
+
+void UWorldBlockPhysicsService::ProcessFluidChange(
+    UWorld &world, const FluidSpreadChange &change)
+{
+  world.MarkFluidChangeDirty(change.BlockPos);
+  world.MarkFluidChangeDirty(change.NeighborPos);
   if (change.RemovedFluid)
   {
     world.PublishBlockPhysicsEvent(change.NeighborPos);
@@ -148,9 +162,8 @@ void UWorldBlockPhysicsService::ProcessFluidChange(UWorld &world,
   {
     MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
                                     world.GetBlockRegistry(), change.BlockPos);
-    MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
-                                    world.GetBlockRegistry(),
-                                    change.NeighborPos);
+    MaterialRules.EvaluateNeighbors(
+        world.GetBlockWorld(), world.GetBlockRegistry(), change.NeighborPos);
   }
 }
 
@@ -163,12 +176,13 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
   const std::vector<BlockUpdateEvent> events = BlockQueue.PopBudgeted();
   for (const BlockUpdateEvent &event : events)
   {
-    if (!Flags.EnableFalling || fallingBudget <= 0 || !ShouldCheckFalling(event))
+    if (!Flags.EnableFalling || fallingBudget <= 0 ||
+        !ShouldCheckFalling(event))
     {
       if (Flags.EnableMaterialRules)
       {
-        MaterialRules.EvaluateNeighbors(world.GetBlockWorld(),
-                                        world.GetBlockRegistry(), event.BlockPos);
+        MaterialRules.EvaluateNeighbors(
+            world.GetBlockWorld(), world.GetBlockRegistry(), event.BlockPos);
       }
       continue;
     }
@@ -219,6 +233,7 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
     {
       PublishFluid(pos);
     }
+    EnqueueFluidNeighbors(world, pos);
   }
 
   world.UpdatePhysicsQueueStats(BlockQueue.GetStats(), FluidQueue.GetStats());

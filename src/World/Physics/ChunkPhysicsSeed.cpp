@@ -1,9 +1,9 @@
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "Blocks/BlockRegistry.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
-#include "World/Math/FluidCellState.h"
-#include "World/Physics/FluidSpreadSystem.h"
+#include "World/Physics/FluidReflowScan.h"
 #include "World/Physics/PhysicsChunkDistance.h"
 
 namespace cutum
@@ -21,56 +21,33 @@ void SeedPhysicsOnChunkCommitted(UWorld &world, glm::ivec3 chunk_coord,
     return;
   }
 
+  ScanChunkFluidFrontier(world, chunk_coord, budgets.MaxLiquidEnqueuePerCommit);
+
   const UBlockRegistry &registry = world.GetBlockRegistry();
   UBlockWorld &block_world = world.GetBlockWorld();
   const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
   int columns_scanned = 0;
-  int liquid_enqueued = 0;
 
-  for (int lz = 0; lz < CHUNK_SIZE && columns_scanned < budgets.MaxColumnsPerCommit;
-       ++lz)
+  for (int lz = 0;
+       lz < CHUNK_SIZE && columns_scanned < budgets.MaxColumnsPerCommit; ++lz)
   {
-    for (int lx = 0; lx < CHUNK_SIZE && columns_scanned < budgets.MaxColumnsPerCommit;
-         ++lx)
+    for (int lx = 0;
+         lx < CHUNK_SIZE && columns_scanned < budgets.MaxColumnsPerCommit; ++lx)
     {
       ++columns_scanned;
-      int top_y = -1;
-      BlockId top_id = BLOCK_AIR;
       for (int ly = CHUNK_SIZE - 1; ly >= 0; --ly)
       {
         const glm::ivec3 pos = origin + glm::ivec3(lx, ly, lz);
         const BlockId id = block_world.GetBlock(pos);
-        if (id != BLOCK_AIR)
+        if (id == BLOCK_AIR)
         {
-          top_y = ly;
-          top_id = id;
-          break;
+          continue;
         }
-      }
-      if (top_y < 0)
-      {
-        continue;
-      }
-      const glm::ivec3 top_pos = origin + glm::ivec3(lx, top_y, lz);
-      if (registry.IsLiquid(top_id) &&
-          liquid_enqueued < budgets.MaxLiquidEnqueuePerCommit)
-      {
-        FluidCellState fluid_state = block_world.GetFluidState(top_pos);
-        if (PackFluidCellState(fluid_state) == 0)
+        if (registry.IsFallingBlock(id))
         {
-          fluid_state = FluidCellState::Source();
+          world.TrySeedFallingAt(pos);
         }
-        if (fluid_state.IsSource() ||
-            UFluidSpreadSystem::HasSpreadTarget(block_world, *registry.GetDefinitions(),
-                                                top_pos))
-        {
-          world.TryEnqueueFluidAt(top_pos);
-          ++liquid_enqueued;
-        }
-      }
-      else if (registry.IsFallingBlock(top_id))
-      {
-        world.TrySeedFallingAt(top_pos);
+        break;
       }
     }
   }

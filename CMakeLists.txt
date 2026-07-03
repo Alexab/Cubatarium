@@ -156,6 +156,7 @@ set(SOURCES
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidReflowScan.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Physics/PrimitivePhysicsProfile.cpp
     src/World/Physics/StandardPhysicsProfile.cpp
@@ -837,6 +838,16 @@ add_executable(liquid_flow_scenarios_test
 target_include_directories(liquid_flow_scenarios_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(liquid_flow_scenarios_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_queue_integration_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidUpdateSet.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidQueueIntegrationTest.cpp)
+target_include_directories(fluid_queue_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_queue_integration_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}

@@ -23,6 +23,7 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
     p.Movement.Occupancy = 0.0f;
     p.IsLiquid = true;
     p.Floodable = true;
+    p.LiquidRenewable = true;
     p.LiquidViscosity = 1.0f;
     p.FluidSpreadPeriodTicks = 5;
     p.FluidMaxLevel = 7;
@@ -125,6 +126,10 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
     {
       p.LiquidViscosity = j["liquid_viscosity"].get<float>();
     }
+    if (j.contains("liquid_renewable"))
+    {
+      p.LiquidRenewable = j["liquid_renewable"].get<bool>();
+    }
     return p;
   }
   BlockPhysicsProfile p = BlockPhysicsProfile::Solid();
@@ -171,6 +176,10 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
   if (j.contains("liquid_viscosity"))
   {
     p.LiquidViscosity = j["liquid_viscosity"].get<float>();
+  }
+  if (j.contains("liquid_renewable"))
+  {
+    p.LiquidRenewable = j["liquid_renewable"].get<bool>();
   }
   return p;
 }
@@ -299,7 +308,8 @@ bool IsReservedBlockName(const std::string &name)
   return name == "__missing__" || name == "__air__";
 }
 
-ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId)
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
+                                   bool useStablePackId)
 {
   ParsedBlockJson out;
   if (!j.is_object())
@@ -328,8 +338,9 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId
       const uint64_t raw = j["id"].get<uint64_t>();
       if (raw < kPackBlockIdMin || raw > kPackBlockIdMax)
       {
-        std::cerr << "ParseBlockFromJson: id " << raw << " out of pack range for '"
-                  << out.Definition.Name << "'" << std::endl;
+        std::cerr << "ParseBlockFromJson: id " << raw
+                  << " out of pack range for '" << out.Definition.Name << "'"
+                  << std::endl;
         return out;
       }
       out.Definition.Id = static_cast<BlockId>(raw);
