@@ -37,6 +37,7 @@
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Objects/ObjectUtil.h"
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidReflowScan.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/PhysicsProfileFactory.h"
@@ -762,10 +763,37 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   const BlockId existing = BlockWorld.GetBlock(blockPos);
   if (BlockRegistry->IsLiquid(Id))
   {
-    if (!BlockWorld.IsAir(blockPos))
+    if (!UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *BlockRegistry,
+                                             blockPos))
     {
       return false;
     }
+    if (UFluidSpreadSystem::ShouldReplaceBlockWithFluid(BlockWorld,
+                                                        *BlockRegistry,
+                                                        blockPos))
+    {
+      BlockWorld.SetBlock(blockPos, Id);
+      BlockWorld.SetFluidState(blockPos, FluidCellState::Source());
+    }
+    else
+    {
+      BlockWorld.SetFluidState(blockPos, FluidCellState::Flowing(1));
+    }
+    ++CachedBlockCount;
+    BlockWorldReady = true;
+    MarkBlockChunkDirty(blockPos);
+    PublishBlockPhysicsEvent(blockPos);
+    PublishNeighborPhysicsEvents(blockPos);
+    if (PhysicsFlags.EnableFluids)
+    {
+      EnqueueFluidFrontierAt(*this, blockPos);
+      MarkBlockChunkDirty(blockPos);
+      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+      {
+        MarkBlockChunkDirty(blockPos + offset);
+      }
+    }
+    return true;
   }
   else if (existing != BLOCK_AIR && !BlockRegistry->IsLiquid(existing))
   {
@@ -1288,7 +1316,14 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   }
   const glm::ivec3 cell = WorldPosToBlock(eye);
   const BlockId Id = BlockWorld.GetBlock(cell);
-  if (Id == BLOCK_AIR || BlockRegistry->BlocksMovement(Id))
+  const bool waterlogged =
+      BlockRegistry->IsFluidPermeable(Id) &&
+      PackFluidCellState(BlockWorld.GetFluidState(cell)) != 0;
+  if (Id == BLOCK_AIR || (BlockRegistry->BlocksMovement(Id) && !waterlogged))
+  {
+    return false;
+  }
+  if (!BlockRegistry->IsLiquid(Id) && !waterlogged)
   {
     return false;
   }
@@ -1301,7 +1336,14 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   }
   if (outFluid)
   {
-    *outFluid = Id;
+    if (BlockRegistry->IsLiquid(Id))
+    {
+      *outFluid = Id;
+    }
+    else
+    {
+      *outFluid = BlockRegistry->GetIdByTypeName("water");
+    }
   }
   return true;
 }
@@ -1329,7 +1371,10 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
       {
         const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
         const BlockId Id = BlockWorld.GetBlock(blockPos);
-        if (Id == BLOCK_AIR || BlockRegistry->BlocksMovement(Id))
+        const bool waterlogged =
+            BlockRegistry->IsFluidPermeable(Id) &&
+            PackFluidCellState(BlockWorld.GetFluidState(blockPos)) != 0;
+        if (Id == BLOCK_AIR || (BlockRegistry->BlocksMovement(Id) && !waterlogged))
         {
           continue;
         }
@@ -1338,9 +1383,18 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
         {
           continue;
         }
-        const auto &mov = BlockRegistry->Physics(Id).Movement;
+        const BlockId physicsId =
+            BlockRegistry->IsLiquid(Id)
+                ? Id
+                : (waterlogged ? BlockRegistry->GetIdByTypeName("water")
+                               : Id);
+        if (physicsId == BLOCK_AIR)
+        {
+          continue;
+        }
+        const auto &mov = BlockRegistry->Physics(physicsId).Movement;
         state.inFluid = true;
-        fluidWeights[Id] += 1;
+        fluidWeights[physicsId] += 1;
         state.DragHorizontal =
             std::max(state.DragHorizontal, mov.DragHorizontal);
         state.SinkSpeed = std::max(state.SinkSpeed, mov.SinkSpeed);

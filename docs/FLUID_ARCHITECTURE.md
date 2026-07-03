@@ -35,7 +35,18 @@ Per queued cell (Luanti `transformLiquidsLocal`-style rebalance):
 5. **Range cutoff:** level `< min_survive` or `> FluidMaxLevel` → remove block.
 6. **Viscosity:** lava steps level by `LiquidViscosity` per tick.
 
-Placement: `SetBlock(liquid)` → `Source()`; player `AddObject` uses same path.
+Placement: `SetBlock(liquid)` → `Source()`; player `AddObject` uses `CanReceiveFluid` / `ShouldReplaceBlockWithFluid`.
+
+## Waterlogging (permeable decor)
+
+| Policy | `block_id` | `fluid_data` | Spread / seal |
+|--------|------------|--------------|---------------|
+| AIR | air | source/flow | `SetBlock(water)` + `SetFluidState` |
+| **Permeable** (cross/cutout, occupancy &lt; 1) | e.g. `tall_grass` | source/flow | **only** `SetFluidState`; block preserved |
+| **Floodable** (legacy) | replaced | source/flow | `SetBlock` + `SetFluidState` |
+| Solid | stone | — | blocks fluid |
+
+`IsFluidPermeable` is derived from render style + occupancy (no JSON flag yet). Mesh: GreedyMesher emits fluid quads from `fluid_data` on permeable cells; cross pass unchanged (both visible). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` after decoration stage.
 
 ## Render (phase R1 — current)
 

@@ -207,6 +207,20 @@ bool UBlockRegistry::IsFloodable(BlockId Id) const
   return false;
 }
 
+bool UBlockRegistry::IsFluidPermeable(BlockId Id) const
+{
+  if (Id == BLOCK_AIR || IsLiquid(Id))
+  {
+    return false;
+  }
+  if (Physics(Id).Movement.Occupancy >= 1.0f)
+  {
+    return false;
+  }
+  const BlockRenderStyle style = GetRenderStyle(Id);
+  return style == BlockRenderStyle::Cross || style == BlockRenderStyle::Cutout;
+}
+
 bool UBlockRegistry::IsFlammable(BlockId Id) const
 {
   if (Definitions)

@@ -22,6 +22,19 @@ public:
                               const UBlockDefinitionStorage &definitions,
                               glm::ivec3 block_pos);
 
+  static bool CanReceiveFluid(const UBlockWorld &blockWorld,
+                              const UBlockRegistry &registry,
+                              glm::ivec3 pos);
+  static bool ShouldReplaceBlockWithFluid(const UBlockWorld &blockWorld,
+                                          const UBlockRegistry &registry,
+                                          glm::ivec3 pos);
+  static bool CanReceiveFluid(const UBlockWorld &blockWorld,
+                              const UBlockDefinitionStorage &definitions,
+                              glm::ivec3 pos);
+  static bool ShouldReplaceBlockWithFluid(const UBlockWorld &blockWorld,
+                                          const UBlockDefinitionStorage &definitions,
+                                          glm::ivec3 pos);
+
   FluidSpreadStats Tick(UWorld &world, glm::ivec3 block_pos);
   FluidSpreadStats TickBlock(UBlockWorld &blockWorld,
                              const UBlockRegistry &registry,

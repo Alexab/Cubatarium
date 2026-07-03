@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 21 | Open: 6
+> Total closed: 22 | Open: 6
 
 ## Open
 
@@ -41,6 +41,7 @@
 | TD-FL-023 | R2 | Luanti-style `TransformFluidCell` in `UFluidSpreadSystem` |
 | TD-FL-024 | R3 | `fluid_queue_integration_test` via `UFluidUpdateSet` + budget 128 |
 | TD-FL-026 | worldgen-pit-placement | Solid hotbar blocks replace liquid cells (`IsPlaceableForSolidBlock` in `CanPlaceClassic` + `AddObject`) |
+| TD-FL-028 | waterlogging | Permeable decor waterlogging (`IsFluidPermeable`, `fluid_data` without block replace; seal/spread/mesh) | `IsFluidPermeable`, `CanReceiveFluid` / `ShouldReplaceBlockWithFluid`, `SealFluidPermeableDecorInChunk`, GreedyMesher waterlogged pass, `fluid_permeable_decor_test` |
 
 ## Phase tracker
 

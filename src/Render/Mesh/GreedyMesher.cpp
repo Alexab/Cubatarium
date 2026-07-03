@@ -1,5 +1,6 @@
 #include "Render/Mesh/GreedyMesher.h"
 
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -247,11 +248,185 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   return false;
 }
 
+BlockId PrimaryLiquidBlockId(UBlockRegistry &registry)
+{
+  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
+  if (definitions == nullptr)
+  {
+    return BLOCK_AIR;
+  }
+  for (const auto &entry : definitions->GetAll())
+  {
+    if (entry.second.Physics.IsLiquid)
+    {
+      return entry.first;
+    }
+  }
+  return registry.GetIdByTypeName("water");
+}
+
+bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
+                            glm::ivec3 world_pos)
+{
+  const BlockId id = reader.GetBlock(world_pos);
+  if (registry.IsLiquid(id))
+  {
+    return true;
+  }
+  if (registry.IsFluidPermeable(id) &&
+      PackFluidCellState(reader.GetFluid(world_pos)) != 0)
+  {
+    return true;
+  }
+  return false;
+}
+
+bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
+                                  UBlockRegistry &registry, BlockId water_id,
+                                  glm::ivec3 block_pos, glm::ivec3 neighbor_offset)
+{
+  const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
+  if (!CellHasRenderableFluid(reader, registry, neighbor_pos))
+  {
+    return false;
+  }
+  return NeighborHidesFace(reader, registry, water_id, block_pos, neighbor_offset);
+}
+
+void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
+                               UBlockRegistry &registry,
+                               std::vector<GreedyQuad> &quads, int max_mesh_y)
+{
+  const BlockId water_id = PrimaryLiquidBlockId(registry);
+  if (water_id == BLOCK_AIR)
+  {
+    return;
+  }
+
+  const glm::ivec3 chunk_coord = reader.ChunkCoord();
+  BlockId mask[CHUNK_SIZE][CHUNK_SIZE];
+  uint8_t fluid_mask[CHUNK_SIZE][CHUNK_SIZE];
+
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    const int u_axis = (axis + 1) % 3;
+    const int v_axis = (axis + 2) % 3;
+    for (int sign = -1; sign <= 1; sign += 2)
+    {
+      for (int slice = 0; slice < CHUNK_SIZE; ++slice)
+      {
+        if (axis == 1 && max_mesh_y >= 0 && slice > max_mesh_y)
+        {
+          continue;
+        }
+
+        std::memset(mask, 0, sizeof(mask));
+        std::memset(fluid_mask, 0, sizeof(fluid_mask));
+
+        for (int v = 0; v < CHUNK_SIZE; ++v)
+        {
+          for (int u = 0; u < CHUNK_SIZE; ++u)
+          {
+            glm::ivec3 local(0);
+            local[axis] = slice;
+            local[u_axis] = u;
+            local[v_axis] = v;
+
+            const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + local.x,
+                                       chunk_coord.y * CHUNK_SIZE + local.y,
+                                       chunk_coord.z * CHUNK_SIZE + local.z);
+            const BlockId id = reader.GetBlockLocal(local);
+            if (!registry.IsFluidPermeable(id))
+            {
+              continue;
+            }
+            const uint8_t packed = PackFluidCellState(reader.GetFluid(world_pos));
+            if (packed == 0)
+            {
+              continue;
+            }
+
+            glm::ivec3 neighbor_offset(0);
+            neighbor_offset[axis] = sign;
+            if (WaterloggedNeighborHidesFace(reader, registry, water_id,
+                                               world_pos, neighbor_offset))
+            {
+              continue;
+            }
+
+            mask[v][u] = water_id;
+            fluid_mask[v][u] = packed;
+          }
+        }
+
+        for (int v = 0; v < CHUNK_SIZE; ++v)
+        {
+          for (int u = 0; u < CHUNK_SIZE; ++u)
+          {
+            const BlockId id = mask[v][u];
+            if (id == BLOCK_AIR)
+            {
+              continue;
+            }
+
+            int width = 1;
+            while (u + width < CHUNK_SIZE && mask[v][u + width] == id &&
+                   fluid_mask[v][u + width] == fluid_mask[v][u])
+            {
+              ++width;
+            }
+
+            int height = 1;
+            bool done = false;
+            while (v + height < CHUNK_SIZE && !done)
+            {
+              for (int k = 0; k < width; ++k)
+              {
+                if (mask[v + height][u + k] != id ||
+                    fluid_mask[v + height][u + k] != fluid_mask[v][u])
+                {
+                  done = true;
+                  break;
+                }
+              }
+              if (!done)
+              {
+                ++height;
+              }
+            }
+
+            GreedyQuad quad;
+            quad.axis = axis;
+            quad.slice = slice;
+            quad.u = u;
+            quad.v = v;
+            quad.width = width;
+            quad.height = height;
+            quad.Id = id;
+            quad.faceSign = sign;
+            quad.FluidPacked = fluid_mask[v][u];
+            quads.push_back(quad);
+
+            for (int dv = 0; dv < height; ++dv)
+            {
+              for (int du = 0; du < width; ++du)
+              {
+                mask[v + dv][u + du] = BLOCK_AIR;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
 
 {
 
   int max_y = -1;
+  const glm::ivec3 chunk_coord = reader.ChunkCoord();
 
   for (int z = 0; z < CHUNK_SIZE; ++z)
 
@@ -265,7 +440,8 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
 
       {
 
-        const BlockId id = reader.GetBlockLocal(glm::ivec3(x, y, z));
+        const glm::ivec3 local(x, y, z);
+        const BlockId id = reader.GetBlockLocal(local);
 
         if (id != BLOCK_AIR &&
 
@@ -274,6 +450,16 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
         {
 
           max_y = std::max(max_y, y);
+        }
+        else if (registry.IsFluidPermeable(id))
+        {
+          const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + local.x,
+                                     chunk_coord.y * CHUNK_SIZE + local.y,
+                                     chunk_coord.z * CHUNK_SIZE + local.z);
+          if (PackFluidCellState(reader.GetFluid(world_pos)) != 0)
+          {
+            max_y = std::max(max_y, y);
+          }
         }
       }
     }
@@ -482,6 +668,8 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
       }
     }
   }
+
+  AppendWaterloggedFluidQuads(reader, registry, quads, max_mesh_y);
 
   return quads;
 }

@@ -157,6 +157,25 @@ static void TestSealChunkBoundaryIsolated()
                     "isolated air at boundary stays air without neighbor water");
 }
 
+static void TestSealPermeableDecorPocket()
+{
+  cutum::UBlockWorld world;
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDecorDefinitions());
+  auto ctx = MakeSealContext(world, registry);
+  FillStoneColumn(world, 0, 0, 58);
+  world.SetBlock(glm::ivec3(0, 61, 0), kWater);
+  world.SetFluidState(glm::ivec3(0, 61, 0), cutum::FluidCellState::Source());
+  world.SetBlock(glm::ivec3(1, 61, 0), kTallGrass);
+
+  cutum::SealFluidPocketsInChunk(ctx, 0, 0);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(1, 61, 0)) == kTallGrass,
+                    kTestName, "permeable decor block preserved during seal");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(1, 61, 0))) != 0,
+      kTestName, "permeable decor receives fluid_data during seal");
+}
+
 } // namespace
 
 int main()
@@ -168,6 +187,7 @@ int main()
   TestSealChain9();
   TestSealChunkBoundarySameWorld();
   TestSealChunkBoundaryIsolated();
+  TestSealPermeableDecorPocket();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

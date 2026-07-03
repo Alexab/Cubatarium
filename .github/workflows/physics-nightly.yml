@@ -42,6 +42,7 @@ jobs:
             "fluid_sim_mesh_integration_test",
             "decor_mesh_integration_test",
             "fluid_worldgen_seal_test",
+            "fluid_permeable_decor_test",
             "fluid_worldgen_chunk_test",
             "deterministic_replay_test",
             "physics_budget_guard_test",

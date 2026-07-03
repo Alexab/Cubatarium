@@ -181,6 +181,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_worldgen_seal_test.exe
 
+      - name: C++ unit test (fluid permeable decor)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_permeable_decor_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

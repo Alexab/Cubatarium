@@ -174,6 +174,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     if (settings.FillWater)
     {
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+      SealFluidPermeableDecorInChunk(composable->GetContext(), base_x, base_z);
     }
   }
 

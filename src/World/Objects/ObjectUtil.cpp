@@ -86,20 +86,37 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
-                                 glm::ivec3 anchorWorldPos, int maxScanY)
+                                 glm::ivec3 anchorWorldPos, int maxScanY,
+                                 int seaLevel, int anchorSurfaceY)
 {
   for (const auto &voxel : object.voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - object.anchor;
     const int localSurface =
         FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
+    const bool voxelSolid =
+        voxel.Id != BLOCK_AIR && registry.BlocksMovement(voxel.Id);
     if (localSurface < 0)
     {
       if (!world.IsAir(worldPos))
       {
         return false;
       }
+      if (seaLevel >= 0 && anchorSurfaceY >= 0 && anchorSurfaceY < seaLevel &&
+          voxelSolid)
+      {
+        return false;
+      }
+      if (seaLevel >= 0 && voxelSolid && worldPos.y <= seaLevel)
+      {
+        return false;
+      }
       continue;
+    }
+    if (seaLevel >= 0 && voxelSolid && localSurface < seaLevel &&
+        worldPos.y <= seaLevel)
+    {
+      return false;
     }
     if (worldPos.y > localSurface + 1)
     {

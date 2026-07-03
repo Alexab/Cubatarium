@@ -174,7 +174,11 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
       continue;
     }
     const int y = localSurface + 1 + rule.Scatter.DyOffset;
-    if (y <= surfaceY)
+    if (y <= surfaceY || y <= ctx.Settings.SeaLevel)
+    {
+      continue;
+    }
+    if (localSurface < ctx.Settings.SeaLevel)
     {
       continue;
     }
@@ -427,7 +431,8 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   const bool canPlace =
       surfaceY >= 0
           ? CanPlaceObjectAtForWorldGen(ctx.World, ctx.Registry, *prefab,
-                                        anchorWorldPos, maxScanY)
+                                        anchorWorldPos, maxScanY,
+                                        ctx.Settings.SeaLevel, surfaceY)
           : CanPlaceObjectAt(ctx.World, *prefab, anchorWorldPos);
   if (!canPlace)
   {

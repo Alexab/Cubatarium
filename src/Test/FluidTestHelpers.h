@@ -56,6 +56,39 @@ inline std::shared_ptr<cutum::UBlockDefinitionStorage> MakeTestFluidDefinitions(
   return definitions;
 }
 
+inline std::shared_ptr<cutum::UBlockDefinitionStorage>
+MakeTestFluidDecorDefinitions()
+{
+  auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+  constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kWater = 9;
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition water;
+  water.Name = "water";
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+  water.Render.Transparent = true;
+  water.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition grass;
+  grass.Name = "tall_grass";
+  grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  grass.Physics.Movement.Occupancy = 0.0f;
+  grass.Render.Style = cutum::BlockRenderStyle::Cross;
+  grass.Render.Transparent = true;
+  std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
+  by_id[kStone] = stone;
+  by_id[kWater] = water;
+  by_id[kTallGrass] = grass;
+  std::unordered_map<std::string, cutum::BlockId> name_to_id;
+  name_to_id["stone"] = kStone;
+  name_to_id["water"] = kWater;
+  name_to_id["tall_grass"] = kTallGrass;
+  definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
+  return definitions;
+}
+
 struct FluidCellExpectation
 {
   glm::ivec3 Pos;
@@ -63,6 +96,8 @@ struct FluidCellExpectation
   int MinTopFaces{0};
   int MinSideFacesToAir{0};
   bool ExpectPlaceable{false};
+  bool ExpectWaterlogged{false};
+  cutum::BlockId DecorBlock{cutum::BLOCK_AIR};
 };
 
 inline int CountTopFacesAt(const std::vector<cutum::GreedyQuad> &quads,
@@ -138,12 +173,23 @@ inline void ExpectFluidCells(const char *test_name, const cutum::UBlockWorld &wo
   for (const FluidCellExpectation &cell : cells)
   {
     const bool is_air = world.IsAir(cell.Pos);
-    const bool is_water = world.GetBlock(cell.Pos) == fluid_id;
-    Expect(is_water == cell.ExpectWaterBlock, test_name,
-           "fluid cell block id mismatch");
+    const cutum::BlockId block_id = world.GetBlock(cell.Pos);
+    const bool is_waterlogged =
+        cell.ExpectWaterlogged && registry.IsFluidPermeable(block_id) &&
+        cutum::PackFluidCellState(world.GetFluidState(cell.Pos)) != 0;
+    if (cell.ExpectWaterlogged)
+    {
+      Expect(is_waterlogged, test_name, "waterlogged decor cell mismatch");
+    }
+    else
+    {
+      const bool is_water = block_id == fluid_id;
+      Expect(is_water == cell.ExpectWaterBlock, test_name,
+             "fluid cell block id mismatch");
+    }
     Expect(is_air == cell.ExpectPlaceable, test_name,
            "fluid cell placement mismatch");
-    if (!cell.ExpectWaterBlock)
+    if (!cell.ExpectWaterBlock && !cell.ExpectWaterlogged)
     {
       continue;
     }

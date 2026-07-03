@@ -6,6 +6,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidSpreadSystem.h"
 
 namespace cutum
@@ -14,17 +15,23 @@ namespace cutum
 namespace
 {
 
-bool IsFloodableCell(const UBlockWorld &block_world,
-                     const UBlockDefinitionStorage &definitions, glm::ivec3 pos)
+bool ShouldEnqueueFluidCell(const UBlockWorld &block_world,
+                            const UBlockRegistry &registry, glm::ivec3 pos)
 {
-  if (block_world.IsAir(pos))
+  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
+  if (definitions == nullptr)
+  {
+    return false;
+  }
+  const BlockId id = block_world.GetBlock(pos);
+  if (registry.IsLiquid(id))
   {
     return true;
   }
-  const BlockId id = block_world.GetBlock(pos);
-  if (const BlockDefinition *def = definitions.GetById(id))
+  if (UFluidSpreadSystem::CanReceiveFluid(block_world, *definitions, pos) &&
+      UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
   {
-    return def->Physics.Floodable && !def->Physics.IsLiquid;
+    return true;
   }
   return false;
 }
@@ -32,20 +39,7 @@ bool IsFloodableCell(const UBlockWorld &block_world,
 void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
 {
   const UBlockRegistry &registry = world.GetBlockRegistry();
-  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
-  if (definitions == nullptr)
-  {
-    return;
-  }
-  const BlockId id = world.GetBlockWorld().GetBlock(pos);
-  if (registry.IsLiquid(id))
-  {
-    world.ForceEnqueueFluidAt(pos);
-    return;
-  }
-  if (IsFloodableCell(world.GetBlockWorld(), *definitions, pos) &&
-      UFluidSpreadSystem::HasSpreadTarget(world.GetBlockWorld(), *definitions,
-                                          pos))
+  if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos))
   {
     world.ForceEnqueueFluidAt(pos);
   }
@@ -80,7 +74,7 @@ void ScanColumn(UWorld &world, glm::ivec3 column_base, int max_enqueue,
       ++enqueued;
       break;
     }
-    if (IsFloodableCell(block_world, *definitions, pos))
+    if (UFluidSpreadSystem::CanReceiveFluid(block_world, *definitions, pos))
     {
       if (UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
       {

@@ -213,12 +213,42 @@ static void TestDigGap(
       "dig gap scene has vertical water face to air");
 }
 
+static void TestWaterloggedGrassMesh(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions,
+    cutum::UBlockRegistry &registry)
+{
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  world.SetBlock(glm::ivec3(0, 10, 0), kStone);
+  world.SetBlock(glm::ivec3(0, 11, 0), kTallGrass);
+  world.SetFluidState(glm::ivec3(0, 11, 0), cutum::FluidCellState::Flowing(1));
+
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 11, 0)) == kTallGrass, kTestName,
+                    "waterlogged grass block id");
+  FluidTest::Expect(
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 11, 0))) != 0,
+      kTestName, "waterlogged grass fluid_data");
+  FluidTest::Expect(registry.IsFluidPermeable(kTallGrass), kTestName,
+                    "tall_grass is fluid permeable");
+
+  const glm::ivec3 pos(0, 11, 0);
+  const glm::ivec3 chunk_coord = cutum::UChunkManager::WorldToChunk(pos);
+  const std::vector<cutum::GreedyQuad> quads =
+      FluidTest::BuildFluidMesh(world, registry, pos);
+  FluidTest::Expect(FluidTest::CountTopFacesAt(quads, kWater, pos, chunk_coord) >=
+                        1,
+                    kTestName, "waterlogged grass has water top mesh face");
+}
+
 } // namespace
 
 int main()
 {
   const auto definitions = FluidTest::MakeTestFluidDefinitions();
+  const auto decor_definitions = FluidTest::MakeTestFluidDecorDefinitions();
   cutum::UBlockRegistry registry(nullptr, definitions);
+  cutum::UBlockRegistry decor_registry(nullptr, decor_definitions);
   cutum::UFluidSpreadSystem fluid;
 
   TestPit22CenterSource(definitions, registry, fluid);
@@ -226,6 +256,7 @@ int main()
   TestShoreFlat(definitions, registry, fluid);
   TestShoreStair(definitions, registry, fluid);
   TestDigGap(definitions, registry, fluid);
+  TestWaterloggedGrassMesh(decor_definitions, decor_registry);
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

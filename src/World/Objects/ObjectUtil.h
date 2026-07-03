@@ -16,7 +16,8 @@ bool CanPlaceObjectAt(const UBlockWorld &world,
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
-                                 glm::ivec3 anchorWorldPos, int maxScanY);
+                                 glm::ivec3 anchorWorldPos, int maxScanY,
+                                 int seaLevel, int anchorSurfaceY);
 
 bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
                         glm::ivec3 groundPos);

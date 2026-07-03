@@ -19,6 +19,7 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
+bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z);
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,

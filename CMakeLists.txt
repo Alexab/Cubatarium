@@ -894,6 +894,18 @@ target_compile_definitions(fluid_worldgen_seal_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_permeable_decor_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidUpdateSet.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidPermeableDecorTest.cpp)
+target_include_directories(fluid_permeable_decor_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_permeable_decor_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_permeable_decor_test glm::glm nlohmann_json::nlohmann_json)
+
 set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp

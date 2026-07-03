@@ -38,6 +38,7 @@ public:
   bool IsFallingBlock(BlockId Id) const;
   bool IsLiquid(BlockId Id) const;
   bool IsFloodable(BlockId Id) const;
+  bool IsFluidPermeable(BlockId Id) const;
   bool IsFlammable(BlockId Id) const;
   bool IsFireBlock(BlockId Id) const;
   float GetLiquidViscosity(BlockId Id) const;
