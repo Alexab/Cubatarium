@@ -6,7 +6,6 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
-#include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidSpreadSystem.h"
 
 namespace cutum
@@ -26,23 +25,6 @@ bool IsFloodableCell(const UBlockWorld &block_world,
   if (const BlockDefinition *def = definitions.GetById(id))
   {
     return def->Physics.Floodable && !def->Physics.IsLiquid;
-  }
-  return false;
-}
-
-bool HasHorizontalFloodableNeighbor(const UBlockWorld &block_world,
-                                    const UBlockDefinitionStorage &definitions,
-                                    glm::ivec3 pos)
-{
-  static constexpr std::array<glm::ivec3, 4> kHorizontal = {
-      glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
-      glm::ivec3(0, 0, 1)};
-  for (const glm::ivec3 &offset : kHorizontal)
-  {
-    if (IsFloodableCell(block_world, definitions, pos + offset))
-    {
-      return true;
-    }
   }
   return false;
 }
@@ -94,21 +76,8 @@ void ScanColumn(UWorld &world, glm::ivec3 column_base, int max_enqueue,
     }
     if (registry.IsLiquid(id))
     {
-      FluidCellState state = block_world.GetFluidState(pos);
-      if (PackFluidCellState(state) == 0)
-      {
-        state = FluidCellState::Source();
-      }
-      const glm::ivec3 below(pos.x, pos.y - 1, pos.z);
-      const bool below_floodable =
-          below.y >= 0 && IsFloodableCell(block_world, *definitions, below);
-      if (!state.IsSource() || below_floodable ||
-          HasHorizontalFloodableNeighbor(block_world, *definitions, pos) ||
-          UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
-      {
-        TryEnqueueCell(world, pos);
-        ++enqueued;
-      }
+      TryEnqueueCell(world, pos);
+      ++enqueued;
       break;
     }
     if (IsFloodableCell(block_world, *definitions, pos))

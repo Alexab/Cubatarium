@@ -777,7 +777,11 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
   {
     EnqueueFluidFrontierAt(*this, blockPos);
-    MarkFluidChangeDirty(blockPos);
+    MarkBlockChunkDirty(blockPos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      MarkBlockChunkDirty(blockPos + offset);
+    }
   }
   return true;
 }
@@ -1198,7 +1202,11 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   if (BlockRegistry && PhysicsFlags.EnableFluids)
   {
     EnqueueFluidFrontierAt(*this, blockPos);
-    MarkFluidChangeDirty(blockPos);
+    MarkBlockChunkDirty(blockPos);
+    if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
+    {
+      BlockPhysicsService->PublishFluid(blockPos);
+    }
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = blockPos + offset;

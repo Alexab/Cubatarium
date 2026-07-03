@@ -1,8 +1,10 @@
 #include "WorldGen/Stages/WorldGenStages.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include "WorldGen/Core/Noise.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 
@@ -116,6 +118,54 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
   ctx.AccumulateDirtyColumn(surfaceY, sea);
 }
 
+void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
+{
+  if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return;
+  }
+  const int sea = ctx.Settings.SeaLevel;
+  static constexpr std::array<glm::ivec3, 6> kNeighborOffsets = {
+      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+
+  bool changed = true;
+  for (int pass = 0; changed && pass < 8; ++pass)
+  {
+    changed = false;
+    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+    {
+      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      {
+        for (int y = 1; y <= sea; ++y)
+        {
+          const glm::ivec3 pos(base_x + lx, y, base_z + lz);
+          if (ctx.World.GetBlock(pos) != BLOCK_AIR)
+          {
+            continue;
+          }
+          bool touches_water = false;
+          for (const glm::ivec3 &offset : kNeighborOffsets)
+          {
+            if (ctx.World.GetBlock(pos + offset) == ctx.Blocks.Water)
+            {
+              touches_water = true;
+              break;
+            }
+          }
+          if (touches_water)
+          {
+            ctx.World.SetBlock(pos, ctx.Blocks.Water);
+            ctx.World.SetFluidState(pos, FluidCellState::Source());
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+  ctx.AccumulateDirtyColumn(0, sea);
+}
+
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
 {
   const int range = std::max(1, settings.MaxHeight - settings.SeaLevel);
@@ -134,7 +184,8 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
     std::cerr << "WorldGen: missing block Types for legacy column" << std::endl;
     return;
   }
-  const BlockId dirtOrStone = ctx.Blocks.Dirt != BLOCK_AIR ? ctx.Blocks.Dirt : stone;
+  const BlockId dirtOrStone =
+      ctx.Blocks.Dirt != BLOCK_AIR ? ctx.Blocks.Dirt : stone;
   const int naturalY = LegacyHashSurfaceY(x, z, ctx.Settings);
   const int surfaceY =
       AdjustSurfaceYForSpawnIsland(x, z, naturalY, ctx.Settings);

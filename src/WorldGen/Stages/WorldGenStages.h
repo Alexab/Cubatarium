@@ -18,6 +18,7 @@ struct ColumnLayerRule
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
+void SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
 
 int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,

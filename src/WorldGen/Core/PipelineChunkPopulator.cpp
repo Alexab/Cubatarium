@@ -8,6 +8,7 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -52,10 +53,10 @@ ThreadLocalPipelineState &GetThreadLocalPipeline()
   return state;
 }
 
-IUWorldGenPipeline *EnsureThreadLocalPipeline(UBlockRegistry &registry,
-                                             UObjectLibrary *prefabs,
-                                             const std::string &ownerPackId,
-                                             const ProceduralSettings &settings)
+IUWorldGenPipeline *
+EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
+                          const std::string &ownerPackId,
+                          const ProceduralSettings &settings)
 {
   ThreadLocalPipelineState &state = GetThreadLocalPipeline();
   const uint32_t key = PipelineSettingsKey(settings);
@@ -165,6 +166,14 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     else
     {
       pipeline->GenerateColumn(world_x, world_z);
+    }
+  }
+
+  if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
+  {
+    if (settings.FillWater)
+    {
+      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
     }
   }
 

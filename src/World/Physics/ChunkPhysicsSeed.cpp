@@ -12,6 +12,8 @@ namespace cutum
 void SeedPhysicsOnChunkCommitted(UWorld &world, glm::ivec3 chunk_coord,
                                  const ChunkPhysicsSeedBudgets &budgets)
 {
+  ScanChunkFluidFrontier(world, chunk_coord, budgets.MaxLiquidEnqueuePerCommit);
+
   const glm::ivec3 focus = world.GetMovementDiagnostics().feetChunk;
   const int liquid_radius = world.GetPhysicsBudgets().LiquidUpdateRadiusChunks;
   const int falling_radius = world.GetPhysicsBudgets().FallingScanRadiusChunks;
@@ -20,8 +22,6 @@ void SeedPhysicsOnChunkCommitted(UWorld &world, glm::ivec3 chunk_coord,
   {
     return;
   }
-
-  ScanChunkFluidFrontier(world, chunk_coord, budgets.MaxLiquidEnqueuePerCommit);
 
   const UBlockRegistry &registry = world.GetBlockRegistry();
   UBlockWorld &block_world = world.GetBlockWorld();

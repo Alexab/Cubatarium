@@ -11,7 +11,7 @@ class UWorld;
 struct ChunkPhysicsSeedBudgets
 {
   int MaxColumnsPerCommit{32};
-  int MaxLiquidEnqueuePerCommit{64};
+  int MaxLiquidEnqueuePerCommit{512};
 };
 
 void SeedPhysicsOnChunkCommitted(UWorld &world, glm::ivec3 chunk_coord,
