@@ -816,71 +816,95 @@ bool UWorldCollision::CheckPositionFree(const glm::vec3 &position,
   return BlockWorld.IsAir(WorldPosToBlock(position));
 }
 
-std::optional<glm::vec3> UWorldCollision::FindNearestFreeCubePosition(
-    const glm::vec3 &position, const glm::vec3 &front,
-    const PlayerCapsule &cap) const
+bool UWorldCollision::CanPlaceClassic(glm::ivec3 place_pos, const glm::vec3 &eye,
+                                      const glm::vec3 &front,
+                                      const PlayerCapsule &cap) const
 {
-  if (!BlockRegistry)
+  if (!BlockWorld.IsAir(place_pos))
   {
-    return std::nullopt;
+    return false;
   }
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
-  if (!hit)
-  {
-    return std::nullopt;
-  }
-
-  glm::ivec3 normal = hit->faceNormal;
-  if (normal == glm::ivec3(0))
-  {
-    const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
-    if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
-        std::abs(toCamera.x) >= std::abs(toCamera.z))
-    {
-      normal.x = toCamera.x > 0.0f ? 1 : -1;
-    }
-    else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
-    {
-      normal.y = toCamera.y > 0.0f ? 1 : -1;
-    }
-    else
-    {
-      normal.z = toCamera.z > 0.0f ? 1 : -1;
-    }
-  }
-
-  const glm::ivec3 placePos = hit->blockPos + normal;
-  if (!BlockWorld.IsAir(placePos))
-  {
-    return std::nullopt;
-  }
-
-  const glm::vec3 res_position = BlockCenter(placePos);
+  const glm::vec3 res_position = BlockCenter(place_pos);
   if (!CheckPositionFree(res_position, 1.0f))
   {
-    return std::nullopt;
+    return false;
   }
 
-  const glm::ivec3 feet_block = WorldPosToBlock(position);
+  const glm::ivec3 feet_block = WorldPosToBlock(
+      glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z));
+  const float front_len = glm::length(front);
+  const bool look_down =
+      front_len > 1e-6f && (front.y / front_len) < -0.1f;
+  const int xz_radius = look_down ? 2 : 1;
   const bool placing_into_pit =
-      placePos.y < feet_block.y &&
-      std::abs(placePos.x - feet_block.x) <= 1 &&
-      std::abs(placePos.z - feet_block.z) <= 1;
+      place_pos.y <= feet_block.y &&
+      std::abs(place_pos.x - feet_block.x) <= xz_radius &&
+      std::abs(place_pos.z - feet_block.z) <= xz_radius;
 
   if (!placing_into_pit)
   {
-    const CollisionVolume vol = CollisionVolumeFromEye(position, cap);
-    const glm::vec3 blockCenter = BlockCenter(placePos);
+    const CollisionVolume vol = CollisionVolumeFromEye(eye, cap);
+    const glm::vec3 blockCenter = BlockCenter(place_pos);
     const glm::vec3 blockHalf(0.5f);
     if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, blockCenter,
                                   blockHalf))
     {
-      return std::nullopt;
+      return false;
     }
   }
 
-  return res_position;
+  return true;
+}
+
+BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
+    const glm::vec3 &eye, const glm::vec3 &front, const PlayerCapsule &cap,
+    float max_distance) const
+{
+  BlockPlacementResolve result;
+  if (!BlockRegistry)
+  {
+    return result;
+  }
+
+  constexpr float kRaycastDistance = 128.0f;
+
+  const bool maybe_solid = TraverseVoxelRay(
+      eye, front, max_distance,
+      [&](glm::ivec3 cell)
+      { return BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)); });
+  if (!maybe_solid)
+  {
+    return result;
+  }
+
+  const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, eye, front,
+                                      kRaycastDistance);
+  if (!hit)
+  {
+    return result;
+  }
+
+  result.break_hit = hit;
+  const glm::ivec3 place_pos = hit->blockPos + InferPlacementNormal(*hit, eye);
+  if (CanPlaceClassic(place_pos, eye, front, cap))
+  {
+    result.place_block_pos = place_pos;
+  }
+
+  return result;
+}
+
+std::optional<glm::vec3> UWorldCollision::FindNearestFreeCubePosition(
+    const glm::vec3 &position, const glm::vec3 &front,
+    const PlayerCapsule &cap) const
+{
+  const BlockPlacementResolve resolved =
+      ResolveBlockPlacement(position, front, cap);
+  if (!resolved.place_block_pos)
+  {
+    return std::nullopt;
+  }
+  return BlockCenter(*resolved.place_block_pos);
 }
 
 } // namespace cutum

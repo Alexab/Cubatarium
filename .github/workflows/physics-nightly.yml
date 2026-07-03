@@ -36,6 +36,7 @@ jobs:
             "fluid_chunk_io_test",
             "fluid_spread_level_test",
             "fluid_placement_test",
+            "block_placement_raycast_test",
             "fluid_mesh_faces_test",
             "deterministic_replay_test",
             "physics_budget_guard_test",

@@ -922,6 +922,15 @@ target_compile_definitions(fluid_placement_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_placement_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(block_placement_raycast_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/BlockPlacementRaycastTest.cpp)
+target_include_directories(block_placement_raycast_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(block_placement_raycast_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(block_placement_raycast_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(material_reaction_rules_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Test/MaterialReactionRulesTest.cpp)

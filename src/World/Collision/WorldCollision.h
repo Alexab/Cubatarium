@@ -5,6 +5,7 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Raycast/BlockRaycast.h"
 #include <glm/glm.hpp>
 #include <optional>
 #include <unordered_map>
@@ -17,6 +18,12 @@ struct PhysicsTelemetry;
 class UBlockRegistry;
 class UBlockWorld;
 class UWorldEnvironment;
+
+struct BlockPlacementResolve
+{
+  std::optional<BlockRayHit> break_hit;
+  std::optional<glm::ivec3> place_block_pos;
+};
 
 class UWorldCollision
 {
@@ -84,6 +91,10 @@ public:
                  const PlayerCapsule &cap, float maxTriggerDistance) const;
 
   bool CheckPositionFree(const glm::vec3 &position, float size = 1.0f) const;
+  BlockPlacementResolve ResolveBlockPlacement(const glm::vec3 &eye,
+                                              const glm::vec3 &front,
+                                              const PlayerCapsule &cap,
+                                              float max_distance = 8.0f) const;
   std::optional<glm::vec3>
   FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
@@ -93,6 +104,8 @@ public:
   void RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord);
 
 private:
+  bool CanPlaceClassic(glm::ivec3 place_pos, const glm::vec3 &eye,
+                       const glm::vec3 &front, const PlayerCapsule &cap) const;
   bool QueryChunkMovementSolid(glm::ivec3 chunk_coord) const;
   uint64_t QueryChunkOccupancyMask(glm::ivec3 chunk_coord) const;
   bool MayContainSolid(const CollisionVolume &vol) const;

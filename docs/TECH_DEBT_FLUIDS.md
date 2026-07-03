@@ -25,11 +25,11 @@
 | TD-FL-007 | audit | `fluid_chunk_io_test` binary v1/v2 round-trip via `UBinaryChunkSerializer` |
 | TD-FL-008 | audit | `WorldStateHasher` includes packed fluid in region hash |
 | TD-FL-009 | audit | `UFluidSpreadSystem` records `ULiquidDebugTrace` on spread |
-| TD-FL-010 | audit | DDA air-pocket heuristic in `RaycastFluidPlacementTarget` |
-| TD-FL-011 | audit | `AddObjectByView` + `UpdateIntersection` use fluid placement raycast |
+| TD-FL-010 | classic-placement | Superseded by unified Classic placement (`hit+normal`); pocket API kept for future bucket tool |
+| TD-FL-011 | classic-placement | Superseded by unified Classic placement in `AddObjectByView` + `UpdateIntersection` |
 | TD-FL-012 | audit → R1 | Level height stub (reverted R1; see Open) |
 | TD-FL-013 | audit | `fluid_blocks_per_tick_max` in `config.json.example` + `Core.cpp` |
-| TD-FL-014 | audit | `fluid_placement_test` covers pit, old pit, capsule scenarios |
+| TD-FL-014 | classic-placement | `fluid_placement_test` + `block_placement_raycast_test` cover Classic pit/wall scenarios |
 | TD-FL-015 | audit | `fluid_mesh_faces_test` counts GreedyMesher fluid faces |
 | TD-FL-016 | audit | `ChunkMeshSnapshot` shell fluid layer + `GetFluid()` |
 | TD-FL-017 | audit | `UBlockWorld::SetBlock(liquid)` auto-`Source()` via definitions hook |

@@ -50,6 +50,7 @@ static void BuildPit(cutum::UBlockWorld &world, int floor_y, glm::ivec3 center)
     }
   }
   world.SetBlock(center + glm::ivec3(0, -1, 0), kStone);
+  (void)floor_y;
 }
 
 int main()
@@ -67,21 +68,23 @@ int main()
   const glm::vec3 feet(1.5f, 11.5f, 1.5f);
   const glm::vec3 front(0.0f, -1.0f, 0.0f);
   const cutum::PlayerCapsule cap = cutum::PlayerCapsule::Standing();
-  const auto free_pos =
-      collision.FindNearestFreeCubePosition(feet, front, cap);
-  Expect(free_pos.has_value(), "1x1 pit placement position found");
-
-  const auto fluid_hit = cutum::RaycastFluidPlacementTarget(
-      world, registry, feet, front, 8.0f);
-  Expect(fluid_hit.has_value(), "fluid raycast finds pit placement");
+  const auto resolved =
+      collision.ResolveBlockPlacement(feet, front, cap, 8.0f);
+  Expect(resolved.break_hit.has_value(), "pit break hit from above");
+  Expect(resolved.place_block_pos.has_value(), "1x1 pit placement position found");
+  Expect(*resolved.place_block_pos == pit_center, "pit center resolved");
+  const glm::ivec3 normal =
+      cutum::InferPlacementNormal(*resolved.break_hit, feet);
+  Expect(*resolved.place_block_pos == resolved.break_hit->blockPos + normal,
+         "classic place is hit+normal");
 
   const glm::ivec3 old_pit(20, 8, 20);
   BuildPit(world, 8, old_pit);
   world.SetBlock(old_pit + glm::ivec3(0, 1, 0), 8);
   const glm::vec3 old_eye(20.5f, 12.0f, 20.5f);
-  const auto old_target = cutum::RaycastFluidPlacementTarget(
-      world, registry, old_eye, glm::vec3(0.0f, -1.0f, 0.0f), 8.0f);
-  Expect(old_target.has_value(), "old pit fluid placement hit");
+  const auto old_resolved = collision.ResolveBlockPlacement(
+      old_eye, glm::vec3(0.0f, -1.0f, 0.0f), cap, 8.0f);
+  Expect(old_resolved.place_block_pos.has_value(), "old pit placement hit");
 
   const auto capsule_free =
       collision.FindNearestFreeCubePosition(feet, front, cap);

@@ -28,7 +28,6 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
-#include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/IO/ChunkStorageService.h"
@@ -1118,25 +1117,16 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
     cap = camera->GetPlayerCapsule();
   }
 
-  auto object_pos = FindNearestFreeCubePosition(position, front, cap);
-  const auto fluid_target = RaycastFluidPlacementTarget(
-      BlockWorld, *BlockRegistry, position, front, 8.0f);
-  if (fluid_target.has_value())
+  const BlockPlacementResolve resolved =
+      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+  if (!resolved.place_block_pos)
   {
-    const glm::vec3 fluid_center = BlockCenter(fluid_target->block_pos);
-    if (!object_pos.has_value() ||
-        WorldPosToBlock(*object_pos) != fluid_target->block_pos)
-    {
-      object_pos = fluid_center;
-    }
+    return false;
   }
-  if (object_pos.has_value())
+  if (AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
   {
-    if (AddObject(blockType, object_pos.value()))
-    {
-      UpdateIntersection(position, front);
-      return true;
-    }
+    UpdateIntersection(position, front);
+    return true;
   }
   return false;
 }
@@ -2005,72 +1995,24 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   IsIntersectionExists = CheckRayIntersection(
       position, front, Intersection, IntersectionDistance,
       IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
-  bool maybeSolidAlongRay = false;
-  if (BlockRegistry)
+
+  const auto camera = GetCurrentUserCamera();
+  const PlayerCapsule cap =
+      camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
+  const BlockPlacementResolve resolved =
+      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+
+  HasIntersectionBlock = resolved.break_hit.has_value();
+  PlaceTargetActive = resolved.place_block_pos.has_value();
+  if (resolved.break_hit)
   {
-    maybeSolidAlongRay = TraverseVoxelRay(
-        position, front, 8.0f, [&](glm::ivec3 cell)
-        { return BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)); });
-  }
-  const auto hit =
-      maybeSolidAlongRay
-          ? RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front)
-          : std::nullopt;
-  HasIntersectionBlock = hit.has_value();
-  PlaceTargetActive = false;
-  PlaceBlockPos = glm::ivec3(0);
-  if (hit)
-  {
-    IntersectionBlockPos = hit->blockPos;
-    const auto camera = GetCurrentUserCamera();
-    const PlayerCapsule cap =
-        camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
-    const auto free_pos = FindNearestFreeCubePosition(position, front, cap);
-    glm::ivec3 normal = hit->faceNormal;
-    if (normal == glm::ivec3(0))
-    {
-      const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
-      if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
-          std::abs(toCamera.x) >= std::abs(toCamera.z))
-      {
-        normal.x = toCamera.x > 0.0f ? 1 : -1;
-      }
-      else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
-      {
-        normal.y = toCamera.y > 0.0f ? 1 : -1;
-      }
-      else
-      {
-        normal.z = toCamera.z > 0.0f ? 1 : -1;
-      }
-    }
-    const glm::ivec3 place_pos = hit->blockPos + normal;
-    if (free_pos.has_value() && WorldPosToBlock(*free_pos) == place_pos &&
-        BlockWorld.IsAir(place_pos))
-    {
-      PlaceTargetActive = true;
-      PlaceBlockPos = place_pos;
-    }
-    else if (BlockRegistry)
-    {
-      const auto fluid_target = RaycastFluidPlacementTarget(
-          BlockWorld, *BlockRegistry, position, front, 8.0f);
-      if (fluid_target.has_value() && BlockWorld.IsAir(fluid_target->block_pos))
-      {
-        if (!free_pos.has_value() ||
-            WorldPosToBlock(*free_pos) == fluid_target->block_pos ||
-            fluid_target->via_fluid_volume)
-        {
-          PlaceTargetActive = true;
-          PlaceBlockPos = fluid_target->block_pos;
-        }
-      }
-    }
+    IntersectionBlockPos = resolved.break_hit->blockPos;
   }
   else
   {
     IntersectionBlockPos = glm::ivec3(0);
   }
+  PlaceBlockPos = resolved.place_block_pos.value_or(glm::ivec3(0));
 
   if (auto user = GetCurrentUser())
   {

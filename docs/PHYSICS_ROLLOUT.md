@@ -35,7 +35,7 @@ Automated gates: `fluid_mesh_faces_test`, `liquid_flow_scenarios_test`, `fluid_q
 
 Manual QA (required before closing TD-FL-021):
 
-- [ ] 1×1 pit: place water/lava — fills center; source `Level=0` at placement
+- [ ] 1×1 pit: aim at pit floor (classic `hit+normal`); source on floor face; fluid spreads to fill center; source `Level=0` at placement
 - [ ] 2×2 pit + one water source — four cells water; source cell stable
 - [ ] Lava 2×2: source does not move (no block ping-pong)
 - [ ] Shore: break block — fill within ~1 s in 7-block radius
