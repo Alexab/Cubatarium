@@ -26,9 +26,9 @@ bits 4–7: FluidKind (0=infer/legacy, 1=water, 2=lava, …)
 
 Dry permeable decor: `block_id` = grass/reeds, `fluid_data=0`. Wet (waterlogged): same `block_id`, non-zero `fluid_data` with explicit `FluidKind` when written by placement, worldgen seal, or flood.
 
-## Transform rules (`UFluidSpreadSystem::TickBlock`)
+## Transform rules (`UFluidTransformSim::TickBlock`)
 
-Per queued cell (Luanti `transformLiquidsLocal`-style rebalance):
+Per queued cell (Luanti `transformLiquidsLocal`-style rebalance). `UFluidSpreadSystem` is a thin coordinator delegating to `UFluidFloodService`, `UFluidFillPolicy`, `UFluidTransformSim`, and `UFluidBlockResolver`.
 
 1. **Down first:** floodable below → `Flowing(1, falling=true)`; source stays.
 2. **Renewable source:** ≥2 horizontal sources → `Source()` at cell.
