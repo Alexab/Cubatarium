@@ -1368,16 +1368,18 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
   return BreakSession->blockPos;
 }
 
-bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
+UWorld::FluidColumnSurface
+UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
 {
+  FluidColumnSurface column;
   if (!BlockRegistry)
   {
-    return false;
+    return column;
   }
   const int bx = WorldCoordToBlockIndex(eye.x);
   const int bz = WorldCoordToBlockIndex(eye.z);
   const int by = WorldCoordToBlockIndex(eye.y);
-  for (int y = by + 2; y >= by - 24; --y)
+  for (int y = by + 8; y >= by - 24; --y)
   {
     const BlockId id = BlockWorld.GetBlock(glm::ivec3(bx, y, bz));
     if (!BlockRegistry->IsLiquid(id))
@@ -1388,17 +1390,26 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
     {
       continue;
     }
-    if (eye.y < BlockTopY(y))
-    {
-      if (outFluid)
-      {
-        *outFluid = id;
-      }
-      return true;
-    }
+    column.fluidId = id;
+    column.surfaceY = BlockTopY(y);
+    column.valid = true;
+    return column;
+  }
+  return column;
+}
+
+bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
+{
+  const FluidColumnSurface column = FindFluidColumnSurface(eye);
+  if (!column.valid || eye.y >= column.surfaceY)
+  {
     return false;
   }
-  return false;
+  if (outFluid)
+  {
+    *outFluid = column.fluidId;
+  }
+  return true;
 }
 
 UWorld::SampledFluidState

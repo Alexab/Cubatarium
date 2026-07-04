@@ -242,6 +242,9 @@ private:
   float FogDensity{1.0f};
   float FogHorizonBlend{0.0f};
   bool WasUnderwaterFog{false};
+  float FluidSurfaceY{-1000.0f};
+  float BelowSurfaceFogStrength{0.0f};
+  glm::vec3 BelowSurfaceFogColor{0.05f, 0.15f, 0.35f};
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

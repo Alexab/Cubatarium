@@ -664,11 +664,28 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     return;
   }
-  const UWorld::SampledFluidState fluid = WorldInstance->SampleFluidPhysics(
-      camera->GetPosition(), camera->GetPlayerCapsule());
+  const glm::vec3 eye = camera->GetPosition();
+  const UWorld::SampledFluidState fluid =
+      WorldInstance->SampleFluidPhysics(eye, camera->GetPlayerCapsule());
+  const UWorld::FluidColumnSurface column =
+      WorldInstance->FindFluidColumnSurface(eye);
   BlockId eyeFluid = BLOCK_AIR;
   const bool cameraInFluid =
-      WorldInstance->IsCameraInsideFluid(camera->GetPosition(), &eyeFluid);
+      column.valid && eye.y < column.surfaceY;
+  if (cameraInFluid)
+  {
+    eyeFluid = column.fluidId;
+  }
+
+  constexpr float kPreSubmergeFragmentFogBand = 0.12f;
+  FluidSurfaceY = column.valid ? column.surfaceY : -1000.0f;
+  BelowSurfaceFogStrength = 0.0f;
+  if (column.valid && fluid.inFluid && !cameraInFluid &&
+      eye.y >= column.surfaceY &&
+      eye.y < column.surfaceY + kPreSubmergeFragmentFogBand)
+  {
+    BelowSurfaceFogStrength = 1.0f;
+  }
 
   glm::vec3 targetSky = BaseSkyColor;
   FogEnabled = 0.0f;
@@ -680,6 +697,13 @@ void UGeometryEngine::PrepareFrameRendering()
   const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
   const bool enteringUnderwater = cameraInFluid && !WasUnderwaterFog;
   const float underwaterFogMix = enteringUnderwater ? 1.0f : 0.15f;
+  if (column.valid)
+  {
+    if (const FluidViewProfile *fv = registry.GetFluidView(column.fluidId))
+    {
+      BelowSurfaceFogColor = fv->FogColor;
+    }
+  }
   if (cameraInFluid)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
@@ -690,9 +714,17 @@ void UGeometryEngine::PrepareFrameRendering()
         FogStart = fv->FogStart;
         FogEnd = fv->FogEnd;
         FogMinBlend = fv->FogMinBlend;
-        SmoothedFogColor =
-            glm::mix(SmoothedFogColor, fv->FogColor, underwaterFogMix);
         targetSky = fv->FogColor;
+        if (enteringUnderwater)
+        {
+          SmoothedFogColor = fv->FogColor;
+          SmoothedSkyTint = fv->FogColor;
+        }
+        else
+        {
+          SmoothedFogColor =
+              glm::mix(SmoothedFogColor, fv->FogColor, underwaterFogMix);
+        }
       }
     }
   }
@@ -726,8 +758,11 @@ void UGeometryEngine::PrepareFrameRendering()
     }
   }
 
-  SmoothedSkyTint =
-      glm::mix(SmoothedSkyTint, targetSky, cameraInFluid ? underwaterFogMix : 0.15f);
+  if (!enteringUnderwater)
+  {
+    SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky,
+                               cameraInFluid ? underwaterFogMix : 0.15f);
+  }
   skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
   WasUnderwaterFog = cameraInFluid;
 }
@@ -743,6 +778,9 @@ void UGeometryEngine::ApplyFogUniforms(
   shader->SetFloat("uFogEnabled", FogEnabled);
   shader->SetFloat("uFogHorizontal", FogHorizontal);
   shader->SetFloat("uFogDensity", FogDensity);
+  shader->SetFloat("uFluidSurfaceY", FluidSurfaceY);
+  shader->SetFloat("uBelowSurfaceFog", BelowSurfaceFogStrength);
+  shader->SetVec3("uBelowSurfaceFogColor", BelowSurfaceFogColor);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(

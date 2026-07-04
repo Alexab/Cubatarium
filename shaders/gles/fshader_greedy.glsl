@@ -25,6 +25,9 @@ uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
+uniform float uFluidSurfaceY;
+uniform float uBelowSurfaceFog;
+uniform vec3 uBelowSurfaceFogColor;
 
 const int kCrossFaceIndex = 127;
 
@@ -109,6 +112,11 @@ void main()
     }
     if (uGreedyShaderMode == kGreedyModeFuzzyOnly && FragColor.a >= uShellAlphaThreshold) {
         discard;
+    }
+    if (uBelowSurfaceFog > 0.001 && vWorldPos.y < uFluidSurfaceY) {
+        float depthBelow = uFluidSurfaceY - vWorldPos.y;
+        float belowFactor = uBelowSurfaceFog * clamp(0.4 + depthBelow * 0.3, 0.4, 1.0);
+        FragColor.rgb = mix(FragColor.rgb, uBelowSurfaceFogColor, belowFactor);
     }
     if (uFogEnabled > 0.5) {
         float dist;
