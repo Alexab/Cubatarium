@@ -912,7 +912,11 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GreedyMesher.cpp
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
     src/Test/DecorMeshIntegrationTest.cpp)
 target_include_directories(decor_mesh_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -923,6 +927,9 @@ target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohma
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
@@ -939,6 +946,8 @@ add_executable(worldgen_vegetation_placement_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
     src/World/Objects/ObjectUtil.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
@@ -965,6 +974,7 @@ target_link_libraries(fluid_permeable_decor_test glm::glm nlohmann_json::nlohman
 
 add_executable(fluid_gameplay_fixes_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
@@ -991,6 +1001,8 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/World/Core/IUBlockWriter.cpp
     src/World/Objects/ObjectLibrary.cpp
     src/World/Objects/ObjectUtil.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
     src/WorldGen/Core/WorldSeedParser.cpp

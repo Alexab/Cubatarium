@@ -61,6 +61,21 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   return definitions;
 }
 
+static void FillCoastalColumnAt(cutum::UBlockWorld &world, int x, int z)
+{
+  for (int y = 0; y <= 47; ++y)
+  {
+    world.SetBlock(glm::ivec3(x, y, z), kStone);
+  }
+  world.SetBlock(glm::ivec3(x, 48, z), kWater);
+  world.SetFluidState(glm::ivec3(x, 48, z),
+                      cutum::FluidCellState::Source().WithKind(
+                          cutum::FluidKind::Water));
+  world.SetBlock(glm::ivec3(x, 49, z), kGrass);
+  world.SetBlock(glm::ivec3(x, 50, z), kGrass);
+  world.SetBlock(glm::ivec3(x, 51, z), kGrass);
+}
+
 static void FillCoastalColumn(cutum::UBlockWorld &world)
 {
   FillCoastalColumnAt(world, 0, 0);
@@ -127,21 +142,6 @@ static cutum::WorldObjectDefinition MakeFallenLog()
   object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
   object.voxels.push_back({glm::ivec3(1, 0, 0), kLog});
   return object;
-}
-
-static void FillCoastalColumnAt(cutum::UBlockWorld &world, int x, int z)
-{
-  for (int y = 0; y <= 47; ++y)
-  {
-    world.SetBlock(glm::ivec3(x, y, z), kStone);
-  }
-  world.SetBlock(glm::ivec3(x, 48, z), kWater);
-  world.SetFluidState(glm::ivec3(x, 48, z),
-                      cutum::FluidCellState::Source().WithKind(
-                          cutum::FluidKind::Water));
-  world.SetBlock(glm::ivec3(x, 49, z), kGrass);
-  world.SetBlock(glm::ivec3(x, 50, z), kGrass);
-  world.SetBlock(glm::ivec3(x, 51, z), kGrass);
 }
 
 static void TestResolvePlacementSurfaceOnCoast()
