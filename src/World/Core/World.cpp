@@ -64,6 +64,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
 
 using json = nlohmann::json;
 
@@ -105,6 +106,56 @@ FluidFloodOptions MakeBreakSiteFloodOptions(const UBlockRegistry &registry,
     }
   }
   return options;
+}
+
+struct FluidSurfaceSample
+{
+  BlockId fluid_id{BLOCK_AIR};
+  float surface_y{0.0f};
+};
+
+bool EyeInBlockColumn(const glm::vec3 &eye, glm::ivec3 block_pos)
+{
+  return std::abs(eye.x - static_cast<float>(block_pos.x)) <= 0.5f &&
+         std::abs(eye.z - static_cast<float>(block_pos.z)) <= 0.5f &&
+         eye.y >= static_cast<float>(block_pos.y) - 0.5f &&
+         eye.y <= static_cast<float>(block_pos.y) + 0.5f;
+}
+
+bool TrySubmergedFluidInColumn(const UBlockWorld &world,
+                               const UBlockRegistry &registry,
+                               const glm::vec3 &eye, glm::ivec3 block_pos,
+                               FluidSurfaceSample &out_sample)
+{
+  const BlockId id = world.GetBlock(block_pos);
+  if (registry.IsLiquid(id))
+  {
+    if (!EyeInBlockColumn(eye, block_pos))
+    {
+      return false;
+    }
+    out_sample.fluid_id = id;
+    out_sample.surface_y = BlockTopY(block_pos.y);
+    return true;
+  }
+  if (registry.IsFluidPermeable(id) &&
+      PackFluidCellState(world.GetFluidState(block_pos)) != 0)
+  {
+    const BlockId water_id = registry.GetIdByTypeName("water");
+    if (water_id == BLOCK_AIR)
+    {
+      return false;
+    }
+    const float surface_y = BlockTopY(block_pos.y);
+    if (eye.y > surface_y || !EyeInBlockColumn(eye, block_pos))
+    {
+      return false;
+    }
+    out_sample.fluid_id = water_id;
+    out_sample.surface_y = surface_y;
+    return true;
+  }
+  return false;
 }
 
 } // namespace
@@ -1373,60 +1424,23 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   {
     return false;
   }
-  const glm::ivec3 cell = WorldPosToBlock(eye);
-  const BlockId Id = BlockWorld.GetBlock(cell);
-  const bool waterlogged =
-      BlockRegistry->IsFluidPermeable(Id) &&
-      PackFluidCellState(BlockWorld.GetFluidState(cell)) != 0;
-  if (Id == BLOCK_AIR)
+  const int bx = WorldCoordToBlockIndex(eye.x);
+  const int bz = WorldCoordToBlockIndex(eye.z);
+  const int by = WorldCoordToBlockIndex(eye.y);
+  FluidSurfaceSample sample;
+  for (int y = by + 1; y >= by - 2; --y)
   {
-    const UBlockDefinitionStorage *definitions =
-        BlockRegistry->GetDefinitions();
-    if (definitions == nullptr ||
-        !UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions, cell))
+    if (TrySubmergedFluidInColumn(BlockWorld, *BlockRegistry, eye,
+                                  glm::ivec3(bx, y, bz), sample))
     {
-      return false;
-    }
-    const glm::vec3 center = BlockCenter(cell);
-    const glm::vec3 rel = eye - center;
-    if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f ||
-        std::abs(rel.z) > 0.5f)
-    {
-      return false;
-    }
-    if (outFluid)
-    {
-      *outFluid = BlockRegistry->GetIdByTypeName("water");
-    }
-    return true;
-  }
-  if (BlockRegistry->BlocksMovement(Id) && !waterlogged)
-  {
-    return false;
-  }
-  if (!BlockRegistry->IsLiquid(Id) && !waterlogged)
-  {
-    return false;
-  }
-  const glm::vec3 center = BlockCenter(cell);
-  const glm::vec3 rel = eye - center;
-  if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f ||
-      std::abs(rel.z) > 0.5f)
-  {
-    return false;
-  }
-  if (outFluid)
-  {
-    if (BlockRegistry->IsLiquid(Id))
-    {
-      *outFluid = Id;
-    }
-    else
-    {
-      *outFluid = BlockRegistry->GetIdByTypeName("water");
+      if (outFluid)
+      {
+        *outFluid = sample.fluid_id;
+      }
+      return true;
     }
   }
-  return true;
+  return false;
 }
 
 UWorld::SampledFluidState
@@ -1455,13 +1469,7 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
         const bool waterlogged =
             BlockRegistry->IsFluidPermeable(Id) &&
             PackFluidCellState(BlockWorld.GetFluidState(blockPos)) != 0;
-        const UBlockDefinitionStorage *definitions =
-            BlockRegistry->GetDefinitions();
-        const bool submerged_air =
-            Id == BLOCK_AIR && definitions != nullptr &&
-            UFluidSpreadSystem::CellTouchesWet(BlockWorld, *definitions,
-                                               blockPos);
-        if ((Id == BLOCK_AIR && !submerged_air) ||
+        if (Id == BLOCK_AIR ||
             (BlockRegistry->BlocksMovement(Id) && !waterlogged))
         {
           continue;
@@ -1474,9 +1482,8 @@ UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
         const BlockId physicsId =
             BlockRegistry->IsLiquid(Id)
                 ? Id
-                : (waterlogged || submerged_air
-                       ? BlockRegistry->GetIdByTypeName("water")
-                       : Id);
+                : (waterlogged ? BlockRegistry->GetIdByTypeName("water")
+                               : Id);
         if (physicsId == BLOCK_AIR)
         {
           continue;

@@ -678,6 +678,8 @@ void UGeometryEngine::PrepareFrameRendering()
   OverlayBlockId = BLOCK_AIR;
 
   const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
+  const bool enteringUnderwater = cameraInFluid && !WasUnderwaterFog;
+  const float underwaterFogMix = enteringUnderwater ? 1.0f : 0.15f;
   if (cameraInFluid)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
@@ -688,7 +690,8 @@ void UGeometryEngine::PrepareFrameRendering()
         FogStart = fv->FogStart;
         FogEnd = fv->FogEnd;
         FogMinBlend = fv->FogMinBlend;
-        SmoothedFogColor = glm::mix(SmoothedFogColor, fv->FogColor, 0.15f);
+        SmoothedFogColor =
+            glm::mix(SmoothedFogColor, fv->FogColor, underwaterFogMix);
         targetSky = fv->FogColor;
       }
     }
@@ -723,8 +726,10 @@ void UGeometryEngine::PrepareFrameRendering()
     }
   }
 
-  SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky, 0.15f);
+  SmoothedSkyTint =
+      glm::mix(SmoothedSkyTint, targetSky, cameraInFluid ? underwaterFogMix : 0.15f);
   skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
+  WasUnderwaterFog = cameraInFluid;
 }
 
 void UGeometryEngine::ApplyFogUniforms(
