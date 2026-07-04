@@ -1,6 +1,7 @@
 #ifndef FLUIDSURFACEMAP_H
 #define FLUIDSURFACEMAP_H
 
+#include "Render/Engine/RenderFogSettings.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
@@ -17,8 +18,8 @@ class UChunkMeshCache;
 class UFluidSurfaceMap
 {
 public:
-  static constexpr float kNoSurfaceSentinel = -1000.0f;
-  static constexpr int kMaxFluidShaderSlots = 3;
+  static constexpr float kNoSurfaceSentinel = URenderFogSettings::NoSurfaceSentinel;
+  static constexpr int kMaxFluidShaderSlots = URenderFogSettings::MaxFluidShaderSlots;
 
   void EnsureGpuResources();
   void DestroyGpuResources();

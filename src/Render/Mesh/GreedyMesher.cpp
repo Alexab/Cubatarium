@@ -14,7 +14,7 @@
 #include "World/Core/BlockWorld.h"
 
 #include "World/Math/FluidCellState.h"
-#include "World/Physics/FluidSpreadSystem.h"
+#include "World/Physics/FluidBlockResolver.h"
 
 #include <algorithm>
 
@@ -340,7 +340,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
             }
 
             const BlockId fluid_id =
-                UFluidSpreadSystem::ResolveFluidBlockIdForMesh(
+                UFluidBlockResolver::ResolveFluidBlockIdForMesh(
                     reader, *definitions, world_pos);
             if (fluid_id == BLOCK_AIR)
             {

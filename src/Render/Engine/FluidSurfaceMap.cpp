@@ -1,6 +1,7 @@
 #include "Render/Engine/FluidSurfaceMap.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Render/Engine/FluidSurfaceMapLogic.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Chunks/Chunk.h"
@@ -59,9 +60,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
                                (cz - renderDistChunks) * CHUNK_SIZE);
 
   const bool sizeChanged = sizeBlocks != SizeBlocks;
-  const bool windowMoved =
-      std::abs(originBlock.x - WindowOriginBlock.x) >= 8 ||
-      std::abs(originBlock.y - WindowOriginBlock.y) >= 8;
+  const bool windowMoved = ShouldRefreshFluidSurfaceWindow(
+      WindowOriginBlock.x, WindowOriginBlock.y, originBlock.x, originBlock.y);
   const bool revisionChanged = LastMeshRevision != cache.GetMeshRevision();
   if (!sizeChanged && !windowMoved && !revisionChanged && Valid)
   {

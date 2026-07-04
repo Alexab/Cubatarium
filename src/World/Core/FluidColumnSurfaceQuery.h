@@ -2,6 +2,7 @@
 #define FLUIDCOLUMNSURFACEQUERY_H
 
 #include "World/Math/BlockTypes.h"
+#include "World/Core/FluidSurfaceScanTuning.h"
 
 namespace cutum
 {
@@ -21,7 +22,8 @@ struct FluidColumnSurface
 FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
                                             const UBlockRegistry &registry,
                                             int bx, int bz, int hintY,
-                                            int scanUp = 32, int scanDown = 64);
+                                            int scanUp = FluidSurfaceScanTuning::ScanUp,
+                                            int scanDown = FluidSurfaceScanTuning::ScanDown);
 
 } // namespace cutum
 

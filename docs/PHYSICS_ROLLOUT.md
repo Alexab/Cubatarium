@@ -37,7 +37,16 @@ C++ (physics-nightly / smoke): `fluid_sim_mesh_integration_test`, `fluid_worldge
 
 Python (worldgen smoke): `shore_air_gaps_max: 0` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
 
-Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_mesh_faces_test`, `underwater_fog_column_test`, `fluid_surface_slice_test`, `fluid_sim_mesh_integration_test`, `fluid_queue_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `liquid_flow_scenarios_test`, `physics_integration_test`. Python CI: `shore_air_gaps_max` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
+Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_mesh_faces_test`, `underwater_fog_column_test`, `fluid_surface_slice_test`, `fluid_surface_map_logic_test`, `fluid_sim_mesh_integration_test`, `fluid_queue_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `worldgen_fluid_vegetation_pipeline_test`, `liquid_flow_scenarios_test`, `physics_integration_test`. Python CI: `shore_air_gaps_max` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
+
+| Check | Automated | Manual only |
+|-------|-----------|-------------|
+| Fluid mesh faces (waterlogged decor) | `fluid_mesh_faces_test` | — |
+| Column surface scan / fog sentinel | `fluid_surface_map_logic_test`, `fluid_surface_slice_test`, `underwater_fog_column_test` | Open-ocean wade tint timing |
+| Seal → prune vegetation pipeline | `worldgen_fluid_vegetation_pipeline_test` | Wide ravine placement feel |
+| Shore fill oscillation | `physics_integration_test`, `liquid_flow_scenarios_test` | Ocean edge visual stability |
+| Below-surface full-screen fog | `underwater_fog_column_test` (rule) | Shallow vs deep subjective tint |
+| TD-FL-021 placement in pits | partial (`fluid_placement_test`) | 7×7 ravine, lava ping-pong |
 
 Manual QA — below-surface / underwater fog (variant A, TD-FL-029):
 
