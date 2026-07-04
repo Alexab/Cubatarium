@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 26 | Open: 5
+> Total closed: 27 | Open: 4
 
 ## Open
 
@@ -9,9 +9,10 @@
 |----|----------|------|--------------|--------------|
 | TD-FL-003 | R1 | Level-based basin / cliff face rules in `GreedyMesher` | R1 uses pre-F0 full-cube culling (fluid→solid hidden) | R4 |
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
-| TD-FL-021 | R3 | Manual QA checklist in `PHYSICS_ROLLOUT.md` (liquids) | Requires in-game verification | R3 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
 | TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Kind-aware `ApplyFluidFill` done; liquid-on-liquid policy still open | backlog |
+
+Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-branch backlog.
 
 ## Closed
 
@@ -45,6 +46,7 @@
 | TD-FL-029 | render | Per-column below-surface fog (variant A): `UFluidSurfaceMap` + shader `surfaceYAt`/`fluidIndexAt`; removed 20 cm pre-submerge band |
 | TD-FL-030 | waterlogging | Explicit `FluidKind` in `fluid_data` (bits 4–7); placement/worldgen/flood write kind; legacy `kind=0` infer + sea-band fallback | `FluidCellState`, `ApplyFluidFill`, `ResolveFluidBlockId`, `fluid_placement_liquid_decor_test` |
 | TD-FL-031 | render | Remove `PrimaryLiquidBlockId`; GreedyMesher uses per-cell `ResolveFluidBlockIdForMesh` | `GreedyMesher.cpp` |
+| TD-FL-021 | phase-8-docs | Manual liquids + fog QA moved to dedicated runbook | [`QA_FLUIDS_2026.md`](QA_FLUIDS_2026.md) |
 
 ## Phase tracker
 

@@ -88,6 +88,16 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 - `ScanChunkFluidFrontier` on chunk commit — column scan, chunk-edge neighbors.
 - `UFluidUpdateSet` budget: `fluid_blocks_per_tick_max` (default 128).
 
+## Shadow mode audit (Phase 8, 2026-07)
+
+Audit by repo-wide `ShadowMode`/`liquid_shadow_mode` grep confirms fluid shadow mode is active and used for rollback safety:
+
+- Config + runtime flags: `config.json.example`, `Core.cpp`, `PhysicsProfile.h`.
+- Wiring: `WorldBlockPhysicsService` sets `FluidSystem.ShadowMode = !flags.EnableFluids || flags.LiquidShadowMode`.
+- Execution guard: `UFluidTransformSim::TickBlock` exits early in shadow mode (no world mutation).
+
+Decision: keep fluid shadow mode as a documented operational rollback control; do not remove in Phase 8.
+
 ## Migration (binary chunk)
 
 - **v1:** block runs only; on load liquids get `Pack(Source())`
