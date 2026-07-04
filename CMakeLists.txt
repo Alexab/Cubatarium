@@ -159,6 +159,7 @@ set(SOURCES
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidReflowScan.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Physics/PrimitivePhysicsProfile.cpp
@@ -803,6 +804,7 @@ add_executable(fluid_spread_level_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidSpreadLevelTest.cpp)
 target_include_directories(fluid_spread_level_test PRIVATE
@@ -816,6 +818,7 @@ add_executable(fluid_mesh_faces_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidMeshFacesTest.cpp)
 target_include_directories(fluid_mesh_faces_test PRIVATE
@@ -849,6 +852,7 @@ add_executable(liquid_viscosity_gate_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/LiquidViscosityGateTest.cpp)
@@ -861,6 +865,7 @@ add_executable(liquid_non_renewable_flow_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/LiquidNonRenewableFlowTest.cpp)
 target_include_directories(liquid_non_renewable_flow_test PRIVATE
@@ -872,6 +877,7 @@ add_executable(liquid_flow_scenarios_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/LiquidFlowScenariosTest.cpp)
 target_include_directories(liquid_flow_scenarios_test PRIVATE
@@ -883,6 +889,7 @@ add_executable(fluid_queue_integration_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidQueueIntegrationTest.cpp)
@@ -897,6 +904,7 @@ add_executable(fluid_sim_mesh_integration_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidSimMeshIntegrationTest.cpp)
@@ -913,6 +921,7 @@ add_executable(fluid_placement_liquid_decor_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidPlacementLiquidDecorTest.cpp)
@@ -936,6 +945,7 @@ add_executable(decor_mesh_integration_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/DecorMeshIntegrationTest.cpp)
 target_include_directories(decor_mesh_integration_test PRIVATE
@@ -951,6 +961,7 @@ add_executable(fluid_worldgen_seal_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
@@ -971,6 +982,7 @@ add_executable(worldgen_vegetation_placement_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
@@ -994,6 +1006,7 @@ add_executable(fluid_block_resolver_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidBlockResolverTest.cpp)
 target_include_directories(fluid_block_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1005,6 +1018,7 @@ add_executable(fluid_flood_service_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidFloodServiceTest.cpp)
 target_include_directories(fluid_flood_service_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1016,6 +1030,7 @@ add_executable(fluid_fill_policy_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidFillPolicyTest.cpp)
 target_include_directories(fluid_fill_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1035,6 +1050,7 @@ add_executable(fluid_permeable_decor_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidPermeableDecorTest.cpp)
@@ -1052,6 +1068,7 @@ add_executable(fluid_gameplay_fixes_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidGameplayFixesTest.cpp)
@@ -1078,6 +1095,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
@@ -1125,6 +1143,7 @@ add_executable(physics_integration_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/PhysicsIntegrationTest.cpp)
 target_include_directories(physics_integration_test PRIVATE
@@ -1165,6 +1184,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/World/Physics/ChunkPhysicsSeed.cpp
     src/Render/Primitives/Cube.cpp
