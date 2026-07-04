@@ -25,6 +25,8 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
                                     const std::string &worldgen_owner_pack_id,
                                     glm::ivec3 chunk_coord);
 
+int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z);
+
 int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,
                                  int centerX = 0, int centerZ = 0);

@@ -935,6 +935,22 @@ target_compile_definitions(fluid_worldgen_seal_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(worldgen_vegetation_placement_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/Test/WorldGenVegetationPlacementTest.cpp)
+target_include_directories(worldgen_vegetation_placement_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_permeable_decor_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp

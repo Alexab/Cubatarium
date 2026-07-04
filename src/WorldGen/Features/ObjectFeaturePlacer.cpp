@@ -95,6 +95,28 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
   return prefab->PlacementYOffset;
 }
 
+PlacementSurfaceInfo ResolveColumnPlacementSurface(const WorldGenContext &ctx,
+                                                   int x, int z,
+                                                   int heightmapSurfaceY)
+{
+  return ResolvePlacementSurfaceY(ctx.World, ctx.Registry, x, z,
+                                  heightmapSurfaceY, ctx.Settings.MaxHeight,
+                                  ctx.Settings.SeaLevel);
+}
+
+bool IsColumnReadyForPlantFeatures(const WorldGenContext &ctx, int x, int z,
+                                   int heightmapSurfaceY,
+                                   PlacementSurfaceInfo &outSurface)
+{
+  outSurface = ResolveColumnPlacementSurface(ctx, x, z, heightmapSurfaceY);
+  if (outSurface.topSolidY < 0)
+  {
+    return false;
+  }
+  return IsExposedLandSurface(ctx.World, ctx.Registry, x, z,
+                              outSurface.topSolidY);
+}
+
 bool PlaceObjectAtWaterSurface(WorldGenContext &ctx, const std::string &prefabName,
                                glm::ivec3 anchorWorldPos)
 {
@@ -170,16 +192,12 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
                  std::max(surfaceY + 24, ctx.Settings.SeaLevel + 4));
     const int localSurface =
         FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
-    if (localSurface < 0)
+    if (localSurface < ctx.Settings.SeaLevel + 1)
     {
       continue;
     }
     const int y = localSurface + 1 + rule.Scatter.DyOffset;
-    if (y <= surfaceY || y <= ctx.Settings.SeaLevel)
-    {
-      continue;
-    }
-    if (localSurface < ctx.Settings.SeaLevel)
+    if (y <= ctx.Settings.SeaLevel)
     {
       continue;
     }
@@ -346,18 +364,20 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
 
   const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
+  PlacementSurfaceInfo placementSurface;
+  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
+  {
+    return false;
+  }
+  const int topSolid = placementSurface.topSolidY;
   if (chosen->Mode == ObjectPlacementMode::ScatterBlocks)
   {
-    if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
-    {
-      return false;
-    }
-    return TryPlaceScatterBlocks(ctx, x, z, surfaceY, *chosen);
+    return TryPlaceScatterBlocks(ctx, x, z, topSolid, *chosen);
   }
   if (chosen->Surface.Kind == SurfaceConstraintKind::WaterSurface)
   {
     if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x,
-                                    z, surfaceY))
+                                    z, topSolid))
     {
       return false;
     }
@@ -368,17 +388,19 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     return PlaceObjectAtWaterSurface(ctx, chosen->ObjectName, water_anchor);
   }
-  const glm::ivec3 anchor(x, surfaceY + 1 + yOffset, z);
+  const WorldObjectDefinition *prefab = ctx.Objects->Get(chosen->ObjectName);
+  if (!prefab)
+  {
+    return false;
+  }
+  const glm::ivec3 anchor(
+      x, ResolveWorldGenAnchorY(*prefab, ctx.Registry, topSolid, yOffset), z);
   if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x, z,
-                                  surfaceY))
+                                  topSolid))
   {
     return false;
   }
-  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
-  {
-    return false;
-  }
-  return PlaceObjectAt(ctx, chosen->ObjectName, anchor, surfaceY);
+  return PlaceObjectAt(ctx, chosen->ObjectName, anchor, topSolid);
 }
 
 const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
@@ -466,7 +488,8 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+  PlacementSurfaceInfo placementSurface;
+  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
   {
     return false;
   }
@@ -513,11 +536,12 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+  PlacementSurfaceInfo placementSurface;
+  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
   {
     return false;
   }
-  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
+  return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
                             GetObjectFeatures(ctx).GroundCover,
                             ObjectFeaturePool::GroundCover, 5500, false, true,
                             ctx.Settings.Tuning.vegetationDensity * 0.85f);
@@ -531,11 +555,12 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  if (!IsExposedLandSurface(ctx.World, ctx.Registry, x, z, surfaceY))
+  PlacementSurfaceInfo placementSurface;
+  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
   {
     return false;
   }
-  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
+  return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
                             GetObjectFeatures(ctx).Decoration,
                             ObjectFeaturePool::Decoration, 6000, false, false,
                             ctx.Settings.Tuning.decorationDensity);

@@ -3,12 +3,41 @@
 #include "Blocks/BlockRegistry.h"
 #include <algorithm>
 #include <array>
+#include <optional>
+#include <unordered_map>
+#include <utility>
 
 namespace cutum
 {
 
 namespace
 {
+
+constexpr int kLeafNearSolidRadius = 5;
+
+using ColumnXZ = std::pair<int, int>;
+
+struct ColumnXZHash
+{
+  size_t operator()(const ColumnXZ &column) const
+  {
+    return std::hash<int64_t>{}(
+        (static_cast<int64_t>(static_cast<uint32_t>(column.first)) << 32) ^
+        static_cast<uint64_t>(static_cast<uint32_t>(column.second)));
+  }
+};
+
+ColumnXZ ColumnKey(int x, int z)
+{
+  return {x, z};
+}
+
+int ChebyshevDistance3(const glm::ivec3 &a, const glm::ivec3 &b)
+{
+  return std::max({std::abs(a.x - b.x), std::abs(a.y - b.y), std::abs(a.z - b.z)});
+}
+
+} // namespace
 
 bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 pos)
@@ -32,8 +61,6 @@ bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
   }
   return false;
 }
-
-} // namespace
 
 bool CanPlaceObjectAt(const UBlockWorld &world,
                       const WorldObjectDefinition &object,
@@ -112,82 +139,298 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
   return -1;
 }
 
+PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
+                                              UBlockRegistry &registry, int x,
+                                              int z, int heightmapSurfaceY,
+                                              int maxHeight, int seaLevel)
+{
+  PlacementSurfaceInfo info;
+  info.maxScanY =
+      heightmapSurfaceY >= 0
+          ? std::min(maxHeight - 1,
+                     std::max(heightmapSurfaceY + 24, seaLevel + 4))
+          : std::min(maxHeight - 1, seaLevel + 4);
+  info.topSolidY =
+      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY);
+  if (info.topSolidY < seaLevel + 1)
+  {
+    info.topSolidY = -1;
+  }
+  return info;
+}
+
+bool IsRemovableFloatingPlantBlock(const UBlockRegistry &registry, BlockId id)
+{
+  if (id == BLOCK_AIR || registry.IsLiquid(id))
+  {
+    return false;
+  }
+  if (registry.IsFluidPermeable(id))
+  {
+    return true;
+  }
+  return !registry.BlocksMovement(id);
+}
+
+bool ColumnSolidYsContiguous(const std::vector<int> &ys)
+{
+  if (ys.empty())
+  {
+    return false;
+  }
+  for (size_t i = 1; i < ys.size(); ++i)
+  {
+    if (ys[i] != ys[i - 1] + 1)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool CanOccupySolidVoxelForWorldGen(const UBlockWorld &world,
+                                    UBlockRegistry &registry, glm::ivec3 pos,
+                                    int columnLocalSurface)
+{
+  if (world.IsAir(pos))
+  {
+    return true;
+  }
+  const BlockId existing = world.GetBlock(pos);
+  if (!registry.BlocksMovement(existing))
+  {
+    return true;
+  }
+  if (columnLocalSurface >= 0 && pos.y == columnLocalSurface &&
+      IsSolidPlantGround(world, registry, pos))
+  {
+    return true;
+  }
+  return false;
+}
+
+bool IsSurfaceLayerPrefab(const WorldObjectDefinition &object,
+                          UBlockRegistry &registry)
+{
+  std::optional<int> solidDy;
+  for (const auto &voxel : object.voxels)
+  {
+    if (voxel.Id == BLOCK_AIR || !registry.BlocksMovement(voxel.Id))
+    {
+      continue;
+    }
+    if (!solidDy.has_value())
+    {
+      solidDy = voxel.offset.y;
+      continue;
+    }
+    if (*solidDy != voxel.offset.y)
+    {
+      return false;
+    }
+  }
+  return solidDy.has_value();
+}
+
+int ResolveWorldGenAnchorY(const WorldObjectDefinition &object,
+                           UBlockRegistry &registry, int topSolid,
+                           int yOffset)
+{
+  const int effectiveYOffset = std::max(yOffset, 0);
+  if (IsSurfaceLayerPrefab(object, registry))
+  {
+    return topSolid + effectiveYOffset;
+  }
+  return topSolid + 1 + effectiveYOffset;
+}
+
+bool ColumnSolidPlacementValid(const UBlockWorld &world,
+                               UBlockRegistry &registry, int x, int z,
+                               const std::vector<int> &ys, int maxScanY,
+                               int seaLevel)
+{
+  const int localSurface =
+      FindTopSolidSurfaceY(world, registry, x, z, maxScanY);
+  if (localSurface < 0)
+  {
+    return false;
+  }
+  if (seaLevel >= 0 && localSurface < seaLevel)
+  {
+    return false;
+  }
+  if (!ColumnSolidYsContiguous(ys))
+  {
+    return false;
+  }
+  const int minY = ys.front();
+  const int maxY = ys.back();
+  if (minY < localSurface || minY > localSurface + 1)
+  {
+    return false;
+  }
+  if (minY == localSurface + 1)
+  {
+    if (!CanPlacePlantAt(world, registry, glm::ivec3(x, minY, z)))
+    {
+      return false;
+    }
+  }
+  else if (!IsSolidPlantGround(world, registry, glm::ivec3(x, localSurface, z)))
+  {
+    return false;
+  }
+  if (seaLevel >= 0 && maxY <= seaLevel)
+  {
+    return false;
+  }
+  return true;
+}
+
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
                                  int seaLevel, int anchorSurfaceY)
 {
+  if (object.voxels.empty())
+  {
+    return false;
+  }
+
+  const int anchorX = anchorWorldPos.x;
+  const int anchorZ = anchorWorldPos.z;
+  const int anchorLocalSurface =
+      FindTopSolidSurfaceY(world, registry, anchorX, anchorZ, maxScanY);
+  if (anchorLocalSurface < 0)
+  {
+    return false;
+  }
+  if (seaLevel >= 0 && anchorLocalSurface < seaLevel)
+  {
+    return false;
+  }
+  (void)anchorSurfaceY;
+
+  const bool surfaceLayer = IsSurfaceLayerPrefab(object, registry);
+
+  std::vector<glm::ivec3> solidWorldPositions;
+  std::vector<glm::ivec3> nonSolidWorldPositions;
+  solidWorldPositions.reserve(object.voxels.size());
+  nonSolidWorldPositions.reserve(object.voxels.size());
+
   for (const auto &voxel : object.voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - object.anchor;
-    const int localSurface =
-        FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
     const bool voxelSolid =
         voxel.Id != BLOCK_AIR && registry.BlocksMovement(voxel.Id);
-    if (localSurface < 0)
+    if (voxelSolid)
     {
-      if (!world.IsAir(worldPos))
+      solidWorldPositions.push_back(worldPos);
+    }
+    else if (voxel.Id != BLOCK_AIR)
+    {
+      nonSolidWorldPositions.push_back(worldPos);
+    }
+  }
+
+  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty())
+  {
+    return false;
+  }
+
+  std::unordered_map<ColumnXZ, std::vector<int>, ColumnXZHash> solidYByColumn;
+  for (const glm::ivec3 &pos : solidWorldPositions)
+  {
+    solidYByColumn[ColumnKey(pos.x, pos.z)].push_back(pos.y);
+  }
+
+  const ColumnXZ anchorKey = ColumnKey(anchorX, anchorZ);
+  const auto anchorIt = solidYByColumn.find(anchorKey);
+  if (solidYByColumn.empty() || anchorIt == solidYByColumn.end())
+  {
+    return false;
+  }
+
+  if (surfaceLayer)
+  {
+    for (const auto &entry : solidYByColumn)
+    {
+      const int colX = entry.first.first;
+      const int colZ = entry.first.second;
+      std::vector<int> ys = entry.second;
+      std::sort(ys.begin(), ys.end());
+      if (!ColumnSolidPlacementValid(world, registry, colX, colZ, ys, maxScanY,
+                                     seaLevel))
       {
         return false;
       }
-      if (seaLevel >= 0 && anchorSurfaceY >= 0 && anchorSurfaceY < seaLevel &&
-          voxelSolid)
+    }
+  }
+  else
+  {
+    {
+      std::vector<int> anchorYs = anchorIt->second;
+      std::sort(anchorYs.begin(), anchorYs.end());
+      if (!ColumnSolidPlacementValid(world, registry, anchorX, anchorZ,
+                                     anchorYs, maxScanY, seaLevel))
       {
         return false;
       }
-      if (seaLevel >= 0 && voxelSolid && worldPos.y <= seaLevel)
+    }
+
+    for (const auto &entry : solidYByColumn)
+    {
+      if (entry.first == anchorKey)
+      {
+        continue;
+      }
+      std::vector<int> ys = entry.second;
+      std::sort(ys.begin(), ys.end());
+      if (!ColumnSolidYsContiguous(ys))
       {
         return false;
       }
-      continue;
-    }
-    if (seaLevel >= 0 && voxelSolid && localSurface < seaLevel &&
-        worldPos.y <= seaLevel)
-    {
-      return false;
-    }
-    if (worldPos.y > localSurface + 1)
-    {
-      if (!world.IsAir(worldPos))
+      if (ys.front() <= anchorLocalSurface)
       {
         return false;
       }
-      for (int y = localSurface + 1; y < worldPos.y; ++y)
-      {
-        const BlockId between =
-            world.GetBlock(glm::ivec3(worldPos.x, y, worldPos.z));
-        if (between != BLOCK_AIR && !registry.BlocksMovement(between))
-        {
-          return false;
-        }
-      }
-      continue;
     }
-    if (worldPos.y == localSurface + 1)
-    {
-      if (!CanPlacePlantAt(world, registry, worldPos))
-      {
-        return false;
-      }
-      continue;
-    }
-    if (!world.IsAir(glm::ivec3(worldPos.x, localSurface + 1, worldPos.z)))
-    {
-      return false;
-    }
-    const BlockId existing = world.GetBlock(worldPos);
-    if (existing == BLOCK_AIR)
-    {
-      return false;
-    }
-    if (!registry.BlocksMovement(existing) ||
-        registry.GetRenderStyle(existing) == BlockRenderStyle::Fluid)
+  }
+
+  for (const glm::ivec3 &worldPos : solidWorldPositions)
+  {
+    const int columnLocalSurface =
+        FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
+    if (!CanOccupySolidVoxelForWorldGen(world, registry, worldPos,
+                                        columnLocalSurface))
     {
       return false;
     }
   }
-  return !object.voxels.empty();
+
+  for (const glm::ivec3 &worldPos : nonSolidWorldPositions)
+  {
+    if (!world.IsAir(worldPos))
+    {
+      return false;
+    }
+    bool nearSolid = false;
+    for (const glm::ivec3 &solidPos : solidWorldPositions)
+    {
+      if (ChebyshevDistance3(worldPos, solidPos) <= kLeafNearSolidRadius)
+      {
+        nearSolid = true;
+        break;
+      }
+    }
+    if (!nearSolid)
+    {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
@@ -247,6 +490,42 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
     ++pos.y;
   }
   return broken;
+}
+
+int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+                                int x, int z, int maxY)
+{
+  const int topSolid =
+      FindTopSolidSurfaceY(world, registry, x, z, maxY);
+  if (topSolid < 0)
+  {
+    return 0;
+  }
+
+  int removed = 0;
+  bool changed = true;
+  while (changed)
+  {
+    changed = false;
+    for (int y = topSolid + 2; y <= maxY; ++y)
+    {
+      const glm::ivec3 pos(x, y, z);
+      const BlockId id = world.GetBlock(pos);
+      if (!IsRemovableFloatingPlantBlock(registry, id))
+      {
+        continue;
+      }
+      if (HasBlockSupportBelow(world, registry, pos))
+      {
+        continue;
+      }
+      world.SetBlock(pos, BLOCK_AIR);
+      world.ClearFluidState(pos);
+      ++removed;
+      changed = true;
+    }
+  }
+  return removed;
 }
 
 } // namespace cutum

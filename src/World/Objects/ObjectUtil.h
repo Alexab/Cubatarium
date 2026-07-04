@@ -13,6 +13,13 @@ bool CanPlaceObjectAt(const UBlockWorld &world,
                       const WorldObjectDefinition &object,
                       glm::ivec3 anchorWorldPos);
 
+bool IsSurfaceLayerPrefab(const WorldObjectDefinition &object,
+                          UBlockRegistry &registry);
+
+int ResolveWorldGenAnchorY(const WorldObjectDefinition &object,
+                           UBlockRegistry &registry, int topSolid,
+                           int yOffset);
+
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
@@ -27,6 +34,25 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                           int x, int z, int surfaceY);
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
                          int x, int z, int maxY);
+
+struct PlacementSurfaceInfo
+{
+  int topSolidY{-1};
+  int maxScanY{0};
+};
+
+PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
+                                              UBlockRegistry &registry, int x,
+                                              int z, int heightmapSurfaceY,
+                                              int maxHeight, int seaLevel);
+
+bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+                          glm::ivec3 pos);
+
+bool IsRemovableFloatingPlantBlock(const UBlockRegistry &registry, BlockId id);
+
+int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+                                int x, int z, int maxY);
 
 struct ObjectPlacementStats
 {

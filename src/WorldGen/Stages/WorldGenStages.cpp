@@ -39,7 +39,7 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
   const float dx = static_cast<float>(worldX - centerX);
   const float dz = static_cast<float>(worldZ - centerZ);
   const float dist = std::sqrt(dx * dx + dz * dz);
-  const int minLandY = settings.SeaLevel + 1;
+  const int minLandY = settings.SeaLevel + 3;
 
   int adjusted = naturalSurfaceY;
   if (dist <= static_cast<float>(kSpawnIslandFlatRadius))
@@ -358,6 +358,25 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   const bool sealed_after_permeable =
       permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z) : false;
   return sealed || permeable || sealed_after_permeable;
+}
+
+int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)
+{
+  const int max_y = std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 32);
+  int removed = 0;
+  for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+  {
+    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+    {
+      removed += PruneFloatingPlantsInColumn(ctx.World, ctx.Registry, base_x + lx,
+                                             base_z + lz, max_y);
+    }
+  }
+  if (removed > 0)
+  {
+    ctx.AccumulateDirtyColumn(ctx.Settings.SeaLevel, max_y);
+  }
+  return removed;
 }
 
 int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
