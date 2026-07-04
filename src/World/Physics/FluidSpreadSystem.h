@@ -2,6 +2,7 @@
 #define FLUIDSPREADSYSTEM_H
 
 #include "World/Physics/FluidSpreadTypes.h"
+#include "World/Math/FluidCellState.h"
 #include <glm/glm.hpp>
 #include <cstdint>
 #include <vector>
@@ -13,6 +14,7 @@ class UWorld;
 class UBlockWorld;
 class UBlockRegistry;
 class UBlockDefinitionStorage;
+class IUChunkMeshReader;
 
 struct FluidFloodOptions
 {
@@ -36,6 +38,20 @@ public:
       glm::ivec3 pos, const FluidFloodOptions &options);
   static BlockId ResolveWaterBlockId(
       const UBlockDefinitionStorage &definitions);
+  static FluidKind FluidKindFromBlockId(
+      const UBlockDefinitionStorage &definitions, BlockId id);
+  static BlockId BlockIdFromFluidKind(
+      const UBlockDefinitionStorage &definitions, FluidKind kind);
+  static BlockId ResolveFluidBlockId(
+      const UBlockWorld &blockWorld,
+      const UBlockDefinitionStorage &definitions, glm::ivec3 block_pos);
+  static BlockId ResolveFluidBlockIdForMesh(
+      const IUChunkMeshReader &reader,
+      const UBlockDefinitionStorage &definitions, glm::ivec3 block_pos);
+  static void ApplyFluidFill(UBlockWorld &blockWorld,
+                             const UBlockDefinitionStorage &definitions,
+                             glm::ivec3 pos, BlockId fluid_id,
+                             FluidCellState state);
   static BlockId ResolveFluidKind(
       const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
       glm::ivec3 block_pos, BlockId block_id);

@@ -44,6 +44,20 @@ int main()
   Expect(unpacked_falling.Falling == 1, "falling round-trip");
   Expect(unpacked_falling.Level == 1, "falling level 1");
 
+  const cutum::FluidCellState waterlogged =
+      cutum::FluidCellState::Flowing(1).WithKind(cutum::FluidKind::Water);
+  const uint8_t packed_waterlogged = cutum::PackFluidCellState(waterlogged);
+  Expect(packed_waterlogged == 0x11, "waterlogged grass packs kind+level");
+  Expect(cutum::UnpackFluidCellState(packed_waterlogged).GetKind() ==
+             cutum::FluidKind::Water,
+         "water kind round-trip");
+
+  const cutum::FluidCellState lava_kind =
+      cutum::FluidCellState::Source().WithKind(cutum::FluidKind::Lava);
+  const uint8_t packed_lava = cutum::PackFluidCellState(lava_kind);
+  Expect(packed_lava == 0x20, "lava source kind packs upper nibble");
+  Expect(cutum::FluidCellHasActiveFluid(packed_lava), "kind-only cell is active");
+
   std::cout << "fluid_state_pack_test: OK" << std::endl;
   return 0;
 }

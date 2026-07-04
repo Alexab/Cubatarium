@@ -1,5 +1,6 @@
 #include "World/Core/BlockWorld.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "World/Math/FluidCellState.h"
 
 namespace cutum
 {
@@ -29,7 +30,16 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
     {
       if (def->Physics.IsLiquid)
       {
-        Chunks.SetFluidState(pos, FluidCellState::Source());
+        FluidKind kind = FluidKind::None;
+        if (def->Physics.FluidMaxLevel >= 7)
+        {
+          kind = FluidKind::Water;
+        }
+        else
+        {
+          kind = FluidKind::Lava;
+        }
+        Chunks.SetFluidState(pos, FluidCellState::Source().WithKind(kind));
       }
     }
   }

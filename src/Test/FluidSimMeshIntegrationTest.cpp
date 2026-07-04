@@ -222,7 +222,9 @@ static void TestWaterloggedGrassMesh(
   world.SetFluidDefinitions(definitions.get());
   world.SetBlock(glm::ivec3(0, 10, 0), kStone);
   world.SetBlock(glm::ivec3(0, 11, 0), kTallGrass);
-  world.SetFluidState(glm::ivec3(0, 11, 0), cutum::FluidCellState::Flowing(1));
+  world.SetFluidState(glm::ivec3(0, 11, 0),
+                      cutum::FluidCellState::Flowing(1).WithKind(
+                          cutum::FluidKind::Water));
 
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 11, 0)) == kTallGrass, kTestName,
                     "waterlogged grass block id");

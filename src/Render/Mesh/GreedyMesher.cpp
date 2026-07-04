@@ -133,7 +133,7 @@ bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
     return true;
   }
   if (registry.IsFluidPermeable(id) &&
-      PackFluidCellState(reader.GetFluid(world_pos)) != 0)
+      FluidCellHasActiveFluid(PackFluidCellState(reader.GetFluid(world_pos))))
   {
     return true;
   }
@@ -274,23 +274,8 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   return false;
 }
 
-BlockId PrimaryLiquidBlockId(UBlockRegistry &registry)
-{
-  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
-  if (definitions == nullptr)
-  {
-    return BLOCK_AIR;
-  }
-  const BlockId water_id = UFluidSpreadSystem::ResolveWaterBlockId(*definitions);
-  if (water_id != BLOCK_AIR)
-  {
-    return water_id;
-  }
-  return registry.GetIdByTypeName("water");
-}
-
 bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
-                                  UBlockRegistry &registry, BlockId water_id,
+                                  UBlockRegistry &registry, BlockId fluid_id,
                                   glm::ivec3 block_pos, glm::ivec3 neighbor_offset)
 {
   const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
@@ -298,15 +283,15 @@ bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
   {
     return false;
   }
-  return NeighborHidesFace(reader, registry, water_id, block_pos, neighbor_offset);
+  return NeighborHidesFace(reader, registry, fluid_id, block_pos, neighbor_offset);
 }
 
 void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
                                UBlockRegistry &registry,
                                std::vector<GreedyQuad> &quads, int max_mesh_y)
 {
-  const BlockId water_id = PrimaryLiquidBlockId(registry);
-  if (water_id == BLOCK_AIR)
+  const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
+  if (definitions == nullptr)
   {
     return;
   }
@@ -349,20 +334,28 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
               continue;
             }
             const uint8_t packed = PackFluidCellState(reader.GetFluid(world_pos));
-            if (packed == 0)
+            if (!FluidCellHasActiveFluid(packed))
+            {
+              continue;
+            }
+
+            const BlockId fluid_id =
+                UFluidSpreadSystem::ResolveFluidBlockIdForMesh(
+                    reader, *definitions, world_pos);
+            if (fluid_id == BLOCK_AIR)
             {
               continue;
             }
 
             glm::ivec3 neighbor_offset(0);
             neighbor_offset[axis] = sign;
-            if (WaterloggedNeighborHidesFace(reader, registry, water_id,
+            if (WaterloggedNeighborHidesFace(reader, registry, fluid_id,
                                                world_pos, neighbor_offset))
             {
               continue;
             }
 
-            mask[v][u] = water_id;
+            mask[v][u] = fluid_id;
             fluid_mask[v][u] = packed;
           }
         }

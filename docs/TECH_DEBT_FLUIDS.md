@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 24 | Open: 5
+> Total closed: 26 | Open: 5
 
 ## Open
 
@@ -11,7 +11,7 @@
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
 | TD-FL-021 | R3 | Manual QA checklist in `PHYSICS_ROLLOUT.md` (liquids) | Requires in-game verification | R3 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
-| TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Solid replace implemented; liquid needs separate policy | backlog |
+| TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Kind-aware `ApplyFluidFill` done; liquid-on-liquid policy still open | backlog |
 
 ## Closed
 
@@ -43,6 +43,8 @@
 | TD-FL-028 | waterlogging | Permeable decor waterlogging (`IsFluidPermeable`, `fluid_data` without block replace; seal/spread/mesh) | `IsFluidPermeable`, `CanReceiveFluid` / `ShouldReplaceBlockWithFluid`, `SealFluidPermeableDecorInChunk`, GreedyMesher waterlogged pass, `fluid_permeable_decor_test` |
 | TD-FL-025 | gameplay-flood | `FloodWetPockets` on `DelBlockAt` + shared seal; submerged-air physics; mesh fluid↔fluid culling | `UFluidSpreadSystem::FloodWetPockets*`, `fluid_gameplay_fixes_test` |
 | TD-FL-029 | render | Per-column below-surface fog (variant A): `UFluidSurfaceMap` + shader `surfaceYAt`/`fluidIndexAt`; removed 20 cm pre-submerge band |
+| TD-FL-030 | waterlogging | Explicit `FluidKind` in `fluid_data` (bits 4–7); placement/worldgen/flood write kind; legacy `kind=0` infer + sea-band fallback | `FluidCellState`, `ApplyFluidFill`, `ResolveFluidBlockId`, `fluid_placement_liquid_decor_test` |
+| TD-FL-031 | render | Remove `PrimaryLiquidBlockId`; GreedyMesher uses per-cell `ResolveFluidBlockIdForMesh` | `GreedyMesher.cpp` |
 
 ## Phase tracker
 

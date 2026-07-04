@@ -21,8 +21,10 @@ Packed in one byte per chunk cell (`fluid_data[i]`):
 ```
 bits 0–2: Level (0–7)
 bit  3  : Falling (1 = vertical stream)
-bits 4–7: Reserved
+bits 4–7: FluidKind (0=infer/legacy, 1=water, 2=lava, …)
 ```
+
+Dry permeable decor: `block_id` = grass/reeds, `fluid_data=0`. Wet (waterlogged): same `block_id`, non-zero `fluid_data` with explicit `FluidKind` when written by placement, worldgen seal, or flood.
 
 ## Transform rules (`UFluidSpreadSystem::TickBlock`)
 
@@ -35,18 +37,18 @@ Per queued cell (Luanti `transformLiquidsLocal`-style rebalance):
 5. **Range cutoff:** level `< min_survive` or `> FluidMaxLevel` → remove block.
 6. **Viscosity:** lava steps level by `LiquidViscosity` per tick.
 
-Placement: `SetBlock(liquid)` → `Source()`; player `AddObject` uses `CanReceiveFluid` / `ShouldReplaceBlockWithFluid`.
+Placement: hotbar `AddObject` uses `ApplyFluidFill` + explicit `FluidKind`; `SetBlock(liquid)` → `Source()` with kind from block preset.
 
 ## Waterlogging (permeable decor)
 
 | Policy | `block_id` | `fluid_data` | Spread / seal |
 |--------|------------|--------------|---------------|
-| AIR | air | source/flow | `SetBlock(water)` + `SetFluidState` |
-| **Permeable** (cross/cutout, occupancy &lt; 1) | e.g. `tall_grass` | source/flow | **only** `SetFluidState`; block preserved |
-| **Floodable** (legacy) | replaced | source/flow | `SetBlock` + `SetFluidState` |
+| AIR | air | source/flow + kind | `SetBlock(fluid)` + `SetFluidState` |
+| **Permeable** (cross/cutout, occupancy &lt; 1) | e.g. `tall_grass` | flow/source + **explicit kind** | **only** `SetFluidState`; block preserved |
+| **Floodable** (legacy) | replaced | source/flow + kind | `SetBlock` + `SetFluidState` |
 | Solid | stone | — | blocks fluid |
 
-`IsFluidPermeable` is derived from render style + occupancy (no JSON flag yet). Mesh: GreedyMesher emits fluid quads from `fluid_data` on permeable cells; cross pass unchanged (both visible). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` after decoration stage.
+`IsFluidPermeable` is derived from render style + occupancy (no JSON flag yet). Mesh: GreedyMesher waterlogged pass uses **per-cell** `ResolveFluidBlockIdForMesh` (no global default water). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` write `FluidKind::Water` on decor in sea columns and coastal stacks (sea…sea+8).
 
 ## Gameplay flood (`FloodWetPockets`)
 
@@ -97,7 +99,7 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 
 ## Acceptance criteria
 
-See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `liquid_flow_scenarios_test`, `fluid_queue_integration_test`.
+See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `fluid_placement_liquid_decor_test`, `fluid_permeable_decor_test`.
 
 ## Related docs
 

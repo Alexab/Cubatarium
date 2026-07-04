@@ -115,7 +115,8 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
     if (ctx.World.GetBlock(pos) == BLOCK_AIR)
     {
       ctx.World.SetBlock(pos, ctx.Blocks.Water);
-      ctx.World.SetFluidState(pos, FluidCellState::Source());
+      ctx.World.SetFluidState(pos,
+                              FluidCellState::Source().WithKind(FluidKind::Water));
     }
   }
   ctx.AccumulateDirtyColumn(surfaceY, sea);
@@ -212,7 +213,7 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
   {
     if (PackFluidCellState(ctx.World.GetFluidState(pos)) == 0)
     {
-      ctx.World.SetFluidState(pos, FluidCellState::Source());
+      ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
       return true;
     }
     return false;
@@ -223,7 +224,7 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
     {
       return false;
     }
-    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
+    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1).WithKind(FluidKind::Water));
     return true;
   }
   if (pos.y <= floor_y)
@@ -237,13 +238,13 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
   if (id == BLOCK_AIR || id == ctx.Blocks.Dirt)
   {
     ctx.World.SetBlock(pos, water);
-    ctx.World.SetFluidState(pos, FluidCellState::Source());
+    ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
     return true;
   }
   if (ctx.Registry.BlocksMovement(id))
   {
     ctx.World.SetBlock(pos, water);
-    ctx.World.SetFluidState(pos, FluidCellState::Source());
+    ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
     return true;
   }
   return false;
@@ -279,7 +280,7 @@ bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
     {
       continue;
     }
-    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1));
+    ctx.World.SetFluidState(pos, FluidCellState::Flowing(1).WithKind(FluidKind::Water));
     changed = true;
   }
   return changed;

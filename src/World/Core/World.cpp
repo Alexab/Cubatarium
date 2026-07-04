@@ -795,22 +795,21 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   const BlockId existing = BlockWorld.GetBlock(blockPos);
   if (BlockRegistry->IsLiquid(Id))
   {
+    const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
+    if (definitions == nullptr)
+    {
+      return false;
+    }
     if (!UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *BlockRegistry,
                                              blockPos))
     {
       return false;
     }
-    if (UFluidSpreadSystem::ShouldReplaceBlockWithFluid(BlockWorld,
-                                                        *BlockRegistry,
-                                                        blockPos))
-    {
-      BlockWorld.SetBlock(blockPos, Id);
-      BlockWorld.SetFluidState(blockPos, FluidCellState::Source());
-    }
-    else
-    {
-      BlockWorld.SetFluidState(blockPos, FluidCellState::Flowing(1));
-    }
+    const FluidKind kind = UFluidSpreadSystem::FluidKindFromBlockId(*definitions, Id);
+    const FluidCellState place_state =
+        FluidCellState::Source().WithKind(kind);
+    UFluidSpreadSystem::ApplyFluidFill(BlockWorld, *definitions, blockPos, Id,
+                                       place_state);
     ++CachedBlockCount;
     BlockWorldReady = true;
     MarkBlockChunkDirty(blockPos);

@@ -89,6 +89,47 @@ MakeTestFluidDecorDefinitions()
   return definitions;
 }
 
+inline std::shared_ptr<cutum::UBlockDefinitionStorage>
+MakeTestWaterLavaDecorDefinitions()
+{
+  auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+  constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kWater = 9;
+  constexpr cutum::BlockId kTallGrass = 10;
+  constexpr cutum::BlockId kLava = 11;
+  cutum::BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition water;
+  water.Name = "water";
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+  water.Render.Transparent = true;
+  water.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition lava;
+  lava.Name = "lava";
+  lava.Physics = cutum::BlockPhysicsProfile::FromPreset("lava");
+  lava.Render.Transparent = true;
+  lava.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition grass;
+  grass.Name = "tall_grass";
+  grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  grass.Physics.Movement.Occupancy = 0.0f;
+  grass.Render.Style = cutum::BlockRenderStyle::Cross;
+  grass.Render.Transparent = true;
+  std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
+  by_id[kStone] = stone;
+  by_id[kWater] = water;
+  by_id[kLava] = lava;
+  by_id[kTallGrass] = grass;
+  std::unordered_map<std::string, cutum::BlockId> name_to_id;
+  name_to_id["stone"] = kStone;
+  name_to_id["water"] = kWater;
+  name_to_id["lava"] = kLava;
+  name_to_id["tall_grass"] = kTallGrass;
+  definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
+  return definitions;
+}
+
 struct FluidCellExpectation
 {
   glm::ivec3 Pos;

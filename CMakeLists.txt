@@ -887,6 +887,20 @@ target_compile_definitions(fluid_sim_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_sim_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_placement_liquid_decor_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidUpdateSet.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidPlacementLiquidDecorTest.cpp)
+target_include_directories(fluid_placement_liquid_decor_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_placement_liquid_decor_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_placement_liquid_decor_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(decor_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Core/Jobs/JobThreadPool.cpp
