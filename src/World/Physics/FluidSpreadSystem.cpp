@@ -6,6 +6,8 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
+#include "World/Physics/FluidTuning.h"
 #include "World/Physics/LiquidDebugTrace.h"
 
 #include <algorithm>
@@ -17,8 +19,6 @@ namespace cutum
 
 namespace
 {
-
-constexpr int kWaterDropBoost = 4;
 
 enum class NeighborAxis
 {
@@ -50,20 +50,8 @@ BlockId ResolveFluidKindImpl(const UBlockWorld &blockWorld,
 
 bool IsFluidPermeableId(const UBlockDefinitionStorage &definitions, BlockId id)
 {
-  if (id == BLOCK_AIR || IsLiquidId(definitions, id))
-  {
-    return false;
-  }
-  if (const BlockDefinition *def = definitions.GetById(id))
-  {
-    if (def->Physics.Movement.Occupancy >= 1.0f)
-    {
-      return false;
-    }
-    return def->Render.Style == BlockRenderStyle::Cross ||
-           def->Render.Style == BlockRenderStyle::Cutout;
-  }
-  return false;
+  return IsFluidPermeableFromDefinition(id, definitions.GetById(id),
+                                        IsLiquidId(definitions, id));
 }
 
 bool CellHasActiveFluid(const UBlockWorld &blockWorld,
@@ -298,7 +286,7 @@ int MaxLevelFromNeighbor(const FluidCellState &neighbor_state,
     if (nb_level > 0)
     {
       const int boosted = std::min(static_cast<int>(FLUID_LEVEL_MAX),
-                                   nb_level + kWaterDropBoost);
+                                   nb_level + FluidTuning::WaterDropBoost);
       return std::max(current_max, boosted);
     }
     break;
@@ -599,7 +587,7 @@ BlockId ResolveFloodFluidIdImpl(const UBlockWorld &blockWorld,
     return options.water_id;
   }
   if (options.water_id != BLOCK_AIR && options.sea_level >= 0 &&
-      pos.y <= options.sea_level + 8)
+      pos.y <= options.sea_level + FluidTuning::CoastalPermeableBandAboveSea)
   {
     const BlockId block_id = blockWorld.GetBlock(pos);
     if (IsFluidPermeableId(definitions, block_id))
@@ -731,7 +719,8 @@ int FloodBreakSiteFromWetNeighborsImpl(
         for (int dz = -1; dz <= 1; ++dz)
         {
           const glm::ivec3 pos = break_pos + glm::ivec3(dx, dy, dz);
-          if (pos.y <= options.sea_level || pos.y > options.sea_level + 8)
+          if (pos.y <= options.sea_level ||
+              pos.y > options.sea_level + FluidTuning::CoastalPermeableBandAboveSea)
           {
             continue;
           }
@@ -1101,7 +1090,7 @@ UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
       ResolveFluidKindImpl(blockWorld, definitions, block_pos, block_id);
   const FluidCellState cell_fluid = blockWorld.GetFluidState(block_pos);
   if (fluid_id == BLOCK_AIR && is_waterlogged_permeable && sea_level >= 0 &&
-      block_pos.y <= sea_level + 8 && !cell_fluid.HasExplicitKind())
+      block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea && !cell_fluid.HasExplicitKind())
   {
     fluid_id = ResolveWaterBlockIdImpl(definitions);
   }
@@ -1111,7 +1100,7 @@ UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
     return stats;
   }
   if (sea_level >= 0 && is_waterlogged_permeable &&
-      block_pos.y <= sea_level + 8 && !cell_fluid.HasExplicitKind())
+      block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea && !cell_fluid.HasExplicitKind())
   {
     const BlockId water_id = ResolveWaterBlockIdImpl(definitions);
     if (water_id != BLOCK_AIR)

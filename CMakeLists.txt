@@ -960,6 +960,28 @@ target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_tuning_defaults_test src/Test/FluidTuningDefaultsTest.cpp)
+target_include_directories(fluid_tuning_defaults_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_tuning_defaults_test glm::glm)
+
+add_executable(fluid_block_resolver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidBlockResolverTest.cpp)
+target_include_directories(fluid_block_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_block_resolver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_block_resolver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(object_placement_mode_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Objects/ObjectUtil.cpp
+    src/Test/ObjectPlacementModeTest.cpp)
+target_include_directories(object_placement_mode_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(object_placement_mode_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(object_placement_mode_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_permeable_decor_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp

@@ -1,6 +1,7 @@
 #ifndef FLUIDSPREADSYSTEM_H
 #define FLUIDSPREADSYSTEM_H
 
+#include "World/Physics/FluidTuning.h"
 #include "World/Physics/FluidSpreadTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <glm/glm.hpp>
@@ -21,7 +22,7 @@ struct FluidFloodOptions
   BlockId fluid_id{BLOCK_AIR};
   BlockId water_id{BLOCK_AIR};
   bool source_for_air{false};
-  int max_passes{8};
+  int max_passes{FluidTuning::FloodMaxPassesDefault};
   int sea_level{-1};
 };
 
