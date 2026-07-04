@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 23 | Open: 5
+> Total closed: 23 | Open: 6
 
 ## Open
 
@@ -12,6 +12,7 @@
 | TD-FL-021 | R3 | Manual QA checklist in `PHYSICS_ROLLOUT.md` (liquids) | Requires in-game verification | R3 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
 | TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Solid replace implemented; liquid needs separate policy | backlog |
+| TD-FL-029 | render | Per-column below-surface fog (variant A): height map + shader lookup, remove 20 cm band | Pre-submerge band is heuristic; retune on eyeHeight change | backlog |
 
 ## Closed
 
@@ -56,4 +57,5 @@
 ## Related docs
 
 - [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md)
+- [UNDERWATER_FOG_TRANSITION.md](UNDERWATER_FOG_TRANSITION.md) — анализ подводного тумана при погружении, план variant A (TD-FL-029)
 - [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md)
