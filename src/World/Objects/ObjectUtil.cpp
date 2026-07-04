@@ -1,6 +1,7 @@
 #include "World/Objects/ObjectUtil.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
+#include "WorldGen/Core/WorldGenPlacementTuning.h"
 #include <algorithm>
 #include <array>
 #include <optional>
@@ -13,7 +14,7 @@ namespace cutum
 namespace
 {
 
-constexpr int kLeafNearSolidRadius = 5;
+constexpr int kLeafNearSolidRadius = WorldGenPlacementTuning::LeafNearSolidRadius;
 
 using ColumnXZ = std::pair<int, int>;
 
@@ -145,14 +146,10 @@ PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               int maxHeight, int seaLevel)
 {
   PlacementSurfaceInfo info;
-  info.maxScanY =
-      heightmapSurfaceY >= 0
-          ? std::min(maxHeight - 1,
-                     std::max(heightmapSurfaceY + 24, seaLevel + 4))
-          : std::min(maxHeight - 1, seaLevel + 4);
+  info.maxScanY = ComputeMaxScanY(heightmapSurfaceY, seaLevel, maxHeight);
   info.topSolidY =
       FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY);
-  if (info.topSolidY < seaLevel + 1)
+  if (info.topSolidY < seaLevel + WorldGenPlacementTuning::MinLandAboveSea)
   {
     info.topSolidY = -1;
   }
@@ -212,6 +209,14 @@ bool CanOccupySolidVoxelForWorldGen(const UBlockWorld &world,
 bool IsSurfaceLayerPrefab(const WorldObjectDefinition &object,
                           UBlockRegistry &registry)
 {
+  if (object.PlacementMode == ObjectPlacementMode::SurfaceLayer)
+  {
+    return true;
+  }
+  if (object.PlacementMode == ObjectPlacementMode::VerticalPlant)
+  {
+    return false;
+  }
   std::optional<int> solidDy;
   for (const auto &voxel : object.voxels)
   {

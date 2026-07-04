@@ -4,6 +4,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Core/WorldGenPlacementTuning.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -188,11 +189,11 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     const int wx = x + ox;
     const int wz = z + oz;
     const int maxScanY =
-        std::min(ctx.Settings.MaxHeight - 1,
-                 std::max(surfaceY + 24, ctx.Settings.SeaLevel + 4));
+        ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight);
     const int localSurface =
         FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
-    if (localSurface < ctx.Settings.SeaLevel + 1)
+    if (localSurface < ctx.Settings.SeaLevel +
+                            WorldGenPlacementTuning::MinLandAboveSea)
     {
       continue;
     }
@@ -446,11 +447,8 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  const int maxScanY =
-      surfaceY >= 0
-          ? std::min(ctx.Settings.MaxHeight - 1,
-                     std::max(surfaceY + 24, ctx.Settings.SeaLevel + 4))
-          : std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 4);
+  const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
+                                       ctx.Settings.MaxHeight);
   const bool canPlace =
       surfaceY >= 0
           ? CanPlaceObjectAtForWorldGen(ctx.World, ctx.Registry, *prefab,
