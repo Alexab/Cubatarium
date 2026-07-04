@@ -677,14 +677,16 @@ void UGeometryEngine::PrepareFrameRendering()
     eyeFluid = column.fluidId;
   }
 
-  constexpr float kPreSubmergeFragmentFogBand = 0.12f;
+  constexpr float kPreSubmergeFragmentFogBand = 0.20f;
   FluidSurfaceY = column.valid ? column.surfaceY : -1000.0f;
   BelowSurfaceFogStrength = 0.0f;
   if (column.valid && fluid.inFluid && !cameraInFluid &&
       eye.y >= column.surfaceY &&
       eye.y < column.surfaceY + kPreSubmergeFragmentFogBand)
   {
-    BelowSurfaceFogStrength = 1.0f;
+    const float bandT =
+        1.0f - (eye.y - column.surfaceY) / kPreSubmergeFragmentFogBand;
+    BelowSurfaceFogStrength = glm::mix(0.72f, 1.0f, bandT);
   }
 
   glm::vec3 targetSky = BaseSkyColor;

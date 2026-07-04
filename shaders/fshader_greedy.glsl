@@ -115,7 +115,7 @@ void main()
     }
     if (uBelowSurfaceFog > 0.001 && vWorldPos.y < uFluidSurfaceY) {
         float depthBelow = uFluidSurfaceY - vWorldPos.y;
-        float belowFactor = uBelowSurfaceFog * clamp(0.4 + depthBelow * 0.3, 0.4, 1.0);
+        float belowFactor = uBelowSurfaceFog * clamp(0.52 + depthBelow * 0.35, 0.52, 1.0);
         FragColor.rgb = mix(FragColor.rgb, uBelowSurfaceFogColor, belowFactor);
     }
     if (uFogEnabled > 0.5) {
