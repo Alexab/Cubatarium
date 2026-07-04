@@ -205,8 +205,8 @@ public:
   };
   SampledFluidState SampleFluidPhysics(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const;
-  /// Eye inside a liquid AABB or waterlogged permeable cell (continuous, not
-  /// grid-snapped); used for underwater fog.
+  /// True when eye.y is strictly below BlockTopY of the topmost liquid block
+  /// in the eye column (binary; no body-in-fluid or grace terms).
   bool IsCameraInsideFluid(const glm::vec3 &eye,
                            BlockId *outFluid = nullptr) const;
   void ApplySpawnToCamera();

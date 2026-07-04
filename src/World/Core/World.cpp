@@ -108,56 +108,6 @@ FluidFloodOptions MakeBreakSiteFloodOptions(const UBlockRegistry &registry,
   return options;
 }
 
-struct FluidSurfaceSample
-{
-  BlockId fluid_id{BLOCK_AIR};
-  float surface_y{0.0f};
-};
-
-bool EyeInBlockColumn(const glm::vec3 &eye, glm::ivec3 block_pos)
-{
-  return std::abs(eye.x - static_cast<float>(block_pos.x)) <= 0.5f &&
-         std::abs(eye.z - static_cast<float>(block_pos.z)) <= 0.5f &&
-         eye.y >= static_cast<float>(block_pos.y) - 0.5f &&
-         eye.y <= static_cast<float>(block_pos.y) + 0.5f;
-}
-
-bool TrySubmergedFluidInColumn(const UBlockWorld &world,
-                               const UBlockRegistry &registry,
-                               const glm::vec3 &eye, glm::ivec3 block_pos,
-                               FluidSurfaceSample &out_sample)
-{
-  const BlockId id = world.GetBlock(block_pos);
-  if (registry.IsLiquid(id))
-  {
-    if (!EyeInBlockColumn(eye, block_pos))
-    {
-      return false;
-    }
-    out_sample.fluid_id = id;
-    out_sample.surface_y = BlockTopY(block_pos.y);
-    return true;
-  }
-  if (registry.IsFluidPermeable(id) &&
-      PackFluidCellState(world.GetFluidState(block_pos)) != 0)
-  {
-    const BlockId water_id = registry.GetIdByTypeName("water");
-    if (water_id == BLOCK_AIR)
-    {
-      return false;
-    }
-    const float surface_y = BlockTopY(block_pos.y);
-    if (eye.y > surface_y || !EyeInBlockColumn(eye, block_pos))
-    {
-      return false;
-    }
-    out_sample.fluid_id = water_id;
-    out_sample.surface_y = surface_y;
-    return true;
-  }
-  return false;
-}
-
 } // namespace
 
 UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
@@ -1427,18 +1377,26 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   const int bx = WorldCoordToBlockIndex(eye.x);
   const int bz = WorldCoordToBlockIndex(eye.z);
   const int by = WorldCoordToBlockIndex(eye.y);
-  FluidSurfaceSample sample;
-  for (int y = by + 1; y >= by - 2; --y)
+  for (int y = by + 2; y >= by - 24; --y)
   {
-    if (TrySubmergedFluidInColumn(BlockWorld, *BlockRegistry, eye,
-                                  glm::ivec3(bx, y, bz), sample))
+    const BlockId id = BlockWorld.GetBlock(glm::ivec3(bx, y, bz));
+    if (!BlockRegistry->IsLiquid(id))
+    {
+      continue;
+    }
+    if (BlockRegistry->GetRenderStyle(id) != BlockRenderStyle::Fluid)
+    {
+      continue;
+    }
+    if (eye.y < BlockTopY(y))
     {
       if (outFluid)
       {
-        *outFluid = sample.fluid_id;
+        *outFluid = id;
       }
       return true;
     }
+    return false;
   }
   return false;
 }
