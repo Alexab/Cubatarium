@@ -37,5 +37,8 @@
   "tags": [
     "decorative",
     "paths"
-  ]
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
 }

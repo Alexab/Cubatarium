@@ -60,5 +60,8 @@
   },
   "tags": [
     "plants"
-  ]
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
 }

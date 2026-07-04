@@ -4,8 +4,10 @@
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
 #include <algorithm>
 #include <array>
+#include <iostream>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace cutum
@@ -242,6 +244,22 @@ int ResolveWorldGenAnchorY(const WorldObjectDefinition &object,
                            int yOffset)
 {
   const int effectiveYOffset = std::max(yOffset, 0);
+  switch (object.PlacementMode)
+  {
+  case ObjectPlacementMode::SurfaceLayer:
+    return topSolid + effectiveYOffset;
+  case ObjectPlacementMode::VerticalPlant:
+    return topSolid + 1 + effectiveYOffset;
+  default:
+    break;
+  }
+  static std::unordered_set<std::string> warnedPrefabs;
+  if (!object.Name.empty() && warnedPrefabs.insert(object.Name).second)
+  {
+    std::cerr << "WorldGen: prefab '" << object.Name
+              << "' missing placement.mode; using surface heuristic"
+              << std::endl;
+  }
   if (IsSurfaceLayerPrefab(object, registry))
   {
     return topSolid + effectiveYOffset;
@@ -296,7 +314,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
-                                 int seaLevel, int anchorSurfaceY)
+                                 int seaLevel)
 {
   if (object.voxels.empty())
   {
@@ -315,9 +333,33 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   {
     return false;
   }
-  (void)anchorSurfaceY;
 
   const bool surfaceLayer = IsSurfaceLayerPrefab(object, registry);
+
+  if (object.PlacementMode == ObjectPlacementMode::SurfaceLayer)
+  {
+    std::optional<int> solidDy;
+    for (const auto &voxel : object.voxels)
+    {
+      if (voxel.Id == BLOCK_AIR || !registry.BlocksMovement(voxel.Id))
+      {
+        continue;
+      }
+      if (!solidDy.has_value())
+      {
+        solidDy = voxel.offset.y;
+        continue;
+      }
+      if (*solidDy != voxel.offset.y)
+      {
+        return false;
+      }
+    }
+    if (!solidDy.has_value())
+    {
+      return false;
+    }
+  }
 
   std::vector<glm::ivec3> solidWorldPositions;
   std::vector<glm::ivec3> nonSolidWorldPositions;

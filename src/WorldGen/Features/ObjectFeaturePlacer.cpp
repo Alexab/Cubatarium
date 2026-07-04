@@ -453,7 +453,7 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
       surfaceY >= 0
           ? CanPlaceObjectAtForWorldGen(ctx.World, ctx.Registry, *prefab,
                                         anchorWorldPos, maxScanY,
-                                        ctx.Settings.SeaLevel, surfaceY)
+                                        ctx.Settings.SeaLevel)
           : CanPlaceObjectAt(ctx.World, *prefab, anchorWorldPos);
   if (!canPlace)
   {
@@ -496,10 +496,10 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
     const int range =
         std::max(1, ctx.Settings.MaxHeight - ctx.Settings.SeaLevel);
     const float heightNorm = std::clamp(
-        static_cast<float>(surfaceY - ctx.Settings.SeaLevel) /
+        static_cast<float>(placementSurface.topSolidY - ctx.Settings.SeaLevel) /
             static_cast<float>(range),
         0.0f, 1.0f);
-    if (heightNorm > 0.82f)
+    if (heightNorm > WorldGenPlacementTuning::HillsVegetationHeightNormMax)
     {
       return false;
     }

@@ -587,7 +587,8 @@
     ]
   },
   "placement": {
-    "y_offset": -1
+    "y_offset": -1,
+    "mode": "vertical_plant"
   },
   "tags": [
     "plants",

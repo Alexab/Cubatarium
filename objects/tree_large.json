@@ -160,5 +160,8 @@
   ],
   "tags": [
     "trees"
-  ]
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
 }

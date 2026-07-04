@@ -84,6 +84,7 @@ static void FillCoastalColumn(cutum::UBlockWorld &world)
 static cutum::WorldObjectDefinition MakeTreeObject(bool include_logs)
 {
   cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::VerticalPlant;
   object.anchor = glm::ivec3(0);
   if (include_logs)
   {
@@ -98,6 +99,7 @@ static cutum::WorldObjectDefinition MakeTreeObject(bool include_logs)
 static cutum::WorldObjectDefinition MakeEmbeddedRootTree()
 {
   cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::VerticalPlant;
   object.anchor = glm::ivec3(0);
   object.voxels.push_back({glm::ivec3(0, -1, 0), kLog});
   object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
@@ -110,6 +112,7 @@ static cutum::WorldObjectDefinition MakeEmbeddedRootTree()
 static cutum::WorldObjectDefinition MakeBranchColumnTree()
 {
   cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::VerticalPlant;
   object.anchor = glm::ivec3(0);
   object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
   object.voxels.push_back({glm::ivec3(0, 1, 0), kLog});
@@ -123,6 +126,7 @@ static cutum::WorldObjectDefinition MakeBranchColumnTree()
 static cutum::WorldObjectDefinition MakePathCobble3x3()
 {
   cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::SurfaceLayer;
   object.anchor = glm::ivec3(0);
   for (int dx = -1; dx <= 1; ++dx)
   {
@@ -137,6 +141,7 @@ static cutum::WorldObjectDefinition MakePathCobble3x3()
 static cutum::WorldObjectDefinition MakeFallenLog()
 {
   cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::SurfaceLayer;
   object.anchor = glm::ivec3(0);
   object.voxels.push_back({glm::ivec3(-1, 0, 0), kLog});
   object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
@@ -169,7 +174,7 @@ static void TestRejectLeavesWithoutTrunk()
   const glm::ivec3 anchor(0, 55, 0);
   FluidTest::Expect(
       !cutum::CanPlaceObjectAtForWorldGen(world, registry, leaves_only, anchor,
-                                          80, kSea, 51),
+                                          80, kSea),
       kTestName, "leaves-only prefab rejected without trunk");
 }
 
@@ -182,7 +187,7 @@ static void TestAcceptGroundedTree()
   const cutum::WorldObjectDefinition tree = MakeTreeObject(true);
   const glm::ivec3 anchor(0, 52, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, tree,
-                                                       anchor, 80, kSea, 51),
+                                                       anchor, 80, kSea),
                     kTestName, "contiguous trunk on coastal surface accepted");
 }
 
@@ -195,7 +200,7 @@ static void TestAcceptEmbeddedRootTree()
   const cutum::WorldObjectDefinition tree = MakeEmbeddedRootTree();
   const glm::ivec3 anchor(0, 52, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, tree,
-                                                       anchor, 80, kSea, 51),
+                                                       anchor, 80, kSea),
                     kTestName, "embedded root log at surface accepted");
 }
 
@@ -209,7 +214,7 @@ static void TestAcceptBranchColumnTree()
   const cutum::WorldObjectDefinition tree = MakeBranchColumnTree();
   const glm::ivec3 anchor(0, 52, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, tree,
-                                                       anchor, 80, kSea, 51),
+                                                       anchor, 80, kSea),
                     kTestName, "branch-column log above trunk accepted");
 }
 
@@ -228,7 +233,7 @@ static void TestAcceptSurfaceLayerPath()
   const cutum::WorldObjectDefinition path = MakePathCobble3x3();
   const glm::ivec3 anchor(0, 51, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, path,
-                                                       anchor, 80, kSea, 51),
+                                                       anchor, 80, kSea),
                     kTestName, "3x3 surface path on grass accepted");
 }
 
@@ -244,7 +249,7 @@ static void TestAcceptFallenLog()
   const cutum::WorldObjectDefinition log = MakeFallenLog();
   const glm::ivec3 anchor(0, 51, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, log,
-                                                       anchor, 80, kSea, 51),
+                                                       anchor, 80, kSea),
                     kTestName, "3x1 fallen log on grass accepted");
 }
 
@@ -257,6 +262,21 @@ static void TestResolveSurfaceLayerAnchorY()
                     kTestName, "surface layer anchor sits on top solid");
   FluidTest::Expect(cutum::ResolveWorldGenAnchorY(tree, registry, 51, 0) == 52,
                     kTestName, "vertical tree anchor sits above top solid");
+}
+
+static void TestRejectMisTaggedVerticalPlantAsSurfaceLayer()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillCoastalColumn(world);
+
+  cutum::WorldObjectDefinition tree = MakeTreeObject(true);
+  tree.PlacementMode = cutum::ObjectPlacementMode::SurfaceLayer;
+  const glm::ivec3 wrong_anchor(0, 51, 0);
+  FluidTest::Expect(
+      !cutum::CanPlaceObjectAtForWorldGen(world, registry, tree, wrong_anchor,
+                                          80, kSea),
+      kTestName, "multi-column tree rejected when tagged surface_layer");
 }
 
 static void TestPruneFloatingLeaves()
@@ -337,6 +357,7 @@ int main()
   TestAcceptSurfaceLayerPath();
   TestAcceptFallenLog();
   TestResolveSurfaceLayerAnchorY();
+  TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();
   TestSealAndPruneCoastalChunk();
   TestSpawnIslandMinSurface();

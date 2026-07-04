@@ -219,5 +219,8 @@
   ],
   "tags": [
     "decorative"
-  ]
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
 }
