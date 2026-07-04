@@ -19,6 +19,7 @@ typedef int GLint;
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
+#include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
@@ -237,22 +238,9 @@ private:
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
-  glm::vec3 SmoothedSkyTint{0.5f, 0.7f, 1.0f};
-  glm::vec3 SmoothedFogColor{0.05f, 0.15f, 0.35f};
-  float FogStart{0.0f};
-  float FogEnd{1000.0f};
-  float FogMinBlend{0.0f};
-  float FogEnabled{0.0f};
-  float FogHorizontal{0.0f};
-  float FogDensity{1.0f};
-  float FogHorizonBlend{0.0f};
-  bool WasUnderwaterFog{false};
   UFluidSurfaceMap FluidSurfaceMap;
+  UUnderwaterFogPass UnderwaterFogPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
-  float BelowSurfaceFogStrength{0.0f};
-  float BelowSurfaceFogMin{0.52f};
-  float BelowSurfaceFogScale{0.35f};
-  std::array<glm::vec3, UFluidSurfaceMap::kMaxFluidShaderSlots> BelowSurfaceFogColors{};
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

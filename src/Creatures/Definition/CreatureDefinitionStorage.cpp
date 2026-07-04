@@ -1,6 +1,6 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
-#include "Creatures/Definition/CatalogSortUtil.h"
+#include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>

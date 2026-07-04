@@ -575,6 +575,10 @@ private:
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);
   bool IsReasonablePlayerPosition(const glm::vec3 &position) const;
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
+  // Phase 6 fluid facade slice: isolate placement/break flood policy.
+  bool TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId);
+  void ApplyBreakSiteFluidFlood(glm::ivec3 blockPos,
+                                std::vector<glm::ivec3> &mesh_touch_blocks);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions);

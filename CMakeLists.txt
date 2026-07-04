@@ -125,6 +125,7 @@ set(SOURCES
     src/App/Core.cpp
     src/App/WorldLifecycleFacade.cpp
     src/App/ResourcePackBootstrap.cpp
+    src/App/ResourcePackSelectionUtil.cpp
     src/App/LegacyConfigAdapter.cpp
     src/App/Settings/RenderSettings.cpp
     src/App/Settings/UiSettings.cpp
@@ -180,6 +181,7 @@ set(SOURCES
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
+    src/Render/Engine/UnderwaterFogPass.cpp
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
@@ -346,6 +348,7 @@ set(HEADERS
     src/App/Core.h
     src/App/WorldLifecycleFacade.h
     src/App/ResourcePackBootstrap.h
+    src/App/ResourcePackSelectionUtil.h
     src/Render/Primitives/Cube.h
     src/Render/Primitives/CubeGL.h
     src/World/Objects/ObjectLibrary.h
@@ -366,6 +369,7 @@ set(HEADERS
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
     src/Render/Engine/GeometryEngine.h
+    src/Render/Engine/UnderwaterFogPass.h
     src/Render/Engine/GreedyGpuBackend.h
     src/Render/Engine/CrossGpuBackend.h
     src/Render/Engine/DistanceFog.h
@@ -482,6 +486,7 @@ set(HEADERS
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h
     src/Core/Progress/IUProgressSink.h
+    src/Core/Sort/CatalogSortUtil.h
     src/App/WorldOperationRunner.h
 )
 
@@ -621,6 +626,21 @@ add_executable(creature_activity_steering_test
 target_include_directories(creature_activity_steering_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_activity_steering_test glm::glm)
+
+add_executable(wander_interval_test
+    src/Activity/Agents/WanderActivityAgent.cpp
+    src/Activity/Helpers/CreatureActivitySteering.cpp
+    src/Test/WanderIntervalTest.cpp)
+target_include_directories(wander_interval_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(wander_interval_test glm::glm)
+
+add_executable(creature_skinned_draw_test
+    src/Creatures/Visual/CreatureBonePaletteGpu.cpp
+    src/Test/CreatureSkinnedDrawTest.cpp)
+target_include_directories(creature_skinned_draw_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_skinned_draw_test OpenGL::GL glm::glm GLEW::GLEW)
 
 add_executable(creature_bone_skeleton_loader_test
     src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
@@ -851,6 +871,16 @@ target_compile_definitions(fluid_surface_slice_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_surface_map_logic_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/Test/FluidSurfaceMapLogicTest.cpp)
+target_include_directories(fluid_surface_map_logic_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_surface_map_logic_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_surface_map_logic_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(liquid_viscosity_gate_test
     src/World/Physics/FluidSpreadSystem.cpp
     src/World/Physics/FluidFloodService.cpp
@@ -1007,6 +1037,51 @@ target_include_directories(worldgen_vegetation_placement_test PRIVATE
 target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
+
+set(WORLDGEN_PIPELINE_TEST_SOURCES
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/Noise.cpp)
+
+add_executable(worldgen_fluid_vegetation_pipeline_test
+    ${WORLDGEN_PIPELINE_TEST_SOURCES}
+    src/Test/WorldGenFluidVegetationPipelineTest.cpp)
+target_include_directories(worldgen_fluid_vegetation_pipeline_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_fluid_vegetation_pipeline_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_fluid_vegetation_pipeline_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_hills_vegetation_gate_test
+    src/Test/WorldGenHillsVegetationGateTest.cpp)
+target_include_directories(worldgen_hills_vegetation_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_hills_vegetation_gate_test glm::glm)
+
+add_executable(worldgen_scatter_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Objects/ObjectUtil.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/WorldGenScatterTest.cpp)
+target_include_directories(worldgen_scatter_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_scatter_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_scatter_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(fluid_tuning_defaults_test src/Test/FluidTuningDefaultsTest.cpp)
 target_include_directories(fluid_tuning_defaults_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

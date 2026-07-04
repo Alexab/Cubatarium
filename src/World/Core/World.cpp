@@ -778,6 +778,77 @@ bool UWorld::HasActiveCooperativeOperation() const
   return CoopSession && CoopSession->Active;
 }
 
+bool UWorld::TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId)
+{
+  if (!BlockRegistry || !BlockRegistry->IsLiquid(liquidId))
+  {
+    return false;
+  }
+  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
+  if (definitions == nullptr)
+  {
+    return false;
+  }
+  if (!UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *BlockRegistry, blockPos))
+  {
+    return false;
+  }
+
+  const FluidKind kind = UFluidSpreadSystem::FluidKindFromBlockId(*definitions, liquidId);
+  const FluidCellState place_state = FluidCellState::Source().WithKind(kind);
+  UFluidSpreadSystem::ApplyFluidFill(BlockWorld, *definitions, blockPos, liquidId,
+                                     place_state);
+  ++CachedBlockCount;
+  BlockWorldReady = true;
+  MarkBlockChunkDirty(blockPos);
+  PublishBlockPhysicsEvent(blockPos);
+  PublishNeighborPhysicsEvents(blockPos);
+  if (PhysicsFlags.EnableFluids)
+  {
+    EnqueueFluidFrontierAt(*this, blockPos);
+    MarkBlockChunkDirty(blockPos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      MarkBlockChunkDirty(blockPos + offset);
+    }
+  }
+  return true;
+}
+
+void UWorld::ApplyBreakSiteFluidFlood(
+    glm::ivec3 blockPos, std::vector<glm::ivec3> &mesh_touch_blocks)
+{
+  if (!BlockRegistry || !PhysicsFlags.EnableFluids)
+  {
+    return;
+  }
+  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
+  if (definitions != nullptr)
+  {
+    FluidFloodOptions flood_options =
+        MakeBreakSiteFloodOptions(*BlockRegistry, GetProceduralSettings(),
+                                  WorldgenOwnerPackId, blockPos);
+    std::vector<glm::ivec3> flood_changed;
+    UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
+        BlockWorld, *definitions, blockPos, flood_options, &flood_changed);
+    mesh_touch_blocks.insert(mesh_touch_blocks.end(), flood_changed.begin(),
+                             flood_changed.end());
+  }
+  EnqueueFluidFrontierAt(*this, blockPos);
+  if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
+  {
+    BlockPhysicsService->PublishFluid(blockPos);
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 neighbor = blockPos + offset;
+    if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(neighbor)))
+    {
+      mesh_touch_blocks.push_back(neighbor);
+    }
+  }
+}
+
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
 {
   if (!BlockRegistry)
@@ -795,36 +866,7 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   const BlockId existing = BlockWorld.GetBlock(blockPos);
   if (BlockRegistry->IsLiquid(Id))
   {
-    const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
-    if (definitions == nullptr)
-    {
-      return false;
-    }
-    if (!UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *BlockRegistry,
-                                             blockPos))
-    {
-      return false;
-    }
-    const FluidKind kind = UFluidSpreadSystem::FluidKindFromBlockId(*definitions, Id);
-    const FluidCellState place_state =
-        FluidCellState::Source().WithKind(kind);
-    UFluidSpreadSystem::ApplyFluidFill(BlockWorld, *definitions, blockPos, Id,
-                                       place_state);
-    ++CachedBlockCount;
-    BlockWorldReady = true;
-    MarkBlockChunkDirty(blockPos);
-    PublishBlockPhysicsEvent(blockPos);
-    PublishNeighborPhysicsEvents(blockPos);
-    if (PhysicsFlags.EnableFluids)
-    {
-      EnqueueFluidFrontierAt(*this, blockPos);
-      MarkBlockChunkDirty(blockPos);
-      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-      {
-        MarkBlockChunkDirty(blockPos + offset);
-      }
-    }
-    return true;
+    return TryAddFluidObject(blockPos, Id);
   }
   else if (existing != BLOCK_AIR && !BlockRegistry->IsLiquid(existing))
   {
@@ -1274,35 +1316,7 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
     PublishBlockPhysicsEvent(above_pos);
     PublishNeighborPhysicsEvents(above_pos);
   }
-  if (BlockRegistry && PhysicsFlags.EnableFluids)
-  {
-    const UBlockDefinitionStorage *definitions =
-        BlockRegistry->GetDefinitions();
-    if (definitions != nullptr)
-    {
-      FluidFloodOptions flood_options =
-          MakeBreakSiteFloodOptions(*BlockRegistry, GetProceduralSettings(),
-                                    WorldgenOwnerPackId, blockPos);
-      std::vector<glm::ivec3> flood_changed;
-      UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
-          BlockWorld, *definitions, blockPos, flood_options, &flood_changed);
-      mesh_touch_blocks.insert(mesh_touch_blocks.end(), flood_changed.begin(),
-                               flood_changed.end());
-    }
-    EnqueueFluidFrontierAt(*this, blockPos);
-    if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
-    {
-      BlockPhysicsService->PublishFluid(blockPos);
-    }
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      const glm::ivec3 neighbor = blockPos + offset;
-      if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(neighbor)))
-      {
-        mesh_touch_blocks.push_back(neighbor);
-      }
-    }
-  }
+  ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (auto camera = GetCurrentUserCamera())
   {

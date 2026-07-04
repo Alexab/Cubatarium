@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "App/Core.h"
+#include "App/ResourcePackSelectionUtil.h"
 #include "Core/ColorUtil.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Render/Textures/TextureBase.h"
@@ -153,23 +154,12 @@ bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
   {
     return false;
   }
-  ResourcePackSelection selection = selectionIn;
-  selection.Primary = NormalizeEnabledPackIds(core, selection.Primary);
-  selection.Secondary = NormalizeEnabledPackIds(core, selection.Secondary);
-  if (selection.Primary.empty())
-  {
-    selection = core.GetDefaultResourcePackSelection();
-    selection.Primary = NormalizeEnabledPackIds(core, selection.Primary);
-    selection.Secondary = NormalizeEnabledPackIds(core, selection.Secondary);
-  }
+  ResourcePackSelection selection =
+      NormalizeResourcePackSelection(core, *this, selectionIn);
   if (selection.Primary.empty())
   {
     std::cerr << "UCore::ApplyResourcePacks: no packs available" << std::endl;
     return false;
-  }
-  if (selection.WorldgenOwner.empty())
-  {
-    selection.WorldgenOwner = selection.Primary.front();
   }
 
   UResourcePackResolver resolver;

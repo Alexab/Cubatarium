@@ -1,5 +1,5 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
-#include "Creatures/Definition/CatalogSortUtil.h"
+#include "Core/Sort/CatalogSortUtil.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>

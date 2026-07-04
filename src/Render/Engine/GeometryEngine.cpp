@@ -54,7 +54,7 @@ UGeometryEngine::UGeometryEngine(
     : WorldInstance(world), TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      BaseSkyColor(0.5f, 0.7f, 1.0f), SmoothedSkyTint(0.5f, 0.7f, 1.0f),
+      BaseSkyColor(0.5f, 0.7f, 1.0f),
       useGradientSky(true)
 {
 }
@@ -684,165 +684,21 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
 void UGeometryEngine::PrepareFrameRendering()
 {
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
+  if (!WorldInstance)
   {
     return;
   }
-  const glm::vec3 eye = camera->GetPosition();
-  const UWorld::SampledFluidState fluid =
-      WorldInstance->SampleFluidPhysics(eye, camera->GetPlayerCapsule());
-  const FluidColumnSurface column =
-      WorldInstance->FindFluidColumnSurface(eye);
-  BlockId eyeFluid = BLOCK_AIR;
-  const bool cameraInFluid =
-      column.valid && eye.y < column.surfaceY;
-  if (cameraInFluid)
-  {
-    eyeFluid = column.fluidId;
-  }
-
-  const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
-  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
-  const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
-  const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
-                                 WorldCoordToBlockIndex(eye.z));
-  const bool mapReady = FluidSurfaceMap.Update(
-      WorldInstance->GetBlockWorld(), const_cast<UBlockRegistry &>(registry),
-      mesh_service.GetCache(), cameraBlockXZ, eyeBlockY,
-      mesh_service.GetMeshRevision());
-  BelowSurfaceFogStrength = (!cameraInFluid && mapReady) ? 1.0f : 0.0f;
-
-  BelowSurfaceFogColors.fill(glm::vec3(0.0f));
-  BelowSurfaceFogMin = 0.52f;
-  BelowSurfaceFogScale = 0.35f;
-  const BlockId water_id = registry.GetIdByTypeName("water");
-  const BlockId lava_id = registry.GetIdByTypeName("lava");
-  if (water_id != BLOCK_AIR)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(water_id))
-    {
-      BelowSurfaceFogColors[1] = fv->FogColor;
-      BelowSurfaceFogMin = fv->BelowSurfaceFogMin;
-      BelowSurfaceFogScale = fv->BelowSurfaceFogScale;
-    }
-  }
-  if (lava_id != BLOCK_AIR)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(lava_id))
-    {
-      BelowSurfaceFogColors[2] = fv->FogColor;
-    }
-  }
-
-  glm::vec3 targetSky = BaseSkyColor;
-  FogEnabled = 0.0f;
-  FogHorizontal = 0.0f;
-  FogHorizonBlend = 0.0f;
-  OverlayTintAlpha = 0.0f;
-  OverlayBlockId = BLOCK_AIR;
-
-  const bool enteringUnderwater = cameraInFluid && !WasUnderwaterFog;
-  const float underwaterFogMix = enteringUnderwater ? 1.0f : 0.15f;
-  if (cameraInFluid)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
-    {
-      if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid)
-      {
-        FogEnabled = 1.0f;
-        FogStart = fv->FogStart;
-        FogEnd = fv->FogEnd;
-        FogMinBlend = fv->FogMinBlend;
-        targetSky = fv->FogColor;
-        if (enteringUnderwater)
-        {
-          SmoothedFogColor = fv->FogColor;
-          SmoothedSkyTint = fv->FogColor;
-        }
-        else
-        {
-          SmoothedFogColor =
-              glm::mix(SmoothedFogColor, fv->FogColor, underwaterFogMix);
-        }
-      }
-    }
-  }
-  else if (Render.DistanceFog)
-  {
-    const DistanceFogParams distance_fog = ComputeDistanceFog(
-        WorldInstance->GetEffectiveRenderDistance(), SmoothedSkyTint,
-        Render.DistanceFogStartRatio,
-        WorldInstance->GetEffectiveFogStartRatio(), Render.DistanceFogDensity);
-    FogEnabled = 1.0f;
-    FogStart = distance_fog.Start;
-    FogEnd = distance_fog.End;
-    FogDensity = distance_fog.Density;
-    FogMinBlend = 0.0f;
-    FogHorizontal = Render.DistanceFogHorizontal ? 1.0f : 0.0f;
-    FogHorizonBlend = 1.0f;
-    SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
-  }
-  if (fluid.inFluid)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(fluid.dominantFluid))
-    {
-      if (fv->OverlayAlpha > 0.01f &&
-          registry.GetRenderStyle(fluid.dominantFluid) ==
-              BlockRenderStyle::Cross)
-      {
-        OverlayTintAlpha = fv->OverlayAlpha;
-        OverlayTintColor = fv->OverlayColor;
-        OverlayBlockId = fluid.dominantFluid;
-      }
-    }
-  }
-
-  if (!enteringUnderwater)
-  {
-    SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky,
-                               cameraInFluid ? underwaterFogMix : 0.15f);
-  }
-  skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
-  WasUnderwaterFog = cameraInFluid;
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap, BaseSkyColor);
+  skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
+  OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
+  OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
+  OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
 }
 
 void UGeometryEngine::ApplyFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos)
 {
-  shader->SetVec3("uCameraPos", cameraPos);
-  shader->SetVec3("uFogColor", SmoothedFogColor);
-  shader->SetFloat("uFogStart", FogStart);
-  shader->SetFloat("uFogEnd", FogEnd);
-  shader->SetFloat("uFogMinBlend", FogMinBlend);
-  shader->SetFloat("uFogEnabled", FogEnabled);
-  shader->SetFloat("uFogHorizontal", FogHorizontal);
-  shader->SetFloat("uFogDensity", FogDensity);
-  shader->SetFloat("uBelowSurfaceFog", BelowSurfaceFogStrength);
-  shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
-  shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
-  if (BelowSurfaceFogStrength > 0.001f && FluidSurfaceMap.IsValid())
-  {
-    shader->SetVec2("uFluidSurfaceOrigin", FluidSurfaceMap.GetOriginBlockXZ());
-    shader->SetVec2("uFluidSurfaceInvSize", FluidSurfaceMap.GetInvSizeBlocks());
-    shader->SetInt("uFluidSurfaceYMap", 1);
-    shader->SetInt("uFluidIndexMap", 2);
-    FluidSurfaceMap.Bind(1, 2);
-  }
-  else
-  {
-    shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
-    shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
-    shader->SetInt("uFluidSurfaceYMap", 1);
-    shader->SetInt("uFluidIndexMap", 2);
-  }
-  const GLint colorLoc =
-      shader->GetUniformLocation("uBelowSurfaceFogColors");
-  if (colorLoc != -1)
-  {
-    glUniform3fv(colorLoc, UFluidSurfaceMap::kMaxFluidShaderSlots,
-                 glm::value_ptr(BelowSurfaceFogColors[0]));
-  }
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -1299,8 +1155,8 @@ void UGeometryEngine::DrawSkyGradientSimple()
 
   // Pass sky color to shader
   skyShader->SetVec4("skyColor", skyColor);
-  skyShader->SetVec3("uFogColor", SmoothedFogColor);
-  skyShader->SetFloat("uFogHorizonBlend", FogHorizonBlend);
+  skyShader->SetVec3("uFogColor", UnderwaterFogPass_.GetFogColor());
+  skyShader->SetFloat("uFogHorizonBlend", UnderwaterFogPass_.GetFogHorizonBlend());
 
   // Create simple rectangle for sky (full screen)
   static const GLfloat skyVertices[] = {
@@ -1439,14 +1295,14 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 void UGeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
   BaseSkyColor = glm::vec3(r, g, b);
-  SmoothedSkyTint = BaseSkyColor;
+  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
   skyColor = glm::vec4(r, g, b, a);
 }
 
 void UGeometryEngine::SetSkyColor(const glm::vec4 &color)
 {
   BaseSkyColor = glm::vec3(color);
-  SmoothedSkyTint = BaseSkyColor;
+  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
   skyColor = color;
 }
 
