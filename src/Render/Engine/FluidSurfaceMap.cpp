@@ -11,8 +11,7 @@
 #include <cmath>
 #include <limits>
 
-// GLEW included after GLFW in platform code; GeometryEngine includes GL headers first.
-#include <GL/glew.h>
+#include "Render/GlIncludes.h"
 
 namespace cutum
 {

@@ -20,7 +20,7 @@
 #endif
 #include <windows.h>
 #include <dbghelp.h>
-#elif __has_include(<execinfo.h>)
+#elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
 #include <csignal>
 #include <cstdlib>
 #include <execinfo.h>
@@ -256,7 +256,7 @@ LONG WINAPI UnhandledExceptionFilter(_EXCEPTION_POINTERS *info)
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
-#elif __has_include(<execinfo.h>)
+#elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
 
 void AppendStackTracePosix()
 {
@@ -366,7 +366,7 @@ void TerminateHandler()
   }
   AppendStackTraceFromCapture();
   std::abort();
-#elif __has_include(<execinfo.h>)
+#elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
   PosixTerminateHandler();
 #else
   std::abort();
@@ -407,7 +407,7 @@ void CubatariumInstallWindowsDiagnostics()
 {
 #ifdef _WIN32
   SetUnhandledExceptionFilter(UnhandledExceptionFilter);
-#elif __has_include(<execinfo.h>)
+#elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
   InstallPosixSignalHandlers();
 #endif
   std::set_terminate(TerminateHandler);

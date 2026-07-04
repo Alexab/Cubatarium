@@ -22,7 +22,9 @@
 #endif
 #include "App/Core.h"
 #include "App/LegacyConfigAdapter.h"
+#ifndef __ANDROID__
 #include "App/Platform/GameDataRoot.h"
+#endif
 #include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
@@ -208,7 +210,16 @@ void UCore::LoadConfig(const std::string &config_file_name)
     std::filesystem::create_directories(WorldPath);
   }
   else
-#endif
+  {
+    ExeDir = GetExecutableDirectory();
+    ConfigFilePath = std::filesystem::path(config_file_name);
+    WorldPath = ExeDir / "worlds";
+    WorkDir = ExeDir;
+    std::error_code pathEc;
+    std::filesystem::current_path(WorkDir, pathEc);
+    std::filesystem::create_directories(WorldPath);
+  }
+#else
   {
     ExeDir = GetExecutableDirectory();
     const auto cwd = std::filesystem::current_path();
@@ -232,6 +243,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldPath = ExeDir / "worlds";
     WorkDir = project_dir;
   }
+#endif
 
   std::string val;
   bool configRead = false;
