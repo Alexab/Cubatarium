@@ -182,10 +182,8 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   if (face_style == BlockRenderStyle::Fluid &&
       CellHasRenderableFluid(reader, registry, neighbor_pos))
-
   {
-
-    return true;
+    return registry.IsLiquid(neighbor);
   }
 
   const bool face_transparent = registry.IsTransparent(face_id);
@@ -193,9 +191,12 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   const bool neighbor_transparent = registry.IsTransparent(neighbor);
 
   if (face_transparent && neighbor_transparent)
-
   {
-
+    if (face_style == BlockRenderStyle::Fluid &&
+        registry.IsFluidPermeable(neighbor))
+    {
+      return false;
+    }
     return true;
   }
 

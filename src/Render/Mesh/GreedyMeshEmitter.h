@@ -72,23 +72,35 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
   vertices.push_back(MakeVertex(p3, faceIndex));
 
   const bool flipWinding = glm::dot(glm::cross(uDir, vDir), nDir) < 0.0f;
+  auto pushTri = [&](uint32_t a, uint32_t b, uint32_t c) {
+    indices.push_back(a);
+    indices.push_back(b);
+    indices.push_back(c);
+  };
   if (flipWinding)
   {
-    indices.push_back(base + 0);
-    indices.push_back(base + 3);
-    indices.push_back(base + 2);
-    indices.push_back(base + 0);
-    indices.push_back(base + 2);
-    indices.push_back(base + 1);
+    pushTri(base + 0, base + 3, base + 2);
+    pushTri(base + 0, base + 2, base + 1);
   }
   else
   {
-    indices.push_back(base + 0);
-    indices.push_back(base + 1);
-    indices.push_back(base + 2);
-    indices.push_back(base + 0);
-    indices.push_back(base + 2);
-    indices.push_back(base + 3);
+    pushTri(base + 0, base + 1, base + 2);
+    pushTri(base + 0, base + 2, base + 3);
+  }
+  // Horizontal fluid faces are visible from inside the volume (e.g. surface when
+  // submerged); shell pass disables cull but backfaces still miss stencil.
+  if (q.FluidPacked != 0 && q.axis == 1)
+  {
+    if (flipWinding)
+    {
+      pushTri(base + 0, base + 1, base + 2);
+      pushTri(base + 0, base + 2, base + 3);
+    }
+    else
+    {
+      pushTri(base + 0, base + 3, base + 2);
+      pushTri(base + 0, base + 2, base + 1);
+    }
   }
 }
 

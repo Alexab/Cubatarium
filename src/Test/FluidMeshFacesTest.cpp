@@ -1,3 +1,5 @@
+#include "Test/FluidTestHelpers.h"
+
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -255,6 +257,47 @@ int main()
   }
   Expect(shore_faces_toward_air >= 1,
          "water at shore keeps vertical face toward dug air");
+
+  const auto decor_definitions = FluidTest::MakeTestFluidDecorDefinitions();
+  cutum::UBlockRegistry decor_registry(nullptr, decor_definitions);
+  constexpr cutum::BlockId kTallGrass = 10;
+  cutum::UBlockWorld waterlogged_top_world;
+  waterlogged_top_world.SetFluidDefinitions(decor_definitions.get());
+  const glm::ivec3 wl_water(14, 10, 8);
+  const glm::ivec3 wl_grass(14, 11, 8);
+  waterlogged_top_world.SetBlock(wl_water, kWater);
+  waterlogged_top_world.SetFluidState(wl_water, cutum::FluidCellState::Source());
+  waterlogged_top_world.SetBlock(wl_grass, kTallGrass);
+  waterlogged_top_world.SetFluidState(wl_grass, cutum::FluidCellState::Flowing(1));
+  const std::vector<cutum::GreedyQuad> wl_quads =
+      cutum::UGreedyMesher::BuildChunkMesh(waterlogged_top_world,
+                                           glm::ivec3(0, 0, 0), decor_registry);
+  Expect(CountFluidFaces(wl_quads, kWater, true) >= 1,
+         "water keeps top face under waterlogged decor");
+
+  cutum::UBlockWorld stacked_water_world;
+  stacked_water_world.SetFluidDefinitions(decor_definitions.get());
+  const glm::ivec3 stack_lower(16, 10, 8);
+  const glm::ivec3 stack_upper(16, 11, 8);
+  stacked_water_world.SetBlock(stack_lower, kWater);
+  stacked_water_world.SetFluidState(stack_lower, cutum::FluidCellState::Source());
+  stacked_water_world.SetBlock(stack_upper, kWater);
+  stacked_water_world.SetFluidState(stack_upper, cutum::FluidCellState::Source());
+  stacked_water_world.SetBlock(stack_upper + glm::ivec3(0, 1, 0), cutum::BLOCK_AIR);
+  const std::vector<cutum::GreedyQuad> stack_quads =
+      cutum::UGreedyMesher::BuildChunkMesh(stacked_water_world,
+                                           glm::ivec3(0, 0, 0), decor_registry);
+  int stack_internal_top = 0;
+  for (const cutum::GreedyQuad &quad : stack_quads)
+  {
+    if (quad.Id == kWater && quad.axis == 1 && quad.faceSign > 0 &&
+        quad.slice == stack_lower.y)
+    {
+      ++stack_internal_top;
+    }
+  }
+  Expect(stack_internal_top == 0,
+         "stacked water hides internal horizontal face");
 
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
   return 0;
