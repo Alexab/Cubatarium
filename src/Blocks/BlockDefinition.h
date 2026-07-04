@@ -2,9 +2,11 @@
 #define BLOCKDEFINITION_H
 
 #include "World/Math/BlockTypes.h"
+#include "World/Math/FluidCellState.h"
 #include <array>
 #include <glm/glm.hpp>
 #include <nlohmann/json_fwd.hpp>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -39,6 +41,8 @@ struct BlockPhysicsProfile
   bool Floodable{false};
   int FluidSpreadPeriodTicks{5};
   int FluidMaxLevel{7};
+  std::optional<bool> FluidPermeable;
+  FluidKind FluidKindPreset{FluidKind::None};
   bool Flammable{false};
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);

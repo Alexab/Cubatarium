@@ -2,6 +2,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Physics/FluidKindPresetUtil.h"
 #include "World/Physics/MaterialReactionRulesRegistry.h"
 
 namespace cutum
@@ -36,7 +37,7 @@ bool TryWaterMeetsLava(UBlockWorld &block_world, const UBlockRegistry &registry,
       {
         if (const BlockDefinition *def = definitions->GetById(id))
         {
-          if (def->Physics.FluidMaxLevel >= 7)
+          if (IsWaterFluidDefinition(def))
           {
             has_water = true;
           }

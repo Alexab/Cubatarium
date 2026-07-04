@@ -1140,6 +1140,13 @@ target_include_directories(fluid_kind_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/
 target_compile_definitions(fluid_kind_resolver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_kind_resolver_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_kind_preset_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/World/Physics/FluidBlockResolver.cpp
+    src/Test/FluidKindPresetTest.cpp)
+target_include_directories(fluid_kind_preset_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_kind_preset_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(object_placement_mode_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Objects/ObjectUtil.cpp
@@ -1163,6 +1170,14 @@ target_include_directories(fluid_permeable_decor_test PRIVATE
 target_compile_definitions(fluid_permeable_decor_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_permeable_decor_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_permeable_block_flag_test
+    src/Blocks/BlockDefinition.cpp
+    src/Test/FluidPermeableBlockFlagTest.cpp)
+target_include_directories(fluid_permeable_block_flag_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_permeable_block_flag_test
+    nlohmann_json::nlohmann_json)
 
 add_executable(fluid_gameplay_fixes_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}

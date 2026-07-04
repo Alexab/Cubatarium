@@ -10,6 +10,16 @@
 | `src/Render/Engine/GeometryEngine.cpp` | 2151 | −300 via fog pass extract (phase 6) |
 | `src/World/Core/World.cpp` | 2100 | incremental facade slices (phase 6) |
 
+## Phase 6/7 update (2026-07-04)
+
+| File | Baseline LOC | Current LOC | Delta vs baseline |
+|------|---------------|-------------|-------------------|
+| `src/Render/Engine/GeometryEngine.cpp` | 2151 | 2265 | +114 |
+| `src/World/Core/World.cpp` | 2100 | 2323 | +223 |
+
+- `GeometryEngine` now routes underwater fog through `UUnderwaterFogPass`; boundary extracted, but baseline drift still keeps file above phase-0 LOC.
+- `World.cpp` gained a fluid facade slice (`TryAddFluidObject`, `ApplyBreakSiteFluidFlood`) to isolate fluid policy paths from placement/break orchestration.
+
 ## Audit commands
 
 ```bash

@@ -17,6 +17,10 @@ inline bool IsFluidPermeableFromDefinition(BlockId id, const BlockDefinition *de
   {
     return false;
   }
+  if (def->Physics.FluidPermeable.has_value())
+  {
+    return def->Physics.FluidPermeable.value();
+  }
   if (def->Physics.Movement.Occupancy >= 1.0f)
   {
     return false;

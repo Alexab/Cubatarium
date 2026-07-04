@@ -48,7 +48,7 @@ Placement: hotbar `AddObject` uses `ApplyFluidFill` + explicit `FluidKind`; `Set
 | **Floodable** (legacy) | replaced | source/flow + kind | `SetBlock` + `SetFluidState` |
 | Solid | stone | — | blocks fluid |
 
-`IsFluidPermeable` is derived from render style + occupancy (no JSON flag yet). Mesh: GreedyMesher waterlogged pass uses **per-cell** `ResolveFluidBlockIdForMesh` (no global default water). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` write `FluidKind::Water` on decor in sea columns and coastal stacks (sea…sea+8).
+`IsFluidPermeable` supports explicit `physics.fluid_permeable`; when absent, fallback remains render style + occupancy. Mesh: GreedyMesher waterlogged pass uses **per-cell** `ResolveFluidBlockIdForMesh` (no global default water). Worldgen: `SealFluidPocketsInChunk` + `SealFluidPermeableDecorInChunk` write `FluidKind::Water` on decor in sea columns and coastal stacks (sea…sea+8).
 
 ## Gameplay flood (`FloodWetPockets`)
 
@@ -63,7 +63,7 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 
 ## Material reactions (water + lava)
 
-`UMaterialReactionRules::TryWaterMeetsLava`: AIR cell with water and lava neighbors → **stone** (not lava). Shore “lava” sightings are usually worldgen `TryPlaceLavaPool` (Hills, above sea) or `ResolveFluidKind` filling air next to exposed lava; gameplay flood prefers water when both touch.
+`UMaterialReactionRules::TryWaterMeetsLava`: AIR cell with water and lava neighbors → **stone** (not lava). Water/lava identity is now resolved from `physics.fluid_kind` (preset-backed), with legacy `FluidMaxLevel` fallback for old packs. Shore “lava” sightings are usually worldgen `TryPlaceLavaPool` (Hills, above sea) or `ResolveFluidKind` filling air next to exposed lava; gameplay flood prefers water when both touch.
 
 ## Render (phase R1 — current)
 
@@ -110,7 +110,7 @@ Decision: keep fluid shadow mode as a documented operational rollback control; d
 
 ## Acceptance criteria
 
-See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `fluid_placement_liquid_decor_test`, `fluid_permeable_decor_test`.
+See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `fluid_placement_liquid_decor_test`, `fluid_permeable_decor_test`, `fluid_permeable_block_flag_test`, `fluid_kind_preset_test`.
 
 ## Related docs
 

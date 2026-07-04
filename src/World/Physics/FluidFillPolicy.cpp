@@ -3,6 +3,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidKindPresetUtil.h"
 #include "World/Physics/FluidPermeabilityUtil.h"
 
 namespace cutum
@@ -28,25 +29,13 @@ bool IsFluidPermeableId(const UBlockDefinitionStorage &definitions, BlockId id)
 
 bool IsWaterKind(const UBlockDefinitionStorage &definitions, BlockId id)
 {
-  if (const BlockDefinition *def = definitions.GetById(id))
-  {
-    return def->Physics.IsLiquid && def->Physics.FluidMaxLevel >= 7;
-  }
-  return false;
+  return IsWaterFluidDefinition(definitions.GetById(id));
 }
 
 FluidKind FluidKindFromBlockId(const UBlockDefinitionStorage &definitions,
                                BlockId id)
 {
-  if (IsWaterKind(definitions, id))
-  {
-    return FluidKind::Water;
-  }
-  if (IsLiquidId(definitions, id))
-  {
-    return FluidKind::Lava;
-  }
-  return FluidKind::None;
+  return FluidKindFromDefinition(definitions.GetById(id));
 }
 
 FluidCellState EnsureFluidKind(const UBlockDefinitionStorage &definitions,

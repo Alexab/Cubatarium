@@ -8,6 +8,29 @@
 namespace cutum
 {
 
+namespace
+{
+
+FluidKind ParseFluidKindPreset(const nlohmann::json &j, const char *field)
+{
+  if (!j.contains(field) || !j[field].is_string())
+  {
+    return FluidKind::None;
+  }
+  const std::string value = j[field].get<std::string>();
+  if (value == "water")
+  {
+    return FluidKind::Water;
+  }
+  if (value == "lava")
+  {
+    return FluidKind::Lava;
+  }
+  return FluidKind::None;
+}
+
+} // namespace
+
 BlockPhysicsProfile BlockPhysicsProfile::Solid()
 {
   BlockPhysicsProfile p;
@@ -27,6 +50,7 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
     p.LiquidViscosity = 1.0f;
     p.FluidSpreadPeriodTicks = 5;
     p.FluidMaxLevel = 7;
+    p.FluidKindPreset = FluidKind::Water;
     p.Movement.DragHorizontal = 0.55f;
     p.Movement.DragVertical = 0.35f;
     p.Movement.SinkSpeed = 1.2f;
@@ -40,6 +64,7 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
     p.LiquidViscosity = 2.0f;
     p.FluidSpreadPeriodTicks = 30;
     p.FluidMaxLevel = 3;
+    p.FluidKindPreset = FluidKind::Lava;
     p.Movement.DragHorizontal = 0.65f;
     p.Movement.DragVertical = 0.45f;
     p.Movement.SinkSpeed = 0.8f;
@@ -130,6 +155,15 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
     {
       p.LiquidRenewable = j["liquid_renewable"].get<bool>();
     }
+    if (j.contains("fluid_permeable"))
+    {
+      p.FluidPermeable = j["fluid_permeable"].get<bool>();
+    }
+    const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
+    if (parsed_kind != FluidKind::None)
+    {
+      p.FluidKindPreset = parsed_kind;
+    }
     return p;
   }
   BlockPhysicsProfile p = BlockPhysicsProfile::Solid();
@@ -180,6 +214,15 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
   if (j.contains("liquid_renewable"))
   {
     p.LiquidRenewable = j["liquid_renewable"].get<bool>();
+  }
+  if (j.contains("fluid_permeable"))
+  {
+    p.FluidPermeable = j["fluid_permeable"].get<bool>();
+  }
+  const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
+  if (parsed_kind != FluidKind::None)
+  {
+    p.FluidKindPreset = parsed_kind;
   }
   return p;
 }

@@ -81,6 +81,11 @@ Full block definition. The numeric `id` field is optional and ignored at runtime
 
 Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 
+Fluid-related `physics` fields:
+
+- `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
+- `fluid_kind` (`"water"` | `"lava"`, optional): explicit liquid kind used for source state/kind resolution. If omitted, runtime keeps legacy fallback (`FluidMaxLevel >= 7` => water).
+
 ## Placeholder
 
 Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).

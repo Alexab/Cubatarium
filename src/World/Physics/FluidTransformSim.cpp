@@ -5,6 +5,7 @@
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidBlockResolver.h"
 #include "World/Physics/FluidFillPolicy.h"
+#include "World/Physics/FluidKindPresetUtil.h"
 #include "World/Physics/FluidPermeabilityUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidTuning.h"
@@ -37,11 +38,7 @@ bool IsLiquidId(const UBlockDefinitionStorage &definitions, BlockId id)
 
 bool IsWaterKind(const UBlockDefinitionStorage &definitions, BlockId id)
 {
-  if (const BlockDefinition *def = definitions.GetById(id))
-  {
-    return def->Physics.IsLiquid && def->Physics.FluidMaxLevel >= 7;
-  }
-  return false;
+  return IsWaterFluidDefinition(definitions.GetById(id));
 }
 
 bool IsFluidPermeableId(const UBlockDefinitionStorage &definitions, BlockId id)

@@ -93,6 +93,14 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/creature_activity_steering_test.exe
 
+      - name: C++ unit test (wander interval)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/wander_interval_test.exe
+
+      - name: C++ unit test (creature skinned draw)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/creature_skinned_draw_test.exe
+
       - name: C++ unit test (navigation pathfinder)
         shell: pwsh
         run: ./build/desktop-msvc/Release/navigation_pathfinder_test.exe
@@ -185,9 +193,29 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_permeable_decor_test.exe
 
+      - name: C++ unit test (fluid permeable block flag)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_permeable_block_flag_test.exe
+
+      - name: C++ unit test (fluid kind preset)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_kind_preset_test.exe
+
       - name: C++ unit test (worldgen vegetation placement)
         shell: pwsh
         run: ./build/desktop-msvc/Release/worldgen_vegetation_placement_test.exe
+
+      - name: C++ unit test (worldgen fluid vegetation pipeline)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_fluid_vegetation_pipeline_test.exe
+
+      - name: C++ unit test (worldgen hills vegetation gate)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_hills_vegetation_gate_test.exe
+
+      - name: C++ unit test (worldgen scatter placement)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_scatter_test.exe
 
       - name: Set up Python
         uses: actions/setup-python@v5
