@@ -60,6 +60,8 @@ struct FluidViewProfile
   float FogMinBlend{0.0f};
   glm::vec3 OverlayColor{0.0f};
   float OverlayAlpha{0.0f};
+  float BelowSurfaceFogMin{0.52f};
+  float BelowSurfaceFogScale{0.35f};
 };
 
 struct BlockRenderProfile

@@ -26,7 +26,11 @@ typedef int GLint;
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
+#include "Render/Engine/FluidSurfaceMap.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/World.h"
+#include "World/Math/GridMath.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -242,9 +246,11 @@ private:
   float FogDensity{1.0f};
   float FogHorizonBlend{0.0f};
   bool WasUnderwaterFog{false};
-  float FluidSurfaceY{-1000.0f};
+  UFluidSurfaceMap FluidSurfaceMap;
   float BelowSurfaceFogStrength{0.0f};
-  glm::vec3 BelowSurfaceFogColor{0.05f, 0.15f, 0.35f};
+  float BelowSurfaceFogMin{0.52f};
+  float BelowSurfaceFogScale{0.35f};
+  std::array<glm::vec3, UFluidSurfaceMap::kMaxFluidShaderSlots> BelowSurfaceFogColors{};
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

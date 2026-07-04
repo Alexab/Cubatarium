@@ -193,6 +193,8 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
     v.FogStart = 0.0f;
     v.FogEnd = 9.0f;
     v.FogMinBlend = 0.5f;
+    v.BelowSurfaceFogMin = 0.52f;
+    v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "lava")
   {
@@ -200,6 +202,8 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
     v.FogStart = 0.0f;
     v.FogEnd = 7.0f;
     v.FogMinBlend = 0.45f;
+    v.BelowSurfaceFogMin = 0.52f;
+    v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "fire")
   {

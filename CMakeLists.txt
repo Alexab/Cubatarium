@@ -137,6 +137,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp
     src/World/Core/WorldCooperativeOps.cpp
@@ -174,6 +175,7 @@ set(SOURCES
     src/World/Mesh/WorldMeshService.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
+    src/Render/Engine/FluidSurfaceMap.cpp
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
@@ -240,6 +242,7 @@ set(SOURCES
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/World/Chunks/ChunkStreamer.cpp
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Chunks/ChunkBuffer.cpp
@@ -811,6 +814,27 @@ target_include_directories(fluid_mesh_faces_test PRIVATE
 target_compile_definitions(fluid_mesh_faces_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(underwater_fog_column_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/Test/UnderwaterFogColumnTest.cpp)
+target_include_directories(underwater_fog_column_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(underwater_fog_column_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(underwater_fog_column_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_surface_slice_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/FluidSurfaceSliceTest.cpp)
+target_include_directories(fluid_surface_slice_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_surface_slice_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(liquid_viscosity_gate_test
     src/World/Physics/FluidSpreadSystem.cpp

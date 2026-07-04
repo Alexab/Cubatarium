@@ -153,6 +153,8 @@ void UChunkMeshCache::MarkAllDirty()
   Dirty.Clear();
   Cache.clear();
   GreedyCache.clear();
+  FluidSurfaceCache.clear();
+  FluidSurfaceDirty.clear();
   Instances.clear();
   GreedyBatches.clear();
   ++MeshRevision;
@@ -211,6 +213,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   {
     return;
   }
+  InvalidateFluidSurfaceForChunk(chunkCoord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -221,6 +224,9 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
   Dirty.Erase(chunkCoord);
+  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+  FluidSurfaceCache.erase(ground);
+  FluidSurfaceDirty.erase(ground);
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -695,5 +701,41 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
   InvalidateVisibleList();
+}
+
+void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)
+{
+  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+  FluidSurfaceDirty.insert(ground);
+}
+
+void UChunkMeshCache::RebuildFluidSurfaceSlice(const UBlockWorld &world,
+                                               UBlockRegistry &registry,
+                                               glm::ivec3 groundChunkCoord,
+                                               int scanHintY)
+{
+  FluidSurfaceCache[groundChunkCoord] =
+      BuildFluidSurfaceColumnSlice(world, registry, groundChunkCoord, scanHintY);
+  FluidSurfaceDirty.erase(groundChunkCoord);
+}
+
+const FluidSurfaceColumnSlice *
+UChunkMeshCache::GetFluidSurfaceSlice(const UBlockWorld &world,
+                                      UBlockRegistry &registry,
+                                      glm::ivec3 groundChunkCoord,
+                                      int scanHintY)
+{
+  const auto dirtyIt = FluidSurfaceDirty.find(groundChunkCoord);
+  const auto cacheIt = FluidSurfaceCache.find(groundChunkCoord);
+  if (dirtyIt != FluidSurfaceDirty.end() || cacheIt == FluidSurfaceCache.end())
+  {
+    RebuildFluidSurfaceSlice(world, registry, groundChunkCoord, scanHintY);
+  }
+  const auto it = FluidSurfaceCache.find(groundChunkCoord);
+  if (it == FluidSurfaceCache.end())
+  {
+    return nullptr;
+  }
+  return &it->second;
 }
 } // namespace cutum

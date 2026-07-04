@@ -19,6 +19,7 @@
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
+#include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -27,6 +28,7 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
+#include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -62,6 +64,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
+  FluidSurfaceMap.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   CreatureDraw_.DestroyBuffers();
@@ -667,7 +670,7 @@ void UGeometryEngine::PrepareFrameRendering()
   const glm::vec3 eye = camera->GetPosition();
   const UWorld::SampledFluidState fluid =
       WorldInstance->SampleFluidPhysics(eye, camera->GetPlayerCapsule());
-  const UWorld::FluidColumnSurface column =
+  const FluidColumnSurface column =
       WorldInstance->FindFluidColumnSurface(eye);
   BlockId eyeFluid = BLOCK_AIR;
   const bool cameraInFluid =
@@ -677,16 +680,37 @@ void UGeometryEngine::PrepareFrameRendering()
     eyeFluid = column.fluidId;
   }
 
-  constexpr float kPreSubmergeFragmentFogBand = 0.20f;
-  FluidSurfaceY = column.valid ? column.surfaceY : -1000.0f;
-  BelowSurfaceFogStrength = 0.0f;
-  if (column.valid && fluid.inFluid && !cameraInFluid &&
-      eye.y >= column.surfaceY &&
-      eye.y < column.surfaceY + kPreSubmergeFragmentFogBand)
+  const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
+  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
+  const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
+  const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
+                                 WorldCoordToBlockIndex(eye.z));
+  const bool mapReady = FluidSurfaceMap.Update(
+      WorldInstance->GetBlockWorld(), const_cast<UBlockRegistry &>(registry),
+      mesh_service.GetCache(), cameraBlockXZ, eyeBlockY,
+      mesh_service.GetMeshRevision());
+  BelowSurfaceFogStrength = (!cameraInFluid && mapReady) ? 1.0f : 0.0f;
+
+  BelowSurfaceFogColors.fill(glm::vec3(0.0f));
+  BelowSurfaceFogMin = 0.52f;
+  BelowSurfaceFogScale = 0.35f;
+  const BlockId water_id = registry.GetIdByTypeName("water");
+  const BlockId lava_id = registry.GetIdByTypeName("lava");
+  if (water_id != BLOCK_AIR)
   {
-    const float bandT =
-        1.0f - (eye.y - column.surfaceY) / kPreSubmergeFragmentFogBand;
-    BelowSurfaceFogStrength = glm::mix(0.72f, 1.0f, bandT);
+    if (const FluidViewProfile *fv = registry.GetFluidView(water_id))
+    {
+      BelowSurfaceFogColors[1] = fv->FogColor;
+      BelowSurfaceFogMin = fv->BelowSurfaceFogMin;
+      BelowSurfaceFogScale = fv->BelowSurfaceFogScale;
+    }
+  }
+  if (lava_id != BLOCK_AIR)
+  {
+    if (const FluidViewProfile *fv = registry.GetFluidView(lava_id))
+    {
+      BelowSurfaceFogColors[2] = fv->FogColor;
+    }
   }
 
   glm::vec3 targetSky = BaseSkyColor;
@@ -696,16 +720,8 @@ void UGeometryEngine::PrepareFrameRendering()
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
-  const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
   const bool enteringUnderwater = cameraInFluid && !WasUnderwaterFog;
   const float underwaterFogMix = enteringUnderwater ? 1.0f : 0.15f;
-  if (column.valid)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(column.fluidId))
-    {
-      BelowSurfaceFogColor = fv->FogColor;
-    }
-  }
   if (cameraInFluid)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
@@ -780,9 +796,31 @@ void UGeometryEngine::ApplyFogUniforms(
   shader->SetFloat("uFogEnabled", FogEnabled);
   shader->SetFloat("uFogHorizontal", FogHorizontal);
   shader->SetFloat("uFogDensity", FogDensity);
-  shader->SetFloat("uFluidSurfaceY", FluidSurfaceY);
   shader->SetFloat("uBelowSurfaceFog", BelowSurfaceFogStrength);
-  shader->SetVec3("uBelowSurfaceFogColor", BelowSurfaceFogColor);
+  shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
+  shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
+  if (BelowSurfaceFogStrength > 0.001f && FluidSurfaceMap.IsValid())
+  {
+    shader->SetVec2("uFluidSurfaceOrigin", FluidSurfaceMap.GetOriginBlockXZ());
+    shader->SetVec2("uFluidSurfaceInvSize", FluidSurfaceMap.GetInvSizeBlocks());
+    shader->SetInt("uFluidSurfaceYMap", 1);
+    shader->SetInt("uFluidIndexMap", 2);
+    FluidSurfaceMap.Bind(1, 2);
+  }
+  else
+  {
+    shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
+    shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
+    shader->SetInt("uFluidSurfaceYMap", 1);
+    shader->SetInt("uFluidIndexMap", 2);
+  }
+  const GLint colorLoc =
+      shader->GetUniformLocation("uBelowSurfaceFogColors");
+  if (colorLoc != -1)
+  {
+    glUniform3fv(colorLoc, UFluidSurfaceMap::kMaxFluidShaderSlots,
+                 glm::value_ptr(BelowSurfaceFogColors[0]));
+  }
 }
 
 void UGeometryEngine::SetGreedyShaderMode(

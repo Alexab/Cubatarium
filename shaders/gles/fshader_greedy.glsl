@@ -25,11 +25,36 @@ uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
-uniform float uFluidSurfaceY;
 uniform float uBelowSurfaceFog;
-uniform vec3 uBelowSurfaceFogColor;
+uniform float uBelowSurfaceFogMin;
+uniform float uBelowSurfaceFogScale;
+uniform vec2 uFluidSurfaceOrigin;
+uniform vec2 uFluidSurfaceInvSize;
+uniform sampler2D uFluidSurfaceYMap;
+uniform sampler2D uFluidIndexMap;
+uniform vec3 uBelowSurfaceFogColors[3];
 
 const int kCrossFaceIndex = 127;
+
+float surfaceYAt(vec2 worldXZ) {
+    vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        return 1e9;
+    }
+    float h = texture(uFluidSurfaceYMap, uv).r;
+    if (h < -500.0) {
+        return 1e9;
+    }
+    return h;
+}
+
+uint fluidIndexAt(vec2 worldXZ) {
+    vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        return 0u;
+    }
+    return uint(floor(texture(uFluidIndexMap, uv).r * 255.0 + 0.5));
+}
 
 float blockTileCoord(float axis)
 {
@@ -113,10 +138,18 @@ void main()
     if (uGreedyShaderMode == kGreedyModeFuzzyOnly && FragColor.a >= uShellAlphaThreshold) {
         discard;
     }
-    if (uBelowSurfaceFog > 0.001 && vWorldPos.y < uFluidSurfaceY) {
-        float depthBelow = uFluidSurfaceY - vWorldPos.y;
-        float belowFactor = uBelowSurfaceFog * clamp(0.52 + depthBelow * 0.35, 0.52, 1.0);
-        FragColor.rgb = mix(FragColor.rgb, uBelowSurfaceFogColor, belowFactor);
+    if (uBelowSurfaceFog > 0.001 && uFluidSurfaceInvSize.x > 0.0) {
+        float sy = surfaceYAt(vWorldPos.xz);
+        if (vWorldPos.y < sy) {
+            uint fi = fluidIndexAt(vWorldPos.xz);
+            if (fi > 0u) {
+                vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
+                float depthBelow = sy - vWorldPos.y;
+                float factor = clamp(uBelowSurfaceFogMin + depthBelow * uBelowSurfaceFogScale,
+                                     uBelowSurfaceFogMin, 1.0);
+                FragColor.rgb = mix(FragColor.rgb, fogCol, factor * uBelowSurfaceFog);
+            }
+        }
     }
     if (uFogEnabled > 0.5) {
         float dist;

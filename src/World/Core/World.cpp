@@ -1368,34 +1368,27 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
   return BreakSession->blockPos;
 }
 
-UWorld::FluidColumnSurface
-UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
+FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
+                                                    int hintY) const
 {
-  FluidColumnSurface column;
   if (!BlockRegistry)
   {
-    return column;
+    return FluidColumnSurface{};
+  }
+  return ::cutum::FindFluidColumnSurfaceAt(BlockWorld, *BlockRegistry, bx, bz,
+                                           hintY, 8, 24);
+}
+
+FluidColumnSurface UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
+{
+  if (!BlockRegistry)
+  {
+    return FluidColumnSurface{};
   }
   const int bx = WorldCoordToBlockIndex(eye.x);
   const int bz = WorldCoordToBlockIndex(eye.z);
   const int by = WorldCoordToBlockIndex(eye.y);
-  for (int y = by + 8; y >= by - 24; --y)
-  {
-    const BlockId id = BlockWorld.GetBlock(glm::ivec3(bx, y, bz));
-    if (!BlockRegistry->IsLiquid(id))
-    {
-      continue;
-    }
-    if (BlockRegistry->GetRenderStyle(id) != BlockRenderStyle::Fluid)
-    {
-      continue;
-    }
-    column.fluidId = id;
-    column.surfaceY = BlockTopY(y);
-    column.valid = true;
-    return column;
-  }
-  return column;
+  return FindFluidColumnSurfaceAt(bx, bz, by);
 }
 
 bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const

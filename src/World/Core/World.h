@@ -15,6 +15,7 @@
 #include "World/Collision/WorldCollision.h"
 #include "World/Core/BlockCountTracker.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/IO/ChunkStorageTypes.h"
@@ -205,13 +206,8 @@ public:
   };
   SampledFluidState SampleFluidPhysics(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const;
-  struct FluidColumnSurface
-  {
-    BlockId fluidId{BLOCK_AIR};
-    float surfaceY{0.0f};
-    bool valid{false};
-  };
   FluidColumnSurface FindFluidColumnSurface(const glm::vec3 &eye) const;
+  FluidColumnSurface FindFluidColumnSurfaceAt(int bx, int bz, int hintY) const;
   /// True when eye.y is strictly below BlockTopY of the topmost liquid block
   /// in the eye column (binary; no body-in-fluid or grace terms).
   bool IsCameraInsideFluid(const glm::vec3 &eye,

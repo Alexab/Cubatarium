@@ -234,6 +234,8 @@ Distance fog uses horizontal (XZ) distance from the camera — not view directio
 
 Asymmetric horizon (clear sky ahead, foggy sides) usually means streaming lag in the movement direction, not a fixed fog direction bug.
 
+**Underwater / below-surface fog:** full-screen underwater fog when `eye.y < BlockTopY` in the eye column (`IsCameraInsideFluid`). When the camera is above the surface, seafloor tint uses per-column GPU maps (`UFluidSurfaceMap`: `GL_R16F` surface Y + `GL_R8UI` fluid index) built from `FluidSurfaceColumnSlice` cached per ground chunk; `fshader_greedy` compares `vWorldPos.y` to `surfaceYAt(vWorldPos.xz)`.
+
 Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
 
 ## Config (`<exe_dir>/config.json`)

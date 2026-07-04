@@ -37,7 +37,16 @@ C++ (physics-nightly / smoke): `fluid_sim_mesh_integration_test`, `fluid_worldge
 
 Python (worldgen smoke): `shore_air_gaps_max: 0` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
 
-Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_mesh_faces_test`, `fluid_sim_mesh_integration_test`, `fluid_queue_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `liquid_flow_scenarios_test`, `physics_integration_test`. Python CI: `shore_air_gaps_max` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
+Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_mesh_faces_test`, `underwater_fog_column_test`, `fluid_surface_slice_test`, `fluid_sim_mesh_integration_test`, `fluid_queue_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `liquid_flow_scenarios_test`, `physics_integration_test`. Python CI: `shore_air_gaps_max` in `tools/worldgen_baseline.json` via `integration_test_worldgen.py`.
+
+Manual QA — below-surface / underwater fog (variant A, TD-FL-029):
+
+- [ ] Open ocean: wade in — seafloor tint before `eye.y < surface`; full underwater fog immediately after submerge
+- [ ] Shallow water, standing, level view — no full-screen underwater fog
+- [ ] Shallow water, look down — tint on seafloor blocks below local surface (per-column)
+- [ ] Lake above/below SeaLevel — correct surface from column scan, not sea-level constant
+- [ ] Lava pool on shore — lava-colored below-surface tint
+- [ ] Run along loaded/unloaded chunk edge — no bright tint artifacts outside map (sentinel `-1000`)
 
 Manual QA (required before closing TD-FL-021):
 

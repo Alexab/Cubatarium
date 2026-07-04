@@ -4,6 +4,7 @@
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/ChunkDirtySet.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
@@ -61,6 +62,10 @@ public:
   {
     RenderDistanceChunks = distance;
   }
+  int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
+  const FluidSurfaceColumnSlice *
+  GetFluidSurfaceSlice(const UBlockWorld &world, UBlockRegistry &registry,
+                       glm::ivec3 groundChunkCoord, int scanHintY);
   const std::vector<FaceInstance> &GetFaceInstances() const
   {
     return Instances;
@@ -119,7 +124,13 @@ private:
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
+  std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
+      FluidSurfaceCache;
+  std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
+  void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
+  void RebuildFluidSurfaceSlice(const UBlockWorld &world, UBlockRegistry &registry,
+                                glm::ivec3 groundChunkCoord, int scanHintY);
   size_t TotalCrossCenterCount() const;
   bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,
                                           const glm::vec3 *cameraPos,

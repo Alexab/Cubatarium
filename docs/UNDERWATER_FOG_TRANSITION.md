@@ -9,13 +9,13 @@
 
 Это не «дыра» в mesh / отсутствие верхней грани воды. Симптом: **подводные блоки рисуются с наземным освещением и туманом**, пока камера формально ещё не считается «под водой».
 
-### Текущее поведение (ветка `water`, после `e58e9fb`)
+### Текущее поведение (ветка `water`, variant A implemented)
 
 | Режим | Условие | Эффект |
 |-------|---------|--------|
-| Полный подводный туман | `eye.y < BlockTopY` верхнего liquid в колонке глаз | Global fog + snap цвета при входе |
-| Pre-submerge tint | тело в воде + глаза в полосе **0…20 см** над поверхностью | Per-fragment tint только для `vWorldPos.y < uFluidSurfaceY` (surface из **колонки камеры**) |
-| Стояние в мелкой воде, голова над поверхностью | `eye.y >= surface` | Без full-screen underwater fog (намеренно) |
+| Полный подводный туман | `eye.y < BlockTopY` верхнего liquid в колонке глаз | Global fog + snap цвета при входе (без изменений) |
+| Below-surface tint | `!cameraInFluid` + `fragment.y < surfaceY(fragment.xz)` | Per-column tint через `UFluidSurfaceMap` (water/lava) |
+| Стояние в мелкой воде, голова над поверхностью | `eye.y >= surface` | Full-screen fog **выкл**; tint на блоках ниже surface своей колонки |
 
 Константы **не привязаны к pitch/FOV**; зависят от **вертикали** `eye.y` и эмпирической полосы. Смена `eyeHeight` капсулы может потребовать retune полосы.
 
@@ -123,7 +123,9 @@
 
 ---
 
-## 7. План реализации варианта A
+## 7. План реализации варианта A — **implemented**
+
+Реализовано: `FindFluidColumnSurfaceAt` (`FluidColumnSurfaceQuery`), `FluidSurfaceColumnSlice` + кэш в `UChunkMeshCache`, `UFluidSurfaceMap`, шейдер `surfaceYAt`/`fluidIndexAt`, `FluidViewProfile::BelowSurfaceFogMin/Scale`, тесты `underwater_fog_column_test` / `fluid_surface_slice_test`. Эвристика 20 cm band удалена.
 
 ### Фаза 0 — рефакторинг запроса колонки (низкий риск)
 
