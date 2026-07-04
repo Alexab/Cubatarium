@@ -8,8 +8,10 @@ UMeleeAttackActivityAgent::UMeleeAttackActivityAgent()
 {
 }
 
-void UMeleeAttackActivityAgent::OnCreatureAdded(CreatureId Id)
+void UMeleeAttackActivityAgent::OnCreatureAdded(
+    CreatureId Id, const CreatureBehaviorParams &behavior)
 {
+  (void)behavior;
   Members.insert(Id);
   State[Id] = UCreatureActivityBlackboard{};
 }

@@ -1,18 +1,32 @@
 #include "Activity/Agents/WanderActivityAgent.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include <algorithm>
 #include <cmath>
 
 namespace cutum
-{
-
-namespace
 {
 
 constexpr float kStuckTimeout = 0.6f;
 constexpr float kStuckMinSpeed = 0.05f;
 constexpr float kSeparationWeight = 0.5f;
 constexpr float kIdleBlockDuration = 0.2f;
+
+void NormalizeWanderIntervalRange(float rawMin, float rawMax, float &outMin,
+                                  float &outMax)
+{
+  constexpr float kDefaultMin = 2.0f;
+  constexpr float kDefaultMax = 4.0f;
+  outMin = rawMin > 0.0f ? rawMin : kDefaultMin;
+  outMax = rawMax > 0.0f ? rawMax : kDefaultMax;
+  if (outMax < outMin)
+  {
+    std::swap(outMin, outMax);
+  }
+}
+
+namespace
+{
 
 void RepickWanderDirection(IUWorldPerception &perception,
                            const CreatureActivityView &view,
@@ -30,12 +44,15 @@ void RepickWanderDirection(IUWorldPerception &perception,
 
 } // namespace
 
-void UWanderActivityAgent::OnCreatureAdded(CreatureId Id)
+void UWanderActivityAgent::OnCreatureAdded(
+    CreatureId Id, const CreatureBehaviorParams &behavior)
 {
   Members.insert(Id);
-  ResetWanderState(Id, 2.0f, 4.0f);
   WanderAgentState &st = State[Id];
-  st.timer = 0.0f;
+  NormalizeWanderIntervalRange(behavior.wanderIntervalMin,
+                               behavior.wanderIntervalMax, st.intervalMin,
+                               st.intervalMax);
+  ResetWanderState(Id, st.intervalMin, st.intervalMax);
   st.forceRepick = true;
   st.stuckTimer = 0.0f;
   st.idleTimer = 0.0f;
@@ -78,8 +95,9 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
 
     WanderAgentState &st = State[Id];
-    const float intervalMin = snapshot->behavior.wanderIntervalMin;
-    const float intervalMax = snapshot->behavior.wanderIntervalMax;
+    NormalizeWanderIntervalRange(snapshot->behavior.wanderIntervalMin,
+                                 snapshot->behavior.wanderIntervalMax,
+                                 st.intervalMin, st.intervalMax);
 
     const bool volume_blocked = !perception.CreatureVolumeClearAt(
         view->bodyOrigin, snapshot->boundsSize, view->Id);
@@ -108,7 +126,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     st.timer -= dt;
     if (st.timer <= 0.0f)
     {
-      ResetWanderState(Id, intervalMin, intervalMax);
+      ResetWanderState(Id, st.intervalMin, st.intervalMax);
       RepickWanderDirection(perception, *view, *snapshot, st);
     }
 

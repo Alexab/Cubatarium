@@ -10,6 +10,9 @@
 namespace cutum
 {
 
+void NormalizeWanderIntervalRange(float rawMin, float rawMax, float &outMin,
+                                  float &outMax);
+
 struct WanderAgentState
 {
   float timer{0.0f};
@@ -17,6 +20,8 @@ struct WanderAgentState
   glm::vec3 lastBodyOrigin{};
   float stuckTimer{0.0f};
   float idleTimer{0.0f};
+  float intervalMin{2.0f};
+  float intervalMax{4.0f};
   bool forceRepick{false};
 };
 
@@ -24,7 +29,8 @@ class UWanderActivityAgent : public IUCreatureActivityAgent
 {
 public:
   const char *GetBehaviorId() const override { return "wander"; }
-  void OnCreatureAdded(CreatureId Id) override;
+  void OnCreatureAdded(CreatureId Id,
+                       const CreatureBehaviorParams &behavior) override;
   void OnCreatureRemoved(CreatureId Id) override;
   void Tick(IUWorldPerception &perception, IUCreatureActivitySink &sink,
             float dt) override;

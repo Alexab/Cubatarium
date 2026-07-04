@@ -17,6 +17,7 @@ public:
 
   void SetCreaturesRoot(const std::string &root);
   std::string GetCreaturesRoot() const { return creaturesRoot; }
+  void Clear();
 
   std::shared_ptr<CreatureGltfMeshAsset> Load(const std::string &speciesId,
                                               const std::string &modelFile);

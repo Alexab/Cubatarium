@@ -17,7 +17,8 @@ public:
   UFleeActivityAgent();
 
   const char *GetBehaviorId() const override { return "flee"; }
-  void OnCreatureAdded(CreatureId Id) override;
+  void OnCreatureAdded(CreatureId Id,
+                       const CreatureBehaviorParams &behavior) override;
   void OnCreatureRemoved(CreatureId Id) override;
   void Tick(IUWorldPerception &perception, IUCreatureActivitySink &sink,
             float dt) override;

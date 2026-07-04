@@ -140,6 +140,7 @@ UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
 
 UCore::~UCore()
 {
+  CreatureGltfCache::Instance().Clear();
   UnwireRenderMeshSink();
 }
 

@@ -110,8 +110,10 @@ Sync helpers: `sync_creature_yaml_b3d_models.py`, `sync_gltf_creature_animation.
    `UGeometryEngine::DrawCreatureGltfMesh` (same vertex layout as skeletal
    cubes: `xyz` + `uv`).
 
-Skinned meshes (joints + weights) use the same draw entry with bone palette
-when present; static multi-primitive exports work without skinning.
+Skinned meshes (joints + weights) upload a `BonePalette` UBO (`std140`,
+binding `0`) via `CreatureBonePaletteGpu`. Runtime clamps upload to max 64 bones;
+unused slots are identity matrices. Static multi-primitive exports work without
+skinning.
 
 ## Tests
 

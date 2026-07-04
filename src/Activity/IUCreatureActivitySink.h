@@ -1,5 +1,5 @@
-#ifndef ICREATUREACTIVITYSINK_H
-#define ICREATUREACTIVITYSINK_H
+#ifndef IUCREATUREACTIVITYSINK_H
+#define IUCREATUREACTIVITYSINK_H
 
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"

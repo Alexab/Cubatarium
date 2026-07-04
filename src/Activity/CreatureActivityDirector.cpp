@@ -30,7 +30,9 @@ void UCreatureActivityDirector::Clear()
 }
 
 void UCreatureActivityDirector::OnCreatureAdded(CreatureId Id,
-                                                const std::string &behaviorId)
+                                                const std::string &behaviorId,
+                                                const CreatureBehaviorParams
+                                                    *behavior)
 {
   if (Id == 0 || behaviorId.empty() || behaviorId == "none")
   {
@@ -42,7 +44,8 @@ void UCreatureActivityDirector::OnCreatureAdded(CreatureId Id,
     return;
   }
   OnCreatureRemoved(Id);
-  agent->OnCreatureAdded(Id);
+  const CreatureBehaviorParams emptyBehavior{};
+  agent->OnCreatureAdded(Id, behavior ? *behavior : emptyBehavior);
   Membership[Id] = agent;
 }
 

@@ -54,7 +54,13 @@ void UWorldEnvironment::SetSkinDefinitionStorage(
 
 void UWorldEnvironment::RegisterDefaultActivityAgents()
 {
-  std::vector<std::pair<CreatureId, std::string>> rebind;
+  struct RebindActivity
+  {
+    CreatureId Id{0};
+    std::string behaviorId;
+    CreatureBehaviorParams behavior;
+  };
+  std::vector<RebindActivity> rebind;
   for (const auto &entry : Creatures)
   {
     if (!entry.second)
@@ -68,13 +74,13 @@ void UWorldEnvironment::RegisterDefaultActivityAgents()
     {
       continue;
     }
-    rebind.emplace_back(entry.first, def->behavior.Id);
+    rebind.push_back({entry.first, def->behavior.Id, def->behavior});
   }
   ActivityDirector.Clear();
   RegisterDefaultCreatureActivityAgents(ActivityDirector);
   for (const auto &pair : rebind)
   {
-    ActivityDirector.OnCreatureAdded(pair.first, pair.second);
+    ActivityDirector.OnCreatureAdded(pair.Id, pair.behaviorId, &pair.behavior);
   }
 }
 
@@ -357,7 +363,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   }
   if (def->role != CreatureRole::ControlledDefault)
   {
-    ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
+    ActivityDirector.OnCreatureAdded(id, def->behavior.Id, &def->behavior);
   }
   if (!Creatures[id]->IsPlayerCharacter())
   {
@@ -845,7 +851,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
         SnapCreatureFeetToGround(*creature);
       }
       Creatures[id] = std::move(creature);
-      ActivityDirector.OnCreatureAdded(id, def->behavior.Id);
+      ActivityDirector.OnCreatureAdded(id, def->behavior.Id, &def->behavior);
       NextCreatureId = std::max(NextCreatureId, id + 1);
     }
     if (PlayerCreatureId != 0 && ControlledCreatureId == 0)

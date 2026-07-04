@@ -5,6 +5,7 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
@@ -81,6 +82,9 @@ bool UCreatureDrawPass::InitBuffers(UShaderManager &shader_manager)
   }
 
   DestroyBuffers();
+  InitCreatureBonePaletteGpu();
+  BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
+                               kCreatureBonePaletteBindingPoint);
   return InitPartBuffers() && InitHeadPartBuffers() && InitBodyPartBuffers();
 }
 
@@ -146,6 +150,7 @@ void UCreatureDrawPass::DestroyBuffers()
     glDeleteVertexArrays(1, &creaturePartVAO);
     creaturePartVAO = 0;
   }
+  DestroyCreatureBonePaletteGpu();
 }
 
 bool UCreatureDrawPass::InitPartBuffers()
@@ -326,19 +331,13 @@ void UCreatureDrawPass::DrawSkinnedMesh(
   creatureSkinnedShader->Use();
   creatureSkinnedShader->SetInt("texture0", 0);
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  constexpr int kMaxSkinnedBoneUniforms = 48;
-#else
-  constexpr int kMaxSkinnedBoneUniforms = 64;
-#endif
-  const int boneCount = static_cast<int>(
-      std::min<size_t>(boneMatrices.size(), kMaxSkinnedBoneUniforms));
-  for (int i = 0; i < boneCount; ++i)
+  BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
+                               kCreatureBonePaletteBindingPoint);
+  const size_t boneCount = UploadCreatureBonePaletteGpu(boneMatrices);
+  if (boneCount > 0)
   {
-    creatureSkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",
-                                   boneMatrices[static_cast<size_t>(i)]);
+    ++Stats.CreatureBoneMatrixUploads;
   }
-  ++Stats.CreatureBoneMatrixUploads;
 
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),

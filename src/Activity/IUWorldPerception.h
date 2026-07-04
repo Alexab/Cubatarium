@@ -1,5 +1,5 @@
-#ifndef IWORLDPERCEPTION_H
-#define IWORLDPERCEPTION_H
+#ifndef IUWORLDPERCEPTION_H
+#define IUWORLDPERCEPTION_H
 
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"

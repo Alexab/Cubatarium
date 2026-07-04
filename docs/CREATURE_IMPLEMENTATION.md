@@ -907,6 +907,15 @@ void SetIntent(CreatureIntent);  // already
 
 Общий слой: `CreatureTextureResolver`, `CreatureRootTransform`, `CreatureMeshGpuCache`, `CreatureBonePaletteGpu`, `CreatureVisibility` (frustum + distance culling).
 
+### Shutdown / lifetime
+
+- `UGeometryEngine` destructor clears creature GPU resources in this order:
+  `CreatureDraw_.DestroyBuffers()` (including `CreatureBonePaletteGpu`) and
+  `CreatureMeshGpuCache::Instance().DestroyAll()`.
+- `CreatureGltfCache` is CPU-side; it is reset by
+  `CreatureGltfCache::Instance().SetCreaturesRoot(...)` and should be explicitly
+  cleared on app teardown/reload boundaries to drop stale weak entries.
+
 ### Метрики (performance HUD)
 
 Строка `Creatures: drawn/considered culled draws bone uploads` — baseline для сравнения до/после оптимизаций.

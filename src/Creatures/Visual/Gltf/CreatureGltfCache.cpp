@@ -20,6 +20,12 @@ void CreatureGltfCache::SetCreaturesRoot(const std::string &root)
   entries.clear();
 }
 
+void CreatureGltfCache::Clear()
+{
+  std::lock_guard<std::mutex> lock(mutex);
+  entries.clear();
+}
+
 std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfCache::Load(const std::string &speciesId,
                         const std::string &modelFile)

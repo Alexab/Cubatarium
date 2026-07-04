@@ -8,8 +8,10 @@ UFleeActivityAgent::UFleeActivityAgent()
 {
 }
 
-void UFleeActivityAgent::OnCreatureAdded(CreatureId Id)
+void UFleeActivityAgent::OnCreatureAdded(
+    CreatureId Id, const CreatureBehaviorParams &behavior)
 {
+  (void)behavior;
   Members.insert(Id);
   State[Id] = UCreatureActivityBlackboard{};
 }
