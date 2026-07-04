@@ -185,6 +185,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_permeable_decor_test.exe
 
+      - name: C++ unit test (worldgen vegetation placement)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_vegetation_placement_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
