@@ -18,7 +18,7 @@ enum class ObjectFeaturePool
   Structures
 };
 
-enum class ObjectPlacementMode
+enum class ObjectFeatureRuleMode
 {
   Object,
   ScatterBlocks,
@@ -57,7 +57,7 @@ struct ObjectFeatureRule
   uint32_t SeedOffset{0};
   int PlacementYOffset{0};
   std::vector<SubBiomeId> SubBiomes;
-  ObjectPlacementMode Mode{ObjectPlacementMode::Object};
+  ObjectFeatureRuleMode Mode{ObjectFeatureRuleMode::Object};
   ScatterBlockSpec Scatter;
   SurfaceConstraint Surface;
 };

@@ -301,7 +301,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       continue;
     }
-    if (rule.Mode == ObjectPlacementMode::ScatterBlocks)
+    if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
     {
       if (rule.Scatter.BlockName.empty() ||
           ResolveScatterBlockId(ctx, rule.Scatter.BlockName) == BLOCK_AIR)
@@ -331,7 +331,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
     const std::string &featureKey =
-        rule.Mode == ObjectPlacementMode::ScatterBlocks ? rule.Scatter.BlockName
+        rule.Mode == ObjectFeatureRuleMode::ScatterBlocks ? rule.Scatter.BlockName
                                                         : rule.ObjectName;
     const float packMul =
         UWorldGenPack::FeatureWeightMultiplier(BiomeIdToString(biome), featureKey);
@@ -371,7 +371,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
   const int topSolid = placementSurface.topSolidY;
-  if (chosen->Mode == ObjectPlacementMode::ScatterBlocks)
+  if (chosen->Mode == ObjectFeatureRuleMode::ScatterBlocks)
   {
     return TryPlaceScatterBlocks(ctx, x, z, topSolid, *chosen);
   }

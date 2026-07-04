@@ -19,7 +19,7 @@ struct WorldGenObjectEntry
   uint32_t SeedOffset{0};
   int PlacementYOffset{0};
   std::vector<std::string> SubBiomes;
-  ObjectPlacementMode Mode{ObjectPlacementMode::Object};
+  ObjectFeatureRuleMode Mode{ObjectFeatureRuleMode::Object};
   ScatterBlockSpec Scatter;
   SurfaceConstraint Surface;
 };

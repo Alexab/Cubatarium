@@ -75,7 +75,7 @@ void ParseObjectPool(const nlohmann::json &pool,
       const std::string mode = item.value("mode", "object");
       if (mode == "scatter_blocks")
       {
-        entry.Mode = ObjectPlacementMode::ScatterBlocks;
+        entry.Mode = ObjectFeatureRuleMode::ScatterBlocks;
         entry.Scatter.BlockName = item.value("block", "");
         entry.Scatter.Attempts = std::max(1, item.value("attempts", 4));
         entry.Scatter.Radius = std::max(0, item.value("radius", 2));
@@ -124,7 +124,7 @@ void AppendPool(std::vector<ObjectFeatureRule> &out,
   {
     for (const auto &entry : pair.second.Entries)
     {
-      if (entry.Mode == ObjectPlacementMode::ScatterBlocks)
+      if (entry.Mode == ObjectFeatureRuleMode::ScatterBlocks)
       {
         if (!entry.Scatter.BlockName.empty())
         {
@@ -205,7 +205,7 @@ void WriteWorldGenSets(nlohmann::json &root, const WorldGenSets &sets)
       for (const auto &entry : pair.second.Entries)
       {
         nlohmann::json item;
-        if (entry.Mode == ObjectPlacementMode::ScatterBlocks)
+        if (entry.Mode == ObjectFeatureRuleMode::ScatterBlocks)
         {
           item["mode"] = "scatter_blocks";
           item["block"] = entry.Scatter.BlockName;

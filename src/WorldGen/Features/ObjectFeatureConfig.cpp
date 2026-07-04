@@ -63,7 +63,7 @@ bool ParseRuleArray(const nlohmann::json &arr,
     const std::string mode = item.value("mode", "object");
     if (mode == "scatter_blocks")
     {
-      rule.Mode = ObjectPlacementMode::ScatterBlocks;
+      rule.Mode = ObjectFeatureRuleMode::ScatterBlocks;
       rule.Scatter.BlockName = item.value("block", "");
       rule.Scatter.Attempts = std::max(1, item.value("attempts", 4));
       rule.Scatter.Radius = std::max(0, item.value("radius", 2));

@@ -1,16 +1,18 @@
 #include "Render/Engine/UnderwaterFogPass.h"
 
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
 namespace cutum
 {
 
-void UUnderwaterFogPass::Update(const UWorld &world, const RenderSettings &render,
+void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
                                 UFluidSurfaceMap &surface_map,
                                 const glm::vec3 &base_sky_color)
 {
@@ -31,15 +33,14 @@ void UUnderwaterFogPass::Update(const UWorld &world, const RenderSettings &rende
     eyeFluid = column.fluidId;
   }
 
-  const UBlockRegistry &registry = world.GetBlockRegistry();
+  UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
   const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
                                  WorldCoordToBlockIndex(eye.z));
   const bool mapReady = surface_map.Update(
-      world.GetBlockWorld(), const_cast<UBlockRegistry &>(registry),
-      mesh_service.GetCache(), cameraBlockXZ, eyeBlockY,
-      mesh_service.GetMeshRevision());
+      world.GetBlockWorld(), registry, mesh_service.GetCache(), cameraBlockXZ,
+      eyeBlockY, mesh_service.GetMeshRevision());
   BelowSurfaceFogStrength = (!cameraInFluid && mapReady) ? 1.0f : 0.0f;
 
   BelowSurfaceFogColors.fill(glm::vec3(0.0f));

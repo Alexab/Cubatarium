@@ -17,7 +17,7 @@ class UWorld;
 class UUnderwaterFogPass
 {
 public:
-  void Update(const UWorld &world, const RenderSettings &render,
+  void Update(UWorld &world, const RenderSettings &render,
               UFluidSurfaceMap &surface_map, const glm::vec3 &base_sky_color);
   void ApplyUniforms(const std::shared_ptr<UShaderProgram> &shader,
                      const glm::vec3 &camera_pos,

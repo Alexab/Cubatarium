@@ -2,6 +2,7 @@
 #define RESOURCEPACKSELECTIONUTIL_H
 
 #include "ResourcePacks/ResourcePack.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 
 namespace cutum
 {

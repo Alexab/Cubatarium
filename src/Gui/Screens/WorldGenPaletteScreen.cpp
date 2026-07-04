@@ -877,7 +877,7 @@ void UWorldGenPaletteScreen::RebuildMainContent()
         {
           ContentKind kind = ContentKind::Object;
           std::string id = entry.ObjectName;
-          if (entry.Mode == ObjectPlacementMode::ScatterBlocks)
+          if (entry.Mode == ObjectFeatureRuleMode::ScatterBlocks)
           {
             kind = ContentKind::Block;
             id = entry.Scatter.BlockName;
