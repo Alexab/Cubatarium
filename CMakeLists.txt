@@ -157,6 +157,7 @@ set(SOURCES
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidReflowScan.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Physics/PrimitivePhysicsProfile.cpp
@@ -799,6 +800,7 @@ target_link_libraries(fluid_chunk_io_test glm::glm nlohmann_json::nlohmann_json)
 add_executable(fluid_spread_level_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidSpreadLevelTest.cpp)
 target_include_directories(fluid_spread_level_test PRIVATE
@@ -810,6 +812,7 @@ add_executable(fluid_mesh_faces_test
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidMeshFacesTest.cpp)
 target_include_directories(fluid_mesh_faces_test PRIVATE
@@ -841,6 +844,7 @@ target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_
 
 add_executable(liquid_viscosity_gate_test
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/LiquidViscosityGateTest.cpp)
@@ -851,6 +855,7 @@ target_link_libraries(liquid_viscosity_gate_test glm::glm)
 add_executable(liquid_non_renewable_flow_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/LiquidNonRenewableFlowTest.cpp)
 target_include_directories(liquid_non_renewable_flow_test PRIVATE
@@ -860,6 +865,7 @@ target_link_libraries(liquid_non_renewable_flow_test glm::glm nlohmann_json::nlo
 add_executable(liquid_flow_scenarios_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/LiquidFlowScenariosTest.cpp)
 target_include_directories(liquid_flow_scenarios_test PRIVATE
@@ -869,6 +875,7 @@ target_link_libraries(liquid_flow_scenarios_test glm::glm nlohmann_json::nlohman
 add_executable(fluid_queue_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidQueueIntegrationTest.cpp)
@@ -881,6 +888,7 @@ add_executable(fluid_sim_mesh_integration_test
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidSimMeshIntegrationTest.cpp)
@@ -895,6 +903,7 @@ add_executable(fluid_placement_liquid_decor_test
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidPlacementLiquidDecorTest.cpp)
@@ -916,6 +925,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/DecorMeshIntegrationTest.cpp)
 target_include_directories(decor_mesh_integration_test PRIVATE
@@ -929,6 +939,7 @@ add_executable(fluid_worldgen_seal_test
     src/ResourcePacks/BlockNameUtil.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
@@ -947,6 +958,7 @@ add_executable(worldgen_vegetation_placement_test
     src/ResourcePacks/BlockNameUtil.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Core/WorldGenContext.cpp
@@ -968,11 +980,22 @@ add_executable(fluid_block_resolver_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidBlockResolverTest.cpp)
 target_include_directories(fluid_block_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(fluid_block_resolver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_block_resolver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_flood_service_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/FluidFloodServiceTest.cpp)
+target_include_directories(fluid_flood_service_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_flood_service_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_flood_service_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(object_placement_mode_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -985,6 +1008,7 @@ target_link_libraries(object_placement_mode_test glm::glm nlohmann_json::nlohman
 add_executable(fluid_permeable_decor_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidPermeableDecorTest.cpp)
@@ -1000,6 +1024,7 @@ add_executable(fluid_gameplay_fixes_test
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/FluidUpdateSet.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidGameplayFixesTest.cpp)
@@ -1024,6 +1049,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/World/Objects/ObjectLibrary.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Core/ProceduralSettings.cpp
@@ -1069,6 +1095,7 @@ target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/Test/PhysicsIntegrationTest.cpp)
 target_include_directories(physics_integration_test PRIVATE
@@ -1107,6 +1134,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
     src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/World/Physics/ChunkPhysicsSeed.cpp
     src/Render/Primitives/Cube.cpp
