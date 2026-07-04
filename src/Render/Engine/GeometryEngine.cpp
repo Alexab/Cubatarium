@@ -65,6 +65,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
   FluidSurfaceMap.DestroyGpuResources();
+  OpaqueDepthCapture.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   CreatureDraw_.DestroyBuffers();
@@ -395,6 +396,7 @@ void UGeometryEngine::DrawCubeGeometry()
                             draw.cullRevision);
     DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
                               draw.meshRevision, draw.cullRevision);
+    OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
     GLboolean blendWasEnabled;
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
@@ -863,6 +865,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->SetInt("texture0", 0);
   SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
                       shellAlphaThreshold);
+  const bool opaqueDepthGuard =
+      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass;
+  if (opaqueDepthGuard)
+  {
+    OpaqueDepthCapture.Bind();
+  }
+  OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     ApplyFogUniforms(greedyShader, camera->GetPosition());
@@ -905,6 +914,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  if (opaqueDepthGuard)
+  {
+    glActiveTexture(GL_TEXTURE0);
+  }
   greedyShader->Unuse();
 }
 

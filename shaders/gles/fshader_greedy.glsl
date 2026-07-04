@@ -34,6 +34,11 @@ uniform sampler2D uFluidSurfaceYMap;
 uniform sampler2D uFluidIndexMap;
 uniform vec3 uBelowSurfaceFogColors[3];
 
+uniform sampler2D uOpaqueDepthMap;
+uniform float uOpaqueDepthGuard;
+uniform vec2 uOpaqueDepthScreenSize;
+uniform float uOpaqueDepthBias;
+
 const int kCrossFaceIndex = 127;
 
 float surfaceYAt(vec2 worldXZ) {
@@ -137,6 +142,14 @@ void main()
     }
     if (uGreedyShaderMode == kGreedyModeFuzzyOnly && FragColor.a >= uShellAlphaThreshold) {
         discard;
+    }
+    if (uOpaqueDepthGuard > 0.5 && uGreedyShaderMode != kGreedyModeShellDepth &&
+        uOpaqueDepthScreenSize.x > 0.0) {
+        vec2 depthUv = gl_FragCoord.xy / uOpaqueDepthScreenSize;
+        float opaqueDepth = texture(uOpaqueDepthMap, depthUv).r;
+        if (gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias) {
+            discard;
+        }
     }
     if (uBelowSurfaceFog > 0.001 && uFluidSurfaceInvSize.x > 0.0) {
         float sy = surfaceYAt(vWorldPos.xz);

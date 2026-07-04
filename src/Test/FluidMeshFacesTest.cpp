@@ -38,17 +38,23 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   cutum::BlockDefinition stone;
   stone.Name = "stone";
   stone.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition log;
+  log.Name = "tree_log";
+  log.Physics = cutum::BlockPhysicsProfile::Solid();
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   constexpr cutum::BlockId kLava = 11;
   constexpr cutum::BlockId kWater = 9;
   constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kLog = 12;
   by_id[kLava] = lava;
   by_id[kWater] = water;
   by_id[kStone] = stone;
+  by_id[kLog] = log;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["lava"] = kLava;
   name_to_id["water"] = kWater;
   name_to_id["stone"] = kStone;
+  name_to_id["tree_log"] = kLog;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
 }
@@ -88,6 +94,7 @@ int main()
   constexpr cutum::BlockId kLava = 11;
   constexpr cutum::BlockId kWater = 9;
   constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kLog = 12;
   const glm::ivec3 base(1, 10, 1);
   for (int dx = 0; dx < 2; ++dx)
   {
@@ -146,6 +153,56 @@ int main()
   }
   Expect(fluid_faces_toward_stone == 0, "fluid hides face toward solid");
   Expect(stone_faces_toward_fluid >= 1, "solid keeps face toward fluid");
+
+  cutum::UBlockWorld log_water_world;
+  log_water_world.SetFluidDefinitions(definitions.get());
+  const glm::ivec3 lw_log(4, 10, 8);
+  const glm::ivec3 lw_water(4, 11, 8);
+  log_water_world.SetBlock(lw_log, kLog);
+  log_water_world.SetBlock(lw_water, kWater);
+  log_water_world.SetFluidState(lw_water, cutum::FluidCellState::Source());
+  const std::vector<cutum::GreedyQuad> lw_quads =
+      cutum::UGreedyMesher::BuildChunkMesh(log_water_world, glm::ivec3(0, 0, 0),
+                                           registry);
+  int water_faces_toward_log = 0;
+  int log_quads = 0;
+  for (const cutum::GreedyQuad &quad : lw_quads)
+  {
+    if (quad.Id == kLog)
+    {
+      ++log_quads;
+    }
+    if (quad.Id == kWater && quad.axis == 1 && quad.faceSign < 0 &&
+        quad.slice >= lw_water.y - 1 && quad.slice <= lw_water.y)
+    {
+      ++water_faces_toward_log;
+    }
+  }
+  Expect(water_faces_toward_log == 0, "water on log hides bottom face toward log");
+  Expect(log_quads >= 4, "log under water keeps side faces to air");
+
+  cutum::UBlockWorld mixed_fluid_world;
+  mixed_fluid_world.SetFluidDefinitions(definitions.get());
+  const glm::ivec3 mix_water(6, 10, 8);
+  const glm::ivec3 mix_lava(7, 10, 8);
+  mixed_fluid_world.SetBlock(mix_water, kWater);
+  mixed_fluid_world.SetFluidState(mix_water, cutum::FluidCellState::Source());
+  mixed_fluid_world.SetBlock(mix_lava, kLava);
+  mixed_fluid_world.SetFluidState(mix_lava, cutum::FluidCellState::Source());
+  const std::vector<cutum::GreedyQuad> mix_quads =
+      cutum::UGreedyMesher::BuildChunkMesh(mixed_fluid_world,
+                                           glm::ivec3(0, 0, 0), registry);
+  int water_faces_toward_lava = 0;
+  for (const cutum::GreedyQuad &quad : mix_quads)
+  {
+    if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+        quad.slice == mix_water.x)
+    {
+      ++water_faces_toward_lava;
+    }
+  }
+  Expect(water_faces_toward_lava >= 1,
+         "water keeps face toward different fluid neighbor");
 
   // Cross-chunk: flowing level in neighbor chunk must not create a false wall.
   cutum::UBlockWorld cross_world;

@@ -158,6 +158,8 @@ Documented in [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md
 3. **ShellSurface** — color, `GL_LEQUAL`, stencil == 1.
 4. **FuzzyEdges** — color, `GL_LESS`, stencil != 1 (soft edges only).
 
+After opaque + cutout passes, **`UOpaqueDepthCapture`** snapshots the depth buffer; color/fuzzy transparent passes discard fragments behind that opaque depth on the same pixel (`uOpaqueDepthGuard` in `fshader_greedy.glsl`).
+
 Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
 Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 12 stems) ship in CC0 packs. QA: new world with `overworld`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.

@@ -49,6 +49,7 @@ flowchart TD
 | Симптом | Смотреть |
 |---------|---------|
 | Вода видна **сквозь камень** | `BehindShell` + stencil (должен быть EQUAL 1, не рисовать где stencil 0) |
+| Лава/вода **сквозь воду на opaque-блоке** (пень) | `UOpaqueDepthCapture` + `uOpaqueDepthGuard` в `fshader_greedy.glsl` (color/fuzzy passes) |
 | Нет **затемнения** между водой/стеклом | `ShellDepth` + `ShellSurface` |
 | Не видно **стекло за водой** | `BehindShell` (GREATER) + сортировка в `GreedyTransparentSort.cpp` |
 | Мир «ломается» после HUD/иконок | `GlStateScope` в `ObjectIconCache`, `Application` clear stencil |

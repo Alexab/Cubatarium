@@ -58,6 +58,7 @@ Manual QA (required before closing TD-FL-021):
 - [ ] Shore: break block — fill within ~1 s in 7-block radius
 - [ ] Water block on flat ground: top + 4 sides, semi-transparent shell
 - [ ] Underwater / shore slope: no seafloor bleed-through, no co-planar flicker
+- [ ] **Opaque occlusion through fluids:** `(x,y+1)=water`, `(x,y)=tree_log`, `(x,y,z-1)=lava` (lava on stump height behind column) — without water lava hidden by log; with water on log, lava must **not** show through water on pixels where opaque log occludes
 - [ ] Pit connected to ocean: transparent water, bottom visible
 - [ ] Old worlds load; ocean stable
 

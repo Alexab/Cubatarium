@@ -23,6 +23,7 @@ typedef int GLint;
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
 #include "Render/Pipeline/IUGreedyTransparentBackend.h"
+#include "Render/Pipeline/OpaqueDepthCapture.h"
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
@@ -247,6 +248,7 @@ private:
   float FogHorizonBlend{0.0f};
   bool WasUnderwaterFog{false};
   UFluidSurfaceMap FluidSurfaceMap;
+  UOpaqueDepthCapture OpaqueDepthCapture;
   float BelowSurfaceFogStrength{0.0f};
   float BelowSurfaceFogMin{0.52f};
   float BelowSurfaceFogScale{0.35f};

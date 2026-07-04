@@ -68,8 +68,8 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 ## Render (phase R1 — current)
 
 - **Full-block cubes** for all fluid cells (`FluidCellHeight` returns 1.0).
-- **Culling:** fluid→opaque hidden; opaque→fluid shown; fluid→air shown; fluid↔fluid hidden (any renderable fluid neighbor, level-independent).
-- **Shell transparency:** four-pass `GreedyTransparentPipeline` on full faces.
+- **Culling:** fluid→opaque hidden; opaque→fluid shown; fluid→air shown; fluid↔fluid same id hidden; **fluid↔different fluid** face kept.
+- **Shell transparency:** four-pass `GreedyTransparentPipeline` on full faces; opaque depth snapshot after solid/cutout pass (`UOpaqueDepthCapture`) rejects transparent color/fuzzy fragments behind opaque geometry on the same screen pixel.
 - Level-based mesh deferred to phase R4 (see [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md)).
 
 ## Face visibility matrix (R1)
@@ -78,6 +78,7 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 |----------|-------------------|
 | AIR | yes |
 | FLUID same id | no |
+| FLUID different id | yes |
 | SOLID opaque | no (terrain face kept) |
 | SOLID toward fluid | yes |
 

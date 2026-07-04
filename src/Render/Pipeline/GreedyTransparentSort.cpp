@@ -64,7 +64,11 @@ void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch> &batches,
                   TransparentBatchLayer(registry.GetRenderStyle(a.blockId));
               const int layerB =
                   TransparentBatchLayer(registry.GetRenderStyle(b.blockId));
-              return layerA < layerB;
+              if (layerA != layerB)
+              {
+                return layerA < layerB;
+              }
+              return a.blockId < b.blockId;
             });
 }
 

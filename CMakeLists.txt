@@ -187,6 +187,7 @@ set(SOURCES
     src/Render/Pipeline/TransparentPass.cpp
     src/Render/Pipeline/GreedyTransparentPipeline.cpp
     src/Render/Pipeline/GreedyDrawCategory.cpp
+    src/Render/Pipeline/OpaqueDepthCapture.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
@@ -808,6 +809,8 @@ add_executable(fluid_mesh_faces_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidMeshFacesTest.cpp)
 target_include_directories(fluid_mesh_faces_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
