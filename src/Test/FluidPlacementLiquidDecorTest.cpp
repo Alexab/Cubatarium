@@ -110,6 +110,64 @@ static void TestWaterOnGrassSpreads(
                     "waterlogged grass spreads to adjacent air");
 }
 
+static void TestWaterOnGrassSpreadsIsolated(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions,
+    cutum::UFluidSpreadSystem &fluid)
+{
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  const glm::ivec3 grass_pos(4, 11, 4);
+  const glm::ivec3 air_pos(5, 11, 4);
+  for (const glm::ivec3 pos : {grass_pos, air_pos})
+  {
+    world.SetBlock(pos + glm::ivec3(0, -1, 0), kStone);
+  }
+  world.SetBlock(grass_pos, kTallGrass);
+  world.SetBlock(air_pos, cutum::BLOCK_AIR);
+  cutum::UFluidSpreadSystem::ApplyFluidFill(
+      world, *definitions, grass_pos, kWater,
+      cutum::FluidCellState::Source().WithKind(cutum::FluidKind::Water));
+
+  cutum::UFluidUpdateSet queue;
+  queue.Enqueue(grass_pos);
+  queue.Enqueue(air_pos);
+  FluidTest::RunQueueTicks(world, *definitions, queue, fluid, 1);
+
+  FluidTest::Expect(world.GetBlock(grass_pos) == kTallGrass, kTestName,
+                    "isolated waterlogged grass keeps decor");
+  FluidTest::Expect(world.GetBlock(air_pos) == kWater, kTestName,
+                    "isolated waterlogged grass spreads to adjacent air");
+}
+
+static void TestLavaOnGrassSpreadsIsolated(
+    const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions,
+    cutum::UFluidSpreadSystem &fluid)
+{
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  const glm::ivec3 grass_pos(6, 11, 4);
+  const glm::ivec3 air_pos(7, 11, 4);
+  for (const glm::ivec3 pos : {grass_pos, air_pos})
+  {
+    world.SetBlock(pos + glm::ivec3(0, -1, 0), kStone);
+  }
+  world.SetBlock(grass_pos, kTallGrass);
+  world.SetBlock(air_pos, cutum::BLOCK_AIR);
+  cutum::UFluidSpreadSystem::ApplyFluidFill(
+      world, *definitions, grass_pos, kLava,
+      cutum::FluidCellState::Source().WithKind(cutum::FluidKind::Lava));
+
+  cutum::UFluidUpdateSet queue;
+  queue.Enqueue(grass_pos);
+  queue.Enqueue(air_pos);
+  FluidTest::RunQueueTicks(world, *definitions, queue, fluid, 1);
+
+  FluidTest::Expect(world.GetBlock(grass_pos) == kTallGrass, kTestName,
+                    "isolated lava-waterlogged grass keeps decor");
+  FluidTest::Expect(world.GetBlock(air_pos) == kLava, kTestName,
+                    "isolated lava-waterlogged grass spreads to adjacent air");
+}
+
 static void TestShoreGrassNotLava(
     const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
 {
@@ -144,6 +202,8 @@ int main()
   TestLavaOnAirSpreads(definitions, fluid);
   TestLavaOnGrassWaterlogs(definitions, registry);
   TestWaterOnGrassSpreads(definitions, fluid);
+  TestWaterOnGrassSpreadsIsolated(definitions, fluid);
+  TestLavaOnGrassSpreadsIsolated(definitions, fluid);
   TestShoreGrassNotLava(definitions);
 
   std::cout << kTestName << ": OK" << std::endl;
