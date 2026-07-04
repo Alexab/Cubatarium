@@ -443,8 +443,13 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         SkinnedShader->Use();
         SkinnedShader->SetInt("texture0", 0);
         SkinnedShader->SetMat4("mvp_matrix", mvp);
-        const int boneCount =
-            static_cast<int>(std::min<size_t>(bindPoseBones.size(), 64));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+        constexpr int kMaxSkinnedBoneUniforms = 48;
+#else
+        constexpr int kMaxSkinnedBoneUniforms = 64;
+#endif
+        const int boneCount = static_cast<int>(
+            std::min<size_t>(bindPoseBones.size(), kMaxSkinnedBoneUniforms));
         for (int i = 0; i < boneCount; ++i)
         {
           SkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",

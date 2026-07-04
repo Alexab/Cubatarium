@@ -171,6 +171,7 @@ UApplication::~UApplication() = default;
 
 void UApplication::Startup(const std::string &configPath)
 {
+  StartupOk = false;
   if (Core)
   {
     Core->LoadConfig(configPath);
@@ -187,7 +188,7 @@ void UApplication::Startup(const std::string &configPath)
   }
   if (!GuiContext->Initialize(ShaderManager, TextRenderer))
   {
-    std::cerr << "Application: GuiContext init failed" << std::endl;
+    CubatariumLogError("App", "GuiContext init failed (shaders/GUI)");
     return;
   }
   if (Window)
@@ -273,6 +274,7 @@ void UApplication::Startup(const std::string &configPath)
 
   State = AppState::MainMenu;
   ShowMainMenu();
+  StartupOk = true;
 }
 
 void UApplication::ScheduleEnterGame() { PendingEnterGame = true; }
@@ -1250,6 +1252,11 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (width > 0 && height > 0)
   {
     glViewport(0, 0, width, height);
+  }
+  else
+  {
+    CubatariumLogError("App", "RenderFrame skipped viewport: zero framebuffer size");
+    return;
   }
   if (State == AppState::MainMenu || State == AppState::Loading)
   {

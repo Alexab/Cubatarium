@@ -7,6 +7,7 @@
 #include <game-activity/GameActivity.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <sstream>
+#include <string>
 
 namespace cutum
 {
@@ -26,8 +27,10 @@ bool ChooseConfig(EGLDisplay display, EGLint renderableType, EGLConfig *config)
                                   8,
                                   EGL_RED_SIZE,
                                   8,
+                                  EGL_ALPHA_SIZE,
+                                  8,
                                   EGL_DEPTH_SIZE,
-                                  24,
+                                  16,
                                   EGL_NONE};
   EGLint numConfigs = 0;
   return eglChooseConfig(display, configAttribs, config, 1, &numConfigs) &&
@@ -62,34 +65,46 @@ bool EglContext::Initialize(android_app *app)
   }
 
   EGLConfig config = nullptr;
-  EGLint clientVersion = 3;
-  if (!ChooseConfig(static_cast<EGLDisplay>(display_), EGL_OPENGL_ES3_BIT, &config))
+  const EGLint renderableTypes[] = {EGL_OPENGL_ES3_BIT,
+                                    EGL_OPENGL_ES3_BIT | EGL_OPENGL_ES2_BIT,
+                                    EGL_OPENGL_ES2_BIT};
+  for (const EGLint renderableType : renderableTypes)
   {
-    CubatariumLogInfo("EGL", "GLES 3 config unavailable, trying GLES 2 config");
-    if (!ChooseConfig(static_cast<EGLDisplay>(display_), EGL_OPENGL_ES2_BIT, &config))
+    if (ChooseConfig(static_cast<EGLDisplay>(display_), renderableType, &config))
     {
-      CubatariumLogError("EGL", "eglChooseConfig failed");
-      eglTerminate(static_cast<EGLDisplay>(display_));
-      display_ = EGL_NO_DISPLAY;
-      return false;
-    }
-  }
-
-  for (EGLint tryVersion : {3, 2})
-  {
-    const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, tryVersion,
-                                     EGL_NONE};
-    context_ = eglCreateContext(static_cast<EGLDisplay>(display_), config,
-                                EGL_NO_CONTEXT, contextAttribs);
-    if (context_ != EGL_NO_CONTEXT)
-    {
-      clientVersion = tryVersion;
       break;
     }
+    config = nullptr;
   }
+  if (config == nullptr)
+  {
+    CubatariumLogError("EGL", "eglChooseConfig failed");
+    eglTerminate(static_cast<EGLDisplay>(display_));
+    display_ = EGL_NO_DISPLAY;
+    return false;
+  }
+
+  const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+  context_ = eglCreateContext(static_cast<EGLDisplay>(display_), config,
+                              EGL_NO_CONTEXT, contextAttribs);
+  EGLint clientVersion = 0;
   if (context_ == EGL_NO_CONTEXT)
   {
-    CubatariumLogError("EGL", "eglCreateContext failed");
+    CubatariumLogError("EGL", "eglCreateContext GLES3 failed");
+    eglTerminate(static_cast<EGLDisplay>(display_));
+    display_ = EGL_NO_DISPLAY;
+    return false;
+  }
+  eglQueryContext(static_cast<EGLDisplay>(display_),
+                  static_cast<EGLContext>(context_), EGL_CONTEXT_CLIENT_VERSION,
+                  &clientVersion);
+  if (clientVersion < 3)
+  {
+    CubatariumLogError("EGL", "GLES 3 context required but got GLES" +
+                                   std::to_string(clientVersion));
+    eglDestroyContext(static_cast<EGLDisplay>(display_),
+                      static_cast<EGLContext>(context_));
+    context_ = EGL_NO_CONTEXT;
     eglTerminate(static_cast<EGLDisplay>(display_));
     display_ = EGL_NO_DISPLAY;
     return false;

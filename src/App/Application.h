@@ -75,6 +75,7 @@ public:
   ~UApplication();
 
   void Startup(const std::string &configPath);
+  bool StartupSucceeded() const { return StartupOk; }
   void RequestEnterGame();
   /// Вход в игру на следующем кадре (безопасно из onClick кнопки меню).
   void ScheduleEnterGame();
@@ -218,6 +219,7 @@ private:
   bool WorldSessionActive{false};
   bool PendingEnterGame{false};
   bool PendingQuit{false};
+  bool StartupOk{false};
   std::function<void()> PendingMenuAction;
   std::function<void()> WorldOpOnComplete;
   bool QuitRequested{false};

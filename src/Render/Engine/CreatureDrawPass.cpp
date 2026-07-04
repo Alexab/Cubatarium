@@ -326,8 +326,13 @@ void UCreatureDrawPass::DrawSkinnedMesh(
   creatureSkinnedShader->Use();
   creatureSkinnedShader->SetInt("texture0", 0);
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
-  const int boneCount =
-      static_cast<int>(std::min<size_t>(boneMatrices.size(), 64));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  constexpr int kMaxSkinnedBoneUniforms = 48;
+#else
+  constexpr int kMaxSkinnedBoneUniforms = 64;
+#endif
+  const int boneCount = static_cast<int>(
+      std::min<size_t>(boneMatrices.size(), kMaxSkinnedBoneUniforms));
   for (int i = 0; i < boneCount; ++i)
   {
     creatureSkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",

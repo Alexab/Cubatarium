@@ -368,6 +368,23 @@ void TerminateHandler()
   std::abort();
 #elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
   PosixTerminateHandler();
+#elif defined(__ANDROID__)
+  try
+  {
+    if (const auto reason = std::current_exception())
+    {
+      std::rethrow_exception(reason);
+    }
+  }
+  catch (const std::exception &e)
+  {
+    LogCrashLine(std::string("[Crash] std::terminate: ") + e.what());
+  }
+  catch (...)
+  {
+    LogCrashLine("[Crash] std::terminate: unknown exception");
+  }
+  std::abort();
 #else
   std::abort();
 #endif

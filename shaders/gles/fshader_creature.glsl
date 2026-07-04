@@ -1,5 +1,6 @@
 #version 300 es
 precision mediump float;
+
 in vec2 TexCoord;
 out vec4 FragColor;
 
@@ -14,6 +15,8 @@ void main()
         float frameH = 1.0 / float(uAnimFrameCount);
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
-    FragColor = texture(texture0, uv);
+    vec4 tex = texture(texture0, uv);
+    if (tex.a < 0.05)
+        discard;
+    FragColor = vec4(tex.rgb, 1.0);
 }
-

@@ -22,6 +22,7 @@
 #endif
 #include "App/Core.h"
 #include "App/LegacyConfigAdapter.h"
+#include "App/Platform/Log.h"
 #ifndef __ANDROID__
 #include "App/Platform/GameDataRoot.h"
 #endif
@@ -537,6 +538,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+    CubatariumLogError("App", std::string("LoadConfig JSON error: ") + e.what());
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "LoadConfig error: " << e.what() << std::endl;
+    CubatariumLogError("App", std::string("LoadConfig error: ") + e.what());
   }
 }
 
@@ -721,7 +728,10 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
 
   SaveConfigFile();
-  SaveWorld(WorldInstance->GetWorldName());
+  if (!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty())
+  {
+    SaveWorld(WorldInstance->GetWorldName());
+  }
 }
 
 AppSettingsSnapshot UCore::GetAppSettings() const

@@ -1,5 +1,6 @@
 #include "Render/Engine/ShaderManager.h"
 #include "App/Platform/IUPlatformPaths.h"
+#include "App/Platform/Log.h"
 #include "Render/GlIncludes.h"
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
@@ -182,6 +183,20 @@ bool UShaderProgram::LinkProgram()
   return programID != 0;
 }
 
+namespace
+{
+
+void LogShaderDiagnostic(const char *type, const char *infoLog)
+{
+#if defined(__ANDROID__)
+  CubatariumLogError("Shader", std::string(type) + ": " + infoLog);
+#else
+  std::cerr << type << ": " << infoLog << std::endl;
+#endif
+}
+
+} // namespace
+
 void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
 {
   GLint success;
@@ -193,8 +208,7 @@ void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
     if (!success)
     {
       glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-      std::cerr << "Shader compile error [" << type << "]: " << infoLog
-                << std::endl;
+      LogShaderDiagnostic(("Shader compile error [" + type + "]").c_str(), infoLog);
     }
   }
   else
@@ -203,7 +217,7 @@ void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
     if (!success)
     {
       glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
-      std::cerr << "Shader program link error: " << infoLog << std::endl;
+      LogShaderDiagnostic("Shader program link error", infoLog);
     }
   }
 }
@@ -247,7 +261,12 @@ std::string UShaderProgram::ReadFile(const std::string &filepath)
   std::ifstream file(resolved);
   if (!file.is_open())
   {
-    std::cerr << "Shader file open error: " << resolved << std::endl;
+    const std::string message = "Shader file open error: " + resolved;
+#if defined(__ANDROID__)
+    CubatariumLogError("Shader", message);
+#else
+    std::cerr << message << std::endl;
+#endif
     return "";
   }
 
@@ -337,6 +356,9 @@ std::shared_ptr<UShaderProgram> UShaderManager::GetTextureShader()
 
 void UShaderManager::CreateDefaultShaders()
 {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
   // Create default shader
   CreateShaderFromStrings("default", GetDefaultVertexShader(),
                           GetDefaultFragmentShader());
@@ -347,6 +369,7 @@ void UShaderManager::CreateDefaultShaders()
   // Create texture shader
   CreateShaderFromStrings("texture", GetTextureVertexShader(),
                           GetTextureFragmentShader());
+#endif
 }
 
 std::string UShaderManager::GetDefaultVertexShader()

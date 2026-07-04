@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.zip.CRC32;
 
 public final class AssetExtractor {
+    private static final String TAG = "Asset";
     private static final String PREFS = "cubatarium_asset_extractor";
     private static final String KEY_VERSION_CODE = "last_extracted_version_code";
     private static final String KEY_ASSET_DIGEST = "last_extracted_digest";
@@ -28,6 +30,7 @@ public final class AssetExtractor {
             "content",
             "fonts",
             "models",
+            "objects",
             "prefabs",
             "resource_packs",
             "shaders",
@@ -49,22 +52,57 @@ public final class AssetExtractor {
         } catch (IOException e) {
             throw new RuntimeException("Failed to compute asset digest", e);
         }
+        final File gameDir = new File(context.getFilesDir(), "game");
         final File flag = new File(context.getFilesDir(), ".assets_extracted");
-        if (stored == versionCode && currentDigest.equals(storedDigest) && flag.exists()) {
+        final boolean cacheHit =
+                stored == versionCode && currentDigest.equals(storedDigest) && flag.exists();
+        if (cacheHit && hasCriticalAssets(gameDir)) {
             return;
         }
-        File gameDir = new File(context.getFilesDir(), "game");
+        if (cacheHit) {
+            Log.w(TAG, "Cached assets incomplete, re-extracting into " + gameDir);
+        } else {
+            Log.i(TAG, "Extracting game assets into " + gameDir);
+        }
         try {
+            deleteRecursive(gameDir);
             copyAssetFolder(context.getAssets(), "", gameDir);
             if (!flag.exists() && !flag.createNewFile()) {
                 flag.createNewFile();
+            }
+            if (!hasCriticalAssets(gameDir)) {
+                throw new IOException("Critical game assets missing after extraction");
             }
             prefs.edit()
                     .putInt(KEY_VERSION_CODE, versionCode)
                     .putString(KEY_ASSET_DIGEST, currentDigest)
                     .apply();
+            Log.i(TAG, "Asset extraction complete");
         } catch (IOException e) {
             throw new RuntimeException("Failed to extract game assets", e);
+        }
+    }
+
+    private static boolean hasCriticalAssets(File gameDir) {
+        return new File(gameDir, "fonts/Roboto-Regular.ttf").isFile()
+                && new File(gameDir, "shaders/gles/vshader_2d.glsl").isFile()
+                && new File(gameDir, "content/types.json").isFile();
+    }
+
+    private static void deleteRecursive(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursive(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            Log.w(TAG, "Failed to delete: " + file);
         }
     }
 

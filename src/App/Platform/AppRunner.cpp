@@ -6,6 +6,7 @@
 #include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/ViewEngine.h"
@@ -29,6 +30,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     const glm::ivec2 fbSize = window.GetFramebufferSize();
     const int initW = fbSize.x > 0 ? fbSize.x : 1280;
     const int initH = fbSize.y > 0 ? fbSize.y : 720;
+    CubatariumLogInfo("App", "Initializing platform window...");
     if (!window.Initialize(initW, initH, "Cubatarium"))
     {
       CubatariumLogError("App",
@@ -46,6 +48,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
 
+    CubatariumLogInfo("App", "Initializing text renderer...");
     if (!text_renderer->Initialize(16))
     {
       CubatariumLogError("App",
@@ -57,6 +60,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
 
     auto geometry_engine = std::make_shared<UGeometryEngine>(
         world, texture_base_instance, texture_cube_instance, text_renderer);
+    CubatariumLogInfo("App", "Initializing geometry engine...");
     if (!geometry_engine->InitEngine())
     {
       CubatariumLogError("App",
@@ -80,10 +84,35 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
         geometry_engine->GetShaderManager(), block_definitions);
     window.SetApplication(application);
 
+    CubatariumLogInfo("App", "Starting application...");
     application->Startup(paths.ResolveWritable("config.json").string());
+    if (!application->StartupSucceeded())
+    {
+      CubatariumLogError("App", "Startup failed — staying on screen for diagnostics");
+    }
+    else
+    {
+      const glm::ivec2 size = window.GetFramebufferSize();
+      if (size.x > 0 && size.y > 0)
+      {
+        PlatformUiMetrics platform;
+        platform.ScreenWidthPx = size.x;
+        platform.ScreenHeightPx = size.y;
+        application->UpdateUiScale(size.x, size.y, platform);
+      }
+    }
+
     window.Run();
 
-    core->SaveSystem(paths.ResolveWritable("config.json").string());
+    try
+    {
+      core->SaveSystem(paths.ResolveWritable("config.json").string());
+    }
+    catch (const std::exception &e)
+    {
+      CubatariumLogError("App",
+                         std::string("SaveSystem failed: ") + e.what());
+    }
     application.reset();
     text_renderer.reset();
     geometry_engine.reset();

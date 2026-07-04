@@ -286,6 +286,10 @@ void UWorldLifecycleFacade::RefreshWorldList(UCore &core)
 
 void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name)
 {
+  if (world_name.empty() && core.ActiveWorldFolder.empty())
+  {
+    return;
+  }
   if (core.ActiveWorldFolder.empty())
   {
     core.ActiveWorldFolder = core.WorldFolderPath(world_name);

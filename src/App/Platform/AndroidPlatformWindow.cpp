@@ -222,30 +222,42 @@ void UAndroidPlatformWindow::Run()
 
 void UAndroidPlatformWindow::ProcessFrame()
 {
-  const auto now = std::chrono::high_resolution_clock::now();
-  FrameDeltaTime = std::chrono::duration<double>(now - LastFrame).count();
-  LastFrame = now;
-
-  if (App)
+  try
   {
-    if (android_input_buffer *input = android_app_swap_input_buffers(App))
+    const auto now = std::chrono::high_resolution_clock::now();
+    FrameDeltaTime = std::chrono::duration<double>(now - LastFrame).count();
+    LastFrame = now;
+
+    if (App)
     {
-      ProcessInputBuffer(input);
-      android_app_clear_motion_events(input);
-      android_app_clear_key_events(input);
+      if (android_input_buffer *input = android_app_swap_input_buffers(App))
+      {
+        ProcessInputBuffer(input);
+        android_app_clear_motion_events(input);
+        android_app_clear_key_events(input);
+      }
     }
-  }
 
-  ProcessInput();
-  if (Application)
-  {
-    AndroidSoftKeyboardProcess(Application.get());
-    Application->Update(FrameDeltaTime);
+    ProcessInput();
+    if (Application)
+    {
+      AndroidSoftKeyboardProcess(Application.get());
+      Application->Update(FrameDeltaTime);
+    }
+    Update();
+    Render();
+    SwapBuffers();
+    Touch.Update();
   }
-  Update();
-  Render();
-  SwapBuffers();
-  Touch.Update();
+  catch (const std::exception &e)
+  {
+    CubatariumLogError("Android",
+                       std::string("ProcessFrame exception: ") + e.what());
+  }
+  catch (...)
+  {
+    CubatariumLogError("Android", "ProcessFrame unknown exception");
+  }
 }
 
 void UAndroidPlatformWindow::PollEvents() {}

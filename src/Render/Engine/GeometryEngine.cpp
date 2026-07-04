@@ -159,6 +159,7 @@ bool UGeometryEngine::InitShaders()
       "instanced", "shaders/vshader_instanced.glsl", "shaders/fshader.glsl");
   if (!instancedShader || !instancedShader->IsValid())
   {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
     std::cerr
         << "Failed to create instanced shader from files, trying inline sources"
         << std::endl;
@@ -191,13 +192,25 @@ bool UGeometryEngine::InitShaders()
       std::cerr << "Failed to create instanced shader" << std::endl;
       return false;
     }
+#endif
+  }
+
+  if (!instancedShader || !instancedShader->IsValid())
+  {
+    std::cerr << "Failed to create instanced shader" << std::endl;
+    return false;
   }
 
   instancedFaceShader = shaderManager->CreateShader(
       "instanced_face", "shaders/vshader_instanced_face.glsl",
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+      "shaders/fshader_instanced_face.glsl");
+#else
       "shaders/fshader.glsl");
+#endif
   if (!instancedFaceShader || !instancedFaceShader->IsValid())
   {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
     std::cerr << "Failed to create instanced face shader from files, trying "
                  "inline sources"
               << std::endl;
@@ -261,6 +274,13 @@ float insetMix(float a, float b, float t, float inset) {
       std::cerr << "Failed to create instanced face shader" << std::endl;
       return false;
     }
+#endif
+  }
+
+  if (!instancedFaceShader || !instancedFaceShader->IsValid())
+  {
+    std::cerr << "Failed to create instanced face shader" << std::endl;
+    return false;
   }
 
   greedyShader = shaderManager->CreateShader(
