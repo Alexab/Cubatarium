@@ -21,6 +21,13 @@ enum class ObjectOrigin
   ResourcePack,
 };
 
+enum class ObjectPlacementMode
+{
+  Default,
+  SurfaceLayer,
+  VerticalPlant,
+};
+
 struct ObjectVoxel
 {
   glm::ivec3 offset;
@@ -35,6 +42,7 @@ struct WorldObjectDefinition
   ObjectOrigin Origin{ObjectOrigin::Builtin};
   std::string SourcePackId;
   int PlacementYOffset{0};
+  ObjectPlacementMode PlacementMode{ObjectPlacementMode::Default};
   glm::ivec3 anchor{0};
   std::vector<ObjectVoxel> voxels;
   glm::ivec3 boundsMin{0};

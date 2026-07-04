@@ -151,8 +151,18 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
     object.Hidden = data.value("visibility", "") == "hidden";
     if (data.contains("placement") && data["placement"].is_object())
     {
+      const json &placement = data["placement"];
       object.PlacementYOffset =
-          data["placement"].value("y_offset", object.PlacementYOffset);
+          placement.value("y_offset", object.PlacementYOffset);
+      const std::string mode = placement.value("mode", std::string{});
+      if (mode == "surface_layer")
+      {
+        object.PlacementMode = ObjectPlacementMode::SurfaceLayer;
+      }
+      else if (mode == "vertical_plant")
+      {
+        object.PlacementMode = ObjectPlacementMode::VerticalPlant;
+      }
     }
 
     if (data.contains("anchor") && data["anchor"].is_array() &&

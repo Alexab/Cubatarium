@@ -11,6 +11,9 @@
     0,
     0
   ],
+  "placement": {
+    "mode": "surface_layer"
+  },
   "blocks": [
     {
       "dx": -1,
