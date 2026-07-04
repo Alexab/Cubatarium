@@ -3,6 +3,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Physics/FluidBlockResolver.h"
 #include "World/Physics/FluidFillPolicy.h"
 #include "World/Physics/FluidPermeabilityUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
@@ -220,9 +221,9 @@ bool HasOutboundSpreadTarget(const UBlockWorld &blockWorld,
     const BlockId neighbor_id = blockWorld.GetBlock(neighbor_pos);
     if (IsLiquidId(definitions, neighbor_id))
     {
-      if (UFluidSpreadSystem::ResolveFluidKind(blockWorld, definitions,
-                                                 neighbor_pos,
-                                                 neighbor_id) == fluid_id)
+      if (UFluidBlockResolver::ResolveFluidKind(blockWorld, definitions,
+                                                neighbor_pos,
+                                                neighbor_id) == fluid_id)
       {
         return true;
       }
@@ -230,8 +231,8 @@ bool HasOutboundSpreadTarget(const UBlockWorld &blockWorld,
     }
     if (IsFluidPermeableId(definitions, neighbor_id) &&
         CellHasActiveFluid(blockWorld, definitions, neighbor_pos) &&
-        UFluidSpreadSystem::ResolveFluidBlockId(blockWorld, definitions,
-                                                neighbor_pos) == fluid_id)
+        UFluidBlockResolver::ResolveFluidBlockId(blockWorld, definitions,
+                                                 neighbor_pos) == fluid_id)
     {
       continue;
     }
@@ -252,9 +253,9 @@ bool NeighborProvidesFluid(const UBlockWorld &blockWorld,
   if (IsFluidPermeableId(definitions, neighbor_id) &&
       CellHasActiveFluid(blockWorld, definitions, neighbor_pos))
   {
-    return UFluidSpreadSystem::ResolveFluidKind(blockWorld, definitions,
-                                                neighbor_pos,
-                                                neighbor_id) == fluid_id;
+    return UFluidBlockResolver::ResolveFluidKind(blockWorld, definitions,
+                                                   neighbor_pos,
+                                                   neighbor_id) == fluid_id;
   }
   return false;
 }
@@ -285,14 +286,14 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
     return stats;
   }
 
-  BlockId fluid_id = UFluidSpreadSystem::ResolveFluidKind(
+  BlockId fluid_id = UFluidBlockResolver::ResolveFluidKind(
       blockWorld, definitions, block_pos, block_id);
   const FluidCellState cell_fluid = blockWorld.GetFluidState(block_pos);
   if (fluid_id == BLOCK_AIR && is_waterlogged_permeable && sea_level >= 0 &&
       block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea &&
       !cell_fluid.HasExplicitKind())
   {
-    fluid_id = UFluidSpreadSystem::ResolveWaterBlockId(definitions);
+    fluid_id = UFluidBlockResolver::ResolveWaterBlockId(definitions);
   }
   if (sea_level >= 0 && block_pos.y <= sea_level && is_liquid &&
       !IsWaterKind(definitions, fluid_id))
@@ -303,7 +304,7 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
       block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea &&
       !cell_fluid.HasExplicitKind())
   {
-    const BlockId water_id = UFluidSpreadSystem::ResolveWaterBlockId(definitions);
+    const BlockId water_id = UFluidBlockResolver::ResolveWaterBlockId(definitions);
     if (water_id != BLOCK_AIR)
     {
       fluid_id = water_id;
@@ -490,6 +491,105 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
   RecordChange(stats, block_pos, block_pos, fluid_id, new_state, false,
                is_liquid ? "transform_flow" : "transform_flood");
   return stats;
+}
+
+bool UFluidTransformSim::HasSpreadTarget(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos)
+{
+  const BlockId block_id = blockWorld.GetBlock(block_pos);
+  if (IsLiquidId(definitions, block_id))
+  {
+    const glm::ivec3 below(block_pos.x, block_pos.y - 1, block_pos.z);
+    if (below.y >= 0 &&
+        UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, below))
+    {
+      return true;
+    }
+    if (!HorizontalSpreadAllowed(blockWorld, definitions, block_pos))
+    {
+      return true;
+    }
+    static constexpr std::array<glm::ivec3, 4> kSideOffsets = {
+        glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
+        glm::ivec3(0, 0, 1)};
+    const FluidCellState self_state =
+        EffectiveFluidState(blockWorld, block_pos);
+    const int self_level = LevelFromState(self_state);
+    const int max_level = GetFluidMaxLevel(definitions, block_id);
+    if (self_state.IsSource() || self_level < max_level)
+    {
+      for (const glm::ivec3 &offset : kSideOffsets)
+      {
+        const glm::ivec3 side = block_pos + offset;
+        const glm::ivec3 side_below(side.x, side.y - 1, side.z);
+        if (side_below.y >= 0 &&
+            UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions,
+                                              side_below))
+        {
+          continue;
+        }
+        if (UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, side))
+        {
+          return true;
+        }
+        if (NeighborProvidesFluid(blockWorld, definitions, side, block_id))
+        {
+          const FluidCellState neighbor_state =
+              EffectiveFluidState(blockWorld, side);
+          if (LevelFromState(neighbor_state) + 1 < self_level)
+          {
+            return true;
+          }
+        }
+      }
+    }
+    return self_state.IsSource();
+  }
+
+  if (!UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, block_pos))
+  {
+    return false;
+  }
+  const BlockId fluid_id = UFluidBlockResolver::ResolveFluidKind(
+      blockWorld, definitions, block_pos, block_id);
+  if (fluid_id == BLOCK_AIR)
+  {
+    return false;
+  }
+  if (IsFluidPermeableId(definitions, block_id) &&
+      CellHasActiveFluid(blockWorld, definitions, block_pos))
+  {
+    const FluidCellState self_fluid = blockWorld.GetFluidState(block_pos);
+    if (self_fluid.HasExplicitKind())
+    {
+      return HasOutboundSpreadTarget(blockWorld, definitions, block_pos,
+                                     fluid_id);
+    }
+  }
+  static constexpr std::array<glm::ivec3, 6> kDirs = {
+      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+  for (const glm::ivec3 &offset : kDirs)
+  {
+    const glm::ivec3 neighbor_pos = block_pos + offset;
+    if (!NeighborProvidesFluid(blockWorld, definitions, neighbor_pos, fluid_id))
+    {
+      continue;
+    }
+    const FluidCellState neighbor_state =
+        EffectiveFluidState(blockWorld, neighbor_pos);
+    if (neighbor_state.IsSource())
+    {
+      return true;
+    }
+    if (LevelFromState(neighbor_state) + 1 <=
+        GetFluidMaxLevel(definitions, fluid_id))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace cutum

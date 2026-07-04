@@ -18,6 +18,9 @@ public:
                                     const UBlockDefinitionStorage &definitions,
                                     uint64_t physics_tick, glm::ivec3 block_pos,
                                     int sea_level, bool shadow_mode);
+  static bool HasSpreadTarget(const UBlockWorld &blockWorld,
+                              const UBlockDefinitionStorage &definitions,
+                              glm::ivec3 block_pos);
 };
 
 } // namespace cutum
