@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Render/Mesh/IUChunkMeshReader.h"
+#include "World/Mesh/IUChunkMeshReader.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <glm/glm.hpp>

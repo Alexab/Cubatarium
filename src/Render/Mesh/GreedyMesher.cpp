@@ -5,7 +5,7 @@
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 
-#include "Render/Mesh/IUChunkMeshReader.h"
+#include "World/Mesh/IUChunkMeshReader.h"
 
 #include "World/Chunks/Chunk.h"
 

@@ -410,7 +410,7 @@ set(HEADERS
     src/Render/Mesh/ChunkMeshCache.h
     src/World/Chunks/ChunkStreamer.h
     src/Render/Mesh/GreedyMesher.h
-    src/Render/Mesh/IUChunkMeshReader.h
+    src/World/Mesh/IUChunkMeshReader.h
     src/Render/Mesh/GreedyMeshBatch.h
     src/App/Platform/InputManager.h
     src/Render/Engine/ShaderManager.h
