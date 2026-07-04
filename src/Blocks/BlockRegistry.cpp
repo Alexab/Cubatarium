@@ -1,4 +1,5 @@
 #include "Blocks/BlockRegistry.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
 #include "World/Physics/MaterialReactionRulesRegistry.h"
 #include <algorithm>
 #include "Blocks/BlockDefinitionStorage.h"
@@ -209,16 +210,12 @@ bool UBlockRegistry::IsFloodable(BlockId Id) const
 
 bool UBlockRegistry::IsFluidPermeable(BlockId Id) const
 {
-  if (Id == BLOCK_AIR || IsLiquid(Id))
+  if (Definitions)
   {
-    return false;
+    return IsFluidPermeableFromDefinition(Id, Definitions->GetById(Id),
+                                          IsLiquid(Id));
   }
-  if (Physics(Id).Movement.Occupancy >= 1.0f)
-  {
-    return false;
-  }
-  const BlockRenderStyle style = GetRenderStyle(Id);
-  return style == BlockRenderStyle::Cross || style == BlockRenderStyle::Cutout;
+  return false;
 }
 
 bool UBlockRegistry::IsFlammable(BlockId Id) const
