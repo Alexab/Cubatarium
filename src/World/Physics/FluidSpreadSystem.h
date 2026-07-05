@@ -90,6 +90,9 @@ public:
 
   static bool ShouldProcessFluidTick(uint64_t physics_tick,
                                      glm::ivec3 block_pos, int spread_period);
+  static int SpreadPeriodForCell(const UBlockWorld &blockWorld,
+                                 const UBlockDefinitionStorage &definitions,
+                                 glm::ivec3 block_pos);
 
 private:
 };

@@ -797,6 +797,18 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->Unuse();
 }
 
+void UGeometryEngine::ResetWorldRenderState()
+{
+  FluidSurfaceMap.DestroyGpuResources();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
+  BlockBatchesValid = false;
+  CachedMeshRevision = 0;
+  CachedInstanceCount = 0;
+  PreparedTransparentTextures = false;
+  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
+}
+
 void UGeometryEngine::WarmupGreedyGpuFromWorld()
 {
   if (!WorldInstance || !TextureCubeStorageInstance ||
@@ -1346,6 +1358,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
 
   size_t blockCount = WorldInstance->GetCachedBlockCount();
   size_t drawCount = WorldInstance->GetRenderInstanceCount();
+  const auto &md = WorldInstance->GetMovementDiagnostics();
 
   // Form performance information strings
   std::vector<std::string> performanceLines = {
@@ -1360,8 +1373,13 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
           " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
           " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
+          " ms" +
+          " View: " + std::to_string(view_duration / 1000.0).substr(0, 6) +
           " ms",
-      "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
+      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
+          " Greedy: " + std::to_string(md.greedyCacheEntries) +
+          " Dirty: " + std::to_string(md.dirtyChunksPending) +
+          " Async: " + std::to_string(md.asyncMeshInFlight)};
 
   performanceLines.push_back(
       "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) + "/" +
@@ -1370,10 +1388,8 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) + " bone uploads: " +
       std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads));
 
-  const auto &md = WorldInstance->GetMovementDiagnostics();
   performanceLines.push_back(
-      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
-      " rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
+      "rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
       " hitch: " + (md.hitchDetected ? "yes" : "no"));
   if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 ||
       md.streamingIoMs > 0.01)

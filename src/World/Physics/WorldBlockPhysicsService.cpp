@@ -1,6 +1,7 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/PhysicsChunkDistance.h"
 #include <algorithm>
 #include <array>
@@ -114,6 +115,20 @@ void UWorldBlockPhysicsService::PublishSupportLost(glm::ivec3 blockPos,
   BlockQueue.Enqueue(ev);
 }
 
+void UWorldBlockPhysicsService::ResetRuntimeState()
+{
+  BlockQueue.Clear();
+  FluidQueue.Clear();
+  FluidQueue.SetBudgets(Budgets);
+  BlockQueue.SetBudgets(Budgets);
+}
+
+void UWorldBlockPhysicsService::ClearFluidQueue()
+{
+  FluidQueue.Clear();
+  FluidQueue.SetBudgets(Budgets);
+}
+
 void UWorldBlockPhysicsService::PublishFluid(glm::ivec3 blockPos)
 {
   if (!Flags.EnableFluids)
@@ -153,8 +168,6 @@ void UWorldBlockPhysicsService::ProcessFluidChange(
   }
   else
   {
-    PublishFluid(change.NeighborPos);
-    PublishFluid(change.BlockPos);
     EnqueueFluidNeighbors(world, change.NeighborPos);
     EnqueueFluidNeighbors(world, change.BlockPos);
   }
@@ -213,6 +226,7 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
   const std::vector<glm::ivec3> fluid_events = FluidQueue.PopBudgeted();
   const UBlockDefinitionStorage *definitions =
       world.GetBlockRegistry().GetDefinitions();
+  bool any_fluid_change = false;
   for (glm::ivec3 pos : fluid_events)
   {
     if (!Flags.EnableFluids || definitions == nullptr)
@@ -223,16 +237,16 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
     world.AccumulateFluidStats(stats);
     if (!stats.Changes.empty())
     {
+      any_fluid_change = true;
       for (const FluidSpreadChange &change : stats.Changes)
       {
         ProcessFluidChange(world, change);
       }
     }
-    else if (UFluidSpreadSystem::HasSpreadTarget(world.GetBlockWorld(),
-                                                 *definitions, pos))
-    {
-      PublishFluid(pos);
-    }
+  }
+  if (!any_fluid_change && !fluid_events.empty())
+  {
+    ClearFluidQueue();
   }
 
   world.UpdatePhysicsQueueStats(BlockQueue.GetStats(), FluidQueue.GetStats());

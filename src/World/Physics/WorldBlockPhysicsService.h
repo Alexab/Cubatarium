@@ -30,6 +30,8 @@ public:
                         glm::ivec3 center, int radius_blocks);
 
   void TickBlockPhysics(UWorld &world) override;
+  void ResetRuntimeState();
+  void ClearFluidQueue();
   const BlockUpdateQueueStats &GetBlockQueueStats() const
   {
     return BlockQueue.GetStats();

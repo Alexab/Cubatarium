@@ -208,12 +208,14 @@ public:
                                        const PlayerCapsule &cap) const;
   FluidColumnSurface FindFluidColumnSurface(const glm::vec3 &eye) const;
   FluidColumnSurface FindFluidColumnSurfaceAt(int bx, int bz, int hintY) const;
+  bool HasNearbyFluidSurface(glm::ivec3 cameraBlock, int radiusBlocks = 48) const;
   /// True when eye.y is strictly below BlockTopY of the topmost liquid block
   /// in the eye column (binary; no body-in-fluid or grace terms).
   bool IsCameraInsideFluid(const glm::vec3 &eye,
                            BlockId *outFluid = nullptr) const;
   void ApplySpawnToCamera();
   void FinalizePlayerAfterWorldLoad();
+  void ResetPhysicsRuntimeState();
   void WarmupSpawnAreaForEnterGame();
   void WarmupVisibleListAtCamera();
   bool IsBlockWorldReady() const { return BlockWorldReady; }

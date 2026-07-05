@@ -252,6 +252,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.BlockWorldReady = false;
       world.LoadedFromChunkSave = false;
       world.BlockWorld.Clear();
+      world.MeshService->GetCache().MarkAllDirty();
+      world.ResetPhysicsRuntimeState();
       world.ModifiedChunks.clear();
       world.MovementDiagHistory.clear();
       ChunksFileName = FolderPath + "/chunks.json";

@@ -110,6 +110,30 @@ bool UFluidSpreadSystem::ShouldProcessFluidTick(uint64_t physics_tick,
   return (physics_tick + phase) % static_cast<uint32_t>(period) == 0;
 }
 
+int UFluidSpreadSystem::SpreadPeriodForCell(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos)
+{
+  const BlockId block_id = blockWorld.GetBlock(block_pos);
+  if (const BlockDefinition *def = definitions.GetById(block_id))
+  {
+    if (def->Physics.IsLiquid)
+    {
+      return std::max(1, def->Physics.FluidSpreadPeriodTicks);
+    }
+  }
+  const BlockId fluid_id =
+      UFluidBlockResolver::ResolveFluidBlockId(blockWorld, definitions, block_pos);
+  if (fluid_id != BLOCK_AIR)
+  {
+    if (const BlockDefinition *fluid_def = definitions.GetById(fluid_id))
+    {
+      return std::max(1, fluid_def->Physics.FluidSpreadPeriodTicks);
+    }
+  }
+  return 5;
+}
+
 bool UFluidSpreadSystem::HasSpreadTarget(
     const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
     glm::ivec3 block_pos)

@@ -92,6 +92,11 @@ static void TestColumnScanFindsSurface()
   const cutum::FluidColumnSurface below_hint =
       cutum::FindFluidColumnSurfaceAt(world, registry, 0, 0, 10, 8, 8);
   Expect(!below_hint.valid, "narrow scan misses fluid outside range");
+
+  Expect(cutum::HasFluidSurfaceNear(world, registry, 0, 0, 45, 16),
+         "proximity finds nearby fluid column");
+  Expect(!cutum::HasFluidSurfaceNear(world, registry, 64, 64, 45, 16),
+         "proximity misses distant fluid column");
 }
 
 static void TestUnderwaterFogPolicy()
@@ -102,9 +107,11 @@ static void TestUnderwaterFogPolicy()
          "submerged with map: global underwater fog");
   Expect(cutum::ShouldUseGlobalUnderwaterFog(true, false),
          "submerged without map: global fallback");
-  Expect(cutum::ShouldUsePerColumnBelowSurfaceFog(true),
-         "map ready enables per-column fog");
-  Expect(!cutum::ShouldUsePerColumnBelowSurfaceFog(false),
+  Expect(cutum::ShouldUsePerColumnBelowSurfaceFog(true, true),
+         "map ready near fluids enables per-column fog");
+  Expect(!cutum::ShouldUsePerColumnBelowSurfaceFog(true, false),
+         "map ready far from fluids disables per-column fog");
+  Expect(!cutum::ShouldUsePerColumnBelowSurfaceFog(false, true),
          "map not ready disables per-column fog");
   Expect(std::abs(cutum::BelowSurfaceFogStrength(true, false) - 1.0f) < 1e-5f,
          "wading strength is 1");

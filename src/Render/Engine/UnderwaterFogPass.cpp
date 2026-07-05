@@ -39,11 +39,19 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
   const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
                                  WorldCoordToBlockIndex(eye.z));
-  const bool mapReady = surface_map.Update(
-      world.GetBlockWorld(), registry, mesh_service.GetCache(), cameraBlockXZ,
-      eyeBlockY, mesh_service.GetMeshRevision());
+  const bool nearbyFluid =
+      cameraInFluid || world.HasNearbyFluidSurface(cameraBlockXZ);
+  bool mapReady = surface_map.IsValid();
+  if (nearbyFluid)
+  {
+    mapReady = surface_map.Update(
+        world.GetBlockWorld(), registry, mesh_service.GetCache(), cameraBlockXZ,
+        eyeBlockY, mesh_service.GetMeshRevision());
+  }
+  const bool columnFogActive =
+      cutum::ShouldUsePerColumnBelowSurfaceFog(mapReady, nearbyFluid);
   BelowSurfaceFogStrength =
-      cutum::BelowSurfaceFogStrength(mapReady, cameraInFluid);
+      cutum::BelowSurfaceFogStrength(columnFogActive, cameraInFluid);
   BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(cameraInFluid);
 
   BelowSurfaceFogColors.fill(glm::vec3(0.0f));

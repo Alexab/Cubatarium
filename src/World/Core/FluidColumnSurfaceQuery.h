@@ -25,6 +25,10 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
                                             int scanUp = FluidSurfaceScanTuning::ScanUp,
                                             int scanDown = FluidSurfaceScanTuning::ScanDown);
 
+/// Coarse column samples around (bx, bz) for fog/render proximity gating.
+bool HasFluidSurfaceNear(const UBlockWorld &world, const UBlockRegistry &registry,
+                         int bx, int bz, int hintY, int radiusBlocks = 48);
+
 } // namespace cutum
 
 #endif

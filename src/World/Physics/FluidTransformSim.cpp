@@ -341,10 +341,28 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
                                                  spread_period))
   {
     const FluidCellState below_state = FluidCellState::Flowing(1, true);
-    UFluidFillPolicy::ApplyFluidFill(blockWorld, definitions, below, fluid_id,
-                                     below_state);
-    RecordChange(stats, block_pos, below, fluid_id, below_state, false,
-                 "spread_down");
+    const FluidCellState stored_below =
+        UFluidFillPolicy::StoredFluidStateForCell(blockWorld, definitions, below,
+                                                  below_state);
+    const bool replace_below =
+        UFluidFillPolicy::ShouldReplaceBlockWithFluid(blockWorld, definitions,
+                                                      below);
+    const BlockId below_id = blockWorld.GetBlock(below);
+    const FluidCellState current_below =
+        replace_below ? FluidCellState{} : blockWorld.GetFluidState(below);
+    const bool already_filled =
+        (!replace_below || below_id == fluid_id) &&
+        current_below.Level == stored_below.Level &&
+        current_below.Falling == stored_below.Falling &&
+        current_below.IsSource() == stored_below.IsSource() &&
+        current_below.GetKind() == stored_below.GetKind();
+    if (!already_filled)
+    {
+      UFluidFillPolicy::ApplyFluidFill(blockWorld, definitions, below, fluid_id,
+                                       below_state);
+      RecordChange(stats, block_pos, below, fluid_id, below_state, false,
+                   "spread_down");
+    }
     return stats;
   }
 
@@ -504,10 +522,6 @@ bool UFluidTransformSim::HasSpreadTarget(
     {
       return true;
     }
-    if (!HorizontalSpreadAllowed(blockWorld, definitions, block_pos))
-    {
-      return true;
-    }
     static constexpr std::array<glm::ivec3, 4> kSideOffsets = {
         glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
         glm::ivec3(0, 0, 1)};
@@ -542,7 +556,7 @@ bool UFluidTransformSim::HasSpreadTarget(
         }
       }
     }
-    return self_state.IsSource();
+    return false;
   }
 
   if (!UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, block_pos))

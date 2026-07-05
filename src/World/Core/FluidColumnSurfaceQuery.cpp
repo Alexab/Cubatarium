@@ -4,6 +4,8 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 
+#include <algorithm>
+
 namespace cutum
 {
 
@@ -31,6 +33,28 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
     return column;
   }
   return column;
+}
+
+bool HasFluidSurfaceNear(const UBlockWorld &world, const UBlockRegistry &registry,
+                         int bx, int bz, int hintY, int radiusBlocks)
+{
+  constexpr int kStride = 16;
+  constexpr int kScanUp = 24;
+  constexpr int kScanDown = 24;
+  const int radius = std::max(0, radiusBlocks);
+  for (int dx = -radius; dx <= radius; dx += kStride)
+  {
+    for (int dz = -radius; dz <= radius; dz += kStride)
+    {
+      if (FindFluidColumnSurfaceAt(world, registry, bx + dx, bz + dz, hintY,
+                                   kScanUp, kScanDown)
+              .valid)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace cutum

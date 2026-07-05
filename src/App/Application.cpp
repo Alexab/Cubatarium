@@ -503,6 +503,7 @@ void UApplication::EnterGameAfterWorldChange()
     World->WarmupSpawnAreaForEnterGame();
     if (Geometry)
     {
+      Geometry->ResetWorldRenderState();
       Geometry->WarmupGreedyGpuFromWorld();
     }
   }

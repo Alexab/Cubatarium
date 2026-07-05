@@ -25,12 +25,7 @@ bool ShouldEnqueueFluidCell(const UBlockWorld &block_world,
     return false;
   }
   const BlockId id = block_world.GetBlock(pos);
-  if (registry.IsLiquid(id))
-  {
-    return true;
-  }
-  if (UFluidSpreadSystem::CanReceiveFluid(block_world, *definitions, pos) &&
-      UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
+  if (UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
   {
     return true;
   }

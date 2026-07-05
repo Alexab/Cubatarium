@@ -22,6 +22,12 @@ void UWorldChunkDirtyService::SetBudgets(const PhysicsBudgets &budgets)
   CollisionQueue.SetProtectLowPriorities(true);
 }
 
+void UWorldChunkDirtyService::ClearPendingQueues()
+{
+  VisualQueue.Clear();
+  CollisionQueue.Clear();
+}
+
 void UWorldChunkDirtyService::EnqueueAffectedChunks(UWorld &world,
                                                     glm::ivec3 blockPos,
                                                     UChunkRebuildQueue &queue)
@@ -93,12 +99,6 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
     {
       world.MeshService->MarkDirty(chunk_coord);
     }
-  }
-  if (!visualChunks.empty() && world.BlockRegistry)
-  {
-    world.MeshService->RebuildDirtyChunks(
-        world.BlockWorld, *world.BlockRegistry,
-        Budgets.VisualRemeshPerTickMax, Budgets.VisualRemeshPerTickMax);
   }
 
   const ChunkRebuildQueueStats &visualStats = VisualQueue.GetStats();

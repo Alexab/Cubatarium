@@ -48,6 +48,7 @@ private:
   int GpuSizeBlocks{0};
   glm::ivec2 LastCameraBlockXZ{INT32_MAX, INT32_MAX};
   uint64_t LastMeshRevision{0};
+  bool StagingGpuDirty{false};
   std::vector<float> SurfaceStaging;
   std::vector<uint8_t> FluidIndexStaging;
 };

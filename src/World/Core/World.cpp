@@ -30,6 +30,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/WorldFluidFacade.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/IO/ChunkStorageService.h"
@@ -585,8 +586,21 @@ void UWorld::WarmupSpawnAreaForEnterGame()
   Streaming->WarmupSpawnAreaForEnterGame(*this);
 }
 
+void UWorld::ResetPhysicsRuntimeState()
+{
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->ResetRuntimeState();
+  }
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->ClearPendingQueues();
+  }
+}
+
 void UWorld::FinalizePlayerAfterWorldLoad()
 {
+  ResetPhysicsRuntimeState();
   ResetMeshLoadDiagnostics();
   BlockCounter.MarkNeedsRecount();
   bool has_terrain_chunks = false;
@@ -1318,6 +1332,17 @@ FluidColumnSurface UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
   return FindFluidColumnSurfaceAt(bx, bz, by);
 }
 
+bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
+                                   int radiusBlocks) const
+{
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  return HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
+                             cameraBlock.z, cameraBlock.y, radiusBlocks);
+}
+
 bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
 {
   const FluidColumnSurface column = FindFluidColumnSurface(eye);
@@ -1738,11 +1763,6 @@ void UWorld::ForceEnqueueFluidAt(glm::ivec3 blockPos)
 {
   if (!BlockPhysicsService || !BlockRegistry || !PhysicsFlags.EnableFluids)
   {
-    return;
-  }
-  if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(blockPos)))
-  {
-    BlockPhysicsService->PublishFluid(blockPos);
     return;
   }
   const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();

@@ -11,10 +11,11 @@ inline bool ShouldUseGlobalUnderwaterFog(bool camera_in_fluid, bool /*map_ready*
   return camera_in_fluid;
 }
 
-/// Per-column below-surface tint whenever the surface map is ready.
-inline bool ShouldUsePerColumnBelowSurfaceFog(bool map_ready)
+/// Per-column below-surface tint when the surface map is ready near fluids.
+inline bool ShouldUsePerColumnBelowSurfaceFog(bool map_ready,
+                                              bool nearby_fluid)
 {
-  return map_ready;
+  return map_ready && nearby_fluid;
 }
 
 /// Wading: full column tint; submerged: light depth supplement with global fog.

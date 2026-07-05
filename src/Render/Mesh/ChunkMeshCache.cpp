@@ -501,10 +501,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
-  ++MeshRevision;
+  PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
+  InvalidateFluidSurfaceForChunk(result.coord);
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -653,11 +654,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   {
     Cache.erase(chunkCoord);
     GreedyCache.erase(chunkCoord);
-    ++MeshRevision;
+    PendingMeshRevisionBump = true;
     InstancesDirty = true;
     GreedyBatchesDirty = true;
-  CrossBatchesDirty = true;
-    InvalidateVisibleList();
+    CrossBatchesDirty = true;
     return;
   }
   if (Render.GreedyMeshing)
@@ -696,11 +696,11 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     RebuildChunkLegacy(world, registry, chunkCoord, chunkInstances);
     Cache[chunkCoord] = std::move(chunkInstances);
   }
-  ++MeshRevision;
+  PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
-  InvalidateVisibleList();
+  InvalidateFluidSurfaceForChunk(chunkCoord);
 }
 
 void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)

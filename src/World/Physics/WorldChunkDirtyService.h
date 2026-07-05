@@ -16,6 +16,7 @@ public:
   void MarkVisualRemesh(UWorld &world, glm::ivec3 blockPos) override;
   void MarkCollisionRebuild(UWorld &world, glm::ivec3 blockPos) override;
   void DrainRebuildQueues(UWorld &world) override;
+  void ClearPendingQueues();
 
 private:
   void EnqueueAffectedChunks(UWorld &world, glm::ivec3 blockPos,

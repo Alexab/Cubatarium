@@ -66,6 +66,11 @@ public:
   const FluidSurfaceColumnSlice *
   GetFluidSurfaceSlice(const UBlockWorld &world, UBlockRegistry &registry,
                        glm::ivec3 groundChunkCoord, int scanHintY);
+  const std::unordered_set<glm::ivec3, IVec3Hash> &
+  GetFluidSurfaceDirtyGroundChunks() const
+  {
+    return FluidSurfaceDirty;
+  }
   const std::vector<FaceInstance> &GetFaceInstances() const
   {
     return Instances;

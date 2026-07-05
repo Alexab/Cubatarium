@@ -79,6 +79,7 @@ public:
   bool IsGradientSky() const;
   void DrawSkyGradient();
   void WarmupGreedyGpuFromWorld();
+  void ResetWorldRenderState();
 
   // Debug/Logging
   void SetVerboseLogging(bool enabled) { VerboseLogging = enabled; }
