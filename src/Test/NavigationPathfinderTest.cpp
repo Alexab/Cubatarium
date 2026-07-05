@@ -11,10 +11,10 @@
 namespace
 {
 
-class FlatNavigationMock : public cutum::IUWorldNavigation
+class UFlatNavigationMock : public cutum::IUWorldNavigation
 {
 public:
-  explicit FlatNavigationMock(int ground_y) : GroundY(ground_y) {}
+  explicit UFlatNavigationMock(int ground_y) : GroundY(ground_y) {}
 
   bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
                               float /*body_height*/) const override
@@ -58,7 +58,7 @@ static void Expect(bool cond, const char *message)
 
 int main()
 {
-  FlatNavigationMock navigation(64);
+  UFlatNavigationMock navigation(64);
   cutum::NavigationQuery query;
   query.search_distance = 8;
   query.body_height = 1.8f;

@@ -1,27 +1,27 @@
-﻿{
-    "name":  "tall_grass",
-    "id":  699,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "tallgrass",
-                     "tallgrass",
-                     "tallgrass",
-                     "tallgrass",
-                     "tallgrass",
-                     "tallgrass"
-                 ],
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "displayName":  "Tall Grass"
+{
+  "name": "tall_grass",
+  "id": 699,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass",
+    "tallgrass"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "displayName": "Tall Grass"
 }
-

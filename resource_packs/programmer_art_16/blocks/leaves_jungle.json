@@ -1,26 +1,26 @@
-﻿{
-    "name":  "leaves_jungle",
-    "id":  647,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "leaves_jungle_opaque",
-                     "leaves_jungle_opaque",
-                     "leaves_jungle_opaque",
-                     "leaves_jungle_opaque",
-                     "leaves_jungle_opaque",
-                     "leaves_jungle_opaque"
-                 ],
-    "render":  {
-                   "style":  "cutout"
-               },
-    "displayName":  "Jungle Leaves",
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                }
+{
+  "name": "leaves_jungle",
+  "id": 647,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves_jungle_opaque",
+    "leaves_jungle_opaque",
+    "leaves_jungle_opaque",
+    "leaves_jungle_opaque",
+    "leaves_jungle_opaque",
+    "leaves_jungle_opaque"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Jungle Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  }
 }
-

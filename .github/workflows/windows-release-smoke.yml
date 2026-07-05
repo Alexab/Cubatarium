@@ -217,6 +217,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/worldgen_scatter_test.exe
 
+      - name: C++ unit test (fluid surface map logic)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_surface_map_logic_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

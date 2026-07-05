@@ -18,6 +18,22 @@ struct WorldGenPlacementTuning
   static constexpr float HillsVegetationHeightNormMax = 0.82f;
 };
 
+inline float HillsVegetationHeightNorm(int top_solid_y, int sea_level,
+                                       int max_height)
+{
+  const int range = std::max(1, max_height - sea_level);
+  return std::clamp(static_cast<float>(top_solid_y - sea_level) /
+                        static_cast<float>(range),
+                    0.0f, 1.0f);
+}
+
+inline bool HillsVegetationAllowed(int top_solid_y, int sea_level,
+                                   int max_height)
+{
+  return HillsVegetationHeightNorm(top_solid_y, sea_level, max_height) <=
+         WorldGenPlacementTuning::HillsVegetationHeightNormMax;
+}
+
 inline int ComputeMaxScanY(int heightmap_surface_y, int sea_level,
                            int max_height)
 {

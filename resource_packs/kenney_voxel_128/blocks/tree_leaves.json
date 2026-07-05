@@ -1,26 +1,26 @@
-﻿{
-    "name":  "tree_leaves",
-    "id":  89,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "leaves_opaque",
-                     "leaves_opaque",
-                     "leaves_opaque",
-                     "leaves_opaque",
-                     "leaves_opaque",
-                     "leaves_opaque"
-                 ],
-    "displayName":  "Leaves",
-    "render":  {
-                   "style":  "cutout"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                }
+{
+  "name": "tree_leaves",
+  "id": 89,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque",
+    "leaves_opaque"
+  ],
+  "displayName": "Leaves",
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  }
 }
-

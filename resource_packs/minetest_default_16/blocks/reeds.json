@@ -1,27 +1,27 @@
-﻿{
-    "name":  "reeds",
-    "id":  547,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds"
-                 ],
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "displayName":  "Reeds"
+{
+  "name": "reeds",
+  "id": 547,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "displayName": "Reeds"
 }
-

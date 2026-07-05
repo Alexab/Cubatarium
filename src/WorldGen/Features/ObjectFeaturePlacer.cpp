@@ -493,13 +493,8 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   }
   if (biome == BiomeId::Hills)
   {
-    const int range =
-        std::max(1, ctx.Settings.MaxHeight - ctx.Settings.SeaLevel);
-    const float heightNorm = std::clamp(
-        static_cast<float>(placementSurface.topSolidY - ctx.Settings.SeaLevel) /
-            static_cast<float>(range),
-        0.0f, 1.0f);
-    if (heightNorm > WorldGenPlacementTuning::HillsVegetationHeightNormMax)
+    if (!HillsVegetationAllowed(placementSurface.topSolidY, ctx.Settings.SeaLevel,
+                                ctx.Settings.MaxHeight))
     {
       return false;
     }

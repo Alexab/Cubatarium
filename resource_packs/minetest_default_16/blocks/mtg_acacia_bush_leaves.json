@@ -1,24 +1,24 @@
-﻿{
-    "name":  "mtg_acacia_bush_leaves",
-    "id":  401,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
-                     "mtg_acacia_bush_leaves_default_acacia_leaves_simple"
-                 ],
-    "render":  {
-                   "style":  "cutout"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                }
+{
+  "name": "mtg_acacia_bush_leaves",
+  "id": 401,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
+    "mtg_acacia_bush_leaves_default_acacia_leaves_simple"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  }
 }
-

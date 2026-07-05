@@ -87,8 +87,8 @@ int main()
     for (int lx = 0; lx < cutum::CHUNK_SIZE; ++lx)
     {
       Expect(slice.HasSurface(lx, lz), "flat ocean fills chunk slice");
-      Expect(slice.surfaceBlockY[lz][lx] == kSeaY, "ocean surface block y");
-      Expect(slice.fluidId[lz][lx] == kWater, "ocean fluid id");
+      Expect(slice.SurfaceBlockY[lz][lx] == kSeaY, "ocean surface block y");
+      Expect(slice.FluidId[lz][lx] == kWater, "ocean fluid id");
     }
   }
 
@@ -100,9 +100,9 @@ int main()
     const cutum::FluidColumnSurface direct =
         cutum::FindFluidColumnSurfaceAt(world, registry, bx, bz, kSeaY);
     Expect(direct.valid, "corner column valid");
-    Expect(slice.surfaceBlockY[bz][bx] == direct.surfaceBlockY,
+    Expect(slice.SurfaceBlockY[bz][bx] == direct.surfaceBlockY,
            "slice matches direct query block y");
-    Expect(slice.fluidId[bz][bx] == direct.fluidId,
+    Expect(slice.FluidId[bz][bx] == direct.fluidId,
            "slice matches direct query fluid id");
   }
 
@@ -110,8 +110,8 @@ int main()
   const cutum::FluidSurfaceColumnSlice lava_slice =
       cutum::BuildFluidSurfaceColumnSlice(world, registry, glm::ivec3(0, 0, 0),
                                           20);
-  Expect(lava_slice.fluidId[5][5] == kLava, "lava pool column uses lava id");
-  Expect(lava_slice.surfaceBlockY[5][5] == 10, "lava pool surface block y");
+  Expect(lava_slice.FluidId[5][5] == kLava, "lava pool column uses lava id");
+  Expect(lava_slice.SurfaceBlockY[5][5] == 10, "lava pool surface block y");
   Expect(cutum::FluidSurfaceIndexForBlock(kLava, registry) == 2,
          "lava maps to shader index 2");
   Expect(cutum::FluidSurfaceIndexForBlock(kWater, registry) == 1,

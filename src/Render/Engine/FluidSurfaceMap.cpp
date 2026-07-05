@@ -100,9 +100,9 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
         continue;
       }
       SurfaceStaging[idx] =
-          BlockTopY(static_cast<int>(slice->surfaceBlockY[localZ][localX]));
+          BlockTopY(static_cast<int>(slice->SurfaceBlockY[localZ][localX]));
       FluidIndexStaging[idx] =
-          FluidSurfaceIndexForBlock(slice->fluidId[localZ][localX], registry);
+          FluidSurfaceIndexForBlock(slice->FluidId[localZ][localX], registry);
     }
   }
 

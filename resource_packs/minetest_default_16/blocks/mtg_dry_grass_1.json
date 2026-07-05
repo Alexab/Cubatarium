@@ -1,27 +1,27 @@
-﻿{
-    "name":  "mtg_dry_grass_1",
-    "id":  451,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "mtg_dry_grass_1_default_dry_grass_1",
-                     "mtg_dry_grass_1_default_dry_grass_1",
-                     "mtg_dry_grass_1_default_dry_grass_1",
-                     "mtg_dry_grass_1_default_dry_grass_1",
-                     "mtg_dry_grass_1_default_dry_grass_1",
-                     "mtg_dry_grass_1_default_dry_grass_1"
-                 ],
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "displayName":  "Dry Grass"
+{
+  "name": "mtg_dry_grass_1",
+  "id": 451,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mtg_dry_grass_1_default_dry_grass_1",
+    "mtg_dry_grass_1_default_dry_grass_1",
+    "mtg_dry_grass_1_default_dry_grass_1",
+    "mtg_dry_grass_1_default_dry_grass_1",
+    "mtg_dry_grass_1_default_dry_grass_1",
+    "mtg_dry_grass_1_default_dry_grass_1"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "displayName": "Dry Grass"
 }
-

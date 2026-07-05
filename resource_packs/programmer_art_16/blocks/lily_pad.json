@@ -1,27 +1,27 @@
-﻿{
-    "name":  "lily_pad",
-    "id":  653,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "waterlily",
-                     "waterlily",
-                     "waterlily",
-                     "waterlily",
-                     "waterlily",
-                     "waterlily"
-                 ],
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "displayName":  "Lily Pad"
+{
+  "name": "lily_pad",
+  "id": 653,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily",
+    "waterlily"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "displayName": "Lily Pad"
 }
-

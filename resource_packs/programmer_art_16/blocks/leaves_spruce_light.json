@@ -1,26 +1,26 @@
-﻿{
-    "name":  "leaves_spruce_light",
-    "id":  650,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "leaves_spruce",
-                     "leaves_spruce",
-                     "leaves_spruce",
-                     "leaves_spruce",
-                     "leaves_spruce",
-                     "leaves_spruce"
-                 ],
-    "render":  {
-                   "style":  "cutout"
-               },
-    "displayName":  "Spruce Leaves",
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                }
+{
+  "name": "leaves_spruce_light",
+  "id": 650,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves_spruce",
+    "leaves_spruce",
+    "leaves_spruce",
+    "leaves_spruce",
+    "leaves_spruce",
+    "leaves_spruce"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Spruce Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  }
 }
-

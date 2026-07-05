@@ -19,7 +19,8 @@
   "physics": {
     "movement": {
       "occupancy": 0
-    }
+    },
+    "fluid_permeable": true
   },
   "displayName": "Tree Branch"
 }

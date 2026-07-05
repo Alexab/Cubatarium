@@ -8,13 +8,13 @@
 |----|----------|------|--------------|--------|
 | TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | incremental facade extract | PR-D backlog |
 | TD-AUD-011 | 2026-06 | UApplication god-class (~1800 LOC) | screen helpers extract | PR-D backlog |
-| TD-AUD-012 | 2026-06 | GeometryEngine coupling | CreatureDrawPass extract; `#include App/Core.h` removed from GeometryEngine | partial |
+| TD-AUD-012 | 2026-06 | GeometryEngine coupling | UUnderwaterFogPass extract; LOC 2012 (−139 vs baseline 2151); `#include App/Core.h` removed from GeometryEngine | partial |
 | TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | ChunkMeshCache reserve(512), diagnostics reserve; GreedyMesher done | partial |
 | TD-AUD-015 | 2026-06 | Dead-code candidates (callers=1) | P0 World symbols removed; registry FP whitelisted | partial |
 | TD-AUD-016 | 2026-06 | Duplicate code clusters (scan_duplicates) | module review done; fixes in backlog | PR-C/D backlog |
 | TD-AUD-017 | 2026-06 | Orphan tools/scripts | fix_*.py archived; tools/README + scan_tools_usage improved | closed |
 | TD-AUD-026 | 2026-07 | AUDIT-APP-003 UCore god-class | WorldLifecycleFacade + ResourcePackBootstrap + EnterGameWorld | partial |
-| TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | RenderMeshSink wiring; mesh cache still in render path | partial |
+| TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | RenderMeshSink wiring; mesh cache still in render path; remediation DoD metrics in REMEDIATION_BASELINE_METRICS | partial |
 
 ## Closed
 
@@ -49,3 +49,4 @@
 | PR-F docs + CI | done | style gate; clang-format on diff |
 | Module agents ×8 | done | 71 findings in audit/modules/ (manual pass 2026-06-27) |
 | Human gate | approved | P0 fixes applied; arch refactor phases 0–5 landed 2026-07 |
+| Remediation DoD | done | 2026-07-05: FluidSpread coordinator 183 LOC, audit_style 0, block migration script applied, QA runbook + CI surface-map test |

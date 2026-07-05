@@ -86,6 +86,15 @@ Fluid-related `physics` fields:
 - `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
 - `fluid_kind` (`"water"` | `"lava"`, optional): explicit liquid kind used for source state/kind resolution. If omitted, runtime keeps legacy fallback (`FluidMaxLevel >= 7` => water).
 
+Bulk migration for existing packs:
+
+```bash
+python tools/migrate_block_fluid_presets.py --dry-run
+python tools/migrate_block_fluid_presets.py --write
+```
+
+The script infers `fluid_permeable` for cross/cutout decor and `fluid_kind` for fluid-style blocks; explicit fields are never overwritten.
+
 ## Placeholder
 
 Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).

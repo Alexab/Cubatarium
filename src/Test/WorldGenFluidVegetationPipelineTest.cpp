@@ -17,6 +17,7 @@ namespace
 constexpr const char *kTestName = "worldgen_fluid_vegetation_pipeline_test";
 constexpr cutum::BlockId kStone = 8;
 constexpr cutum::BlockId kWater = 9;
+constexpr cutum::BlockId kLog = 20;
 constexpr cutum::BlockId kLeaves = 21;
 constexpr cutum::BlockId kGrass = 22;
 constexpr int kSea = 48;
@@ -32,6 +33,9 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
   water.Render.Transparent = true;
   water.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition log;
+  log.Name = "tree_log";
+  log.Physics = cutum::BlockPhysicsProfile::Solid();
   cutum::BlockDefinition leaves;
   leaves.Name = "tree_leaves";
   leaves.Physics = cutum::BlockPhysicsProfile::Solid();
@@ -44,15 +48,28 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kWater] = water;
+  by_id[kLog] = log;
   by_id[kLeaves] = leaves;
   by_id[kGrass] = grass;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["water"] = kWater;
+  name_to_id["tree_log"] = kLog;
   name_to_id["tree_leaves"] = kLeaves;
   name_to_id["grass"] = kGrass;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
+}
+
+static cutum::WorldObjectDefinition MakeGroundedTree()
+{
+  cutum::WorldObjectDefinition object;
+  object.PlacementMode = cutum::ObjectPlacementMode::VerticalPlant;
+  object.anchor = glm::ivec3(0);
+  object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
+  object.voxels.push_back({glm::ivec3(0, 1, 0), kLog});
+  object.voxels.push_back({glm::ivec3(0, 2, 0), kLeaves});
+  return object;
 }
 
 static cutum::WorldObjectDefinition MakePath3x3()
@@ -148,12 +165,48 @@ static void TestSurfacePathAfterSeal()
                     "path center placed on surface");
 }
 
+static void TestFillPlaceTreeSealPrune()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillCoastalColumn(world, 4, 4);
+
+  cutum::ProceduralSettings settings;
+  settings.FillWater = true;
+  settings.SeaLevel = kSea;
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.Blocks.Stone = kStone;
+  ctx.Blocks.Water = kWater;
+  ctx.Blocks.Grass = kGrass;
+
+  cutum::FillFluidColumn(ctx, 4, 4, 51);
+
+  const cutum::WorldObjectDefinition tree = MakeGroundedTree();
+  const glm::ivec3 anchor(4, 52, 4);
+  FluidTest::Expect(
+      cutum::CanPlaceObjectAtForWorldGen(world, registry, tree, anchor, 80,
+                                         kSea),
+      kTestName, "grounded tree accepted before seal");
+  cutum::PlaceObjectAt(world, tree, anchor, false);
+  FluidTest::Expect(world.GetBlock(glm::ivec3(4, 52, 4)) == kLog, kTestName,
+                    "tree trunk placed above coastal grass");
+
+  cutum::SealFluidPocketsInChunk(ctx, 0, 0);
+  cutum::PruneFloatingVegetationInChunk(ctx, 0, 0);
+
+  FluidTest::Expect(world.GetBlock(glm::ivec3(4, 52, 4)) == kLog, kTestName,
+                    "seal and prune keep grounded trunk");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(4, 51, 4)) == kGrass, kTestName,
+                    "seal and prune keep surface grass");
+}
+
 } // namespace
 
 int main()
 {
   TestSealPrunePipeline();
   TestSurfacePathAfterSeal();
+  TestFillPlaceTreeSealPrune();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }
