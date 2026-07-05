@@ -221,6 +221,30 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_surface_map_logic_test.exe
 
+      - name: C++ unit test (fluid tuning defaults)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_tuning_defaults_test.exe
+
+      - name: C++ unit test (fluid block resolver)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_block_resolver_test.exe
+
+      - name: C++ unit test (fluid flood service)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_flood_service_test.exe
+
+      - name: C++ unit test (fluid fill policy)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_fill_policy_test.exe
+
+      - name: C++ unit test (fluid kind resolver)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_kind_resolver_test.exe
+
+      - name: C++ unit test (object placement mode)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/object_placement_mode_test.exe
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

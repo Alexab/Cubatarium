@@ -20,14 +20,14 @@
 | `fluid_worldgen_seal_test` | Worldgen seal | 2, 3 | smoke |
 | `fluid_worldgen_chunk_test` | Chunk worldgen fluids | 3 | nightly |
 | `fluid_placement_test` | Classic placement | 1 | nightly |
-| `fluid_tuning_defaults_test` | Fluid tuning constants | 1 | remediation |
-| `fluid_block_resolver_test` | IUFluidBlockResolver | 1, 4 | remediation |
-| `fluid_flood_service_test` | UFluidFloodService | 2 | remediation |
-| `fluid_fill_policy_test` | UFluidFillPolicy | 2 | remediation |
-| `fluid_kind_resolver_test` | Kind inference | 2, 7 | remediation |
-| `fluid_surface_map_logic_test` | Fog CPU logic | 4 | remediation |
-| `fluid_permeable_block_flag_test` | Block JSON flag | 7 | remediation |
-| `fluid_kind_preset_test` | Block preset FluidKind | 7 | remediation |
+| `fluid_tuning_defaults_test` | Fluid tuning constants | 1 | smoke |
+| `fluid_block_resolver_test` | IUFluidBlockResolver | 1, 4 | smoke |
+| `fluid_flood_service_test` | UFluidFloodService | 2 | smoke |
+| `fluid_fill_policy_test` | UFluidFillPolicy | 2 | smoke |
+| `fluid_kind_resolver_test` | Kind inference | 2, 7 | smoke |
+| `fluid_surface_map_logic_test` | Fog CPU logic | 4 | smoke |
+| `fluid_permeable_block_flag_test` | Block JSON flag | 7 | smoke |
+| `fluid_kind_preset_test` | Block preset FluidKind | 7 | smoke |
 | `liquid_viscosity_gate_test` | Lava viscosity | 2 | nightly |
 | `liquid_non_renewable_flow_test` | Non-renewable flow | 2 | nightly |
 | `liquid_flow_scenarios_test` | Flow scenarios | 2 | nightly |
@@ -44,9 +44,9 @@
 |--------|--------|-------------|----------|
 | `worldgen_vegetation_placement_test` | ObjectUtil placement | 0, 3 | smoke |
 | `worldgen_fluid_vegetation_pipeline_test` | Seal → prune E2E | 3 | smoke |
-| `worldgen_hills_vegetation_gate_test` | Hills topSolid gate | 3 | remediation |
-| `worldgen_scatter_test` | Scatter placement | 3 | remediation |
-| `object_placement_mode_test` | JSON placement mode | 1, 3 | remediation |
+| `worldgen_hills_vegetation_gate_test` | Hills topSolid gate | 3 | smoke |
+| `worldgen_scatter_test` | Scatter placement | 3 | smoke |
+| `object_placement_mode_test` | JSON placement mode | 1, 3 | smoke |
 
 ## Creatures / AI
 
@@ -56,8 +56,8 @@
 | `navigation_pathfinder_test` | A* pathfinding | 5 | smoke |
 | `creature_gltf_loader_test` | glTF loader | 5 | nightly |
 | `creature_bone_skeleton_loader_test` | Bone skeleton | 5 | nightly |
-| `creature_skinned_draw_test` | Skinned UBO draw | 5 | remediation |
-| `wander_interval_test` | Wander interval JSON | 5 | remediation |
+| `creature_skinned_draw_test` | Skinned UBO draw | 5 | smoke |
+| `wander_interval_test` | Wander interval JSON | 5 | smoke |
 
 ## World / render / app
 

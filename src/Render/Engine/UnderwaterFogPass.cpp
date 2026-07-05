@@ -2,6 +2,7 @@
 
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
+#include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -41,7 +42,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const bool mapReady = surface_map.Update(
       world.GetBlockWorld(), registry, mesh_service.GetCache(), cameraBlockXZ,
       eyeBlockY, mesh_service.GetMeshRevision());
-  BelowSurfaceFogStrength = (!cameraInFluid && mapReady) ? 1.0f : 0.0f;
+  BelowSurfaceFogStrength =
+      cutum::BelowSurfaceFogStrength(mapReady, cameraInFluid);
+  BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(cameraInFluid);
 
   BelowSurfaceFogColors.fill(glm::vec3(0.0f));
   BelowSurfaceFogMin = 0.52f;
@@ -80,10 +83,13 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     {
       if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid)
       {
-        FogEnabled = 1.0f;
-        FogStart = fv->FogStart;
-        FogEnd = fv->FogEnd;
-        FogMinBlend = fv->FogMinBlend;
+        if (ShouldUseGlobalUnderwaterFog(cameraInFluid, mapReady))
+        {
+          FogEnabled = 1.0f;
+          FogStart = fv->FogStart;
+          FogEnd = fv->FogEnd;
+          FogMinBlend = fv->FogMinBlend;
+        }
         targetSky = fv->FogColor;
         if (enteringUnderwater)
         {
@@ -150,6 +156,7 @@ void UUnderwaterFogPass::ApplyUniforms(
   shader->SetFloat("uBelowSurfaceFog", BelowSurfaceFogStrength);
   shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
   shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
+  shader->SetFloat("uBelowSurfaceFogDepthMin", BelowSurfaceFogDepthMin);
   if (BelowSurfaceFogStrength > 0.001f && surface_map.IsValid())
   {
     shader->SetVec2("uFluidSurfaceOrigin", surface_map.GetOriginBlockXZ());
@@ -162,6 +169,7 @@ void UUnderwaterFogPass::ApplyUniforms(
   {
     shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
     shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
+    shader->SetFloat("uBelowSurfaceFogDepthMin", 0.0f);
     shader->SetInt("uFluidSurfaceYMap", 1);
     shader->SetInt("uFluidIndexMap", 2);
   }

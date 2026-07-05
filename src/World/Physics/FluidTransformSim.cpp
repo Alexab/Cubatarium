@@ -9,6 +9,7 @@
 #include "World/Physics/FluidPermeabilityUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidTuning.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Physics/LiquidDebugTrace.h"
 
 #include <algorithm>
@@ -167,7 +168,7 @@ int MaxLevelFromNeighbor(const FluidCellState &neighbor_state,
     if (nb_level > 0)
     {
       const int boosted = std::min(static_cast<int>(FLUID_LEVEL_MAX),
-                                   nb_level + FluidTuning::WaterDropBoost);
+                                   nb_level + URuntimeTuning::Get().WaterDropBoost);
       return std::max(current_max, boosted);
     }
     break;
@@ -287,7 +288,7 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
       blockWorld, definitions, block_pos, block_id);
   const FluidCellState cell_fluid = blockWorld.GetFluidState(block_pos);
   if (fluid_id == BLOCK_AIR && is_waterlogged_permeable && sea_level >= 0 &&
-      block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea &&
+      block_pos.y <= sea_level + URuntimeTuning::Get().CoastalBandAboveSea &&
       !cell_fluid.HasExplicitKind())
   {
     fluid_id = UFluidBlockResolver::ResolveWaterBlockId(definitions);
@@ -298,7 +299,7 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
     return stats;
   }
   if (sea_level >= 0 && is_waterlogged_permeable &&
-      block_pos.y <= sea_level + FluidTuning::CoastalPermeableBandAboveSea &&
+      block_pos.y <= sea_level + URuntimeTuning::Get().CoastalBandAboveSea &&
       !cell_fluid.HasExplicitKind())
   {
     const BlockId water_id = UFluidBlockResolver::ResolveWaterBlockId(definitions);

@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 27 | Open: 4
+> Total closed: 28 | Open: 4
 
 ## Open
 
@@ -46,6 +46,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 | TD-FL-029 | render | Per-column below-surface fog (variant A): `UFluidSurfaceMap` + shader `surfaceYAt`/`fluidIndexAt`; removed 20 cm pre-submerge band |
 | TD-FL-030 | waterlogging | Explicit `FluidKind` in `fluid_data` (bits 4–7); placement/worldgen/flood write kind; legacy `kind=0` infer + sea-band fallback | `FluidCellState`, `ApplyFluidFill`, `ResolveFluidBlockId`, `fluid_placement_liquid_decor_test` |
 | TD-FL-031 | render | Remove `PrimaryLiquidBlockId`; GreedyMesher uses per-cell `ResolveFluidBlockIdForMesh` | `GreedyMesher.cpp` |
+| TD-FL-032 | phase-1-tuning | Centralize fluid/fog/worldgen magic numbers in `URuntimeTuning` + config.json | `RuntimeTuning.h`, `config.json.example` |
 | TD-FL-021 | phase-8-docs | Manual liquids + fog QA moved to dedicated runbook | [`QA_FLUIDS_2026.md`](QA_FLUIDS_2026.md) |
 
 ## Phase tracker

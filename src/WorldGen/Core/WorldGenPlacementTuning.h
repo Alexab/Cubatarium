@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "World/Core/RuntimeTuning.h"
+
 namespace cutum
 {
 
@@ -31,7 +33,7 @@ inline bool HillsVegetationAllowed(int top_solid_y, int sea_level,
                                    int max_height)
 {
   return HillsVegetationHeightNorm(top_solid_y, sea_level, max_height) <=
-         WorldGenPlacementTuning::HillsVegetationHeightNormMax;
+         URuntimeTuning::Get().HillsVegetationHeightNormMax;
 }
 
 inline int ComputeMaxScanY(int heightmap_surface_y, int sea_level,

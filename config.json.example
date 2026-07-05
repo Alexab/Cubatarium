@@ -18,7 +18,8 @@
             "decoration_density": 0.85,
             "height_smoothing": true,
             "height_smoothing_radius": 1,
-            "jitter_amplitude": 1.0
+            "jitter_amplitude": 1.0,
+            "hills_vegetation_height_norm_max": 0.82
         },
         "async_chunk_generation": true,
         "async_chunk_io": true,
@@ -52,6 +53,11 @@
         "block_queue_hard_limit": 8192,
         "liquid_events_per_tick_max": 128,
         "fluid_blocks_per_tick_max": 128,
+        "fluid_tuning": {
+            "water_drop_boost": 4,
+            "flood_max_passes": 8,
+            "coastal_band_above_sea": 8
+        },
         "liquid_queue_soft_limit": 2048,
         "liquid_queue_hard_limit": 8192,
         "falling_events_per_tick_max": 128,
@@ -78,7 +84,12 @@
         "altitude_adaptive_fog": true,
         "altitude_fog_threshold_blocks": 32,
         "altitude_fog_penalty_per_16_blocks": 0.05,
-        "gradient_sky": true
+        "gradient_sky": true,
+        "underwater_fog": {
+            "surface_scan_up": 32,
+            "surface_scan_down": 64,
+            "surface_window_move_threshold": 8
+        }
     },
     "ui": {
         "legacy_hud": false,

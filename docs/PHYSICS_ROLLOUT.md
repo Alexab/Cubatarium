@@ -31,7 +31,9 @@ If movement regressions persist:
 
 ### Liquids (level-based model, 2026-07)
 
-#### Automated shore gates
+Full manual runbook with sign-off: [`QA_FLUIDS_2026.md`](QA_FLUIDS_2026.md) (FOG-01…06, LIQ-01…11).
+
+#### Automated vs manual bridge
 
 C++ (physics-nightly / smoke): `fluid_sim_mesh_integration_test`, `fluid_worldgen_seal_test`, `fluid_worldgen_chunk_test`, `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `liquid_flow_scenarios_test`, `physics_integration_test`.
 
@@ -46,7 +48,8 @@ Automated gates: `block_placement_raycast_test`, `fluid_placement_test`, `fluid_
 | Seal → prune vegetation pipeline | `worldgen_fluid_vegetation_pipeline_test` | Wide ravine placement feel |
 | Shore fill oscillation | `physics_integration_test`, `liquid_flow_scenarios_test` | Ocean edge visual stability |
 | Below-surface full-screen fog | `underwater_fog_column_test` (rule) | Shallow vs deep subjective tint |
-| TD-FL-021 placement in pits | partial (`fluid_placement_test`) | 7×7 ravine, lava ping-pong |
+| TD-FL-021 placement in pits | `block_placement_raycast_test` (ravine 7×7, water pit) | Lava ping-pong feel |
+| Per-column submerged fog (FOG-01/04) | `fluid_surface_map_logic_test`, `UnderwaterFogColumnTest` policy | Subjective wade-in timing after P0 fix |
 
 Manual QA — below-surface / underwater fog (variant A, TD-FL-029):
 

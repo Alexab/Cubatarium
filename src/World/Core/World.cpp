@@ -29,7 +29,8 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
-#include "World/Core/WorldCooperativeOps.h"
+#include "World/Core/WorldFluidFacade.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
@@ -76,37 +77,6 @@ namespace
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
-
-BlockId ResolveWaterBlockId(const UBlockRegistry &registry,
-                            const std::string &worldgen_owner_pack_id)
-{
-  BlockId water_id = registry.GetIdByTypeName("water");
-  if (water_id == BLOCK_AIR && !worldgen_owner_pack_id.empty())
-  {
-    water_id = registry.GetIdByTypeName(
-        MakeQualifiedBlockName(worldgen_owner_pack_id, "water"));
-  }
-  return water_id;
-}
-
-FluidFloodOptions MakeBreakSiteFloodOptions(const UBlockRegistry &registry,
-                                            const ProceduralSettings &settings,
-                                            const std::string &worldgen_owner_pack_id,
-                                            glm::ivec3 break_pos)
-{
-  FluidFloodOptions options;
-  options.water_id = ResolveWaterBlockId(registry, worldgen_owner_pack_id);
-  options.source_for_air = false;
-  if (settings.FillWater && options.water_id != BLOCK_AIR)
-  {
-    options.sea_level = settings.SeaLevel;
-    if (break_pos.y <= settings.SeaLevel)
-    {
-      options.fluid_id = options.water_id;
-    }
-  }
-  return options;
-}
 
 } // namespace
 
@@ -780,73 +750,13 @@ bool UWorld::HasActiveCooperativeOperation() const
 
 bool UWorld::TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId)
 {
-  if (!BlockRegistry || !BlockRegistry->IsLiquid(liquidId))
-  {
-    return false;
-  }
-  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
-  if (definitions == nullptr)
-  {
-    return false;
-  }
-  if (!UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *BlockRegistry, blockPos))
-  {
-    return false;
-  }
-
-  const FluidKind kind = UFluidSpreadSystem::FluidKindFromBlockId(*definitions, liquidId);
-  const FluidCellState place_state = FluidCellState::Source().WithKind(kind);
-  UFluidSpreadSystem::ApplyFluidFill(BlockWorld, *definitions, blockPos, liquidId,
-                                     place_state);
-  ++CachedBlockCount;
-  BlockWorldReady = true;
-  MarkBlockChunkDirty(blockPos);
-  PublishBlockPhysicsEvent(blockPos);
-  PublishNeighborPhysicsEvents(blockPos);
-  if (PhysicsFlags.EnableFluids)
-  {
-    EnqueueFluidFrontierAt(*this, blockPos);
-    MarkBlockChunkDirty(blockPos);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      MarkBlockChunkDirty(blockPos + offset);
-    }
-  }
-  return true;
+  return UWorldFluidFacade::TryAddFluidObject(*this, blockPos, liquidId);
 }
 
 void UWorld::ApplyBreakSiteFluidFlood(
     glm::ivec3 blockPos, std::vector<glm::ivec3> &mesh_touch_blocks)
 {
-  if (!BlockRegistry || !PhysicsFlags.EnableFluids)
-  {
-    return;
-  }
-  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
-  if (definitions != nullptr)
-  {
-    FluidFloodOptions flood_options =
-        MakeBreakSiteFloodOptions(*BlockRegistry, GetProceduralSettings(),
-                                  WorldgenOwnerPackId, blockPos);
-    std::vector<glm::ivec3> flood_changed;
-    UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
-        BlockWorld, *definitions, blockPos, flood_options, &flood_changed);
-    mesh_touch_blocks.insert(mesh_touch_blocks.end(), flood_changed.begin(),
-                             flood_changed.end());
-  }
-  EnqueueFluidFrontierAt(*this, blockPos);
-  if (BlockWorld.IsAir(blockPos) && BlockPhysicsService)
-  {
-    BlockPhysicsService->PublishFluid(blockPos);
-  }
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 neighbor = blockPos + offset;
-    if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(neighbor)))
-    {
-      mesh_touch_blocks.push_back(neighbor);
-    }
-  }
+  UWorldFluidFacade::ApplyBreakSiteFluidFlood(*this, blockPos, mesh_touch_blocks);
 }
 
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
@@ -1388,8 +1298,10 @@ FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
   {
     return FluidColumnSurface{};
   }
-  return ::cutum::FindFluidColumnSurfaceAt(BlockWorld, *BlockRegistry, bx, bz,
-                                           hintY, 8, 24);
+  return ::cutum::FindFluidColumnSurfaceAt(
+      BlockWorld, *BlockRegistry, bx, bz, hintY,
+      URuntimeTuning::Get().FluidSurfaceScanUp,
+      URuntimeTuning::Get().FluidSurfaceScanDown);
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const

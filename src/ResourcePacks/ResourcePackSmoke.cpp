@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 namespace cutum
 {
@@ -110,6 +111,49 @@ bool SmokeSelection(const ResourcePackSelection &selection,
                 << " texture override(s) from " << pack.Id << std::endl;
     }
   }
+  static const char *kDecorStems[] = {"stone", "tree_bark"};
+  const bool minetestPrimary =
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                "minetest_default_16") != selection.Primary.end();
+  if (minetestPrimary)
+  {
+    for (const char *name : kDecorStems)
+    {
+      const BlockId id = registry.ResolveBlockName(name);
+      if (id == BLOCK_AIR)
+      {
+        std::cerr << "ResourcePackSmoke: missing decor block '" << name << "'"
+                  << std::endl;
+        return false;
+      }
+      bool found = false;
+      for (const MergedCubeDesc &desc : registry.GetCubeDescriptors())
+      {
+        if (desc.Name != name)
+        {
+          continue;
+        }
+        found = true;
+        for (const std::string &stem : desc.Stems)
+        {
+          if (stem.rfind("__ph_", 0) == 0)
+          {
+            std::cerr << "ResourcePackSmoke: placeholder texture stem for '"
+                      << name << "': " << stem << std::endl;
+            return false;
+          }
+        }
+        break;
+      }
+      if (!found)
+      {
+        std::cerr << "ResourcePackSmoke: no cube descriptor for '" << name
+                  << "'" << std::endl;
+        return false;
+      }
+    }
+  }
+
   std::cout << "ResourcePackSmoke: OK " << packs.size() << " pack(s), "
             << firstCount << " blocks" << std::endl;
   return true;
@@ -162,6 +206,49 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
               << " object(s), expected >= " << kMinObjects << std::endl;
     return false;
   }
+
+  const BlockId stone_id = blockRegistry.GetIdByTypeName("stone");
+  const BlockId tree_bark_id = blockRegistry.GetIdByTypeName("tree_bark");
+  if (stone_id == BLOCK_AIR || tree_bark_id == BLOCK_AIR)
+  {
+    std::cerr << "ResourcePackSmoke: stone/tree_bark not resolved after object load"
+              << std::endl;
+    return false;
+  }
+  const auto *path = objects.Get("path_cobble_3x3");
+  const auto *log = objects.Get("deco_log_pine");
+  if (!path || !log || path->voxels.empty() || log->voxels.empty())
+  {
+    std::cerr << "ResourcePackSmoke: missing path_cobble_3x3 or deco_log_pine"
+              << std::endl;
+    return false;
+  }
+  bool path_has_stone = false;
+  for (const auto &voxel : path->voxels)
+  {
+    if (voxel.Id == stone_id)
+    {
+      path_has_stone = true;
+      break;
+    }
+  }
+  bool log_has_bark = false;
+  for (const auto &voxel : log->voxels)
+  {
+    if (voxel.Id == tree_bark_id)
+    {
+      log_has_bark = true;
+      break;
+    }
+  }
+  if (!path_has_stone || !log_has_bark)
+  {
+    std::cerr << "ResourcePackSmoke: prefab blocks not bound (stone="
+              << path_has_stone << ", tree_bark=" << log_has_bark << ")"
+              << std::endl;
+    return false;
+  }
+
   std::cout << "ResourcePackSmoke: startup init OK (" << objectCount
             << " objects after pack merge)" << std::endl;
   return true;

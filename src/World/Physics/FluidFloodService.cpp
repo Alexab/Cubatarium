@@ -7,6 +7,7 @@
 #include "World/Physics/FluidPermeabilityUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidTuning.h"
+#include "World/Core/RuntimeTuning.h"
 
 #include <algorithm>
 #include <array>
@@ -77,7 +78,7 @@ BlockId ResolveFloodFluidIdImpl(const UBlockWorld &blockWorld,
     return options.water_id;
   }
   if (options.water_id != BLOCK_AIR && options.sea_level >= 0 &&
-      pos.y <= options.sea_level + FluidTuning::CoastalPermeableBandAboveSea)
+      pos.y <= options.sea_level + URuntimeTuning::Get().CoastalBandAboveSea)
   {
     const BlockId block_id = blockWorld.GetBlock(pos);
     if (IsFluidPermeableId(definitions, block_id))
@@ -211,7 +212,7 @@ int FloodBreakSiteFromWetNeighborsImpl(
         {
           const glm::ivec3 pos = break_pos + glm::ivec3(dx, dy, dz);
           if (pos.y <= options.sea_level ||
-              pos.y > options.sea_level + FluidTuning::CoastalPermeableBandAboveSea)
+              pos.y > options.sea_level + URuntimeTuning::Get().CoastalBandAboveSea)
           {
             continue;
           }

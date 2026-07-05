@@ -1,8 +1,8 @@
 #include "Render/Engine/FluidSurfaceMapLogic.h"
-#include "Render/Engine/RenderFogSettings.h"
+#include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
-#include "World/Core/FluidSurfaceScanTuning.h"
+#include "World/Core/RuntimeTuning.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
@@ -55,10 +55,12 @@ static void TestSentinelAndTuningDefaults()
 {
   Expect(std::abs(cutum::FluidSurfaceStagingSentinel() + 1000.0f) < 0.001f,
          "staging sentinel is -1000");
-  Expect(cutum::URenderFogSettings::FluidSurfaceWindowMoveThreshold == 8,
+  cutum::URuntimeTuning::ResetToDefaults();
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 8,
          "window move threshold default");
-  Expect(cutum::FluidSurfaceScanTuning::ScanUp == 32, "scan up default");
-  Expect(cutum::FluidSurfaceScanTuning::ScanDown == 64, "scan down default");
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanUp == 32, "scan up default");
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanDown == 64,
+         "scan down default");
   Expect(cutum::FluidSurfaceColumnSlice::kNoSurface == INT16_MIN,
          "column slice no-surface sentinel");
 }
@@ -92,6 +94,40 @@ static void TestColumnScanFindsSurface()
   Expect(!below_hint.valid, "narrow scan misses fluid outside range");
 }
 
+static void TestUnderwaterFogPolicy()
+{
+  Expect(!cutum::ShouldUseGlobalUnderwaterFog(false, true),
+         "above surface with map: no global underwater fog");
+  Expect(cutum::ShouldUseGlobalUnderwaterFog(true, true),
+         "submerged with map: global underwater fog");
+  Expect(cutum::ShouldUseGlobalUnderwaterFog(true, false),
+         "submerged without map: global fallback");
+  Expect(cutum::ShouldUsePerColumnBelowSurfaceFog(true),
+         "map ready enables per-column fog");
+  Expect(!cutum::ShouldUsePerColumnBelowSurfaceFog(false),
+         "map not ready disables per-column fog");
+  Expect(std::abs(cutum::BelowSurfaceFogStrength(true, false) - 1.0f) < 1e-5f,
+         "wading strength is 1");
+  Expect(std::abs(cutum::BelowSurfaceFogStrength(true, true) - 0.25f) < 1e-5f,
+         "submerged strength is a light supplement");
+  Expect(std::abs(cutum::BelowSurfaceFogStrength(false, false)) < 1e-5f,
+         "map not ready strength is 0");
+  Expect(std::abs(cutum::BelowSurfaceFogDepthMin(false) - 0.5f) < 1e-5f,
+         "wading skips shallow surface band");
+  Expect(std::abs(cutum::BelowSurfaceFogDepthMin(true)) < 1e-5f,
+         "submerged uses full below-surface column");
+
+  cutum::FluidViewProfile profile;
+  profile.FogMinBlend = 0.5f;
+  profile.BelowSurfaceFogMin = 0.52f;
+  Expect(std::abs(cutum::SubmergedBelowSurfaceFogMin(profile) - 0.52f) < 1e-5f,
+         "submerged min uses higher of fog min blend and below-surface min");
+
+  profile.FogMinBlend = 0.85f;
+  Expect(std::abs(cutum::SubmergedBelowSurfaceFogMin(profile) - 0.85f) < 1e-5f,
+         "submerged min prefers fog min blend when higher");
+}
+
 } // namespace
 
 int main()
@@ -99,6 +135,7 @@ int main()
   TestSentinelAndTuningDefaults();
   TestWindowMoveThreshold();
   TestColumnScanFindsSurface();
+  TestUnderwaterFogPolicy();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

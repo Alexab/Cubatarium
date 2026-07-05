@@ -80,12 +80,46 @@ def migrate_file(path: Path, write: bool) -> tuple[bool, list[str]]:
     return True, changes
 
 
+def validate_all() -> int:
+    errors: list[str] = []
+    for path in sorted(BLOCKS_ROOT.glob("*/blocks/*.json")):
+        try:
+            data = load_json(path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{path}: invalid JSON: {exc}")
+            continue
+        name = data.get("name", "")
+        if not name:
+            errors.append(f"{path}: missing name")
+            continue
+        textures = data.get("textures", [])
+        if not isinstance(textures, list) or len(textures) < 6:
+            errors.append(f"{path}: textures array must have 6 entries")
+            continue
+        if not all(isinstance(t, str) for t in textures[:6]):
+            errors.append(f"{path}: texture stems must be strings")
+    if errors:
+        for line in errors[:50]:
+            print(line)
+        if len(errors) > 50:
+            print(f"... and {len(errors) - 50} more")
+        print(f"validate: FAILED ({len(errors)} error(s))")
+        return 1
+    print("validate: OK")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--dry-run", action="store_true")
     group.add_argument("--write", action="store_true")
+    group.add_argument("--validate", action="store_true",
+                       help="Check all block JSON files parse and have 6 texture stems")
     args = parser.parse_args()
+
+    if args.validate:
+        return validate_all()
 
     touched = 0
     for path in sorted(BLOCKS_ROOT.glob("*/blocks/*.json")):

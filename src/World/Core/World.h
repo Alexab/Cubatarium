@@ -694,6 +694,7 @@ private:
   std::unique_ptr<IUPhysicsScheduler> PhysicsScheduler;
 
   friend class UWorldChunkDirtyService;
+  friend class UWorldFluidFacade;
   friend class UWorldBlockPhysicsService;
 };
 

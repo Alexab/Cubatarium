@@ -6,7 +6,7 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | incremental facade extract | PR-D backlog |
+| TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | `UWorldFluidFacade` extracted (TryAddFluidObject, break-site flood); further slices backlog | partial |
 | TD-AUD-011 | 2026-06 | UApplication god-class (~1800 LOC) | screen helpers extract | PR-D backlog |
 | TD-AUD-012 | 2026-06 | GeometryEngine coupling | UUnderwaterFogPass extract; LOC 2012 (−139 vs baseline 2151); `#include App/Core.h` removed from GeometryEngine | partial |
 | TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | ChunkMeshCache reserve(512), diagnostics reserve; GreedyMesher done | partial |

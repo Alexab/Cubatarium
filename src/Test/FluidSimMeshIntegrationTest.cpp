@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 namespace
 {
@@ -240,7 +241,57 @@ static void TestWaterloggedGrassMesh(
       FluidTest::BuildFluidMesh(world, registry, pos);
   FluidTest::Expect(FluidTest::CountTopFacesAt(quads, kWater, pos, chunk_coord) >=
                         1,
-                    kTestName, "waterlogged grass has water top mesh face");
+                    kTestName,                     "waterlogged grass has water top mesh face");
+}
+
+static void TestOpaqueColumnBarrierBetweenFluids(
+    cutum::UBlockRegistry &registry)
+{
+  auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+  constexpr cutum::BlockId kWater = 9;
+  constexpr cutum::BlockId kLava = 11;
+  constexpr cutum::BlockId kLog = 12;
+  cutum::BlockDefinition water;
+  water.Name = "water";
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+  water.Render.Transparent = true;
+  water.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition lava;
+  lava.Name = "lava";
+  lava.Physics = cutum::BlockPhysicsProfile::FromPreset("lava");
+  lava.Render.Transparent = true;
+  lava.Render.Style = cutum::BlockRenderStyle::Fluid;
+  cutum::BlockDefinition log;
+  log.Name = "tree_log";
+  log.Physics = cutum::BlockPhysicsProfile::Solid();
+  std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
+  by_id[kWater] = water;
+  by_id[kLava] = lava;
+  by_id[kLog] = log;
+  std::unordered_map<std::string, cutum::BlockId> name_to_id;
+  name_to_id["water"] = kWater;
+  name_to_id["lava"] = kLava;
+  name_to_id["tree_log"] = kLog;
+  definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
+  cutum::UBlockRegistry stack_registry(nullptr, definitions);
+
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  world.SetBlock(glm::ivec3(0, 12, 0), kWater);
+  world.SetBlock(glm::ivec3(0, 11, 0), kLog);
+  world.SetBlock(glm::ivec3(0, 10, 0), kLava);
+
+  FluidTest::Expect(stack_registry.BlocksMovement(kLog), kTestName,
+                    "log blocks movement between fluids");
+  FluidTest::Expect(!stack_registry.IsLiquid(kLog), kTestName,
+                    "log is opaque to fluid kind routing");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 11, 0)) == kLog, kTestName,
+                    "log remains between water and lava column");
+  const std::vector<cutum::GreedyQuad> water_quads =
+      FluidTest::BuildFluidMesh(world, stack_registry, glm::ivec3(0, 12, 0));
+  FluidTest::Expect(!water_quads.empty(), kTestName,
+                    "water column still emits mesh above log barrier");
+  (void)registry;
 }
 
 } // namespace
@@ -259,6 +310,7 @@ int main()
   TestShoreStair(definitions, registry, fluid);
   TestDigGap(definitions, registry, fluid);
   TestWaterloggedGrassMesh(decor_definitions, decor_registry);
+  TestOpaqueColumnBarrierBetweenFluids(registry);
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

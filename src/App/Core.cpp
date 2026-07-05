@@ -23,6 +23,7 @@
 #include "App/Core.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
+#include "App/RuntimeTuningConfig.h"
 #ifndef __ANDROID__
 #include "App/Platform/GameDataRoot.h"
 #endif
@@ -420,6 +421,17 @@ void UCore::LoadConfig(const std::string &config_file_name)
         ReadLegacyUiSettings(d["ui"], Ui);
       }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
+      const json *physics_tuning = (d.contains("physics") && d["physics"].is_object())
+                                       ? &d["physics"]
+                                       : nullptr;
+      const json *render_tuning = (d.contains("render") && d["render"].is_object())
+                                      ? &d["render"]
+                                      : nullptr;
+      const json *procedural_tuning =
+          (d.contains("procedural") && d["procedural"].is_object())
+              ? &d["procedural"]
+              : nullptr;
+      ApplyRuntimeTuningFromConfig(physics_tuning, render_tuning, procedural_tuning);
     }
     else
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Render/Engine/RenderFogSettings.h"
+#include "World/Core/RuntimeTuning.h"
 #include <cstdlib>
 
 namespace cutum
@@ -9,15 +9,15 @@ namespace cutum
 inline bool ShouldRefreshFluidSurfaceWindow(int old_origin_x, int old_origin_z,
                                             int new_origin_x, int new_origin_z)
 {
-  return std::abs(new_origin_x - old_origin_x) >=
-             URenderFogSettings::FluidSurfaceWindowMoveThreshold ||
-         std::abs(new_origin_z - old_origin_z) >=
-             URenderFogSettings::FluidSurfaceWindowMoveThreshold;
+  const int threshold =
+      URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold;
+  return std::abs(new_origin_x - old_origin_x) >= threshold ||
+         std::abs(new_origin_z - old_origin_z) >= threshold;
 }
 
 inline float FluidSurfaceStagingSentinel()
 {
-  return URenderFogSettings::NoSurfaceSentinel;
+  return -1000.0f;
 }
 
 } // namespace cutum

@@ -46,6 +46,7 @@ private:
   float BelowSurfaceFogStrength{0.0f};
   float BelowSurfaceFogMin{0.52f};
   float BelowSurfaceFogScale{0.35f};
+  float BelowSurfaceFogDepthMin{0.0f};
   std::array<glm::vec3, UFluidSurfaceMap::kMaxFluidShaderSlots>
       BelowSurfaceFogColors{};
   glm::vec3 OverlayTintColor{0.0f};

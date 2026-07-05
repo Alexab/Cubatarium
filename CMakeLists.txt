@@ -123,6 +123,7 @@ set(SOURCES
     src/Pose/BoneSkeleton/SkeletalAnimationProfiles.cpp
     src/Pose/BoneSkeleton/BoneSkeletonPoseEngine.cpp
     src/App/Core.cpp
+    src/App/RuntimeTuningConfig.cpp
     src/App/WorldLifecycleFacade.cpp
     src/App/ResourcePackBootstrap.cpp
     src/App/ResourcePackSelectionUtil.cpp
@@ -138,6 +139,8 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/RuntimeTuning.cpp
+    src/World/Core/WorldFluidFacade.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp
@@ -669,6 +672,15 @@ set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/Blocks/BlockDefinitionStorage.cpp
     src/Blocks/BlockDefinition.cpp)
 
+set(PHYSICS_FLUID_SIM_SOURCES
+    src/World/Core/RuntimeTuning.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp)
+
 set(PHYSICS_LIGHT_REGISTRY_DEF CUTUM_PHYSICS_LIGHT_REGISTRY)
 
 set(PHYSICS_COLLISION_UNIT_SOURCES
@@ -685,6 +697,7 @@ set(PHYSICS_COLLISION_UNIT_SOURCES
 set(PHYSICS_MATERIAL_UNIT_SOURCES
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Blocks/BlockRegistry.cpp
+    src/World/Core/RuntimeTuning.cpp
     src/World/Physics/MaterialReactionRules.cpp
     src/World/Physics/MaterialReactionRulesRegistry.cpp)
 
@@ -822,12 +835,7 @@ target_link_libraries(fluid_chunk_io_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(fluid_spread_level_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/Test/FluidSpreadLevelTest.cpp)
 target_include_directories(fluid_spread_level_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -874,6 +882,7 @@ target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_
 add_executable(fluid_surface_map_logic_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/World/Core/RuntimeTuning.cpp
     src/Test/FluidSurfaceMapLogicTest.cpp)
 target_include_directories(fluid_surface_map_logic_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -882,12 +891,7 @@ target_compile_definitions(fluid_surface_map_logic_test PRIVATE
 target_link_libraries(fluid_surface_map_logic_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(liquid_viscosity_gate_test
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Test/LiquidViscosityGateTest.cpp)
 target_include_directories(liquid_viscosity_gate_test PRIVATE
@@ -896,12 +900,7 @@ target_link_libraries(liquid_viscosity_gate_test glm::glm)
 
 add_executable(liquid_non_renewable_flow_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/Test/LiquidNonRenewableFlowTest.cpp)
 target_include_directories(liquid_non_renewable_flow_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -909,12 +908,7 @@ target_link_libraries(liquid_non_renewable_flow_test glm::glm nlohmann_json::nlo
 
 add_executable(liquid_flow_scenarios_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/Test/LiquidFlowScenariosTest.cpp)
 target_include_directories(liquid_flow_scenarios_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -922,13 +916,8 @@ target_link_libraries(liquid_flow_scenarios_test glm::glm nlohmann_json::nlohman
 
 add_executable(fluid_queue_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/World/Physics/FluidUpdateSet.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
     src/Test/FluidQueueIntegrationTest.cpp)
 target_include_directories(fluid_queue_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1064,6 +1053,7 @@ target_compile_definitions(worldgen_fluid_vegetation_pipeline_test PRIVATE
 target_link_libraries(worldgen_fluid_vegetation_pipeline_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_hills_vegetation_gate_test
+    src/World/Core/RuntimeTuning.cpp
     src/Test/WorldGenHillsVegetationGateTest.cpp)
 target_include_directories(worldgen_hills_vegetation_gate_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1083,7 +1073,9 @@ target_include_directories(worldgen_scatter_test PRIVATE ${CMAKE_SOURCE_DIR}/src
 target_compile_definitions(worldgen_scatter_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_scatter_test glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_tuning_defaults_test src/Test/FluidTuningDefaultsTest.cpp)
+add_executable(fluid_tuning_defaults_test
+    src/World/Core/RuntimeTuning.cpp
+    src/Test/FluidTuningDefaultsTest.cpp)
 target_include_directories(fluid_tuning_defaults_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(fluid_tuning_defaults_test glm::glm)
 
@@ -1261,12 +1253,7 @@ target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann
 
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/Test/PhysicsIntegrationTest.cpp)
 target_include_directories(physics_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1303,12 +1290,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Physics/FallingBlockRules.cpp
     src/World/Physics/FallingBlockRulesRegistry.cpp
     src/World/Physics/FallingBlocksSystem.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
+    ${PHYSICS_FLUID_SIM_SOURCES}
     src/World/Physics/ChunkPhysicsSeed.cpp
     src/Render/Primitives/Cube.cpp
     src/Creatures/Core/CreatureBounds.cpp

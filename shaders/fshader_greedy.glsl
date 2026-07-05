@@ -28,6 +28,7 @@ uniform float uFogDensity;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
+uniform float uBelowSurfaceFogDepthMin;
 uniform vec2 uFluidSurfaceOrigin;
 uniform vec2 uFluidSurfaceInvSize;
 uniform sampler2D uFluidSurfaceYMap;
@@ -153,11 +154,11 @@ void main()
     }
     if (uBelowSurfaceFog > 0.001 && uFluidSurfaceInvSize.x > 0.0) {
         float sy = surfaceYAt(vWorldPos.xz);
-        if (vWorldPos.y < sy) {
+        float depthBelow = sy - vWorldPos.y;
+        if (vWorldPos.y < sy && depthBelow >= uBelowSurfaceFogDepthMin) {
             uint fi = fluidIndexAt(vWorldPos.xz);
             if (fi > 0u) {
                 vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
-                float depthBelow = sy - vWorldPos.y;
                 float factor = clamp(uBelowSurfaceFogMin + depthBelow * uBelowSurfaceFogScale,
                                      uBelowSurfaceFogMin, 1.0);
                 FragColor.rgb = mix(FragColor.rgb, fogCol, factor * uBelowSurfaceFog);
