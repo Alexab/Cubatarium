@@ -278,6 +278,11 @@ void UWindowManager::Run()
 
     glfwPollEvents();
 
+    if (World)
+    {
+      World->SetWallFrameDelta(DeltaTime);
+    }
+
     // Input processing
     ProcessInput();
     if (Application)

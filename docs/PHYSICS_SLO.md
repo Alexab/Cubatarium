@@ -16,6 +16,26 @@ Diagnostics are exported via:
 
 - `movement_diagnostics.json` (`physics_*` fields)
 - `PhysicsTelemetry` counters on `UWorld`
+- In-game HUD (`ui.show_performance: true`): **Wall FPS** (full frame interval), **Sim FPS** (physics + view + draw), **Phys/Move/Block/Drain** ms breakdown
+
+## HUD metrics (F3 performance overlay)
+
+| Line | Meaning |
+|------|---------|
+| Wall FPS | `1 / wall_frame_ms` — real frame pacing (includes input, swap, VSync wait) |
+| Sim FPS | `1 / (physics_step_ms + view_ms + scene_ms)` — measured simulation + render work |
+| Phys | Total `DoMovement` time (movement + block physics + drain queues) |
+| Move / Block / Drain | Per-phase breakdown from `PhysicsTelemetry` |
+| steps | Block/drain ticks this frame (always 1; fixed multi-step removed 2026-07) |
+| LiqQ | Liquid queue depth — rising under load indicates spread backlog |
+
+If Wall FPS drops but Sim FPS stays high, the bottleneck is outside measured sim (GPU wait, OS scheduling) or stale metrics — compare with `physics_step_ms` in `movement_diagnostics.v2`.
+
+## Threading evaluation (2026-07)
+
+Block/fluid physics remains **main-thread** (Luanti-style queue + per-tick budget). Async workers (`UJobThreadPool`) already cover mesh build and chunk I/O only.
+
+A future worker path would follow `UAsyncMeshBuilder`: immutable chunk snapshot → worker proposes fluid deltas → main thread commits to `BlockWorld`. **Not implemented** — deferred until `physics_step_ms` p95 exceeds SLO after remesh-path fix (TD-FL-033) and queue optimizations.
 
 ## MVP thresholds (single-player desktop)
 

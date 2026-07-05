@@ -2,6 +2,7 @@
 #define FLUIDUPDATESET_H
 
 #include "World/Physics/PhysicsProfile.h"
+#include <deque>
 #include <glm/glm.hpp>
 #include <unordered_set>
 #include <vector>
@@ -47,8 +48,7 @@ private:
 
   PhysicsBudgets Budgets;
   std::unordered_set<glm::ivec3, IVec3Hash> Keys;
-  uint64_t NextInsertionOrder{0};
-  std::vector<std::pair<uint64_t, glm::ivec3>> Order;
+  std::deque<glm::ivec3> Fifo;
   FluidUpdateSetStats Stats;
 };
 

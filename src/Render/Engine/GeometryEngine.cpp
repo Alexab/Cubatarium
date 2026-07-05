@@ -1335,10 +1335,14 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   float scale = 0.7f;
   glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Yellow color for performance
 
-  // Calculate FPS
-  double totalTime = DurationDrawSceneMks +
-                     WorldInstance->GetDurationDoMovementMks() + view_duration;
-  double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
+  // Calculate FPS (sim = movement + view + draw; wall = full frame interval)
+  const PhysicsTelemetry &phys = WorldInstance->GetPhysicsTelemetry();
+  const double sim_ms = phys.PhysicsStepMs +
+                        (view_duration / 1000.0) +
+                        (DurationDrawSceneMks / 1000.0);
+  const double wall_ms = WorldInstance->GetWallFrameDelta() * 1000.0;
+  const double sim_fps = sim_ms > 0.0 ? 1000.0 / sim_ms : 0.0;
+  const double wall_fps = wall_ms > 0.0 ? 1000.0 / wall_ms : sim_fps;
 
   size_t blockCount = WorldInstance->GetCachedBlockCount();
   size_t drawCount = WorldInstance->GetRenderInstanceCount();
@@ -1346,14 +1350,16 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   // Form performance information strings
   std::vector<std::string> performanceLines = {
       "Performance:",
-      "FPS: " + std::to_string(fps).substr(0, 6),
+      "Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
+      "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
       "Blocks: " + std::to_string(blockCount) +
           " draw: " + std::to_string(drawCount),
+      "Phys: " + std::to_string(phys.PhysicsStepMs).substr(0, 6) + " ms" +
+          " steps: " + std::to_string(phys.SimulationStepsThisFrame),
+      "Move: " + std::to_string(phys.MovementStepMs).substr(0, 6) + " ms" +
+          " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
+          " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
-          " ms",
-      "Movement: " +
-          std::to_string(WorldInstance->GetDurationDoMovementMks() / 1000.0)
-              .substr(0, 6) +
           " ms",
       "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
 
@@ -1425,6 +1431,9 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) + " LiqQ: " +
       std::to_string(md.physicsLiquidQueueDepth) + " Purged: " +
       std::to_string(md.physicsPurgedUpdates));
+  performanceLines.push_back(
+      "RemeshQ: " + std::to_string(md.physicsVisualRemeshBacklog) +
+      " CollQ: " + std::to_string(md.physicsCollisionRebuildBacklog));
   performanceLines.push_back(
       "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
       " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +

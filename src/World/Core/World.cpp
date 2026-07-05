@@ -1671,14 +1671,9 @@ void UWorld::MarkFluidRegionDirty(glm::ivec3 center, int block_radius)
 
 void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
 {
-  if (IsWithinLiquidUpdateRadius(blockPos))
-  {
-    MarkBlockChunkDirty(blockPos);
-  }
-  else
-  {
-    MarkBlockChunkDirtyFromPhysics(blockPos);
-  }
+  // Simulation path: always budgeted remesh (async when enabled). Use
+  // MarkBlockChunkDirty for player-driven edits that need instant feedback.
+  MarkBlockChunkDirtyFromPhysics(blockPos);
 }
 
 void UWorld::MarkFluidFloodMeshDirty(
@@ -1853,14 +1848,52 @@ void UWorld::DoMovement()
   ++PhysicsTickCounter;
   if (PhysicsScheduler)
   {
-    auto t_begin = std::chrono::high_resolution_clock::now();
-    PhysicsScheduler->Tick(*this);
-    auto t_end = std::chrono::high_resolution_clock::now();
+    using clock = std::chrono::high_resolution_clock;
+    const auto t_begin = clock::now();
+    auto t_after_move = t_begin;
+
+    if (MovementPhysicsService)
+    {
+      MovementPhysicsService->TickMovement(*this);
+      t_after_move = clock::now();
+    }
+
+    double block_ms = 0.0;
+    double drain_ms = 0.0;
+    if (BlockPhysicsService)
+    {
+      const auto tb = clock::now();
+      BlockPhysicsService->TickBlockPhysics(*this);
+      block_ms = std::chrono::duration<double, std::milli>(clock::now() - tb)
+                     .count();
+    }
+    if (ChunkDirtyService)
+    {
+      const auto tb = clock::now();
+      ChunkDirtyService->DrainRebuildQueues(*this);
+      drain_ms = std::chrono::duration<double, std::milli>(clock::now() - tb)
+                     .count();
+    }
+
+    const auto t_end = clock::now();
+    PhysicsTelemetryData.MovementStepMs =
+        std::chrono::duration<double, std::milli>(t_after_move - t_begin).count();
+    PhysicsTelemetryData.BlockStepMs = block_ms;
+    PhysicsTelemetryData.DrainStepMs = drain_ms;
+    PhysicsTelemetryData.FluidStepMs = block_ms;
+    PhysicsTelemetryData.SimulationStepsThisFrame = 1;
     PhysicsTelemetryData.PhysicsStepMs =
         std::chrono::duration<double, std::milli>(t_end - t_begin).count();
+    DurationDoMovementMks = static_cast<uint64_t>(
+        std::chrono::duration<double, std::micro>(t_end - t_begin).count());
     return;
   }
   RunLegacyPhysicsFrame();
+}
+
+void UWorld::SetWallFrameDelta(double seconds)
+{
+  WallFrameDeltaSec = seconds > 0.0 ? seconds : 0.0;
 }
 
 void UWorld::RunLegacyPhysicsFrame()
@@ -2030,9 +2063,13 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                          double view_update_mks)
 {
   DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
-  const double frameMs =
+  const double sim_ms =
       (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
-  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
+  const double wall_ms = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec * 1000.0 : sim_ms;
+  const double frameMs = std::max(sim_ms, wall_ms);
+  MovementDiag.hitchDetected =
+      frameMs > 50.0 || PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
+      MovementDiag.deltaTime > 0.1f;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()

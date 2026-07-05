@@ -323,6 +323,8 @@ static void TestAcceptFallenLogOverTallGrass()
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 51, 0)) == kGrass, kTestName,
                     "grass preserved under fallen log");
 }
+
+static void TestFindSurfaceUnderPlants()
 {
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr, MakeDefinitions());

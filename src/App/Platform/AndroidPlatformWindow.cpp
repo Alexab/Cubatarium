@@ -239,6 +239,10 @@ void UAndroidPlatformWindow::ProcessFrame()
     }
 
     ProcessInput();
+    if (World)
+    {
+      World->SetWallFrameDelta(FrameDeltaTime);
+    }
     if (Application)
     {
       AndroidSoftKeyboardProcess(Application.get());

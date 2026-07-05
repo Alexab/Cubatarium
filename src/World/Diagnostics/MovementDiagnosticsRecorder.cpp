@@ -52,6 +52,11 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"hitch_detected", sample.hitchDetected},
         {"fall_through_suspected", sample.fallThroughSuspected},
         {"physics_step_ms", sample.physicsStepMs},
+        {"physics_movement_ms", sample.physicsMovementMs},
+        {"physics_block_ms", sample.physicsBlockMs},
+        {"physics_drain_ms", sample.physicsDrainMs},
+        {"wall_frame_ms", sample.wallFrameMs},
+        {"physics_simulation_steps", sample.physicsSimulationSteps},
         {"physics_block_queue_depth", sample.physicsBlockQueueDepth},
         {"physics_liquid_queue_depth", sample.physicsLiquidQueueDepth},
         {"physics_deferred_updates", sample.physicsDeferredUpdates},
@@ -113,6 +118,12 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
   world.MovementDiag.meshBacklogCleared = world.MeshBacklogClearedLatch;
   const PhysicsTelemetry &physicsTelemetry = world.GetPhysicsTelemetry();
   world.MovementDiag.physicsStepMs = physicsTelemetry.PhysicsStepMs;
+  world.MovementDiag.physicsMovementMs = physicsTelemetry.MovementStepMs;
+  world.MovementDiag.physicsBlockMs = physicsTelemetry.BlockStepMs;
+  world.MovementDiag.physicsDrainMs = physicsTelemetry.DrainStepMs;
+  world.MovementDiag.wallFrameMs = world.WallFrameDeltaSec * 1000.0;
+  world.MovementDiag.physicsSimulationSteps =
+      physicsTelemetry.SimulationStepsThisFrame;
   world.MovementDiag.physicsBlockQueueDepth = physicsTelemetry.BlockQueueDepth;
   world.MovementDiag.physicsLiquidQueueDepth = physicsTelemetry.LiquidQueueDepth;
   world.MovementDiag.physicsDeferredUpdates = physicsTelemetry.DeferredUpdates;
@@ -157,12 +168,16 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
     }
   }
 
-  const double frameMs =
+  const double sim_ms =
       (world.DurationDoMovementMks +
        (world.ViewInstance ? world.ViewInstance->GetDurationUpdateMks() : 0.0)) /
       1000.0;
+  const double wall_ms =
+      world.WallFrameDeltaSec > 0.0 ? world.WallFrameDeltaSec * 1000.0 : sim_ms;
+  const double frameMs = std::max(sim_ms, wall_ms);
   world.MovementDiag.hitchDetected =
-      frameMs > 50.0 || world.MovementDiag.deltaTime > 0.1f;
+      frameMs > 50.0 || world.MovementDiag.physicsStepMs > 50.0 ||
+      world.MovementDiag.deltaTime > 0.1f;
   world.MovementDiag.fallThroughSuspected =
       world.MovementDiag.playerYDrop > 2.0f &&
       (world.MovementDiag.feetIsAir || !world.MovementDiag.feetChunkLoaded) &&

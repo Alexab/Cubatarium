@@ -79,11 +79,6 @@ bool UWorldFluidFacade::TryAddFluidObject(UWorld &world, glm::ivec3 block_pos,
   if (world.GetPhysicsFeatureFlags().EnableFluids)
   {
     EnqueueFluidFrontierAt(world, block_pos);
-    world.MarkBlockChunkDirty(block_pos);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      world.MarkBlockChunkDirty(block_pos + offset);
-    }
   }
   return true;
 }

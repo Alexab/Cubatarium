@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 28 | Open: 4
+> Total closed: 29 | Open: 4
 
 ## Open
 
@@ -48,6 +48,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 | TD-FL-031 | render | Remove `PrimaryLiquidBlockId`; GreedyMesher uses per-cell `ResolveFluidBlockIdForMesh` | `GreedyMesher.cpp` |
 | TD-FL-032 | phase-1-tuning | Centralize fluid/fog/worldgen magic numbers in `URuntimeTuning` + config.json | `RuntimeTuning.h`, `config.json.example` |
 | TD-FL-021 | phase-8-docs | Manual liquids + fog QA moved to dedicated runbook | [`QA_FLUIDS_2026.md`](QA_FLUIDS_2026.md) |
+| TD-FL-033 | perf-remesh | Fluid spread uses `MarkBlockChunkDirtyFromPhysics` (budgeted/async remesh); player placement keeps sync `MarkBlockChunkDirty` | `WorldBlockPhysicsService`, `WorldFluidFacade` |
 
 ## Phase tracker
 

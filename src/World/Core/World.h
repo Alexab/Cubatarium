@@ -418,6 +418,8 @@ public:
   glm::ivec3 GetPlaceBlockPos() const { return PlaceBlockPos; }
 
   uint64_t GetDurationDoMovementMks() const;
+  void SetWallFrameDelta(double seconds);
+  double GetWallFrameDelta() const { return WallFrameDeltaSec; }
   void SetPhysicsProfile(PhysicsProfile profile);
   PhysicsProfile GetPhysicsProfile() const { return ActivePhysicsProfile; }
   void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
@@ -471,6 +473,11 @@ public:
     int framesSinceLoad{0};
     bool meshBacklogCleared{false};
     double physicsStepMs{0.0};
+    double physicsMovementMs{0.0};
+    double physicsBlockMs{0.0};
+    double physicsDrainMs{0.0};
+    double wallFrameMs{0.0};
+    int physicsSimulationSteps{0};
     uint64_t physicsBlockQueueDepth{0};
     uint64_t physicsLiquidQueueDepth{0};
     uint64_t physicsDeferredUpdates{0};
@@ -687,6 +694,7 @@ private:
   PhysicsBudgets PhysicsBudgetConfig;
   PhysicsTelemetry PhysicsTelemetryData;
   uint64_t PhysicsTickCounter{0};
+  double WallFrameDeltaSec{0.0};
   uint64_t PhysicsEventOrderCounter{0};
   std::unique_ptr<class UWorldBlockPhysicsService> BlockPhysicsService;
   std::unique_ptr<class UWorldMovementPhysicsService> MovementPhysicsService;

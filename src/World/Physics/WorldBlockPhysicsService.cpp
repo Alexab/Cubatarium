@@ -138,8 +138,8 @@ void UWorldBlockPhysicsService::WakeNearbyFluids(
 void UWorldBlockPhysicsService::ProcessFluidChange(
     UWorld &world, const FluidSpreadChange &change)
 {
-  world.MarkBlockChunkDirty(change.BlockPos);
-  world.MarkBlockChunkDirty(change.NeighborPos);
+  world.MarkBlockChunkDirtyFromPhysics(change.BlockPos);
+  world.MarkBlockChunkDirtyFromPhysics(change.NeighborPos);
   if (change.RemovedFluid)
   {
     world.PublishBlockPhysicsEvent(change.NeighborPos);
