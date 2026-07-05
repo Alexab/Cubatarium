@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_stonebrick",
-    "id":  512,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_stonebrick_default_stone_brick",
-                     "mtg_stonebrick_default_stone_brick",
-                     "mtg_stonebrick_default_stone_brick",
-                     "mtg_stonebrick_default_stone_brick",
-                     "mtg_stonebrick_default_stone_brick",
-                     "mtg_stonebrick_default_stone_brick"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_stonebrick",
+  "id": 512,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stonebrick_default_stone_brick",
+    "mtg_stonebrick_default_stone_brick",
+    "mtg_stonebrick_default_stone_brick",
+    "mtg_stonebrick_default_stone_brick",
+    "mtg_stonebrick_default_stone_brick",
+    "mtg_stonebrick_default_stone_brick"
+  ],
+  "render": {}
 }
-

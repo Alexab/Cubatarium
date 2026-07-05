@@ -10,6 +10,7 @@ namespace cutum
 struct WorldGenPlacementTuning
 {
   static constexpr int LeafNearSolidRadius = 5;
+  static constexpr int SurfacePlantClearance = 8;
   static constexpr int SurfaceScanAboveHeightmap = 24;
   static constexpr int SurfaceScanMinAboveSea = 4;
   static constexpr int MinLandAboveSea = 1;

@@ -1,20 +1,19 @@
-﻿{
-    "name":  "mtg_glass",
-    "id":  455,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_glass_default_glass_detail",
-                     "mtg_glass_default_glass_detail",
-                     "mtg_glass_default_glass_detail",
-                     "mtg_glass_default_glass_detail",
-                     "mtg_glass_default_glass",
-                     "mtg_glass_default_glass_detail"
-                 ],
-    "render":  {
-                   "transparent":  true
-               },
-    "displayName":  "Glass"
+{
+  "name": "mtg_glass",
+  "id": 455,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass_detail",
+    "mtg_glass_default_glass",
+    "mtg_glass_default_glass_detail"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Glass"
 }
-

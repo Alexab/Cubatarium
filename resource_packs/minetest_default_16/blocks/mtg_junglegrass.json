@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_junglegrass",
-    "id":  460,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_junglegrass_default_junglegrass",
-                     "mtg_junglegrass_default_junglegrass",
-                     "mtg_junglegrass_default_junglegrass",
-                     "mtg_junglegrass_default_junglegrass",
-                     "mtg_junglegrass_default_junglegrass",
-                     "mtg_junglegrass_default_junglegrass"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_junglegrass",
+  "id": 460,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_junglegrass_default_junglegrass",
+    "mtg_junglegrass_default_junglegrass",
+    "mtg_junglegrass_default_junglegrass",
+    "mtg_junglegrass_default_junglegrass",
+    "mtg_junglegrass_default_junglegrass",
+    "mtg_junglegrass_default_junglegrass"
+  ],
+  "render": {}
 }
-

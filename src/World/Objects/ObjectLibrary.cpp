@@ -182,7 +182,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       const int dy = blockEntry.at("dy").get<int>();
       const int dz = blockEntry.at("dz").get<int>();
       const std::string type = blockEntry.at("type").get<std::string>();
-      const BlockId Id = registry.GetIdByTypeName(type);
+      const BlockId Id = registry.GetPackBlockIdByTypeName(type);
       if (Id == BLOCK_AIR)
       {
         const std::string logKey = path + '\x1f' + type;
@@ -195,6 +195,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       }
       ObjectVoxel voxel;
       voxel.offset = glm::ivec3(dx, dy, dz);
+      voxel.Type = type;
       voxel.Id = Id;
       object.voxels.push_back(voxel);
 
@@ -218,6 +219,54 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
               << std::endl;
     return false;
   }
+}
+
+void UObjectLibrary::RebindBlockIds(UBlockRegistry &registry)
+{
+  for (auto &pair : Objects)
+  {
+    for (ObjectVoxel &voxel : pair.second.voxels)
+    {
+      if (voxel.Type.empty())
+      {
+        continue;
+      }
+      const BlockId id = registry.GetPackBlockIdByTypeName(voxel.Type);
+      if (id != BLOCK_AIR)
+      {
+        voxel.Id = id;
+      }
+    }
+  }
+}
+
+bool UObjectLibrary::ValidateCriticalPrefabs() const
+{
+  static const char *kRequired[] = {"deco_log_pine", "path_cobble_3x3",
+                                    "campfire_ring"};
+  bool ok = true;
+  for (const char *name : kRequired)
+  {
+    const WorldObjectDefinition *prefab = Get(name);
+    if (!prefab || prefab->voxels.empty())
+    {
+      std::cerr << "UObjectLibrary: CRITICAL prefab missing or empty: " << name
+                << std::endl;
+      ok = false;
+      continue;
+    }
+    for (const ObjectVoxel &voxel : prefab->voxels)
+    {
+      if (voxel.Id == BLOCK_AIR)
+      {
+        std::cerr << "UObjectLibrary: CRITICAL prefab '" << name
+                  << "' has unresolved block type '" << voxel.Type << "'"
+                  << std::endl;
+        ok = false;
+      }
+    }
+  }
+  return ok;
 }
 
 const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const

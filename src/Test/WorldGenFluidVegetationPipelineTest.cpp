@@ -160,7 +160,7 @@ static void TestSurfacePathAfterSeal()
       cutum::CanPlaceObjectAtForWorldGen(world, registry, path, anchor, 80,
                                          kSea),
       kTestName, "3x3 path accepted on grass after fluid seal");
-  cutum::PlaceObjectAt(world, path, anchor, false);
+  cutum::PlaceObjectAt(world, registry, path, anchor, false);
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 51, 0)) == kStone, kTestName,
                     "path center placed on surface");
 }
@@ -187,7 +187,7 @@ static void TestFillPlaceTreeSealPrune()
       cutum::CanPlaceObjectAtForWorldGen(world, registry, tree, anchor, 80,
                                          kSea),
       kTestName, "grounded tree accepted before seal");
-  cutum::PlaceObjectAt(world, tree, anchor, false);
+  cutum::PlaceObjectAt(world, registry, tree, anchor, false);
   FluidTest::Expect(world.GetBlock(glm::ivec3(4, 52, 4)) == kLog, kTestName,
                     "tree trunk placed above coastal grass");
 

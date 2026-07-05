@@ -34,6 +34,7 @@ public:
 
   BlockId ResolveName(const std::string &name);
   BlockId ResolveBlockName(const std::string &name);
+  BlockId LookupBlockName(const std::string &name) const;
 
   void SetWorldgenOwnerPackId(const std::string &packId)
   {

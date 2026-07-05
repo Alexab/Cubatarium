@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_sapling",
-    "id":  495,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_sapling_default_sapling",
-                     "mtg_sapling_default_sapling",
-                     "mtg_sapling_default_sapling",
-                     "mtg_sapling_default_sapling",
-                     "mtg_sapling_default_sapling",
-                     "mtg_sapling_default_sapling"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_sapling",
+  "id": 495,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling",
+    "mtg_sapling_default_sapling"
+  ],
+  "render": {}
 }
-

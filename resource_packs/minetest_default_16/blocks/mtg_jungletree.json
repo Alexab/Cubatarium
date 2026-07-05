@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_jungletree",
-    "id":  463,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_jungletree_default_jungletree",
-                     "mtg_jungletree_default_jungletree",
-                     "mtg_jungletree_default_jungletree",
-                     "mtg_jungletree_default_jungletree",
-                     "mtg_jungletree_default_jungletree_top",
-                     "mtg_jungletree_default_jungletree_top"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_jungletree",
+  "id": 463,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree",
+    "mtg_jungletree_default_jungletree_top",
+    "mtg_jungletree_default_jungletree_top"
+  ],
+  "render": {}
 }
-

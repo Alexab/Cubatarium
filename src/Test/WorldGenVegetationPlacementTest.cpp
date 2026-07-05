@@ -142,6 +142,7 @@ static cutum::WorldObjectDefinition MakeFallenLog()
 {
   cutum::WorldObjectDefinition object;
   object.PlacementMode = cutum::ObjectPlacementMode::SurfaceLayer;
+  object.PlacementYOffset = 1;
   object.anchor = glm::ivec3(0);
   object.voxels.push_back({glm::ivec3(-1, 0, 0), kLog});
   object.voxels.push_back({glm::ivec3(0, 0, 0), kLog});
@@ -247,10 +248,94 @@ static void TestAcceptFallenLog()
   }
 
   const cutum::WorldObjectDefinition log = MakeFallenLog();
-  const glm::ivec3 anchor(0, 51, 0);
+  const glm::ivec3 anchor(0, 52, 0);
   FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, log,
                                                        anchor, 80, kSea),
                     kTestName, "3x1 fallen log on grass accepted");
+}
+
+static void FillGrassSurfaceAt(cutum::UBlockWorld &world, int x, int z,
+                               int surfaceY)
+{
+  for (int y = 0; y < surfaceY; ++y)
+  {
+    world.SetBlock(glm::ivec3(x, y, z), kStone);
+  }
+  world.SetBlock(glm::ivec3(x, surfaceY, z), kGrass);
+}
+
+static void TestRejectFallenLogOnSlope()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillGrassSurfaceAt(world, -1, 0, 51);
+  FillGrassSurfaceAt(world, 0, 0, 51);
+  FillGrassSurfaceAt(world, 1, 0, 52);
+
+  const cutum::WorldObjectDefinition log = MakeFallenLog();
+  const glm::ivec3 anchor(0, 52, 0);
+  FluidTest::Expect(
+      cutum::CanPlaceObjectAtForWorldGen(world, registry, log, anchor, 80,
+                                          kSea),
+      kTestName, "fallen log may span columns with different ground heights");
+}
+
+static void TestRejectFallenLogBesideTreeTrunk()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillGrassSurfaceAt(world, -1, 0, 51);
+  for (int y = 51; y <= 55; ++y)
+  {
+    world.SetBlock(glm::ivec3(-1, y, 0), kLog);
+  }
+  FillGrassSurfaceAt(world, 0, 0, 51);
+  FillGrassSurfaceAt(world, 1, 0, 51);
+
+  const cutum::WorldObjectDefinition log = MakeFallenLog();
+  const glm::ivec3 anchor(0, 52, 0);
+  FluidTest::Expect(
+      !cutum::CanPlaceObjectAtForWorldGen(world, registry, log, anchor, 80,
+                                          kSea),
+      kTestName, "fallen log rejected when side column surface is a tree trunk");
+}
+
+static void TestAcceptFallenLogOverTallGrass()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    FillCoastalColumnAt(world, dx, 0);
+    world.SetBlock(glm::ivec3(dx, 52, 0), kLeaves);
+  }
+
+  const cutum::WorldObjectDefinition log = MakeFallenLog();
+  const glm::ivec3 anchor(0, 52, 0);
+  FluidTest::Expect(cutum::CanPlaceObjectAtForWorldGen(world, registry, log,
+                                                       anchor, 80, kSea),
+                    kTestName, "fallen log accepted above grass under plants");
+  const cutum::ObjectPlacementStats stats = cutum::PlaceObjectAt(
+      world, registry, log, anchor, false,
+      cutum::ObjectWorldGenPlacementOptions{80, kSea});
+  FluidTest::Expect(stats.placedCount == 3, kTestName,
+                    "fallen log replaces non-solid plants above grass");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 51, 0)) == kGrass, kTestName,
+                    "grass preserved under fallen log");
+}
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillCoastalColumn(world);
+  world.SetBlock(glm::ivec3(0, 52, 0), kLeaves);
+
+  const int surface =
+      cutum::FindTopSolidSurfaceY(world, registry, 0, 0, 80);
+  FluidTest::Expect(surface == 51, kTestName,
+                    "grass surface found under non-solid plants");
+  FluidTest::Expect(
+      cutum::IsExposedLandSurface(world, registry, 0, 0, surface), kTestName,
+      "grass remains placeable with plants above");
 }
 
 static void TestResolveSurfaceLayerAnchorY()
@@ -356,6 +441,10 @@ int main()
   TestAcceptBranchColumnTree();
   TestAcceptSurfaceLayerPath();
   TestAcceptFallenLog();
+  TestRejectFallenLogOnSlope();
+  TestRejectFallenLogBesideTreeTrunk();
+  TestAcceptFallenLogOverTallGrass();
+  TestFindSurfaceUnderPlants();
   TestResolveSurfaceLayerAnchorY();
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();

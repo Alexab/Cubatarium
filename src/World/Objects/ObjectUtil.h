@@ -26,6 +26,9 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
                                  int seaLevel);
 
+bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
+                         int x, int y, int z, int maxY);
+
 bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
                         glm::ivec3 groundPos);
 bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
@@ -49,6 +52,9 @@ PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
 bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 pos);
 
+BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
+                                      const UBlockRegistry &registry);
+
 bool IsRemovableFloatingPlantBlock(const UBlockRegistry &registry, BlockId id);
 
 int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
@@ -61,10 +67,19 @@ struct ObjectPlacementStats
   int maxY{0};
 };
 
+struct ObjectWorldGenPlacementOptions
+{
+  int maxScanY{-1};
+  int seaLevel{-1};
+};
+
 ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
+                                   UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos,
-                                   bool skipOccupied);
+                                   bool skipOccupied,
+                                   const ObjectWorldGenPlacementOptions &options =
+                                       ObjectWorldGenPlacementOptions{});
 
 std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
                                                       UBlockRegistry &registry,

@@ -75,6 +75,39 @@ void UBlockRegistry::RebuildMaps()
 #endif
 }
 
+BlockId UBlockRegistry::GetPackBlockIdByTypeName(const std::string &Name) const
+{
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (MergeRegistry)
+  {
+    return MergeRegistry->LookupBlockName(Name);
+  }
+#endif
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetByName(Name))
+    {
+      return def->Id;
+    }
+  }
+  const auto it = NameToId.find(Name);
+  if (it != NameToId.end())
+  {
+    return it->second;
+  }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (Textures)
+  {
+    const size_t Id = Textures->GetTypeIdByName(Name);
+    if (Id != 0)
+    {
+      return static_cast<BlockId>(Id);
+    }
+  }
+#endif
+  return BLOCK_AIR;
+}
+
 BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 {
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY

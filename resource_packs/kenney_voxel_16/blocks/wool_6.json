@@ -1,20 +1,17 @@
-﻿{
-    "name":  "wool_6",
-    "id":  164,
-    "types":  [
-                  "decorative"
-              ],
-    "textures":  [
-                     "cloth_6",
-                     "cloth_6",
-                     "cloth_6",
-                     "cloth_6",
-                     "cloth_6",
-                     "cloth_6"
-                 ],
-    "displayName":  "Pink Wool",
-    "render":  {
-
-               }
+{
+  "name": "wool_6",
+  "id": 164,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_6",
+    "cloth_6",
+    "cloth_6",
+    "cloth_6",
+    "cloth_6",
+    "cloth_6"
+  ],
+  "displayName": "Pink Wool",
+  "render": {}
 }
-

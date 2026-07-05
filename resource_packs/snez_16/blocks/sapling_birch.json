@@ -1,19 +1,16 @@
-﻿{
-    "name":  "sapling_birch",
-    "id":  940,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "sapling_birch",
-                     "sapling_birch",
-                     "sapling_birch",
-                     "sapling_birch",
-                     "sapling_birch",
-                     "sapling_birch"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "sapling_birch",
+  "id": 940,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sapling_birch",
+    "sapling_birch",
+    "sapling_birch",
+    "sapling_birch",
+    "sapling_birch",
+    "sapling_birch"
+  ],
+  "render": {}
 }
-

@@ -8,7 +8,8 @@
     0
   ],
   "placement": {
-    "mode": "surface_layer"
+    "mode": "surface_layer",
+    "y_offset": 1
   },
   "blocks": [
     {

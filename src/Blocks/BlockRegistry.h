@@ -31,6 +31,7 @@ public:
   }
 
   BlockId GetIdByTypeName(const std::string &Name) const;
+  BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
 
   bool IsSolid(BlockId Id) const;

@@ -1,19 +1,16 @@
-﻿{
-    "name":  "stone_slab",
-    "id":  815,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "stoneslab_side",
-                     "stoneslab_side",
-                     "stoneslab_side",
-                     "stoneslab_side",
-                     "stoneslab_side",
-                     "stoneslab_side"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "stone_slab",
+  "id": 815,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side",
+    "stoneslab_side"
+  ],
+  "render": {}
 }
-

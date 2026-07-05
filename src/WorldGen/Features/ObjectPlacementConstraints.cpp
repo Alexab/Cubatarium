@@ -2,6 +2,7 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectUtil.h"
+#include "WorldGen/Core/WorldGenPlacementTuning.h"
 
 namespace cutum
 {
@@ -15,8 +16,13 @@ bool IsGrassLandSurface(const WorldGenContext &ctx, int x, int z, int surface_y)
   {
     return false;
   }
-  return ctx.World.GetBlock(glm::ivec3(x, surface_y, z)) == ctx.Blocks.Grass &&
-         ctx.World.IsAir(glm::ivec3(x, surface_y + 1, z));
+  if (ctx.World.GetBlock(glm::ivec3(x, surface_y, z)) != ctx.Blocks.Grass)
+  {
+    return false;
+  }
+  const int maxY = ComputeMaxScanY(surface_y, ctx.Settings.SeaLevel,
+                                   ctx.Settings.MaxHeight);
+  return HasOpenSurfaceAbove(ctx.World, ctx.Registry, x, surface_y, z, maxY);
 }
 
 bool IsNearSurfaceWater(const WorldGenContext &ctx, int x, int z, int surface_y,

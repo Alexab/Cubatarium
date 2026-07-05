@@ -1,5 +1,6 @@
 #include "App/ResourcePackBootstrap.h"
 
+#include <algorithm>
 #include <iostream>
 #include <unordered_set>
 
@@ -19,6 +20,75 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+bool HasPlaceholderStem(const UBlockMergeRegistry &registry,
+                        const std::string &name)
+{
+  for (const MergedCubeDesc &desc : registry.GetCubeDescriptors())
+  {
+    if (desc.Name != name)
+    {
+      continue;
+    }
+    for (const std::string &stem : desc.Stems)
+    {
+      if (stem.rfind("__ph_", 0) == 0)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
+bool ValidateMergedCatalog(const UBlockMergeRegistry &registry,
+                           const ResourcePackSelection &selection)
+{
+  if (registry.GetCubeDescriptors().empty())
+  {
+    std::cerr << "ApplyResourcePacks: zero blocks after merge" << std::endl;
+    return false;
+  }
+
+  static const char *kTierA[] = {
+      "bedrock", "stone",  "dirt",   "grass",   "sand",    "sandstone",
+      "gravel",  "snow",   "clay",   "ice",     "hellrock",  "water",
+      "lava",    "fire",   "wood",   "tree_log", "tree_bark", "tree_leaves"};
+  for (const char *name : kTierA)
+  {
+    if (registry.GetNameToId().count(name) == 0)
+    {
+      std::cerr << "ApplyResourcePacks: missing tier A block '" << name << "'"
+                << std::endl;
+      return false;
+    }
+  }
+
+  const bool minetestPrimary =
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                "minetest_default_16") != selection.Primary.end();
+  if (minetestPrimary)
+  {
+    static const char *kDecorStems[] = {"stone", "tree_bark", "tree_log"};
+    for (const char *name : kDecorStems)
+    {
+      if (HasPlaceholderStem(registry, name))
+      {
+        std::cerr << "ApplyResourcePacks: placeholder texture stem for '"
+                  << name << "'" << std::endl;
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+} // namespace
 
 void UResourcePackBootstrap::InitPlaceholderCache(UCore &core)
 {
@@ -186,6 +256,14 @@ bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
   {
     core.ObjectLibraryInstance->LoadMerged(core.ObjectsPath, packs,
                                            core.WorldInstance->GetBlockRegistry());
+    core.ObjectLibraryInstance->RebindBlockIds(
+        core.WorldInstance->GetBlockRegistry());
+    if (!core.ObjectLibraryInstance->ValidateCriticalPrefabs())
+    {
+      std::cerr << "ApplyResourcePacks: decoration prefabs failed validation"
+                << std::endl;
+      return false;
+    }
     core.WorldInstance->SetObjectLibrary(core.ObjectLibraryInstance.get());
   }
 
@@ -210,6 +288,12 @@ bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
     core.WorldInstance->SetCatalogFingerprint(
         core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
   }
+
+  if (!ValidateMergedCatalog(*core.BlockMergeRegistryInstance, selection))
+  {
+    return false;
+  }
+
   return true;
 }
 

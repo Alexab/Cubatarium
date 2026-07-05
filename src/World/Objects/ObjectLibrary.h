@@ -32,6 +32,7 @@ struct ObjectVoxel
 {
   glm::ivec3 offset;
   BlockId Id{BLOCK_AIR};
+  std::string Type;
 };
 
 struct WorldObjectDefinition
@@ -59,6 +60,8 @@ public:
   void LoadMerged(const std::filesystem::path &baseFolder,
                   const std::vector<ResourcePackManifest> &packs,
                   UBlockRegistry &registry);
+  void RebindBlockIds(UBlockRegistry &registry);
+  bool ValidateCriticalPrefabs() const;
   const WorldObjectDefinition *Get(const std::string &Name) const;
   std::vector<std::string> ListNames() const;
   std::string GetDisplayName(const std::string &Name) const;

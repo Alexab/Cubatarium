@@ -1,19 +1,16 @@
-﻿{
-    "name":  "fern",
-    "id":  370,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "fern",
-                     "fern",
-                     "fern",
-                     "fern",
-                     "fern",
-                     "fern"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "fern",
+  "id": 370,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "fern",
+    "fern",
+    "fern",
+    "fern",
+    "fern",
+    "fern"
+  ],
+  "render": {}
 }
-

@@ -497,15 +497,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetProceduralSettings(ProceduralTemplate, false);
     if (!ApplyResourcePacks(defaultPacks))
     {
-      BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
-                                          ResourcePacks.PlaceholderTileSize);
-      WorldInstance->RefreshBlockRegistry();
-      if (ObjectLibraryInstance)
-      {
-        ObjectLibraryInstance->Load(ObjectsPath.string(),
-                                    WorldInstance->GetBlockRegistry());
-        WorldInstance->SetObjectLibrary(ObjectLibraryInstance.get());
-      }
+      ResourcePacksReady = false;
+      std::cerr << "ERROR: failed to apply default resource packs at startup. "
+                << "Fix resource_packs in config or install missing packs."
+                << std::endl;
     }
     else if (auto user = WorldInstance->GetCurrentUser())
     {
@@ -980,12 +975,16 @@ std::vector<InstalledPackInfo> UCore::ListInstalledResourcePacks() const
 
 bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
 {
-  return ResourcePackBootstrap.ApplyResourcePacks(*this, enabledIds);
+  const bool ok = ResourcePackBootstrap.ApplyResourcePacks(*this, enabledIds);
+  ResourcePacksReady = ok;
+  return ok;
 }
 
 bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
 {
-  return ResourcePackBootstrap.ApplyResourcePacks(*this, selectionIn);
+  const bool ok = ResourcePackBootstrap.ApplyResourcePacks(*this, selectionIn);
+  ResourcePacksReady = ok;
+  return ok;
 }
 
 void UCore::CreateNewWorldWithSettings(

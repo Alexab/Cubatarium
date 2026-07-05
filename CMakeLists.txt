@@ -1442,6 +1442,16 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/textures")
     )
 endif()
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/objects")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/objects"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/objects"
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Syncing objects to runtime directory"
+    )
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/content")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND}

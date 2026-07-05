@@ -1,19 +1,16 @@
-﻿{
-    "name":  "redstone_lamp",
-    "id":  933,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "redstoneLight",
-                     "redstoneLight",
-                     "redstoneLight",
-                     "redstoneLight",
-                     "redstoneLight",
-                     "redstoneLight"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "redstone_lamp",
+  "id": 933,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redstoneLight",
+    "redstoneLight",
+    "redstoneLight",
+    "redstoneLight",
+    "redstoneLight",
+    "redstoneLight"
+  ],
+  "render": {}
 }
-

@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_aspen_sapling",
-    "id":  410,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_aspen_sapling_default_aspen_sapling",
-                     "mtg_aspen_sapling_default_aspen_sapling",
-                     "mtg_aspen_sapling_default_aspen_sapling",
-                     "mtg_aspen_sapling_default_aspen_sapling",
-                     "mtg_aspen_sapling_default_aspen_sapling",
-                     "mtg_aspen_sapling_default_aspen_sapling"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_aspen_sapling",
+  "id": 410,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_aspen_sapling_default_aspen_sapling",
+    "mtg_aspen_sapling_default_aspen_sapling",
+    "mtg_aspen_sapling_default_aspen_sapling",
+    "mtg_aspen_sapling_default_aspen_sapling",
+    "mtg_aspen_sapling_default_aspen_sapling",
+    "mtg_aspen_sapling_default_aspen_sapling"
+  ],
+  "render": {}
 }
-

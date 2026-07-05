@@ -1,19 +1,16 @@
-﻿{
-    "name":  "redstone_torch",
-    "id":  545,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "redtorch",
-                     "redtorch",
-                     "redtorch",
-                     "redtorch",
-                     "redtorch",
-                     "redtorch"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "redstone_torch",
+  "id": 545,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redtorch",
+    "redtorch",
+    "redtorch",
+    "redtorch",
+    "redtorch",
+    "redtorch"
+  ],
+  "render": {}
 }
-

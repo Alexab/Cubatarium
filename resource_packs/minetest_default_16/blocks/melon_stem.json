@@ -1,19 +1,16 @@
-﻿{
-    "name":  "melon_stem",
-    "id":  400,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "stem_straight",
-                     "stem_straight",
-                     "stem_straight",
-                     "stem_straight",
-                     "stem_straight",
-                     "stem_straight"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "melon_stem",
+  "id": 400,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight",
+    "stem_straight"
+  ],
+  "render": {}
 }
-

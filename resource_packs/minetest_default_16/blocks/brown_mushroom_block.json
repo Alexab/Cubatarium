@@ -1,19 +1,16 @@
-﻿{
-    "name":  "brown_mushroom_block",
-    "id":  352,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "mushroom_skin_brown",
-                     "mushroom_skin_brown",
-                     "mushroom_skin_brown",
-                     "mushroom_skin_brown",
-                     "mushroom_skin_brown",
-                     "mushroom_skin_brown"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "brown_mushroom_block",
+  "id": 352,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown",
+    "mushroom_skin_brown"
+  ],
+  "render": {}
 }
-

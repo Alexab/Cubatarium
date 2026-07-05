@@ -8,7 +8,9 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 
@@ -73,7 +75,7 @@ bool SmokeSelection(const ResourcePackSelection &selection,
   static const char *kTierA[] = {
       "bedrock", "stone",  "dirt",   "grass",   "sand",    "sandstone",
       "gravel",  "snow",   "clay",   "ice",     "hellrock",  "water",
-      "lava",    "fire",   "wood",   "tree_log", "tree_leaves"};
+      "lava",    "fire",   "wood",   "tree_log", "tree_bark", "tree_leaves"};
   for (const char *name : kTierA)
   {
     if (registry.ResolveBlockName(name) == BLOCK_AIR)
@@ -245,6 +247,63 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   {
     std::cerr << "ResourcePackSmoke: prefab blocks not bound (stone="
               << path_has_stone << ", tree_bark=" << log_has_bark << ")"
+              << std::endl;
+    return false;
+  }
+
+  auto defs_storage = std::make_shared<UBlockDefinitionStorage>();
+  registry->PopulateBlockDefinitionStorage(*defs_storage);
+  blockRegistry.SetDefinitions(defs_storage);
+  if (!blockRegistry.BlocksMovement(tree_bark_id) ||
+      !blockRegistry.BlocksMovement(stone_id))
+  {
+    std::cerr << "ResourcePackSmoke: decor blocks are not movement-solid"
+              << std::endl;
+    return false;
+  }
+  if (!objects.ValidateCriticalPrefabs())
+  {
+    return false;
+  }
+
+  UBlockWorld world;
+  for (int y = 0; y <= 47; ++y)
+  {
+    world.SetBlock(glm::ivec3(0, y, 0), stone_id);
+  }
+  world.SetBlock(glm::ivec3(0, 48, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 49, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 50, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 51, 0), stone_id);
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    world.SetBlock(glm::ivec3(dx, 51, 0), stone_id);
+  }
+  const glm::ivec3 log_anchor(0, 52, 0);
+  if (!CanPlaceObjectAtForWorldGen(world, blockRegistry, *log, log_anchor, 80,
+                                   48))
+  {
+    std::cerr << "ResourcePackSmoke: deco_log_pine rejected by worldgen placement"
+              << std::endl;
+    return false;
+  }
+  const ObjectPlacementStats log_stats =
+      PlaceObjectAt(world, blockRegistry, *log, log_anchor, false);
+  if (log_stats.placedCount != static_cast<int>(log->voxels.size()))
+  {
+    std::cerr << "ResourcePackSmoke: deco_log_pine placed " << log_stats.placedCount
+              << "/" << log->voxels.size() << " voxels" << std::endl;
+    return false;
+  }
+  if (world.GetBlock(glm::ivec3(0, 52, 0)) != tree_bark_id)
+  {
+    std::cerr << "ResourcePackSmoke: deco_log center is not tree_bark"
+              << std::endl;
+    return false;
+  }
+  if (world.GetBlock(glm::ivec3(0, 51, 0)) != stone_id)
+  {
+    std::cerr << "ResourcePackSmoke: deco_log should rest above ground surface"
               << std::endl;
     return false;
   }

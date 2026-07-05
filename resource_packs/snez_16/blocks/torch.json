@@ -1,19 +1,16 @@
-﻿{
-    "name":  "torch",
-    "id":  958,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "torch",
-                     "torch",
-                     "torch",
-                     "torch",
-                     "torch",
-                     "torch"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "torch",
+  "id": 958,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch"
+  ],
+  "render": {}
 }
-

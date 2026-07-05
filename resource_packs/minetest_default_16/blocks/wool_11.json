@@ -1,20 +1,17 @@
-﻿{
-    "name":  "wool_11",
-    "id":  584,
-    "types":  [
-                  "decorative"
-              ],
-    "textures":  [
-                     "cloth_11",
-                     "cloth_11",
-                     "cloth_11",
-                     "cloth_11",
-                     "cloth_11",
-                     "cloth_11"
-                 ],
-    "displayName":  "Blue Wool",
-    "render":  {
-
-               }
+{
+  "name": "wool_11",
+  "id": 584,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_11",
+    "cloth_11",
+    "cloth_11",
+    "cloth_11",
+    "cloth_11",
+    "cloth_11"
+  ],
+  "displayName": "Blue Wool",
+  "render": {}
 }
-

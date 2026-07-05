@@ -1,19 +1,16 @@
-﻿{
-    "name":  "flower",
-    "id":  901,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "flower",
-                     "flower",
-                     "flower",
-                     "flower",
-                     "flower",
-                     "flower"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "flower",
+  "id": 901,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "flower",
+    "flower",
+    "flower",
+    "flower",
+    "flower",
+    "flower"
+  ],
+  "render": {}
 }
-

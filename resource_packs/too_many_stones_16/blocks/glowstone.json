@@ -1,19 +1,16 @@
-﻿{
-    "name":  "glowstone",
-    "id":  978,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "lightgem",
-                     "lightgem",
-                     "lightgem",
-                     "lightgem",
-                     "lightgem",
-                     "lightgem"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "glowstone",
+  "id": 978,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem",
+    "lightgem"
+  ],
+  "render": {}
 }
-

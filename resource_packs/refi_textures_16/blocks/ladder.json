@@ -1,19 +1,16 @@
-﻿{
-    "name":  "ladder",
-    "id":  774,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "ladder",
-                     "ladder",
-                     "ladder",
-                     "ladder",
-                     "ladder",
-                     "ladder"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "ladder",
+  "id": 774,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder",
+    "ladder"
+  ],
+  "render": {}
 }
-

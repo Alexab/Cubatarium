@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_stone_with_iron",
-    "id":  509,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_stone_with_iron_composite_0",
-                     "mtg_stone_with_iron_composite_0",
-                     "mtg_stone_with_iron_composite_0",
-                     "mtg_stone_with_iron_composite_0",
-                     "mtg_stone_with_iron_composite_0",
-                     "mtg_stone_with_iron_composite_0"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_stone_with_iron",
+  "id": 509,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_iron_composite_0",
+    "mtg_stone_with_iron_composite_0",
+    "mtg_stone_with_iron_composite_0",
+    "mtg_stone_with_iron_composite_0",
+    "mtg_stone_with_iron_composite_0",
+    "mtg_stone_with_iron_composite_0"
+  ],
+  "render": {}
 }
-

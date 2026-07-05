@@ -1,20 +1,17 @@
-﻿{
-    "name":  "oreRedstone",
-    "id":  790,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "oreRedstone",
-                     "oreRedstone",
-                     "oreRedstone",
-                     "oreRedstone",
-                     "oreRedstone",
-                     "oreRedstone"
-                 ],
-    "displayName":  "Redstone Ore",
-    "render":  {
-
-               }
+{
+  "name": "oreRedstone",
+  "id": 790,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone"
+  ],
+  "displayName": "Redstone Ore",
+  "render": {}
 }
-

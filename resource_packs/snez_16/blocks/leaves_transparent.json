@@ -1,21 +1,20 @@
-﻿{
-    "name":  "leaves_transparent",
-    "id":  915,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "leaves",
-                     "leaves",
-                     "leaves",
-                     "leaves",
-                     "leaves",
-                     "leaves"
-                 ],
-    "render":  {
-                   "transparent":  true
-               },
-    "displayName":  "Leaves"
+{
+  "name": "leaves_transparent",
+  "id": 915,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Leaves"
 }
-

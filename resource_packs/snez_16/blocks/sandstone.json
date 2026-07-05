@@ -1,21 +1,18 @@
-﻿{
-    "name":  "sandstone",
-    "id":  937,
-    "types":  [
-                  "natural",
-                  "building"
-              ],
-    "textures":  [
-                     "sandstone_side",
-                     "sandstone_side",
-                     "sandstone_side",
-                     "sandstone_side",
-                     "sandstone_top",
-                     "sandstone_bottom"
-                 ],
-    "displayName":  "Sandstone",
-    "render":  {
-
-               }
+{
+  "name": "sandstone",
+  "id": 937,
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "sandstone_side",
+    "sandstone_side",
+    "sandstone_side",
+    "sandstone_side",
+    "sandstone_top",
+    "sandstone_bottom"
+  ],
+  "displayName": "Sandstone",
+  "render": {}
 }
-

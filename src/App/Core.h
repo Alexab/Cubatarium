@@ -139,6 +139,10 @@ public:
   std::vector<InstalledPackInfo> ListInstalledResourcePacks() const;
   bool ApplyResourcePacks(const std::vector<std::string> &enabledIds);
   bool ApplyResourcePacks(const ResourcePackSelection &selection);
+  bool AreResourcePacksReady() const
+  {
+    return ResourcePacksReady;
+  }
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const std::vector<std::string> &resourcePacks);
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
@@ -204,6 +208,7 @@ private:
   ResourcePackSelection PendingNewWorldPackSelection;
   std::optional<ProceduralSettings> PendingNewWorldSettings;
   ResourcePackSelection ActivePackSelection;
+  bool ResourcePacksReady{false};
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
   std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;

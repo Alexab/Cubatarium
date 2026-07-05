@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_copperblock",
-    "id":  426,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_copperblock_default_copper_block",
-                     "mtg_copperblock_default_copper_block",
-                     "mtg_copperblock_default_copper_block",
-                     "mtg_copperblock_default_copper_block",
-                     "mtg_copperblock_default_copper_block",
-                     "mtg_copperblock_default_copper_block"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_copperblock",
+  "id": 426,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block",
+    "mtg_copperblock_default_copper_block"
+  ],
+  "render": {}
 }
-

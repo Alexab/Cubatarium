@@ -114,6 +114,12 @@ void UWorldLifecycleFacade::CreateWorldFromProceduralConfig(UCore &core)
 void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
 {
   const std::string new_world_name = SetupNewWorldForCreation(core);
+  if (new_world_name.empty())
+  {
+    std::cerr << "CreateNewWorldWithCurrentSettings: aborted (resource packs)"
+              << std::endl;
+    return;
+  }
   core.WorldInstance->Create(new_world_name);
   core.WorldInstance->GenerateUsers();
   SaveWorld(core, new_world_name);
@@ -400,9 +406,12 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
 
   core.WorldInstance->SetResourcePackSelection(
       selection.Primary, selection.Secondary, selection.WorldgenOwner);
-  if (!ResourcePackSelectionEqual(selection, core.ActivePackSelection))
+  if (!core.ResourcePackBootstrap.ApplyResourcePacks(core, selection))
   {
-    core.ResourcePackBootstrap.ApplyResourcePacks(core, selection);
+    std::cerr << "ERROR: SetupNewWorldForCreation: failed to apply resource "
+                 "packs; world creation aborted."
+              << std::endl;
+    return {};
   }
 
   const std::string new_world_name = AllocateNextWorldName(core);

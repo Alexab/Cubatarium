@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_desert_sandstone_brick",
-    "id":  437,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
-                     "mtg_desert_sandstone_brick_default_desert_sandstone_brick"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_desert_sandstone_brick",
+  "id": 437,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick",
+    "mtg_desert_sandstone_brick_default_desert_sandstone_brick"
+  ],
+  "render": {}
 }
-

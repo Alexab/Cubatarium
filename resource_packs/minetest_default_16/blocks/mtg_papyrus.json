@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_papyrus",
-    "id":  478,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_papyrus_default_papyrus",
-                     "mtg_papyrus_default_papyrus",
-                     "mtg_papyrus_default_papyrus",
-                     "mtg_papyrus_default_papyrus",
-                     "mtg_papyrus_default_papyrus",
-                     "mtg_papyrus_default_papyrus"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_papyrus",
+  "id": 478,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus",
+    "mtg_papyrus_default_papyrus"
+  ],
+  "render": {}
 }
-

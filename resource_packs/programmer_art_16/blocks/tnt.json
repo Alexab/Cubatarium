@@ -1,19 +1,16 @@
-﻿{
-    "name":  "tnt",
-    "id":  701,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "tnt_side",
-                     "tnt_side",
-                     "tnt_side",
-                     "tnt_side",
-                     "tnt_top",
-                     "tnt_bottom"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "tnt",
+  "id": 701,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tnt_side",
+    "tnt_side",
+    "tnt_side",
+    "tnt_side",
+    "tnt_top",
+    "tnt_bottom"
+  ],
+  "render": {}
 }
-

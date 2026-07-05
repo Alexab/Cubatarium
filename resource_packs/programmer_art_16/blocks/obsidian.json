@@ -1,20 +1,17 @@
-﻿{
-    "name":  "obsidian",
-    "id":  662,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "obsidian",
-                     "obsidian",
-                     "obsidian",
-                     "obsidian",
-                     "obsidian",
-                     "obsidian"
-                 ],
-    "displayName":  "Obsidian",
-    "render":  {
-
-               }
+{
+  "name": "obsidian",
+  "id": 662,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "obsidian",
+    "obsidian",
+    "obsidian",
+    "obsidian",
+    "obsidian",
+    "obsidian"
+  ],
+  "displayName": "Obsidian",
+  "render": {}
 }
-

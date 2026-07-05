@@ -1,20 +1,17 @@
-﻿{
-    "name":  "hellsand",
-    "id":  769,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "hellsand",
-                     "hellsand",
-                     "hellsand",
-                     "hellsand",
-                     "hellsand",
-                     "hellsand"
-                 ],
-    "displayName":  "Soul Sand",
-    "render":  {
-
-               }
+{
+  "name": "hellsand",
+  "id": 769,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand",
+    "hellsand"
+  ],
+  "displayName": "Soul Sand",
+  "render": {}
 }
-

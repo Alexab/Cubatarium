@@ -18,7 +18,7 @@ const std::unordered_set<std::string> UBlockMergeRegistry::kTierAWorldgenNames =
     {"bedrock",  "stone",      "dirt",        "grass",      "sand",
      "sandstone", "gravel",    "snow",        "clay",       "ice",
      "hellrock", "water",      "lava",        "fire",       "wood",
-     "tree_log", "tree_leaves"};
+     "tree_log", "tree_bark",  "tree_leaves"};
 
 void UBlockMergeRegistry::Rebuild(
     const std::vector<ResourcePackManifest> &packs,
@@ -198,6 +198,17 @@ std::string UBlockMergeRegistry::ResolveStemInPack(
   return {};
 }
 
+namespace
+{
+
+std::unordered_set<std::string> &LoggedPlaceholderStems()
+{
+  static std::unordered_set<std::string> logged;
+  return logged;
+}
+
+} // namespace
+
 void UBlockMergeRegistry::ResolveTextureAtlas(
     const std::vector<ResourcePackManifest> &sorted)
 {
@@ -217,14 +228,39 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
     const ResourcePackManifest &ownerPack = packIt->second;
     for (int face = 0; face < 6; ++face)
     {
-      const std::string resolved = ResolveStemInPack(
-          pair.second.Stems[static_cast<size_t>(face)], ownerPack);
+      const std::string rawStem =
+          pair.second.Stems[static_cast<size_t>(face)];
+      std::string resolved = ResolveStemInPack(rawStem, ownerPack);
+      if (resolved.empty())
+      {
+        for (const auto &pack : sorted)
+        {
+          if (pack.Id == ownerPack.Id)
+          {
+            continue;
+          }
+          resolved = ResolveStemInPack(rawStem, pack);
+          if (!resolved.empty())
+          {
+            break;
+          }
+        }
+      }
       if (!resolved.empty())
       {
         pair.second.Stems[static_cast<size_t>(face)] = resolved;
       }
       else if (PlaceholderCache)
       {
+        const std::string logKey =
+            pair.first + ":" + std::to_string(face) + ":" + rawStem;
+        if (LoggedPlaceholderStems().insert(logKey).second)
+        {
+          std::cerr << "BlockMergeRegistry: placeholder texture stem for '"
+                    << pair.first << "' face " << face << " (owner="
+                    << pair.second.OwnerPackId << ", stem=" << rawStem << ")"
+                    << std::endl;
+        }
         pair.second.Stems[static_cast<size_t>(face)] =
             PlaceholderCache->GetOrCreateStem(pair.first, face,
                                               PlaceholderTileSize);
@@ -426,7 +462,7 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   return nextId;
 }
 
-BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
+BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
 {
   if (name.empty())
   {
@@ -455,6 +491,16 @@ BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
     {
       return localIt->second;
     }
+  }
+  return BLOCK_AIR;
+}
+
+BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
+{
+  const BlockId existing = LookupBlockName(name);
+  if (existing != BLOCK_AIR)
+  {
+    return existing;
   }
   return CreateSyntheticBlock(name);
 }

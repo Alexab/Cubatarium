@@ -1,20 +1,17 @@
-﻿{
-    "name":  "stonebricksmooth_mossy",
-    "id":  1003,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "stonebricksmooth_mossy",
-                     "stonebricksmooth_mossy",
-                     "stonebricksmooth_mossy",
-                     "stonebricksmooth_mossy",
-                     "stonebricksmooth_mossy",
-                     "stonebricksmooth_mossy"
-                 ],
-    "displayName":  "Mossy Stone Bricks",
-    "render":  {
-
-               }
+{
+  "name": "stonebricksmooth_mossy",
+  "id": 1003,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "stonebricksmooth_mossy",
+    "stonebricksmooth_mossy",
+    "stonebricksmooth_mossy",
+    "stonebricksmooth_mossy",
+    "stonebricksmooth_mossy",
+    "stonebricksmooth_mossy"
+  ],
+  "displayName": "Mossy Stone Bricks",
+  "render": {}
 }
-

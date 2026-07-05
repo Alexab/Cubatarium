@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_pine_bush_needles",
-    "id":  482,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_pine_bush_needles_default_pine_needles",
-                     "mtg_pine_bush_needles_default_pine_needles",
-                     "mtg_pine_bush_needles_default_pine_needles",
-                     "mtg_pine_bush_needles_default_pine_needles",
-                     "mtg_pine_bush_needles_default_pine_needles",
-                     "mtg_pine_bush_needles_default_pine_needles"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_pine_bush_needles",
+  "id": 482,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_bush_needles_default_pine_needles",
+    "mtg_pine_bush_needles_default_pine_needles",
+    "mtg_pine_bush_needles_default_pine_needles",
+    "mtg_pine_bush_needles_default_pine_needles",
+    "mtg_pine_bush_needles_default_pine_needles",
+    "mtg_pine_bush_needles_default_pine_needles"
+  ],
+  "render": {}
 }
-

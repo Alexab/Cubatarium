@@ -1,19 +1,16 @@
-﻿{
-    "name":  "red_mushroom",
-    "id":  930,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "red_mushroom",
+  "id": 930,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red"
+  ],
+  "render": {}
 }
-

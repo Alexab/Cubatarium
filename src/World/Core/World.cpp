@@ -821,7 +821,7 @@ bool UWorld::PlaceObject(const std::string &prefab_name,
   }
 
   const ObjectPlacementStats stats =
-      PlaceObjectAt(BlockWorld, *prefab, anchorWorldPos, true);
+      PlaceObjectAt(BlockWorld, *BlockRegistry, *prefab, anchorWorldPos, true);
   if (stats.placedCount == 0)
   {
     return false;
@@ -829,7 +829,9 @@ bool UWorld::PlaceObject(const std::string &prefab_name,
   for (const auto &voxel : prefab->voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-    if (BlockWorld.GetBlock(worldPos) == voxel.Id)
+    const BlockId blockId =
+        ResolveObjectVoxelPlacementId(voxel, *BlockRegistry);
+    if (BlockWorld.GetBlock(worldPos) == blockId)
     {
       MarkBlockChunkDirty(worldPos);
     }

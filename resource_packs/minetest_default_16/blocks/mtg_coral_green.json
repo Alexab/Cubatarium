@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_coral_green",
-    "id":  429,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_coral_green_default_coral_skeleton",
-                     "mtg_coral_green_default_coral_skeleton",
-                     "mtg_coral_green_default_coral_skeleton",
-                     "mtg_coral_green_default_coral_skeleton",
-                     "mtg_coral_green_default_coral_skeleton",
-                     "mtg_coral_green_default_coral_skeleton"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_coral_green",
+  "id": 429,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coral_green_default_coral_skeleton",
+    "mtg_coral_green_default_coral_skeleton",
+    "mtg_coral_green_default_coral_skeleton",
+    "mtg_coral_green_default_coral_skeleton",
+    "mtg_coral_green_default_coral_skeleton",
+    "mtg_coral_green_default_coral_skeleton"
+  ],
+  "render": {}
 }
-

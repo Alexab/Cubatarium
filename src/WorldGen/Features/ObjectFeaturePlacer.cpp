@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -135,7 +136,7 @@ bool PlaceObjectAtWaterSurface(WorldGenContext &ctx, const std::string &prefabNa
     return false;
   }
   const ObjectPlacementStats stats =
-      PlaceObjectAt(ctx.World, *prefab, anchorWorldPos, false);
+      PlaceObjectAt(ctx.World, ctx.Registry, *prefab, anchorWorldPos, false);
   if (stats.placedCount == 0)
   {
     return false;
@@ -311,6 +312,15 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     else if (!ctx.Objects->Get(rule.ObjectName))
     {
+      if (pool == ObjectFeaturePool::Decoration)
+      {
+        static std::unordered_set<std::string> warnedMissingDecor;
+        if (warnedMissingDecor.insert(rule.ObjectName).second)
+        {
+          std::cerr << "ObjectFeaturePlacer: missing decoration prefab '"
+                    << rule.ObjectName << "'" << std::endl;
+        }
+      }
       continue;
     }
     const uint32_t h = FeatureHash(x, z, seed + rule.SeedOffset);
@@ -459,8 +469,9 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  const ObjectPlacementStats stats =
-      PlaceObjectAt(ctx.World, *prefab, anchorWorldPos, false);
+  const ObjectPlacementStats stats = PlaceObjectAt(
+      ctx.World, ctx.Registry, *prefab, anchorWorldPos, false,
+      ObjectWorldGenPlacementOptions{maxScanY, ctx.Settings.SeaLevel});
   if (stats.placedCount == 0)
   {
     return false;

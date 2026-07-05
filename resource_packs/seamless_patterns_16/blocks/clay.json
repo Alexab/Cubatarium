@@ -1,20 +1,17 @@
-﻿{
-    "name":  "clay",
-    "id":  854,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "clay",
-                     "clay",
-                     "clay",
-                     "clay",
-                     "clay",
-                     "clay"
-                 ],
-    "displayName":  "Clay",
-    "render":  {
-
-               }
+{
+  "name": "clay",
+  "id": 854,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay"
+  ],
+  "displayName": "Clay",
+  "render": {}
 }
-
