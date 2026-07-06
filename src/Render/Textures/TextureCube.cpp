@@ -6,8 +6,8 @@
 // #include <QFile>
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Render/GlIncludes.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "ThirdParty/stb_image.h"
 #include <cstring>
 #include <filesystem>
@@ -164,8 +164,26 @@ void UTextureCubeStorage::BuildFromDescriptors(
     const std::vector<MergedCubeDesc> &descriptors)
 {
   Clear();
-  for (const auto &desc : descriptors)
+  PatchDescriptors(descriptors);
+}
+
+void UTextureCubeStorage::PatchDescriptors(
+    const std::vector<MergedCubeDesc> &descriptors)
+{
+  for (const MergedCubeDesc &desc : descriptors)
   {
+    const size_t typeId = static_cast<size_t>(desc.Id);
+    if (const auto existing = Textures.find(typeId); existing != Textures.end())
+    {
+      const GLuint tex = existing->second.GetTexture();
+      if (tex != 0)
+      {
+        glDeleteTextures(1, &tex);
+      }
+      TexturesNames.erase(existing->second.GetName());
+      Textures.erase(existing);
+    }
+
     std::vector<std::string> stems(desc.Stems.begin(), desc.Stems.end());
     int stripFrames = 0;
     if (BlockDefinitions)
@@ -183,9 +201,29 @@ void UTextureCubeStorage::BuildFromDescriptors(
       stripFrames = desc.AnimFrames;
     }
     UTextureCube cube =
-        CreateCubeTexture(desc.Name, static_cast<size_t>(desc.Id), stems,
-                          stripFrames);
+        CreateCubeTexture(desc.Name, typeId, stems, stripFrames);
     Textures[cube.GetTypeId()] = cube;
+  }
+}
+
+void UTextureCubeStorage::RemoveCubeDescriptors(
+    const std::vector<BlockId> &blockIds)
+{
+  for (const BlockId blockId : blockIds)
+  {
+    const size_t typeId = static_cast<size_t>(blockId);
+    const auto it = Textures.find(typeId);
+    if (it == Textures.end())
+    {
+      continue;
+    }
+    const GLuint tex = it->second.GetTexture();
+    if (tex != 0)
+    {
+      glDeleteTextures(1, &tex);
+    }
+    TexturesNames.erase(it->second.GetName());
+    Textures.erase(it);
   }
 }
 
@@ -219,9 +257,8 @@ LoadedStem LoadStemRgba(const UTextureBase &base)
     return out;
   }
   int channels = 0;
-  unsigned char *data =
-      stbi_load(base.GetFileName().c_str(), &out.Width, &out.Height, &channels,
-                4);
+  unsigned char *data = stbi_load(base.GetFileName().c_str(), &out.Width,
+                                  &out.Height, &channels, 4);
   if (!data)
   {
     return out;

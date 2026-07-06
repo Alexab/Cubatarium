@@ -7,6 +7,7 @@
 #include <vector>
 typedef unsigned int GLuint;
 #include "Render/Textures/TextureBase.h"
+#include "World/Math/BlockTypes.h"
 
 namespace cutum
 {
@@ -57,6 +58,8 @@ public:
   void Load(const std::string &textures_path);
   void Clear();
   void BuildFromDescriptors(const std::vector<MergedCubeDesc> &descriptors);
+  void PatchDescriptors(const std::vector<MergedCubeDesc> &descriptors);
+  void RemoveCubeDescriptors(const std::vector<BlockId> &blockIds);
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
   size_t GetTypeIdByName(const std::string &Name) const;

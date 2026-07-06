@@ -2,6 +2,7 @@
 #define RESOURCEPACKBOOTSTRAP_H
 
 #include "Blocks/BlockDefinition.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/ResourcePack.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <array>
@@ -19,12 +20,15 @@ class UResourcePackBootstrap
 public:
   void InitPlaceholderCache(UCore &core);
 
-  bool ApplyResourcePacks(UCore &core, const std::vector<std::string> &enabledIds);
+  bool ApplyResourcePacks(UCore &core,
+                          const std::vector<std::string> &enabledIds);
   bool ApplyResourcePacks(UCore &core, const ResourcePackSelection &selection);
   void ApplyResourcePacksAfterWorldDataLoaded(UCore &core);
   void ReloadCreatureCatalog(UCore &core,
                              const std::vector<ResourcePackManifest> &packs);
   void RebuildBlockTexturesFromMergeRegistry(UCore &core);
+  void PatchRuntimeBlockTextures(UCore &core,
+                                 const RuntimeOverlayFlushResult &flush);
 
   bool RegisterRuntimeBlock(UCore &core, const BlockDefinition &def,
                             const std::array<std::string, 6> &textureStems);

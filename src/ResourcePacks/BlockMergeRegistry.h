@@ -25,6 +25,12 @@ struct MergedCubeDesc
   int AnimFrames{1};
 };
 
+struct RuntimeOverlayFlushResult
+{
+  std::vector<MergedCubeDesc> PatchedDescriptors;
+  std::vector<BlockId> RemovedBlockIds;
+};
+
 class UBlockMergeRegistry
 {
 public:
@@ -56,8 +62,12 @@ public:
 
   BlockId RegisterRuntimeBlock(const BlockDefinition &def,
                                const std::array<std::string, 6> &stems);
-  void FlushRuntimeOverlay();
+  RuntimeOverlayFlushResult FlushRuntimeOverlay();
   void UnregisterRuntimeBlock(const std::string &name);
+
+  void RegisterMissingTextureStems(
+      UTextureBaseStorage &out,
+      const std::vector<MergedCubeDesc> &descriptors) const;
 
   void PopulateBlockDefinitionStorage(UBlockDefinitionStorage &out) const;
   void PopulateTextureBaseStorage(UTextureBaseStorage &out) const;
@@ -111,6 +121,7 @@ private:
   std::vector<MergedCubeDesc> CubeDescs;
   std::vector<std::pair<BlockDefinition, std::array<std::string, 6>>>
       RuntimeOverlay;
+  std::unordered_set<std::string> RuntimeOverlayRemoved;
   bool RuntimeOverlayDirty{false};
   std::shared_ptr<UPlaceholderTextureCache> PlaceholderCache;
   int PlaceholderTileSize{16};

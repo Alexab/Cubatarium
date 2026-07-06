@@ -55,9 +55,9 @@ bool ValidateMergedCatalog(const UBlockMergeRegistry &registry,
   }
 
   static const char *kTierA[] = {
-      "bedrock", "stone",  "dirt",   "grass",   "sand",    "sandstone",
-      "gravel",  "snow",   "clay",   "ice",     "hellrock",  "water",
-      "lava",    "fire",   "wood",   "tree_log", "tree_bark", "tree_leaves"};
+      "bedrock", "stone", "dirt", "grass",    "sand",      "sandstone",
+      "gravel",  "snow",  "clay", "ice",      "hellrock",  "water",
+      "lava",    "fire",  "wood", "tree_log", "tree_bark", "tree_leaves"};
   for (const char *name : kTierA)
   {
     if (registry.GetNameToId().count(name) == 0)
@@ -95,8 +95,9 @@ void UResourcePackBootstrap::InitPlaceholderCache(UCore &core)
   const glm::vec3 bg = ParseHexColor(core.ResourcePacks.PlaceholderBackground,
                                      glm::vec3(0.42f, 0.29f, 0.62f));
   core.PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
-      core.ExeDir / ".placeholder_cache", core.ResourcePacks.PlaceholderTileSize,
-      bg, static_cast<size_t>(core.ResourcePacks.PlaceholderCacheMaxEntries));
+      core.ExeDir / ".placeholder_cache",
+      core.ResourcePacks.PlaceholderTileSize, bg,
+      static_cast<size_t>(core.ResourcePacks.PlaceholderCacheMaxEntries));
 }
 
 void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
@@ -122,6 +123,42 @@ void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
       core.BlockMergeRegistryInstance->GetCubeDescriptors());
 }
 
+void UResourcePackBootstrap::PatchRuntimeBlockTextures(
+    UCore &core, const RuntimeOverlayFlushResult &flush)
+{
+  if (!core.BlockMergeRegistryInstance || !core.BlockDefinitionsInstance ||
+      !core.TextureBaseStorageInstance || !core.TextureCubeStorageInstance)
+  {
+    return;
+  }
+  if (flush.PatchedDescriptors.empty() && flush.RemovedBlockIds.empty())
+  {
+    return;
+  }
+  if (core.WorldInstance)
+  {
+    core.WorldInstance->WaitForPendingMeshJobs();
+  }
+  core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
+      *core.BlockDefinitionsInstance);
+  if (!flush.PatchedDescriptors.empty())
+  {
+    core.BlockMergeRegistryInstance->RegisterMissingTextureStems(
+        *core.TextureBaseStorageInstance, flush.PatchedDescriptors);
+  }
+  core.TextureCubeStorageInstance->SetBlockDefinitions(
+      core.BlockDefinitionsInstance);
+  if (!flush.RemovedBlockIds.empty())
+  {
+    core.TextureCubeStorageInstance->RemoveCubeDescriptors(
+        flush.RemovedBlockIds);
+  }
+  if (!flush.PatchedDescriptors.empty())
+  {
+    core.TextureCubeStorageInstance->PatchDescriptors(flush.PatchedDescriptors);
+  }
+}
+
 bool UResourcePackBootstrap::RegisterRuntimeBlock(
     UCore &core, const BlockDefinition &def,
     const std::array<std::string, 6> &textureStems)
@@ -139,7 +176,8 @@ bool UResourcePackBootstrap::RegisterRuntimeBlock(
   {
     return false;
   }
-  const BlockId resolved = core.BlockMergeRegistryInstance->ResolveName(def.Name);
+  const BlockId resolved =
+      core.BlockMergeRegistryInstance->ResolveName(def.Name);
   if (resolved == BLOCK_AIR)
   {
     return false;
@@ -165,9 +203,10 @@ void UResourcePackBootstrap::FlushRuntimeBlockOverlay(UCore &core)
   {
     return;
   }
-  core.BlockMergeRegistryInstance->FlushRuntimeOverlay();
+  const RuntimeOverlayFlushResult flush =
+      core.BlockMergeRegistryInstance->FlushRuntimeOverlay();
   core.RuntimeBlockFlushPending = false;
-  RebuildBlockTexturesFromMergeRegistry(core);
+  PatchRuntimeBlockTextures(core, flush);
   if (core.WorldInstance)
   {
     core.WorldInstance->OnBlockRegistryRuntimeOverlayChanged();
@@ -217,8 +256,8 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
   return ApplyResourcePacks(core, selection);
 }
 
-bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
-                                                const ResourcePackSelection &selectionIn)
+bool UResourcePackBootstrap::ApplyResourcePacks(
+    UCore &core, const ResourcePackSelection &selectionIn)
 {
   if (!core.BlockMergeRegistryInstance)
   {
@@ -246,16 +285,18 @@ bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
   }
 
   core.BlockMergeRegistryInstance->SetPrimaryPackIds(selection.Primary);
-  core.BlockMergeRegistryInstance->SetWorldgenOwnerPackId(selection.WorldgenOwner);
-  core.BlockMergeRegistryInstance->Rebuild(packs, core.PlaceholderCacheInstance,
-                                           core.ResourcePacks.PlaceholderTileSize);
+  core.BlockMergeRegistryInstance->SetWorldgenOwnerPackId(
+      selection.WorldgenOwner);
+  core.BlockMergeRegistryInstance->Rebuild(
+      packs, core.PlaceholderCacheInstance,
+      core.ResourcePacks.PlaceholderTileSize);
   core.ActivePackSelection = selection;
   core.ActiveResourcePacksEnabled = selection.AllIds();
 
   if (core.ObjectLibraryInstance && core.WorldInstance)
   {
-    core.ObjectLibraryInstance->LoadMerged(core.ObjectsPath, packs,
-                                           core.WorldInstance->GetBlockRegistry());
+    core.ObjectLibraryInstance->LoadMerged(
+        core.ObjectsPath, packs, core.WorldInstance->GetBlockRegistry());
     core.ObjectLibraryInstance->RebindBlockIds(
         core.WorldInstance->GetBlockRegistry());
     if (!core.ObjectLibraryInstance->ValidateCriticalPrefabs())
@@ -274,7 +315,8 @@ bool UResourcePackBootstrap::ApplyResourcePacks(UCore &core,
   {
     std::cout << " [" << p.Id << "]";
   }
-  std::cout << " (" << core.BlockMergeRegistryInstance->GetCubeDescriptors().size()
+  std::cout << " ("
+            << core.BlockMergeRegistryInstance->GetCubeDescriptors().size()
             << " block types)" << std::endl;
 
   if (core.WorldInstance)
@@ -333,7 +375,8 @@ void UResourcePackBootstrap::ApplyResourcePacksAfterWorldDataLoaded(UCore &core)
     core.WorldInstance->SetResourcePackSelection(
         selection.Primary, selection.Secondary, selection.WorldgenOwner);
   }
-  const std::string storedFingerprint = core.WorldInstance->GetCatalogFingerprint();
+  const std::string storedFingerprint =
+      core.WorldInstance->GetCatalogFingerprint();
   ApplyResourcePacks(core, selection);
   if (core.BlockMergeRegistryInstance && !storedFingerprint.empty())
   {
