@@ -1,9 +1,11 @@
 #ifndef VIEWENGINE_H
 #define VIEWENGINE_H
 
-#include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/Camera.h"
 #include <chrono>
+#include <cstdint>
+#include <map>
+#include <memory>
 
 namespace cutum
 {

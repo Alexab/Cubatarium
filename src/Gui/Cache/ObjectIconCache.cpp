@@ -1,4 +1,5 @@
 #include "Gui/Cache/ObjectIconCache.h"
+#include "Gui/Cache/GuiOffscreenIconCacheBase.h"
 #include "Gui/Preview/ObjectPreviewLayout.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
@@ -76,22 +77,8 @@ bool UObjectIconCache::Initialize()
 
 void UObjectIconCache::Shutdown()
 {
-  for (const auto &entry : Cache)
-  {
-    if (entry.second != 0 && entry.second != ColorTex)
-    {
-      glDeleteTextures(1, &entry.second);
-    }
-  }
-  for (const auto &entry : BlockCache)
-  {
-    if (entry.second != 0 && entry.second != ColorTex)
-    {
-      glDeleteTextures(1, &entry.second);
-    }
-  }
-  Cache.clear();
-  BlockCache.clear();
+  UGuiOffscreenIconCacheBase::DeleteGlTextures(Cache, ColorTex);
+  UGuiOffscreenIconCacheBase::DeleteGlTextures(BlockCache, ColorTex);
 
   if (DepthRbo != 0)
   {
@@ -302,14 +289,7 @@ GLuint UObjectIconCache::GetBlockTexture(BlockId blockId) const
 
 void UObjectIconCache::ClearBlockIconCache()
 {
-  for (const auto &entry : BlockCache)
-  {
-    if (entry.second != 0 && entry.second != ColorTex)
-    {
-      glDeleteTextures(1, &entry.second);
-    }
-  }
-  BlockCache.clear();
+  UGuiOffscreenIconCacheBase::DeleteGlTextures(BlockCache, ColorTex);
 }
 
 GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)

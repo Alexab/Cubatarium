@@ -1,5 +1,6 @@
 #include "Gui/Widgets/GuiListView.h"
 #include "Gui/Core/GuiFocus.h"
+#include "Gui/Core/GuiListScrollMixin.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
@@ -78,10 +79,7 @@ void UGuiListView::UpdateLayout(const GuiRect &parentClientArea)
   ApplyMinimumBounds();
 }
 
-int UGuiListView::GetPreferredHeight() const
-{
-  return MinHeight();
-}
+int UGuiListView::GetPreferredHeight() const { return MinHeight(); }
 
 bool UGuiListView::ConsumesScrollDragAt(int x, int y) const
 {
@@ -132,12 +130,12 @@ int UGuiListView::ContentHeight() const
 
 int UGuiListView::MaxScrollY() const
 {
-  return std::max(0, ContentHeight() - Bounds.H);
+  return GuiListScrollMixin::MaxScrollY(ContentHeight(), Bounds.H);
 }
 
 void UGuiListView::ClampScroll()
 {
-  ScrollOffsetPx = std::clamp(ScrollOffsetPx, 0, MaxScrollY());
+  GuiListScrollMixin::ClampScroll(ScrollOffsetPx, MaxScrollY());
 }
 
 void UGuiListView::ScrollToEnd()
@@ -154,14 +152,8 @@ void UGuiListView::EnsureSelectedVisible()
   }
   const int rowTop = SelectedIndex * RowHeight;
   const int rowBottom = rowTop + RowHeight;
-  if (rowTop < ScrollOffsetPx)
-  {
-    ScrollOffsetPx = rowTop;
-  }
-  else if (rowBottom > ScrollOffsetPx + Bounds.H)
-  {
-    ScrollOffsetPx = rowBottom - Bounds.H;
-  }
+  GuiListScrollMixin::ScrollRowIntoView(rowTop, rowBottom, Bounds.H,
+                                        ScrollOffsetPx);
   ClampScroll();
 }
 
@@ -185,12 +177,8 @@ void UGuiListView::ApplySelectionScrollPolicy()
 
 GuiRect UGuiListView::ScrollbarTrackRect() const
 {
-  if (MaxScrollY() <= 0)
-  {
-    return {0, 0, 0, 0};
-  }
-  return {Bounds.X + Bounds.W - ScrollbarWidthPx(), Bounds.Y, ScrollbarWidthPx(),
-          Bounds.H};
+  return GuiListScrollMixin::ScrollbarTrackRect(Bounds, ScrollbarWidthPx(),
+                                                MaxScrollY());
 }
 
 GuiRect UGuiListView::ScrollbarThumbRect() const

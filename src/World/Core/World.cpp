@@ -19,7 +19,6 @@
 #include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/ViewEngine.h"
-#include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"

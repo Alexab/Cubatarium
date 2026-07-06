@@ -1,4 +1,5 @@
 #include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/GuiOffscreenIconCacheBase.h"
 
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -55,15 +56,7 @@ bool UCreatureIconCache::Initialize()
 
 void UCreatureIconCache::ClearRenderedIcons()
 {
-  for (const auto &entry : SpeciesCache)
-  {
-    GLuint tex = entry.second;
-    if (tex == 0)
-    {
-      continue;
-    }
-    glDeleteTextures(1, &tex);
-  }
+  UGuiOffscreenIconCacheBase::DeleteGlTextures(SpeciesCache);
   for (const auto &entry : SkinCache)
   {
     GLuint tex = entry.second;
@@ -73,8 +66,8 @@ void UCreatureIconCache::ClearRenderedIcons()
     }
     if (Preview && Preview->GetTextures())
     {
-      const GLuint diffuse =
-          Preview->GetTextures()->GetTexture("skin/" + entry.first + "/diffuse");
+      const GLuint diffuse = Preview->GetTextures()->GetTexture(
+          "skin/" + entry.first + "/diffuse");
       if (tex == diffuse)
       {
         continue;
@@ -116,13 +109,7 @@ void UCreatureIconCache::ClearRenderedIcons()
 
 void UCreatureIconCache::Shutdown()
 {
-  for (const auto &entry : SpeciesCache)
-  {
-    if (entry.second != 0)
-    {
-      glDeleteTextures(1, &entry.second);
-    }
-  }
+  UGuiOffscreenIconCacheBase::DeleteGlTextures(SpeciesCache);
   for (const auto &entry : SkinCache)
   {
     if (entry.second == 0)
@@ -131,8 +118,8 @@ void UCreatureIconCache::Shutdown()
     }
     if (Preview && Preview->GetTextures())
     {
-      const GLuint diffuse =
-          Preview->GetTextures()->GetTexture("skin/" + entry.first + "/diffuse");
+      const GLuint diffuse = Preview->GetTextures()->GetTexture(
+          "skin/" + entry.first + "/diffuse");
       if (entry.second == diffuse)
       {
         continue;
@@ -162,8 +149,8 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     return direct;
   }
 
-  GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize, kIconYaw,
-                                              kIconPitch);
+  GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize,
+                                              kIconYaw, kIconPitch);
   if (tex == 0)
   {
     glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
@@ -211,9 +198,8 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
       color = def->iconFallbackColor;
     }
   }
-  const GLuint tex =
-      Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b,
-                                       color.a);
+  const GLuint tex = Preview->CreateSolidColorTexture(
+      kIconSize, color.r, color.g, color.b, color.a);
   SkinCache[skinId] = tex;
   return tex;
 }
