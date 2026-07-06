@@ -127,9 +127,19 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     PresetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
   }
-  if (WorldGenPackIdInput)
+  if (WorldGenPackList)
   {
-    WorldGenPackIdInput->SetText(FormSettings.WorldGenPackId);
+    int selected = 0;
+    for (size_t i = 0; i < PackInfos.size(); ++i)
+    {
+      if (PackInfos[i].Id == FormSettings.WorldGenPackId)
+      {
+        selected = static_cast<int>(i);
+        break;
+      }
+    }
+    WorldGenPackList->SetSelectedIndex(selected);
+    RefreshWorldGenPackDescription();
   }
   if (SeedInput)
   {
@@ -280,12 +290,12 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
 ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
 {
   ProceduralSettings s = FormSettings;
-  if (WorldGenPackIdInput)
+  if (WorldGenPackList && !PackInfos.empty())
   {
-    const std::string packId = WorldGenPackIdInput->GetText();
-    if (!packId.empty())
+    const int selected = WorldGenPackList->GetSelectedIndex();
+    if (selected >= 0 && selected < static_cast<int>(PackInfos.size()))
     {
-      s.WorldGenPackId = packId;
+      s.WorldGenPackId = PackInfos[static_cast<size_t>(selected)].Id;
     }
   }
   if (SeedInput)
@@ -452,6 +462,39 @@ void UWorldGenSettingsForm::OnGeneratorSelected(int index)
   SetSettings(FormSettings);
 }
 
+void UWorldGenSettingsForm::OnWorldGenPackSelected(int index)
+{
+  if (index < 0 || index >= static_cast<int>(PackInfos.size()))
+  {
+    return;
+  }
+  FormSettings.WorldGenPackId = PackInfos[static_cast<size_t>(index)].Id;
+  RefreshWorldGenPackDescription();
+}
+
+void UWorldGenSettingsForm::RefreshWorldGenPackDescription()
+{
+  if (!WorldGenPackDescLabel || !WorldGenPackList)
+  {
+    return;
+  }
+  const int index = WorldGenPackList->GetSelectedIndex();
+  if (index < 0 || index >= static_cast<int>(PackInfos.size()))
+  {
+    WorldGenPackDescLabel->SetText("");
+    return;
+  }
+  const WorldGenPackInfo &info = PackInfos[static_cast<size_t>(index)];
+  if (!info.Description.empty())
+  {
+    WorldGenPackDescLabel->SetText(info.Description);
+  }
+  else
+  {
+    WorldGenPackDescLabel->SetText("Pack: " + info.Id);
+  }
+}
+
 void UWorldGenSettingsForm::RefreshGeneratorDescription()
 {
   if (!GeneratorDescLabel)
@@ -509,7 +552,8 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(BiomeTundraLabel, showBiomeTuning);
   SetWidgetVisible(BiomeTundraInput, showBiomeTuning);
   SetWidgetVisible(WorldGenPackIdLabel, showBiomeTuning);
-  SetWidgetVisible(WorldGenPackIdInput, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackList, showBiomeTuning);
+  SetWidgetVisible(WorldGenPackDescLabel, showBiomeTuning);
   SetWidgetVisible(BiomeBlendLabel, showBiomeTuning);
   SetWidgetVisible(BiomeBlendInput, showBiomeTuning);
   SetWidgetVisible(TerrainErosionLabel, showBiomeTuning);
@@ -836,13 +880,43 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
 
-  auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack id:");
+  auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack:");
   WorldGenPackIdLabel = packLabel.get();
   panel.AddChild(std::move(packLabel));
-  auto packIn = std::make_unique<UGuiTextInput>(Theme);
-  WorldGenPackIdInput = packIn.get();
-  packIn->SetText(FormSettings.WorldGenPackId);
-  panel.AddChild(std::move(packIn));
+  PackInfos = UWorldGenPack::ListPackInfos();
+  std::vector<std::string> pack_items;
+  pack_items.reserve(PackInfos.size());
+  for (const WorldGenPackInfo &info : PackInfos)
+  {
+    pack_items.push_back(info.Id);
+  }
+  if (pack_items.empty())
+  {
+    pack_items.push_back(FormSettings.WorldGenPackId.empty() ? "default"
+                                                             : FormSettings.WorldGenPackId);
+    PackInfos.push_back({pack_items.front(), ""});
+  }
+  auto packList = std::make_unique<UGuiListView>(Theme);
+  WorldGenPackList = packList.get();
+  packList->SetItems(std::move(pack_items));
+  packList->SetVisibleRowCount(3);
+  int pack_selected = 0;
+  for (size_t i = 0; i < PackInfos.size(); ++i)
+  {
+    if (PackInfos[i].Id == FormSettings.WorldGenPackId)
+    {
+      pack_selected = static_cast<int>(i);
+      break;
+    }
+  }
+  packList->SetSelectedIndex(pack_selected);
+  packList->SetOnSelectionChanged(
+      [this](int index) { OnWorldGenPackSelected(index); });
+  panel.AddChild(std::move(packList));
+  auto packDesc = std::make_unique<UGuiLabel>(Theme, "");
+  WorldGenPackDescLabel = packDesc.get();
+  panel.AddChild(std::move(packDesc));
+  RefreshWorldGenPackDescription();
 }
 
 std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
@@ -907,8 +981,9 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({WaterBox, 29, 0, 1, 1, 30});
   items.push_back({LavaBox, 29, 1, 1, 1, 30});
   items.push_back({FireBox, 30, 0, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 30, 1, 1, 1, 28});
-  items.push_back({WorldGenPackIdInput, 31, 0, 1, 2, 32});
+  items.push_back({WorldGenPackIdLabel, 30, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 30, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 31, 0, 1, 2, 36});
   return items;
 }
 

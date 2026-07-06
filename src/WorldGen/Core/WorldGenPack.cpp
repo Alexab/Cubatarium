@@ -576,6 +576,46 @@ std::vector<std::string> UWorldGenPack::ListPackIds()
   return ids;
 }
 
+std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
+{
+  std::vector<WorldGenPackInfo> infos;
+  const std::filesystem::path root("content/worldgen_packs");
+  if (!std::filesystem::exists(root))
+  {
+    return infos;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(root))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::filesystem::path packJson = entry.path() / "pack.json";
+    if (!std::filesystem::exists(packJson))
+    {
+      continue;
+    }
+    try
+    {
+      std::ifstream file(packJson);
+      const nlohmann::json rootJson = nlohmann::json::parse(file);
+      WorldGenPackInfo info;
+      info.Id = rootJson.value("id", entry.path().filename().string());
+      info.Description = rootJson.value("description", std::string{});
+      infos.push_back(std::move(info));
+    }
+    catch (const std::exception &ex)
+    {
+      std::cerr << "WorldGenPack: failed to read " << packJson.string() << ": "
+                << ex.what() << std::endl;
+    }
+  }
+  std::sort(infos.begin(), infos.end(),
+            [](const WorldGenPackInfo &a, const WorldGenPackInfo &b)
+            { return a.Id < b.Id; });
+  return infos;
+}
+
 const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
 
 const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height; }

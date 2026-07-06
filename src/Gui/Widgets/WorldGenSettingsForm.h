@@ -3,6 +3,7 @@
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -35,7 +36,9 @@ public:
 private:
   void AddWidgetsTo(UGuiPanel &panel);
   void OnGeneratorSelected(int index);
+  void OnWorldGenPackSelected(int index);
   void RefreshGeneratorDescription();
+  void RefreshWorldGenPackDescription();
   void UpdateFieldVisibility();
 
   const GuiTheme *Theme;
@@ -51,6 +54,9 @@ private:
   UGuiListView *GeneratorList{nullptr};
   UGuiListView *PresetList{nullptr};
   UGuiLabel *WorldGenPackIdLabel{nullptr};
+  UGuiLabel *WorldGenPackDescLabel{nullptr};
+  UGuiListView *WorldGenPackList{nullptr};
+  std::vector<WorldGenPackInfo> PackInfos;
   UGuiLabel *SeedLabel{nullptr};
   UGuiLabel *SeaLevelLabel{nullptr};
   UGuiLabel *MaxHeightLabel{nullptr};
@@ -73,7 +79,6 @@ private:
   UGuiLabel *CaveMaxDepthLabel{nullptr};
   UGuiLabel *CaveStyleLabel{nullptr};
   UGuiLabel *BedrockTopYLabel{nullptr};
-  UGuiTextInput *WorldGenPackIdInput{nullptr};
   UGuiTextInput *SeedInput{nullptr};
   UGuiTextInput *SeaLevelInput{nullptr};
   UGuiTextInput *MaxHeightInput{nullptr};

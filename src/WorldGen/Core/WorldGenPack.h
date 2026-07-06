@@ -87,6 +87,12 @@ struct WorldGenPackPipeline
   std::vector<WorldGenStageId> StageOrder;
 };
 
+struct WorldGenPackInfo
+{
+  std::string Id;
+  std::string Description;
+};
+
 struct WorldGenPack
 {
   std::string Id{"default"};
@@ -107,6 +113,7 @@ public:
   static bool LoadPackId(const std::string &packId);
   static bool ReloadActive();
   static std::vector<std::string> ListPackIds();
+  static std::vector<WorldGenPackInfo> ListPackInfos();
   static const WorldGenPack &Get();
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();

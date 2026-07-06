@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "id": "default",
+  "description": "Procedural overworld biomes with climate-driven height and features",
   "biome_mode": "procedural",
   "biome_blend_radius": 14,
   "biome_map_block_scale": 4
