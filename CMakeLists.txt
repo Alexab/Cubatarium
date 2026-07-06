@@ -140,6 +140,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
     src/World/Core/WorldFluidFacade.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
@@ -363,6 +364,7 @@ set(HEADERS
     src/Creatures/Player/User.h
     src/Render/Engine/ViewEngine.h
     src/World/Core/World.h
+    src/World/Core/WorldViewBinding.h
     src/World/Collision/WorldCollision.h
     src/World/Core/WorldCooperativeOps.h
     src/World/Environment/WorldEnvironment.h
@@ -1318,6 +1320,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/Creatures/Core/CreatureBounds.cpp
     src/World/Raycast/BlockRaycast.cpp
     src/World/Core/World.cpp
+    src/World/Core/WorldViewBinding.cpp
     src/World/Environment/WorldEnvironment.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Streaming/WorldStreaming.cpp

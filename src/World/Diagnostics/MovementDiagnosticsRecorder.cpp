@@ -22,7 +22,7 @@ namespace cutum
 using json = nlohmann::json;
 
 void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
-                                            const std::string &file_name)
+                                              const std::string &file_name)
 {
   json root;
   root["schema"] = "movement_diagnostics.v2";
@@ -82,9 +82,8 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
   }
 }
 
-void UMovementDiagnosticsRecorder::Update(UWorld &world,
-                                          const std::shared_ptr<UCamera> &camera,
-                                          float prev_player_y)
+void UMovementDiagnosticsRecorder::Update(
+    UWorld &world, const std::shared_ptr<UCamera> &camera, float prev_player_y)
 {
   world.MovementDiag = UWorld::MovementDiagnostics{};
   if (!camera)
@@ -94,15 +93,16 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
 
   const glm::vec3 playerPos = camera->GetPosition();
   const PlayerCapsule cap = camera->GetPlayerCapsule();
-  world.MovementDiag.feetBlock = WorldPosToBlock(glm::vec3(
-      playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
+  world.MovementDiag.feetBlock = WorldPosToBlock(
+      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
   world.MovementDiag.feetChunk =
       UChunkManager::WorldToChunk(world.MovementDiag.feetBlock);
   const glm::ivec3 feetGround(world.MovementDiag.feetChunk.x, 0,
                               world.MovementDiag.feetChunk.z);
   world.MovementDiag.feetChunkLoaded =
       world.BlockWorld.GetChunkManager().HasChunk(feetGround);
-  world.MovementDiag.feetIsAir = world.BlockWorld.IsAir(world.MovementDiag.feetBlock);
+  world.MovementDiag.feetIsAir =
+      world.BlockWorld.IsAir(world.MovementDiag.feetBlock);
   world.MovementDiag.meshDrawCount = world.GetRenderInstanceCount();
   world.MovementDiag.deltaTime = camera->GetDeltaTime();
   world.MovementDiag.streamingGenMs = world.Streaming->GetFrameStreamingGenMs();
@@ -110,7 +110,8 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
   world.MovementDiag.dirtyChunksPending =
       static_cast<int>(world.MeshService->GetDirtyCount());
   world.MovementDiag.flatRebuildMs = world.MeshService->GetLastFlatRebuildMs();
-  world.MovementDiag.asyncMeshInFlight = world.MeshService->GetAsyncInFlightCount();
+  world.MovementDiag.asyncMeshInFlight =
+      world.MeshService->GetAsyncInFlightCount();
   world.MovementDiag.asyncMeshingEnabled = world.Render.AsyncMeshing;
   world.MovementDiag.greedyCacheEntries =
       static_cast<int>(world.MeshService->GetGreedyCacheSize());
@@ -125,7 +126,8 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
   world.MovementDiag.physicsSimulationSteps =
       physicsTelemetry.SimulationStepsThisFrame;
   world.MovementDiag.physicsBlockQueueDepth = physicsTelemetry.BlockQueueDepth;
-  world.MovementDiag.physicsLiquidQueueDepth = physicsTelemetry.LiquidQueueDepth;
+  world.MovementDiag.physicsLiquidQueueDepth =
+      physicsTelemetry.LiquidQueueDepth;
   world.MovementDiag.physicsDeferredUpdates = physicsTelemetry.DeferredUpdates;
   world.MovementDiag.physicsDroppedUpdates = physicsTelemetry.DroppedUpdates;
   world.MovementDiag.physicsPurgedUpdates = physicsTelemetry.PurgedUpdates;
@@ -170,21 +172,23 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
 
   const double sim_ms =
       (world.DurationDoMovementMks +
-       (world.ViewInstance ? world.ViewInstance->GetDurationUpdateMks() : 0.0)) /
+       (world.GetViewEngine() ? world.GetViewEngine()->GetDurationUpdateMks()
+                              : 0.0)) /
       1000.0;
   const double wall_ms =
       world.WallFrameDeltaSec > 0.0 ? world.WallFrameDeltaSec * 1000.0 : sim_ms;
   const double frameMs = std::max(sim_ms, wall_ms);
-  world.MovementDiag.hitchDetected =
-      frameMs > 50.0 || world.MovementDiag.physicsStepMs > 50.0 ||
-      world.MovementDiag.deltaTime > 0.1f;
+  world.MovementDiag.hitchDetected = frameMs > 50.0 ||
+                                     world.MovementDiag.physicsStepMs > 50.0 ||
+                                     world.MovementDiag.deltaTime > 0.1f;
   world.MovementDiag.fallThroughSuspected =
       world.MovementDiag.playerYDrop > 2.0f &&
       (world.MovementDiag.feetIsAir || !world.MovementDiag.feetChunkLoaded) &&
       world.MovementDiag.meshDrawCount > 0;
 
 #ifdef CUBATARIUM_DEBUG
-  if (world.MovementDiag.hitchDetected || world.MovementDiag.fallThroughSuspected ||
+  if (world.MovementDiag.hitchDetected ||
+      world.MovementDiag.fallThroughSuspected ||
       world.MovementDiag.playerYDrop > 2.0f)
   {
     std::cerr << "[Movement-debug] cameraDt=" << world.MovementDiag.deltaTime
@@ -207,9 +211,9 @@ void UMovementDiagnosticsRecorder::Update(UWorld &world,
   if (world.MovementDiagHistory.size() > kMaxSamples)
   {
     const size_t trim = world.MovementDiagHistory.size() - kMaxSamples;
-    world.MovementDiagHistory.erase(
-        world.MovementDiagHistory.begin(),
-        world.MovementDiagHistory.begin() + static_cast<std::ptrdiff_t>(trim));
+    world.MovementDiagHistory.erase(world.MovementDiagHistory.begin(),
+                                    world.MovementDiagHistory.begin() +
+                                        static_cast<std::ptrdiff_t>(trim));
   }
 }
 

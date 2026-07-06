@@ -17,8 +17,6 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Engine/ViewEngine.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"
@@ -28,6 +26,7 @@
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/WorldFluidFacade.h"
+#include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
@@ -79,7 +78,8 @@ constexpr float kMinReasonablePlayerY = -32.0f;
 
 UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
                std::shared_ptr<UViewEngine> views)
-    : TextureCubeInstance(texture_cube), ViewInstance(views),
+    : TextureCubeInstance(texture_cube),
+      ViewBinding(std::make_unique<UWorldViewBinding>(std::move(views))),
       MeshService(std::make_unique<UWorldMeshService>()),
       Streaming(std::make_unique<UWorldStreaming>()),
       Persistence(std::make_unique<UWorldPersistence>()), Environment(*this),
@@ -453,31 +453,6 @@ void UWorld::SanitizeUserPosition(const std::shared_ptr<UUser> &user)
   }
 }
 
-void UWorld::ApplySpawnToCamera()
-{
-  glm::vec3 spawn = SpawnPoint;
-  const PlayerCapsule cap = PlayerCapsule::Standing();
-  DepenetrateEye(spawn, cap, GetMovementCollisionSkipId());
-  SpawnPoint = spawn;
-
-  if (auto user = GetCurrentUser())
-  {
-    user->SetPosition(SpawnPoint);
-    user->SetCameraOrientation(-90.0f, 0.0f);
-  }
-  if (auto camera = GetCurrentUserCamera())
-  {
-    camera->SetPosition(SpawnPoint);
-    camera->SetOrientation(-90.0f, 0.0f);
-    return;
-  }
-  if (ViewInstance && ViewInstance->GetActiveCamera())
-  {
-    ViewInstance->GetActiveCamera()->SetPosition(SpawnPoint);
-    ViewInstance->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
-  }
-}
-
 std::optional<int> UWorld::FindHighestSolidY(int x, int z) const
 {
   return Collision.FindHighestSolidY(x, z);
@@ -505,75 +480,6 @@ bool UWorld::IsValidStandFootprint(const glm::vec3 &eyePos,
                                    const PlayerCapsule &cap, float feetY) const
 {
   return Collision.IsValidStandFootprint(eyePos, cap, feetY);
-}
-
-void UWorld::EnsurePlayerOnGround()
-{
-  auto user = GetCurrentUser();
-  if (!user || !BlockRegistry)
-  {
-    return;
-  }
-
-  std::string userName = CurrentUserName;
-  for (const auto &entry : Users)
-  {
-    if (entry.second == user)
-    {
-      userName = entry.first;
-      break;
-    }
-  }
-  auto camera = GetUserCamera(userName);
-  if (!camera)
-  {
-    return;
-  }
-
-  const PlayerCapsule cap = PlayerCapsule::Standing();
-  glm::vec3 pos = user->GetPosition();
-  const glm::ivec3 column = WorldPosToBlock(pos);
-  int x = column.x;
-  int z = column.z;
-
-  std::optional<int> topY = FindHighestSolidY(x, z);
-  if (!topY)
-  {
-    const glm::ivec3 spawnColumn = WorldPosToBlock(SpawnPoint);
-    x = spawnColumn.x;
-    z = spawnColumn.z;
-    topY = FindHighestSolidY(x, z);
-  }
-  if (!topY)
-  {
-    ApplySpawnToCamera();
-    if (auto cam = GetUserCamera(userName))
-    {
-      cam->ResetVerticalPhysics();
-    }
-    return;
-  }
-
-  pos = BlockCenter(glm::ivec3(x, *topY, z));
-  pos.y = BlockTopY(*topY) + cap.eyeHeight;
-  DepenetrateEye(pos, cap, GetMovementCollisionSkipId());
-
-  user->SetPosition(pos);
-  camera->SetPosition(pos);
-  camera->ResetVerticalPhysics();
-}
-
-void UWorld::WarmupVisibleListAtCamera()
-{
-  auto camera = GetCurrentUserCamera();
-  if (!camera)
-  {
-    return;
-  }
-  const glm::mat4 view = camera->GetViewMatrix();
-  const glm::mat4 proj = camera->GetProjection();
-  const glm::mat4 vp = proj * view;
-  MeshService->WarmupVisibleListFromViewProj(vp, camera->GetPosition());
 }
 
 void UWorld::WarmupSpawnAreaForEnterGame()
@@ -641,33 +547,9 @@ void UWorld::FinalizePlayerAfterWorldLoad()
     ApplySpawnToCamera();
   }
 
-  if (auto camera = GetCurrentUserCamera())
+  if (ViewBinding)
   {
-    camera->ResetVerticalPhysics();
-  }
-}
-
-void UWorld::ApplyUserToCamera(const std::shared_ptr<UUser> &user)
-{
-  if (!user)
-  {
-    return;
-  }
-  SanitizeUserPosition(user);
-
-  std::string userName = CurrentUserName;
-  for (const auto &entry : Users)
-  {
-    if (entry.second == user)
-    {
-      userName = entry.first;
-      break;
-    }
-  }
-  if (auto camera = GetUserCamera(userName))
-  {
-    camera->SetPosition(user->GetPosition());
-    camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+    ViewBinding->ResetCurrentCameraVerticalPhysics(*this);
   }
 }
 
@@ -939,15 +821,16 @@ bool UWorld::AddUser(const std::string &Name)
     Environment.SetPlayerCreatureId(pid);
     Environment.SetControlledCreatureId(pid);
   }
-  auto camera = std::make_shared<UCamera>(
-      SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
-  camera->SetFreeMove(false);
-  const size_t viewId = ViewInstance->AddCameraReturnId(camera);
+  if (!ViewBinding)
+  {
+    return false;
+  }
+  const size_t viewId = ViewBinding->CreateUserCamera(SpawnPoint);
   user->SetViewId(viewId);
   if (Users.size() == 1)
   {
     SetCurrentUserName(Name);
-    ViewInstance->SetActiveCamera(viewId);
+    ViewBinding->SetActiveCamera(viewId);
   }
 
   return true;
@@ -1025,51 +908,11 @@ bool UWorld::SetCurrentUserName(const std::string &Name)
     }
   }
   ApplyUserToCamera(GetCurrentUser());
-  if (auto user = GetCurrentUser())
+  if (auto user = GetCurrentUser(); user && ViewBinding)
   {
-    ViewInstance->SetActiveCamera(user->GetViewId());
+    ViewBinding->SetActiveCamera(user->GetViewId());
   }
   return true;
-}
-
-std::shared_ptr<UCamera> UWorld::GetUserCamera(const std::string &Name)
-{
-  auto user = GetUser(Name);
-  if (user == nullptr)
-    return nullptr;
-
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera()
-{
-  auto user = GetCurrentUser();
-  if (user == nullptr)
-    return nullptr;
-
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera() const
-{
-  auto user = GetCurrentUser();
-  if (user == nullptr)
-  {
-    return nullptr;
-  }
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-bool UWorld::AddObjectByView()
-{
-  return AddObjectByView(GetCurrentUserCamera()->GetPosition(),
-                         GetCurrentUserCamera()->GetFront());
-}
-
-bool UWorld::DelObjectByView()
-{
-  return DelObjectByView(GetCurrentUserCamera()->GetPosition(),
-                         GetCurrentUserCamera()->GetFront());
 }
 
 bool UWorld::CheckRayIntersection(
@@ -1123,11 +966,8 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
     return false;
   }
 
-  PlayerCapsule cap = PlayerCapsule::Standing();
-  if (const auto camera = GetCurrentUserCamera())
-  {
-    cap = camera->GetPlayerCapsule();
-  }
+  PlayerCapsule cap = ViewBinding ? ViewBinding->ResolvePlacementCapsule(*this)
+                                  : PlayerCapsule::Standing();
 
   const BlockPlacementResolve resolved =
       Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
@@ -1141,12 +981,6 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
     return true;
   }
   return false;
-}
-
-bool UWorld::PlaceActiveObjectByView()
-{
-  return PlaceActiveObjectByView(GetCurrentUserCamera()->GetPosition(),
-                                 GetCurrentUserCamera()->GetFront());
 }
 
 bool UWorld::PlaceActiveObjectByView(const glm::vec3 &position,
@@ -1218,9 +1052,9 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   }
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
-  if (auto camera = GetCurrentUserCamera())
+  if (ViewBinding)
   {
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
+    ViewBinding->RefreshIntersectionFromCurrentView(*this);
   }
   return true;
 }
@@ -1736,169 +1570,6 @@ void UWorld::SetWallFrameDelta(double seconds)
   WallFrameDeltaSec = seconds > 0.0 ? seconds : 0.0;
 }
 
-void UWorld::RunLegacyPhysicsFrame()
-{
-  if (!BlockWorldReady)
-  {
-    return;
-  }
-  if (PhysicsSuspendFrames > 0)
-  {
-    --PhysicsSuspendFrames;
-    return;
-  }
-
-  auto t_begin = std::chrono::high_resolution_clock::now();
-  Streaming->ResetFrameTiming();
-
-  auto camera = GetCurrentUserCamera();
-  UCreature *controlled = GetControlledCreature();
-  if (camera && camera->GetPosition().y < kMinReasonablePlayerY)
-  {
-    EnsurePlayerOnGround();
-    camera->ResetVerticalPhysics();
-    return;
-  }
-  const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
-  const float dt = camera ? camera->GetDeltaTime() : 0.0f;
-  glm::ivec3 feetBlockForReadiness(0);
-  bool hasFeetBlockForReadiness = false;
-
-  if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
-  {
-    const glm::vec3 eyePos = camera->GetPosition();
-    float feetY =
-        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
-    if (controlled)
-    {
-      feetY = BoundsFeetY(controlled->GetBodyOrigin());
-    }
-    const glm::ivec3 feetBlock =
-        WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
-    feetBlockForReadiness = feetBlock;
-    hasFeetBlockForReadiness = true;
-    glm::vec3 forward = camera->GetFront();
-    forward.y = 0.0f;
-    Streaming->EnsureCollisionChunks(feetBlock, forward);
-  }
-
-  UWorldCreatureActivitySink activitySink(*this);
-  Environment.TickActivity(*this, activitySink, dt);
-
-  ForEachCreature(
-      [&](UCreature &creature)
-      {
-        if (Environment.GetControlledCreatureId() != 0 &&
-            creature.GetId() == Environment.GetControlledCreatureId())
-        {
-          return;
-        }
-        if (creature.IsPossessed())
-        {
-          return;
-        }
-        creature.ExecuteIntent(*this, dt);
-      });
-
-  bool is_moved = camera && camera->DoMovement(this);
-  static bool was_collision_ready = true;
-  const bool collision_ready = !hasFeetBlockForReadiness ||
-                               IsCollisionReadyAtFeet(feetBlockForReadiness);
-  if (!collision_ready && camera)
-  {
-    PhysicsTelemetryData.CollisionReadyWaitMs +=
-        static_cast<double>(camera->GetDeltaTime()) * 1000.0;
-  }
-  if (collision_ready != was_collision_ready)
-  {
-    ++PhysicsTelemetryData.CollisionReadyTransitions;
-    was_collision_ready = collision_ready;
-  }
-  if (camera && hasFeetBlockForReadiness && !collision_ready)
-  {
-    camera->ResetVerticalPhysics();
-    is_moved = true;
-  }
-  if (Streaming && Streaming->GetStreamer() && hasFeetBlockForReadiness)
-  {
-    const glm::ivec3 feet_chunk =
-        UChunkManager::WorldToChunk(feetBlockForReadiness);
-    Streaming->GetStreamer()->SetCollisionUrgentRing(
-        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
-        !collision_ready);
-  }
-
-  if (controlled && camera)
-  {
-    const glm::vec3 eye = camera->GetPosition();
-    float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
-    if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
-    {
-      const int gx = WorldCoordToBlockIndex(eye.x);
-      const int gz = WorldCoordToBlockIndex(eye.z);
-      if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
-      {
-        feetY = *gy;
-      }
-    }
-    controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
-    controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
-    controlled->GetLocomotion().SyncFeetAnchorFromView(
-        feetY, camera->HasAnchoredFeet());
-    controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()),
-                               camera->GetPitch());
-    controlled->SyncBoundsFromStance();
-    controlled->GetLocomotion().SetMode(camera->GetFreeMove()
-                                            ? CreatureMovementMode::Flying
-                                            : CreatureMovementMode::Walking);
-    float horizontalSpeed = 0.0f;
-    const UCreatureLocomotionController &camLoc =
-        camera->GetLocomotionController();
-    const LocomotionState camState = camLoc.GetLocomotionState();
-    const PlayerInput moveInput = camera->GetMovementInput();
-    if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
-        camState == LocomotionState::Crouch)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    else if (camState == LocomotionState::Fly ||
-             camState == LocomotionState::Glide ||
-             camState == LocomotionState::Hover)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    controlled->RebuildLocomotionFactsFromController(
-        camLoc, controlled->GetLocomotion().GetCapabilities(),
-        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
-    is_moved = true;
-  }
-
-  if (camera)
-  {
-    UpdateStreaming();
-    TickAsyncChunkSystems();
-    TickMeshEmerge();
-    BlockWorldReady = true;
-  }
-
-  if (is_moved && camera)
-  {
-    if (auto user = GetCurrentUser())
-    {
-      user->SetPosition(camera->GetPosition());
-      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
-    }
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
-  }
-
-  auto t_end = std::chrono::high_resolution_clock::now();
-  DurationDoMovementMks = static_cast<uint64_t>(
-      std::chrono::duration<double, std::micro>(t_end - t_begin).count());
-  PhysicsTelemetryData.MovementStepMs =
-      std::chrono::duration<double, std::milli>(t_end - t_begin).count();
-  UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
-}
-
 void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                          double view_update_mks)
 {
@@ -1958,41 +1629,6 @@ size_t UWorld::GetRenderInstanceCount() const
     return MeshService->GetGreedyVertexCount();
   }
   return MeshService->GetInstanceCount();
-}
-
-void UWorld::UpdateIntersection(const glm::vec3 &position,
-                                const glm::vec3 &front)
-{
-  IsIntersectionExists = CheckRayIntersection(
-      position, front, Intersection, IntersectionDistance,
-      IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
-
-  const auto camera = GetCurrentUserCamera();
-  const PlayerCapsule cap =
-      camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
-  const BlockPlacementResolve resolved =
-      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
-
-  HasIntersectionBlock = resolved.break_hit.has_value();
-  PlaceTargetActive = resolved.place_block_pos.has_value();
-  if (resolved.break_hit)
-  {
-    IntersectionBlockPos = resolved.break_hit->blockPos;
-  }
-  else
-  {
-    IntersectionBlockPos = glm::ivec3(0);
-  }
-  PlaceBlockPos = resolved.place_block_pos.value_or(glm::ivec3(0));
-
-  if (auto user = GetCurrentUser())
-  {
-    if (auto camera = GetCurrentUserCamera())
-    {
-      user->SetPosition(camera->GetPosition());
-      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
-    }
-  }
 }
 
 bool UWorld::GetIsIntersectionExists() const { return IsIntersectionExists; }

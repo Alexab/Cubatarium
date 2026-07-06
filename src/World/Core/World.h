@@ -48,6 +48,7 @@ class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
 
+class UWorldViewBinding;
 class UViewEngine;
 class UTextureCubeStorage;
 class UObjectLibrary;
@@ -121,6 +122,8 @@ public:
   std::shared_ptr<UCamera> GetUserCamera(const std::string &Name);
   std::shared_ptr<UCamera> GetCurrentUserCamera();
   std::shared_ptr<UCamera> GetCurrentUserCamera() const;
+
+  std::shared_ptr<UViewEngine> GetViewEngine() const;
 
   const UBlockWorld &GetBlockWorld() const { return BlockWorld; }
   UBlockWorld &GetBlockWorld() { return BlockWorld; }
@@ -533,6 +536,7 @@ public:
 
   void ClearCreaturesAndUsers();
 
+  friend class UWorldViewBinding;
   friend class UMovementDiagnosticsRecorder;
 
 private:
@@ -629,7 +633,7 @@ private:
   UWorldEnvironment Environment;
 
   std::shared_ptr<UTextureCubeStorage> TextureCubeInstance;
-  std::shared_ptr<UViewEngine> ViewInstance;
+  std::unique_ptr<UWorldViewBinding> ViewBinding;
   UObjectLibrary *ObjectLibrary{nullptr};
   WorldGenSets WorldGenSetsData;
   ObjectFeatureConfig ResolvedObjectFeatures;
