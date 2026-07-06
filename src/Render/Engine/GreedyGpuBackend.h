@@ -2,6 +2,7 @@
 #define GREEDYGPUBACKEND_H
 
 #include "Render/Mesh/GreedyMeshBatch.h"
+#include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Math/BlockTypes.h"
 #include <cstddef>
 #include <cstdint>
@@ -23,6 +24,9 @@ struct GreedyGpuBatch
   GLsizei indexCountGl{0};
   size_t vboCapacityBytes{0};
   size_t eboCapacityBytes{0};
+  bool pooled{false};
+  size_t vboByteOffset{0};
+  size_t eboByteOffset{0};
 };
 
 struct GreedyGpuPassCache
@@ -31,6 +35,9 @@ struct GreedyGpuPassCache
   uint64_t meshRevision{0};
   uint64_t cullRevision{0};
   uint64_t sortRevision{0};
+  bool usesVertexPool{false};
+  GLuint poolVbo{0};
+  GLuint poolEbo{0};
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).
@@ -50,6 +57,8 @@ private:
   void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);
   void DestroyBatchBuffers(GreedyGpuBatch &batch);
+
+  UGreedyVertexPool VertexPool;
 };
 
 } // namespace cutum

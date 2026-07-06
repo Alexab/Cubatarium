@@ -1,4 +1,5 @@
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/GreedyVertexPool.h"
 #include "Render/GlIncludes.h"
 
 namespace cutum
@@ -40,6 +41,13 @@ void UGreedyGpuBackend::UploadBuffer(GLuint &buffer, size_t &capacity_bytes,
 
 void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
 {
+  if (batch.pooled)
+  {
+    batch.pooled = false;
+    batch.vboByteOffset = 0;
+    batch.eboByteOffset = 0;
+    return;
+  }
   if (batch.ebo != 0)
   {
     glDeleteBuffers(1, &batch.ebo);
@@ -58,22 +66,41 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
                                     const GreedyMeshBatch &batch)
 {
   gpu.blockId = batch.blockId;
+  gpu.pooled = false;
+  gpu.vboByteOffset = 0;
+  gpu.eboByteOffset = 0;
+  if (!batch.vertices.empty() && !batch.indices.empty())
+  {
+    const GreedyGpuPoolAllocation alloc = VertexPool.Allocate(batch);
+    if (alloc.vertexCount > 0 && alloc.indexCount > 0)
+    {
+      gpu.vertexCount = alloc.vertexCount;
+      gpu.indexCount = alloc.indexCount;
+      gpu.indexCountGl = alloc.indexCountGl;
+      gpu.pooled = true;
+      gpu.vboByteOffset = alloc.vertexByteOffset;
+      gpu.eboByteOffset = alloc.indexByteOffset;
+      return;
+    }
+  }
+
   gpu.vertexCount = batch.vertices.size();
   gpu.indexCount = batch.indices.size();
   gpu.indexCountGl = static_cast<GLsizei>(batch.indices.size());
 
-  const size_t vbo_bytes =
-      batch.vertices.size() * sizeof(GreedyMeshVertex);
+  const size_t vbo_bytes = batch.vertices.size() * sizeof(GreedyMeshVertex);
   const size_t ebo_bytes = batch.indices.size() * sizeof(uint32_t);
-  UploadBuffer(gpu.vbo, gpu.vboCapacityBytes, kArrayBuffer, batch.vertices.data(),
-               vbo_bytes);
+  UploadBuffer(gpu.vbo, gpu.vboCapacityBytes, kArrayBuffer,
+               batch.vertices.data(), vbo_bytes);
   UploadBuffer(gpu.ebo, gpu.eboCapacityBytes, kElementArrayBuffer,
                batch.indices.data(), ebo_bytes);
 }
 
-void UGreedyGpuBackend::RefreshPass(
-    GreedyGpuPassCache &cache, const std::vector<GreedyMeshBatch> &batches,
-    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
+void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
+                                    const std::vector<GreedyMeshBatch> &batches,
+                                    uint64_t mesh_revision,
+                                    uint64_t cull_revision,
+                                    uint64_t sort_revision)
 {
   if (mesh_revision == cache.meshRevision &&
       cull_revision == cache.cullRevision &&
@@ -81,6 +108,11 @@ void UGreedyGpuBackend::RefreshPass(
   {
     return;
   }
+
+  VertexPool.Reset();
+  cache.usesVertexPool = true;
+  cache.poolVbo = VertexPool.VertexBuffer();
+  cache.poolEbo = VertexPool.IndexBuffer();
 
   size_t write_index = 0;
   for (const GreedyMeshBatch &batch : batches)
@@ -124,6 +156,9 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.meshRevision = 0;
   cache.cullRevision = 0;
   cache.sortRevision = 0;
+  cache.usesVertexPool = false;
+  cache.poolVbo = 0;
+  cache.poolEbo = 0;
 }
 
 void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,
@@ -133,6 +168,7 @@ void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,
   DestroyPass(opaque);
   DestroyPass(cutout);
   DestroyPass(transparent);
+  VertexPool.Destroy();
 }
 
 } // namespace cutum

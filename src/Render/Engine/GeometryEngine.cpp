@@ -766,7 +766,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   for (const GreedyGpuBatch &gpu : cache.batches)
   {
     SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCountGl <= 0 || gpu.vbo == 0 || gpu.ebo == 0)
+    if (gpu.indexCountGl <= 0)
+    {
+      continue;
+    }
+    const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
+    const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
+    if (vbo == 0 || ebo == 0)
     {
       continue;
     }
@@ -781,17 +787,25 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       continue;
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void *)0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, kStride,
-                          (void *)(offsetof(GreedyMeshVertex, faceIndex)));
+    glVertexAttribPointer(
+        1, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, faceIndex)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
-                          (void *)(offsetof(GreedyMeshVertex, u)));
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
-    glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(
+        GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+        reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
   }
 
   glBindVertexArray(0);

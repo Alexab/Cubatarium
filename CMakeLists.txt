@@ -189,6 +189,7 @@ set(SOURCES
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
+    src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Pipeline/GlStateScope.cpp
