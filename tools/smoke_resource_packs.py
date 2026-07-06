@@ -175,10 +175,10 @@ def check_texture_overrides_sync() -> None:
     run([sys.executable, "tools/sync_texture_overrides.py", "--check"])
 
 
-def check_prefabs() -> None:
-    run([sys.executable, "tools/generate_prefab_features.py", "--merge-calibrated"])
+def check_objects() -> None:
+    run([sys.executable, "tools/generate_object_features.py", "--merge-calibrated"])
     run([sys.executable, "tools/validate_prefabs.py"])
-    run([sys.executable, "tools/validate_prefab_features.py", "--strict"])
+    run([sys.executable, "tools/validate_object_features.py", "--strict"])
     run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 
@@ -190,7 +190,7 @@ def main() -> int:
     check_object_prefab_blocks()
     check_primary_audit()
     check_validate_primary()
-    check_prefabs()
+    check_objects()
     print("=== all smoke checks passed ===")
     return 0
 

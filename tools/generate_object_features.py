@@ -12,6 +12,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 MANIFEST = REPO / "tools" / "object_manifest.yaml"
 OUT_JSON = REPO / "content" / "object_features.json"
+OBJECTS = REPO / "objects"
 
 VALID_SURFACE_CONSTRAINTS = {
     "any_land",
@@ -106,12 +107,24 @@ def main() -> int:
                 pools[pool].append(rule)
 
     calibrated_rules: dict[str, list] = {k: [] for k in pools}
+    object_names: set[str] = set()
+    if OBJECTS.is_dir():
+        for path in OBJECTS.rglob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            object_names.add(data.get("name") or path.stem)
     if args.merge_calibrated and OUT_JSON.is_file():
         existing = json.loads(OUT_JSON.read_text(encoding="utf-8-sig"))
         for pool_name in pools:
             for rule in existing.get(pool_name, []):
-                if isinstance(rule, dict) and rule.get("calibrated"):
-                    calibrated_rules[pool_name].append(rule)
+                if not isinstance(rule, dict) or not rule.get("calibrated"):
+                    continue
+                obj = rule.get("object")
+                if obj and obj not in object_names:
+                    continue
+                calibrated_rules[pool_name].append(rule)
 
     for pool_name in pools:
         pools[pool_name].extend(calibrated_rules[pool_name])

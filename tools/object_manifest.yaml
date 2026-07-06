@@ -133,6 +133,8 @@ objects:
       biomes:
       - forest
       - tundra
+      - foothills
+      - cold_steppe
       spacing: 48
       weight: 2
       seed_offset: 4002
@@ -212,6 +214,7 @@ objects:
       biomes:
       - plains
       - desert
+      - savanna
       spacing: 30
       weight: 2
       seed_offset: 4007
@@ -301,6 +304,9 @@ objects:
       pool: ground_cover
       biomes:
       - plains
+      - foothills
+      - scrubland
+      - savanna
       spacing: 28
       weight: 2
       seed_offset: 4101
@@ -383,6 +389,7 @@ objects:
       pool: vegetation
       biomes:
       - desert
+      - scrubland
       spacing: 12
       weight: 3
       seed_offset: 4201
@@ -509,6 +516,9 @@ objects:
       pool: ground_cover
       biomes:
       - desert
+      - savanna
+      - cold_steppe
+      - scrubland
       spacing: 8
       weight: 2
       seed_offset: 4114

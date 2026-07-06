@@ -10,7 +10,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 PACK_BIOMES = REPO / "content" / "worldgen_packs" / "default" / "biomes"
-PREFAB_FEATURES = REPO / "content" / "prefab_features.json"
+OBJECT_FEATURES = REPO / "content" / "object_features.json"
 HEIGHT_JSON = REPO / "content" / "worldgen_packs" / "default" / "height.json"
 CLIMATE_JSON = REPO / "content" / "worldgen_packs" / "default" / "climate.json"
 
@@ -34,10 +34,10 @@ def biome_ids() -> list[str]:
     return ids
 
 
-def prefab_biome_coverage() -> tuple[set[str], set[str]]:
-    data = json.loads(PREFAB_FEATURES.read_text(encoding="utf-8"))
+def object_biome_coverage() -> tuple[set[str], set[str]]:
+    data = json.loads(OBJECT_FEATURES.read_text(encoding="utf-8"))
     covered: set[str] = set()
-    for pool in ("vegetation", "ground_cover", "decoration"):
+    for pool in ("vegetation", "ground_cover", "decoration", "structures"):
         for rule in data.get(pool, []):
             for biome in rule.get("biomes", []):
                 covered.add(biome)
@@ -142,10 +142,10 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> tuple[float, float
 
 def main() -> int:
     height_cfg = check_schema_files()
-    all_biomes, covered = prefab_biome_coverage()
+    all_biomes, covered = object_biome_coverage()
     missing = sorted(all_biomes - covered)
     if missing:
-        print(f"WARN: biomes without prefab rules: {', '.join(missing)}", file=sys.stderr)
+        print(f"WARN: biomes without object rules: {', '.join(missing)}", file=sys.stderr)
         return 1
 
     failed = False

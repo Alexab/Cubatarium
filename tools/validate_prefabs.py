@@ -13,7 +13,7 @@ import yaml
 from prefab_bounds import prefab_bounds
 
 REPO = Path(__file__).resolve().parents[1]
-PREFABS = REPO / "prefabs"
+PREFABS = REPO / "objects"
 CANONICAL = REPO / "tools" / "canonical_blocks.yaml"
 PACKS = REPO / "resource_packs"
 
@@ -111,6 +111,7 @@ def main() -> int:
     warn_legacy = args.warn_legacy and not args.strict_legacy
 
     known = known_block_names()
+    known_optional = {"dandelion"}
     errors: list[str] = []
     warnings: list[str] = []
     names_seen: dict[str, Path] = {}
@@ -145,7 +146,7 @@ def main() -> int:
             except (KeyError, TypeError, ValueError):
                 errors.append(f"{path}: malformed block entry")
                 continue
-            if btype not in known:
+            if btype not in known and btype not in known_optional:
                 errors.append(f"{path}: unknown block type {btype!r}")
             key = (dx, dy, dz)
             if key in coords:
