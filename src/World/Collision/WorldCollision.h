@@ -3,11 +3,15 @@
 
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
-#include "World/Math/CollisionVolume.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
+#include "World/Math/BlockTypes.h"
+#include "World/Math/CollisionVolume.h"
 #include "World/Raycast/BlockRaycast.h"
 #include <glm/glm.hpp>
+#include <map>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 
 namespace cutum
@@ -23,6 +27,16 @@ struct BlockPlacementResolve
 {
   std::optional<BlockRayHit> break_hit;
   std::optional<glm::ivec3> place_block_pos;
+};
+
+struct SampledFluidState
+{
+  bool inFluid{false};
+  BlockId dominantFluid{BLOCK_AIR};
+  float blendWeight{0.0f};
+  float DragHorizontal{0.0f};
+  float SinkSpeed{0.0f};
+  float RiseSpeed{0.0f};
 };
 
 class UWorldCollision
@@ -99,6 +113,19 @@ public:
   FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
 
+  bool CheckRayIntersection(
+      const glm::vec3 &position, const glm::vec3 &front,
+      std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
+          &distance_map) const;
+  bool CheckRayIntersection(const glm::vec3 &position, const glm::vec3 &front,
+                            glm::vec3 &intersection, float &distance,
+                            size_t &cube_index, int &cube_side,
+                            size_t &object_index) const;
+
+  SampledFluidState SampleFluidPhysicsVolume(const CollisionVolume &vol) const;
+  FluidColumnSurface FindFluidColumnSurfaceAt(int bx, int bz, int hintY) const;
+  FluidColumnSurface FindFluidColumnSurfaceEye(const glm::vec3 &eye) const;
+
   void InvalidateChunkMovementSolid(glm::ivec3 chunk_coord);
   void RebuildChunkMovementSolid(glm::ivec3 chunk_coord);
   void RemoveChunkMovementSolidCache(glm::ivec3 chunk_coord);
@@ -122,7 +149,8 @@ private:
   static constexpr int SubchunksPerAxis = CHUNK_SIZE / SubchunkSize;
   static constexpr int SubchunkCount =
       SubchunksPerAxis * SubchunksPerAxis * SubchunksPerAxis;
-  mutable std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ChunkOccupancyMask;
+  mutable std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      ChunkOccupancyMask;
 };
 
 } // namespace cutum

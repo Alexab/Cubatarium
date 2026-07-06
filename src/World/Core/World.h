@@ -195,20 +195,12 @@ public:
     OnAfterWorldDataLoaded = std::move(callback);
   }
 
-  struct SampledFluidState
-  {
-    bool inFluid{false};
-    BlockId dominantFluid{BLOCK_AIR};
-    float blendWeight{0.0f};
-    float DragHorizontal{0.0f};
-    float SinkSpeed{0.0f};
-    float RiseSpeed{0.0f};
-  };
   SampledFluidState SampleFluidPhysics(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const;
   FluidColumnSurface FindFluidColumnSurface(const glm::vec3 &eye) const;
   FluidColumnSurface FindFluidColumnSurfaceAt(int bx, int bz, int hintY) const;
-  bool HasNearbyFluidSurface(glm::ivec3 cameraBlock, int radiusBlocks = 48) const;
+  bool HasNearbyFluidSurface(glm::ivec3 cameraBlock,
+                             int radiusBlocks = 48) const;
   /// True when eye.y is strictly below BlockTopY of the topmost liquid block
   /// in the eye column (binary; no body-in-fluid or grace terms).
   bool IsCameraInsideFluid(const glm::vec3 &eye,
@@ -590,7 +582,8 @@ private:
                                 std::vector<glm::ivec3> &mesh_touch_blocks);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
-  void MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions);
+  void
+  MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,

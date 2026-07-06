@@ -18,10 +18,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Render/Camera/Camera.h"
-#include "Render/Camera/Frustum.h"
-#include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/ViewEngine.h"
-#include "Render/Primitives/Cube.h"
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
@@ -29,9 +26,9 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
-#include "World/Core/WorldFluidFacade.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Core/WorldFluidFacade.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
@@ -40,8 +37,8 @@
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Objects/ObjectUtil.h"
 #include "World/Persistence/WorldPersistence.h"
-#include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/FluidReflowScan.h"
+#include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/PhysicsProfileFactory.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Physics/WorldChunkDirtyService.h"
@@ -63,10 +60,10 @@
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
-#include <optional>
 
 using json = nlohmann::json;
 
@@ -577,8 +574,7 @@ void UWorld::WarmupVisibleListAtCamera()
   const glm::mat4 view = camera->GetViewMatrix();
   const glm::mat4 proj = camera->GetProjection();
   const glm::mat4 vp = proj * view;
-  MeshService->UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
-                                      camera->GetPosition());
+  MeshService->WarmupVisibleListFromViewProj(vp, camera->GetPosition());
 }
 
 void UWorld::WarmupSpawnAreaForEnterGame()
@@ -770,7 +766,8 @@ bool UWorld::TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId)
 void UWorld::ApplyBreakSiteFluidFlood(
     glm::ivec3 blockPos, std::vector<glm::ivec3> &mesh_touch_blocks)
 {
-  UWorldFluidFacade::ApplyBreakSiteFluidFlood(*this, blockPos, mesh_touch_blocks);
+  UWorldFluidFacade::ApplyBreakSiteFluidFlood(*this, blockPos,
+                                              mesh_touch_blocks);
 }
 
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
@@ -1081,18 +1078,7 @@ bool UWorld::CheckRayIntersection(
     std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
         &distance_map) const
 {
-  distance_map.clear();
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
-  if (!hit)
-  {
-    return false;
-  }
-  const glm::vec3 hitCenter = BlockCenter(hit->blockPos);
-  distance_map[hit->distance] =
-      std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(
-          0, glm::vec3(hit->faceNormal), hitCenter, 0, 0);
-  return true;
+  return Collision.CheckRayIntersection(position, front, distance_map);
 }
 
 bool UWorld::CheckRayIntersection(const glm::vec3 &position,
@@ -1101,19 +1087,8 @@ bool UWorld::CheckRayIntersection(const glm::vec3 &position,
                                   size_t &cube_index, int &cube_side,
                                   size_t &object_index) const
 {
-  std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
-      distance_map;
-
-  const bool result = CheckRayIntersection(position, front, distance_map);
-  if (result)
-  {
-    cube_side = std::get<0>(distance_map.begin()->second);
-    intersecion = std::get<2>(distance_map.begin()->second);
-    distance = distance_map.begin()->first;
-    cube_index = 0;
-    object_index = 0;
-  }
-  return result;
+  return Collision.CheckRayIntersection(position, front, intersecion, distance,
+                                        cube_index, cube_side, object_index);
 }
 
 bool UWorld::CheckPositionFree(const glm::vec3 &position, float size) const
@@ -1310,26 +1285,12 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
                                                     int hintY) const
 {
-  if (!BlockRegistry)
-  {
-    return FluidColumnSurface{};
-  }
-  return ::cutum::FindFluidColumnSurfaceAt(
-      BlockWorld, *BlockRegistry, bx, bz, hintY,
-      URuntimeTuning::Get().FluidSurfaceScanUp,
-      URuntimeTuning::Get().FluidSurfaceScanDown);
+  return Collision.FindFluidColumnSurfaceAt(bx, bz, hintY);
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
 {
-  if (!BlockRegistry)
-  {
-    return FluidColumnSurface{};
-  }
-  const int bx = WorldCoordToBlockIndex(eye.x);
-  const int bz = WorldCoordToBlockIndex(eye.z);
-  const int by = WorldCoordToBlockIndex(eye.y);
-  return FindFluidColumnSurfaceAt(bx, bz, by);
+  return Collision.FindFluidColumnSurfaceEye(eye);
 }
 
 bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
@@ -1357,75 +1318,10 @@ bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
   return true;
 }
 
-UWorld::SampledFluidState
+SampledFluidState
 UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
 {
-  SampledFluidState state;
-  if (!BlockRegistry)
-  {
-    return state;
-  }
-  std::unordered_map<BlockId, int> fluidWeights;
-  const glm::vec3 center = vol.center;
-  const glm::vec3 half = vol.halfExtents;
-  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
-  const int radius =
-      static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
-  const glm::vec3 blockHalf(0.5f);
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dy = -radius; dy <= radius; ++dy)
-    {
-      for (int dz = -radius; dz <= radius; ++dz)
-      {
-        const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
-        const BlockId Id = BlockWorld.GetBlock(blockPos);
-        const bool waterlogged =
-            BlockRegistry->IsFluidPermeable(Id) &&
-            PackFluidCellState(BlockWorld.GetFluidState(blockPos)) != 0;
-        if (Id == BLOCK_AIR ||
-            (BlockRegistry->BlocksMovement(Id) && !waterlogged))
-        {
-          continue;
-        }
-        const glm::vec3 blockCenter = BlockCenter(blockPos);
-        if (!UCube::CheckAabbCollision(center, half, blockCenter, blockHalf))
-        {
-          continue;
-        }
-        const BlockId physicsId =
-            BlockRegistry->IsLiquid(Id)
-                ? Id
-                : (waterlogged ? BlockRegistry->GetIdByTypeName("water")
-                               : Id);
-        if (physicsId == BLOCK_AIR)
-        {
-          continue;
-        }
-        const auto &mov = BlockRegistry->Physics(physicsId).Movement;
-        state.inFluid = true;
-        fluidWeights[physicsId] += 1;
-        state.DragHorizontal =
-            std::max(state.DragHorizontal, mov.DragHorizontal);
-        state.SinkSpeed = std::max(state.SinkSpeed, mov.SinkSpeed);
-        state.RiseSpeed = std::max(state.RiseSpeed, mov.RiseSpeed);
-      }
-    }
-  }
-  if (state.inFluid)
-  {
-    state.blendWeight = 1.0f;
-    int bestWeight = 0;
-    for (const auto &entry : fluidWeights)
-    {
-      if (entry.second > bestWeight)
-      {
-        bestWeight = entry.second;
-        state.dominantFluid = entry.first;
-      }
-    }
-  }
-  return state;
+  return Collision.SampleFluidPhysicsVolume(vol);
 }
 
 bool UWorld::IsFoliageFluidBlock(BlockId id) const
@@ -1439,9 +1335,8 @@ bool UWorld::IsFoliageFluidBlock(BlockId id) const
          mov.RiseSpeed == 0.0f && mov.DragHorizontal == 0.0f;
 }
 
-UWorld::SampledFluidState
-UWorld::SampleFluidPhysics(const glm::vec3 &eyePos,
-                           const PlayerCapsule &cap) const
+SampledFluidState UWorld::SampleFluidPhysics(const glm::vec3 &eyePos,
+                                             const PlayerCapsule &cap) const
 {
   return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
 }
@@ -1650,48 +1545,7 @@ bool UWorld::IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const
 
 void UWorld::MarkFluidRegionDirty(glm::ivec3 center, int block_radius)
 {
-  const int radius = std::max(0, block_radius);
-  if (!IsWithinLiquidUpdateRadius(center))
-  {
-    MarkBlockChunkDirtyFromPhysics(center);
-    return;
-  }
-
-  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
-  const auto add_block = [&](glm::ivec3 block_pos)
-  {
-    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
-    }
-  };
-
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dy = -radius; dy <= radius; ++dy)
-    {
-      for (int dz = -radius; dz <= radius; ++dz)
-      {
-        add_block(center + glm::ivec3(dx, dy, dz));
-      }
-    }
-  }
-
-  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
-  const bool immediate = BlockRegistry != nullptr;
-  for (const glm::ivec3 &chunk_coord : chunk_coords)
-  {
-    if (immediate)
-    {
-      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
-                                         chunk_coord);
-    }
-    else
-    {
-      MeshService->MarkDirty(chunk_coord);
-    }
-  }
+  UWorldFluidFacade::MarkFluidRegionDirty(*this, center, block_radius);
 }
 
 void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
@@ -1704,44 +1558,7 @@ void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
 void UWorld::MarkFluidFloodMeshDirty(
     glm::ivec3 blockPos, const std::vector<glm::ivec3> &filled_blocks)
 {
-  if (filled_blocks.empty() || !BlockRegistry)
-  {
-    return;
-  }
-  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
-  const auto add_block = [&](glm::ivec3 pos)
-  {
-    chunk_coords.insert(UChunkManager::WorldToChunk(pos));
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      chunk_coords.insert(UChunkManager::WorldToChunk(pos + offset));
-    }
-  };
-  add_block(blockPos);
-  for (const glm::ivec3 &pos : filled_blocks)
-  {
-    add_block(pos);
-  }
-  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
-  const glm::ivec3 center_chunk = UChunkManager::WorldToChunk(blockPos);
-  const bool immediate = IsWithinLiquidUpdateRadius(blockPos);
-  for (const glm::ivec3 &chunk_coord : chunk_coords)
-  {
-    if (immediate)
-    {
-      const int dist =
-          std::max({std::abs(chunk_coord.x - center_chunk.x),
-                    std::abs(chunk_coord.y - center_chunk.y),
-                    std::abs(chunk_coord.z - center_chunk.z)});
-      if (dist <= 1)
-      {
-        MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
-                                           chunk_coord);
-        continue;
-      }
-    }
-    MeshService->MarkDirty(chunk_coord);
-  }
+  UWorldFluidFacade::MarkFluidFloodMeshDirty(*this, blockPos, filled_blocks);
 }
 
 void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
@@ -1761,8 +1578,8 @@ void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
   {
     return;
   }
-  if (!UFluidSpreadSystem::HasSpreadTargetForTick(
-          BlockWorld, *definitions, blockPos, PhysicsTickCounter))
+  if (!UFluidSpreadSystem::HasSpreadTargetForTick(BlockWorld, *definitions,
+                                                  blockPos, PhysicsTickCounter))
   {
     return;
   }
@@ -1887,20 +1704,21 @@ void UWorld::DoMovement()
     {
       const auto tb = clock::now();
       BlockPhysicsService->TickBlockPhysics(*this);
-      block_ms = std::chrono::duration<double, std::milli>(clock::now() - tb)
-                     .count();
+      block_ms =
+          std::chrono::duration<double, std::milli>(clock::now() - tb).count();
     }
     if (ChunkDirtyService)
     {
       const auto tb = clock::now();
       ChunkDirtyService->DrainRebuildQueues(*this);
-      drain_ms = std::chrono::duration<double, std::milli>(clock::now() - tb)
-                     .count();
+      drain_ms =
+          std::chrono::duration<double, std::milli>(clock::now() - tb).count();
     }
 
     const auto t_end = clock::now();
     PhysicsTelemetryData.MovementStepMs =
-        std::chrono::duration<double, std::milli>(t_after_move - t_begin).count();
+        std::chrono::duration<double, std::milli>(t_after_move - t_begin)
+            .count();
     PhysicsTelemetryData.BlockStepMs = block_ms;
     PhysicsTelemetryData.DrainStepMs = drain_ms;
     PhysicsTelemetryData.FluidStepMs = block_ms;
@@ -2088,11 +1906,12 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
   DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
   const double sim_ms =
       (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
-  const double wall_ms = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec * 1000.0 : sim_ms;
+  const double wall_ms =
+      WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec * 1000.0 : sim_ms;
   const double frameMs = std::max(sim_ms, wall_ms);
-  MovementDiag.hitchDetected =
-      frameMs > 50.0 || PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
-      MovementDiag.deltaTime > 0.1f;
+  MovementDiag.hitchDetected = frameMs > 50.0 ||
+                               PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
+                               MovementDiag.deltaTime > 0.1f;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()
@@ -2226,61 +2045,14 @@ void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
 void UWorld::MarkBlocksChunkDirtyBatch(
     const std::vector<glm::ivec3> &block_positions)
 {
-  if (block_positions.empty())
-  {
-    return;
-  }
-  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
-  for (const glm::ivec3 &block_pos : block_positions)
-  {
-    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
-    }
-  }
-  ModifiedChunks.insert(chunk_coords.begin(), chunk_coords.end());
-  if (!BlockRegistry)
-  {
-    for (const glm::ivec3 &chunk_coord : chunk_coords)
-    {
-      MeshService->MarkDirty(chunk_coord);
-    }
-    return;
-  }
-  for (const glm::ivec3 &chunk_coord : chunk_coords)
-  {
-    MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry, chunk_coord);
-  }
+  MeshService->MarkBlocksChunkDirtyBatchFromEdit(
+      BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks);
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
-  // When BlockRegistry is available (normal gameplay), rebuild mesh
-  // synchronously so block edits appear immediately. During headless load /
-  // pre-registry init, defer via MarkDirty and let the frame budget rebuild
-  // later.
-  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
-  ModifiedChunks.insert(chunkCoord);
-
-  const bool immediate = BlockRegistry != nullptr;
-  auto mark_coord = [&](glm::ivec3 coord)
-  {
-    if (immediate)
-    {
-      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry, coord);
-    }
-    else
-    {
-      MeshService->MarkDirty(coord);
-    }
-  };
-
-  mark_coord(chunkCoord);
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    mark_coord(UChunkManager::WorldToChunk(blockPos + offset));
-  }
+  MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
+                                           blockPos, ModifiedChunks);
 }
 
 void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)

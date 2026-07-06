@@ -1,4 +1,5 @@
 #include "World/Mesh/WorldMeshService.h"
+#include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/Frustum.h"
 #include "World/Chunks/ChunkManager.h"
@@ -79,13 +80,14 @@ void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
 }
 
 void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
-                                                int min_y, int max_y)
+                                                  int min_y, int max_y)
 {
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   for (int cx = ground_chunk_coord.x - 1; cx <= ground_chunk_coord.x + 1; ++cx)
   {
-    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1; ++cz)
+    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1;
+         ++cz)
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
@@ -117,8 +119,8 @@ void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
 }
 
 void UWorldMeshService::RebuildChunkImmediate(const UBlockWorld &world,
-                                             UBlockRegistry &registry,
-                                             glm::ivec3 chunk_coord)
+                                              UBlockRegistry &registry,
+                                              glm::ivec3 chunk_coord)
 {
   Cache.RebuildChunkImmediate(world, registry, chunk_coord);
 }
@@ -135,7 +137,10 @@ bool UWorldMeshService::HasPendingAsyncMeshWork() const
   return Cache.HasPendingAsyncMeshWork();
 }
 
-size_t UWorldMeshService::GetDirtyCount() const { return Cache.GetDirtyCount(); }
+size_t UWorldMeshService::GetDirtyCount() const
+{
+  return Cache.GetDirtyCount();
+}
 
 int UWorldMeshService::GetAsyncInFlightCount() const
 {
@@ -173,18 +178,23 @@ size_t UWorldMeshService::GetInstanceCount() const
 }
 
 void UWorldMeshService::UpdateVisibleInstances(const Frustum &frustum,
-                                             const glm::mat4 &view_proj,
-                                             const glm::vec3 &camera_pos)
+                                               const glm::mat4 &view_proj,
+                                               const glm::vec3 &camera_pos)
 {
   Cache.UpdateVisibleInstances(frustum, view_proj, camera_pos);
 }
 
-const std::vector<FaceInstance> &
-UWorldMeshService::PrepareFaceInstances(UBlockWorld &world,
-                                      UBlockRegistry &registry,
-                                      const std::shared_ptr<UCamera> &camera,
-                                      int max_drain_per_frame,
-                                      int max_schedule_per_frame)
+void UWorldMeshService::WarmupVisibleListFromViewProj(
+    const glm::mat4 &view_proj, const glm::vec3 &camera_pos)
+{
+  UpdateVisibleInstances(Frustum::FromViewProjection(view_proj), view_proj,
+                         camera_pos);
+}
+
+const std::vector<FaceInstance> &UWorldMeshService::PrepareFaceInstances(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const std::shared_ptr<UCamera> &camera, int max_drain_per_frame,
+    int max_schedule_per_frame)
 {
   (void)world;
   (void)registry;
@@ -196,15 +206,14 @@ UWorldMeshService::PrepareFaceInstances(UBlockWorld &world,
     const glm::mat4 proj = camera->GetProjection();
     const glm::mat4 vp = proj * view;
     Cache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
-                               camera->GetPosition());
+                                 camera->GetPosition());
   }
   return Cache.GetFaceInstances();
 }
 
-const std::vector<GreedyMeshBatch> &
-UWorldMeshService::GetGreedyRenderBatches(UBlockWorld &world,
-                                        UBlockRegistry &registry,
-                                        const std::shared_ptr<UCamera> &camera)
+const std::vector<GreedyMeshBatch> &UWorldMeshService::GetGreedyRenderBatches(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const std::shared_ptr<UCamera> &camera)
 {
   PrepareFaceInstances(world, registry, camera);
   return Cache.GetGreedyBatches();
@@ -227,6 +236,66 @@ UWorldMeshService::GetCrossRenderBatches(UBlockWorld &world,
 {
   PrepareFaceInstances(world, registry, camera);
   return Cache.GetCrossBatches();
+}
+
+void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
+    UBlockWorld &block_world, UBlockRegistry *registry, glm::ivec3 block_pos,
+    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks)
+{
+  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(block_pos);
+  modified_chunks.insert(chunk_coord);
+
+  const bool immediate = registry != nullptr;
+  auto mark_coord = [&](glm::ivec3 coord)
+  {
+    if (immediate)
+    {
+      RebuildChunkImmediate(block_world, *registry, coord);
+    }
+    else
+    {
+      MarkDirty(coord);
+    }
+  };
+
+  mark_coord(chunk_coord);
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    mark_coord(UChunkManager::WorldToChunk(block_pos + offset));
+  }
+}
+
+void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
+    UBlockWorld &block_world, UBlockRegistry *registry,
+    const std::vector<glm::ivec3> &block_positions,
+    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks)
+{
+  if (block_positions.empty())
+  {
+    return;
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
+    }
+  }
+  modified_chunks.insert(chunk_coords.begin(), chunk_coords.end());
+  if (!registry)
+  {
+    for (const glm::ivec3 &chunk_coord : chunk_coords)
+    {
+      MarkDirty(chunk_coord);
+    }
+    return;
+  }
+  for (const glm::ivec3 &chunk_coord : chunk_coords)
+  {
+    RebuildChunkImmediate(block_world, *registry, chunk_coord);
+  }
 }
 
 } // namespace cutum

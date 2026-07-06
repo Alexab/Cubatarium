@@ -8,6 +8,8 @@
 #include "World/Interfaces/IUWorldMeshSink.h"
 #include <glm/glm.hpp>
 #include <memory>
+#include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -58,14 +60,17 @@ public:
   size_t GetGreedyVertexCount() const;
   size_t GetInstanceCount() const;
 
-  void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &view_proj,
+  void UpdateVisibleInstances(const Frustum &frustum,
+                              const glm::mat4 &view_proj,
                               const glm::vec3 &camera_pos);
+  void WarmupVisibleListFromViewProj(const glm::mat4 &view_proj,
+                                     const glm::vec3 &camera_pos);
 
   const std::vector<FaceInstance> &
   PrepareFaceInstances(UBlockWorld &world, UBlockRegistry &registry,
-                     const std::shared_ptr<UCamera> &camera,
-                     int max_drain_per_frame = 8,
-                     int max_schedule_per_frame = 8);
+                       const std::shared_ptr<UCamera> &camera,
+                       int max_drain_per_frame = 8,
+                       int max_schedule_per_frame = 8);
 
   const std::vector<GreedyMeshBatch> &
   GetGreedyRenderBatches(UBlockWorld &world, UBlockRegistry &registry,
@@ -81,6 +86,14 @@ public:
   GreedyDrawSnapshot PrepareGreedyDraw(UBlockWorld &world,
                                        UBlockRegistry &registry,
                                        const std::shared_ptr<UCamera> &camera);
+
+  void MarkBlockChunkDirtyFromEdit(
+      UBlockWorld &block_world, UBlockRegistry *registry, glm::ivec3 block_pos,
+      std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks);
+  void MarkBlocksChunkDirtyBatchFromEdit(
+      UBlockWorld &block_world, UBlockRegistry *registry,
+      const std::vector<glm::ivec3> &block_positions,
+      std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks);
 
   const std::vector<CrossInstanceBatch> &
   GetCrossRenderBatches(UBlockWorld &world, UBlockRegistry &registry,
