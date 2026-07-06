@@ -29,7 +29,6 @@ void UGreedyVertexPool::EnsureCapacity(size_t vertex_bytes, size_t index_bytes)
     glBufferData(kArrayBuffer, static_cast<GLsizeiptr>(vertex_bytes), nullptr,
                  GL_DYNAMIC_DRAW);
     VertexCapacityBytes = vertex_bytes;
-    VertexUsedBytes = 0;
   }
   if (index_bytes > IndexCapacityBytes)
   {
@@ -37,8 +36,16 @@ void UGreedyVertexPool::EnsureCapacity(size_t vertex_bytes, size_t index_bytes)
     glBufferData(kElementArrayBuffer, static_cast<GLsizeiptr>(index_bytes),
                  nullptr, GL_DYNAMIC_DRAW);
     IndexCapacityBytes = index_bytes;
-    IndexUsedBytes = 0;
   }
+  glBindBuffer(kArrayBuffer, 0);
+  glBindBuffer(kElementArrayBuffer, 0);
+}
+
+void UGreedyVertexPool::Reserve(size_t vertex_bytes, size_t index_bytes)
+{
+  EnsureCapacity(vertex_bytes, index_bytes);
+  VertexUsedBytes = 0;
+  IndexUsedBytes = 0;
 }
 
 GreedyGpuPoolAllocation
@@ -57,8 +64,10 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   const size_t index_bytes = alloc.indexCount * sizeof(uint32_t);
   const size_t needed_vertex = VertexUsedBytes + vertex_bytes;
   const size_t needed_index = IndexUsedBytes + index_bytes;
-  EnsureCapacity(std::max(needed_vertex, VertexCapacityBytes),
-                 std::max(needed_index, IndexCapacityBytes));
+  if (needed_vertex > VertexCapacityBytes || needed_index > IndexCapacityBytes)
+  {
+    EnsureCapacity(needed_vertex, needed_index);
+  }
 
   alloc.vertexByteOffset = VertexUsedBytes;
   alloc.indexByteOffset = IndexUsedBytes;

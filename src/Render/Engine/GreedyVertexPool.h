@@ -25,6 +25,8 @@ class UGreedyVertexPool
 {
 public:
   GreedyGpuPoolAllocation Allocate(const GreedyMeshBatch &batch);
+  /// Grow GPU buffers once per pass before batch uploads (avoids mid-pass orphan).
+  void Reserve(size_t vertex_bytes, size_t index_bytes);
   void Reset();
   void Destroy();
 

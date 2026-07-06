@@ -63,7 +63,8 @@ void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
 }
 
 void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
-                                    const GreedyMeshBatch &batch)
+                                    const GreedyMeshBatch &batch,
+                                    UGreedyVertexPool &pool)
 {
   gpu.blockId = batch.blockId;
   gpu.pooled = false;
@@ -71,7 +72,7 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   gpu.eboByteOffset = 0;
   if (!batch.vertices.empty() && !batch.indices.empty())
   {
-    const GreedyGpuPoolAllocation alloc = VertexPool.Allocate(batch);
+    const GreedyGpuPoolAllocation alloc = pool.Allocate(batch);
     if (alloc.vertexCount > 0 && alloc.indexCount > 0)
     {
       gpu.vertexCount = alloc.vertexCount;
@@ -109,10 +110,21 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
     return;
   }
 
-  VertexPool.Reset();
-  cache.usesVertexPool = true;
-  cache.poolVbo = VertexPool.VertexBuffer();
-  cache.poolEbo = VertexPool.IndexBuffer();
+  size_t total_vertex_bytes = 0;
+  size_t total_index_bytes = 0;
+  for (const GreedyMeshBatch &batch : batches)
+  {
+    if (batch.vertices.empty() || batch.indices.empty())
+    {
+      continue;
+    }
+    total_vertex_bytes += batch.vertices.size() * sizeof(GreedyMeshVertex);
+    total_index_bytes += batch.indices.size() * sizeof(uint32_t);
+  }
+  cache.VertexPool.Reserve(total_vertex_bytes, total_index_bytes);
+  cache.usesVertexPool = total_vertex_bytes > 0 && total_index_bytes > 0;
+  cache.poolVbo = cache.VertexPool.VertexBuffer();
+  cache.poolEbo = cache.VertexPool.IndexBuffer();
 
   size_t write_index = 0;
   for (const GreedyMeshBatch &batch : batches)
@@ -123,12 +135,12 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
     }
     if (write_index < cache.batches.size())
     {
-      UploadBatch(cache.batches[write_index], batch);
+      UploadBatch(cache.batches[write_index], batch, cache.VertexPool);
       ++write_index;
       continue;
     }
     GreedyGpuBatch gpu;
-    UploadBatch(gpu, batch);
+    UploadBatch(gpu, batch, cache.VertexPool);
     cache.batches.push_back(gpu);
     ++write_index;
   }
@@ -159,6 +171,7 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.usesVertexPool = false;
   cache.poolVbo = 0;
   cache.poolEbo = 0;
+  cache.VertexPool.Destroy();
 }
 
 void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,
@@ -168,7 +181,6 @@ void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,
   DestroyPass(opaque);
   DestroyPass(cutout);
   DestroyPass(transparent);
-  VertexPool.Destroy();
 }
 
 } // namespace cutum

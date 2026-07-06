@@ -39,6 +39,7 @@ struct GreedyGpuPassCache
   bool usesVertexPool{false};
   GLuint poolVbo{0};
   GLuint poolEbo{0};
+  UGreedyVertexPool VertexPool;
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).
@@ -54,12 +55,11 @@ public:
                   GreedyGpuPassCache &transparent);
 
 private:
-  void UploadBatch(GreedyGpuBatch &gpu, const GreedyMeshBatch &batch);
+  void UploadBatch(GreedyGpuBatch &gpu, const GreedyMeshBatch &batch,
+                   UGreedyVertexPool &pool);
   void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);
   void DestroyBatchBuffers(GreedyGpuBatch &batch);
-
-  UGreedyVertexPool VertexPool;
 };
 
 } // namespace cutum
