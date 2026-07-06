@@ -364,6 +364,13 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     }
     if (p.contains("enable_caves"))
     {
+      static bool warned = false;
+      if (!warned)
+      {
+        std::cerr
+            << "[config] procedural.enable_caves is deprecated; use caves\n";
+        warned = true;
+      }
       settings.EnableCaves = p["enable_caves"].get<bool>();
       hasCaves = true;
     }
@@ -487,7 +494,6 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;
   procedural["preset"] = settings.WorldGenPresetId;
   procedural["caves"] = settings.EnableCaves;
-  procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
   procedural["ground_cover"] = settings.EnableGroundCover;
   procedural["decoration"] = settings.EnableDecoration;
@@ -509,7 +515,6 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["tuning"] = tuning;
   WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
-  root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
   if (!settings.SeedText.empty())
   {
@@ -533,7 +538,6 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
   procedural["tuning"] = tuning;
   WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
-  root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
   if (!settings.SeedText.empty())
   {

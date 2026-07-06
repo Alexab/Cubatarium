@@ -16,6 +16,7 @@ typedef int GLint;
 #include "App/Settings/RenderSettings.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
@@ -28,7 +29,6 @@ typedef int GLint;
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Render/Engine/FluidSurfaceMap.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -98,7 +98,8 @@ public:
   /// Unit cube wireframe (1x1 centered) with given MVP and color.
   void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color);
 
-  void SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
+  void
+  SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
   void SetGameContent(const IUGameContent *content) { GameContent = content; }
   const IUGameContent *GetGameContent() const { return GameContent; }
   std::shared_ptr<UCreatureTextureStorage> GetCreatureTextureStorage() const
@@ -108,7 +109,7 @@ public:
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
   void DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
-                                const BoneSkeletonCubeMeshCpu &mesh);
+                                    const BoneSkeletonCubeMeshCpu &mesh);
   void DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
                             const BoneSkeletonCubeMeshCpu &mesh);
   void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
@@ -122,7 +123,10 @@ public:
   {
     return CreatureDraw_.GetStats();
   }
-  CreatureDrawQueue &GetCreatureDrawQueue() { return CreatureDraw_.GetDrawQueue(); }
+  CreatureDrawQueue &GetCreatureDrawQueue()
+  {
+    return CreatureDraw_.GetDrawQueue();
+  }
   std::shared_ptr<UShaderManager> GetShaderManager() const
   {
     return shaderManager;
@@ -172,6 +176,7 @@ private:
   void DestroyOutlineBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
+  void RenderBiomeDebugOverlay();
 
   void DrawCubeGeometry();
   void DrawCube(std::shared_ptr<UCube> icube,
@@ -279,10 +284,10 @@ private:
                                const glm::mat4 &vp,
                                const std::map<size_t, UTextureCube> &textures,
                                uint64_t meshRevision, uint64_t cullRevision);
-  void DrawCrossInstancedBatches(
-      const std::vector<CrossInstanceBatch> &batches, const glm::mat4 &vp,
-      const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
-      uint64_t cullRevision);
+  void DrawCrossInstancedBatches(const std::vector<CrossInstanceBatch> &batches,
+                                 const glm::mat4 &vp,
+                                 const std::map<size_t, UTextureCube> &textures,
+                                 uint64_t meshRevision, uint64_t cullRevision);
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);

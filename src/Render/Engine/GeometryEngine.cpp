@@ -1,8 +1,5 @@
 
 #include "Render/Engine/GeometryEngine.h"
-#include "World/Physics/LiquidDebugTrace.h"
-#include "Render/Engine/CreatureDrawPass.h"
-#include "Render/Engine/GreedyGpuBackend.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -18,9 +15,11 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
+#include "Render/Engine/CreatureDrawPass.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -28,10 +27,12 @@
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Chunks/Chunk.h"
-#include "World/Math/GridMath.h"
 #include "World/Core/World.h"
+#include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Physics/LiquidDebugTrace.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
 #include <chrono>
@@ -55,8 +56,7 @@ UGeometryEngine::UGeometryEngine(
     : WorldInstance(world), TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      BaseSkyColor(0.5f, 0.7f, 1.0f),
-      useGradientSky(true)
+      BaseSkyColor(0.5f, 0.7f, 1.0f), useGradientSky(true)
 {
 }
 
@@ -463,6 +463,7 @@ void UGeometryEngine::DrawCubeGeometry()
 
   RenderSelectionOutline();
   RenderBlockCrackOverlay();
+  RenderBiomeDebugOverlay();
   if (WorldInstance)
   {
     CreatureDraw_.Render(*WorldInstance, *this, Render);
@@ -689,7 +690,8 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     return;
   }
-  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap, BaseSkyColor);
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
+                            BaseSkyColor);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
@@ -830,8 +832,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
   const UWorldMeshService::GreedyDrawSnapshot draw =
       mesh_service.PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
-                                     WorldInstance->GetBlockRegistry(),
-                                     camera);
+                                     WorldInstance->GetBlockRegistry(), camera);
   const auto &greedyBatches = draw.batches;
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
@@ -873,7 +874,8 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     return;
   }
 
-  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision, cullRevision);
+  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
+                              cullRevision);
   if (CrossGpuPass.batches.empty())
   {
     return;
@@ -1173,7 +1175,8 @@ void UGeometryEngine::DrawSkyGradientSimple()
   // Pass sky color to shader
   skyShader->SetVec4("skyColor", skyColor);
   skyShader->SetVec3("uFogColor", UnderwaterFogPass_.GetFogColor());
-  skyShader->SetFloat("uFogHorizonBlend", UnderwaterFogPass_.GetFogHorizonBlend());
+  skyShader->SetFloat("uFogHorizonBlend",
+                      UnderwaterFogPass_.GetFogHorizonBlend());
 
   // Create simple rectangle for sky (full screen)
   static const GLfloat skyVertices[] = {
@@ -1354,8 +1357,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
 
   // Calculate FPS (sim = movement + view + draw; wall = full frame interval)
   const PhysicsTelemetry &phys = WorldInstance->GetPhysicsTelemetry();
-  const double sim_ms = phys.PhysicsStepMs +
-                        (view_duration / 1000.0) +
+  const double sim_ms = phys.PhysicsStepMs + (view_duration / 1000.0) +
                         (DurationDrawSceneMks / 1000.0);
   const double wall_ms = WorldInstance->GetWallFrameDelta() * 1000.0;
   const double sim_fps = sim_ms > 0.0 ? 1000.0 / sim_ms : 0.0;
@@ -1378,19 +1380,19 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
           " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
           " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
-          " ms" +
-          " View: " + std::to_string(view_duration / 1000.0).substr(0, 6) +
-          " ms",
+          " ms" + " View: " +
+          std::to_string(view_duration / 1000.0).substr(0, 6) + " ms",
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
           " Async: " + std::to_string(md.asyncMeshInFlight)};
 
   performanceLines.push_back(
-      "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) + "/" +
-      std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
-      " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) + " draws: " +
-      std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) + " bone uploads: " +
+      "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
+      "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
+      " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) +
+      " draws: " + std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) +
+      " bone uploads: " +
       std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads));
 
   performanceLines.push_back(
@@ -1443,40 +1445,41 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     }
   }
   {
-  const bool collision_ready =
-      md.feetChunkLoaded && !md.feetInUnloadList && !md.fallThroughSuspected;
-  performanceLines.push_back(
-      std::string("Phys: ") + cutum::ToString(WorldInstance->GetPhysicsProfile()) +
-      " CollReady: " + (collision_ready ? "yes" : "no"));
-  performanceLines.push_back(
-      "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) + " LiqQ: " +
-      std::to_string(md.physicsLiquidQueueDepth) + " Purged: " +
-      std::to_string(md.physicsPurgedUpdates));
-  performanceLines.push_back(
-      "RemeshQ: " + std::to_string(md.physicsVisualRemeshBacklog) +
-      " CollQ: " + std::to_string(md.physicsCollisionRebuildBacklog));
-  performanceLines.push_back(
-      "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
-      " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +
-      " wait: " + std::to_string(md.physicsCollisionReadyWaitMs).substr(0, 6) +
-      "ms");
-  if (WorldInstance->GetPhysicsFeatureFlags().LiquidDebugTrace)
-  {
-    std::vector<cutum::LiquidDebugEntry> liquid_trace;
-    cutum::ULiquidDebugTrace::Instance().CopyRecent(liquid_trace);
-    const size_t start =
-        liquid_trace.size() > 3 ? liquid_trace.size() - 3 : 0;
-    for (size_t i = start; i < liquid_trace.size(); ++i)
+    const bool collision_ready =
+        md.feetChunkLoaded && !md.feetInUnloadList && !md.fallThroughSuspected;
+    performanceLines.push_back(
+        std::string("Phys: ") +
+        cutum::ToString(WorldInstance->GetPhysicsProfile()) +
+        " CollReady: " + (collision_ready ? "yes" : "no"));
+    performanceLines.push_back(
+        "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) +
+        " LiqQ: " + std::to_string(md.physicsLiquidQueueDepth) +
+        " Purged: " + std::to_string(md.physicsPurgedUpdates));
+    performanceLines.push_back(
+        "RemeshQ: " + std::to_string(md.physicsVisualRemeshBacklog) +
+        " CollQ: " + std::to_string(md.physicsCollisionRebuildBacklog));
+    performanceLines.push_back(
+        "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
+        " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +
+        " wait: " +
+        std::to_string(md.physicsCollisionReadyWaitMs).substr(0, 6) + "ms");
+    if (WorldInstance->GetPhysicsFeatureFlags().LiquidDebugTrace)
     {
-      const cutum::LiquidDebugEntry &entry = liquid_trace[i];
-      performanceLines.push_back(
-          "Liq " + std::string(entry.Reason) + " (" +
-          std::to_string(entry.From.x) + "," + std::to_string(entry.From.y) +
-          "," + std::to_string(entry.From.z) + ")->(" +
-          std::to_string(entry.To.x) + "," + std::to_string(entry.To.y) + "," +
-          std::to_string(entry.To.z) + ")");
+      std::vector<cutum::LiquidDebugEntry> liquid_trace;
+      cutum::ULiquidDebugTrace::Instance().CopyRecent(liquid_trace);
+      const size_t start =
+          liquid_trace.size() > 3 ? liquid_trace.size() - 3 : 0;
+      for (size_t i = start; i < liquid_trace.size(); ++i)
+      {
+        const cutum::LiquidDebugEntry &entry = liquid_trace[i];
+        performanceLines.push_back(
+            "Liq " + std::string(entry.Reason) + " (" +
+            std::to_string(entry.From.x) + "," + std::to_string(entry.From.y) +
+            "," + std::to_string(entry.From.z) + ")->(" +
+            std::to_string(entry.To.x) + "," + std::to_string(entry.To.y) +
+            "," + std::to_string(entry.To.z) + ")");
+      }
     }
-  }
   }
 
   // Display text in top right corner
@@ -2289,6 +2292,76 @@ void UGeometryEngine::RenderSelectionOutline()
   else
   {
     glDisable(GL_CULL_FACE);
+  }
+}
+
+namespace
+{
+
+glm::vec4 BiomeDebugColor(BiomeId biome)
+{
+  const float hue = static_cast<float>(BiomeIndex(biome)) * 0.618033988f;
+  return glm::vec4(0.45f + 0.45f * std::sin(hue),
+                   0.45f + 0.45f * std::sin(hue + 2.094f),
+                   0.45f + 0.45f * std::sin(hue + 4.188f), 0.55f);
+}
+
+} // namespace
+
+void UGeometryEngine::RenderBiomeDebugOverlay()
+{
+  if (!WorldInstance)
+  {
+    return;
+  }
+  const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
+  if (!settings.DebugWorldGenOverlay)
+  {
+    return;
+  }
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+  const glm::vec3 camPos = camera->GetPosition();
+  const int centerX = static_cast<int>(std::floor(camPos.x));
+  const int centerZ = static_cast<int>(std::floor(camPos.z));
+  constexpr int kRadius = 12;
+  constexpr int kStep = 2;
+  const glm::mat4 mvp = camera->GetMvpMatrix();
+
+  for (int dx = -kRadius; dx <= kRadius; dx += kStep)
+  {
+    for (int dz = -kRadius; dz <= kRadius; dz += kStep)
+    {
+      const int worldX = centerX + dx;
+      const int worldZ = centerZ + dz;
+      const std::optional<int> surfaceY =
+          WorldInstance->FindHighestSolidY(worldX, worldZ);
+      if (!surfaceY)
+      {
+        continue;
+      }
+      float temperature = 0.0f;
+      float moisture = 0.0f;
+      ComputeBiomeClimate(worldX, worldZ, settings.Seed, temperature, moisture);
+      const float localHeightNorm =
+          std::clamp(static_cast<float>(*surfaceY - settings.SeaLevel) /
+                         static_cast<float>(std::max(1, settings.MaxHeight -
+                                                            settings.SeaLevel)),
+                     0.0f, 1.0f);
+      const BiomeId biome =
+          ClassifyBiome(temperature, moisture, localHeightNorm);
+      const glm::vec4 color = BiomeDebugColor(biome);
+      glm::mat4 model(1.0f);
+      model =
+          glm::translate(model, glm::vec3(static_cast<float>(worldX) + 0.5f,
+                                          static_cast<float>(*surfaceY) + 0.08f,
+                                          static_cast<float>(worldZ) + 0.5f));
+      model = glm::scale(model, glm::vec3(0.92f, 0.04f, 0.92f));
+      DrawBoxWireframe(mvp * model, color);
+    }
   }
 }
 
