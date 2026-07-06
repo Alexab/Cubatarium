@@ -209,7 +209,7 @@ void UResourcePackBootstrap::FlushRuntimeBlockOverlay(UCore &core)
   PatchRuntimeBlockTextures(core, flush);
   if (core.WorldInstance)
   {
-    core.WorldInstance->OnBlockRegistryRuntimeOverlayChanged();
+    core.WorldInstance->OnBlockRegistryRuntimeOverlayChanged(&flush);
   }
 }
 

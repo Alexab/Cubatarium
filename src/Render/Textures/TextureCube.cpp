@@ -173,17 +173,6 @@ void UTextureCubeStorage::PatchDescriptors(
   for (const MergedCubeDesc &desc : descriptors)
   {
     const size_t typeId = static_cast<size_t>(desc.Id);
-    if (const auto existing = Textures.find(typeId); existing != Textures.end())
-    {
-      const GLuint tex = existing->second.GetTexture();
-      if (tex != 0)
-      {
-        glDeleteTextures(1, &tex);
-      }
-      TexturesNames.erase(existing->second.GetName());
-      Textures.erase(existing);
-    }
-
     std::vector<std::string> stems(desc.Stems.begin(), desc.Stems.end());
     int stripFrames = 0;
     if (BlockDefinitions)
@@ -200,6 +189,44 @@ void UTextureCubeStorage::PatchDescriptors(
     {
       stripFrames = desc.AnimFrames;
     }
+
+    const CubeAtlasPixels atlas =
+        BuildCubeAtlasPixels(desc.Name, stems, stripFrames);
+    if (atlas.Rgba.empty() || atlas.Width <= 0 || atlas.Height <= 0)
+    {
+      continue;
+    }
+
+    if (const auto existing = Textures.find(typeId); existing != Textures.end())
+    {
+      GLuint tex = existing->second.GetTexture();
+      if (tex != 0)
+      {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        GLint existing_w = 0;
+        GLint existing_h = 0;
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,
+                                 &existing_w);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT,
+                                 &existing_h);
+        if (existing_w == atlas.Width && existing_h == atlas.Height)
+        {
+          glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlas.Width, atlas.Height,
+                          GL_RGBA, GL_UNSIGNED_BYTE, atlas.Rgba.data());
+          glBindTexture(GL_TEXTURE_2D, 0);
+          UTextureCube cube(desc.Name, typeId, stems);
+          cube.SetNumTextureFrames(existing->second.GetNumTextureFrames());
+          cube.SetTexture(tex);
+          Textures[typeId] = cube;
+          TexturesNames[desc.Name] = typeId;
+          continue;
+        }
+        glDeleteTextures(1, &tex);
+      }
+      TexturesNames.erase(existing->second.GetName());
+      Textures.erase(existing);
+    }
+
     UTextureCube cube =
         CreateCubeTexture(desc.Name, typeId, stems, stripFrames);
     Textures[cube.GetTypeId()] = cube;
@@ -289,6 +316,124 @@ void CopyRegion(unsigned char *dst, int dstX, int dstY, int dstStride,
 }
 
 } // namespace
+
+UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
+    const std::string &cube_type_name,
+    const std::vector<std::string> &texture_names, int stripFrameCount) const
+{
+  CubeAtlasPixels atlas;
+  if (!TextureBaseStorageInstance)
+  {
+    return atlas;
+  }
+  const auto &base_texture_descriptions =
+      TextureBaseStorageInstance->GetBaseTextures();
+  if (texture_names.empty())
+  {
+    return atlas;
+  }
+  const bool useVerticalStrip =
+      stripFrameCount > 1 && texture_names.size() == 6;
+  const int num_texture_frames = useVerticalStrip ? stripFrameCount : 1;
+
+  const auto firstTexIt = base_texture_descriptions.find(texture_names[0]);
+  if (firstTexIt == base_texture_descriptions.end())
+  {
+    std::cerr
+        << "UTextureCubeStorage::BuildCubeAtlasPixels: unknown base texture '"
+        << texture_names[0] << "' for " << cube_type_name << std::endl;
+    return atlas;
+  }
+  const LoadedStem firstLoaded = LoadStemRgba(firstTexIt->second);
+  if (!firstLoaded.Ok)
+  {
+    return atlas;
+  }
+
+  int width = firstLoaded.Width;
+  int height = firstLoaded.Height;
+  if (useVerticalStrip)
+  {
+    width = firstLoaded.Width;
+    height = firstLoaded.Height / num_texture_frames;
+    if (height <= 0)
+    {
+      height = firstLoaded.Width;
+    }
+  }
+
+  const int total_width = width * 6;
+  const int total_height = height * num_texture_frames;
+  atlas.Width = total_width;
+  atlas.Height = total_height;
+  atlas.Rgba.assign(static_cast<size_t>(total_width * total_height * 4), 0);
+
+  if (useVerticalStrip)
+  {
+    for (int j = 0; j < num_texture_frames; ++j)
+    {
+      for (size_t i = 0; i < 6; ++i)
+      {
+        const auto texIt = base_texture_descriptions.find(texture_names[i]);
+        if (texIt == base_texture_descriptions.end())
+        {
+          continue;
+        }
+        const LoadedStem texLoaded = LoadStemRgba(texIt->second);
+        if (!texLoaded.Ok)
+        {
+          continue;
+        }
+        CopyRegion(atlas.Rgba.data(), static_cast<int>(i) * width, j * height,
+                   total_width, total_width, texLoaded.Rgba.data(), 0,
+                   j * height, texLoaded.Width, texLoaded.Height, width,
+                   height);
+      }
+    }
+    return atlas;
+  }
+
+  size_t k = 0;
+  for (int j = 0; j < num_texture_frames; ++j)
+  {
+    for (int i = 0; i < 6; ++i)
+    {
+      if (k >= texture_names.size())
+      {
+        break;
+      }
+      const auto texIt = base_texture_descriptions.find(texture_names[k]);
+      if (texIt == base_texture_descriptions.end())
+      {
+        ++k;
+        continue;
+      }
+      const LoadedStem texLoaded = LoadStemRgba(texIt->second);
+      if (texLoaded.Ok)
+      {
+        for (int y = 0; y < height; ++y)
+        {
+          for (int x = 0; x < width; ++x)
+          {
+            const int src_idx = (y * width + x) * 4;
+            const int dst_idx =
+                ((j * height + y) * total_width + (i * width + x)) * 4;
+            if (src_idx + 3 < static_cast<int>(texLoaded.Rgba.size()) &&
+                dst_idx + 3 < static_cast<int>(atlas.Rgba.size()))
+            {
+              atlas.Rgba[dst_idx] = texLoaded.Rgba[src_idx];
+              atlas.Rgba[dst_idx + 1] = texLoaded.Rgba[src_idx + 1];
+              atlas.Rgba[dst_idx + 2] = texLoaded.Rgba[src_idx + 2];
+              atlas.Rgba[dst_idx + 3] = texLoaded.Rgba[src_idx + 3];
+            }
+          }
+        }
+      }
+      ++k;
+    }
+  }
+  return atlas;
+}
 
 UTextureCube UTextureCubeStorage::CreateCubeTexture(
     const std::string &cube_type_name, size_t cube_type_id,

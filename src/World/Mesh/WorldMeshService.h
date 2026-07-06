@@ -94,6 +94,8 @@ public:
       UBlockWorld &block_world, UBlockRegistry *registry,
       const std::vector<glm::ivec3> &block_positions,
       std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks);
+  void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
+                                    const std::vector<BlockId> &block_ids);
 
   const std::vector<CrossInstanceBatch> &
   GetCrossRenderBatches(UBlockWorld &world, UBlockRegistry &registry,

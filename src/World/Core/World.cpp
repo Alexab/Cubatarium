@@ -31,6 +31,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Objects/ObjectUtil.h"
@@ -358,11 +359,24 @@ void UWorld::OnBlockRegistryChanged()
   }
 }
 
-void UWorld::OnBlockRegistryRuntimeOverlayChanged()
+void UWorld::OnBlockRegistryRuntimeOverlayChanged(
+    const RuntimeOverlayFlushResult *flush)
 {
   RefreshBlockRegistry();
   RebuildWorldGenPipeline();
-  MeshService->MarkAllDirtyFromWorld(BlockWorld);
+  std::vector<BlockId> affected_ids;
+  if (flush)
+  {
+    affected_ids = flush->RemovedBlockIds;
+    affected_ids.reserve(affected_ids.size() +
+                         flush->PatchedDescriptors.size());
+    for (const MergedCubeDesc &desc : flush->PatchedDescriptors)
+    {
+      affected_ids.push_back(desc.Id);
+    }
+  }
+  WorldMeshDirtyPolicy::MarkRuntimeOverlayMeshDirty(*this, BlockWorld,
+                                                    *MeshService, affected_ids);
   if (OnBlockRegistryChangedCallback)
   {
     OnBlockRegistryChangedCallback();

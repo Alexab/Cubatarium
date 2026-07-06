@@ -44,6 +44,8 @@
 namespace cutum
 {
 
+struct RuntimeOverlayFlushResult;
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
@@ -132,11 +134,16 @@ public:
 
   UWorldMeshService &GetMeshService();
   const UWorldMeshService &GetMeshService() const;
+  UWorldChunkDirtyService *GetChunkDirtyService()
+  {
+    return ChunkDirtyService.get();
+  }
 
   void WaitForPendingMeshJobs();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
-  void OnBlockRegistryRuntimeOverlayChanged();
+  void OnBlockRegistryRuntimeOverlayChanged(
+      const RuntimeOverlayFlushResult *flush = nullptr);
   void SetOnBlockRegistryChanged(std::function<void()> callback)
   {
     OnBlockRegistryChangedCallback = std::move(callback);

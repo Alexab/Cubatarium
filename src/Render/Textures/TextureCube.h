@@ -65,6 +65,17 @@ public:
   size_t GetTypeIdByName(const std::string &Name) const;
 
 private:
+  struct CubeAtlasPixels
+  {
+    int Width{0};
+    int Height{0};
+    std::vector<unsigned char> Rgba;
+  };
+
+  CubeAtlasPixels
+  BuildCubeAtlasPixels(const std::string &cube_type_name,
+                       const std::vector<std::string> &texture_names,
+                       int stripFrameCount) const;
   UTextureCube CreateCubeTexture(const std::string &cube_type_name,
                                  size_t cube_type_id,
                                  const std::vector<std::string> &texture_names,

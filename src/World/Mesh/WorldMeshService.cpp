@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/Frustum.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -236,6 +237,43 @@ UWorldMeshService::GetCrossRenderBatches(UBlockWorld &world,
 {
   PrepareFaceInstances(world, registry, camera);
   return Cache.GetCrossBatches();
+}
+
+void UWorldMeshService::MarkChunksContainingBlockIds(
+    const UBlockWorld &block_world, const std::vector<BlockId> &block_ids)
+{
+  if (block_ids.empty())
+  {
+    MarkAllDirtyFromWorld(block_world);
+    return;
+  }
+  std::unordered_set<BlockId> targets(block_ids.begin(), block_ids.end());
+  block_world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        bool contains_target = false;
+        for (int local_y = 0; local_y < CHUNK_SIZE && !contains_target;
+             ++local_y)
+        {
+          for (int local_z = 0; local_z < CHUNK_SIZE && !contains_target;
+               ++local_z)
+          {
+            for (int local_x = 0; local_x < CHUNK_SIZE && !contains_target;
+                 ++local_x)
+            {
+              if (targets.count(chunk.GetBlockLocal(
+                      glm::ivec3(local_x, local_y, local_z))) != 0)
+              {
+                contains_target = true;
+              }
+            }
+          }
+        }
+        if (contains_target)
+        {
+          MarkDirty(chunk.GetCoord());
+        }
+      });
 }
 
 void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
