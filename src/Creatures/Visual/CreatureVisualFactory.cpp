@@ -1,9 +1,10 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
 #include "Creatures/Visual/CreatureVisualGltf.h"
 #include "Creatures/Visual/CreatureVisualRigid.h"
-#include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
+#include "Creatures/Visual/CreatureVisualSprite.h"
 #include <memory>
 
 namespace cutum
@@ -26,7 +27,8 @@ bool BackendAssetsAvailable(const CreatureDefinition &def,
   }
 }
 
-std::unique_ptr<IUCreatureVisual> CreateForBackend(CreatureVisualBackend backend)
+std::unique_ptr<IUCreatureVisual>
+CreateForBackend(CreatureVisualBackend backend)
 {
   switch (backend)
   {
@@ -44,6 +46,10 @@ std::unique_ptr<IUCreatureVisual> CreateForBackend(CreatureVisualBackend backend
 std::unique_ptr<IUCreatureVisual>
 CreateCreatureVisual(const CreatureDefinition &def)
 {
+  if (def.visual.sprite.billboard)
+  {
+    return CreateCreatureVisualSprite();
+  }
   CreatureVisualBackend backend =
       ParseCreatureVisualBackend(def.visual.backend);
   if (!BackendAssetsAvailable(def, backend) &&

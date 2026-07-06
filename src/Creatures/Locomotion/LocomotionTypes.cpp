@@ -31,6 +31,38 @@ LocomotionArchetype ParseLocomotionArchetype(const std::string &s)
   return LocomotionArchetype::TerrestrialBiped;
 }
 
+LocomotionArchetype
+ResolveCreaturePoseArchetype(const std::string &rigTemplateId,
+                             LocomotionArchetype fallback)
+{
+  if (rigTemplateId.empty() || rigTemplateId == "biped")
+  {
+    return fallback;
+  }
+  if (rigTemplateId == "quadruped")
+  {
+    return LocomotionArchetype::TerrestrialQuadruped;
+  }
+  if (rigTemplateId == "bird" || rigTemplateId == "aerial")
+  {
+    return LocomotionArchetype::Aerial;
+  }
+  if (rigTemplateId == "fish" || rigTemplateId == "aquatic")
+  {
+    return LocomotionArchetype::Aquatic;
+  }
+  if (rigTemplateId == "serpent" || rigTemplateId == "serpentine")
+  {
+    return LocomotionArchetype::Serpentine;
+  }
+  if (rigTemplateId == "terrestrial_biped" ||
+      rigTemplateId == "terrestrial_quadruped")
+  {
+    return ParseLocomotionArchetype(rigTemplateId);
+  }
+  return fallback;
+}
+
 const char *ToString(LocomotionState state)
 {
   switch (state)
@@ -129,8 +161,8 @@ CreatureHabitat ParseCreatureHabitat(const std::string &s)
   {
     return CreatureHabitat::Terrestrial;
   }
-  std::cerr << "ParseCreatureHabitat: unknown '" << s
-            << "', using terrestrial" << std::endl;
+  std::cerr << "ParseCreatureHabitat: unknown '" << s << "', using terrestrial"
+            << std::endl;
   return CreatureHabitat::Terrestrial;
 }
 

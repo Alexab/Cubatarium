@@ -27,7 +27,8 @@ public:
   bool InitBuffers(UShaderManager &shader_manager);
   void DestroyBuffers();
 
-  void Render(UWorld &world, UGeometryEngine &engine, const RenderSettings &render);
+  void Render(UWorld &world, UGeometryEngine &engine,
+              const RenderSettings &render);
 
   void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
                         CreaturePartMesh mesh = CreaturePartMesh::Box);
@@ -38,6 +39,8 @@ public:
   void DrawSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
                        const GltfPrimitiveCpu &mesh,
                        const std::vector<glm::mat4> &boneMatrices);
+  void DrawBillboard(const glm::mat4 &mvp, GLuint texture,
+                     const glm::vec4 &tint);
 
   const CreatureRenderStats &GetStats() const { return Stats; }
   CreatureDrawQueue &GetDrawQueue() { return Queue; }
@@ -47,6 +50,7 @@ private:
   bool InitHeadPartBuffers();
   bool InitBodyPartBuffers();
   bool InitRigidHeadPartBuffers();
+  bool InitBillboardBuffers();
 
   GLuint creaturePartVAO{0};
   GLuint creaturePartVBO{0};
@@ -60,6 +64,9 @@ private:
   GLuint creatureRigidHeadPartVAO{0};
   GLuint creatureRigidHeadPartVBO{0};
   GLuint creatureRigidHeadPartEBO{0};
+  GLuint creatureBillboardVAO{0};
+  GLuint creatureBillboardVBO{0};
+  GLuint creatureBillboardEBO{0};
   std::shared_ptr<UShaderProgram> creatureShader;
   std::shared_ptr<UShaderProgram> creatureSkinnedShader;
   CreatureRenderStats Stats;

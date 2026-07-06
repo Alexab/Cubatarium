@@ -115,6 +115,8 @@ public:
   void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
                                const GltfPrimitiveCpu &mesh,
                                const std::vector<glm::mat4> &boneMatrices);
+  void DrawCreatureBillboard(const glm::mat4 &mvp, GLuint texture,
+                             const glm::vec4 &tint);
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }

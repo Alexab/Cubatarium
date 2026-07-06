@@ -4,8 +4,9 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
-#include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
@@ -150,6 +151,21 @@ void UCreatureDrawPass::DestroyBuffers()
     glDeleteVertexArrays(1, &creaturePartVAO);
     creaturePartVAO = 0;
   }
+  if (creatureBillboardEBO)
+  {
+    glDeleteBuffers(1, &creatureBillboardEBO);
+    creatureBillboardEBO = 0;
+  }
+  if (creatureBillboardVBO)
+  {
+    glDeleteBuffers(1, &creatureBillboardVBO);
+    creatureBillboardVBO = 0;
+  }
+  if (creatureBillboardVAO)
+  {
+    glDeleteVertexArrays(1, &creatureBillboardVAO);
+    creatureBillboardVAO = 0;
+  }
   DestroyCreatureBonePaletteGpu();
 }
 
@@ -161,8 +177,8 @@ bool UCreatureDrawPass::InitPartBuffers()
   }
   float texCoords[48];
   BuildCreatureBoxTexCoords(texCoords);
-  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO, creaturePartEBO,
-                                texCoords);
+  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO,
+                                creaturePartEBO, texCoords);
 }
 
 bool UCreatureDrawPass::InitHeadPartBuffers()
@@ -200,6 +216,35 @@ bool UCreatureDrawPass::InitRigidHeadPartBuffers()
   return UploadCreaturePartMesh(creatureRigidHeadPartVAO,
                                 creatureRigidHeadPartVBO,
                                 creatureRigidHeadPartEBO, texCoords);
+}
+
+bool UCreatureDrawPass::InitBillboardBuffers()
+{
+  if (creatureBillboardVAO != 0)
+  {
+    return true;
+  }
+  const float vertices[] = {
+      -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f,  0.0f, 0.0f, 1.0f, 0.0f,
+      0.5f,  1.0f, 0.0f, 1.0f, 1.0f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f,
+  };
+  const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
+  glGenVertexArrays(1, &creatureBillboardVAO);
+  glGenBuffers(1, &creatureBillboardVBO);
+  glGenBuffers(1, &creatureBillboardEBO);
+  glBindVertexArray(creatureBillboardVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, creatureBillboardVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, creatureBillboardEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glBindVertexArray(0);
+  return creatureBillboardVAO != 0;
 }
 
 void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
@@ -251,6 +296,7 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
   creatureShader->SetInt("texture0", 0);
   creatureShader->SetInt("uAnimFrame", 0);
   creatureShader->SetInt("uAnimFrameCount", 1);
+  creatureShader->SetVec4("uTint", glm::vec4(1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
 
   glBindVertexArray(vao);
@@ -262,8 +308,55 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
   ++Stats.CreatureDrawCalls;
 }
 
-void UCreatureDrawPass::DrawBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
-                                             const BoneSkeletonCubeMeshCpu &mesh)
+void UCreatureDrawPass::DrawBillboard(const glm::mat4 &mvp, GLuint texture,
+                                      const glm::vec4 &tint)
+{
+  if (texture == 0 || !creatureShader || !creatureShader->IsValid())
+  {
+    return;
+  }
+  if (creatureBillboardVAO == 0 && !InitBillboardBuffers())
+  {
+    return;
+  }
+
+  GLboolean blendEnabled;
+  glGetBooleanv(GL_BLEND, &blendEnabled);
+  GLint blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha;
+  glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRgb);
+  glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRgb);
+  glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+  glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+  glBindTexture(GL_TEXTURE_2D, texture);
+  creatureShader->Use();
+  creatureShader->SetInt("texture0", 0);
+  creatureShader->SetInt("uAnimFrame", 0);
+  creatureShader->SetInt("uAnimFrameCount", 1);
+  creatureShader->SetVec4("uTint", tint);
+  creatureShader->SetMat4("mvp_matrix", mvp);
+  glBindVertexArray(creatureBillboardVAO);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
+  creatureShader->Unuse();
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  glBlendFunc(blendSrcRgb, blendDstRgb);
+  glBlendFuncSeparate(blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha);
+  if (!blendEnabled)
+  {
+    glDisable(GL_BLEND);
+  }
+  ++Stats.CreatureDrawCalls;
+}
+
+void UCreatureDrawPass::DrawBoneSkeletonMesh(
+    const glm::mat4 &mvp, GLuint texture, const BoneSkeletonCubeMeshCpu &mesh)
 {
   if (texture == 0 || mesh.interleavedPosUv.empty() || mesh.indices.empty() ||
       !creatureShader || !creatureShader->IsValid())
@@ -286,6 +379,7 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(const glm::mat4 &mvp, GLuint textur
   creatureShader->SetInt("texture0", 0);
   creatureShader->SetInt("uAnimFrame", 0);
   creatureShader->SetInt("uAnimFrameCount", 1);
+  creatureShader->SetVec4("uTint", glm::vec4(1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
 
   glBindVertexArray(vao);
@@ -382,10 +476,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           }
         }
         const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
-        if (!CreatureBoundsIntersectsFrustum(frustum, creature.GetBodyOrigin(),
-                                             sizeBlocks, cameraPos,
-                                             maxDistBlocks,
-                                             render.FrustumCulling))
+        if (!CreatureBoundsIntersectsFrustum(
+                frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
+                maxDistBlocks, render.FrustumCulling))
         {
           ++Stats.CreaturesCulled;
           return;
@@ -405,11 +498,14 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           visual->SetAppearance(world.GetResolvedAppearance(creature));
           const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
           CreaturePoseParams pose;
+          const LocomotionArchetype poseArchetype =
+              ResolveCreaturePoseArchetype(def->visual.rig.templateId,
+                                           facts.archetype);
           if (ParseCreatureVisualBackend(def->visual.backend) ==
               CreatureVisualBackend::RigidVoxels)
           {
             if (IUCreaturePosePresenter *presenter =
-                    world.GetPosePresenterRegistry().Get(facts.archetype))
+                    world.GetPosePresenterRegistry().Get(poseArchetype))
             {
               pose = presenter->Compute(facts, *def, dt);
             }

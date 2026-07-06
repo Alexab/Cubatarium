@@ -64,6 +64,13 @@
       "model_scale": 1.0,
       "model_yaw_offset_deg": 0
     },
+    "rig": {
+      "template": "aerial"
+    },
+    "sprite": {
+      "billboard": true,
+      "emissive_tint": [1.2, 0.55, 0.15, 1.0]
+    },
     "animation": {
       "walk_cycle_hz": 2.0,
       "clips": {

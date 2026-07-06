@@ -145,6 +145,12 @@ struct CreatureRigSpec
   std::vector<std::string> partIds;
 };
 
+struct CreatureSpriteSpec
+{
+  bool billboard{false};
+  glm::vec4 emissiveTint{1.f, 1.f, 1.f, 1.f};
+};
+
 struct CreatureVisualSpec
 {
   std::string backend{"rigid_voxels"};
@@ -157,6 +163,7 @@ struct CreatureVisualSpec
   std::string defaultTextureKey;
   std::string iconMode{"bounds_wireframe"};
   CreatureRigSpec rig;
+  CreatureSpriteSpec sprite;
   CreatureAnimationParams Animation;
   CreatureBoneSkeletonSpec boneSkeleton;
   CreatureGltfSpec gltf;

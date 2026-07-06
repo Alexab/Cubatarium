@@ -1,6 +1,6 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
-#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Core/Sort/CatalogSortUtil.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
@@ -314,6 +314,27 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           }
         }
       }
+      if (vis.contains("sprite") && vis["sprite"].is_object())
+      {
+        const auto &sprite = vis["sprite"];
+        def.visual.sprite.billboard = sprite.value("billboard", false);
+        if (sprite.contains("emissive_tint") &&
+            sprite["emissive_tint"].is_array())
+        {
+          const auto &t = sprite["emissive_tint"];
+          if (t.size() >= 4)
+          {
+            def.visual.sprite.emissiveTint =
+                glm::vec4(t[0].get<float>(), t[1].get<float>(),
+                          t[2].get<float>(), t[3].get<float>());
+          }
+          else if (t.size() >= 3)
+          {
+            def.visual.sprite.emissiveTint = glm::vec4(
+                t[0].get<float>(), t[1].get<float>(), t[2].get<float>(), 1.f);
+          }
+        }
+      }
       if (vis.contains("parts") && vis["parts"].is_array())
       {
         for (const auto &partJson : vis["parts"])
@@ -367,8 +388,10 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
             vis["texture_size"].size() >= 2)
         {
-          def.visual.boneSkeleton.textureSize.x = vis["texture_size"][0].get<int>();
-          def.visual.boneSkeleton.textureSize.y = vis["texture_size"][1].get<int>();
+          def.visual.boneSkeleton.textureSize.x =
+              vis["texture_size"][0].get<int>();
+          def.visual.boneSkeleton.textureSize.y =
+              vis["texture_size"][1].get<int>();
         }
       }
       if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&

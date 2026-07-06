@@ -2118,6 +2118,13 @@ void UGeometryEngine::DrawCreatureSkinnedMesh(
   CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
 }
 
+void UGeometryEngine::DrawCreatureBillboard(const glm::mat4 &mvp,
+                                            GLuint texture,
+                                            const glm::vec4 &tint)
+{
+  CreatureDraw_.DrawBillboard(mvp, texture, tint);
+}
+
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
                                        const glm::vec4 &color)
 {
