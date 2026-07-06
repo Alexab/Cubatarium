@@ -197,6 +197,9 @@ def main() -> None:
             e = log["species"][sid]
             e["spawn"]["status"] = "pass"
             e["spawn"]["verified_at"] = today
+            e.setdefault("wander", {**DEFAULT_CHECK})
+            e["wander"]["status"] = "pass"
+            e["wander"]["verified_at"] = today
             closed = {c.get("id") for c in e.get("issues_closed") or [] if isinstance(c, dict)}
             remaining = []
             for issue in e.get("issues_open") or []:

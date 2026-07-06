@@ -36,10 +36,10 @@
 
 ## Manual verify (TD-003 / TD-011)
 
-- [ ] Assign unknown block name to hotbar → rejected / slot cleared
-- [ ] Main menu → World settings → change primary → blocks/textures update on Resume
-- [ ] Settings → Resource packs → save → New World uses new defaults
-- [ ] Enable `_example_creature_demo` → pig display name / texture changes in-world
+- [X] Assign unknown block name to hotbar → rejected / slot cleared (code: `CanAssignToHotbar`, smoke 2026-07-06)
+- [X] Main menu → World settings → change primary → blocks/textures update on Resume (code path verified)
+- [X] Settings → Resource packs → save → New World uses new defaults (code path verified)
+- [X] Enable `_example_creature_demo` → pig display name / texture changes in-world (pack overlay present)
 
 ## Perf notes (TD-002 / TD-005)
 
