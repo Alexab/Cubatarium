@@ -6,6 +6,7 @@
 #include <cstdint>
 
 typedef unsigned int GLuint;
+typedef int GLsizei;
 
 namespace cutum
 {

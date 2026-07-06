@@ -168,8 +168,7 @@ PlayerCapsule UCreatureLocomotionController::GetCollisionCapsule() const
   const float crouchEye =
       stand.eyeHeight * (refCrouch.eyeHeight / refStand.eyeHeight);
   return {stand.height + (crouchHeight - stand.height) * t,
-          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t,
-          stand.halfWidth};
+          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t, stand.halfWidth};
 }
 
 bool UCreatureLocomotionController::OnSpacePressed()
@@ -471,8 +470,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   }
 
   const PlayerCapsule cap = GetCollisionCapsule();
-  const UWorld::SampledFluidState fluid =
-      world->SampleFluidPhysics(eyePos, cap);
+  const SampledFluidState fluid = world->SampleFluidPhysics(eyePos, cap);
 
   const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
   const float feetY = supportVol.center.y - supportVol.halfExtents.y;
@@ -480,8 +478,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
 
   const bool isFoliage =
       fluid.inFluid && world->IsFoliageFluidBlock(fluid.dominantFluid);
-  const bool foliageClimbActive =
-      isFoliage && world->IsFoliageClimbEnabled();
+  const bool foliageClimbActive = isFoliage && world->IsFoliageClimbEnabled();
 
   const bool fluidStreakCandidate =
       fluid.inFluid && !supported && (!isFoliage || foliageClimbActive);

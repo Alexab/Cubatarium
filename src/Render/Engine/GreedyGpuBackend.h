@@ -1,6 +1,7 @@
 #ifndef GREEDYGPUBACKEND_H
 #define GREEDYGPUBACKEND_H
 
+#include "Render/Engine/GreedyVertexPool.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Math/BlockTypes.h"

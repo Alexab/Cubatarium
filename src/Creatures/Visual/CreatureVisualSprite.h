@@ -2,6 +2,7 @@
 #define CREATUREVISUALSPRITE_H
 
 #include "Creatures/Visual/CreatureVisual.h"
+#include <memory>
 
 namespace cutum
 {

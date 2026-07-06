@@ -235,9 +235,8 @@ PlayerInput UCamera::BuildPlayerInput(bool spaceJustPressed) const
   input.jumpHeld = keyDown(GLFW_KEY_SPACE);
   input.jumpPressed = spaceJustPressed;
   input.crouchHeld = IsShiftDown();
-  input.sprintHeld =
-      SprintActive || keyDown(GLFW_KEY_LEFT_CONTROL) ||
-      keyDown(GLFW_KEY_RIGHT_CONTROL);
+  input.sprintHeld = SprintActive || keyDown(GLFW_KEY_LEFT_CONTROL) ||
+                     keyDown(GLFW_KEY_RIGHT_CONTROL);
   return input;
 }
 
@@ -375,8 +374,7 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   const bool hasShift = glm::dot(shift, shift) > 1e-10f;
 
   const PlayerCapsule cap = GetPlayerCapsule();
-  const UWorld::SampledFluidState fluid =
-      world->SampleFluidPhysics(Position, cap);
+  const SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
   if (hasShift && fluid.inFluid)
   {
     const float drag =
@@ -560,9 +558,8 @@ void UCamera::UpdateCameraVectors()
   const float rightLen = glm::length(right);
   if (rightLen < 1e-6f)
   {
-    this->Right =
-        glm::normalize(glm::vec3(-std::sin(radians(this->Yaw)), 0.0f,
-                                   std::cos(radians(this->Yaw))));
+    this->Right = glm::normalize(glm::vec3(-std::sin(radians(this->Yaw)), 0.0f,
+                                           std::cos(radians(this->Yaw))));
   }
   else
   {
@@ -706,8 +703,7 @@ void UCamera::ResetVerticalPhysics()
 
 bool UCamera::DoMovement(const UWorld *world)
 {
-  const float frameDt =
-      std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
+  const float frameDt = std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
   if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
   {

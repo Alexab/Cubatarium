@@ -60,7 +60,7 @@ void UCreatureVisualSprite::SubmitDraw(UGeometryEngine &engine,
   const glm::vec3 center =
       BodyOrigin + glm::vec3(0.0f, SizeBlocks.y * 0.5f, 0.0f);
   float yawDeg = 0.0f;
-  if (const std::shared_ptr<UWorld> world = engine.WorldInstance)
+  if (const std::shared_ptr<UWorld> world = engine.GetWorld())
   {
     if (auto camera = world->GetCurrentUserCamera())
     {

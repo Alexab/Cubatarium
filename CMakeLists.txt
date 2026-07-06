@@ -688,6 +688,8 @@ set(PHYSICS_LIGHT_REGISTRY_DEF CUTUM_PHYSICS_LIGHT_REGISTRY)
 set(PHYSICS_COLLISION_UNIT_SOURCES
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
     src/Blocks/BlockRegistry.cpp
+    src/World/Core/RuntimeTuning.cpp
+    src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp

@@ -120,6 +120,7 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  const std::shared_ptr<UWorld> &GetWorld() const { return WorldInstance; }
   void InvalidateBlockBatchCache() { BlockBatchesValid = false; }
   const CreatureRenderStats &GetCreatureRenderStats() const
   {

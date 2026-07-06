@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/FluidReflowScan.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/WorldBlockPhysicsService.h"

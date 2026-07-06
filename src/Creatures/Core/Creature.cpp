@@ -1,7 +1,7 @@
-#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
@@ -195,8 +195,8 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     }
     else if (habitat == CreatureHabitat::Amphibious)
     {
-      const EnvironmentSample env = ProbeEnvironmentAt(
-          world, BodyOrigin, Bounds.profile.restSizeBlocks);
+      const EnvironmentSample env =
+          ProbeEnvironmentAt(world, BodyOrigin, Bounds.profile.restSizeBlocks);
       if (!env.inWater)
       {
         delta.y = 0.0f;
@@ -211,10 +211,9 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
           !ProbeEnvironmentAt(world, BodyOrigin, size).inWater));
     if (use_terrestrial_steps)
     {
-      const float max_step_up =
-          def && def->locomotion.jumpHeightBlocks > 0.01f
-              ? def->locomotion.jumpHeightBlocks
-              : 1.0f;
+      const float max_step_up = def && def->locomotion.jumpHeightBlocks > 0.01f
+                                    ? def->locomotion.jumpHeightBlocks
+                                    : 1.0f;
       const float max_step_down = std::max(max_step_up, 1.0f);
       candidate = ResolveTerrestrialMobMovement(world, BodyOrigin, delta, size,
                                                 Id, max_step_up, max_step_down);
@@ -259,8 +258,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         habitat == CreatureHabitat::Lava)
     {
       const CollisionVolume vol = GetCollisionVolume();
-      const UWorld::SampledFluidState fluid =
-          world.SampleFluidPhysicsVolume(vol);
+      const SampledFluidState fluid = world.SampleFluidPhysicsVolume(vol);
       if (fluid.inFluid && glm::length(Intent.moveDirWorld) < 1e-4f)
       {
         const float sink = fluid.SinkSpeed * dt * 0.2f;

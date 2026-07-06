@@ -24,7 +24,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   }
 
   const glm::vec3 eye = camera->GetPosition();
-  const UWorld::SampledFluidState fluid =
+  const SampledFluidState fluid =
       world.SampleFluidPhysics(eye, camera->GetPlayerCapsule());
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
   BlockId eyeFluid = BLOCK_AIR;
@@ -45,9 +45,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   bool mapReady = surface_map.IsValid();
   if (nearbyFluid)
   {
-    mapReady = surface_map.Update(
-        world.GetBlockWorld(), registry, mesh_service.GetCache(), cameraBlockXZ,
-        eyeBlockY, mesh_service.GetMeshRevision());
+    mapReady = surface_map.Update(world.GetBlockWorld(), registry,
+                                  mesh_service.GetCache(), cameraBlockXZ,
+                                  eyeBlockY, mesh_service.GetMeshRevision());
   }
   const bool columnFogActive =
       cutum::ShouldUsePerColumnBelowSurfaceFog(mapReady, nearbyFluid);
@@ -133,7 +133,8 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     if (const FluidViewProfile *fv = registry.GetFluidView(fluid.dominantFluid))
     {
       if (fv->OverlayAlpha > 0.01f &&
-          registry.GetRenderStyle(fluid.dominantFluid) == BlockRenderStyle::Cross)
+          registry.GetRenderStyle(fluid.dominantFluid) ==
+              BlockRenderStyle::Cross)
       {
         OverlayTintAlpha = fv->OverlayAlpha;
         OverlayTintColor = fv->OverlayColor;
@@ -144,8 +145,8 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   if (!enteringUnderwater)
   {
-    SmoothedSkyTint =
-        glm::mix(SmoothedSkyTint, targetSky, cameraInFluid ? underwaterFogMix : 0.15f);
+    SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky,
+                               cameraInFluid ? underwaterFogMix : 0.15f);
   }
   WasUnderwaterFog = cameraInFluid;
 }
