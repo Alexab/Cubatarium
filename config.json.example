@@ -23,6 +23,7 @@
         },
         "async_chunk_generation": true,
         "async_chunk_io": true,
+        "ring_gate_enabled": false,
         "max_chunk_commits_per_frame": 3,
         "max_chunk_commits_per_frame_boost": 6,
         "max_load_ops_per_frame": 4,

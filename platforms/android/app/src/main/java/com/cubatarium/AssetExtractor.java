@@ -8,14 +8,23 @@ import android.content.res.AssetManager;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.zip.CRC32;
+
+import org.json.JSONObject;
 
 public final class AssetExtractor {
     private static final String TAG = "Asset";
@@ -73,6 +82,7 @@ public final class AssetExtractor {
             if (!hasCriticalAssets(gameDir)) {
                 throw new IOException("Critical game assets missing after extraction");
             }
+            verifyExtractedManifest(context, gameDir);
             prefs.edit()
                     .putInt(KEY_VERSION_CODE, versionCode)
                     .putString(KEY_ASSET_DIGEST, currentDigest)
@@ -87,6 +97,60 @@ public final class AssetExtractor {
         return new File(gameDir, "fonts/Roboto-Regular.ttf").isFile()
                 && new File(gameDir, "shaders/gles/vshader_2d.glsl").isFile()
                 && new File(gameDir, "content/types.json").isFile();
+    }
+
+    private static void verifyExtractedManifest(Context context, File gameDir)
+            throws IOException {
+        try (InputStream in = context.getAssets().open("asset_manifest.json");
+             Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+            final StringBuilder json = new StringBuilder();
+            final char[] buffer = new char[4096];
+            int read;
+            while ((read = reader.read(buffer)) >= 0) {
+                json.append(buffer, 0, read);
+            }
+            final JSONObject root = new JSONObject(json.toString());
+            final JSONObject files = root.getJSONObject("files");
+            final Iterator<String> keys = files.keys();
+            while (keys.hasNext()) {
+                final String relative = keys.next();
+                final String expected = files.getString(relative);
+                final File extracted = new File(gameDir, relative);
+                if (!extracted.isFile()) {
+                    throw new IOException("Manifest file missing after extract: " + relative);
+                }
+                final String actual = sha256Hex(extracted);
+                if (!expected.equalsIgnoreCase(actual)) {
+                    throw new IOException("Checksum mismatch for " + relative);
+                }
+            }
+            Log.i(TAG, "Asset manifest verification passed");
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Asset manifest verification failed", e);
+        }
+    }
+
+    private static String sha256Hex(File file) throws IOException {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (FileInputStream in = new FileInputStream(file)) {
+                final byte[] buffer = new byte[8192];
+                int read;
+                while ((read = in.read(buffer)) >= 0) {
+                    digest.update(buffer, 0, read);
+                }
+            }
+            final byte[] hash = digest.digest();
+            final StringBuilder hex = new StringBuilder(hash.length * 2);
+            for (byte value : hash) {
+                hex.append(String.format("%02x", value));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("SHA-256 unavailable", e);
+        }
     }
 
     private static void deleteRecursive(File file) {

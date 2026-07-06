@@ -38,10 +38,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
 {
   const std::shared_ptr<UWorld> world = session.GetWorld();
 
-  registry.Register(
-      "help",
-      [&registry](const std::vector<std::string> &)
-      { return CommandResult{true, registry.FormatHelpText()}; });
+  registry.Register("help", [&registry](const std::vector<std::string> &)
+                    { return CommandResult{true, registry.FormatHelpText()}; });
 
   registry.Register(
       "worldgen",
@@ -76,10 +74,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           ProceduralSettings settings = active->GetProceduralSettings();
           settings.DebugWorldGenOverlay = enable;
           active->SetProceduralSettings(settings);
-          return CommandResult{
-              true, std::string("Worldgen debug overlay ") +
-                        (enable ? "enabled" : "disabled") +
-                        " (flag stored; visual overlay not wired yet)"};
+          return CommandResult{true, std::string("Worldgen debug overlay ") +
+                                         (enable ? "enabled" : "disabled")};
         }
         return CommandResult{false, "Unknown worldgen subcommand"};
       });
