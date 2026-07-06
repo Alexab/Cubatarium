@@ -121,11 +121,23 @@ int main()
 
   world.SetBlock(glm::ivec3(7, 10, 7), kWater);
   world.SetBlock(glm::ivec3(7, 15, 7), kWater);
-  const cutum::FluidColumnSurface stacked =
+  const cutum::FluidColumnSurface disjoint =
       cutum::FindFluidColumnSurfaceAt(world, registry, 7, 7, 12);
-  Expect(stacked.valid, "stacked water column is valid");
-  Expect(stacked.bottomBlockY == 10, "stacked water bottom block y");
-  Expect(stacked.surfaceBlockY == 15, "stacked water surface block y");
+  Expect(disjoint.valid, "disjoint water column is valid");
+  Expect(disjoint.bottomBlockY == 15, "disjoint water bottom is surface segment only");
+  Expect(disjoint.surfaceBlockY == 15, "disjoint water surface block y");
+
+  for (int y = 11; y <= 14; ++y)
+  {
+    world.SetBlock(glm::ivec3(8, y, 8), kWater);
+  }
+  world.SetBlock(glm::ivec3(8, 10, 8), kWater);
+  world.SetBlock(glm::ivec3(8, 15, 8), kWater);
+  const cutum::FluidColumnSurface contiguous =
+      cutum::FindFluidColumnSurfaceAt(world, registry, 8, 8, 12);
+  Expect(contiguous.valid, "contiguous water column is valid");
+  Expect(contiguous.bottomBlockY == 10, "contiguous water bottom block y");
+  Expect(contiguous.surfaceBlockY == 15, "contiguous water surface block y");
 
   std::cout << "fluid_surface_slice_test: ok" << std::endl;
   return 0;

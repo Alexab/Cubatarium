@@ -18,14 +18,14 @@ inline bool ShouldUsePerColumnBelowSurfaceFog(bool map_ready,
   return map_ready && nearby_fluid;
 }
 
-/// Wading: full column tint; submerged: light depth supplement with global fog.
+/// Submerged: light depth supplement with global fog. Wading above water: off.
 inline float BelowSurfaceFogStrength(bool map_ready, bool camera_in_fluid)
 {
-  if (!map_ready)
+  if (!map_ready || !camera_in_fluid)
   {
     return 0.0f;
   }
-  return camera_in_fluid ? 0.25f : 1.0f;
+  return 0.25f;
 }
 
 /// Skip per-column tint in the shallow band when viewing from above water.

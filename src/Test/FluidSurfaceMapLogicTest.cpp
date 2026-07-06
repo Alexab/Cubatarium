@@ -113,8 +113,8 @@ static void TestUnderwaterFogPolicy()
          "map ready far from fluids disables per-column fog");
   Expect(!cutum::ShouldUsePerColumnBelowSurfaceFog(false, true),
          "map not ready disables per-column fog");
-  Expect(std::abs(cutum::BelowSurfaceFogStrength(true, false) - 1.0f) < 1e-5f,
-         "wading strength is 1");
+  Expect(std::abs(cutum::BelowSurfaceFogStrength(true, false)) < 1e-5f,
+         "wading above water disables column tint strength");
   Expect(std::abs(cutum::BelowSurfaceFogStrength(true, true) - 0.25f) < 1e-5f,
          "submerged strength is a light supplement");
   Expect(std::abs(cutum::BelowSurfaceFogStrength(false, false)) < 1e-5f,
@@ -146,6 +146,10 @@ static void TestUnderwaterFogPolicy()
          "pool floor block is directly under fluid span");
   Expect(!cutum::ShouldTintBlockBelowFluidColumn(9, 15, 15),
          "ground far below isolated canopy water is not tinted");
+  Expect(!cutum::ShouldTintBlockBelowFluidColumn(11, 15, 15),
+         "dry block in gap below disjoint surface water is not tinted");
+  Expect(cutum::ShouldTintBlockBelowFluidColumn(9, 10, 15),
+         "ground below contiguous fluid column is tinted");
   Expect(cutum::ShouldTintBlockBelowFluidColumn(4, 5, 20),
          "deep ocean floor is directly under fluid span");
 

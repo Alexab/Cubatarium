@@ -4,7 +4,6 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 
-#include <algorithm>
 #include <cstdint>
 
 namespace cutum
@@ -16,7 +15,6 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
                                             int scanUp, int scanDown)
 {
   FluidColumnSurface column;
-  int min_y = INT32_MAX;
   int max_y = INT32_MIN;
   BlockId top_fluid_id = BLOCK_AIR;
   for (int y = hintY + scanUp; y >= hintY - scanDown; --y)
@@ -30,7 +28,6 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
     {
       continue;
     }
-    min_y = std::min(min_y, y);
     if (y > max_y)
     {
       max_y = y;
@@ -41,9 +38,22 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
   {
     return column;
   }
+
+  int bottom_y = max_y;
+  for (int y = max_y - 1; y >= hintY - scanDown; --y)
+  {
+    const BlockId id = world.GetBlock(glm::ivec3(bx, y, bz));
+    if (!registry.IsLiquid(id) ||
+        registry.GetRenderStyle(id) != BlockRenderStyle::Fluid)
+    {
+      break;
+    }
+    bottom_y = y;
+  }
+
   column.fluidId = top_fluid_id;
   column.surfaceBlockY = max_y;
-  column.bottomBlockY = min_y;
+  column.bottomBlockY = bottom_y;
   column.surfaceY = BlockTopY(max_y);
   column.valid = true;
   return column;
