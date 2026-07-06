@@ -8,8 +8,10 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Player/User.h"
+#include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Gui/Core/GuiMetrics.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -489,7 +491,20 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     }
     else if (key == KeyCode::Key_F12)
     {
-      // reserved
+#ifndef __ANDROID__
+      if (Application && Application->GetGameSession().GetInventoryMode() ==
+                             InventoryMode::Creative)
+      {
+        UCreatureVisualQaSpawner spawner(*World);
+        const bool batch = (Mods & GLFW_MOD_SHIFT) != 0;
+        const CreatureVisualQaSpawnResult spawnResult =
+            batch ? spawner.SpawnAllInGrid() : spawner.SpawnNextSpecies();
+        if (Geometries)
+        {
+          Geometries->ShowTransientMessage(spawnResult.Message, 2.5);
+        }
+      }
+#endif
     }
     else if (key == KeyCode::Key_Delete)
     {
