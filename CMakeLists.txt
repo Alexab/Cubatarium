@@ -183,6 +183,7 @@ set(SOURCES
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Mesh/WorldMeshService.cpp
+    src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
@@ -285,6 +286,7 @@ set(SOURCES
     src/App/WorldOperationRunner.cpp
     src/App/Platform/CursorCapture.cpp
     src/Game/GameSession.cpp
+    src/Game/CreatureVisualQaSpawner.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
     src/Commands/WorldCommands.cpp
@@ -873,6 +875,10 @@ target_include_directories(underwater_fog_column_test PRIVATE
 target_compile_definitions(underwater_fog_column_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(underwater_fog_column_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(camera_stability_test src/Test/CameraStabilityTest.cpp)
+target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(camera_stability_test glm::glm)
 
 add_executable(fluid_surface_slice_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
