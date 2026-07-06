@@ -88,6 +88,7 @@ int main()
     {
       Expect(slice.HasSurface(lx, lz), "flat ocean fills chunk slice");
       Expect(slice.SurfaceBlockY[lz][lx] == kSeaY, "ocean surface block y");
+      Expect(slice.BottomBlockY[lz][lx] == kSeaY, "ocean bottom block y");
       Expect(slice.FluidId[lz][lx] == kWater, "ocean fluid id");
     }
   }
@@ -112,10 +113,19 @@ int main()
                                           20);
   Expect(lava_slice.FluidId[5][5] == kLava, "lava pool column uses lava id");
   Expect(lava_slice.SurfaceBlockY[5][5] == 10, "lava pool surface block y");
+  Expect(lava_slice.BottomBlockY[5][5] == 10, "lava pool bottom block y");
   Expect(cutum::FluidSurfaceIndexForBlock(kLava, registry) == 2,
          "lava maps to shader index 2");
   Expect(cutum::FluidSurfaceIndexForBlock(kWater, registry) == 1,
          "water maps to shader index 1");
+
+  world.SetBlock(glm::ivec3(7, 10, 7), kWater);
+  world.SetBlock(glm::ivec3(7, 15, 7), kWater);
+  const cutum::FluidColumnSurface stacked =
+      cutum::FindFluidColumnSurfaceAt(world, registry, 7, 7, 12);
+  Expect(stacked.valid, "stacked water column is valid");
+  Expect(stacked.bottomBlockY == 10, "stacked water bottom block y");
+  Expect(stacked.surfaceBlockY == 15, "stacked water surface block y");
 
   std::cout << "fluid_surface_slice_test: ok" << std::endl;
   return 0;

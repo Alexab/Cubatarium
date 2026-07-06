@@ -142,6 +142,12 @@ static void TestUnderwaterFogPolicy()
          "wading top faces keep shallow band at waterline");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(true, 2)) < 1e-5f,
          "submerged vertical faces use full column");
+  Expect(cutum::ShouldTintBlockBelowFluidColumn(9, 10, 10),
+         "pool floor block is directly under fluid span");
+  Expect(!cutum::ShouldTintBlockBelowFluidColumn(9, 15, 15),
+         "ground far below isolated canopy water is not tinted");
+  Expect(cutum::ShouldTintBlockBelowFluidColumn(4, 5, 20),
+         "deep ocean floor is directly under fluid span");
 
   cutum::FluidViewProfile profile;
   profile.FogMinBlend = 0.5f;

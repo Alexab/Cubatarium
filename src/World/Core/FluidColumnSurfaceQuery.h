@@ -15,6 +15,7 @@ struct FluidColumnSurface
   BlockId fluidId{BLOCK_AIR};
   float surfaceY{0.0f};
   int surfaceBlockY{0};
+  int bottomBlockY{0};
   bool valid{false};
 };
 

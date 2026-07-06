@@ -79,6 +79,7 @@ int main()
   Expect(ocean.valid, "water column has surface");
   Expect(ocean.fluidId == kWater, "top liquid is water");
   Expect(ocean.surfaceBlockY == kSeaY, "surface block y matches sea level");
+  Expect(ocean.bottomBlockY == kSeaY, "single-block water bottom matches surface");
   Expect(std::abs(ocean.surfaceY - cutum::BlockTopY(kSeaY)) < 1e-4f,
          "surfaceY is BlockTopY");
 

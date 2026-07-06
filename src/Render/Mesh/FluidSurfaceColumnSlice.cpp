@@ -40,6 +40,7 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
     {
       slice.SurfaceBlockY[lz][lx] = FluidSurfaceColumnSlice::kNoSurface;
+      slice.BottomBlockY[lz][lx] = FluidSurfaceColumnSlice::kNoSurface;
       slice.FluidId[lz][lx] = BLOCK_AIR;
     }
   }
@@ -59,6 +60,7 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
         continue;
       }
       slice.SurfaceBlockY[lz][lx] = static_cast<int16_t>(column.surfaceBlockY);
+      slice.BottomBlockY[lz][lx] = static_cast<int16_t>(column.bottomBlockY);
       slice.FluidId[lz][lx] = column.fluidId;
     }
   }

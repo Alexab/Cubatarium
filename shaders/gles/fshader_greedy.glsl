@@ -33,6 +33,7 @@ uniform vec2 uFluidSurfaceOrigin;
 uniform vec2 uFluidSurfaceInvSize;
 uniform sampler2D uFluidSurfaceYMap;
 uniform sampler2D uFluidIndexMap;
+uniform sampler2D uFluidBottomBlockMap;
 uniform vec3 uBelowSurfaceFogColors[3];
 
 uniform sampler2D uOpaqueDepthMap;
@@ -60,6 +61,32 @@ uint fluidIndexAt(vec2 worldXZ) {
         return 0u;
     }
     return uint(floor(texture(uFluidIndexMap, uv).r * 255.0 + 0.5));
+}
+
+float fluidBottomBlockYAt(vec2 worldXZ) {
+    vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        return 1e9;
+    }
+    float h = texture(uFluidBottomBlockMap, uv).r;
+    if (h < -500.0) {
+        return 1e9;
+    }
+    return h;
+}
+
+vec2 fluidColumnSampleXZ(vec2 worldXZ) {
+    return vec2(floor(worldXZ.x + 0.5), floor(worldXZ.y + 0.5));
+}
+
+int blockIndexYFromFace(float worldY, int faceIndex) {
+    if (faceIndex == 4) {
+        return int(floor(worldY - 0.5));
+    }
+    if (faceIndex == 5) {
+        return int(floor(worldY + 0.5));
+    }
+    return int(floor(worldY + 0.5 - 1e-4));
 }
 
 float blockTileCoord(float axis)
@@ -159,10 +186,18 @@ void main()
             applyTint = false;
         }
         if (applyTint) {
-            float sy = surfaceYAt(vWorldPos.xz);
+            vec2 sampleXZ = fluidColumnSampleXZ(vWorldPos.xz);
+            float sy = surfaceYAt(sampleXZ);
+            float bottomBlockY = fluidBottomBlockYAt(sampleXZ);
+            int blockIndexY = blockIndexYFromFace(vWorldPos.y, vFaceIndex);
+            int surfaceBlockY = int(round(sy - 0.5));
+            int bottomBlockIndexY = int(round(bottomBlockY));
+            bool inFluidSpan = blockIndexY + 1 >= bottomBlockIndexY &&
+                               blockIndexY < surfaceBlockY;
             float depthBelow = sy - vWorldPos.y;
-            if (vWorldPos.y < sy && depthBelow >= uBelowSurfaceFogDepthMin) {
-                uint fi = fluidIndexAt(vWorldPos.xz);
+            if (inFluidSpan && vWorldPos.y < sy &&
+                depthBelow >= uBelowSurfaceFogDepthMin) {
+                uint fi = fluidIndexAt(sampleXZ);
                 if (fi > 0u) {
                     vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
                     float factor = clamp(uBelowSurfaceFogMin + depthBelow * uBelowSurfaceFogScale,
@@ -187,3 +222,4 @@ void main()
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
     }
 }
+

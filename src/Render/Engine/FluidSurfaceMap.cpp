@@ -24,6 +24,7 @@ namespace
 
 void PatchGroundChunkStaging(std::vector<float> &surfaceStaging,
                              std::vector<uint8_t> &fluidIndexStaging,
+                             std::vector<float> &fluidBottomStaging,
                              int sizeBlocks, glm::ivec2 originBlock,
                              glm::ivec3 groundChunk,
                              const FluidSurfaceColumnSlice *slice,
@@ -46,10 +47,13 @@ void PatchGroundChunkStaging(std::vector<float> &surfaceStaging,
       {
         surfaceStaging[idx] = UFluidSurfaceMap::kNoSurfaceSentinel;
         fluidIndexStaging[idx] = 0;
+        fluidBottomStaging[idx] = UFluidSurfaceMap::kNoSurfaceSentinel;
         continue;
       }
       surfaceStaging[idx] =
           BlockTopY(static_cast<int>(slice->SurfaceBlockY[localZ][localX]));
+      fluidBottomStaging[idx] = static_cast<float>(
+          slice->BottomBlockY[localZ][localX]);
       fluidIndexStaging[idx] =
           FluidSurfaceIndexForBlock(slice->FluidId[localZ][localX], registry);
     }
@@ -81,6 +85,10 @@ void UFluidSurfaceMap::EnsureGpuResources()
   {
     glGenTextures(1, &FluidIndexTex);
   }
+  if (FluidBottomTex == 0)
+  {
+    glGenTextures(1, &FluidBottomTex);
+  }
 }
 
 void UFluidSurfaceMap::DestroyGpuResources()
@@ -95,12 +103,18 @@ void UFluidSurfaceMap::DestroyGpuResources()
     glDeleteTextures(1, &FluidIndexTex);
     FluidIndexTex = 0;
   }
+  if (FluidBottomTex != 0)
+  {
+    glDeleteTextures(1, &FluidBottomTex);
+    FluidBottomTex = 0;
+  }
   Valid = false;
   SizeBlocks = 0;
   GpuSizeBlocks = 0;
   StagingGpuDirty = false;
   SurfaceStaging.clear();
   FluidIndexStaging.clear();
+  FluidBottomStaging.clear();
 }
 
 bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
@@ -138,8 +152,9 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
         {
           const FluidSurfaceColumnSlice *slice = cache.GetFluidSurfaceSlice(
               world, registry, groundChunk, scanHintY);
-          PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging, SizeBlocks,
-                                  originBlock, groundChunk, slice, registry);
+          PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
+                                  FluidBottomStaging, SizeBlocks, originBlock,
+                                  groundChunk, slice, registry);
         }
         LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
         LastMeshRevision = cache.GetMeshRevision();
@@ -167,6 +182,7 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       static_cast<size_t>(SizeBlocks) * static_cast<size_t>(SizeBlocks);
   SurfaceStaging.assign(texelCount, kNoSurfaceSentinel);
   FluidIndexStaging.assign(texelCount, 0);
+  FluidBottomStaging.assign(texelCount, kNoSurfaceSentinel);
 
   for (int dz = 0; dz < SizeBlocks; ++dz)
   {
@@ -188,6 +204,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       }
       SurfaceStaging[idx] =
           BlockTopY(static_cast<int>(slice->SurfaceBlockY[localZ][localX]));
+      FluidBottomStaging[idx] = static_cast<float>(
+          slice->BottomBlockY[localZ][localX]);
       FluidIndexStaging[idx] =
           FluidSurfaceIndexForBlock(slice->FluidId[localZ][localX], registry);
     }
@@ -256,13 +274,30 @@ bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
                     GL_UNSIGNED_BYTE, FluidIndexStaging.data());
   }
 
+  glBindTexture(GL_TEXTURE_2D, FluidBottomTex);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  if (reallocate)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, SizeBlocks, SizeBlocks, 0, GL_RED,
+                 GL_FLOAT, FluidBottomStaging.data());
+  }
+  else
+  {
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SizeBlocks, SizeBlocks, GL_RED,
+                    GL_FLOAT, FluidBottomStaging.data());
+  }
+
   glBindTexture(GL_TEXTURE_2D, 0);
   Valid = true;
   StagingGpuDirty = false;
   return true;
 }
 
-void UFluidSurfaceMap::Bind(int surfaceYUnit, int fluidIndexUnit) const
+void UFluidSurfaceMap::Bind(int surfaceYUnit, int fluidIndexUnit,
+                           int fluidBottomUnit) const
 {
   if (!Valid)
   {
@@ -272,6 +307,8 @@ void UFluidSurfaceMap::Bind(int surfaceYUnit, int fluidIndexUnit) const
   glBindTexture(GL_TEXTURE_2D, SurfaceYTex);
   glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + fluidIndexUnit));
   glBindTexture(GL_TEXTURE_2D, FluidIndexTex);
+  glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + fluidBottomUnit));
+  glBindTexture(GL_TEXTURE_2D, FluidBottomTex);
   glActiveTexture(GL_TEXTURE0);
 }
 

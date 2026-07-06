@@ -66,6 +66,17 @@ inline float BelowSurfaceFogDepthMinForFace(bool camera_in_fluid, int face_index
   return BelowSurfaceFogDepthMin(camera_in_fluid);
 }
 
+/// Solid block is directly under a contiguous fluid span in its column.
+inline bool ShouldTintBlockBelowFluidColumn(int block_y, int bottom_block_y,
+                                            int surface_block_y)
+{
+  if (surface_block_y < bottom_block_y)
+  {
+    return false;
+  }
+  return block_y + 1 >= bottom_block_y && block_y < surface_block_y;
+}
+
 inline float SubmergedBelowSurfaceFogMin(const FluidViewProfile &profile)
 {
   return profile.FogMinBlend > profile.BelowSurfaceFogMin

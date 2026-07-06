@@ -14,6 +14,7 @@ struct FluidSurfaceColumnSlice
 {
   static constexpr int16_t kNoSurface = INT16_MIN;
   int16_t SurfaceBlockY[CHUNK_SIZE][CHUNK_SIZE];
+  int16_t BottomBlockY[CHUNK_SIZE][CHUNK_SIZE];
   BlockId FluidId[CHUNK_SIZE][CHUNK_SIZE];
 
   FluidSurfaceColumnSlice()
@@ -23,6 +24,7 @@ struct FluidSurfaceColumnSlice
       for (int lx = 0; lx < CHUNK_SIZE; ++lx)
       {
         SurfaceBlockY[lz][lx] = kNoSurface;
+        BottomBlockY[lz][lx] = kNoSurface;
         FluidId[lz][lx] = BLOCK_AIR;
       }
     }

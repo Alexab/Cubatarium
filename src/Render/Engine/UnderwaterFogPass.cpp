@@ -174,7 +174,8 @@ void UUnderwaterFogPass::ApplyUniforms(
     shader->SetVec2("uFluidSurfaceInvSize", surface_map.GetInvSizeBlocks());
     shader->SetInt("uFluidSurfaceYMap", 1);
     shader->SetInt("uFluidIndexMap", 2);
-    surface_map.Bind(1, 2);
+    shader->SetInt("uFluidBottomBlockMap", 3);
+    surface_map.Bind(1, 2, 3);
   }
   else
   {
@@ -183,6 +184,7 @@ void UUnderwaterFogPass::ApplyUniforms(
     shader->SetFloat("uBelowSurfaceFogDepthMin", 0.0f);
     shader->SetInt("uFluidSurfaceYMap", 1);
     shader->SetInt("uFluidIndexMap", 2);
+    shader->SetInt("uFluidBottomBlockMap", 3);
   }
   const GLint colorLoc = shader->GetUniformLocation("uBelowSurfaceFogColors");
   if (colorLoc != -1)

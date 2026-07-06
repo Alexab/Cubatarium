@@ -27,7 +27,7 @@ public:
   bool Update(UBlockWorld &world, UBlockRegistry &registry, UChunkMeshCache &cache,
               glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision);
 
-  void Bind(int surfaceYUnit, int fluidIndexUnit) const;
+  void Bind(int surfaceYUnit, int fluidIndexUnit, int fluidBottomUnit) const;
 
   bool IsValid() const { return Valid; }
   glm::vec2 GetOriginBlockXZ() const { return OriginBlockXZ; }
@@ -44,6 +44,7 @@ private:
   glm::vec2 InvSizeBlocks{0.0f};
   GLuint SurfaceYTex{0};
   GLuint FluidIndexTex{0};
+  GLuint FluidBottomTex{0};
   bool Valid{false};
   int GpuSizeBlocks{0};
   glm::ivec2 LastCameraBlockXZ{INT32_MAX, INT32_MAX};
@@ -51,6 +52,7 @@ private:
   bool StagingGpuDirty{false};
   std::vector<float> SurfaceStaging;
   std::vector<uint8_t> FluidIndexStaging;
+  std::vector<float> FluidBottomStaging;
 };
 
 } // namespace cutum
