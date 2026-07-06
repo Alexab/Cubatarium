@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 29 | Open: 4
+> Total closed: 29 | Open: 5
 
 ## Open
 
@@ -11,6 +11,7 @@
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
 | TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Kind-aware `ApplyFluidFill` done; liquid-on-liquid policy still open | backlog |
+| TD-FL-034 | render-2026-07 | **Below-surface fog regressions (shore puddles, seafloor patchiness, partial-submerge flash)** — см. § TD-FL-034 | Попытка fix 2026-07-06 откачена: усилила тёмные пятна на суше/дне, не закрыла исходные симптомы | render backlog |
 
 Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-branch backlog.
 
@@ -59,6 +60,41 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 | R2 | done | Transform sim + ReflowScan + Source placement |
 | R3 | done | Integration test, telemetry stub, docs |
 | R4 | backlog | Level mesh + sloped surfaces |
+
+## TD-FL-034 — below-surface fog: симптомы и откат fix 2026-07-06
+
+### Симптомы (in-game, ветка `arch_refactor2`, до и после неудачного fix)
+
+| # | Сценарий | Наблюдение |
+|---|----------|------------|
+| A | Суша рядом с лужами / мелкой водой | Тёмные участки земли у кромки воды (per-column tint без полного underwater fog) |
+| B | Взгляд с берега на море | Под водой видны **более тёмные** пятна на дне (рядом со светлыми участками песка) |
+| C | Погружение (глаза на границе surface) | На определённой глубине, когда глаз **частично** под водой: кадр(ы) без полного тумана; участки дна сначала **тёмно-синие**, затем обычный подводный цвет |
+| D | Дно моря | Часть блоков песка **светлее** соседних (не как на берегу, но заметная «пятнистость») — **не исправлено** |
+
+Связано с TD-FL-029 (variant A): per-column `UFluidSurfaceMap` + `uBelowSurfaceFog` в `fshader_greedy.glsl`. Manual QA: FOG-01, FOG-03, FOG-06 в [`QA_FLUIDS_2026.md`](QA_FLUIDS_2026.md).
+
+### Неудачная попытка fix (откачена 2026-07-06)
+
+Цель: включить pre-submerge tint (`BelowSurfaceFogStrength = 1.0` при `!cameraInFluid`), закрыть дыры в surface map, выровнять `depthBelow` по верху блока.
+
+| Изменение | Файл | Намерение |
+|-----------|------|-----------|
+| `BelowSurfaceFogStrength(columnFog, cameraInFluid)` → 1.0 при wading | `FluidUnderwaterFogLogic.h` | REG-01: tint до погружения |
+| Fallback `FindFluidColumnSurfaceAt` при пустом slice | `FluidSurfaceMap.cpp` | REG-03: нет колонок без `fi` |
+| `depthBelow = sy - (blockIndexY + 1)` вместо `sy - vWorldPos.y` | `fshader_greedy.glsl`, GLES | Ровный tint на дне |
+| Тесты + FOG-07 | `FluidSurface*Test`, `QA_FLUIDS_2026.md` | Gate |
+
+**Результат после fix:** регресс — тёмные пятна на **суше** у луж (A), тёмные пятна **дна** при взгляде с берега (B), при нырянии вспышка тёмно-синего дна (C); светлые пятна песка (D) и момент без тумана на границе погружения (C) **остались**.
+
+**Откат:** `git checkout` на перечисленные fluid/fog/shader/test файлы; код возвращён к состоянию до fix.
+
+### Направления для следующей попытки (не реализовано)
+
+1. **Не смешивать** full-strength column tint на суше с distance fog — отдельная политика для shore band vs open ocean vs submerged.
+2. **Диагностика** per-column: `surfaceY`, `bottomBlockY`, `inFluidSpan`, `uBelowSurfaceFog` на светлых vs тёмных блоках (одинаковая глубина).
+3. **Partial submerge:** ранний сигнал из капсулы / eye band, не только `eye.y < surfaceY` колонки глаз (см. [`UNDERWATER_FOG_TRANSITION.md`](UNDERWATER_FOG_TRANSITION.md) §6).
+4. Избегать «силового» `BelowSurfaceFogStrength = 1.0` над сушей — вероятная причина тёмных кромок у луж.
 
 ## Related docs
 
