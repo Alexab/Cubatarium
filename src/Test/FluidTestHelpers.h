@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <unordered_map>
 #include <vector>
 
@@ -318,20 +319,92 @@ inline int CountShoreAirGaps(const cutum::UBlockWorld &world,
   return gaps;
 }
 
-inline void EnqueueFluidNeighbors(cutum::UFluidUpdateSet &queue,
-                                  cutum::UBlockWorld &world,
-                                  const cutum::UBlockDefinitionStorage &definitions,
-                                  glm::ivec3 block_pos)
+inline bool IsFluidQueueCandidate(
+    const cutum::UBlockWorld &world,
+    const cutum::UBlockDefinitionStorage &definitions, glm::ivec3 pos)
+{
+  const cutum::BlockId id = world.GetBlock(pos);
+  if (const cutum::BlockDefinition *def = definitions.GetById(id))
+  {
+    if (def->Physics.IsLiquid)
+    {
+      return true;
+    }
+  }
+  return cutum::UFluidSpreadSystem::CanReceiveFluid(world, definitions, pos);
+}
+
+inline void TryEnqueueFluidAt(cutum::UFluidUpdateSet &queue,
+                              const cutum::UBlockWorld &world,
+                              const cutum::UBlockDefinitionStorage &definitions,
+                              glm::ivec3 pos, uint64_t physics_tick)
+{
+  if (!IsFluidQueueCandidate(world, definitions, pos))
+  {
+    return;
+  }
+  if (!cutum::UFluidSpreadSystem::HasSpreadTargetForTick(world, definitions,
+                                                         pos, physics_tick))
+  {
+    return;
+  }
+  queue.Enqueue(pos);
+}
+
+inline void WakeFluidAdjacency(cutum::UFluidUpdateSet &queue,
+                               const cutum::UBlockWorld &world,
+                               const cutum::UBlockDefinitionStorage &definitions,
+                               glm::ivec3 center, uint64_t physics_tick)
 {
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
       glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
   for (const glm::ivec3 &offset : kDirs)
   {
-    const glm::ivec3 neighbor = block_pos + offset;
-    if (cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions, neighbor))
+    TryEnqueueFluidAt(queue, world, definitions, center + offset, physics_tick);
+  }
+}
+
+inline void WakeFromFluidChange(
+    cutum::UFluidUpdateSet &queue, const cutum::UBlockWorld &world,
+    const cutum::UBlockDefinitionStorage &definitions,
+    const cutum::FluidSpreadChange &change, uint64_t physics_tick)
+{
+  TryEnqueueFluidAt(queue, world, definitions, change.BlockPos, physics_tick);
+  TryEnqueueFluidAt(queue, world, definitions, change.NeighborPos, physics_tick);
+  WakeFluidAdjacency(queue, world, definitions, change.BlockPos, physics_tick);
+  if (change.NeighborPos != change.BlockPos)
+  {
+    WakeFluidAdjacency(queue, world, definitions, change.NeighborPos,
+                       physics_tick);
+  }
+}
+
+inline void RunPhysicsFluidQueueTicks(
+    cutum::UBlockWorld &world, const cutum::UBlockDefinitionStorage &definitions,
+    cutum::UFluidUpdateSet &queue, cutum::UFluidSpreadSystem &fluid,
+    uint64_t max_ticks)
+{
+  cutum::PhysicsBudgets budgets;
+  budgets.FluidBlocksPerTickMax = 128;
+  queue.SetBudgets(budgets);
+  fluid.ShadowMode = false;
+
+  for (uint64_t tick = 0; tick < max_ticks; ++tick)
+  {
+    const std::vector<glm::ivec3> batch = queue.PopBudgeted();
+    if (batch.empty())
     {
-      queue.Enqueue(neighbor);
+      break;
+    }
+    for (glm::ivec3 pos : batch)
+    {
+      const cutum::FluidSpreadStats stats =
+          fluid.TickBlock(world, definitions, tick, pos);
+      for (const cutum::FluidSpreadChange &change : stats.Changes)
+      {
+        WakeFromFluidChange(queue, world, definitions, change, tick);
+      }
     }
   }
 }
@@ -381,15 +454,8 @@ inline void RunQueueTicks(cutum::UBlockWorld &world,
           fluid.TickBlock(world, definitions, tick, pos);
       for (const cutum::FluidSpreadChange &change : stats.Changes)
       {
-        EnqueueFluidNeighbors(queue, world, definitions, change.BlockPos);
-        EnqueueFluidNeighbors(queue, world, definitions, change.NeighborPos);
+        WakeFromFluidChange(queue, world, definitions, change, tick);
       }
-      if (stats.Changes.empty() &&
-          cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions, pos))
-      {
-        queue.Enqueue(pos);
-      }
-      EnqueueFluidNeighbors(queue, world, definitions, pos);
     }
   }
 }

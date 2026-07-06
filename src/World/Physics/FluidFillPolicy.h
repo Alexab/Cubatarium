@@ -24,6 +24,9 @@ public:
                                                 const UBlockDefinitionStorage &definitions,
                                                 glm::ivec3 pos,
                                                 FluidCellState state);
+  static FluidCellState NormalizeFluidKind(
+      const UBlockDefinitionStorage &definitions, BlockId fluid_id,
+      FluidCellState state);
   static void ApplyFluidFill(UBlockWorld &blockWorld,
                              const UBlockDefinitionStorage &definitions,
                              glm::ivec3 pos, BlockId fluid_id,

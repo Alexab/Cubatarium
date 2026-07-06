@@ -109,7 +109,7 @@ void UWorldFluidFacade::ApplyBreakSiteFluidFlood(
   UBlockWorld &block_world = world.GetBlockWorld();
   if (block_world.IsAir(block_pos) && world.BlockPhysicsService)
   {
-    world.BlockPhysicsService->PublishFluid(block_pos);
+    world.TryEnqueueFluidAt(block_pos);
   }
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {

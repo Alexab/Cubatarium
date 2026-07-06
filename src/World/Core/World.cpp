@@ -1751,8 +1751,18 @@ void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
     return;
   }
   const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
-  if (definitions == nullptr ||
-      !UFluidSpreadSystem::HasSpreadTarget(BlockWorld, *definitions, blockPos))
+  if (definitions == nullptr)
+  {
+    return;
+  }
+  const BlockId block_id = BlockWorld.GetBlock(blockPos);
+  if (!BlockRegistry->IsLiquid(block_id) &&
+      !UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *definitions, blockPos))
+  {
+    return;
+  }
+  if (!UFluidSpreadSystem::HasSpreadTargetForTick(
+          BlockWorld, *definitions, blockPos, PhysicsTickCounter))
   {
     return;
   }
@@ -1765,12 +1775,7 @@ void UWorld::ForceEnqueueFluidAt(glm::ivec3 blockPos)
   {
     return;
   }
-  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
-  if (definitions != nullptr &&
-      UFluidSpreadSystem::HasSpreadTarget(BlockWorld, *definitions, blockPos))
-  {
-    BlockPhysicsService->PublishFluid(blockPos);
-  }
+  BlockPhysicsService->PublishFluid(blockPos);
 }
 
 void UWorld::WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks)
@@ -1794,7 +1799,7 @@ void UWorld::WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks)
         const glm::ivec3 pos(blockPos.x + dx, blockPos.y + dy, blockPos.z + dz);
         if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(pos)))
         {
-          ForceEnqueueFluidAt(pos);
+          TryEnqueueFluidAt(pos);
         }
       }
     }
@@ -1825,7 +1830,6 @@ void UWorld::PublishBlockPhysicsEvent(glm::ivec3 blockPos)
   const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
   BlockPhysicsService->PublishBlockChanged(
       blockPos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
-  TryEnqueueFluidAt(blockPos);
 }
 
 void UWorld::PublishNeighborPhysicsEvents(glm::ivec3 blockPos)
@@ -1840,7 +1844,6 @@ void UWorld::PublishNeighborPhysicsEvents(glm::ivec3 blockPos)
     const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(pos);
     BlockPhysicsService->PublishNeighborChanged(
         pos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
-    TryEnqueueFluidAt(pos);
   }
   const glm::ivec3 above(blockPos.x, blockPos.y + 1, blockPos.z);
   const glm::ivec3 aboveChunk = UChunkManager::WorldToChunk(above);

@@ -5,7 +5,7 @@ Source checklist: [`docs/PHYSICS_ROLLOUT.md`](PHYSICS_ROLLOUT.md) (automated↔m
 
 ## Automated coverage links
 
-- Core fluid integration: [`FluidSimMeshIntegrationTest.cpp`](../src/Test/FluidSimMeshIntegrationTest.cpp), [`FluidQueueIntegrationTest.cpp`](../src/Test/FluidQueueIntegrationTest.cpp), [`PhysicsIntegrationTest.cpp`](../src/Test/PhysicsIntegrationTest.cpp), [`LiquidFlowScenariosTest.cpp`](../src/Test/LiquidFlowScenariosTest.cpp)
+- Core fluid integration: [`FluidSimMeshIntegrationTest.cpp`](../src/Test/FluidSimMeshIntegrationTest.cpp), [`FluidQueueIntegrationTest.cpp`](../src/Test/FluidQueueIntegrationTest.cpp), [`FluidStablePuddleTest.cpp`](../src/Test/FluidStablePuddleTest.cpp), [`PhysicsIntegrationTest.cpp`](../src/Test/PhysicsIntegrationTest.cpp), [`LiquidFlowScenariosTest.cpp`](../src/Test/LiquidFlowScenariosTest.cpp)
 - Worldgen and shoreline gates: [`FluidWorldGenSealTest.cpp`](../src/Test/FluidWorldGenSealTest.cpp), [`FluidWorldGenChunkTest.cpp`](../src/Test/FluidWorldGenChunkTest.cpp), [`WorldGenFluidVegetationPipelineTest.cpp`](../src/Test/WorldGenFluidVegetationPipelineTest.cpp)
 - Rendering and fog: [`FluidMeshFacesTest.cpp`](../src/Test/FluidMeshFacesTest.cpp), [`FluidSurfaceSliceTest.cpp`](../src/Test/FluidSurfaceSliceTest.cpp), [`FluidSurfaceMapLogicTest.cpp`](../src/Test/FluidSurfaceMapLogicTest.cpp), [`UnderwaterFogColumnTest.cpp`](../src/Test/UnderwaterFogColumnTest.cpp), [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h)
 - Placement: [`BlockPlacementRaycastTest.cpp`](../src/Test/BlockPlacementRaycastTest.cpp) (LIQ-01/02 scenarios), [`FluidPlacementTest.cpp`](../src/Test/FluidPlacementTest.cpp)
@@ -46,6 +46,7 @@ Submerged rendering now uses **per-column below-surface fog** when the surface m
 | LIQ-09 | Opaque log occludes lava behind water | [X] | [ ] | Automated: column barrier test (mesh partial) | `FluidSimMeshIntegrationTest` |
 | LIQ-10 | Ocean pit transparency | [X] | [ ] | | `FluidWorldGenSealTest` |
 | LIQ-11 | Old worlds stable | [X] | [ ] | | `FluidChunkIoTest` |
+| LIQ-12 | Land puddle: LiqQ→0, no oscillation after spread | [ ] | [ ] | F3: LiqQ/BlockQ drain without reload | `FluidStablePuddleTest`, `FluidQueueDrainIntegrationTest` |
 
 ## Sign-off
 

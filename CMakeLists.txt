@@ -923,6 +923,24 @@ target_include_directories(fluid_queue_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(fluid_queue_integration_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_stable_puddle_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    ${PHYSICS_FLUID_SIM_SOURCES}
+    src/World/Physics/FluidUpdateSet.cpp
+    src/Test/FluidStablePuddleTest.cpp)
+target_include_directories(fluid_stable_puddle_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_stable_puddle_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_queue_drain_integration_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    ${PHYSICS_FLUID_SIM_SOURCES}
+    src/World/Physics/FluidUpdateSet.cpp
+    src/Test/FluidQueueDrainIntegrationTest.cpp)
+target_include_directories(fluid_queue_drain_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(fluid_queue_drain_integration_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_sim_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp

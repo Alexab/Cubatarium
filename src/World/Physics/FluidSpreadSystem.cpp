@@ -141,6 +141,27 @@ bool UFluidSpreadSystem::HasSpreadTarget(
   return UFluidTransformSim::HasSpreadTarget(blockWorld, definitions, block_pos);
 }
 
+bool UFluidSpreadSystem::HasSpreadTargetForTick(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos, uint64_t physics_tick)
+{
+  if (!UFluidTransformSim::HasSpreadTarget(blockWorld, definitions, block_pos))
+  {
+    return false;
+  }
+  const BlockId block_id = blockWorld.GetBlock(block_pos);
+  if (const BlockDefinition *def = definitions.GetById(block_id))
+  {
+    if (def->Physics.IsLiquid)
+    {
+      const int spread_period = SpreadPeriodForCell(blockWorld, definitions,
+                                                    block_pos);
+      return ShouldProcessFluidTick(physics_tick, block_pos, spread_period);
+    }
+  }
+  return true;
+}
+
 FluidSpreadStats UFluidSpreadSystem::Tick(UWorld &world, glm::ivec3 block_pos)
 {
   const UBlockDefinitionStorage *definitions =

@@ -82,6 +82,24 @@ Break-site flood (`FloodBreakSiteFromWetNeighbors`): one hop only — fills the 
 | SOLID opaque | no (terrain face kept) |
 | SOLID toward fluid | yes |
 
+## Active queue contract (Luanti-style)
+
+The runtime fluid queue (`UFluidUpdateSet` / LiqQ) holds **only cells scheduled for transform**, not every liquid in the world.
+
+| Rule | Behavior |
+|------|----------|
+| **Enqueue** | On real `FluidSpreadChange`, on ReflowScan frontier seed, or on explicit player/worldgen wake. Dedup by position (`Keys`). |
+| **Pop** | `PopBudgeted()` removes popped cells from the queue permanently. |
+| **Tick result empty** | Cell is stable — **do not** re-enqueue. |
+| **Tick result non-empty** | Wake `change.BlockPos`, `change.NeighborPos`, and their 6-neighbors (once per changed cell). |
+| **TryEnqueueFluidAt** | Enqueues liquid/floodable cells only when `HasSpreadTargetForTick` (transform preview + spread phase gate). |
+| **HasSpreadTarget** | ReflowScan / frontier seed only (`FluidReflowScan`, test `EnqueueFluidFrontier`). |
+| **HasSpreadTargetForTick** | Runtime enqueue gate: `TransformWouldChange` and, for liquids, `ShouldProcessFluidTick`. |
+| **spread_period** | Gated inside `TickBlock`; throttled cells are skipped and dropped from the queue until a neighbor change re-schedules them. |
+| **BlockQ** | Fluid `transform_flow` does **not** publish block physics events. `transform_dry` (block → air) publishes a single `BlockChanged` only. |
+
+Do **not** add parallel settled caches, idle clears, or phase-rotation that keeps throttled cells in LiqQ.
+
 ## Frontier queue (`FluidReflowScan`)
 
 - `EnqueueFluidFrontierAt` on block removal / placement wake.
@@ -110,7 +128,7 @@ Decision: keep fluid shadow mode as a documented operational rollback control; d
 
 ## Acceptance criteria
 
-See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `fluid_placement_liquid_decor_test`, `fluid_permeable_decor_test`, `fluid_permeable_block_flag_test`, `fluid_kind_preset_test`.
+See [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md) liquids section. Automated: `fluid_mesh_faces_test`, `fluid_queue_integration_test`, `fluid_stable_puddle_test`, `fluid_placement_liquid_decor_test`, `fluid_permeable_decor_test`, `fluid_permeable_block_flag_test`, `fluid_kind_preset_test`.
 
 ## Related docs
 

@@ -53,7 +53,7 @@ void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
   }
   if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos))
   {
-    world.ForceEnqueueFluidAt(pos);
+    world.TryEnqueueFluidAt(pos);
   }
 }
 

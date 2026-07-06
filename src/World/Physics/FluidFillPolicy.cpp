@@ -38,8 +38,11 @@ FluidKind FluidKindFromBlockId(const UBlockDefinitionStorage &definitions,
   return FluidKindFromDefinition(definitions.GetById(id));
 }
 
-FluidCellState EnsureFluidKind(const UBlockDefinitionStorage &definitions,
-                               BlockId fluid_id, FluidCellState state)
+} // namespace
+
+FluidCellState UFluidFillPolicy::NormalizeFluidKind(
+    const UBlockDefinitionStorage &definitions, BlockId fluid_id,
+    FluidCellState state)
 {
   if (state.HasExplicitKind())
   {
@@ -52,8 +55,6 @@ FluidCellState EnsureFluidKind(const UBlockDefinitionStorage &definitions,
   }
   return state.WithKind(kind);
 }
-
-} // namespace
 
 bool UFluidFillPolicy::CanReceiveFluid(const UBlockWorld &blockWorld,
                                        const UBlockDefinitionStorage &definitions,
@@ -122,7 +123,7 @@ void UFluidFillPolicy::ApplyFluidFill(UBlockWorld &blockWorld,
                                       FluidCellState state)
 {
   const FluidCellState with_kind =
-      EnsureFluidKind(definitions, fluid_id, state);
+      NormalizeFluidKind(definitions, fluid_id, state);
   const FluidCellState stored =
       StoredFluidStateForCell(blockWorld, definitions, pos, with_kind);
   if (ShouldReplaceBlockWithFluid(blockWorld, definitions, pos))

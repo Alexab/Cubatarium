@@ -1,4 +1,5 @@
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Test/FluidTestHelpers.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidSpreadSystem.h"
@@ -60,81 +61,11 @@ static int CountWater(const cutum::UBlockWorld &world, int y, int min_x,
 }
 
 static void
-EnqueueFluidNeighbors(cutum::UFluidUpdateSet &queue, cutum::UBlockWorld &world,
-                      const cutum::UBlockDefinitionStorage &definitions,
-                      glm::ivec3 block_pos)
-{
-  static constexpr std::array<glm::ivec3, 6> kDirs = {
-      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
-      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
-  for (const glm::ivec3 &offset : kDirs)
-  {
-    const glm::ivec3 neighbor = block_pos + offset;
-    if (cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions,
-                                                   neighbor))
-    {
-      queue.Enqueue(neighbor);
-    }
-  }
-}
-
-static void
 EnqueueFluidFrontier(cutum::UFluidUpdateSet &queue, cutum::UBlockWorld &world,
                      const cutum::UBlockDefinitionStorage &definitions,
                      glm::ivec3 block_pos)
 {
-  if (cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions, block_pos))
-  {
-    queue.Enqueue(block_pos);
-  }
-  static constexpr std::array<glm::ivec3, 6> kDirs = {
-      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
-      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
-  for (const glm::ivec3 &offset : kDirs)
-  {
-    const glm::ivec3 neighbor = block_pos + offset;
-    if (cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions,
-                                                   neighbor))
-    {
-      queue.Enqueue(neighbor);
-    }
-  }
-}
-
-static void RunQueueTicks(cutum::UBlockWorld &world,
-                          const cutum::UBlockDefinitionStorage &definitions,
-                          cutum::UFluidUpdateSet &queue,
-                          cutum::UFluidSpreadSystem &fluid, uint64_t max_ticks)
-{
-  cutum::PhysicsBudgets budgets;
-  budgets.FluidBlocksPerTickMax = 128;
-  queue.SetBudgets(budgets);
-  fluid.ShadowMode = false;
-
-  for (uint64_t tick = 0; tick < max_ticks; ++tick)
-  {
-    const std::vector<glm::ivec3> batch = queue.PopBudgeted();
-    if (batch.empty())
-    {
-      break;
-    }
-    for (glm::ivec3 pos : batch)
-    {
-      const cutum::FluidSpreadStats stats =
-          fluid.TickBlock(world, definitions, tick, pos);
-      for (const cutum::FluidSpreadChange &change : stats.Changes)
-      {
-        EnqueueFluidNeighbors(queue, world, definitions, change.BlockPos);
-        EnqueueFluidNeighbors(queue, world, definitions, change.NeighborPos);
-      }
-      if (stats.Changes.empty() &&
-          cutum::UFluidSpreadSystem::HasSpreadTarget(world, definitions, pos))
-      {
-        queue.Enqueue(pos);
-      }
-      EnqueueFluidNeighbors(queue, world, definitions, pos);
-    }
-  }
+  FluidTest::EnqueueFluidFrontier(queue, world, definitions, block_pos);
 }
 
 int main()
@@ -165,13 +96,16 @@ int main()
 
   cutum::UFluidUpdateSet queue;
   cutum::UFluidSpreadSystem fluid;
-  queue.Enqueue(glm::ivec3(1, 10, 1));
-  RunQueueTicks(world, *definitions, queue, fluid, 500);
+  FluidTest::EnqueueFluidFrontier(queue, world, *definitions,
+                                  glm::ivec3(1, 10, 1));
+  FluidTest::RunQueueTicks(world, *definitions, queue, fluid, 500);
 
   Expect(CountWater(world, 10, 1, 2, 1, 2) == 4,
          "2x2 pit fills via fluid update queue");
   Expect(world.GetFluidState(glm::ivec3(1, 10, 1)).IsSource(),
          "source cell remains source after queue-driven spread");
+  Expect(queue.GetStats().Depth == 0,
+         "pit fill drains fluid queue after spread settles");
 
   cutum::UBlockWorld shore_world;
   shore_world.SetFluidDefinitions(definitions.get());
@@ -184,7 +118,7 @@ int main()
   cutum::UFluidUpdateSet shore_queue;
   shore_queue.Enqueue(glm::ivec3(0, 10, 0));
   shore_queue.Enqueue(glm::ivec3(1, 10, 0));
-  RunQueueTicks(shore_world, *definitions, shore_queue, fluid, 200);
+  FluidTest::RunQueueTicks(shore_world, *definitions, shore_queue, fluid, 200);
 
   Expect(shore_world.GetBlock(glm::ivec3(1, 10, 0)) == kWater,
          "shore air next to sea fills via floodable queue tick");
@@ -206,33 +140,40 @@ int main()
   cutum::UFluidUpdateSet stair_queue;
   EnqueueFluidFrontier(stair_queue, stair_world, *definitions,
                        glm::ivec3(1, 10, 0));
-  RunQueueTicks(stair_world, *definitions, stair_queue, fluid, 200);
+  FluidTest::RunQueueTicks(stair_world, *definitions, stair_queue, fluid, 200);
 
   Expect(stair_world.GetBlock(glm::ivec3(1, 10, 0)) == kWater,
          "stair-step shore cavity fills from horizontal sea water");
 
   cutum::UBlockWorld land_world;
   land_world.SetFluidDefinitions(definitions.get());
-  for (int x = 3; x <= 7; ++x)
+  for (int x = 0; x < 5; ++x)
   {
-    for (int z = 3; z <= 7; ++z)
+    for (int z = 0; z < 5; ++z)
     {
       land_world.SetBlock(glm::ivec3(x, 9, z), 8);
+      const bool perimeter = x == 0 || z == 0 || x == 4 || z == 4;
+      if (perimeter)
+      {
+        land_world.SetBlock(glm::ivec3(x, 10, z), 8);
+      }
     }
   }
-  land_world.SetBlock(glm::ivec3(5, 10, 5), kWater);
-  land_world.SetFluidState(glm::ivec3(5, 10, 5),
+  land_world.SetBlock(glm::ivec3(2, 10, 2), kWater);
+  land_world.SetFluidState(glm::ivec3(2, 10, 2),
                            cutum::FluidCellState::Source());
 
   cutum::UFluidUpdateSet land_queue;
   EnqueueFluidFrontier(land_queue, land_world, *definitions,
-                       glm::ivec3(5, 10, 5));
-  RunQueueTicks(land_world, *definitions, land_queue, fluid, 200);
+                       glm::ivec3(2, 10, 2));
+  FluidTest::RunQueueTicks(land_world, *definitions, land_queue, fluid, 400);
 
-  Expect(land_world.GetBlock(glm::ivec3(6, 10, 5)) == kWater,
+  Expect(land_world.GetBlock(glm::ivec3(3, 10, 2)) == kWater,
          "placed source spreads to horizontal air on land");
-  Expect(land_world.GetBlock(glm::ivec3(5, 10, 6)) == kWater,
+  Expect(land_world.GetBlock(glm::ivec3(2, 10, 3)) == kWater,
          "placed source spreads to second horizontal neighbor");
+  Expect(land_queue.GetStats().Depth == 0,
+         "land puddle drains fluid queue after spread settles");
 
   std::cout << "fluid_queue_integration_test: OK" << std::endl;
   return 0;

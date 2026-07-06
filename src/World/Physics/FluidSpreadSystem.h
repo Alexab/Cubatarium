@@ -65,6 +65,10 @@ public:
   static bool HasSpreadTarget(const UBlockWorld &world,
                               const UBlockDefinitionStorage &definitions,
                               glm::ivec3 block_pos);
+  static bool HasSpreadTargetForTick(const UBlockWorld &world,
+                                     const UBlockDefinitionStorage &definitions,
+                                     glm::ivec3 block_pos,
+                                     uint64_t physics_tick);
 
   static bool CanReceiveFluid(const UBlockWorld &blockWorld,
                               const UBlockRegistry &registry,
