@@ -34,16 +34,32 @@ inline float BelowSurfaceFogDepthMin(bool camera_in_fluid)
   return camera_in_fluid ? 0.0f : 0.5f;
 }
 
-/// Per-column tint targets opaque geometry only; transparent fluid keeps its own look.
-inline bool ShouldApplyBelowSurfaceFogToPass(bool transparent_pass)
+/// Per-column tint targets opaque solids only; fluid/cutout/cross keep their own look.
+inline bool ShouldApplyBelowSurfaceFogToPass(bool transparent_pass,
+                                             bool alpha_cutout = false)
 {
-  return !transparent_pass;
+  return !transparent_pass && !alpha_cutout;
 }
 
-/// Vertical side faces skip the shallow band to avoid diagonal quarter-face banding.
+/// Cross vegetation and wading side faces are excluded from column tint.
+inline bool ShouldApplyBelowSurfaceFogToFace(bool camera_in_fluid, int face_index)
+{
+  constexpr int kCrossFaceIndex = 127;
+  if (face_index == kCrossFaceIndex)
+  {
+    return false;
+  }
+  if (!camera_in_fluid)
+  {
+    return face_index == 4;
+  }
+  return true;
+}
+
+/// Horizontal top faces keep the shallow band when wading above water.
 inline float BelowSurfaceFogDepthMinForFace(bool camera_in_fluid, int face_index)
 {
-  if (!camera_in_fluid && face_index >= 0 && face_index <= 3)
+  if (!camera_in_fluid && face_index != 4)
   {
     return 0.0f;
   }

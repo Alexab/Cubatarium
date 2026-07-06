@@ -753,8 +753,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(greedyShader, camera->GetPosition(),
-                     cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass));
+    ApplyFogUniforms(
+        greedyShader, camera->GetPosition(),
+        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -889,7 +890,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
                       GreedyShaderMode::TransparentColor, 0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(crossInstancedShader, camera->GetPosition());
+    ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
   }
   glActiveTexture(GL_TEXTURE0);
 

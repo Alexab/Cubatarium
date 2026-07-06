@@ -127,11 +127,19 @@ static void TestUnderwaterFogPolicy()
          "opaque pass receives below-surface tint");
   Expect(!cutum::ShouldApplyBelowSurfaceFogToPass(true),
          "transparent fluid pass skips below-surface tint");
-  Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(false, 2)) < 1e-5f,
-         "vertical side faces skip shallow band when wading");
+  Expect(!cutum::ShouldApplyBelowSurfaceFogToPass(false, true),
+         "cutout pass skips below-surface tint");
+  Expect(cutum::ShouldApplyBelowSurfaceFogToFace(false, 4),
+         "wading tints opaque top faces under water");
+  Expect(!cutum::ShouldApplyBelowSurfaceFogToFace(false, 2),
+         "wading skips side faces to avoid tree and ground banding");
+  Expect(!cutum::ShouldApplyBelowSurfaceFogToFace(false, 127),
+         "cross vegetation never receives column tint");
+  Expect(cutum::ShouldApplyBelowSurfaceFogToFace(true, 2),
+         "submerged side faces may receive column tint");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(false, 4) - 0.5f) <
              1e-5f,
-         "horizontal faces keep shallow band when wading");
+         "wading top faces keep shallow band at waterline");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(true, 2)) < 1e-5f,
          "submerged vertical faces use full column");
 
