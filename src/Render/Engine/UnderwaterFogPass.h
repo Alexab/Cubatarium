@@ -21,7 +21,8 @@ public:
               UFluidSurfaceMap &surface_map, const glm::vec3 &base_sky_color);
   void ApplyUniforms(const std::shared_ptr<UShaderProgram> &shader,
                      const glm::vec3 &camera_pos,
-                     const UFluidSurfaceMap &surface_map) const;
+                     const UFluidSurfaceMap &surface_map,
+                     bool apply_below_surface_fog = true) const;
   void ResetSkyTint(const glm::vec3 &base_sky_color);
 
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
@@ -47,6 +48,7 @@ private:
   float BelowSurfaceFogMin{0.52f};
   float BelowSurfaceFogScale{0.35f};
   float BelowSurfaceFogDepthMin{0.0f};
+  bool CameraInFluid{false};
   std::array<glm::vec3, UFluidSurfaceMap::kMaxFluidShaderSlots>
       BelowSurfaceFogColors{};
   glm::vec3 OverlayTintColor{0.0f};

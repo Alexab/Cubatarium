@@ -147,7 +147,8 @@ private:
                             BlockId blockId,
                             const std::map<size_t, UTextureCube> &textures);
   void ApplyFogUniforms(const std::shared_ptr<UShaderProgram> &shader,
-                        const glm::vec3 &cameraPos);
+                        const glm::vec3 &cameraPos,
+                        bool applyBelowSurfaceFog = true);
   void RenderFluidOverlay(int width, int height);
   bool InitOverlayBuffers();
   void DestroyOverlayBuffers();

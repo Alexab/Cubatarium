@@ -34,6 +34,22 @@ inline float BelowSurfaceFogDepthMin(bool camera_in_fluid)
   return camera_in_fluid ? 0.0f : 0.5f;
 }
 
+/// Per-column tint targets opaque geometry only; transparent fluid keeps its own look.
+inline bool ShouldApplyBelowSurfaceFogToPass(bool transparent_pass)
+{
+  return !transparent_pass;
+}
+
+/// Vertical side faces skip the shallow band to avoid diagonal quarter-face banding.
+inline float BelowSurfaceFogDepthMinForFace(bool camera_in_fluid, int face_index)
+{
+  if (!camera_in_fluid && face_index >= 0 && face_index <= 3)
+  {
+    return 0.0f;
+  }
+  return BelowSurfaceFogDepthMin(camera_in_fluid);
+}
+
 inline float SubmergedBelowSurfaceFogMin(const FluidViewProfile &profile)
 {
   return profile.FogMinBlend > profile.BelowSurfaceFogMin

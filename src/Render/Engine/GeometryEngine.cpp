@@ -20,6 +20,7 @@
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -696,9 +697,11 @@ void UGeometryEngine::PrepareFrameRendering()
 }
 
 void UGeometryEngine::ApplyFogUniforms(
-    const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos)
+    const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos,
+    bool applyBelowSurfaceFog)
 {
-  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap);
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap,
+                                   applyBelowSurfaceFog);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -750,7 +753,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(greedyShader, camera->GetPosition());
+    ApplyFogUniforms(greedyShader, camera->GetPosition(),
+                     cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass));
   }
   glActiveTexture(GL_TEXTURE0);
 

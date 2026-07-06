@@ -89,6 +89,7 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
   }
   // Horizontal fluid faces are visible from inside the volume (e.g. surface when
   // submerged); shell pass disables cull but backfaces still miss stencil.
+  // Below-surface column tint is opaque-only (see ShouldApplyBelowSurfaceFogToPass).
   if (q.FluidPacked != 0 && q.axis == 1)
   {
     if (flipWinding)

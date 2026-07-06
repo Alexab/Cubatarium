@@ -29,6 +29,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
   BlockId eyeFluid = BLOCK_AIR;
   const bool cameraInFluid = column.valid && eye.y < column.surfaceY;
+  CameraInFluid = cameraInFluid;
   if (cameraInFluid)
   {
     eyeFluid = column.fluidId;
@@ -151,7 +152,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
 void UUnderwaterFogPass::ApplyUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &camera_pos,
-    const UFluidSurfaceMap &surface_map) const
+    const UFluidSurfaceMap &surface_map, bool apply_below_surface_fog) const
 {
   shader->SetVec3("uCameraPos", camera_pos);
   shader->SetVec3("uFogColor", SmoothedFogColor);
@@ -161,11 +162,13 @@ void UUnderwaterFogPass::ApplyUniforms(
   shader->SetFloat("uFogEnabled", FogEnabled);
   shader->SetFloat("uFogHorizontal", FogHorizontal);
   shader->SetFloat("uFogDensity", FogDensity);
-  shader->SetFloat("uBelowSurfaceFog", BelowSurfaceFogStrength);
+  const float below_surface_fog =
+      apply_below_surface_fog ? BelowSurfaceFogStrength : 0.0f;
+  shader->SetFloat("uBelowSurfaceFog", below_surface_fog);
   shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
   shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
   shader->SetFloat("uBelowSurfaceFogDepthMin", BelowSurfaceFogDepthMin);
-  if (BelowSurfaceFogStrength > 0.001f && surface_map.IsValid())
+  if (below_surface_fog > 0.001f && surface_map.IsValid())
   {
     shader->SetVec2("uFluidSurfaceOrigin", surface_map.GetOriginBlockXZ());
     shader->SetVec2("uFluidSurfaceInvSize", surface_map.GetInvSizeBlocks());

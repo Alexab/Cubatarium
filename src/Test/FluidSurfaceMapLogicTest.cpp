@@ -123,6 +123,17 @@ static void TestUnderwaterFogPolicy()
          "wading skips shallow surface band");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMin(true)) < 1e-5f,
          "submerged uses full below-surface column");
+  Expect(cutum::ShouldApplyBelowSurfaceFogToPass(false),
+         "opaque pass receives below-surface tint");
+  Expect(!cutum::ShouldApplyBelowSurfaceFogToPass(true),
+         "transparent fluid pass skips below-surface tint");
+  Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(false, 2)) < 1e-5f,
+         "vertical side faces skip shallow band when wading");
+  Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(false, 4) - 0.5f) <
+             1e-5f,
+         "horizontal faces keep shallow band when wading");
+  Expect(std::abs(cutum::BelowSurfaceFogDepthMinForFace(true, 2)) < 1e-5f,
+         "submerged vertical faces use full column");
 
   cutum::FluidViewProfile profile;
   profile.FogMinBlend = 0.5f;

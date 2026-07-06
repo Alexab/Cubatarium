@@ -155,7 +155,11 @@ void main()
     if (uBelowSurfaceFog > 0.001 && uFluidSurfaceInvSize.x > 0.0) {
         float sy = surfaceYAt(vWorldPos.xz);
         float depthBelow = sy - vWorldPos.y;
-        if (vWorldPos.y < sy && depthBelow >= uBelowSurfaceFogDepthMin) {
+        float depthMin = uBelowSurfaceFogDepthMin;
+        if (vFaceIndex >= 0 && vFaceIndex <= 3 && uBelowSurfaceFogDepthMin > 0.0) {
+            depthMin = 0.0;
+        }
+        if (vWorldPos.y < sy && depthBelow >= depthMin) {
             uint fi = fluidIndexAt(vWorldPos.xz);
             if (fi > 0u) {
                 vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
