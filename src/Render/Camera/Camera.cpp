@@ -1,4 +1,5 @@
 #include "Render/Camera/Camera.h"
+#include "Render/Camera/CameraBasisLogic.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
@@ -532,51 +533,8 @@ void UCamera::ProcessMouseScroll(float Yoffset)
 
 void UCamera::UpdateCameraVectors()
 {
-  // Calculate the new Front vector
-  glm::vec3 front;
-  front.x = std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch));
-  front.y = std::sin(radians(this->Pitch));
-  front.z = std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch));
-  const float frontLen = glm::length(front);
-  if (frontLen > 1.0e-6f)
-  {
-    front /= frontLen;
-  }
-  else
-  {
-    front = glm::vec3(0.0f, 0.0f, -1.0f);
-  }
-  this->Front = front;
-
-  glm::vec3 worldUp = WorldUp;
-  if (std::abs(glm::dot(Front, worldUp)) > 0.98f)
-  {
-    worldUp = glm::vec3(0.0f, 0.0f, Front.y > 0.0f ? -1.0f : 1.0f);
-  }
-
-  glm::vec3 right = glm::cross(Front, worldUp);
-  const float rightLen = glm::length(right);
-  if (rightLen < 1e-6f)
-  {
-    this->Right = glm::normalize(glm::vec3(-std::sin(radians(this->Yaw)), 0.0f,
-                                           std::cos(radians(this->Yaw))));
-  }
-  else
-  {
-    this->Right = right / rightLen;
-  }
-
-  this->Up = glm::cross(Right, Front);
-  const float upLen = glm::length(Up);
-  if (upLen > 1.0e-6f)
-  {
-    this->Up /= upLen;
-  }
-  else
-  {
-    this->Up = WorldUp;
-  }
-
+  ComputeFpsCameraBasis(static_cast<float>(Yaw), static_cast<float>(Pitch),
+                        Front, Right, Up, WorldUp);
   UpdatePose();
 }
 
