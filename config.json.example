@@ -89,8 +89,7 @@
         "underwater_fog": {
             "surface_scan_up": 32,
             "surface_scan_down": 64,
-            "surface_window_move_threshold": 8,
-            "below_surface_fog_v2": false
+            "surface_window_move_threshold": 8
         }
     },
     "ui": {

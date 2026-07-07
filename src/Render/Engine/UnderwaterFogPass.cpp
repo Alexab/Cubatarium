@@ -4,7 +4,6 @@
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/GlIncludes.h"
-#include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -29,10 +28,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
       world.SampleFluidPhysics(eye, camera->GetPlayerCapsule());
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
   BlockId eyeFluid = BLOCK_AIR;
-  const bool belowSurfaceFogV2 = URuntimeTuning::Get().BelowSurfaceFogV2;
-  const float capsuleFeetY = camera->GetPlayerCapsule().feetY(eye);
-  const bool cameraInFluid = cutum::IsCameraSubmergedForFog(
-      column.valid, eye.y, column.surfaceY, capsuleFeetY, belowSurfaceFogV2);
+  const bool cameraInFluid = column.valid && eye.y < column.surfaceY;
   CameraInFluid = cameraInFluid;
   if (cameraInFluid)
   {
@@ -58,7 +54,6 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   BelowSurfaceFogStrength =
       cutum::BelowSurfaceFogStrength(columnFogActive, cameraInFluid);
   BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(cameraInFluid);
-  BelowSurfaceFogBlockDepth = belowSurfaceFogV2;
 
   BelowSurfaceFogColors.fill(glm::vec3(0.0f));
   BelowSurfaceFogMin = 0.52f;
@@ -174,8 +169,6 @@ void UUnderwaterFogPass::ApplyUniforms(
   shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
   shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
   shader->SetFloat("uBelowSurfaceFogDepthMin", BelowSurfaceFogDepthMin);
-  shader->SetFloat("uBelowSurfaceFogBlockDepth",
-                    BelowSurfaceFogBlockDepth ? 1.0f : 0.0f);
   if (below_surface_fog > 0.001f && surface_map.IsValid())
   {
     shader->SetVec2("uFluidSurfaceOrigin", surface_map.GetOriginBlockXZ());
@@ -190,7 +183,6 @@ void UUnderwaterFogPass::ApplyUniforms(
     shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
     shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
     shader->SetFloat("uBelowSurfaceFogDepthMin", 0.0f);
-    shader->SetFloat("uBelowSurfaceFogBlockDepth", 0.0f);
     shader->SetInt("uFluidSurfaceYMap", 1);
     shader->SetInt("uFluidIndexMap", 2);
     shader->SetInt("uFluidBottomBlockMap", 3);

@@ -49,7 +49,6 @@ private:
   float BelowSurfaceFogScale{0.35f};
   float BelowSurfaceFogDepthMin{0.0f};
   bool CameraInFluid{false};
-  bool BelowSurfaceFogBlockDepth{false};
   std::array<glm::vec3, UFluidSurfaceMap::kMaxFluidShaderSlots>
       BelowSurfaceFogColors{};
   glm::vec3 OverlayTintColor{0.0f};
