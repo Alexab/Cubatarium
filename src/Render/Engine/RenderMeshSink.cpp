@@ -8,6 +8,7 @@ void URenderMeshSink::Attach(UGeometryEngine *engine) { Engine = engine; }
 
 void URenderMeshSink::OnChunkBlocksChanged(glm::ivec3 /*chunk_coord*/)
 {
+  ++InvalidationCount;
   if (Engine)
   {
     Engine->InvalidateBlockBatchCache();
@@ -16,6 +17,7 @@ void URenderMeshSink::OnChunkBlocksChanged(glm::ivec3 /*chunk_coord*/)
 
 void URenderMeshSink::OnChunkUnloaded(glm::ivec3 /*chunk_coord*/)
 {
+  ++InvalidationCount;
   if (Engine)
   {
     Engine->InvalidateBlockBatchCache();

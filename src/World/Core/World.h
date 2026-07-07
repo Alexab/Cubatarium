@@ -709,6 +709,7 @@ private:
 
   friend class UWorldChunkDirtyService;
   friend class UWorldFluidFacade;
+  friend class UWorldCreatureFacade;
   friend class UWorldBlockPhysicsService;
 };
 

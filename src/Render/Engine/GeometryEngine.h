@@ -20,6 +20,7 @@ typedef int GLint;
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
+#include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
@@ -252,6 +253,7 @@ private:
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
   UFluidSurfaceMap FluidSurfaceMap;
   UUnderwaterFogPass UnderwaterFogPass_;
+  USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};

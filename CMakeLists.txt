@@ -153,6 +153,7 @@ set(SOURCES
     src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
     src/World/Core/WorldFluidFacade.cpp
+    src/World/Core/WorldCreatureFacade.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp
@@ -198,6 +199,7 @@ set(SOURCES
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
     src/Render/Engine/UnderwaterFogPass.cpp
+    src/Render/Engine/SkyGradientPass.cpp
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp

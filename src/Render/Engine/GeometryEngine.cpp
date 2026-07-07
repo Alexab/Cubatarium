@@ -1182,84 +1182,12 @@ void UGeometryEngine::DrawCube(std::shared_ptr<UCube> icube, GLuint texture)
 
 void UGeometryEngine::DrawSkyGradient()
 {
-  // Use simple version which is more reliable
-  DrawSkyGradientSimple();
+  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_);
 }
 
 void UGeometryEngine::DrawSkyGradientSimple()
 {
-  // Check that sky shader is ready
-  if (!skyShader->IsValid())
-  {
-    std::cerr << "Sky shader is not linked!" << std::endl;
-    return;
-  }
-
-  // Temporarily disable depth test for sky
-  glDisable(GL_DEPTH_TEST);
-
-  // Use sky shader
-  skyShader->Use();
-
-  // Set identity matrix for sky
-  glm::mat4 skyMatrix = glm::mat4(1.0f);
-  skyShader->SetMat4("mvp_matrix", skyMatrix);
-
-  // Pass sky color to shader
-  skyShader->SetVec4("skyColor", skyColor);
-  skyShader->SetVec3("uFogColor", UnderwaterFogPass_.GetFogColor());
-  skyShader->SetFloat("uFogHorizonBlend",
-                      UnderwaterFogPass_.GetFogHorizonBlend());
-
-  // Create simple rectangle for sky (full screen)
-  static const GLfloat skyVertices[] = {
-      // Positions      // Texture coordinates
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
-      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
-
-  // Create temporary VBO for rendering
-  GLuint tempVBO;
-  glGenBuffers(1, &tempVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(skyVertices), skyVertices,
-               GL_STATIC_DRAW);
-
-  // Set attributes
-  int vertexLocation =
-      glGetAttribLocation(skyShader->GetProgramID(), "a_position");
-  if (vertexLocation != -1)
-  {
-    glEnableVertexAttribArray(vertexLocation);
-    glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)0);
-  }
-
-  int texcoordLocation =
-      glGetAttribLocation(skyShader->GetProgramID(), "a_texcoord");
-  if (texcoordLocation != -1)
-  {
-    glEnableVertexAttribArray(texcoordLocation);
-    glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
-  }
-
-  // Render sky as triangles
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-  // Check OpenGL errors
-  GLenum error = glGetError();
-  if (error != GL_NO_ERROR)
-  {
-    std::cerr << "OpenGL error after drawing sky: " << error << std::endl;
-  }
-
-  // Free resources
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glDeleteBuffers(1, &tempVBO);
-  skyShader->Unuse();
-
-  // Enable depth test back
-  glEnable(GL_DEPTH_TEST);
+  DrawSkyGradient();
 }
 
 bool UGeometryEngine::InitOverlayBuffers()
