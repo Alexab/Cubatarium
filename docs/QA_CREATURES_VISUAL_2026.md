@@ -13,6 +13,7 @@ Prerequisites:
 | Creature code/assets vs baseline | `git diff bc94ade HEAD -- src/Creatures/ models/creatures/` | **empty** |
 | glTF bind-pose / skinning | `python tools/test_gltf_skinned_bind_pose.py` | **33/33 passed** |
 | Preview dock isolation | `ContentPreviewDock` uses `RenderUnique` (`c05439d`) | **present on branch** |
+| Dock walk animation | `PreviewAnimTime` @ 0.8x, walk clip, 30 FPS re-render | **present** |
 
 ## Manual matrix
 

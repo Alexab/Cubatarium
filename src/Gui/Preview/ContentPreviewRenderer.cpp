@@ -263,7 +263,8 @@ GLuint UContentPreviewRenderer::Render(ContentKind kind, const std::string &id,
 
 GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
                                              const std::string &id, int size,
-                                             float yawDeg, float pitchDeg)
+                                             float yawDeg, float pitchDeg,
+                                             float animTimeSec, bool animateWalk)
 {
   if (id.empty() || !SupportsKind(kind))
   {
@@ -271,9 +272,10 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
   }
   if (kind == ContentKind::UCreature)
   {
-    return Creatures ? Creatures->RenderToUniqueTexture(id, "", size, yawDeg,
-                                                        pitchDeg)
-                     : 0;
+    return Creatures
+               ? Creatures->RenderToUniqueTexture(id, "", size, yawDeg, pitchDeg,
+                                                  animTimeSec, animateWalk)
+               : 0;
   }
   if (kind == ContentKind::Skin)
   {
@@ -287,7 +289,8 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
       return 0;
     }
     return Creatures->RenderToUniqueTexture(
-        species->GetControlledDefaultSpeciesId(), id, size, yawDeg, pitchDeg);
+        species->GetControlledDefaultSpeciesId(), id, size, yawDeg, pitchDeg,
+        animTimeSec, animateWalk);
   }
 
   const GLuint shared = Render(kind, id, size, yawDeg, pitchDeg);

@@ -88,13 +88,16 @@ GLuint GetOrCreatePreviewSkinnedVao(const cutum::GltfPrimitiveCpu &mesh,
       mesh, indexCount);
 }
 
-const GltfAnimationCpu *ResolvePreviewGltfClip(
-    const CreatureGltfMeshAsset &asset)
+const GltfAnimationCpu *ResolvePreviewGltfClip(const CreatureGltfMeshAsset &asset,
+                                               bool preferWalk)
 {
-  static const char *kClipPreference[] = {"idle", "walk"};
-  for (const char *name : kClipPreference)
+  static const char *kWalkFirst[] = {"walk", "idle", "run"};
+  static const char *kIdleFirst[] = {"idle", "walk"};
+  const char *const *order = preferWalk ? kWalkFirst : kIdleFirst;
+  const size_t orderLen = preferWalk ? 3 : 2;
+  for (size_t i = 0; i < orderLen; ++i)
   {
-    const auto it = asset.animationIndexByName.find(name);
+    const auto it = asset.animationIndexByName.find(order[i]);
     if (it != asset.animationIndexByName.end())
     {
       return &asset.animations[it->second];
@@ -396,7 +399,9 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
 bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                                                 const std::string &skinId,
                                                 int viewportSize, float yawDeg,
-                                                float pitchDeg)
+                                                float pitchDeg,
+                                                float animTimeSec,
+                                                bool animateWalk)
 {
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
@@ -450,10 +455,12 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     static std::unordered_map<size_t, GLuint> previewGltfVaoCache;
     static std::unordered_map<size_t, GLuint> previewGltfSkinnedVaoCache;
     const glm::mat4 mvp = projection * view * bodyMat;
-    const GltfAnimationCpu *previewAnim = ResolvePreviewGltfClip(*meshAsset);
+    const GltfAnimationCpu *previewAnim =
+        ResolvePreviewGltfClip(*meshAsset, animateWalk);
     const std::vector<glm::mat4> skinBones =
         meshAsset->hasSkin
-            ? ComputeGltfSkinMatrices(*meshAsset, previewAnim, 0.f, true)
+            ? ComputeGltfSkinMatrices(*meshAsset, previewAnim, animTimeSec,
+                                      true)
             : std::vector<glm::mat4>{};
 
     bool drewAny = false;
@@ -590,8 +597,17 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         BoneSkeletonPreviewRootMatrix(meshAsset->geometry, 1.2f);
 
     CreatureLocomotionFacts facts;
-    facts.state = LocomotionState::Idle;
-    facts.animPhase = 0.f;
+    if (animateWalk)
+    {
+      facts.state = LocomotionState::Walk;
+      facts.animPhase =
+          animTimeSec * (2.f * 3.14159265f * 0.35f);
+    }
+    else
+    {
+      facts.state = LocomotionState::Idle;
+      facts.animPhase = 0.f;
+    }
     const BoneSkeletonPose pose =
         BoneSkeletonPoseEngine::Compute(facts, *def, 0.f);
     BoneSkeletonHierarchy hierarchy(meshAsset->geometry);
@@ -707,7 +723,7 @@ GLuint UCreaturePreviewRenderer::Render(const std::string &speciesId,
 
 GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     const std::string &speciesId, const std::string &skinId, int size,
-    float yawDeg, float pitchDeg)
+    float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk)
 {
   if (speciesId.empty() || !Shader)
   {
@@ -744,7 +760,8 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   glDepthMask(GL_TRUE);
   glDisable(GL_CULL_FACE);
 
-  if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg))
+  if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg,
+                        animTimeSec, animateWalk))
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteTextures(1, &tex);

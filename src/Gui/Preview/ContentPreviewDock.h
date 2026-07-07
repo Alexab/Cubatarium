@@ -60,6 +60,7 @@ private:
   float Pitch{32.0f};
   int RenderSize{256};
   double RenderThrottle{0.0};
+  float PreviewAnimTime{0.f};
   GLuint PreviewTexture{0};
   std::function<void()> OnChange;
 };

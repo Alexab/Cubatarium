@@ -37,7 +37,8 @@ public:
                 float yawDeg, float pitchDeg);
   /// Stable texture for dock preview (not shared with icon-warmup FBO).
   GLuint RenderUnique(ContentKind kind, const std::string &id, int size,
-                      float yawDeg, float pitchDeg);
+                      float yawDeg, float pitchDeg, float animTimeSec = 0.f,
+                      bool animateWalk = false);
 
 private:
   bool EnsureFboSize(int size);

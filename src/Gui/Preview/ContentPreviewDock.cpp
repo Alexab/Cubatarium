@@ -9,6 +9,19 @@
 
 #include "Render/GlIncludes.h"
 
+namespace
+{
+
+constexpr float kPreviewWalkTimeScale = 0.8f;
+
+bool IsAnimatedCreaturePreviewKind(cutum::ContentKind kind)
+{
+  return kind == cutum::ContentKind::UCreature ||
+         kind == cutum::ContentKind::Skin;
+}
+
+} // namespace
+
 namespace cutum
 {
 
@@ -82,6 +95,7 @@ void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
   HasSelection = !id.empty();
   Yaw = 45.0f;
   Pitch = 32.0f;
+  PreviewAnimTime = 0.f;
   if (Viewport)
   {
     Viewport->SetAngles(Yaw, Pitch);
@@ -150,12 +164,14 @@ void UContentPreviewDock::RenderPreviewIfNeeded()
     return;
   }
   const int size = std::max(128, std::min(RenderSize, 512));
+  const bool animateWalk = IsAnimatedCreaturePreviewKind(Kind);
   if (PreviewTexture != 0)
   {
     glDeleteTextures(1, &PreviewTexture);
     PreviewTexture = 0;
   }
-  PreviewTexture = Renderer->RenderUnique(Kind, EntryId, size, Yaw, Pitch);
+  PreviewTexture = Renderer->RenderUnique(Kind, EntryId, size, Yaw, Pitch,
+                                          PreviewAnimTime, animateWalk);
   Viewport->SetPreviewTexture(PreviewTexture);
   RenderDirty = false;
 }
@@ -206,6 +222,13 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
 
 void UContentPreviewDock::Update(double dt)
 {
+  if (HasSelection && Renderer && Renderer->SupportsKind(Kind) &&
+      IsAnimatedCreaturePreviewKind(Kind))
+  {
+    PreviewAnimTime += static_cast<float>(dt) * kPreviewWalkTimeScale;
+    RenderDirty = true;
+  }
+
   RenderThrottle += dt;
   if (RenderDirty && RenderThrottle >= 1.0 / 30.0)
   {

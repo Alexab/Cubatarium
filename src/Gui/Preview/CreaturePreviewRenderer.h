@@ -41,7 +41,9 @@ public:
   /// Allocates a standalone texture (for icon cache entries).
   GLuint RenderToUniqueTexture(const std::string &speciesId,
                                const std::string &skinId, int size,
-                               float yawDeg, float pitchDeg);
+                               float yawDeg, float pitchDeg,
+                               float animTimeSec = 0.f,
+                               bool animateWalk = false);
 
   GLuint CreateSolidColorTexture(int size, float r, float g, float b, float a);
 
@@ -53,7 +55,8 @@ private:
   bool EnsureFboSize(int size);
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;
   bool DrawSpeciesParts(const std::string &speciesId, const std::string &skinId,
-                        int viewportSize, float yawDeg, float pitchDeg);
+                        int viewportSize, float yawDeg, float pitchDeg,
+                        float animTimeSec = 0.f, bool animateWalk = false);
 
   std::shared_ptr<UCreatureDefinitionStorage> Species;
   std::shared_ptr<USkinDefinitionStorage> Skins;
