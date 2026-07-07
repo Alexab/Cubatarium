@@ -143,14 +143,18 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     return 0;
   }
 
-  if (const GLuint direct = Preview->TryGetDirectSpeciesIcon(speciesId))
-  {
-    SpeciesCache[speciesId] = direct;
-    return direct;
-  }
-
+  // Prefer rendered icon from current 3D model so slot preview stays aligned
+  // with the actual creature visual; use packed icon texture only as fallback.
   GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize,
                                               kIconYaw, kIconPitch);
+  if (tex == 0)
+  {
+    if (const GLuint direct = Preview->TryGetDirectSpeciesIcon(speciesId))
+    {
+      SpeciesCache[speciesId] = direct;
+      return direct;
+    }
+  }
   if (tex == 0)
   {
     glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
