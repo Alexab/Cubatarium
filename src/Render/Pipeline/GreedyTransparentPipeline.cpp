@@ -49,6 +49,37 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
 
   backend.PrepareTransparent(ctx);
 
+  static int stencil_bits = -1;
+  if (stencil_bits < 0)
+  {
+    glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
+  }
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  if (stencil_bits == 0)
+  {
+    for (const TransparentPassDesc &pass : GetGreedyTransparentPasses())
+    {
+      if (pass.Id != TransparentPassId::ShellSurface)
+      {
+        continue;
+      }
+      if (settings.logPassNames)
+      {
+        std::cout << "[Transparent] " << pass.debugName << " (no-stencil fallback)"
+                  << std::endl;
+      }
+      TransparentPassDesc fallback = pass;
+      fallback.depthFunc = GL_LESS;
+      fallback.depthWrite = false;
+      ApplyPassGlState(fallback);
+      glDisable(GL_STENCIL_TEST);
+      backend.DrawPreparedTransparent(pass.shaderMode, settings.shellAlpha);
+    }
+    return;
+  }
+#endif
+
   glEnable(GL_STENCIL_TEST);
   glStencilMask(0xFF);
 

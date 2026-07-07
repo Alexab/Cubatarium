@@ -9,6 +9,8 @@
 #include <sstream>
 #include <string>
 
+#include "Render/GlIncludes.h"
+
 namespace cutum
 {
 
@@ -31,6 +33,8 @@ bool ChooseConfig(EGLDisplay display, EGLint renderableType, EGLConfig *config)
                                   8,
                                   EGL_DEPTH_SIZE,
                                   16,
+                                  EGL_STENCIL_SIZE,
+                                  8,
                                   EGL_NONE};
   EGLint numConfigs = 0;
   return eglChooseConfig(display, configAttribs, config, 1, &numConfigs) &&
@@ -135,9 +139,11 @@ bool EglContext::Initialize(android_app *app)
 
   width_ = ANativeWindow_getWidth(app_->window);
   height_ = ANativeWindow_getHeight(app_->window);
+  GLint stencil_bits = 0;
+  glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
   std::ostringstream msg;
   msg << "Context ready GLES" << clientVersion << " " << width_ << "x"
-      << height_;
+      << height_ << " stencil=" << stencil_bits;
   CubatariumLogInfo("EGL", msg.str());
   return true;
 }
