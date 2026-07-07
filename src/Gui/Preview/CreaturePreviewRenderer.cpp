@@ -289,18 +289,13 @@ GLuint UCreaturePreviewRenderer::TryGetDirectSpeciesIcon(
   {
     return 0;
   }
-  // Flat icon.png is only valid for rigid_voxels; bedrock_geo and gltf_skeleton
-  // must render icons from the same 3D backend as world/preview.
-  if (ParseCreatureVisualBackend(def->visual.backend) !=
-      CreatureVisualBackend::RigidVoxels)
-  {
-    return 0;
-  }
   const GLuint iconTex = Textures->GetTexture(speciesId + "/icon");
   if (iconTex == 0)
   {
     return 0;
   }
+  // Respect per-species icon mode: species/skin texture icons can be used
+  // directly regardless of visual backend.
   if (def->visual.iconMode == "species_texture" ||
       def->visual.iconMode == "skin_texture")
   {
