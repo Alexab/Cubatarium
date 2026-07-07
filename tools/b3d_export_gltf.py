@@ -176,6 +176,39 @@ def flatten_joints(roots: list[B3DBone], units_per_block: float = DEFAULT_B3D_UN
   return joints, bones
 
 
+def resolve_skin_binding(
+    bone_index: int,
+    joints: list[ExportJoint],
+    bones: list[B3DBone],
+) -> tuple[int, dict[int, list[tuple[int, float]]]]:
+  """Luanti b3d stores mesh on cube nodes and skin weights on child Bone nodes."""
+  bone = bones[bone_index]
+  local_weights: dict[int, list[tuple[int, float]]] = {}
+  for entry in bone.vertex_weights:
+    if entry.weight <= 0.0:
+      continue
+    local_weights.setdefault(entry.vertex_id, []).append((bone_index, entry.weight))
+  if local_weights:
+    return bone_index, local_weights
+
+  for child_index, child_joint in enumerate(joints):
+    if child_joint.parent != bone_index:
+      continue
+    child = bones[child_index]
+    if not child.vertex_weights:
+      continue
+    for entry in child.vertex_weights:
+      if entry.weight <= 0.0:
+        continue
+      local_weights.setdefault(entry.vertex_id, []).append(
+          (child_index, entry.weight)
+      )
+    if local_weights:
+      return child_index, local_weights
+
+  return bone_index, local_weights
+
+
 def normalize_vertex_weights(
     pairs: list[tuple[int, float]],
 ) -> tuple[tuple[int, int, int, int], tuple[float, float, float, float]]:
@@ -203,19 +236,14 @@ def build_mesh(joints: list[ExportJoint], bones: list[B3DBone], scale: float) ->
         if not bone.mesh.vertices:
             continue
 
-        local_weights: dict[int, list[tuple[int, float]]] = {}
-        for entry in bone.vertex_weights:
-            if entry.weight <= 0.0:
-                continue
-            local_weights.setdefault(entry.vertex_id, []).append(
-                (bone_index, entry.weight)
-            )
+        skin_joint, local_weights = resolve_skin_binding(bone_index, joints, bones)
 
         for vertex_id, vert in enumerate(bone.mesh.vertices):
             lx, ly, lz = vert.x / scale, vert.y / scale, vert.z / scale
+            # Mesh lives on the cube node; Bone child owns skin weights/animation.
             gx, gy, gz = transform_vec3(bind_globals[bone_index], lx, ly, lz)
             joints_tuple, weights_tuple = normalize_vertex_weights(
-                local_weights.get(vertex_id, [(bone_index, 1.0)])
+                local_weights.get(vertex_id, [(skin_joint, 1.0)])
             )
             mesh.vertices.append(
                 ExportVertex(
