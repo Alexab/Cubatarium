@@ -77,25 +77,26 @@
 - `A-wave0` (2026-07-07): per-pointer joystick release, touch controls above palette, EGL stencil + GLES fluid fallback.
 - `A-wave1` (2026-07-07): BACK→quit on main menu, deferred GPU warmup, reduced load chunk budget on Android.
 - `A-wave2` (2026-07-07): architecture partial (`2d02a7a`), creatures TD-CRE-034/035 (`3de5d0f`, `f57e383`), fluids TD-FL-034 v2 flag (`f2e8a26`).
+- `A-wave3` (2026-07-07): GLES single-pass fluid render (`18b81e0`); AND-17 manual PASS (placed water/lava, ocean film, underwater fog).
 - Automated gate (2026-07-07 @ `f2e8a26`): `python tools/audit_style.py` 0 violations; `validate_gltf_creature.py --skinned-only` 33/33; `test_gltf_skinned_bind_pose.py` 33/33. C++ targets `docked_overlay_layout_test`, `touch_input_bridge_lifecycle_test`, `fluid_surface_map_logic_test` — run in CI/desktop build before release.
-- **Manual sign-off (2026-07-07):** single Android device — AND-01..16, AND-13..15 PASS; **AND-17 FAIL** (no sea surface film on GLES). Profiles B/C/E N/A. Gate **BLOCKED** until AND-17 fixed — см. [`QA_ANDROID_2026.md`](QA_ANDROID_2026.md).
+- **Manual sign-off (2026-07-07):** single Android device — AND-01..17, AND-13..15 PASS after GLES fluid fix (`18b81e0`). Profiles B/C/E N/A. Gate **CLOSED** (manual) — см. [`QA_ANDROID_2026.md`](QA_ANDROID_2026.md).
 
-### TD-AUD-028..031 manual sign-off (2026-07-07)
+### TD-AUD-028..031 manual sign-off (2026-07-07, verified `18b81e0`)
 
 | Gate | Status |
 |------|--------|
 | AND-01..04 layout (profiles A, B, C, E) | [X] PASS [ ] FAIL — B/C/E N/A single device |
 | AND-05..08 Back flow | [X] PASS [ ] FAIL |
 | AND-09..12, AND-16 joystick lifecycle | [X] PASS [ ] FAIL |
-| AND-17 sea surface (EGL stencil) | [ ] PASS [X] FAIL |
+| AND-17 sea surface + fluids (GLES) | [X] PASS [ ] FAIL |
 | AND-13..15 startup/load (profile D) | [X] PASS [ ] FAIL |
 | `touch_input_bridge_lifecycle_test` (CI) | [ ] PASS [ ] FAIL |
 | `docked_overlay_layout_test` (CI) | [ ] PASS [ ] FAIL |
 
 - Tester: manual (single Android device)
-- APK commit: `arch_refactor3` @ `f2e8a26`
+- APK commit: `arch_refactor3` @ `18b81e0`
 - Date: 2026-07-07
-- TD-AUD-028..031 release gate: [ ] CLOSED [X] BLOCKED — AND-17 GLES sea surface; reopen TD-FL-034 Android slice
+- TD-AUD-028..031 release gate: [X] CLOSED [ ] BLOCKED — manual complete; CI unit tests pending
 
 ## Phase tracker
 

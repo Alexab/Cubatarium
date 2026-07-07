@@ -73,5 +73,5 @@ Feature flag: `render.below_surface_fog_v2` in `config.json` (default **false**)
 - Date: 2026-07-07
 - Config shipped: `below_surface_fog_v2` default **false** (v2 A/B not run; v1 sufficient for A–C)
 - Result: [X] Automated PASS (2026-07-07 style + glTF) [ ] Manual PASS [X] Manual partial
-- DoD blockers (plan): FOG-01/03/04/06 PASS on v1; symptom **D** FAIL (wont-fix); Android AND-17 separate FAIL
-- Notes: symptom D (seafloor sand mottling) accepted as wont-fix per TECH_DEBT_FLUIDS; FOG-05 lava not tested
+- DoD blockers (plan): FOG-01/03/04/06 PASS on v1; symptom **D** wont-fix; Android AND-17 PASS (`18b81e0`)
+- Notes: desktop v1 sign-off complete; Android fluids verified post-GLES single-pass

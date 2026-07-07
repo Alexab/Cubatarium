@@ -53,7 +53,7 @@ Manual + automated QA matrix for Android UX blockers (`TD-AUD-028..031`).
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-17 | Sea surface visible from shore | [ ] | [X] | GLES fix: single-pass transparent (no stencil shell); re-test after build |
+| AND-17 | Sea surface visible from shore | [X] | [ ] | GLES single-pass transparent (`18b81e0`); placed water/lava + ocean film + underwater fog OK |
 
 ## Manual QA — startup / load (TD-AUD-031)
 
@@ -71,12 +71,13 @@ Close `TD-AUD-028..031` only when:
 2. Manual matrix has no FAIL on profiles A–E.
 3. Evidence recorded in `docs/TECH_DEBT_AUDIT.md` execution progress section.
 
-## Sign-off (manual device QA 2026-07-07)
+## Sign-off (manual device QA 2026-07-07, verified `18b81e0`)
 
 - Tester: manual run (single Android device)
-- APK build: `arch_refactor3` @ `f2e8a26`
+- APK build: `arch_refactor3` @ `18b81e0`
 - Date: 2026-07-07
 - Profiles exercised: A [X] B [ ] C [ ] D [X] E [ ] — one physical device; B/C/E N/A
+- GLES fluids verified: placed water/lava visible; ocean surface film; underwater fog on wade-in
 - Automated (CI/desktop): `docked_overlay_layout_test` [ ] `touch_input_bridge_lifecycle_test` [ ] — pending CI
-- Manual result: [ ] PASS (no FAIL rows) [X] FAIL — IDs: **AND-17** (sea surface film not visible on GLES)
-- TD-AUD-028..031 gate: [ ] CLOSED [X] BLOCKED — AND-17 FAIL; TD-AUD-028/029/030/031 otherwise PASS on tested device
+- Manual result: [X] PASS (no FAIL rows) [ ] FAIL
+- TD-AUD-028..031 gate: [X] CLOSED [ ] BLOCKED — manual matrix complete on tested device

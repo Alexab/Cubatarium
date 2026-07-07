@@ -18,7 +18,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); desktop fog A–C closed, D wont-fix; **Android AND-17 FAIL** (GLES surface film) — follow-up open |
+| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); desktop fog A–C closed, D wont-fix; Android GLES fluids + AND-17 closed (`18b81e0`) |
 | TD-FL-001 | F2 | Replaced `LiquidSimulationSystem` with `UFluidSpreadSystem` (source/flowing levels) |
 | TD-FL-002 | F5 | `MarkFluidRegionDirty` + immediate remesh near player |
 | TD-FL-003 | F4 → R1 | Basin heuristic (reverted R1; see Open) |
@@ -108,7 +108,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 - Packet `R1` icon cache diagnostics (`57ef029`): versioned manifest + PNG read/write failure counters для наблюдаемости regressions.
 - Packet `R2` targeted persistent cache invalidation (`17de9ca`): адресная инвалидация `block/creature/skin` снижает риск stale визуалов при runtime catalog refresh.
 - `TD-FL-034` code closed (`f2e8a26`): v2 shore policy (`BelowSurfaceFogStrengthV2`, `IsShallowFluidSpan`, `IsPartialSubmerge`) behind `render.below_surface_fog_v2` (default **off**); GLES stencil in wave 0 (`fd04741`). Prior rollout (`dc75582`) откачен (`33c21c9`) — не повторять без A/B manual gate.
-- **Manual sign-off (2026-07-07):** desktop v1 (`below_surface_fog_v2: false`) — FOG-01/03/04/06 PASS; symptoms A–C PASS; **D FAIL → wont-fix**. v2 A/B not run. Android AND-17 FAIL (surface film) — GLES follow-up open.
+- **Manual sign-off (2026-07-07):** desktop v1 (`below_surface_fog_v2: false`) — FOG-01/03/04/06 PASS; symptoms A–C PASS; **D FAIL → wont-fix**. v2 A/B not run. Android AND-17 PASS (`18b81e0`): placed water/lava, ocean film, underwater fog.
 
 ### TD-FL-034 manual symptom sign-off (2026-07-07)
 
@@ -124,4 +124,4 @@ Config: v1 only (`render.below_surface_fog_v2` **false**). v2 column not exercis
 - Tester: manual (desktop)
 - Build/commit: `arch_refactor3` @ `f2e8a26`
 - Date: 2026-07-07
-- Ship policy: `below_surface_fog_v2` default **false**; enable v2 only after GLES AND-17 + optional v2 A/B
+- Ship policy: `below_surface_fog_v2` default **false**; optional v2 A/B on desktop when needed
