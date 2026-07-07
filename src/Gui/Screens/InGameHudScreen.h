@@ -19,6 +19,7 @@ class UGuiPanel;
 class UGuiLabel;
 class UGuiRenderer;
 struct GuiTheme;
+class UGuiContext;
 
 class UInGameHudScreen : public UGuiScreenBase
 {
@@ -41,7 +42,10 @@ public:
                               std::function<void()> onJumpPress);
   bool RouteTouchMove(int PointerId, int x, int y);
   void ReleaseJoystickCapture();
+  void ReleaseJoystickCaptureForPointer(int pointer_id);
   void ReleaseTouchCaptures();
+  bool HitTestTouchControls(int x, int y) const;
+  void RenderTouchControlsOverlay(class UGuiContext &ctx, int width, int height);
 #endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).

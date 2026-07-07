@@ -45,6 +45,13 @@ Manual + automated QA matrix for Android UX blockers (`TD-AUD-028..031`).
 | AND-10 | Drag joystick, release outside zone | [ ] | [ ] | No sticky movement |
 | AND-11 | Joystick + second finger on look pad | [ ] | [ ] | Independent pointers |
 | AND-12 | System gesture cancel / focus loss | [ ] | [ ] | Joystick resets to neutral |
+| AND-16 | Joystick + Jump simultaneous | [ ] | [ ] | Movement continues while jumping; auto: `touch_input_bridge_lifecycle_test` |
+
+## Manual QA — fluid surface (TD-FL-034 Android)
+
+| ID | Scenario | PASS | FAIL | Notes |
+|----|----------|------|------|-------|
+| AND-17 | Sea surface visible from shore | [ ] | [ ] | Water film over ocean; requires EGL stencil |
 
 ## Manual QA — startup / load (TD-AUD-031)
 

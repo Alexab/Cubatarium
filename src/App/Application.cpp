@@ -508,11 +508,12 @@ void UApplication::EnterGameAfterWorldChange()
       ProgressScreen->ApplySnapshot(ProgressSink.Get());
     }
 #if defined(__ANDROID__)
-    // Avoid long blocking warmups on Android app thread.
+    // Avoid long blocking warmups on Android app thread; spread GPU prep.
     if (Geometry)
     {
       Geometry->ResetWorldRenderState();
     }
+    AndroidGpuWarmupFramesRemaining = 5;
 #else
     World->WarmupSpawnAreaForEnterGame();
     if (Geometry)
@@ -976,6 +977,16 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
 
   if (Pressed)
   {
+#if defined(__ANDROID__)
+    if (HudScreen && HudScreen->HitTestTouchControls(event.X, event.Y))
+    {
+      if (routeRoot(HudScreen->GetRoot(), true))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Hud;
+        return true;
+      }
+    }
+#endif
     if (WorldGenOpen && routeRoot(WorldGenScreen->GetRoot(), true))
     {
       OverlayCaptures[pointerIndex] = OverlayPointerCapture::WorldGen;
@@ -1019,7 +1030,7 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     const bool handled =
         routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, false);
 #if defined(__ANDROID__)
-    ReleaseHudJoystickCapture();
+    ReleaseHudJoystickCaptureForPointer(event.PointerId);
 #endif
     return handled;
   }
@@ -1105,7 +1116,12 @@ void UApplication::Update(double dt)
 
   if (State == AppState::Loading)
   {
+#if defined(__ANDROID__)
+    constexpr int kAndroidLoadChunkBudget = 4;
+    if (WorldOpRunner && WorldOpRunner->Tick(ProgressSink, kAndroidLoadChunkBudget))
+#else
     if (WorldOpRunner && WorldOpRunner->Tick(ProgressSink, 8))
+#endif
     {
       OnWorldOperationFinished();
     }
@@ -1124,6 +1140,16 @@ void UApplication::Update(double dt)
   }
   else if (State == AppState::InGame)
   {
+#if defined(__ANDROID__)
+    if (AndroidGpuWarmupFramesRemaining > 0 && Geometry && World)
+    {
+      --AndroidGpuWarmupFramesRemaining;
+      if (AndroidGpuWarmupFramesRemaining == 0)
+      {
+        Geometry->WarmupGreedyGpuFromWorld();
+      }
+    }
+#endif
     if (HudScreen)
     {
 #ifndef __ANDROID__
@@ -1351,6 +1377,12 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     notifyViewport(WorldGenScreen.get());
     GuiContext->RenderOverlay(*WorldGenScreen->GetRoot(), width, height, false);
   }
+#if defined(__ANDROID__)
+  if (HudScreen && (PaletteOpen || WorldGenOpen))
+  {
+    HudScreen->RenderTouchControlsOverlay(*GuiContext, width, height);
+  }
+#endif
   if (State == AppState::InGame)
   {
     DrawDragGhost(width, height);
@@ -1413,6 +1445,14 @@ void UApplication::ReleaseHudJoystickCapture()
   if (State == AppState::InGame && HudScreen)
   {
     HudScreen->ReleaseJoystickCapture();
+  }
+}
+
+void UApplication::ReleaseHudJoystickCaptureForPointer(int pointerId)
+{
+  if (State == AppState::InGame && HudScreen)
+  {
+    HudScreen->ReleaseJoystickCaptureForPointer(pointerId);
   }
 }
 

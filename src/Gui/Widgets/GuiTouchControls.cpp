@@ -165,6 +165,11 @@ public:
 
   bool IsActive() const { return active_; }
 
+  bool OwnsPointer(int pointer_id) const
+  {
+    return active_ && GuiPointerMatches(pointer_id, capturePointerId_);
+  }
+
   void ForceRelease()
   {
     active_ = false;
@@ -584,6 +589,23 @@ void UGuiTouchControls::ReleaseJoystickCapture()
   }
 }
 
+void UGuiTouchControls::ReleaseJoystickCaptureForPointer(int pointer_id)
+{
+  auto *joystick = dynamic_cast<UTouchVirtualJoystick *>(JoystickWidget);
+  if (!joystick || !joystick->OwnsPointer(pointer_id))
+  {
+    return;
+  }
+  if (OnReleaseJoystickCapture)
+  {
+    OnReleaseJoystickCapture();
+  }
+  if (Bridge)
+  {
+    Bridge->ResetJoystick();
+  }
+}
+
 void UGuiTouchControls::ReleaseAllCaptures()
 {
   if (OnReleaseAllCaptures)
@@ -593,6 +615,34 @@ void UGuiTouchControls::ReleaseAllCaptures()
   if (Bridge)
   {
     Bridge->ResetJoystick();
+  }
+}
+
+bool UGuiTouchControls::HitTestTopRightReserved(int x, int y) const
+{
+  if (TopRightReservedRect.W <= 0 || TopRightReservedRect.H <= 0)
+  {
+    return false;
+  }
+  const GuiRect screenRect{
+      TopRightScreenOffsetX + TopRightReservedRect.X,
+      TopRightScreenOffsetY + TopRightReservedRect.Y, TopRightReservedRect.W,
+      TopRightReservedRect.H};
+  return screenRect.Contains(x, y);
+}
+
+GuiRect UGuiTouchControls::GetTopRightReservedRect() const
+{
+  return {TopRightScreenOffsetX + TopRightReservedRect.X,
+          TopRightScreenOffsetY + TopRightReservedRect.Y,
+          TopRightReservedRect.W, TopRightReservedRect.H};
+}
+
+void UGuiTouchControls::RenderOverlay(UGuiRenderer &renderer)
+{
+  if (Root)
+  {
+    Root->Draw(renderer);
   }
 }
 
@@ -679,6 +729,13 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
                               topRightY + (buttonSize + buttonGap) * 2,
                               buttonSize, buttonSize});
   }
+
+  TopRightScreenOffsetX = offsetX;
+  TopRightScreenOffsetY = offsetY;
+  TopRightReservedRect = {width - buttonSize - margin - margin / 2,
+                          topRightY - margin / 2,
+                          buttonSize + margin * 2,
+                          buttonSize * 3 + buttonGap * 2 + margin};
 
   if (LookPad)
   {

@@ -105,6 +105,7 @@ public:
   bool RouteScroll(double Xoffset, double Yoffset, int mouseX, int mouseY);
 #if defined(__ANDROID__)
   void ReleaseHudJoystickCapture();
+  void ReleaseHudJoystickCaptureForPointer(int pointerId);
   void TryToggleFlightOnJumpPress();
   void SubmitConsoleCommand();
 #endif
@@ -250,6 +251,9 @@ private:
   int ViewportInsetRight{0};
   int ViewportInsetBottom{0};
   int KeyboardInsetBottom{0};
+#if defined(__ANDROID__)
+  int AndroidGpuWarmupFramesRemaining{0};
+#endif
   AppCursorPolicy LastCursorPolicy{AppCursorPolicy::Free};
 };
 

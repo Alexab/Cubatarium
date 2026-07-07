@@ -105,6 +105,32 @@ void UInGameHudScreen::ReleaseJoystickCapture()
   }
 }
 
+void UInGameHudScreen::ReleaseJoystickCaptureForPointer(int pointer_id)
+{
+  if (TouchControls)
+  {
+    TouchControls->ReleaseJoystickCaptureForPointer(pointer_id);
+  }
+}
+
+bool UInGameHudScreen::HitTestTouchControls(int x, int y) const
+{
+  return TouchControls && TouchControls->HitTestTopRightReserved(x, y);
+}
+
+void UInGameHudScreen::RenderTouchControlsOverlay(UGuiContext &ctx, int width,
+                                                  int height)
+{
+  if (!TouchControls)
+  {
+    return;
+  }
+  UGuiRenderer &renderer = ctx.GetRenderer();
+  renderer.BeginFrame(width, height);
+  TouchControls->RenderOverlay(renderer);
+  renderer.EndFrame();
+}
+
 void UInGameHudScreen::ReleaseTouchCaptures()
 {
   if (TouchControls)

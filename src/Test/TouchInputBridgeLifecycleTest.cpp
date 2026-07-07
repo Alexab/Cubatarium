@@ -67,6 +67,30 @@ void TestMultitouchPointerIsolation()
          "releasing one pointer clears left button latch");
 }
 
+void TestJoystickAndHeldKeyIsolation()
+{
+  cutum::UTouchInputBridge bridge;
+  bridge.SetJoystickActive(true);
+  bridge.SetJoystickVector({0.8f, 0.6f});
+  bridge.SetHeldKey(cutum::KeyCode::Key_Space, true);
+  bridge.Update();
+  Expect(bridge.IsJoystickActive(), "joystick active while jump held");
+  Expect(bridge.IsKeyPressed(cutum::KeyCode::Key_W),
+         "joystick forward while jump held");
+
+  bridge.SetHeldKey(cutum::KeyCode::Key_Space, false);
+  bridge.Update();
+  Expect(bridge.IsJoystickActive(), "joystick survives jump release");
+  Expect(bridge.IsKeyPressed(cutum::KeyCode::Key_W),
+         "joystick movement survives jump release");
+
+  bridge.ResetJoystick();
+  bridge.Update();
+  Expect(!bridge.IsJoystickActive(), "joystick reset clears active flag");
+  Expect(!bridge.IsKeyPressed(cutum::KeyCode::Key_W),
+         "joystick reset clears movement");
+}
+
 } // namespace
 
 int main()
@@ -75,6 +99,7 @@ int main()
   TestJoystickResetOnCancel();
   TestTouchUpOutsideZoneClearsPointer();
   TestMultitouchPointerIsolation();
+  TestJoystickAndHeldKeyIsolation();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }
