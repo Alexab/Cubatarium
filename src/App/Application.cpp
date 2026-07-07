@@ -17,6 +17,7 @@
 #include "Creatures/Player/User.h"
 #include "Game/GameSession.h"
 #include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
@@ -246,15 +247,21 @@ void UApplication::Startup(const std::string &configPath)
     }
     CreaturePreviewRenderer = creaturePreview;
 
+    auto iconService = std::make_shared<UInventoryIconService>();
+    if (!iconService->Initialize())
+    {
+      iconService.reset();
+    }
     auto objectCache = std::make_unique<UObjectIconCache>(
-        Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager);
+        Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager,
+        iconService);
     if (objectCache->Initialize())
     {
       std::unique_ptr<UCreatureIconCache> creatureCache;
       if (creaturePreview)
       {
         creatureCache =
-            std::make_unique<UCreatureIconCache>(creaturePreview);
+            std::make_unique<UCreatureIconCache>(creaturePreview, iconService);
         if (!creatureCache->Initialize())
         {
           creatureCache.reset();

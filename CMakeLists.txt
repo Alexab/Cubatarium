@@ -63,8 +63,17 @@ if(NOT EXISTS ${STB_IMAGE_HEADER})
     )
 endif()
 
+set(STB_IMAGE_WRITE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image_write.h")
+if(NOT EXISTS ${STB_IMAGE_WRITE_HEADER})
+    file(DOWNLOAD
+        "https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h"
+        ${STB_IMAGE_WRITE_HEADER}
+    )
+endif()
+
 set(SOURCES
     src/ThirdParty/stb_image.cpp
+    src/ThirdParty/stb_image_write.cpp
     src/main.cpp
     src/App/Utils.cpp
     src/App/CreateWorldCli.cpp
@@ -305,6 +314,7 @@ set(SOURCES
     src/Gui/Preview/ObjectPreviewLayout.cpp
     src/Gui/Preview/ContentPreviewDock.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp
+    src/Gui/Cache/InventoryIconService.cpp
     src/Gui/Cache/ObjectIconCache.cpp
     src/Gui/Cache/CreatureIconCache.cpp
     src/Gui/Core/GuiInputRouter.cpp
@@ -425,6 +435,7 @@ set(HEADERS
     src/Render/Engine/ShaderManager.h
     src/Render/Engine/TextRenderer.h
     src/ThirdParty/stb_image.h
+    src/ThirdParty/stb_image_write.h
     src/App/Application.h
     src/App/Navigation/ScreenNavigator.h
     src/App/Input/InputRouter.h
@@ -451,6 +462,7 @@ set(HEADERS
     src/Gui/Preview/ObjectPreviewLayout.h
     src/Gui/Preview/ContentPreviewDock.h
     src/Gui/Layout/DockedOverlayLayout.h
+    src/Gui/Cache/InventoryIconService.h
     src/Gui/Cache/ObjectIconCache.h
     src/Gui/Interfaces/IUGuiIconSource.h
     src/Gui/Core/GuiInputRouter.h
@@ -759,6 +771,20 @@ add_executable(physics_profile_parse_test
 target_include_directories(physics_profile_parse_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(physics_profile_parse_test glm::glm)
+
+add_executable(inventory_icon_fingerprint_test
+    src/App/Platform/IUPlatformPaths.cpp
+    src/ThirdParty/stb_image.cpp
+    src/ThirdParty/stb_image_write.cpp
+    src/Gui/Cache/InventoryIconService.cpp
+    src/Test/InventoryIconFingerprintTest.cpp)
+target_include_directories(inventory_icon_fingerprint_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(inventory_icon_fingerprint_test
+    OpenGL::GL
+    GLEW::GLEW
+    nlohmann_json::nlohmann_json
+    glm::glm)
 
 set(PHYSICS_REPLAY_TEST_SOURCES
     src/World/Physics/BlockUpdateQueue.cpp

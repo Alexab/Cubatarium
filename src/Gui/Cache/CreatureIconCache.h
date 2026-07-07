@@ -12,12 +12,14 @@ namespace cutum
 {
 
 class UCreaturePreviewRenderer;
+class UInventoryIconService;
 
 class UCreatureIconCache
 {
 public:
   explicit UCreatureIconCache(
-      std::shared_ptr<UCreaturePreviewRenderer> preview);
+      std::shared_ptr<UCreaturePreviewRenderer> preview,
+      std::shared_ptr<UInventoryIconService> iconService = nullptr);
   ~UCreatureIconCache();
 
   bool Initialize();
@@ -31,8 +33,11 @@ public:
 private:
   GLuint GetOrCreateSpeciesIcon(const std::string &speciesId);
   GLuint GetOrCreateSkinIcon(const std::string &skinId);
+  std::string BuildSpeciesFingerprint(const std::string &speciesId) const;
+  std::string BuildSkinFingerprint(const std::string &skinId) const;
 
   std::shared_ptr<UCreaturePreviewRenderer> Preview;
+  std::shared_ptr<UInventoryIconService> IconService;
 
   std::unordered_map<std::string, GLuint> SpeciesCache;
   std::unordered_map<std::string, GLuint> SkinCache;

@@ -19,6 +19,18 @@
 | TD-CRE-021 | audit | 8 placeholder species — research textures imported + baked | `sync_luanti_research_textures.py` + `bake_rigid_creature_textures.py` | done |
 | TD-CRE-026 | gltf | Parts-only glTF without b3d — per-bone upgrade vs root bob | Policy in `CREATURE_BACKENDS.md`; 2 species remain parts-only (`fire_spirit`, `octopus`) | backlog |
 | TD-CRE-028 | gltf | Sprite visuals (`fire_spirit` glow billboard) | Luanti `visual=sprite`; procedural texture placeholder | backlog |
+| TD-CRE-034 | visual-regression | `puffin` 3D model is incorrect in world and inventory preview | Suspected wrong source model/transform mapping after catalog sync; needs model remap + icon cache regeneration | backlog |
+| TD-CRE-035 | visual-regression | `manatee` 3D model has invalid geometry/scale/offset | Verify source in `tools/creature_luanti_sources.yaml`, then fix geometry transform and regenerate icon cache | backlog |
+
+### TD-CRE-034 acceptance notes (`puffin`)
+- Repro: spawn `puffin` in world and inspect inventory preview icon.
+- Suspected source: wrong model asset binding or transform remap in visual catalog.
+- Close when: world model is visually correct, preview matches world, icon cache regenerated and manually verified.
+
+### TD-CRE-035 acceptance notes (`manatee`)
+- Repro: spawn `manatee` in world and inspect inventory preview icon.
+- Suspected source: mismatch in source metadata (`tools/creature_luanti_sources.yaml`) and model transform (scale/offset).
+- Close when: geometry/scale/offset are corrected, world+preview are visually consistent, icon cache regenerated and manually verified.
 
 ## Closed
 

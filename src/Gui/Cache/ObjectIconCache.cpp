@@ -1,5 +1,6 @@
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Cache/GuiOffscreenIconCacheBase.h"
+#include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Preview/ObjectPreviewLayout.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
@@ -15,6 +16,7 @@
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <sstream>
 
 namespace cutum
 {
@@ -23,9 +25,11 @@ UObjectIconCache::UObjectIconCache(
     std::shared_ptr<UObjectLibrary> objects,
     std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UBlockDefinitionStorage> blockDefs,
-    std::shared_ptr<UShaderManager> shader_manager)
+    std::shared_ptr<UShaderManager> shader_manager,
+    std::shared_ptr<UInventoryIconService> iconService)
     : Objects(std::move(objects)), Textures(std::move(textures)),
-      BlockDefs(std::move(blockDefs)), ShaderManager(std::move(shader_manager))
+      BlockDefs(std::move(blockDefs)), ShaderManager(std::move(shader_manager)),
+      IconService(std::move(iconService))
 {
 }
 
@@ -309,9 +313,26 @@ GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
     return it->second;
   }
 
+  const std::string fingerprint = BuildBlockFingerprint(blockName);
+  if (IconService && !fingerprint.empty())
+  {
+    GLuint cachedTex = 0;
+    if (IconService->TryLoadIconTexture("block", blockName, "", fingerprint,
+                                        kIconSize, cachedTex))
+    {
+      BlockCache[Id] = cachedTex;
+      return cachedTex;
+    }
+  }
+
   const GLuint tex = RenderBlockIcon(Id);
   if (tex != 0)
   {
+    if (IconService && !fingerprint.empty())
+    {
+      IconService->StoreIconTexture("block", blockName, "", fingerprint,
+                                    kIconSize, tex);
+    }
     BlockCache[Id] = tex;
   }
   return tex;
@@ -450,7 +471,23 @@ GLuint UObjectIconCache::GetIcon(const std::string &objectName)
   {
     return cached;
   }
+  const std::string fingerprint = BuildObjectFingerprint(objectName);
+  if (IconService && !fingerprint.empty())
+  {
+    GLuint cachedTex = 0;
+    if (IconService->TryLoadIconTexture("object", objectName, "", fingerprint,
+                                        kIconSize, cachedTex))
+    {
+      Cache[objectName] = cachedTex;
+      return cachedTex;
+    }
+  }
   const GLuint tex = RenderObjectIcon(objectName);
+  if (tex != 0 && IconService && !fingerprint.empty())
+  {
+    IconService->StoreIconTexture("object", objectName, "", fingerprint,
+                                  kIconSize, tex);
+  }
   Cache[objectName] = tex;
   return tex;
 }
@@ -462,6 +499,47 @@ void UObjectIconCache::WarmupNext(size_t count)
   {
     GetIcon(WarmupQueue[WarmupIndex]);
   }
+}
+
+std::string UObjectIconCache::BuildObjectFingerprint(
+    const std::string &objectName) const
+{
+  if (!Objects || objectName.empty())
+  {
+    return {};
+  }
+  const WorldObjectDefinition *def = Objects->Get(objectName);
+  if (!def)
+  {
+    return {};
+  }
+  std::ostringstream out;
+  out << "v2|object|" << objectName << '|' << def->voxels.size();
+  for (const ObjectVoxel &voxel : def->voxels)
+  {
+    out << '|' << voxel.Id << ':' << voxel.offset.x << ',' << voxel.offset.y
+        << ',' << voxel.offset.z;
+  }
+  return out.str();
+}
+
+std::string UObjectIconCache::BuildBlockFingerprint(
+    const std::string &blockName) const
+{
+  if (!BlockDefs || blockName.empty())
+  {
+    return {};
+  }
+  const BlockDefinition *def = BlockDefs->GetByName(blockName);
+  if (!def)
+  {
+    return {};
+  }
+  std::ostringstream out;
+  out << "v2|block|" << blockName << '|' << def->Id << '|'
+      << static_cast<int>(def->Render.Transparent) << '|'
+      << static_cast<int>(def->Physics.IsLiquid);
+  return out.str();
 }
 
 } // namespace cutum

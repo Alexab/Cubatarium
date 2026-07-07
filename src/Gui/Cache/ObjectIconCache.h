@@ -16,6 +16,7 @@ class UBlockDefinitionStorage;
 class UObjectLibrary;
 class UShaderManager;
 class UTextureCubeStorage;
+class UInventoryIconService;
 
 class UObjectIconCache
 {
@@ -23,7 +24,8 @@ public:
   UObjectIconCache(std::shared_ptr<UObjectLibrary> objects,
                    std::shared_ptr<UTextureCubeStorage> textures,
                    std::shared_ptr<UBlockDefinitionStorage> blockDefs,
-                   std::shared_ptr<UShaderManager> shaderManager);
+                   std::shared_ptr<UShaderManager> shaderManager,
+                   std::shared_ptr<UInventoryIconService> iconService = nullptr);
   ~UObjectIconCache();
 
   bool Initialize();
@@ -38,6 +40,8 @@ public:
   void ClearBlockIconCache();
 
 private:
+  std::string BuildObjectFingerprint(const std::string &objectName) const;
+  std::string BuildBlockFingerprint(const std::string &blockName) const;
   GLuint RenderObjectIcon(const std::string &objectName);
   GLuint RenderBlockIcon(BlockId blockId);
   GLuint GetBlockTexture(BlockId blockId) const;
@@ -47,6 +51,7 @@ private:
   std::shared_ptr<UTextureCubeStorage> Textures;
   std::shared_ptr<UBlockDefinitionStorage> BlockDefs;
   std::shared_ptr<UShaderManager> ShaderManager;
+  std::shared_ptr<UInventoryIconService> IconService;
   std::shared_ptr<class UShaderProgram> Shader;
 
   std::unordered_map<std::string, GLuint> Cache;

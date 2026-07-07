@@ -1,5 +1,6 @@
 #include "Gui/Cache/CreatureIconCache.h"
 #include "Gui/Cache/GuiOffscreenIconCacheBase.h"
+#include "Gui/Cache/InventoryIconService.h"
 
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -9,13 +10,15 @@
 
 #include "Render/GlIncludes.h"
 #include <glm/vec4.hpp>
+#include <sstream>
 
 namespace cutum
 {
 
 UCreatureIconCache::UCreatureIconCache(
-    std::shared_ptr<UCreaturePreviewRenderer> preview)
-    : Preview(std::move(preview))
+    std::shared_ptr<UCreaturePreviewRenderer> preview,
+    std::shared_ptr<UInventoryIconService> iconService)
+    : Preview(std::move(preview)), IconService(std::move(iconService))
 {
 }
 
@@ -143,10 +146,23 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     return 0;
   }
 
+  const std::string fingerprint = BuildSpeciesFingerprint(speciesId);
+  if (IconService && !fingerprint.empty())
+  {
+    GLuint cachedTex = 0;
+    if (IconService->TryLoadIconTexture("creature", speciesId, "", fingerprint,
+                                        kIconSize, cachedTex))
+    {
+      SpeciesCache[speciesId] = cachedTex;
+      return cachedTex;
+    }
+  }
+
   // Prefer rendered icon from current 3D model so slot preview stays aligned
   // with the actual creature visual; use packed icon texture only as fallback.
   GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize,
                                               kIconYaw, kIconPitch);
+  const bool rendered = tex != 0;
   if (tex == 0)
   {
     if (const GLuint direct = Preview->TryGetDirectSpeciesIcon(speciesId))
@@ -168,6 +184,11 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     tex = Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b,
                                            color.a);
   }
+  if (rendered && IconService && !fingerprint.empty())
+  {
+    IconService->StoreIconTexture("creature", speciesId, "", fingerprint,
+                                  kIconSize, tex);
+  }
   SpeciesCache[speciesId] = tex;
   return tex;
 }
@@ -182,6 +203,42 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
   if (!Preview)
   {
     return 0;
+  }
+
+  const std::string fingerprint = BuildSkinFingerprint(skinId);
+  if (IconService && !fingerprint.empty())
+  {
+    GLuint cachedTex = 0;
+    if (IconService->TryLoadIconTexture("skin", skinId, "", fingerprint,
+                                        kIconSize, cachedTex))
+    {
+      SkinCache[skinId] = cachedTex;
+      return cachedTex;
+    }
+  }
+
+  GLuint rendered = 0;
+  if (UCreatureTextureStorage *textures = Preview->GetTextures())
+  {
+    if (USkinDefinitionStorage *skins = Preview->GetSkins())
+    {
+      if (const SkinDefinition *def = skins->Get(skinId))
+      {
+        rendered = Preview->RenderToUniqueTexture(def->creatureId, skinId,
+                                                  kIconSize, kIconYaw,
+                                                  kIconPitch);
+      }
+    }
+  }
+  if (rendered != 0)
+  {
+    if (IconService && !fingerprint.empty())
+    {
+      IconService->StoreIconTexture("skin", skinId, "", fingerprint, kIconSize,
+                                    rendered);
+    }
+    SkinCache[skinId] = rendered;
+    return rendered;
   }
 
   if (UCreatureTextureStorage *textures = Preview->GetTextures())
@@ -206,6 +263,60 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
       kIconSize, color.r, color.g, color.b, color.a);
   SkinCache[skinId] = tex;
   return tex;
+}
+
+std::string UCreatureIconCache::BuildSpeciesFingerprint(
+    const std::string &speciesId) const
+{
+  if (!Preview || speciesId.empty())
+  {
+    return {};
+  }
+  UCreatureDefinitionStorage *species = Preview->GetSpecies();
+  if (!species)
+  {
+    return {};
+  }
+  const CreatureDefinition *def = species->Get(speciesId);
+  if (!def)
+  {
+    return {};
+  }
+  std::ostringstream out;
+  out << "v2|species|" << speciesId << '|' << def->visual.backend << '|'
+      << def->visual.textureLayout << '|' << def->visual.iconMode << '|'
+      << def->visual.defaultTextureKey << '|'
+      << def->visual.boneSkeleton.geometryFile << '|'
+      << def->visual.boneSkeleton.geometryId << '|'
+      << def->visual.gltf.modelPath << '|' << def->visual.gltf.modelScale
+      << '|' << def->visual.gltf.modelOffsetY << '|'
+      << def->visual.Parts.size();
+  return out.str();
+}
+
+std::string UCreatureIconCache::BuildSkinFingerprint(
+    const std::string &skinId) const
+{
+  if (!Preview || skinId.empty())
+  {
+    return {};
+  }
+  USkinDefinitionStorage *skins = Preview->GetSkins();
+  if (!skins)
+  {
+    return {};
+  }
+  const SkinDefinition *def = skins->Get(skinId);
+  if (!def)
+  {
+    return {};
+  }
+  std::ostringstream out;
+  out << "v2|skin|" << skinId << '|' << def->creatureId << '|'
+      << def->textureKey << '|' << def->iconFallbackColor.r << ','
+      << def->iconFallbackColor.g << ',' << def->iconFallbackColor.b << ','
+      << def->iconFallbackColor.a;
+  return out.str();
 }
 
 GLuint UCreatureIconCache::GetSpeciesIcon(const std::string &speciesId)
