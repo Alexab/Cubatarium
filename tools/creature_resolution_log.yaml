@@ -261,16 +261,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -279,7 +279,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   dolphin:
     spawnable: true
     habitat: aquatic
@@ -334,16 +334,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -352,7 +352,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   fire_spirit:
     spawnable: true
     habitat: aerial
@@ -441,16 +441,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -459,7 +459,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   hedgehog:
     spawnable: true
     habitat: terrestrial
@@ -508,16 +508,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -529,7 +529,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   human:
     spawnable: false
     habitat: terrestrial
@@ -571,16 +571,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_probe
@@ -592,7 +592,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   land_guard:
     spawnable: true
     habitat: terrestrial
@@ -607,16 +607,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -625,7 +625,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   lava_flan:
     spawnable: true
     habitat: lava
@@ -640,16 +640,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -661,7 +661,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   lobster:
     spawnable: true
     habitat: aquatic
@@ -710,16 +710,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -731,7 +731,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   mese_monster:
     spawnable: true
     habitat: terrestrial
@@ -746,16 +746,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -764,7 +764,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   octopus:
     spawnable: true
     habitat: aquatic
@@ -779,16 +779,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -800,7 +800,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   oerkki:
     spawnable: true
     habitat: terrestrial
@@ -815,16 +815,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -833,7 +833,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
     backend_audit:
       status: tooling_pass
       verified_at: '2026-06-30'
@@ -852,16 +852,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -870,7 +870,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   orc:
     spawnable: true
     habitat: terrestrial
@@ -885,16 +885,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -903,7 +903,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   owl:
     spawnable: true
     habitat: aerial
@@ -952,16 +952,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_probe
@@ -973,7 +973,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   penguin:
     spawnable: true
     habitat: amphibious
@@ -988,16 +988,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -1009,7 +1009,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
     backend_audit:
       status: tooling_pass
       verified_at: '2026-06-30'
@@ -1096,16 +1096,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_probe
@@ -1117,7 +1117,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
     backend_audit:
       status: tooling_pass
       verified_at: '2026-06-30'
@@ -1136,16 +1136,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -1154,7 +1154,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   seahorse:
     spawnable: true
     habitat: aquatic
@@ -1203,16 +1203,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -1224,7 +1224,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   shark:
     spawnable: true
     habitat: aquatic
@@ -1414,16 +1414,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -1435,7 +1435,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   stone_monster:
     spawnable: true
     habitat: terrestrial
@@ -1450,16 +1450,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -1468,7 +1468,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   tortoise:
     spawnable: true
     habitat: terrestrial
@@ -1517,16 +1517,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -1535,7 +1535,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   treeman:
     spawnable: true
     habitat: terrestrial
@@ -1550,16 +1550,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -1568,7 +1568,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   trout:
     spawnable: true
     habitat: aquatic
@@ -1619,16 +1619,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: spawn_probe
@@ -1640,7 +1640,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   wasp:
     spawnable: true
     habitat: aerial
@@ -1689,16 +1689,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: aquatic_depth
@@ -1713,7 +1713,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   whale:
     spawnable: true
     habitat: aquatic
@@ -1728,16 +1728,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: audit_catalog
+      verified_at: '2026-07-07'
+      note: icon/asset quality ok per audit
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: icon quality ok per audit
     issues_open: []
     issues_closed:
     - id: aquatic_depth
@@ -1752,7 +1752,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
     backend_audit:
       status: tooling_pass
       verified_at: '2026-06-30'
