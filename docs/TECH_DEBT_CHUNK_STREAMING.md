@@ -27,12 +27,7 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-CS-010 | 2026-06 | ~~Async meshing defaults off; needs in-game validation~~ | Default **on** (`RenderSettings.AsyncMeshing`); bisect in profiling section; `movement_diagnostics.v2` exports `async_meshing_enabled` | closed |
-| TD-CS-011 | 2026-06 | ~~Async chunk generation defaults off~~ | Defaults **on** since 2026-06 (`ProceduralSettings`, `config.json`) | closed |
-| TD-CS-012 | 2026-06 | ~~Async chunk I/O defaults off~~ | Defaults **on** since 2026-06 | closed |
-| TD-CS-014 | 2026-06 | ~~GPU instancing for Cross vegetation~~ | `UCrossGpuBackend` + `CrossInstanceBatch`; one instanced draw per block type | closed |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
-| TD-CS-017 | 2026-06 | Ring gate tuning / configurable disable | `procedural.ring_gate_enabled` in config | closed |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
 | TD-CS-019 | 2026-06 | Sky horizon fog uses fixed band; true radial sky fog optional | horizon blend shipped | backlog |
 

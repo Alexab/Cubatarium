@@ -7,7 +7,6 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-002 | 1.5 | `RegisterRuntimeBlock`: incremental atlas + dirty chunks instead of full `Rebuild()` | Deferred rebuild batches overlay flush; full incremental atlas still backlog | backlog |
-| TD-005 | 1.1 | Placeholder cache: LRU / size limit for `.placeholder_cache/` | Disk cache via `GetOrCreateStem` → `LoadPlaceholderFile`/`SavePlaceholderFile` works; LRU size limit optional | closed |
 | TD-006 | 1.1 | Android: selective asset extraction | Whitelist + CRC digest active; per-file sha256 manifest phase A | backlog |
 
 ## Closed

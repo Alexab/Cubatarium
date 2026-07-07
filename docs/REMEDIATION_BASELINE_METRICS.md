@@ -28,3 +28,14 @@
 - TD-AUD-026/027: partial
 
 See [TECH_DEBT_AUDIT.md](TECH_DEBT_AUDIT.md).
+
+## Baseline refresh (2026-07-07)
+
+| Metric | Owner | Baseline capture | Target gate | Notes |
+|--------|-------|------------------|-------------|-------|
+| Android startup p95 (cold start) | app/android | pending | no ANR-like dialog, p95 improvement vs 2026-07-07 baseline | Measure on low/mid/high devices |
+| Android inventory controls overlap rate | gui/android | pending | 0 repros on smoke matrix | Cover 16:9, 20:9, 4:3 profiles |
+| Android Back flow correctness | app/input | pending | 100% pass on 3-state flow | Inventory -> close, InGame -> menu, Menu -> exit confirm |
+| Android joystick stuck incidents | input/android | pending | 0 stuck incidents in 10x multi-touch runs | Include release outside joystick area |
+| Icon cache hit/miss/store | gui/cache | pending | hit ratio up after warmup, no UI hitch spikes | Track persistent PNG cache lifecycle |
+| Frame time p95 (streaming stress) | render/world | pending | no regression vs current baseline | Use in-game performance HUD + diagnostics export |
