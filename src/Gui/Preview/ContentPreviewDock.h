@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+typedef unsigned int GLuint;
+
 namespace cutum
 {
 
@@ -58,6 +60,7 @@ private:
   float Pitch{32.0f};
   int RenderSize{256};
   double RenderThrottle{0.0};
+  GLuint PreviewTexture{0};
   std::function<void()> OnChange;
 };
 

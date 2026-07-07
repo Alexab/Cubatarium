@@ -35,6 +35,9 @@ public:
   bool SupportsKind(ContentKind kind) const;
   GLuint Render(ContentKind kind, const std::string &id, int size,
                 float yawDeg, float pitchDeg);
+  /// Stable texture for dock preview (not shared with icon-warmup FBO).
+  GLuint RenderUnique(ContentKind kind, const std::string &id, int size,
+                      float yawDeg, float pitchDeg);
 
 private:
   bool EnsureFboSize(int size);

@@ -7,6 +7,8 @@
 #include "Gui/Widgets/GuiPreviewViewport.h"
 #include "Gui/Core/GuiTheme.h"
 
+#include "Render/GlIncludes.h"
+
 namespace cutum
 {
 
@@ -62,7 +64,14 @@ std::unique_ptr<UGuiPanel> UContentPreviewDock::ReleasePanel()
   return std::move(Root);
 }
 
-UContentPreviewDock::~UContentPreviewDock() = default;
+UContentPreviewDock::~UContentPreviewDock()
+{
+  if (PreviewTexture != 0)
+  {
+    glDeleteTextures(1, &PreviewTexture);
+    PreviewTexture = 0;
+  }
+}
 
 void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
                                        const std::string &displayName)
@@ -141,9 +150,13 @@ void UContentPreviewDock::RenderPreviewIfNeeded()
     return;
   }
   const int size = std::max(128, std::min(RenderSize, 512));
-  const GLuint tex =
-      Renderer->Render(Kind, EntryId, size, Yaw, Pitch);
-  Viewport->SetPreviewTexture(tex);
+  if (PreviewTexture != 0)
+  {
+    glDeleteTextures(1, &PreviewTexture);
+    PreviewTexture = 0;
+  }
+  PreviewTexture = Renderer->RenderUnique(Kind, EntryId, size, Yaw, Pitch);
+  Viewport->SetPreviewTexture(PreviewTexture);
   RenderDirty = false;
 }
 

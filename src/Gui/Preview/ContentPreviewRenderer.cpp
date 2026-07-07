@@ -261,6 +261,63 @@ GLuint UContentPreviewRenderer::Render(ContentKind kind, const std::string &id,
   return 0;
 }
 
+GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
+                                             const std::string &id, int size,
+                                             float yawDeg, float pitchDeg)
+{
+  if (id.empty() || !SupportsKind(kind))
+  {
+    return 0;
+  }
+  if (kind == ContentKind::UCreature)
+  {
+    return Creatures ? Creatures->RenderToUniqueTexture(id, "", size, yawDeg,
+                                                        pitchDeg)
+                     : 0;
+  }
+  if (kind == ContentKind::Skin)
+  {
+    if (!Creatures)
+    {
+      return 0;
+    }
+    UCreatureDefinitionStorage *species = Creatures->GetSpecies();
+    if (!species)
+    {
+      return 0;
+    }
+    return Creatures->RenderToUniqueTexture(
+        species->GetControlledDefaultSpeciesId(), id, size, yawDeg, pitchDeg);
+  }
+
+  const GLuint shared = Render(kind, id, size, yawDeg, pitchDeg);
+  if (shared == 0 || FboSize <= 0)
+  {
+    return 0;
+  }
+
+  GLuint tex = 0;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FboSize, FboSize, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  UGlStateScope glState(kGlMaskIconFbo);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, Fbo);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Fbo);
+  glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                       GL_TEXTURE_2D, ColorTex, 0);
+  glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                       GL_TEXTURE_2D, tex, 0);
+  glBlitFramebuffer(0, 0, FboSize, FboSize, 0, 0, FboSize, FboSize,
+                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return tex;
+}
+
 GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
                                              int size, float yawDeg,
                                              float pitchDeg)
