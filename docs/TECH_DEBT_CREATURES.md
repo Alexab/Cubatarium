@@ -61,5 +61,4 @@
 
 - Packet `P0.1` tracker normalization committed (`15bbb00`): статусная рассинхронизация Open/Closed устранена для закрытых historical пунктов.
 - Packet `R2` persistent icon invalidation committed (`17de9ca`): `ClearRenderedIcons` теперь инвалидация `creature/skin` на диске, что упрощает повторную валидацию после model fixes.
-- `TD-CRE-034` (`puffin`): glTF re-exported from `animalworld/models/Puffin.b3d` (226 verts, mesh Y 0.0–0.586); awaiting manual visual sign-off.
-- `TD-CRE-035` (`manatee`): glTF re-exported from `animalworld/models/Manatee.b3d` + bounds normalized to rigid envelope; awaiting manual visual sign-off.
+- `TD-CRE-034` (`puffin`) и `TD-CRE-035` (`manatee`) остаются `backlog/open`: требуют отдельного model source remap/transform коррекции и ручной visual check.
