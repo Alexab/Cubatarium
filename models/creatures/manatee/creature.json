@@ -104,11 +104,11 @@
         "Slither": "walk",
         "Coil": "idle",
         "Action": "punch",
-        "Hover": "fly",
-        "Glide": "fly",
-        "Swim": "fly",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "idle",
         "Tread": "idle",
-        "Fly": "fly"
+        "Fly": "idle"
       }
     }
   }

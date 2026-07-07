@@ -18,7 +18,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); GLES stencil wave 0 |
+| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); desktop fog A–C closed, D wont-fix; **Android AND-17 FAIL** (GLES surface film) — follow-up open |
 | TD-FL-001 | F2 | Replaced `LiquidSimulationSystem` with `UFluidSpreadSystem` (source/flowing levels) |
 | TD-FL-002 | F5 | `MarkFluidRegionDirty` + immediate remesh near player |
 | TD-FL-003 | F4 → R1 | Basin heuristic (reverted R1; see Open) |
@@ -107,4 +107,21 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 - Packet `P0.2` baseline refresh committed (`15bbb00`): метрики startup/frame/cache закреплены в `REMEDIATION_BASELINE_METRICS.md`.
 - Packet `R1` icon cache diagnostics (`57ef029`): versioned manifest + PNG read/write failure counters для наблюдаемости regressions.
 - Packet `R2` targeted persistent cache invalidation (`17de9ca`): адресная инвалидация `block/creature/skin` снижает риск stale визуалов при runtime catalog refresh.
-- `TD-FL-034` остаётся `open`; feature-flag rollout (`dc75582`) откачен (`33c21c9`) после регрессии partial-submerge fog.
+- `TD-FL-034` code closed (`f2e8a26`): v2 shore policy (`BelowSurfaceFogStrengthV2`, `IsShallowFluidSpan`, `IsPartialSubmerge`) behind `render.below_surface_fog_v2` (default **off**); GLES stencil in wave 0 (`fd04741`). Prior rollout (`dc75582`) откачен (`33c21c9`) — не повторять без A/B manual gate.
+- **Manual sign-off (2026-07-07):** desktop v1 (`below_surface_fog_v2: false`) — FOG-01/03/04/06 PASS; symptoms A–C PASS; **D FAIL → wont-fix**. v2 A/B not run. Android AND-17 FAIL (surface film) — GLES follow-up open.
+
+### TD-FL-034 manual symptom sign-off (2026-07-07)
+
+Config: v1 only (`render.below_surface_fog_v2` **false**). v2 column not exercised.
+
+| Symptom | Scenario | v1 (flag off) | v2 (flag on) | Resolution |
+|---------|----------|---------------|--------------|------------|
+| A | Суша у луж 1×1 / 2×2 | [X] PASS | — | **closed** |
+| B | Взгляд с берега на дно моря | [X] PASS | — | **closed** |
+| C | Погружение, глаза на границе surface | [X] PASS | — | **closed** |
+| D | Пятнистость песка на дне моря | [X] FAIL | — | **wont-fix** (pre-existing) |
+
+- Tester: manual (desktop)
+- Build/commit: `arch_refactor3` @ `f2e8a26`
+- Date: 2026-07-07
+- Ship policy: `below_surface_fog_v2` default **false**; enable v2 only after GLES AND-17 + optional v2 A/B

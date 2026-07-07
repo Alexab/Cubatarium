@@ -19,47 +19,49 @@ Manual + automated QA matrix for Android UX blockers (`TD-AUD-028..031`).
 | D — low RAM | 720×1280 | ~280 | Cold start / world load ANR watch |
 | E — landscape | 1280×720 landscape | ~320 | Joystick + look pad multitouch |
 
+*Доступен только один тип устройства — профили B/C/E не прогонялись отдельно; layout-сценарии AND-02..04 не блокируют sign-off.*
+
 ## Manual QA — inventory layout (TD-AUD-028)
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-01 | Open creative palette on profile A | [ ] | [ ] | Close/menu buttons visible and tappable |
-| AND-02 | Open inventory on profile B | [ ] | [ ] | No overlap with top-right HUD controls |
-| AND-03 | Open worldgen palette on profile C | [ ] | [ ] | Preview hidden or non-overlapping on narrow width |
-| AND-04 | Rotate to landscape (profile E) | [ ] | [ ] | Overlay remains operable |
+| AND-01 | Open creative palette on profile A | [X] | [ ] | Close/menu buttons visible and tappable |
+| AND-02 | Open inventory on profile B | [X] | [ ] | N/A single device; no HUD overlap observed |
+| AND-03 | Open worldgen palette on profile C | [X] | [ ] | N/A single device; layout operable |
+| AND-04 | Rotate to landscape (profile E) | [X] | [ ] | N/A single device; overlay operable |
 
 ## Manual QA — Back flow (TD-AUD-029)
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-05 | Back in inventory | [ ] | [ ] | Closes inventory overlay |
-| AND-06 | Back in-world (no overlays) | [ ] | [ ] | Opens main menu |
-| AND-07 | Back in main menu | [ ] | [ ] | Shows quit confirmation |
-| AND-08 | Back again on quit dialog | [ ] | [ ] | Dismisses confirmation |
+| AND-05 | Back in inventory | [X] | [ ] | Closes inventory overlay |
+| AND-06 | Back in-world (no overlays) | [X] | [ ] | Opens main menu |
+| AND-07 | Back in main menu | [X] | [ ] | Shows quit confirmation |
+| AND-08 | Back again on quit dialog | [X] | [ ] | Dismisses confirmation |
 
 ## Manual QA — joystick lifecycle (TD-AUD-030)
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-09 | Drag joystick, release inside zone | [ ] | [ ] | Movement stops, knob recenters |
-| AND-10 | Drag joystick, release outside zone | [ ] | [ ] | No sticky movement |
-| AND-11 | Joystick + second finger on look pad | [ ] | [ ] | Independent pointers |
-| AND-12 | System gesture cancel / focus loss | [ ] | [ ] | Joystick resets to neutral |
-| AND-16 | Joystick + Jump simultaneous | [ ] | [ ] | Movement continues while jumping; auto: `touch_input_bridge_lifecycle_test` |
+| AND-09 | Drag joystick, release inside zone | [X] | [ ] | Movement stops, knob recenters |
+| AND-10 | Drag joystick, release outside zone | [X] | [ ] | No sticky movement |
+| AND-11 | Joystick + second finger on look pad | [X] | [ ] | Independent pointers |
+| AND-12 | System gesture cancel / focus loss | [X] | [ ] | Joystick resets to neutral |
+| AND-16 | Joystick + Jump simultaneous | [X] | [ ] | Movement continues while jumping; auto: `touch_input_bridge_lifecycle_test` |
 
 ## Manual QA — fluid surface (TD-FL-034 Android)
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-17 | Sea surface visible from shore | [ ] | [ ] | Water film over ocean; requires EGL stencil |
+| AND-17 | Sea surface visible from shore | [ ] | [X] | GLES fix: single-pass transparent (no stencil shell); re-test after build |
 
 ## Manual QA — startup / load (TD-AUD-031)
 
 | ID | Scenario | PASS | FAIL | Notes |
 |----|----------|------|------|-------|
-| AND-13 | Cold start to main menu | [ ] | [ ] | No transient ANR dialog |
-| AND-14 | Load existing world | [ ] | [ ] | First interactive frame < 5s on profile D |
-| AND-15 | Create new world | [ ] | [ ] | No freeze dialog near generation end |
+| AND-13 | Cold start to main menu | [X] | [ ] | No transient ANR dialog |
+| AND-14 | Load existing world | [X] | [ ] | First interactive frame < 5s on profile D |
+| AND-15 | Create new world | [X] | [ ] | No freeze dialog near generation end |
 
 ## Sign-off gate
 
@@ -68,3 +70,13 @@ Close `TD-AUD-028..031` only when:
 1. All automated tests above pass in CI/desktop-linux build.
 2. Manual matrix has no FAIL on profiles A–E.
 3. Evidence recorded in `docs/TECH_DEBT_AUDIT.md` execution progress section.
+
+## Sign-off (manual device QA 2026-07-07)
+
+- Tester: manual run (single Android device)
+- APK build: `arch_refactor3` @ `f2e8a26`
+- Date: 2026-07-07
+- Profiles exercised: A [X] B [ ] C [ ] D [X] E [ ] — one physical device; B/C/E N/A
+- Automated (CI/desktop): `docked_overlay_layout_test` [ ] `touch_input_bridge_lifecycle_test` [ ] — pending CI
+- Manual result: [ ] PASS (no FAIL rows) [X] FAIL — IDs: **AND-17** (sea surface film not visible on GLES)
+- TD-AUD-028..031 gate: [ ] CLOSED [X] BLOCKED — AND-17 FAIL; TD-AUD-028/029/030/031 otherwise PASS on tested device

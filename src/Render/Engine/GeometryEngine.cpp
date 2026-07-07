@@ -1047,8 +1047,13 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  constexpr bool kAlphaCutout = false;
+#else
+  constexpr bool kAlphaCutout = true;
+#endif
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
-                       *PreparedTransparentTextures, true, true, mode,
+                       *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
 }
 

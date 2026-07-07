@@ -44,6 +44,8 @@ flowchart TD
 
 Порог оболочки: `GreedyTransparentSettings::shellAlpha` (по умолчанию **0.35**). Выше — плотнее оболочка, меньше «дырок» в mutual occlusion.
 
+**Android / GLES:** вместо 4 проходов — один `TransparentColor` pass (`GL_LESS`, без stencil, без alpha cutout). Desktop shell technique ненадёжен на GLES (жидкости не видны вообще).
+
 ## С чего начать при баге
 
 | Симптом | Смотреть |
@@ -52,7 +54,7 @@ flowchart TD
 | Лава/вода **сквозь воду на opaque-блоке** (пень) | `UOpaqueDepthCapture` + `uOpaqueDepthGuard` в `fshader_greedy.glsl` (color/fuzzy passes) |
 | Нет **затемнения** между водой/стеклом | `ShellDepth` + `ShellSurface` |
 | Не видно **стекло за водой** | `BehindShell` (GREATER) + сортировка в `GreedyTransparentSort.cpp` |
-| Мир «ломается» после HUD/иконок | `GlStateScope` в `ObjectIconCache`, `Application` clear stencil |
+| Не видно **жидкости на Android** (вода/лава) | `GreedyTransparentPipeline` GLES single-pass; не stencil shell |
 
 Включить лог проходов: `GreedyTransparentSettings settings; settings.logPassNames = true;` перед `GreedyTransparentPipeline::Draw`.
 

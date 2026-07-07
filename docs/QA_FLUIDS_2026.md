@@ -10,26 +10,44 @@ Source checklist: [`docs/PHYSICS_ROLLOUT.md`](PHYSICS_ROLLOUT.md) (automated↔m
 - Rendering and fog: [`FluidMeshFacesTest.cpp`](../src/Test/FluidMeshFacesTest.cpp), [`FluidSurfaceSliceTest.cpp`](../src/Test/FluidSurfaceSliceTest.cpp), [`FluidSurfaceMapLogicTest.cpp`](../src/Test/FluidSurfaceMapLogicTest.cpp), [`UnderwaterFogColumnTest.cpp`](../src/Test/UnderwaterFogColumnTest.cpp), [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h)
 - Placement: [`BlockPlacementRaycastTest.cpp`](../src/Test/BlockPlacementRaycastTest.cpp) (LIQ-01/02 scenarios), [`FluidPlacementTest.cpp`](../src/Test/FluidPlacementTest.cpp)
 
-## Automated run (2026-07-05, Release MSVC)
+## Automated run (2026-07-07, `arch_refactor3` @ `f2e8a26`)
 
-All remediation smoke targets green, including `fluid_tuning_defaults_test`, `fluid_block_resolver_test`, `fluid_flood_service_test`, `fluid_fill_policy_test`, `fluid_kind_resolver_test`, `object_placement_mode_test`.
+| Check | Result |
+|-------|--------|
+| `python tools/audit_style.py` | **0 violations** |
+| `validate_gltf_creature.py --skinned-only` | **33/33 OK** |
+| `test_gltf_skinned_bind_pose.py` | **33/33 passed** |
+| `fluid_surface_map_logic_test` (v2 policy tests) | _run in CI/desktop build_ |
+| Prior remediation smoke (2026-07-05 MSVC) | green — see table below |
 
-`python tools/audit_style.py`: 0 violations.
+Prior remediation smoke targets (2026-07-05): `fluid_tuning_defaults_test`, `fluid_block_resolver_test`, `fluid_flood_service_test`, `fluid_fill_policy_test`, `fluid_kind_resolver_test`, `object_placement_mode_test`.
 
 ## P0 fog fix (per-column submerged fog)
 
 Submerged rendering now uses **per-column below-surface fog** when the surface map is ready instead of full-screen `uFogEnabled`, fixing air blocks above water receiving underwater fog (FOG-04). Global fog remains only as fallback when the map is unavailable. See [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h).
 
+## TD-FL-034 v2 shore policy (2026-07-07)
+
+Feature flag: `render.below_surface_fog_v2` in `config.json` (default **false**). When **true**, `BelowSurfaceFogStrengthV2` applies shallow-span / partial-submerge / open-ocean policies (see [`TECH_DEBT_FLUIDS.md`](TECH_DEBT_FLUIDS.md) symptoms A–D).
+
+**Manual A/B procedure:**
+
+1. Creative world with ocean + shore puddles (1×1, 2×2 water on land).
+2. Run FOG-01, FOG-03, FOG-04, FOG-06 with `below_surface_fog_v2: false`.
+3. Set `below_surface_fog_v2: true`, restart, repeat same scenarios.
+4. Fill symptom table A–D in `TECH_DEBT_FLUIDS.md` execution progress.
+5. Android: AND-17 (sea surface film) on GLES — separate from v2 flag.
+
 ## Manual QA - underwater fog
 
 | ID | Scenario | PASS | FAIL | Notes | Automated reference |
 |----|----------|------|------|-------|---------------------|
-| FOG-01 | Open ocean wade-in; tint before submerge; fog after submerge | [ ] | [ ] | Re-test after P0 per-column submerged fog | `FluidSurfaceMapLogicTest`, `UnderwaterFogColumnTest` |
+| FOG-01 | Open ocean wade-in; tint before submerge; fog after submerge | [X] | [ ] | v1 PASS (symptoms A–C); see TECH_DEBT_FLUIDS | `FluidSurfaceMapLogicTest`, `UnderwaterFogColumnTest` |
 | FOG-02 | Shallow water, standing, level view; no full-screen fog | [X] | [ ] | | `UnderwaterFogColumnTest` |
-| FOG-03 | Shallow water, look down; tint on seafloor below local surface | [ ] | [ ] | Manual in-game | `FluidSurfaceSliceTest` |
-| FOG-04 | Lake uses per-column surface, not sea-level constant | [ ] | [ ] | Re-test after P0 fix | `FluidSurfaceMapLogicTest` |
-| FOG-05 | Lava pool lava-colored below-surface tint | [ ] | [ ] | Manual in-game | `UnderwaterFogColumnTest` |
-| FOG-06 | Chunk edge; no artifacts outside sentinel | [ ] | [ ] | Manual in-game | `FluidSurfaceSliceTest` |
+| FOG-03 | Shallow water, look down; tint on seafloor below local surface | [X] | [ ] | v1 PASS | `FluidSurfaceSliceTest` |
+| FOG-04 | Lake uses per-column surface, not sea-level constant | [X] | [ ] | v1 PASS | `FluidSurfaceMapLogicTest` |
+| FOG-05 | Lava pool lava-colored below-surface tint | [ ] | [ ] | Not tested this run | `UnderwaterFogColumnTest` |
+| FOG-06 | Chunk edge; no artifacts outside sentinel | [X] | [ ] | v1 PASS | `FluidSurfaceSliceTest` |
 
 ## Manual QA - liquids
 
@@ -50,7 +68,10 @@ Submerged rendering now uses **per-column below-surface fog** when the surface m
 
 ## Sign-off
 
-- Tester: automated gate complete; manual FOG-03/05/06 + FOG-01/04 re-test pending in-game
-- Build/commit: `arch_refactor` (remediation gaps follow-up, uncommitted)
-- Date: 2026-07-05
-- Result: [X] Automated PASS [ ] Manual PASS [X] Manual partial — FOG-03/05/06 need in-game pass; FOG-01/04 need re-test after P0
+- Tester: manual run (desktop, v1 `below_surface_fog_v2: false`)
+- Build/commit: `arch_refactor3` @ `f2e8a26`
+- Date: 2026-07-07
+- Config shipped: `below_surface_fog_v2` default **false** (v2 A/B not run; v1 sufficient for A–C)
+- Result: [X] Automated PASS (2026-07-07 style + glTF) [ ] Manual PASS [X] Manual partial
+- DoD blockers (plan): FOG-01/03/04/06 PASS on v1; symptom **D** FAIL (wont-fix); Android AND-17 separate FAIL
+- Notes: symptom D (seafloor sand mottling) accepted as wont-fix per TECH_DEBT_FLUIDS; FOG-05 lava not tested

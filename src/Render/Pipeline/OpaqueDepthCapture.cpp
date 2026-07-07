@@ -39,8 +39,14 @@ void UOpaqueDepthCapture::EnsureSize(int width, int height)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  // GL_DEPTH_COMPONENT32F is optional on GLES; 24-bit is widely copyable from default FBO.
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, Width, Height, 0,
+               GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+#else
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, Width, Height, 0,
                GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+#endif
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -78,6 +84,10 @@ void UOpaqueDepthCapture::ApplyShaderUniforms(
   {
     return;
   }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  // Default-FBO depth copy is unreliable on some GLES drivers; skip guard (AND-17).
+  enable = false;
+#endif
   shader->SetFloat("uOpaqueDepthGuard", enable && IsValid() ? 1.0f : 0.0f);
   if (!enable || !IsValid())
   {

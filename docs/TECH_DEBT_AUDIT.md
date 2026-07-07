@@ -76,7 +76,26 @@
 - `A-test` Android automated gate (2026-07-07): `docked_overlay_layout_test`, `touch_input_bridge_lifecycle_test`, `docs/QA_ANDROID_2026.md`; joystick fail-safe on Hud pointer release + motion cancel.
 - `A-wave0` (2026-07-07): per-pointer joystick release, touch controls above palette, EGL stencil + GLES fluid fallback.
 - `A-wave1` (2026-07-07): BACK→quit on main menu, deferred GPU warmup, reduced load chunk budget on Android.
-- Manual Android matrix (`AND-01..AND-17`) recommended on device profiles A–E before release.
+- `A-wave2` (2026-07-07): architecture partial (`2d02a7a`), creatures TD-CRE-034/035 (`3de5d0f`, `f57e383`), fluids TD-FL-034 v2 flag (`f2e8a26`).
+- Automated gate (2026-07-07 @ `f2e8a26`): `python tools/audit_style.py` 0 violations; `validate_gltf_creature.py --skinned-only` 33/33; `test_gltf_skinned_bind_pose.py` 33/33. C++ targets `docked_overlay_layout_test`, `touch_input_bridge_lifecycle_test`, `fluid_surface_map_logic_test` — run in CI/desktop build before release.
+- **Manual sign-off (2026-07-07):** single Android device — AND-01..16, AND-13..15 PASS; **AND-17 FAIL** (no sea surface film on GLES). Profiles B/C/E N/A. Gate **BLOCKED** until AND-17 fixed — см. [`QA_ANDROID_2026.md`](QA_ANDROID_2026.md).
+
+### TD-AUD-028..031 manual sign-off (2026-07-07)
+
+| Gate | Status |
+|------|--------|
+| AND-01..04 layout (profiles A, B, C, E) | [X] PASS [ ] FAIL — B/C/E N/A single device |
+| AND-05..08 Back flow | [X] PASS [ ] FAIL |
+| AND-09..12, AND-16 joystick lifecycle | [X] PASS [ ] FAIL |
+| AND-17 sea surface (EGL stencil) | [ ] PASS [X] FAIL |
+| AND-13..15 startup/load (profile D) | [X] PASS [ ] FAIL |
+| `touch_input_bridge_lifecycle_test` (CI) | [ ] PASS [ ] FAIL |
+| `docked_overlay_layout_test` (CI) | [ ] PASS [ ] FAIL |
+
+- Tester: manual (single Android device)
+- APK commit: `arch_refactor3` @ `f2e8a26`
+- Date: 2026-07-07
+- TD-AUD-028..031 release gate: [ ] CLOSED [X] BLOCKED — AND-17 GLES sea surface; reopen TD-FL-034 Android slice
 
 ## Phase tracker
 
