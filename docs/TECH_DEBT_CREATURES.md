@@ -56,3 +56,9 @@
 | TD-CRE-019 | audit | Icon placeholder fallback (`parts_preview` → FBO; baked `species_texture` → `icon.png`) | `CreatureIconCache.cpp` + bake `patch_creature_icon_mode` |
 | TD-CRE-020 | spawn | Universal spawn probe + habitat snap (50 spawnable) | `CreatureEnvironment.cpp`, `WorldCreatures.cpp` |
 | TD-CRE-021 | audit | 8 placeholder species — research textures imported + baked | `sync_luanti_research_textures.py` + `bake_rigid_creature_textures.py` |
+
+## Execution progress (2026-07-07)
+
+- Packet `P0.1` tracker normalization committed (`15bbb00`): статусная рассинхронизация Open/Closed устранена для закрытых historical пунктов.
+- Packet `R2` persistent icon invalidation committed (`17de9ca`): `ClearRenderedIcons` теперь инвалидация `creature/skin` на диске, что упрощает повторную валидацию после model fixes.
+- `TD-CRE-034` (`puffin`) и `TD-CRE-035` (`manatee`) остаются `backlog/open`: требуют отдельного model source remap/transform коррекции и ручной visual check.

@@ -101,3 +101,10 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 - [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md)
 - [UNDERWATER_FOG_TRANSITION.md](UNDERWATER_FOG_TRANSITION.md) — анализ подводного тумана при погружении, план variant A (TD-FL-029)
 - [PHYSICS_ROLLOUT.md](PHYSICS_ROLLOUT.md)
+
+## Execution progress (2026-07-07)
+
+- Packet `P0.2` baseline refresh committed (`15bbb00`): метрики startup/frame/cache закреплены в `REMEDIATION_BASELINE_METRICS.md`.
+- Packet `R1` icon cache diagnostics (`57ef029`): versioned manifest + PNG read/write failure counters для наблюдаемости regressions.
+- Packet `R2` targeted persistent cache invalidation (`17de9ca`): адресная инвалидация `block/creature/skin` снижает риск stale визуалов при runtime catalog refresh.
+- `TD-FL-034` остаётся `open` и требует отдельного feature-flag A/B цикла (не закрыто в этом проходе).

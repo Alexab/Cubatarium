@@ -66,3 +66,9 @@
 | B — layered height, биомы, реки, ravines, структуры grid, ground_cover, руды, string seed | done |
 | C — climate sampler, переходные биомы, erosion lite, 3D caves, ores.json, presets, smoke CI | done |
 | D — Overworld terrain smoothing, climate height, height.json, biome prefab coverage | done |
+
+## Execution progress (2026-07-07)
+
+- Worldgen remains in maintenance/polish mode (core roadmap phases A–D already `done`).
+- Общий debt-remediation цикл добавил baseline/traceability для cross-module рисков (`15bbb00`, `8a0fcdb`), без изменения worldgen runtime contracts.
+- Незапирающие улучшения (pack dropdown UX, presets UX, biome/climate debug overlay) остаются в backlog и могут выполняться независимыми малыми PR без риска для генератора.
