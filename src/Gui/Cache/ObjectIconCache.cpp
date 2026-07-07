@@ -294,6 +294,10 @@ GLuint UObjectIconCache::GetBlockTexture(BlockId blockId) const
 void UObjectIconCache::ClearBlockIconCache()
 {
   UGuiOffscreenIconCacheBase::DeleteGlTextures(BlockCache, ColorTex);
+  if (IconService)
+  {
+    IconService->InvalidateKind("block");
+  }
 }
 
 GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)

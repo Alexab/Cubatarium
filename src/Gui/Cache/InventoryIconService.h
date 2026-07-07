@@ -43,6 +43,7 @@ public:
                         const std::string &fingerprint, int size,
                         GLuint texture);
   void InvalidateAll();
+  void InvalidateKind(const std::string &kind);
 
   const Stats &GetStats() const { return Metrics; }
 

@@ -80,6 +80,11 @@ void UCreatureIconCache::ClearRenderedIcons()
   }
   SpeciesCache.clear();
   SkinCache.clear();
+  if (IconService)
+  {
+    IconService->InvalidateKind("creature");
+    IconService->InvalidateKind("skin");
+  }
   WarmupIndex = 0;
   if (!Preview)
   {

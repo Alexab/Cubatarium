@@ -349,4 +349,27 @@ void UInventoryIconService::InvalidateAll()
   }
 }
 
+void UInventoryIconService::InvalidateKind(const std::string &kind)
+{
+  if (kind.empty())
+  {
+    return;
+  }
+  std::vector<std::string> eraseKeys;
+  for (const auto &[key, entry] : Entries)
+  {
+    if (key.rfind(kind + ":", 0) == 0)
+    {
+      std::error_code ec;
+      std::filesystem::remove(CacheRoot / entry.File, ec);
+      eraseKeys.push_back(key);
+    }
+  }
+  for (const std::string &key : eraseKeys)
+  {
+    Entries.erase(key);
+  }
+  SaveManifest();
+}
+
 } // namespace cutum
