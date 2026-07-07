@@ -89,34 +89,17 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       }
       if (app.ConsoleOpen)
       {
-        app.ConsoleOpen = false;
-        app.SuppressConsoleToggleChar = false;
-        if (app.ConsoleScreen)
-        {
-          app.ConsoleScreen->SetVisible(false);
-        }
-        app.ClearGameplayKeyboard();
-        app.SyncCursorVisibility();
+        app.ScreenNav.CloseConsoleOverlay();
         return true;
       }
       if (app.PaletteOpen)
       {
-        app.PaletteOpen = false;
-        if (app.PaletteScreen)
-        {
-          app.PaletteScreen->SetVisible(false);
-        }
-        app.SyncCursorVisibility();
+        app.ScreenNav.CloseInventoryPalette();
         return true;
       }
       if (app.WorldGenOpen)
       {
-        app.WorldGenOpen = false;
-        if (app.WorldGenScreen)
-        {
-          app.WorldGenScreen->SetVisible(false);
-        }
-        app.SyncCursorVisibility();
+        app.ScreenNav.CloseWorldGenOverlay();
         return true;
       }
       app.ReturnToMainMenu();
@@ -306,11 +289,6 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     if (app.MenuSubview != MenuSubview::Main)
     {
       app.ScreenNav.ShowMainMenu();
-      return true;
-    }
-    if (app.HasWorldSession() && app.GameSession)
-    {
-      app.GameSession->ResumeGame();
       return true;
     }
     if (app.MainMenuScreen)

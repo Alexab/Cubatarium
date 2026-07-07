@@ -155,4 +155,48 @@ void UScreenNavigator::ReturnToMainMenu()
   ShowMainMenu();
 }
 
+void UScreenNavigator::CloseInventoryPalette()
+{
+  if (!Application)
+  {
+    return;
+  }
+  Application->PaletteOpen = false;
+  if (Application->PaletteScreen)
+  {
+    Application->PaletteScreen->SetVisible(false);
+  }
+  Application->SyncCursorVisibility();
+}
+
+void UScreenNavigator::CloseConsoleOverlay()
+{
+  if (!Application)
+  {
+    return;
+  }
+  Application->ConsoleOpen = false;
+  Application->SuppressConsoleToggleChar = false;
+  if (Application->ConsoleScreen)
+  {
+    Application->ConsoleScreen->SetVisible(false);
+  }
+  Application->ClearGameplayKeyboard();
+  Application->SyncCursorVisibility();
+}
+
+void UScreenNavigator::CloseWorldGenOverlay()
+{
+  if (!Application)
+  {
+    return;
+  }
+  Application->WorldGenOpen = false;
+  if (Application->WorldGenScreen)
+  {
+    Application->WorldGenScreen->SetVisible(false);
+  }
+  Application->SyncCursorVisibility();
+}
+
 } // namespace cutum

@@ -18,6 +18,9 @@ public:
   void ShowNewWorld();
   void ShowLoadWorld();
   void ReturnToMainMenu();
+  void CloseInventoryPalette();
+  void CloseConsoleOverlay();
+  void CloseWorldGenOverlay();
 
 private:
   UApplication *Application;
