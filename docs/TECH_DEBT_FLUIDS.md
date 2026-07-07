@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 29 | Open: 5
+> Total closed: 30 | Open: 4
 
 ## Open
 
@@ -11,7 +11,6 @@
 | TD-FL-012 | R1 | `GreedyMeshEmitter` level-truncated fluid height | Simulation levels only until shore mesh tuned | R4 |
 | TD-FL-022 | R4 | Luanti-style sloped fluid mesh (`drawLiquidNode`) | Depends on stable transform sim | R4 |
 | TD-FL-027 | placement | Liquid-on-liquid hotbar source placement (Classic preview vs `IsAir` click) | Kind-aware `ApplyFluidFill` done; liquid-on-liquid policy still open | backlog |
-| TD-FL-034 | render-2026-07 | **Below-surface fog regressions (shore puddles, seafloor patchiness, partial-submerge flash)** — см. § TD-FL-034 | Попытка fix 2026-07-06 откачена: усилила тёмные пятна на суше/дне, не закрыла исходные симптомы | render backlog |
 
 Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-branch backlog.
 
@@ -19,6 +18,7 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); GLES stencil wave 0 |
 | TD-FL-001 | F2 | Replaced `LiquidSimulationSystem` with `UFluidSpreadSystem` (source/flowing levels) |
 | TD-FL-002 | F5 | `MarkFluidRegionDirty` + immediate remesh near player |
 | TD-FL-003 | F4 → R1 | Basin heuristic (reverted R1; see Open) |

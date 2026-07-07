@@ -51,9 +51,25 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   }
   const bool columnFogActive =
       cutum::ShouldUsePerColumnBelowSurfaceFog(mapReady, nearbyFluid);
-  BelowSurfaceFogStrength =
-      cutum::BelowSurfaceFogStrength(columnFogActive, cameraInFluid);
-  BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(cameraInFluid);
+  const bool partial_submerge =
+      column.valid &&
+      cutum::IsPartialSubmerge(cameraInFluid, eye.y, column.surfaceY);
+  if (render.BelowSurfaceFogV2)
+  {
+    BelowSurfaceFogStrength = cutum::BelowSurfaceFogStrengthV2(
+        columnFogActive, cameraInFluid, partial_submerge,
+        column.surfaceBlockY, column.bottomBlockY);
+    if (partial_submerge)
+    {
+      CameraInFluid = true;
+    }
+  }
+  else
+  {
+    BelowSurfaceFogStrength =
+        cutum::BelowSurfaceFogStrength(columnFogActive, cameraInFluid);
+  }
+  BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(CameraInFluid);
 
   BelowSurfaceFogColors.fill(glm::vec3(0.0f));
   BelowSurfaceFogMin = 0.52f;

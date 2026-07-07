@@ -36,6 +36,8 @@ struct RenderSettings
   float DistanceFogDensity{0.85f};
   /// Use horizontal (XZ) distance for distance fog (classic render fog).
   bool DistanceFogHorizontal{true};
+  /// Per-column below-surface fog v2 (shore band / partial submerge); default off.
+  bool BelowSurfaceFogV2{false};
   bool AltitudeAdaptiveFog{true};
   int AltitudeFogThresholdBlocks{32};
   float AltitudeFogPenaltyPer16Blocks{0.05f};

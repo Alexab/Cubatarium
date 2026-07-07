@@ -82,6 +82,7 @@
         "distance_fog_start_ratio": 0.55,
         "distance_fog_density": 0.85,
         "distance_fog_horizontal": true,
+        "below_surface_fog_v2": false,
         "altitude_adaptive_fog": true,
         "altitude_fog_threshold_blocks": 32,
         "altitude_fog_penalty_per_16_blocks": 0.05,

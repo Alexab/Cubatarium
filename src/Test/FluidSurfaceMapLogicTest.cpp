@@ -119,6 +119,22 @@ static void TestUnderwaterFogPolicy()
          "submerged strength is a light supplement");
   Expect(std::abs(cutum::BelowSurfaceFogStrength(false, false)) < 1e-5f,
          "map not ready strength is 0");
+  Expect(cutum::IsShallowFluidSpan(12, 12), "single-block fluid is shallow");
+  Expect(cutum::IsShallowFluidSpan(13, 12), "two-block fluid is shallow");
+  Expect(!cutum::IsShallowFluidSpan(20, 12), "deep column is not shallow");
+  Expect(cutum::IsPartialSubmerge(false, 10.2f, 10.4f),
+         "eye in band below surface is partial submerge");
+  Expect(!cutum::IsPartialSubmerge(false, 11.0f, 10.4f),
+         "eye above surface is not partial submerge");
+  Expect(std::abs(cutum::BelowSurfaceFogStrengthV2(true, false, false, 20, 12) -
+                 0.12f) < 1e-5f,
+         "v2 above water uses weak shore tint for deep columns");
+  Expect(std::abs(cutum::BelowSurfaceFogStrengthV2(true, false, false, 12, 12)) <
+             1e-5f,
+         "v2 skips puddles on land");
+  Expect(std::abs(cutum::BelowSurfaceFogStrengthV2(true, false, true, 12, 12) -
+                 0.35f) < 1e-5f,
+         "v2 partial submerge uses stronger band");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMin(false) - 0.5f) < 1e-5f,
          "wading skips shallow surface band");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMin(true)) < 1e-5f,
