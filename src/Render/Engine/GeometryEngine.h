@@ -30,7 +30,6 @@ typedef int GLint;
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
-#include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include <array>
 #include <glm/glm.hpp>
@@ -46,6 +45,7 @@ namespace cutum
 
 class IUGameContent;
 class UCreatureTextureStorage;
+class UWorld;
 
 // Structure for batch rendering
 struct RenderBatch

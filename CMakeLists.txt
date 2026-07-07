@@ -149,6 +149,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
     src/World/Core/WorldFluidFacade.cpp
@@ -384,6 +385,8 @@ set(HEADERS
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h
     src/World/Interfaces/IUWorldMeshSink.h
+    src/World/Interfaces/IUWorldRenderReadModel.h
+    src/World/Adapters/WorldRenderReadAdapter.h
     src/World/Mesh/WorldMeshService.h
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h

@@ -13,6 +13,7 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Engine/GeometryEngine.h"
+#include "World/Core/World.h"
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
 #include <GLFW/glfw3.h>
