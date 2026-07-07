@@ -1,14 +1,14 @@
 # Creature resolution log
 
-Source: `tools/creature_resolution_log.yaml` (updated 2026-07-06)
+Source: `tools/creature_resolution_log.yaml` (updated 2026-07-07)
 
 ## Summary (spawnable only)
 
 - Species: **54**
 - spawn: pass=54
 - wander: pass=54
-- silhouette: pass=19, pending=35
-- icon: pass=19, pending=35
+- silhouette: pass=24, pending=30
+- icon: pass=24, pending=30
 
 ## Open issues
 
@@ -20,13 +20,13 @@ None.
 |----|-------|--------|------------|------|------|
 | badger | pass | pass | pass | pass | 0 |
 | bee | pass | pass | pass | pass | 0 |
-| bunny | pass | pass | pending | pending | 0 |
+| bunny | pass | pass | pass | pass | 0 |
 | butterfly | pass | pass | pass | pass | 0 |
 | chicken | pass | pass | pass | pass | 0 |
 | cow | pass | pass | pass | pass | 0 |
 | crab | pass | pass | pass | pass | 0 |
 | dirt_monster | pass | pass | pending | pending | 0 |
-| dolphin | pass | pass | pending | pending | 0 |
+| dolphin | pass | pass | pass | pass | 0 |
 | dungeon_master | pass | pass | pending | pending | 0 |
 | fire_spirit | pass | pass | pending | pending | 0 |
 | fox | pass | pass | pass | pass | 0 |
@@ -57,15 +57,15 @@ None.
 | seal | pass | pass | pending | pending | 0 |
 | shark | pass | pass | pass | pass | 0 |
 | sheep | pass | pass | pass | pass | 0 |
-| skeleton | pass | pass | pending | pending | 0 |
+| skeleton | pass | pass | pass | pass | 0 |
 | spider | pass | pass | pass | pass | 0 |
-| squid | pass | pass | pending | pending | 0 |
+| squid | pass | pass | pass | pass | 0 |
 | stingray | pass | pass | pending | pending | 0 |
 | stone_monster | pass | pass | pending | pending | 0 |
 | tortoise | pass | pass | pass | pass | 0 |
 | tree_monster | pass | pass | pending | pending | 0 |
 | treeman | pass | pass | pending | pending | 0 |
-| trout | pass | pass | pending | pending | 0 |
+| trout | pass | pass | pass | pass | 0 |
 | warthog | pass | pass | pending | pending | 0 |
 | wasp | pass | pass | pass | pass | 0 |
 | water_dragon | pass | pass | pending | pending | 0 |

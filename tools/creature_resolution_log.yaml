@@ -85,16 +85,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: rigid_crop_bake
+      verified_at: '2026-07-07'
+      note: rigid_crop bake
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: baked atlas
     issues_open: []
     issues_closed:
     - id: spawn_probe
@@ -106,7 +106,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   butterfly:
     spawnable: true
     habitat: aerial
@@ -294,16 +294,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: rigid_crop_bake
+      verified_at: '2026-07-07'
+      note: rigid_crop bake
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: baked atlas
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -315,7 +315,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
     backend_audit:
       status: tooling_pass
       verified_at: '2026-06-30'
@@ -1311,16 +1311,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: rigid_crop_bake
+      verified_at: '2026-07-07'
+      note: rigid_crop bake
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: baked atlas
     issues_open: []
     issues_closed:
     - id: spawn_occupy_mismatch
@@ -1329,7 +1329,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   spider:
     spawnable: true
     habitat: terrestrial
@@ -1378,16 +1378,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: rigid_crop_bake
+      verified_at: '2026-07-07'
+      note: rigid_crop bake
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: baked atlas
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -1399,7 +1399,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   stingray:
     spawnable: true
     habitat: aquatic
@@ -1583,16 +1583,16 @@ species:
       verified_at: '2026-07-06'
       note: needs in-game verify after hotfix 2026-06-19
     silhouette:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
-      score: null
+      status: pass
+      scenario: rigid_crop_bake
+      verified_at: '2026-07-07'
+      note: rigid_crop bake
+      score: 4
     icon:
-      status: pending
-      scenario: ''
-      verified_at: null
-      note: ''
+      status: pass
+      scenario: species_texture
+      verified_at: '2026-07-07'
+      note: baked atlas
     issues_open: []
     issues_closed:
     - id: spawn_habitat
@@ -1604,7 +1604,7 @@ species:
     - id: aerial_wander_clearance
       closed_at: '2026-06-19'
       note: code hotfix
-    last_updated: '2026-07-06'
+    last_updated: '2026-07-07'
   warthog:
     spawnable: true
     habitat: terrestrial
