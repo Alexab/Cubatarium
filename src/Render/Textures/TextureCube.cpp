@@ -202,6 +202,10 @@ void UTextureCubeStorage::PatchDescriptors(
       GLuint tex = existing->second.GetTexture();
       if (tex != 0)
       {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+        // GLES build keeps this path simple and portable: recreate texture.
+        glDeleteTextures(1, &tex);
+#else
         glBindTexture(GL_TEXTURE_2D, tex);
         GLint existing_w = 0;
         GLint existing_h = 0;
@@ -222,6 +226,7 @@ void UTextureCubeStorage::PatchDescriptors(
           continue;
         }
         glDeleteTextures(1, &tex);
+#endif
       }
       TexturesNames.erase(existing->second.GetName());
       Textures.erase(existing);
