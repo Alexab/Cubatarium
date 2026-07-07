@@ -507,12 +507,20 @@ void UApplication::EnterGameAfterWorldChange()
       ProgressSink.Report("mesh_warmup", 0.97f, "Preparing view...");
       ProgressScreen->ApplySnapshot(ProgressSink.Get());
     }
+#if defined(__ANDROID__)
+    // Avoid long blocking warmups on Android app thread.
+    if (Geometry)
+    {
+      Geometry->ResetWorldRenderState();
+    }
+#else
     World->WarmupSpawnAreaForEnterGame();
     if (Geometry)
     {
       Geometry->ResetWorldRenderState();
       Geometry->WarmupGreedyGpuFromWorld();
     }
+#endif
   }
   RefreshBlockCatalog();
   ShowInGameHud();

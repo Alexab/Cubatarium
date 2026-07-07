@@ -12,8 +12,14 @@ DockedLayout DockedOverlayLayout::Compute(int viewportW, int viewportH,
                                           const GuiTheme &theme)
 {
   const int gap = theme.Padding;
-  const int previewW =
+  int previewW =
       std::max(200, viewportW * std::max(20, previewWidthPercent) / 100);
+  // On narrow/short viewports, use single-pane mode so right-side controls
+  // remain accessible above overlays.
+  if (viewportW < 1100 || viewportH < 700)
+  {
+    previewW = 0;
+  }
   const int mainW = std::max(200, viewportW - previewW - gap);
   const int panelH =
       std::max(120, viewportH * std::max(50, mainHeightPercent) / 100);
@@ -21,7 +27,14 @@ DockedLayout DockedOverlayLayout::Compute(int viewportW, int viewportH,
 
   DockedLayout layout;
   layout.main = {offsetX, panelY, mainW, panelH};
-  layout.preview = {offsetX + mainW + gap, panelY, previewW, panelH};
+  if (previewW > 0)
+  {
+    layout.preview = {offsetX + mainW + gap, panelY, previewW, panelH};
+  }
+  else
+  {
+    layout.preview = {offsetX + mainW, panelY, 0, panelH};
+  }
   return layout;
 }
 
