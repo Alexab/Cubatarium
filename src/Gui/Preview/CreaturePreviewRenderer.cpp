@@ -10,6 +10,7 @@
 #include "Creatures/Visual/CreatureRootTransform.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
@@ -87,6 +88,44 @@ GLuint GetOrCreatePreviewSkinnedVao(const cutum::GltfPrimitiveCpu &mesh,
       mesh, indexCount);
 }
 
+const GltfAnimationCpu *ResolvePreviewGltfClip(
+    const CreatureGltfMeshAsset &asset)
+{
+  static const char *kClipPreference[] = {"idle", "walk"};
+  for (const char *name : kClipPreference)
+  {
+    const auto it = asset.animationIndexByName.find(name);
+    if (it != asset.animationIndexByName.end())
+    {
+      return &asset.animations[it->second];
+    }
+  }
+  return nullptr;
+}
+
+void UploadPreviewSkinnedBones(class UShaderProgram &shader,
+                               const std::vector<glm::mat4> &bones)
+{
+  if (bones.empty())
+  {
+    return;
+  }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  constexpr int kMaxSkinnedBoneUniforms = 48;
+  const int boneCount = static_cast<int>(
+      std::min<size_t>(bones.size(), kMaxSkinnedBoneUniforms));
+  for (int i = 0; i < boneCount; ++i)
+  {
+    shader.SetMat4("uBones[" + std::to_string(i) + "]",
+                   bones[static_cast<size_t>(i)]);
+  }
+#else
+  BindCreatureBonePaletteBlock(shader.GetProgramID(),
+                               kCreatureBonePaletteBindingPoint);
+  UploadCreatureBonePaletteGpu(bones);
+#endif
+}
+
 } // namespace
 
 UCreaturePreviewRenderer::UCreaturePreviewRenderer(
@@ -141,6 +180,11 @@ bool UCreaturePreviewRenderer::Initialize()
   {
     return false;
   }
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  InitCreatureBonePaletteGpu();
+  BindCreatureBonePaletteBlock(SkinnedShader->GetProgramID(),
+                               kCreatureBonePaletteBindingPoint);
+#endif
   return EnsureFboSize(256);
 }
 
@@ -406,9 +450,10 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     static std::unordered_map<size_t, GLuint> previewGltfVaoCache;
     static std::unordered_map<size_t, GLuint> previewGltfSkinnedVaoCache;
     const glm::mat4 mvp = projection * view * bodyMat;
-    const std::vector<glm::mat4> bindPoseBones =
+    const GltfAnimationCpu *previewAnim = ResolvePreviewGltfClip(*meshAsset);
+    const std::vector<glm::mat4> skinBones =
         meshAsset->hasSkin
-            ? ComputeGltfSkinMatrices(*meshAsset, nullptr, 0.f, true)
+            ? ComputeGltfSkinMatrices(*meshAsset, previewAnim, 0.f, true)
             : std::vector<glm::mat4>{};
 
     bool drewAny = false;
@@ -433,23 +478,12 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
       glBindTexture(GL_TEXTURE_2D, tex);
 
       if (prim.skinned && SkinnedShader && SkinnedShader->IsValid() &&
-          !bindPoseBones.empty())
+          !skinBones.empty())
       {
         SkinnedShader->Use();
         SkinnedShader->SetInt("texture0", 0);
         SkinnedShader->SetMat4("mvp_matrix", mvp);
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-        constexpr int kMaxSkinnedBoneUniforms = 48;
-#else
-        constexpr int kMaxSkinnedBoneUniforms = 64;
-#endif
-        const int boneCount = static_cast<int>(
-            std::min<size_t>(bindPoseBones.size(), kMaxSkinnedBoneUniforms));
-        for (int i = 0; i < boneCount; ++i)
-        {
-          SkinnedShader->SetMat4("uBones[" + std::to_string(i) + "]",
-                                 bindPoseBones[static_cast<size_t>(i)]);
-        }
+        UploadPreviewSkinnedBones(*SkinnedShader, skinBones);
         const GLuint vao =
             GetOrCreatePreviewSkinnedVao(prim, previewGltfSkinnedVaoCache);
         glBindVertexArray(vao);
@@ -457,7 +491,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                        GL_UNSIGNED_INT, nullptr);
         SkinnedShader->Unuse();
       }
-      else if (prim.skinned && !bindPoseBones.empty())
+      else if (prim.skinned && !skinBones.empty())
       {
         Shader->Use();
         Shader->SetInt("texture0", 0);

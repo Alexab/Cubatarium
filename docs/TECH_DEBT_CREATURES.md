@@ -15,6 +15,11 @@
 | TD-CRE-034 | visual-regression | `puffin` 3D model is incorrect in world and inventory preview | Suspected wrong source model/transform mapping after catalog sync; needs model remap + icon cache regeneration | backlog |
 | TD-CRE-035 | visual-regression | `manatee` 3D model has invalid geometry/scale/offset | Verify source in `tools/creature_luanti_sources.yaml`, then fix geometry transform and regenerate icon cache | backlog |
 
+### TD-CRE-034 / TD-CRE-035 remediation policy
+- **Do not** re-apply commit `114cf50` (mass puffin re-export + manatee bounds) without isolated per-species QA.
+- After any model fix: clear `bin/cache/icons/` (or `InventoryIconService::InvalidateKind("creature")`) and re-verify world + dock preview + slot icon.
+- Baseline visual for gltf-skeleton species matches `bc94ade`; puffin/manatee issues predate `arch_refactor3` debt packets.
+
 ### TD-CRE-034 acceptance notes (`puffin`)
 - Repro: spawn `puffin` in world and inspect inventory preview icon.
 - Suspected source: wrong model asset binding or transform remap in visual catalog.
@@ -29,6 +34,7 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-CRE-036 | gui-preview-2026-07 | Dock creature preview «рассыпалось»: (1) shared `ColorTex` FBO (`b9adeab`, fix `c05439d` `RenderUnique`); (2) desktop skinned shader reads `BonePalette` UBO, preview only called `SetMat4(uBones[i])` and inherited animated world UBO — fix `UploadPreviewSkinnedBones` in `CreaturePreviewRenderer.cpp`. |
 | TD-CRE-030 | AI-2 | Incremental `CreatureSpatialIndex` (`Upsert`/`Remove`/`PruneExcept`) |
 | TD-CRE-031 | AI-2 | `gameplay.activity_tick_hz` в `config.json` + `UWorld::SetActivityTickHz` |
 | TD-CRE-032 | AI-2 | Activity culling через `UChunkStreamer::IsPositionInActiveRing` |
@@ -59,6 +65,9 @@
 
 ## Execution progress (2026-07-07)
 
+- **Visual restore baseline:** `arch_refactor3` @ `c05439d` adopted as working branch; `git diff bc94ade..c05439d -- src/Creatures/ models/creatures/` is empty (creature code/assets match `bc94ade`).
+- **Preview root cause:** (1) dock shared `ColorTex` with icon warmup (`b9adeab`, fixed `c05439d`); (2) desktop `vshader_creature_skinned.glsl` uses `BonePalette` UBO — preview must call `UploadCreatureBonePaletteGpu`, not only `SetMat4(uBones[i])`, or it displays world creature animation bleeding into the viewport.
+- **Icon cache:** local `bin/cache/icons/` cleared after branch switch so PNGs regenerate from current renderer path.
 - Packet `P0.1` tracker normalization committed (`15bbb00`): статусная рассинхронизация Open/Closed устранена для закрытых historical пунктов.
 - Packet `R2` persistent icon invalidation committed (`17de9ca`): `ClearRenderedIcons` теперь инвалидация `creature/skin` на диске, что упрощает повторную валидацию после model fixes.
 - `TD-CRE-034` (`puffin`) и `TD-CRE-035` (`manatee`) остаются `backlog/open`: re-export b3d (`114cf50`) откачен (`1ceb066`) после регрессии gltf-skeleton; нужен точечный fix без массового пересборa.
