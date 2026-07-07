@@ -29,6 +29,7 @@ uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
 uniform float uBelowSurfaceFogDepthMin;
+uniform float uBelowSurfaceFogBlockDepth;
 uniform vec2 uFluidSurfaceOrigin;
 uniform vec2 uFluidSurfaceInvSize;
 uniform sampler2D uFluidSurfaceYMap;
@@ -195,6 +196,10 @@ void main()
             bool inFluidSpan = blockIndexY + 1 >= bottomBlockIndexY &&
                                blockIndexY < surfaceBlockY;
             float depthBelow = sy - vWorldPos.y;
+            if (uBelowSurfaceFogBlockDepth > 0.5) {
+                float blockTopY = float(blockIndexY + 1);
+                depthBelow = sy - blockTopY;
+            }
             if (inFluidSpan && vWorldPos.y < sy &&
                 depthBelow >= uBelowSurfaceFogDepthMin) {
                 uint fi = fluidIndexAt(sampleXZ);

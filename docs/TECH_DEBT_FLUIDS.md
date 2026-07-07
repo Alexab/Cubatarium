@@ -108,3 +108,4 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 - Packet `R1` icon cache diagnostics (`57ef029`): versioned manifest + PNG read/write failure counters для наблюдаемости regressions.
 - Packet `R2` targeted persistent cache invalidation (`17de9ca`): адресная инвалидация `block/creature/skin` снижает риск stale визуалов при runtime catalog refresh.
 - `TD-FL-034` остаётся `open` и требует отдельного feature-flag A/B цикла (не закрыто в этом проходе).
+- Packet `R4` feature-flag groundwork (2026-07-07): `render.underwater_fog.below_surface_fog_v2` toggles capsule-aware submerged detection + block-top depth tint in greedy shader; default `false` for safe rollback.

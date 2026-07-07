@@ -119,6 +119,12 @@ static void TestUnderwaterFogPolicy()
          "submerged strength is a light supplement");
   Expect(std::abs(cutum::BelowSurfaceFogStrength(false, false)) < 1e-5f,
          "map not ready strength is 0");
+  Expect(cutum::IsCameraSubmergedForFog(true, 64.2f, 64.0f, 63.5f, true),
+         "v2 treats capsule feet below surface as submerged");
+  Expect(!cutum::IsCameraSubmergedForFog(true, 64.6f, 64.0f, 64.1f, true),
+         "v2 keeps dry eye and feet above surface dry");
+  Expect(!cutum::IsCameraSubmergedForFog(true, 64.2f, 64.0f, 63.5f, false),
+         "legacy path requires eye below surface");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMin(false) - 0.5f) < 1e-5f,
          "wading skips shallow surface band");
   Expect(std::abs(cutum::BelowSurfaceFogDepthMin(true)) < 1e-5f,

@@ -28,6 +28,22 @@ inline float BelowSurfaceFogStrength(bool map_ready, bool camera_in_fluid)
   return 0.25f;
 }
 
+/// TD-FL-034 v2: treat capsule feet below surface as submerged for fog transitions.
+inline bool IsCameraSubmergedForFog(bool column_valid, float eye_y,
+                                    float surface_y, float capsule_feet_y,
+                                    bool below_surface_fog_v2)
+{
+  if (!column_valid)
+  {
+    return false;
+  }
+  if (eye_y < surface_y)
+  {
+    return true;
+  }
+  return below_surface_fog_v2 && capsule_feet_y < surface_y - 1e-4f;
+}
+
 /// Skip per-column tint in the shallow band when viewing from above water.
 inline float BelowSurfaceFogDepthMin(bool camera_in_fluid)
 {

@@ -12,6 +12,8 @@ struct URuntimeTuning
   int WaterDropBoost{4};
   int FloodMaxPasses{8};
   int CoastalBandAboveSea{8};
+  /// TD-FL-034: gated rollout for shore/seafloor fog policy tweaks.
+  bool BelowSurfaceFogV2{false};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

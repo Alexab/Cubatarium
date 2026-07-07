@@ -35,6 +35,7 @@ void ApplyRuntimeTuningFromConfig(const nlohmann::json *physics,
     tuning.FluidSurfaceScanDown = fog.value("surface_scan_down", 64);
     tuning.FluidSurfaceWindowMoveThreshold =
         fog.value("surface_window_move_threshold", 8);
+    tuning.BelowSurfaceFogV2 = fog.value("below_surface_fog_v2", false);
   }
 
   if (procedural && procedural->contains("tuning") &&
