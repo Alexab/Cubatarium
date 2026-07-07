@@ -12,8 +12,6 @@
 | TD-CRE-017 | audit | Wave bake coverage (~42 Luanti mobs) | `creature_luanti_sources.yaml` + `bake_rigid_creature_textures.py`; partial until all research textures present | 3 |
 | TD-CRE-026 | gltf | Parts-only glTF without b3d — per-bone upgrade vs root bob | Policy in `CREATURE_BACKENDS.md`; 2 species remain parts-only (`fire_spirit`, `octopus`) | backlog |
 | TD-CRE-028 | gltf | Sprite visuals (`fire_spirit` glow billboard) | Luanti `visual=sprite`; procedural texture placeholder | backlog |
-| TD-CRE-034 | visual-regression | `puffin` 3D model is incorrect in world and inventory preview | Suspected wrong source model/transform mapping after catalog sync; needs model remap + icon cache regeneration | backlog |
-| TD-CRE-035 | visual-regression | `manatee` 3D model has invalid geometry/scale/offset | Verify source in `tools/creature_luanti_sources.yaml`, then fix geometry transform and regenerate icon cache | backlog |
 
 ### TD-CRE-034 / TD-CRE-035 remediation policy
 - **Do not** re-apply commit `114cf50` (mass puffin re-export + manatee bounds) without isolated per-species QA.
@@ -35,6 +33,8 @@
 | ID | Closed in | Resolution |
 |----|-----------|------------|
 | TD-CRE-036 | gui-preview-2026-07 | Dock creature preview «рассыпалось»: (1) shared `ColorTex` FBO (`b9adeab`, fix `c05439d` `RenderUnique`); (2) desktop skinned shader reads `BonePalette` UBO, preview only called `SetMat4(uBones[i])` and inherited animated world UBO — fix `UploadPreviewSkinnedBones` in `CreaturePreviewRenderer.cpp`. |
+| TD-CRE-034 | 2026-07 | Isolated b3d re-export (`convert_creature_mesh_to_gltf.py --species puffin`) |
+| TD-CRE-035 | 2026-07 | b3d re-export + normalized bounds 0.7×0.45×1.35 in `creature.json` |
 | TD-CRE-030 | AI-2 | Incremental `CreatureSpatialIndex` (`Upsert`/`Remove`/`PruneExcept`) |
 | TD-CRE-031 | AI-2 | `gameplay.activity_tick_hz` в `config.json` + `UWorld::SetActivityTickHz` |
 | TD-CRE-032 | AI-2 | Activity culling через `UChunkStreamer::IsPositionInActiveRing` |
