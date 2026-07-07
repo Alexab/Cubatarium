@@ -30,6 +30,7 @@ typedef int GLint;
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
+#include "World/Interfaces/IUWorldRenderReadModel.h"
 #include "World/Math/GridMath.h"
 #include <array>
 #include <glm/glm.hpp>
@@ -239,6 +240,7 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorage;
   std::shared_ptr<UWorld> WorldInstance;
+  std::unique_ptr<IUWorldRenderReadModel> WorldRenderReadModel;
   const IUGameContent *GameContent{nullptr};
   std::shared_ptr<UTextRenderer> textRenderer;
 

@@ -34,7 +34,7 @@ const std::string &UWorldRenderReadAdapter::GetCurrentUserName() const
   return World ? World->GetCurrentUserName() : EmptyString();
 }
 
-const UWorldMeshService *UWorldRenderReadAdapter::TryGetMeshService() const
+UWorldMeshService *UWorldRenderReadAdapter::TryGetMeshService() const
 {
   return World ? &World->GetMeshService() : nullptr;
 }

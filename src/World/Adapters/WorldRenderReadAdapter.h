@@ -17,7 +17,7 @@ public:
   std::shared_ptr<UCamera> GetCurrentUserCamera() const override;
   std::string GetWorldName() const override;
   const std::string &GetCurrentUserName() const override;
-  const UWorldMeshService *TryGetMeshService() const override;
+  UWorldMeshService *TryGetMeshService() const override;
 
 private:
   std::shared_ptr<UWorld> World;

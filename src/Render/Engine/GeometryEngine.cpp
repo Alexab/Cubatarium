@@ -27,6 +27,7 @@
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Adapters/WorldRenderReadAdapter.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -53,7 +54,9 @@ UGeometryEngine::UGeometryEngine(
     std::shared_ptr<UTextureBaseStorage> texture_base_storage,
     std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
     std::shared_ptr<UTextRenderer> text_renderer)
-    : WorldInstance(world), TextureBaseStorageInstance(texture_base_storage),
+    : WorldInstance(world),
+      WorldRenderReadModel(std::make_unique<UWorldRenderReadAdapter>(world)),
+      TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
       BaseSkyColor(0.5f, 0.7f, 1.0f), useGradientSky(true)
@@ -365,7 +368,9 @@ void UGeometryEngine::DrawCubeGeometry()
 {
   auto t_begin = std::chrono::high_resolution_clock::now();
 
-  auto camera = WorldInstance->GetCurrentUserCamera();
+  auto camera = WorldRenderReadModel
+                    ? WorldRenderReadModel->GetCurrentUserCamera()
+                    : WorldInstance->GetCurrentUserCamera();
   if (!camera)
   {
     return;
@@ -385,24 +390,30 @@ void UGeometryEngine::DrawCubeGeometry()
   }
 
   auto textures = TextureCubeStorageInstance->GetTextures();
-  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
-  const uint64_t meshRevision = mesh_service.GetMeshRevision();
+  UWorldMeshService *mesh_service =
+      WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
+                           : &WorldInstance->GetMeshService();
+  if (!mesh_service)
+  {
+    return;
+  }
+  const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
       useGreedyMesh
-          ? mesh_service.GetGreedyVertexCount()
+          ? mesh_service->GetGreedyVertexCount()
           : mesh_service
-                .PrepareFaceInstances(WorldInstance->GetBlockWorld(),
-                                      WorldInstance->GetBlockRegistry(), camera)
+                ->PrepareFaceInstances(WorldInstance->GetBlockWorld(),
+                                       WorldInstance->GetBlockRegistry(), camera)
                 .size();
   const bool useBatchCache = Render.BatchCache && !useGreedyMesh;
 
   if (useGreedyMesh)
   {
     const UWorldMeshService::GreedyDrawSnapshot draw =
-        mesh_service.PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
-                                       WorldInstance->GetBlockRegistry(),
-                                       camera);
+        mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                        WorldInstance->GetBlockRegistry(),
+                                        camera);
     const auto &greedyBatches = draw.batches;
     if (!useBatchCache || !BlockBatchesValid ||
         greedyBatches.size() != CachedInstanceCount ||
@@ -445,7 +456,7 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = mesh_service.PrepareFaceInstances(
+    const auto &blockInstances = mesh_service->PrepareFaceInstances(
         WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
         camera);
     if (!useBatchCache || !BlockBatchesValid ||
@@ -826,7 +837,7 @@ void UGeometryEngine::ResetWorldRenderState()
   BlockBatchesValid = false;
   CachedMeshRevision = 0;
   CachedInstanceCount = 0;
-  PreparedTransparentTextures = false;
+  PreparedTransparentTextures = nullptr;
   UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
 }
 
@@ -837,16 +848,24 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   {
     return;
   }
-  auto camera = WorldInstance->GetCurrentUserCamera();
+  auto camera = WorldRenderReadModel
+                    ? WorldRenderReadModel->GetCurrentUserCamera()
+                    : WorldInstance->GetCurrentUserCamera();
   if (!camera)
   {
     return;
   }
 
-  UWorldMeshService &mesh_service = WorldInstance->GetMeshService();
+  UWorldMeshService *mesh_service =
+      WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
+                           : &WorldInstance->GetMeshService();
+  if (!mesh_service)
+  {
+    return;
+  }
   const UWorldMeshService::GreedyDrawSnapshot draw =
-      mesh_service.PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
-                                     WorldInstance->GetBlockRegistry(), camera);
+      mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                      WorldInstance->GetBlockRegistry(), camera);
   const auto &greedyBatches = draw.batches;
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();

@@ -17,7 +17,7 @@ public:
   virtual std::shared_ptr<UCamera> GetCurrentUserCamera() const = 0;
   virtual std::string GetWorldName() const = 0;
   virtual const std::string &GetCurrentUserName() const = 0;
-  virtual const UWorldMeshService *TryGetMeshService() const = 0;
+  virtual UWorldMeshService *TryGetMeshService() const = 0;
 };
 
 } // namespace cutum
