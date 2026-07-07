@@ -73,6 +73,8 @@
   - Android enter-game warmup de-blocked (non-blocking path).
 - `S1` world-render read-model groundwork: commit `fdcf6d8`.
 - `R1` icon cache manifest/diagnostics hardening: commit `57ef029`.
+- `A-test` Android automated gate (2026-07-07): `docked_overlay_layout_test`, `touch_input_bridge_lifecycle_test`, `docs/QA_ANDROID_2026.md`; joystick fail-safe on Hud pointer release + motion cancel.
+- Manual Android matrix (`AND-01..AND-15`) still required before closing `TD-AUD-028..031`.
 
 ## Phase tracker
 

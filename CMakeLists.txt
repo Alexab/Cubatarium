@@ -909,6 +909,18 @@ add_executable(camera_stability_test src/Test/CameraStabilityTest.cpp)
 target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(camera_stability_test glm::glm)
 
+add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
+    src/Gui/Layout/DockedOverlayLayout.cpp)
+target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(docked_overlay_layout_test glm::glm)
+
+add_executable(touch_input_bridge_lifecycle_test
+    src/App/Platform/TouchInputBridge.cpp
+    src/Test/TouchInputBridgeLifecycleTest.cpp)
+target_include_directories(touch_input_bridge_lifecycle_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(touch_input_bridge_lifecycle_test glm::glm)
+
 add_executable(fluid_surface_slice_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp

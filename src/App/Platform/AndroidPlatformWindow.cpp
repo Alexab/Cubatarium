@@ -560,6 +560,10 @@ bool UAndroidPlatformWindow::HandleGameMotionEvent(
       UiPointerCapture[pointerIndex] = false;
     }
     Touch.ResetJoystick();
+    if (Application)
+    {
+      Application->ReleaseHudJoystickCapture();
+    }
   }
   return true;
 }

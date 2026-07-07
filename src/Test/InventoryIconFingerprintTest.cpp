@@ -26,5 +26,20 @@ int main()
     std::cerr << "HashFingerprint is unstable\n";
     return 1;
   }
+
+  UInventoryIconService service;
+  if (!service.Initialize())
+  {
+    std::cerr << "Initialize failed\n";
+    return 1;
+  }
+  service.InvalidateKind("creature");
+  service.InvalidateKind("block");
+  const UInventoryIconService::Stats &stats = service.GetStats();
+  if (stats.ManifestVersionMismatches != 0)
+  {
+    std::cerr << "unexpected manifest version mismatch after init\n";
+    return 1;
+  }
   return 0;
 }

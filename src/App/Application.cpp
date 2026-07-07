@@ -1015,7 +1015,14 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
   case OverlayPointerCapture::Console:
     return ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), false);
   case OverlayPointerCapture::Hud:
-    return routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, false);
+  {
+    const bool handled =
+        routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, false);
+#if defined(__ANDROID__)
+    ReleaseHudJoystickCapture();
+#endif
+    return handled;
+  }
   default:
     return false;
   }
