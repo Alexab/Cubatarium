@@ -15,6 +15,10 @@
 | TD-AUD-017 | 2026-06 | Orphan tools/scripts | fix_*.py archived; tools/README + scan_tools_usage improved | closed |
 | TD-AUD-026 | 2026-07 | AUDIT-APP-003 UCore god-class | WorldLifecycleFacade + ResourcePackBootstrap + EnterGameWorld | partial |
 | TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | RenderMeshSink wiring; mesh cache still in render path; remediation DoD metrics in REMEDIATION_BASELINE_METRICS | partial |
+| TD-AUD-028 | 2026-07 | Android inventory preview overlaps control buttons | On small/varied resolutions right-side preview occludes close/menu controls; user cannot close inventory/menu reliably | partial |
+| TD-AUD-029 | 2026-07 | Android Back button navigation flow is inconsistent | Back should close inventory; in-world should open main menu; in main menu should request app exit | partial |
+| TD-AUD-030 | 2026-07 | Android left joystick can stick in move state after finger release | Likely pointer-up outside joystick hit area; movement remains active and joystick does not recenter | partial |
+| TD-AUD-031 | 2026-07 | Android may briefly show ANR-like freeze dialog on startup/world load | Transient watchdog stall near end of load/generation; dialog disappears but UX regression remains | partial |
 
 ## Closed
 
@@ -37,6 +41,38 @@
 | TD-AUD-018 | 2026-06 | spawn_fire_blocks_max=8; seed 42 decorative fire documented |
 | TD-AUD-019 | 2026-06 | tree_bark in cubatarium_cc0_base for merge smoke |
 | TD-AUD-025 | 2026-07 | Legacy `I*` interfaces → `IU*` (PR-IU-1..6): platform, world IO, worldgen, creatures, GUI, render/progress |
+
+## Android UX acceptance notes
+
+### TD-AUD-028 inventory controls vs preview
+- Repro: open inventory on Android (multiple aspect ratios); preview panel hides close/menu controls.
+- Close when: controls are always visible and operable (either guaranteed layout fit or controls rendered/clickable above preview) across supported resolutions.
+
+### TD-AUD-029 Back button flow
+- Repro: press system Back in inventory/in-world/main-menu states.
+- Close when:
+  - in inventory: closes inventory,
+  - in world: opens main menu,
+  - in main menu: shows exit confirmation and exits only after confirmation.
+
+### TD-AUD-030 left joystick stuck movement
+- Repro: drag left joystick and release finger near/outside joystick zone; movement sometimes continues.
+- Close when: pointer release/cancel always resets joystick state to neutral and movement stops immediately.
+
+### TD-AUD-031 startup freeze dialog
+- Repro: cold app start and/or world generation; transient system "app not responding/frozen" dialog may appear.
+- Close when: dialog no longer appears in startup/load path under normal load scenarios, confirmed on target Android devices.
+
+## Execution progress (2026-07-07)
+
+- `P0.1/P0.2` docs normalization + baseline refresh: commit `15bbb00`.
+- `A1..A4` Android blockers first pass: commit `4836d01`.
+  - Back key routing wired from Android key events to `GLFW_KEY_ESCAPE`.
+  - Touch routing migrated to stable `pointer id` in motion path.
+  - Overlay dock switches to single-pane on narrow/short viewports.
+  - Android enter-game warmup de-blocked (non-blocking path).
+- `S1` world-render read-model groundwork: commit `fdcf6d8`.
+- `R1` icon cache manifest/diagnostics hardening: commit `57ef029`.
 
 ## Phase tracker
 
