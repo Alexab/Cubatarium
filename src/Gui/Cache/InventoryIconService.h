@@ -21,6 +21,9 @@ public:
     uint64_t CacheHits{0};
     uint64_t CacheMisses{0};
     uint64_t RenderStores{0};
+    uint64_t PngReadFailures{0};
+    uint64_t PngWriteFailures{0};
+    uint64_t ManifestVersionMismatches{0};
   };
 
   UInventoryIconService();
@@ -39,6 +42,7 @@ public:
                         const std::string &variantId,
                         const std::string &fingerprint, int size,
                         GLuint texture);
+  void InvalidateAll();
 
   const Stats &GetStats() const { return Metrics; }
 
@@ -53,7 +57,7 @@ private:
   std::filesystem::path CacheRoot;
   std::filesystem::path ManifestPath;
   std::unordered_map<std::string, Entry> Entries;
-  Stats Metrics;
+  mutable Stats Metrics;
 
   static std::string SanitizeFileToken(const std::string &raw);
 

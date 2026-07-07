@@ -12,6 +12,11 @@
 namespace cutum
 {
 
+namespace
+{
+constexpr int kManifestVersion = 2;
+}
+
 UInventoryIconService::UInventoryIconService() = default;
 
 bool UInventoryIconService::Initialize()
@@ -100,6 +105,12 @@ bool UInventoryIconService::LoadManifest()
   {
     return true;
   }
+  const int version = doc.value("version", 1);
+  if (version != kManifestVersion)
+  {
+    ++Metrics.ManifestVersionMismatches;
+    return true;
+  }
   for (auto it = doc["entries"].begin(); it != doc["entries"].end(); ++it)
   {
     const auto &entry = it.value();
@@ -122,7 +133,7 @@ bool UInventoryIconService::LoadManifest()
 bool UInventoryIconService::SaveManifest() const
 {
   nlohmann::json doc;
-  doc["version"] = 1;
+  doc["version"] = kManifestVersion;
   nlohmann::json entries = nlohmann::json::object();
   for (const auto &[key, entry] : Entries)
   {
@@ -153,11 +164,13 @@ bool UInventoryIconService::ReadPngRgba(const std::filesystem::path &path,
   if (!data || width <= 0 || height <= 0 || width != height)
   {
     stbi_image_free(data);
+    ++Metrics.PngReadFailures;
     return false;
   }
   if (expectedSize > 0 && width != expectedSize)
   {
     stbi_image_free(data);
+    ++Metrics.PngReadFailures;
     return false;
   }
   outSize = width;
@@ -175,16 +188,23 @@ bool UInventoryIconService::WritePngRgba(const std::filesystem::path &path,
 {
   if (size <= 0)
   {
+    ++Metrics.PngWriteFailures;
     return false;
   }
   const size_t expected =
       static_cast<size_t>(size) * static_cast<size_t>(size) * 4;
   if (pixels.size() != expected)
   {
+    ++Metrics.PngWriteFailures;
     return false;
   }
-  return stbi_write_png(path.string().c_str(), size, size, 4, pixels.data(),
-                        size * 4) != 0;
+  const bool ok = stbi_write_png(path.string().c_str(), size, size, 4,
+                                 pixels.data(), size * 4) != 0;
+  if (!ok)
+  {
+    ++Metrics.PngWriteFailures;
+  }
+  return ok;
 }
 
 bool UInventoryIconService::CaptureTexturePixels(
@@ -306,6 +326,27 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   }
   ++Metrics.RenderStores;
   return true;
+}
+
+void UInventoryIconService::InvalidateAll()
+{
+  Entries.clear();
+  std::error_code ec;
+  if (std::filesystem::exists(CacheRoot))
+  {
+    for (const auto &entry : std::filesystem::directory_iterator(CacheRoot))
+    {
+      if (!entry.is_regular_file())
+      {
+        continue;
+      }
+      const std::filesystem::path path = entry.path();
+      if (path.extension() == ".png" || path.filename() == "manifest.json")
+      {
+        std::filesystem::remove(path, ec);
+      }
+    }
+  }
 }
 
 } // namespace cutum
