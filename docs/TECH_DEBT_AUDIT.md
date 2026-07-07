@@ -6,19 +6,15 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | `UWorldFluidFacade` extracted (TryAddFluidObject, break-site flood); further slices backlog | partial |
-| TD-AUD-011 | 2026-06 | UApplication god-class (~1800 LOC) | screen helpers extract | PR-D backlog |
-| TD-AUD-012 | 2026-06 | GeometryEngine coupling | UUnderwaterFogPass extract; LOC 2012 (−139 vs baseline 2151); `#include App/Core.h` removed from GeometryEngine | partial |
+| TD-AUD-010 | 2026-06 | UWorld god-class (~3400 LOC) | `UWorldCreatureFacade` spawn slice extracted; further slices backlog | partial |
+| TD-AUD-011 | 2026-06 | UApplication god-class (~1800 LOC) | `ScreenNavigator` overlay close helpers | partial |
+| TD-AUD-012 | 2026-06 | GeometryEngine coupling | `USkyGradientPass` extracted; `UUnderwaterFogPass` prior | partial |
 | TD-AUD-014 | 2026-06 | Remaining perf_hints (push_back without nearby reserve) | ChunkMeshCache reserve(512), diagnostics reserve; GreedyMesher done | partial |
 | TD-AUD-015 | 2026-06 | Dead-code candidates (callers=1) | P0 World symbols removed; registry FP whitelisted | partial |
 | TD-AUD-016 | 2026-06 | Duplicate code clusters (scan_duplicates) | module review done; fixes in backlog | PR-C/D backlog |
 | TD-AUD-017 | 2026-06 | Orphan tools/scripts | fix_*.py archived; tools/README + scan_tools_usage improved | closed |
 | TD-AUD-026 | 2026-07 | AUDIT-APP-003 UCore god-class | WorldLifecycleFacade + ResourcePackBootstrap + EnterGameWorld | partial |
-| TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | RenderMeshSink wiring; mesh cache still in render path; remediation DoD metrics in REMEDIATION_BASELINE_METRICS | partial |
-| TD-AUD-028 | 2026-07 | Android inventory preview overlaps control buttons | On small/varied resolutions right-side preview occludes close/menu controls; user cannot close inventory/menu reliably | partial |
-| TD-AUD-029 | 2026-07 | Android Back button navigation flow is inconsistent | Back should close inventory; in-world should open main menu; in main menu should request app exit | partial |
-| TD-AUD-030 | 2026-07 | Android left joystick can stick in move state after finger release | Likely pointer-up outside joystick hit area; movement remains active and joystick does not recenter | partial |
-| TD-AUD-031 | 2026-07 | Android may briefly show ANR-like freeze dialog on startup/world load | Transient watchdog stall near end of load/generation; dialog disappears but UX regression remains | partial |
+| TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | `URenderMeshSink` invalidation counter; read-model on arch_refactor3 | partial |
 
 ## Closed
 
@@ -41,6 +37,10 @@
 | TD-AUD-018 | 2026-06 | spawn_fire_blocks_max=8; seed 42 decorative fire documented |
 | TD-AUD-019 | 2026-06 | tree_bark in cubatarium_cc0_base for merge smoke |
 | TD-AUD-025 | 2026-07 | Legacy `I*` interfaces → `IU*` (PR-IU-1..6): platform, world IO, worldgen, creatures, GUI, render/progress |
+| TD-AUD-028 | 2026-07 | Touch controls render/input pass above palette preview; `HitTestTouchControls` priority; `RenderTouchControlsOverlay` |
+| TD-AUD-029 | 2026-07 | Main menu BACK shows quit confirmation (removed ResumeGame on ESCAPE); inventory/world chain unchanged |
+| TD-AUD-030 | 2026-07 | Per-pointer `ReleaseJoystickCaptureForPointer`; multitouch test AND-16 |
+| TD-AUD-031 | 2026-07 | Android: deferred `WarmupGreedyGpuFromWorld` (5 frames), load chunk budget 4/frame |
 
 ## Android UX acceptance notes
 
@@ -74,7 +74,9 @@
 - `S1` world-render read-model groundwork: commit `fdcf6d8`.
 - `R1` icon cache manifest/diagnostics hardening: commit `57ef029`.
 - `A-test` Android automated gate (2026-07-07): `docked_overlay_layout_test`, `touch_input_bridge_lifecycle_test`, `docs/QA_ANDROID_2026.md`; joystick fail-safe on Hud pointer release + motion cancel.
-- Manual Android matrix (`AND-01..AND-15`) still required before closing `TD-AUD-028..031`.
+- `A-wave0` (2026-07-07): per-pointer joystick release, touch controls above palette, EGL stencil + GLES fluid fallback.
+- `A-wave1` (2026-07-07): BACK→quit on main menu, deferred GPU warmup, reduced load chunk budget on Android.
+- Manual Android matrix (`AND-01..AND-17`) recommended on device profiles A–E before release.
 
 ## Phase tracker
 
