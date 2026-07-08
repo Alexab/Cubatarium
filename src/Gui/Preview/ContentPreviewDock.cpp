@@ -111,6 +111,15 @@ void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
 
 void UContentPreviewDock::ClearSelection()
 {
+  if (PreviewTexture != 0)
+  {
+    glDeleteTextures(1, &PreviewTexture);
+    PreviewTexture = 0;
+  }
+  if (Viewport)
+  {
+    Viewport->SetPreviewTexture(0);
+  }
   SetSelection(Kind, "", "");
   HasSelection = false;
   SyncVisibility();

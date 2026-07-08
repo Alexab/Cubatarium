@@ -131,6 +131,10 @@ bool UContentPreviewRenderer::EnsureFboSize(int size)
   glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          ColorTex, 0);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+#endif
 
   glGenRenderbuffers(1, &DepthRbo);
   glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
@@ -293,29 +297,142 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
         animTimeSec, animateWalk);
   }
 
-  const GLuint shared = Render(kind, id, size, yawDeg, pitchDeg);
-  if (shared == 0 || FboSize <= 0)
+  if (kind != ContentKind::Block && kind != ContentKind::Object)
   {
     return 0;
   }
 
+  if (!EnsureFboSize(size) || FboSize <= 0)
+  {
+    return 0;
+  }
+
+  const int clamped = std::max(64, std::min(FboSize, 512));
   GLuint tex = 0;
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FboSize, FboSize, 0, GL_RGBA,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, Fbo);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                       GL_TEXTURE_2D, ColorTex, 0);
-  glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                       GL_TEXTURE_2D, tex, 0);
-  glBlitFramebuffer(0, 0, FboSize, FboSize, 0, 0, FboSize, FboSize,
-                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteTextures(1, &tex);
+    return 0;
+  }
+
+  glViewport(0, 0, clamped, clamped);
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  glDisable(GL_CULL_FACE);
+  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  if (kind == ContentKind::Object)
+  {
+    const WorldObjectDefinition *object =
+        Objects ? Objects->Get(id) : nullptr;
+    if (!object || object->voxels.empty() || !Shader)
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glDeleteTextures(1, &tex);
+      return 0;
+    }
+    const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
+
+    const glm::mat4 projection =
+        glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);
+    const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kDefaultOrbitDistance);
+
+    Shader->Use();
+    Shader->SetInt("texture0", 0);
+    Shader->SetInt("uAnimFrame", 0);
+    Shader->SetInt("uAnimFrameCount", 1);
+    glBindVertexArray(CubeVao);
+
+    for (const ObjectVoxel &voxel : object->voxels)
+    {
+      if (voxel.Id == BLOCK_AIR)
+      {
+        continue;
+      }
+      const GLuint blockTex = GetBlockTexture(voxel.Id);
+      if (blockTex == 0)
+      {
+        continue;
+      }
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, blockTex);
+
+      const glm::mat4 model = ObjectPreviewVoxelModel(fit, voxel.offset);
+      const glm::mat4 mvp = projection * view * model;
+      Shader->SetMat4("mvp_matrix", mvp);
+      glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    }
+
+    glBindVertexArray(0);
+    Shader->Unuse();
+  }
+  else
+  {
+    if (!BlockDefs || id.empty() || !Shader)
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glDeleteTextures(1, &tex);
+      return 0;
+    }
+    const BlockDefinition *def = BlockDefs->GetByName(id);
+    if (!def || def->Id == BLOCK_AIR)
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glDeleteTextures(1, &tex);
+      return 0;
+    }
+    const GLuint blockTex = GetBlockTexture(def->Id);
+    if (blockTex == 0)
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glDeleteTextures(1, &tex);
+      return 0;
+    }
+
+    const glm::mat4 projection =
+        glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);
+    const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kDefaultOrbitDistance);
+
+    Shader->Use();
+    Shader->SetInt("texture0", 0);
+    Shader->SetInt("uAnimFrame", 0);
+    Shader->SetInt("uAnimFrameCount", 1);
+    glBindVertexArray(CubeVao);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, blockTex);
+
+    const glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)) *
+                            glm::scale(glm::mat4(1.0f), glm::vec3(0.88f));
+    const glm::mat4 mvp = projection * view * model;
+    Shader->SetMat4("mvp_matrix", mvp);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+
+    glBindVertexArray(0);
+    Shader->Unuse();
+  }
+
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         ColorTex, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
   return tex;
