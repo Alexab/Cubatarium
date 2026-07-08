@@ -321,6 +321,15 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  weatherShader =
+      shaderManager->CreateShader("weather_overlay", "shaders/vshader_overlay.glsl",
+                                  "shaders/fshader_weather_overlay.glsl");
+  if (!weatherShader || !weatherShader->IsValid())
+  {
+    std::cerr << "Failed to create weather overlay shader" << std::endl;
+    return false;
+  }
+
   return true;
 }
 
@@ -342,6 +351,7 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   {
     RenderFluidOverlay(width_size, height_size);
   }
+  RenderWeatherOverlay(width_size, height_size);
 
   // Render crosshair
   if (ShowCrosshair)
@@ -1325,6 +1335,73 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   overlayShader->Unuse();
+}
+
+void UGeometryEngine::RenderWeatherOverlay(int width, int height)
+{
+  (void)width;
+  (void)height;
+  if (!weatherShader || !WorldInstance || !InitOverlayBuffers())
+  {
+    return;
+  }
+  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  if (env.PrecipitationIntensity <= 0.01f)
+  {
+    return;
+  }
+
+  int weather_kind = 0;
+  if (env.Weather == UWorld::WeatherType::Rain ||
+      env.TargetWeather == UWorld::WeatherType::Rain ||
+      env.Weather == UWorld::WeatherType::Storm ||
+      env.TargetWeather == UWorld::WeatherType::Storm)
+  {
+    weather_kind = 1;
+  }
+  else if (env.Weather == UWorld::WeatherType::Snow ||
+           env.TargetWeather == UWorld::WeatherType::Snow)
+  {
+    weather_kind = 2;
+  }
+  if (weather_kind == 0)
+  {
+    return;
+  }
+
+  float quality = 1.0f;
+  switch (Render.Preset)
+  {
+  case PerformancePreset::Fast:
+    quality = 0.65f;
+    break;
+  case PerformancePreset::Quality:
+    quality = 1.2f;
+    break;
+  case PerformancePreset::Balanced:
+  default:
+    quality = 1.0f;
+    break;
+  }
+
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  weatherShader->Use();
+  weatherShader->SetVec2("uResolution", glm::vec2(width, height));
+  weatherShader->SetFloat("uTimeSec", AnimationClock.ElapsedSeconds());
+  weatherShader->SetFloat("uIntensity",
+                          std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
+  weatherShader->SetInt("uWeatherKind", weather_kind);
+  weatherShader->SetFloat("uQuality", quality);
+  weatherShader->SetFloat("uDayFactor", std::clamp(env.DayNightFactor, 0.0f, 1.0f));
+
+  glBindVertexArray(overlayVAO);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+  glBindVertexArray(0);
+  weatherShader->Unuse();
 }
 
 // Methods for sky color management

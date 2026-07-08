@@ -159,6 +159,7 @@ private:
                         const glm::vec3 &cameraPos,
                         bool applyBelowSurfaceFog = true);
   void RenderFluidOverlay(int width, int height);
+  void RenderWeatherOverlay(int width, int height);
   bool InitOverlayBuffers();
   void DestroyOverlayBuffers();
   GLuint cubeVAO = 0;
@@ -232,6 +233,7 @@ private:
   std::shared_ptr<UShaderProgram>
       crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
+  std::shared_ptr<UShaderProgram> weatherShader;
   std::shared_ptr<UShaderProgram>
       outlineShader; // Shader for block selection outline
   GLuint overlayVAO{0};
