@@ -20,10 +20,11 @@ Prerequisites:
 | manatee bounds fix | `git show f57e383 --stat` | **creature.json bounds** |
 | b3d cube/Bone skin weights | `git show bb5d423 --stat` | **exporter fix + crab re-export** |
 | P0 seal / hermitcrab re-export | `git show 5d4ed36 --stat` | **collapsed mesh restored** |
+| P1 skin-weight batch | `git show 7d1690a` | **5/7 OK; stingray/seahorse reverted** |
 
 ## Manual matrix
 
-Sign-off: **partial PASS** — P0 aquatic mobs OK; manatee gap accepted as backlog.
+Sign-off: **partial PASS** — P0 aquatic OK; P1 partial; manatee gap accepted as backlog.
 
 | Species | Backend | World spawn + walk | Slot icon | Dock preview static (5s) | Dock orbit drag |
 |---------|---------|-------------------|-----------|---------------------------|-----------------|
@@ -55,6 +56,15 @@ Sign-off: **partial PASS** — P0 aquatic mobs OK; manatee gap accepted as backl
 | wolf, cow, chicken | Выглядят как bone-skeleton; ок | — |
 | badger | Ок; лапы движутся в стороны — возможно норма gait | — |
 | puffin | Критерии preview/icon/world — ок | TD-CRE-034 closed |
+
+### P1 notes (2026-07-08)
+
+| Species | Observation | Tracker |
+|---------|-------------|---------|
+| lobster, puffin, shark, wasp, kitten | P1 skin-weight re-export OK | **P1 PASS** |
+| seahorse | P1 remap ломает модель (разрыв верх/низ); откат pre-P1 weights | **legacy cube weights** |
+| stingray | P1 remap — только левая половина; откат pre-P1 weights | **legacy cube weights** |
+
 ### Policy
 
 - Do **not** re-apply mass re-export `114cf50` without per-species validation.
@@ -77,6 +87,13 @@ Sign-off: **partial PASS** — P0 aquatic mobs OK; manatee gap accepted as backl
 - Date: 2026-07-08
 - Icon cache refreshed: [X] yes (`creature_seal__*`, `creature_hermitcrab__*` cleared)
 - Result: [X] **P0 PASS** — `crab` (`bb5d423`), `seal` + `hermitcrab` (`5d4ed36`); manatee unchanged (TD-CRE-035 backlog)
+
+## Sign-off (P1 b3d skin fix — 2026-07-08)
+
+- Tester: manual run (desktop)
+- Build/commit: `arch_refactor3` @ HEAD (after stingray/seahorse revert)
+- Date: 2026-07-08
+- Result: [X] **P1 partial PASS** — `lobster`, `puffin`, `shark`, `wasp`, `kitten` OK; `seahorse`, `stingray` keep legacy cube weights (`LEGACY_CUBE_ONLY_WEIGHT_SPECIES`)
 
 ## Regression guard
 

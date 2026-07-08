@@ -74,6 +74,7 @@
 - `TD-CRE-034` (`puffin`) closed (`3de5d0f`): isolated b3d→glTF re-export; manual QA PASS 2026-07-07 (preview/icon/world criteria).
 - `TD-CRE-035` (`manatee`) **reopened** (2026-07-07): bounds fix (`f57e383`) — preview/icon OK; world model still has torso gap (head/limbs/rear detached). Accepted backlog 2026-07-08 (no further model work). See [`QA_CREATURES_VISUAL_2026.md`](QA_CREATURES_VISUAL_2026.md).
 - **Luanti b3d skin export P0** (`bb5d423`, `5d4ed36`, 2026-07-08): exporter resolves mesh-on-`cube` / weights-on-`Bone`; manual QA PASS for `crab`, `seal`, `hermitcrab` (collapsed meshes restored). P1/P2 batch deferred.
+- **Luanti b3d skin export P1** (`7d1690a`, 2026-07-08): manual PASS for `lobster`, `puffin`, `shark`, `wasp`, `kitten`. `seahorse` + `stingray` reverted to pre-P1 `model.bin` — Bone-child weight remap splits mesh; exporter denylist `LEGACY_CUBE_ONLY_WEIGHT_SPECIES` (`manatee`, `seahorse`, `stingray`).
 
 ### TD-CRE-034/035 manual sign-off (2026-07-07)
 

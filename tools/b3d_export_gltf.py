@@ -176,10 +176,17 @@ def flatten_joints(roots: list[B3DBone], units_per_block: float = DEFAULT_B3D_UN
   return joints, bones
 
 
+# Some Luanti mobs bind correctly only with weights on the cube mesh node; remapping
+# to child Bone joints splits the mesh at rest (seahorse, stingray) or worsens gaps.
+LEGACY_CUBE_ONLY_WEIGHT_SPECIES = frozenset({"manatee", "seahorse", "stingray"})
+
+
 def resolve_skin_binding(
     bone_index: int,
     joints: list[ExportJoint],
     bones: list[B3DBone],
+    *,
+    use_bone_child_weights: bool = True,
 ) -> tuple[int, dict[int, list[tuple[int, float]]]]:
   """Luanti b3d stores mesh on cube nodes and skin weights on child Bone nodes."""
   bone = bones[bone_index]
@@ -188,7 +195,7 @@ def resolve_skin_binding(
     if entry.weight <= 0.0:
       continue
     local_weights.setdefault(entry.vertex_id, []).append((bone_index, entry.weight))
-  if local_weights:
+  if local_weights or not use_bone_child_weights:
     return bone_index, local_weights
 
   for child_index, child_joint in enumerate(joints):
@@ -226,17 +233,28 @@ def normalize_vertex_weights(
   return tuple(joints), tuple(weights)
 
 
-def build_mesh(joints: list[ExportJoint], bones: list[B3DBone], scale: float) -> ExportMesh:
+def build_mesh(
+    joints: list[ExportJoint],
+    bones: list[B3DBone],
+    scale: float,
+    species_id: str = "",
+) -> ExportMesh:
     """Merge every bone mesh into one skinned mesh (animalworld uses per-bone cubes)."""
     mesh = ExportMesh()
     bind_globals = joint_global_bind_matrices(joints)
     vertex_offset = 0
+    use_bone_child_weights = species_id not in LEGACY_CUBE_ONLY_WEIGHT_SPECIES
 
     for bone_index, bone in enumerate(bones):
         if not bone.mesh.vertices:
             continue
 
-        skin_joint, local_weights = resolve_skin_binding(bone_index, joints, bones)
+        skin_joint, local_weights = resolve_skin_binding(
+            bone_index,
+            joints,
+            bones,
+            use_bone_child_weights=use_bone_child_weights,
+        )
 
         for vertex_id, vert in enumerate(bone.mesh.vertices):
             lx, ly, lz = vert.x / scale, vert.y / scale, vert.z / scale
@@ -896,7 +914,7 @@ def export_b3d_to_gltf(
 ) -> Path:
   roots = load_b3d_document(b3d_path)
   joints, bones = flatten_joints(roots, units_per_block)
-  mesh = build_mesh(joints, bones, units_per_block)
+  mesh = build_mesh(joints, bones, units_per_block, species_id)
   if not mesh.vertices or not mesh.indices:
     raise ValueError(f"no mesh data in {b3d_path}")
   align_mesh_to_feet(mesh)
