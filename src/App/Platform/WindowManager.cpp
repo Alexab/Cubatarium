@@ -519,41 +519,6 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         BlockInput->OnKeyDelete(ctx);
       }
     }
-    else if (key == KeyCode::Key_F1)
-    {
-      SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Blue sky
-    }
-    else if (key == KeyCode::Key_F2)
-    {
-      SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f); // Orange sky
-    }
-    else if (key == KeyCode::Key_F3)
-    {
-      SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f); // Dark blue sky
-    }
-    else if (key == KeyCode::Key_F4)
-    {
-      SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Gray sky
-    }
-    else if (key == KeyCode::Key_F6)
-    {
-      SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
-      SetGradientSky(true);
-    }
-    else if (key == KeyCode::Key_F7)
-    {
-      if (auto anchor = World->FindObjectAnchorFromView(
-              World->GetCurrentUserCamera()->GetPosition(),
-              World->GetCurrentUserCamera()->GetFront()))
-      {
-        World->PlaceObject("tree_small", anchor.value());
-      }
-    }
-    else if (key == KeyCode::Key_F8)
-    {
-      SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
-      SetGradientSky(true);
-    }
     else if (key == KeyCode::Key_F9)
     {
       if (Geometries)
