@@ -12,7 +12,7 @@
 | TD-CRE-017 | audit | Wave bake coverage (~42 Luanti mobs) | `creature_luanti_sources.yaml` + `bake_rigid_creature_textures.py`; partial until all research textures present | 3 |
 | TD-CRE-026 | gltf | Parts-only glTF without b3d — per-bone upgrade vs root bob | Policy in `CREATURE_BACKENDS.md`; 2 species remain parts-only (`fire_spirit`, `octopus`) | backlog |
 | TD-CRE-028 | gltf | Sprite visuals (`fire_spirit` glow billboard) | Luanti `visual=sprite`; procedural texture placeholder | backlog |
-| TD-CRE-035 | 2026-07 | Manatee torso gap in world model (head/limbs/rear detached) | bounds fix insufficient; mesh bind/parent chain or b3d source | reopen |
+| TD-CRE-035 | 2026-07 | Manatee torso gap in world model (head/limbs/rear detached) | bounds + skin-weight fix insufficient; b3d source layout | accepted backlog |
 
 ### TD-CRE-034 / TD-CRE-035 remediation policy
 - **Do not** re-apply commit `114cf50` (mass puffin re-export + manatee bounds) without isolated per-species QA.
@@ -72,7 +72,8 @@
 - Packet `P0.1` tracker normalization committed (`15bbb00`): статусная рассинхронизация Open/Closed устранена для закрытых historical пунктов.
 - Packet `R2` persistent icon invalidation committed (`17de9ca`): `ClearRenderedIcons` теперь инвалидация `creature/skin` на диске, что упрощает повторную валидацию после model fixes.
 - `TD-CRE-034` (`puffin`) closed (`3de5d0f`): isolated b3d→glTF re-export; manual QA PASS 2026-07-07 (preview/icon/world criteria).
-- `TD-CRE-035` (`manatee`) **reopened** (2026-07-07): bounds fix (`f57e383`) — preview/icon OK; world model still has torso gap (head/limbs/rear detached). See [`QA_CREATURES_VISUAL_2026.md`](QA_CREATURES_VISUAL_2026.md).
+- `TD-CRE-035` (`manatee`) **reopened** (2026-07-07): bounds fix (`f57e383`) — preview/icon OK; world model still has torso gap (head/limbs/rear detached). Accepted backlog 2026-07-08 (no further model work). See [`QA_CREATURES_VISUAL_2026.md`](QA_CREATURES_VISUAL_2026.md).
+- **Luanti b3d skin export P0** (`bb5d423`, `5d4ed36`, 2026-07-08): exporter resolves mesh-on-`cube` / weights-on-`Bone`; manual QA PASS for `crab`, `seal`, `hermitcrab` (collapsed meshes restored). P1/P2 batch deferred.
 
 ### TD-CRE-034/035 manual sign-off (2026-07-07)
 
@@ -81,8 +82,16 @@
 | puffin | [X] PASS | [X] PASS | [X] PASS | [X] PASS | [X] |
 | manatee | [X] PASS* | [X] PASS | [X] PASS | [X] PASS | [X] |
 
-\*manatee world: criteria met (no fall-apart) but **torso gap** — TD-CRE-035 reopened.
+\*manatee world: criteria met (no fall-apart) but **torso gap** — TD-CRE-035 accepted backlog.
+
+### P0 b3d skin export sign-off (2026-07-08)
+
+| Species | World spawn | Slot icon | Dock static 5s | Dock orbit | Icon cache regen |
+|---------|-------------|-----------|----------------|------------|------------------|
+| crab | [X] PASS | [X] PASS | [X] PASS | [X] PASS | [X] |
+| seal | [X] PASS | [X] PASS | [X] PASS | [X] PASS | [X] |
+| hermitcrab | [X] PASS | [X] PASS | [X] PASS | [X] PASS | [X] |
 
 - Tester: manual (desktop)
-- Build/commit: `arch_refactor3` @ `f2e8a26`
-- Date: 2026-07-07
+- Build/commit: `arch_refactor3` @ `5d4ed36`
+- Date: 2026-07-08

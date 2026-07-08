@@ -1,6 +1,6 @@
-# QA: Creature visual restore (`arch_refactor3` @ `f2e8a26`)
+# QA: Creature visual restore (`arch_refactor3` @ `5d4ed36`)
 
-Branch under test: **`arch_refactor3`** @ `f2e8a26` (TD-CRE-034/035 fixes: `3de5d0f`, `f57e383`)
+Branch under test: **`arch_refactor3`** @ `5d4ed36` (Luanti b3d skin export: `bb5d423`, P0 re-export: `5d4ed36`)
 
 Prerequisites:
 - Clear creature icon cache before first run: delete `bin/cache/icons/creature_puffin__*.png`, `creature_manatee__*.png` (or entire `bin/cache/icons/`), then restart game.
@@ -18,17 +18,21 @@ Prerequisites:
 | Dock walk animation | `PreviewAnimTime` @ 0.8x, walk clip, 30 FPS re-render | **present** |
 | puffin model fix | `git show 3de5d0f --stat` | **model.gltf/bin re-export** |
 | manatee bounds fix | `git show f57e383 --stat` | **creature.json bounds** |
+| b3d cube/Bone skin weights | `git show bb5d423 --stat` | **exporter fix + crab re-export** |
+| P0 seal / hermitcrab re-export | `git show 5d4ed36 --stat` | **collapsed mesh restored** |
 
 ## Manual matrix
 
-Sign-off: **partial PASS** — matrix criteria met; known visual backlog noted below.
+Sign-off: **partial PASS** — P0 aquatic mobs OK; manatee gap accepted as backlog.
 
 | Species | Backend | World spawn + walk | Slot icon | Dock preview static (5s) | Dock orbit drag |
 |---------|---------|-------------------|-----------|---------------------------|-----------------|
 | wolf | gltf_skeleton | [X] | [X] | [X] | [X] |
 | cow | gltf_skeleton | [X] | [X] | [X] | [X] |
 | badger | gltf_skeleton | [X] | [X] | [X] | [X] |
-| crab | gltf_skeleton | [X] | [X] | [X] | [X] |
+| crab | gltf_skeleton (P0 skin fix) | [X] | [X] | [X] | [X] |
+| seal | gltf_skeleton (P0 re-export) | [X] | [X] | [X] | [X] |
+| hermitcrab | gltf_skeleton (P0 re-export) | [X] | [X] | [X] | [X] |
 | chicken | bone_skeleton | [X] | [X] | [X] | [X] |
 | puffin | gltf_skeleton (TD-CRE-034) | [X] | [X] | [X] | [X] |
 | manatee | gltf_skeleton (TD-CRE-035) | [X] | [X] | [X] | [X] |
@@ -40,12 +44,14 @@ Sign-off: **partial PASS** — matrix criteria met; known visual backlog noted b
 3. **Slot icon** matches dock preview model (± fixed yaw/pitch framing).
 4. **World** model matches preview bind-pose silhouette (animation in world is OK).
 
-### Manual notes (2026-07-07)
+### Manual notes (2026-07-07 / P0 2026-07-08)
 
 | Species | Observation | Tracker |
 |---------|-------------|---------|
-| crab | Неправильная форма — прямоугольная «палка» (asset quality) | backlog (pre-existing) |
-| manatee | Дырка в теле: видны голова, конечности и зад; торс оторван от головы | **TD-CRE-035 reopened** — mesh/bind gap |
+| crab | После `bb5d423` — нормальная форма, анимация ок | **P0 PASS** |
+| seal | После `5d4ed36` — полный mesh, world/preview/icon ок | **P0 PASS** |
+| hermitcrab | После `5d4ed36` — полный mesh, world/preview/icon ок | **P0 PASS** |
+| manatee | Разрыв торса остаётся; оставлен как есть | **TD-CRE-035** — accepted backlog |
 | wolf, cow, chicken | Выглядят как bone-skeleton; ок | — |
 | badger | Ок; лапы движутся в стороны — возможно норма gait | — |
 | puffin | Критерии preview/icon/world — ок | TD-CRE-034 closed |
@@ -62,6 +68,15 @@ Sign-off: **partial PASS** — matrix criteria met; known visual backlog noted b
 - Date: 2026-07-07
 - Icon cache refreshed: [X] yes (puffin/manatee entries cleared pre-run)
 - Result: [ ] Manual PASS [X] Manual partial — TD-CRE-034 closed; **TD-CRE-035 reopened** (torso gap in world model)
+
+## Sign-off (P0 b3d skin fix — 2026-07-08)
+
+- Tester: manual run (desktop)
+- Devices: desktop
+- Build/commit: `arch_refactor3` @ `5d4ed36`
+- Date: 2026-07-08
+- Icon cache refreshed: [X] yes (`creature_seal__*`, `creature_hermitcrab__*` cleared)
+- Result: [X] **P0 PASS** — `crab` (`bb5d423`), `seal` + `hermitcrab` (`5d4ed36`); manatee unchanged (TD-CRE-035 backlog)
 
 ## Regression guard
 
