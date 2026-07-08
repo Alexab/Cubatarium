@@ -33,9 +33,17 @@
 /bin/content/
 /bin/resource_packs/
 /bin/fonts/
+/bin/cache/
+/bin/objects/
+/bin/bin/worlds/
 /bin/config.json
 /bin/icon.png
 /bin/Cubatarium
+/bin/*.txt
+/bin/*.json
+/bin/*_out*.txt
+/bin/*_err*.txt
+/bin/*report*.json
 
 # Desktop CMake build trees
 /build/desktop-msvc/
@@ -68,6 +76,8 @@ resource_packs/_build_staging_*/
 # Local dev / debug artifacts
 /emulator-logcat*.txt
 /emulator-*.png
+/emulator_screenshot.png
+/purple_smoke_report.json
 tools/__pycache__/
 tools/audit/__pycache__/
 tools/_members_out.txt
