@@ -62,13 +62,13 @@ Sign-off: **partial PASS** — P0 aquatic OK; P1 partial; manatee gap accepted a
 | Species | Observation | Tracker |
 |---------|-------------|---------|
 | lobster, puffin, shark, wasp, kitten | P1 skin-weight re-export OK | **P1 PASS** |
-| seahorse | P1 remap ломает модель (разрыв верх/низ); откат pre-P1 weights | **legacy cube weights** |
-| stingray | P1 remap — только левая половина; откат pre-P1 weights | **legacy cube weights** |
+| seahorse | IBM fix in exporter; Bone weights + cube bake | **re-verify** |
+| stingray | IBM fix in exporter; Bone weights + cube bake | **re-verify** |
 
 ### Policy
 
 - Do **not** re-apply mass re-export `114cf50` without per-species validation.
-- After any model change: `InvalidateKind("creature")` or clear `bin/cache/icons/` and re-verify world + dock + slot icon.
+- After any model change: `python tools/clear_creature_visual_cache.py --species <id>`, then fully quit the game and spawn new mobs; or clear `bin/cache/icons/` manually.
 
 ## Sign-off (manual run 2026-07-07)
 
@@ -93,7 +93,20 @@ Sign-off: **partial PASS** — P0 aquatic OK; P1 partial; manatee gap accepted a
 - Tester: manual run (desktop)
 - Build/commit: `arch_refactor3` @ HEAD (after stingray/seahorse revert)
 - Date: 2026-07-08
-- Result: [X] **P1 partial PASS** — `lobster`, `puffin`, `shark`, `wasp`, `kitten` OK; `seahorse`, `stingray` keep legacy cube weights (`LEGACY_CUBE_ONLY_WEIGHT_SPECIES`)
+- Result: [X] **P1 partial PASS** — `lobster`, `puffin`, `shark`, `wasp`, `kitten` OK; `seahorse`, `stingray` Bone weights restored (cube bake + `skin_bind_joints`), pending manual re-verify
+
+### Skinning gaps (when they appear)
+
+| Mode | Bind mesh | Animation | Typical failure |
+|------|-----------|-----------|-----------------|
+| Legacy cube weights | OK | **none** (channels on Bone, weights on cube) | stingray/seahorse «frozen» |
+| Bone weights + cube bake | OK | OK | preferred for Luanti b3d |
+| Bone weights + skin_joint bake | tail/neck **gaps** or inflated bbox | OK | stingray tail y≈1.5; seahorse neck gap ≈0.4 |
+
+Root cause of split-bind gaps: mesh vertices baked through `bind_globals[skin_joint]` while IBM targets Bone joints whose bind scale is stripped to `(1,1,1)` — rest pose no longer matches Luanti cube layout.
+
+**2026-07-08 IBM bug:** `mat4_inverse()` in `b3d_export_gltf.py` mis-inverted some bone rotations → wrong `inverseBindMatrices` → parts mirrored/off-body in world (stingray half-body, seahorse torso gap). Fixed via `numpy.linalg.inv`; re-export all b3d species with `--all-with-b3d`.
+
 
 ## Regression guard
 

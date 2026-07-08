@@ -6,9 +6,11 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 
 #include "Render/GlIncludes.h"
+#include <filesystem>
 #include <glm/vec4.hpp>
 #include <sstream>
 
@@ -296,6 +298,26 @@ std::string UCreatureIconCache::BuildSpeciesFingerprint(
       << def->visual.gltf.modelPath << '|' << def->visual.gltf.modelScale
       << '|' << def->visual.gltf.modelOffsetY << '|'
       << def->visual.Parts.size();
+  if (def->visual.backend == "gltf_skeleton")
+  {
+    if (const auto *paths = IUPlatformPaths::TryGet())
+    {
+      const std::string modelFile = def->visual.gltf.modelPath.empty()
+                                        ? "model.gltf"
+                                        : def->visual.gltf.modelPath;
+      const std::filesystem::path binPath =
+          paths->AssetRoot() / "models" / "creatures" / speciesId /
+          std::filesystem::path(modelFile).replace_extension(".bin");
+      std::error_code ec;
+      if (std::filesystem::exists(binPath, ec))
+      {
+        out << '|' << std::filesystem::file_size(binPath, ec) << '|'
+            << std::filesystem::last_write_time(binPath, ec)
+                   .time_since_epoch()
+                   .count();
+      }
+    }
+  }
   return out.str();
 }
 

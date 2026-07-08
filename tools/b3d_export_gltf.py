@@ -88,28 +88,12 @@ def mat4_mul(a: list[float], b: list[float]) -> list[float]:
 
 
 def mat4_inverse(m: list[float]) -> list[float]:
-  inv = [0.0] * 16
-  inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10]
-  inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10]
-  inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9]
-  inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] - m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9]
-  inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] - m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10]
-  inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] + m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10]
-  inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] - m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9]
-  inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] + m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9]
-  inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] + m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6]
-  inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] - m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6]
-  inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] + m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5]
-  inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5]
-  inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] - m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6]
-  inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] + m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6]
-  inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5]
-  inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5]
-  det = sum(m[i] * inv[i] for i in range(0, 16, 4))
-  if abs(det) < 1e-12:
-    return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
-  inv_det = 1.0 / det
-  return [v * inv_det for v in inv]
+  """Invert a column-major 4x4 (glTF). Custom cofactor code mis-inverts some rotations."""
+  import numpy as np
+
+  a = np.array(m, dtype=np.float64).reshape(4, 4, order="F")
+  inv = np.linalg.inv(a)
+  return inv.reshape(16, order="F").tolist()
 
 
 def transform_vec3(m: list[float], x: float, y: float, z: float) -> tuple[float, float, float]:
@@ -130,6 +114,32 @@ def joint_global_bind_matrices(joints: list[ExportJoint]) -> list[list[float]]:
       global_m = local
     globals_m.append(global_m)
   return globals_m
+
+
+def skin_bind_joints(
+    joints: list[ExportJoint], bones: list[B3DBone]
+) -> list[ExportJoint]:
+  """Bind pose for skinning: meshless weight bones use unit scale (Luanti mesh cubes are pre-sized).
+
+  Vertex bake stays on cube bind globals; IBM uses these joints. Do not bake vertices
+  through skin_joint global (split-bind) — that inflates stingray tail and opens seahorse
+  neck gaps. Legacy cube-only weights (manatee) skip Bone-child remap entirely.
+  """
+  bound: list[ExportJoint] = []
+  for index, joint in enumerate(joints):
+    if bones[index].mesh.vertices:
+      bound.append(joint)
+    else:
+      bound.append(
+          ExportJoint(
+              joint.name,
+              joint.parent,
+              joint.translation,
+              joint.rotation,
+              (1.0, 1.0, 1.0),
+          )
+      )
+  return bound
 
 
 def infer_units_per_block(
@@ -176,9 +186,8 @@ def flatten_joints(roots: list[B3DBone], units_per_block: float = DEFAULT_B3D_UN
   return joints, bones
 
 
-# Some Luanti mobs bind correctly only with weights on the cube mesh node; remapping
-# to child Bone joints splits the mesh at rest (seahorse, stingray) or worsens gaps.
-LEGACY_CUBE_ONLY_WEIGHT_SPECIES = frozenset({"manatee", "seahorse", "stingray"})
+# Manatee: flat ROOT branches + cube.001 torso; Bone-child remap worsens gap / head motion.
+LEGACY_CUBE_ONLY_WEIGHT_SPECIES = frozenset({"manatee"})
 
 
 def resolve_skin_binding(
@@ -241,7 +250,8 @@ def build_mesh(
 ) -> ExportMesh:
     """Merge every bone mesh into one skinned mesh (animalworld uses per-bone cubes)."""
     mesh = ExportMesh()
-    bind_globals = joint_global_bind_matrices(joints)
+    bind_joints = skin_bind_joints(joints, bones)
+    bind_globals = joint_global_bind_matrices(bind_joints)
     vertex_offset = 0
     use_bone_child_weights = species_id not in LEGACY_CUBE_ONLY_WEIGHT_SPECIES
 
@@ -258,7 +268,8 @@ def build_mesh(
 
         for vertex_id, vert in enumerate(bone.mesh.vertices):
             lx, ly, lz = vert.x / scale, vert.y / scale, vert.z / scale
-            # Mesh lives on the cube node; Bone child owns skin weights/animation.
+            # Mesh lives on cube nodes; bake to cube bind global. Weights may target
+            # child Bone — skin_bind_joints + IBM on those joints keeps animation correct.
             gx, gy, gz = transform_vec3(bind_globals[bone_index], lx, ly, lz)
             joints_tuple, weights_tuple = normalize_vertex_weights(
                 local_weights.get(vertex_id, [(skin_joint, 1.0)])
@@ -776,6 +787,7 @@ def pack_skinned_gltf(
     species_id: str,
     textured_meshes: list[tuple[str, ExportMesh]],
     joints: list[ExportJoint],
+    bones: list[B3DBone],
     texture_uri: str = "textures/body.png",
     animations: list[dict] | None = None,
     animation_blob: bytes | None = None,
@@ -798,7 +810,8 @@ def pack_skinned_gltf(
     raise ValueError(f"{species_id}: no skinned mesh primitives to export")
 
   nodes = [{"name": "armature"}]
-  for joint in joints:
+  bind_joints = skin_bind_joints(joints, bones)
+  for joint in bind_joints:
     node: dict = {
         "name": joint.name,
         "translation": list(joint.translation),
@@ -806,13 +819,13 @@ def pack_skinned_gltf(
         "scale": list(joint.scale),
     }
     nodes.append(node)
-  for i, joint in enumerate(joints):
+  for i, joint in enumerate(bind_joints):
     if joint.parent >= 0:
       parent_node = nodes[joint.parent + 1]
       parent_node.setdefault("children", []).append(i + 1)
 
-  skin_joint_nodes = list(range(1, len(joints) + 1))
-  bind_globals = joint_global_bind_matrices(joints)
+  skin_joint_nodes = list(range(1, len(bind_joints) + 1))
+  bind_globals = joint_global_bind_matrices(bind_joints)
   ibm: list[float] = []
   for global_m in bind_globals:
     inv_m = mat4_inverse(global_m)
@@ -937,6 +950,7 @@ def export_b3d_to_gltf(
         species_id,
         textured_meshes,
         joints,
+        bones,
         texture_uri=texture_uri,
         animations=animations,
         animation_blob=animation_blob,
