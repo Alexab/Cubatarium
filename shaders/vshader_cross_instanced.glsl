@@ -8,6 +8,7 @@ layout (location = 3) in vec3 aInstanceOffset;
 out vec3 vWorldPos;
 out vec2 vUV;
 flat out int vFaceIndex;
+out float vLight;
 
 uniform mat4 mvp_matrix;
 
@@ -18,4 +19,5 @@ void main()
     vWorldPos = worldPos;
     vUV = aUV;
     vFaceIndex = int(aFaceIndex + 0.5);
+    vLight = 1.0;
 }

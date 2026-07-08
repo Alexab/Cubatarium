@@ -3,6 +3,7 @@
 in vec3 vWorldPos;
 in vec2 vUV;
 flat in int vFaceIndex;
+in float vLight;
 
 out vec4 FragColor;
 
@@ -25,6 +26,10 @@ uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
+uniform float uEnvFogMultiplier;
+uniform float uEnvMinAmbient;
+uniform float uEnvDayFactor;
+uniform float uEnvLightDebug;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
@@ -162,6 +167,16 @@ void main()
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
     FragColor = texture(texture0, uv);
+    float localLight = clamp(vLight, 0.0, 1.0);
+    if (vFaceIndex == kCrossFaceIndex && localLight < 0.01) {
+        localLight = 1.0;
+    }
+    float ambientFloor = clamp(uEnvMinAmbient * (0.4 + 0.6 * uEnvDayFactor), 0.02, 0.95);
+    float lit = mix(ambientFloor, 1.0, localLight);
+    FragColor.rgb *= lit;
+    if (uEnvLightDebug > 0.5) {
+        FragColor.rgb = vec3(localLight);
+    }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }
@@ -217,7 +232,7 @@ void main()
         }
         float fogRange = max(uFogEnd - uFogStart, 0.001);
         float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
-        fogFactor = pow(fogFactor, max(uFogDensity, 0.1));
+        fogFactor = pow(fogFactor, max(uFogDensity * max(uEnvFogMultiplier, 0.05), 0.1));
         fogFactor = max(fogFactor, uFogMinBlend);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
     }

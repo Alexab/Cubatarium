@@ -703,7 +703,13 @@ void UGeometryEngine::PrepareFrameRendering()
   }
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
                             BaseSkyColor);
-  skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
+  glm::vec3 tint = UnderwaterFogPass_.GetSkyTint();
+  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
+  const float sky_mul = std::clamp(0.2f + day * env.WeatherSkyAttenuation, 0.12f,
+                                   1.0f);
+  tint *= sky_mul;
+  skyColor = glm::vec4(tint, 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
@@ -770,6 +776,24 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         greedyShader, camera->GetPosition(),
         cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
   }
+  if (WorldInstance)
+  {
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    greedyShader->SetFloat("uEnvFogMultiplier", env.WeatherFogMultiplier);
+    greedyShader->SetFloat("uEnvMinAmbient",
+                           WorldInstance->GetLightingSettings().MinAmbient);
+    greedyShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    greedyShader->SetFloat(
+        "uEnvLightDebug",
+        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+  }
+  else
+  {
+    greedyShader->SetFloat("uEnvFogMultiplier", 1.0f);
+    greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
+    greedyShader->SetFloat("uEnvDayFactor", 1.0f);
+    greedyShader->SetFloat("uEnvLightDebug", 0.0f);
+  }
   glActiveTexture(GL_TEXTURE0);
 
   glBindVertexArray(greedyMeshVAO);
@@ -814,6 +838,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                  offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
+    glVertexAttribPointer(
+        3, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, light)));
+    glEnableVertexAttribArray(3);
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -926,6 +955,24 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
+  }
+  if (WorldInstance)
+  {
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    crossInstancedShader->SetFloat("uEnvFogMultiplier", env.WeatherFogMultiplier);
+    crossInstancedShader->SetFloat(
+        "uEnvMinAmbient", WorldInstance->GetLightingSettings().MinAmbient);
+    crossInstancedShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    crossInstancedShader->SetFloat(
+        "uEnvLightDebug",
+        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+  }
+  else
+  {
+    crossInstancedShader->SetFloat("uEnvFogMultiplier", 1.0f);
+    crossInstancedShader->SetFloat("uEnvMinAmbient", 0.12f);
+    crossInstancedShader->SetFloat("uEnvDayFactor", 1.0f);
+    crossInstancedShader->SetFloat("uEnvLightDebug", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -1081,6 +1128,9 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, u)));
   glEnableVertexAttribArray(2);
+  glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, light)));
+  glEnableVertexAttribArray(3);
 
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
@@ -1575,7 +1625,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "0-9 - Primary hotbar; objects via HUD / palette",
       "Classic: mouse look, hold LMB break, RMB place/use slot",
       "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
-      "Delete - Instant break, F1-F8 - Sky",
+      "Delete - Instant break",
   };
 
   constexpr float helpX = 20.0f;
