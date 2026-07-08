@@ -325,11 +325,14 @@ void UWorld::TickEnvironment(float dtSeconds)
     const float from_wind = weather_to_wind(EnvironmentStateData.Weather);
     const float to_wind = weather_to_wind(EnvironmentStateData.TargetWeather);
 
-    EnvironmentStateData.Cloudiness = std::lerp(from_cloud, to_cloud, alpha);
+    EnvironmentStateData.Cloudiness =
+        from_cloud + (to_cloud - from_cloud) * alpha;
     EnvironmentStateData.PrecipitationIntensity =
-        std::lerp(from_precip, to_precip, alpha);
-    EnvironmentStateData.WeatherFogMultiplier = std::lerp(from_fog, to_fog, alpha);
-    EnvironmentStateData.WindStrength = std::lerp(from_wind, to_wind, alpha);
+        from_precip + (to_precip - from_precip) * alpha;
+    EnvironmentStateData.WeatherFogMultiplier =
+        from_fog + (to_fog - from_fog) * alpha;
+    EnvironmentStateData.WindStrength =
+        from_wind + (to_wind - from_wind) * alpha;
   }
   else
   {
