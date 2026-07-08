@@ -37,6 +37,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
+  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
   const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
   const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
                                  WorldCoordToBlockIndex(eye.z));
@@ -93,7 +94,10 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     }
   }
 
-  glm::vec3 targetSky = base_sky_color;
+  const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
+  const float sky_mul = std::clamp(0.2f + day * env.WeatherSkyAttenuation, 0.12f,
+                                   1.0f);
+  glm::vec3 targetSky = base_sky_color * sky_mul;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
@@ -132,7 +136,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   else if (render.DistanceFog)
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
-        world.GetEffectiveRenderDistance(), SmoothedSkyTint,
+        world.GetEffectiveRenderDistance(), targetSky,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity);
     FogEnabled = 1.0f;
@@ -142,7 +146,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogMinBlend = 0.0f;
     FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
-    SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
+    SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
   }
   if (fluid.inFluid)
   {
