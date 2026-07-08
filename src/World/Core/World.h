@@ -27,6 +27,8 @@
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <array>
+#include <cstdint>
+#include <algorithm>
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -72,6 +74,38 @@ struct FluidSpreadStats;
 class UWorld : public IUWorldPerception
 {
 public:
+  enum class WeatherType
+  {
+    Clear = 0,
+    Cloudy = 1,
+    Rain = 2,
+    Storm = 3,
+    Snow = 4,
+  };
+
+  struct EnvironmentState
+  {
+    float TimeOfDayNormalized{0.35f};
+    float DayLengthMinutes{20.0f};
+    bool TimeFrozen{false};
+    WeatherType Weather{WeatherType::Clear};
+    WeatherType TargetWeather{WeatherType::Clear};
+    float WeatherTransitionSec{0.0f};
+    float WeatherTransitionDurationSec{45.0f};
+    float Cloudiness{0.0f};
+    float PrecipitationIntensity{0.0f};
+    float WindStrength{0.2f};
+    float WeatherFogMultiplier{1.0f};
+    float WeatherSkyAttenuation{1.0f};
+    float DayNightFactor{1.0f};
+  };
+
+  struct LightingSettings
+  {
+    bool DebugEnabled{false};
+    float MinAmbient{0.12f};
+  };
+
   UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
          std::shared_ptr<UViewEngine> views);
   ~UWorld();
@@ -520,6 +554,27 @@ public:
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   void RefreshStreamerSettings();
+  void TickEnvironment(float dtSeconds);
+  const EnvironmentState &GetEnvironmentState() const { return EnvironmentStateData; }
+  const LightingSettings &GetLightingSettings() const { return LightingSettingsData; }
+  void SetTimeOfDayNormalized(float value);
+  void AddTimeOfDayNormalized(float delta);
+  void SetTimeFrozen(bool frozen) { EnvironmentStateData.TimeFrozen = frozen; }
+  void SetDayLengthMinutes(float minutes);
+  void SetWeather(WeatherType weather, float transitionSeconds = 45.0f);
+  void SetWeatherByName(const std::string &name, float transitionSeconds = 45.0f);
+  std::string GetWeatherName() const;
+  static std::string WeatherTypeToString(WeatherType value);
+  static bool WeatherTypeFromString(const std::string &value, WeatherType &out);
+  void SetLightingDebugEnabled(bool enabled)
+  {
+    LightingSettingsData.DebugEnabled = enabled;
+  }
+  void SetLightingMinAmbient(float value)
+  {
+    LightingSettingsData.MinAmbient = std::clamp(value, 0.02f, 0.5f);
+  }
+  void RebuildAllLightingDirtyMeshes();
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
@@ -657,6 +712,8 @@ private:
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};
   RenderSettings Render;
+  EnvironmentState EnvironmentStateData;
+  LightingSettings LightingSettingsData;
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};

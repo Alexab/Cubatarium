@@ -54,6 +54,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -74,6 +75,30 @@ namespace
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
+constexpr float kSecondsPerMinute = 60.0f;
+constexpr float kMinDayLengthMinutes = 1.0f;
+
+float Clamp01(float value)
+{
+  return std::clamp(value, 0.0f, 1.0f);
+}
+
+float Wrap01(float value)
+{
+  if (!std::isfinite(value))
+  {
+    return 0.0f;
+  }
+  const float wrapped = std::fmod(value, 1.0f);
+  return wrapped < 0.0f ? wrapped + 1.0f : wrapped;
+}
+
+std::string NormalizeToken(std::string value)
+{
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  return value;
+}
 
 } // namespace
 
@@ -99,6 +124,237 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
 }
 
 UWorld::~UWorld() = default;
+
+std::string UWorld::WeatherTypeToString(WeatherType value)
+{
+  switch (value)
+  {
+  case WeatherType::Cloudy:
+    return "cloudy";
+  case WeatherType::Rain:
+    return "rain";
+  case WeatherType::Storm:
+    return "storm";
+  case WeatherType::Snow:
+    return "snow";
+  case WeatherType::Clear:
+  default:
+    return "clear";
+  }
+}
+
+bool UWorld::WeatherTypeFromString(const std::string &value, WeatherType &out)
+{
+  const std::string normalized = NormalizeToken(value);
+  if (normalized == "clear")
+  {
+    out = WeatherType::Clear;
+    return true;
+  }
+  if (normalized == "cloudy")
+  {
+    out = WeatherType::Cloudy;
+    return true;
+  }
+  if (normalized == "rain")
+  {
+    out = WeatherType::Rain;
+    return true;
+  }
+  if (normalized == "storm")
+  {
+    out = WeatherType::Storm;
+    return true;
+  }
+  if (normalized == "snow")
+  {
+    out = WeatherType::Snow;
+    return true;
+  }
+  return false;
+}
+
+void UWorld::SetTimeOfDayNormalized(float value)
+{
+  EnvironmentStateData.TimeOfDayNormalized = Wrap01(value);
+}
+
+void UWorld::AddTimeOfDayNormalized(float delta)
+{
+  SetTimeOfDayNormalized(EnvironmentStateData.TimeOfDayNormalized + delta);
+}
+
+void UWorld::SetDayLengthMinutes(float minutes)
+{
+  EnvironmentStateData.DayLengthMinutes = std::max(kMinDayLengthMinutes, minutes);
+}
+
+void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
+{
+  EnvironmentStateData.TargetWeather = weather;
+  EnvironmentStateData.WeatherTransitionDurationSec =
+      std::max(0.0f, transitionSeconds);
+  EnvironmentStateData.WeatherTransitionSec = 0.0f;
+  if (EnvironmentStateData.Weather == weather ||
+      EnvironmentStateData.WeatherTransitionDurationSec <= 0.01f)
+  {
+    EnvironmentStateData.Weather = weather;
+    EnvironmentStateData.TargetWeather = weather;
+    EnvironmentStateData.WeatherTransitionSec =
+        EnvironmentStateData.WeatherTransitionDurationSec;
+  }
+}
+
+void UWorld::SetWeatherByName(const std::string &name, float transitionSeconds)
+{
+  WeatherType weather = WeatherType::Clear;
+  if (WeatherTypeFromString(name, weather))
+  {
+    SetWeather(weather, transitionSeconds);
+  }
+}
+
+std::string UWorld::GetWeatherName() const
+{
+  return WeatherTypeToString(EnvironmentStateData.Weather);
+}
+
+void UWorld::TickEnvironment(float dtSeconds)
+{
+  if (dtSeconds <= 0.0f || !std::isfinite(dtSeconds))
+  {
+    return;
+  }
+
+  if (!EnvironmentStateData.TimeFrozen)
+  {
+    const float cycle_seconds =
+        std::max(kMinDayLengthMinutes, EnvironmentStateData.DayLengthMinutes) *
+        kSecondsPerMinute;
+    AddTimeOfDayNormalized(dtSeconds / std::max(1.0f, cycle_seconds));
+  }
+
+  const auto weather_to_cloudiness = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Cloudy:
+      return 0.55f;
+    case WeatherType::Rain:
+      return 0.75f;
+    case WeatherType::Storm:
+      return 0.95f;
+    case WeatherType::Snow:
+      return 0.8f;
+    case WeatherType::Clear:
+    default:
+      return 0.1f;
+    }
+  };
+  const auto weather_to_precip = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Rain:
+      return 0.6f;
+    case WeatherType::Storm:
+      return 1.0f;
+    case WeatherType::Snow:
+      return 0.55f;
+    case WeatherType::Cloudy:
+    case WeatherType::Clear:
+    default:
+      return 0.0f;
+    }
+  };
+  const auto weather_to_fog = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Cloudy:
+      return 1.05f;
+    case WeatherType::Rain:
+      return 1.2f;
+    case WeatherType::Storm:
+      return 1.35f;
+    case WeatherType::Snow:
+      return 1.25f;
+    case WeatherType::Clear:
+    default:
+      return 1.0f;
+    }
+  };
+  const auto weather_to_wind = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Storm:
+      return 1.0f;
+    case WeatherType::Rain:
+      return 0.65f;
+    case WeatherType::Cloudy:
+      return 0.45f;
+    case WeatherType::Snow:
+      return 0.35f;
+    case WeatherType::Clear:
+    default:
+      return 0.2f;
+    }
+  };
+
+  const bool transitioning =
+      EnvironmentStateData.Weather != EnvironmentStateData.TargetWeather;
+  if (transitioning && EnvironmentStateData.WeatherTransitionDurationSec > 0.01f)
+  {
+    EnvironmentStateData.WeatherTransitionSec += dtSeconds;
+    const float alpha = Clamp01(EnvironmentStateData.WeatherTransitionSec /
+                                EnvironmentStateData.WeatherTransitionDurationSec);
+    if (alpha >= 1.0f)
+    {
+      EnvironmentStateData.Weather = EnvironmentStateData.TargetWeather;
+      EnvironmentStateData.WeatherTransitionSec =
+          EnvironmentStateData.WeatherTransitionDurationSec;
+    }
+    const float from_cloud = weather_to_cloudiness(EnvironmentStateData.Weather);
+    const float to_cloud =
+        weather_to_cloudiness(EnvironmentStateData.TargetWeather);
+    const float from_precip = weather_to_precip(EnvironmentStateData.Weather);
+    const float to_precip = weather_to_precip(EnvironmentStateData.TargetWeather);
+    const float from_fog = weather_to_fog(EnvironmentStateData.Weather);
+    const float to_fog = weather_to_fog(EnvironmentStateData.TargetWeather);
+    const float from_wind = weather_to_wind(EnvironmentStateData.Weather);
+    const float to_wind = weather_to_wind(EnvironmentStateData.TargetWeather);
+
+    EnvironmentStateData.Cloudiness = std::lerp(from_cloud, to_cloud, alpha);
+    EnvironmentStateData.PrecipitationIntensity =
+        std::lerp(from_precip, to_precip, alpha);
+    EnvironmentStateData.WeatherFogMultiplier = std::lerp(from_fog, to_fog, alpha);
+    EnvironmentStateData.WindStrength = std::lerp(from_wind, to_wind, alpha);
+  }
+  else
+  {
+    EnvironmentStateData.Weather = EnvironmentStateData.TargetWeather;
+    EnvironmentStateData.Cloudiness =
+        weather_to_cloudiness(EnvironmentStateData.Weather);
+    EnvironmentStateData.PrecipitationIntensity =
+        weather_to_precip(EnvironmentStateData.Weather);
+    EnvironmentStateData.WeatherFogMultiplier =
+        weather_to_fog(EnvironmentStateData.Weather);
+    EnvironmentStateData.WindStrength = weather_to_wind(EnvironmentStateData.Weather);
+  }
+
+  const float solar_phase = std::sin(EnvironmentStateData.TimeOfDayNormalized *
+                                     6.28318530718f);
+  const float day_factor = Clamp01(solar_phase * 0.5f + 0.5f);
+  EnvironmentStateData.DayNightFactor = day_factor;
+  EnvironmentStateData.WeatherSkyAttenuation =
+      std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.45f, 0.35f, 1.0f);
+}
+
+void UWorld::RebuildAllLightingDirtyMeshes()
+{
+  InvalidateBlockMesh();
+}
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
@@ -1532,6 +1788,7 @@ bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
 
 void UWorld::DoMovement()
 {
+  TickEnvironment(static_cast<float>(WallFrameDeltaSec));
   ++PhysicsTickCounter;
   if (PhysicsScheduler)
   {

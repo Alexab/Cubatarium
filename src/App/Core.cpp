@@ -355,6 +355,19 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
       }
+      if (d.contains("environment") && d["environment"].is_object())
+      {
+        const json &env = d["environment"];
+        DefaultTimeOfDay = env.value("time_of_day", DefaultTimeOfDay);
+        DefaultDayLengthMinutes =
+            env.value("day_length_minutes", DefaultDayLengthMinutes);
+        DefaultWeather = env.value("weather", DefaultWeather);
+        if (env.contains("lighting") && env["lighting"].is_object())
+        {
+          DefaultLightingMinAmbient =
+              env["lighting"].value("min_ambient", DefaultLightingMinAmbient);
+        }
+      }
       if (d.contains("render") && d["render"].is_object())
       {
         const json &r = d["render"];
@@ -446,6 +459,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
       ResetToGeneratorDefaults(ProceduralTemplate);
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
+      DefaultTimeOfDay = 0.35f;
+      DefaultDayLengthMinutes = 20.0f;
+      DefaultWeather = "clear";
+      DefaultLightingMinAmbient = 0.12f;
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
       ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
@@ -530,6 +547,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
     WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
     WorldInstance->SetRenderSettings(Render);
+    WorldInstance->SetTimeOfDayNormalized(DefaultTimeOfDay);
+    WorldInstance->SetDayLengthMinutes(DefaultDayLengthMinutes);
+    WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
+    WorldInstance->SetLightingMinAmbient(DefaultLightingMinAmbient);
+    // Keep debug disabled by default; toggle via command.
+    WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
     {
       GeometryEngineInstance->SetRenderSettings(Render);
@@ -693,6 +716,12 @@ void UCore::SaveConfigFile()
       Render.AltitudeFogPenaltyPer16Blocks;
   render_json["gradient_sky"] = Render.GradientSky;
   system_data["render"] = render_json;
+  json environment_json;
+  environment_json["time_of_day"] = DefaultTimeOfDay;
+  environment_json["day_length_minutes"] = DefaultDayLengthMinutes;
+  environment_json["weather"] = DefaultWeather;
+  environment_json["lighting"]["min_ambient"] = DefaultLightingMinAmbient;
+  system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
   resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
@@ -732,6 +761,10 @@ void UCore::SaveSystem(const std::string &config_file_name)
     DefaultUserName = WorldInstance->GetCurrentUserName();
   }
   WorldSeed = ProceduralTemplate.Seed;
+  DefaultTimeOfDay = WorldInstance->GetEnvironmentState().TimeOfDayNormalized;
+  DefaultDayLengthMinutes = WorldInstance->GetEnvironmentState().DayLengthMinutes;
+  DefaultWeather = WorldInstance->GetWeatherName();
+  DefaultLightingMinAmbient = WorldInstance->GetLightingSettings().MinAmbient;
 
   if (ConfigFilePath.empty())
   {

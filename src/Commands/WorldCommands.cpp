@@ -12,6 +12,9 @@
 #include "World/Core/World.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
+#include <algorithm>
+#include <cctype>
+#include <sstream>
 
 namespace cutum
 {
@@ -30,6 +33,13 @@ UCreatureInventory *GetCommandInventory(const std::shared_ptr<UWorld> &world)
     return &creature->GetInventory();
   }
   return nullptr;
+}
+
+std::string Lower(std::string value)
+{
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  return value;
 }
 
 } // namespace
@@ -81,8 +91,165 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       });
 
   registry.Register(
-      "time", [](const std::vector<std::string> &)
-      { return CommandResult{true, "Time of day is not implemented yet."}; });
+      "time",
+      [world](const std::vector<std::string> &args)
+      {
+        if (!world)
+        {
+          return CommandResult{false, "No active world"};
+        }
+        if (args.size() == 1)
+        {
+          const float t = world->GetEnvironmentState().TimeOfDayNormalized;
+          std::ostringstream out;
+          out << "time=" << t;
+          return CommandResult{true, out.str()};
+        }
+        const std::string cmd = Lower(args[1]);
+        if (cmd == "set")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{false, "Usage: time set <0..1>"};
+          }
+          try
+          {
+            world->SetTimeOfDayNormalized(std::stof(args[2]));
+            world->RebuildAllLightingDirtyMeshes();
+            return CommandResult{true, "Time updated"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid time value"};
+          }
+        }
+        if (cmd == "add")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{false, "Usage: time add <delta>"};
+          }
+          try
+          {
+            world->AddTimeOfDayNormalized(std::stof(args[2]));
+            world->RebuildAllLightingDirtyMeshes();
+            return CommandResult{true, "Time advanced"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid delta value"};
+          }
+        }
+        if (cmd == "freeze")
+        {
+          bool freeze = true;
+          if (args.size() >= 3)
+          {
+            const std::string token = Lower(args[2]);
+            freeze = token == "on" || token == "1" || token == "true";
+          }
+          world->SetTimeFrozen(freeze);
+          return CommandResult{true, freeze ? "Time frozen" : "Time resumed"};
+        }
+        if (cmd == "daylength")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{false, "Usage: time daylength <minutes>"};
+          }
+          try
+          {
+            world->SetDayLengthMinutes(std::stof(args[2]));
+            return CommandResult{true, "Day length updated"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid day length"};
+          }
+        }
+        return CommandResult{
+            false,
+            "Usage: time [set <0..1> | add <delta> | freeze [on|off] | daylength <minutes>]"};
+      });
+
+  registry.Register(
+      "weather",
+      [world](const std::vector<std::string> &args)
+      {
+        if (!world)
+        {
+          return CommandResult{false, "No active world"};
+        }
+        if (args.size() == 1)
+        {
+          return CommandResult{true, "weather=" + world->GetWeatherName()};
+        }
+        const std::string cmd = Lower(args[1]);
+        if (cmd == "set")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{
+                false, "Usage: weather set <clear|cloudy|rain|storm|snow> [transition_sec]"};
+          }
+          float transition_sec = 45.0f;
+          if (args.size() >= 4)
+          {
+            try
+            {
+              transition_sec = std::stof(args[3]);
+            }
+            catch (...)
+            {
+              return CommandResult{false, "Invalid transition seconds"};
+            }
+          }
+          UWorld::WeatherType weather = UWorld::WeatherType::Clear;
+          if (!UWorld::WeatherTypeFromString(args[2], weather))
+          {
+            return CommandResult{
+                false, "Unknown weather. Expected clear|cloudy|rain|storm|snow"};
+          }
+          world->SetWeather(weather, transition_sec);
+          world->RebuildAllLightingDirtyMeshes();
+          return CommandResult{true, "Weather transition started"};
+        }
+        return CommandResult{false, "Usage: weather [set <type> [transition_sec]]"};
+      });
+
+  registry.Register(
+      "light",
+      [world](const std::vector<std::string> &args)
+      {
+        if (!world)
+        {
+          return CommandResult{false, "No active world"};
+        }
+        if (args.size() < 2)
+        {
+          return CommandResult{false, "Usage: light <recalc|debug>"};
+        }
+        const std::string cmd = Lower(args[1]);
+        if (cmd == "recalc")
+        {
+          world->RebuildAllLightingDirtyMeshes();
+          return CommandResult{true, "Scheduled full light mesh refresh"};
+        }
+        if (cmd == "debug")
+        {
+          bool enabled = true;
+          if (args.size() >= 3)
+          {
+            const std::string token = Lower(args[2]);
+            enabled = token == "on" || token == "1" || token == "true";
+          }
+          world->SetLightingDebugEnabled(enabled);
+          world->RebuildAllLightingDirtyMeshes();
+          return CommandResult{true,
+                               enabled ? "Light debug enabled" : "Light debug disabled"};
+        }
+        return CommandResult{false, "Usage: light <recalc|debug [on|off]>"};
+      });
 
   registry.Register("give",
                     [world](const std::vector<std::string> &args)

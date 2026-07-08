@@ -197,6 +197,10 @@ private:
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
   float ActivityTickHz{20.0f};
+  float DefaultTimeOfDay{0.35f};
+  float DefaultDayLengthMinutes{20.0f};
+  std::string DefaultWeather{"clear"};
+  float DefaultLightingMinAmbient{0.12f};
   PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Standard};
   PhysicsFeatureFlags PhysicsFlags;
   PhysicsBudgets PhysicsBudgetsConfig;

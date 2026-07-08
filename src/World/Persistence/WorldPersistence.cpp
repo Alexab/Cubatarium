@@ -699,6 +699,26 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
     {
       std::cerr << "LoadWorldData: missing required worldgen_sets" << std::endl;
     }
+
+    if (d.contains("environment") && d["environment"].is_object())
+    {
+      const json &env = d["environment"];
+      if (env.contains("time_of_day"))
+      {
+        world.SetTimeOfDayNormalized(env.value("time_of_day", 0.35f));
+      }
+      world.SetDayLengthMinutes(env.value("day_length_minutes", 20.0f));
+      world.SetTimeFrozen(env.value("time_frozen", false));
+      if (env.contains("weather") && env["weather"].is_string())
+      {
+        world.SetWeatherByName(env["weather"].get<std::string>(), 0.0f);
+      }
+      if (env.contains("lighting") && env["lighting"].is_object())
+      {
+        const json &lighting = env["lighting"];
+        world.SetLightingDebugEnabled(lighting.value("debug", false));
+      }
+    }
   }
   catch (const json::exception &e)
   {
@@ -747,6 +767,16 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
     world_data["catalog_fingerprint"] = world.CatalogFingerprint;
   }
   WriteWorldGenSets(world_data, world.WorldGenSetsData);
+  json env;
+  env["time_of_day"] = world.GetEnvironmentState().TimeOfDayNormalized;
+  env["day_length_minutes"] = world.GetEnvironmentState().DayLengthMinutes;
+  env["time_frozen"] = world.GetEnvironmentState().TimeFrozen;
+  env["weather"] = UWorld::WeatherTypeToString(world.GetEnvironmentState().Weather);
+  env["weather_target"] =
+      UWorld::WeatherTypeToString(world.GetEnvironmentState().TargetWeather);
+  env["lighting_version"] = 1;
+  env["lighting"]["debug"] = world.GetLightingSettings().DebugEnabled;
+  world_data["environment"] = env;
 
   std::ofstream file(file_name);
   if (file.is_open())
