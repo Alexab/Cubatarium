@@ -9,6 +9,7 @@
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include <algorithm>
 #include <climits>
 #include <glm/glm.hpp>
 #include <memory>
@@ -61,6 +62,10 @@ public:
   void SetRenderDistanceChunks(int distance)
   {
     RenderDistanceChunks = distance;
+  }
+  void SetSurfaceWetness(float value)
+  {
+    SurfaceWetness = std::clamp(value, 0.0f, 1.0f);
   }
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   const FluidSurfaceColumnSlice *
@@ -125,6 +130,7 @@ private:
   uint64_t LastVisibleMeshRevision{0};
   std::vector<glm::ivec3> LastVisibleChunks;
   int RenderDistanceChunks{4};
+  float SurfaceWetness{0.0f};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};

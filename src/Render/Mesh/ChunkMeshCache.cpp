@@ -863,6 +863,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         GreedyMeshVertex &vertex = batch.vertices[i];
         const glm::vec3 world_pos(vertex.px, vertex.py, vertex.pz);
         vertex.light = SampleVertexLight01(world, registry, world_pos, false);
+        if (q.axis == 1 && q.faceSign > 0)
+        {
+          vertex.wetness = SurfaceWetness;
+        }
+        else
+        {
+          vertex.wetness = 0.0f;
+        }
       }
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);

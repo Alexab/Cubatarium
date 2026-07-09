@@ -402,6 +402,8 @@ void UGeometryEngine::DrawCubeGeometry()
   {
     return;
   }
+  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
+      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
@@ -797,6 +799,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity",
                            std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
+    greedyShader->SetFloat("uEnvWetness",
+                           std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
   }
   else
   {
@@ -805,6 +809,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvDayFactor", 1.0f);
     greedyShader->SetFloat("uEnvLightDebug", 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
+    greedyShader->SetFloat("uEnvWetness", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -855,6 +860,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                  offsetof(GreedyMeshVertex, light)));
     glEnableVertexAttribArray(3);
+    glVertexAttribPointer(
+        4, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, wetness)));
+    glEnableVertexAttribArray(4);
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -904,6 +914,8 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   {
     return;
   }
+  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
+      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const UWorldMeshService::GreedyDrawSnapshot draw =
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
@@ -980,6 +992,8 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     crossInstancedShader->SetFloat(
         "uEnvLightDebug",
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+    crossInstancedShader->SetFloat("uEnvWetness",
+                                   std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
   }
   else
   {
@@ -987,6 +1001,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     crossInstancedShader->SetFloat("uEnvMinAmbient", 0.12f);
     crossInstancedShader->SetFloat("uEnvDayFactor", 1.0f);
     crossInstancedShader->SetFloat("uEnvLightDebug", 0.0f);
+    crossInstancedShader->SetFloat("uEnvWetness", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -1145,6 +1160,9 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, light)));
   glEnableVertexAttribArray(3);
+  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, wetness)));
+  glEnableVertexAttribArray(4);
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }
