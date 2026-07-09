@@ -247,7 +247,7 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
 } // namespace
 
 void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
-                  glm::ivec3 chunk_coord)
+                  glm::ivec3 chunk_coord, bool include_block_light)
 {
   UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
   if (!chunk)
@@ -264,7 +264,10 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
     }
   }
   PropagateSkylightHorizontal(world, registry, *chunk, chunk_coord);
-  PropagateBlocklight(world, registry, *chunk, chunk_coord);
+  if (include_block_light)
+  {
+    PropagateBlocklight(world, registry, *chunk, chunk_coord);
+  }
 }
 
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,

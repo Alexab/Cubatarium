@@ -26,19 +26,30 @@ constexpr float kPhaseWeightMetadata = 0.05f;
 constexpr float kPhaseWeightEntities = 0.05f;
 constexpr float kPhaseWeightChunks = 0.50f;
 constexpr float kPhaseWeightSpatial = 0.12f;
-constexpr float kPhaseWeightMeshWarmup = 0.20f;
+constexpr float kPhaseWeightRelight = 0.08f;
+constexpr float kPhaseWeightMeshWarmup = 0.12f;
 constexpr float kPhaseWeightGenerate = 0.12f;
 constexpr int kMeshWarmupMaxTicks = 50000;
 
 } // namespace
 
-void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
+float CooperativeLoadProgressBase()
 {
-  if (world.IsLightingRelightDeferred() && world.BlockRegistry)
-  {
-    RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
-    world.SetLightingRelightDeferred(false);
-  }
+  return kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
+         kPhaseWeightSpatial;
+}
+
+void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
+{
+  RelightQueue.clear();
+  RelightQueueIndex = 0;
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk) { RelightQueue.push_back(chunk.GetCoord()); });
+  CurrentPhase = Phase::RelightChunks;
+}
+
+void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
+{
   world.BlockCounter.MarkNeedsRecount();
   if (world.MeshService->GetDirtyCount() == 0 &&
       !world.MeshService->HasPendingAsyncMeshWork())
@@ -56,7 +67,16 @@ void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
     MeshWarmupStartPending = 1;
   }
   CurrentPhase = Phase::MeshWarmup;
-  MeshWarmupFinalizeOnly = false;
+}
+
+void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
+{
+  if (world.IsLightingRelightDeferred() && world.BlockRegistry)
+  {
+    BeginDeferredRelightQueue(world);
+    return;
+  }
+  BeginMeshWarmupInner(world);
 }
 
 void UWorldCooperativeSession::Report(IUProgressSink &sink,
@@ -417,6 +437,38 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     break;
   }
+  case Phase::RelightChunks:
+  {
+    if (world.BlockRegistry)
+    {
+      const int relight_budget = std::max(budget * 4, 16);
+      int relit = 0;
+      while (RelightQueueIndex < RelightQueue.size() &&
+             relit < relight_budget)
+      {
+        RelightChunk(world.BlockWorld, *world.BlockRegistry,
+                     RelightQueue[RelightQueueIndex++], false);
+        ++relit;
+      }
+    }
+    const float relight_base = CooperativeLoadProgressBase();
+    const float relight_frac =
+        relight_base +
+        kPhaseWeightRelight *
+            (RelightQueue.empty()
+                 ? 1.0f
+                 : static_cast<float>(RelightQueueIndex) /
+                       static_cast<float>(RelightQueue.size()));
+    Report(sink, "relight", relight_frac, "Computing lighting...");
+    if (RelightQueueIndex >= RelightQueue.size())
+    {
+      world.SetLightingRelightDeferred(false);
+      RelightQueue.clear();
+      RelightQueueIndex = 0;
+      BeginMeshWarmupInner(world);
+    }
+    break;
+  }
   case Phase::MeshWarmup:
   {
     if (world.BlockRegistry)
@@ -443,8 +495,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const float mesh_base =
         Kind == WorldCoopKind::Create
             ? (0.05f + 0.75f)
-            : (kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
-               kPhaseWeightSpatial);
+            : (CooperativeLoadProgressBase() + kPhaseWeightRelight);
     const float mesh_frac =
         mesh_base + kPhaseWeightMeshWarmup * std::clamp(mesh_inner, 0.0f, 1.0f);
     Report(sink, "mesh_warmup", mesh_frac,

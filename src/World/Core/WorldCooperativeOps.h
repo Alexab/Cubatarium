@@ -40,6 +40,7 @@ private:
     ScanChunks,
     LoadChunks,
     SpatialChunks,
+    RelightChunks,
     MeshWarmup,
     PostLoadAnalysis,
     ProceduralFill,
@@ -79,7 +80,11 @@ private:
   int MeshWarmupTicks{0};
   size_t MeshWarmupStartPending{0};
   bool MeshWarmupFinalizeOnly{false};
+  std::vector<glm::ivec3> RelightQueue;
+  size_t RelightQueueIndex{0};
 
+  void BeginDeferredRelightQueue(UWorld &world);
+  void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
   int GenCenterX{0};
   int GenCenterZ{0};

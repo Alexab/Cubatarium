@@ -10,7 +10,7 @@ class UBlockRegistry;
 class UBlockWorld;
 
 void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
-                  glm::ivec3 chunk_coord);
+                  glm::ivec3 chunk_coord, bool include_block_light = true);
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 block_pos);
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
