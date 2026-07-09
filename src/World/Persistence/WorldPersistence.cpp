@@ -14,9 +14,9 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Streaming/WorldStreaming.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
+#include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -164,8 +164,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
         }
       }
 
-      if (column_completed && world.Streaming &&
-          world.Streaming->GetStreamer())
+      if (column_completed && world.Streaming && world.Streaming->GetStreamer())
       {
         world.Streaming->GetStreamer()->NotifyChunkCommitted(ground);
       }
@@ -222,14 +221,14 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    AsyncChunkIo->RequestLoad(slice, *ChunkStorage, WorldFolderPath,
-                              world.Streaming->GetChunkGenTokens().Current(
-                                  ground_coord));
+    AsyncChunkIo->RequestLoad(
+        slice, *ChunkStorage, WorldFolderPath,
+        world.Streaming->GetChunkGenTokens().Current(ground_coord));
   }
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
-                                                        glm::ivec3 ground_coord)
+                                                      glm::ivec3 ground_coord)
 {
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
   {
@@ -269,10 +268,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     {
       continue;
     }
-    AsyncChunkIo->RequestSave(slice, *ChunkStorage, WorldFolderPath,
-                              world.BlockWorld, *world.BlockRegistry,
-                              world.Streaming->GetChunkGenTokens().Current(
-                                  ground_coord));
+    AsyncChunkIo->RequestSave(
+        slice, *ChunkStorage, WorldFolderPath, world.BlockWorld,
+        *world.BlockRegistry,
+        world.Streaming->GetChunkGenTokens().Current(ground_coord));
   }
 }
 
@@ -312,8 +311,9 @@ void UWorldPersistence::SaveTerrainColumn(glm::ivec3 ground_coord,
                                   registry, max_height);
 }
 
-void UWorldPersistence::LoadInitialTerrainColumns(
-    UWorld &world, glm::vec3 spawn_point, int render_distance_chunks)
+void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
+                                                  glm::vec3 spawn_point,
+                                                  int render_distance_chunks)
 {
   if (!ChunkStorage || !world.BlockRegistry)
   {
@@ -326,10 +326,9 @@ void UWorldPersistence::LoadInitialTerrainColumns(
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
-      LoadTerrainColumn(
-          glm::ivec3(center_chunk.x + dx, 0, center_chunk.z + dz),
-          world.BlockWorld, *world.BlockRegistry,
-          world.ProceduralTemplate.MaxHeight);
+      LoadTerrainColumn(glm::ivec3(center_chunk.x + dx, 0, center_chunk.z + dz),
+                        world.BlockWorld, *world.BlockRegistry,
+                        world.ProceduralTemplate.MaxHeight);
     }
   }
 }
@@ -400,7 +399,8 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
         user->SetSelectedSkinId(
             user_data["selected_appearance_type"].get<std::string>());
       }
-      UCreature *player_creature = world.GetCreature(user->GetPlayerCreatureId());
+      UCreature *player_creature =
+          world.GetCreature(user->GetPlayerCreatureId());
       if (!player_creature && world.Environment.GetPlayerCreatureId() != 0)
       {
         user->SetPlayerCreatureId(world.Environment.GetPlayerCreatureId());
@@ -536,7 +536,8 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
           user->GetSelectedAppearanceTypeId();
     }
 
-    if (UCreature *player_creature = world.GetCreature(user->GetPlayerCreatureId()))
+    if (UCreature *player_creature =
+            world.GetCreature(user->GetPlayerCreatureId()))
     {
       player_creature->GetInventory().SerializeToJson(user_json);
     }
@@ -713,10 +714,22 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       {
         world.SetWeatherByName(env["weather"].get<std::string>(), 0.0f);
       }
+      if (env.contains("weather_target") && env["weather_target"].is_string())
+      {
+        UWorld::WeatherType target = UWorld::WeatherType::Clear;
+        if (UWorld::WeatherTypeFromString(
+                env["weather_target"].get<std::string>(), target))
+        {
+          world.SetWeather(target, 0.0f);
+        }
+      }
       if (env.contains("lighting") && env["lighting"].is_object())
       {
         const json &lighting = env["lighting"];
         world.SetLightingDebugEnabled(lighting.value("debug", false));
+        world.SetWeatherOverlayEnabled(lighting.value("weather_overlay", true));
+        world.SetWeatherParticlesEnabled(
+            lighting.value("weather_particles", true));
       }
     }
   }
@@ -737,11 +750,12 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   world_data["world_seed"] = world.WorldSeed;
   WriteProceduralSettings(world_data, world.ProceduralTemplate);
 
-  json arr = json::array({world.SpawnPoint.x, world.SpawnPoint.y,
-                          world.SpawnPoint.z});
+  json arr =
+      json::array({world.SpawnPoint.x, world.SpawnPoint.y, world.SpawnPoint.z});
   world_data["spawn_point"] = arr;
 
-  if (!world.ResourcePacksPrimary.empty() || !world.ResourcePacksSecondary.empty())
+  if (!world.ResourcePacksPrimary.empty() ||
+      !world.ResourcePacksSecondary.empty())
   {
     auto &rp = world_data["resource_packs"];
     if (!world.ResourcePacksPrimary.empty())
@@ -771,11 +785,16 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   env["time_of_day"] = world.GetEnvironmentState().TimeOfDayNormalized;
   env["day_length_minutes"] = world.GetEnvironmentState().DayLengthMinutes;
   env["time_frozen"] = world.GetEnvironmentState().TimeFrozen;
-  env["weather"] = UWorld::WeatherTypeToString(world.GetEnvironmentState().Weather);
+  env["weather"] =
+      UWorld::WeatherTypeToString(world.GetEnvironmentState().Weather);
   env["weather_target"] =
       UWorld::WeatherTypeToString(world.GetEnvironmentState().TargetWeather);
   env["lighting_version"] = 1;
   env["lighting"]["debug"] = world.GetLightingSettings().DebugEnabled;
+  env["lighting"]["weather_overlay"] =
+      world.GetLightingSettings().WeatherOverlayEnabled;
+  env["lighting"]["weather_particles"] =
+      world.GetLightingSettings().WeatherParticlesEnabled;
   world_data["environment"] = env;
 
   std::ofstream file(file_name);

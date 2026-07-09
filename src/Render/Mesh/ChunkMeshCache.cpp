@@ -131,11 +131,13 @@ int BlockEmissionLevel(const UBlockRegistry &registry, BlockId id)
   {
     return 13;
   }
-  if (name.find("glow") != std::string::npos || name.find("light") != std::string::npos)
+  if (name.find("glow") != std::string::npos ||
+      name.find("light") != std::string::npos)
   {
     return 12;
   }
-  if (name.find("lava") != std::string::npos || name.find("fire") != std::string::npos)
+  if (name.find("lava") != std::string::npos ||
+      name.find("fire") != std::string::npos)
   {
     return 14;
   }
@@ -151,7 +153,8 @@ bool HasLineOfSight(const UBlockWorld &world, const UBlockRegistry &registry,
 {
   glm::ivec3 cursor = from;
   const glm::ivec3 delta = to - from;
-  const int steps = std::max({std::abs(delta.x), std::abs(delta.y), std::abs(delta.z)});
+  const int steps =
+      std::max({std::abs(delta.x), std::abs(delta.y), std::abs(delta.z)});
   if (steps <= 1)
   {
     return true;
@@ -196,18 +199,20 @@ float SampleSkyLight01(const UBlockWorld &world, const UBlockRegistry &registry,
   }
 
   // Allow side openings to leak skylight into caves.
-  const glm::ivec2 offsets[] = {{1, 0},  {-1, 0}, {0, 1},  {0, -1},
-                                {1, 1},  {-1, 1}, {1, -1}, {-1, -1}};
+  const glm::ivec2 offsets[] = {{1, 0}, {-1, 0}, {0, 1},  {0, -1},
+                                {1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
   float best = 0.0f;
   for (int radius = 1; radius <= 6; ++radius)
   {
     for (const glm::ivec2 &offset : offsets)
     {
       bool open = true;
-      const glm::ivec3 sample(pos.x + offset.x * radius, pos.y, pos.z + offset.y * radius);
+      const glm::ivec3 sample(pos.x + offset.x * radius, pos.y,
+                              pos.z + offset.y * radius);
       for (int step = 1; step <= kSkyScanMaxBlocks; ++step)
       {
-        if (!IsLightTransparent(registry, world.GetBlock(sample + glm::ivec3(0, step, 0))))
+        if (!IsLightTransparent(
+                registry, world.GetBlock(sample + glm::ivec3(0, step, 0))))
         {
           open = false;
           break;
@@ -222,8 +227,8 @@ float SampleSkyLight01(const UBlockWorld &world, const UBlockRegistry &registry,
   return best;
 }
 
-float SampleBlockLight01(const UBlockWorld &world, const UBlockRegistry &registry,
-                         glm::ivec3 pos)
+float SampleBlockLight01(const UBlockWorld &world,
+                         const UBlockRegistry &registry, glm::ivec3 pos)
 {
   float best = 0.0f;
   for (int dz = -kBlockLightMaxRadius; dz <= kBlockLightMaxRadius; ++dz)
@@ -238,7 +243,8 @@ float SampleBlockLight01(const UBlockWorld &world, const UBlockRegistry &registr
           continue;
         }
         const glm::ivec3 sample = pos + glm::ivec3(dx, dy, dz);
-        const int emission = BlockEmissionLevel(registry, world.GetBlock(sample));
+        const int emission =
+            BlockEmissionLevel(registry, world.GetBlock(sample));
         if (emission <= 0 || manhattan > emission)
         {
           continue;
@@ -255,7 +261,8 @@ float SampleBlockLight01(const UBlockWorld &world, const UBlockRegistry &registr
   return std::clamp(best, 0.0f, 1.0f);
 }
 
-float SampleVertexLight01(const UBlockWorld &world, const UBlockRegistry &registry,
+float SampleVertexLight01(const UBlockWorld &world,
+                          const UBlockRegistry &registry,
                           const glm::vec3 &world_pos, bool debugLight)
 {
   const glm::ivec3 voxel(static_cast<int>(std::round(world_pos.x)),
@@ -556,9 +563,9 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
                                                 const glm::vec3 *cameraPos,
                                                 float maxCullDistance)
 {
-  const auto merge_from_cache =
-      [&](const Frustum *cull_frustum, const glm::vec3 *cull_camera,
-          float cull_distance)
+  const auto merge_from_cache = [&](const Frustum *cull_frustum,
+                                    const glm::vec3 *cull_camera,
+                                    float cull_distance)
       -> std::unordered_map<BlockId, std::vector<glm::vec3>>
   {
     std::unordered_map<BlockId, std::vector<glm::vec3>> merged;
@@ -609,12 +616,12 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const glm::ivec3 camera_chunk =
       UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
   const bool needs_greedy_rebuild =
-      GreedyBatchesDirty ||
-      (GreedyBatches.empty() && !GreedyCache.empty());
+      GreedyBatchesDirty || (GreedyBatches.empty() && !GreedyCache.empty());
   const bool needs_cross_rebuild =
       CrossBatchesDirty ||
       (CrossBatches.empty() && TotalCrossCenterCount() > 0);
-  // Trade-off: camera rotation inside the same chunk does not rebuild flat lists.
+  // Trade-off: camera rotation inside the same chunk does not rebuild flat
+  // lists.
   if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
       MeshRevision == LastCullMeshRevision &&
       camera_chunk == LastCullCameraChunk)
@@ -736,8 +743,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 
   int rebuilt = 0;
   const int sync_budget = std::max(max_drain_per_frame, max_schedule_per_frame);
-  for (auto it = Dirty.begin();
-       it != Dirty.end() && rebuilt < sync_budget;)
+  for (auto it = Dirty.begin(); it != Dirty.end() && rebuilt < sync_budget;)
   {
     RebuildChunk(world, registry, *it);
     it = Dirty.RemoveAt(it);
@@ -857,6 +863,20 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         GreedyMeshVertex &vertex = batch.vertices[i];
         const glm::vec3 world_pos(vertex.px, vertex.py, vertex.pz);
         vertex.light = SampleVertexLight01(world, registry, world_pos, false);
+        vertex.wetness = 0.0f;
+        const int face_index = static_cast<int>(vertex.faceIndex + 0.5f);
+        if (SurfaceWetness > 0.01f && face_index == 4)
+        {
+          const glm::ivec3 block_pos(
+              static_cast<int>(std::floor(world_pos.x)),
+              static_cast<int>(std::floor(world_pos.y - 0.5f)),
+              static_cast<int>(std::floor(world_pos.z)));
+          if (IsLightTransparent(
+                  registry, world.GetBlock(block_pos + glm::ivec3(0, 1, 0))))
+          {
+            vertex.wetness = SurfaceWetness;
+          }
+        }
       }
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);
@@ -898,16 +918,14 @@ void UChunkMeshCache::RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                                glm::ivec3 groundChunkCoord,
                                                int scanHintY)
 {
-  FluidSurfaceCache[groundChunkCoord] =
-      BuildFluidSurfaceColumnSlice(world, registry, groundChunkCoord, scanHintY);
+  FluidSurfaceCache[groundChunkCoord] = BuildFluidSurfaceColumnSlice(
+      world, registry, groundChunkCoord, scanHintY);
   FluidSurfaceDirty.erase(groundChunkCoord);
 }
 
-const FluidSurfaceColumnSlice *
-UChunkMeshCache::GetFluidSurfaceSlice(const UBlockWorld &world,
-                                      UBlockRegistry &registry,
-                                      glm::ivec3 groundChunkCoord,
-                                      int scanHintY)
+const FluidSurfaceColumnSlice *UChunkMeshCache::GetFluidSurfaceSlice(
+    const UBlockWorld &world, UBlockRegistry &registry,
+    glm::ivec3 groundChunkCoord, int scanHintY)
 {
   const auto dirtyIt = FluidSurfaceDirty.find(groundChunkCoord);
   const auto cacheIt = FluidSurfaceCache.find(groundChunkCoord);

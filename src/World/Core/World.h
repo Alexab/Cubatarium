@@ -26,9 +26,9 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
-#include <algorithm>
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -98,12 +98,16 @@ public:
     float WeatherFogMultiplier{1.0f};
     float WeatherSkyAttenuation{1.0f};
     float DayNightFactor{1.0f};
+    float SurfaceWetness{0.0f};
   };
 
   struct LightingSettings
   {
     bool DebugEnabled{false};
     float MinAmbient{0.12f};
+    bool WeatherOverlayEnabled{true};
+    bool WeatherParticlesEnabled{true};
+    uint8_t WeatherDebugMode{0};
   };
 
   UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
@@ -555,14 +559,21 @@ public:
   const RenderSettings &GetRenderSettings() const { return Render; }
   void RefreshStreamerSettings();
   void TickEnvironment(float dtSeconds);
-  const EnvironmentState &GetEnvironmentState() const { return EnvironmentStateData; }
-  const LightingSettings &GetLightingSettings() const { return LightingSettingsData; }
+  const EnvironmentState &GetEnvironmentState() const
+  {
+    return EnvironmentStateData;
+  }
+  const LightingSettings &GetLightingSettings() const
+  {
+    return LightingSettingsData;
+  }
   void SetTimeOfDayNormalized(float value);
   void AddTimeOfDayNormalized(float delta);
   void SetTimeFrozen(bool frozen) { EnvironmentStateData.TimeFrozen = frozen; }
   void SetDayLengthMinutes(float minutes);
   void SetWeather(WeatherType weather, float transitionSeconds = 45.0f);
-  void SetWeatherByName(const std::string &name, float transitionSeconds = 45.0f);
+  void SetWeatherByName(const std::string &name,
+                        float transitionSeconds = 45.0f);
   std::string GetWeatherName() const;
   static std::string WeatherTypeToString(WeatherType value);
   static bool WeatherTypeFromString(const std::string &value, WeatherType &out);
@@ -573,6 +584,18 @@ public:
   void SetLightingMinAmbient(float value)
   {
     LightingSettingsData.MinAmbient = std::clamp(value, 0.02f, 0.5f);
+  }
+  void SetWeatherOverlayEnabled(bool enabled)
+  {
+    LightingSettingsData.WeatherOverlayEnabled = enabled;
+  }
+  void SetWeatherParticlesEnabled(bool enabled)
+  {
+    LightingSettingsData.WeatherParticlesEnabled = enabled;
+  }
+  void SetWeatherDebugMode(uint8_t mode)
+  {
+    LightingSettingsData.WeatherDebugMode = mode;
   }
   void RebuildAllLightingDirtyMeshes();
 

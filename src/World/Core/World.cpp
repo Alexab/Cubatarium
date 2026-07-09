@@ -53,8 +53,8 @@
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -78,10 +78,7 @@ constexpr float kMinReasonablePlayerY = -32.0f;
 constexpr float kSecondsPerMinute = 60.0f;
 constexpr float kMinDayLengthMinutes = 1.0f;
 
-float Clamp01(float value)
-{
-  return std::clamp(value, 0.0f, 1.0f);
-}
+float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
 float Wrap01(float value)
 {
@@ -95,8 +92,8 @@ float Wrap01(float value)
 
 std::string NormalizeToken(std::string value)
 {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch)
+                 { return static_cast<char>(std::tolower(ch)); });
   return value;
 }
 
@@ -186,11 +183,13 @@ void UWorld::AddTimeOfDayNormalized(float delta)
 
 void UWorld::SetDayLengthMinutes(float minutes)
 {
-  EnvironmentStateData.DayLengthMinutes = std::max(kMinDayLengthMinutes, minutes);
+  EnvironmentStateData.DayLengthMinutes =
+      std::max(kMinDayLengthMinutes, minutes);
 }
 
 void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
 {
+  const WeatherType previous_target = EnvironmentStateData.TargetWeather;
   EnvironmentStateData.TargetWeather = weather;
   EnvironmentStateData.WeatherTransitionDurationSec =
       std::max(0.0f, transitionSeconds);
@@ -202,6 +201,15 @@ void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
     EnvironmentStateData.TargetWeather = weather;
     EnvironmentStateData.WeatherTransitionSec =
         EnvironmentStateData.WeatherTransitionDurationSec;
+  }
+  const auto has_precip = [](WeatherType value)
+  {
+    return value == WeatherType::Rain || value == WeatherType::Storm ||
+           value == WeatherType::Snow;
+  };
+  if (has_precip(previous_target) != has_precip(weather))
+  {
+    InvalidateBlockMesh();
   }
 }
 
@@ -304,22 +312,26 @@ void UWorld::TickEnvironment(float dtSeconds)
 
   const bool transitioning =
       EnvironmentStateData.Weather != EnvironmentStateData.TargetWeather;
-  if (transitioning && EnvironmentStateData.WeatherTransitionDurationSec > 0.01f)
+  if (transitioning &&
+      EnvironmentStateData.WeatherTransitionDurationSec > 0.01f)
   {
     EnvironmentStateData.WeatherTransitionSec += dtSeconds;
-    const float alpha = Clamp01(EnvironmentStateData.WeatherTransitionSec /
-                                EnvironmentStateData.WeatherTransitionDurationSec);
+    const float alpha =
+        Clamp01(EnvironmentStateData.WeatherTransitionSec /
+                EnvironmentStateData.WeatherTransitionDurationSec);
     if (alpha >= 1.0f)
     {
       EnvironmentStateData.Weather = EnvironmentStateData.TargetWeather;
       EnvironmentStateData.WeatherTransitionSec =
           EnvironmentStateData.WeatherTransitionDurationSec;
     }
-    const float from_cloud = weather_to_cloudiness(EnvironmentStateData.Weather);
+    const float from_cloud =
+        weather_to_cloudiness(EnvironmentStateData.Weather);
     const float to_cloud =
         weather_to_cloudiness(EnvironmentStateData.TargetWeather);
     const float from_precip = weather_to_precip(EnvironmentStateData.Weather);
-    const float to_precip = weather_to_precip(EnvironmentStateData.TargetWeather);
+    const float to_precip =
+        weather_to_precip(EnvironmentStateData.TargetWeather);
     const float from_fog = weather_to_fog(EnvironmentStateData.Weather);
     const float to_fog = weather_to_fog(EnvironmentStateData.TargetWeather);
     const float from_wind = weather_to_wind(EnvironmentStateData.Weather);
@@ -343,21 +355,35 @@ void UWorld::TickEnvironment(float dtSeconds)
         weather_to_precip(EnvironmentStateData.Weather);
     EnvironmentStateData.WeatherFogMultiplier =
         weather_to_fog(EnvironmentStateData.Weather);
-    EnvironmentStateData.WindStrength = weather_to_wind(EnvironmentStateData.Weather);
+    EnvironmentStateData.WindStrength =
+        weather_to_wind(EnvironmentStateData.Weather);
   }
 
-  const float solar_phase = std::sin(EnvironmentStateData.TimeOfDayNormalized *
-                                     6.28318530718f);
+  const float solar_phase =
+      std::sin(EnvironmentStateData.TimeOfDayNormalized * 6.28318530718f);
   const float day_factor = Clamp01(solar_phase * 0.5f + 0.5f);
   EnvironmentStateData.DayNightFactor = day_factor;
   EnvironmentStateData.WeatherSkyAttenuation =
       std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.45f, 0.35f, 1.0f);
+
+  const bool precip_active =
+      EnvironmentStateData.PrecipitationIntensity > 0.05f &&
+      (EnvironmentStateData.Weather == WeatherType::Rain ||
+       EnvironmentStateData.TargetWeather == WeatherType::Rain ||
+       EnvironmentStateData.Weather == WeatherType::Storm ||
+       EnvironmentStateData.TargetWeather == WeatherType::Storm ||
+       EnvironmentStateData.Weather == WeatherType::Snow ||
+       EnvironmentStateData.TargetWeather == WeatherType::Snow);
+  const float target_wetness =
+      precip_active ? EnvironmentStateData.PrecipitationIntensity * 0.85f
+                    : 0.0f;
+  const float wet_lerp =
+      std::clamp(dtSeconds * (precip_active ? 0.35f : 0.12f), 0.0f, 1.0f);
+  EnvironmentStateData.SurfaceWetness +=
+      (target_wetness - EnvironmentStateData.SurfaceWetness) * wet_lerp;
 }
 
-void UWorld::RebuildAllLightingDirtyMeshes()
-{
-  InvalidateBlockMesh();
-}
+void UWorld::RebuildAllLightingDirtyMeshes() { InvalidateBlockMesh(); }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {

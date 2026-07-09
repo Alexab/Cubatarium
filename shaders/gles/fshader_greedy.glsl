@@ -25,6 +25,9 @@ uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
+uniform float uEnvFogMultiplier;
+uniform float uEnvPrecipIntensity;
+uniform float uEnvWetness;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
@@ -162,6 +165,15 @@ void main()
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
     FragColor = texture(texture0, uv);
+    const float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
+    if (precip > 0.001) {
+        float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
+        FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);
+    }
+    float wet = clamp(uEnvWetness, 0.0, 1.0);
+    if (wet > 0.001 && vFaceIndex == 4) {
+        FragColor.rgb *= 1.0 - wet * 0.15;
+    }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }
@@ -217,7 +229,7 @@ void main()
         }
         float fogRange = max(uFogEnd - uFogStart, 0.001);
         float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
-        fogFactor = pow(fogFactor, max(uFogDensity, 0.1));
+        fogFactor = pow(fogFactor, max(uFogDensity * max(uEnvFogMultiplier, 0.05), 0.1));
         fogFactor = max(fogFactor, uFogMinBlend);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
     }

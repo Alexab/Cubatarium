@@ -519,6 +519,38 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         BlockInput->OnKeyDelete(ctx);
       }
     }
+    else if (key == KeyCode::Key_F8)
+    {
+      const UWorld::WeatherType current = World->GetEnvironmentState().Weather;
+      UWorld::WeatherType next = UWorld::WeatherType::Clear;
+      switch (current)
+      {
+      case UWorld::WeatherType::Clear:
+        next = UWorld::WeatherType::Rain;
+        break;
+      case UWorld::WeatherType::Rain:
+        next = UWorld::WeatherType::Storm;
+        break;
+      case UWorld::WeatherType::Storm:
+        next = UWorld::WeatherType::Snow;
+        break;
+      case UWorld::WeatherType::Snow:
+        next = UWorld::WeatherType::Cloudy;
+        break;
+      case UWorld::WeatherType::Cloudy:
+      default:
+        next = UWorld::WeatherType::Clear;
+        break;
+      }
+      World->SetWeather(next, 1.2f);
+      World->SetWeatherOverlayEnabled(true);
+      World->SetWeatherParticlesEnabled(true);
+      if (Geometries)
+      {
+        Geometries->ShowTransientMessage(
+            "Weather: " + UWorld::WeatherTypeToString(next), 2.2);
+      }
+    }
     else if (key == KeyCode::Key_F9)
     {
       if (Geometries)
@@ -749,7 +781,7 @@ void UWindowManager::RenderHelpText()
       "look",
       "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, "
       "Shift+F11 - Flat",
-      "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"};
+      "Delete - Remove block, F8 weather, F9 HUD, F10 perf, F11 crosshair"};
 
   for (const auto &line : help_lines)
   {

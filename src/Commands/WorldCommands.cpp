@@ -37,8 +37,8 @@ UCreatureInventory *GetCommandInventory(const std::shared_ptr<UWorld> &world)
 
 std::string Lower(std::string value)
 {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch)
+                 { return static_cast<char>(std::tolower(ch)); });
   return value;
 }
 
@@ -167,9 +167,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             return CommandResult{false, "Invalid day length"};
           }
         }
-        return CommandResult{
-            false,
-            "Usage: time [set <0..1> | add <delta> | freeze [on|off] | daylength <minutes>]"};
+        return CommandResult{false, "Usage: time [set <0..1> | add <delta> | "
+                                    "freeze [on|off] | daylength <minutes>]"};
       });
 
   registry.Register(
@@ -190,7 +189,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           if (args.size() < 3)
           {
             return CommandResult{
-                false, "Usage: weather set <clear|cloudy|rain|storm|snow> [transition_sec]"};
+                false, "Usage: weather set <clear|cloudy|rain|storm|snow> "
+                       "[transition_sec]"};
           }
           float transition_sec = 45.0f;
           if (args.size() >= 4)
@@ -208,13 +208,63 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           if (!UWorld::WeatherTypeFromString(args[2], weather))
           {
             return CommandResult{
-                false, "Unknown weather. Expected clear|cloudy|rain|storm|snow"};
+                false,
+                "Unknown weather. Expected clear|cloudy|rain|storm|snow"};
           }
           world->SetWeather(weather, transition_sec);
-          world->RebuildAllLightingDirtyMeshes();
           return CommandResult{true, "Weather transition started"};
         }
-        return CommandResult{false, "Usage: weather [set <type> [transition_sec]]"};
+        if (cmd == "overlay")
+        {
+          bool enabled = true;
+          if (args.size() >= 3)
+          {
+            const std::string token = Lower(args[2]);
+            enabled = token == "on" || token == "1" || token == "true";
+          }
+          world->SetWeatherOverlayEnabled(enabled);
+          return CommandResult{true, enabled ? "Weather overlay enabled"
+                                             : "Weather overlay disabled"};
+        }
+        if (cmd == "particles")
+        {
+          bool enabled = true;
+          if (args.size() >= 3)
+          {
+            const std::string token = Lower(args[2]);
+            enabled = token == "on" || token == "1" || token == "true";
+          }
+          world->SetWeatherParticlesEnabled(enabled);
+          return CommandResult{true, enabled ? "Weather particles enabled"
+                                             : "Weather particles disabled"};
+        }
+        if (cmd == "debug")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{
+                false,
+                "Usage: weather debug <0|1|2|3> (off|solid|depth|particles)"};
+          }
+          try
+          {
+            const int mode = std::stoi(args[2]);
+            if (mode < 0 || mode > 3)
+            {
+              return CommandResult{false, "Weather debug mode must be 0-3"};
+            }
+            world->SetWeatherDebugMode(static_cast<uint8_t>(mode));
+            return CommandResult{true, "Weather debug mode set"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid weather debug mode"};
+          }
+        }
+        return CommandResult{
+            false,
+            "Usage: weather [set <type> [transition_sec] | overlay [on|off] | "
+            "particles [on|off] | debug <0-3>]"};
       });
 
   registry.Register(
@@ -245,8 +295,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           }
           world->SetLightingDebugEnabled(enabled);
           world->RebuildAllLightingDirtyMeshes();
-          return CommandResult{true,
-                               enabled ? "Light debug enabled" : "Light debug disabled"};
+          return CommandResult{true, enabled ? "Light debug enabled"
+                                             : "Light debug disabled"};
         }
         return CommandResult{false, "Usage: light <recalc|debug [on|off]>"};
       });

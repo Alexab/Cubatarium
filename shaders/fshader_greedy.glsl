@@ -4,6 +4,7 @@ in vec3 vWorldPos;
 in vec2 vUV;
 flat in int vFaceIndex;
 in float vLight;
+in float vWetness;
 
 out vec4 FragColor;
 
@@ -30,6 +31,8 @@ uniform float uEnvFogMultiplier;
 uniform float uEnvMinAmbient;
 uniform float uEnvDayFactor;
 uniform float uEnvLightDebug;
+uniform float uEnvPrecipIntensity;
+uniform float uEnvWetness;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
@@ -176,6 +179,18 @@ void main()
     FragColor.rgb *= lit;
     if (uEnvLightDebug > 0.5) {
         FragColor.rgb = vec3(localLight);
+    }
+    const float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
+    if (precip > 0.001) {
+        float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
+        FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);
+        FragColor.rgb = mix(FragColor.rgb, vec3(0.72, 0.78, 0.88), precip * 0.04);
+    }
+    float wet = clamp(max(uEnvWetness, vWetness), 0.0, 1.0);
+    if (wet > 0.001 && vFaceIndex == 4) {
+        FragColor.rgb *= 1.0 - wet * 0.18;
+        float spec = pow(clamp(1.0 - abs(fract(vWorldPos.x + vWorldPos.z + uEnvDayFactor) - 0.5) * 2.0, 0.0, 1.0), 8.0);
+        FragColor.rgb += vec3(spec * wet * 0.12);
     }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;

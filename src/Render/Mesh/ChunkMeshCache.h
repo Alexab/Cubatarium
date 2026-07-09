@@ -58,6 +58,7 @@ public:
   void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &viewProj,
                               const glm::vec3 &cameraPos);
   void SetRenderSettings(const RenderSettings &settings);
+  void SetSurfaceWetness(float wetness) { SurfaceWetness = wetness; }
   void SetRenderDistanceChunks(int distance)
   {
     RenderDistanceChunks = distance;
@@ -105,8 +106,8 @@ private:
                                 const glm::vec3 *cameraPos,
                                 float maxCullDistance);
   void RebuildFlatCrossInstances(const Frustum *frustum,
-                               const glm::vec3 *cameraPos,
-                               float maxCullDistance);
+                                 const glm::vec3 *cameraPos,
+                                 float maxCullDistance);
   void InvalidateVisibleList();
   float MaxCullDistance() const;
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
@@ -126,6 +127,7 @@ private:
   std::vector<glm::ivec3> LastVisibleChunks;
   int RenderDistanceChunks{4};
   RenderSettings Render;
+  float SurfaceWetness{0.0f};
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
@@ -134,7 +136,8 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
-  void RebuildFluidSurfaceSlice(const UBlockWorld &world, UBlockRegistry &registry,
+  void RebuildFluidSurfaceSlice(const UBlockWorld &world,
+                                UBlockRegistry &registry,
                                 glm::ivec3 groundChunkCoord, int scanHintY);
   size_t TotalCrossCenterCount() const;
   bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,

@@ -30,6 +30,7 @@ inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
   v.u = 0.0f;
   v.v = 0.0f;
   v.light = 1.0f;
+  v.wetness = 0.0f;
   return v;
 }
 
@@ -73,7 +74,8 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
   vertices.push_back(MakeVertex(p3, faceIndex));
 
   const bool flipWinding = glm::dot(glm::cross(uDir, vDir), nDir) < 0.0f;
-  auto pushTri = [&](uint32_t a, uint32_t b, uint32_t c) {
+  auto pushTri = [&](uint32_t a, uint32_t b, uint32_t c)
+  {
     indices.push_back(a);
     indices.push_back(b);
     indices.push_back(c);
@@ -88,9 +90,10 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
     pushTri(base + 0, base + 1, base + 2);
     pushTri(base + 0, base + 2, base + 3);
   }
-  // Horizontal fluid faces are visible from inside the volume (e.g. surface when
-  // submerged); shell pass disables cull but backfaces still miss stencil.
-  // Below-surface column tint is opaque-only (see ShouldApplyBelowSurfaceFogToPass).
+  // Horizontal fluid faces are visible from inside the volume (e.g. surface
+  // when submerged); shell pass disables cull but backfaces still miss stencil.
+  // Below-surface column tint is opaque-only (see
+  // ShouldApplyBelowSurfaceFogToPass).
   if (q.FluidPacked != 0 && q.axis == 1)
   {
     if (flipWinding)

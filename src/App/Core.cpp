@@ -33,9 +33,9 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Player/User.h"
-#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
@@ -43,8 +43,8 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Version.h"
 #include "World/Core/World.h"
-#include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -371,7 +371,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
       if (d.contains("render") && d["render"].is_object())
       {
         const json &r = d["render"];
-        if (r.contains("performance_preset") && r["performance_preset"].is_string())
+        if (r.contains("performance_preset") &&
+            r["performance_preset"].is_string())
         {
           const std::string preset = r["performance_preset"].get<std::string>();
           if (preset == "fast")
@@ -394,14 +395,15 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
-        Render.FrustumCulling = r.value("frustum_culling", Render.FrustumCulling);
+        Render.FrustumCulling =
+            r.value("frustum_culling", Render.FrustumCulling);
         Render.BatchCache = r.value("batch_cache", Render.BatchCache);
         Render.CreatureDebugBounds =
             r.value("creature_debug_bounds", Render.CreatureDebugBounds);
         Render.CreatureTexturedParts =
             r.value("creature_textured_parts", Render.CreatureTexturedParts);
-        Render.CreatureWireframeOverlay =
-            r.value("creature_wireframe_overlay", Render.CreatureWireframeOverlay);
+        Render.CreatureWireframeOverlay = r.value(
+            "creature_wireframe_overlay", Render.CreatureWireframeOverlay);
         Render.DistanceFog = r.value("distance_fog", Render.DistanceFog);
         Render.DistanceFogStartRatio =
             r.value("distance_fog_start_ratio", Render.DistanceFogStartRatio);
@@ -413,8 +415,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("below_surface_fog_v2", Render.BelowSurfaceFogV2);
         Render.AltitudeAdaptiveFog =
             r.value("altitude_adaptive_fog", Render.AltitudeAdaptiveFog);
-        Render.AltitudeFogThresholdBlocks = r.value("altitude_fog_threshold_blocks",
-                                                   Render.AltitudeFogThresholdBlocks);
+        Render.AltitudeFogThresholdBlocks = r.value(
+            "altitude_fog_threshold_blocks", Render.AltitudeFogThresholdBlocks);
         Render.AltitudeFogPenaltyPer16Blocks =
             r.value("altitude_fog_penalty_per_16_blocks",
                     Render.AltitudeFogPenaltyPer16Blocks);
@@ -436,17 +438,18 @@ void UCore::LoadConfig(const std::string &config_file_name)
         ReadLegacyUiSettings(d["ui"], Ui);
       }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
-      const json *physics_tuning = (d.contains("physics") && d["physics"].is_object())
-                                       ? &d["physics"]
-                                       : nullptr;
-      const json *render_tuning = (d.contains("render") && d["render"].is_object())
-                                      ? &d["render"]
-                                      : nullptr;
+      const json *physics_tuning =
+          (d.contains("physics") && d["physics"].is_object()) ? &d["physics"]
+                                                              : nullptr;
+      const json *render_tuning =
+          (d.contains("render") && d["render"].is_object()) ? &d["render"]
+                                                            : nullptr;
       const json *procedural_tuning =
           (d.contains("procedural") && d["procedural"].is_object())
               ? &d["procedural"]
               : nullptr;
-      ApplyRuntimeTuningFromConfig(physics_tuning, render_tuning, procedural_tuning);
+      ApplyRuntimeTuningFromConfig(physics_tuning, render_tuning,
+                                   procedural_tuning);
     }
     else
     {
@@ -486,7 +489,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
     WorldInstance->SetOnAfterWorldDataLoaded(
-        [this]() { ResourcePackBootstrap.ApplyResourcePacksAfterWorldDataLoaded(*this); });
+        [this]()
+        {
+          ResourcePackBootstrap.ApplyResourcePacksAfterWorldDataLoaded(*this);
+        });
 
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
@@ -551,6 +557,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetDayLengthMinutes(DefaultDayLengthMinutes);
     WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
     WorldInstance->SetLightingMinAmbient(DefaultLightingMinAmbient);
+    WorldInstance->SetWeatherOverlayEnabled(true);
+    WorldInstance->SetWeatherParticlesEnabled(true);
     // Keep debug disabled by default; toggle via command.
     WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
@@ -571,7 +579,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error: " << e.what() << std::endl;
-    CubatariumLogError("App", std::string("LoadConfig JSON error: ") + e.what());
+    CubatariumLogError("App",
+                       std::string("LoadConfig JSON error: ") + e.what());
   }
   catch (const std::exception &e)
   {
@@ -657,8 +666,10 @@ void UCore::SaveConfigFile()
       PhysicsBudgetsConfig.LiquidEventsPerTickMax;
   physics["fluid_blocks_per_tick_max"] =
       PhysicsBudgetsConfig.FluidBlocksPerTickMax;
-  physics["liquid_queue_soft_limit"] = PhysicsBudgetsConfig.LiquidQueueSoftLimit;
-  physics["liquid_queue_hard_limit"] = PhysicsBudgetsConfig.LiquidQueueHardLimit;
+  physics["liquid_queue_soft_limit"] =
+      PhysicsBudgetsConfig.LiquidQueueSoftLimit;
+  physics["liquid_queue_hard_limit"] =
+      PhysicsBudgetsConfig.LiquidQueueHardLimit;
   physics["falling_events_per_tick_max"] =
       PhysicsBudgetsConfig.FallingEventsPerTickMax;
   physics["collision_safety_radius_chunks"] =
@@ -762,7 +773,8 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
   WorldSeed = ProceduralTemplate.Seed;
   DefaultTimeOfDay = WorldInstance->GetEnvironmentState().TimeOfDayNormalized;
-  DefaultDayLengthMinutes = WorldInstance->GetEnvironmentState().DayLengthMinutes;
+  DefaultDayLengthMinutes =
+      WorldInstance->GetEnvironmentState().DayLengthMinutes;
   DefaultWeather = WorldInstance->GetWeatherName();
   DefaultLightingMinAmbient = WorldInstance->GetLightingSettings().MinAmbient;
 
@@ -856,10 +868,7 @@ void UCore::CreateNewWorldFromTemplate()
   WorldLifecycle.CreateNewWorldWithCurrentSettings(*this);
 }
 
-void UCore::RefreshWorldList()
-{
-  WorldLifecycle.RefreshWorldList(*this);
-}
+void UCore::RefreshWorldList() { WorldLifecycle.RefreshWorldList(*this); }
 
 void UCore::LoadWorldByName(const std::string &world_name)
 {
@@ -901,10 +910,7 @@ void UCore::PrepareLoadWorld(const std::string &world_name)
   WorldLifecycle.PrepareLoadWorld(*this, world_name);
 }
 
-void UCore::FinalizeLoadedWorld()
-{
-  WorldLifecycle.FinalizeLoadedWorld(*this);
-}
+void UCore::FinalizeLoadedWorld() { WorldLifecycle.FinalizeLoadedWorld(*this); }
 
 void UCore::FinalizeEnterGameSession()
 {
@@ -945,10 +951,7 @@ void UCore::LoadWorld(const std::string &world_name)
   WorldLifecycle.LoadWorld(*this, world_name);
 }
 
-void UCore::LoadLastWorld()
-{
-  WorldLifecycle.LoadLastWorld(*this);
-}
+void UCore::LoadLastWorld() { WorldLifecycle.LoadLastWorld(*this); }
 
 void UCore::SaveWorld(const std::string &world_name)
 {

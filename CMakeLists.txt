@@ -213,6 +213,9 @@ set(SOURCES
     src/Render/Pipeline/GreedyTransparentPipeline.cpp
     src/Render/Pipeline/GreedyDrawCategory.cpp
     src/Render/Pipeline/OpaqueDepthCapture.cpp
+    src/Render/Pipeline/WeatherDepthCapture.cpp
+    src/Render/Weather/WeatherParticleSystem.cpp
+    src/Render/Weather/WeatherRenderPass.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp

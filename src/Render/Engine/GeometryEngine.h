@@ -19,8 +19,8 @@ typedef int GLint;
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
-#include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/SkyGradientPass.h"
+#include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
@@ -30,6 +30,7 @@ typedef int GLint;
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
+#include "Render/Weather/WeatherRenderPass.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Interfaces/IUWorldRenderReadModel.h"
 #include "World/Math/GridMath.h"
@@ -233,7 +234,6 @@ private:
   std::shared_ptr<UShaderProgram>
       crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
-  std::shared_ptr<UShaderProgram> weatherShader;
   std::shared_ptr<UShaderProgram>
       outlineShader; // Shader for block selection outline
   GLuint overlayVAO{0};
@@ -249,6 +249,8 @@ private:
 
   // performance data
   double DurationDrawSceneMks;
+  double DurationWeatherStreakMks{0.0};
+  double DurationWeatherParticleMks{0.0};
 
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
@@ -257,6 +259,7 @@ private:
   UUnderwaterFogPass UnderwaterFogPass_;
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
+  UWeatherRenderPass WeatherPass;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

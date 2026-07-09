@@ -26,8 +26,8 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
-#include "World/Chunks/Chunk.h"
 #include "World/Adapters/WorldRenderReadAdapter.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -70,6 +70,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyGreedyMeshBuffers();
   FluidSurfaceMap.DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
+  WeatherPass.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   CreatureDraw_.DestroyBuffers();
@@ -321,12 +322,8 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
-  weatherShader =
-      shaderManager->CreateShader("weather_overlay", "shaders/vshader_overlay.glsl",
-                                  "shaders/fshader_weather_overlay.glsl");
-  if (!weatherShader || !weatherShader->IsValid())
+  if (!WeatherPass.InitShaders(shaderManager))
   {
-    std::cerr << "Failed to create weather overlay shader" << std::endl;
     return false;
   }
 
@@ -352,8 +349,6 @@ void UGeometryEngine::Paint(int width_size, int height_size,
     RenderFluidOverlay(width_size, height_size);
   }
   RenderWeatherOverlay(width_size, height_size);
-
-  // Render crosshair
   if (ShowCrosshair)
   {
     RenderCrosshair(width_size, height_size);
@@ -414,7 +409,8 @@ void UGeometryEngine::DrawCubeGeometry()
           ? mesh_service->GetGreedyVertexCount()
           : mesh_service
                 ->PrepareFaceInstances(WorldInstance->GetBlockWorld(),
-                                       WorldInstance->GetBlockRegistry(), camera)
+                                       WorldInstance->GetBlockRegistry(),
+                                       camera)
                 .size();
   const bool useBatchCache = Render.BatchCache && !useGreedyMesh;
 
@@ -716,13 +712,23 @@ void UGeometryEngine::PrepareFrameRendering()
   glm::vec3 tint = UnderwaterFogPass_.GetSkyTint();
   const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
-  const float sky_mul = std::clamp(0.2f + day * env.WeatherSkyAttenuation, 0.12f,
-                                   1.0f);
+  const float sky_mul =
+      std::clamp(0.2f + day * env.WeatherSkyAttenuation, 0.12f, 1.0f);
   tint *= sky_mul;
+  const float weather_darken = std::clamp(
+      env.Cloudiness * 0.22f + env.PrecipitationIntensity * 0.18f, 0.0f, 0.35f);
+  tint *= (1.0f - weather_darken);
   skyColor = glm::vec4(tint, 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
+
+  if (UWorldMeshService *mesh_service =
+          WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
+                               : &WorldInstance->GetMeshService())
+  {
+    mesh_service->GetCache().SetSurfaceWetness(env.SurfaceWetness);
+  }
 }
 
 void UGeometryEngine::ApplyFogUniforms(
@@ -796,6 +802,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat(
         "uEnvLightDebug",
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+    greedyShader->SetFloat("uEnvPrecipIntensity",
+                           std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
+    greedyShader->SetFloat("uEnvWetness",
+                           std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
   }
   else
   {
@@ -803,6 +813,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
     greedyShader->SetFloat("uEnvDayFactor", 1.0f);
     greedyShader->SetFloat("uEnvLightDebug", 0.0f);
+    greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
+    greedyShader->SetFloat("uEnvWetness", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -853,6 +865,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                  offsetof(GreedyMeshVertex, light)));
     glEnableVertexAttribArray(3);
+    glVertexAttribPointer(
+        4, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, wetness)));
+    glEnableVertexAttribArray(4);
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -904,7 +921,8 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   }
   const UWorldMeshService::GreedyDrawSnapshot draw =
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
-                                      WorldInstance->GetBlockRegistry(), camera);
+                                      WorldInstance->GetBlockRegistry(),
+                                      camera);
   const auto &greedyBatches = draw.batches;
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
@@ -969,7 +987,8 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   if (WorldInstance)
   {
     const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
-    crossInstancedShader->SetFloat("uEnvFogMultiplier", env.WeatherFogMultiplier);
+    crossInstancedShader->SetFloat("uEnvFogMultiplier",
+                                   env.WeatherFogMultiplier);
     crossInstancedShader->SetFloat(
         "uEnvMinAmbient", WorldInstance->GetLightingSettings().MinAmbient);
     crossInstancedShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
@@ -1141,6 +1160,9 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, light)));
   glEnableVertexAttribArray(3);
+  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, wetness)));
+  glEnableVertexAttribArray(4);
 
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
@@ -1247,13 +1269,18 @@ void UGeometryEngine::DrawCube(std::shared_ptr<UCube> icube, GLuint texture)
 
 void UGeometryEngine::DrawSkyGradient()
 {
-  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_);
+  float horizon_boost = 0.0f;
+  if (WorldInstance)
+  {
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    horizon_boost =
+        std::clamp(env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f,
+                   0.0f, 0.35f);
+  }
+  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, horizon_boost);
 }
 
-void UGeometryEngine::DrawSkyGradientSimple()
-{
-  DrawSkyGradient();
-}
+void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
 
 bool UGeometryEngine::InitOverlayBuffers()
 {
@@ -1339,69 +1366,39 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 
 void UGeometryEngine::RenderWeatherOverlay(int width, int height)
 {
-  (void)width;
-  (void)height;
-  if (!weatherShader || !WorldInstance || !InitOverlayBuffers())
-  {
-    return;
-  }
-  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
-  if (env.PrecipitationIntensity <= 0.01f)
+  if (!WorldInstance || width <= 0 || height <= 0 || !InitOverlayBuffers())
   {
     return;
   }
 
-  int weather_kind = 0;
-  if (env.Weather == UWorld::WeatherType::Rain ||
-      env.TargetWeather == UWorld::WeatherType::Rain ||
-      env.Weather == UWorld::WeatherType::Storm ||
-      env.TargetWeather == UWorld::WeatherType::Storm)
-  {
-    weather_kind = 1;
-  }
-  else if (env.Weather == UWorld::WeatherType::Snow ||
-           env.TargetWeather == UWorld::WeatherType::Snow)
-  {
-    weather_kind = 2;
-  }
-  if (weather_kind == 0)
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!camera)
   {
     return;
   }
 
-  float quality = 1.0f;
-  switch (Render.Preset)
-  {
-  case PerformancePreset::Fast:
-    quality = 0.65f;
-    break;
-  case PerformancePreset::Quality:
-    quality = 1.2f;
-    break;
-  case PerformancePreset::Balanced:
-  default:
-    quality = 1.0f;
-    break;
-  }
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 view_proj = proj * view;
+  const glm::mat3 view_rot = glm::mat3(view);
+  const glm::vec3 camera_right = glm::normalize(glm::vec3(view_rot[0]));
+  const glm::vec3 camera_up = glm::normalize(glm::vec3(view_rot[1]));
 
-  UGlStateScope glGuard(kGlMaskOverlay2D);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  WeatherRenderContext ctx;
+  ctx.Width = width;
+  ctx.Height = height;
+  ctx.OverlayVao = overlayVAO;
+  ctx.ViewProj = view_proj;
+  ctx.CameraPos = camera->GetPosition();
+  ctx.CameraRight = camera_right;
+  ctx.CameraUp = camera_up;
+  ctx.ElapsedSec = AnimationClock.ElapsedSeconds();
+  ctx.DeltaSec = static_cast<float>(camera->GetDeltaTime());
+  ctx.Preset = Render.Preset;
 
-  weatherShader->Use();
-  weatherShader->SetVec2("uResolution", glm::vec2(width, height));
-  weatherShader->SetFloat("uTimeSec", AnimationClock.ElapsedSeconds());
-  weatherShader->SetFloat("uIntensity",
-                          std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
-  weatherShader->SetInt("uWeatherKind", weather_kind);
-  weatherShader->SetFloat("uQuality", quality);
-  weatherShader->SetFloat("uDayFactor", std::clamp(env.DayNightFactor, 0.0f, 1.0f));
-
-  glBindVertexArray(overlayVAO);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-  glBindVertexArray(0);
-  weatherShader->Unuse();
+  WeatherPass.Render(ctx, *WorldInstance);
+  DurationWeatherStreakMks = WeatherPass.GetLastStreakMs();
+  DurationWeatherParticleMks = WeatherPass.GetLastParticleMs();
 }
 
 // Methods for sky color management
@@ -1463,6 +1460,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   // Form performance information strings
   std::vector<std::string> performanceLines = {
       "Performance:",
+      "Weather: " + WorldInstance->GetWeatherName(),
       "Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
       "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
       "Blocks: " + std::to_string(blockCount) +
@@ -1475,11 +1473,15 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
           " ms" + " View: " +
           std::to_string(view_duration / 1000.0).substr(0, 6) + " ms",
+      "Weather: streak " +
+          std::to_string(DurationWeatherStreakMks).substr(0, 5) + " ms" +
+          " particle " +
+          std::to_string(DurationWeatherParticleMks).substr(0, 5) + " ms" +
+          " n=" + std::to_string(WeatherPass.GetActiveParticleCount()),
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
           " Async: " + std::to_string(md.asyncMeshInFlight)};
-
   performanceLines.push_back(
       "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
       "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
@@ -1702,7 +1704,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "0-9 - Primary hotbar; objects via HUD / palette",
       "Classic: mouse look, hold LMB break, RMB place/use slot",
       "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
-      "Delete - Instant break",
+      "Delete - Instant break, F8 weather",
   };
 
   constexpr float helpX = 20.0f;
@@ -1711,6 +1713,29 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
   {
     textRenderer->RenderText(line, helpX, y, scale, helpColor);
     y += 20.0f;
+  }
+
+  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  std::vector<std::string> weatherLines;
+  weatherLines.push_back(
+      "Weather: " + UWorld::WeatherTypeToString(env.Weather) + " -> " +
+      UWorld::WeatherTypeToString(env.TargetWeather));
+  weatherLines.push_back(
+      "Precip: " + std::to_string(env.PrecipitationIntensity).substr(0, 4) +
+      " Overlay: " +
+      (WorldInstance->GetLightingSettings().WeatherOverlayEnabled ? "on"
+                                                                  : "off") +
+      " Particles: " +
+      (WorldInstance->GetLightingSettings().WeatherParticlesEnabled ? "on"
+                                                                    : "off"));
+  float weatherY = static_cast<float>(height_size) - 52.0f;
+  for (const std::string &line : weatherLines)
+  {
+    const glm::vec2 textSize = textRenderer->GetTextSize(line, 0.75f);
+    const float weatherX = static_cast<float>(width_size) - textSize.x - 16.0f;
+    textRenderer->RenderText(line, weatherX, weatherY, 0.75f,
+                             glm::vec3(0.9f, 0.95f, 1.0f));
+    weatherY -= 18.0f;
   }
 
   const double now = std::chrono::duration<double>(

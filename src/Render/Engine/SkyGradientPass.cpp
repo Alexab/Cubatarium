@@ -4,6 +4,7 @@
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/GlIncludes.h"
 
+#include <algorithm>
 #include <iostream>
 
 namespace cutum
@@ -11,7 +12,8 @@ namespace cutum
 
 void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const glm::vec4 &sky_color,
-                            const UUnderwaterFogPass &fog_pass)
+                            const UUnderwaterFogPass &fog_pass,
+                            float horizon_boost)
 {
   if (!sky_shader || !sky_shader->IsValid())
   {
@@ -27,7 +29,9 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetMat4("mvp_matrix", sky_matrix);
   sky_shader->SetVec4("skyColor", sky_color);
   sky_shader->SetVec3("uFogColor", fog_pass.GetFogColor());
-  sky_shader->SetFloat("uFogHorizonBlend", fog_pass.GetFogHorizonBlend());
+  sky_shader->SetFloat(
+      "uFogHorizonBlend",
+      std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));
 
   static const GLfloat sky_vertices[] = {
       -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
