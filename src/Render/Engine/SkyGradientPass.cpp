@@ -16,7 +16,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const UUnderwaterFogPass &fog_pass,
                             const UWorld::EnvironmentState &env,
                             PerformancePreset preset, float elapsed_sec,
-                            float horizon_boost)
+                            const glm::mat3 &inv_view_rot, float horizon_boost)
 {
   if (!sky_shader || !sky_shader->IsValid())
   {
@@ -38,6 +38,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetFloat("uCloudCoverage",
                        std::clamp(env.CloudCoverage, 0.0f, 1.0f));
   sky_shader->SetFloat("uElapsedSec", std::max(0.0f, elapsed_sec));
+  sky_shader->SetMat3("uInvViewRot", inv_view_rot);
   int cloud_steps = 12;
   if (preset == PerformancePreset::Fast)
   {
@@ -89,14 +90,17 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
       -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
       1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
 
+  GLuint temp_vao = 0;
   GLuint temp_vbo = 0;
+  glGenVertexArrays(1, &temp_vao);
+  glBindVertexArray(temp_vao);
   glGenBuffers(1, &temp_vbo);
   glBindBuffer(GL_ARRAY_BUFFER, temp_vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(sky_vertices), sky_vertices,
                GL_STATIC_DRAW);
 
   const int vertex_location =
-      glGetAttribLocation(sky_shader->GetProgramID(), "a_position");
+      glGetAttribLocation(sky_shader->GetProgramID(), "aPos");
   if (vertex_location != -1)
   {
     glEnableVertexAttribArray(vertex_location);
@@ -105,7 +109,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   }
 
   const int texcoord_location =
-      glGetAttribLocation(sky_shader->GetProgramID(), "a_texcoord");
+      glGetAttribLocation(sky_shader->GetProgramID(), "aTexCoord");
   if (texcoord_location != -1)
   {
     glEnableVertexAttribArray(texcoord_location);
@@ -122,6 +126,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   }
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+  glDeleteVertexArrays(1, &temp_vao);
   glDeleteBuffers(1, &temp_vbo);
   sky_shader->Unuse();
 

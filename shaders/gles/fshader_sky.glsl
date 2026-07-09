@@ -20,6 +20,7 @@ uniform vec3 uCelestialColor[4];
 uniform float uCelestialIntensity[4];
 uniform float uCelestialAngularSizeDeg[4];
 uniform int uCelestialType[4];
+uniform mat3 uInvViewRot;
 
 float hash12(vec2 p)
 {
@@ -60,10 +61,11 @@ void main()
     vec3 skyBottom = skyColor.rgb * 1.3;
     vec3 finalColor = mix(skyBottom, skyTop, TexCoord.y);
     vec2 sky_uv = TexCoord * 2.0 - 1.0;
-    vec3 view_dir = normalize(vec3(sky_uv.x, max(-0.35, sky_uv.y), 1.25));
+    vec3 dir_view = normalize(vec3(sky_uv.x, sky_uv.y, -1.0));
+    vec3 view_dir = normalize(uInvViewRot * dir_view);
     float night_factor = clamp(1.0 - (sin(uTimeOfDay * 6.28318530718) * 0.5 + 0.5), 0.0, 1.0);
     float stars = starField(TexCoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
-    finalColor += vec3(stars) * (uStarVisibility * night_factor);
+    finalColor += vec3(stars) * (uStarVisibility * max(night_factor, 0.35));
     for (int i = 0; i < 4; ++i)
     {
         if (i >= uCelestialCount)
@@ -71,10 +73,10 @@ void main()
             break;
         }
         vec3 dir = normalize(uCelestialDir[i]);
-        float ang = max(0.05, uCelestialAngularSizeDeg[i]) * 0.0174532925;
+        float ang = max(1.5, uCelestialAngularSizeDeg[i]) * 0.0174532925;
         float d = acos(clamp(dot(view_dir, dir), -1.0, 1.0));
-        float disc = smoothstep(ang, ang * 0.6, d);
-        float halo = smoothstep(ang * 2.8, ang * 0.6, d) * 0.35;
+        float disc = smoothstep(ang, ang * 0.35, d);
+        float halo = smoothstep(ang * 3.5, ang * 0.35, d) * 0.55;
         vec3 body_col = uCelestialColor[i] * uCelestialIntensity[i];
         if (uCelestialType[i] == 1)
         {
@@ -100,9 +102,9 @@ void main()
         weight += w;
     }
     float cloud = weight > 0.0 ? acc / weight : 0.0;
-    cloud = smoothstep(0.45, 0.85, cloud) * clamp(uCloudCoverage, 0.0, 1.0);
+    cloud = smoothstep(0.2, 0.55, cloud) * clamp(uCloudCoverage, 0.0, 1.0);
     vec3 cloud_col = mix(vec3(0.55, 0.58, 0.62), vec3(0.9, 0.92, 0.95), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-    finalColor = mix(finalColor, cloud_col, cloud * 0.75);
+    finalColor = mix(finalColor, cloud_col, cloud * 0.92);
 
     if (uFogHorizonBlend > 0.001) {
         float horizon = 1.0 - smoothstep(0.0, 0.45, TexCoord.y);

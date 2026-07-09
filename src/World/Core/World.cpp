@@ -267,7 +267,7 @@ void UWorld::EnsureDefaultCelestialBodies()
   sun_main.Type = CelestialBodyType::Sun;
   sun_main.Color = glm::vec3(1.0f, 0.94f, 0.82f);
   sun_main.Intensity = 1.0f;
-  sun_main.AngularSizeDeg = 0.53f;
+  sun_main.AngularSizeDeg = 5.0f;
   sun_main.OrbitInclinationDeg = 23.0f;
   sun_main.OrbitPeriodDays = 1.0f;
   sun_main.OrbitPhase = 0.0f;
@@ -277,7 +277,7 @@ void UWorld::EnsureDefaultCelestialBodies()
   sun_secondary.Id = "sun_secondary";
   sun_secondary.Color = glm::vec3(1.0f, 0.8f, 0.62f);
   sun_secondary.Intensity = 0.52f;
-  sun_secondary.AngularSizeDeg = 0.42f;
+  sun_secondary.AngularSizeDeg = 3.8f;
   sun_secondary.OrbitInclinationDeg = 37.0f;
   sun_secondary.OrbitPeriodDays = 1.6f;
   sun_secondary.OrbitPhase = 0.22f;
@@ -288,7 +288,7 @@ void UWorld::EnsureDefaultCelestialBodies()
   moon_main.Type = CelestialBodyType::Moon;
   moon_main.Color = glm::vec3(0.72f, 0.78f, 0.9f);
   moon_main.Intensity = 0.35f;
-  moon_main.AngularSizeDeg = 0.57f;
+  moon_main.AngularSizeDeg = 4.2f;
   moon_main.OrbitInclinationDeg = 18.0f;
   moon_main.OrbitPeriodDays = 1.0f;
   moon_main.OrbitPhase = 0.5f;
@@ -298,7 +298,7 @@ void UWorld::EnsureDefaultCelestialBodies()
   moon_secondary.Id = "moon_secondary";
   moon_secondary.Color = glm::vec3(0.64f, 0.72f, 0.88f);
   moon_secondary.Intensity = 0.22f;
-  moon_secondary.AngularSizeDeg = 0.48f;
+  moon_secondary.AngularSizeDeg = 3.2f;
   moon_secondary.OrbitInclinationDeg = 29.0f;
   moon_secondary.OrbitPeriodDays = 1.9f;
   moon_secondary.OrbitPhase = 0.08f;
@@ -308,7 +308,28 @@ void UWorld::EnsureDefaultCelestialBodies()
                                           moon_secondary};
   if (EnvironmentStateData.CloudCoverageOverride < 0.0f)
   {
-    EnvironmentStateData.CloudCoverageOverride = 0.6f;
+    EnvironmentStateData.CloudCoverageOverride = 0.75f;
+  }
+  RefreshSkyVisualStateForRender();
+}
+
+void UWorld::RefreshSkyVisualStateForRender()
+{
+  EnsureDefaultCelestialBodies();
+  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    if (body.Id.empty())
+    {
+      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
+    }
+    body.Type = CelestialTypeFromId(body.Id);
+    body.DirectionWorld = ComputeCelestialDirection(
+        body, EnvironmentStateData.TimeOfDayNormalized);
+  }
+  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  {
+    EnvironmentStateData.CloudCoverage =
+        Clamp01(EnvironmentStateData.CloudCoverageOverride);
   }
 }
 

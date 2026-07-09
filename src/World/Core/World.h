@@ -623,6 +623,7 @@ public:
     LightingSettingsData.WeatherDebugMode = mode;
   }
   void EnsureDefaultCelestialBodies();
+  void RefreshSkyVisualStateForRender();
   void ResetCelestialBodies();
   void SetStarVisibility(float value);
   void SetCloudCoverage(float value);
