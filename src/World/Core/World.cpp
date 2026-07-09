@@ -80,6 +80,16 @@ constexpr float kMinDayLengthMinutes = 1.0f;
 
 float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
+float Smoothstep(float edge0, float edge1, float x)
+{
+  if (edge1 <= edge0)
+  {
+    return x >= edge1 ? 1.0f : 0.0f;
+  }
+  const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+  return t * t * (3.0f - 2.0f * t);
+}
+
 float Wrap01(float value)
 {
   if (!std::isfinite(value))
@@ -486,10 +496,6 @@ void UWorld::TickEnvironment(float dtSeconds)
         weather_to_wind(EnvironmentStateData.Weather);
   }
 
-  const float solar_phase =
-      std::sin(EnvironmentStateData.TimeOfDayNormalized * 6.28318530718f);
-  const float day_factor = Clamp01(solar_phase * 0.5f + 0.5f);
-  EnvironmentStateData.DayNightFactor = day_factor;
   EnvironmentStateData.WeatherSkyAttenuation =
       std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.45f, 0.35f, 1.0f);
 
@@ -516,7 +522,8 @@ void UWorld::TickEnvironment(float dtSeconds)
           ? Clamp01(EnvironmentStateData.CloudCoverageOverride)
           : auto_cloud_coverage;
   EnsureDefaultCelestialBodies();
-  float strongest_sun = 0.0f;
+  float sun_day = 0.0f;
+  float moon_night = 0.0f;
   for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
   {
     if (body.Id.empty())
@@ -526,13 +533,20 @@ void UWorld::TickEnvironment(float dtSeconds)
     body.Type = CelestialTypeFromId(body.Id);
     body.DirectionWorld = ComputeCelestialDirection(
         body, EnvironmentStateData.TimeOfDayNormalized);
+    const float elev = body.DirectionWorld.y;
+    const float above_horizon = Smoothstep(0.0f, 0.15f, elev);
+    const float lit = above_horizon * std::max(body.Intensity, 0.0f);
     if (body.Type == CelestialBodyType::Sun)
     {
-      strongest_sun = std::max(strongest_sun, Clamp01(body.DirectionWorld.y));
+      sun_day = std::max(sun_day, lit);
+    }
+    else
+    {
+      moon_night = std::max(moon_night, lit);
     }
   }
-  EnvironmentStateData.DayNightFactor =
-      std::max(EnvironmentStateData.DayNightFactor, strongest_sun);
+  EnvironmentStateData.DayNightFactor = Clamp01(sun_day);
+  EnvironmentStateData.MoonNightFactor = Clamp01(moon_night);
   const float night = 1.0f - EnvironmentStateData.DayNightFactor;
   const float auto_star_visibility =
       Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));

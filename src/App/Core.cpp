@@ -463,7 +463,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
       DefaultTimeOfDay = 0.35f;
-      DefaultDayLengthMinutes = 20.0f;
+      DefaultDayLengthMinutes = 10.0f;
       DefaultWeather = "clear";
       DefaultLightingMinAmbient = 0.12f;
       Render = RenderSettings::Default();

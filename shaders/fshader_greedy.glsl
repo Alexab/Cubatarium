@@ -30,6 +30,7 @@ uniform float uFogDensity;
 uniform float uEnvFogMultiplier;
 uniform float uEnvMinAmbient;
 uniform float uEnvDayFactor;
+uniform float uEnvNightFactor;
 uniform float uEnvLightDebug;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
@@ -174,7 +175,9 @@ void main()
     if (vFaceIndex == kCrossFaceIndex && localLight < 0.01) {
         localLight = 1.0;
     }
-    float ambientFloor = clamp(uEnvMinAmbient * (0.4 + 0.6 * uEnvDayFactor), 0.02, 0.95);
+    float dayAmbient = uEnvMinAmbient * (0.4 + 0.6 * uEnvDayFactor);
+    float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
+    float ambientFloor = clamp(max(dayAmbient, nightAmbient), 0.02, 0.95);
     float lit = mix(ambientFloor, 1.0, localLight);
     FragColor.rgb *= lit;
     if (uEnvLightDebug > 0.5) {

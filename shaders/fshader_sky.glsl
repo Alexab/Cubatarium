@@ -105,9 +105,8 @@ void main()
     vec3 dir_view = normalize(vec3(sky_uv.x, sky_uv.y, -1.0));
     vec3 view_dir = normalize(uInvViewRot * dir_view);
 
-    float night_factor = clamp(1.0 - (sin(uTimeOfDay * 6.28318530718) * 0.5 + 0.5), 0.0, 1.0);
     float stars = starField(TexCoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
-    finalColor += vec3(stars) * (uStarVisibility * max(night_factor, 0.35));
+    finalColor += vec3(stars) * uStarVisibility;
 
     for (int i = 0; i < 4; ++i)
     {

@@ -709,7 +709,7 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       {
         world.SetTimeOfDayNormalized(env.value("time_of_day", 0.35f));
       }
-      world.SetDayLengthMinutes(env.value("day_length_minutes", 20.0f));
+      world.SetDayLengthMinutes(env.value("day_length_minutes", 10.0f));
       world.SetTimeFrozen(env.value("time_frozen", false));
       if (env.contains("weather") && env["weather"].is_string())
       {

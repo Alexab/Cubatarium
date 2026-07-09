@@ -715,9 +715,13 @@ void UGeometryEngine::PrepareFrameRendering()
   glm::vec3 tint = UnderwaterFogPass_.GetSkyTint();
   const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
-  const float sky_mul =
-      std::clamp(0.2f + day * env.WeatherSkyAttenuation, 0.12f, 1.0f);
+  const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
+  const float sky_mul = std::clamp(
+      0.12f + day * env.WeatherSkyAttenuation * 0.88f + moon * 0.28f, 0.12f,
+      1.0f);
   tint *= sky_mul;
+  tint = glm::mix(tint, tint * glm::vec3(0.75f, 0.82f, 0.95f),
+                  moon * (1.0f - day) * 0.45f);
   const float weather_darken = std::clamp(
       env.Cloudiness * 0.22f + env.PrecipitationIntensity * 0.18f, 0.0f, 0.35f);
   tint *= (1.0f - weather_darken);
@@ -795,6 +799,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvMinAmbient",
                            WorldInstance->GetLightingSettings().MinAmbient);
     greedyShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    greedyShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
     greedyShader->SetFloat(
         "uEnvLightDebug",
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
@@ -808,6 +813,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvFogMultiplier", 1.0f);
     greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
     greedyShader->SetFloat("uEnvDayFactor", 1.0f);
+    greedyShader->SetFloat("uEnvNightFactor", 0.0f);
     greedyShader->SetFloat("uEnvLightDebug", 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
     greedyShader->SetFloat("uEnvWetness", 0.0f);
@@ -990,6 +996,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     crossInstancedShader->SetFloat(
         "uEnvMinAmbient", WorldInstance->GetLightingSettings().MinAmbient);
     crossInstancedShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    crossInstancedShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
     crossInstancedShader->SetFloat(
         "uEnvLightDebug",
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
@@ -1001,6 +1008,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     crossInstancedShader->SetFloat("uEnvFogMultiplier", 1.0f);
     crossInstancedShader->SetFloat("uEnvMinAmbient", 0.12f);
     crossInstancedShader->SetFloat("uEnvDayFactor", 1.0f);
+    crossInstancedShader->SetFloat("uEnvNightFactor", 0.0f);
     crossInstancedShader->SetFloat("uEnvLightDebug", 0.0f);
     crossInstancedShader->SetFloat("uEnvWetness", 0.0f);
   }

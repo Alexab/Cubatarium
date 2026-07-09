@@ -106,7 +106,7 @@ public:
   struct EnvironmentState
   {
     float TimeOfDayNormalized{0.35f};
-    float DayLengthMinutes{20.0f};
+    float DayLengthMinutes{10.0f};
     bool TimeFrozen{false};
     WeatherType Weather{WeatherType::Clear};
     WeatherType TargetWeather{WeatherType::Clear};
@@ -118,6 +118,7 @@ public:
     float WeatherFogMultiplier{1.0f};
     float WeatherSkyAttenuation{1.0f};
     float DayNightFactor{1.0f};
+    float MoonNightFactor{0.0f};
     float SurfaceWetness{0.0f};
     float StarVisibility{0.0f};
     float CloudCoverage{0.2f};

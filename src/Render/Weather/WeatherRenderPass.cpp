@@ -196,8 +196,9 @@ void UWeatherRenderPass::RenderStreaksPass(const WeatherRenderContext &ctx,
                           std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
   StreaksShader->SetInt("uWeatherKind", WeatherKind(world));
   StreaksShader->SetFloat("uQuality", QualityForPreset(ctx.Preset));
-  StreaksShader->SetFloat("uDayFactor",
-                          std::clamp(env.DayNightFactor, 0.0f, 1.0f));
+  const float weather_light = std::clamp(
+      std::max(env.DayNightFactor, env.MoonNightFactor * 0.75f), 0.0f, 1.0f);
+  StreaksShader->SetFloat("uDayFactor", weather_light);
   StreaksShader->SetFloat("uWind", std::clamp(env.WindStrength, 0.0f, 1.0f));
   StreaksShader->SetFloat("uDebugMode", debug_mode == 1 ? 1.0f : 0.0f);
   DepthCapture.Bind();
@@ -335,8 +336,9 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   ParticleShader->SetMat4("uViewProj", ctx.ViewProj);
   ParticleShader->SetVec3("uCameraRight", ctx.CameraRight);
   ParticleShader->SetVec3("uCameraUp", ctx.CameraUp);
-  ParticleShader->SetFloat("uDayFactor",
-                           std::clamp(env.DayNightFactor, 0.0f, 1.0f));
+  const float weather_light = std::clamp(
+      std::max(env.DayNightFactor, env.MoonNightFactor * 0.75f), 0.0f, 1.0f);
+  ParticleShader->SetFloat("uDayFactor", weather_light);
   ParticleShader->SetFloat("uIntensity",
                            std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
 
