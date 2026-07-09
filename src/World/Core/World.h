@@ -121,6 +121,8 @@ public:
     float SurfaceWetness{0.0f};
     float StarVisibility{0.0f};
     float CloudCoverage{0.2f};
+    float StarVisibilityOverride{-1.0f};
+    float CloudCoverageOverride{-1.0f};
     std::vector<UCelestialBodyVisual> CelestialBodies;
   };
 

@@ -21,6 +21,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -733,11 +734,23 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       }
       if (env.contains("star_visibility"))
       {
-        world.SetStarVisibility(env.value("star_visibility", 0.0f));
+        world.EnvironmentStateData.StarVisibility =
+            std::clamp(env.value("star_visibility", 0.0f), 0.0f, 1.0f);
       }
       if (env.contains("cloud_coverage"))
       {
-        world.SetCloudCoverage(env.value("cloud_coverage", 0.2f));
+        world.EnvironmentStateData.CloudCoverage =
+            std::clamp(env.value("cloud_coverage", 0.2f), 0.0f, 1.0f);
+      }
+      if (env.contains("star_visibility_override"))
+      {
+        world.EnvironmentStateData.StarVisibilityOverride = std::clamp(
+            env.value("star_visibility_override", -1.0f), -1.0f, 1.0f);
+      }
+      if (env.contains("cloud_coverage_override"))
+      {
+        world.EnvironmentStateData.CloudCoverageOverride = std::clamp(
+            env.value("cloud_coverage_override", -1.0f), -1.0f, 1.0f);
       }
       if (env.contains("celestial_bodies") &&
           env["celestial_bodies"].is_array())
@@ -842,6 +855,10 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
       world.GetLightingSettings().WeatherParticlesEnabled;
   env["star_visibility"] = world.GetEnvironmentState().StarVisibility;
   env["cloud_coverage"] = world.GetEnvironmentState().CloudCoverage;
+  env["star_visibility_override"] =
+      world.GetEnvironmentState().StarVisibilityOverride;
+  env["cloud_coverage_override"] =
+      world.GetEnvironmentState().CloudCoverageOverride;
   env["celestial_bodies"] = json::array();
   for (const UWorld::UCelestialBodyVisual &body :
        world.GetEnvironmentState().CelestialBodies)

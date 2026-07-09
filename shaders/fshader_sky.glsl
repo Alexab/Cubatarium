@@ -1,10 +1,7 @@
-#ifdef GL_ES
-// Set default precision to medium
-precision mediump int;
-precision mediump float;
-#endif
+#version 330 core
 
-varying vec2 v_texcoord;
+in vec2 TexCoord;
+out vec4 FragColor;
 
 uniform vec4 skyColor;
 uniform float uFogHorizonBlend;
@@ -59,12 +56,12 @@ void main()
 {
     vec3 skyTop = skyColor.rgb;
     vec3 skyBottom = skyColor.rgb * 1.3;
-    vec3 finalColor = mix(skyBottom, skyTop, v_texcoord.y);
-    vec2 sky_uv = v_texcoord * 2.0 - 1.0;
+    vec3 finalColor = mix(skyBottom, skyTop, TexCoord.y);
+    vec2 sky_uv = TexCoord * 2.0 - 1.0;
     vec3 view_dir = normalize(vec3(sky_uv.x, max(-0.35, sky_uv.y), 1.25));
 
     float night_factor = clamp(1.0 - (sin(uTimeOfDay * 6.28318530718) * 0.5 + 0.5), 0.0, 1.0);
-    float stars = starField(v_texcoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
+    float stars = starField(TexCoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
     finalColor += vec3(stars) * (uStarVisibility * night_factor);
 
     for (int i = 0; i < 4; ++i)
@@ -96,8 +93,8 @@ void main()
         {
             break;
         }
-        float t = (float(i) + hash12(v_texcoord * 4096.0) * uCloudJitter) / float(max(steps, 1));
-        vec2 sample_uv = v_texcoord + wind + vec2(t * 0.25, t * 0.08);
+        float t = (float(i) + hash12(TexCoord * 4096.0) * uCloudJitter) / float(max(steps, 1));
+        vec2 sample_uv = TexCoord + wind + vec2(t * 0.25, t * 0.08);
         float den = cloudDensity(sample_uv, uElapsedSec * 0.03);
         float w = 1.0 - t;
         acc += den * w;
@@ -109,9 +106,9 @@ void main()
     finalColor = mix(finalColor, cloud_col, cloud * 0.75);
 
     if (uFogHorizonBlend > 0.001) {
-        float horizon = 1.0 - smoothstep(0.0, 0.45, v_texcoord.y);
+        float horizon = 1.0 - smoothstep(0.0, 0.45, TexCoord.y);
         finalColor = mix(finalColor, uFogColor, horizon * uFogHorizonBlend);
     }
 
-    gl_FragColor = vec4(finalColor, 1.0);
+    FragColor = vec4(finalColor, 1.0);
 }

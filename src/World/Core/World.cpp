@@ -262,33 +262,61 @@ void UWorld::EnsureDefaultCelestialBodies()
   {
     return;
   }
-  UCelestialBodyVisual sun;
-  sun.Id = "sun_main";
-  sun.Type = CelestialBodyType::Sun;
-  sun.Color = glm::vec3(1.0f, 0.94f, 0.82f);
-  sun.Intensity = 1.0f;
-  sun.AngularSizeDeg = 0.53f;
-  sun.OrbitInclinationDeg = 23.0f;
-  sun.OrbitPeriodDays = 1.0f;
-  sun.OrbitPhase = 0.0f;
-  sun.OrbitLongitudeDeg = 0.0f;
+  UCelestialBodyVisual sun_main;
+  sun_main.Id = "sun_main";
+  sun_main.Type = CelestialBodyType::Sun;
+  sun_main.Color = glm::vec3(1.0f, 0.94f, 0.82f);
+  sun_main.Intensity = 1.0f;
+  sun_main.AngularSizeDeg = 0.53f;
+  sun_main.OrbitInclinationDeg = 23.0f;
+  sun_main.OrbitPeriodDays = 1.0f;
+  sun_main.OrbitPhase = 0.0f;
+  sun_main.OrbitLongitudeDeg = 0.0f;
 
-  UCelestialBodyVisual moon;
-  moon.Id = "moon_main";
-  moon.Type = CelestialBodyType::Moon;
-  moon.Color = glm::vec3(0.72f, 0.78f, 0.9f);
-  moon.Intensity = 0.35f;
-  moon.AngularSizeDeg = 0.57f;
-  moon.OrbitInclinationDeg = 18.0f;
-  moon.OrbitPeriodDays = 1.0f;
-  moon.OrbitPhase = 0.5f;
-  moon.OrbitLongitudeDeg = 8.0f;
-  EnvironmentStateData.CelestialBodies = {sun, moon};
+  UCelestialBodyVisual sun_secondary = sun_main;
+  sun_secondary.Id = "sun_secondary";
+  sun_secondary.Color = glm::vec3(1.0f, 0.8f, 0.62f);
+  sun_secondary.Intensity = 0.52f;
+  sun_secondary.AngularSizeDeg = 0.42f;
+  sun_secondary.OrbitInclinationDeg = 37.0f;
+  sun_secondary.OrbitPeriodDays = 1.6f;
+  sun_secondary.OrbitPhase = 0.22f;
+  sun_secondary.OrbitLongitudeDeg = 48.0f;
+
+  UCelestialBodyVisual moon_main;
+  moon_main.Id = "moon_main";
+  moon_main.Type = CelestialBodyType::Moon;
+  moon_main.Color = glm::vec3(0.72f, 0.78f, 0.9f);
+  moon_main.Intensity = 0.35f;
+  moon_main.AngularSizeDeg = 0.57f;
+  moon_main.OrbitInclinationDeg = 18.0f;
+  moon_main.OrbitPeriodDays = 1.0f;
+  moon_main.OrbitPhase = 0.5f;
+  moon_main.OrbitLongitudeDeg = 8.0f;
+
+  UCelestialBodyVisual moon_secondary = moon_main;
+  moon_secondary.Id = "moon_secondary";
+  moon_secondary.Color = glm::vec3(0.64f, 0.72f, 0.88f);
+  moon_secondary.Intensity = 0.22f;
+  moon_secondary.AngularSizeDeg = 0.48f;
+  moon_secondary.OrbitInclinationDeg = 29.0f;
+  moon_secondary.OrbitPeriodDays = 1.9f;
+  moon_secondary.OrbitPhase = 0.08f;
+  moon_secondary.OrbitLongitudeDeg = -34.0f;
+
+  EnvironmentStateData.CelestialBodies = {sun_main, sun_secondary, moon_main,
+                                          moon_secondary};
+  if (EnvironmentStateData.CloudCoverageOverride < 0.0f)
+  {
+    EnvironmentStateData.CloudCoverageOverride = 0.6f;
+  }
 }
 
 void UWorld::SetStarVisibility(float value)
 {
-  EnvironmentStateData.StarVisibility = Clamp01(value);
+  EnvironmentStateData.StarVisibilityOverride = Clamp01(value);
+  EnvironmentStateData.StarVisibility =
+      EnvironmentStateData.StarVisibilityOverride;
 }
 
 void UWorld::ResetCelestialBodies()
@@ -299,7 +327,9 @@ void UWorld::ResetCelestialBodies()
 
 void UWorld::SetCloudCoverage(float value)
 {
-  EnvironmentStateData.CloudCoverage = Clamp01(value);
+  EnvironmentStateData.CloudCoverageOverride = Clamp01(value);
+  EnvironmentStateData.CloudCoverage =
+      EnvironmentStateData.CloudCoverageOverride;
 }
 
 void UWorld::TickEnvironment(float dtSeconds)
@@ -456,9 +486,13 @@ void UWorld::TickEnvironment(float dtSeconds)
       std::clamp(dtSeconds * (precip_active ? 0.35f : 0.12f), 0.0f, 1.0f);
   EnvironmentStateData.SurfaceWetness +=
       (target_wetness - EnvironmentStateData.SurfaceWetness) * wet_lerp;
-  EnvironmentStateData.CloudCoverage = std::clamp(
+  const float auto_cloud_coverage = std::clamp(
       EnvironmentStateData.Cloudiness * 0.9f + target_wetness * 0.25f, 0.0f,
       1.0f);
+  EnvironmentStateData.CloudCoverage =
+      EnvironmentStateData.CloudCoverageOverride >= 0.0f
+          ? Clamp01(EnvironmentStateData.CloudCoverageOverride)
+          : auto_cloud_coverage;
   EnsureDefaultCelestialBodies();
   float strongest_sun = 0.0f;
   for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
@@ -478,8 +512,12 @@ void UWorld::TickEnvironment(float dtSeconds)
   EnvironmentStateData.DayNightFactor =
       std::max(EnvironmentStateData.DayNightFactor, strongest_sun);
   const float night = 1.0f - EnvironmentStateData.DayNightFactor;
-  EnvironmentStateData.StarVisibility =
+  const float auto_star_visibility =
       Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
+  EnvironmentStateData.StarVisibility =
+      EnvironmentStateData.StarVisibilityOverride >= 0.0f
+          ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
+          : auto_star_visibility;
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes() { InvalidateBlockMesh(); }
