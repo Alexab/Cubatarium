@@ -309,4 +309,11 @@ void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
   }
 }
 
+void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry)
+{
+  world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      { RelightChunk(world, registry, chunk.GetCoord()); });
+}
+
 } // namespace cutum

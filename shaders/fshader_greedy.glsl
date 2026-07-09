@@ -32,7 +32,9 @@ uniform float uEnvFogMultiplier;
 uniform float uEnvMinAmbient;
 uniform float uEnvDayFactor;
 uniform float uEnvNightFactor;
+uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
+uniform float uEnvLightDebugMode;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform float uBelowSurfaceFog;
@@ -180,12 +182,18 @@ void main()
     float dayAmbient = uEnvMinAmbient * (0.4 + 0.6 * uEnvDayFactor);
     float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
     float blockAmbientFloor = clamp(uEnvMinAmbient * 0.15, 0.02, 0.5);
-    float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor);
+    float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor * uEnvSkyLightScale);
     float blockLit = mix(blockAmbientFloor, 1.0, block01);
     float lit = max(skyLit, blockLit);
     FragColor.rgb *= lit;
-    if (uEnvLightDebug > 0.5) {
-        FragColor.rgb = vec3(sky01, block01, 0.0);
+    if (uEnvLightDebugMode > 0.5) {
+        if (uEnvLightDebugMode < 1.5) {
+            FragColor.rgb = vec3(sky01, block01, 0.0);
+        } else if (uEnvLightDebugMode < 2.5) {
+            FragColor.rgb = vec3(sky01);
+        } else {
+            FragColor.rgb = vec3(block01);
+        }
     }
     float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
     if (precip > 0.001) {

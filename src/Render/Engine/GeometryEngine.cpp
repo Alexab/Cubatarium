@@ -49,6 +49,21 @@
 namespace cutum
 {
 
+namespace
+{
+
+float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
+{
+  float scale = env.WeatherSkyAttenuation;
+  if (env.PrecipitationIntensity > 0.05f)
+  {
+    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.25f;
+  }
+  return std::clamp(scale, 0.55f, 1.0f);
+}
+
+} // namespace
+
 UGeometryEngine::UGeometryEngine(
     std::shared_ptr<UWorld> world,
     std::shared_ptr<UTextureBaseStorage> texture_base_storage,
@@ -800,9 +815,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
                            WorldInstance->GetLightingSettings().MinAmbient);
     greedyShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
     greedyShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
+    greedyShader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(env));
     greedyShader->SetFloat(
         "uEnvLightDebug",
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+    greedyShader->SetFloat(
+        "uEnvLightDebugMode",
+        static_cast<float>(WorldInstance->GetLightingSettings().DebugMode));
     greedyShader->SetFloat("uEnvPrecipIntensity",
                            std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
     greedyShader->SetFloat("uEnvWetness",
@@ -814,7 +833,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
     greedyShader->SetFloat("uEnvDayFactor", 1.0f);
     greedyShader->SetFloat("uEnvNightFactor", 0.0f);
+    greedyShader->SetFloat("uEnvSkyLightScale", 1.0f);
     greedyShader->SetFloat("uEnvLightDebug", 0.0f);
+    greedyShader->SetFloat("uEnvLightDebugMode", 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
     greedyShader->SetFloat("uEnvWetness", 0.0f);
   }

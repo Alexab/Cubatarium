@@ -131,6 +131,7 @@ public:
   struct LightingSettings
   {
     bool DebugEnabled{false};
+    uint8_t DebugMode{0};
     float MinAmbient{0.12f};
     bool WeatherOverlayEnabled{true};
     bool WeatherParticlesEnabled{true};
@@ -624,6 +625,19 @@ public:
   void SetLightingDebugEnabled(bool enabled)
   {
     LightingSettingsData.DebugEnabled = enabled;
+    if (!enabled)
+    {
+      LightingSettingsData.DebugMode = 0;
+    }
+    else if (LightingSettingsData.DebugMode == 0)
+    {
+      LightingSettingsData.DebugMode = 1;
+    }
+  }
+  void SetLightingDebugMode(uint8_t mode)
+  {
+    LightingSettingsData.DebugMode = mode;
+    LightingSettingsData.DebugEnabled = mode != 0;
   }
   void SetLightingMinAmbient(float value)
   {

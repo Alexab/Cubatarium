@@ -218,8 +218,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         {
           if (args.size() < 3)
           {
-            return CommandResult{
-                false, "Usage: weather auto <on|off|status>"};
+            return CommandResult{false, "Usage: weather auto <on|off|status>"};
           }
           const std::string sub = Lower(args[2]);
           if (sub == "on")
@@ -285,11 +284,10 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             return CommandResult{false, "Invalid weather debug mode"};
           }
         }
-        return CommandResult{
-            false,
-            "Usage: weather [set <type> [transition_sec] | auto <on|off|status> | "
-            "overlay [on|off] | "
-            "particles [on|off] | debug <0-3>]"};
+        return CommandResult{false, "Usage: weather [set <type> "
+                                    "[transition_sec] | auto <on|off|status> | "
+                                    "overlay [on|off] | "
+                                    "particles [on|off] | debug <0-3>]"};
       });
 
   registry.Register(
@@ -368,18 +366,47 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         }
         if (cmd == "debug")
         {
-          bool enabled = true;
-          if (args.size() >= 3)
+          if (args.size() < 3)
           {
-            const std::string token = Lower(args[2]);
-            enabled = token == "on" || token == "1" || token == "true";
+            return CommandResult{
+                false, "Usage: light debug <off|on|sky|block|combined>"};
           }
-          world->SetLightingDebugEnabled(enabled);
+          const std::string token = Lower(args[2]);
+          if (token == "off" || token == "0" || token == "false")
+          {
+            world->SetLightingDebugMode(0);
+            world->RebuildAllLightingDirtyMeshes();
+            return CommandResult{true, "Light debug disabled"};
+          }
+          uint8_t mode = 1;
+          std::string label = "combined";
+          if (token == "sky")
+          {
+            mode = 2;
+            label = "sky";
+          }
+          else if (token == "block")
+          {
+            mode = 3;
+            label = "block";
+          }
+          else if (token == "combined" || token == "on" || token == "1" ||
+                   token == "true")
+          {
+            mode = 1;
+            label = "combined";
+          }
+          else
+          {
+            return CommandResult{
+                false, "Usage: light debug <off|on|sky|block|combined>"};
+          }
+          world->SetLightingDebugMode(mode);
           world->RebuildAllLightingDirtyMeshes();
-          return CommandResult{true, enabled ? "Light debug enabled"
-                                             : "Light debug disabled"};
+          return CommandResult{true, "Light debug: " + label};
         }
-        return CommandResult{false, "Usage: light <recalc|debug [on|off]>"};
+        return CommandResult{
+            false, "Usage: light <recalc|debug <off|on|sky|block|combined>>"};
       });
 
   registry.Register("give",

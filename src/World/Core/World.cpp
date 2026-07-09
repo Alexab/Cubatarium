@@ -690,7 +690,14 @@ void UWorld::TickEnvironment(float dtSeconds)
   TickWeatherAuto(dtSeconds);
 }
 
-void UWorld::RebuildAllLightingDirtyMeshes() { InvalidateBlockMesh(); }
+void UWorld::RebuildAllLightingDirtyMeshes()
+{
+  if (BlockRegistry)
+  {
+    RelightAllLoadedChunks(BlockWorld, *BlockRegistry);
+  }
+  InvalidateBlockMesh();
+}
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
