@@ -103,5 +103,49 @@
         "default_secondary": [],
         "default_enabled": ["minetest_default_16"],
         "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
+    },
+    "environment": {
+        "time_of_day": 0.35,
+        "day_length_minutes": 10,
+        "lighting": { "min_ambient": 0.12 },
+        "celestial": {
+            "horizon_fade": 0.15,
+            "bodies": [
+                {
+                    "id": "sun_main",
+                    "type": "sun",
+                    "color": [1.0, 0.94, 0.82],
+                    "intensity": 1.0,
+                    "angular_size_deg": 5.0,
+                    "orbit_inclination_deg": 23.0,
+                    "orbit_period_days": 1.0,
+                    "orbit_phase": 0.0,
+                    "orbit_longitude_deg": 0.0
+                },
+                {
+                    "id": "moon_main",
+                    "type": "moon",
+                    "color": [0.72, 0.78, 0.9],
+                    "intensity": 0.35,
+                    "angular_size_deg": 4.2,
+                    "orbit_inclination_deg": 18.0,
+                    "orbit_period_days": 1.0,
+                    "orbit_phase": 0.5,
+                    "orbit_longitude_deg": 8.0
+                }
+            ]
+        },
+        "weather": {
+            "auto_change": true,
+            "dry_fraction": 0.7,
+            "precip_fraction": 0.3,
+            "dry_clear_fraction": 0.55,
+            "min_precip_minutes": 2.0,
+            "min_dry_minutes": 1.0,
+            "transition_seconds": 45.0,
+            "episode_min_minutes": 3.0,
+            "episode_max_minutes": 12.0,
+            "precip_heavy_fraction": 0.35
+        }
     }
 }

@@ -214,6 +214,30 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           world->SetWeather(weather, transition_sec);
           return CommandResult{true, "Weather transition started"};
         }
+        if (cmd == "auto")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{
+                false, "Usage: weather auto <on|off|status>"};
+          }
+          const std::string sub = Lower(args[2]);
+          if (sub == "on")
+          {
+            world->SetWeatherAutoEnabled(true);
+            return CommandResult{true, "Weather auto enabled"};
+          }
+          if (sub == "off")
+          {
+            world->SetWeatherAutoEnabled(false);
+            return CommandResult{true, "Weather auto disabled"};
+          }
+          if (sub == "status")
+          {
+            return CommandResult{true, world->GetWeatherAutoStatusText()};
+          }
+          return CommandResult{false, "Usage: weather auto <on|off|status>"};
+        }
         if (cmd == "overlay")
         {
           bool enabled = true;
@@ -263,7 +287,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         }
         return CommandResult{
             false,
-            "Usage: weather [set <type> [transition_sec] | overlay [on|off] | "
+            "Usage: weather [set <type> [transition_sec] | auto <on|off|status> | "
+            "overlay [on|off] | "
             "particles [on|off] | debug <0-3>]"};
       });
 

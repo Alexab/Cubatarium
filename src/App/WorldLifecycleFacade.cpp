@@ -121,6 +121,15 @@ void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
     return;
   }
   core.WorldInstance->Create(new_world_name);
+  core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig, true);
+  if (!core.DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+  {
+    core.WorldInstance->SetWeatherByName(core.DefaultWeather, 0.0f);
+  }
+  else
+  {
+    core.WorldInstance->ClearWeatherManualOverride();
+  }
   core.WorldInstance->GenerateUsers();
   SaveWorld(core, new_world_name);
   LoadWorldList(core, core.WorldPath.string());

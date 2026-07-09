@@ -15,6 +15,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
@@ -705,15 +706,18 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
     if (d.contains("environment") && d["environment"].is_object())
     {
       const json &env = d["environment"];
-      if (env.contains("time_of_day"))
-      {
-        world.SetTimeOfDayNormalized(env.value("time_of_day", 0.35f));
-      }
-      world.SetDayLengthMinutes(env.value("day_length_minutes", 10.0f));
+      EnvironmentConfig config = EnvironmentConfig::FromJson(env);
+      world.ApplyEnvironmentConfig(config, false);
       world.SetTimeFrozen(env.value("time_frozen", false));
       if (env.contains("weather") && env["weather"].is_string())
       {
-        world.SetWeatherByName(env["weather"].get<std::string>(), 0.0f);
+        UWorld::WeatherType weather = UWorld::WeatherType::Clear;
+        if (UWorld::WeatherTypeFromString(env["weather"].get<std::string>(),
+                                          weather))
+        {
+          world.SetWeatherInternal(weather, config.WeatherAuto.TransitionSeconds,
+                                   config.WeatherRuntime.ManualOverride);
+        }
       }
       if (env.contains("weather_target") && env["weather_target"].is_string())
       {
@@ -721,7 +725,8 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
         if (UWorld::WeatherTypeFromString(
                 env["weather_target"].get<std::string>(), target))
         {
-          world.SetWeather(target, 0.0f);
+          world.SetWeatherInternal(target, config.WeatherAuto.TransitionSeconds,
+                                   config.WeatherRuntime.ManualOverride);
         }
       }
       if (env.contains("lighting") && env["lighting"].is_object())
@@ -751,42 +756,6 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       {
         world.EnvironmentStateData.CloudCoverageOverride = std::clamp(
             env.value("cloud_coverage_override", -1.0f), -1.0f, 1.0f);
-      }
-      if (env.contains("celestial_bodies") &&
-          env["celestial_bodies"].is_array())
-      {
-        auto &bodies = world.EnvironmentStateData.CelestialBodies;
-        bodies.clear();
-        for (const json &entry : env["celestial_bodies"])
-        {
-          if (!entry.is_object())
-          {
-            continue;
-          }
-          UWorld::UCelestialBodyVisual body;
-          body.Id = entry.value("id", std::string("sun_auto"));
-          const std::string type = entry.value("type", std::string("sun"));
-          body.Type = type == "moon" ? UWorld::CelestialBodyType::Moon
-                                     : UWorld::CelestialBodyType::Sun;
-          if (entry.contains("color") && entry["color"].is_array() &&
-              entry["color"].size() == 3)
-          {
-            body.Color = glm::vec3(entry["color"][0].get<float>(),
-                                   entry["color"][1].get<float>(),
-                                   entry["color"][2].get<float>());
-          }
-          body.Intensity = entry.value("intensity", body.Intensity);
-          body.AngularSizeDeg =
-              entry.value("angular_size_deg", body.AngularSizeDeg);
-          body.OrbitInclinationDeg =
-              entry.value("orbit_inclination_deg", body.OrbitInclinationDeg);
-          body.OrbitPeriodDays =
-              entry.value("orbit_period_days", body.OrbitPeriodDays);
-          body.OrbitPhase = entry.value("orbit_phase", body.OrbitPhase);
-          body.OrbitLongitudeDeg =
-              entry.value("orbit_longitude_deg", body.OrbitLongitudeDeg);
-          bodies.push_back(body);
-        }
       }
       world.EnsureDefaultCelestialBodies();
     }
@@ -839,14 +808,19 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
     world_data["catalog_fingerprint"] = world.CatalogFingerprint;
   }
   WriteWorldGenSets(world_data, world.WorldGenSetsData);
-  json env;
-  env["time_of_day"] = world.GetEnvironmentState().TimeOfDayNormalized;
-  env["day_length_minutes"] = world.GetEnvironmentState().DayLengthMinutes;
+  world.SyncDefaultCelestialBodiesToConfig();
+  EnvironmentConfig config = world.GetEnvironmentConfig();
+  config.TimeOfDay = world.GetEnvironmentState().TimeOfDayNormalized;
+  config.DayLengthMinutes = world.GetEnvironmentState().DayLengthMinutes;
+  json env = config.ToJson();
   env["time_frozen"] = world.GetEnvironmentState().TimeFrozen;
   env["weather"] =
       UWorld::WeatherTypeToString(world.GetEnvironmentState().Weather);
   env["weather_target"] =
       UWorld::WeatherTypeToString(world.GetEnvironmentState().TargetWeather);
+  json weather_auto;
+  config.WriteWeatherAutoToJson(weather_auto);
+  env["weather_auto"] = weather_auto;
   env["lighting_version"] = 1;
   env["lighting"]["debug"] = world.GetLightingSettings().DebugEnabled;
   env["lighting"]["weather_overlay"] =
@@ -859,23 +833,6 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
       world.GetEnvironmentState().StarVisibilityOverride;
   env["cloud_coverage_override"] =
       world.GetEnvironmentState().CloudCoverageOverride;
-  env["celestial_bodies"] = json::array();
-  for (const UWorld::UCelestialBodyVisual &body :
-       world.GetEnvironmentState().CelestialBodies)
-  {
-    json item;
-    item["id"] = body.Id;
-    item["type"] =
-        body.Type == UWorld::CelestialBodyType::Moon ? "moon" : "sun";
-    item["color"] = json::array({body.Color.r, body.Color.g, body.Color.b});
-    item["intensity"] = body.Intensity;
-    item["angular_size_deg"] = body.AngularSizeDeg;
-    item["orbit_inclination_deg"] = body.OrbitInclinationDeg;
-    item["orbit_period_days"] = body.OrbitPeriodDays;
-    item["orbit_phase"] = body.OrbitPhase;
-    item["orbit_longitude_deg"] = body.OrbitLongitudeDeg;
-    env["celestial_bodies"].push_back(item);
-  }
   world_data["environment"] = env;
 
   std::ofstream file(file_name);

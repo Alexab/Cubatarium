@@ -17,6 +17,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/WorldCooperativeOps.h"
+#include "World/Environment/EnvironmentConfig.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
@@ -600,6 +601,23 @@ public:
   void SetWeather(WeatherType weather, float transitionSeconds = 45.0f);
   void SetWeatherByName(const std::string &name,
                         float transitionSeconds = 45.0f);
+  void SetWeatherInternal(WeatherType weather, float transitionSeconds,
+                          bool manual_override);
+  void ApplyEnvironmentConfig(const EnvironmentConfig &config,
+                              bool reset_weather_runtime = true);
+  const EnvironmentConfig &GetEnvironmentConfig() const
+  {
+    return EnvironmentSettingsData;
+  }
+  EnvironmentConfig &GetEnvironmentConfigMutable()
+  {
+    return EnvironmentSettingsData;
+  }
+  float GetCelestialHorizonFade() const;
+  void SetWeatherAutoEnabled(bool enabled);
+  bool IsWeatherAutoEnabled() const;
+  void ClearWeatherManualOverride();
+  std::string GetWeatherAutoStatusText() const;
   std::string GetWeatherName() const;
   static std::string WeatherTypeToString(WeatherType value);
   static bool WeatherTypeFromString(const std::string &value, WeatherType &out);
@@ -720,6 +738,9 @@ private:
   void SaveMovementDiagnostics(const std::string &file_name) const;
   void ResetMeshLoadDiagnostics();
   void TickMeshLoadDiagnostics();
+  void ApplyCelestialBodiesFromConfig();
+  void SyncDefaultCelestialBodiesToConfig();
+  void TickWeatherAuto(float dtSeconds);
   void RebuildWorldGenPipeline();
 
   std::string WorldName;
@@ -767,6 +788,7 @@ private:
   bool FoliageClimbEnabled{true};
   RenderSettings Render;
   EnvironmentState EnvironmentStateData;
+  EnvironmentConfig EnvironmentSettingsData;
   LightingSettings LightingSettingsData;
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};

@@ -18,6 +18,7 @@
 #include "Blocks/BlockDefinition.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include <array>
+#include "World/Environment/EnvironmentConfig.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -201,6 +202,7 @@ private:
   float DefaultDayLengthMinutes{10.0f};
   std::string DefaultWeather{"clear"};
   float DefaultLightingMinAmbient{0.12f};
+  EnvironmentConfig DefaultEnvironmentConfig{};
   PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Standard};
   PhysicsFeatureFlags PhysicsFlags;
   PhysicsBudgets PhysicsBudgetsConfig;

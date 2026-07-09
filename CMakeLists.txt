@@ -159,6 +159,9 @@ set(SOURCES
     src/World/Collision/VoxelDdaTraversal.cpp
     src/World/Core/WorldCooperativeOps.cpp
     src/World/Environment/WorldEnvironment.cpp
+    src/World/Environment/EnvironmentConfig.cpp
+    src/World/Environment/WeatherBiomeUtil.cpp
+    src/World/Environment/WeatherAutoController.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
@@ -387,6 +390,9 @@ set(HEADERS
     src/World/Collision/WorldCollision.h
     src/World/Core/WorldCooperativeOps.h
     src/World/Environment/WorldEnvironment.h
+    src/World/Environment/EnvironmentConfig.h
+    src/World/Environment/WeatherBiomeUtil.h
+    src/World/Environment/WeatherAutoController.h
     src/World/Persistence/WorldPersistence.h
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h

@@ -358,14 +358,13 @@ void UCore::LoadConfig(const std::string &config_file_name)
       if (d.contains("environment") && d["environment"].is_object())
       {
         const json &env = d["environment"];
-        DefaultTimeOfDay = env.value("time_of_day", DefaultTimeOfDay);
-        DefaultDayLengthMinutes =
-            env.value("day_length_minutes", DefaultDayLengthMinutes);
-        DefaultWeather = env.value("weather", DefaultWeather);
-        if (env.contains("lighting") && env["lighting"].is_object())
+        DefaultEnvironmentConfig = EnvironmentConfig::FromJson(env);
+        DefaultTimeOfDay = DefaultEnvironmentConfig.TimeOfDay;
+        DefaultDayLengthMinutes = DefaultEnvironmentConfig.DayLengthMinutes;
+        DefaultLightingMinAmbient = DefaultEnvironmentConfig.MinAmbient;
+        if (env.contains("weather") && env["weather"].is_string())
         {
-          DefaultLightingMinAmbient =
-              env["lighting"].value("min_ambient", DefaultLightingMinAmbient);
+          DefaultWeather = env["weather"].get<std::string>();
         }
       }
       if (d.contains("render") && d["render"].is_object())
@@ -466,6 +465,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
       DefaultDayLengthMinutes = 10.0f;
       DefaultWeather = "clear";
       DefaultLightingMinAmbient = 0.12f;
+      DefaultEnvironmentConfig = EnvironmentConfig{};
+      DefaultEnvironmentConfig.Validate();
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
       ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
@@ -553,14 +554,17 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
     WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
     WorldInstance->SetRenderSettings(Render);
-    WorldInstance->SetTimeOfDayNormalized(DefaultTimeOfDay);
-    WorldInstance->SetDayLengthMinutes(DefaultDayLengthMinutes);
-    WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
-    WorldInstance->SetLightingMinAmbient(DefaultLightingMinAmbient);
+    WorldInstance->ApplyEnvironmentConfig(DefaultEnvironmentConfig, true);
+    if (!DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+    {
+      WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
+    }
+    else
+    {
+      WorldInstance->ClearWeatherManualOverride();
+    }
     WorldInstance->SetWeatherOverlayEnabled(false);
     WorldInstance->SetWeatherParticlesEnabled(true);
-    WorldInstance->EnsureDefaultCelestialBodies();
-    // Keep debug disabled by default; toggle via command.
     WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
     {
@@ -728,11 +732,7 @@ void UCore::SaveConfigFile()
       Render.AltitudeFogPenaltyPer16Blocks;
   render_json["gradient_sky"] = Render.GradientSky;
   system_data["render"] = render_json;
-  json environment_json;
-  environment_json["time_of_day"] = DefaultTimeOfDay;
-  environment_json["day_length_minutes"] = DefaultDayLengthMinutes;
-  environment_json["weather"] = DefaultWeather;
-  environment_json["lighting"]["min_ambient"] = DefaultLightingMinAmbient;
+  json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
@@ -773,9 +773,10 @@ void UCore::SaveSystem(const std::string &config_file_name)
     DefaultUserName = WorldInstance->GetCurrentUserName();
   }
   WorldSeed = ProceduralTemplate.Seed;
-  DefaultTimeOfDay = WorldInstance->GetEnvironmentState().TimeOfDayNormalized;
-  DefaultDayLengthMinutes =
-      WorldInstance->GetEnvironmentState().DayLengthMinutes;
+  DefaultEnvironmentConfig = WorldInstance->GetEnvironmentConfig();
+  DefaultTimeOfDay = DefaultEnvironmentConfig.TimeOfDay;
+  DefaultDayLengthMinutes = DefaultEnvironmentConfig.DayLengthMinutes;
+  DefaultLightingMinAmbient = DefaultEnvironmentConfig.MinAmbient;
   DefaultWeather = WorldInstance->GetWeatherName();
   DefaultLightingMinAmbient = WorldInstance->GetLightingSettings().MinAmbient;
 

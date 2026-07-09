@@ -28,6 +28,8 @@
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Environment/WeatherAutoController.h"
+#include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
@@ -238,9 +240,18 @@ void UWorld::SetDayLengthMinutes(float minutes)
 
 void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
 {
+  SetWeatherInternal(weather, transitionSeconds, true);
+}
+
+void UWorld::SetWeatherInternal(WeatherType weather, float transitionSeconds,
+                                bool manual_override)
+{
+  if (manual_override)
+  {
+    EnvironmentSettingsData.WeatherRuntime.ManualOverride = true;
+  }
   if (weather == WeatherType::Clear)
   {
-    // Clear weather should return cloud coverage to environment-driven values.
     EnvironmentStateData.CloudCoverageOverride = -1.0f;
   }
   EnvironmentStateData.TargetWeather = weather;
@@ -269,6 +280,126 @@ void UWorld::SetWeatherByName(const std::string &name, float transitionSeconds)
 std::string UWorld::GetWeatherName() const
 {
   return WeatherTypeToString(EnvironmentStateData.Weather);
+}
+
+void UWorld::ApplyCelestialBodiesFromConfig()
+{
+  if (EnvironmentSettingsData.CelestialBodies.empty())
+  {
+    EnsureDefaultCelestialBodies();
+    SyncDefaultCelestialBodiesToConfig();
+    return;
+  }
+  EnvironmentStateData.CelestialBodies.clear();
+  for (const EnvironmentCelestialBodySpec &spec :
+       EnvironmentSettingsData.CelestialBodies)
+  {
+    UCelestialBodyVisual body;
+    body.Id = spec.Id;
+    const std::string type = NormalizeToken(spec.Type);
+    body.Type = type == "moon" ? CelestialBodyType::Moon : CelestialBodyType::Sun;
+    body.Color = spec.Color;
+    body.Intensity = spec.Intensity;
+    body.AngularSizeDeg = spec.AngularSizeDeg;
+    body.OrbitInclinationDeg = spec.OrbitInclinationDeg;
+    body.OrbitPeriodDays = spec.OrbitPeriodDays;
+    body.OrbitPhase = spec.OrbitPhase;
+    body.OrbitLongitudeDeg = spec.OrbitLongitudeDeg;
+    EnvironmentStateData.CelestialBodies.push_back(body);
+  }
+  RefreshSkyVisualStateForRender();
+}
+
+void UWorld::SyncDefaultCelestialBodiesToConfig()
+{
+  EnvironmentSettingsData.CelestialBodies.clear();
+  for (const UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    EnvironmentCelestialBodySpec spec;
+    spec.Id = body.Id;
+    spec.Type =
+        body.Type == CelestialBodyType::Moon ? "moon" : "sun";
+    spec.Color = body.Color;
+    spec.Intensity = body.Intensity;
+    spec.AngularSizeDeg = body.AngularSizeDeg;
+    spec.OrbitInclinationDeg = body.OrbitInclinationDeg;
+    spec.OrbitPeriodDays = body.OrbitPeriodDays;
+    spec.OrbitPhase = body.OrbitPhase;
+    spec.OrbitLongitudeDeg = body.OrbitLongitudeDeg;
+    EnvironmentSettingsData.CelestialBodies.push_back(spec);
+  }
+}
+
+void UWorld::ApplyEnvironmentConfig(const EnvironmentConfig &config,
+                                    bool reset_weather_runtime)
+{
+  EnvironmentSettingsData = config;
+  EnvironmentSettingsData.Validate();
+  SetTimeOfDayNormalized(EnvironmentSettingsData.TimeOfDay);
+  SetDayLengthMinutes(EnvironmentSettingsData.DayLengthMinutes);
+  SetLightingMinAmbient(EnvironmentSettingsData.MinAmbient);
+  ApplyCelestialBodiesFromConfig();
+  if (reset_weather_runtime)
+  {
+    WeatherAutoRuntime runtime;
+    runtime.Enabled = EnvironmentSettingsData.WeatherAuto.AutoChange;
+    EnvironmentSettingsData.WeatherRuntime = runtime;
+  }
+}
+
+float UWorld::GetCelestialHorizonFade() const
+{
+  return EnvironmentSettingsData.CelestialHorizonFade;
+}
+
+void UWorld::SetWeatherAutoEnabled(bool enabled)
+{
+  EnvironmentSettingsData.WeatherRuntime.Enabled = enabled;
+  EnvironmentSettingsData.WeatherAuto.AutoChange = enabled;
+  if (enabled)
+  {
+    EnvironmentSettingsData.WeatherRuntime.ManualOverride = false;
+    EnvironmentSettingsData.WeatherRuntime.EpisodeRemainingSec = 0.0f;
+  }
+}
+
+bool UWorld::IsWeatherAutoEnabled() const
+{
+  return EnvironmentSettingsData.WeatherAuto.AutoChange &&
+         EnvironmentSettingsData.WeatherRuntime.Enabled;
+}
+
+void UWorld::ClearWeatherManualOverride()
+{
+  EnvironmentSettingsData.WeatherRuntime.ManualOverride = false;
+  EnvironmentSettingsData.WeatherRuntime.EpisodeRemainingSec = 0.0f;
+}
+
+std::string UWorld::GetWeatherAutoStatusText() const
+{
+  const WeatherAutoSettings &settings = EnvironmentSettingsData.WeatherAuto;
+  const WeatherAutoRuntime &runtime = EnvironmentSettingsData.WeatherRuntime;
+  std::string mode = "none";
+  if (runtime.EpisodeMode == WeatherAutoEpisodeMode::Dry)
+  {
+    mode = "dry";
+  }
+  else if (runtime.EpisodeMode == WeatherAutoEpisodeMode::Precip)
+  {
+    mode = "precip";
+  }
+  return "auto=" + std::string(IsWeatherAutoEnabled() ? "on" : "off") +
+         " manual=" + (runtime.ManualOverride ? "yes" : "no") +
+         " dry/precip=" + std::to_string(settings.DryFraction).substr(0, 4) +
+         "/" + std::to_string(settings.PrecipFraction).substr(0, 4) +
+         " episode=" + mode + " remaining=" +
+         std::to_string(runtime.EpisodeRemainingSec).substr(0, 5) + "s" +
+         " weather=" + GetWeatherName();
+}
+
+void UWorld::TickWeatherAuto(float dtSeconds)
+{
+  UWeatherAutoController::Tick(*this, dtSeconds);
 }
 
 void UWorld::EnsureDefaultCelestialBodies()
@@ -534,7 +665,8 @@ void UWorld::TickEnvironment(float dtSeconds)
     body.DirectionWorld = ComputeCelestialDirection(
         body, EnvironmentStateData.TimeOfDayNormalized);
     const float elev = body.DirectionWorld.y;
-    const float above_horizon = Smoothstep(0.0f, 0.15f, elev);
+    const float above_horizon =
+        Smoothstep(0.0f, GetCelestialHorizonFade(), elev);
     const float lit = above_horizon * std::max(body.Intensity, 0.0f);
     if (body.Type == CelestialBodyType::Sun)
     {
@@ -554,6 +686,7 @@ void UWorld::TickEnvironment(float dtSeconds)
       EnvironmentStateData.StarVisibilityOverride >= 0.0f
           ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
           : auto_star_visibility;
+  TickWeatherAuto(dtSeconds);
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes() { InvalidateBlockMesh(); }
