@@ -32,16 +32,17 @@ void UWeatherParticleSystem::SpawnParticle(const glm::vec3 &camera_pos,
     {
       continue;
     }
-    const float radius = 8.0f + Random01() * 12.0f;
+    const float radius = 3.0f + Random01() * 7.0f;
     const float angle = Random01() * 6.2831853f;
-    const float height = (Random01() - 0.2f) * 10.0f;
+    const float height = (Random01() - 0.1f) * 8.0f;
     particle.Pos = camera_pos + glm::vec3(std::cos(angle) * radius, height,
                                           std::sin(angle) * radius);
     const float fall =
-        kind == 2 ? 0.6f + Random01() * 0.5f : 4.0f + Random01() * 6.0f;
+        kind == 2 ? 0.45f + Random01() * 0.35f : 7.0f + Random01() * 7.0f;
     particle.Vel =
         glm::vec3(wind * (0.4f + Random01() * 0.8f), -fall, wind * 0.2f);
-    particle.Life = 1.5f + Random01() * 2.5f;
+    particle.Life =
+        kind == 2 ? (2.2f + Random01() * 2.4f) : (1.0f + Random01() * 1.0f);
     particle.Size =
         kind == 2 ? 0.05f + Random01() * 0.05f : 0.04f + Random01() * 0.06f;
     particle.Size *= 0.75f + intensity * 0.5f;
@@ -101,8 +102,8 @@ void UWeatherParticleSystem::Update(const UWorld &world,
     particle.Pos += particle.Vel * dt_seconds;
     particle.Life -= dt_seconds;
     const glm::vec3 delta = particle.Pos - camera_pos;
-    if (particle.Life <= 0.0f || glm::length(delta) > 24.0f ||
-        particle.Pos.y < camera_pos.y - 18.0f)
+    if (particle.Life <= 0.0f || glm::length(delta) > 14.0f ||
+        particle.Pos.y < camera_pos.y - 10.0f)
     {
       particle.Alive = false;
       continue;

@@ -279,12 +279,6 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
     return;
   }
 
-  if (ParticleCooldownSec > 0.0f)
-  {
-    ParticleCooldownSec = std::max(0.0f, ParticleCooldownSec - ctx.DeltaSec);
-    return;
-  }
-
   const auto t_begin = std::chrono::high_resolution_clock::now();
   ParticleSystem.Update(world, ctx.CameraPos, ctx.DeltaSec, budget);
   if (ParticleSystem.GetActiveCount() <= 0)
@@ -350,11 +344,6 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   const auto t_end = std::chrono::high_resolution_clock::now();
   LastParticleMs =
       std::chrono::duration<double, std::milli>(t_end - t_begin).count();
-
-  if (LastParticleMs > 2.5)
-  {
-    ParticleCooldownSec = 5.0f;
-  }
 }
 
 } // namespace cutum

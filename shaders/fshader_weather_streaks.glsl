@@ -37,6 +37,12 @@ void main()
     discard;
   }
 
+  float sky_mask = smoothstep(0.52, 0.9, uv.y);
+  if (sky_mask <= 0.001)
+  {
+    discard;
+  }
+
   if (uDepthGuard > 0.5 && uDepthScreenSize.x > 0.0)
   {
     vec2 depth_uv = gl_FragCoord.xy / uDepthScreenSize;
@@ -46,11 +52,6 @@ void main()
       discard;
     }
   }
-  else if (uv.y < 0.45)
-  {
-    discard;
-  }
-
   float alpha = 0.0;
   vec3 color = vec3(0.72, 0.8, 0.9);
   float day = clamp(uDayFactor, 0.0, 1.0);
@@ -59,25 +60,25 @@ void main()
 
   if (uWeatherKind == 1)
   {
-    vec2 p = vec2(uv.x + uv.y * (0.035 + wind_bias), uv.y);
-    float lane = hash12(vec2(floor((p.x + t * 0.13) * 160.0), 19.7));
-    float phase =
-        fract((1.0 - p.y) * 34.0 + t * (4.2 + wind_bias * 2.4) + lane * 7.0);
-    float drop = smoothstep(0.88, 1.0, phase);
-    float lane_mask = smoothstep(0.38, 0.88, lane);
-    alpha = drop * lane_mask * intensity * 0.22;
+    vec2 p = vec2(uv.x + uv.y * (0.025 + wind_bias), uv.y);
+    float lane_seed = hash12(vec2(floor((p.x + t * 0.07) * 220.0), floor(uv.y * 10.0)));
+    float lane = smoothstep(0.62, 0.96, lane_seed);
+    float run = fract((1.0 - p.y) * 52.0 + t * (5.8 + wind_bias * 3.0) + lane_seed * 11.0);
+    float streak = smoothstep(0.93, 1.0, run);
+    float turbulence = 0.7 + 0.3 * hash12(vec2(p.x * 120.0, t * 0.5));
+    alpha = streak * lane * turbulence * intensity * 0.26 * sky_mask;
     color = mix(vec3(0.5, 0.58, 0.68), vec3(0.72, 0.8, 0.9), day);
   }
   else if (uWeatherKind == 2)
   {
-    vec2 cell = floor(vec2(uv.x * 90.0 + wind_bias * 20.0,
-                           uv.y * 70.0 - t * 0.18));
-    vec2 f = fract(vec2(uv.x * 90.0 + wind_bias * 20.0,
-                        uv.y * 70.0 - t * 0.18)) - 0.5;
+    vec2 drift = vec2(t * (0.06 + wind_bias * 0.25), -t * 0.12);
+    vec2 cell = floor((uv + drift) * vec2(70.0, 52.0));
+    vec2 f = fract((uv + drift) * vec2(70.0, 52.0)) - 0.5;
     float seed = hash12(cell);
-    float d = length(f - vec2(seed - 0.5, fract(seed * 5.1) - 0.5) * 0.35);
-    float flake = smoothstep(0.2, 0.0, d);
-    alpha = flake * step(0.56, seed) * intensity * 0.42;
+    vec2 jitter = vec2(seed - 0.5, fract(seed * 5.1) - 0.5) * 0.28;
+    float d = length(f - jitter);
+    float flake = smoothstep(0.23, 0.0, d);
+    alpha = flake * step(0.44, seed) * intensity * 0.48 * sky_mask;
     color = vec3(0.94, 0.96, 1.0);
   }
 
@@ -85,5 +86,5 @@ void main()
   {
     discard;
   }
-  FragColor = vec4(color, clamp(alpha, 0.0, 0.22));
+  FragColor = vec4(color, clamp(alpha, 0.0, 0.18));
 }
