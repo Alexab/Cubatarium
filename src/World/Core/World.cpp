@@ -228,6 +228,11 @@ void UWorld::SetDayLengthMinutes(float minutes)
 
 void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
 {
+  if (weather == WeatherType::Clear)
+  {
+    // Clear weather should return cloud coverage to environment-driven values.
+    EnvironmentStateData.CloudCoverageOverride = -1.0f;
+  }
   EnvironmentStateData.TargetWeather = weather;
   EnvironmentStateData.WeatherTransitionDurationSec =
       std::max(0.0f, transitionSeconds);
@@ -306,10 +311,6 @@ void UWorld::EnsureDefaultCelestialBodies()
 
   EnvironmentStateData.CelestialBodies = {sun_main, sun_secondary, moon_main,
                                           moon_secondary};
-  if (EnvironmentStateData.CloudCoverageOverride < 0.0f)
-  {
-    EnvironmentStateData.CloudCoverageOverride = 0.75f;
-  }
   RefreshSkyVisualStateForRender();
 }
 

@@ -21,12 +21,25 @@ uniform float uCelestialIntensity[4];
 uniform float uCelestialAngularSizeDeg[4];
 uniform int uCelestialType[4];
 uniform mat3 uInvViewRot;
+uniform vec3 uCameraPos;
 
 float hash12(vec2 p)
 {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
+}
+
+float valueNoise(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash12(i);
+    float b = hash12(i + vec2(1.0, 0.0));
+    float c = hash12(i + vec2(0.0, 1.0));
+    float d = hash12(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
 float starField(vec2 uv, float twinkle)
@@ -43,16 +56,21 @@ float starField(vec2 uv, float twinkle)
 
 float cloudDensity(vec2 uv, float time_shift)
 {
-    float d = 0.0;
-    float amp = 0.55;
-    vec2 p = uv * 1.8;
-    for (int i = 0; i < 5; ++i)
-    {
-        d += amp * (hash12(floor(p * 64.0 + time_shift)) - 0.5);
-        p = p * 1.93 + vec2(3.1, 1.7);
-        amp *= 0.55;
-    }
-    return clamp(d + 0.5, 0.0, 1.0);
+    vec2 p = uv + vec2(time_shift * 0.25, -time_shift * 0.08);
+    float n0 = valueNoise(p * 4.0);
+    float n1 = valueNoise(p * 9.0 + vec2(13.2, -7.1));
+    return clamp(n0 * 0.72 + n1 * 0.28, 0.0, 1.0);
+}
+
+float cloudDensityWorld(vec3 world_pos, float time_shift)
+{
+    return cloudDensity(world_pos.xz * 0.0012, time_shift);
+}
+
+float layerProfile(float y, float center, float half_thickness)
+{
+    float dy = abs(y - center) / max(half_thickness, 1.0);
+    return clamp(1.0 - dy, 0.0, 1.0);
 }
 
 void main()
@@ -84,27 +102,29 @@ void main()
         }
         finalColor += body_col * (disc + halo);
     }
-    int steps = clamp(uCloudSteps, 2, 24);
-    float acc = 0.0;
-    float weight = 0.0;
-    vec2 wind = vec2(0.01, 0.004) * uElapsedSec;
-    for (int i = 0; i < 24; ++i)
-    {
-        if (i >= steps)
-        {
-            break;
-        }
-        float t = (float(i) + hash12(TexCoord * 4096.0) * uCloudJitter) / float(max(steps, 1));
-        vec2 sample_uv = TexCoord + wind + vec2(t * 0.25, t * 0.08);
-        float den = cloudDensity(sample_uv, uElapsedSec * 0.03);
-        float w = 1.0 - t;
-        acc += den * w;
-        weight += w;
-    }
-    float cloud = weight > 0.0 ? acc / weight : 0.0;
-    cloud = smoothstep(0.2, 0.55, cloud) * clamp(uCloudCoverage, 0.0, 1.0);
-    vec3 cloud_col = mix(vec3(0.55, 0.58, 0.62), vec3(0.9, 0.92, 0.95), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-    finalColor = mix(finalColor, cloud_col, cloud * 0.92);
+    vec2 wind_low = vec2(0.010, 0.004) * uElapsedSec;
+    vec2 wind_high = vec2(0.016, -0.003) * uElapsedSec;
+    float y_term = max(view_dir.y, 0.15);
+    vec2 proj = view_dir.xz / y_term;
+    proj = clamp(proj, vec2(-3.0), vec2(3.0));
+    vec2 low_uv = uCameraPos.xz * 0.0016 + proj * 0.42 + wind_low * 0.8;
+    vec2 high_uv = uCameraPos.xz * 0.0009 + proj * 0.65 + wind_high * 0.9;
+
+    float low_shape = cloudDensity(low_uv, uElapsedSec * 0.022);
+    float low_detail = cloudDensity(low_uv * 2.1 + vec2(0.37, -0.22), uElapsedSec * 0.055);
+    float low_cov = max(0.0, low_shape * 0.78 + low_detail * 0.30 - 0.40);
+
+    float high_shape = cloudDensity(high_uv, uElapsedSec * 0.015);
+    float high_cov = max(0.0, high_shape - 0.52);
+    float cloud_low = smoothstep(0.10, 0.35, low_cov) * clamp(uCloudCoverage, 0.0, 1.0);
+    float cloud_high = smoothstep(0.04, 0.20, high_cov) * clamp(uCloudCoverage, 0.0, 1.0);
+    float horizon_thick = 1.0 - smoothstep(0.0, 0.42, view_dir.y);
+    cloud_low *= mix(1.25, 0.55, clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
+    cloud_high *= mix(1.1, 0.75, clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
+    vec3 low_col = mix(vec3(0.66, 0.69, 0.74), vec3(0.94, 0.95, 0.98), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
+    vec3 high_col = mix(vec3(0.78, 0.81, 0.87), vec3(0.97, 0.98, 1.0), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
+    finalColor = mix(finalColor, high_col, cloud_high * 0.28);
+    finalColor = mix(finalColor, low_col, cloud_low * (0.30 + 0.20 * horizon_thick));
 
     if (uFogHorizonBlend > 0.001) {
         float horizon = 1.0 - smoothstep(0.0, 0.45, TexCoord.y);

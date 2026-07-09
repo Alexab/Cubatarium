@@ -16,7 +16,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const UUnderwaterFogPass &fog_pass,
                             const UWorld::EnvironmentState &env,
                             PerformancePreset preset, float elapsed_sec,
-                            const glm::mat3 &inv_view_rot, float horizon_boost)
+                            const glm::mat3 &inv_view_rot,
+                            const glm::vec3 &camera_pos, float horizon_boost)
 {
   if (!sky_shader || !sky_shader->IsValid())
   {
@@ -39,6 +40,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                        std::clamp(env.CloudCoverage, 0.0f, 1.0f));
   sky_shader->SetFloat("uElapsedSec", std::max(0.0f, elapsed_sec));
   sky_shader->SetMat3("uInvViewRot", inv_view_rot);
+  sky_shader->SetVec3("uCameraPos", camera_pos);
   int cloud_steps = 12;
   if (preset == PerformancePreset::Fast)
   {

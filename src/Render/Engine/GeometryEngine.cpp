@@ -1282,15 +1282,17 @@ void UGeometryEngine::DrawSkyGradient()
       env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f, 0.0f, 0.35f);
 
   glm::mat3 inv_view_rot(1.0f);
+  glm::vec3 camera_pos(0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
     inv_view_rot = glm::transpose(view_rot);
+    camera_pos = camera->GetPosition();
   }
 
   SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env,
                         Render.Preset, AnimationClock.ElapsedSeconds(),
-                        inv_view_rot, horizon_boost);
+                        inv_view_rot, camera_pos, horizon_boost);
 }
 
 void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
