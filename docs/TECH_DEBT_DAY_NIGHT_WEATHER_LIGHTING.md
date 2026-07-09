@@ -41,6 +41,15 @@ This file tracks implementation compromises for the environment and lighting rol
 - **Risk:** Brief particle disappearance during spikes.
 - **Follow-up:** Tiered budget reduction instead of full cooldown.
 
+- **Issue:** Screen-space weather background on sky remains perceptually unnatural
+  (regular artifacts, weak weather semantics).
+- **Current decision:** Disable streak background pass for now and ship
+  particles-only precipitation (`WeatherOverlayEnabled=false` by default, F8
+  keeps overlay off).
+- **Risk:** Distant sky has less explicit precipitation cues.
+- **Follow-up:** Revisit with a new sky-weather approach (spatiotemporal blue
+  noise driven, cloud-layer aware) after dedicated visual R&D.
+
 ### QA matrix (Variant D)
 
 | Scenario | Expected |

@@ -543,7 +543,7 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         break;
       }
       World->SetWeather(next, 1.2f);
-      World->SetWeatherOverlayEnabled(true);
+      World->SetWeatherOverlayEnabled(false);
       World->SetWeatherParticlesEnabled(true);
       if (Geometries)
       {

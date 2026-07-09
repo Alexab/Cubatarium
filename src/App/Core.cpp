@@ -557,7 +557,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetDayLengthMinutes(DefaultDayLengthMinutes);
     WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
     WorldInstance->SetLightingMinAmbient(DefaultLightingMinAmbient);
-    WorldInstance->SetWeatherOverlayEnabled(true);
+    WorldInstance->SetWeatherOverlayEnabled(false);
     WorldInstance->SetWeatherParticlesEnabled(true);
     // Keep debug disabled by default; toggle via command.
     WorldInstance->SetLightingDebugEnabled(false);

@@ -157,10 +157,8 @@ void UWeatherRenderPass::Render(const WeatherRenderContext &ctx,
 
   DepthCapture.CaptureFromDefaultFramebuffer();
 
-  if (world.GetLightingSettings().WeatherOverlayEnabled)
-  {
-    RenderStreaksPass(ctx, world);
-  }
+  // Temporarily disabled: sky background streaks look unnatural in current art
+  // direction. Keep particles-only weather until a better sky solution lands.
   if (world.GetLightingSettings().WeatherParticlesEnabled)
   {
     RenderParticlesPass(ctx, world);
