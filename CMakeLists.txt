@@ -162,6 +162,7 @@ set(SOURCES
     src/World/Environment/EnvironmentConfig.cpp
     src/World/Environment/WeatherBiomeUtil.cpp
     src/World/Environment/WeatherAutoController.cpp
+    src/World/Lighting/LightUtil.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
@@ -393,6 +394,7 @@ set(HEADERS
     src/World/Environment/EnvironmentConfig.h
     src/World/Environment/WeatherBiomeUtil.h
     src/World/Environment/WeatherAutoController.h
+    src/World/Lighting/LightUtil.h
     src/World/Persistence/WorldPersistence.h
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h
@@ -869,6 +871,12 @@ add_executable(fluid_state_pack_test
 target_include_directories(fluid_state_pack_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(fluid_state_pack_test glm::glm)
+
+add_executable(chunk_light_pack_test
+    src/Test/ChunkLightPackTest.cpp)
+target_include_directories(chunk_light_pack_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_light_pack_test glm::glm)
 
 add_executable(fluid_chunk_io_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
