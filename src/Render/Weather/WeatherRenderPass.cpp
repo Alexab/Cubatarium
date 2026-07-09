@@ -3,6 +3,7 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Weather/WeatherExposure.h"
 #include "World/Core/World.h"
 
 #include <chrono>
@@ -159,6 +160,12 @@ void UWeatherRenderPass::Render(const WeatherRenderContext &ctx,
   // direction. Keep particles-only weather until a better sky solution lands.
   if (!world.GetLightingSettings().WeatherParticlesEnabled)
   {
+    return;
+  }
+
+  if (!CanReceiveOutdoorPrecipitation(world, ctx.CameraPos))
+  {
+    ParticleSystem.Reset();
     return;
   }
 

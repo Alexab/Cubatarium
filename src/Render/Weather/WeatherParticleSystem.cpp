@@ -1,5 +1,6 @@
 #include "Render/Weather/WeatherParticleSystem.h"
 
+#include "Render/Weather/WeatherExposure.h"
 #include "World/Core/World.h"
 
 #include <algorithm>
@@ -70,6 +71,16 @@ void UWeatherParticleSystem::Update(const UWorld &world,
 
   const UWorld::EnvironmentState &env = world.GetEnvironmentState();
   const float intensity = std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f);
+  if (!CanReceiveOutdoorPrecipitation(world, camera_pos))
+  {
+    for (Particle &particle : Pool)
+    {
+      particle.Alive = false;
+    }
+    Instances.clear();
+    ActiveCount = 0;
+    return;
+  }
   const bool raining = env.Weather == UWorld::WeatherType::Rain ||
                        env.TargetWeather == UWorld::WeatherType::Rain ||
                        env.Weather == UWorld::WeatherType::Storm ||

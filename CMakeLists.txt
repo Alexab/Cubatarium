@@ -216,6 +216,7 @@ set(SOURCES
     src/Render/Pipeline/WeatherDepthCapture.cpp
     src/Render/Weather/WeatherParticleSystem.cpp
     src/Render/Weather/WeatherRenderPass.cpp
+    src/Render/Weather/WeatherExposure.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
