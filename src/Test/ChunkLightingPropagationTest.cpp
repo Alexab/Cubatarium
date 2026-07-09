@@ -1,0 +1,124 @@
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Blocks/BlockRegistry.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/LightUtil.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <unordered_map>
+
+static void Expect(bool cond, const char *message)
+{
+  if (!cond)
+  {
+    std::cerr << "chunk_lighting_propagation_test: " << message << std::endl;
+    std::exit(1);
+  }
+}
+
+static std::shared_ptr<cutum::UBlockRegistry> MakeRegistry()
+{
+  constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kTorch = 50;
+  auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+  cutum::BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Id = kStone;
+  stone.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition torch;
+  torch.Name = "torch";
+  torch.Id = kTorch;
+  torch.Physics = cutum::BlockPhysicsProfile::Solid();
+  torch.Render.Style = cutum::BlockRenderStyle::Cross;
+  std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
+  by_id[kStone] = stone;
+  by_id[kTorch] = torch;
+  std::unordered_map<std::string, cutum::BlockId> name_to_id;
+  name_to_id["stone"] = kStone;
+  name_to_id["torch"] = kTorch;
+  definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
+  return std::make_shared<cutum::UBlockRegistry>(nullptr, definitions);
+}
+
+static int SkyAt(const cutum::UBlockWorld &world, glm::ivec3 pos)
+{
+  const glm::ivec3 chunk_coord = cutum::UChunkManager::WorldToChunk(pos);
+  const cutum::UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return -1;
+  }
+  return chunk->GetSkyLightLocal(
+      cutum::UChunkManager::WorldToLocal(pos));
+}
+
+static int BlockAt(const cutum::UBlockWorld &world, glm::ivec3 pos)
+{
+  const glm::ivec3 chunk_coord = cutum::UChunkManager::WorldToChunk(pos);
+  const cutum::UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return -1;
+  }
+  return chunk->GetBlockLightLocal(
+      cutum::UChunkManager::WorldToLocal(pos));
+}
+
+int main()
+{
+  constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kTorch = 50;
+  auto registry = MakeRegistry();
+  cutum::UBlockWorld world;
+  const glm::ivec3 chunk_coord(0, 0, 0);
+
+  for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
+  {
+    for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+    {
+      world.SetBlock(glm::ivec3(x, 0, z), kStone);
+    }
+  }
+
+  cutum::RelightChunk(world, *registry, chunk_coord);
+  Expect(SkyAt(world, glm::ivec3(8, 15, 8)) == cutum::kMaxLightLevel,
+         "open sky at chunk top");
+
+  for (int x = 4; x <= 11; ++x)
+  {
+    for (int z = 4; z <= 11; ++z)
+    {
+      world.SetBlock(glm::ivec3(x, 8, z), kStone);
+    }
+  }
+  for (int x = 4; x <= 11; ++x)
+  {
+    for (int y = 1; y <= 15; ++y)
+    {
+      world.SetBlock(glm::ivec3(x, y, 4), kStone);
+      world.SetBlock(glm::ivec3(x, y, 11), kStone);
+    }
+  }
+  for (int z = 4; z <= 11; ++z)
+  {
+    for (int y = 1; y <= 15; ++y)
+    {
+      world.SetBlock(glm::ivec3(4, y, z), kStone);
+      world.SetBlock(glm::ivec3(11, y, z), kStone);
+    }
+  }
+
+  cutum::RelightChunk(world, *registry, chunk_coord);
+  Expect(SkyAt(world, glm::ivec3(8, 5, 8)) == 0, "enclosed room skylight");
+
+  world.SetBlock(glm::ivec3(8, 5, 8), kTorch);
+  cutum::RelightChunksAround(world, *registry, glm::ivec3(8, 5, 8));
+  Expect(BlockAt(world, glm::ivec3(8, 5, 8)) >= 13, "torch emission");
+  Expect(BlockAt(world, glm::ivec3(8, 5, 9)) > 0, "torch blocklight spread");
+
+  std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
+  return 0;
+}

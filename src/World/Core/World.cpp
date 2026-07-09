@@ -31,6 +31,7 @@
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/ChunkLighting.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
@@ -297,7 +298,8 @@ void UWorld::ApplyCelestialBodiesFromConfig()
     UCelestialBodyVisual body;
     body.Id = spec.Id;
     const std::string type = NormalizeToken(spec.Type);
-    body.Type = type == "moon" ? CelestialBodyType::Moon : CelestialBodyType::Sun;
+    body.Type =
+        type == "moon" ? CelestialBodyType::Moon : CelestialBodyType::Sun;
     body.Color = spec.Color;
     body.Intensity = spec.Intensity;
     body.AngularSizeDeg = spec.AngularSizeDeg;
@@ -317,8 +319,7 @@ void UWorld::SyncDefaultCelestialBodiesToConfig()
   {
     EnvironmentCelestialBodySpec spec;
     spec.Id = body.Id;
-    spec.Type =
-        body.Type == CelestialBodyType::Moon ? "moon" : "sun";
+    spec.Type = body.Type == CelestialBodyType::Moon ? "moon" : "sun";
     spec.Color = body.Color;
     spec.Intensity = body.Intensity;
     spec.AngularSizeDeg = body.AngularSizeDeg;
@@ -1289,6 +1290,10 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
+  if (BlockRegistry)
+  {
+    RelightChunksAround(BlockWorld, *BlockRegistry, blockPos);
+  }
   MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
@@ -2274,6 +2279,10 @@ const UWorldMeshService &UWorld::GetMeshService() const { return *MeshService; }
 
 void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y)
 {
+  if (BlockRegistry)
+  {
+    RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y);
+  }
   MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 
