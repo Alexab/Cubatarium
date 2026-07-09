@@ -8,6 +8,7 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -36,8 +37,6 @@ bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
 }
 constexpr int kCrossScanBelow = 2;
 constexpr int kCrossScanAbove = 4;
-constexpr int kSkyScanMaxBlocks = 64;
-constexpr int kBlockLightMaxRadius = 14;
 
 int MaxSolidLocalY(const UChunk &chunk, const UBlockRegistry &registry)
 {
@@ -97,186 +96,6 @@ bool ChunkPassesFrustum(const Frustum *frustum, const glm::vec3 *cameraPos,
                                       maxCullDistance);
 }
 
-bool IsLightTransparent(const UBlockRegistry &registry, BlockId id)
-{
-  if (id == BLOCK_AIR)
-  {
-    return true;
-  }
-  if (registry.IsLiquid(id))
-  {
-    return true;
-  }
-  if (registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
-  {
-    return true;
-  }
-  return !registry.BlocksMovement(id);
-}
-
-int BlockEmissionLevel(const UBlockRegistry &registry, BlockId id)
-{
-  if (id == BLOCK_AIR)
-  {
-    return 0;
-  }
-  const std::string name = registry.GetTypeNameById(id);
-  if (name.empty())
-  {
-    return 0;
-  }
-  if (name.find("torch") != std::string::npos ||
-      name.find("lantern") != std::string::npos ||
-      name.find("lamp") != std::string::npos)
-  {
-    return 13;
-  }
-  if (name.find("glow") != std::string::npos ||
-      name.find("light") != std::string::npos)
-  {
-    return 12;
-  }
-  if (name.find("lava") != std::string::npos ||
-      name.find("fire") != std::string::npos)
-  {
-    return 14;
-  }
-  if (registry.IsFireBlock(id))
-  {
-    return 14;
-  }
-  return 0;
-}
-
-bool HasLineOfSight(const UBlockWorld &world, const UBlockRegistry &registry,
-                    glm::ivec3 from, glm::ivec3 to)
-{
-  glm::ivec3 cursor = from;
-  const glm::ivec3 delta = to - from;
-  const int steps =
-      std::max({std::abs(delta.x), std::abs(delta.y), std::abs(delta.z)});
-  if (steps <= 1)
-  {
-    return true;
-  }
-  for (int i = 1; i < steps; ++i)
-  {
-    const float t = static_cast<float>(i) / static_cast<float>(steps);
-    const float x = static_cast<float>(from.x) +
-                    (static_cast<float>(to.x) - static_cast<float>(from.x)) * t;
-    const float y = static_cast<float>(from.y) +
-                    (static_cast<float>(to.y) - static_cast<float>(from.y)) * t;
-    const float z = static_cast<float>(from.z) +
-                    (static_cast<float>(to.z) - static_cast<float>(from.z)) * t;
-    cursor.x = static_cast<int>(std::round(x));
-    cursor.y = static_cast<int>(std::round(y));
-    cursor.z = static_cast<int>(std::round(z));
-    const BlockId id = world.GetBlock(cursor);
-    if (!IsLightTransparent(registry, id))
-    {
-      return false;
-    }
-  }
-  return true;
-}
-
-float SampleSkyLight01(const UBlockWorld &world, const UBlockRegistry &registry,
-                       glm::ivec3 pos)
-{
-  int blockers = 0;
-  for (int step = 1; step <= kSkyScanMaxBlocks; ++step)
-  {
-    const glm::ivec3 probe(pos.x, pos.y + step, pos.z);
-    if (!IsLightTransparent(registry, world.GetBlock(probe)))
-    {
-      ++blockers;
-      break;
-    }
-  }
-  if (blockers == 0)
-  {
-    return 1.0f;
-  }
-
-  // Allow side openings to leak skylight into caves.
-  const glm::ivec2 offsets[] = {{1, 0}, {-1, 0}, {0, 1},  {0, -1},
-                                {1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
-  float best = 0.0f;
-  for (int radius = 1; radius <= 6; ++radius)
-  {
-    for (const glm::ivec2 &offset : offsets)
-    {
-      bool open = true;
-      const glm::ivec3 sample(pos.x + offset.x * radius, pos.y,
-                              pos.z + offset.y * radius);
-      for (int step = 1; step <= kSkyScanMaxBlocks; ++step)
-      {
-        if (!IsLightTransparent(
-                registry, world.GetBlock(sample + glm::ivec3(0, step, 0))))
-        {
-          open = false;
-          break;
-        }
-      }
-      if (open)
-      {
-        best = std::max(best, std::max(0.0f, 1.0f - radius * 0.14f));
-      }
-    }
-  }
-  return best;
-}
-
-float SampleBlockLight01(const UBlockWorld &world,
-                         const UBlockRegistry &registry, glm::ivec3 pos)
-{
-  float best = 0.0f;
-  for (int dz = -kBlockLightMaxRadius; dz <= kBlockLightMaxRadius; ++dz)
-  {
-    for (int dy = -kBlockLightMaxRadius; dy <= kBlockLightMaxRadius; ++dy)
-    {
-      for (int dx = -kBlockLightMaxRadius; dx <= kBlockLightMaxRadius; ++dx)
-      {
-        const int manhattan = std::abs(dx) + std::abs(dy) + std::abs(dz);
-        if (manhattan > kBlockLightMaxRadius)
-        {
-          continue;
-        }
-        const glm::ivec3 sample = pos + glm::ivec3(dx, dy, dz);
-        const int emission =
-            BlockEmissionLevel(registry, world.GetBlock(sample));
-        if (emission <= 0 || manhattan > emission)
-        {
-          continue;
-        }
-        if (!HasLineOfSight(world, registry, sample, pos))
-        {
-          continue;
-        }
-        const float level = static_cast<float>(emission - manhattan) / 15.0f;
-        best = std::max(best, level);
-      }
-    }
-  }
-  return std::clamp(best, 0.0f, 1.0f);
-}
-
-float SampleVertexLight01(const UBlockWorld &world,
-                          const UBlockRegistry &registry,
-                          const glm::vec3 &world_pos, bool debugLight)
-{
-  const glm::ivec3 voxel(static_cast<int>(std::round(world_pos.x)),
-                         static_cast<int>(std::round(world_pos.y)),
-                         static_cast<int>(std::round(world_pos.z)));
-  const float sky = SampleSkyLight01(world, registry, voxel);
-  const float block = SampleBlockLight01(world, registry, voxel);
-  float light = std::max(sky, block);
-  if (debugLight)
-  {
-    light = block;
-  }
-  return std::clamp(light, 0.0f, 1.0f);
-}
 } // namespace
 
 size_t UChunkMeshCache::TotalCrossCenterCount() const
@@ -862,7 +681,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       {
         GreedyMeshVertex &vertex = batch.vertices[i];
         const glm::vec3 world_pos(vertex.px, vertex.py, vertex.pz);
-        vertex.light = SampleVertexLight01(world, registry, world_pos, false);
+        const glm::ivec3 world_voxel(static_cast<int>(std::round(world_pos.x)),
+                                     static_cast<int>(std::round(world_pos.y)),
+                                     static_cast<int>(std::round(world_pos.z)));
+        ApplyVertexLight(vertex, world, world_voxel);
         if (q.axis == 1 && q.faceSign > 0)
         {
           vertex.wetness = SurfaceWetness;

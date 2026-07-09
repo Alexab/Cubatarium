@@ -15,7 +15,8 @@ struct GreedyMeshVertex
   float faceIndex;
   float u;
   float v;
-  float light;
+  float skyLight;
+  float blockLight;
   float wetness;
 };
 

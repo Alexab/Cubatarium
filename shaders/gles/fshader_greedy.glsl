@@ -3,6 +3,9 @@ precision mediump float;
 in vec3 vWorldPos;
 in vec2 vUV;
 flat in int vFaceIndex;
+in float vSkyLight;
+in float vBlockLight;
+in float vWetness;
 
 out vec4 FragColor;
 
@@ -26,6 +29,10 @@ uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
 uniform float uEnvFogMultiplier;
+uniform float uEnvMinAmbient;
+uniform float uEnvDayFactor;
+uniform float uEnvNightFactor;
+uniform float uEnvLightDebug;
 uniform float uEnvPrecipIntensity;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
@@ -164,6 +171,20 @@ void main()
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
     FragColor = texture(texture0, uv);
+    float sky01 = clamp(vSkyLight, 0.0, 1.0);
+    float block01 = clamp(vBlockLight, 0.0, 1.0);
+    if (vFaceIndex == kCrossFaceIndex && sky01 < 0.01 && block01 < 0.01) {
+        sky01 = 1.0;
+    }
+    float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
+    float blockAmbientFloor = clamp(uEnvMinAmbient * 0.15, 0.02, 0.5);
+    float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor);
+    float blockLit = mix(blockAmbientFloor, 1.0, block01);
+    float lit = max(skyLit, blockLit);
+    FragColor.rgb *= lit;
+    if (uEnvLightDebug > 0.5) {
+        FragColor.rgb = vec3(sky01, block01, 0.0);
+    }
     float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
     if (precip > 0.001) {
         float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));

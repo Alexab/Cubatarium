@@ -3,6 +3,7 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/MeshLightSampling.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <mutex>
@@ -70,8 +71,18 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
               registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
           AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
         }
-        const int max_local_y =
-            MaxSolidLocalYSnapshot(snapshot, *registryPtr);
+        for (auto &entry : byBlockId)
+        {
+          for (GreedyMeshVertex &vertex : entry.second.vertices)
+          {
+            const glm::ivec3 world_voxel(
+                static_cast<int>(std::round(vertex.px)),
+                static_cast<int>(std::round(vertex.py)),
+                static_cast<int>(std::round(vertex.pz)));
+            ApplyVertexLight(vertex, snapshot, world_voxel);
+          }
+        }
+        const int max_local_y = MaxSolidLocalYSnapshot(snapshot, *registryPtr);
         (void)max_local_y;
         CollectCrossCentersFromSnapshot(snapshot, *registryPtr,
                                         result.crossCenters);

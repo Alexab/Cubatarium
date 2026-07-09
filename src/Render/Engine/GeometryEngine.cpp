@@ -716,9 +716,9 @@ void UGeometryEngine::PrepareFrameRendering()
   const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
   const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
-  const float sky_mul = std::clamp(
-      0.12f + day * env.WeatherSkyAttenuation * 0.88f + moon * 0.28f, 0.12f,
-      1.0f);
+  const float sky_mul =
+      std::clamp(0.12f + day * env.WeatherSkyAttenuation * 0.88f + moon * 0.28f,
+                 0.12f, 1.0f);
   tint *= sky_mul;
   tint = glm::mix(tint, tint * glm::vec3(0.75f, 0.82f, 0.95f),
                   moon * (1.0f - day) * 0.45f);
@@ -865,13 +865,18 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     glVertexAttribPointer(
         3, 1, GL_FLOAT, GL_FALSE, kStride,
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, light)));
+                                 offsetof(GreedyMeshVertex, skyLight)));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(
         4, 1, GL_FLOAT, GL_FALSE, kStride,
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, wetness)));
+                                 offsetof(GreedyMeshVertex, blockLight)));
     glEnableVertexAttribArray(4);
+    glVertexAttribPointer(
+        5, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, wetness)));
+    glEnableVertexAttribArray(5);
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -1167,11 +1172,14 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
                         (void *)(offsetof(GreedyMeshVertex, u)));
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
-                        (void *)(offsetof(GreedyMeshVertex, light)));
+                        (void *)(offsetof(GreedyMeshVertex, skyLight)));
   glEnableVertexAttribArray(3);
   glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kStride,
-                        (void *)(offsetof(GreedyMeshVertex, wetness)));
+                        (void *)(offsetof(GreedyMeshVertex, blockLight)));
   glEnableVertexAttribArray(4);
+  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, wetness)));
+  glEnableVertexAttribArray(5);
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }

@@ -31,6 +31,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
   }
   snapshot.blocks = chunk->GetData();
   snapshot.fluid_packed = chunk->GetFluidData();
+  snapshot.light_packed = chunk->GetLightData();
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   for (int axis = 0; axis < 3; ++axis)
@@ -81,7 +82,14 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
 
 BlockId ChunkMeshSnapshot::GetBlockLocal(glm::ivec3 local) const
 {
-  return blocks[local.x + CHUNK_SIZE * local.y + CHUNK_SIZE * CHUNK_SIZE * local.z];
+  return blocks[local.x + CHUNK_SIZE * local.y +
+                CHUNK_SIZE * CHUNK_SIZE * local.z];
+}
+
+uint8_t ChunkMeshSnapshot::GetLightPackedLocal(glm::ivec3 local) const
+{
+  return light_packed[local.x + CHUNK_SIZE * local.y +
+                      CHUNK_SIZE * CHUNK_SIZE * local.z];
 }
 
 uint8_t ChunkMeshSnapshot::GetFluidPackedLocal(glm::ivec3 local) const
@@ -115,9 +123,6 @@ FluidCellState ChunkMeshSnapshot::GetFluid(glm::ivec3 worldPos) const
   return UnpackFluidCellState(GetFluidPacked(worldPos));
 }
 
-glm::ivec3 ChunkMeshSnapshot::ChunkOrigin() const
-{
-  return coord * CHUNK_SIZE;
-}
+glm::ivec3 ChunkMeshSnapshot::ChunkOrigin() const { return coord * CHUNK_SIZE; }
 
 } // namespace cutum
