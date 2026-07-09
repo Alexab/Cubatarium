@@ -251,6 +251,7 @@ private:
   double DurationDrawSceneMks;
   double DurationWeatherStreakMks{0.0};
   double DurationWeatherParticleMks{0.0};
+  double DurationSkyGradientMks{0.0};
 
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4

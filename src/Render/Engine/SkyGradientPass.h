@@ -20,12 +20,15 @@ public:
             const UWorld::EnvironmentState &env, PerformancePreset preset,
             float elapsed_sec, const glm::mat3 &inv_view_rot,
             const glm::vec3 &camera_pos, float horizon_boost = 0.0f);
+  void InvalidateGpuResources();
+  double GetLastDrawMs() const { return LastDrawMs; }
 
 private:
   bool EnsureBuffers();
   void DestroyBuffers();
   unsigned int SkyVao{0};
   unsigned int SkyVbo{0};
+  double LastDrawMs{0.0};
 };
 
 } // namespace cutum

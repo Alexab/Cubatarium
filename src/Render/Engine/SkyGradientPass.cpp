@@ -5,13 +5,25 @@
 #include "Render/GlIncludes.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <string>
 
 namespace cutum
 {
 
+namespace
+{
+constexpr int kAttrPos = 0;
+constexpr int kAttrTexCoord = 1;
+constexpr GLfloat kSkyVertices[] = {-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, -1.0f,
+                                    0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                                    1.0f,  -1.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+} // namespace
+
 USkyGradientPass::~USkyGradientPass() { DestroyBuffers(); }
+
+void USkyGradientPass::InvalidateGpuResources() { DestroyBuffers(); }
 
 bool USkyGradientPass::EnsureBuffers()
 {
@@ -19,9 +31,6 @@ bool USkyGradientPass::EnsureBuffers()
   {
     return true;
   }
-  static const GLfloat sky_vertices[] = {
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
-      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
   glGenVertexArrays(1, &SkyVao);
   glGenBuffers(1, &SkyVbo);
   if (SkyVao == 0 || SkyVbo == 0)
@@ -31,8 +40,14 @@ bool USkyGradientPass::EnsureBuffers()
   }
   glBindVertexArray(SkyVao);
   glBindBuffer(GL_ARRAY_BUFFER, SkyVbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(sky_vertices), sky_vertices,
+  glBufferData(GL_ARRAY_BUFFER, sizeof(kSkyVertices), kSkyVertices,
                GL_STATIC_DRAW);
+  glEnableVertexAttribArray(kAttrPos);
+  glVertexAttribPointer(kAttrPos, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat),
+                        (void *)0);
+  glEnableVertexAttribArray(kAttrTexCoord);
+  glVertexAttribPointer(kAttrTexCoord, 2, GL_FLOAT, GL_FALSE,
+                        5 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
   return true;
@@ -70,6 +85,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
     std::cerr << "Sky pass buffers are not initialized!" << std::endl;
     return;
   }
+
+  const auto t_begin = std::chrono::high_resolution_clock::now();
 
   glDisable(GL_DEPTH_TEST);
 
@@ -135,39 +152,15 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
       std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));
 
   glBindVertexArray(SkyVao);
-  glBindBuffer(GL_ARRAY_BUFFER, SkyVbo);
-
-  const int vertex_location =
-      glGetAttribLocation(sky_shader->GetProgramID(), "aPos");
-  if (vertex_location != -1)
-  {
-    glEnableVertexAttribArray(vertex_location);
-    glVertexAttribPointer(vertex_location, 3, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)0);
-  }
-
-  const int texcoord_location =
-      glGetAttribLocation(sky_shader->GetProgramID(), "aTexCoord");
-  if (texcoord_location != -1)
-  {
-    glEnableVertexAttribArray(texcoord_location);
-    glVertexAttribPointer(texcoord_location, 2, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
-  }
-
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-  const GLenum error = glGetError();
-  if (error != GL_NO_ERROR)
-  {
-    std::cerr << "OpenGL error after drawing sky: " << error << std::endl;
-  }
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
   sky_shader->Unuse();
 
   glEnable(GL_DEPTH_TEST);
+
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  LastDrawMs =
+      std::chrono::duration<double, std::milli>(t_end - t_begin).count();
 }
 
 } // namespace cutum

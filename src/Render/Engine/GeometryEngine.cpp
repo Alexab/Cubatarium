@@ -76,6 +76,7 @@ UGeometryEngine::~UGeometryEngine()
   CreatureDraw_.DestroyBuffers();
   CreatureMeshGpuCache::Instance().DestroyAll();
   DestroyOverlayBuffers();
+  SkyGradientPass_.InvalidateGpuResources();
 }
 
 void UGeometryEngine::SetCreatureTextureStorage(
@@ -1293,6 +1294,7 @@ void UGeometryEngine::DrawSkyGradient()
   SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env,
                         Render.Preset, AnimationClock.ElapsedSeconds(),
                         inv_view_rot, camera_pos, horizon_boost);
+  DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();
 }
 
 void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
@@ -1492,7 +1494,8 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
           std::to_string(DurationWeatherStreakMks).substr(0, 5) + " ms" +
           " particle " +
           std::to_string(DurationWeatherParticleMks).substr(0, 5) + " ms" +
-          " n=" + std::to_string(WeatherPass.GetActiveParticleCount()),
+          " sky " + std::to_string(DurationSkyGradientMks).substr(0, 5) +
+          " ms" + " n=" + std::to_string(WeatherPass.GetActiveParticleCount()),
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
