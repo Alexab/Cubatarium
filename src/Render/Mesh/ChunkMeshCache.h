@@ -58,7 +58,6 @@ public:
   void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &viewProj,
                               const glm::vec3 &cameraPos);
   void SetRenderSettings(const RenderSettings &settings);
-  void SetSurfaceWetness(float wetness) { SurfaceWetness = wetness; }
   void SetRenderDistanceChunks(int distance)
   {
     RenderDistanceChunks = distance;
@@ -127,7 +126,6 @@ private:
   std::vector<glm::ivec3> LastVisibleChunks;
   int RenderDistanceChunks{4};
   RenderSettings Render;
-  float SurfaceWetness{0.0f};
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};

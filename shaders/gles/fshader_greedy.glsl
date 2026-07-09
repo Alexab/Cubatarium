@@ -27,7 +27,6 @@ uniform float uFogHorizontal;
 uniform float uFogDensity;
 uniform float uEnvFogMultiplier;
 uniform float uEnvPrecipIntensity;
-uniform float uEnvWetness;
 uniform float uBelowSurfaceFog;
 uniform float uBelowSurfaceFogMin;
 uniform float uBelowSurfaceFogScale;
@@ -169,10 +168,6 @@ void main()
     if (precip > 0.001) {
         float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
         FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);
-    }
-    float wet = clamp(uEnvWetness, 0.0, 1.0);
-    if (wet > 0.001 && vFaceIndex == 4) {
-        FragColor.rgb *= 1.0 - wet * 0.15;
     }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;

@@ -30,7 +30,6 @@ inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
   v.u = 0.0f;
   v.v = 0.0f;
   v.light = 1.0f;
-  v.wetness = 0.0f;
   return v;
 }
 

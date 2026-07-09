@@ -9,7 +9,6 @@ out vec3 vWorldPos;
 out vec2 vUV;
 flat out int vFaceIndex;
 out float vLight;
-out float vWetness;
 
 uniform mat4 mvp_matrix;
 
@@ -21,5 +20,4 @@ void main()
     vUV = aUV;
     vFaceIndex = int(aFaceIndex + 0.5);
     vLight = 1.0;
-    vWetness = 0.0;
 }

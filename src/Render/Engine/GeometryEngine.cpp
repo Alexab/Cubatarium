@@ -722,13 +722,6 @@ void UGeometryEngine::PrepareFrameRendering()
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
-
-  if (UWorldMeshService *mesh_service =
-          WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
-                               : &WorldInstance->GetMeshService())
-  {
-    mesh_service->GetCache().SetSurfaceWetness(env.SurfaceWetness);
-  }
 }
 
 void UGeometryEngine::ApplyFogUniforms(
@@ -804,8 +797,6 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity",
                            std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
-    greedyShader->SetFloat("uEnvWetness",
-                           std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
   }
   else
   {
@@ -814,7 +805,6 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     greedyShader->SetFloat("uEnvDayFactor", 1.0f);
     greedyShader->SetFloat("uEnvLightDebug", 0.0f);
     greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
-    greedyShader->SetFloat("uEnvWetness", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -865,11 +855,6 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                  offsetof(GreedyMeshVertex, light)));
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(
-        4, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, wetness)));
-    glEnableVertexAttribArray(4);
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -1160,10 +1145,6 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, light)));
   glEnableVertexAttribArray(3);
-  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kStride,
-                        (void *)(offsetof(GreedyMeshVertex, wetness)));
-  glEnableVertexAttribArray(4);
-
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }
