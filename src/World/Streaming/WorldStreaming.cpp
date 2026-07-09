@@ -215,6 +215,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             persistence.LoadTerrainColumn(coord, world.BlockWorld,
                                           *world.BlockRegistry,
                                           settings.MaxHeight) > 0;
+        if (loaded)
+        {
+          world.RelightTerrainColumn(coord.x, coord.z, 0, settings.MaxHeight);
+        }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)

@@ -699,6 +699,16 @@ void UWorld::RebuildAllLightingDirtyMeshes()
   InvalidateBlockMesh();
 }
 
+void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
+                                  int max_y)
+{
+  if (LightingRelightDeferred || !BlockRegistry)
+  {
+    return;
+  }
+  RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y);
+}
+
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
   return UWorldPersistence::HasPersistedTerrainOnDisk(world_folder_path);
@@ -2286,10 +2296,7 @@ const UWorldMeshService &UWorld::GetMeshService() const { return *MeshService; }
 
 void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y)
 {
-  if (BlockRegistry)
-  {
-    RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y);
-  }
+  RelightTerrainColumn(world_x, world_z, min_y, max_y);
   MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 

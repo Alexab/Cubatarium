@@ -36,16 +36,7 @@ bool WorldPosInChunk(glm::ivec3 world_pos, glm::ivec3 chunk_coord)
 
 void ClearChunkLight(UChunk &chunk)
 {
-  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-  {
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-    {
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-      {
-        chunk.SetLightLocal(glm::ivec3(lx, ly, lz), 0, 0);
-      }
-    }
-  }
+  chunk.GetLightDataMutable().fill(0);
 }
 
 void WriteSkyLight(UChunk &chunk, glm::ivec3 local, int sky_level)
@@ -185,24 +176,38 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
                          UChunk &chunk, glm::ivec3 chunk_coord)
 {
   const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-  const int margin = kMaxLightLevel;
   std::deque<std::pair<glm::ivec3, int>> queue;
 
-  for (int dx = -margin; dx < CHUNK_SIZE + margin; ++dx)
+  const auto seed_chunk = [&](glm::ivec3 neighbor_coord)
   {
-    for (int dz = -margin; dz < CHUNK_SIZE + margin; ++dz)
+    const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
+    if (!neighbor)
     {
-      for (int dy = -margin; dy < CHUNK_SIZE + margin; ++dy)
+      return;
+    }
+    const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
+    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+    {
+      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
       {
-        const glm::ivec3 world_pos = origin + glm::ivec3(dx, dy, dz);
-        const BlockId id = world.GetBlock(world_pos);
-        const int emission = BlockEmissionLevel(registry, id);
-        if (emission > 0)
+        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
         {
-          queue.emplace_back(world_pos, emission);
+          const glm::ivec3 local(lx, ly, lz);
+          const BlockId id = neighbor->GetBlockLocal(local);
+          const int emission = BlockEmissionLevel(registry, id);
+          if (emission > 0)
+          {
+            queue.emplace_back(neighbor_origin + local, emission);
+          }
         }
       }
     }
+  };
+
+  seed_chunk(chunk_coord);
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    seed_chunk(chunk_coord + offset);
   }
 
   while (!queue.empty())

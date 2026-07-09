@@ -168,6 +168,11 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
 
       if (column_completed && world.Streaming && world.Streaming->GetStreamer())
       {
+        if (load.success && world.BlockRegistry)
+        {
+          const int max_y = world.ProceduralTemplate.MaxHeight;
+          world.RelightTerrainColumn(ground.x, ground.z, 0, max_y);
+        }
         world.Streaming->GetStreamer()->NotifyChunkCommitted(ground);
       }
     }

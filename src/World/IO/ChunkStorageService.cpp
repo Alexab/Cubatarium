@@ -1,7 +1,6 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Lighting/ChunkLighting.h"
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -237,10 +236,6 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   const UChunkBuffer buffer =
       DeserializeChunk(bytes, chunkCoord, format, registry);
   const int placed = ApplyBufferToWorld(buffer, world);
-  if (placed >= 0)
-  {
-    RelightChunksAround(world, registry, chunkCoord * CHUNK_SIZE);
-  }
   return placed;
 }
 

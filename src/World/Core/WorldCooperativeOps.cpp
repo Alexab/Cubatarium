@@ -7,6 +7,7 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Lighting/ChunkLighting.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
@@ -33,6 +34,11 @@ constexpr int kMeshWarmupMaxTicks = 50000;
 
 void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
 {
+  if (world.IsLightingRelightDeferred() && world.BlockRegistry)
+  {
+    RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
+    world.SetLightingRelightDeferred(false);
+  }
   world.BlockCounter.MarkNeedsRecount();
   if (world.MeshService->GetDirtyCount() == 0 &&
       !world.MeshService->HasPendingAsyncMeshWork())
@@ -249,6 +255,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     if (Kind == WorldCoopKind::Load)
     {
       world.SetWorldFolderPath(FolderPath);
+      world.SetLightingRelightDeferred(true);
       world.BlockWorldReady = false;
       world.LoadedFromChunkSave = false;
       world.BlockWorld.Clear();
@@ -274,6 +281,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     else
     {
       world.ClearCreaturesAndUsers();
+      world.SetLightingRelightDeferred(true);
       world.BlockWorldReady = false;
       world.HasPersistedSave = false;
       world.LoadedFromChunkSave = false;

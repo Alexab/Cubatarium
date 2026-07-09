@@ -662,6 +662,13 @@ public:
   void SetCloudCoverage(float value);
   void RebuildAllLightingDirtyMeshes();
 
+  void SetLightingRelightDeferred(bool deferred)
+  {
+    LightingRelightDeferred = deferred;
+  }
+  bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
+  void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y);
+
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
 
@@ -804,6 +811,7 @@ private:
   EnvironmentState EnvironmentStateData;
   EnvironmentConfig EnvironmentSettingsData;
   LightingSettings LightingSettingsData;
+  bool LightingRelightDeferred{false};
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};
