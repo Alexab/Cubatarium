@@ -60,6 +60,31 @@ float cloudDensity(vec2 uv, float time_shift)
     return clamp(n0 * 0.72 + n1 * 0.28, 0.0, 1.0);
 }
 
+vec2 cloudHorizonUv(vec3 dir, vec2 camera_xz, vec2 wind, float azimuth_scale,
+                    float elev_scale)
+{
+    vec2 horiz = normalize(dir.xz + vec2(1e-4));
+    float azimuth = atan(horiz.x, horiz.y);
+    float elev = clamp(dir.y, 0.0, 1.0);
+    return vec2(azimuth * azimuth_scale, elev * elev_scale) +
+           camera_xz * 0.0008 + wind * 0.55;
+}
+
+vec2 cloudWorldUv(vec3 dir, vec2 camera_xz, float world_scale, float parallax,
+                  vec2 wind, float elev_w)
+{
+    float y_safe = mix(0.50, max(dir.y, 0.24), elev_w);
+    vec2 proj = dir.xz / y_safe;
+    float r2 = dot(proj, proj);
+    proj *= inversesqrt(1.0 + r2 * 0.28);
+    return camera_xz * world_scale + proj * parallax * elev_w + wind;
+}
+
+vec2 blendCloudUv(vec2 horizon_uv, vec2 world_uv, float elev_w)
+{
+    return mix(horizon_uv, world_uv, elev_w);
+}
+
 float cloudDensityWorld(vec3 world_pos, float time_shift)
 {
     return cloudDensity(world_pos.xz * 0.0012, time_shift);
@@ -108,29 +133,41 @@ void main()
     float cloud_cov = clamp(uCloudCoverage, 0.0, 1.0);
     if (cloud_cov > 0.001)
     {
+        float elev = clamp(view_dir.y, 0.0, 1.0);
+        // Fade detailed clouds below ~30 deg and keep a soft horizon band.
+        float elev_w = smoothstep(0.22, 0.52, elev);
+        float horizon_fade = smoothstep(0.06, 0.42, elev);
+
         vec2 wind_low = vec2(0.010, 0.004) * uElapsedSec;
         vec2 wind_high = vec2(0.016, -0.003) * uElapsedSec;
-        float y_term = max(view_dir.y, 0.15);
-        vec2 proj = view_dir.xz / y_term;
-        proj = clamp(proj, vec2(-3.0), vec2(3.0));
-        vec2 low_uv = uCameraPos.xz * 0.0016 + proj * 0.42 + wind_low * 0.8;
-        vec2 high_uv = uCameraPos.xz * 0.0009 + proj * 0.65 + wind_high * 0.9;
+        vec2 horizon_low_uv =
+            cloudHorizonUv(view_dir, uCameraPos.xz, wind_low, 1.75, 3.2);
+        vec2 horizon_high_uv =
+            cloudHorizonUv(view_dir, uCameraPos.xz, wind_high, 1.15, 2.6);
+        vec2 world_low_uv =
+            cloudWorldUv(view_dir, uCameraPos.xz, 0.0016, 0.42, wind_low, elev_w);
+        vec2 world_high_uv =
+            cloudWorldUv(view_dir, uCameraPos.xz, 0.0009, 0.65, wind_high, elev_w);
+        vec2 low_uv = blendCloudUv(horizon_low_uv, world_low_uv, elev_w);
+        vec2 high_uv = blendCloudUv(horizon_high_uv, world_high_uv, elev_w);
 
         float low_shape = cloudDensity(low_uv, uElapsedSec * 0.022);
-        float low_detail = cloudDensity(low_uv * 2.1 + vec2(0.37, -0.22), uElapsedSec * 0.055);
-        float low_cov = max(0.0, low_shape * 0.78 + low_detail * 0.30 - 0.40);
+        float low_detail =
+            cloudDensity(low_uv * 2.1 + vec2(0.37, -0.22), uElapsedSec * 0.055) *
+            elev_w;
+        float low_cov =
+            max(0.0, low_shape * 0.78 + low_detail * 0.30 - 0.40);
 
         float high_shape = cloudDensity(high_uv, uElapsedSec * 0.015);
         float high_cov = max(0.0, high_shape - 0.52);
-        float cloud_low = smoothstep(0.10, 0.35, low_cov) * cloud_cov;
-        float cloud_high = smoothstep(0.04, 0.20, high_cov) * cloud_cov;
-        float horizon_thick = 1.0 - smoothstep(0.0, 0.42, view_dir.y);
-        cloud_low *= mix(1.25, 0.55, clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-        cloud_high *= mix(1.1, 0.75, clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
+        float cloud_low = smoothstep(0.10, 0.35, low_cov) * cloud_cov * horizon_fade;
+        float cloud_high = smoothstep(0.04, 0.20, high_cov) * cloud_cov * horizon_fade;
+        cloud_low *= mix(0.45, 1.0, elev_w);
+        cloud_high *= mix(0.65, 1.0, elev_w);
         vec3 low_col = mix(vec3(0.66, 0.69, 0.74), vec3(0.94, 0.95, 0.98), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
         vec3 high_col = mix(vec3(0.78, 0.81, 0.87), vec3(0.97, 0.98, 1.0), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
         finalColor = mix(finalColor, high_col, cloud_high * 0.28);
-        finalColor = mix(finalColor, low_col, cloud_low * (0.30 + 0.20 * horizon_thick));
+        finalColor = mix(finalColor, low_col, cloud_low * 0.30);
     }
 
     if (uFogHorizonBlend > 0.001) {
