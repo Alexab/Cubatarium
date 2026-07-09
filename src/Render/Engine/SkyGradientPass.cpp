@@ -11,6 +11,47 @@
 namespace cutum
 {
 
+USkyGradientPass::~USkyGradientPass() { DestroyBuffers(); }
+
+bool USkyGradientPass::EnsureBuffers()
+{
+  if (SkyVao != 0 && SkyVbo != 0)
+  {
+    return true;
+  }
+  static const GLfloat sky_vertices[] = {
+      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
+      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
+  glGenVertexArrays(1, &SkyVao);
+  glGenBuffers(1, &SkyVbo);
+  if (SkyVao == 0 || SkyVbo == 0)
+  {
+    DestroyBuffers();
+    return false;
+  }
+  glBindVertexArray(SkyVao);
+  glBindBuffer(GL_ARRAY_BUFFER, SkyVbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(sky_vertices), sky_vertices,
+               GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+  return true;
+}
+
+void USkyGradientPass::DestroyBuffers()
+{
+  if (SkyVbo != 0)
+  {
+    glDeleteBuffers(1, &SkyVbo);
+    SkyVbo = 0;
+  }
+  if (SkyVao != 0)
+  {
+    glDeleteVertexArrays(1, &SkyVao);
+    SkyVao = 0;
+  }
+}
+
 void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const glm::vec4 &sky_color,
                             const UUnderwaterFogPass &fog_pass,
@@ -22,6 +63,11 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   if (!sky_shader || !sky_shader->IsValid())
   {
     std::cerr << "Sky shader is not linked!" << std::endl;
+    return;
+  }
+  if (!EnsureBuffers())
+  {
+    std::cerr << "Sky pass buffers are not initialized!" << std::endl;
     return;
   }
 
@@ -88,18 +134,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
       "uFogHorizonBlend",
       std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));
 
-  static const GLfloat sky_vertices[] = {
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
-      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
-
-  GLuint temp_vao = 0;
-  GLuint temp_vbo = 0;
-  glGenVertexArrays(1, &temp_vao);
-  glBindVertexArray(temp_vao);
-  glGenBuffers(1, &temp_vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, temp_vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(sky_vertices), sky_vertices,
-               GL_STATIC_DRAW);
+  glBindVertexArray(SkyVao);
+  glBindBuffer(GL_ARRAY_BUFFER, SkyVbo);
 
   const int vertex_location =
       glGetAttribLocation(sky_shader->GetProgramID(), "aPos");
@@ -129,8 +165,6 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
-  glDeleteVertexArrays(1, &temp_vao);
-  glDeleteBuffers(1, &temp_vbo);
   sky_shader->Unuse();
 
   glEnable(GL_DEPTH_TEST);
