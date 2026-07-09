@@ -83,6 +83,26 @@ public:
     Snow = 4,
   };
 
+  enum class CelestialBodyType
+  {
+    Sun = 0,
+    Moon = 1,
+  };
+
+  struct UCelestialBodyVisual
+  {
+    std::string Id{"sun"};
+    CelestialBodyType Type{CelestialBodyType::Sun};
+    glm::vec3 Color{1.0f, 0.95f, 0.82f};
+    float Intensity{1.0f};
+    float AngularSizeDeg{0.53f};
+    float OrbitInclinationDeg{23.0f};
+    float OrbitPeriodDays{1.0f};
+    float OrbitPhase{0.0f};
+    float OrbitLongitudeDeg{0.0f};
+    glm::vec3 DirectionWorld{0.0f, 1.0f, 0.0f};
+  };
+
   struct EnvironmentState
   {
     float TimeOfDayNormalized{0.35f};
@@ -99,6 +119,9 @@ public:
     float WeatherSkyAttenuation{1.0f};
     float DayNightFactor{1.0f};
     float SurfaceWetness{0.0f};
+    float StarVisibility{0.0f};
+    float CloudCoverage{0.2f};
+    std::vector<UCelestialBodyVisual> CelestialBodies;
   };
 
   struct LightingSettings
@@ -597,6 +620,9 @@ public:
   {
     LightingSettingsData.WeatherDebugMode = mode;
   }
+  void EnsureDefaultCelestialBodies();
+  void SetStarVisibility(float value);
+  void SetCloudCoverage(float value);
   void RebuildAllLightingDirtyMeshes();
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }

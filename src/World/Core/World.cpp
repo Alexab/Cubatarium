@@ -97,6 +97,45 @@ std::string NormalizeToken(std::string value)
   return value;
 }
 
+UWorld::CelestialBodyType CelestialTypeFromId(const std::string &id)
+{
+  const std::string lower = NormalizeToken(id);
+  if (lower.find("moon") != std::string::npos)
+  {
+    return UWorld::CelestialBodyType::Moon;
+  }
+  return UWorld::CelestialBodyType::Sun;
+}
+
+glm::vec3 ComputeCelestialDirection(const UWorld::UCelestialBodyVisual &body,
+                                    float time_norm)
+{
+  const float period_days = std::max(0.01f, body.OrbitPeriodDays);
+  const float orbit_phase =
+      (time_norm / period_days + body.OrbitPhase) * 6.28318530718f;
+  glm::vec3 dir(std::cos(orbit_phase), std::sin(orbit_phase), 0.0f);
+  const float inc = glm::radians(body.OrbitInclinationDeg);
+  const float cos_i = std::cos(inc);
+  const float sin_i = std::sin(inc);
+  const glm::vec3 tilted(dir.x, dir.y * cos_i - dir.z * sin_i,
+                         dir.y * sin_i + dir.z * cos_i);
+  const float lon = glm::radians(body.OrbitLongitudeDeg);
+  const float cos_l = std::cos(lon);
+  const float sin_l = std::sin(lon);
+  glm::vec3 out(tilted.x * cos_l + tilted.z * sin_l, tilted.y,
+                -tilted.x * sin_l + tilted.z * cos_l);
+  if (!std::isfinite(out.x) || !std::isfinite(out.y) || !std::isfinite(out.z))
+  {
+    out = glm::vec3(0.0f, 1.0f, 0.0f);
+  }
+  const float len = glm::length(out);
+  if (len <= 1e-5f)
+  {
+    return glm::vec3(0.0f, 1.0f, 0.0f);
+  }
+  return out / len;
+}
+
 } // namespace
 
 UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
@@ -215,6 +254,46 @@ void UWorld::SetWeatherByName(const std::string &name, float transitionSeconds)
 std::string UWorld::GetWeatherName() const
 {
   return WeatherTypeToString(EnvironmentStateData.Weather);
+}
+
+void UWorld::EnsureDefaultCelestialBodies()
+{
+  if (!EnvironmentStateData.CelestialBodies.empty())
+  {
+    return;
+  }
+  UCelestialBodyVisual sun;
+  sun.Id = "sun_main";
+  sun.Type = CelestialBodyType::Sun;
+  sun.Color = glm::vec3(1.0f, 0.94f, 0.82f);
+  sun.Intensity = 1.0f;
+  sun.AngularSizeDeg = 0.53f;
+  sun.OrbitInclinationDeg = 23.0f;
+  sun.OrbitPeriodDays = 1.0f;
+  sun.OrbitPhase = 0.0f;
+  sun.OrbitLongitudeDeg = 0.0f;
+
+  UCelestialBodyVisual moon;
+  moon.Id = "moon_main";
+  moon.Type = CelestialBodyType::Moon;
+  moon.Color = glm::vec3(0.72f, 0.78f, 0.9f);
+  moon.Intensity = 0.35f;
+  moon.AngularSizeDeg = 0.57f;
+  moon.OrbitInclinationDeg = 18.0f;
+  moon.OrbitPeriodDays = 1.0f;
+  moon.OrbitPhase = 0.5f;
+  moon.OrbitLongitudeDeg = 8.0f;
+  EnvironmentStateData.CelestialBodies = {sun, moon};
+}
+
+void UWorld::SetStarVisibility(float value)
+{
+  EnvironmentStateData.StarVisibility = Clamp01(value);
+}
+
+void UWorld::SetCloudCoverage(float value)
+{
+  EnvironmentStateData.CloudCoverage = Clamp01(value);
 }
 
 void UWorld::TickEnvironment(float dtSeconds)
@@ -371,6 +450,30 @@ void UWorld::TickEnvironment(float dtSeconds)
       std::clamp(dtSeconds * (precip_active ? 0.35f : 0.12f), 0.0f, 1.0f);
   EnvironmentStateData.SurfaceWetness +=
       (target_wetness - EnvironmentStateData.SurfaceWetness) * wet_lerp;
+  EnvironmentStateData.CloudCoverage = std::clamp(
+      EnvironmentStateData.Cloudiness * 0.9f + target_wetness * 0.25f, 0.0f,
+      1.0f);
+  EnsureDefaultCelestialBodies();
+  float strongest_sun = 0.0f;
+  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    if (body.Id.empty())
+    {
+      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
+    }
+    body.Type = CelestialTypeFromId(body.Id);
+    body.DirectionWorld = ComputeCelestialDirection(
+        body, EnvironmentStateData.TimeOfDayNormalized);
+    if (body.Type == CelestialBodyType::Sun)
+    {
+      strongest_sun = std::max(strongest_sun, Clamp01(body.DirectionWorld.y));
+    }
+  }
+  EnvironmentStateData.DayNightFactor =
+      std::max(EnvironmentStateData.DayNightFactor, strongest_sun);
+  const float night = 1.0f - EnvironmentStateData.DayNightFactor;
+  EnvironmentStateData.StarVisibility =
+      Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes() { InvalidateBlockMesh(); }

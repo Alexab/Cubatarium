@@ -731,6 +731,51 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
         world.SetWeatherParticlesEnabled(
             lighting.value("weather_particles", true));
       }
+      if (env.contains("star_visibility"))
+      {
+        world.SetStarVisibility(env.value("star_visibility", 0.0f));
+      }
+      if (env.contains("cloud_coverage"))
+      {
+        world.SetCloudCoverage(env.value("cloud_coverage", 0.2f));
+      }
+      if (env.contains("celestial_bodies") &&
+          env["celestial_bodies"].is_array())
+      {
+        auto &bodies = world.EnvironmentStateData.CelestialBodies;
+        bodies.clear();
+        for (const json &entry : env["celestial_bodies"])
+        {
+          if (!entry.is_object())
+          {
+            continue;
+          }
+          UWorld::UCelestialBodyVisual body;
+          body.Id = entry.value("id", std::string("sun_auto"));
+          const std::string type = entry.value("type", std::string("sun"));
+          body.Type = type == "moon" ? UWorld::CelestialBodyType::Moon
+                                     : UWorld::CelestialBodyType::Sun;
+          if (entry.contains("color") && entry["color"].is_array() &&
+              entry["color"].size() == 3)
+          {
+            body.Color = glm::vec3(entry["color"][0].get<float>(),
+                                   entry["color"][1].get<float>(),
+                                   entry["color"][2].get<float>());
+          }
+          body.Intensity = entry.value("intensity", body.Intensity);
+          body.AngularSizeDeg =
+              entry.value("angular_size_deg", body.AngularSizeDeg);
+          body.OrbitInclinationDeg =
+              entry.value("orbit_inclination_deg", body.OrbitInclinationDeg);
+          body.OrbitPeriodDays =
+              entry.value("orbit_period_days", body.OrbitPeriodDays);
+          body.OrbitPhase = entry.value("orbit_phase", body.OrbitPhase);
+          body.OrbitLongitudeDeg =
+              entry.value("orbit_longitude_deg", body.OrbitLongitudeDeg);
+          bodies.push_back(body);
+        }
+      }
+      world.EnsureDefaultCelestialBodies();
     }
   }
   catch (const json::exception &e)
@@ -795,6 +840,25 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
       world.GetLightingSettings().WeatherOverlayEnabled;
   env["lighting"]["weather_particles"] =
       world.GetLightingSettings().WeatherParticlesEnabled;
+  env["star_visibility"] = world.GetEnvironmentState().StarVisibility;
+  env["cloud_coverage"] = world.GetEnvironmentState().CloudCoverage;
+  env["celestial_bodies"] = json::array();
+  for (const UWorld::UCelestialBodyVisual &body :
+       world.GetEnvironmentState().CelestialBodies)
+  {
+    json item;
+    item["id"] = body.Id;
+    item["type"] =
+        body.Type == UWorld::CelestialBodyType::Moon ? "moon" : "sun";
+    item["color"] = json::array({body.Color.r, body.Color.g, body.Color.b});
+    item["intensity"] = body.Intensity;
+    item["angular_size_deg"] = body.AngularSizeDeg;
+    item["orbit_inclination_deg"] = body.OrbitInclinationDeg;
+    item["orbit_period_days"] = body.OrbitPeriodDays;
+    item["orbit_phase"] = body.OrbitPhase;
+    item["orbit_longitude_deg"] = body.OrbitLongitudeDeg;
+    env["celestial_bodies"].push_back(item);
+  }
   world_data["environment"] = env;
 
   std::ofstream file(file_name);

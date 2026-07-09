@@ -559,6 +559,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetLightingMinAmbient(DefaultLightingMinAmbient);
     WorldInstance->SetWeatherOverlayEnabled(false);
     WorldInstance->SetWeatherParticlesEnabled(true);
+    WorldInstance->EnsureDefaultCelestialBodies();
     // Keep debug disabled by default; toggle via command.
     WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
