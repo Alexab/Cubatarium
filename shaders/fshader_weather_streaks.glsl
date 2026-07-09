@@ -53,9 +53,9 @@ void main()
 
   float alpha = 0.0;
   vec3 color = vec3(0.72, 0.8, 0.9);
-  const float day = clamp(uDayFactor, 0.0, 1.0);
-  const float t = uTimeSec;
-  const float wind_bias = clamp(uWind, 0.0, 1.0) * 0.08;
+  float day = clamp(uDayFactor, 0.0, 1.0);
+  float t = uTimeSec;
+  float wind_bias = clamp(uWind, 0.0, 1.0) * 0.08;
 
   if (uWeatherKind == 1)
   {

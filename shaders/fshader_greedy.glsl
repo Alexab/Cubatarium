@@ -178,7 +178,7 @@ void main()
     if (uEnvLightDebug > 0.5) {
         FragColor.rgb = vec3(localLight);
     }
-    const float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
+    float precip = clamp(uEnvPrecipIntensity, 0.0, 1.0);
     if (precip > 0.001) {
         float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
         FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);

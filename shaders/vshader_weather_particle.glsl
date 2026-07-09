@@ -16,7 +16,7 @@ uniform float uDayFactor;
 
 void main()
 {
-  const float size = max(aSize, 0.02);
+  float size = max(aSize, 0.02);
   vec3 offset = uCameraRight * aCorner.x * size + uCameraUp * aCorner.y * size;
   if (aKind > 1.5)
   {
