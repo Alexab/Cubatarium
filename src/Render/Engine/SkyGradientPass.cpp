@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <string>
 
 namespace cutum
 {
@@ -13,6 +14,8 @@ namespace cutum
 void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const glm::vec4 &sky_color,
                             const UUnderwaterFogPass &fog_pass,
+                            const UWorld::EnvironmentState &env,
+                            PerformancePreset preset, float elapsed_sec,
                             float horizon_boost)
 {
   if (!sky_shader || !sky_shader->IsValid())
@@ -29,6 +32,55 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetMat4("mvp_matrix", sky_matrix);
   sky_shader->SetVec4("skyColor", sky_color);
   sky_shader->SetVec3("uFogColor", fog_pass.GetFogColor());
+  sky_shader->SetFloat("uTimeOfDay", env.TimeOfDayNormalized);
+  sky_shader->SetFloat("uStarVisibility",
+                       std::clamp(env.StarVisibility, 0.0f, 1.0f));
+  sky_shader->SetFloat("uCloudCoverage",
+                       std::clamp(env.CloudCoverage, 0.0f, 1.0f));
+  sky_shader->SetFloat("uElapsedSec", std::max(0.0f, elapsed_sec));
+  int cloud_steps = 12;
+  if (preset == PerformancePreset::Fast)
+  {
+    cloud_steps = 6;
+  }
+  else if (preset == PerformancePreset::Quality)
+  {
+    cloud_steps = 18;
+  }
+  sky_shader->SetInt("uCloudSteps", cloud_steps);
+  sky_shader->SetFloat(
+      "uCloudJitter",
+      preset == PerformancePreset::Fast
+          ? 0.35f
+          : (preset == PerformancePreset::Quality ? 0.8f : 0.6f));
+  constexpr int kMaxBodies = 4;
+  sky_shader->SetInt("uCelestialCount",
+                     static_cast<int>(std::min<size_t>(
+                         env.CelestialBodies.size(), kMaxBodies)));
+  for (int i = 0; i < kMaxBodies; ++i)
+  {
+    const std::string idx = std::to_string(i);
+    if (i < static_cast<int>(env.CelestialBodies.size()))
+    {
+      const UWorld::UCelestialBodyVisual &body = env.CelestialBodies[i];
+      sky_shader->SetVec3("uCelestialDir[" + idx + "]", body.DirectionWorld);
+      sky_shader->SetVec3("uCelestialColor[" + idx + "]", body.Color);
+      sky_shader->SetFloat("uCelestialIntensity[" + idx + "]", body.Intensity);
+      sky_shader->SetFloat("uCelestialAngularSizeDeg[" + idx + "]",
+                           body.AngularSizeDeg);
+      sky_shader->SetInt("uCelestialType[" + idx + "]",
+                         body.Type == UWorld::CelestialBodyType::Moon ? 1 : 0);
+    }
+    else
+    {
+      sky_shader->SetVec3("uCelestialDir[" + idx + "]",
+                          glm::vec3(0.0f, 1.0f, 0.0f));
+      sky_shader->SetVec3("uCelestialColor[" + idx + "]", glm::vec3(0.0f));
+      sky_shader->SetFloat("uCelestialIntensity[" + idx + "]", 0.0f);
+      sky_shader->SetFloat("uCelestialAngularSizeDeg[" + idx + "]", 0.0f);
+      sky_shader->SetInt("uCelestialType[" + idx + "]", 0);
+    }
+  }
   sky_shader->SetFloat(
       "uFogHorizonBlend",
       std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));

@@ -291,6 +291,12 @@ void UWorld::SetStarVisibility(float value)
   EnvironmentStateData.StarVisibility = Clamp01(value);
 }
 
+void UWorld::ResetCelestialBodies()
+{
+  EnvironmentStateData.CelestialBodies.clear();
+  EnsureDefaultCelestialBodies();
+}
+
 void UWorld::SetCloudCoverage(float value)
 {
   EnvironmentStateData.CloudCoverage = Clamp01(value);

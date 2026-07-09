@@ -268,6 +268,62 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       });
 
   registry.Register(
+      "sky",
+      [world](const std::vector<std::string> &args)
+      {
+        if (!world)
+        {
+          return CommandResult{false, "No active world"};
+        }
+        if (args.size() < 2)
+        {
+          return CommandResult{
+              false,
+              "Usage: sky <stars <0..1>|clouds <0..1>|reset_celestials>"};
+        }
+        const std::string cmd = Lower(args[1]);
+        if (cmd == "stars")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{false, "Usage: sky stars <0..1>"};
+          }
+          try
+          {
+            world->SetStarVisibility(std::stof(args[2]));
+            return CommandResult{true, "Sky stars visibility updated"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid stars value"};
+          }
+        }
+        if (cmd == "clouds")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{false, "Usage: sky clouds <0..1>"};
+          }
+          try
+          {
+            world->SetCloudCoverage(std::stof(args[2]));
+            return CommandResult{true, "Sky cloud coverage updated"};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid clouds value"};
+          }
+        }
+        if (cmd == "reset_celestials")
+        {
+          world->ResetCelestialBodies();
+          return CommandResult{true, "Sky celestial bodies reset"};
+        }
+        return CommandResult{
+            false, "Usage: sky <stars <0..1>|clouds <0..1>|reset_celestials>"};
+      });
+
+  registry.Register(
       "light",
       [world](const std::vector<std::string> &args)
       {

@@ -1276,7 +1276,9 @@ void UGeometryEngine::DrawSkyGradient()
         std::clamp(env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f,
                    0.0f, 0.35f);
   }
-  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, horizon_boost);
+  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_,
+                        WorldInstance->GetEnvironmentState(), Render.Preset,
+                        AnimationClock.ElapsedSeconds(), horizon_boost);
 }
 
 void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
