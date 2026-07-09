@@ -59,11 +59,13 @@ void main()
 
   if (uWeatherKind == 1)
   {
-    vec2 p = vec2(uv.x + uv.y * (0.04 + wind_bias), uv.y);
-    float streak = fract(p.y * 42.0 - t * (2.8 + wind_bias * 2.0));
-    float drop = smoothstep(0.96, 1.0, streak);
-    float column = hash12(vec2(floor(uv.x * 64.0), floor(t * 2.0)));
-    alpha = drop * column * intensity * 0.55;
+    vec2 p = vec2(uv.x + uv.y * (0.035 + wind_bias), uv.y);
+    float lane = hash12(vec2(floor((p.x + t * 0.13) * 160.0), 19.7));
+    float phase =
+        fract((1.0 - p.y) * 34.0 + t * (4.2 + wind_bias * 2.4) + lane * 7.0);
+    float drop = smoothstep(0.88, 1.0, phase);
+    float lane_mask = smoothstep(0.38, 0.88, lane);
+    alpha = drop * lane_mask * intensity * 0.22;
     color = mix(vec3(0.5, 0.58, 0.68), vec3(0.72, 0.8, 0.9), day);
   }
   else if (uWeatherKind == 2)
@@ -75,7 +77,7 @@ void main()
     float seed = hash12(cell);
     float d = length(f - vec2(seed - 0.5, fract(seed * 5.1) - 0.5) * 0.35);
     float flake = smoothstep(0.2, 0.0, d);
-    alpha = flake * step(0.5, seed) * intensity * 0.65;
+    alpha = flake * step(0.56, seed) * intensity * 0.42;
     color = vec3(0.94, 0.96, 1.0);
   }
 
@@ -83,5 +85,5 @@ void main()
   {
     discard;
   }
-  FragColor = vec4(color, clamp(alpha, 0.0, 0.35));
+  FragColor = vec4(color, clamp(alpha, 0.0, 0.22));
 }

@@ -189,7 +189,6 @@ void UWorld::SetDayLengthMinutes(float minutes)
 
 void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
 {
-  const WeatherType previous_target = EnvironmentStateData.TargetWeather;
   EnvironmentStateData.TargetWeather = weather;
   EnvironmentStateData.WeatherTransitionDurationSec =
       std::max(0.0f, transitionSeconds);
@@ -201,15 +200,6 @@ void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
     EnvironmentStateData.TargetWeather = weather;
     EnvironmentStateData.WeatherTransitionSec =
         EnvironmentStateData.WeatherTransitionDurationSec;
-  }
-  const auto has_precip = [](WeatherType value)
-  {
-    return value == WeatherType::Rain || value == WeatherType::Storm ||
-           value == WeatherType::Snow;
-  };
-  if (has_precip(previous_target) != has_precip(weather))
-  {
-    InvalidateBlockMesh();
   }
 }
 

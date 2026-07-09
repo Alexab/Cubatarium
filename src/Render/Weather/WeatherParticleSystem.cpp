@@ -47,6 +47,7 @@ void UWeatherParticleSystem::SpawnParticle(const glm::vec3 &camera_pos,
     particle.Size *= 0.75f + intensity * 0.5f;
     particle.Kind = kind;
     particle.Alive = true;
+    break;
   }
 }
 
