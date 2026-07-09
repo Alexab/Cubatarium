@@ -25,7 +25,8 @@ struct ParticleInstanceGpu
   float Pad1;
 };
 
-constexpr GlStateMask kGlMaskWeatherOverlay = kGlMaskOverlay2D;
+constexpr GlStateMask kGlMaskWeatherOverlay =
+    kGlMaskOverlay2D | GlStateBit::DepthMask | GlStateBit::CullFace;
 
 } // namespace
 
