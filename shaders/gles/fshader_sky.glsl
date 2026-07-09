@@ -62,13 +62,12 @@ float cloudDensity(vec2 uv, float time_shift)
     return clamp(n0 * 0.72 + n1 * 0.28, 0.0, 1.0);
 }
 
-vec2 cloudHorizonUv(vec3 dir, vec2 camera_xz, vec2 wind, float azimuth_scale,
+vec2 cloudHorizonUv(vec3 dir, vec2 camera_xz, vec2 wind, float ring_scale,
                     float elev_scale)
 {
     vec2 horiz = normalize(dir.xz + vec2(1e-4));
-    float azimuth = atan(horiz.x, horiz.y);
     float elev = clamp(dir.y, 0.0, 1.0);
-    return vec2(azimuth * azimuth_scale, elev * elev_scale) +
+    return horiz * ring_scale + vec2(0.0, elev * elev_scale) +
            camera_xz * 0.0008 + wind * 0.55;
 }
 
@@ -139,9 +138,9 @@ void main()
         vec2 wind_low = vec2(0.010, 0.004) * uElapsedSec;
         vec2 wind_high = vec2(0.016, -0.003) * uElapsedSec;
         vec2 horizon_low_uv =
-            cloudHorizonUv(view_dir, uCameraPos.xz, wind_low, 1.75, 3.2);
+            cloudHorizonUv(view_dir, uCameraPos.xz, wind_low, 5.5, 3.2);
         vec2 horizon_high_uv =
-            cloudHorizonUv(view_dir, uCameraPos.xz, wind_high, 1.15, 2.6);
+            cloudHorizonUv(view_dir, uCameraPos.xz, wind_high, 3.6, 2.6);
         vec2 world_low_uv =
             cloudWorldUv(view_dir, uCameraPos.xz, 0.0016, 0.42, wind_low, elev_w);
         vec2 world_high_uv =
