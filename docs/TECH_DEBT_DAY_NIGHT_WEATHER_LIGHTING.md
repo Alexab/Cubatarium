@@ -68,3 +68,26 @@ This file tracks implementation compromises for the environment and lighting rol
 - Target: streak pass < 0.5ms, particle pass < 1.5ms on desktop Balanced.
 - Hard rule: no nested fragment loops in weather shaders (prior 0 FPS regression).
 - Streak alpha cap: 0.35; particle alpha cap: 0.45.
+
+### 2026-07-09: New sky pipeline (stars + celestials + clouds)
+
+- **Issue:** Volumetric clouds are implemented as a compact screen-space raymarch approximation in `fshader_sky.glsl`, not full 3D world-space cloud volumes.
+- **Current decision:** Keep quality-tier cloud step budgets (`Fast=6`, `Balanced=12`, `Quality=18`) to stay within frame budget while replacing the old static sky.
+- **Risk:** Cloud parallax and horizon depth cues remain approximate at extreme camera FOVs.
+- **Follow-up:** Move clouds to dedicated half-resolution volumetric buffer with temporal reprojection history and height-aware phase function.
+
+- **Issue:** Celestial typing currently infers moon/sun from `id` token when data is loaded.
+- **Current decision:** Preserve explicit persisted `type`, but keep ID heuristic fallback to avoid breaking old saves.
+- **Risk:** Misnamed custom bodies can get incorrect defaults when legacy data omits `type`.
+- **Follow-up:** Add strict schema validation and migration for `environment.celestial_bodies`.
+
+### QA matrix (Sky)
+
+| Scenario | Expected |
+|----------|----------|
+| Midnight (`time set 0.0`) with clear weather | Visible star field + moon disc |
+| Daytime (`time set 0.5`) | Stars almost invisible, sun disc visible |
+| `sky stars 0` | Stars disabled regardless of time |
+| `sky clouds 1` | Dense cloud layer with preset-dependent quality |
+| `sky reset_celestials` | Default sun/moon pair restored |
+| Fast vs Quality presets | Cloud detail and stability increase with preset |
