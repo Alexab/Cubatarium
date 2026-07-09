@@ -138,12 +138,12 @@ int UWeatherRenderPass::ParticleBudget(PerformancePreset preset,
   switch (preset)
   {
   case PerformancePreset::Fast:
-    return 0;
+    return weather_kind == 2 ? 220 : 320;
   case PerformancePreset::Quality:
-    return weather_kind == 2 ? 1800 : 2500;
+    return weather_kind == 2 ? 2800 : 3800;
   case PerformancePreset::Balanced:
   default:
-    return weather_kind == 2 ? 600 : 800;
+    return weather_kind == 2 ? 1200 : 1600;
   }
 }
 

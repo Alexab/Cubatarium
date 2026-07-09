@@ -89,7 +89,7 @@ void UWeatherParticleSystem::Update(const UWorld &world,
   const int kind = snowing && !raining ? 2 : 1;
   const float wind = std::clamp(env.WindStrength, 0.0f, 1.0f);
   const int spawn_target =
-      std::min(budget, static_cast<int>(budget * intensity * 0.85f) + 8);
+      std::min(budget, static_cast<int>(budget * intensity * 0.98f) + 28);
 
   int alive_count = 0;
   for (Particle &particle : Pool)
