@@ -226,6 +226,45 @@ bool UWorld::WeatherTypeFromString(const std::string &value, WeatherType &out)
 void UWorld::SetTimeOfDayNormalized(float value)
 {
   EnvironmentStateData.TimeOfDayNormalized = Wrap01(value);
+  UpdateCelestialLightingFactors();
+}
+
+void UWorld::UpdateCelestialLightingFactors()
+{
+  EnsureDefaultCelestialBodies();
+  float sun_day = 0.0f;
+  float moon_night = 0.0f;
+  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    if (body.Id.empty())
+    {
+      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
+    }
+    body.Type = CelestialTypeFromId(body.Id);
+    body.DirectionWorld = ComputeCelestialDirection(
+        body, EnvironmentStateData.TimeOfDayNormalized);
+    const float elev = body.DirectionWorld.y;
+    const float above_horizon =
+        Smoothstep(0.0f, GetCelestialHorizonFade(), elev);
+    const float lit = above_horizon * std::max(body.Intensity, 0.0f);
+    if (body.Type == CelestialBodyType::Sun)
+    {
+      sun_day = std::max(sun_day, lit);
+    }
+    else
+    {
+      moon_night = std::max(moon_night, lit);
+    }
+  }
+  EnvironmentStateData.DayNightFactor = Clamp01(sun_day);
+  EnvironmentStateData.MoonNightFactor = Clamp01(moon_night);
+  const float night = 1.0f - EnvironmentStateData.DayNightFactor;
+  const float auto_star_visibility =
+      Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
+  EnvironmentStateData.StarVisibility =
+      EnvironmentStateData.StarVisibilityOverride >= 0.0f
+          ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
+          : auto_star_visibility;
 }
 
 void UWorld::AddTimeOfDayNormalized(float delta)
@@ -458,17 +497,7 @@ void UWorld::EnsureDefaultCelestialBodies()
 
 void UWorld::RefreshSkyVisualStateForRender()
 {
-  EnsureDefaultCelestialBodies();
-  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
-  {
-    if (body.Id.empty())
-    {
-      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
-    }
-    body.Type = CelestialTypeFromId(body.Id);
-    body.DirectionWorld = ComputeCelestialDirection(
-        body, EnvironmentStateData.TimeOfDayNormalized);
-  }
+  UpdateCelestialLightingFactors();
   if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
   {
     EnvironmentStateData.CloudCoverage =
@@ -654,39 +683,7 @@ void UWorld::TickEnvironment(float dtSeconds)
           ? Clamp01(EnvironmentStateData.CloudCoverageOverride)
           : auto_cloud_coverage;
   EnsureDefaultCelestialBodies();
-  float sun_day = 0.0f;
-  float moon_night = 0.0f;
-  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
-  {
-    if (body.Id.empty())
-    {
-      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
-    }
-    body.Type = CelestialTypeFromId(body.Id);
-    body.DirectionWorld = ComputeCelestialDirection(
-        body, EnvironmentStateData.TimeOfDayNormalized);
-    const float elev = body.DirectionWorld.y;
-    const float above_horizon =
-        Smoothstep(0.0f, GetCelestialHorizonFade(), elev);
-    const float lit = above_horizon * std::max(body.Intensity, 0.0f);
-    if (body.Type == CelestialBodyType::Sun)
-    {
-      sun_day = std::max(sun_day, lit);
-    }
-    else
-    {
-      moon_night = std::max(moon_night, lit);
-    }
-  }
-  EnvironmentStateData.DayNightFactor = Clamp01(sun_day);
-  EnvironmentStateData.MoonNightFactor = Clamp01(moon_night);
-  const float night = 1.0f - EnvironmentStateData.DayNightFactor;
-  const float auto_star_visibility =
-      Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
-  EnvironmentStateData.StarVisibility =
-      EnvironmentStateData.StarVisibilityOverride >= 0.0f
-          ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
-          : auto_star_visibility;
+  UpdateCelestialLightingFactors();
   TickWeatherAuto(dtSeconds);
 }
 
@@ -1343,8 +1340,12 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   BlockWorldReady = true;
   if (BlockRegistry)
   {
-    RelightChunksAround(BlockWorld, *BlockRegistry, blockPos,
-                        ProceduralTemplate.MaxHeight);
+    const std::vector<glm::ivec3> relit_chunks = RelightBlocksAroundAll(
+        BlockWorld, *BlockRegistry, {blockPos}, ProceduralTemplate.MaxHeight);
+    for (const glm::ivec3 &coord : relit_chunks)
+    {
+      MeshService->MarkDirty(coord);
+    }
   }
   MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
@@ -1715,8 +1716,13 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   if (BlockRegistry)
   {
-    RelightBlocksAroundAll(BlockWorld, *BlockRegistry, mesh_touch_blocks,
-                           ProceduralTemplate.MaxHeight);
+    const std::vector<glm::ivec3> relit_chunks = RelightBlocksAroundAll(
+        BlockWorld, *BlockRegistry, mesh_touch_blocks,
+        ProceduralTemplate.MaxHeight);
+    for (const glm::ivec3 &coord : relit_chunks)
+    {
+      MeshService->MarkDirty(coord);
+    }
   }
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (ViewBinding)

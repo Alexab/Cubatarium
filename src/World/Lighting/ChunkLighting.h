@@ -14,9 +14,10 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
                   glm::ivec3 chunk_coord, bool include_block_light = true);
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 block_pos, int max_world_y);
-void RelightBlocksAroundAll(UBlockWorld &world, UBlockRegistry &registry,
-                            const std::vector<glm::ivec3> &block_positions,
-                            int max_world_y);
+std::vector<glm::ivec3>
+RelightBlocksAroundAll(UBlockWorld &world, UBlockRegistry &registry,
+                       const std::vector<glm::ivec3> &block_positions,
+                       int max_world_y);
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
                    int world_z, int min_y, int max_y,
                    bool include_block_light = true);

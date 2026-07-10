@@ -665,6 +665,7 @@ public:
   }
   void EnsureDefaultCelestialBodies();
   void RefreshSkyVisualStateForRender();
+  void UpdateCelestialLightingFactors();
   void ResetCelestialBodies();
   void SetStarVisibility(float value);
   void SetCloudCoverage(float value);

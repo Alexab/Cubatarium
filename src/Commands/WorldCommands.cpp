@@ -115,7 +115,6 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           try
           {
             world->SetTimeOfDayNormalized(std::stof(args[2]));
-            world->RebuildAllLightingDirtyMeshes();
             return CommandResult{true, "Time updated"};
           }
           catch (...)
@@ -132,7 +131,6 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           try
           {
             world->AddTimeOfDayNormalized(std::stof(args[2]));
-            world->RebuildAllLightingDirtyMeshes();
             return CommandResult{true, "Time advanced"};
           }
           catch (...)
