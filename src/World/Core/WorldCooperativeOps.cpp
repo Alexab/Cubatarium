@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -552,6 +553,24 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       world.SetLightingRelightDeferred(false);
       world.SetLightingSkylightBulkComplete(true);
+      if (world.BlockRegistry)
+      {
+        const int max_y = world.ProceduralTemplate.MaxHeight;
+        std::unordered_set<std::uint64_t> ground_columns;
+        for (const glm::ivec3 &coord : RelightQueue)
+        {
+          const std::uint64_t key =
+              (static_cast<std::uint64_t>(static_cast<std::uint32_t>(coord.x))
+               << 32) |
+              static_cast<std::uint32_t>(coord.z);
+          if (!ground_columns.insert(key).second)
+          {
+            continue;
+          }
+          world.RelightTerrainColumn(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
+                                   0, max_y);
+        }
+      }
       RelightQueue.clear();
       RelightQueueIndex = 0;
       world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);

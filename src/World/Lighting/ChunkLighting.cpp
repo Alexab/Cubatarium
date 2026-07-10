@@ -377,6 +377,157 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
   }
 }
 
+namespace
+{
+
+constexpr int kRelightFrontierIterations = 2;
+
+void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
+                              int min_y, int max_y,
+                              std::unordered_set<glm::ivec3, IVec3Hash> &out)
+{
+  const glm::ivec3 base =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
+  const glm::ivec3 top =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int cy = base.y; cy <= top.y; ++cy)
+      {
+        const glm::ivec3 coord(base.x + dx, cy, base.z + dz);
+        if (world.GetChunkManager().HasChunk(coord))
+        {
+          out.insert(coord);
+        }
+      }
+    }
+  }
+}
+
+bool FaceHasLitTransparentVoxel(const UBlockWorld &world,
+                                const UBlockRegistry &registry,
+                                const UChunk &chunk, glm::ivec3 chunk_coord,
+                                const glm::ivec3 &neighbor_offset)
+{
+  const auto check_face = [&](int fixed_axis, int fixed_value, int axis_a,
+                              int axis_b)
+  {
+    for (int a = 0; a < CHUNK_SIZE; ++a)
+    {
+      for (int b = 0; b < CHUNK_SIZE; ++b)
+      {
+        glm::ivec3 local(0);
+        local[fixed_axis] = fixed_value;
+        local[axis_a] = a;
+        local[axis_b] = b;
+        if (!IsLightTransparent(registry, chunk.GetBlockLocal(local)))
+        {
+          continue;
+        }
+        if (chunk.GetSkyLightLocal(local) > 0 ||
+            chunk.GetBlockLightLocal(local) > 0)
+        {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  if (neighbor_offset.x == 1)
+  {
+    return check_face(0, CHUNK_SIZE - 1, 1, 2);
+  }
+  if (neighbor_offset.x == -1)
+  {
+    return check_face(0, 0, 1, 2);
+  }
+  if (neighbor_offset.y == 1)
+  {
+    return check_face(1, CHUNK_SIZE - 1, 0, 2);
+  }
+  if (neighbor_offset.y == -1)
+  {
+    return check_face(1, 0, 0, 2);
+  }
+  if (neighbor_offset.z == 1)
+  {
+    return check_face(2, CHUNK_SIZE - 1, 0, 1);
+  }
+  if (neighbor_offset.z == -1)
+  {
+    return check_face(2, 0, 0, 1);
+  }
+  return false;
+}
+
+void CollectLitBorderNeighborChunks(
+    const UBlockWorld &world, const UBlockRegistry &registry,
+    glm::ivec3 chunk_coord,
+    const std::unordered_set<glm::ivec3, IVec3Hash> &relit_set,
+    std::unordered_set<glm::ivec3, IVec3Hash> &frontier)
+{
+  const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 neighbor_coord = chunk_coord + offset;
+    if (relit_set.count(neighbor_coord) ||
+        !world.GetChunkManager().HasChunk(neighbor_coord))
+    {
+      continue;
+    }
+    if (FaceHasLitTransparentVoxel(world, registry, *chunk, chunk_coord,
+                                   offset))
+    {
+      frontier.insert(neighbor_coord);
+    }
+  }
+}
+
+std::unordered_set<glm::ivec3, IVec3Hash>
+RelightChunkSetWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
+                            std::unordered_set<glm::ivec3, IVec3Hash>
+                                initial_coords,
+                            bool include_block_light)
+{
+  if (initial_coords.empty())
+  {
+    return {};
+  }
+
+  std::vector<glm::ivec3> batch(initial_coords.begin(), initial_coords.end());
+  RelightChunkCoords(world, registry, batch, include_block_light);
+
+  std::unordered_set<glm::ivec3, IVec3Hash> relit_set =
+      std::move(initial_coords);
+
+  for (int iter = 0; iter < kRelightFrontierIterations; ++iter)
+  {
+    std::unordered_set<glm::ivec3, IVec3Hash> frontier;
+    for (const glm::ivec3 &coord : relit_set)
+    {
+      CollectLitBorderNeighborChunks(world, registry, coord, relit_set,
+                                     frontier);
+    }
+    if (frontier.empty())
+    {
+      break;
+    }
+    batch.assign(frontier.begin(), frontier.end());
+    RelightChunkCoords(world, registry, batch, include_block_light);
+    relit_set.insert(frontier.begin(), frontier.end());
+  }
+  return relit_set;
+}
+
+} // namespace
+
 void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
                   glm::ivec3 chunk_coord, bool include_block_light)
 {
@@ -388,77 +539,47 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
 }
 
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
-                         glm::ivec3 block_pos)
+                         glm::ivec3 block_pos, int max_world_y)
 {
-  const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
-  std::vector<glm::ivec3> coords;
-  coords.push_back(center);
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 neighbor = center + offset;
-    if (world.GetChunkManager().HasChunk(neighbor))
-    {
-      coords.push_back(neighbor);
-    }
-  }
-  RelightChunkCoords(world, registry, coords, true);
+  RelightBlocksAroundAll(world, registry, {block_pos}, max_world_y);
 }
 
 void RelightBlocksAroundAll(UBlockWorld &world, UBlockRegistry &registry,
-                            const std::vector<glm::ivec3> &block_positions)
+                            const std::vector<glm::ivec3> &block_positions,
+                            int max_world_y)
 {
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
   for (const glm::ivec3 &block_pos : block_positions)
   {
-    const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
-    coords.insert(center);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      coords.insert(center + offset);
-    }
+    CollectColumnChunkCoords(world, block_pos.x, block_pos.z, 0, max_world_y,
+                             coords);
   }
-  std::vector<glm::ivec3> coord_list;
-  coord_list.reserve(coords.size());
-  for (const glm::ivec3 &coord : coords)
+  RelightChunkSetWithFrontier(world, registry, std::move(coords), true);
+}
+
+void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
+                               int world_x, int world_z, int min_y, int max_y,
+                               bool include_block_light,
+                               std::vector<glm::ivec3> *out_relit_chunks)
+{
+  std::unordered_set<glm::ivec3, IVec3Hash> coords;
+  CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
+  const std::unordered_set<glm::ivec3, IVec3Hash> relit =
+      RelightChunkSetWithFrontier(world, registry, std::move(coords),
+                                  include_block_light);
+  if (!out_relit_chunks)
   {
-    if (world.GetChunkManager().HasChunk(coord))
-    {
-      coord_list.push_back(coord);
-    }
+    return;
   }
-  if (!coord_list.empty())
-  {
-    RelightChunkCoords(world, registry, coord_list, true);
-  }
+  out_relit_chunks->assign(relit.begin(), relit.end());
 }
 
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
                    int world_z, int min_y, int max_y, bool include_block_light)
 {
-  const glm::ivec3 base =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
-  const glm::ivec3 top =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
-  for (int dx = -1; dx <= 1; ++dx)
-  {
-    for (int dz = -1; dz <= 1; ++dz)
-    {
-      for (int cy = base.y; cy <= top.y; ++cy)
-      {
-        coords.insert(glm::ivec3(base.x + dx, cy, base.z + dz));
-      }
-    }
-  }
-  std::vector<glm::ivec3> coord_list;
-  coord_list.reserve(coords.size());
-  for (const glm::ivec3 &coord : coords)
-  {
-    if (world.GetChunkManager().HasChunk(coord))
-    {
-      coord_list.push_back(coord);
-    }
-  }
+  CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
+  std::vector<glm::ivec3> coord_list(coords.begin(), coords.end());
   if (!coord_list.empty())
   {
     RelightChunkCoords(world, registry, coord_list, include_block_light);

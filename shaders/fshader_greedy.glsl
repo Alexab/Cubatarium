@@ -182,9 +182,9 @@ void main()
     float daySky = clamp(uEnvDayFactor * uEnvSkyLightScale, 0.0, 1.0);
     float nightSky = clamp(uEnvNightFactor * (1.0 - daySky), 0.0, 1.0);
     float dayAmbient = uEnvMinAmbient * (0.42 + 0.38 * daySky);
-    float nightAmbient = uEnvMinAmbient * (0.12 + 0.28 * nightSky);
+    float nightAmbient = uEnvMinAmbient * (0.18 + 0.32 * nightSky);
     float skyAmbient = mix(nightAmbient, dayAmbient, daySky);
-    float skyMix = clamp(sky01 * daySky + sky01 * 0.12 * (1.0 - daySky), 0.0, 1.0);
+    float skyMix = clamp(sky01 * daySky + sky01 * 0.18 * (1.0 - daySky), 0.0, 1.0);
     float skyLit = mix(skyAmbient, 1.0, skyMix);
     float blockAmbientFloor = clamp(uEnvMinAmbient * 0.04, 0.005, 0.1);
     float blockStrength = mix(0.9, 0.35, daySky);

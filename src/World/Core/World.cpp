@@ -707,8 +707,13 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
     return;
   }
   const bool include_block_light = !LightingSkylightBulkComplete;
-  RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y,
-                include_block_light);
+  std::vector<glm::ivec3> relit_chunks;
+  RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
+                            max_y, include_block_light, &relit_chunks);
+  for (const glm::ivec3 &coord : relit_chunks)
+  {
+    MeshService->MarkDirty(coord);
+  }
 }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
@@ -1338,7 +1343,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   BlockWorldReady = true;
   if (BlockRegistry)
   {
-    RelightChunksAround(BlockWorld, *BlockRegistry, blockPos);
+    RelightChunksAround(BlockWorld, *BlockRegistry, blockPos,
+                        ProceduralTemplate.MaxHeight);
   }
   MarkBlockChunkDirty(blockPos);
   PublishBlockPhysicsEvent(blockPos);
@@ -1709,7 +1715,8 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   if (BlockRegistry)
   {
-    RelightBlocksAroundAll(BlockWorld, *BlockRegistry, mesh_touch_blocks);
+    RelightBlocksAroundAll(BlockWorld, *BlockRegistry, mesh_touch_blocks,
+                           ProceduralTemplate.MaxHeight);
   }
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (ViewBinding)
