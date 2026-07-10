@@ -14,7 +14,12 @@
     "leaves_spruce_opaque"
   ],
   "render": {
-    "transparent": true
+    "style": "cutout"
   },
-  "displayName": "Spruce Leaves"
+  "displayName": "Spruce Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

@@ -60,13 +60,13 @@ int MaxSolidLocalY(const UChunk &chunk, const UBlockRegistry &registry)
   return max_y;
 }
 
-void CollectCrossCentersInBand(
+void CollectCrossInstancesInBand(
     const UChunk &chunk, glm::ivec3 chunk_coord, const UBlockRegistry &registry,
     int max_local_y,
-    std::unordered_map<BlockId, std::vector<glm::vec3>> &cross_centers)
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &cross_instances)
 {
   (void)max_local_y;
-  CollectCrossCentersFromChunk(chunk, chunk_coord, registry, cross_centers);
+  CollectCrossInstancesFromChunk(chunk, chunk_coord, registry, cross_instances);
 }
 void MergeGreedyBatch(GreedyMeshBatch &dst, const GreedyMeshBatch &src)
 {
@@ -399,9 +399,9 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   const auto merge_from_cache = [&](const Frustum *cull_frustum,
                                     const glm::vec3 *cull_camera,
                                     float cull_distance)
-      -> std::unordered_map<BlockId, std::vector<glm::vec3>>
+      -> std::unordered_map<BlockId, std::vector<CrossInstanceGpu>>
   {
-    std::unordered_map<BlockId, std::vector<glm::vec3>> merged;
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> merged;
     for (const auto &entry : GreedyCache)
     {
       if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
@@ -411,14 +411,14 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
       }
       for (const auto &pair : entry.second.crossCenters)
       {
-        std::vector<glm::vec3> &dst = merged[pair.first];
+        std::vector<CrossInstanceGpu> &dst = merged[pair.first];
         dst.insert(dst.end(), pair.second.begin(), pair.second.end());
       }
     }
     return merged;
   };
 
-  std::unordered_map<BlockId, std::vector<glm::vec3>> merged =
+  std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> merged =
       merge_from_cache(frustum, cameraPos, maxCullDistance);
   if (frustum && cameraPos && merged.empty() && !GreedyCache.empty() &&
       (CrossBatchesDirty || CrossBatches.empty()))
@@ -435,7 +435,7 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   {
     CrossInstanceBatch batch;
     batch.blockId = pair.first;
-    batch.centers = std::move(pair.second);
+    batch.instances = std::move(pair.second);
     CrossBatches.push_back(std::move(batch));
   }
   CrossBatchesDirty = false;
@@ -709,8 +709,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       chunkMesh.batches.push_back(std::move(pair.second));
     }
     chunkMesh.crossCenters.clear();
-    CollectCrossCentersInBand(*chunk, chunkCoord, registry, max_local_y,
-                              chunkMesh.crossCenters);
+    CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
+                                chunkMesh.crossCenters);
   }
   else
   {

@@ -29,7 +29,6 @@ inline int UnpackBlock(uint8_t packed)
 }
 
 bool IsLightTransparent(const UBlockRegistry &registry, BlockId id);
-int BlockEmissionLevel(const UBlockRegistry &registry, BlockId id);
 
 } // namespace cutum
 

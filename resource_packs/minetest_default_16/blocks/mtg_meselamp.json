@@ -12,5 +12,9 @@
     "mtg_meselamp_default_meselamp",
     "mtg_meselamp_default_meselamp"
   ],
-  "render": {}
+  "render": {},
+  "displayName": "Meselamp",
+  "lighting": {
+    "emission": 15
+  }
 }

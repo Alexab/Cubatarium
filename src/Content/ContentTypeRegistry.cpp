@@ -18,6 +18,7 @@ namespace
 {
 
 constexpr const char *kMiscType = "misc";
+constexpr const char *kLightingType = "lighting";
 
 void ParseTypeArray(const nlohmann::json &arr,
                     std::vector<ContentType> &out,
@@ -133,6 +134,14 @@ void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage &storage)
         BlockEntries[typeId] = {};
       }
       BlockEntries[typeId].push_back(entry);
+    }
+    if (def.Lighting.Emission > 0)
+    {
+      if (!BlockEntries.count(kLightingType))
+      {
+        BlockEntries[kLightingType] = {};
+      }
+      BlockEntries[kLightingType].push_back(entry);
     }
   }
   for (auto &pair : BlockEntries)

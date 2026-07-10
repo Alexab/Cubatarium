@@ -179,6 +179,7 @@ void UApplication::PrepareForShutdown()
   WorldOpRunner.reset();
   if (World)
   {
+    World->PrepareForShutdown();
     World->SetOnBlockRegistryChanged({});
     World->SetOnCreatureCatalogChanged({});
   }

@@ -95,6 +95,32 @@ python tools/migrate_block_fluid_presets.py --write
 
 The script infers `fluid_permeable` for cross/cutout decor and `fluid_kind` for fluid-style blocks; explicit fields are never overwritten.
 
+### lighting (block emission)
+
+Local light sources use the blocklight channel (0–15, Minecraft-style). Set emission in block JSON or via `tools/canonical_blocks.yaml` (applied with `python tools/apply_canonical_types.py`):
+
+```json
+{
+  "name": "torch",
+  "textures": ["torch", "torch", "torch", "torch", "torch", "torch"],
+  "render": { "transparent": true, "style": "cross" },
+  "physics": {
+    "movement": { "occupancy": 0 },
+    "fluid_permeable": true
+  },
+  "lighting": { "emission": 14 }
+}
+```
+
+| emission | Typical blocks |
+|--------:|----------------|
+| 15 | glowstone, jack_o_lantern, lit redstone lamp |
+| 14 | torch, fire, lava |
+| 7 | redstone torch (on) |
+| 0 | default (non-emissive) |
+
+Cross sprites (torch, plants) sample the same chunk lightmap as greedy mesh vertices.
+
 ## Placeholder
 
 Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).

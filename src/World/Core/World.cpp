@@ -700,17 +700,18 @@ void UWorld::RebuildAllLightingDirtyMeshes()
 }
 
 void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
-                                  int max_y, bool priority_mesh)
+                                  int max_y, bool priority_mesh,
+                                  bool include_skylight, bool include_block_light)
 {
   if (LightingRelightDeferred || !BlockRegistry)
   {
     return;
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
-  const bool include_block_light = !LightingSkylightBulkComplete;
   std::vector<glm::ivec3> relit_chunks;
   RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
-                            max_y, include_block_light, &relit_chunks);
+                            max_y, include_block_light, include_skylight,
+                            &relit_chunks);
   MarkRelitChunksForMesh(relit_chunks, priority_mesh);
   const auto t1 = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.FullRelightMs =
@@ -730,11 +731,10 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
     return;
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
-  const bool include_block_light = !LightingSkylightBulkComplete;
   const int max_y = ProceduralTemplate.MaxHeight;
   const RelightFrontierOutcome outcome = RelightBlocksAroundAllEx(
-      BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y,
-      include_block_light, kRelightFrontierIterationsEdit);
+      BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y, true,
+      kRelightFrontierIterationsEdit);
   MarkRelitChunksForMesh(outcome.relit_chunks, true);
   PlayerRelightMeshBurstFrames = 3;
   if (outcome.frontier_unfinished && Persistence)
@@ -822,7 +822,8 @@ void UWorld::EnqueueAsyncPlayerRelight(
   spec.block_positions = block_positions;
   spec.min_world_y = min_world_y;
   spec.max_world_y = ProceduralTemplate.MaxHeight;
-  spec.include_block_light = !LightingSkylightBulkComplete;
+  spec.include_skylight = true;
+  spec.include_block_light = true;
   spec.frontier_iterations = kRelightFrontierIterationsEdit;
   spec.job_id = ++NextAsyncRelightJobId;
   UChunkRelightSnapshot snapshot =
@@ -831,7 +832,9 @@ void UWorld::EnqueueAsyncPlayerRelight(
 }
 
 void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
-                                              int min_y, int max_y)
+                                              int min_y, int max_y,
+                                              bool include_skylight,
+                                              bool include_block_light)
 {
   if (!BlockRegistry)
   {
@@ -842,7 +845,8 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.block_positions = {glm::ivec3(world_x, min_y, world_z)};
   spec.min_world_y = min_y;
   spec.max_world_y = max_y;
-  spec.include_block_light = !LightingSkylightBulkComplete;
+  spec.include_skylight = include_skylight;
+  spec.include_block_light = include_block_light;
   spec.frontier_iterations = kRelightFrontierIterationsFull;
   spec.job_id = ++NextAsyncRelightJobId;
   UChunkRelightSnapshot snapshot =
@@ -1224,6 +1228,32 @@ void UWorld::ReloadAllCreatureVisuals()
 }
 
 void UWorld::WaitForPendingMeshJobs() { MeshService->WaitForAsyncMeshIdle(); }
+
+void UWorld::WaitForPendingRelightJobs()
+{
+  if (AsyncRelight)
+  {
+    AsyncRelight->WaitIdle();
+  }
+}
+
+void UWorld::PrepareForShutdown()
+{
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
+  if (Persistence)
+  {
+    Persistence->ClearPendingRelights();
+  }
+  DrainAsyncRelightResults(1024, false, false);
+  WaitForPendingRelightJobs();
+  if (MeshService)
+  {
+    MeshService->WaitForAsyncMeshIdle();
+  }
+}
 
 void UWorld::RefreshBlockRegistry()
 {

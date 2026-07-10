@@ -33,6 +33,7 @@ static std::shared_ptr<cutum::UBlockRegistry> MakeRegistry()
   torch.Id = kTorch;
   torch.Physics = cutum::BlockPhysicsProfile::Solid();
   torch.Render.Style = cutum::BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kTorch] = torch;

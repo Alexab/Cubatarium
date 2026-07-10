@@ -48,6 +48,7 @@ public:
   const FluidViewProfile *GetFluidView(BlockId Id) const;
   const BlockPhysicsProfile &Physics(BlockId Id) const;
   const BlockAnimationSpec &Animation(BlockId Id) const;
+  int GetLightEmission(BlockId Id) const;
   size_t GetTextureId(BlockId Id) const;
 
 private:

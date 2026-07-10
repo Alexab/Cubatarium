@@ -42,6 +42,7 @@ private:
     SpatialChunks,
     RelightChunks,
     RelightColumns,
+    RelightEmissiveBlockLight,
     MeshWarmup,
     PrepareEnter,
     PrepareView,
@@ -90,10 +91,13 @@ private:
   size_t ColumnRelightIndex{0};
   size_t ColumnRelightScheduledIndex{0};
   size_t ColumnRelightAppliedCount{0};
+  std::vector<glm::ivec3> EmissiveChunkRelightQueue;
+  size_t EmissiveChunkRelightIndex{0};
   size_t MeshWarmupProcessedMax{0};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginColumnRelightQueue(UWorld &world);
+  void BeginEmissiveBlockLightQueue(UWorld &world);
   void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
   void BeginPrepareEnter();

@@ -235,7 +235,7 @@ void PropagateBlocklight(UChunkRelightSnapshot &grid,
         {
           const glm::ivec3 local(lx, ly, lz);
           const BlockId id = grid.GetBlock(seed_origin + local);
-          const int emission = BlockEmissionLevel(registry, id);
+          const int emission = registry.GetLightEmission(id);
           if (emission > 0)
           {
             queue.emplace_back(seed_origin + local, emission);
@@ -281,29 +281,65 @@ void PropagateBlocklight(UChunkRelightSnapshot &grid,
 void RelightChunkCoordsOnGrid(UChunkRelightSnapshot &grid,
                               const UBlockRegistry &registry,
                               const std::vector<glm::ivec3> &coords,
-                              bool include_block_light)
+                              bool include_block_light, bool include_skylight)
 {
-  for (const glm::ivec3 &coord : coords)
-  {
-    grid.ClearChunkLight(coord);
-  }
   for (const glm::ivec3 &coord : coords)
   {
     if (!grid.HasChunk(coord))
     {
       continue;
     }
-    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+    if (include_skylight && include_block_light)
     {
-      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+      grid.ClearChunkLight(coord);
+    }
+    else if (include_skylight)
+    {
+      for (int ly = 0; ly < CHUNK_SIZE; ++ly)
       {
-        PropagateSkylightColumn(grid, registry, coord, lx, lz);
+        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+        {
+          for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+          {
+            grid.WriteSkyLight(coord * CHUNK_SIZE + glm::ivec3(lx, ly, lz), 0);
+          }
+        }
+      }
+    }
+    else if (include_block_light)
+    {
+      for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+      {
+        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+        {
+          for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+          {
+            grid.WriteBlockLight(coord * CHUNK_SIZE + glm::ivec3(lx, ly, lz), 0);
+          }
+        }
       }
     }
   }
-  for (const glm::ivec3 &coord : coords)
+  if (include_skylight)
   {
-    PropagateSkylightHorizontal(grid, registry, coord);
+    for (const glm::ivec3 &coord : coords)
+    {
+      if (!grid.HasChunk(coord))
+      {
+        continue;
+      }
+      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      {
+        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+        {
+          PropagateSkylightColumn(grid, registry, coord, lx, lz);
+        }
+      }
+    }
+    for (const glm::ivec3 &coord : coords)
+    {
+      PropagateSkylightHorizontal(grid, registry, coord);
+    }
   }
   if (!include_block_light)
   {
@@ -549,7 +585,8 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry) const
     relit_set.insert(entry.first);
   }
   std::vector<glm::ivec3> batch(relit_set.begin(), relit_set.end());
-  RelightChunkCoordsOnGrid(grid, registry, batch, Spec.include_block_light);
+  RelightChunkCoordsOnGrid(grid, registry, batch, Spec.include_block_light,
+                           Spec.include_skylight);
 
   bool frontier_unfinished = false;
   for (int iter = 0; iter < Spec.frontier_iterations; ++iter)
@@ -575,7 +612,8 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry) const
       break;
     }
     batch.assign(frontier.begin(), frontier.end());
-    RelightChunkCoordsOnGrid(grid, registry, batch, Spec.include_block_light);
+    RelightChunkCoordsOnGrid(grid, registry, batch, Spec.include_block_light,
+                           Spec.include_skylight);
     relit_set.insert(frontier.begin(), frontier.end());
     frontier_unfinished = (iter == Spec.frontier_iterations - 1);
   }

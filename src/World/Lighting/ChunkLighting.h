@@ -20,7 +20,10 @@ struct RelightFrontierOutcome
 };
 
 void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
-                  glm::ivec3 chunk_coord, bool include_block_light = true);
+                  glm::ivec3 chunk_coord, bool include_block_light = true,
+                  bool include_skylight = true);
+void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,
+                            glm::ivec3 chunk_coord);
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 block_pos, int max_world_y);
 void RelightBlocksAroundLocal(UBlockWorld &world, UBlockRegistry &registry,
@@ -35,10 +38,11 @@ RelightFrontierOutcome RelightBlocksAroundAllEx(
     int max_world_y, bool include_block_light, int frontier_iterations);
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
                    int world_z, int min_y, int max_y,
-                   bool include_block_light = true);
+                   bool include_block_light = true,
+                   bool include_skylight = true);
 void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
-                               bool include_block_light,
+                               bool include_block_light, bool include_skylight,
                                std::vector<glm::ivec3> *out_relit_chunks);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 

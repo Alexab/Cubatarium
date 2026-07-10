@@ -61,4 +61,27 @@ inline void ApplyVertexLight(GreedyMeshVertex &vertex, const UBlockWorld &world,
   ApplyVertexLight(vertex, SampleLightPacked(world, world_voxel));
 }
 
+struct CrossInstanceLight
+{
+  float skyLight{0.f};
+  float blockLight{0.f};
+};
+
+inline CrossInstanceLight SampleCrossInstanceLight(const UChunk &chunk,
+                                                   glm::ivec3 world_voxel)
+{
+  const glm::ivec3 local = UChunkManager::WorldToLocal(world_voxel);
+  const uint8_t packed = chunk.GetLightPackedLocal(local);
+  return {LightLevel01(UnpackSky(packed)),
+          LightLevel01(UnpackBlock(packed))};
+}
+
+inline CrossInstanceLight
+SampleCrossInstanceLight(const ChunkMeshSnapshot &snapshot,
+                         glm::ivec3 world_voxel)
+{
+  return {LightLevel01(UnpackSky(SampleLightPacked(snapshot, world_voxel))),
+          LightLevel01(UnpackBlock(SampleLightPacked(snapshot, world_voxel)))};
+}
+
 } // namespace cutum

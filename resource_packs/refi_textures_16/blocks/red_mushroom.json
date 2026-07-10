@@ -2,7 +2,8 @@
   "name": "red_mushroom",
   "id": 796,
   "types": [
-    "natural"
+    "natural",
+    "plants"
   ],
   "textures": [
     "mushroom_red",
@@ -12,5 +13,14 @@
     "mushroom_red",
     "mushroom_red"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Red Mushroom"
 }

@@ -76,6 +76,11 @@ struct BlockRenderProfile
   FluidViewProfile FluidView;
 };
 
+struct BlockLightingProfile
+{
+  int Emission{0};
+};
+
 struct BlockDefinition
 {
   std::string Name;
@@ -84,6 +89,7 @@ struct BlockDefinition
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;
   BlockRenderProfile Render;
+  BlockLightingProfile Lighting;
   std::vector<std::string> Types;
 };
 
@@ -102,6 +108,7 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json &j);
 BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j);
 BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j);
+BlockLightingProfile ParseLightingFromJson(const nlohmann::json &j);
 void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
                                const std::string &physicsPreset);
 

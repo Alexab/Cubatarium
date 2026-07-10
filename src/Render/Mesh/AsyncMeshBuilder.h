@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
@@ -18,7 +19,7 @@ struct MeshBuildResult
 {
   glm::ivec3 coord{0};
   std::vector<GreedyMeshBatch> batches;
-  std::unordered_map<BlockId, std::vector<glm::vec3>> crossCenters;
+  std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
   uint64_t sourceRevision{0};
   uint64_t jobId{0};
 };

@@ -12,5 +12,9 @@
     "redstoneLight_lit",
     "redstoneLight_lit"
   ],
-  "render": {}
+  "render": {},
+  "displayName": "Redstone Lamp",
+  "lighting": {
+    "emission": 15
+  }
 }

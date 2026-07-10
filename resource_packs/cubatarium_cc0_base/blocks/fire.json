@@ -22,5 +22,8 @@
     "frame_count": 2,
     "frametime": 6
   },
-  "displayName": "Fire"
+  "displayName": "Fire",
+  "lighting": {
+    "emission": 14
+  }
 }

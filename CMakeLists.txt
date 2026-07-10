@@ -887,6 +887,17 @@ target_include_directories(chunk_light_pack_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_light_pack_test glm::glm)
 
+add_executable(block_light_emission_parse_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Test/BlockLightEmissionParseTest.cpp)
+target_include_directories(block_light_emission_parse_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(block_light_emission_parse_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(block_light_emission_parse_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Chunks/Chunk.cpp

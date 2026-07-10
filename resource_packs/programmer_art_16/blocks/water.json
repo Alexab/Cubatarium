@@ -14,8 +14,7 @@
     "water"
   ],
   "physics": {
-    "preset": "water",
-    "fluid_kind": "water"
+    "preset": "water"
   },
   "render": {
     "transparent": true,

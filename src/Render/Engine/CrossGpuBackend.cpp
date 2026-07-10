@@ -1,5 +1,6 @@
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include <cstddef>
@@ -128,9 +129,19 @@ void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
   glEnableVertexAttribArray(2);
   glBindBuffer(kElementArrayBuffer, TemplateEbo);
   glBindBuffer(kArrayBuffer, gpu.instanceVbo);
-  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+  constexpr GLsizei kInstanceStride =
+      static_cast<GLsizei>(sizeof(CrossInstanceGpu));
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, kInstanceStride, (void *)0);
   glEnableVertexAttribArray(3);
   glVertexAttribDivisor(3, 1);
+  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
+                        (void *)(offsetof(CrossInstanceGpu, skyLight)));
+  glEnableVertexAttribArray(4);
+  glVertexAttribDivisor(4, 1);
+  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
+                        (void *)(offsetof(CrossInstanceGpu, blockLight)));
+  glEnableVertexAttribArray(5);
+  glVertexAttribDivisor(5, 1);
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
@@ -140,10 +151,11 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
                                        const CrossInstanceBatch &batch)
 {
   gpu.blockId = batch.blockId;
-  gpu.instanceCount = batch.centers.size();
-  const size_t byte_size = batch.centers.size() * sizeof(glm::vec3);
+  gpu.instanceCount = batch.instances.size();
+  const size_t byte_size =
+      batch.instances.size() * sizeof(CrossInstanceGpu);
   UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
-               batch.centers.data(), byte_size);
+               batch.instances.data(), byte_size);
   EnsureBatchVao(gpu);
 }
 
@@ -160,7 +172,7 @@ void UCrossGpuBackend::RefreshPass(
   size_t write_index = 0;
   for (const CrossInstanceBatch &batch : batches)
   {
-    if (batch.centers.empty())
+    if (batch.instances.empty())
     {
       continue;
     }

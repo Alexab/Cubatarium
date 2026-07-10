@@ -12,5 +12,9 @@
     "lightgem",
     "lightgem"
   ],
-  "render": {}
+  "render": {},
+  "displayName": "Glowstone",
+  "lighting": {
+    "emission": 15
+  }
 }

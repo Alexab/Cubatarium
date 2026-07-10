@@ -207,6 +207,8 @@ public:
   }
 
   void WaitForPendingMeshJobs();
+  void WaitForPendingRelightJobs();
+  void PrepareForShutdown();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
   void OnBlockRegistryRuntimeOverlayChanged(
@@ -688,11 +690,14 @@ public:
     LightingSkylightBulkComplete = complete;
   }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
-                            bool priority_mesh = false);
+                            bool priority_mesh = false,
+                            bool include_skylight = true,
+                            bool include_block_light = true);
   void RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
                          int min_world_y);
   void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
-                                        int max_y);
+                                        int max_y, bool include_skylight = true,
+                                        bool include_block_light = true);
   int DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;

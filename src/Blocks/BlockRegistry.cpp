@@ -341,6 +341,22 @@ const BlockAnimationSpec &UBlockRegistry::Animation(BlockId Id) const
   return DefaultAnimation;
 }
 
+int UBlockRegistry::GetLightEmission(BlockId Id) const
+{
+  if (Id == BLOCK_AIR)
+  {
+    return 0;
+  }
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return std::clamp(def->Lighting.Emission, 0, 15);
+    }
+  }
+  return 0;
+}
+
 size_t UBlockRegistry::GetTextureId(BlockId Id) const
 {
   return static_cast<size_t>(Id);

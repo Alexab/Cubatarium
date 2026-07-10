@@ -209,6 +209,13 @@ int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
   return static_cast<int>(PendingTerrainColumnRelights.size());
 }
 
+void UWorldPersistence::ClearPendingRelights()
+{
+  PendingPlayerRelights.clear();
+  PendingTerrainColumnRelights.clear();
+  PendingTerrainColumnRelightKeys.clear();
+}
+
 int UWorldPersistence::GetPendingPlayerRelightCount() const
 {
   return static_cast<int>(PendingPlayerRelights.size());

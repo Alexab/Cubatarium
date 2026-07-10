@@ -4,6 +4,7 @@
     { "id": "natural", "displayName": "Natural", "sortOrder": 20 },
     { "id": "plants", "displayName": "Plants", "sortOrder": 25 },
     { "id": "fluid", "displayName": "Fluids", "sortOrder": 30 },
+    { "id": "lighting", "displayName": "Light sources", "sortOrder": 32 },
     { "id": "decorative", "displayName": "Decorative", "sortOrder": 35 },
     { "id": "mechanisms", "displayName": "Mechanisms", "sortOrder": 40 },
     { "id": "misc", "displayName": "Misc", "sortOrder": 999 }

@@ -311,6 +311,29 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
   return r;
 }
 
+BlockLightingProfile ParseLightingFromJson(const nlohmann::json &j)
+{
+  BlockLightingProfile lighting;
+  if (!j.is_object())
+  {
+    return lighting;
+  }
+  if (!j.contains("emission"))
+  {
+    return lighting;
+  }
+  const auto &emission = j["emission"];
+  if (!emission.is_number_integer() && !emission.is_number_unsigned())
+  {
+    std::cerr << "ParseLightingFromJson: emission must be an integer"
+              << std::endl;
+    return lighting;
+  }
+  lighting.Emission =
+      std::clamp(emission.get<int>(), 0, 15);
+  return lighting;
+}
+
 void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
                                const std::string &physicsPreset)
 {
@@ -413,6 +436,10 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   if (j.contains("render"))
   {
     out.Definition.Render = ParseRenderFromJson(j["render"]);
+  }
+  if (j.contains("lighting"))
+  {
+    out.Definition.Lighting = ParseLightingFromJson(j["lighting"]);
   }
   if (j.contains("types") && j["types"].is_array())
   {

@@ -12,5 +12,9 @@
     "redtorch_lit",
     "redtorch_lit"
   ],
-  "render": {}
+  "render": {},
+  "displayName": "Redstone Torch",
+  "lighting": {
+    "emission": 7
+  }
 }

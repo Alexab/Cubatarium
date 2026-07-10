@@ -40,6 +40,7 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   fire.Name = "fire";
   fire.Physics = cutum::BlockPhysicsProfile::FromPreset("fire");
   fire.Render.Transparent = true;
+  fire.Lighting.Emission = 14;
 
   cutum::BlockDefinition tall_grass;
   tall_grass.Name = "tall_grass";
@@ -68,7 +69,7 @@ static size_t CountCrossInstances(
   size_t count = 0;
   for (const cutum::CrossInstanceBatch &batch : batches)
   {
-    count += batch.centers.size();
+    count += batch.instances.size();
   }
   return count;
 }

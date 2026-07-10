@@ -238,6 +238,8 @@ tier_a:
     - lava
     reference_pack: cubatarium_cc0_base
     display_name: Lava
+    lighting:
+      emission: 14
   fire:
     types:
     - natural
@@ -264,6 +266,8 @@ tier_a:
     - fire
     reference_pack: cubatarium_cc0_base
     display_name: Fire
+    lighting:
+      emission: 14
   wood:
     types:
     - natural
@@ -754,3 +758,45 @@ tier_b:
     types:
     - decorative
     display_name: Black Wool
+  torch:
+    types:
+    - natural
+    - decorative
+    physics:
+      movement:
+        occupancy: 0
+      fluid_permeable: true
+    render:
+      transparent: true
+      style: cross
+    lighting:
+      emission: 14
+    display_name: Torch
+  glowstone:
+    lighting:
+      emission: 15
+    display_name: Glowstone
+  jack_o_lantern:
+    lighting:
+      emission: 15
+    display_name: Jack o'Lantern
+  redstone_lamp_on:
+    lighting:
+      emission: 15
+    display_name: Redstone Lamp
+  redstone_torch_on:
+    lighting:
+      emission: 7
+    display_name: Redstone Torch
+  redstone_lamp:
+    lighting:
+      emission: 0
+    display_name: Redstone Lamp
+  redstone_torch:
+    lighting:
+      emission: 0
+    display_name: Redstone Torch
+  mtg_meselamp:
+    lighting:
+      emission: 15
+    display_name: Meselamp

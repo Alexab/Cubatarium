@@ -14,8 +14,7 @@
     "lava"
   ],
   "physics": {
-    "preset": "lava",
-    "fluid_kind": "lava"
+    "preset": "lava"
   },
   "render": {
     "transparent": true,
@@ -25,5 +24,8 @@
     "frame_count": 4,
     "frametime": 6
   },
-  "displayName": "Lava"
+  "displayName": "Lava",
+  "lighting": {
+    "emission": 14
+  }
 }

@@ -58,6 +58,7 @@ public:
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   int GetPendingPlayerRelightCount() const;
+  void ClearPendingRelights();
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;

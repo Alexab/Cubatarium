@@ -747,6 +747,11 @@ void UWindowManager::Shutdown()
     glfwMakeContextCurrent(Window);
   }
 
+  if (World)
+  {
+    World->PrepareForShutdown();
+  }
+
   if (Application)
   {
     Application->PrepareForShutdown();
@@ -924,6 +929,10 @@ void UWindowManager::WindowCloseCallback(GLFWwindow *w)
   if (self && self->Application)
   {
     self->Application->GetGameSession().SaveCommandHistory();
+  }
+  if (self && self->World)
+  {
+    self->World->PrepareForShutdown();
   }
   if (self && self->Core)
   {

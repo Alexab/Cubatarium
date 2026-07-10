@@ -101,7 +101,7 @@ private:
   struct ChunkGreedyMesh
   {
     std::vector<GreedyMeshBatch> batches;
-    std::unordered_map<BlockId, std::vector<glm::vec3>> crossCenters;
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
   };
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);

@@ -21,6 +21,7 @@ struct RelightJobSpec
   int min_world_y{0};
   int max_world_y{128};
   bool include_block_light{true};
+  bool include_skylight{true};
   int frontier_iterations{2};
   uint64_t job_id{0};
 };

@@ -3,6 +3,8 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/CrossInstanceBatch.h"
+#include "Render/Mesh/MeshLightSampling.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
@@ -13,10 +15,10 @@
 namespace cutum
 {
 
-inline void CollectCrossCentersFromChunk(
+inline void CollectCrossInstancesFromChunk(
     const UChunk &chunk, glm::ivec3 chunk_coord,
     const UBlockRegistry &registry,
-    std::unordered_map<BlockId, std::vector<glm::vec3>> &out)
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &out)
 {
   for (int ly = 0; ly < CHUNK_SIZE; ++ly)
   {
@@ -34,15 +36,21 @@ inline void CollectCrossCentersFromChunk(
         const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + lx,
                                    chunk_coord.y * CHUNK_SIZE + ly,
                                    chunk_coord.z * CHUNK_SIZE + lz);
-        out[id].push_back(BlockCenter(world_pos));
+        const CrossInstanceLight light =
+            SampleCrossInstanceLight(chunk, world_pos);
+        CrossInstanceGpu instance;
+        instance.center = BlockCenter(world_pos);
+        instance.skyLight = light.skyLight;
+        instance.blockLight = light.blockLight;
+        out[id].push_back(instance);
       }
     }
   }
 }
 
-inline void CollectCrossCentersFromSnapshot(
+inline void CollectCrossInstancesFromSnapshot(
     const ChunkMeshSnapshot &snapshot, const UBlockRegistry &registry,
-    std::unordered_map<BlockId, std::vector<glm::vec3>> &out)
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &out)
 {
   for (int ly = 0; ly < CHUNK_SIZE; ++ly)
   {
@@ -60,7 +68,13 @@ inline void CollectCrossCentersFromSnapshot(
         const glm::ivec3 world_pos(snapshot.coord.x * CHUNK_SIZE + lx,
                                    snapshot.coord.y * CHUNK_SIZE + ly,
                                    snapshot.coord.z * CHUNK_SIZE + lz);
-        out[id].push_back(BlockCenter(world_pos));
+        const CrossInstanceLight light =
+            SampleCrossInstanceLight(snapshot, world_pos);
+        CrossInstanceGpu instance;
+        instance.center = BlockCenter(world_pos);
+        instance.skyLight = light.skyLight;
+        instance.blockLight = light.blockLight;
+        out[id].push_back(instance);
       }
     }
   }

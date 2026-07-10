@@ -192,16 +192,68 @@ void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
 
   if (ColumnRelightQueue.empty())
   {
-    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
-    BeginMeshWarmupInner(world);
+    BeginEmissiveBlockLightQueue(world);
     return;
   }
 
   CurrentPhase = Phase::RelightColumns;
 }
 
+void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
+{
+  EmissiveChunkRelightQueue.clear();
+  EmissiveChunkRelightIndex = 0;
+  ColumnRelightQueue.clear();
+  ColumnRelightIndex = 0;
+  ColumnRelightScheduledIndex = 0;
+  ColumnRelightAppliedCount = 0;
+
+  if (world.BlockRegistry)
+  {
+    world.BlockWorld.GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          bool has_emissive = false;
+          for (int ly = 0; ly < CHUNK_SIZE && !has_emissive; ++ly)
+          {
+            for (int lz = 0; lz < CHUNK_SIZE && !has_emissive; ++lz)
+            {
+              for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+              {
+                const BlockId id =
+                    chunk.GetBlockLocal(glm::ivec3(lx, ly, lz));
+                if (world.BlockRegistry->GetLightEmission(id) > 0)
+                {
+                  has_emissive = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (has_emissive)
+          {
+            EmissiveChunkRelightQueue.push_back(chunk.GetCoord());
+          }
+        });
+  }
+
+  std::cout << "[WorldLoad] RelightEmissiveBlockLight: "
+            << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
+
+  if (EmissiveChunkRelightQueue.empty())
+  {
+    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+    BeginMeshWarmupInner(world);
+    return;
+  }
+
+  CurrentPhase = Phase::RelightEmissiveBlockLight;
+}
+
 void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
 {
+  // Skylight-only bulk relight ends here; gameplay edits/streaming need block light.
+  world.SetLightingSkylightBulkComplete(false);
   world.BlockCounter.MarkNeedsRecount();
   bool has_chunks = false;
   world.BlockWorld.GetChunkManager().ForEachChunk(
@@ -258,6 +310,8 @@ const char *UWorldCooperativeSession::PhaseId() const
     return "relight_chunks";
   case Phase::RelightColumns:
     return "relight_columns";
+  case Phase::RelightEmissiveBlockLight:
+    return "relight_emissive_blocklight";
   case Phase::MeshWarmup:
     return "mesh_warmup";
   case Phase::PrepareEnter:
@@ -656,7 +710,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              relit < relight_budget)
       {
         RelightChunk(world.BlockWorld, *world.BlockRegistry,
-                     RelightQueue[RelightQueueIndex++], false);
+                     RelightQueue[RelightQueueIndex++], false, true);
         ++relit;
       }
     }
@@ -699,7 +753,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         {
           const glm::ivec2 &col =
               ColumnRelightQueue[ColumnRelightScheduledIndex++];
-          world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y);
+          world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y, true,
+                                                 false);
           ++scheduled;
         }
       }
@@ -711,7 +766,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                relit < column_budget)
         {
           const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
-          world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+          world.RelightTerrainColumn(col.x, col.y, 0, max_y, false, true, false);
           ++relit;
           ++ColumnRelightAppliedCount;
         }
@@ -747,10 +802,42 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       std::cout << "[WorldLoad] RelightColumns done: "
                 << ColumnRelightQueue.size() << " columns, last_tick_ms="
                 << tick_ms << std::endl;
-      ColumnRelightQueue.clear();
-      ColumnRelightIndex = 0;
-      ColumnRelightScheduledIndex = 0;
-      ColumnRelightAppliedCount = 0;
+      BeginEmissiveBlockLightQueue(world);
+    }
+    break;
+  }
+  case Phase::RelightEmissiveBlockLight:
+  {
+    if (world.BlockRegistry)
+    {
+      const int relight_budget = std::max(budget * 4, 16);
+      int relit = 0;
+      while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
+             relit < relight_budget)
+      {
+        RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
+                               EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+        ++relit;
+      }
+    }
+    const float relight_base =
+        Kind == WorldCoopKind::Create
+            ? (kCreateWeightInit + kCreateWeightGenerate)
+            : (ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                      : CooperativeLoadProgressBase());
+    const float relight_weight =
+        Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
+    const float relight_frac = ComputeRelightLoadProgress(
+        relight_base, relight_weight, EmissiveChunkRelightIndex,
+        EmissiveChunkRelightQueue.size(), 0, 0, 0);
+    Report(sink, "relight", relight_frac, "Computing block light...");
+
+    if (EmissiveChunkRelightIndex >= EmissiveChunkRelightQueue.size())
+    {
+      std::cout << "[WorldLoad] RelightEmissiveBlockLight done: "
+                << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
+      EmissiveChunkRelightQueue.clear();
+      EmissiveChunkRelightIndex = 0;
       world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
       BeginMeshWarmupInner(world);
     }

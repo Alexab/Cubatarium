@@ -79,8 +79,8 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         }
         const int max_local_y = MaxSolidLocalYSnapshot(snapshot, *registryPtr);
         (void)max_local_y;
-        CollectCrossCentersFromSnapshot(snapshot, *registryPtr,
-                                        result.crossCenters);
+        CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
+                                          result.crossCenters);
         result.batches.reserve(byBlockId.size());
         for (auto &entry : byBlockId)
         {

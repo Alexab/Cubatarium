@@ -175,9 +175,6 @@ void main()
     FragColor = texture(texture0, uv);
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);
-    if (vFaceIndex == kCrossFaceIndex && sky01 < 0.01 && block01 < 0.01) {
-        sky01 = 1.0;
-    }
     float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
     float blockAmbientFloor = clamp(uEnvMinAmbient * 0.15, 0.02, 0.5);
     float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor * uEnvSkyLightScale);

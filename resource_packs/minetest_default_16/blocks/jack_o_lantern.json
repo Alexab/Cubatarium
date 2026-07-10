@@ -12,5 +12,9 @@
     "pumpkin_top",
     "pumpkin_side"
   ],
-  "render": {}
+  "render": {},
+  "displayName": "Jack o'Lantern",
+  "lighting": {
+    "emission": 15
+  }
 }
