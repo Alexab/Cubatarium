@@ -88,7 +88,7 @@ struct ProceduralSettings
   bool AsyncChunkGeneration{true};
   bool AsyncChunkIo{true};
   bool AsyncRelight{true};
-  int RelightThreadCount{2};
+  int RelightThreadCount{4};
   bool RingGateEnabled{false};
   int MaxChunkCommitsPerFrame{3};
   int MaxLoadOpsPerFrame{4};

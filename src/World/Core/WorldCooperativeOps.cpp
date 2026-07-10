@@ -152,13 +152,9 @@ void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
   RelightQueue.clear();
   RelightQueueIndex = 0;
-  ColumnRelightQueue.clear();
-  ColumnRelightIndex = 0;
-  ColumnRelightScheduledIndex = 0;
-  ColumnRelightAppliedCount = 0;
-  world.BlockWorld.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk) { RelightQueue.push_back(chunk.GetCoord()); });
-  CurrentPhase = Phase::RelightChunks;
+  // Column relight already covers skylight for the full vertical stack; skip the
+  // per-chunk pass that duplicated work on every slice during create/load.
+  BeginColumnRelightQueue(world);
 }
 
 void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
@@ -168,20 +164,18 @@ void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
   ColumnRelightScheduledIndex = 0;
   ColumnRelightAppliedCount = 0;
 
-  std::unordered_set<std::uint64_t> ground_columns;
-  for (const glm::ivec3 &coord : RelightQueue)
-  {
-    const std::uint64_t key =
-        (static_cast<std::uint64_t>(static_cast<std::uint32_t>(coord.x))
-         << 32) |
-        static_cast<std::uint32_t>(coord.z);
-    if (!ground_columns.insert(key).second)
-    {
-      continue;
-    }
-    ColumnRelightQueue.push_back(
-        glm::ivec2(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE));
-  }
+  std::unordered_set<glm::ivec3, IVec3Hash> ground_columns;
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        const glm::ivec3 coord = chunk.GetCoord();
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        if (ground_columns.insert(ground).second)
+        {
+          ColumnRelightQueue.push_back(
+              glm::ivec2(ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE));
+        }
+      });
 
   world.SetLightingRelightDeferred(false);
   world.SetLightingSkylightBulkComplete(true);
@@ -749,32 +743,53 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
+    const bool bulk_coop_relight =
+        Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load;
     if (world.BlockRegistry)
     {
       if (world.ProceduralTemplate.AsyncRelight)
       {
-        ColumnRelightAppliedCount += static_cast<size_t>(
-            world.DrainAsyncRelightResults(4, false, false));
-
         const int thread_count =
             std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
-        const int max_inflight = thread_count * 2;
-        const int schedule_budget = std::clamp(budget / 2, 2, 8);
-        int scheduled = 0;
-        while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
-               world.GetAsyncRelightInFlightCount() < max_inflight &&
-               scheduled < schedule_budget)
+        const int max_inflight = thread_count * (bulk_coop_relight ? 4 : 2);
+        const int drain_batch = bulk_coop_relight ? 64 : 4;
+        const int schedule_batch =
+            bulk_coop_relight ? std::clamp(budget * 4, 16, 64)
+                              : std::clamp(budget / 2, 2, 8);
+        const int pass_limit = bulk_coop_relight ? 12 : 1;
+        for (int pass = 0; pass < pass_limit; ++pass)
         {
-          const glm::ivec2 &col =
-              ColumnRelightQueue[ColumnRelightScheduledIndex++];
-          world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y, true,
-                                                 false);
-          ++scheduled;
+          ColumnRelightAppliedCount += static_cast<size_t>(
+              world.DrainAsyncRelightResults(drain_batch, false, false));
+
+          int scheduled = 0;
+          while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
+                 world.GetAsyncRelightInFlightCount() < max_inflight &&
+                 scheduled < schedule_batch)
+          {
+            const glm::ivec2 &col =
+                ColumnRelightQueue[ColumnRelightScheduledIndex++];
+            world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y, true,
+                                                   false);
+            ++scheduled;
+          }
+
+          if (!bulk_coop_relight)
+          {
+            break;
+          }
+          if (ColumnRelightScheduledIndex >= ColumnRelightQueue.size() &&
+              !world.HasPendingAsyncRelightWork())
+          {
+            break;
+          }
         }
       }
       else
       {
-        const int column_budget = std::clamp(budget / 4, 1, 4);
+        const int column_budget =
+            bulk_coop_relight ? std::clamp(budget, 8, 32)
+                              : std::clamp(budget / 4, 1, 4);
         int relit = 0;
         while (ColumnRelightIndex < ColumnRelightQueue.size() &&
                relit < column_budget)
