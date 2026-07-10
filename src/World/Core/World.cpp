@@ -1063,7 +1063,13 @@ void UWorld::InitStreamerCallbacks()
 
 void UWorld::TickAsyncChunkSystems()
 {
-  DrainAsyncRelightResults();
+  const int pending_player =
+      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
+  const int pending_bg =
+      Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+  const int drain_budget = std::clamp(
+      4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
+  DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
   Streaming->TickAsyncChunkSystems(*this);
 }
 

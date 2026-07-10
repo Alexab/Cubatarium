@@ -172,13 +172,29 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     return;
   }
   const int max_y = world.ProceduralTemplate.MaxHeight;
+  const bool async_bg =
+      world.ProceduralTemplate.AsyncRelight && !world.IsLightingRelightDeferred();
+  const int max_inflight =
+      async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) * 2
+               : 0;
   int drained_bg = 0;
   while (!PendingTerrainColumnRelights.empty() && drained_bg < max_bg_columns)
   {
+    if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
+    {
+      break;
+    }
     const glm::ivec2 col = PendingTerrainColumnRelights.front();
     PendingTerrainColumnRelights.pop_front();
     PendingTerrainColumnRelightKeys.erase(col);
-    world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+    if (async_bg)
+    {
+      world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y);
+    }
+    else
+    {
+      world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+    }
     ++drained_bg;
   }
 }

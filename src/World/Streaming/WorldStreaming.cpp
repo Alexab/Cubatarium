@@ -145,6 +145,10 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)
       {
+        if (world.ShouldDeferStreamingMeshForRelight())
+        {
+          return;
+        }
         world.MarkTerrainChunkMeshDirty(groundCoord, min_y, max_y);
       });
   world.Persistence->EnsureChunkIoInitialized();
@@ -166,8 +170,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
   const int pending_bg = world.Persistence->GetPendingTerrainColumnRelightCount();
   const int player_budget = pending_player > 0 ? 2 : 0;
+  const bool async_bg =
+      procedural.AsyncRelight && !world.IsLightingRelightDeferred();
   const int bg_budget =
-      pending_bg > 12 ? 4 : (pending_bg > 0 ? 2 : 1);
+      async_bg ? (pending_bg > 24 ? 2 : 1)
+               : (pending_bg > 12 ? 2 : (pending_bg > 0 ? 1 : 0));
   world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
   world.PhysicsTelemetryData.PendingPlayerRelights =
       static_cast<uint64_t>(pending_player);
@@ -257,6 +264,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [&world](glm::ivec3 coord)
       {
+        if (world.ShouldDeferStreamingMeshForRelight())
+        {
+          return;
+        }
         world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
                                         world.GetProceduralSettings().MaxHeight);
       },

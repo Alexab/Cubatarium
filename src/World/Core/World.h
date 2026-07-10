@@ -679,6 +679,10 @@ public:
     LightingRelightDeferred = deferred;
   }
   bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
+  bool ShouldDeferStreamingMeshForRelight() const
+  {
+    return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred;
+  }
   void SetLightingSkylightBulkComplete(bool complete)
   {
     LightingSkylightBulkComplete = complete;
