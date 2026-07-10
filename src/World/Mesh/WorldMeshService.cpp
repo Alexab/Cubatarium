@@ -284,7 +284,8 @@ void UWorldMeshService::MarkChunksContainingBlockIds(
 
 void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
     UBlockWorld &block_world, UBlockRegistry *registry, glm::ivec3 block_pos,
-    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks)
+    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
+    bool sync_neighbor_chunks)
 {
   const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(block_pos);
   modified_chunks.insert(chunk_coord);
@@ -295,7 +296,7 @@ void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
   const bool hybrid_async_edit =
       registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
 
-  if (full_sync_rebuild)
+  if (full_sync_rebuild || (hybrid_async_edit && sync_neighbor_chunks))
   {
     RebuildChunkImmediate(block_world, *registry, chunk_coord);
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
@@ -326,7 +327,8 @@ void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
 void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     UBlockWorld &block_world, UBlockRegistry *registry,
     const std::vector<glm::ivec3> &block_positions,
-    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks)
+    std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
+    bool sync_neighbor_chunks)
 {
   if (block_positions.empty())
   {
@@ -355,7 +357,9 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   const RenderSettings &render = Cache.GetRenderSettings();
   const bool full_sync_rebuild =
       !render.AsyncMeshing || !render.GreedyMeshing;
-  if (full_sync_rebuild)
+  const bool hybrid_async_edit =
+      registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
+  if (full_sync_rebuild || (hybrid_async_edit && sync_neighbor_chunks))
   {
     for (const glm::ivec3 &chunk_coord : chunk_coords)
     {

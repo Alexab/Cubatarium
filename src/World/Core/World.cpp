@@ -1862,7 +1862,7 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight(mesh_touch_blocks);
-  MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, true);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
@@ -2506,10 +2506,11 @@ void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
 }
 
 void UWorld::MarkBlocksChunkDirtyBatch(
-    const std::vector<glm::ivec3> &block_positions)
+    const std::vector<glm::ivec3> &block_positions, bool sync_neighbor_chunks)
 {
   MeshService->MarkBlocksChunkDirtyBatchFromEdit(
-      BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks);
+      BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
+      sync_neighbor_chunks);
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)

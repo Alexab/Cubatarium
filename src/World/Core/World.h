@@ -772,7 +772,8 @@ private:
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void
-  MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions);
+  MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
+                            bool sync_neighbor_chunks = false);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
