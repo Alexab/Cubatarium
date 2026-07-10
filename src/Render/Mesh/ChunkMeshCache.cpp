@@ -680,19 +680,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
       {
         GreedyMeshVertex &vertex = batch.vertices[i];
-        const glm::vec3 world_pos(vertex.px, vertex.py, vertex.pz);
-        const glm::ivec3 world_voxel(static_cast<int>(std::round(world_pos.x)),
-                                     static_cast<int>(std::round(world_pos.y)),
-                                     static_cast<int>(std::round(world_pos.z)));
-        ApplyVertexLight(vertex, world, world_voxel);
-        if (q.axis == 1 && q.faceSign > 0)
-        {
-          vertex.wetness = SurfaceWetness;
-        }
-        else
-        {
-          vertex.wetness = 0.0f;
-        }
+        ApplyVertexLight(vertex, q.LightPacked);
+        const bool top_face = q.axis == 1 && q.faceSign > 0;
+        vertex.wetness = SurfaceWetness * (top_face ? 0.15f : 0.05f);
       }
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);

@@ -179,12 +179,19 @@ void main()
     if (vFaceIndex == kCrossFaceIndex && sky01 < 0.01 && block01 < 0.01) {
         sky01 = 1.0;
     }
-    float dayAmbient = uEnvMinAmbient * (0.4 + 0.6 * uEnvDayFactor);
-    float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
-    float blockAmbientFloor = clamp(uEnvMinAmbient * 0.15, 0.02, 0.5);
-    float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor * uEnvSkyLightScale);
-    float blockLit = mix(blockAmbientFloor, 1.0, block01);
-    float lit = max(skyLit, blockLit);
+    float daySky = clamp(uEnvDayFactor * uEnvSkyLightScale, 0.0, 1.0);
+    float dayAmbient = max(uEnvMinAmbient * (0.82 + 0.18 * daySky), 0.12);
+    float nightAmbient = max(uEnvMinAmbient * (0.72 + 0.28 * uEnvNightFactor), 0.08);
+    float skyAmbient = mix(nightAmbient, dayAmbient, daySky);
+    float skyMix = clamp(sky01 * (0.78 + 0.22 * daySky), 0.0, 1.0);
+    float skyLit = mix(skyAmbient, 1.0, skyMix);
+    if (vFaceIndex == 4) {
+        skyLit = min(1.0, skyLit + 0.08 * daySky);
+    }
+    float blockAmbientFloor = clamp(uEnvMinAmbient * 0.06, 0.01, 0.18);
+    float blockStrength = mix(0.58, 0.24, daySky);
+    float blockLit = mix(blockAmbientFloor, blockStrength, block01);
+    float lit = clamp(max(skyLit, blockLit) + skyAmbient * 0.18, 0.0, 1.0);
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {
         if (uEnvLightDebugMode < 1.5) {
@@ -204,7 +211,7 @@ void main()
     float wet = clamp(vWetness * uEnvWetness, 0.0, 1.0);
     if (wet > 0.001) {
         vec3 cooler = FragColor.rgb * vec3(0.78, 0.82, 0.9);
-        FragColor.rgb = mix(FragColor.rgb, cooler, wet * 0.35);
+        FragColor.rgb = mix(FragColor.rgb, cooler, wet * 0.08);
     }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
@@ -246,7 +253,7 @@ void main()
                     vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
                     float factor = clamp(uBelowSurfaceFogMin + depthBelow * uBelowSurfaceFogScale,
                                          uBelowSurfaceFogMin, 1.0);
-                    FragColor.rgb = mix(FragColor.rgb, fogCol, factor * uBelowSurfaceFog);
+                    FragColor.rgb = mix(FragColor.rgb, fogCol, factor * uBelowSurfaceFog * 0.55);
                 }
             }
         }

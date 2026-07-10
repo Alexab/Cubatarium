@@ -52,6 +52,13 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
           local[vAxis] = v;
           const glm::ivec3 worldPos = origin + local;
           snapshot.shellBlocks[worldPos] = world.GetBlock(worldPos);
+          const glm::ivec3 lightChunkCoord = UChunkManager::WorldToChunk(worldPos);
+          if (const UChunk *lightChunk =
+                  world.GetChunkManager().GetChunk(lightChunkCoord))
+          {
+            snapshot.shellLight[worldPos] = lightChunk->GetLightPackedLocal(
+                UChunkManager::WorldToLocal(worldPos));
+          }
           const uint8_t packed =
               PackFluidCellState(world.GetFluidState(worldPos));
           if (packed != 0)
@@ -90,6 +97,21 @@ uint8_t ChunkMeshSnapshot::GetLightPackedLocal(glm::ivec3 local) const
 {
   return light_packed[local.x + CHUNK_SIZE * local.y +
                       CHUNK_SIZE * CHUNK_SIZE * local.z];
+}
+
+uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
+{
+  const glm::ivec3 local = worldPos - ChunkOrigin();
+  if (InChunkLocal(local))
+  {
+    return GetLightPackedLocal(local);
+  }
+  const auto it = shellLight.find(worldPos);
+  if (it != shellLight.end())
+  {
+    return it->second;
+  }
+  return 0;
 }
 
 uint8_t ChunkMeshSnapshot::GetFluidPackedLocal(glm::ivec3 local) const

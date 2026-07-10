@@ -629,7 +629,7 @@ void UWorld::TickEnvironment(float dtSeconds)
   }
 
   EnvironmentStateData.WeatherSkyAttenuation =
-      std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.45f, 0.35f, 1.0f);
+      std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.28f, 0.65f, 1.0f);
 
   const bool precip_active =
       EnvironmentStateData.PrecipitationIntensity > 0.05f &&

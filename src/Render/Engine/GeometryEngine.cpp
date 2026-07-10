@@ -58,9 +58,9 @@ float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
   float scale = env.WeatherSkyAttenuation;
   if (env.PrecipitationIntensity > 0.05f)
   {
-    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.25f;
+    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.12f;
   }
-  return std::clamp(scale, 0.55f, 1.0f);
+  return std::clamp(scale, 0.82f, 1.0f);
 }
 
 } // namespace
@@ -739,13 +739,13 @@ void UGeometryEngine::PrepareFrameRendering()
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
   const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
   const float sky_mul =
-      std::clamp(0.12f + day * env.WeatherSkyAttenuation * 0.88f + moon * 0.28f,
-                 0.12f, 1.0f);
+      std::clamp(0.3f + day * env.WeatherSkyAttenuation * 0.7f + moon * 0.26f,
+                 0.3f, 1.0f);
   tint *= sky_mul;
   tint = glm::mix(tint, tint * glm::vec3(0.75f, 0.82f, 0.95f),
                   moon * (1.0f - day) * 0.45f);
   const float weather_darken = std::clamp(
-      env.Cloudiness * 0.22f + env.PrecipitationIntensity * 0.18f, 0.0f, 0.35f);
+      env.Cloudiness * 0.1f + env.PrecipitationIntensity * 0.08f, 0.0f, 0.16f);
   tint *= (1.0f - weather_darken);
   skyColor = glm::vec4(tint, 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();

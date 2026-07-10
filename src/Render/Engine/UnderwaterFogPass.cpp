@@ -97,7 +97,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
   const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
   const float sky_mul = std::clamp(
-      0.12f + day * env.WeatherSkyAttenuation * 0.88f + moon * 0.28f, 0.12f,
+      0.3f + day * env.WeatherSkyAttenuation * 0.7f + moon * 0.26f, 0.3f,
       1.0f);
   glm::vec3 targetSky = base_sky_color * sky_mul;
   targetSky = glm::mix(targetSky, targetSky * glm::vec3(0.75f, 0.82f, 0.95f),

@@ -38,6 +38,7 @@ int MaxSolidLocalYSnapshot(const ChunkMeshSnapshot &snapshot,
   }
   return max_y;
 }
+
 } // namespace
 
 void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
@@ -69,17 +70,11 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
           batch.Transparent = registryPtr->IsTransparent(q.Id);
           batch.AlphaCutout =
               registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+          const size_t base_vertex = batch.vertices.size();
           AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
-        }
-        for (auto &entry : byBlockId)
-        {
-          for (GreedyMeshVertex &vertex : entry.second.vertices)
+          for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
           {
-            const glm::ivec3 world_voxel(
-                static_cast<int>(std::round(vertex.px)),
-                static_cast<int>(std::round(vertex.py)),
-                static_cast<int>(std::round(vertex.pz)));
-            ApplyVertexLight(vertex, snapshot, world_voxel);
+            ApplyVertexLight(batch.vertices[i], q.LightPacked);
           }
         }
         const int max_local_y = MaxSolidLocalYSnapshot(snapshot, *registryPtr);

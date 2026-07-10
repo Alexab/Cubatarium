@@ -58,6 +58,22 @@ public:
     return World.GetBlock(world_pos);
   }
 
+  uint8_t GetLightPackedLocal(glm::ivec3 local) const override
+  {
+    return Chunk ? Chunk->GetLightPackedLocal(local) : 0;
+  }
+
+  uint8_t GetLightPacked(glm::ivec3 world_pos) const override
+  {
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
+    const UChunk *chunk = World.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      return 0;
+    }
+    return chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(world_pos));
+  }
+
   uint8_t GetFluidPackedLocal(glm::ivec3 local) const override
 
   {
@@ -104,6 +120,16 @@ public:
   {
 
     return Snapshot.GetBlock(world_pos);
+  }
+
+  uint8_t GetLightPackedLocal(glm::ivec3 local) const override
+  {
+    return Snapshot.GetLightPackedLocal(local);
+  }
+
+  uint8_t GetLightPacked(glm::ivec3 world_pos) const override
+  {
+    return Snapshot.GetLightPacked(world_pos);
   }
 
   uint8_t GetFluidPackedLocal(glm::ivec3 local) const override
@@ -286,6 +312,18 @@ bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
   return NeighborHidesFace(reader, registry, fluid_id, block_pos, neighbor_offset);
 }
 
+uint8_t FaceLightPacked(IUChunkMeshReader &reader, glm::ivec3 block_pos,
+                        glm::ivec3 neighbor_offset)
+{
+  const glm::ivec3 face_air = block_pos + neighbor_offset;
+  const uint8_t face_light = reader.GetLightPacked(face_air);
+  if (face_light != 0)
+  {
+    return face_light;
+  }
+  return reader.GetLightPacked(block_pos);
+}
+
 void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
                                UBlockRegistry &registry,
                                std::vector<GreedyQuad> &quads, int max_mesh_y)
@@ -299,6 +337,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
   const glm::ivec3 chunk_coord = reader.ChunkCoord();
   BlockId mask[CHUNK_SIZE][CHUNK_SIZE];
   uint8_t fluid_mask[CHUNK_SIZE][CHUNK_SIZE];
+  uint8_t light_mask[CHUNK_SIZE][CHUNK_SIZE];
 
   for (int axis = 0; axis < 3; ++axis)
   {
@@ -315,6 +354,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
 
         std::memset(mask, 0, sizeof(mask));
         std::memset(fluid_mask, 0, sizeof(fluid_mask));
+        std::memset(light_mask, 0, sizeof(light_mask));
 
         for (int v = 0; v < CHUNK_SIZE; ++v)
         {
@@ -357,6 +397,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
 
             mask[v][u] = fluid_id;
             fluid_mask[v][u] = packed;
+            light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
           }
         }
 
@@ -372,7 +413,8 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
 
             int width = 1;
             while (u + width < CHUNK_SIZE && mask[v][u + width] == id &&
-                   fluid_mask[v][u + width] == fluid_mask[v][u])
+                   fluid_mask[v][u + width] == fluid_mask[v][u] &&
+                   light_mask[v][u + width] == light_mask[v][u])
             {
               ++width;
             }
@@ -384,7 +426,8 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
               for (int k = 0; k < width; ++k)
               {
                 if (mask[v + height][u + k] != id ||
-                    fluid_mask[v + height][u + k] != fluid_mask[v][u])
+                    fluid_mask[v + height][u + k] != fluid_mask[v][u] ||
+                    light_mask[v + height][u + k] != light_mask[v][u])
                 {
                   done = true;
                   break;
@@ -405,6 +448,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
             quad.height = height;
             quad.Id = id;
             quad.faceSign = sign;
+            quad.LightPacked = light_mask[v][u];
             quad.FluidPacked = fluid_mask[v][u];
             quads.push_back(quad);
 
@@ -486,6 +530,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
   BlockId mask[CHUNK_SIZE][CHUNK_SIZE];
 
   uint8_t fluid_mask[CHUNK_SIZE][CHUNK_SIZE];
+  uint8_t light_mask[CHUNK_SIZE][CHUNK_SIZE];
 
   for (int axis = 0; axis < 3; ++axis)
 
@@ -513,6 +558,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
         std::memset(mask, 0, sizeof(mask));
 
         std::memset(fluid_mask, 0, sizeof(fluid_mask));
+        std::memset(light_mask, 0, sizeof(light_mask));
 
         for (int v = 0; v < CHUNK_SIZE; ++v)
 
@@ -566,6 +612,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             }
 
             mask[v][u] = id;
+            light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
 
             fluid_mask[v][u] =
                 registry.IsLiquid(id)
@@ -594,6 +641,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             int width = 1;
 
             while (u + width < CHUNK_SIZE && mask[v][u + width] == id &&
+                   light_mask[v][u + width] == light_mask[v][u] &&
 
                    fluid_mask[v][u + width] == fluid_mask[v][u])
 
@@ -615,6 +663,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
               {
 
                 if (mask[v + height][u + k] != id ||
+                    light_mask[v + height][u + k] != light_mask[v][u] ||
 
                     fluid_mask[v + height][u + k] != fluid_mask[v][u])
 
@@ -651,6 +700,8 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             quad.Id = id;
 
             quad.faceSign = sign;
+
+            quad.LightPacked = light_mask[v][u];
 
             quad.FluidPacked = fluid_mask[v][u];
 

@@ -23,6 +23,7 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> shellBlocks;
   std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> shellFluid;
+  std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> shellLight;
   uint64_t sourceRevision{0};
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
@@ -32,6 +33,7 @@ struct ChunkMeshSnapshot
   BlockId GetBlock(glm::ivec3 worldPos) const;
   BlockId GetBlockLocal(glm::ivec3 local) const;
   uint8_t GetLightPackedLocal(glm::ivec3 local) const;
+  uint8_t GetLightPacked(glm::ivec3 worldPos) const;
   uint8_t GetFluidPackedLocal(glm::ivec3 local) const;
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   FluidCellState GetFluidLocal(glm::ivec3 local) const;
