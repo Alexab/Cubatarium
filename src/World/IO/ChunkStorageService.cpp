@@ -1,5 +1,6 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include <filesystem>
 #include <fstream>
@@ -239,6 +240,61 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   return placed;
 }
 
+int UChunkStorageService::GetHighestChunkSliceOnDisk(
+    const std::string &worldFolder, glm::ivec3 groundCoord) const
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
+  if (!std::filesystem::exists(chunks_dir) ||
+      !std::filesystem::is_directory(chunks_dir))
+  {
+    return -1;
+  }
+
+  const std::string prefix = std::to_string(groundCoord.x) + "_";
+  const std::string suffix = "_" + std::to_string(groundCoord.z);
+  int highest = -1;
+  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  {
+    const std::string stem = entry.path().stem().string();
+    if (stem.size() <= prefix.size() + suffix.size())
+    {
+      continue;
+    }
+    if (stem.compare(0, prefix.size(), prefix) != 0 ||
+        stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) != 0)
+    {
+      continue;
+    }
+    try
+    {
+      const std::string cy_text = stem.substr(
+          prefix.size(), stem.size() - prefix.size() - suffix.size());
+      const int cy = std::stoi(cy_text);
+      highest = std::max(highest, cy);
+    }
+    catch (const std::exception &)
+    {
+    }
+  }
+  return highest;
+}
+
+void UChunkStorageService::RemoveChunkSliceFromDisk(
+    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+{
+  for (const ChunkDiskFormat format :
+       {ChunkDiskFormat::Binary, ChunkDiskFormat::Json})
+  {
+    const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
+    std::error_code ec;
+    std::filesystem::remove(filePath, ec);
+  }
+}
+
 void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              const UBlockWorld &world,
                                              const std::string &worldFolder,
@@ -250,15 +306,44 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
     groundCoord.y = 0;
   }
   const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
+  const int highestNonAir =
+      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
+  int highestInRam = -1;
   for (int cy = 0; cy <= maxCy; ++cy)
+  {
+    if (world.GetChunkManager().HasChunk(
+            glm::ivec3(groundCoord.x, cy, groundCoord.z)))
+    {
+      highestInRam = cy;
+    }
+  }
+  int highestToSave = std::max({highestOnDisk, highestNonAir, highestInRam});
+  if (highestToSave < 0)
+  {
+    return;
+  }
+  highestToSave = std::min(highestToSave, maxCy);
+
+  for (int cy = 0; cy <= highestToSave; ++cy)
   {
     const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(slice);
-    if (!chunk)
+    if (chunk)
     {
-      continue;
+      SaveChunk(slice, *chunk, worldFolder, registry);
     }
-    SaveChunk(slice, *chunk, worldFolder, registry);
+    else
+    {
+      const UChunk empty_slice(slice);
+      SaveChunk(slice, empty_slice, worldFolder, registry);
+    }
+  }
+
+  for (int cy = highestToSave + 1; cy <= maxCy; ++cy)
+  {
+    RemoveChunkSliceFromDisk(
+        worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z));
   }
 }
 
@@ -279,7 +364,12 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
 
   int total = 0;
   const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
+  if (highestOnDisk < 0)
+  {
+    return 0;
+  }
+  for (int cy = 0; cy <= highestOnDisk; ++cy)
   {
     const int placed = LoadChunk(glm::ivec3(groundCoord.x, cy, groundCoord.z),
                                  world, worldFolder, registry);
@@ -288,7 +378,9 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
       total += placed;
     }
   }
-  return total;
+  MaterializeTerrainColumnAirSlices(world, groundCoord, maxWorldY);
+  (void)maxCy;
+  return total > 0 ? total : 1;
 }
 
 void UChunkStorageService::WriteStorageMarker(

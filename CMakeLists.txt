@@ -652,6 +652,19 @@ target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
 
+add_executable(terrain_column_util_test
+    src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/TerrainColumnUtil.cpp
+    src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/Math/FluidCellState.cpp
+    src/World/Math/GridMath.cpp
+    src/Test/TerrainColumnUtilTest.cpp)
+target_include_directories(terrain_column_util_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(terrain_column_util_test glm::glm)
+
 add_executable(world_mesh_service_test
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Test/WorldMeshServiceTest.cpp)

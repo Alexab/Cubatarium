@@ -116,6 +116,21 @@ std::vector<AsyncChunkSaveRequest> UAsyncChunkIO::DrainSaves()
   return CompletedSaves.DrainAll();
 }
 
+void UAsyncChunkIO::WaitIdle()
+{
+  Pool.WaitIdle();
+}
+
+bool UAsyncChunkIO::CompletedLoadsEmpty() const
+{
+  return CompletedLoads.Empty();
+}
+
+bool UAsyncChunkIO::CompletedSavesEmpty() const
+{
+  return CompletedSaves.Empty();
+}
+
 UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
                                     glm::ivec3 chunkCoord,
                                     UBlockRegistry &registry)

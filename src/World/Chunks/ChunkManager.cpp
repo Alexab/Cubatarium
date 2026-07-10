@@ -133,6 +133,11 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   Chunks.erase(chunkCoord);
 }
 
+void UChunkManager::EnsureChunk(glm::ivec3 chunkCoord)
+{
+  (void)GetOrCreateChunk(chunkCoord);
+}
+
 UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
 {
   auto it = Chunks.find(chunkCoord);

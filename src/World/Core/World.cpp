@@ -1245,6 +1245,7 @@ void UWorld::PrepareForShutdown()
   }
   if (Persistence)
   {
+    Persistence->FlushAsyncChunkIo(*this);
     Persistence->ClearPendingRelights();
   }
   DrainAsyncRelightResults(1024, false, false);

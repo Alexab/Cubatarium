@@ -52,6 +52,7 @@ public:
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
   void TickAsyncChunkIo(UWorld &world);
+  void FlushAsyncChunkIo(UWorld &world);
   void EnqueueTerrainColumnRelight(int world_x, int world_z);
   void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
   void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
@@ -61,6 +62,7 @@ public:
   void ClearPendingRelights();
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
+  void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
@@ -71,9 +73,24 @@ public:
                                  int render_distance_chunks);
 
 private:
+  struct PendingAsyncColumnLoadState
+  {
+    int remaining_results{0};
+    int highest_cy_on_disk{-1};
+    bool had_disk_read_failure{false};
+    bool had_invalid_token{false};
+    int retry_generation{0};
+  };
+
+  static constexpr int kMaxAsyncColumnLoadRetries = 4;
+
+  void FinalizeAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
+                                      PendingAsyncColumnLoadState state);
+
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unique_ptr<UChunkStorageService> ChunkStorage;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
+  std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
+      PendingAsyncColumnLoadSlices;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
   struct PlayerRelightRequest
   {

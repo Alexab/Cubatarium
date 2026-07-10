@@ -45,6 +45,9 @@ public:
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
   std::vector<AsyncChunkSaveRequest> DrainSaves();
+  void WaitIdle();
+  bool CompletedLoadsEmpty() const;
+  bool CompletedSavesEmpty() const;
 
 private:
   UJobThreadPool Pool;

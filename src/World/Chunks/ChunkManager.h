@@ -36,6 +36,7 @@ public:
   UChunk *GetChunk(glm::ivec3 chunk_coord);
   const UChunk *GetChunk(glm::ivec3 chunk_coord) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
+  void EnsureChunk(glm::ivec3 chunk_coord);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
 

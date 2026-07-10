@@ -240,6 +240,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       {
         UWorldPersistence &persistence = *world.Persistence;
         const glm::ivec3 ground(coord.x, 0, coord.z);
+        persistence.CancelAsyncTerrainColumnLoad(ground);
+        ChunkGenTokens.Bump(ground);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
+        }
         const auto t0 = std::chrono::high_resolution_clock::now();
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
@@ -251,16 +257,16 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           persistence.SaveTerrainColumn(ground, world.BlockWorld,
                                         *world.BlockRegistry,
                                         settings.MaxHeight);
+          ChunkGenTokens.Bump(ground);
+          if (ChunkScheduler)
+          {
+            ChunkScheduler->Invalidate(ground);
+          }
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
-        ChunkGenTokens.Bump(ground);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
       },
       [&world](glm::ivec3 coord)
       {

@@ -331,8 +331,18 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
   if (existing != nullptr && !forceSync && AsyncGeneration &&
       OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord))
   {
-    ProcedurallyGenerated.insert(chunkCoord);
-    return true;
+    if (IsTerrainChunkCompleteCached(chunkCoord))
+    {
+      ProcedurallyGenerated.insert(chunkCoord);
+      return true;
+    }
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    InvalidateTerrainCompleteCache(chunkCoord);
+    if (OnRequestAsyncChunk)
+    {
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    }
+    return false;
   }
   if (existing != nullptr && !OnGenerateColumn && !AsyncGeneration)
   {

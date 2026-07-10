@@ -58,6 +58,11 @@ public:
   {
     return *EmergeCoordinator;
   }
+  UChunkLoadScheduler *GetChunkScheduler() { return ChunkScheduler.get(); }
+  const UChunkLoadScheduler *GetChunkScheduler() const
+  {
+    return ChunkScheduler.get();
+  }
 
   void EnsureCollisionChunks(const glm::ivec3 &feetBlock,
                              const glm::vec3 &forward);

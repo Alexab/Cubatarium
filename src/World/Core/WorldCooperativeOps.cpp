@@ -12,6 +12,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
+#include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include <algorithm>
 #include <chrono>
@@ -419,8 +420,17 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
   }
   else
   {
-    SaveChunkCoords.assign(world.ModifiedChunks.begin(),
-                           world.ModifiedChunks.end());
+    std::unordered_set<glm::ivec3, IVec3Hash> grounds;
+    grounds.reserve(world.ModifiedChunks.size());
+    for (const glm::ivec3 &modified : world.ModifiedChunks)
+    {
+      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
+    }
+    SaveChunkCoords.reserve(grounds.size());
+    for (const glm::ivec3 &ground : grounds)
+    {
+      SaveChunkCoords.push_back(ground);
+    }
   }
 }
 
@@ -558,6 +568,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
+      if (world.Persistence)
+      {
+        world.Persistence->FlushAsyncChunkIo(world);
+      }
       CurrentPhase = Phase::ScanSaveChunks;
       Report(sink, "init", 0.f, "Preparing save...");
     }
@@ -1057,15 +1071,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       CurrentPhase = Phase::SaveMetadata;
       break;
     }
+    const bool save_by_ground_column = !world.ModifiedChunks.empty();
     int saved = 0;
     while (SaveChunkIndex < SaveChunkCoords.size() && saved < budget)
     {
       const glm::ivec3 coord = SaveChunkCoords[SaveChunkIndex++];
-      const UChunk *chunk = world.BlockWorld.GetChunkManager().GetChunk(coord);
-      if (chunk)
+      if (save_by_ground_column)
       {
-        world.GetChunkStorage().SaveChunk(coord, *chunk, FolderPath,
-                                          *world.BlockRegistry);
+        world.GetChunkStorage().SaveTerrainColumn(
+            coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
+            world.ProceduralTemplate.MaxHeight);
+      }
+      else
+      {
+        const UChunk *chunk = world.BlockWorld.GetChunkManager().GetChunk(coord);
+        if (chunk)
+        {
+          world.GetChunkStorage().SaveChunk(coord, *chunk, FolderPath,
+                                            *world.BlockRegistry);
+        }
       }
       ++saved;
     }

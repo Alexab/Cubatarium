@@ -40,6 +40,11 @@ public:
   int LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
                 const std::string &worldFolder, UBlockRegistry &registry);
 
+  int GetHighestChunkSliceOnDisk(const std::string &worldFolder,
+                                 glm::ivec3 groundCoord) const;
+  void RemoveChunkSliceFromDisk(const std::string &worldFolder,
+                                glm::ivec3 chunkCoord) const;
+
   void SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,
                          UBlockRegistry &registry, int maxWorldY);
