@@ -29,6 +29,7 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
 }
 
 constexpr int kChunkBudgetPerFrame = 16;
+constexpr int kEnterGameGpuWarmupFrames = 3;
 
 } // namespace
 
@@ -159,6 +160,26 @@ void UWorldOperationRunner::PrepareCreateWorld()
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
+bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
+{
+  if (CurrentStage != Stage::EnterGameGpuWarmup)
+  {
+    return true;
+  }
+  const int frame_index = kEnterGameGpuWarmupFrames - EnterGameGpuWarmupFramesLeft;
+  const float frac =
+      0.94f + 0.05f * (static_cast<float>(frame_index + 1) /
+                        static_cast<float>(kEnterGameGpuWarmupFrames));
+  sink.Report("prepare_view", frac, "Uploading terrain...");
+  --EnterGameGpuWarmupFramesLeft;
+  if (EnterGameGpuWarmupFramesLeft > 0)
+  {
+    return false;
+  }
+  CurrentStage = Stage::EnterGameFinalize;
+  return false;
+}
+
 bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 {
   if (!Active || CurrentStage == Stage::Done || CurrentStage == Stage::Failed)
@@ -242,7 +263,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
-      CurrentStage = Stage::EnterGameFinalize;
+      CurrentStage = Stage::EnterGameGpuWarmup;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupFrames;
       return false;
     }
     Success = true;
@@ -271,7 +293,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
-      CurrentStage = Stage::EnterGameFinalize;
+      CurrentStage = Stage::EnterGameGpuWarmup;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupFrames;
       return false;
     }
     Success = true;
@@ -279,6 +302,9 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     CurrentStage = Stage::Done;
     sink.End(true);
     return true;
+
+  case Stage::EnterGameGpuWarmup:
+    return false;
 
   case Stage::EnterGameFinalize:
     Core.FinalizeEnterGameSession();

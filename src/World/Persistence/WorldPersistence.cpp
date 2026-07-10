@@ -126,6 +126,36 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
                       : ChunkWriteFormat::Binary;
 }
 
+void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z)
+{
+  const glm::ivec2 key(world_x, world_z);
+  for (const glm::ivec2 &pending : PendingTerrainColumnRelights)
+  {
+    if (pending == key)
+    {
+      return;
+    }
+  }
+  PendingTerrainColumnRelights.push_back(key);
+}
+
+void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_columns)
+{
+  if (max_columns <= 0 || PendingTerrainColumnRelights.empty())
+  {
+    return;
+  }
+  const int max_y = world.ProceduralTemplate.MaxHeight;
+  int drained = 0;
+  while (!PendingTerrainColumnRelights.empty() && drained < max_columns)
+  {
+    const glm::ivec2 col = PendingTerrainColumnRelights.front();
+    PendingTerrainColumnRelights.pop_front();
+    world.RelightTerrainColumn(col.x, col.y, 0, max_y);
+    ++drained;
+  }
+}
+
 void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
 {
   if (!ChunkStorage)
@@ -135,7 +165,9 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
 
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
-    for (AsyncChunkLoadResult &load : AsyncChunkIo->DrainLoads())
+    constexpr std::size_t kMaxAsyncSliceAppliesPerFrame = 16;
+    for (AsyncChunkLoadResult &load :
+         AsyncChunkIo->DrainLoadsUpTo(kMaxAsyncSliceAppliesPerFrame))
     {
       const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
       bool column_completed = false;
@@ -170,12 +202,14 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       {
         if (load.success && world.BlockRegistry)
         {
-          const int max_y = world.ProceduralTemplate.MaxHeight;
-          world.RelightTerrainColumn(ground.x, ground.z, 0, max_y);
+          EnqueueTerrainColumnRelight(ground.x, ground.z);
         }
         world.Streaming->GetStreamer()->NotifyChunkCommitted(ground);
       }
     }
+
+    constexpr int kMaxColumnRelightsPerFrame = 2;
+    DrainTerrainColumnRelights(world, kMaxColumnRelightsPerFrame);
 
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {

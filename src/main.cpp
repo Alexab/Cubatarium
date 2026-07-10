@@ -41,6 +41,24 @@ int main(int argc, char *argv[])
       cutum::IUPlatformPaths::SetGlobal(paths);
       return cutum::RunResourcePackSmoke(*paths);
     }
+    if (std::strcmp(argv[i], "--load-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunLoadWorld(argc, argv, i + 1);
+    }
+    if (std::strcmp(argv[i], "--enter-game-smoke") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunEnterGameSmoke(*paths);
+    }
     if (std::strcmp(argv[i], "--validate-load") == 0)
     {
 #ifdef _WIN32

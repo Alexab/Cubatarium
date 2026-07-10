@@ -1,4 +1,5 @@
 #include "World/Core/WorldCooperativeOps.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Blocks/BlockRegistry.h"
@@ -28,8 +29,31 @@ constexpr float kPhaseWeightChunks = 0.50f;
 constexpr float kPhaseWeightSpatial = 0.12f;
 constexpr float kPhaseWeightRelight = 0.08f;
 constexpr float kPhaseWeightMeshWarmup = 0.12f;
+constexpr float kPhaseWeightPrepareView = 0.06f;
 constexpr float kPhaseWeightGenerate = 0.12f;
 constexpr int kMeshWarmupMaxTicks = 50000;
+
+void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
+                                              WorldCoopKind kind)
+{
+  if (kind != WorldCoopKind::Load)
+  {
+    return;
+  }
+  if (!world.GetMeshService().HasPendingDirty() &&
+      !world.GetMeshService().HasPendingAsyncMeshWork())
+  {
+    world.MarkSpawnAreaPreparedByCooperativeLoad();
+  }
+}
+
+void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
+{
+  if (kind == WorldCoopKind::Load)
+  {
+    MarkSpawnAreaPreparedAfterCooperativeLoad(world, kind);
+  }
+}
 
 } // namespace
 
@@ -38,6 +62,16 @@ float CooperativeLoadProgressBase()
   return kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
          kPhaseWeightSpatial;
 }
+
+namespace
+{
+
+float CooperativeLoadProgressAfterMesh()
+{
+  return CooperativeLoadProgressBase() + kPhaseWeightRelight + kPhaseWeightMeshWarmup;
+}
+
+} // namespace
 
 void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
@@ -51,12 +85,13 @@ void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
 {
   world.BlockCounter.MarkNeedsRecount();
-  if (world.MeshService->GetDirtyCount() == 0 &&
+  bool has_chunks = false;
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &) { has_chunks = true; });
+  if (has_chunks && world.MeshService->GetDirtyCount() == 0 &&
       !world.MeshService->HasPendingAsyncMeshWork())
   {
-    world.BlockWorld.GetChunkManager().ForEachChunk(
-        [&](const UChunk &chunk)
-        { world.MeshService->MarkDirty(chunk.GetCoord()); });
+    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
   }
   MeshWarmupTicks = 0;
   MeshWarmupStartPending =
@@ -77,6 +112,57 @@ void UWorldCooperativeSession::BeginMeshWarmup(UWorld &world)
     return;
   }
   BeginMeshWarmupInner(world);
+}
+
+void UWorldCooperativeSession::BeginPrepareEnter()
+{
+  CurrentPhase = Phase::PrepareEnter;
+}
+
+const char *UWorldCooperativeSession::PhaseId() const
+{
+  switch (CurrentPhase)
+  {
+  case Phase::Init:
+    return "init";
+  case Phase::Metadata:
+    return "metadata";
+  case Phase::Entities:
+    return "entities";
+  case Phase::ScanChunks:
+    return "scan_chunks";
+  case Phase::LoadChunks:
+    return "load_chunks";
+  case Phase::SpatialChunks:
+    return "spatial_chunks";
+  case Phase::RelightChunks:
+    return "relight_chunks";
+  case Phase::MeshWarmup:
+    return "mesh_warmup";
+  case Phase::PrepareEnter:
+    return "prepare_enter";
+  case Phase::PrepareView:
+    return "prepare_view";
+  case Phase::PostLoadAnalysis:
+    return "post_load_analysis";
+  case Phase::ProceduralFill:
+    return "procedural_fill";
+  case Phase::FinalizeWorld:
+    return "finalize_world";
+  case Phase::ScanSaveChunks:
+    return "scan_save_chunks";
+  case Phase::SaveChunks:
+    return "save_chunks";
+  case Phase::SaveMetadata:
+    return "save_metadata";
+  case Phase::GenerateColumns:
+    return "generate_columns";
+  case Phase::PostCreate:
+    return "post_create";
+  case Phase::Done:
+    return "done";
+  }
+  return "unknown";
 }
 
 void UWorldCooperativeSession::Report(IUProgressSink &sink,
@@ -275,7 +361,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     if (Kind == WorldCoopKind::Load)
     {
       world.SetWorldFolderPath(FolderPath);
+      world.ClearSpawnAreaPreparedByCooperativeLoad();
       world.SetLightingRelightDeferred(true);
+      world.SetLightingSkylightBulkComplete(false);
       world.BlockWorldReady = false;
       world.LoadedFromChunkSave = false;
       world.BlockWorld.Clear();
@@ -388,7 +476,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else
       {
-        CurrentPhase = Phase::PostLoadAnalysis;
+        BeginMeshWarmup(world);
       }
     }
     break;
@@ -463,8 +551,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     if (RelightQueueIndex >= RelightQueue.size())
     {
       world.SetLightingRelightDeferred(false);
+      world.SetLightingSkylightBulkComplete(true);
       RelightQueue.clear();
       RelightQueueIndex = 0;
+      world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
       BeginMeshWarmupInner(world);
     }
     break;
@@ -505,17 +595,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       if (Kind == WorldCoopKind::Create)
       {
-        world.FinalizePlayerAfterWorldLoad();
-        CurrentPhase = Phase::Done;
-        Active = false;
-        Report(sink, "done", 1.f, "World created.");
+        BeginPrepareEnter();
       }
       else if (MeshWarmupFinalizeOnly)
       {
-        world.FinalizePlayerAfterWorldLoad();
-        CurrentPhase = Phase::Done;
-        Active = false;
-        Report(sink, "done", 1.f, "World loaded.");
+        BeginPrepareEnter();
       }
       else
       {
@@ -528,11 +612,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                 << world.MeshService->GetDirtyCount() << std::endl;
       if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
       {
-        world.FinalizePlayerAfterWorldLoad();
-        CurrentPhase = Phase::Done;
-        Active = false;
-        Report(sink, "done", 1.f,
-               Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
+        BeginPrepareEnter();
       }
       else
       {
@@ -604,10 +684,38 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              "Building terrain meshes...");
       break;
     }
+    BeginPrepareEnter();
+    break;
+  }
+  case Phase::PrepareEnter:
+  {
     world.FinalizePlayerAfterWorldLoad();
+    if (auto user = world.GetCurrentUser())
+    {
+      world.ApplyUserToCamera(user);
+    }
+    else
+    {
+      world.ApplySpawnToCamera();
+    }
+    CurrentPhase = Phase::PrepareView;
+    Report(sink, "prepare_enter", CooperativeLoadProgressAfterMesh(),
+           "Placing player...");
+    break;
+  }
+  case Phase::PrepareView:
+  {
+    WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
+    world.WarmupVisibleListAtCamera();
+    WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    FinalizeCooperativeLoadForEnterGame(world, Kind);
     CurrentPhase = Phase::Done;
     Active = false;
-    Report(sink, "done", 1.f, "World loaded.");
+    Report(sink, "prepare_view",
+           CooperativeLoadProgressAfterMesh() + kPhaseWeightPrepareView,
+           "Preparing view...");
+    Report(sink, "done", 1.f,
+           Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
     break;
   }
   case Phase::ScanSaveChunks:
@@ -693,6 +801,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::Done:
     Active = false;
     return true;
+  }
+
+  if (CurrentPhase != LastDiagPhase)
+  {
+    LogWorldLoadDiag(PhaseId(), world);
+    LastDiagPhase = CurrentPhase;
   }
 
   return CurrentPhase == Phase::Done;

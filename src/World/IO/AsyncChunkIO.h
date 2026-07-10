@@ -43,6 +43,7 @@ public:
                    UBlockRegistry &registry, ChunkGenerationToken token);
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
+  std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
   std::vector<AsyncChunkSaveRequest> DrainSaves();
 
 private:

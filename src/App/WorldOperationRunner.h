@@ -44,6 +44,16 @@ public:
   bool Succeeded() const { return Success; }
   const std::string &ErrorMessage() const { return Error; }
   bool ShouldEnterGame() const { return Request.enterGameAfter; }
+  bool IsEnterGameGpuWarmupStage() const
+  {
+    return CurrentStage == Stage::EnterGameGpuWarmup;
+  }
+  int EnterGameGpuWarmupFramesRemaining() const
+  {
+    return EnterGameGpuWarmupFramesLeft;
+  }
+  /// @return true when GPU warmup stage finished.
+  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink);
 
 private:
   enum class Stage
@@ -58,6 +68,7 @@ private:
     EnterGameCreate,
     EnterGameLoad,
     EnterGameFinalize,
+    EnterGameGpuWarmup,
     Done,
     Failed
   };
@@ -76,6 +87,7 @@ private:
   std::string PendingWorldName;
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
+  int EnterGameGpuWarmupFramesLeft{0};
 };
 
 } // namespace cutum

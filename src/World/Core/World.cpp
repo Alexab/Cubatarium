@@ -706,7 +706,9 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   {
     return;
   }
-  RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y);
+  const bool include_block_light = !LightingSkylightBulkComplete;
+  RelightColumn(BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y,
+                include_block_light);
 }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
@@ -822,7 +824,13 @@ void UWorld::RebuildWorldGenPipeline()
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
   ctx.ObjectFeatures = &ResolvedObjectFeatures;
   ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
-  { MarkColumnMeshDirty(world_x, world_z, min_y, max_y); };
+  {
+    if (!LightingRelightDeferred)
+    {
+      RelightTerrainColumn(world_x, world_z, min_y, max_y);
+    }
+    MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
+  };
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
 
@@ -1010,7 +1018,6 @@ void UWorld::WaitForPendingMeshJobs() { MeshService->WaitForAsyncMeshIdle(); }
 
 void UWorld::RefreshBlockRegistry()
 {
-  WaitForPendingMeshJobs();
   if (BlockRegistry)
   {
     if (BlockMergeRegistry)
@@ -1108,6 +1115,28 @@ bool UWorld::IsValidStandFootprint(const glm::vec3 &eyePos,
 void UWorld::WarmupSpawnAreaForEnterGame()
 {
   Streaming->WarmupSpawnAreaForEnterGame(*this);
+}
+
+void UWorld::PrepareEnterGameSession()
+{
+  Streaming->PrepareEnterGameSession(*this);
+}
+
+void UWorld::MarkSpawnAreaPreparedByCooperativeLoad()
+{
+  SpawnAreaPreparedByCooperativeLoad = true;
+}
+
+bool UWorld::ConsumeSpawnAreaPreparedByCooperativeLoad()
+{
+  const bool prepared = SpawnAreaPreparedByCooperativeLoad;
+  SpawnAreaPreparedByCooperativeLoad = false;
+  return prepared;
+}
+
+void UWorld::ClearSpawnAreaPreparedByCooperativeLoad()
+{
+  SpawnAreaPreparedByCooperativeLoad = false;
 }
 
 void UWorld::ResetPhysicsRuntimeState()
@@ -2296,7 +2325,6 @@ const UWorldMeshService &UWorld::GetMeshService() const { return *MeshService; }
 
 void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y)
 {
-  RelightTerrainColumn(world_x, world_z, min_y, max_y);
   MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 

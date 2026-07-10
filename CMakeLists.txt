@@ -158,6 +158,7 @@ set(SOURCES
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp
     src/World/Core/WorldCooperativeOps.cpp
+    src/World/Core/WorldLoadDiagnostics.cpp
     src/World/Environment/WorldEnvironment.cpp
     src/World/Environment/EnvironmentConfig.cpp
     src/World/Environment/WeatherBiomeUtil.cpp
@@ -391,6 +392,7 @@ set(HEADERS
     src/World/Core/WorldViewBinding.h
     src/World/Collision/WorldCollision.h
     src/World/Core/WorldCooperativeOps.h
+    src/World/Core/WorldLoadDiagnostics.h
     src/World/Environment/WorldEnvironment.h
     src/World/Environment/EnvironmentConfig.h
     src/World/Environment/WeatherBiomeUtil.h
@@ -1578,6 +1580,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs")
         COMMAND ${CMAKE_COMMAND}
             -DSYNC_SRC="${CMAKE_SOURCE_DIR}/resource_packs"
             -DSYNC_DST="${CUBATARIUM_RUN_DIR}/resource_packs"
+            -DSYNC_EXCLUDE_PREFIX="_build_staging_"
             -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
         COMMENT "Syncing resource packs to runtime directory"
     )

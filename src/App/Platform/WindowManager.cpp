@@ -92,7 +92,8 @@ UWindowManager::UWindowManager()
 
 UWindowManager::~UWindowManager() { Shutdown(); }
 
-bool UWindowManager::Initialize(int width, int height, const char *title)
+bool UWindowManager::Initialize(int width, int height, const char *title,
+                                bool visible)
 {
   glfwSetErrorCallback(ErrorCallback);
 
@@ -105,6 +106,7 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
   auto createWindow = [&](bool multisample) -> GLFWwindow *
   {
     glfwDefaultWindowHints();
+    glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -299,7 +301,17 @@ void UWindowManager::Run()
     Render();
 
     glfwSwapBuffers(Window);
+
+    if (StopPredicate && StopPredicate())
+    {
+      IsRunning = false;
+    }
   }
+}
+
+void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
+{
+  StopPredicate = std::move(predicate);
 }
 
 void UWindowManager::ProcessInput()
@@ -720,17 +732,28 @@ void UWindowManager::SetTextRenderer(
 
 void UWindowManager::Shutdown()
 {
+  if (!IsInitialized)
+  {
+    return;
+  }
+
   if (InputManager)
   {
     InputManager->Shutdown();
   }
 
-  if (IsInitialized && Window)
+  if (Window)
   {
     glfwMakeContextCurrent(Window);
   }
 
+  if (Application)
+  {
+    Application->PrepareForShutdown();
+  }
+
   Application.reset();
+
   TextRenderer.reset();
   Geometries.reset();
   Views.reset();

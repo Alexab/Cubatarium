@@ -10,6 +10,9 @@ int RunValidateLoad();
 /// Headless world generation for CI / --create-world.
 int RunCreateWorld(int argc, char **argv, int create_world_index);
 
+/// Headless cooperative load for CI / --load-world.
+int RunLoadWorld(int argc, char **argv, int load_world_index);
+
 /// Serializer throughput smoke for chunk I/O backends.
 int RunBenchChunkIo();
 

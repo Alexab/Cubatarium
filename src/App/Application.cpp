@@ -49,6 +49,7 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureCube.h"
 #include "World/Core/World.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Objects/ObjectLibrary.h"
 
 #ifndef __ANDROID__
@@ -168,7 +169,20 @@ UApplication::UApplication(
   }
 }
 
-UApplication::~UApplication() = default;
+UApplication::~UApplication()
+{
+  PrepareForShutdown();
+}
+
+void UApplication::PrepareForShutdown()
+{
+  WorldOpRunner.reset();
+  if (World)
+  {
+    World->SetOnBlockRegistryChanged({});
+    World->SetOnCreatureCatalogChanged({});
+  }
+}
 
 void UApplication::Startup(const std::string &configPath)
 {
@@ -501,27 +515,8 @@ void UApplication::EnterGameAfterWorldChange()
     {
       Geometry->SetShowHud(Ui.LegacyHud);
     }
-    World->FinalizePlayerAfterWorldLoad();
-    if (ProgressScreen)
-    {
-      ProgressSink.Report("mesh_warmup", 0.97f, "Preparing view...");
-      ProgressScreen->ApplySnapshot(ProgressSink.Get());
-    }
-#if defined(__ANDROID__)
-    // Avoid long blocking warmups on Android app thread; spread GPU prep.
-    if (Geometry)
-    {
-      Geometry->ResetWorldRenderState();
-    }
-    AndroidGpuWarmupFramesRemaining = 5;
-#else
-    World->WarmupSpawnAreaForEnterGame();
-    if (Geometry)
-    {
-      Geometry->ResetWorldRenderState();
-      Geometry->WarmupGreedyGpuFromWorld();
-    }
-#endif
+    World->PrepareEnterGameSession();
+    LogWorldLoadDiag("enter_game_after_world_change", *World);
   }
   RefreshBlockCatalog();
   ShowInGameHud();
@@ -1118,12 +1113,36 @@ void UApplication::Update(double dt)
   {
 #if defined(__ANDROID__)
     constexpr int kAndroidLoadChunkBudget = 4;
-    if (WorldOpRunner && WorldOpRunner->Tick(ProgressSink, kAndroidLoadChunkBudget))
+    constexpr int kLoadChunkBudget = kAndroidLoadChunkBudget;
 #else
-    if (WorldOpRunner && WorldOpRunner->Tick(ProgressSink, 8))
+    constexpr int kLoadChunkBudget = 8;
 #endif
+    if (WorldOpRunner)
     {
-      OnWorldOperationFinished();
+      if (WorldOpRunner->IsEnterGameGpuWarmupStage())
+      {
+        constexpr int kGpuWarmupFrames = 3;
+        const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
+        const int frame = kGpuWarmupFrames - remaining;
+        if (Geometry && World)
+        {
+          if (frame == 0)
+          {
+            Geometry->ResetWorldRenderState();
+            LogWorldLoadDiag("gpu_warmup_reset", *World);
+          }
+          else if (frame == kGpuWarmupFrames - 1)
+          {
+            Geometry->WarmupGreedyGpuFromWorld();
+            LogWorldLoadDiag("gpu_warmup_draw", *World);
+          }
+        }
+        WorldOpRunner->AdvanceEnterGameGpuWarmup(ProgressSink);
+      }
+      if (WorldOpRunner->Tick(ProgressSink, kLoadChunkBudget))
+      {
+        OnWorldOperationFinished();
+      }
     }
     if (ProgressScreen)
     {
@@ -1140,16 +1159,6 @@ void UApplication::Update(double dt)
   }
   else if (State == AppState::InGame)
   {
-#if defined(__ANDROID__)
-    if (AndroidGpuWarmupFramesRemaining > 0 && Geometry && World)
-    {
-      --AndroidGpuWarmupFramesRemaining;
-      if (AndroidGpuWarmupFramesRemaining == 0)
-      {
-        Geometry->WarmupGreedyGpuFromWorld();
-      }
-    }
-#endif
     if (HudScreen)
     {
 #ifndef __ANDROID__

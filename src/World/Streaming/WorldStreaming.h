@@ -70,6 +70,7 @@ public:
   void SetStreamerMaxLoadOpsPerFrame(int value);
 
   void WarmupSpawnAreaForEnterGame(UWorld &world);
+  void PrepareEnterGameSession(UWorld &world);
 
   void MarkPersistedColumnsFromWorld();
 

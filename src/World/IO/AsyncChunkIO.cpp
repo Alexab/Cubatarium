@@ -105,6 +105,12 @@ std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoads()
   return CompletedLoads.DrainAll();
 }
 
+std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoadsUpTo(
+    std::size_t max_count)
+{
+  return CompletedLoads.DrainUpTo(max_count);
+}
+
 std::vector<AsyncChunkSaveRequest> UAsyncChunkIO::DrainSaves()
 {
   return CompletedSaves.DrainAll();

@@ -81,6 +81,7 @@ public:
   void ScheduleEnterGame();
   void ScheduleQuit();
   void RequestQuit();
+  void PrepareForShutdown();
   void SetWindow(GLFWwindow *window) { Window = window; }
   void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
   UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
@@ -251,9 +252,6 @@ private:
   int ViewportInsetRight{0};
   int ViewportInsetBottom{0};
   int KeyboardInsetBottom{0};
-#if defined(__ANDROID__)
-  int AndroidGpuWarmupFramesRemaining{0};
-#endif
   AppCursorPolicy LastCursorPolicy{AppCursorPolicy::Free};
 };
 

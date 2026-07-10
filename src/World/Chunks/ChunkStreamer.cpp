@@ -15,6 +15,9 @@ namespace cutum
 namespace
 {
 
+constexpr int kCollisionSyncSubColumnsPerFrame = 32;
+constexpr int kTerrainSubColumnsPerChunk = CHUNK_SIZE * CHUNK_SIZE;
+
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
                                const PlayerCapsule &cap)
 {
@@ -92,6 +95,14 @@ void UChunkStreamer::SetColumnPendingCallback(IsColumnPendingFn fn)
   OnIsColumnPending = std::move(fn);
 }
 
+void UChunkStreamer::SetGenerationLightingHooks(
+    std::function<void(bool)> defer_relight,
+    std::function<void(glm::ivec3)> relight_column)
+{
+  OnSetLightingRelightDeferred = std::move(defer_relight);
+  OnRelightTerrainColumn = std::move(relight_column);
+}
+
 void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
 {
   glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
@@ -123,6 +134,7 @@ void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
     groundCoord.y = 0;
   }
   TerrainCompleteCache.erase(groundCoord);
+  ColumnGenStates.erase(groundCoord);
 }
 
 int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
@@ -217,6 +229,83 @@ void UChunkStreamer::MarkPersistedColumnsFromWorld()
   }
 }
 
+bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
+                                                    int max_sub_columns,
+                                                    bool only_empty_columns)
+{
+  if (!OnGenerateColumn || max_sub_columns <= 0)
+  {
+    return IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
+  ColumnGenState &state = ColumnGenStates[chunkCoord];
+  state.onlyEmptyColumns = only_empty_columns;
+
+  bool generated = false;
+  int generated_this_call = 0;
+
+  if (OnSetLightingRelightDeferred)
+  {
+    OnSetLightingRelightDeferred(true);
+  }
+
+  while (state.cursor < kTerrainSubColumnsPerChunk &&
+         generated_this_call < max_sub_columns)
+  {
+    const int lx = state.cursor % CHUNK_SIZE;
+    const int lz = state.cursor / CHUNK_SIZE;
+    ++state.cursor;
+    const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
+    const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
+    if (state.onlyEmptyColumns &&
+        !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight))
+    {
+      continue;
+    }
+    OnGenerateColumn(worldX, worldZ);
+    generated = true;
+    ++generated_this_call;
+  }
+
+  if (OnSetLightingRelightDeferred)
+  {
+    OnSetLightingRelightDeferred(false);
+  }
+
+  if (!generated && state.cursor >= kTerrainSubColumnsPerChunk)
+  {
+    ColumnGenStates.erase(chunkCoord);
+    const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
+    if (existing != nullptr && IsTerrainChunkCompleteCached(chunkCoord))
+    {
+      ProcedurallyGenerated.insert(chunkCoord);
+    }
+    return IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
+  if (!generated)
+  {
+    return IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
+  const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
+  if (complete)
+  {
+    ColumnGenStates.erase(chunkCoord);
+    if (OnRelightTerrainColumn)
+    {
+      OnRelightTerrainColumn(chunkCoord);
+    }
+    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+    ProcedurallyGenerated.insert(chunkCoord);
+  }
+  else
+  {
+    ProcedurallyGenerated.erase(chunkCoord);
+  }
+  return complete;
+}
+
 bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
 {
   // UTerrain columns are generated at world Y=0..surface; only fill ground
@@ -287,45 +376,11 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     return false;
   }
 
-  bool generated = false;
   const bool onlyEmptyColumns = existing != nullptr && !clearedPartialDiskLoad;
-  for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-  {
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-    {
-      const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
-      const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
-      if (onlyEmptyColumns &&
-          !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight))
-      {
-        continue;
-      }
-      OnGenerateColumn(worldX, worldZ);
-      generated = true;
-    }
-  }
-
-  if (!generated)
-  {
-    if (existing != nullptr &&
-        IsTerrainChunkCompleteCached(chunkCoord))
-    {
-      ProcedurallyGenerated.insert(chunkCoord);
-    }
-    return false;
-  }
-
-  MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
-  const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
-  if (complete)
-  {
-    ProcedurallyGenerated.insert(chunkCoord);
-  }
-  else
-  {
-    ProcedurallyGenerated.erase(chunkCoord);
-  }
-  return complete;
+  const int sub_column_budget =
+      forceSync ? kCollisionSyncSubColumnsPerFrame : kTerrainSubColumnsPerChunk;
+  return AdvanceTerrainColumnGeneration(chunkCoord, sub_column_budget,
+                                        onlyEmptyColumns);
 }
 
 bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,

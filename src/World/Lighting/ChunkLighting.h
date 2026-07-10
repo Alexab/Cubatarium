@@ -14,7 +14,8 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 block_pos);
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
-                   int world_z, int min_y, int max_y);
+                   int world_z, int min_y, int max_y,
+                   bool include_block_light = true);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
 } // namespace cutum

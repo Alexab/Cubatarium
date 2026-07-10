@@ -3,6 +3,7 @@
 
 #include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/WindowManager.h"
+#include <functional>
 
 namespace cutum
 {
@@ -11,6 +12,8 @@ class UDesktopPlatformWindow : public IUPlatformWindow
 {
 public:
   bool Initialize(int width, int height, const char *title) override;
+  bool InitializeHidden(int width, int height, const char *title);
+  void SetStopPredicate(std::function<bool()> predicate);
   void Run() override;
   void Shutdown() override;
   void PollEvents() override;

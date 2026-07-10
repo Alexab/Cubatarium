@@ -1,5 +1,6 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -417,6 +418,12 @@ void UGeometryEngine::DrawCubeGeometry()
   if (!mesh_service)
   {
     return;
+  }
+  static bool logged_first_paint_diag = false;
+  if (!logged_first_paint_diag && WorldInstance)
+  {
+    logged_first_paint_diag = true;
+    LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetPosition());
   }
   mesh_service->GetCache().SetSurfaceWetness(std::clamp(
       WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));

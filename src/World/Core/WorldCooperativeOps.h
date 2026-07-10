@@ -42,6 +42,8 @@ private:
     SpatialChunks,
     RelightChunks,
     MeshWarmup,
+    PrepareEnter,
+    PrepareView,
     PostLoadAnalysis,
     ProceduralFill,
     FinalizeWorld,
@@ -86,6 +88,8 @@ private:
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
+  void BeginPrepareEnter();
+  const char *PhaseId() const;
   int GenCenterX{0};
   int GenCenterZ{0};
   struct GenColumnEntry
@@ -103,6 +107,7 @@ private:
   bool NeedsProceduralFill{false};
   bool Failed{false};
   std::string ErrorMessage;
+  Phase LastDiagPhase{Phase::Done};
 };
 
 } // namespace cutum

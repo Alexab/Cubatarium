@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <deque>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -40,6 +41,8 @@ public:
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
   void TickAsyncChunkIo(UWorld &world);
+  void EnqueueTerrainColumnRelight(int world_x, int world_z);
+  void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
@@ -56,6 +59,7 @@ private:
   std::unique_ptr<UChunkStorageService> ChunkStorage;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
+  std::deque<glm::ivec2> PendingTerrainColumnRelights;
   std::string WorldFolderPath;
 };
 

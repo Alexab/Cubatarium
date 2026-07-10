@@ -55,14 +55,13 @@ void UWorldStreaming::SetStreamerMaxLoadOpsPerFrame(int value)
   }
 }
 
-void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
+void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
 {
   if (!world.BlockRegistry)
   {
     return;
   }
 
-  world.InitStreamerCallbacks();
   if (auto user = world.GetCurrentUser())
   {
     world.ApplyUserToCamera(user);
@@ -71,46 +70,12 @@ void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
   {
     world.ApplySpawnToCamera();
   }
+  world.ConsumeSpawnAreaPreparedByCooperativeLoad();
+}
 
-  const int prev_load_ops = world.MaxLoadOpsPerFrame;
-  const int warmup_load_ops =
-      std::max(prev_load_ops,
-               (2 * world.RenderDistanceChunks + 1) *
-                   (2 * world.RenderDistanceChunks + 1));
-  world.MaxLoadOpsPerFrame = warmup_load_ops;
-  SetStreamerMaxLoadOpsPerFrame(warmup_load_ops);
-
-  constexpr int kMeshFlushBudget = UChunkEmergeCoordinator::kWarmupMeshFlush;
-  const UChunkEmergeCoordinator::FrameBudget warmup_budget =
-      UChunkEmergeCoordinator::WarmupBudget(kMeshFlushBudget);
-  for (int pass = 0; pass < 48; ++pass)
-  {
-    world.UpdateStreaming();
-    world.TickAsyncChunkSystems();
-    world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
-                                          warmup_budget.MaxMeshDrain,
-                                          warmup_budget.MaxMeshSchedule);
-    world.MeshService->DrainAsyncMeshResults(world.BlockWorld, *world.BlockRegistry,
-                                             warmup_budget.MaxMeshDrain);
-    if (!world.MeshService->HasPendingDirty() &&
-        !world.MeshService->HasPendingAsyncMeshWork())
-    {
-      break;
-    }
-  }
-
-  world.MeshService->WaitForAsyncMeshIdle();
-  while (world.MeshService->HasPendingDirty())
-  {
-    world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
-                                          warmup_budget.MaxMeshDrain,
-                                          warmup_budget.MaxMeshSchedule);
-    world.MeshService->DrainAsyncMeshResults(world.BlockWorld, *world.BlockRegistry,
-                                             warmup_budget.MaxMeshDrain);
-  }
-
-  world.MaxLoadOpsPerFrame = prev_load_ops;
-  world.RefreshStreamerSettings();
+void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
+{
+  PrepareEnterGameSession(world);
   world.WarmupVisibleListAtCamera();
 }
 
@@ -170,6 +135,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          budget.MaxLoadOps);
   }
   world.Persistence->TickAsyncChunkIo(world);
+  world.Persistence->DrainTerrainColumnRelights(world, 1);
 }
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
@@ -217,7 +183,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                           settings.MaxHeight) > 0;
         if (loaded)
         {
-          world.RelightTerrainColumn(coord.x, coord.z, 0, settings.MaxHeight);
+          persistence.EnqueueTerrainColumnRelight(coord.x, coord.z);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -316,6 +282,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetColumnPendingCallback(
       [&world](glm::ivec3 coord)
       { return world.Persistence->IsTerrainColumnDiskLoadPending(coord); });
+  Streamer->SetGenerationLightingHooks(
+      [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); },
+      [&world](glm::ivec3 ground)
+      {
+        world.Persistence->EnqueueTerrainColumnRelight(ground.x, ground.z);
+      });
 }
 
 void UWorldStreaming::RefreshStreamerSettings(const ProceduralSettings &settings,

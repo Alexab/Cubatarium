@@ -285,7 +285,15 @@ public:
   void FinalizePlayerAfterWorldLoad();
   void ResetPhysicsRuntimeState();
   void WarmupSpawnAreaForEnterGame();
+  void PrepareEnterGameSession();
   void WarmupVisibleListAtCamera();
+  void MarkSpawnAreaPreparedByCooperativeLoad();
+  bool ConsumeSpawnAreaPreparedByCooperativeLoad();
+  void ClearSpawnAreaPreparedByCooperativeLoad();
+  bool IsSpawnAreaPreparedByCooperativeLoad() const
+  {
+    return SpawnAreaPreparedByCooperativeLoad;
+  }
   bool IsBlockWorldReady() const { return BlockWorldReady; }
   void InvalidateBlockMesh();
 
@@ -667,6 +675,10 @@ public:
     LightingRelightDeferred = deferred;
   }
   bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
+  void SetLightingSkylightBulkComplete(bool complete)
+  {
+    LightingSkylightBulkComplete = complete;
+  }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y);
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
@@ -812,6 +824,8 @@ private:
   EnvironmentConfig EnvironmentSettingsData;
   LightingSettings LightingSettingsData;
   bool LightingRelightDeferred{false};
+  bool LightingSkylightBulkComplete{false};
+  bool SpawnAreaPreparedByCooperativeLoad{false};
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};

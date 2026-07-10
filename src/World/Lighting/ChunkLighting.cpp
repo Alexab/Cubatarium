@@ -151,6 +151,10 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      if (!WorldPosInChunk(neighbor, chunk_coord))
+      {
+        continue;
+      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -162,11 +166,8 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
       {
         continue;
       }
-      if (WorldPosInChunk(neighbor, chunk_coord))
-      {
-        const glm::ivec3 local = neighbor - origin;
-        WriteSkyLight(chunk, local, next);
-      }
+      const glm::ivec3 local = neighbor - origin;
+      WriteSkyLight(chunk, local, next);
       queue.push_back(neighbor);
     }
   }
@@ -214,12 +215,12 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
   {
     const auto [pos, light] = queue.front();
     queue.pop_front();
-    if (light <= GetBlockLightWorld(world, pos))
-    {
-      continue;
-    }
     if (WorldPosInChunk(pos, chunk_coord))
     {
+      if (light <= GetBlockLightWorld(world, pos))
+      {
+        continue;
+      }
       const glm::ivec3 local = pos - origin;
       WriteBlockLight(chunk, local, light);
     }
@@ -230,6 +231,10 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      if (!WorldPosInChunk(neighbor, chunk_coord))
+      {
+        continue;
+      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -291,7 +296,7 @@ void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
 }
 
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
-                   int world_z, int min_y, int max_y)
+                   int world_z, int min_y, int max_y, bool include_block_light)
 {
   const glm::ivec3 base =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
@@ -312,7 +317,7 @@ void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
   {
     if (world.GetChunkManager().HasChunk(coord))
     {
-      RelightChunk(world, registry, coord);
+      RelightChunk(world, registry, coord, include_block_light);
     }
   }
 }

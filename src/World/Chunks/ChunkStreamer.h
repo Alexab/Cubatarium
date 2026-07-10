@@ -59,6 +59,8 @@ public:
   void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
                          IsChunkCommittedFn isCommittedFn);
   void SetColumnPendingCallback(IsColumnPendingFn fn);
+  void SetGenerationLightingHooks(std::function<void(bool)> defer_relight,
+                                  std::function<void(glm::ivec3)> relight_column);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void MarkPersistedColumnsFromWorld();
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
@@ -92,6 +94,8 @@ public:
 
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
+                                      bool only_empty_columns);
   bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
   void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
@@ -123,6 +127,8 @@ private:
   RequestAsyncChunkFn OnRequestAsyncChunk;
   IsChunkCommittedFn OnIsChunkCommitted;
   IsColumnPendingFn OnIsColumnPending;
+  std::function<void(bool)> OnSetLightingRelightDeferred;
+  std::function<void(glm::ivec3)> OnRelightTerrainColumn;
   bool AsyncGeneration{false};
   bool RingGateEnabled{false};
   bool CollisionUrgent{false};
@@ -132,6 +138,12 @@ private:
   ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  struct ColumnGenState
+  {
+    int cursor{0};
+    bool onlyEmptyColumns{false};
+  };
+  std::unordered_map<glm::ivec3, ColumnGenState, IVec3Hash> ColumnGenStates;
   std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;

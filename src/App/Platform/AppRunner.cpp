@@ -2,9 +2,11 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
+#include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/Log.h"
+#include "App/Settings/AppState.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -13,8 +15,12 @@
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "World/Core/World.h"
+#include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 
+#include <chrono>
+#include <fstream>
 #include <iostream>
 
 namespace cutum
@@ -119,7 +125,6 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     view_engine.reset();
     core.reset();
     world.reset();
-    window.Shutdown();
     return 0;
   }
   catch (const std::exception &e)
@@ -131,6 +136,156 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
   {
     CubatariumLogError("App", "Unknown exception");
     return -1;
+  }
+}
+
+int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
+{
+  if (in_game_frames < 1)
+  {
+    in_game_frames = 5;
+  }
+
+  UDesktopPlatformWindow window;
+  if (!window.InitializeHidden(1280, 720, "enter-game-smoke"))
+  {
+    std::cerr << "enter-game-smoke: failed to initialize window" << std::endl;
+    return 1;
+  }
+
+  try
+  {
+    IUPlatformPaths::SetGlobal(
+        std::shared_ptr<IUPlatformPaths>(&paths, [](IUPlatformPaths *) {}));
+
+    auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+    auto texture_cube_instance =
+        std::make_shared<UTextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
+    auto object_library = std::make_shared<UObjectLibrary>();
+    auto view_engine = std::make_shared<UViewEngine>();
+    auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
+    auto text_renderer = std::make_shared<UTextRenderer>();
+    if (!text_renderer->Initialize(16))
+    {
+      std::cerr << "enter-game-smoke: text renderer init failed" << std::endl;
+      return 1;
+    }
+    text_renderer->SetWindowSize(1280, 720);
+
+    auto geometry_engine = std::make_shared<UGeometryEngine>(
+        world, texture_base_instance, texture_cube_instance, text_renderer);
+    if (!geometry_engine->InitEngine())
+    {
+      std::cerr << "enter-game-smoke: geometry engine init failed" << std::endl;
+      return 1;
+    }
+
+    auto core = std::make_shared<UCore>(
+        texture_base_instance, texture_cube_instance, object_library, world,
+        geometry_engine, view_engine);
+    geometry_engine->SetGameContent(core.get());
+    texture_cube_instance->SetBlockDefinitions(block_definitions);
+    world->SetBlockDefinitionStorage(block_definitions);
+
+    window.SetInstances(core, world, geometry_engine, view_engine);
+    window.SetTextRenderer(text_renderer);
+
+    auto application = std::make_shared<UApplication>(
+        core, world, geometry_engine, view_engine, text_renderer,
+        geometry_engine->GetShaderManager(), block_definitions);
+    window.SetApplication(application);
+
+    application->Startup(paths.ResolveWritable("config.json").string());
+    if (!application->StartupSucceeded())
+    {
+      std::cerr << "enter-game-smoke: startup failed" << std::endl;
+      return 1;
+    }
+
+    application->ScheduleEnterGame();
+
+    const auto started = std::chrono::steady_clock::now();
+    int ingame_frames_seen = 0;
+    bool loading_seen = false;
+    window.SetStopPredicate(
+        [&]()
+        {
+          const auto elapsed_ms =
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now() - started)
+                  .count();
+          if (elapsed_ms > 180000)
+          {
+            return true;
+          }
+          if (application->GetState() == AppState::Loading)
+          {
+            loading_seen = true;
+          }
+          if (application->GetState() == AppState::InGame)
+          {
+            ++ingame_frames_seen;
+          }
+          return ingame_frames_seen >= in_game_frames;
+        });
+
+    window.Run();
+
+    LogWorldLoadDiag("enter_game_smoke_end", *world);
+    WarnIfTerrainMeshesMissing(*world, "enter-game-smoke");
+
+    const size_t blocks = world->GetBlockWorld().CountNonAir();
+    const size_t cache = world->GetMeshService().GetGreedyCacheSize();
+    const size_t batches =
+        world->GetMeshService().GetCache().GetGreedyBatches().size();
+    const size_t vertices = world->GetMeshService().GetGreedyVertexCount();
+
+    int exit_code = 0;
+    if (!loading_seen)
+    {
+      std::cerr << "enter-game-smoke: FAIL loading screen never shown"
+                << std::endl;
+      exit_code = 1;
+    }
+    else if (ingame_frames_seen < in_game_frames)
+    {
+      std::cerr << "enter-game-smoke: FAIL timed out before in-game (frames="
+                << ingame_frames_seen << ")" << std::endl;
+      exit_code = 1;
+    }
+    else if (blocks > 0 && cache == 0 && batches == 0)
+    {
+      std::cerr << "enter-game-smoke: FAIL terrain meshes missing" << std::endl;
+      exit_code = 1;
+    }
+    else
+    {
+      std::cout << "enter-game-smoke: PASS blocks=" << blocks
+                << " greedy_batches=" << batches << std::endl;
+    }
+
+    const std::filesystem::path report_path =
+        GetExecutableDirectory() / "enter_game_smoke_report.txt";
+    std::ofstream report(report_path);
+    if (report)
+    {
+      report << "exit_code=" << exit_code << '\n'
+             << "loading_seen=" << (loading_seen ? 1 : 0) << '\n'
+             << "ingame_frames=" << ingame_frames_seen << '\n'
+             << "default_world=" << core->GetAppSettings().DefaultWorld << '\n'
+             << "blocks=" << blocks << '\n'
+             << "greedy_cache=" << cache << '\n'
+             << "greedy_batches=" << batches << '\n'
+             << "greedy_vertices=" << vertices << '\n';
+    }
+
+    return exit_code;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "enter-game-smoke: exception: " << e.what() << std::endl;
+    return 1;
   }
 }
 

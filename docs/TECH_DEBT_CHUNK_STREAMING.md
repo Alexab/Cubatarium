@@ -23,10 +23,15 @@
 
 **Perf regression fix (2026-07):** `RebuildDirtyChunks` no longer marks flat batches dirty every frame; GPU backends use `glBufferSubData` when buffer capacity suffices (no per-frame orphan); render uses single `PrepareGreedyDraw` per frame.
 
+**Load-path freeze fix (2026-07):** cooperative load no longer finishes mesh warmup with empty dirty-set (`MarkAllDirtyFromWorld` after relight); см. TD-CS-022 (closed).
+
+**Movement hitch mitigation (2026-07):** sync collision column gen budgeted to 32 sub-columns/frame; relight/io drained with per-frame caps. Остаются краткие hitch — см. TD-CS-021.
+
 ## Open
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
+| TD-CS-021 | 2026-07 | Краткие hitch при движении в новый terrain-chunk | Бюджеты смягчают, но не убирают полностью: incremental sync collision gen (~32 sub-columns/frame), relight queue (2–3 columns/frame), async IO slice drain (16/frame), mesh emerge drain (8 schedule + 8 drain), flat greedy rebuild | Phase F: полный async collision path, adaptive mesh budget, приоритет чанков у feet |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
 | TD-CS-019 | 2026-06 | Sky horizon fog uses fixed band; true radial sky fog optional | horizon blend shipped | backlog |
@@ -49,6 +54,8 @@
 | TD-CS-014 | 2026-07 | `UCrossGpuBackend` retained instance VBO + `glDrawElementsInstanced` per block type |
 | TD-CS-010 | 2026-07 | Async meshing default on; bisect documented; diagnostics export `async_meshing_enabled` |
 | TD-CS-020 | 2026-06 | Dedupe mesh dirty on async chunk commit (`ColumnMeshDirty` only) |
+| TD-CS-022 | 2026-07 | «Только небо» / мгновенный mesh warmup при загрузке (пустой dirty-set после `MarkAllDirty`) | `MarkAllDirtyFromWorld` после relight; diag `[WorldLoad]`; CLI `--load-world` / `--enter-game-smoke` |
+| TD-CS-023 | 2026-07 | Multi-second freeze при sync collision gen (256 sub-columns + relight/column) | Incremental `AdvanceTerrainColumnGeneration`, deferred relight batch, budgeted async IO relight queue |
 
 ## Phase tracker
 
