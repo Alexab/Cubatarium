@@ -48,6 +48,22 @@ constexpr float kCreateWeightMeshWarmup = 0.48f;
 constexpr float kCreateWeightPrepare = 0.04f;
 
 constexpr int kMeshWarmupMaxTicks = 50000;
+constexpr int kStreamingWarmupMaxTicks = 48;
+
+glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
+{
+  return UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+}
+
+bool IsStreamingWarmupSettled(const UWorld &world)
+{
+  return world.IsEnterStreamingWarmupSettled();
+}
+
+void TickStreamingWarmup(UWorld &world, int iteration_budget)
+{
+  world.TickEnterStreamingWarmup(iteration_budget);
+}
 
 static_assert(kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
                   kPhaseWeightSpatial + kPhaseWeightRelight +
@@ -607,8 +623,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.GetChunkStorage().ApplyStorageMarkerFromDisk(FolderPath);
     SpatialStreamingLoad = world.IsStreamingEnabled() && world.HasPersistedSave;
     SpatialRadius = world.RenderDistanceChunks + 1;
-    const glm::ivec3 spawnBlock = WorldPosToBlock(world.SpawnPoint);
-    SpatialCenter = UChunkManager::WorldToChunk(spawnBlock);
+    SpatialCenter = ResolveSpatialLoadCenter(world);
     CurrentPhase = Phase::ScanChunks;
     Report(sink, "entities", kPhaseWeightMetadata + kPhaseWeightEntities,
            "Loading entities...");
@@ -1051,12 +1066,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::PrepareView:
   {
-    WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
-    world.WarmupVisibleListAtCamera();
-    WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
-    FinalizeCooperativeLoadForEnterGame(world, Kind);
-    CurrentPhase = Phase::Done;
-    Active = false;
+    if (StreamingWarmupTicks == 0)
+    {
+      WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
+    }
+    TickStreamingWarmup(world, std::max(1, budget / 2));
+    ++StreamingWarmupTicks;
+    const bool streaming_settled = IsStreamingWarmupSettled(world);
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
@@ -1066,6 +1082,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                    : CooperativeLoadProgressAfterMesh());
     const float prepare_weight =
         Kind == WorldCoopKind::Create ? kCreateWeightPrepare : kPhaseWeightPrepareView;
+    const float stream_inner =
+        streaming_settled ? 1.0f
+                        : std::min(0.95f,
+                                   static_cast<float>(StreamingWarmupTicks) /
+                                       static_cast<float>(kStreamingWarmupMaxTicks));
+    Report(sink, "prepare_view",
+           prepare_view_base + prepare_weight * stream_inner,
+           streaming_settled ? "Preparing view..."
+                             : "Loading nearby terrain...");
+    if (!streaming_settled && StreamingWarmupTicks < kStreamingWarmupMaxTicks)
+    {
+      break;
+    }
+    world.WarmupVisibleListAtCamera();
+    WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    FinalizeCooperativeLoadForEnterGame(world, Kind);
+    CurrentPhase = Phase::Done;
+    Active = false;
+    StreamingWarmupTicks = 0;
     Report(sink, "prepare_view", prepare_view_base + prepare_weight,
            "Preparing view...");
     Report(sink, "done", 1.f,

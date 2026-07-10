@@ -150,6 +150,7 @@ public:
 
   glm::vec3 GetSpawnPoint() const;
   void SetSpawnPoint(glm::vec3 value);
+  glm::ivec3 GetPreferredLoadFocusBlock() const;
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
   void SetProceduralSettings(const ProceduralSettings &settings,
@@ -289,6 +290,8 @@ public:
   void ResetPhysicsRuntimeState();
   void WarmupSpawnAreaForEnterGame();
   void PrepareEnterGameSession();
+  bool IsEnterStreamingWarmupSettled() const;
+  void TickEnterStreamingWarmup(int iteration_budget);
   void WarmupVisibleListAtCamera();
   void MarkSpawnAreaPreparedByCooperativeLoad();
   bool ConsumeSpawnAreaPreparedByCooperativeLoad();

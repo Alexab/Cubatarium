@@ -18,6 +18,7 @@
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/CreatureDrawPass.h"
 #include "Render/Engine/DistanceFog.h"
+#include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/GreedyGpuBackend.h"
@@ -918,7 +919,34 @@ void UGeometryEngine::ResetWorldRenderState()
   CachedMeshRevision = 0;
   CachedInstanceCount = 0;
   PreparedTransparentTextures = nullptr;
-  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
+  glm::vec3 sky_tint = BaseSkyColor;
+  glm::vec3 fog_color(0.05f, 0.15f, 0.35f);
+  if (WorldInstance)
+  {
+    WorldInstance->RefreshSkyVisualStateForRender();
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    HorizonFogColorInput color_in;
+    color_in.base_sky = BaseSkyColor;
+    color_in.day = env.DayNightFactor;
+    color_in.moon = env.MoonNightFactor;
+    color_in.weather_atten = env.WeatherSkyAttenuation;
+    color_in.cloudiness = env.Cloudiness;
+    color_in.precip = env.PrecipitationIntensity;
+    color_in.celestial_bodies = &env.CelestialBodies;
+    const AtmosphericSkyColors atmospheric =
+        ComputeAtmosphericSkyColors(color_in);
+    sky_tint = atmospheric.sky_tint;
+    fog_color = atmospheric.fog_color;
+    if (Render.DistanceFog)
+    {
+      const DistanceFogParams distance_fog = ComputeDistanceFog(
+          WorldInstance->GetEffectiveRenderDistance(), atmospheric.fog_color,
+          Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
+          Render.DistanceFogDensity, Render.DistanceFogEndMarginBlocks);
+      fog_color = distance_fog.Color;
+    }
+  }
+  UnderwaterFogPass_.ResetAtmosphericColors(sky_tint, fog_color);
 }
 
 void UGeometryEngine::WarmupGreedyGpuFromWorld()

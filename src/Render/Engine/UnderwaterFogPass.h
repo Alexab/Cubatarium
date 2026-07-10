@@ -24,6 +24,8 @@ public:
                      const UFluidSurfaceMap &surface_map,
                      bool apply_below_surface_fog = true) const;
   void ResetSkyTint(const glm::vec3 &base_sky_color);
+  void ResetAtmosphericColors(const glm::vec3 &sky_tint,
+                              const glm::vec3 &fog_color);
 
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
   const glm::vec3 &GetFogColor() const { return SmoothedFogColor; }

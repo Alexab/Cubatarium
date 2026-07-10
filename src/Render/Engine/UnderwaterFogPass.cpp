@@ -229,4 +229,11 @@ void UUnderwaterFogPass::ResetSkyTint(const glm::vec3 &base_sky_color)
   SmoothedSkyTint = base_sky_color;
 }
 
+void UUnderwaterFogPass::ResetAtmosphericColors(const glm::vec3 &sky_tint,
+                                                const glm::vec3 &fog_color)
+{
+  SmoothedSkyTint = sky_tint;
+  SmoothedFogColor = fog_color;
+}
+
 } // namespace cutum

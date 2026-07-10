@@ -953,6 +953,29 @@ void UWorld::SetWorldName(const std::string &value) { WorldName = value; }
 
 glm::vec3 UWorld::GetSpawnPoint() const { return SpawnPoint; }
 
+glm::ivec3 UWorld::GetPreferredLoadFocusBlock() const
+{
+  if (auto user = GetCurrentUser())
+  {
+    return WorldPosToBlock(user->GetPosition());
+  }
+  if (!CurrentUserName.empty())
+  {
+    if (auto user = const_cast<UWorld *>(this)->GetUser(CurrentUserName))
+    {
+      return WorldPosToBlock(user->GetPosition());
+    }
+  }
+  for (const auto &entry : Users)
+  {
+    if (entry.second)
+    {
+      return WorldPosToBlock(entry.second->GetPosition());
+    }
+  }
+  return WorldPosToBlock(SpawnPoint);
+}
+
 void UWorld::SetSpawnPoint(glm::vec3 value) { SpawnPoint = value; }
 
 void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
@@ -1360,6 +1383,45 @@ void UWorld::WarmupSpawnAreaForEnterGame()
 void UWorld::PrepareEnterGameSession()
 {
   Streaming->PrepareEnterGameSession(*this);
+}
+
+bool UWorld::IsEnterStreamingWarmupSettled() const
+{
+  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  const glm::ivec3 feet = GetPreferredLoadFocusBlock();
+  if (!IsCollisionReadyAtFeet(feet))
+  {
+    return false;
+  }
+  if (MeshService->HasPendingDirty() || MeshService->HasPendingAsyncMeshWork())
+  {
+    return false;
+  }
+  if (Persistence &&
+      (Persistence->GetPendingPlayerRelightCount() > 0 ||
+       Persistence->GetPendingTerrainColumnRelightCount() > 0))
+  {
+    return false;
+  }
+  return true;
+}
+
+void UWorld::TickEnterStreamingWarmup(int iteration_budget)
+{
+  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
+  {
+    return;
+  }
+  const int iterations = std::clamp(iteration_budget, 1, 16);
+  for (int i = 0; i < iterations; ++i)
+  {
+    UpdateStreaming();
+    TickAsyncChunkSystems();
+    TickMeshEmerge();
+  }
 }
 
 void UWorld::MarkSpawnAreaPreparedByCooperativeLoad()

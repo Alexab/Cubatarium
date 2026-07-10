@@ -94,6 +94,7 @@ private:
   std::vector<glm::ivec3> EmissiveChunkRelightQueue;
   size_t EmissiveChunkRelightIndex{0};
   size_t MeshWarmupProcessedMax{0};
+  int StreamingWarmupTicks{0};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginColumnRelightQueue(UWorld &world);
