@@ -20,6 +20,7 @@ public:
   void Enqueue(UChunkRelightSnapshot snapshot, const UBlockRegistry &registry);
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
   bool HasPendingWork() const;
+  int GetInFlightCount() const;
   void WaitIdle();
 
 private:

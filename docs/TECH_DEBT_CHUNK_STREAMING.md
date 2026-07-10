@@ -25,6 +25,8 @@
 
 **Load-path freeze fix (2026-07):** cooperative load no longer finishes mesh warmup with empty dirty-set (`MarkAllDirtyFromWorld` after relight); см. TD-CS-022 (closed).
 
+**Load freeze at 80% (2026-07):** бюджетная фаза `RelightColumns` + async column relight при `async_relight`; см. TD-CS-024 (closed).
+
 **Movement hitch mitigation (2026-07):** sync collision column gen budgeted to 32 sub-columns/frame; relight/io drained with per-frame caps. Остаются краткие hitch — см. TD-CS-021.
 
 ## Open
@@ -56,6 +58,7 @@
 | TD-CS-020 | 2026-06 | Dedupe mesh dirty on async chunk commit (`ColumnMeshDirty` only) |
 | TD-CS-022 | 2026-07 | «Только небо» / мгновенный mesh warmup при загрузке (пустой dirty-set после `MarkAllDirty`) | `MarkAllDirtyFromWorld` после relight; diag `[WorldLoad]`; CLI `--load-world` / `--enter-game-smoke` |
 | TD-CS-023 | 2026-07 | Multi-second freeze при sync collision gen (256 sub-columns + relight/column) | Incremental `AdvanceTerrainColumnGeneration`, deferred relight batch, budgeted async IO relight queue |
+| TD-CS-024 | 2026-07 | Freeze на ~80% cooperative load (sync `RelightTerrainColumn` для всех колонок в одном tick) | Бюджетная фаза `RelightColumns`, async path через `UAsyncRelightBuilder`, mesh warmup progress creep |
 
 ## Phase tracker
 

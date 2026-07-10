@@ -57,6 +57,12 @@ bool UAsyncRelightBuilder::HasPendingWork() const
   return !InFlight.empty();
 }
 
+int UAsyncRelightBuilder::GetInFlightCount() const
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  return static_cast<int>(InFlight.size());
+}
+
 void UAsyncRelightBuilder::WaitIdle() { Pool.WaitIdle(); }
 
 } // namespace cutum

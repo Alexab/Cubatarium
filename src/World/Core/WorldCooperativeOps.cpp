@@ -14,6 +14,7 @@
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <unordered_set>
@@ -24,15 +25,103 @@ namespace cutum
 namespace
 {
 
-constexpr float kPhaseWeightMetadata = 0.05f;
-constexpr float kPhaseWeightEntities = 0.05f;
-constexpr float kPhaseWeightChunks = 0.50f;
-constexpr float kPhaseWeightSpatial = 0.12f;
-constexpr float kPhaseWeightRelight = 0.08f;
-constexpr float kPhaseWeightMeshWarmup = 0.12f;
+// Load-path weights tuned for saved worlds (e.g. World_091): mesh build dominates,
+// relight second, chunk IO/metadata are short slices of wall-clock time.
+constexpr float kPhaseWeightMetadata = 0.01f;
+constexpr float kPhaseWeightEntities = 0.01f;
+constexpr float kPhaseWeightChunks = 0.12f;
+constexpr float kPhaseWeightSpatial = 0.04f;
+constexpr float kPhaseWeightRelight = 0.18f;
+constexpr float kPhaseWeightMeshWarmup = 0.58f;
 constexpr float kPhaseWeightPrepareView = 0.06f;
-constexpr float kPhaseWeightGenerate = 0.12f;
+
+// Rare empty-world path: procedural generation replaces chunk IO budget.
+constexpr float kProceduralFillWeightGenerate = 0.28f;
+constexpr float kProceduralFillWeightMeshWarmup = 0.46f;
+
+// Create-world path: column generation then relight/mesh.
+constexpr float kCreateWeightInit = 0.02f;
+constexpr float kCreateWeightGenerate = 0.30f;
+constexpr float kCreateWeightRelight = 0.16f;
+constexpr float kCreateWeightMeshWarmup = 0.48f;
+constexpr float kCreateWeightPrepare = 0.04f;
+
 constexpr int kMeshWarmupMaxTicks = 50000;
+
+static_assert(kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
+                  kPhaseWeightSpatial + kPhaseWeightRelight +
+                  kPhaseWeightMeshWarmup + kPhaseWeightPrepareView ==
+              1.0f,
+              "load progress weights must sum to 1");
+
+static_assert(kCreateWeightInit + kCreateWeightGenerate + kCreateWeightRelight +
+                  kCreateWeightMeshWarmup + kCreateWeightPrepare == 1.0f,
+              "create progress weights must sum to 1");
+
+float CooperativeLoadProgressBase()
+{
+  return kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
+         kPhaseWeightSpatial;
+}
+
+float CooperativeLoadProgressAfterMesh()
+{
+  return CooperativeLoadProgressBase() + kPhaseWeightRelight +
+         kPhaseWeightMeshWarmup;
+}
+
+float CooperativeLoadMeshProgressBase()
+{
+  return CooperativeLoadProgressBase() + kPhaseWeightRelight;
+}
+
+float ProceduralFillProgressBase()
+{
+  return kPhaseWeightMetadata + kPhaseWeightEntities;
+}
+
+float ProceduralFillProgressAfterGenerate()
+{
+  return ProceduralFillProgressBase() + kProceduralFillWeightGenerate;
+}
+
+float ProceduralFillMeshProgressBase()
+{
+  return ProceduralFillProgressAfterGenerate() + kPhaseWeightRelight;
+}
+
+float CooperativeCreateMeshProgressBase()
+{
+  return kCreateWeightInit + kCreateWeightGenerate + kCreateWeightRelight;
+}
+
+float ComputeRelightLoadProgress(float progress_base, float relight_weight,
+                                 size_t chunk_index, size_t chunk_total,
+                                 size_t column_done, size_t column_total,
+                                 int async_in_flight)
+{
+  const float chunk_progress =
+      chunk_total == 0
+          ? 1.0f
+          : static_cast<float>(chunk_index) / static_cast<float>(chunk_total);
+  const float chunk_part = 0.4f * std::min(1.0f, chunk_progress);
+
+  float column_progress = 1.0f;
+  if (column_total > 0)
+  {
+    column_progress =
+        (static_cast<float>(column_done) +
+         0.5f * static_cast<float>(async_in_flight)) /
+        static_cast<float>(column_total);
+    column_progress = std::min(1.0f, column_progress);
+  }
+  else if (chunk_total > 0 && chunk_index < chunk_total)
+  {
+    column_progress = 0.0f;
+  }
+  const float column_part = 0.6f * column_progress;
+  return progress_base + relight_weight * (chunk_part + column_part);
+}
 
 void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
                                               WorldCoopKind kind)
@@ -58,29 +147,57 @@ void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
 
 } // namespace
 
-float CooperativeLoadProgressBase()
-{
-  return kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
-         kPhaseWeightSpatial;
-}
-
-namespace
-{
-
-float CooperativeLoadProgressAfterMesh()
-{
-  return CooperativeLoadProgressBase() + kPhaseWeightRelight + kPhaseWeightMeshWarmup;
-}
-
-} // namespace
-
 void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
   RelightQueue.clear();
   RelightQueueIndex = 0;
+  ColumnRelightQueue.clear();
+  ColumnRelightIndex = 0;
+  ColumnRelightScheduledIndex = 0;
+  ColumnRelightAppliedCount = 0;
   world.BlockWorld.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk) { RelightQueue.push_back(chunk.GetCoord()); });
   CurrentPhase = Phase::RelightChunks;
+}
+
+void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
+{
+  ColumnRelightQueue.clear();
+  ColumnRelightIndex = 0;
+  ColumnRelightScheduledIndex = 0;
+  ColumnRelightAppliedCount = 0;
+
+  std::unordered_set<std::uint64_t> ground_columns;
+  for (const glm::ivec3 &coord : RelightQueue)
+  {
+    const std::uint64_t key =
+        (static_cast<std::uint64_t>(static_cast<std::uint32_t>(coord.x))
+         << 32) |
+        static_cast<std::uint32_t>(coord.z);
+    if (!ground_columns.insert(key).second)
+    {
+      continue;
+    }
+    ColumnRelightQueue.push_back(
+        glm::ivec2(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE));
+  }
+
+  world.SetLightingRelightDeferred(false);
+  world.SetLightingSkylightBulkComplete(true);
+  RelightQueue.clear();
+  RelightQueueIndex = 0;
+
+  std::cout << "[WorldLoad] RelightColumns: " << ColumnRelightQueue.size()
+            << " terrain columns" << std::endl;
+
+  if (ColumnRelightQueue.empty())
+  {
+    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+    BeginMeshWarmupInner(world);
+    return;
+  }
+
+  CurrentPhase = Phase::RelightColumns;
 }
 
 void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
@@ -95,6 +212,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
     world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
   }
   MeshWarmupTicks = 0;
+  MeshWarmupProcessedMax = 0;
   MeshWarmupStartPending =
       world.MeshService->GetDirtyCount() +
       static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
@@ -138,6 +256,8 @@ const char *UWorldCooperativeSession::PhaseId() const
     return "spatial_chunks";
   case Phase::RelightChunks:
     return "relight_chunks";
+  case Phase::RelightColumns:
+    return "relight_columns";
   case Phase::MeshWarmup:
     return "mesh_warmup";
   case Phase::PrepareEnter:
@@ -540,39 +660,97 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         ++relit;
       }
     }
-    const float relight_base = CooperativeLoadProgressBase();
-    const float relight_frac =
-        relight_base +
-        kPhaseWeightRelight *
-            (RelightQueue.empty()
-                 ? 1.0f
-                 : static_cast<float>(RelightQueueIndex) /
-                       static_cast<float>(RelightQueue.size()));
+    const float relight_base =
+        Kind == WorldCoopKind::Create
+            ? (kCreateWeightInit + kCreateWeightGenerate)
+            : (ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                      : CooperativeLoadProgressBase());
+    const float relight_weight =
+        Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
+    const float relight_frac = ComputeRelightLoadProgress(
+        relight_base, relight_weight, RelightQueueIndex, RelightQueue.size(), 0,
+        0, 0);
     Report(sink, "relight", relight_frac, "Computing lighting...");
     if (RelightQueueIndex >= RelightQueue.size())
     {
-      world.SetLightingRelightDeferred(false);
-      world.SetLightingSkylightBulkComplete(true);
-      if (world.BlockRegistry)
+      BeginColumnRelightQueue(world);
+    }
+    break;
+  }
+  case Phase::RelightColumns:
+  {
+    const int max_y = world.ProceduralTemplate.MaxHeight;
+    const auto tick_t0 = std::chrono::steady_clock::now();
+    if (world.BlockRegistry)
+    {
+      if (world.ProceduralTemplate.AsyncRelight)
       {
-        const int max_y = world.ProceduralTemplate.MaxHeight;
-        std::unordered_set<std::uint64_t> ground_columns;
-        for (const glm::ivec3 &coord : RelightQueue)
+        ColumnRelightAppliedCount += static_cast<size_t>(
+            world.DrainAsyncRelightResults(4, false, false));
+
+        const int thread_count =
+            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
+        const int max_inflight = thread_count * 2;
+        const int schedule_budget = std::clamp(budget / 2, 2, 8);
+        int scheduled = 0;
+        while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
+               world.GetAsyncRelightInFlightCount() < max_inflight &&
+               scheduled < schedule_budget)
         {
-          const std::uint64_t key =
-              (static_cast<std::uint64_t>(static_cast<std::uint32_t>(coord.x))
-               << 32) |
-              static_cast<std::uint32_t>(coord.z);
-          if (!ground_columns.insert(key).second)
-          {
-            continue;
-          }
-          world.RelightTerrainColumn(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
-                                   0, max_y);
+          const glm::ivec2 &col =
+              ColumnRelightQueue[ColumnRelightScheduledIndex++];
+          world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y);
+          ++scheduled;
         }
       }
-      RelightQueue.clear();
-      RelightQueueIndex = 0;
+      else
+      {
+        const int column_budget = std::clamp(budget / 4, 1, 4);
+        int relit = 0;
+        while (ColumnRelightIndex < ColumnRelightQueue.size() &&
+               relit < column_budget)
+        {
+          const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
+          world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+          ++relit;
+          ++ColumnRelightAppliedCount;
+        }
+      }
+    }
+
+    const bool columns_done =
+        world.ProceduralTemplate.AsyncRelight
+            ? (ColumnRelightScheduledIndex >= ColumnRelightQueue.size() &&
+               !world.HasPendingAsyncRelightWork())
+            : (ColumnRelightIndex >= ColumnRelightQueue.size());
+
+    const int async_in_flight = world.ProceduralTemplate.AsyncRelight
+                                    ? world.GetAsyncRelightInFlightCount()
+                                    : 0;
+    const float relight_base =
+        Kind == WorldCoopKind::Create
+            ? (kCreateWeightInit + kCreateWeightGenerate)
+            : (ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                      : CooperativeLoadProgressBase());
+    const float relight_weight =
+        Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
+    const float relight_frac = ComputeRelightLoadProgress(
+        relight_base, relight_weight, 1, 1, ColumnRelightAppliedCount,
+        ColumnRelightQueue.size(), async_in_flight);
+    Report(sink, "relight", relight_frac, "Computing column lighting...");
+
+    if (columns_done)
+    {
+      const auto tick_t1 = std::chrono::steady_clock::now();
+      const double tick_ms =
+          std::chrono::duration<double, std::milli>(tick_t1 - tick_t0).count();
+      std::cout << "[WorldLoad] RelightColumns done: "
+                << ColumnRelightQueue.size() << " columns, last_tick_ms="
+                << tick_ms << std::endl;
+      ColumnRelightQueue.clear();
+      ColumnRelightIndex = 0;
+      ColumnRelightScheduledIndex = 0;
+      ColumnRelightAppliedCount = 0;
       world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
       BeginMeshWarmupInner(world);
     }
@@ -580,10 +758,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::MeshWarmup:
   {
+    const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+        UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
     if (world.BlockRegistry)
     {
-      const UChunkEmergeCoordinator::FrameBudget mesh_budget =
-          UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
       world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
                                             mesh_budget.MaxMeshDrain,
                                             mesh_budget.MaxMeshSchedule);
@@ -597,19 +775,41 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const size_t pending_now =
         world.MeshService->GetDirtyCount() +
         static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
-    const float mesh_inner =
+    if (MeshWarmupStartPending > pending_now)
+    {
+      const size_t processed_now = MeshWarmupStartPending - pending_now;
+      MeshWarmupProcessedMax = std::max(MeshWarmupProcessedMax, processed_now);
+    }
+    const float mesh_inner_processed =
         mesh_done ? 1.0f
-                  : 1.0f - static_cast<float>(pending_now) /
-                                static_cast<float>(MeshWarmupStartPending);
+                  : static_cast<float>(MeshWarmupProcessedMax) /
+                        static_cast<float>(MeshWarmupStartPending);
+    const size_t estimated_ticks = std::max<size_t>(
+        1, MeshWarmupStartPending /
+               static_cast<size_t>(std::max(1, mesh_budget.MaxMeshDrain)));
+    const float mesh_inner_creep =
+        mesh_done ? 1.0f
+                  : std::min(0.95f,
+                             static_cast<float>(MeshWarmupTicks) /
+                                 static_cast<float>(estimated_ticks));
+    const float mesh_inner =
+        mesh_done ? 1.0f : std::max(mesh_inner_processed, mesh_inner_creep);
     const float mesh_base =
         Kind == WorldCoopKind::Create
-            ? (0.05f + 0.75f)
-            : (CooperativeLoadProgressBase() + kPhaseWeightRelight);
+            ? CooperativeCreateMeshProgressBase()
+            : (ProceduralFillLoadPath ? ProceduralFillMeshProgressBase()
+                                      : CooperativeLoadMeshProgressBase());
+    const float mesh_weight =
+        Kind == WorldCoopKind::Create
+            ? kCreateWeightMeshWarmup
+            : (ProceduralFillLoadPath ? kProceduralFillWeightMeshWarmup
+                                      : kPhaseWeightMeshWarmup);
     const float mesh_frac =
-        mesh_base + kPhaseWeightMeshWarmup * std::clamp(mesh_inner, 0.0f, 1.0f);
+        mesh_base + mesh_weight * std::clamp(mesh_inner, 0.0f, 1.0f);
     Report(sink, "mesh_warmup", mesh_frac,
            mesh_done ? "Terrain meshes ready."
-                     : "Building terrain meshes...");
+                     : "Building meshes... " + std::to_string(pending_now) +
+                           " remaining");
     if (mesh_done)
     {
       if (Kind == WorldCoopKind::Create)
@@ -661,9 +861,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     if (NeedsProceduralFill)
     {
+      ProceduralFillLoadPath = true;
       InitGenerationGrid(world);
       CurrentPhase = Phase::ProceduralFill;
-      Report(sink, "generate", 0.72f, "Generating terrain...");
+      Report(sink, "generate", ProceduralFillProgressBase(),
+             "Generating terrain...");
     }
     else
     {
@@ -681,8 +883,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       CurrentPhase = Phase::FinalizeWorld;
     }
     const float genFrac =
-        0.72f + 0.18f * (static_cast<float>(GenDoneColumns) /
-                         static_cast<float>(std::max(1, GenTotalColumns)));
+        ProceduralFillProgressBase() +
+        kProceduralFillWeightGenerate *
+            (static_cast<float>(GenDoneColumns) /
+             static_cast<float>(std::max(1, GenTotalColumns)));
     Report(sink, "generate", genFrac, "Generating terrain...");
     break;
   }
@@ -699,7 +903,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       MeshWarmupFinalizeOnly = true;
       BeginMeshWarmup(world);
       Report(sink, "mesh_warmup",
-             kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks,
+             ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                    : CooperativeLoadProgressBase(),
              "Building terrain meshes...");
       break;
     }
@@ -718,8 +923,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.ApplySpawnToCamera();
     }
     CurrentPhase = Phase::PrepareView;
-    Report(sink, "prepare_enter", CooperativeLoadProgressAfterMesh(),
-           "Placing player...");
+    const float prepare_base =
+        Kind == WorldCoopKind::Create
+            ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
+            : (ProceduralFillLoadPath
+                   ? (ProceduralFillMeshProgressBase() +
+                      kProceduralFillWeightMeshWarmup)
+                   : CooperativeLoadProgressAfterMesh());
+    Report(sink, "prepare_enter", prepare_base, "Placing player...");
     break;
   }
   case Phase::PrepareView:
@@ -730,8 +941,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     FinalizeCooperativeLoadForEnterGame(world, Kind);
     CurrentPhase = Phase::Done;
     Active = false;
-    Report(sink, "prepare_view",
-           CooperativeLoadProgressAfterMesh() + kPhaseWeightPrepareView,
+    const float prepare_view_base =
+        Kind == WorldCoopKind::Create
+            ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
+            : (ProceduralFillLoadPath
+                   ? (ProceduralFillMeshProgressBase() +
+                      kProceduralFillWeightMeshWarmup)
+                   : CooperativeLoadProgressAfterMesh());
+    const float prepare_weight =
+        Kind == WorldCoopKind::Create ? kCreateWeightPrepare : kPhaseWeightPrepareView;
+    Report(sink, "prepare_view", prepare_view_base + prepare_weight,
            "Preparing view...");
     Report(sink, "done", 1.f,
            Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
@@ -801,8 +1020,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       CurrentPhase = Phase::PostCreate;
     }
     const float frac =
-        0.05f + 0.75f * (static_cast<float>(GenDoneColumns) /
-                         static_cast<float>(std::max(1, GenTotalColumns)));
+        kCreateWeightInit +
+        kCreateWeightGenerate *
+            (static_cast<float>(GenDoneColumns) /
+             static_cast<float>(std::max(1, GenTotalColumns)));
     Report(sink, "generate", frac, "Generating terrain...");
     break;
   }
@@ -814,7 +1035,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.AllowProceduralFill = world.IsStreamingEnabled();
     world.InitStreamerCallbacks();
     BeginMeshWarmup(world);
-    Report(sink, "mesh_warmup", 0.82f, "Building terrain meshes...");
+    Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),
+                 "Building terrain meshes...");
     break;
   }
   case Phase::Done:

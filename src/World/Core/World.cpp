@@ -830,17 +830,39 @@ void UWorld::EnqueueAsyncPlayerRelight(
   AsyncRelight->Enqueue(std::move(snapshot), *BlockRegistry);
 }
 
-void UWorld::DrainAsyncRelightResults()
+void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
+                                              int min_y, int max_y)
 {
-  if (!AsyncRelight || !BlockRegistry)
+  if (!BlockRegistry)
   {
     return;
   }
-  const auto t0 = std::chrono::high_resolution_clock::now();
-  constexpr int kMaxAsyncRelightApplyPerFrame = 4;
-  for (RelightComputeResult &result :
-       AsyncRelight->DrainCompleted(kMaxAsyncRelightApplyPerFrame))
+  EnsureAsyncRelightBuilder();
+  RelightJobSpec spec;
+  spec.block_positions = {glm::ivec3(world_x, min_y, world_z)};
+  spec.min_world_y = min_y;
+  spec.max_world_y = max_y;
+  spec.include_block_light = !LightingSkylightBulkComplete;
+  spec.frontier_iterations = kRelightFrontierIterationsFull;
+  spec.job_id = ++NextAsyncRelightJobId;
+  UChunkRelightSnapshot snapshot =
+      UChunkRelightSnapshot::Capture(BlockWorld, spec);
+  AsyncRelight->Enqueue(std::move(snapshot), *BlockRegistry);
+}
+
+int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
+                                     bool enqueue_background_frontier)
+{
+  if (!AsyncRelight || !BlockRegistry)
   {
+    return 0;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  int applied = 0;
+  for (RelightComputeResult &result :
+       AsyncRelight->DrainCompleted(max_per_frame))
+  {
+    ++applied;
     std::vector<glm::ivec3> relit_coords;
     relit_coords.reserve(result.chunks.size());
     for (const RelightChunkLightData &chunk_data : result.chunks)
@@ -852,9 +874,13 @@ void UWorld::DrainAsyncRelightResults()
         relit_coords.push_back(chunk_data.coord);
       }
     }
-    MarkRelitChunksForMesh(relit_coords, true);
-    PlayerRelightMeshBurstFrames = 3;
-    if (result.frontier_unfinished && Persistence)
+    MarkRelitChunksForMesh(relit_coords, priority_mesh);
+    if (priority_mesh)
+    {
+      PlayerRelightMeshBurstFrames = 3;
+    }
+    if (enqueue_background_frontier && result.frontier_unfinished &&
+        Persistence)
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
@@ -863,11 +889,27 @@ void UWorld::DrainAsyncRelightResults()
     }
   }
   const auto t1 = std::chrono::high_resolution_clock::now();
-  if (AsyncRelight->HasPendingWork())
+  if (applied > 0 || AsyncRelight->HasPendingWork())
   {
     PhysicsTelemetryData.FullRelightMs =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
   }
+  return applied;
+}
+
+void UWorld::DrainAsyncRelightResults()
+{
+  DrainAsyncRelightResults(4, true, true);
+}
+
+bool UWorld::HasPendingAsyncRelightWork() const
+{
+  return AsyncRelight && AsyncRelight->HasPendingWork();
+}
+
+int UWorld::GetAsyncRelightInFlightCount() const
+{
+  return AsyncRelight ? AsyncRelight->GetInFlightCount() : 0;
 }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
