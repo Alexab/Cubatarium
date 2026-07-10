@@ -36,7 +36,8 @@ struct Frustum
   /// fallback near camera.
   bool IntersectsChunkAABB(const glm::vec3 &bmin, const glm::vec3 &bmax,
                            const glm::vec3 &cameraPos,
-                           float maxDistance = 0.0f) const
+                           float maxDistance = 0.0f,
+                           bool horizontalDistance = false) const
   {
     if (cameraPos.x >= bmin.x && cameraPos.x <= bmax.x &&
         cameraPos.y >= bmin.y && cameraPos.y <= bmax.y &&
@@ -48,7 +49,12 @@ struct Frustum
     if (maxDistance > 0.0f)
     {
       const glm::vec3 center = (bmin + bmax) * 0.5f;
-      if (glm::length(center - cameraPos) <= maxDistance)
+      const float dist =
+          horizontalDistance
+              ? glm::length(glm::vec2(center.x - cameraPos.x,
+                                      center.z - cameraPos.z))
+              : glm::length(center - cameraPos);
+      if (dist <= maxDistance)
       {
         return true;
       }

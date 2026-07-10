@@ -23,6 +23,12 @@ void UWorldMeshService::SetRenderDistanceChunks(int distance)
   Cache.SetRenderDistanceChunks(distance);
 }
 
+void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
+                                             int threshold_blocks)
+{
+  Cache.SetAltitudeCullState(altitude_above_terrain, threshold_blocks);
+}
+
 void UWorldMeshService::NotifyChunkBlocksChanged(glm::ivec3 chunk_coord)
 {
   if (MeshSink)

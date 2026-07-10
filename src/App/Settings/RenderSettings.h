@@ -43,6 +43,14 @@ struct RenderSettings
   float AltitudeFogPenaltyPer16Blocks{0.05f};
   /// Gradient sky pass before world geometry (greedy path).
   bool GradientSky{true};
+  /// View-direction horizon fog in sky shader (vs screen-space band).
+  bool HorizonFogRadial{true};
+  /// Tint sky horizon fog toward sun/moon direction.
+  bool HorizonFogCelestialTint{true};
+  /// Blocks subtracted from render horizon for fog end.
+  int DistanceFogEndMarginBlocks{12};
+  /// Use terrain surface height for altitude-adaptive fog (not feet Y).
+  bool AltitudeUseTerrainSurface{true};
 
   static RenderSettings Legacy()
   {

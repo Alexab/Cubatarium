@@ -10,7 +10,6 @@ namespace cutum
 namespace
 {
 constexpr float kMinFogStartBlocks = 16.0f;
-constexpr float kHorizonMarginBlocks = 24.0f;
 constexpr float kMinHorizonBlocks = 32.0f;
 } // namespace
 
@@ -20,21 +19,24 @@ float RenderHorizonBlocks(int render_distance_chunks)
          static_cast<float>(CHUNK_SIZE);
 }
 
-float FogHorizonBlocks(int render_distance_chunks)
+float FogHorizonBlocks(int render_distance_chunks, int end_margin_blocks)
 {
   const float full = RenderHorizonBlocks(render_distance_chunks);
-  return std::max(kMinHorizonBlocks, full - kHorizonMarginBlocks);
+  const float margin =
+      static_cast<float>(std::max(0, end_margin_blocks));
+  return std::max(kMinHorizonBlocks, full - margin);
 }
 
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio,
-                                     float fog_density)
+                                     float fog_density, int end_margin_blocks)
 {
   const float ratio = effective_fog_start_ratio >= 0.0f
                           ? effective_fog_start_ratio
                           : start_ratio;
-  const float fog_blocks = FogHorizonBlocks(render_distance_chunks);
+  const float fog_blocks =
+      FogHorizonBlocks(render_distance_chunks, end_margin_blocks);
   const float clamped_ratio = std::clamp(ratio, 0.0f, 1.0f);
   DistanceFogParams params;
   params.End = fog_blocks;

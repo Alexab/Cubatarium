@@ -18,12 +18,13 @@ struct DistanceFogParams
 float RenderHorizonBlocks(int render_distance_chunks);
 
 /// Fog fade horizon — slightly inside render horizon to hide streaming edge.
-float FogHorizonBlocks(int render_distance_chunks);
+float FogHorizonBlocks(int render_distance_chunks, int end_margin_blocks = 12);
 
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio = -1.0f,
-                                     float fog_density = 1.0f);
+                                     float fog_density = 1.0f,
+                                     int end_margin_blocks = 12);
 
 } // namespace cutum
 

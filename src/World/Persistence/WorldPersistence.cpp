@@ -244,7 +244,8 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       {
         if (load.success && world.BlockRegistry)
         {
-          EnqueueTerrainColumnRelight(ground.x, ground.z);
+          EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
+                                      ground.z * CHUNK_SIZE);
         }
         world.Streaming->GetStreamer()->NotifyChunkCommitted(ground);
       }

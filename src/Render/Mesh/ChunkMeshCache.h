@@ -65,6 +65,11 @@ public:
   {
     RenderDistanceChunks = distance;
   }
+  void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
+  {
+    AltitudeAboveTerrain = altitude_above_terrain;
+    AltitudeFogThresholdBlocks = threshold_blocks;
+  }
   void SetSurfaceWetness(float value)
   {
     SurfaceWetness = std::clamp(value, 0.0f, 1.0f);
@@ -115,7 +120,11 @@ private:
                                  const glm::vec3 *cameraPos,
                                  float maxCullDistance);
   void InvalidateVisibleList();
-  float MaxCullDistance() const;
+  bool UseHorizontalCullDistance() const
+  {
+    return AltitudeAboveTerrain >
+           static_cast<float>(AltitudeFogThresholdBlocks);
+  }
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
   UChunkDirtySet Dirty;
@@ -132,6 +141,8 @@ private:
   uint64_t LastVisibleMeshRevision{0};
   std::vector<glm::ivec3> LastVisibleChunks;
   int RenderDistanceChunks{4};
+  float AltitudeAboveTerrain{0.0f};
+  int AltitudeFogThresholdBlocks{32};
   float SurfaceWetness{0.0f};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
@@ -149,6 +160,7 @@ private:
   bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,
                                           const glm::vec3 *cameraPos,
                                           float maxCullDistance);
+  float MaxCullDistance() const;
 };
 } // namespace cutum
 #endif

@@ -732,22 +732,11 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     return;
   }
+  WorldInstance->EnsureDefaultCelestialBodies();
+  WorldInstance->RefreshSkyVisualStateForRender();
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
                             BaseSkyColor);
-  glm::vec3 tint = UnderwaterFogPass_.GetSkyTint();
-  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
-  const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
-  const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
-  const float sky_mul =
-      std::clamp(0.3f + day * env.WeatherSkyAttenuation * 0.7f + moon * 0.26f,
-                 0.3f, 1.0f);
-  tint *= sky_mul;
-  tint = glm::mix(tint, tint * glm::vec3(0.75f, 0.82f, 0.95f),
-                  moon * (1.0f - day) * 0.45f);
-  const float weather_darken = std::clamp(
-      env.Cloudiness * 0.1f + env.PrecipitationIntensity * 0.08f, 0.0f, 0.16f);
-  tint *= (1.0f - weather_darken);
-  skyColor = glm::vec4(tint, 1.0f);
+  skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
@@ -1325,6 +1314,13 @@ void UGeometryEngine::DrawSkyGradient()
   const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
   horizon_boost = std::clamp(
       env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f, 0.0f, 0.35f);
+  if (Render.AltitudeAdaptiveFog)
+  {
+    const float altitude = WorldInstance->GetAltitudeAboveTerrain();
+    const float threshold =
+        static_cast<float>(std::max(1, Render.AltitudeFogThresholdBlocks));
+    horizon_boost += std::clamp(altitude / (threshold * 2.0f), 0.0f, 0.25f);
+  }
 
   glm::mat3 inv_view_rot(1.0f);
   glm::vec3 camera_pos(0.0f);
@@ -1335,7 +1331,7 @@ void UGeometryEngine::DrawSkyGradient()
     camera_pos = camera->GetPosition();
   }
 
-  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env,
+  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env, Render,
                         Render.Preset, AnimationClock.ElapsedSeconds(),
                         inv_view_rot, camera_pos, horizon_boost);
   DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();

@@ -87,6 +87,10 @@
         "altitude_fog_threshold_blocks": 32,
         "altitude_fog_penalty_per_16_blocks": 0.05,
         "gradient_sky": true,
+        "horizon_fog_radial": true,
+        "horizon_fog_celestial_tint": true,
+        "distance_fog_end_margin_blocks": 12,
+        "altitude_use_terrain_surface": true,
         "underwater_fog": {
             "surface_scan_up": 32,
             "surface_scan_down": 64,

@@ -8,6 +8,9 @@ out vec4 FragColor;
 uniform vec4 skyColor;
 uniform float uFogHorizonBlend;
 uniform vec3 uFogColor;
+uniform float uHorizonFogRadial;
+uniform float uHorizonFogCelestialTint;
+uniform float uFogHorizonElevation;
 uniform float uTimeOfDay;
 uniform float uStarVisibility;
 uniform float uCloudCoverage;
@@ -97,6 +100,34 @@ float layerProfile(float y, float center, float half_thickness)
     return clamp(1.0 - dy, 0.0, 1.0);
 }
 
+vec3 horizonFogColor(vec3 view_dir)
+{
+    vec3 fog_col = uFogColor;
+    if (uHorizonFogCelestialTint < 0.5)
+    {
+        return fog_col;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
+        if (i >= uCelestialCount)
+        {
+            break;
+        }
+        vec3 dir = normalize(uCelestialDir[i]);
+        if (dir.y <= 0.0)
+        {
+            continue;
+        }
+        float nd = clamp(dot(view_dir, dir), -1.0, 1.0);
+        float cone = cos(max(1.5, uCelestialAngularSizeDeg[i]) * 0.35 * 0.0174532925);
+        float prox = smoothstep(cone, 1.0, nd);
+        vec3 body_col = uCelestialColor[i] * uCelestialIntensity[i];
+        float tint_strength = (uCelestialType[i] == 1) ? 0.28 : 0.45;
+        fog_col = mix(fog_col, body_col, prox * tint_strength);
+    }
+    return fog_col;
+}
+
 void main()
 {
     vec3 skyTop = skyColor.rgb;
@@ -167,8 +198,12 @@ void main()
     }
 
     if (uFogHorizonBlend > 0.001) {
-        float horizon = 1.0 - smoothstep(0.0, 0.45, TexCoord.y);
-        finalColor = mix(finalColor, uFogColor, horizon * uFogHorizonBlend);
+        float elev = clamp(view_dir.y, 0.0, 1.0);
+        float horizon = uHorizonFogRadial > 0.5
+            ? smoothstep(uFogHorizonElevation, 0.02, elev)
+            : (1.0 - smoothstep(0.0, 0.45, TexCoord.y));
+        vec3 fog_col = horizonFogColor(view_dir);
+        finalColor = mix(finalColor, fog_col, horizon * uFogHorizonBlend);
     }
 
     FragColor = vec4(finalColor, 1.0);

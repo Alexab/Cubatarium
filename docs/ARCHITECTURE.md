@@ -226,15 +226,16 @@ Cross batches merge by `blockId` in `RebuildFlatGreedyBatches`. Scatter vegetati
 
 ### Fog vs cull vs streaming
 
-Distance fog uses horizontal (XZ) distance from the camera — not view direction. The sky gradient applies horizon fog (`uFogHorizonBlend`) so unloaded void ahead matches terrain fog on the sides.
+Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from `ComputeAtmosphericSkyColors` (day/night, weather, sun/moon twilight). Sky horizon fog is **view-direction** radial when `horizon_fog_radial` is true (`fshader_sky.glsl`); celestial tint optional via `horizon_fog_celestial_tint`.
 
 | System | Horizon |
 |--------|---------|
-| `ComputeDistanceFog` | `effective_render_distance × CHUNK_SIZE` |
-| `ChunkMeshCache::MaxCullDistance` | same (no +2 chunk margin) |
+| `ComputeDistanceFog` | `FogHorizonBlocks(effective_render_distance, end_margin)` |
+| `ChunkMeshCache::MaxCullDistance` | `RenderHorizonBlocks(effective_render_distance)` |
 | `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
+| Altitude policy | `ground_y` from terrain surface (`altitude_use_terrain_surface`); horizontal cull above threshold |
 
-Asymmetric horizon (clear sky ahead, foggy sides) usually means streaming lag in the movement direction, not a fixed fog direction bug.
+At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
 
 **Underwater / below-surface fog:** full-screen underwater fog when `eye.y < BlockTopY` in the eye column (`IsCameraInsideFluid`). When the camera is above the surface, seafloor tint uses per-column GPU maps (`UFluidSurfaceMap`: `GL_R16F` surface Y + `GL_R8UI` fluid index) built from `FluidSurfaceColumnSlice` cached per ground chunk; `fshader_greedy` compares `vWorldPos.y` to `surfaceYAt(vWorldPos.xz)`.
 

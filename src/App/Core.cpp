@@ -420,6 +420,14 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("altitude_fog_penalty_per_16_blocks",
                     Render.AltitudeFogPenaltyPer16Blocks);
         Render.GradientSky = r.value("gradient_sky", Render.GradientSky);
+        Render.HorizonFogRadial =
+            r.value("horizon_fog_radial", Render.HorizonFogRadial);
+        Render.HorizonFogCelestialTint = r.value(
+            "horizon_fog_celestial_tint", Render.HorizonFogCelestialTint);
+        Render.DistanceFogEndMarginBlocks = r.value(
+            "distance_fog_end_margin_blocks", Render.DistanceFogEndMarginBlocks);
+        Render.AltitudeUseTerrainSurface = r.value(
+            "altitude_use_terrain_surface", Render.AltitudeUseTerrainSurface);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -731,6 +739,12 @@ void UCore::SaveConfigFile()
   render_json["altitude_fog_penalty_per_16_blocks"] =
       Render.AltitudeFogPenaltyPer16Blocks;
   render_json["gradient_sky"] = Render.GradientSky;
+  render_json["horizon_fog_radial"] = Render.HorizonFogRadial;
+  render_json["horizon_fog_celestial_tint"] = Render.HorizonFogCelestialTint;
+  render_json["distance_fog_end_margin_blocks"] =
+      Render.DistanceFogEndMarginBlocks;
+  render_json["altitude_use_terrain_surface"] =
+      Render.AltitudeUseTerrainSurface;
   system_data["render"] = render_json;
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;

@@ -214,6 +214,7 @@ set(SOURCES
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Engine/DistanceFog.cpp
+    src/Render/Engine/HorizonFogColor.cpp
     src/Render/Pipeline/GlStateScope.cpp
     src/Render/Pipeline/GreedyShaderMode.cpp
     src/Render/Pipeline/GreedyTransparentSort.cpp
@@ -1079,6 +1080,7 @@ add_executable(decor_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Core/Jobs/JobThreadPool.cpp
     src/Render/Engine/DistanceFog.cpp
+    src/Render/Engine/HorizonFogColor.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp

@@ -3,6 +3,7 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
+#include "Render/Engine/HorizonFogColor.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -96,12 +97,16 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
   const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
-  const float sky_mul = std::clamp(
-      0.3f + day * env.WeatherSkyAttenuation * 0.7f + moon * 0.26f, 0.3f,
-      1.0f);
-  glm::vec3 targetSky = base_sky_color * sky_mul;
-  targetSky = glm::mix(targetSky, targetSky * glm::vec3(0.75f, 0.82f, 0.95f),
-                       moon * (1.0f - day) * 0.45f);
+  HorizonFogColorInput color_in;
+  color_in.base_sky = base_sky_color;
+  color_in.day = day;
+  color_in.moon = moon;
+  color_in.weather_atten = env.WeatherSkyAttenuation;
+  color_in.cloudiness = env.Cloudiness;
+  color_in.precip = env.PrecipitationIntensity;
+  color_in.celestial_bodies = &env.CelestialBodies;
+  const AtmosphericSkyColors atmospheric = ComputeAtmosphericSkyColors(color_in);
+  glm::vec3 targetSky = atmospheric.sky_tint;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
@@ -140,9 +145,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   else if (render.DistanceFog)
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
-        world.GetEffectiveRenderDistance(), targetSky,
+        world.GetEffectiveRenderDistance(), atmospheric.fog_color,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
-        render.DistanceFogDensity);
+        render.DistanceFogDensity, render.DistanceFogEndMarginBlocks);
     FogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;

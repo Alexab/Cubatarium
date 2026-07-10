@@ -85,7 +85,8 @@ void MergeGreedyBatch(GreedyMeshBatch &dst, const GreedyMeshBatch &src)
 }
 
 bool ChunkPassesFrustum(const Frustum *frustum, const glm::vec3 *cameraPos,
-                        float maxCullDistance, glm::ivec3 chunk_coord)
+                        float maxCullDistance, glm::ivec3 chunk_coord,
+                        bool horizontal_distance)
 {
   if (!frustum || !cameraPos)
   {
@@ -93,7 +94,7 @@ bool ChunkPassesFrustum(const Frustum *frustum, const glm::vec3 *cameraPos,
   }
   return frustum->IntersectsChunkAABB(ChunkAABBMin(chunk_coord),
                                       ChunkAABBMax(chunk_coord), *cameraPos,
-                                      maxCullDistance);
+                                      maxCullDistance, horizontal_distance);
 }
 
 } // namespace
@@ -258,6 +259,7 @@ void UChunkMeshCache::RebuildFlatInstanceList(const Frustum *frustum,
                                               const glm::vec3 *cameraPos,
                                               float maxCullDistance)
 {
+  const bool horizontal_cull = UseHorizontalCullDistance();
   Instances.clear();
   for (const auto &entry : Cache)
   {
@@ -265,7 +267,7 @@ void UChunkMeshCache::RebuildFlatInstanceList(const Frustum *frustum,
     {
       if (!frustum->IntersectsChunkAABB(ChunkAABBMin(entry.first),
                                         ChunkAABBMax(entry.first), *cameraPos,
-                                        maxCullDistance))
+                                        maxCullDistance, horizontal_cull))
       {
         continue;
       }
@@ -282,13 +284,14 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   {
     return false;
   }
+  const bool horizontal_cull = UseHorizontalCullDistance();
   std::vector<glm::ivec3> visible;
   visible.reserve(GreedyCache.size());
   for (const auto &entry : GreedyCache)
   {
     if (!frustum->IntersectsChunkAABB(ChunkAABBMin(entry.first),
                                       ChunkAABBMax(entry.first), *cameraPos,
-                                      maxCullDistance))
+                                      maxCullDistance, horizontal_cull))
     {
       continue;
     }
@@ -326,6 +329,7 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
     return;
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
+  const bool horizontal_cull = UseHorizontalCullDistance();
   const auto merge_from_cache =
       [&](const Frustum *cull_frustum, const glm::vec3 *cull_camera,
           float cull_distance) -> std::vector<GreedyMeshBatch>
@@ -336,7 +340,7 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
     for (const auto &entry : GreedyCache)
     {
       if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
-                              entry.first))
+                              entry.first, horizontal_cull))
       {
         continue;
       }
@@ -391,6 +395,7 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
                                                 const glm::vec3 *cameraPos,
                                                 float maxCullDistance)
 {
+  const bool horizontal_cull = UseHorizontalCullDistance();
   const auto merge_from_cache = [&](const Frustum *cull_frustum,
                                     const glm::vec3 *cull_camera,
                                     float cull_distance)
@@ -400,7 +405,7 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
     for (const auto &entry : GreedyCache)
     {
       if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
-                              entry.first))
+                              entry.first, horizontal_cull))
       {
         continue;
       }

@@ -32,6 +32,7 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
+  void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);

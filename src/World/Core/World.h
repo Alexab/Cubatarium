@@ -580,6 +580,8 @@ public:
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
+  float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
+  void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                    double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
@@ -857,6 +859,7 @@ private:
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};
+  float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;
   glm::vec3 LastCameraPosition{0.0f};
   float LastMovementSpeed{0.0f};

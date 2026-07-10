@@ -5,12 +5,15 @@
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Render/Camera/Camera.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -19,6 +22,25 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+float QueryTerrainSurfaceWorldY(UWorld &world, const glm::vec3 &eye)
+{
+  UBlockRegistry &registry = world.GetBlockRegistry();
+  const glm::ivec3 block = WorldPosToBlock(eye);
+  const int surface_block_y = FindTopSolidSurfaceY(
+      world.GetBlockWorld(), registry, block.x, block.z,
+      world.GetProceduralSettings().MaxHeight);
+  if (surface_block_y < 0)
+  {
+    return 0.0f;
+  }
+  return BlockTopY(surface_block_y);
+}
+
+} // namespace
 
 UWorldStreaming::UWorldStreaming()
     : EmergeCoordinator(std::make_unique<UChunkEmergeCoordinator>())
@@ -113,6 +135,12 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
                                           remesh_max_y);
         }
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        if (IsTerrainChunkComplete(world.BlockWorld, ground, settings.MaxHeight))
+        {
+          world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
+                                                         ground.z * CHUNK_SIZE);
+        }
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)
@@ -192,7 +220,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                           settings.MaxHeight) > 0;
         if (loaded)
         {
-          persistence.EnqueueTerrainColumnRelight(coord.x, coord.z);
+          persistence.EnqueueTerrainColumnRelight(coord.x * CHUNK_SIZE,
+                                                  coord.z * CHUNK_SIZE);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -295,7 +324,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); },
       [&world](glm::ivec3 ground)
       {
-        world.Persistence->EnqueueTerrainColumnRelight(ground.x, ground.z);
+        world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
+                                                       ground.z * CHUNK_SIZE);
       });
 }
 
@@ -344,14 +374,22 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       altitudeParams.RenderDistancePenaltyPerChunk = 1;
       altitudeParams.FogStartRatioBoost =
           std::max(0.15f, render.AltitudeFogPenaltyPer16Blocks * 4.0f);
+      const float ground_y = render.AltitudeUseTerrainSurface
+                                 ? QueryTerrainSurfaceWorldY(world, eye)
+                                 : cap.feetY(eye);
+      world.SetAltitudeAboveTerrain(std::max(0.0f, eye.y - ground_y));
+      meshService.SetAltitudeCullState(world.GetAltitudeAboveTerrain(),
+                                       render.AltitudeFogThresholdBlocks);
       const StreamingAltitudeSnapshot alt = ComputeStreamingAltitude(
-          renderDistanceChunks, eye.y, cap.feetY(eye),
+          renderDistanceChunks, eye.y, ground_y,
           render.DistanceFogStartRatio, altitudeParams);
       effectiveRenderDistance = alt.EffectiveRenderDistance;
       effectiveFogStartRatio = alt.EffectiveFogStartRatio;
     }
     else
     {
+      world.SetAltitudeAboveTerrain(0.0f);
+      meshService.SetAltitudeCullState(0.0f, render.AltitudeFogThresholdBlocks);
       effectiveRenderDistance = renderDistanceChunks;
       effectiveFogStartRatio = render.DistanceFogStartRatio;
     }

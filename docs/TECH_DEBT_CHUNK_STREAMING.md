@@ -36,7 +36,6 @@
 | TD-CS-021 | 2026-07 | Краткие hitch при движении в новый terrain-chunk | Бюджеты смягчают, но не убирают полностью: incremental sync collision gen (~32 sub-columns/frame), relight queue (2–3 columns/frame), async IO slice drain (16/frame), mesh emerge drain (8 schedule + 8 drain), flat greedy rebuild | Phase F: полный async collision path, adaptive mesh budget, приоритет чанков у feet |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
-| TD-CS-019 | 2026-06 | Sky horizon fog uses fixed band; true radial sky fog optional | horizon blend shipped | backlog |
 
 ## Closed
 
@@ -59,6 +58,7 @@
 | TD-CS-022 | 2026-07 | «Только небо» / мгновенный mesh warmup при загрузке (пустой dirty-set после `MarkAllDirty`) | `MarkAllDirtyFromWorld` после relight; diag `[WorldLoad]`; CLI `--load-world` / `--enter-game-smoke` |
 | TD-CS-023 | 2026-07 | Multi-second freeze при sync collision gen (256 sub-columns + relight/column) | Incremental `AdvanceTerrainColumnGeneration`, deferred relight batch, budgeted async IO relight queue |
 | TD-CS-024 | 2026-07 | Freeze на ~80% cooperative load (sync `RelightTerrainColumn` для всех колонок в одном tick) | Бюджетная фаза `RelightColumns`, async path через `UAsyncRelightBuilder`, mesh warmup progress creep |
+| TD-CS-019 | 2026-07 | Sky horizon fog uses fixed screen band; ignores view direction and celestial tint | Radial `fshader_sky` fog + `HorizonFogColor` + `horizon_fog_radial` / `horizon_fog_celestial_tint` |
 
 ## Phase tracker
 

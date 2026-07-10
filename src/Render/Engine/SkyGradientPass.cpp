@@ -71,6 +71,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                             const glm::vec4 &sky_color,
                             const UUnderwaterFogPass &fog_pass,
                             const UWorld::EnvironmentState &env,
+                            const RenderSettings &render,
                             PerformancePreset preset, float elapsed_sec,
                             const glm::mat3 &inv_view_rot,
                             const glm::vec3 &camera_pos, float horizon_boost)
@@ -150,6 +151,10 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetFloat(
       "uFogHorizonBlend",
       std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));
+  sky_shader->SetFloat("uHorizonFogRadial", render.HorizonFogRadial ? 1.0f : 0.0f);
+  sky_shader->SetFloat("uHorizonFogCelestialTint",
+                       render.HorizonFogCelestialTint ? 1.0f : 0.0f);
+  sky_shader->SetFloat("uFogHorizonElevation", 0.35f);
 
   glBindVertexArray(SkyVao);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
