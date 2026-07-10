@@ -231,7 +231,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     ground_coord.y = 0;
   }
   const int max_height = world.ProceduralTemplate.MaxHeight;
-  MaterializeTerrainColumnAirSlices(world.BlockWorld, ground_coord, max_height);
+  MaterializeRequiredTerrainColumnSlices(world.BlockWorld, ground_coord,
+                                         max_height, state.highest_cy_on_disk);
 
   const bool has_disk = state.highest_cy_on_disk >= 0;
   const bool complete = IsTerrainChunkComplete(
@@ -244,12 +245,12 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   {
     ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
     PendingAsyncColumnLoadState retry_state;
-    const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
-    retry_state.remaining_results = max_cy + 1;
+    const int load_to_cy = state.highest_cy_on_disk;
+    retry_state.remaining_results = load_to_cy + 1;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
     retry_state.retry_generation = state.retry_generation + 1;
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
-    for (int cy = 0; cy <= max_cy; ++cy)
+    for (int cy = 0; cy <= load_to_cy; ++cy)
     {
       const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
       AsyncChunkIo->RequestLoad(
@@ -275,8 +276,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 
   if (has_disk || complete)
   {
-    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                ground_coord.z * CHUNK_SIZE);
+    if (GetPendingTerrainColumnRelightCount() < 24)
+    {
+      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                  ground_coord.z * CHUNK_SIZE);
+    }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
 }
@@ -411,14 +415,16 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   {
     return;
   }
-  const int max_cy =
-      (world.ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
   PendingAsyncColumnLoadState state;
-  state.remaining_results = max_cy + 1;
   state.highest_cy_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
+  if (state.highest_cy_on_disk < 0)
+  {
+    return;
+  }
+  state.remaining_results = state.highest_cy_on_disk + 1;
   PendingAsyncColumnLoadSlices[ground_coord] = state;
-  for (int cy = 0; cy <= max_cy; ++cy)
+  for (int cy = 0; cy <= state.highest_cy_on_disk; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     AsyncChunkIo->RequestLoad(
@@ -449,17 +455,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
   const int highest_non_air =
       GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height);
-  int highest_in_ram = -1;
-  for (int cy = 0; cy <= max_cy; ++cy)
-  {
-    if (world.BlockWorld.GetChunkManager().HasChunk(
-            glm::ivec3(ground_coord.x, cy, ground_coord.z)))
-    {
-      highest_in_ram = cy;
-    }
-  }
-  int highest_to_save =
-      std::max({highest_on_disk, highest_non_air, highest_in_ram});
+  int highest_to_save = std::max(highest_on_disk, highest_non_air);
   if (highest_to_save < 0)
   {
     return;

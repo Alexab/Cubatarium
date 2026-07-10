@@ -751,12 +751,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         const int thread_count =
             std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
-        const int max_inflight = thread_count * (bulk_coop_relight ? 4 : 2);
-        const int drain_batch = bulk_coop_relight ? 64 : 4;
+        const int max_inflight = thread_count * (bulk_coop_relight ? 3 : 2);
+        const int drain_batch = bulk_coop_relight ? 16 : 4;
         const int schedule_batch =
-            bulk_coop_relight ? std::clamp(budget * 4, 16, 64)
+            bulk_coop_relight ? std::clamp(budget * 2, 8, 24)
                               : std::clamp(budget / 2, 2, 8);
-        const int pass_limit = bulk_coop_relight ? 12 : 1;
+        const int pass_limit = bulk_coop_relight ? 4 : 1;
         for (int pass = 0; pass < pass_limit; ++pass)
         {
           ColumnRelightAppliedCount += static_cast<size_t>(

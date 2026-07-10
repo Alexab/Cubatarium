@@ -44,13 +44,14 @@ int main()
   Expect(cutum::IsTerrainChunkComplete(world, ground, kMaxWorldY, 3),
          "column with lower terrain and required slices should be complete");
 
-  cutum::MaterializeTerrainColumnAirSlices(world, ground, kMaxWorldY);
-  const int max_cy = (kMaxWorldY + cutum::CHUNK_SIZE - 1) / cutum::CHUNK_SIZE;
-  for (int cy = 0; cy <= max_cy; ++cy)
+  cutum::MaterializeRequiredTerrainColumnSlices(world, ground, kMaxWorldY, 3);
+  for (int cy = 0; cy <= 3; ++cy)
   {
     Expect(chunks.HasChunk(glm::ivec3(ground.x, cy, ground.z)),
-           "materialize should create every slice through maxCy");
+           "materialize should create required slices through topCy");
   }
+  Expect(!chunks.HasChunk(glm::ivec3(ground.x, 8, ground.z)),
+         "materialize should not pad empty sky slices up to maxCy");
 
   std::cout << "terrain_column_util_test: OK" << std::endl;
   return 0;
