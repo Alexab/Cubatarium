@@ -15,6 +15,8 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Lighting/ChunkLighting.h"
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -129,36 +131,71 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
 void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z)
 {
   const glm::ivec2 key(world_x, world_z);
-  for (const glm::ivec2 &pending : PendingTerrainColumnRelights)
+  if (!PendingTerrainColumnRelightKeys.insert(key).second)
   {
-    if (pending == key)
-    {
-      return;
-    }
+    return;
   }
   PendingTerrainColumnRelights.push_back(key);
 }
 
-void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_columns)
+void UWorldPersistence::EnqueuePlayerRelight(
+    const std::vector<glm::ivec3> &block_positions)
 {
-  if (max_columns <= 0 || PendingTerrainColumnRelights.empty())
+  if (block_positions.empty())
+  {
+    return;
+  }
+  int min_y = block_positions.front().y;
+  for (const glm::ivec3 &pos : block_positions)
+  {
+    min_y = std::min(min_y, pos.y);
+  }
+  min_y = std::max(0, min_y - CHUNK_SIZE);
+  PendingPlayerRelights.push_back(
+      PlayerRelightRequest{block_positions, min_y});
+}
+
+void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
+                                           int max_bg_columns)
+{
+  int drained_player = 0;
+  while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
+  {
+    const PlayerRelightRequest request = std::move(PendingPlayerRelights.front());
+    PendingPlayerRelights.pop_front();
+    world.RelightPlayerEdit(request.block_positions, request.min_world_y);
+    ++drained_player;
+  }
+
+  if (max_bg_columns <= 0 || PendingTerrainColumnRelights.empty())
   {
     return;
   }
   const int max_y = world.ProceduralTemplate.MaxHeight;
-  int drained = 0;
-  while (!PendingTerrainColumnRelights.empty() && drained < max_columns)
+  int drained_bg = 0;
+  while (!PendingTerrainColumnRelights.empty() && drained_bg < max_bg_columns)
   {
     const glm::ivec2 col = PendingTerrainColumnRelights.front();
     PendingTerrainColumnRelights.pop_front();
-    world.RelightTerrainColumn(col.x, col.y, 0, max_y);
-    ++drained;
+    PendingTerrainColumnRelightKeys.erase(col);
+    world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+    ++drained_bg;
   }
+}
+
+void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_columns)
+{
+  DrainRelightQueues(world, 0, max_columns);
 }
 
 int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
 {
   return static_cast<int>(PendingTerrainColumnRelights.size());
+}
+
+int UWorldPersistence::GetPendingPlayerRelightCount() const
+{
+  return static_cast<int>(PendingPlayerRelights.size());
 }
 
 void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
@@ -212,9 +249,6 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
         world.Streaming->GetStreamer()->NotifyChunkCommitted(ground);
       }
     }
-
-    constexpr int kMaxColumnRelightsPerFrame = 2;
-    DrainTerrainColumnRelights(world, kMaxColumnRelightsPerFrame);
 
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {

@@ -10,9 +10,20 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
+
+struct IVec2Hash
+{
+  std::size_t operator()(const glm::ivec2 &v) const noexcept
+  {
+    return std::hash<int64_t>{}((static_cast<int64_t>(v.x) << 32) ^
+                                static_cast<uint32_t>(v.y));
+  }
+};
 
 class UBlockRegistry;
 class UBlockWorld;
@@ -42,8 +53,11 @@ public:
 
   void TickAsyncChunkIo(UWorld &world);
   void EnqueueTerrainColumnRelight(int world_x, int world_z);
+  void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
+  void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
+  int GetPendingPlayerRelightCount() const;
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
@@ -60,7 +74,14 @@ private:
   std::unique_ptr<UChunkStorageService> ChunkStorage;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
+  struct PlayerRelightRequest
+  {
+    std::vector<glm::ivec3> block_positions;
+    int min_world_y{0};
+  };
+  std::deque<PlayerRelightRequest> PendingPlayerRelights;
   std::deque<glm::ivec2> PendingTerrainColumnRelights;
+  std::unordered_set<glm::ivec2, IVec2Hash> PendingTerrainColumnRelightKeys;
   std::string WorldFolderPath;
 };
 

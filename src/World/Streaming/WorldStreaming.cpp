@@ -135,9 +135,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          budget.MaxLoadOps);
   }
   world.Persistence->TickAsyncChunkIo(world);
-  const int pending = world.Persistence->GetPendingTerrainColumnRelightCount();
-  const int column_budget = pending > 12 ? 4 : (pending > 0 ? 2 : 1);
-  world.Persistence->DrainTerrainColumnRelights(world, column_budget);
+  const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
+  const int pending_bg = world.Persistence->GetPendingTerrainColumnRelightCount();
+  const int player_budget = pending_player > 0 ? 2 : 0;
+  const int bg_budget =
+      pending_bg > 12 ? 4 : (pending_bg > 0 ? 2 : 1);
+  world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
+  world.PhysicsTelemetryData.PendingPlayerRelights =
+      static_cast<uint64_t>(pending_player);
+  world.PhysicsTelemetryData.PendingBackgroundRelights =
+      static_cast<uint64_t>(pending_bg);
 }
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)

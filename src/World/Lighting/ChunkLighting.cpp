@@ -380,7 +380,7 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 namespace
 {
 
-constexpr int kRelightFrontierIterations = 4;
+constexpr int kRelightFrontierIterations = kRelightFrontierIterationsFull;
 
 void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
                               int min_y, int max_y,
@@ -494,10 +494,15 @@ std::unordered_set<glm::ivec3, IVec3Hash>
 RelightChunkSetWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                             std::unordered_set<glm::ivec3, IVec3Hash>
                                 initial_coords,
-                            bool include_block_light)
+                            bool include_block_light, int frontier_iterations,
+                            bool *out_frontier_unfinished)
 {
   if (initial_coords.empty())
   {
+    if (out_frontier_unfinished)
+    {
+      *out_frontier_unfinished = false;
+    }
     return {};
   }
 
@@ -507,7 +512,8 @@ RelightChunkSetWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
   std::unordered_set<glm::ivec3, IVec3Hash> relit_set =
       std::move(initial_coords);
 
-  for (int iter = 0; iter < kRelightFrontierIterations; ++iter)
+  bool frontier_unfinished = false;
+  for (int iter = 0; iter < frontier_iterations; ++iter)
   {
     std::unordered_set<glm::ivec3, IVec3Hash> frontier;
     for (const glm::ivec3 &coord : relit_set)
@@ -517,11 +523,17 @@ RelightChunkSetWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
     }
     if (frontier.empty())
     {
+      frontier_unfinished = false;
       break;
     }
     batch.assign(frontier.begin(), frontier.end());
     RelightChunkCoords(world, registry, batch, include_block_light);
     relit_set.insert(frontier.begin(), frontier.end());
+    frontier_unfinished = (iter == frontier_iterations - 1);
+  }
+  if (out_frontier_unfinished)
+  {
+    *out_frontier_unfinished = frontier_unfinished;
   }
   return relit_set;
 }
@@ -598,8 +610,33 @@ RelightBlocksAroundAll(UBlockWorld &world, UBlockRegistry &registry,
                              coords);
   }
   const std::unordered_set<glm::ivec3, IVec3Hash> relit =
-      RelightChunkSetWithFrontier(world, registry, std::move(coords), true);
+      RelightChunkSetWithFrontier(world, registry, std::move(coords), true,
+                                  kRelightFrontierIterationsFull, nullptr);
   return {relit.begin(), relit.end()};
+}
+
+RelightFrontierOutcome RelightBlocksAroundAllEx(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const std::vector<glm::ivec3> &block_positions, int min_world_y,
+    int max_world_y, bool include_block_light, int frontier_iterations)
+{
+  RelightFrontierOutcome outcome;
+  if (block_positions.empty())
+  {
+    return outcome;
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> coords;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    CollectColumnChunkCoords(world, block_pos.x, block_pos.z, min_world_y,
+                             max_world_y, coords);
+  }
+  const std::unordered_set<glm::ivec3, IVec3Hash> relit =
+      RelightChunkSetWithFrontier(world, registry, std::move(coords),
+                                  include_block_light, frontier_iterations,
+                                  &outcome.frontier_unfinished);
+  outcome.relit_chunks.assign(relit.begin(), relit.end());
+  return outcome;
 }
 
 void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
@@ -611,7 +648,8 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
   CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
   const std::unordered_set<glm::ivec3, IVec3Hash> relit =
       RelightChunkSetWithFrontier(world, registry, std::move(coords),
-                                  include_block_light);
+                                  include_block_light,
+                                  kRelightFrontierIterationsFull, nullptr);
   if (!out_relit_chunks)
   {
     return;

@@ -31,6 +31,8 @@
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/AsyncRelightBuilder.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
@@ -57,6 +59,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -697,31 +700,173 @@ void UWorld::RebuildAllLightingDirtyMeshes()
 }
 
 void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
-                                  int max_y)
+                                  int max_y, bool priority_mesh)
 {
   if (LightingRelightDeferred || !BlockRegistry)
   {
     return;
   }
+  const auto t0 = std::chrono::high_resolution_clock::now();
   const bool include_block_light = !LightingSkylightBulkComplete;
   std::vector<glm::ivec3> relit_chunks;
   RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
                             max_y, include_block_light, &relit_chunks);
+  MarkRelitChunksForMesh(relit_chunks, priority_mesh);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FullRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
+                               int min_world_y)
+{
+  if (LightingRelightDeferred || !BlockRegistry || block_positions.empty())
+  {
+    return;
+  }
+  if (ProceduralTemplate.AsyncRelight)
+  {
+    EnqueueAsyncPlayerRelight(block_positions, min_world_y);
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  const bool include_block_light = !LightingSkylightBulkComplete;
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const RelightFrontierOutcome outcome = RelightBlocksAroundAllEx(
+      BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y,
+      include_block_light, kRelightFrontierIterationsEdit);
+  MarkRelitChunksForMesh(outcome.relit_chunks, true);
+  PlayerRelightMeshBurstFrames = 3;
+  if (outcome.frontier_unfinished && Persistence)
+  {
+    for (const glm::ivec3 &pos : block_positions)
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FullRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
+                                    bool priority_mesh)
+{
   for (const glm::ivec3 &coord : relit_chunks)
   {
-    MeshService->MarkDirty(coord);
+    if (priority_mesh)
+    {
+      MeshService->MarkDirtyPriority(coord);
+    }
+    else
+    {
+      MeshService->MarkDirty(coord);
+    }
   }
+}
+
+void UWorld::ApplyEditFastRelight(
+    const std::vector<glm::ivec3> &block_positions)
+{
+  if (LightingRelightDeferred || !BlockRegistry || block_positions.empty())
+  {
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  RelightBlocksAroundLocal(BlockWorld, *BlockRegistry, block_positions);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FastRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
 void UWorld::ApplyEditLighting(const std::vector<glm::ivec3> &block_positions)
 {
-  if (block_positions.empty())
+  if (block_positions.empty() || !Persistence)
   {
     return;
   }
-  for (const glm::ivec3 &pos : block_positions)
+  Persistence->EnqueuePlayerRelight(block_positions);
+  PhysicsTelemetryData.PendingPlayerRelights =
+      static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
+  PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
+      Persistence->GetPendingTerrainColumnRelightCount());
+}
+
+void UWorld::TickPlayerRelightMeshBurst()
+{
+  if (PlayerRelightMeshBurstFrames > 0)
   {
-    Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    --PlayerRelightMeshBurstFrames;
+  }
+}
+
+void UWorld::EnsureAsyncRelightBuilder()
+{
+  if (!AsyncRelight)
+  {
+    const std::size_t threads = static_cast<std::size_t>(
+        std::clamp(ProceduralTemplate.RelightThreadCount, 1, 8));
+    AsyncRelight = std::make_unique<UAsyncRelightBuilder>(threads);
+  }
+}
+
+void UWorld::EnqueueAsyncPlayerRelight(
+    const std::vector<glm::ivec3> &block_positions, int min_world_y)
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  EnsureAsyncRelightBuilder();
+  RelightJobSpec spec;
+  spec.block_positions = block_positions;
+  spec.min_world_y = min_world_y;
+  spec.max_world_y = ProceduralTemplate.MaxHeight;
+  spec.include_block_light = !LightingSkylightBulkComplete;
+  spec.frontier_iterations = kRelightFrontierIterationsEdit;
+  spec.job_id = ++NextAsyncRelightJobId;
+  UChunkRelightSnapshot snapshot =
+      UChunkRelightSnapshot::Capture(BlockWorld, spec);
+  AsyncRelight->Enqueue(std::move(snapshot), *BlockRegistry);
+}
+
+void UWorld::DrainAsyncRelightResults()
+{
+  if (!AsyncRelight || !BlockRegistry)
+  {
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  constexpr int kMaxAsyncRelightApplyPerFrame = 4;
+  for (RelightComputeResult &result :
+       AsyncRelight->DrainCompleted(kMaxAsyncRelightApplyPerFrame))
+  {
+    std::vector<glm::ivec3> relit_coords;
+    relit_coords.reserve(result.chunks.size());
+    for (const RelightChunkLightData &chunk_data : result.chunks)
+    {
+      if (UChunk *chunk =
+              BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
+      {
+        chunk->GetLightDataMutable() = chunk_data.light_packed;
+        relit_coords.push_back(chunk_data.coord);
+      }
+    }
+    MarkRelitChunksForMesh(relit_coords, true);
+    PlayerRelightMeshBurstFrames = 3;
+    if (result.frontier_unfinished && Persistence)
+    {
+      for (const glm::ivec3 &pos : result.source_block_positions)
+      {
+        Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      }
+    }
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  if (AsyncRelight->HasPendingWork())
+  {
+    PhysicsTelemetryData.FullRelightMs =
+        std::chrono::duration<double, std::milli>(t1 - t0).count();
   }
 }
 
@@ -876,6 +1021,7 @@ void UWorld::InitStreamerCallbacks()
 
 void UWorld::TickAsyncChunkSystems()
 {
+  DrainAsyncRelightResults();
   Streaming->TickAsyncChunkSystems(*this);
 }
 
@@ -886,6 +1032,7 @@ void UWorld::TickMeshEmerge()
     return;
   }
   Streaming->TickMeshEmerge(*this);
+  TickPlayerRelightMeshBurst();
 }
 
 void UWorld::RefreshStreamerSettings()
@@ -1350,7 +1497,13 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
+  const auto edit_t0 = std::chrono::high_resolution_clock::now();
+  ApplyEditFastRelight({blockPos});
   MarkBlockChunkDirty(blockPos);
+  PhysicsTelemetryData.EditToFirstMeshMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - edit_t0)
+          .count();
   ApplyEditLighting({blockPos});
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
@@ -1707,7 +1860,13 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_above.begin(),
                            broken_above.end());
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
+  const auto edit_t0 = std::chrono::high_resolution_clock::now();
+  ApplyEditFastRelight(mesh_touch_blocks);
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
+  PhysicsTelemetryData.EditToFirstMeshMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - edit_t0)
+          .count();
   ApplyEditLighting(mesh_touch_blocks);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);

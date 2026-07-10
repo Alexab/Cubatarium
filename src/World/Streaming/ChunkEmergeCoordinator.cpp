@@ -66,11 +66,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 {
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
-  mesh_service.RebuildDirtyChunks(world.GetBlockWorld(), registry,
-                                  LastBudget.MaxMeshDrain,
-                                  LastBudget.MaxMeshSchedule);
+  int mesh_drain = LastBudget.MaxMeshDrain;
+  int mesh_schedule = LastBudget.MaxMeshSchedule;
+  if (world.GetPlayerRelightMeshBurstFrames() > 0)
+  {
+    mesh_drain = std::max(mesh_drain, 24);
+    mesh_schedule = std::max(mesh_schedule, 24);
+  }
+  mesh_service.RebuildDirtyChunks(world.GetBlockWorld(), registry, mesh_drain,
+                                  mesh_schedule);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
-                                     LastBudget.MaxMeshDrain);
+                                     mesh_drain);
 }
 
 } // namespace cutum

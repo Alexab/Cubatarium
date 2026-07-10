@@ -196,6 +196,15 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
   {
     settings.AsyncChunkIo = p["async_chunk_io"].get<bool>();
   }
+  if (p.contains("async_relight"))
+  {
+    settings.AsyncRelight = p["async_relight"].get<bool>();
+  }
+  if (p.contains("relight_thread_count"))
+  {
+    settings.RelightThreadCount =
+        std::clamp(p["relight_thread_count"].get<int>(), 1, 8);
+  }
   if (p.contains("ring_gate_enabled"))
   {
     settings.RingGateEnabled = p["ring_gate_enabled"].get<bool>();
@@ -241,6 +250,8 @@ void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
 {
   procedural["async_chunk_generation"] = settings.AsyncChunkGeneration;
   procedural["async_chunk_io"] = settings.AsyncChunkIo;
+  procedural["async_relight"] = settings.AsyncRelight;
+  procedural["relight_thread_count"] = settings.RelightThreadCount;
   procedural["ring_gate_enabled"] = settings.RingGateEnabled;
   procedural["max_chunk_commits_per_frame"] = settings.MaxChunkCommitsPerFrame;
   procedural["max_load_ops_per_frame"] = settings.MaxLoadOpsPerFrame;

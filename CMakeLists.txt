@@ -165,6 +165,8 @@ set(SOURCES
     src/World/Environment/WeatherAutoController.cpp
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/World/Lighting/ChunkRelightSnapshot.cpp
+    src/World/Lighting/AsyncRelightBuilder.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
@@ -399,6 +401,8 @@ set(HEADERS
     src/World/Environment/WeatherAutoController.h
     src/World/Lighting/LightUtil.h
     src/World/Lighting/ChunkLighting.h
+    src/World/Lighting/ChunkRelightSnapshot.h
+    src/World/Lighting/AsyncRelightBuilder.h
     src/World/Persistence/WorldPersistence.h
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h

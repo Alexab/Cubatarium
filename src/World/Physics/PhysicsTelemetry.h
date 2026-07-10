@@ -25,6 +25,11 @@ struct PhysicsTelemetry
   uint64_t CollisionBroadphaseFallbacks{0};
   uint64_t CollisionReadyTransitions{0};
   double CollisionReadyWaitMs{0.0};
+  double FastRelightMs{0.0};
+  double FullRelightMs{0.0};
+  double EditToFirstMeshMs{0.0};
+  uint64_t PendingPlayerRelights{0};
+  uint64_t PendingBackgroundRelights{0};
 };
 
 } // namespace cutum

@@ -7,7 +7,7 @@ This file tracks implementation compromises for the environment and lighting rol
 - **Issue:** Per-vertex CPU light scans baked a single `vLight` channel and async meshing skipped local light entirely.
 - **Current decision:** Store packed skylight/blocklight in `UChunk`, relight on edits/load/worldgen, sample lightmap in mesh, and apply day-night/weather only to skylight in shaders.
 - **Risk:** Full-chunk relight on edits is simple but may spike CPU when placing large structures.
-- **Follow-up:** Persist light in `.cchunk`, data-driven block emission, and budgeted incremental relight queues.
+- **Follow-up:** Persist light in `.cchunk`, data-driven block emission. Budgeted incremental relight queues **implemented (2026-07-10):** fast local relight on edit, player-priority queue, async `UAsyncRelightBuilder` (2 threads default), mesh burst after relight.
 
 - **Issue:** Emissive blocks still use name heuristics in `LightUtil`.
 - **Current decision:** Keep heuristic emission levels until block definitions expose explicit values.

@@ -290,24 +290,36 @@ void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
   modified_chunks.insert(chunk_coord);
 
   const RenderSettings &render = Cache.GetRenderSettings();
-  const bool sync_rebuild =
+  const bool full_sync_rebuild =
       registry != nullptr && (!render.AsyncMeshing || !render.GreedyMeshing);
-  auto mark_coord = [&](glm::ivec3 coord)
-  {
-    if (sync_rebuild)
-    {
-      RebuildChunkImmediate(block_world, *registry, coord);
-    }
-    else
-    {
-      MarkDirtyPriority(coord);
-    }
-  };
+  const bool hybrid_async_edit =
+      registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
 
-  mark_coord(chunk_coord);
+  if (full_sync_rebuild)
+  {
+    RebuildChunkImmediate(block_world, *registry, chunk_coord);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      RebuildChunkImmediate(block_world, *registry,
+                            UChunkManager::WorldToChunk(block_pos + offset));
+    }
+    return;
+  }
+
+  if (hybrid_async_edit)
+  {
+    RebuildChunkImmediate(block_world, *registry, chunk_coord);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      MarkDirtyPriority(UChunkManager::WorldToChunk(block_pos + offset));
+    }
+    return;
+  }
+
+  MarkDirtyPriority(chunk_coord);
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
-    mark_coord(UChunkManager::WorldToChunk(block_pos + offset));
+    MarkDirtyPriority(UChunkManager::WorldToChunk(block_pos + offset));
   }
 }
 
@@ -321,8 +333,10 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     return;
   }
   std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
+  std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
   for (const glm::ivec3 &block_pos : block_positions)
   {
+    center_chunks.insert(UChunkManager::WorldToChunk(block_pos));
     chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
@@ -339,19 +353,27 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     return;
   }
   const RenderSettings &render = Cache.GetRenderSettings();
-  const bool sync_rebuild =
-      registry != nullptr && (!render.AsyncMeshing || !render.GreedyMeshing);
-  if (!sync_rebuild)
+  const bool full_sync_rebuild =
+      !render.AsyncMeshing || !render.GreedyMeshing;
+  if (full_sync_rebuild)
   {
     for (const glm::ivec3 &chunk_coord : chunk_coords)
     {
-      MarkDirtyPriority(chunk_coord);
+      RebuildChunkImmediate(block_world, *registry, chunk_coord);
     }
     return;
   }
+
   for (const glm::ivec3 &chunk_coord : chunk_coords)
   {
-    RebuildChunkImmediate(block_world, *registry, chunk_coord);
+    if (center_chunks.count(chunk_coord))
+    {
+      RebuildChunkImmediate(block_world, *registry, chunk_coord);
+    }
+    else
+    {
+      MarkDirtyPriority(chunk_coord);
+    }
   }
 }
 

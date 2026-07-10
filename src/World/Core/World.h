@@ -54,6 +54,7 @@ class USkinDefinitionStorage;
 struct CreatureDefinition;
 
 class UWorldViewBinding;
+class UAsyncRelightBuilder;
 class UViewEngine;
 class UTextureCubeStorage;
 class UObjectLibrary;
@@ -680,7 +681,15 @@ public:
   {
     LightingSkylightBulkComplete = complete;
   }
-  void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y);
+  void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
+                            bool priority_mesh = false);
+  void RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
+                         int min_world_y);
+  int GetPlayerRelightMeshBurstFrames() const
+  {
+    return PlayerRelightMeshBurstFrames;
+  }
+  void TickPlayerRelightMeshBurst();
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
@@ -744,6 +753,7 @@ private:
   void RebuildBlockMesh();
   void InitStreamerCallbacks();
   void TickAsyncChunkSystems();
+  void DrainAsyncRelightResults();
   void TickMeshEmerge();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);
   bool IsReasonablePlayerPosition(const glm::vec3 &position) const;
@@ -753,6 +763,12 @@ private:
   void ApplyBreakSiteFluidFlood(glm::ivec3 blockPos,
                                 std::vector<glm::ivec3> &mesh_touch_blocks);
   void ApplyEditLighting(const std::vector<glm::ivec3> &block_positions);
+  void ApplyEditFastRelight(const std::vector<glm::ivec3> &block_positions);
+  void EnqueueAsyncPlayerRelight(const std::vector<glm::ivec3> &block_positions,
+                                 int min_world_y);
+  void EnsureAsyncRelightBuilder();
+  void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
+                              bool priority_mesh);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void
@@ -819,6 +835,8 @@ private:
   std::unique_ptr<UWorldMeshService> MeshService;
   std::unique_ptr<UWorldStreaming> Streaming;
   std::unique_ptr<UWorldPersistence> Persistence;
+  std::unique_ptr<UAsyncRelightBuilder> AsyncRelight;
+  uint64_t NextAsyncRelightJobId{1};
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};
   RenderSettings Render;
@@ -827,6 +845,7 @@ private:
   LightingSettings LightingSettingsData;
   bool LightingRelightDeferred{false};
   bool LightingSkylightBulkComplete{false};
+  int PlayerRelightMeshBurstFrames{0};
   bool SpawnAreaPreparedByCooperativeLoad{false};
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
