@@ -86,6 +86,20 @@ int SkylightStepCost(const UBlockRegistry &registry, BlockId id)
   return 1;
 }
 
+int VerticalSkylightStepCost(const UBlockRegistry &registry, BlockId id)
+{
+  if (!IsLightTransparent(registry, id))
+  {
+    return kMaxLightLevel + 1;
+  }
+  // Direct sky column should stay bright through air/cross/cutout blocks.
+  if (registry.IsLiquid(id))
+  {
+    return 1;
+  }
+  return 0;
+}
+
 void PropagateSkylightColumn(UBlockWorld &world, UBlockRegistry &registry,
                              UChunk &chunk, glm::ivec3 chunk_coord, int local_x,
                              int local_z)
@@ -113,7 +127,7 @@ void PropagateSkylightColumn(UBlockWorld &world, UBlockRegistry &registry,
     {
       WriteSkyLight(chunk, local, incoming);
     }
-    incoming = std::max(0, incoming - SkylightStepCost(registry, id));
+    incoming = std::max(0, incoming - VerticalSkylightStepCost(registry, id));
   }
 }
 
