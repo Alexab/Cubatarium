@@ -526,6 +526,34 @@ RelightChunkSetWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
   return relit_set;
 }
 
+void CollectEditNeighborhoodChunkCoords(
+    const UBlockWorld &world,
+    const std::vector<glm::ivec3> &block_positions,
+    std::unordered_set<glm::ivec3, IVec3Hash> &out)
+{
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+      const glm::ivec3 layer(center.x, center.y + dy, center.z);
+      if (!world.GetChunkManager().HasChunk(layer))
+      {
+        continue;
+      }
+      out.insert(layer);
+      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+      {
+        const glm::ivec3 neighbor = layer + offset;
+        if (world.GetChunkManager().HasChunk(neighbor))
+        {
+          out.insert(neighbor);
+        }
+      }
+    }
+  }
+}
+
 } // namespace
 
 void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
@@ -538,10 +566,24 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
   RelightChunkCoords(world, registry, {chunk_coord}, include_block_light);
 }
 
+void RelightBlocksAroundLocal(UBlockWorld &world, UBlockRegistry &registry,
+                              const std::vector<glm::ivec3> &block_positions)
+{
+  std::unordered_set<glm::ivec3, IVec3Hash> coords;
+  CollectEditNeighborhoodChunkCoords(world, block_positions, coords);
+  if (coords.empty())
+  {
+    return;
+  }
+  const std::vector<glm::ivec3> batch(coords.begin(), coords.end());
+  RelightChunkCoords(world, registry, batch, true);
+}
+
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 block_pos, int max_world_y)
 {
-  (void)RelightBlocksAroundAll(world, registry, {block_pos}, max_world_y);
+  (void)max_world_y;
+  RelightBlocksAroundLocal(world, registry, {block_pos});
 }
 
 std::vector<glm::ivec3>

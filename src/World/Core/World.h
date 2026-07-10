@@ -752,6 +752,7 @@ private:
   bool TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId);
   void ApplyBreakSiteFluidFlood(glm::ivec3 blockPos,
                                 std::vector<glm::ivec3> &mesh_touch_blocks);
+  void ApplyEditLighting(const std::vector<glm::ivec3> &block_positions);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void

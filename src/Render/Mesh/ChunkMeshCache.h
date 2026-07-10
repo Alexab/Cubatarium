@@ -36,6 +36,7 @@ public:
   void MarkAllDirty();
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void MarkDirty(glm::ivec3 chunkCoord);
+  void MarkDirtyPriority(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame = 8,
@@ -59,6 +60,7 @@ public:
   void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &viewProj,
                               const glm::vec3 &cameraPos);
   void SetRenderSettings(const RenderSettings &settings);
+  const RenderSettings &GetRenderSettings() const { return Render; }
   void SetRenderDistanceChunks(int distance)
   {
     RenderDistanceChunks = distance;

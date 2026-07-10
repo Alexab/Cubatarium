@@ -222,6 +222,15 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
 }
+void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
+{
+  Dirty.MarkDirtyPriority(chunkCoord);
+  InvalidateFluidSurfaceForChunk(chunkCoord);
+  PendingMeshRevisionBump = true;
+  InstancesDirty = true;
+  GreedyBatchesDirty = true;
+  CrossBatchesDirty = true;
+}
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
   Cache.erase(chunkCoord);

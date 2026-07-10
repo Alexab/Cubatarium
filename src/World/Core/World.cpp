@@ -713,6 +713,18 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   }
 }
 
+void UWorld::ApplyEditLighting(const std::vector<glm::ivec3> &block_positions)
+{
+  if (block_positions.empty())
+  {
+    return;
+  }
+  for (const glm::ivec3 &pos : block_positions)
+  {
+    Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+  }
+}
+
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
   return UWorldPersistence::HasPersistedTerrainOnDisk(world_folder_path);
@@ -1338,16 +1350,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
-  if (BlockRegistry)
-  {
-    const std::vector<glm::ivec3> relit_chunks = RelightBlocksAroundAll(
-        BlockWorld, *BlockRegistry, {blockPos}, ProceduralTemplate.MaxHeight);
-    for (const glm::ivec3 &coord : relit_chunks)
-    {
-      MeshService->MarkDirty(coord);
-    }
-  }
   MarkBlockChunkDirty(blockPos);
+  ApplyEditLighting({blockPos});
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
@@ -1702,6 +1706,9 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   mesh_touch_blocks.push_back(blockPos);
   mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_above.begin(),
                            broken_above.end());
+  ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
+  ApplyEditLighting(mesh_touch_blocks);
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   for (const glm::ivec3 &above_pos : broken_above)
@@ -1713,18 +1720,6 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
     PublishBlockPhysicsEvent(above_pos);
     PublishNeighborPhysicsEvents(above_pos);
   }
-  ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
-  if (BlockRegistry)
-  {
-    const std::vector<glm::ivec3> relit_chunks = RelightBlocksAroundAll(
-        BlockWorld, *BlockRegistry, mesh_touch_blocks,
-        ProceduralTemplate.MaxHeight);
-    for (const glm::ivec3 &coord : relit_chunks)
-    {
-      MeshService->MarkDirty(coord);
-    }
-  }
-  MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (ViewBinding)
   {
     ViewBinding->RefreshIntersectionFromCurrentView(*this);

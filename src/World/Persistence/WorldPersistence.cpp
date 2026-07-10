@@ -156,6 +156,11 @@ void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_column
   }
 }
 
+int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
+{
+  return static_cast<int>(PendingTerrainColumnRelights.size());
+}
+
 void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
 {
   if (!ChunkStorage)

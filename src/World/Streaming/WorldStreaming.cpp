@@ -135,7 +135,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          budget.MaxLoadOps);
   }
   world.Persistence->TickAsyncChunkIo(world);
-  world.Persistence->DrainTerrainColumnRelights(world, 1);
+  const int pending = world.Persistence->GetPendingTerrainColumnRelightCount();
+  const int column_budget = pending > 12 ? 4 : (pending > 0 ? 2 : 1);
+  world.Persistence->DrainTerrainColumnRelights(world, column_budget);
 }
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)

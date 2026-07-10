@@ -34,6 +34,7 @@ public:
   void SetRenderDistanceChunks(int distance);
 
   void MarkDirty(glm::ivec3 chunk_coord);
+  void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);

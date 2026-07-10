@@ -45,6 +45,12 @@ void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
   NotifyChunkBlocksChanged(chunk_coord);
 }
 
+void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
+{
+  Cache.MarkDirtyPriority(chunk_coord);
+  NotifyChunkBlocksChanged(chunk_coord);
+}
+
 void UWorldMeshService::MarkAllDirtyFromWorld(const UBlockWorld &world)
 {
   Cache.MarkAllDirtyFromWorld(world);
@@ -283,16 +289,18 @@ void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
   const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(block_pos);
   modified_chunks.insert(chunk_coord);
 
-  const bool immediate = registry != nullptr;
+  const RenderSettings &render = Cache.GetRenderSettings();
+  const bool sync_rebuild =
+      registry != nullptr && (!render.AsyncMeshing || !render.GreedyMeshing);
   auto mark_coord = [&](glm::ivec3 coord)
   {
-    if (immediate)
+    if (sync_rebuild)
     {
       RebuildChunkImmediate(block_world, *registry, coord);
     }
     else
     {
-      MarkDirty(coord);
+      MarkDirtyPriority(coord);
     }
   };
 
@@ -326,7 +334,18 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   {
     for (const glm::ivec3 &chunk_coord : chunk_coords)
     {
-      MarkDirty(chunk_coord);
+      MarkDirtyPriority(chunk_coord);
+    }
+    return;
+  }
+  const RenderSettings &render = Cache.GetRenderSettings();
+  const bool sync_rebuild =
+      registry != nullptr && (!render.AsyncMeshing || !render.GreedyMeshing);
+  if (!sync_rebuild)
+  {
+    for (const glm::ivec3 &chunk_coord : chunk_coords)
+    {
+      MarkDirtyPriority(chunk_coord);
     }
     return;
   }

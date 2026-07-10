@@ -14,6 +14,19 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
   Queue.push_back(coord);
 }
 
+void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
+{
+  if (Set.count(coord))
+  {
+    Queue.erase(std::remove(Queue.begin(), Queue.end(), coord), Queue.end());
+  }
+  else
+  {
+    Set.insert(coord);
+  }
+  Queue.insert(Queue.begin(), coord);
+}
+
 void UChunkDirtySet::Erase(glm::ivec3 coord)
 {
   if (!Set.erase(coord))

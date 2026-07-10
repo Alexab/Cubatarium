@@ -43,6 +43,7 @@ public:
   void TickAsyncChunkIo(UWorld &world);
   void EnqueueTerrainColumnRelight(int world_x, int world_z);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
+  int GetPendingTerrainColumnRelightCount() const;
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;

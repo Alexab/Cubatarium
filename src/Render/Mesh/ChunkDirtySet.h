@@ -14,6 +14,7 @@ class UChunkDirtySet
 {
 public:
   void MarkDirty(glm::ivec3 coord);
+  void MarkDirtyPriority(glm::ivec3 coord);
   void Erase(glm::ivec3 coord);
   void Clear();
 
