@@ -119,6 +119,37 @@ int main()
   Expect(BlockAt(world, glm::ivec3(8, 5, 8)) >= 13, "torch emission");
   Expect(BlockAt(world, glm::ivec3(8, 5, 9)) > 0, "torch blocklight spread");
 
+  world.SetBlock(glm::ivec3(8, 5, 8), cutum::BLOCK_AIR);
+  cutum::RelightChunksAround(world, *registry, glm::ivec3(8, 5, 8));
+  Expect(BlockAt(world, glm::ivec3(8, 5, 9)) == 0,
+         "torch blocklight removed after break");
+
+  for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
+  {
+    for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+    {
+      world.SetBlock(glm::ivec3(x, 0, z), kStone);
+    }
+  }
+  for (int y = 1; y <= 15; ++y)
+  {
+    world.SetBlock(glm::ivec3(8, y, 8), cutum::BLOCK_AIR);
+    world.SetBlock(glm::ivec3(7, y, 8), kStone);
+    world.SetBlock(glm::ivec3(9, y, 8), kStone);
+    world.SetBlock(glm::ivec3(8, y, 7), kStone);
+    world.SetBlock(glm::ivec3(8, y, 9), kStone);
+  }
+  cutum::RelightChunk(world, *registry, chunk_coord);
+  Expect(SkyAt(world, glm::ivec3(8, 1, 8)) > 0, "skylight enters open shaft");
+  world.SetBlock(glm::ivec3(8, 2, 8), kStone);
+  cutum::RelightChunksAround(world, *registry, glm::ivec3(8, 2, 8));
+  Expect(SkyAt(world, glm::ivec3(8, 1, 8)) == 0,
+         "skylight blocked by second shaft block");
+  world.SetBlock(glm::ivec3(8, 2, 8), cutum::BLOCK_AIR);
+  cutum::RelightChunksAround(world, *registry, glm::ivec3(8, 2, 8));
+  Expect(SkyAt(world, glm::ivec3(8, 1, 8)) > 0,
+         "skylight restored after shaft reopen");
+
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
   return 0;
 }

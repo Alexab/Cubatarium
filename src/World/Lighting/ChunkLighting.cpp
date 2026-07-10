@@ -51,6 +51,29 @@ void WriteBlockLight(UChunk &chunk, glm::ivec3 local, int block_level)
   chunk.SetLightLocal(local, sky_level, block_level);
 }
 
+void WriteSkyLightWorld(UBlockWorld &world, glm::ivec3 world_pos, int sky_level)
+{
+  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
+  UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  WriteSkyLight(*chunk, UChunkManager::WorldToLocal(world_pos), sky_level);
+}
+
+void WriteBlockLightWorld(UBlockWorld &world, glm::ivec3 world_pos,
+                          int block_level)
+{
+  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
+  UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  WriteBlockLight(*chunk, UChunkManager::WorldToLocal(world_pos), block_level);
+}
+
 int GetSkyLightWorld(const UBlockWorld &world, glm::ivec3 world_pos)
 {
   const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
@@ -131,27 +154,85 @@ void PropagateSkylightColumn(UBlockWorld &world, UBlockRegistry &registry,
   }
 }
 
-void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
-                                 UChunk &chunk, glm::ivec3 chunk_coord)
+bool SharesChunkFace(glm::ivec3 world_pos, glm::ivec3 chunk_coord)
 {
   const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-  std::deque<glm::ivec3> queue;
-  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+  const glm::ivec3 local = world_pos - origin;
+  if (local.x < 0 || local.x >= CHUNK_SIZE || local.y < 0 ||
+      local.y >= CHUNK_SIZE || local.z < 0 || local.z >= CHUNK_SIZE)
   {
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+    return false;
+  }
+  return local.x == 0 || local.x == CHUNK_SIZE - 1 || local.y == 0 ||
+         local.y == CHUNK_SIZE - 1 || local.z == 0 || local.z == CHUNK_SIZE - 1;
+}
+
+void SeedSkylightHorizontalQueue(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord,
+                                 std::deque<glm::ivec3> &queue)
+{
+  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
+  const auto try_seed = [&](glm::ivec3 world_pos, int sky_level)
+  {
+    if (sky_level <= 0)
     {
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      return;
+    }
+    if (!IsLightTransparent(registry, world.GetBlock(world_pos)))
+    {
+      return;
+    }
+    queue.push_back(world_pos);
+  };
+
+  if (const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord))
+  {
+    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+    {
+      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
       {
-        const glm::ivec3 local(lx, ly, lz);
-        const BlockId id = chunk.GetBlockLocal(local);
-        if (IsLightTransparent(registry, id) &&
-            chunk.GetSkyLightLocal(local) > 0)
+        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
         {
-          queue.push_back(origin + local);
+          const glm::ivec3 local(lx, ly, lz);
+          try_seed(origin + local, chunk->GetSkyLightLocal(local));
         }
       }
     }
   }
+
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 neighbor_coord = chunk_coord + offset;
+    const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
+    if (!neighbor)
+    {
+      continue;
+    }
+    const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
+    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+    {
+      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+      {
+        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+        {
+          const glm::ivec3 local(lx, ly, lz);
+          const glm::ivec3 world_pos = neighbor_origin + local;
+          if (!SharesChunkFace(world_pos, chunk_coord))
+          {
+            continue;
+          }
+          try_seed(world_pos, neighbor->GetSkyLightLocal(local));
+        }
+      }
+    }
+  }
+}
+
+void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord)
+{
+  std::deque<glm::ivec3> queue;
+  SeedSkylightHorizontalQueue(world, registry, chunk_coord, queue);
 
   while (!queue.empty())
   {
@@ -165,10 +246,6 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
-      if (!WorldPosInChunk(neighbor, chunk_coord))
-      {
-        continue;
-      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -180,27 +257,25 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
       {
         continue;
       }
-      const glm::ivec3 local = neighbor - origin;
-      WriteSkyLight(chunk, local, next);
+      WriteSkyLightWorld(world, neighbor, next);
       queue.push_back(neighbor);
     }
   }
 }
 
 void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
-                         UChunk &chunk, glm::ivec3 chunk_coord)
+                         glm::ivec3 chunk_coord)
 {
-  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
   std::deque<std::pair<glm::ivec3, int>> queue;
 
-  const auto seed_chunk = [&](glm::ivec3 neighbor_coord)
+  const auto seed_chunk = [&](glm::ivec3 seed_coord)
   {
-    const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
-    if (!neighbor)
+    const UChunk *seed_chunk_ptr = world.GetChunkManager().GetChunk(seed_coord);
+    if (!seed_chunk_ptr)
     {
       return;
     }
-    const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
+    const glm::ivec3 seed_origin = seed_coord * CHUNK_SIZE;
     for (int ly = 0; ly < CHUNK_SIZE; ++ly)
     {
       for (int lz = 0; lz < CHUNK_SIZE; ++lz)
@@ -208,11 +283,12 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
         for (int lx = 0; lx < CHUNK_SIZE; ++lx)
         {
           const glm::ivec3 local(lx, ly, lz);
-          const BlockId id = neighbor->GetBlockLocal(local);
+          const glm::ivec3 world_pos = seed_origin + local;
+          const BlockId id = seed_chunk_ptr->GetBlockLocal(local);
           const int emission = BlockEmissionLevel(registry, id);
           if (emission > 0)
           {
-            queue.emplace_back(neighbor_origin + local, emission);
+            queue.emplace_back(world_pos, emission);
           }
         }
       }
@@ -229,15 +305,11 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
   {
     const auto [pos, light] = queue.front();
     queue.pop_front();
-    if (WorldPosInChunk(pos, chunk_coord))
+    if (light <= GetBlockLightWorld(world, pos))
     {
-      if (light <= GetBlockLightWorld(world, pos))
-      {
-        continue;
-      }
-      const glm::ivec3 local = pos - origin;
-      WriteBlockLight(chunk, local, light);
+      continue;
     }
+    WriteBlockLightWorld(world, pos, light);
     if (light <= 1)
     {
       continue;
@@ -245,10 +317,6 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
-      if (!WorldPosInChunk(neighbor, chunk_coord))
-      {
-        continue;
-      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -265,28 +333,58 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
 
 } // namespace
 
-void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
-                  glm::ivec3 chunk_coord, bool include_block_light)
+void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
+                        const std::vector<glm::ivec3> &coords,
+                        bool include_block_light)
 {
-  UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
-  if (!chunk)
+  for (const glm::ivec3 &coord : coords)
+  {
+    if (UChunk *chunk = world.GetChunkManager().GetChunk(coord))
+    {
+      ClearChunkLight(*chunk);
+    }
+  }
+
+  for (const glm::ivec3 &coord : coords)
+  {
+    UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+    {
+      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+      {
+        PropagateSkylightColumn(world, registry, *chunk, coord, lx, lz);
+      }
+    }
+  }
+
+  for (const glm::ivec3 &coord : coords)
+  {
+    PropagateSkylightHorizontal(world, registry, coord);
+  }
+
+  if (!include_block_light)
   {
     return;
   }
 
-  ClearChunkLight(*chunk);
-  for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+  for (const glm::ivec3 &coord : coords)
   {
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-    {
-      PropagateSkylightColumn(world, registry, *chunk, chunk_coord, lx, lz);
-    }
+    PropagateBlocklight(world, registry, coord);
   }
-  PropagateSkylightHorizontal(world, registry, *chunk, chunk_coord);
-  if (include_block_light)
+}
+
+void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
+                  glm::ivec3 chunk_coord, bool include_block_light)
+{
+  if (!world.GetChunkManager().HasChunk(chunk_coord))
   {
-    PropagateBlocklight(world, registry, *chunk, chunk_coord);
+    return;
   }
+  RelightChunkCoords(world, registry, {chunk_coord}, include_block_light);
 }
 
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
@@ -303,9 +401,34 @@ void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,
       coords.push_back(neighbor);
     }
   }
+  RelightChunkCoords(world, registry, coords, true);
+}
+
+void RelightBlocksAroundAll(UBlockWorld &world, UBlockRegistry &registry,
+                            const std::vector<glm::ivec3> &block_positions)
+{
+  std::unordered_set<glm::ivec3, IVec3Hash> coords;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
+    coords.insert(center);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      coords.insert(center + offset);
+    }
+  }
+  std::vector<glm::ivec3> coord_list;
+  coord_list.reserve(coords.size());
   for (const glm::ivec3 &coord : coords)
   {
-    RelightChunk(world, registry, coord);
+    if (world.GetChunkManager().HasChunk(coord))
+    {
+      coord_list.push_back(coord);
+    }
+  }
+  if (!coord_list.empty())
+  {
+    RelightChunkCoords(world, registry, coord_list, true);
   }
 }
 
@@ -327,12 +450,18 @@ void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
       }
     }
   }
+  std::vector<glm::ivec3> coord_list;
+  coord_list.reserve(coords.size());
   for (const glm::ivec3 &coord : coords)
   {
     if (world.GetChunkManager().HasChunk(coord))
     {
-      RelightChunk(world, registry, coord, include_block_light);
+      coord_list.push_back(coord);
     }
+  }
+  if (!coord_list.empty())
+  {
+    RelightChunkCoords(world, registry, coord_list, include_block_light);
   }
 }
 

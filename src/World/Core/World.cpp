@@ -1709,23 +1709,7 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   if (BlockRegistry)
   {
-    std::unordered_set<glm::ivec3, IVec3Hash> relight_coords;
-    for (const glm::ivec3 &pos : mesh_touch_blocks)
-    {
-      const glm::ivec3 center = UChunkManager::WorldToChunk(pos);
-      relight_coords.insert(center);
-      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-      {
-        relight_coords.insert(center + offset);
-      }
-    }
-    for (const glm::ivec3 &coord : relight_coords)
-    {
-      if (BlockWorld.GetChunkManager().HasChunk(coord))
-      {
-        RelightChunk(BlockWorld, *BlockRegistry, coord);
-      }
-    }
+    RelightBlocksAroundAll(BlockWorld, *BlockRegistry, mesh_touch_blocks);
   }
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks);
   if (ViewBinding)

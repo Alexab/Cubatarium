@@ -180,18 +180,16 @@ void main()
         sky01 = 1.0;
     }
     float daySky = clamp(uEnvDayFactor * uEnvSkyLightScale, 0.0, 1.0);
-    float dayAmbient = max(uEnvMinAmbient * (0.82 + 0.18 * daySky), 0.12);
-    float nightAmbient = max(uEnvMinAmbient * (0.72 + 0.28 * uEnvNightFactor), 0.08);
+    float nightSky = clamp(uEnvNightFactor * (1.0 - daySky), 0.0, 1.0);
+    float dayAmbient = uEnvMinAmbient * (0.42 + 0.38 * daySky);
+    float nightAmbient = uEnvMinAmbient * (0.12 + 0.28 * nightSky);
     float skyAmbient = mix(nightAmbient, dayAmbient, daySky);
-    float skyMix = clamp(sky01 * (0.78 + 0.22 * daySky), 0.0, 1.0);
+    float skyMix = clamp(sky01 * daySky + sky01 * 0.12 * (1.0 - daySky), 0.0, 1.0);
     float skyLit = mix(skyAmbient, 1.0, skyMix);
-    if (vFaceIndex == 4) {
-        skyLit = min(1.0, skyLit + 0.08 * daySky);
-    }
-    float blockAmbientFloor = clamp(uEnvMinAmbient * 0.06, 0.01, 0.18);
-    float blockStrength = mix(0.58, 0.24, daySky);
+    float blockAmbientFloor = clamp(uEnvMinAmbient * 0.04, 0.005, 0.1);
+    float blockStrength = mix(0.9, 0.35, daySky);
     float blockLit = mix(blockAmbientFloor, blockStrength, block01);
-    float lit = clamp(max(skyLit, blockLit) + skyAmbient * 0.18, 0.0, 1.0);
+    float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {
         if (uEnvLightDebugMode < 1.5) {
