@@ -37,6 +37,7 @@ def run_create(
     radius: int,
     report_path: Path,
     timeout: int,
+    terrain_backend: str | None = None,
 ) -> None:
     cmd = [
         str(exe),
@@ -53,6 +54,8 @@ def run_create(
         "--report-json",
         str(report_path),
     ]
+    if terrain_backend:
+        cmd.extend(["--terrain-backend", terrain_backend])
     print("+", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True, timeout=timeout)
 
@@ -80,6 +83,17 @@ def main() -> int:
     )
     parser.add_argument("--timeout", type=int, default=480)
     parser.add_argument("--keep-worlds", action="store_true")
+    parser.add_argument(
+        "--terrain-backend",
+        type=str,
+        default="heightmap",
+        help="Terrain backend passed to --create-world (heightmap or density_3d)",
+    )
+    parser.add_argument(
+        "--both-backends",
+        action="store_true",
+        help="Run integration for both heightmap and density_3d backends",
+    )
     args = parser.parse_args()
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
@@ -89,85 +103,104 @@ def main() -> int:
     refs = REPO / "content" / "worldgen_refs.json"
     spawn_radius = baseline.get("spawn_radius", 48)
 
+    backends = ["heightmap", "density_3d"] if args.both_backends else [args.terrain_backend]
+
     failures: list[str] = []
-    for seed in seeds:
-        world_name = f"CI_{seed}"
-        world_dir = args.cwd / "worlds" / world_name
-        report_path = args.cwd / f"create_world_{seed}.json"
-        if world_dir.is_dir() and not args.keep_worlds:
-            shutil.rmtree(world_dir, ignore_errors=True)
+    for backend in backends:
+        for seed in seeds:
+            suffix = "" if backend == "heightmap" else f"_{backend}"
+            world_name = f"CI_{seed}{suffix}"
+            world_dir = args.cwd / "worlds" / world_name
+            report_path = args.cwd / f"create_world_{seed}{suffix}.json"
+            if world_dir.is_dir() and not args.keep_worlds:
+                shutil.rmtree(world_dir, ignore_errors=True)
 
-        try:
-            run_create(
-                args.exe,
-                args.cwd,
-                seed,
-                world_name,
-                args.radius_chunks,
-                report_path,
-                args.timeout,
+            try:
+                run_create(
+                    args.exe,
+                    args.cwd,
+                    seed,
+                    world_name,
+                    args.radius_chunks,
+                    report_path,
+                    args.timeout,
+                    terrain_backend=backend,
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+                failures.append(
+                    f"backend={backend} seed {seed}: create-world failed: {exc}"
+                )
+                continue
+
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            if not report.get("success"):
+                failures.append(
+                    f"backend={backend} seed {seed}: report success=false: "
+                    f"{report.get('error')}"
+                )
+                continue
+            if report.get("seed") != seed:
+                failures.append(
+                    f"backend={backend} seed {seed}: world_seed mismatch "
+                    f"report={report.get('seed')}"
+                )
+
+            metrics = analyze_world(
+                world_dir,
+                refs,
+                repo_root=REPO,
+                spawn_radius=spawn_radius,
+                max_height=baseline.get("max_height", 128),
             )
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            failures.append(f"seed {seed}: create-world failed: {exc}")
-            continue
+            seed_failures = compare_to_thresholds(metrics, thresholds)
+            for msg in seed_failures:
+                failures.append(f"backend={backend} seed {seed}: {msg}")
 
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-        if not report.get("success"):
-            failures.append(f"seed {seed}: report success=false: {report.get('error')}")
-            continue
-        if report.get("seed") != seed:
-            failures.append(
-                f"seed {seed}: world_seed mismatch report={report.get('seed')}"
+            chunk_a = world_dir / "chunks" / "0_0_0.cchunk"
+            if not chunk_a.is_file():
+                failures.append(
+                    f"backend={backend} seed {seed}: missing chunk 0_0_0.cchunk"
+                )
+                continue
+
+            if not args.skip_determinism:
+                world_b = f"CI_{seed}{suffix}_det"
+                world_b_dir = args.cwd / "worlds" / world_b
+                if world_b_dir.is_dir():
+                    shutil.rmtree(world_b_dir, ignore_errors=True)
+                run_create(
+                    args.exe,
+                    args.cwd,
+                    seed,
+                    world_b,
+                    args.radius_chunks,
+                    args.cwd / f"create_world_{seed}{suffix}_det.json",
+                    args.timeout,
+                    terrain_backend=backend,
+                )
+                chunk_b = world_b_dir / "chunks" / "0_0_0.cchunk"
+                if chunk_b.is_file() and sha256_file(chunk_a) != sha256_file(chunk_b):
+                    failures.append(
+                        f"backend={backend} seed {seed}: determinism failed "
+                        f"for 0_0_0.cchunk"
+                    )
+                if not args.keep_worlds:
+                    shutil.rmtree(world_b_dir, ignore_errors=True)
+
+            spawn = metrics.get("spawn", {}).get("surface_slots", {})
+            print(
+                f"backend={backend} seed {seed}: grass={spawn.get('grass', 0):.1f}% "
+                f"stone={spawn.get('stone', 0):.1f}% "
+                f"trees={metrics.get('spawn_tree_blocks', 0)} "
+                f"bush={metrics.get('spawn_bush_common_footprints', 0)} "
+                f"logs={metrics.get('spawn_ground_logs', 0)} "
+                f"fire={metrics.get('spawn_fire_blocks', 0)} "
+                f"gaps={metrics.get('shore_air_gaps', 0)} "
+                f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
+                f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}% "
+                f"flat={metrics.get('flatness_pct', 0):.2f}% "
+                f"rolling={metrics.get('rolling_hill_pct', 0):.2f}%"
             )
-
-        metrics = analyze_world(
-            world_dir,
-            refs,
-            repo_root=REPO,
-            spawn_radius=spawn_radius,
-            max_height=baseline.get("max_height", 128),
-        )
-        seed_failures = compare_to_thresholds(metrics, thresholds)
-        for msg in seed_failures:
-            failures.append(f"seed {seed}: {msg}")
-
-        chunk_a = world_dir / "chunks" / "0_0_0.cchunk"
-        if not chunk_a.is_file():
-            failures.append(f"seed {seed}: missing chunk 0_0_0.cchunk")
-            continue
-
-        if not args.skip_determinism:
-            world_b = f"CI_{seed}_det"
-            world_b_dir = args.cwd / "worlds" / world_b
-            if world_b_dir.is_dir():
-                shutil.rmtree(world_b_dir, ignore_errors=True)
-            run_create(
-                args.exe,
-                args.cwd,
-                seed,
-                world_b,
-                args.radius_chunks,
-                args.cwd / f"create_world_{seed}_det.json",
-                args.timeout,
-            )
-            chunk_b = world_b_dir / "chunks" / "0_0_0.cchunk"
-            if chunk_b.is_file() and sha256_file(chunk_a) != sha256_file(chunk_b):
-                failures.append(f"seed {seed}: determinism failed for 0_0_0.cchunk")
-            if not args.keep_worlds:
-                shutil.rmtree(world_b_dir, ignore_errors=True)
-
-        spawn = metrics.get("spawn", {}).get("surface_slots", {})
-        print(
-            f"seed {seed}: grass={spawn.get('grass', 0):.1f}% "
-            f"stone={spawn.get('stone', 0):.1f}% "
-            f"trees={metrics.get('spawn_tree_blocks', 0)} "
-            f"bush={metrics.get('spawn_bush_common_footprints', 0)} "
-            f"logs={metrics.get('spawn_ground_logs', 0)} "
-            f"fire={metrics.get('spawn_fire_blocks', 0)} "
-            f"gaps={metrics.get('shore_air_gaps', 0)} "
-            f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
-            f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}%"
-        )
 
     if failures:
         print("integration_test_worldgen: FAILED", file=sys.stderr)

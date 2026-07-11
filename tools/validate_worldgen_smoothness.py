@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+BASELINE = REPO / "tools" / "worldgen_baseline.json"
 PACK_BIOMES = REPO / "content" / "worldgen_packs" / "default" / "biomes"
 OBJECT_FEATURES = REPO / "content" / "object_features.json"
 HEIGHT_JSON = REPO / "content" / "worldgen_packs" / "default" / "height.json"
@@ -21,9 +22,18 @@ SAMPLE_RADIUS = 96
 ROUGHNESS = 0.58
 AMPLITUDE_BLOCKS = 4.5 * (MAX_HEIGHT / 12.0 if MAX_HEIGHT > 15 else 1.0) * ROUGHNESS
 
-# Regression budgets for coarse layered height (Python proxy, not full C++ pipeline).
+# Legacy single-sided proxy budgets (kept for quick regression signal).
 MAX_MEAN_ABS_DELTA_Y = 1.35
 MAX_PCT_DELTA_GT_2 = 4.5
+
+
+def load_thresholds() -> dict:
+    if not BASELINE.is_file():
+        return {}
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+    thresholds = dict(baseline.get("thresholds", {}))
+    thresholds["max_height"] = baseline.get("max_height", MAX_HEIGHT)
+    return thresholds
 
 
 def biome_ids() -> list[str]:
@@ -113,10 +123,21 @@ def layered_height_y(x: int, z: int, seed: int, height_cfg: dict) -> int:
         seed + 20,
         int(layers["detail"]["octaves"]),
     )
+    rolling = 0.0
+    rolling_layer = layers.get("rolling")
+    if rolling_layer:
+        rolling = _fbm(
+            wx * rolling_layer["scale"],
+            wz * rolling_layer["scale"],
+            seed + 30,
+            int(rolling_layer.get("octaves", 2)),
+        )
+        rolling *= float(rolling_layer.get("weight", 0.0))
     h01 = (
         layers["continental"]["weight"] * continental
         + layers["regional"]["weight"] * regional
         + layers["detail"]["weight"] * detail
+        + rolling
     )
     h01 = max(0.0, min(1.0, h01))
     h01 = h01 ** float(overworld["curve_exponent"])
@@ -124,7 +145,7 @@ def layered_height_y(x: int, z: int, seed: int, height_cfg: dict) -> int:
     return SEA_LEVEL + int(math.floor(delta + 0.5))
 
 
-def height_smoothness_metrics(seed: int, height_cfg: dict) -> tuple[float, float]:
+def height_smoothness_metrics(seed: int, height_cfg: dict) -> dict:
     deltas: list[int] = []
     for x in range(-SAMPLE_RADIUS, SAMPLE_RADIUS):
         for z in range(-SAMPLE_RADIUS, SAMPLE_RADIUS):
@@ -134,14 +155,72 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> tuple[float, float
             deltas.append(abs(y - y_e))
             deltas.append(abs(y - y_n))
     if not deltas:
-        return 0.0, 0.0
+        return {
+            "mean_abs_delta_y": 0.0,
+            "pct_delta_gt_2": 0.0,
+            "flatness_pct": 0.0,
+            "rolling_hill_pct": 0.0,
+            "delta_ge_4_pct": 0.0,
+        }
     mean_abs = sum(deltas) / len(deltas)
     pct_gt_2 = 100.0 * sum(1 for d in deltas if d > 2) / len(deltas)
-    return mean_abs, pct_gt_2
+    flatness_pct = 100.0 * sum(1 for d in deltas if d == 0) / len(deltas)
+    rolling_hill_pct = (
+        100.0 * sum(1 for d in deltas if 1 <= d <= 3) / len(deltas)
+    )
+    delta_ge_4_pct = 100.0 * sum(1 for d in deltas if d >= 4) / len(deltas)
+    return {
+        "mean_abs_delta_y": mean_abs,
+        "pct_delta_gt_2": pct_gt_2,
+        "flatness_pct": flatness_pct,
+        "rolling_hill_pct": rolling_hill_pct,
+        "delta_ge_4_pct": delta_ge_4_pct,
+    }
+
+
+def check_bidirectional_budgets(metrics: dict, thresholds: dict) -> tuple[list[str], list[str]]:
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    def fail(msg: str) -> None:
+        failures.append(msg)
+
+    def warn(msg: str) -> None:
+        warnings.append(msg)
+
+    flatness_max = thresholds.get("flatness_pct_max")
+    if flatness_max is not None and metrics["flatness_pct"] > flatness_max:
+        warn(
+            f"flatness_pct={metrics['flatness_pct']:.2f}% > {flatness_max}% "
+            "(proxy; see integration_test_worldgen)"
+        )
+
+    flatness_min = thresholds.get("flatness_pct_min")
+    if flatness_min is not None and metrics["flatness_pct"] < flatness_min:
+        warn(
+            f"flatness_pct={metrics['flatness_pct']:.2f}% < {flatness_min}% "
+            "(proxy; see integration_test_worldgen)"
+        )
+
+    rolling_min = thresholds.get("rolling_hill_pct_min")
+    if rolling_min is not None and metrics["rolling_hill_pct"] < rolling_min:
+        warn(
+            f"rolling_hill_pct={metrics['rolling_hill_pct']:.2f}% < {rolling_min}% "
+            "(proxy; see integration_test_worldgen)"
+        )
+
+    cliff_max = thresholds.get("delta_ge_4_pct_max")
+    if cliff_max is not None and metrics["delta_ge_4_pct"] > cliff_max:
+        fail(
+            f"delta_ge_4_pct={metrics['delta_ge_4_pct']:.2f}% > {cliff_max}%"
+        )
+
+    return failures, warnings
 
 
 def main() -> int:
     height_cfg = check_schema_files()
+    thresholds = load_thresholds()
     all_biomes, covered = object_biome_coverage()
     missing = sorted(all_biomes - covered)
     if missing:
@@ -149,25 +228,45 @@ def main() -> int:
         return 1
 
     failed = False
+    bidirectional_failed = False
     for seed in REFERENCE_SEEDS:
-        mean_abs, pct_gt_2 = height_smoothness_metrics(seed, height_cfg)
+        metrics = height_smoothness_metrics(seed, height_cfg)
         print(
-            f"seed={seed}: mean_abs_delta_y={mean_abs:.3f} "
-            f"pct_delta_gt_2={pct_gt_2:.2f}%"
+            f"seed={seed}: mean_abs_delta_y={metrics['mean_abs_delta_y']:.3f} "
+            f"pct_delta_gt_2={metrics['pct_delta_gt_2']:.2f}% "
+            f"flatness={metrics['flatness_pct']:.2f}% "
+            f"rolling_hills={metrics['rolling_hill_pct']:.2f}% "
+            f"delta_ge_4={metrics['delta_ge_4_pct']:.2f}%"
         )
-        if mean_abs > MAX_MEAN_ABS_DELTA_Y or pct_gt_2 > MAX_PCT_DELTA_GT_2:
+        if (
+            metrics["mean_abs_delta_y"] > MAX_MEAN_ABS_DELTA_Y
+            or metrics["pct_delta_gt_2"] > MAX_PCT_DELTA_GT_2
+        ):
             failed = True
+        budget_failures, budget_warnings = check_bidirectional_budgets(
+            metrics, thresholds
+        )
+        if budget_failures:
+            bidirectional_failed = True
+            for msg in budget_failures:
+                print(f"WARN: seed={seed}: {msg}", file=sys.stderr)
+        for msg in budget_warnings:
+            print(f"NOTE: seed={seed}: {msg}", file=sys.stderr)
 
     print(
         f"validate_worldgen_smoothness: biomes={len(all_biomes)} "
-        f"covered={len(covered)} reference_seeds={REFERENCE_SEEDS}"
+        f"covered={len(covered)} reference_seeds={REFERENCE_SEEDS} "
+        f"backend_proxy=heightmap"
     )
     if failed:
         print(
-            f"WARN: smoothness budgets exceeded "
+            f"WARN: legacy smoothness budgets exceeded "
             f"(mean_abs<={MAX_MEAN_ABS_DELTA_Y}, pct_gt_2<={MAX_PCT_DELTA_GT_2}%)",
             file=sys.stderr,
         )
+        return 1
+    if bidirectional_failed:
+        print("WARN: bidirectional terrain quality budgets exceeded", file=sys.stderr)
         return 1
     print("validate_worldgen_smoothness: OK")
     return 0

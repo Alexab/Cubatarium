@@ -19,7 +19,14 @@
     "spawn_fire_blocks_max": 8,
     "micro_pit_pct_max": 3.6,
     "max_height_violations_max": 0,
-    "shore_air_gaps_max": 0
+    "shore_air_gaps_max": 0,
+    "flatness_pct_max": 38.0,
+    "flatness_pct_min": 4.0,
+    "rolling_hill_pct_min": 6.0,
+    "plateau_edge_pct_max": 12.0,
+    "delta_ge_4_pct_max": 1.8,
+    "cave_chunk_coverage_pct_min": 1.5,
+    "nn_distance_cv_min": 0.22
   },
   "reference_seeds": [42, 12354, 20240625]
 }
