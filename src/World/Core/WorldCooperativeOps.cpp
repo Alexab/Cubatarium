@@ -192,10 +192,10 @@ UWorldCooperativeSession::~UWorldCooperativeSession()
 
 void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
-  if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
+  world.CancelAsyncRelightWork();
+  if (world.Persistence)
   {
-    BeginBulkChunkRelightQueue(world);
-    return;
+    world.Persistence->ClearPendingRelights();
   }
   BeginColumnRelightQueue(world);
 }
@@ -216,7 +216,6 @@ void UWorldCooperativeSession::BeginBulkChunkRelightQueue(UWorld &world)
       [&](const UChunk &chunk)
       { BulkRelightChunkQueue.push_back(chunk.GetCoord()); });
 
-  world.SetLightingRelightDeferred(false);
   world.SetLightingSkylightBulkComplete(true);
 
   std::cout << "[WorldLoad] RelightBulkChunks: "
@@ -268,16 +267,38 @@ void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
   CurrentPhase = Phase::RelightColumns;
 }
 
+void UWorldCooperativeSession::FinishEmissiveBlockLightRelight(UWorld &world)
+{
+  std::cout << "[WorldLoad] RelightEmissiveBlockLight done: "
+            << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
+  EmissiveChunkRelightQueue.clear();
+  EmissiveChunkRelightIndex = 0;
+  world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+  BeginMeshWarmupInner(world);
+}
+
 void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 {
   EmissiveChunkRelightQueue.clear();
   EmissiveChunkRelightIndex = 0;
-  EmissiveChunkRelightScheduledIndex = 0;
-  EmissiveChunkRelightAppliedCount = 0;
   ColumnRelightQueue.clear();
   ColumnRelightIndex = 0;
   ColumnRelightScheduledIndex = 0;
   ColumnRelightAppliedCount = 0;
+
+  world.CancelAsyncRelightWork();
+
+  // Bulk create/load already ran column skylight relight; a full-world emissive
+  // scan blocks the main thread for a long time on large saves.
+  if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
+  {
+    std::cout << "[WorldLoad] RelightEmissiveBlockLight: skipped (coop "
+              << (Kind == WorldCoopKind::Create ? "create" : "load")
+              << "), starting mesh warmup" << std::endl;
+    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+    BeginMeshWarmupInner(world);
+    return;
+  }
 
   if (world.BlockRegistry)
   {
@@ -326,6 +347,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
   // Skylight-only bulk relight ends here; gameplay edits/streaming need block light.
   world.SetLightingSkylightBulkComplete(false);
   world.BlockCounter.MarkNeedsRecount();
+  world.MeshService->CancelAsyncInFlightKeepDirty();
   bool has_chunks = false;
   world.BlockWorld.GetChunkManager().ForEachChunk(
       [&](const UChunk &) { has_chunks = true; });
@@ -793,9 +815,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.SetLightingSkylightBulkComplete(false);
       world.BlockWorldReady = false;
       world.LoadedFromChunkSave = false;
+      world.MeshService->CancelAsyncMeshWork();
       world.BlockWorld.Clear();
       world.MeshService->GetCache().MarkAllDirty();
       world.ResetPhysicsRuntimeState();
+      world.CancelAsyncRelightWork();
       world.ModifiedChunks.clear();
       world.MovementDiagHistory.clear();
       ChunksFileName = FolderPath + "/chunks.json";
@@ -824,6 +848,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.AllowProceduralFill = true;
       world.RefreshBlockRegistry();
       world.BlockWorld.Clear();
+      world.CancelAsyncRelightWork();
       world.ModifiedChunks.clear();
       FolderPath = world.GetWorldFolderPath();
       if (!FolderPath.empty())
@@ -995,58 +1020,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const auto tick_t0 = std::chrono::steady_clock::now();
     if (world.BlockRegistry)
     {
-      if (world.ProceduralTemplate.AsyncRelight)
+      const int chunk_budget = std::clamp(budget * 4, 16, 64);
+      int relit = 0;
+      while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
+             relit < chunk_budget)
       {
-        const int thread_count =
-            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
-        const int pipeline_depth = thread_count * 8;
-        const int drain_batch = 128;
-        const int schedule_batch = std::clamp(budget * 8, 32, 128);
-        const int pass_limit = 12;
-        for (int pass = 0; pass < pass_limit; ++pass)
-        {
-          BulkRelightChunkAppliedCount += static_cast<size_t>(
-              world.DrainAsyncRelightResults(drain_batch, false, false));
-
-          int scheduled = 0;
-          while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
-                 world.GetAsyncRelightInFlightCount() < pipeline_depth &&
-                 scheduled < schedule_batch)
-          {
-            world.EnqueueAsyncChunkRelight(
-                BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++], true,
-                false, kRelightFrontierIterationsFull);
-            ++scheduled;
-          }
-
-          if (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size() &&
-              !world.HasPendingAsyncRelightWork())
-          {
-            break;
-          }
-        }
-      }
-      else
-      {
-        const int chunk_budget = std::clamp(budget * 4, 16, 64);
-        int relit = 0;
-        while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
-               relit < chunk_budget)
-        {
-          RelightChunk(world.BlockWorld, *world.BlockRegistry,
-                       BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++],
-                       false, true);
-          ++relit;
-          ++BulkRelightChunkAppliedCount;
-        }
+        RelightChunk(world.BlockWorld, *world.BlockRegistry,
+                     BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++],
+                     false, true);
+        ++relit;
       }
     }
 
     const bool chunks_done =
-        world.ProceduralTemplate.AsyncRelight
-            ? (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size() &&
-               !world.HasPendingAsyncRelightWork())
-            : (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size());
+        BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size();
 
     const float relight_base =
         Kind == WorldCoopKind::Create
@@ -1055,19 +1042,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : CooperativeLoadProgressBase());
     const float relight_weight =
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
-    const size_t relight_done = world.ProceduralTemplate.AsyncRelight
-                                    ? BulkRelightChunkAppliedCount
-                                    : BulkRelightChunkScheduledIndex;
+    const size_t relight_done = BulkRelightChunkScheduledIndex;
     const size_t relight_total = BulkRelightChunkQueue.size();
-    const int relight_inflight = world.ProceduralTemplate.AsyncRelight
-                                     ? world.GetAsyncRelightInFlightCount()
-                                     : 0;
     const float relight_inner =
         relight_total > 0
-            ? std::min(1.0f,
-                       (static_cast<float>(relight_done) +
-                        0.35f * static_cast<float>(relight_inflight)) /
-                           static_cast<float>(relight_total))
+            ? std::min(1.0f, static_cast<float>(relight_done) /
+                                 static_cast<float>(relight_total))
             : 1.0f;
     const float relight_frac = relight_base + relight_weight * relight_inner;
 
@@ -1093,74 +1073,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
-    const bool bulk_coop_relight =
-        Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load;
     if (world.BlockRegistry)
     {
-      if (world.ProceduralTemplate.AsyncRelight)
+      const int column_budget = std::clamp(budget, 8, 32);
+      int relit = 0;
+      while (ColumnRelightIndex < ColumnRelightQueue.size() &&
+             relit < column_budget)
       {
-        const int thread_count =
-            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
-        const int max_inflight = thread_count * (bulk_coop_relight ? 3 : 2);
-        const int drain_batch = bulk_coop_relight ? 32 : 4;
-        const int schedule_batch =
-            bulk_coop_relight ? std::clamp(budget * 4, 16, 64)
-                              : std::clamp(budget / 2, 2, 8);
-        const int pass_limit = bulk_coop_relight ? 6 : 1;
-        for (int pass = 0; pass < pass_limit; ++pass)
-        {
-          ColumnRelightAppliedCount += static_cast<size_t>(
-              world.DrainAsyncRelightResults(drain_batch, false, false));
-
-          int scheduled = 0;
-          while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
-                 world.GetAsyncRelightInFlightCount() < max_inflight &&
-                 scheduled < schedule_batch)
-          {
-            const glm::ivec2 &col =
-                ColumnRelightQueue[ColumnRelightScheduledIndex++];
-            world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y, true,
-                                                   false);
-            ++scheduled;
-          }
-
-          if (!bulk_coop_relight)
-          {
-            break;
-          }
-          if (ColumnRelightScheduledIndex >= ColumnRelightQueue.size() &&
-              !world.HasPendingAsyncRelightWork())
-          {
-            break;
-          }
-        }
-      }
-      else
-      {
-        const int column_budget =
-            bulk_coop_relight ? std::clamp(budget, 8, 32)
-                              : std::clamp(budget / 4, 1, 4);
-        int relit = 0;
-        while (ColumnRelightIndex < ColumnRelightQueue.size() &&
-               relit < column_budget)
-        {
-          const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
-          world.RelightTerrainColumn(col.x, col.y, 0, max_y, false, true, false);
-          ++relit;
-          ++ColumnRelightAppliedCount;
-        }
+        const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
+        RelightColumn(world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0,
+                      max_y, false, true);
+        ++relit;
       }
     }
 
     const bool columns_done =
-        world.ProceduralTemplate.AsyncRelight
-            ? (ColumnRelightScheduledIndex >= ColumnRelightQueue.size() &&
-               !world.HasPendingAsyncRelightWork())
-            : (ColumnRelightIndex >= ColumnRelightQueue.size());
+        ColumnRelightIndex >= ColumnRelightQueue.size();
+    const size_t relight_done = ColumnRelightIndex;
+    const size_t relight_total = ColumnRelightQueue.size();
 
-    const int async_in_flight = world.ProceduralTemplate.AsyncRelight
-                                    ? world.GetAsyncRelightInFlightCount()
-                                    : 0;
     const float relight_base =
         Kind == WorldCoopKind::Create
             ? (kCreateWeightInit + kCreateWeightGenerate)
@@ -1168,24 +1099,30 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : CooperativeLoadProgressBase());
     const float relight_weight =
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
-    const float relight_frac = ComputeRelightLoadProgress(
-        relight_base, relight_weight, 1, 1, ColumnRelightAppliedCount,
-        ColumnRelightQueue.size(), async_in_flight);
+    const float relight_inner =
+        relight_total > 0
+            ? std::min(1.0f, static_cast<float>(relight_done) /
+                                 static_cast<float>(relight_total))
+            : 1.0f;
+    const float relight_frac = relight_base + relight_weight * relight_inner;
     Report(sink, "relight", relight_frac,
            columns_done ? "Lighting ready."
                        : "Computing lighting... " +
-                             std::to_string(ColumnRelightAppliedCount) + "/" +
-                             std::to_string(ColumnRelightQueue.size()));
+                             std::to_string(relight_done) + "/" +
+                             std::to_string(relight_total));
 
     if (columns_done)
     {
       const auto tick_t1 = std::chrono::steady_clock::now();
       const double tick_ms =
           std::chrono::duration<double, std::milli>(tick_t1 - tick_t0).count();
-      std::cout << "[WorldLoad] RelightColumns done: "
-                << ColumnRelightQueue.size() << " columns, last_tick_ms="
-                << tick_ms << std::endl;
+      std::cout << "[WorldLoad] RelightColumns done: " << relight_total
+                << " columns, last_tick_ms=" << tick_ms << std::endl;
       BeginEmissiveBlockLightQueue(world);
+      if (CurrentPhase == Phase::MeshWarmup)
+      {
+        ReportMeshWarmupStart(sink);
+      }
     }
     break;
   }
@@ -1193,50 +1130,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     if (world.BlockRegistry)
     {
-      if (world.ProceduralTemplate.AsyncRelight)
+      const int relight_budget = std::max(budget * 4, 16);
+      int relit = 0;
+      while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
+             relit < relight_budget)
       {
-        const int thread_count =
-            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
-        const int pipeline_depth = thread_count * 4;
-        const int drain_batch = 64;
-        const int schedule_batch = std::clamp(budget * 4, 16, 64);
-        const int pass_limit = 8;
-        for (int pass = 0; pass < pass_limit; ++pass)
-        {
-          EmissiveChunkRelightAppliedCount += static_cast<size_t>(
-              world.DrainAsyncRelightResults(drain_batch, false, false));
-
-          int scheduled = 0;
-          while (EmissiveChunkRelightScheduledIndex <
-                     EmissiveChunkRelightQueue.size() &&
-                 world.GetAsyncRelightInFlightCount() < pipeline_depth &&
-                 scheduled < schedule_batch)
-          {
-            world.EnqueueAsyncChunkRelight(
-                EmissiveChunkRelightQueue[EmissiveChunkRelightScheduledIndex++],
-                false, true, kRelightFrontierIterationsFull);
-            ++scheduled;
-          }
-
-          if (EmissiveChunkRelightScheduledIndex >=
-                  EmissiveChunkRelightQueue.size() &&
-              !world.HasPendingAsyncRelightWork())
-          {
-            break;
-          }
-        }
-      }
-      else
-      {
-        const int relight_budget = std::max(budget * 4, 16);
-        int relit = 0;
-        while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
-               relit < relight_budget)
-        {
-          RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
-                                 EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
-          ++relit;
-        }
+        RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
+                               EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+        ++relit;
       }
     }
     const float relight_base =
@@ -1246,46 +1147,29 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : CooperativeLoadProgressBase());
     const float relight_weight =
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
-    const size_t emissive_done = world.ProceduralTemplate.AsyncRelight
-                                     ? EmissiveChunkRelightAppliedCount
-                                     : EmissiveChunkRelightIndex;
+    const size_t emissive_done = EmissiveChunkRelightIndex;
     const size_t emissive_total = EmissiveChunkRelightQueue.size();
-    const int emissive_inflight = world.ProceduralTemplate.AsyncRelight
-                                      ? world.GetAsyncRelightInFlightCount()
-                                      : 0;
     const float relight_frac = ComputeRelightLoadProgress(
-        relight_base, relight_weight, emissive_done, emissive_total, 0, 0,
-        emissive_inflight);
+        relight_base, relight_weight, emissive_done, emissive_total, 0, 0, 0);
     Report(sink, "relight", relight_frac, "Computing block light...");
 
-    const bool emissive_done_flag =
-        world.ProceduralTemplate.AsyncRelight
-            ? (EmissiveChunkRelightScheduledIndex >=
-                   EmissiveChunkRelightQueue.size() &&
-               !world.HasPendingAsyncRelightWork())
-            : (EmissiveChunkRelightIndex >= EmissiveChunkRelightQueue.size());
-
-    if (emissive_done_flag)
+    if (EmissiveChunkRelightIndex >= EmissiveChunkRelightQueue.size())
     {
-      std::cout << "[WorldLoad] RelightEmissiveBlockLight done: "
-                << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
-      EmissiveChunkRelightQueue.clear();
-      EmissiveChunkRelightIndex = 0;
-      EmissiveChunkRelightScheduledIndex = 0;
-      EmissiveChunkRelightAppliedCount = 0;
-      world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
-      BeginMeshWarmupInner(world);
+      FinishEmissiveBlockLightRelight(world);
     }
     break;
   }
   case Phase::MeshWarmup:
   {
     const bool create_mesh_warmup = Kind == WorldCoopKind::Create;
+    const bool force_sync_mesh = Kind != WorldCoopKind::Create;
     const UChunkEmergeCoordinator::FrameBudget mesh_budget =
         create_mesh_warmup
             ? UChunkEmergeCoordinator::CreateMeshWarmupBudget(budget)
             : UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
-    const int pass_limit = create_mesh_warmup ? 8 : 2;
+    const int pass_limit = create_mesh_warmup ? 8 : 1;
+    const int sync_mesh_budget =
+        force_sync_mesh ? std::max(8, budget * 4) : mesh_budget.MaxMeshDrain;
     MeshRebuildTickStats tick_stats;
     for (int pass = 0; pass < pass_limit; ++pass)
     {
@@ -1293,18 +1177,34 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         break;
       }
+      const int drain_budget =
+          force_sync_mesh ? sync_mesh_budget : mesh_budget.MaxMeshDrain;
+      const int schedule_budget =
+          force_sync_mesh ? sync_mesh_budget : mesh_budget.MaxMeshSchedule;
       MeshRebuildTickStats pass_stats =
           world.MeshService->RebuildDirtyChunksWithStats(
-              world.BlockWorld, *world.BlockRegistry, mesh_budget.MaxMeshDrain,
-              mesh_budget.MaxMeshSchedule);
+              world.BlockWorld, *world.BlockRegistry, drain_budget,
+              schedule_budget, force_sync_mesh);
       tick_stats.Completed += pass_stats.Completed;
       tick_stats.Scheduled += pass_stats.Scheduled;
       tick_stats.SyncRebuilt += pass_stats.SyncRebuilt;
+      if (!force_sync_mesh)
+      {
+        world.MeshService->DrainAsyncMeshResults(
+            world.BlockWorld, *world.BlockRegistry, mesh_budget.MaxMeshDrain);
+      }
       if (!world.MeshService->HasPendingDirty() &&
           !world.MeshService->HasPendingAsyncMeshWork())
       {
         break;
       }
+    }
+    if (MeshWarmupTicks == 0)
+    {
+      std::cout << "[WorldLoad] MeshWarmup start: pending="
+                << world.MeshService->GetDirtyCount() << " inflight="
+                << world.MeshService->GetAsyncInFlightCount()
+                << " sync=" << (force_sync_mesh ? "yes" : "no") << std::endl;
     }
     MeshWarmupCompletedTotal += static_cast<size_t>(tick_stats.Completed);
     ++MeshWarmupTicks;

@@ -55,20 +55,22 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
   const uint64_t job_id =
       spec.job_id > 0 ? spec.job_id : NextJobId++;
   spec.job_id = job_id;
+
+  UChunkRelightSnapshot snapshot;
+  {
+    std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
+    snapshot = UChunkRelightSnapshot::Capture(world, spec);
+  }
+
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[job_id] = job_id;
   }
 
-  Pool.Enqueue([this, &world, spec = std::move(spec), &registry,
+  Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
                 job_id]() mutable
                {
-                 UChunkRelightSnapshot snapshot;
-                 {
-                   std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
-                   snapshot = UChunkRelightSnapshot::Capture(world, spec);
-                 }
-                 RelightComputeResult result = snapshot.Compute(registry);
+                 RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  Completed.Push(std::move(result));
                });

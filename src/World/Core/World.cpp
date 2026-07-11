@@ -1125,6 +1125,10 @@ void UWorld::InitStreamerCallbacks()
 
 void UWorld::TickAsyncChunkSystems()
 {
+  if (HasActiveCooperativeOperation())
+  {
+    return;
+  }
   const int pending_player =
       Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
   const int pending_bg =

@@ -159,6 +159,10 @@ void UWorldPersistence::EnqueuePlayerRelight(
 void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
+  if (world.HasActiveCooperativeOperation())
+  {
+    return;
+  }
   int drained_player = 0;
   while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
   {

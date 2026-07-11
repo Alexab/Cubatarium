@@ -126,10 +126,10 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame)
+    int max_schedule_per_frame, bool force_sync)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
-                                           max_schedule_per_frame);
+                                           max_schedule_per_frame, force_sync);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
@@ -155,6 +155,11 @@ bool UWorldMeshService::WaitForAsyncMeshIdleFor(
 }
 
 void UWorldMeshService::CancelAsyncMeshWork() { Cache.CancelAsyncMeshWork(); }
+
+void UWorldMeshService::CancelAsyncInFlightKeepDirty()
+{
+  Cache.CancelAsyncInFlightKeepDirty();
+}
 
 bool UWorldMeshService::HasPendingDirty() const
 {
