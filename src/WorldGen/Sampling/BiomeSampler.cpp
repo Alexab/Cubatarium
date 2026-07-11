@@ -211,23 +211,29 @@ int LocalCoarseHeightRange(int x, int z, const CoarseHeightCallback &getCoarseY)
   return maxY - minY;
 }
 
-float FlatTerrainJitterScale(int localCoarseRange)
+float FlatTerrainJitterScale(int localCoarseRange, float climateErosion)
 {
+  float scale = 1.0f;
   if (localCoarseRange <= 2)
   {
-    return 0.0f;
+    scale = climateErosion > 0.6f ? 0.0f : 0.55f;
   }
-  if (localCoarseRange <= 4)
+  else if (localCoarseRange <= 4)
   {
-    return 0.35f;
+    scale = 0.35f;
   }
-  return 1.0f;
+  if (climateErosion < 0.4f)
+  {
+    scale = std::max(scale, 0.75f);
+  }
+  return scale;
 }
 
 int FillMicroDepressions(int x, int z, int y, int localCoarseRange,
-                         const CoarseHeightCallback &getCoarseY)
+                         const CoarseHeightCallback &getCoarseY,
+                         float climateErosion)
 {
-  if (!getCoarseY || localCoarseRange > 3)
+  if (!getCoarseY || localCoarseRange > 3 || climateErosion < 0.4f)
   {
     return y;
   }
@@ -258,9 +264,10 @@ int FillMicroDepressions(int x, int z, int y, int localCoarseRange,
 }
 
 int ClampToFlatPlateau(int x, int z, int y, int localCoarseRange,
-                       const CoarseHeightCallback &getCoarseY)
+                       const CoarseHeightCallback &getCoarseY,
+                       float climateErosion)
 {
-  if (!getCoarseY || localCoarseRange > 2)
+  if (!getCoarseY || localCoarseRange > 2 || climateErosion <= 0.6f)
   {
     return y;
   }
@@ -795,9 +802,14 @@ int SmoothBlendedSurfaceY(int x, int z, int baseY,
                           const BiomeWeightSet &weights,
                           const ProceduralSettings &settings, uint32_t seed,
                           const WorldGenTuning &tuning,
-                          const CoarseHeightCallback &getCoarseY)
+                          const CoarseHeightCallback &getCoarseY,
+                          float climateErosion)
 {
   if (!tuning.heightSmoothing || tuning.heightSmoothingRadius <= 0 || !getCoarseY)
+  {
+    return baseY;
+  }
+  if (climateErosion < 0.4f)
   {
     return baseY;
   }
@@ -835,7 +847,9 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
   }
 
   int y = BiomeBlendedBaseY(x, z, coarseY, weights, settings);
-  y = SmoothBlendedSurfaceY(x, z, y, weights, settings, seed, tuning, getCoarseY);
+  const ClimateSample climate = SampleClimate(x, z, seed);
+  y = SmoothBlendedSurfaceY(x, z, y, weights, settings, seed, tuning, getCoarseY,
+                            climate.erosion);
 
   const int localCoarseRange = LocalCoarseHeightRange(x, z, getCoarseY);
 
@@ -846,19 +860,19 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
       heightPack.Loaded ? heightPack.JitterAmplitude : tuning.jitterAmplitude;
   const float erosionDamp =
       heightPack.Loaded ? heightPack.JitterErosionDamp : 0.85f;
-  const ClimateSample climate = SampleClimate(x, z, seed);
   const float jitter =
       NormalizedFBM2D(static_cast<float>(x) * jitterScale,
                       static_cast<float>(z) * jitterScale, seed + 77, 2, 0.5f,
                       2.0f) *
-      volatilityJitter * jitterAmp * FlatTerrainJitterScale(localCoarseRange) *
+      volatilityJitter * jitterAmp *
+      FlatTerrainJitterScale(localCoarseRange, climate.erosion) *
       (1.0f - climate.erosion * erosionDamp);
   y = static_cast<int>(std::floor(static_cast<float>(y) + jitter + 0.5f));
 
   y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);
-  y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY);
-  y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY);
+  y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
+  y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
   y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY);
   return std::clamp(y, 1, settings.MaxHeight);
 }

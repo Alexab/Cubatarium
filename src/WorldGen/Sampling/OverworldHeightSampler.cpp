@@ -30,6 +30,9 @@ void ApplyPackHeightLayers(HeightSampleParams &p)
   p.detail.weight = pack.Detail.Weight;
   p.detailWeight = pack.Detail.Weight;
   p.detailScale = pack.Detail.Scale;
+  p.rolling.scale = pack.Rolling.Scale;
+  p.rolling.octaves = pack.Rolling.Octaves;
+  p.rolling.weight = pack.Rolling.Weight;
   p.seaBias = pack.SeaBias;
   p.curveExponent = pack.CurveExponent;
 }
@@ -82,6 +85,7 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int MaxHeight)
     p.continental = {0.003f, 2, 0.63f};
     p.regional = {0.008f, 3, 0.32f};
     p.detail = {0.025f, 2, 0.05f};
+    p.rolling = {0.012f, 3, 0.08f};
     p.seaBias = 0.45f;
     p.curveExponent = 1.12f;
     ApplyPackHeightLayers(p);
@@ -235,7 +239,8 @@ int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const
         0.5f;
     const float offset = ClimateTerrainOffset(
         climate, SeaLevel, MaxHeight, regional01, detail01, Params.detailWeight,
-        Params.amplitudeBlocks, TerrainRoughness);
+        Params.amplitudeBlocks, TerrainRoughness, x, z, Seed,
+        Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
     const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks * 0.16f;
     float heightDelta = offset + delta;
     const float maxUp = Params.amplitudeBlocks * 0.55f;

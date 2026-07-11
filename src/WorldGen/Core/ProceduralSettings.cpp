@@ -277,7 +277,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
   else
   {
     s.WorldGenPresetId = "balanced";
-    s.Tuning.terrainRoughness = 0.50f;
+    s.Tuning.terrainRoughness = 0.56f;
     s.Tuning.terrainErosion = 0.32f;
     s.Tuning.structureDensity = 0.35f;
     s.Tuning.vegetationDensity = 0.75f;
@@ -287,7 +287,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.hydraulicErosionIterations = 4;
     s.Tuning.erosionStrength = 0.25f;
     s.Tuning.heightSmoothing = true;
-    s.Tuning.heightSmoothingRadius = 2;
+    s.Tuning.heightSmoothingRadius = 1;
     s.Tuning.thermalErosionIterations = 0;
     s.Tuning.hydraulicErosionIterations = 0;
     s.FillFire = false;

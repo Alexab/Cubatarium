@@ -31,6 +31,7 @@ struct HeightSampleParams
   HeightLayerParams continental;
   HeightLayerParams regional;
   HeightLayerParams detail;
+  HeightLayerParams rolling;
   float curveExponent{1.12f};
   int stoneSurfaceAboveY{-1};
   bool useRidgeNoise{false};

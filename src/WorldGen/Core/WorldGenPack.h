@@ -45,6 +45,7 @@ struct PackHeightConfig
   HeightLayerPackConfig Continental;
   HeightLayerPackConfig Regional;
   HeightLayerPackConfig Detail;
+  HeightLayerPackConfig Rolling;
   float SeaBias{0.45f};
   float CurveExponent{1.12f};
   float JitterScale{0.03f};

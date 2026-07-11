@@ -321,6 +321,10 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
       {
         ParseHeightLayer(layers["detail"], pack.Height.Detail);
       }
+      if (layers.contains("rolling"))
+      {
+        ParseHeightLayer(layers["rolling"], pack.Height.Rolling);
+      }
     }
     if (json.contains("overworld") && json["overworld"].is_object())
     {

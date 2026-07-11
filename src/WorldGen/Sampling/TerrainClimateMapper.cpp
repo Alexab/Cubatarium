@@ -70,25 +70,44 @@ float ErosionAmplitudeMultiplier(float erosion)
 float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
                            int maxHeight, float regionalNoise01,
                            float detailNoise01, float detailWeight,
-                           float amplitudeBlocks, float terrainRoughness)
+                           float amplitudeBlocks, float terrainRoughness,
+                           int worldX, int worldZ, uint32_t seed,
+                           float rollingWeight, float rollingScale,
+                           int rollingOctaves)
 {
   const float erosion = std::clamp(climate.erosion, 0.0f, 1.0f);
-  const float erosionMul = ErosionAmplitudeMultiplier(erosion);
-  const float erosionFlat = 1.0f - erosion;
+  const float erosion_mul = ErosionAmplitudeMultiplier(erosion);
+  const float erosion_flat = 1.0f - erosion;
+  const float low_erosion_boost = Smoothstep(0.35f, 0.0f, erosion);
   const float pv = PeaksAndValleys(climate.weirdness);
 
-  const float regionalDelta =
+  const float regional_delta =
       (regionalNoise01 - 0.5f) * 2.0f * amplitudeBlocks * terrainRoughness *
-      erosionMul * erosionFlat * 0.30f;
-  const float detailDelta = (detailNoise01 - 0.5f) * 2.0f * detailWeight *
-                            amplitudeBlocks * erosionFlat * erosionFlat * 0.40f;
-  const float ridgeBoost =
-      (pv - 0.5f) * amplitudeBlocks * 0.20f * erosionFlat;
+      erosion_mul * (erosion_flat + low_erosion_boost * 0.35f) * 0.30f;
+  const float detail_delta =
+      (detailNoise01 - 0.5f) * 2.0f * detailWeight * amplitudeBlocks *
+      (erosion_flat * erosion_flat + low_erosion_boost * 0.25f) * 0.40f;
+  const float ridge_boost =
+      (pv - 0.5f) * amplitudeBlocks * 0.20f * erosion_flat;
 
-  const float climateBase =
+  float rolling_delta = 0.0f;
+  if (rollingWeight > 0.0f && rollingOctaves > 0)
+  {
+    const float rolling01 =
+        (NormalizedFBM2D(static_cast<float>(worldX) * rollingScale,
+                         static_cast<float>(worldZ) * rollingScale,
+                         seed + 4400, rollingOctaves, 0.5f, 2.0f) +
+         1.0f) *
+        0.5f;
+    rolling_delta = (rolling01 - 0.5f) * 2.0f * amplitudeBlocks *
+                    rollingWeight * (erosion_flat + low_erosion_boost * 0.5f);
+  }
+
+  const float climate_base =
       ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight);
-  const float midBias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.15f;
-  return (climateBase - midBias) + regionalDelta + detailDelta + ridgeBoost;
+  const float mid_bias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.15f;
+  return (climate_base - mid_bias) + regional_delta + detail_delta + ridge_boost +
+         rolling_delta;
 }
 
 } // namespace cutum
