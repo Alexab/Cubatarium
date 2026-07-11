@@ -21,6 +21,14 @@ namespace cutum
 {
 struct Frustum;
 struct MeshBuildResult;
+
+struct MeshRebuildTickStats
+{
+  int Completed{0};
+  int Scheduled{0};
+  int SyncRebuilt{0};
+};
+
 struct FaceInstance
 {
   glm::mat4 model{1.0f};
@@ -35,13 +43,17 @@ class UChunkMeshCache
 {
 public:
   void MarkAllDirty();
-  void MarkAllDirtyFromWorld(const UBlockWorld &world);
+  void MarkAllDirtyFromWorld(const UBlockWorld &world,
+                             bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame = 8,
                           int max_schedule_per_frame = 8);
+  MeshRebuildTickStats RebuildDirtyChunksWithStats(
+      UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
+      int max_schedule_per_frame);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);

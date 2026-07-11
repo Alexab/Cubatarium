@@ -28,16 +28,26 @@ struct MeshBuildResult
 class UAsyncMeshBuilder
 {
 public:
+  explicit UAsyncMeshBuilder(std::size_t thread_count = 0);
+
   void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
+  int GetWorkerCount() const { return WorkerCount; }
+  int GetMaxPipelineDepth() const
+  {
+    return WorkerCount * kPipelineSlotsPerWorker;
+  }
   bool HasPendingWork() const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
 
 private:
+  static constexpr int kPipelineSlotsPerWorker = 6;
+
+  int WorkerCount{1};
   UJobThreadPool Pool;
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;

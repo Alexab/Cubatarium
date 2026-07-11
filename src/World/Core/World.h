@@ -709,6 +709,8 @@ public:
   void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
                                         int max_y, bool include_skylight = true,
                                         bool include_block_light = true);
+  void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
+                                        int frontier_iterations = 1);
   int DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;

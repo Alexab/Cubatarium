@@ -1116,7 +1116,7 @@ void UApplication::Update(double dt)
     constexpr int kAndroidLoadChunkBudget = 4;
     constexpr int kLoadChunkBudget = kAndroidLoadChunkBudget;
 #else
-    constexpr int kLoadChunkBudget = 8;
+    constexpr int kLoadChunkBudget = 16;
 #endif
     if (WorldOpRunner)
     {

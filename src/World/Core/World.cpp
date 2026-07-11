@@ -826,9 +826,7 @@ void UWorld::EnqueueAsyncPlayerRelight(
   spec.include_block_light = true;
   spec.frontier_iterations = kRelightFrontierIterationsEdit;
   spec.job_id = ++NextAsyncRelightJobId;
-  UChunkRelightSnapshot snapshot =
-      UChunkRelightSnapshot::Capture(BlockWorld, spec);
-  AsyncRelight->Enqueue(std::move(snapshot), *BlockRegistry);
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
 }
 
 void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
@@ -849,9 +847,28 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.include_block_light = include_block_light;
   spec.frontier_iterations = kRelightFrontierIterationsFull;
   spec.job_id = ++NextAsyncRelightJobId;
-  UChunkRelightSnapshot snapshot =
-      UChunkRelightSnapshot::Capture(BlockWorld, spec);
-  AsyncRelight->Enqueue(std::move(snapshot), *BlockRegistry);
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+}
+
+void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
+                                              int frontier_iterations)
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  EnsureAsyncRelightBuilder();
+  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
+  RelightJobSpec spec;
+  spec.block_positions = {origin};
+  spec.min_world_y = origin.y;
+  spec.max_world_y =
+      std::min(ProceduralTemplate.MaxHeight, origin.y + CHUNK_SIZE - 1);
+  spec.include_skylight = true;
+  spec.include_block_light = false;
+  spec.frontier_iterations = frontier_iterations;
+  spec.job_id = ++NextAsyncRelightJobId;
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
 }
 
 int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,

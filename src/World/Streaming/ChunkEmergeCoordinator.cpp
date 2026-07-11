@@ -5,6 +5,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <algorithm>
+#include <thread>
 
 namespace cutum
 {
@@ -49,6 +50,21 @@ UChunkEmergeCoordinator::CooperativeWarmupBudget(int coop_budget)
 {
   const int mesh =
       std::min(128, std::max(coop_budget * 8, 32));
+  FrameBudget budget;
+  budget.MaxMeshDrain = mesh;
+  budget.MaxMeshSchedule = mesh;
+  return budget;
+}
+
+UChunkEmergeCoordinator::FrameBudget
+UChunkEmergeCoordinator::CreateMeshWarmupBudget(int coop_budget)
+{
+  const int threads = std::max(
+      2, static_cast<int>(std::thread::hardware_concurrency() > 0
+                              ? std::thread::hardware_concurrency()
+                              : 4));
+  const int mesh =
+      std::min(512, std::max(coop_budget * 24, threads * 32));
   FrameBudget budget;
   budget.MaxMeshDrain = mesh;
   budget.MaxMeshSchedule = mesh;

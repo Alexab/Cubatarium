@@ -7,9 +7,29 @@
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <mutex>
+#include <thread>
 
 namespace cutum
 {
+
+namespace
+{
+std::size_t ResolveMeshWorkerCount(std::size_t thread_count)
+{
+  if (thread_count == 0)
+  {
+    const std::size_t hw = std::thread::hardware_concurrency();
+    return hw > 1 ? hw - 1 : 1;
+  }
+  return std::max<std::size_t>(1, thread_count);
+}
+} // namespace
+
+UAsyncMeshBuilder::UAsyncMeshBuilder(std::size_t thread_count)
+    : Pool(ResolveMeshWorkerCount(thread_count)),
+      WorkerCount(static_cast<int>(ResolveMeshWorkerCount(thread_count)))
+{
+}
 
 namespace
 {

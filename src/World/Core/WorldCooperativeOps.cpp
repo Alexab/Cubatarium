@@ -1,5 +1,6 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Blocks/BlockRegistry.h"
@@ -169,11 +170,43 @@ void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
 
 void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
+  if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
+  {
+    BeginBulkChunkRelightQueue(world);
+    return;
+  }
+  BeginColumnRelightQueue(world);
+}
+
+void UWorldCooperativeSession::BeginBulkChunkRelightQueue(UWorld &world)
+{
+  BulkRelightChunkQueue.clear();
+  BulkRelightChunkScheduledIndex = 0;
+  BulkRelightChunkAppliedCount = 0;
+  ColumnRelightQueue.clear();
+  ColumnRelightIndex = 0;
+  ColumnRelightScheduledIndex = 0;
+  ColumnRelightAppliedCount = 0;
   RelightQueue.clear();
   RelightQueueIndex = 0;
-  // Column relight already covers skylight for the full vertical stack; skip the
-  // per-chunk pass that duplicated work on every slice during create/load.
-  BeginColumnRelightQueue(world);
+
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      { BulkRelightChunkQueue.push_back(chunk.GetCoord()); });
+
+  world.SetLightingRelightDeferred(false);
+  world.SetLightingSkylightBulkComplete(true);
+
+  std::cout << "[WorldLoad] RelightBulkChunks: "
+            << BulkRelightChunkQueue.size() << " chunks" << std::endl;
+
+  if (BulkRelightChunkQueue.empty())
+  {
+    BeginEmissiveBlockLightQueue(world);
+    return;
+  }
+
+  CurrentPhase = Phase::RelightBulkChunks;
 }
 
 void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
@@ -221,6 +254,15 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
   ColumnRelightIndex = 0;
   ColumnRelightScheduledIndex = 0;
   ColumnRelightAppliedCount = 0;
+
+  // Bulk create/load already ran skylight relight; a full-world emissive scan
+  // blocks the main thread for minutes on large patches.
+  if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
+  {
+    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+    BeginMeshWarmupInner(world);
+    return;
+  }
 
   if (world.BlockRegistry)
   {
@@ -279,6 +321,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
   }
   MeshWarmupTicks = 0;
   MeshWarmupProcessedMax = 0;
+  MeshWarmupCompletedTotal = 0;
   MeshWarmupStartPending =
       world.MeshService->GetDirtyCount() +
       static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
@@ -304,6 +347,22 @@ void UWorldCooperativeSession::BeginPrepareEnter()
   CurrentPhase = Phase::PrepareEnter;
 }
 
+void UWorldCooperativeSession::ReportMeshWarmupStart(IUProgressSink &sink) const
+{
+  if (CurrentPhase != Phase::MeshWarmup)
+  {
+    return;
+  }
+  const float mesh_base =
+      Kind == WorldCoopKind::Create
+          ? CooperativeCreateMeshProgressBase()
+          : (ProceduralFillLoadPath ? ProceduralFillMeshProgressBase()
+                                    : CooperativeLoadMeshProgressBase());
+  Report(sink, "mesh_warmup", mesh_base,
+         "Building terrain meshes... 0/" +
+             std::to_string(MeshWarmupStartPending));
+}
+
 const char *UWorldCooperativeSession::PhaseId() const
 {
   switch (CurrentPhase)
@@ -324,6 +383,8 @@ const char *UWorldCooperativeSession::PhaseId() const
     return "relight_chunks";
   case Phase::RelightColumns:
     return "relight_columns";
+  case Phase::RelightBulkChunks:
+    return "relight_bulk_chunks";
   case Phase::RelightEmissiveBlockLight:
     return "relight_emissive_blocklight";
   case Phase::MeshWarmup:
@@ -800,6 +861,104 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     break;
   }
+  case Phase::RelightBulkChunks:
+  {
+    const auto tick_t0 = std::chrono::steady_clock::now();
+    if (world.BlockRegistry)
+    {
+      if (world.ProceduralTemplate.AsyncRelight)
+      {
+        const int thread_count =
+            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
+        const int pipeline_depth = thread_count * 8;
+        const int drain_batch = 128;
+        const int schedule_batch = std::clamp(budget * 8, 32, 128);
+        const int pass_limit = 12;
+        for (int pass = 0; pass < pass_limit; ++pass)
+        {
+          BulkRelightChunkAppliedCount += static_cast<size_t>(
+              world.DrainAsyncRelightResults(drain_batch, false, false));
+
+          int scheduled = 0;
+          while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
+                 world.GetAsyncRelightInFlightCount() < pipeline_depth &&
+                 scheduled < schedule_batch)
+          {
+            world.EnqueueAsyncChunkSkylightRelight(
+                BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++]);
+            ++scheduled;
+          }
+
+          if (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size() &&
+              !world.HasPendingAsyncRelightWork())
+          {
+            break;
+          }
+        }
+      }
+      else
+      {
+        const int chunk_budget = std::clamp(budget * 4, 16, 64);
+        int relit = 0;
+        while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
+               relit < chunk_budget)
+        {
+          RelightChunk(world.BlockWorld, *world.BlockRegistry,
+                       BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++],
+                       false, true);
+          ++relit;
+          ++BulkRelightChunkAppliedCount;
+        }
+      }
+    }
+
+    const bool chunks_done =
+        world.ProceduralTemplate.AsyncRelight
+            ? (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size() &&
+               !world.HasPendingAsyncRelightWork())
+            : (BulkRelightChunkScheduledIndex >= BulkRelightChunkQueue.size());
+
+    const float relight_base =
+        Kind == WorldCoopKind::Create
+            ? (kCreateWeightInit + kCreateWeightGenerate)
+            : (ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                      : CooperativeLoadProgressBase());
+    const float relight_weight =
+        Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
+    const size_t relight_done = world.ProceduralTemplate.AsyncRelight
+                                    ? BulkRelightChunkAppliedCount
+                                    : BulkRelightChunkScheduledIndex;
+    const size_t relight_total = BulkRelightChunkQueue.size();
+    const int relight_inflight = world.ProceduralTemplate.AsyncRelight
+                                     ? world.GetAsyncRelightInFlightCount()
+                                     : 0;
+    const float relight_inner =
+        relight_total > 0
+            ? std::min(1.0f,
+                       (static_cast<float>(relight_done) +
+                        0.35f * static_cast<float>(relight_inflight)) /
+                           static_cast<float>(relight_total))
+            : 1.0f;
+    const float relight_frac = relight_base + relight_weight * relight_inner;
+
+    if (chunks_done)
+    {
+      const auto tick_t1 = std::chrono::steady_clock::now();
+      const double tick_ms =
+          std::chrono::duration<double, std::milli>(tick_t1 - tick_t0).count();
+      std::cout << "[WorldLoad] RelightBulkChunks done: " << relight_total
+                << " chunks, last_tick_ms=" << tick_ms << std::endl;
+      BeginEmissiveBlockLightQueue(world);
+      ReportMeshWarmupStart(sink);
+    }
+    else
+    {
+      Report(sink, "relight", relight_frac,
+             "Computing lighting... " + std::to_string(relight_done) + "/" +
+                 std::to_string(relight_total));
+    }
+    break;
+  }
   case Phase::RelightColumns:
   {
     const int max_y = world.ProceduralTemplate.MaxHeight;
@@ -813,11 +972,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const int thread_count =
             std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
         const int max_inflight = thread_count * (bulk_coop_relight ? 3 : 2);
-        const int drain_batch = bulk_coop_relight ? 16 : 4;
+        const int drain_batch = bulk_coop_relight ? 32 : 4;
         const int schedule_batch =
-            bulk_coop_relight ? std::clamp(budget * 2, 8, 24)
+            bulk_coop_relight ? std::clamp(budget * 4, 16, 64)
                               : std::clamp(budget / 2, 2, 8);
-        const int pass_limit = bulk_coop_relight ? 4 : 1;
+        const int pass_limit = bulk_coop_relight ? 6 : 1;
         for (int pass = 0; pass < pass_limit; ++pass)
         {
           ColumnRelightAppliedCount += static_cast<size_t>(
@@ -882,7 +1041,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const float relight_frac = ComputeRelightLoadProgress(
         relight_base, relight_weight, 1, 1, ColumnRelightAppliedCount,
         ColumnRelightQueue.size(), async_in_flight);
-    Report(sink, "relight", relight_frac, "Computing column lighting...");
+    Report(sink, "relight", relight_frac,
+           columns_done ? "Lighting ready."
+                       : "Computing lighting... " +
+                             std::to_string(ColumnRelightAppliedCount) + "/" +
+                             std::to_string(ColumnRelightQueue.size()));
 
     if (columns_done)
     {
@@ -935,42 +1098,49 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::MeshWarmup:
   {
+    const bool create_mesh_warmup = Kind == WorldCoopKind::Create;
     const UChunkEmergeCoordinator::FrameBudget mesh_budget =
-        UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
-    if (world.BlockRegistry)
+        create_mesh_warmup
+            ? UChunkEmergeCoordinator::CreateMeshWarmupBudget(budget)
+            : UChunkEmergeCoordinator::CooperativeWarmupBudget(budget);
+    const int pass_limit = create_mesh_warmup ? 8 : 2;
+    MeshRebuildTickStats tick_stats;
+    for (int pass = 0; pass < pass_limit; ++pass)
     {
-      world.MeshService->RebuildDirtyChunks(world.BlockWorld, *world.BlockRegistry,
-                                            mesh_budget.MaxMeshDrain,
-                                            mesh_budget.MaxMeshSchedule);
-      world.MeshService->DrainAsyncMeshResults(world.BlockWorld,
-                                               *world.BlockRegistry,
-                                               mesh_budget.MaxMeshDrain);
+      if (!world.BlockRegistry)
+      {
+        break;
+      }
+      MeshRebuildTickStats pass_stats =
+          world.MeshService->RebuildDirtyChunksWithStats(
+              world.BlockWorld, *world.BlockRegistry, mesh_budget.MaxMeshDrain,
+              mesh_budget.MaxMeshSchedule);
+      tick_stats.Completed += pass_stats.Completed;
+      tick_stats.Scheduled += pass_stats.Scheduled;
+      tick_stats.SyncRebuilt += pass_stats.SyncRebuilt;
+      if (!world.MeshService->HasPendingDirty() &&
+          !world.MeshService->HasPendingAsyncMeshWork())
+      {
+        break;
+      }
     }
+    MeshWarmupCompletedTotal += static_cast<size_t>(tick_stats.Completed);
     ++MeshWarmupTicks;
     const bool mesh_done = !world.MeshService->HasPendingDirty() &&
                            !world.MeshService->HasPendingAsyncMeshWork();
     const size_t pending_now =
         world.MeshService->GetDirtyCount() +
         static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
-    if (MeshWarmupStartPending > pending_now)
+    if (MeshWarmupCompletedTotal > MeshWarmupProcessedMax)
     {
-      const size_t processed_now = MeshWarmupStartPending - pending_now;
-      MeshWarmupProcessedMax = std::max(MeshWarmupProcessedMax, processed_now);
+      MeshWarmupProcessedMax = MeshWarmupCompletedTotal;
     }
-    const float mesh_inner_processed =
-        mesh_done ? 1.0f
-                  : static_cast<float>(MeshWarmupProcessedMax) /
-                        static_cast<float>(MeshWarmupStartPending);
-    const size_t estimated_ticks = std::max<size_t>(
-        1, MeshWarmupStartPending /
-               static_cast<size_t>(std::max(1, mesh_budget.MaxMeshDrain)));
-    const float mesh_inner_creep =
-        mesh_done ? 1.0f
-                  : std::min(0.95f,
-                             static_cast<float>(MeshWarmupTicks) /
-                                 static_cast<float>(estimated_ticks));
-    const float mesh_inner =
-        mesh_done ? 1.0f : std::max(mesh_inner_processed, mesh_inner_creep);
+    const float completed_frac =
+        MeshWarmupStartPending > 0
+            ? std::min(1.0f,
+                       static_cast<float>(MeshWarmupCompletedTotal) /
+                           static_cast<float>(MeshWarmupStartPending))
+            : 1.0f;
     const float mesh_base =
         Kind == WorldCoopKind::Create
             ? CooperativeCreateMeshProgressBase()
@@ -982,11 +1152,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             : (ProceduralFillLoadPath ? kProceduralFillWeightMeshWarmup
                                       : kPhaseWeightMeshWarmup);
     const float mesh_frac =
-        mesh_base + mesh_weight * std::clamp(mesh_inner, 0.0f, 1.0f);
+        mesh_base + mesh_weight * (mesh_done ? 1.0f : completed_frac);
+    const size_t done_count = MeshWarmupCompletedTotal;
+    const size_t total_count = MeshWarmupStartPending;
     Report(sink, "mesh_warmup", mesh_frac,
            mesh_done ? "Terrain meshes ready."
-                     : "Building meshes... " + std::to_string(pending_now) +
-                           " remaining");
+                     : "Building meshes... " + std::to_string(done_count) +
+                           "/" + std::to_string(total_count) +
+                           " (" + std::to_string(pending_now) + " pending)");
     if (mesh_done)
     {
       world.SetLightingRelightDeferred(false);
@@ -1258,8 +1431,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.AllowProceduralFill = world.IsStreamingEnabled();
     world.InitStreamerCallbacks();
     BeginMeshWarmup(world);
-    Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),
-                 "Building terrain meshes...");
+    if (CurrentPhase == Phase::MeshWarmup)
+    {
+      Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),
+             "Building terrain meshes...");
+    }
     break;
   }
   case Phase::Done:

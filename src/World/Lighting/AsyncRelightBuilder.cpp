@@ -1,13 +1,31 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "World/Core/BlockWorld.h"
 #include <mutex>
+#include <thread>
 
 namespace cutum
 {
 
+namespace
+{
+std::size_t ResolveRelightWorkerCount(std::size_t thread_count)
+{
+  if (thread_count == 0)
+  {
+    const std::size_t hw = std::thread::hardware_concurrency();
+    return hw > 1 ? hw - 1 : 1;
+  }
+  return std::max<std::size_t>(1, thread_count);
+}
+
+std::mutex gRelightCaptureMutex;
+} // namespace
+
 UAsyncRelightBuilder::UAsyncRelightBuilder(std::size_t thread_count)
-    : Pool(thread_count)
+    : WorkerCount(static_cast<int>(ResolveRelightWorkerCount(thread_count))),
+      Pool(ResolveRelightWorkerCount(thread_count))
 {
 }
 
@@ -25,6 +43,32 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                 job_id]() mutable
                {
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
+                 result.job_id = job_id;
+                 Completed.Push(std::move(result));
+               });
+}
+
+void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
+                                      RelightJobSpec spec,
+                                      const UBlockRegistry &registry)
+{
+  const uint64_t job_id =
+      spec.job_id > 0 ? spec.job_id : NextJobId++;
+  spec.job_id = job_id;
+  {
+    std::lock_guard<std::mutex> lock(InFlightMutex);
+    InFlight[job_id] = job_id;
+  }
+
+  Pool.Enqueue([this, &world, spec = std::move(spec), &registry,
+                job_id]() mutable
+               {
+                 UChunkRelightSnapshot snapshot;
+                 {
+                   std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
+                   snapshot = UChunkRelightSnapshot::Capture(world, spec);
+                 }
+                 RelightComputeResult result = snapshot.Compute(registry);
                  result.job_id = job_id;
                  Completed.Push(std::move(result));
                });

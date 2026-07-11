@@ -42,6 +42,7 @@ private:
     SpatialChunks,
     RelightChunks,
     RelightColumns,
+    RelightBulkChunks,
     RelightEmissiveBlockLight,
     MeshWarmup,
     PrepareEnter,
@@ -93,16 +94,22 @@ private:
   size_t ColumnRelightIndex{0};
   size_t ColumnRelightScheduledIndex{0};
   size_t ColumnRelightAppliedCount{0};
+  std::vector<glm::ivec3> BulkRelightChunkQueue;
+  size_t BulkRelightChunkScheduledIndex{0};
+  size_t BulkRelightChunkAppliedCount{0};
   std::vector<glm::ivec3> EmissiveChunkRelightQueue;
   size_t EmissiveChunkRelightIndex{0};
   size_t MeshWarmupProcessedMax{0};
+  size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
 
   void BeginDeferredRelightQueue(UWorld &world);
+  void BeginBulkChunkRelightQueue(UWorld &world);
   void BeginColumnRelightQueue(UWorld &world);
   void BeginEmissiveBlockLightQueue(UWorld &world);
   void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
+  void ReportMeshWarmupStart(IUProgressSink &sink) const;
   void BeginPrepareEnter();
   const char *PhaseId() const;
   int GenCenterX{0};

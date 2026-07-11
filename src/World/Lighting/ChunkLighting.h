@@ -12,6 +12,7 @@ class UBlockWorld;
 
 constexpr int kRelightFrontierIterationsFull = 4;
 constexpr int kRelightFrontierIterationsEdit = 2;
+constexpr int kRelightFrontierIterationsBulk = 1;
 
 struct RelightFrontierOutcome
 {

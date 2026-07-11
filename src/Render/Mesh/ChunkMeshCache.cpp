@@ -167,15 +167,19 @@ void UChunkMeshCache::MarkAllDirty()
   CrossBatchesDirty = true;
   InvalidateVisibleList();
 }
-void UChunkMeshCache::MarkAllDirtyFromWorld(const UBlockWorld &world)
+void UChunkMeshCache::MarkAllDirtyFromWorld(const UBlockWorld &world,
+                                            bool clear_existing_caches)
 {
-  MarkAllDirty();
-  world.GetChunkManager().ForEachChunk([this](const UChunk &chunk)
-                                       { MarkDirty(chunk.GetCoord()); });
+  if (clear_existing_caches)
+  {
+    MarkAllDirty();
+  }
+  world.GetChunkManager().ForEachChunk(
+      [this](const UChunk &chunk) { MarkDirty(chunk.GetCoord()); });
 }
 void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 {
-  MarkAllDirtyFromWorld(world);
+  MarkAllDirtyFromWorld(world, true);
   RebuildDirtyChunks(world, registry, 10000, 10000);
   if (Render.AsyncMeshing && Render.GreedyMeshing)
   {
@@ -570,6 +574,15 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
                                          int max_drain_per_frame,
                                          int max_schedule_per_frame)
 {
+  (void)RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
+                                    max_schedule_per_frame);
+}
+
+MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
+    UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
+    int max_schedule_per_frame)
+{
+  MeshRebuildTickStats stats;
   bool mesh_data_changed = false;
   if (Render.AsyncMeshing && Render.GreedyMeshing)
   {
@@ -579,12 +592,19 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
     {
       ApplyMeshResult(world, std::move(result));
       mesh_data_changed = true;
+      ++stats.Completed;
     }
 
+    const int max_pipeline = std::max(
+        max_schedule_per_frame, AsyncBuilder->GetMaxPipelineDepth());
     int scheduled = 0;
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
+      if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
+      {
+        break;
+      }
       if (AsyncBuilder->IsInFlight(*it))
       {
         ++it;
@@ -600,6 +620,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       it = Dirty.RemoveAt(it);
       ++scheduled;
+      ++stats.Scheduled;
     }
     if (InstancesDirty)
     {
@@ -611,7 +632,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
       CrossBatchesDirty = true;
     }
     BumpMeshRevisionIfNeeded();
-    return;
+    return stats;
   }
 
   int rebuilt = 0;
@@ -621,6 +642,8 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
     RebuildChunk(world, registry, *it);
     it = Dirty.RemoveAt(it);
     ++rebuilt;
+    ++stats.SyncRebuilt;
+    ++stats.Completed;
   }
   if (InstancesDirty)
   {
@@ -632,6 +655,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
     CrossBatchesDirty = true;
   }
   BumpMeshRevisionIfNeeded();
+  return stats;
 }
 
 int UChunkMeshCache::GetAsyncInFlightCount() const

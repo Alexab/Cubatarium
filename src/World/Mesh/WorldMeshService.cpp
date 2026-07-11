@@ -124,6 +124,14 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
                            max_schedule_per_frame);
 }
 
+MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
+    UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
+    int max_schedule_per_frame)
+{
+  return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
+                                           max_schedule_per_frame);
+}
+
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
                                               UBlockRegistry &registry,
                                               int max_per_frame)

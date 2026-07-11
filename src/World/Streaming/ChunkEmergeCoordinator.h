@@ -31,6 +31,7 @@ public:
 
   static FrameBudget WarmupBudget(int mesh_flush = kWarmupMeshFlush);
   static FrameBudget CooperativeWarmupBudget(int coop_budget);
+  static FrameBudget CreateMeshWarmupBudget(int coop_budget);
 
   void BeginFrame(const ProceduralSettings &procedural, float movement_speed,
                   int default_load_ops);

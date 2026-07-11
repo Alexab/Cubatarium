@@ -46,6 +46,9 @@ public:
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame, int max_schedule_per_frame);
+  MeshRebuildTickStats RebuildDirtyChunksWithStats(
+      UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
+      int max_schedule_per_frame);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
