@@ -403,6 +403,46 @@ void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
 }
 
+void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path oresJson = root / "ores.json";
+  if (!std::filesystem::exists(oresJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(oresJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (!json.contains("ores") || !json["ores"].is_array())
+    {
+      return;
+    }
+    for (const auto &entry : json["ores"])
+    {
+      if (!entry.is_object() || !entry.contains("slot"))
+      {
+        continue;
+      }
+      PackOreRule rule;
+      rule.Slot = entry["slot"].get<std::string>();
+      rule.YPeak = entry.value("y_peak", rule.YPeak);
+      rule.YSpread = entry.value("y_spread", rule.YSpread);
+      rule.VeinSize = entry.value("vein_size", rule.VeinSize);
+      rule.Rarity = entry.value("rarity", rule.Rarity);
+      rule.MaxSurfaceOffset = entry.value("max_surface_offset", rule.MaxSurfaceOffset);
+      rule.BelowSeaLevel = entry.value("below_sea_level", rule.BelowSeaLevel);
+      rule.SeedModulo = entry.value("seed_modulo", rule.SeedModulo);
+      pack.Ores.Rules.push_back(rule);
+    }
+    pack.Ores.Loaded = !pack.Ores.Rules.empty();
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ores.json parse error: " << e.what() << std::endl;
+  }
+}
+
 BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
                                      const std::string &biomeId)
 {
@@ -488,6 +528,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   LoadPipelineJson(root, ActivePack);
   LoadHeightJson(root, ActivePack);
   LoadClimateJson(root, ActivePack);
+  LoadOresJson(root, ActivePack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -621,6 +662,8 @@ const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
 const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height; }
 
 const PackClimateConfig &UWorldGenPack::ClimateConfig() { return ActivePack.Climate; }
+
+const PackOresConfig &UWorldGenPack::OresConfig() { return ActivePack.Ores; }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
     const std::string &biomeId)

@@ -71,6 +71,24 @@ struct PackClimateConfig
   bool Loaded{false};
 };
 
+struct PackOreRule
+{
+  std::string Slot;
+  int YPeak{32};
+  int YSpread{24};
+  int VeinSize{4};
+  float Rarity{0.1f};
+  int MaxSurfaceOffset{5};
+  bool BelowSeaLevel{false};
+  int SeedModulo{0};
+};
+
+struct PackOresConfig
+{
+  std::vector<PackOreRule> Rules;
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
@@ -103,6 +121,7 @@ struct WorldGenPack
   WorldGenPackPipeline Pipeline;
   PackHeightConfig Height;
   PackClimateConfig Climate;
+  PackOresConfig Ores;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -117,6 +136,7 @@ public:
   static const WorldGenPack &Get();
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();
+  static const PackOresConfig &OresConfig();
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,

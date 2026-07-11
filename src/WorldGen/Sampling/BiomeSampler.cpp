@@ -859,6 +859,7 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);
   y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY);
   y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY);
+  y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY);
   return std::clamp(y, 1, settings.MaxHeight);
 }
 
