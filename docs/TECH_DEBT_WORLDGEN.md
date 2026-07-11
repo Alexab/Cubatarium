@@ -8,7 +8,7 @@
 | Область | Формат | Кто читает |
 |---------|--------|------------|
 | `content/worldgen_packs/**` | JSON | C++ (`UWorldGenPack`) |
-| `content/prefab_features.json` | JSON | C++ |
+| `content/object_features.json` | JSON | C++ |
 | `tools/prefab_manifest.yaml` | YAML | Python (генерация) |
 | `tools/*.yaml` | YAML | Python / CI |
 
@@ -51,7 +51,7 @@
 | Root `terrain` | `procedural.generator` | Root alias still written for older configs; parser warns when both disagree |
 | `ui.block_input_profile` | `ui.control_scheme` | Both read; write emits both (`classic` / `cubatarium`) |
 | `ui.legacy_hud` | unchanged | Toggles GeometryEngine text HUD vs Gui HUD |
-| `prefab_features.yaml` | `content/prefab_features.json` | YAML removed from content (generator-only) |
+| `prefab_features.yaml` | `content/object_features.json` | YAML removed from content (generator-only) |
 | `pipeline.yaml` | `content/worldgen_packs/*/pipeline.json` | Pack-driven stages |
 
 ## Worldgen smoke baselines
@@ -60,12 +60,22 @@
 
 ## Roadmap worldgen (2026) — статус
 
-| Фаза | Статус |
-|------|--------|
-| A — калибровка tuning/caves/prefab | done |
-| B — layered height, биомы, реки, ravines, структуры grid, ground_cover, руды, string seed | done |
-| C — climate sampler, переходные биомы, erosion lite, 3D caves, ores.json, presets, smoke CI | done |
-| D — Overworld terrain smoothing, climate height, height.json, biome prefab coverage | done |
+Infrastructure phases A–D are largely complete. **Terrain visual quality** (Minecraft-like hills, caves, vegetation clustering) remains in the quality backlog below.
+
+| Фаза | Infra | Quality |
+|------|-------|---------|
+| A — tuning/caves/object calibration | done | cave depth/gate still shallow |
+| B — layered height, биомы, rivers, ravines, ores | done | `ores.json` loader wired (2026-07) |
+| C — climate, transitional biomes, erosion, 3D caves, presets, smoke CI | partial | erosion lite wired; 3D caves infra-only; smoke CI proxy gaps |
+| D — smoothing, climate height, height.json, biome coverage | done | smoothing contributes to overly flat plains |
+
+### Quality backlog (post roadmap)
+
+- Erosion-gated plateau/smoothing and rolling hills layer
+- Deeper multi-noise caves with pack-driven config
+- Noise-density vegetation placement (replace hash grid)
+- Optional `terrain_backend: density_3d`
+- Batch audit metrics (`tools/audit_worldgen_batch.py`) and bidirectional CI budgets
 
 ## Execution progress (2026-07-07)
 
