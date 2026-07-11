@@ -341,6 +341,252 @@ def block_id_to_slot(
     return slot if slot else name
 
 
+GROUND_COVER_BLOCK_NAMES = frozenset(
+    {
+        "tall_grass",
+        "dry_grass",
+        "flower_red",
+        "flower_yellow",
+        "flower_blue",
+        "flower_white",
+    }
+)
+
+
+def load_world_block_columns(world_dir: Path) -> dict[tuple[int, int, int], int]:
+    chunk_dir = world_dir / "chunks"
+    if not chunk_dir.is_dir():
+        return {}
+    columns: dict[tuple[int, int, int], int] = {}
+    for path in chunk_dir.glob("*.cchunk"):
+        columns.update(decode_chunk(path))
+    return columns
+
+
+def terrain_surface_map(
+    columns: dict[tuple[int, int, int], int],
+    *,
+    air_id: int = 0,
+) -> dict[tuple[int, int], int]:
+    surface: dict[tuple[int, int], int] = {}
+    by_xz: dict[tuple[int, int], list[int]] = defaultdict(list)
+    for (wx, wy, wz), bid in columns.items():
+        if bid == air_id:
+            continue
+        by_xz[(wx, wz)].append(wy)
+    for xz, heights in by_xz.items():
+        ground_y = terrain_surface_y(columns, xz[0], xz[1], air_id=air_id)
+        if ground_y is not None:
+            surface[xz] = ground_y
+        else:
+            surface[xz] = max(heights)
+    return surface
+
+
+def local_height_range(
+    surface: dict[tuple[int, int], int], x: int, z: int
+) -> int | None:
+    center = surface.get((x, z))
+    if center is None:
+        return None
+    neighbors = [center]
+    for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        neighbor = surface.get((x + dx, z + dz))
+        if neighbor is not None:
+            neighbors.append(neighbor)
+    if len(neighbors) < 2:
+        return None
+    return max(neighbors) - min(neighbors)
+
+
+def terrain_shape_stats(surface: dict[tuple[int, int], tuple[int, int]]) -> dict:
+    heights_only: dict[tuple[int, int], int] = {
+        xz: y for xz, (y, _) in surface.items()
+    }
+    if not heights_only:
+        return {
+            "flatness_pct": 0.0,
+            "rolling_hill_pct": 0.0,
+            "plateau_edge_pct": 0.0,
+        }
+
+    flat_count = 0
+    rolling_count = 0
+    plateau_edges = 0
+    measured = 0
+
+    for (x, z), y in heights_only.items():
+        local_range = local_height_range(heights_only, x, z)
+        if local_range is None:
+            continue
+        measured += 1
+        if local_range <= 1:
+            flat_count += 1
+        if 2 <= local_range <= 4:
+            rolling_count += 1
+
+        neighbor_heights: list[int] = []
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbor = heights_only.get((x + dx, z + dz))
+            if neighbor is not None:
+                neighbor_heights.append(neighbor)
+        if not neighbor_heights:
+            continue
+        neighbor_range = max(neighbor_heights + [y]) - min(neighbor_heights + [y])
+        if neighbor_range <= 1:
+            max_delta = max(abs(y - ny) for ny in neighbor_heights)
+            if max_delta >= 4:
+                plateau_edges += 1
+
+    denom = max(1, measured)
+    return {
+        "flatness_pct": 100.0 * flat_count / denom,
+        "rolling_hill_pct": 100.0 * rolling_count / denom,
+        "plateau_edge_pct": 100.0 * plateau_edges / denom,
+        "shape_columns_measured": measured,
+    }
+
+
+def cave_stats(
+    columns: dict[tuple[int, int, int], int],
+    surface: dict[tuple[int, int], int],
+    *,
+    air_id: int = 0,
+    spawn_radius: int | None = None,
+) -> dict:
+    if not columns or not surface:
+        return {
+            "cave_air_volume": 0,
+            "max_cave_depth_below_surface": 0,
+            "cave_chunk_coverage_pct": 0.0,
+        }
+
+    cave_air = 0
+    max_depth = 0
+    chunks_with_caves: set[tuple[int, int]] = set()
+    total_chunks: set[tuple[int, int]] = set()
+
+    for (wx, wy, wz), bid in columns.items():
+        if spawn_radius is not None and (
+            abs(wx) > spawn_radius or abs(wz) > spawn_radius
+        ):
+            continue
+        chunk_x = wx // CHUNK_SIZE if wx >= 0 else (wx - CHUNK_SIZE + 1) // CHUNK_SIZE
+        chunk_z = wz // CHUNK_SIZE if wz >= 0 else (wz - CHUNK_SIZE + 1) // CHUNK_SIZE
+        total_chunks.add((chunk_x, chunk_z))
+        if bid != air_id:
+            continue
+        ground_y = surface.get((wx, wz))
+        if ground_y is None:
+            continue
+        if wy >= ground_y:
+            continue
+        depth = ground_y - wy
+        if depth <= 0:
+            continue
+        cave_air += 1
+        max_depth = max(max_depth, depth)
+        chunks_with_caves.add((chunk_x, chunk_z))
+
+    chunk_coverage = (
+        100.0 * len(chunks_with_caves) / max(1, len(total_chunks))
+        if total_chunks
+        else 0.0
+    )
+    return {
+        "cave_air_volume": cave_air,
+        "max_cave_depth_below_surface": max_depth,
+        "cave_chunk_coverage_pct": chunk_coverage,
+        "cave_chunks_with_air": len(chunks_with_caves),
+        "cave_chunks_total": len(total_chunks),
+    }
+
+
+def vegetation_cluster_stats(
+    world_dir: Path,
+    id_to_name: dict[int, str],
+    spawn_radius: int,
+    surface: dict[tuple[int, int], tuple[int, int]],
+) -> dict:
+    columns = load_world_block_columns(world_dir)
+    ground_cover_columns: set[tuple[int, int]] = set()
+    tree_columns: set[tuple[int, int]] = set()
+
+    for (wx, wy, wz), bid in columns.items():
+        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+            continue
+        name = id_to_name.get(bid, "")
+        if name in GROUND_COVER_BLOCK_NAMES:
+            ground_y = terrain_surface_y(columns, wx, wz)
+            if ground_y is not None and wy <= ground_y + 2:
+                ground_cover_columns.add((wx, wz))
+        if name in VEGETATION_BLOCK_NAMES:
+            ground_y = terrain_surface_y(columns, wx, wz)
+            if ground_y is not None and wy >= ground_y:
+                tree_columns.add((wx, wz))
+
+    spawn_columns = [
+        xz
+        for xz in surface
+        if abs(xz[0]) <= spawn_radius and abs(xz[1]) <= spawn_radius
+    ]
+    ground_cover_density = (
+        100.0 * len(ground_cover_columns) / max(1, len(spawn_columns))
+    )
+
+    feature_columns = sorted(ground_cover_columns | tree_columns)
+    nn_distances: list[float] = []
+    for i, (x0, z0) in enumerate(feature_columns):
+        best = float("inf")
+        for j, (x1, z1) in enumerate(feature_columns):
+            if i == j:
+                continue
+            dist = ((x0 - x1) ** 2 + (z0 - z1) ** 2) ** 0.5
+            if dist < best:
+                best = dist
+        if best < float("inf"):
+            nn_distances.append(best)
+
+    if len(nn_distances) >= 2:
+        mean_nn = sum(nn_distances) / len(nn_distances)
+        variance = sum((d - mean_nn) ** 2 for d in nn_distances) / len(nn_distances)
+        nn_cv = (variance**0.5) / max(mean_nn, 1e-6)
+    else:
+        nn_cv = 0.0
+
+    window = 16
+    densities: list[float] = []
+    if spawn_columns:
+        min_x = min(x for x, _ in spawn_columns)
+        max_x = max(x for x, _ in spawn_columns)
+        min_z = min(z for _, z in spawn_columns)
+        max_z = max(z for _, z in spawn_columns)
+        for wx in range(min_x, max_x + 1, window):
+            for wz in range(min_z, max_z + 1, window):
+                count = sum(
+                    1
+                    for x, z in ground_cover_columns
+                    if wx <= x < wx + window and wz <= z < wz + window
+                )
+                densities.append(float(count))
+
+    if len(densities) >= 2:
+        mean_density = sum(densities) / len(densities)
+        density_var = sum((d - mean_density) ** 2 for d in densities) / len(
+            densities
+        )
+    else:
+        density_var = 0.0
+
+    return {
+        "ground_cover_density": ground_cover_density,
+        "ground_cover_columns": len(ground_cover_columns),
+        "nn_distance_cv": nn_cv,
+        "local_density_variance": density_var,
+        "feature_columns": len(feature_columns),
+    }
+
+
 def _height_deltas(surface: dict[tuple[int, int], tuple[int, int]]) -> list[int]:
     deltas: list[int] = []
     by_x: dict[int, dict[int, int]] = defaultdict(dict)
@@ -396,6 +642,7 @@ def analyze_surface(
     cliff1 = sum(1 for d in deltas if d >= 1)
     max_violations = sum(1 for y in heights if y > max_height)
     pits = micro_pit_stats(surface)
+    shape = terrain_shape_stats(surface)
 
     result: dict = {
         "columns": len(surface),
@@ -412,6 +659,9 @@ def analyze_surface(
         "top_block_ids": top_blocks.most_common(8),
         "micro_pit_pct": pits["micro_pit_pct"],
         "micro_pits": pits["micro_pits"],
+        "flatness_pct": shape["flatness_pct"],
+        "rolling_hill_pct": shape["rolling_hill_pct"],
+        "plateau_edge_pct": shape["plateau_edge_pct"],
     }
 
     if id_to_name is not None and slot_map is not None:
@@ -474,12 +724,25 @@ def analyze_world(
         (bid for bid, name in id_to_name.items() if name == "water"),
         None,
     )
+    columns = load_world_block_columns(world_dir)
+    terrain_surface = terrain_surface_map(columns)
+    metrics.update(
+        cave_stats(
+            columns,
+            terrain_surface,
+            spawn_radius=spawn_radius,
+        )
+    )
+    metrics.update(
+        vegetation_cluster_stats(
+            world_dir,
+            id_to_name,
+            spawn_radius,
+            surface,
+        )
+    )
+
     if water_id is not None:
-        chunk_dir = world_dir / "chunks"
-        columns: dict[tuple[int, int, int], int] = {}
-        if chunk_dir.is_dir():
-            for path in chunk_dir.glob("*.cchunk"):
-                columns.update(decode_chunk(path))
         metrics["shore_air_gaps"] = count_shore_air_gaps(
             columns,
             water_id=water_id,
@@ -574,5 +837,57 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         shore_gaps = metrics.get("shore_air_gaps", 0)
         if shore_gaps > shore_gaps_max:
             fail(f"shore_air_gaps={shore_gaps} > {shore_gaps_max}")
+
+    flatness_max = thresholds.get("flatness_pct_max")
+    if flatness_max is not None:
+        flatness = metrics.get("flatness_pct", 0.0)
+        if flatness > flatness_max:
+            fail(f"flatness_pct={flatness:.2f}% > {flatness_max}%")
+
+    flatness_min = thresholds.get("flatness_pct_min")
+    if flatness_min is not None:
+        flatness = metrics.get("flatness_pct", 0.0)
+        if flatness < flatness_min:
+            fail(f"flatness_pct={flatness:.2f}% < {flatness_min}%")
+
+    rolling_min = thresholds.get("rolling_hill_pct_min")
+    if rolling_min is not None:
+        rolling = metrics.get("rolling_hill_pct", 0.0)
+        if rolling < rolling_min:
+            fail(f"rolling_hill_pct={rolling:.2f}% < {rolling_min}%")
+
+    plateau_edge_max = thresholds.get("plateau_edge_pct_max")
+    if plateau_edge_max is not None:
+        plateau_edge = metrics.get("plateau_edge_pct", 0.0)
+        if plateau_edge > plateau_edge_max:
+            fail(f"plateau_edge_pct={plateau_edge:.2f}% > {plateau_edge_max}%")
+
+    cliff4_max = thresholds.get("delta_ge_4_pct_max")
+    if cliff4_max is not None:
+        cliff4 = metrics.get("delta_ge_4_pct", 0.0)
+        if cliff4 > cliff4_max:
+            fail(f"delta_ge_4_pct={cliff4:.3f}% > {cliff4_max}%")
+
+    cave_coverage_min = thresholds.get("cave_chunk_coverage_pct_min")
+    if cave_coverage_min is not None:
+        cave_cov = metrics.get("cave_chunk_coverage_pct", 0.0)
+        if cave_cov < cave_coverage_min:
+            fail(
+                f"cave_chunk_coverage_pct={cave_cov:.2f}% < {cave_coverage_min}%"
+            )
+
+    cave_depth_min = thresholds.get("max_cave_depth_below_surface_min")
+    if cave_depth_min is not None:
+        cave_depth = metrics.get("max_cave_depth_below_surface", 0)
+        if cave_depth < cave_depth_min:
+            fail(
+                f"max_cave_depth_below_surface={cave_depth} < {cave_depth_min}"
+            )
+
+    nn_cv_min = thresholds.get("nn_distance_cv_min")
+    if nn_cv_min is not None:
+        nn_cv = metrics.get("nn_distance_cv", 0.0)
+        if nn_cv < nn_cv_min:
+            fail(f"nn_distance_cv={nn_cv:.3f} < {nn_cv_min}")
 
     return failures
