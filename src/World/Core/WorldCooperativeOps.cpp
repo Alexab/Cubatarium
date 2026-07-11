@@ -416,6 +416,8 @@ const char *UWorldCooperativeSession::PhaseId() const
     return "finalize_world";
   case Phase::ScanSaveChunks:
     return "scan_save_chunks";
+  case Phase::DrainAsyncIo:
+    return "drain_async_io";
   case Phase::SaveChunks:
     return "save_chunks";
   case Phase::SaveMetadata:
@@ -509,7 +511,17 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
   SaveChunkIndex = 0;
   SaveUsesTerrainColumns = true;
   std::unordered_set<glm::ivec3, IVec3Hash> grounds;
-  if (world.ModifiedChunks.empty())
+  const bool incremental_save =
+      world.IsStreamingEnabled() && world.HasPersistedSave;
+  if (incremental_save || !world.ModifiedChunks.empty())
+  {
+    grounds.reserve(world.ModifiedChunks.size());
+    for (const glm::ivec3 &modified : world.ModifiedChunks)
+    {
+      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
+    }
+  }
+  else
   {
     world.BlockWorld.GetChunkManager().ForEachChunk(
         [&](const UChunk &chunk)
@@ -517,14 +529,6 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
           const glm::ivec3 coord = chunk.GetCoord();
           grounds.insert(glm::ivec3(coord.x, 0, coord.z));
         });
-  }
-  else
-  {
-    grounds.reserve(world.ModifiedChunks.size());
-    for (const glm::ivec3 &modified : world.ModifiedChunks)
-    {
-      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
-    }
   }
   SaveChunkCoords.reserve(grounds.size());
   for (const glm::ivec3 &ground : grounds)
@@ -806,11 +810,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
-      if (world.Persistence)
-      {
-        world.Persistence->FlushAsyncChunkIo(world);
-      }
-      CurrentPhase = Phase::ScanSaveChunks;
+      SaveDrainIoFrames = 0;
+      CurrentPhase = Phase::DrainAsyncIo;
       Report(sink, "init", 0.f, "Preparing save...");
     }
     else
@@ -1530,6 +1531,33 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
            "Preparing view...");
     Report(sink, "done", 1.f,
            Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
+    break;
+  }
+  case Phase::DrainAsyncIo:
+  {
+    bool drained = true;
+    if (world.Persistence)
+    {
+      drained = world.Persistence->TickDrainAsyncChunkIo(
+          world, std::max(budget * 2, 8));
+    }
+    ++SaveDrainIoFrames;
+    const float frac = std::min(0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) /
+                                           64.0f);
+    Report(sink, "init", frac, "Flushing pending terrain IO...");
+    if (drained)
+    {
+      CurrentPhase = Phase::ScanSaveChunks;
+    }
+    else if (SaveDrainIoFrames >= 512)
+    {
+      if (world.Persistence)
+      {
+        (void)world.Persistence->AbortAsyncChunkIoFor(
+            std::chrono::milliseconds(100));
+      }
+      CurrentPhase = Phase::ScanSaveChunks;
+    }
     break;
   }
   case Phase::ScanSaveChunks:

@@ -136,6 +136,10 @@ void UScreenNavigator::ReturnToMainMenu()
     {
       Application->GameSession->SaveCommandHistory();
     }
+    if (Application->Core && Application->HasWorldSession())
+    {
+      Application->SaveActiveWorldIfNeeded();
+    }
 #ifndef __ANDROID__
     if (auto *wm = GetWindowManager(Application->Window))
     {
