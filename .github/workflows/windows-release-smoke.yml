@@ -250,13 +250,17 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: C++ unit test (worldgen cave depth)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_cave_depth_test.exe
+
       - name: Worldgen integration test
         shell: pwsh
         run: |
           if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ inputs.full_test }}" -eq "true") {
-            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 2
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 4 --both-backends --seeds 42,12354,20240625
           } else {
-            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 2 --seeds 42 --skip-determinism
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 4 --seeds 42,12354,20240625 --skip-determinism
           }
 
       - name: Upload desktop runtime artifact

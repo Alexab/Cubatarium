@@ -69,7 +69,7 @@ def main() -> int:
         type=Path,
         default=REPO / "tools" / "worldgen_baseline.json",
     )
-    parser.add_argument("--radius-chunks", type=int, default=2)
+    parser.add_argument("--radius-chunks", type=int, default=None)
     parser.add_argument(
         "--seeds",
         type=str,
@@ -107,6 +107,8 @@ def main() -> int:
     seeds = parse_seeds(args.seeds, baseline.get("reference_seeds", [42, 12354, 20240625]))
     refs = REPO / "content" / "worldgen_refs.json"
     spawn_radius = baseline.get("spawn_radius", 48)
+    radius_chunks = args.radius_chunks or baseline.get("radius_chunks", 2)
+    backend_thresholds = baseline.get("backend_thresholds", {})
 
     backends = ["heightmap", "density_3d"] if args.both_backends else [args.terrain_backend]
 
@@ -126,7 +128,7 @@ def main() -> int:
                     args.cwd,
                     seed,
                     world_name,
-                    args.radius_chunks,
+                    radius_chunks,
                     report_path,
                     args.timeout,
                     terrain_backend=backend,
@@ -174,7 +176,10 @@ def main() -> int:
                 spawn_radius=spawn_radius,
                 max_height=baseline.get("max_height", 128),
             )
-            seed_failures = compare_to_thresholds(metrics, thresholds)
+            active_thresholds = dict(thresholds)
+            if backend != "heightmap":
+                active_thresholds.update(backend_thresholds.get(backend, {}))
+            seed_failures = compare_to_thresholds(metrics, active_thresholds)
             for msg in seed_failures:
                 failures.append(f"backend={backend} seed {seed}: {msg}")
 
@@ -188,7 +193,7 @@ def main() -> int:
                     args.cwd,
                     seed,
                     world_b,
-                    args.radius_chunks,
+                    radius_chunks,
                     args.cwd / f"create_world_{seed}{suffix}_det.json",
                     args.timeout,
                     terrain_backend=backend,

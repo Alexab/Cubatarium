@@ -421,15 +421,16 @@ static void TestSealAndPruneCoastalChunk()
                     "chunk prune keeps coastal grass");
 }
 
-static void TestSpawnIslandMinSurface()
+static void TestSpawnPositionUsesNaturalSurface()
 {
   cutum::ProceduralSettings settings;
   settings.FillWater = true;
   settings.SeaLevel = kSea;
   settings.MaxHeight = 128;
-  const int adjusted = cutum::AdjustSurfaceYForSpawnIsland(0, 0, 46, settings);
-  FluidTest::Expect(adjusted >= kSea + 3, kTestName,
-                    "spawn island lifts surface to at least sea+3");
+  const int natural = 46;
+  const int adjusted = cutum::AdjustSurfaceYForSpawnIsland(0, 0, natural, settings);
+  FluidTest::Expect(adjusted == natural, kTestName,
+                    "spawn island no longer lifts surface");
 }
 
 } // namespace
@@ -451,7 +452,7 @@ int main()
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();
   TestSealAndPruneCoastalChunk();
-  TestSpawnIslandMinSurface();
+  TestSpawnPositionUsesNaturalSurface();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

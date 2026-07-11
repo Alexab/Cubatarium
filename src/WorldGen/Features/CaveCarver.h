@@ -18,6 +18,7 @@ struct CaveParams
   float threshold{0.64f};
   int minY{4};
   int maxDepthBelowSurface{8};
+  int minDepthBelowSurface{2};
   int octaves{4};
   float persistence{0.5f};
   float lacunarity{2.f};

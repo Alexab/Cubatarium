@@ -79,6 +79,18 @@ int EffectiveChance(int chancePerColumn, float density)
   return std::max(1, static_cast<int>(static_cast<float>(chancePerColumn) * multiplier));
 }
 
+float TargetColumnDensity(int spacing, float density_multiplier)
+{
+  const int effective_spacing = EffectiveSpacing(spacing, density_multiplier);
+  if (effective_spacing <= 0)
+  {
+    return 0.0f;
+  }
+  const float base = 1.0f / static_cast<float>(std::max(8, effective_spacing));
+  const float target = base * (0.5f + density_multiplier * 0.75f);
+  return std::clamp(target, 0.008f, 0.06f);
+}
+
 bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
                             float density_multiplier, uint32_t rule_seed_offset,
                             uint32_t pool_seed_offset)
@@ -88,17 +100,13 @@ bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
   {
     return false;
   }
-  const uint32_t jitter =
-      FeatureHash(x, z, seed + rule_seed_offset + 17u) % 5u;
-  const int jittered_spacing =
-      std::max(1, effective_spacing + static_cast<int>(jitter) - 2);
   const float noise = NormalizedFBM2D(static_cast<float>(x) * 0.02f,
                                       static_cast<float>(z) * 0.02f,
                                       seed + pool_seed_offset + rule_seed_offset,
                                       2, 0.5f, 2.0f);
-  const float threshold =
-      1.0f - (1.0f / static_cast<float>(jittered_spacing));
-  return noise > threshold;
+  const float noise01 = (noise + 1.0f) * 0.5f;
+  const float target = TargetColumnDensity(spacing, density_multiplier);
+  return noise01 > (1.0f - target);
 }
 
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
@@ -529,18 +537,6 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   {
     if (!HillsVegetationAllowed(placementSurface.topSolidY, ctx.Settings.SeaLevel,
                                 ctx.Settings.MaxHeight))
-    {
-      return false;
-    }
-  }
-  const int minTreeSpacing = EffectiveSpacing(24, ctx.Settings.Tuning.vegetationDensity);
-  constexpr int kDx[] = {-1, 1, 0, 0};
-  constexpr int kDz[] = {0, 0, -1, 1};
-  for (int i = 0; i < 4; ++i)
-  {
-    const uint32_t neighborHash =
-        FeatureHash(x + kDx[i], z + kDz[i], ctx.Settings.Seed + 5000);
-    if (neighborHash % static_cast<uint32_t>(std::max(1, minTreeSpacing)) == 0u)
     {
       return false;
     }

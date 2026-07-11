@@ -9,42 +9,35 @@ namespace cutum
 namespace
 {
 
-float CatmullRom1D(float t, float p0, float p1, float p2, float p3)
-{
-  const float t2 = t * t;
-  const float t3 = t2 * t;
-  return 0.5f * ((2.0f * p1) + (-p0 + p2) * t +
-                   (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
-                   (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
-}
-
 float SplineHeightFromContinental(float c, int seaLevel, int maxHeight)
 {
   const float range = static_cast<float>(std::max(8, maxHeight - seaLevel));
-  const float oceanDeep = seaLevel - range * 0.30f;
-  const float oceanShallow = seaLevel - range * 0.12f;
-  const float beach = seaLevel - range * 0.03f;
-  const float inland = seaLevel + range * 0.04f;
-  const float highland = seaLevel + range * 0.18f;
+  const float u = std::clamp(c, 0.0f, 1.0f);
 
-  if (c < 0.28f)
+  const float y_deep = seaLevel - range * 0.20f;
+  const float y_shallow = seaLevel - range * 0.06f;
+  const float y_coast = seaLevel + range * 0.01f;
+  const float y_low = seaLevel + range * 0.08f;
+  const float y_hills = seaLevel + range * 0.16f;
+  const float y_high = seaLevel + range * 0.24f;
+
+  if (u < 0.25f)
   {
-    const float t = c / 0.28f;
-    return oceanDeep + (oceanShallow - oceanDeep) * t;
+    const float t = u / 0.25f;
+    return y_deep + (y_shallow - y_deep) * Smoothstep(0.0f, 1.0f, t);
   }
-  if (c < 0.38f)
+  if (u < 0.50f)
   {
-    const float t = (c - 0.28f) / 0.10f;
-    return oceanShallow + (beach - oceanShallow) * t;
+    const float t = (u - 0.25f) / 0.25f;
+    return y_shallow + (y_coast - y_shallow) * Smoothstep(0.0f, 1.0f, t);
   }
-  if (c < 0.55f)
+  if (u < 0.72f)
   {
-    const float t = (c - 0.38f) / 0.17f;
-    return beach + (inland - beach) * t;
+    const float t = (u - 0.50f) / 0.22f;
+    return y_coast + (y_hills - y_coast) * Smoothstep(0.0f, 1.0f, t);
   }
-  const float t = std::clamp((c - 0.55f) / 0.45f, 0.0f, 1.0f);
-  return inland + (highland - inland) * CatmullRom1D(t, inland, inland, highland,
-                                                     seaLevel + range * 0.55f);
+  const float t = (u - 0.72f) / 0.28f;
+  return y_hills + (y_high - y_hills) * Smoothstep(0.0f, 1.0f, t);
 }
 
 } // namespace
@@ -83,7 +76,7 @@ float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
 
   const float regional_delta =
       (regionalNoise01 - 0.5f) * 2.0f * amplitudeBlocks * terrainRoughness *
-      erosion_mul * (erosion_flat + low_erosion_boost * 0.35f) * 0.30f;
+      erosion_mul * (erosion_flat + low_erosion_boost * 0.35f) * 0.42f;
   const float detail_delta =
       (detailNoise01 - 0.5f) * 2.0f * detailWeight * amplitudeBlocks *
       (erosion_flat * erosion_flat + low_erosion_boost * 0.25f) * 0.40f;
@@ -99,13 +92,13 @@ float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
                          seed + 4400, rollingOctaves, 0.5f, 2.0f) +
          1.0f) *
         0.5f;
-    rolling_delta = (rolling01 - 0.5f) * 2.0f * amplitudeBlocks *
+    rolling_delta = (rolling01 - 0.5f) * 2.0f * amplitudeBlocks * 1.55f *
                     rollingWeight * (erosion_flat + low_erosion_boost * 0.5f);
   }
 
   const float climate_base =
       ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight);
-  const float mid_bias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.15f;
+  const float mid_bias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.12f;
   return (climate_base - mid_bias) + regional_delta + detail_delta + ridge_boost +
          rolling_delta;
 }

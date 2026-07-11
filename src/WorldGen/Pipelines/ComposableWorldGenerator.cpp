@@ -25,7 +25,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
     DensityFieldParams density_params;
-    density_params.cavesInDensity = ctx.Settings.Caves.useDensityField;
+    density_params.cavesInDensity = false;
     DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                            ctx.Settings.MaxHeight,
                            ctx.Settings.Tuning.terrainRoughness, density_params,
@@ -80,10 +80,7 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
         BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     sample.DominantBiome = DominantBiome(sample.Biomes);
-    sample.SurfaceY = BiomeSampler->RefineSurfaceY(
-        world_x, world_z, sample.PreliminarySurfaceY, Ctx.Settings);
-    sample.SurfaceY = AdjustSurfaceYForSpawnIsland(world_x, world_z,
-                                                   sample.SurfaceY, Ctx.Settings);
+    sample.SurfaceY = DensitySampler->SurfaceYAt(world_x, world_z);
     const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
     { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
     sample.SurfaceGradient =
@@ -123,11 +120,7 @@ int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
   case ComposableTerrainMode::Flat:
     return Ctx.Settings.FlatSurfaceY;
   case ComposableTerrainMode::LegacyHash:
-  {
-    const int natural_y = LegacyHashSurfaceY(world_x, world_z, Ctx.Settings);
-    return AdjustSurfaceYForSpawnIsland(world_x, world_z, natural_y,
-                                        Ctx.Settings);
-  }
+    return LegacyHashSurfaceY(world_x, world_z, Ctx.Settings);
   case ComposableTerrainMode::NoiseHeightmap:
   default:
   {
@@ -137,20 +130,10 @@ int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
       natural_y = BiomeSampler->RefineSurfaceY(world_x, world_z, natural_y,
                                                 Ctx.Settings);
     }
-    return AdjustSurfaceYForSpawnIsland(world_x, world_z, natural_y,
-                                        Ctx.Settings);
+    return natural_y;
   }
   case ComposableTerrainMode::Density3D:
-  {
-    int natural_y = DensitySampler->SurfaceYAt(world_x, world_z);
-    if (Config.UseBiomeSurface && BiomeSampler)
-    {
-      natural_y = BiomeSampler->RefineSurfaceY(world_x, world_z, natural_y,
-                                                Ctx.Settings);
-    }
-    return AdjustSurfaceYForSpawnIsland(world_x, world_z, natural_y,
-                                        Ctx.Settings);
-  }
+    return DensitySampler->SurfaceYAt(world_x, world_z);
   }
 }
 

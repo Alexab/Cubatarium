@@ -1,4 +1,5 @@
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/CaveDepthBand.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenContext.h"
@@ -35,7 +36,8 @@ float CombinedCaveNoise(int x, int y, int z, uint32_t seed, const CaveParams &pa
 bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params)
 {
-  if (y < params.minY || y > surfaceY - params.maxDepthBelowSurface)
+  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, params);
+  if (!band.valid || y < band.y_bottom || y > band.y_top)
   {
     return false;
   }
@@ -82,12 +84,12 @@ bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed)
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
                       uint32_t Seed, const CaveParams &params)
 {
-  const int yMax = surfaceY - params.maxDepthBelowSurface;
-  if (yMax < params.minY)
+  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, params);
+  if (!band.valid)
   {
     return;
   }
-  for (int y = params.minY; y <= yMax; ++y)
+  for (int y = band.y_bottom; y <= band.y_top; ++y)
   {
     const bool carve = params.style == CaveStyle::Worm
                            ? ShouldCarveWorm(x, y, z, surfaceY, Seed)
@@ -102,7 +104,7 @@ void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
       ctx.World.SetBlock(pos, BLOCK_AIR);
     }
   }
-  ctx.AccumulateDirtyColumn(params.minY, surfaceY);
+  ctx.AccumulateDirtyColumn(band.y_bottom, surfaceY);
 }
 
 } // namespace cutum

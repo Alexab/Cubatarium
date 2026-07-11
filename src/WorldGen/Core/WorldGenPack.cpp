@@ -461,6 +461,8 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
     const nlohmann::json json = nlohmann::json::parse(file);
     pack.Caves.MaxDepthBelowSurface =
         json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
+    pack.Caves.MinDepthBelowSurface =
+        json.value("min_depth_below_surface", pack.Caves.MinDepthBelowSurface);
     pack.Caves.ChunkGateThreshold =
         json.value("chunk_gate_threshold", pack.Caves.ChunkGateThreshold);
     pack.Caves.UseDensityField =
@@ -733,6 +735,7 @@ void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
     return;
   }
   settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  settings.Caves.minDepthBelowSurface = caves.MinDepthBelowSurface;
   settings.Caves.chunkGateThreshold = caves.ChunkGateThreshold;
   settings.Caves.useDensityField = caves.UseDensityField;
   settings.Caves.densityCaveAmplitude = caves.DensityCaveAmplitude;

@@ -159,8 +159,10 @@ static void TestSeed(uint32_t seed, cutum::UPipelineChunkPopulator &populator,
   FluidTest::Expect(resolved_water != cutum::BLOCK_AIR, kTestName,
                     "water block id resolved");
 
+  const int max_coord = cutum::CHUNK_SIZE * 2 - 1;
   const int gaps = FluidTest::CountShoreAirGaps(world, resolved_water,
-                                                settings.SeaLevel, -32, 31, -32, 31);
+                                                settings.SeaLevel, 0, max_coord,
+                                                0, max_coord);
   FluidTest::Expect(gaps == 0, kTestName, "shore_air_gaps must be zero");
   ScanChunkSeamMesh(world, registry, resolved_water, settings.SeaLevel);
 }

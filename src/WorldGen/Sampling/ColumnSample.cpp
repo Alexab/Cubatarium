@@ -23,14 +23,12 @@ bool ShouldSpawnSurfaceOverride(int world_x, int world_z,
                                 const ProceduralSettings &settings,
                                 int center_x, int center_z)
 {
-  if (!settings.FillWater)
-  {
-    return false;
-  }
-  const float dx = static_cast<float>(world_x - center_x);
-  const float dz = static_cast<float>(world_z - center_z);
-  const float dist = std::sqrt(dx * dx + dz * dz);
-  return dist <= 48.f;
+  (void)world_x;
+  (void)world_z;
+  (void)settings;
+  (void)center_x;
+  (void)center_z;
+  return false;
 }
 
 UColumnSampleBuilder::UColumnSampleBuilder(
@@ -63,8 +61,6 @@ ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
   ctx.SurfaceY =
       BiomeSampler->RefineSurfaceY(world_x, world_z, ctx.PreliminarySurfaceY,
                                    Settings);
-  ctx.SurfaceY = AdjustSurfaceYForSpawnIsland(world_x, world_z, ctx.SurfaceY,
-                                              Settings);
   ctx.HeightNorm =
       HeightNormFromY(ctx.SurfaceY, Settings.SeaLevel, Settings.MaxHeight);
 

@@ -6,7 +6,6 @@
 #include "World/Objects/ObjectUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "WorldGen/Core/Noise.h"
-#include "WorldGen/Sampling/DensityFieldSampler.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -15,51 +14,15 @@
 namespace cutum
 {
 
-namespace
-{
-
-constexpr int kSpawnIslandFlatRadius = 48;
-constexpr int kSpawnIslandBlendRadius = 16;
-
-float SpawnSmoothstep(float edge0, float edge1, float x)
-{
-  const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-  return t * t * (3.0f - 2.0f * t);
-}
-
-} // namespace
-
 int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,
                                  int centerX, int centerZ)
 {
-  if (!settings.FillWater)
-  {
-    return naturalSurfaceY;
-  }
-  const float dx = static_cast<float>(worldX - centerX);
-  const float dz = static_cast<float>(worldZ - centerZ);
-  const float dist = std::sqrt(dx * dx + dz * dz);
-  const int minLandY = settings.SeaLevel + 3;
-
-  int adjusted = naturalSurfaceY;
-  if (dist <= static_cast<float>(kSpawnIslandFlatRadius))
-  {
-    adjusted = std::max(naturalSurfaceY, minLandY);
-  }
-  else if (dist <
-           static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius))
-  {
-    const float u = SpawnSmoothstep(
-        static_cast<float>(kSpawnIslandFlatRadius),
-        static_cast<float>(kSpawnIslandFlatRadius + kSpawnIslandBlendRadius),
-        dist);
-    const float minFloor = static_cast<float>(minLandY) * (1.0f - u) +
-                           static_cast<float>(naturalSurfaceY) * u;
-    adjusted =
-        std::max(naturalSurfaceY, static_cast<int>(std::lround(minFloor)));
-  }
-  return std::clamp(adjusted, 1, settings.MaxHeight);
+  (void)worldX;
+  (void)worldZ;
+  (void)centerX;
+  (void)centerZ;
+  return std::clamp(naturalSurfaceY, 1, settings.MaxHeight);
 }
 
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
@@ -97,50 +60,6 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   const int maxY = std::max(surfaceY, ctx.Settings.SeaLevel);
   ctx.AccumulateDirtyColumn(0, maxY);
-}
-
-void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
-                                  int surfaceY, const ColumnLayerRule &rule,
-                                  const UDensityFieldSampler &sampler)
-{
-  if (surfaceY < 1)
-  {
-    return;
-  }
-  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
-  int maxY = surfaceY;
-  for (int y = 0; y <= ctx.Settings.MaxHeight; ++y)
-  {
-    if (sampler.SampleDensity(x, y, z, surfaceY) <= 0.0f)
-    {
-      continue;
-    }
-    BlockId id = rule.fillerBlock;
-    if (y <= bedrockTop)
-    {
-      id = ctx.Blocks.Bedrock;
-    }
-    else if (y < surfaceY - rule.dirtDepth - rule.stoneDepthBelowDirt)
-    {
-      id = rule.fillerBlock;
-    }
-    else if (y < surfaceY - rule.dirtDepth)
-    {
-      id = rule.fillerBlock;
-    }
-    else if (y < surfaceY)
-    {
-      id = rule.subsurfaceBlock;
-    }
-    else
-    {
-      id = rule.surfaceBlock;
-    }
-    ctx.World.SetBlock(glm::ivec3(x, y, z), id);
-    maxY = std::max(maxY, y);
-  }
-  const int dirtyMax = std::max(maxY, ctx.Settings.SeaLevel);
-  ctx.AccumulateDirtyColumn(0, dirtyMax);
 }
 
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
@@ -195,6 +114,74 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   }
   return filled > 0;
 }
+
+namespace
+{
+
+bool AirTouchesLiquidBlock(const WorldGenContext &ctx, glm::ivec3 pos)
+{
+  static constexpr std::array<glm::ivec3, 6> kDirs = {
+      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+  for (const glm::ivec3 &offset : kDirs)
+  {
+    const BlockId id = ctx.World.GetBlock(pos + offset);
+    if (id == ctx.Blocks.Water || ctx.Registry.IsLiquid(id))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
+{
+  const int sea = ctx.Settings.SeaLevel;
+  const int min_x = base_x - 1;
+  const int max_x = base_x + CHUNK_SIZE;
+  const int min_z = base_z - 1;
+  const int max_z = base_z + CHUNK_SIZE;
+  const BlockId water = ctx.Blocks.Water;
+  bool any = false;
+  for (int pass = 0; pass < 8; ++pass)
+  {
+    bool changed = false;
+    for (int y = 1; y <= sea; ++y)
+    {
+      for (int x = min_x; x <= max_x; ++x)
+      {
+        for (int z = min_z; z <= max_z; ++z)
+        {
+          const glm::ivec3 pos(x, y, z);
+          if (ctx.World.GetBlock(pos) != BLOCK_AIR)
+          {
+            continue;
+          }
+          if (!AirTouchesLiquidBlock(ctx, pos))
+          {
+            continue;
+          }
+          ctx.World.SetBlock(pos, water);
+          ctx.World.SetFluidState(pos,
+                                  FluidCellState::Source().WithKind(FluidKind::Water));
+          changed = true;
+          any = true;
+        }
+      }
+    }
+    if (!changed)
+    {
+      break;
+    }
+  }
+  if (any)
+  {
+    ctx.AccumulateDirtyColumn(0, sea);
+  }
+  return any;
+}
+
+} // namespace
 
 namespace
 {
@@ -402,7 +389,8 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   const bool permeable = SealFluidPermeableDecorInChunk(ctx, base_x, base_z);
   const bool sealed_after_permeable =
       permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z) : false;
-  return sealed || permeable || sealed_after_permeable;
+  const bool shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
+  return sealed || permeable || sealed_after_permeable || shore_air;
 }
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)
@@ -445,8 +433,7 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
   const BlockId dirtOrStone =
       ctx.Blocks.Dirt != BLOCK_AIR ? ctx.Blocks.Dirt : stone;
   const int naturalY = LegacyHashSurfaceY(x, z, ctx.Settings);
-  const int surfaceY =
-      AdjustSurfaceYForSpawnIsland(x, z, naturalY, ctx.Settings);
+  const int surfaceY = naturalY;
 
   for (int y = 0; y <= surfaceY; ++y)
   {

@@ -241,10 +241,10 @@ int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const
         climate, SeaLevel, MaxHeight, regional01, detail01, Params.detailWeight,
         Params.amplitudeBlocks, TerrainRoughness, x, z, Seed,
         Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
-    const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks * 0.16f;
+    const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks * 0.32f;
     float heightDelta = offset + delta;
-    const float maxUp = Params.amplitudeBlocks * 0.55f;
-    const float maxDown = Params.amplitudeBlocks * 0.48f;
+    const float maxUp = Params.amplitudeBlocks * 0.62f;
+    const float maxDown = Params.amplitudeBlocks * 0.55f;
     heightDelta = std::clamp(heightDelta, -maxDown, maxUp);
     int surfaceY =
         SeaLevel + static_cast<int>(std::floor(heightDelta + 0.5f));

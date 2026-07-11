@@ -301,15 +301,15 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
   else
   {
     s.WorldGenPresetId = "balanced";
-    s.Tuning.terrainRoughness = 0.56f;
+    s.Tuning.terrainRoughness = 0.62f;
     s.Tuning.terrainErosion = 0.32f;
     s.Tuning.structureDensity = 0.35f;
     s.Tuning.vegetationDensity = 0.75f;
     s.Tuning.decorationDensity = 0.55f;
     s.Tuning.biomeBlendRadius = 14.0f;
     s.Tuning.erosionStrength = 0.25f;
-    s.Tuning.heightSmoothing = true;
-    s.Tuning.heightSmoothingRadius = 1;
+    s.Tuning.heightSmoothing = false;
+    s.Tuning.heightSmoothingRadius = 0;
     s.FillFire = false;
   }
   ClampTuning(s.Tuning);

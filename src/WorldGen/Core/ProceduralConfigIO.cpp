@@ -445,6 +445,11 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
         settings.Caves.maxDepthBelowSurface =
             caves["max_depth_below_surface"].get<int>();
       }
+      if (caves.contains("min_depth_below_surface"))
+      {
+        settings.Caves.minDepthBelowSurface =
+            caves["min_depth_below_surface"].get<int>();
+      }
       if (caves.contains("scale"))
       {
         settings.Caves.scale = caves["scale"].get<float>();
@@ -527,6 +532,7 @@ void WriteProceduralSettings(nlohmann::json &root,
   caveParams["threshold"] = settings.Caves.threshold;
   caveParams["min_y"] = settings.Caves.minY;
   caveParams["max_depth_below_surface"] = settings.Caves.maxDepthBelowSurface;
+  caveParams["min_depth_below_surface"] = settings.Caves.minDepthBelowSurface;
   caveParams["scale"] = settings.Caves.scale;
   caveParams["style"] = CaveStyleToString(settings.Caves.style);
   caveParams["use_density_field"] = settings.Caves.useDensityField;

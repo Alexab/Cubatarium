@@ -216,15 +216,15 @@ float FlatTerrainJitterScale(int localCoarseRange, float climateErosion)
   float scale = 1.0f;
   if (localCoarseRange <= 2)
   {
-    scale = climateErosion > 0.6f ? 0.0f : 0.55f;
+    scale = climateErosion > 0.6f ? 0.50f : 0.70f;
   }
   else if (localCoarseRange <= 4)
   {
-    scale = 0.35f;
+    scale = 0.55f;
   }
   if (climateErosion < 0.4f)
   {
-    scale = std::max(scale, 0.75f);
+    scale = std::max(scale, 0.80f);
   }
   return scale;
 }
@@ -233,7 +233,7 @@ int FillMicroDepressions(int x, int z, int y, int localCoarseRange,
                          const CoarseHeightCallback &getCoarseY,
                          float climateErosion)
 {
-  if (!getCoarseY || localCoarseRange > 3 || climateErosion < 0.4f)
+  if (!getCoarseY || localCoarseRange > 3 || climateErosion < 0.70f)
   {
     return y;
   }
@@ -256,9 +256,9 @@ int FillMicroDepressions(int x, int z, int y, int localCoarseRange,
   {
     return minNeighbor;
   }
-  if (localCoarseRange <= 2 && y > maxNeighbor + 1)
+  if (localCoarseRange <= 1 && climateErosion > 0.85f && y > maxNeighbor + 2)
   {
-    return maxNeighbor + 1;
+    return maxNeighbor + 2;
   }
   return y;
 }
@@ -267,7 +267,7 @@ int ClampToFlatPlateau(int x, int z, int y, int localCoarseRange,
                        const CoarseHeightCallback &getCoarseY,
                        float climateErosion)
 {
-  if (!getCoarseY || localCoarseRange > 2 || climateErosion <= 0.6f)
+  if (!getCoarseY || localCoarseRange > 2 || climateErosion <= 0.90f)
   {
     return y;
   }
@@ -311,7 +311,7 @@ int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
   {
     return surfaceY;
   }
-  if (localCoarseRange <= 3)
+  if (localCoarseRange <= 2)
   {
     return surfaceY;
   }
@@ -363,9 +363,9 @@ int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settin
       }
     }
   }
-  if (wetNeighbors >= 10 && surfaceY > sea)
+  if (wetNeighbors >= 18 && surfaceY > sea)
   {
-    return std::max(sea, surfaceY - (wetNeighbors >= 18 ? 2 : 1));
+    return std::max(sea, surfaceY - (wetNeighbors >= 28 ? 2 : 1));
   }
   if (wetNeighbors <= 2 && surfaceY == sea)
   {
@@ -809,7 +809,7 @@ int SmoothBlendedSurfaceY(int x, int z, int baseY,
   {
     return baseY;
   }
-  if (climateErosion < 0.4f)
+  if (climateErosion < 0.85f)
   {
     return baseY;
   }
@@ -866,8 +866,20 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
                       2.0f) *
       volatilityJitter * jitterAmp *
       FlatTerrainJitterScale(localCoarseRange, climate.erosion) *
-      (1.0f - climate.erosion * erosionDamp);
+      (1.0f - climate.erosion * erosionDamp) * 5.0f;
   y = static_cast<int>(std::floor(static_cast<float>(y) + jitter + 0.5f));
+
+  const float micro_rolling =
+      NormalizedFBM2D(static_cast<float>(x) * 0.045f,
+                      static_cast<float>(z) * 0.045f, seed + 8801, 2, 0.5f,
+                      2.0f) *
+      volatilityJitter * 4.2f;
+  const float rolling_hills =
+      NormalizedFBM2D(static_cast<float>(x) * 0.018f,
+                      static_cast<float>(z) * 0.018f, seed + 8800, 3, 0.5f,
+                      2.0f) *
+      (0.6f + volatilityJitter * 0.4f) * 6.5f;
+  y += static_cast<int>(std::floor(micro_rolling + rolling_hills + 0.5f));
 
   y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);

@@ -1183,7 +1183,15 @@ void UWorld::GenerateWorldBlocks()
   {
     WorldGen->GenerateFullPatch(0, 0, patchRadiusBlocks);
   }
-  SpawnPoint = WorldGen->DefaultSpawnPosition(0, 0);
+  if (BlockRegistry)
+  {
+    SpawnPoint =
+        WorldGen->ResolvePlayerSpawnPosition(BlockWorld, *BlockRegistry);
+  }
+  else
+  {
+    SpawnPoint = WorldGen->DefaultSpawnPosition(0, 0);
+  }
 
   RebuildBlockMesh();
 }

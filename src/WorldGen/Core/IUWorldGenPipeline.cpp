@@ -4,6 +4,7 @@
 #include <vector>
 #include "World/Chunks/Chunk.h"
 #include "World/Math/GridMath.h"
+#include "World/Objects/ObjectUtil.h"
 
 namespace cutum
 {
@@ -62,6 +63,65 @@ glm::vec3 IUWorldGenPipeline::DefaultSpawnPosition(int worldX, int worldZ,
   return glm::vec3(static_cast<float>(worldX),
                    static_cast<float>(sy) + eyeHeight + 0.5f,
                    static_cast<float>(worldZ));
+}
+
+glm::vec3 IUWorldGenPipeline::ResolvePlayerSpawnPosition(
+    const UBlockWorld &world, UBlockRegistry &registry, int centerX,
+    int centerZ, float eyeHeight) const
+{
+  constexpr int kMaxRadius = 96;
+  constexpr int kStep = 4;
+
+  struct SpawnCandidate
+  {
+    int x;
+    int z;
+    int dist2;
+  };
+  std::vector<SpawnCandidate> candidates;
+  candidates.reserve(
+      static_cast<size_t>((kMaxRadius / kStep + 1) * (kMaxRadius / kStep + 1) * 4));
+
+  for (int x = centerX - kMaxRadius; x <= centerX + kMaxRadius; x += kStep)
+  {
+    for (int z = centerZ - kMaxRadius; z <= centerZ + kMaxRadius; z += kStep)
+    {
+      const int dx = x - centerX;
+      const int dz = z - centerZ;
+      const int dist2 = dx * dx + dz * dz;
+      if (dist2 > kMaxRadius * kMaxRadius)
+      {
+        continue;
+      }
+      candidates.push_back({x, z, dist2});
+    }
+  }
+  std::sort(candidates.begin(), candidates.end(),
+            [](const SpawnCandidate &a, const SpawnCandidate &b)
+            { return a.dist2 < b.dist2; });
+
+  const ProceduralSettings &settings = Ctx.Settings;
+  for (const SpawnCandidate &candidate : candidates)
+  {
+    const int heightmap_y = SurfaceYAt(candidate.x, candidate.z);
+    const PlacementSurfaceInfo surface = ResolvePlacementSurfaceY(
+        world, registry, candidate.x, candidate.z, heightmap_y,
+        settings.MaxHeight, settings.SeaLevel);
+    if (surface.topSolidY < 0)
+    {
+      continue;
+    }
+    if (!IsExposedLandSurface(world, registry, candidate.x, candidate.z,
+                              surface.topSolidY))
+    {
+      continue;
+    }
+    return glm::vec3(static_cast<float>(candidate.x),
+                     static_cast<float>(surface.topSolidY) + eyeHeight + 0.5f,
+                     static_cast<float>(candidate.z));
+  }
+
+  return DefaultSpawnPosition(centerX, centerZ, eyeHeight);
 }
 
 void IUWorldGenPipeline::GenerateSpawnPatch(int centerX, int centerZ,

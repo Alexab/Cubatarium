@@ -3,8 +3,8 @@
   "preset": "balanced",
   "sea_level": 48,
   "max_height": 128,
-  "spawn_radius": 48,
-  "radius_chunks": 2,
+  "spawn_radius": 32,
+  "radius_chunks": 4,
   "thresholds": {
     "delta_ge_16_pct_max": 0.5,
     "delta_ge_8_pct_max": 6.0,
@@ -27,6 +27,15 @@
     "delta_ge_4_pct_max": 1.8,
     "cave_chunk_coverage_pct_min": 1.5,
     "nn_distance_cv_min": 0.22
+  },
+  "backend_thresholds": {
+    "density_3d": {
+      "flatness_pct_max": 42.0,
+      "rolling_hill_pct_min": 5.0,
+      "cave_chunk_coverage_pct_min": 1.5,
+      "spawn_tree_blocks_min": 4000,
+      "nn_distance_cv_min": 0.20
+    }
   },
   "reference_seeds": [42, 12354, 20240625]
 }

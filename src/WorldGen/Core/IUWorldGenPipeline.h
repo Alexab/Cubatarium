@@ -20,6 +20,12 @@ public:
 
   virtual glm::vec3 DefaultSpawnPosition(int worldX, int worldZ,
                                          float eyeHeight = 1.62f) const;
+  glm::vec3 ResolvePlayerSpawnPosition(const UBlockWorld &world,
+                                       UBlockRegistry &registry,
+                                       int centerX = 0, int centerZ = 0,
+                                       float eyeHeight = 1.62f) const;
+
+  const ProceduralSettings &GetProceduralSettings() const { return Ctx.Settings; }
   virtual void GenerateSpawnPatch(int centerX, int centerZ, int radiusBlocks,
                                   WorldGenColumnProgressFn onProgress = nullptr);
   virtual void GenerateFullPatch(int centerX, int centerZ, int halfExtent,

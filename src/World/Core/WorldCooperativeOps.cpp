@@ -1231,9 +1231,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     if (AdvanceGeneration(world, budget * CHUNK_SIZE))
     {
-      world.SpawnPoint = world.WorldGen
-                             ? world.WorldGen->DefaultSpawnPosition(0, 0)
-                             : world.SpawnPoint;
+      if (world.WorldGen && world.BlockRegistry)
+      {
+        world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
+            world.BlockWorld, *world.BlockRegistry);
+      }
+      else if (world.WorldGen)
+      {
+        world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
+      }
       CurrentPhase = Phase::FinalizeWorld;
     }
     const float genFrac =
@@ -1410,7 +1416,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       if (world.WorldGen)
       {
-        world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
+        if (world.BlockRegistry)
+        {
+          world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
+              world.BlockWorld, *world.BlockRegistry);
+        }
+        else
+        {
+          world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
+        }
       }
       CurrentPhase = Phase::PostCreate;
     }

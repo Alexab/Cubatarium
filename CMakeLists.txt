@@ -258,6 +258,7 @@ set(SOURCES
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
@@ -270,6 +271,7 @@ set(SOURCES
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
@@ -1171,6 +1173,13 @@ target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(worldgen_cave_depth_test
+    src/WorldGen/Features/CaveDepthBand.cpp
+    src/Test/WorldGenCaveDepthTest.cpp)
+target_include_directories(worldgen_cave_depth_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_cave_depth_test glm::glm)
+
 set(WORLDGEN_PIPELINE_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
@@ -1367,6 +1376,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
@@ -1379,6 +1389,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Features/CaveCarver.cpp
+    src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp

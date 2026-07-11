@@ -95,6 +95,7 @@ struct PackOresConfig
 struct PackCavesConfig
 {
   int MaxDepthBelowSurface{48};
+  int MinDepthBelowSurface{2};
   float ChunkGateThreshold{0.25f};
   bool UseDensityField{true};
   float DensityCaveAmplitude{0.15f};

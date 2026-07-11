@@ -60,22 +60,29 @@
 
 ## Roadmap worldgen (2026) — статус
 
-Infrastructure phases A–D are largely complete. **Terrain visual quality** (Minecraft-like hills, caves, vegetation clustering) remains in the quality backlog below.
+Infrastructure phases A–D are complete. **Terrain visual quality** work (2026-07 quality fix) addressed spawn flattening, cave depth bands, terrain calibration, vegetation density gates, CI quality metrics, and `density_3d` MVP (Y-scan surface, column fill, post-carve caves, 3D terrain FBM).
 
-| Фаза | Infra | Quality |
-|------|-------|---------|
-| A — tuning/caves/object calibration | done | cave depth/gate still shallow |
-| B — layered height, биомы, rivers, ravines, ores | done | `ores.json` loader wired (2026-07) |
-| C — climate, transitional biomes, erosion, 3D caves, presets, smoke CI | partial | erosion lite wired; 3D caves infra-only; smoke CI proxy gaps |
-| D — smoothing, climate height, height.json, biome coverage | done | smoothing contributes to overly flat plains |
+| Фаза | Infra | Quality (2026-07) |
+|------|-------|---------------------|
+| A — tuning/caves/object calibration | done | caves.json + depth band; spawn island removed |
+| B — layered height, биомы, rivers, ravines, ores | done | `ores.json` loader; natural spawn search |
+| C — climate, transitional biomes, erosion, 3D caves, presets, smoke CI | done | erosion-gates recalibrated; integration CI radius 4 + multi-seed |
+| D — smoothing, climate height, height.json, biome coverage | done | rolling/detail weights raised; plains volatility |
 
-### Quality backlog (post roadmap)
+### Backend status
 
-- Erosion-gated plateau/smoothing and rolling hills layer
-- Deeper multi-noise caves with pack-driven config
-- Noise-density vegetation placement (replace hash grid)
-- Optional `terrain_backend: density_3d`
-- Batch audit metrics (`tools/audit_worldgen_batch.py`) and bidirectional CI budgets
+| Backend | Default | Status |
+|---------|---------|--------|
+| `heightmap` | yes | Quality gates in `integration_test_worldgen.py` + `worldgen_baseline.json` |
+| `density_3d` | no | MVP: 3D FBM terrain density, Y-scan surface, `FillTerrainColumnFromDensity`, post-carve caves; optional CI via `--both-backends` |
+
+### Remaining backlog
+
+- Unified cave density (disable post-carve, cheese/spaghetti in terrain density only)
+- MC-style density router (full offset/factor/jaggedness on 3D noise)
+- Overhangs tuning and perf budget for `density_3d`
+- Nightly `audit_worldgen_batch.py` on 20+ seeds
+- `worldgen_refs.json` refresh after baseline tuning stabilizes
 
 ## Execution progress (2026-07-07)
 

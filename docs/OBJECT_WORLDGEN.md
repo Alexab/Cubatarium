@@ -42,12 +42,12 @@ Legacy `tree_small` / `tree_large` (category `misc`) stay in the library for cre
 For vegetation and decoration, a column attempt runs when a **noise density gate** passes:
 
 ```
-noise = NormalizedFBM2D(x * 0.02, z * 0.02, seed + poolSalt + ruleSeedOffset, ...)
-threshold = 1 - 1 / EffectiveSpacing(spacing, density)
-passes when noise > threshold
+noise01 = (NormalizedFBM2D(x * 0.02, z * 0.02, seed + offsets, ...) + 1) * 0.5
+target_density = clamp((1 / effective_spacing) * (0.5 + density * 0.75), 0.008, 0.06)
+passes when noise01 > (1 - target_density)
 ```
 
-`EffectiveSpacing` uses `max(1, round(spacing / density))` when density &gt; 0. A small hash-derived jitter (±2) is applied to spacing so columns are not locked to a rigid grid. Density multipliers are clamped to `[0, 2]` via `ClampTuningValue` in `procedural.tuning`.
+`EffectiveSpacing` uses `max(1, round(spacing * max(0.25, 2 - density)))` when density &gt; 0. Density multipliers are clamped to `[0, 2]` via `ClampTuningValue` in `procedural.tuning`.
 
 Ground cover is not suppressed when a tree occupies the same column (trees and ground cover may coexist).
 
