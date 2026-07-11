@@ -6,6 +6,7 @@
 #include <exception>
 #include <fstream>
 #include <iomanip>
+#include <atomic>
 #include <iostream>
 #include <mutex>
 #include <sstream>
@@ -37,6 +38,12 @@ std::mutex &LogMutex()
 {
   static std::mutex m;
   return m;
+}
+
+std::atomic<bool> &SuppressErrorDialogsFlag()
+{
+  static std::atomic<bool> flag{false};
+  return flag;
 }
 
 std::filesystem::path LogFilePath()
@@ -413,7 +420,10 @@ void WriteLogLine(const char *tag, const std::string &msg, bool isError)
   if (isError)
   {
     AppendLogLine(text);
-    ShowWindowsErrorDialog(msg);
+    if (!SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
+    {
+      ShowWindowsErrorDialog(msg);
+    }
   }
 #endif
 }
@@ -471,6 +481,11 @@ void CubatariumLogError(const char *tag, const std::string &msg)
 {
   std::lock_guard<std::mutex> lock(LogMutex());
   WriteLogLine(tag, msg, true);
+}
+
+void CubatariumSetSuppressErrorDialogs(bool suppress)
+{
+  SuppressErrorDialogsFlag().store(suppress, std::memory_order_relaxed);
 }
 
 } // namespace cutum

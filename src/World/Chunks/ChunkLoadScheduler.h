@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include <chrono>
 #include <functional>
 #include <queue>
 #include <unordered_map>
@@ -41,6 +42,8 @@ public:
                    glm::ivec2 column_origin = glm::ivec2(0),
                    bool has_column_origin = false);
   void Cancel(glm::ivec3 coord);
+  void CancelAllPending(std::chrono::milliseconds worker_wait =
+                            std::chrono::milliseconds(2000));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4);

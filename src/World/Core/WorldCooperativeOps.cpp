@@ -830,6 +830,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else if (Kind == WorldCoopKind::Save)
     {
+      world.QuiesceBackgroundWork(std::chrono::milliseconds(2000));
       world.RefreshBlockRegistry();
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);

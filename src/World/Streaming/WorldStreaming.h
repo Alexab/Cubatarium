@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include <chrono>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
@@ -53,6 +54,9 @@ public:
 
   void TickAsyncChunkSystems(UWorld &world);
   void TickMeshEmerge(UWorld &world);
+  void QuiesceBackgroundWork(UWorld &world,
+                             std::chrono::milliseconds async_io_timeout =
+                                 std::chrono::milliseconds(2000));
 
   UChunkEmergeCoordinator &GetEmergeCoordinator() { return *EmergeCoordinator; }
   const UChunkEmergeCoordinator &GetEmergeCoordinator() const

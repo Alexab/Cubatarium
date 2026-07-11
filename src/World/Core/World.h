@@ -214,6 +214,8 @@ public:
   void WaitForPendingRelightJobs();
   bool WaitForPendingRelightJobsFor(std::chrono::milliseconds timeout);
   void PrepareForShutdown();
+  void QuiesceBackgroundWork(
+      std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
   void OnBlockRegistryRuntimeOverlayChanged(

@@ -195,6 +195,33 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       static_cast<uint64_t>(pending_bg);
 }
 
+void UWorldStreaming::QuiesceBackgroundWork(
+    UWorld &world, const std::chrono::milliseconds async_io_timeout)
+{
+  SetStreamingEnabled(false);
+  if (Streamer)
+  {
+    Streamer->SetEnabled(false);
+  }
+  DeferredPhysicsSeedQueue.clear();
+  if (ChunkScheduler)
+  {
+    ChunkScheduler->CancelAllPending(async_io_timeout);
+  }
+  if (world.Persistence)
+  {
+    world.Persistence->ClearPendingRelights();
+    for (int pass = 0; pass < 64; ++pass)
+    {
+      if (world.Persistence->TickDrainAsyncChunkIo(world, 8))
+      {
+        break;
+      }
+    }
+    (void)world.Persistence->AbortAsyncChunkIoFor(async_io_timeout);
+  }
+}
+
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   EmergeCoordinator->TickMeshEmerge(world);

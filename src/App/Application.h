@@ -125,6 +125,7 @@ public:
   void SetHotbarCountSetting(int count);
 
   void ReturnToMainMenu() override;
+  void SaveWorldSessionIfNeeded();
   void SaveIfNeededAndProceed(std::function<void()> proceed) override;
   AppSettingsSnapshot LoadAppSettingsSnapshot() const override;
   ProceduralSettings LoadProceduralTemplate() const override;

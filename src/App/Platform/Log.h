@@ -8,6 +8,7 @@ namespace cutum
 
 void CubatariumLogInfo(const char *tag, const std::string &msg);
 void CubatariumLogError(const char *tag, const std::string &msg);
+void CubatariumSetSuppressErrorDialogs(bool suppress);
 
 /// Installs native crash logging (stack trace to cubatarium.log / logcat).
 void CubatariumInstallWindowsDiagnostics();
