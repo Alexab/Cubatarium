@@ -11,6 +11,8 @@ namespace cutum
 namespace
 {
 
+constexpr float kSurfaceWobbleScale = 0.35f;
+
 float CombinedCaveDensityNoise(int x, int y, int z, uint32_t seed,
                                const CaveParams &params)
 {
@@ -32,6 +34,17 @@ float CombinedCaveDensityNoise(int x, int y, int z, uint32_t seed,
          noodle * params.noodleWeight;
 }
 
+float HorizontalSurfaceWobble(int x, int z, uint32_t seed, float scale,
+                              int octaves, float persistence, float lacunarity,
+                              float noise_factor, float jaggedness)
+{
+  const float horizontal = NormalizedFBM2D(
+      static_cast<float>(x) * scale, static_cast<float>(z) * scale, seed + 5100,
+      octaves, persistence, lacunarity);
+  return (horizontal - 0.5f) * 2.0f * noise_factor * jaggedness *
+         kSurfaceWobbleScale;
+}
+
 } // namespace
 
 UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
@@ -49,64 +62,70 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   return RouteDensity(climate, SeaLevel, MaxHeight, TerrainRoughness);
 }
 
-float UDensityFieldSampler::SampleDensityAt(int x, int y, int z,
-                                            int octaves) const
+float UDensityFieldSampler::SampleTerrainDensityAt(
+    int x, int y, int z, int octaves, const DensityRouteParams &route) const
 {
-  const DensityRouteParams route = RouteAt(x, z);
-  const float scale = Params.noiseScale;
-  const float wx = static_cast<float>(x) * scale;
-  const float wy = static_cast<float>(y) * scale;
-  const float wz = static_cast<float>(z) * scale;
-  const float noise3d =
-      FBM3D(wx, wy, wz, Seed + 5100, octaves, Params.persistence,
-            Params.lacunarity);
-  float density = route.baseHeightBlocks - static_cast<float>(y) +
-                  noise3d * route.noiseFactor * route.jaggedness;
-
-  if (Params.cavesInDensity && y < MaxHeight - 4)
-  {
-    const int surface_y = SurfaceYAt(x, z);
-    if (y <= surface_y - Caves.maxDepthBelowSurface && y >= Caves.minY)
-    {
-      const float cave_noise =
-          CombinedCaveDensityNoise(x, y, z, Seed + 3000, Caves);
-      density += cave_noise * Params.caveAmplitude;
-    }
-  }
-  return density;
+  (void)z;
+  const int effective_octaves =
+      octaves > 0 ? octaves : std::max(1, Params.octaves);
+  const float wobble = HorizontalSurfaceWobble(
+      x, z, Seed, Params.noiseScale, effective_octaves, Params.persistence,
+      Params.lacunarity, route.noiseFactor, route.jaggedness);
+  return route.baseHeightBlocks + wobble - static_cast<float>(y);
 }
 
-float UDensityFieldSampler::SampleDensity(int x, int y, int z) const
+float UDensityFieldSampler::ApplyCaveDensityOffset(int x, int y, int z,
+                                                   int surface_y,
+                                                   float density) const
 {
-  return SampleDensityAt(x, y, z, Params.octaves);
+  if (!Params.cavesInDensity || surface_y < Caves.minY)
+  {
+    return density;
+  }
+  const int cave_top = surface_y - Caves.maxDepthBelowSurface;
+  if (y > cave_top || y < Caves.minY)
+  {
+    return density;
+  }
+  const float cave_noise = CombinedCaveDensityNoise(x, y, z, Seed + 3000, Caves);
+  return density + cave_noise * Params.caveAmplitude;
+}
+
+float UDensityFieldSampler::SampleTerrainDensity(int x, int y, int z,
+                                                 int octaves) const
+{
+  return SampleTerrainDensityAt(x, y, z, octaves, RouteAt(x, z));
+}
+
+float UDensityFieldSampler::SampleDensity(int x, int y, int z,
+                                          int surface_y) const
+{
+  const DensityRouteParams route = RouteAt(x, z);
+  float density =
+      SampleTerrainDensityAt(x, y, z, Params.octaves, route);
+  return ApplyCaveDensityOffset(x, y, z, surface_y, density);
 }
 
 int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 {
-  int surface_y = SeaLevel;
-  for (int y = MaxHeight; y >= 0; --y)
-  {
-    if (SampleDensityAt(x, y, z, Params.octaves) > 0.0f)
-    {
-      surface_y = y;
-      break;
-    }
-  }
+  const DensityRouteParams route = RouteAt(x, z);
+  const float wobble = HorizontalSurfaceWobble(
+      x, z, Seed, Params.noiseScale, Params.octaves, Params.persistence,
+      Params.lacunarity, route.noiseFactor, route.jaggedness);
+  const int surface_y =
+      static_cast<int>(std::lround(route.baseHeightBlocks + wobble));
   return std::clamp(surface_y, 1, MaxHeight);
 }
 
 int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
 {
+  const DensityRouteParams route = RouteAt(x, z);
   const int coarse_octaves = std::max(1, Params.octaves - 2);
-  int surface_y = SeaLevel;
-  for (int y = MaxHeight; y >= 0; --y)
-  {
-    if (SampleDensityAt(x, y, z, coarse_octaves) > 0.0f)
-    {
-      surface_y = y;
-      break;
-    }
-  }
+  const float wobble = HorizontalSurfaceWobble(
+      x, z, Seed, Params.noiseScale, coarse_octaves, Params.persistence,
+      Params.lacunarity, route.noiseFactor, route.jaggedness);
+  const int surface_y =
+      static_cast<int>(std::lround(route.baseHeightBlocks + wobble));
   return std::clamp(surface_y, 1, MaxHeight);
 }
 

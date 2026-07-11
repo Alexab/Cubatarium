@@ -111,7 +111,7 @@ void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
   int maxY = surfaceY;
   for (int y = 0; y <= ctx.Settings.MaxHeight; ++y)
   {
-    if (sampler.SampleDensity(x, y, z) <= 0.0f)
+    if (sampler.SampleDensity(x, y, z, surfaceY) <= 0.0f)
     {
       continue;
     }

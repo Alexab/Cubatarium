@@ -25,12 +25,16 @@ public:
                        const DensityFieldParams &params = DensityFieldParams{},
                        const CaveParams &caves = CaveParams{});
 
-  float SampleDensity(int x, int y, int z) const;
+  float SampleTerrainDensity(int x, int y, int z, int octaves = -1) const;
+  float SampleDensity(int x, int y, int z, int surface_y) const;
   int SurfaceYAt(int x, int z) const;
   int CoarseSurfaceYAt(int x, int z) const;
 
 private:
-  float SampleDensityAt(int x, int y, int z, int octaves) const;
+  float SampleTerrainDensityAt(int x, int y, int z, int octaves,
+                               const DensityRouteParams &route) const;
+  float ApplyCaveDensityOffset(int x, int y, int z, int surface_y,
+                               float density) const;
   DensityRouteParams RouteAt(int x, int z) const;
 
   uint32_t Seed;

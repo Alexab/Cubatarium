@@ -103,6 +103,9 @@ void UWorldGenSettingsForm::SetHintText(const std::string &text)
 void UWorldGenSettingsForm::SetForNewWorldDefaults()
 {
   ForNewWorldScreen = true;
+  FormSettings.Generator = ProceduralGenerator::Overworld;
+  ResetToGeneratorDefaults(FormSettings);
+  ApplyWorldGenPreset(FormSettings, "balanced");
   SetHintText("Choose generator and tuning for this new world.");
 }
 
