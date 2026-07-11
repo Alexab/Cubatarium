@@ -183,6 +183,11 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
     TerrainRoughnessInput->SetText(
         std::to_string(FormSettings.Tuning.terrainRoughness));
   }
+  if (TerrainBackendList)
+  {
+    TerrainBackendList->SetSelectedIndex(
+        FormSettings.TerrainBackendMode == TerrainBackend::Density3D ? 1 : 0);
+  }
   if (BiomeForestInput)
   {
     BiomeForestInput->SetText(
@@ -341,6 +346,12 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
     s.Tuning.terrainRoughness =
         ParseFloatOr(TerrainRoughnessInput->GetText(), s.Tuning.terrainRoughness);
   }
+  if (TerrainBackendList)
+  {
+    const int backend_index = TerrainBackendList->GetSelectedIndex();
+    s.TerrainBackendMode = backend_index == 1 ? TerrainBackend::Density3D
+                                            : TerrainBackend::Heightmap;
+  }
   if (BiomeForestInput)
   {
     s.Tuning.biomeForestWeight =
@@ -462,6 +473,12 @@ void UWorldGenSettingsForm::OnGeneratorSelected(int index)
   SetSettings(FormSettings);
 }
 
+void UWorldGenSettingsForm::OnTerrainBackendSelected(int index)
+{
+  FormSettings.TerrainBackendMode =
+      index == 1 ? TerrainBackend::Density3D : TerrainBackend::Heightmap;
+}
+
 void UWorldGenSettingsForm::OnWorldGenPackSelected(int index)
 {
   if (index < 0 || index >= static_cast<int>(PackInfos.size()))
@@ -541,6 +558,8 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(StructureDensityInput, showStructures);
   SetWidgetVisible(TerrainRoughnessLabel, showTuning);
   SetWidgetVisible(TerrainRoughnessInput, showTuning);
+  SetWidgetVisible(TerrainBackendLabel, showTuning);
+  SetWidgetVisible(TerrainBackendList, showTuning);
   SetWidgetVisible(BiomeForestLabel, showBiomeTuning);
   SetWidgetVisible(BiomeForestInput, showBiomeTuning);
   SetWidgetVisible(BiomeDesertLabel, showBiomeTuning);
@@ -712,6 +731,18 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   TerrainRoughnessInput = roughIn.get();
   roughIn->SetText(std::to_string(FormSettings.Tuning.terrainRoughness));
   panel.AddChild(std::move(roughIn));
+
+  auto backendLabel = std::make_unique<UGuiLabel>(Theme, "Terrain backend:");
+  TerrainBackendLabel = backendLabel.get();
+  panel.AddChild(std::move(backendLabel));
+  auto backendList = std::make_unique<UGuiListView>(Theme);
+  TerrainBackendList = backendList.get();
+  backendList->SetItems({"Heightmap", "3D density"});
+  backendList->SetSelectedIndex(
+      FormSettings.TerrainBackendMode == TerrainBackend::Density3D ? 1 : 0);
+  backendList->SetOnSelectionChanged(
+      [this](int index) { OnTerrainBackendSelected(index); });
+  panel.AddChild(std::move(backendList));
 
   auto forestLabel =
       std::make_unique<UGuiLabel>(Theme, "Forest biome weight (0-2):");
@@ -946,44 +977,46 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({StructureDensityInput, 11, 1, 1, 1, 32});
   items.push_back({TerrainRoughnessLabel, 12, 0, 1, 1, 28});
   items.push_back({TerrainRoughnessInput, 12, 1, 1, 1, 32});
-  items.push_back({BiomeForestLabel, 13, 0, 1, 1, 28});
-  items.push_back({BiomeForestInput, 13, 1, 1, 1, 32});
-  items.push_back({BiomeDesertLabel, 14, 0, 1, 1, 28});
-  items.push_back({BiomeDesertInput, 14, 1, 1, 1, 32});
-  items.push_back({BiomePlainsLabel, 15, 0, 1, 1, 28});
-  items.push_back({BiomePlainsInput, 15, 1, 1, 1, 32});
-  items.push_back({BiomeHillsLabel, 16, 0, 1, 1, 28});
-  items.push_back({BiomeHillsInput, 16, 1, 1, 1, 32});
-  items.push_back({BiomeTundraLabel, 17, 0, 1, 1, 28});
-  items.push_back({BiomeTundraInput, 17, 1, 1, 1, 32});
-  items.push_back({BiomeBlendLabel, 18, 0, 1, 1, 28});
-  items.push_back({BiomeBlendInput, 18, 1, 1, 1, 32});
-  items.push_back({TerrainErosionLabel, 19, 0, 1, 1, 28});
-  items.push_back({TerrainErosionInput, 19, 1, 1, 1, 32});
-  items.push_back({OreDensityLabel, 20, 0, 1, 1, 28});
-  items.push_back({OreDensityInput, 20, 1, 1, 1, 32});
-  items.push_back({CaveThresholdLabel, 21, 0, 1, 1, 28});
-  items.push_back({CaveThresholdInput, 21, 1, 1, 1, 32});
-  items.push_back({CaveMinYLabel, 22, 0, 1, 1, 28});
-  items.push_back({CaveMinYInput, 22, 1, 1, 1, 32});
-  items.push_back({CaveScaleLabel, 23, 0, 1, 1, 28});
-  items.push_back({CaveScaleInput, 23, 1, 1, 1, 32});
-  items.push_back({CaveMaxDepthLabel, 24, 0, 1, 1, 28});
-  items.push_back({CaveMaxDepthInput, 24, 1, 1, 1, 32});
-  items.push_back({CaveStyleLabel, 25, 0, 1, 1, 28});
-  items.push_back({CaveStyleInput, 25, 1, 1, 1, 32});
-  items.push_back({CavesBox, 26, 0, 1, 1, 30});
-  items.push_back({OresBox, 26, 1, 1, 1, 30});
-  items.push_back({TreesBox, 27, 0, 1, 1, 30});
-  items.push_back({GroundCoverBox, 27, 1, 1, 1, 30});
-  items.push_back({DecorationBox, 28, 0, 1, 1, 30});
-  items.push_back({StructuresBox, 28, 1, 1, 1, 30});
-  items.push_back({WaterBox, 29, 0, 1, 1, 30});
-  items.push_back({LavaBox, 29, 1, 1, 1, 30});
-  items.push_back({FireBox, 30, 0, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 30, 0, 1, 1, 28});
-  items.push_back({WorldGenPackList, 30, 1, 1, 1, 72});
-  items.push_back({WorldGenPackDescLabel, 31, 0, 1, 2, 36});
+  items.push_back({TerrainBackendLabel, 13, 0, 1, 1, 28});
+  items.push_back({TerrainBackendList, 13, 1, 1, 1, 72});
+  items.push_back({BiomeForestLabel, 14, 0, 1, 1, 28});
+  items.push_back({BiomeForestInput, 14, 1, 1, 1, 32});
+  items.push_back({BiomeDesertLabel, 15, 0, 1, 1, 28});
+  items.push_back({BiomeDesertInput, 15, 1, 1, 1, 32});
+  items.push_back({BiomePlainsLabel, 16, 0, 1, 1, 28});
+  items.push_back({BiomePlainsInput, 16, 1, 1, 1, 32});
+  items.push_back({BiomeHillsLabel, 17, 0, 1, 1, 28});
+  items.push_back({BiomeHillsInput, 17, 1, 1, 1, 32});
+  items.push_back({BiomeTundraLabel, 18, 0, 1, 1, 28});
+  items.push_back({BiomeTundraInput, 18, 1, 1, 1, 32});
+  items.push_back({BiomeBlendLabel, 19, 0, 1, 1, 28});
+  items.push_back({BiomeBlendInput, 19, 1, 1, 1, 32});
+  items.push_back({TerrainErosionLabel, 20, 0, 1, 1, 28});
+  items.push_back({TerrainErosionInput, 20, 1, 1, 1, 32});
+  items.push_back({OreDensityLabel, 21, 0, 1, 1, 28});
+  items.push_back({OreDensityInput, 21, 1, 1, 1, 32});
+  items.push_back({CaveThresholdLabel, 22, 0, 1, 1, 28});
+  items.push_back({CaveThresholdInput, 22, 1, 1, 1, 32});
+  items.push_back({CaveMinYLabel, 23, 0, 1, 1, 28});
+  items.push_back({CaveMinYInput, 23, 1, 1, 1, 32});
+  items.push_back({CaveScaleLabel, 24, 0, 1, 1, 28});
+  items.push_back({CaveScaleInput, 24, 1, 1, 1, 32});
+  items.push_back({CaveMaxDepthLabel, 25, 0, 1, 1, 28});
+  items.push_back({CaveMaxDepthInput, 25, 1, 1, 1, 32});
+  items.push_back({CaveStyleLabel, 26, 0, 1, 1, 28});
+  items.push_back({CaveStyleInput, 26, 1, 1, 1, 32});
+  items.push_back({CavesBox, 27, 0, 1, 1, 30});
+  items.push_back({OresBox, 27, 1, 1, 1, 30});
+  items.push_back({TreesBox, 28, 0, 1, 1, 30});
+  items.push_back({GroundCoverBox, 28, 1, 1, 1, 30});
+  items.push_back({DecorationBox, 29, 0, 1, 1, 30});
+  items.push_back({StructuresBox, 29, 1, 1, 1, 30});
+  items.push_back({WaterBox, 30, 0, 1, 1, 30});
+  items.push_back({LavaBox, 30, 1, 1, 1, 30});
+  items.push_back({FireBox, 31, 0, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 32, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 32, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 33, 0, 1, 2, 36});
   return items;
 }
 

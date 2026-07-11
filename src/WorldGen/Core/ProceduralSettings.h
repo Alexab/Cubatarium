@@ -8,6 +8,12 @@
 namespace cutum
 {
 
+enum class TerrainBackend
+{
+  Heightmap,
+  Density3D,
+};
+
 enum class ProceduralGenerator
 {
   Flat,
@@ -104,6 +110,7 @@ struct ProceduralSettings
   CaveParams Caves;
   RavineParams Ravines;
   WorldGenTuning Tuning;
+  TerrainBackend TerrainBackendMode{TerrainBackend::Heightmap};
 };
 
 float ClampTuningValue(float value);
@@ -113,6 +120,9 @@ const char *ProceduralGeneratorToString(ProceduralGenerator g);
 
 CaveStyle CaveStyleFromString(const std::string &s);
 const char *CaveStyleToString(CaveStyle style);
+
+TerrainBackend TerrainBackendFromString(const std::string &s);
+const char *TerrainBackendToString(TerrainBackend backend);
 
 void ResolveProceduralDefaults(ProceduralSettings &s);
 void ApplyGeneratorTierDefaults(ProceduralSettings &s);

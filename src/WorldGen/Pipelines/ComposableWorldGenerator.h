@@ -5,6 +5,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
+#include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <optional>
@@ -17,6 +18,7 @@ enum class ComposableTerrainMode
   Flat,
   LegacyHash,
   NoiseHeightmap,
+  Density3D,
 };
 
 struct ComposableWorldGenConfig
@@ -50,6 +52,10 @@ public:
 
   const ComposableWorldGenConfig &GetConfig() const { return Config; }
   const WorldGenStageMask &GetStageMask() const { return StageMask; }
+  const UDensityFieldSampler *GetDensitySampler() const
+  {
+    return DensitySampler.has_value() ? &*DensitySampler : nullptr;
+  }
   WorldGenContext &GetContext() { return Ctx; }
 
 private:
@@ -64,6 +70,7 @@ private:
   ComposableWorldGenConfig Config;
   WorldGenStageMask StageMask;
   std::optional<UOverworldHeightSampler> HeightSampler;
+  std::optional<UDensityFieldSampler> DensitySampler;
   std::optional<UBiomeSampler> BiomeSampler;
   std::optional<UColumnSampleBuilder> SampleBuilder;
 };

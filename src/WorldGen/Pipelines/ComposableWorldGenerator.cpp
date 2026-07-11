@@ -7,6 +7,7 @@
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 namespace cutum
@@ -21,7 +22,16 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
       StageMask(BuildWorldGenStageMask(config, ctx.Settings,
                                        UWorldGenPack::Get().Pipeline))
 {
-  if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
+  if (Config.TerrainMode == ComposableTerrainMode::Density3D)
+  {
+    DensityFieldParams density_params;
+    density_params.cavesInDensity = ctx.Settings.Caves.useDensityField;
+    DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
+                           ctx.Settings.MaxHeight,
+                           ctx.Settings.Tuning.terrainRoughness, density_params,
+                           ctx.Settings.Caves);
+  }
+  else if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
   {
     HeightSampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                           ctx.Settings.MaxHeight, Config.HeightPreset,
@@ -36,6 +46,15 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
           [this](int hx, int hz)
           { return HeightSampler->CoarseSurfaceYAt(hx, hz); });
     }
+    else if (DensitySampler)
+    {
+      BiomeSampler->SetCoarseHeightCallback(
+          [this](int hx, int hz)
+          { return DensitySampler->CoarseSurfaceYAt(hx, hz); });
+    }
+  }
+  if (HeightSampler || DensitySampler)
+  {
     SampleBuilder.emplace(HeightSampler.has_value() ? &*HeightSampler : nullptr,
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
                           ctx.Settings);
@@ -45,9 +64,39 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
 ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
     int world_x, int world_z) const
 {
-  if (SampleBuilder)
+  if (SampleBuilder && HeightSampler)
   {
     return SampleBuilder->Build(world_x, world_z);
+  }
+  if (DensitySampler && BiomeSampler)
+  {
+    ColumnSampleContext sample;
+    sample.Climate = SampleClimate(world_x, world_z, Ctx.Settings.Seed);
+    sample.MacroHeight01 =
+        std::clamp(OverworldMacroHeight01(world_x, world_z, Ctx.Settings.Seed),
+                   0.f, 1.f);
+    sample.PreliminarySurfaceY = DensitySampler->CoarseSurfaceYAt(world_x, world_z);
+    sample.Biomes =
+        BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
+                                Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+    sample.DominantBiome = DominantBiome(sample.Biomes);
+    sample.SurfaceY = BiomeSampler->RefineSurfaceY(
+        world_x, world_z, sample.PreliminarySurfaceY, Ctx.Settings);
+    sample.SurfaceY = AdjustSurfaceYForSpawnIsland(world_x, world_z,
+                                                   sample.SurfaceY, Ctx.Settings);
+    const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
+    { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
+    sample.SurfaceGradient =
+        SampleCoarseHeightGradient(world_x, world_z, coarse_fn);
+    sample.SurfaceBiome = PickSurfaceBiome(world_x, world_z, sample.Biomes);
+    sample.SpawnSurfaceOverride =
+        ShouldSpawnSurfaceOverride(world_x, world_z, Ctx.Settings);
+    const float denom = std::max(
+        1.f, static_cast<float>(Ctx.Settings.MaxHeight - Ctx.Settings.SeaLevel));
+    sample.HeightNorm = std::clamp(
+        static_cast<float>(sample.SurfaceY - Ctx.Settings.SeaLevel) / denom, 0.f,
+        1.f);
+    return sample;
   }
   ColumnSampleContext sample;
   sample.PreliminarySurfaceY = SampleCoarseSurfaceY(world_x, world_z);
@@ -61,7 +110,11 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
 
 int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
 {
-  if (SampleBuilder)
+  if (SampleBuilder && HeightSampler)
+  {
+    return BuildColumnSample(world_x, world_z).SurfaceY;
+  }
+  if (DensitySampler && BiomeSampler)
   {
     return BuildColumnSample(world_x, world_z).SurfaceY;
   }
@@ -87,6 +140,17 @@ int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
     return AdjustSurfaceYForSpawnIsland(world_x, world_z, natural_y,
                                         Ctx.Settings);
   }
+  case ComposableTerrainMode::Density3D:
+  {
+    int natural_y = DensitySampler->SurfaceYAt(world_x, world_z);
+    if (Config.UseBiomeSurface && BiomeSampler)
+    {
+      natural_y = BiomeSampler->RefineSurfaceY(world_x, world_z, natural_y,
+                                                Ctx.Settings);
+    }
+    return AdjustSurfaceYForSpawnIsland(world_x, world_z, natural_y,
+                                        Ctx.Settings);
+  }
   }
 }
 
@@ -97,6 +161,10 @@ int UComposableWorldGenerator::SampleCoarseSurfaceY(int world_x,
       HeightSampler)
   {
     return HeightSampler->CoarseSurfaceYAt(world_x, world_z);
+  }
+  if (Config.TerrainMode == ComposableTerrainMode::Density3D && DensitySampler)
+  {
+    return DensitySampler->CoarseSurfaceYAt(world_x, world_z);
   }
   return SampleSurfaceY(world_x, world_z);
 }
@@ -144,7 +212,8 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
 
   rule.surfaceBlock = Ctx.Blocks.Grass;
   rule.subsurfaceBlock = Ctx.Blocks.Dirt;
-  if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap &&
+  if ((Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap ||
+       Config.TerrainMode == ComposableTerrainMode::Density3D) &&
       Config.HeightPreset == HeightPreset::Mountains && HeightSampler)
   {
     const int stone_above = HeightSampler->params().stoneSurfaceAboveY;

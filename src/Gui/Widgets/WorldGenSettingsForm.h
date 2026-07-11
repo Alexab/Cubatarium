@@ -36,6 +36,7 @@ public:
 private:
   void AddWidgetsTo(UGuiPanel &panel);
   void OnGeneratorSelected(int index);
+  void OnTerrainBackendSelected(int index);
   void OnWorldGenPackSelected(int index);
   void RefreshGeneratorDescription();
   void RefreshWorldGenPackDescription();
@@ -65,6 +66,8 @@ private:
   UGuiLabel *DecorationDensityLabel{nullptr};
   UGuiLabel *StructureDensityLabel{nullptr};
   UGuiLabel *TerrainRoughnessLabel{nullptr};
+  UGuiLabel *TerrainBackendLabel{nullptr};
+  UGuiListView *TerrainBackendList{nullptr};
   UGuiLabel *BiomeForestLabel{nullptr};
   UGuiLabel *BiomeDesertLabel{nullptr};
   UGuiLabel *BiomePlainsLabel{nullptr};

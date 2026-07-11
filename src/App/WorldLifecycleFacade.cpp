@@ -503,6 +503,7 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   settings.Generator = args.Generator;
   settings.Seed = args.Seed;
   ApplyWorldGenPreset(settings, args.Preset);
+  settings.TerrainBackendMode = args.TerrainBackendMode;
   settings.AsyncChunkGeneration = false;
   settings.AsyncChunkIo = false;
   ResolveProceduralDefaults(settings);

@@ -111,6 +111,16 @@ bool ParseCreateWorldCliArgs(int argc, char **argv, int start_index,
       out.Preset = argv[++i];
       continue;
     }
+    if (std::strcmp(arg, "--terrain-backend") == 0)
+    {
+      if (i + 1 >= argc)
+      {
+        error = "--terrain-backend requires a value";
+        return false;
+      }
+      out.TerrainBackendMode = TerrainBackendFromString(argv[++i]);
+      continue;
+    }
     if (std::strcmp(arg, "--radius-chunks") == 0)
     {
       if (i + 1 >= argc || !ParseInt(argv[i + 1], out.RadiusChunks))

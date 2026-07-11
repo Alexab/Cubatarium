@@ -9,6 +9,16 @@ namespace cutum
 namespace
 {
 
+void ApplyTerrainBackend(ComposableWorldGenConfig &config,
+                         const ProceduralSettings &settings)
+{
+  if (settings.TerrainBackendMode == TerrainBackend::Density3D &&
+      config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
+  {
+    config.TerrainMode = ComposableTerrainMode::Density3D;
+  }
+}
+
 void ApplyFlatDefaults(ProceduralSettings &s)
 {
   s.Generator = ProceduralGenerator::Flat;
@@ -93,6 +103,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateHills(WorldGenContext ctx)
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
   config.HeightPreset = HeightPreset::Hills;
   config.Fluids = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
@@ -102,6 +113,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateMountains(WorldGenContext ctx)
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
   config.HeightPreset = HeightPreset::Mountains;
   config.Fluids = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
@@ -121,6 +133,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;
   config.FirePatch = ctx.Settings.FillFire;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
@@ -136,6 +149,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
   config.Structures = true;
   config.LavaPools = true;
   config.FirePatch = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 

@@ -368,6 +368,11 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.WorldGenPresetId = p["preset"].get<std::string>();
       ApplyWorldGenPreset(settings, settings.WorldGenPresetId);
     }
+    if (p.contains("terrain_backend") && p["terrain_backend"].is_string())
+    {
+      settings.TerrainBackendMode =
+          TerrainBackendFromString(p["terrain_backend"].get<std::string>());
+    }
     if (p.contains("caves") && p["caves"].is_boolean())
     {
       settings.EnableCaves = p["caves"].get<bool>();
@@ -518,6 +523,8 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["bedrock_top_y"] = settings.BedrockTopY;
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;
   procedural["preset"] = settings.WorldGenPresetId;
+  procedural["terrain_backend"] =
+      TerrainBackendToString(settings.TerrainBackendMode);
   procedural["caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
   procedural["ground_cover"] = settings.EnableGroundCover;

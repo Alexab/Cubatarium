@@ -7,6 +7,7 @@
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
+#include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <unordered_map>
 
@@ -19,8 +20,18 @@ void RunTerrainStage(UComposableWorldGenerator &generator,
 {
   const ColumnLayerRule rule =
       generator.BuildTerrainRuleFromSample(world_x, world_z, sample);
-  FillTerrainColumn(generator.GetContext(), world_x, world_z, sample.SurfaceY,
-                    rule);
+  WorldGenContext &ctx = generator.GetContext();
+  if (generator.GetConfig().TerrainMode == ComposableTerrainMode::Density3D)
+  {
+    if (const UDensityFieldSampler *density_sampler =
+            generator.GetDensitySampler())
+    {
+      FillTerrainColumnFromDensity(ctx, world_x, world_z, sample.SurfaceY, rule,
+                                   *density_sampler);
+      return;
+    }
+  }
+  FillTerrainColumn(ctx, world_x, world_z, sample.SurfaceY, rule);
 }
 
 namespace
@@ -49,6 +60,11 @@ void RunCavesStage(UComposableWorldGenerator &generator,
                    PostTerrainState &)
 {
   WorldGenContext &ctx = generator.GetContext();
+  if (generator.GetConfig().TerrainMode == ComposableTerrainMode::Density3D &&
+      ctx.Settings.Caves.useDensityField)
+  {
+    return;
+  }
   CarveColumnCaves(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
                    ctx.Settings.Caves);
 }

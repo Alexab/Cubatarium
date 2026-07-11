@@ -15,6 +15,7 @@ struct CreateWorldCliArgs
   std::string WorldName;
   uint32_t Seed{42};
   ProceduralGenerator Generator{ProceduralGenerator::Overworld};
+  TerrainBackend TerrainBackendMode{TerrainBackend::Heightmap};
   std::string Preset{"balanced"};
   int RadiusChunks{4};
   std::filesystem::path OutputRoot{"worlds"};

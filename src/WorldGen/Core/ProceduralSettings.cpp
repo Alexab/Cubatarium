@@ -92,6 +92,32 @@ const char *CaveStyleToString(CaveStyle style)
   return style == CaveStyle::Worm ? "worm" : "noise";
 }
 
+TerrainBackend TerrainBackendFromString(const std::string &s)
+{
+  if (s == "density_3d" || s == "density3d" || s == "3d")
+  {
+    return TerrainBackend::Density3D;
+  }
+  if (s != "heightmap" && !s.empty())
+  {
+    std::cerr << "WARN: unknown terrain_backend '" << s
+              << "', using heightmap" << std::endl;
+  }
+  return TerrainBackend::Heightmap;
+}
+
+const char *TerrainBackendToString(TerrainBackend backend)
+{
+  switch (backend)
+  {
+  case TerrainBackend::Density3D:
+    return "density_3d";
+  case TerrainBackend::Heightmap:
+  default:
+    return "heightmap";
+  }
+}
+
 namespace
 {
 
