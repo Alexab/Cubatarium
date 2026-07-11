@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include <deque>
 #include <glm/glm.hpp>
 #include <memory>
 
@@ -90,6 +91,7 @@ private:
   bool StreamingEnabled{true};
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
+  std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
 };
 
 } // namespace cutum

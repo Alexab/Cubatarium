@@ -124,8 +124,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           world.GetMeshService().MarkDirty(coord);
         }
-        ChunkPhysicsSeedBudgets seed_budgets;
-        SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
+        DeferredPhysicsSeedQueue.push_back(coord);
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (SealFluidShoreOnChunkCommitted(
                 world.BlockWorld, *world.BlockRegistry, settings,
@@ -158,7 +157,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   const ProceduralSettings &procedural = world.GetProceduralSettings();
   EmergeCoordinator->BeginFrame(procedural, world.LastMovementSpeed,
-                                world.MaxLoadOpsPerFrame);
+                                world.MaxLoadOpsPerFrame,
+                                world.GetLastMovementFrameMs());
   const UChunkEmergeCoordinator::FrameBudget budget =
       EmergeCoordinator->GetLastBudget();
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
@@ -166,6 +166,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     ChunkScheduler->Tick(world.BlockWorld, budget.MaxChunkCommits,
                          budget.MaxLoadOps);
   }
+  const int physics_budget = std::max(1, budget.MaxChunkCommits);
+  const auto physics_t0 = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < physics_budget && !DeferredPhysicsSeedQueue.empty(); ++i)
+  {
+    const glm::ivec3 coord = DeferredPhysicsSeedQueue.front();
+    DeferredPhysicsSeedQueue.pop_front();
+    ChunkPhysicsSeedBudgets seed_budgets;
+    SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
+  }
+  world.PhysicsTelemetryData.CommitPhysicsMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - physics_t0)
+          .count();
   world.Persistence->TickAsyncChunkIo(world);
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
   const int pending_bg = world.Persistence->GetPendingTerrainColumnRelightCount();

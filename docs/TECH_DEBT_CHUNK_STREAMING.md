@@ -27,13 +27,13 @@
 
 **Load freeze at 80% (2026-07):** бюджетная фаза `RelightColumns` + async column relight при `async_relight`; см. TD-CS-024 (closed).
 
-**Movement hitch mitigation (2026-07):** sync collision column gen budgeted to 32 sub-columns/frame; relight/io drained with per-frame caps. Остаются краткие hitch — см. TD-CS-021.
+**Movement hitch mitigation (2026-07):** sync collision column gen budgeted to 32 sub-columns/frame; relight/io drained with per-frame caps. **Phase F partial (2026-07-11):** deferred physics seed queue, reduced seed budgets (8 cols / 128 liquid per commit), adaptive mesh/commit budgets from `LastMovementFrameMs`. Остаются краткие hitch — см. TD-CS-021.
 
 ## Open
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-CS-021 | 2026-07 | Краткие hitch при движении в новый terrain-chunk | Бюджеты смягчают, но не убирают полностью: incremental sync collision gen (~32 sub-columns/frame), relight queue (2–3 columns/frame), async IO slice drain (16/frame), mesh emerge drain (8 schedule + 8 drain), flat greedy rebuild | Phase F: полный async collision path, adaptive mesh budget, приоритет чанков у feet |
+| TD-CS-021 | 2026-07 | Краткие hitch при движении (~каждые 16 блоков) при генерации/выгрузке/save чанков | Phase F partial (2026-07-11): deferred physics seed, adaptive mesh budgets. **Partial terrain column save (2026-07-11):** incomplete sync/async columns could be persisted on unload → holes on reload; fixed by gating `SaveTerrainColumn` on `IsTerrainChunkComplete` + async regen for partial in-memory columns | Phase F remainder: relight budget per commit, full async collision |
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
 

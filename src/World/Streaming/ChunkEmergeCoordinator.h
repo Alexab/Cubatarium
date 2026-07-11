@@ -26,15 +26,15 @@ public:
   const FrameBudget &GetLastBudget() const { return LastBudget; }
 
   FrameBudget ComputeBudget(const ProceduralSettings &procedural,
-                            float movement_speed,
-                            int default_load_ops) const;
+                            float movement_speed, int default_load_ops,
+                            double last_frame_ms = 0.0) const;
 
   static FrameBudget WarmupBudget(int mesh_flush = kWarmupMeshFlush);
   static FrameBudget CooperativeWarmupBudget(int coop_budget);
   static FrameBudget CreateMeshWarmupBudget(int coop_budget);
 
   void BeginFrame(const ProceduralSettings &procedural, float movement_speed,
-                  int default_load_ops);
+                  int default_load_ops, double last_frame_ms = 0.0);
 
   void TickMeshEmerge(UWorld &world);
 

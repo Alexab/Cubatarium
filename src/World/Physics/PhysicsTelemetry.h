@@ -30,6 +30,9 @@ struct PhysicsTelemetry
   double EditToFirstMeshMs{0.0};
   uint64_t PendingPlayerRelights{0};
   uint64_t PendingBackgroundRelights{0};
+  double CommitPhysicsMs{0.0};
+  double CommitRelightMs{0.0};
+  double CommitMeshMs{0.0};
 };
 
 } // namespace cutum

@@ -2,9 +2,10 @@
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/WorldStreaming.h"
-#include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "Core/Jobs/JobThreadPool.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
@@ -15,15 +16,30 @@
 #include "World/Math/GridMath.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <thread>
 #include <unordered_set>
 
 namespace cutum
 {
+
+struct CooperativeParallelGenState
+{
+  CooperativeParallelGenState()
+      : Pool(std::max<std::size_t>(2, std::thread::hardware_concurrency()))
+  {
+  }
+
+  std::unique_ptr<UPipelineChunkPopulator> Populator;
+  UJobThreadPool Pool;
+  UCompletedJobQueue<ChunkPopulateResult> Completed;
+  size_t InFlight{0};
+};
 
 namespace
 {
@@ -168,6 +184,12 @@ void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
 
 } // namespace
 
+UWorldCooperativeSession::~UWorldCooperativeSession()
+{
+  delete ParallelGen;
+  ParallelGen = nullptr;
+}
+
 void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
 {
   if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
@@ -250,19 +272,12 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 {
   EmissiveChunkRelightQueue.clear();
   EmissiveChunkRelightIndex = 0;
+  EmissiveChunkRelightScheduledIndex = 0;
+  EmissiveChunkRelightAppliedCount = 0;
   ColumnRelightQueue.clear();
   ColumnRelightIndex = 0;
   ColumnRelightScheduledIndex = 0;
   ColumnRelightAppliedCount = 0;
-
-  // Bulk create/load already ran skylight relight; a full-world emissive scan
-  // blocks the main thread for minutes on large patches.
-  if (Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load)
-  {
-    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
-    BeginMeshWarmupInner(world);
-    return;
-  }
 
   if (world.BlockRegistry)
   {
@@ -431,7 +446,9 @@ void UWorldCooperativeSession::Cancel()
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
                                          const std::string &world_folder_path)
 {
+  delete ParallelGen;
   *this = UWorldCooperativeSession{};
+  ParallelGen = nullptr;
   Kind = WorldCoopKind::Load;
   Active = true;
   FolderPath = world_folder_path;
@@ -442,7 +459,9 @@ void UWorldCooperativeSession::BeginLoad(UWorld &world,
 void UWorldCooperativeSession::BeginSave(UWorld &world,
                                          const std::string &world_folder_path)
 {
+  delete ParallelGen;
   *this = UWorldCooperativeSession{};
+  ParallelGen = nullptr;
   Kind = WorldCoopKind::Save;
   Active = true;
   FolderPath = world_folder_path;
@@ -453,7 +472,9 @@ void UWorldCooperativeSession::BeginSave(UWorld &world,
 void UWorldCooperativeSession::BeginCreate(UWorld &world,
                                            const std::string &world_name)
 {
+  delete ParallelGen;
   *this = UWorldCooperativeSession{};
+  ParallelGen = nullptr;
   Kind = WorldCoopKind::Create;
   Active = true;
   TargetWorldName = world_name;
@@ -561,6 +582,113 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
   GenColumnIndex = 0;
   GenTotalColumns = static_cast<int>(GenColumnQueue.size());
   GenDoneColumns = 0;
+
+  GenChunkQueue.clear();
+  GenChunkScheduleIndex = 0;
+  delete ParallelGen;
+  ParallelGen = nullptr;
+  const int min_cx = FloorDiv(min_x, CHUNK_SIZE);
+  const int max_cx = FloorDiv(max_x, CHUNK_SIZE);
+  const int min_cz = FloorDiv(min_z, CHUNK_SIZE);
+  const int max_cz = FloorDiv(max_z, CHUNK_SIZE);
+  GenChunkQueue.reserve(static_cast<size_t>((max_cx - min_cx + 1) *
+                                            (max_cz - min_cz + 1)));
+  for (int cx = min_cx; cx <= max_cx; ++cx)
+  {
+    for (int cz = min_cz; cz <= max_cz; ++cz)
+    {
+      GenChunkQueue.push_back({cx, cz});
+    }
+  }
+  std::sort(GenChunkQueue.begin(), GenChunkQueue.end(),
+            [this](const GenChunkEntry &a, const GenChunkEntry &b)
+            {
+              const int ax = a.Cx * CHUNK_SIZE + CHUNK_SIZE / 2;
+              const int az = a.Cz * CHUNK_SIZE + CHUNK_SIZE / 2;
+              const int bx = b.Cx * CHUNK_SIZE + CHUNK_SIZE / 2;
+              const int bz = b.Cz * CHUNK_SIZE + CHUNK_SIZE / 2;
+              const int da = (ax - GenCenterX) * (ax - GenCenterX) +
+                             (az - GenCenterZ) * (az - GenCenterZ);
+              const int db = (bx - GenCenterX) * (bx - GenCenterX) +
+                             (bz - GenCenterZ) * (bz - GenCenterZ);
+              return da < db;
+            });
+}
+
+void UWorldCooperativeSession::EnsureParallelGenerationInfrastructure(
+    UWorld &world)
+{
+  if (!ParallelGen)
+  {
+    ParallelGen = new CooperativeParallelGenState();
+  }
+  if (!ParallelGen->Populator && world.BlockRegistry)
+  {
+    ParallelGen->Populator = std::make_unique<UPipelineChunkPopulator>(
+        *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);
+  }
+}
+
+bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
+                                                         int budget)
+{
+  EnsureParallelGenerationInfrastructure(world);
+  if (!ParallelGen || !ParallelGen->Populator)
+  {
+    return AdvanceGeneration(world, budget);
+  }
+
+  world.SetCooperativeBulkGenerating(true);
+  const ProceduralSettings settings = world.GetProceduralSettings();
+  const std::size_t max_inflight =
+      std::max<std::size_t>(2, std::thread::hardware_concurrency()) * 2;
+
+  for (ChunkPopulateResult &result :
+       ParallelGen->Completed.DrainUpTo(static_cast<std::size_t>(budget) * 2))
+  {
+    result.buffer.ApplyTo(world.BlockWorld);
+    GenDoneColumns += CHUNK_SIZE * CHUNK_SIZE;
+    if (ParallelGen->InFlight > 0)
+    {
+      --ParallelGen->InFlight;
+    }
+  }
+
+  int scheduled = 0;
+  while (GenChunkScheduleIndex < GenChunkQueue.size() &&
+         ParallelGen->InFlight < max_inflight &&
+         scheduled < budget * 2)
+  {
+    const GenChunkEntry &entry = GenChunkQueue[GenChunkScheduleIndex++];
+    ChunkPopulateRequest request;
+    request.chunkCoord = glm::ivec3(entry.Cx, 0, entry.Cz);
+    request.settings = settings;
+    request.token.coord = request.chunkCoord;
+    request.token.sequence = 1;
+    request.columnOrigin = glm::ivec2(GenCenterX, GenCenterZ);
+    request.hasColumnOrigin = true;
+    ++ParallelGen->InFlight;
+    ++scheduled;
+    UPipelineChunkPopulator *populator = ParallelGen->Populator.get();
+    UCompletedJobQueue<ChunkPopulateResult> *completed = &ParallelGen->Completed;
+    ParallelGen->Pool.Enqueue(
+        [populator, request, completed]()
+        {
+          ChunkPopulateResult result = populator->Populate(request);
+          completed->Push(std::move(result));
+        });
+  }
+
+  const bool queue_empty =
+      GenChunkScheduleIndex >= GenChunkQueue.size() && ParallelGen->InFlight == 0 &&
+      ParallelGen->Completed.Empty();
+  if (queue_empty)
+  {
+    ParallelGen->Pool.WaitIdle();
+    world.SetCooperativeBulkGenerating(false);
+    return true;
+  }
+  return false;
 }
 
 bool UWorldCooperativeSession::LoadOneChunkFile(
@@ -884,8 +1012,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                  world.GetAsyncRelightInFlightCount() < pipeline_depth &&
                  scheduled < schedule_batch)
           {
-            world.EnqueueAsyncChunkSkylightRelight(
-                BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++]);
+            world.EnqueueAsyncChunkRelight(
+                BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++], true,
+                false, kRelightFrontierIterationsFull);
             ++scheduled;
           }
 
@@ -1063,14 +1192,50 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     if (world.BlockRegistry)
     {
-      const int relight_budget = std::max(budget * 4, 16);
-      int relit = 0;
-      while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
-             relit < relight_budget)
+      if (world.ProceduralTemplate.AsyncRelight)
       {
-        RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
-                               EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
-        ++relit;
+        const int thread_count =
+            std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
+        const int pipeline_depth = thread_count * 4;
+        const int drain_batch = 64;
+        const int schedule_batch = std::clamp(budget * 4, 16, 64);
+        const int pass_limit = 8;
+        for (int pass = 0; pass < pass_limit; ++pass)
+        {
+          EmissiveChunkRelightAppliedCount += static_cast<size_t>(
+              world.DrainAsyncRelightResults(drain_batch, false, false));
+
+          int scheduled = 0;
+          while (EmissiveChunkRelightScheduledIndex <
+                     EmissiveChunkRelightQueue.size() &&
+                 world.GetAsyncRelightInFlightCount() < pipeline_depth &&
+                 scheduled < schedule_batch)
+          {
+            world.EnqueueAsyncChunkRelight(
+                EmissiveChunkRelightQueue[EmissiveChunkRelightScheduledIndex++],
+                false, true, kRelightFrontierIterationsFull);
+            ++scheduled;
+          }
+
+          if (EmissiveChunkRelightScheduledIndex >=
+                  EmissiveChunkRelightQueue.size() &&
+              !world.HasPendingAsyncRelightWork())
+          {
+            break;
+          }
+        }
+      }
+      else
+      {
+        const int relight_budget = std::max(budget * 4, 16);
+        int relit = 0;
+        while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
+               relit < relight_budget)
+        {
+          RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
+                                 EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+          ++relit;
+        }
       }
     }
     const float relight_base =
@@ -1080,17 +1245,33 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : CooperativeLoadProgressBase());
     const float relight_weight =
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
+    const size_t emissive_done = world.ProceduralTemplate.AsyncRelight
+                                     ? EmissiveChunkRelightAppliedCount
+                                     : EmissiveChunkRelightIndex;
+    const size_t emissive_total = EmissiveChunkRelightQueue.size();
+    const int emissive_inflight = world.ProceduralTemplate.AsyncRelight
+                                      ? world.GetAsyncRelightInFlightCount()
+                                      : 0;
     const float relight_frac = ComputeRelightLoadProgress(
-        relight_base, relight_weight, EmissiveChunkRelightIndex,
-        EmissiveChunkRelightQueue.size(), 0, 0, 0);
+        relight_base, relight_weight, emissive_done, emissive_total, 0, 0,
+        emissive_inflight);
     Report(sink, "relight", relight_frac, "Computing block light...");
 
-    if (EmissiveChunkRelightIndex >= EmissiveChunkRelightQueue.size())
+    const bool emissive_done_flag =
+        world.ProceduralTemplate.AsyncRelight
+            ? (EmissiveChunkRelightScheduledIndex >=
+                   EmissiveChunkRelightQueue.size() &&
+               !world.HasPendingAsyncRelightWork())
+            : (EmissiveChunkRelightIndex >= EmissiveChunkRelightQueue.size());
+
+    if (emissive_done_flag)
     {
       std::cout << "[WorldLoad] RelightEmissiveBlockLight done: "
                 << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
       EmissiveChunkRelightQueue.clear();
       EmissiveChunkRelightIndex = 0;
+      EmissiveChunkRelightScheduledIndex = 0;
+      EmissiveChunkRelightAppliedCount = 0;
       world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
       BeginMeshWarmupInner(world);
     }
@@ -1229,7 +1410,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::ProceduralFill:
   {
-    if (AdvanceGeneration(world, budget * CHUNK_SIZE))
+    const bool use_parallel = std::thread::hardware_concurrency() > 1;
+    const bool generation_done =
+        use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
+                     : AdvanceGeneration(world, budget * CHUNK_SIZE);
+    if (generation_done)
     {
       if (world.WorldGen && world.BlockRegistry)
       {
@@ -1368,9 +1553,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       const glm::ivec3 coord = SaveChunkCoords[SaveChunkIndex++];
       if (save_by_ground_column)
       {
-        world.GetChunkStorage().SaveTerrainColumn(
-            coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
-            world.ProceduralTemplate.MaxHeight);
+        if (IsTerrainChunkComplete(world.BlockWorld, coord,
+                                   world.ProceduralTemplate.MaxHeight))
+        {
+          world.GetChunkStorage().SaveTerrainColumn(
+              coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
+              world.ProceduralTemplate.MaxHeight);
+        }
       }
       else
       {
@@ -1412,7 +1601,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::GenerateColumns:
   {
-    if (AdvanceGeneration(world, budget * CHUNK_SIZE))
+    const bool use_parallel = std::thread::hardware_concurrency() > 1;
+    const bool generation_done =
+        use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
+                     : AdvanceGeneration(world, budget * CHUNK_SIZE);
+    if (generation_done)
     {
       if (world.WorldGen)
       {

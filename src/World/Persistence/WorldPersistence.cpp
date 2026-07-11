@@ -479,6 +479,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     return;
   }
   const int max_height = world.ProceduralTemplate.MaxHeight;
+  if (!IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height))
+  {
+    return;
+  }
   const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
   const int highest_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
@@ -556,6 +560,14 @@ void UWorldPersistence::SaveTerrainColumn(glm::ivec3 ground_coord,
                                           int max_height)
 {
   if (!ChunkStorage)
+  {
+    return;
+  }
+  if (ground_coord.y != 0)
+  {
+    ground_coord.y = 0;
+  }
+  if (!IsTerrainChunkComplete(block_world, ground_coord, max_height))
   {
     return;
   }

@@ -13,7 +13,8 @@ namespace cutum
 UChunkEmergeCoordinator::FrameBudget
 UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
                                        float movement_speed,
-                                       int default_load_ops) const
+                                       int default_load_ops,
+                                       double last_frame_ms) const
 {
   FrameBudget budget;
   const bool boost =
@@ -25,6 +26,18 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
                             : default_load_ops;
   budget.MaxMeshDrain = kDefaultMeshDrain;
   budget.MaxMeshSchedule = kDefaultMeshSchedule;
+  if (last_frame_ms > 24.0)
+  {
+    budget.MaxChunkCommits = std::max(1, budget.MaxChunkCommits / 2);
+    budget.MaxLoadOps = std::max(1, budget.MaxLoadOps / 2);
+    budget.MaxMeshDrain = std::max(2, budget.MaxMeshDrain / 2);
+    budget.MaxMeshSchedule = budget.MaxMeshDrain;
+  }
+  else if (last_frame_ms > 16.0)
+  {
+    budget.MaxMeshDrain = std::max(4, budget.MaxMeshDrain - 2);
+    budget.MaxMeshSchedule = budget.MaxMeshDrain;
+  }
   if (boost)
   {
     budget.MaxMeshDrain =
@@ -73,9 +86,11 @@ UChunkEmergeCoordinator::CreateMeshWarmupBudget(int coop_budget)
 
 void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
                                          float movement_speed,
-                                         int default_load_ops)
+                                         int default_load_ops,
+                                         double last_frame_ms)
 {
-  LastBudget = ComputeBudget(procedural, movement_speed, default_load_ops);
+  LastBudget =
+      ComputeBudget(procedural, movement_speed, default_load_ops, last_frame_ms);
 }
 
 void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
