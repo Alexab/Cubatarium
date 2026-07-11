@@ -242,7 +242,11 @@ int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const
         Params.amplitudeBlocks, TerrainRoughness, x, z, Seed,
         Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
     const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks * 0.32f;
-    float heightDelta = offset + delta;
+    const float local_wobble =
+        NormalizedFBM2D(wx * 0.055f, wz * 0.055f, Seed + 9900, 2,
+                        Params.persistence, Params.lacunarity) *
+        5.5f;
+    float heightDelta = offset + delta + local_wobble;
     const float maxUp = Params.amplitudeBlocks * 0.62f;
     const float maxDown = Params.amplitudeBlocks * 0.55f;
     heightDelta = std::clamp(heightDelta, -maxDown, maxUp);

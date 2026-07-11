@@ -76,7 +76,7 @@ float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
 
   const float regional_delta =
       (regionalNoise01 - 0.5f) * 2.0f * amplitudeBlocks * terrainRoughness *
-      erosion_mul * (erosion_flat + low_erosion_boost * 0.35f) * 0.42f;
+      erosion_mul * (erosion_flat + low_erosion_boost * 0.35f) * 0.52f;
   const float detail_delta =
       (detailNoise01 - 0.5f) * 2.0f * detailWeight * amplitudeBlocks *
       (erosion_flat * erosion_flat + low_erosion_boost * 0.25f) * 0.40f;
