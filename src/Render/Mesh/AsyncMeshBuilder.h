@@ -35,6 +35,7 @@ public:
   bool HasPendingWork() const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
+  void CancelPending();
 
 private:
   UJobThreadPool Pool;

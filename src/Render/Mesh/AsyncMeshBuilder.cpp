@@ -141,4 +141,14 @@ bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
   return Pool.WaitIdleFor(timeout);
 }
 
+void UAsyncMeshBuilder::CancelPending()
+{
+  Pool.CancelPendingJobs();
+  {
+    std::lock_guard<std::mutex> lock(InFlightMutex);
+    InFlight.clear();
+  }
+  (void)Completed.DrainAll();
+}
+
 } // namespace cutum

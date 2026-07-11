@@ -48,6 +48,7 @@ public:
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
+  void CancelPending();
   bool CompletedLoadsEmpty() const;
   bool CompletedSavesEmpty() const;
 

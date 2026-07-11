@@ -403,7 +403,7 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
 
 void UWorldPersistence::AbortAsyncChunkIo()
 {
-  (void)AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+  (void)AbortAsyncChunkIoFor(std::chrono::milliseconds(200));
 }
 
 bool UWorldPersistence::AbortAsyncChunkIoFor(
@@ -417,12 +417,15 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
   }
   (void)AsyncChunkIo->DrainLoads();
   (void)AsyncChunkIo->DrainSaves();
+  AsyncChunkIo->CancelPending();
   if (timeout.count() <= 0)
   {
-    AsyncChunkIo->WaitIdle();
     return true;
   }
-  return AsyncChunkIo->WaitIdleFor(timeout);
+  const bool idle = AsyncChunkIo->WaitIdleFor(timeout);
+  (void)AsyncChunkIo->DrainLoads();
+  (void)AsyncChunkIo->DrainSaves();
+  return idle;
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,

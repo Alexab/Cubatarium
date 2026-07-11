@@ -52,6 +52,7 @@ public:
                              glm::ivec3 chunk_coord);
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
+  void CancelAsyncMeshWork();
 
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,

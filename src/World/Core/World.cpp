@@ -1275,6 +1275,15 @@ bool UWorld::WaitForPendingRelightJobsFor(
   return AsyncRelight->WaitIdleFor(timeout);
 }
 
+void UWorld::CancelAsyncRelightWork()
+{
+  if (!AsyncRelight)
+  {
+    return;
+  }
+  AsyncRelight->CancelPending();
+}
+
 void UWorld::PrepareForShutdown()
 {
   if (ShutdownPrepared)
@@ -1291,26 +1300,26 @@ void UWorld::PrepareForShutdown()
   {
     Streaming->SetStreamingEnabled(false);
   }
-  constexpr auto kShutdownWait = std::chrono::milliseconds(2500);
+  constexpr auto kFastShutdownWait = std::chrono::milliseconds(200);
+  if (MeshService)
+  {
+    MeshService->CancelAsyncMeshWork();
+  }
+  CancelAsyncRelightWork();
   if (Persistence)
   {
     Persistence->ClearPendingRelights();
-    if (!Persistence->AbortAsyncChunkIoFor(kShutdownWait))
+    if (!Persistence->AbortAsyncChunkIoFor(kFastShutdownWait))
     {
-      std::cerr << "World shutdown: async chunk IO did not finish in time."
+      std::cerr << "World shutdown: async chunk IO still active after cancel."
                 << std::endl;
     }
   }
-  DrainAsyncRelightResults(1024, false, false);
-  if (!WaitForPendingRelightJobsFor(kShutdownWait))
-  {
-    std::cerr << "World shutdown: async relight did not finish in time."
-              << std::endl;
-  }
+  (void)WaitForPendingRelightJobsFor(kFastShutdownWait);
   if (MeshService &&
-      !MeshService->WaitForAsyncMeshIdleFor(kShutdownWait))
+      !MeshService->WaitForAsyncMeshIdleFor(kFastShutdownWait))
   {
-    std::cerr << "World shutdown: async mesh build did not finish in time."
+    std::cerr << "World shutdown: async mesh build still active after cancel."
               << std::endl;
   }
 }

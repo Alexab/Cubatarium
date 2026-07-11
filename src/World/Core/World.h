@@ -795,6 +795,7 @@ private:
   void EnqueueAsyncPlayerRelight(const std::vector<glm::ivec3> &block_positions,
                                  int min_world_y);
   void EnsureAsyncRelightBuilder();
+  void CancelAsyncRelightWork();
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh);
   void EnsurePlayerOnGround();

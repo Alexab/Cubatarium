@@ -146,6 +146,8 @@ bool UWorldMeshService::WaitForAsyncMeshIdleFor(
   return Cache.WaitForAsyncMeshIdleFor(timeout);
 }
 
+void UWorldMeshService::CancelAsyncMeshWork() { Cache.CancelAsyncMeshWork(); }
+
 bool UWorldMeshService::HasPendingDirty() const
 {
   return Cache.HasPendingDirty();

@@ -215,6 +215,16 @@ bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
   return AsyncBuilder->WaitIdleFor(timeout);
 }
 
+void UChunkMeshCache::CancelAsyncMeshWork()
+{
+  Dirty.Clear();
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return;
+  }
+  AsyncBuilder->CancelPending();
+}
+
 bool UChunkMeshCache::HasPendingDirty() const
 {
   return !Dirty.empty() || HasPendingAsyncMeshWork();
