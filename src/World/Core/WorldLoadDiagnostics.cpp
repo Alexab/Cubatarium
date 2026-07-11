@@ -16,6 +16,17 @@ namespace cutum
 namespace
 {
 
+int SkyLightAtWorld(const UBlockWorld &block_world, glm::ivec3 world_pos)
+{
+  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
+  const UChunk *chunk = block_world.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return 0;
+  }
+  return chunk->GetSkyLightLocal(UChunkManager::WorldToLocal(world_pos));
+}
+
 size_t CountLoadedChunks(const UBlockWorld &block_world)
 {
   size_t count = 0;
@@ -74,7 +85,42 @@ void WarnIfTerrainMeshesMissing(const UWorld &world, const std::string &context)
       << ") but greedy meshes are empty (cache=" << cache_size
       << " batches=" << batch_count << " dirty=" << mesh.GetDirtyCount()
       << " in_flight=" << mesh.GetAsyncInFlightCount() << ")";
-  CubatariumLogError("WorldLoad", msg.str());
+  CubatariumLogInfo("WorldLoad", msg.str());
+  std::cerr << "[WorldLoad] WARNING: " << msg.str() << std::endl;
+}
+
+void WarnIfSpawnSkylightMissing(const UWorld &world, const std::string &context)
+{
+  const size_t blocks = world.GetBlockWorld().CountNonAir();
+  if (blocks == 0)
+  {
+    return;
+  }
+  const glm::ivec3 feet = world.GetPreferredLoadFocusBlock();
+  const std::optional<int> top_y = world.FindHighestSolidY(feet.x, feet.z);
+  if (!top_y)
+  {
+    return;
+  }
+  // Skylight is stored in transparent voxels; probe open air above the surface.
+  const glm::ivec3 probe(feet.x, *top_y + 1, feet.z);
+  if (SkyLightAtWorld(world.GetBlockWorld(), probe) > 0)
+  {
+    return;
+  }
+  // Fallback: any skylight in the spawn column above the surface.
+  for (int y = *top_y + 1; y <= *top_y + 8; ++y)
+  {
+    if (SkyLightAtWorld(world.GetBlockWorld(), glm::ivec3(feet.x, y, feet.z)) > 0)
+    {
+      return;
+    }
+  }
+  std::ostringstream msg;
+  msg << context << ": terrain blocks present (" << blocks
+      << ") but spawn skylight is zero above surface at (" << probe.x << ", "
+      << probe.y << ", " << probe.z << ")";
+  CubatariumLogInfo("WorldLoad", msg.str());
   std::cerr << "[WorldLoad] WARNING: " << msg.str() << std::endl;
 }
 

@@ -10,6 +10,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <chrono>
 #include <climits>
 #include <glm/glm.hpp>
 #include <memory>
@@ -45,8 +46,11 @@ public:
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
   bool HasPendingDirty() const;
+  bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                      int radius_chunks) const;
   bool HasPendingAsyncMeshWork() const;
   void WaitForAsyncMeshIdle();
+  bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }

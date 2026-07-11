@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -46,6 +47,7 @@ public:
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
   bool CompletedLoadsEmpty() const;
   bool CompletedSavesEmpty() const;
 

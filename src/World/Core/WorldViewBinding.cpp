@@ -392,6 +392,7 @@ void UWorld::RunLegacyPhysicsFrame()
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
   glm::ivec3 feetBlockForReadiness(0);
   bool hasFeetBlockForReadiness = false;
+  static bool prev_collision_ring_ready = true;
 
   if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
   {
@@ -408,7 +409,10 @@ void UWorld::RunLegacyPhysicsFrame()
     hasFeetBlockForReadiness = true;
     glm::vec3 forward = camera->GetFront();
     forward.y = 0.0f;
-    Streaming->EnsureCollisionChunks(feetBlock, forward);
+    if (prev_collision_ring_ready || (PhysicsTickCounter % 2) == 0)
+    {
+      Streaming->EnsureCollisionChunks(feetBlock, forward);
+    }
   }
 
   UWorldCreatureActivitySink activitySink(*this);
@@ -431,8 +435,10 @@ void UWorld::RunLegacyPhysicsFrame()
 
   bool is_moved = camera && camera->DoMovement(this);
   static bool was_collision_ready = true;
-  const bool collision_ready = !hasFeetBlockForReadiness ||
-                               IsCollisionReadyAtFeet(feetBlockForReadiness);
+  const bool collision_ready =
+      !hasFeetBlockForReadiness ||
+      (camera && camera->GetFreeMove()) ||
+      IsCollisionReadyAtFeet(feetBlockForReadiness);
   if (!collision_ready && camera)
   {
     PhysicsTelemetryData.CollisionReadyWaitMs +=
@@ -443,10 +449,10 @@ void UWorld::RunLegacyPhysicsFrame()
     ++PhysicsTelemetryData.CollisionReadyTransitions;
     was_collision_ready = collision_ready;
   }
+  prev_collision_ring_ready = collision_ready;
   if (camera && hasFeetBlockForReadiness && !collision_ready)
   {
-    camera->ResetVerticalPhysics();
-    is_moved = true;
+    camera->SuspendFallThroughUnloadedChunks();
   }
   if (Streaming && Streaming->GetStreamer() && hasFeetBlockForReadiness)
   {

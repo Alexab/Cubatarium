@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
@@ -22,6 +23,7 @@ public:
   bool HasPendingWork() const;
   int GetInFlightCount() const;
   void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
 
 private:
   UJobThreadPool Pool;

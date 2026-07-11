@@ -46,16 +46,26 @@ void UJobThreadPool::Enqueue(std::function<void()> job)
 
 void UJobThreadPool::WaitIdle()
 {
-  for (;;)
+  std::unique_lock<std::mutex> lock(QueueMutex);
+  QueueCv.wait(lock, [this] { return Jobs.empty() && ActiveJobs == 0; });
+}
+
+bool UJobThreadPool::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  std::unique_lock<std::mutex> lock(QueueMutex);
+  if (QueueCv.wait_for(lock, timeout,
+                       [this] { return Jobs.empty() && ActiveJobs == 0; }))
   {
-    std::unique_lock<std::mutex> lock(QueueMutex);
-    if (Jobs.empty() && ActiveJobs == 0)
-    {
-      return;
-    }
-    lock.unlock();
-    std::this_thread::yield();
+    return true;
   }
+  Jobs.clear();
+  return false;
+}
+
+void UJobThreadPool::CancelPendingJobs()
+{
+  std::lock_guard<std::mutex> lock(QueueMutex);
+  Jobs.clear();
 }
 
 void UJobThreadPool::WorkerLoop()

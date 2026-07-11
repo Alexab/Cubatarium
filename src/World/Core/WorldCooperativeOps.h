@@ -62,6 +62,7 @@ private:
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);
   void InitGenerationGrid(UWorld &world);
+  void SealFluidInGenerationPatch(UWorld &world);
   bool LoadOneChunkFile(UWorld &world, const std::filesystem::path &path);
   bool AdvanceGeneration(UWorld &world, int budget);
 
@@ -73,6 +74,7 @@ private:
   size_t ChunkFileIndex{0};
   std::vector<glm::ivec3> SaveChunkCoords;
   size_t SaveChunkIndex{0};
+  bool SaveUsesTerrainColumns{false};
 
   bool SpatialStreamingLoad{false};
   std::string ChunksFileName;
@@ -105,6 +107,10 @@ private:
   const char *PhaseId() const;
   int GenCenterX{0};
   int GenCenterZ{0};
+  int GenPatchMinX{0};
+  int GenPatchMaxX{0};
+  int GenPatchMinZ{0};
+  int GenPatchMaxZ{0};
   struct GenColumnEntry
   {
     int X;

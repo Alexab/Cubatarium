@@ -1,4 +1,5 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
 #include "Core/Progress/ProgressTypes.h"
 #include "World/Core/World.h"
@@ -29,7 +30,8 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
 }
 
 constexpr int kChunkBudgetPerFrame = 16;
-constexpr int kEnterGameGpuWarmupFrames = 3;
+constexpr int kEnterGameGpuWarmupMinFrames = 3;
+constexpr int kEnterGameGpuWarmupMaxFrames = 8;
 
 } // namespace
 
@@ -141,6 +143,7 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     }
     if (!World.HasActiveCooperativeOperation())
     {
+      World.SetWorldFolderPath(Core.GetActiveWorldFolder().string());
       World.BeginCooperativeCreate(PendingWorldName);
     }
     if (World.TickCooperativeCreate(sink, budget))
@@ -166,13 +169,19 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
   {
     return true;
   }
-  const int frame_index = kEnterGameGpuWarmupFrames - EnterGameGpuWarmupFramesLeft;
+  const int frame_index =
+      kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
   const float frac =
       0.94f + 0.05f * (static_cast<float>(frame_index + 1) /
-                        static_cast<float>(kEnterGameGpuWarmupFrames));
+                        static_cast<float>(kEnterGameGpuWarmupMaxFrames));
   sink.Report("prepare_view", frac, "Uploading terrain...");
   --EnterGameGpuWarmupFramesLeft;
-  if (EnterGameGpuWarmupFramesLeft > 0)
+  const bool min_frames_done =
+      frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
+  const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  const bool streaming_ready = World.IsEnterStreamingWarmupSettled();
+  if (EnterGameGpuWarmupFramesLeft > 0 &&
+      (!min_frames_done || !mesh_ready || !streaming_ready))
   {
     return false;
   }
@@ -264,7 +273,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     if (Request.op == WorldRunnerOp::EnterGame)
     {
       CurrentStage = Stage::EnterGameGpuWarmup;
-      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupFrames;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       return false;
     }
     Success = true;
@@ -274,11 +283,20 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     return true;
 
   case Stage::PostCreateUsers:
-    World.GenerateUsers();
+    Core.ApplyDefaultEnvironmentToWorld();
+    if (World.GetCurrentUser() == nullptr)
+    {
+      World.GenerateUsers();
+    }
+    if (auto merge_registry = Core.GetBlockMergeRegistry())
+    {
+      World.SetCatalogFingerprint(merge_registry->ComputeCatalogFingerprint());
+    }
+    WarnIfSpawnSkylightMissing(World, "before create save");
     CurrentStage = Stage::PostCreateSave;
+    PendingWorldOp = WorldRunnerOp::Save;
     sink.Begin(WorldOperationKind::Save);
     sink.Report("save", 0.f, "Saving new world...");
-    PendingWorldOp = WorldRunnerOp::Save;
     return false;
 
   case Stage::PostCreateSave:
@@ -287,6 +305,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       return false;
     }
     Core.RefreshWorldListAfterSave();
+    World.RefreshPersistedTerrainAfterSave();
     if (Request.saveConfigAfter)
     {
       Core.SaveConfigFile();
@@ -294,7 +313,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     if (Request.op == WorldRunnerOp::EnterGame)
     {
       CurrentStage = Stage::EnterGameGpuWarmup;
-      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupFrames;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       return false;
     }
     Success = true;

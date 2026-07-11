@@ -14,6 +14,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
+#include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -48,21 +49,23 @@ constexpr float kCreateWeightMeshWarmup = 0.48f;
 constexpr float kCreateWeightPrepare = 0.04f;
 
 constexpr int kMeshWarmupMaxTicks = 50000;
-constexpr int kStreamingWarmupMaxTicks = 48;
+constexpr int kCreateSpawnWarmupMaxTicks = 48;
+constexpr int kStreamUnloadMarginChunks = 1;
 
 glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
 {
   return UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
 }
 
-bool IsStreamingWarmupSettled(const UWorld &world)
+bool IsCreateSpawnWarmupSettled(const UWorld &world)
 {
-  return world.IsEnterStreamingWarmupSettled();
+  return world.IsCreateSpawnWarmupSettled();
 }
 
-void TickStreamingWarmup(UWorld &world, int iteration_budget)
+void TickCreateSpawnMeshWarmup(UWorld &world, int budget)
 {
-  world.TickEnterStreamingWarmup(iteration_budget);
+  world.DrainSpawnRadiusMeshWarmup(budget);
+  world.TickEnterStreamingWarmup(std::max(1, budget / 2));
 }
 
 static_assert(kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
@@ -422,25 +425,29 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
 {
   SaveChunkCoords.clear();
   SaveChunkIndex = 0;
+  SaveUsesTerrainColumns = true;
+  std::unordered_set<glm::ivec3, IVec3Hash> grounds;
   if (world.ModifiedChunks.empty())
   {
     world.BlockWorld.GetChunkManager().ForEachChunk(
         [&](const UChunk &chunk)
-        { SaveChunkCoords.push_back(chunk.GetCoord()); });
+        {
+          const glm::ivec3 coord = chunk.GetCoord();
+          grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+        });
   }
   else
   {
-    std::unordered_set<glm::ivec3, IVec3Hash> grounds;
     grounds.reserve(world.ModifiedChunks.size());
     for (const glm::ivec3 &modified : world.ModifiedChunks)
     {
       grounds.insert(glm::ivec3(modified.x, 0, modified.z));
     }
-    SaveChunkCoords.reserve(grounds.size());
-    for (const glm::ivec3 &ground : grounds)
-    {
-      SaveChunkCoords.push_back(ground);
-    }
+  }
+  SaveChunkCoords.reserve(grounds.size());
+  for (const glm::ivec3 &ground : grounds)
+  {
+    SaveChunkCoords.push_back(ground);
   }
 }
 
@@ -452,13 +459,23 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
   }
   GenCenterX = 0;
   GenCenterZ = 0;
-  const int patch_radius_blocks =
-      std::max(1, world.RenderDistanceChunks) * CHUNK_SIZE;
+  const int collision_shell_chunks =
+      world.PhysicsFlags.EnableCollisionReadinessGate
+          ? std::max(1, world.PhysicsBudgetConfig.CollisionSafetyRadiusChunks)
+          : 1;
+  const int patch_radius_chunks =
+      std::max(1, world.RenderDistanceChunks) + collision_shell_chunks +
+      kStreamUnloadMarginChunks;
+  const int patch_radius_blocks = patch_radius_chunks * CHUNK_SIZE;
   const int half = patch_radius_blocks;
   const int min_x = GenCenterX - half;
   const int max_x = GenCenterX + half;
   const int min_z = GenCenterZ - half;
   const int max_z = GenCenterZ + half;
+  GenPatchMinX = min_x;
+  GenPatchMaxX = max_x;
+  GenPatchMinZ = min_z;
+  GenPatchMaxZ = max_z;
 
   GenColumnQueue.clear();
   GenColumnQueue.reserve(static_cast<size_t>((max_x - min_x + 1) *
@@ -539,6 +556,28 @@ bool UWorldCooperativeSession::AdvanceGeneration(UWorld &world, int budget)
   return GenColumnIndex >= GenColumnQueue.size();
 }
 
+void UWorldCooperativeSession::SealFluidInGenerationPatch(UWorld &world)
+{
+  const ProceduralSettings &settings = world.GetProceduralSettings();
+  if (!settings.FillWater || !world.BlockRegistry)
+  {
+    return;
+  }
+  const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
+  const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
+  const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
+  const int max_cz = FloorDiv(GenPatchMaxZ, CHUNK_SIZE);
+  for (int cx = min_cx; cx <= max_cx; ++cx)
+  {
+    for (int cz = min_cz; cz <= max_cz; ++cz)
+    {
+      (void)SealFluidShoreOnChunkCommitted(
+          world.BlockWorld, *world.BlockRegistry, settings,
+          world.WorldgenOwnerPackId, glm::ivec3(cx, 0, cz));
+    }
+  }
+}
+
 bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                     int chunkBudget)
 {
@@ -596,6 +635,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.RefreshBlockRegistry();
       world.BlockWorld.Clear();
       world.ModifiedChunks.clear();
+      FolderPath = world.GetWorldFolderPath();
+      if (!FolderPath.empty())
+      {
+        std::filesystem::create_directories(FolderPath);
+        std::filesystem::create_directories(FolderPath + "/chunks");
+        world.SetWorldFolderPath(FolderPath);
+      }
       CurrentPhase = Phase::GenerateColumns;
       InitGenerationGrid(world);
       Report(sink, "init", 0.f, "Generating terrain...");
@@ -943,6 +989,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                            " remaining");
     if (mesh_done)
     {
+      world.SetLightingRelightDeferred(false);
+      world.SetLightingSkylightBulkComplete(false);
       if (Kind == WorldCoopKind::Create)
       {
         BeginPrepareEnter();
@@ -960,6 +1008,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       std::cerr << "MeshWarmup: timeout with pending dirty="
                 << world.MeshService->GetDirtyCount() << std::endl;
+      world.SetLightingRelightDeferred(false);
+      world.SetLightingSkylightBulkComplete(false);
       if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
       {
         BeginPrepareEnter();
@@ -1066,13 +1116,42 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::PrepareView:
   {
-    if (StreamingWarmupTicks == 0)
+    if (Kind == WorldCoopKind::Create)
+    {
+      if (StreamingWarmupTicks == 0)
+      {
+        WarnIfTerrainMeshesMissing(world, "PrepareView before spawn warmup");
+      }
+      TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
+      ++StreamingWarmupTicks;
+      const bool spawn_settled = IsCreateSpawnWarmupSettled(world);
+      const float prepare_view_base =
+          CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup;
+      const float stream_inner =
+          spawn_settled ? 1.0f
+                        : std::min(0.95f,
+                                   static_cast<float>(StreamingWarmupTicks) /
+                                       static_cast<float>(
+                                           kCreateSpawnWarmupMaxTicks));
+      Report(sink, "prepare_view",
+             prepare_view_base + kCreateWeightPrepare * stream_inner,
+             spawn_settled ? "Preparing view..."
+                           : "Loading nearby terrain...");
+      if (!spawn_settled && StreamingWarmupTicks < kCreateSpawnWarmupMaxTicks)
+      {
+        break;
+      }
+    }
+    else
     {
       WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
     }
-    TickStreamingWarmup(world, std::max(1, budget / 2));
-    ++StreamingWarmupTicks;
-    const bool streaming_settled = IsStreamingWarmupSettled(world);
+    world.WarmupVisibleListAtCamera();
+    WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    FinalizeCooperativeLoadForEnterGame(world, Kind);
+    CurrentPhase = Phase::Done;
+    Active = false;
+    StreamingWarmupTicks = 0;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
@@ -1081,26 +1160,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                       kProceduralFillWeightMeshWarmup)
                    : CooperativeLoadProgressAfterMesh());
     const float prepare_weight =
-        Kind == WorldCoopKind::Create ? kCreateWeightPrepare : kPhaseWeightPrepareView;
-    const float stream_inner =
-        streaming_settled ? 1.0f
-                        : std::min(0.95f,
-                                   static_cast<float>(StreamingWarmupTicks) /
-                                       static_cast<float>(kStreamingWarmupMaxTicks));
-    Report(sink, "prepare_view",
-           prepare_view_base + prepare_weight * stream_inner,
-           streaming_settled ? "Preparing view..."
-                             : "Loading nearby terrain...");
-    if (!streaming_settled && StreamingWarmupTicks < kStreamingWarmupMaxTicks)
-    {
-      break;
-    }
-    world.WarmupVisibleListAtCamera();
-    WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
-    FinalizeCooperativeLoadForEnterGame(world, Kind);
-    CurrentPhase = Phase::Done;
-    Active = false;
-    StreamingWarmupTicks = 0;
+        Kind == WorldCoopKind::Create ? kCreateWeightPrepare
+                                      : kPhaseWeightPrepareView;
     Report(sink, "prepare_view", prepare_view_base + prepare_weight,
            "Preparing view...");
     Report(sink, "done", 1.f,
@@ -1121,7 +1182,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       CurrentPhase = Phase::SaveMetadata;
       break;
     }
-    const bool save_by_ground_column = !world.ModifiedChunks.empty();
+    const bool save_by_ground_column = SaveUsesTerrainColumns;
     int saved = 0;
     while (SaveChunkIndex < SaveChunkCoords.size() && saved < budget)
     {
@@ -1190,6 +1251,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::PostCreate:
   {
+    SealFluidInGenerationPatch(world);
     world.WorldName = TargetWorldName;
     world.WorldGenSetsData = BuildDefaultWorldGenSets();
     world.RebuildResolvedObjectFeatures();

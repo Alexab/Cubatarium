@@ -14,4 +14,6 @@ void LogWorldLoadDiag(const std::string &phase, const UWorld &world,
 
 void WarnIfTerrainMeshesMissing(const UWorld &world, const std::string &context);
 
+void WarnIfSpawnSkylightMissing(const UWorld &world, const std::string &context);
+
 } // namespace cutum

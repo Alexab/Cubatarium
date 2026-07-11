@@ -6,6 +6,7 @@
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include <chrono>
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <vector>
@@ -33,6 +34,7 @@ public:
   int GetInFlightCount() const;
   bool HasPendingWork() const;
   void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
 
 private:
   UJobThreadPool Pool;

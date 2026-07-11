@@ -65,4 +65,9 @@ int UAsyncRelightBuilder::GetInFlightCount() const
 
 void UAsyncRelightBuilder::WaitIdle() { Pool.WaitIdle(); }
 
+bool UAsyncRelightBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  return Pool.WaitIdleFor(timeout);
+}
+
 } // namespace cutum

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
@@ -23,6 +24,8 @@ public:
 
   void Enqueue(std::function<void()> job);
   void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
+  void CancelPendingJobs();
 
 private:
   void WorkerLoop();

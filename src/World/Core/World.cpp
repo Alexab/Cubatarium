@@ -1260,22 +1260,58 @@ void UWorld::WaitForPendingRelightJobs()
   }
 }
 
+bool UWorld::WaitForPendingRelightJobsFor(
+    const std::chrono::milliseconds timeout)
+{
+  if (!AsyncRelight)
+  {
+    return true;
+  }
+  if (timeout.count() <= 0)
+  {
+    AsyncRelight->WaitIdle();
+    return true;
+  }
+  return AsyncRelight->WaitIdleFor(timeout);
+}
+
 void UWorld::PrepareForShutdown()
 {
+  if (ShutdownPrepared)
+  {
+    return;
+  }
+  ShutdownPrepared = true;
   if (CoopSession && CoopSession->Active)
   {
     CoopSession->Cancel();
   }
+  AllowProceduralFill = false;
+  if (Streaming)
+  {
+    Streaming->SetStreamingEnabled(false);
+  }
+  constexpr auto kShutdownWait = std::chrono::milliseconds(2500);
   if (Persistence)
   {
-    Persistence->FlushAsyncChunkIo(*this);
     Persistence->ClearPendingRelights();
+    if (!Persistence->AbortAsyncChunkIoFor(kShutdownWait))
+    {
+      std::cerr << "World shutdown: async chunk IO did not finish in time."
+                << std::endl;
+    }
   }
   DrainAsyncRelightResults(1024, false, false);
-  WaitForPendingRelightJobs();
-  if (MeshService)
+  if (!WaitForPendingRelightJobsFor(kShutdownWait))
   {
-    MeshService->WaitForAsyncMeshIdle();
+    std::cerr << "World shutdown: async relight did not finish in time."
+              << std::endl;
+  }
+  if (MeshService &&
+      !MeshService->WaitForAsyncMeshIdleFor(kShutdownWait))
+  {
+    std::cerr << "World shutdown: async mesh build did not finish in time."
+              << std::endl;
   }
 }
 
@@ -1385,6 +1421,108 @@ void UWorld::PrepareEnterGameSession()
   Streaming->PrepareEnterGameSession(*this);
 }
 
+bool UWorld::DrainEnterGameMeshWarmup(int budget)
+{
+  if (GetBlockWorld().CountNonAir() == 0)
+  {
+    return true;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  if (!mesh.HasPendingDirty() && !mesh.HasPendingAsyncMeshWork() &&
+      mesh.GetGreedyCacheSize() > 0)
+  {
+    return true;
+  }
+  if (!BlockRegistry)
+  {
+    return mesh.GetGreedyCacheSize() > 0;
+  }
+  // Bootstrap only when nothing was built yet; never wipe an existing cache.
+  if (mesh.GetGreedyCacheSize() == 0 && mesh.GetDirtyCount() == 0)
+  {
+    mesh.MarkAllDirtyFromWorld(BlockWorld);
+  }
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
+  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                          mesh_budget.MaxMeshSchedule);
+  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                             mesh_budget.MaxMeshDrain);
+  return mesh.GetGreedyCacheSize() > 0 && !mesh.HasPendingDirty() &&
+         !mesh.HasPendingAsyncMeshWork();
+}
+
+bool UWorld::NeedsEnterGameMeshWarmup() const
+{
+  if (GetBlockWorld().CountNonAir() == 0)
+  {
+    return false;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  if (mesh.HasPendingAsyncMeshWork())
+  {
+    return true;
+  }
+  // Coop create/load already built spawn meshes; far dirty chunks must not
+  // block enter or keep Loading (and input) hostage on the main thread.
+  if (mesh.GetGreedyCacheSize() > 0)
+  {
+    return false;
+  }
+  return mesh.HasPendingDirty();
+}
+
+bool UWorld::IsCreateSpawnWarmupSettled() const
+{
+  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  {
+    if (GetBlockWorld().CountNonAir() == 0)
+    {
+      return true;
+    }
+    const glm::ivec3 feet = GetPreferredLoadFocusBlock();
+    const glm::ivec3 center = UChunkManager::WorldToChunk(feet);
+    const int radius = RenderDistanceChunks + 1;
+    const UWorldMeshService &mesh = *MeshService;
+    if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
+    {
+      return false;
+    }
+    return !mesh.HasPendingAsyncMeshWork();
+  }
+  return IsEnterStreamingWarmupSettled();
+}
+
+void UWorld::DrainSpawnRadiusMeshWarmup(int budget)
+{
+  if (GetBlockWorld().CountNonAir() == 0 || !BlockRegistry)
+  {
+    return;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
+  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                          mesh_budget.MaxMeshSchedule);
+  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                             mesh_budget.MaxMeshDrain);
+}
+
+void UWorld::RefreshPersistedTerrainAfterSave()
+{
+  HasPersistedSave = true;
+  LoadedFromChunkSave = true;
+  AllowProceduralFill = IsStreamingEnabled();
+  if (Streaming)
+  {
+    InitStreamerCallbacks();
+    if (Streaming->HasStreamer())
+    {
+      Streaming->MarkPersistedColumnsFromWorld();
+    }
+  }
+}
+
 bool UWorld::IsEnterStreamingWarmupSettled() const
 {
   if (!IsStreamingEnabled() || !Streaming->HasStreamer())
@@ -1415,7 +1553,7 @@ void UWorld::TickEnterStreamingWarmup(int iteration_budget)
   {
     return;
   }
-  const int iterations = std::clamp(iteration_budget, 1, 16);
+  const int iterations = std::max(1, iteration_budget);
   for (int i = 0; i < iterations; ++i)
   {
     UpdateStreaming();
@@ -2475,6 +2613,18 @@ bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
       !Streaming->HasStreamer())
   {
     return true;
+  }
+  if (BlockRegistry)
+  {
+    for (int dy = 0; dy <= 2; ++dy)
+    {
+      const BlockId id =
+          BlockWorld.GetBlock(glm::ivec3(feetBlock.x, feetBlock.y + dy, feetBlock.z));
+      if (BlockRegistry->IsLiquid(id))
+      {
+        return true;
+      }
+    }
   }
   if (const auto *streamer = Streaming->GetStreamer())
   {

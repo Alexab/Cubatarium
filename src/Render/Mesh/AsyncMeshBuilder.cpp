@@ -136,4 +136,9 @@ bool UAsyncMeshBuilder::HasPendingWork() const
 
 void UAsyncMeshBuilder::WaitIdle() { Pool.WaitIdle(); }
 
+bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  return Pool.WaitIdleFor(timeout);
+}
+
 } // namespace cutum

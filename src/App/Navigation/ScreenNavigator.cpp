@@ -166,6 +166,7 @@ void UScreenNavigator::CloseInventoryPalette()
   {
     Application->PaletteScreen->SetVisible(false);
   }
+  Application->GuiContext->ClearInputState();
   Application->SyncCursorVisibility();
 }
 
@@ -182,6 +183,7 @@ void UScreenNavigator::CloseConsoleOverlay()
     Application->ConsoleScreen->SetVisible(false);
   }
   Application->ClearGameplayKeyboard();
+  Application->GuiContext->ClearInputState();
   Application->SyncCursorVisibility();
 }
 
@@ -196,6 +198,7 @@ void UScreenNavigator::CloseWorldGenOverlay()
   {
     Application->WorldGenScreen->SetVisible(false);
   }
+  Application->GuiContext->ClearInputState();
   Application->SyncCursorVisibility();
 }
 

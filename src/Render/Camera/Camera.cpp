@@ -659,6 +659,15 @@ void UCamera::ResetVerticalPhysics()
   UpdatePose();
 }
 
+void UCamera::SuspendFallThroughUnloadedChunks()
+{
+  if (GetFreeMove())
+  {
+    return;
+  }
+  Locomotion.ClampVerticalVelocity(0.0f);
+}
+
 bool UCamera::DoMovement(const UWorld *world)
 {
   const float frameDt = std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);

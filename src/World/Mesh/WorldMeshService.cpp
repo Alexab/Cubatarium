@@ -140,9 +140,21 @@ void UWorldMeshService::RebuildChunkImmediate(const UBlockWorld &world,
 
 void UWorldMeshService::WaitForAsyncMeshIdle() { Cache.WaitForAsyncMeshIdle(); }
 
+bool UWorldMeshService::WaitForAsyncMeshIdleFor(
+    const std::chrono::milliseconds timeout)
+{
+  return Cache.WaitForAsyncMeshIdleFor(timeout);
+}
+
 bool UWorldMeshService::HasPendingDirty() const
 {
   return Cache.HasPendingDirty();
+}
+
+bool UWorldMeshService::HasDirtyWithinHorizontalRadius(
+    glm::ivec3 center_chunk, int radius_chunks) const
+{
+  return Cache.HasDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
 }
 
 bool UWorldMeshService::HasPendingAsyncMeshWork() const

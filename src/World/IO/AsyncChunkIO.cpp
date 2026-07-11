@@ -121,6 +121,11 @@ void UAsyncChunkIO::WaitIdle()
   Pool.WaitIdle();
 }
 
+bool UAsyncChunkIO::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  return Pool.WaitIdleFor(timeout);
+}
+
 bool UAsyncChunkIO::CompletedLoadsEmpty() const
 {
   return CompletedLoads.Empty();

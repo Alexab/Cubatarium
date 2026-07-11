@@ -37,6 +37,7 @@ public:
   bool IsOnGround() const { return OnGround; }
   float GetStanceBlend() const { return StanceBlend; }
   float GetVerticalVelocity() const { return VerticalVelocity; }
+  void ClampVerticalVelocity(float minValue);
   LocomotionState GetLocomotionState() const { return LocomotionState; }
   PlayerCapsule GetCapsule() const;
   PlayerCapsule GetCollisionCapsule() const;

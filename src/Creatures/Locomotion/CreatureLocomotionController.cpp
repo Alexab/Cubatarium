@@ -82,6 +82,14 @@ void UCreatureLocomotionController::SetCollisionProfile(
   EyeHeight = eyeHeight;
 }
 
+void UCreatureLocomotionController::ClampVerticalVelocity(const float minValue)
+{
+  if (VerticalVelocity < minValue)
+  {
+    VerticalVelocity = minValue;
+  }
+}
+
 void UCreatureLocomotionController::Reset()
 {
   Mode = CreatureMovementMode::Walking;

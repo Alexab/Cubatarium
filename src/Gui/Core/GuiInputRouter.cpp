@@ -358,8 +358,7 @@ bool UGuiInputRouter::WantsCaptureMouse() const
 
 bool UGuiInputRouter::WantsCaptureKeyboard() const
 {
-  return ModalKeyboard || KeyboardFocus != nullptr ||
-         (Screen && Screen->BlocksGameInput());
+  return ModalKeyboard || (Screen && Screen->BlocksGameInput());
 }
 
 } // namespace cutum

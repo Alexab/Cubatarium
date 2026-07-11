@@ -928,6 +928,23 @@ void UCore::PrepareLoadWorld(const std::string &world_name)
 
 void UCore::FinalizeLoadedWorld() { WorldLifecycle.FinalizeLoadedWorld(*this); }
 
+void UCore::ApplyDefaultEnvironmentToWorld()
+{
+  if (!WorldInstance)
+  {
+    return;
+  }
+  WorldInstance->ApplyEnvironmentConfig(DefaultEnvironmentConfig, true);
+  if (!DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+  {
+    WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
+  }
+  else
+  {
+    WorldInstance->ClearWeatherManualOverride();
+  }
+}
+
 void UCore::FinalizeEnterGameSession()
 {
   WorldLifecycle.FinalizeEnterGameSession(*this);

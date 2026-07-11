@@ -28,6 +28,7 @@
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
+#include <chrono>
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -209,6 +210,7 @@ public:
 
   void WaitForPendingMeshJobs();
   void WaitForPendingRelightJobs();
+  bool WaitForPendingRelightJobsFor(std::chrono::milliseconds timeout);
   void PrepareForShutdown();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
@@ -293,6 +295,12 @@ public:
   bool IsEnterStreamingWarmupSettled() const;
   void TickEnterStreamingWarmup(int iteration_budget);
   void WarmupVisibleListAtCamera();
+  /// Build pending terrain meshes before GPU upload (returns true when ready).
+  bool DrainEnterGameMeshWarmup(int budget);
+  bool NeedsEnterGameMeshWarmup() const;
+  bool IsCreateSpawnWarmupSettled() const;
+  void DrainSpawnRadiusMeshWarmup(int budget);
+  void RefreshPersistedTerrainAfterSave();
   void MarkSpawnAreaPreparedByCooperativeLoad();
   bool ConsumeSpawnAreaPreparedByCooperativeLoad();
   void ClearSpawnAreaPreparedByCooperativeLoad();
@@ -868,6 +876,7 @@ private:
   bool LightingSkylightBulkComplete{false};
   int PlayerRelightMeshBurstFrames{0};
   bool SpawnAreaPreparedByCooperativeLoad{false};
+  bool ShutdownPrepared{false};
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};

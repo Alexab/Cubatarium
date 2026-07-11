@@ -1122,9 +1122,12 @@ void UApplication::Update(double dt)
     {
       if (WorldOpRunner->IsEnterGameGpuWarmupStage())
       {
-        constexpr int kGpuWarmupFrames = 3;
+        constexpr int kGpuWarmupMaxFrames = 8;
+        constexpr int kGpuWarmupMinFrames = 3;
+        constexpr int kGpuWarmupMeshBudget = 16;
+        constexpr int kGpuWarmupStreamingBudget = 8;
         const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
-        const int frame = kGpuWarmupFrames - remaining;
+        const int frame = kGpuWarmupMaxFrames - remaining;
         if (Geometry && World)
         {
           if (frame == 0)
@@ -1132,8 +1135,21 @@ void UApplication::Update(double dt)
             Geometry->ResetWorldRenderState();
             LogWorldLoadDiag("gpu_warmup_reset", *World);
           }
-          else if (frame == kGpuWarmupFrames - 1)
+          else
           {
+            if (World->NeedsEnterGameMeshWarmup())
+            {
+              World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
+            }
+            World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
+          }
+          const bool upload_ready =
+              frame >= kGpuWarmupMinFrames - 1 &&
+              !World->NeedsEnterGameMeshWarmup() &&
+              World->IsEnterStreamingWarmupSettled();
+          if (upload_ready)
+          {
+            World->WarmupVisibleListAtCamera();
             Geometry->WarmupGreedyGpuFromWorld();
             LogWorldLoadDiag("gpu_warmup_draw", *World);
           }

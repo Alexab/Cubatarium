@@ -336,22 +336,30 @@ void UWindowManager::ProcessInput()
     auto camera = World->GetCurrentUserCamera();
     if (camera)
     {
+      auto keyDown = [this](KeyCode key) -> bool
+      {
+        if (InputManager->IsKeyPressed(key))
+        {
+          return true;
+        }
+        return Window && glfwGetKey(Window, static_cast<int>(key)) == GLFW_PRESS;
+      };
       const bool shift_down =
-          InputManager->IsKeyPressed(KeyCode::Key_Shift) ||
+          keyDown(KeyCode::Key_Shift) ||
           (Window && glfwGetKey(Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-      const bool left_ctrl_down = InputManager->IsKeyPressed(KeyCode::Key_Ctrl);
+      const bool left_ctrl_down = keyDown(KeyCode::Key_Ctrl);
       const bool right_ctrl_down =
           Window && glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
-                              InputManager->IsKeyPressed(KeyCode::Key_W));
+                              keyDown(KeyCode::Key_W));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
-                              InputManager->IsKeyPressed(KeyCode::Key_S));
+                              keyDown(KeyCode::Key_S));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A),
-                              InputManager->IsKeyPressed(KeyCode::Key_A));
+                              keyDown(KeyCode::Key_A));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D),
-                              InputManager->IsKeyPressed(KeyCode::Key_D));
+                              keyDown(KeyCode::Key_D));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
-                              InputManager->IsKeyPressed(KeyCode::Key_Space));
+                              keyDown(KeyCode::Key_Space));
       camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shift_down);
       camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shift_down);
       camera->UpdateKeyStatus(GLFW_KEY_LEFT_CONTROL, left_ctrl_down);
@@ -929,10 +937,6 @@ void UWindowManager::WindowCloseCallback(GLFWwindow *w)
   if (self && self->Application)
   {
     self->Application->GetGameSession().SaveCommandHistory();
-  }
-  if (self && self->World)
-  {
-    self->World->PrepareForShutdown();
   }
   if (self && self->Core)
   {

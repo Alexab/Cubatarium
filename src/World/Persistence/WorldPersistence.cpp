@@ -382,13 +382,15 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
   {
     return;
   }
-  constexpr int kMaxDrainIterations = 100000;
+  constexpr int kMaxDrainIterations = 4096;
   for (int i = 0; i < kMaxDrainIterations; ++i)
   {
     TickAsyncChunkIo(world);
     if (PendingAsyncColumnLoadSlices.empty() &&
         PendingAsyncColumnSaveSlices.empty())
     {
+      (void)AsyncChunkIo->DrainLoads();
+      (void)AsyncChunkIo->DrainSaves();
       AsyncChunkIo->WaitIdle();
       if (AsyncChunkIo->CompletedLoadsEmpty() &&
           AsyncChunkIo->CompletedSavesEmpty())
@@ -397,6 +399,30 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
       }
     }
   }
+}
+
+void UWorldPersistence::AbortAsyncChunkIo()
+{
+  (void)AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+}
+
+bool UWorldPersistence::AbortAsyncChunkIoFor(
+    const std::chrono::milliseconds timeout)
+{
+  PendingAsyncColumnLoadSlices.clear();
+  PendingAsyncColumnSaveSlices.clear();
+  if (!AsyncChunkIo)
+  {
+    return true;
+  }
+  (void)AsyncChunkIo->DrainLoads();
+  (void)AsyncChunkIo->DrainSaves();
+  if (timeout.count() <= 0)
+  {
+    AsyncChunkIo->WaitIdle();
+    return true;
+  }
+  return AsyncChunkIo->WaitIdleFor(timeout);
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,

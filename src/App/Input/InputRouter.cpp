@@ -155,6 +155,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       else
       {
         app.SuppressConsoleToggleChar = false;
+        app.GuiContext->ClearInputState();
       }
       app.SyncCursorVisibility();
       return true;
@@ -183,6 +184,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         {
           app.PaletteScreen->SetVisible(false);
         }
+        app.GuiContext->ClearInputState();
       }
       else
       {
@@ -217,6 +219,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         {
           app.PaletteScreen->SetVisible(false);
         }
+        app.GuiContext->ClearInputState();
       }
       else
       {
@@ -250,6 +253,10 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         {
           app.PaletteScreen->SetVisible(false);
         }
+      }
+      else
+      {
+        app.GuiContext->ClearInputState();
       }
       if (app.WorldGenScreen)
       {

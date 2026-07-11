@@ -71,6 +71,7 @@ public:
 
   bool DoMovement(const UWorld *world);
   void ResetVerticalPhysics();
+  void SuspendFallThroughUnloadedChunks();
   void ApplyCreatureLocomotion(const CreatureLocomotionCapabilities &caps,
                                const CreatureBoundsProfile &bounds,
                                float eyeHeight);

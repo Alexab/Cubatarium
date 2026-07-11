@@ -161,6 +161,7 @@ public:
   void PrepareStartupWorldCreation();
   void PrepareLoadWorld(const std::string &world_name);
   void FinalizeLoadedWorld();
+  void ApplyDefaultEnvironmentToWorld();
   void FinalizeEnterGameSession();
   std::string SetupNewWorldForCreation();
   void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,

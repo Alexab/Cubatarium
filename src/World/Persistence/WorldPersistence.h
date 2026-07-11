@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <chrono>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
@@ -53,6 +54,8 @@ public:
 
   void TickAsyncChunkIo(UWorld &world);
   void FlushAsyncChunkIo(UWorld &world);
+  void AbortAsyncChunkIo();
+  bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z);
   void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
   void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);

@@ -6,6 +6,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
+#include <chrono>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_set>
@@ -50,8 +51,11 @@ public:
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunk_coord);
   void WaitForAsyncMeshIdle();
+  bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
 
   bool HasPendingDirty() const;
+  bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                      int radius_chunks) const;
   bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const;
   int GetAsyncInFlightCount() const;

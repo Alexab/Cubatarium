@@ -205,10 +205,40 @@ void UChunkMeshCache::WaitForAsyncMeshIdle()
   }
 }
 
+bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
+    const std::chrono::milliseconds timeout)
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return true;
+  }
+  return AsyncBuilder->WaitIdleFor(timeout);
+}
+
 bool UChunkMeshCache::HasPendingDirty() const
 {
   return !Dirty.empty() || HasPendingAsyncMeshWork();
 }
+
+bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
+    glm::ivec3 center_chunk, int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return false;
+  }
+  for (const glm::ivec3 &coord : Dirty)
+  {
+    const int dx = std::abs(coord.x - center_chunk.x);
+    const int dz = std::abs(coord.z - center_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
   const size_t before = Dirty.GetCount();
