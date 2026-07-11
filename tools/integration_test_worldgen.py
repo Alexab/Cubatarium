@@ -94,6 +94,11 @@ def main() -> int:
         action="store_true",
         help="Run integration for both heightmap and density_3d backends",
     )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Fast smoke: create-world + chunk file only (skip metrics/determinism)",
+    )
     args = parser.parse_args()
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
@@ -145,6 +150,23 @@ def main() -> int:
                     f"report={report.get('seed')}"
                 )
 
+            chunk_a = world_dir / "chunks" / "0_0_0.cchunk"
+            if not chunk_a.is_file():
+                failures.append(
+                    f"backend={backend} seed {seed}: missing chunk 0_0_0.cchunk"
+                )
+                continue
+
+            if args.smoke:
+                print(
+                    f"backend={backend} seed {seed}: OK "
+                    f"chunks={report.get('chunk_files', 0)} "
+                    f"spawn_y={report.get('spawn_y', 0):.1f}"
+                )
+                if not args.keep_worlds:
+                    shutil.rmtree(world_dir, ignore_errors=True)
+                continue
+
             metrics = analyze_world(
                 world_dir,
                 refs,
@@ -155,13 +177,6 @@ def main() -> int:
             seed_failures = compare_to_thresholds(metrics, thresholds)
             for msg in seed_failures:
                 failures.append(f"backend={backend} seed {seed}: {msg}")
-
-            chunk_a = world_dir / "chunks" / "0_0_0.cchunk"
-            if not chunk_a.is_file():
-                failures.append(
-                    f"backend={backend} seed {seed}: missing chunk 0_0_0.cchunk"
-                )
-                continue
 
             if not args.skip_determinism:
                 world_b = f"CI_{seed}{suffix}_det"
