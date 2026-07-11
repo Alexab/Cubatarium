@@ -158,7 +158,10 @@
       "placement_y_offset": -1
     },
     {
-      "object": "dry_grass_clump",
+      "mode": "scatter_blocks",
+      "block": "mtg_dry_grass_1",
+      "attempts": 4,
+      "radius": 2,
       "biomes": [
         "desert",
         "savanna",
@@ -167,8 +170,7 @@
       ],
       "weight": 2,
       "seed_offset": 4114,
-      "spacing": 8,
-      "placement_y_offset": -1
+      "spacing": 8
     },
     {
       "object": "flower_patch_common",
@@ -182,7 +184,10 @@
       "placement_y_offset": -1
     },
     {
-      "object": "flower_scatter_plains",
+      "mode": "scatter_blocks",
+      "block": "dandelion",
+      "attempts": 5,
+      "radius": 3,
       "biomes": [
         "plains"
       ],

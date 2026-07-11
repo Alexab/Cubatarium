@@ -4,6 +4,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
@@ -76,6 +77,28 @@ int EffectiveChance(int chancePerColumn, float density)
   }
   const float multiplier = std::max(0.25f, 2.0f - density);
   return std::max(1, static_cast<int>(static_cast<float>(chancePerColumn) * multiplier));
+}
+
+bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
+                            float density_multiplier, uint32_t rule_seed_offset,
+                            uint32_t pool_seed_offset)
+{
+  const int effective_spacing = EffectiveSpacing(spacing, density_multiplier);
+  if (effective_spacing <= 0)
+  {
+    return false;
+  }
+  const uint32_t jitter =
+      FeatureHash(x, z, seed + rule_seed_offset + 17u) % 5u;
+  const int jittered_spacing =
+      std::max(1, effective_spacing + static_cast<int>(jitter) - 2);
+  const float noise = NormalizedFBM2D(static_cast<float>(x) * 0.02f,
+                                      static_cast<float>(z) * 0.02f,
+                                      seed + pool_seed_offset + rule_seed_offset,
+                                      2, 0.5f, 2.0f);
+  const float threshold =
+      1.0f - (1.0f / static_cast<float>(jittered_spacing));
+  return noise > threshold;
 }
 
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
@@ -334,8 +357,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     else
     {
-      const int spacing = EffectiveSpacing(rule.Spacing, densityMultiplier);
-      if (spacing <= 0 || h % static_cast<uint32_t>(spacing) != 0)
+      if (!PassesNoiseDensityGate(x, z, seed, rule.Spacing, densityMultiplier,
+                                  rule.SeedOffset, pickSeedOffset))
       {
         continue;
       }
@@ -532,11 +555,8 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
                                  int surfaceY, BiomeId biome,
                                  bool skipIfTreeNearby)
 {
+  (void)skipIfTreeNearby;
   if (!UObjectFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableGroundCover)
-  {
-    return false;
-  }
-  if (skipIfTreeNearby)
   {
     return false;
   }

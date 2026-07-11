@@ -513,6 +513,10 @@ objects:
       mod: minetest-game/default
       license: CC-BY-SA-3.0
     worldgen:
+      mode: scatter_blocks
+      block: mtg_dry_grass_1
+      attempts: 4
+      radius: 2
       pool: ground_cover
       biomes:
       - desert
@@ -548,9 +552,11 @@ objects:
       mod: cubatarium/procedural
       license: CC0
     worldgen:
-      pool: ground_cover
+      mode: scatter_blocks
+      block: dandelion
       attempts: 5
       radius: 3
+      pool: ground_cover
       biomes:
       - plains
       spacing: 12
