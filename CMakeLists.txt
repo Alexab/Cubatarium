@@ -261,6 +261,8 @@ set(SOURCES
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/DensityRouter.cpp
+    src/WorldGen/Sampling/DensityFieldSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
@@ -1368,6 +1370,8 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/DensityRouter.cpp
+    src/WorldGen/Sampling/DensityFieldSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
