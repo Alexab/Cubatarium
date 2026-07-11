@@ -153,16 +153,6 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.riverWidth = tuning["river_width"].get<float>();
   }
-  if (tuning.contains("thermal_erosion_iterations"))
-  {
-    out.thermalErosionIterations =
-        tuning["thermal_erosion_iterations"].get<int>();
-  }
-  if (tuning.contains("hydraulic_erosion_iterations"))
-  {
-    out.hydraulicErosionIterations =
-        tuning["hydraulic_erosion_iterations"].get<int>();
-  }
   if (tuning.contains("erosion_strength"))
   {
     out.erosionStrength = tuning["erosion_strength"].get<float>();
@@ -282,8 +272,6 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["ore_density"] = tuning.oreDensity;
   out["terrain_erosion"] = tuning.terrainErosion;
   out["river_width"] = tuning.riverWidth;
-  out["thermal_erosion_iterations"] = tuning.thermalErosionIterations;
-  out["hydraulic_erosion_iterations"] = tuning.hydraulicErosionIterations;
   out["erosion_strength"] = tuning.erosionStrength;
   out["height_smoothing"] = tuning.heightSmoothing;
   out["height_smoothing_radius"] = tuning.heightSmoothingRadius;

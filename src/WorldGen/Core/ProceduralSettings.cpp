@@ -140,8 +140,6 @@ void ClampTuning(WorldGenTuning &t)
   t.oreDensity = ClampTuningValue(t.oreDensity);
   t.terrainErosion = std::clamp(t.terrainErosion, 0.0f, 1.0f);
   t.riverWidth = std::clamp(t.riverWidth, 0.5f, 1.5f);
-  t.thermalErosionIterations = std::clamp(t.thermalErosionIterations, 0, 8);
-  t.hydraulicErosionIterations = std::clamp(t.hydraulicErosionIterations, 0, 32);
   t.erosionStrength = std::clamp(t.erosionStrength, 0.0f, 1.0f);
   t.jitterAmplitude = std::clamp(t.jitterAmplitude, 0.0f, 2.0f);
   t.heightSmoothingRadius = std::clamp(t.heightSmoothingRadius, 0, 2);
@@ -291,7 +289,6 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.vegetationDensity = 0.8f;
     s.Tuning.decorationDensity = 0.8f;
     s.Tuning.biomeBlendRadius = 16.0f;
-    s.Tuning.hydraulicErosionIterations = 4;
     s.Tuning.erosionStrength = 0.25f;
     s.FillFire = false;
   }
@@ -310,13 +307,9 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.vegetationDensity = 0.75f;
     s.Tuning.decorationDensity = 0.55f;
     s.Tuning.biomeBlendRadius = 14.0f;
-    s.Tuning.thermalErosionIterations = 3;
-    s.Tuning.hydraulicErosionIterations = 4;
     s.Tuning.erosionStrength = 0.25f;
     s.Tuning.heightSmoothing = true;
     s.Tuning.heightSmoothingRadius = 1;
-    s.Tuning.thermalErosionIterations = 0;
-    s.Tuning.hydraulicErosionIterations = 0;
     s.FillFire = false;
   }
   ClampTuning(s.Tuning);

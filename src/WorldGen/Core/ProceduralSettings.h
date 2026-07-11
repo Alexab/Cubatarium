@@ -43,8 +43,6 @@ struct WorldGenTuning
   float oreDensity{1.0f};
   float terrainErosion{0.32f};
   float riverWidth{1.0f};
-  int thermalErosionIterations{3};
-  int hydraulicErosionIterations{4};
   float erosionStrength{0.25f};
   bool heightSmoothing{true};
   int heightSmoothingRadius{1};
