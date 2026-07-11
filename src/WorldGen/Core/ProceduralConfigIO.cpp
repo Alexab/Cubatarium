@@ -461,6 +461,20 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
         settings.Caves.style =
             CaveStyleFromString(caves["style"].get<std::string>());
       }
+      if (caves.contains("use_density_field"))
+      {
+        settings.Caves.useDensityField = caves["use_density_field"].get<bool>();
+      }
+      if (caves.contains("density_cave_amplitude"))
+      {
+        settings.Caves.densityCaveAmplitude =
+            caves["density_cave_amplitude"].get<float>();
+      }
+      if (caves.contains("chunk_gate_threshold"))
+      {
+        settings.Caves.chunkGateThreshold =
+            caves["chunk_gate_threshold"].get<float>();
+      }
     }
     if (p.contains("tuning") && p["tuning"].is_object())
     {
@@ -520,6 +534,9 @@ void WriteProceduralSettings(nlohmann::json &root,
   caveParams["max_depth_below_surface"] = settings.Caves.maxDepthBelowSurface;
   caveParams["scale"] = settings.Caves.scale;
   caveParams["style"] = CaveStyleToString(settings.Caves.style);
+  caveParams["use_density_field"] = settings.Caves.useDensityField;
+  caveParams["density_cave_amplitude"] = settings.Caves.densityCaveAmplitude;
+  caveParams["chunk_gate_threshold"] = settings.Caves.chunkGateThreshold;
   procedural["cave_params"] = caveParams;
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);

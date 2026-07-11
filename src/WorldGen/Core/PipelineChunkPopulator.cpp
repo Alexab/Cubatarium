@@ -24,12 +24,16 @@ namespace
 bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
                          const CaveParams &params)
 {
+  if (!params.enableChunkGate)
+  {
+    return true;
+  }
   const float cx = static_cast<float>(chunkWorldX) + CHUNK_SIZE * 0.5f;
   const float cz = static_cast<float>(chunkWorldZ) + CHUNK_SIZE * 0.5f;
   const float gate =
       NormalizedFBM2D(cx * params.scale * 0.25f, cz * params.scale * 0.25f,
                       seed + 3000, 2, 0.5f, 2.0f);
-  return gate > 0.42f;
+  return gate > params.chunkGateThreshold;
 }
 
 uint32_t PipelineSettingsKey(const ProceduralSettings &settings)

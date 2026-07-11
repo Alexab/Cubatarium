@@ -234,7 +234,8 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
     s.EnableCaves = true;
     s.EnableOres = true;
     s.Caves.useDensityField = true;
-    s.Caves.maxDepthBelowSurface = 6;
+    s.Caves.maxDepthBelowSurface = 48;
+    s.Caves.chunkGateThreshold = 0.25f;
     s.Ravines.enabled = true;
   }
   if (s.Generator == ProceduralGenerator::BetaRetro)

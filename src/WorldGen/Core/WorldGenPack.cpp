@@ -1,4 +1,5 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "ThirdParty/stb_image.h"
@@ -447,6 +448,58 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
 }
 
+void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path cavesJson = root / "caves.json";
+  if (!std::filesystem::exists(cavesJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(cavesJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Caves.MaxDepthBelowSurface =
+        json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
+    pack.Caves.ChunkGateThreshold =
+        json.value("chunk_gate_threshold", pack.Caves.ChunkGateThreshold);
+    pack.Caves.UseDensityField =
+        json.value("use_density_field", pack.Caves.UseDensityField);
+    pack.Caves.DensityCaveAmplitude = json.value(
+        "density_cave_amplitude", pack.Caves.DensityCaveAmplitude);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("cheese"))
+      {
+        pack.Caves.CheeseScale =
+            layers["cheese"].value("scale", pack.Caves.CheeseScale);
+        pack.Caves.CheeseWeight =
+            layers["cheese"].value("weight", pack.Caves.CheeseWeight);
+      }
+      if (layers.contains("spaghetti"))
+      {
+        pack.Caves.SpaghettiScale =
+            layers["spaghetti"].value("scale", pack.Caves.SpaghettiScale);
+        pack.Caves.SpaghettiWeight =
+            layers["spaghetti"].value("weight", pack.Caves.SpaghettiWeight);
+      }
+      if (layers.contains("noodle"))
+      {
+        pack.Caves.NoodleScale =
+            layers["noodle"].value("scale", pack.Caves.NoodleScale);
+        pack.Caves.NoodleWeight =
+            layers["noodle"].value("weight", pack.Caves.NoodleWeight);
+      }
+    }
+    pack.Caves.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: caves.json parse error: " << e.what() << std::endl;
+  }
+}
+
 BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
                                      const std::string &biomeId)
 {
@@ -533,6 +586,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   LoadHeightJson(root, ActivePack);
   LoadClimateJson(root, ActivePack);
   LoadOresJson(root, ActivePack);
+  LoadCavesJson(root, ActivePack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -668,6 +722,27 @@ const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height
 const PackClimateConfig &UWorldGenPack::ClimateConfig() { return ActivePack.Climate; }
 
 const PackOresConfig &UWorldGenPack::OresConfig() { return ActivePack.Ores; }
+
+const PackCavesConfig &UWorldGenPack::CavesConfig() { return ActivePack.Caves; }
+
+void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
+{
+  const PackCavesConfig &caves = ActivePack.Caves;
+  if (!caves.Loaded)
+  {
+    return;
+  }
+  settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  settings.Caves.chunkGateThreshold = caves.ChunkGateThreshold;
+  settings.Caves.useDensityField = caves.UseDensityField;
+  settings.Caves.densityCaveAmplitude = caves.DensityCaveAmplitude;
+  settings.Caves.cheeseScale = caves.CheeseScale;
+  settings.Caves.cheeseWeight = caves.CheeseWeight;
+  settings.Caves.spaghettiScale = caves.SpaghettiScale;
+  settings.Caves.spaghettiWeight = caves.SpaghettiWeight;
+  settings.Caves.noodleScale = caves.NoodleScale;
+  settings.Caves.noodleWeight = caves.NoodleWeight;
+}
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
     const std::string &biomeId)

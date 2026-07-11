@@ -1,6 +1,7 @@
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <iostream>
 #include <memory>
 
@@ -33,6 +34,7 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
   {
     ctx.Settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
   }
+  UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings);
 
   auto pipeline = UWorldGeneratorRegistry::Create(ctx);
   std::cout << "WorldGen: created pipeline "

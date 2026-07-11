@@ -10,6 +10,8 @@
 namespace cutum
 {
 
+struct ProceduralSettings;
+
 enum class WorldGenBiomeMode
 {
   Procedural,
@@ -90,6 +92,21 @@ struct PackOresConfig
   bool Loaded{false};
 };
 
+struct PackCavesConfig
+{
+  int MaxDepthBelowSurface{48};
+  float ChunkGateThreshold{0.25f};
+  bool UseDensityField{true};
+  float DensityCaveAmplitude{0.15f};
+  float CheeseScale{0.015f};
+  float CheeseWeight{1.0f};
+  float SpaghettiScale{0.045f};
+  float SpaghettiWeight{0.55f};
+  float NoodleScale{0.08f};
+  float NoodleWeight{0.30f};
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
@@ -123,6 +140,7 @@ struct WorldGenPack
   PackHeightConfig Height;
   PackClimateConfig Climate;
   PackOresConfig Ores;
+  PackCavesConfig Caves;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -138,6 +156,8 @@ public:
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
+  static const PackCavesConfig &CavesConfig();
+  static void ApplyPackCaveDefaults(ProceduralSettings &settings);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,
