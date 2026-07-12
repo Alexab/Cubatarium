@@ -70,6 +70,7 @@ public:
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   int GetAsyncInFlightCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
+  bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;

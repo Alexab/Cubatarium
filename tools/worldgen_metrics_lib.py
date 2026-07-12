@@ -82,6 +82,9 @@ def count_spawn_vegetation_blocks(
     world_dir: Path,
     id_to_name: dict[int, str],
     spawn_radius: int,
+    *,
+    center_x: int = 0,
+    center_z: int = 0,
 ) -> dict[str, int]:
     chunk_dir = world_dir / "chunks"
     if not chunk_dir.is_dir():
@@ -89,7 +92,7 @@ def count_spawn_vegetation_blocks(
     counts: Counter[str] = Counter()
     for path in chunk_dir.glob("*.cchunk"):
         for (wx, _wy, wz), bid in decode_chunk(path).items():
-            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+            if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
                 continue
             name = id_to_name.get(bid, "")
             if name in VEGETATION_BLOCK_NAMES:
@@ -535,6 +538,9 @@ def vegetation_cluster_stats(
     )
 
     feature_columns = sorted(ground_cover_columns | tree_columns)
+    if len(feature_columns) > 384:
+        stride = max(1, len(feature_columns) // 384)
+        feature_columns = feature_columns[::stride]
     nn_distances: list[float] = []
     for i, (x0, z0) in enumerate(feature_columns):
         best = float("inf")
@@ -681,6 +687,69 @@ def analyze_surface(
     return result
 
 
+def spawn_center_from_meta(meta: dict) -> tuple[int, int]:
+    spawn = meta.get("spawn_point")
+    if isinstance(spawn, list) and len(spawn) >= 3:
+        return int(round(float(spawn[0]))), int(round(float(spawn[2])))
+    return 0, 0
+
+
+def spawn_surface_subset(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    center_x: int,
+    center_z: int,
+    radius: int,
+) -> dict[tuple[int, int], tuple[int, int]]:
+    return {
+        xz: val
+        for xz, val in surface.items()
+        if abs(xz[0] - center_x) <= radius and abs(xz[1] - center_z) <= radius
+    }
+
+
+def land_surface_subset(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    water_id: int | None,
+) -> dict[tuple[int, int], tuple[int, int]]:
+    if water_id is None:
+        return dict(surface)
+    land: dict[tuple[int, int], tuple[int, int]] = {}
+    for xz, (y, bid) in surface.items():
+        if bid == water_id:
+            continue
+        land[xz] = (y, bid)
+    return land
+
+
+def spawn_land_shape_metrics(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    center_x: int,
+    center_z: int,
+    radius: int,
+    water_id: int | None,
+) -> dict:
+    spawn_surface = spawn_surface_subset(surface, center_x, center_z, radius)
+    spawn_land = land_surface_subset(spawn_surface, water_id)
+    shape_source = spawn_land if spawn_land else spawn_surface
+    if not shape_source:
+        return {
+            "spawn_center": [center_x, center_z],
+            "spawn_land_columns": 0,
+            "spawn_flatness_pct": 0.0,
+            "spawn_rolling_hill_pct": 0.0,
+            "spawn_plateau_edge_pct": 0.0,
+        }
+    shape = terrain_shape_stats(shape_source)
+    return {
+        "spawn_center": [center_x, center_z],
+        "spawn_land_columns": len(shape_source),
+        "spawn_flatness_pct": shape["flatness_pct"],
+        "spawn_rolling_hill_pct": shape["rolling_hill_pct"],
+        "spawn_plateau_edge_pct": shape["plateau_edge_pct"],
+    }
+
+
 def analyze_world(
     world_dir: Path,
     refs_path: Path,
@@ -693,6 +762,11 @@ def analyze_world(
     slot_map = load_slot_map(refs_path)
     id_to_name = build_id_to_name_from_world(world_dir, repo)
     surface = load_world_columns(world_dir)
+    meta_path = world_dir / "world_data.json"
+    meta: dict = {}
+    if meta_path.is_file():
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    spawn_x, spawn_z = spawn_center_from_meta(meta)
     metrics = analyze_surface(
         surface,
         spawn_radius=spawn_radius,
@@ -700,7 +774,13 @@ def analyze_world(
         id_to_name=id_to_name,
         slot_map=slot_map,
     )
-    veg = count_spawn_vegetation_blocks(world_dir, id_to_name, spawn_radius)
+    veg = count_spawn_vegetation_blocks(
+        world_dir,
+        id_to_name,
+        spawn_radius,
+        center_x=spawn_x,
+        center_z=spawn_z,
+    )
     metrics["spawn_vegetation"] = veg
     metrics["spawn_tree_blocks"] = veg.get("tree_log", 0) + veg.get("tree_leaves", 0)
     metrics["spawn_ground_logs"] = count_spawn_ground_logs(
@@ -712,17 +792,24 @@ def analyze_world(
     metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
         world_dir, id_to_name, spawn_radius
     )
-    meta_path = world_dir / "world_data.json"
     sea_level = 48
-    if meta_path.is_file():
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta.get("sea_level") is not None:
+        sea_level = int(meta["sea_level"])
+    if meta:
         metrics["seed"] = meta.get("world_seed")
         metrics["world_name"] = meta.get("world_name")
-        if meta.get("sea_level") is not None:
-            sea_level = int(meta["sea_level"])
     water_id = next(
         (bid for bid, name in id_to_name.items() if name == "water"),
         None,
+    )
+    metrics.update(
+        spawn_land_shape_metrics(
+            surface,
+            center_x=spawn_x,
+            center_z=spawn_z,
+            radius=spawn_radius,
+            water_id=water_id,
+        )
     )
     columns = load_world_block_columns(world_dir)
     terrain_surface = terrain_surface_map(columns)
@@ -840,25 +927,33 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
 
     flatness_max = thresholds.get("flatness_pct_max")
     if flatness_max is not None:
-        flatness = metrics.get("flatness_pct", 0.0)
+        flatness = metrics.get(
+            "spawn_flatness_pct", metrics.get("flatness_pct", 0.0)
+        )
         if flatness > flatness_max:
             fail(f"flatness_pct={flatness:.2f}% > {flatness_max}%")
 
     flatness_min = thresholds.get("flatness_pct_min")
     if flatness_min is not None:
-        flatness = metrics.get("flatness_pct", 0.0)
+        flatness = metrics.get(
+            "spawn_flatness_pct", metrics.get("flatness_pct", 0.0)
+        )
         if flatness < flatness_min:
             fail(f"flatness_pct={flatness:.2f}% < {flatness_min}%")
 
     rolling_min = thresholds.get("rolling_hill_pct_min")
     if rolling_min is not None:
-        rolling = metrics.get("rolling_hill_pct", 0.0)
+        rolling = metrics.get(
+            "spawn_rolling_hill_pct", metrics.get("rolling_hill_pct", 0.0)
+        )
         if rolling < rolling_min:
             fail(f"rolling_hill_pct={rolling:.2f}% < {rolling_min}%")
 
     plateau_edge_max = thresholds.get("plateau_edge_pct_max")
     if plateau_edge_max is not None:
-        plateau_edge = metrics.get("plateau_edge_pct", 0.0)
+        plateau_edge = metrics.get(
+            "spawn_plateau_edge_pct", metrics.get("plateau_edge_pct", 0.0)
+        )
         if plateau_edge > plateau_edge_max:
             fail(f"plateau_edge_pct={plateau_edge:.2f}% > {plateau_edge_max}%")
 

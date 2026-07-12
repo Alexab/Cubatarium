@@ -66,6 +66,7 @@ public:
   int GetAsyncInFlightCount() const;
   double GetLastFlatRebuildMs() const;
   size_t GetGreedyCacheSize() const;
+  bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
   size_t GetGreedyVertexCount() const;

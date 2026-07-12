@@ -21,6 +21,7 @@ struct ChunkPopulateRequest
   ProceduralSettings settings;
   glm::ivec2 columnOrigin{0};
   bool hasColumnOrigin{false};
+  UObjectLibrary *objects{nullptr};
   std::function<bool()> shouldCancel;
 };
 

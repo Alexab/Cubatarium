@@ -57,6 +57,7 @@ public:
   void QuiesceBackgroundWork(UWorld &world,
                              std::chrono::milliseconds async_io_timeout =
                                  std::chrono::milliseconds(2000));
+  void ResumeStreamerAfterQuiesce();
 
   UChunkEmergeCoordinator &GetEmergeCoordinator() { return *EmergeCoordinator; }
   const UChunkEmergeCoordinator &GetEmergeCoordinator() const

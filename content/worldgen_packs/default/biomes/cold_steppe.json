@@ -11,7 +11,11 @@
   },
   "features": {
     "vegetation": {
-      "tree_pine_mapgen": 0.7
+      "tree_pine": 0.85,
+      "tree_pine_small": 0.7
+    },
+    "ground_cover": {
+      "bush_common": 0.55
     }
   }
 }

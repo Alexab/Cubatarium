@@ -86,7 +86,7 @@ void RunVegetationStage(UComposableWorldGenerator &generator,
 {
   state.placed_tree = TryPlaceVegetationFeatures(
       generator.GetContext(), world_x, world_z, sample.SurfaceY,
-      sample.DominantBiome);
+      sample.SurfaceBiome);
 }
 
 void RunGroundCoverStage(UComposableWorldGenerator &generator,
@@ -103,7 +103,7 @@ void RunDecorationStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceDecorationFeatures(generator.GetContext(), world_x, world_z,
-                             sample.SurfaceY, sample.DominantBiome);
+                             sample.SurfaceY, sample.SurfaceBiome);
 }
 
 void RunStructuresStage(UComposableWorldGenerator &generator,
@@ -111,7 +111,7 @@ void RunStructuresStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceStructureFeatures(generator.GetContext(), world_x, world_z,
-                            sample.SurfaceY, sample.DominantBiome);
+                            sample.SurfaceY, sample.SurfaceBiome);
 }
 
 void RunBuiltinStage(UComposableWorldGenerator &generator,

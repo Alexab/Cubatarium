@@ -8,7 +8,13 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from worldgen_metrics_lib import decode_chunk, terrain_shape_stats
+from worldgen_metrics_lib import (
+    analyze_world,
+    build_id_to_name_from_world,
+    count_spawn_vegetation_blocks,
+    decode_chunk,
+    terrain_shape_stats,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -56,11 +62,12 @@ def main() -> int:
     if len(sys.argv) < 2:
         print(
             "usage: quick_terrain_metrics.py WORLD_NAME [radius=32] "
-            "[center_x=0] [center_z=0] [--land]"
+            "[center_x=0] [center_z=0] [--land] [--count-objects]"
         )
         return 1
     land_only = "--land" in sys.argv
-    args = [a for a in sys.argv[1:] if a != "--land"]
+    count_objects = "--count-objects" in sys.argv
+    args = [a for a in sys.argv[1:] if a not in ("--land", "--count-objects")]
     world = REPO / "bin" / "worlds" / args[0]
     radius = int(args[1]) if len(args) > 1 else 32
     center_x = int(args[2]) if len(args) > 2 else 0
@@ -84,6 +91,25 @@ def main() -> int:
     print(f"  flatness_pct: {shape['flatness_pct']:.1f}")
     print(f"  rolling_hill_pct: {shape['rolling_hill_pct']:.1f}")
     print(f"  plateau_edge_pct: {shape['plateau_edge_pct']:.1f}")
+
+    if count_objects:
+        refs = REPO / "content" / "worldgen_refs.json"
+        id_to_name = build_id_to_name_from_world(world, REPO)
+        veg = count_spawn_vegetation_blocks(world, id_to_name, radius)
+        metrics = analyze_world(
+            world,
+            refs,
+            repo_root=REPO,
+            spawn_radius=radius,
+            max_height=128,
+        )
+        print("  placement (blocks in world files, not render):")
+        print(f"    spawn_tree_blocks: {metrics.get('spawn_tree_blocks', 0)}")
+        print(f"    spawn_bush_common_footprints: {metrics.get('spawn_bush_common_footprints', 0)}")
+        print(f"    spawn_ground_logs: {metrics.get('spawn_ground_logs', 0)}")
+        print(f"    spawn_fire_blocks: {metrics.get('spawn_fire_blocks', 0)}")
+        if veg:
+            print(f"    vegetation_breakdown: {veg}")
     return 0
 
 

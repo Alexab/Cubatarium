@@ -14,6 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from worldgen_metrics_lib import analyze_world, compare_to_thresholds
 
+try:
+    from validate_biome_features import validate as validate_biome_features
+except ImportError:
+    validate_biome_features = None
+
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -100,6 +105,14 @@ def main() -> int:
         help="Fast smoke: create-world + chunk file only (skip metrics/determinism)",
     )
     args = parser.parse_args()
+
+    if validate_biome_features is not None:
+        biome_failures = validate_biome_features()
+        if biome_failures:
+            print("integration_test_worldgen: biome feature validation FAILED", file=sys.stderr)
+            for line in biome_failures:
+                print(f"  - {line}", file=sys.stderr)
+            return 1
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     thresholds = dict(baseline.get("thresholds", {}))
@@ -218,8 +231,8 @@ def main() -> int:
                 f"gaps={metrics.get('shore_air_gaps', 0)} "
                 f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
                 f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}% "
-                f"flat={metrics.get('flatness_pct', 0):.2f}% "
-                f"rolling={metrics.get('rolling_hill_pct', 0):.2f}%"
+                f"flat={metrics.get('spawn_flatness_pct', metrics.get('flatness_pct', 0)):.2f}% "
+                f"rolling={metrics.get('spawn_rolling_hill_pct', metrics.get('rolling_hill_pct', 0)):.2f}%"
             )
 
     if failures:

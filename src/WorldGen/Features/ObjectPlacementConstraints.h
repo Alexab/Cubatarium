@@ -14,4 +14,7 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
 bool FindWaterSurfaceAnchorForPlacement(const WorldGenContext &ctx, int x,
                                         int z, glm::ivec3 &anchor_out);
 
+float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                     int surfaceY);
+
 } // namespace cutum

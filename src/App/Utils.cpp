@@ -268,6 +268,9 @@ int RunCreateWorld(int argc, char **argv, int create_world_index)
     std::cerr
         << "create-world: object_features.json not loaded — vegetation disabled"
         << std::endl;
+    glfwDestroyWindow(ctx);
+    glfwTerminate();
+    return 1;
   }
 
   auto headless = MakeHeadlessCore();

@@ -1,8 +1,8 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
+#include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Chunks/ChunkManager.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
-#include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
@@ -88,7 +88,7 @@ float TargetColumnDensity(int spacing, float density_multiplier)
   }
   const float base = 1.0f / static_cast<float>(std::max(8, effective_spacing));
   const float target = base * (0.5f + density_multiplier * 0.75f);
-  return std::clamp(target, 0.008f, 0.06f);
+  return std::clamp(target, 0.012f, 0.07f);
 }
 
 bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
@@ -100,13 +100,18 @@ bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
   {
     return false;
   }
+  const uint32_t column_hash =
+      FeatureHash(x, z, seed + pool_seed_offset + rule_seed_offset);
+  if (column_hash % static_cast<uint32_t>(effective_spacing) != 0U)
+  {
+    return false;
+  }
   const float noise = NormalizedFBM2D(static_cast<float>(x) * 0.02f,
                                       static_cast<float>(z) * 0.02f,
                                       seed + pool_seed_offset + rule_seed_offset,
                                       2, 0.5f, 2.0f);
   const float noise01 = (noise + 1.0f) * 0.5f;
-  const float target = TargetColumnDensity(spacing, density_multiplier);
-  return noise01 > (1.0f - target);
+  return noise01 > 0.28f;
 }
 
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
@@ -445,13 +450,24 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   return PlaceObjectAt(ctx, chosen->ObjectName, anchor, topSolid);
 }
 
+bool HasObjectFeatureRules(const ObjectFeatureConfig &cfg)
+{
+  return !cfg.Vegetation.empty() || !cfg.GroundCover.empty() ||
+         !cfg.Decoration.empty() || !cfg.Structures.empty();
+}
+
 const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 {
-  if (ctx.ObjectFeatures)
+  if (ctx.ObjectFeatures && HasObjectFeatureRules(*ctx.ObjectFeatures))
   {
     return *ctx.ObjectFeatures;
   }
-  return UObjectFeatureConfigStorage::Get();
+  if (UObjectFeatureConfigStorage::IsLoaded())
+  {
+    return UObjectFeatureConfigStorage::Get();
+  }
+  static const ObjectFeatureConfig kEmpty;
+  return kEmpty;
 }
 
 } // namespace
@@ -617,6 +633,13 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
                                      ctx.Settings.Tuning.structureDensity);
   const uint32_t h = FeatureHash(cellX, cellZ, ctx.Settings.Seed + 7000);
   if (chance <= 0 || h % static_cast<uint32_t>(chance) != 0)
+  {
+    return false;
+  }
+
+  constexpr float kMaxStructureSurfaceGradient = 5.5f;
+  if (SampleStructureSurfaceGradient(ctx, x, z, surfaceY) >
+      kMaxStructureSurfaceGradient)
   {
     return false;
   }

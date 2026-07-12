@@ -19,5 +19,14 @@
       "noise_threshold": 0.5,
       "vegetation_weight_mul": 1.15
     }
+  },
+  "features": {
+    "vegetation": {
+      "cactus_large": 1.2,
+      "tree_acacia": 0.45
+    },
+    "ground_cover": {
+      "bush_acacia": 0.7
+    }
   }
 }

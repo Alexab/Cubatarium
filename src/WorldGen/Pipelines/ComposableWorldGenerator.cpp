@@ -19,7 +19,7 @@ namespace cutum
 UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
                                                    ComposableWorldGenConfig config)
     : IUWorldGenPipeline(ctx), Config(ApplyPackPipelineMask(config)),
-      StageMask(BuildWorldGenStageMask(config, ctx.Settings,
+      StageMask(BuildWorldGenStageMask(Config, ctx.Settings,
                                        UWorldGenPack::Get().Pipeline))
 {
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)

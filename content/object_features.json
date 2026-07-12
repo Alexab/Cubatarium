@@ -1,5 +1,10 @@
 {
   "schema_version": 1,
+  "structure_placement": {
+    "cell_size": 64,
+    "chance_per_cell": 10,
+    "min_spacing": 128
+  },
   "vegetation": [
     {
       "object": "cactus_large",
@@ -31,7 +36,8 @@
       "object": "tree_apple",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 3,
       "seed_offset": 4001,
@@ -42,7 +48,8 @@
       "object": "tree_aspen",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 2,
       "seed_offset": 4008,
@@ -78,7 +85,8 @@
         "forest",
         "tundra",
         "foothills",
-        "cold_steppe"
+        "cold_steppe",
+        "hills"
       ],
       "weight": 2,
       "seed_offset": 4002,
@@ -139,7 +147,8 @@
         "plains",
         "foothills",
         "scrubland",
-        "savanna"
+        "savanna",
+        "hills"
       ],
       "weight": 2,
       "seed_offset": 4101,
@@ -176,7 +185,8 @@
       "object": "flower_patch_common",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 2,
       "seed_offset": 4110,
@@ -284,7 +294,8 @@
       "object": "deco_log_aspen",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 4305,
@@ -305,7 +316,8 @@
       "object": "deco_log_pine",
       "biomes": [
         "forest",
-        "tundra"
+        "tundra",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 4302,
@@ -316,7 +328,8 @@
       "object": "farm_plot_small",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 9204,
@@ -326,7 +339,8 @@
       "object": "lily_pad_pair",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 4210,
@@ -372,7 +386,8 @@
       "object": "reeds_on_dirt",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 4202,
@@ -394,7 +409,8 @@
     {
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 9201,
@@ -459,13 +475,14 @@
       ],
       "weight": 1,
       "seed_offset": 9102,
-      "chance_per_column": 8000
+      "chance_per_column": 7000
     },
     {
       "object": "house_wood_small",
       "biomes": [
         "plains",
-        "forest"
+        "forest",
+        "hills"
       ],
       "weight": 1,
       "seed_offset": 9101,
@@ -478,7 +495,7 @@
       ],
       "weight": 1,
       "seed_offset": 9001,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_egypt_a",
@@ -487,7 +504,7 @@
       ],
       "weight": 1,
       "seed_offset": 9002,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_egypt_b",
@@ -496,7 +513,7 @@
       ],
       "weight": 1,
       "seed_offset": 9003,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_house_a",
@@ -505,7 +522,7 @@
       ],
       "weight": 1,
       "seed_offset": 9004,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_house_b",
@@ -514,7 +531,7 @@
       ],
       "weight": 1,
       "seed_offset": 9005,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_sandstone",
@@ -524,7 +541,7 @@
       ],
       "weight": 1,
       "seed_offset": 9006,
-      "chance_per_column": 4000
+      "chance_per_column": 3000
     },
     {
       "object": "ruin_stonehenge",
@@ -534,7 +551,7 @@
       ],
       "weight": 1,
       "seed_offset": 9007,
-      "chance_per_column": 5000
+      "chance_per_column": 6500
     },
     {
       "object": "ruin_temple",
@@ -544,7 +561,7 @@
       ],
       "weight": 1,
       "seed_offset": 9008,
-      "chance_per_column": 5000
+      "chance_per_column": 6500
     },
     {
       "object": "shed_wood",

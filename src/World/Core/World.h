@@ -338,6 +338,7 @@ public:
                            const glm::vec3 &front) const;
 
   void SetObjectLibrary(UObjectLibrary *library) { ObjectLibrary = library; }
+  UObjectLibrary *GetObjectLibrary() const { return ObjectLibrary; }
 
   WorldGenSets &GetWorldGenSets() { return WorldGenSetsData; }
   const WorldGenSets &GetWorldGenSets() const { return WorldGenSetsData; }
@@ -348,6 +349,7 @@ public:
     return ResolvedObjectFeatures;
   }
   void RebuildResolvedObjectFeatures();
+  void RebuildWorldGenPipeline();
 
   void SetCreatureDefinitionStorage(
       std::shared_ptr<UCreatureDefinitionStorage> storage);
@@ -838,7 +840,6 @@ private:
   void ApplyCelestialBodiesFromConfig();
   void SyncDefaultCelestialBodiesToConfig();
   void TickWeatherAuto(float dtSeconds);
-  void RebuildWorldGenPipeline();
 
   std::string WorldName;
   glm::vec3 SpawnPoint;
