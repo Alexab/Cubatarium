@@ -1,6 +1,7 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include <algorithm>
 
 namespace cutum
@@ -8,7 +9,8 @@ namespace cutum
 
 UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
-    : Populator(populator), Tokens(tokens)
+    : Populator(populator), Tokens(tokens),
+      Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration))
 {
 }
 
@@ -92,6 +94,7 @@ void UChunkLoadScheduler::CancelAllPending(
   Pool.CancelPendingJobs();
   (void)Completed.DrainAll();
   (void)Pool.WaitIdleFor(worker_wait);
+  (void)Completed.DrainAll();
 }
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)

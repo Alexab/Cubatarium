@@ -1,5 +1,6 @@
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
@@ -16,12 +17,7 @@ namespace
 {
 std::size_t ResolveMeshWorkerCount(std::size_t thread_count)
 {
-  if (thread_count == 0)
-  {
-    const std::size_t hw = std::thread::hardware_concurrency();
-    return hw > 1 ? hw - 1 : 1;
-  }
-  return std::max<std::size_t>(1, thread_count);
+  return ComputeWorkerThreadCount(JobPoolKind::MeshBuild, thread_count);
 }
 } // namespace
 

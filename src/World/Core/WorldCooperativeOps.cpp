@@ -3,6 +3,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Core/Jobs/JobThreadPool.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -33,7 +34,7 @@ namespace cutum
 struct CooperativeParallelGenState
 {
   CooperativeParallelGenState()
-      : Pool(std::max<std::size_t>(2, std::thread::hardware_concurrency()))
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::CoopGeneration))
   {
   }
 
@@ -383,7 +384,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
       [&](const UChunk &) { has_chunks = true; });
   if (has_chunks)
   {
-    world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+    world.MeshService->GetCache().MarkAllDirtyFromWorld(world.BlockWorld, true);
   }
   MeshWarmupTicks = 0;
   MeshWarmupProcessedMax = 0;
@@ -494,6 +495,27 @@ void UWorldCooperativeSession::Cancel()
 {
   Active = false;
   CurrentPhase = Phase::Done;
+}
+
+bool UWorldCooperativeSession::BlocksStreamingTick() const
+{
+  if (!Active)
+  {
+    return false;
+  }
+  if (Kind == WorldCoopKind::Save)
+  {
+    return true;
+  }
+  switch (CurrentPhase)
+  {
+  case Phase::PrepareView:
+  case Phase::PrepareEnter:
+  case Phase::Done:
+    return false;
+  default:
+    return true;
+  }
 }
 
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
@@ -701,7 +723,7 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
   world.SetCooperativeBulkGenerating(true);
   const ProceduralSettings settings = world.GetProceduralSettings();
   const std::size_t max_inflight =
-      std::max<std::size_t>(2, std::thread::hardware_concurrency()) * 2;
+      ComputeWorkerThreadCount(JobPoolKind::CoopGeneration) * 2;
 
   for (ChunkPopulateResult &result :
        ParallelGen->Completed.DrainUpTo(static_cast<std::size_t>(budget) * 2))
@@ -865,13 +887,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else if (Kind == WorldCoopKind::Save)
     {
-      world.QuiesceBackgroundWork(std::chrono::milliseconds(2000));
       world.RefreshBlockRegistry();
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
-      SaveDrainIoFrames = 0;
-      CurrentPhase = Phase::DrainAsyncIo;
+      if (world.Persistence)
+      {
+        world.Persistence->FlushAsyncChunkIo(world);
+      }
+      CurrentPhase = Phase::ScanSaveChunks;
       Report(sink, "init", 0.f, "Preparing save...");
     }
     else
@@ -1572,11 +1596,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.SaveWorldData(FolderPath + "/world_data.json");
     world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
     world.ModifiedChunks.clear();
-    if (world.Streaming)
-    {
-      world.Streaming->ResumeStreamerAfterQuiesce();
-    }
-    world.AllowProceduralFill = world.IsStreamingEnabled();
+    world.EnsureStreamingActiveAfterBackgroundQuiesce();
     CurrentPhase = Phase::Done;
     Active = false;
     Report(sink, "done", 1.f, "World saved.");

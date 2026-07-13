@@ -50,6 +50,29 @@
 | `worldgen_scatter_test` | Scatter placement | 3 | smoke |
 | `object_placement_mode_test` | JSON placement mode | 1, 3 | smoke |
 
+## Thread safety / streaming stress
+
+| Target | Module | Owner phase | Smoke CI |
+|--------|--------|-------------|----------|
+| `chunk_generation_registry_test` | Concurrent Bump/Current registry | 0 | smoke |
+| `linux-ninja-tsan` preset | TSAN build (Linux Clang/GCC) | 0 | manual |
+| create → save → enter → walk | Streaming after quiesce | 0 | manual |
+
+### Concurrency checklist (async path changes)
+
+Any PR touching `ChunkLoadScheduler`, `WorldCooperativeOps`, `ChunkMeshCache`,
+`AsyncChunkIO`, or `QuiesceBackgroundWork` must pass:
+
+1. `chunk_generation_registry_test`
+2. `cmake --preset linux-ninja-tsan` + `ninja chunk_generation_registry_test` (TSAN clean)
+3. Manual stress (~2–5 min): new world → enter → walk beyond create patch → save → continue → exit
+
+```bash
+cmake --preset linux-ninja-tsan
+cmake --build build/desktop-linux-tsan --target chunk_generation_registry_test
+./build/desktop-linux-tsan/chunk_generation_registry_test
+```
+
 ## Creatures / AI
 
 | Target | Module | Owner phase | Smoke CI |

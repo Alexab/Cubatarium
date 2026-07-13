@@ -573,6 +573,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     return;
   }
+  const auto revisionIt = ActiveMeshSourceRevision.find(result.coord);
+  if (revisionIt == ActiveMeshSourceRevision.end() ||
+      revisionIt->second != result.sourceRevision)
+  {
+    return;
+  }
+  ActiveMeshSourceRevision.erase(revisionIt);
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
@@ -631,6 +638,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       ChunkMeshSnapshot snapshot =
           ChunkMeshSnapshot::Capture(world, *it, MeshRevision);
+      ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       it = Dirty.RemoveAt(it);
       ++scheduled;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Jobs/JobThreadBudget.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -37,6 +38,11 @@ struct AsyncChunkSaveRequest
 class UAsyncChunkIO
 {
 public:
+  UAsyncChunkIO()
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo))
+  {
+  }
+
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, ChunkGenerationToken token);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,

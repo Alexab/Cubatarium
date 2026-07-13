@@ -3,6 +3,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <mutex>
 #include <unordered_map>
 
 namespace cutum
@@ -26,7 +27,8 @@ public:
   uint64_t Bump(glm::ivec3 coord);
 
 private:
-  mutable std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> Sequences;
+  mutable std::mutex Mutex;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> Sequences;
 };
 
 } // namespace cutum

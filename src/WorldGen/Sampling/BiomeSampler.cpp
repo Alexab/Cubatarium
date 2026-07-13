@@ -367,7 +367,7 @@ int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settin
   {
     return std::max(sea, surfaceY - (wetNeighbors >= 28 ? 2 : 1));
   }
-  if (wetNeighbors <= 2 && surfaceY == sea)
+  if (wetNeighbors <= 1 && surfaceY == sea)
   {
     return sea + 1;
   }

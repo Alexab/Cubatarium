@@ -15,6 +15,16 @@ endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
+option(CUBATARIUM_ENABLE_TSAN "Build with ThreadSanitizer (Linux Clang/GCC)" OFF)
+if(CUBATARIUM_ENABLE_TSAN)
+    if((CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU") AND NOT WIN32)
+        add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=thread)
+    else()
+        message(WARNING "CUBATARIUM_ENABLE_TSAN is only supported on Linux with Clang/GCC")
+    endif()
+endif()
+
 if(WIN32)
     include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
 endif()
@@ -300,6 +310,7 @@ set(SOURCES
     src/World/IO/BinaryChunkSerializer.cpp
     src/World/IO/ChunkStorageService.cpp
     src/Core/Jobs/JobThreadPool.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
     src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
@@ -1124,6 +1135,7 @@ target_link_libraries(fluid_placement_liquid_decor_test glm::glm nlohmann_json::
 add_executable(decor_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Core/Jobs/JobThreadPool.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
@@ -1250,6 +1262,13 @@ target_include_directories(worldgen_structure_slope_gate_test PRIVATE
 target_compile_definitions(worldgen_structure_slope_gate_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_structure_slope_gate_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(chunk_generation_registry_test
+    src/World/Chunks/ChunkGenerationToken.cpp
+    src/Test/ChunkGenerationRegistryTest.cpp)
+target_include_directories(chunk_generation_registry_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_generation_registry_test glm::glm)
 
 add_executable(worldgen_scatter_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}

@@ -4,19 +4,19 @@
 
   "layers": {
 
-    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.50 },
+    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.62 },
 
     "regional": { "scale": 0.008, "octaves": 3, "weight": 0.32 },
 
     "detail": { "scale": 0.025, "octaves": 2, "weight": 0.14 },
 
-    "rolling": { "scale": 0.012, "octaves": 3, "weight": 0.26 }
+    "rolling": { "scale": 0.012, "octaves": 3, "weight": 0.30 }
 
   },
 
   "overworld": { "sea_bias": 0.45, "curve_exponent": 1.08 },
 
-  "jitter": { "scale": 0.035, "amplitude": 0.52, "erosion_damp": 0.72 }
+  "jitter": { "scale": 0.035, "amplitude": 0.38, "erosion_damp": 0.72 }
 
 }
 

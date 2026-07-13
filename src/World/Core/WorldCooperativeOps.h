@@ -35,6 +35,9 @@ public:
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
   void Cancel();
 
+  /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or quiesces workers).
+  bool BlocksStreamingTick() const;
+
 private:
   enum class Phase
   {

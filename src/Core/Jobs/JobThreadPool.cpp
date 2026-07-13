@@ -1,5 +1,5 @@
 #include "Core/Jobs/JobThreadPool.h"
-#include <algorithm>
+#include "Core/Jobs/JobThreadBudget.h"
 #include <thread>
 
 namespace cutum
@@ -9,8 +9,7 @@ UJobThreadPool::UJobThreadPool(std::size_t threadCount)
 {
   if (threadCount == 0)
   {
-    const std::size_t hw = std::thread::hardware_concurrency();
-    threadCount = hw > 1 ? hw - 1 : 1;
+    threadCount = ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration);
   }
   Workers.reserve(threadCount);
   for (std::size_t i = 0; i < threadCount; ++i)

@@ -6,6 +6,7 @@ namespace cutum
 
 ChunkGenerationToken UChunkGenerationRegistry::Current(glm::ivec3 coord) const
 {
+  std::lock_guard<std::mutex> lock(Mutex);
   ChunkGenerationToken token;
   token.coord = coord;
   const auto it = Sequences.find(coord);
@@ -15,6 +16,7 @@ ChunkGenerationToken UChunkGenerationRegistry::Current(glm::ivec3 coord) const
 
 uint64_t UChunkGenerationRegistry::Bump(glm::ivec3 coord)
 {
+  std::lock_guard<std::mutex> lock(Mutex);
   return ++Sequences[coord];
 }
 
