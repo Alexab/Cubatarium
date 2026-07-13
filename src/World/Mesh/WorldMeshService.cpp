@@ -268,6 +268,27 @@ bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsChunkMeshDirty(chunk_coord);
+}
+
+uint64_t UWorldMeshService::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
+{
+  return Cache.GetChunkMeshRevision(chunk_coord);
+}
+
+bool UWorldMeshService::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasInflightMeshBuild(chunk_coord);
+}
+
+uint64_t UWorldMeshService::GetInflightSourceRevision(
+    glm::ivec3 chunk_coord) const
+{
+  return Cache.GetInflightSourceRevision(chunk_coord);
+}
+
 uint64_t UWorldMeshService::GetMeshRevision() const
 {
   return Cache.GetMeshRevision();

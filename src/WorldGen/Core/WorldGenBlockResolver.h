@@ -31,4 +31,9 @@ struct WorldGenBlockResolver
   void Resolve(UBlockRegistry &registry, const std::string &worldgen_owner_pack_id);
 };
 
+/// Pack lookup only — never creates synthetic runtime blocks (scatter worldgen).
+BlockId ResolvePackScatterBlockId(UBlockRegistry &registry,
+                                  const std::string &worldgen_owner_pack_id,
+                                  const std::string &block_name);
+
 } // namespace cutum

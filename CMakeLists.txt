@@ -211,6 +211,7 @@ set(SOURCES
     src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
+    src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/App/Platform/WindowManager.cpp
@@ -1301,6 +1302,27 @@ add_executable(worldgen_scatter_test
 target_include_directories(worldgen_scatter_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_scatter_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_scatter_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_scatter_block_resolve_test
+    src/Blocks/BlockRegistry.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/ResourcePacks/BlockMergeRegistry.cpp
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/ResourcePacks/ResourcePack.cpp
+    src/ResourcePacks/TextureOverrides.cpp
+    src/ResourcePacks/PlaceholderTextureCache.cpp
+    src/Render/Textures/TextureBase.cpp
+    src/Render/Textures/TextureCube.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/Test/WorldGenScatterBlockResolveTest.cpp)
+target_include_directories(worldgen_scatter_block_resolve_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_scatter_block_resolve_test glm::glm
+    nlohmann_json::nlohmann_json OpenGL::GL GLEW::GLEW)
 
 add_executable(fluid_tuning_defaults_test
     src/World/Core/RuntimeTuning.cpp

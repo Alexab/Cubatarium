@@ -194,10 +194,7 @@
       "placement_y_offset": -1
     },
     {
-      "mode": "scatter_blocks",
-      "block": "dandelion",
-      "attempts": 5,
-      "radius": 3,
+      "object": "flower_scatter_plains",
       "biomes": [
         "plains"
       ],

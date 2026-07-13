@@ -362,4 +362,35 @@ size_t UBlockRegistry::GetTextureId(BlockId Id) const
   return static_cast<size_t>(Id);
 }
 
+bool UBlockRegistry::HasRenderableTexture(BlockId Id) const
+{
+  if (Id == BLOCK_AIR)
+  {
+    return false;
+  }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (Textures)
+  {
+    const auto &map = Textures->GetTextures();
+    const auto it = map.find(static_cast<size_t>(Id));
+    return it != map.end() && it->second.GetTextureId() != 0;
+  }
+  if (MergeRegistry)
+  {
+    for (const MergedCubeDesc &desc : MergeRegistry->GetCubeDescriptors())
+    {
+      if (desc.Id == Id)
+      {
+        return true;
+      }
+    }
+  }
+#endif
+  if (Definitions && Definitions->GetById(Id) != nullptr)
+  {
+    return true;
+  }
+  return false;
+}
+
 } // namespace cutum

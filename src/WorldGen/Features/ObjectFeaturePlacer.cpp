@@ -13,6 +13,8 @@
 #include "World/Objects/ObjectUtil.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
+#include "App/Platform/Log.h"
 #include <climits>
 #include <cmath>
 #include <cstdint>
@@ -181,31 +183,22 @@ bool PlaceObjectAtWaterSurface(WorldGenContext &ctx, const std::string &prefabNa
   return true;
 }
 
-BlockId ResolveScatterBlockId(const WorldGenContext &ctx,
-                              const std::string &blockName)
-{
-  if (blockName.empty())
-  {
-    return BLOCK_AIR;
-  }
-  if (!ctx.WorldgenOwnerPackId.empty())
-  {
-    const BlockId qualified = ctx.Registry.GetIdByTypeName(
-        MakeQualifiedBlockName(ctx.WorldgenOwnerPackId, blockName));
-    if (qualified != BLOCK_AIR)
-    {
-      return qualified;
-    }
-  }
-  return ctx.Registry.GetIdByTypeName(blockName);
-}
-
 bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
                            const ObjectFeatureRule &rule)
 {
-  const BlockId blockId = ResolveScatterBlockId(ctx, rule.Scatter.BlockName);
+  const BlockId blockId = ResolvePackScatterBlockId(
+      ctx.Registry, ctx.WorldgenOwnerPackId, rule.Scatter.BlockName);
   if (blockId == BLOCK_AIR)
   {
+    return false;
+  }
+  if (!ctx.Registry.HasRenderableTexture(blockId))
+  {
+    CubatariumLogInfo(
+        "Scatter",
+        "skip scatter block '" + rule.Scatter.BlockName +
+            "' (id=" + std::to_string(static_cast<int>(blockId)) +
+            "): no renderable texture");
     return false;
   }
 
@@ -341,7 +334,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
     {
       if (rule.Scatter.BlockName.empty() ||
-          ResolveScatterBlockId(ctx, rule.Scatter.BlockName) == BLOCK_AIR)
+          ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId,
+                                    rule.Scatter.BlockName) == BLOCK_AIR)
       {
         continue;
       }

@@ -16,14 +16,14 @@ BlockId ResolveSlotName(UBlockRegistry &registry, const std::string &worldgen_ow
 {
   if (!worldgen_owner.empty())
   {
-    const BlockId qualified = registry.GetIdByTypeName(
+    const BlockId qualified = registry.GetPackBlockIdByTypeName(
         MakeQualifiedBlockName(worldgen_owner, block_name));
     if (qualified != BLOCK_AIR)
     {
       return qualified;
     }
   }
-  return registry.GetIdByTypeName(block_name);
+  return registry.GetPackBlockIdByTypeName(block_name);
 }
 
 BlockId ResolveSlot(UBlockRegistry &registry, const std::string &worldgen_owner,
@@ -89,6 +89,26 @@ void WorldGenBlockResolver::Resolve(UBlockRegistry &registry,
   resolve("fire", Fire);
   resolve("ore_coal", OreCoal);
   resolve("ore_iron", OreIron);
+}
+
+BlockId ResolvePackScatterBlockId(UBlockRegistry &registry,
+                                  const std::string &worldgen_owner_pack_id,
+                                  const std::string &block_name)
+{
+  if (block_name.empty())
+  {
+    return BLOCK_AIR;
+  }
+  if (!worldgen_owner_pack_id.empty())
+  {
+    const BlockId qualified = registry.GetPackBlockIdByTypeName(
+        MakeQualifiedBlockName(worldgen_owner_pack_id, block_name));
+    if (qualified != BLOCK_AIR)
+    {
+      return qualified;
+    }
+  }
+  return registry.GetPackBlockIdByTypeName(block_name);
 }
 
 } // namespace cutum

@@ -10,6 +10,7 @@
 #include "Game/GameSession.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/BlockInspectDiagnostics.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
 #include <algorithm>
@@ -691,6 +692,42 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         user->SetSelectedSkinId(args[1]);
         user->SetSelectedAppearanceTypeId(args[1]);
         return CommandResult{true, "Appearance set to " + args[1]};
+      });
+
+  registry.Register(
+      "block",
+      [world](const std::vector<std::string> &args) -> CommandResult
+      {
+        if (args.size() < 2 || args[1] != "inspect")
+        {
+          return CommandResult{
+              false,
+              "Usage: block inspect | block inspect clear | block inspect path"};
+        }
+        if (args.size() >= 3 && args[2] == "clear")
+        {
+          UBlockInspectDiagnostics::ClearLog();
+          return CommandResult{true, "block_inspect.jsonl cleared"};
+        }
+        if (args.size() >= 3 && args[2] == "path")
+        {
+          return CommandResult{
+              true, UBlockInspectDiagnostics::DefaultLogPath().string()};
+        }
+        if (!world)
+        {
+          return CommandResult{false, "No world"};
+        }
+        const int sample =
+            UBlockInspectDiagnostics::CaptureFromCrosshair(*world, nullptr);
+        if (sample < 0)
+        {
+          return CommandResult{false, "No block under crosshair"};
+        }
+        return CommandResult{
+            true,
+            "Block inspect logged (#" + std::to_string(sample) + ") -> " +
+                UBlockInspectDiagnostics::DefaultLogPath().string()};
       });
 }
 

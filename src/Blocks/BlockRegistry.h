@@ -50,6 +50,8 @@ public:
   const BlockAnimationSpec &Animation(BlockId Id) const;
   int GetLightEmission(BlockId Id) const;
   size_t GetTextureId(BlockId Id) const;
+  /// True when the block has a merged cube descriptor and loaded GPU texture.
+  bool HasRenderableTexture(BlockId Id) const;
 
 private:
   void RebuildMaps();

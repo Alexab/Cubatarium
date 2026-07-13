@@ -80,6 +80,10 @@ public:
     return LastRebuildTickStats;
   }
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
+  bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
+  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
+  bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
+  uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;
   uint64_t GetMeshRevision() const { return MeshRevision; }

@@ -530,6 +530,34 @@ void UGeometryEngine::ShowTransientMessage(const std::string &msg,
       seconds;
 }
 
+GLuint UGeometryEngine::InspectBlockGpuTexture(BlockId block_id,
+                                               bool *map_has_entry) const
+{
+  if (!TextureCubeStorageInstance)
+  {
+    if (map_has_entry)
+    {
+      *map_has_entry = false;
+    }
+    return 0;
+  }
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
+  const auto it = textures.find(static_cast<size_t>(block_id));
+  if (it == textures.end())
+  {
+    if (map_has_entry)
+    {
+      *map_has_entry = false;
+    }
+    return 0;
+  }
+  if (map_has_entry)
+  {
+    *map_has_entry = true;
+  }
+  return it->second.GetTextureId();
+}
+
 void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
 {
   Render = settings;

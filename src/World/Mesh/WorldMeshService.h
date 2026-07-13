@@ -76,6 +76,10 @@ public:
   double GetLastFlatRebuildMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
+  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
+  bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
+  uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;

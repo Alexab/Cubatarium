@@ -332,6 +332,33 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
+bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
+{
+  return Dirty.Contains(chunk_coord);
+}
+
+uint64_t UChunkMeshCache::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
+{
+  return MeshRevisions.Current(chunk_coord);
+}
+
+bool UChunkMeshCache::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
+{
+  return ActiveMeshSourceRevision.find(chunk_coord) !=
+         ActiveMeshSourceRevision.end();
+}
+
+uint64_t UChunkMeshCache::GetInflightSourceRevision(
+    glm::ivec3 chunk_coord) const
+{
+  const auto it = ActiveMeshSourceRevision.find(chunk_coord);
+  if (it == ActiveMeshSourceRevision.end())
+  {
+    return 0;
+  }
+  return it->second;
+}
+
 bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
     int radius_chunks) const

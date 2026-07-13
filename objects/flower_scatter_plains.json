@@ -16,19 +16,19 @@
       "dx": -1,
       "dy": 0,
       "dz": 0,
-      "type": "dandelion"
+      "type": "rose"
     },
     {
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "dandelion"
+      "type": "rose"
     },
     {
       "dx": 1,
       "dy": 0,
       "dz": 0,
-      "type": "dandelion"
+      "type": "rose"
     }
   ],
   "placement": {

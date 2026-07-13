@@ -98,6 +98,10 @@ public:
 
   void ShowTransientMessage(const std::string &msg, double seconds);
 
+  /// Debug: GL texture id for block greedy/cross draw (0 if missing).
+  GLuint InspectBlockGpuTexture(BlockId block_id,
+                                bool *map_has_entry = nullptr) const;
+
   /// Unit cube wireframe (1x1 centered) with given MVP and color.
   void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color);
 
