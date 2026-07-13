@@ -754,15 +754,30 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
 void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     bool priority_mesh)
 {
+  if (relit_chunks.empty())
+  {
+    return;
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> grounds;
+  grounds.reserve(relit_chunks.size());
   for (const glm::ivec3 &coord : relit_chunks)
+  {
+    grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+  }
+  const int remesh_min_y =
+      std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE);
+  const int remesh_max_y = ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2;
+  for (const glm::ivec3 &ground : grounds)
   {
     if (priority_mesh)
     {
-      MeshService->MarkDirtyPriority(coord);
+      MeshService->MarkTerrainChunkMeshDirtyPriority(ground, remesh_min_y,
+                                                     remesh_max_y);
     }
     else
     {
-      MeshService->MarkDirty(coord);
+      MeshService->MarkTerrainChunkMeshDirty(ground, remesh_min_y,
+                                             remesh_max_y);
     }
   }
 }

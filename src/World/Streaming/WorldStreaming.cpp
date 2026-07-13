@@ -317,12 +317,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [&world](glm::ivec3 coord)
       {
-        if (world.ShouldDeferStreamingMeshForRelight())
-        {
-          return;
-        }
+        const ProceduralSettings &settings = world.GetProceduralSettings();
         world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
-                                        world.GetProceduralSettings().MaxHeight);
+                                        settings.MaxHeight);
       },
       [this, &world](int x, int z)
       {

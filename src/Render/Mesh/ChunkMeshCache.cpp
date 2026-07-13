@@ -577,6 +577,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (revisionIt == ActiveMeshSourceRevision.end() ||
       revisionIt->second != result.sourceRevision)
   {
+    MarkDirty(result.coord);
     return;
   }
   ActiveMeshSourceRevision.erase(revisionIt);

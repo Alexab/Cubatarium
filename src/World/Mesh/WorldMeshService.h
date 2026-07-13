@@ -42,6 +42,8 @@ public:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord, int min_y,
                                  int max_y);
+  void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord, int min_y,
+                                         int max_y);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,

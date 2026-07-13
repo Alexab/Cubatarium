@@ -110,6 +110,24 @@ void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
   }
 }
 
+void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cx = ground_chunk_coord.x - 1; cx <= ground_chunk_coord.x + 1; ++cx)
+  {
+    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1;
+         ++cz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        MarkDirtyPriority(glm::ivec3(cx, cy, cz));
+      }
+    }
+  }
+}
+
 void UWorldMeshService::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 {
   Cache.RebuildAll(world, registry);

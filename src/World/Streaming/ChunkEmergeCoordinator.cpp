@@ -40,8 +40,7 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
   }
   if (boost)
   {
-    budget.MaxMeshDrain =
-        std::max(budget.MaxMeshDrain, budget.MaxChunkCommits * 2);
+    budget.MaxMeshDrain = std::min(budget.MaxMeshDrain, 6);
     budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
   return budget;
@@ -106,8 +105,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   }
   mesh_service.RebuildDirtyChunks(world.GetBlockWorld(), registry, mesh_drain,
                                   mesh_schedule);
-  mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
-                                     mesh_drain);
 }
 
 } // namespace cutum
