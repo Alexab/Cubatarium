@@ -932,6 +932,23 @@ target_compile_definitions(chunk_lighting_propagation_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(chunk_lighting_propagation_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(chunk_bulk_blocklight_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/Lighting/LightUtil.cpp
+    src/World/Lighting/ChunkLighting.cpp
+    src/World/Math/FluidCellState.cpp
+    src/World/Math/GridMath.cpp
+    src/Test/ChunkBulkBlockLightTest.cpp)
+target_include_directories(chunk_bulk_blocklight_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(chunk_bulk_blocklight_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(chunk_bulk_blocklight_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_chunk_io_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Chunks/ChunkBuffer.cpp

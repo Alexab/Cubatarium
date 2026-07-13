@@ -11,6 +11,8 @@ namespace cutum
 
 class UWorld;
 
+struct CooperativeParallelGenState;
+
 enum class WorldCoopKind
 {
   Load,
@@ -23,6 +25,8 @@ class UWorldCooperativeSession
 public:
   WorldCoopKind Kind{WorldCoopKind::Load};
   bool Active{false};
+
+  ~UWorldCooperativeSession();
 
   void BeginLoad(UWorld &world, const std::string &world_folder_path);
   void BeginSave(UWorld &world, const std::string &world_folder_path);
@@ -99,6 +103,8 @@ private:
   size_t BulkRelightChunkAppliedCount{0};
   std::vector<glm::ivec3> EmissiveChunkRelightQueue;
   size_t EmissiveChunkRelightIndex{0};
+  size_t EmissiveChunkRelightScheduledIndex{0};
+  size_t EmissiveChunkRelightAppliedCount{0};
   size_t MeshWarmupProcessedMax{0};
   size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
@@ -118,11 +124,20 @@ private:
   int GenPatchMaxX{0};
   int GenPatchMinZ{0};
   int GenPatchMaxZ{0};
+  struct GenChunkEntry
+  {
+    int Cx;
+    int Cz;
+  };
   struct GenColumnEntry
   {
     int X;
     int Z;
   };
+  std::vector<GenChunkEntry> GenChunkQueue;
+  size_t GenChunkScheduleIndex{0};
+  void EnsureParallelGenerationInfrastructure(UWorld &world);
+  bool AdvanceParallelGeneration(UWorld &world, int budget);
   std::vector<GenColumnEntry> GenColumnQueue;
   size_t GenColumnIndex{0};
   int GenTotalColumns{0};
@@ -134,6 +149,7 @@ private:
   bool Failed{false};
   std::string ErrorMessage;
   Phase LastDiagPhase{Phase::Done};
+  CooperativeParallelGenState *ParallelGen{nullptr};
 };
 
 } // namespace cutum

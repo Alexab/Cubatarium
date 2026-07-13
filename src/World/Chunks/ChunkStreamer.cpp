@@ -386,6 +386,18 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     return false;
   }
 
+  if (existing != nullptr && !clearedPartialDiskLoad && !forceSync &&
+      AsyncGeneration && OnRequestAsyncChunk &&
+      !IsTerrainChunkCompleteCached(chunkCoord))
+  {
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    InvalidateTerrainCompleteCache(chunkCoord);
+    ColumnGenStates.erase(chunkCoord);
+    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
+           IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
   const bool onlyEmptyColumns = existing != nullptr && !clearedPartialDiskLoad;
   const int sub_column_budget =
       forceSync ? kCollisionSyncSubColumnsPerFrame : kTerrainSubColumnsPerChunk;

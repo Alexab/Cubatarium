@@ -700,6 +700,13 @@ public:
   {
     LightingSkylightBulkComplete = complete;
   }
+  void SetCooperativeBulkGenerating(bool value)
+  {
+    CooperativeBulkGenerating = value;
+  }
+  bool IsCooperativeBulkGenerating() const { return CooperativeBulkGenerating; }
+  void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
+  double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
                             bool priority_mesh = false,
                             bool include_skylight = true,
@@ -711,6 +718,9 @@ public:
                                         bool include_block_light = true);
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
+  void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
+                                bool include_block_light,
+                                int frontier_iterations);
   int DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;
@@ -877,6 +887,8 @@ private:
   LightingSettings LightingSettingsData;
   bool LightingRelightDeferred{false};
   bool LightingSkylightBulkComplete{false};
+  bool CooperativeBulkGenerating{false};
+  double LastMovementFrameMs{0.0};
   int PlayerRelightMeshBurstFrames{0};
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};

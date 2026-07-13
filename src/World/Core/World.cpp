@@ -853,7 +853,19 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
 void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                               int frontier_iterations)
 {
+  EnqueueAsyncChunkRelight(chunk_coord, true, false, frontier_iterations);
+}
+
+void UWorld::EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord,
+                                      bool include_skylight,
+                                      bool include_block_light,
+                                      int frontier_iterations)
+{
   if (!BlockRegistry)
+  {
+    return;
+  }
+  if (!include_skylight && !include_block_light)
   {
     return;
   }
@@ -864,8 +876,8 @@ void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
   spec.min_world_y = origin.y;
   spec.max_world_y =
       std::min(ProceduralTemplate.MaxHeight, origin.y + CHUNK_SIZE - 1);
-  spec.include_skylight = true;
-  spec.include_block_light = false;
+  spec.include_skylight = include_skylight;
+  spec.include_block_light = include_block_light;
   spec.frontier_iterations = frontier_iterations;
   spec.job_id = ++NextAsyncRelightJobId;
   AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
@@ -1070,6 +1082,10 @@ void UWorld::RebuildWorldGenPipeline()
   ctx.ObjectFeatures = &ResolvedObjectFeatures;
   ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
   {
+    if (CooperativeBulkGenerating)
+    {
+      return;
+    }
     if (!LightingRelightDeferred)
     {
       RelightTerrainColumn(world_x, world_z, min_y, max_y);

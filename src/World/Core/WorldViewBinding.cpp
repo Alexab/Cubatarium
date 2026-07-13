@@ -531,6 +531,7 @@ void UWorld::RunLegacyPhysicsFrame()
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
   PhysicsTelemetryData.MovementStepMs =
       std::chrono::duration<double, std::milli>(t_end - t_begin).count();
+  SetLastMovementFrameMs(PhysicsTelemetryData.MovementStepMs);
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
 

@@ -56,6 +56,13 @@ This file tracks implementation compromises for the environment and lighting rol
 | `weather debug 1` | Solid blue streak pass overlay |
 | Android GLES | Sky-band streaks + reduced particle budget |
 
+### TD-LIGHT-001 (2026-07-11): Bulk block light skipped after create/load
+
+- **Issue:** After cooperative create or load, emissive block light (torches, lava) is invisible until the player places a block in the chunk; skylight may be partially applied in mesh.
+- **Root cause:** `UWorldCooperativeSession::BeginEmissiveBlockLightQueue` skipped the emissive pass for `Create`/`Load` and jumped straight to mesh warmup; bulk skylight used `include_block_light=false` and frontier iteration 1; mesh warmup could start before relight completed.
+- **Resolution (2026-07-11):** `RelightEmissiveBlockLight` phase now runs for create/load (async when `AsyncRelight`); bulk skylight uses `kRelightFrontierIterationsFull`; mesh warmup starts only after emissive queue drains. Regression: `chunk_bulk_blocklight_test`.
+- **Cross-link:** Commit-path relight spikes during movement — [TECH_DEBT_CHUNK_STREAMING.md](TECH_DEBT_CHUNK_STREAMING.md) TD-CS-021.
+
 ### Performance guardrails
 
 - Target: streak pass < 0.5ms, particle pass < 1.5ms on desktop Balanced.
