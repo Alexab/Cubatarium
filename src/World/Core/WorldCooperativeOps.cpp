@@ -11,6 +11,7 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageService.h"
@@ -18,6 +19,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
@@ -37,6 +39,7 @@ struct CooperativeParallelGenState
   }
 
   std::unique_ptr<UPipelineChunkPopulator> Populator;
+  UObjectLibrary *PopulatorObjectLibrary{nullptr};
   UJobThreadPool Pool;
   UCompletedJobQueue<ChunkPopulateResult> Completed;
   size_t InFlight{0};
@@ -73,6 +76,32 @@ constexpr int kStreamUnloadMarginChunks = 1;
 glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
 {
   return UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+}
+
+bool UseParallelChunkGeneration(const UWorld &world)
+{
+  return world.GetProceduralSettings().AsyncChunkGeneration &&
+         std::thread::hardware_concurrency() > 1;
+}
+
+bool CooperativeTerrainMeshesIncomplete(const UWorld &world)
+{
+  size_t ground_chunks = 0;
+  size_t meshed_chunks = 0;
+  world.GetBlockWorld().GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        if (chunk.GetCoord().y != 0)
+        {
+          return;
+        }
+        ++ground_chunks;
+        if (world.GetMeshService().HasGreedyMesh(chunk.GetCoord()))
+        {
+          ++meshed_chunks;
+        }
+      });
+  return ground_chunks > 0 && meshed_chunks < ground_chunks;
 }
 
 bool IsCreateSpawnWarmupSettled(const UWorld &world)
@@ -217,6 +246,7 @@ void UWorldCooperativeSession::BeginBulkChunkRelightQueue(UWorld &world)
       [&](const UChunk &chunk)
       { BulkRelightChunkQueue.push_back(chunk.GetCoord()); });
 
+  world.SetLightingRelightDeferred(false);
   world.SetLightingSkylightBulkComplete(true);
 
   std::cout << "[WorldLoad] RelightBulkChunks: "
@@ -340,8 +370,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
   bool has_chunks = false;
   world.BlockWorld.GetChunkManager().ForEachChunk(
       [&](const UChunk &) { has_chunks = true; });
-  if (has_chunks && world.MeshService->GetDirtyCount() == 0 &&
-      !world.MeshService->HasPendingAsyncMeshWork())
+  if (has_chunks)
   {
     world.MeshService->GetCache().MarkAllDirtyFromWorld(world.BlockWorld, true);
   }
@@ -575,6 +604,10 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
   {
     world.RebuildWorldGenPipeline();
   }
+  else if (world.ObjectLibrary && world.BlockRegistry)
+  {
+    world.ObjectLibrary->RebindBlockIds(*world.BlockRegistry);
+  }
   GenCenterX = 0;
   GenCenterZ = 0;
   const int collision_shell_chunks =
@@ -658,10 +691,11 @@ void UWorldCooperativeSession::EnsureParallelGenerationInfrastructure(
   {
     ParallelGen = new CooperativeParallelGenState();
   }
-  if (!ParallelGen->Populator && world.BlockRegistry)
+  if (!ParallelGen->Populator || ParallelGen->PopulatorObjectLibrary != world.ObjectLibrary)
   {
     ParallelGen->Populator = std::make_unique<UPipelineChunkPopulator>(
         *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);
+    ParallelGen->PopulatorObjectLibrary = world.ObjectLibrary;
   }
 }
 
@@ -703,6 +737,7 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
     request.token.sequence = 1;
     request.columnOrigin = glm::ivec2(GenCenterX, GenCenterZ);
     request.hasColumnOrigin = true;
+    request.objects = world.ObjectLibrary;
     ++ParallelGen->InFlight;
     ++scheduled;
     UPipelineChunkPopulator *populator = ParallelGen->Populator.get();
@@ -860,6 +895,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.LoadedFromChunkSave = false;
       world.AllowProceduralFill = true;
       world.RefreshBlockRegistry();
+      if (world.ObjectLibrary && world.BlockRegistry)
+      {
+        world.ObjectLibrary->RebindBlockIds(*world.BlockRegistry);
+      }
+      world.WorldGenSetsData = BuildDefaultWorldGenSets();
+      world.RebuildResolvedObjectFeatures();
+      world.RebuildWorldGenPipeline();
       world.BlockWorld.Clear();
       world.CancelAsyncRelightWork();
       world.ModifiedChunks.clear();
@@ -1224,8 +1266,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     MeshWarmupCompletedTotal += static_cast<size_t>(tick_stats.Completed);
     ++MeshWarmupTicks;
-    const bool mesh_done = !world.MeshService->HasPendingDirty() &&
-                           !world.MeshService->HasPendingAsyncMeshWork();
+    const bool mesh_done_raw = !world.MeshService->HasPendingDirty() &&
+                               !world.MeshService->HasPendingAsyncMeshWork();
+    bool mesh_done = mesh_done_raw;
+    if (mesh_done && Kind == WorldCoopKind::Create &&
+        CooperativeTerrainMeshesIncomplete(world))
+    {
+      world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+      mesh_done = false;
+    }
     const size_t pending_now =
         world.MeshService->GetDirtyCount() +
         static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
@@ -1327,7 +1376,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::ProceduralFill:
   {
-    const bool use_parallel = std::thread::hardware_concurrency() > 1;
+    const bool use_parallel = UseParallelChunkGeneration(world);
     const bool generation_done =
         use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
                      : AdvanceGeneration(world, budget * CHUNK_SIZE);
@@ -1546,7 +1595,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::GenerateColumns:
   {
-    const bool use_parallel = std::thread::hardware_concurrency() > 1;
+    const bool use_parallel = UseParallelChunkGeneration(world);
     const bool generation_done =
         use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
                      : AdvanceGeneration(world, budget * CHUNK_SIZE);
@@ -1580,8 +1629,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.WorldName = TargetWorldName;
     world.WorldGenSetsData = BuildDefaultWorldGenSets();
     world.RebuildResolvedObjectFeatures();
+    world.RebuildWorldGenPipeline();
     world.AllowProceduralFill = world.IsStreamingEnabled();
     world.InitStreamerCallbacks();
+    if (world.Streaming->HasStreamer())
+    {
+      world.Streaming->MarkPersistedColumnsFromWorld();
+    }
     BeginMeshWarmup(world);
     if (CurrentPhase == Phase::MeshWarmup)
     {

@@ -534,6 +534,13 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   core.WorldInstance->SetResourcePackSelection(
       selection.Primary, selection.Secondary, selection.WorldgenOwner);
   core.WorldInstance->SetProceduralSettings(settings);
+  if (!core.GetObjectLibrary())
+  {
+    report.Error = "Object library is not initialized.";
+    return false;
+  }
+  core.WorldInstance->SetObjectLibrary(core.GetObjectLibrary().get());
+  core.WorldInstance->RebuildWorldGenPipeline();
   core.WorldInstance->SetRenderSettings(core.Render);
 
   try

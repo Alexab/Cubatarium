@@ -45,6 +45,8 @@
 | `worldgen_vegetation_placement_test` | ObjectUtil placement | 0, 3 | smoke |
 | `worldgen_fluid_vegetation_pipeline_test` | Seal → prune E2E | 3 | smoke |
 | `worldgen_hills_vegetation_gate_test` | Hills topSolid gate | 3 | smoke |
+| `worldgen_biome_features_test` | Biome feature weights vs pack | 3 | smoke |
+| `worldgen_structure_slope_gate_test` | Structure slope gate | 3 | smoke |
 | `worldgen_scatter_test` | Scatter placement | 3 | smoke |
 | `object_placement_mode_test` | JSON placement mode | 1, 3 | smoke |
 

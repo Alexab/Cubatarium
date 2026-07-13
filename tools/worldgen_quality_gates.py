@@ -59,10 +59,12 @@ def main() -> int:
     failures = compare_to_thresholds(metrics, thresholds)
 
     print(
-        f"flatness={metrics.get('flatness_pct', 0):.2f}% "
-        f"rolling={metrics.get('rolling_hill_pct', 0):.2f}% "
+        f"flatness={metrics.get('spawn_flatness_pct', metrics.get('flatness_pct', 0)):.2f}% "
+        f"rolling={metrics.get('spawn_rolling_hill_pct', metrics.get('rolling_hill_pct', 0)):.2f}% "
         f"cave_cov={metrics.get('cave_chunk_coverage_pct', 0):.2f}% "
-        f"veg_cv={metrics.get('nn_distance_cv', 0):.3f}"
+        f"veg_cv={metrics.get('nn_distance_cv', 0):.3f} "
+        f"trees={metrics.get('spawn_tree_blocks', 0)} "
+        f"(spawn land; placement blocks)"
     )
 
     if failures:

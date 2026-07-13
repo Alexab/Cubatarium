@@ -26,18 +26,20 @@
   },
   "features": {
     "vegetation": {
-      "tree_pine_mapgen": 1.25,
-      "tree_jungle_mapgen": 1.15
+      "tree_pine": 1.25,
+      "tree_jungle": 1.15,
+      "tree_apple": 1.05,
+      "tree_aspen": 0.95
     },
     "decoration": {
       "deco_log_apple": 0.22,
       "deco_log_aspen": 0.22,
-      "deco_log_jungle": 0.20,
+      "deco_log_jungle": 0.2,
       "deco_log_pine": 0.22
     },
     "ground_cover": {
-      "bush_pine": 0.50,
-      "bush_blueberry": 0.70
+      "bush_pine": 0.5,
+      "bush_blueberry": 0.7
     }
   }
 }

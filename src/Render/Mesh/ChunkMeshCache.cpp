@@ -243,6 +243,11 @@ bool UChunkMeshCache::HasPendingDirty() const
   return !Dirty.empty() || HasPendingAsyncMeshWork();
 }
 
+bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
+{
+  return GreedyCache.find(chunk_coord) != GreedyCache.end();
+}
+
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
     glm::ivec3 center_chunk, int radius_chunks) const
 {

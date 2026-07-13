@@ -778,11 +778,17 @@ float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
     return 1.0f;
   }
   const auto prefabIt = def->FeatureWeights.find(prefabName);
-  if (prefabIt == def->FeatureWeights.end())
+  if (prefabIt != def->FeatureWeights.end())
   {
-    return 1.0f;
+    return std::max(0.1f, prefabIt->second);
   }
-  return std::max(0.1f, prefabIt->second);
+  const std::string mapgenKey = prefabName + "_mapgen";
+  const auto mapgenIt = def->FeatureWeights.find(mapgenKey);
+  if (mapgenIt != def->FeatureWeights.end())
+  {
+    return std::max(0.1f, mapgenIt->second);
+  }
+  return 1.0f;
 }
 
 float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,

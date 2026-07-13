@@ -1248,6 +1248,28 @@ target_include_directories(chunk_generation_registry_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_generation_registry_test glm::glm)
 
+add_executable(worldgen_biome_features_test
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/WorldGenBiomeFeaturesTest.cpp)
+target_include_directories(worldgen_biome_features_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_biome_features_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_structure_slope_gate_test
+    ${WORLDGEN_PIPELINE_TEST_SOURCES}
+    src/WorldGen/Features/ObjectPlacementConstraints.cpp
+    src/Test/WorldGenStructureSlopeGateTest.cpp)
+target_include_directories(worldgen_structure_slope_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_structure_slope_gate_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_structure_slope_gate_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(worldgen_scatter_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Objects/ObjectUtil.cpp
@@ -1443,6 +1465,15 @@ target_include_directories(fluid_worldgen_chunk_test PRIVATE
 target_compile_definitions(fluid_worldgen_chunk_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_vegetation_placement_integration_test
+    ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+    src/Test/WorldGenVegetationPlacementIntegrationTest.cpp)
+target_include_directories(worldgen_vegetation_placement_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_vegetation_placement_integration_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}

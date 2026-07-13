@@ -197,6 +197,11 @@ size_t UWorldMeshService::GetGreedyCacheSize() const
   return Cache.GetGreedyCacheSize();
 }
 
+bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasGreedyMesh(chunk_coord);
+}
+
 uint64_t UWorldMeshService::GetMeshRevision() const
 {
   return Cache.GetMeshRevision();

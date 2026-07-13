@@ -4,6 +4,8 @@
 #include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
 
+#include <cmath>
+
 namespace cutum
 {
 
@@ -124,6 +126,40 @@ bool FindWaterSurfaceAnchorForPlacement(const WorldGenContext &ctx, int x,
                                         int z, glm::ivec3 &anchor_out)
 {
   return FindWaterSurfaceAnchor(ctx, x, z, anchor_out);
+}
+
+float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                     int surfaceY)
+{
+  const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
+                                       ctx.Settings.MaxHeight);
+  auto surfaceAt = [&](int wx, int wz) -> int {
+    return FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+  };
+  const int centerY = surfaceAt(x, z);
+  if (centerY < 0)
+  {
+    return 999.0f;
+  }
+  float maxDelta = 0.0f;
+  for (int dz = -4; dz <= 4; dz += 4)
+  {
+    for (int dx = -4; dx <= 4; dx += 4)
+    {
+      if (dx == 0 && dz == 0)
+      {
+        continue;
+      }
+      const int neighborY = surfaceAt(x + dx, z + dz);
+      if (neighborY < 0)
+      {
+        continue;
+      }
+      maxDelta =
+          std::max(maxDelta, static_cast<float>(std::abs(neighborY - centerY)));
+    }
+  }
+  return maxDelta;
 }
 
 } // namespace cutum

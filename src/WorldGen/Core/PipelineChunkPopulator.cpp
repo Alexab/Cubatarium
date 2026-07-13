@@ -36,13 +36,44 @@ bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
   return gate > params.chunkGateThreshold;
 }
 
-uint32_t PipelineSettingsKey(const ProceduralSettings &settings)
+uint32_t PipelineSettingsKey(const ProceduralSettings &settings,
+                             UObjectLibrary *prefabs)
 {
   uint32_t key = settings.Seed;
   key ^= static_cast<uint32_t>(settings.Generator) * 2654435761u;
   key ^= static_cast<uint32_t>(settings.EnableCaves) << 1;
   key ^= static_cast<uint32_t>(settings.MaxHeight) << 2;
+  key ^= static_cast<uint32_t>(settings.EnableTrees) << 3;
+  key ^= static_cast<uint32_t>(settings.EnableGroundCover) << 4;
+  key ^= static_cast<uint32_t>(settings.EnableDecoration) << 5;
+  key ^= static_cast<uint32_t>(reinterpret_cast<uintptr_t>(prefabs) >> 4);
   return key;
+}
+
+void RefreshThreadLocalPipelineContext(UBlockRegistry &registry,
+                                       UObjectLibrary *prefabs,
+                                       const std::string &ownerPackId,
+                                       const ProceduralSettings &settings,
+                                       IUWorldGenPipeline *pipeline)
+{
+  if (!pipeline)
+  {
+    return;
+  }
+  auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
+  if (!composable)
+  {
+    return;
+  }
+  WorldGenContext &ctx = composable->GetContext();
+  ctx.Objects = prefabs;
+  ctx.Settings = settings;
+  ctx.WorldgenOwnerPackId = ownerPackId;
+  ctx.ResolveBlockIds();
+  if (prefabs)
+  {
+    prefabs->RebindBlockIds(registry);
+  }
 }
 
 struct ThreadLocalPipelineState
@@ -64,19 +95,25 @@ EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
                           const ProceduralSettings &settings)
 {
   ThreadLocalPipelineState &state = GetThreadLocalPipeline();
-  const uint32_t key = PipelineSettingsKey(settings);
+  const uint32_t key = PipelineSettingsKey(settings, prefabs);
   if (!state.pipeline || state.key != key)
   {
     state.world.Clear();
     WorldGenContext ctx{state.world, registry, settings, prefabs};
     ctx.WorldgenOwnerPackId = ownerPackId;
     ctx.ResolveBlockIds();
+    if (prefabs)
+    {
+      prefabs->RebindBlockIds(registry);
+    }
     state.pipeline = UProceduralWorldGenFactory::Create(std::move(ctx));
     state.key = key;
   }
   else
   {
     state.world.Clear();
+    RefreshThreadLocalPipelineContext(registry, prefabs, ownerPackId, settings,
+                                    state.pipeline.get());
   }
   return state.pipeline.get();
 }
@@ -107,8 +144,9 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     settings.EnableCaves = false;
   }
 
+  UObjectLibrary *objects = request.objects ? request.objects : Objects;
   IUWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
-      Registry, Objects, WorldgenOwnerPackId, settings);
+      Registry, objects, WorldgenOwnerPackId, settings);
   if (!pipeline)
   {
     return result;

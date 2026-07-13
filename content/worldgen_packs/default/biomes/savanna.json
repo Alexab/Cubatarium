@@ -3,7 +3,7 @@
   "height": {
     "base_offset": 0,
     "amplitude_mul": 0.9,
-    "volatility_mul": 0.50
+    "volatility_mul": 0.5
   },
   "palette": {
     "surface": "grass",
@@ -21,7 +21,10 @@
   },
   "features": {
     "vegetation": {
-      "tree_acacia_mapgen": 1.2
+      "tree_acacia": 1.25
+    },
+    "ground_cover": {
+      "bush_acacia": 0.9
     }
   }
 }

@@ -1081,7 +1081,13 @@ void UWorld::RebuildWorldGenPipeline()
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                       ObjectLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
-  ctx.ObjectFeatures = &ResolvedObjectFeatures;
+  if (!ResolvedObjectFeatures.Vegetation.empty() ||
+      !ResolvedObjectFeatures.GroundCover.empty() ||
+      !ResolvedObjectFeatures.Decoration.empty() ||
+      !ResolvedObjectFeatures.Structures.empty())
+  {
+    ctx.ObjectFeatures = &ResolvedObjectFeatures;
+  }
   ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
   {
     if (CooperativeBulkGenerating)
@@ -1474,6 +1480,44 @@ void UWorld::PrepareEnterGameSession()
   Streaming->PrepareEnterGameSession(*this);
 }
 
+namespace
+{
+
+int EnterGameMeshRadiusChunks(const UWorld &world)
+{
+  return std::max(1, world.GetRenderDistanceChunks() + 1);
+}
+
+bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+{
+  if (world.GetBlockWorld().CountNonAir() == 0)
+  {
+    return false;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(world);
+  const UWorldMeshService &mesh = world.GetMeshService();
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+      {
+        continue;
+      }
+      if (!mesh.HasGreedyMesh(coord))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 bool UWorld::DrainEnterGameMeshWarmup(int budget)
 {
   if (GetBlockWorld().CountNonAir() == 0)
@@ -1481,8 +1525,13 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
     return true;
   }
   UWorldMeshService &mesh = *MeshService;
-  if (!mesh.HasPendingDirty() && !mesh.HasPendingAsyncMeshWork() &&
-      mesh.GetGreedyCacheSize() > 0)
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  const bool spawn_meshes_pending =
+      mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
+      HasMissingGreedyMeshesNearFocus(*this);
+  if (!spawn_meshes_pending && !mesh.HasPendingAsyncMeshWork())
   {
     return true;
   }
@@ -1500,7 +1549,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
                           mesh_budget.MaxMeshSchedule);
   mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
                              mesh_budget.MaxMeshDrain);
-  return mesh.GetGreedyCacheSize() > 0 && !mesh.HasPendingDirty() &&
+  return !HasMissingGreedyMeshesNearFocus(*this) && !mesh.HasPendingDirty() &&
          !mesh.HasPendingAsyncMeshWork();
 }
 
@@ -1515,13 +1564,14 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return true;
   }
-  // Coop create/load already built spawn meshes; far dirty chunks must not
-  // block enter or keep Loading (and input) hostage on the main thread.
-  if (mesh.GetGreedyCacheSize() > 0)
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
   {
-    return false;
+    return true;
   }
-  return mesh.HasPendingDirty();
+  return HasMissingGreedyMeshesNearFocus(*this);
 }
 
 bool UWorld::IsCreateSpawnWarmupSettled() const
@@ -1576,6 +1626,7 @@ void UWorld::EnsureStreamingActiveAfterBackgroundQuiesce()
   AllowProceduralFill = IsStreamingEnabled();
   if (Streaming)
   {
+    Streaming->ResumeStreamerAfterQuiesce();
     InitStreamerCallbacks();
   }
 }
@@ -1600,6 +1651,24 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
        Persistence->GetPendingTerrainColumnRelightCount() > 0))
   {
     return false;
+  }
+  if (IsStreamingEnabled() && Streaming && Streaming->HasStreamer())
+  {
+    const glm::ivec3 center =
+        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+    const int radius = EnterGameMeshRadiusChunks(*this);
+    const int max_y = GetProceduralSettings().MaxHeight;
+    for (int dx = -radius; dx <= radius; ++dx)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+        if (!IsTerrainChunkComplete(BlockWorld, coord, max_y))
+        {
+          return false;
+        }
+      }
+    }
   }
   return true;
 }

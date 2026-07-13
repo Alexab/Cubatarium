@@ -3,7 +3,7 @@
   "height": {
     "base_offset": -1,
     "amplitude_mul": 0.75,
-    "volatility_mul": 0.40
+    "volatility_mul": 0.4
   },
   "palette": {
     "surface": "sand",
@@ -21,10 +21,11 @@
   },
   "features": {
     "vegetation": {
-      "cactus_large": 0.6
+      "cactus_large": 0.75,
+      "tree_acacia": 0.5
     },
     "ground_cover": {
-      "bush_acacia": 1.2
+      "bush_acacia": 1.25
     }
   }
 }

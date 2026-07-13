@@ -198,7 +198,6 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 void UWorldStreaming::QuiesceBackgroundWork(
     UWorld &world, const std::chrono::milliseconds async_io_timeout)
 {
-  SetStreamingEnabled(false);
   if (Streamer)
   {
     Streamer->SetEnabled(false);
@@ -219,6 +218,14 @@ void UWorldStreaming::QuiesceBackgroundWork(
       }
     }
     (void)world.Persistence->AbortAsyncChunkIoFor(async_io_timeout);
+  }
+}
+
+void UWorldStreaming::ResumeStreamerAfterQuiesce()
+{
+  if (Streamer && StreamingEnabled)
+  {
+    Streamer->SetEnabled(true);
   }
 }
 
@@ -381,6 +388,20 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); },
       [&world](glm::ivec3 ground)
       {
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        if (settings.FillWater && world.BlockRegistry)
+        {
+          const bool changed = SealFluidShoreOnChunkCommitted(
+              world.BlockWorld, *world.BlockRegistry, settings,
+              world.WorldgenOwnerPackId, ground);
+          if (changed)
+          {
+            const int mesh_min_y = std::max(0, settings.SeaLevel - 8);
+            const int mesh_max_y =
+                std::min(settings.MaxHeight - 1, settings.SeaLevel + 8);
+            world.MarkTerrainChunkMeshDirty(ground, mesh_min_y, mesh_max_y);
+          }
+        }
         world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
                                                        ground.z * CHUNK_SIZE);
       });

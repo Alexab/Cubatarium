@@ -86,31 +86,32 @@ Infrastructure phases A–D are complete. **Terrain visual quality** work (2026-
 
 ## Quality backlog (2026-07, post Overworld plan)
 
-Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth band, terrain spline, `density_3d` MVP, CI smoke) is **done**. Visual/metric quality and E2E vegetation remain **partial**. Resume after P0 perf/lighting/streaming fixes (see [TECH_DEBT_CHUNK_STREAMING.md](TECH_DEBT_CHUNK_STREAMING.md) TD-CS-021, [TECH_DEBT_DAY_NIGHT_WEATHER_LIGHTING.md](TECH_DEBT_DAY_NIGHT_WEATHER_LIGHTING.md) TD-LIGHT-001).
+Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth band, terrain spline, `density_3d` MVP, CI smoke) is **done**. Visual/metric quality and E2E vegetation were **partial**; the 2026-07-12 quality-resume cycle addressed hills, biome vegetation profiles, structure calibration, and placement baselines.
 
-| ID | Item | Status | Recommendation |
-|----|------|--------|----------------|
-| WG-Q1 | `flatness_pct` land ~58–83%; CI gate 38% not met; full `analyze_world` ~2h on large saves | Open | Move CI metric to **spawn-centered land-only** (`tools/quick_terrain_metrics.py`, `worldgen_quality_gates.py`); tune `FillMicroDepressions` / `ClampToFlatPlateau` only after P0 |
-| WG-Q2 | `density_3d` MVP only (column Y-scan); unified cave density, MC-router, overhangs | Deferred | Step 2: shared density field for caves+terrain; step 3: surface router; keep default `heightmap` until metrics stable |
-| WG-Q3 | Multi-seed CI gates (`integration_test_worldgen.py` without `--smoke`) | Open | Run 3–5 reference seeds in CI after P0; nightly `audit_worldgen_batch.py` (20 seeds) as separate workflow |
-| WG-Q4 | `worldgen_refs.json` / baseline refresh | Open | Refresh after spawn metrics and vegetation E2E stabilize |
-| WG-Q5 | Mesa/flat artifacts on pre-fix saves (e.g. World_112, World_106 ~95% flatness) | Known | Saves do not migrate; QA should recreate worlds; compare with `quick_terrain_metrics.py` not full-disk `analyze_world` |
-| WG-Q6 | Vegetation / decor objects may not appear in-game | Open | See subsection below |
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| WG-Q1 | `flatness_pct` too high; rolling hills low | **Addressed** | `height.json` + biome height tuning; relaxed `FillMicroDepressions` / `ClampToFlatPlateau`; land spawn metrics via `quick_terrain_metrics.py --land` |
+| WG-Q2 | `density_3d` MVP only | **Deferred** | Not in this cycle; default remains `heightmap` |
+| WG-Q3 | Multi-seed CI gates | **Done** | `integration_test_worldgen.py` on reference seeds 42, 12354, 20240625 + `validate_biome_features.py` |
+| WG-Q4 | `worldgen_refs.json` / baseline refresh | **Done** | Thresholds in `worldgen_baseline.json`; `worldgen_spawn_report.py` for placement audit |
+| WG-Q5 | Mesa/flat artifacts on pre-fix saves | **Known** | Recreate worlds for QA; use spawn-centered land metrics |
+| WG-Q6 | Vegetation / decor E2E | **Addressed (placement)** | All 9 biomes have `features`; density gate floor raised; `_mapgen` weight alias; placement counted by CI — render still TD-CS-014 |
+| WG-Q7 | Villages / jigsaw settlements | **Deferred** | Ruins/houses on 64×64 cell grid first; villages need structure sets later |
 
 ### WG-Q6 — Vegetation and objects
 
-**Symptom:** After `TargetColumnDensity` / `ObjectFeaturePlacer` tuning, trees and decor may still be absent in-game (E2E not verified). Batch audit (World_106): `spawn_tree_blocks: 0`, `spawn_bush_common_footprints: 0`.
+**Placement vs render:** `spawn_tree_blocks` and `quick_terrain_metrics.py --count-objects` count **blocks in chunk files** (worldgen placement). In-game visibility depends on mesh warmup / cross-vegetation render ([TECH_DEBT_CHUNK_STREAMING.md](TECH_DEBT_CHUNK_STREAMING.md) TD-CS-014), not worldgen.
 
-**Likely causes and fixes (in order):**
+**Tools:**
 
-1. **`PassesNoiseDensityGate` / spacing** still reject columns on some seeds → lower gate or add biome floor density; verify with `tools/quick_terrain_metrics.py --count-objects`.
-2. **`EnableTrees` / stage mask** — `RunVegetationStage` skipped when `procedural.trees=false` or mask lacks `Vegetation` → log stage mask at create-world.
-3. **`CanPlacePlantAt` + seal/prune** after fluids — `worldgen_fluid_vegetation_pipeline_test` does not cover all biomes → add scatter-count integration test.
-4. **Object pack / library** — pack id mismatch or empty object registry → assert non-zero placements in headless create (see [OBJECT_WORLDGEN.md](OBJECT_WORLDGEN.md)).
-5. **Render vs placement** — cross-vegetation mesh (TD-CS-014) is separate from block placement; if blocks exist but no mesh, fix mesh warmup / lighting (TD-LIGHT-001), not worldgen.
-6. **CI gate `spawn_tree_blocks_min: 5000`** in `tools/worldgen_baseline.json` — re-run on reference seeds after P0 lighting so meshes are warm.
+1. `tools/quick_terrain_metrics.py --land --count-objects` — fast spawn shape + placement counts
+2. `tools/worldgen_spawn_report.py` — reference-seed placement baseline (after `integration_test_worldgen.py`)
+3. `tools/validate_biome_features.py` — biome `features` keys match `object_features.json`
+4. `tools/worldgen_quality_gates.py` — phase-3 gates (flatness, rolling, caves, veg clustering)
 
-**Recommended order (after P0):** headless placement audit → in-game verify → tune gates → refresh baseline.
+**Structure placement:** `structure_placement` in `content/object_features.json` (`cell_size`, `chance_per_cell`, `min_spacing`); slope gate in `SampleStructureSurfaceGradient` / `TryPlaceStructureFeatures`.
+
+**Recommended QA:** new Overworld, reference seed, RD 8; forest/plains/savanna trees; desert cactus/ruins; `/worldgen reload` only affects new chunks.
 
 ## Execution progress (2026-07-07)
 
