@@ -229,6 +229,15 @@ void UChunkMeshCache::CancelAsyncMeshWork()
   AsyncBuilder->CancelPending();
 }
 
+void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return;
+  }
+  AsyncBuilder->CancelPending();
+}
+
 bool UChunkMeshCache::HasPendingDirty() const
 {
   return !Dirty.empty() || HasPendingAsyncMeshWork();
@@ -580,11 +589,11 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame)
+    int max_schedule_per_frame, bool force_sync)
 {
   MeshRebuildTickStats stats;
   bool mesh_data_changed = false;
-  if (Render.AsyncMeshing && Render.GreedyMeshing)
+  if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
     for (MeshBuildResult &result :

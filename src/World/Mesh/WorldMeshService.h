@@ -48,7 +48,7 @@ public:
                           int max_drain_per_frame, int max_schedule_per_frame);
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-      int max_schedule_per_frame);
+      int max_schedule_per_frame, bool force_sync = false);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
@@ -56,6 +56,7 @@ public:
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
+  void CancelAsyncInFlightKeepDirty();
 
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,

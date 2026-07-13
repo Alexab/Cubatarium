@@ -105,8 +105,6 @@ private:
   size_t BulkRelightChunkAppliedCount{0};
   std::vector<glm::ivec3> EmissiveChunkRelightQueue;
   size_t EmissiveChunkRelightIndex{0};
-  size_t EmissiveChunkRelightScheduledIndex{0};
-  size_t EmissiveChunkRelightAppliedCount{0};
   size_t MeshWarmupProcessedMax{0};
   size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
@@ -115,6 +113,7 @@ private:
   void BeginBulkChunkRelightQueue(UWorld &world);
   void BeginColumnRelightQueue(UWorld &world);
   void BeginEmissiveBlockLightQueue(UWorld &world);
+  void FinishEmissiveBlockLightRelight(UWorld &world);
   void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
   void ReportMeshWarmupStart(IUProgressSink &sink) const;
