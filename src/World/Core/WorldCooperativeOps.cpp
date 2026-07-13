@@ -1303,8 +1303,6 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                            GenPatchMinZ, GenPatchMaxZ))
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
-      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
-      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
       const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
       const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
       const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
@@ -1313,8 +1311,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         for (int cz = min_cz; cz <= max_cz; ++cz)
         {
-          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), remesh_min_y,
-                                          remesh_max_y);
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), 0,
+                                          settings.MaxHeight);
         }
       }
       mesh_done = false;
