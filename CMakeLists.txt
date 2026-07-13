@@ -270,6 +270,7 @@ set(SOURCES
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/TerrainHydrology.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
@@ -295,6 +296,7 @@ set(SOURCES
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/World/Chunks/ChunkStreamer.cpp
     src/World/Chunks/TerrainColumnUtil.cpp
@@ -673,6 +675,8 @@ add_executable(terrain_column_util_test
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Core/BlockWorld.cpp
     src/World/Core/IUBlockWriter.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Math/GridMath.cpp
     src/Test/TerrainColumnUtilTest.cpp)
@@ -686,6 +690,20 @@ add_executable(world_mesh_service_test
 target_include_directories(world_mesh_service_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(world_mesh_service_test glm::glm)
+
+add_executable(chunk_mesh_revision_test
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
+    src/Test/ChunkMeshRevisionTest.cpp)
+target_include_directories(chunk_mesh_revision_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_mesh_revision_test glm::glm)
+
+add_executable(terrain_mesh_dirty_seam_test
+    src/World/Math/GridMath.cpp
+    src/Test/TerrainMeshDirtySeamTest.cpp)
+target_include_directories(terrain_mesh_dirty_seam_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
@@ -1141,6 +1159,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GreedyMesher.cpp
@@ -1169,6 +1188,7 @@ add_executable(fluid_worldgen_seal_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/TerrainHydrology.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -1177,8 +1197,18 @@ add_executable(fluid_worldgen_seal_test
 target_include_directories(fluid_worldgen_seal_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(fluid_worldgen_seal_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
+    ${PHYSICS_LIGHT_REGISTRY_DEF} CUTUM_TERRAIN_HYDROLOGY_NO_PACK)
 target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(terrain_hydrology_test
+    src/WorldGen/Sampling/TerrainHydrology.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/Test/TerrainHydrologyTest.cpp)
+target_include_directories(terrain_hydrology_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(terrain_hydrology_test PRIVATE
+    CUTUM_TERRAIN_HYDROLOGY_NO_PACK)
+target_link_libraries(terrain_hydrology_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_vegetation_placement_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1191,6 +1221,7 @@ add_executable(worldgen_vegetation_placement_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/TerrainHydrology.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -1199,7 +1230,7 @@ add_executable(worldgen_vegetation_placement_test
 target_include_directories(worldgen_vegetation_placement_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
+    ${PHYSICS_LIGHT_REGISTRY_DEF} CUTUM_TERRAIN_HYDROLOGY_NO_PACK)
 target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_cave_depth_test
@@ -1220,6 +1251,7 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/TerrainHydrology.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -1231,7 +1263,7 @@ add_executable(worldgen_fluid_vegetation_pipeline_test
 target_include_directories(worldgen_fluid_vegetation_pipeline_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_fluid_vegetation_pipeline_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
+    ${PHYSICS_LIGHT_REGISTRY_DEF} CUTUM_TERRAIN_HYDROLOGY_NO_PACK)
 target_link_libraries(worldgen_fluid_vegetation_pipeline_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_hills_vegetation_gate_test
@@ -1260,7 +1292,7 @@ add_executable(worldgen_structure_slope_gate_test
 target_include_directories(worldgen_structure_slope_gate_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_structure_slope_gate_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
+    ${PHYSICS_LIGHT_REGISTRY_DEF} CUTUM_TERRAIN_HYDROLOGY_NO_PACK)
 target_link_libraries(worldgen_structure_slope_gate_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(chunk_generation_registry_test
@@ -1436,6 +1468,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/TerrainHydrology.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp

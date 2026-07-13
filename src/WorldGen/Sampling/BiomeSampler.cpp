@@ -3,6 +3,7 @@
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
+#include "WorldGen/Sampling/TerrainHydrology.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -365,6 +366,11 @@ int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settin
   }
   if (wetNeighbors >= 18 && surfaceY > sea)
   {
+    if (ClassifyTerrainHydrology(x, z, settings.Seed) ==
+        TerrainHydrologyClass::Land)
+    {
+      return std::max(sea + 1, surfaceY - 1);
+    }
     return std::max(sea, surfaceY - (wetNeighbors >= 28 ? 2 : 1));
   }
   if (wetNeighbors <= 1 && surfaceY == sea)
@@ -883,6 +889,7 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
 
   y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);
+  y = ApplyLandSeaHeightPolicy(x, z, y, seed, settings);
   y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
   y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
   y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY);

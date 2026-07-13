@@ -116,25 +116,24 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   ChunkScheduler->SetMarkDirtyFn(
       [this, &world](glm::ivec3 coord)
       {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
         if (Streamer)
         {
           Streamer->NotifyChunkCommitted(coord);
         }
-        else
-        {
-          world.GetMeshService().MarkDirty(coord);
-        }
-        DeferredPhysicsSeedQueue.push_back(coord);
         const ProceduralSettings &settings = world.GetProceduralSettings();
+        // Mesh must be scheduled on commit; deferring for async relight left
+        // object/decoration voxels collidable but invisible until a later edit.
+        world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, 0, settings.MaxHeight, true);
+        DeferredPhysicsSeedQueue.push_back(coord);
         if (SealFluidShoreOnChunkCommitted(
                 world.BlockWorld, *world.BlockRegistry, settings,
                 world.WorldgenOwnerPackId, coord))
         {
           const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE;
-          world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
-                                          remesh_max_y);
+          world.MarkTerrainChunkMeshDirtySeamed(ground, 0, remesh_max_y, true);
         }
-        const glm::ivec3 ground(coord.x, 0, coord.z);
         if (IsTerrainChunkComplete(world.BlockWorld, ground, settings.MaxHeight))
         {
           world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
@@ -144,11 +143,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)
       {
-        if (world.ShouldDeferStreamingMeshForRelight())
-        {
-          return;
-        }
-        world.MarkTerrainChunkMeshDirty(groundCoord, min_y, max_y);
+        world.MarkTerrainChunkMeshDirtySeamed(groundCoord, min_y, max_y, true);
       });
   world.Persistence->EnsureChunkIoInitialized();
 }
@@ -161,12 +156,27 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                 world.GetLastMovementFrameMs());
   const UChunkEmergeCoordinator::FrameBudget budget =
       EmergeCoordinator->GetLastBudget();
+  UChunkEmergeCoordinator::FrameBudget chunk_budget = budget;
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
   {
-    ChunkScheduler->Tick(world.BlockWorld, budget.MaxChunkCommits,
-                         budget.MaxLoadOps);
+    const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_ground =
+        UChunkManager::WorldToChunk(focus_block);
+    const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
+    const int focus_radius = world.GetRenderDistanceChunks() + 1;
+    const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
+    if (mesh_dirty > 32 &&
+        world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
+                                                            focus_radius))
+    {
+      chunk_budget.MaxChunkCommits =
+          std::max(1, chunk_budget.MaxChunkCommits / 2);
+      chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
+    }
+    ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
+                         chunk_budget.MaxLoadOps);
   }
-  const int physics_budget = std::max(1, budget.MaxChunkCommits);
+  const int physics_budget = std::max(1, chunk_budget.MaxChunkCommits);
   const auto physics_t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < physics_budget && !DeferredPhysicsSeedQueue.empty(); ++i)
   {
@@ -317,15 +327,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [&world](glm::ivec3 coord)
       {
-        if (world.ShouldDeferStreamingMeshForRelight())
-        {
-          return;
-        }
         const ProceduralSettings &settings = world.GetProceduralSettings();
-        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
-        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z),
-                                        remesh_min_y, remesh_max_y);
+        world.MarkTerrainChunkMeshDirtySeamed(glm::ivec3(coord.x, 0, coord.z), 0,
+                                              settings.MaxHeight, true);
       },
       [this, &world](int x, int z)
       {
@@ -402,7 +406,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             const int mesh_min_y = std::max(0, settings.SeaLevel - 8);
             const int mesh_max_y =
                 std::min(settings.MaxHeight - 1, settings.SeaLevel + 8);
-            world.MarkTerrainChunkMeshDirty(ground, mesh_min_y, mesh_max_y);
+            world.MarkTerrainChunkMeshDirtySeamed(ground, mesh_min_y, mesh_max_y,
+                                                  true);
           }
         }
         world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,

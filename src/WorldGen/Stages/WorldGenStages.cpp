@@ -1,4 +1,6 @@
 #include "WorldGen/Stages/WorldGenStages.h"
+
+#include "WorldGen/Sampling/TerrainHydrology.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
@@ -73,7 +75,13 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
   {
     return;
   }
-  for (int y = surfaceY + 1; y <= sea; ++y)
+  const int fill_top =
+      FluidFillTopY(x, z, surfaceY, ctx.Settings.Seed, ctx.Settings);
+  if (fill_top <= surfaceY)
+  {
+    return;
+  }
+  for (int y = surfaceY + 1; y <= fill_top; ++y)
   {
     const glm::ivec3 pos(x, y, z);
     if (ctx.World.GetBlock(pos) == BLOCK_AIR)

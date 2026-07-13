@@ -43,15 +43,15 @@ static void TestFillColumnBelowSea()
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
   auto ctx = MakeSealContext(world, registry);
-  FillStoneColumn(world, 0, 0, 60);
-  cutum::FillFluidColumn(ctx, 0, 0, 60);
+  FillStoneColumn(world, 0, 0, 58);
+  cutum::FillFluidColumn(ctx, 0, 0, 58);
 
-  for (int y = 61; y <= 63; ++y)
+  for (int y = 59; y <= 63; ++y)
   {
     FluidTest::Expect(world.GetBlock(glm::ivec3(0, y, 0)) == kWater, kTestName,
                       "below-sea column fills with water");
   }
-  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 60, 0)) == kStone, kTestName,
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 58, 0)) == kStone, kTestName,
                     "surface block remains stone");
 }
 

@@ -3,6 +3,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/ChunkDirtySet.h"
+#include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
@@ -71,6 +72,13 @@ public:
   int GetAsyncInFlightCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
+                                              glm::ivec3 center_ground_chunk,
+                                              int radius_chunks) const;
+  const MeshRebuildTickStats &GetLastRebuildTickStats() const
+  {
+    return LastRebuildTickStats;
+  }
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;
@@ -84,6 +92,7 @@ public:
   {
     RenderDistanceChunks = distance;
   }
+  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
   {
     AltitudeAboveTerrain = altitude_above_terrain;
@@ -167,11 +176,25 @@ private:
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
+  UChunkMeshRevisionRegistry MeshRevisions;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveMeshSourceRevision;
+  std::unordered_map<glm::ivec3, std::pair<size_t, size_t>, IVec3Hash>
+      GreedyOpaqueBatchRanges;
+  size_t GreedyOpaqueBatchCount{0};
+  std::vector<GreedyMeshBatch> GreedyCutoutBatches;
+  bool GreedyIncrementalIndexValid{false};
+  bool GreedyCutoutBatchesDirty{true};
+  MeshRebuildTickStats LastRebuildTickStats{};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
+  void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
+  void PatchGreedyBatchesForChunk(glm::ivec3 chunk_coord);
+  void RebuildCutoutGreedyBatches();
+  void RebuildGreedyBatchIndexFromFullMerge();
+  void ReassembleGreedyDrawBatches();
+  void InvalidateGreedyBatchIndex();
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,
@@ -180,7 +203,12 @@ private:
   bool TrySkipFlatRebuildForVisibleChunks(const Frustum *frustum,
                                           const glm::vec3 *cameraPos,
                                           float maxCullDistance);
+  int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
+                                int max_sync);
   float MaxCullDistance() const;
+  glm::ivec3 MeshFocusGroundChunk{0};
+  int MeshFocusRadiusChunks{6};
+  bool MeshFocusValid{false};
 };
 } // namespace cutum
 #endif

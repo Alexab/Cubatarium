@@ -3,6 +3,7 @@
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
@@ -115,6 +116,85 @@ float UChunkMeshCache::MaxCullDistance() const
 {
   return RenderHorizonBlocks(RenderDistanceChunks);
 }
+
+void UChunkMeshCache::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
+                                          int radius_chunks)
+{
+  MeshFocusGroundChunk = ground_chunk_coord;
+  MeshFocusRadiusChunks = std::max(1, radius_chunks);
+  MeshFocusValid = true;
+}
+
+int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
+                                               UBlockRegistry &registry,
+                                               int max_sync)
+{
+  if (!MeshFocusValid || max_sync <= 0 || !Render.GreedyMeshing)
+  {
+    return 0;
+  }
+
+  struct Candidate
+  {
+    glm::ivec3 coord;
+    int dist;
+  };
+  std::vector<Candidate> candidates;
+  candidates.reserve(64);
+  world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        const glm::ivec3 coord = chunk.GetCoord();
+        const int dx = std::abs(coord.x - MeshFocusGroundChunk.x);
+        const int dz = std::abs(coord.z - MeshFocusGroundChunk.z);
+        const int dist = std::max(dx, dz);
+        if (dist > MeshFocusRadiusChunks)
+        {
+          return;
+        }
+        if (GreedyCache.find(coord) != GreedyCache.end())
+        {
+          return;
+        }
+        if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
+        {
+          return;
+        }
+        candidates.push_back({coord, dist});
+      });
+  if (candidates.empty())
+  {
+    return 0;
+  }
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b)
+            { return a.dist < b.dist; });
+
+  int rebuilt = 0;
+  for (const Candidate &candidate : candidates)
+  {
+    if (rebuilt >= max_sync)
+    {
+      break;
+    }
+    if (!world.GetChunkManager().HasChunk(candidate.coord))
+    {
+      continue;
+    }
+    RebuildChunk(world, registry, candidate.coord);
+    Dirty.Erase(candidate.coord);
+    ActiveMeshSourceRevision.erase(candidate.coord);
+    GreedyBatchesDirty = true;
+    ++rebuilt;
+  }
+  if (rebuilt > 0)
+  {
+    CrossBatchesDirty = true;
+    PendingMeshRevisionBump = true;
+  }
+  return rebuilt;
+}
+
 void UChunkMeshCache::BumpMeshRevisionIfNeeded()
 {
   if (!PendingMeshRevisionBump)
@@ -161,6 +241,10 @@ void UChunkMeshCache::MarkAllDirty()
   FluidSurfaceDirty.clear();
   Instances.clear();
   GreedyBatches.clear();
+  InvalidateGreedyBatchIndex();
+  GreedyOpaqueBatchCount = 0;
+  MeshRevisions.Clear();
+  ActiveMeshSourceRevision.clear();
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -248,6 +332,216 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
+bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
+    const UBlockWorld &world, glm::ivec3 center_ground_chunk,
+    int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return false;
+  }
+  bool missing = false;
+  world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        if (missing)
+        {
+          return;
+        }
+        const glm::ivec3 coord = chunk.GetCoord();
+        const int dx = std::abs(coord.x - center_ground_chunk.x);
+        const int dz = std::abs(coord.z - center_ground_chunk.z);
+        if (std::max(dx, dz) > radius_chunks)
+        {
+          return;
+        }
+        if (GreedyCache.find(coord) == GreedyCache.end())
+        {
+          missing = true;
+        }
+      });
+  return missing;
+}
+
+void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
+{
+  MeshRevisions.Bump(chunk_coord);
+}
+
+void UChunkMeshCache::InvalidateGreedyBatchIndex()
+{
+  GreedyIncrementalIndexValid = false;
+  GreedyOpaqueBatchRanges.clear();
+  GreedyCutoutBatches.clear();
+  GreedyCutoutBatchesDirty = true;
+}
+
+void UChunkMeshCache::RebuildCutoutGreedyBatches()
+{
+  std::unordered_map<BlockId, GreedyMeshBatch> merged_cutout;
+  for (const auto &entry : GreedyCache)
+  {
+    for (const GreedyMeshBatch &chunk_batch : entry.second.batches)
+    {
+      if (chunk_batch.vertices.empty())
+      {
+        continue;
+      }
+      if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
+      {
+        GreedyMeshBatch &dst = merged_cutout[chunk_batch.blockId];
+        if (dst.vertices.empty())
+        {
+          dst = chunk_batch;
+        }
+        else
+        {
+          MergeGreedyBatch(dst, chunk_batch);
+        }
+      }
+    }
+  }
+  GreedyCutoutBatches.clear();
+  GreedyCutoutBatches.reserve(merged_cutout.size());
+  for (auto &pair : merged_cutout)
+  {
+    GreedyCutoutBatches.push_back(std::move(pair.second));
+  }
+  GreedyCutoutBatchesDirty = false;
+}
+
+void UChunkMeshCache::RebuildGreedyBatchIndexFromFullMerge()
+{
+  GreedyOpaqueBatchRanges.clear();
+  size_t opaque_count = 0;
+  for (const auto &entry : GreedyCache)
+  {
+    size_t chunk_count = 0;
+    for (const GreedyMeshBatch &chunk_batch : entry.second.batches)
+    {
+      if (chunk_batch.vertices.empty())
+      {
+        continue;
+      }
+      if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
+      {
+        continue;
+      }
+      ++chunk_count;
+    }
+    if (chunk_count > 0)
+    {
+      GreedyOpaqueBatchRanges[entry.first] = {opaque_count, chunk_count};
+      opaque_count += chunk_count;
+    }
+  }
+  GreedyIncrementalIndexValid = true;
+}
+
+void UChunkMeshCache::PatchGreedyBatchesForChunk(glm::ivec3 chunk_coord)
+{
+  if (!GreedyIncrementalIndexValid)
+  {
+    GreedyBatchesDirty = true;
+    return;
+  }
+
+  // GreedyBatches may contain opaque + cutout; index tracks opaque only.
+  if (GreedyBatches.size() > GreedyOpaqueBatchCount)
+  {
+    GreedyBatches.resize(GreedyOpaqueBatchCount);
+  }
+
+  const auto range_it = GreedyOpaqueBatchRanges.find(chunk_coord);
+  if (range_it != GreedyOpaqueBatchRanges.end())
+  {
+    const size_t start = range_it->second.first;
+    const size_t count = range_it->second.second;
+    if (start + count <= GreedyOpaqueBatchCount)
+    {
+      GreedyBatches.erase(
+          GreedyBatches.begin() + static_cast<std::ptrdiff_t>(start),
+          GreedyBatches.begin() +
+              static_cast<std::ptrdiff_t>(start + count));
+      GreedyOpaqueBatchCount -= count;
+      for (auto &pair : GreedyOpaqueBatchRanges)
+      {
+        if (pair.first == chunk_coord)
+        {
+          continue;
+        }
+        if (pair.second.first > start)
+        {
+          pair.second.first -= count;
+        }
+      }
+    }
+    GreedyOpaqueBatchRanges.erase(range_it);
+  }
+
+  const auto cache_it = GreedyCache.find(chunk_coord);
+  bool has_cutout = false;
+  size_t inserted = 0;
+  if (cache_it != GreedyCache.end())
+  {
+    const size_t insert_at = GreedyOpaqueBatchCount;
+    for (const GreedyMeshBatch &chunk_batch : cache_it->second.batches)
+    {
+      if (chunk_batch.vertices.empty())
+      {
+        continue;
+      }
+      if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
+      {
+        has_cutout = true;
+        continue;
+      }
+      GreedyBatches.insert(GreedyBatches.begin() +
+                               static_cast<std::ptrdiff_t>(insert_at + inserted),
+                           chunk_batch);
+      ++inserted;
+    }
+    if (inserted > 0)
+    {
+      GreedyOpaqueBatchRanges[chunk_coord] = {insert_at, inserted};
+      GreedyOpaqueBatchCount += inserted;
+      for (auto &pair : GreedyOpaqueBatchRanges)
+      {
+        if (pair.first == chunk_coord)
+        {
+          continue;
+        }
+        if (pair.second.first >= insert_at)
+        {
+          pair.second.first += inserted;
+        }
+      }
+    }
+  }
+
+  if (has_cutout)
+  {
+    GreedyCutoutBatchesDirty = true;
+  }
+  if (GreedyCutoutBatchesDirty)
+  {
+    RebuildCutoutGreedyBatches();
+  }
+  ReassembleGreedyDrawBatches();
+  ++CullRevision;
+  GreedyBatchesDirty = true;
+}
+
+void UChunkMeshCache::ReassembleGreedyDrawBatches()
+{
+  if (GreedyBatches.size() > GreedyOpaqueBatchCount)
+  {
+    GreedyBatches.resize(GreedyOpaqueBatchCount);
+  }
+  GreedyBatches.insert(GreedyBatches.end(), GreedyCutoutBatches.begin(),
+                       GreedyCutoutBatches.end());
+}
+
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
     glm::ivec3 center_chunk, int radius_chunks) const
 {
@@ -275,8 +569,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   {
     return;
   }
+  BumpChunkMeshRevision(chunkCoord);
   InvalidateFluidSurfaceForChunk(chunkCoord);
-  PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -284,8 +578,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
   Dirty.MarkDirtyPriority(chunkCoord);
+  BumpChunkMeshRevision(chunkCoord);
   InvalidateFluidSurfaceForChunk(chunkCoord);
-  PendingMeshRevisionBump = true;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -295,12 +589,15 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
   Dirty.Erase(chunkCoord);
+  MeshRevisions.Erase(chunkCoord);
+  ActiveMeshSourceRevision.erase(chunkCoord);
+  GreedyBatchesDirty = true;
+  InvalidateGreedyBatchIndex();
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   FluidSurfaceCache.erase(ground);
   FluidSurfaceDirty.erase(ground);
   ++MeshRevision;
   InstancesDirty = true;
-  GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
   InvalidateVisibleList();
 }
@@ -339,6 +636,10 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
     const Frustum *frustum, const glm::vec3 *cameraPos, float maxCullDistance)
 {
   if (!frustum || !cameraPos)
+  {
+    return false;
+  }
+  if (PendingMeshRevisionBump)
   {
     return false;
   }
@@ -389,13 +690,18 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   const bool horizontal_cull = UseHorizontalCullDistance();
-  const auto merge_from_cache =
+  if (frustum && cameraPos)
+  {
+    InvalidateGreedyBatchIndex();
+  }
+  const auto merge_opaque_from_cache =
       [&](const Frustum *cull_frustum, const glm::vec3 *cull_camera,
-          float cull_distance) -> std::vector<GreedyMeshBatch>
+          float cull_distance,
+          std::unordered_map<BlockId, GreedyMeshBatch> *merged_cutout)
+          -> std::vector<GreedyMeshBatch>
   {
     std::vector<GreedyMeshBatch> merged;
     merged.reserve(GreedyCache.size() * 4);
-    std::unordered_map<BlockId, GreedyMeshBatch> merged_cutout;
     for (const auto &entry : GreedyCache)
     {
       if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
@@ -411,43 +717,58 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
         }
         if (!chunk_batch.Transparent && chunk_batch.AlphaCutout)
         {
-          GreedyMeshBatch &dst = merged_cutout[chunk_batch.blockId];
-          if (dst.vertices.empty())
+          if (merged_cutout != nullptr)
           {
-            dst = chunk_batch;
-          }
-          else
-          {
-            MergeGreedyBatch(dst, chunk_batch);
+            GreedyMeshBatch &dst = (*merged_cutout)[chunk_batch.blockId];
+            if (dst.vertices.empty())
+            {
+              dst = chunk_batch;
+            }
+            else
+            {
+              MergeGreedyBatch(dst, chunk_batch);
+            }
           }
           continue;
         }
         merged.push_back(chunk_batch);
       }
     }
-    for (auto &pair : merged_cutout)
-    {
-      merged.push_back(std::move(pair.second));
-    }
     return merged;
   };
 
+  std::unordered_map<BlockId, GreedyMeshBatch> merged_cutout;
   std::vector<GreedyMeshBatch> merged =
-      merge_from_cache(frustum, cameraPos, maxCullDistance);
+      merge_opaque_from_cache(frustum, cameraPos, maxCullDistance, &merged_cutout);
   if (frustum && cameraPos && merged.empty() && !GreedyCache.empty() &&
       (GreedyBatchesDirty || GreedyBatches.empty()))
   {
-    merged = merge_from_cache(nullptr, nullptr, 0.0f);
+    merged_cutout.clear();
+    merged = merge_opaque_from_cache(nullptr, nullptr, 0.0f, &merged_cutout);
   }
   else if (frustum && cameraPos && merged.empty() && !GreedyCache.empty())
   {
-    if (!GreedyBatchesDirty && !GreedyBatches.empty())
-    {
-      return;
-    }
-    merged = merge_from_cache(nullptr, nullptr, 0.0f);
+    merged_cutout.clear();
+    merged = merge_opaque_from_cache(nullptr, nullptr, 0.0f, &merged_cutout);
   }
   GreedyBatches = std::move(merged);
+  GreedyOpaqueBatchCount = GreedyBatches.size();
+  GreedyCutoutBatches.clear();
+  GreedyCutoutBatches.reserve(merged_cutout.size());
+  for (auto &pair : merged_cutout)
+  {
+    GreedyCutoutBatches.push_back(std::move(pair.second));
+  }
+  GreedyCutoutBatchesDirty = false;
+  ReassembleGreedyDrawBatches();
+  if (!frustum || !cameraPos)
+  {
+    RebuildGreedyBatchIndexFromFullMerge();
+  }
+  else
+  {
+    InvalidateGreedyBatchIndex();
+  }
   GreedyBatchesDirty = false;
   ++CullRevision;
   LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
@@ -578,9 +899,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     return;
   }
+  const uint64_t expected_revision = MeshRevisions.Current(result.coord);
   const auto revisionIt = ActiveMeshSourceRevision.find(result.coord);
   if (revisionIt == ActiveMeshSourceRevision.end() ||
-      revisionIt->second != result.sourceRevision)
+      revisionIt->second != result.sourceRevision ||
+      result.sourceRevision != expected_revision)
   {
     if (GreedyCache.find(result.coord) == GreedyCache.end())
     {
@@ -598,8 +921,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   chunkMesh.crossCenters = std::move(result.crossCenters);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
-  GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
+  GreedyBatchesDirty = true;
+  InvalidateGreedyBatchIndex();
   InvalidateFluidSurfaceForChunk(result.coord);
 }
 
@@ -620,9 +944,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   bool mesh_data_changed = false;
   if (!Dirty.empty())
   {
+    if (MeshFocusValid)
+    {
+      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, MeshFocusRadiusChunks);
+    }
     Dirty.PrioritizeChunksWithoutMesh(
         [this](glm::ivec3 coord)
         { return GreedyCache.find(coord) == GreedyCache.end(); });
+  }
+  if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
+  {
+    const int sync_cap =
+        std::max(2, std::min(12, max_schedule_per_frame));
+    const int sync_filled =
+        SyncRebuildVisibleMissing(world, registry, sync_cap);
+    stats.SyncRebuilt += sync_filled;
+    stats.Completed += sync_filled;
+    mesh_data_changed = sync_filled > 0;
   }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
@@ -655,8 +993,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         it = Dirty.RemoveAt(it);
         continue;
       }
+      const uint64_t source_revision = MeshRevisions.Current(*it);
       ChunkMeshSnapshot snapshot =
-          ChunkMeshSnapshot::Capture(world, *it, MeshRevision);
+          ChunkMeshSnapshot::Capture(world, *it, source_revision);
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       it = Dirty.RemoveAt(it);
@@ -673,6 +1012,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       CrossBatchesDirty = true;
     }
     BumpMeshRevisionIfNeeded();
+    LastRebuildTickStats = stats;
     return stats;
   }
 
@@ -696,6 +1036,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     CrossBatchesDirty = true;
   }
   BumpMeshRevisionIfNeeded();
+  LastRebuildTickStats = stats;
   return stats;
 }
 
@@ -827,8 +1168,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   }
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
-  GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
+  GreedyBatchesDirty = true;
+  InvalidateGreedyBatchIndex();
   InvalidateFluidSurfaceForChunk(chunkCoord);
 }
 

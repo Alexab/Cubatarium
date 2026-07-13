@@ -23,6 +23,12 @@ void UWorldMeshService::SetRenderDistanceChunks(int distance)
   Cache.SetRenderDistanceChunks(distance);
 }
 
+void UWorldMeshService::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
+                                            int radius_chunks)
+{
+  Cache.SetMeshRebuildFocus(ground_chunk_coord, radius_chunks);
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {
@@ -92,15 +98,23 @@ void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
   }
 }
 
-void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
-                                                  int min_y, int max_y)
+void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+    bool include_horizontal_neighbors)
 {
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
-  for (int cx = ground_chunk_coord.x - 1; cx <= ground_chunk_coord.x + 1; ++cx)
+  const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1
+                                               : ground_chunk_coord.x;
+  const int cx1 = include_horizontal_neighbors ? ground_chunk_coord.x + 1
+                                               : ground_chunk_coord.x;
+  const int cz0 = include_horizontal_neighbors ? ground_chunk_coord.z - 1
+                                               : ground_chunk_coord.z;
+  const int cz1 = include_horizontal_neighbors ? ground_chunk_coord.z + 1
+                                               : ground_chunk_coord.z;
+  for (int cx = cx0; cx <= cx1; ++cx)
   {
-    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1;
-         ++cz)
+    for (int cz = cz0; cz <= cz1; ++cz)
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
@@ -110,15 +124,29 @@ void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
   }
 }
 
-void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
-    glm::ivec3 ground_chunk_coord, int min_y, int max_y)
+void UWorldMeshService::MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord,
+                                                  int min_y, int max_y)
+{
+  MarkTerrainChunkMeshDirtySeamed(ground_chunk_coord, min_y, max_y, true);
+}
+
+void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+    bool include_horizontal_neighbors)
 {
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
-  for (int cx = ground_chunk_coord.x - 1; cx <= ground_chunk_coord.x + 1; ++cx)
+  const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1
+                                               : ground_chunk_coord.x;
+  const int cx1 = include_horizontal_neighbors ? ground_chunk_coord.x + 1
+                                               : ground_chunk_coord.x;
+  const int cz0 = include_horizontal_neighbors ? ground_chunk_coord.z - 1
+                                               : ground_chunk_coord.z;
+  const int cz1 = include_horizontal_neighbors ? ground_chunk_coord.z + 1
+                                               : ground_chunk_coord.z;
+  for (int cx = cx0; cx <= cx1; ++cx)
   {
-    for (int cz = ground_chunk_coord.z - 1; cz <= ground_chunk_coord.z + 1;
-         ++cz)
+    for (int cz = cz0; cz <= cz1; ++cz)
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
@@ -126,6 +154,26 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
       }
     }
   }
+}
+
+void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y)
+{
+  MarkTerrainChunkMeshDirtySeamedPriority(ground_chunk_coord, min_y, max_y,
+                                          true);
+}
+
+bool UWorldMeshService::HasMissingGreedyMeshInHorizontalRadius(
+    const UBlockWorld &world, glm::ivec3 center_ground_chunk,
+    int radius_chunks) const
+{
+  return Cache.HasMissingGreedyMeshInHorizontalRadius(world, center_ground_chunk,
+                                                      radius_chunks);
+}
+
+const MeshRebuildTickStats &UWorldMeshService::GetLastRebuildTickStats() const
+{
+  return Cache.GetLastRebuildTickStats();
 }
 
 void UWorldMeshService::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)

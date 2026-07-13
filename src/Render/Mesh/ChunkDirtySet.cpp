@@ -49,6 +49,39 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
   return Queue.erase(it);
 }
 
+void UChunkDirtySet::PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk,
+                                              int radius_chunks)
+{
+  if (Queue.size() < 2 || radius_chunks < 0)
+  {
+    return;
+  }
+  std::vector<glm::ivec3> near_chunks;
+  std::vector<glm::ivec3> far_chunks;
+  near_chunks.reserve(Queue.size());
+  far_chunks.reserve(Queue.size());
+  for (const glm::ivec3 &coord : Queue)
+  {
+    const int dx = std::abs(coord.x - focus_ground_chunk.x);
+    const int dz = std::abs(coord.z - focus_ground_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      near_chunks.push_back(coord);
+    }
+    else
+    {
+      far_chunks.push_back(coord);
+    }
+  }
+  if (near_chunks.empty() || far_chunks.empty())
+  {
+    return;
+  }
+  Queue.clear();
+  Queue.insert(Queue.end(), near_chunks.begin(), near_chunks.end());
+  Queue.insert(Queue.end(), far_chunks.begin(), far_chunks.end());
+}
+
 void UChunkDirtySet::PrioritizeChunksWithoutMesh(
     const std::function<bool(glm::ivec3)> &missing_mesh)
 {
