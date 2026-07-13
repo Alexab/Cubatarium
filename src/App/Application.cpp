@@ -30,6 +30,7 @@
 #include "Gui/Interfaces/IUGuiClipboard.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Screens/WorldProgressScreen.h"
+#include "App/Platform/Log.h"
 #include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
@@ -176,6 +177,7 @@ UApplication::~UApplication()
 
 void UApplication::PrepareForShutdown()
 {
+  CubatariumSetSuppressErrorDialogs(true);
   WorldOpRunner.reset();
   if (World)
   {
@@ -448,6 +450,11 @@ void UApplication::ShowNewWorld()
 void UApplication::ShowLoadWorld()
 {
   ScreenNav.ShowLoadWorld();
+}
+
+void UApplication::SaveWorldSessionIfNeeded()
+{
+  SaveActiveWorldIfNeeded();
 }
 
 void UApplication::SaveActiveWorldIfNeeded()

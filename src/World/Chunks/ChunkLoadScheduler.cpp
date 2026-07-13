@@ -67,6 +67,33 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
   RequestPriorities.erase(coord);
 }
 
+void UChunkLoadScheduler::CancelAllPending(
+    const std::chrono::milliseconds worker_wait)
+{
+  Queue = std::priority_queue<PendingRequest, std::vector<PendingRequest>,
+                              RequestCompare>();
+  std::vector<glm::ivec3> bump_coords;
+  bump_coords.reserve(ActiveTokens.size() + States.size());
+  for (const auto &entry : ActiveTokens)
+  {
+    bump_coords.push_back(entry.first);
+  }
+  for (const auto &entry : States)
+  {
+    bump_coords.push_back(entry.first);
+  }
+  for (const glm::ivec3 &coord : bump_coords)
+  {
+    Tokens.Bump(coord);
+  }
+  States.clear();
+  ActiveTokens.clear();
+  RequestPriorities.clear();
+  Pool.CancelPendingJobs();
+  (void)Completed.DrainAll();
+  (void)Pool.WaitIdleFor(worker_wait);
+}
+
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 {
   Tokens.Bump(coord);

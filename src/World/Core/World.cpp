@@ -1327,6 +1327,25 @@ void UWorld::CancelAsyncRelightWork()
   AsyncRelight->CancelPending();
 }
 
+void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout)
+{
+  AllowProceduralFill = false;
+  if (Streaming)
+  {
+    Streaming->QuiesceBackgroundWork(*this, async_timeout);
+  }
+  CancelAsyncRelightWork();
+  if (MeshService)
+  {
+    MeshService->CancelAsyncInFlightKeepDirty();
+  }
+  (void)WaitForPendingRelightJobsFor(async_timeout);
+  if (MeshService)
+  {
+    (void)MeshService->WaitForAsyncMeshIdleFor(async_timeout);
+  }
+}
+
 void UWorld::PrepareForShutdown()
 {
   if (ShutdownPrepared)
@@ -1338,32 +1357,10 @@ void UWorld::PrepareForShutdown()
   {
     CoopSession->Cancel();
   }
-  AllowProceduralFill = false;
-  if (Streaming)
-  {
-    Streaming->SetStreamingEnabled(false);
-  }
-  constexpr auto kFastShutdownWait = std::chrono::milliseconds(200);
+  QuiesceBackgroundWork(std::chrono::milliseconds(2000));
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-  }
-  CancelAsyncRelightWork();
-  if (Persistence)
-  {
-    Persistence->ClearPendingRelights();
-    if (!Persistence->AbortAsyncChunkIoFor(kFastShutdownWait))
-    {
-      std::cerr << "World shutdown: async chunk IO still active after cancel."
-                << std::endl;
-    }
-  }
-  (void)WaitForPendingRelightJobsFor(kFastShutdownWait);
-  if (MeshService &&
-      !MeshService->WaitForAsyncMeshIdleFor(kFastShutdownWait))
-  {
-    std::cerr << "World shutdown: async mesh build still active after cancel."
-              << std::endl;
   }
 }
 
@@ -1734,26 +1731,11 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path)
   {
     CoopSession->Cancel();
   }
+  QuiesceBackgroundWork(std::chrono::milliseconds(2000));
   RefreshBlockRegistry();
   std::filesystem::create_directories(world_folder_path);
   std::filesystem::create_directories(world_folder_path + "/chunks");
   SetWorldFolderPath(world_folder_path);
-
-  if (Persistence)
-  {
-    constexpr int kDrainPasses = 32;
-    for (int i = 0; i < kDrainPasses; ++i)
-    {
-      if (Persistence->TickDrainAsyncChunkIo(*this, 4))
-      {
-        break;
-      }
-    }
-    if (!Persistence->IsAsyncChunkIoQuiescent())
-    {
-      (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(250));
-    }
-  }
 
   if (BlockRegistry)
   {

@@ -1,9 +1,9 @@
 #include "App/Platform/WindowManager.h"
 #include "App/Application.h"
 #include "App/Core.h"
+#include "App/Settings/AppState.h"
 #include "App/Platform/InputManager.h"
 #include "App/Platform/Log.h"
-#include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -936,6 +936,11 @@ void UWindowManager::WindowCloseCallback(GLFWwindow *w)
   auto *self = static_cast<UWindowManager *>(glfwGetWindowUserPointer(w));
   if (self && self->Application)
   {
+    if (self->Application->GetState() == AppState::InGame &&
+        self->Application->HasWorldSession())
+    {
+      self->Application->SaveWorldSessionIfNeeded();
+    }
     self->Application->GetGameSession().SaveCommandHistory();
   }
   if (self && self->Core)

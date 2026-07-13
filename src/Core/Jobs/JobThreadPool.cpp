@@ -53,13 +53,8 @@ void UJobThreadPool::WaitIdle()
 bool UJobThreadPool::WaitIdleFor(const std::chrono::milliseconds timeout)
 {
   std::unique_lock<std::mutex> lock(QueueMutex);
-  if (QueueCv.wait_for(lock, timeout,
-                       [this] { return Jobs.empty() && ActiveJobs == 0; }))
-  {
-    return true;
-  }
-  Jobs.clear();
-  return false;
+  return QueueCv.wait_for(lock, timeout,
+                          [this] { return Jobs.empty() && ActiveJobs == 0; });
 }
 
 void UJobThreadPool::CancelPendingJobs()
