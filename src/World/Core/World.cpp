@@ -1556,7 +1556,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   }
   if (mesh.GetDirtyCount() == 0 || HasMissingGreedyMeshesNearFocus(*this))
   {
-    mesh.GetCache().MarkAllDirtyFromWorld(BlockWorld, true);
+    mesh.GetCache().MarkAllDirtyFromWorld(BlockWorld, false);
   }
   const UChunkEmergeCoordinator::FrameBudget mesh_budget =
       UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
