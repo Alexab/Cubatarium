@@ -19,8 +19,8 @@ public:
     int MaxMeshSchedule{8};
   };
 
-  static constexpr int kDefaultMeshDrain = 8;
-  static constexpr int kDefaultMeshSchedule = 8;
+  static constexpr int kDefaultMeshDrain = 12;
+  static constexpr int kDefaultMeshSchedule = 12;
   static constexpr int kWarmupMeshFlush = 256;
 
   const FrameBudget &GetLastBudget() const { return LastBudget; }

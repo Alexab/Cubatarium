@@ -295,6 +295,7 @@ set(SOURCES
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/World/Chunks/ChunkStreamer.cpp
     src/World/Chunks/TerrainColumnUtil.cpp
@@ -673,6 +674,8 @@ add_executable(terrain_column_util_test
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Core/BlockWorld.cpp
     src/World/Core/IUBlockWriter.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Math/GridMath.cpp
     src/Test/TerrainColumnUtilTest.cpp)
@@ -686,6 +689,20 @@ add_executable(world_mesh_service_test
 target_include_directories(world_mesh_service_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(world_mesh_service_test glm::glm)
+
+add_executable(chunk_mesh_revision_test
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
+    src/Test/ChunkMeshRevisionTest.cpp)
+target_include_directories(chunk_mesh_revision_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_mesh_revision_test glm::glm)
+
+add_executable(terrain_mesh_dirty_seam_test
+    src/World/Math/GridMath.cpp
+    src/Test/TerrainMeshDirtySeamTest.cpp)
+target_include_directories(terrain_mesh_dirty_seam_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
@@ -1141,6 +1158,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GreedyMesher.cpp

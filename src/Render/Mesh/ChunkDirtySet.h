@@ -34,6 +34,7 @@ public:
 
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
+  void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);
 
 private:
   std::vector<glm::ivec3> Queue;

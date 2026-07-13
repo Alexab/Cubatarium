@@ -737,6 +737,7 @@ public:
     return PlayerRelightMeshBurstFrames;
   }
   void TickPlayerRelightMeshBurst();
+  void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
@@ -817,6 +818,8 @@ private:
   void CancelAsyncRelightWork();
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh);
+  void AccumulateRelightMeshColumns(
+      const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void
@@ -835,6 +838,9 @@ private:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);
+  void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord, int min_y,
+                                       int max_y,
+                                       bool include_horizontal_neighbors = true);
   void SaveMovementDiagnostics(const std::string &file_name) const;
   void ResetMeshLoadDiagnostics();
   void TickMeshLoadDiagnostics();
@@ -896,6 +902,21 @@ private:
   bool CooperativeBulkGenerating{false};
   double LastMovementFrameMs{0.0};
   int PlayerRelightMeshBurstFrames{0};
+  struct PendingRelightMeshColumnRange
+  {
+    int min_y{0};
+    int max_y{0};
+  };
+  struct GroundColumnHash
+  {
+    std::size_t operator()(const glm::ivec2 &v) const noexcept
+    {
+      return std::hash<int64_t>{}((static_cast<int64_t>(v.x) << 32) ^
+                                  static_cast<uint32_t>(v.y));
+    }
+  };
+  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
+      PendingRelightMeshColumns;
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   int RenderDistanceChunks{4};

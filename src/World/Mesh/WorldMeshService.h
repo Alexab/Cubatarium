@@ -33,6 +33,7 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
+  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
@@ -42,8 +43,14 @@ public:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord, int min_y,
                                  int max_y);
+  void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 ground_chunk_coord, int min_y,
+                                       int max_y,
+                                       bool include_horizontal_neighbors = true);
   void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord, int min_y,
                                          int max_y);
+  void MarkTerrainChunkMeshDirtySeamedPriority(
+      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+      bool include_horizontal_neighbors = true);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
@@ -69,6 +76,10 @@ public:
   double GetLastFlatRebuildMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
+                                              glm::ivec3 center_ground_chunk,
+                                              int radius_chunks) const;
+  const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
   size_t GetGreedyVertexCount() const;

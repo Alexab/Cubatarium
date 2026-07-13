@@ -84,9 +84,35 @@ bool UseParallelChunkGeneration(const UWorld &world)
          std::thread::hardware_concurrency() > 1;
 }
 
+bool CooperativeTerrainMeshesIncompleteInPatch(const UWorld &world,
+                                             int patch_min_x, int patch_max_x,
+                                             int patch_min_z, int patch_max_z);
+
 bool CooperativeTerrainMeshesIncomplete(const UWorld &world, int patch_min_x,
                                         int patch_max_x, int patch_min_z,
                                         int patch_max_z)
+{
+  if (CooperativeTerrainMeshesIncompleteInPatch(world, patch_min_x, patch_max_x,
+                                                patch_min_z, patch_max_z))
+  {
+    return true;
+  }
+  const glm::ivec3 spawn_chunk =
+      UChunkManager::WorldToChunk(WorldPosToBlock(world.GetSpawnPoint()));
+  const glm::ivec3 spawn_ground(spawn_chunk.x, 0, spawn_chunk.z);
+  const int spawn_radius = world.GetRenderDistanceChunks() + 1;
+  if (world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), spawn_ground, spawn_radius))
+  {
+    return true;
+  }
+  return world.GetMeshService().HasDirtyWithinHorizontalRadius(spawn_ground,
+                                                               spawn_radius);
+}
+
+bool CooperativeTerrainMeshesIncompleteInPatch(const UWorld &world,
+                                             int patch_min_x, int patch_max_x,
+                                             int patch_min_z, int patch_max_z)
 {
   const ProceduralSettings &settings = world.GetProceduralSettings();
   const int sea = settings.SeaLevel;

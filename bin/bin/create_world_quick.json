@@ -1,0 +1,12 @@
+{
+  "chunk_files": 415,
+  "error": "",
+  "generator": "overworld",
+  "preset": "balanced",
+  "radius_chunks": 3,
+  "seed": 42,
+  "spawn_y": 52.119998931884766,
+  "success": true,
+  "world_name": "CI_quick_stable",
+  "world_path": "E:\\Work\\Home\\Cubatarium\\bin\\worlds\\CI_quick_stable"
+}

@@ -5,6 +5,7 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
+#include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Core/Progress/IUProgressSink.h"
@@ -758,27 +759,84 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     return;
   }
+  int remesh_min_y = INT32_MAX;
+  int remesh_max_y = INT32_MIN;
   std::unordered_set<glm::ivec3, IVec3Hash> grounds;
   grounds.reserve(relit_chunks.size());
   for (const glm::ivec3 &coord : relit_chunks)
   {
     grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+    const int chunk_base_y = coord.y * CHUNK_SIZE;
+    remesh_min_y = std::min(remesh_min_y, chunk_base_y);
+    remesh_max_y = std::max(remesh_max_y, chunk_base_y + CHUNK_SIZE - 1);
   }
-  const int remesh_min_y =
-      std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE);
-  const int remesh_max_y = ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2;
+  remesh_min_y = std::max(0, remesh_min_y - 1);
+  remesh_max_y = remesh_max_y + 1;
   for (const glm::ivec3 &ground : grounds)
   {
     if (priority_mesh)
     {
-      MeshService->MarkTerrainChunkMeshDirtyPriority(ground, remesh_min_y,
-                                                     remesh_max_y);
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, remesh_min_y,
+                                                           remesh_max_y, true);
     }
     else
     {
-      MeshService->MarkTerrainChunkMeshDirty(ground, remesh_min_y,
-                                             remesh_max_y);
+      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y,
+                                                   remesh_max_y, true);
     }
+  }
+}
+
+void UWorld::AccumulateRelightMeshColumns(
+    const std::vector<glm::ivec3> &relit_chunks)
+{
+  if (relit_chunks.empty())
+  {
+    return;
+  }
+  for (const glm::ivec3 &coord : relit_chunks)
+  {
+    const glm::ivec2 ground(coord.x, coord.z);
+    const int chunk_base_y = coord.y * CHUNK_SIZE;
+    const int chunk_top_y = chunk_base_y + CHUNK_SIZE - 1;
+    auto [it, inserted] = PendingRelightMeshColumns.try_emplace(ground);
+    if (inserted)
+    {
+      it->second.min_y = std::max(0, chunk_base_y - 1);
+      it->second.max_y = chunk_top_y + 1;
+    }
+    else
+    {
+      it->second.min_y =
+          std::min(it->second.min_y, std::max(0, chunk_base_y - 1));
+      it->second.max_y = std::max(it->second.max_y, chunk_top_y + 1);
+    }
+  }
+}
+
+void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
+{
+  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0)
+  {
+    return;
+  }
+  if (HasPendingAsyncRelightWork())
+  {
+    return;
+  }
+  if (Persistence && Persistence->GetPendingTerrainColumnRelightCount() > 0)
+  {
+    return;
+  }
+  int flushed = 0;
+  for (auto it = PendingRelightMeshColumns.begin();
+       it != PendingRelightMeshColumns.end() && flushed < max_columns_per_flush;)
+  {
+    const glm::ivec3 ground(it->first.x, 0, it->first.y);
+    MeshService->MarkTerrainChunkMeshDirtySeamed(ground, it->second.min_y,
+                                                 it->second.max_y, true);
+    it = PendingRelightMeshColumns.erase(it);
+    ++flushed;
   }
 }
 
@@ -924,10 +982,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         relit_coords.push_back(chunk_data.coord);
       }
     }
-    MarkRelitChunksForMesh(relit_coords, priority_mesh);
     if (priority_mesh)
     {
+      MarkRelitChunksForMesh(relit_coords, true);
       PlayerRelightMeshBurstFrames = 3;
+    }
+    else
+    {
+      AccumulateRelightMeshColumns(relit_coords);
     }
     if (enqueue_background_frontier && result.frontier_unfinished &&
         Persistence)
@@ -2978,6 +3040,14 @@ void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                        int max_y)
 {
   MeshService->MarkTerrainChunkMeshDirty(groundChunkCoord, min_y, max_y);
+}
+
+void UWorld::MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord,
+                                             int min_y, int max_y,
+                                             bool include_horizontal_neighbors)
+{
+  MeshService->MarkTerrainChunkMeshDirtySeamed(
+      groundChunkCoord, min_y, max_y, include_horizontal_neighbors);
 }
 
 void UWorld::MarkBlocksChunkDirtyBatch(
