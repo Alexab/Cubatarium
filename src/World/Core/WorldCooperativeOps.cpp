@@ -84,24 +84,37 @@ bool UseParallelChunkGeneration(const UWorld &world)
          std::thread::hardware_concurrency() > 1;
 }
 
-bool CooperativeTerrainMeshesIncomplete(const UWorld &world)
+bool CooperativeTerrainMeshesIncomplete(const UWorld &world, int patch_min_x,
+                                        int patch_max_x, int patch_min_z,
+                                        int patch_max_z)
 {
-  size_t ground_chunks = 0;
-  size_t meshed_chunks = 0;
-  world.GetBlockWorld().GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
+  const ProceduralSettings &settings = world.GetProceduralSettings();
+  const int sea = settings.SeaLevel;
+  const int cy0 = std::max(0, FloorDiv(sea - CHUNK_SIZE, CHUNK_SIZE));
+  const int cy1 = FloorDiv(sea + CHUNK_SIZE * 2, CHUNK_SIZE);
+  const int min_cx = FloorDiv(patch_min_x, CHUNK_SIZE);
+  const int max_cx = FloorDiv(patch_max_x, CHUNK_SIZE);
+  const int min_cz = FloorDiv(patch_min_z, CHUNK_SIZE);
+  const int max_cz = FloorDiv(patch_max_z, CHUNK_SIZE);
+  for (int cx = min_cx; cx <= max_cx; ++cx)
+  {
+    for (int cz = min_cz; cz <= max_cz; ++cz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
       {
-        if (chunk.GetCoord().y != 0)
+        const glm::ivec3 coord(cx, cy, cz);
+        if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
         {
-          return;
+          continue;
         }
-        ++ground_chunks;
-        if (world.GetMeshService().HasGreedyMesh(chunk.GetCoord()))
+        if (!world.GetMeshService().HasGreedyMesh(coord))
         {
-          ++meshed_chunks;
+          return true;
         }
-      });
-  return ground_chunks > 0 && meshed_chunks < ground_chunks;
+      }
+    }
+  }
+  return false;
 }
 
 bool IsCreateSpawnWarmupSettled(const UWorld &world)
@@ -384,7 +397,25 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
       [&](const UChunk &) { has_chunks = true; });
   if (has_chunks)
   {
-    world.MeshService->GetCache().MarkAllDirtyFromWorld(world.BlockWorld, true);
+    world.MeshService->GetCache().MarkAllDirtyFromWorld(world.BlockWorld, false);
+    if (Kind == WorldCoopKind::Create)
+    {
+      const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+      const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
+      const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
+      const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
+      const int max_cz = FloorDiv(GenPatchMaxZ, CHUNK_SIZE);
+      for (int cx = min_cx; cx <= max_cx; ++cx)
+      {
+        for (int cz = min_cz; cz <= max_cz; ++cz)
+        {
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), remesh_min_y,
+                                          remesh_max_y);
+        }
+      }
+    }
   }
   MeshWarmupTicks = 0;
   MeshWarmupProcessedMax = 0;
@@ -1229,7 +1260,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::MeshWarmup:
   {
     const bool create_mesh_warmup = Kind == WorldCoopKind::Create;
-    const bool force_sync_mesh = Kind != WorldCoopKind::Create;
+    const bool force_sync_mesh = create_mesh_warmup;
     const UChunkEmergeCoordinator::FrameBudget mesh_budget =
         create_mesh_warmup
             ? UChunkEmergeCoordinator::CreateMeshWarmupBudget(budget)
@@ -1279,9 +1310,24 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                !world.MeshService->HasPendingAsyncMeshWork();
     bool mesh_done = mesh_done_raw;
     if (mesh_done && Kind == WorldCoopKind::Create &&
-        CooperativeTerrainMeshesIncomplete(world))
+        CooperativeTerrainMeshesIncomplete(world, GenPatchMinX, GenPatchMaxX,
+                                           GenPatchMinZ, GenPatchMaxZ))
     {
-      world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
+      const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+      const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
+      const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
+      const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
+      const int max_cz = FloorDiv(GenPatchMaxZ, CHUNK_SIZE);
+      for (int cx = min_cx; cx <= max_cx; ++cx)
+      {
+        for (int cz = min_cz; cz <= max_cz; ++cz)
+        {
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), remesh_min_y,
+                                          remesh_max_y);
+        }
+      }
       mesh_done = false;
     }
     const size_t pending_now =

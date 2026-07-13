@@ -3,6 +3,7 @@
 
 #include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
+#include <functional>
 #include <unordered_set>
 #include <vector>
 
@@ -30,6 +31,9 @@ public:
   const_iterator end() const { return Queue.end(); }
 
   iterator RemoveAt(iterator it);
+
+  void PrioritizeChunksWithoutMesh(
+      const std::function<bool(glm::ivec3)> &missing_mesh);
 
 private:
   std::vector<glm::ivec3> Queue;

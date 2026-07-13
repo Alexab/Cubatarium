@@ -38,11 +38,6 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
     budget.MaxMeshDrain = std::max(4, budget.MaxMeshDrain - 2);
     budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
-  if (boost)
-  {
-    budget.MaxMeshDrain = std::min(budget.MaxMeshDrain, 6);
-    budget.MaxMeshSchedule = budget.MaxMeshDrain;
-  }
   return budget;
 }
 
@@ -98,6 +93,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   UWorldMeshService &mesh_service = world.GetMeshService();
   int mesh_drain = LastBudget.MaxMeshDrain;
   int mesh_schedule = LastBudget.MaxMeshSchedule;
+  const size_t pending_dirty = mesh_service.GetDirtyCount();
+  const int pending_async = mesh_service.GetAsyncInFlightCount();
+  if (pending_dirty > 48 || pending_async > 16)
+  {
+    mesh_drain = std::max(mesh_drain, 16);
+    mesh_schedule = std::max(mesh_schedule, 16);
+  }
+  else if (pending_dirty > 16 || pending_async > 8)
+  {
+    mesh_drain = std::max(mesh_drain, 12);
+    mesh_schedule = std::max(mesh_schedule, 12);
+  }
   if (world.GetPlayerRelightMeshBurstFrames() > 0)
   {
     mesh_drain = std::max(mesh_drain, 24);
@@ -105,6 +112,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   }
   mesh_service.RebuildDirtyChunks(world.GetBlockWorld(), registry, mesh_drain,
                                   mesh_schedule);
+  mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
+                                     mesh_drain);
 }
 
 } // namespace cutum
