@@ -327,6 +327,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [&world](glm::ivec3 coord)
       {
+        const ProceduralSettings &settings = world.GetProceduralSettings();
         world.MarkTerrainChunkMeshDirtySeamed(glm::ivec3(coord.x, 0, coord.z), 0,
                                               settings.MaxHeight, true);
       },
