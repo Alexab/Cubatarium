@@ -166,6 +166,7 @@ private:
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
   bool PendingMeshRevisionBump{false};
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveMeshSourceRevision;
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;

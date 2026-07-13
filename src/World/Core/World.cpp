@@ -1125,7 +1125,7 @@ void UWorld::InitStreamerCallbacks()
 
 void UWorld::TickAsyncChunkSystems()
 {
-  if (HasActiveCooperativeOperation())
+  if (CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick())
   {
     return;
   }
@@ -1490,10 +1490,9 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   {
     return mesh.GetGreedyCacheSize() > 0;
   }
-  // Bootstrap only when nothing was built yet; never wipe an existing cache.
-  if (mesh.GetGreedyCacheSize() == 0 && mesh.GetDirtyCount() == 0)
+  if (mesh.GetDirtyCount() == 0 || HasMissingGreedyMeshesNearFocus(*this))
   {
-    mesh.MarkAllDirtyFromWorld(BlockWorld);
+    mesh.GetCache().MarkAllDirtyFromWorld(BlockWorld, true);
   }
   const UChunkEmergeCoordinator::FrameBudget mesh_budget =
       UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
@@ -1565,14 +1564,19 @@ void UWorld::RefreshPersistedTerrainAfterSave()
 {
   HasPersistedSave = true;
   LoadedFromChunkSave = true;
+  EnsureStreamingActiveAfterBackgroundQuiesce();
+  if (Streaming && Streaming->HasStreamer())
+  {
+    Streaming->MarkPersistedColumnsFromWorld();
+  }
+}
+
+void UWorld::EnsureStreamingActiveAfterBackgroundQuiesce()
+{
   AllowProceduralFill = IsStreamingEnabled();
   if (Streaming)
   {
     InitStreamerCallbacks();
-    if (Streaming->HasStreamer())
-    {
-      Streaming->MarkPersistedColumnsFromWorld();
-    }
   }
 }
 
@@ -1765,6 +1769,7 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path)
   SaveCreatures(world_folder_path + "/creatures.json");
   SaveWorldData(world_folder_path + "/world_data.json");
   ModifiedChunks.clear();
+  EnsureStreamingActiveAfterBackgroundQuiesce();
 }
 
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)

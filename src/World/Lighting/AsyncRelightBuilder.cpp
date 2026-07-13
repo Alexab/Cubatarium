@@ -1,6 +1,7 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include "World/Core/BlockWorld.h"
 #include <mutex>
 #include <thread>
@@ -12,12 +13,7 @@ namespace
 {
 std::size_t ResolveRelightWorkerCount(std::size_t thread_count)
 {
-  if (thread_count == 0)
-  {
-    const std::size_t hw = std::thread::hardware_concurrency();
-    return hw > 1 ? hw - 1 : 1;
-  }
-  return std::max<std::size_t>(1, thread_count);
+  return ComputeWorkerThreadCount(JobPoolKind::Relight, thread_count);
 }
 
 std::mutex gRelightCaptureMutex;
