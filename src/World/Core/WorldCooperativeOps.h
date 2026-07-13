@@ -55,6 +55,7 @@ private:
     ProceduralFill,
     FinalizeWorld,
     ScanSaveChunks,
+    DrainAsyncIo,
     SaveChunks,
     SaveMetadata,
     GenerateColumns,
@@ -80,6 +81,7 @@ private:
   std::vector<glm::ivec3> SaveChunkCoords;
   size_t SaveChunkIndex{0};
   bool SaveUsesTerrainColumns{false};
+  int SaveDrainIoFrames{0};
 
   bool SpatialStreamingLoad{false};
   std::string ChunksFileName;

@@ -314,6 +314,13 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name
     core.WorldInstance->SetCatalogFingerprint(
         core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
   }
+  if (core.WorldInstance &&
+      core.WorldInstance->IsStreamingEnabled() &&
+      UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
+  {
+    core.WorldInstance->SaveSessionSnapshot(core.ActiveWorldFolder.string());
+    return;
+  }
   core.WorldInstance->Save(core.ActiveWorldFolder.string());
 }
 

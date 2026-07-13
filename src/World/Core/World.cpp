@@ -41,6 +41,8 @@
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Objects/ObjectUtil.h"
 #include "World/Persistence/WorldPersistence.h"
+#include <chrono>
+#include <filesystem>
 #include "World/Physics/FluidReflowScan.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "World/Physics/PhysicsProfileFactory.h"
@@ -1720,6 +1722,63 @@ void UWorld::Save(const std::string &world_folder_path)
   while (!TickCooperativeSave(sink, 64))
   {
   }
+}
+
+void UWorld::SaveSessionSnapshot(const std::string &world_folder_path)
+{
+  if (world_folder_path.empty())
+  {
+    return;
+  }
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
+  RefreshBlockRegistry();
+  std::filesystem::create_directories(world_folder_path);
+  std::filesystem::create_directories(world_folder_path + "/chunks");
+  SetWorldFolderPath(world_folder_path);
+
+  if (Persistence)
+  {
+    constexpr int kDrainPasses = 32;
+    for (int i = 0; i < kDrainPasses; ++i)
+    {
+      if (Persistence->TickDrainAsyncChunkIo(*this, 4))
+      {
+        break;
+      }
+    }
+    if (!Persistence->IsAsyncChunkIoQuiescent())
+    {
+      (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(250));
+    }
+  }
+
+  if (BlockRegistry)
+  {
+    std::unordered_set<glm::ivec3, IVec3Hash> grounds;
+    grounds.reserve(ModifiedChunks.size());
+    for (const glm::ivec3 &modified : ModifiedChunks)
+    {
+      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
+    }
+    for (const glm::ivec3 &ground : grounds)
+    {
+      if (IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+      {
+        GetChunkStorage().SaveTerrainColumn(
+            ground, BlockWorld, world_folder_path, *BlockRegistry,
+            ProceduralTemplate.MaxHeight);
+      }
+    }
+  }
+
+  GetChunkStorage().WriteStorageMarker(world_folder_path);
+  SaveUsers(world_folder_path + "/users.json");
+  SaveCreatures(world_folder_path + "/creatures.json");
+  SaveWorldData(world_folder_path + "/world_data.json");
+  ModifiedChunks.clear();
 }
 
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)

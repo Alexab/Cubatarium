@@ -166,6 +166,8 @@ public:
   void Create(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
+  /// Fast save for exit/autosave: metadata plus modified terrain only.
+  void SaveSessionSnapshot(const std::string &world_folder_path);
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
