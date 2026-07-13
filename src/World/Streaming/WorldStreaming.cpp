@@ -321,8 +321,11 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           return;
         }
-        world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
-                                        world.GetProceduralSettings().MaxHeight);
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+        world.MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z),
+                                        remesh_min_y, remesh_max_y);
       },
       [this, &world](int x, int z)
       {

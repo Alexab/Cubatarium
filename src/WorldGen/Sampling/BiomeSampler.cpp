@@ -873,12 +873,12 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
       NormalizedFBM2D(static_cast<float>(x) * 0.055f,
                       static_cast<float>(z) * 0.055f, seed + 8801, 2, 0.5f,
                       2.0f) *
-      volatilityJitter * 7.0f;
+      volatilityJitter * 8.5f;
   const float rolling_hills =
       NormalizedFBM2D(static_cast<float>(x) * 0.018f,
                       static_cast<float>(z) * 0.018f, seed + 8800, 3, 0.5f,
                       2.0f) *
-      (0.6f + volatilityJitter * 0.4f) * 8.0f;
+      (0.6f + volatilityJitter * 0.4f) * 10.0f;
   y += static_cast<int>(std::floor(micro_rolling + rolling_hills + 0.5f));
 
   y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);

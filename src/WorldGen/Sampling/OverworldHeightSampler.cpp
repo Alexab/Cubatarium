@@ -245,7 +245,7 @@ int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const
     const float local_wobble =
         NormalizedFBM2D(wx * 0.055f, wz * 0.055f, Seed + 9900, 2,
                         Params.persistence, Params.lacunarity) *
-        5.5f;
+        6.5f;
     float heightDelta = offset + delta + local_wobble;
     const float maxUp = Params.amplitudeBlocks * 0.62f;
     const float maxDown = Params.amplitudeBlocks * 0.55f;

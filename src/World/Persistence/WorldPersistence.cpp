@@ -280,10 +280,19 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 
   if (has_disk || complete)
   {
-    if (GetPendingTerrainColumnRelightCount() < 24)
+    const bool relight_enqueued =
+        GetPendingTerrainColumnRelightCount() < 24;
+    if (relight_enqueued)
     {
       EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
                                   ground_coord.z * CHUNK_SIZE);
+    }
+    if (!world.ShouldDeferStreamingMeshForRelight() || !relight_enqueued)
+    {
+      const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+      world.MarkTerrainChunkMeshDirty(ground_coord, remesh_min_y, remesh_max_y);
     }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);

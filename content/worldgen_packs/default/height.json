@@ -4,13 +4,13 @@
 
   "layers": {
 
-    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.62 },
+    "continental": { "scale": 0.003, "octaves": 2, "weight": 0.58 },
 
     "regional": { "scale": 0.008, "octaves": 3, "weight": 0.32 },
 
     "detail": { "scale": 0.025, "octaves": 2, "weight": 0.14 },
 
-    "rolling": { "scale": 0.012, "octaves": 3, "weight": 0.30 }
+    "rolling": { "scale": 0.012, "octaves": 3, "weight": 0.34 }
 
   },
 
