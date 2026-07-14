@@ -298,6 +298,11 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       app.ScreenNav.ShowMainMenu();
       return true;
     }
+    if (app.HasWorldSession())
+    {
+      app.RequestEnterGame();
+      return true;
+    }
     if (app.MainMenuScreen)
     {
       app.MainMenuScreen->ShowQuitConfirmation(true);

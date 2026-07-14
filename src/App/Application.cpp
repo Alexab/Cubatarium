@@ -306,7 +306,7 @@ void UApplication::ScheduleEnterGame() { PendingEnterGame = true; }
 void UApplication::ScheduleQuit()
 {
   PendingQuit = true;
-  PendingShutdownSave = HasWorldSession() && State == AppState::InGame;
+  PendingShutdownSave = HasWorldSession();
 }
 
 void UApplication::BeginShutdownOperation(const bool saveSession,
@@ -347,7 +347,7 @@ bool UApplication::TryBeginShutdownFromWindowClose()
   {
     return false;
   }
-  BeginShutdownOperation(State == AppState::InGame && HasWorldSession(), true);
+  BeginShutdownOperation(HasWorldSession(), true);
   return true;
 }
 
