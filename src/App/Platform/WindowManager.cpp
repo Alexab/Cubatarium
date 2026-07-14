@@ -936,12 +936,11 @@ void UWindowManager::WindowCloseCallback(GLFWwindow *w)
   auto *self = static_cast<UWindowManager *>(glfwGetWindowUserPointer(w));
   if (self && self->Application)
   {
-    if (self->Application->GetState() == AppState::InGame &&
-        self->Application->HasWorldSession())
+    if (self->Application->TryBeginShutdownFromWindowClose())
     {
-      self->Application->SaveWorldSessionIfNeeded();
+      glfwSetWindowShouldClose(w, GLFW_FALSE);
+      return;
     }
-    self->Application->GetGameSession().SaveCommandHistory();
   }
   if (self && self->Core)
   {

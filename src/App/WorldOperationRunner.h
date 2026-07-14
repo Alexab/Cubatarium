@@ -3,6 +3,7 @@
 #include "Core/Progress/IUProgressSink.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "World/Core/World.h"
 #include <functional>
 #include <string>
 
@@ -19,7 +20,8 @@ enum class WorldRunnerOp
   Create,
   SaveThenLoad,
   SaveThenCreate,
-  EnterGame
+  EnterGame,
+  Shutdown
 };
 
 struct WorldRunnerRequest
@@ -30,6 +32,8 @@ struct WorldRunnerRequest
   ResourcePackSelection packs;
   bool enterGameAfter{false};
   bool saveConfigAfter{true};
+  bool shutdownSaveSession{false};
+  bool shutdownCloseApplication{true};
 };
 
 class UWorldOperationRunner
@@ -44,6 +48,12 @@ public:
   bool Succeeded() const { return Success; }
   const std::string &ErrorMessage() const { return Error; }
   bool ShouldEnterGame() const { return Request.enterGameAfter; }
+  bool ShouldCloseApplication() const
+  {
+    return Request.op == WorldRunnerOp::Shutdown &&
+           Request.shutdownCloseApplication;
+  }
+  bool IsShutdownOperation() const { return Request.op == WorldRunnerOp::Shutdown; }
   bool IsEnterGameGpuWarmupStage() const
   {
     return CurrentStage == Stage::EnterGameGpuWarmup;
@@ -69,6 +79,9 @@ private:
     EnterGameLoad,
     EnterGameFinalize,
     EnterGameGpuWarmup,
+    ShutdownQuiesce,
+    ShutdownSave,
+    ShutdownFinalize,
     Done,
     Failed
   };
@@ -88,6 +101,7 @@ private:
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
   int EnterGameGpuWarmupFramesLeft{0};
+  UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 
 } // namespace cutum

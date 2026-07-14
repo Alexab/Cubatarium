@@ -560,6 +560,17 @@ void UWorldCooperativeSession::Cancel()
 {
   Active = false;
   CurrentPhase = Phase::Done;
+  CancelBackgroundWorkers();
+}
+
+void UWorldCooperativeSession::CancelBackgroundWorkers()
+{
+  if (ParallelGen)
+  {
+    ParallelGen->Pool.CancelPendingJobs();
+    (void)ParallelGen->Completed.DrainAll();
+    ParallelGen->InFlight = 0;
+  }
 }
 
 bool UWorldCooperativeSession::BlocksStreamingTick() const

@@ -33,6 +33,7 @@ struct PhysicsTelemetry
   uint64_t AsyncRelightInflight{0};
   uint64_t RelightDiscardedLate{0};
   uint64_t MeshDiscardedLate{0};
+  double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
   double CommitMeshMs{0.0};

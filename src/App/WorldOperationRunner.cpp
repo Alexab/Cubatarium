@@ -3,6 +3,7 @@
 #include "App/Core.h"
 #include "Core/Progress/ProgressTypes.h"
 #include "World/Core/World.h"
+#include <chrono>
 #include <iostream>
 
 namespace cutum
@@ -25,6 +26,8 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
     return WorldOperationKind::Create;
   case WorldRunnerOp::EnterGame:
     return WorldOperationKind::EnterGame;
+  case WorldRunnerOp::Shutdown:
+    return WorldOperationKind::Shutdown;
   }
   return WorldOperationKind::Load;
 }
@@ -79,6 +82,10 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
     break;
   case WorldRunnerOp::EnterGame:
     CurrentStage = Stage::EnterGameList;
+    break;
+  case WorldRunnerOp::Shutdown:
+    CurrentStage = Stage::ShutdownQuiesce;
+    World.BeginBackgroundQuiesce(ShutdownQuiesceState);
     break;
   }
 }
@@ -364,6 +371,48 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     CurrentStage = Stage::WorldOperation;
     sink.Begin(WorldOperationKind::Load);
     return false;
+
+  case Stage::ShutdownQuiesce:
+    sink.Begin(WorldOperationKind::Shutdown);
+    if (!World.TickBackgroundQuiesce(ShutdownQuiesceState,
+                                     std::chrono::milliseconds(50), &sink))
+    {
+      return false;
+    }
+    if (Request.shutdownSaveSession)
+    {
+      CurrentStage = Stage::ShutdownSave;
+      sink.Report("save", 0.92f, "Saving world...");
+      return false;
+    }
+    CurrentStage = Stage::ShutdownFinalize;
+    return false;
+
+  case Stage::ShutdownSave:
+  {
+    const std::string folder = Core.GetActiveWorldFolder().string();
+    if (!folder.empty())
+    {
+      World.SaveSessionSnapshot(folder, true);
+    }
+    CurrentStage = Stage::ShutdownFinalize;
+    return false;
+  }
+
+  case Stage::ShutdownFinalize:
+    if (Request.shutdownCloseApplication)
+    {
+      World.PrepareForShutdown();
+    }
+    else
+    {
+      World.ResumeAfterSessionSave();
+    }
+    Success = true;
+    Active = false;
+    CurrentStage = Stage::Done;
+    sink.End(true);
+    return true;
 
   default:
     break;

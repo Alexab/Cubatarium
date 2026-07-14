@@ -72,6 +72,12 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"physics_visual_remesh_backlog", sample.physicsVisualRemeshBacklog},
         {"physics_collision_rebuild_backlog",
          sample.physicsCollisionRebuildBacklog},
+        {"pending_player_relights", sample.pendingPlayerRelights},
+        {"pending_bg_relights", sample.pendingBgRelights},
+        {"async_relight_inflight", sample.asyncRelightInflight},
+        {"relight_discarded_late", sample.relightDiscardedLate},
+        {"mesh_discarded_late", sample.meshDiscardedLate},
+        {"relight_completed_per_sec", sample.relightCompletedPerSec},
     });
   }
   root["samples"] = json(samples);
@@ -152,6 +158,8 @@ void UMovementDiagnosticsRecorder::Update(
   world.MovementDiag.relightDiscardedLate =
       physicsTelemetry.RelightDiscardedLate;
   world.MovementDiag.meshDiscardedLate = physicsTelemetry.MeshDiscardedLate;
+  world.MovementDiag.relightCompletedPerSec =
+      physicsTelemetry.RelightCompletedPerSec;
   world.TickMeshLoadDiagnostics();
 
   if (world.HasLastPlayerY)

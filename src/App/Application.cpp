@@ -303,7 +303,53 @@ void UApplication::Startup(const std::string &configPath)
 
 void UApplication::ScheduleEnterGame() { PendingEnterGame = true; }
 
-void UApplication::ScheduleQuit() { PendingQuit = true; }
+void UApplication::ScheduleQuit()
+{
+  PendingQuit = true;
+  PendingShutdownSave = HasWorldSession() && State == AppState::InGame;
+}
+
+void UApplication::BeginShutdownOperation(const bool saveSession,
+                                        const bool closeAfter)
+{
+  if (!Core || !World || State == AppState::Loading)
+  {
+    RequestQuit();
+    return;
+  }
+  ShutdownCloseAfter = closeAfter;
+  WorldRunnerRequest request;
+  request.op = WorldRunnerOp::Shutdown;
+  request.shutdownSaveSession = saveSession;
+  request.shutdownCloseApplication = closeAfter;
+  request.saveConfigAfter = false;
+  BeginWorldOperation(std::move(request),
+                      [this]()
+                      {
+                        if (GameSession)
+                        {
+                          GameSession->SaveCommandHistory();
+                        }
+                        if (Core)
+                        {
+                          Core->SaveSystem("config.json");
+                        }
+                        if (ShutdownCloseAfter)
+                        {
+                          RequestQuit();
+                        }
+                      });
+}
+
+bool UApplication::TryBeginShutdownFromWindowClose()
+{
+  if (!Core || !World || State == AppState::Loading)
+  {
+    return false;
+  }
+  BeginShutdownOperation(State == AppState::InGame && HasWorldSession(), true);
+  return true;
+}
 
 void UApplication::RequestEnterGame()
 {
@@ -363,6 +409,20 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
 void UApplication::OnWorldOperationFinished()
 {
   const bool success = WorldOpRunner && WorldOpRunner->Succeeded();
+  if (WorldOpRunner && WorldOpRunner->IsShutdownOperation())
+  {
+    if (success && WorldOpOnComplete)
+    {
+      auto callback = std::move(WorldOpOnComplete);
+      WorldOpOnComplete = nullptr;
+      callback();
+    }
+    else if (!success && WorldOpRunner->ShouldCloseApplication())
+    {
+      RequestQuit();
+    }
+    return;
+  }
   if (!success)
   {
     ShowMainMenu();
@@ -1108,7 +1168,8 @@ void UApplication::Update(double dt)
   if (PendingQuit)
   {
     PendingQuit = false;
-    RequestQuit();
+    BeginShutdownOperation(PendingShutdownSave, true);
+    return;
   }
   if (PendingMenuAction)
   {

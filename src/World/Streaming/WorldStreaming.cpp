@@ -130,10 +130,13 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           Streamer->NotifyChunkCommitted(coord);
         }
         const ProceduralSettings &settings = world.GetProceduralSettings();
-        // Mesh must be scheduled on commit; deferring for async relight left
-        // object/decoration voxels collidable but invisible until a later edit.
-        world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, 0, settings.MaxHeight, true);
+        const glm::ivec3 focus_ground =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int focus_radius = world.GetRenderDistanceChunks() + 1;
+        const bool near_focus =
+            std::abs(coord.x - focus_ground.x) <= focus_radius &&
+            std::abs(coord.z - focus_ground.z) <= focus_radius;
+        bool mesh_from_relight = false;
         DeferredPhysicsSeedQueue.push_back(coord);
         if (SealFluidShoreOnChunkCommitted(
                 world.BlockWorld, *world.BlockRegistry, settings,
@@ -144,8 +147,25 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
         if (IsTerrainChunkComplete(world.BlockWorld, ground, settings.MaxHeight))
         {
-          world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                         ground.z * CHUNK_SIZE);
+          if (near_focus && !world.IsLightingRelightDeferred())
+          {
+            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
+                                       ground.z * CHUNK_SIZE, 0,
+                                       settings.MaxHeight, true);
+            mesh_from_relight = true;
+          }
+          else
+          {
+            world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
+                                                           ground.z * CHUNK_SIZE);
+          }
+        }
+        if (!mesh_from_relight)
+        {
+          // Far columns: mesh before async relight for object visibility;
+          // remesh after relight via FlushPendingRelightMeshColumns.
+          world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, 0, settings.MaxHeight, true);
         }
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
@@ -232,7 +252,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   if (now < gBgRelightClampUntil)
   {
-    bg_budget = 0;
+    bg_budget = pending_bg > 0 ? std::min(bg_budget, 1) : 0;
   }
 
   world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);

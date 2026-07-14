@@ -820,14 +820,6 @@ void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
   {
     return;
   }
-  if (HasPendingAsyncRelightWork())
-  {
-    return;
-  }
-  if (Persistence && Persistence->GetPendingTerrainColumnRelightCount() > 0)
-  {
-    return;
-  }
   int flushed = 0;
   for (auto it = PendingRelightMeshColumns.begin();
        it != PendingRelightMeshColumns.end() && flushed < max_columns_per_flush;)
@@ -1232,7 +1224,16 @@ void UWorld::TickAsyncChunkSystems()
       Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
   const int drain_budget = std::clamp(
       4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
-  DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
+  const int applied = DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
+  if (applied > 0)
+  {
+    const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
+    PhysicsTelemetryData.RelightCompletedPerSec = applied / dt;
+  }
+  else
+  {
+    PhysicsTelemetryData.RelightCompletedPerSec = 0.0;
+  }
   Streaming->TickAsyncChunkSystems(*this);
 }
 
@@ -1430,6 +1431,10 @@ void UWorld::CancelAsyncRelightWork()
 
 void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout)
 {
+  if (BackgroundQuiesceFinished)
+  {
+    return;
+  }
   AllowProceduralFill = false;
   if (Streaming)
   {
@@ -1445,6 +1450,7 @@ void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout
   {
     (void)MeshService->WaitForAsyncMeshIdleFor(async_timeout);
   }
+  BackgroundQuiesceFinished = true;
 }
 
 void UWorld::PrepareForShutdown()
@@ -1458,7 +1464,10 @@ void UWorld::PrepareForShutdown()
   {
     CoopSession->Cancel();
   }
-  QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+  if (!BackgroundQuiesceFinished)
+  {
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+  }
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
@@ -1722,6 +1731,12 @@ void UWorld::EnsureStreamingActiveAfterBackgroundQuiesce()
   }
 }
 
+void UWorld::ResumeAfterSessionSave()
+{
+  BackgroundQuiesceFinished = false;
+  EnsureStreamingActiveAfterBackgroundQuiesce();
+}
+
 bool UWorld::IsEnterStreamingWarmupSettled() const
 {
   if (!IsStreamingEnabled() || !Streaming->HasStreamer())
@@ -1889,17 +1904,21 @@ void UWorld::Save(const std::string &world_folder_path)
   }
 }
 
-void UWorld::SaveSessionSnapshot(const std::string &world_folder_path)
+void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
+                                 const bool skip_quiesce)
 {
   if (world_folder_path.empty())
   {
     return;
   }
-  if (CoopSession && CoopSession->Active)
+  if (!skip_quiesce)
   {
-    CoopSession->Cancel();
+    if (CoopSession && CoopSession->Active)
+    {
+      CoopSession->Cancel();
+    }
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
   }
-  QuiesceBackgroundWork(std::chrono::milliseconds(2000));
   RefreshBlockRegistry();
   std::filesystem::create_directories(world_folder_path);
   std::filesystem::create_directories(world_folder_path + "/chunks");
@@ -1989,6 +2008,111 @@ bool UWorld::TickCooperativeCreate(IUProgressSink &sink, int columnBudget)
 bool UWorld::HasActiveCooperativeOperation() const
 {
   return CoopSession && CoopSession->Active;
+}
+
+bool UWorld::BlocksAsyncRelightDrain() const
+{
+  return CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick();
+}
+
+void UWorld::BeginBackgroundQuiesce(UBackgroundQuiesceState &state)
+{
+  state = UBackgroundQuiesceState{};
+  BackgroundQuiesceFinished = false;
+}
+
+bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
+                                   const std::chrono::milliseconds step_timeout,
+                                   IUProgressSink *sink)
+{
+  auto report = [&](const char *phase_id, float fraction, const char *message)
+  {
+    if (sink)
+    {
+      sink->Report(phase_id, fraction, message);
+    }
+  };
+
+  switch (state.phase)
+  {
+  case UBackgroundQuiesceState::Phase::Start:
+    AllowProceduralFill = false;
+    if (CoopSession)
+    {
+      CoopSession->CancelBackgroundWorkers();
+    }
+    report("start", 0.05f, "Stopping background work...");
+    state.phase = UBackgroundQuiesceState::Phase::StreamingOff;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::StreamingOff:
+    if (Streaming)
+    {
+      Streaming->QuiesceBackgroundWork(*this, step_timeout);
+    }
+    report("streaming", 0.2f, "Stopping streaming...");
+    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::ChunkGenCancel:
+  case UBackgroundQuiesceState::Phase::DrainIo:
+    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::CancelWorkers:
+    CancelAsyncRelightWork();
+    if (MeshService)
+    {
+      MeshService->CancelAsyncInFlightKeepDirty();
+    }
+    report("cancel", 0.35f, "Cancelling pending jobs...");
+    state.phase = UBackgroundQuiesceState::Phase::WaitRelight;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::WaitRelight:
+  {
+    const bool idle = WaitForPendingRelightJobsFor(step_timeout);
+    const float frac =
+        0.35f + 0.3f * static_cast<float>(state.waitRelightPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("relight", std::min(0.65f, frac), "Waiting for relight jobs...");
+    if (idle || ++state.waitRelightPasses >=
+                   UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::WaitMesh;
+    }
+    return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::WaitMesh:
+  {
+    const bool idle =
+        MeshService ? MeshService->WaitForAsyncMeshIdleFor(step_timeout) : true;
+    const float frac =
+        0.65f + 0.25f * static_cast<float>(state.waitMeshPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("mesh", std::min(0.9f, frac), "Waiting for mesh jobs...");
+    if (idle || ++state.waitMeshPasses >= UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::Finalize;
+    }
+    return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::Finalize:
+    if (MeshService)
+    {
+      MeshService->CancelAsyncMeshWork();
+    }
+    BackgroundQuiesceFinished = true;
+    report("done", 1.f, "Background work stopped.");
+    state.phase = UBackgroundQuiesceState::Phase::Done;
+    return true;
+
+  case UBackgroundQuiesceState::Phase::Done:
+    return true;
+  }
+  return true;
 }
 
 bool UWorld::TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId)

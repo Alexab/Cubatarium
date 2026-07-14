@@ -10,7 +10,8 @@ enum class WorldOperationKind
   Load,
   Create,
   Save,
-  EnterGame
+  EnterGame,
+  Shutdown
 };
 
 struct ProgressSnapshot

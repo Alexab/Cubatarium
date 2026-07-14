@@ -34,6 +34,7 @@ public:
   /// @return true when the operation finished successfully.
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
   void Cancel();
+  void CancelBackgroundWorkers();
 
   /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or quiesces workers).
   bool BlocksStreamingTick() const;

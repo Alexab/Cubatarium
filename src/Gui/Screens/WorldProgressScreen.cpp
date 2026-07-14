@@ -25,6 +25,8 @@ const char *TitleForKind(WorldOperationKind kind)
     return "Saving world...";
   case WorldOperationKind::EnterGame:
     return "Starting game...";
+  case WorldOperationKind::Shutdown:
+    return "Shutting down...";
   }
   return "Please wait...";
 }

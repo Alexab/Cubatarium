@@ -159,7 +159,7 @@ void UWorldPersistence::EnqueuePlayerRelight(
 void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
-  if (world.HasActiveCooperativeOperation())
+  if (world.BlocksAsyncRelightDrain())
   {
     return;
   }
@@ -280,13 +280,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 
   if (has_disk || complete)
   {
-    const bool relight_enqueued =
-        GetPendingTerrainColumnRelightCount() < 24;
-    if (relight_enqueued)
-    {
-      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                  ground_coord.z * CHUNK_SIZE);
-    }
+    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                ground_coord.z * CHUNK_SIZE);
     const ProceduralSettings &settings = world.GetProceduralSettings();
     world.MarkTerrainChunkMeshDirtySeamed(ground_coord, 0, settings.MaxHeight,
                                           true);

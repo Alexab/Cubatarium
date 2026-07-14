@@ -81,6 +81,9 @@ public:
   void ScheduleEnterGame();
   void ScheduleQuit();
   void RequestQuit();
+  /// Window close / quit: cooperative shutdown with progress UI.
+  bool TryBeginShutdownFromWindowClose();
+  void BeginShutdownOperation(bool saveSession, bool closeAfter);
   void PrepareForShutdown();
   void SetWindow(GLFWwindow *window) { Window = window; }
   void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
@@ -222,6 +225,8 @@ private:
   bool WorldSessionActive{false};
   bool PendingEnterGame{false};
   bool PendingQuit{false};
+  bool PendingShutdownSave{false};
+  bool ShutdownCloseAfter{false};
   bool StartupOk{false};
   std::function<void()> PendingMenuAction;
   std::function<void()> WorldOpOnComplete;

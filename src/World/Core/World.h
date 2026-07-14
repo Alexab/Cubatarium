@@ -74,6 +74,29 @@ struct FluidUpdateSetStats;
 struct FallingBlocksStats;
 struct FluidSpreadStats;
 
+struct UBackgroundQuiesceState
+{
+  enum class Phase : uint8_t
+  {
+    Start,
+    StreamingOff,
+    ChunkGenCancel,
+    DrainIo,
+    CancelWorkers,
+    WaitRelight,
+    WaitMesh,
+    Finalize,
+    Done
+  };
+
+  Phase phase{Phase::Start};
+  int drainIoPasses{0};
+  int waitRelightPasses{0};
+  int waitMeshPasses{0};
+  static constexpr int kMaxDrainIoPasses = 64;
+  static constexpr int kMaxWaitPasses = 120;
+};
+
 class UWorld : public IUWorldPerception
 {
 public:
@@ -167,7 +190,8 @@ public:
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
   /// Fast save for exit/autosave: metadata plus modified terrain only.
-  void SaveSessionSnapshot(const std::string &world_folder_path);
+  void SaveSessionSnapshot(const std::string &world_folder_path,
+                           bool skip_quiesce = false);
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
@@ -176,6 +200,7 @@ public:
   void BeginCooperativeCreate(const std::string &world_name);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
+  bool BlocksAsyncRelightDrain() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
   bool AddUser(const std::string &Name);
@@ -216,7 +241,13 @@ public:
   void PrepareForShutdown();
   void QuiesceBackgroundWork(
       std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
+  void BeginBackgroundQuiesce(UBackgroundQuiesceState &state);
+  /// @return true when quiesce finished.
+  bool TickBackgroundQuiesce(UBackgroundQuiesceState &state,
+                             std::chrono::milliseconds step_timeout,
+                             class IUProgressSink *sink = nullptr);
   void EnsureStreamingActiveAfterBackgroundQuiesce();
+  void ResumeAfterSessionSave();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
   void OnBlockRegistryRuntimeOverlayChanged(
@@ -593,6 +624,7 @@ public:
     int asyncRelightInflight{0};
     uint64_t relightDiscardedLate{0};
     uint64_t meshDiscardedLate{0};
+    double relightCompletedPerSec{0.0};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -927,6 +959,7 @@ private:
       PendingRelightMeshColumns;
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
+  bool BackgroundQuiesceFinished{false};
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};
