@@ -69,11 +69,15 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
     return;
   }
   const int sea = ctx.Settings.SeaLevel;
-  if (surfaceY >= sea)
+  const int maxScanY = std::max(1, ctx.Settings.MaxHeight - 1);
+  const int topSolid =
+      FindTopSolidSurfaceY(ctx.World, ctx.Registry, x, z, maxScanY);
+  const int fillBase = topSolid >= 0 ? topSolid : surfaceY;
+  if (fillBase >= sea)
   {
     return;
   }
-  for (int y = surfaceY + 1; y <= sea; ++y)
+  for (int y = fillBase + 1; y <= sea; ++y)
   {
     const glm::ivec3 pos(x, y, z);
     if (ctx.World.GetBlock(pos) == BLOCK_AIR)
@@ -83,7 +87,7 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
                               FluidCellState::Source().WithKind(FluidKind::Water));
     }
   }
-  ctx.AccumulateDirtyColumn(surfaceY, sea);
+  ctx.AccumulateDirtyColumn(fillBase, sea);
 }
 
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
