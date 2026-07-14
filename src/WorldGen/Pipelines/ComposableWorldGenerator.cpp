@@ -80,7 +80,16 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
         BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     sample.DominantBiome = DominantBiome(sample.Biomes);
-    sample.SurfaceY = DensitySampler->SurfaceYAt(world_x, world_z);
+    const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
+    if (Ctx.Settings.Tuning.useDensityRefineParity)
+    {
+      sample.SurfaceY = BiomeSampler->RefineSurfaceY(world_x, world_z, raw_y,
+                                                       Ctx.Settings);
+    }
+    else
+    {
+      sample.SurfaceY = raw_y;
+    }
     const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
     { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
     sample.SurfaceGradient =
@@ -197,9 +206,22 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
   rule.subsurfaceBlock = Ctx.Blocks.Dirt;
   if ((Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap ||
        Config.TerrainMode == ComposableTerrainMode::Density3D) &&
-      Config.HeightPreset == HeightPreset::Mountains && HeightSampler)
+      Config.HeightPreset == HeightPreset::Mountains &&
+      (HeightSampler || DensitySampler))
   {
-    const int stone_above = HeightSampler->params().stoneSurfaceAboveY;
+    int stone_above = -1;
+    if (HeightSampler)
+    {
+      stone_above = HeightSampler->params().stoneSurfaceAboveY;
+    }
+    else if (DensitySampler)
+    {
+      stone_above =
+          Ctx.Settings.SeaLevel +
+          static_cast<int>(12.0f * (Ctx.Settings.MaxHeight > 15
+                                        ? Ctx.Settings.MaxHeight / 96.0f
+                                        : 1.0f));
+    }
     if (stone_above > 0 && sample.SurfaceY >= stone_above)
     {
       rule.surfaceBlock = Ctx.Blocks.Stone;
