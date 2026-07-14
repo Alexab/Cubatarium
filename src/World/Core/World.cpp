@@ -2109,6 +2109,10 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     {
       MeshService->CancelAsyncMeshWork();
     }
+    if (Persistence)
+    {
+      Persistence->AbortAsyncChunkIo();
+    }
     BackgroundQuiesceFinished = true;
     report("done", 1.f, "Background work stopped.");
     state.phase = UBackgroundQuiesceState::Phase::Done;

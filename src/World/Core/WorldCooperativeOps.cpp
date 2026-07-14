@@ -985,11 +985,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
-      if (world.Persistence)
-      {
-        world.Persistence->FlushAsyncChunkIo(world);
-      }
-      CurrentPhase = Phase::ScanSaveChunks;
+      SaveDrainIoFrames = 0;
+      CurrentPhase = Phase::DrainAsyncIo;
       Report(sink, "init", 0.f, "Preparing save...");
     }
     else

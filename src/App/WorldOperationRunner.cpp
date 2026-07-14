@@ -382,7 +382,6 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     if (Request.shutdownSaveSession)
     {
       CurrentStage = Stage::ShutdownSave;
-      sink.Report("save", 0.92f, "Saving world...");
       return false;
     }
     CurrentStage = Stage::ShutdownFinalize;
@@ -393,7 +392,15 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     const std::string folder = Core.GetActiveWorldFolder().string();
     if (!folder.empty())
     {
-      World.SaveSessionSnapshot(folder, true);
+      if (!World.HasActiveCooperativeOperation())
+      {
+        sink.Report("save", 0.92f, "Saving world...");
+        World.BeginCooperativeSave(folder);
+      }
+      if (!World.TickCooperativeSave(sink, budget))
+      {
+        return false;
+      }
     }
     CurrentStage = Stage::ShutdownFinalize;
     return false;
