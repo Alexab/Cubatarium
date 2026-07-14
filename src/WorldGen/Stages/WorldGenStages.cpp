@@ -395,7 +395,7 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
-  const int max_y = std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 32);
+  const int max_y = ctx.Settings.MaxHeight - 1;
   int removed = 0;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {

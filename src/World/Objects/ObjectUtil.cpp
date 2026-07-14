@@ -243,6 +243,56 @@ glm::ivec3 ResolveObjectVoxelWorldPos(const UBlockWorld & /*world*/,
   return anchorWorldPos + voxel.offset - object.anchor;
 }
 
+bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
+{
+  if (id == BLOCK_AIR)
+  {
+    return false;
+  }
+  const std::string &type = registry.GetTypeNameById(id);
+  return type == "tree_log" || type == "tree_leaves" || type == "tree_branch";
+}
+
+bool IsVerticalTreePrefab(const WorldObjectDefinition &object,
+                          const UBlockRegistry &registry)
+{
+  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant)
+  {
+    return false;
+  }
+  for (const auto &voxel : object.voxels)
+  {
+    const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
+    if (id == BLOCK_AIR)
+    {
+      continue;
+    }
+    const std::string &type = registry.GetTypeNameById(id);
+    if (type == "tree_log" || type == "tree_branch")
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool HasTreeVegetationInFootprint(const UBlockWorld &world,
+                                  UBlockRegistry &registry,
+                                  const WorldObjectDefinition &object,
+                                  glm::ivec3 anchorWorldPos, int maxScanY)
+{
+  for (const auto &voxel : object.voxels)
+  {
+    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
+        world, anchorWorldPos, object, voxel, registry, maxScanY);
+    if (IsTreeVegetationBlock(registry, world.GetBlock(worldPos)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
@@ -571,6 +621,13 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     {
       return false;
     }
+  }
+
+  if (IsVerticalTreePrefab(object, registry) &&
+      HasTreeVegetationInFootprint(world, registry, object, anchorWorldPos,
+                                   maxScanY))
+  {
+    return false;
   }
 
   return true;

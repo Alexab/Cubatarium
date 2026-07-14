@@ -64,7 +64,51 @@ float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
   return std::clamp(scale, 0.82f, 1.0f);
 }
 
+void ApplyGreedyEnvironmentUniformsToShader(
+    const std::shared_ptr<UShaderProgram> &shader,
+    const UWorld::EnvironmentState *env,
+    const UWorld::LightingSettings *lighting)
+{
+  if (env && lighting)
+  {
+    shader->SetFloat("uEnvFogMultiplier", env->WeatherFogMultiplier);
+    shader->SetFloat("uEnvMinAmbient", lighting->MinAmbient);
+    shader->SetFloat("uEnvDayFactor", env->DayNightFactor);
+    shader->SetFloat("uEnvNightFactor", env->MoonNightFactor);
+    shader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(*env));
+    shader->SetFloat("uEnvLightDebug", lighting->DebugEnabled ? 1.0f : 0.0f);
+    shader->SetFloat("uEnvLightDebugMode",
+                     static_cast<float>(lighting->DebugMode));
+    shader->SetFloat("uEnvPrecipIntensity",
+                     std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f));
+    shader->SetFloat("uEnvWetness", std::clamp(env->SurfaceWetness, 0.0f, 1.0f));
+    return;
+  }
+  shader->SetFloat("uEnvFogMultiplier", 1.0f);
+  shader->SetFloat("uEnvMinAmbient", 0.12f);
+  shader->SetFloat("uEnvDayFactor", 1.0f);
+  shader->SetFloat("uEnvNightFactor", 0.0f);
+  shader->SetFloat("uEnvSkyLightScale", 1.0f);
+  shader->SetFloat("uEnvLightDebug", 0.0f);
+  shader->SetFloat("uEnvLightDebugMode", 0.0f);
+  shader->SetFloat("uEnvPrecipIntensity", 0.0f);
+  shader->SetFloat("uEnvWetness", 0.0f);
+}
+
 } // namespace
+
+void UGeometryEngine::ApplyGreedyEnvironmentUniforms(
+    const std::shared_ptr<UShaderProgram> &shader)
+{
+  if (WorldInstance)
+  {
+    ApplyGreedyEnvironmentUniformsToShader(
+        shader, &WorldInstance->GetEnvironmentState(),
+        &WorldInstance->GetLightingSettings());
+    return;
+  }
+  ApplyGreedyEnvironmentUniformsToShader(shader, nullptr, nullptr);
+}
 
 UGeometryEngine::UGeometryEngine(
     std::shared_ptr<UWorld> world,
@@ -838,38 +882,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         greedyShader, camera->GetPosition(),
         cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
   }
-  if (WorldInstance)
-  {
-    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
-    greedyShader->SetFloat("uEnvFogMultiplier", env.WeatherFogMultiplier);
-    greedyShader->SetFloat("uEnvMinAmbient",
-                           WorldInstance->GetLightingSettings().MinAmbient);
-    greedyShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
-    greedyShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
-    greedyShader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(env));
-    greedyShader->SetFloat(
-        "uEnvLightDebug",
-        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
-    greedyShader->SetFloat(
-        "uEnvLightDebugMode",
-        static_cast<float>(WorldInstance->GetLightingSettings().DebugMode));
-    greedyShader->SetFloat("uEnvPrecipIntensity",
-                           std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
-    greedyShader->SetFloat("uEnvWetness",
-                           std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
-  }
-  else
-  {
-    greedyShader->SetFloat("uEnvFogMultiplier", 1.0f);
-    greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
-    greedyShader->SetFloat("uEnvDayFactor", 1.0f);
-    greedyShader->SetFloat("uEnvNightFactor", 0.0f);
-    greedyShader->SetFloat("uEnvSkyLightScale", 1.0f);
-    greedyShader->SetFloat("uEnvLightDebug", 0.0f);
-    greedyShader->SetFloat("uEnvLightDebugMode", 0.0f);
-    greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
-    greedyShader->SetFloat("uEnvWetness", 0.0f);
-  }
+  ApplyGreedyEnvironmentUniforms(greedyShader);
   glActiveTexture(GL_TEXTURE0);
 
   glBindVertexArray(greedyMeshVAO);
@@ -1072,30 +1085,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   {
     ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
   }
-  if (WorldInstance)
-  {
-    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
-    crossInstancedShader->SetFloat("uEnvFogMultiplier",
-                                   env.WeatherFogMultiplier);
-    crossInstancedShader->SetFloat(
-        "uEnvMinAmbient", WorldInstance->GetLightingSettings().MinAmbient);
-    crossInstancedShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
-    crossInstancedShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
-    crossInstancedShader->SetFloat(
-        "uEnvLightDebug",
-        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
-    crossInstancedShader->SetFloat("uEnvWetness",
-                                   std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
-  }
-  else
-  {
-    crossInstancedShader->SetFloat("uEnvFogMultiplier", 1.0f);
-    crossInstancedShader->SetFloat("uEnvMinAmbient", 0.12f);
-    crossInstancedShader->SetFloat("uEnvDayFactor", 1.0f);
-    crossInstancedShader->SetFloat("uEnvNightFactor", 0.0f);
-    crossInstancedShader->SetFloat("uEnvLightDebug", 0.0f);
-    crossInstancedShader->SetFloat("uEnvWetness", 0.0f);
-  }
+  ApplyGreedyEnvironmentUniforms(crossInstancedShader);
   glActiveTexture(GL_TEXTURE0);
 
   const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
