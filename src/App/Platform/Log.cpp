@@ -21,6 +21,7 @@
 #endif
 #include <windows.h>
 #include <dbghelp.h>
+#include <cstdlib>
 #elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
 #include <csignal>
 #include <cstdlib>
@@ -104,6 +105,10 @@ std::wstring Utf8ToWide(const std::string &utf8)
 
 void ShowWindowsErrorDialog(const std::string &message)
 {
+  if (SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
+  {
+    return;
+  }
   const std::string logPath = LogFilePath().string();
   std::ostringstream body;
   body << message << "\n\nDetails were written to:\n" << logPath;
@@ -257,9 +262,12 @@ void LogNativeCrash(const char *kind, _EXCEPTION_POINTERS *info)
 LONG WINAPI UnhandledExceptionFilter(_EXCEPTION_POINTERS *info)
 {
   LogNativeCrash("Unhandled native exception", info);
-  ShowWindowsErrorDialog(
-      "Cubatarium stopped unexpectedly.\n"
-      "Update your GPU driver or run Cubatarium.exe --smoke-packs from Command Prompt.");
+  if (!SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
+  {
+    ShowWindowsErrorDialog(
+        "Cubatarium stopped unexpectedly.\n"
+        "Update your GPU driver or run Cubatarium.exe --smoke-packs from Command Prompt.");
+  }
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -433,6 +441,9 @@ void WriteLogLine(const char *tag, const std::string &msg, bool isError)
 void CubatariumInstallWindowsDiagnostics()
 {
 #ifdef _WIN32
+  CubatariumSetSuppressErrorDialogs(true);
+  _set_error_mode(_OUT_TO_STDERR);
+  _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
   SetUnhandledExceptionFilter(UnhandledExceptionFilter);
 #elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
   InstallPosixSignalHandlers();

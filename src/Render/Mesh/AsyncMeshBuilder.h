@@ -45,6 +45,8 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  /// Drop in-flight tracking for a coord (e.g. chunk unloaded); late results are ignored.
+  void ForgetInflight(glm::ivec3 coord);
   uint64_t GetDiscardedLateCount() const
   {
     return DiscardedLate.load(std::memory_order_relaxed);

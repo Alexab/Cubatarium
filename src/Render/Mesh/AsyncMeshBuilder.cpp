@@ -135,10 +135,12 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
         continue;
       }
       const auto it = InFlight.find(result.coord);
-      if (it != InFlight.end() && it->second == result.jobId)
+      if (it == InFlight.end() || it->second != result.jobId)
       {
-        InFlight.erase(it);
+        DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        continue;
       }
+      InFlight.erase(it);
       accepted.push_back(std::move(result));
     }
   }
@@ -190,6 +192,12 @@ void UAsyncMeshBuilder::CancelPending()
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);
     }
   }
+}
+
+void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  InFlight.erase(coord);
 }
 
 } // namespace cutum

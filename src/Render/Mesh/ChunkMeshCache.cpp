@@ -485,6 +485,10 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
     Dirty.Erase(slice);
     MeshRevisions.Erase(slice);
     ActiveMeshSourceRevision.erase(slice);
+    if (AsyncBuilder)
+    {
+      AsyncBuilder->ForgetInflight(slice);
+    }
   }
   FluidSurfaceCache.erase(ground_coord);
   FluidSurfaceDirty.erase(ground_coord);
@@ -761,10 +765,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   const uint64_t expected_revision = MeshRevisions.Current(result.coord);
   const auto revisionIt = ActiveMeshSourceRevision.find(result.coord);
-  if (revisionIt == ActiveMeshSourceRevision.end() ||
-      revisionIt->second != result.sourceRevision ||
+  if (revisionIt == ActiveMeshSourceRevision.end())
+  {
+    return;
+  }
+  if (revisionIt->second != result.sourceRevision ||
       result.sourceRevision != expected_revision)
   {
+    ActiveMeshSourceRevision.erase(revisionIt);
     if (GreedyCache.find(result.coord) == GreedyCache.end())
     {
       MarkDirtyPriority(result.coord);
