@@ -61,20 +61,23 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
 {
   const glm::ivec3 coord = snapshot.coord;
-  const uint64_t jobId = NextJobId++;
+  const uint64_t submitEpoch = Epoch.load(std::memory_order_acquire);
+  const uint64_t jobId =
+      NextJobId.fetch_add(1, std::memory_order_relaxed);
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[coord] = jobId;
   }
 
   Pool.Enqueue(
-      [this, snapshot = std::move(snapshot), registryPtr = &registry,
-       jobId]() mutable
+      [this, snapshot = std::move(snapshot), registryPtr = &registry, jobId,
+       submitEpoch]() mutable
       {
         MeshBuildResult result;
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;
         result.jobId = jobId;
+        result.submitEpoch = submitEpoch;
 
         std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
         const auto quads =
@@ -113,19 +116,33 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       maxPerFrame > 0 ? static_cast<std::size_t>(maxPerFrame) : 0;
   std::vector<MeshBuildResult> drained =
       limit > 0 ? Completed.DrainUpTo(limit) : std::vector<MeshBuildResult>{};
+  const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
+  std::vector<MeshBuildResult> accepted;
+  accepted.reserve(drained.size());
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    for (const MeshBuildResult &result : drained)
+    for (MeshBuildResult &result : drained)
     {
+      if (result.submitEpoch != current_epoch)
+      {
+        DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        const auto it = InFlight.find(result.coord);
+        if (it != InFlight.end() && it->second == result.jobId)
+        {
+          InFlight.erase(it);
+        }
+        continue;
+      }
       const auto it = InFlight.find(result.coord);
       if (it != InFlight.end() && it->second == result.jobId)
       {
         InFlight.erase(it);
       }
+      accepted.push_back(std::move(result));
     }
   }
-  return drained;
+  return accepted;
 }
 
 bool UAsyncMeshBuilder::IsInFlight(glm::ivec3 coord) const
@@ -159,12 +176,20 @@ bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
 
 void UAsyncMeshBuilder::CancelPending()
 {
+  Epoch.fetch_add(1, std::memory_order_acq_rel);
   Pool.CancelPendingJobs();
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight.clear();
   }
-  (void)Completed.DrainAll();
+  const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
+  for (MeshBuildResult &result : Completed.DrainAll())
+  {
+    if (result.submitEpoch != current_epoch)
+    {
+      DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+    }
+  }
 }
 
 } // namespace cutum

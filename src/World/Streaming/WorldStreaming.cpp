@@ -26,6 +26,14 @@ namespace cutum
 namespace
 {
 
+constexpr float kBadFrameMs = 24.0f;
+constexpr int kRelightBacklogStuckWindowMs = 1500;
+constexpr int kRelightBgClampCooldownMs = 400;
+
+int gLastBgRelightBacklog = 0;
+std::chrono::steady_clock::time_point gLastBgRelightBacklogTs{};
+std::chrono::steady_clock::time_point gBgRelightClampUntil{};
+
 float QueryTerrainSurfaceWorldY(UWorld &world, const glm::vec3 &eye)
 {
   UBlockRegistry &registry = world.GetBlockRegistry();
@@ -195,14 +203,49 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const int player_budget = pending_player > 0 ? 2 : 0;
   const bool async_bg =
       procedural.AsyncRelight && !world.IsLightingRelightDeferred();
-  const int bg_budget =
+  int bg_budget =
       async_bg ? (pending_bg > 24 ? 2 : 1)
                : (pending_bg > 12 ? 2 : (pending_bg > 0 ? 1 : 0));
+
+  const double frame_ms = world.GetLastMovementFrameMs();
+  const double flat_ms = world.GetMeshService().GetLastFlatRebuildMs();
+  const auto now = std::chrono::steady_clock::now();
+  if (gLastBgRelightBacklogTs == std::chrono::steady_clock::time_point{})
+  {
+    gLastBgRelightBacklogTs = now;
+    gLastBgRelightBacklog = pending_bg;
+  }
+  else if (now - gLastBgRelightBacklogTs >=
+           std::chrono::milliseconds(kRelightBacklogStuckWindowMs))
+  {
+    if (pending_bg >= gLastBgRelightBacklog)
+    {
+      gBgRelightClampUntil =
+          now + std::chrono::milliseconds(kRelightBgClampCooldownMs);
+    }
+    gLastBgRelightBacklog = pending_bg;
+    gLastBgRelightBacklogTs = now;
+  }
+  if (frame_ms > kBadFrameMs || flat_ms > 16.0)
+  {
+    bg_budget = std::max(0, bg_budget / 2);
+  }
+  if (now < gBgRelightClampUntil)
+  {
+    bg_budget = 0;
+  }
+
   world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
   world.PhysicsTelemetryData.PendingPlayerRelights =
       static_cast<uint64_t>(pending_player);
   world.PhysicsTelemetryData.PendingBackgroundRelights =
       static_cast<uint64_t>(pending_bg);
+  world.PhysicsTelemetryData.AsyncRelightInflight =
+      static_cast<uint64_t>(world.GetAsyncRelightInFlightCount());
+  world.PhysicsTelemetryData.RelightDiscardedLate =
+      world.GetRelightDiscardedLateCount();
+  world.PhysicsTelemetryData.MeshDiscardedLate =
+      world.GetMeshDiscardedLateCount();
 }
 
 void UWorldStreaming::QuiesceBackgroundWork(
@@ -328,8 +371,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [&world](glm::ivec3 coord)
       {
         const ProceduralSettings &settings = world.GetProceduralSettings();
-        world.MarkTerrainChunkMeshDirtySeamed(glm::ivec3(coord.x, 0, coord.z), 0,
-                                              settings.MaxHeight, true);
+        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+        world.MarkTerrainChunkMeshDirtySeamed(glm::ivec3(coord.x, 0, coord.z),
+                                              remesh_min_y, remesh_max_y, true);
       },
       [this, &world](int x, int z)
       {

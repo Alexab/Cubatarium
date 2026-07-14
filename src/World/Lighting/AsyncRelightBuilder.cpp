@@ -28,18 +28,21 @@ UAsyncRelightBuilder::UAsyncRelightBuilder(std::size_t thread_count)
 void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                                    const UBlockRegistry &registry)
 {
-  const uint64_t job_id =
-      snapshot.GetJobId() > 0 ? snapshot.GetJobId() : NextJobId++;
+  const uint64_t submit_epoch = Epoch.load(std::memory_order_acquire);
+  const uint64_t job_id = snapshot.GetJobId() > 0
+                              ? snapshot.GetJobId()
+                              : NextJobId.fetch_add(1, std::memory_order_relaxed);
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[job_id] = job_id;
   }
 
   Pool.Enqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
-                job_id]() mutable
+                job_id, submit_epoch]() mutable
                {
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
+                 result.submitEpoch = submit_epoch;
                  Completed.Push(std::move(result));
                });
 }
@@ -48,8 +51,10 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                                       RelightJobSpec spec,
                                       const UBlockRegistry &registry)
 {
+  const uint64_t submit_epoch = Epoch.load(std::memory_order_acquire);
   const uint64_t job_id =
-      spec.job_id > 0 ? spec.job_id : NextJobId++;
+      spec.job_id > 0 ? spec.job_id
+                      : NextJobId.fetch_add(1, std::memory_order_relaxed);
   spec.job_id = job_id;
 
   UChunkRelightSnapshot snapshot;
@@ -64,10 +69,11 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
   }
 
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                job_id]() mutable
+                job_id, submit_epoch]() mutable
                {
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
+                 result.submitEpoch = submit_epoch;
                  Completed.Push(std::move(result));
                });
 }
@@ -79,14 +85,24 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
       max_per_frame > 0 ? static_cast<std::size_t>(max_per_frame) : 0;
   std::vector<RelightComputeResult> drained =
       limit > 0 ? Completed.DrainUpTo(limit) : std::vector<RelightComputeResult>{};
+  const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
+  std::vector<RelightComputeResult> accepted;
+  accepted.reserve(drained.size());
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    for (const RelightComputeResult &result : drained)
+    for (RelightComputeResult &result : drained)
     {
+      if (result.submitEpoch != current_epoch)
+      {
+        DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        InFlight.erase(result.job_id);
+        continue;
+      }
       InFlight.erase(result.job_id);
+      accepted.push_back(std::move(result));
     }
   }
-  return drained;
+  return accepted;
 }
 
 bool UAsyncRelightBuilder::HasPendingWork() const
@@ -114,12 +130,20 @@ bool UAsyncRelightBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
 
 void UAsyncRelightBuilder::CancelPending()
 {
+  Epoch.fetch_add(1, std::memory_order_acq_rel);
   Pool.CancelPendingJobs();
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight.clear();
   }
-  (void)Completed.DrainAll();
+  const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
+  for (RelightComputeResult &result : Completed.DrainAll())
+  {
+    if (result.submitEpoch != current_epoch)
+    {
+      DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+    }
+  }
 }
 
 } // namespace cutum

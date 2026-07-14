@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <mutex>
@@ -33,6 +34,10 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  uint64_t GetDiscardedLateCount() const
+  {
+    return DiscardedLate.load(std::memory_order_relaxed);
+  }
 
 private:
   static constexpr int kPipelineSlotsPerWorker = 8;
@@ -42,7 +47,9 @@ private:
   UCompletedJobQueue<RelightComputeResult> Completed;
   mutable std::mutex InFlightMutex;
   std::unordered_map<uint64_t, uint64_t> InFlight;
-  uint64_t NextJobId{1};
+  std::atomic<uint64_t> NextJobId{1};
+  std::atomic<uint64_t> Epoch{1};
+  std::atomic<uint64_t> DiscardedLate{0};
 };
 
 } // namespace cutum

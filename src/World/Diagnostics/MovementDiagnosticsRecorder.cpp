@@ -143,6 +143,15 @@ void UMovementDiagnosticsRecorder::Update(
       physicsTelemetry.VisualRemeshBacklog;
   world.MovementDiag.physicsCollisionRebuildBacklog =
       physicsTelemetry.CollisionRebuildBacklog;
+  world.MovementDiag.pendingPlayerRelights =
+      static_cast<int>(physicsTelemetry.PendingPlayerRelights);
+  world.MovementDiag.pendingBgRelights =
+      static_cast<int>(physicsTelemetry.PendingBackgroundRelights);
+  world.MovementDiag.asyncRelightInflight =
+      static_cast<int>(physicsTelemetry.AsyncRelightInflight);
+  world.MovementDiag.relightDiscardedLate =
+      physicsTelemetry.RelightDiscardedLate;
+  world.MovementDiag.meshDiscardedLate = physicsTelemetry.MeshDiscardedLate;
   world.TickMeshLoadDiagnostics();
 
   if (world.HasLastPlayerY)

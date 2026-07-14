@@ -6,6 +6,7 @@
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include <atomic>
 #include <chrono>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -23,6 +24,7 @@ struct MeshBuildResult
   std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
   uint64_t sourceRevision{0};
   uint64_t jobId{0};
+  uint64_t submitEpoch{0};
 };
 
 class UAsyncMeshBuilder
@@ -43,6 +45,10 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  uint64_t GetDiscardedLateCount() const
+  {
+    return DiscardedLate.load(std::memory_order_relaxed);
+  }
 
 private:
   static constexpr int kPipelineSlotsPerWorker = 6;
@@ -52,7 +58,9 @@ private:
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
-  uint64_t NextJobId{1};
+  std::atomic<uint64_t> NextJobId{1};
+  std::atomic<uint64_t> Epoch{1};
+  std::atomic<uint64_t> DiscardedLate{0};
 };
 
 } // namespace cutum

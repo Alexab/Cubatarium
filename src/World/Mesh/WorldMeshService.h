@@ -73,6 +73,7 @@ public:
   bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const;
   int GetAsyncInFlightCount() const;
+  uint64_t GetMeshDiscardedLateCount() const;
   double GetLastFlatRebuildMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
@@ -107,7 +108,9 @@ public:
 
   struct GreedyDrawSnapshot
   {
-    const std::vector<GreedyMeshBatch> &batches;
+    const UChunkMeshCache &cache;
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs;
+    const std::vector<GreedyBatchRef> &transparentRefs;
     const std::vector<CrossInstanceBatch> &crossBatches;
     uint64_t meshRevision{0};
     uint64_t cullRevision{0};

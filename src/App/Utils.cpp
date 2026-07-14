@@ -418,7 +418,9 @@ int RunLoadWorld(int argc, char **argv, int load_world_index)
 
   const size_t blocks = world.GetBlockWorld().CountNonAir();
   const size_t cache = world.GetMeshService().GetGreedyCacheSize();
-  const size_t batches = world.GetMeshService().GetCache().GetGreedyBatches().size();
+  const size_t batches =
+      world.GetMeshService().GetCache().GetGreedyOpaqueCutoutRefs().size() +
+      world.GetMeshService().GetCache().GetGreedyTransparentRefs().size();
   const size_t vertices = world.GetMeshService().GetGreedyVertexCount();
 
   std::cout << "load-world: blocks=" << blocks << " greedy_cache=" << cache

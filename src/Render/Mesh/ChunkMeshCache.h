@@ -70,6 +70,7 @@ public:
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   int GetAsyncInFlightCount() const;
+  uint64_t GetMeshDiscardedLateCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
@@ -120,9 +121,27 @@ public:
     return Instances;
   }
   const std::vector<FaceInstance> &GetInstances() const { return Instances; }
-  const std::vector<GreedyMeshBatch> &GetGreedyBatches() const
+  const std::vector<GreedyBatchRef> &GetGreedyOpaqueCutoutRefs() const
   {
-    return GreedyBatches;
+    return GreedyOpaqueCutoutRefs;
+  }
+  const std::vector<GreedyBatchRef> &GetGreedyTransparentRefs() const
+  {
+    return GreedyTransparentRefs;
+  }
+  const GreedyMeshBatch *TryGetGreedyBatch(const GreedyBatchRef &ref) const
+  {
+    const auto it = GreedyCache.find(ref.chunkCoord);
+    if (it == GreedyCache.end())
+    {
+      return nullptr;
+    }
+    const std::vector<GreedyMeshBatch> &batches = it->second.batches;
+    if (ref.batchIndex >= batches.size())
+    {
+      return nullptr;
+    }
+    return &batches[ref.batchIndex];
   }
   const std::vector<CrossInstanceBatch> &GetCrossBatches() const
   {
@@ -161,7 +180,8 @@ private:
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
   UChunkDirtySet Dirty;
   std::vector<FaceInstance> Instances;
-  std::vector<GreedyMeshBatch> GreedyBatches;
+  std::vector<GreedyBatchRef> GreedyOpaqueCutoutRefs;
+  std::vector<GreedyBatchRef> GreedyTransparentRefs;
   std::vector<CrossInstanceBatch> CrossBatches;
   bool InstancesDirty{true};
   bool GreedyBatchesDirty{true};
@@ -179,26 +199,18 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
+  std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveMeshSourceRevision;
-  std::unordered_map<glm::ivec3, std::pair<size_t, size_t>, IVec3Hash>
-      GreedyOpaqueBatchRanges;
-  size_t GreedyOpaqueBatchCount{0};
-  std::vector<GreedyMeshBatch> GreedyCutoutBatches;
-  bool GreedyIncrementalIndexValid{false};
-  bool GreedyCutoutBatchesDirty{true};
+  std::unordered_map<glm::ivec3, size_t, IVec3Hash> GreedyVertexCountByChunk;
+  size_t GreedyVertexCountTotal{0};
   MeshRebuildTickStats LastRebuildTickStats{};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
-  void PatchGreedyBatchesForChunk(glm::ivec3 chunk_coord);
-  void RebuildCutoutGreedyBatches();
-  void RebuildGreedyBatchIndexFromFullMerge();
-  void ReassembleGreedyDrawBatches();
-  void InvalidateGreedyBatchIndex();
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,

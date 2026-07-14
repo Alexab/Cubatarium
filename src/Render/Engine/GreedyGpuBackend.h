@@ -15,6 +15,8 @@ typedef int GLsizei;
 namespace cutum
 {
 
+class UChunkMeshCache;
+
 struct GreedyGpuBatch
 {
   BlockId blockId{BLOCK_AIR};
@@ -50,6 +52,11 @@ public:
                    const std::vector<GreedyMeshBatch> &batches,
                    uint64_t mesh_revision, uint64_t cull_revision,
                    uint64_t sort_revision);
+  void RefreshPassRefs(GreedyGpuPassCache &cache,
+                       const UChunkMeshCache &meshCache,
+                       const std::vector<GreedyBatchRef> &refs,
+                       uint64_t mesh_revision, uint64_t cull_revision,
+                       uint64_t sort_revision);
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);

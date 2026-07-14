@@ -588,6 +588,11 @@ public:
     double physicsCollisionReadyWaitMs{0.0};
     uint64_t physicsVisualRemeshBacklog{0};
     uint64_t physicsCollisionRebuildBacklog{0};
+    int pendingPlayerRelights{0};
+    int pendingBgRelights{0};
+    int asyncRelightInflight{0};
+    uint64_t relightDiscardedLate{0};
+    uint64_t meshDiscardedLate{0};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -714,6 +719,7 @@ public:
   bool IsCooperativeBulkGenerating() const { return CooperativeBulkGenerating; }
   void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
   double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
+  float GetLastMovementSpeed() const { return LastMovementSpeed; }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
                             bool priority_mesh = false,
                             bool include_skylight = true,
@@ -732,6 +738,8 @@ public:
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;
   int GetAsyncRelightInFlightCount() const;
+  uint64_t GetRelightDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateCount() const;
   int GetPlayerRelightMeshBurstFrames() const
   {
     return PlayerRelightMeshBurstFrames;

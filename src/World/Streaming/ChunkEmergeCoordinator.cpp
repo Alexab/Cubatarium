@@ -35,20 +35,22 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
                             : default_load_ops;
   budget.MaxMeshDrain = kDefaultMeshDrain;
   budget.MaxMeshSchedule = kDefaultMeshSchedule;
-  if (boost)
-  {
-    budget.MaxMeshDrain =
-        std::max(budget.MaxMeshDrain, budget.MaxChunkCommits * 2);
-    budget.MaxMeshSchedule = budget.MaxMeshDrain;
-  }
   if (last_frame_ms > 24.0)
   {
     budget.MaxChunkCommits = std::max(1, budget.MaxChunkCommits / 2);
     budget.MaxLoadOps = std::max(1, budget.MaxLoadOps / 2);
+    budget.MaxMeshDrain = std::max(2, budget.MaxMeshDrain / 2);
+    budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
   else if (last_frame_ms > 16.0)
   {
     budget.MaxMeshDrain = std::max(4, budget.MaxMeshDrain - 2);
+    budget.MaxMeshSchedule = budget.MaxMeshDrain;
+  }
+  if (boost)
+  {
+    budget.MaxMeshDrain =
+        std::max(budget.MaxMeshDrain, budget.MaxChunkCommits * 2);
     budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
   return budget;
@@ -104,6 +106,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 {
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
+  const ProceduralSettings &procedural = world.GetProceduralSettings();
+  const float movement_speed = world.GetLastMovementSpeed();
+  const bool moving =
+      movement_speed > procedural.MovementSpeedBoostThreshold;
+  const double last_frame_ms = world.GetLastMovementFrameMs();
+
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground =
       UChunkManager::WorldToChunk(focus_block);
@@ -113,6 +121,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 
   int mesh_drain = LastBudget.MaxMeshDrain;
   int mesh_schedule = LastBudget.MaxMeshSchedule;
+
   const size_t pending_dirty = mesh_service.GetDirtyCount();
   const int pending_async = mesh_service.GetAsyncInFlightCount();
   const bool near_mesh_backlog =
@@ -121,42 +130,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
                                                          focus_ground_horiz,
                                                          focus_radius);
-  if (near_mesh_backlog)
+
+  if (moving && near_mesh_backlog)
   {
-    mesh_drain = std::max(mesh_drain, 32);
-    mesh_schedule = std::max(mesh_schedule, 32);
+    if (pending_dirty > 48 || pending_async > 16)
+    {
+      mesh_drain = std::max(mesh_drain, 16);
+      mesh_schedule = std::max(mesh_schedule, 16);
+    }
+    else if (pending_dirty > 16 || pending_async > 8)
+    {
+      mesh_drain = std::max(mesh_drain, 12);
+      mesh_schedule = std::max(mesh_schedule, 12);
+    }
   }
-  if (pending_dirty > 96 || pending_async > 32)
-  {
-    mesh_drain = std::max(mesh_drain, 48);
-    mesh_schedule = std::max(mesh_schedule, 48);
-  }
-  else if (pending_dirty > 48 || pending_async > 16)
-  {
-    mesh_drain = std::max(mesh_drain, 32);
-    mesh_schedule = std::max(mesh_schedule, 32);
-  }
-  else if (pending_dirty > 16 || pending_async > 8)
-  {
-    mesh_drain = std::max(mesh_drain, 20);
-    mesh_schedule = std::max(mesh_schedule, 20);
-  }
-  else if (pending_dirty > 0 || pending_async > 0)
-  {
-    mesh_drain = std::max(mesh_drain, 16);
-    mesh_schedule = std::max(mesh_schedule, 16);
-  }
+
   if (world.GetPlayerRelightMeshBurstFrames() > 0)
   {
     mesh_drain = std::max(mesh_drain, 24);
     mesh_schedule = std::max(mesh_schedule, 24);
   }
-  if (world.GetLastMovementFrameMs() > 24.0 && near_mesh_backlog)
+
+  if (last_frame_ms > 24.0)
   {
-    mesh_drain = std::max(mesh_drain, 24);
-    mesh_schedule = std::max(mesh_schedule, 24);
+    mesh_drain = std::max(2, mesh_drain / 2);
+    mesh_schedule = mesh_drain;
   }
-  else if (world.GetLastMovementFrameMs() > 16.0 && !near_mesh_backlog)
+  else if (last_frame_ms > 16.0 && !moving)
   {
     mesh_drain = std::max(4, mesh_drain - 2);
     mesh_schedule = mesh_drain;

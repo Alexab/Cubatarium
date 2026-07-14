@@ -1006,6 +1006,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     PhysicsTelemetryData.FullRelightMs =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
   }
+  PhysicsTelemetryData.AsyncRelightInflight =
+      static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
+  PhysicsTelemetryData.RelightDiscardedLate =
+      AsyncRelight->GetDiscardedLateCount();
   return applied;
 }
 
@@ -1022,6 +1026,16 @@ bool UWorld::HasPendingAsyncRelightWork() const
 int UWorld::GetAsyncRelightInFlightCount() const
 {
   return AsyncRelight ? AsyncRelight->GetInFlightCount() : 0;
+}
+
+uint64_t UWorld::GetRelightDiscardedLateCount() const
+{
+  return AsyncRelight ? AsyncRelight->GetDiscardedLateCount() : 0;
+}
+
+uint64_t UWorld::GetMeshDiscardedLateCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateCount() : 0;
 }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)

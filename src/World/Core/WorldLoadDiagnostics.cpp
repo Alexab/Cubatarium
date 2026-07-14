@@ -45,7 +45,9 @@ std::string FormatWorldLoadDiagLine(const std::string &phase, const UWorld &worl
       << " mesh_dirty=" << mesh.GetDirtyCount()
       << " mesh_in_flight=" << mesh.GetAsyncInFlightCount()
       << " greedy_cache=" << mesh.GetGreedyCacheSize()
-      << " greedy_batches=" << mesh.GetCache().GetGreedyBatches().size()
+      << " greedy_batches="
+      << (mesh.GetCache().GetGreedyOpaqueCutoutRefs().size() +
+          mesh.GetCache().GetGreedyTransparentRefs().size())
       << " greedy_vertices=" << mesh.GetGreedyVertexCount()
       << " flat_rebuild_ms=" << mesh.GetLastFlatRebuildMs();
   if (camera_pos)
@@ -71,7 +73,9 @@ void WarnIfTerrainMeshesMissing(const UWorld &world, const std::string &context)
   const size_t blocks = world.GetBlockWorld().CountNonAir();
   const UWorldMeshService &mesh = world.GetMeshService();
   const size_t cache_size = mesh.GetGreedyCacheSize();
-  const size_t batch_count = mesh.GetCache().GetGreedyBatches().size();
+  const size_t batch_count =
+      mesh.GetCache().GetGreedyOpaqueCutoutRefs().size() +
+      mesh.GetCache().GetGreedyTransparentRefs().size();
   if (blocks == 0)
   {
     return;

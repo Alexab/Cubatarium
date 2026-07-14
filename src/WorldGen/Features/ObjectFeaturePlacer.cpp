@@ -14,7 +14,6 @@
 #include "ResourcePacks/BlockNameUtil.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
-#include "App/Platform/Log.h"
 #include <climits>
 #include <cmath>
 #include <cstdint>
@@ -194,11 +193,9 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   if (!ctx.Registry.HasRenderableTexture(blockId))
   {
-    CubatariumLogInfo(
-        "Scatter",
-        "skip scatter block '" + rule.Scatter.BlockName +
-            "' (id=" + std::to_string(static_cast<int>(blockId)) +
-            "): no renderable texture");
+    std::cerr << "Scatter: skip scatter block '" << rule.Scatter.BlockName
+              << "' (id=" << static_cast<int>(blockId)
+              << "): no renderable texture" << std::endl;
     return false;
   }
 

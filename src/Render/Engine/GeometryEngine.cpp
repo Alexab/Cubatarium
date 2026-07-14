@@ -446,18 +446,18 @@ void UGeometryEngine::DrawCubeGeometry()
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    const auto &greedyBatches = draw.batches;
+    const auto &opaqueCutoutRefs = draw.opaqueCutoutRefs;
     if (!useBatchCache || !BlockBatchesValid ||
-        greedyBatches.size() != CachedInstanceCount ||
+        opaqueCutoutRefs.size() != CachedInstanceCount ||
         draw.meshRevision != CachedMeshRevision)
     {
-      CachedInstanceCount = greedyBatches.size();
+      CachedInstanceCount = opaqueCutoutRefs.size();
       CachedMeshRevision = draw.meshRevision;
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    DrawGreedyOpaqueBatches(greedyBatches, vp, textures, draw.meshRevision,
-                            draw.cullRevision);
+    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp, textures,
+                            draw.meshRevision, draw.cullRevision);
     DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
                               draw.meshRevision, draw.cullRevision);
     OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
@@ -465,7 +465,8 @@ void UGeometryEngine::DrawCubeGeometry()
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    GreedyTransparentDrawContext tctx{greedyBatches,
+    GreedyTransparentDrawContext tctx{draw.cache,
+                                      draw.transparentRefs,
                                       vp,
                                       draw.meshRevision,
                                       draw.cullRevision,
@@ -1005,16 +1006,16 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
                                       camera);
-  const auto &greedyBatches = draw.batches;
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(greedyBatches, vp, textures, draw.meshRevision,
-                          draw.cullRevision);
+  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp, textures,
+                          draw.meshRevision, draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
 
-  GreedyTransparentDrawContext tctx{greedyBatches,
+  GreedyTransparentDrawContext tctx{draw.cache,
+                                    draw.transparentRefs,
                                     vp,
                                     draw.meshRevision,
                                     draw.cullRevision,
@@ -1023,7 +1024,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                     textures};
   PrepareTransparent(tctx);
 
-  CachedInstanceCount = greedyBatches.size();
+  CachedInstanceCount = draw.opaqueCutoutRefs.size();
   CachedMeshRevision = draw.meshRevision;
   BlockBatchesValid = true;
 }
@@ -1125,43 +1126,57 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 }
 
 void UGeometryEngine::DrawGreedyOpaqueBatches(
-    const std::vector<GreedyMeshBatch> &batches, const glm::mat4 &vp,
+    const UChunkMeshCache &cache,
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
+    const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
     uint64_t cullRevision)
 {
-  std::vector<GreedyMeshBatch> solid;
-  std::vector<GreedyMeshBatch> cutout;
-  solid.reserve(batches.size());
-  cutout.reserve(batches.size());
-  for (const GreedyMeshBatch &batch : batches)
+  std::vector<GreedyBatchRef> solid;
+  std::vector<GreedyBatchRef> cutout;
+  solid.reserve(opaqueCutoutRefs.size());
+  cutout.reserve(opaqueCutoutRefs.size());
+  for (const GreedyBatchRef &ref : opaqueCutoutRefs)
   {
-    if (batch.Transparent)
+    const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+    if (!batch)
     {
       continue;
     }
-    if (batch.AlphaCutout)
+    if (batch->AlphaCutout)
     {
-      cutout.push_back(batch);
+      cutout.push_back(ref);
     }
     else
     {
-      solid.push_back(batch);
+      solid.push_back(ref);
     }
   }
   if (!solid.empty())
   {
-    GreedyGpuBackend.RefreshPass(GreedyGpuOpaque, solid, meshRevision,
-                                 cullRevision, 0);
+    GreedyGpuBackend.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
+                                     cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
   }
   if (!cutout.empty())
   {
+    std::sort(cutout.begin(), cutout.end(),
+              [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
+              {
+                const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
+                const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
+                if (!a || !b)
+                {
+                  return a != nullptr;
+                }
+                return a->blockId < b->blockId;
+              });
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
-    GreedyGpuBackend.RefreshPass(GreedyGpuCutout, cutout, meshRevision,
-                                 cullRevision, 0);
+    GreedyGpuBackend.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
+                                     cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
     if (cullWasEnabled)
@@ -1174,20 +1189,21 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
-  std::vector<GreedyMeshBatch> filtered;
-  filtered.reserve(ctx.allBatches.size());
-  for (const GreedyMeshBatch &batch : ctx.allBatches)
+  std::vector<GreedyBatchRef> filtered;
+  filtered.reserve(ctx.transparentRefs.size());
+  for (const GreedyBatchRef &ref : ctx.transparentRefs)
   {
-    if (!batch.Transparent)
+    const GreedyMeshBatch *batch = ctx.cache.TryGetGreedyBatch(ref);
+    if (!batch)
     {
       continue;
     }
-    if (ctx.blockRegistry.GetRenderStyle(batch.blockId) ==
+    if (ctx.blockRegistry.GetRenderStyle(batch->blockId) ==
         BlockRenderStyle::Cross)
     {
       continue;
     }
-    filtered.push_back(batch);
+    filtered.push_back(ref);
   }
   if (filtered.empty())
   {
@@ -1195,10 +1211,12 @@ void UGeometryEngine::PrepareTransparent(
     PreparedTransparentTextures = nullptr;
     return;
   }
-  SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
+  SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
+                               ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  GreedyGpuBackend.RefreshPass(GreedyGpuTransparent, filtered, ctx.meshRevision,
-                               ctx.cullRevision, sortRevision);
+  GreedyGpuBackend.RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
+                                   ctx.meshRevision, ctx.cullRevision,
+                                   sortRevision);
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }
@@ -1595,7 +1613,11 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
-          " Async: " + std::to_string(md.asyncMeshInFlight)};
+          " Async: " + std::to_string(md.asyncMeshInFlight),
+      "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
+          " bg=" + std::to_string(md.pendingBgRelights) +
+          " inflight=" + std::to_string(md.asyncRelightInflight) +
+          " late=" + std::to_string(md.relightDiscardedLate)};
   performanceLines.push_back(
       "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
       "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +

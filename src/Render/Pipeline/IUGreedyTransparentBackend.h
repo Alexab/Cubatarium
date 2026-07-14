@@ -19,7 +19,8 @@ class UBlockRegistry;
 
 struct GreedyTransparentDrawContext
 {
-  const std::vector<GreedyMeshBatch> &allBatches;
+  const UChunkMeshCache &cache;
+  const std::vector<GreedyBatchRef> &transparentRefs;
   glm::mat4 viewProjection;
   uint64_t meshRevision;
   uint64_t cullRevision;

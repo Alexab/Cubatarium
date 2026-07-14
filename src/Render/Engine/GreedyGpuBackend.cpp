@@ -1,4 +1,5 @@
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyVertexPool.h"
 #include "Render/GlIncludes.h"
 
@@ -141,6 +142,68 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
     }
     GreedyGpuBatch gpu;
     UploadBatch(gpu, batch, cache.VertexPool);
+    cache.batches.push_back(gpu);
+    ++write_index;
+  }
+
+  for (size_t i = write_index; i < cache.batches.size(); ++i)
+  {
+    DestroyBatchBuffers(cache.batches[i]);
+  }
+  cache.batches.resize(write_index);
+
+  glBindBuffer(kArrayBuffer, 0);
+  glBindBuffer(kElementArrayBuffer, 0);
+  cache.meshRevision = mesh_revision;
+  cache.cullRevision = cull_revision;
+  cache.sortRevision = sort_revision;
+}
+
+void UGreedyGpuBackend::RefreshPassRefs(
+    GreedyGpuPassCache &cache, const UChunkMeshCache &meshCache,
+    const std::vector<GreedyBatchRef> &refs,
+    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
+{
+  if (mesh_revision == cache.meshRevision &&
+      cull_revision == cache.cullRevision &&
+      sort_revision == cache.sortRevision)
+  {
+    return;
+  }
+
+  size_t total_vertex_bytes = 0;
+  size_t total_index_bytes = 0;
+  for (const GreedyBatchRef &ref : refs)
+  {
+    const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
+    if (!batch || batch->vertices.empty() || batch->indices.empty())
+    {
+      continue;
+    }
+    total_vertex_bytes += batch->vertices.size() * sizeof(GreedyMeshVertex);
+    total_index_bytes += batch->indices.size() * sizeof(uint32_t);
+  }
+  cache.VertexPool.Reserve(total_vertex_bytes, total_index_bytes);
+  cache.usesVertexPool = total_vertex_bytes > 0 && total_index_bytes > 0;
+  cache.poolVbo = cache.VertexPool.VertexBuffer();
+  cache.poolEbo = cache.VertexPool.IndexBuffer();
+
+  size_t write_index = 0;
+  for (const GreedyBatchRef &ref : refs)
+  {
+    const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
+    if (!batch || batch->vertices.empty() || batch->indices.empty())
+    {
+      continue;
+    }
+    if (write_index < cache.batches.size())
+    {
+      UploadBatch(cache.batches[write_index], *batch, cache.VertexPool);
+      ++write_index;
+      continue;
+    }
+    GreedyGpuBatch gpu;
+    UploadBatch(gpu, *batch, cache.VertexPool);
     cache.batches.push_back(gpu);
     ++write_index;
   }

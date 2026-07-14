@@ -75,14 +75,21 @@ static size_t CountCrossInstances(
 }
 
 static size_t CountGreedyVerticesForBlock(
-    const std::vector<cutum::GreedyMeshBatch> &batches, cutum::BlockId block_id)
+    const cutum::UChunkMeshCache &cache,
+    const std::vector<cutum::GreedyBatchRef> &refs,
+    cutum::BlockId block_id)
 {
   size_t count = 0;
-  for (const cutum::GreedyMeshBatch &batch : batches)
+  for (const cutum::GreedyBatchRef &ref : refs)
   {
-    if (batch.blockId == block_id)
+    const cutum::GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+    if (!batch)
     {
-      count += batch.vertices.size();
+      continue;
+    }
+    if (batch->blockId == block_id)
+    {
+      count += batch->vertices.size();
     }
   }
   return count;
@@ -155,9 +162,8 @@ static void TestCampfireStoneMesh(cutum::UBlockWorld &world,
   const glm::vec3 camera_pos(glm::vec3(anchor) + glm::vec3(0.5f, 2.5f, 4.0f));
   RebuildAndCull(cache, world, registry, camera_pos);
 
-  const std::vector<cutum::GreedyMeshBatch> &greedy_batches =
-      cache.GetGreedyBatches();
-  Expect(CountGreedyVerticesForBlock(greedy_batches, kStone) > 0,
+  const auto &refs = cache.GetGreedyOpaqueCutoutRefs();
+  Expect(CountGreedyVerticesForBlock(cache, refs, kStone) > 0,
          "campfire stone ring should produce opaque greedy vertices");
 }
 

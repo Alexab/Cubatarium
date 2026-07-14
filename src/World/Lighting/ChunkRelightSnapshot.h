@@ -35,6 +35,7 @@ struct RelightChunkLightData
 struct RelightComputeResult
 {
   uint64_t job_id{0};
+  uint64_t submitEpoch{0};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   std::vector<glm::ivec3> source_block_positions;

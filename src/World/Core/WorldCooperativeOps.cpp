@@ -358,11 +358,31 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 
   world.CancelAsyncRelightWork();
 
+  // On create/load we still need emissive block light to be correct near the
+  // player. Full-world scans can be very expensive, so we only scan near the
+  // spawn/focus radius.
+  const bool coop_create_or_load =
+      Kind == WorldCoopKind::Create || Kind == WorldCoopKind::Load;
+  const glm::ivec3 focus_chunk =
+      UChunkManager::WorldToChunk(WorldPosToBlock(world.GetSpawnPoint()));
+  const glm::ivec3 focus_ground(focus_chunk.x, 0, focus_chunk.z);
+  const int focus_radius = world.GetRenderDistanceChunks() + 1;
+
   if (world.BlockRegistry)
   {
     world.BlockWorld.GetChunkManager().ForEachChunk(
         [&](const UChunk &chunk)
         {
+          if (coop_create_or_load)
+          {
+            const glm::ivec3 coord = chunk.GetCoord();
+            const int dx = std::abs(coord.x - focus_ground.x);
+            const int dz = std::abs(coord.z - focus_ground.z);
+            if (std::max(dx, dz) > focus_radius)
+            {
+              return;
+            }
+          }
           bool has_emissive = false;
           for (int ly = 0; ly < CHUNK_SIZE && !has_emissive; ++ly)
           {
@@ -415,6 +435,8 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
     if (Kind == WorldCoopKind::Create)
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
       const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
       const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
       const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
@@ -423,8 +445,8 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
       {
         for (int cz = min_cz; cz <= max_cz; ++cz)
         {
-          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), 0,
-                                          settings.MaxHeight);
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), remesh_min_y,
+                                          remesh_max_y);
         }
       }
     }
@@ -1329,6 +1351,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                            GenPatchMinZ, GenPatchMaxZ))
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
       const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
       const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
       const int min_cz = FloorDiv(GenPatchMinZ, CHUNK_SIZE);
@@ -1337,8 +1361,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         for (int cz = min_cz; cz <= max_cz; ++cz)
         {
-          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), 0,
-                                          settings.MaxHeight);
+          world.MarkTerrainChunkMeshDirty(glm::ivec3(cx, 0, cz), remesh_min_y,
+                                          remesh_max_y);
         }
       }
       mesh_done = false;

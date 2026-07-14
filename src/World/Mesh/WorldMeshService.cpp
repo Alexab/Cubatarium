@@ -253,6 +253,11 @@ int UWorldMeshService::GetAsyncInFlightCount() const
   return Cache.GetAsyncInFlightCount();
 }
 
+uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
+{
+  return Cache.GetMeshDiscardedLateCount();
+}
+
 double UWorldMeshService::GetLastFlatRebuildMs() const
 {
   return Cache.GetLastFlatRebuildMs();
@@ -348,7 +353,12 @@ const std::vector<GreedyMeshBatch> &UWorldMeshService::GetGreedyRenderBatches(
     const std::shared_ptr<UCamera> &camera)
 {
   PrepareFaceInstances(world, registry, camera);
-  return Cache.GetGreedyBatches();
+  // Legacy API retained only for older call sites; prefer PrepareGreedyDraw.
+  static const std::vector<GreedyMeshBatch> kEmpty;
+  (void)world;
+  (void)registry;
+  (void)camera;
+  return kEmpty;
 }
 
 UWorldMeshService::GreedyDrawSnapshot
@@ -357,8 +367,12 @@ UWorldMeshService::PrepareGreedyDraw(UBlockWorld &world,
                                      const std::shared_ptr<UCamera> &camera)
 {
   PrepareFaceInstances(world, registry, camera);
-  return GreedyDrawSnapshot{Cache.GetGreedyBatches(), Cache.GetCrossBatches(),
-                            Cache.GetMeshRevision(), Cache.GetCullRevision()};
+  return GreedyDrawSnapshot{Cache,
+                            Cache.GetGreedyOpaqueCutoutRefs(),
+                            Cache.GetGreedyTransparentRefs(),
+                            Cache.GetCrossBatches(),
+                            Cache.GetMeshRevision(),
+                            Cache.GetCullRevision()};
 }
 
 const std::vector<CrossInstanceBatch> &
