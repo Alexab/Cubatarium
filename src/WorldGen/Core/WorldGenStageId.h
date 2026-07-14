@@ -7,6 +7,7 @@ enum class WorldGenStageId
 {
   Terrain,
   Ravines,
+  Valleys,
   Caves,
   Fluids,
   Ores,
@@ -18,6 +19,6 @@ enum class WorldGenStageId
   FirePatch,
 };
 
-constexpr int WorldGenStageIdCount = 11;
+constexpr int WorldGenStageIdCount = 12;
 
 } // namespace cutum

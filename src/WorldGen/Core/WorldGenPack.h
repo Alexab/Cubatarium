@@ -108,11 +108,31 @@ struct PackCavesConfig
   bool Loaded{false};
 };
 
+struct PackRavinesConfig
+{
+  bool Enabled{true};
+  int Rarity{600};
+  int MinDepth{8};
+  int MaxDepth{40};
+  int AquaticMaxDepth{5};
+  bool Loaded{false};
+};
+
+struct PackValleysConfig
+{
+  bool Enabled{true};
+  int MaxDepth{12};
+  float WidthSigma{2.5f};
+  float AquaticDepthScale{0.4f};
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
   bool Fluids{false};
   bool Ravines{false};
+  bool Valleys{false};
   bool Ores{false};
   bool Caves{false};
   bool Vegetation{false};
@@ -142,6 +162,8 @@ struct WorldGenPack
   PackClimateConfig Climate;
   PackOresConfig Ores;
   PackCavesConfig Caves;
+  PackRavinesConfig Ravines;
+  PackValleysConfig Valleys;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -158,7 +180,10 @@ public:
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
   static const PackCavesConfig &CavesConfig();
+  static const PackRavinesConfig &RavinesConfig();
+  static const PackValleysConfig &ValleysConfig();
   static void ApplyPackCaveDefaults(ProceduralSettings &settings);
+  static void ApplyPackRavineDefaults(ProceduralSettings &settings);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,

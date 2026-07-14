@@ -175,6 +175,11 @@ bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline
     pipeline.Ravines = true;
     return true;
   }
+  if (stage == "valleys")
+  {
+    pipeline.Valleys = true;
+    return true;
+  }
   if (stage == "ores")
   {
     pipeline.Ores = true;
@@ -448,6 +453,57 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
 }
 
+void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path valleys_json = root / "valleys.json";
+  if (!std::filesystem::exists(valleys_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(valleys_json);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Valleys.Enabled = json.value("enabled", pack.Valleys.Enabled);
+    pack.Valleys.MaxDepth = json.value("max_depth", pack.Valleys.MaxDepth);
+    pack.Valleys.WidthSigma = json.value("width_sigma", pack.Valleys.WidthSigma);
+    pack.Valleys.AquaticDepthScale =
+        json.value("aquatic_depth_scale", pack.Valleys.AquaticDepthScale);
+    pack.Valleys.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: valleys.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path ravines_json = root / "ravines.json";
+  if (!std::filesystem::exists(ravines_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(ravines_json);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Ravines.Enabled = json.value("enabled", pack.Ravines.Enabled);
+    pack.Ravines.Rarity = json.value("rarity", pack.Ravines.Rarity);
+    pack.Ravines.MinDepth = json.value("min_depth", pack.Ravines.MinDepth);
+    pack.Ravines.MaxDepth = json.value("max_depth", pack.Ravines.MaxDepth);
+    pack.Ravines.AquaticMaxDepth =
+        json.value("aquatic_max_depth", pack.Ravines.AquaticMaxDepth);
+    pack.Ravines.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ravines.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
 void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
 {
   const std::filesystem::path cavesJson = root / "caves.json";
@@ -589,6 +645,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   LoadClimateJson(root, ActivePack);
   LoadOresJson(root, ActivePack);
   LoadCavesJson(root, ActivePack);
+  LoadRavinesJson(root, ActivePack);
+  LoadValleysJson(root, ActivePack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -727,6 +785,16 @@ const PackOresConfig &UWorldGenPack::OresConfig() { return ActivePack.Ores; }
 
 const PackCavesConfig &UWorldGenPack::CavesConfig() { return ActivePack.Caves; }
 
+const PackRavinesConfig &UWorldGenPack::RavinesConfig()
+{
+  return ActivePack.Ravines;
+}
+
+const PackValleysConfig &UWorldGenPack::ValleysConfig()
+{
+  return ActivePack.Valleys;
+}
+
 void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
 {
   const PackCavesConfig &caves = ActivePack.Caves;
@@ -745,6 +813,20 @@ void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
   settings.Caves.spaghettiWeight = caves.SpaghettiWeight;
   settings.Caves.noodleScale = caves.NoodleScale;
   settings.Caves.noodleWeight = caves.NoodleWeight;
+}
+
+void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
+{
+  const PackRavinesConfig &ravines = ActivePack.Ravines;
+  if (!ravines.Loaded)
+  {
+    return;
+  }
+  settings.Ravines.enabled = ravines.Enabled;
+  settings.Ravines.rarity = ravines.Rarity;
+  settings.Ravines.minDepth = ravines.MinDepth;
+  settings.Ravines.maxDepth = ravines.MaxDepth;
+  settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
 }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(

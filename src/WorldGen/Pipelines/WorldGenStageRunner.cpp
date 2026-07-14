@@ -7,6 +7,8 @@
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
+#include "WorldGen/Features/ValleyCarver.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include <unordered_map>
@@ -51,8 +53,32 @@ void RunRavinesStage(UComposableWorldGenerator &generator,
                      int world_z, PostTerrainState &)
 {
   WorldGenContext &ctx = generator.GetContext();
+  const RavineSurfaceYCallback get_surface_y =
+      [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
   CarveColumnRavines(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
-                     ctx.Settings.Ravines);
+                     ctx.Settings.Ravines, ctx.Settings.SeaLevel,
+                     get_surface_y);
+}
+
+void RunValleysStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x,
+                     int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  ValleyParams params;
+  const PackValleysConfig &pack = UWorldGenPack::ValleysConfig();
+  if (pack.Loaded)
+  {
+    params.enabled = pack.Enabled;
+    params.maxDepth = pack.MaxDepth;
+    params.widthSigma = pack.WidthSigma;
+    params.aquaticDepthScale = pack.AquaticDepthScale;
+  }
+  const ValleySurfaceYCallback get_surface_y =
+      [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
+  CarveColumnValleys(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                     params, ctx.Settings.SeaLevel,
+                     ctx.Settings.Tuning.riverWidth, get_surface_y);
 }
 
 void RunCavesStage(UComposableWorldGenerator &generator,
@@ -129,6 +155,7 @@ const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
 {
   static const std::unordered_map<WorldGenStageId, PostTerrainStageFn> map = {
       {WorldGenStageId::Ravines, RunRavinesStage},
+      {WorldGenStageId::Valleys, RunValleysStage},
       {WorldGenStageId::Caves, RunCavesStage},
       {WorldGenStageId::Fluids, RunFluidsStage},
       {WorldGenStageId::Ores, RunOresStage},
