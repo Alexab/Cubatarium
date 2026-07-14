@@ -129,14 +129,22 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
                       : ChunkWriteFormat::Binary;
 }
 
-void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z)
+void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
+                                                    const bool priority)
 {
   const glm::ivec2 key(world_x, world_z);
   if (!PendingTerrainColumnRelightKeys.insert(key).second)
   {
     return;
   }
-  PendingTerrainColumnRelights.push_back(key);
+  if (priority)
+  {
+    PendingTerrainColumnRelightsPriority.push_back(key);
+  }
+  else
+  {
+    PendingTerrainColumnRelights.push_back(key);
+  }
 }
 
 void UWorldPersistence::EnqueuePlayerRelight(
@@ -172,7 +180,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     ++drained_player;
   }
 
-  if (max_bg_columns <= 0 || PendingTerrainColumnRelights.empty())
+  if (max_bg_columns <= 0)
   {
     return;
   }
@@ -183,14 +191,31 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) * 2
                : 0;
   int drained_bg = 0;
-  while (!PendingTerrainColumnRelights.empty() && drained_bg < max_bg_columns)
+  auto drain_one = [&]()
   {
+    if (drained_bg >= max_bg_columns)
+    {
+      return false;
+    }
     if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
     {
-      break;
+      return false;
     }
-    const glm::ivec2 col = PendingTerrainColumnRelights.front();
-    PendingTerrainColumnRelights.pop_front();
+    glm::ivec2 col;
+    if (!PendingTerrainColumnRelightsPriority.empty())
+    {
+      col = PendingTerrainColumnRelightsPriority.front();
+      PendingTerrainColumnRelightsPriority.pop_front();
+    }
+    else if (!PendingTerrainColumnRelights.empty())
+    {
+      col = PendingTerrainColumnRelights.front();
+      PendingTerrainColumnRelights.pop_front();
+    }
+    else
+    {
+      return false;
+    }
     PendingTerrainColumnRelightKeys.erase(col);
     if (async_bg)
     {
@@ -201,6 +226,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
     }
     ++drained_bg;
+    return true;
+  };
+  while (drain_one())
+  {
   }
 }
 
@@ -211,13 +240,15 @@ void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_column
 
 int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
 {
-  return static_cast<int>(PendingTerrainColumnRelights.size());
+  return static_cast<int>(PendingTerrainColumnRelights.size() +
+                          PendingTerrainColumnRelightsPriority.size());
 }
 
 void UWorldPersistence::ClearPendingRelights()
 {
   PendingPlayerRelights.clear();
   PendingTerrainColumnRelights.clear();
+  PendingTerrainColumnRelightsPriority.clear();
   PendingTerrainColumnRelightKeys.clear();
 }
 
@@ -280,8 +311,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 
   if (has_disk || complete)
   {
+    const glm::ivec3 focus_ground =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const int focus_radius = world.GetRenderDistanceChunks() + 1;
+    const bool near_focus =
+        std::abs(ground_coord.x - focus_ground.x) <= focus_radius &&
+        std::abs(ground_coord.z - focus_ground.z) <= focus_radius;
     EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                ground_coord.z * CHUNK_SIZE);
+                                ground_coord.z * CHUNK_SIZE, near_focus);
     const ProceduralSettings &settings = world.GetProceduralSettings();
     world.MarkTerrainChunkMeshDirtySeamed(ground_coord, 0, settings.MaxHeight,
                                           true);
@@ -298,9 +335,18 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
 
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
-    constexpr std::size_t kMaxAsyncSliceAppliesPerFrame = 16;
+    const double frame_ms = world.GetLastMovementFrameMs();
+    std::size_t max_slice_applies = 10;
+    if (frame_ms > 24.0)
+    {
+      max_slice_applies = 4;
+    }
+    else if (frame_ms > 16.0)
+    {
+      max_slice_applies = 6;
+    }
     for (AsyncChunkLoadResult &load :
-         AsyncChunkIo->DrainLoadsUpTo(kMaxAsyncSliceAppliesPerFrame))
+         AsyncChunkIo->DrainLoadsUpTo(max_slice_applies))
     {
       const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
       auto pending_it = PendingAsyncColumnLoadSlices.find(ground);

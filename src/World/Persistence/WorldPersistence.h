@@ -58,7 +58,8 @@ public:
   bool IsAsyncChunkIoQuiescent() const;
   void AbortAsyncChunkIo();
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
-  void EnqueueTerrainColumnRelight(int world_x, int world_z);
+  void EnqueueTerrainColumnRelight(int world_x, int world_z,
+                                   bool priority = false);
   void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
   void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
@@ -104,6 +105,7 @@ private:
   };
   std::deque<PlayerRelightRequest> PendingPlayerRelights;
   std::deque<glm::ivec2> PendingTerrainColumnRelights;
+  std::deque<glm::ivec2> PendingTerrainColumnRelightsPriority;
   std::unordered_set<glm::ivec2, IVec2Hash> PendingTerrainColumnRelightKeys;
   std::string WorldFolderPath;
 };

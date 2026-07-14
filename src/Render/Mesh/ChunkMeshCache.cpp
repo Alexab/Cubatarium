@@ -452,10 +452,44 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   MeshRevisions.Erase(chunkCoord);
   ActiveMeshSourceRevision.erase(chunkCoord);
   GreedyBatchesDirty = true;
-  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
-  FluidSurfaceCache.erase(ground);
-  FluidSurfaceDirty.erase(ground);
+  if (chunkCoord.y == 0)
+  {
+    const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+    FluidSurfaceCache.erase(ground);
+    FluidSurfaceDirty.erase(ground);
+  }
   ++MeshRevision;
+  InstancesDirty = true;
+  CrossBatchesDirty = true;
+  InvalidateVisibleList();
+}
+
+void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
+{
+  if (ground_coord.y != 0)
+  {
+    ground_coord.y = 0;
+  }
+  max_cy = std::max(0, max_cy);
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    Cache.erase(slice);
+    GreedyCache.erase(slice);
+    const auto vIt = GreedyVertexCountByChunk.find(slice);
+    if (vIt != GreedyVertexCountByChunk.end())
+    {
+      GreedyVertexCountTotal -= vIt->second;
+      GreedyVertexCountByChunk.erase(vIt);
+    }
+    Dirty.Erase(slice);
+    MeshRevisions.Erase(slice);
+    ActiveMeshSourceRevision.erase(slice);
+  }
+  FluidSurfaceCache.erase(ground_coord);
+  FluidSurfaceDirty.erase(ground_coord);
+  ++MeshRevision;
+  GreedyBatchesDirty = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
   InvalidateVisibleList();

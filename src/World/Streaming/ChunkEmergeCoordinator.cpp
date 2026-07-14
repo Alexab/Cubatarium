@@ -42,12 +42,17 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
     budget.MaxMeshDrain = std::max(2, budget.MaxMeshDrain / 2);
     budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
+  else if (last_frame_ms > 20.0 && boost)
+  {
+    budget.MaxChunkCommits = std::max(1, budget.MaxChunkCommits - 1);
+    budget.MaxLoadOps = std::max(1, budget.MaxLoadOps - 1);
+  }
   else if (last_frame_ms > 16.0)
   {
     budget.MaxMeshDrain = std::max(4, budget.MaxMeshDrain - 2);
     budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
-  if (boost)
+  if (boost && last_frame_ms <= 20.0)
   {
     budget.MaxMeshDrain =
         std::max(budget.MaxMeshDrain, budget.MaxChunkCommits * 2);

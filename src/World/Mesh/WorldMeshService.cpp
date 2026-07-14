@@ -74,6 +74,20 @@ void UWorldMeshService::RemoveChunk(glm::ivec3 chunk_coord)
   NotifyChunkUnloaded(chunk_coord);
 }
 
+void UWorldMeshService::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
+{
+  Cache.RemoveColumn(ground_coord, max_cy);
+  if (ground_coord.y != 0)
+  {
+    ground_coord.y = 0;
+  }
+  max_cy = std::max(0, max_cy);
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    NotifyChunkUnloaded(glm::ivec3(ground_coord.x, cy, ground_coord.z));
+  }
+}
+
 void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
                                             int max_y)
 {

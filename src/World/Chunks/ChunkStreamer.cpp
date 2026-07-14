@@ -504,8 +504,16 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = RenderDistance + UnloadMargin;
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int player_cy_min =
+      UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
+          .y;
+  const int player_cy_max =
+      UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0)).y;
+  const int keep_cy_min = std::max(0, player_cy_min - 1);
+  const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
   std::unordered_set<glm::ivec3, IVec3Hash> columnsInMemory;
+  columnsInMemory.reserve(256);
   World.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
       {
@@ -514,10 +522,11 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       });
 
   int unloadOps = 0;
+  const int unload_limit = EffectiveUnloadOpsPerFrame;
   std::unordered_set<glm::ivec3, IVec3Hash> savedColumns;
   for (const glm::ivec3 &ground : columnsInMemory)
   {
-    if (unloadOps >= MaxUnloadOpsPerFrame)
+    if (unloadOps >= unload_limit)
     {
       break;
     }
@@ -530,7 +539,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
 
     bool keepColumn = false;
-    for (int cy = 0; cy <= maxCy; ++cy)
+    for (int cy = keep_cy_min; cy <= keep_cy_max; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
       if (!World.GetChunkManager().HasChunk(slice))
@@ -554,6 +563,11 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       ++LastFrameStats.savesThisFrame;
     }
 
+    if (OnUnloadColumn)
+    {
+      OnUnloadColumn(ground, maxCy);
+    }
+
     for (int cy = 0; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
@@ -562,7 +576,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
         continue;
       }
       World.GetChunkManager().RemoveChunk(slice);
-      if (OnUnloadChunk)
+      if (OnUnloadChunk && !OnUnloadColumn)
       {
         OnUnloadChunk(slice);
       }

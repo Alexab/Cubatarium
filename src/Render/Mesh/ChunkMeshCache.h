@@ -49,6 +49,8 @@ public:
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
+  /// Removes all Y slices for a terrain column with one greedy-list invalidation.
+  void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame = 8,
                           int max_schedule_per_frame = 8);

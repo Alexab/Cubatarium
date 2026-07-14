@@ -43,6 +43,7 @@ public:
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
+  using UnloadColumnFn = std::function<void(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
@@ -67,7 +68,19 @@ public:
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
-  void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
+  void SetMaxUnloadOpsPerFrame(int value)
+  {
+    MaxUnloadOpsPerFrame = value;
+    EffectiveUnloadOpsPerFrame = value;
+  }
+  void SetUnloadColumnCallback(UnloadColumnFn fn)
+  {
+    OnUnloadColumn = std::move(fn);
+  }
+  void SetEffectiveUnloadOpsPerFrame(int value)
+  {
+    EffectiveUnloadOpsPerFrame = value;
+  }
   void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
   void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
   void SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
@@ -116,6 +129,7 @@ private:
   int UnloadMargin{1};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
+  int EffectiveUnloadOpsPerFrame{2};
   bool Enabled{true};
   std::string WorldFolder;
 
@@ -123,6 +137,7 @@ private:
   SaveChunkFn OnSaveChunk;
   MarkDirtyFn OnMarkDirty;
   UnloadChunkFn OnUnloadChunk;
+  UnloadColumnFn OnUnloadColumn;
   GenerateColumnFn OnGenerateColumn;
   RequestAsyncChunkFn OnRequestAsyncChunk;
   IsChunkCommittedFn OnIsChunkCommitted;

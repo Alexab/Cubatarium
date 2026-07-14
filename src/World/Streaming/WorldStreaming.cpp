@@ -136,7 +136,6 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         const bool near_focus =
             std::abs(coord.x - focus_ground.x) <= focus_radius &&
             std::abs(coord.z - focus_ground.z) <= focus_radius;
-        bool mesh_from_relight = false;
         DeferredPhysicsSeedQueue.push_back(coord);
         if (SealFluidShoreOnChunkCommitted(
                 world.BlockWorld, *world.BlockRegistry, settings,
@@ -145,28 +144,16 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE;
           world.MarkTerrainChunkMeshDirtySeamed(ground, 0, remesh_max_y, true);
         }
-        if (IsTerrainChunkComplete(world.BlockWorld, ground, settings.MaxHeight))
+        if (!world.IsLightingRelightDeferred())
         {
-          if (near_focus && !world.IsLightingRelightDeferred())
-          {
-            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
-                                       ground.z * CHUNK_SIZE, 0,
-                                       settings.MaxHeight, true);
-            mesh_from_relight = true;
-          }
-          else
-          {
-            world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                           ground.z * CHUNK_SIZE);
-          }
+          world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
+                                                         ground.z * CHUNK_SIZE,
+                                                         near_focus);
         }
-        if (!mesh_from_relight)
-        {
-          // Far columns: mesh before async relight for object visibility;
-          // remesh after relight via FlushPendingRelightMeshColumns.
-          world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, 0, settings.MaxHeight, true);
-        }
+        // Mesh before async relight for object visibility; remesh after relight
+        // via FlushPendingRelightMeshColumns.
+        world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, 0, settings.MaxHeight, true);
       });
   ChunkScheduler->SetColumnMeshDirtyFn(
       [&world](glm::ivec3 groundCoord, int min_y, int max_y)
@@ -185,6 +172,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const UChunkEmergeCoordinator::FrameBudget budget =
       EmergeCoordinator->GetLastBudget();
   UChunkEmergeCoordinator::FrameBudget chunk_budget = budget;
+  const double frame_ms = world.GetLastMovementFrameMs();
+  const int pending_bg =
+      world.Persistence ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                        : 0;
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
   {
     const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
@@ -193,6 +184,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
     const int focus_radius = world.GetRenderDistanceChunks() + 1;
     const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
+    const bool moving_fast =
+        world.LastMovementSpeed > procedural.MovementSpeedBoostThreshold;
+    if (moving_fast &&
+        (mesh_dirty > 16 || pending_bg > 8 || frame_ms > 20.0))
+    {
+      chunk_budget.MaxChunkCommits = std::min(
+          chunk_budget.MaxChunkCommits, procedural.MaxChunkCommitsPerFrame);
+      chunk_budget.MaxLoadOps =
+          std::min(chunk_budget.MaxLoadOps, procedural.MaxLoadOpsPerFrame);
+    }
     if (mesh_dirty > 32 &&
         world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
                                                             focus_radius))
@@ -201,10 +202,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::max(1, chunk_budget.MaxChunkCommits / 2);
       chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
     }
+    if (frame_ms > kBadFrameMs)
+    {
+      chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits / 2);
+      chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
+    }
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
                          chunk_budget.MaxLoadOps);
   }
-  const int physics_budget = std::max(1, chunk_budget.MaxChunkCommits);
+  int physics_budget = std::max(1, chunk_budget.MaxChunkCommits);
+  if (frame_ms > kBadFrameMs)
+  {
+    physics_budget = 1;
+  }
   const auto physics_t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < physics_budget && !DeferredPhysicsSeedQueue.empty(); ++i)
   {
@@ -219,15 +229,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           .count();
   world.Persistence->TickAsyncChunkIo(world);
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
-  const int pending_bg = world.Persistence->GetPendingTerrainColumnRelightCount();
   const int player_budget = pending_player > 0 ? 2 : 0;
   const bool async_bg =
       procedural.AsyncRelight && !world.IsLightingRelightDeferred();
   int bg_budget =
-      async_bg ? (pending_bg > 24 ? 2 : 1)
+      async_bg ? (pending_bg > 24 ? 3 : (pending_bg > 8 ? 2 : 1))
                : (pending_bg > 12 ? 2 : (pending_bg > 0 ? 1 : 0));
 
-  const double frame_ms = world.GetLastMovementFrameMs();
   const double flat_ms = world.GetMeshService().GetLastFlatRebuildMs();
   const auto now = std::chrono::steady_clock::now();
   if (gLastBgRelightBacklogTs == std::chrono::steady_clock::time_point{})
@@ -411,11 +419,24 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [this, &world](glm::ivec3 coord)
       {
-        world.GetMeshService().RemoveChunk(coord);
         world.Collision.RemoveChunkMovementSolidCache(coord);
         if (coord.y == 0 && ChunkScheduler)
         {
           ChunkScheduler->Invalidate(coord);
+        }
+      });
+  Streamer->SetUnloadColumnCallback(
+      [this, &world](glm::ivec3 ground, int max_cy)
+      {
+        world.GetMeshService().RemoveColumn(ground, max_cy);
+        for (int cy = 0; cy <= max_cy; ++cy)
+        {
+          world.Collision.RemoveChunkMovementSolidCache(
+              glm::ivec3(ground.x, cy, ground.z));
+        }
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
         }
       });
   Streamer->SetAsyncGeneration(procedural.AsyncChunkGeneration);
@@ -553,6 +574,17 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     lastCameraPosition = eye;
 
     const ProceduralSettings &procedural = world.GetProceduralSettings();
+    const double frame_ms = world.GetLastMovementFrameMs();
+    int unload_ops = world.MaxUnloadOpsPerFrame;
+    if (frame_ms > 24.0)
+    {
+      unload_ops = 0;
+    }
+    else if (frame_ms > 16.0)
+    {
+      unload_ops = std::min(unload_ops, 1);
+    }
+    Streamer->SetEffectiveUnloadOpsPerFrame(unload_ops);
     Streamer->Update(WorldPosToBlock(eye), eye, cap);
     Streamer->PrefetchAhead(
         UChunkManager::WorldToChunk(

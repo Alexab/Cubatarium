@@ -40,6 +40,7 @@ public:
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
+  void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord, int min_y,
                                  int max_y);
