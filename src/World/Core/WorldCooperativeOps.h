@@ -71,7 +71,7 @@ private:
               const std::string &message) const;
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);
-  void InitGenerationGrid(UWorld &world);
+  void InitGenerationGrid(UWorld &world, bool center_on_load_focus = false);
   void SealFluidInGenerationPatch(UWorld &world);
   bool LoadOneChunkFile(UWorld &world, const std::filesystem::path &path);
   bool AdvanceGeneration(UWorld &world, int budget);

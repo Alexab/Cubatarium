@@ -1927,7 +1927,12 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   if (BlockRegistry)
   {
     std::unordered_set<glm::ivec3, IVec3Hash> grounds;
-    grounds.reserve(ModifiedChunks.size());
+    BlockWorld.GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          const glm::ivec3 coord = chunk.GetCoord();
+          grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+        });
     for (const glm::ivec3 &modified : ModifiedChunks)
     {
       grounds.insert(glm::ivec3(modified.x, 0, modified.z));

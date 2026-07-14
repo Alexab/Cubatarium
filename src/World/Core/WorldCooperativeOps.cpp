@@ -664,7 +664,15 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
       world.IsStreamingEnabled() && world.HasPersistedSave;
   if (incremental_save || !world.ModifiedChunks.empty())
   {
-    grounds.reserve(world.ModifiedChunks.size());
+    if (incremental_save)
+    {
+      world.BlockWorld.GetChunkManager().ForEachChunk(
+          [&](const UChunk &chunk)
+          {
+            const glm::ivec3 coord = chunk.GetCoord();
+            grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+          });
+    }
     for (const glm::ivec3 &modified : world.ModifiedChunks)
     {
       grounds.insert(glm::ivec3(modified.x, 0, modified.z));
@@ -686,7 +694,8 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
   }
 }
 
-void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
+void UWorldCooperativeSession::InitGenerationGrid(UWorld &world,
+                                                  const bool center_on_load_focus)
 {
   if (!world.WorldGen)
   {
@@ -696,8 +705,17 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world)
   {
     world.ObjectLibrary->RebindBlockIds(*world.BlockRegistry);
   }
-  GenCenterX = 0;
-  GenCenterZ = 0;
+  if (center_on_load_focus)
+  {
+    const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+    GenCenterX = focus_block.x;
+    GenCenterZ = focus_block.z;
+  }
+  else
+  {
+    GenCenterX = 0;
+    GenCenterZ = 0;
+  }
   const int collision_shell_chunks =
       world.PhysicsFlags.EnableCollisionReadinessGate
           ? std::max(1, world.PhysicsBudgetConfig.CollisionSafetyRadiusChunks)
@@ -1457,16 +1475,23 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       if (ChunkFilesRead == 0 && VoxelsFromChunkFiles == 0)
       {
-        world.HasPersistedSave = false;
-        world.LoadedFromChunkSave = false;
-        world.AllowProceduralFill = true;
-        NeedsProceduralFill = true;
+        if (world.IsStreamingEnabled() && world.HasPersistedSave)
+        {
+          NeedsProceduralFill = false;
+        }
+        else
+        {
+          world.HasPersistedSave = false;
+          world.LoadedFromChunkSave = false;
+          world.AllowProceduralFill = true;
+          NeedsProceduralFill = true;
+        }
       }
     }
     if (NeedsProceduralFill)
     {
       ProceduralFillLoadPath = true;
-      InitGenerationGrid(world);
+      InitGenerationGrid(world, ProceduralFillLoadPath);
       CurrentPhase = Phase::ProceduralFill;
       Report(sink, "generate", ProceduralFillProgressBase(),
              "Generating terrain...");
@@ -1485,14 +1510,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                      : AdvanceGeneration(world, budget * CHUNK_SIZE);
     if (generation_done)
     {
-      if (world.WorldGen && world.BlockRegistry)
+      if (!ProceduralFillLoadPath || world.Users.empty())
       {
-        world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
-            world.BlockWorld, *world.BlockRegistry);
-      }
-      else if (world.WorldGen)
-      {
-        world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
+        if (world.WorldGen && world.BlockRegistry)
+        {
+          world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
+              world.BlockWorld, *world.BlockRegistry);
+        }
+        else if (world.WorldGen)
+        {
+          world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
+        }
       }
       CurrentPhase = Phase::FinalizeWorld;
     }
