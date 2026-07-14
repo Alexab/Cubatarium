@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "rarity": 600,
+  "min_depth": 8,
+  "max_depth": 40,
+  "aquatic_max_depth": 5
+}
