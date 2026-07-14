@@ -8,16 +8,17 @@ BlockWorld → ChunkMeshCache (GreedyMesher) → GreedyMeshBatch[] → GeometryE
 
 Legacy path (`greedy_meshing: false`): instanced cubes via `vshader_instanced.glsl`.
 
-World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below). Default in `config.json.example` is legacy (all `false`).
+World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per chunk. **`config.json` → `render`** toggles optimizations (see below).
 
 | Flag | Effect |
 |------|--------|
 | `greedy_meshing` | `true` (default): GreedyMesher merged quads; **required** for water, lava, fire. `false`: legacy instanced cubes (solids only). |
 | `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
-| `frustum_culling` | `true` (default): skip chunks outside view frustum. |
-| `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged. |
-| `frustum_culling` | Skip off-screen chunks in the instance list. Skips near plane; chunk AABB expanded by 2 blocks. |
-| `batch_cache` | Skip rebuilding texture batches when mesh revision unchanged (legacy instanced path only). |
+| `frustum_culling` | `true` (default): skip chunks outside view frustum. Chunk AABB expanded by 2 blocks. |
+| `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged (legacy instanced path). |
+| `performance_preset` | `fast` / `balanced` (default) / `quality` — seeds `async_meshing`, `distance_fog`, `gradient_sky`; individual `render.*` keys override the preset. |
+| `async_meshing` | Background mesh rebuild; see `RenderSettings.AsyncMeshing`. |
+| `distance_fog` | Distance fog using `FogHorizonBlocks` / `RenderHorizonBlocks`. |
 
 **Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy mesh uses `vshader.glsl` with vertices in world space and atlas UV baked on the CPU (`BlockAtlasUV.h`, same layout as `CubeGL`).
 
@@ -36,21 +37,19 @@ Assets (textures, models, prefabs) resolve via `FindProjectRoot()` from the repo
 
 | File | Content |
 |------|---------|
-| `chunks/` | Per-chunk JSON (`cx_cy_cz.json`), format_version 2, sparse voxels |
+| `chunks/` | Per-chunk binary `cx_cy_cz.cchunk` (primary); legacy `*.json` read for migration |
 | `chunks.json` | Marker `{ "format_version": 3, "storage": "per_file" }` |
 | `users.json` | Per user: `position[3]`, `yaw`, `pitch` |
-| `world_data.json` | `world_name`, `spawn_point` |
-| `objects.json` | Legacy; read-only migration source |
-| `blocks.json` | Legacy flat block list (import if chunks empty) |
+| `world_data.json` | `world_name`, `spawn_point`, `procedural`, `worldgen_sets` |
 
-## Load order (`World::Load`)
+## Load order (`WorldCooperativeOps`)
 
-1. `world_data.json`, `users.json`
-2. `chunks/` directory if present, else monolithic `chunks.json` (+ migrate to per-file)
-3. If `CountNonAir == 0`: `blocks.json`
-4. If still empty: `MigrateObjectsFromJson(objects.json)`
-5. If still empty: procedural terrain (`GenerateHeightmap` or `GenerateFlat`)
-6. `RebuildBlockMesh`; camera restored from user data (not spawn reset)
+1. `world_data.json` (requires `worldgen_sets`), `users.json`, `creatures.json`
+2. `chunks.json` storage marker → scan `chunks/` per-file (`.cchunk` / `.json`)
+3. If no persisted terrain and world is new: procedural fill
+4. `RebuildBlockMesh`; camera restored from user data (not spawn reset)
+
+Legacy `blocks.json`, monolithic `chunks.json` arrays, and save `objects.json` are **not** read.
 
 ## Blocks
 
@@ -66,7 +65,7 @@ Block types and face textures load from **resource packs** under `resource_packs
 
 Face order in block JSON: **[+Z, +X, −Z, −X, +Y, −Y]** (same as `BlockAtlasUV.h`).
 
-Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base`. For full Minecraft-parity visuals, generate a local legacy pack (gitignored):
+Default release packs: `kenney_voxel_16` + `cubatarium_cc0_base`. For full legacy block visuals (`minecraft_legacy_16`), generate a local pack (gitignored):
 
 ```powershell
 .\tools\migrate_to_resource_pack.ps1
@@ -85,11 +84,11 @@ Legacy `models/blocks/` and `textures/blocks/` at repo root are **deprecated**; 
 | Hills | stone | gravel (fallback stone) |
 | Tundra | snow (fallback stone) | dirt |
 
-Trees and structures: prefabs in [`prefabs/`](../prefabs/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Runtime data under `content/` is **JSON only** (C++ uses `nlohmann::json`; YAML in `tools/` is for authoring scripts). Worldgen reads [`content/prefab_features.json`](../content/prefab_features.json) (vegetation, decoration, structures pools by biome; optional `sub_biomes` per rule; scatter mode for single-block ground cover). See [PREFAB_WORLDGEN.md](PREFAB_WORLDGEN.md). Feature toggles: `procedural.trees` (vegetation), `procedural.decoration`, `procedural.structures`. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `decoration_density`, `structure_density`, `biome_*_weight`, `biome_blend_radius`, `ore_density`, `terrain_erosion`). Biome height, surface `palette`, `sub_biomes`, feature weights, and pipeline stages load from [`content/worldgen_packs/<pack_id>/`](content/worldgen_packs/default/) (`pack.json`, `pipeline.json`, `biomes/*.json`; `WorldGenPack`, `procedural.worldgen_pack_id`). Hot-reload: console `worldgen reload` (new chunks only). Cave tuning: `procedural.cave_params` (`threshold`, `min_y`, `scale`, `max_depth_below_surface`, `style`: `noise` or `worm`). Bedrock thickness: `procedural.bedrock_top_y`.
+Trees and structures: world objects in [`objects/`](../objects/) use canonical block names (`tree_log`, `tree_leaves`, `stone`, `wood`, …) so they resolve in any primary resource pack. Runtime data under `content/` is **JSON only** (C++ uses `nlohmann::json`; YAML in `tools/` is for authoring scripts). Global defaults live in [`content/object_features.json`](../content/object_features.json); per-world overrides in `world_data.json` → `worldgen_sets` (edited in-game with **G**). See [OBJECT_WORLDGEN.md](OBJECT_WORLDGEN.md). Feature toggles: `procedural.trees` (vegetation), `procedural.decoration`, `procedural.structures`. Per-world density multipliers live in `procedural.tuning` (`vegetation_density`, `decoration_density`, `structure_density`, `biome_*_weight`, `biome_blend_radius`, `ore_density`, `terrain_erosion`). Biome height, surface `palette`, `sub_biomes`, feature weights, and pipeline stages load from [`content/worldgen_packs/<pack_id>/`](content/worldgen_packs/default/) (`pack.json`, `pipeline.json`, `biomes/*.json`; `WorldGenPack`, `procedural.worldgen_pack_id`). Hot-reload: console `worldgen reload` (new chunks only). Cave tuning: `procedural.cave_params` (`threshold`, `min_y`, `scale`, `max_depth_below_surface`, `style`: `noise` or `worm`). Bedrock thickness: `procedural.bedrock_top_y`.
 
 ## World generation
 
-Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorRegistry` (`WorldGeneratorDescriptor.h`). Factory entry: `UProceduralWorldGenFactory::Create`.
+Generators implement `IUWorldGenPipeline` and are registered in `UWorldGeneratorRegistry` (`WorldGeneratorDescriptor.h`). Factory entry: `UProceduralWorldGenFactory::Create`.
 
 | Generator id | Description |
 |--------------|-------------|
@@ -99,7 +98,7 @@ Generators implement `IWorldGenPipeline` and are registered in `UWorldGeneratorR
 | `hills` / `mountains` | Noise terrain presets |
 | `beta_retro` | Overworld (BetaRetro): beta-style cliffs with biomes |
 
-`UComposableWorldGenerator` composes column stages: terrain, fluids, caves, prefab features. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
+`UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IUBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
 Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 
@@ -134,7 +133,11 @@ Name heuristics in [`tools/canonical_blocks.yaml`](../tools/canonical_blocks.yam
 
 Implementation: [`GreedyMesher.cpp`](../src/Render/Mesh/GreedyMesher.cpp) (`NeighborHidesFace`).
 
-Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ solid transparent** boundaries (glass, ice) an extra **two-hop** check avoids x-ray into open air volumes. **Opaque ↔ fluid**: the **solid** face is kept (sand/stone texture at cliffs); the fluid face toward solids is culled so water does not paint a translucent skin on terrain blocks.
+Greedy mesh hides shared faces between solid blocks as before. At **opaque ↔ solid transparent** boundaries (glass, ice) an extra **two-hop** check avoids x-ray into open air volumes.
+
+**Flow-level fluids** (`FluidCellState`: source level 0, flowing 1–7): mesh height follows level on the top face; side faces use basin heuristic (enclosed pit) and level compare fluid↔fluid. See [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md).
+
+**Opaque ↔ fluid (cliff):** solid face kept at terrain; fluid face toward opaque culled on open cliffs. **Basin / pit:** fluid side faces toward stone are drawn (truncated by level). **Fluid ↔ fluid:** hide face when neighbor level ≥ self.
 
 - `stone | glass | air` (window) — opaque face toward glass stays culled; room stays visible through the pane.
 - `air | glass | stone` (glass on a solid facade) — opaque face toward glass is **kept** so depth/color behind glass is the adjacent stone, not sky or distant caves.
@@ -155,6 +158,8 @@ Documented in [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md
 3. **ShellSurface** — color, `GL_LEQUAL`, stencil == 1.
 4. **FuzzyEdges** — color, `GL_LESS`, stencil != 1 (soft edges only).
 
+After opaque + cutout passes, **`UOpaqueDepthCapture`** snapshots the depth buffer; color/fuzzy transparent passes discard fragments behind that opaque depth on the same pixel (`uOpaqueDepthGuard` in `fshader_greedy.glsl`).
+
 Frame setup: `Application::RenderFrame` clears **color, depth, and stencil** before `GeometryEngine::Paint`. FBO prefab icons use `GlStateScope` so GUI does not leak GL state into the world pass.
 
 Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 12 stems) ship in CC0 packs. QA: new world with `overworld`, `fill_water` / `fill_fire` true; spawn fire prefab `fire_patch`.
@@ -164,27 +169,42 @@ Import animated types: water/lava (4-frame vertical strips) and fire (2-frame, 1
 | Path | Role |
 |------|------|
 | `resource_packs/` | Block packs (definitions + textures); copied to `bin/resource_packs/` on build |
-| `models/objects/` | Legacy brush prototypes (`SingleCube` only) |
 | `textures/` | Non-block textures (creatures, UI, etc.) |
-| `prefabs/` | Multi-block templates → `PrefabLibrary` |
-| `prefabs/user/` | Drop-in user prefabs (optional) |
+| `objects/` | Multi-block templates → `UObjectLibrary` |
+| `objects/user/` | Drop-in user objects (optional) |
 
-Prefab assets load at startup via `Core::LoadSystem`. They are **not** stored in world saves — placed blocks persist in chunk files only.
+Object assets load at startup via `Core::LoadSystem`. They are **not** stored in world saves — placed blocks persist in chunk files only.
 
-## PrefabLibrary vs ObjectStorage
+## UObjectLibrary
 
-- **ObjectStorage** — legacy single-block brush catalog (`TakeObject` deprecated).
-- **PrefabLibrary** — JSON templates with sparse `blocks[]`, optional `category`, `displayName`, `placement.y_offset`; loaded from `prefabs/`, `prefabs/imported/`, `prefabs/user/`, and optional `resource_packs/*/prefabs/`; placement via `World::PlacePrefab`.
-- **Hotbar** — `0–9` primary bar; second bar (prefabs) via HUD when `hotbar_count` is 2 (`SetPrefabHotbar` from `PrefabLibrary::ListNames()`).
+- **UObjectLibrary** — JSON templates with sparse voxels, `tags[]`, optional `displayName`, `placement.y_offset`; loaded from `objects/`, `objects/imported/`, `objects/user/`, and optional `resource_packs/*/objects/`; placement via `World::PlaceObject`.
+- **Hotbar** — `0–9` primary bar; second bar (objects) via HUD when `hotbar_count` is 2 (`SetObjectHotbar` from `UObjectLibrary::ListNames()`).
+- **Worldgen UI** — **G** opens `WorldGenPaletteScreen` to edit per-world `worldgen_sets` (objects, terrain slots, ores).
 
 ## Streaming
 
 Default: `streaming_enabled: true` in `config.json`.
 
+Pipeline per frame:
+
+```
+UChunkStreamer (view-biased priority via ChunkLoadPriority)
+  → UChunkLoadScheduler (async Populate, column origin sort)
+  → commit → MarkDirty → UChunkMeshCache (async greedy + cross cutout)
+```
+
+`ChunkLoadPriority` — Chebyshev ring + view dot product + feet-neighborhood bonus; optional ring gate (inner ring before outer).
+
+`UChunkLoadScheduler` commits with `max_chunk_commits_per_frame` (boosted when movement speed exceeds `movement_speed_boost_threshold`).
+
+Altitude: `ComputeStreamingAltitude` shrinks effective `render_distance_chunks` and fog start when the camera rises (`render.altitude_adaptive_fog`).
+
+Spatial load: cooperative `MeshWarmup` phase builds meshes on the loading screen before gameplay.
+
 `ChunkStreamer` around the camera each frame:
 
 1. For each chunk in render radius — try `chunks/cx_cy_cz.json` on disk.
-2. If missing — generate columns for that chunk using the world's procedural pipeline (`IWorldGenPipeline::GenerateColumn` via `UWorldGeneratorRegistry`).
+2. If missing — generate columns for that chunk using the world's procedural pipeline (`PipelineChunkPopulator` / `IUWorldGenPipeline::GenerateColumn`).
 3. Unload distant chunks (save to disk, drop from memory).
 
 Initial area on new world: chunk-aligned patch centered at spawn, radius `render_distance_chunks` in blocks (`GenerateSpawnPatch` / `GenerateFullPatch` fill every column in each touched chunk). `ChunkStreamer` backfills empty columns in partially filled ground chunks (`y == 0`). Empty chunk JSON (`voxels: []`) is not treated as a successful load.
@@ -192,6 +212,34 @@ Initial area on new world: chunk-aligned patch centered at spawn, radius `render
 `terrain` and `world_seed` are stored in `world_data.json` per world so reload uses the same generator as creation.
 
 `render_distance_chunks` — radius in chunks (default 4).
+
+### Greedy draw categories
+
+| Category | Blocks | Pass |
+|----------|--------|------|
+| Opaque | solid terrain | opaque |
+| Cutout | leaves, glass discard | opaque + alpha cutout |
+| CrossCutout | tall_grass, reeds | opaque cutout (not 4-pass stencil) |
+| TransparentFluid | water, lava | `GreedyTransparentPipeline` |
+
+Cross batches merge by `blockId` in `RebuildFlatGreedyBatches`. Scatter vegetation capped via `max_per_chunk` in `prefab_features.json`.
+
+### Fog vs cull vs streaming
+
+Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from `ComputeAtmosphericSkyColors` (day/night, weather, sun/moon twilight). Sky horizon fog is **view-direction** radial when `horizon_fog_radial` is true (`fshader_sky.glsl`); celestial tint optional via `horizon_fog_celestial_tint`.
+
+| System | Horizon |
+|--------|---------|
+| `ComputeDistanceFog` | `FogHorizonBlocks(effective_render_distance, end_margin)` |
+| `ChunkMeshCache::MaxCullDistance` | `RenderHorizonBlocks(effective_render_distance)` |
+| `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
+| Altitude policy | `ground_y` from terrain surface (`altitude_use_terrain_surface`); horizontal cull above threshold |
+
+At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
+
+**Underwater / below-surface fog:** full-screen underwater fog when `eye.y < BlockTopY` in the eye column (`IsCameraInsideFluid`). When the camera is above the surface, seafloor tint uses per-column GPU maps (`UFluidSurfaceMap`: `GL_R16F` surface Y + `GL_R8UI` fluid index) built from `FluidSurfaceColumnSlice` cached per ground chunk; `fshader_greedy` compares `vWorldPos.y` to `surfaceYAt(vWorldPos.xz)`.
+
+Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
 
 ## Config (`<exe_dir>/config.json`)
 
@@ -225,7 +273,19 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 | `GuiIconSource` / `PrefabIconCache` | Block icons from `TextureCubeStorage`; prefab icons via FBO voxel preview (cached) |
 | `Application` | `AppState`, main menu vs in-game, console/palette overlays |
 | `ContentTypeRegistry` | Block/object categories (`content/types.json`, optional `"types"` on blocks) |
-| `CommandRegistry` | In-game console (`help`, `give`, `tp`, `fly`, `time`) |
+| `CommandRegistry` | In-game console; world commands in `RegisterWorldCommands` (`src/Commands/WorldCommands.cpp`) |
+
+## Console / Commands
+
+| Piece | Role |
+|-------|------|
+| `UCommandRegistry` | Name → handler map; `ExecuteLine` tokenizes input; `FormatHelpText()` lists registered names |
+| `RegisterWorldCommands` | Registers gameplay commands (`give`, `tp`, `fly`, `spawn`, skin/possess, `worldgen`) on session init |
+| `help` | Built after world commands; text comes from the registry, not a hardcoded list |
+| `UGameSession` | Owns registry + `Execute()` for the in-game console overlay |
+| History | `UConsoleCommandHistory` persists to `console_history.txt` under the game data root |
+
+Console is toggled via `ui.console_key` (default grave). Chat log lines are appended by `GameSession::AddChatLine`.
 
 **Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`; `OnMetricsChanged` triggers relayout when UI scale changes. Sizes come from scaled `GuiTheme` fields (design px at 720p/160dpi baseline). Main menu title uses `TopCenter` + centered label text; in-game HUD places hotbar bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
 
@@ -242,3 +302,45 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` in `Application::RouteKey`. Left Alt toggles free cursor for HUD.
 
 **Manual check (GUI):** resize main menu and in-game window; verify hotbar centering and row order; block/prefab icons and tooltips on hover and slot selection; F9 palette and console panel edges on resize.
+
+## Module boundaries
+
+Layer dependency rules (enforced by `tools/audit/check_include_rules.py` in CI):
+
+```
+App → Game, Gui, World (facade), Render (facade), Core
+World → Blocks, WorldGen, Creatures (IU-interfaces only)
+Render → World (IUBlockWorld read-only), Blocks (defs)
+World ↛ Render   (no #include Render/* from World headers)
+```
+
+| Module | May include | Must not include |
+|--------|-------------|------------------|
+| `src/World/` | Blocks, WorldGen, Creatures, Core | `Render/*` except `src/World/Mesh/` adapter |
+| `src/Render/` | Blocks, World interfaces | `Gui/*`, `App/Application.h` (Pipeline: see [`src/Render/Pipeline/README.md`](../src/Render/Pipeline/README.md)) |
+| `src/App/` | all facades | — |
+| `src/Gui/` | App interfaces, Blocks icons | direct `World.h` (use view-models) |
+
+New interfaces use **`IU*`** naming (`IUWorldMeshSink`, `IUGameContent`); see [`CODING_STYLE.md`](CODING_STYLE.md).
+
+### World facades (2026-07)
+
+| Module | Class | Role |
+|--------|-------|------|
+| `World/Mesh/` | `UWorldMeshService` | Chunk mesh cache, dirty API (`IUWorldMeshSink`) |
+| `World/Persistence/` | `UWorldPersistence` | users/world_data/chunk I/O |
+| `World/Streaming/` | `UWorldStreaming` | `UChunkStreamer`, scheduler, emerge |
+| `World/Streaming/` | `UChunkEmergeCoordinator` | Per-frame chunk/mesh budgets |
+| `World/Environment/` | `UWorldEnvironment` | Creatures, activity, poses |
+| `World/Collision/` | `UWorldCollision` | Movement, collision, step-up |
+| `Game/Interfaces/` | `IUGameContent` | Read-only defs (blocks, objects, creatures) |
+
+## Console / Commands module layout
+
+| Path | Role |
+|------|------|
+| `src/Commands/` | `UCommandRegistry`, `RegisterWorldCommands`, command handlers |
+| `src/Console/` | Input history (`UConsoleCommandHistory`), sanitization |
+| `src/Gui/Screens/ConsoleScreen.cpp` | Console overlay UI only |
+
+Gameplay commands register in `src/Commands/WorldCommands.cpp` on session init; `UGameSession` owns the registry and delegates `Execute()` to the overlay.

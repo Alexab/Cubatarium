@@ -5,9 +5,10 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
+#include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -17,38 +18,58 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
-#include "Render/Engine/ViewEngine.h"
-#include "Render/Primitives/Cube.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Camera/Frustum.h"
-#include "Storage/Object.h"
-#include "Storage/ObjectStorage.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
+#include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
-#include "Core/Progress/IProgressSink.h"
-#include "World/Core/WorldCooperativeOps.h"
 #include "World/Chunks/TerrainColumnUtil.h"
-#include "World/IO/AsyncChunkIO.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
+#include "World/Core/RuntimeTuning.h"
+#include "World/Core/WorldFluidFacade.h"
+#include "World/Core/WorldViewBinding.h"
+#include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Environment/WeatherAutoController.h"
+#include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
-#include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/AsyncRelightBuilder.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Lighting/ChunkLighting.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
-#include "World/Prefabs/Prefab.h"
-#include "World/Prefabs/PrefabUtil.h"
+#include "World/Mesh/WorldMeshDirtyPolicy.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
+#include "World/Persistence/WorldPersistence.h"
+#include <chrono>
+#include <filesystem>
+#include "World/Physics/FluidReflowScan.h"
+#include "World/Physics/FluidSpreadSystem.h"
+#include "World/Physics/PhysicsProfileFactory.h"
+#include "World/Physics/WorldBlockPhysicsService.h"
+#include "World/Physics/WorldChunkDirtyService.h"
+#include "World/Physics/WorldMovementPhysicsService.h"
+#include "World/Physics/WorldPhysicsScheduler.h"
 #include "World/Raycast/BlockRaycast.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
-#include "WorldGen/Core/IChunkPopulator.h"
+#include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/WorldStreaming.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
-#include "WorldGen/Features/PrefabFeaturePlacer.h"
+#include "WorldGen/Core/WorldGenSets.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
+#include <cctype>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -62,103 +83,976 @@ namespace
 {
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
-
 constexpr float kMinReasonablePlayerY = -32.0f;
+constexpr float kSecondsPerMinute = 60.0f;
+constexpr float kMinDayLengthMinutes = 1.0f;
 
-bool HasChunkJsonFiles(const std::string &chunks_dir)
+float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
+
+float Smoothstep(float edge0, float edge1, float x)
 {
-  if (!std::filesystem::exists(chunks_dir) ||
-      !std::filesystem::is_directory(chunks_dir))
+  if (edge1 <= edge0)
   {
-    return false;
+    return x >= edge1 ? 1.0f : 0.0f;
   }
-  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
-  {
-    if (entry.path().extension() == ".json")
-    {
-      return true;
-    }
-  }
-  return false;
+  const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+  return t * t * (3.0f - 2.0f * t);
 }
 
-bool HasChunkDataFiles(const std::string &chunks_dir)
+float Wrap01(float value)
 {
-  if (!std::filesystem::exists(chunks_dir) ||
-      !std::filesystem::is_directory(chunks_dir))
+  if (!std::isfinite(value))
   {
-    return false;
+    return 0.0f;
   }
-  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  const float wrapped = std::fmod(value, 1.0f);
+  return wrapped < 0.0f ? wrapped + 1.0f : wrapped;
+}
+
+std::string NormalizeToken(std::string value)
+{
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch)
+                 { return static_cast<char>(std::tolower(ch)); });
+  return value;
+}
+
+UWorld::CelestialBodyType CelestialTypeFromId(const std::string &id)
+{
+  const std::string lower = NormalizeToken(id);
+  if (lower.find("moon") != std::string::npos)
   {
-    const auto ext = entry.path().extension();
-    if (ext == ".json" || ext == ".cchunk")
-    {
-      return true;
-    }
+    return UWorld::CelestialBodyType::Moon;
   }
-  return false;
+  return UWorld::CelestialBodyType::Sun;
+}
+
+glm::vec3 ComputeCelestialDirection(const UWorld::UCelestialBodyVisual &body,
+                                    float time_norm)
+{
+  const float period_days = std::max(0.01f, body.OrbitPeriodDays);
+  const float orbit_phase =
+      (time_norm / period_days + body.OrbitPhase) * 6.28318530718f;
+  glm::vec3 dir(std::cos(orbit_phase), std::sin(orbit_phase), 0.0f);
+  const float inc = glm::radians(body.OrbitInclinationDeg);
+  const float cos_i = std::cos(inc);
+  const float sin_i = std::sin(inc);
+  const glm::vec3 tilted(dir.x, dir.y * cos_i - dir.z * sin_i,
+                         dir.y * sin_i + dir.z * cos_i);
+  const float lon = glm::radians(body.OrbitLongitudeDeg);
+  const float cos_l = std::cos(lon);
+  const float sin_l = std::sin(lon);
+  glm::vec3 out(tilted.x * cos_l + tilted.z * sin_l, tilted.y,
+                -tilted.x * sin_l + tilted.z * cos_l);
+  if (!std::isfinite(out.x) || !std::isfinite(out.y) || !std::isfinite(out.z))
+  {
+    out = glm::vec3(0.0f, 1.0f, 0.0f);
+  }
+  const float len = glm::length(out);
+  if (len <= 1e-5f)
+  {
+    return glm::vec3(0.0f, 1.0f, 0.0f);
+  }
+  return out / len;
 }
 
 } // namespace
 
-bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
-{
-  const std::string blocks_file = world_folder_path + "/blocks.json";
-  if (std::filesystem::exists(blocks_file) &&
-      std::filesystem::file_size(blocks_file) > 2)
-  {
-    return true;
-  }
-
-  const std::string chunks_dir = world_folder_path + "/chunks";
-  if (HasChunkDataFiles(chunks_dir) ||
-      UChunkStorageService::HasChunkFilesOnDisk(world_folder_path))
-  {
-    return true;
-  }
-
-  const std::string chunks_file = world_folder_path + "/chunks.json";
-  if (!std::filesystem::exists(chunks_file))
-  {
-    return false;
-  }
-
-  try
-  {
-    std::ifstream file(chunks_file);
-    if (!file.is_open())
-    {
-      return false;
-    }
-    const json data = json::parse(file);
-    const std::string storage = data.value("storage", "");
-    if (storage == "per_file" || storage == "binary" || storage == "json")
-    {
-      return true;
-    }
-    return data.contains("chunks") && data["chunks"].is_array() &&
-           !data["chunks"].empty();
-  }
-  catch (const json::exception &)
-  {
-    return false;
-  }
-}
-
-UWorld::UWorld(std::shared_ptr<UObjectStorage> object_storage,
+UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
                std::shared_ptr<UViewEngine> views)
-    : ObjectStorageInstance(object_storage), ViewInstance(views)
+    : TextureCubeInstance(texture_cube),
+      ViewBinding(std::make_unique<UWorldViewBinding>(std::move(views))),
+      MeshService(std::make_unique<UWorldMeshService>()),
+      Streaming(std::make_unique<UWorldStreaming>()),
+      Persistence(std::make_unique<UWorldPersistence>()), Environment(*this),
+      Collision(BlockWorld, &Environment)
 {
-  if (ObjectStorageInstance && ObjectStorageInstance->GetTextureCubeStorage())
+  if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(
-        ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
+    BlockRegistry =
+        std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
+    Collision.SetBlockRegistry(BlockRegistry.get());
   }
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
-  RegisterDefaultCreaturePosePresenters(PosePresenterRegistry);
-  ChunkStorage = std::make_unique<UChunkStorageService>();
+  Environment.Initialize();
+  ConfigurePhysicsServices();
+}
+
+UWorld::~UWorld() = default;
+
+std::string UWorld::WeatherTypeToString(WeatherType value)
+{
+  switch (value)
+  {
+  case WeatherType::Cloudy:
+    return "cloudy";
+  case WeatherType::Rain:
+    return "rain";
+  case WeatherType::Storm:
+    return "storm";
+  case WeatherType::Snow:
+    return "snow";
+  case WeatherType::Clear:
+  default:
+    return "clear";
+  }
+}
+
+bool UWorld::WeatherTypeFromString(const std::string &value, WeatherType &out)
+{
+  const std::string normalized = NormalizeToken(value);
+  if (normalized == "clear")
+  {
+    out = WeatherType::Clear;
+    return true;
+  }
+  if (normalized == "cloudy")
+  {
+    out = WeatherType::Cloudy;
+    return true;
+  }
+  if (normalized == "rain")
+  {
+    out = WeatherType::Rain;
+    return true;
+  }
+  if (normalized == "storm")
+  {
+    out = WeatherType::Storm;
+    return true;
+  }
+  if (normalized == "snow")
+  {
+    out = WeatherType::Snow;
+    return true;
+  }
+  return false;
+}
+
+void UWorld::SetTimeOfDayNormalized(float value)
+{
+  EnvironmentStateData.TimeOfDayNormalized = Wrap01(value);
+  UpdateCelestialLightingFactors();
+}
+
+void UWorld::UpdateCelestialLightingFactors()
+{
+  EnsureDefaultCelestialBodies();
+  float sun_day = 0.0f;
+  float moon_night = 0.0f;
+  for (UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    if (body.Id.empty())
+    {
+      body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
+    }
+    body.Type = CelestialTypeFromId(body.Id);
+    body.DirectionWorld = ComputeCelestialDirection(
+        body, EnvironmentStateData.TimeOfDayNormalized);
+    const float elev = body.DirectionWorld.y;
+    const float above_horizon =
+        Smoothstep(0.0f, GetCelestialHorizonFade(), elev);
+    const float lit = above_horizon * std::max(body.Intensity, 0.0f);
+    if (body.Type == CelestialBodyType::Sun)
+    {
+      sun_day = std::max(sun_day, lit);
+    }
+    else
+    {
+      moon_night = std::max(moon_night, lit);
+    }
+  }
+  EnvironmentStateData.DayNightFactor = Clamp01(sun_day);
+  EnvironmentStateData.MoonNightFactor = Clamp01(moon_night);
+  const float night = 1.0f - EnvironmentStateData.DayNightFactor;
+  const float auto_star_visibility =
+      Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
+  EnvironmentStateData.StarVisibility =
+      EnvironmentStateData.StarVisibilityOverride >= 0.0f
+          ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
+          : auto_star_visibility;
+}
+
+void UWorld::AddTimeOfDayNormalized(float delta)
+{
+  SetTimeOfDayNormalized(EnvironmentStateData.TimeOfDayNormalized + delta);
+}
+
+void UWorld::SetDayLengthMinutes(float minutes)
+{
+  EnvironmentStateData.DayLengthMinutes =
+      std::max(kMinDayLengthMinutes, minutes);
+}
+
+void UWorld::SetWeather(WeatherType weather, float transitionSeconds)
+{
+  SetWeatherInternal(weather, transitionSeconds, true);
+}
+
+void UWorld::SetWeatherInternal(WeatherType weather, float transitionSeconds,
+                                bool manual_override)
+{
+  if (manual_override)
+  {
+    EnvironmentSettingsData.WeatherRuntime.ManualOverride = true;
+  }
+  if (weather == WeatherType::Clear)
+  {
+    EnvironmentStateData.CloudCoverageOverride = -1.0f;
+  }
+  EnvironmentStateData.TargetWeather = weather;
+  EnvironmentStateData.WeatherTransitionDurationSec =
+      std::max(0.0f, transitionSeconds);
+  EnvironmentStateData.WeatherTransitionSec = 0.0f;
+  if (EnvironmentStateData.Weather == weather ||
+      EnvironmentStateData.WeatherTransitionDurationSec <= 0.01f)
+  {
+    EnvironmentStateData.Weather = weather;
+    EnvironmentStateData.TargetWeather = weather;
+    EnvironmentStateData.WeatherTransitionSec =
+        EnvironmentStateData.WeatherTransitionDurationSec;
+  }
+}
+
+void UWorld::SetWeatherByName(const std::string &name, float transitionSeconds)
+{
+  WeatherType weather = WeatherType::Clear;
+  if (WeatherTypeFromString(name, weather))
+  {
+    SetWeather(weather, transitionSeconds);
+  }
+}
+
+std::string UWorld::GetWeatherName() const
+{
+  return WeatherTypeToString(EnvironmentStateData.Weather);
+}
+
+void UWorld::ApplyCelestialBodiesFromConfig()
+{
+  if (EnvironmentSettingsData.CelestialBodies.empty())
+  {
+    EnsureDefaultCelestialBodies();
+    SyncDefaultCelestialBodiesToConfig();
+    return;
+  }
+  EnvironmentStateData.CelestialBodies.clear();
+  for (const EnvironmentCelestialBodySpec &spec :
+       EnvironmentSettingsData.CelestialBodies)
+  {
+    UCelestialBodyVisual body;
+    body.Id = spec.Id;
+    const std::string type = NormalizeToken(spec.Type);
+    body.Type =
+        type == "moon" ? CelestialBodyType::Moon : CelestialBodyType::Sun;
+    body.Color = spec.Color;
+    body.Intensity = spec.Intensity;
+    body.AngularSizeDeg = spec.AngularSizeDeg;
+    body.OrbitInclinationDeg = spec.OrbitInclinationDeg;
+    body.OrbitPeriodDays = spec.OrbitPeriodDays;
+    body.OrbitPhase = spec.OrbitPhase;
+    body.OrbitLongitudeDeg = spec.OrbitLongitudeDeg;
+    EnvironmentStateData.CelestialBodies.push_back(body);
+  }
+  RefreshSkyVisualStateForRender();
+}
+
+void UWorld::SyncDefaultCelestialBodiesToConfig()
+{
+  EnvironmentSettingsData.CelestialBodies.clear();
+  for (const UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    EnvironmentCelestialBodySpec spec;
+    spec.Id = body.Id;
+    spec.Type = body.Type == CelestialBodyType::Moon ? "moon" : "sun";
+    spec.Color = body.Color;
+    spec.Intensity = body.Intensity;
+    spec.AngularSizeDeg = body.AngularSizeDeg;
+    spec.OrbitInclinationDeg = body.OrbitInclinationDeg;
+    spec.OrbitPeriodDays = body.OrbitPeriodDays;
+    spec.OrbitPhase = body.OrbitPhase;
+    spec.OrbitLongitudeDeg = body.OrbitLongitudeDeg;
+    EnvironmentSettingsData.CelestialBodies.push_back(spec);
+  }
+}
+
+void UWorld::ApplyEnvironmentConfig(const EnvironmentConfig &config,
+                                    bool reset_weather_runtime)
+{
+  EnvironmentSettingsData = config;
+  EnvironmentSettingsData.Validate();
+  SetTimeOfDayNormalized(EnvironmentSettingsData.TimeOfDay);
+  SetDayLengthMinutes(EnvironmentSettingsData.DayLengthMinutes);
+  SetLightingMinAmbient(EnvironmentSettingsData.MinAmbient);
+  ApplyCelestialBodiesFromConfig();
+  if (reset_weather_runtime)
+  {
+    WeatherAutoRuntime runtime;
+    runtime.Enabled = EnvironmentSettingsData.WeatherAuto.AutoChange;
+    EnvironmentSettingsData.WeatherRuntime = runtime;
+  }
+}
+
+float UWorld::GetCelestialHorizonFade() const
+{
+  return EnvironmentSettingsData.CelestialHorizonFade;
+}
+
+void UWorld::SetWeatherAutoEnabled(bool enabled)
+{
+  EnvironmentSettingsData.WeatherRuntime.Enabled = enabled;
+  EnvironmentSettingsData.WeatherAuto.AutoChange = enabled;
+  if (enabled)
+  {
+    EnvironmentSettingsData.WeatherRuntime.ManualOverride = false;
+    EnvironmentSettingsData.WeatherRuntime.EpisodeRemainingSec = 0.0f;
+  }
+}
+
+bool UWorld::IsWeatherAutoEnabled() const
+{
+  return EnvironmentSettingsData.WeatherAuto.AutoChange &&
+         EnvironmentSettingsData.WeatherRuntime.Enabled;
+}
+
+void UWorld::ClearWeatherManualOverride()
+{
+  EnvironmentSettingsData.WeatherRuntime.ManualOverride = false;
+  EnvironmentSettingsData.WeatherRuntime.EpisodeRemainingSec = 0.0f;
+}
+
+std::string UWorld::GetWeatherAutoStatusText() const
+{
+  const WeatherAutoSettings &settings = EnvironmentSettingsData.WeatherAuto;
+  const WeatherAutoRuntime &runtime = EnvironmentSettingsData.WeatherRuntime;
+  std::string mode = "none";
+  if (runtime.EpisodeMode == WeatherAutoEpisodeMode::Dry)
+  {
+    mode = "dry";
+  }
+  else if (runtime.EpisodeMode == WeatherAutoEpisodeMode::Precip)
+  {
+    mode = "precip";
+  }
+  return "auto=" + std::string(IsWeatherAutoEnabled() ? "on" : "off") +
+         " manual=" + (runtime.ManualOverride ? "yes" : "no") +
+         " dry/precip=" + std::to_string(settings.DryFraction).substr(0, 4) +
+         "/" + std::to_string(settings.PrecipFraction).substr(0, 4) +
+         " episode=" + mode + " remaining=" +
+         std::to_string(runtime.EpisodeRemainingSec).substr(0, 5) + "s" +
+         " weather=" + GetWeatherName();
+}
+
+void UWorld::TickWeatherAuto(float dtSeconds)
+{
+  UWeatherAutoController::Tick(*this, dtSeconds);
+}
+
+void UWorld::EnsureDefaultCelestialBodies()
+{
+  if (!EnvironmentStateData.CelestialBodies.empty())
+  {
+    return;
+  }
+  UCelestialBodyVisual sun_main;
+  sun_main.Id = "sun_main";
+  sun_main.Type = CelestialBodyType::Sun;
+  sun_main.Color = glm::vec3(1.0f, 0.94f, 0.82f);
+  sun_main.Intensity = 1.0f;
+  sun_main.AngularSizeDeg = 5.0f;
+  sun_main.OrbitInclinationDeg = 23.0f;
+  sun_main.OrbitPeriodDays = 1.0f;
+  sun_main.OrbitPhase = 0.0f;
+  sun_main.OrbitLongitudeDeg = 0.0f;
+
+  UCelestialBodyVisual sun_secondary = sun_main;
+  sun_secondary.Id = "sun_secondary";
+  sun_secondary.Color = glm::vec3(1.0f, 0.8f, 0.62f);
+  sun_secondary.Intensity = 0.52f;
+  sun_secondary.AngularSizeDeg = 3.8f;
+  sun_secondary.OrbitInclinationDeg = 37.0f;
+  sun_secondary.OrbitPeriodDays = 1.6f;
+  sun_secondary.OrbitPhase = 0.22f;
+  sun_secondary.OrbitLongitudeDeg = 48.0f;
+
+  UCelestialBodyVisual moon_main;
+  moon_main.Id = "moon_main";
+  moon_main.Type = CelestialBodyType::Moon;
+  moon_main.Color = glm::vec3(0.72f, 0.78f, 0.9f);
+  moon_main.Intensity = 0.35f;
+  moon_main.AngularSizeDeg = 4.2f;
+  moon_main.OrbitInclinationDeg = 18.0f;
+  moon_main.OrbitPeriodDays = 1.0f;
+  moon_main.OrbitPhase = 0.5f;
+  moon_main.OrbitLongitudeDeg = 8.0f;
+
+  UCelestialBodyVisual moon_secondary = moon_main;
+  moon_secondary.Id = "moon_secondary";
+  moon_secondary.Color = glm::vec3(0.64f, 0.72f, 0.88f);
+  moon_secondary.Intensity = 0.22f;
+  moon_secondary.AngularSizeDeg = 3.2f;
+  moon_secondary.OrbitInclinationDeg = 29.0f;
+  moon_secondary.OrbitPeriodDays = 1.9f;
+  moon_secondary.OrbitPhase = 0.08f;
+  moon_secondary.OrbitLongitudeDeg = -34.0f;
+
+  EnvironmentStateData.CelestialBodies = {sun_main, sun_secondary, moon_main,
+                                          moon_secondary};
+  RefreshSkyVisualStateForRender();
+}
+
+void UWorld::RefreshSkyVisualStateForRender()
+{
+  UpdateCelestialLightingFactors();
+  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  {
+    EnvironmentStateData.CloudCoverage =
+        Clamp01(EnvironmentStateData.CloudCoverageOverride);
+  }
+}
+
+void UWorld::SetStarVisibility(float value)
+{
+  EnvironmentStateData.StarVisibilityOverride = Clamp01(value);
+  EnvironmentStateData.StarVisibility =
+      EnvironmentStateData.StarVisibilityOverride;
+}
+
+void UWorld::ResetCelestialBodies()
+{
+  EnvironmentStateData.CelestialBodies.clear();
+  EnsureDefaultCelestialBodies();
+}
+
+void UWorld::SetCloudCoverage(float value)
+{
+  EnvironmentStateData.CloudCoverageOverride = Clamp01(value);
+  EnvironmentStateData.CloudCoverage =
+      EnvironmentStateData.CloudCoverageOverride;
+}
+
+void UWorld::TickEnvironment(float dtSeconds)
+{
+  if (dtSeconds <= 0.0f || !std::isfinite(dtSeconds))
+  {
+    return;
+  }
+
+  if (!EnvironmentStateData.TimeFrozen)
+  {
+    const float cycle_seconds =
+        std::max(kMinDayLengthMinutes, EnvironmentStateData.DayLengthMinutes) *
+        kSecondsPerMinute;
+    AddTimeOfDayNormalized(dtSeconds / std::max(1.0f, cycle_seconds));
+  }
+
+  const auto weather_to_cloudiness = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Cloudy:
+      return 0.55f;
+    case WeatherType::Rain:
+      return 0.75f;
+    case WeatherType::Storm:
+      return 0.95f;
+    case WeatherType::Snow:
+      return 0.8f;
+    case WeatherType::Clear:
+    default:
+      return 0.1f;
+    }
+  };
+  const auto weather_to_precip = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Rain:
+      return 0.6f;
+    case WeatherType::Storm:
+      return 1.0f;
+    case WeatherType::Snow:
+      return 0.55f;
+    case WeatherType::Cloudy:
+    case WeatherType::Clear:
+    default:
+      return 0.0f;
+    }
+  };
+  const auto weather_to_fog = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Cloudy:
+      return 1.05f;
+    case WeatherType::Rain:
+      return 1.2f;
+    case WeatherType::Storm:
+      return 1.35f;
+    case WeatherType::Snow:
+      return 1.25f;
+    case WeatherType::Clear:
+    default:
+      return 1.0f;
+    }
+  };
+  const auto weather_to_wind = [](WeatherType weather) -> float
+  {
+    switch (weather)
+    {
+    case WeatherType::Storm:
+      return 1.0f;
+    case WeatherType::Rain:
+      return 0.65f;
+    case WeatherType::Cloudy:
+      return 0.45f;
+    case WeatherType::Snow:
+      return 0.35f;
+    case WeatherType::Clear:
+    default:
+      return 0.2f;
+    }
+  };
+
+  const bool transitioning =
+      EnvironmentStateData.Weather != EnvironmentStateData.TargetWeather;
+  if (transitioning &&
+      EnvironmentStateData.WeatherTransitionDurationSec > 0.01f)
+  {
+    EnvironmentStateData.WeatherTransitionSec += dtSeconds;
+    const float alpha =
+        Clamp01(EnvironmentStateData.WeatherTransitionSec /
+                EnvironmentStateData.WeatherTransitionDurationSec);
+    if (alpha >= 1.0f)
+    {
+      EnvironmentStateData.Weather = EnvironmentStateData.TargetWeather;
+      EnvironmentStateData.WeatherTransitionSec =
+          EnvironmentStateData.WeatherTransitionDurationSec;
+    }
+    const float from_cloud =
+        weather_to_cloudiness(EnvironmentStateData.Weather);
+    const float to_cloud =
+        weather_to_cloudiness(EnvironmentStateData.TargetWeather);
+    const float from_precip = weather_to_precip(EnvironmentStateData.Weather);
+    const float to_precip =
+        weather_to_precip(EnvironmentStateData.TargetWeather);
+    const float from_fog = weather_to_fog(EnvironmentStateData.Weather);
+    const float to_fog = weather_to_fog(EnvironmentStateData.TargetWeather);
+    const float from_wind = weather_to_wind(EnvironmentStateData.Weather);
+    const float to_wind = weather_to_wind(EnvironmentStateData.TargetWeather);
+
+    EnvironmentStateData.Cloudiness =
+        from_cloud + (to_cloud - from_cloud) * alpha;
+    EnvironmentStateData.PrecipitationIntensity =
+        from_precip + (to_precip - from_precip) * alpha;
+    EnvironmentStateData.WeatherFogMultiplier =
+        from_fog + (to_fog - from_fog) * alpha;
+    EnvironmentStateData.WindStrength =
+        from_wind + (to_wind - from_wind) * alpha;
+  }
+  else
+  {
+    EnvironmentStateData.Weather = EnvironmentStateData.TargetWeather;
+    EnvironmentStateData.Cloudiness =
+        weather_to_cloudiness(EnvironmentStateData.Weather);
+    EnvironmentStateData.PrecipitationIntensity =
+        weather_to_precip(EnvironmentStateData.Weather);
+    EnvironmentStateData.WeatherFogMultiplier =
+        weather_to_fog(EnvironmentStateData.Weather);
+    EnvironmentStateData.WindStrength =
+        weather_to_wind(EnvironmentStateData.Weather);
+  }
+
+  EnvironmentStateData.WeatherSkyAttenuation =
+      std::clamp(1.0f - EnvironmentStateData.Cloudiness * 0.28f, 0.65f, 1.0f);
+
+  const bool precip_active =
+      EnvironmentStateData.PrecipitationIntensity > 0.05f &&
+      (EnvironmentStateData.Weather == WeatherType::Rain ||
+       EnvironmentStateData.TargetWeather == WeatherType::Rain ||
+       EnvironmentStateData.Weather == WeatherType::Storm ||
+       EnvironmentStateData.TargetWeather == WeatherType::Storm ||
+       EnvironmentStateData.Weather == WeatherType::Snow ||
+       EnvironmentStateData.TargetWeather == WeatherType::Snow);
+  const float target_wetness =
+      precip_active ? EnvironmentStateData.PrecipitationIntensity * 0.85f
+                    : 0.0f;
+  const float wet_lerp =
+      std::clamp(dtSeconds * (precip_active ? 0.35f : 0.12f), 0.0f, 1.0f);
+  EnvironmentStateData.SurfaceWetness +=
+      (target_wetness - EnvironmentStateData.SurfaceWetness) * wet_lerp;
+  const float auto_cloud_coverage = std::clamp(
+      EnvironmentStateData.Cloudiness * 0.9f + target_wetness * 0.25f, 0.0f,
+      1.0f);
+  EnvironmentStateData.CloudCoverage =
+      EnvironmentStateData.CloudCoverageOverride >= 0.0f
+          ? Clamp01(EnvironmentStateData.CloudCoverageOverride)
+          : auto_cloud_coverage;
+  EnsureDefaultCelestialBodies();
+  UpdateCelestialLightingFactors();
+  TickWeatherAuto(dtSeconds);
+}
+
+void UWorld::RebuildAllLightingDirtyMeshes()
+{
+  if (BlockRegistry)
+  {
+    RelightAllLoadedChunks(BlockWorld, *BlockRegistry);
+  }
+  InvalidateBlockMesh();
+}
+
+void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
+                                  int max_y, bool priority_mesh,
+                                  bool include_skylight, bool include_block_light)
+{
+  if (LightingRelightDeferred || !BlockRegistry)
+  {
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  std::vector<glm::ivec3> relit_chunks;
+  RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
+                            max_y, include_block_light, include_skylight,
+                            &relit_chunks);
+  MarkRelitChunksForMesh(relit_chunks, priority_mesh);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FullRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
+                               int min_world_y)
+{
+  if (LightingRelightDeferred || !BlockRegistry || block_positions.empty())
+  {
+    return;
+  }
+  if (ProceduralTemplate.AsyncRelight)
+  {
+    EnqueueAsyncPlayerRelight(block_positions, min_world_y);
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const RelightFrontierOutcome outcome = RelightBlocksAroundAllEx(
+      BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y, true,
+      kRelightFrontierIterationsEdit);
+  MarkRelitChunksForMesh(outcome.relit_chunks, true);
+  PlayerRelightMeshBurstFrames = 3;
+  if (outcome.frontier_unfinished && Persistence)
+  {
+    for (const glm::ivec3 &pos : block_positions)
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FullRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
+                                    bool priority_mesh)
+{
+  if (relit_chunks.empty())
+  {
+    return;
+  }
+  int remesh_min_y = INT32_MAX;
+  int remesh_max_y = INT32_MIN;
+  std::unordered_set<glm::ivec3, IVec3Hash> grounds;
+  grounds.reserve(relit_chunks.size());
+  for (const glm::ivec3 &coord : relit_chunks)
+  {
+    grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+    const int chunk_base_y = coord.y * CHUNK_SIZE;
+    remesh_min_y = std::min(remesh_min_y, chunk_base_y);
+    remesh_max_y = std::max(remesh_max_y, chunk_base_y + CHUNK_SIZE - 1);
+  }
+  remesh_min_y = std::max(0, remesh_min_y - 1);
+  remesh_max_y = remesh_max_y + 1;
+  for (const glm::ivec3 &ground : grounds)
+  {
+    if (priority_mesh)
+    {
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, remesh_min_y,
+                                                           remesh_max_y, true);
+    }
+    else
+    {
+      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y,
+                                                   remesh_max_y, true);
+    }
+  }
+}
+
+void UWorld::AccumulateRelightMeshColumns(
+    const std::vector<glm::ivec3> &relit_chunks)
+{
+  if (relit_chunks.empty())
+  {
+    return;
+  }
+  for (const glm::ivec3 &coord : relit_chunks)
+  {
+    const glm::ivec2 ground(coord.x, coord.z);
+    const int chunk_base_y = coord.y * CHUNK_SIZE;
+    const int chunk_top_y = chunk_base_y + CHUNK_SIZE - 1;
+    auto [it, inserted] = PendingRelightMeshColumns.try_emplace(ground);
+    if (inserted)
+    {
+      it->second.min_y = std::max(0, chunk_base_y - 1);
+      it->second.max_y = chunk_top_y + 1;
+    }
+    else
+    {
+      it->second.min_y =
+          std::min(it->second.min_y, std::max(0, chunk_base_y - 1));
+      it->second.max_y = std::max(it->second.max_y, chunk_top_y + 1);
+    }
+  }
+}
+
+void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
+{
+  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0)
+  {
+    return;
+  }
+  int flushed = 0;
+  for (auto it = PendingRelightMeshColumns.begin();
+       it != PendingRelightMeshColumns.end() && flushed < max_columns_per_flush;)
+  {
+    const glm::ivec3 ground(it->first.x, 0, it->first.y);
+    MeshService->MarkTerrainChunkMeshDirtySeamed(ground, it->second.min_y,
+                                                 it->second.max_y, true);
+    it = PendingRelightMeshColumns.erase(it);
+    ++flushed;
+  }
+}
+
+void UWorld::ApplyEditFastRelight(
+    const std::vector<glm::ivec3> &block_positions)
+{
+  if (LightingRelightDeferred || !BlockRegistry || block_positions.empty())
+  {
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  RelightBlocksAroundLocal(BlockWorld, *BlockRegistry, block_positions);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.FastRelightMs =
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::ApplyEditLighting(const std::vector<glm::ivec3> &block_positions)
+{
+  if (block_positions.empty() || !Persistence)
+  {
+    return;
+  }
+  Persistence->EnqueuePlayerRelight(block_positions);
+  PhysicsTelemetryData.PendingPlayerRelights =
+      static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
+  PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
+      Persistence->GetPendingTerrainColumnRelightCount());
+}
+
+void UWorld::TickPlayerRelightMeshBurst()
+{
+  if (PlayerRelightMeshBurstFrames > 0)
+  {
+    --PlayerRelightMeshBurstFrames;
+  }
+}
+
+void UWorld::EnsureAsyncRelightBuilder()
+{
+  if (!AsyncRelight)
+  {
+    const std::size_t threads = static_cast<std::size_t>(
+        std::clamp(ProceduralTemplate.RelightThreadCount, 1, 8));
+    AsyncRelight = std::make_unique<UAsyncRelightBuilder>(threads);
+  }
+}
+
+void UWorld::EnqueueAsyncPlayerRelight(
+    const std::vector<glm::ivec3> &block_positions, int min_world_y)
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  EnsureAsyncRelightBuilder();
+  RelightJobSpec spec;
+  spec.block_positions = block_positions;
+  spec.min_world_y = min_world_y;
+  spec.max_world_y = ProceduralTemplate.MaxHeight;
+  spec.include_skylight = true;
+  spec.include_block_light = true;
+  spec.frontier_iterations = kRelightFrontierIterationsEdit;
+  spec.job_id = ++NextAsyncRelightJobId;
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+}
+
+void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
+                                              int min_y, int max_y,
+                                              bool include_skylight,
+                                              bool include_block_light)
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  EnsureAsyncRelightBuilder();
+  RelightJobSpec spec;
+  spec.block_positions = {glm::ivec3(world_x, min_y, world_z)};
+  spec.min_world_y = min_y;
+  spec.max_world_y = max_y;
+  spec.include_skylight = include_skylight;
+  spec.include_block_light = include_block_light;
+  spec.frontier_iterations = kRelightFrontierIterationsFull;
+  spec.job_id = ++NextAsyncRelightJobId;
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+}
+
+void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
+                                              int frontier_iterations)
+{
+  EnqueueAsyncChunkRelight(chunk_coord, true, false, frontier_iterations);
+}
+
+void UWorld::EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord,
+                                      bool include_skylight,
+                                      bool include_block_light,
+                                      int frontier_iterations)
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  if (!include_skylight && !include_block_light)
+  {
+    return;
+  }
+  EnsureAsyncRelightBuilder();
+  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
+  RelightJobSpec spec;
+  spec.block_positions = {origin};
+  spec.min_world_y = origin.y;
+  spec.max_world_y =
+      std::min(ProceduralTemplate.MaxHeight, origin.y + CHUNK_SIZE - 1);
+  spec.include_skylight = include_skylight;
+  spec.include_block_light = include_block_light;
+  spec.frontier_iterations = frontier_iterations;
+  spec.job_id = ++NextAsyncRelightJobId;
+  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+}
+
+int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
+                                     bool enqueue_background_frontier)
+{
+  if (!AsyncRelight || !BlockRegistry)
+  {
+    return 0;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  int applied = 0;
+  for (RelightComputeResult &result :
+       AsyncRelight->DrainCompleted(max_per_frame))
+  {
+    ++applied;
+    std::vector<glm::ivec3> relit_coords;
+    relit_coords.reserve(result.chunks.size());
+    for (const RelightChunkLightData &chunk_data : result.chunks)
+    {
+      if (UChunk *chunk =
+              BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
+      {
+        chunk->GetLightDataMutable() = chunk_data.light_packed;
+        relit_coords.push_back(chunk_data.coord);
+      }
+    }
+    if (priority_mesh)
+    {
+      MarkRelitChunksForMesh(relit_coords, true);
+      PlayerRelightMeshBurstFrames = 3;
+    }
+    else
+    {
+      AccumulateRelightMeshColumns(relit_coords);
+    }
+    if (enqueue_background_frontier && result.frontier_unfinished &&
+        Persistence)
+    {
+      for (const glm::ivec3 &pos : result.source_block_positions)
+      {
+        Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      }
+    }
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  if (applied > 0 || AsyncRelight->HasPendingWork())
+  {
+    PhysicsTelemetryData.FullRelightMs =
+        std::chrono::duration<double, std::milli>(t1 - t0).count();
+  }
+  PhysicsTelemetryData.AsyncRelightInflight =
+      static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
+  PhysicsTelemetryData.RelightDiscardedLate =
+      AsyncRelight->GetDiscardedLateCount();
+  return applied;
+}
+
+void UWorld::DrainAsyncRelightResults()
+{
+  DrainAsyncRelightResults(4, true, true);
+}
+
+bool UWorld::HasPendingAsyncRelightWork() const
+{
+  return AsyncRelight && AsyncRelight->HasPendingWork();
+}
+
+int UWorld::GetAsyncRelightInFlightCount() const
+{
+  return AsyncRelight ? AsyncRelight->GetInFlightCount() : 0;
+}
+
+uint64_t UWorld::GetRelightDiscardedLateCount() const
+{
+  return AsyncRelight ? AsyncRelight->GetDiscardedLateCount() : 0;
+}
+
+uint64_t UWorld::GetMeshDiscardedLateCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateCount() : 0;
+}
+
+bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
+{
+  return UWorldPersistence::HasPersistedTerrainOnDisk(world_folder_path);
+}
+
+UChunkStorageService &UWorld::GetChunkStorage()
+{
+  return Persistence->GetChunkStorage();
+}
+
+const UChunkStorageService &UWorld::GetChunkStorage() const
+{
+  return Persistence->GetChunkStorage();
+}
+
+const std::string &UWorld::GetWorldFolderPath() const
+{
+  return Persistence->GetWorldFolderPath();
+}
+
+void UWorld::SetWorldFolderPath(const std::string &path)
+{
+  Persistence->SetWorldFolderPath(path);
 }
 
 void UWorld::GenerateUsers()
@@ -173,6 +1067,29 @@ void UWorld::SetWorldName(const std::string &value) { WorldName = value; }
 
 glm::vec3 UWorld::GetSpawnPoint() const { return SpawnPoint; }
 
+glm::ivec3 UWorld::GetPreferredLoadFocusBlock() const
+{
+  if (auto user = GetCurrentUser())
+  {
+    return WorldPosToBlock(user->GetPosition());
+  }
+  if (!CurrentUserName.empty())
+  {
+    if (auto user = const_cast<UWorld *>(this)->GetUser(CurrentUserName))
+    {
+      return WorldPosToBlock(user->GetPosition());
+    }
+  }
+  for (const auto &entry : Users)
+  {
+    if (entry.second)
+    {
+      return WorldPosToBlock(entry.second->GetPosition());
+    }
+  }
+  return WorldPosToBlock(SpawnPoint);
+}
+
 void UWorld::SetSpawnPoint(glm::vec3 value) { SpawnPoint = value; }
 
 void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
@@ -185,10 +1102,10 @@ void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
   ResolveProceduralDefaults(settings);
   ApplyGeneratorTierDefaults(settings);
   SetProceduralSettings(settings);
-  if (BlockRegistry && !Streamer)
+  if (BlockRegistry)
   {
-    Streamer = std::make_unique<UChunkStreamer>(BlockWorld, *BlockRegistry,
-                                                WorldSeed, 0, 8);
+    Streaming->EnsureStreamer(BlockWorld, *BlockRegistry, WorldSeed,
+                              ProceduralTemplate);
   }
 }
 
@@ -200,14 +1117,39 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
   TerrainType = ProceduralGeneratorToString(settings.Generator);
   MaxLoadOpsPerFrame = settings.MaxLoadOpsPerFrame;
   MaxUnloadOpsPerFrame = settings.MaxUnloadOpsPerFrame;
-  if (BlockRegistry && !Streamer)
+  if (BlockRegistry)
   {
-    Streamer = std::make_unique<UChunkStreamer>(BlockWorld, *BlockRegistry,
-                                                WorldSeed, 0, 8);
+    Streaming->EnsureStreamer(BlockWorld, *BlockRegistry, WorldSeed,
+                              ProceduralTemplate);
   }
   if (rebuildPipeline)
   {
     RebuildWorldGenPipeline();
+  }
+}
+
+void UWorld::SetWorldGenSets(WorldGenSets sets)
+{
+  WorldGenSetsData = std::move(sets);
+  RebuildResolvedObjectFeatures();
+  RebuildWorldGenPipeline();
+}
+
+void UWorld::SaveWorldGenSetsToDisk()
+{
+  if (GetWorldFolderPath().empty())
+  {
+    return;
+  }
+  Persistence->SaveWorldData(*this, GetWorldFolderPath() + "/world_data.json");
+}
+
+void UWorld::RebuildResolvedObjectFeatures()
+{
+  if (UObjectFeatureConfigStorage::IsLoaded())
+  {
+    ResolvedObjectFeatures = ResolveObjectFeatures(
+        WorldGenSetsData, UObjectFeatureConfigStorage::Get());
   }
 }
 
@@ -218,13 +1160,28 @@ void UWorld::RebuildWorldGenPipeline()
     WorldGen.reset();
     return;
   }
+  RebuildResolvedObjectFeatures();
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                      PrefabLibrary};
+                      ObjectLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
-  ctx.OnColumnMeshDirty =
-      [this](int world_x, int world_z, int min_y, int max_y)
+  if (!ResolvedObjectFeatures.Vegetation.empty() ||
+      !ResolvedObjectFeatures.GroundCover.empty() ||
+      !ResolvedObjectFeatures.Decoration.empty() ||
+      !ResolvedObjectFeatures.Structures.empty())
   {
-    MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
+    ctx.ObjectFeatures = &ResolvedObjectFeatures;
+  }
+  ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
+  {
+    if (CooperativeBulkGenerating)
+    {
+      return;
+    }
+    if (!LightingRelightDeferred)
+    {
+      RelightTerrainColumn(world_x, world_z, min_y, max_y);
+    }
+    MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
   };
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
@@ -232,381 +1189,88 @@ void UWorld::RebuildWorldGenPipeline()
 void UWorld::SetRenderDistanceChunks(int distance)
 {
   RenderDistanceChunks = distance;
-  if (Streamer)
+  EffectiveRenderDistance = distance;
+  if (Streaming->HasStreamer())
   {
-    Streamer->SetRenderDistance(distance);
+    Streaming->SetRenderDistance(distance);
   }
-  MeshCache.SetRenderDistanceChunks(distance);
+  MeshService->SetRenderDistanceChunks(distance);
 }
 
 void UWorld::SetChunkWriteFormat(ChunkWriteFormat format)
 {
-  if (!ChunkStorage)
-  {
-    ChunkStorage = std::make_unique<UChunkStorageService>();
-  }
-  ChunkStorage->SetWriteFormat(format);
+  Persistence->SetChunkWriteFormat(format);
 }
 
 ChunkWriteFormat UWorld::GetChunkWriteFormat() const
 {
-  return ChunkStorage ? ChunkStorage->GetSettings().writeFormat
-                    : ChunkWriteFormat::Binary;
-}
-
-void UWorld::InitChunkScheduler()
-{
-  if (!BlockRegistry)
-  {
-    ChunkPopulator.reset();
-    ChunkScheduler.reset();
-    return;
-  }
-  ChunkPopulator = std::make_unique<PipelineChunkPopulator>(
-      *BlockRegistry, PrefabLibrary, WorldgenOwnerPackId);
-  ChunkScheduler =
-      std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
-  ChunkScheduler->SetMarkDirtyFn(
-      [this](glm::ivec3 coord)
-      {
-        if (Streamer)
-        {
-          Streamer->NotifyChunkCommitted(coord);
-        }
-        else
-        {
-          MeshCache.MarkDirty(coord);
-        }
-      });
-  ChunkScheduler->SetColumnMeshDirtyFn(
-      [this](glm::ivec3 groundCoord, int min_y, int max_y)
-      { MarkTerrainChunkMeshDirty(groundCoord, min_y, max_y); });
-  if (!AsyncChunkIo)
-  {
-    AsyncChunkIo = std::make_unique<UAsyncChunkIO>();
-  }
-  if (!ChunkStorage)
-  {
-    ChunkStorage = std::make_unique<UChunkStorageService>();
-  }
-}
-
-void UWorld::TickAsyncChunkSystems()
-{
-  if (ChunkScheduler && ProceduralTemplate.AsyncChunkGeneration)
-  {
-    ChunkScheduler->Tick(BlockWorld, ProceduralTemplate.MaxChunkCommitsPerFrame,
-                       MaxLoadOpsPerFrame);
-  }
-  if (!ChunkStorage)
-  {
-    return;
-  }
-
-  if (AsyncChunkIo && ProceduralTemplate.AsyncChunkIo)
-  {
-    for (AsyncChunkLoadResult &load : AsyncChunkIo->DrainLoads())
-    {
-      const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
-      bool columnCompleted = false;
-      const auto pendingIt = PendingAsyncColumnLoadSlices.find(ground);
-      if (pendingIt != PendingAsyncColumnLoadSlices.end())
-      {
-        const int remaining = --pendingIt->second;
-        if (remaining <= 0)
-        {
-          PendingAsyncColumnLoadSlices.erase(pendingIt);
-          columnCompleted = true;
-        }
-      }
-      else
-      {
-        columnCompleted = true;
-      }
-
-      if (load.success &&
-          load.token.IsValidFor(load.coord, load.token.sequence))
-      {
-        const ChunkBuffer buffer = ChunkStorage->DeserializeChunk(
-            load.payload, load.coord, load.format, *BlockRegistry);
-        if (!buffer.IsEmpty())
-        {
-          buffer.ApplyTo(BlockWorld);
-        }
-      }
-
-      if (columnCompleted && Streamer)
-      {
-        Streamer->NotifyChunkCommitted(ground);
-      }
-    }
-
-    for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
-    {
-      if (ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
-          ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
-      {
-        const std::string legacyJson = ChunkStorage->ChunkFilePath(
-            WorldFolderPath, save.coord, ChunkDiskFormat::Json);
-        std::error_code ec;
-        std::filesystem::remove(legacyJson, ec);
-      }
-      auto pendingIt = PendingAsyncColumnSaveSlices.find(save.groundCoord);
-      if (pendingIt != PendingAsyncColumnSaveSlices.end())
-      {
-        --pendingIt->second;
-        if (pendingIt->second <= 0)
-        {
-          PendingAsyncColumnSaveSlices.erase(pendingIt);
-          ChunkStorage->ClearColumnSavePending(save.groundCoord);
-        }
-      }
-      else
-      {
-        ChunkStorage->ClearColumnSavePending(save.groundCoord);
-      }
-    }
-  }
+  return Persistence->GetChunkWriteFormat();
 }
 
 void UWorld::InitStreamerCallbacks()
 {
-  if (!Streamer || !BlockRegistry)
+  Streaming->InitStreamerCallbacks(*this);
+}
+
+void UWorld::TickAsyncChunkSystems()
+{
+  if (CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick())
   {
     return;
   }
-  InitChunkScheduler();
-  Streamer->SetRenderDistance(RenderDistanceChunks);
-  Streamer->SetMaxLoadOpsPerFrame(MaxLoadOpsPerFrame);
-  Streamer->SetMaxUnloadOpsPerFrame(MaxUnloadOpsPerFrame);
-  Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
-  Streamer->SetEnabled(StreamingEnabled);
-  Streamer->SetWorldFolder(WorldFolderPath);
-  Streamer->SetCallbacks(
-      [this](glm::ivec3 coord)
-      {
-        if (!ChunkStorage)
-        {
-          return false;
-        }
-        if (ChunkStorage->IsColumnSavePending(coord))
-        {
-          return false;
-        }
-        if (IsTerrainColumnDiskLoadPending(coord))
-        {
-          return false;
-        }
-        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
-        {
-          RequestAsyncTerrainColumnLoad(coord);
-          return false;
-        }
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded = ChunkStorage->LoadTerrainColumn(
-                                coord, BlockWorld, WorldFolderPath, *BlockRegistry,
-                                ProceduralTemplate.MaxHeight) > 0;
-        FrameStreamingIoMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-        return loaded;
-      },
-      [this](glm::ivec3 coord)
-      {
-        if (!ChunkStorage)
-        {
-          return;
-        }
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        if (ProceduralTemplate.AsyncChunkIo && AsyncChunkIo)
-        {
-          RequestAsyncTerrainColumnSave(ground);
-        }
-        else
-        {
-          ChunkStorage->SaveTerrainColumn(ground, BlockWorld, WorldFolderPath,
-                                          *BlockRegistry,
-                                          ProceduralTemplate.MaxHeight);
-        }
-        FrameStreamingIoMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-        ChunkGenTokens.Bump(ground);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
-      },
-      [this](glm::ivec3 coord)
-      {
-        MarkTerrainChunkMeshDirty(glm::ivec3(coord.x, 0, coord.z), 0,
-                                  ProceduralTemplate.MaxHeight);
-      },
-      [this](int x, int z)
-      {
-        if (!AllowProceduralFill || !WorldGen)
-        {
-          return;
-        }
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        WorldGen->GenerateColumn(x, z);
-        FrameStreamingGenMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-      },
-      [this](glm::ivec3 coord)
-      {
-        MeshCache.RemoveChunk(coord);
-        if (coord.y == 0 && ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(coord);
-        }
-      });
-  Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
-  Streamer->SetAsyncCallbacks(
-      [this](glm::ivec3 coord, int priority)
-      {
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->RequestLoad(coord, priority, ProceduralTemplate);
-        }
-      },
-      [this](glm::ivec3 coord)
-      {
-        if (ChunkScheduler && ChunkScheduler->IsPending(coord))
-        {
-          return false;
-        }
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
-        {
-          return false;
-        }
-        return IsTerrainChunkComplete(BlockWorld, coord,
-                                      ProceduralTemplate.MaxHeight);
-      });
-  Streamer->SetColumnPendingCallback(
-      [this](glm::ivec3 coord)
-      { return IsTerrainColumnDiskLoadPending(coord); });
+  const int pending_player =
+      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
+  const int pending_bg =
+      Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+  const int drain_budget = std::clamp(
+      4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
+  const int applied = DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
+  if (applied > 0)
+  {
+    const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
+    PhysicsTelemetryData.RelightCompletedPerSec = applied / dt;
+  }
+  else
+  {
+    PhysicsTelemetryData.RelightCompletedPerSec = 0.0;
+  }
+  Streaming->TickAsyncChunkSystems(*this);
+}
+
+void UWorld::TickMeshEmerge()
+{
+  if (!BlockRegistry)
+  {
+    return;
+  }
+  Streaming->TickMeshEmerge(*this);
+  TickPlayerRelightMeshBurst();
 }
 
 void UWorld::RefreshStreamerSettings()
 {
-  if (!Streamer)
-  {
-    return;
-  }
-  Streamer->SetAsyncGeneration(ProceduralTemplate.AsyncChunkGeneration);
-  Streamer->SetMaxTerrainHeight(ProceduralTemplate.MaxHeight);
-  Streamer->SetMaxLoadOpsPerFrame(MaxLoadOpsPerFrame);
-  Streamer->SetMaxUnloadOpsPerFrame(MaxUnloadOpsPerFrame);
+  Streaming->RefreshStreamerSettings(ProceduralTemplate, MaxLoadOpsPerFrame,
+                                     MaxUnloadOpsPerFrame);
 }
 
-void UWorld::RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord)
+void UWorld::SetStreamingEnabled(bool enabled)
 {
-  if (!AsyncChunkIo || !ChunkStorage || !BlockRegistry)
-  {
-    return;
-  }
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  if (ChunkStorage->IsColumnSavePending(groundCoord) ||
-      PendingAsyncColumnLoadSlices.count(groundCoord) > 0)
-  {
-    return;
-  }
-  const int maxCy =
-      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  const int sliceCount = maxCy + 1;
-  PendingAsyncColumnLoadSlices[groundCoord] = sliceCount;
-  for (int cy = 0; cy <= maxCy; ++cy)
-  {
-    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
-    AsyncChunkIo->RequestLoad(slice, *ChunkStorage, WorldFolderPath,
-                              ChunkGenTokens.Current(groundCoord));
-  }
+  Streaming->SetStreamingEnabled(enabled);
 }
 
-void UWorld::RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord)
+bool UWorld::IsStreamingEnabled() const
 {
-  if (!AsyncChunkIo || !ChunkStorage || !BlockRegistry)
-  {
-    return;
-  }
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  if (ChunkStorage->IsColumnSavePending(groundCoord) ||
-      PendingAsyncColumnSaveSlices.count(groundCoord) > 0)
-  {
-    return;
-  }
-  const int maxCy =
-      (ProceduralTemplate.MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  int saveCount = 0;
-  for (int cy = 0; cy <= maxCy; ++cy)
-  {
-    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
-    if (!BlockWorld.GetChunkManager().HasChunk(slice))
-    {
-      continue;
-    }
-    ++saveCount;
-  }
-  if (saveCount == 0)
-  {
-    return;
-  }
-  ChunkStorage->MarkColumnSavePending(groundCoord);
-  PendingAsyncColumnSaveSlices[groundCoord] = saveCount;
-  for (int cy = 0; cy <= maxCy; ++cy)
-  {
-    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
-    if (!BlockWorld.GetChunkManager().HasChunk(slice))
-    {
-      continue;
-    }
-    AsyncChunkIo->RequestSave(slice, *ChunkStorage, WorldFolderPath, BlockWorld,
-                              *BlockRegistry, ChunkGenTokens.Current(groundCoord));
-  }
-}
-
-bool UWorld::IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const
-{
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  return PendingAsyncColumnLoadSlices.count(groundCoord) > 0;
+  return Streaming->IsStreamingEnabled();
 }
 
 void UWorld::LoadInitialStreamingChunks()
 {
-  if (!ChunkStorage || !BlockRegistry)
-  {
-    return;
-  }
-  const glm::ivec3 spawnBlock = WorldPosToBlock(SpawnPoint);
-  const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(spawnBlock);
-  const int radius = RenderDistanceChunks + 1;
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      ChunkStorage->LoadTerrainColumn(
-          glm::ivec3(centerChunk.x + dx, 0, centerChunk.z + dz), BlockWorld,
-          WorldFolderPath, *BlockRegistry, ProceduralTemplate.MaxHeight);
-    }
-  }
+  Persistence->LoadInitialTerrainColumns(*this, SpawnPoint,
+                                         RenderDistanceChunks);
   CachedBlockCount = BlockWorld.CountNonAir();
   BlockWorld.GetChunkManager().ForEachChunk(
-      [this](const UChunk &chunk) { MeshCache.MarkDirty(chunk.GetCoord()); });
+      [this](const UChunk &chunk)
+      { MeshService->MarkDirty(chunk.GetCoord()); });
 }
 
 void UWorld::GenerateWorldBlocks()
@@ -631,7 +1295,7 @@ void UWorld::GenerateWorldBlocks()
   }
 
   const int patchRadiusBlocks = std::max(1, RenderDistanceChunks) * CHUNK_SIZE;
-  if (StreamingEnabled)
+  if (IsStreamingEnabled())
   {
     WorldGen->GenerateSpawnPatch(0, 0, patchRadiusBlocks);
   }
@@ -639,16 +1303,14 @@ void UWorld::GenerateWorldBlocks()
   {
     WorldGen->GenerateFullPatch(0, 0, patchRadiusBlocks);
   }
-  SpawnPoint = WorldGen->DefaultSpawnPosition(0, 0);
-
-  if (ProceduralTemplate.FillFire && PrefabLibrary && BlockRegistry)
+  if (BlockRegistry)
   {
-    WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
-                        PrefabLibrary};
-    ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
-    ctx.ResolveBlockIds();
-    const int surfaceY = WorldGen->SurfaceYAt(8, 8);
-    PlacePrefabAt(ctx, "fire_patch", glm::ivec3(8, surfaceY + 1, 8));
+    SpawnPoint =
+        WorldGen->ResolvePlayerSpawnPosition(BlockWorld, *BlockRegistry);
+  }
+  else
+  {
+    SpawnPoint = WorldGen->DefaultSpawnPosition(0, 0);
   }
 
   RebuildBlockMesh();
@@ -662,15 +1324,15 @@ void UWorld::SetBlockDefinitionStorage(
   {
     BlockRegistry->SetDefinitions(BlockDefinitions);
   }
-  else if (ObjectStorageInstance &&
-           ObjectStorageInstance->GetTextureCubeStorage())
+  else if (TextureCubeInstance)
   {
-    BlockRegistry = std::make_unique<UBlockRegistry>(
-        ObjectStorageInstance->GetTextureCubeStorage(), BlockDefinitions);
+    BlockRegistry =
+        std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
     if (BlockMergeRegistry)
     {
       BlockRegistry->SetMergeRegistry(BlockMergeRegistry);
     }
+    Collision.SetBlockRegistry(BlockRegistry.get());
   }
 }
 
@@ -695,11 +1357,24 @@ void UWorld::OnBlockRegistryChanged()
   }
 }
 
-void UWorld::OnBlockRegistryRuntimeOverlayChanged()
+void UWorld::OnBlockRegistryRuntimeOverlayChanged(
+    const RuntimeOverlayFlushResult *flush)
 {
   RefreshBlockRegistry();
   RebuildWorldGenPipeline();
-  MeshCache.MarkAllDirtyFromWorld(BlockWorld);
+  std::vector<BlockId> affected_ids;
+  if (flush)
+  {
+    affected_ids = flush->RemovedBlockIds;
+    affected_ids.reserve(affected_ids.size() +
+                         flush->PatchedDescriptors.size());
+    for (const MergedCubeDesc &desc : flush->PatchedDescriptors)
+    {
+      affected_ids.push_back(desc.Id);
+    }
+  }
+  WorldMeshDirtyPolicy::MarkRuntimeOverlayMeshDirty(*this, BlockWorld,
+                                                    *MeshService, affected_ids);
   if (OnBlockRegistryChangedCallback)
   {
     OnBlockRegistryChangedCallback();
@@ -717,24 +1392,90 @@ void UWorld::OnCreatureCatalogChanged()
 
 void UWorld::ReloadAllCreatureVisuals()
 {
-  ForEachCreature(
-      [this](UCreature &creature)
-      {
-        const CreatureDefinition *def =
-            GetCreatureDefinition(creature.GetTypeId());
-        if (!def)
-        {
-          return;
-        }
-        creature.SetVisual(CreateCreatureVisual(*def));
-      });
+  Environment.ReloadAllCreatureVisuals();
 }
 
-void UWorld::WaitForPendingMeshJobs() { MeshCache.WaitForAsyncMeshIdle(); }
+void UWorld::WaitForPendingMeshJobs() { MeshService->WaitForAsyncMeshIdle(); }
+
+void UWorld::WaitForPendingRelightJobs()
+{
+  if (AsyncRelight)
+  {
+    AsyncRelight->WaitIdle();
+  }
+}
+
+bool UWorld::WaitForPendingRelightJobsFor(
+    const std::chrono::milliseconds timeout)
+{
+  if (!AsyncRelight)
+  {
+    return true;
+  }
+  if (timeout.count() <= 0)
+  {
+    AsyncRelight->WaitIdle();
+    return true;
+  }
+  return AsyncRelight->WaitIdleFor(timeout);
+}
+
+void UWorld::CancelAsyncRelightWork()
+{
+  if (!AsyncRelight)
+  {
+    return;
+  }
+  AsyncRelight->CancelPending();
+}
+
+void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout)
+{
+  if (BackgroundQuiesceFinished)
+  {
+    return;
+  }
+  AllowProceduralFill = false;
+  if (Streaming)
+  {
+    Streaming->QuiesceBackgroundWork(*this, async_timeout);
+  }
+  CancelAsyncRelightWork();
+  if (MeshService)
+  {
+    MeshService->CancelAsyncInFlightKeepDirty();
+  }
+  (void)WaitForPendingRelightJobsFor(async_timeout);
+  if (MeshService)
+  {
+    (void)MeshService->WaitForAsyncMeshIdleFor(async_timeout);
+  }
+  BackgroundQuiesceFinished = true;
+}
+
+void UWorld::PrepareForShutdown()
+{
+  if (ShutdownPrepared)
+  {
+    return;
+  }
+  ShutdownPrepared = true;
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
+  if (!BackgroundQuiesceFinished)
+  {
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+  }
+  if (MeshService)
+  {
+    MeshService->CancelAsyncMeshWork();
+  }
+}
 
 void UWorld::RefreshBlockRegistry()
 {
-  WaitForPendingMeshJobs();
   if (BlockRegistry)
   {
     if (BlockMergeRegistry)
@@ -748,6 +1489,7 @@ void UWorld::RefreshBlockRegistry()
     if (BlockDefinitions)
     {
       BlockRegistry->SetDefinitions(BlockDefinitions);
+      BlockWorld.SetFluidDefinitions(BlockDefinitions.get());
     }
     BlockRegistry->Reload();
   }
@@ -759,7 +1501,7 @@ void UWorld::RebuildBlockMesh()
   {
     return;
   }
-  MeshCache.RebuildAll(BlockWorld, *BlockRegistry);
+  MeshService->RebuildAll(BlockWorld, *BlockRegistry);
   CachedBlockCount = BlockWorld.CountNonAir();
   BlockWorldReady = CachedBlockCount > 0;
 }
@@ -799,259 +1541,315 @@ void UWorld::SanitizeUserPosition(const std::shared_ptr<UUser> &user)
   }
 }
 
-void UWorld::ApplySpawnToCamera()
-{
-  glm::vec3 spawn = SpawnPoint;
-  const PlayerCapsule cap = PlayerCapsule::Standing();
-  DepenetrateEye(spawn, cap, GetMovementCollisionSkipId());
-  SpawnPoint = spawn;
-
-  if (auto user = GetCurrentUser())
-  {
-    user->SetPosition(SpawnPoint);
-    user->SetCameraOrientation(-90.0f, 0.0f);
-  }
-  if (auto camera = GetCurrentUserCamera())
-  {
-    camera->SetPosition(SpawnPoint);
-    camera->SetOrientation(-90.0f, 0.0f);
-    return;
-  }
-  if (ViewInstance && ViewInstance->GetActiveCamera())
-  {
-    ViewInstance->GetActiveCamera()->SetPosition(SpawnPoint);
-    ViewInstance->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
-  }
-}
-
 std::optional<int> UWorld::FindHighestSolidY(int x, int z) const
 {
-  if (!BlockRegistry)
-  {
-    return std::nullopt;
-  }
-  for (int y = 255; y >= 0; --y)
-  {
-    if (BlockRegistry->IsSolid(BlockWorld.GetBlock(glm::ivec3(x, y, z))))
-    {
-      return y;
-    }
-  }
-  return std::nullopt;
+  return Collision.FindHighestSolidY(x, z);
 }
 
 std::optional<float> UWorld::QueryGroundFeetYColumn(int worldX,
                                                     int worldZ) const
 {
-  if (const std::optional<int> topY = FindHighestSolidY(worldX, worldZ))
-  {
-    return BlockTopY(*topY);
-  }
-  return std::nullopt;
+  return Collision.QueryGroundFeetYColumn(worldX, worldZ);
 }
 
 std::optional<float> UWorld::QueryGroundFeetYUnder(int worldX, int worldZ,
                                                    float referenceFeetY) const
 {
-  if (!BlockRegistry)
-  {
-    return std::nullopt;
-  }
-  const int startY =
-      std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)), 0, 255);
-  for (int y = startY; y >= 0; --y)
-  {
-    if (BlockRegistry->IsSolid(
-            BlockWorld.GetBlock(glm::ivec3(worldX, y, worldZ))))
-    {
-      return BlockTopY(y);
-    }
-  }
-  return std::nullopt;
+  return Collision.QueryGroundFeetYUnder(worldX, worldZ, referenceFeetY);
 }
 
 bool UWorld::IsValidStandCell(const glm::ivec3 &cell,
                               const PlayerCapsule &cap) const
 {
-  if (!BlockRegistry)
-  {
-    return false;
-  }
-  if (!BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)))
-  {
-    return false;
-  }
-  const std::optional<int> columnTopY = FindHighestSolidY(cell.x, cell.z);
-  if (!columnTopY || *columnTopY != cell.y)
-  {
-    return false;
-  }
-  const int layers = static_cast<int>(std::ceil(cap.height));
-  for (int dy = 1; dy <= layers; ++dy)
-  {
-    const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
-    if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(above)))
-    {
-      return false;
-    }
-  }
-  return true;
+  return Collision.IsValidStandCell(cell, cap);
+}
+
+bool UWorld::IsValidStandFootprint(const glm::vec3 &eyePos,
+                                   const PlayerCapsule &cap, float feetY) const
+{
+  return Collision.IsValidStandFootprint(eyePos, cap, feetY);
+}
+
+void UWorld::WarmupSpawnAreaForEnterGame()
+{
+  Streaming->WarmupSpawnAreaForEnterGame(*this);
+}
+
+void UWorld::PrepareEnterGameSession()
+{
+  Streaming->PrepareEnterGameSession(*this);
 }
 
 namespace
 {
 
-constexpr int kFootprintMinSolidSamples = 4;
-
-struct FootprintStandSampleStats
+int EnterGameMeshRadiusChunks(const UWorld &world)
 {
-  int solidSamples{0};
-  int validStandSamples{0};
-  bool centerSolid{false};
-  bool centerValidStand{false};
-};
+  return std::max(1, world.GetRenderDistanceChunks() + 1);
+}
 
-FootprintStandSampleStats
-SampleFootprintAtFeet(const UWorld &world, const UBlockWorld &blockWorld,
-                      const UBlockRegistry &registry, float feetY,
-                      float centerX, float centerZ, float halfWidth,
-                      const PlayerCapsule &cap, bool checkValidStand)
+bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
 {
-  FootprintStandSampleStats stats{};
-  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
-  const int centerGx = WorldCoordToBlockIndex(centerX);
-  const int centerGz = WorldCoordToBlockIndex(centerZ);
-  const float sampleX[3] = {centerX - halfWidth, centerX, centerX + halfWidth};
-  const float sampleZ[3] = {centerZ - halfWidth, centerZ, centerZ + halfWidth};
-  for (float sx : sampleX)
+  if (world.GetBlockWorld().CountNonAir() == 0)
   {
-    for (float sz : sampleZ)
+    return false;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(world);
+  const UWorldMeshService &mesh = world.GetMeshService();
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
     {
-      const glm::ivec3 cell(WorldCoordToBlockIndex(sx), supportY,
-                            WorldCoordToBlockIndex(sz));
-      const bool solid = registry.BlocksMovement(blockWorld.GetBlock(cell));
-      if (!solid)
+      const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
       {
         continue;
       }
-      ++stats.solidSamples;
-      const bool isCenter = cell.x == centerGx && cell.z == centerGz;
-      if (isCenter)
+      if (!mesh.HasGreedyMesh(coord))
       {
-        stats.centerSolid = true;
-      }
-      if (!checkValidStand)
-      {
-        continue;
-      }
-      if (!world.IsValidStandCell(cell, cap))
-      {
-        continue;
-      }
-      ++stats.validStandSamples;
-      if (isCenter)
-      {
-        stats.centerValidStand = true;
+        return true;
       }
     }
   }
-  return stats;
+  return false;
 }
 
 } // namespace
 
-bool UWorld::IsValidStandFootprint(const glm::vec3 &eyePos,
-                                   const PlayerCapsule &cap, float feetY) const
+bool UWorld::DrainEnterGameMeshWarmup(int budget)
 {
+  if (GetBlockWorld().CountNonAir() == 0)
+  {
+    return true;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  const bool spawn_meshes_pending =
+      mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
+      HasMissingGreedyMeshesNearFocus(*this);
+  if (!spawn_meshes_pending && !mesh.HasPendingAsyncMeshWork())
+  {
+    return true;
+  }
   if (!BlockRegistry)
+  {
+    return mesh.GetGreedyCacheSize() > 0;
+  }
+  if (mesh.GetDirtyCount() == 0 || HasMissingGreedyMeshesNearFocus(*this))
+  {
+    mesh.GetCache().MarkAllDirtyFromWorld(BlockWorld, false);
+  }
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
+  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                          mesh_budget.MaxMeshSchedule);
+  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                             mesh_budget.MaxMeshDrain);
+  return !HasMissingGreedyMeshesNearFocus(*this) && !mesh.HasPendingDirty() &&
+         !mesh.HasPendingAsyncMeshWork();
+}
+
+bool UWorld::NeedsEnterGameMeshWarmup() const
+{
+  if (GetBlockWorld().CountNonAir() == 0)
   {
     return false;
   }
-  const CollisionVolume vol = CollisionVolumeFromEye(eyePos, cap);
-  const FootprintStandSampleStats stats = SampleFootprintAtFeet(
-      *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      cap.halfWidth, cap, true);
-  return stats.centerValidStand &&
-         stats.validStandSamples >= kFootprintMinSolidSamples;
+  const UWorldMeshService &mesh = *MeshService;
+  if (mesh.HasPendingAsyncMeshWork())
+  {
+    return true;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
+  {
+    return true;
+  }
+  return HasMissingGreedyMeshesNearFocus(*this);
 }
 
-void UWorld::EnsurePlayerOnGround()
+bool UWorld::IsCreateSpawnWarmupSettled() const
 {
-  auto user = GetCurrentUser();
-  if (!user || !BlockRegistry)
+  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  {
+    if (GetBlockWorld().CountNonAir() == 0)
+    {
+      return true;
+    }
+    const glm::ivec3 feet = GetPreferredLoadFocusBlock();
+    const glm::ivec3 center = UChunkManager::WorldToChunk(feet);
+    const int radius = RenderDistanceChunks + 1;
+    const UWorldMeshService &mesh = *MeshService;
+    if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
+    {
+      return false;
+    }
+    return !mesh.HasPendingAsyncMeshWork();
+  }
+  return IsEnterStreamingWarmupSettled();
+}
+
+void UWorld::DrainSpawnRadiusMeshWarmup(int budget)
+{
+  if (GetBlockWorld().CountNonAir() == 0 || !BlockRegistry)
   {
     return;
   }
+  UWorldMeshService &mesh = *MeshService;
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
+  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                          mesh_budget.MaxMeshSchedule);
+  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                             mesh_budget.MaxMeshDrain);
+}
 
-  std::string userName = CurrentUserName;
-  for (const auto &entry : Users)
+void UWorld::RefreshPersistedTerrainAfterSave()
+{
+  HasPersistedSave = true;
+  LoadedFromChunkSave = true;
+  EnsureStreamingActiveAfterBackgroundQuiesce();
+  if (Streaming && Streaming->HasStreamer())
   {
-    if (entry.second == user)
+    Streaming->MarkPersistedColumnsFromWorld();
+  }
+}
+
+void UWorld::EnsureStreamingActiveAfterBackgroundQuiesce()
+{
+  AllowProceduralFill = IsStreamingEnabled();
+  if (Streaming)
+  {
+    Streaming->ResumeStreamerAfterQuiesce();
+    InitStreamerCallbacks();
+  }
+}
+
+void UWorld::ResumeAfterSessionSave()
+{
+  BackgroundQuiesceFinished = false;
+  EnsureStreamingActiveAfterBackgroundQuiesce();
+}
+
+bool UWorld::IsEnterStreamingWarmupSettled() const
+{
+  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  const glm::ivec3 feet = GetPreferredLoadFocusBlock();
+  if (!IsCollisionReadyAtFeet(feet))
+  {
+    return false;
+  }
+  if (MeshService->HasPendingDirty() || MeshService->HasPendingAsyncMeshWork())
+  {
+    return false;
+  }
+  if (Persistence &&
+      (Persistence->GetPendingPlayerRelightCount() > 0 ||
+       Persistence->GetPendingTerrainColumnRelightCount() > 0))
+  {
+    return false;
+  }
+  if (IsStreamingEnabled() && Streaming && Streaming->HasStreamer())
+  {
+    const glm::ivec3 center =
+        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+    const int radius = EnterGameMeshRadiusChunks(*this);
+    const int max_y = GetProceduralSettings().MaxHeight;
+    for (int dx = -radius; dx <= radius; ++dx)
     {
-      userName = entry.first;
-      break;
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+        if (!IsTerrainChunkComplete(BlockWorld, coord, max_y))
+        {
+          return false;
+        }
+      }
     }
   }
-  auto camera = GetUserCamera(userName);
-  if (!camera)
+  return true;
+}
+
+void UWorld::TickEnterStreamingWarmup(int iteration_budget)
+{
+  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
   {
     return;
   }
-
-  const PlayerCapsule cap = PlayerCapsule::Standing();
-  glm::vec3 pos = user->GetPosition();
-  const glm::ivec3 column = WorldPosToBlock(pos);
-  int x = column.x;
-  int z = column.z;
-
-  std::optional<int> topY = FindHighestSolidY(x, z);
-  if (!topY)
+  const int iterations = std::max(1, iteration_budget);
+  for (int i = 0; i < iterations; ++i)
   {
-    const glm::ivec3 spawnColumn = WorldPosToBlock(SpawnPoint);
-    x = spawnColumn.x;
-    z = spawnColumn.z;
-    topY = FindHighestSolidY(x, z);
+    UpdateStreaming();
+    TickAsyncChunkSystems();
+    TickMeshEmerge();
   }
-  if (!topY)
+}
+
+void UWorld::MarkSpawnAreaPreparedByCooperativeLoad()
+{
+  SpawnAreaPreparedByCooperativeLoad = true;
+}
+
+bool UWorld::ConsumeSpawnAreaPreparedByCooperativeLoad()
+{
+  const bool prepared = SpawnAreaPreparedByCooperativeLoad;
+  SpawnAreaPreparedByCooperativeLoad = false;
+  return prepared;
+}
+
+void UWorld::ClearSpawnAreaPreparedByCooperativeLoad()
+{
+  SpawnAreaPreparedByCooperativeLoad = false;
+}
+
+void UWorld::ResetPhysicsRuntimeState()
+{
+  if (BlockPhysicsService)
   {
-    ApplySpawnToCamera();
-    if (auto cam = GetUserCamera(userName))
-    {
-      cam->ResetVerticalPhysics();
-    }
-    return;
+    BlockPhysicsService->ResetRuntimeState();
   }
-
-  pos = BlockCenter(glm::ivec3(x, *topY, z));
-  pos.y = BlockTopY(*topY) + cap.eyeHeight;
-  DepenetrateEye(pos, cap, GetMovementCollisionSkipId());
-
-  user->SetPosition(pos);
-  camera->SetPosition(pos);
-  camera->ResetVerticalPhysics();
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->ClearPendingQueues();
+  }
 }
 
 void UWorld::FinalizePlayerAfterWorldLoad()
 {
-  BlockWorldReady = CachedBlockCount > 0;
+  ResetPhysicsRuntimeState();
+  ResetMeshLoadDiagnostics();
+  BlockCounter.MarkNeedsRecount();
+  bool has_terrain_chunks = false;
+  BlockWorld.GetChunkManager().ForEachChunk([&](const UChunk &)
+                                            { has_terrain_chunks = true; });
+  BlockWorldReady = has_terrain_chunks || CachedBlockCount > 0;
   PhysicsSuspendFrames = 3;
 
   if (CurrentUserName.empty() && !Users.empty())
   {
     SetCurrentUserName(Users.begin()->first);
   }
-  if (ControlledCreatureId == 0)
+  if (Environment.GetControlledCreatureId() == 0)
   {
-    if (PlayerCreatureId != 0)
+    if (Environment.GetPlayerCreatureId() != 0)
     {
-      SetControlledCreature(PlayerCreatureId);
+      SetControlledCreature(Environment.GetPlayerCreatureId());
     }
     else if (auto user = GetCurrentUser())
     {
       if (user->GetPlayerCreatureId() != 0)
       {
-        PlayerCreatureId = user->GetPlayerCreatureId();
-        SetControlledCreature(PlayerCreatureId);
+        Environment.SetPlayerCreatureId(user->GetPlayerCreatureId());
+        SetControlledCreature(Environment.GetPlayerCreatureId());
       }
     }
   }
@@ -1073,39 +1871,15 @@ void UWorld::FinalizePlayerAfterWorldLoad()
     ApplySpawnToCamera();
   }
 
-  if (auto camera = GetCurrentUserCamera())
+  if (ViewBinding)
   {
-    camera->ResetVerticalPhysics();
-  }
-}
-
-void UWorld::ApplyUserToCamera(const std::shared_ptr<UUser> &user)
-{
-  if (!user)
-  {
-    return;
-  }
-  SanitizeUserPosition(user);
-
-  std::string userName = CurrentUserName;
-  for (const auto &entry : Users)
-  {
-    if (entry.second == user)
-    {
-      userName = entry.first;
-      break;
-    }
-  }
-  if (auto camera = GetUserCamera(userName))
-  {
-    camera->SetPosition(user->GetPosition());
-    camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+    ViewBinding->ResetCurrentCameraVerticalPhysics(*this);
   }
 }
 
 void UWorld::Create(const std::string &world_name)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeCreate(world_name);
   while (!TickCooperativeCreate(sink, 64))
   {
@@ -1114,7 +1888,7 @@ void UWorld::Create(const std::string &world_name)
 
 void UWorld::Load(const std::string &world_folder_path)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeLoad(world_folder_path);
   while (!TickCooperativeLoad(sink, 64))
   {
@@ -1123,11 +1897,63 @@ void UWorld::Load(const std::string &world_folder_path)
 
 void UWorld::Save(const std::string &world_folder_path)
 {
-  NullProgressSink sink;
+  UNullProgressSink sink;
   BeginCooperativeSave(world_folder_path);
   while (!TickCooperativeSave(sink, 64))
   {
   }
+}
+
+void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
+                                 const bool skip_quiesce)
+{
+  if (world_folder_path.empty())
+  {
+    return;
+  }
+  if (!skip_quiesce)
+  {
+    if (CoopSession && CoopSession->Active)
+    {
+      CoopSession->Cancel();
+    }
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+  }
+  RefreshBlockRegistry();
+  std::filesystem::create_directories(world_folder_path);
+  std::filesystem::create_directories(world_folder_path + "/chunks");
+  SetWorldFolderPath(world_folder_path);
+
+  if (BlockRegistry)
+  {
+    std::unordered_set<glm::ivec3, IVec3Hash> grounds;
+    BlockWorld.GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          const glm::ivec3 coord = chunk.GetCoord();
+          grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+        });
+    for (const glm::ivec3 &modified : ModifiedChunks)
+    {
+      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
+    }
+    for (const glm::ivec3 &ground : grounds)
+    {
+      if (IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+      {
+        GetChunkStorage().SaveTerrainColumn(
+            ground, BlockWorld, world_folder_path, *BlockRegistry,
+            ProceduralTemplate.MaxHeight);
+      }
+    }
+  }
+
+  GetChunkStorage().WriteStorageMarker(world_folder_path);
+  SaveUsers(world_folder_path + "/users.json");
+  SaveCreatures(world_folder_path + "/creatures.json");
+  SaveWorldData(world_folder_path + "/world_data.json");
+  ModifiedChunks.clear();
+  EnsureStreamingActiveAfterBackgroundQuiesce();
 }
 
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
@@ -1139,7 +1965,7 @@ void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
   CoopSession->BeginLoad(*this, world_folder_path);
 }
 
-bool UWorld::TickCooperativeLoad(IProgressSink &sink, int chunkBudget)
+bool UWorld::TickCooperativeLoad(IUProgressSink &sink, int chunkBudget)
 {
   if (!CoopSession)
   {
@@ -1157,7 +1983,7 @@ void UWorld::BeginCooperativeSave(const std::string &world_folder_path)
   CoopSession->BeginSave(*this, world_folder_path);
 }
 
-bool UWorld::TickCooperativeSave(IProgressSink &sink, int chunkBudget)
+bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
 {
   if (!CoopSession)
   {
@@ -1175,7 +2001,7 @@ void UWorld::BeginCooperativeCreate(const std::string &world_name)
   CoopSession->BeginCreate(*this, world_name);
 }
 
-bool UWorld::TickCooperativeCreate(IProgressSink &sink, int columnBudget)
+bool UWorld::TickCooperativeCreate(IUProgressSink &sink, int columnBudget)
 {
   if (!CoopSession)
   {
@@ -1187,6 +2013,127 @@ bool UWorld::TickCooperativeCreate(IProgressSink &sink, int columnBudget)
 bool UWorld::HasActiveCooperativeOperation() const
 {
   return CoopSession && CoopSession->Active;
+}
+
+bool UWorld::BlocksAsyncRelightDrain() const
+{
+  return CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick();
+}
+
+void UWorld::BeginBackgroundQuiesce(UBackgroundQuiesceState &state)
+{
+  state = UBackgroundQuiesceState{};
+  BackgroundQuiesceFinished = false;
+}
+
+bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
+                                   const std::chrono::milliseconds step_timeout,
+                                   IUProgressSink *sink)
+{
+  auto report = [&](const char *phase_id, float fraction, const char *message)
+  {
+    if (sink)
+    {
+      sink->Report(phase_id, fraction, message);
+    }
+  };
+
+  switch (state.phase)
+  {
+  case UBackgroundQuiesceState::Phase::Start:
+    AllowProceduralFill = false;
+    if (CoopSession)
+    {
+      CoopSession->CancelBackgroundWorkers();
+    }
+    report("start", 0.05f, "Stopping background work...");
+    state.phase = UBackgroundQuiesceState::Phase::StreamingOff;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::StreamingOff:
+    if (Streaming)
+    {
+      Streaming->QuiesceBackgroundWork(*this, step_timeout);
+    }
+    report("streaming", 0.2f, "Stopping streaming...");
+    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::ChunkGenCancel:
+  case UBackgroundQuiesceState::Phase::DrainIo:
+    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::CancelWorkers:
+    CancelAsyncRelightWork();
+    if (MeshService)
+    {
+      MeshService->CancelAsyncInFlightKeepDirty();
+    }
+    report("cancel", 0.35f, "Cancelling pending jobs...");
+    state.phase = UBackgroundQuiesceState::Phase::WaitRelight;
+    return false;
+
+  case UBackgroundQuiesceState::Phase::WaitRelight:
+  {
+    const bool idle = WaitForPendingRelightJobsFor(step_timeout);
+    const float frac =
+        0.35f + 0.3f * static_cast<float>(state.waitRelightPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("relight", std::min(0.65f, frac), "Waiting for relight jobs...");
+    if (idle || ++state.waitRelightPasses >=
+                   UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::WaitMesh;
+    }
+    return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::WaitMesh:
+  {
+    const bool idle =
+        MeshService ? MeshService->WaitForAsyncMeshIdleFor(step_timeout) : true;
+    const float frac =
+        0.65f + 0.25f * static_cast<float>(state.waitMeshPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("mesh", std::min(0.9f, frac), "Waiting for mesh jobs...");
+    if (idle || ++state.waitMeshPasses >= UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::Finalize;
+    }
+    return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::Finalize:
+    if (MeshService)
+    {
+      MeshService->CancelAsyncMeshWork();
+    }
+    if (Persistence)
+    {
+      Persistence->AbortAsyncChunkIo();
+    }
+    BackgroundQuiesceFinished = true;
+    report("done", 1.f, "Background work stopped.");
+    state.phase = UBackgroundQuiesceState::Phase::Done;
+    return true;
+
+  case UBackgroundQuiesceState::Phase::Done:
+    return true;
+  }
+  return true;
+}
+
+bool UWorld::TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId)
+{
+  return UWorldFluidFacade::TryAddFluidObject(*this, blockPos, liquidId);
+}
+
+void UWorld::ApplyBreakSiteFluidFlood(
+    glm::ivec3 blockPos, std::vector<glm::ivec3> &mesh_touch_blocks)
+{
+  UWorldFluidFacade::ApplyBreakSiteFluidFlood(*this, blockPos,
+                                              mesh_touch_blocks);
 }
 
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
@@ -1203,9 +2150,17 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
     return false;
   }
   const glm::ivec3 blockPos = WorldPosToBlock(position);
-  if (!BlockWorld.IsAir(blockPos))
+  const BlockId existing = BlockWorld.GetBlock(blockPos);
+  if (BlockRegistry->IsLiquid(Id))
   {
-    return false;
+    return TryAddFluidObject(blockPos, Id);
+  }
+  else if (existing != BLOCK_AIR && !BlockRegistry->IsLiquid(existing))
+  {
+    if (BlockRegistry->BlocksMovement(existing))
+    {
+      return false;
+    }
   }
   BlockWorld.SetBlock(blockPos, Id);
   if (BlockWorld.GetBlock(blockPos) != Id)
@@ -1214,25 +2169,43 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
+  const auto edit_t0 = std::chrono::high_resolution_clock::now();
+  ApplyEditFastRelight({blockPos});
   MarkBlockChunkDirty(blockPos);
+  PhysicsTelemetryData.EditToFirstMeshMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - edit_t0)
+          .count();
+  ApplyEditLighting({blockPos});
+  PublishBlockPhysicsEvent(blockPos);
+  PublishNeighborPhysicsEvents(blockPos);
+  if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
+  {
+    EnqueueFluidFrontierAt(*this, blockPos);
+    MarkBlockChunkDirty(blockPos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      MarkBlockChunkDirty(blockPos + offset);
+    }
+  }
   return true;
 }
 
-bool UWorld::PlacePrefab(const std::string &prefab_name,
+bool UWorld::PlaceObject(const std::string &prefab_name,
                          glm::ivec3 anchorWorldPos)
 {
-  if (!PrefabLibrary || !BlockRegistry)
+  if (!ObjectLibrary || !BlockRegistry)
   {
     return false;
   }
-  const Prefab *prefab = PrefabLibrary->Get(prefab_name);
+  const WorldObjectDefinition *prefab = ObjectLibrary->Get(prefab_name);
   if (!prefab)
   {
     return false;
   }
 
-  const PrefabPlacementStats stats =
-      PlacePrefabAt(BlockWorld, *prefab, anchorWorldPos, true);
+  const ObjectPlacementStats stats =
+      PlaceObjectAt(BlockWorld, *BlockRegistry, *prefab, anchorWorldPos, true);
   if (stats.placedCount == 0)
   {
     return false;
@@ -1240,7 +2213,9 @@ bool UWorld::PlacePrefab(const std::string &prefab_name,
   for (const auto &voxel : prefab->voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
-    if (BlockWorld.GetBlock(worldPos) == voxel.Id)
+    const BlockId blockId =
+        ResolveObjectVoxelPlacementId(voxel, *BlockRegistry);
+    if (BlockWorld.GetBlock(worldPos) == blockId)
     {
       MarkBlockChunkDirty(worldPos);
     }
@@ -1248,23 +2223,23 @@ bool UWorld::PlacePrefab(const std::string &prefab_name,
   return true;
 }
 
-bool UWorld::CanPlacePrefab(const std::string &prefab_name,
+bool UWorld::CanPlaceObject(const std::string &prefab_name,
                             glm::ivec3 anchorWorldPos) const
 {
-  if (!PrefabLibrary || !BlockRegistry)
+  if (!ObjectLibrary || !BlockRegistry)
   {
     return false;
   }
-  const Prefab *prefab = PrefabLibrary->Get(prefab_name);
+  const WorldObjectDefinition *prefab = ObjectLibrary->Get(prefab_name);
   if (!prefab)
   {
     return false;
   }
-  return CanPlacePrefabAt(BlockWorld, *prefab, anchorWorldPos);
+  return CanPlaceObjectAt(BlockWorld, *prefab, anchorWorldPos);
 }
 
 std::optional<glm::ivec3>
-UWorld::FindPrefabAnchorFromView(const glm::vec3 &position,
+UWorld::FindObjectAnchorFromView(const glm::vec3 &position,
                                  const glm::vec3 &front) const
 {
   const auto hit =
@@ -1307,10 +2282,10 @@ bool UWorld::AddUser(const std::string &Name)
   const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
   const glm::vec3 bodyOrigin = BodyOriginFromEye(SpawnPoint, eyeOffset);
   std::string speciesId = "human";
-  if (CreatureDefinitions)
+  if (const auto &creature_definitions = GetCreatureDefinitionStorage())
   {
     const std::string controlled =
-        CreatureDefinitions->GetControlledDefaultSpeciesId();
+        creature_definitions->GetControlledDefaultSpeciesId();
     if (!controlled.empty())
     {
       speciesId = controlled;
@@ -1335,18 +2310,19 @@ bool UWorld::AddUser(const std::string &Name)
   }
   if (Users.size() == 1)
   {
-    PlayerCreatureId = pid;
-    ControlledCreatureId = pid;
+    Environment.SetPlayerCreatureId(pid);
+    Environment.SetControlledCreatureId(pid);
   }
-  auto camera = std::make_shared<UCamera>(
-      SpawnPoint, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
-  camera->SetFreeMove(false);
-  const size_t viewId = ViewInstance->AddCameraReturnId(camera);
+  if (!ViewBinding)
+  {
+    return false;
+  }
+  const size_t viewId = ViewBinding->CreateUserCamera(SpawnPoint);
   user->SetViewId(viewId);
   if (Users.size() == 1)
   {
     SetCurrentUserName(Name);
-    ViewInstance->SetActiveCamera(viewId);
+    ViewBinding->SetActiveCamera(viewId);
   }
 
   return true;
@@ -1419,56 +2395,16 @@ bool UWorld::SetCurrentUserName(const std::string &Name)
   {
     if (user->GetPlayerCreatureId() != 0)
     {
-      PlayerCreatureId = user->GetPlayerCreatureId();
-      SetControlledCreature(PlayerCreatureId);
+      Environment.SetPlayerCreatureId(user->GetPlayerCreatureId());
+      SetControlledCreature(Environment.GetPlayerCreatureId());
     }
   }
   ApplyUserToCamera(GetCurrentUser());
-  if (auto user = GetCurrentUser())
+  if (auto user = GetCurrentUser(); user && ViewBinding)
   {
-    ViewInstance->SetActiveCamera(user->GetViewId());
+    ViewBinding->SetActiveCamera(user->GetViewId());
   }
   return true;
-}
-
-std::shared_ptr<UCamera> UWorld::GetUserCamera(const std::string &Name)
-{
-  auto user = GetUser(Name);
-  if (user == nullptr)
-    return nullptr;
-
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera()
-{
-  auto user = GetCurrentUser();
-  if (user == nullptr)
-    return nullptr;
-
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-std::shared_ptr<UCamera> UWorld::GetCurrentUserCamera() const
-{
-  auto user = GetCurrentUser();
-  if (user == nullptr)
-  {
-    return nullptr;
-  }
-  return ViewInstance->GetCamera(user->GetViewId());
-}
-
-bool UWorld::AddObjectByView()
-{
-  return AddObjectByView(GetCurrentUserCamera()->GetPosition(),
-                         GetCurrentUserCamera()->GetFront());
-}
-
-bool UWorld::DelObjectByView()
-{
-  return DelObjectByView(GetCurrentUserCamera()->GetPosition(),
-                         GetCurrentUserCamera()->GetFront());
 }
 
 bool UWorld::CheckRayIntersection(
@@ -1476,18 +2412,7 @@ bool UWorld::CheckRayIntersection(
     std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
         &distance_map) const
 {
-  distance_map.clear();
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
-  if (!hit)
-  {
-    return false;
-  }
-  const glm::vec3 hitCenter = BlockCenter(hit->blockPos);
-  distance_map[hit->distance] =
-      std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>(
-          0, glm::vec3(hit->faceNormal), hitCenter, 0, 0);
-  return true;
+  return Collision.CheckRayIntersection(position, front, distance_map);
 }
 
 bool UWorld::CheckRayIntersection(const glm::vec3 &position,
@@ -1496,24 +2421,13 @@ bool UWorld::CheckRayIntersection(const glm::vec3 &position,
                                   size_t &cube_index, int &cube_side,
                                   size_t &object_index) const
 {
-  std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
-      distance_map;
-
-  const bool result = CheckRayIntersection(position, front, distance_map);
-  if (result)
-  {
-    cube_side = std::get<0>(distance_map.begin()->second);
-    intersecion = std::get<2>(distance_map.begin()->second);
-    distance = distance_map.begin()->first;
-    cube_index = 0;
-    object_index = 0;
-  }
-  return result;
+  return Collision.CheckRayIntersection(position, front, intersecion, distance,
+                                        cube_index, cube_side, object_index);
 }
 
-bool UWorld::CheckPositionFree(const glm::vec3 &position, float /*size*/) const
+bool UWorld::CheckPositionFree(const glm::vec3 &position, float size) const
 {
-  return BlockWorld.IsAir(WorldPosToBlock(position));
+  return Collision.CheckPositionFree(position, size);
 }
 
 std::optional<glm::vec3>
@@ -1521,54 +2435,7 @@ UWorld::FindNearestFreeCubePosition(const glm::vec3 &position,
                                     const glm::vec3 &front,
                                     const PlayerCapsule &cap) const
 {
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
-  if (!hit)
-  {
-    return std::nullopt;
-  }
-
-  glm::ivec3 normal = hit->faceNormal;
-  if (normal == glm::ivec3(0))
-  {
-    const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
-    if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
-        std::abs(toCamera.x) >= std::abs(toCamera.z))
-    {
-      normal.x = toCamera.x > 0.0f ? 1 : -1;
-    }
-    else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
-    {
-      normal.y = toCamera.y > 0.0f ? 1 : -1;
-    }
-    else
-    {
-      normal.z = toCamera.z > 0.0f ? 1 : -1;
-    }
-  }
-
-  const glm::ivec3 placePos = hit->blockPos + normal;
-  if (!BlockWorld.IsAir(placePos))
-  {
-    return std::nullopt;
-  }
-
-  const glm::vec3 res_position = BlockCenter(placePos);
-  if (!CheckPositionFree(res_position, 1.0f))
-  {
-    return std::nullopt;
-  }
-
-  const CollisionVolume vol = CollisionVolumeFromEye(position, cap);
-  const glm::vec3 blockCenter = BlockCenter(placePos);
-  const glm::vec3 blockHalf(0.5f);
-  if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, blockCenter,
-                                blockHalf))
-  {
-    return std::nullopt;
-  }
-
-  return res_position;
+  return Collision.FindNearestFreeCubePosition(position, front, cap);
 }
 
 bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
@@ -1591,31 +2458,24 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
     return false;
   }
 
-  PlayerCapsule cap = PlayerCapsule::Standing();
-  if (const auto camera = GetCurrentUserCamera())
-  {
-    cap = camera->GetPlayerCapsule();
-  }
+  PlayerCapsule cap = ViewBinding ? ViewBinding->ResolvePlacementCapsule(*this)
+                                  : PlayerCapsule::Standing();
 
-  auto object_pos = FindNearestFreeCubePosition(position, front, cap);
-  if (object_pos.has_value())
+  const BlockPlacementResolve resolved =
+      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+  if (!resolved.place_block_pos)
   {
-    if (AddObject(blockType, object_pos.value()))
-    {
-      UpdateIntersection(position, front);
-      return true;
-    }
+    return false;
+  }
+  if (AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
+  {
+    UpdateIntersection(position, front);
+    return true;
   }
   return false;
 }
 
-bool UWorld::PlaceActivePrefabByView()
-{
-  return PlaceActivePrefabByView(GetCurrentUserCamera()->GetPosition(),
-                                 GetCurrentUserCamera()->GetFront());
-}
-
-bool UWorld::PlaceActivePrefabByView(const glm::vec3 &position,
+bool UWorld::PlaceActiveObjectByView(const glm::vec3 &position,
                                      const glm::vec3 &front)
 {
   auto user = GetCurrentUser();
@@ -1630,18 +2490,18 @@ bool UWorld::PlaceActivePrefabByView(const glm::vec3 &position,
     return false;
   }
   const std::string &prefabName =
-      controlled->GetInventory().GetActivePrefabName();
+      controlled->GetInventory().GetActiveObjectName();
   if (prefabName.empty())
   {
     return false;
   }
 
-  const auto anchor = FindPrefabAnchorFromView(position, front);
+  const auto anchor = FindObjectAnchorFromView(position, front);
   if (!anchor.has_value())
   {
     return false;
   }
-  if (PlacePrefab(prefabName, anchor.value()))
+  if (PlaceObject(prefabName, anchor.value()))
   {
     UpdateIntersection(position, front);
     return true;
@@ -1664,10 +2524,36 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   {
     --CachedBlockCount;
   }
-  MarkBlockChunkDirty(blockPos);
-  if (auto camera = GetCurrentUserCamera())
+  const std::vector<glm::ivec3> broken_above =
+      BreakUnsupportedBlocksAbove(BlockWorld, *BlockRegistry, blockPos);
+  std::vector<glm::ivec3> mesh_touch_blocks;
+  mesh_touch_blocks.reserve(1 + broken_above.size());
+  mesh_touch_blocks.push_back(blockPos);
+  mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_above.begin(),
+                           broken_above.end());
+  ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
+  const auto edit_t0 = std::chrono::high_resolution_clock::now();
+  ApplyEditFastRelight(mesh_touch_blocks);
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, true);
+  PhysicsTelemetryData.EditToFirstMeshMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - edit_t0)
+          .count();
+  ApplyEditLighting(mesh_touch_blocks);
+  PublishBlockPhysicsEvent(blockPos);
+  PublishNeighborPhysicsEvents(blockPos);
+  for (const glm::ivec3 &above_pos : broken_above)
   {
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
+    if (CachedBlockCount > 0)
+    {
+      --CachedBlockCount;
+    }
+    PublishBlockPhysicsEvent(above_pos);
+    PublishNeighborPhysicsEvents(above_pos);
+  }
+  if (ViewBinding)
+  {
+    ViewBinding->RefreshIntersectionFromCurrentView(*this);
   }
   return true;
 }
@@ -1728,163 +2614,80 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
   return BreakSession->blockPos;
 }
 
-bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
+FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
+                                                    int hintY) const
+{
+  return Collision.FindFluidColumnSurfaceAt(bx, bz, hintY);
+}
+
+FluidColumnSurface UWorld::FindFluidColumnSurface(const glm::vec3 &eye) const
+{
+  return Collision.FindFluidColumnSurfaceEye(eye);
+}
+
+bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
+                                   int radiusBlocks) const
 {
   if (!BlockRegistry)
   {
     return false;
   }
-  const glm::ivec3 cell = WorldPosToBlock(eye);
-  const BlockId Id = BlockWorld.GetBlock(cell);
-  if (Id == BLOCK_AIR || BlockRegistry->BlocksMovement(Id))
-  {
-    return false;
-  }
-  const glm::vec3 center = BlockCenter(cell);
-  const glm::vec3 rel = eye - center;
-  if (std::abs(rel.x) > 0.5f || std::abs(rel.y) > 0.5f ||
-      std::abs(rel.z) > 0.5f)
+  return HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
+                             cameraBlock.z, cameraBlock.y, radiusBlocks);
+}
+
+bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
+{
+  const FluidColumnSurface column = FindFluidColumnSurface(eye);
+  if (!column.valid || eye.y >= column.surfaceY)
   {
     return false;
   }
   if (outFluid)
   {
-    *outFluid = Id;
+    *outFluid = column.fluidId;
   }
   return true;
 }
 
-UWorld::SampledFluidState
+SampledFluidState
 UWorld::SampleFluidPhysicsVolume(const CollisionVolume &vol) const
 {
-  SampledFluidState state;
-  if (!BlockRegistry)
-  {
-    return state;
-  }
-  std::unordered_map<BlockId, int> fluidWeights;
-  const glm::vec3 center = vol.center;
-  const glm::vec3 half = vol.halfExtents;
-  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
-  const int radius =
-      static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
-  const glm::vec3 blockHalf(0.5f);
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dy = -radius; dy <= radius; ++dy)
-    {
-      for (int dz = -radius; dz <= radius; ++dz)
-      {
-        const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
-        const BlockId Id = BlockWorld.GetBlock(blockPos);
-        if (Id == BLOCK_AIR || BlockRegistry->BlocksMovement(Id))
-        {
-          continue;
-        }
-        const glm::vec3 blockCenter = BlockCenter(blockPos);
-        if (!UCube::CheckAabbCollision(center, half, blockCenter, blockHalf))
-        {
-          continue;
-        }
-        const auto &mov = BlockRegistry->Physics(Id).Movement;
-        state.inFluid = true;
-        fluidWeights[Id] += 1;
-        state.DragHorizontal =
-            std::max(state.DragHorizontal, mov.DragHorizontal);
-        state.SinkSpeed = std::max(state.SinkSpeed, mov.SinkSpeed);
-        state.RiseSpeed = std::max(state.RiseSpeed, mov.RiseSpeed);
-      }
-    }
-  }
-  if (state.inFluid)
-  {
-    state.blendWeight = 1.0f;
-    int bestWeight = 0;
-    for (const auto &entry : fluidWeights)
-    {
-      if (entry.second > bestWeight)
-      {
-        bestWeight = entry.second;
-        state.dominantFluid = entry.first;
-      }
-    }
-  }
-  return state;
+  return Collision.SampleFluidPhysicsVolume(vol);
 }
 
-UWorld::SampledFluidState
-UWorld::SampleFluidPhysics(const glm::vec3 &eyePos,
-                           const PlayerCapsule &cap) const
+bool UWorld::IsFoliageFluidBlock(BlockId id) const
+{
+  if (!BlockRegistry || id == BLOCK_AIR)
+  {
+    return false;
+  }
+  const auto &mov = BlockRegistry->Physics(id).Movement;
+  return mov.Occupancy < 1.0f && mov.SinkSpeed == 0.0f &&
+         mov.RiseSpeed == 0.0f && mov.DragHorizontal == 0.0f;
+}
+
+SampledFluidState UWorld::SampleFluidPhysics(const glm::vec3 &eyePos,
+                                             const PlayerCapsule &cap) const
 {
   return SampleFluidPhysicsVolume(CollisionVolumeFromEye(eyePos, cap));
 }
 
 bool UWorld::CheckBlockCollisionVolume(const CollisionVolume &vol) const
 {
-  if (!BlockRegistry)
-  {
-    return false;
-  }
-  const glm::vec3 center = vol.center;
-  const glm::vec3 half = vol.halfExtents;
-  const glm::ivec3 blockCenterCell = WorldPosToBlock(center);
-  const int radius =
-      static_cast<int>(std::ceil(std::max({half.x, half.y, half.z})));
-  const glm::vec3 blockHalf(0.5f);
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dy = -radius; dy <= radius; ++dy)
-    {
-      for (int dz = -radius; dz <= radius; ++dz)
-      {
-        const glm::ivec3 blockPos = blockCenterCell + glm::ivec3(dx, dy, dz);
-        const BlockId Id = BlockWorld.GetBlock(blockPos);
-        if (!BlockRegistry->BlocksMovement(Id))
-        {
-          continue;
-        }
-        const glm::vec3 blockCenter = BlockCenter(blockPos);
-        if (UCube::CheckAabbCollision(center, half, blockCenter, blockHalf))
-        {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+  return Collision.CheckBlockCollisionVolume(vol);
 }
 
 bool UWorld::CheckCreatureCollisionVolume(const CollisionVolume &vol,
                                           CreatureId skipCreatureId) const
 {
-  for (const auto &entry : Creatures)
-  {
-    if (entry.first == skipCreatureId)
-    {
-      continue;
-    }
-    const CollisionVolume other = entry.second->GetCollisionVolume();
-    if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, other.center,
-                                  other.halfExtents))
-    {
-      return true;
-    }
-  }
-  return false;
+  return Collision.CheckCreatureCollisionVolume(vol, skipCreatureId);
 }
 
 bool UWorld::CheckCollisionVolume(const CollisionVolume &vol,
                                   CreatureId skipCreatureId) const
 {
-  if (CheckBlockCollisionVolume(vol))
-  {
-    return true;
-  }
-  if (!EntityCollisionEnabled)
-  {
-    return false;
-  }
-  return CheckCreatureCollisionVolume(vol, skipCreatureId);
+  return Collision.CheckCollisionVolume(vol, skipCreatureId);
 }
 
 bool UWorld::CheckCollision(const glm::vec3 &eyePos,
@@ -1896,188 +2699,34 @@ bool UWorld::CheckCollision(const glm::vec3 &eyePos,
 bool UWorld::CheckCollision(const glm::vec3 &eyePos, const PlayerCapsule &cap,
                             CreatureId skipCreatureId) const
 {
-  return CheckCollisionVolume(CollisionVolumeFromEye(eyePos, cap),
-                              skipCreatureId);
+  return Collision.CheckCollision(eyePos, cap, skipCreatureId);
 }
 
 bool UWorld::DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
                             CreatureId skipCreatureId) const
 {
-  constexpr int kMaxIterations = 32;
-  constexpr float kStep = 0.05f;
-  if (!CheckCollision(eyePos, cap, skipCreatureId))
-  {
-    return true;
-  }
-  for (int i = 0; i < kMaxIterations; ++i)
-  {
-    eyePos.y += kStep;
-    if (!CheckCollision(eyePos, cap, skipCreatureId))
-    {
-      return true;
-    }
-  }
-  return !CheckCollision(eyePos, cap, skipCreatureId);
+  return Collision.DepenetrateEye(eyePos, cap, skipCreatureId);
 }
 
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {
-  if (!BlockRegistry)
-  {
-    return false;
-  }
-  const FootprintStandSampleStats stats = SampleFootprintAtFeet(
-      *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      vol.halfExtents.x, PlayerCapsule{}, false);
-  return stats.centerSolid && stats.solidSamples >= kFootprintMinSolidSamples;
+  return Collision.HasGroundSupportVolume(vol, feetY);
 }
 
 bool UWorld::HasGroundSupport(const glm::vec3 &eyePos,
                               const PlayerCapsule &cap) const
 {
-  return HasGroundSupportVolume(CollisionVolumeFromEye(eyePos, cap),
-                                cap.feetY(eyePos));
+  return Collision.HasGroundSupport(eyePos, cap);
 }
-
-namespace
-{
-
-constexpr float kCollisionMaxStep = 0.25f;
-constexpr float kCollisionEpsilon = 0.01f;
-constexpr int kCollisionMaxIterations = 64;
-
-glm::vec3 ResolveMovementAxisEye(const UWorld &world, const glm::vec3 &fromEye,
-                                 float axisDelta, int axis,
-                                 const PlayerCapsule &cap,
-                                 CreatureId skipCreatureId)
-{
-  if (std::abs(axisDelta) < 1e-8f)
-  {
-    return fromEye;
-  }
-  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
-  float remaining = std::abs(axisDelta);
-  glm::vec3 pos = fromEye;
-  glm::vec3 axisUnit(0.0f);
-  axisUnit[axis] = 1.0f;
-
-  int iterations = 0;
-  while (remaining > 1e-6f && iterations < kCollisionMaxIterations)
-  {
-    const float step = std::min(remaining, kCollisionMaxStep);
-    const glm::vec3 next = pos + axisUnit * step * sign;
-    if (world.CheckCollisionVolume(CollisionVolumeFromEye(next, cap),
-                                   skipCreatureId))
-    {
-      glm::vec3 lo = pos;
-      glm::vec3 hi = next;
-      for (int i = 0; i < 8; ++i)
-      {
-        const glm::vec3 mid = (lo + hi) * 0.5f;
-        if (world.CheckCollisionVolume(CollisionVolumeFromEye(mid, cap),
-                                       skipCreatureId))
-        {
-          hi = mid;
-        }
-        else
-        {
-          lo = mid;
-        }
-      }
-      if (axis == 1)
-      {
-        pos = lo;
-      }
-      else
-      {
-        pos = lo - axisUnit * kCollisionEpsilon * sign;
-      }
-      break;
-    }
-    pos = next;
-    remaining -= step;
-    ++iterations;
-  }
-  return pos;
-}
-
-glm::vec3 ResolveMovementAxisBody(const UWorld &world,
-                                  const glm::vec3 &fromBody, float axisDelta,
-                                  int axis, const glm::vec3 &currentSizeBlocks,
-                                  CreatureId skipCreatureId)
-{
-  if (std::abs(axisDelta) < 1e-8f)
-  {
-    return fromBody;
-  }
-  const float sign = axisDelta > 0.0f ? 1.0f : -1.0f;
-  float remaining = std::abs(axisDelta);
-  glm::vec3 body = fromBody;
-  glm::vec3 axisUnit(0.0f);
-  axisUnit[axis] = 1.0f;
-
-  int iterations = 0;
-  while (remaining > 1e-6f && iterations < kCollisionMaxIterations)
-  {
-    const float step = std::min(remaining, kCollisionMaxStep);
-    const glm::vec3 nextBody = body + axisUnit * step * sign;
-    if (world.CheckCollisionVolume(
-            CollisionVolumeFromBody(nextBody, currentSizeBlocks),
-            skipCreatureId))
-    {
-      glm::vec3 lo = body;
-      glm::vec3 hi = nextBody;
-      for (int i = 0; i < 8; ++i)
-      {
-        const glm::vec3 mid = (lo + hi) * 0.5f;
-        if (world.CheckCollisionVolume(
-                CollisionVolumeFromBody(mid, currentSizeBlocks),
-                skipCreatureId))
-        {
-          hi = mid;
-        }
-        else
-        {
-          lo = mid;
-        }
-      }
-      if (axis == 1 && sign < 0.0f)
-      {
-        body = lo;
-      }
-      else
-      {
-        body = lo - axisUnit * kCollisionEpsilon * sign;
-      }
-      break;
-    }
-    body = nextBody;
-    remaining -= step;
-    ++iterations;
-  }
-  return body;
-}
-
-} // namespace
 
 glm::vec3 UWorld::ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                       const glm::vec3 &delta,
                                       const glm::vec3 &currentSizeBlocks,
                                       CreatureId skipCreatureId) const
 {
-  if (glm::dot(delta, delta) < 1e-10f)
-  {
-    return bodyOrigin;
-  }
-  glm::vec3 body = bodyOrigin;
-  body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks,
-                                 skipCreatureId);
-  body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks,
-                                 skipCreatureId);
-  body = ResolveMovementAxisBody(*this, body, delta.z, 2, currentSizeBlocks,
-                                 skipCreatureId);
-  return body;
+  return Collision.ResolveMovementBody(bodyOrigin, delta, currentSizeBlocks,
+                                       skipCreatureId);
 }
 
 glm::vec3 UWorld::ResolveMovement(const glm::vec3 &eyePos,
@@ -2085,127 +2734,15 @@ glm::vec3 UWorld::ResolveMovement(const glm::vec3 &eyePos,
                                   const PlayerCapsule &cap,
                                   CreatureId skipCreatureId) const
 {
-  if (glm::dot(delta, delta) < 1e-10f)
-  {
-    return eyePos;
-  }
-  glm::vec3 resolvedEye = eyePos;
-  if (delta.y > 0.0f && CheckCollision(resolvedEye, cap, skipCreatureId))
-  {
-    DepenetrateEye(resolvedEye, cap, skipCreatureId);
-  }
-  const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
-  const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height,
-                             cap.halfWidth * 2.0f);
-  const glm::vec3 body = BodyOriginFromEye(resolvedEye, eyeOffset);
-  const glm::vec3 newBody =
-      ResolveMovementBody(body, delta, sizeBlocks, skipCreatureId);
-  return BoundsEyePosition(newBody, eyeOffset);
+  return Collision.ResolveMovement(eyePos, delta, cap, skipCreatureId);
 }
 
-namespace
+UWorldCollision::StepUpProbe UWorld::ProbeStepUp(const glm::vec3 &eyePos,
+                                                 const glm::vec3 &horiz,
+                                                 const PlayerCapsule &cap,
+                                                 float maxTriggerDistance) const
 {
-
-glm::vec3 StepStandPosition(const glm::ivec3 &stepCell,
-                            const PlayerCapsule &cap)
-{
-  const float feetY = BlockTopY(stepCell.y);
-  return glm::vec3(static_cast<float>(stepCell.x), feetY + cap.eyeHeight,
-                   static_cast<float>(stepCell.z));
-}
-
-bool FindSteppableLedge(const UWorld &world, const UBlockWorld &blockWorld,
-                        const UBlockRegistry &registry, const glm::vec3 &eyePos,
-                        const glm::vec3 &dir, const PlayerCapsule &cap,
-                        glm::ivec3 &outStepCell)
-{
-  const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
-  const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
-  if (dx == 0 && dz == 0)
-  {
-    return false;
-  }
-  const float feetY = cap.feetY(eyePos);
-  const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
-  const glm::ivec3 standCell(WorldCoordToBlockIndex(eyePos.x), supportY,
-                             WorldCoordToBlockIndex(eyePos.z));
-  if (!registry.BlocksMovement(blockWorld.GetBlock(standCell)))
-  {
-    return false;
-  }
-  const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
-  if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell)))
-  {
-    return false;
-  }
-  const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
-  if (!world.IsValidStandCell(stepCell, cap))
-  {
-    return false;
-  }
-  const float stepFeetY = BlockTopY(stepCell.y);
-  const float rise = stepFeetY - feetY;
-  if (rise < 0.45f || rise > 1.05f)
-  {
-    return false;
-  }
-  const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
-  if (world.CheckCollision(landingEye, cap))
-  {
-    return false;
-  }
-  outStepCell = stepCell;
-  return true;
-}
-
-float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
-                          const glm::vec3 &dir, const PlayerCapsule &cap)
-{
-  const glm::vec3 blockCenter(static_cast<float>(stepCell.x),
-                              static_cast<float>(stepCell.y),
-                              static_cast<float>(stepCell.z));
-  const glm::vec3 facePoint =
-      blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
-  const glm::vec3 playerLead =
-      eyePos + glm::vec3(dir.x * cap.halfWidth, 0.0f, dir.z * cap.halfWidth);
-  return glm::dot(facePoint - playerLead, dir);
-}
-
-} // namespace
-
-UWorld::StepUpProbe UWorld::ProbeStepUp(const glm::vec3 &eyePos,
-                                        const glm::vec3 &horiz,
-                                        const PlayerCapsule &cap,
-                                        float maxTriggerDistance) const
-{
-  StepUpProbe probe{};
-  if (!BlockRegistry)
-  {
-    return probe;
-  }
-  const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
-  const float horizLen = glm::length(horizFlat);
-  if (horizLen < 1e-6f)
-  {
-    return probe;
-  }
-  const glm::vec3 dir = horizFlat / horizLen;
-  glm::ivec3 stepCell(0);
-  if (!FindSteppableLedge(*this, BlockWorld, *BlockRegistry, eyePos, dir, cap,
-                          stepCell))
-  {
-    return probe;
-  }
-  const float dist = DistanceToStepRiser(eyePos, stepCell, dir, cap);
-  if (dist < -0.02f || dist > maxTriggerDistance)
-  {
-    return probe;
-  }
-  probe.Valid = true;
-  probe.DistanceToLedge = dist;
-  probe.MoveDir = dir;
-  probe.TargetPos = StepStandPosition(stepCell, cap);
-  return probe;
+  return Collision.ProbeStepUp(eyePos, horiz, cap, maxTriggerDistance);
 }
 
 bool UWorld::GetStepUpLanding(const glm::vec3 &eyePos, const glm::vec3 &horiz,
@@ -2213,766 +2750,397 @@ bool UWorld::GetStepUpLanding(const glm::vec3 &eyePos, const glm::vec3 &horiz,
                               float maxTriggerDistance,
                               glm::vec3 &outLanding) const
 {
-  const StepUpProbe probe = ProbeStepUp(eyePos, horiz, cap, maxTriggerDistance);
-  if (!probe.Valid)
-  {
-    return false;
-  }
-  glm::ivec3 stepCell(0);
-  const glm::vec3 horizFlat(horiz.x, 0.0f, horiz.z);
-  const float horizLen = glm::length(horizFlat);
-  if (horizLen < 1e-6f)
-  {
-    return false;
-  }
-  const glm::vec3 dir = horizFlat / horizLen;
-  if (!FindSteppableLedge(*this, BlockWorld, *BlockRegistry, eyePos, dir, cap,
-                          stepCell))
-  {
-    return false;
-  }
-  const glm::ivec3 feetCell =
-      WorldPosToBlock(glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
-  if (feetCell.x == stepCell.x && feetCell.z == stepCell.z &&
-      feetCell.y >= stepCell.y)
-  {
-    return false;
-  }
-
-  outLanding = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
-                                           probe.MoveDir.z * 0.18f);
-  return !CheckCollision(outLanding, cap);
+  return Collision.GetStepUpLanding(eyePos, horiz, cap, maxTriggerDistance,
+                                    outLanding);
 }
 
 bool UWorld::TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
                        const PlayerCapsule &cap, float maxTriggerDistance) const
 {
-  glm::vec3 landing = eyePos;
-  if (!GetStepUpLanding(eyePos, horiz, cap, maxTriggerDistance, landing))
-  {
-    return false;
-  }
-  eyePos = landing;
-  return true;
+  return Collision.TryStepUp(eyePos, horiz, cap, maxTriggerDistance);
 }
 
 void UWorld::LoadUsers(const std::string &file_name)
 {
-  std::string val;
-  std::ifstream file(file_name);
-  if (file.is_open())
-  {
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    val = buffer.str();
-    file.close();
-  }
-  else
-  {
-    std::cerr << "Failed to open users file: " << file_name << std::endl;
-    return;
-  }
-
-  try
-  {
-    Users.clear();
-    json d = json::parse(val);
-    for (auto I = d.begin(); I != d.end(); ++I)
-    {
-      const auto user_name = I.key();
-      const auto user_data = I.value();
-
-      AddUser(user_name);
-      auto user = GetUser(user_name);
-      if (!user)
-      {
-        continue;
-      }
-
-      glm::vec3 position = SpawnPoint;
-      const auto position_value = user_data.value("position", json::array());
-      if (position_value.is_array() && position_value.size() == 3)
-      {
-        position = glm::vec3(position_value[0].get<float>(),
-                             position_value[1].get<float>(),
-                             position_value[2].get<float>());
-      }
-      user->SetPosition(position);
-      SanitizeUserPosition(user);
-
-      if (user_data.contains("player_creature_id"))
-      {
-        const CreatureId savedId =
-            user_data["player_creature_id"].get<CreatureId>();
-        if (GetCreature(savedId))
-        {
-          user->SetPlayerCreatureId(savedId);
-          PlayerCreatureId = savedId;
-        }
-      }
-      if (user_data.contains("selected_skin_id"))
-      {
-        user->SetSelectedSkinId(
-            user_data["selected_skin_id"].get<std::string>());
-      }
-      else if (user_data.contains("selected_appearance_type"))
-      {
-        user->SetSelectedAppearanceTypeId(
-            user_data["selected_appearance_type"].get<std::string>());
-        user->SetSelectedSkinId(
-            user_data["selected_appearance_type"].get<std::string>());
-      }
-      UCreature *playerCreature = GetCreature(user->GetPlayerCreatureId());
-      if (!playerCreature && PlayerCreatureId != 0)
-      {
-        user->SetPlayerCreatureId(PlayerCreatureId);
-        playerCreature = GetCreature(PlayerCreatureId);
-      }
-      if (!playerCreature)
-      {
-        std::string speciesId = "human";
-        if (CreatureDefinitions)
-        {
-          const std::string controlled =
-              CreatureDefinitions->GetControlledDefaultSpeciesId();
-          if (!controlled.empty())
-          {
-            speciesId = controlled;
-          }
-        }
-        const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
-        const glm::vec3 bodyOrigin = BodyOriginFromEye(position, eyeOffset);
-        const CreatureId pid = SpawnCreature(speciesId, bodyOrigin);
-        if (pid != 0)
-        {
-          user->SetPlayerCreatureId(pid);
-          PlayerCreatureId = pid;
-          if (Users.size() == 1)
-          {
-            ControlledCreatureId = pid;
-          }
-          if (UPlayer *player = dynamic_cast<UPlayer *>(GetCreature(pid)))
-          {
-            player->BindUser(user);
-          }
-          playerCreature = GetCreature(pid);
-        }
-      }
-      if (playerCreature)
-      {
-        const glm::vec3 eyeOffset = playerCreature->GetEyeOffset();
-        playerCreature->SetBodyOrigin(
-            BodyOriginFromEye(user->GetPosition(), eyeOffset));
-      }
-
-      float yaw = -90.0f;
-      float pitch = 0.0f;
-      if (user_data.contains("yaw"))
-      {
-        yaw = user_data["yaw"].get<float>();
-      }
-      if (user_data.contains("pitch"))
-      {
-        pitch = user_data["pitch"].get<float>();
-      }
-      user->SetCameraOrientation(yaw, pitch);
-
-      const size_t HotbarCount = 2;
-      if (playerCreature)
-      {
-        UCreatureInventory &inv = playerCreature->GetInventory();
-        const bool hadHotbars = user_data.contains("hotbars") &&
-                                user_data["hotbars"].is_array();
-        inv.DeserializeFromJson(user_data, HotbarCount);
-        if (inv.GetStorage().empty())
-        {
-          inv.InitCreativeDefaults();
-        }
-        if (!hadHotbars || inv.IsPrimaryHotbarEmpty())
-        {
-          inv.EnsureDefaultHotbar();
-        }
-        playerCreature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
-        if (!user->GetSelectedSkinId().empty())
-        {
-          playerCreature->SetSkinId(user->GetSelectedSkinId());
-          if (const CreatureDefinition *def =
-                  GetCreatureDefinition(playerCreature->GetTypeId()))
-          {
-            playerCreature->SetVisual(CreateCreatureVisual(*def));
-          }
-        }
-      }
-
-      if (auto camera = GetUserCamera(user_name))
-      {
-        camera->SetPosition(position);
-        camera->SetOrientation(yaw, pitch);
-      }
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadUsers: " << e.what() << std::endl;
-  }
+  Persistence->LoadUsers(*this, file_name);
 }
 
 void UWorld::SaveUsers(const std::string &file_name)
 {
-  json objects;
-
-  for (auto I = Users.begin(); I != Users.end(); ++I)
-  {
-    const auto &user_name = I->first;
-    auto user = I->second;
-
-    glm::vec3 position = user->GetPosition();
-    float yaw = user->GetCameraYaw();
-    float pitch = user->GetCameraPitch();
-    if (user_name == CurrentUserName)
-    {
-      if (auto camera = GetUserCamera(user_name))
-      {
-        position = camera->GetPosition();
-        yaw = camera->GetYaw();
-        pitch = camera->GetPitch();
-        user->SetPosition(position);
-        user->SetCameraOrientation(yaw, pitch);
-      }
-    }
-
-    json user_json;
-    user_json["position"] = json::array({position.x, position.y, position.z});
-    user_json["yaw"] = yaw;
-    user_json["pitch"] = pitch;
-    user_json["player_creature_id"] = user->GetPlayerCreatureId();
-    if (!user->GetSelectedSkinId().empty())
-    {
-      user_json["selected_skin_id"] = user->GetSelectedSkinId();
-    }
-    else if (!user->GetSelectedAppearanceTypeId().empty())
-    {
-      user_json["selected_appearance_type"] =
-          user->GetSelectedAppearanceTypeId();
-    }
-
-    if (UCreature *playerCreature = GetCreature(user->GetPlayerCreatureId()))
-    {
-      playerCreature->GetInventory().SerializeToJson(user_json);
-    }
-
-    objects[user_name] = user_json;
-  }
-
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << objects.dump(4);
-    file.close();
-  }
+  Persistence->SaveUsers(*this, file_name);
 }
 
 void UWorld::LoadWorldData(const std::string &file_name)
 {
-  std::string val;
-  std::ifstream file(file_name);
-  if (file.is_open())
-  {
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    val = buffer.str();
-    file.close();
-  }
-  else
-  {
-    std::cerr << "Failed to open world data file: " << file_name << std::endl;
-    return;
-  }
-
-  try
-  {
-    json d = json::parse(val);
-    std::string world_name_value = d.value("world_name", "");
-    json spawn_point_value = d.value("spawn_point", json::array());
-
-    if (world_name_value.empty() || spawn_point_value.empty())
-      return;
-
-    if (!spawn_point_value.is_array())
-      return;
-
-    if (spawn_point_value.size() != 3)
-      return;
-
-    glm::vec3 spawn_point(spawn_point_value[0].get<float>(),
-                          spawn_point_value[1].get<float>(),
-                          spawn_point_value[2].get<float>());
-
-    WorldName = world_name_value;
-    SpawnPoint = spawn_point;
-
-    if (d.contains("terrain") && d["terrain"].is_string())
-    {
-      TerrainType = d["terrain"].get<std::string>();
-    }
-    if (d.contains("world_seed"))
-    {
-      WorldSeed = d["world_seed"].get<uint32_t>();
-    }
-    if (d.contains("procedural") && d["procedural"].is_object())
-    {
-      ProceduralTemplate = ParseProceduralSettings(d);
-      TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-      WorldSeed = ProceduralTemplate.Seed;
-    }
-    else
-    {
-      ProceduralTemplate.Seed = WorldSeed;
-      ProceduralTemplate.Generator = ProceduralGeneratorFromString(TerrainType);
-      ResolveProceduralDefaults(ProceduralTemplate);
-      ApplyGeneratorTierDefaults(ProceduralTemplate);
-    }
-    ResourcePacksEnabled.clear();
-    ResourcePacksPrimary.clear();
-    ResourcePacksSecondary.clear();
-    WorldgenOwnerPackId.clear();
-    if (d.contains("resource_packs") && d["resource_packs"].is_object())
-    {
-      const auto &rp = d["resource_packs"];
-      auto parseIds = [](const nlohmann::json &arr,
-                         std::vector<std::string> &out) {
-        if (!arr.is_array())
-        {
-          return;
-        }
-        for (const auto &id : arr)
-        {
-          if (id.is_string())
-          {
-            out.push_back(id.get<std::string>());
-          }
-        }
-      };
-      if (rp.contains("primary") && rp["primary"].is_array())
-      {
-        parseIds(rp["primary"], ResourcePacksPrimary);
-      }
-      if (rp.contains("secondary") && rp["secondary"].is_array())
-      {
-        parseIds(rp["secondary"], ResourcePacksSecondary);
-      }
-      if (ResourcePacksPrimary.empty() && rp.contains("enabled") &&
-          rp["enabled"].is_array())
-      {
-        parseIds(rp["enabled"], ResourcePacksPrimary);
-      }
-      if (rp.contains("worldgen_owner") && rp["worldgen_owner"].is_string())
-      {
-        WorldgenOwnerPackId = rp["worldgen_owner"].get<std::string>();
-      }
-      ResourcePacksEnabled = ResourcePacksPrimary;
-      ResourcePacksEnabled.insert(ResourcePacksEnabled.end(),
-                                  ResourcePacksSecondary.begin(),
-                                  ResourcePacksSecondary.end());
-    }
-    if (d.contains("catalog_fingerprint") && d["catalog_fingerprint"].is_string())
-    {
-      CatalogFingerprint = d["catalog_fingerprint"].get<std::string>();
-    }
-    else
-    {
-      CatalogFingerprint.clear();
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadWorldData: " << e.what()
-              << std::endl;
-  }
+  Persistence->LoadWorldData(*this, file_name);
 }
 
 void UWorld::SaveWorldData(const std::string &file_name)
 {
-  json world_data;
-
-  world_data["world_name"] = WorldName;
-  world_data["terrain"] = TerrainType;
-  world_data["world_seed"] = WorldSeed;
-  WriteProceduralSettings(world_data, ProceduralTemplate);
-
-  json arr = json::array({SpawnPoint.x, SpawnPoint.y, SpawnPoint.z});
-  world_data["spawn_point"] = arr;
-
-  if (!ResourcePacksPrimary.empty() || !ResourcePacksSecondary.empty())
-  {
-    auto &rp = world_data["resource_packs"];
-    if (!ResourcePacksPrimary.empty())
-    {
-      rp["primary"] = ResourcePacksPrimary;
-    }
-    if (!ResourcePacksSecondary.empty())
-    {
-      rp["secondary"] = ResourcePacksSecondary;
-    }
-    if (!WorldgenOwnerPackId.empty())
-    {
-      rp["worldgen_owner"] = WorldgenOwnerPackId;
-    }
-  }
-  else if (!ResourcePacksEnabled.empty())
-  {
-    world_data["resource_packs"]["primary"] = ResourcePacksEnabled;
-  }
-
-  if (!CatalogFingerprint.empty())
-  {
-    world_data["catalog_fingerprint"] = CatalogFingerprint;
-  }
-
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << world_data.dump(4);
-    file.close();
-  }
+  Persistence->SaveWorldData(*this, file_name);
 }
 
 void UWorld::SaveMovementDiagnostics(const std::string &file_name) const
 {
-  json root;
-  root["schema"] = "movement_diagnostics.v1";
-  root["world_name"] = WorldName;
-  root["sample_count"] = MovementDiagHistory.size();
-  json samples = json::array();
-  for (const MovementDiagnostics &sample : MovementDiagHistory)
+  UMovementDiagnosticsRecorder::SaveToFile(*this, file_name);
+}
+
+void UWorld::ConfigurePhysicsServices()
+{
+  BlockPhysicsService = std::make_unique<UWorldBlockPhysicsService>();
+  MovementPhysicsService = std::make_unique<UWorldMovementPhysicsService>();
+  ChunkDirtyService = std::make_unique<UWorldChunkDirtyService>();
+  if (BlockPhysicsService)
   {
-    samples.push_back({
-        {"delta_time", sample.deltaTime},
-        {"player_y_drop", sample.playerYDrop},
-        {"streaming_loads", sample.streamingLoads},
-        {"streaming_unloads", sample.streamingUnloads},
-        {"streaming_gen_ms", sample.streamingGenMs},
-        {"streaming_io_ms", sample.streamingIoMs},
-        {"mesh_rebuild_ms", sample.meshRebuildMs},
-        {"dirty_chunks_pending", sample.dirtyChunksPending},
-        {"mesh_rebuilds_this_frame", sample.meshRebuildsThisFrame},
-        {"hitch_detected", sample.hitchDetected},
-        {"fall_through_suspected", sample.fallThroughSuspected},
-    });
+    BlockPhysicsService->SetBudgets(PhysicsBudgetConfig);
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
-  root["samples"] = std::move(samples);
-  std::ofstream file(file_name);
-  if (file.is_open())
+  if (ChunkDirtyService)
   {
-    file << root.dump(2);
+    ChunkDirtyService->SetBudgets(PhysicsBudgetConfig);
+  }
+  PhysicsScheduler = std::make_unique<UWorldPhysicsScheduler>(
+      MovementPhysicsService.get(), BlockPhysicsService.get(),
+      ChunkDirtyService.get());
+  Collision.SetTelemetry(&PhysicsTelemetryData);
+}
+
+void UWorld::SetPhysicsProfile(PhysicsProfile profile)
+{
+  ActivePhysicsProfile = profile;
+  if (BlockPhysicsService)
+  {
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
 }
 
-void UWorld::AppendMovementDiagnosticsSample()
+void UWorld::SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags)
 {
-  constexpr size_t kMaxSamples = 4096;
-  MovementDiagHistory.push_back(MovementDiag);
-  if (MovementDiagHistory.size() > kMaxSamples)
+  PhysicsFlags = flags;
+  Collision.SetBroadphaseEnabled(flags.EnableCollisionBroadphase);
+  Collision.SetCollisionDdaEnabled(flags.EnableCollisionDda);
+  Collision.SetTelemetry(&PhysicsTelemetryData);
+  if (BlockPhysicsService)
   {
-    const size_t trim = MovementDiagHistory.size() - kMaxSamples;
-    MovementDiagHistory.erase(MovementDiagHistory.begin(),
-                              MovementDiagHistory.begin() +
-                                  static_cast<std::ptrdiff_t>(trim));
+    UPhysicsProfileFactory::ConfigureService(
+        ActivePhysicsProfile, *BlockPhysicsService, PhysicsFlags);
   }
+}
+
+void UWorld::SetPhysicsBudgets(const PhysicsBudgets &budgets)
+{
+  PhysicsBudgetConfig = budgets;
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->SetBudgets(budgets);
+  }
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->SetBudgets(budgets);
+  }
+}
+
+void UWorld::UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
+                                     const FluidUpdateSetStats &fluidStats)
+{
+  PhysicsTelemetryData.BlockQueueDepth = blockStats.Depth;
+  PhysicsTelemetryData.LiquidQueueDepth = fluidStats.Depth;
+  PhysicsTelemetryData.DeferredUpdates = blockStats.Deferred;
+  PhysicsTelemetryData.DroppedUpdates = blockStats.Dropped + fluidStats.Dropped;
+  PhysicsTelemetryData.PurgedUpdates = blockStats.Purged;
+}
+
+void UWorld::AccumulateFallingStats(const FallingBlocksStats &stats)
+{
+  PhysicsTelemetryData.DeferredUpdates += stats.Deferred;
+  PhysicsTelemetryData.DroppedUpdates += stats.Dropped;
+}
+
+void UWorld::AccumulateFluidStats(const FluidSpreadStats &stats)
+{
+  PhysicsTelemetryData.DeferredUpdates += stats.Candidates - stats.Applied;
+  PhysicsTelemetryData.DroppedUpdates += 0;
+  (void)stats;
+}
+
+bool UWorld::IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const
+{
+  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
+  const glm::ivec3 focus = MovementDiag.feetChunk;
+  const int radius = std::max({std::abs(chunkCoord.x - focus.x),
+                               std::abs(chunkCoord.y - focus.y),
+                               std::abs(chunkCoord.z - focus.z)});
+  return radius <= PhysicsBudgetConfig.LiquidUpdateRadiusChunks;
+}
+
+void UWorld::MarkFluidRegionDirty(glm::ivec3 center, int block_radius)
+{
+  UWorldFluidFacade::MarkFluidRegionDirty(*this, center, block_radius);
+}
+
+void UWorld::MarkFluidChangeDirty(glm::ivec3 blockPos)
+{
+  // Simulation path: always budgeted remesh (async when enabled). Use
+  // MarkBlockChunkDirty for player-driven edits that need instant feedback.
+  MarkBlockChunkDirtyFromPhysics(blockPos);
+}
+
+void UWorld::MarkFluidFloodMeshDirty(
+    glm::ivec3 blockPos, const std::vector<glm::ivec3> &filled_blocks)
+{
+  UWorldFluidFacade::MarkFluidFloodMeshDirty(*this, blockPos, filled_blocks);
+}
+
+void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService || !BlockRegistry || !PhysicsFlags.EnableFluids)
+  {
+    return;
+  }
+  const UBlockDefinitionStorage *definitions = BlockRegistry->GetDefinitions();
+  if (definitions == nullptr)
+  {
+    return;
+  }
+  const BlockId block_id = BlockWorld.GetBlock(blockPos);
+  if (!BlockRegistry->IsLiquid(block_id) &&
+      !UFluidSpreadSystem::CanReceiveFluid(BlockWorld, *definitions, blockPos))
+  {
+    return;
+  }
+  if (!UFluidSpreadSystem::HasSpreadTargetForTick(BlockWorld, *definitions,
+                                                  blockPos, PhysicsTickCounter))
+  {
+    return;
+  }
+  BlockPhysicsService->PublishFluid(blockPos);
+}
+
+void UWorld::ForceEnqueueFluidAt(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService || !BlockRegistry || !PhysicsFlags.EnableFluids)
+  {
+    return;
+  }
+  BlockPhysicsService->PublishFluid(blockPos);
+}
+
+void UWorld::WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks)
+{
+  if (!BlockRegistry || !PhysicsFlags.EnableFluids || !BlockPhysicsService)
+  {
+    return;
+  }
+  BlockPhysicsService->PublishFluid(blockPos);
+  const int clamped_radius = std::max(0, radius_blocks);
+  for (int dx = -clamped_radius; dx <= clamped_radius; ++dx)
+  {
+    for (int dy = -clamped_radius; dy <= clamped_radius; ++dy)
+    {
+      for (int dz = -clamped_radius; dz <= clamped_radius; ++dz)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 pos(blockPos.x + dx, blockPos.y + dy, blockPos.z + dz);
+        if (BlockRegistry->IsLiquid(BlockWorld.GetBlock(pos)))
+        {
+          TryEnqueueFluidAt(pos);
+        }
+      }
+    }
+  }
+}
+
+void UWorld::TrySeedFallingAt(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService || !BlockRegistry || !PhysicsFlags.EnableFalling)
+  {
+    return;
+  }
+  if (!BlockRegistry->IsFallingBlock(BlockWorld.GetBlock(blockPos)))
+  {
+    return;
+  }
+  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(blockPos);
+  BlockPhysicsService->PublishSupportLost(
+      blockPos, chunk_coord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
+}
+
+void UWorld::PublishBlockPhysicsEvent(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService)
+  {
+    return;
+  }
+  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
+  BlockPhysicsService->PublishBlockChanged(
+      blockPos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
+}
+
+void UWorld::PublishNeighborPhysicsEvents(glm::ivec3 blockPos)
+{
+  if (!BlockPhysicsService)
+  {
+    return;
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 pos = blockPos + offset;
+    const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(pos);
+    BlockPhysicsService->PublishNeighborChanged(
+        pos, chunkCoord, PhysicsTickCounter, ++PhysicsEventOrderCounter);
+  }
+  const glm::ivec3 above(blockPos.x, blockPos.y + 1, blockPos.z);
+  const glm::ivec3 aboveChunk = UChunkManager::WorldToChunk(above);
+  BlockPhysicsService->PublishSupportLost(above, aboveChunk, PhysicsTickCounter,
+                                          ++PhysicsEventOrderCounter);
+}
+
+bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
+{
+  if (!PhysicsFlags.EnableCollisionReadinessGate || !Streaming ||
+      !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  if (BlockRegistry)
+  {
+    for (int dy = 0; dy <= 2; ++dy)
+    {
+      const BlockId id =
+          BlockWorld.GetBlock(glm::ivec3(feetBlock.x, feetBlock.y + dy, feetBlock.z));
+      if (BlockRegistry->IsLiquid(id))
+      {
+        return true;
+      }
+    }
+  }
+  if (const auto *streamer = Streaming->GetStreamer())
+  {
+    return streamer->IsCollisionReady(
+        feetBlock, PhysicsBudgetConfig.CollisionSafetyRadiusChunks);
+  }
+  return false;
 }
 
 void UWorld::DoMovement()
 {
-  if (!BlockWorldReady)
+  TickEnvironment(static_cast<float>(WallFrameDeltaSec));
+  ++PhysicsTickCounter;
+  if (PhysicsScheduler)
   {
+    using clock = std::chrono::high_resolution_clock;
+    const auto t_begin = clock::now();
+    auto t_after_move = t_begin;
+
+    if (MovementPhysicsService)
+    {
+      MovementPhysicsService->TickMovement(*this);
+      t_after_move = clock::now();
+    }
+
+    double block_ms = 0.0;
+    double drain_ms = 0.0;
+    if (BlockPhysicsService)
+    {
+      const auto tb = clock::now();
+      BlockPhysicsService->TickBlockPhysics(*this);
+      block_ms =
+          std::chrono::duration<double, std::milli>(clock::now() - tb).count();
+    }
+    if (ChunkDirtyService)
+    {
+      const auto tb = clock::now();
+      ChunkDirtyService->DrainRebuildQueues(*this);
+      drain_ms =
+          std::chrono::duration<double, std::milli>(clock::now() - tb).count();
+    }
+
+    const auto t_end = clock::now();
+    PhysicsTelemetryData.MovementStepMs =
+        std::chrono::duration<double, std::milli>(t_after_move - t_begin)
+            .count();
+    PhysicsTelemetryData.BlockStepMs = block_ms;
+    PhysicsTelemetryData.DrainStepMs = drain_ms;
+    PhysicsTelemetryData.FluidStepMs = block_ms;
+    PhysicsTelemetryData.SimulationStepsThisFrame = 1;
+    PhysicsTelemetryData.PhysicsStepMs =
+        std::chrono::duration<double, std::milli>(t_end - t_begin).count();
+    DurationDoMovementMks = static_cast<uint64_t>(
+        std::chrono::duration<double, std::micro>(t_end - t_begin).count());
     return;
   }
-  if (PhysicsSuspendFrames > 0)
-  {
-    --PhysicsSuspendFrames;
-    return;
-  }
-
-  auto t_begin = std::chrono::high_resolution_clock::now();
-  FrameStreamingGenMs = 0.0;
-  FrameStreamingIoMs = 0.0;
-
-  auto camera = GetCurrentUserCamera();
-  UCreature *controlled = GetControlledCreature();
-  if (camera && camera->GetPosition().y < kMinReasonablePlayerY)
-  {
-    EnsurePlayerOnGround();
-    camera->ResetVerticalPhysics();
-    return;
-  }
-  const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
-  const float dt = camera ? camera->GetDeltaTime() : 0.0f;
-
-  if (camera && Streamer && StreamingEnabled)
-  {
-    const glm::vec3 eyePos = camera->GetPosition();
-    float feetY =
-        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
-    if (controlled)
-    {
-      feetY = BoundsFeetY(controlled->GetBodyOrigin());
-    }
-    const glm::ivec3 feetBlock =
-        WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
-    Streamer->EnsureCollisionChunks(feetBlock);
-  }
-
-  UWorldCreatureActivitySink activitySink(*this);
-  ActivityDirector.TickAgents(*this, activitySink, dt);
-
-  ForEachCreature(
-      [&](UCreature &creature)
-      {
-        if (ControlledCreatureId != 0 &&
-            creature.GetId() == ControlledCreatureId)
-        {
-          return;
-        }
-        if (creature.IsPossessed())
-        {
-          return;
-        }
-        creature.ExecuteIntent(*this, dt);
-      });
-
-  bool is_moved = camera && camera->DoMovement(this);
-
-  if (controlled && camera)
-  {
-    const glm::vec3 eye = camera->GetPosition();
-    float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
-    if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
-    {
-      const int gx = WorldCoordToBlockIndex(eye.x);
-      const int gz = WorldCoordToBlockIndex(eye.z);
-      if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
-      {
-        feetY = *gy;
-      }
-    }
-    controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
-    controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
-    controlled->GetLocomotion().SyncFeetAnchorFromView(
-        feetY, camera->HasAnchoredFeet());
-    controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()),
-                               camera->GetPitch());
-    controlled->SyncBoundsFromStance();
-    controlled->GetLocomotion().SetMode(camera->GetFreeMove()
-                                            ? CreatureMovementMode::Flying
-                                            : CreatureMovementMode::Walking);
-    float horizontalSpeed = 0.0f;
-    const UCreatureLocomotionController &camLoc =
-        camera->GetLocomotionController();
-    const LocomotionState camState = camLoc.GetLocomotionState();
-    const PlayerInput moveInput = camera->GetMovementInput();
-    if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
-        camState == LocomotionState::Crouch)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    else if (camState == LocomotionState::Fly ||
-             camState == LocomotionState::Glide ||
-             camState == LocomotionState::Hover)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    controlled->RebuildLocomotionFactsFromController(
-        camLoc, controlled->GetLocomotion().GetCapabilities(),
-        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
-    is_moved = true;
-  }
-
-  if (camera)
-  {
-    UpdateStreaming();
-    TickAsyncChunkSystems();
-    BlockWorldReady = true;
-  }
-
-  if (is_moved && camera)
-  {
-    if (auto user = GetCurrentUser())
-    {
-      user->SetPosition(camera->GetPosition());
-      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
-    }
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
-  }
-
-  auto t_end = std::chrono::high_resolution_clock::now();
-  DurationDoMovementMks = static_cast<uint64_t>(
-      std::chrono::duration<double, std::micro>(t_end - t_begin).count());
-  UpdateMovementDiagnostics(camera, prevPlayerY);
+  RunLegacyPhysicsFrame();
 }
 
-void UWorld::UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
-                                       float prevPlayerY)
+void UWorld::SetWallFrameDelta(double seconds)
 {
-  MovementDiag = MovementDiagnostics{};
-  if (!camera)
+  WallFrameDeltaSec = seconds > 0.0 ? seconds : 0.0;
+}
+
+void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
+                                         double view_update_mks)
+{
+  DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
+  const double sim_ms =
+      (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
+  const double wall_ms =
+      WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec * 1000.0 : sim_ms;
+  const double frameMs = std::max(sim_ms, wall_ms);
+  MovementDiag.hitchDetected = frameMs > 50.0 ||
+                               PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
+                               MovementDiag.deltaTime > 0.1f;
+}
+
+void UWorld::ResetMeshLoadDiagnostics()
+{
+  FramesSinceLoad = 0;
+  MeshBacklogClearedLatch = false;
+  MeshLoadDiagActive = true;
+}
+
+void UWorld::TickMeshLoadDiagnostics()
+{
+  if (!MeshLoadDiagActive)
   {
     return;
   }
-
-  const glm::vec3 playerPos = camera->GetPosition();
-  const PlayerCapsule cap = camera->GetPlayerCapsule();
-  MovementDiag.feetBlock = WorldPosToBlock(
-      glm::vec3(playerPos.x, cap.feetY(playerPos) + 0.01f, playerPos.z));
-  MovementDiag.feetChunk = UChunkManager::WorldToChunk(MovementDiag.feetBlock);
-  const glm::ivec3 feetGround(MovementDiag.feetChunk.x, 0,
-                              MovementDiag.feetChunk.z);
-  MovementDiag.feetChunkLoaded =
-      BlockWorld.GetChunkManager().HasChunk(feetGround);
-  MovementDiag.feetIsAir = BlockWorld.IsAir(MovementDiag.feetBlock);
-  MovementDiag.meshDrawCount = GetRenderInstanceCount();
-  MovementDiag.deltaTime = camera->GetDeltaTime();
-  MovementDiag.streamingGenMs = FrameStreamingGenMs;
-  MovementDiag.streamingIoMs = FrameStreamingIoMs;
-  MovementDiag.dirtyChunksPending =
-      static_cast<int>(MeshCache.GetDirtyCount());
-
-  if (HasLastPlayerY)
+  if (FramesSinceLoad < 600 || MeshService->HasPendingDirty() ||
+      MeshService->HasPendingAsyncMeshWork())
   {
-    MovementDiag.playerYDrop = prevPlayerY - playerPos.y;
+    ++FramesSinceLoad;
   }
-  else
+  if (!MeshBacklogClearedLatch && !MeshService->HasPendingDirty() &&
+      !MeshService->HasPendingAsyncMeshWork())
   {
-    MovementDiag.playerYDrop = 0.0f;
+    MeshBacklogClearedLatch = true;
   }
-  HasLastPlayerY = true;
-  LastPlayerY = playerPos.y;
-
-  if (Streamer)
+  if (MeshBacklogClearedLatch && FramesSinceLoad >= 600 &&
+      !MeshService->HasPendingDirty())
   {
-    const auto &stats = Streamer->GetLastFrameStats();
-    MovementDiag.streamingLoads = stats.loadsThisFrame;
-    MovementDiag.streamingUnloads = stats.unloadsThisFrame;
-    for (const glm::ivec3 &coord : stats.unloadedCoords)
-    {
-      if (coord.x == feetGround.x && coord.z == feetGround.z)
-      {
-        MovementDiag.feetInUnloadList = true;
-        break;
-      }
-    }
+    MeshLoadDiagActive = false;
   }
-
-  const double frameMs =
-      (DurationDoMovementMks +
-       (ViewInstance ? ViewInstance->GetDurationUpdateMks() : 0.0)) /
-      1000.0;
-  MovementDiag.hitchDetected = frameMs > 50.0 || MovementDiag.deltaTime > 0.1f;
-  MovementDiag.fallThroughSuspected =
-      MovementDiag.playerYDrop > 2.0f &&
-      (MovementDiag.feetIsAir || !MovementDiag.feetChunkLoaded) &&
-      MovementDiag.meshDrawCount > 0;
-
-#ifdef CUBATARIUM_DEBUG
-  if (MovementDiag.hitchDetected || MovementDiag.fallThroughSuspected ||
-      MovementDiag.playerYDrop > 2.0f)
-  {
-    std::cerr << "[Movement-debug] cameraDt=" << MovementDiag.deltaTime
-              << " frameMs=" << frameMs << " yDrop=" << MovementDiag.playerYDrop
-              << " feetChunk=(" << MovementDiag.feetChunk.x << ","
-              << MovementDiag.feetChunk.y << "," << MovementDiag.feetChunk.z
-              << ")"
-              << " hasChunk=" << MovementDiag.feetChunkLoaded
-              << " feetAir=" << MovementDiag.feetIsAir
-              << " meshDraw=" << MovementDiag.meshDrawCount
-              << " loads=" << MovementDiag.streamingLoads
-              << " unloads=" << MovementDiag.streamingUnloads
-              << " feetUnloaded=" << MovementDiag.feetInUnloadList << std::endl;
-  }
-#endif
-  AppendMovementDiagnosticsSample();
 }
 
 void UWorld::UpdateStreaming()
 {
-  if (!Streamer || !StreamingEnabled)
-  {
-    return;
-  }
-  if (auto camera = GetCurrentUserCamera())
-  {
-    const PlayerCapsule cap = camera->GetPlayerCapsule();
-    Streamer->Update(WorldPosToBlock(camera->GetPosition()),
-                     camera->GetPosition(), cap);
-  }
+  Streaming->UpdateStreaming(*this, *MeshService, Render, RenderDistanceChunks,
+                             EffectiveRenderDistance, EffectiveFogStartRatio,
+                             AltitudeParams, LastCameraPosition,
+                             LastMovementSpeed);
 }
 
 size_t UWorld::GetRenderInstanceCount() const
 {
   if (Render.GreedyMeshing)
   {
-    return MeshCache.GetGreedyVertexCount();
+    return MeshService->GetGreedyVertexCount();
   }
-  return MeshCache.GetInstanceCount();
-}
-
-void UWorld::UpdateIntersection(const glm::vec3 &position,
-                                const glm::vec3 &front)
-{
-  IsIntersectionExists = CheckRayIntersection(
-      position, front, Intersection, IntersectionDistance,
-      IntersectionCubeIndex, IntersectionCubeSide, IntersectionObjectIndex);
-  const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
-  HasIntersectionBlock = hit.has_value();
-  PlaceTargetActive = false;
-  if (hit)
-  {
-    IntersectionBlockPos = hit->blockPos;
-    const auto camera = GetCurrentUserCamera();
-    const PlayerCapsule cap =
-        camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
-    if (FindNearestFreeCubePosition(position, front, cap).has_value())
-    {
-      glm::ivec3 normal = hit->faceNormal;
-      if (normal == glm::ivec3(0))
-      {
-        const glm::vec3 toCamera = position - BlockCenter(hit->blockPos);
-        if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
-            std::abs(toCamera.x) >= std::abs(toCamera.z))
-        {
-          normal.x = toCamera.x > 0.0f ? 1 : -1;
-        }
-        else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
-        {
-          normal.y = toCamera.y > 0.0f ? 1 : -1;
-        }
-        else
-        {
-          normal.z = toCamera.z > 0.0f ? 1 : -1;
-        }
-      }
-      const glm::ivec3 placePos = hit->blockPos + normal;
-      if (BlockWorld.IsAir(placePos))
-      {
-        PlaceTargetActive = true;
-        PlaceBlockPos = placePos;
-      }
-    }
-  }
-  else
-  {
-    IntersectionBlockPos = glm::ivec3(0);
-    PlaceBlockPos = glm::ivec3(0);
-  }
-
-  if (auto user = GetCurrentUser())
-  {
-    if (auto camera = GetCurrentUserCamera())
-    {
-      user->SetPosition(camera->GetPosition());
-      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
-    }
-  }
+  return MeshService->GetInstanceCount();
 }
 
 bool UWorld::GetIsIntersectionExists() const { return IsIntersectionExists; }
@@ -2996,356 +3164,62 @@ void UWorld::InvalidateBlockMesh()
 {
   if (BlockRegistry)
   {
-    MeshCache.MarkAllDirtyFromWorld(BlockWorld);
+    MeshService->MarkAllDirtyFromWorld(BlockWorld);
   }
 }
 
 void UWorld::SetRenderSettings(const RenderSettings &settings)
 {
   Render = settings;
-  MeshCache.SetRenderSettings(settings);
+  MeshService->SetRenderSettings(settings);
 }
 
-const std::vector<FaceInstance> &UWorld::GetBlockRenderInstances()
+UWorldMeshService &UWorld::GetMeshService() { return *MeshService; }
+
+const UWorldMeshService &UWorld::GetMeshService() const { return *MeshService; }
+
+void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y)
 {
-  if (BlockRegistry && MeshCache.HasPendingDirty())
-  {
-    const int rebuildBudget = Render.GreedyMeshing ? 256 : 64;
-    const auto t0 = std::chrono::high_resolution_clock::now();
-    const size_t dirtyBefore = MeshCache.GetDirtyCount();
-    MeshCache.RebuildDirtyChunks(BlockWorld, *BlockRegistry, rebuildBudget);
-    MovementDiag.meshRebuildMs =
-        std::chrono::duration<double, std::milli>(
-            std::chrono::high_resolution_clock::now() - t0)
-            .count();
-    MovementDiag.meshRebuildsThisFrame =
-        static_cast<int>(dirtyBefore - MeshCache.GetDirtyCount());
-    MovementDiag.dirtyChunksPending =
-        static_cast<int>(MeshCache.GetDirtyCount());
-    if (!MeshCache.HasPendingDirty())
-    {
-      CachedBlockCount = BlockWorld.CountNonAir();
-    }
-  }
-  if (auto camera = GetCurrentUserCamera())
-  {
-    const glm::mat4 view = camera->GetViewMatrix();
-    const glm::mat4 proj = camera->GetProjection();
-    const glm::mat4 vp = proj * view;
-    MeshCache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
-                                     camera->GetPosition());
-  }
-  return MeshCache.GetFaceInstances();
-}
-
-const std::vector<GreedyMeshBatch> &UWorld::GetGreedyRenderBatches()
-{
-  GetBlockRenderInstances();
-  return MeshCache.GetGreedyBatches();
-}
-
-size_t UWorld::GetGreedyVertexCount() const
-{
-  return MeshCache.GetGreedyVertexCount();
-}
-
-uint64_t UWorld::GetMeshRevision() const { return MeshCache.GetMeshRevision(); }
-
-uint64_t UWorld::GetCullRevision() const { return MeshCache.GetCullRevision(); }
-
-void UWorld::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
-                                 int max_y)
-{
-  const glm::ivec3 base =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
-  const glm::ivec3 top =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
-  std::unordered_set<glm::ivec3, IVec3Hash> dirty_chunks;
-  for (int dx = -1; dx <= 1; ++dx)
-  {
-    for (int dz = -1; dz <= 1; ++dz)
-    {
-      for (int cy = base.y; cy <= top.y; ++cy)
-      {
-        dirty_chunks.insert(glm::ivec3(base.x + dx, cy, base.z + dz));
-      }
-    }
-  }
-  for (const glm::ivec3 &coord : dirty_chunks)
-  {
-    MeshCache.MarkDirty(coord);
-  }
+  MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
 }
 
 void UWorld::MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                        int max_y)
 {
-  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
-  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
-  for (int cx = groundChunkCoord.x - 1; cx <= groundChunkCoord.x + 1; ++cx)
-  {
-    for (int cz = groundChunkCoord.z - 1; cz <= groundChunkCoord.z + 1; ++cz)
-    {
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        MeshCache.MarkDirty(glm::ivec3(cx, cy, cz));
-      }
-    }
-  }
+  MeshService->MarkTerrainChunkMeshDirty(groundChunkCoord, min_y, max_y);
+}
+
+void UWorld::MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord,
+                                             int min_y, int max_y,
+                                             bool include_horizontal_neighbors)
+{
+  MeshService->MarkTerrainChunkMeshDirtySeamed(
+      groundChunkCoord, min_y, max_y, include_horizontal_neighbors);
+}
+
+void UWorld::MarkBlocksChunkDirtyBatch(
+    const std::vector<glm::ivec3> &block_positions, bool sync_neighbor_chunks)
+{
+  MeshService->MarkBlocksChunkDirtyBatchFromEdit(
+      BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
+      sync_neighbor_chunks);
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
-  const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(blockPos);
-  ModifiedChunks.insert(chunkCoord);
-
-  if (BlockRegistry)
-  {
-    MeshCache.RebuildChunkImmediate(BlockWorld, *BlockRegistry, chunkCoord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      MeshCache.RebuildChunkImmediate(
-          BlockWorld, *BlockRegistry,
-          UChunkManager::WorldToChunk(blockPos + offset));
-    }
-  }
-  else
-  {
-    MeshCache.MarkDirty(chunkCoord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      MeshCache.MarkDirty(UChunkManager::WorldToChunk(blockPos + offset));
-    }
-  }
+  MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
+                                           blockPos, ModifiedChunks);
 }
 
-void UWorld::LoadBlocks(const std::string &file_name)
+void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
 {
-  if (!BlockRegistry)
+  if (ChunkDirtyService)
   {
+    ChunkDirtyService->MarkVisualRemesh(*this, blockPos);
+    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
     return;
   }
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json data = json::parse(file);
-    const json &blocks = data.at("blocks");
-    for (const auto &entry : blocks)
-    {
-      const int x = entry.at("x").get<int>();
-      const int y = entry.at("y").get<int>();
-      const int z = entry.at("z").get<int>();
-      const std::string type = entry.at("type").get<std::string>();
-      if (type.empty())
-      {
-        continue;
-      }
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-      BlockWorld.SetBlock(glm::ivec3(x, y, z), Id);
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadBlocks: " << e.what() << std::endl;
-  }
-}
-
-void UWorld::SaveBlocks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  json data;
-  data["format_version"] = 1;
-  json blocks = json::array();
-  BlockWorld.ForEachBlock(
-      [&](glm::ivec3 pos, BlockId Id)
-      {
-        const std::string &type = BlockRegistry->GetTypeNameById(Id);
-        if (type.empty())
-        {
-          return;
-        }
-        blocks.push_back({
-            {"x", pos.x},
-            {"y", pos.y},
-            {"z", pos.z},
-            {"type", type},
-        });
-      });
-  data["blocks"] = blocks;
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << data.dump(4);
-  }
-}
-
-void UWorld::LoadChunks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json data = json::parse(file);
-    if (data.value("storage", "") == "per_file")
-    {
-      return;
-    }
-    if (!data.contains("chunks") || !data["chunks"].is_array())
-    {
-      return;
-    }
-    for (const auto &chunkEntry : data["chunks"])
-    {
-      const int cx = chunkEntry.at("cx").get<int>();
-      const int cy = chunkEntry.at("cy").get<int>();
-      const int cz = chunkEntry.at("cz").get<int>();
-      const glm::ivec3 chunkCoord(cx, cy, cz);
-      for (const auto &voxel : chunkEntry.at("voxels"))
-      {
-        const int lx = voxel.at("lx").get<int>();
-        const int ly = voxel.at("ly").get<int>();
-        const int lz = voxel.at("lz").get<int>();
-        const std::string type = voxel.at("type").get<std::string>();
-        if (type.empty())
-        {
-          continue;
-        }
-        const BlockId Id = BlockRegistry->GetIdByTypeName(type);
-        const glm::ivec3 worldPos(cx * CHUNK_SIZE + lx, cy * CHUNK_SIZE + ly,
-                                  cz * CHUNK_SIZE + lz);
-        BlockWorld.SetBlock(worldPos, Id);
-      }
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in LoadChunks: " << e.what() << std::endl;
-  }
-}
-
-void UWorld::SaveChunks(const std::string &file_name)
-{
-  if (!BlockRegistry)
-  {
-    return;
-  }
-  json data;
-  data["format_version"] = 2;
-  data["chunk_size"] = CHUNK_SIZE;
-  json chunks = json::array();
-
-  std::map<std::string, json> chunkMap;
-  BlockWorld.ForEachBlock(
-      [&](glm::ivec3 worldPos, BlockId Id)
-      {
-        const std::string &type = BlockRegistry->GetTypeNameById(Id);
-        if (type.empty())
-        {
-          return;
-        }
-        const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(worldPos);
-        const glm::ivec3 local = UChunkManager::WorldToLocal(worldPos);
-        const std::string key = std::to_string(chunkCoord.x) + "," +
-                                std::to_string(chunkCoord.y) + "," +
-                                std::to_string(chunkCoord.z);
-        if (chunkMap.find(key) == chunkMap.end())
-        {
-          chunkMap[key] = json::object({
-              {"cx", chunkCoord.x},
-              {"cy", chunkCoord.y},
-              {"cz", chunkCoord.z},
-              {"voxels", json::array()},
-          });
-        }
-        chunkMap[key]["voxels"].push_back({
-            {"lx", local.x},
-            {"ly", local.y},
-            {"lz", local.z},
-            {"type", type},
-        });
-      });
-
-  for (auto &entry : chunkMap)
-  {
-    chunks.push_back(std::move(entry.second));
-  }
-  data["chunks"] = chunks;
-
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << data.dump(4);
-  }
-}
-
-void UWorld::MigrateMonolithicChunksJson(const std::string & /*chunks_file*/,
-                                         const std::string &world_folder)
-{
-  if (!ChunkStorage || !BlockRegistry)
-  {
-    return;
-  }
-  BlockWorld.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
-      {
-        ChunkStorage->SaveChunk(chunk.GetCoord(), chunk, world_folder,
-                                *BlockRegistry);
-      });
-  ChunkStorage->WriteStorageMarker(world_folder);
-}
-
-void UWorld::MigrateObjectsFromJson(const std::string &file_name)
-{
-  std::ifstream file(file_name);
-  if (!file.is_open())
-  {
-    return;
-  }
-  try
-  {
-    json objects = json::parse(file);
-    for (const auto &object_data : objects)
-    {
-      const std::string type_name = object_data.value("type_name", "");
-      if (type_name == "terrain_plane" || type_name.empty())
-      {
-        continue;
-      }
-      const auto position_value = object_data.value("position", json::array());
-      if (!position_value.is_array() || position_value.size() != 3)
-      {
-        continue;
-      }
-      const glm::ivec3 blockPos(
-          static_cast<int>(std::round(position_value[0].get<float>())),
-          static_cast<int>(std::round(position_value[1].get<float>())),
-          static_cast<int>(std::round(position_value[2].get<float>())));
-      const BlockId Id = BlockRegistry->GetIdByTypeName(type_name);
-      if (Id != BLOCK_AIR)
-      {
-        BlockWorld.SetBlock(blockPos, Id);
-      }
-    }
-  }
-  catch (const json::exception &e)
-  {
-    std::cerr << "JSON parsing error in MigrateObjectsFromJson: " << e.what()
-              << std::endl;
-  }
+  MarkBlockChunkDirty(blockPos);
 }
 
 } // namespace cutum

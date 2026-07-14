@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_bronzeblock",
-    "id":  416,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_bronzeblock_default_bronze_block",
-                     "mtg_bronzeblock_default_bronze_block",
-                     "mtg_bronzeblock_default_bronze_block",
-                     "mtg_bronzeblock_default_bronze_block",
-                     "mtg_bronzeblock_default_bronze_block",
-                     "mtg_bronzeblock_default_bronze_block"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_bronzeblock",
+  "id": 416,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_bronzeblock_default_bronze_block",
+    "mtg_bronzeblock_default_bronze_block",
+    "mtg_bronzeblock_default_bronze_block",
+    "mtg_bronzeblock_default_bronze_block",
+    "mtg_bronzeblock_default_bronze_block",
+    "mtg_bronzeblock_default_bronze_block"
+  ],
+  "render": {}
 }
-

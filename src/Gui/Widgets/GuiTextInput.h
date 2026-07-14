@@ -1,7 +1,7 @@
 #ifndef GUI_TEXT_INPUT_H
 #define GUI_TEXT_INPUT_H
 
-#include "Gui/Interfaces/IGuiClipboard.h"
+#include "Gui/Interfaces/IUGuiClipboard.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
@@ -23,7 +23,7 @@ public:
   void SetFocused(bool focused) { Focused = focused; }
   bool IsFocused() const { return Focused; }
 
-  void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
+  void SetClipboard(IUGuiClipboard *clipboard) { Clipboard = clipboard; }
   void SetOnEdited(std::function<void()> fn) { OnEdited = std::move(fn); }
 
   void ClearSelection();
@@ -59,7 +59,7 @@ private:
   int TextPadding() const;
 
   const GuiTheme *Theme;
-  IGuiClipboard *Clipboard{nullptr};
+  IUGuiClipboard *Clipboard{nullptr};
   std::function<void()> OnEdited;
   std::string Buffer;
   size_t CaretPos{0};

@@ -25,7 +25,7 @@ ControlScheme ControlSchemeFromString(const std::string &value)
   {
     return ControlScheme::Cubatarium;
   }
-  if (key == "classic" || key == "minecraft")
+  if (key == "classic" || key == "minecraft") // "minecraft" deprecated alias
   {
     return ControlScheme::Classic;
   }

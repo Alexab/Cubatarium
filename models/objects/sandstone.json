@@ -1,6 +1,0 @@
-{
- "name" : "sandstone",
- "id" : 7,
- "class" : "SingleCube",
- "cube_textures" : ["sandstone"]
-}

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Core/Progress/IProgressSink.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "World/Core/World.h"
 #include <functional>
 #include <string>
 
@@ -19,7 +20,8 @@ enum class WorldRunnerOp
   Create,
   SaveThenLoad,
   SaveThenCreate,
-  EnterGame
+  EnterGame,
+  Shutdown
 };
 
 struct WorldRunnerRequest
@@ -30,6 +32,8 @@ struct WorldRunnerRequest
   ResourcePackSelection packs;
   bool enterGameAfter{false};
   bool saveConfigAfter{true};
+  bool shutdownSaveSession{false};
+  bool shutdownCloseApplication{true};
 };
 
 class UWorldOperationRunner
@@ -40,10 +44,26 @@ public:
   void Start(WorldRunnerRequest request);
   bool IsActive() const { return Active; }
   /// @return true when the operation has finished (success or failure).
-  bool Tick(IProgressSink &sink, int chunkBudgetPerFrame);
+  bool Tick(IUProgressSink &sink, int chunkBudgetPerFrame);
   bool Succeeded() const { return Success; }
   const std::string &ErrorMessage() const { return Error; }
   bool ShouldEnterGame() const { return Request.enterGameAfter; }
+  bool ShouldCloseApplication() const
+  {
+    return Request.op == WorldRunnerOp::Shutdown &&
+           Request.shutdownCloseApplication;
+  }
+  bool IsShutdownOperation() const { return Request.op == WorldRunnerOp::Shutdown; }
+  bool IsEnterGameGpuWarmupStage() const
+  {
+    return CurrentStage == Stage::EnterGameGpuWarmup;
+  }
+  int EnterGameGpuWarmupFramesRemaining() const
+  {
+    return EnterGameGpuWarmupFramesLeft;
+  }
+  /// @return true when GPU warmup stage finished.
+  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink);
 
 private:
   enum class Stage
@@ -58,12 +78,16 @@ private:
     EnterGameCreate,
     EnterGameLoad,
     EnterGameFinalize,
+    EnterGameGpuWarmup,
+    ShutdownQuiesce,
+    ShutdownSave,
+    ShutdownFinalize,
     Done,
     Failed
   };
 
-  void Fail(const std::string &message, IProgressSink &sink);
-  bool TickWorldOp(IProgressSink &sink, int chunkBudget);
+  void Fail(const std::string &message, IUProgressSink &sink);
+  bool TickWorldOp(IUProgressSink &sink, int chunkBudget);
   void PrepareCreateWorld();
 
   UCore &Core;
@@ -76,6 +100,8 @@ private:
   std::string PendingWorldName;
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
+  int EnterGameGpuWarmupFramesLeft{0};
+  UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 
 } // namespace cutum

@@ -1,4 +1,7 @@
 #include "Blocks/BlockRegistry.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
+#include "World/Physics/MaterialReactionRulesRegistry.h"
+#include <algorithm>
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
@@ -34,6 +37,7 @@ void UBlockRegistry::RebuildMaps()
 {
   NameToId.clear();
   IdToName.clear();
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {
     for (const auto &entry : MergeRegistry->GetNameToId())
@@ -43,6 +47,16 @@ void UBlockRegistry::RebuildMaps()
     }
     return;
   }
+#endif
+  if (Definitions)
+  {
+    for (const auto &entry : Definitions->GetAll())
+    {
+      NameToId[entry.second.Name] = entry.first;
+      IdToName[entry.first] = entry.second.Name;
+    }
+  }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (!Textures)
   {
     return;
@@ -58,19 +72,30 @@ void UBlockRegistry::RebuildMaps()
     NameToId[cube.GetName()] = Id;
     IdToName[Id] = cube.GetName();
   }
+#endif
 }
 
-BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
+BlockId UBlockRegistry::GetPackBlockIdByTypeName(const std::string &Name) const
 {
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {
-    return MergeRegistry->ResolveName(Name);
+    return MergeRegistry->LookupBlockName(Name);
   }
-  auto it = NameToId.find(Name);
+#endif
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetByName(Name))
+    {
+      return def->Id;
+    }
+  }
+  const auto it = NameToId.find(Name);
   if (it != NameToId.end())
   {
     return it->second;
   }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (Textures)
   {
     const size_t Id = Textures->GetTypeIdByName(Name);
@@ -79,12 +104,47 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
       return static_cast<BlockId>(Id);
     }
   }
+#endif
+  return BLOCK_AIR;
+}
+
+BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
+{
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (MergeRegistry)
+  {
+    return MergeRegistry->ResolveName(Name);
+  }
+#endif
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetByName(Name))
+    {
+      return def->Id;
+    }
+  }
+  auto it = NameToId.find(Name);
+  if (it != NameToId.end())
+  {
+    return it->second;
+  }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (Textures)
+  {
+    const size_t Id = Textures->GetTypeIdByName(Name);
+    if (Id != 0)
+    {
+      return static_cast<BlockId>(Id);
+    }
+  }
+#endif
   return BLOCK_AIR;
 }
 
 const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {
     if (const std::string *name = MergeRegistry->GetTypeNameById(Id))
@@ -92,11 +152,20 @@ const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
       return *name;
     }
   }
+#endif
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Name;
+    }
+  }
   auto it = IdToName.find(Id);
   if (it != IdToName.end())
   {
     return it->second;
   }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (Textures)
   {
     const auto texIt = Textures->GetTextures().find(static_cast<size_t>(Id));
@@ -105,6 +174,7 @@ const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
       return texIt->second.GetName();
     }
   }
+#endif
   return empty;
 }
 
@@ -134,6 +204,85 @@ bool UBlockRegistry::BlocksMovement(BlockId Id) const
 }
 
 bool UBlockRegistry::IsSolid(BlockId Id) const { return BlocksMovement(Id); }
+
+bool UBlockRegistry::IsFallingBlock(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.Falling;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsLiquid(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.IsLiquid;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsFloodable(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.Floodable;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsFluidPermeable(BlockId Id) const
+{
+  if (Definitions)
+  {
+    return IsFluidPermeableFromDefinition(Id, Definitions->GetById(Id),
+                                          IsLiquid(Id));
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsFlammable(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return def->Physics.Flammable;
+    }
+  }
+  return false;
+}
+
+bool UBlockRegistry::IsFireBlock(BlockId Id) const
+{
+  if (Id == BLOCK_AIR)
+  {
+    return false;
+  }
+  return GetTypeNameById(Id) == MaterialReactionRegistry::FireTypeName();
+}
+
+float UBlockRegistry::GetLiquidViscosity(BlockId Id) const
+{
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return std::max(1.0f, def->Physics.LiquidViscosity);
+    }
+  }
+  return 1.0f;
+}
 
 bool UBlockRegistry::IsTransparent(BlockId Id) const
 {
@@ -192,9 +341,56 @@ const BlockAnimationSpec &UBlockRegistry::Animation(BlockId Id) const
   return DefaultAnimation;
 }
 
+int UBlockRegistry::GetLightEmission(BlockId Id) const
+{
+  if (Id == BLOCK_AIR)
+  {
+    return 0;
+  }
+  if (Definitions)
+  {
+    if (const BlockDefinition *def = Definitions->GetById(Id))
+    {
+      return std::clamp(def->Lighting.Emission, 0, 15);
+    }
+  }
+  return 0;
+}
+
 size_t UBlockRegistry::GetTextureId(BlockId Id) const
 {
   return static_cast<size_t>(Id);
+}
+
+bool UBlockRegistry::HasRenderableTexture(BlockId Id) const
+{
+  if (Id == BLOCK_AIR)
+  {
+    return false;
+  }
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (Textures)
+  {
+    const auto &map = Textures->GetTextures();
+    const auto it = map.find(static_cast<size_t>(Id));
+    return it != map.end() && it->second.GetTextureId() != 0;
+  }
+  if (MergeRegistry)
+  {
+    for (const MergedCubeDesc &desc : MergeRegistry->GetCubeDescriptors())
+    {
+      if (desc.Id == Id)
+      {
+        return true;
+      }
+    }
+  }
+#endif
+  if (Definitions && Definitions->GetById(Id) != nullptr)
+  {
+    return true;
+  }
+  return false;
 }
 
 } // namespace cutum

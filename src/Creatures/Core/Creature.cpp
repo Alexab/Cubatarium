@@ -1,7 +1,7 @@
-#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
@@ -29,7 +29,7 @@ UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
 
 UCreature::~UCreature() = default;
 
-void UCreature::SetVisual(std::unique_ptr<ICreatureVisual> visual)
+void UCreature::SetVisual(std::unique_ptr<IUCreatureVisual> visual)
 {
   Visual = std::move(visual);
 }
@@ -195,16 +195,33 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     }
     else if (habitat == CreatureHabitat::Amphibious)
     {
-      const EnvironmentSample env = ProbeEnvironmentAt(
-          world, BodyOrigin, Bounds.profile.restSizeBlocks);
+      const EnvironmentSample env =
+          ProbeEnvironmentAt(world, BodyOrigin, Bounds.profile.restSizeBlocks);
       if (!env.inWater)
       {
         delta.y = 0.0f;
       }
     }
     const glm::vec3 size = Bounds.profile.restSizeBlocks;
-    const glm::vec3 candidate =
-        world.ResolveMovementBody(BodyOrigin, delta, size, Id);
+    glm::vec3 candidate = BodyOrigin;
+    const bool use_terrestrial_steps =
+        !airMobility &&
+        (habitat == CreatureHabitat::Terrestrial ||
+         (habitat == CreatureHabitat::Amphibious &&
+          !ProbeEnvironmentAt(world, BodyOrigin, size).inWater));
+    if (use_terrestrial_steps)
+    {
+      const float max_step_up = def && def->locomotion.jumpHeightBlocks > 0.01f
+                                    ? def->locomotion.jumpHeightBlocks
+                                    : 1.0f;
+      const float max_step_down = std::max(max_step_up, 1.0f);
+      candidate = ResolveTerrestrialMobMovement(world, BodyOrigin, delta, size,
+                                                Id, max_step_up, max_step_down);
+    }
+    else
+    {
+      candidate = world.ResolveMovementBody(BodyOrigin, delta, size, Id);
+    }
     if (airMobility)
     {
       const CollisionVolume vol = CollisionVolumeFromBody(candidate, size);
@@ -213,14 +230,17 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         BodyOrigin = candidate;
       }
     }
+    else if (use_terrestrial_steps)
+    {
+      if (glm::length(candidate - BodyOrigin) > 1e-5f)
+      {
+        BodyOrigin = candidate;
+      }
+    }
     else
     {
       const bool habitatOk =
-          (habitat == CreatureHabitat::Aquatic ||
-           habitat == CreatureHabitat::Amphibious ||
-           habitat == CreatureHabitat::Lava)
-              ? world.HabitatAllowsMovementAt(habitat, candidate, size)
-              : HabitatAllowsAt(world, habitat, candidate, size);
+          world.HabitatAllowsMovementAt(habitat, candidate, size);
       if (habitatOk)
       {
         BodyOrigin = candidate;
@@ -238,8 +258,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         habitat == CreatureHabitat::Lava)
     {
       const CollisionVolume vol = GetCollisionVolume();
-      const UWorld::SampledFluidState fluid =
-          world.SampleFluidPhysicsVolume(vol);
+      const SampledFluidState fluid = world.SampleFluidPhysicsVolume(vol);
       if (fluid.inFluid && glm::length(Intent.moveDirWorld) < 1e-4f)
       {
         const float sink = fluid.SinkSpeed * dt * 0.2f;

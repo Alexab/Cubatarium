@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Core/Jobs/JobThreadBudget.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -36,6 +38,11 @@ struct AsyncChunkSaveRequest
 class UAsyncChunkIO
 {
 public:
+  UAsyncChunkIO()
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo))
+  {
+  }
+
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, ChunkGenerationToken token);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
@@ -43,17 +50,23 @@ public:
                    UBlockRegistry &registry, ChunkGenerationToken token);
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
+  std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
   std::vector<AsyncChunkSaveRequest> DrainSaves();
+  void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
+  void CancelPending();
+  bool CompletedLoadsEmpty() const;
+  bool CompletedSavesEmpty() const;
 
 private:
   UJobThreadPool Pool;
-  CompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
-  CompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
+  UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
+  UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
 };
 
-ChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
-                                   glm::ivec3 chunkCoord,
-                                   UBlockRegistry &registry);
+UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
+                                    glm::ivec3 chunkCoord,
+                                    UBlockRegistry &registry);
 
 std::string SerializeChunkToJson(glm::ivec3 chunkCoord, const UChunk &chunk,
                                  UBlockRegistry &registry);

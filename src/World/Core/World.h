@@ -1,8 +1,7 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include "Activity/CreatureActivityDirector.h"
-#include "Activity/IWorldPerception.h"
+#include "Activity/IUWorldPerception.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -11,22 +10,27 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
-#include "Pose/CreaturePosePresenterRegistry.h"
-#include "Render/Mesh/ChunkMeshCache.h"
 #include "World/Chunks/ChunkManager.h"
-#include "World/Chunks/ChunkGenerationToken.h"
-#include "World/Chunks/ChunkLoadScheduler.h"
-#include "World/Chunks/ChunkStreamer.h"
-#include "WorldGen/Core/IChunkPopulator.h"
+#include "World/Chunks/StreamingAltitudePolicy.h"
+#include "World/Collision/WorldCollision.h"
+#include "World/Core/BlockCountTracker.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Math/CollisionVolume.h"
-#include "WorldGen/Core/IWorldGenPipeline.h"
-#include "WorldGen/Core/ProceduralSettings.h"
-#include "World/IO/AsyncChunkIO.h"
-#include "World/IO/ChunkStorageService.h"
-#include "World/IO/ChunkStorageTypes.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/WorldCooperativeOps.h"
+#include "World/Environment/EnvironmentConfig.h"
+#include "World/Environment/WorldEnvironment.h"
+#include "World/IO/ChunkStorageTypes.h"
+#include "World/Math/CollisionVolume.h"
+#include "World/Physics/PhysicsProfile.h"
+#include "World/Physics/PhysicsTelemetry.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenSets.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
+#include <algorithm>
+#include <chrono>
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -44,21 +48,124 @@
 namespace cutum
 {
 
+struct RuntimeOverlayFlushResult;
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
 
+class UWorldViewBinding;
+class UAsyncRelightBuilder;
 class UViewEngine;
-class UObjectStorage;
-class UPrefabLibrary;
+class UTextureCubeStorage;
+class UObjectLibrary;
 class UUser;
 class UCamera;
+class UWorldMeshService;
+class UChunkStorageService;
+class UWorldPersistence;
+class UWorldStreaming;
+class IUPhysicsScheduler;
+class UWorldBlockPhysicsService;
+class UWorldMovementPhysicsService;
+class UWorldChunkDirtyService;
+struct BlockUpdateQueueStats;
+struct FluidUpdateSetStats;
+struct FallingBlocksStats;
+struct FluidSpreadStats;
 
-class UWorld : public IWorldPerception
+struct UBackgroundQuiesceState
+{
+  enum class Phase : uint8_t
+  {
+    Start,
+    StreamingOff,
+    ChunkGenCancel,
+    DrainIo,
+    CancelWorkers,
+    WaitRelight,
+    WaitMesh,
+    Finalize,
+    Done
+  };
+
+  Phase phase{Phase::Start};
+  int drainIoPasses{0};
+  int waitRelightPasses{0};
+  int waitMeshPasses{0};
+  static constexpr int kMaxDrainIoPasses = 64;
+  static constexpr int kMaxWaitPasses = 120;
+};
+
+class UWorld : public IUWorldPerception
 {
 public:
-  UWorld(std::shared_ptr<UObjectStorage> object_storage,
+  enum class WeatherType
+  {
+    Clear = 0,
+    Cloudy = 1,
+    Rain = 2,
+    Storm = 3,
+    Snow = 4,
+  };
+
+  enum class CelestialBodyType
+  {
+    Sun = 0,
+    Moon = 1,
+  };
+
+  struct UCelestialBodyVisual
+  {
+    std::string Id{"sun"};
+    CelestialBodyType Type{CelestialBodyType::Sun};
+    glm::vec3 Color{1.0f, 0.95f, 0.82f};
+    float Intensity{1.0f};
+    float AngularSizeDeg{0.53f};
+    float OrbitInclinationDeg{23.0f};
+    float OrbitPeriodDays{1.0f};
+    float OrbitPhase{0.0f};
+    float OrbitLongitudeDeg{0.0f};
+    glm::vec3 DirectionWorld{0.0f, 1.0f, 0.0f};
+  };
+
+  struct EnvironmentState
+  {
+    float TimeOfDayNormalized{0.35f};
+    float DayLengthMinutes{10.0f};
+    bool TimeFrozen{false};
+    WeatherType Weather{WeatherType::Clear};
+    WeatherType TargetWeather{WeatherType::Clear};
+    float WeatherTransitionSec{0.0f};
+    float WeatherTransitionDurationSec{45.0f};
+    float Cloudiness{0.0f};
+    float PrecipitationIntensity{0.0f};
+    float WindStrength{0.2f};
+    float WeatherFogMultiplier{1.0f};
+    float WeatherSkyAttenuation{1.0f};
+    float DayNightFactor{1.0f};
+    float MoonNightFactor{0.0f};
+    float SurfaceWetness{0.0f};
+    float StarVisibility{0.0f};
+    float CloudCoverage{0.2f};
+    float StarVisibilityOverride{-1.0f};
+    float CloudCoverageOverride{-1.0f};
+    std::vector<UCelestialBodyVisual> CelestialBodies;
+  };
+
+  struct LightingSettings
+  {
+    bool DebugEnabled{false};
+    uint8_t DebugMode{0};
+    float MinAmbient{0.12f};
+    bool WeatherOverlayEnabled{true};
+    bool WeatherParticlesEnabled{true};
+    uint8_t WeatherDebugMode{0};
+  };
+
+  UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
          std::shared_ptr<UViewEngine> views);
+  ~UWorld();
 
   void GenerateUsers();
 
@@ -67,6 +174,7 @@ public:
 
   glm::vec3 GetSpawnPoint() const;
   void SetSpawnPoint(glm::vec3 value);
+  glm::ivec3 GetPreferredLoadFocusBlock() const;
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
   void SetProceduralSettings(const ProceduralSettings &settings,
@@ -81,14 +189,18 @@ public:
   void Create(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
+  /// Fast save for exit/autosave: metadata plus modified terrain only.
+  void SaveSessionSnapshot(const std::string &world_folder_path,
+                           bool skip_quiesce = false);
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
-  bool TickCooperativeLoad(class IProgressSink &sink, int chunkBudget);
+  bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
   void BeginCooperativeSave(const std::string &world_folder_path);
-  bool TickCooperativeSave(class IProgressSink &sink, int chunkBudget);
+  bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
   void BeginCooperativeCreate(const std::string &world_name);
-  bool TickCooperativeCreate(class IProgressSink &sink, int columnBudget);
+  bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
+  bool BlocksAsyncRelightDrain() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
   bool AddUser(const std::string &Name);
@@ -109,15 +221,37 @@ public:
   std::shared_ptr<UCamera> GetCurrentUserCamera();
   std::shared_ptr<UCamera> GetCurrentUserCamera() const;
 
+  std::shared_ptr<UViewEngine> GetViewEngine() const;
+
   const UBlockWorld &GetBlockWorld() const { return BlockWorld; }
   UBlockWorld &GetBlockWorld() { return BlockWorld; }
   UBlockRegistry &GetBlockRegistry() { return *BlockRegistry; }
   const UBlockRegistry &GetBlockRegistry() const { return *BlockRegistry; }
 
+  UWorldMeshService &GetMeshService();
+  const UWorldMeshService &GetMeshService() const;
+  UWorldChunkDirtyService *GetChunkDirtyService()
+  {
+    return ChunkDirtyService.get();
+  }
+
   void WaitForPendingMeshJobs();
+  void WaitForPendingRelightJobs();
+  bool WaitForPendingRelightJobsFor(std::chrono::milliseconds timeout);
+  void PrepareForShutdown();
+  void QuiesceBackgroundWork(
+      std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
+  void BeginBackgroundQuiesce(UBackgroundQuiesceState &state);
+  /// @return true when quiesce finished.
+  bool TickBackgroundQuiesce(UBackgroundQuiesceState &state,
+                             std::chrono::milliseconds step_timeout,
+                             class IUProgressSink *sink = nullptr);
+  void EnsureStreamingActiveAfterBackgroundQuiesce();
+  void ResumeAfterSessionSave();
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
-  void OnBlockRegistryRuntimeOverlayChanged();
+  void OnBlockRegistryRuntimeOverlayChanged(
+      const RuntimeOverlayFlushResult *flush = nullptr);
   void SetOnBlockRegistryChanged(std::function<void()> callback)
   {
     OnBlockRegistryChangedCallback = std::move(callback);
@@ -149,7 +283,10 @@ public:
   {
     return WorldgenOwnerPackId;
   }
-  const std::string &GetCatalogFingerprint() const { return CatalogFingerprint; }
+  const std::string &GetCatalogFingerprint() const
+  {
+    return CatalogFingerprint;
+  }
   void SetCatalogFingerprint(std::string fingerprint)
   {
     CatalogFingerprint = std::move(fingerprint);
@@ -176,31 +313,42 @@ public:
     OnAfterWorldDataLoaded = std::move(callback);
   }
 
-  struct SampledFluidState
-  {
-    bool inFluid{false};
-    BlockId dominantFluid{BLOCK_AIR};
-    float blendWeight{0.0f};
-    float DragHorizontal{0.0f};
-    float SinkSpeed{0.0f};
-    float RiseSpeed{0.0f};
-  };
   SampledFluidState SampleFluidPhysics(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const;
-  /// Eye inside fluid block AABB (visual fog); does not use player collision
-  /// capsule.
+  FluidColumnSurface FindFluidColumnSurface(const glm::vec3 &eye) const;
+  FluidColumnSurface FindFluidColumnSurfaceAt(int bx, int bz, int hintY) const;
+  bool HasNearbyFluidSurface(glm::ivec3 cameraBlock,
+                             int radiusBlocks = 48) const;
+  /// True when eye.y is strictly below BlockTopY of the topmost liquid block
+  /// in the eye column (binary; no body-in-fluid or grace terms).
   bool IsCameraInsideFluid(const glm::vec3 &eye,
                            BlockId *outFluid = nullptr) const;
   void ApplySpawnToCamera();
   void FinalizePlayerAfterWorldLoad();
+  void ResetPhysicsRuntimeState();
+  void WarmupSpawnAreaForEnterGame();
+  void PrepareEnterGameSession();
+  bool IsEnterStreamingWarmupSettled() const;
+  void TickEnterStreamingWarmup(int iteration_budget);
+  void WarmupVisibleListAtCamera();
+  /// Build pending terrain meshes before GPU upload (returns true when ready).
+  bool DrainEnterGameMeshWarmup(int budget);
+  bool NeedsEnterGameMeshWarmup() const;
+  bool IsCreateSpawnWarmupSettled() const;
+  void DrainSpawnRadiusMeshWarmup(int budget);
+  void RefreshPersistedTerrainAfterSave();
+  void MarkSpawnAreaPreparedByCooperativeLoad();
+  bool ConsumeSpawnAreaPreparedByCooperativeLoad();
+  void ClearSpawnAreaPreparedByCooperativeLoad();
+  bool IsSpawnAreaPreparedByCooperativeLoad() const
+  {
+    return SpawnAreaPreparedByCooperativeLoad;
+  }
   bool IsBlockWorldReady() const { return BlockWorldReady; }
   void InvalidateBlockMesh();
-  const std::vector<FaceInstance> &GetBlockRenderInstances();
-  const std::vector<GreedyMeshBatch> &GetGreedyRenderBatches();
-  size_t GetGreedyVertexCount() const;
 
   bool AddObjectByView();
-  bool PlaceActivePrefabByView();
+  bool PlaceActiveObjectByView();
   bool DelObjectByView();
   bool DelBlockAt(glm::ivec3 blockPos);
 
@@ -214,14 +362,26 @@ public:
 
   bool AddObject(const std::string type_id, const glm::vec3 &position);
 
-  bool PlacePrefab(const std::string &prefab_name, glm::ivec3 anchorWorldPos);
-  bool CanPlacePrefab(const std::string &prefab_name,
+  bool PlaceObject(const std::string &prefab_name, glm::ivec3 anchorWorldPos);
+  bool CanPlaceObject(const std::string &prefab_name,
                       glm::ivec3 anchorWorldPos) const;
   std::optional<glm::ivec3>
-  FindPrefabAnchorFromView(const glm::vec3 &position,
+  FindObjectAnchorFromView(const glm::vec3 &position,
                            const glm::vec3 &front) const;
 
-  void SetPrefabLibrary(UPrefabLibrary *library) { PrefabLibrary = library; }
+  void SetObjectLibrary(UObjectLibrary *library) { ObjectLibrary = library; }
+  UObjectLibrary *GetObjectLibrary() const { return ObjectLibrary; }
+
+  WorldGenSets &GetWorldGenSets() { return WorldGenSetsData; }
+  const WorldGenSets &GetWorldGenSets() const { return WorldGenSetsData; }
+  void SetWorldGenSets(WorldGenSets sets);
+  void SaveWorldGenSetsToDisk();
+  const ObjectFeatureConfig &GetResolvedObjectFeatures() const
+  {
+    return ResolvedObjectFeatures;
+  }
+  void RebuildResolvedObjectFeatures();
+  void RebuildWorldGenPipeline();
 
   void SetCreatureDefinitionStorage(
       std::shared_ptr<UCreatureDefinitionStorage> storage);
@@ -230,12 +390,12 @@ public:
   const std::shared_ptr<UCreatureDefinitionStorage> &
   GetCreatureDefinitionStorage() const
   {
-    return CreatureDefinitions;
+    return Environment.GetCreatureDefinitionStorage();
   }
   const std::shared_ptr<USkinDefinitionStorage> &
   GetSkinDefinitionStorage() const
   {
-    return SkinDefinitions;
+    return Environment.GetSkinDefinitionStorage();
   }
 
   UCreature *GetCreature(CreatureId Id);
@@ -244,8 +404,14 @@ public:
   const UCreature *GetControlledCreature() const;
   UCreature *GetPlayerCreature();
   const UCreature *GetPlayerCreature() const;
-  CreatureId GetControlledCreatureId() const { return ControlledCreatureId; }
-  CreatureId GetPlayerCreatureId() const { return PlayerCreatureId; }
+  CreatureId GetControlledCreatureId() const
+  {
+    return Environment.GetControlledCreatureId();
+  }
+  CreatureId GetPlayerCreatureId() const
+  {
+    return Environment.GetPlayerCreatureId();
+  }
   bool SetControlledCreature(CreatureId Id);
   void ApplyLocomotionDefinitionToCamera(UCamera &camera,
                                          const CreatureDefinition &def) const;
@@ -256,6 +422,13 @@ public:
   QueryControlledCreatureInfo() const override;
   std::vector<CreatureId> CreaturesInRadius(const glm::vec3 &center,
                                             float radius) const override;
+  std::vector<CreatureNeighborView>
+  QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
+                                 CreatureId skip_id) const override;
+  bool CreatureVolumeClearAt(const glm::vec3 &body_origin,
+                             const glm::vec3 &size_blocks,
+                             CreatureId skip_id) const override;
+  std::optional<glm::vec3> GetCreatureBodyOrigin(CreatureId id) const override;
   /// Top face under feet: highest solid in column at or below referenceFeetY
   /// (runtime pose).
   std::optional<float> QueryGroundFeetYUnder(int worldX, int worldZ,
@@ -283,6 +456,7 @@ public:
   bool HabitatAllowsMovementAt(CreatureHabitat habitat,
                                const glm::vec3 &bodyOrigin,
                                const glm::vec3 &sizeBlocks) const override;
+  bool IsWithinActivityRange(const glm::vec3 &body_origin) const override;
   std::optional<CreatureId> PickCreatureByView(const glm::vec3 &eye,
                                                const glm::vec3 &front,
                                                float maxDistance) const;
@@ -296,11 +470,11 @@ public:
   GetCreatureDefinition(const std::string &typeId) const;
   UCreaturePosePresenterRegistry &GetPosePresenterRegistry()
   {
-    return PosePresenterRegistry;
+    return Environment.GetPosePresenterRegistry();
   }
   const UCreaturePosePresenterRegistry &GetPosePresenterRegistry() const
   {
-    return PosePresenterRegistry;
+    return Environment.GetPosePresenterRegistry();
   }
   ResolvedCreatureAppearance
   GetResolvedAppearance(const UCreature &creature) const;
@@ -338,15 +512,12 @@ public:
                             const PlayerCapsule &cap,
                             CreatureId skipCreatureId = 0) const;
 
-  CreatureId GetMovementCollisionSkipId() const { return ControlledCreatureId; }
-
-  struct StepUpProbe
+  CreatureId GetMovementCollisionSkipId() const
   {
-    bool Valid{false};
-    float DistanceToLedge{0.0f};
-    glm::vec3 TargetPos{0.0f};
-    glm::vec3 MoveDir{0.0f};
-  };
+    return Environment.GetControlledCreatureId();
+  }
+
+  using StepUpProbe = UWorldCollision::StepUpProbe;
   StepUpProbe ProbeStepUp(const glm::vec3 &eyePos, const glm::vec3 &horiz,
                           const PlayerCapsule &cap,
                           float maxTriggerDistance) const;
@@ -360,11 +531,10 @@ public:
   bool TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
                  const PlayerCapsule &cap, float maxTriggerDistance) const;
   void DoMovement();
+  void RunLegacyPhysicsFrame();
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;
-  uint64_t GetMeshRevision() const;
-  uint64_t GetCullRevision() const;
   size_t GetCachedBlockCount() const { return CachedBlockCount; }
 
   bool GetIsIntersectionExists() const;
@@ -378,6 +548,33 @@ public:
   glm::ivec3 GetPlaceBlockPos() const { return PlaceBlockPos; }
 
   uint64_t GetDurationDoMovementMks() const;
+  void SetWallFrameDelta(double seconds);
+  double GetWallFrameDelta() const { return WallFrameDeltaSec; }
+  void SetPhysicsProfile(PhysicsProfile profile);
+  PhysicsProfile GetPhysicsProfile() const { return ActivePhysicsProfile; }
+  void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
+  void SetPhysicsBudgets(const PhysicsBudgets &budgets);
+  const PhysicsTelemetry &GetPhysicsTelemetry() const
+  {
+    return PhysicsTelemetryData;
+  }
+  const PhysicsBudgets &GetPhysicsBudgets() const
+  {
+    return PhysicsBudgetConfig;
+  }
+  uint64_t GetPhysicsTickCounter() const { return PhysicsTickCounter; }
+  void PublishBlockPhysicsEvent(glm::ivec3 blockPos);
+  void PublishNeighborPhysicsEvents(glm::ivec3 blockPos);
+  void TryEnqueueFluidAt(glm::ivec3 blockPos);
+  void ForceEnqueueFluidAt(glm::ivec3 blockPos);
+  void WakeFluidFrontier(glm::ivec3 blockPos, int radius_blocks = 2);
+  void MarkFluidRegionDirty(glm::ivec3 center, int block_radius = 1);
+  void TrySeedFallingAt(glm::ivec3 blockPos);
+  const PhysicsFeatureFlags &GetPhysicsFeatureFlags() const
+  {
+    return PhysicsFlags;
+  }
+  bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
 
   struct MovementDiagnostics
   {
@@ -398,6 +595,36 @@ public:
     double meshRebuildMs{0.0};
     int dirtyChunksPending{0};
     int meshRebuildsThisFrame{0};
+    double flatRebuildMs{0.0};
+    double countNonAirMs{0.0};
+    int asyncMeshInFlight{0};
+    bool asyncMeshingEnabled{true};
+    int greedyCacheEntries{0};
+    int framesSinceLoad{0};
+    bool meshBacklogCleared{false};
+    double physicsStepMs{0.0};
+    double physicsMovementMs{0.0};
+    double physicsBlockMs{0.0};
+    double physicsDrainMs{0.0};
+    double wallFrameMs{0.0};
+    int physicsSimulationSteps{0};
+    uint64_t physicsBlockQueueDepth{0};
+    uint64_t physicsLiquidQueueDepth{0};
+    uint64_t physicsDeferredUpdates{0};
+    uint64_t physicsDroppedUpdates{0};
+    uint64_t physicsPurgedUpdates{0};
+    uint64_t physicsCollisionBroadphaseRejects{0};
+    uint64_t physicsCollisionBroadphaseFallbacks{0};
+    uint64_t physicsCollisionReadyTransitions{0};
+    double physicsCollisionReadyWaitMs{0.0};
+    uint64_t physicsVisualRemeshBacklog{0};
+    uint64_t physicsCollisionRebuildBacklog{0};
+    int pendingPlayerRelights{0};
+    int pendingBgRelights{0};
+    int asyncRelightInflight{0};
+    uint64_t relightDiscardedLate{0};
+    uint64_t meshDiscardedLate{0};
+    double relightCompletedPerSec{0.0};
   };
 
   const MovementDiagnostics &GetMovementDiagnostics() const
@@ -405,36 +632,182 @@ public:
     return MovementDiag;
   }
 
-  void SetStreamingEnabled(bool enabled) { StreamingEnabled = enabled; }
+  void SetStreamingEnabled(bool enabled);
   void SetRenderDistanceChunks(int distance);
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
+  int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
+  float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
+  float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
+  void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
+  void UpdateFrameHitchDiagnostics(double draw_scene_mks,
+                                   double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
   ChunkWriteFormat GetChunkWriteFormat() const;
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
-  UChunkStorageService &GetChunkStorage() { return *ChunkStorage; }
-  const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
-  bool IsStreamingEnabled() const { return StreamingEnabled; }
+  UChunkStorageService &GetChunkStorage();
+  const UChunkStorageService &GetChunkStorage() const;
+  const std::string &GetWorldFolderPath() const;
+  void SetWorldFolderPath(const std::string &path);
+  bool IsStreamingEnabled() const;
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   void RefreshStreamerSettings();
+  void TickEnvironment(float dtSeconds);
+  const EnvironmentState &GetEnvironmentState() const
+  {
+    return EnvironmentStateData;
+  }
+  const LightingSettings &GetLightingSettings() const
+  {
+    return LightingSettingsData;
+  }
+  void SetTimeOfDayNormalized(float value);
+  void AddTimeOfDayNormalized(float delta);
+  void SetTimeFrozen(bool frozen) { EnvironmentStateData.TimeFrozen = frozen; }
+  void SetDayLengthMinutes(float minutes);
+  void SetWeather(WeatherType weather, float transitionSeconds = 45.0f);
+  void SetWeatherByName(const std::string &name,
+                        float transitionSeconds = 45.0f);
+  void SetWeatherInternal(WeatherType weather, float transitionSeconds,
+                          bool manual_override);
+  void ApplyEnvironmentConfig(const EnvironmentConfig &config,
+                              bool reset_weather_runtime = true);
+  const EnvironmentConfig &GetEnvironmentConfig() const
+  {
+    return EnvironmentSettingsData;
+  }
+  EnvironmentConfig &GetEnvironmentConfigMutable()
+  {
+    return EnvironmentSettingsData;
+  }
+  float GetCelestialHorizonFade() const;
+  void SetWeatherAutoEnabled(bool enabled);
+  bool IsWeatherAutoEnabled() const;
+  void ClearWeatherManualOverride();
+  std::string GetWeatherAutoStatusText() const;
+  std::string GetWeatherName() const;
+  static std::string WeatherTypeToString(WeatherType value);
+  static bool WeatherTypeFromString(const std::string &value, WeatherType &out);
+  void SetLightingDebugEnabled(bool enabled)
+  {
+    LightingSettingsData.DebugEnabled = enabled;
+    if (!enabled)
+    {
+      LightingSettingsData.DebugMode = 0;
+    }
+    else if (LightingSettingsData.DebugMode == 0)
+    {
+      LightingSettingsData.DebugMode = 1;
+    }
+  }
+  void SetLightingDebugMode(uint8_t mode)
+  {
+    LightingSettingsData.DebugMode = mode;
+    LightingSettingsData.DebugEnabled = mode != 0;
+  }
+  void SetLightingMinAmbient(float value)
+  {
+    LightingSettingsData.MinAmbient = std::clamp(value, 0.02f, 0.5f);
+  }
+  void SetWeatherOverlayEnabled(bool enabled)
+  {
+    LightingSettingsData.WeatherOverlayEnabled = enabled;
+  }
+  void SetWeatherParticlesEnabled(bool enabled)
+  {
+    LightingSettingsData.WeatherParticlesEnabled = enabled;
+  }
+  void SetWeatherDebugMode(uint8_t mode)
+  {
+    LightingSettingsData.WeatherDebugMode = mode;
+  }
+  void EnsureDefaultCelestialBodies();
+  void RefreshSkyVisualStateForRender();
+  void UpdateCelestialLightingFactors();
+  void ResetCelestialBodies();
+  void SetStarVisibility(float value);
+  void SetCloudCoverage(float value);
+  void RebuildAllLightingDirtyMeshes();
+
+  void SetLightingRelightDeferred(bool deferred)
+  {
+    LightingRelightDeferred = deferred;
+  }
+  bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
+  bool ShouldDeferStreamingMeshForRelight() const
+  {
+    return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred;
+  }
+  void SetLightingSkylightBulkComplete(bool complete)
+  {
+    LightingSkylightBulkComplete = complete;
+  }
+  void SetCooperativeBulkGenerating(bool value)
+  {
+    CooperativeBulkGenerating = value;
+  }
+  bool IsCooperativeBulkGenerating() const { return CooperativeBulkGenerating; }
+  void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
+  double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
+  float GetLastMovementSpeed() const { return LastMovementSpeed; }
+  void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
+                            bool priority_mesh = false,
+                            bool include_skylight = true,
+                            bool include_block_light = true);
+  void RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
+                         int min_world_y);
+  void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
+                                        int max_y, bool include_skylight = true,
+                                        bool include_block_light = true);
+  void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
+                                        int frontier_iterations = 1);
+  void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
+                                bool include_block_light,
+                                int frontier_iterations);
+  int DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
+                               bool enqueue_background_frontier);
+  bool HasPendingAsyncRelightWork() const;
+  int GetAsyncRelightInFlightCount() const;
+  uint64_t GetRelightDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateCount() const;
+  int GetPlayerRelightMeshBurstFrames() const
+  {
+    return PlayerRelightMeshBurstFrames;
+  }
+  void TickPlayerRelightMeshBurst();
+  void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
 
+  void SetFoliageClimbEnabled(bool enabled) { FoliageClimbEnabled = enabled; }
+  bool IsFoliageClimbEnabled() const { return FoliageClimbEnabled; }
+  bool IsFoliageFluidBlock(BlockId id) const;
+
   void SetEntityCollisionEnabled(bool enabled)
   {
-    EntityCollisionEnabled = enabled;
+    Collision.SetEntityCollisionEnabled(enabled);
   }
-  bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
+  bool IsEntityCollisionEnabled() const
+  {
+    return Collision.IsEntityCollisionEnabled();
+  }
+
+  void SetActivityTickHz(float hz);
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
 
   void ClearCreaturesAndUsers();
 
+  friend class UWorldViewBinding;
+  friend class UMovementDiagnosticsRecorder;
+
 private:
   friend class UWorldCooperativeSession;
+  friend class UWorldStreaming;
+  friend class UWorldPersistence;
   bool CheckRayIntersection(
       const glm::vec3 &position, const glm::vec3 &front,
       std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
@@ -446,31 +819,20 @@ private:
 
   bool CheckPositionFree(const glm::vec3 &position, float size = 1.0) const;
   std::optional<glm::vec3>
-  FindNearestFreeCubePosition(const glm::vec3 &position,
-                              const glm::vec3 &front,
+  FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
 
   bool AddObjectByView(const glm::vec3 &position, const glm::vec3 &front);
-  bool PlaceActivePrefabByView(const glm::vec3 &position,
+  bool PlaceActiveObjectByView(const glm::vec3 &position,
                                const glm::vec3 &front);
   bool DelObjectByView(const glm::vec3 &position, const glm::vec3 &front);
 
   void LoadUsers(const std::string &file_name);
   void SaveUsers(const std::string &file_name);
   void LinkUsersToPlayerCreatures();
+  void ResetCreaturesBeforeEntityLoad();
 
-  void MigrateObjectsFromJson(const std::string &file_name);
-
-  void LoadBlocks(const std::string &file_name);
-  void SaveBlocks(const std::string &file_name);
-  void LoadChunks(const std::string &file_name);
-  void SaveChunks(const std::string &file_name);
   void LoadInitialStreamingChunks();
-  void RequestAsyncTerrainColumnLoad(glm::ivec3 groundCoord);
-  void RequestAsyncTerrainColumnSave(glm::ivec3 groundCoord);
-  bool IsTerrainColumnDiskLoadPending(glm::ivec3 groundCoord) const;
-  void MigrateMonolithicChunksJson(const std::string &chunks_file,
-                                   const std::string &world_folder);
 
   void LoadWorldData(const std::string &file_name);
   void SaveWorldData(const std::string &file_name);
@@ -478,21 +840,53 @@ private:
   void GenerateWorldBlocks();
   void RebuildBlockMesh();
   void InitStreamerCallbacks();
-  void InitChunkScheduler();
   void TickAsyncChunkSystems();
+  void DrainAsyncRelightResults();
+  void TickMeshEmerge();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);
   bool IsReasonablePlayerPosition(const glm::vec3 &position) const;
   void SanitizeUserPosition(const std::shared_ptr<UUser> &user);
+  // Phase 6 fluid facade slice: isolate placement/break flood policy.
+  bool TryAddFluidObject(glm::ivec3 blockPos, BlockId liquidId);
+  void ApplyBreakSiteFluidFlood(glm::ivec3 blockPos,
+                                std::vector<glm::ivec3> &mesh_touch_blocks);
+  void ApplyEditLighting(const std::vector<glm::ivec3> &block_positions);
+  void ApplyEditFastRelight(const std::vector<glm::ivec3> &block_positions);
+  void EnqueueAsyncPlayerRelight(const std::vector<glm::ivec3> &block_positions,
+                                 int min_world_y);
+  void EnsureAsyncRelightBuilder();
+  void CancelAsyncRelightWork();
+  void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
+                              bool priority_mesh);
+  void AccumulateRelightMeshColumns(
+      const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void
+  MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
+                            bool sync_neighbor_chunks = false);
+  void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
+  void MarkFluidChangeDirty(glm::ivec3 blockPos);
+  void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
+                               const std::vector<glm::ivec3> &filled_blocks);
+  void UpdatePhysicsQueueStats(const BlockUpdateQueueStats &blockStats,
+                               const FluidUpdateSetStats &fluidStats);
+  void AccumulateFallingStats(const FallingBlocksStats &stats);
+  void AccumulateFluidStats(const FluidSpreadStats &stats);
+  void ConfigurePhysicsServices();
+  bool IsWithinLiquidUpdateRadius(glm::ivec3 blockPos) const;
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);
-  void UpdateMovementDiagnostics(const std::shared_ptr<UCamera> &camera,
-                                 float prevPlayerY);
+  void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord, int min_y,
+                                       int max_y,
+                                       bool include_horizontal_neighbors = true);
   void SaveMovementDiagnostics(const std::string &file_name) const;
-  void AppendMovementDiagnosticsSample();
-  void RebuildWorldGenPipeline();
+  void ResetMeshLoadDiagnostics();
+  void TickMeshLoadDiagnostics();
+  void ApplyCelestialBodiesFromConfig();
+  void SyncDefaultCelestialBodiesToConfig();
+  void TickWeatherAuto(float dtSeconds);
 
   std::string WorldName;
   glm::vec3 SpawnPoint;
@@ -500,7 +894,7 @@ private:
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};
   ProceduralSettings ProceduralTemplate;
-  std::unique_ptr<IWorldGenPipeline> WorldGen;
+  std::unique_ptr<IUWorldGenPipeline> WorldGen;
   size_t CachedBlockCount{0};
   bool BlockWorldReady{false};
   int PhysicsSuspendFrames{0};
@@ -518,41 +912,64 @@ private:
 
   std::map<std::string, std::shared_ptr<UUser>> Users;
 
-  std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
-  CreatureId NextCreatureId{1};
-  CreatureId PlayerCreatureId{0};
-  CreatureId ControlledCreatureId{0};
-  std::shared_ptr<UCreatureDefinitionStorage> CreatureDefinitions;
-  std::shared_ptr<USkinDefinitionStorage> SkinDefinitions;
-  UCreatureActivityDirector ActivityDirector;
-  UCreaturePosePresenterRegistry PosePresenterRegistry;
+  UWorldEnvironment Environment;
 
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
-  std::shared_ptr<UViewEngine> ViewInstance;
-  UPrefabLibrary *PrefabLibrary{nullptr};
+  std::shared_ptr<UTextureCubeStorage> TextureCubeInstance;
+  std::unique_ptr<UWorldViewBinding> ViewBinding;
+  UObjectLibrary *ObjectLibrary{nullptr};
+  WorldGenSets WorldGenSetsData;
+  ObjectFeatureConfig ResolvedObjectFeatures;
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;
   std::shared_ptr<class UBlockMergeRegistry> BlockMergeRegistry;
   std::unique_ptr<UBlockRegistry> BlockRegistry;
   UBlockWorld BlockWorld;
-  UChunkMeshCache MeshCache;
-  std::unique_ptr<UChunkStreamer> Streamer;
-  std::unique_ptr<PipelineChunkPopulator> ChunkPopulator;
-  std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
-  UChunkGenerationRegistry ChunkGenTokens;
-  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
-  std::unique_ptr<UChunkStorageService> ChunkStorage;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnLoadSlices;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
-  bool StreamingEnabled{true};
+  UWorldCollision Collision;
+  UBlockCountTracker BlockCounter;
+  std::unique_ptr<UWorldMeshService> MeshService;
+  std::unique_ptr<UWorldStreaming> Streaming;
+  std::unique_ptr<UWorldPersistence> Persistence;
+  std::unique_ptr<UAsyncRelightBuilder> AsyncRelight;
+  uint64_t NextAsyncRelightJobId{1};
   bool StepUpEnabled{true};
-  bool EntityCollisionEnabled{true};
+  bool FoliageClimbEnabled{true};
   RenderSettings Render;
+  EnvironmentState EnvironmentStateData;
+  EnvironmentConfig EnvironmentSettingsData;
+  LightingSettings LightingSettingsData;
+  bool LightingRelightDeferred{false};
+  bool LightingSkylightBulkComplete{false};
+  bool CooperativeBulkGenerating{false};
+  double LastMovementFrameMs{0.0};
+  int PlayerRelightMeshBurstFrames{0};
+  struct PendingRelightMeshColumnRange
+  {
+    int min_y{0};
+    int max_y{0};
+  };
+  struct GroundColumnHash
+  {
+    std::size_t operator()(const glm::ivec2 &v) const noexcept
+    {
+      return std::hash<int64_t>{}((static_cast<int64_t>(v.x) << 32) ^
+                                  static_cast<uint32_t>(v.y));
+    }
+  };
+  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
+      PendingRelightMeshColumns;
+  bool SpawnAreaPreparedByCooperativeLoad{false};
+  bool ShutdownPrepared{false};
+  bool BackgroundQuiesceFinished{false};
   int RenderDistanceChunks{4};
+  int EffectiveRenderDistance{4};
+  float EffectiveFogStartRatio{0.85f};
+  float AltitudeAboveTerrain{0.0f};
+  StreamingAltitudePolicyParams AltitudeParams;
+  glm::vec3 LastCameraPosition{0.0f};
+  float LastMovementSpeed{0.0f};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> ModifiedChunks;
-  std::string WorldFolderPath;
   bool IsIntersectionExists;
   glm::vec3 Intersection;
   float IntersectionDistance;
@@ -573,13 +990,31 @@ private:
   std::optional<BlockBreakSession> BreakSession;
 
   uint64_t DurationDoMovementMks;
+  uint64_t DurationDrawSceneMks{0};
   MovementDiagnostics MovementDiag;
   std::vector<MovementDiagnostics> MovementDiagHistory;
   std::unique_ptr<UWorldCooperativeSession> CoopSession;
-  double FrameStreamingGenMs{0.0};
-  double FrameStreamingIoMs{0.0};
   float LastPlayerY{0.0f};
   bool HasLastPlayerY{false};
+  int FramesSinceLoad{0};
+  bool MeshBacklogClearedLatch{false};
+  bool MeshLoadDiagActive{false};
+  PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Primitive};
+  PhysicsFeatureFlags PhysicsFlags;
+  PhysicsBudgets PhysicsBudgetConfig;
+  PhysicsTelemetry PhysicsTelemetryData;
+  uint64_t PhysicsTickCounter{0};
+  double WallFrameDeltaSec{0.0};
+  uint64_t PhysicsEventOrderCounter{0};
+  std::unique_ptr<class UWorldBlockPhysicsService> BlockPhysicsService;
+  std::unique_ptr<class UWorldMovementPhysicsService> MovementPhysicsService;
+  std::unique_ptr<class UWorldChunkDirtyService> ChunkDirtyService;
+  std::unique_ptr<IUPhysicsScheduler> PhysicsScheduler;
+
+  friend class UWorldChunkDirtyService;
+  friend class UWorldFluidFacade;
+  friend class UWorldCreatureFacade;
+  friend class UWorldBlockPhysicsService;
 };
 
 } // namespace cutum

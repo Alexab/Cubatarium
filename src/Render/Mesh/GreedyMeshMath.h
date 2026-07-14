@@ -2,30 +2,13 @@
 #define GREEDYMESHMATH_H
 
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Mesh/GreedyMeshCommon.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/Chunk.h"
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace cutum
 {
-
-namespace
-{
-
-inline int FaceIndexFromGreedy(int axis, int faceSign)
-{
-  if (axis == 2)
-  {
-    return faceSign > 0 ? 0 : 2;
-  }
-  if (axis == 0)
-  {
-    return faceSign > 0 ? 1 : 3;
-  }
-  return faceSign > 0 ? 4 : 5;
-}
-
-} // namespace
 
 inline FaceInstance MakeFaceInstanceFromQuad(const GreedyQuad &q,
                                              glm::ivec3 chunkCoord)

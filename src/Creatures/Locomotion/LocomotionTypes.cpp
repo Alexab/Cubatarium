@@ -31,6 +31,38 @@ LocomotionArchetype ParseLocomotionArchetype(const std::string &s)
   return LocomotionArchetype::TerrestrialBiped;
 }
 
+LocomotionArchetype
+ResolveCreaturePoseArchetype(const std::string &rigTemplateId,
+                             LocomotionArchetype fallback)
+{
+  if (rigTemplateId.empty() || rigTemplateId == "biped")
+  {
+    return fallback;
+  }
+  if (rigTemplateId == "quadruped")
+  {
+    return LocomotionArchetype::TerrestrialQuadruped;
+  }
+  if (rigTemplateId == "bird" || rigTemplateId == "aerial")
+  {
+    return LocomotionArchetype::Aerial;
+  }
+  if (rigTemplateId == "fish" || rigTemplateId == "aquatic")
+  {
+    return LocomotionArchetype::Aquatic;
+  }
+  if (rigTemplateId == "serpent" || rigTemplateId == "serpentine")
+  {
+    return LocomotionArchetype::Serpentine;
+  }
+  if (rigTemplateId == "terrestrial_biped" ||
+      rigTemplateId == "terrestrial_quadruped")
+  {
+    return ParseLocomotionArchetype(rigTemplateId);
+  }
+  return fallback;
+}
+
 const char *ToString(LocomotionState state)
 {
   switch (state)
@@ -69,6 +101,44 @@ const char *ToString(LocomotionState state)
   return "unknown";
 }
 
+const char *LocomotionStateCatalogKey(LocomotionState state)
+{
+  switch (state)
+  {
+  case LocomotionState::Idle:
+    return "Idle";
+  case LocomotionState::Walk:
+    return "Walk";
+  case LocomotionState::Run:
+    return "Run";
+  case LocomotionState::Jump:
+    return "Jump";
+  case LocomotionState::Fall:
+    return "Fall";
+  case LocomotionState::Crouch:
+    return "Crouch";
+  case LocomotionState::Fly:
+    return "Fly";
+  case LocomotionState::Glide:
+    return "Glide";
+  case LocomotionState::Hover:
+    return "Hover";
+  case LocomotionState::Swim:
+    return "Swim";
+  case LocomotionState::Tread:
+    return "Tread";
+  case LocomotionState::Slither:
+    return "Slither";
+  case LocomotionState::Coil:
+    return "Coil";
+  case LocomotionState::Action:
+    return "Action";
+  case LocomotionState::Count:
+    return "Count";
+  }
+  return "Unknown";
+}
+
 CreatureHabitat ParseCreatureHabitat(const std::string &s)
 {
   if (s == "aquatic")
@@ -91,8 +161,8 @@ CreatureHabitat ParseCreatureHabitat(const std::string &s)
   {
     return CreatureHabitat::Terrestrial;
   }
-  std::cerr << "ParseCreatureHabitat: unknown '" << s
-            << "', using terrestrial" << std::endl;
+  std::cerr << "ParseCreatureHabitat: unknown '" << s << "', using terrestrial"
+            << std::endl;
   return CreatureHabitat::Terrestrial;
 }
 

@@ -105,16 +105,47 @@ std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoads()
   return CompletedLoads.DrainAll();
 }
 
+std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoadsUpTo(
+    std::size_t max_count)
+{
+  return CompletedLoads.DrainUpTo(max_count);
+}
+
 std::vector<AsyncChunkSaveRequest> UAsyncChunkIO::DrainSaves()
 {
   return CompletedSaves.DrainAll();
 }
 
-ChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
-                                   glm::ivec3 chunkCoord,
-                                   UBlockRegistry &registry)
+void UAsyncChunkIO::WaitIdle()
 {
-  JsonChunkSerializer serializer;
+  Pool.WaitIdle();
+}
+
+bool UAsyncChunkIO::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  return Pool.WaitIdleFor(timeout);
+}
+
+void UAsyncChunkIO::CancelPending()
+{
+  Pool.CancelPendingJobs();
+}
+
+bool UAsyncChunkIO::CompletedLoadsEmpty() const
+{
+  return CompletedLoads.Empty();
+}
+
+bool UAsyncChunkIO::CompletedSavesEmpty() const
+{
+  return CompletedSaves.Empty();
+}
+
+UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
+                                    glm::ivec3 chunkCoord,
+                                    UBlockRegistry &registry)
+{
+  UJsonChunkSerializer serializer;
   std::vector<uint8_t> bytes(jsonText.begin(), jsonText.end());
   return serializer.Deserialize(bytes, chunkCoord, registry);
 }
@@ -122,7 +153,7 @@ ChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
 std::string SerializeChunkToJson(glm::ivec3 chunkCoord, const UChunk &chunk,
                                  UBlockRegistry &registry)
 {
-  JsonChunkSerializer serializer;
+  UJsonChunkSerializer serializer;
   const SerializedChunk serialized =
       serializer.Serialize(chunkCoord, chunk, registry);
   return std::string(serialized.bytes.begin(), serialized.bytes.end());

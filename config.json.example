@@ -6,13 +6,29 @@
     "terrain": "overworld",
     "procedural": {
         "generator": "overworld",
+        "preset": "balanced",
         "trees": true,
+        "ground_cover": true,
         "decoration": true,
         "structures": true,
+        "tuning": {
+            "terrain_roughness": 0.58,
+            "terrain_erosion": 0.32,
+            "vegetation_density": 0.68,
+            "decoration_density": 0.85,
+            "height_smoothing": true,
+            "height_smoothing_radius": 1,
+            "jitter_amplitude": 1.0,
+            "hills_vegetation_height_norm_max": 0.82
+        },
         "async_chunk_generation": true,
         "async_chunk_io": true,
+        "ring_gate_enabled": false,
         "max_chunk_commits_per_frame": 3,
+        "max_chunk_commits_per_frame_boost": 6,
         "max_load_ops_per_frame": 4,
+        "max_load_ops_per_frame_boost": 8,
+        "movement_speed_boost_threshold": 6.0,
         "max_unload_ops_per_frame": 2
     },
     "chunk_storage": "binary",
@@ -22,6 +38,40 @@
         "step_up": true,
         "entity_collision": true
     },
+    "physics": {
+        "profile": "standard",
+        "enable_falling": true,
+        "enable_fluids": true,
+        "enable_block_events": true,
+        "enable_collision_broadphase": true,
+        "enable_collision_readiness_gate": true,
+        "falling_shadow_mode": false,
+        "liquid_shadow_mode": false,
+        "liquid_debug_trace": false,
+        "enable_collision_dda": false,
+        "block_events_per_tick_max": 128,
+        "block_queue_soft_limit": 2048,
+        "block_queue_hard_limit": 8192,
+        "liquid_events_per_tick_max": 128,
+        "fluid_blocks_per_tick_max": 128,
+        "fluid_tuning": {
+            "water_drop_boost": 4,
+            "flood_max_passes": 8,
+            "coastal_band_above_sea": 8
+        },
+        "liquid_queue_soft_limit": 2048,
+        "liquid_queue_hard_limit": 8192,
+        "falling_events_per_tick_max": 128,
+        "collision_safety_radius_chunks": 1,
+        "visual_remesh_per_tick_max": 8,
+        "collision_rebuild_per_tick_max": 16,
+        "visual_remesh_queue_soft_limit": 512,
+        "visual_remesh_queue_hard_limit": 4096,
+        "collision_rebuild_queue_soft_limit": 512,
+        "collision_rebuild_queue_hard_limit": 4096,
+        "liquid_update_radius_chunks": 2,
+        "falling_scan_radius_chunks": 2
+    },
     "render": {
         "greedy_meshing": true,
         "async_meshing": true,
@@ -29,9 +79,23 @@
         "frustum_culling": true,
         "batch_cache": true,
         "distance_fog": true,
-        "distance_fog_start_ratio": 0.85,
+        "distance_fog_start_ratio": 0.55,
+        "distance_fog_density": 0.85,
         "distance_fog_horizontal": true,
-        "gradient_sky": true
+        "below_surface_fog_v2": false,
+        "altitude_adaptive_fog": true,
+        "altitude_fog_threshold_blocks": 32,
+        "altitude_fog_penalty_per_16_blocks": 0.05,
+        "gradient_sky": true,
+        "horizon_fog_radial": true,
+        "horizon_fog_celestial_tint": true,
+        "distance_fog_end_margin_blocks": 12,
+        "altitude_use_terrain_surface": true,
+        "underwater_fog": {
+            "surface_scan_up": 32,
+            "surface_scan_down": 64,
+            "surface_window_move_threshold": 8
+        }
     },
     "ui": {
         "legacy_hud": false,
@@ -43,5 +107,49 @@
         "default_secondary": [],
         "default_enabled": ["minetest_default_16"],
         "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
+    },
+    "environment": {
+        "time_of_day": 0.35,
+        "day_length_minutes": 10,
+        "lighting": { "min_ambient": 0.12 },
+        "celestial": {
+            "horizon_fade": 0.15,
+            "bodies": [
+                {
+                    "id": "sun_main",
+                    "type": "sun",
+                    "color": [1.0, 0.94, 0.82],
+                    "intensity": 1.0,
+                    "angular_size_deg": 5.0,
+                    "orbit_inclination_deg": 23.0,
+                    "orbit_period_days": 1.0,
+                    "orbit_phase": 0.0,
+                    "orbit_longitude_deg": 0.0
+                },
+                {
+                    "id": "moon_main",
+                    "type": "moon",
+                    "color": [0.72, 0.78, 0.9],
+                    "intensity": 0.35,
+                    "angular_size_deg": 4.2,
+                    "orbit_inclination_deg": 18.0,
+                    "orbit_period_days": 1.0,
+                    "orbit_phase": 0.5,
+                    "orbit_longitude_deg": 8.0
+                }
+            ]
+        },
+        "weather": {
+            "auto_change": true,
+            "dry_fraction": 0.7,
+            "precip_fraction": 0.3,
+            "dry_clear_fraction": 0.55,
+            "min_precip_minutes": 2.0,
+            "min_dry_minutes": 1.0,
+            "transition_seconds": 45.0,
+            "episode_min_minutes": 3.0,
+            "episode_max_minutes": 12.0,
+            "precip_heavy_fraction": 0.35
+        }
     }
 }

@@ -2,10 +2,11 @@
 #include "App/Platform/AndroidPlatformPaths.h"
 #include "App/Platform/AppRunner.h"
 #include "App/Platform/GameAssets.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 #include "android_jni.h"
 
+#include <chrono>
 #include <filesystem>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 
@@ -30,13 +31,17 @@ void HandleAppCmd(android_app *app, int32_t cmd)
   state->window->OnAppCmd(cmd);
 }
 
-bool GameAssetsReady(const IPlatformPaths &paths)
+bool GameAssetsReady(const IUPlatformPaths &paths)
 {
-  const auto font = paths.AssetRoot() / "fonts" / kBundledUiFontFileName;
-  return std::filesystem::exists(font);
+  const auto root = paths.AssetRoot();
+  const auto font = root / "fonts" / kBundledUiFontFileName;
+  const auto uiShader = root / "shaders" / "gles" / "vshader_2d.glsl";
+  const auto types = root / "content" / "types.json";
+  return std::filesystem::exists(font) && std::filesystem::exists(uiShader) &&
+         std::filesystem::exists(types);
 }
 
-bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
+bool WaitForGameAssets(android_app *app, const IUPlatformPaths &paths)
 {
   if (GameAssetsReady(paths))
   {
@@ -44,11 +49,27 @@ bool WaitForGameAssets(android_app *app, const IPlatformPaths &paths)
   }
 
   CubatariumLogInfo("Android", "Waiting for game assets extraction...");
+  const auto waitStart = std::chrono::steady_clock::now();
+  auto lastLog = waitStart;
   while (app->destroyRequested == 0)
   {
     if (GameAssetsReady(paths))
     {
       return true;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    if (now - lastLog >= std::chrono::seconds(2))
+    {
+      const auto root = paths.AssetRoot();
+      const bool hasFont = std::filesystem::exists(
+          root / "fonts" / kBundledUiFontFileName);
+      const bool hasShaders = std::filesystem::exists(
+          root / "shaders" / "gles" / "vshader_2d.glsl");
+      CubatariumLogInfo(
+          "Android",
+          "Still waiting for assets (font=" + std::string(hasFont ? "yes" : "no") +
+              ", shaders=" + std::string(hasShaders ? "yes" : "no") + ")");
+      lastLog = now;
     }
     int events = 0;
     android_poll_source *source = nullptr;
@@ -112,6 +133,8 @@ extern "C" void android_main(struct android_app *app)
 {
   using namespace cutum;
 
+  CubatariumInstallWindowsDiagnostics();
+
   UAndroidPlatformWindow window(app);
   AndroidAppState state;
   state.window = &window;
@@ -127,7 +150,7 @@ extern "C" void android_main(struct android_app *app)
       std::make_shared<UAndroidPlatformPaths>(
           CubatariumAndroidGetAssetManager());
   pathsPtr->EnsureWritableConfig();
-  IPlatformPaths::SetGlobal(pathsPtr);
+  IUPlatformPaths::SetGlobal(pathsPtr);
 
   if (app->window != nullptr)
   {

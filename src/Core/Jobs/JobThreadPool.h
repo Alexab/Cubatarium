@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
@@ -22,6 +24,8 @@ public:
 
   void Enqueue(std::function<void()> job);
   void WaitIdle();
+  bool WaitIdleFor(std::chrono::milliseconds timeout);
+  void CancelPendingJobs();
 
 private:
   void WorkerLoop();
@@ -34,8 +38,7 @@ private:
   bool Stop{false};
 };
 
-template <typename T>
-class CompletedJobQueue
+template <typename T> class UCompletedJobQueue
 {
 public:
   void Push(T value)
@@ -49,6 +52,25 @@ public:
     std::lock_guard<std::mutex> lock(Mutex);
     std::vector<T> drained;
     drained.swap(Items);
+    return drained;
+  }
+
+  std::vector<T> DrainUpTo(std::size_t maxCount)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    std::vector<T> drained;
+    if (maxCount == 0 || Items.empty())
+    {
+      return drained;
+    }
+    const std::size_t take = std::min(maxCount, Items.size());
+    drained.reserve(take);
+    for (std::size_t i = 0; i < take; ++i)
+    {
+      drained.push_back(std::move(Items[i]));
+    }
+    Items.erase(Items.begin(),
+                Items.begin() + static_cast<std::ptrdiff_t>(take));
     return drained;
   }
 

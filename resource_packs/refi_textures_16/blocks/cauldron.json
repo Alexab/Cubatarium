@@ -1,19 +1,16 @@
-﻿{
-    "name":  "cauldron",
-    "id":  745,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "cauldron_side",
-                     "cauldron_side",
-                     "cauldron_side",
-                     "cauldron_side",
-                     "cauldron_top",
-                     "cauldron_bottom"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "cauldron",
+  "id": 745,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "cauldron_side",
+    "cauldron_side",
+    "cauldron_side",
+    "cauldron_side",
+    "cauldron_top",
+    "cauldron_bottom"
+  ],
+  "render": {}
 }
-

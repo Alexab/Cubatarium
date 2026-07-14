@@ -52,6 +52,16 @@ models/skins/<skin_id>/textures/diffuse.png
 
 Texture keys at runtime: `<species_id>/<stem>` and `skin/<skin_id>/<stem>`.
 
+## Visual backends (ship set)
+
+| Backend | Count | Species | Notes |
+|---------|-------|---------|-------|
+| `gltf_skeleton` | 36 | Luanti mobs migrated from rigid boxes | `model.gltf` + `model.bin`; 5 yaml `.b3d` species use skinned mesh export |
+| `bone_skeleton` | 16 | Tier A/B (cow, sheep, human, zombie, …) | Bedrock-style `geometry.geo.json` |
+| `rigid_voxels` | 3 | `rigid_demo_walker`, `rigid_demo_flyer`, `rigid_demo_swimmer` | Canonical rigid reference; see [CREATURE_TEXTURED.md](CREATURE_TEXTURED.md) |
+
+Regenerate glTF from b3d: `python tools/convert_creature_mesh_to_gltf.py --all-with-b3d`. Smoke: `python tools/smoke_creature_rigid_demo.py`, `python tools/render_creature_preview_gltf.py`.
+
 ## JSON reference
 
 ### `creature.json`
@@ -182,7 +192,7 @@ python tools/generate_creature_assets.py
 1. Motor: `Creature::ExecuteIntent` / `Camera::DoMovement` → `CreatureLocomotionFacts` (скорость, grounded, stance).
 2. `DeriveLocomotionState` → `LocomotionState` (Idle, Walk, Run, Jump, Fall, Crouch, Fly, …).
 3. `CreaturePosePresenterRegistry` → biped / quadruped / aerial presenters → `CreaturePoseParams` по part id.
-4. `ICreatureVisual::UpdatePose` → `CreatureVisualRigid` рисует части.
+4. `IUCreatureVisual::UpdatePose` → `CreatureVisualRigid` рисует части.
 
 Опционально в `CreatureIntent`: `lookAtWorld`, `lookAtWeight` (IK головы).
 
@@ -193,11 +203,13 @@ python tools/generate_creature_assets.py
 | `behavior` | При spawn / load | Движение каждый кадр |
 |------------|------------------|----------------------|
 | `wander` | `OnCreatureAdded` → **`WanderActivityAgent`** (таймер, направление в агенте) | Агент `SetIntent` в `DoMovement`, затем `Creature::ExecuteIntent` |
+| `flee` | **`FleeActivityAgent`** + `USimpleFsmBrain` | Убегание от controlled; navigation + steering |
+| `melee_attack` | **`MeleeAttackActivityAgent`** + `USimpleFsmBrain` | zombie, skeleton, dungeon_master — преследование и `attackTargetId` в intent |
 | `none` | Нет membership в директоре | Только `ExecuteIntent` (гравитация, коллизии; intent пустой, если не задан иначе) |
 
 Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`.
 
-Параметры wander читаются агентом через `ICreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
+Параметры wander читаются агентом через `IUCreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
 
 ## Code map
 

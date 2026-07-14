@@ -60,25 +60,25 @@ flowchart TB
 | Модуль | Ответственность |
 |--------|----------------|
 | **`Creature`** | Состояние тела, bounds, инвентарь, `CreatureLocomotionController`, визуал. **Не** содержит стратегический ИИ (только применяет `Intent` / player input). |
-| **`ICreatureActivityAgent`** (напр. `WanderActivityAgent`) | Владеет списком `CreatureId` с одним `behavior` из каталога; в `Tick` строит решение и вызывает `ICreatureActivitySink::SetIntent`. |
+| **`IUCreatureActivityAgent`** (напр. `WanderActivityAgent`) | Владеет списком `CreatureId` с одним `behavior` из каталога; в `Tick` строит решение и вызывает `IUCreatureActivitySink::SetIntent`. |
 | **`CreatureActivityDirector`** | Реестр агентов по `behaviorId`; membership при spawn/load; **`TickAgents(perception, sink, dt)`**. |
-| **`World`** | Реализует **`IWorldPerception`**; в `DoMovement` создаёт **`WorldCreatureActivitySink`** и тикает директор **перед** `ExecuteIntent`. |
+| **`World`** | Реализует **`IUWorldPerception`**; в `DoMovement` создаёт **`WorldCreatureActivitySink`** и тикает директор **перед** `ExecuteIntent`. |
 | **Управляемая сущность** | При `possess` / ввод игрока агент **не** перезаписывает intent (или агент снимает существо с своего списка на время possess). |
 
 ### Направление данных
 
 - **Мир → агенты:** вызов `agent->Tick(perception, dt)` (pull со стороны мира, как вы описали: «мир опрашивает агентов»).
-- **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IWorldPerception` + **запись intent** в подчинённых `Creature`.
+- **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IUWorldPerception` + **запись intent** в подчинённых `Creature`.
 - **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` / locomotion исполняет движение через `World::ResolveMovement`.
 
 ### Где живёт ИИ
 
 | Слой | Где | Частота |
 |------|-----|---------|
-| Стратегия (куда патрулировать, агро) | **`ICreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
+| Стратегия (куда патрулировать, агро) | **`IUCreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
 | Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + `World`** | каждый кадр |
-| Presentation (поза частей, walk cycle) | **`src/Pose/*` + `ICreatureVisual`** | каждый кадр (render) |
+| Presentation (поза частей, walk cycle) | **`src/Pose/*` + `IUCreatureVisual`** | каждый кадр (render) |
 
 ИИ **не** внутри `Creature` как монолит; **мозг** — у агента (или у plug-in мозга агента). Существо — **исполнитель** намерений + особый случай **player input** для controlled.
 
@@ -99,9 +99,9 @@ flowchart TB
 | Тип | Файл | Назначение |
 |-----|------|------------|
 | `CreatureActivityTypes` | `CreatureActivityTypes.h` | `CreatureId`, `CreatureActivityView`, `ControlledCreatureInfo` |
-| `IWorldPerception` | `IWorldPerception.h` | `QueryControlledCreatureInfo()`, `CreaturesInRadius()` |
-| `ICreatureActivitySink` | `ICreatureActivitySink.h` | `GetCreatureView`, `GetBehaviorSnapshot`, `SetIntent` |
-| `ICreatureActivityAgent` | `ICreatureActivityAgent.h` | `GetBehaviorId()`, membership, `Tick` |
+| `IUWorldPerception` | `IUWorldPerception.h` | `QueryControlledCreatureInfo()`, `CreaturesInRadius()` |
+| `IUCreatureActivitySink` | `IUCreatureActivitySink.h` | `GetCreatureView`, `GetBehaviorSnapshot`, `SetIntent` |
+| `IUCreatureActivityAgent` | `IUCreatureActivityAgent.h` | `GetBehaviorId()`, membership, `Tick` |
 | `CreatureActivityDirector` | `CreatureActivityDirector.*` | Реестр агентов, `OnCreatureAdded/Removed`, `TickAgents` |
 | `WorldCreatureActivitySink` | `WorldCreatureActivitySink.*` | Адаптер к `World` / `Creature` |
 | `RegisterDefaultCreatureActivityAgents` | `CreatureActivityRegistry.*` | Регистрация `WanderActivityAgent` для `behavior: wander` |
@@ -132,9 +132,9 @@ Controlled и possessed **не** получают intent от агентов в 
 ```
 src/Activity/
   CreatureActivityTypes.h
-  ICreatureActivitySink.h
-  IWorldPerception.h
-  ICreatureActivityAgent.h
+  IUCreatureActivitySink.h
+  IUWorldPerception.h
+  IUCreatureActivityAgent.h
   CreatureActivityDirector.h
   CreatureActivityDirector.cpp
   WorldCreatureActivitySink.h
@@ -152,10 +152,46 @@ src/Activity/
 
 1. ~~`CreatureIntent` + `ExecuteIntent`~~ — сделано.
 2. ~~`CreatureActivityDirector` + `WanderActivityAgent`~~ — сделано.
-3. ~~`IWorldPerception` (controlled + существа в радиусе)~~ — сделано.
+3. ~~`IUWorldPerception` (controlled + существа в радиусе)~~ — сделано.
 4. Региональные агенты по чанкам; лимит существ на агент.
-5. `SampleBlocks` в `IWorldPerception`; pluggable `IAgentBrain`; throttle `Tick`.
+5. `SampleBlocks` в `IUWorldPerception`; pluggable `IAgentBrain`; throttle `Tick`.
 6. Долгосрочно: локальные belief / gossip.
+
+---
+
+## Steering / mob separation (фаза 0)
+
+Общая тактика для activity-агентов: [`CreatureActivitySteering`](../../src/Activity/Helpers/CreatureActivitySteering.h).
+
+| API perception | Назначение |
+|----------------|------------|
+| `CreatureVolumeClearAt` | Probe без пересечения AABB других существ |
+| `QueryCreatureNeighborsInRadius` | Соседи с `bodyOrigin` для separation |
+| `GetCreatureBodyOrigin` | Позиция по `CreatureId` |
+
+`WanderActivityAgent` использует:
+
+- `PickLocomotionDirection` — habitat + creature probe
+- `ComputeSeparationDirection` / `BlendLocomotionDirection` — разъезд в толпе
+- `IsLocomotionStuck` — repick направления при залипании
+- `TryDepenetrateSpawnOrigin` (spawn/load) — XZ-сдвиг при overlap в [`CreatureEnvironment`](../../src/Creatures/Environment/CreatureEnvironment.cpp)
+
+## Navigation (фаза 1)
+
+Модуль [`src/Navigation/`](../src/Navigation/): `UNavigationPathfinder` (A* по stand-nodes), `UWaypointFollower`, `SteerCreatureAlongPath` в [`CreatureActivityNavigation`](../../src/Activity/Helpers/CreatureActivityNavigation.h).
+
+## Масштаб (фаза 2)
+
+- [`CreatureSpatialIndex`](../../src/World/Environment/CreatureSpatialIndex.cpp) — инкрементальный `Upsert`/`Remove`/`PruneExcept`; `SyncCreatureSpatialIndex` перед `TickActivity` обновляет только сдвинувшихся мобов
+- Throttle когнитивного слоя: `gameplay.activity_tick_hz` в `config.json` → `UCreatureActivityDirector::SetActivityTickInterval` (default 20 Гц)
+- `IsWithinActivityRange` — моб тикается только если его ground-chunk в активном кольце `UChunkStreamer` (тот же критерий, что `ShouldKeepChunkLoaded`)
+
+## Brain + новые behaviors (фаза 3)
+
+- [`IUAgentBrain`](../../src/Activity/Brain/IUAgentBrain.h), [`USimpleFsmBrain`](../../src/Activity/Brain/SimpleFsmBrain.cpp)
+- `flee` → [`FleeActivityAgent`](../../src/Activity/Agents/FleeActivityAgent.cpp) (sheep); steering фазы 0 (separation + `PickLocomotionDirection`) в flee-ветке brain
+- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master)
+- `CreatureIntent.attackTargetId` — задел под combat (урон вне activity)
 
 ---
 

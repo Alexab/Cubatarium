@@ -4,7 +4,7 @@
 namespace cutum
 {
 
-/// Placeholder for skinned mesh VAO (TD-CRE-001).
+/// GPU VAO for skinned glTF primitives (runtime cache lives in GeometryEngine).
 class UCreatureSkinnedMesh
 {
 };

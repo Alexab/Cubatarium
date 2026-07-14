@@ -1,7 +1,9 @@
 #include "WorldGen/Core/ProceduralConfigIO.h"
+#include "App/LegacyConfigAdapter.h"
+#include "App/Settings/UiSettings.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldSeedParser.h"
-#include "App/Settings/UiSettings.h"
 #include <algorithm>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -13,8 +15,8 @@ namespace
 {
 
 void ApplyLegacyVerticalMode(ProceduralSettings &settings,
-                             const std::string &verticalMode,
-                             bool hasSeaLevel, bool hasMaxHeight)
+                             const std::string &verticalMode, bool hasSeaLevel,
+                             bool hasMaxHeight)
 {
   if (hasSeaLevel || hasMaxHeight)
   {
@@ -115,6 +117,22 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.biomeTundraWeight = tuning["biome_tundra_weight"].get<float>();
   }
+  if (tuning.contains("biome_savanna_weight"))
+  {
+    out.biomeSavannaWeight = tuning["biome_savanna_weight"].get<float>();
+  }
+  if (tuning.contains("biome_foothills_weight"))
+  {
+    out.biomeFoothillsWeight = tuning["biome_foothills_weight"].get<float>();
+  }
+  if (tuning.contains("biome_scrubland_weight"))
+  {
+    out.biomeScrublandWeight = tuning["biome_scrubland_weight"].get<float>();
+  }
+  if (tuning.contains("biome_cold_steppe_weight"))
+  {
+    out.biomeColdSteppeWeight = tuning["biome_cold_steppe_weight"].get<float>();
+  }
   if (tuning.contains("terrain_roughness"))
   {
     out.terrainRoughness = tuning["terrain_roughness"].get<float>();
@@ -135,18 +153,21 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.riverWidth = tuning["river_width"].get<float>();
   }
-  if (tuning.contains("thermal_erosion_iterations"))
-  {
-    out.thermalErosionIterations = tuning["thermal_erosion_iterations"].get<int>();
-  }
-  if (tuning.contains("hydraulic_erosion_iterations"))
-  {
-    out.hydraulicErosionIterations =
-        tuning["hydraulic_erosion_iterations"].get<int>();
-  }
   if (tuning.contains("erosion_strength"))
   {
     out.erosionStrength = tuning["erosion_strength"].get<float>();
+  }
+  if (tuning.contains("height_smoothing"))
+  {
+    out.heightSmoothing = tuning["height_smoothing"].get<bool>();
+  }
+  if (tuning.contains("height_smoothing_radius"))
+  {
+    out.heightSmoothingRadius = tuning["height_smoothing_radius"].get<int>();
+  }
+  if (tuning.contains("jitter_amplitude"))
+  {
+    out.jitterAmplitude = tuning["jitter_amplitude"].get<float>();
   }
 }
 
@@ -165,6 +186,19 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
   {
     settings.AsyncChunkIo = p["async_chunk_io"].get<bool>();
   }
+  if (p.contains("async_relight"))
+  {
+    settings.AsyncRelight = p["async_relight"].get<bool>();
+  }
+  if (p.contains("relight_thread_count"))
+  {
+    settings.RelightThreadCount =
+        std::clamp(p["relight_thread_count"].get<int>(), 1, 8);
+  }
+  if (p.contains("ring_gate_enabled"))
+  {
+    settings.RingGateEnabled = p["ring_gate_enabled"].get<bool>();
+  }
   if (p.contains("max_chunk_commits_per_frame"))
   {
     settings.MaxChunkCommitsPerFrame =
@@ -180,6 +214,21 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
     settings.MaxUnloadOpsPerFrame =
         std::clamp(p["max_unload_ops_per_frame"].get<int>(), 1, 32);
   }
+  if (p.contains("max_chunk_commits_per_frame_boost"))
+  {
+    settings.MaxChunkCommitsPerFrameBoost =
+        std::clamp(p["max_chunk_commits_per_frame_boost"].get<int>(), 1, 32);
+  }
+  if (p.contains("max_load_ops_per_frame_boost"))
+  {
+    settings.MaxLoadOpsPerFrameBoost =
+        std::clamp(p["max_load_ops_per_frame_boost"].get<int>(), 1, 32);
+  }
+  if (p.contains("movement_speed_boost_threshold"))
+  {
+    settings.MovementSpeedBoostThreshold =
+        p["movement_speed_boost_threshold"].get<float>();
+  }
   if (p.contains("streaming") && p["streaming"].is_object())
   {
     ParseProceduralStreamingOptions(p["streaming"], settings);
@@ -191,9 +240,17 @@ void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
 {
   procedural["async_chunk_generation"] = settings.AsyncChunkGeneration;
   procedural["async_chunk_io"] = settings.AsyncChunkIo;
+  procedural["async_relight"] = settings.AsyncRelight;
+  procedural["relight_thread_count"] = settings.RelightThreadCount;
+  procedural["ring_gate_enabled"] = settings.RingGateEnabled;
   procedural["max_chunk_commits_per_frame"] = settings.MaxChunkCommitsPerFrame;
   procedural["max_load_ops_per_frame"] = settings.MaxLoadOpsPerFrame;
   procedural["max_unload_ops_per_frame"] = settings.MaxUnloadOpsPerFrame;
+  procedural["max_chunk_commits_per_frame_boost"] =
+      settings.MaxChunkCommitsPerFrameBoost;
+  procedural["max_load_ops_per_frame_boost"] = settings.MaxLoadOpsPerFrameBoost;
+  procedural["movement_speed_boost_threshold"] =
+      settings.MovementSpeedBoostThreshold;
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
@@ -206,14 +263,19 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["biome_desert_weight"] = tuning.biomeDesertWeight;
   out["biome_hills_weight"] = tuning.biomeHillsWeight;
   out["biome_tundra_weight"] = tuning.biomeTundraWeight;
+  out["biome_savanna_weight"] = tuning.biomeSavannaWeight;
+  out["biome_foothills_weight"] = tuning.biomeFoothillsWeight;
+  out["biome_scrubland_weight"] = tuning.biomeScrublandWeight;
+  out["biome_cold_steppe_weight"] = tuning.biomeColdSteppeWeight;
   out["terrain_roughness"] = tuning.terrainRoughness;
   out["biome_blend_radius"] = tuning.biomeBlendRadius;
   out["ore_density"] = tuning.oreDensity;
   out["terrain_erosion"] = tuning.terrainErosion;
   out["river_width"] = tuning.riverWidth;
-  out["thermal_erosion_iterations"] = tuning.thermalErosionIterations;
-  out["hydraulic_erosion_iterations"] = tuning.hydraulicErosionIterations;
   out["erosion_strength"] = tuning.erosionStrength;
+  out["height_smoothing"] = tuning.heightSmoothing;
+  out["height_smoothing_radius"] = tuning.heightSmoothingRadius;
+  out["jitter_amplitude"] = tuning.jitterAmplitude;
 }
 
 } // namespace
@@ -256,8 +318,16 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("generator") && p["generator"].is_string())
     {
       legacyGeneratorId = p["generator"].get<std::string>();
-      settings.Generator =
-          ProceduralGeneratorFromString(legacyGeneratorId);
+      settings.Generator = ProceduralGeneratorFromString(legacyGeneratorId);
+    }
+    {
+      const uint32_t savedSeed = settings.Seed;
+      const std::string savedSeedText = settings.SeedText;
+      const WorldSeedKind savedSeedKind = settings.SeedKind;
+      ResetToGeneratorDefaults(settings);
+      settings.Seed = savedSeed;
+      settings.SeedText = savedSeedText;
+      settings.SeedKind = savedSeedKind;
     }
     if (p.contains("vertical") && p["vertical"].is_string())
     {
@@ -284,6 +354,12 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     if (p.contains("preset") && p["preset"].is_string())
     {
       settings.WorldGenPresetId = p["preset"].get<std::string>();
+      ApplyWorldGenPreset(settings, settings.WorldGenPresetId);
+    }
+    if (p.contains("terrain_backend") && p["terrain_backend"].is_string())
+    {
+      settings.TerrainBackendMode =
+          TerrainBackendFromString(p["terrain_backend"].get<std::string>());
     }
     if (p.contains("caves") && p["caves"].is_boolean())
     {
@@ -292,6 +368,13 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     }
     if (p.contains("enable_caves"))
     {
+      static bool warned = false;
+      if (!warned)
+      {
+        std::cerr
+            << "[config] procedural.enable_caves is deprecated; use caves\n";
+        warned = true;
+      }
       settings.EnableCaves = p["enable_caves"].get<bool>();
       hasCaves = true;
     }
@@ -299,6 +382,10 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.EnableTrees = p["trees"].get<bool>();
       hasTrees = true;
+    }
+    if (p.contains("ground_cover"))
+    {
+      settings.EnableGroundCover = p["ground_cover"].get<bool>();
     }
     if (p.contains("decoration"))
     {
@@ -358,6 +445,11 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
         settings.Caves.maxDepthBelowSurface =
             caves["max_depth_below_surface"].get<int>();
       }
+      if (caves.contains("min_depth_below_surface"))
+      {
+        settings.Caves.minDepthBelowSurface =
+            caves["min_depth_below_surface"].get<int>();
+      }
       if (caves.contains("scale"))
       {
         settings.Caves.scale = caves["scale"].get<float>();
@@ -366,6 +458,20 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       {
         settings.Caves.style =
             CaveStyleFromString(caves["style"].get<std::string>());
+      }
+      if (caves.contains("use_density_field"))
+      {
+        settings.Caves.useDensityField = caves["use_density_field"].get<bool>();
+      }
+      if (caves.contains("density_cave_amplitude"))
+      {
+        settings.Caves.densityCaveAmplitude =
+            caves["density_cave_amplitude"].get<float>();
+      }
+      if (caves.contains("chunk_gate_threshold"))
+      {
+        settings.Caves.chunkGateThreshold =
+            caves["chunk_gate_threshold"].get<float>();
       }
     }
     if (p.contains("tuning") && p["tuning"].is_object())
@@ -376,31 +482,17 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
                             hasMaxHeight);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
-                                hasOres, hasFillWater, hasFillLava, hasFillFire);
+                                hasOres, hasFillWater, hasFillLava,
+                                hasFillFire);
   }
   else if (root.contains("terrain") && root["terrain"].is_string())
   {
-    const std::string terrain = root["terrain"].get<std::string>();
-    if (terrain == "flat")
-    {
-      settings.Generator = ProceduralGenerator::Flat;
-    }
-    else
-    {
-      settings.Generator = ProceduralGenerator::Heightmap;
-    }
+    settings.Generator = ReadLegacyTerrainGenerator(root);
   }
 
-  if (hasProcedural && root.contains("terrain") && root["terrain"].is_string())
+  if (hasProcedural)
   {
-    const std::string legacy = root["terrain"].get<std::string>();
-    const std::string fromProc =
-        ProceduralGeneratorToString(settings.Generator);
-    if (legacy != fromProc)
-    {
-      std::cerr << "WARN: procedural.Generator (" << fromProc
-                << ") overrides legacy terrain (" << legacy << ")" << std::endl;
-    }
+    WarnIfLegacyTerrainOverridden(root, settings, hasProcedural);
   }
 
   ResolveProceduralDefaults(settings);
@@ -411,37 +503,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 
 ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
 {
-  ProceduralSettings settings;
-  settings.Seed = root.value("world_seed", 12345u);
-  std::string legacyGeneratorId;
-
-  const bool hasProcedural =
-      root.contains("procedural") && root["procedural"].is_object();
-  if (hasProcedural)
-  {
-    const nlohmann::json &p = root["procedural"];
-    if (p.contains("generator") && p["generator"].is_string())
-    {
-      legacyGeneratorId = p["generator"].get<std::string>();
-      settings.Generator =
-          ProceduralGeneratorFromString(legacyGeneratorId);
-    }
-  }
-  else if (root.contains("terrain") && root["terrain"].is_string())
-  {
-    legacyGeneratorId = root["terrain"].get<std::string>();
-    settings.Generator =
-        ProceduralGeneratorFromString(legacyGeneratorId);
-  }
-
-  ResetToGeneratorDefaults(settings);
-  ApplyLegacyOverworldProfile(legacyGeneratorId, settings, false, false, false,
-                              false, false, false);
-  if (hasProcedural)
-  {
-    ParseProceduralStreamingOptions(root["procedural"], settings);
-  }
-  return settings;
+  return ParseProceduralSettings(root);
 }
 
 void WriteProceduralSettings(nlohmann::json &root,
@@ -454,9 +516,11 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["bedrock_top_y"] = settings.BedrockTopY;
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;
   procedural["preset"] = settings.WorldGenPresetId;
+  procedural["terrain_backend"] =
+      TerrainBackendToString(settings.TerrainBackendMode);
   procedural["caves"] = settings.EnableCaves;
-  procedural["enable_caves"] = settings.EnableCaves;
   procedural["trees"] = settings.EnableTrees;
+  procedural["ground_cover"] = settings.EnableGroundCover;
   procedural["decoration"] = settings.EnableDecoration;
   procedural["structures"] = settings.EnableStructures;
   procedural["flat_surface_y"] = settings.FlatSurfaceY;
@@ -468,15 +532,18 @@ void WriteProceduralSettings(nlohmann::json &root,
   caveParams["threshold"] = settings.Caves.threshold;
   caveParams["min_y"] = settings.Caves.minY;
   caveParams["max_depth_below_surface"] = settings.Caves.maxDepthBelowSurface;
+  caveParams["min_depth_below_surface"] = settings.Caves.minDepthBelowSurface;
   caveParams["scale"] = settings.Caves.scale;
   caveParams["style"] = CaveStyleToString(settings.Caves.style);
+  caveParams["use_density_field"] = settings.Caves.useDensityField;
+  caveParams["density_cave_amplitude"] = settings.Caves.densityCaveAmplitude;
+  caveParams["chunk_gate_threshold"] = settings.Caves.chunkGateThreshold;
   procedural["cave_params"] = caveParams;
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);
   procedural["tuning"] = tuning;
   WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
-  root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
   if (!settings.SeedText.empty())
   {
@@ -490,9 +557,16 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
 {
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
+  procedural["preset"] = settings.WorldGenPresetId;
+  procedural["trees"] = settings.EnableTrees;
+  procedural["ground_cover"] = settings.EnableGroundCover;
+  procedural["decoration"] = settings.EnableDecoration;
+  procedural["structures"] = settings.EnableStructures;
+  nlohmann::json tuning;
+  WriteTuning(settings.Tuning, tuning);
+  procedural["tuning"] = tuning;
   WriteProceduralStreamingOptions(settings, procedural);
   root["procedural"] = procedural;
-  root["terrain"] = ProceduralGeneratorToString(settings.Generator);
   root["world_seed"] = settings.Seed;
   if (!settings.SeedText.empty())
   {
@@ -504,18 +578,7 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
 void WriteUiSettings(nlohmann::json &root, const UiSettings &settings)
 {
   nlohmann::json ui;
-  ui["legacy_hud"] = settings.LegacyHud;
-  ui["show_performance"] = settings.ShowPerformance;
-  ui["console_key"] = settings.ConsoleKey;
-  ui["palette_key"] = settings.PaletteKey;
-  ui["inventory_key"] = settings.InventoryKey;
-  ui["hotbar_count"] = settings.HotbarCount;
-  ui["control_scheme"] = ControlSchemeToString(settings.ControlScheme);
-  ui["place_click_max_seconds"] = settings.PlaceClickMaxSeconds;
-  ui["break_hold_min_seconds"] = settings.BreakHoldMinSeconds;
-  ui["break_duration_seconds"] = settings.BreakDurationSeconds;
-  ui["rmb_drag_threshold_px"] = settings.RmbDragThresholdPx;
-  ui["ui_scale"] = settings.UiScaleUser;
+  WriteLegacyUiSettings(ui, settings);
   root["ui"] = ui;
 }
 

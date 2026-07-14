@@ -1,20 +1,17 @@
-﻿{
-    "name":  "blockRedstone",
-    "id":  612,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "blockRedstone",
-                     "blockRedstone",
-                     "blockRedstone",
-                     "blockRedstone",
-                     "blockRedstone",
-                     "blockRedstone"
-                 ],
-    "displayName":  "Redstone Block",
-    "render":  {
-
-               }
+{
+  "name": "blockRedstone",
+  "id": 612,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone"
+  ],
+  "displayName": "Redstone Block",
+  "render": {}
 }
-

@@ -2,6 +2,10 @@
 #define GEOMETRYENGINE_H
 
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Creatures/Visual/CreatureRenderStats.h"
+#include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Game/Interfaces/IUGameContent.h"
+#include "Render/Engine/CreatureDrawPass.h"
 
 // GLEW will be included in .cpp file after GLFW initialization
 // Forward declaration for OpenGL Types
@@ -11,17 +15,26 @@ typedef int GLint;
 
 #include "App/Settings/RenderSettings.h"
 #include "Render/Engine/AnimationClock.h"
+#include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
+#include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
-#include "Render/Pipeline/IGreedyTransparentBackend.h"
+#include "Render/Pipeline/IUGreedyTransparentBackend.h"
+#include "Render/Pipeline/OpaqueDepthCapture.h"
 #include "Render/Primitives/CubeGL.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Storage/Object.h"
-#include "World/Core/World.h"
+#include "Render/Weather/WeatherRenderPass.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
+#include "World/Interfaces/IUWorldRenderReadModel.h"
+#include "World/Math/GridMath.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -33,27 +46,24 @@ typedef int GLint;
 namespace cutum
 {
 
-class UCore;
+class IUGameContent;
 class UCreatureTextureStorage;
+class UWorld;
 
 // Structure for batch rendering
 struct RenderBatch
 {
   GLuint textureID; // Replace QOpenGLTexture with GLuint
   size_t blockTypeId{0};
-  std::vector<glm::mat4>
-      ModelMatrices; // Per-instance model (blocks) or unused for objects
+  std::vector<glm::mat4> ModelMatrices; // Per-instance model (blocks)
   std::vector<float> faceIndices;
   std::vector<glm::vec2> quadSizes;
-  std::vector<std::shared_ptr<UObject>> objects;
-  std::vector<size_t> cubeIndices;
 };
 
-class UGeometryEngine : public IGreedyTransparentBackend
+class UGeometryEngine : public IUGreedyTransparentBackend
 {
 public:
-  UGeometryEngine(std::shared_ptr<UObjectStorage> object_storage,
-                  std::shared_ptr<UWorld> world,
+  UGeometryEngine(std::shared_ptr<UWorld> world,
                   std::shared_ptr<UTextureBaseStorage> texture_base_storage,
                   std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
                   std::shared_ptr<UTextRenderer> text_renderer = nullptr);
@@ -71,6 +81,8 @@ public:
   void SetGradientSky(bool useGradient);
   bool IsGradientSky() const;
   void DrawSkyGradient();
+  void WarmupGreedyGpuFromWorld();
+  void ResetWorldRenderState();
 
   // Debug/Logging
   void SetVerboseLogging(bool enabled) { VerboseLogging = enabled; }
@@ -86,22 +98,45 @@ public:
 
   void ShowTransientMessage(const std::string &msg, double seconds);
 
+  /// Debug: GL texture id for block greedy/cross draw (0 if missing).
+  GLuint InspectBlockGpuTexture(BlockId block_id,
+                                bool *map_has_entry = nullptr) const;
+
   /// Unit cube wireframe (1x1 centered) with given MVP and color.
   void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color);
 
   void
   SetCreatureTextureStorage(std::shared_ptr<UCreatureTextureStorage> storage);
+  void SetGameContent(const IUGameContent *content) { GameContent = content; }
+  const IUGameContent *GetGameContent() const { return GameContent; }
   std::shared_ptr<UCreatureTextureStorage> GetCreatureTextureStorage() const
   {
     return CreatureTextureStorage;
   }
   void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
                                 CreaturePartMesh mesh = CreaturePartMesh::Box);
-  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint meshVao,
-                               GLuint texture);
+  void DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
+                                    const BoneSkeletonCubeMeshCpu &mesh);
+  void DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
+                            const BoneSkeletonCubeMeshCpu &mesh);
+  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
+                               const GltfPrimitiveCpu &mesh,
+                               const std::vector<glm::mat4> &boneMatrices);
+  void DrawCreatureBillboard(const glm::mat4 &mvp, GLuint texture,
+                             const glm::vec4 &tint);
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  const std::shared_ptr<UWorld> &GetWorld() const { return WorldInstance; }
+  void InvalidateBlockBatchCache() { BlockBatchesValid = false; }
+  const CreatureRenderStats &GetCreatureRenderStats() const
+  {
+    return CreatureDraw_.GetStats();
+  }
+  CreatureDrawQueue &GetCreatureDrawQueue()
+  {
+    return CreatureDraw_.GetDrawQueue();
+  }
   std::shared_ptr<UShaderManager> GetShaderManager() const
   {
     return shaderManager;
@@ -122,13 +157,14 @@ private:
   void DestroyFaceQuadBuffers();
   bool InitGreedyMeshBuffers();
   void DestroyGreedyMeshBuffers();
-  struct GreedyGpuPassCache;
   void SetBlockAnimUniforms(const std::shared_ptr<UShaderProgram> &shader,
                             BlockId blockId,
                             const std::map<size_t, UTextureCube> &textures);
   void ApplyFogUniforms(const std::shared_ptr<UShaderProgram> &shader,
-                        const glm::vec3 &cameraPos);
+                        const glm::vec3 &cameraPos,
+                        bool applyBelowSurfaceFog = true);
   void RenderFluidOverlay(int width, int height);
+  void RenderWeatherOverlay(int width, int height);
   bool InitOverlayBuffers();
   void DestroyOverlayBuffers();
   GLuint cubeVAO = 0;
@@ -146,36 +182,17 @@ private:
   GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
   GLuint previewTexture = 0;                             // Preview texture
   GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
-  GLuint creaturePartVAO = 0;
-  GLuint creaturePartVBO = 0;
-  GLuint creaturePartEBO = 0;
-  GLuint creatureHeadPartVAO = 0;
-  GLuint creatureHeadPartVBO = 0;
-  GLuint creatureHeadPartEBO = 0;
-  GLuint creatureBodyPartVAO = 0;
-  GLuint creatureBodyPartVBO = 0;
-  GLuint creatureBodyPartEBO = 0;
-  GLuint creatureRigidHeadPartVAO = 0;
-  GLuint creatureRigidHeadPartVBO = 0;
-  GLuint creatureRigidHeadPartEBO = 0;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
-  bool InitCreaturePartBuffers();
-  bool InitCreatureHeadPartBuffers();
-  bool InitCreatureBodyPartBuffers();
-  bool InitCreatureRigidHeadPartBuffers();
-  void DestroyCreaturePartBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
-  void RenderCreatures();
+  void RenderBiomeDebugOverlay();
 
   void DrawCubeGeometry();
   void DrawCube(std::shared_ptr<UCube> icube,
                 GLuint texture); // Replace QOpenGLTexture with GLuint
-  void DrawObject(std::shared_ptr<UObject> object,
-                  const std::map<size_t, UTextureCube> &textures);
-  void DrawSkyGradientSimple(); // Simple version without VBO
+  void DrawSkyGradientSimple();  // Simple version without VBO
 
   // New optimized methods
   void PrepareRenderBatchesFromBlocks(
@@ -218,6 +235,8 @@ private:
       instancedFaceShader; // Instanced greedy face quads
   std::shared_ptr<UShaderProgram>
       greedyShader; // Greedy world mesh (UV in fragment shader)
+  std::shared_ptr<UShaderProgram>
+      crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
       outlineShader; // Shader for block selection outline
@@ -228,22 +247,24 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorage;
   std::shared_ptr<UWorld> WorldInstance;
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
+  std::unique_ptr<IUWorldRenderReadModel> WorldRenderReadModel;
+  const IUGameContent *GameContent{nullptr};
   std::shared_ptr<UTextRenderer> textRenderer;
 
   // performance data
   double DurationDrawSceneMks;
+  double DurationWeatherStreakMks{0.0};
+  double DurationWeatherParticleMks{0.0};
+  double DurationSkyGradientMks{0.0};
 
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
-  glm::vec3 SmoothedSkyTint{0.5f, 0.7f, 1.0f};
-  glm::vec3 SmoothedFogColor{0.05f, 0.15f, 0.35f};
-  float FogStart{0.0f};
-  float FogEnd{1000.0f};
-  float FogMinBlend{0.0f};
-  float FogEnabled{0.0f};
-  float FogHorizontal{0.0f};
+  UFluidSurfaceMap FluidSurfaceMap;
+  UUnderwaterFogPass UnderwaterFogPass_;
+  USkyGradientPass SkyGradientPass_;
+  UOpaqueDepthCapture OpaqueDepthCapture;
+  UWeatherRenderPass WeatherPass;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};
@@ -267,29 +288,25 @@ private:
   RenderSettings Render;
   UAnimationClock AnimationClock;
 
-  struct GreedyGpuBatch
-  {
-    BlockId blockId{BLOCK_AIR};
-    GLuint vbo{0};
-    GLuint ebo{0};
-    GLsizei indexCount{0};
-  };
-  struct GreedyGpuPassCache
-  {
-    std::vector<GreedyGpuBatch> batches;
-    uint64_t meshRevision{0};
-    uint64_t cullRevision{0};
-    uint64_t sortRevision{0};
-  };
+  UCreatureDrawPass CreatureDraw_;
+  UGreedyGpuBackend GreedyGpuBackend;
+  UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
+  CrossGpuPassCache CrossGpuPass;
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
-  void DrawGreedyOpaqueBatches(const std::vector<GreedyMeshBatch> &batches,
-                               const glm::mat4 &vp,
+  void DrawGreedyOpaqueBatches(
+      const UChunkMeshCache &cache,
+      const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
+      const glm::mat4 &vp,
                                const std::map<size_t, UTextureCube> &textures,
                                uint64_t meshRevision, uint64_t cullRevision);
+  void DrawCrossInstancedBatches(const std::vector<CrossInstanceBatch> &batches,
+                                 const glm::mat4 &vp,
+                                 const std::map<size_t, UTextureCube> &textures,
+                                 uint64_t meshRevision, uint64_t cullRevision);
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);
@@ -298,12 +315,6 @@ private:
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
-  void RefreshGreedyGpuBatches(const std::vector<GreedyMeshBatch> &batches,
-                               uint64_t meshRevision, uint64_t cullRevision,
-                               GreedyGpuPassCache &cache,
-                               uint64_t sortRevision);
-  void DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache);
-  void DestroyGreedyGpuBatches();
 
   std::string TransientMessage;
   double TransientMessageUntil{0.0};

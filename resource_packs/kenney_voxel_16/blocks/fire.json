@@ -1,27 +1,29 @@
-﻿{
-    "name":  "fire",
-    "id":  121,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0",
-                     "fire_0"
-                 ],
-    "physics":  {
-                    "preset":  "fire"
-                },
-    "render":  {
-                   "transparent":  true
-               },
-    "animation":  {
-                      "frame_count":  2,
-                      "frametime":  6
-                  },
-    "displayName":  "Fire"
+{
+  "name": "fire",
+  "id": 121,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "fire_0",
+    "fire_0",
+    "fire_0",
+    "fire_0",
+    "fire_0",
+    "fire_0"
+  ],
+  "physics": {
+    "preset": "fire"
+  },
+  "render": {
+    "transparent": true
+  },
+  "animation": {
+    "frame_count": 2,
+    "frametime": 6
+  },
+  "displayName": "Fire",
+  "lighting": {
+    "emission": 14
+  }
 }
-

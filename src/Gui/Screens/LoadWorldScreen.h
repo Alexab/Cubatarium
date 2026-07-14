@@ -5,7 +5,7 @@
 namespace cutum
 {
 
-class IGuiMenuHost;
+class IUGuiMenuHost;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UGuiListView;
@@ -16,7 +16,7 @@ class UGuiPanel;
 class ULoadWorldScreen : public UGuiScreenBase
 {
 public:
-  explicit ULoadWorldScreen(IGuiMenuHost *host);
+  explicit ULoadWorldScreen(IUGuiMenuHost *host);
 
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;
@@ -25,7 +25,7 @@ private:
   void Relayout();
   void OnLoad();
 
-  IGuiMenuHost *Host{nullptr};
+  IUGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiListView *List{nullptr};

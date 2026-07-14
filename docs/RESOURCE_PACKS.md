@@ -39,17 +39,17 @@ resource_packs/<pack_id>/
 - **priority**: tiebreaker within the same UI tier and list position.
 - **worldgen_role**: `primary` (worldgen-capable) or `secondary` (decorative / partial).
 - Primary candidates are **whitelisted** in `tools/pack_dependencies.yaml` (not auto-promoted when tier A is complete). Run `python tools/update_pack_metadata.py` after rebuilding packs.
-- **animation.frametime**: game ticks per frame (20 ticks = 1 second), same as Minecraft `.mcmeta` / Minetest. Canonical tier A fluids/fire use `frametime: 6` (~0.3 s per frame).
+- **animation.frametime**: game ticks per frame (20 ticks = 1 second), same as classic `.mcmeta` / Minetest. Canonical tier A fluids/fire use `frametime: 6` (~0.3 s per frame).
 - **merge_mode**: `skip_existing` (default), `override`, or `duplicate` (`pack_id::local_name`).
 - **id**: must match the folder name under `resource_packs/`.
 
-## Merge rules (3 layers, Bedrock-style)
+## Merge rules (3 layers, layered override)
 
 1. **Block catalog** — union of block names from enabled packs; `merge_mode` controls collisions.
 2. **Block definition** — physics/render/types from the **owner pack** only.
 3. **Texture atlas** — stems resolved in the owner pack; atlas keys remain `pack_id/stem`.
 
-**Selection order:** `primary[]` then `secondary[]`. **Higher in each list = higher priority** (like Minecraft). Effective priority:
+**Selection order:** `primary[]` then `secondary[]`. **Higher in each list = higher priority**. Effective priority:
 
 `tier * 1000 + inverted_selection_index * 10 + pack.priority`
 
@@ -65,7 +65,7 @@ resource_packs/<pack_id>/
 
 See also `docs/block-semantics-audit.md` and `tools/audit_resource_packs.py`.
 
-### Comparison with Minecraft / Minetest
+### Comparison with Minetest / classic pack merge
 
 | Pattern | Cubatarium |
 |---------|------------|
@@ -80,6 +80,46 @@ See also `docs/block-semantics-audit.md` and `tools/audit_resource_packs.py`.
 Full block definition. The numeric `id` field is optional and ignored at runtime; identity is the string `name` (no `::` in pack JSON).
 
 Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
+
+Fluid-related `physics` fields:
+
+- `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
+- `fluid_kind` (`"water"` | `"lava"`, optional): explicit liquid kind used for source state/kind resolution. If omitted, runtime keeps legacy fallback (`FluidMaxLevel >= 7` => water).
+
+Bulk migration for existing packs:
+
+```bash
+python tools/migrate_block_fluid_presets.py --dry-run
+python tools/migrate_block_fluid_presets.py --write
+```
+
+The script infers `fluid_permeable` for cross/cutout decor and `fluid_kind` for fluid-style blocks; explicit fields are never overwritten.
+
+### lighting (block emission)
+
+Local light sources use the blocklight channel (0–15, Minecraft-style). Set emission in block JSON or via `tools/canonical_blocks.yaml` (applied with `python tools/apply_canonical_types.py`):
+
+```json
+{
+  "name": "torch",
+  "textures": ["torch", "torch", "torch", "torch", "torch", "torch"],
+  "render": { "transparent": true, "style": "cross" },
+  "physics": {
+    "movement": { "occupancy": 0 },
+    "fluid_permeable": true
+  },
+  "lighting": { "emission": 14 }
+}
+```
+
+| emission | Typical blocks |
+|--------:|----------------|
+| 15 | glowstone, jack_o_lantern, lit redstone lamp |
+| 14 | torch, fire, lava |
+| 7 | redstone torch (on) |
+| 0 | default (non-emissive) |
+
+Cross sprites (torch, plants) sample the same chunk lightmap as greedy mesh vertices.
 
 ## Placeholder
 

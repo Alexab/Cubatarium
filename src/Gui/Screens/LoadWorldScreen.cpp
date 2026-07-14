@@ -4,7 +4,7 @@
 
 #include "Gui/Core/GuiRenderer.h"
 
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 
 #include "Gui/Widgets/GuiButton.h"
 
@@ -46,7 +46,7 @@ std::string FormatPackList(const std::vector<std::string> &packs)
   return oss.str();
 }
 
-void UpdatePackSubtitle(IGuiMenuHost *host, UGuiLabel *label, int index)
+void UpdatePackSubtitle(IUGuiMenuHost *host, UGuiLabel *label, int index)
 {
   if (!host || !label || index < 0)
   {
@@ -62,7 +62,7 @@ void UpdatePackSubtitle(IGuiMenuHost *host, UGuiLabel *label, int index)
 
 } // namespace
 
-ULoadWorldScreen::ULoadWorldScreen(IGuiMenuHost *host)
+ULoadWorldScreen::ULoadWorldScreen(IUGuiMenuHost *host)
 
     : Host(host)
 

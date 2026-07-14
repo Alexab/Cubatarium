@@ -5,7 +5,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiCheckbox.h"
@@ -51,7 +51,7 @@ GuiGridSpec BuildTwoColumnSpec(const GuiMetrics &metrics, int width)
 
 } // namespace
 
-USettingsScreen::USettingsScreen(IGuiMenuHost *host) : Host(host) {}
+USettingsScreen::USettingsScreen(IUGuiMenuHost *host) : Host(host) {}
 
 USettingsScreen::~USettingsScreen() = default;
 
@@ -82,6 +82,10 @@ void USettingsScreen::OnSave()
   if (StepUpBox)
   {
     app.StepUpEnabled = StepUpBox->IsChecked();
+  }
+  if (FoliageClimbBox)
+  {
+    app.FoliageClimbEnabled = FoliageClimbBox->IsChecked();
   }
   if (GreedyBox)
   {
@@ -261,6 +265,10 @@ void USettingsScreen::Build(UGuiContext &ctx)
   StepUpBox = step.get();
   step->SetChecked(appSnap.StepUpEnabled);
   app.AddChild(std::move(step));
+  auto foliage = std::make_unique<UGuiCheckbox>(&theme, "Foliage climb");
+  FoliageClimbBox = foliage.get();
+  foliage->SetChecked(appSnap.FoliageClimbEnabled);
+  app.AddChild(std::move(foliage));
   auto greedy = std::make_unique<UGuiCheckbox>(&theme, "Greedy meshing");
   GreedyBox = greedy.get();
   greedy->SetChecked(appSnap.Render.GreedyMeshing);
@@ -434,9 +442,9 @@ void USettingsScreen::Relayout()
 std::vector<GuiGridItem>
 USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
 {
-  const int hotbarValueRow = spec.columns > 1 ? 12 : 14;
+  const int hotbarValueRow = spec.columns > 1 ? 13 : 15;
   const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
-  const int controlSchemeRow = spec.columns > 1 ? 13 : 17;
+  const int controlSchemeRow = spec.columns > 1 ? 14 : 18;
   const int uiScaleSliderRow = spec.columns > 1 ? 1 : 2;
   const int uiScaleValueRow = spec.columns > 1 ? 0 : 1;
   const int uiScaleValueCol = spec.columns > 1 ? 1 : 0;
@@ -456,17 +464,18 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
       {RenderDistInput, 4, 1, 1, 1, fieldH},
       {StreamingBox, 5, 0, 1, 1, checkH},
       {StepUpBox, 5, 1, 1, 1, checkH},
-      {GreedyBox, 6, 0, 1, 1, checkH},
-      {FaceQuadsBox, 6, 1, 1, 1, checkH},
-      {FrustumBox, 7, 0, 1, 1, checkH},
-      {BatchCacheBox, 7, 1, 1, 1, checkH},
-      {LegacyHudBox, 8, 0, 1, 2, checkH},
-      {ShowPerformanceBox, 9, 0, 1, 2, checkH},
-      {ConsoleKeyLabel, 10, 0, 1, 1, labelH},
-      {ConsoleKeyInput, 10, 1, 1, 1, fieldH},
-      {PaletteKeyLabel, 11, 0, 1, 1, labelH},
-      {PaletteKeyInput, 11, 1, 1, 1, fieldH},
-      {HotbarCountLabel, 12, 0, 1, 1, labelH},
+      {FoliageClimbBox, 6, 0, 1, 2, checkH},
+      {GreedyBox, 7, 0, 1, 1, checkH},
+      {FaceQuadsBox, 7, 1, 1, 1, checkH},
+      {FrustumBox, 8, 0, 1, 1, checkH},
+      {BatchCacheBox, 8, 1, 1, 1, checkH},
+      {LegacyHudBox, 9, 0, 1, 2, checkH},
+      {ShowPerformanceBox, 10, 0, 1, 2, checkH},
+      {ConsoleKeyLabel, 11, 0, 1, 1, labelH},
+      {ConsoleKeyInput, 11, 1, 1, 1, fieldH},
+      {PaletteKeyLabel, 12, 0, 1, 1, labelH},
+      {PaletteKeyInput, 12, 1, 1, 1, fieldH},
+      {HotbarCountLabel, 13, 0, 1, 1, labelH},
       {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, fieldH},
       {ControlSchemeLabel, controlSchemeRow, 0, 1, 1, labelH},
       {ControlSchemeButton, controlSchemeRow, 1, 1, 1, fieldH},

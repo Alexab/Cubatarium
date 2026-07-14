@@ -1,5 +1,5 @@
 #include "Core/Jobs/JobThreadPool.h"
-#include <algorithm>
+#include "Core/Jobs/JobThreadBudget.h"
 #include <thread>
 
 namespace cutum
@@ -9,8 +9,7 @@ UJobThreadPool::UJobThreadPool(std::size_t threadCount)
 {
   if (threadCount == 0)
   {
-    const std::size_t hw = std::thread::hardware_concurrency();
-    threadCount = hw > 1 ? hw - 1 : 1;
+    threadCount = ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration);
   }
   Workers.reserve(threadCount);
   for (std::size_t i = 0; i < threadCount; ++i)
@@ -46,16 +45,21 @@ void UJobThreadPool::Enqueue(std::function<void()> job)
 
 void UJobThreadPool::WaitIdle()
 {
-  for (;;)
-  {
-    std::unique_lock<std::mutex> lock(QueueMutex);
-    if (Jobs.empty() && ActiveJobs == 0)
-    {
-      return;
-    }
-    lock.unlock();
-    std::this_thread::yield();
-  }
+  std::unique_lock<std::mutex> lock(QueueMutex);
+  QueueCv.wait(lock, [this] { return Jobs.empty() && ActiveJobs == 0; });
+}
+
+bool UJobThreadPool::WaitIdleFor(const std::chrono::milliseconds timeout)
+{
+  std::unique_lock<std::mutex> lock(QueueMutex);
+  return QueueCv.wait_for(lock, timeout,
+                          [this] { return Jobs.empty() && ActiveJobs == 0; });
+}
+
+void UJobThreadPool::CancelPendingJobs()
+{
+  std::lock_guard<std::mutex> lock(QueueMutex);
+  Jobs.clear();
 }
 
 void UJobThreadPool::WorkerLoop()

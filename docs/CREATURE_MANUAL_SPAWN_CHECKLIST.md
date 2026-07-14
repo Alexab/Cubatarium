@@ -10,6 +10,15 @@
 4. Позиция: ноги на земле / тело в воде / в воздухе
 5. Неподходящий биом — dimmed + корректная подсказка
 
+## F12 QA hotkey (creative)
+
+| Жест | Действие |
+|------|----------|
+| **F12** | Следующий spawnable вид (`[N/50] species`) |
+| **Shift+F12** | Пакетный спавн всех spawnable в сетке вокруг игрока |
+
+Работает только в **creative**. Sequential-режим заменяет предыдущего QA-моба.
+
 ## Группы
 
 | # | Сценарий | Виды |
@@ -21,3 +30,14 @@
 | 5 | Лавовое озеро | lava_flan |
 
 Автоматическая матрица: `docs/CREATURE_SPAWN_MATRIX.md`, журнал: `docs/CREATURE_RESOLUTION_LOG.md`.
+
+Backend audit (bone_skeleton vs gltf_skeleton): `docs/CREATURE_BACKEND_MATRIX.md`
+(`python tools/audit_creature_backends.py`).
+
+## Backend verification reps (2026-06-30)
+
+| Backend | Species | Verify |
+|---------|---------|--------|
+| bone_skeleton | chicken, sheep, wolf, dolphin | spawn + silhouette + icon |
+| gltf skinned | oerkki, badger, penguin | spawn + walk clip + icon |
+| gltf parts / special | rat, whale, fire_spirit | spawn + icon; fire_spirit = sprite policy |

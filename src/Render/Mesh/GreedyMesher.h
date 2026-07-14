@@ -22,6 +22,8 @@ struct GreedyQuad
   int height;
   BlockId Id;
   int faceSign;
+  uint8_t LightPacked{0};
+  uint8_t FluidPacked{0};
 };
 
 class UGreedyMesher

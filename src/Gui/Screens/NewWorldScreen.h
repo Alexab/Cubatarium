@@ -7,7 +7,7 @@
 namespace cutum
 {
 
-class IGuiMenuHost;
+class IUGuiMenuHost;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
@@ -19,7 +19,7 @@ class UGuiScrollView;
 class UNewWorldScreen : public UGuiScreenBase
 {
 public:
-  explicit UNewWorldScreen(IGuiMenuHost *host);
+  explicit UNewWorldScreen(IUGuiMenuHost *host);
   ~UNewWorldScreen();
 
   void Build(UGuiContext &ctx) override;
@@ -34,7 +34,7 @@ private:
   void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
   void LayoutWorldPage(const GuiRect &area) const;
 
-  IGuiMenuHost *Host{nullptr};
+  IUGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiScrollView *BodyScroll{nullptr};

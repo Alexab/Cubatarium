@@ -1,6 +1,7 @@
 #pragma once
 
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <string>
 #include <unordered_map>
@@ -8,6 +9,8 @@
 
 namespace cutum
 {
+
+struct ProceduralSettings;
 
 enum class WorldGenBiomeMode
 {
@@ -32,6 +35,79 @@ struct BiomePackDefinition
   std::unordered_map<std::string, BiomeSubBiomePackRule> SubBiomes;
 };
 
+struct HeightLayerPackConfig
+{
+  float Scale{0.003f};
+  int Octaves{2};
+  float Weight{0.63f};
+};
+
+struct PackHeightConfig
+{
+  HeightLayerPackConfig Continental;
+  HeightLayerPackConfig Regional;
+  HeightLayerPackConfig Detail;
+  HeightLayerPackConfig Rolling;
+  float SeaBias{0.45f};
+  float CurveExponent{1.12f};
+  float JitterScale{0.03f};
+  float JitterAmplitude{1.0f};
+  float JitterErosionDamp{0.85f};
+  bool Loaded{false};
+};
+
+struct ClimateAxisPackConfig
+{
+  float Scale{0.002f};
+  int Octaves{3};
+  int SeedOffset{0};
+};
+
+struct PackClimateConfig
+{
+  ClimateAxisPackConfig Temperature;
+  ClimateAxisPackConfig Moisture;
+  ClimateAxisPackConfig Continentalness;
+  ClimateAxisPackConfig Erosion;
+  ClimateAxisPackConfig Weirdness;
+  ClimateAxisPackConfig Ridge;
+  bool Loaded{false};
+};
+
+struct PackOreRule
+{
+  std::string Slot;
+  int YPeak{32};
+  int YSpread{24};
+  int VeinSize{4};
+  float Rarity{0.1f};
+  int MaxSurfaceOffset{5};
+  bool BelowSeaLevel{false};
+  int SeedModulo{0};
+};
+
+struct PackOresConfig
+{
+  std::vector<PackOreRule> Rules;
+  bool Loaded{false};
+};
+
+struct PackCavesConfig
+{
+  int MaxDepthBelowSurface{48};
+  int MinDepthBelowSurface{2};
+  float ChunkGateThreshold{0.25f};
+  bool UseDensityField{true};
+  float DensityCaveAmplitude{0.15f};
+  float CheeseScale{0.015f};
+  float CheeseWeight{1.0f};
+  float SpaghettiScale{0.045f};
+  float SpaghettiWeight{0.55f};
+  float NoodleScale{0.08f};
+  float NoodleWeight{0.30f};
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
@@ -45,6 +121,13 @@ struct WorldGenPackPipeline
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  std::vector<WorldGenStageId> StageOrder;
+};
+
+struct WorldGenPackInfo
+{
+  std::string Id;
+  std::string Description;
 };
 
 struct WorldGenPack
@@ -55,6 +138,10 @@ struct WorldGenPack
   int BiomeMapBlockScale{4};
   float BiomeBlendRadius{-1.0f};
   WorldGenPackPipeline Pipeline;
+  PackHeightConfig Height;
+  PackClimateConfig Climate;
+  PackOresConfig Ores;
+  PackCavesConfig Caves;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -65,14 +152,20 @@ public:
   static bool LoadPackId(const std::string &packId);
   static bool ReloadActive();
   static std::vector<std::string> ListPackIds();
+  static std::vector<WorldGenPackInfo> ListPackInfos();
   static const WorldGenPack &Get();
+  static const PackHeightConfig &HeightConfig();
+  static const PackClimateConfig &ClimateConfig();
+  static const PackOresConfig &OresConfig();
+  static const PackCavesConfig &CavesConfig();
+  static void ApplyPackCaveDefaults(ProceduralSettings &settings);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,
                                        const std::string &prefabName);
   static float SubBiomePoolWeightMultiplier(const std::string &biomeId,
                                             SubBiomeId subBiome,
-                                            PrefabFeaturePool pool);
+                                            ObjectFeaturePool pool);
   static BiomeId BiomeAtImage(int worldX, int worldZ);
 
 private:

@@ -1,21 +1,18 @@
-﻿{
-    "name":  "bookshelf",
-    "id":  613,
-    "types":  [
-                  "building",
-                  "decorative"
-              ],
-    "textures":  [
-                     "bookshelf",
-                     "bookshelf",
-                     "bookshelf",
-                     "bookshelf",
-                     "bookshelf",
-                     "bookshelf"
-                 ],
-    "displayName":  "Bookshelf",
-    "render":  {
-
-               }
+{
+  "name": "bookshelf",
+  "id": 613,
+  "types": [
+    "building",
+    "decorative"
+  ],
+  "textures": [
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf",
+    "bookshelf"
+  ],
+  "displayName": "Bookshelf",
+  "render": {}
 }
-

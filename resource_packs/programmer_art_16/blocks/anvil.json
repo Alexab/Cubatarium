@@ -1,19 +1,16 @@
-﻿{
-    "name":  "anvil",
-    "id":  602,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "anvil_base",
-                     "anvil_base",
-                     "anvil_base",
-                     "anvil_base",
-                     "anvil_top",
-                     "anvil_base"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "anvil",
+  "id": 602,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "anvil_base",
+    "anvil_base",
+    "anvil_base",
+    "anvil_base",
+    "anvil_top",
+    "anvil_base"
+  ],
+  "render": {}
 }
-

@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_pine_sapling",
-    "id":  486,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_pine_sapling_default_pine_sapling",
-                     "mtg_pine_sapling_default_pine_sapling",
-                     "mtg_pine_sapling_default_pine_sapling",
-                     "mtg_pine_sapling_default_pine_sapling",
-                     "mtg_pine_sapling_default_pine_sapling",
-                     "mtg_pine_sapling_default_pine_sapling"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_pine_sapling",
+  "id": 486,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_sapling_default_pine_sapling",
+    "mtg_pine_sapling_default_pine_sapling",
+    "mtg_pine_sapling_default_pine_sapling",
+    "mtg_pine_sapling_default_pine_sapling",
+    "mtg_pine_sapling_default_pine_sapling",
+    "mtg_pine_sapling_default_pine_sapling"
+  ],
+  "render": {}
 }
-

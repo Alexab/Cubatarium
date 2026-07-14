@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <cstddef>
 #include <cstdint>
@@ -29,7 +29,7 @@ struct WorldGeneratorDescriptor
   const char *PackId;
   uint32_t FeatureFlags;
   void (*ApplyDefaults)(ProceduralSettings &settings);
-  std::unique_ptr<IWorldGenPipeline> (*Create)(WorldGenContext ctx);
+  std::unique_ptr<IUWorldGenPipeline> (*Create)(WorldGenContext ctx);
 };
 
 class UWorldGeneratorRegistry
@@ -39,7 +39,7 @@ public:
   static const WorldGeneratorDescriptor &Get(size_t index);
   static const WorldGeneratorDescriptor *Find(ProceduralGenerator id);
   static int IndexOf(ProceduralGenerator id);
-  static std::unique_ptr<IWorldGenPipeline> Create(WorldGenContext ctx);
+  static std::unique_ptr<IUWorldGenPipeline> Create(WorldGenContext ctx);
 };
 
 } // namespace cutum

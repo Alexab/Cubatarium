@@ -1,34 +1,47 @@
 
 #include "Render/Engine/GeometryEngine.h"
-#include "Render/Engine/DistanceFog.h"
-#include "App/Core.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Player/User.h"
-#include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
-#include "Pose/ICreaturePosePresenter.h"
-#include "Render/Engine/ShaderManager.h"
-#include "Render/GlIncludes.h"
-#include "Render/Pipeline/GreedyShaderMode.h"
-#include "Render/Pipeline/GreedyTransparentPipeline.h"
-#include "Render/Pipeline/GreedyTransparentSort.h"
+#include "Pose/IUCreaturePosePresenter.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
-#include "Storage/ObjectImplementation.h"
-#include "Storage/ObjectStorage.h"
+#include "Render/Camera/Frustum.h"
+#include "Render/Engine/CreatureDrawPass.h"
+#include "Render/Engine/DistanceFog.h"
+#include "Render/Engine/HorizonFogColor.h"
+#include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/FluidUnderwaterFogLogic.h"
+#include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/ShaderManager.h"
+#include "Render/GlIncludes.h"
+#include "Render/Pipeline/GlStateMask.h"
+#include "Render/Pipeline/GlStateScope.h"
+#include "Render/Pipeline/GreedyTransparentPipeline.h"
+#include "Render/Pipeline/GreedyTransparentSort.h"
+#include "World/Adapters/WorldRenderReadAdapter.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Core/World.h"
 #include "World/Math/GridMath.h"
-#include "WorldGen/Features/PrefabFeatureConfig.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Physics/LiquidDebugTrace.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -38,18 +51,32 @@
 namespace cutum
 {
 
+namespace
+{
+
+float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
+{
+  float scale = env.WeatherSkyAttenuation;
+  if (env.PrecipitationIntensity > 0.05f)
+  {
+    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.12f;
+  }
+  return std::clamp(scale, 0.82f, 1.0f);
+}
+
+} // namespace
+
 UGeometryEngine::UGeometryEngine(
-    std::shared_ptr<UObjectStorage> object_storage,
     std::shared_ptr<UWorld> world,
     std::shared_ptr<UTextureBaseStorage> texture_base_storage,
     std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
     std::shared_ptr<UTextRenderer> text_renderer)
-    : ObjectStorageInstance(object_storage), WorldInstance(world),
+    : WorldInstance(world),
+      WorldRenderReadModel(std::make_unique<UWorldRenderReadAdapter>(world)),
       TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      BaseSkyColor(0.5f, 0.7f, 1.0f), SmoothedSkyTint(0.5f, 0.7f, 1.0f),
-      useGradientSky(true)
+      BaseSkyColor(0.5f, 0.7f, 1.0f), useGradientSky(true)
 {
 }
 
@@ -58,10 +85,15 @@ UGeometryEngine::~UGeometryEngine()
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
+  FluidSurfaceMap.DestroyGpuResources();
+  OpaqueDepthCapture.DestroyGpuResources();
+  WeatherPass.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
-  DestroyCreaturePartBuffers();
+  CreatureDraw_.DestroyBuffers();
+  CreatureMeshGpuCache::Instance().DestroyAll();
   DestroyOverlayBuffers();
+  SkyGradientPass_.InvalidateGpuResources();
 }
 
 void UGeometryEngine::SetCreatureTextureStorage(
@@ -95,11 +127,9 @@ bool UGeometryEngine::InitEngine()
   // Initialize preview buffers
   InitPreviewBuffers();
 
-  DestroyCreaturePartBuffers();
-  if (!InitCreaturePartBuffers() || !InitCreatureHeadPartBuffers() ||
-      !InitCreatureBodyPartBuffers())
+  if (!CreatureDraw_.InitBuffers(*shaderManager))
   {
-    std::cerr << "Failed to initialize creature part buffers" << std::endl;
+    std::cerr << "Failed to initialize creature draw pass" << std::endl;
     return false;
   }
 
@@ -152,6 +182,7 @@ bool UGeometryEngine::InitShaders()
       "instanced", "shaders/vshader_instanced.glsl", "shaders/fshader.glsl");
   if (!instancedShader || !instancedShader->IsValid())
   {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
     std::cerr
         << "Failed to create instanced shader from files, trying inline sources"
         << std::endl;
@@ -184,13 +215,25 @@ bool UGeometryEngine::InitShaders()
       std::cerr << "Failed to create instanced shader" << std::endl;
       return false;
     }
+#endif
+  }
+
+  if (!instancedShader || !instancedShader->IsValid())
+  {
+    std::cerr << "Failed to create instanced shader" << std::endl;
+    return false;
   }
 
   instancedFaceShader = shaderManager->CreateShader(
       "instanced_face", "shaders/vshader_instanced_face.glsl",
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+      "shaders/fshader_instanced_face.glsl");
+#else
       "shaders/fshader.glsl");
+#endif
   if (!instancedFaceShader || !instancedFaceShader->IsValid())
   {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
     std::cerr << "Failed to create instanced face shader from files, trying "
                  "inline sources"
               << std::endl;
@@ -254,6 +297,13 @@ float insetMix(float a, float b, float t, float inset) {
       std::cerr << "Failed to create instanced face shader" << std::endl;
       return false;
     }
+#endif
+  }
+
+  if (!instancedFaceShader || !instancedFaceShader->IsValid())
+  {
+    std::cerr << "Failed to create instanced face shader" << std::endl;
+    return false;
   }
 
   greedyShader = shaderManager->CreateShader(
@@ -261,6 +311,15 @@ float insetMix(float a, float b, float t, float inset) {
   if (!greedyShader || !greedyShader->IsValid())
   {
     std::cerr << "Failed to create greedy mesh shader" << std::endl;
+    return false;
+  }
+
+  crossInstancedShader = shaderManager->CreateShader(
+      "cross_instanced", "shaders/vshader_cross_instanced.glsl",
+      "shaders/fshader_greedy.glsl");
+  if (!crossInstancedShader || !crossInstancedShader->IsValid())
+  {
+    std::cerr << "Failed to create cross instanced shader" << std::endl;
     return false;
   }
 
@@ -281,6 +340,11 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  if (!WeatherPass.InitShaders(shaderManager))
+  {
+    return false;
+  }
+
   return true;
 }
 
@@ -293,12 +357,16 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   }
   (void)view_duration;
   DrawCubeGeometry();
+  if (WorldInstance)
+  {
+    WorldInstance->UpdateFrameHitchDiagnostics(DurationDrawSceneMks,
+                                               view_duration);
+  }
   if (OverlayTintAlpha > 0.01f)
   {
     RenderFluidOverlay(width_size, height_size);
   }
-
-  // Render crosshair
+  RenderWeatherOverlay(width_size, height_size);
   if (ShowCrosshair)
   {
     RenderCrosshair(width_size, height_size);
@@ -323,19 +391,15 @@ void UGeometryEngine::DrawCubeGeometry()
 {
   auto t_begin = std::chrono::high_resolution_clock::now();
 
-  auto camera = WorldInstance->GetCurrentUserCamera();
+  auto camera = WorldRenderReadModel
+                    ? WorldRenderReadModel->GetCurrentUserCamera()
+                    : WorldInstance->GetCurrentUserCamera();
   if (!camera)
   {
     return;
   }
 
-  // Save OpenGL state
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-  GLboolean cullFaceEnabled;
-  glGetBooleanv(GL_CULL_FACE, &cullFaceEnabled);
+  UGlStateScope glGuard(kGlMaskDrawCubeRestore);
 
   // Ensure instanced resources are ready
   if (cubeVAO == 0)
@@ -349,35 +413,63 @@ void UGeometryEngine::DrawCubeGeometry()
   }
 
   auto textures = TextureCubeStorageInstance->GetTextures();
-  const uint64_t meshRevision = WorldInstance->GetMeshRevision();
+  UWorldMeshService *mesh_service =
+      WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
+                           : &WorldInstance->GetMeshService();
+  if (!mesh_service)
+  {
+    return;
+  }
+  static bool logged_first_paint_diag = false;
+  if (!logged_first_paint_diag && WorldInstance)
+  {
+    logged_first_paint_diag = true;
+    LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetPosition());
+  }
+  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
+      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
+  const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
-      useGreedyMesh ? WorldInstance->GetGreedyVertexCount()
-                    : WorldInstance->GetBlockRenderInstances().size();
+      useGreedyMesh
+          ? mesh_service->GetGreedyVertexCount()
+          : mesh_service
+                ->PrepareFaceInstances(WorldInstance->GetBlockWorld(),
+                                       WorldInstance->GetBlockRegistry(),
+                                       camera)
+                .size();
   const bool useBatchCache = Render.BatchCache && !useGreedyMesh;
 
   if (useGreedyMesh)
   {
-    const auto &greedyBatches = WorldInstance->GetGreedyRenderBatches();
+    const UWorldMeshService::GreedyDrawSnapshot draw =
+        mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                        WorldInstance->GetBlockRegistry(),
+                                        camera);
+    const auto &opaqueCutoutRefs = draw.opaqueCutoutRefs;
     if (!useBatchCache || !BlockBatchesValid ||
-        greedyBatches.size() != CachedInstanceCount ||
-        meshRevision != CachedMeshRevision)
+        opaqueCutoutRefs.size() != CachedInstanceCount ||
+        draw.meshRevision != CachedMeshRevision)
     {
-      CachedInstanceCount = greedyBatches.size();
-      CachedMeshRevision = meshRevision;
+      CachedInstanceCount = opaqueCutoutRefs.size();
+      CachedMeshRevision = draw.meshRevision;
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    const uint64_t cullRev = WorldInstance->GetCullRevision();
-    DrawGreedyOpaqueBatches(greedyBatches, vp, textures, meshRevision, cullRev);
+    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp, textures,
+                            draw.meshRevision, draw.cullRevision);
+    DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+                              draw.meshRevision, draw.cullRevision);
+    OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
     GLboolean blendWasEnabled;
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    GreedyTransparentDrawContext tctx{greedyBatches,
+    GreedyTransparentDrawContext tctx{draw.cache,
+                                      draw.transparentRefs,
                                       vp,
-                                      meshRevision,
-                                      cullRev,
+                                      draw.meshRevision,
+                                      draw.cullRevision,
                                       camera->GetPosition(),
                                       WorldInstance->GetBlockRegistry(),
                                       textures};
@@ -397,7 +489,9 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = WorldInstance->GetBlockRenderInstances();
+    const auto &blockInstances = mesh_service->PrepareFaceInstances(
+        WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
+        camera);
     if (!useBatchCache || !BlockBatchesValid ||
         renderCount != CachedInstanceCount ||
         meshRevision != CachedMeshRevision)
@@ -413,35 +507,13 @@ void UGeometryEngine::DrawCubeGeometry()
 
   RenderSelectionOutline();
   RenderBlockCrackOverlay();
-  RenderCreatures();
+  RenderBiomeDebugOverlay();
+  if (WorldInstance)
+  {
+    CreatureDraw_.Render(*WorldInstance, *this, Render);
+  }
 
   // Active object preview disabled to avoid per-frame resource churn
-
-  // Restore state
-  if (cullFaceEnabled)
-  {
-    glEnable(GL_CULL_FACE);
-  }
-  else
-  {
-    glDisable(GL_CULL_FACE);
-  }
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDrawSceneMks =
@@ -459,12 +531,41 @@ void UGeometryEngine::ShowTransientMessage(const std::string &msg,
       seconds;
 }
 
+GLuint UGeometryEngine::InspectBlockGpuTexture(BlockId block_id,
+                                               bool *map_has_entry) const
+{
+  if (!TextureCubeStorageInstance)
+  {
+    if (map_has_entry)
+    {
+      *map_has_entry = false;
+    }
+    return 0;
+  }
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
+  const auto it = textures.find(static_cast<size_t>(block_id));
+  if (it == textures.end())
+  {
+    if (map_has_entry)
+    {
+      *map_has_entry = false;
+    }
+    return 0;
+  }
+  if (map_has_entry)
+  {
+    *map_has_entry = true;
+  }
+  return it->second.GetTextureId();
+}
+
 void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
 {
   Render = settings;
   SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
-  DestroyGreedyGpuBatches();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
   DestroyFaceQuadBuffers();
 }
 
@@ -511,7 +612,7 @@ void UGeometryEngine::RenderBatches(const glm::mat4 &mvp_matrix)
 void UGeometryEngine::DrawBatch(const RenderBatch &batch,
                                 const glm::mat4 &mvp_matrix)
 {
-  if (batch.ModelMatrices.empty() && batch.objects.empty())
+  if (batch.ModelMatrices.empty())
   {
     if (VerboseLogging)
       std::cout << "DrawBatch: Empty batch, skipping" << std::endl;
@@ -520,7 +621,7 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
 
   if (VerboseLogging)
     std::cout << "DrawBatch: Drawing " << batch.ModelMatrices.size()
-              << " objects" << std::endl;
+              << " instances" << std::endl;
 
   glBindTexture(GL_TEXTURE_2D, batch.textureID);
 
@@ -529,35 +630,14 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   if (!camera)
     return;
 
-  if (!batch.objects.empty())
+  instanceMVPs.reserve(batch.ModelMatrices.size());
+  for (const auto &model : batch.ModelMatrices)
   {
-    instanceMVPs.reserve(batch.objects.size());
-    for (size_t i = 0; i < batch.cubeIndices.size(); ++i)
-    {
-      auto &object = batch.objects[i];
-      if (!object)
-        continue;
-      size_t cubeIdx = batch.cubeIndices[i];
-      if (cubeIdx >= object->GetCubes().size())
-        continue;
-      auto &cube = object->GetCubes()[cubeIdx];
-      glm::mat4 model = object->GetPose() * cube->GetInitialPose();
-      glm::mat4 mvp = camera->GetProjection() * camera->GetViewMatrix() * model;
-      instanceMVPs.push_back(mvp);
-    }
-  }
-  else
-  {
-    instanceMVPs.reserve(batch.ModelMatrices.size());
-    for (const auto &model : batch.ModelMatrices)
-    {
-      instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
-                             model);
-    }
+    instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
+                           model);
   }
 
-  const bool isBlockBatch =
-      batch.objects.empty() && !batch.ModelMatrices.empty();
+  const bool isBlockBatch = !batch.ModelMatrices.empty();
   const bool drawFaceQuads =
       isBlockBatch && Render.UseFaceQuadDraw() &&
       batch.faceIndices.size() == batch.ModelMatrices.size();
@@ -639,76 +719,6 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
   activeShader->Unuse();
 }
 
-void UGeometryEngine::DestroyGreedyGpuPassCache(GreedyGpuPassCache &cache)
-{
-  for (GreedyGpuBatch &batch : cache.batches)
-  {
-    if (batch.ebo)
-    {
-      glDeleteBuffers(1, &batch.ebo);
-      batch.ebo = 0;
-    }
-    if (batch.vbo)
-    {
-      glDeleteBuffers(1, &batch.vbo);
-      batch.vbo = 0;
-    }
-  }
-  cache.batches.clear();
-  cache.meshRevision = 0;
-  cache.cullRevision = 0;
-  cache.sortRevision = 0;
-}
-
-void UGeometryEngine::DestroyGreedyGpuBatches()
-{
-  DestroyGreedyGpuPassCache(GreedyGpuOpaque);
-  DestroyGreedyGpuPassCache(GreedyGpuCutout);
-  DestroyGreedyGpuPassCache(GreedyGpuTransparent);
-}
-
-void UGeometryEngine::RefreshGreedyGpuBatches(
-    const std::vector<GreedyMeshBatch> &batches, uint64_t meshRevision,
-    uint64_t cullRevision, GreedyGpuPassCache &cache, uint64_t sortRevision)
-{
-  if (meshRevision == cache.meshRevision &&
-      cullRevision == cache.cullRevision && sortRevision == cache.sortRevision)
-  {
-    return;
-  }
-
-  DestroyGreedyGpuPassCache(cache);
-  cache.batches.reserve(batches.size());
-
-  for (const GreedyMeshBatch &batch : batches)
-  {
-    if (batch.vertices.empty() || batch.indices.empty())
-    {
-      continue;
-    }
-    GreedyGpuBatch gpu;
-    gpu.blockId = batch.blockId;
-    gpu.indexCount = static_cast<GLsizei>(batch.indices.size());
-    glGenBuffers(1, &gpu.vbo);
-    glGenBuffers(1, &gpu.ebo);
-    glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 batch.vertices.size() * sizeof(GreedyMeshVertex),
-                 batch.vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 batch.indices.size() * sizeof(uint32_t), batch.indices.data(),
-                 GL_STATIC_DRAW);
-    cache.batches.push_back(gpu);
-  }
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  cache.meshRevision = meshRevision;
-  cache.cullRevision = cullRevision;
-  cache.sortRevision = sortRevision;
-}
-
 void UGeometryEngine::SetBlockAnimUniforms(
     const std::shared_ptr<UShaderProgram> &shader, BlockId blockId,
     const std::map<size_t, UTextureCube> &textures)
@@ -748,81 +758,26 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
 void UGeometryEngine::PrepareFrameRendering()
 {
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
+  if (!WorldInstance)
   {
     return;
   }
-  const UWorld::SampledFluidState fluid = WorldInstance->SampleFluidPhysics(
-      camera->GetPosition(), camera->GetPlayerCapsule());
-  BlockId eyeFluid = BLOCK_AIR;
-  const bool cameraInFluid =
-      WorldInstance->IsCameraInsideFluid(camera->GetPosition(), &eyeFluid);
-
-  glm::vec3 targetSky = BaseSkyColor;
-  FogEnabled = 0.0f;
-  FogHorizontal = 0.0f;
-  OverlayTintAlpha = 0.0f;
-  OverlayBlockId = BLOCK_AIR;
-
-  const UBlockRegistry &registry = WorldInstance->GetBlockRegistry();
-  if (cameraInFluid)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
-    {
-      if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid)
-      {
-        FogEnabled = 1.0f;
-        FogStart = fv->FogStart;
-        FogEnd = fv->FogEnd;
-        FogMinBlend = fv->FogMinBlend;
-        SmoothedFogColor = glm::mix(SmoothedFogColor, fv->FogColor, 0.15f);
-        targetSky = fv->FogColor;
-      }
-    }
-  }
-  else if (Render.DistanceFog)
-  {
-    const DistanceFogParams distance_fog = ComputeDistanceFog(
-        WorldInstance->GetRenderDistanceChunks(), SmoothedSkyTint,
-        Render.DistanceFogStartRatio);
-    FogEnabled = 1.0f;
-    FogStart = distance_fog.Start;
-    FogEnd = distance_fog.End;
-    FogMinBlend = 0.0f;
-    FogHorizontal = Render.DistanceFogHorizontal ? 1.0f : 0.0f;
-    SmoothedFogColor =
-        glm::mix(SmoothedFogColor, distance_fog.Color, 0.15f);
-  }
-  if (fluid.inFluid)
-  {
-    if (const FluidViewProfile *fv = registry.GetFluidView(fluid.dominantFluid))
-    {
-      if (fv->OverlayAlpha > 0.01f &&
-          registry.GetRenderStyle(fluid.dominantFluid) ==
-              BlockRenderStyle::Cross)
-      {
-        OverlayTintAlpha = fv->OverlayAlpha;
-        OverlayTintColor = fv->OverlayColor;
-        OverlayBlockId = fluid.dominantFluid;
-      }
-    }
-  }
-
-  SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky, 0.15f);
-  skyColor = glm::vec4(SmoothedSkyTint, 1.0f);
+  WorldInstance->EnsureDefaultCelestialBodies();
+  WorldInstance->RefreshSkyVisualStateForRender();
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
+                            BaseSkyColor);
+  skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
+  OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
+  OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
+  OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
 }
 
 void UGeometryEngine::ApplyFogUniforms(
-    const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos)
+    const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos,
+    bool applyBelowSurfaceFog)
 {
-  shader->SetVec3("uCameraPos", cameraPos);
-  shader->SetVec3("uFogColor", SmoothedFogColor);
-  shader->SetFloat("uFogStart", FogStart);
-  shader->SetFloat("uFogEnd", FogEnd);
-  shader->SetFloat("uFogMinBlend", FogMinBlend);
-  shader->SetFloat("uFogEnabled", FogEnabled);
-  shader->SetFloat("uFogHorizontal", FogHorizontal);
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap,
+                                   applyBelowSurfaceFog);
 }
 
 void UGeometryEngine::SetGreedyShaderMode(
@@ -865,9 +820,50 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->SetInt("texture0", 0);
   SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
                       shellAlphaThreshold);
+  const bool opaqueDepthGuard =
+      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass;
+  if (opaqueDepthGuard)
+  {
+    OpaqueDepthCapture.Bind();
+  }
+  OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(greedyShader, camera->GetPosition());
+    ApplyFogUniforms(
+        greedyShader, camera->GetPosition(),
+        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
+  }
+  if (WorldInstance)
+  {
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    greedyShader->SetFloat("uEnvFogMultiplier", env.WeatherFogMultiplier);
+    greedyShader->SetFloat("uEnvMinAmbient",
+                           WorldInstance->GetLightingSettings().MinAmbient);
+    greedyShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    greedyShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
+    greedyShader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(env));
+    greedyShader->SetFloat(
+        "uEnvLightDebug",
+        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+    greedyShader->SetFloat(
+        "uEnvLightDebugMode",
+        static_cast<float>(WorldInstance->GetLightingSettings().DebugMode));
+    greedyShader->SetFloat("uEnvPrecipIntensity",
+                           std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
+    greedyShader->SetFloat("uEnvWetness",
+                           std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
+  }
+  else
+  {
+    greedyShader->SetFloat("uEnvFogMultiplier", 1.0f);
+    greedyShader->SetFloat("uEnvMinAmbient", 0.12f);
+    greedyShader->SetFloat("uEnvDayFactor", 1.0f);
+    greedyShader->SetFloat("uEnvNightFactor", 0.0f);
+    greedyShader->SetFloat("uEnvSkyLightScale", 1.0f);
+    greedyShader->SetFloat("uEnvLightDebug", 0.0f);
+    greedyShader->SetFloat("uEnvLightDebugMode", 0.0f);
+    greedyShader->SetFloat("uEnvPrecipIntensity", 0.0f);
+    greedyShader->SetFloat("uEnvWetness", 0.0f);
   }
   glActiveTexture(GL_TEXTURE0);
 
@@ -876,7 +872,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   for (const GreedyGpuBatch &gpu : cache.batches)
   {
     SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCount <= 0)
+    if (gpu.indexCountGl <= 0)
+    {
+      continue;
+    }
+    const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
+    const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
+    if (vbo == 0 || ebo == 0)
     {
       continue;
     }
@@ -891,63 +893,290 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       continue;
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void *)0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, kStride,
-                          (void *)(offsetof(GreedyMeshVertex, faceIndex)));
+    glVertexAttribPointer(
+        1, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, faceIndex)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
-                          (void *)(offsetof(GreedyMeshVertex, u)));
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
-    glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
+    glVertexAttribPointer(
+        3, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, skyLight)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(
+        4, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, blockLight)));
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(
+        5, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                 offsetof(GreedyMeshVertex, wetness)));
+    glEnableVertexAttribArray(5);
+    glDrawElements(
+        GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+        reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
   }
 
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  if (opaqueDepthGuard)
+  {
+    glActiveTexture(GL_TEXTURE0);
+  }
   greedyShader->Unuse();
 }
 
-void UGeometryEngine::DrawGreedyOpaqueBatches(
-    const std::vector<GreedyMeshBatch> &batches, const glm::mat4 &vp,
+void UGeometryEngine::ResetWorldRenderState()
+{
+  FluidSurfaceMap.DestroyGpuResources();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
+  BlockBatchesValid = false;
+  CachedMeshRevision = 0;
+  CachedInstanceCount = 0;
+  PreparedTransparentTextures = nullptr;
+  glm::vec3 sky_tint = BaseSkyColor;
+  glm::vec3 fog_color(0.05f, 0.15f, 0.35f);
+  if (WorldInstance)
+  {
+    WorldInstance->RefreshSkyVisualStateForRender();
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    HorizonFogColorInput color_in;
+    color_in.base_sky = BaseSkyColor;
+    color_in.day = env.DayNightFactor;
+    color_in.moon = env.MoonNightFactor;
+    color_in.weather_atten = env.WeatherSkyAttenuation;
+    color_in.cloudiness = env.Cloudiness;
+    color_in.precip = env.PrecipitationIntensity;
+    color_in.celestial_bodies = &env.CelestialBodies;
+    const AtmosphericSkyColors atmospheric =
+        ComputeAtmosphericSkyColors(color_in);
+    sky_tint = atmospheric.sky_tint;
+    fog_color = atmospheric.fog_color;
+    if (Render.DistanceFog)
+    {
+      const DistanceFogParams distance_fog = ComputeDistanceFog(
+          WorldInstance->GetEffectiveRenderDistance(), atmospheric.fog_color,
+          Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
+          Render.DistanceFogDensity, Render.DistanceFogEndMarginBlocks);
+      fog_color = distance_fog.Color;
+    }
+  }
+  UnderwaterFogPass_.ResetAtmosphericColors(sky_tint, fog_color);
+}
+
+void UGeometryEngine::WarmupGreedyGpuFromWorld()
+{
+  if (!WorldInstance || !TextureCubeStorageInstance ||
+      !Render.UseFaceQuadDraw())
+  {
+    return;
+  }
+  auto camera = WorldRenderReadModel
+                    ? WorldRenderReadModel->GetCurrentUserCamera()
+                    : WorldInstance->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+
+  UWorldMeshService *mesh_service =
+      WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
+                           : &WorldInstance->GetMeshService();
+  if (!mesh_service)
+  {
+    return;
+  }
+  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
+      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
+  const UWorldMeshService::GreedyDrawSnapshot draw =
+      mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
+                                      WorldInstance->GetBlockRegistry(),
+                                      camera);
+  const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+  const auto textures = TextureCubeStorageInstance->GetTextures();
+
+  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp, textures,
+                          draw.meshRevision, draw.cullRevision);
+  DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
+                            draw.cullRevision);
+
+  GreedyTransparentDrawContext tctx{draw.cache,
+                                    draw.transparentRefs,
+                                    vp,
+                                    draw.meshRevision,
+                                    draw.cullRevision,
+                                    camera->GetPosition(),
+                                    WorldInstance->GetBlockRegistry(),
+                                    textures};
+  PrepareTransparent(tctx);
+
+  CachedInstanceCount = draw.opaqueCutoutRefs.size();
+  CachedMeshRevision = draw.meshRevision;
+  BlockBatchesValid = true;
+}
+
+void UGeometryEngine::DrawCrossInstancedBatches(
+    const std::vector<CrossInstanceBatch> &batches, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
     uint64_t cullRevision)
 {
-  std::vector<GreedyMeshBatch> solid;
-  std::vector<GreedyMeshBatch> cutout;
-  solid.reserve(batches.size());
-  cutout.reserve(batches.size());
-  for (const GreedyMeshBatch &batch : batches)
+  if (batches.empty())
   {
-    if (batch.Transparent)
+    return;
+  }
+  if (!CrossGpuBackend.EnsureTemplateMesh())
+  {
+    return;
+  }
+  if (!crossInstancedShader || !crossInstancedShader->IsValid())
+  {
+    return;
+  }
+
+  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
+                              cullRevision);
+  if (CrossGpuPass.batches.empty())
+  {
+    return;
+  }
+
+  GLboolean cullWasEnabled;
+  glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+  glDisable(GL_CULL_FACE);
+
+  crossInstancedShader->Use();
+  crossInstancedShader->SetMat4("mvp_matrix", vp);
+  crossInstancedShader->SetInt("texture0", 0);
+  SetGreedyShaderMode(crossInstancedShader, true, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
+  }
+  if (WorldInstance)
+  {
+    const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+    crossInstancedShader->SetFloat("uEnvFogMultiplier",
+                                   env.WeatherFogMultiplier);
+    crossInstancedShader->SetFloat(
+        "uEnvMinAmbient", WorldInstance->GetLightingSettings().MinAmbient);
+    crossInstancedShader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    crossInstancedShader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
+    crossInstancedShader->SetFloat(
+        "uEnvLightDebug",
+        WorldInstance->GetLightingSettings().DebugEnabled ? 1.0f : 0.0f);
+    crossInstancedShader->SetFloat("uEnvWetness",
+                                   std::clamp(env.SurfaceWetness, 0.0f, 1.0f));
+  }
+  else
+  {
+    crossInstancedShader->SetFloat("uEnvFogMultiplier", 1.0f);
+    crossInstancedShader->SetFloat("uEnvMinAmbient", 0.12f);
+    crossInstancedShader->SetFloat("uEnvDayFactor", 1.0f);
+    crossInstancedShader->SetFloat("uEnvNightFactor", 0.0f);
+    crossInstancedShader->SetFloat("uEnvLightDebug", 0.0f);
+    crossInstancedShader->SetFloat("uEnvWetness", 0.0f);
+  }
+  glActiveTexture(GL_TEXTURE0);
+
+  const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
+  for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
+  {
+    if (gpu.instanceCount == 0 || gpu.instanceVbo == 0 || gpu.vao == 0)
     {
       continue;
     }
-    if (batch.AlphaCutout)
+    const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+    if (texIt == textures.end())
     {
-      cutout.push_back(batch);
+      continue;
+    }
+    const GLuint textureId = texIt->second.GetTextureId();
+    if (textureId == 0)
+    {
+      continue;
+    }
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
+    glBindVertexArray(gpu.vao);
+    glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr,
+                            static_cast<GLsizei>(gpu.instanceCount));
+  }
+  glBindVertexArray(0);
+  crossInstancedShader->Unuse();
+
+  if (cullWasEnabled)
+  {
+    glEnable(GL_CULL_FACE);
+  }
+}
+
+void UGeometryEngine::DrawGreedyOpaqueBatches(
+    const UChunkMeshCache &cache,
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
+    const glm::mat4 &vp,
+    const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+    uint64_t cullRevision)
+{
+  std::vector<GreedyBatchRef> solid;
+  std::vector<GreedyBatchRef> cutout;
+  solid.reserve(opaqueCutoutRefs.size());
+  cutout.reserve(opaqueCutoutRefs.size());
+  for (const GreedyBatchRef &ref : opaqueCutoutRefs)
+  {
+    const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+    if (!batch)
+    {
+      continue;
+    }
+    if (batch->AlphaCutout)
+    {
+      cutout.push_back(ref);
     }
     else
     {
-      solid.push_back(batch);
+      solid.push_back(ref);
     }
   }
   if (!solid.empty())
   {
-    RefreshGreedyGpuBatches(solid, meshRevision, cullRevision, GreedyGpuOpaque,
-                            0);
+    GreedyGpuBackend.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
+                                     cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
   }
   if (!cutout.empty())
   {
+    std::sort(cutout.begin(), cutout.end(),
+              [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
+              {
+                const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
+                const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
+                if (!a || !b)
+                {
+                  return a != nullptr;
+                }
+                return a->blockId < b->blockId;
+              });
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
-    RefreshGreedyGpuBatches(cutout, meshRevision, cullRevision, GreedyGpuCutout,
-                            0);
+    GreedyGpuBackend.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
+                                     cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
     if (cullWasEnabled)
@@ -960,25 +1189,34 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
-  std::vector<GreedyMeshBatch> filtered;
-  filtered.reserve(ctx.allBatches.size());
-  for (const GreedyMeshBatch &batch : ctx.allBatches)
+  std::vector<GreedyBatchRef> filtered;
+  filtered.reserve(ctx.transparentRefs.size());
+  for (const GreedyBatchRef &ref : ctx.transparentRefs)
   {
-    if (batch.Transparent)
+    const GreedyMeshBatch *batch = ctx.cache.TryGetGreedyBatch(ref);
+    if (!batch)
     {
-      filtered.push_back(batch);
+      continue;
     }
+    if (ctx.blockRegistry.GetRenderStyle(batch->blockId) ==
+        BlockRenderStyle::Cross)
+    {
+      continue;
+    }
+    filtered.push_back(ref);
   }
   if (filtered.empty())
   {
-    GreedyGpuTransparent.batches.clear();
+    GreedyGpuBackend.DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
     return;
   }
-  SortTransparentGreedyBatches(filtered, ctx.cameraPos, ctx.blockRegistry);
+  SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
+                               ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  RefreshGreedyGpuBatches(filtered, ctx.meshRevision, ctx.cullRevision,
-                          GreedyGpuTransparent, sortRevision);
+  GreedyGpuBackend.RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
+                                   ctx.meshRevision, ctx.cullRevision,
+                                   sortRevision);
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }
@@ -990,8 +1228,13 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  constexpr bool kAlphaCutout = false;
+#else
+  constexpr bool kAlphaCutout = true;
+#endif
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
-                       *PreparedTransparentTextures, true, true, mode,
+                       *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
 }
 
@@ -1019,14 +1262,24 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, u)));
   glEnableVertexAttribArray(2);
-
+  glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, skyLight)));
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, blockLight)));
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, wetness)));
+  glEnableVertexAttribArray(5);
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }
 
 void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
-  DestroyGreedyGpuBatches();
+  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                              GreedyGpuTransparent);
+  CrossGpuBackend.DestroyAll(CrossGpuPass);
   if (greedyMeshEBO)
   {
     glDeleteBuffers(1, &greedyMeshEBO);
@@ -1121,95 +1374,44 @@ void UGeometryEngine::DrawCube(std::shared_ptr<UCube> icube, GLuint texture)
   defaultShader->Unuse();
 }
 
-void UGeometryEngine::DrawObject(std::shared_ptr<UObject> object,
-                                 const std::map<size_t, UTextureCube> &textures)
-{
-  for (size_t i = 0; i < object->GetCubes().size(); i++)
-  {
-    auto &cube = object->GetCubes()[i];
-    GLuint texture = textures.at(cube->GetTypeId()).GetTextureId();
-    DrawCube(cube, texture);
-  }
-}
-
 void UGeometryEngine::DrawSkyGradient()
 {
-  // Use simple version which is more reliable
-  DrawSkyGradientSimple();
-}
-
-void UGeometryEngine::DrawSkyGradientSimple()
-{
-  // Check that sky shader is ready
-  if (!skyShader->IsValid())
+  if (!WorldInstance)
   {
-    std::cerr << "Sky shader is not linked!" << std::endl;
     return;
   }
 
-  // Temporarily disable depth test for sky
-  glDisable(GL_DEPTH_TEST);
+  WorldInstance->EnsureDefaultCelestialBodies();
+  WorldInstance->RefreshSkyVisualStateForRender();
 
-  // Use sky shader
-  skyShader->Use();
-
-  // Set identity matrix for sky
-  glm::mat4 skyMatrix = glm::mat4(1.0f);
-  skyShader->SetMat4("mvp_matrix", skyMatrix);
-
-  // Pass sky color to shader
-  skyShader->SetVec4("skyColor", skyColor);
-
-  // Create simple rectangle for sky (full screen)
-  static const GLfloat skyVertices[] = {
-      // Positions      // Texture coordinates
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f,
-      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f};
-
-  // Create temporary VBO for rendering
-  GLuint tempVBO;
-  glGenBuffers(1, &tempVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(skyVertices), skyVertices,
-               GL_STATIC_DRAW);
-
-  // Set attributes
-  int vertexLocation =
-      glGetAttribLocation(skyShader->GetProgramID(), "a_position");
-  if (vertexLocation != -1)
+  float horizon_boost = 0.0f;
+  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  horizon_boost = std::clamp(
+      env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f, 0.0f, 0.35f);
+  if (Render.AltitudeAdaptiveFog)
   {
-    glEnableVertexAttribArray(vertexLocation);
-    glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)0);
+    const float altitude = WorldInstance->GetAltitudeAboveTerrain();
+    const float threshold =
+        static_cast<float>(std::max(1, Render.AltitudeFogThresholdBlocks));
+    horizon_boost += std::clamp(altitude / (threshold * 2.0f), 0.0f, 0.25f);
   }
 
-  int texcoordLocation =
-      glGetAttribLocation(skyShader->GetProgramID(), "a_texcoord");
-  if (texcoordLocation != -1)
+  glm::mat3 inv_view_rot(1.0f);
+  glm::vec3 camera_pos(0.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    glEnableVertexAttribArray(texcoordLocation);
-    glVertexAttribPointer(texcoordLocation, 2, GL_FLOAT, GL_FALSE,
-                          5 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+    const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
+    inv_view_rot = glm::transpose(view_rot);
+    camera_pos = camera->GetPosition();
   }
 
-  // Render sky as triangles
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-  // Check OpenGL errors
-  GLenum error = glGetError();
-  if (error != GL_NO_ERROR)
-  {
-    std::cerr << "OpenGL error after drawing sky: " << error << std::endl;
-  }
-
-  // Free resources
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glDeleteBuffers(1, &tempVBO);
-  skyShader->Unuse();
-
-  // Enable depth test back
-  glEnable(GL_DEPTH_TEST);
+  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env, Render,
+                        Render.Preset, AnimationClock.ElapsedSeconds(),
+                        inv_view_rot, camera_pos, horizon_boost);
+  DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();
 }
+
+void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
 
 bool UGeometryEngine::InitOverlayBuffers()
 {
@@ -1275,11 +1477,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
     return;
   }
 
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1295,33 +1493,57 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   overlayShader->Unuse();
+}
 
-  if (depthTestEnabled)
+void UGeometryEngine::RenderWeatherOverlay(int width, int height)
+{
+  if (!WorldInstance || width <= 0 || height <= 0 || !InitOverlayBuffers())
   {
-    glEnable(GL_DEPTH_TEST);
+    return;
   }
-  else
+
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!camera)
   {
-    glDisable(GL_DEPTH_TEST);
+    return;
   }
-  if (!blendEnabled)
-  {
-    glDisable(GL_BLEND);
-  }
+
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  const glm::mat4 view_proj = proj * view;
+  const glm::mat3 view_rot = glm::mat3(view);
+  const glm::vec3 camera_right = glm::normalize(glm::vec3(view_rot[0]));
+  const glm::vec3 camera_up = glm::normalize(glm::vec3(view_rot[1]));
+
+  WeatherRenderContext ctx;
+  ctx.Width = width;
+  ctx.Height = height;
+  ctx.OverlayVao = overlayVAO;
+  ctx.ViewProj = view_proj;
+  ctx.CameraPos = camera->GetPosition();
+  ctx.CameraRight = camera_right;
+  ctx.CameraUp = camera_up;
+  ctx.ElapsedSec = AnimationClock.ElapsedSeconds();
+  ctx.DeltaSec = static_cast<float>(camera->GetDeltaTime());
+  ctx.Preset = Render.Preset;
+
+  WeatherPass.Render(ctx, *WorldInstance);
+  DurationWeatherStreakMks = WeatherPass.GetLastStreakMs();
+  DurationWeatherParticleMks = WeatherPass.GetLastParticleMs();
 }
 
 // Methods for sky color management
 void UGeometryEngine::SetSkyColor(float r, float g, float b, float a)
 {
   BaseSkyColor = glm::vec3(r, g, b);
-  SmoothedSkyTint = BaseSkyColor;
+  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
   skyColor = glm::vec4(r, g, b, a);
 }
 
 void UGeometryEngine::SetSkyColor(const glm::vec4 &color)
 {
   BaseSkyColor = glm::vec3(color);
-  SmoothedSkyTint = BaseSkyColor;
+  UnderwaterFogPass_.ResetSkyTint(BaseSkyColor);
   skyColor = color;
 }
 
@@ -1354,38 +1576,73 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   float scale = 0.7f;
   glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Yellow color for performance
 
-  // Calculate FPS
-  double totalTime = DurationDrawSceneMks +
-                     WorldInstance->GetDurationDoMovementMks() + view_duration;
-  double fps = totalTime > 0 ? 1000000.0 / totalTime : 0.0;
+  // Calculate FPS (sim = movement + view + draw; wall = full frame interval)
+  const PhysicsTelemetry &phys = WorldInstance->GetPhysicsTelemetry();
+  const double sim_ms = phys.PhysicsStepMs + (view_duration / 1000.0) +
+                        (DurationDrawSceneMks / 1000.0);
+  const double wall_ms = WorldInstance->GetWallFrameDelta() * 1000.0;
+  const double sim_fps = sim_ms > 0.0 ? 1000.0 / sim_ms : 0.0;
+  const double wall_fps = wall_ms > 0.0 ? 1000.0 / wall_ms : sim_fps;
 
   size_t blockCount = WorldInstance->GetCachedBlockCount();
   size_t drawCount = WorldInstance->GetRenderInstanceCount();
+  const auto &md = WorldInstance->GetMovementDiagnostics();
 
   // Form performance information strings
   std::vector<std::string> performanceLines = {
       "Performance:",
-      "FPS: " + std::to_string(fps).substr(0, 6),
+      "Weather: " + WorldInstance->GetWeatherName(),
+      "Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
+      "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
       "Blocks: " + std::to_string(blockCount) +
           " draw: " + std::to_string(drawCount),
+      "Phys: " + std::to_string(phys.PhysicsStepMs).substr(0, 6) + " ms" +
+          " steps: " + std::to_string(phys.SimulationStepsThisFrame),
+      "Move: " + std::to_string(phys.MovementStepMs).substr(0, 6) + " ms" +
+          " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
+          " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
-          " ms",
-      "Movement: " +
-          std::to_string(WorldInstance->GetDurationDoMovementMks() / 1000.0)
-              .substr(0, 6) +
-          " ms",
-      "View: " + std::to_string(view_duration / 1000.0).substr(0, 6) + " ms"};
+          " ms" + " View: " +
+          std::to_string(view_duration / 1000.0).substr(0, 6) + " ms",
+      "Weather: streak " +
+          std::to_string(DurationWeatherStreakMks).substr(0, 5) + " ms" +
+          " particle " +
+          std::to_string(DurationWeatherParticleMks).substr(0, 5) + " ms" +
+          " sky " + std::to_string(DurationSkyGradientMks).substr(0, 5) +
+          " ms" + " n=" + std::to_string(WeatherPass.GetActiveParticleCount()),
+      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
+          " Greedy: " + std::to_string(md.greedyCacheEntries) +
+          " Dirty: " + std::to_string(md.dirtyChunksPending) +
+          " Async: " + std::to_string(md.asyncMeshInFlight),
+      "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
+          " bg=" + std::to_string(md.pendingBgRelights) +
+          " inflight=" + std::to_string(md.asyncRelightInflight) +
+          " late=" + std::to_string(md.relightDiscardedLate)};
+  performanceLines.push_back(
+      "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
+      "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
+      " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) +
+      " draws: " + std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) +
+      " bone uploads: " +
+      std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads));
 
-  const auto &md = WorldInstance->GetMovementDiagnostics();
-  if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 || md.streamingIoMs > 0.01)
+  performanceLines.push_back(
+      "rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
+      " hitch: " + (md.hitchDetected ? "yes" : "no"));
+  if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 ||
+      md.streamingIoMs > 0.01)
   {
     performanceLines.push_back(
         "Gen: " + std::to_string(md.streamingGenMs).substr(0, 5) + " ms" +
         " Mesh: " + std::to_string(md.meshRebuildMs).substr(0, 5) + " ms" +
         " IO: " + std::to_string(md.streamingIoMs).substr(0, 5) + " ms");
     performanceLines.push_back(
-        "Dirty: " + std::to_string(md.dirtyChunksPending) + " rebuilt: " +
-        std::to_string(md.meshRebuildsThisFrame));
+        "Dirty: " + std::to_string(md.dirtyChunksPending) +
+        " rebuilt: " + std::to_string(md.meshRebuildsThisFrame));
+    performanceLines.push_back(
+        "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
+        " Cache: " + std::to_string(md.greedyCacheEntries) +
+        " Dirty: " + std::to_string(md.dirtyChunksPending));
   }
   {
     float temperature = 0.0f;
@@ -1395,7 +1652,8 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
                         temperature, moisture);
     const float localHeightNorm =
         std::clamp(static_cast<float>(md.feetBlock.y - settings.SeaLevel) /
-                       static_cast<float>(std::max(1, settings.MaxHeight - settings.SeaLevel)),
+                       static_cast<float>(
+                           std::max(1, settings.MaxHeight - settings.SeaLevel)),
                    0.0f, 1.0f);
     const BiomeId biome = ClassifyBiome(temperature, moisture, localHeightNorm);
     performanceLines.push_back(
@@ -1415,6 +1673,43 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     if (md.fallThroughSuspected)
     {
       performanceLines.emplace_back("!! fall-through suspected !!");
+    }
+  }
+  {
+    const bool collision_ready =
+        md.feetChunkLoaded && !md.feetInUnloadList && !md.fallThroughSuspected;
+    performanceLines.push_back(
+        std::string("Phys: ") +
+        cutum::ToString(WorldInstance->GetPhysicsProfile()) +
+        " CollReady: " + (collision_ready ? "yes" : "no"));
+    performanceLines.push_back(
+        "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) +
+        " LiqQ: " + std::to_string(md.physicsLiquidQueueDepth) +
+        " Purged: " + std::to_string(md.physicsPurgedUpdates));
+    performanceLines.push_back(
+        "RemeshQ: " + std::to_string(md.physicsVisualRemeshBacklog) +
+        " CollQ: " + std::to_string(md.physicsCollisionRebuildBacklog));
+    performanceLines.push_back(
+        "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
+        " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +
+        " wait: " +
+        std::to_string(md.physicsCollisionReadyWaitMs).substr(0, 6) + "ms");
+    if (WorldInstance->GetPhysicsFeatureFlags().LiquidDebugTrace)
+    {
+      std::vector<cutum::LiquidDebugEntry> liquid_trace;
+      cutum::ULiquidDebugTrace::Instance().CopyRecent(liquid_trace);
+      const size_t start =
+          liquid_trace.size() > 3 ? liquid_trace.size() - 3 : 0;
+      for (size_t i = start; i < liquid_trace.size(); ++i)
+      {
+        const cutum::LiquidDebugEntry &entry = liquid_trace[i];
+        performanceLines.push_back(
+            "Liq " + std::string(entry.Reason) + " (" +
+            std::to_string(entry.From.x) + "," + std::to_string(entry.From.y) +
+            "," + std::to_string(entry.From.z) + ")->(" +
+            std::to_string(entry.To.x) + "," + std::to_string(entry.To.y) +
+            "," + std::to_string(entry.To.z) + ")");
+      }
     }
   }
 
@@ -1441,13 +1736,7 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
     return;
   }
 
-  // Сохраняем состояние OpenGL
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
-  // Отключаем тест глубины для 2D рендеринга
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
 
   // Используем UI шейдер
@@ -1517,25 +1806,6 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
 
   // Отключаем шейдер
   uiShader->Unuse();
-
-  // Восстанавливаем состояние OpenGL
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 }
 
 void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
@@ -1570,7 +1840,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "0-9 - Primary hotbar; objects via HUD / palette",
       "Classic: mouse look, hold LMB break, RMB place/use slot",
       "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
-      "Delete - Instant break, F1-F8 - Sky",
+      "Delete - Instant break, F8 weather",
   };
 
   constexpr float helpX = 20.0f;
@@ -1579,6 +1849,29 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
   {
     textRenderer->RenderText(line, helpX, y, scale, helpColor);
     y += 20.0f;
+  }
+
+  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  std::vector<std::string> weatherLines;
+  weatherLines.push_back(
+      "Weather: " + UWorld::WeatherTypeToString(env.Weather) + " -> " +
+      UWorld::WeatherTypeToString(env.TargetWeather));
+  weatherLines.push_back(
+      "Precip: " + std::to_string(env.PrecipitationIntensity).substr(0, 4) +
+      " Overlay: " +
+      (WorldInstance->GetLightingSettings().WeatherOverlayEnabled ? "on"
+                                                                  : "off") +
+      " Particles: " +
+      (WorldInstance->GetLightingSettings().WeatherParticlesEnabled ? "on"
+                                                                    : "off"));
+  float weatherY = static_cast<float>(height_size) - 52.0f;
+  for (const std::string &line : weatherLines)
+  {
+    const glm::vec2 textSize = textRenderer->GetTextSize(line, 0.75f);
+    const float weatherX = static_cast<float>(width_size) - textSize.x - 16.0f;
+    textRenderer->RenderText(line, weatherX, weatherY, 0.75f,
+                             glm::vec3(0.9f, 0.95f, 1.0f));
+    weatherY -= 18.0f;
   }
 
   const double now = std::chrono::duration<double>(
@@ -1624,7 +1917,7 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   std::string prefabName;
   if (UCreature *controlled = WorldInstance->GetControlledCreature())
   {
-    prefabName = controlled->GetInventory().GetActivePrefabName();
+    prefabName = controlled->GetInventory().GetActiveObjectName();
   }
   if (!prefabName.empty())
   {
@@ -2053,230 +2346,37 @@ void UGeometryEngine::DestroyOutlineBuffers()
   }
 }
 
-namespace
-{
-
-bool UploadCreaturePartMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
-                            const float *texCoords)
-{
-  float vertices[24 * 5];
-  for (int v = 0; v < 24; ++v)
-  {
-    vertices[v * 5 + 0] = kCreaturePartPositions[v * 3 + 0];
-    vertices[v * 5 + 1] = kCreaturePartPositions[v * 3 + 1];
-    vertices[v * 5 + 2] = kCreaturePartPositions[v * 3 + 2];
-    vertices[v * 5 + 3] = texCoords[v * 2 + 0];
-    vertices[v * 5 + 4] = texCoords[v * 2 + 1];
-  }
-
-  if (vao == 0)
-  {
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-  }
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
-               kCreaturePartIndices, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  return vao != 0;
-}
-
-} // namespace
-
-bool UGeometryEngine::InitCreaturePartBuffers()
-{
-  if (creaturePartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureBoxTexCoords(texCoords);
-  return UploadCreaturePartMesh(creaturePartVAO, creaturePartVBO,
-                                creaturePartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureHeadPartBuffers()
-{
-  if (creatureHeadPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureHeadTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureHeadPartVAO, creatureHeadPartVBO,
-                                creatureHeadPartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureBodyPartBuffers()
-{
-  if (creatureBodyPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureBodyTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureBodyPartVAO, creatureBodyPartVBO,
-                                creatureBodyPartEBO, texCoords);
-}
-
-bool UGeometryEngine::InitCreatureRigidHeadPartBuffers()
-{
-  if (creatureRigidHeadPartVAO != 0)
-  {
-    return true;
-  }
-  float texCoords[48];
-  BuildCreatureRigidHeadTexCoords(texCoords);
-  return UploadCreaturePartMesh(creatureRigidHeadPartVAO,
-                                creatureRigidHeadPartVBO,
-                                creatureRigidHeadPartEBO, texCoords);
-}
-
-void UGeometryEngine::DestroyCreaturePartBuffers()
-{
-  if (creatureRigidHeadPartEBO)
-  {
-    glDeleteBuffers(1, &creatureRigidHeadPartEBO);
-    creatureRigidHeadPartEBO = 0;
-  }
-  if (creatureRigidHeadPartVBO)
-  {
-    glDeleteBuffers(1, &creatureRigidHeadPartVBO);
-    creatureRigidHeadPartVBO = 0;
-  }
-  if (creatureRigidHeadPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureRigidHeadPartVAO);
-    creatureRigidHeadPartVAO = 0;
-  }
-  if (creatureBodyPartEBO)
-  {
-    glDeleteBuffers(1, &creatureBodyPartEBO);
-    creatureBodyPartEBO = 0;
-  }
-  if (creatureBodyPartVBO)
-  {
-    glDeleteBuffers(1, &creatureBodyPartVBO);
-    creatureBodyPartVBO = 0;
-  }
-  if (creatureBodyPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureBodyPartVAO);
-    creatureBodyPartVAO = 0;
-  }
-  if (creatureHeadPartEBO)
-  {
-    glDeleteBuffers(1, &creatureHeadPartEBO);
-    creatureHeadPartEBO = 0;
-  }
-  if (creatureHeadPartVBO)
-  {
-    glDeleteBuffers(1, &creatureHeadPartVBO);
-    creatureHeadPartVBO = 0;
-  }
-  if (creatureHeadPartVAO)
-  {
-    glDeleteVertexArrays(1, &creatureHeadPartVAO);
-    creatureHeadPartVAO = 0;
-  }
-  if (creaturePartEBO)
-  {
-    glDeleteBuffers(1, &creaturePartEBO);
-    creaturePartEBO = 0;
-  }
-  if (creaturePartVBO)
-  {
-    glDeleteBuffers(1, &creaturePartVBO);
-    creaturePartVBO = 0;
-  }
-  if (creaturePartVAO)
-  {
-    glDeleteVertexArrays(1, &creaturePartVAO);
-    creaturePartVAO = 0;
-  }
-}
-
 void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
                                                GLuint texture,
                                                CreaturePartMesh mesh)
 {
-  if (texture == 0 || !defaultShader || !defaultShader->IsValid())
-  {
-    return;
-  }
-  GLuint vao = 0;
-  switch (mesh)
-  {
-  case CreaturePartMesh::Head:
-    if (creatureHeadPartVAO == 0 && !InitCreatureHeadPartBuffers())
-    {
-      return;
-    }
-    vao = creatureHeadPartVAO;
-    break;
-  case CreaturePartMesh::Body:
-    if (creatureBodyPartVAO == 0 && !InitCreatureBodyPartBuffers())
-    {
-      return;
-    }
-    vao = creatureBodyPartVAO;
-    break;
-  case CreaturePartMesh::RigidHead:
-    if (creatureRigidHeadPartVAO == 0 && !InitCreatureRigidHeadPartBuffers())
-    {
-      return;
-    }
-    vao = creatureRigidHeadPartVAO;
-    break;
-  case CreaturePartMesh::Box:
-  default:
-    if (creaturePartVAO == 0 && !InitCreaturePartBuffers())
-    {
-      return;
-    }
-    vao = creaturePartVAO;
-    break;
-  }
-
-  GLboolean depthEnabled = GL_TRUE;
-  glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-
-  glBindTexture(GL_TEXTURE_2D, texture);
-  defaultShader->Use();
-  defaultShader->SetInt("texture0", 0);
-  defaultShader->SetInt("uAnimFrame", 0);
-  defaultShader->SetInt("uAnimFrameCount", 1);
-  defaultShader->SetMat4("mvp_matrix", mvp);
-
-  glBindVertexArray(vao);
-  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
-
-  defaultShader->Unuse();
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  if (!depthEnabled)
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
+  CreatureDraw_.DrawTexturedPart(mvp, texture, mesh);
 }
 
-void UGeometryEngine::DrawCreatureSkinnedMesh(const glm::mat4 & /*mvp*/,
-                                            GLuint /*meshVao*/,
-                                            GLuint /*texture*/)
+void UGeometryEngine::DrawCreatureBoneSkeletonMesh(
+    const glm::mat4 &mvp, GLuint texture, const BoneSkeletonCubeMeshCpu &mesh)
 {
-  // glTF skinned mesh draw — TD-CRE-001
+  CreatureDraw_.DrawBoneSkeletonMesh(mvp, texture, mesh);
+}
+
+void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
+                                           const BoneSkeletonCubeMeshCpu &mesh)
+{
+  CreatureDraw_.DrawGltfMesh(mvp, texture, mesh);
+}
+
+void UGeometryEngine::DrawCreatureSkinnedMesh(
+    const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
+    const std::vector<glm::mat4> &boneMatrices)
+{
+  CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
+}
+
+void UGeometryEngine::DrawCreatureBillboard(const glm::mat4 &mvp,
+                                            GLuint texture,
+                                            const glm::vec4 &tint)
+{
+  CreatureDraw_.DrawBillboard(mvp, texture, tint);
 }
 
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
@@ -2321,103 +2421,6 @@ void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
   {
     glDisable(GL_CULL_FACE);
   }
-}
-
-void UGeometryEngine::RenderCreatures()
-{
-  if (!WorldInstance)
-  {
-    return;
-  }
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
-  {
-    return;
-  }
-  const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
-  const float dt = static_cast<float>(camera->GetDeltaTime());
-  const CreatureId controlledId = WorldInstance->GetControlledCreatureId();
-  WorldInstance->ForEachCreature(
-      [&](UCreature &creature)
-      {
-        if (creature.GetId() == controlledId)
-        {
-          if (camera->GetPerspective() == CameraPerspective::FirstPerson)
-          {
-            return;
-          }
-        }
-        const std::string animType =
-            WorldInstance->ResolveAnimationTypeId(creature);
-        const CreatureDefinition *def =
-            WorldInstance->GetCreatureDefinition(animType);
-        CreatureDefinition fallback;
-        if (!def)
-        {
-          fallback.Id = animType;
-          def = &fallback;
-        }
-        if (ICreatureVisual *visual = creature.GetVisual())
-        {
-          visual->SetAppearance(WorldInstance->GetResolvedAppearance(creature));
-          const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
-          ICreaturePosePresenter *presenter =
-              WorldInstance->GetPosePresenterRegistry().Get(facts.archetype);
-          CreaturePoseParams pose;
-          if (presenter)
-          {
-            pose = presenter->Compute(facts, *def, dt);
-          }
-          visual->UpdatePose(creature, facts, pose, *def, dt);
-          visual->SubmitDraw(*this, viewProj);
-        }
-
-        if (Render.CreatureDebugBounds)
-        {
-          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-          const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
-          const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
-          glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
-          model = glm::scale(model, maxSize);
-          DrawBoxWireframe(viewProj * model,
-                           glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
-
-          const int gx = static_cast<int>(std::floor(bodyOrigin.x));
-          const int gz = static_cast<int>(std::floor(bodyOrigin.z));
-          const float feetY = BoundsFeetY(bodyOrigin);
-          float groundY = feetY;
-          float delta = 0.0f;
-          if (const std::optional<float> queryY =
-                  WorldInstance->QueryGroundFeetYUnder(gx, gz, feetY))
-          {
-            groundY = *queryY;
-            delta = feetY - groundY;
-          }
-          const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
-                                       static_cast<float>(gz) + 0.5f);
-          glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
-          groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
-          const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
-          DrawBoxWireframe(
-              viewProj * groundModel,
-              glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
-
-          static auto lastPoseLog = std::chrono::steady_clock::now();
-          const auto now = std::chrono::steady_clock::now();
-          if (now - lastPoseLog >= std::chrono::seconds(2))
-          {
-            lastPoseLog = now;
-            const float eyeY = creature.GetLocomotionEye().y;
-            const bool isControlled = creature.GetId() == controlledId;
-            if (isControlled || controlledId == 0)
-            {
-              std::cerr << "[creature_pose] Id=" << creature.GetId()
-                        << " feetY=" << feetY << " groundY=" << groundY
-                        << " delta=" << delta << " eyeY=" << eyeY << std::endl;
-            }
-          }
-        }
-      });
 }
 
 namespace
@@ -2550,6 +2553,76 @@ void UGeometryEngine::RenderSelectionOutline()
   else
   {
     glDisable(GL_CULL_FACE);
+  }
+}
+
+namespace
+{
+
+glm::vec4 BiomeDebugColor(BiomeId biome)
+{
+  const float hue = static_cast<float>(BiomeIndex(biome)) * 0.618033988f;
+  return glm::vec4(0.45f + 0.45f * std::sin(hue),
+                   0.45f + 0.45f * std::sin(hue + 2.094f),
+                   0.45f + 0.45f * std::sin(hue + 4.188f), 0.55f);
+}
+
+} // namespace
+
+void UGeometryEngine::RenderBiomeDebugOverlay()
+{
+  if (!WorldInstance)
+  {
+    return;
+  }
+  const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
+  if (!settings.DebugWorldGenOverlay)
+  {
+    return;
+  }
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+  const glm::vec3 camPos = camera->GetPosition();
+  const int centerX = static_cast<int>(std::floor(camPos.x));
+  const int centerZ = static_cast<int>(std::floor(camPos.z));
+  constexpr int kRadius = 12;
+  constexpr int kStep = 2;
+  const glm::mat4 mvp = camera->GetMvpMatrix();
+
+  for (int dx = -kRadius; dx <= kRadius; dx += kStep)
+  {
+    for (int dz = -kRadius; dz <= kRadius; dz += kStep)
+    {
+      const int worldX = centerX + dx;
+      const int worldZ = centerZ + dz;
+      const std::optional<int> surfaceY =
+          WorldInstance->FindHighestSolidY(worldX, worldZ);
+      if (!surfaceY)
+      {
+        continue;
+      }
+      float temperature = 0.0f;
+      float moisture = 0.0f;
+      ComputeBiomeClimate(worldX, worldZ, settings.Seed, temperature, moisture);
+      const float localHeightNorm =
+          std::clamp(static_cast<float>(*surfaceY - settings.SeaLevel) /
+                         static_cast<float>(std::max(1, settings.MaxHeight -
+                                                            settings.SeaLevel)),
+                     0.0f, 1.0f);
+      const BiomeId biome =
+          ClassifyBiome(temperature, moisture, localHeightNorm);
+      const glm::vec4 color = BiomeDebugColor(biome);
+      glm::mat4 model(1.0f);
+      model =
+          glm::translate(model, glm::vec3(static_cast<float>(worldX) + 0.5f,
+                                          static_cast<float>(*surfaceY) + 0.08f,
+                                          static_cast<float>(worldZ) + 0.5f));
+      model = glm::scale(model, glm::vec3(0.92f, 0.04f, 0.92f));
+      DrawBoxWireframe(mvp * model, color);
+    }
   }
 }
 

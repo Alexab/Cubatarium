@@ -148,6 +148,10 @@ bool UGuiWidget::OnMouseDown(const GuiMouseEvent &event)
 {
   for (auto it = Children.rbegin(); it != Children.rend(); ++it)
   {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
     if ((*it)->OnMouseDown(event))
     {
       return true;
@@ -160,6 +164,10 @@ bool UGuiWidget::OnMouseUp(const GuiMouseEvent &event)
 {
   for (auto it = Children.rbegin(); it != Children.rend(); ++it)
   {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
     if ((*it)->OnMouseUp(event))
     {
       return true;
@@ -172,6 +180,10 @@ bool UGuiWidget::OnMouseMove(const GuiMouseEvent &event)
 {
   for (auto it = Children.rbegin(); it != Children.rend(); ++it)
   {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
     if ((*it)->OnMouseMove(event))
     {
       return true;

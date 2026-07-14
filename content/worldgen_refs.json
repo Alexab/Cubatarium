@@ -75,21 +75,6 @@
         "fire"
       ]
     },
-    "ore_coal": {
-      "block_names": [
-        "ore_coal"
-      ]
-    },
-    "ore_iron": {
-      "block_names": [
-        "ore_iron"
-      ]
-    },
-    "ore_copper": {
-      "block_names": [
-        "ore_copper"
-      ]
-    },
     "wood": {
       "block_names": [
         "wood"
@@ -98,6 +83,16 @@
     "tree_log": {
       "block_names": [
         "tree_log"
+      ]
+    },
+    "tree_bark": {
+      "block_names": [
+        "tree_bark"
+      ]
+    },
+    "tree_branch": {
+      "block_names": [
+        "tree_branch"
       ]
     },
     "tree_leaves": {

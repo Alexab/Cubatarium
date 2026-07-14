@@ -1,0 +1,39 @@
+quadruped:
+  bones:
+    leg0: { channel: rotation_x, phase: 0.0, swing_deg: 45 }
+    leg1: { channel: rotation_x, phase: 3.141, swing_deg: 45 }
+    leg2: { channel: rotation_x, phase: 3.141, swing_deg: 45 }
+    leg3: { channel: rotation_x, phase: 0.0, swing_deg: 45 }
+    head: { channel: look_at, max_deg: 30 }
+    tail: { channel: wag_x, amplitude_deg: 15 }
+
+humanoid:
+  bones:
+    rightArm: { channel: rotation_x, phase: 3.141, swing_deg: 40 }
+    leftArm: { channel: rotation_x, phase: 0.0, swing_deg: 40 }
+    rightLeg: { channel: rotation_x, phase: 0.0, swing_deg: 45 }
+    leftLeg: { channel: rotation_x, phase: 3.141, swing_deg: 45 }
+    head: { channel: look_at, max_deg: 30 }
+
+chicken:
+  bones:
+    leg0: { channel: rotation_x, phase: 0.0, swing_deg: 35 }
+    leg1: { channel: rotation_x, phase: 3.141, swing_deg: 35 }
+    wing0: { channel: rotation_z, amplitude_deg: 5 }
+    wing1: { channel: rotation_z, amplitude_deg: -5 }
+    head: { channel: peck_x, amplitude_deg: 12 }
+
+aquatic:
+  bones:
+    body: { channel: undulate_y, amplitude_deg: 8 }
+    tail: { channel: wag_y, amplitude_deg: 15 }
+
+aerial:
+  bones:
+    body: { channel: pitch_x, amplitude_deg: 10 }
+    wing0: { channel: flap_z, amplitude_deg: 25 }
+    wing1: { channel: flap_z, amplitude_deg: -25 }
+
+serpentine:
+  bones:
+    body: { channel: roll_z, amplitude_deg: 6 }

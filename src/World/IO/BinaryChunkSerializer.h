@@ -1,23 +1,24 @@
 #pragma once
 
-#include "World/IO/IChunkSerializer.h"
+#include "World/IO/IUChunkSerializer.h"
 
 namespace cutum
 {
 
-class BinaryChunkSerializer : public IChunkSerializer
+class UBinaryChunkSerializer : public IUChunkSerializer
 {
 public:
   static constexpr char kMagic[4] = {'C', 'C', 'H', 'K'};
-  static constexpr uint8_t kVersion = 1;
+  static constexpr uint8_t kVersion = 2;
+  static constexpr uint8_t kVersionLegacy = 1;
 
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Binary; }
   const char *FileExtension() const override { return ".cchunk"; }
   SerializedChunk Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
                             UBlockRegistry &registry) const override;
-  ChunkBuffer Deserialize(const std::vector<uint8_t> &bytes,
-                          glm::ivec3 chunkCoord,
-                          UBlockRegistry &registry) const override;
+  UChunkBuffer Deserialize(const std::vector<uint8_t> &bytes,
+                           glm::ivec3 chunkCoord,
+                           UBlockRegistry &registry) const override;
 };
 
 } // namespace cutum

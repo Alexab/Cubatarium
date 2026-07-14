@@ -1,4 +1,5 @@
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/CaveDepthBand.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenContext.h"
@@ -7,28 +8,47 @@
 namespace cutum
 {
 
+namespace
+{
+
+float CombinedCaveNoise(int x, int y, int z, uint32_t seed, const CaveParams &params)
+{
+  const float wx = static_cast<float>(x);
+  const float wy = static_cast<float>(y);
+  const float wz = static_cast<float>(z);
+  const float cheese = FBM3D(wx * params.cheeseScale, wy * params.cheeseScale,
+                               wz * params.cheeseScale, seed + 3100, 2,
+                               params.persistence, params.lacunarity);
+  const float spaghetti =
+      FBM3D(wx * params.spaghettiScale, wy * params.spaghettiScale * 0.8f,
+            wz * params.spaghettiScale, seed + 3200, 2, params.persistence,
+            params.lacunarity);
+  const float noodle =
+      FBM3D(wx * params.noodleScale, wy * params.noodleScale * 1.2f,
+            wz * params.noodleScale, seed + 3300, 2, params.persistence,
+            params.lacunarity);
+  return cheese * params.cheeseWeight + spaghetti * params.spaghettiWeight +
+         noodle * params.noodleWeight;
+}
+
+} // namespace
+
 bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params)
 {
-  if (y < params.minY || y > surfaceY - params.maxDepthBelowSurface)
+  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, params);
+  if (!band.valid || y < band.y_bottom || y > band.y_top)
   {
     return false;
   }
   if (params.useDensityField)
   {
     float density = static_cast<float>(surfaceY - y);
-    const float caveNoise = FBM3D(static_cast<float>(x) * params.scale,
-                                  static_cast<float>(y) * params.scale,
-                                  static_cast<float>(z) * params.scale,
-                                  Seed + 3000, params.octaves, params.persistence,
-                                  params.lacunarity);
-    density += caveNoise * params.densityCaveAmplitude * 24.0f;
+    const float cave_noise = CombinedCaveNoise(x, y, z, Seed + 3000, params);
+    density += cave_noise * params.densityCaveAmplitude * 24.0f;
     return density < 0.0f;
   }
-  const float n = FBM3D(static_cast<float>(x) * params.scale,
-                        static_cast<float>(y) * params.scale,
-                        static_cast<float>(z) * params.scale, Seed + 3000,
-                        params.octaves, params.persistence, params.lacunarity);
+  const float n = CombinedCaveNoise(x, y, z, Seed + 3000, params);
   const float n01 = (n + 1.0f) * 0.5f;
   return n01 > params.threshold;
 }
@@ -64,12 +84,12 @@ bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed)
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
                       uint32_t Seed, const CaveParams &params)
 {
-  const int yMax = surfaceY - params.maxDepthBelowSurface;
-  if (yMax < params.minY)
+  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, params);
+  if (!band.valid)
   {
     return;
   }
-  for (int y = params.minY; y <= yMax; ++y)
+  for (int y = band.y_bottom; y <= band.y_top; ++y)
   {
     const bool carve = params.style == CaveStyle::Worm
                            ? ShouldCarveWorm(x, y, z, surfaceY, Seed)
@@ -84,7 +104,7 @@ void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
       ctx.World.SetBlock(pos, BLOCK_AIR);
     }
   }
-  ctx.AccumulateDirtyColumn(params.minY, surfaceY);
+  ctx.AccumulateDirtyColumn(band.y_bottom, surfaceY);
 }
 
 } // namespace cutum

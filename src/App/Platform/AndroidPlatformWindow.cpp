@@ -155,6 +155,7 @@ void UAndroidPlatformWindow::OnAppCmd(int32_t cmd)
     }
     break;
   case APP_CMD_TERM_WINDOW:
+    Touch.ResetJoystick();
     Egl.Shutdown();
     break;
   case APP_CMD_WINDOW_RESIZED:
@@ -222,30 +223,46 @@ void UAndroidPlatformWindow::Run()
 
 void UAndroidPlatformWindow::ProcessFrame()
 {
-  const auto now = std::chrono::high_resolution_clock::now();
-  FrameDeltaTime = std::chrono::duration<double>(now - LastFrame).count();
-  LastFrame = now;
-
-  if (App)
+  try
   {
-    if (android_input_buffer *input = android_app_swap_input_buffers(App))
+    const auto now = std::chrono::high_resolution_clock::now();
+    FrameDeltaTime = std::chrono::duration<double>(now - LastFrame).count();
+    LastFrame = now;
+
+    if (App)
     {
-      ProcessInputBuffer(input);
-      android_app_clear_motion_events(input);
-      android_app_clear_key_events(input);
+      if (android_input_buffer *input = android_app_swap_input_buffers(App))
+      {
+        ProcessInputBuffer(input);
+        android_app_clear_motion_events(input);
+        android_app_clear_key_events(input);
+      }
     }
-  }
 
-  ProcessInput();
-  if (Application)
-  {
-    AndroidSoftKeyboardProcess(Application.get());
-    Application->Update(FrameDeltaTime);
+    ProcessInput();
+    if (World)
+    {
+      World->SetWallFrameDelta(FrameDeltaTime);
+    }
+    if (Application)
+    {
+      AndroidSoftKeyboardProcess(Application.get());
+      Application->Update(FrameDeltaTime);
+    }
+    Update();
+    Render();
+    SwapBuffers();
+    Touch.Update();
   }
-  Update();
-  Render();
-  SwapBuffers();
-  Touch.Update();
+  catch (const std::exception &e)
+  {
+    CubatariumLogError("Android",
+                       std::string("ProcessFrame exception: ") + e.what());
+  }
+  catch (...)
+  {
+    CubatariumLogError("Android", "ProcessFrame unknown exception");
+  }
 }
 
 void UAndroidPlatformWindow::PollEvents() {}
@@ -480,6 +497,7 @@ bool UAndroidPlatformWindow::HandleGameMotionEvent(
   }
   const float x = GameActivityPointerAxes_getX(&event.pointers[pointer]);
   const float y = GameActivityPointerAxes_getY(&event.pointers[pointer]);
+  const int pointerId = static_cast<int>(event.pointers[pointer].id);
   if (masked == AMOTION_EVENT_ACTION_DOWN ||
       masked == AMOTION_EVENT_ACTION_POINTER_DOWN)
   {
@@ -488,11 +506,11 @@ bool UAndroidPlatformWindow::HandleGameMotionEvent(
     {
       uiConsumed = Application->RouteMouseButton(
           static_cast<int>(MouseButton::Left), true, static_cast<int>(x),
-          static_cast<int>(y), pointer);
+          static_cast<int>(y), pointerId);
     }
-    const int pointerIndex = NormalizePointerIndex(pointer);
+    const int pointerIndex = NormalizePointerIndex(pointerId);
     UiPointerCapture[pointerIndex] = uiConsumed;
-    Touch.OnTouchDown(pointer, x, y, !uiConsumed);
+    Touch.OnTouchDown(pointerId, x, y, !uiConsumed);
   }
   else if (masked == AMOTION_EVENT_ACTION_MOVE)
   {
@@ -500,40 +518,52 @@ bool UAndroidPlatformWindow::HandleGameMotionEvent(
     {
       const float px = GameActivityPointerAxes_getX(&event.pointers[i]);
       const float py = GameActivityPointerAxes_getY(&event.pointers[i]);
-      const int pointerIndex = NormalizePointerIndex(static_cast<int>(i));
-      Touch.OnTouchMove(static_cast<int>(i), px, py,
+      const int movePointerId = static_cast<int>(event.pointers[i].id);
+      const int pointerIndex = NormalizePointerIndex(movePointerId);
+      Touch.OnTouchMove(movePointerId, px, py,
                         !UiPointerCapture[pointerIndex]);
       if (Application && UiPointerCapture[pointerIndex])
       {
         Application->RouteMouseMove(static_cast<int>(px), static_cast<int>(py),
-                                    static_cast<int>(i));
+                                    movePointerId);
       }
     }
   }
   else if (masked == AMOTION_EVENT_ACTION_UP ||
            masked == AMOTION_EVENT_ACTION_POINTER_UP)
   {
-    const int pointerIndex = NormalizePointerIndex(pointer);
+    const int pointerIndex = NormalizePointerIndex(pointerId);
     if (Application)
     {
       Application->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
                                     static_cast<int>(x), static_cast<int>(y),
-                                    pointer);
+                                    pointerId);
     }
-    Touch.OnTouchUp(pointer, x, y);
+    Touch.OnTouchUp(pointerId, x, y);
     UiPointerCapture[pointerIndex] = false;
   }
   else if (masked == AMOTION_EVENT_ACTION_CANCEL)
   {
-    const int pointerIndex = NormalizePointerIndex(pointer);
+    for (uint32_t i = 0; i < event.pointerCount; ++i)
+    {
+      const int cancelPointerId = static_cast<int>(event.pointers[i].id);
+      const float cx = GameActivityPointerAxes_getX(&event.pointers[i]);
+      const float cy = GameActivityPointerAxes_getY(&event.pointers[i]);
+      const int pointerIndex = NormalizePointerIndex(cancelPointerId);
+      if (Application)
+      {
+        Application->RouteMouseButton(
+            static_cast<int>(MouseButton::Left), false, static_cast<int>(cx),
+            static_cast<int>(cy), cancelPointerId);
+      }
+      Touch.OnTouchUp(cancelPointerId, cx, cy, true);
+      UiPointerCapture[pointerIndex] = false;
+    }
+    Touch.ResetJoystick();
     if (Application)
     {
-      Application->RouteMouseButton(static_cast<int>(MouseButton::Left), false,
-                                    static_cast<int>(x), static_cast<int>(y),
-                                    pointer);
+      Application->ReleaseHudJoystickCapture();
     }
-    Touch.OnTouchUp(pointer, x, y, true);
-    UiPointerCapture[pointerIndex] = false;
   }
   return true;
 }
@@ -547,6 +577,28 @@ void UAndroidPlatformWindow::ProcessInputBuffer(android_input_buffer *buffer)
   for (uint64_t i = 0; i < buffer->motionEventsCount; ++i)
   {
     HandleGameMotionEvent(buffer->motionEvents[i]);
+  }
+  for (uint64_t i = 0; i < buffer->keyEventsCount; ++i)
+  {
+    const GameActivityKeyEvent &event = buffer->keyEvents[i];
+    if (event.keyCode != AKEYCODE_BACK || !Application)
+    {
+      continue;
+    }
+    int action = 0;
+    if (event.action == AKEY_EVENT_ACTION_DOWN)
+    {
+      action = GLFW_PRESS;
+    }
+    else if (event.action == AKEY_EVENT_ACTION_UP)
+    {
+      action = GLFW_RELEASE;
+    }
+    else
+    {
+      continue;
+    }
+    Application->RouteKey(GLFW_KEY_ESCAPE, action, 0);
   }
 }
 

@@ -8,11 +8,18 @@
 #include <optional>
 #include <string>
 
+#include "App/CreateWorldCli.h"
+#include "App/ResourcePackBootstrap.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
+#include "App/WorldLifecycleFacade.h"
+#include "Render/Engine/RenderMeshSink.h"
 #include "Blocks/BlockDefinition.h"
+#include "Game/Interfaces/IUGameContent.h"
 #include <array>
+#include "World/Environment/EnvironmentConfig.h"
+#include "World/Physics/PhysicsProfile.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
@@ -27,24 +34,28 @@ class UWorld;
 class UTextureBaseStorage;
 class UTextureCubeStorage;
 class UCreatureTextureStorage;
-class UObjectStorage;
-class UPrefabLibrary;
+class UCreatureDefinitionStorage;
+class UObjectLibrary;
 class UGeometryEngine;
 class UViewEngine;
 class UBlockDefinitionStorage;
 class UBlockMergeRegistry;
 class UPlaceholderTextureCache;
 
-class UCore
+class UCore : public IUGameContent
 {
+  friend class UWorldLifecycleFacade;
+  friend class UResourcePackBootstrap;
+
 public:
   UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
         std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
-        std::shared_ptr<UObjectStorage> object_storage,
-        std::shared_ptr<UPrefabLibrary> prefab_library,
+        std::shared_ptr<UObjectLibrary> object_library,
         std::shared_ptr<UWorld> world,
         std::shared_ptr<UGeometryEngine> geometries,
         std::shared_ptr<UViewEngine> views);
+
+  ~UCore();
 
 public:
   void LoadConfig(const std::string &config_file_name);
@@ -85,11 +96,18 @@ public:
     return ProceduralTemplate;
   }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
+  bool IsFoliageClimbEnabled() const { return FoliageClimbEnabled; }
   bool IsEntityCollisionEnabled() const { return EntityCollisionEnabled; }
-  std::shared_ptr<UPrefabLibrary> GetPrefabLibrary() const
+  float GetActivityTickHz() const { return ActivityTickHz; }
+  std::shared_ptr<UObjectLibrary> GetObjectLibrary() const
   {
-    return PrefabLibraryInstance;
+    return ObjectLibraryInstance;
   }
+  const UBlockDefinitionStorage &Blocks() const override;
+  const UObjectLibrary &Objects() const override;
+  const UCreatureDefinitionStorage &Creatures() const override;
+  const WorldGenPack &ActiveWorldGenPack() const override;
+
   std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
   {
     return BlockDefinitionsInstance;
@@ -122,10 +140,16 @@ public:
   std::vector<InstalledPackInfo> ListInstalledResourcePacks() const;
   bool ApplyResourcePacks(const std::vector<std::string> &enabledIds);
   bool ApplyResourcePacks(const ResourcePackSelection &selection);
+  bool AreResourcePacksReady() const
+  {
+    return ResourcePacksReady;
+  }
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const std::vector<std::string> &resourcePacks);
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const ResourcePackSelection &selection);
+  bool CreateWorldHeadless(const CreateWorldCliArgs &args,
+                           CreateWorldReport &report);
   std::vector<std::string>
   PeekWorldResourcePacks(const std::string &world_name) const;
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
@@ -137,6 +161,7 @@ public:
   void PrepareStartupWorldCreation();
   void PrepareLoadWorld(const std::string &world_name);
   void FinalizeLoadedWorld();
+  void ApplyDefaultEnvironmentToWorld();
   void FinalizeEnterGameSession();
   std::string SetupNewWorldForCreation();
   void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,
@@ -156,8 +181,7 @@ private:
 
   std::filesystem::path TextureBaseStorageFileName;
   std::filesystem::path TextureCubeStorageFileName;
-  std::filesystem::path ObjectStorageFileName;
-  std::filesystem::path PrefabsPath;
+  std::filesystem::path ObjectsPath;
   std::filesystem::path WorldPath;
   std::filesystem::path ActiveWorldFolder;
   std::filesystem::path ConfigFilePath;
@@ -172,7 +196,17 @@ private:
   bool StreamingEnabled{true};
   std::string ChunkStorageFormat{"binary"};
   bool StepUpEnabled{true};
+  bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
+  float ActivityTickHz{20.0f};
+  float DefaultTimeOfDay{0.35f};
+  float DefaultDayLengthMinutes{10.0f};
+  std::string DefaultWeather{"clear"};
+  float DefaultLightingMinAmbient{0.12f};
+  EnvironmentConfig DefaultEnvironmentConfig{};
+  PhysicsProfile ActivePhysicsProfile{PhysicsProfile::Standard};
+  PhysicsFeatureFlags PhysicsFlags;
+  PhysicsBudgets PhysicsBudgetsConfig;
   RenderSettings Render;
   UiSettings Ui;
   ResourcePacksConfig ResourcePacks;
@@ -181,6 +215,7 @@ private:
   ResourcePackSelection PendingNewWorldPackSelection;
   std::optional<ProceduralSettings> PendingNewWorldSettings;
   ResourcePackSelection ActivePackSelection;
+  bool ResourcePacksReady{false};
 
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitionsInstance;
   std::shared_ptr<UBlockMergeRegistry> BlockMergeRegistryInstance;
@@ -188,24 +223,22 @@ private:
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
-  std::shared_ptr<UObjectStorage> ObjectStorageInstance;
-  std::shared_ptr<UPrefabLibrary> PrefabLibraryInstance;
+  std::shared_ptr<UObjectLibrary> ObjectLibraryInstance;
   std::shared_ptr<UGeometryEngine> GeometryEngineInstance;
   std::shared_ptr<UViewEngine> ViewEngineInstance;
   std::shared_ptr<UWorld> WorldInstance;
 
+  URenderMeshSink RenderMeshSink;
+  void WireRenderMeshSink();
+  void UnwireRenderMeshSink();
+
   bool ShouldCreateWorldOnStartup() const;
   std::filesystem::path WorldFolderPath(const std::string &world_name) const;
-  std::string AllocateNextWorldName() const;
-  void CreateNewWorldWithCurrentSettings();
-  void RebuildBlockTexturesFromMergeRegistry();
-  void ApplyResourcePacksAfterWorldDataLoaded();
-  void ReloadCreatureCatalog(const std::vector<ResourcePackManifest> &packs);
-  std::vector<std::string>
-  NormalizeEnabledPackIds(const std::vector<std::string> &requested) const;
-  void FlushRuntimeBlockOverlay();
   int RuntimeBlockBatchDepth{0};
   bool RuntimeBlockFlushPending{false};
+
+  UWorldLifecycleFacade WorldLifecycle;
+  UResourcePackBootstrap ResourcePackBootstrap;
 };
 
 } // namespace cutum

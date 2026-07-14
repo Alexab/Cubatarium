@@ -1,6 +1,6 @@
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
-#include "WorldGen/Pipelines/ComposableWorldGenPipeline.h"
 #include <array>
 
 namespace cutum
@@ -8,6 +8,16 @@ namespace cutum
 
 namespace
 {
+
+void ApplyTerrainBackend(ComposableWorldGenConfig &config,
+                         const ProceduralSettings &settings)
+{
+  if (settings.TerrainBackendMode == TerrainBackend::Density3D &&
+      config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
+  {
+    config.TerrainMode = ComposableTerrainMode::Density3D;
+  }
+}
 
 void ApplyFlatDefaults(ProceduralSettings &s)
 {
@@ -65,14 +75,13 @@ void ApplyBetaRetroDefaults(ProceduralSettings &s)
   s.Tuning.decorationDensity = 0.6f;
 }
 
-std::unique_ptr<IWorldGenPipeline> MakeComposable(WorldGenContext ctx,
+std::unique_ptr<IUWorldGenPipeline> MakeComposable(WorldGenContext ctx,
                                                   ComposableWorldGenConfig config)
 {
-  config = ApplyPackPipelineMask(config);
   return std::make_unique<UComposableWorldGenerator>(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateFlat(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateFlat(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::Flat;
@@ -80,7 +89,7 @@ std::unique_ptr<IWorldGenPipeline> CreateFlat(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::LegacyHash;
@@ -88,25 +97,27 @@ std::unique_ptr<IWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateHills(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateHills(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
   config.HeightPreset = HeightPreset::Hills;
   config.Fluids = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateMountains(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateMountains(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
   config.HeightPreset = HeightPreset::Mountains;
   config.Fluids = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -117,15 +128,16 @@ std::unique_ptr<IWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Ores = ctx.Settings.EnableOres;
   config.Ravines = ctx.Settings.Ravines.enabled;
   config.Vegetation = ctx.Settings.EnableTrees;
-  config.GroundCover = ctx.Settings.EnableTrees;
+  config.GroundCover = ctx.Settings.EnableGroundCover;
   config.Decoration = ctx.Settings.EnableDecoration;
   config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;
   config.FirePatch = ctx.Settings.FillFire;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
-std::unique_ptr<IWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
+std::unique_ptr<IUWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
 {
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::NoiseHeightmap;
@@ -137,6 +149,7 @@ std::unique_ptr<IWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
   config.Structures = true;
   config.LavaPools = true;
   config.FirePatch = true;
+  ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }
 
@@ -231,7 +244,7 @@ int UWorldGeneratorRegistry::IndexOf(ProceduralGenerator id)
   return 0;
 }
 
-std::unique_ptr<IWorldGenPipeline> UWorldGeneratorRegistry::Create(
+std::unique_ptr<IUWorldGenPipeline> UWorldGeneratorRegistry::Create(
     WorldGenContext ctx)
 {
   const WorldGeneratorDescriptor *descriptor = Find(ctx.Settings.Generator);

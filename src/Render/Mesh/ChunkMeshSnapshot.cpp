@@ -1,6 +1,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
 
 namespace cutum
 {
@@ -29,6 +30,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
     return snapshot;
   }
   snapshot.blocks = chunk->GetData();
+  snapshot.fluid_packed = chunk->GetFluidData();
+  snapshot.light_packed = chunk->GetLightData();
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   for (int axis = 0; axis < 3; ++axis)
@@ -49,6 +52,19 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
           local[vAxis] = v;
           const glm::ivec3 worldPos = origin + local;
           snapshot.shellBlocks[worldPos] = world.GetBlock(worldPos);
+          const glm::ivec3 lightChunkCoord = UChunkManager::WorldToChunk(worldPos);
+          if (const UChunk *lightChunk =
+                  world.GetChunkManager().GetChunk(lightChunkCoord))
+          {
+            snapshot.shellLight[worldPos] = lightChunk->GetLightPackedLocal(
+                UChunkManager::WorldToLocal(worldPos));
+          }
+          const uint8_t packed =
+              PackFluidCellState(world.GetFluidState(worldPos));
+          if (packed != 0)
+          {
+            snapshot.shellFluid[worldPos] = packed;
+          }
         }
       }
     }
@@ -73,12 +89,62 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
 
 BlockId ChunkMeshSnapshot::GetBlockLocal(glm::ivec3 local) const
 {
-  return blocks[local.x + CHUNK_SIZE * local.y + CHUNK_SIZE * CHUNK_SIZE * local.z];
+  return blocks[local.x + CHUNK_SIZE * local.y +
+                CHUNK_SIZE * CHUNK_SIZE * local.z];
 }
 
-glm::ivec3 ChunkMeshSnapshot::ChunkOrigin() const
+uint8_t ChunkMeshSnapshot::GetLightPackedLocal(glm::ivec3 local) const
 {
-  return coord * CHUNK_SIZE;
+  return light_packed[local.x + CHUNK_SIZE * local.y +
+                      CHUNK_SIZE * CHUNK_SIZE * local.z];
 }
+
+uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
+{
+  const glm::ivec3 local = worldPos - ChunkOrigin();
+  if (InChunkLocal(local))
+  {
+    return GetLightPackedLocal(local);
+  }
+  const auto it = shellLight.find(worldPos);
+  if (it != shellLight.end())
+  {
+    return it->second;
+  }
+  return 0;
+}
+
+uint8_t ChunkMeshSnapshot::GetFluidPackedLocal(glm::ivec3 local) const
+{
+  return fluid_packed[local.x + CHUNK_SIZE * local.y +
+                      CHUNK_SIZE * CHUNK_SIZE * local.z];
+}
+
+FluidCellState ChunkMeshSnapshot::GetFluidLocal(glm::ivec3 local) const
+{
+  return UnpackFluidCellState(GetFluidPackedLocal(local));
+}
+
+uint8_t ChunkMeshSnapshot::GetFluidPacked(glm::ivec3 worldPos) const
+{
+  const glm::ivec3 local = worldPos - ChunkOrigin();
+  if (InChunkLocal(local))
+  {
+    return GetFluidPackedLocal(local);
+  }
+  const auto it = shellFluid.find(worldPos);
+  if (it != shellFluid.end())
+  {
+    return it->second;
+  }
+  return 0;
+}
+
+FluidCellState ChunkMeshSnapshot::GetFluid(glm::ivec3 worldPos) const
+{
+  return UnpackFluidCellState(GetFluidPacked(worldPos));
+}
+
+glm::ivec3 ChunkMeshSnapshot::ChunkOrigin() const { return coord * CHUNK_SIZE; }
 
 } // namespace cutum

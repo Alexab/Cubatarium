@@ -1,20 +1,17 @@
-﻿{
-    "name":  "oreEmerald",
-    "id":  133,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "oreEmerald",
-                     "oreEmerald",
-                     "oreEmerald",
-                     "oreEmerald",
-                     "oreEmerald",
-                     "oreEmerald"
-                 ],
-    "displayName":  "Emerald Ore",
-    "render":  {
-
-               }
+{
+  "name": "oreEmerald",
+  "id": 133,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreEmerald",
+    "oreEmerald",
+    "oreEmerald",
+    "oreEmerald",
+    "oreEmerald",
+    "oreEmerald"
+  ],
+  "displayName": "Emerald Ore",
+  "render": {}
 }
-

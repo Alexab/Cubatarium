@@ -1,19 +1,16 @@
-﻿{
-    "name":  "hopper",
-    "id":  910,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "hopper",
-                     "hopper",
-                     "hopper",
-                     "hopper",
-                     "hopper_top",
-                     "hopper_inside"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "hopper",
+  "id": 910,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper_top",
+    "hopper_inside"
+  ],
+  "render": {}
 }
-

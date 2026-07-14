@@ -1,20 +1,17 @@
-﻿{
-    "name":  "oreCoal",
-    "id":  131,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "oreCoal",
-                     "oreCoal",
-                     "oreCoal",
-                     "oreCoal",
-                     "oreCoal",
-                     "oreCoal"
-                 ],
-    "displayName":  "Coal Ore",
-    "render":  {
-
-               }
+{
+  "name": "oreCoal",
+  "id": 131,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal",
+    "oreCoal"
+  ],
+  "displayName": "Coal Ore",
+  "render": {}
 }
-

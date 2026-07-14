@@ -1,6 +1,8 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -143,8 +145,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
-    def.habitat =
-        ParseCreatureHabitat(data.value("habitat", "terrestrial"));
+    def.habitat = ParseCreatureHabitat(data.value("habitat", "terrestrial"));
     def.behavior.Id = data.value("behavior", def.behavior.Id);
     if (data.contains("behavior_params") && data["behavior_params"].is_object())
     {
@@ -154,6 +155,18 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           bp.value("wander_interval_min", def.behavior.wanderIntervalMin);
       def.behavior.wanderIntervalMax =
           bp.value("wander_interval_max", def.behavior.wanderIntervalMax);
+      def.behavior.fleeRadius =
+          bp.value("flee_radius", def.behavior.fleeRadius);
+      def.behavior.fleeSpeedMultiplier =
+          bp.value("flee_speed_multiplier", def.behavior.fleeSpeedMultiplier);
+      def.behavior.safeDistance =
+          bp.value("safe_distance", def.behavior.safeDistance);
+      def.behavior.aggroRadius =
+          bp.value("aggro_radius", def.behavior.aggroRadius);
+      def.behavior.attackRange =
+          bp.value("attack_range", def.behavior.attackRange);
+      def.behavior.attackCooldown =
+          bp.value("attack_cooldown", def.behavior.attackCooldown);
     }
     if (data.contains("locomotion"))
     {
@@ -208,6 +221,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           vis.value("texture_layout", def.visual.textureLayout);
       def.visual.defaultTextureKey =
           vis.value("default_texture", def.visual.defaultTextureKey);
+      def.visual.rigidModelPath = vis.value("rigid_model", "");
       if (vis.contains("icon") && vis["icon"].is_object())
       {
         const auto &icon = vis["icon"];
@@ -237,6 +251,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
             "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
         def.visual.Animation.wingIdleSwingDeg = anim.value(
             "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
+        def.visual.Animation.lookAtDeg =
+            anim.value("look_at_deg", def.visual.Animation.lookAtDeg);
         if (anim.contains("clips") && anim["clips"].is_object())
         {
           for (const auto &[clipId, clipJson] : anim["clips"].items())
@@ -253,7 +269,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           {
             if (clipId.is_string())
             {
-              def.visual.Animation.stateMap[stateName] = clipId.get<std::string>();
+              def.visual.Animation.stateMap[stateName] =
+                  clipId.get<std::string>();
             }
           }
         }
@@ -265,6 +282,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         def.visual.gltf.modelScale = gltf.value("model_scale", 1.f);
         def.visual.gltf.modelYawOffsetDeg =
             gltf.value("model_yaw_offset_deg", 0.f);
+        def.visual.gltf.modelOffsetY = gltf.value("model_offset_y", 0.f);
         if (gltf.contains("textures") && gltf["textures"].is_array())
         {
           for (const auto &tex : gltf["textures"])
@@ -274,6 +292,10 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
               def.visual.gltf.texturePaths.push_back(tex.get<std::string>());
             }
           }
+        }
+        if (gltf.contains("model_yaw_offset_deg"))
+        {
+          def.visual.modelYawOffsetDeg = def.visual.gltf.modelYawOffsetDeg;
         }
       }
       if (vis.contains("rig") && vis["rig"].is_object())
@@ -289,6 +311,27 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
             {
               def.visual.rig.partIds.push_back(partId.get<std::string>());
             }
+          }
+        }
+      }
+      if (vis.contains("sprite") && vis["sprite"].is_object())
+      {
+        const auto &sprite = vis["sprite"];
+        def.visual.sprite.billboard = sprite.value("billboard", false);
+        if (sprite.contains("emissive_tint") &&
+            sprite["emissive_tint"].is_array())
+        {
+          const auto &t = sprite["emissive_tint"];
+          if (t.size() >= 4)
+          {
+            def.visual.sprite.emissiveTint =
+                glm::vec4(t[0].get<float>(), t[1].get<float>(),
+                          t[2].get<float>(), t[3].get<float>());
+          }
+          else if (t.size() >= 3)
+          {
+            def.visual.sprite.emissiveTint = glm::vec4(
+                t[0].get<float>(), t[1].get<float>(), t[2].get<float>(), 1.f);
           }
         }
       }
@@ -321,12 +364,49 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           def.visual.Parts.push_back(part);
         }
       }
+      if (!def.visual.rigidModelPath.empty())
+      {
+        const std::string speciesDir =
+            std::filesystem::path(path).parent_path().string();
+        std::vector<CreatureVisualPartDef> rigidParts;
+        if (CreatureRigidModelCache::Instance().LoadParts(
+                speciesDir, def.visual.rigidModelPath, rigidParts))
+        {
+          def.visual.Parts = std::move(rigidParts);
+        }
+      }
+      if (vis.contains("geometry") || vis.contains("geometry_file") ||
+          vis.contains("texture_size") || vis.contains("animation_profile"))
+      {
+        def.visual.boneSkeleton.geometryId = vis.value("geometry", "");
+        def.visual.boneSkeleton.geometryFile =
+            vis.value("geometry_file", def.visual.boneSkeleton.geometryFile);
+        def.visual.boneSkeleton.textureStem =
+            vis.value("texture", def.visual.boneSkeleton.textureStem);
+        def.visual.boneSkeleton.animationProfile =
+            vis.value("animation_profile", "");
+        if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
+            vis["texture_size"].size() >= 2)
+        {
+          def.visual.boneSkeleton.textureSize.x =
+              vis["texture_size"][0].get<int>();
+          def.visual.boneSkeleton.textureSize.y =
+              vis["texture_size"][1].get<int>();
+        }
+      }
       if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
           def.visual.gltf.modelPath.empty())
       {
         std::cerr << "UCreatureDefinitionStorage: " << path
-                  << ": gltf_skeleton without visual.gltf.model for "
-                  << def.Id << std::endl;
+                  << ": gltf_skeleton without visual.gltf.model for " << def.Id
+                  << std::endl;
+      }
+      if (parsedBackend == CreatureVisualBackend::BoneSkeleton &&
+          def.visual.boneSkeleton.geometryId.empty())
+      {
+        std::cerr << "UCreatureDefinitionStorage: " << path
+                  << ": bone_skeleton without visual.geometry for " << def.Id
+                  << std::endl;
       }
     }
     Definitions[def.Id] = def;
@@ -360,19 +440,12 @@ std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
     (void)def;
     ids.push_back(Id);
   }
-  std::sort(ids.begin(), ids.end(),
-            [this](const std::string &a, const std::string &b)
-            {
-              const auto *defA = Get(a);
-              const auto *defB = Get(b);
-              const int orderA = defA ? defA->catalog.sortOrder : 0;
-              const int orderB = defB ? defB->catalog.sortOrder : 0;
-              if (orderA != orderB)
-              {
-                return orderA < orderB;
-              }
-              return a < b;
-            });
+  SortDefinitionIdsByCatalogOrder(ids,
+                                  [this](const std::string &id) -> int
+                                  {
+                                    const auto *def = Get(id);
+                                    return def ? def->catalog.sortOrder : 0;
+                                  });
   return ids;
 }
 
@@ -386,19 +459,12 @@ std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
       ids.push_back(Id);
     }
   }
-  std::sort(ids.begin(), ids.end(),
-            [this](const std::string &a, const std::string &b)
-            {
-              const auto *defA = Get(a);
-              const auto *defB = Get(b);
-              const int orderA = defA ? defA->catalog.sortOrder : 0;
-              const int orderB = defB ? defB->catalog.sortOrder : 0;
-              if (orderA != orderB)
-              {
-                return orderA < orderB;
-              }
-              return a < b;
-            });
+  SortDefinitionIdsByCatalogOrder(ids,
+                                  [this](const std::string &id) -> int
+                                  {
+                                    const auto *def = Get(id);
+                                    return def ? def->catalog.sortOrder : 0;
+                                  });
   return ids;
 }
 

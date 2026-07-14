@@ -39,8 +39,7 @@ void ApplyGroundBirdWalk(CreaturePoseParams &pose,
   const float bodyBob = def.visual.Animation.bodyBobBlocks;
   const float wingIdle = def.visual.Animation.wingIdleSwingDeg;
   const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
-  float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
+  float swingScale = std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
   if (facts.state == LocomotionState::Run &&
       facts.horizontalSpeed > walkSpeed * 1.2f)
   {
@@ -59,11 +58,9 @@ void ApplyGroundBirdWalk(CreaturePoseParams &pose,
 
   const float wingBase = -8.0f;
   CreaturePartPose wingL;
-  wingL.eulerDeg =
-      glm::vec3(wingBase + sinP * wingIdle, 0.0f, 0.0f);
+  wingL.eulerDeg = glm::vec3(wingBase + sinP * wingIdle, 0.0f, 0.0f);
   CreaturePartPose wingR;
-  wingR.eulerDeg =
-      glm::vec3(wingBase - sinP * wingIdle, 0.0f, 0.0f);
+  wingR.eulerDeg = glm::vec3(wingBase - sinP * wingIdle, 0.0f, 0.0f);
   pose.SetPart("wing_l", wingL);
   pose.SetPart("wing_r", wingR);
 
@@ -104,20 +101,38 @@ void ApplyGroundBirdIdle(CreaturePoseParams &pose, float phase)
   }
 }
 
-void ApplyFlyingPose(CreaturePoseParams &pose, const CreatureDefinition &def,
-                     float phase, float flapDeg)
+void ApplyFlyingPose(CreaturePoseParams &pose,
+                     const CreatureLocomotionFacts &facts,
+                     const CreatureDefinition &def, float phase, float flapDeg)
 {
+  const float walkRef = std::max(def.locomotion.walkSpeed, 0.01f);
+  const float speedFactor =
+      std::clamp(facts.horizontalSpeed / walkRef, 0.55f, 1.75f);
   const float sinP = std::sin(phase);
-  CreaturePartPose wingL;
-  wingL.eulerDeg = glm::vec3(sinP * flapDeg, 0.0f, 0.0f);
-  CreaturePartPose wingR;
-  wingR.eulerDeg = glm::vec3(-sinP * flapDeg, 0.0f, 0.0f);
-  pose.SetPart("wing_l", wingL);
-  pose.SetPart("wing_r", wingR);
+  const float cosP = std::cos(phase);
+  const float upperFlap = sinP * flapDeg * speedFactor;
+  const float lowerFlap = sinP * flapDeg * 0.58f * speedFactor + cosP * 5.0f;
+  const float bankDeg = std::sin(phase * 0.5f) * 10.0f * speedFactor;
+
+  CreaturePartPose wingUpperL;
+  wingUpperL.eulerDeg = glm::vec3(upperFlap, 0.0f, -bankDeg);
+  CreaturePartPose wingUpperR;
+  wingUpperR.eulerDeg = glm::vec3(-upperFlap, 0.0f, bankDeg);
+  pose.SetPart("wing_l", wingUpperL);
+  pose.SetPart("wing_r", wingUpperR);
+  pose.SetPart("wing_upper_l", wingUpperL);
+  pose.SetPart("wing_upper_r", wingUpperR);
+
+  CreaturePartPose wingLowerL;
+  wingLowerL.eulerDeg = glm::vec3(lowerFlap, 0.0f, -bankDeg * 0.45f);
+  CreaturePartPose wingLowerR;
+  wingLowerR.eulerDeg = glm::vec3(-lowerFlap, 0.0f, bankDeg * 0.45f);
+  pose.SetPart("wing_lower_l", wingLowerL);
+  pose.SetPart("wing_lower_r", wingLowerR);
 
   CreaturePartPose torso;
-  torso.eulerDeg =
-      glm::vec3(def.visual.Animation.flyBodyPitchDeg * 0.5f, 0.0f, 0.0f);
+  torso.eulerDeg = glm::vec3(def.visual.Animation.flyBodyPitchDeg * 0.5f, 0.0f,
+                             bankDeg * 0.2f);
   pose.SetPart("torso", torso);
 }
 
@@ -159,7 +174,7 @@ UAerialPosePresenter::Compute(const CreatureLocomotionFacts &facts,
     case LocomotionState::Fly:
     case LocomotionState::Hover:
     case LocomotionState::Glide:
-      ApplyFlyingPose(pose, def, phase, flapDeg);
+      ApplyFlyingPose(pose, facts, def, phase, flapDeg);
       break;
     default:
     {

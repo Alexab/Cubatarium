@@ -1,19 +1,16 @@
-﻿{
-    "name":  "comparator",
-    "id":  621,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "comparator",
-                     "comparator",
-                     "comparator",
-                     "comparator",
-                     "comparator",
-                     "comparator"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "comparator",
+  "id": 621,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator",
+    "comparator"
+  ],
+  "render": {}
 }
-

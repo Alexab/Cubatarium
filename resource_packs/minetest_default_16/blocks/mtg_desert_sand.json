@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_desert_sand",
-    "id":  434,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_desert_sand_default_desert_sand",
-                     "mtg_desert_sand_default_desert_sand",
-                     "mtg_desert_sand_default_desert_sand",
-                     "mtg_desert_sand_default_desert_sand",
-                     "mtg_desert_sand_default_desert_sand",
-                     "mtg_desert_sand_default_desert_sand"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_desert_sand",
+  "id": 434,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_desert_sand_default_desert_sand",
+    "mtg_desert_sand_default_desert_sand",
+    "mtg_desert_sand_default_desert_sand",
+    "mtg_desert_sand_default_desert_sand",
+    "mtg_desert_sand_default_desert_sand",
+    "mtg_desert_sand_default_desert_sand"
+  ],
+  "render": {}
 }
-

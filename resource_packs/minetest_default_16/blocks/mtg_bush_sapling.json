@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_bush_sapling",
-    "id":  418,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_bush_sapling_default_bush_sapling",
-                     "mtg_bush_sapling_default_bush_sapling",
-                     "mtg_bush_sapling_default_bush_sapling",
-                     "mtg_bush_sapling_default_bush_sapling",
-                     "mtg_bush_sapling_default_bush_sapling",
-                     "mtg_bush_sapling_default_bush_sapling"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_bush_sapling",
+  "id": 418,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_bush_sapling_default_bush_sapling",
+    "mtg_bush_sapling_default_bush_sapling",
+    "mtg_bush_sapling_default_bush_sapling",
+    "mtg_bush_sapling_default_bush_sapling",
+    "mtg_bush_sapling_default_bush_sapling",
+    "mtg_bush_sapling_default_bush_sapling"
+  ],
+  "render": {}
 }
-

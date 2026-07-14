@@ -36,9 +36,30 @@ void ApplyPassGlState(const TransparentPassDesc &pass)
   }
 }
 
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+
+void DrawGlesTransparentSinglePass(IUGreedyTransparentBackend &backend,
+                                   const GreedyTransparentSettings &settings)
+{
+  // GLES: skip desktop 4-pass stencil shell — drivers/marked texels often yield
+  // zero visible fluid (AND-17: no water/lava at all on Android).
+  glDisable(GL_STENCIL_TEST);
+  glDepthMask(GL_FALSE);
+  glDepthFunc(GL_LESS);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  if (settings.logPassNames)
+  {
+    std::cout << "[Transparent] GLES single-pass color (no stencil)" << std::endl;
+  }
+  backend.DrawPreparedTransparent(GreedyShaderMode::TransparentColor,
+                                  settings.shellAlpha);
+}
+
+#endif
+
 } // namespace
 
-void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend &backend,
+void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
                                       const GreedyTransparentDrawContext &ctx,
                                       const GreedyTransparentSettings &settings)
 {
@@ -48,6 +69,17 @@ void UGreedyTransparentPipeline::Draw(IGreedyTransparentBackend &backend,
   glDisable(GL_CULL_FACE);
 
   backend.PrepareTransparent(ctx);
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  DrawGlesTransparentSinglePass(backend, settings);
+  return;
+#endif
+
+  static int stencil_bits = -1;
+  if (stencil_bits < 0)
+  {
+    glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
+  }
 
   glEnable(GL_STENCIL_TEST);
   glStencilMask(0xFF);

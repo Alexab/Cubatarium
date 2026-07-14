@@ -36,7 +36,8 @@ struct Frustum
   /// fallback near camera.
   bool IntersectsChunkAABB(const glm::vec3 &bmin, const glm::vec3 &bmax,
                            const glm::vec3 &cameraPos,
-                           float maxDistance = 0.0f) const
+                           float maxDistance = 0.0f,
+                           bool horizontalDistance = false) const
   {
     if (cameraPos.x >= bmin.x && cameraPos.x <= bmax.x &&
         cameraPos.y >= bmin.y && cameraPos.y <= bmax.y &&
@@ -48,7 +49,12 @@ struct Frustum
     if (maxDistance > 0.0f)
     {
       const glm::vec3 center = (bmin + bmax) * 0.5f;
-      if (glm::length(center - cameraPos) <= maxDistance)
+      const float dist =
+          horizontalDistance
+              ? glm::length(glm::vec2(center.x - cameraPos.x,
+                                      center.z - cameraPos.z))
+              : glm::length(center - cameraPos);
+      if (dist <= maxDistance)
       {
         return true;
       }
@@ -63,6 +69,46 @@ struct Frustum
         continue;
       }
       const glm::vec4 &plane = planes[i];
+      const glm::vec3 n(plane);
+      glm::vec3 p = bmin;
+      if (n.x >= 0.0f)
+      {
+        p.x = bmax.x;
+      }
+      if (n.y >= 0.0f)
+      {
+        p.y = bmax.y;
+      }
+      if (n.z >= 0.0f)
+      {
+        p.z = bmax.z;
+      }
+      if (glm::dot(n, p) + plane.w < 0.0f)
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Creature / entity AABB vs frustum planes (all six planes).
+  bool IntersectsAABB(const glm::vec3 &bmin, const glm::vec3 &bmax,
+                      const glm::vec3 &cameraPos,
+                      float maxDistance = 0.0f) const
+  {
+    const glm::vec3 center = (bmin + bmax) * 0.5f;
+    if (cameraPos.x >= bmin.x && cameraPos.x <= bmax.x &&
+        cameraPos.y >= bmin.y && cameraPos.y <= bmax.y &&
+        cameraPos.z >= bmin.z && cameraPos.z <= bmax.z)
+    {
+      return true;
+    }
+    if (maxDistance > 0.0f && glm::length(center - cameraPos) <= maxDistance)
+    {
+      return true;
+    }
+    for (const glm::vec4 &plane : planes)
+    {
       const glm::vec3 n(plane);
       glm::vec3 p = bmin;
       if (n.x >= 0.0f)

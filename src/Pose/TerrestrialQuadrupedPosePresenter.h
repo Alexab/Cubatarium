@@ -1,12 +1,12 @@
 #ifndef TERRESTRIALQUADRUPEDPOSEPRESENTER_H
 #define TERRESTRIALQUADRUPEDPOSEPRESENTER_H
 
-#include "Pose/ICreaturePosePresenter.h"
+#include "Pose/IUCreaturePosePresenter.h"
 
 namespace cutum
 {
 
-class UTerrestrialQuadrupedPosePresenter : public ICreaturePosePresenter
+class UTerrestrialQuadrupedPosePresenter : public IUCreaturePosePresenter
 {
 public:
   LocomotionArchetype GetArchetype() const override;

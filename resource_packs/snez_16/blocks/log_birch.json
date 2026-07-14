@@ -1,19 +1,16 @@
-﻿{
-    "name":  "log_birch",
-    "id":  917,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "tree_birch",
-                     "tree_birch",
-                     "tree_birch",
-                     "tree_birch",
-                     "wood_birch",
-                     "wood_birch"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "log_birch",
+  "id": 917,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "tree_birch",
+    "wood_birch",
+    "wood_birch"
+  ],
+  "render": {}
 }
-

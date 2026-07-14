@@ -1,0 +1,88 @@
+name: Physics nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  physics-nightly:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path C:\vcpkg\vcpkg.exe)) {
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            C:\vcpkg\bootstrap-vcpkg.bat
+          }
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      - name: Configure (Release, static)
+        shell: pwsh
+        run: ./scripts/build/windows-configure.ps1 -Config Release
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build/desktop-msvc --config Release --parallel 4
+
+      - name: Physics unit tests
+        shell: pwsh
+        run: |
+          $tests = @(
+            "fluid_state_pack_test",
+            "fluid_chunk_io_test",
+            "fluid_spread_level_test",
+            "fluid_placement_test",
+            "block_placement_raycast_test",
+            "fluid_mesh_faces_test",
+            "underwater_fog_column_test",
+            "fluid_surface_slice_test",
+            "fluid_queue_integration_test",
+            "fluid_sim_mesh_integration_test",
+            "decor_mesh_integration_test",
+            "fluid_worldgen_seal_test",
+            "fluid_permeable_decor_test",
+            "fluid_worldgen_chunk_test",
+            "deterministic_replay_test",
+            "physics_budget_guard_test",
+            "liquid_queue_backpressure_test",
+            "collision_readiness_gate_test",
+            "movement_chunk_boundary_test",
+            "falling_blocks_stability_test",
+            "block_update_queue_order_test",
+            "voxel_dda_traversal_test",
+            "chunk_rebuild_queue_test",
+            "physics_profile_parse_test",
+            "block_update_queue_purge_test",
+            "liquid_queue_priority_test",
+            "liquid_viscosity_gate_test",
+            "liquid_non_renewable_flow_test",
+            "liquid_flow_scenarios_test",
+            "physics_integration_test",
+            "physics_profile_hash_test",
+            "collision_broadphase_subchunk_test",
+            "material_reaction_rules_test",
+            "movement_integration_test"
+          )
+          foreach ($t in $tests) {
+            Write-Host "Running $t"
+            ./build/desktop-msvc/Release/${t}.exe
+          }
+
+      - name: Extended deterministic replay
+        shell: pwsh
+        env:
+          EXTENDED: "1"
+        run: ./build/desktop-msvc/Release/deterministic_replay_test.exe
+
+      - name: Upload physics nightly summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-nightly-summary
+          path: |
+            docs/PHYSICS_SLO.md
+            docs/PHYSICS_ROLLOUT.md
+          if-no-files-found: warn

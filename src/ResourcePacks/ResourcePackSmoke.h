@@ -4,10 +4,10 @@
 namespace cutum
 {
 
-class IPlatformPaths;
+class IUPlatformPaths;
 
 /// Headless resource-pack merge + worldgen refs smoke (no window/GL).
-int RunResourcePackSmoke(IPlatformPaths &paths);
+int RunResourcePackSmoke(IUPlatformPaths &paths);
 
 } // namespace cutum
 

@@ -12,6 +12,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 PACKS = REPO / "resource_packs"
+OBJECTS = REPO / "objects"
 CANONICAL = REPO / "tools" / "canonical_blocks.yaml"
 WORLDGEN_REFS = REPO / "content" / "worldgen_refs.json"
 CONFIG_EXAMPLE = REPO / "config.json.example"
@@ -97,14 +98,88 @@ def merge_smoke() -> None:
         print(f"merge smoke OK: {scenario}")
 
 
+def collect_object_block_types() -> set[str]:
+    types: set[str] = set()
+    if not OBJECTS.is_dir():
+        return types
+    for path in OBJECTS.rglob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for block in data.get("blocks", []):
+            if isinstance(block, dict) and isinstance(block.get("type"), str):
+                types.add(block["type"])
+    return types
+
+
+def texture_exists(pack_id: str, stem: str) -> bool:
+    if "/" in stem:
+        pack_id, stem = stem.split("/", 1)
+    path = PACKS / pack_id / "textures" / "blocks" / f"{stem}.png"
+    return path.is_file()
+
+
+def check_object_prefab_blocks() -> None:
+    object_types = collect_object_block_types()
+    if not object_types:
+        raise SystemExit("object prefab smoke: no block types found in objects/")
+    decor = ("stone", "tree_bark", "tree_log")
+
+    for scenario in MERGE_SCENARIOS:
+        merged: dict[str, dict] = {}
+        owner: dict[str, str] = {}
+        for tier in ("primary", "secondary"):
+            for pack_id in scenario[tier]:
+                for name, block in load_blocks(pack_id).items():
+                    if name not in merged:
+                        merged[name] = block
+                        owner[name] = pack_id
+        for name in decor:
+            if name not in merged:
+                raise SystemExit(
+                    f"object prefab smoke failed for {scenario}: "
+                    f"missing decor block {name!r}"
+                )
+            block = merged[name]
+            textures = block.get("textures") or []
+            if not isinstance(textures, list) or len(textures) < 6:
+                raise SystemExit(
+                    f"object prefab smoke: block {name!r} has invalid textures"
+                )
+            pack_id = owner[name]
+            for stem in textures[:6]:
+                if not isinstance(stem, str) or not texture_exists(pack_id, stem):
+                    raise SystemExit(
+                        f"object prefab smoke: missing texture {pack_id}/{stem} "
+                        f"for block {name!r} in {scenario}"
+                    )
+
+    minetest_merged = load_blocks("minetest_default_16")
+    known_optional = {"dandelion"}
+    missing_minetest = sorted(
+        t for t in object_types if t not in minetest_merged and t not in known_optional
+    )
+    if missing_minetest:
+        raise SystemExit(
+            "object prefab smoke: minetest primary missing object types: "
+            + ", ".join(missing_minetest)
+        )
+    print(
+        f"object prefab smoke OK ({len(object_types)} object block types, "
+        f"decor textures verified)"
+    )
+
+
 def check_texture_overrides_sync() -> None:
     run([sys.executable, "tools/sync_texture_overrides.py", "--check"])
 
 
-def check_prefabs() -> None:
-    run([sys.executable, "tools/generate_prefab_features.py"])
+def check_objects() -> None:
+    run([sys.executable, "tools/generate_object_features.py", "--merge-calibrated"])
     run([sys.executable, "tools/validate_prefabs.py"])
-    run([sys.executable, "tools/validate_prefab_features.py"])
+    run([sys.executable, "tools/validate_object_features.py", "--strict"])
+    run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 
 def main() -> int:
@@ -112,9 +187,10 @@ def main() -> int:
     check_worldgen_refs_drift()
     check_texture_overrides_sync()
     merge_smoke()
+    check_object_prefab_blocks()
     check_primary_audit()
     check_validate_primary()
-    check_prefabs()
+    check_objects()
     print("=== all smoke checks passed ===")
     return 0
 

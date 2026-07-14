@@ -1,6 +1,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Math/FluidCellState.h"
 #include <cstring>
 #include <unordered_map>
 #include <vector>
@@ -69,9 +70,9 @@ bool ReadI32(const std::vector<uint8_t> &bytes, size_t &offset, int32_t &value)
 
 } // namespace
 
-SerializedChunk BinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord,
-                                                 const UChunk &chunk,
-                                                 UBlockRegistry & /*registry*/) const
+SerializedChunk
+UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
+                                  UBlockRegistry & /*registry*/) const
 {
   SerializedChunk out;
   out.format = ChunkDiskFormat::Binary;
@@ -150,14 +151,19 @@ SerializedChunk BinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord,
     AppendU16(bytes, run.length);
     AppendU16(bytes, run.paletteIdx);
   }
+
+  AppendU32(bytes, static_cast<uint32_t>(CHUNK_VOLUME));
+  bytes.insert(bytes.end(), chunk.GetFluidData().begin(),
+               chunk.GetFluidData().end());
   return out;
 }
 
-ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
-                                               glm::ivec3 chunkCoord,
-                                               UBlockRegistry & /*registry*/) const
+UChunkBuffer
+UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
+                                    glm::ivec3 chunkCoord,
+                                    UBlockRegistry &registry) const
 {
-  ChunkBuffer buffer;
+  UChunkBuffer buffer;
   if (bytes.size() < 4 + 1 + 12 + 2)
   {
     return buffer;
@@ -170,7 +176,7 @@ ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes
 
   size_t offset = 4;
   const uint8_t version = bytes[offset++];
-  if (version != kVersion)
+  if (version != kVersion && version != kVersionLegacy)
   {
     return buffer;
   }
@@ -255,9 +261,13 @@ ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes
       if (id != BLOCK_AIR)
       {
         const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
-                                chunkCoord.y * CHUNK_SIZE + ly,
-                                chunkCoord.z * CHUNK_SIZE + lz);
+                                  chunkCoord.y * CHUNK_SIZE + ly,
+                                  chunkCoord.z * CHUNK_SIZE + lz);
         buffer.SetBlock(worldPos, id);
+        if (version == kVersionLegacy && registry.IsLiquid(id))
+        {
+          buffer.SetFluidPacked(worldPos, PackFluidCellState(FluidCellState::Source()));
+        }
       }
       advanceLocal();
       ++filled;
@@ -267,7 +277,52 @@ ChunkBuffer BinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes
   if (filled != CHUNK_VOLUME)
   {
     buffer.Clear();
+    return buffer;
   }
+
+  if (version >= kVersion)
+  {
+    uint32_t fluid_byte_count = 0;
+    if (!ReadU32(bytes, offset, fluid_byte_count))
+    {
+      buffer.Clear();
+      return buffer;
+    }
+    if (fluid_byte_count == CHUNK_VOLUME)
+    {
+      if (offset + CHUNK_VOLUME > bytes.size())
+      {
+        buffer.Clear();
+        return buffer;
+      }
+      int fx = 0;
+      int fy = 0;
+      int fz = 0;
+      for (uint32_t fi = 0; fi < fluid_byte_count; ++fi)
+      {
+        const uint8_t packed = bytes[offset++];
+        if (packed != 0)
+        {
+          const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + fx,
+                                    chunkCoord.y * CHUNK_SIZE + fy,
+                                    chunkCoord.z * CHUNK_SIZE + fz);
+          buffer.SetFluidPacked(worldPos, packed);
+        }
+        ++fx;
+        if (fx >= CHUNK_SIZE)
+        {
+          fx = 0;
+          ++fy;
+          if (fy >= CHUNK_SIZE)
+          {
+            fy = 0;
+            ++fz;
+          }
+        }
+      }
+    }
+  }
+
   return buffer;
 }
 

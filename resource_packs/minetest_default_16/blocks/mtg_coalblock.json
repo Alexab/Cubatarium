@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_coalblock",
-    "id":  424,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_coalblock_default_coal_block",
-                     "mtg_coalblock_default_coal_block",
-                     "mtg_coalblock_default_coal_block",
-                     "mtg_coalblock_default_coal_block",
-                     "mtg_coalblock_default_coal_block",
-                     "mtg_coalblock_default_coal_block"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_coalblock",
+  "id": 424,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block",
+    "mtg_coalblock_default_coal_block"
+  ],
+  "render": {}
 }
-

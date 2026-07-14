@@ -1,4 +1,5 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Core/Sort/CatalogSortUtil.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -166,19 +167,12 @@ std::vector<std::string> USkinDefinitionStorage::ListEquippable() const
       ids.push_back(Id);
     }
   }
-  std::sort(ids.begin(), ids.end(),
-            [this](const std::string &a, const std::string &b)
-            {
-              const auto *defA = Get(a);
-              const auto *defB = Get(b);
-              const int orderA = defA ? defA->catalog.sortOrder : 0;
-              const int orderB = defB ? defB->catalog.sortOrder : 0;
-              if (orderA != orderB)
-              {
-                return orderA < orderB;
-              }
-              return a < b;
-            });
+  SortDefinitionIdsByCatalogOrder(ids,
+                                  [this](const std::string &id) -> int
+                                  {
+                                    const auto *def = Get(id);
+                                    return def ? def->catalog.sortOrder : 0;
+                                  });
   return ids;
 }
 

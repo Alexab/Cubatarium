@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_acacia_bush_sapling",
-    "id":  402,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
-                     "mtg_acacia_bush_sapling_default_acacia_bush_sapling"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_acacia_bush_sapling",
+  "id": 402,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling",
+    "mtg_acacia_bush_sapling_default_acacia_bush_sapling"
+  ],
+  "render": {}
 }
-

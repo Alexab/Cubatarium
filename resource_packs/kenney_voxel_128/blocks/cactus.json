@@ -1,21 +1,18 @@
-﻿{
-    "name":  "cactus",
-    "id":  60,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "cactus_side",
-                     "cactus_side",
-                     "cactus_side",
-                     "cactus_side",
-                     "cactus_top",
-                     "cactus_bottom"
-                 ],
-    "displayName":  "Cactus",
-    "render":  {
-
-               }
+{
+  "name": "cactus",
+  "id": 60,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "cactus_side",
+    "cactus_side",
+    "cactus_side",
+    "cactus_side",
+    "cactus_top",
+    "cactus_bottom"
+  ],
+  "displayName": "Cactus",
+  "render": {}
 }
-

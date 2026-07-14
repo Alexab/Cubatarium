@@ -1,7 +1,9 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
 #include "Core/Progress/ProgressTypes.h"
 #include "World/Core/World.h"
+#include <chrono>
 #include <iostream>
 
 namespace cutum
@@ -24,11 +26,15 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
     return WorldOperationKind::Create;
   case WorldRunnerOp::EnterGame:
     return WorldOperationKind::EnterGame;
+  case WorldRunnerOp::Shutdown:
+    return WorldOperationKind::Shutdown;
   }
   return WorldOperationKind::Load;
 }
 
-constexpr int kChunkBudgetPerFrame = 8;
+constexpr int kChunkBudgetPerFrame = 16;
+constexpr int kEnterGameGpuWarmupMinFrames = 3;
+constexpr int kEnterGameGpuWarmupMaxFrames = 8;
 
 } // namespace
 
@@ -77,10 +83,14 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   case WorldRunnerOp::EnterGame:
     CurrentStage = Stage::EnterGameList;
     break;
+  case WorldRunnerOp::Shutdown:
+    CurrentStage = Stage::ShutdownQuiesce;
+    World.BeginBackgroundQuiesce(ShutdownQuiesceState);
+    break;
   }
 }
 
-void UWorldOperationRunner::Fail(const std::string &message, IProgressSink &sink)
+void UWorldOperationRunner::Fail(const std::string &message, IUProgressSink &sink)
 {
   Error = message;
   Success = false;
@@ -90,7 +100,7 @@ void UWorldOperationRunner::Fail(const std::string &message, IProgressSink &sink
   std::cerr << "World operation failed: " << message << std::endl;
 }
 
-bool UWorldOperationRunner::TickWorldOp(IProgressSink &sink, int chunkBudget)
+bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
 {
   const int budget = std::max(1, chunkBudget);
   switch (PendingWorldOp)
@@ -140,6 +150,7 @@ bool UWorldOperationRunner::TickWorldOp(IProgressSink &sink, int chunkBudget)
     }
     if (!World.HasActiveCooperativeOperation())
     {
+      World.SetWorldFolderPath(Core.GetActiveWorldFolder().string());
       World.BeginCooperativeCreate(PendingWorldName);
     }
     if (World.TickCooperativeCreate(sink, budget))
@@ -159,7 +170,33 @@ void UWorldOperationRunner::PrepareCreateWorld()
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
-bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
+bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
+{
+  if (CurrentStage != Stage::EnterGameGpuWarmup)
+  {
+    return true;
+  }
+  const int frame_index =
+      kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
+  const float frac =
+      0.94f + 0.05f * (static_cast<float>(frame_index + 1) /
+                        static_cast<float>(kEnterGameGpuWarmupMaxFrames));
+  sink.Report("prepare_view", frac, "Uploading terrain...");
+  --EnterGameGpuWarmupFramesLeft;
+  const bool min_frames_done =
+      frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
+  const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  const bool streaming_ready = World.IsEnterStreamingWarmupSettled();
+  if (EnterGameGpuWarmupFramesLeft > 0 &&
+      (!min_frames_done || !mesh_ready || !streaming_ready))
+  {
+    return false;
+  }
+  CurrentStage = Stage::EnterGameFinalize;
+  return false;
+}
+
+bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 {
   if (!Active || CurrentStage == Stage::Done || CurrentStage == Stage::Failed)
   {
@@ -242,7 +279,8 @@ bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
-      CurrentStage = Stage::EnterGameFinalize;
+      CurrentStage = Stage::EnterGameGpuWarmup;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       return false;
     }
     Success = true;
@@ -252,11 +290,20 @@ bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
     return true;
 
   case Stage::PostCreateUsers:
-    World.GenerateUsers();
+    Core.ApplyDefaultEnvironmentToWorld();
+    if (World.GetCurrentUser() == nullptr)
+    {
+      World.GenerateUsers();
+    }
+    if (auto merge_registry = Core.GetBlockMergeRegistry())
+    {
+      World.SetCatalogFingerprint(merge_registry->ComputeCatalogFingerprint());
+    }
+    WarnIfSpawnSkylightMissing(World, "before create save");
     CurrentStage = Stage::PostCreateSave;
+    PendingWorldOp = WorldRunnerOp::Save;
     sink.Begin(WorldOperationKind::Save);
     sink.Report("save", 0.f, "Saving new world...");
-    PendingWorldOp = WorldRunnerOp::Save;
     return false;
 
   case Stage::PostCreateSave:
@@ -265,13 +312,15 @@ bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
       return false;
     }
     Core.RefreshWorldListAfterSave();
+    World.RefreshPersistedTerrainAfterSave();
     if (Request.saveConfigAfter)
     {
       Core.SaveConfigFile();
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
-      CurrentStage = Stage::EnterGameFinalize;
+      CurrentStage = Stage::EnterGameGpuWarmup;
+      EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       return false;
     }
     Success = true;
@@ -279,6 +328,9 @@ bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
     CurrentStage = Stage::Done;
     sink.End(true);
     return true;
+
+  case Stage::EnterGameGpuWarmup:
+    return false;
 
   case Stage::EnterGameFinalize:
     Core.FinalizeEnterGameSession();
@@ -319,6 +371,55 @@ bool UWorldOperationRunner::Tick(IProgressSink &sink, int chunkBudgetPerFrame)
     CurrentStage = Stage::WorldOperation;
     sink.Begin(WorldOperationKind::Load);
     return false;
+
+  case Stage::ShutdownQuiesce:
+    sink.Begin(WorldOperationKind::Shutdown);
+    if (!World.TickBackgroundQuiesce(ShutdownQuiesceState,
+                                     std::chrono::milliseconds(50), &sink))
+    {
+      return false;
+    }
+    if (Request.shutdownSaveSession)
+    {
+      CurrentStage = Stage::ShutdownSave;
+      return false;
+    }
+    CurrentStage = Stage::ShutdownFinalize;
+    return false;
+
+  case Stage::ShutdownSave:
+  {
+    const std::string folder = Core.GetActiveWorldFolder().string();
+    if (!folder.empty())
+    {
+      if (!World.HasActiveCooperativeOperation())
+      {
+        sink.Report("save", 0.92f, "Saving world...");
+        World.BeginCooperativeSave(folder);
+      }
+      if (!World.TickCooperativeSave(sink, budget))
+      {
+        return false;
+      }
+    }
+    CurrentStage = Stage::ShutdownFinalize;
+    return false;
+  }
+
+  case Stage::ShutdownFinalize:
+    if (Request.shutdownCloseApplication)
+    {
+      World.PrepareForShutdown();
+    }
+    else
+    {
+      World.ResumeAfterSessionSave();
+    }
+    Success = true;
+    Active = false;
+    CurrentStage = Stage::Done;
+    sink.End(true);
+    return true;
 
   default:
     break;

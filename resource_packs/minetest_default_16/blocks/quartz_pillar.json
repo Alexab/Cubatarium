@@ -1,19 +1,16 @@
-﻿{
-    "name":  "quartz_pillar",
-    "id":  537,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "quartzblock_lines",
-                     "quartzblock_lines",
-                     "quartzblock_lines",
-                     "quartzblock_lines",
-                     "quartzblock_lines_top",
-                     "quartzblock_lines_top"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "quartz_pillar",
+  "id": 537,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "quartzblock_lines",
+    "quartzblock_lines",
+    "quartzblock_lines",
+    "quartzblock_lines",
+    "quartzblock_lines_top",
+    "quartzblock_lines_top"
+  ],
+  "render": {}
 }
-

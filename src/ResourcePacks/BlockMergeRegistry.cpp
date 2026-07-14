@@ -15,10 +15,9 @@ namespace cutum
 namespace fs = std::filesystem;
 
 const std::unordered_set<std::string> UBlockMergeRegistry::kTierAWorldgenNames =
-    {"bedrock",  "stone",      "dirt",        "grass",      "sand",
-     "sandstone", "gravel",    "snow",        "clay",       "ice",
-     "hellrock", "water",      "lava",        "fire",       "wood",
-     "tree_log", "tree_leaves"};
+    {"bedrock", "stone", "dirt", "grass",    "sand",      "sandstone",
+     "gravel",  "snow",  "clay", "ice",      "hellrock",  "water",
+     "lava",    "fire",  "wood", "tree_log", "tree_bark", "tree_leaves"};
 
 void UBlockMergeRegistry::Rebuild(
     const std::vector<ResourcePackManifest> &packs,
@@ -35,9 +34,8 @@ void UBlockMergeRegistry::Rebuild(
 
   std::vector<ResourcePackManifest> sorted = packs;
   std::sort(sorted.begin(), sorted.end(),
-            [](const ResourcePackManifest &a, const ResourcePackManifest &b) {
-              return a.EffectivePriority < b.EffectivePriority;
-            });
+            [](const ResourcePackManifest &a, const ResourcePackManifest &b)
+            { return a.EffectivePriority < b.EffectivePriority; });
 
   MergeBlockCatalog(sorted);
   ResolveBlockDefinitions(sorted);
@@ -116,8 +114,7 @@ void UBlockMergeRegistry::MergeBlockCatalog(
         entry.Definition.Name = pb.RegistryName;
         entry.Stems = pb.Block.TextureStems;
         entry.OwnerPackId = pb.Pack.Id;
-        entry.IsQualifiedDuplicate =
-            pb.RegistryName != pb.LocalName;
+        entry.IsQualifiedDuplicate = pb.RegistryName != pb.LocalName;
         BlocksByName[pb.RegistryName] = entry;
         continue;
       }
@@ -179,8 +176,9 @@ void UBlockMergeRegistry::ApplyTextureOverrides(
   }
 }
 
-std::string UBlockMergeRegistry::ResolveStemInPack(
-    const std::string &stem, const ResourcePackManifest &pack) const
+std::string
+UBlockMergeRegistry::ResolveStemInPack(const std::string &stem,
+                                       const ResourcePackManifest &pack) const
 {
   if (stem.empty())
   {
@@ -197,6 +195,17 @@ std::string UBlockMergeRegistry::ResolveStemInPack(
   }
   return {};
 }
+
+namespace
+{
+
+std::unordered_set<std::string> &LoggedPlaceholderStems()
+{
+  static std::unordered_set<std::string> logged;
+  return logged;
+}
+
+} // namespace
 
 void UBlockMergeRegistry::ResolveTextureAtlas(
     const std::vector<ResourcePackManifest> &sorted)
@@ -217,14 +226,38 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
     const ResourcePackManifest &ownerPack = packIt->second;
     for (int face = 0; face < 6; ++face)
     {
-      const std::string resolved = ResolveStemInPack(
-          pair.second.Stems[static_cast<size_t>(face)], ownerPack);
+      const std::string rawStem = pair.second.Stems[static_cast<size_t>(face)];
+      std::string resolved = ResolveStemInPack(rawStem, ownerPack);
+      if (resolved.empty())
+      {
+        for (const auto &pack : sorted)
+        {
+          if (pack.Id == ownerPack.Id)
+          {
+            continue;
+          }
+          resolved = ResolveStemInPack(rawStem, pack);
+          if (!resolved.empty())
+          {
+            break;
+          }
+        }
+      }
       if (!resolved.empty())
       {
         pair.second.Stems[static_cast<size_t>(face)] = resolved;
       }
       else if (PlaceholderCache)
       {
+        const std::string logKey =
+            pair.first + ":" + std::to_string(face) + ":" + rawStem;
+        if (LoggedPlaceholderStems().insert(logKey).second)
+        {
+          std::cerr << "BlockMergeRegistry: placeholder texture stem for '"
+                    << pair.first << "' face " << face
+                    << " (owner=" << pair.second.OwnerPackId
+                    << ", stem=" << rawStem << ")" << std::endl;
+        }
         pair.second.Stems[static_cast<size_t>(face)] =
             PlaceholderCache->GetOrCreateStem(pair.first, face,
                                               PlaceholderTileSize);
@@ -239,8 +272,8 @@ void UBlockMergeRegistry::AssignRuntimeIds()
   IdToName.clear();
   CubeDescs.clear();
 
-  const auto registerBlock =
-      [this](const std::string &name, MergedEntry &entry, BlockId id) -> bool
+  const auto registerBlock = [this](const std::string &name, MergedEntry &entry,
+                                    BlockId id) -> bool
   {
     if (IdToName.count(id))
     {
@@ -426,7 +459,7 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
   return nextId;
 }
 
-BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
+BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
 {
   if (name.empty())
   {
@@ -456,6 +489,16 @@ BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
       return localIt->second;
     }
   }
+  return BLOCK_AIR;
+}
+
+BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
+{
+  const BlockId existing = LookupBlockName(name);
+  if (existing != BLOCK_AIR)
+  {
+    return existing;
+  }
   return CreateSyntheticBlock(name);
 }
 
@@ -471,11 +514,12 @@ BlockId UBlockMergeRegistry::RegisterRuntimeBlock(
   {
     return BLOCK_AIR;
   }
-  RuntimeOverlay.erase(
-      std::remove_if(RuntimeOverlay.begin(), RuntimeOverlay.end(),
-                     [&](const auto &p) { return p.first.Name == def.Name; }),
-      RuntimeOverlay.end());
+  RuntimeOverlay.erase(std::remove_if(RuntimeOverlay.begin(),
+                                      RuntimeOverlay.end(), [&](const auto &p)
+                                      { return p.first.Name == def.Name; }),
+                       RuntimeOverlay.end());
   RuntimeOverlay.push_back({def, stems});
+  RuntimeOverlayRemoved.erase(def.Name);
   RuntimeOverlayDirty = true;
   if (NameToId.count(def.Name))
   {
@@ -484,23 +528,78 @@ BlockId UBlockMergeRegistry::RegisterRuntimeBlock(
   return BLOCK_AIR;
 }
 
-void UBlockMergeRegistry::FlushRuntimeOverlay()
+RuntimeOverlayFlushResult UBlockMergeRegistry::FlushRuntimeOverlay()
 {
-  if (!RuntimeOverlayDirty || !PlaceholderCache)
+  RuntimeOverlayFlushResult result;
+  if (!RuntimeOverlayDirty)
   {
-    return;
+    return result;
   }
-  Rebuild(ActivePacks, PlaceholderCache, PlaceholderTileSize);
+  if (!PlaceholderCache)
+  {
+    RuntimeOverlayDirty = false;
+    RuntimeOverlayRemoved.clear();
+    return result;
+  }
+
+  for (const std::string &name : RuntimeOverlayRemoved)
+  {
+    const auto idIt = NameToId.find(name);
+    if (idIt != NameToId.end())
+    {
+      result.RemovedBlockIds.push_back(idIt->second);
+    }
+  }
+
+  std::vector<ResourcePackManifest> sorted = ActivePacks;
+  std::sort(sorted.begin(), sorted.end(),
+            [](const ResourcePackManifest &a, const ResourcePackManifest &b)
+            { return a.EffectivePriority < b.EffectivePriority; });
+
+  for (const auto &rt : RuntimeOverlay)
+  {
+    MergedEntry entry;
+    entry.Definition = rt.first;
+    entry.Stems = rt.second;
+    entry.OwnerPackId = "runtime";
+    BlocksByName[rt.first.Name] = entry;
+  }
+  if (!RuntimeOverlay.empty())
+  {
+    ResolveTextureAtlas(sorted);
+  }
+  AssignRuntimeIds();
+
+  for (const auto &rt : RuntimeOverlay)
+  {
+    const auto idIt = NameToId.find(rt.first.Name);
+    if (idIt == NameToId.end())
+    {
+      continue;
+    }
+    for (const MergedCubeDesc &desc : CubeDescs)
+    {
+      if (desc.Id == idIt->second)
+      {
+        result.PatchedDescriptors.push_back(desc);
+        break;
+      }
+    }
+  }
+
   RuntimeOverlayDirty = false;
+  RuntimeOverlayRemoved.clear();
+  return result;
 }
 
 void UBlockMergeRegistry::UnregisterRuntimeBlock(const std::string &name)
 {
-  RuntimeOverlay.erase(
-      std::remove_if(RuntimeOverlay.begin(), RuntimeOverlay.end(),
-                     [&](const auto &p) { return p.first.Name == name; }),
-      RuntimeOverlay.end());
+  RuntimeOverlay.erase(std::remove_if(RuntimeOverlay.begin(),
+                                      RuntimeOverlay.end(), [&](const auto &p)
+                                      { return p.first.Name == name; }),
+                       RuntimeOverlay.end());
   BlocksByName.erase(name);
+  RuntimeOverlayRemoved.insert(name);
   RuntimeOverlayDirty = true;
 }
 
@@ -521,6 +620,45 @@ void UBlockMergeRegistry::PopulateTextureBaseStorage(
     UTextureBaseStorage &out) const
 {
   out.Clear();
+  for (const auto &pack : ActivePacks)
+  {
+    UResourcePack::RegisterTextures(pack, out);
+  }
+  if (PlaceholderCache)
+  {
+    PlaceholderCache->RegisterAll(out);
+  }
+}
+
+void UBlockMergeRegistry::RegisterMissingTextureStems(
+    UTextureBaseStorage &out,
+    const std::vector<MergedCubeDesc> &descriptors) const
+{
+  std::unordered_set<std::string> needed;
+  for (const MergedCubeDesc &desc : descriptors)
+  {
+    for (const std::string &stem : desc.Stems)
+    {
+      if (!stem.empty())
+      {
+        needed.insert(stem);
+      }
+    }
+  }
+  const auto &have = out.GetBaseTextures();
+  bool anyMissing = false;
+  for (const std::string &stem : needed)
+  {
+    if (!have.count(stem))
+    {
+      anyMissing = true;
+      break;
+    }
+  }
+  if (!anyMissing)
+  {
+    return;
+  }
   for (const auto &pack : ActivePacks)
   {
     UResourcePack::RegisterTextures(pack, out);

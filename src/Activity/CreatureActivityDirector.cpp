@@ -1,10 +1,11 @@
 #include "Activity/CreatureActivityDirector.h"
+#include <algorithm>
 
 namespace cutum
 {
 
 void UCreatureActivityDirector::RegisterAgent(
-    std::unique_ptr<ICreatureActivityAgent> agent)
+    std::unique_ptr<IUCreatureActivityAgent> agent)
 {
   if (!agent)
   {
@@ -29,19 +30,22 @@ void UCreatureActivityDirector::Clear()
 }
 
 void UCreatureActivityDirector::OnCreatureAdded(CreatureId Id,
-                                                const std::string &behaviorId)
+                                                const std::string &behaviorId,
+                                                const CreatureBehaviorParams
+                                                    *behavior)
 {
   if (Id == 0 || behaviorId.empty() || behaviorId == "none")
   {
     return;
   }
-  ICreatureActivityAgent *agent = FindAgent(behaviorId);
+  IUCreatureActivityAgent *agent = FindAgent(behaviorId);
   if (!agent)
   {
     return;
   }
   OnCreatureRemoved(Id);
-  agent->OnCreatureAdded(Id);
+  const CreatureBehaviorParams emptyBehavior{};
+  agent->OnCreatureAdded(Id, behavior ? *behavior : emptyBehavior);
   Membership[Id] = agent;
 }
 
@@ -59,17 +63,29 @@ void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
   Membership.erase(it);
 }
 
-void UCreatureActivityDirector::TickAgents(IWorldPerception &perception,
-                                           ICreatureActivitySink &sink,
+void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
+                                           IUCreatureActivitySink &sink,
                                            float dt)
 {
+  AccumulatedTickDt += dt;
+  if (AccumulatedTickDt < ActivityTickInterval)
+  {
+    return;
+  }
+  const float cognitive_dt = AccumulatedTickDt;
+  AccumulatedTickDt = 0.0f;
   for (const auto &agent : Agents)
   {
-    agent->Tick(perception, sink, dt);
+    agent->Tick(perception, sink, cognitive_dt);
   }
 }
 
-ICreatureActivityAgent *
+void UCreatureActivityDirector::SetActivityTickInterval(float seconds)
+{
+  ActivityTickInterval = std::max(seconds, 0.01f);
+}
+
+IUCreatureActivityAgent *
 UCreatureActivityDirector::FindAgent(const std::string &behaviorId) const
 {
   const auto it = AgentsByBehaviorId.find(behaviorId);

@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mushroom_stem",
-    "id":  517,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "mushroom_skin_stem",
-                     "mushroom_skin_stem",
-                     "mushroom_skin_stem",
-                     "mushroom_skin_stem",
-                     "mushroom_skin_stem",
-                     "mushroom_skin_stem"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mushroom_stem",
+  "id": 517,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem",
+    "mushroom_skin_stem"
+  ],
+  "render": {}
 }
-

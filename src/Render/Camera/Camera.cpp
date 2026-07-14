@@ -1,4 +1,5 @@
 #include "Render/Camera/Camera.h"
+#include "Render/Camera/CameraBasisLogic.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
@@ -235,9 +236,8 @@ PlayerInput UCamera::BuildPlayerInput(bool spaceJustPressed) const
   input.jumpHeld = keyDown(GLFW_KEY_SPACE);
   input.jumpPressed = spaceJustPressed;
   input.crouchHeld = IsShiftDown();
-  input.sprintHeld =
-      SprintActive || keyDown(GLFW_KEY_LEFT_CONTROL) ||
-      keyDown(GLFW_KEY_RIGHT_CONTROL);
+  input.sprintHeld = SprintActive || keyDown(GLFW_KEY_LEFT_CONTROL) ||
+                     keyDown(GLFW_KEY_RIGHT_CONTROL);
   return input;
 }
 
@@ -375,8 +375,7 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   const bool hasShift = glm::dot(shift, shift) > 1e-10f;
 
   const PlayerCapsule cap = GetPlayerCapsule();
-  const UWorld::SampledFluidState fluid =
-      world->SampleFluidPhysics(Position, cap);
+  const SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
   if (hasShift && fluid.inFluid)
   {
     const float drag =
@@ -534,52 +533,8 @@ void UCamera::ProcessMouseScroll(float Yoffset)
 
 void UCamera::UpdateCameraVectors()
 {
-  // Calculate the new Front vector
-  glm::vec3 front;
-  front.x = std::cos(radians(this->Yaw)) * std::cos(radians(this->Pitch));
-  front.y = std::sin(radians(this->Pitch));
-  front.z = std::sin(radians(this->Yaw)) * std::cos(radians(this->Pitch));
-  const float frontLen = glm::length(front);
-  if (frontLen > 1.0e-6f)
-  {
-    front /= frontLen;
-  }
-  else
-  {
-    front = glm::vec3(0.0f, 0.0f, -1.0f);
-  }
-  this->Front = front;
-
-  // Avoid gimbal lock when looking near straight up/down (cross(Front, Up) ->
-  // NaN).
-  glm::vec3 worldUp = WorldUp;
-  if (std::abs(glm::dot(Front, worldUp)) > 0.98f)
-  {
-    worldUp = glm::vec3(0.0f, 0.0f, Front.y > 0.0f ? -1.0f : 1.0f);
-  }
-
-  this->Right = glm::cross(Front, worldUp);
-  const float rightLen = glm::length(Right);
-  if (rightLen > 1.0e-6f)
-  {
-    this->Right /= rightLen;
-  }
-  else
-  {
-    this->Right = glm::vec3(1.0f, 0.0f, 0.0f);
-  }
-
-  this->Up = glm::cross(Right, Front);
-  const float upLen = glm::length(Up);
-  if (upLen > 1.0e-6f)
-  {
-    this->Up /= upLen;
-  }
-  else
-  {
-    this->Up = WorldUp;
-  }
-
+  ComputeFpsCameraBasis(static_cast<float>(Yaw), static_cast<float>(Pitch),
+                        Front, Right, Up, WorldUp);
   UpdatePose();
 }
 
@@ -699,13 +654,23 @@ void UCamera::ResetVerticalPhysics()
   Locomotion.Reset();
   InitLocomotionCollisionProfile();
   StepUpAnim.Active = false;
+  PhysicsAccumulator = 0.0f;
   SyncFreeMoveFromController();
   UpdatePose();
 }
 
+void UCamera::SuspendFallThroughUnloadedChunks()
+{
+  if (GetFreeMove())
+  {
+    return;
+  }
+  Locomotion.ClampVerticalVelocity(0.0f);
+}
+
 bool UCamera::DoMovement(const UWorld *world)
 {
-  const float dt = std::min(static_cast<float>(DeltaTime), kMaxPhysicsDelta);
+  const float frameDt = std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
   if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
   {
@@ -718,6 +683,7 @@ bool UCamera::DoMovement(const UWorld *world)
 
   if (GetFreeMove())
   {
+    const float dt = std::min(frameDt, kMaxPhysicsDelta);
     const bool groundedInFlight =
         world && world->HasGroundSupport(Position, flightCap);
     if (groundedInFlight)
@@ -770,29 +736,36 @@ bool UCamera::DoMovement(const UWorld *world)
   }
   else if (world)
   {
-    if (ApplyHorizontalMovement(world, dt))
+    PhysicsAccumulator += frameDt;
+    int substeps = 0;
+    while (PhysicsAccumulator >= kFixedPhysicsDt &&
+           substeps < kMaxPhysicsSubsteps)
     {
-      is_moved = true;
-    }
-  }
+      PhysicsAccumulator -= kFixedPhysicsDt;
+      ++substeps;
 
-  if (!GetFreeMove() && world)
-  {
-    if (IsStepUpAnimationActive())
-    {
+      if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
+      {
+        is_moved = true;
+      }
+
+      if (IsStepUpAnimationActive())
+      {
+        is_moved = true;
+        UpdatePose();
+        return is_moved;
+      }
+
+      if (Position.y < kMinReasonablePlayerY)
+      {
+        break;
+      }
+
+      Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
+                                  world->GetMovementCollisionSkipId());
       is_moved = true;
       UpdatePose();
-      return is_moved;
     }
-    if (Position.y < kMinReasonablePlayerY)
-    {
-      return is_moved;
-    }
-
-    Locomotion.UpdateLocomotion(world, Position, input, dt,
-                                world->GetMovementCollisionSkipId());
-    is_moved = true;
-    UpdatePose();
   }
 
   return is_moved;

@@ -14,10 +14,10 @@ class UCreature;
 struct CreatureDefinition;
 class UGeometryEngine;
 
-class ICreatureVisual
+class IUCreatureVisual
 {
 public:
-  virtual ~ICreatureVisual() = default;
+  virtual ~IUCreatureVisual() = default;
   virtual void UpdatePose(const UCreature &creature,
                           const CreatureLocomotionFacts &facts,
                           const CreaturePoseParams &pose,

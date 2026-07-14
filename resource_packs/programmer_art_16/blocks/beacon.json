@@ -1,19 +1,16 @@
-﻿{
-    "name":  "beacon",
-    "id":  605,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "beacon",
-                     "beacon",
-                     "beacon",
-                     "beacon",
-                     "beacon",
-                     "beacon"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "beacon",
+  "id": 605,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "beacon",
+    "beacon",
+    "beacon",
+    "beacon",
+    "beacon",
+    "beacon"
+  ],
+  "render": {}
 }
-

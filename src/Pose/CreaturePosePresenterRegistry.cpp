@@ -9,7 +9,7 @@ namespace cutum
 {
 
 void UCreaturePosePresenterRegistry::Register(
-    std::unique_ptr<ICreaturePosePresenter> presenter)
+    std::unique_ptr<IUCreaturePosePresenter> presenter)
 {
   if (!presenter)
   {
@@ -22,7 +22,7 @@ void UCreaturePosePresenterRegistry::Register(
   }
 }
 
-ICreaturePosePresenter *
+IUCreaturePosePresenter *
 UCreaturePosePresenterRegistry::Get(LocomotionArchetype archetype) const
 {
   const size_t index = static_cast<size_t>(archetype);

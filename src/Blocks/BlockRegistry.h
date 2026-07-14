@@ -25,17 +25,33 @@ public:
   void SetMergeRegistry(std::shared_ptr<UBlockMergeRegistry> merge_registry);
   void Reload();
 
+  const UBlockDefinitionStorage *GetDefinitions() const
+  {
+    return Definitions.get();
+  }
+
   BlockId GetIdByTypeName(const std::string &Name) const;
+  BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
 
   bool IsSolid(BlockId Id) const;
   bool BlocksMovement(BlockId Id) const;
+  bool IsFallingBlock(BlockId Id) const;
+  bool IsLiquid(BlockId Id) const;
+  bool IsFloodable(BlockId Id) const;
+  bool IsFluidPermeable(BlockId Id) const;
+  bool IsFlammable(BlockId Id) const;
+  bool IsFireBlock(BlockId Id) const;
+  float GetLiquidViscosity(BlockId Id) const;
   bool IsTransparent(BlockId Id) const;
   BlockRenderStyle GetRenderStyle(BlockId Id) const;
   const FluidViewProfile *GetFluidView(BlockId Id) const;
   const BlockPhysicsProfile &Physics(BlockId Id) const;
   const BlockAnimationSpec &Animation(BlockId Id) const;
+  int GetLightEmission(BlockId Id) const;
   size_t GetTextureId(BlockId Id) const;
+  /// True when the block has a merged cube descriptor and loaded GPU texture.
+  bool HasRenderableTexture(BlockId Id) const;
 
 private:
   void RebuildMaps();

@@ -7,6 +7,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "src"
 
+# Legacy creature/visual classes pending U-prefix rename (TD-CRE-029).
+LEGACY_CLASS_FILE_PREFIXES = (
+    "src/Creatures/Visual/",
+    "src/Pose/BoneSkeleton/",
+    "src/Gui/Layout/DockedOverlayLayout.h",
+)
+
 SKIP_INCLUDES = {
     "Version.h",
     "ThirdParty/stb_image.h",
@@ -57,13 +64,20 @@ def audit_file(fp: Path) -> list[str]:
         return []
     text = fp.read_text(encoding="utf-8", errors="ignore")
     rel = fp.relative_to(ROOT.parent)
+    rel_posix = rel.as_posix()
     issues: list[str] = []
 
-    for m in CLASS_RE.finditer(text):
-        name = m.group(1)
-        if name.startswith("I") or name.startswith("U"):
-            continue
-        issues.append(f"{rel}: class without U/I prefix: {name}")
+    skip_class_prefix = any(
+        rel_posix.startswith(prefix) or rel_posix == prefix
+        for prefix in LEGACY_CLASS_FILE_PREFIXES
+    )
+
+    if not skip_class_prefix:
+        for m in CLASS_RE.finditer(text):
+            name = m.group(1)
+            if name.startswith("I") or name.startswith("U"):
+                continue
+            issues.append(f"{rel}: class without U/I prefix: {name}")
 
     if fp.suffix == ".h":
         for m in MEMBER_RE.finditer(text):

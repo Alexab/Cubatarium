@@ -18,6 +18,9 @@ inline GreedyMeshVertex CrossVertex(const glm::vec3 &pos, float u, float v)
   vtx.faceIndex = kGreedyCrossFaceIndex;
   vtx.u = u;
   vtx.v = v;
+  vtx.skyLight = 1.0f;
+  vtx.blockLight = 0.0f;
+  vtx.wetness = 0.0f;
   return vtx;
 }
 

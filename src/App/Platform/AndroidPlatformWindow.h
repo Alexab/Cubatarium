@@ -1,7 +1,7 @@
 #ifndef ANDROID_PLATFORM_WINDOW_H
 #define ANDROID_PLATFORM_WINDOW_H
 
-#include "App/Platform/IPlatformWindow.h"
+#include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/TouchInputBridge.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "egl_context.h"
@@ -17,7 +17,7 @@ struct GameActivityMotionEvent;
 namespace cutum
 {
 
-class UAndroidPlatformWindow : public IPlatformWindow
+class UAndroidPlatformWindow : public IUPlatformWindow
 {
 public:
   explicit UAndroidPlatformWindow(android_app *app);

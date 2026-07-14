@@ -8,6 +8,29 @@
 namespace cutum
 {
 
+namespace
+{
+
+FluidKind ParseFluidKindPreset(const nlohmann::json &j, const char *field)
+{
+  if (!j.contains(field) || !j[field].is_string())
+  {
+    return FluidKind::None;
+  }
+  const std::string value = j[field].get<std::string>();
+  if (value == "water")
+  {
+    return FluidKind::Water;
+  }
+  if (value == "lava")
+  {
+    return FluidKind::Lava;
+  }
+  return FluidKind::None;
+}
+
+} // namespace
+
 BlockPhysicsProfile BlockPhysicsProfile::Solid()
 {
   BlockPhysicsProfile p;
@@ -21,6 +44,13 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
   if (preset == "water")
   {
     p.Movement.Occupancy = 0.0f;
+    p.IsLiquid = true;
+    p.Floodable = true;
+    p.LiquidRenewable = true;
+    p.LiquidViscosity = 1.0f;
+    p.FluidSpreadPeriodTicks = 5;
+    p.FluidMaxLevel = 7;
+    p.FluidKindPreset = FluidKind::Water;
     p.Movement.DragHorizontal = 0.55f;
     p.Movement.DragVertical = 0.35f;
     p.Movement.SinkSpeed = 1.2f;
@@ -29,6 +59,12 @@ BlockPhysicsProfile BlockPhysicsProfile::FromPreset(const std::string &preset)
   else if (preset == "lava")
   {
     p.Movement.Occupancy = 0.0f;
+    p.IsLiquid = true;
+    p.Floodable = true;
+    p.LiquidViscosity = 2.0f;
+    p.FluidSpreadPeriodTicks = 30;
+    p.FluidMaxLevel = 3;
+    p.FluidKindPreset = FluidKind::Lava;
     p.Movement.DragHorizontal = 0.65f;
     p.Movement.DragVertical = 0.45f;
     p.Movement.SinkSpeed = 0.8f;
@@ -99,6 +135,35 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
         p.Movement.DamageOnContact = m["damage_on_contact"].get<bool>();
       }
     }
+    if (j.contains("falling"))
+    {
+      p.Falling = j["falling"].get<bool>();
+    }
+    if (j.contains("liquid"))
+    {
+      p.IsLiquid = j["liquid"].get<bool>();
+    }
+    if (j.contains("floodable"))
+    {
+      p.Floodable = j["floodable"].get<bool>();
+    }
+    if (j.contains("liquid_viscosity"))
+    {
+      p.LiquidViscosity = j["liquid_viscosity"].get<float>();
+    }
+    if (j.contains("liquid_renewable"))
+    {
+      p.LiquidRenewable = j["liquid_renewable"].get<bool>();
+    }
+    if (j.contains("fluid_permeable"))
+    {
+      p.FluidPermeable = j["fluid_permeable"].get<bool>();
+    }
+    const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
+    if (parsed_kind != FluidKind::None)
+    {
+      p.FluidKindPreset = parsed_kind;
+    }
     return p;
   }
   BlockPhysicsProfile p = BlockPhysicsProfile::Solid();
@@ -130,6 +195,35 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
       p.Movement.DamageOnContact = m["damage_on_contact"].get<bool>();
     }
   }
+  if (j.contains("falling"))
+  {
+    p.Falling = j["falling"].get<bool>();
+  }
+  if (j.contains("liquid"))
+  {
+    p.IsLiquid = j["liquid"].get<bool>();
+  }
+  if (j.contains("floodable"))
+  {
+    p.Floodable = j["floodable"].get<bool>();
+  }
+  if (j.contains("liquid_viscosity"))
+  {
+    p.LiquidViscosity = j["liquid_viscosity"].get<float>();
+  }
+  if (j.contains("liquid_renewable"))
+  {
+    p.LiquidRenewable = j["liquid_renewable"].get<bool>();
+  }
+  if (j.contains("fluid_permeable"))
+  {
+    p.FluidPermeable = j["fluid_permeable"].get<bool>();
+  }
+  const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
+  if (parsed_kind != FluidKind::None)
+  {
+    p.FluidKindPreset = parsed_kind;
+  }
   return p;
 }
 
@@ -142,6 +236,8 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
     v.FogStart = 0.0f;
     v.FogEnd = 9.0f;
     v.FogMinBlend = 0.5f;
+    v.BelowSurfaceFogMin = 0.52f;
+    v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "lava")
   {
@@ -149,6 +245,8 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
     v.FogStart = 0.0f;
     v.FogEnd = 7.0f;
     v.FogMinBlend = 0.45f;
+    v.BelowSurfaceFogMin = 0.52f;
+    v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "fire")
   {
@@ -213,6 +311,29 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
   return r;
 }
 
+BlockLightingProfile ParseLightingFromJson(const nlohmann::json &j)
+{
+  BlockLightingProfile lighting;
+  if (!j.is_object())
+  {
+    return lighting;
+  }
+  if (!j.contains("emission"))
+  {
+    return lighting;
+  }
+  const auto &emission = j["emission"];
+  if (!emission.is_number_integer() && !emission.is_number_unsigned())
+  {
+    std::cerr << "ParseLightingFromJson: emission must be an integer"
+              << std::endl;
+    return lighting;
+  }
+  lighting.Emission =
+      std::clamp(emission.get<int>(), 0, 15);
+  return lighting;
+}
+
 void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
                                const std::string &physicsPreset)
 {
@@ -257,7 +378,8 @@ bool IsReservedBlockName(const std::string &name)
   return name == "__missing__" || name == "__air__";
 }
 
-ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId)
+ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
+                                   bool useStablePackId)
 {
   ParsedBlockJson out;
   if (!j.is_object())
@@ -286,8 +408,9 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId
       const uint64_t raw = j["id"].get<uint64_t>();
       if (raw < kPackBlockIdMin || raw > kPackBlockIdMax)
       {
-        std::cerr << "ParseBlockFromJson: id " << raw << " out of pack range for '"
-                  << out.Definition.Name << "'" << std::endl;
+        std::cerr << "ParseBlockFromJson: id " << raw
+                  << " out of pack range for '" << out.Definition.Name << "'"
+                  << std::endl;
         return out;
       }
       out.Definition.Id = static_cast<BlockId>(raw);
@@ -313,6 +436,10 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j, bool useStablePackId
   if (j.contains("render"))
   {
     out.Definition.Render = ParseRenderFromJson(j["render"]);
+  }
+  if (j.contains("lighting"))
+  {
+    out.Definition.Lighting = ParseLightingFromJson(j["lighting"]);
   }
   if (j.contains("types") && j["types"].is_array())
   {

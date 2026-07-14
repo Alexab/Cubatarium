@@ -1,26 +1,29 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "App/Navigation/ScreenNavigator.h"
+#include "App/Input/InputRouter.h"
 #include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "App/Settings/UiSettings.h"
+#include "App/WorldOperationRunner.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiMetrics.h"
-#include "Gui/Interfaces/IGuiClipboard.h"
-#include "Gui/Interfaces/IGuiMenuHost.h"
-#include "Gui/Screens/WorldProgressScreen.h"
-#include "App/WorldOperationRunner.h"
-#include "Core/Progress/IProgressSink.h"
+#include "Gui/Interfaces/IUGuiClipboard.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
-#include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -43,6 +46,8 @@ class UGuiContext;
 class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
+class UContentPreviewRenderer;
+class UCreaturePreviewRenderer;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -55,8 +60,11 @@ enum class MenuSubview
   NewWorld
 };
 
-class UApplication : public IGuiMenuHost
+class UApplication : public IUGuiMenuHost
 {
+  friend class UScreenNavigator;
+  friend class UInputRouter;
+
 public:
   UApplication(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,
                std::shared_ptr<UGeometryEngine> geometry,
@@ -67,11 +75,16 @@ public:
   ~UApplication();
 
   void Startup(const std::string &configPath);
+  bool StartupSucceeded() const { return StartupOk; }
   void RequestEnterGame();
   /// Вход в игру на следующем кадре (безопасно из onClick кнопки меню).
   void ScheduleEnterGame();
   void ScheduleQuit();
   void RequestQuit();
+  /// Window close / quit: cooperative shutdown with progress UI.
+  bool TryBeginShutdownFromWindowClose();
+  void BeginShutdownOperation(bool saveSession, bool closeAfter);
+  void PrepareForShutdown();
   void SetWindow(GLFWwindow *window) { Window = window; }
   void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
   UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
@@ -96,6 +109,7 @@ public:
   bool RouteScroll(double Xoffset, double Yoffset, int mouseX, int mouseY);
 #if defined(__ANDROID__)
   void ReleaseHudJoystickCapture();
+  void ReleaseHudJoystickCaptureForPointer(int pointerId);
   void TryToggleFlightOnJumpPress();
   void SubmitConsoleCommand();
 #endif
@@ -114,6 +128,7 @@ public:
   void SetHotbarCountSetting(int count);
 
   void ReturnToMainMenu() override;
+  void SaveWorldSessionIfNeeded();
   void SaveIfNeededAndProceed(std::function<void()> proceed) override;
   AppSettingsSnapshot LoadAppSettingsSnapshot() const override;
   ProceduralSettings LoadProceduralTemplate() const override;
@@ -123,9 +138,9 @@ public:
   void CreateNewWorldWithSettings(
       const ProceduralSettings &settings,
       const std::vector<std::string> &resourcePacksEnabled) override;
-  void CreateNewWorldWithSettings(
-      const ProceduralSettings &settings,
-      const ResourcePackSelection &selection) override;
+  void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
@@ -153,6 +168,7 @@ private:
   void ScheduleDeferredMenuAction(std::function<void()> Action);
   void EnterGameAfterWorldChange();
   void RefreshBlockCatalog();
+  void RefreshCreatureCatalog();
   void ShowInGameHud();
   void SyncCursorVisibility();
   void SyncGameplayLookCapture();
@@ -168,6 +184,9 @@ private:
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
   void NotifyAllScreensMetricsChanged(const GuiMetrics &metrics);
+
+  UScreenNavigator ScreenNav;
+  UInputRouter InputRouter;
 
   std::shared_ptr<UCore> Core;
   std::shared_ptr<UWorld> World;
@@ -185,6 +204,7 @@ private:
   GLFWwindow *Window{nullptr};
   bool ConsoleOpen{false};
   bool PaletteOpen{false};
+  bool WorldGenOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).
@@ -194,7 +214,8 @@ private:
     None,
     Palette,
     Console,
-    Hud
+    Hud,
+    WorldGen
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
@@ -204,19 +225,25 @@ private:
   bool WorldSessionActive{false};
   bool PendingEnterGame{false};
   bool PendingQuit{false};
+  bool PendingShutdownSave{false};
+  bool ShutdownCloseAfter{false};
+  bool StartupOk{false};
   std::function<void()> PendingMenuAction;
   std::function<void()> WorldOpOnComplete;
   bool QuitRequested{false};
 
   UWorldProgressScreen *ProgressScreen{nullptr};
   std::unique_ptr<UWorldOperationRunner> WorldOpRunner;
-  LatestProgressSink ProgressSink;
+  ULatestProgressSink ProgressSink;
 
   std::unique_ptr<UGuiIconSource> IconSource;
+  std::shared_ptr<UCreaturePreviewRenderer> CreaturePreviewRenderer;
+  std::unique_ptr<UContentPreviewRenderer> ContentPreviewRenderer;
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
-  std::unique_ptr<IGuiClipboard> Clipboard;
+  std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
+  std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;
 
   MenuSubview MenuSubview{MenuSubview::Main};

@@ -37,14 +37,15 @@
     "jump_height": 1.0,
     "walk_speed": 2.4
   },
-  "behavior": "wander",
+  "behavior": "melee_attack",
   "behavior_params": {
     "move_speed": 2.4,
-    "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "aggro_radius": 14.0,
+    "attack_range": 2.0,
+    "attack_cooldown": 1.2
   },
   "visual": {
-    "backend": "rigid_voxels",
+    "backend": "bone_skeleton",
     "texture_layout": "rigid_crop",
     "animation": {
       "walk_cycle_hz": 2.0,
@@ -55,7 +56,8 @@
       "tail_swing_deg": 12,
       "run_speed_multiplier": 1.3,
       "crouch_leg_bend_deg": 25,
-      "wing_idle_swing_deg": 5
+      "wing_idle_swing_deg": 5,
+      "look_at_deg": 30
     },
     "default_texture": "body",
     "parts": [
@@ -176,6 +178,14 @@
         0.8,
         1.0
       ]
-    }
+    },
+    "geometry": "geometry.skeleton.v1.8",
+    "geometry_file": "geometry.geo.json",
+    "texture": "diffuse",
+    "texture_size": [
+      64,
+      32
+    ],
+    "animation_profile": "humanoid"
   }
 }

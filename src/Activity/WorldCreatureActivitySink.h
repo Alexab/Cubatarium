@@ -1,14 +1,14 @@
 #ifndef WORLDCREATUREACTIVITYSINK_H
 #define WORLDCREATUREACTIVITYSINK_H
 
-#include "Activity/ICreatureActivitySink.h"
+#include "Activity/IUCreatureActivitySink.h"
 
 namespace cutum
 {
 
 class UWorld;
 
-class UWorldCreatureActivitySink : public ICreatureActivitySink
+class UWorldCreatureActivitySink : public IUCreatureActivitySink
 {
 public:
   explicit UWorldCreatureActivitySink(UWorld &world);
@@ -18,6 +18,7 @@ public:
   std::optional<CreatureBehaviorSnapshot>
   GetBehaviorSnapshot(CreatureId Id) const override;
   void SetIntent(CreatureId Id, const CreatureIntent &intent) override;
+  const UWorld &GetWorld() const override { return World; }
 
 private:
   UWorld &World;

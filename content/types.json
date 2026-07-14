@@ -1,12 +1,24 @@
 {
-  "types": [
+  "blockTypes": [
     { "id": "building", "displayName": "Building", "sortOrder": 10 },
     { "id": "natural", "displayName": "Natural", "sortOrder": 20 },
     { "id": "plants", "displayName": "Plants", "sortOrder": 25 },
     { "id": "fluid", "displayName": "Fluids", "sortOrder": 30 },
+    { "id": "lighting", "displayName": "Light sources", "sortOrder": 32 },
     { "id": "decorative", "displayName": "Decorative", "sortOrder": 35 },
     { "id": "mechanisms", "displayName": "Mechanisms", "sortOrder": 40 },
-    { "id": "misc", "displayName": "Misc", "sortOrder": 999 },
+    { "id": "misc", "displayName": "Misc", "sortOrder": 999 }
+  ],
+  "objectTypes": [
+    { "id": "trees", "displayName": "Trees", "sortOrder": 10 },
+    { "id": "bushes", "displayName": "Bushes", "sortOrder": 20 },
+    { "id": "structures", "displayName": "Structures", "sortOrder": 30 },
+    { "id": "ruins", "displayName": "Ruins", "sortOrder": 40 },
+    { "id": "paths", "displayName": "Paths & decor", "sortOrder": 50 },
+    { "id": "plants", "displayName": "Plants", "sortOrder": 60 },
+    { "id": "misc", "displayName": "Misc", "sortOrder": 999 }
+  ],
+  "creatureTypes": [
     { "id": "mobs", "displayName": "Mobs", "sortOrder": 50 },
     { "id": "passive", "displayName": "Passive mobs", "sortOrder": 51 },
     { "id": "hostile", "displayName": "Hostile mobs", "sortOrder": 52 },

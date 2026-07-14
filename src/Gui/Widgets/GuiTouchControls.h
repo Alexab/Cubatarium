@@ -3,12 +3,15 @@
 
 #include <functional>
 
+#include "Gui/Core/GuiTypes.h"
+
 namespace cutum
 {
 
 class UTouchInputBridge;
 class UGuiPanel;
 class UGuiWidget;
+class UGuiRenderer;
 struct GuiTheme;
 
 class UGuiTouchControls
@@ -24,7 +27,11 @@ public:
   void Layout(int width, int height, int offsetX, int offsetY);
   bool RouteCapturedMove(int PointerId, int x, int y);
   void ReleaseJoystickCapture();
+  void ReleaseJoystickCaptureForPointer(int pointer_id);
   void ReleaseAllCaptures();
+  bool HitTestTopRightReserved(int x, int y) const;
+  GuiRect GetTopRightReservedRect() const;
+  void RenderOverlay(class UGuiRenderer &renderer);
   ~UGuiTouchControls();
 
 private:
@@ -44,11 +51,14 @@ private:
   UGuiWidget *MenuButton{nullptr};
   UGuiWidget *ConsoleButton{nullptr};
   float UiScale{1.f};
-  int lastLayoutWidth_{-1};
-  int lastLayoutHeight_{-1};
-  int lastLayoutOffsetX_{-1};
-  int lastLayoutOffsetY_{-1};
-  float lastLayoutUiScale_{-1.f};
+  int LastLayoutWidth{-1};
+  int LastLayoutHeight{-1};
+  int LastLayoutOffsetX{-1};
+  int LastLayoutOffsetY{-1};
+  float LastLayoutUiScale{-1.f};
+  GuiRect TopRightReservedRect{};
+  int TopRightScreenOffsetX{0};
+  int TopRightScreenOffsetY{0};
   std::function<bool(int, int, int)> OnRouteCapturedMove;
   std::function<void()> OnReleaseJoystickCapture;
   std::function<void()> OnReleaseHoldButtons;

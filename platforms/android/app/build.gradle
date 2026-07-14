@@ -57,6 +57,11 @@ android {
 
     buildTypes {
         debug {
+            externalNativeBuild {
+                cmake {
+                    abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
+                }
+            }
             debuggable true
             jniDebuggable true
             ndk {
@@ -106,7 +111,7 @@ android {
 tasks.register("syncAssets", Copy) {
     from("${repoRoot}/textures") { into "textures" }
     from("${repoRoot}/models") { into "models" }
-    from("${repoRoot}/prefabs") { into "prefabs" }
+    from("${repoRoot}/objects") { into "objects" }
     from("${repoRoot}/content") { into "content" }
     from("${repoRoot}/resource_packs") {
         into "resource_packs"

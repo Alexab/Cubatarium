@@ -70,6 +70,7 @@ function Assert-StagedRuntimeFiles {
         "content\worldgen_refs.json",
         "content\types.json",
         "shaders\vshader_greedy.glsl",
+        "shaders\vshader_cross_instanced.glsl",
         "prefabs",
         "resource_packs",
         "fonts"

@@ -15,7 +15,7 @@ class UGuiRenderer;
 class UGuiInputRouter;
 class UGuiScreenBase;
 class UGuiWidget;
-class IGuiClipboard;
+class IUGuiClipboard;
 class UShaderManager;
 class UTextRenderer;
 
@@ -58,8 +58,8 @@ public:
   const GuiTheme &GetTheme() const { return Theme; }
   const GuiMetrics &GetMetrics() const { return Metrics; }
 
-  void SetClipboard(IGuiClipboard *clipboard) { Clipboard = clipboard; }
-  IGuiClipboard *GetClipboard() const { return Clipboard; }
+  void SetClipboard(IUGuiClipboard *clipboard) { Clipboard = clipboard; }
+  IUGuiClipboard *GetClipboard() const { return Clipboard; }
 
   void ApplyUiScale(float scale);
   float GetUiScale() const { return UiScale; }
@@ -73,7 +73,7 @@ private:
   GuiTheme BaseTheme;
   float UiScale{1.f};
   GuiMetrics Metrics;
-  IGuiClipboard *Clipboard{nullptr};
+  IUGuiClipboard *Clipboard{nullptr};
   GuiTheme Theme;
   std::unique_ptr<UGuiRenderer> Renderer;
   std::unique_ptr<UGuiInputRouter> InputRouter;

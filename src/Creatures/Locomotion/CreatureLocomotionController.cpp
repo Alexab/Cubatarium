@@ -82,6 +82,14 @@ void UCreatureLocomotionController::SetCollisionProfile(
   EyeHeight = eyeHeight;
 }
 
+void UCreatureLocomotionController::ClampVerticalVelocity(const float minValue)
+{
+  if (VerticalVelocity < minValue)
+  {
+    VerticalVelocity = minValue;
+  }
+}
+
 void UCreatureLocomotionController::Reset()
 {
   Mode = CreatureMovementMode::Walking;
@@ -168,8 +176,7 @@ PlayerCapsule UCreatureLocomotionController::GetCollisionCapsule() const
   const float crouchEye =
       stand.eyeHeight * (refCrouch.eyeHeight / refStand.eyeHeight);
   return {stand.height + (crouchHeight - stand.height) * t,
-          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t,
-          stand.halfWidth};
+          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t, stand.halfWidth};
 }
 
 bool UCreatureLocomotionController::OnSpacePressed()
@@ -471,14 +478,20 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   }
 
   const PlayerCapsule cap = GetCollisionCapsule();
-  const UWorld::SampledFluidState fluid =
-      world->SampleFluidPhysics(eyePos, cap);
+  const SampledFluidState fluid = world->SampleFluidPhysics(eyePos, cap);
 
   const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
   const float feetY = supportVol.center.y - supportVol.halfExtents.y;
   const bool supported = world->HasGroundSupportVolume(supportVol, feetY);
 
-  if (fluid.inFluid && !supported)
+  const bool isFoliage =
+      fluid.inFluid && world->IsFoliageFluidBlock(fluid.dominantFluid);
+  const bool foliageClimbActive = isFoliage && world->IsFoliageClimbEnabled();
+
+  const bool fluidStreakCandidate =
+      fluid.inFluid && !supported && (!isFoliage || foliageClimbActive);
+
+  if (fluidStreakCandidate)
   {
     UnsupportedFluidStreak = std::min(UnsupportedFluidStreak + 1, 8);
   }
@@ -486,7 +499,11 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   {
     UnsupportedFluidStreak = 0;
   }
-  const bool swimmingFluid = fluid.inFluid && UnsupportedFluidStreak >= 2;
+  const bool swimmingWater =
+      fluid.inFluid && !isFoliage && UnsupportedFluidStreak >= 2;
+  const bool climbingFoliage =
+      foliageClimbActive && UnsupportedFluidStreak >= 2;
+  const bool swimmingFluid = swimmingWater || climbingFoliage;
 
   if (!input.jumpHeld)
   {
@@ -495,7 +512,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
 
   const bool jumpEdge = input.jumpHeld && !SpaceWasPressed;
   const bool jumpFromGround =
-      FeetAnchored && (OnGround || (supported && !swimmingFluid));
+      FeetAnchored && (OnGround || (supported && !swimmingWater));
   if (jumpEdge && !SuppressNextJump && jumpFromGround)
   {
     if (StanceBlend > kJumpStanceMax &&

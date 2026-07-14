@@ -78,6 +78,7 @@ public:
   void SetBlockedGameRegion(int index, const TouchBlockedRegion &region);
   void QueuePlaceTap(float x, float y);
   void RequestCameraBaseline(float x, float y);
+  int NormalizePointerId(int PointerId) const;
 
 private:
   struct PointerState
@@ -93,7 +94,6 @@ private:
   };
 
   void ApplyJoystickToKeys();
-  int NormalizePointerId(int PointerId) const;
   float ContentLeft() const { return static_cast<float>(ContentInsetLeft); }
   float ContentRight() const
   {

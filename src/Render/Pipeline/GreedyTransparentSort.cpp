@@ -64,7 +64,44 @@ void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch> &batches,
                   TransparentBatchLayer(registry.GetRenderStyle(a.blockId));
               const int layerB =
                   TransparentBatchLayer(registry.GetRenderStyle(b.blockId));
-              return layerA < layerB;
+              if (layerA != layerB)
+              {
+                return layerA < layerB;
+              }
+              return a.blockId < b.blockId;
+            });
+}
+
+void SortTransparentGreedyBatches(
+    std::vector<GreedyBatchRef> &refs,
+    const UChunkMeshCache &cache, const glm::vec3 &cameraPos,
+    const UBlockRegistry &registry)
+{
+  std::sort(refs.begin(), refs.end(),
+            [&](const GreedyBatchRef &ra,
+                const GreedyBatchRef &rb)
+            {
+              const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
+              const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
+              if (!a || !b)
+              {
+                return a != nullptr;
+              }
+              const float distA = GreedyBatchViewDistance(*a, cameraPos);
+              const float distB = GreedyBatchViewDistance(*b, cameraPos);
+              if (std::abs(distA - distB) > 0.25f)
+              {
+                return distA > distB;
+              }
+              const int layerA =
+                  TransparentBatchLayer(registry.GetRenderStyle(a->blockId));
+              const int layerB =
+                  TransparentBatchLayer(registry.GetRenderStyle(b->blockId));
+              if (layerA != layerB)
+              {
+                return layerA < layerB;
+              }
+              return a->blockId < b->blockId;
             });
 }
 

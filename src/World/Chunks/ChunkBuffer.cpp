@@ -1,27 +1,29 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
 #include <algorithm>
 
 namespace cutum
 {
 
-BlockWorldWriter::BlockWorldWriter(UBlockWorld &world) : World(world) {}
+UBlockWorldWriter::UBlockWorldWriter(UBlockWorld &world) : World(world) {}
 
-void BlockWorldWriter::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UBlockWorldWriter::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
   World.SetBlock(worldPos, id);
 }
 
-BlockId BlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
+BlockId UBlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
 {
   return World.GetBlock(worldPos);
 }
 
-void ChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
+void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
   if (id == BLOCK_AIR)
   {
     Blocks.erase(worldPos);
+    FluidPacked.erase(worldPos);
     return;
   }
   Blocks[worldPos] = id;
@@ -36,7 +38,17 @@ void ChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
   MaxY = std::max(MaxY, worldPos.y);
 }
 
-BlockId ChunkBuffer::GetBlock(glm::ivec3 worldPos) const
+void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
+{
+  if (packed == 0)
+  {
+    FluidPacked.erase(worldPos);
+    return;
+  }
+  FluidPacked[worldPos] = packed;
+}
+
+BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 {
   const auto it = Blocks.find(worldPos);
   if (it == Blocks.end())
@@ -46,17 +58,34 @@ BlockId ChunkBuffer::GetBlock(glm::ivec3 worldPos) const
   return it->second;
 }
 
-void ChunkBuffer::ApplyTo(UBlockWorld &world) const
+uint8_t UChunkBuffer::GetFluidPacked(glm::ivec3 worldPos) const
+{
+  const auto it = FluidPacked.find(worldPos);
+  if (it == FluidPacked.end())
+  {
+    return 0;
+  }
+  return it->second;
+}
+
+void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
   for (const auto &entry : Blocks)
   {
     world.SetBlock(entry.first, entry.second);
+    const auto fluid_it = FluidPacked.find(entry.first);
+    if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
+    {
+      world.SetFluidState(entry.first,
+                         UnpackFluidCellState(fluid_it->second));
+    }
   }
 }
 
-void ChunkBuffer::Clear()
+void UChunkBuffer::Clear()
 {
   Blocks.clear();
+  FluidPacked.clear();
   HasBounds = false;
   MinY = 0;
   MaxY = -1;

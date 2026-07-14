@@ -1,19 +1,16 @@
-﻿{
-    "name":  "enchantment_table",
-    "id":  365,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "enchantment_side",
-                     "enchantment_side",
-                     "enchantment_side",
-                     "enchantment_side",
-                     "enchantment_top",
-                     "enchantment_bottom"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "enchantment_table",
+  "id": 365,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "enchantment_side",
+    "enchantment_side",
+    "enchantment_side",
+    "enchantment_side",
+    "enchantment_top",
+    "enchantment_bottom"
+  ],
+  "render": {}
 }
-

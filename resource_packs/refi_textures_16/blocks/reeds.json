@@ -1,27 +1,26 @@
-﻿{
-    "name":  "reeds",
-    "id":  801,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds",
-                     "reeds"
-                 ],
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "displayName":  "Reeds"
+{
+  "name": "reeds",
+  "id": 801,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds",
+    "reeds"
+  ],
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "displayName": "Reeds"
 }
-

@@ -1,0 +1,1238 @@
+{
+  "name": "tower_stone",
+  "version": 2,
+  "displayName": "Stone Tower",
+  "source": {
+    "mod": "cubatarium/procedural",
+    "license": "CC0"
+  },
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 9,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 9,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 9,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 9,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 9,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 10,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 10,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 10,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 10,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -2,
+      "dy": 10,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 7,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 7,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 9,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 9,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": -1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": 0,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": 1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": -1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 0,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 3,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 3,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 7,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 7,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": -1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": 0,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": 1,
+      "type": "stonebricksmooth"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 6,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 6,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 6,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 6,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 6,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": 2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": -2,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": -1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": 0,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": 1,
+      "type": "stone"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": 2,
+      "type": "stone"
+    }
+  ],
+  "tags": [
+    "building",
+    "structures"
+  ]
+}

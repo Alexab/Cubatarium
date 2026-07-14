@@ -1,19 +1,16 @@
-﻿{
-    "name":  "nether_wart",
-    "id":  520,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "netherStalk_2",
-                     "netherStalk_2",
-                     "netherStalk_2",
-                     "netherStalk_2",
-                     "netherStalk_2",
-                     "netherStalk_2"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "nether_wart",
+  "id": 520,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2",
+    "netherStalk_2"
+  ],
+  "render": {}
 }
-

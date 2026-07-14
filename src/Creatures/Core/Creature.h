@@ -16,7 +16,7 @@ namespace cutum
 {
 
 class UWorld;
-class ICreatureVisual;
+class IUCreatureVisual;
 
 class UCreature
 {
@@ -96,8 +96,8 @@ public:
   virtual void UpdateControlled(UWorld &world, const CreatureInput &input,
                                 float dt);
 
-  ICreatureVisual *GetVisual() { return Visual.get(); }
-  void SetVisual(std::unique_ptr<ICreatureVisual> visual);
+  IUCreatureVisual *GetVisual() { return Visual.get(); }
+  void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
 
   void SetCapabilities(const CreatureLocomotionCapabilities &caps)
   {
@@ -119,7 +119,7 @@ protected:
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};
-  std::unique_ptr<ICreatureVisual> Visual;
+  std::unique_ptr<IUCreatureVisual> Visual;
   LocomotionArchetype LocomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};
   CreatureLocomotionFacts LocomotionFacts{};

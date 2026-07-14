@@ -1,19 +1,16 @@
-﻿{
-    "name":  "activator_rail",
-    "id":  880,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "activatorRail",
-                     "activatorRail",
-                     "activatorRail",
-                     "activatorRail",
-                     "activatorRail",
-                     "activatorRail"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "activator_rail",
+  "id": 880,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail",
+    "activatorRail"
+  ],
+  "render": {}
 }
-

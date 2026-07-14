@@ -75,8 +75,7 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
   {
     return LocomotionState::Walk;
   }
-  if (raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon && hintInput &&
-      hintInput->hasSuggestedAnim)
+  if (hintInput && hintInput->hasSuggestedAnim)
   {
     switch (hintInput->suggestedAnim)
     {

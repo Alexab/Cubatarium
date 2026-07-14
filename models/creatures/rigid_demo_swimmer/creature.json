@@ -1,0 +1,86 @@
+{
+  "id": "rigid_demo_swimmer",
+  "display_name": "Rigid Demo Swimmer",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "demo",
+      "rigid_reference"
+    ],
+    "spawnable": true,
+    "sort_order": 902
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.76,
+      0.34,
+      1.435
+    ],
+    "max": [
+      0.76,
+      0.34,
+      1.435
+    ],
+    "min": [
+      0.76,
+      0.289,
+      1.435
+    ],
+    "_derived": {
+      "rest": [
+        0.76,
+        0.34,
+        1.435
+      ],
+      "max": [
+        0.76,
+        0.34,
+        1.435
+      ],
+      "min": [
+        0.76,
+        0.289,
+        1.435
+      ]
+    },
+    "source": "parts_aabb"
+  },
+  "eye_height": 0.28,
+  "habitat": "aquatic",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "texture_layout": "rigid_crop",
+    "model_yaw_offset_deg": 0,
+    "animation": {
+      "walk_cycle_hz": 2.5,
+      "tail_swing_deg": 20,
+      "body_bob_blocks": 0.02
+    },
+    "default_texture": "body",
+    "rigid_model": "rigid_model.json",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.24,
+        0.47,
+        0.78,
+        1.0
+      ]
+    }
+  }
+}

@@ -45,8 +45,22 @@ def post_a1_terrestrial(habitat: str, eye_err: float, spawnable: bool) -> str:
     return "pass" if abs(eye_err) > 0.05 else "pass"
 
 
+def load_resolution_spawn_status() -> dict[str, str]:
+    path = TOOLS / "creature_resolution_log.yaml"
+    if not path.is_file():
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    out: dict[str, str] = {}
+    for sid, entry in (data.get("species") or {}).items():
+        spawn = (entry or {}).get("spawn") or {}
+        status = spawn.get("status", "pending")
+        out[sid] = "pass" if status == "pass" else "pending"
+    return out
+
+
 def main() -> None:
     diag = load_diagnosis()
+    manual_status = load_resolution_spawn_status()
     rows = []
     for sid in sorted(diag.keys()):
         d = diag[sid]
@@ -68,7 +82,7 @@ def main() -> None:
             if habitat == "aerial"
             else "n/a",
             "blocked_hint_expected": d["expected_fail_reason"],
-            "manual_ingame": "pending",
+            "manual_ingame": manual_status.get(sid, "pending"),
         }
         rows.append(row)
 

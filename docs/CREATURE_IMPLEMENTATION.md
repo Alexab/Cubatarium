@@ -741,17 +741,17 @@ CMake: копия `models/` уже включает подпапку `creatures/
 
 | Файл | Назначение |
 |------|------------|
-| `CreatureVisual.h` | `ICreatureVisual` |
+| `CreatureVisual.h` | `IUCreatureVisual` |
 | `CreatureVisualFactory.cpp` | по `visual.backend` |
 | `CreatureVisualRigid.cpp` | parts + pose |
 | `CreatureVisualGltf.cpp` | stub `SubmitDraw` empty |
 
-### 11.2 `ICreatureVisual`
+### 11.2 `IUCreatureVisual`
 
 ```cpp
-class ICreatureVisual {
+class IUCreatureVisual {
 public:
-  virtual ~ICreatureVisual() = default;
+  virtual ~IUCreatureVisual() = default;
   virtual void UpdatePose(const Creature&, LocomotionState,
                           const CreatureDefinition& animDef, float dt) = 0;
   virtual void SubmitDraw(GeometryEngine&, const glm::mat4& viewProj) = 0;
@@ -896,3 +896,38 @@ void SetIntent(CreatureIntent);  // already
 
 - `gameplay.entity_collision` — коллизии AABB между всеми `creatures_` (default on).
 - F5 — цикл First / Third back / Third front; eye остаётся в `Camera::Position`.
+
+---
+
+## 18. Визуализация и FPS (рефакторинг 2026-06)
+
+### Архитектура
+
+Три бэкенда (`rigid_voxels`, `bone_skeleton`, `gltf_skeleton`) собирают `CreatureDrawRequest` в `CreatureDrawQueue`; один `Flush` в конце `UGeometryEngine::RenderCreatures`.
+
+Общий слой: `CreatureTextureResolver`, `CreatureRootTransform`, `CreatureMeshGpuCache`, `CreatureBonePaletteGpu`, `CreatureVisibility` (frustum + distance culling).
+
+### Shutdown / lifetime
+
+- `UGeometryEngine` destructor clears creature GPU resources in this order:
+  `CreatureDraw_.DestroyBuffers()` (including `CreatureBonePaletteGpu`) and
+  `CreatureMeshGpuCache::Instance().DestroyAll()`.
+- `CreatureGltfCache` is CPU-side; it is reset by
+  `CreatureGltfCache::Instance().SetCreaturesRoot(...)` and should be explicitly
+  cleared on app teardown/reload boundaries to drop stale weak entries.
+
+### Метрики (performance HUD)
+
+Строка `Creatures: drawn/considered culled draws bone uploads` — baseline для сравнения до/после оптимизаций.
+
+### Perf smoke-сцена
+
+1. Создать мир, заспавнить 10× `kitten` (glTF) или `fox` (skeletal) в радиусе видимости.
+2. Включить performance overlay.
+3. Сравнить `draws` и `bone uploads`; цель — ≤1 bone upload на skinned primitive (UBO вместо 64× `SetMat4`).
+
+### Rigid demo
+
+Геометрия в `rigid_model.json`; bounds: `python tools/derive_creature_bounds.py models/creatures/<id>/creature.json`.
+
+См. также [`CREATURE_BACKENDS.md`](CREATURE_BACKENDS.md).

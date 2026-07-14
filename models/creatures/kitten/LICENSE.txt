@@ -1,2 +1,4 @@
-Placeholder procedural textures for Cubatarium.
-Replace with CC-licensed Luanti assets when imported.
+Source file: mobs_kitten.png
+Upstream: mobs_animal/textures/mobs_kitten.png
+License: MIT
+Attribution: mobs_animal — TenPlus1

@@ -3,6 +3,7 @@
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <string>
 
@@ -70,6 +71,21 @@ std::string GetCreatureSpawnBlockedHint(const UWorld &world,
 glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
                                 const CreatureDefinition &def,
                                 const glm::vec3 &probeOrigin);
+
+/// Nudge spawn origin on XZ when overlapping another creature AABB.
+glm::vec3 TryDepenetrateSpawnOrigin(const UWorld &world,
+                                    CreatureHabitat habitat,
+                                    const glm::vec3 &bodyOrigin,
+                                    const glm::vec3 &sizeBlocks,
+                                    uint64_t skip_creature_id = 0);
+
+/// Terrestrial mob move: horizontal slide with 1-block step up/down and feet snap.
+glm::vec3 ResolveTerrestrialMobMovement(const UWorld &world,
+                                        const glm::vec3 &bodyOrigin,
+                                        const glm::vec3 &horizontalDelta,
+                                        const glm::vec3 &sizeBlocks,
+                                        uint64_t skip_creature_id,
+                                        float max_step_up, float max_step_down);
 
 } // namespace cutum
 

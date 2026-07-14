@@ -1,19 +1,26 @@
-﻿{
-    "name":  "red_mushroom",
-    "id":  930,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red",
-                     "mushroom_red"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "red_mushroom",
+  "id": 930,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red",
+    "mushroom_red"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Red Mushroom"
 }
-

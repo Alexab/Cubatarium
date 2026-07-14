@@ -1,12 +1,24 @@
 {
   "id": "hills",
   "height": {
-    "base_offset": 2,
-    "amplitude_mul": 1.25,
-    "volatility_mul": 1.2
+    "base_offset": 1,
+    "amplitude_mul": 1.05,
+    "volatility_mul": 0.5
   },
   "palette": {
-    "surface": "stone",
-    "subsurface": "gravel"
+    "surface": "grass",
+    "subsurface": "dirt"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine": 0.85,
+      "tree_aspen": 0.55
+    },
+    "ground_cover": {
+      "bush_common": 0.9
+    },
+    "decoration": {
+      "deco_log_pine": 0.18
+    }
   }
 }

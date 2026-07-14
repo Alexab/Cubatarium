@@ -34,8 +34,9 @@ public:
   ~UWindowManager();
 
   bool Initialize(int width = 1280, int height = 720,
-                  const char *title = "Cubatarium");
+                  const char *title = "Cubatarium", bool visible = true);
   void Run();
+  void SetStopPredicate(std::function<bool()> predicate);
   void Shutdown();
 
   /// Initializes the window manager with the specified parameters.
@@ -123,6 +124,7 @@ private: // Window and rendering state
 
   glm::vec4 SkyColor;
   bool UseGradientSky;
+  std::function<bool()> StopPredicate;
 };
 
 } // namespace cutum

@@ -2,8 +2,8 @@
 #define GUI_ICON_SOURCE_H
 
 #include "Gui/Cache/CreatureIconCache.h"
-#include "Gui/Cache/PrefabIconCache.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Cache/ObjectIconCache.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include <memory>
 
 namespace cutum
@@ -11,29 +11,29 @@ namespace cutum
 
 class UTextureCubeStorage;
 
-class UGuiIconSource : public IGuiIconSource
+class UGuiIconSource : public IUGuiIconSource
 {
 public:
   UGuiIconSource(std::shared_ptr<UTextureCubeStorage> textures,
-                 std::unique_ptr<UPrefabIconCache> prefabCache,
+                 std::unique_ptr<UObjectIconCache> objectCache,
                  std::unique_ptr<UCreatureIconCache> creatureCache = nullptr);
 
   GLuint GetBlockIconTexture(const std::string &blockName) override;
-  GLuint GetPrefabIconTexture(const std::string &prefabName) override;
+  GLuint GetObjectIconTexture(const std::string &objectName) override;
   GLuint
-  GetPrefabIconTextureIfCached(const std::string &prefabName) const override;
+  GetObjectIconTextureIfCached(const std::string &objectName) const override;
   GLuint GetCreatureIconTexture(const std::string &speciesId) override;
   GLuint GetSkinIconTexture(const std::string &skinId) override;
 
-  UPrefabIconCache &GetPrefabCache() { return *PrefabCache; }
+  UObjectIconCache &GetObjectCache() { return *ObjectCache; }
   void ClearBlockIconCache();
   void ClearCreatureIconCache();
-  void WarmupPrefabIcons(size_t maxPerFrame);
+  void WarmupObjectIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
 
 private:
   std::shared_ptr<UTextureCubeStorage> Textures;
-  std::unique_ptr<UPrefabIconCache> PrefabCache;
+  std::unique_ptr<UObjectIconCache> ObjectCache;
   std::unique_ptr<UCreatureIconCache> CreatureCache;
 };
 

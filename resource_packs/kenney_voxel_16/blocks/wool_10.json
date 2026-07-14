@@ -1,20 +1,17 @@
-﻿{
-    "name":  "wool_10",
-    "id":  154,
-    "types":  [
-                  "decorative"
-              ],
-    "textures":  [
-                     "cloth_10",
-                     "cloth_10",
-                     "cloth_10",
-                     "cloth_10",
-                     "cloth_10",
-                     "cloth_10"
-                 ],
-    "displayName":  "Purple Wool",
-    "render":  {
-
-               }
+{
+  "name": "wool_10",
+  "id": 154,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_10",
+    "cloth_10",
+    "cloth_10",
+    "cloth_10",
+    "cloth_10",
+    "cloth_10"
+  ],
+  "displayName": "Purple Wool",
+  "render": {}
 }
-

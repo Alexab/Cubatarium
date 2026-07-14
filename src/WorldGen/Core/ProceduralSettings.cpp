@@ -92,6 +92,32 @@ const char *CaveStyleToString(CaveStyle style)
   return style == CaveStyle::Worm ? "worm" : "noise";
 }
 
+TerrainBackend TerrainBackendFromString(const std::string &s)
+{
+  if (s == "density_3d" || s == "density3d" || s == "3d")
+  {
+    return TerrainBackend::Density3D;
+  }
+  if (s != "heightmap" && !s.empty())
+  {
+    std::cerr << "WARN: unknown terrain_backend '" << s
+              << "', using heightmap" << std::endl;
+  }
+  return TerrainBackend::Heightmap;
+}
+
+const char *TerrainBackendToString(TerrainBackend backend)
+{
+  switch (backend)
+  {
+  case TerrainBackend::Density3D:
+    return "density_3d";
+  case TerrainBackend::Heightmap:
+  default:
+    return "heightmap";
+  }
+}
+
 namespace
 {
 
@@ -105,14 +131,18 @@ void ClampTuning(WorldGenTuning &t)
   t.biomeDesertWeight = ClampTuningValue(t.biomeDesertWeight);
   t.biomeHillsWeight = ClampTuningValue(t.biomeHillsWeight);
   t.biomeTundraWeight = ClampTuningValue(t.biomeTundraWeight);
+  t.biomeSavannaWeight = ClampTuningValue(t.biomeSavannaWeight);
+  t.biomeFoothillsWeight = ClampTuningValue(t.biomeFoothillsWeight);
+  t.biomeScrublandWeight = ClampTuningValue(t.biomeScrublandWeight);
+  t.biomeColdSteppeWeight = ClampTuningValue(t.biomeColdSteppeWeight);
   t.terrainRoughness = ClampTuningValue(t.terrainRoughness);
   t.biomeBlendRadius = std::clamp(t.biomeBlendRadius, 0.0f, 16.0f);
   t.oreDensity = ClampTuningValue(t.oreDensity);
   t.terrainErosion = std::clamp(t.terrainErosion, 0.0f, 1.0f);
   t.riverWidth = std::clamp(t.riverWidth, 0.5f, 1.5f);
-  t.thermalErosionIterations = std::clamp(t.thermalErosionIterations, 0, 8);
-  t.hydraulicErosionIterations = std::clamp(t.hydraulicErosionIterations, 0, 32);
   t.erosionStrength = std::clamp(t.erosionStrength, 0.0f, 1.0f);
+  t.jitterAmplitude = std::clamp(t.jitterAmplitude, 0.0f, 2.0f);
+  t.heightSmoothingRadius = std::clamp(t.heightSmoothingRadius, 0, 2);
   if (t.terrainRoughness < 0.25f)
   {
     t.terrainRoughness = 0.25f;
@@ -220,6 +250,7 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
       s.Generator == ProceduralGenerator::BetaRetro)
   {
     s.EnableTrees = true;
+    s.EnableGroundCover = true;
     s.FillLava = true;
   }
   if (s.Generator == ProceduralGenerator::Overworld)
@@ -227,6 +258,8 @@ void ApplyGeneratorTierDefaults(ProceduralSettings &s)
     s.EnableCaves = true;
     s.EnableOres = true;
     s.Caves.useDensityField = true;
+    s.Caves.maxDepthBelowSurface = 48;
+    s.Caves.chunkGateThreshold = 0.25f;
     s.Ravines.enabled = true;
   }
   if (s.Generator == ProceduralGenerator::BetaRetro)
@@ -254,21 +287,30 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.terrainErosion = 0.28f;
     s.Tuning.structureDensity = 0.25f;
     s.Tuning.vegetationDensity = 0.8f;
+    s.Tuning.decorationDensity = 0.8f;
     s.Tuning.biomeBlendRadius = 16.0f;
+    s.Tuning.erosionStrength = 0.25f;
+    s.FillFire = false;
   }
   else if (presetId == "sparse_structures")
   {
     s.Tuning.structureDensity = 0.2f;
     s.Tuning.vegetationDensity = 0.75f;
+    s.Tuning.decorationDensity = 0.75f;
   }
   else
   {
     s.WorldGenPresetId = "balanced";
-    s.Tuning.terrainRoughness = 0.75f;
-    s.Tuning.terrainErosion = 0.22f;
+    s.Tuning.terrainRoughness = 0.62f;
+    s.Tuning.terrainErosion = 0.32f;
     s.Tuning.structureDensity = 0.35f;
-    s.Tuning.vegetationDensity = 0.85f;
+    s.Tuning.vegetationDensity = 0.75f;
+    s.Tuning.decorationDensity = 0.55f;
     s.Tuning.biomeBlendRadius = 14.0f;
+    s.Tuning.erosionStrength = 0.25f;
+    s.Tuning.heightSmoothing = false;
+    s.Tuning.heightSmoothingRadius = 0;
+    s.FillFire = false;
   }
   ClampTuning(s.Tuning);
 }

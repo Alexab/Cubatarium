@@ -1,14 +1,16 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include <algorithm>
 
 namespace cutum
 {
 
-UChunkLoadScheduler::UChunkLoadScheduler(IChunkPopulator &populator,
+UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
-    : Populator(populator), Tokens(tokens)
+    : Populator(populator), Tokens(tokens),
+      Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration))
 {
 }
 
@@ -23,7 +25,9 @@ void UChunkLoadScheduler::SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn)
 }
 
 void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
-                                      const ProceduralSettings &settings)
+                                      const ProceduralSettings &settings,
+                                      glm::ivec2 column_origin,
+                                      bool has_column_origin)
 {
   if (coord.y != 0)
   {
@@ -50,6 +54,8 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.priority = priority;
   pending.token = Tokens.Current(coord);
   pending.settings = settings;
+  pending.columnOrigin = column_origin;
+  pending.hasColumnOrigin = has_column_origin;
   States[coord] = ChunkLoadState::Requested;
   ActiveTokens[coord] = pending.token;
   RequestPriorities[coord] = priority;
@@ -61,6 +67,34 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
   States.erase(coord);
   ActiveTokens.erase(coord);
   RequestPriorities.erase(coord);
+}
+
+void UChunkLoadScheduler::CancelAllPending(
+    const std::chrono::milliseconds worker_wait)
+{
+  Queue = std::priority_queue<PendingRequest, std::vector<PendingRequest>,
+                              RequestCompare>();
+  std::vector<glm::ivec3> bump_coords;
+  bump_coords.reserve(ActiveTokens.size() + States.size());
+  for (const auto &entry : ActiveTokens)
+  {
+    bump_coords.push_back(entry.first);
+  }
+  for (const auto &entry : States)
+  {
+    bump_coords.push_back(entry.first);
+  }
+  for (const glm::ivec3 &coord : bump_coords)
+  {
+    Tokens.Bump(coord);
+  }
+  States.clear();
+  ActiveTokens.clear();
+  RequestPriorities.clear();
+  Pool.CancelPendingJobs();
+  (void)Completed.DrainAll();
+  (void)Pool.WaitIdleFor(worker_wait);
+  (void)Completed.DrainAll();
 }
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
@@ -76,6 +110,12 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
   populateRequest.settings = request.settings;
+  populateRequest.columnOrigin = request.columnOrigin;
+  populateRequest.hasColumnOrigin = request.hasColumnOrigin;
+  const glm::ivec3 coord = request.coord;
+  const uint64_t start_sequence = request.token.sequence;
+  populateRequest.shouldCancel = [this, coord, start_sequence]()
+  { return Tokens.Current(coord).sequence != start_sequence; };
   const int priority = request.priority;
   Pool.Enqueue(
       [this, populateRequest, priority]()

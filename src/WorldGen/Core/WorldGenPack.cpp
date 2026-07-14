@@ -1,4 +1,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "ThirdParty/stb_image.h"
 #include <algorithm>
 #include <filesystem>
@@ -236,7 +239,13 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
     {
       if (stage.is_string())
       {
-        ParsePipelineStage(stage.get<std::string>(), pack.Pipeline);
+        const std::string stage_name = stage.get<std::string>();
+        ParsePipelineStage(stage_name, pack.Pipeline);
+        if (const std::optional<WorldGenStageId> stage_id =
+                WorldGenStageIdFromPipelineString(stage_name))
+        {
+          pack.Pipeline.StageOrder.push_back(*stage_id);
+        }
       }
     }
   }
@@ -244,6 +253,252 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
   {
     std::cerr << "WorldGenPack: pipeline.json parse error: " << e.what()
               << std::endl;
+  }
+}
+
+void ParseHeightLayer(const nlohmann::json &layer, HeightLayerPackConfig &out)
+{
+  if (!layer.is_object())
+  {
+    return;
+  }
+  if (layer.contains("scale"))
+  {
+    out.Scale = layer["scale"].get<float>();
+  }
+  if (layer.contains("octaves"))
+  {
+    out.Octaves = layer["octaves"].get<int>();
+  }
+  if (layer.contains("weight"))
+  {
+    out.Weight = layer["weight"].get<float>();
+  }
+}
+
+void ParseClimateAxis(const nlohmann::json &axis, ClimateAxisPackConfig &out)
+{
+  if (!axis.is_object())
+  {
+    return;
+  }
+  if (axis.contains("scale"))
+  {
+    out.Scale = axis["scale"].get<float>();
+  }
+  if (axis.contains("octaves"))
+  {
+    out.Octaves = axis["octaves"].get<int>();
+  }
+  if (axis.contains("seed_offset"))
+  {
+    out.SeedOffset = axis["seed_offset"].get<int>();
+  }
+}
+
+void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path heightJson = root / "height.json";
+  if (!std::filesystem::exists(heightJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(heightJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("continental"))
+      {
+        ParseHeightLayer(layers["continental"], pack.Height.Continental);
+      }
+      if (layers.contains("regional"))
+      {
+        ParseHeightLayer(layers["regional"], pack.Height.Regional);
+      }
+      if (layers.contains("detail"))
+      {
+        ParseHeightLayer(layers["detail"], pack.Height.Detail);
+      }
+      if (layers.contains("rolling"))
+      {
+        ParseHeightLayer(layers["rolling"], pack.Height.Rolling);
+      }
+    }
+    if (json.contains("overworld") && json["overworld"].is_object())
+    {
+      const auto &ow = json["overworld"];
+      if (ow.contains("sea_bias"))
+      {
+        pack.Height.SeaBias = ow["sea_bias"].get<float>();
+      }
+      if (ow.contains("curve_exponent"))
+      {
+        pack.Height.CurveExponent = ow["curve_exponent"].get<float>();
+      }
+    }
+    if (json.contains("jitter") && json["jitter"].is_object())
+    {
+      const auto &j = json["jitter"];
+      if (j.contains("scale"))
+      {
+        pack.Height.JitterScale = j["scale"].get<float>();
+      }
+      if (j.contains("amplitude"))
+      {
+        pack.Height.JitterAmplitude = j["amplitude"].get<float>();
+      }
+      if (j.contains("erosion_damp"))
+      {
+        pack.Height.JitterErosionDamp = j["erosion_damp"].get<float>();
+      }
+    }
+    pack.Height.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: height.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path climateJson = root / "climate.json";
+  if (!std::filesystem::exists(climateJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(climateJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("temperature"))
+    {
+      ParseClimateAxis(json["temperature"], pack.Climate.Temperature);
+    }
+    if (json.contains("moisture"))
+    {
+      ParseClimateAxis(json["moisture"], pack.Climate.Moisture);
+    }
+    if (json.contains("continentalness"))
+    {
+      ParseClimateAxis(json["continentalness"], pack.Climate.Continentalness);
+    }
+    if (json.contains("erosion"))
+    {
+      ParseClimateAxis(json["erosion"], pack.Climate.Erosion);
+    }
+    if (json.contains("weirdness"))
+    {
+      ParseClimateAxis(json["weirdness"], pack.Climate.Weirdness);
+    }
+    if (json.contains("ridge"))
+    {
+      ParseClimateAxis(json["ridge"], pack.Climate.Ridge);
+    }
+    pack.Climate.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: climate.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path oresJson = root / "ores.json";
+  if (!std::filesystem::exists(oresJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(oresJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (!json.contains("ores") || !json["ores"].is_array())
+    {
+      return;
+    }
+    for (const auto &entry : json["ores"])
+    {
+      if (!entry.is_object() || !entry.contains("slot"))
+      {
+        continue;
+      }
+      PackOreRule rule;
+      rule.Slot = entry["slot"].get<std::string>();
+      rule.YPeak = entry.value("y_peak", rule.YPeak);
+      rule.YSpread = entry.value("y_spread", rule.YSpread);
+      rule.VeinSize = entry.value("vein_size", rule.VeinSize);
+      rule.Rarity = entry.value("rarity", rule.Rarity);
+      rule.MaxSurfaceOffset = entry.value("max_surface_offset", rule.MaxSurfaceOffset);
+      rule.BelowSeaLevel = entry.value("below_sea_level", rule.BelowSeaLevel);
+      rule.SeedModulo = entry.value("seed_modulo", rule.SeedModulo);
+      pack.Ores.Rules.push_back(rule);
+    }
+    pack.Ores.Loaded = !pack.Ores.Rules.empty();
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ores.json parse error: " << e.what() << std::endl;
+  }
+}
+
+void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path cavesJson = root / "caves.json";
+  if (!std::filesystem::exists(cavesJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(cavesJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Caves.MaxDepthBelowSurface =
+        json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
+    pack.Caves.MinDepthBelowSurface =
+        json.value("min_depth_below_surface", pack.Caves.MinDepthBelowSurface);
+    pack.Caves.ChunkGateThreshold =
+        json.value("chunk_gate_threshold", pack.Caves.ChunkGateThreshold);
+    pack.Caves.UseDensityField =
+        json.value("use_density_field", pack.Caves.UseDensityField);
+    pack.Caves.DensityCaveAmplitude = json.value(
+        "density_cave_amplitude", pack.Caves.DensityCaveAmplitude);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("cheese"))
+      {
+        pack.Caves.CheeseScale =
+            layers["cheese"].value("scale", pack.Caves.CheeseScale);
+        pack.Caves.CheeseWeight =
+            layers["cheese"].value("weight", pack.Caves.CheeseWeight);
+      }
+      if (layers.contains("spaghetti"))
+      {
+        pack.Caves.SpaghettiScale =
+            layers["spaghetti"].value("scale", pack.Caves.SpaghettiScale);
+        pack.Caves.SpaghettiWeight =
+            layers["spaghetti"].value("weight", pack.Caves.SpaghettiWeight);
+      }
+      if (layers.contains("noodle"))
+      {
+        pack.Caves.NoodleScale =
+            layers["noodle"].value("scale", pack.Caves.NoodleScale);
+        pack.Caves.NoodleWeight =
+            layers["noodle"].value("weight", pack.Caves.NoodleWeight);
+      }
+    }
+    pack.Caves.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: caves.json parse error: " << e.what() << std::endl;
   }
 }
 
@@ -312,7 +567,13 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
       {
         if (stage.is_string())
         {
-          ParsePipelineStage(stage.get<std::string>(), ActivePack.Pipeline);
+          const std::string stage_name = stage.get<std::string>();
+          ParsePipelineStage(stage_name, ActivePack.Pipeline);
+          if (const std::optional<WorldGenStageId> stage_id =
+                  WorldGenStageIdFromPipelineString(stage_name))
+          {
+            ActivePack.Pipeline.StageOrder.push_back(*stage_id);
+          }
         }
       }
     }
@@ -324,6 +585,10 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   }
 
   LoadPipelineJson(root, ActivePack);
+  LoadHeightJson(root, ActivePack);
+  LoadClimateJson(root, ActivePack);
+  LoadOresJson(root, ActivePack);
+  LoadCavesJson(root, ActivePack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -365,6 +630,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   std::cout << "WorldGenPack: loaded '" << ActivePack.Id << "' with "
             << ActivePack.Biomes.size() << " biome profile(s)"
             << (ActivePack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
+  GetActiveBiomeRegistry().LoadFromPack(ActivePack);
   return true;
 }
 
@@ -411,7 +677,75 @@ std::vector<std::string> UWorldGenPack::ListPackIds()
   return ids;
 }
 
+std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
+{
+  std::vector<WorldGenPackInfo> infos;
+  const std::filesystem::path root("content/worldgen_packs");
+  if (!std::filesystem::exists(root))
+  {
+    return infos;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(root))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::filesystem::path packJson = entry.path() / "pack.json";
+    if (!std::filesystem::exists(packJson))
+    {
+      continue;
+    }
+    try
+    {
+      std::ifstream file(packJson);
+      const nlohmann::json rootJson = nlohmann::json::parse(file);
+      WorldGenPackInfo info;
+      info.Id = rootJson.value("id", entry.path().filename().string());
+      info.Description = rootJson.value("description", std::string{});
+      infos.push_back(std::move(info));
+    }
+    catch (const std::exception &ex)
+    {
+      std::cerr << "WorldGenPack: failed to read " << packJson.string() << ": "
+                << ex.what() << std::endl;
+    }
+  }
+  std::sort(infos.begin(), infos.end(),
+            [](const WorldGenPackInfo &a, const WorldGenPackInfo &b)
+            { return a.Id < b.Id; });
+  return infos;
+}
+
 const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
+
+const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height; }
+
+const PackClimateConfig &UWorldGenPack::ClimateConfig() { return ActivePack.Climate; }
+
+const PackOresConfig &UWorldGenPack::OresConfig() { return ActivePack.Ores; }
+
+const PackCavesConfig &UWorldGenPack::CavesConfig() { return ActivePack.Caves; }
+
+void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
+{
+  const PackCavesConfig &caves = ActivePack.Caves;
+  if (!caves.Loaded)
+  {
+    return;
+  }
+  settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  settings.Caves.minDepthBelowSurface = caves.MinDepthBelowSurface;
+  settings.Caves.chunkGateThreshold = caves.ChunkGateThreshold;
+  settings.Caves.useDensityField = caves.UseDensityField;
+  settings.Caves.densityCaveAmplitude = caves.DensityCaveAmplitude;
+  settings.Caves.cheeseScale = caves.CheeseScale;
+  settings.Caves.cheeseWeight = caves.CheeseWeight;
+  settings.Caves.spaghettiScale = caves.SpaghettiScale;
+  settings.Caves.spaghettiWeight = caves.SpaghettiWeight;
+  settings.Caves.noodleScale = caves.NoodleScale;
+  settings.Caves.noodleWeight = caves.NoodleWeight;
+}
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
     const std::string &biomeId)
@@ -444,16 +778,22 @@ float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
     return 1.0f;
   }
   const auto prefabIt = def->FeatureWeights.find(prefabName);
-  if (prefabIt == def->FeatureWeights.end())
+  if (prefabIt != def->FeatureWeights.end())
   {
-    return 1.0f;
+    return std::max(0.1f, prefabIt->second);
   }
-  return std::max(0.1f, prefabIt->second);
+  const std::string mapgenKey = prefabName + "_mapgen";
+  const auto mapgenIt = def->FeatureWeights.find(mapgenKey);
+  if (mapgenIt != def->FeatureWeights.end())
+  {
+    return std::max(0.1f, mapgenIt->second);
+  }
+  return 1.0f;
 }
 
 float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
                                                   SubBiomeId subBiome,
-                                                  PrefabFeaturePool pool)
+                                                  ObjectFeaturePool pool)
 {
   const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
   if (!def)
@@ -465,11 +805,11 @@ float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
   {
     return 1.0f;
   }
-  if (pool == PrefabFeaturePool::Vegetation)
+  if (pool == ObjectFeaturePool::Vegetation)
   {
     return std::max(0.1f, subIt->second.VegetationWeightMul);
   }
-  if (pool == PrefabFeaturePool::Decoration)
+  if (pool == ObjectFeaturePool::Decoration)
   {
     return std::max(0.1f, subIt->second.DecorationWeightMul);
   }

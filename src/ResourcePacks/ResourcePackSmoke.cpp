@@ -1,6 +1,6 @@
 #include "ResourcePacks/ResourcePackSmoke.h"
 
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -8,7 +8,9 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Prefabs/Prefab.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 
@@ -16,6 +18,7 @@
 #include <filesystem>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 namespace cutum
 {
@@ -72,7 +75,7 @@ bool SmokeSelection(const ResourcePackSelection &selection,
   static const char *kTierA[] = {
       "bedrock", "stone",  "dirt",   "grass",   "sand",    "sandstone",
       "gravel",  "snow",   "clay",   "ice",     "hellrock",  "water",
-      "lava",    "fire",   "wood",   "tree_log", "tree_leaves"};
+      "lava",    "fire",   "wood",   "tree_log", "tree_bark", "tree_leaves"};
   for (const char *name : kTierA)
   {
     if (registry.ResolveBlockName(name) == BLOCK_AIR)
@@ -110,6 +113,49 @@ bool SmokeSelection(const ResourcePackSelection &selection,
                 << " texture override(s) from " << pack.Id << std::endl;
     }
   }
+  static const char *kDecorStems[] = {"stone", "tree_bark"};
+  const bool minetestPrimary =
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                "minetest_default_16") != selection.Primary.end();
+  if (minetestPrimary)
+  {
+    for (const char *name : kDecorStems)
+    {
+      const BlockId id = registry.ResolveBlockName(name);
+      if (id == BLOCK_AIR)
+      {
+        std::cerr << "ResourcePackSmoke: missing decor block '" << name << "'"
+                  << std::endl;
+        return false;
+      }
+      bool found = false;
+      for (const MergedCubeDesc &desc : registry.GetCubeDescriptors())
+      {
+        if (desc.Name != name)
+        {
+          continue;
+        }
+        found = true;
+        for (const std::string &stem : desc.Stems)
+        {
+          if (stem.rfind("__ph_", 0) == 0)
+          {
+            std::cerr << "ResourcePackSmoke: placeholder texture stem for '"
+                      << name << "': " << stem << std::endl;
+            return false;
+          }
+        }
+        break;
+      }
+      if (!found)
+      {
+        std::cerr << "ResourcePackSmoke: no cube descriptor for '" << name
+                  << "'" << std::endl;
+        return false;
+      }
+    }
+  }
+
   std::cout << "ResourcePackSmoke: OK " << packs.size() << " pack(s), "
             << firstCount << " blocks" << std::endl;
   return true;
@@ -131,20 +177,20 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   UBlockRegistry blockRegistry(nullptr, nullptr);
   blockRegistry.SetMergeRegistry(registry);
 
-  UPrefabLibrary prefabs;
-  prefabs.LoadMerged(assetRoot / "prefabs", packs, blockRegistry);
+  UObjectLibrary objects;
+  objects.LoadMerged(assetRoot / "objects", packs, blockRegistry);
 
   // Simulate worldgen slot resolution creating synthetic blocks (e.g. ore_coal).
   (void)blockRegistry.GetIdByTypeName("ore_coal");
   (void)blockRegistry.GetIdByTypeName("ore_iron");
 
-  UBlockDefinitionStorage defsAfterPrefabs;
-  registry->PopulateBlockDefinitionStorage(defsAfterPrefabs);
+  UBlockDefinitionStorage defsAfterObjects;
+  registry->PopulateBlockDefinitionStorage(defsAfterObjects);
   for (const char *fluid : {"water", "lava", "fire"})
   {
     const BlockId id = registry->ResolveBlockName(fluid);
-    const BlockDefinition *def = defsAfterPrefabs.GetById(id);
-    const BlockDefinition *defByName = defsAfterPrefabs.GetByName(fluid);
+    const BlockDefinition *def = defsAfterObjects.GetById(id);
+    const BlockDefinition *defByName = defsAfterObjects.GetByName(fluid);
     if (!def || !defByName || def != defByName ||
         def->Physics.Movement.Occupancy >= 1.0f)
     {
@@ -154,22 +200,122 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
     }
   }
 
-  const size_t prefabCount = prefabs.ListNames().size();
-  constexpr size_t kMinPrefabs = 45;
-  if (prefabCount < kMinPrefabs)
+  const size_t objectCount = objects.ListNames().size();
+  constexpr size_t kMinObjects = 45;
+  if (objectCount < kMinObjects)
   {
-    std::cerr << "ResourcePackSmoke: startup init loaded only " << prefabCount
-              << " prefab(s), expected >= " << kMinPrefabs << std::endl;
+    std::cerr << "ResourcePackSmoke: startup init loaded only " << objectCount
+              << " object(s), expected >= " << kMinObjects << std::endl;
     return false;
   }
-  std::cout << "ResourcePackSmoke: startup init OK (" << prefabCount
-            << " prefabs after pack merge)" << std::endl;
+
+  const BlockId stone_id = blockRegistry.GetIdByTypeName("stone");
+  const BlockId tree_bark_id = blockRegistry.GetIdByTypeName("tree_bark");
+  if (stone_id == BLOCK_AIR || tree_bark_id == BLOCK_AIR)
+  {
+    std::cerr << "ResourcePackSmoke: stone/tree_bark not resolved after object load"
+              << std::endl;
+    return false;
+  }
+  const auto *path = objects.Get("path_cobble_3x3");
+  const auto *log = objects.Get("deco_log_pine");
+  if (!path || !log || path->voxels.empty() || log->voxels.empty())
+  {
+    std::cerr << "ResourcePackSmoke: missing path_cobble_3x3 or deco_log_pine"
+              << std::endl;
+    return false;
+  }
+  bool path_has_stone = false;
+  for (const auto &voxel : path->voxels)
+  {
+    if (voxel.Id == stone_id)
+    {
+      path_has_stone = true;
+      break;
+    }
+  }
+  bool log_has_bark = false;
+  for (const auto &voxel : log->voxels)
+  {
+    if (voxel.Id == tree_bark_id)
+    {
+      log_has_bark = true;
+      break;
+    }
+  }
+  if (!path_has_stone || !log_has_bark)
+  {
+    std::cerr << "ResourcePackSmoke: prefab blocks not bound (stone="
+              << path_has_stone << ", tree_bark=" << log_has_bark << ")"
+              << std::endl;
+    return false;
+  }
+
+  auto defs_storage = std::make_shared<UBlockDefinitionStorage>();
+  registry->PopulateBlockDefinitionStorage(*defs_storage);
+  blockRegistry.SetDefinitions(defs_storage);
+  if (!blockRegistry.BlocksMovement(tree_bark_id) ||
+      !blockRegistry.BlocksMovement(stone_id))
+  {
+    std::cerr << "ResourcePackSmoke: decor blocks are not movement-solid"
+              << std::endl;
+    return false;
+  }
+  if (!objects.ValidateCriticalPrefabs())
+  {
+    return false;
+  }
+
+  UBlockWorld world;
+  for (int y = 0; y <= 47; ++y)
+  {
+    world.SetBlock(glm::ivec3(0, y, 0), stone_id);
+  }
+  world.SetBlock(glm::ivec3(0, 48, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 49, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 50, 0), stone_id);
+  world.SetBlock(glm::ivec3(0, 51, 0), stone_id);
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    world.SetBlock(glm::ivec3(dx, 51, 0), stone_id);
+  }
+  const glm::ivec3 log_anchor(0, 52, 0);
+  if (!CanPlaceObjectAtForWorldGen(world, blockRegistry, *log, log_anchor, 80,
+                                   48))
+  {
+    std::cerr << "ResourcePackSmoke: deco_log_pine rejected by worldgen placement"
+              << std::endl;
+    return false;
+  }
+  const ObjectPlacementStats log_stats =
+      PlaceObjectAt(world, blockRegistry, *log, log_anchor, false);
+  if (log_stats.placedCount != static_cast<int>(log->voxels.size()))
+  {
+    std::cerr << "ResourcePackSmoke: deco_log_pine placed " << log_stats.placedCount
+              << "/" << log->voxels.size() << " voxels" << std::endl;
+    return false;
+  }
+  if (world.GetBlock(glm::ivec3(0, 52, 0)) != tree_bark_id)
+  {
+    std::cerr << "ResourcePackSmoke: deco_log center is not tree_bark"
+              << std::endl;
+    return false;
+  }
+  if (world.GetBlock(glm::ivec3(0, 51, 0)) != stone_id)
+  {
+    std::cerr << "ResourcePackSmoke: deco_log should rest above ground surface"
+              << std::endl;
+    return false;
+  }
+
+  std::cout << "ResourcePackSmoke: startup init OK (" << objectCount
+            << " objects after pack merge)" << std::endl;
   return true;
 }
 
 } // namespace
 
-int RunResourcePackSmoke(IPlatformPaths &paths)
+int RunResourcePackSmoke(IUPlatformPaths &paths)
 {
   const fs::path assetRoot = paths.AssetRoot();
   const fs::path writableRoot = paths.WritableRoot();

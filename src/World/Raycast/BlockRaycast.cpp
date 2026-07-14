@@ -1,9 +1,12 @@
 #include "World/Raycast/BlockRaycast.h"
-#include "Blocks/BlockRegistry.h"
-#include "World/Core/BlockWorld.h"
-#include "World/Math/GridMath.h"
+#include <array>
 #include <cmath>
 #include <limits>
+
+#include "Blocks/BlockRegistry.h"
+#include "World/Collision/VoxelDdaTraversal.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Math/GridMath.h"
 
 namespace cutum
 {
@@ -34,6 +37,48 @@ bool IsRaycastTarget(const UBlockWorld &world, const UBlockRegistry &registry,
 {
   const BlockId Id = world.GetBlock(pos);
   return registry.BlocksMovement(Id);
+}
+
+bool IsAirPocketCell(const UBlockWorld &world, const UBlockRegistry &registry,
+                     glm::ivec3 cell)
+{
+  if (!world.IsAir(cell))
+  {
+    return false;
+  }
+  static constexpr std::array<glm::ivec3, 6> kNeighbors = {
+      glm::ivec3(1, 0, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(0, 1, 0),
+      glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1)};
+  for (const glm::ivec3 &offset : kNeighbors)
+  {
+    if (IsRaycastTarget(world, registry, cell + offset))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+glm::ivec3 InferFaceNormal(const UBlockWorld &world,
+                           const UBlockRegistry &registry, glm::ivec3 air_cell,
+                           glm::ivec3 solid_hint)
+{
+  const glm::ivec3 delta = air_cell - solid_hint;
+  if (delta != glm::ivec3(0))
+  {
+    return delta;
+  }
+  static constexpr std::array<glm::ivec3, 6> kNeighbors = {
+      glm::ivec3(1, 0, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(0, 1, 0),
+      glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1)};
+  for (const glm::ivec3 &offset : kNeighbors)
+  {
+    if (IsRaycastTarget(world, registry, air_cell + offset))
+    {
+      return -offset;
+    }
+  }
+  return glm::ivec3(0, -1, 0);
 }
 
 } // namespace
@@ -67,8 +112,6 @@ RaycastSolidBlocks(const UBlockWorld &world, const UBlockRegistry &registry,
   float t = 0.0f;
   while (t < maxDistance)
   {
-    const glm::vec3 pos = origin + direction * t;
-
     float tNext = maxDistance;
     int stepAxis = -1;
     const float tx = NextBoundaryT(origin, direction, current.x, 0);
@@ -124,6 +167,104 @@ RaycastSolidBlocks(const UBlockWorld &world, const UBlockRegistry &registry,
   }
 
   return std::nullopt;
+}
+
+glm::ivec3 InferPlacementNormal(const BlockRayHit &hit, glm::vec3 eye_pos)
+{
+  if (hit.faceNormal != glm::ivec3(0))
+  {
+    return hit.faceNormal;
+  }
+  const glm::vec3 toCamera = eye_pos - BlockCenter(hit.blockPos);
+  glm::ivec3 normal(0);
+  if (std::abs(toCamera.x) >= std::abs(toCamera.y) &&
+      std::abs(toCamera.x) >= std::abs(toCamera.z))
+  {
+    normal.x = toCamera.x > 0.0f ? 1 : -1;
+  }
+  else if (std::abs(toCamera.y) >= std::abs(toCamera.z))
+  {
+    normal.y = toCamera.y > 0.0f ? 1 : -1;
+  }
+  else
+  {
+    normal.z = toCamera.z > 0.0f ? 1 : -1;
+  }
+  return normal;
+}
+
+// Future: bucket pour / fluid tool placement — NOT used by hotbar AddObjectByView.
+std::optional<glm::ivec3> RaycastAirPocketAlongRay(
+    const UBlockWorld &world, const UBlockRegistry &registry, glm::vec3 eye_pos,
+    glm::vec3 front, const BlockRayHit &hit, float max_distance)
+{
+  const float len = glm::length(front);
+  if (len < 1e-6f)
+  {
+    return std::nullopt;
+  }
+  const glm::vec3 direction = front / len;
+
+  std::optional<glm::ivec3> best;
+  float best_t = std::numeric_limits<float>::max();
+  const float traverse_dist = std::max(0.0f, std::min(hit.distance - 0.05f, max_distance));
+
+  TraverseVoxelRay(eye_pos, direction, traverse_dist,
+                   [&](glm::ivec3 cell)
+                   {
+                     if (!IsAirPocketCell(world, registry, cell) ||
+                         !world.IsAir(cell))
+                     {
+                       return false;
+                     }
+                     const float t = glm::dot(BlockCenter(cell) - eye_pos, direction);
+                     if (t >= 0.0f && t < best_t)
+                     {
+                       best_t = t;
+                       best = cell;
+                     }
+                     return false;
+                   });
+
+  return best;
+}
+
+// Future: bucket pour / fluid tool placement — NOT used by hotbar AddObjectByView.
+std::optional<FluidPlacementHit> RaycastFluidPlacementTarget(
+    const UBlockWorld &world, const UBlockRegistry &registry, glm::vec3 eye_pos,
+    glm::vec3 front, float max_distance)
+{
+  const auto hit =
+      RaycastSolidBlocks(world, registry, eye_pos, front, max_distance);
+  if (!hit)
+  {
+    return std::nullopt;
+  }
+
+  const glm::ivec3 normal = InferPlacementNormal(*hit, eye_pos);
+  const glm::ivec3 place_pos = hit->blockPos + normal;
+  if (world.IsAir(place_pos))
+  {
+    FluidPlacementHit placement;
+    placement.block_pos = place_pos;
+    placement.face_normal = normal;
+    placement.via_fluid_volume = false;
+    return placement;
+  }
+
+  const auto pocket =
+      RaycastAirPocketAlongRay(world, registry, eye_pos, front, *hit, max_distance);
+  if (!pocket)
+  {
+    return std::nullopt;
+  }
+
+  FluidPlacementHit placement;
+  placement.block_pos = *pocket;
+  placement.face_normal =
+      InferFaceNormal(world, registry, *pocket, hit->blockPos);
+  placement.via_fluid_volume = true;
+  return placement;
 }
 
 } // namespace cutum

@@ -1,15 +1,22 @@
 #include "Blocks/Input/BlockInputController.h"
 
+#include "World/Diagnostics/BlockInspectDiagnostics.h"
+
 #include "App/Application.h"
 #if defined(__ANDROID__)
 #include "App/Platform/TouchInputBridge.h"
 #endif
+#include "App/Platform/GlfwKeyCompat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+
+#if !defined(__ANDROID__)
+#include <GLFW/glfw3.h>
+#endif
 
 #include <cmath>
 
@@ -41,6 +48,45 @@ bool ShouldBlockBreakByMovement(const BlockInputContext &ctx)
 #endif
 }
 
+bool IsCtrlHeld(const BlockInputContext &ctx)
+{
+#if defined(__ANDROID__)
+  (void)ctx;
+  return false;
+#else
+  if (!ctx.Window)
+  {
+    return false;
+  }
+  return glfwGetKey(ctx.Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+         glfwGetKey(ctx.Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+#endif
+}
+
+bool TryBlockInspectClick(const BlockInputContext &ctx)
+{
+  if (!IsCtrlHeld(ctx) || !ctx.World)
+  {
+    return false;
+  }
+  const int sample =
+      UBlockInspectDiagnostics::CaptureFromCrosshair(*ctx.World, ctx.Geometries);
+  if (sample < 0)
+  {
+    if (ctx.Geometries)
+    {
+      ctx.Geometries->ShowTransientMessage("Block inspect: no target", 1.5);
+    }
+    return true;
+  }
+  if (ctx.Geometries)
+  {
+    ctx.Geometries->ShowTransientMessage(
+        "Block inspect logged (#" + std::to_string(sample) + ")", 1.5);
+  }
+  return true;
+}
+
 } // namespace
 
 const InventoryEntryRef *
@@ -70,8 +116,8 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
   }
   switch (Active->kind)
   {
-  case InventoryEntryKind::UObject:
-    ctx.World->PlaceActivePrefabByView();
+  case InventoryEntryKind::Object:
+    ctx.World->PlaceActiveObjectByView();
     break;
   case InventoryEntryKind::UCreature:
     if (!ctx.World->SpawnCreatureByView(Active->Id) && ctx.Geometries)
@@ -144,6 +190,10 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   {
     return;
   }
+  if (TryBlockInspectClick(ctx))
+  {
+    return;
+  }
   LeftDownTime = std::chrono::steady_clock::now();
   LeftHeld = true;
 
@@ -159,6 +209,12 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
                                               const BlockInputContext &ctx)
 {
   if (!ctx.Ui || !ctx.World)
+  {
+    LeftHeld = false;
+    return;
+  }
+
+  if (IsCtrlHeld(ctx))
   {
     LeftHeld = false;
     return;

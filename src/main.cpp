@@ -11,7 +11,7 @@
 #include "App/Platform/AppRunner.h"
 #include "App/Platform/DesktopPlatformPaths.h"
 #include "App/Platform/DesktopPlatformWindow.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 #include "App/Utils.h"
 #include "ResourcePacks/ResourcePackSmoke.h"
@@ -38,8 +38,26 @@ int main(int argc, char *argv[])
       cutum::CubatariumAttachParentConsole();
 #endif
       auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
-      cutum::IPlatformPaths::SetGlobal(paths);
+      cutum::IUPlatformPaths::SetGlobal(paths);
       return cutum::RunResourcePackSmoke(*paths);
+    }
+    if (std::strcmp(argv[i], "--load-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunLoadWorld(argc, argv, i + 1);
+    }
+    if (std::strcmp(argv[i], "--enter-game-smoke") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunEnterGameSmoke(*paths);
     }
     if (std::strcmp(argv[i], "--validate-load") == 0)
     {
@@ -47,7 +65,7 @@ int main(int argc, char *argv[])
       cutum::CubatariumAttachParentConsole();
 #endif
       auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
-      cutum::IPlatformPaths::SetGlobal(paths);
+      cutum::IUPlatformPaths::SetGlobal(paths);
       return cutum::RunValidateLoad();
     }
     if (std::strcmp(argv[i], "--bench-io") == 0)
@@ -56,13 +74,22 @@ int main(int argc, char *argv[])
       cutum::CubatariumAttachParentConsole();
 #endif
       auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
-      cutum::IPlatformPaths::SetGlobal(paths);
+      cutum::IUPlatformPaths::SetGlobal(paths);
       return cutum::RunBenchChunkIo();
+    }
+    if (std::strcmp(argv[i], "--create-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunCreateWorld(argc, argv, i + 1);
     }
   }
 
   auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
-  cutum::IPlatformPaths::SetGlobal(paths);
+  cutum::IUPlatformPaths::SetGlobal(paths);
   cutum::UDesktopPlatformWindow window;
   return cutum::RunCubatarium(window, *paths);
 }

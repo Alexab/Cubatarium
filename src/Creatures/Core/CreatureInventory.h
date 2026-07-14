@@ -22,7 +22,7 @@ public:
   void InitCreativeDefaults();
   void EnsureDefaultHotbar();
   bool IsPrimaryHotbarEmpty() const;
-  void SetPrefabHotbar(const std::vector<std::string> &prefab_names);
+  void SetObjectHotbar(const std::vector<std::string> &object_names);
 
   size_t GetHotbarCount() const { return Hotbars.size(); }
   const HotbarBar &GetHotbar(size_t bar) const;
@@ -41,7 +41,7 @@ public:
   size_t GetActiveSlotIndex(size_t bar) const;
 
   const std::string &GetActiveBlockTypeName() const;
-  const std::string &GetActivePrefabName() const;
+  const std::string &GetActiveObjectName() const;
 
   void SerializeToJson(nlohmann::json &out) const;
   void DeserializeFromJson(const nlohmann::json &data, size_t maxBarCount = 4);

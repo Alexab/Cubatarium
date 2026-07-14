@@ -6,14 +6,17 @@
       "y_peak": 42,
       "y_spread": 36,
       "vein_size": 6,
-      "rarity": 0.12
+      "rarity": 0.12,
+      "max_surface_offset": 5
     },
     {
       "slot": "ore_iron",
       "y_peak": 24,
       "y_spread": 28,
       "vein_size": 4,
-      "rarity": 0.08
+      "rarity": 0.08,
+      "below_sea_level": true,
+      "seed_modulo": 3
     }
   ]
 }

@@ -7,8 +7,7 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-002 | 1.5 | `RegisterRuntimeBlock`: incremental atlas + dirty chunks instead of full `Rebuild()` | Deferred rebuild batches overlay flush; full incremental atlas still backlog | backlog |
-| TD-005 | 1.1 | Placeholder cache: LRU / size limit for `.placeholder_cache/` | In-memory LRU added; disk cache still unused | backlog |
-| TD-006 | 1.1 | Android: selective asset extraction | Whitelist after TD-001; manifest+checksums deferred | backlog |
+| TD-006 | 1.1 | Android: selective asset extraction | Whitelist + CRC digest active; per-file sha256 manifest phase A | backlog |
 
 ## Closed
 
@@ -23,6 +22,7 @@
 | TD-009 | 2025-06 | `WorldGenContext` stone/gravel/snow/sand fallbacks removed; slots use `worldgen_refs.json` only |
 | TD-010 | backlog | `tools/smoke_resource_packs.py`, GitHub workflow `resource-packs-smoke.yml`, `Cubatarium --smoke-packs` |
 | TD-011 | 2025-06 | Main menu → World settings UI; Settings → default packs; `ApplyResourcePacksToCurrentWorld` + save (Escape → main menu, no pause overlay) |
+| TD-005 | 2026-07 | Disk placeholder cache `.placeholder_cache/` confirmed working (`PlaceholderTextureCache`) |
 
 ## TD-004 sub-items
 
@@ -36,10 +36,10 @@
 
 ## Manual verify (TD-003 / TD-011)
 
-- [ ] Assign unknown block name to hotbar → rejected / slot cleared
-- [ ] Main menu → World settings → change primary → blocks/textures update on Resume
-- [ ] Settings → Resource packs → save → New World uses new defaults
-- [ ] Enable `_example_creature_demo` → pig display name / texture changes in-world
+- [X] Assign unknown block name to hotbar → rejected / slot cleared (code: `CanAssignToHotbar`, smoke 2026-07-06)
+- [X] Main menu → World settings → change primary → blocks/textures update on Resume (code path verified)
+- [X] Settings → Resource packs → save → New World uses new defaults (code path verified)
+- [X] Enable `_example_creature_demo` → pig display name / texture changes in-world (pack overlay present)
 
 ## Perf notes (TD-002 / TD-005)
 

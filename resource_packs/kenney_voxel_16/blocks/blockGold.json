@@ -1,20 +1,17 @@
-﻿{
-    "name":  "blockGold",
-    "id":  113,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "blockGold",
-                     "blockGold",
-                     "blockGold",
-                     "blockGold",
-                     "blockGold",
-                     "blockGold"
-                 ],
-    "displayName":  "Gold Block",
-    "render":  {
-
-               }
+{
+  "name": "blockGold",
+  "id": 113,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold",
+    "blockGold"
+  ],
+  "displayName": "Gold Block",
+  "render": {}
 }
-

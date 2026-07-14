@@ -9,7 +9,7 @@ flowchart TD
   App[Application::RenderFrame]
   Clear[glClear color depth stencil]
   Paint[GeometryEngine::Paint]
-  Icons[PrefabIconCache warmup]
+  Icons[ObjectIconCache warmup]
   GUI[GuiContext overlay]
   App --> Clear --> Paint --> Icons --> GUI
 ```
@@ -44,14 +44,17 @@ flowchart TD
 
 Порог оболочки: `GreedyTransparentSettings::shellAlpha` (по умолчанию **0.35**). Выше — плотнее оболочка, меньше «дырок» в mutual occlusion.
 
+**Android / GLES:** вместо 4 проходов — один `TransparentColor` pass (`GL_LESS`, без stencil, без alpha cutout). Desktop shell technique ненадёжен на GLES (жидкости не видны вообще).
+
 ## С чего начать при баге
 
 | Симптом | Смотреть |
 |---------|---------|
 | Вода видна **сквозь камень** | `BehindShell` + stencil (должен быть EQUAL 1, не рисовать где stencil 0) |
+| Лава/вода **сквозь воду на opaque-блоке** (пень) | `UOpaqueDepthCapture` + `uOpaqueDepthGuard` в `fshader_greedy.glsl` (color/fuzzy passes) |
 | Нет **затемнения** между водой/стеклом | `ShellDepth` + `ShellSurface` |
 | Не видно **стекло за водой** | `BehindShell` (GREATER) + сортировка в `GreedyTransparentSort.cpp` |
-| Мир «ломается» после HUD/иконок | `GlStateScope` в `PrefabIconCache`, `Application` clear stencil |
+| Не видно **жидкости на Android** (вода/лава) | `GreedyTransparentPipeline` GLES single-pass; не stencil shell |
 
 Включить лог проходов: `GreedyTransparentSettings settings; settings.logPassNames = true;` перед `GreedyTransparentPipeline::Draw`.
 
@@ -62,7 +65,7 @@ flowchart TD
 | GLEW, glm, `ChunkMeshCache.h`, `Render/Pipeline/*.h` | `GeometryEngine.h` |
 | `ShaderProgram` (forward declare) | `Gui/*`, `Application.h` |
 
-`GreedyTransparentPipeline` знает только **`IGreedyTransparentBackend`** — реализация в `GeometryEngine`.
+`GreedyTransparentPipeline` знает только **`IUGreedyTransparentBackend`** — реализация в `GeometryEngine`.
 
 ## Файлы
 
@@ -72,5 +75,5 @@ flowchart TD
 | `GreedyTransparentSort` | Сортировка прозрачных батчей (fluid → default → cross) |
 | `TransparentPass` | Имена и параметры 4 проходов |
 | `GreedyTransparentPipeline` | Цикл проходов + blend/cull |
-| `IGreedyTransparentBackend` | `PrepareTransparent` + `DrawPreparedTransparent` |
+| `IUGreedyTransparentBackend` | `PrepareTransparent` + `DrawPreparedTransparent` |
 | `GreedyShaderMode` | Режимы fragment shader (`uGreedyShaderMode`) |

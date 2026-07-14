@@ -13,18 +13,19 @@ namespace cutum
 {
 
 class UGameSession;
-class IGuiIconSource;
+class IUGuiIconSource;
 class UGuiSlot;
 class UGuiPanel;
 class UGuiLabel;
 class UGuiRenderer;
 struct GuiTheme;
+class UGuiContext;
 
 class UInGameHudScreen : public UGuiScreenBase
 {
 public:
   UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
-                   IGuiIconSource *icons);
+                   IUGuiIconSource *icons);
   ~UInGameHudScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out);
@@ -41,7 +42,10 @@ public:
                               std::function<void()> onJumpPress);
   bool RouteTouchMove(int PointerId, int x, int y);
   void ReleaseJoystickCapture();
+  void ReleaseJoystickCaptureForPointer(int pointer_id);
   void ReleaseTouchCaptures();
+  bool HitTestTouchControls(int x, int y) const;
+  void RenderTouchControlsOverlay(class UGuiContext &ctx, int width, int height);
 #endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).
@@ -54,7 +58,7 @@ private:
   void UpdateTooltips();
 
   UGameSession *Session{nullptr};
-  IGuiIconSource *Icons{nullptr};
+  IUGuiIconSource *Icons{nullptr};
   const GuiTheme *Theme;
   UGuiPanel *RootPanel{nullptr};
   std::vector<UGuiSlot *> PrimarySlots;

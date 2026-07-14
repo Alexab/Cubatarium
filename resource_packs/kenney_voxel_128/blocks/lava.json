@@ -1,29 +1,31 @@
-﻿{
-    "name":  "lava",
-    "id":  70,
-    "types":  [
-                  "fluid",
-                  "natural"
-              ],
-    "textures":  [
-                     "lava",
-                     "lava",
-                     "lava",
-                     "lava",
-                     "lava",
-                     "lava"
-                 ],
-    "physics":  {
-                    "preset":  "lava"
-                },
-    "render":  {
-                   "transparent":  true,
-                   "style":  "fluid"
-               },
-    "animation":  {
-                      "frame_count":  4,
-                      "frametime":  6
-                  },
-    "displayName":  "Lava"
+{
+  "name": "lava",
+  "id": 70,
+  "types": [
+    "fluid",
+    "natural"
+  ],
+  "textures": [
+    "lava",
+    "lava",
+    "lava",
+    "lava",
+    "lava",
+    "lava"
+  ],
+  "physics": {
+    "preset": "lava"
+  },
+  "render": {
+    "transparent": true,
+    "style": "fluid"
+  },
+  "animation": {
+    "frame_count": 4,
+    "frametime": 6
+  },
+  "displayName": "Lava",
+  "lighting": {
+    "emission": 14
+  }
 }
-

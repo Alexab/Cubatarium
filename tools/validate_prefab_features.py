@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -13,6 +14,13 @@ REPO = Path(__file__).resolve().parents[1]
 FEATURES = REPO / "content" / "prefab_features.json"
 MANIFEST = REPO / "tools" / "prefab_manifest.yaml"
 PREFABS = REPO / "prefabs"
+
+VALID_SURFACE_CONSTRAINTS = {
+    "any_land",
+    "grass",
+    "near_water",
+    "water_surface",
+}
 
 
 def load_prefab_names() -> set[str]:
@@ -29,18 +37,28 @@ def load_prefab_names() -> set[str]:
     return names
 
 
-def manifest_worldgen() -> dict[str, dict]:
+def manifest_worldgen() -> dict[str, list[dict]]:
     manifest = yaml.safe_load(MANIFEST.read_text(encoding="utf-8")) or {}
     prefabs = manifest.get("prefabs") or {}
-    out: dict[str, dict] = {}
+    out: dict[str, list[dict]] = {}
     for name, meta in prefabs.items():
         wg = meta.get("worldgen")
         if isinstance(wg, dict):
-            out[name] = wg
+            out.setdefault(name, []).append(wg)
+        elif isinstance(wg, list):
+            out[name] = [entry for entry in wg if isinstance(entry, dict)]
     return out
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Error when manifest worldgen fields diverge from JSON (non-calibrated)",
+    )
+    args = parser.parse_args()
+
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -77,6 +95,12 @@ def main() -> int:
             biomes = rule.get("biomes") or []
             weight = rule.get("weight", 1)
 
+            surface = rule.get("surface_constraint")
+            if surface is not None and surface not in VALID_SURFACE_CONSTRAINTS:
+                errors.append(
+                    f"{pool_name}[{idx}]: invalid surface_constraint {surface!r}"
+                )
+
             if not biomes:
                 errors.append(f"{pool_name}[{idx}]: empty biomes")
 
@@ -98,8 +122,6 @@ def main() -> int:
                         errors.append(
                             f"{pool_name}[{idx}]: spacing {spacing} not in [8, 256]"
                         )
-                if block and block not in manifest_wg:
-                    pass  # scatter rules live only in JSON
                 key = (scatter_key, tuple(sorted(biomes)))
                 if key in seen_keys:
                     warnings.append(
@@ -121,10 +143,14 @@ def main() -> int:
                 spacing = rule.get("spacing")
                 if spacing is None:
                     errors.append(f"{pool_name}[{idx}]: missing spacing")
-                elif spacing < 8 or spacing > 256:
+                elif not rule.get("calibrated") and (
+                    spacing < 8 or spacing > 256
+                ):
                     errors.append(
                         f"{pool_name}[{idx}]: spacing {spacing} not in [8, 256]"
                     )
+                elif rule.get("calibrated") and spacing < 8:
+                    errors.append(f"{pool_name}[{idx}]: spacing {spacing} < 8")
             elif pool_name == "structures":
                 chance = rule.get("chance_per_column")
                 if chance is None:
@@ -139,8 +165,36 @@ def main() -> int:
                     f"{pool_name}[{idx}]: tree prefab {prefab!r} without _mapgen suffix"
                 )
 
-            if prefab in manifest_wg:
-                pass
+            if rule.get("calibrated"):
+                key = (prefab, tuple(sorted(biomes)))
+                if key in seen_keys:
+                    warnings.append(f"{pool_name}[{idx}]: duplicate calibrated rule {key}")
+                seen_keys.add(key)
+                continue
+
+            if prefab in manifest_wg and args.strict:
+                manifest_entries = manifest_wg[prefab]
+                matched = False
+                for wg in manifest_entries:
+                    if tuple(sorted(wg.get("biomes") or [])) != tuple(sorted(biomes)):
+                        continue
+                    matched = True
+                    for field in ("spacing", "weight", "seed_offset"):
+                        if field in wg and wg[field] != rule.get(field):
+                            errors.append(
+                                f"{pool_name}[{idx}]: {prefab} {field} drift "
+                                f"(manifest {wg[field]!r} vs json {rule.get(field)!r})"
+                            )
+                    manifest_surface = wg.get("surface_constraint")
+                    if manifest_surface and manifest_surface != surface:
+                        errors.append(
+                            f"{pool_name}[{idx}]: {prefab} surface_constraint drift"
+                        )
+                if not matched and len(manifest_entries) == 1:
+                    warnings.append(
+                        f"{pool_name}[{idx}]: {prefab!r} biomes differ from manifest "
+                        "(mark calibrated: true if intentional)"
+                    )
             elif prefab not in manifest_wg:
                 warnings.append(
                     f"{pool_name}[{idx}]: {prefab!r} in JSON but no worldgen in manifest"
@@ -151,21 +205,22 @@ def main() -> int:
                 warnings.append(f"{pool_name}[{idx}]: duplicate rule {key}")
             seen_keys.add(key)
 
-    for name, wg in manifest_wg.items():
-        pool = wg.get("pool")
-        if pool not in json_prefabs_by_pool:
-            continue
-        mode = wg.get("mode", "prefab")
-        if mode == "scatter_blocks":
-            block = wg.get("block", "?")
-            key = f"scatter:{block}"
-        else:
-            key = name
-        if key not in json_prefabs_by_pool[pool]:
-            warnings.append(
-                f"manifest worldgen for {name!r} missing from prefab_features.json "
-                f"(run generate_prefab_features.py)"
-            )
+    for name, wg_list in manifest_wg.items():
+        for wg in wg_list:
+            pool = wg.get("pool")
+            if pool not in json_prefabs_by_pool:
+                continue
+            mode = wg.get("mode", "prefab")
+            if mode == "scatter_blocks":
+                block = wg.get("block", "?")
+                key = f"scatter:{block}"
+            else:
+                key = name
+            if key not in json_prefabs_by_pool[pool]:
+                warnings.append(
+                    f"manifest worldgen for {name!r} missing from prefab_features.json "
+                    f"(run generate_prefab_features.py)"
+                )
 
     print_errors(errors, warnings)
     return 1 if errors else 0

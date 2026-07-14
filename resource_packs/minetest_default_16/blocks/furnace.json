@@ -1,19 +1,16 @@
-﻿{
-    "name":  "furnace",
-    "id":  373,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "furnace_front",
-                     "furnace_side",
-                     "furnace_side",
-                     "furnace_side",
-                     "furnace_top",
-                     "furnace_top"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "furnace",
+  "id": 373,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "furnace_front",
+    "furnace_side",
+    "furnace_side",
+    "furnace_side",
+    "furnace_top",
+    "furnace_top"
+  ],
+  "render": {}
 }
-

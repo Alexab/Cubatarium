@@ -6,7 +6,18 @@ namespace cutum
 bool UDesktopPlatformWindow::Initialize(int width, int height,
                                         const char *title)
 {
-  return WindowManager.Initialize(width, height, title);
+  return WindowManager.Initialize(width, height, title, true);
+}
+
+bool UDesktopPlatformWindow::InitializeHidden(int width, int height,
+                                              const char *title)
+{
+  return WindowManager.Initialize(width, height, title, false);
+}
+
+void UDesktopPlatformWindow::SetStopPredicate(std::function<bool()> predicate)
+{
+  WindowManager.SetStopPredicate(std::move(predicate));
 }
 
 void UDesktopPlatformWindow::Run() { WindowManager.Run(); }

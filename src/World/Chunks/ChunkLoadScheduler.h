@@ -3,7 +3,8 @@
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
-#include "WorldGen/Core/IChunkPopulator.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
+#include <chrono>
 #include <functional>
 #include <queue>
 #include <unordered_map>
@@ -31,14 +32,18 @@ public:
   using ColumnMeshDirtyFn =
       std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 
-  UChunkLoadScheduler(IChunkPopulator &populator,
+  UChunkLoadScheduler(IUChunkPopulator &populator,
                       UChunkGenerationRegistry &tokens);
 
   void SetMarkDirtyFn(MarkChunkDirtyFn fn);
   void SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn);
   void RequestLoad(glm::ivec3 coord, int priority,
-                   const ProceduralSettings &settings);
+                   const ProceduralSettings &settings,
+                   glm::ivec2 column_origin = glm::ivec2(0),
+                   bool has_column_origin = false);
   void Cancel(glm::ivec3 coord);
+  void CancelAllPending(std::chrono::milliseconds worker_wait =
+                            std::chrono::milliseconds(2000));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4);
@@ -53,6 +58,8 @@ private:
     int priority{0};
     ChunkGenerationToken token;
     ProceduralSettings settings;
+    glm::ivec2 columnOrigin{0};
+    bool hasColumnOrigin{false};
   };
 
   struct PendingResult
@@ -71,10 +78,10 @@ private:
 
   void ScheduleWorker(const PendingRequest &request);
 
-  IChunkPopulator &Populator;
+  IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   UJobThreadPool Pool;
-  CompletedJobQueue<PendingResult> Completed;
+  UCompletedJobQueue<PendingResult> Completed;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,

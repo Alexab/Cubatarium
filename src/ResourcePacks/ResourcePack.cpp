@@ -12,6 +12,16 @@ namespace cutum
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+void StripUtf8Bom(std::string &text)
+{
+  if (text.size() >= 3 && static_cast<unsigned char>(text[0]) == 0xEF &&
+      static_cast<unsigned char>(text[1]) == 0xBB &&
+      static_cast<unsigned char>(text[2]) == 0xBF)
+  {
+    text.erase(0, 3);
+  }
+}
+
 std::string PackQualifiedTextureStem(const std::string &packId,
                                      const std::string &stem)
 {
@@ -34,9 +44,11 @@ UResourcePack::LoadManifest(const fs::path &root)
   }
   std::stringstream buffer;
   buffer << in.rdbuf();
+  std::string raw = buffer.str();
+  StripUtf8Bom(raw);
   try
   {
-    const json d = json::parse(buffer.str());
+    const json d = json::parse(raw);
     ResourcePackManifest m;
     m.Root = root;
     m.Id = d.value("id", root.filename().string());
@@ -116,9 +128,11 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
+    std::string raw = buffer.str();
+    StripUtf8Bom(raw);
     try
     {
-      const json d = json::parse(buffer.str());
+      const json d = json::parse(raw);
       const ParsedBlockJson parsed = ParseBlockFromJson(d, true);
       if (!parsed.Valid)
       {

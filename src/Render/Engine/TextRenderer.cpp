@@ -1,7 +1,7 @@
 #include "Render/Engine/TextRenderer.h"
 
 #include "App/Platform/GameAssets.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -16,9 +16,37 @@ namespace
 
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
 constexpr GLint kGlyphInternalFormat = GL_R8;
+constexpr GLenum kGlyphUploadFormat = GL_RED;
+bool GlyphTexturesUseAlphaChannel = false;
 #else
 constexpr GLint kGlyphInternalFormat = GL_RED;
+constexpr GLenum kGlyphUploadFormat = GL_RED;
+bool GlyphTexturesUseAlphaChannel = false;
 #endif
+
+bool UploadGlyphBitmap(int bitmapWidth, int bitmapRows, unsigned char *buffer)
+{
+  glTexImage2D(GL_TEXTURE_2D, 0, kGlyphInternalFormat, bitmapWidth, bitmapRows, 0,
+               kGlyphUploadFormat, GL_UNSIGNED_BYTE, buffer);
+  if (glGetError() == GL_NO_ERROR)
+  {
+    GlyphTexturesUseAlphaChannel = false;
+    return true;
+  }
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, bitmapWidth, bitmapRows, 0, GL_ALPHA,
+               GL_UNSIGNED_BYTE, buffer);
+  if (glGetError() == GL_NO_ERROR)
+  {
+    GlyphTexturesUseAlphaChannel = true;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+    return true;
+  }
+#endif
+  return false;
+}
 
 void ConfigureGlyphTextureParameters()
 {
@@ -27,8 +55,11 @@ void ConfigureGlyphTextureParameters()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+  if (!GlyphTexturesUseAlphaChannel)
+  {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+  }
 #endif
 }
 
@@ -318,23 +349,21 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
       glGenTextures(1, &texture);
       glBindTexture(GL_TEXTURE_2D, texture);
 
-      glTexImage2D(GL_TEXTURE_2D, 0, kGlyphInternalFormat, bitmapWidth,
-                   bitmapRows, 0, GL_RED, GL_UNSIGNED_BYTE,
-                   face->glyph->bitmap.buffer);
-      ConfigureGlyphTextureParameters();
-
-      if (!loggedGlError)
+      if (!UploadGlyphBitmap(bitmapWidth, bitmapRows, face->glyph->bitmap.buffer))
       {
-        const GLenum glError = glGetError();
-        if (glError != GL_NO_ERROR)
+        if (!loggedGlError)
         {
-          CubatariumLogError(
-              "Text", "glTexImage2D failed with GL error " +
-                          std::to_string(static_cast<unsigned int>(glError)));
+          CubatariumLogError("Text", "glTexImage2D failed for glyph upload");
           loggedGlError = true;
         }
+        glDeleteTextures(1, &texture);
+        texture = 0;
       }
-      ++texturedGlyphs;
+      else
+      {
+        ConfigureGlyphTextureParameters();
+        ++texturedGlyphs;
+      }
     }
 
     Character character = {texture,
@@ -489,7 +518,7 @@ void UTextRenderer::SetWindowSize(int width, int height)
 
 std::string UTextRenderer::FindAvailableFont()
 {
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     const auto preferred =
         paths->AssetRoot() / "fonts" / kBundledUiFontFileName;

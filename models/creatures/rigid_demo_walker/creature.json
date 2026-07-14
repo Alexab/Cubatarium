@@ -1,0 +1,86 @@
+{
+  "id": "rigid_demo_walker",
+  "display_name": "Rigid Demo Walker",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "demo",
+      "rigid_reference"
+    ],
+    "spawnable": true,
+    "sort_order": 900
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.59,
+      0.9,
+      1.125
+    ],
+    "max": [
+      0.59,
+      0.9,
+      1.125
+    ],
+    "min": [
+      0.59,
+      0.765,
+      1.125
+    ],
+    "_derived": {
+      "rest": [
+        0.59,
+        0.9,
+        1.125
+      ],
+      "max": [
+        0.59,
+        0.9,
+        1.125
+      ],
+      "min": [
+        0.59,
+        0.765,
+        1.125
+      ]
+    },
+    "source": "parts_aabb"
+  },
+  "eye_height": 0.45,
+  "habitat": "terrestrial",
+  "locomotion_archetype": "terrestrial_quadruped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "rigid_voxels",
+    "texture_layout": "rigid_crop",
+    "model_yaw_offset_deg": 0,
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 28,
+      "body_bob_blocks": 0.03
+    },
+    "default_texture": "body",
+    "rigid_model": "rigid_model.json",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.47,
+        0.35,
+        0.24,
+        1.0
+      ]
+    }
+  }
+}

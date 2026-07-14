@@ -16,7 +16,9 @@ struct AppSettingsSnapshot
   int RenderDistanceChunks{4};
   bool StreamingEnabled{true};
   bool StepUpEnabled{true};
+  bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
+  float ActivityTickHz{20.0f};
   RenderSettings Render;
   UiSettings Ui;
   std::vector<std::string> DefaultResourcePacksEnabled;

@@ -5,11 +5,11 @@
 #include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Game/Inventory/SlotInteraction.h"
-#include "Gui/Interfaces/IContentCatalog.h"
-#include "Gui/Interfaces/IGameCommandContext.h"
-#include "Gui/Interfaces/IGuiGameActions.h"
-#include "Gui/Interfaces/IHotbarViewModel.h"
-#include "Gui/Interfaces/IInventoryViewModel.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUGameCommandContext.h"
+#include "Gui/Interfaces/IUGuiGameActions.h"
+#include "Gui/Interfaces/IUHotbarViewModel.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -21,25 +21,25 @@ namespace cutum
 
 class UApplication;
 class UWorld;
+class IUGameContent;
 
-class UGameSession : public IGuiGameActions,
-                     public IHotbarViewModel,
-                     public IInventoryViewModel,
-                     public IGameCommandContext
+class UGameSession : public IUGuiGameActions,
+                     public IUHotbarViewModel,
+                     public IUInventoryViewModel,
+                     public IUGameCommandContext
 {
 public:
   UGameSession(UApplication *application, std::shared_ptr<UWorld> world);
 
   void InitializeCatalog(const std::string &typesJsonPath,
-                         const UBlockDefinitionStorage &blocks,
-                         const UPrefabLibrary &prefabs);
-  void ReindexBlockCatalog(const UBlockDefinitionStorage &blocks,
-                           const UPrefabLibrary &prefabs);
+                         const IUGameContent &content);
+  void ReindexBlockCatalog(const IUGameContent &content);
   void RegisterCommands();
 
   UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }
+  std::shared_ptr<UWorld> GetWorld() const { return World; }
   UContentTypeRegistry &GetContentCatalog() { return ContentCatalog; }
-  IContentCatalog &AsContentCatalog() { return ContentCatalog; }
+  IUContentCatalog &AsContentCatalog() { return ContentCatalog; }
 
   void LoadLastWorld() override;
   void ResumeGame() override;

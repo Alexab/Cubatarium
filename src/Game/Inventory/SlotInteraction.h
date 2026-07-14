@@ -2,7 +2,7 @@
 #define SLOT_INTERACTION_H
 
 #include "Game/Inventory/InventoryTypes.h"
-#include "Gui/Interfaces/IContentCatalog.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 #include <cstddef>
 #include <string>
 

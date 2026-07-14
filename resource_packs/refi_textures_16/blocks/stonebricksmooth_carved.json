@@ -1,20 +1,17 @@
-﻿{
-    "name":  "stonebricksmooth_carved",
-    "id":  819,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "stonebricksmooth_carved",
-                     "stonebricksmooth_carved",
-                     "stonebricksmooth_carved",
-                     "stonebricksmooth_carved",
-                     "stonebricksmooth_carved",
-                     "stonebricksmooth_carved"
-                 ],
-    "displayName":  "Chiseled Stone Bricks",
-    "render":  {
-
-               }
+{
+  "name": "stonebricksmooth_carved",
+  "id": 819,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved"
+  ],
+  "displayName": "Chiseled Stone Bricks",
+  "render": {}
 }
-

@@ -111,19 +111,19 @@ bool UCreatureInventory::IsPrimaryHotbarEmpty() const
   return true;
 }
 
-void UCreatureInventory::SetPrefabHotbar(
-    const std::vector<std::string> &prefab_names)
+void UCreatureInventory::SetObjectHotbar(
+    const std::vector<std::string> &object_names)
 {
   EnsureHotbarCount(2);
   size_t idx = 0;
-  for (const std::string &Name : prefab_names)
+  for (const std::string &Name : object_names)
   {
     if (idx >= kHotbarSlots)
     {
       break;
     }
     InventoryEntryRef entry;
-    entry.kind = InventoryEntryKind::UObject;
+    entry.kind = InventoryEntryKind::Object;
     entry.Id = Name;
     entry.empty = false;
     entry.count = 0;
@@ -182,11 +182,11 @@ const std::string &UCreatureInventory::GetActiveBlockTypeName() const
   return kEmpty;
 }
 
-const std::string &UCreatureInventory::GetActivePrefabName() const
+const std::string &UCreatureInventory::GetActiveObjectName() const
 {
   static const std::string kEmpty;
   const InventoryEntryRef *Active = GetActiveEntryRef();
-  if (Active && !Active->empty && Active->kind == InventoryEntryKind::UObject)
+  if (Active && !Active->empty && Active->kind == InventoryEntryKind::Object)
   {
     return Active->Id;
   }
@@ -255,7 +255,7 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
         case InventoryEntryKind::Block:
           s["kind"] = "block";
           break;
-        case InventoryEntryKind::UObject:
+        case InventoryEntryKind::Object:
           s["kind"] = "object";
           break;
         case InventoryEntryKind::UCreature:
@@ -316,7 +316,7 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
             const std::string kind = slotJson.value("kind", "block");
             if (kind == "object")
             {
-              bar.slots[si].entry.kind = InventoryEntryKind::UObject;
+              bar.slots[si].entry.kind = InventoryEntryKind::Object;
             }
             else if (kind == "creature")
             {

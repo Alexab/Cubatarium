@@ -2,9 +2,11 @@
 #define BLOCKDEFINITION_H
 
 #include "World/Math/BlockTypes.h"
+#include "World/Math/FluidCellState.h"
 #include <array>
 #include <glm/glm.hpp>
 #include <nlohmann/json_fwd.hpp>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -32,6 +34,16 @@ struct BlockMovementPhysics
 struct BlockPhysicsProfile
 {
   BlockMovementPhysics Movement;
+  bool Falling{false};
+  bool IsLiquid{false};
+  float LiquidViscosity{1.0f};
+  bool LiquidRenewable{false};
+  bool Floodable{false};
+  int FluidSpreadPeriodTicks{5};
+  int FluidMaxLevel{7};
+  std::optional<bool> FluidPermeable;
+  FluidKind FluidKindPreset{FluidKind::None};
+  bool Flammable{false};
   static BlockPhysicsProfile Solid();
   static BlockPhysicsProfile FromPreset(const std::string &preset);
 };
@@ -52,6 +64,8 @@ struct FluidViewProfile
   float FogMinBlend{0.0f};
   glm::vec3 OverlayColor{0.0f};
   float OverlayAlpha{0.0f};
+  float BelowSurfaceFogMin{0.52f};
+  float BelowSurfaceFogScale{0.35f};
 };
 
 struct BlockRenderProfile
@@ -62,6 +76,11 @@ struct BlockRenderProfile
   FluidViewProfile FluidView;
 };
 
+struct BlockLightingProfile
+{
+  int Emission{0};
+};
+
 struct BlockDefinition
 {
   std::string Name;
@@ -70,6 +89,7 @@ struct BlockDefinition
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;
   BlockRenderProfile Render;
+  BlockLightingProfile Lighting;
   std::vector<std::string> Types;
 };
 
@@ -88,6 +108,7 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
 BlockAnimationSpec ParseAnimationFromJson(const nlohmann::json &j);
 BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j);
 BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j);
+BlockLightingProfile ParseLightingFromJson(const nlohmann::json &j);
 void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
                                const std::string &physicsPreset);
 

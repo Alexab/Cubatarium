@@ -1,6 +1,7 @@
 #ifndef GREEDYMESHEMITTER_H
 #define GREEDYMESHEMITTER_H
 
+#include "Render/Mesh/GreedyMeshCommon.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/Chunk.h"
@@ -11,20 +12,12 @@
 namespace cutum
 {
 
-namespace
+// Phase R1: full-block fluid cubes. Level-based height deferred (see
+// FLUID_ARCHITECTURE).
+inline float FluidCellHeight(uint8_t packed)
 {
-
-inline int FaceIndexFromGreedy(int axis, int faceSign)
-{
-  if (axis == 2)
-  {
-    return faceSign > 0 ? 0 : 2;
-  }
-  if (axis == 0)
-  {
-    return faceSign > 0 ? 1 : 3;
-  }
-  return faceSign > 0 ? 4 : 5;
+  (void)packed;
+  return 1.0f;
 }
 
 inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
@@ -36,10 +29,11 @@ inline GreedyMeshVertex MakeVertex(const glm::vec3 &pos, int faceIndex)
   v.faceIndex = static_cast<float>(faceIndex);
   v.u = 0.0f;
   v.v = 0.0f;
+  v.skyLight = 1.0f;
+  v.blockLight = 0.0f;
+  v.wetness = 0.0f;
   return v;
 }
-
-} // namespace
 
 inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
                              std::vector<GreedyMeshVertex> &vertices,
@@ -67,6 +61,7 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
       static_cast<float>(q.slice) + (q.faceSign > 0 ? 0.5f : -0.5f);
   corner[uAxis] += static_cast<float>(q.u) - 0.5f;
   corner[vAxis] += static_cast<float>(q.v) - 0.5f;
+
   const glm::vec3 p0 = corner;
   const glm::vec3 p1 = corner + uDir * width;
   const glm::vec3 p2 = corner + uDir * width + vDir * height;
@@ -80,23 +75,38 @@ inline void AppendGreedyQuad(const GreedyQuad &q, glm::ivec3 chunkCoord,
   vertices.push_back(MakeVertex(p3, faceIndex));
 
   const bool flipWinding = glm::dot(glm::cross(uDir, vDir), nDir) < 0.0f;
+  auto pushTri = [&](uint32_t a, uint32_t b, uint32_t c)
+  {
+    indices.push_back(a);
+    indices.push_back(b);
+    indices.push_back(c);
+  };
   if (flipWinding)
   {
-    indices.push_back(base + 0);
-    indices.push_back(base + 3);
-    indices.push_back(base + 2);
-    indices.push_back(base + 0);
-    indices.push_back(base + 2);
-    indices.push_back(base + 1);
+    pushTri(base + 0, base + 3, base + 2);
+    pushTri(base + 0, base + 2, base + 1);
   }
   else
   {
-    indices.push_back(base + 0);
-    indices.push_back(base + 1);
-    indices.push_back(base + 2);
-    indices.push_back(base + 0);
-    indices.push_back(base + 2);
-    indices.push_back(base + 3);
+    pushTri(base + 0, base + 1, base + 2);
+    pushTri(base + 0, base + 2, base + 3);
+  }
+  // Horizontal fluid faces are visible from inside the volume (e.g. surface
+  // when submerged); shell pass disables cull but backfaces still miss stencil.
+  // Below-surface column tint is opaque-only (see
+  // ShouldApplyBelowSurfaceFogToPass).
+  if (q.FluidPacked != 0 && q.axis == 1)
+  {
+    if (flipWinding)
+    {
+      pushTri(base + 0, base + 1, base + 2);
+      pushTri(base + 0, base + 2, base + 3);
+    }
+    else
+    {
+      pushTri(base + 0, base + 3, base + 2);
+      pushTri(base + 0, base + 2, base + 1);
+    }
   }
 }
 

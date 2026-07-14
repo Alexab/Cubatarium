@@ -1,19 +1,16 @@
-﻿{
-    "name":  "sapling_spruce",
-    "id":  691,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "sapling_spruce",
-                     "sapling_spruce",
-                     "sapling_spruce",
-                     "sapling_spruce",
-                     "sapling_spruce",
-                     "sapling_spruce"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "sapling_spruce",
+  "id": 691,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce"
+  ],
+  "render": {}
 }
-

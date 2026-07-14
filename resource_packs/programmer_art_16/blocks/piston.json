@@ -1,19 +1,16 @@
-﻿{
-    "name":  "piston",
-    "id":  670,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "piston_side",
-                     "piston_side",
-                     "piston_side",
-                     "piston_side",
-                     "piston_top",
-                     "piston_bottom"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "piston",
+  "id": 670,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "piston_side",
+    "piston_side",
+    "piston_side",
+    "piston_side",
+    "piston_top",
+    "piston_bottom"
+  ],
+  "render": {}
 }
-

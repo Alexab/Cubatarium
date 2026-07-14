@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_dry_dirt_with_dry_grass",
-    "id":  450,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_dry_dirt_with_dry_grass_composite_0",
-                     "mtg_dry_dirt_with_dry_grass_composite_0",
-                     "mtg_dry_dirt_with_dry_grass_composite_0",
-                     "mtg_dry_dirt_with_dry_grass_composite_0",
-                     "mtg_dry_dirt_with_dry_grass_default_dry_grass",
-                     "mtg_dry_dirt_with_dry_grass_default_dry_dirt"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_dry_dirt_with_dry_grass",
+  "id": 450,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_dry_dirt_with_dry_grass_composite_0",
+    "mtg_dry_dirt_with_dry_grass_composite_0",
+    "mtg_dry_dirt_with_dry_grass_composite_0",
+    "mtg_dry_dirt_with_dry_grass_composite_0",
+    "mtg_dry_dirt_with_dry_grass_default_dry_grass",
+    "mtg_dry_dirt_with_dry_grass_default_dry_dirt"
+  ],
+  "render": {}
 }
-

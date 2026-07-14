@@ -1,20 +1,17 @@
-﻿{
-    "name":  "stonebricksmooth_cracked",
-    "id":  86,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "stonebricksmooth_cracked",
-                     "stonebricksmooth_cracked",
-                     "stonebricksmooth_cracked",
-                     "stonebricksmooth_cracked",
-                     "stonebricksmooth_cracked",
-                     "stonebricksmooth_cracked"
-                 ],
-    "displayName":  "Cracked Stone Bricks",
-    "render":  {
-
-               }
+{
+  "name": "stonebricksmooth_cracked",
+  "id": 86,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "stonebricksmooth_cracked",
+    "stonebricksmooth_cracked",
+    "stonebricksmooth_cracked",
+    "stonebricksmooth_cracked",
+    "stonebricksmooth_cracked",
+    "stonebricksmooth_cracked"
+  ],
+  "displayName": "Cracked Stone Bricks",
+  "render": {}
 }
-

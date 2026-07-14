@@ -20,6 +20,7 @@ class B3DVertex:
 @dataclass
 class B3DMesh:
   vertices: list[B3DVertex] = field(default_factory=list)
+  indices: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -31,8 +32,19 @@ class B3DKeyframe:
 
 
 @dataclass
+class B3DVertexWeight:
+  vertex_id: int
+  weight: float
+
+
+@dataclass
 class B3DBone:
   name: str
+  position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+  scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+  rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+  mesh: B3DMesh = field(default_factory=B3DMesh)
+  vertex_weights: list[B3DVertexWeight] = field(default_factory=list)
   keyframes: list[B3DKeyframe] = field(default_factory=list)
   children: list["B3DBone"] = field(default_factory=list)
 
@@ -130,12 +142,15 @@ class B3DReader:
       verts.append(B3DVertex(x=x, y=y, z=z, u=u, v=v))
     return verts
 
-  def _parse_tris(self) -> None:
+  def _parse_tris(self) -> list[int]:
     self._id()
+    indices: list[int] = []
     while self._remaining():
-      self._id()
-      self._id()
-      self._id()
+      i1 = self._id()
+      i2 = self._id()
+      i3 = self._id()
+      indices.extend([i1 - 1, i2 - 1, i3 - 1])
+    return indices
 
   def _parse_mesh(self) -> B3DMesh:
     self._optional_id()
@@ -148,7 +163,7 @@ class B3DReader:
         if tag == "VRTS":
           mesh.vertices.extend(self._parse_vrts())
         elif tag == "TRIS":
-          self._parse_tris()
+          mesh.indices.extend(self._parse_tris())
         else:
           pass
       self._pos = end
@@ -208,27 +223,44 @@ class B3DReader:
           self._i32()
           self._f32()
         elif tag == "BONE":
-          while self._remaining():
-            self._id()
-            self._f32()
+          pass
         else:
           pass
       self._pos = end
     return mesh
 
+  def _parse_bone_weights(self) -> list[B3DVertexWeight]:
+    weights: list[B3DVertexWeight] = []
+    while self._remaining():
+      vertex_id = self._i32()
+      strength = self._f32()
+      if strength > 0.0:
+        weights.append(B3DVertexWeight(vertex_id=vertex_id, weight=strength))
+    return weights
+
   def _parse_node_pose(self) -> B3DBone:
     name = self._string()
-    self._vec3()
-    self._vec3()
-    self._quat()
-    bone = B3DBone(name=name)
+    position = self._vec3()
+    scale = self._vec3()
+    rotation = (
+        self._f32(),
+        self._f32(),
+        self._f32(),
+        self._f32(),
+    )
+    bone = B3DBone(
+        name=name,
+        position=position,
+        scale=scale,
+        rotation=rotation,
+    )
     while self._remaining():
       tag, length = self._read_chunk()
       start = self._pos
       end = start + length
       with self._bounded(end):
         if tag == "MESH":
-          self._parse_mesh()
+          bone.mesh = self._parse_mesh()
         elif tag == "NODE":
           bone.children.append(self._parse_node_pose())
         elif tag == "KEYS":
@@ -238,9 +270,7 @@ class B3DReader:
           self._i32()
           self._f32()
         elif tag == "BONE":
-          while self._remaining():
-            self._id()
-            self._f32()
+          bone.vertex_weights = self._parse_bone_weights()
         else:
           pass
       self._pos = end
@@ -322,7 +352,7 @@ class B3DReader:
     with self._bounded(end):
       return self._parse_bb3d()
 
-  def read_pose(self) -> list[B3DBone]:
+  def read_document(self) -> list[B3DBone]:
     self._pos = 0
     tag, length = self._read_chunk()
     if tag != "BB3D":
@@ -337,7 +367,11 @@ def load_b3d_vertices(path: Path) -> list[B3DVertex]:
 
 
 def load_b3d_pose(path: Path) -> list[B3DBone]:
-  return B3DReader(path.read_bytes()).read_pose()
+  return B3DReader(path.read_bytes()).read_document()
+
+
+def load_b3d_document(path: Path) -> list[B3DBone]:
+  return B3DReader(path.read_bytes()).read_document()
 
 
 def iter_b3d_bones(roots: list[B3DBone]):

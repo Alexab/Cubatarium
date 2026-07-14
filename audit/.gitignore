@@ -1,0 +1,3 @@
+# Audit artifacts (generated); keep directory via !audit/.gitignore in root .gitignore
+*
+!.gitignore

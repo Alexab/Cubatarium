@@ -4,8 +4,8 @@ in vec2 TexCoord;
 out vec4 FragColor;
 
 uniform sampler2D texture0;
-uniform int uAnimFrame;
-uniform int uAnimFrameCount;
+uniform mediump int uAnimFrame;
+uniform mediump int uAnimFrameCount;
 
 void main()
 {

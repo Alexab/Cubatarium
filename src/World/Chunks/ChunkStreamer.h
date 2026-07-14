@@ -2,6 +2,7 @@
 #define CHUNKSTREAMER_H
 
 #include "Creatures/Player/PlayerCapsule.h"
+#include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <functional>
@@ -42,6 +43,7 @@ public:
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
+  using UnloadColumnFn = std::function<void(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
@@ -58,20 +60,45 @@ public:
   void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
                          IsChunkCommittedFn isCommittedFn);
   void SetColumnPendingCallback(IsColumnPendingFn fn);
+  void SetGenerationLightingHooks(std::function<void(bool)> defer_relight,
+                                  std::function<void(glm::ivec3)> relight_column);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void MarkPersistedColumnsFromWorld();
   void SetRenderDistance(int chunks) { RenderDistance = chunks; }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
-  void SetMaxUnloadOpsPerFrame(int value) { MaxUnloadOpsPerFrame = value; }
+  void SetMaxUnloadOpsPerFrame(int value)
+  {
+    MaxUnloadOpsPerFrame = value;
+    EffectiveUnloadOpsPerFrame = value;
+  }
+  void SetUnloadColumnCallback(UnloadColumnFn fn)
+  {
+    OnUnloadColumn = std::move(fn);
+  }
+  void SetEffectiveUnloadOpsPerFrame(int value)
+  {
+    EffectiveUnloadOpsPerFrame = value;
+  }
+  void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
+  void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
+  void SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
+                              bool urgent);
+
+  bool IsPositionInActiveRing(const glm::vec3 &worldPos, glm::ivec3 feetBlockPos,
+                            const glm::vec3 &eyePos,
+                            const PlayerCapsule &cap) const;
 
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
+  bool IsCollisionReady(glm::ivec3 feetBlockPos, int radiusChunks) const;
 
   /// Full streaming pass after Movement: load/unload with per-frame budget.
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
+                     float movement_speed, float speed_threshold);
 
   const StreamingFrameStats &GetLastFrameStats() const
   {
@@ -80,6 +107,8 @@ public:
 
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
+                                      bool only_empty_columns);
   bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
   void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
@@ -88,6 +117,8 @@ private:
                              const glm::vec3 &eyePos,
                              const PlayerCapsule &cap) const;
   int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
+  int ChunkLoadPriorityFor(glm::ivec3 groundCoord) const;
+  bool RingPrerequisitesMet(glm::ivec3 coord);
 
   UBlockWorld &World;
   UBlockRegistry &Registry;
@@ -98,6 +129,7 @@ private:
   int UnloadMargin{1};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
+  int EffectiveUnloadOpsPerFrame{2};
   bool Enabled{true};
   std::string WorldFolder;
 
@@ -105,13 +137,28 @@ private:
   SaveChunkFn OnSaveChunk;
   MarkDirtyFn OnMarkDirty;
   UnloadChunkFn OnUnloadChunk;
+  UnloadColumnFn OnUnloadColumn;
   GenerateColumnFn OnGenerateColumn;
   RequestAsyncChunkFn OnRequestAsyncChunk;
   IsChunkCommittedFn OnIsChunkCommitted;
   IsColumnPendingFn OnIsColumnPending;
+  std::function<void(bool)> OnSetLightingRelightDeferred;
+  std::function<void(glm::ivec3)> OnRelightTerrainColumn;
   bool AsyncGeneration{false};
+  bool RingGateEnabled{false};
+  bool CollisionUrgent{false};
+  glm::ivec3 CollisionUrgentCenter{0};
+  int CollisionUrgentRadius{0};
+  glm::vec3 ViewForwardXz{0.0f, 0.0f, 1.0f};
+  ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  struct ColumnGenState
+  {
+    int cursor{0};
+    bool onlyEmptyColumns{false};
+  };
+  std::unordered_map<glm::ivec3, ColumnGenState, IVec3Hash> ColumnGenStates;
   std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;

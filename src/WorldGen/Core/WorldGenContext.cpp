@@ -1,112 +1,36 @@
 #include "WorldGen/Core/WorldGenContext.h"
+
 #include "Blocks/BlockRegistry.h"
-#include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Chunks/ChunkManager.h"
-#include "WorldGen/Core/WorldGenRefs.h"
 #include <algorithm>
 #include <iostream>
-#include <unordered_set>
 
 namespace cutum
 {
 
-namespace
-{
-
-BlockId ResolveSlotName(UBlockRegistry &registry,
-                        const std::string &worldgenOwner,
-                        const std::string &blockName)
-{
-  if (!worldgenOwner.empty())
-  {
-    const BlockId qualified = registry.GetIdByTypeName(
-        MakeQualifiedBlockName(worldgenOwner, blockName));
-    if (qualified != BLOCK_AIR)
-    {
-      return qualified;
-    }
-  }
-  return registry.GetIdByTypeName(blockName);
-}
-
-BlockId ResolveSlot(UBlockRegistry &registry, const std::string &worldgenOwner,
-                    const std::string &slotName,
-                    std::unordered_set<std::string> &visited)
-{
-  if (!visited.insert(slotName).second)
-  {
-    return BLOCK_AIR;
-  }
-
-  const WorldGenSlotSpec *spec = UWorldGenRefs::GetSlot(slotName);
-  if (spec)
-  {
-    for (const std::string &blockName : spec->BlockNames)
-    {
-      const BlockId id = ResolveSlotName(registry, worldgenOwner, blockName);
-      if (id != BLOCK_AIR)
-      {
-        return id;
-      }
-    }
-    if (!spec->FallbackSlot.empty())
-    {
-      return ResolveSlot(registry, worldgenOwner, spec->FallbackSlot, visited);
-    }
-    return BLOCK_AIR;
-  }
-
-  return ResolveSlotName(registry, worldgenOwner, slotName);
-}
-
-} // namespace
-
 WorldGenContext::WorldGenContext(UBlockWorld &world, UBlockRegistry &registry,
                                  ProceduralSettings settings,
-                                 UPrefabLibrary *prefabs)
+                                 UObjectLibrary *objects)
     : World(world), Registry(registry), Settings(std::move(settings)),
-      Prefabs(prefabs)
+      Objects(objects)
 {
 }
 
 void WorldGenContext::ResolveBlockIds()
 {
-  const auto resolve = [this](const char *slotName, BlockId &out)
-  {
-    std::unordered_set<std::string> visited;
-    out = ResolveSlot(Registry, WorldgenOwnerPackId, slotName, visited);
-    if (out == BLOCK_AIR)
-    {
-      std::cerr << "WorldGen: missing block type for slot '" << slotName
-                << "' (check worldgen_refs and active packs)" << std::endl;
-    }
-  };
+  Blocks.Resolve(Registry, WorldgenOwnerPackId);
 
-  resolve("bedrock", Bedrock);
-  resolve("stone", Stone);
-  resolve("dirt", Dirt);
-  resolve("grass", Grass);
-  resolve("sand", Sand);
-  resolve("sandstone", Sandstone);
-  resolve("wood", Wood);
-  resolve("gravel", Gravel);
-  resolve("snow", Snow);
-  resolve("clay", Clay);
-  resolve("ice", Ice);
-  resolve("hellrock", Hellrock);
-  resolve("water", Water);
-  resolve("lava", Lava);
-  resolve("fire", Fire);
-  resolve("ore_coal", OreCoal);
-  resolve("ore_iron", OreIron);
-
-  if (Settings.FillWater && Water == BLOCK_AIR)
+  if (Settings.FillWater && Blocks.Water == BLOCK_AIR)
   {
     std::cerr << "WorldGen: block type 'water' not loaded — fill_water will "
                  "have no effect"
               << std::endl;
   }
+}
+
+ColumnWriteContext WorldGenContext::GetWriteContext()
+{
+  return ColumnWriteContext{World, Registry, Blocks, OnColumnMeshDirty};
 }
 
 void WorldGenContext::ResetColumnDirty(int world_x, int world_z)

@@ -1,4 +1,5 @@
 #include "ResourcePacks/ResourcePackResolver.h"
+#include "App/LegacyConfigAdapter.h"
 #include <algorithm>
 #include <iostream>
 #include <unordered_set>
@@ -138,7 +139,7 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
     }
     else if (rp.contains("enabled") && rp["enabled"].is_array())
     {
-      ParseEnabledArray(rp["enabled"], cfg.DefaultEnabled);
+      cfg.DefaultEnabled = ReadLegacyEnabledPackList(rp);
     }
     if (cfg.DefaultPrimary.empty() && !cfg.DefaultEnabled.empty())
     {

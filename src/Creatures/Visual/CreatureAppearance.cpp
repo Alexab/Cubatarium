@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 
@@ -92,6 +93,9 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
   result.wireframeColor = def->visual.wireframeColor;
   result.visualBackend = def->visual.backend;
   result.textureLayout = def->visual.textureLayout;
+  result.defaultTextureKey = def->visual.defaultTextureKey.empty()
+                                 ? "body"
+                                 : def->visual.defaultTextureKey;
 
   const SkinDefinition *skin = nullptr;
   if (!skinId.empty())
@@ -107,7 +111,11 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
     }
   }
 
-  ResolvePartsFromSpecies(*def, skin, skinId, result);
+  if (ParseCreatureVisualBackend(def->visual.backend) ==
+      CreatureVisualBackend::RigidVoxels)
+  {
+    ResolvePartsFromSpecies(*def, skin, skinId, result);
+  }
   return result;
 }
 

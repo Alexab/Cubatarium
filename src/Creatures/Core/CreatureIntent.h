@@ -2,6 +2,7 @@
 #define CREATUREINTENT_H
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -16,6 +17,7 @@ struct CreatureIntent
   LocomotionState suggestedAnim{LocomotionState::Idle};
   glm::vec3 lookAtWorld{0.0f};
   float lookAtWeight{0.0f};
+  uint64_t attackTargetId{0};
 };
 
 } // namespace cutum

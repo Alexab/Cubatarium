@@ -99,6 +99,8 @@ def apply_canonical_meta_to_block_json(block: dict[str, Any]) -> dict[str, Any]:
                 block[key] = spec[key]
         if "display_name" in spec:
             block["displayName"] = spec["display_name"]
+        if "lighting" in spec:
+            block["lighting"] = spec["lighting"]
     render = block.get("render")
     if not isinstance(render, dict):
         render = {}

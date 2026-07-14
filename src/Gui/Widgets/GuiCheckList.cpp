@@ -1,7 +1,7 @@
 #include "Gui/Widgets/GuiCheckList.h"
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiKeyCodes.h"
-#include "Gui/Core/GuiKeyCodes.h"
+#include "Gui/Core/GuiListScrollMixin.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
@@ -89,10 +89,7 @@ void UGuiCheckList::UpdateLayout(const GuiRect &parentClientArea)
   ApplyMinimumBounds();
 }
 
-int UGuiCheckList::GetPreferredHeight() const
-{
-  return MinHeight();
-}
+int UGuiCheckList::GetPreferredHeight() const { return MinHeight(); }
 
 void UGuiCheckList::SetItems(std::vector<GuiCheckListItem> items)
 {
@@ -228,12 +225,12 @@ int UGuiCheckList::ContentHeight() const
 
 int UGuiCheckList::MaxScrollY() const
 {
-  return std::max(0, ContentHeight() - Bounds.H);
+  return GuiListScrollMixin::MaxScrollY(ContentHeight(), Bounds.H);
 }
 
 void UGuiCheckList::ClampScroll()
 {
-  ScrollOffsetPx = std::clamp(ScrollOffsetPx, 0, MaxScrollY());
+  GuiListScrollMixin::ClampScroll(ScrollOffsetPx, MaxScrollY());
 }
 
 void UGuiCheckList::EnsureFocusedVisible()
@@ -244,25 +241,15 @@ void UGuiCheckList::EnsureFocusedVisible()
   }
   const int rowTop = FocusedIndex * RowHeight;
   const int rowBottom = rowTop + RowHeight;
-  if (rowTop < ScrollOffsetPx)
-  {
-    ScrollOffsetPx = rowTop;
-  }
-  else if (rowBottom > ScrollOffsetPx + Bounds.H)
-  {
-    ScrollOffsetPx = rowBottom - Bounds.H;
-  }
+  GuiListScrollMixin::ScrollRowIntoView(rowTop, rowBottom, Bounds.H,
+                                        ScrollOffsetPx);
   ClampScroll();
 }
 
 GuiRect UGuiCheckList::ScrollbarTrackRect() const
 {
-  if (MaxScrollY() <= 0)
-  {
-    return {0, 0, 0, 0};
-  }
-  return {Bounds.X + Bounds.W - ScrollbarWidthPx(), Bounds.Y, ScrollbarWidthPx(),
-          Bounds.H};
+  return GuiListScrollMixin::ScrollbarTrackRect(Bounds, ScrollbarWidthPx(),
+                                                MaxScrollY());
 }
 
 GuiRect UGuiCheckList::ScrollbarThumbRect() const
@@ -325,10 +312,10 @@ void UGuiCheckList::Draw(UGuiRenderer &renderer)
     }
     const int boxY = row.Y + (row.H - box) / 2;
     GuiRect boxRect{row.X + Theme->Padding, boxY, box, box};
-    renderer.DrawFilledRect(
-        boxRect,
-        Items[i].Checked ? Theme->ButtonHover : Theme->ButtonNormal);
-    renderer.DrawBorderRect(boxRect, Theme->PanelBorder, Theme->BorderThickness);
+    renderer.DrawFilledRect(boxRect, Items[i].Checked ? Theme->ButtonHover
+                                                      : Theme->ButtonNormal);
+    renderer.DrawBorderRect(boxRect, Theme->PanelBorder,
+                            Theme->BorderThickness);
     if (Items[i].Checked)
     {
       renderer.DrawTextCenteredInRect(boxRect, "x", Theme->TextPrimary);
@@ -390,7 +377,8 @@ bool UGuiCheckList::OnMouseMove(const GuiMouseEvent &event)
   {
     const int localY = event.Y - Bounds.Y + ScrollOffsetPx;
     int targetIndex = localY / RowHeight;
-    targetIndex = std::clamp(targetIndex, 0, static_cast<int>(Items.size()) - 1);
+    targetIndex =
+        std::clamp(targetIndex, 0, static_cast<int>(Items.size()) - 1);
     if (targetIndex != PendingToggleIndex)
     {
       std::swap(Items[static_cast<size_t>(PendingToggleIndex)],
@@ -453,7 +441,8 @@ bool UGuiCheckList::ToggleIndex(int index)
   {
     return false;
   }
-  Items[static_cast<size_t>(index)].Checked = !Items[static_cast<size_t>(index)].Checked;
+  Items[static_cast<size_t>(index)].Checked =
+      !Items[static_cast<size_t>(index)].Checked;
   NotifyChanged();
   return true;
 }

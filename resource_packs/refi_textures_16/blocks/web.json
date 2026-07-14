@@ -1,21 +1,25 @@
-﻿{
-    "name":  "web",
-    "id":  833,
-    "types":  [
-                  "decorative",
-                  "misc"
-              ],
-    "textures":  [
-                     "web",
-                     "web",
-                     "web",
-                     "web",
-                     "web",
-                     "web"
-                 ],
-    "displayName":  "Cobweb",
-    "render":  {
-                   "transparent":  true
-               }
+{
+  "name": "web",
+  "id": 833,
+  "types": [
+    "decorative",
+    "misc"
+  ],
+  "textures": [
+    "web",
+    "web",
+    "web",
+    "web",
+    "web",
+    "web"
+  ],
+  "displayName": "Cobweb",
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }
-

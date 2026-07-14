@@ -1,14 +1,14 @@
 #ifndef ANDROID_PLATFORM_PATHS_H
 #define ANDROID_PLATFORM_PATHS_H
 
-#include "App/Platform/IPlatformPaths.h"
+#include "App/Platform/IUPlatformPaths.h"
 
 struct AAssetManager;
 
 namespace cutum
 {
 
-class UAndroidPlatformPaths : public IPlatformPaths
+class UAndroidPlatformPaths : public IUPlatformPaths
 {
 public:
   explicit UAndroidPlatformPaths(AAssetManager *assetManager);

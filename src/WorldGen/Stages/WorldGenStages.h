@@ -6,6 +6,8 @@
 namespace cutum
 {
 
+class UDensityFieldSampler;
+
 struct ColumnLayerRule
 {
   BlockId surfaceBlock{BLOCK_AIR};
@@ -17,7 +19,18 @@ struct ColumnLayerRule
 
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
+void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
+                                  int surfaceY, const ColumnLayerRule &rule,
+                                  const UDensityFieldSampler &sampler);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
+bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
+bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z);
+bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
+                                    const ProceduralSettings &settings,
+                                    const std::string &worldgen_owner_pack_id,
+                                    glm::ivec3 chunk_coord);
+
+int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z);
 
 int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,

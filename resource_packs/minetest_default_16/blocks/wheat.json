@@ -1,27 +1,26 @@
-﻿{
-    "name":  "wheat",
-    "id":  576,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "crops_7",
-                     "crops_7",
-                     "crops_7",
-                     "crops_7",
-                     "crops_7",
-                     "crops_7"
-                 ],
-    "render":  {
-                   "transparent":  true,
-                   "style":  "cross"
-               },
-    "physics":  {
-                    "movement":  {
-                                     "occupancy":  0
-                                 }
-                },
-    "displayName":  "Wheat"
+{
+  "name": "wheat",
+  "id": 576,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7",
+    "crops_7"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Wheat"
 }
-

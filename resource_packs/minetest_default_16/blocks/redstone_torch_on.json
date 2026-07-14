@@ -1,19 +1,20 @@
-﻿{
-    "name":  "redstone_torch_on",
-    "id":  546,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "redtorch_lit",
-                     "redtorch_lit",
-                     "redtorch_lit",
-                     "redtorch_lit",
-                     "redtorch_lit",
-                     "redtorch_lit"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "redstone_torch_on",
+  "id": 546,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redtorch_lit",
+    "redtorch_lit",
+    "redtorch_lit",
+    "redtorch_lit",
+    "redtorch_lit",
+    "redtorch_lit"
+  ],
+  "render": {},
+  "displayName": "Redstone Torch",
+  "lighting": {
+    "emission": 7
+  }
 }
-

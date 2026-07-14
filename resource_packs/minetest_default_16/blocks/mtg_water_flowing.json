@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_water_flowing",
-    "id":  515,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_water_flowing_default_water",
-                     "mtg_water_flowing_default_water",
-                     "mtg_water_flowing_default_water",
-                     "mtg_water_flowing_default_water",
-                     "mtg_water_flowing_default_water",
-                     "mtg_water_flowing_default_water"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_water_flowing",
+  "id": 515,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_water_flowing_default_water",
+    "mtg_water_flowing_default_water",
+    "mtg_water_flowing_default_water",
+    "mtg_water_flowing_default_water",
+    "mtg_water_flowing_default_water",
+    "mtg_water_flowing_default_water"
+  ],
+  "render": {}
 }
-

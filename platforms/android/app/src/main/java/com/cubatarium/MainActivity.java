@@ -1,5 +1,6 @@
 package com.cubatarium;
 
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowManager;
@@ -16,16 +17,21 @@ public class MainActivity extends GameActivity {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        hideSystemBars();
-        nativeOnCreate();
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(newBase);
         try {
-            AssetExtractor.extractIfNeeded(this);
+            AssetExtractor.extractIfNeeded(newBase);
         } catch (RuntimeException e) {
             android.util.Log.e("Cubatarium", "Asset extraction failed", e);
             throw e;
         }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        hideSystemBars();
+        nativeOnCreate();
     }
 
     @Override

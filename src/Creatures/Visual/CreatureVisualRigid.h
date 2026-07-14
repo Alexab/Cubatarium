@@ -8,7 +8,7 @@
 namespace cutum
 {
 
-class UCreatureVisualRigid : public ICreatureVisual
+class UCreatureVisualRigid : public IUCreatureVisual
 {
 public:
   void UpdatePose(const UCreature &creature,

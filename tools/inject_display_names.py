@@ -28,6 +28,7 @@ DISPLAY_NAMES: dict[str, str] = {
     "fire": "Fire",
     "wood": "Wood",
     "tree_log": "Tree Log",
+    "tree_branch": "Tree Branch",
     "tree_leaves": "Leaves",
     # tier_b
     "glass": "Glass",

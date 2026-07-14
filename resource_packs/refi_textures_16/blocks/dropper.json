@@ -1,19 +1,16 @@
-﻿{
-    "name":  "dropper",
-    "id":  754,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "dropper_front",
-                     "furnace_side",
-                     "furnace_side",
-                     "furnace_side",
-                     "furnace_top",
-                     "furnace_top"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "dropper",
+  "id": 754,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "dropper_front",
+    "furnace_side",
+    "furnace_side",
+    "furnace_side",
+    "furnace_top",
+    "furnace_top"
+  ],
+  "render": {}
 }
-

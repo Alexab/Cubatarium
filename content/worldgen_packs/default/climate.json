@@ -7,7 +7,10 @@
     "erosion",
     "weirdness"
   ],
-  "continentalness": { "scale": 0.0015, "octaves": 2, "seed_offset": 3000 },
+  "temperature": { "scale": 0.002, "octaves": 3, "seed_offset": 1000 },
+  "moisture": { "scale": 0.002, "octaves": 3, "seed_offset": 2000 },
+  "continentalness": { "scale": 0.002, "octaves": 2, "seed_offset": 3000 },
   "erosion": { "scale": 0.002, "octaves": 3, "seed_offset": 4000 },
-  "weirdness": { "scale": 0.003, "octaves": 2, "seed_offset": 5000 }
+  "weirdness": { "scale": 0.003, "octaves": 2, "seed_offset": 5000 },
+  "ridge": { "scale": 0.004, "octaves": 2, "seed_offset": 6000 }
 }

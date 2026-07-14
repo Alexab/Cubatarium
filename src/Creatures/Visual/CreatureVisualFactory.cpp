@@ -1,33 +1,63 @@
-#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
 #include "Creatures/Visual/CreatureVisualGltf.h"
 #include "Creatures/Visual/CreatureVisualRigid.h"
-#include <iostream>
+#include "Creatures/Visual/CreatureVisualSprite.h"
 #include <memory>
-#include <unordered_set>
 
 namespace cutum
 {
 
-std::unique_ptr<ICreatureVisual>
-CreateCreatureVisual(const CreatureDefinition &def)
+namespace
 {
-  switch (ParseCreatureVisualBackend(def.visual.backend))
+
+bool BackendAssetsAvailable(const CreatureDefinition &def,
+                            CreatureVisualBackend backend)
+{
+  switch (backend)
   {
   case CreatureVisualBackend::GltfSkeleton:
-  {
-    static std::unordered_set<std::string> logged;
-    if (logged.insert(def.Id).second)
-    {
-      std::cerr << "UCreatureVisual: gltf_skeleton stub for " << def.Id
-                << std::endl;
-    }
-    return std::make_unique<UCreatureVisualGltf>();
+    return !def.visual.gltf.modelPath.empty();
+  case CreatureVisualBackend::BoneSkeleton:
+    return !def.visual.boneSkeleton.geometryId.empty();
+  default:
+    return true;
   }
+}
+
+std::unique_ptr<IUCreatureVisual>
+CreateForBackend(CreatureVisualBackend backend)
+{
+  switch (backend)
+  {
+  case CreatureVisualBackend::BoneSkeleton:
+    return CreateCreatureVisualBoneSkeleton();
+  case CreatureVisualBackend::GltfSkeleton:
+    return CreateCreatureVisualGltf();
   default:
     return std::make_unique<UCreatureVisualRigid>();
   }
+}
+
+} // namespace
+
+std::unique_ptr<IUCreatureVisual>
+CreateCreatureVisual(const CreatureDefinition &def)
+{
+  if (def.visual.sprite.billboard)
+  {
+    return CreateCreatureVisualSprite();
+  }
+  CreatureVisualBackend backend =
+      ParseCreatureVisualBackend(def.visual.backend);
+  if (!BackendAssetsAvailable(def, backend) &&
+      !def.visual.fallbackBackend.empty())
+  {
+    backend = ParseCreatureVisualBackend(def.visual.fallbackBackend);
+  }
+  return CreateForBackend(backend);
 }
 
 } // namespace cutum

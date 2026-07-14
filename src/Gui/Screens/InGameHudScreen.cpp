@@ -2,7 +2,7 @@
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
-#include "Gui/Interfaces/IGuiIconSource.h"
+#include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -19,7 +19,7 @@ namespace cutum
 {
 
 UInGameHudScreen::UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
-                                   IGuiIconSource *icons)
+                                   IUGuiIconSource *icons)
     : Session(session), Theme(theme), Icons(icons)
 {
 }
@@ -103,6 +103,32 @@ void UInGameHudScreen::ReleaseJoystickCapture()
   {
     TouchControls->ReleaseJoystickCapture();
   }
+}
+
+void UInGameHudScreen::ReleaseJoystickCaptureForPointer(int pointer_id)
+{
+  if (TouchControls)
+  {
+    TouchControls->ReleaseJoystickCaptureForPointer(pointer_id);
+  }
+}
+
+bool UInGameHudScreen::HitTestTouchControls(int x, int y) const
+{
+  return TouchControls && TouchControls->HitTestTopRightReserved(x, y);
+}
+
+void UInGameHudScreen::RenderTouchControlsOverlay(UGuiContext &ctx, int width,
+                                                  int height)
+{
+  if (!TouchControls)
+  {
+    return;
+  }
+  UGuiRenderer &renderer = ctx.GetRenderer();
+  renderer.BeginFrame(width, height);
+  TouchControls->RenderOverlay(renderer);
+  renderer.EndFrame();
 }
 
 void UInGameHudScreen::ReleaseTouchCaptures()
@@ -306,8 +332,8 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Block:
         tex = Icons->GetBlockIconTexture(primary[i].Id);
         break;
-      case InventoryEntryKind::UObject:
-        tex = Icons->GetPrefabIconTexture(primary[i].Id);
+      case InventoryEntryKind::Object:
+        tex = Icons->GetObjectIconTexture(primary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
         tex = Icons->GetCreatureIconTexture(primary[i].Id);
@@ -330,8 +356,8 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Block:
         tex = Icons->GetBlockIconTexture(secondary[i].Id);
         break;
-      case InventoryEntryKind::UObject:
-        tex = Icons->GetPrefabIconTexture(secondary[i].Id);
+      case InventoryEntryKind::Object:
+        tex = Icons->GetObjectIconTexture(secondary[i].Id);
         break;
       case InventoryEntryKind::UCreature:
         tex = Icons->GetCreatureIconTexture(secondary[i].Id);

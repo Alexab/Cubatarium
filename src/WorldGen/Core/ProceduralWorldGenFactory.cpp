@@ -1,13 +1,14 @@
-#include "WorldGen/Core/IWorldGenPipeline.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <iostream>
 #include <memory>
 
 namespace cutum
 {
 
-std::unique_ptr<IWorldGenPipeline>
+std::unique_ptr<IUWorldGenPipeline>
 UProceduralWorldGenFactory::Create(WorldGenContext ctx)
 {
   ctx.ResolveBlockIds();
@@ -33,6 +34,7 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
   {
     ctx.Settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
   }
+  UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings);
 
   auto pipeline = UWorldGeneratorRegistry::Create(ctx);
   std::cout << "WorldGen: created pipeline "

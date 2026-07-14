@@ -1,20 +1,17 @@
-﻿{
-    "name":  "gravel",
-    "id":  858,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "gravel",
-                     "gravel",
-                     "gravel",
-                     "gravel",
-                     "gravel",
-                     "gravel"
-                 ],
-    "displayName":  "Gravel",
-    "render":  {
-
-               }
+{
+  "name": "gravel",
+  "id": 858,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel"
+  ],
+  "displayName": "Gravel",
+  "render": {}
 }
-

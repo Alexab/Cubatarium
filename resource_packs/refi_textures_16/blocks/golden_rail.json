@@ -1,19 +1,16 @@
-﻿{
-    "name":  "golden_rail",
-    "id":  765,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "goldenRail",
-                     "goldenRail",
-                     "goldenRail",
-                     "goldenRail",
-                     "goldenRail",
-                     "goldenRail"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "golden_rail",
+  "id": 765,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail",
+    "goldenRail"
+  ],
+  "render": {}
 }
-

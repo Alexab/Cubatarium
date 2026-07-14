@@ -26,6 +26,12 @@ struct CreatureActivityView
   bool isPlayerCharacter{false};
 };
 
+struct CreatureNeighborView
+{
+  CreatureId Id{0};
+  glm::vec3 bodyOrigin{0.0f};
+};
+
 } // namespace cutum
 
 #endif

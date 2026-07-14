@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_stone_with_tin",
-    "id":  511,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_stone_with_tin_composite_0",
-                     "mtg_stone_with_tin_composite_0",
-                     "mtg_stone_with_tin_composite_0",
-                     "mtg_stone_with_tin_composite_0",
-                     "mtg_stone_with_tin_composite_0",
-                     "mtg_stone_with_tin_composite_0"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_stone_with_tin",
+  "id": 511,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_tin_composite_0",
+    "mtg_stone_with_tin_composite_0",
+    "mtg_stone_with_tin_composite_0",
+    "mtg_stone_with_tin_composite_0",
+    "mtg_stone_with_tin_composite_0",
+    "mtg_stone_with_tin_composite_0"
+  ],
+  "render": {}
 }
-

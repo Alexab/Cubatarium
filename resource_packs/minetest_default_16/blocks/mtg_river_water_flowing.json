@@ -1,19 +1,16 @@
-﻿{
-    "name":  "mtg_river_water_flowing",
-    "id":  489,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "mtg_river_water_flowing_default_river_water",
-                     "mtg_river_water_flowing_default_river_water",
-                     "mtg_river_water_flowing_default_river_water",
-                     "mtg_river_water_flowing_default_river_water",
-                     "mtg_river_water_flowing_default_river_water",
-                     "mtg_river_water_flowing_default_river_water"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "mtg_river_water_flowing",
+  "id": 489,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water",
+    "mtg_river_water_flowing_default_river_water"
+  ],
+  "render": {}
 }
-

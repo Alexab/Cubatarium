@@ -1,20 +1,24 @@
 #include "App/Platform/WindowManager.h"
 #include "App/Application.h"
 #include "App/Core.h"
-#include "App/Platform/InputManager.h"
-#include "Gui/Core/GuiMetrics.h"
-#include "App/Platform/Log.h"
 #include "App/Settings/AppState.h"
+#include "App/Platform/InputManager.h"
+#include "App/Platform/Log.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Player/User.h"
+#include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Core/GuiMetrics.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Pipeline/GlStateMask.h"
+#include "Render/Pipeline/GlStateScope.h"
+#include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "ThirdParty/stb_image.h"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -88,7 +92,8 @@ UWindowManager::UWindowManager()
 
 UWindowManager::~UWindowManager() { Shutdown(); }
 
-bool UWindowManager::Initialize(int width, int height, const char *title)
+bool UWindowManager::Initialize(int width, int height, const char *title,
+                                bool visible)
 {
   glfwSetErrorCallback(ErrorCallback);
 
@@ -98,8 +103,10 @@ bool UWindowManager::Initialize(int width, int height, const char *title)
     return false;
   }
 
-  auto createWindow = [&](bool multisample) -> GLFWwindow * {
+  auto createWindow = [&](bool multisample) -> GLFWwindow *
+  {
     glfwDefaultWindowHints();
+    glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -275,6 +282,11 @@ void UWindowManager::Run()
 
     glfwPollEvents();
 
+    if (World)
+    {
+      World->SetWallFrameDelta(DeltaTime);
+    }
+
     // Input processing
     ProcessInput();
     if (Application)
@@ -289,7 +301,17 @@ void UWindowManager::Run()
     Render();
 
     glfwSwapBuffers(Window);
+
+    if (StopPredicate && StopPredicate())
+    {
+      IsRunning = false;
+    }
   }
+}
+
+void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
+{
+  StopPredicate = std::move(predicate);
 }
 
 void UWindowManager::ProcessInput()
@@ -314,24 +336,30 @@ void UWindowManager::ProcessInput()
     auto camera = World->GetCurrentUserCamera();
     if (camera)
     {
+      auto keyDown = [this](KeyCode key) -> bool
+      {
+        if (InputManager->IsKeyPressed(key))
+        {
+          return true;
+        }
+        return Window && glfwGetKey(Window, static_cast<int>(key)) == GLFW_PRESS;
+      };
       const bool shift_down =
-          InputManager->IsKeyPressed(KeyCode::Key_Shift) ||
+          keyDown(KeyCode::Key_Shift) ||
           (Window && glfwGetKey(Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-      const bool left_ctrl_down =
-          InputManager->IsKeyPressed(KeyCode::Key_Ctrl);
+      const bool left_ctrl_down = keyDown(KeyCode::Key_Ctrl);
       const bool right_ctrl_down =
-          Window &&
-          glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+          Window && glfwGetKey(Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_W),
-                              InputManager->IsKeyPressed(KeyCode::Key_W));
+                              keyDown(KeyCode::Key_W));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_S),
-                              InputManager->IsKeyPressed(KeyCode::Key_S));
+                              keyDown(KeyCode::Key_S));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_A),
-                              InputManager->IsKeyPressed(KeyCode::Key_A));
+                              keyDown(KeyCode::Key_A));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_D),
-                              InputManager->IsKeyPressed(KeyCode::Key_D));
+                              keyDown(KeyCode::Key_D));
       camera->UpdateKeyStatus(static_cast<int>(KeyCode::Key_Space),
-                              InputManager->IsKeyPressed(KeyCode::Key_Space));
+                              keyDown(KeyCode::Key_Space));
       camera->UpdateKeyStatus(GLFW_KEY_LEFT_SHIFT, shift_down);
       camera->UpdateKeyStatus(GLFW_KEY_RIGHT_SHIFT, shift_down);
       camera->UpdateKeyStatus(GLFW_KEY_LEFT_CONTROL, left_ctrl_down);
@@ -483,7 +511,20 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     }
     else if (key == KeyCode::Key_F12)
     {
-      // reserved
+#ifndef __ANDROID__
+      if (Application && Application->GetGameSession().GetInventoryMode() ==
+                             InventoryMode::Creative)
+      {
+        UCreatureVisualQaSpawner spawner(*World);
+        const bool batch = (Mods & GLFW_MOD_SHIFT) != 0;
+        const CreatureVisualQaSpawnResult spawnResult =
+            batch ? spawner.SpawnAllInGrid() : spawner.SpawnNextSpecies();
+        if (Geometries)
+        {
+          Geometries->ShowTransientMessage(spawnResult.Message, 2.5);
+        }
+      }
+#endif
     }
     else if (key == KeyCode::Key_Delete)
     {
@@ -498,40 +539,37 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         BlockInput->OnKeyDelete(ctx);
       }
     }
-    else if (key == KeyCode::Key_F1)
-    {
-      SetSkyColor(0.5f, 0.7f, 1.0f, 1.0f); // Blue sky
-    }
-    else if (key == KeyCode::Key_F2)
-    {
-      SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f); // Orange sky
-    }
-    else if (key == KeyCode::Key_F3)
-    {
-      SetSkyColor(0.1f, 0.1f, 0.3f, 1.0f); // Dark blue sky
-    }
-    else if (key == KeyCode::Key_F4)
-    {
-      SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f); // Gray sky
-    }
-    else if (key == KeyCode::Key_F6)
-    {
-      SetSkyColor(1.0f, 0.6f, 0.3f, 1.0f);
-      SetGradientSky(true);
-    }
-    else if (key == KeyCode::Key_F7)
-    {
-      if (auto anchor = World->FindPrefabAnchorFromView(
-              World->GetCurrentUserCamera()->GetPosition(),
-              World->GetCurrentUserCamera()->GetFront()))
-      {
-        World->PlacePrefab("tree_small", anchor.value());
-      }
-    }
     else if (key == KeyCode::Key_F8)
     {
-      SetSkyColor(0.6f, 0.6f, 0.6f, 1.0f);
-      SetGradientSky(true);
+      const UWorld::WeatherType current = World->GetEnvironmentState().Weather;
+      UWorld::WeatherType next = UWorld::WeatherType::Clear;
+      switch (current)
+      {
+      case UWorld::WeatherType::Clear:
+        next = UWorld::WeatherType::Rain;
+        break;
+      case UWorld::WeatherType::Rain:
+        next = UWorld::WeatherType::Storm;
+        break;
+      case UWorld::WeatherType::Storm:
+        next = UWorld::WeatherType::Snow;
+        break;
+      case UWorld::WeatherType::Snow:
+        next = UWorld::WeatherType::Cloudy;
+        break;
+      case UWorld::WeatherType::Cloudy:
+      default:
+        next = UWorld::WeatherType::Clear;
+        break;
+      }
+      World->SetWeather(next, 1.2f);
+      World->SetWeatherOverlayEnabled(false);
+      World->SetWeatherParticlesEnabled(true);
+      if (Geometries)
+      {
+        Geometries->ShowTransientMessage(
+            "Weather: " + UWorld::WeatherTypeToString(next), 2.2);
+      }
     }
     else if (key == KeyCode::Key_F9)
     {
@@ -702,10 +740,38 @@ void UWindowManager::SetTextRenderer(
 
 void UWindowManager::Shutdown()
 {
+  if (!IsInitialized)
+  {
+    return;
+  }
+
   if (InputManager)
   {
     InputManager->Shutdown();
   }
+
+  if (Window)
+  {
+    glfwMakeContextCurrent(Window);
+  }
+
+  if (World)
+  {
+    World->PrepareForShutdown();
+  }
+
+  if (Application)
+  {
+    Application->PrepareForShutdown();
+  }
+
+  Application.reset();
+
+  TextRenderer.reset();
+  Geometries.reset();
+  Views.reset();
+  World.reset();
+  Core.reset();
 
   if (Window)
   {
@@ -725,38 +791,13 @@ void UWindowManager::RenderUI()
     return;
   }
 
-  // Save current OpenGL state
-  GLboolean depthTestEnabled;
-  glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-  GLboolean blendEnabled;
-  glGetBooleanv(GL_BLEND, &blendEnabled);
-
-  // Configure OpenGL for 2D rendering
+  UGlStateScope glGuard(kGlMaskOverlay2D);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // Display hints
   RenderHelpText();
-
-  // Restore OpenGL state
-  if (depthTestEnabled)
-  {
-    glEnable(GL_DEPTH_TEST);
-  }
-  else
-  {
-    glDisable(GL_DEPTH_TEST);
-  }
-
-  if (blendEnabled)
-  {
-    glEnable(GL_BLEND);
-  }
-  else
-  {
-    glDisable(GL_BLEND);
-  }
 }
 
 void UWindowManager::RenderHelpText()
@@ -772,11 +813,11 @@ void UWindowManager::RenderHelpText()
   std::vector<std::string> help_lines = {
       "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, "
       "RMB hold - Look, ` - Console",
-      "Classic (Minecraft): mouse look, LMB break, RMB place; Cubatarium: RMB "
+      "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",
       "Shift+F10 - Procedural world (from config), Shift+F12 - Heightmap, "
       "Shift+F11 - Flat",
-      "Delete - Remove block, F9 HUD, F10 perf, F11 crosshair"};
+      "Delete - Remove block, F8 weather, F9 HUD, F10 perf, F11 crosshair"};
 
   for (const auto &line : help_lines)
   {
@@ -895,7 +936,11 @@ void UWindowManager::WindowCloseCallback(GLFWwindow *w)
   auto *self = static_cast<UWindowManager *>(glfwGetWindowUserPointer(w));
   if (self && self->Application)
   {
-    self->Application->GetGameSession().SaveCommandHistory();
+    if (self->Application->TryBeginShutdownFromWindowClose())
+    {
+      glfwSetWindowShouldClose(w, GLFW_FALSE);
+      return;
+    }
   }
   if (self && self->Core)
   {

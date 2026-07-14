@@ -5,19 +5,14 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include <algorithm>
-#include <cctype>
 #include <chrono>
-#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
 #include <system_error>
-#include <unordered_set>
 #include <vector>
-
-#include <glm/glm.hpp>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -26,61 +21,35 @@
 #include <windows.h>
 #endif
 #include "App/Core.h"
-#include "App/Platform/IPlatformPaths.h"
+#include "App/LegacyConfigAdapter.h"
+#include "App/Platform/Log.h"
+#include "App/RuntimeTuningConfig.h"
+#ifndef __ANDROID__
+#include "App/Platform/GameDataRoot.h"
+#endif
+#include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
-#include "ResourcePacks/BlockMergeRegistry.h"
-#include "ResourcePacks/PlaceholderTextureCache.h"
-#include "ResourcePacks/CreaturePackMerge.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Storage/ObjectStorage.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "Version.h"
+#include "World/Core/World.h"
 #include "World/IO/ChunkStorageTypes.h"
-#include "World/Prefabs/Prefab.h"
-#include "Creatures/Core/Creature.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
-#include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenPack.h"
 
 using json = nlohmann::json;
-
-namespace
-{
-
-glm::vec3 ParseHexColor(const std::string &hex, glm::vec3 fallback)
-{
-  if (hex.size() != 7 || hex[0] != '#')
-  {
-    return fallback;
-  }
-  auto nib = [&](size_t i) -> int {
-    const char c = hex[i];
-    if (c >= '0' && c <= '9')
-    {
-      return c - '0';
-    }
-    if (c >= 'a' && c <= 'f')
-    {
-      return 10 + (c - 'a');
-    }
-    if (c >= 'A' && c <= 'F')
-    {
-      return 10 + (c - 'A');
-    }
-    return 0;
-  };
-  return glm::vec3((nib(1) * 16 + nib(2)) / 255.0f,
-                   (nib(3) * 16 + nib(4)) / 255.0f,
-                   (nib(5) * 16 + nib(6)) / 255.0f);
-}
-
-} // namespace
 
 namespace cutum
 {
@@ -88,83 +57,59 @@ namespace cutum
 namespace
 {
 
-constexpr int kMaxProjectRootSearchDepth = 8;
-
-bool IsGameDataRoot(const std::filesystem::path &candidate)
+void ApplyStandardPhysicsDefaults(PhysicsProfile &profile,
+                                  PhysicsFeatureFlags &flags)
 {
-  const bool hasResourcePacks =
-      std::filesystem::exists(candidate / "resource_packs");
-  const bool hasPrefabs = std::filesystem::exists(candidate / "prefabs");
-  const bool hasShaders = std::filesystem::exists(candidate / "shaders" /
-                                                "vshader_greedy.glsl");
-  if (hasResourcePacks && hasPrefabs && hasShaders)
-  {
-    return true;
-  }
-  const bool hasTextures =
-      std::filesystem::exists(candidate / "textures" / "blocks");
-  const bool hasModels =
-      std::filesystem::exists(candidate / "models" / "blocks");
-  return hasTextures && hasModels && hasPrefabs && hasShaders;
-}
-
-std::optional<std::filesystem::path>
-TryFindProjectRoot(std::filesystem::path start)
-{
-  for (int depth = 0; depth < kMaxProjectRootSearchDepth; ++depth)
-  {
-    if (IsGameDataRoot(start))
-    {
-      return start;
-    }
-    if (!start.has_parent_path())
-    {
-      break;
-    }
-    start = start.parent_path();
-  }
-  return std::nullopt;
-}
-
-std::filesystem::path FindProjectRoot(std::filesystem::path start)
-{
-  if (auto root = TryFindProjectRoot(start))
-  {
-    return *root;
-  }
-  return start;
-}
-
-bool ParseWorldNumberSuffix(const std::string &Name, int &outNumber)
-{
-  constexpr const char *kPrefix = "World_";
-  if (Name.size() != 9)
-  {
-    return false;
-  }
-  if (Name.compare(0, 6, kPrefix) != 0)
-  {
-    return false;
-  }
-  for (size_t i = 6; i < Name.size(); ++i)
-  {
-    if (!std::isdigit(static_cast<unsigned char>(Name[i])))
-    {
-      return false;
-    }
-  }
-  outNumber = std::stoi(Name.substr(6));
-  return true;
-}
-
-bool ResourcePackSelectionEqual(const ResourcePackSelection &a,
-                                const ResourcePackSelection &b)
-{
-  return a.Primary == b.Primary && a.Secondary == b.Secondary &&
-         a.WorldgenOwner == b.WorldgenOwner;
+  profile = PhysicsProfile::Standard;
+  flags.EnableBlockEvents = true;
+  flags.EnableFalling = true;
+  flags.EnableFluids = true;
+  flags.EnableCollisionBroadphase = true;
+  flags.EnableCollisionReadinessGate = true;
+  flags.FallingShadowMode = true;
+  flags.LiquidShadowMode = false;
 }
 
 } // namespace
+
+const UBlockDefinitionStorage &UCore::Blocks() const
+{
+  static const UBlockDefinitionStorage kEmpty;
+  if (BlockDefinitionsInstance)
+  {
+    return *BlockDefinitionsInstance;
+  }
+  return kEmpty;
+}
+
+const UObjectLibrary &UCore::Objects() const
+{
+  static const UObjectLibrary kEmpty;
+  if (ObjectLibraryInstance)
+  {
+    return *ObjectLibraryInstance;
+  }
+  return kEmpty;
+}
+
+const UCreatureDefinitionStorage &UCore::Creatures() const
+{
+  static const UCreatureDefinitionStorage kEmpty;
+  if (WorldInstance)
+  {
+    const auto &storage = WorldInstance->GetCreatureDefinitionStorage();
+    if (storage)
+    {
+      return *storage;
+    }
+  }
+  return kEmpty;
+}
+
+const WorldGenPack &UCore::ActiveWorldGenPack() const
+{
+  return UWorldGenPack::Get();
+}
 
 std::filesystem::path GetExecutableDirectory()
 {
@@ -183,48 +128,45 @@ std::filesystem::path GetExecutableDirectory()
 
 UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UTextureCubeStorage> texture_cube_storage_,
-             std::shared_ptr<UObjectStorage> object_storage_,
-             std::shared_ptr<UPrefabLibrary> prefab_library_,
+             std::shared_ptr<UObjectLibrary> object_library_,
              std::shared_ptr<UWorld> World,
              std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
-      ObjectStorageInstance(object_storage_),
-      PrefabLibraryInstance(prefab_library_), WorldInstance(World),
+      ObjectLibraryInstance(object_library_), WorldInstance(World),
       GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
+}
+
+UCore::~UCore()
+{
+  CreatureGltfCache::Instance().Clear();
+  UnwireRenderMeshSink();
+}
+
+void UCore::WireRenderMeshSink()
+{
+  RenderMeshSink.Attach(GeometryEngineInstance.get());
+  if (WorldInstance)
+  {
+    WorldInstance->GetMeshService().SetMeshSink(&RenderMeshSink);
+  }
+}
+
+void UCore::UnwireRenderMeshSink()
+{
+  if (WorldInstance)
+  {
+    WorldInstance->GetMeshService().SetMeshSink(nullptr);
+  }
+  RenderMeshSink.Attach(nullptr);
 }
 
 std::filesystem::path
 UCore::WorldFolderPath(const std::string &world_name) const
 {
   return WorldPath / world_name;
-}
-
-std::string UCore::AllocateNextWorldName() const
-{
-  int maxNumber = 0;
-  if (std::filesystem::exists(WorldPath) &&
-      std::filesystem::is_directory(WorldPath))
-  {
-    for (const auto &entry : std::filesystem::directory_iterator(WorldPath))
-    {
-      if (!entry.is_directory())
-      {
-        continue;
-      }
-      int number = 0;
-      if (ParseWorldNumberSuffix(entry.path().filename().string(), number))
-      {
-        maxNumber = std::max(maxNumber, number);
-      }
-    }
-  }
-
-  char nameBuffer[16];
-  std::snprintf(nameBuffer, sizeof(nameBuffer), "World_%03d", maxNumber + 1);
-  return nameBuffer;
 }
 
 bool UCore::ShouldCreateWorldOnStartup() const
@@ -260,7 +202,7 @@ bool UCore::ShouldCreateWorldOnStartup() const
 void UCore::LoadConfig(const std::string &config_file_name)
 {
 #ifdef __ANDROID__
-  if (auto *paths = IPlatformPaths::TryGet())
+  if (auto *paths = IUPlatformPaths::TryGet())
   {
     ExeDir = paths->WritableRoot();
     ConfigFilePath = std::filesystem::path(config_file_name);
@@ -271,7 +213,16 @@ void UCore::LoadConfig(const std::string &config_file_name)
     std::filesystem::create_directories(WorldPath);
   }
   else
-#endif
+  {
+    ExeDir = GetExecutableDirectory();
+    ConfigFilePath = std::filesystem::path(config_file_name);
+    WorldPath = ExeDir / "worlds";
+    WorkDir = ExeDir;
+    std::error_code pathEc;
+    std::filesystem::current_path(WorkDir, pathEc);
+    std::filesystem::create_directories(WorldPath);
+  }
+#else
   {
     ExeDir = GetExecutableDirectory();
     const auto cwd = std::filesystem::current_path();
@@ -295,6 +246,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldPath = ExeDir / "worlds";
     WorkDir = project_dir;
   }
+#endif
 
   std::string val;
   bool configRead = false;
@@ -321,7 +273,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
       DefaultWorldName = d.value("default_world", "");
       DefaultUserName = d.value("default_user", "");
       WorldSeed = d.value("world_seed", 12345u);
-      TerrainType = d.value("terrain", "heightmap");
       ProceduralTemplate = ParseProceduralTemplateFromConfig(d);
       WorldSeed = ProceduralTemplate.Seed;
       TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
@@ -339,31 +290,144 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         const json &gameplay = d["gameplay"];
         StepUpEnabled = gameplay.value("step_up", true);
+        FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
+        ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
+      }
+      if (d.contains("physics") && d["physics"].is_object())
+      {
+        const json &physics = d["physics"];
+        ActivePhysicsProfile =
+            PhysicsProfileFromString(physics.value("profile", "standard"));
+        PhysicsFlags.EnableFalling = physics.value("enable_falling", true);
+        PhysicsFlags.EnableFluids = physics.value("enable_fluids", true);
+        PhysicsFlags.EnableBlockEvents =
+            physics.value("enable_block_events", true);
+        PhysicsFlags.EnableCollisionBroadphase =
+            physics.value("enable_collision_broadphase", true);
+        PhysicsFlags.EnableCollisionReadinessGate =
+            physics.value("enable_collision_readiness_gate", true);
+        PhysicsFlags.FallingShadowMode =
+            physics.value("falling_shadow_mode", true);
+        PhysicsFlags.LiquidShadowMode =
+            physics.value("liquid_shadow_mode", false);
+        PhysicsFlags.LiquidDebugTrace =
+            physics.value("liquid_debug_trace", false);
+        PhysicsFlags.EnableCollisionDda =
+            physics.value("enable_collision_dda", false);
+        PhysicsBudgetsConfig.BlockEventsPerTickMax =
+            physics.value("block_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.BlockQueueSoftLimit =
+            physics.value("block_queue_soft_limit", 2048);
+        PhysicsBudgetsConfig.BlockQueueHardLimit =
+            physics.value("block_queue_hard_limit", 8192);
+        PhysicsBudgetsConfig.LiquidEventsPerTickMax =
+            physics.value("liquid_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.FluidBlocksPerTickMax =
+            physics.value("fluid_blocks_per_tick_max",
+                          PhysicsBudgetsConfig.LiquidEventsPerTickMax);
+        PhysicsBudgetsConfig.LiquidQueueSoftLimit =
+            physics.value("liquid_queue_soft_limit", 2048);
+        PhysicsBudgetsConfig.LiquidQueueHardLimit =
+            physics.value("liquid_queue_hard_limit", 8192);
+        PhysicsBudgetsConfig.FallingEventsPerTickMax =
+            physics.value("falling_events_per_tick_max", 128);
+        PhysicsBudgetsConfig.CollisionSafetyRadiusChunks =
+            physics.value("collision_safety_radius_chunks", 1);
+        PhysicsBudgetsConfig.VisualRemeshPerTickMax =
+            physics.value("visual_remesh_per_tick_max", 8);
+        PhysicsBudgetsConfig.CollisionRebuildPerTickMax =
+            physics.value("collision_rebuild_per_tick_max", 16);
+        PhysicsBudgetsConfig.VisualRemeshQueueSoftLimit =
+            physics.value("visual_remesh_queue_soft_limit", 512);
+        PhysicsBudgetsConfig.VisualRemeshQueueHardLimit =
+            physics.value("visual_remesh_queue_hard_limit", 4096);
+        PhysicsBudgetsConfig.CollisionRebuildQueueSoftLimit =
+            physics.value("collision_rebuild_queue_soft_limit", 512);
+        PhysicsBudgetsConfig.CollisionRebuildQueueHardLimit =
+            physics.value("collision_rebuild_queue_hard_limit", 4096);
+        PhysicsBudgetsConfig.LiquidUpdateRadiusChunks =
+            physics.value("liquid_update_radius_chunks", 2);
+        PhysicsBudgetsConfig.FallingScanRadiusChunks =
+            physics.value("falling_scan_radius_chunks", 2);
       }
       else
       {
-        StepUpEnabled = true;
-        EntityCollisionEnabled = true;
+        ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
+      }
+      if (d.contains("environment") && d["environment"].is_object())
+      {
+        const json &env = d["environment"];
+        DefaultEnvironmentConfig = EnvironmentConfig::FromJson(env);
+        DefaultTimeOfDay = DefaultEnvironmentConfig.TimeOfDay;
+        DefaultDayLengthMinutes = DefaultEnvironmentConfig.DayLengthMinutes;
+        DefaultLightingMinAmbient = DefaultEnvironmentConfig.MinAmbient;
+        if (env.contains("weather") && env["weather"].is_string())
+        {
+          DefaultWeather = env["weather"].get<std::string>();
+        }
       }
       if (d.contains("render") && d["render"].is_object())
       {
         const json &r = d["render"];
-        Render.GreedyMeshing = r.value("greedy_meshing", true);
-        Render.AsyncMeshing = r.value("async_meshing", true);
-        Render.FaceQuads = r.value("face_quads", true);
-        Render.FrustumCulling = r.value("frustum_culling", true);
-        Render.BatchCache = r.value("batch_cache", true);
-        Render.CreatureDebugBounds = r.value("creature_debug_bounds", false);
-        Render.CreatureTexturedParts = r.value("creature_textured_parts", true);
-        Render.CreatureWireframeOverlay =
-            r.value("creature_wireframe_overlay", false);
-        Render.DistanceFog = r.value("distance_fog", true);
+        if (r.contains("performance_preset") &&
+            r["performance_preset"].is_string())
+        {
+          const std::string preset = r["performance_preset"].get<std::string>();
+          if (preset == "fast")
+          {
+            Render = RenderSettings::FromPreset(PerformancePreset::Fast);
+          }
+          else if (preset == "quality")
+          {
+            Render = RenderSettings::FromPreset(PerformancePreset::Quality);
+          }
+          else
+          {
+            Render = RenderSettings::FromPreset(PerformancePreset::Balanced);
+          }
+        }
+        else
+        {
+          Render = RenderSettings::Default();
+        }
+        Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
+        Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
+        Render.FrustumCulling =
+            r.value("frustum_culling", Render.FrustumCulling);
+        Render.BatchCache = r.value("batch_cache", Render.BatchCache);
+        Render.CreatureDebugBounds =
+            r.value("creature_debug_bounds", Render.CreatureDebugBounds);
+        Render.CreatureTexturedParts =
+            r.value("creature_textured_parts", Render.CreatureTexturedParts);
+        Render.CreatureWireframeOverlay = r.value(
+            "creature_wireframe_overlay", Render.CreatureWireframeOverlay);
+        Render.DistanceFog = r.value("distance_fog", Render.DistanceFog);
         Render.DistanceFogStartRatio =
-            r.value("distance_fog_start_ratio", 0.85f);
+            r.value("distance_fog_start_ratio", Render.DistanceFogStartRatio);
+        Render.DistanceFogDensity =
+            r.value("distance_fog_density", Render.DistanceFogDensity);
         Render.DistanceFogHorizontal =
-            r.value("distance_fog_horizontal", true);
-        Render.GradientSky = r.value("gradient_sky", true);
+            r.value("distance_fog_horizontal", Render.DistanceFogHorizontal);
+        Render.BelowSurfaceFogV2 =
+            r.value("below_surface_fog_v2", Render.BelowSurfaceFogV2);
+        Render.AltitudeAdaptiveFog =
+            r.value("altitude_adaptive_fog", Render.AltitudeAdaptiveFog);
+        Render.AltitudeFogThresholdBlocks = r.value(
+            "altitude_fog_threshold_blocks", Render.AltitudeFogThresholdBlocks);
+        Render.AltitudeFogPenaltyPer16Blocks =
+            r.value("altitude_fog_penalty_per_16_blocks",
+                    Render.AltitudeFogPenaltyPer16Blocks);
+        Render.GradientSky = r.value("gradient_sky", Render.GradientSky);
+        Render.HorizonFogRadial =
+            r.value("horizon_fog_radial", Render.HorizonFogRadial);
+        Render.HorizonFogCelestialTint = r.value(
+            "horizon_fog_celestial_tint", Render.HorizonFogCelestialTint);
+        Render.DistanceFogEndMarginBlocks = r.value(
+            "distance_fog_end_margin_blocks", Render.DistanceFogEndMarginBlocks);
+        Render.AltitudeUseTerrainSurface = r.value(
+            "altitude_use_terrain_surface", Render.AltitudeUseTerrainSurface);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -378,31 +442,21 @@ void UCore::LoadConfig(const std::string &config_file_name)
       }
       if (d.contains("ui") && d["ui"].is_object())
       {
-        const json &u = d["ui"];
-        Ui.LegacyHud = u.value("legacy_hud", false);
-        Ui.ShowPerformance = u.value("show_performance", true);
-        Ui.ConsoleKey = u.value("console_key", "grave");
-        Ui.PaletteKey = u.value("palette_key", "b");
-        Ui.InventoryKey = u.value("inventory_key", "e");
-        Ui.HotbarCount = std::clamp(u.value("hotbar_count", 1), 1, 2);
-        std::string schemeStr = "classic";
-        if (u.contains("control_scheme") && u["control_scheme"].is_string())
-        {
-          schemeStr = u["control_scheme"].get<std::string>();
-        }
-        else if (u.contains("block_input_profile") &&
-                 u["block_input_profile"].is_string())
-        {
-          schemeStr = u["block_input_profile"].get<std::string>();
-        }
-        Ui.ControlScheme = ControlSchemeFromString(schemeStr);
-        Ui.PlaceClickMaxSeconds = u.value("place_click_max_seconds", 0.20f);
-        Ui.BreakHoldMinSeconds = u.value("break_hold_min_seconds", 0.50f);
-        Ui.BreakDurationSeconds = u.value("break_duration_seconds", 0.25f);
-        Ui.RmbDragThresholdPx = u.value("rmb_drag_threshold_px", 4);
-        Ui.UiScaleUser = u.value("ui_scale", 1.f);
+        ReadLegacyUiSettings(d["ui"], Ui);
       }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
+      const json *physics_tuning =
+          (d.contains("physics") && d["physics"].is_object()) ? &d["physics"]
+                                                              : nullptr;
+      const json *render_tuning =
+          (d.contains("render") && d["render"].is_object()) ? &d["render"]
+                                                            : nullptr;
+      const json *procedural_tuning =
+          (d.contains("procedural") && d["procedural"].is_object())
+              ? &d["procedural"]
+              : nullptr;
+      ApplyRuntimeTuningFromConfig(physics_tuning, render_tuning,
+                                   procedural_tuning);
     }
     else
     {
@@ -415,8 +469,15 @@ void UCore::LoadConfig(const std::string &config_file_name)
       ResetToGeneratorDefaults(ProceduralTemplate);
       RenderDistanceChunks = 4;
       StreamingEnabled = true;
+      DefaultTimeOfDay = 0.35f;
+      DefaultDayLengthMinutes = 10.0f;
+      DefaultWeather = "clear";
+      DefaultLightingMinAmbient = 0.12f;
+      DefaultEnvironmentConfig = EnvironmentConfig{};
+      DefaultEnvironmentConfig.Validate();
       Render = RenderSettings::Default();
       ResourcePacks = ResourcePacksConfig{};
+      ApplyStandardPhysicsDefaults(ActivePhysicsProfile, PhysicsFlags);
       {
         const ResourcePackSelection defaults = DefaultResourcePackSelection();
         ResourcePacks.DefaultPrimary = defaults.Primary;
@@ -427,27 +488,29 @@ void UCore::LoadConfig(const std::string &config_file_name)
 
     TextureBaseStorageFileName = WorkDir / "textures" / "blocks";
     TextureCubeStorageFileName = WorkDir / "models" / "blocks";
-    ObjectStorageFileName = WorkDir / "models" / "objects";
-    PrefabsPath = WorkDir / "prefabs";
+    ObjectsPath = WorkDir / "objects";
 
     BlockDefinitionsInstance = std::make_shared<UBlockDefinitionStorage>();
     BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
     auto blockDefinitions = BlockDefinitionsInstance;
 
-    const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
-                                       glm::vec3(0.42f, 0.29f, 0.62f));
-    PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
-        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg,
-        static_cast<size_t>(ResourcePacks.PlaceholderCacheMaxEntries));
+    ResourcePackBootstrap.InitPlaceholderCache(*this);
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
     WorldInstance->SetOnAfterWorldDataLoaded(
-        [this]() { ApplyResourcePacksAfterWorldDataLoaded(); });
+        [this]()
+        {
+          ResourcePackBootstrap.ApplyResourcePacksAfterWorldDataLoaded(*this);
+        });
 
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
     auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
     creatureDefinitions->Load((WorkDir / "models" / "creatures").string());
+    CreatureBoneSkeletonCache::Instance().SetCreaturesRoot(
+        (WorkDir / "models" / "creatures").string());
+    CreatureGltfCache::Instance().SetCreaturesRoot(
+        (WorkDir / "models" / "creatures").string());
     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
 
     auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
@@ -460,29 +523,23 @@ void UCore::LoadConfig(const std::string &config_file_name)
         (WorkDir / "models" / "creatures").string(),
         (WorkDir / "models" / "skins").string());
 
-    ObjectStorageInstance->Load(ObjectStorageFileName.string());
-
-    const ResourcePackSelection defaultPacks = GetDefaultResourcePackSelection();
+    const ResourcePackSelection defaultPacks =
+        GetDefaultResourcePackSelection();
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
                                             defaultPacks.Secondary,
                                             defaultPacks.WorldgenOwner);
     WorldInstance->SetProceduralSettings(ProceduralTemplate, false);
     if (!ApplyResourcePacks(defaultPacks))
     {
-      BlockMergeRegistryInstance->Rebuild({}, PlaceholderCacheInstance,
-                                          ResourcePacks.PlaceholderTileSize);
-      WorldInstance->RefreshBlockRegistry();
-      if (PrefabLibraryInstance)
-      {
-        PrefabLibraryInstance->Load(PrefabsPath.string(),
-                                    WorldInstance->GetBlockRegistry());
-        WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
-      }
+      ResourcePacksReady = false;
+      std::cerr << "ERROR: failed to apply default resource packs at startup. "
+                << "Fix resource_packs in config or install missing packs."
+                << std::endl;
     }
     else if (auto user = WorldInstance->GetCurrentUser())
     {
-      WorldInstance->EnsurePlayerHotbarCount(user,
-                                             static_cast<size_t>(Ui.HotbarCount));
+      WorldInstance->EnsurePlayerHotbarCount(
+          user, static_cast<size_t>(Ui.HotbarCount));
     }
 
     std::cout << "Procedural: "
@@ -498,8 +555,25 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetChunkWriteFormat(
         ChunkWriteFormatFromString(ChunkStorageFormat));
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
+    WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+    WorldInstance->SetActivityTickHz(ActivityTickHz);
+    WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+    WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+    WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
     WorldInstance->SetRenderSettings(Render);
+    WorldInstance->ApplyEnvironmentConfig(DefaultEnvironmentConfig, true);
+    if (!DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+    {
+      WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
+    }
+    else
+    {
+      WorldInstance->ClearWeatherManualOverride();
+    }
+    WorldInstance->SetWeatherOverlayEnabled(false);
+    WorldInstance->SetWeatherParticlesEnabled(true);
+    WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
     {
       GeometryEngineInstance->SetRenderSettings(Render);
@@ -511,75 +585,28 @@ void UCore::LoadConfig(const std::string &config_file_name)
               << " frustum=" << Render.FrustumCulling
               << " batch_cache=" << Render.BatchCache << std::endl;
     std::cout << "Gameplay: step_up=" << (StepUpEnabled ? "1" : "0")
+              << " foliage_climb=" << (FoliageClimbEnabled ? "1" : "0")
               << " entity_collision=" << (EntityCollisionEnabled ? "1" : "0")
-              << std::endl;
+              << " activity_tick_hz=" << ActivityTickHz << std::endl;
   }
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error: " << e.what() << std::endl;
+    CubatariumLogError("App",
+                       std::string("LoadConfig JSON error: ") + e.what());
   }
-}
-
-void UCore::RebuildBlockTexturesFromMergeRegistry()
-{
-  if (!BlockMergeRegistryInstance || !BlockDefinitionsInstance ||
-      !TextureBaseStorageInstance || !TextureCubeStorageInstance)
+  catch (const std::exception &e)
   {
-    return;
+    std::cerr << "LoadConfig error: " << e.what() << std::endl;
+    CubatariumLogError("App", std::string("LoadConfig error: ") + e.what());
   }
-  if (WorldInstance)
-  {
-    WorldInstance->WaitForPendingMeshJobs();
-  }
-  BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
-      *BlockDefinitionsInstance);
-  TextureBaseStorageInstance->Clear();
-  BlockMergeRegistryInstance->PopulateTextureBaseStorage(
-      *TextureBaseStorageInstance);
-  TextureCubeStorageInstance->Clear();
-  TextureCubeStorageInstance->SetBlockDefinitions(BlockDefinitionsInstance);
-  TextureCubeStorageInstance->BuildFromDescriptors(
-      BlockMergeRegistryInstance->GetCubeDescriptors());
 }
 
 void UCore::EnterGame()
 {
   try
   {
-    std::filesystem::create_directories(WorldPath);
-    LoadWorldList(WorldPath.string());
-
-    if (ShouldCreateWorldOnStartup())
-    {
-      if (!DefaultWorldName.empty())
-      {
-        std::cout << "Core::EnterGame: world '" << DefaultWorldName
-                  << "' not found, creating a new one." << std::endl;
-      }
-      CreateWorld();
-      SaveSystem(ConfigFilePath.filename().string());
-    }
-    else
-    {
-      LoadLastWorld();
-    }
-
-    if (DefaultUserName.empty())
-    {
-      DefaultUserName = WorldInstance->GetCurrentUserName();
-    }
-    if (WorldInstance->GetCurrentUser() == nullptr)
-    {
-      WorldInstance->GenerateUsers();
-    }
-    if (UCreature *player = WorldInstance->GetPlayerCreature())
-    {
-      if (player->GetInventory().GetActiveEntryRef() == nullptr)
-      {
-        player->GetInventory().SetActiveSlot(0, 1);
-      }
-    }
-    std::cout << kCubatariumVersion << " (feet snap: BlockTopY)" << std::endl;
+    WorldLifecycle.EnterGameWorld(*this);
   }
   catch (const std::exception &e)
   {
@@ -597,53 +624,17 @@ void UCore::LoadSystem(const std::string &config_file_name)
 bool UCore::RegisterRuntimeBlock(const BlockDefinition &def,
                                  const std::array<std::string, 6> &textureStems)
 {
-  if (!BlockMergeRegistryInstance || !WorldInstance)
-  {
-    return false;
-  }
-  const BlockId id =
-      BlockMergeRegistryInstance->RegisterRuntimeBlock(def, textureStems);
-  RuntimeBlockFlushPending = true;
-  FlushRuntimeBlockOverlay();
-  if (id == BLOCK_AIR &&
-      BlockMergeRegistryInstance->GetNameToId().count(def.Name) == 0)
-  {
-    return false;
-  }
-  const BlockId resolved =
-      BlockMergeRegistryInstance->ResolveName(def.Name);
-  if (resolved == BLOCK_AIR)
-  {
-    return false;
-  }
-  return true;
+  return ResourcePackBootstrap.RegisterRuntimeBlock(*this, def, textureStems);
 }
 
 void UCore::BeginRuntimeBlockBatch()
 {
-  ++RuntimeBlockBatchDepth;
+  ResourcePackBootstrap.BeginRuntimeBlockBatch(*this);
 }
 
 void UCore::EndRuntimeBlockBatch()
 {
-  RuntimeBlockBatchDepth = std::max(0, RuntimeBlockBatchDepth - 1);
-  FlushRuntimeBlockOverlay();
-}
-
-void UCore::FlushRuntimeBlockOverlay()
-{
-  if (!RuntimeBlockFlushPending || RuntimeBlockBatchDepth > 0 ||
-      !BlockMergeRegistryInstance)
-  {
-    return;
-  }
-  BlockMergeRegistryInstance->FlushRuntimeOverlay();
-  RuntimeBlockFlushPending = false;
-  RebuildBlockTexturesFromMergeRegistry();
-  if (WorldInstance)
-  {
-    WorldInstance->OnBlockRegistryRuntimeOverlayChanged();
-  }
+  ResourcePackBootstrap.EndRuntimeBlockBatch(*this);
 }
 
 void UCore::SaveConfigFile()
@@ -663,9 +654,72 @@ void UCore::SaveConfigFile()
   system_data["chunk_storage"] = ChunkStorageFormat;
   json gameplay;
   gameplay["step_up"] = StepUpEnabled;
+  gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
+  gameplay["activity_tick_hz"] = ActivityTickHz;
   system_data["gameplay"] = gameplay;
+  json physics;
+  physics["profile"] = ToString(ActivePhysicsProfile);
+  physics["enable_falling"] = PhysicsFlags.EnableFalling;
+  physics["enable_fluids"] = PhysicsFlags.EnableFluids;
+  physics["enable_block_events"] = PhysicsFlags.EnableBlockEvents;
+  physics["enable_collision_broadphase"] =
+      PhysicsFlags.EnableCollisionBroadphase;
+  physics["enable_collision_readiness_gate"] =
+      PhysicsFlags.EnableCollisionReadinessGate;
+  physics["falling_shadow_mode"] = PhysicsFlags.FallingShadowMode;
+  physics["liquid_shadow_mode"] = PhysicsFlags.LiquidShadowMode;
+  physics["liquid_debug_trace"] = PhysicsFlags.LiquidDebugTrace;
+  physics["enable_collision_dda"] = PhysicsFlags.EnableCollisionDda;
+  physics["block_events_per_tick_max"] =
+      PhysicsBudgetsConfig.BlockEventsPerTickMax;
+  physics["block_queue_soft_limit"] = PhysicsBudgetsConfig.BlockQueueSoftLimit;
+  physics["block_queue_hard_limit"] = PhysicsBudgetsConfig.BlockQueueHardLimit;
+  physics["liquid_events_per_tick_max"] =
+      PhysicsBudgetsConfig.LiquidEventsPerTickMax;
+  physics["fluid_blocks_per_tick_max"] =
+      PhysicsBudgetsConfig.FluidBlocksPerTickMax;
+  physics["liquid_queue_soft_limit"] =
+      PhysicsBudgetsConfig.LiquidQueueSoftLimit;
+  physics["liquid_queue_hard_limit"] =
+      PhysicsBudgetsConfig.LiquidQueueHardLimit;
+  physics["falling_events_per_tick_max"] =
+      PhysicsBudgetsConfig.FallingEventsPerTickMax;
+  physics["collision_safety_radius_chunks"] =
+      PhysicsBudgetsConfig.CollisionSafetyRadiusChunks;
+  physics["visual_remesh_per_tick_max"] =
+      PhysicsBudgetsConfig.VisualRemeshPerTickMax;
+  physics["collision_rebuild_per_tick_max"] =
+      PhysicsBudgetsConfig.CollisionRebuildPerTickMax;
+  physics["visual_remesh_queue_soft_limit"] =
+      PhysicsBudgetsConfig.VisualRemeshQueueSoftLimit;
+  physics["visual_remesh_queue_hard_limit"] =
+      PhysicsBudgetsConfig.VisualRemeshQueueHardLimit;
+  physics["collision_rebuild_queue_soft_limit"] =
+      PhysicsBudgetsConfig.CollisionRebuildQueueSoftLimit;
+  physics["collision_rebuild_queue_hard_limit"] =
+      PhysicsBudgetsConfig.CollisionRebuildQueueHardLimit;
+  physics["liquid_update_radius_chunks"] =
+      PhysicsBudgetsConfig.LiquidUpdateRadiusChunks;
+  physics["falling_scan_radius_chunks"] =
+      PhysicsBudgetsConfig.FallingScanRadiusChunks;
+  system_data["physics"] = physics;
   json render_json;
+  const char *preset_name = "balanced";
+  switch (Render.Preset)
+  {
+  case PerformancePreset::Fast:
+    preset_name = "fast";
+    break;
+  case PerformancePreset::Quality:
+    preset_name = "quality";
+    break;
+  case PerformancePreset::Balanced:
+  default:
+    preset_name = "balanced";
+    break;
+  }
+  render_json["performance_preset"] = preset_name;
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
   render_json["face_quads"] = Render.FaceQuads;
@@ -676,9 +730,24 @@ void UCore::SaveConfigFile()
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   render_json["distance_fog"] = Render.DistanceFog;
   render_json["distance_fog_start_ratio"] = Render.DistanceFogStartRatio;
+  render_json["distance_fog_density"] = Render.DistanceFogDensity;
   render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
+  render_json["below_surface_fog_v2"] = Render.BelowSurfaceFogV2;
+  render_json["altitude_adaptive_fog"] = Render.AltitudeAdaptiveFog;
+  render_json["altitude_fog_threshold_blocks"] =
+      Render.AltitudeFogThresholdBlocks;
+  render_json["altitude_fog_penalty_per_16_blocks"] =
+      Render.AltitudeFogPenaltyPer16Blocks;
   render_json["gradient_sky"] = Render.GradientSky;
+  render_json["horizon_fog_radial"] = Render.HorizonFogRadial;
+  render_json["horizon_fog_celestial_tint"] = Render.HorizonFogCelestialTint;
+  render_json["distance_fog_end_margin_blocks"] =
+      Render.DistanceFogEndMarginBlocks;
+  render_json["altitude_use_terrain_surface"] =
+      Render.AltitudeUseTerrainSurface;
   system_data["render"] = render_json;
+  json environment_json = DefaultEnvironmentConfig.ToJson();
+  system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
   resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
@@ -718,6 +787,12 @@ void UCore::SaveSystem(const std::string &config_file_name)
     DefaultUserName = WorldInstance->GetCurrentUserName();
   }
   WorldSeed = ProceduralTemplate.Seed;
+  DefaultEnvironmentConfig = WorldInstance->GetEnvironmentConfig();
+  DefaultTimeOfDay = DefaultEnvironmentConfig.TimeOfDay;
+  DefaultDayLengthMinutes = DefaultEnvironmentConfig.DayLengthMinutes;
+  DefaultLightingMinAmbient = DefaultEnvironmentConfig.MinAmbient;
+  DefaultWeather = WorldInstance->GetWeatherName();
+  DefaultLightingMinAmbient = WorldInstance->GetLightingSettings().MinAmbient;
 
   if (ConfigFilePath.empty())
   {
@@ -725,7 +800,10 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
 
   SaveConfigFile();
-  SaveWorld(WorldInstance->GetWorldName());
+  if (!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty())
+  {
+    SaveWorld(WorldInstance->GetWorldName());
+  }
 }
 
 AppSettingsSnapshot UCore::GetAppSettings() const
@@ -736,7 +814,9 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.RenderDistanceChunks = RenderDistanceChunks;
   snapshot.StreamingEnabled = StreamingEnabled;
   snapshot.StepUpEnabled = StepUpEnabled;
+  snapshot.FoliageClimbEnabled = FoliageClimbEnabled;
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
+  snapshot.ActivityTickHz = ActivityTickHz;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
   snapshot.DefaultResourcePacks = GetDefaultResourcePackSelection();
@@ -751,7 +831,9 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   RenderDistanceChunks = settings.RenderDistanceChunks;
   StreamingEnabled = settings.StreamingEnabled;
   StepUpEnabled = settings.StepUpEnabled;
+  FoliageClimbEnabled = settings.FoliageClimbEnabled;
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
+  ActivityTickHz = settings.ActivityTickHz;
   Render = settings.Render;
   Ui = settings.Ui;
   if (!settings.DefaultResourcePacks.Primary.empty())
@@ -768,7 +850,12 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetChunkWriteFormat(
       ChunkWriteFormatFromString(ChunkStorageFormat));
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
+  WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+  WorldInstance->SetActivityTickHz(ActivityTickHz);
+  WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+  WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+  WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
   WorldInstance->SetRenderSettings(Render);
   if (GeometryEngineInstance)
   {
@@ -794,78 +881,24 @@ void UCore::CreateNewWorldFromTemplate()
   ResetToGeneratorDefaults(ProceduralTemplate);
   TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
   PendingNewWorldSettings.reset();
-  CreateNewWorldWithCurrentSettings();
+  WorldLifecycle.CreateNewWorldWithCurrentSettings(*this);
 }
 
-void UCore::RefreshWorldList()
-{
-  std::filesystem::create_directories(WorldPath);
-  LoadWorldList(WorldPath.string());
-}
+void UCore::RefreshWorldList() { WorldLifecycle.RefreshWorldList(*this); }
 
 void UCore::LoadWorldByName(const std::string &world_name)
 {
-  DefaultWorldName = world_name;
-  LoadWorld(world_name);
+  WorldLifecycle.LoadWorldByName(*this, world_name);
 }
 
 void UCore::CreateWorld(const std::string &terrain_type)
 {
-  WorldSeed += 1;
-  if (!terrain_type.empty())
-  {
-    TerrainType = terrain_type;
-    ProceduralTemplate.Generator = ProceduralGeneratorFromString(terrain_type);
-  }
-  ProceduralTemplate.Seed = WorldSeed;
-  ResetToGeneratorDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-  PendingNewWorldSettings.reset();
-  CreateNewWorldWithCurrentSettings();
+  WorldLifecycle.CreateWorld(*this, terrain_type);
 }
 
 void UCore::CreateWorldFromProceduralConfig()
 {
-  if (!ConfigFilePath.empty() && std::filesystem::exists(ConfigFilePath))
-  {
-    std::ifstream file(ConfigFilePath.string());
-    if (file.is_open())
-    {
-      std::stringstream buffer;
-      buffer << file.rdbuf();
-      try
-      {
-        const json d = json::parse(buffer.str());
-        ProceduralTemplate = ParseProceduralTemplateFromConfig(d);
-        WorldSeed = ProceduralTemplate.Seed;
-      }
-      catch (const json::exception &e)
-      {
-        std::cerr << "CreateWorldFromProceduralConfig: config parse error: "
-                  << e.what() << std::endl;
-      }
-    }
-  }
-
-  WorldSeed += 1;
-  ProceduralTemplate.Seed = WorldSeed;
-  ResetToGeneratorDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-
-  std::cout << "Core::CreateWorldFromProceduralConfig: " << TerrainType
-            << " (Seed=" << ProceduralTemplate.Seed << ")" << std::endl;
-
-  PendingNewWorldSettings.reset();
-  CreateNewWorldWithCurrentSettings();
-}
-
-void UCore::CreateNewWorldWithCurrentSettings()
-{
-  const std::string new_world_name = SetupNewWorldForCreation();
-  WorldInstance->Create(new_world_name);
-  WorldInstance->GenerateUsers();
-  SaveWorld(new_world_name);
-  LoadWorldList(WorldPath.string());
+  WorldLifecycle.CreateWorldFromProceduralConfig(*this);
 }
 
 void UCore::PrepareStartupWorldCreation()
@@ -880,8 +913,7 @@ void UCore::PrepareStartupWorldCreation()
 
 void UCore::PrepareEnterGameWorldList()
 {
-  std::filesystem::create_directories(WorldPath);
-  LoadWorldList(WorldPath.string());
+  WorldLifecycle.PrepareEnterGameWorldList(*this);
 }
 
 bool UCore::NeedsCreateWorldOnStartup() const
@@ -891,114 +923,41 @@ bool UCore::NeedsCreateWorldOnStartup() const
 
 void UCore::PrepareLoadWorld(const std::string &world_name)
 {
-  DefaultWorldName = world_name;
-  ActiveWorldFolder = WorldFolderPath(world_name);
+  WorldLifecycle.PrepareLoadWorld(*this, world_name);
 }
 
-void UCore::FinalizeLoadedWorld()
+void UCore::FinalizeLoadedWorld() { WorldLifecycle.FinalizeLoadedWorld(*this); }
+
+void UCore::ApplyDefaultEnvironmentToWorld()
 {
-  ApplyRuntimeStreamingToWorld();
-  if (!DefaultUserName.empty())
+  if (!WorldInstance)
   {
-    if (!WorldInstance->SetCurrentUserName(DefaultUserName))
-    {
-      std::cerr << "Core::FinalizeLoadedWorld: user '" << DefaultUserName
-                << "' not found." << std::endl;
-    }
+    return;
   }
-  if (WorldInstance->GetCurrentUser() == nullptr)
+  WorldInstance->ApplyEnvironmentConfig(DefaultEnvironmentConfig, true);
+  if (!DefaultEnvironmentConfig.WeatherAuto.AutoChange)
   {
-    WorldInstance->GenerateUsers();
+    WorldInstance->SetWeatherByName(DefaultWeather, 0.0f);
+  }
+  else
+  {
+    WorldInstance->ClearWeatherManualOverride();
   }
 }
 
 void UCore::FinalizeEnterGameSession()
 {
-  if (DefaultUserName.empty())
-  {
-    DefaultUserName = WorldInstance->GetCurrentUserName();
-  }
-  if (WorldInstance->GetCurrentUser() == nullptr)
-  {
-    WorldInstance->GenerateUsers();
-  }
-  if (UCreature *player = WorldInstance->GetPlayerCreature())
-  {
-    if (player->GetInventory().GetActiveEntryRef() == nullptr)
-    {
-      player->GetInventory().SetActiveSlot(0, 1);
-    }
-  }
+  WorldLifecycle.FinalizeEnterGameSession(*this);
 }
 
 void UCore::RefreshWorldListAfterSave()
 {
-  LoadWorldList(WorldPath.string());
+  WorldLifecycle.RefreshWorldListAfterSave(*this);
 }
 
 std::string UCore::SetupNewWorldForCreation()
 {
-  ResourcePackSelection selection = PendingNewWorldPackSelection;
-  const std::vector<std::string> legacyPacks = PendingNewWorldResourcePacks;
-  PendingNewWorldPackSelection = {};
-  PendingNewWorldResourcePacks.clear();
-  if (selection.Primary.empty())
-  {
-    selection.Primary = NormalizeEnabledPackIds(legacyPacks);
-  }
-  if (selection.Primary.empty())
-  {
-    selection = GetDefaultResourcePackSelection();
-  }
-  selection.Primary = NormalizeEnabledPackIds(selection.Primary);
-  selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
-  if (selection.Primary.empty())
-  {
-    selection = GetDefaultResourcePackSelection();
-    selection.Primary = NormalizeEnabledPackIds(selection.Primary);
-    selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
-  }
-  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
-  {
-    selection.WorldgenOwner = selection.Primary.front();
-  }
-
-  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
-                                          selection.WorldgenOwner);
-  if (!ResourcePackSelectionEqual(selection, ActivePackSelection))
-  {
-    ApplyResourcePacks(selection);
-  }
-
-  const std::string new_world_name = AllocateNextWorldName();
-  DefaultWorldName = new_world_name;
-  ActiveWorldFolder = WorldFolderPath(new_world_name);
-  std::filesystem::create_directories(ActiveWorldFolder / "chunks");
-
-  std::cout << "Core::CreateWorld: new world '" << new_world_name << "' at "
-            << ActiveWorldFolder.string() << std::endl;
-
-  ProceduralSettings worldSettings = ProceduralTemplate;
-  if (PendingNewWorldSettings.has_value())
-  {
-    worldSettings = *PendingNewWorldSettings;
-    PendingNewWorldSettings.reset();
-  }
-  else
-  {
-    worldSettings.Seed = WorldSeed;
-    ResetToGeneratorDefaults(worldSettings);
-  }
-  ResolveProceduralDefaults(worldSettings);
-  ApplyGeneratorTierDefaults(worldSettings);
-  worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
-  worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
-  worldSettings.MaxChunkCommitsPerFrame =
-      ProceduralTemplate.MaxChunkCommitsPerFrame;
-
-  WorldInstance->SetProceduralSettings(worldSettings);
-  WorldInstance->SetRenderSettings(Render);
-  return new_world_name;
+  return WorldLifecycle.SetupNewWorldForCreation(*this);
 }
 
 void UCore::ApplyRuntimeStreamingToWorld()
@@ -1010,101 +969,31 @@ void UCore::ApplyRuntimeStreamingToWorld()
   ProceduralSettings worldSettings = WorldInstance->GetProceduralSettings();
   worldSettings.AsyncChunkGeneration = ProceduralTemplate.AsyncChunkGeneration;
   worldSettings.AsyncChunkIo = ProceduralTemplate.AsyncChunkIo;
-  worldSettings.MaxChunkCommitsPerFrame = ProceduralTemplate.MaxChunkCommitsPerFrame;
+  worldSettings.MaxChunkCommitsPerFrame =
+      ProceduralTemplate.MaxChunkCommitsPerFrame;
   WorldInstance->SetProceduralSettings(worldSettings, false);
+  WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
+  WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
+  WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
   WorldInstance->SetRenderSettings(Render);
   WorldInstance->RefreshStreamerSettings();
 }
 
 void UCore::LoadWorld(const std::string &world_name)
 {
-  ActiveWorldFolder = WorldFolderPath(world_name);
-  WorldInstance->Load(ActiveWorldFolder.string());
-  ApplyRuntimeStreamingToWorld();
-  if (!DefaultUserName.empty())
-  {
-    if (!WorldInstance->SetCurrentUserName(DefaultUserName))
-    {
-      std::cerr << "Core::LoadWorld: user '" << DefaultUserName
-                << "' not found." << std::endl;
-    }
-  }
-  if (WorldInstance->GetCurrentUser() == nullptr)
-  {
-    WorldInstance->GenerateUsers();
-  }
+  WorldLifecycle.LoadWorld(*this, world_name);
 }
 
-void UCore::LoadLastWorld()
-{
-  if (DefaultWorldName.empty())
-  {
-    std::cerr << "Core::LoadLastWorld: default_world is not set in config."
-              << std::endl;
-    return;
-  }
-
-  std::cout << "Loading last World: " << DefaultWorldName
-            << " (user: " << DefaultUserName << ")" << std::endl;
-
-  LoadWorld(DefaultWorldName);
-
-  if (!DefaultUserName.empty())
-  {
-    if (!WorldInstance->SetCurrentUserName(DefaultUserName))
-    {
-      std::cerr << "Core::LoadLastWorld: user '" << DefaultUserName
-                << "' not found, using current user." << std::endl;
-    }
-  }
-
-  WorldInstance->FinalizePlayerAfterWorldLoad();
-}
+void UCore::LoadLastWorld() { WorldLifecycle.LoadLastWorld(*this); }
 
 void UCore::SaveWorld(const std::string &world_name)
 {
-  if (ActiveWorldFolder.empty())
-  {
-    ActiveWorldFolder = WorldFolderPath(world_name);
-  }
-  if (WorldInstance && BlockMergeRegistryInstance)
-  {
-    WorldInstance->SetCatalogFingerprint(
-        BlockMergeRegistryInstance->ComputeCatalogFingerprint());
-  }
-  WorldInstance->Save(ActiveWorldFolder.string());
+  WorldLifecycle.SaveWorld(*this, world_name);
 }
 
 void UCore::LoadWorldList(const std::string &world_path)
 {
-  WorldList.clear();
-
-  if (!std::filesystem::exists(world_path) ||
-      !std::filesystem::is_directory(world_path))
-  {
-    return;
-  }
-
-  try
-  {
-    for (const auto &entry : std::filesystem::directory_iterator(world_path))
-    {
-      if (!entry.is_directory())
-      {
-        continue;
-      }
-      const std::string Name = entry.path().filename().string();
-      if (std::find(WorldList.begin(), WorldList.end(), Name) ==
-          WorldList.end())
-      {
-        WorldList.push_back(Name);
-      }
-    }
-  }
-  catch (const std::filesystem::filesystem_error &ex)
-  {
-    std::cerr << ex.what() << std::endl;
-  }
+  WorldLifecycle.LoadWorldList(*this, world_path);
 }
 
 std::vector<std::string> UCore::GetDefaultEnabledResourcePacks() const
@@ -1136,8 +1025,7 @@ ResourcePackSelection UCore::GetDefaultResourcePackSelection() const
   return selection;
 }
 
-void UCore::SetDefaultEnabledResourcePacks(
-    const std::vector<std::string> &ids)
+void UCore::SetDefaultEnabledResourcePacks(const std::vector<std::string> &ids)
 {
   ResourcePacks.DefaultEnabled = ids;
   ResourcePacks.DefaultPrimary = ids;
@@ -1157,215 +1045,39 @@ std::vector<InstalledPackInfo> UCore::ListInstalledResourcePacks() const
   return UResourcePackResolver::ListInstalled(WorkDir, ExeDir);
 }
 
-std::vector<std::string>
-UCore::NormalizeEnabledPackIds(const std::vector<std::string> &requested) const
-{
-  const auto installed = ListInstalledResourcePacks();
-  std::unordered_set<std::string> installedIds;
-  for (const auto &pack : installed)
-  {
-    installedIds.insert(pack.Id);
-  }
-  std::vector<std::string> result;
-  std::unordered_set<std::string> seen;
-  for (const auto &id : requested)
-  {
-    if (seen.count(id) != 0)
-    {
-      continue;
-    }
-    if (installedIds.count(id) != 0)
-    {
-      seen.insert(id);
-      result.push_back(id);
-    }
-    else
-    {
-      std::cerr << "UCore: resource pack not installed, skipping: " << id
-                << std::endl;
-    }
-  }
-  return result;
-}
-
 bool UCore::ApplyResourcePacks(const std::vector<std::string> &enabledIds)
 {
-  ResourcePackSelection selection;
-  selection.Primary = enabledIds;
-  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
-  {
-    selection.WorldgenOwner = selection.Primary.front();
-  }
-  return ApplyResourcePacks(selection);
+  const bool ok = ResourcePackBootstrap.ApplyResourcePacks(*this, enabledIds);
+  ResourcePacksReady = ok;
+  return ok;
 }
 
 bool UCore::ApplyResourcePacks(const ResourcePackSelection &selectionIn)
 {
-  if (!BlockMergeRegistryInstance)
-  {
-    return false;
-  }
-  ResourcePackSelection selection = selectionIn;
-  selection.Primary = NormalizeEnabledPackIds(selection.Primary);
-  selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
-  if (selection.Primary.empty())
-  {
-    selection = GetDefaultResourcePackSelection();
-    selection.Primary = NormalizeEnabledPackIds(selection.Primary);
-    selection.Secondary = NormalizeEnabledPackIds(selection.Secondary);
-  }
-  if (selection.Primary.empty())
-  {
-    std::cerr << "UCore::ApplyResourcePacks: no packs available" << std::endl;
-    return false;
-  }
-  if (selection.WorldgenOwner.empty())
-  {
-    selection.WorldgenOwner = selection.Primary.front();
-  }
-
-  UResourcePackResolver resolver;
-  const auto packs = resolver.Resolve(selection, WorkDir, ExeDir);
-  if (packs.empty())
-  {
-    std::cerr << "UCore::ApplyResourcePacks: no packs resolved" << std::endl;
-    return false;
-  }
-
-  if (!PlaceholderCacheInstance)
-  {
-    const glm::vec3 bg = ParseHexColor(ResourcePacks.PlaceholderBackground,
-                                       glm::vec3(0.42f, 0.29f, 0.62f));
-    PlaceholderCacheInstance = std::make_shared<UPlaceholderTextureCache>(
-        ExeDir / ".placeholder_cache", ResourcePacks.PlaceholderTileSize, bg,
-        static_cast<size_t>(ResourcePacks.PlaceholderCacheMaxEntries));
-  }
-
-  BlockMergeRegistryInstance->SetPrimaryPackIds(selection.Primary);
-  BlockMergeRegistryInstance->SetWorldgenOwnerPackId(selection.WorldgenOwner);
-  BlockMergeRegistryInstance->Rebuild(packs, PlaceholderCacheInstance,
-                                      ResourcePacks.PlaceholderTileSize);
-  ActivePackSelection = selection;
-  ActiveResourcePacksEnabled = selection.AllIds();
-
-  if (PrefabLibraryInstance && WorldInstance)
-  {
-    PrefabLibraryInstance->LoadMerged(PrefabsPath, packs,
-                                      WorldInstance->GetBlockRegistry());
-    WorldInstance->SetPrefabLibrary(PrefabLibraryInstance.get());
-  }
-
-  RebuildBlockTexturesFromMergeRegistry();
-
-  std::cout << "Resource packs: applied " << packs.size() << " pack(s)";
-  for (const auto &p : packs)
-  {
-    std::cout << " [" << p.Id << "]";
-  }
-  std::cout << " (" << BlockMergeRegistryInstance->GetCubeDescriptors().size()
-            << " block types)" << std::endl;
-
-  if (WorldInstance)
-  {
-    WorldInstance->OnBlockRegistryChanged();
-    RebuildBlockTexturesFromMergeRegistry();
-  }
-  ReloadCreatureCatalog(packs);
-  if (WorldInstance && BlockMergeRegistryInstance)
-  {
-    WorldInstance->SetCatalogFingerprint(
-        BlockMergeRegistryInstance->ComputeCatalogFingerprint());
-  }
-  return true;
-}
-
-void UCore::ReloadCreatureCatalog(
-    const std::vector<ResourcePackManifest> &packs)
-{
-  if (!WorldInstance || !CreatureTextureStorageInstance)
-  {
-    return;
-  }
-  auto defs = WorldInstance->GetCreatureDefinitionStorage();
-  if (!defs)
-  {
-    return;
-  }
-  ApplyCreaturePackOverlays(*defs, *CreatureTextureStorageInstance,
-                            WorldInstance->GetSkinDefinitionStorage().get(),
-                            WorkDir / "models" / "creatures",
-                            WorkDir / "models" / "skins", packs);
-  WorldInstance->OnCreatureCatalogChanged();
-}
-
-void UCore::ApplyResourcePacksAfterWorldDataLoaded()
-{
-  ResourcePackSelection selection;
-  selection.Primary = WorldInstance->GetResourcePacksPrimary();
-  selection.Secondary = WorldInstance->GetResourcePacksSecondary();
-  selection.WorldgenOwner = WorldInstance->GetWorldgenOwnerPackId();
-  if (selection.Primary.empty())
-  {
-    selection.Primary = WorldInstance->GetResourcePacksEnabled();
-  }
-  if (selection.Primary.empty())
-  {
-    selection = GetDefaultResourcePackSelection();
-    WorldInstance->SetResourcePackSelection(
-        selection.Primary, selection.Secondary, selection.WorldgenOwner);
-  }
-  const std::string storedFingerprint = WorldInstance->GetCatalogFingerprint();
-  ApplyResourcePacks(selection);
-  if (BlockMergeRegistryInstance && !storedFingerprint.empty())
-  {
-    const std::string currentFingerprint =
-        BlockMergeRegistryInstance->ComputeCatalogFingerprint();
-    if (storedFingerprint != currentFingerprint)
-    {
-      std::cerr << "WARNING: block catalog fingerprint mismatch for world '"
-                << WorldInstance->GetWorldName()
-                << "'. Blocks/textures may not match the saved terrain."
-                << std::endl;
-    }
-  }
+  const bool ok = ResourcePackBootstrap.ApplyResourcePacks(*this, selectionIn);
+  ResourcePacksReady = ok;
+  return ok;
 }
 
 void UCore::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const std::vector<std::string> &resourcePacks)
 {
-  ResourcePackSelection selection;
-  selection.Primary = resourcePacks;
-  if (!selection.Primary.empty())
-  {
-    selection.WorldgenOwner = selection.Primary.front();
-  }
-  CreateNewWorldWithSettings(settings, selection);
+  WorldLifecycle.CreateNewWorldWithSettings(*this, settings, resourcePacks);
 }
 
 void UCore::CreateNewWorldWithSettings(
     const ProceduralSettings &settings,
     const ResourcePackSelection &resourcePacks)
 {
-  ApplyNewWorldCreationRequest(settings, resourcePacks);
-  CreateNewWorldWithCurrentSettings();
+  WorldLifecycle.CreateNewWorldWithSettings(*this, settings, resourcePacks);
 }
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
     const ResourcePackSelection &resourcePacks)
 {
-  PendingNewWorldSettings = settings;
-  PendingNewWorldSettings->Seed = settings.Seed;
-  WorldSeed = settings.Seed + 1;
-  PendingNewWorldSettings->Seed = WorldSeed;
-
-  ProceduralTemplate.Generator = settings.Generator;
-  ProceduralTemplate.Seed = WorldSeed;
-  ResetToGeneratorDefaults(ProceduralTemplate);
-  TerrainType = ProceduralGeneratorToString(ProceduralTemplate.Generator);
-
-  PendingNewWorldPackSelection = resourcePacks;
+  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks);
 }
 
 std::vector<std::string>
@@ -1382,24 +1094,7 @@ UCore::PeekWorldResourcePacks(const std::string &world_name) const
   try
   {
     const json d = json::parse(buffer.str());
-    if (!d.contains("resource_packs") || !d["resource_packs"].is_object())
-    {
-      return {};
-    }
-    const auto &rp = d["resource_packs"];
-    if (!rp.contains("enabled") || !rp["enabled"].is_array())
-    {
-      return {};
-    }
-    std::vector<std::string> result;
-    for (const auto &id : rp["enabled"])
-    {
-      if (id.is_string())
-      {
-        result.push_back(id.get<std::string>());
-      }
-    }
-    return result;
+    return ReadLegacyWorldEnabledPacks(d);
   }
   catch (const json::exception &e)
   {
@@ -1445,10 +1140,16 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   {
     return false;
   }
-  WorldInstance->SetResourcePackSelection(selection.Primary, selection.Secondary,
-                                          selection.WorldgenOwner);
+  WorldInstance->SetResourcePackSelection(
+      selection.Primary, selection.Secondary, selection.WorldgenOwner);
   SaveWorld(WorldInstance->GetWorldName());
   return true;
+}
+
+bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,
+                                CreateWorldReport &report)
+{
+  return WorldLifecycle.CreateWorldHeadless(*this, args, report);
 }
 
 } // namespace cutum

@@ -1,5 +1,6 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include <filesystem>
 #include <fstream>
@@ -65,14 +66,15 @@ std::string UChunkStorageService::ChunkFilePath(const std::string &worldFolder,
                                                 glm::ivec3 coord,
                                                 ChunkDiskFormat format) const
 {
-  const std::string ext =
-      format == ChunkDiskFormat::Json ? JsonSerializer.FileExtension()
-                                      : BinarySerializer.FileExtension();
+  const std::string ext = format == ChunkDiskFormat::Json
+                              ? JsonSerializer.FileExtension()
+                              : BinarySerializer.FileExtension();
   return ChunksDir(worldFolder) + "/" + CoordStem(coord) + ext;
 }
 
-ChunkDiskFormat UChunkStorageService::DetectFormatOnDisk(
-    const std::string &worldFolder, glm::ivec3 coord) const
+ChunkDiskFormat
+UChunkStorageService::DetectFormatOnDisk(const std::string &worldFolder,
+                                         glm::ivec3 coord) const
 {
   const std::string binaryPath =
       ChunkFilePath(worldFolder, coord, ChunkDiskFormat::Binary);
@@ -89,35 +91,37 @@ ChunkDiskFormat UChunkStorageService::DetectFormatOnDisk(
   return ChunkDiskFormat::Absent;
 }
 
-const IChunkSerializer &UChunkStorageService::GetSerializer(
-    ChunkDiskFormat format) const
+const IUChunkSerializer &
+UChunkStorageService::GetSerializer(ChunkDiskFormat format) const
 {
   return format == ChunkDiskFormat::Json
-             ? static_cast<const IChunkSerializer &>(JsonSerializer)
-             : static_cast<const IChunkSerializer &>(BinarySerializer);
+             ? static_cast<const IUChunkSerializer &>(JsonSerializer)
+             : static_cast<const IUChunkSerializer &>(BinarySerializer);
 }
 
-IChunkSerializer &UChunkStorageService::MutableSerializer(ChunkDiskFormat format)
+IUChunkSerializer &
+UChunkStorageService::MutableSerializer(ChunkDiskFormat format)
 {
   return format == ChunkDiskFormat::Json
-             ? static_cast<IChunkSerializer &>(JsonSerializer)
-             : static_cast<IChunkSerializer &>(BinarySerializer);
+             ? static_cast<IUChunkSerializer &>(JsonSerializer)
+             : static_cast<IUChunkSerializer &>(BinarySerializer);
 }
 
-const IChunkSerializer &UChunkStorageService::GetWriteSerializer() const
+const IUChunkSerializer &UChunkStorageService::GetWriteSerializer() const
 {
   return Settings.writeFormat == ChunkWriteFormat::Json
-             ? static_cast<const IChunkSerializer &>(JsonSerializer)
-             : static_cast<const IChunkSerializer &>(BinarySerializer);
+             ? static_cast<const IUChunkSerializer &>(JsonSerializer)
+             : static_cast<const IUChunkSerializer &>(BinarySerializer);
 }
 
-SerializedChunk UChunkStorageService::SerializeChunk(
-    glm::ivec3 chunkCoord, const UChunk &chunk, UBlockRegistry &registry) const
+SerializedChunk
+UChunkStorageService::SerializeChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
+                                     UBlockRegistry &registry) const
 {
   return GetWriteSerializer().Serialize(chunkCoord, chunk, registry);
 }
 
-ChunkBuffer UChunkStorageService::DeserializeChunk(
+UChunkBuffer UChunkStorageService::DeserializeChunk(
     const std::vector<uint8_t> &bytes, glm::ivec3 chunkCoord,
     ChunkDiskFormat format, UBlockRegistry &registry) const
 {
@@ -128,8 +132,8 @@ ChunkBuffer UChunkStorageService::DeserializeChunk(
   return GetSerializer(format).Deserialize(bytes, chunkCoord, registry);
 }
 
-int UChunkStorageService::ApplyBufferToWorld(const ChunkBuffer &buffer,
-                                           UBlockWorld &world) const
+int UChunkStorageService::ApplyBufferToWorld(const UChunkBuffer &buffer,
+                                             UBlockWorld &world) const
 {
   if (buffer.IsEmpty())
   {
@@ -176,8 +180,8 @@ bool UChunkStorageService::WriteBytesAtomically(
   return !ec;
 }
 
-bool UChunkStorageService::ReadBytesFromFile(const std::string &filePath,
-                                           std::vector<uint8_t> &outBytes) const
+bool UChunkStorageService::ReadBytesFromFile(
+    const std::string &filePath, std::vector<uint8_t> &outBytes) const
 {
   std::ifstream file(filePath, std::ios::binary);
   if (!file.is_open())
@@ -193,7 +197,8 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                                      const std::string &worldFolder,
                                      UBlockRegistry &registry)
 {
-  const SerializedChunk serialized = SerializeChunk(chunkCoord, chunk, registry);
+  const SerializedChunk serialized =
+      SerializeChunk(chunkCoord, chunk, registry);
   const std::string filePath =
       ChunkFilePath(worldFolder, chunkCoord, serialized.format);
   if (!WriteBytesAtomically(filePath, serialized.bytes))
@@ -229,29 +234,107 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
     return -1;
   }
 
-  const ChunkBuffer buffer =
+  const UChunkBuffer buffer =
       DeserializeChunk(bytes, chunkCoord, format, registry);
-  return ApplyBufferToWorld(buffer, world);
+  const int placed = ApplyBufferToWorld(buffer, world);
+  return placed;
 }
 
-void UChunkStorageService::SaveTerrainColumn(
-    glm::ivec3 groundCoord, const UBlockWorld &world,
-    const std::string &worldFolder, UBlockRegistry &registry, int maxWorldY)
+int UChunkStorageService::GetHighestChunkSliceOnDisk(
+    const std::string &worldFolder, glm::ivec3 groundCoord) const
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
+  if (!std::filesystem::exists(chunks_dir) ||
+      !std::filesystem::is_directory(chunks_dir))
+  {
+    return -1;
+  }
+
+  const std::string prefix = std::to_string(groundCoord.x) + "_";
+  const std::string suffix = "_" + std::to_string(groundCoord.z);
+  int highest = -1;
+  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  {
+    const std::string stem = entry.path().stem().string();
+    if (stem.size() <= prefix.size() + suffix.size())
+    {
+      continue;
+    }
+    if (stem.compare(0, prefix.size(), prefix) != 0 ||
+        stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) != 0)
+    {
+      continue;
+    }
+    try
+    {
+      const std::string cy_text = stem.substr(
+          prefix.size(), stem.size() - prefix.size() - suffix.size());
+      const int cy = std::stoi(cy_text);
+      highest = std::max(highest, cy);
+    }
+    catch (const std::exception &)
+    {
+    }
+  }
+  return highest;
+}
+
+void UChunkStorageService::RemoveChunkSliceFromDisk(
+    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+{
+  for (const ChunkDiskFormat format :
+       {ChunkDiskFormat::Binary, ChunkDiskFormat::Json})
+  {
+    const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
+    std::error_code ec;
+    std::filesystem::remove(filePath, ec);
+  }
+}
+
+void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
+                                             const UBlockWorld &world,
+                                             const std::string &worldFolder,
+                                             UBlockRegistry &registry,
+                                             int maxWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
   const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
+  const int highestNonAir =
+      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
+  int highestToSave = std::max(highestOnDisk, highestNonAir);
+  if (highestToSave < 0)
+  {
+    return;
+  }
+  highestToSave = std::min(highestToSave, maxCy);
+
+  for (int cy = 0; cy <= highestToSave; ++cy)
   {
     const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(slice);
-    if (!chunk)
+    if (chunk)
     {
-      continue;
+      SaveChunk(slice, *chunk, worldFolder, registry);
     }
-    SaveChunk(slice, *chunk, worldFolder, registry);
+    else
+    {
+      const UChunk empty_slice(slice);
+      SaveChunk(slice, empty_slice, worldFolder, registry);
+    }
+  }
+
+  for (int cy = highestToSave + 1; cy <= maxCy; ++cy)
+  {
+    RemoveChunkSliceFromDisk(
+        worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z));
   }
 }
 
@@ -272,19 +355,28 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
 
   int total = 0;
   const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
+  if (highestOnDisk < 0)
+  {
+    return 0;
+  }
+  for (int cy = 0; cy <= highestOnDisk; ++cy)
   {
     const int placed = LoadChunk(glm::ivec3(groundCoord.x, cy, groundCoord.z),
-                               world, worldFolder, registry);
+                                 world, worldFolder, registry);
     if (placed > 0)
     {
       total += placed;
     }
   }
-  return total;
+  MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY,
+                                         highestOnDisk);
+  (void)maxCy;
+  return total > 0 ? total : 1;
 }
 
-void UChunkStorageService::WriteStorageMarker(const std::string &worldFolder) const
+void UChunkStorageService::WriteStorageMarker(
+    const std::string &worldFolder) const
 {
   json marker;
   marker["format_version"] = 4;

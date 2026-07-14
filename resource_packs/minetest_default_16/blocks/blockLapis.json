@@ -1,20 +1,17 @@
-﻿{
-    "name":  "blockLapis",
-    "id":  347,
-    "types":  [
-                  "building"
-              ],
-    "textures":  [
-                     "blockLapis",
-                     "blockLapis",
-                     "blockLapis",
-                     "blockLapis",
-                     "blockLapis",
-                     "blockLapis"
-                 ],
-    "displayName":  "Lapis Block",
-    "render":  {
-
-               }
+{
+  "name": "blockLapis",
+  "id": 347,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis",
+    "blockLapis"
+  ],
+  "displayName": "Lapis Block",
+  "render": {}
 }
-

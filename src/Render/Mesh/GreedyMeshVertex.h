@@ -15,6 +15,9 @@ struct GreedyMeshVertex
   float faceIndex;
   float u;
   float v;
+  float skyLight;
+  float blockLight;
+  float wetness;
 };
 
 } // namespace cutum

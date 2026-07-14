@@ -1,19 +1,16 @@
-﻿{
-    "name":  "rail",
-    "id":  674,
-    "types":  [
-                  "natural"
-              ],
-    "textures":  [
-                     "rail",
-                     "rail",
-                     "rail",
-                     "rail",
-                     "rail",
-                     "rail"
-                 ],
-    "render":  {
-
-               }
+{
+  "name": "rail",
+  "id": 674,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "rail",
+    "rail",
+    "rail",
+    "rail",
+    "rail",
+    "rail"
+  ],
+  "render": {}
 }
-
