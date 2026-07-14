@@ -269,6 +269,7 @@ set(SOURCES
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -284,6 +285,7 @@ set(SOURCES
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
@@ -1205,6 +1207,38 @@ target_compile_definitions(fluid_worldgen_seal_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(ravine_carver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Features/RavineCarver.cpp
+    src/Test/RavineCarverTest.cpp)
+target_include_directories(ravine_carver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(ravine_carver_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(ravine_carver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_smoothness_test
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/WorldGenSmoothnessTest.cpp)
+target_include_directories(worldgen_smoothness_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_smoothness_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(worldgen_vegetation_placement_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
@@ -1480,6 +1514,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -1495,6 +1530,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp

@@ -25,6 +25,7 @@ AMPLITUDE_BLOCKS = 4.5 * (MAX_HEIGHT / 12.0 if MAX_HEIGHT > 15 else 1.0) * ROUGH
 # Legacy single-sided proxy budgets (kept for quick regression signal).
 MAX_MEAN_ABS_DELTA_Y = 1.35
 MAX_PCT_DELTA_GT_2 = 4.5
+MAX_PCT_DELTA_GT_3 = 0.5
 
 
 def load_thresholds() -> dict:
@@ -158,12 +159,14 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> dict:
         return {
             "mean_abs_delta_y": 0.0,
             "pct_delta_gt_2": 0.0,
+            "pct_delta_gt_3": 0.0,
             "flatness_pct": 0.0,
             "rolling_hill_pct": 0.0,
             "delta_ge_4_pct": 0.0,
         }
     mean_abs = sum(deltas) / len(deltas)
     pct_gt_2 = 100.0 * sum(1 for d in deltas if d > 2) / len(deltas)
+    pct_gt_3 = 100.0 * sum(1 for d in deltas if d > 3) / len(deltas)
     flatness_pct = 100.0 * sum(1 for d in deltas if d == 0) / len(deltas)
     rolling_hill_pct = (
         100.0 * sum(1 for d in deltas if 1 <= d <= 3) / len(deltas)
@@ -172,6 +175,7 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> dict:
     return {
         "mean_abs_delta_y": mean_abs,
         "pct_delta_gt_2": pct_gt_2,
+        "pct_delta_gt_3": pct_gt_3,
         "flatness_pct": flatness_pct,
         "rolling_hill_pct": rolling_hill_pct,
         "delta_ge_4_pct": delta_ge_4_pct,
@@ -234,6 +238,7 @@ def main() -> int:
         print(
             f"seed={seed}: mean_abs_delta_y={metrics['mean_abs_delta_y']:.3f} "
             f"pct_delta_gt_2={metrics['pct_delta_gt_2']:.2f}% "
+            f"pct_delta_gt_3={metrics['pct_delta_gt_3']:.2f}% "
             f"flatness={metrics['flatness_pct']:.2f}% "
             f"rolling_hills={metrics['rolling_hill_pct']:.2f}% "
             f"delta_ge_4={metrics['delta_ge_4_pct']:.2f}%"
@@ -241,6 +246,7 @@ def main() -> int:
         if (
             metrics["mean_abs_delta_y"] > MAX_MEAN_ABS_DELTA_Y
             or metrics["pct_delta_gt_2"] > MAX_PCT_DELTA_GT_2
+            or metrics["pct_delta_gt_3"] > MAX_PCT_DELTA_GT_3
         ):
             failed = True
         budget_failures, budget_warnings = check_bidirectional_budgets(
