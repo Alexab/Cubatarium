@@ -495,6 +495,7 @@ void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
     pack.Ravines.MaxDepth = json.value("max_depth", pack.Ravines.MaxDepth);
     pack.Ravines.AquaticMaxDepth =
         json.value("aquatic_max_depth", pack.Ravines.AquaticMaxDepth);
+    pack.Ravines.FillWater = json.value("fill_water", pack.Ravines.FillWater);
     pack.Ravines.Loaded = true;
   }
   catch (const std::exception &e)
@@ -827,6 +828,7 @@ void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
   settings.Ravines.minDepth = ravines.MinDepth;
   settings.Ravines.maxDepth = ravines.MaxDepth;
   settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
+  settings.Ravines.fillWater = ravines.FillWater;
 }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(

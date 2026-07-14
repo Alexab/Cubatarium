@@ -261,6 +261,23 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     CavesBox->SetChecked(FormSettings.EnableCaves);
   }
+  if (RavinesBox)
+  {
+    RavinesBox->SetChecked(FormSettings.Ravines.enabled);
+  }
+  if (RavineRarityInput)
+  {
+    RavineRarityInput->SetText(std::to_string(FormSettings.Ravines.rarity));
+  }
+  if (RavineAquaticMaxDepthInput)
+  {
+    RavineAquaticMaxDepthInput->SetText(
+        std::to_string(FormSettings.Ravines.aquaticMaxDepth));
+  }
+  if (RavineFillWaterBox)
+  {
+    RavineFillWaterBox->SetChecked(FormSettings.Ravines.fillWater);
+  }
   if (OresBox)
   {
     OresBox->SetChecked(FormSettings.EnableOres);
@@ -443,6 +460,25 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   if (CavesBox)
   {
     s.EnableCaves = CavesBox->IsChecked();
+  }
+  if (RavinesBox)
+  {
+    s.Ravines.enabled = RavinesBox->IsChecked();
+  }
+  if (RavineRarityInput)
+  {
+    s.Ravines.rarity =
+        std::max(1, ParseIntOr(RavineRarityInput->GetText(), s.Ravines.rarity));
+  }
+  if (RavineAquaticMaxDepthInput)
+  {
+    s.Ravines.aquaticMaxDepth = std::max(
+        0, ParseIntOr(RavineAquaticMaxDepthInput->GetText(),
+                      s.Ravines.aquaticMaxDepth));
+  }
+  if (RavineFillWaterBox)
+  {
+    s.Ravines.fillWater = RavineFillWaterBox->IsChecked();
   }
   if (OresBox)
   {
@@ -634,6 +670,12 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(CaveMaxDepthInput, showCaves);
   SetWidgetVisible(CaveStyleLabel, showCaves);
   SetWidgetVisible(CaveStyleInput, showCaves);
+  SetWidgetVisible(RavinesBox, showCaves);
+  SetWidgetVisible(RavineRarityLabel, showCaves);
+  SetWidgetVisible(RavineRarityInput, showCaves);
+  SetWidgetVisible(RavineAquaticMaxDepthLabel, showCaves);
+  SetWidgetVisible(RavineAquaticMaxDepthInput, showCaves);
+  SetWidgetVisible(RavineFillWaterBox, showCaves);
 }
 
 void UWorldGenSettingsForm::BuildInto(UGuiPanel &panel)
@@ -902,6 +944,37 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   caves->SetOnChanged([this](bool v) { FormSettings.EnableCaves = v; });
   panel.AddChild(std::move(caves));
 
+  auto ravines = std::make_unique<UGuiCheckbox>(Theme, "Ravines");
+  RavinesBox = ravines.get();
+  ravines->SetChecked(FormSettings.Ravines.enabled);
+  ravines->SetOnChanged([this](bool v) { FormSettings.Ravines.enabled = v; });
+  panel.AddChild(std::move(ravines));
+
+  auto ravineRarityLabel = std::make_unique<UGuiLabel>(Theme, "Ravine rarity:");
+  RavineRarityLabel = ravineRarityLabel.get();
+  panel.AddChild(std::move(ravineRarityLabel));
+  auto ravineRarityIn = std::make_unique<UGuiTextInput>(Theme);
+  RavineRarityInput = ravineRarityIn.get();
+  ravineRarityIn->SetText(std::to_string(FormSettings.Ravines.rarity));
+  panel.AddChild(std::move(ravineRarityIn));
+
+  auto ravineAquaticLabel =
+      std::make_unique<UGuiLabel>(Theme, "Ravine aquatic max depth:");
+  RavineAquaticMaxDepthLabel = ravineAquaticLabel.get();
+  panel.AddChild(std::move(ravineAquaticLabel));
+  auto ravineAquaticIn = std::make_unique<UGuiTextInput>(Theme);
+  RavineAquaticMaxDepthInput = ravineAquaticIn.get();
+  ravineAquaticIn->SetText(std::to_string(FormSettings.Ravines.aquaticMaxDepth));
+  panel.AddChild(std::move(ravineAquaticIn));
+
+  auto ravineFillWater =
+      std::make_unique<UGuiCheckbox>(Theme, "Fill ravines with water");
+  RavineFillWaterBox = ravineFillWater.get();
+  ravineFillWater->SetChecked(FormSettings.Ravines.fillWater);
+  ravineFillWater->SetOnChanged(
+      [this](bool v) { FormSettings.Ravines.fillWater = v; });
+  panel.AddChild(std::move(ravineFillWater));
+
   auto ores = std::make_unique<UGuiCheckbox>(Theme, "Ores");
   OresBox = ores.get();
   ores->SetChecked(FormSettings.EnableOres);
@@ -1083,21 +1156,27 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({CaveStyleInput, 26, 1, 1, 1, 32});
   items.push_back({CavesBox, 27, 0, 1, 1, 30});
   items.push_back({OresBox, 27, 1, 1, 1, 30});
-  items.push_back({TreesBox, 28, 0, 1, 1, 30});
-  items.push_back({GroundCoverBox, 28, 1, 1, 1, 30});
-  items.push_back({DecorationBox, 29, 0, 1, 1, 30});
-  items.push_back({StructuresBox, 29, 1, 1, 1, 30});
-  items.push_back({WaterBox, 30, 0, 1, 1, 30});
-  items.push_back({LavaBox, 30, 1, 1, 1, 30});
-  items.push_back({FireBox, 31, 0, 1, 1, 30});
-  items.push_back({TerrainQualityLabel, 32, 0, 1, 2, 28});
-  items.push_back({UnifiedHeightFieldBox, 33, 0, 1, 1, 30});
-  items.push_back({AnalyticValleysBox, 33, 1, 1, 1, 30});
-  items.push_back({MudflowErosionBox, 34, 0, 1, 1, 30});
-  items.push_back({DensityRefineParityBox, 34, 1, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 35, 0, 1, 1, 28});
-  items.push_back({WorldGenPackList, 35, 1, 1, 1, 72});
-  items.push_back({WorldGenPackDescLabel, 36, 0, 1, 2, 36});
+  items.push_back({RavinesBox, 28, 0, 1, 1, 30});
+  items.push_back({RavineRarityLabel, 28, 0, 1, 1, 28});
+  items.push_back({RavineRarityInput, 28, 1, 1, 1, 32});
+  items.push_back({RavineAquaticMaxDepthLabel, 29, 0, 1, 1, 28});
+  items.push_back({RavineAquaticMaxDepthInput, 29, 1, 1, 1, 32});
+  items.push_back({RavineFillWaterBox, 30, 0, 1, 2, 30});
+  items.push_back({TreesBox, 31, 0, 1, 1, 30});
+  items.push_back({GroundCoverBox, 31, 1, 1, 1, 30});
+  items.push_back({DecorationBox, 32, 0, 1, 1, 30});
+  items.push_back({StructuresBox, 32, 1, 1, 1, 30});
+  items.push_back({WaterBox, 33, 0, 1, 1, 30});
+  items.push_back({LavaBox, 33, 1, 1, 1, 30});
+  items.push_back({FireBox, 34, 0, 1, 1, 30});
+  items.push_back({TerrainQualityLabel, 35, 0, 1, 2, 28});
+  items.push_back({UnifiedHeightFieldBox, 36, 0, 1, 1, 30});
+  items.push_back({AnalyticValleysBox, 36, 1, 1, 1, 30});
+  items.push_back({MudflowErosionBox, 37, 0, 1, 1, 30});
+  items.push_back({DensityRefineParityBox, 37, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 38, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 38, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 39, 0, 1, 2, 36});
   return items;
 }
 

@@ -4,5 +4,6 @@
   "rarity": 600,
   "min_depth": 8,
   "max_depth": 40,
-  "aquatic_max_depth": 5
+  "aquatic_max_depth": 5,
+  "fill_water": false
 }

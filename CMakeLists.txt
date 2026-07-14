@@ -1222,6 +1222,63 @@ target_compile_definitions(ravine_carver_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(ravine_carver_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(valley_carver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/ValleyCarverTest.cpp)
+target_include_directories(valley_carver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(valley_carver_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(valley_carver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(mudflow_erosion_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
+    src/Test/MudflowErosionTest.cpp)
+target_include_directories(mudflow_erosion_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(mudflow_erosion_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(mudflow_erosion_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(density_refine_parity_test
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/DensityRouter.cpp
+    src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Features/CaveDepthBand.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/DensityRefineParityTest.cpp)
+target_include_directories(density_refine_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(worldgen_smoothness_test
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp

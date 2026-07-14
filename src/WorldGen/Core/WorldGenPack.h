@@ -115,6 +115,7 @@ struct PackRavinesConfig
   int MinDepth{8};
   int MaxDepth{40};
   int AquaticMaxDepth{5};
+  bool FillWater{false};
   bool Loaded{false};
 };
 

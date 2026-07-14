@@ -37,5 +37,11 @@
       "nn_distance_cv_min": 0.20
     }
   },
-  "reference_seeds": [42, 12354, 20240625]
+  "reference_seeds": [42, 12354, 20240625],
+  "smoothness_thresholds": {
+    "mean_abs_delta_y_max": 1.1,
+    "pct_delta_gt_2_max": 2.5,
+    "pct_delta_gt_3_max": 0.5,
+    "max_underwater_cliff_count": 120
+  }
 }

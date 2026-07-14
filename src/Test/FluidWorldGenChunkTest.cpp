@@ -9,8 +9,10 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
+#include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -165,6 +167,24 @@ static void TestSeed(uint32_t seed, cutum::UPipelineChunkPopulator &populator,
                                                 0, max_coord);
   FluidTest::Expect(gaps == 0, kTestName, "shore_air_gaps must be zero");
   ScanChunkSeamMesh(world, registry, resolved_water, settings.SeaLevel);
+
+  int max_surface_delta = 0;
+  for (int x = 0; x <= max_coord; ++x)
+  {
+    for (int z = 0; z <= max_coord; ++z)
+    {
+      const int y = cutum::FindTopSolidSurfaceY(
+          world, registry, x, z, settings.MaxHeight);
+      const int y_e = cutum::FindTopSolidSurfaceY(
+          world, registry, x + 1, z, settings.MaxHeight);
+      const int y_n = cutum::FindTopSolidSurfaceY(
+          world, registry, x, z + 1, settings.MaxHeight);
+      max_surface_delta =
+          std::max({max_surface_delta, std::abs(y - y_e), std::abs(y - y_n)});
+    }
+  }
+  FluidTest::Expect(max_surface_delta <= 6, kTestName,
+                    "2x2 chunk surface neighbor delta within budget");
 }
 
 } // namespace

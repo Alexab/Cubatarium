@@ -79,6 +79,19 @@ void CarveColumnRavinesDeterministic(WorldGenContext &ctx, int x, int z,
           ctx.World.SetBlock(pos, BLOCK_AIR);
         }
       }
+      if (params.fillWater && ctx.Blocks.Water != BLOCK_AIR &&
+          carved_bottom < column_surface_y)
+      {
+        const int fill_top = std::min(column_surface_y, sea_level);
+        for (int y = carved_bottom; y <= fill_top; ++y)
+        {
+          const glm::ivec3 pos(wx, y, wz);
+          if (ctx.World.IsAir(pos))
+          {
+            ctx.World.SetBlock(pos, ctx.Blocks.Water);
+          }
+        }
+      }
       ctx.AccumulateDirtyColumn(std::max(1, carved_bottom), column_surface_y);
     }
   }
