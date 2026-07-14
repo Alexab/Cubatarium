@@ -8,6 +8,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
+#include "WorldGen/Stages/MudflowErosion.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
@@ -214,6 +215,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
   {
+    if (settings.Tuning.useMudflowErosion)
+    {
+      ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
+    }
     if (settings.FillWater)
     {
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
