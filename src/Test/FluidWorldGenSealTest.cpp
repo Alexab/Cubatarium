@@ -69,6 +69,28 @@ static void TestFillColumnAboveSea()
                     "surface block remains stone above sea");
 }
 
+static void TestFillColumnAfterRavineCarve()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto ctx = MakeSealContext(world, registry, 48);
+  FillStoneColumn(world, 0, 0, 48);
+  for (int y = 16; y <= 48; ++y)
+  {
+    world.SetBlock(glm::ivec3(0, y, 0), cutum::BLOCK_AIR);
+  }
+
+  cutum::FillFluidColumn(ctx, 0, 0, 48);
+
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 15, 0)) == kStone, kTestName,
+                    "ravine floor remains stone");
+  for (int y = 16; y <= 48; ++y)
+  {
+    FluidTest::Expect(world.GetBlock(glm::ivec3(0, y, 0)) == kWater, kTestName,
+                      "ravine-carved column fills to sea from actual floor");
+  }
+}
+
 static void TestSealSinglePocket()
 {
   cutum::UBlockWorld world;
@@ -254,6 +276,7 @@ int main()
 {
   TestFillColumnBelowSea();
   TestFillColumnAboveSea();
+  TestFillColumnAfterRavineCarve();
   TestSealSinglePocket();
   TestSealChain8();
   TestSealChain9();

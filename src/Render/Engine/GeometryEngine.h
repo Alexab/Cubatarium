@@ -163,6 +163,8 @@ private:
   void ApplyFogUniforms(const std::shared_ptr<UShaderProgram> &shader,
                         const glm::vec3 &cameraPos,
                         bool applyBelowSurfaceFog = true);
+  void ApplyGreedyEnvironmentUniforms(
+      const std::shared_ptr<UShaderProgram> &shader);
   void RenderFluidOverlay(int width, int height);
   void RenderWeatherOverlay(int width, int height);
   bool InitOverlayBuffers();

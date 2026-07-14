@@ -200,6 +200,37 @@ static void TestFillPlaceTreeSealPrune()
                     "seal and prune keep surface grass");
 }
 
+static void TestPruneHighFloatingLeavesWithoutWater()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  cutum::ProceduralSettings settings;
+  settings.FillWater = false;
+  settings.SeaLevel = kSea;
+  settings.MaxHeight = 128;
+  cutum::WorldGenContext ctx(world, registry, settings);
+
+  for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
+  {
+    for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+    {
+      for (int y = 0; y <= 80; ++y)
+      {
+        world.SetBlock(glm::ivec3(x, y, z), kStone);
+      }
+      world.SetBlock(glm::ivec3(x, 100, z), kLeaves);
+    }
+  }
+
+  cutum::PruneFloatingVegetationInChunk(ctx, 0, 0);
+
+  FluidTest::Expect(world.GetBlock(glm::ivec3(4, 100, 4)) == cutum::BLOCK_AIR,
+                    kTestName,
+                    "prune removes high floating leaves when fill water disabled");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(4, 80, 4)) == kStone, kTestName,
+                    "prune keeps ground when fill water disabled");
+}
+
 } // namespace
 
 int main()
@@ -207,6 +238,7 @@ int main()
   TestSealPrunePipeline();
   TestSurfacePathAfterSeal();
   TestFillPlaceTreeSealPrune();
+  TestPruneHighFloatingLeavesWithoutWater();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

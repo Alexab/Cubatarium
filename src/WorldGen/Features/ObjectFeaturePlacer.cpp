@@ -558,7 +558,10 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
                                  int surfaceY, BiomeId biome,
                                  bool skipIfTreeNearby)
 {
-  (void)skipIfTreeNearby;
+  if (skipIfTreeNearby)
+  {
+    return false;
+  }
   if (!UObjectFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableGroundCover)
   {
     return false;

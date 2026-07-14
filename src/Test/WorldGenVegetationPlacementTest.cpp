@@ -421,6 +421,40 @@ static void TestSealAndPruneCoastalChunk()
                     "chunk prune keeps coastal grass");
 }
 
+static void TestRejectTreeFootprintOverlap()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillCoastalColumn(world);
+
+  world.SetBlock(glm::ivec3(0, 55, 0), kLeaves);
+
+  const cutum::WorldObjectDefinition tree = MakeTreeObject(true);
+  const glm::ivec3 anchor(0, 52, 0);
+  FluidTest::Expect(
+      !cutum::CanPlaceObjectAtForWorldGen(world, registry, tree, anchor, 80,
+                                          kSea),
+      kTestName,
+      "reject tree when footprint overlaps existing tree vegetation");
+}
+
+static void TestRejectTreeFootprintOverlapWithTrunk()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  FillCoastalColumn(world);
+
+  world.SetBlock(glm::ivec3(0, 53, 0), kLeaves);
+
+  const cutum::WorldObjectDefinition tree = MakeTreeObject(true);
+  const glm::ivec3 anchor(0, 52, 0);
+  FluidTest::Expect(
+      !cutum::CanPlaceObjectAtForWorldGen(world, registry, tree, anchor, 80,
+                                          kSea),
+      kTestName,
+      "reject tree when footprint overlaps existing tree leaves on trunk cell");
+}
+
 static void TestSpawnPositionUsesNaturalSurface()
 {
   cutum::ProceduralSettings settings;
@@ -452,6 +486,8 @@ int main()
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();
   TestSealAndPruneCoastalChunk();
+  TestRejectTreeFootprintOverlap();
+  TestRejectTreeFootprintOverlapWithTrunk();
   TestSpawnPositionUsesNaturalSurface();
 
   std::cout << kTestName << ": OK" << std::endl;

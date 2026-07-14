@@ -222,8 +222,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       {
         SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
       }
-      PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
     }
+    PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
   }
 
   genWorld.ForEachBlock(
