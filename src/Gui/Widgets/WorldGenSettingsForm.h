@@ -113,6 +113,11 @@ private:
   UGuiCheckbox *WaterBox{nullptr};
   UGuiCheckbox *LavaBox{nullptr};
   UGuiCheckbox *FireBox{nullptr};
+  UGuiLabel *TerrainQualityLabel{nullptr};
+  UGuiCheckbox *UnifiedHeightFieldBox{nullptr};
+  UGuiCheckbox *AnalyticValleysBox{nullptr};
+  UGuiCheckbox *MudflowErosionBox{nullptr};
+  UGuiCheckbox *DensityRefineParityBox{nullptr};
 
   std::vector<GuiGridItem> BuildGridItems() const;
 };

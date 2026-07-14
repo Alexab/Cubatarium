@@ -47,6 +47,10 @@ struct WorldGenTuning
   bool heightSmoothing{true};
   int heightSmoothingRadius{1};
   float jitterAmplitude{1.0f};
+  bool useUnifiedHeightField{false};
+  bool useAnalyticValleys{false};
+  bool useMudflowErosion{false};
+  bool useDensityRefineParity{false};
 };
 
 struct RavineParams
@@ -55,6 +59,7 @@ struct RavineParams
   int rarity{600};
   int minDepth{8};
   int maxDepth{40};
+  int aquaticMaxDepth{5};
   bool fillWater{false};
 };
 

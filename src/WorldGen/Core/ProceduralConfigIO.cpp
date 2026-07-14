@@ -169,6 +169,22 @@ void ParseTuning(const nlohmann::json &tuning, WorldGenTuning &out)
   {
     out.jitterAmplitude = tuning["jitter_amplitude"].get<float>();
   }
+  if (tuning.contains("use_unified_height_field"))
+  {
+    out.useUnifiedHeightField = tuning["use_unified_height_field"].get<bool>();
+  }
+  if (tuning.contains("use_analytic_valleys"))
+  {
+    out.useAnalyticValleys = tuning["use_analytic_valleys"].get<bool>();
+  }
+  if (tuning.contains("use_mudflow_erosion"))
+  {
+    out.useMudflowErosion = tuning["use_mudflow_erosion"].get<bool>();
+  }
+  if (tuning.contains("use_density_refine_parity"))
+  {
+    out.useDensityRefineParity = tuning["use_density_refine_parity"].get<bool>();
+  }
 }
 
 void ParseProceduralStreamingOptions(const nlohmann::json &p,
@@ -276,6 +292,10 @@ void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)
   out["height_smoothing"] = tuning.heightSmoothing;
   out["height_smoothing_radius"] = tuning.heightSmoothingRadius;
   out["jitter_amplitude"] = tuning.jitterAmplitude;
+  out["use_unified_height_field"] = tuning.useUnifiedHeightField;
+  out["use_analytic_valleys"] = tuning.useAnalyticValleys;
+  out["use_mudflow_erosion"] = tuning.useMudflowErosion;
+  out["use_density_refine_parity"] = tuning.useDensityRefineParity;
 }
 
 } // namespace
@@ -474,6 +494,35 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
             caves["chunk_gate_threshold"].get<float>();
       }
     }
+    if (p.contains("ravines") && p["ravines"].is_object())
+    {
+      const nlohmann::json &ravines = p["ravines"];
+      if (ravines.contains("enabled"))
+      {
+        settings.Ravines.enabled = ravines["enabled"].get<bool>();
+      }
+      if (ravines.contains("rarity"))
+      {
+        settings.Ravines.rarity = ravines["rarity"].get<int>();
+      }
+      if (ravines.contains("min_depth"))
+      {
+        settings.Ravines.minDepth = ravines["min_depth"].get<int>();
+      }
+      if (ravines.contains("max_depth"))
+      {
+        settings.Ravines.maxDepth = ravines["max_depth"].get<int>();
+      }
+      if (ravines.contains("aquatic_max_depth"))
+      {
+        settings.Ravines.aquaticMaxDepth =
+            ravines["aquatic_max_depth"].get<int>();
+      }
+      if (ravines.contains("fill_water"))
+      {
+        settings.Ravines.fillWater = ravines["fill_water"].get<bool>();
+      }
+    }
     if (p.contains("tuning") && p["tuning"].is_object())
     {
       ParseTuning(p["tuning"], settings.Tuning);
@@ -539,6 +588,14 @@ void WriteProceduralSettings(nlohmann::json &root,
   caveParams["density_cave_amplitude"] = settings.Caves.densityCaveAmplitude;
   caveParams["chunk_gate_threshold"] = settings.Caves.chunkGateThreshold;
   procedural["cave_params"] = caveParams;
+  nlohmann::json ravines;
+  ravines["enabled"] = settings.Ravines.enabled;
+  ravines["rarity"] = settings.Ravines.rarity;
+  ravines["min_depth"] = settings.Ravines.minDepth;
+  ravines["max_depth"] = settings.Ravines.maxDepth;
+  ravines["aquatic_max_depth"] = settings.Ravines.aquaticMaxDepth;
+  ravines["fill_water"] = settings.Ravines.fillWater;
+  procedural["ravines"] = ravines;
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);
   procedural["tuning"] = tuning;

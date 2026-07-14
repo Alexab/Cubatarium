@@ -26,6 +26,10 @@ int PresetIndexFromId(const std::string &id)
   {
     return 2;
   }
+  if (id == "smooth")
+  {
+    return 3;
+  }
   return 0;
 }
 
@@ -37,6 +41,8 @@ std::string PresetIdFromIndex(int index)
     return "realistic";
   case 2:
     return "sparse_structures";
+  case 3:
+    return "smooth";
   default:
     return "balanced";
   }
@@ -287,6 +293,23 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     FireBox->SetChecked(FormSettings.FillFire);
   }
+  if (UnifiedHeightFieldBox)
+  {
+    UnifiedHeightFieldBox->SetChecked(FormSettings.Tuning.useUnifiedHeightField);
+  }
+  if (AnalyticValleysBox)
+  {
+    AnalyticValleysBox->SetChecked(FormSettings.Tuning.useAnalyticValleys);
+  }
+  if (MudflowErosionBox)
+  {
+    MudflowErosionBox->SetChecked(FormSettings.Tuning.useMudflowErosion);
+  }
+  if (DensityRefineParityBox)
+  {
+    DensityRefineParityBox->SetChecked(
+        FormSettings.Tuning.useDensityRefineParity);
+  }
   RefreshGeneratorDescription();
   UpdateFieldVisibility();
   if (OnLayoutChanged)
@@ -457,6 +480,22 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     const int selected = PresetList->GetSelectedIndex();
     ApplyWorldGenPreset(s, PresetIdFromIndex(selected));
+  }
+  if (UnifiedHeightFieldBox)
+  {
+    s.Tuning.useUnifiedHeightField = UnifiedHeightFieldBox->IsChecked();
+  }
+  if (AnalyticValleysBox)
+  {
+    s.Tuning.useAnalyticValleys = AnalyticValleysBox->IsChecked();
+  }
+  if (MudflowErosionBox)
+  {
+    s.Tuning.useMudflowErosion = MudflowErosionBox->IsChecked();
+  }
+  if (DensityRefineParityBox)
+  {
+    s.Tuning.useDensityRefineParity = DensityRefineParityBox->IsChecked();
   }
   ResolveProceduralDefaults(s);
   return s;
@@ -653,7 +692,7 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   panel.AddChild(std::move(presetLabel));
   auto presetList = std::make_unique<UGuiListView>(Theme);
   PresetList = presetList.get();
-  presetList->SetItems({"Balanced", "Realistic", "Sparse structures"});
+  presetList->SetItems({"Balanced", "Realistic", "Sparse structures", "Smooth terrain"});
   presetList->SetVisibleRowCount(3);
   presetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
   panel.AddChild(std::move(presetList));
@@ -914,6 +953,40 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
 
+  auto terrainQualityLabel =
+      std::make_unique<UGuiLabel>(Theme, "Terrain quality (experimental):");
+  TerrainQualityLabel = terrainQualityLabel.get();
+  panel.AddChild(std::move(terrainQualityLabel));
+
+  auto unifiedHeight = std::make_unique<UGuiCheckbox>(Theme, "Unified height field");
+  UnifiedHeightFieldBox = unifiedHeight.get();
+  unifiedHeight->SetChecked(FormSettings.Tuning.useUnifiedHeightField);
+  unifiedHeight->SetOnChanged([this](bool v)
+                              { FormSettings.Tuning.useUnifiedHeightField = v; });
+  panel.AddChild(std::move(unifiedHeight));
+
+  auto analyticValleys = std::make_unique<UGuiCheckbox>(Theme, "Analytic valleys");
+  AnalyticValleysBox = analyticValleys.get();
+  analyticValleys->SetChecked(FormSettings.Tuning.useAnalyticValleys);
+  analyticValleys->SetOnChanged([this](bool v)
+                                { FormSettings.Tuning.useAnalyticValleys = v; });
+  panel.AddChild(std::move(analyticValleys));
+
+  auto mudflow = std::make_unique<UGuiCheckbox>(Theme, "Mudflow erosion");
+  MudflowErosionBox = mudflow.get();
+  mudflow->SetChecked(FormSettings.Tuning.useMudflowErosion);
+  mudflow->SetOnChanged([this](bool v)
+                       { FormSettings.Tuning.useMudflowErosion = v; });
+  panel.AddChild(std::move(mudflow));
+
+  auto densityParity =
+      std::make_unique<UGuiCheckbox>(Theme, "Density refine parity");
+  DensityRefineParityBox = densityParity.get();
+  densityParity->SetChecked(FormSettings.Tuning.useDensityRefineParity);
+  densityParity->SetOnChanged([this](bool v)
+                              { FormSettings.Tuning.useDensityRefineParity = v; });
+  panel.AddChild(std::move(densityParity));
+
   auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack:");
   WorldGenPackIdLabel = packLabel.get();
   panel.AddChild(std::move(packLabel));
@@ -1017,9 +1090,14 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({WaterBox, 30, 0, 1, 1, 30});
   items.push_back({LavaBox, 30, 1, 1, 1, 30});
   items.push_back({FireBox, 31, 0, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 32, 0, 1, 1, 28});
-  items.push_back({WorldGenPackList, 32, 1, 1, 1, 72});
-  items.push_back({WorldGenPackDescLabel, 33, 0, 1, 2, 36});
+  items.push_back({TerrainQualityLabel, 32, 0, 1, 2, 28});
+  items.push_back({UnifiedHeightFieldBox, 33, 0, 1, 1, 30});
+  items.push_back({AnalyticValleysBox, 33, 1, 1, 1, 30});
+  items.push_back({MudflowErosionBox, 34, 0, 1, 1, 30});
+  items.push_back({DensityRefineParityBox, 34, 1, 1, 1, 30});
+  items.push_back({WorldGenPackIdLabel, 35, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 35, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 36, 0, 1, 2, 36});
   return items;
 }
 
