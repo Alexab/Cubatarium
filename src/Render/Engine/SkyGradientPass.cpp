@@ -97,6 +97,9 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetMat4("mvp_matrix", sky_matrix);
   sky_shader->SetVec4("skyColor", sky_color);
   sky_shader->SetVec3("uFogColor", fog_pass.GetFogColor());
+  sky_shader->SetFloat("uUnderwaterSkyAmount", fog_pass.GetUnderwaterSkyAmount());
+  sky_shader->SetFloat("uScreenWaterlineNdc", fog_pass.GetScreenWaterlineNdc());
+  sky_shader->SetVec3("uUnderwaterFogColor", fog_pass.GetUnderwaterFogColor());
   sky_shader->SetFloat("uTimeOfDay", env.TimeOfDayNormalized);
   sky_shader->SetFloat("uStarVisibility",
                        std::clamp(env.StarVisibility, 0.0f, 1.0f));

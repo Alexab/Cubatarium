@@ -410,8 +410,6 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("distance_fog_density", Render.DistanceFogDensity);
         Render.DistanceFogHorizontal =
             r.value("distance_fog_horizontal", Render.DistanceFogHorizontal);
-        Render.BelowSurfaceFogV2 =
-            r.value("below_surface_fog_v2", Render.BelowSurfaceFogV2);
         Render.AltitudeAdaptiveFog =
             r.value("altitude_adaptive_fog", Render.AltitudeAdaptiveFog);
         Render.AltitudeFogThresholdBlocks = r.value(
@@ -732,7 +730,6 @@ void UCore::SaveConfigFile()
   render_json["distance_fog_start_ratio"] = Render.DistanceFogStartRatio;
   render_json["distance_fog_density"] = Render.DistanceFogDensity;
   render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
-  render_json["below_surface_fog_v2"] = Render.BelowSurfaceFogV2;
   render_json["altitude_adaptive_fog"] = Render.AltitudeAdaptiveFog;
   render_json["altitude_fog_threshold_blocks"] =
       Render.AltitudeFogThresholdBlocks;

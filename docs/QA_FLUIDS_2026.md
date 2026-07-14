@@ -7,7 +7,7 @@ Source checklist: [`docs/PHYSICS_ROLLOUT.md`](PHYSICS_ROLLOUT.md) (automated↔m
 
 - Core fluid integration: [`FluidSimMeshIntegrationTest.cpp`](../src/Test/FluidSimMeshIntegrationTest.cpp), [`FluidQueueIntegrationTest.cpp`](../src/Test/FluidQueueIntegrationTest.cpp), [`FluidStablePuddleTest.cpp`](../src/Test/FluidStablePuddleTest.cpp), [`PhysicsIntegrationTest.cpp`](../src/Test/PhysicsIntegrationTest.cpp), [`LiquidFlowScenariosTest.cpp`](../src/Test/LiquidFlowScenariosTest.cpp)
 - Worldgen and shoreline gates: [`FluidWorldGenSealTest.cpp`](../src/Test/FluidWorldGenSealTest.cpp), [`FluidWorldGenChunkTest.cpp`](../src/Test/FluidWorldGenChunkTest.cpp), [`WorldGenFluidVegetationPipelineTest.cpp`](../src/Test/WorldGenFluidVegetationPipelineTest.cpp)
-- Rendering and fog: [`FluidMeshFacesTest.cpp`](../src/Test/FluidMeshFacesTest.cpp), [`FluidSurfaceSliceTest.cpp`](../src/Test/FluidSurfaceSliceTest.cpp), [`FluidSurfaceMapLogicTest.cpp`](../src/Test/FluidSurfaceMapLogicTest.cpp), [`UnderwaterFogColumnTest.cpp`](../src/Test/UnderwaterFogColumnTest.cpp), [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h)
+- Rendering and fog: [`FluidMeshFacesTest.cpp`](../src/Test/FluidMeshFacesTest.cpp), [`FluidSurfaceSliceTest.cpp`](../src/Test/FluidSurfaceSliceTest.cpp), [`FluidSurfaceMapLogicTest.cpp`](../src/Test/FluidSurfaceMapLogicTest.cpp), [`UnderwaterWaterlineTest.cpp`](../src/Test/UnderwaterWaterlineTest.cpp), [`UnderwaterFogColumnTest.cpp`](../src/Test/UnderwaterFogColumnTest.cpp), [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h)
 - Placement: [`BlockPlacementRaycastTest.cpp`](../src/Test/BlockPlacementRaycastTest.cpp) (LIQ-01/02 scenarios), [`FluidPlacementTest.cpp`](../src/Test/FluidPlacementTest.cpp)
 
 ## Automated run (2026-07-07, `arch_refactor3` @ `f2e8a26`)
@@ -17,26 +17,15 @@ Source checklist: [`docs/PHYSICS_ROLLOUT.md`](PHYSICS_ROLLOUT.md) (automated↔m
 | `python tools/audit_style.py` | **0 violations** |
 | `validate_gltf_creature.py --skinned-only` | **33/33 OK** |
 | `test_gltf_skinned_bind_pose.py` | **33/33 passed** |
-| `fluid_surface_map_logic_test` (v2 policy tests) | _run in CI/desktop build_ |
+| `fluid_surface_map_logic_test` (v3 policy tests) | _run in CI/desktop build_ |
+| `underwater_waterline_test` | _run in CI/desktop build_ |
 | Prior remediation smoke (2026-07-05 MSVC) | green — see table below |
 
 Prior remediation smoke targets (2026-07-05): `fluid_tuning_defaults_test`, `fluid_block_resolver_test`, `fluid_flood_service_test`, `fluid_fill_policy_test`, `fluid_kind_resolver_test`, `object_placement_mode_test`.
 
-## P0 fog fix (per-column submerged fog)
+## Fluid fog v3 (fragment-driven)
 
-Submerged rendering now uses **per-column below-surface fog** when the surface map is ready instead of full-screen `uFogEnabled`, fixing air blocks above water receiving underwater fog (FOG-04). Global fog remains only as fallback when the map is unavailable. See [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h).
-
-## TD-FL-034 v2 shore policy (2026-07-07)
-
-Feature flag: `render.below_surface_fog_v2` in `config.json` (default **false**). When **true**, `BelowSurfaceFogStrengthV2` applies shallow-span / partial-submerge / open-ocean policies (see [`TECH_DEBT_FLUIDS.md`](TECH_DEBT_FLUIDS.md) symptoms A–D).
-
-**Manual A/B procedure:**
-
-1. Creative world with ocean + shore puddles (1×1, 2×2 water on land).
-2. Run FOG-01, FOG-03, FOG-04, FOG-06 with `below_surface_fog_v2: false`.
-3. Set `below_surface_fog_v2: true`, restart, repeat same scenarios.
-4. Fill symptom table A–D in `TECH_DEBT_FLUIDS.md` execution progress.
-5. Android: AND-17 (sea surface film) on GLES — separate from v2 flag.
+Per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(xz)`; global underwater fog only when the surface map is unavailable. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses screen waterline split. See [`FluidUnderwaterFogLogic.h`](../src/Render/Engine/FluidUnderwaterFogLogic.h) and [`UNDERWATER_FOG_TRANSITION.md`](UNDERWATER_FOG_TRANSITION.md).
 
 ## Manual QA - underwater fog
 
@@ -48,6 +37,7 @@ Feature flag: `render.below_surface_fog_v2` in `config.json` (default **false**)
 | FOG-04 | Lake uses per-column surface, not sea-level constant | [X] | [ ] | v1 PASS | `FluidSurfaceMapLogicTest` |
 | FOG-05 | Lava pool lava-colored below-surface tint | [ ] | [ ] | Not tested this run | `UnderwaterFogColumnTest` |
 | FOG-06 | Chunk edge; no artifacts outside sentinel | [X] | [ ] | v1 PASS | `FluidSurfaceSliceTest` |
+| FOG-07 | Partial submerge waterline; no sun underwater at chunk edge | [ ] | [ ] | v3 manual | `UnderwaterWaterlineTest`, `FluidSurfaceMapLogicTest` |
 
 ## Manual QA - liquids
 

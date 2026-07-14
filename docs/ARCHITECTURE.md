@@ -237,7 +237,7 @@ Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from
 
 At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
 
-**Underwater / below-surface fog:** full-screen underwater fog when `eye.y < BlockTopY` in the eye column (`IsCameraInsideFluid`). When the camera is above the surface, seafloor tint uses per-column GPU maps (`UFluidSurfaceMap`: `GL_R16F` surface Y + `GL_R8UI` fluid index) built from `FluidSurfaceColumnSlice` cached per ground chunk; `fshader_greedy` compares `vWorldPos.y` to `surfaceYAt(vWorldPos.xz)`.
+**Underwater / fluid fog (v3):** per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(vWorldPos.xz)` using `UFluidSurfaceMap` (`GL_R16F` surface Y + `GL_R8UI` fluid index). Global underwater fog is a fallback only when the surface map is unavailable. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses a screen waterline split (`FluidUnderwaterFogLogic.h`).
 
 Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
 

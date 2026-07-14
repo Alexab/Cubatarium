@@ -1,7 +1,7 @@
 # Tech debt: Fluids (flow-level refactor)
 
 > Review at end of each phase (F0–F6, R1–R3). Close items when implemented or explicitly wont-fix.
-> Total closed: 30 | Open: 4
+> Total closed: 31 | Open: 4
 
 ## Open
 
@@ -18,7 +18,8 @@ Phase 9 backlog note: TD-FL-003, TD-FL-012, and TD-FL-022 remain on feature-bran
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); desktop fog A–C closed, D wont-fix; Android GLES fluids + AND-17 closed (`18b81e0`) |
+| TD-FL-035 | 2026-07 | Fragment-driven fluid fog v3: per-fragment underwater fog, sky celestial suppress + waterline split, removed `below_surface_fog_v2` |
+| TD-FL-034 | 2026-07 | v2 shore policy behind `render.below_surface_fog_v2` (default off); superseded by TD-FL-035 |
 | TD-FL-001 | F2 | Replaced `LiquidSimulationSystem` with `UFluidSpreadSystem` (source/flowing levels) |
 | TD-FL-002 | F5 | `MarkFluidRegionDirty` + immediate remesh near player |
 | TD-FL-003 | F4 → R1 | Basin heuristic (reverted R1; see Open) |

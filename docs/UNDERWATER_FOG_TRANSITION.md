@@ -302,6 +302,17 @@ if (uBelowSurfaceFog > 0.001) {
 | ID | Описание |
 |----|----------|
 | TD-FL-029 | Per-column below-surface fog (variant A) — см. §7 |
+| TD-FL-035 | Fragment-driven fluid fog v3 — per-fragment underwater fog + sky waterline |
+
+---
+
+## 11. Fluid fog v3 (2026-07)
+
+Реализовано поверх variant A:
+
+- **Terrain:** per-fragment underwater distance fog (`uUnderwaterFogEnabled`) вместо бинарного `uFogEnabled` при погружении; global fog только без surface map.
+- **Sky:** `uUnderwaterSkyAmount` подавляет celestial при полном погружении; `uScreenWaterlineNdc` — split при partial submerge.
+- **CPU:** единая политика в `FluidUnderwaterFogLogic.h`; флаг `below_surface_fog_v2` удалён.
 
 ---
 
@@ -309,6 +320,7 @@ if (uBelowSurfaceFog > 0.001) {
 
 | Дата | Коммит / событие |
 |------|------------------|
+| 2026-07 | Fluid fog v3 — fragment-driven fog + sky waterline (TD-FL-035) |
 | 2026-07 | `f093eab` — pre-submerge tint (колонка глаз + band) |
 | 2026-07 | `e58e9fb` — tune band 20 cm, ramp, shader strength |
 | 2026-07 | Этот документ — анализ + план variant A |
