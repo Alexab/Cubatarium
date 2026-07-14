@@ -221,6 +221,10 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_surface_map_logic_test.exe
 
+      - name: C++ unit test (underwater waterline)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/underwater_waterline_test.exe
+
       - name: C++ unit test (fluid tuning defaults)
         shell: pwsh
         run: ./build/desktop-msvc/Release/fluid_tuning_defaults_test.exe

@@ -25,6 +25,9 @@ uniform float uCelestialAngularSizeDeg[4];
 uniform int uCelestialType[4];
 uniform mat3 uInvViewRot;
 uniform vec3 uCameraPos;
+uniform float uUnderwaterSkyAmount;
+uniform float uScreenWaterlineNdc;
+uniform vec3 uUnderwaterFogColor;
 
 float hash12(vec2 p)
 {
@@ -130,14 +133,25 @@ vec3 horizonFogColor(vec3 view_dir)
 
 void main()
 {
+    if (uUnderwaterSkyAmount > 0.99) {
+        FragColor = vec4(uUnderwaterFogColor, 1.0);
+        return;
+    }
+
     vec3 skyTop = skyColor.rgb;
     vec3 skyBottom = skyColor.rgb * 1.3;
     vec3 finalColor = mix(skyBottom, skyTop, TexCoord.y);
     vec2 sky_uv = TexCoord * 2.0 - 1.0;
     vec3 dir_view = normalize(vec3(sky_uv.x, sky_uv.y, -1.0));
     vec3 view_dir = normalize(uInvViewRot * dir_view);
+
+    float below_waterline = 0.0;
+    if (uScreenWaterlineNdc > -1.5) {
+        below_waterline = step(TexCoord.y, uScreenWaterlineNdc);
+    }
+
     float stars = starField(TexCoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
-    finalColor += vec3(stars) * uStarVisibility;
+    finalColor += vec3(stars) * uStarVisibility * (1.0 - below_waterline);
     for (int i = 0; i < 4; ++i)
     {
         if (i >= uCelestialCount)
@@ -156,7 +170,7 @@ void main()
         {
             body_col *= vec3(0.75, 0.8, 0.95);
         }
-        finalColor += body_col * (disc + halo);
+        finalColor += body_col * (disc + halo) * (1.0 - below_waterline);
     }
     float cloud_cov = clamp(uCloudCoverage, 0.0, 1.0);
     if (cloud_cov > 0.001)
@@ -193,8 +207,13 @@ void main()
         cloud_high *= mix(0.65, 1.0, elev_w);
         vec3 low_col = mix(vec3(0.66, 0.69, 0.74), vec3(0.94, 0.95, 0.98), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
         vec3 high_col = mix(vec3(0.78, 0.81, 0.87), vec3(0.97, 0.98, 1.0), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-        finalColor = mix(finalColor, high_col, cloud_high * 0.28);
-        finalColor = mix(finalColor, low_col, cloud_low * 0.30);
+        float cloud_mask = (1.0 - below_waterline);
+        finalColor = mix(finalColor, high_col, cloud_high * 0.28 * cloud_mask);
+        finalColor = mix(finalColor, low_col, cloud_low * 0.30 * cloud_mask);
+    }
+
+    if (below_waterline > 0.5) {
+        finalColor = uUnderwaterFogColor;
     }
 
     if (uFogHorizonBlend > 0.001) {

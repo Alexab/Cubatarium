@@ -1063,6 +1063,12 @@ target_compile_definitions(fluid_surface_map_logic_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_surface_map_logic_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(underwater_waterline_test
+    src/Test/UnderwaterWaterlineTest.cpp)
+target_include_directories(underwater_waterline_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(underwater_waterline_test glm::glm)
+
 add_executable(liquid_viscosity_gate_test
     ${PHYSICS_FLUID_SIM_SOURCES}
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}

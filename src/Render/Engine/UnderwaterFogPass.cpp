@@ -5,6 +5,7 @@
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -16,7 +17,8 @@ namespace cutum
 
 void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
                                 UFluidSurfaceMap &surface_map,
-                                const glm::vec3 &base_sky_color)
+                                const glm::vec3 &base_sky_color,
+                                const glm::mat3 &inv_view_rot)
 {
   auto camera = world.GetCurrentUserCamera();
   if (!camera)
@@ -28,72 +30,87 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const SampledFluidState fluid =
       world.SampleFluidPhysics(eye, camera->GetPlayerCapsule());
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
-  BlockId eyeFluid = BLOCK_AIR;
-  const bool cameraInFluid = column.valid && eye.y < column.surfaceY;
-  CameraInFluid = cameraInFluid;
-  if (cameraInFluid)
+  BlockId eye_fluid = BLOCK_AIR;
+  const bool camera_submerged = column.valid && eye.y < column.surfaceY;
+  CameraInFluid = camera_submerged;
+  if (camera_submerged)
   {
-    eyeFluid = column.fluidId;
+    eye_fluid = column.fluidId;
   }
 
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   const UWorld::EnvironmentState &env = world.GetEnvironmentState();
-  const int eyeBlockY = WorldCoordToBlockIndex(eye.y);
-  const glm::ivec3 cameraBlockXZ(WorldCoordToBlockIndex(eye.x), eyeBlockY,
-                                 WorldCoordToBlockIndex(eye.z));
-  const bool nearbyFluid =
-      cameraInFluid || world.HasNearbyFluidSurface(cameraBlockXZ);
-  bool mapReady = surface_map.IsValid();
-  if (nearbyFluid)
+  const int eye_block_y = WorldCoordToBlockIndex(eye.y);
+  const glm::ivec3 camera_block_xz(WorldCoordToBlockIndex(eye.x), eye_block_y,
+                                   WorldCoordToBlockIndex(eye.z));
+  const bool nearby_fluid =
+      camera_submerged || world.HasNearbyFluidSurface(camera_block_xz);
+  bool map_ready = surface_map.IsValid();
+  if (nearby_fluid)
   {
-    mapReady = surface_map.Update(world.GetBlockWorld(), registry,
-                                  mesh_service.GetCache(), cameraBlockXZ,
-                                  eyeBlockY, mesh_service.GetMeshRevision());
+    map_ready = surface_map.Update(world.GetBlockWorld(), registry,
+                                   mesh_service.GetCache(), camera_block_xz,
+                                   eye_block_y, mesh_service.GetMeshRevision());
   }
-  const bool columnFogActive =
-      cutum::ShouldUsePerColumnBelowSurfaceFog(mapReady, nearbyFluid);
-  const bool partial_submerge =
-      column.valid &&
-      cutum::IsPartialSubmerge(cameraInFluid, eye.y, column.surfaceY);
-  if (render.BelowSurfaceFogV2)
-  {
-    BelowSurfaceFogStrength = cutum::BelowSurfaceFogStrengthV2(
-        columnFogActive, cameraInFluid, partial_submerge,
-        column.surfaceBlockY, column.bottomBlockY);
-    if (partial_submerge)
-    {
-      CameraInFluid = true;
-    }
-  }
-  else
-  {
-    BelowSurfaceFogStrength =
-        cutum::BelowSurfaceFogStrength(columnFogActive, cameraInFluid);
-  }
-  BelowSurfaceFogDepthMin = cutum::BelowSurfaceFogDepthMin(CameraInFluid);
 
-  BelowSurfaceFogColors.fill(glm::vec3(0.0f));
-  BelowSurfaceFogMin = 0.52f;
-  BelowSurfaceFogScale = 0.35f;
+  const bool partial_submerge =
+      column.valid && cutum::IsPartialSubmerge(eye.y, column.surfaceY);
+  const bool column_underwater_fog =
+      cutum::ShouldApplyUnderwaterFogToColumn(
+          camera_submerged, partial_submerge, column.surfaceBlockY,
+          column.bottomBlockY);
+  const bool per_column_active =
+      cutum::ShouldUsePerColumnUnderwaterFog(map_ready, nearby_fluid) &&
+      column_underwater_fog;
+
+  UnderwaterFogColors.fill(glm::vec3(0.0f));
+  UnderwaterFogStart = 0.0f;
+  UnderwaterFogEnd = 9.0f;
+  UnderwaterFogMinBlend = 0.5f;
+  UnderwaterFogColor = glm::vec3(0.05f, 0.15f, 0.35f);
   const BlockId water_id = registry.GetIdByTypeName("water");
   const BlockId lava_id = registry.GetIdByTypeName("lava");
   if (water_id != BLOCK_AIR)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(water_id))
     {
-      BelowSurfaceFogColors[1] = fv->FogColor;
-      BelowSurfaceFogMin = fv->BelowSurfaceFogMin;
-      BelowSurfaceFogScale = fv->BelowSurfaceFogScale;
+      UnderwaterFogColors[1] = fv->FogColor;
+      UnderwaterFogStart = fv->FogStart;
+      UnderwaterFogEnd = fv->FogEnd;
+      UnderwaterFogMinBlend = fv->FogMinBlend;
+      UnderwaterFogColor = fv->FogColor;
     }
   }
   if (lava_id != BLOCK_AIR)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(lava_id))
     {
-      BelowSurfaceFogColors[2] = fv->FogColor;
+      UnderwaterFogColors[2] = fv->FogColor;
     }
   }
+  if (camera_submerged && eye_fluid != BLOCK_AIR)
+  {
+    if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
+    {
+      UnderwaterFogColor = fv->FogColor;
+      UnderwaterFogStart = fv->FogStart;
+      UnderwaterFogEnd = fv->FogEnd;
+      UnderwaterFogMinBlend = fv->FogMinBlend;
+    }
+  }
+
+  CameraColumnSurfaceY = column.valid ? column.surfaceY : 1e9f;
+  CameraColumnFluidIndex =
+      column.valid
+          ? static_cast<float>(FluidSurfaceIndexForBlock(column.fluidId,
+                                                         registry))
+          : 0.0f;
+  CameraColumnBottomBlockY =
+      column.valid ? static_cast<float>(column.bottomBlockY) : 1e9f;
+  UnderwaterFogSubmerged = camera_submerged ? 1.0f : 0.0f;
+  UnderwaterFogEnabled = per_column_active ? 1.0f : 0.0f;
+  AirFogEnabled = 0.0f;
 
   const float day = std::clamp(env.DayNightFactor, 0.0f, 1.0f);
   const float moon = std::clamp(env.MoonNightFactor, 0.0f, 1.0f);
@@ -106,30 +123,30 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   color_in.precip = env.PrecipitationIntensity;
   color_in.celestial_bodies = &env.CelestialBodies;
   const AtmosphericSkyColors atmospheric = ComputeAtmosphericSkyColors(color_in);
-  glm::vec3 targetSky = atmospheric.sky_tint;
+  glm::vec3 target_sky = atmospheric.sky_tint;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
-  const bool enteringUnderwater = cameraInFluid && !WasUnderwaterFog;
-  const float underwaterFogMix = enteringUnderwater ? 1.0f : 0.15f;
-  if (cameraInFluid)
+  const bool entering_underwater = camera_submerged && !WasUnderwaterFog;
+  const float underwater_fog_mix = entering_underwater ? 1.0f : 0.15f;
+  if (camera_submerged)
   {
-    if (const FluidViewProfile *fv = registry.GetFluidView(eyeFluid))
+    if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
     {
-      if (registry.GetRenderStyle(eyeFluid) == BlockRenderStyle::Fluid)
+      if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
       {
-        if (ShouldUseGlobalUnderwaterFog(cameraInFluid, mapReady))
+        if (cutum::ShouldUseGlobalUnderwaterFog(camera_submerged, map_ready))
         {
           FogEnabled = 1.0f;
           FogStart = fv->FogStart;
           FogEnd = fv->FogEnd;
           FogMinBlend = fv->FogMinBlend;
         }
-        targetSky = fv->FogColor;
-        if (enteringUnderwater)
+        target_sky = fv->FogColor;
+        if (entering_underwater)
         {
           SmoothedFogColor = fv->FogColor;
           SmoothedSkyTint = fv->FogColor;
@@ -137,7 +154,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         else
         {
           SmoothedFogColor =
-              glm::mix(SmoothedFogColor, fv->FogColor, underwaterFogMix);
+              glm::mix(SmoothedFogColor, fv->FogColor, underwater_fog_mix);
         }
       }
     }
@@ -148,7 +165,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         world.GetEffectiveRenderDistance(), atmospheric.fog_color,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity, render.DistanceFogEndMarginBlocks);
-    FogEnabled = 1.0f;
+    AirFogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
     FogDensity = distance_fog.Density;
@@ -157,6 +174,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogHorizonBlend = 1.0f;
     SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
   }
+
   if (fluid.inFluid)
   {
     if (const FluidViewProfile *fv = registry.GetFluidView(fluid.dominantFluid))
@@ -172,17 +190,35 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     }
   }
 
-  if (!enteringUnderwater)
+  if (!entering_underwater)
   {
-    SmoothedSkyTint = glm::mix(SmoothedSkyTint, targetSky,
-                               cameraInFluid ? underwaterFogMix : 0.15f);
+    SmoothedSkyTint = glm::mix(SmoothedSkyTint, target_sky,
+                               camera_submerged ? underwater_fog_mix : 0.15f);
   }
-  WasUnderwaterFog = cameraInFluid;
+
+  if (camera_submerged && !partial_submerge)
+  {
+    UnderwaterSkyAmount = 1.0f;
+    ScreenWaterlineNdc = -2.0f;
+  }
+  else if (partial_submerge && column.valid)
+  {
+    UnderwaterSkyAmount = 0.0f;
+    ScreenWaterlineNdc = cutum::ComputeScreenWaterlineNdc(
+        eye, column.surfaceY, inv_view_rot);
+  }
+  else
+  {
+    UnderwaterSkyAmount = 0.0f;
+    ScreenWaterlineNdc = -2.0f;
+  }
+
+  WasUnderwaterFog = camera_submerged;
 }
 
 void UUnderwaterFogPass::ApplyUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &camera_pos,
-    const UFluidSurfaceMap &surface_map, bool apply_below_surface_fog) const
+    const UFluidSurfaceMap &surface_map, bool apply_underwater_fog) const
 {
   shader->SetVec3("uCameraPos", camera_pos);
   shader->SetVec3("uFogColor", SmoothedFogColor);
@@ -192,13 +228,18 @@ void UUnderwaterFogPass::ApplyUniforms(
   shader->SetFloat("uFogEnabled", FogEnabled);
   shader->SetFloat("uFogHorizontal", FogHorizontal);
   shader->SetFloat("uFogDensity", FogDensity);
-  const float below_surface_fog =
-      apply_below_surface_fog ? BelowSurfaceFogStrength : 0.0f;
-  shader->SetFloat("uBelowSurfaceFog", below_surface_fog);
-  shader->SetFloat("uBelowSurfaceFogMin", BelowSurfaceFogMin);
-  shader->SetFloat("uBelowSurfaceFogScale", BelowSurfaceFogScale);
-  shader->SetFloat("uBelowSurfaceFogDepthMin", BelowSurfaceFogDepthMin);
-  if (below_surface_fog > 0.001f && surface_map.IsValid())
+  shader->SetFloat("uAirFogEnabled", AirFogEnabled);
+  const float underwater_fog_enabled =
+      apply_underwater_fog ? UnderwaterFogEnabled : 0.0f;
+  shader->SetFloat("uUnderwaterFogEnabled", underwater_fog_enabled);
+  shader->SetFloat("uUnderwaterFogStart", UnderwaterFogStart);
+  shader->SetFloat("uUnderwaterFogEnd", UnderwaterFogEnd);
+  shader->SetFloat("uUnderwaterFogMinBlend", UnderwaterFogMinBlend);
+  shader->SetFloat("uUnderwaterFogSubmerged", UnderwaterFogSubmerged);
+  shader->SetFloat("uCameraColumnSurfaceY", CameraColumnSurfaceY);
+  shader->SetFloat("uCameraColumnFluidIndex", CameraColumnFluidIndex);
+  shader->SetFloat("uCameraColumnBottomBlockY", CameraColumnBottomBlockY);
+  if (underwater_fog_enabled > 0.001f && surface_map.IsValid())
   {
     shader->SetVec2("uFluidSurfaceOrigin", surface_map.GetOriginBlockXZ());
     shader->SetVec2("uFluidSurfaceInvSize", surface_map.GetInvSizeBlocks());
@@ -211,16 +252,15 @@ void UUnderwaterFogPass::ApplyUniforms(
   {
     shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
     shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
-    shader->SetFloat("uBelowSurfaceFogDepthMin", 0.0f);
     shader->SetInt("uFluidSurfaceYMap", 1);
     shader->SetInt("uFluidIndexMap", 2);
     shader->SetInt("uFluidBottomBlockMap", 3);
   }
-  const GLint colorLoc = shader->GetUniformLocation("uBelowSurfaceFogColors");
-  if (colorLoc != -1)
+  const GLint color_loc = shader->GetUniformLocation("uUnderwaterFogColors");
+  if (color_loc != -1)
   {
-    glUniform3fv(colorLoc, UFluidSurfaceMap::kMaxFluidShaderSlots,
-                 glm::value_ptr(BelowSurfaceFogColors[0]));
+    glUniform3fv(color_loc, UFluidSurfaceMap::kMaxFluidShaderSlots,
+                 glm::value_ptr(UnderwaterFogColors[0]));
   }
 }
 

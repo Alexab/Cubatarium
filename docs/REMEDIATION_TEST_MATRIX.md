@@ -25,7 +25,8 @@
 | `fluid_flood_service_test` | UFluidFloodService | 2 | smoke |
 | `fluid_fill_policy_test` | UFluidFillPolicy | 2 | smoke |
 | `fluid_kind_resolver_test` | Kind inference | 2, 7 | smoke |
-| `fluid_surface_map_logic_test` | Fog CPU logic | 4 | smoke |
+| `fluid_surface_map_logic_test` | Fog CPU logic v3 | 4 | smoke |
+| `underwater_waterline_test` | Sky waterline NDC | 4 | smoke |
 | `fluid_permeable_block_flag_test` | Block JSON flag | 7 | smoke |
 | `fluid_kind_preset_test` | Block preset FluidKind | 7 | smoke |
 | `liquid_viscosity_gate_test` | Lava viscosity | 2 | nightly |

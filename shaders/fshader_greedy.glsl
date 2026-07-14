@@ -28,6 +28,15 @@ uniform float uFogMinBlend;
 uniform float uFogEnabled;
 uniform float uFogHorizontal;
 uniform float uFogDensity;
+uniform float uAirFogEnabled;
+uniform float uUnderwaterFogEnabled;
+uniform float uUnderwaterFogStart;
+uniform float uUnderwaterFogEnd;
+uniform float uUnderwaterFogMinBlend;
+uniform float uUnderwaterFogSubmerged;
+uniform float uCameraColumnSurfaceY;
+uniform float uCameraColumnFluidIndex;
+uniform float uCameraColumnBottomBlockY;
 uniform float uEnvFogMultiplier;
 uniform float uEnvMinAmbient;
 uniform float uEnvDayFactor;
@@ -37,16 +46,12 @@ uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
-uniform float uBelowSurfaceFog;
-uniform float uBelowSurfaceFogMin;
-uniform float uBelowSurfaceFogScale;
-uniform float uBelowSurfaceFogDepthMin;
 uniform vec2 uFluidSurfaceOrigin;
 uniform vec2 uFluidSurfaceInvSize;
 uniform sampler2D uFluidSurfaceYMap;
 uniform sampler2D uFluidIndexMap;
 uniform sampler2D uFluidBottomBlockMap;
-uniform vec3 uBelowSurfaceFogColors[3];
+uniform vec3 uUnderwaterFogColors[3];
 
 uniform sampler2D uOpaqueDepthMap;
 uniform float uOpaqueDepthGuard;
@@ -58,10 +63,16 @@ const int kCrossFaceIndex = 127;
 float surfaceYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+            return uCameraColumnSurfaceY;
+        }
         return 1e9;
     }
     float h = texture(uFluidSurfaceYMap, uv).r;
     if (h < -500.0) {
+        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+            return uCameraColumnSurfaceY;
+        }
         return 1e9;
     }
     return h;
@@ -70,18 +81,34 @@ float surfaceYAt(vec2 worldXZ) {
 uint fluidIndexAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnFluidIndex > 0.5) {
+            return uint(floor(uCameraColumnFluidIndex + 0.5));
+        }
         return 0u;
     }
-    return uint(floor(texture(uFluidIndexMap, uv).r * 255.0 + 0.5));
+    uint fi = uint(floor(texture(uFluidIndexMap, uv).r * 255.0 + 0.5));
+    if (fi == 0u && uUnderwaterFogEnabled > 0.5 && uCameraColumnFluidIndex > 0.5) {
+        float sy = texture(uFluidSurfaceYMap, uv).r;
+        if (sy < -500.0) {
+            return uint(floor(uCameraColumnFluidIndex + 0.5));
+        }
+    }
+    return fi;
 }
 
 float fluidBottomBlockYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+            return uCameraColumnBottomBlockY;
+        }
         return 1e9;
     }
     float h = texture(uFluidBottomBlockMap, uv).r;
     if (h < -500.0) {
+        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+            return uCameraColumnBottomBlockY;
+        }
         return 1e9;
     }
     return h;
@@ -89,6 +116,34 @@ float fluidBottomBlockYAt(vec2 worldXZ) {
 
 vec2 fluidColumnSampleXZ(vec2 worldXZ) {
     return vec2(floor(worldXZ.x + 0.5), floor(worldXZ.y + 0.5));
+}
+
+void fluidSurfaceContextAt(vec2 worldXZ, out float surface_y, out uint fluid_index,
+                         out float bottom_block_y) {
+    vec2 center = fluidColumnSampleXZ(worldXZ);
+    surface_y = surfaceYAt(center);
+    fluid_index = fluidIndexAt(center);
+    bottom_block_y = fluidBottomBlockYAt(center);
+
+    const vec2 kNeighborOffsets[4] = vec2[](
+        vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0));
+    for (int i = 0; i < 4; ++i) {
+        vec2 neighbor = center + kNeighborOffsets[i];
+        float sy_nb = surfaceYAt(neighbor);
+        uint fi_nb = fluidIndexAt(neighbor);
+        if (fi_nb == 0u || sy_nb > 1e8) {
+            continue;
+        }
+        if (fluid_index == 0u) {
+            surface_y = sy_nb;
+            fluid_index = fi_nb;
+            bottom_block_y = fluidBottomBlockYAt(neighbor);
+        } else if (sy_nb > surface_y) {
+            surface_y = sy_nb;
+            fluid_index = fi_nb;
+            bottom_block_y = fluidBottomBlockYAt(neighbor);
+        }
+    }
 }
 
 int blockIndexYFromFace(float worldY, int faceIndex) {
@@ -99,6 +154,14 @@ int blockIndexYFromFace(float worldY, int faceIndex) {
         return int(floor(worldY + 0.5));
     }
     return int(floor(worldY + 0.5 - 1e-4));
+}
+
+float computeDistanceFogFactor(float dist, float fogStart, float fogEnd,
+                               float minBlend, float density) {
+    float fogRange = max(fogEnd - fogStart, 0.001);
+    float fogFactor = clamp((dist - fogStart) / fogRange, 0.0, 1.0);
+    fogFactor = pow(fogFactor, max(density * max(uEnvFogMultiplier, 0.05), 0.1));
+    return max(fogFactor, minBlend);
 }
 
 float blockTileCoord(float axis)
@@ -225,35 +288,46 @@ void main()
             discard;
         }
     }
-    if (uBelowSurfaceFog > 0.001 && uFluidSurfaceInvSize.x > 0.0 &&
+    bool frag_underwater = false;
+    vec3 underwater_fog_color = uFogColor;
+
+    if (uUnderwaterFogEnabled > 0.5 && uFluidSurfaceInvSize.x > 0.0 &&
         vFaceIndex != kCrossFaceIndex) {
-        bool applyTint = true;
-        if (uBelowSurfaceFogDepthMin > 0.0 && vFaceIndex != 4) {
-            applyTint = false;
-        }
-        if (applyTint) {
-            vec2 sampleXZ = fluidColumnSampleXZ(vWorldPos.xz);
-            float sy = surfaceYAt(sampleXZ);
-            float bottomBlockY = fluidBottomBlockYAt(sampleXZ);
-            int blockIndexY = blockIndexYFromFace(vWorldPos.y, vFaceIndex);
-            int surfaceBlockY = int(round(sy - 0.5));
-            int bottomBlockIndexY = int(round(bottomBlockY));
-            bool inFluidSpan = blockIndexY + 1 >= bottomBlockIndexY &&
-                               blockIndexY < surfaceBlockY;
-            float depthBelow = sy - vWorldPos.y;
-            if (inFluidSpan && vWorldPos.y < sy &&
-                depthBelow >= uBelowSurfaceFogDepthMin) {
-                uint fi = fluidIndexAt(sampleXZ);
-                if (fi > 0u) {
-                    vec3 fogCol = uBelowSurfaceFogColors[int(fi)];
-                    float factor = clamp(uBelowSurfaceFogMin + depthBelow * uBelowSurfaceFogScale,
-                                         uBelowSurfaceFogMin, 1.0);
-                    FragColor.rgb = mix(FragColor.rgb, fogCol, factor * uBelowSurfaceFog * 0.55);
-                }
+        float sy;
+        float bottom_block_y;
+        uint fi;
+        fluidSurfaceContextAt(vWorldPos.xz, sy, fi, bottom_block_y);
+        int block_index_y = blockIndexYFromFace(vWorldPos.y, vFaceIndex);
+        int surface_block_y = int(round(sy - 0.5));
+        int bottom_block_index_y = int(round(bottom_block_y));
+        bool in_fluid_span = false;
+        if (uUnderwaterFogSubmerged > 0.5) {
+            in_fluid_span = true;
+        } else if (bottom_block_index_y < 500 &&
+                   block_index_y <= surface_block_y) {
+            if (block_index_y + 1 >= bottom_block_index_y) {
+                in_fluid_span = true;
+            } else if (bottom_block_index_y == surface_block_y) {
+                in_fluid_span = true;
             }
         }
+        if (in_fluid_span && fi > 0u && sy < 1e8 && vWorldPos.y < sy) {
+            frag_underwater = true;
+            underwater_fog_color = uUnderwaterFogColors[int(fi)];
+            float dist = length(vWorldPos - uCameraPos);
+            float fog_factor = computeDistanceFogFactor(
+                dist, uUnderwaterFogStart, uUnderwaterFogEnd,
+                uUnderwaterFogMinBlend, 1.0);
+            FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
+        }
     }
+
     if (uFogEnabled > 0.5) {
+        float dist = length(vWorldPos - uCameraPos);
+        float fog_factor = computeDistanceFogFactor(
+            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
+        FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
+    } else if (uAirFogEnabled > 0.5 && !frag_underwater) {
         float dist;
         if (uFogHorizontal > 0.5) {
             vec2 delta_xz = vWorldPos.xz - uCameraPos.xz;
@@ -261,11 +335,9 @@ void main()
         } else {
             dist = length(vWorldPos - uCameraPos);
         }
-        float fogRange = max(uFogEnd - uFogStart, 0.001);
-        float fogFactor = clamp((dist - uFogStart) / fogRange, 0.0, 1.0);
-        fogFactor = pow(fogFactor, max(uFogDensity * max(uEnvFogMultiplier, 0.05), 0.1));
-        fogFactor = max(fogFactor, uFogMinBlend);
-        FragColor.rgb = mix(FragColor.rgb, uFogColor, fogFactor);
+        float fog_factor = computeDistanceFogFactor(
+            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
+        FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
     }
 }
 

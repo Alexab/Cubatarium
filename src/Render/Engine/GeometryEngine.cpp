@@ -764,8 +764,13 @@ void UGeometryEngine::PrepareFrameRendering()
   }
   WorldInstance->EnsureDefaultCelestialBodies();
   WorldInstance->RefreshSkyVisualStateForRender();
+  glm::mat3 inv_view_rot(1.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
+  }
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
-                            BaseSkyColor);
+                            BaseSkyColor, inv_view_rot);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
