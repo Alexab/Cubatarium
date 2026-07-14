@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <nlohmann/json.hpp>
+#include <shared_mutex>
 
 using json = nlohmann::json;
 
@@ -89,7 +90,10 @@ void UObjectLibrary::LoadMerged(
     const std::filesystem::path &baseFolder,
     const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
 {
-  Objects.clear();
+  {
+    std::unique_lock lock(ObjectsMutex);
+    Objects.clear();
+  }
   LoggedUnknownTypes.clear();
   LoadDirectory(baseFolder, "", ObjectOrigin::Builtin, registry);
   LoadDirectoryRecursive(baseFolder / "imported", "", ObjectOrigin::Imported,
@@ -210,6 +214,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       return false;
     }
 
+    std::unique_lock lock(ObjectsMutex);
     Objects[object.Name] = std::move(object);
     return true;
   }
@@ -223,6 +228,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
 
 void UObjectLibrary::RebindBlockIds(UBlockRegistry &registry)
 {
+  std::unique_lock lock(ObjectsMutex);
   for (auto &pair : Objects)
   {
     for (ObjectVoxel &voxel : pair.second.voxels)
@@ -271,6 +277,7 @@ bool UObjectLibrary::ValidateCriticalPrefabs() const
 
 const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const
 {
+  std::shared_lock lock(ObjectsMutex);
   const auto it = Objects.find(Name);
   if (it == Objects.end())
   {
@@ -281,6 +288,7 @@ const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const
 
 std::vector<std::string> UObjectLibrary::ListNames() const
 {
+  std::shared_lock lock(ObjectsMutex);
   std::vector<std::string> names;
   names.reserve(Objects.size());
   for (const auto &entry : Objects)

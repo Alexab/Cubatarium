@@ -9,6 +9,27 @@
 namespace cutum
 {
 
+namespace
+{
+
+const BlockDefinition *
+FindDefinition(const std::shared_ptr<const BlockDefinitionCatalog> &catalog,
+               BlockId id)
+{
+  if (!catalog)
+  {
+    return nullptr;
+  }
+  const auto it = catalog->ById.find(id);
+  if (it != catalog->ById.end())
+  {
+    return &it->second;
+  }
+  return nullptr;
+}
+
+} // namespace
+
 UBlockRegistry::UBlockRegistry(
     std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UBlockDefinitionStorage> definitions)
@@ -40,7 +61,8 @@ void UBlockRegistry::RebuildMaps()
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {
-    for (const auto &entry : MergeRegistry->GetNameToId())
+    const auto name_to_id = MergeRegistry->SnapshotNameToId();
+    for (const auto &entry : name_to_id)
     {
       NameToId[entry.first] = entry.second;
       IdToName[entry.second] = entry.first;
@@ -50,7 +72,8 @@ void UBlockRegistry::RebuildMaps()
 #endif
   if (Definitions)
   {
-    for (const auto &entry : Definitions->GetAll())
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    for (const auto &entry : catalog->ById)
     {
       NameToId[entry.second.Name] = entry.first;
       IdToName[entry.first] = entry.second.Name;
@@ -75,6 +98,12 @@ void UBlockRegistry::RebuildMaps()
 #endif
 }
 
+std::shared_ptr<const BlockDefinitionCatalog>
+UBlockRegistry::GetDefinitionsCatalogSnapshot() const
+{
+  return Definitions ? Definitions->GetCatalogSnapshot() : nullptr;
+}
+
 BlockId UBlockRegistry::GetPackBlockIdByTypeName(const std::string &Name) const
 {
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
@@ -85,9 +114,11 @@ BlockId UBlockRegistry::GetPackBlockIdByTypeName(const std::string &Name) const
 #endif
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetByName(Name))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    const auto name_it = catalog->NameToId.find(Name);
+    if (name_it != catalog->NameToId.end())
     {
-      return def->Id;
+      return name_it->second;
     }
   }
   const auto it = NameToId.find(Name);
@@ -118,9 +149,11 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 #endif
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetByName(Name))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    const auto name_it = catalog->NameToId.find(Name);
+    if (name_it != catalog->NameToId.end())
     {
-      return def->Id;
+      return name_it->second;
     }
   }
   auto it = NameToId.find(Name);
@@ -144,20 +177,24 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
 const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;
+  thread_local std::string cached_name;
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {
     if (const std::string *name = MergeRegistry->GetTypeNameById(Id))
     {
-      return *name;
+      cached_name = *name;
+      return cached_name;
     }
   }
 #endif
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
-      return def->Name;
+      cached_name = def->Name;
+      return cached_name;
     }
   }
   auto it = IdToName.find(Id);
@@ -186,9 +223,12 @@ const BlockPhysicsProfile &UBlockRegistry::Physics(BlockId Id) const
   }
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
-      return def->Physics;
+      thread_local BlockPhysicsProfile cached_physics;
+      cached_physics = def->Physics;
+      return cached_physics;
     }
   }
   return SolidDefault;
@@ -209,7 +249,8 @@ bool UBlockRegistry::IsFallingBlock(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Physics.Falling;
     }
@@ -221,7 +262,8 @@ bool UBlockRegistry::IsLiquid(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Physics.IsLiquid;
     }
@@ -233,7 +275,8 @@ bool UBlockRegistry::IsFloodable(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Physics.Floodable;
     }
@@ -245,8 +288,10 @@ bool UBlockRegistry::IsFluidPermeable(BlockId Id) const
 {
   if (Definitions)
   {
-    return IsFluidPermeableFromDefinition(Id, Definitions->GetById(Id),
-                                          IsLiquid(Id));
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    const BlockDefinition *def = FindDefinition(catalog, Id);
+    return IsFluidPermeableFromDefinition(
+        Id, def, def != nullptr && def->Physics.IsLiquid);
   }
   return false;
 }
@@ -255,7 +300,8 @@ bool UBlockRegistry::IsFlammable(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Physics.Flammable;
     }
@@ -276,7 +322,8 @@ float UBlockRegistry::GetLiquidViscosity(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return std::max(1.0f, def->Physics.LiquidViscosity);
     }
@@ -292,7 +339,8 @@ bool UBlockRegistry::IsTransparent(BlockId Id) const
   }
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Render.Transparent;
     }
@@ -304,7 +352,8 @@ BlockRenderStyle UBlockRegistry::GetRenderStyle(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       return def->Render.Style;
     }
@@ -316,13 +365,16 @@ const FluidViewProfile *UBlockRegistry::GetFluidView(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
       if (def->Render.Style == BlockRenderStyle::Fluid ||
           def->Render.Style == BlockRenderStyle::Cross ||
           def->Render.FluidView.OverlayAlpha > 0.0f)
       {
-        return &def->Render.FluidView;
+        thread_local FluidViewProfile cached_view;
+        cached_view = def->Render.FluidView;
+        return &cached_view;
       }
     }
   }
@@ -333,9 +385,12 @@ const BlockAnimationSpec &UBlockRegistry::Animation(BlockId Id) const
 {
   if (Definitions)
   {
-    if (const BlockDefinition *def = Definitions->GetById(Id))
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (const BlockDefinition *def = FindDefinition(catalog, Id))
     {
-      return def->Animation;
+      thread_local BlockAnimationSpec cached_animation;
+      cached_animation = def->Animation;
+      return cached_animation;
     }
   }
   return DefaultAnimation;
@@ -377,18 +432,19 @@ bool UBlockRegistry::HasRenderableTexture(BlockId Id) const
   }
   if (MergeRegistry)
   {
-    for (const MergedCubeDesc &desc : MergeRegistry->GetCubeDescriptors())
+    if (MergeRegistry->HasBlockId(Id))
     {
-      if (desc.Id == Id)
-      {
-        return true;
-      }
+      return true;
     }
   }
 #endif
-  if (Definitions && Definitions->GetById(Id) != nullptr)
+  if (Definitions)
   {
-    return true;
+    const auto catalog = Definitions->GetCatalogSnapshot();
+    if (FindDefinition(catalog, Id) != nullptr)
+    {
+      return true;
+    }
   }
   return false;
 }

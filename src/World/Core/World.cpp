@@ -1476,6 +1476,11 @@ void UWorld::PrepareForShutdown()
 
 void UWorld::RefreshBlockRegistry()
 {
+  if (MeshService)
+  {
+    MeshService->CancelAsyncInFlightKeepDirty();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(1000));
+  }
   if (BlockRegistry)
   {
     if (BlockMergeRegistry)

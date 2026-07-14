@@ -14,6 +14,121 @@ namespace cutum
 namespace
 {
 
+const BlockDefinition *FindDefinition(const BlockDefinitionCatalog &catalog,
+                                      BlockId id)
+{
+  const auto it = catalog.ById.find(id);
+  if (it != catalog.ById.end())
+  {
+    return &it->second;
+  }
+  return nullptr;
+}
+
+bool IsLiquidId(const BlockDefinitionCatalog &catalog, BlockId id)
+{
+  if (const BlockDefinition *def = FindDefinition(catalog, id))
+  {
+    return def->Physics.IsLiquid;
+  }
+  return false;
+}
+
+bool IsWaterKind(const BlockDefinitionCatalog &catalog, BlockId id)
+{
+  return IsWaterFluidDefinition(FindDefinition(catalog, id));
+}
+
+bool IsFluidPermeableId(const BlockDefinitionCatalog &catalog, BlockId id)
+{
+  return IsFluidPermeableFromDefinition(id, FindDefinition(catalog, id),
+                                        IsLiquidId(catalog, id));
+}
+
+BlockId ResolveWaterBlockIdImpl(const BlockDefinitionCatalog &catalog)
+{
+  for (const auto &entry : catalog.ById)
+  {
+    if (IsWaterKind(catalog, entry.first))
+    {
+      return entry.first;
+    }
+  }
+  return BLOCK_AIR;
+}
+
+BlockId BlockIdFromFluidKindImpl(const BlockDefinitionCatalog &catalog,
+                                 FluidKind kind)
+{
+  switch (kind)
+  {
+  case FluidKind::Water:
+    return ResolveWaterBlockIdImpl(catalog);
+  case FluidKind::Lava:
+    for (const auto &entry : catalog.ById)
+    {
+      if (IsLiquidId(catalog, entry.first) &&
+          !IsWaterKind(catalog, entry.first))
+      {
+        return entry.first;
+      }
+    }
+    return BLOCK_AIR;
+  default:
+    return BLOCK_AIR;
+  }
+}
+
+void ConsiderLiquidNeighbor(const BlockDefinitionCatalog &catalog, BlockId id,
+                            BlockId &water_liquid, BlockId &other_liquid)
+{
+  if (!IsLiquidId(catalog, id))
+  {
+    return;
+  }
+  if (IsWaterKind(catalog, id))
+  {
+    water_liquid = id;
+    return;
+  }
+  if (other_liquid == BLOCK_AIR)
+  {
+    other_liquid = id;
+  }
+}
+
+void ConsiderWaterloggedNeighborMesh(
+    const IUChunkMeshReader &reader, const BlockDefinitionCatalog &catalog,
+    glm::ivec3 neighbor_pos, BlockId &water_liquid, BlockId &other_liquid)
+{
+  const BlockId neighbor_id = reader.GetBlock(neighbor_pos);
+  if (!IsFluidPermeableId(catalog, neighbor_id))
+  {
+    return;
+  }
+  const FluidCellState neighbor_fluid = reader.GetFluid(neighbor_pos);
+  if (!FluidCellHasActiveFluid(PackFluidCellState(neighbor_fluid)))
+  {
+    return;
+  }
+  if (neighbor_fluid.HasExplicitKind())
+  {
+    ConsiderLiquidNeighbor(
+        catalog, BlockIdFromFluidKindImpl(catalog, neighbor_fluid.GetKind()),
+        water_liquid, other_liquid);
+    return;
+  }
+  static constexpr std::array<glm::ivec3, 6> kDirs = {
+      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+  for (const glm::ivec3 &inner_offset : kDirs)
+  {
+    ConsiderLiquidNeighbor(catalog,
+                           reader.GetBlock(neighbor_pos + inner_offset),
+                           water_liquid, other_liquid);
+  }
+}
+
 bool IsLiquidId(const UBlockDefinitionStorage &definitions, BlockId id)
 {
   if (const BlockDefinition *def = definitions.GetById(id))
@@ -263,15 +378,17 @@ BlockId UFluidBlockResolver::ResolveFluidBlockIdForMesh(
     const IUChunkMeshReader &reader,
     const UBlockDefinitionStorage &definitions, glm::ivec3 block_pos)
 {
+  const auto catalog = definitions.GetCatalogSnapshot();
+  const BlockDefinitionCatalog &defs = *catalog;
   const BlockId block_id = reader.GetBlock(block_pos);
-  if (IsLiquidId(definitions, block_id))
+  if (IsLiquidId(defs, block_id))
   {
     return block_id;
   }
   const FluidCellState fluid = reader.GetFluid(block_pos);
   if (fluid.HasExplicitKind())
   {
-    return BlockIdFromFluidKindImpl(definitions, fluid.GetKind());
+    return BlockIdFromFluidKindImpl(defs, fluid.GetKind());
   }
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
@@ -282,18 +399,17 @@ BlockId UFluidBlockResolver::ResolveFluidBlockIdForMesh(
   {
     for (const glm::ivec3 &offset : kDirs)
     {
-      ConsiderLiquidNeighbor(definitions,
-                             reader.GetBlock(block_pos + offset), water_liquid,
-                             other_liquid);
+      ConsiderLiquidNeighbor(defs, reader.GetBlock(block_pos + offset),
+                             water_liquid, other_liquid);
     }
   }
   for (const glm::ivec3 &offset : kDirs)
   {
     const glm::ivec3 neighbor_pos = block_pos + offset;
-    ConsiderLiquidNeighbor(definitions, reader.GetBlock(neighbor_pos),
-                           water_liquid, other_liquid);
-    ConsiderWaterloggedNeighborMesh(reader, definitions, neighbor_pos,
-                                    water_liquid, other_liquid);
+    ConsiderLiquidNeighbor(defs, reader.GetBlock(neighbor_pos), water_liquid,
+                           other_liquid);
+    ConsiderWaterloggedNeighborMesh(reader, defs, neighbor_pos, water_liquid,
+                                    other_liquid);
   }
   if (water_liquid != BLOCK_AIR)
   {

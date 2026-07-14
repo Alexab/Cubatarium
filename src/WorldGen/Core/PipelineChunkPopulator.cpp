@@ -71,10 +71,6 @@ void RefreshThreadLocalPipelineContext(UBlockRegistry &registry,
   ctx.Settings = settings;
   ctx.WorldgenOwnerPackId = ownerPackId;
   ctx.ResolveBlockIds();
-  if (prefabs)
-  {
-    prefabs->RebindBlockIds(registry);
-  }
 }
 
 struct ThreadLocalPipelineState
@@ -103,10 +99,6 @@ EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
     WorldGenContext ctx{state.world, registry, settings, prefabs};
     ctx.WorldgenOwnerPackId = ownerPackId;
     ctx.ResolveBlockIds();
-    if (prefabs)
-    {
-      prefabs->RebindBlockIds(registry);
-    }
     state.pipeline = UProceduralWorldGenFactory::Create(std::move(ctx));
     state.key = key;
   }

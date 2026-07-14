@@ -7,6 +7,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <set>
+#include <shared_mutex>
 #include <unordered_set>
 
 namespace cutum
@@ -24,6 +25,7 @@ void UBlockMergeRegistry::Rebuild(
     std::shared_ptr<UPlaceholderTextureCache> placeholder,
     int placeholderTileSize)
 {
+  std::unique_lock lock(CatalogMutex);
   ActivePacks = packs;
   PlaceholderCache = std::move(placeholder);
   PlaceholderTileSize = placeholderTileSize;
@@ -367,6 +369,7 @@ bool UBlockMergeRegistry::IsPackOwnedEntry(const MergedEntry &entry)
 
 std::string UBlockMergeRegistry::ComputeCatalogFingerprint() const
 {
+  std::shared_lock lock(CatalogMutex);
   nlohmann::json root;
   nlohmann::json packs = nlohmann::json::array();
   for (const ResourcePackManifest &pack : ActivePacks)
@@ -461,6 +464,7 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
 
 BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
 {
+  std::shared_lock lock(CatalogMutex);
   if (name.empty())
   {
     return BLOCK_AIR;
@@ -494,10 +498,34 @@ BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
 
 BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
 {
-  const BlockId existing = LookupBlockName(name);
-  if (existing != BLOCK_AIR)
+  std::unique_lock lock(CatalogMutex);
+  if (name.empty())
   {
-    return existing;
+    return BLOCK_AIR;
+  }
+  if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
+  {
+    const std::string qualified =
+        MakeQualifiedBlockName(WorldgenOwnerPackId, name);
+    const auto qualifiedIt = NameToId.find(qualified);
+    if (qualifiedIt != NameToId.end())
+    {
+      return qualifiedIt->second;
+    }
+  }
+  const auto it = NameToId.find(name);
+  if (it != NameToId.end())
+  {
+    return it->second;
+  }
+  if (IsQualifiedBlockName(name))
+  {
+    const std::string local = LocalBlockName(name);
+    const auto localIt = NameToId.find(local);
+    if (localIt != NameToId.end())
+    {
+      return localIt->second;
+    }
   }
   return CreateSyntheticBlock(name);
 }
@@ -510,6 +538,7 @@ BlockId UBlockMergeRegistry::ResolveName(const std::string &name)
 BlockId UBlockMergeRegistry::RegisterRuntimeBlock(
     const BlockDefinition &def, const std::array<std::string, 6> &stems)
 {
+  std::unique_lock lock(CatalogMutex);
   if (def.Name.empty() || IsReservedBlockName(def.Name))
   {
     return BLOCK_AIR;
@@ -530,6 +559,7 @@ BlockId UBlockMergeRegistry::RegisterRuntimeBlock(
 
 RuntimeOverlayFlushResult UBlockMergeRegistry::FlushRuntimeOverlay()
 {
+  std::unique_lock lock(CatalogMutex);
   RuntimeOverlayFlushResult result;
   if (!RuntimeOverlayDirty)
   {
@@ -594,6 +624,7 @@ RuntimeOverlayFlushResult UBlockMergeRegistry::FlushRuntimeOverlay()
 
 void UBlockMergeRegistry::UnregisterRuntimeBlock(const std::string &name)
 {
+  std::unique_lock lock(CatalogMutex);
   RuntimeOverlay.erase(std::remove_if(RuntimeOverlay.begin(),
                                       RuntimeOverlay.end(), [&](const auto &p)
                                       { return p.first.Name == name; }),
@@ -606,6 +637,7 @@ void UBlockMergeRegistry::UnregisterRuntimeBlock(const std::string &name)
 void UBlockMergeRegistry::PopulateBlockDefinitionStorage(
     UBlockDefinitionStorage &out) const
 {
+  std::shared_lock lock(CatalogMutex);
   std::unordered_map<BlockId, BlockDefinition> byId;
   for (const auto &pair : BlocksByName)
   {
@@ -667,6 +699,38 @@ void UBlockMergeRegistry::RegisterMissingTextureStems(
   {
     PlaceholderCache->RegisterAll(out);
   }
+}
+
+std::unordered_map<std::string, BlockId>
+UBlockMergeRegistry::SnapshotNameToId() const
+{
+  std::shared_lock lock(CatalogMutex);
+  return NameToId;
+}
+
+bool UBlockMergeRegistry::HasBlock(const std::string &name) const
+{
+  std::shared_lock lock(CatalogMutex);
+  return BlocksByName.find(name) != BlocksByName.end();
+}
+
+bool UBlockMergeRegistry::HasBlockId(BlockId id) const
+{
+  std::shared_lock lock(CatalogMutex);
+  return IdToName.find(id) != IdToName.end();
+}
+
+const std::string *UBlockMergeRegistry::GetTypeNameById(BlockId id) const
+{
+  thread_local std::string cached_name;
+  std::shared_lock lock(CatalogMutex);
+  const auto it = IdToName.find(id);
+  if (it != IdToName.end())
+  {
+    cached_name = it->second;
+    return &cached_name;
+  }
+  return nullptr;
 }
 
 } // namespace cutum

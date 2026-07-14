@@ -11,10 +11,58 @@ namespace cutum
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+std::shared_ptr<const BlockDefinitionCatalog>
+UBlockDefinitionStorage::GetCatalogSnapshot() const
+{
+  return Active;
+}
+
+const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
+{
+  const auto catalog = Active;
+  if (!catalog)
+  {
+    return nullptr;
+  }
+  const auto it = catalog->ById.find(Id);
+  if (it != catalog->ById.end())
+  {
+    return &it->second;
+  }
+  return nullptr;
+}
+
+const BlockDefinition *
+UBlockDefinitionStorage::GetByName(const std::string &Name) const
+{
+  const auto catalog = Active;
+  if (!catalog)
+  {
+    return nullptr;
+  }
+  const auto it = catalog->NameToId.find(Name);
+  if (it == catalog->NameToId.end())
+  {
+    return nullptr;
+  }
+  return GetById(it->second);
+}
+
+const std::unordered_map<BlockId, BlockDefinition> &
+UBlockDefinitionStorage::GetAll() const
+{
+  const auto catalog = Active;
+  static const std::unordered_map<BlockId, BlockDefinition> empty;
+  if (!catalog)
+  {
+    return empty;
+  }
+  return catalog->ById;
+}
+
 void UBlockDefinitionStorage::Load(const std::string &modelsPath)
 {
-  ById.clear();
-  NameToId.clear();
+  auto catalog = std::make_shared<BlockDefinitionCatalog>();
   try
   {
     for (const auto &entry : fs::directory_iterator(modelsPath))
@@ -80,43 +128,25 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
         ApplyRenderPresetDefaults(def.Render,
                                   d["physics"]["preset"].get<std::string>());
       }
-      ById[def.Id] = def;
-      NameToId[def.Name] = def.Id;
+      catalog->ById[def.Id] = def;
+      catalog->NameToId[def.Name] = def.Id;
     }
   }
   catch (const fs::filesystem_error &ex)
   {
     std::cerr << "UBlockDefinitionStorage::Load: " << ex.what() << std::endl;
   }
-}
-
-const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
-{
-  const auto it = ById.find(Id);
-  if (it != ById.end())
-  {
-    return &it->second;
-  }
-  return nullptr;
-}
-
-const BlockDefinition *
-UBlockDefinitionStorage::GetByName(const std::string &Name) const
-{
-  const auto it = NameToId.find(Name);
-  if (it == NameToId.end())
-  {
-    return nullptr;
-  }
-  return GetById(it->second);
+  Active = std::move(catalog);
 }
 
 void UBlockDefinitionStorage::ReplaceAll(
     std::unordered_map<BlockId, BlockDefinition> newById,
     std::unordered_map<std::string, BlockId> newNameToId)
 {
-  ById = std::move(newById);
-  NameToId = std::move(newNameToId);
+  auto catalog = std::make_shared<BlockDefinitionCatalog>();
+  catalog->ById = std::move(newById);
+  catalog->NameToId = std::move(newNameToId);
+  Active = std::move(catalog);
 }
 
 } // namespace cutum

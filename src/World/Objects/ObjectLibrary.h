@@ -5,6 +5,7 @@
 #include "World/Math/BlockTypes.h"
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -81,6 +82,7 @@ private:
 
   std::unordered_map<std::string, WorldObjectDefinition> Objects;
   std::unordered_set<std::string> LoggedUnknownTypes;
+  mutable std::shared_mutex ObjectsMutex;
 };
 
 } // namespace cutum

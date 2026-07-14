@@ -10,6 +10,7 @@
 namespace cutum
 {
 
+struct BlockDefinitionCatalog;
 class UTextureCubeStorage;
 class UBlockDefinitionStorage;
 class UBlockMergeRegistry;
@@ -29,6 +30,12 @@ public:
   {
     return Definitions.get();
   }
+  std::shared_ptr<UBlockDefinitionStorage> GetDefinitionsShared() const
+  {
+    return Definitions;
+  }
+  std::shared_ptr<const BlockDefinitionCatalog> GetDefinitionsCatalogSnapshot()
+      const;
 
   BlockId GetIdByTypeName(const std::string &Name) const;
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
