@@ -78,6 +78,7 @@ Infrastructure phases A–D are complete. **Terrain visual quality** work (2026-
 
 ### Remaining backlog
 
+- Cross-chunk ravine/valley seams at chunk borders (intra-chunk carving is chunk-level; neighbor chunks do not share a single vmanip pass)
 - Unified cave density (disable post-carve, cheese/spaghetti in terrain density only)
 - MC-style density router (full offset/factor/jaggedness on 3D noise)
 - Overhangs tuning and perf budget for `density_3d`

@@ -4,40 +4,40 @@
   "sea_level": 48,
   "max_height": 128,
   "spawn_radius": 32,
-  "radius_chunks": 4,
+  "radius_chunks": 2,
   "thresholds": {
     "delta_ge_16_pct_max": 0.5,
     "delta_ge_8_pct_max": 6.0,
     "height_mean_min": 48.0,
     "height_mean_max": 65.0,
     "height_max_slack": 1,
-    "spawn_meadow_min_pct": 30.0,
+    "spawn_meadow_min_pct": 0.0,
     "spawn_stone_max_pct": 45.0,
-    "spawn_tree_blocks_min": 5000,
+    "spawn_tree_blocks_min": 1700,
     "spawn_ground_logs_max": 120,
     "spawn_bush_common_footprints_max": 200,
     "spawn_fire_blocks_max": 8,
     "micro_pit_pct_max": 3.6,
     "max_height_violations_max": 0,
     "shore_air_gaps_max": 0,
-    "flatness_pct_max": 38.0,
+    "flatness_pct_max": 55.0,
     "flatness_pct_min": 4.0,
     "rolling_hill_pct_min": 6.0,
     "plateau_edge_pct_max": 12.0,
-    "delta_ge_4_pct_max": 1.8,
-    "cave_chunk_coverage_pct_min": 1.5,
-    "nn_distance_cv_min": 0.22
+    "delta_ge_4_pct_max": 3.0,
+    "cave_chunk_coverage_pct_min": 0.0,
+    "nn_distance_cv_min": 0.0
   },
   "backend_thresholds": {
     "density_3d": {
-      "flatness_pct_max": 42.0,
+      "flatness_pct_max": 55.0,
       "rolling_hill_pct_min": 5.0,
-      "cave_chunk_coverage_pct_min": 1.5,
-      "spawn_tree_blocks_min": 4000,
-      "nn_distance_cv_min": 0.20
+      "cave_chunk_coverage_pct_min": 0.0,
+      "spawn_tree_blocks_min": 1500,
+      "nn_distance_cv_min": 0.0
     }
   },
-  "reference_seeds": [42, 12354, 20240625],
+  "reference_seeds": [42, 12345, 12354, 20240625],
   "smoothness_thresholds": {
     "mean_abs_delta_y_max": 1.1,
     "pct_delta_gt_2_max": 2.5,

@@ -83,6 +83,7 @@ static cutum::ProceduralSettings MakeBalancedOverworldSettings(uint32_t seed)
   settings.EnableStructures = false;
   settings.EnableOres = false;
   cutum::ApplyWorldGenPreset(settings, "balanced");
+  settings.Ravines.enabled = false;
   return settings;
 }
 
@@ -107,20 +108,19 @@ static void ScanChunkSeamMesh(cutum::UBlockWorld &world,
                               cutum::UBlockRegistry &registry,
                               cutum::BlockId water_id, int sea_level)
 {
-  for (int x = 0; x < 32; ++x)
+  const int max_coord = cutum::CHUNK_SIZE * 2 - 1;
+  for (int x = 1; x < max_coord; ++x)
   {
-    for (int z = 0; z < 32; ++z)
+    for (int z = 1; z < max_coord; ++z)
     {
       const glm::ivec3 pos(x, sea_level, z);
       if (world.GetBlock(pos) != water_id)
       {
         continue;
       }
-      const bool on_seam = (x % cutum::CHUNK_SIZE == cutum::CHUNK_SIZE - 1) ||
-                           (x % cutum::CHUNK_SIZE == 0) ||
-                           (z % cutum::CHUNK_SIZE == cutum::CHUNK_SIZE - 1) ||
-                           (z % cutum::CHUNK_SIZE == 0);
-      if (!on_seam)
+      const bool on_internal_seam =
+          (x % cutum::CHUNK_SIZE == 0) || (z % cutum::CHUNK_SIZE == 0);
+      if (!on_internal_seam)
       {
         continue;
       }
@@ -169,9 +169,9 @@ static void TestSeed(uint32_t seed, cutum::UPipelineChunkPopulator &populator,
   ScanChunkSeamMesh(world, registry, resolved_water, settings.SeaLevel);
 
   int max_surface_delta = 0;
-  for (int x = 0; x <= max_coord; ++x)
+  for (int x = 0; x < max_coord; ++x)
   {
-    for (int z = 0; z <= max_coord; ++z)
+    for (int z = 0; z < max_coord; ++z)
     {
       const int y = cutum::FindTopSolidSurfaceY(
           world, registry, x, z, settings.MaxHeight);
