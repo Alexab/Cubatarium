@@ -124,8 +124,10 @@ private:
   UGuiCheckbox *AnalyticValleysBox{nullptr};
   UGuiCheckbox *MudflowErosionBox{nullptr};
   UGuiCheckbox *DensityRefineParityBox{nullptr};
+  UGuiLabel *TerrainQualityHintLabel{nullptr};
 
   std::vector<GuiGridItem> BuildGridItems() const;
+  void WireTerrainQualityHint(UGuiCheckbox &box, const char *description);
 };
 
 } // namespace cutum

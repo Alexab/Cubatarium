@@ -98,6 +98,18 @@ UWorldGenSettingsForm::UWorldGenSettingsForm(const GuiTheme *theme)
 {
 }
 
+void UWorldGenSettingsForm::WireTerrainQualityHint(UGuiCheckbox &box,
+                                                 const char *description)
+{
+  box.SetDescription(description);
+  box.SetOnDescriptionHover([this](const std::string &text) {
+    if (TerrainQualityHintLabel)
+    {
+      TerrainQualityHintLabel->SetText(text);
+    }
+  });
+}
+
 void UWorldGenSettingsForm::SetHintText(const std::string &text)
 {
   if (HintLabel)
@@ -1036,6 +1048,10 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   unifiedHeight->SetChecked(FormSettings.Tuning.useUnifiedHeightField);
   unifiedHeight->SetOnChanged([this](bool v)
                               { FormSettings.Tuning.useUnifiedHeightField = v; });
+  WireTerrainQualityHint(
+      *unifiedHeight,
+      "Blend biome height profiles (offset + amplitude) into one continuous "
+      "surface Y before coast and erosion passes.");
   panel.AddChild(std::move(unifiedHeight));
 
   auto analyticValleys = std::make_unique<UGuiCheckbox>(Theme, "Analytic valleys");
@@ -1043,6 +1059,10 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   analyticValleys->SetChecked(FormSettings.Tuning.useAnalyticValleys);
   analyticValleys->SetOnChanged([this](bool v)
                                 { FormSettings.Tuning.useAnalyticValleys = v; });
+  WireTerrainQualityHint(
+      *analyticValleys,
+      "Gaussian river valleys with smooth walls; disables hash ravines when on. "
+      "Best with Smooth terrain preset.");
   panel.AddChild(std::move(analyticValleys));
 
   auto mudflow = std::make_unique<UGuiCheckbox>(Theme, "Mudflow erosion");
@@ -1050,6 +1070,10 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   mudflow->SetChecked(FormSettings.Tuning.useMudflowErosion);
   mudflow->SetOnChanged([this](bool v)
                        { FormSettings.Tuning.useMudflowErosion = v; });
+  WireTerrainQualityHint(
+      *mudflow,
+      "Chunk post-pass: moves dirt/gravel/sand one block down steep slopes "
+      "(max 2 iterations) before fluid fill.");
   panel.AddChild(std::move(mudflow));
 
   auto densityParity =
@@ -1058,7 +1082,16 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   densityParity->SetChecked(FormSettings.Tuning.useDensityRefineParity);
   densityParity->SetOnChanged([this](bool v)
                               { FormSettings.Tuning.useDensityRefineParity = v; });
+  WireTerrainQualityHint(
+      *densityParity,
+      "Apply RefineSurfaceY (rivers, coast, smoothing) to density_3d backend "
+      "so 3D terrain matches heightmap refinement.");
   panel.AddChild(std::move(densityParity));
+
+  auto terrainHint = std::make_unique<UGuiLabel>(
+      Theme, "Hover a terrain quality option above for details.");
+  TerrainQualityHintLabel = terrainHint.get();
+  panel.AddChild(std::move(terrainHint));
 
   auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack:");
   WorldGenPackIdLabel = packLabel.get();
@@ -1174,9 +1207,10 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({AnalyticValleysBox, 36, 1, 1, 1, 30});
   items.push_back({MudflowErosionBox, 37, 0, 1, 1, 30});
   items.push_back({DensityRefineParityBox, 37, 1, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 38, 0, 1, 1, 28});
-  items.push_back({WorldGenPackList, 38, 1, 1, 1, 72});
-  items.push_back({WorldGenPackDescLabel, 39, 0, 1, 2, 36});
+  items.push_back({TerrainQualityHintLabel, 38, 0, 1, 2, 48});
+  items.push_back({WorldGenPackIdLabel, 39, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 39, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 40, 0, 1, 2, 36});
   return items;
 }
 

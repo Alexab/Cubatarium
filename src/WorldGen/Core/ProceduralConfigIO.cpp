@@ -522,6 +522,13 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       {
         settings.Ravines.fillWater = ravines["fill_water"].get<bool>();
       }
+      if (ravines.contains("feather_mode"))
+      {
+        settings.Ravines.featherMode =
+            ravines["feather_mode"].get<std::string>() == "linear"
+                ? RavineFeatherMode::Linear
+                : RavineFeatherMode::Smoothstep;
+      }
     }
     if (p.contains("tuning") && p["tuning"].is_object())
     {
@@ -595,6 +602,9 @@ void WriteProceduralSettings(nlohmann::json &root,
   ravines["max_depth"] = settings.Ravines.maxDepth;
   ravines["aquatic_max_depth"] = settings.Ravines.aquaticMaxDepth;
   ravines["fill_water"] = settings.Ravines.fillWater;
+  ravines["feather_mode"] =
+      settings.Ravines.featherMode == RavineFeatherMode::Linear ? "linear"
+                                                                : "smoothstep";
   procedural["ravines"] = ravines;
   nlohmann::json tuning;
   WriteTuning(settings.Tuning, tuning);

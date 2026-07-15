@@ -116,6 +116,7 @@ struct PackRavinesConfig
   int MaxDepth{40};
   int AquaticMaxDepth{5};
   bool FillWater{false};
+  std::string FeatherMode{"smoothstep"};
   bool Loaded{false};
 };
 

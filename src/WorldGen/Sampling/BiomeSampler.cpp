@@ -327,13 +327,14 @@ int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
   return std::max(targetY, surfaceY - depth);
 }
 
-int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settings,
-                    const CoarseHeightCallback &getCoarseY)
+float ComputeCoastBeachStrength(int x, int z, int surface_y,
+                                const ProceduralSettings &settings,
+                                const CoarseHeightCallback &getCoarseY)
 {
   const int sea = settings.SeaLevel;
-  if (surfaceY < sea - 2 || surfaceY > sea + 6)
+  if (surface_y < sea - 2 || surface_y > sea + 6)
   {
-    return surfaceY;
+    return 0.0f;
   }
   int wet_neighbors = 0;
   constexpr int scan_radius = 4;
@@ -371,14 +372,22 @@ int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settin
                  static_cast<float>(wet_neighbors));
   const float coast_proximity =
       1.0f - Smoothstep(static_cast<float>(sea + 6), static_cast<float>(sea - 2),
-                        static_cast<float>(surfaceY));
-  const float beach_strength = wet_factor * coast_proximity;
+                        static_cast<float>(surface_y));
+  return wet_factor * coast_proximity;
+}
+
+int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settings,
+                    const CoarseHeightCallback &getCoarseY)
+{
+  const float beach_strength =
+      ComputeCoastBeachStrength(x, z, surfaceY, settings, getCoarseY);
   if (beach_strength <= 0.001f)
   {
     return surfaceY;
   }
 
-  const float beach_height = 2.0f + wet_factor * 2.0f;
+  const int sea = settings.SeaLevel;
+  const float beach_height = 2.0f + beach_strength * 2.0f;
   const float target_y =
       static_cast<float>(sea) + beach_strength * beach_height;
   const float blend = beach_strength * 0.65f;

@@ -53,6 +53,12 @@ struct WorldGenTuning
   bool useDensityRefineParity{false};
 };
 
+enum class RavineFeatherMode
+{
+  Smoothstep,
+  Linear,
+};
+
 struct RavineParams
 {
   bool enabled{true};
@@ -61,6 +67,7 @@ struct RavineParams
   int maxDepth{40};
   int aquaticMaxDepth{5};
   bool fillWater{false};
+  RavineFeatherMode featherMode{RavineFeatherMode::Smoothstep};
 };
 
 enum class WorldSeedKind

@@ -22,6 +22,15 @@ std::vector<uint8_t> gBiomeMapPixels;
 int gBiomeMapW = 0;
 int gBiomeMapH = 0;
 
+RavineFeatherMode ParseRavineFeatherMode(const std::string &mode)
+{
+  if (mode == "linear")
+  {
+    return RavineFeatherMode::Linear;
+  }
+  return RavineFeatherMode::Smoothstep;
+}
+
 BiomeId BiomeFromMapColor(uint8_t r, uint8_t g, uint8_t b)
 {
   if (r == 0x2d && g == 0x8a && b == 0x3f)
@@ -496,6 +505,8 @@ void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
     pack.Ravines.AquaticMaxDepth =
         json.value("aquatic_max_depth", pack.Ravines.AquaticMaxDepth);
     pack.Ravines.FillWater = json.value("fill_water", pack.Ravines.FillWater);
+    pack.Ravines.FeatherMode =
+        json.value("feather_mode", pack.Ravines.FeatherMode);
     pack.Ravines.Loaded = true;
   }
   catch (const std::exception &e)
@@ -829,6 +840,7 @@ void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
   settings.Ravines.maxDepth = ravines.MaxDepth;
   settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
   settings.Ravines.fillWater = ravines.FillWater;
+  settings.Ravines.featherMode = ParseRavineFeatherMode(ravines.FeatherMode);
 }
 
 const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(

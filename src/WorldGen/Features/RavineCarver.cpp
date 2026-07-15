@@ -48,7 +48,15 @@ void CarveColumnRavinesDeterministic(WorldGenContext &ctx, int x, int z,
       const int wz = z + dz;
       const float dist = std::sqrt(static_cast<float>(dx * dx + dz * dz));
       const float t = std::clamp(dist / 3.5f, 0.0f, 1.0f);
-      const float width_profile = 1.0f - Smoothstep(0.0f, 1.0f, t);
+      float width_profile = 0.0f;
+      if (params.featherMode == RavineFeatherMode::Linear)
+      {
+        width_profile = 1.0f - t;
+      }
+      else
+      {
+        width_profile = 1.0f - Smoothstep(0.0f, 1.0f, t);
+      }
       int column_depth =
           static_cast<int>(static_cast<float>(carve_depth) * width_profile);
       if (column_depth <= 0)

@@ -117,4 +117,11 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
                                      const struct ColumnSampleContext &sample,
                                      const WorldGenContext &ctx);
 
+float ComputeCoastBeachStrength(int x, int z, int surface_y,
+                                const ProceduralSettings &settings,
+                                const CoarseHeightCallback &get_coarse_y = {});
+int ApplyCoastShelf(int x, int z, int surface_y,
+                    const ProceduralSettings &settings,
+                    const CoarseHeightCallback &get_coarse_y = {});
+
 } // namespace cutum

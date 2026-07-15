@@ -1280,6 +1280,11 @@ target_include_directories(density_refine_parity_test PRIVATE
 target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_smoothness_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
@@ -1294,6 +1299,8 @@ add_executable(worldgen_smoothness_test
     src/Test/WorldGenSmoothnessTest.cpp)
 target_include_directories(worldgen_smoothness_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_smoothness_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(worldgen_smoothness_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_vegetation_placement_test
