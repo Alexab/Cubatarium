@@ -198,6 +198,83 @@ static void TestRavineFeatherReducesRimDelta()
                     "feather profile keeps rim carve shallow");
 }
 
+static void FillStoneChunk(cutum::UBlockWorld &world, int base_x, int base_z,
+                           int top_y)
+{
+  for (int lz = 0; lz < 16; ++lz)
+  {
+    for (int lx = 0; lx < 16; ++lx)
+    {
+      FillStoneColumn(world, base_x + lx, base_z + lz, top_y);
+    }
+  }
+}
+
+static int MaxCarveRimDelta(const cutum::UBlockWorld &world, int base_x,
+                            int base_z, int surface_y)
+{
+  int max_rim_delta = 0;
+  for (int lz = 0; lz < 16; ++lz)
+  {
+    for (int lx = 0; lx < 16; ++lx)
+    {
+      const int x = base_x + lx;
+      const int z = base_z + lz;
+      const int depth = surface_y - DeepestAirBelowSurface(world, x, z, surface_y);
+      if (depth <= 0)
+      {
+        continue;
+      }
+      if (lx + 1 < 16)
+      {
+        const int depth_e = surface_y - DeepestAirBelowSurface(
+                                            world, x + 1, z, surface_y);
+        if (depth_e > 0)
+        {
+          max_rim_delta = std::max(max_rim_delta, std::abs(depth - depth_e));
+        }
+      }
+      if (lz + 1 < 16)
+      {
+        const int depth_n = surface_y - DeepestAirBelowSurface(
+                                            world, x, z + 1, surface_y);
+        if (depth_n > 0)
+        {
+          max_rim_delta = std::max(max_rim_delta, std::abs(depth - depth_n));
+        }
+      }
+    }
+  }
+  return max_rim_delta;
+}
+
+static void TestChunkRavineSeamOrderIndependent()
+{
+  cutum::RavineParams params;
+  params.enabled = true;
+  params.maxDepth = 12;
+  params.aquaticMaxDepth = 0;
+  const auto surface_at = [](int, int) { return kSurfaceY; };
+
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto ctx = MakeContext(world, registry);
+  FillStoneChunk(world, 0, 0, kSurfaceY);
+  cutum::CarveChunkRavinesDeterministic(ctx, 0, 0, 8, 8, params, 48,
+                                        surface_at);
+
+  FluidTest::Expect(ColumnHasAirBelowSurface(world, 8, 8, kSurfaceY), kTestName,
+                    "chunk ravine carve occurred");
+  const int center_depth =
+      kSurfaceY - DeepestAirBelowSurface(world, 8, 8, kSurfaceY);
+  const int rim_depth =
+      kSurfaceY - DeepestAirBelowSurface(world, 11, 8, kSurfaceY);
+  FluidTest::Expect(center_depth > rim_depth, kTestName,
+                    "chunk ravine carves deeper at center than rim");
+  FluidTest::Expect(rim_depth <= 2, kTestName,
+                    "chunk ravine feather keeps rim carve shallow");
+}
+
 } // namespace
 
 int main()
@@ -208,6 +285,7 @@ int main()
   TestAquaticMaxDepthCap();
   TestRavineFillWater();
   TestRavineFeatherReducesRimDelta();
+  TestChunkRavineSeamOrderIndependent();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

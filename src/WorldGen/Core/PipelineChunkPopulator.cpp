@@ -1,15 +1,20 @@
+#include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
-#include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
+#include "WorldGen/Features/RavineCarver.h"
+#include "WorldGen/Features/ValleyCarver.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
 #include "WorldGen/Stages/MudflowErosion.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <array>
@@ -196,8 +201,18 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
     {
       UBlockWorldColumnWriter writer(genWorld, Registry);
-      UColumnGenerationService::GenerateColumn(*composable, writer, world_x,
-                                               world_z);
+      const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
+      if (terrain_mode == ComposableTerrainMode::Flat ||
+          terrain_mode == ComposableTerrainMode::LegacyHash)
+      {
+        UColumnGenerationService::GenerateColumn(*composable, writer, world_x,
+                                                 world_z);
+      }
+      else
+      {
+        UColumnGenerationService::GenerateColumnTerrainOnly(*composable, writer,
+                                                            world_x, world_z);
+      }
     }
     else
     {
@@ -207,6 +222,57 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
   {
+    const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
+    if (terrain_mode != ComposableTerrainMode::Flat &&
+        terrain_mode != ComposableTerrainMode::LegacyHash)
+    {
+      WorldGenContext &ctx = composable->GetContext();
+      const RavineSurfaceYCallback get_surface_y =
+          [composable](int hx, int hz) { return composable->SurfaceYAt(hx, hz); };
+
+      if (settings.Tuning.useAnalyticValleys)
+      {
+        ValleyParams valley_params;
+        const PackValleysConfig &pack = UWorldGenPack::ValleysConfig();
+        if (pack.Loaded)
+        {
+          valley_params.enabled = pack.Enabled;
+          valley_params.maxDepth = pack.MaxDepth;
+          valley_params.widthSigma = pack.WidthSigma;
+          valley_params.aquaticDepthScale = pack.AquaticDepthScale;
+          valley_params.riverNoiseScale = pack.RiverNoiseScale;
+        }
+        CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
+                          settings.SeaLevel, settings.Tuning.riverWidth,
+                          get_surface_y);
+      }
+
+      if (composable->GetStageMask().IsEnabled(WorldGenStageId::Ravines))
+      {
+        CarveChunkRavines(ctx, base_x, base_z, settings.Seed, settings.Ravines,
+                          settings.SeaLevel, get_surface_y);
+      }
+
+      const uint32_t skip_chunk_stages =
+          WorldGenStageSkipBit(WorldGenStageId::Valleys) |
+          WorldGenStageSkipBit(WorldGenStageId::Ravines);
+
+      for (size_t i = 0; i < column_count; ++i)
+      {
+        if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
+        {
+          break;
+        }
+        const int lx = columns[i].first;
+        const int lz = columns[i].second;
+        const int world_x = base_x + lx;
+        const int world_z = base_z + lz;
+        UBlockWorldColumnWriter writer(genWorld, Registry);
+        UColumnGenerationService::GenerateColumnPostTerrain(
+            *composable, writer, world_x, world_z, skip_chunk_stages);
+      }
+    }
+
     if (settings.Tuning.useMudflowErosion)
     {
       ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);

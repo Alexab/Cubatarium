@@ -3,5 +3,6 @@
   "enabled": true,
   "max_depth": 12,
   "width_sigma": 2.5,
+  "river_noise_scale": 0.008,
   "aquatic_depth_scale": 0.4
 }

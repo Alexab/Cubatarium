@@ -147,6 +147,102 @@ static void TestValleyCarveSmoothWalls()
                     "valley cross-section rim delta stays smooth");
 }
 
+static void FillStoneChunk(cutum::UBlockWorld &world, int base_x, int base_z,
+                           int top_y)
+{
+  for (int lz = 0; lz < 16; ++lz)
+  {
+    for (int lx = 0; lx < 16; ++lx)
+    {
+      FillStoneColumn(world, base_x + lx, base_z + lz, top_y);
+    }
+  }
+}
+
+static int MaxCarveRimDelta(const cutum::UBlockWorld &world, int base_x,
+                            int base_z, int surface_y)
+{
+  int max_rim_delta = 0;
+  for (int lz = 0; lz < 16; ++lz)
+  {
+    for (int lx = 0; lx < 16; ++lx)
+    {
+      const int x = base_x + lx;
+      const int z = base_z + lz;
+      const int depth = surface_y - DeepestAirBelowSurface(world, x, z, surface_y);
+      if (depth <= 0)
+      {
+        continue;
+      }
+      if (lx + 1 < 16)
+      {
+        const int depth_e = surface_y - DeepestAirBelowSurface(
+                                            world, x + 1, z, surface_y);
+        if (depth_e > 0)
+        {
+          max_rim_delta = std::max(max_rim_delta, std::abs(depth - depth_e));
+        }
+      }
+      if (lz + 1 < 16)
+      {
+        const int depth_n = surface_y - DeepestAirBelowSurface(
+                                            world, x, z + 1, surface_y);
+        if (depth_n > 0)
+        {
+          max_rim_delta = std::max(max_rim_delta, std::abs(depth - depth_n));
+        }
+      }
+    }
+  }
+  return max_rim_delta;
+}
+
+static void TestChunkValleySeamStable()
+{
+  cutum::ValleyParams params;
+  params.enabled = true;
+  params.maxDepth = 12;
+  params.widthSigma = 2.5f;
+  params.aquaticDepthScale = 0.4f;
+  params.riverNoiseScale = 0.008f;
+
+  const auto surface_at = [](int, int) { return kSurfaceY; };
+
+  int base_x = 0;
+  int base_z = 0;
+  bool carved = false;
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto ctx = MakeContext(world, registry);
+
+  for (int z = 0; z < 256 && !carved; ++z)
+  {
+    for (int x = 0; x < 256 && !carved; ++x)
+    {
+      world.Clear();
+      FillStoneChunk(world, x, z, kSurfaceY);
+      cutum::CarveChunkValleys(ctx, x, z, kSeed, params, 48, 1.0f, surface_at);
+      for (int lz = 0; lz < 16 && !carved; ++lz)
+      {
+        for (int lx = 0; lx < 16; ++lx)
+        {
+          if (DeepestAirBelowSurface(world, x + lx, z + lz, kSurfaceY) <
+              kSurfaceY)
+          {
+            carved = true;
+            base_x = x;
+            base_z = z;
+            break;
+          }
+        }
+      }
+    }
+  }
+  FluidTest::Expect(carved, kTestName, "chunk valley carve occurred");
+  FluidTest::Expect(MaxCarveRimDelta(world, base_x, base_z, kSurfaceY) <= 2,
+                    kTestName, "chunk valley seam stays smooth across chunk");
+}
+
 } // namespace
 
 int main()
@@ -157,6 +253,7 @@ int main()
   cutum::UWorldGenPack::LoadPackId("default");
 
   TestValleyCarveSmoothWalls();
+  TestChunkValleySeamStable();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }
