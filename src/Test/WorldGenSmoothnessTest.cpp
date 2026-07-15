@@ -190,6 +190,7 @@ static void TestCoastSandMatchesRamp()
 
       cutum::ColumnSampleContext sample;
       sample.SurfaceY = surface_y;
+      sample.CoastFactor = beach_strength;
       sample.Biomes = cutum::BlendedBiomeWeights(
           x, z, coarse(x, z), settings.SeaLevel, settings.MaxHeight,
           settings.Seed, settings.Tuning, coarse);

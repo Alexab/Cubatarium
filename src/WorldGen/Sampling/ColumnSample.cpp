@@ -71,6 +71,8 @@ ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
   ctx.SurfaceBiome = PickSurfaceBiome(world_x, world_z, ctx.Biomes);
   ctx.SpawnSurfaceOverride =
       ShouldSpawnSurfaceOverride(world_x, world_z, Settings);
+  ctx.CoastFactor = ComputeCoastBeachStrength(
+      world_x, world_z, ctx.SurfaceY, Settings, coarse_fn);
   return ctx;
 }
 

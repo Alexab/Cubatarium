@@ -412,9 +412,15 @@ float SampleCoarseHeightGradient(int x, int z,
 
 int ApplyErosionLite(int x, int z, int surfaceY, uint32_t seed,
                      const ProceduralSettings &settings,
-                     const CoarseHeightCallback &getCoarseY)
+                     const CoarseHeightCallback &getCoarseY,
+                     const BiomeWeightSet &weights, float macro_height01)
 {
   (void)seed;
+  if (weights.weights[BiomeIndex(BiomeId::Hills)] > 0.6f &&
+      macro_height01 > 0.75f)
+  {
+    return surfaceY;
+  }
   const float erosion = std::clamp(settings.Tuning.terrainErosion, 0.0f, 1.0f);
   const float erosion_strength =
       std::clamp(settings.Tuning.erosionStrength, 0.0f, 1.0f);
@@ -960,11 +966,35 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
       (0.6f + volatilityJitter * 0.4f) * 6.5f;
   y += static_cast<int>(std::floor(micro_rolling + rolling_hills + 0.5f));
 
+  if (localCoarseRange <= 3 && getCoarseY)
+  {
+    float neighbor_sum = static_cast<float>(y);
+    float neighbor_wsum = 1.0f;
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dz == 0)
+        {
+          continue;
+        }
+        neighbor_sum += static_cast<float>(getCoarseY(x + dx, z + dz));
+        neighbor_wsum += 1.0f;
+      }
+    }
+    const int neighbor_avg = static_cast<int>(
+        std::floor(neighbor_sum / neighbor_wsum + 0.5f));
+    y = std::clamp(y, neighbor_avg - 2, neighbor_avg + 2);
+  }
+
   y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);
   y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
   y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
-  y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY);
+  const float macro_height01 =
+      std::clamp(OverworldMacroHeight01(x, z, seed), 0.0f, 1.0f);
+  y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY, weights,
+                       macro_height01);
   return std::clamp(y, 1, settings.MaxHeight);
 }
 
@@ -1182,11 +1212,7 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   if (ctx.Settings.FillWater && surface_y <= ctx.Settings.SeaLevel + 2 &&
       surface_y >= ctx.Settings.SeaLevel - 1)
   {
-    const float land =
-        weights.weights[BiomeIndex(BiomeId::Plains)] +
-        weights.weights[BiomeIndex(BiomeId::Forest)] +
-        weights.weights[BiomeIndex(BiomeId::Hills)];
-    if (land > 0.2f)
+    if (sample.CoastFactor > 0.25f)
     {
       rule.surface = ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : rule.surface;
       rule.subsurface =

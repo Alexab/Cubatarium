@@ -102,6 +102,8 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
     sample.HeightNorm = std::clamp(
         static_cast<float>(sample.SurfaceY - Ctx.Settings.SeaLevel) / denom, 0.f,
         1.f);
+    sample.CoastFactor = ComputeCoastBeachStrength(
+        world_x, world_z, sample.SurfaceY, Ctx.Settings, coarse_fn);
     return sample;
   }
   ColumnSampleContext sample;
@@ -217,10 +219,7 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
     else if (DensitySampler)
     {
       stone_above =
-          Ctx.Settings.SeaLevel +
-          static_cast<int>(12.0f * (Ctx.Settings.MaxHeight > 15
-                                        ? Ctx.Settings.MaxHeight / 96.0f
-                                        : 1.0f));
+          MountainsStoneSurfaceAboveY(Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     }
     if (stone_above > 0 && sample.SurfaceY >= stone_above)
     {

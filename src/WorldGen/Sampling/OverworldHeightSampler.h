@@ -64,5 +64,6 @@ float SampleLayeredHeight01(int x, int z, uint32_t seed,
                             HeightPreset preset);
 float OverworldMacroHeight01(int x, int z, uint32_t seed);
 float SeaBiasForPreset(HeightPreset preset);
+int MountainsStoneSurfaceAboveY(int sea_level, int max_height);
 
 } // namespace cutum
