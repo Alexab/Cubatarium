@@ -1608,7 +1608,14 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
-          " Async: " + std::to_string(md.asyncMeshInFlight),
+          " MeshAsync: " + std::to_string(md.asyncMeshInFlight) +
+          " GenQ: " + std::to_string(md.genQueuePending) +
+          "/" + std::to_string(md.genInFlight),
+      "Populate: " + std::to_string(md.populateMsLast).substr(0, 5) + " ms" +
+          " ema " + std::to_string(md.populateMsEma).substr(0, 5) +
+          " (t " + std::to_string(md.populateTerrainMs).substr(0, 4) +
+          " c " + std::to_string(md.populateCarveMs).substr(0, 4) +
+          " p " + std::to_string(md.populatePostMs).substr(0, 4) + ")",
       "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
           " bg=" + std::to_string(md.pendingBgRelights) +
           " inflight=" + std::to_string(md.asyncRelightInflight) +

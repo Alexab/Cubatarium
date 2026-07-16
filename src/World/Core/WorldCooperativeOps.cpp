@@ -34,7 +34,8 @@ namespace cutum
 struct CooperativeParallelGenState
 {
   CooperativeParallelGenState()
-      : Pool(ComputeWorkerThreadCount(JobPoolKind::CoopGeneration))
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::CoopGeneration),
+             "CoopGeneration")
   {
   }
 

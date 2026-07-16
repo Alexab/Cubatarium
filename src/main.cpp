@@ -22,6 +22,9 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
 #endif
+  const bool also_stderr =
+      argc > 1; // CLI / console modes also get ERROR+ on stderr via wrappers
+  cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
   for (int i = 1; i < argc; ++i)
   {

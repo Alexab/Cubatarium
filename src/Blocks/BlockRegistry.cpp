@@ -56,6 +56,7 @@ void UBlockRegistry::Reload() { RebuildMaps(); }
 
 void UBlockRegistry::RebuildMaps()
 {
+  std::unique_lock lock(MapsMutex);
   NameToId.clear();
   IdToName.clear();
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
@@ -121,10 +122,13 @@ BlockId UBlockRegistry::GetPackBlockIdByTypeName(const std::string &Name) const
       return name_it->second;
     }
   }
-  const auto it = NameToId.find(Name);
-  if (it != NameToId.end())
   {
-    return it->second;
+    std::shared_lock lock(MapsMutex);
+    const auto it = NameToId.find(Name);
+    if (it != NameToId.end())
+    {
+      return it->second;
+    }
   }
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (Textures)
@@ -156,10 +160,13 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
       return name_it->second;
     }
   }
-  auto it = NameToId.find(Name);
-  if (it != NameToId.end())
   {
-    return it->second;
+    std::shared_lock lock(MapsMutex);
+    const auto it = NameToId.find(Name);
+    if (it != NameToId.end())
+    {
+      return it->second;
+    }
   }
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (Textures)
@@ -197,10 +204,13 @@ const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
       return cached_name;
     }
   }
-  auto it = IdToName.find(Id);
-  if (it != IdToName.end())
   {
-    return it->second;
+    std::shared_lock lock(MapsMutex);
+    const auto it = IdToName.find(Id);
+    if (it != IdToName.end())
+    {
+      return it->second;
+    }
   }
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (Textures)

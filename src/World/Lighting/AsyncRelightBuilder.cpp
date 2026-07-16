@@ -21,7 +21,7 @@ std::mutex gRelightCaptureMutex;
 
 UAsyncRelightBuilder::UAsyncRelightBuilder(std::size_t thread_count)
     : WorkerCount(static_cast<int>(ResolveRelightWorkerCount(thread_count))),
-      Pool(ResolveRelightWorkerCount(thread_count))
+      Pool(ResolveRelightWorkerCount(thread_count), "Relight")
 {
 }
 

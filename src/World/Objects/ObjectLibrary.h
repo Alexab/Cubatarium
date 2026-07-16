@@ -5,6 +5,7 @@
 #include "World/Math/BlockTypes.h"
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <memory>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -63,6 +64,10 @@ public:
                   UBlockRegistry &registry);
   void RebindBlockIds(UBlockRegistry &registry);
   bool ValidateCriticalPrefabs() const;
+  /// Thread-safe; returned shared_ptr keeps the definition alive across reloads.
+  std::shared_ptr<const WorldObjectDefinition>
+  GetShared(const std::string &Name) const;
+  /// Convenience for main-thread short reads. Holds a TLS shared_ptr keep-alive.
   const WorldObjectDefinition *Get(const std::string &Name) const;
   std::vector<std::string> ListNames() const;
   std::string GetDisplayName(const std::string &Name) const;
@@ -80,7 +85,8 @@ private:
                               const std::string &namePrefix, ObjectOrigin origin,
                               UBlockRegistry &registry);
 
-  std::unordered_map<std::string, WorldObjectDefinition> Objects;
+  std::unordered_map<std::string, std::shared_ptr<WorldObjectDefinition>>
+      Objects;
   std::unordered_set<std::string> LoggedUnknownTypes;
   mutable std::shared_mutex ObjectsMutex;
 };

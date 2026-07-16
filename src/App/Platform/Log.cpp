@@ -1,15 +1,22 @@
 #include "App/Platform/Log.h"
 
-#include "App/Core.h"
+#ifndef GLOG_NO_ABBREVIATED_SEVERITIES
+#define GLOG_NO_ABBREVIATED_SEVERITIES
+#endif
+#include <glog/logging.h>
 
+#include <atomic>
+#include <algorithm>
 #include <chrono>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <atomic>
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #if defined(__ANDROID__)
 #include <android/log.h>
@@ -18,6 +25,9 @@
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 #include <dbghelp.h>
@@ -35,6 +45,21 @@ namespace cutum
 namespace
 {
 
+std::filesystem::path ExecutableDirectory()
+{
+#ifdef _WIN32
+  wchar_t buffer[MAX_PATH];
+  const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+  if (length == 0 || length >= MAX_PATH)
+  {
+    return std::filesystem::current_path();
+  }
+  return std::filesystem::path(buffer).parent_path();
+#else
+  return std::filesystem::current_path();
+#endif
+}
+
 std::mutex &LogMutex()
 {
   static std::mutex m;
@@ -47,37 +72,85 @@ std::atomic<bool> &SuppressErrorDialogsFlag()
   return flag;
 }
 
-std::filesystem::path LogFilePath()
+std::atomic<bool> &LoggingInitializedFlag()
 {
-  return GetExecutableDirectory() / "cubatarium.log";
+  static std::atomic<bool> flag{false};
+  return flag;
 }
 
-void AppendLogLine(const std::string &line)
+std::filesystem::path LogsDirectory()
 {
-  const auto path = LogFilePath();
-  std::ofstream out(path, std::ios::app);
-  if (!out.is_open())
+  return ExecutableDirectory() / "logs";
+}
+
+void EnsureLogsDirectory()
+{
+  std::error_code ec;
+  std::filesystem::create_directories(LogsDirectory(), ec);
+}
+
+void PruneOldLogs()
+{
+  EnsureLogsDirectory();
+  const auto logs_dir = LogsDirectory();
+  std::vector<std::filesystem::directory_entry> entries;
+  std::error_code ec;
+  for (const auto &entry : std::filesystem::directory_iterator(logs_dir, ec))
+  {
+    if (!entry.is_regular_file(ec))
+    {
+      continue;
+    }
+    const auto ext = entry.path().extension().string();
+    if (ext == ".dmp" || ext == ".log" ||
+        entry.path().filename().string().find(".log.") != std::string::npos ||
+        entry.path().filename().string().find("Cubatarium.") == 0)
+    {
+      entries.push_back(entry);
+    }
+  }
+
+  const auto now = std::filesystem::file_time_type::clock::now();
+  constexpr auto kMaxAge = std::chrono::hours(24 * 14);
+  for (auto it = entries.begin(); it != entries.end();)
+  {
+    const auto age = now - it->last_write_time(ec);
+    if (!ec && age > kMaxAge)
+    {
+      std::filesystem::remove(it->path(), ec);
+      it = entries.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+
+  constexpr size_t kMaxFiles = 50;
+  if (entries.size() <= kMaxFiles)
   {
     return;
   }
-  const auto now = std::chrono::system_clock::now();
-  const auto t = std::chrono::system_clock::to_time_t(now);
-  std::tm tm{};
-#ifdef _WIN32
-  localtime_s(&tm, &t);
-#else
-  localtime_r(&t, &tm);
-#endif
-  out << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << ' ' << line << '\n';
+  std::sort(entries.begin(), entries.end(),
+            [](const std::filesystem::directory_entry &a,
+               const std::filesystem::directory_entry &b)
+            {
+              std::error_code local_ec;
+              return a.last_write_time(local_ec) < b.last_write_time(local_ec);
+            });
+  while (entries.size() > kMaxFiles)
+  {
+    std::filesystem::remove(entries.front().path(), ec);
+    entries.erase(entries.begin());
+  }
 }
 
-void LogCrashLine(const std::string &line)
+void FlushLogsHard()
 {
-  AppendLogLine(line);
-  std::cerr << line << std::endl;
-#if defined(__ANDROID__)
-  __android_log_print(ANDROID_LOG_ERROR, "Crash", "%s", line.c_str());
-#endif
+  if (LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    google::FlushLogFiles(google::GLOG_INFO);
+  }
 }
 
 #ifdef _WIN32
@@ -109,7 +182,7 @@ void ShowWindowsErrorDialog(const std::string &message)
   {
     return;
   }
-  const std::string logPath = LogFilePath().string();
+  const std::string logPath = LogsDirectory().string();
   std::ostringstream body;
   body << message << "\n\nDetails were written to:\n" << logPath;
   const std::wstring wide = Utf8ToWide(body.str());
@@ -139,7 +212,7 @@ void AppendSymbolizedFrame(HANDLE process, DWORD64 address, int frameIndex)
     line << " at " << lineInfo.FileName << ':' << lineInfo.LineNumber;
   }
 
-  LogCrashLine(line.str());
+  LOG(ERROR) << line.str();
 }
 
 void AppendStackTraceFromContext(const CONTEXT *context)
@@ -148,7 +221,7 @@ void AppendStackTraceFromContext(const CONTEXT *context)
   SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
   if (!SymInitialize(process, nullptr, TRUE))
   {
-    LogCrashLine("[Crash]   (failed to initialize symbol resolver)");
+    LOG(ERROR) << "[Crash]   (failed to initialize symbol resolver)";
     return;
   }
 
@@ -177,7 +250,7 @@ void AppendStackTraceFromContext(const CONTEXT *context)
   const DWORD machine = 0;
 #endif
 
-  LogCrashLine("[Crash] Stack trace:");
+  LOG(ERROR) << "[Crash] Stack trace:";
 
 #if defined(_M_X64) || defined(_M_IX86)
   for (int frameIndex = 0; frameIndex < 64; ++frameIndex)
@@ -195,7 +268,7 @@ void AppendStackTraceFromContext(const CONTEXT *context)
     AppendSymbolizedFrame(process, address, frameIndex);
   }
 #else
-  LogCrashLine("[Crash]   (stack walk unsupported on this architecture)");
+  LOG(ERROR) << "[Crash]   (stack walk unsupported on this architecture)";
 #endif
 
   SymCleanup(process);
@@ -208,7 +281,7 @@ void AppendStackTraceFromCapture()
       CaptureStackBackTrace(0, static_cast<DWORD>(std::size(frames)), frames, nullptr);
   if (count == 0)
   {
-    LogCrashLine("[Crash]   (empty stack capture)");
+    LOG(ERROR) << "[Crash]   (empty stack capture)";
     return;
   }
 
@@ -216,11 +289,11 @@ void AppendStackTraceFromCapture()
   SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
   if (!SymInitialize(process, nullptr, TRUE))
   {
-    LogCrashLine("[Crash]   (failed to initialize symbol resolver)");
+    LOG(ERROR) << "[Crash]   (failed to initialize symbol resolver)";
     return;
   }
 
-  LogCrashLine("[Crash] Stack trace:");
+  LOG(ERROR) << "[Crash] Stack trace:";
   for (USHORT frameIndex = 0; frameIndex < count; ++frameIndex)
   {
     AppendSymbolizedFrame(process,
@@ -230,7 +303,47 @@ void AppendStackTraceFromCapture()
   SymCleanup(process);
 }
 
-void LogNativeCrash(const char *kind, _EXCEPTION_POINTERS *info)
+void WriteMiniDump(_EXCEPTION_POINTERS *info)
+{
+  EnsureLogsDirectory();
+  const auto now = std::chrono::system_clock::now();
+  const auto t = std::chrono::system_clock::to_time_t(now);
+  std::tm tm{};
+  localtime_s(&tm, &t);
+  std::ostringstream name;
+  name << "cubatarium_crash_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << '_'
+       << GetCurrentProcessId() << ".dmp";
+  const auto dump_path = LogsDirectory() / name.str();
+  HANDLE file = CreateFileW(Utf8ToWide(dump_path.string()).c_str(), GENERIC_WRITE,
+                            0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+                            nullptr);
+  if (file == INVALID_HANDLE_VALUE)
+  {
+    LOG(ERROR) << "[Crash] Failed to create minidump file "
+               << dump_path.string();
+    return;
+  }
+
+  MINIDUMP_EXCEPTION_INFORMATION mei{};
+  mei.ThreadId = GetCurrentThreadId();
+  mei.ExceptionPointers = info;
+  mei.ClientPointers = FALSE;
+
+  const BOOL ok = MiniDumpWriteDump(
+      GetCurrentProcess(), GetCurrentProcessId(), file, MiniDumpWithDataSegs,
+      info ? &mei : nullptr, nullptr, nullptr);
+  CloseHandle(file);
+  if (ok)
+  {
+    LOG(ERROR) << "[Crash] Minidump written: " << dump_path.string();
+  }
+  else
+  {
+    LOG(ERROR) << "[Crash] MiniDumpWriteDump failed err=" << GetLastError();
+  }
+}
+
+void LogFatalWithStack(const char *kind, _EXCEPTION_POINTERS *info)
 {
   static LONG handling = 0;
   if (InterlockedExchange(&handling, 1) != 0)
@@ -238,8 +351,14 @@ void LogNativeCrash(const char *kind, _EXCEPTION_POINTERS *info)
     return;
   }
 
+  if (!LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    CubatariumInitLogging("Cubatarium", true);
+  }
+
   std::ostringstream header;
-  header << "[Crash] " << kind;
+  header << "[Crash] " << kind << " thread=" << GetCurrentThreadId()
+         << " job_kind=" << CubatariumGetWorkerJobKind();
   if (info && info->ExceptionRecord)
   {
     header << " (code 0x" << std::hex << info->ExceptionRecord->ExceptionCode
@@ -247,7 +366,7 @@ void LogNativeCrash(const char *kind, _EXCEPTION_POINTERS *info)
            << reinterpret_cast<uintptr_t>(info->ExceptionRecord->ExceptionAddress)
            << std::dec << ')';
   }
-  LogCrashLine(header.str());
+  LOG(ERROR) << header.str();
 
   if (info && info->ContextRecord)
   {
@@ -257,16 +376,18 @@ void LogNativeCrash(const char *kind, _EXCEPTION_POINTERS *info)
   {
     AppendStackTraceFromCapture();
   }
+  WriteMiniDump(info);
+  FlushLogsHard();
 }
 
 LONG WINAPI UnhandledExceptionFilter(_EXCEPTION_POINTERS *info)
 {
-  LogNativeCrash("Unhandled native exception", info);
+  LogFatalWithStack("Unhandled native exception", info);
   if (!SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
   {
     ShowWindowsErrorDialog(
         "Cubatarium stopped unexpectedly.\n"
-        "Update your GPU driver or run Cubatarium.exe --smoke-packs from Command Prompt.");
+        "See bin/logs/ for the crash log and minidump.");
   }
   return EXCEPTION_EXECUTE_HANDLER;
 }
@@ -279,12 +400,12 @@ void AppendStackTracePosix()
   const int count = backtrace(frames, static_cast<int>(std::size(frames)));
   if (count <= 0)
   {
-    LogCrashLine("[Crash]   (empty stack capture)");
+    LOG(ERROR) << "[Crash]   (empty stack capture)";
     return;
   }
 
   char **symbols = backtrace_symbols(frames, count);
-  LogCrashLine("[Crash] Stack trace:");
+  LOG(ERROR) << "[Crash] Stack trace:";
   for (int frameIndex = 0; frameIndex < count; ++frameIndex)
   {
     std::ostringstream line;
@@ -298,7 +419,7 @@ void AppendStackTracePosix()
       line << " 0x" << std::hex << reinterpret_cast<uintptr_t>(frames[frameIndex])
            << std::dec;
     }
-    LogCrashLine(line.str());
+    LOG(ERROR) << line.str();
   }
   std::free(symbols);
 }
@@ -312,37 +433,23 @@ void PosixSignalHandler(int sig, siginfo_t *info, void * /*ucontext*/)
   }
   handling = 1;
 
+  if (!LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    CubatariumInitLogging("Cubatarium", true);
+  }
+
   std::ostringstream header;
-  header << "[Crash] Signal " << sig;
+  header << "[Crash] Signal " << sig << " job_kind="
+         << CubatariumGetWorkerJobKind();
   if (info != nullptr)
   {
     header << " (address 0x" << std::hex
            << reinterpret_cast<uintptr_t>(info->si_addr) << std::dec << ')';
   }
-  LogCrashLine(header.str());
+  LOG(ERROR) << header.str();
   AppendStackTracePosix();
+  FlushLogsHard();
   _exit(128 + sig);
-}
-
-void PosixTerminateHandler()
-{
-  try
-  {
-    if (const auto reason = std::current_exception())
-    {
-      std::rethrow_exception(reason);
-    }
-  }
-  catch (const std::exception &e)
-  {
-    LogCrashLine(std::string("[Crash] std::terminate: ") + e.what());
-  }
-  catch (...)
-  {
-    LogCrashLine("[Crash] std::terminate: unknown exception");
-  }
-  AppendStackTracePosix();
-  std::abort();
 }
 
 void InstallPosixSignalHandlers()
@@ -363,7 +470,11 @@ void InstallPosixSignalHandlers()
 
 void TerminateHandler()
 {
-#if defined(_WIN32)
+  if (!LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    CubatariumInitLogging("Cubatarium", true);
+  }
+
   try
   {
     if (const auto reason = std::current_exception())
@@ -373,70 +484,61 @@ void TerminateHandler()
   }
   catch (const std::exception &e)
   {
-    LogCrashLine(std::string("[Crash] std::terminate: ") + e.what());
+    LOG(ERROR) << "[Crash] std::terminate: " << e.what()
+               << " job_kind=" << CubatariumGetWorkerJobKind();
   }
   catch (...)
   {
-    LogCrashLine("[Crash] std::terminate: unknown exception");
+    LOG(ERROR) << "[Crash] std::terminate: unknown exception job_kind="
+               << CubatariumGetWorkerJobKind();
   }
+
+#if defined(_WIN32)
   AppendStackTraceFromCapture();
+  WriteMiniDump(nullptr);
+  FlushLogsHard();
   std::abort();
 #elif !defined(__ANDROID__) && __has_include(<execinfo.h>)
-  PosixTerminateHandler();
-#elif defined(__ANDROID__)
-  try
-  {
-    if (const auto reason = std::current_exception())
-    {
-      std::rethrow_exception(reason);
-    }
-  }
-  catch (const std::exception &e)
-  {
-    LogCrashLine(std::string("[Crash] std::terminate: ") + e.what());
-  }
-  catch (...)
-  {
-    LogCrashLine("[Crash] std::terminate: unknown exception");
-  }
+  AppendStackTracePosix();
+  FlushLogsHard();
   std::abort();
 #else
+  FlushLogsHard();
   std::abort();
-#endif
-}
-
-void WriteLogLine(const char *tag, const std::string &msg, bool isError)
-{
-  std::ostringstream line;
-  line << '[' << tag << "]" << (isError ? " ERROR: " : " ") << msg;
-  const std::string text = line.str();
-
-#if defined(__ANDROID__)
-  if (isError)
-  {
-    __android_log_print(ANDROID_LOG_ERROR, tag, "%s", msg.c_str());
-  }
-  else
-  {
-    __android_log_print(ANDROID_LOG_INFO, tag, "%s", msg.c_str());
-  }
-#else
-  std::cerr << text << std::endl;
-#endif
-
-#ifdef _WIN32
-  if (isError)
-  {
-    AppendLogLine(text);
-    if (!SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
-    {
-      ShowWindowsErrorDialog(msg);
-    }
-  }
 #endif
 }
 
 } // namespace
+
+void CubatariumInitLogging(const char *argv0, bool also_log_to_stderr)
+{
+  bool expected = false;
+  if (!LoggingInitializedFlag().compare_exchange_strong(expected, true))
+  {
+    return;
+  }
+
+  EnsureLogsDirectory();
+  PruneOldLogs();
+
+  FLAGS_log_dir = LogsDirectory().string();
+  FLAGS_max_log_size = 32;
+  FLAGS_alsologtostderr = also_log_to_stderr;
+  FLAGS_logtostderr = false;
+  FLAGS_colorlogtostderr = also_log_to_stderr;
+  google::InitGoogleLogging(argv0 ? argv0 : "Cubatarium");
+  google::InstallFailureSignalHandler();
+  LOG(INFO) << "[Log] initialized dir=" << FLAGS_log_dir;
+}
+
+void CubatariumShutdownLogging()
+{
+  if (!LoggingInitializedFlag().exchange(false))
+  {
+    return;
+  }
+  google::ShutdownGoogleLogging();
+}
 
 void CubatariumInstallWindowsDiagnostics()
 {
@@ -485,13 +587,37 @@ void CubatariumAttachWindowsConsole()
 void CubatariumLogInfo(const char *tag, const std::string &msg)
 {
   std::lock_guard<std::mutex> lock(LogMutex());
-  WriteLogLine(tag, msg, false);
+  if (!LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    CubatariumInitLogging("Cubatarium", false);
+  }
+  LOG(INFO) << '[' << (tag ? tag : "?") << "] " << msg;
+#if defined(__ANDROID__)
+  __android_log_print(ANDROID_LOG_INFO, tag ? tag : "Cubatarium", "%s",
+                      msg.c_str());
+#endif
 }
 
 void CubatariumLogError(const char *tag, const std::string &msg)
 {
   std::lock_guard<std::mutex> lock(LogMutex());
-  WriteLogLine(tag, msg, true);
+  if (!LoggingInitializedFlag().load(std::memory_order_relaxed))
+  {
+    CubatariumInitLogging("Cubatarium", true);
+  }
+  LOG(ERROR) << '[' << (tag ? tag : "?") << "] ERROR: " << msg;
+#if defined(__ANDROID__)
+  __android_log_print(ANDROID_LOG_ERROR, tag ? tag : "Cubatarium", "%s",
+                      msg.c_str());
+#else
+  std::cerr << '[' << (tag ? tag : "?") << "] ERROR: " << msg << std::endl;
+#endif
+#ifdef _WIN32
+  if (!SuppressErrorDialogsFlag().load(std::memory_order_relaxed))
+  {
+    ShowWindowsErrorDialog(msg);
+  }
+#endif
 }
 
 void CubatariumSetSuppressErrorDialogs(bool suppress)

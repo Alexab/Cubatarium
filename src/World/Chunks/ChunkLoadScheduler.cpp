@@ -3,6 +3,7 @@
 #include "World/Core/BlockWorld.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include <algorithm>
+#include <thread>
 
 namespace cutum
 {
@@ -10,7 +11,8 @@ namespace cutum
 UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
     : Populator(populator), Tokens(tokens),
-      Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration))
+      Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration),
+           "ChunkGeneration")
 {
 }
 
@@ -95,6 +97,22 @@ void UChunkLoadScheduler::CancelAllPending(
   (void)Completed.DrainAll();
   (void)Pool.WaitIdleFor(worker_wait);
   (void)Completed.DrainAll();
+}
+
+bool UChunkLoadScheduler::WaitForWorkersIdle(
+    const std::chrono::milliseconds timeout)
+{
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (std::chrono::steady_clock::now() < deadline)
+  {
+    (void)Completed.DrainAll();
+    if (Pool.GetActiveJobCount() == 0 && Queue.empty())
+    {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  return Pool.GetActiveJobCount() == 0 && Queue.empty();
 }
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
@@ -212,6 +230,16 @@ ChunkLoadState UChunkLoadScheduler::GetState(glm::ivec3 coord) const
     return ChunkLoadState::Absent;
   }
   return it->second;
+}
+
+int UChunkLoadScheduler::GetPendingQueueCount() const
+{
+  return static_cast<int>(Queue.size());
+}
+
+int UChunkLoadScheduler::GetGenInFlightCount() const
+{
+  return static_cast<int>(Pool.GetActiveJobCount());
 }
 
 } // namespace cutum

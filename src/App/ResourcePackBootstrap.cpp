@@ -1,12 +1,14 @@
 #include "App/ResourcePackBootstrap.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <unordered_set>
 
 #include <glm/glm.hpp>
 
 #include "App/Core.h"
+#include "App/Platform/Log.h"
 #include "App/ResourcePackSelectionUtil.h"
 #include "Core/ColorUtil.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -16,6 +18,7 @@
 #include "ResourcePacks/CreaturePackMerge.h"
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "World/Core/World.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 
 namespace cutum
@@ -109,7 +112,10 @@ void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
   }
   if (core.WorldInstance)
   {
-    core.WorldInstance->WaitForPendingMeshJobs();
+    // Timed wait — infinite WaitIdle deadlocks Create when a mesh worker is
+    // stuck or cancelled in-flight without completing.
+    (void)core.WorldInstance->GetMeshService().WaitForAsyncMeshIdleFor(
+        std::chrono::milliseconds(2000));
   }
   core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
       *core.BlockDefinitionsInstance);
@@ -137,7 +143,8 @@ void UResourcePackBootstrap::PatchRuntimeBlockTextures(
   }
   if (core.WorldInstance)
   {
-    core.WorldInstance->WaitForPendingMeshJobs();
+    (void)core.WorldInstance->GetMeshService().WaitForAsyncMeshIdleFor(
+        std::chrono::milliseconds(2000));
   }
   core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
       *core.BlockDefinitionsInstance);
@@ -261,12 +268,14 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
 {
   if (!core.BlockMergeRegistryInstance)
   {
+    CubatariumLogError("Packs", "ApplyResourcePacks: no BlockMergeRegistry");
     return false;
   }
   ResourcePackSelection selection =
       NormalizeResourcePackSelection(core, *this, selectionIn);
   if (selection.Primary.empty())
   {
+    CubatariumLogError("Packs", "ApplyResourcePacks: no packs available");
     std::cerr << "UCore::ApplyResourcePacks: no packs available" << std::endl;
     return false;
   }
@@ -275,6 +284,11 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
   const auto packs = resolver.Resolve(selection, core.WorkDir, core.ExeDir);
   if (packs.empty())
   {
+    CubatariumLogError(
+        "Packs",
+        "ApplyResourcePacks: no packs resolved workDir=" + core.WorkDir.string() +
+            " exeDir=" + core.ExeDir.string() + " primary0=" +
+            (selection.Primary.empty() ? std::string{} : selection.Primary.front()));
     std::cerr << "UCore::ApplyResourcePacks: no packs resolved" << std::endl;
     return false;
   }
@@ -293,6 +307,40 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
   core.ActivePackSelection = selection;
   core.ActiveResourcePacksEnabled = selection.AllIds();
 
+  {
+    const BlockId bark =
+        core.BlockMergeRegistryInstance->LookupBlockName("tree_bark");
+    CubatariumLogInfo(
+        "Packs",
+        "after Rebuild descriptors=" +
+            std::to_string(
+                core.BlockMergeRegistryInstance->GetCubeDescriptors().size()) +
+            " tree_bark_id=" + std::to_string(bark) +
+            " objectsPath=" + core.ObjectsPath.string());
+  }
+
+  // Refresh registry maps from the rebuilt merge catalog before loading
+  // prefabs — otherwise GetPackBlockIdByTypeName can miss names if the
+  // world registry was never rebound after MergeRegistry::Rebuild.
+  if (core.WorldInstance)
+  {
+    core.WorldInstance->SetBlockMergeRegistry(core.BlockMergeRegistryInstance);
+    if (core.BlockDefinitionsInstance)
+    {
+      core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
+          *core.BlockDefinitionsInstance);
+      core.WorldInstance->GetBlockRegistry().SetDefinitions(
+          core.BlockDefinitionsInstance);
+    }
+    core.WorldInstance->GetBlockRegistry().Reload();
+    const BlockId bark_via_registry =
+        core.WorldInstance->GetBlockRegistry().GetPackBlockIdByTypeName(
+            "tree_bark");
+    CubatariumLogInfo("Packs",
+                      "registry tree_bark_id=" +
+                          std::to_string(bark_via_registry));
+  }
+
   if (core.ObjectLibraryInstance && core.WorldInstance)
   {
     core.ObjectLibraryInstance->LoadMerged(
@@ -301,6 +349,11 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
         core.WorldInstance->GetBlockRegistry());
     if (!core.ObjectLibraryInstance->ValidateCriticalPrefabs())
     {
+      CubatariumLogError(
+          "Packs",
+          "ApplyResourcePacks: decoration prefabs failed validation objectsPath=" +
+              core.ObjectsPath.string() + " loadedObjects=" +
+              std::to_string(core.ObjectLibraryInstance->ListNames().size()));
       std::cerr << "ApplyResourcePacks: decoration prefabs failed validation"
                 << std::endl;
       return false;
@@ -333,6 +386,7 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
 
   if (!ValidateMergedCatalog(*core.BlockMergeRegistryInstance, selection))
   {
+    CubatariumLogError("Packs", "ApplyResourcePacks: ValidateMergedCatalog failed");
     return false;
   }
 

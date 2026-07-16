@@ -44,12 +44,16 @@ public:
   void Cancel(glm::ivec3 coord);
   void CancelAllPending(std::chrono::milliseconds worker_wait =
                             std::chrono::milliseconds(2000));
+  bool WaitForWorkersIdle(std::chrono::milliseconds timeout =
+                               std::chrono::milliseconds(10000));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4);
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;
+  int GetPendingQueueCount() const;
+  int GetGenInFlightCount() const;
 
 private:
   struct PendingRequest

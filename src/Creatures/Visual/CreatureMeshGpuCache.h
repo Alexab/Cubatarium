@@ -4,6 +4,7 @@
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <cstddef>
+#include <mutex>
 #include <unordered_map>
 
 typedef unsigned int GLuint;
@@ -40,6 +41,7 @@ private:
 
   std::unordered_map<size_t, SkeletalMeshGpuBuffers> SkeletalCache;
   std::unordered_map<size_t, GltfSkinnedMeshGpuBuffers> GltfSkinnedCache;
+  std::mutex CacheMutex;
 };
 
 } // namespace cutum

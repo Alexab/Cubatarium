@@ -1466,7 +1466,11 @@ void UWorld::PrepareForShutdown()
   }
   if (!BackgroundQuiesceFinished)
   {
-    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+    QuiesceBackgroundWork(std::chrono::milliseconds(10000));
+  }
+  if (Streaming)
+  {
+    Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
   }
   if (MeshService)
   {
@@ -1476,10 +1480,18 @@ void UWorld::PrepareForShutdown()
 
 void UWorld::RefreshBlockRegistry()
 {
+  // Drain in-flight mesh/relight readers before swapping catalogs. Do not call
+  // QuiesceBackgroundWork here: it permanently disables the streamer and sets
+  // BackgroundQuiesceFinished, which breaks create/load cooperative paths.
+  CancelAsyncRelightWork();
   if (MeshService)
   {
     MeshService->CancelAsyncInFlightKeepDirty();
     (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(1000));
+  }
+  if (Streaming)
+  {
+    Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
   }
   if (BlockRegistry)
   {

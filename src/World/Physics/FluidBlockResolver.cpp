@@ -168,7 +168,12 @@ bool CellHasActiveFluid(const UBlockWorld &blockWorld,
 
 BlockId ResolveWaterBlockIdImpl(const UBlockDefinitionStorage &definitions)
 {
-  for (const auto &entry : definitions.GetAll())
+  const auto catalog = definitions.GetCatalogSnapshot();
+  if (!catalog)
+  {
+    return BLOCK_AIR;
+  }
+  for (const auto &entry : catalog->ById)
   {
     if (IsWaterKind(definitions, entry.first))
     {
@@ -186,7 +191,13 @@ BlockId BlockIdFromFluidKindImpl(const UBlockDefinitionStorage &definitions,
   case FluidKind::Water:
     return ResolveWaterBlockIdImpl(definitions);
   case FluidKind::Lava:
-    for (const auto &entry : definitions.GetAll())
+  {
+    const auto catalog = definitions.GetCatalogSnapshot();
+    if (!catalog)
+    {
+      return BLOCK_AIR;
+    }
+    for (const auto &entry : catalog->ById)
     {
       if (IsLiquidId(definitions, entry.first) &&
           !IsWaterKind(definitions, entry.first))
@@ -195,6 +206,7 @@ BlockId BlockIdFromFluidKindImpl(const UBlockDefinitionStorage &definitions,
       }
     }
     return BLOCK_AIR;
+  }
   default:
     return BLOCK_AIR;
   }

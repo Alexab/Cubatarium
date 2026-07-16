@@ -284,10 +284,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
     Streamer->SetEnabled(false);
   }
   DeferredPhysicsSeedQueue.clear();
-  if (ChunkScheduler)
-  {
-    ChunkScheduler->CancelAllPending(async_io_timeout);
-  }
+  PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
     world.Persistence->ClearPendingRelights();
@@ -300,6 +297,17 @@ void UWorldStreaming::QuiesceBackgroundWork(
     }
     (void)world.Persistence->AbortAsyncChunkIoFor(async_io_timeout);
   }
+}
+
+void UWorldStreaming::PauseChunkGeneration(
+    const std::chrono::milliseconds worker_wait)
+{
+  if (!ChunkScheduler)
+  {
+    return;
+  }
+  ChunkScheduler->CancelAllPending(worker_wait);
+  (void)ChunkScheduler->WaitForWorkersIdle(worker_wait);
 }
 
 void UWorldStreaming::ResumeStreamerAfterQuiesce()

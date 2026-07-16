@@ -598,6 +598,14 @@ public:
     double flatRebuildMs{0.0};
     double countNonAirMs{0.0};
     int asyncMeshInFlight{0};
+    int genQueuePending{0};
+    int genInFlight{0};
+    double populateMsLast{0.0};
+    double populateMsEma{0.0};
+    double populateSampleMs{0.0};
+    double populateTerrainMs{0.0};
+    double populateCarveMs{0.0};
+    double populatePostMs{0.0};
     bool asyncMeshingEnabled{true};
     int greedyCacheEntries{0};
     int framesSinceLoad{0};

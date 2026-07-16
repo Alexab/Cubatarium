@@ -16,16 +16,22 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include "App/Platform/Log.h"
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 namespace cutum
 {
 
 namespace
 {
+
+std::mutex gPopulateDiagMutex;
+ChunkPopulateTiming gLastPopulateTiming;
 
 bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
                          const CaveParams &params)
@@ -116,7 +122,26 @@ EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
   return state.pipeline.get();
 }
 
+double ElapsedMs(std::chrono::steady_clock::time_point start)
+{
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now() - start)
+      .count();
+}
+
 } // namespace
+
+void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing)
+{
+  std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
+  gLastPopulateTiming = timing;
+}
+
+ChunkPopulateTiming ChunkPopulateDiagnostics::GetLast()
+{
+  std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
+  return gLastPopulateTiming;
+}
 
 UPipelineChunkPopulator::UPipelineChunkPopulator(
     UBlockRegistry &registry, UObjectLibrary *prefabs,
@@ -129,6 +154,9 @@ UPipelineChunkPopulator::UPipelineChunkPopulator(
 ChunkPopulateResult
 UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 {
+  const auto populate_start = std::chrono::steady_clock::now();
+  ChunkPopulateTiming timing{};
+
   ChunkPopulateResult result;
   result.coord = request.chunkCoord;
   result.token = request.token;
@@ -188,6 +216,11 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
               return da < db;
             });
 
+  std::array<std::array<ColumnSampleContext, CHUNK_SIZE>, CHUNK_SIZE> samples{};
+  std::array<std::array<bool, CHUNK_SIZE>, CHUNK_SIZE> sample_valid{};
+
+  auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
+  const auto terrain_start = std::chrono::steady_clock::now();
   for (size_t i = 0; i < column_count; ++i)
   {
     if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
@@ -198,7 +231,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     const int lz = columns[i].second;
     const int world_x = base_x + lx;
     const int world_z = base_z + lz;
-    if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
+    if (composable)
     {
       UBlockWorldColumnWriter writer(genWorld, Registry);
       const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
@@ -210,8 +243,9 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       }
       else
       {
-        UColumnGenerationService::GenerateColumnTerrainOnly(*composable, writer,
-                                                            world_x, world_z);
+        samples[lz][lx] = UColumnGenerationService::GenerateColumnTerrainOnly(
+            *composable, writer, world_x, world_z);
+        sample_valid[lz][lx] = true;
       }
     }
     else
@@ -219,8 +253,11 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       pipeline->GenerateColumn(world_x, world_z);
     }
   }
+  timing.terrainMs = ElapsedMs(terrain_start);
+  // Terrain includes BuildColumnSample; expose as sample+terrain together for HUD.
+  timing.sampleMs = timing.terrainMs;
 
-  if (auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline))
+  if (composable)
   {
     const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
     if (terrain_mode != ComposableTerrainMode::Flat &&
@@ -228,8 +265,20 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     {
       WorldGenContext &ctx = composable->GetContext();
       const RavineSurfaceYCallback get_surface_y =
-          [composable](int hx, int hz) { return composable->SurfaceYAt(hx, hz); };
+          [composable, base_x, base_z, &samples,
+           &sample_valid](int hx, int hz)
+          {
+            const int lx = hx - base_x;
+            const int lz = hz - base_z;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE &&
+                sample_valid[lz][lx])
+            {
+              return samples[lz][lx].SurfaceY;
+            }
+            return composable->SurfaceYAt(hx, hz);
+          };
 
+      const auto carve_start = std::chrono::steady_clock::now();
       if (settings.Tuning.useAnalyticValleys)
       {
         ValleyParams valley_params;
@@ -252,11 +301,13 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
         CarveChunkRavines(ctx, base_x, base_z, settings.Seed, settings.Ravines,
                           settings.SeaLevel, get_surface_y);
       }
+      timing.carveMs = ElapsedMs(carve_start);
 
       const uint32_t skip_chunk_stages =
           WorldGenStageSkipBit(WorldGenStageId::Valleys) |
           WorldGenStageSkipBit(WorldGenStageId::Ravines);
 
+      const auto post_start = std::chrono::steady_clock::now();
       for (size_t i = 0; i < column_count; ++i)
       {
         if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
@@ -267,12 +318,19 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
         const int lz = columns[i].second;
         const int world_x = base_x + lx;
         const int world_z = base_z + lz;
+        if (!sample_valid[lz][lx])
+        {
+          continue;
+        }
         UBlockWorldColumnWriter writer(genWorld, Registry);
         UColumnGenerationService::GenerateColumnPostTerrain(
-            *composable, writer, world_x, world_z, skip_chunk_stages);
+            *composable, writer, world_x, world_z, skip_chunk_stages,
+            samples[lz][lx]);
       }
+      timing.postMs = ElapsedMs(post_start);
     }
 
+    const auto seal_start = std::chrono::steady_clock::now();
     if (settings.Tuning.useMudflowErosion)
     {
       ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
@@ -287,6 +345,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       }
     }
     PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
+    timing.sealMs = ElapsedMs(seal_start);
   }
 
   genWorld.ForEachBlock(
@@ -300,6 +359,33 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
           result.buffer.SetFluidPacked(pos, packed);
         }
       });
+
+  timing.totalMs = ElapsedMs(populate_start);
+  ChunkPopulateDiagnostics::Record(timing);
+
+  static thread_local double s_last_log_ms = 0.0;
+  static thread_local auto s_last_log_tp = std::chrono::steady_clock::now();
+  const auto now = std::chrono::steady_clock::now();
+  const double since_log =
+      std::chrono::duration<double, std::milli>(now - s_last_log_tp).count();
+  if (timing.totalMs >= 40.0 || since_log >= 5000.0)
+  {
+    CubatariumLogInfo(
+        "ChunkPopulate",
+        "chunk=(" + std::to_string(request.chunkCoord.x) + "," +
+            std::to_string(request.chunkCoord.y) + "," +
+            std::to_string(request.chunkCoord.z) + ") total_ms=" +
+            std::to_string(timing.totalMs) +
+            " sample_ms=" + std::to_string(timing.sampleMs) +
+            " terrain_ms=" + std::to_string(timing.terrainMs) +
+            " carve_ms=" + std::to_string(timing.carveMs) +
+            " post_ms=" + std::to_string(timing.postMs) +
+            " seal_ms=" + std::to_string(timing.sealMs));
+    s_last_log_tp = now;
+    s_last_log_ms = timing.totalMs;
+  }
+  (void)s_last_log_ms;
+
   return result;
 }
 

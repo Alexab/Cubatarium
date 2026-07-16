@@ -1,4 +1,5 @@
 #include "Blocks/BlockDefinitionStorage.h"
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,18 +15,22 @@ using json = nlohmann::json;
 std::shared_ptr<const BlockDefinitionCatalog>
 UBlockDefinitionStorage::GetCatalogSnapshot() const
 {
-  return Active;
+  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
 }
 
 const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 {
-  const auto catalog = Active;
-  if (!catalog)
+  // Keep the RCU snapshot alive for this thread until the next Get* call so
+  // returned pointers remain valid for synchronous reads (same pattern as
+  // UObjectLibrary::Get).
+  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  keep = GetCatalogSnapshot();
+  if (!keep)
   {
     return nullptr;
   }
-  const auto it = catalog->ById.find(Id);
-  if (it != catalog->ById.end())
+  const auto it = keep->ById.find(Id);
+  if (it != keep->ById.end())
   {
     return &it->second;
   }
@@ -35,29 +40,23 @@ const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 const BlockDefinition *
 UBlockDefinitionStorage::GetByName(const std::string &Name) const
 {
-  const auto catalog = Active;
-  if (!catalog)
+  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  keep = GetCatalogSnapshot();
+  if (!keep)
   {
     return nullptr;
   }
-  const auto it = catalog->NameToId.find(Name);
-  if (it == catalog->NameToId.end())
+  const auto it = keep->NameToId.find(Name);
+  if (it == keep->NameToId.end())
   {
     return nullptr;
   }
-  return GetById(it->second);
-}
-
-const std::unordered_map<BlockId, BlockDefinition> &
-UBlockDefinitionStorage::GetAll() const
-{
-  const auto catalog = Active;
-  static const std::unordered_map<BlockId, BlockDefinition> empty;
-  if (!catalog)
+  const auto byId = keep->ById.find(it->second);
+  if (byId == keep->ById.end())
   {
-    return empty;
+    return nullptr;
   }
-  return catalog->ById;
+  return &byId->second;
 }
 
 void UBlockDefinitionStorage::Load(const std::string &modelsPath)
@@ -136,7 +135,9 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
   {
     std::cerr << "UBlockDefinitionStorage::Load: " << ex.what() << std::endl;
   }
-  Active = std::move(catalog);
+  std::atomic_store_explicit(&Active, std::shared_ptr<const BlockDefinitionCatalog>(
+                                          std::move(catalog)),
+                              std::memory_order_release);
 }
 
 void UBlockDefinitionStorage::ReplaceAll(
@@ -146,7 +147,9 @@ void UBlockDefinitionStorage::ReplaceAll(
   auto catalog = std::make_shared<BlockDefinitionCatalog>();
   catalog->ById = std::move(newById);
   catalog->NameToId = std::move(newNameToId);
-  Active = std::move(catalog);
+  std::atomic_store_explicit(&Active, std::shared_ptr<const BlockDefinitionCatalog>(
+                                          std::move(catalog)),
+                              std::memory_order_release);
 }
 
 } // namespace cutum

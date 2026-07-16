@@ -358,8 +358,11 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       PendingAsyncColumnLoadState &state = pending_it->second;
       const ChunkDiskFormat disk_format =
           ChunkStorage->DetectFormatOnDisk(WorldFolderPath, load.coord);
-      const bool token_valid =
-          load.token.IsValidFor(load.coord, load.token.sequence);
+      const uint64_t current_sequence =
+          world.Streaming
+              ? world.Streaming->GetChunkGenTokens().Current(ground).sequence
+              : load.token.sequence;
+      const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
       if (load.success && token_valid && world.BlockRegistry)
       {

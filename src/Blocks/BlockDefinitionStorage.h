@@ -21,14 +21,15 @@ public:
   void ReplaceAll(std::unordered_map<BlockId, BlockDefinition> byId,
                   std::unordered_map<std::string, BlockId> nameToId);
 
+  /// Thread-safe RCU snapshot; keep the shared_ptr while reading entries.
   std::shared_ptr<const BlockDefinitionCatalog> GetCatalogSnapshot() const;
 
   const BlockDefinition *GetById(BlockId Id) const;
   const BlockDefinition *GetByName(const std::string &Name) const;
-  const std::unordered_map<BlockId, BlockDefinition> &GetAll() const;
 
 private:
-  std::shared_ptr<const BlockDefinitionCatalog> Active{
+  // Published via atomic_load/store for cross-thread readers.
+  mutable std::shared_ptr<const BlockDefinitionCatalog> Active{
       std::make_shared<BlockDefinitionCatalog>()};
 };
 

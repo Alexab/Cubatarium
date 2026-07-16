@@ -25,6 +25,22 @@ struct ChunkPopulateRequest
   std::function<bool()> shouldCancel;
 };
 
+struct ChunkPopulateTiming
+{
+  double totalMs{0.0};
+  double sampleMs{0.0};
+  double terrainMs{0.0};
+  double carveMs{0.0};
+  double postMs{0.0};
+  double sealMs{0.0};
+};
+
+struct ChunkPopulateDiagnostics
+{
+  static void Record(const ChunkPopulateTiming &timing);
+  static ChunkPopulateTiming GetLast();
+};
+
 struct ChunkPopulateResult
 {
   glm::ivec3 coord;

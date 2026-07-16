@@ -17,7 +17,11 @@
 
 **MarkBlockChunkDirty contract (TD-AUD-013):** when `BlockRegistry != nullptr` (normal gameplay), block edits call `MeshCache.RebuildChunkImmediate` on the chunk + neighbors; during headless load before registry init, `MarkDirty` defers rebuild to the frame budget / async mesh path.
 
-**In-game validation (async mesh):** with `ui.show_performance: true`, fly through loaded terrain; toggle `render.async_meshing` in `config.json` and compare `mesh_rebuild_ms` / hitch lines in HUD. Export `movement_diagnostics.v2` before/after — each sample includes `async_meshing_enabled` for bisect correlation.
+**In-game validation (async mesh):** with `ui.show_performance: true`, fly through loaded terrain; toggle `render.async_meshing` in `config.json` and compare `mesh_rebuild_ms` / hitch lines in HUD. Export `movement_diagnostics.v2` before/after — each sample includes `async_meshing_enabled` for bisect correlation. HUD labels: `MeshAsync` (mesh in-flight) vs `GenQ` (pending/in-flight chunk generation).
+
+**Threading audit:** see [`docs/THREADING_AUDIT.md`](THREADING_AUDIT.md) for the inventory of worker pools, cross-thread artifacts, and pattern verdicts.
+
+**Crash / logs:** run output lives under `bin/logs/` (glog per-run files + `.dmp` minidumps). See that folder after AV / terminate.
 
 **Cross vegetation (TD-CS-014):** cross blocks store per-chunk centers in `ChunkMeshCache`; flat merge builds `CrossInstanceBatch[]`; `GeometryEngine` draws via `UCrossGpuBackend` (one `glDrawElementsInstanced` per block type).
 

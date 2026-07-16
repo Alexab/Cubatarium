@@ -1,11 +1,14 @@
 #include "Core/Jobs/JobThreadPool.h"
+#include "App/Platform/Log.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include <thread>
 
 namespace cutum
 {
 
-UJobThreadPool::UJobThreadPool(std::size_t threadCount)
+UJobThreadPool::UJobThreadPool(std::size_t threadCount,
+                               const char *worker_job_kind)
+    : WorkerJobKind(worker_job_kind ? worker_job_kind : "Worker")
 {
   if (threadCount == 0)
   {
@@ -62,8 +65,21 @@ void UJobThreadPool::CancelPendingJobs()
   Jobs.clear();
 }
 
+std::size_t UJobThreadPool::GetPendingJobCount() const
+{
+  std::lock_guard<std::mutex> lock(QueueMutex);
+  return Jobs.size();
+}
+
+std::size_t UJobThreadPool::GetActiveJobCount() const
+{
+  std::lock_guard<std::mutex> lock(QueueMutex);
+  return ActiveJobs;
+}
+
 void UJobThreadPool::WorkerLoop()
 {
+  CubatariumSetWorkerJobKind(WorkerJobKind.c_str());
   for (;;)
   {
     std::function<void()> job;

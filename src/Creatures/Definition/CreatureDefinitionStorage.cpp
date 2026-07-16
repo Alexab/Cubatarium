@@ -50,7 +50,10 @@ CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
 
 void UCreatureDefinitionStorage::Load(const std::string &folder)
 {
-  Definitions.clear();
+  {
+    std::unique_lock lock(DefinitionsMutex);
+    Definitions.clear();
+  }
   if (!std::filesystem::exists(folder))
   {
     return;
@@ -67,7 +70,7 @@ void UCreatureDefinitionStorage::Load(const std::string &folder)
       LoadFile(jsonPath.string());
     }
   }
-  std::cout << "UCreatureDefinitionStorage: loaded " << Definitions.size()
+  std::cout << "UCreatureDefinitionStorage: loaded " << Count()
             << " definitions" << std::endl;
 }
 
@@ -99,6 +102,7 @@ void UCreatureDefinitionStorage::LoadOverlay(const std::string &folder)
 
 bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
 {
+  CreatureDefinition def;
   try
   {
     std::ifstream file(path);
@@ -108,7 +112,6 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     }
     nlohmann::json data;
     file >> data;
-    CreatureDefinition def;
     def.Id = data.value("id", "");
     if (def.Id.empty())
     {
@@ -409,7 +412,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
                   << std::endl;
       }
     }
-    Definitions[def.Id] = def;
+    std::unique_lock lock(DefinitionsMutex);
+    Definitions[def.Id] = std::move(def);
     return true;
   }
   catch (const std::exception &e)
@@ -423,6 +427,7 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
 const CreatureDefinition *
 UCreatureDefinitionStorage::Get(const std::string &Id) const
 {
+  std::shared_lock lock(DefinitionsMutex);
   const auto it = Definitions.find(Id);
   if (it == Definitions.end())
   {
@@ -431,8 +436,15 @@ UCreatureDefinitionStorage::Get(const std::string &Id) const
   return &it->second;
 }
 
+size_t UCreatureDefinitionStorage::Count() const
+{
+  std::shared_lock lock(DefinitionsMutex);
+  return Definitions.size();
+}
+
 std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
 {
+  std::shared_lock lock(DefinitionsMutex);
   std::vector<std::string> ids;
   ids.reserve(Definitions.size());
   for (const auto &[Id, def] : Definitions)
@@ -440,17 +452,19 @@ std::vector<std::string> UCreatureDefinitionStorage::ListAllIds() const
     (void)def;
     ids.push_back(Id);
   }
-  SortDefinitionIdsByCatalogOrder(ids,
-                                  [this](const std::string &id) -> int
-                                  {
-                                    const auto *def = Get(id);
-                                    return def ? def->catalog.sortOrder : 0;
-                                  });
+  SortDefinitionIdsByCatalogOrder(
+      ids,
+      [&defs = Definitions](const std::string &id) -> int
+      {
+        const auto it = defs.find(id);
+        return it != defs.end() ? it->second.catalog.sortOrder : 0;
+      });
   return ids;
 }
 
 std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
 {
+  std::shared_lock lock(DefinitionsMutex);
   std::vector<std::string> ids;
   for (const auto &[Id, def] : Definitions)
   {
@@ -459,17 +473,19 @@ std::vector<std::string> UCreatureDefinitionStorage::ListSpawnable() const
       ids.push_back(Id);
     }
   }
-  SortDefinitionIdsByCatalogOrder(ids,
-                                  [this](const std::string &id) -> int
-                                  {
-                                    const auto *def = Get(id);
-                                    return def ? def->catalog.sortOrder : 0;
-                                  });
+  SortDefinitionIdsByCatalogOrder(
+      ids,
+      [&defs = Definitions](const std::string &id) -> int
+      {
+        const auto it = defs.find(id);
+        return it != defs.end() ? it->second.catalog.sortOrder : 0;
+      });
   return ids;
 }
 
 std::string UCreatureDefinitionStorage::GetControlledDefaultSpeciesId() const
 {
+  std::shared_lock lock(DefinitionsMutex);
   for (const auto &[Id, def] : Definitions)
   {
     if (def.role == CreatureRole::ControlledDefault)

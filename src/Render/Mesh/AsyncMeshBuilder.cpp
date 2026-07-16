@@ -22,7 +22,7 @@ std::size_t ResolveMeshWorkerCount(std::size_t thread_count)
 } // namespace
 
 UAsyncMeshBuilder::UAsyncMeshBuilder(std::size_t thread_count)
-    : Pool(ResolveMeshWorkerCount(thread_count)),
+    : Pool(ResolveMeshWorkerCount(thread_count), "MeshBuild"),
       WorkerCount(static_cast<int>(ResolveMeshWorkerCount(thread_count)))
 {
 }

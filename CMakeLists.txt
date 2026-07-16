@@ -4,16 +4,36 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-# Static CRT (/MT) and vcpkg libs for MSVC Windows. Runtime output goes to bin/.
+# Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
+# only for MSVC / clang-cl — GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg manifest mode" FORCE)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        CACHE STRING "MSVC runtime library (/MT)" FORCE)
 endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
+
+# MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
+set(CUBATARIUM_MSVC_DESKTOP FALSE)
+if(WIN32)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set(CUBATARIUM_MSVC_DESKTOP TRUE)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+           AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(CUBATARIUM_MSVC_DESKTOP TRUE)
+    endif()
+endif()
+if(CUBATARIUM_MSVC_DESKTOP)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CACHE STRING "MSVC runtime library (/MT)" FORCE)
+    include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
+elseif(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    # clang++ on Windows with x64-windows-static vcpkg deps must use /MT too.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CACHE STRING "MSVC runtime library (/MT for static vcpkg)" FORCE)
+endif()
 
 option(CUBATARIUM_ENABLE_TSAN "Build with ThreadSanitizer (Linux Clang/GCC)" OFF)
 if(CUBATARIUM_ENABLE_TSAN)
@@ -23,10 +43,6 @@ if(CUBATARIUM_ENABLE_TSAN)
     else()
         message(WARNING "CUBATARIUM_ENABLE_TSAN is only supported on Linux with Clang/GCC")
     endif()
-endif()
-
-if(WIN32)
-    include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
 endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
@@ -63,6 +79,12 @@ if(NOT ANDROID)
     find_package(GLEW REQUIRED)
     find_package(Freetype REQUIRED)
     find_package(nlohmann_json REQUIRED)
+    find_package(glog CONFIG REQUIRED)
+    # vcpkg glog exports /Zc:__cplusplus for MSVC ABI; clang++ (GNU driver) rejects it.
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+        set_target_properties(glog::glog PROPERTIES INTERFACE_COMPILE_OPTIONS "")
+    endif()
 endif()
 
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image.h")
@@ -393,6 +415,7 @@ set(SOURCES
     src/App/Platform/DesktopPlatformWindow.cpp
     src/App/Platform/IUPlatformPaths.cpp
     src/App/Platform/Log.cpp
+    src/App/Platform/WorkerJobKind.cpp
 )
 
 set(HEADERS
@@ -1161,6 +1184,7 @@ target_link_libraries(fluid_placement_liquid_decor_test glm::glm nlohmann_json::
 add_executable(decor_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
@@ -1601,7 +1625,9 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Features/ObjectFeaturePlacer.cpp
     src/WorldGen/Features/BuiltinWorldGenFeatures.cpp
     src/WorldGen/Core/PipelineChunkPopulator.cpp
-    src/WorldGen/Core/ProceduralWorldGenFactory.cpp)
+    src/WorldGen/Core/ProceduralWorldGenFactory.cpp
+    src/App/Platform/Log.cpp
+    src/App/Platform/WorkerJobKind.cpp)
 
 add_executable(fluid_worldgen_chunk_test
     ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
@@ -1610,7 +1636,10 @@ target_include_directories(fluid_worldgen_chunk_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(fluid_worldgen_chunk_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+if(WIN32)
+  target_link_libraries(fluid_worldgen_chunk_test dbghelp)
+endif()
 
 add_executable(worldgen_vegetation_placement_integration_test
     ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
@@ -1619,7 +1648,10 @@ target_include_directories(worldgen_vegetation_placement_integration_test PRIVAT
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_vegetation_placement_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+if(WIN32)
+  target_link_libraries(worldgen_vegetation_placement_integration_test dbghelp)
+endif()
 
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
@@ -1724,7 +1756,9 @@ if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
-if(MSVC)
+if(CUBATARIUM_MSVC_DESKTOP
+   OR (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"))
     set_property(TARGET ${PROJECT_NAME} PROPERTY
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
@@ -1741,6 +1775,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GLEW::GLEW
     Freetype::Freetype
     nlohmann_json::nlohmann_json
+    glog::glog
 )
 
 if(WIN32)

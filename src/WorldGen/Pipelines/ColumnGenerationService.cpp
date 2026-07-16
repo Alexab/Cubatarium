@@ -51,14 +51,15 @@ void UColumnGenerationService::GenerateColumn(
   ctx.FlushColumnDirty();
 }
 
-void UColumnGenerationService::GenerateColumnTerrainOnly(
+ColumnSampleContext UColumnGenerationService::GenerateColumnTerrainOnly(
     UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
     int world_z)
 {
+  ColumnSampleContext sample{};
   WorldGenContext &ctx = generator.GetContext();
   if (&writer.GetBlockWorld() != &ctx.World || &writer.GetRegistry() != &ctx.Registry)
   {
-    return;
+    return sample;
   }
   const ComposableWorldGenConfig &config = generator.GetConfig();
   ctx.ResetColumnDirty(world_x, world_z);
@@ -66,24 +67,24 @@ void UColumnGenerationService::GenerateColumnTerrainOnly(
   {
     FillFlatColumn(ctx, world_x, world_z);
     ctx.FlushColumnDirty();
-    return;
+    return sample;
   }
   if (config.TerrainMode == ComposableTerrainMode::LegacyHash)
   {
     FillLegacyHashColumn(ctx, world_x, world_z);
     ctx.FlushColumnDirty();
-    return;
+    return sample;
   }
 
-  const ColumnSampleContext sample =
-      generator.BuildColumnSample(world_x, world_z);
+  sample = generator.BuildColumnSample(world_x, world_z);
   RunTerrainStage(generator, sample, world_x, world_z);
   ctx.FlushColumnDirty();
+  return sample;
 }
 
 void UColumnGenerationService::GenerateColumnPostTerrain(
     UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
-    int world_z, uint32_t skip_stage_mask)
+    int world_z, uint32_t skip_stage_mask, const ColumnSampleContext &sample)
 {
   WorldGenContext &ctx = generator.GetContext();
   if (&writer.GetBlockWorld() != &ctx.World || &writer.GetRegistry() != &ctx.Registry)
@@ -98,8 +99,6 @@ void UColumnGenerationService::GenerateColumnPostTerrain(
   }
 
   ctx.ResetColumnDirty(world_x, world_z);
-  const ColumnSampleContext sample =
-      generator.BuildColumnSample(world_x, world_z);
   RunPostTerrainStagesExcluding(generator, sample, world_x, world_z,
                                 skip_stage_mask);
   ctx.FlushColumnDirty();

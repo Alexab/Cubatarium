@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -10,6 +11,7 @@
 #include <sstream>
 
 #include "App/Core.h"
+#include "App/Platform/Log.h"
 #include "App/ResourcePackBootstrap.h"
 #include "Creatures/Core/Creature.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
@@ -113,44 +115,83 @@ void UWorldLifecycleFacade::CreateWorldFromProceduralConfig(UCore &core)
 
 void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
 {
+  const auto begin = std::chrono::steady_clock::now();
+  CubatariumLogInfo(
+      "World",
+      "create begin name=(pending) seed=" + std::to_string(core.WorldSeed));
   const std::string new_world_name = SetupNewWorldForCreation(core);
   if (new_world_name.empty())
   {
+    CubatariumLogError("World", "create FAILED: resource packs / setup aborted");
     std::cerr << "CreateNewWorldWithCurrentSettings: aborted (resource packs)"
               << std::endl;
     return;
   }
-  core.WorldInstance->Create(new_world_name);
-  core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig, true);
-  if (!core.DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+  CubatariumLogInfo("World", "create begin name=" + new_world_name +
+                                 " seed=" + std::to_string(core.WorldSeed));
+  try
   {
-    core.WorldInstance->SetWeatherByName(core.DefaultWeather, 0.0f);
+    core.WorldInstance->Create(new_world_name);
+    core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig, true);
+    if (!core.DefaultEnvironmentConfig.WeatherAuto.AutoChange)
+    {
+      core.WorldInstance->SetWeatherByName(core.DefaultWeather, 0.0f);
+    }
+    else
+    {
+      core.WorldInstance->ClearWeatherManualOverride();
+    }
+    core.WorldInstance->GenerateUsers();
+    SaveWorld(core, new_world_name);
+    LoadWorldList(core, core.WorldPath.string());
+    const double ms = std::chrono::duration<double, std::milli>(
+                          std::chrono::steady_clock::now() - begin)
+                          .count();
+    CubatariumLogInfo("World", "create done name=" + new_world_name +
+                                   " ms=" + std::to_string(ms));
   }
-  else
+  catch (const std::exception &e)
   {
-    core.WorldInstance->ClearWeatherManualOverride();
+    CubatariumLogError("World",
+                       std::string("create FAILED name=") + new_world_name +
+                           ": " + e.what());
+    throw;
   }
-  core.WorldInstance->GenerateUsers();
-  SaveWorld(core, new_world_name);
-  LoadWorldList(core, core.WorldPath.string());
 }
 
 void UWorldLifecycleFacade::LoadWorld(UCore &core, const std::string &world_name)
 {
-  core.ActiveWorldFolder = core.WorldFolderPath(world_name);
-  core.WorldInstance->Load(core.ActiveWorldFolder.string());
-  core.ApplyRuntimeStreamingToWorld();
-  if (!core.DefaultUserName.empty())
+  const auto begin = std::chrono::steady_clock::now();
+  CubatariumLogInfo("World", "load begin name=" + world_name);
+  try
   {
-    if (!core.WorldInstance->SetCurrentUserName(core.DefaultUserName))
+    core.ActiveWorldFolder = core.WorldFolderPath(world_name);
+    core.WorldInstance->Load(core.ActiveWorldFolder.string());
+    core.ApplyRuntimeStreamingToWorld();
+    if (!core.DefaultUserName.empty())
     {
-      std::cerr << "Core::LoadWorld: user '" << core.DefaultUserName
-                << "' not found." << std::endl;
+      if (!core.WorldInstance->SetCurrentUserName(core.DefaultUserName))
+      {
+        std::cerr << "Core::LoadWorld: user '" << core.DefaultUserName
+                  << "' not found." << std::endl;
+      }
     }
+    if (core.WorldInstance->GetCurrentUser() == nullptr)
+    {
+      core.WorldInstance->GenerateUsers();
+    }
+    const double ms = std::chrono::duration<double, std::milli>(
+                          std::chrono::steady_clock::now() - begin)
+                          .count();
+    CubatariumLogInfo("World", "load done name=" + world_name +
+                                   " path=" + core.ActiveWorldFolder.string() +
+                                   " ms=" + std::to_string(ms));
   }
-  if (core.WorldInstance->GetCurrentUser() == nullptr)
+  catch (const std::exception &e)
   {
-    core.WorldInstance->GenerateUsers();
+    CubatariumLogError("World", std::string("load FAILED name=") + world_name +
+                                    ": " + e.what());
+    throw;
   }
 }
 
@@ -309,19 +350,38 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name
   {
     core.ActiveWorldFolder = core.WorldFolderPath(world_name);
   }
-  if (core.WorldInstance && core.BlockMergeRegistryInstance)
+  CubatariumLogInfo("World", "save begin name=" + world_name +
+                                 " path=" + core.ActiveWorldFolder.string());
+  const auto begin = std::chrono::steady_clock::now();
+  try
   {
-    core.WorldInstance->SetCatalogFingerprint(
-        core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+    if (core.WorldInstance && core.BlockMergeRegistryInstance)
+    {
+      core.WorldInstance->SetCatalogFingerprint(
+          core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+    }
+    if (core.WorldInstance &&
+        core.WorldInstance->IsStreamingEnabled() &&
+        UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
+    {
+      core.WorldInstance->SaveSessionSnapshot(core.ActiveWorldFolder.string());
+    }
+    else
+    {
+      core.WorldInstance->Save(core.ActiveWorldFolder.string());
+    }
+    const double ms = std::chrono::duration<double, std::milli>(
+                          std::chrono::steady_clock::now() - begin)
+                          .count();
+    CubatariumLogInfo("World", "save done name=" + world_name +
+                                   " ms=" + std::to_string(ms));
   }
-  if (core.WorldInstance &&
-      core.WorldInstance->IsStreamingEnabled() &&
-      UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
+  catch (const std::exception &e)
   {
-    core.WorldInstance->SaveSessionSnapshot(core.ActiveWorldFolder.string());
-    return;
+    CubatariumLogError("World", std::string("save FAILED name=") + world_name +
+                                    ": " + e.what());
+    throw;
   }
-  core.WorldInstance->Save(core.ActiveWorldFolder.string());
 }
 
 void UWorldLifecycleFacade::CreateNewWorldWithSettings(
@@ -478,9 +538,16 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   report.Preset = args.Preset;
   report.RadiusChunks = args.RadiusChunks;
 
+  CubatariumLogInfo("World",
+                    "create begin name=" + args.WorldName +
+                        " seed=" + std::to_string(args.Seed) +
+                        " radius=" + std::to_string(args.RadiusChunks));
+  const auto begin = std::chrono::steady_clock::now();
+
   if (!core.WorldInstance)
   {
     report.Error = "World instance is not initialized.";
+    CubatariumLogError("World", "create FAILED: " + report.Error);
     return false;
   }
 
@@ -500,6 +567,7 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   if (!core.ResourcePackBootstrap.ApplyResourcePacks(core, selection))
   {
     report.Error = "Failed to apply resource packs.";
+    CubatariumLogError("World", "create FAILED: " + report.Error);
     return false;
   }
 
@@ -537,6 +605,7 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   if (!core.GetObjectLibrary())
   {
     report.Error = "Object library is not initialized.";
+    CubatariumLogError("World", "create FAILED: " + report.Error);
     return false;
   }
   core.WorldInstance->SetObjectLibrary(core.GetObjectLibrary().get());
@@ -557,6 +626,9 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   catch (const std::exception &e)
   {
     report.Error = e.what();
+    CubatariumLogError("World",
+                       std::string("create FAILED name=") + args.WorldName +
+                           ": " + e.what());
     return false;
   }
 
@@ -577,6 +649,12 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   report.WorldPath = core.ActiveWorldFolder.string();
   report.ChunkFiles = chunk_files;
   report.SpawnY = core.WorldInstance->GetSpawnPoint().y;
+  const double ms = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - begin)
+                        .count();
+  CubatariumLogInfo("World", "create done name=" + args.WorldName +
+                                 " ms=" + std::to_string(ms) +
+                                 " chunks=" + std::to_string(chunk_files));
   return true;
 }
 

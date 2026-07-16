@@ -39,7 +39,7 @@ class UAsyncChunkIO
 {
 public:
   UAsyncChunkIO()
-      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo))
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo), "ChunkIo")
   {
   }
 
