@@ -1002,6 +1002,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
   PhysicsTelemetryData.RelightDiscardedLate =
       AsyncRelight->GetDiscardedLateCount();
+  if (Persistence)
+  {
+    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
   return applied;
 }
 
@@ -1218,13 +1225,13 @@ void UWorld::TickAsyncChunkSystems()
   {
     return;
   }
-  const int pending_player =
-      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
   const int pending_bg =
       Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
   const int drain_budget = std::clamp(
       4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
-  const int applied = DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
+  // Always priority remesh after light so streamed columns are not left black.
+  const int applied =
+      DrainAsyncRelightResults(drain_budget, /*priority_mesh=*/true, true);
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
@@ -1427,6 +1434,15 @@ void UWorld::CancelAsyncRelightWork()
     return;
   }
   AsyncRelight->CancelPending();
+  // During shutdown / quiesce Persistence may clear queues next; still re-queue
+  // discarded sources when Persistence is alive so mid-game cancels recover.
+  if (Persistence && !ShutdownPrepared)
+  {
+    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
 }
 
 void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout)
@@ -1464,17 +1480,19 @@ void UWorld::PrepareForShutdown()
   {
     CoopSession->Cancel();
   }
-  if (!BackgroundQuiesceFinished)
-  {
-    QuiesceBackgroundWork(std::chrono::milliseconds(10000));
-  }
+  // Always fully quiesce: SaveMetadata may have skipped streamer resume on
+  // quit, or an earlier quiesce may have been followed by ResumeStreamer.
+  BackgroundQuiesceFinished = false;
+  QuiesceBackgroundWork(std::chrono::milliseconds(10000));
   if (Streaming)
   {
     Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
   }
+  CancelAsyncRelightWork();
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(2000));
   }
 }
 
@@ -1991,13 +2009,14 @@ bool UWorld::TickCooperativeLoad(IUProgressSink &sink, int chunkBudget)
   return CoopSession->Tick(*this, sink, chunkBudget);
 }
 
-void UWorld::BeginCooperativeSave(const std::string &world_folder_path)
+void UWorld::BeginCooperativeSave(const std::string &world_folder_path,
+                                  bool resume_streaming_after_save)
 {
   if (!CoopSession)
   {
     CoopSession = std::make_unique<UWorldCooperativeSession>();
   }
-  CoopSession->BeginSave(*this, world_folder_path);
+  CoopSession->BeginSave(*this, world_folder_path, resume_streaming_after_save);
 }
 
 bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
@@ -3103,6 +3122,7 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                          double view_update_mks)
 {
   DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
+  DurationViewUpdateMks = static_cast<uint64_t>(view_update_mks);
   const double sim_ms =
       (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
   const double wall_ms =
@@ -3111,6 +3131,9 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
   MovementDiag.hitchDetected = frameMs > 50.0 ||
                                PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
                                MovementDiag.deltaTime > 0.1f;
+  MovementDiag.simMs = sim_ms;
+  MovementDiag.swapWaitMs = LastSwapWaitMs;
+  MovementDiag.unaccountedMs = wall_ms - sim_ms - LastSwapWaitMs;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()
@@ -3226,6 +3249,8 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
   MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
                                            blockPos, ModifiedChunks);
+  MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
+                                              blockPos);
 }
 
 void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
@@ -3233,7 +3258,20 @@ void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
   if (ChunkDirtyService)
   {
     ChunkDirtyService->MarkVisualRemesh(*this, blockPos);
-    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+    // Pure fluid cells do not change solid occupancy — skip collision rebuild.
+    const BlockId id = BlockWorld.GetBlock(blockPos);
+    const bool needs_collision =
+        !BlockRegistry || !BlockRegistry->IsLiquid(id) ||
+        BlockRegistry->BlocksMovement(id);
+    if (needs_collision)
+    {
+      ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+    }
+    if (MeshService)
+    {
+      MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld,
+                                                  BlockRegistry.get(), blockPos);
+    }
     return;
   }
   MarkBlockChunkDirty(blockPos);

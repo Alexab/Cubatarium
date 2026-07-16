@@ -233,6 +233,7 @@ set(SOURCES
     src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
+    src/World/Diagnostics/FramePerfMonitor.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
@@ -1083,6 +1084,7 @@ add_executable(fluid_surface_map_logic_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Core/RuntimeTuning.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Test/FluidSurfaceMapLogicTest.cpp)
 target_include_directories(fluid_surface_map_logic_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

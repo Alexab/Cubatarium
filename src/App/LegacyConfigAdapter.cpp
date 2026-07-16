@@ -12,6 +12,8 @@ void ReadLegacyUiSettings(const nlohmann::json &ui, UiSettings &out)
 {
   out.LegacyHud = ui.value("legacy_hud", false);
   out.ShowPerformance = ui.value("show_performance", true);
+  out.PerfLogIntervalSec =
+      std::clamp(ui.value("perf_log_interval_sec", 2.0f), 0.25f, 60.0f);
   out.ConsoleKey = ui.value("console_key", "grave");
   out.PaletteKey = ui.value("palette_key", "b");
   out.WorldGenKey = ui.value("worldgen_key", "g");
@@ -40,6 +42,7 @@ void WriteLegacyUiSettings(nlohmann::json &ui, const UiSettings &settings)
 {
   ui["legacy_hud"] = settings.LegacyHud;
   ui["show_performance"] = settings.ShowPerformance;
+  ui["perf_log_interval_sec"] = settings.PerfLogIntervalSec;
   ui["console_key"] = settings.ConsoleKey;
   ui["palette_key"] = settings.PaletteKey;
   ui["worldgen_key"] = settings.WorldGenKey;

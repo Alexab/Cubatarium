@@ -65,6 +65,9 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"physics_block_ms", sample.physicsBlockMs},
         {"physics_drain_ms", sample.physicsDrainMs},
         {"wall_frame_ms", sample.wallFrameMs},
+        {"swap_wait_ms", sample.swapWaitMs},
+        {"sim_ms", sample.simMs},
+        {"unaccounted_ms", sample.unaccountedMs},
         {"physics_simulation_steps", sample.physicsSimulationSteps},
         {"physics_block_queue_depth", sample.physicsBlockQueueDepth},
         {"physics_liquid_queue_depth", sample.physicsLiquidQueueDepth},
@@ -172,6 +175,14 @@ void UMovementDiagnosticsRecorder::Update(
   world.MovementDiag.physicsBlockMs = physicsTelemetry.BlockStepMs;
   world.MovementDiag.physicsDrainMs = physicsTelemetry.DrainStepMs;
   world.MovementDiag.wallFrameMs = world.WallFrameDeltaSec * 1000.0;
+  world.MovementDiag.swapWaitMs = world.LastSwapWaitMs;
+  world.MovementDiag.simMs =
+      world.MovementDiag.physicsStepMs +
+      (world.GetDurationViewUpdateMks() / 1000.0) +
+      (world.GetDurationDrawSceneMks() / 1000.0);
+  world.MovementDiag.unaccountedMs = world.MovementDiag.wallFrameMs -
+                                     world.MovementDiag.simMs -
+                                     world.MovementDiag.swapWaitMs;
   world.MovementDiag.physicsSimulationSteps =
       physicsTelemetry.SimulationStepsThisFrame;
   world.MovementDiag.physicsBlockQueueDepth = physicsTelemetry.BlockQueueDepth;

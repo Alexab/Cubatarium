@@ -44,7 +44,7 @@ static void TestRuntimeTuningDefaults()
                     "runtime surface scan up default");
   FluidTest::Expect(t.FluidSurfaceScanDown == 64, kTestName,
                     "runtime surface scan down default");
-  FluidTest::Expect(t.FluidSurfaceWindowMoveThreshold == 8, kTestName,
+  FluidTest::Expect(t.FluidSurfaceWindowMoveThreshold == 16, kTestName,
                     "runtime window threshold default");
   FluidTest::Expect(
       std::abs(t.HillsVegetationHeightNormMax - 0.82f) < 1e-5f, kTestName,

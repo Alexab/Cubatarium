@@ -426,6 +426,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
             "distance_fog_end_margin_blocks", Render.DistanceFogEndMarginBlocks);
         Render.AltitudeUseTerrainSurface = r.value(
             "altitude_use_terrain_surface", Render.AltitudeUseTerrainSurface);
+        Render.VSync = r.value("vsync", Render.VSync);
+        Render.MsaaSamples =
+            std::clamp(r.value("msaa_samples", Render.MsaaSamples), 0, 16);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -742,6 +745,8 @@ void UCore::SaveConfigFile()
       Render.DistanceFogEndMarginBlocks;
   render_json["altitude_use_terrain_surface"] =
       Render.AltitudeUseTerrainSurface;
+  render_json["vsync"] = Render.VSync;
+  render_json["msaa_samples"] = Render.MsaaSamples;
   system_data["render"] = render_json;
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;

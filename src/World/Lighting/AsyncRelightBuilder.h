@@ -34,6 +34,8 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  /// Source block positions from jobs discarded by CancelPending / late epoch.
+  std::vector<glm::ivec3> TakeDiscardedSourcePositions();
   uint64_t GetDiscardedLateCount() const
   {
     return DiscardedLate.load(std::memory_order_relaxed);
@@ -43,13 +45,16 @@ private:
   static constexpr int kPipelineSlotsPerWorker = 8;
 
   int WorkerCount{1};
-  UJobThreadPool Pool;
+  // Completed must outlive Pool (destroy order = reverse declaration).
   UCompletedJobQueue<RelightComputeResult> Completed;
+  UJobThreadPool Pool;
   mutable std::mutex InFlightMutex;
   std::unordered_map<uint64_t, uint64_t> InFlight;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};
+  mutable std::mutex DiscardedSourcesMutex;
+  std::vector<glm::ivec3> DiscardedSources;
 };
 
 } // namespace cutum

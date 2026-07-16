@@ -25,11 +25,15 @@ class UWorldCooperativeSession
 public:
   WorldCoopKind Kind{WorldCoopKind::Load};
   bool Active{false};
+  bool ResumeStreamingAfterSave{true};
 
   ~UWorldCooperativeSession();
 
   void BeginLoad(UWorld &world, const std::string &world_folder_path);
-  void BeginSave(UWorld &world, const std::string &world_folder_path);
+  /// When resume_streaming_after_save is false (shutdown save), SaveMetadata
+  /// must not recreate streamer/worker pools before PrepareForShutdown.
+  void BeginSave(UWorld &world, const std::string &world_folder_path,
+                 bool resume_streaming_after_save = true);
   void BeginCreate(UWorld &world, const std::string &world_name);
   /// @return true when the operation finished successfully.
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);

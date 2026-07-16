@@ -424,7 +424,6 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     return;
   }
   BumpChunkMeshRevision(chunkCoord);
-  InvalidateFluidSurfaceForChunk(chunkCoord);
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -433,7 +432,6 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
   Dirty.MarkDirtyPriority(chunkCoord);
   BumpChunkMeshRevision(chunkCoord);
-  InvalidateFluidSurfaceForChunk(chunkCoord);
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -803,7 +801,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateFluidSurfaceForChunk(result.coord);
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -1076,7 +1073,6 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateFluidSurfaceForChunk(chunkCoord);
 }
 
 void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)

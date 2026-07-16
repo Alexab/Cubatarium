@@ -104,6 +104,12 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         InFlight.erase(result.job_id);
+        {
+          std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+          DiscardedSources.insert(DiscardedSources.end(),
+                                  result.source_block_positions.begin(),
+                                  result.source_block_positions.end());
+        }
         continue;
       }
       InFlight.erase(result.job_id);
@@ -150,8 +156,20 @@ void UAsyncRelightBuilder::CancelPending()
     if (result.submitEpoch != current_epoch)
     {
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+      std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+      DiscardedSources.insert(DiscardedSources.end(),
+                              result.source_block_positions.begin(),
+                              result.source_block_positions.end());
     }
   }
+}
+
+std::vector<glm::ivec3> UAsyncRelightBuilder::TakeDiscardedSourcePositions()
+{
+  std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+  std::vector<glm::ivec3> out;
+  out.swap(DiscardedSources);
+  return out;
 }
 
 } // namespace cutum

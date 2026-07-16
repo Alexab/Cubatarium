@@ -167,10 +167,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     mesh_schedule = mesh_drain;
   }
 
+  // Remesh after light before consuming other dirty work so black (light=0)
+  // meshes do not stick for many frames under ocean stream backlog.
+  world.FlushPendingRelightMeshColumns(24);
+
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
-  world.FlushPendingRelightMeshColumns(8);
 
 #ifndef NDEBUG
   ++gMeshTelemetryTick;

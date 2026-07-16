@@ -145,6 +145,9 @@ public:
   /// Updates sky tint and fluid fog state from the camera; call before glClear.
   void PrepareFrameRendering();
 
+  /// Drop weather/sky quality when present stall (swap_wait) is high.
+  PerformancePreset EffectiveWeatherPreset() const;
+
   void PrepareTransparent(const GreedyTransparentDrawContext &ctx) override;
   void DrawPreparedTransparent(GreedyShaderMode mode,
                                float shellAlpha) override;

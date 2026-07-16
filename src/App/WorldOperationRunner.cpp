@@ -395,7 +395,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       if (!World.HasActiveCooperativeOperation())
       {
         sink.Report("save", 0.92f, "Saving world...");
-        World.BeginCooperativeSave(folder);
+        // Do not resume streaming after quit-save — PrepareForShutdown follows.
+        World.BeginCooperativeSave(folder, /*resume_streaming_after_save=*/false);
       }
       if (!World.TickCooperativeSave(sink, budget))
       {

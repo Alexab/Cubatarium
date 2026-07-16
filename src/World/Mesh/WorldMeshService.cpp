@@ -63,6 +63,34 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
   NotifyChunkBlocksChanged(chunk_coord);
 }
 
+void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(
+    const UBlockWorld &world, UBlockRegistry *registry, glm::ivec3 block_pos)
+{
+  if (!registry)
+  {
+    return;
+  }
+  auto touches_liquid = [&](glm::ivec3 p)
+  { return registry->IsLiquid(world.GetBlock(p)); };
+  if (!touches_liquid(block_pos))
+  {
+    bool neighbor_liquid = false;
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      if (touches_liquid(block_pos + offset))
+      {
+        neighbor_liquid = true;
+        break;
+      }
+    }
+    if (!neighbor_liquid)
+    {
+      return;
+    }
+  }
+  Cache.InvalidateFluidSurfaceForChunk(UChunkManager::WorldToChunk(block_pos));
+}
+
 void UWorldMeshService::MarkAllDirtyFromWorld(const UBlockWorld &world)
 {
   Cache.MarkAllDirtyFromWorld(world);

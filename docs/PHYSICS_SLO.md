@@ -16,20 +16,24 @@ Diagnostics are exported via:
 
 - `movement_diagnostics.json` (`physics_*` fields)
 - `PhysicsTelemetry` counters on `UWorld`
-- In-game HUD (`ui.show_performance: true`): **Wall FPS** (full frame interval), **Sim FPS** (physics + view + draw), **Phys/Move/Block/Drain** ms breakdown
+- In-game HUD (`ui.show_performance: true`): **Wall FPS** (full frame interval), **Sim FPS** (physics + view + draw), **Swap** ms, **Phys/Move/Block/Drain** ms breakdown
+- Automatic InGame perf log: glog `[Perf]` lines + `bin/logs/perf_<timestamp>_<pid>.jsonl` (no world save required; interval `ui.perf_log_interval_sec`, default 2s)
 
 ## HUD metrics (F3 performance overlay)
 
 | Line | Meaning |
 |------|---------|
-| Wall FPS | `1 / wall_frame_ms` — real frame pacing (includes input, swap, VSync wait) |
-| Sim FPS | `1 / (physics_step_ms + view_ms + scene_ms)` — measured simulation + render work |
+| Wall FPS | `1 / wall_frame_ms` — real frame pacing (includes input, swap, VSync/present wait) |
+| Sim FPS | `1 / (physics_step_ms + view_ms + scene_ms)` — measured simulation + CPU draw-submit |
+| Swap | Wall-clock ms spent in `glfwSwapBuffers` (GPU/present stall) |
 | Phys | Total `DoMovement` time (movement + block physics + drain queues) |
 | Move / Block / Drain | Per-phase breakdown from `PhysicsTelemetry` |
 | steps | Block/drain ticks this frame (always 1; fixed multi-step removed 2026-07) |
 | LiqQ | Liquid queue depth — rising under load indicates spread backlog |
 
-If Wall FPS drops but Sim FPS stays high, the bottleneck is outside measured sim (GPU wait, OS scheduling) or stale metrics — compare with `physics_step_ms` in `movement_diagnostics.v2`.
+**Wall ≪ Sim** (e.g. Wall ~5 FPS, Sim 60–90): first check `swap_wait_ms`. If swap is ~0 and `unaccounted_ms` dominates, read the phase breakdown in the same JSONL line: `input_ms`, `app_update_ms`, `world_extra_ms`, `prepare_frame_ms` (FluidSurfaceMap + sky + clear), `post_scene_ms` (weather/HUD after cubes), `gui_overlay_ms`, `residual_ms`. Config: `render.vsync` (default false → `glfwSwapInterval(0)`), `render.msaa_samples` (default 0).
+
+If Wall ≈ Sim and both are low, the bottleneck is CPU sim/streaming — compare with `physics_step_ms` / GenQ in `movement_diagnostics.v2`.
 
 ## Threading evaluation (2026-07)
 

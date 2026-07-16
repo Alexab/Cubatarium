@@ -102,9 +102,10 @@ void PruneOldLogs()
       continue;
     }
     const auto ext = entry.path().extension().string();
-    if (ext == ".dmp" || ext == ".log" ||
+    if (ext == ".dmp" || ext == ".log" || ext == ".jsonl" ||
         entry.path().filename().string().find(".log.") != std::string::npos ||
-        entry.path().filename().string().find("Cubatarium.") == 0)
+        entry.path().filename().string().find("Cubatarium.") == 0 ||
+        entry.path().filename().string().find("perf_") == 0)
     {
       entries.push_back(entry);
     }

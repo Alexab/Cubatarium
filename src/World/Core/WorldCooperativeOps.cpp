@@ -610,13 +610,15 @@ void UWorldCooperativeSession::BeginLoad(UWorld &world,
 }
 
 void UWorldCooperativeSession::BeginSave(UWorld &world,
-                                         const std::string &world_folder_path)
+                                         const std::string &world_folder_path,
+                                         bool resume_streaming_after_save)
 {
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Save;
   Active = true;
+  ResumeStreamingAfterSave = resume_streaming_after_save;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
   (void)world;
@@ -1751,7 +1753,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.SaveWorldData(FolderPath + "/world_data.json");
     world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
     world.ModifiedChunks.clear();
-    world.EnsureStreamingActiveAfterBackgroundQuiesce();
+    if (ResumeStreamingAfterSave)
+    {
+      world.EnsureStreamingActiveAfterBackgroundQuiesce();
+    }
     CurrentPhase = Phase::Done;
     Active = false;
     Report(sink, "done", 1.f, "World saved.");

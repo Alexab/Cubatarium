@@ -16,6 +16,8 @@ struct UiSettings
 {
   bool LegacyHud{false};
   bool ShowPerformance{true};
+  /// Seconds between periodic [Perf] / perf_*.jsonl aggregates (InGame).
+  float PerfLogIntervalSec{2.0f};
   std::string ConsoleKey{"grave"};
   std::string PaletteKey{"b"};      // creative palette, Blocks tab
   std::string WorldGenKey{"g"};     // world generation sets

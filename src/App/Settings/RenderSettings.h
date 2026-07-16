@@ -49,6 +49,12 @@ struct RenderSettings
   int DistanceFogEndMarginBlocks{12};
   /// Use terrain surface height for altitude-adaptive fog (not feet Y).
   bool AltitudeUseTerrainSurface{true};
+  /// glfwSwapInterval: false → 0 (uncapped present). Default off to avoid
+  /// driver-forced stalls when Wall FPS ≪ Sim FPS.
+  bool VSync{false};
+  /// Request MSAA sample count at window create (0 = off). Applied only when
+  /// the window is created before config; prefer 0 for GPU-bound present.
+  int MsaaSamples{0};
 
   static RenderSettings Legacy()
   {

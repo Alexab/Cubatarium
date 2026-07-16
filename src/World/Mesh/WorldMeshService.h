@@ -38,6 +38,10 @@ public:
 
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
+  void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
+                                      UBlockRegistry *registry,
+                                      glm::ivec3 block_pos);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);

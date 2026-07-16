@@ -48,6 +48,9 @@ public:
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
+  /// Fluid column cache invalidation — call on fluid voxel changes only, not
+  /// on every mesh remesh.
+  void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
   /// Removes all Y slices for a terrain column with one greedy-list invalidation.
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
@@ -213,7 +216,6 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
-  void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,
                                 glm::ivec3 groundChunkCoord, int scanHintY);

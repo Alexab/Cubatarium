@@ -84,8 +84,9 @@ private:
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
-  UJobThreadPool Pool;
+  // Completed must outlive Pool (members destroy in reverse declaration order).
   UCompletedJobQueue<PendingResult> Completed;
+  UJobThreadPool Pool;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,
