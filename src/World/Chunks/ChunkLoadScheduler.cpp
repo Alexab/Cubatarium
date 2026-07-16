@@ -2,6 +2,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include <algorithm>
 #include <thread>
 
@@ -134,6 +135,7 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   const uint64_t start_sequence = request.token.sequence;
   populateRequest.shouldCancel = [this, coord, start_sequence]()
   { return Tokens.Current(coord).sequence != start_sequence; };
+  populateRequest.content = CaptureWorldGenContentSnapshot();
   const int priority = request.priority;
   Pool.Enqueue(
       [this, populateRequest, priority]()

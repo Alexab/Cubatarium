@@ -3,6 +3,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -178,7 +179,9 @@ public:
   static bool ReloadActive();
   static std::vector<std::string> ListPackIds();
   static std::vector<WorldGenPackInfo> ListPackInfos();
+  /// Prefer GetSnapshot() for cross-thread / long-lived readers.
   static const WorldGenPack &Get();
+  static std::shared_ptr<const WorldGenPack> GetSnapshot();
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
@@ -197,7 +200,9 @@ public:
   static BiomeId BiomeAtImage(int worldX, int worldZ);
 
 private:
-  static WorldGenPack ActivePack;
+  static void Publish(std::shared_ptr<const WorldGenPack> pack);
+  // Published via atomic load/store for cross-thread readers.
+  static std::shared_ptr<const WorldGenPack> Active;
   static std::string ActivePackDir;
 };
 

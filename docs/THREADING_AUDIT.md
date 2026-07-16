@@ -17,11 +17,11 @@ Legend: **Risk** L / M / H.
 
 | Pool | Files | Shared / artifacts | Sync | Risk |
 |------|-------|--------------------|------|------|
-| MeshBuild | `AsyncMeshBuilder`, `ChunkMeshCache` | owned `ChunkMeshSnapshot`; raw `UBlockRegistry*` | snapshot + epoch/jobId + InFlightMutex | M |
-| Relight | `AsyncRelightBuilder` | owned relight snapshot; raw registry; capture mutex | capture mutex + epoch | L–M |
-| ChunkIo | `AsyncChunkIO`, `WorldPersistence` | bytes/path; generation token | serialize-on-main; disk on worker | L after registry-sequence check |
-| ChunkGeneration | `ChunkLoadScheduler` | shared populator / registry / ObjectLibrary | token + shouldCancel; apply-on-main | M |
-| CoopGeneration | `WorldCooperativeOps` | same populator | completed queue; WaitIdle on main | M |
+| MeshBuild | `AsyncMeshBuilder`, `ChunkMeshCache` | owned `ChunkMeshSnapshot`; catalog `shared_ptr` keep + registry maps | snapshot + epoch/jobId + InFlightMutex + catalog pin | L–M |
+| Relight | `AsyncRelightBuilder` | owned relight snapshot; catalog keep; capture mutex | capture mutex + epoch + catalog pin | L |
+| ChunkIo | `AsyncChunkIO`, `WorldPersistence` | bytes/path; generation token | serialize-on-main; disk on worker; registry sequence check | L |
+| ChunkGeneration | `ChunkLoadScheduler` | populator; `WorldGenContentSnapshot` pin; ObjectLibrary | token + shouldCancel + content pin; apply-on-main | L |
+| CoopGeneration | `WorldCooperativeOps` | same populator + content snapshot | real gen tokens + `WaitIdleFor(2s)`; completed queue | L |
 
 ## C. Tokens / epoch / quiesce
 
@@ -30,15 +30,17 @@ Legend: **Risk** L / M / H.
 | `UChunkGenerationRegistry` | `ChunkGenerationToken.*` | mutex | L |
 | Mesh/Relight epoch | Async builders | atomics | L |
 | Quiesce pipeline | `World`, `WorldStreaming`, `WorldOperationRunner` | cancel + WaitIdle timeout | L–M |
-| `RefreshBlockRegistry` | `World.cpp` | **QuiesceBackgroundWork** before mutate | L |
+| `PauseChunkGeneration` | `WorldStreaming` | cancel pending + wait workers idle | L |
+| `RefreshBlockRegistry` | `World.cpp` | PauseChunkGeneration + mesh/relight drain before mutate | L |
 
 ## D. Snapshots / TLS (sound patterns)
 
 | Site | Files | Risk |
 |------|-------|------|
 | Mesh/Relight value snapshots | ChunkMesh/RelightSnapshot | L |
-| TLS `ThreadLocalPipelineState` | `PipelineChunkPopulator.cpp` | L (world); shared catalogs see E |
-| ObjectLibrary `GetShared` / TLS keep in `Get` | `ObjectLibrary.*` | L–M if `Get` used across yield |
+| TLS `ThreadLocalPipelineState` | `PipelineChunkPopulator.cpp` | L |
+| ObjectLibrary `GetShared` / TLS keep in `Get` | `ObjectLibrary.*` | L |
+| `WorldGenContentPinScope` | `WorldGenContentPin.*` | L (pins pack/features/refs for Populate) |
 
 ## E. Catalog / prefab / pack
 
@@ -46,17 +48,18 @@ Legend: **Risk** L / M / H.
 |------|-------|----------|------|------|
 | `BlockDefinitionStorage::Active` | `BlockDefinitionStorage.*` | RCU `shared_ptr` | `atomic_load` / `atomic_store` | L |
 | Removed dangling `GetAll()` | — | use `GetCatalogSnapshot()` | — | fixed |
-| `UBlockRegistry` maps | `BlockRegistry.*` | rebuild under quiesce | none on maps during rebuild | M if quiesce skipped |
+| `UBlockRegistry` maps | `BlockRegistry.*` | `shared_mutex` on NameToId/IdToName | MapsMutex + PauseChunkGeneration on reload | L |
 | `UBlockMergeRegistry` | `BlockMergeRegistry.*` | lookups | shared_mutex | L |
 | `UObjectLibrary` | `ObjectLibrary.*` | `shared_ptr` defs | shared_mutex + owned ptr | L |
-| `UWorldGenPack` / feature / refs | `WorldGenPack`, configs | static global | quiesce on reload | M if hot-reload without quiesce |
+| `UWorldGenPack` / features / refs | Pack, ObjectFeatureConfig, WorldGenRefs | RCU publish + job pin | atomic snapshot + `WorldGenContentPinScope` | L |
+| Creature/Skin definition maps | `*DefinitionStorage.*` | maps | shared_mutex | L |
+| `CreatureMeshGpuCache` | GPU VAO cache | maps | mutex | L |
 
 ## F. Other
 
 | Site | Note | Risk |
 |------|------|------|
 | glog | any thread after init | L |
-| Creature caches | usually main | L |
 | Progressive queues / physics | main-only | L |
 
 ## Pattern verdict
@@ -74,17 +77,18 @@ flowchart LR
   mailbox --> mainApply
 ```
 
-**Fixed in this pass:**
+**Fixed:**
 
-1. Async IO token validation now compares against `ChunkGenTokens.Current(ground).sequence` (was self-compare).
+1. Async IO token validation compares against `ChunkGenTokens.Current(ground).sequence`.
 2. Catalog publish is atomic; `GetAll()` removed in favor of snapshots.
-3. `ObjectLibrary` stores `shared_ptr` definitions; `GetShared` for safe lifetime.
-4. `RefreshBlockRegistry` quiesces background work first.
+3. `ObjectLibrary` stores `shared_ptr` definitions; `GetShared` for safe lifetime; map insert captures name before move.
+4. `RefreshBlockRegistry` uses `PauseChunkGeneration` (not permanent Quiesce) before mutate; registry maps are mutexed.
 5. Worker pools stamp TLS `job_kind` for crash logs.
+6. Worldgen pack/feature/refs are RCU-published; Populate pins a content snapshot for the job.
+7. Mesh/Relight jobs hold `GetDefinitionsCatalogSnapshot()` for the job lifetime.
+8. Coop generation uses real chunk gen tokens + bounded `WaitIdleFor`.
 
-**Still watch:**
+**Still watch (non-blocking):**
 
-- Raw `UBlockRegistry*` in mesh/relight jobs if Reload runs without full quiesce.
-- Static WorldGenPack during hot reload.
-- Coop WaitIdle on main under load.
-- No global thread throttle across five pools.
+- No global thread throttle across five pools (perf contention only).
+- Phase 4 streaming hitch budgets — adaptive emerge already present; revisit only if hitch remains after gen cache.

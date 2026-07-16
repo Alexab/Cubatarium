@@ -3,6 +3,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -22,6 +23,8 @@ struct ChunkPopulateRequest
   glm::ivec2 columnOrigin{0};
   bool hasColumnOrigin{false};
   UObjectLibrary *objects{nullptr};
+  /// Captured on schedule thread; pinned for the whole Populate job.
+  WorldGenContentSnapshot content;
   std::function<bool()> shouldCancel;
 };
 

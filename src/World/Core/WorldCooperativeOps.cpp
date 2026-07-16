@@ -19,6 +19,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
@@ -819,10 +820,24 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
   const ProceduralSettings settings = world.GetProceduralSettings();
   const std::size_t max_inflight =
       ComputeWorkerThreadCount(JobPoolKind::CoopGeneration) * 2;
+  UChunkGenerationRegistry *tokens =
+      world.Streaming ? &world.Streaming->GetChunkGenTokens() : nullptr;
 
   for (ChunkPopulateResult &result :
        ParallelGen->Completed.DrainUpTo(static_cast<std::size_t>(budget) * 2))
   {
+    if (tokens)
+    {
+      const uint64_t current = tokens->Current(result.coord).sequence;
+      if (!result.token.IsValidFor(result.coord, current))
+      {
+        if (ParallelGen->InFlight > 0)
+        {
+          --ParallelGen->InFlight;
+        }
+        continue;
+      }
+    }
     result.buffer.ApplyTo(world.BlockWorld);
     GenDoneColumns += CHUNK_SIZE * CHUNK_SIZE;
     if (ParallelGen->InFlight > 0)
@@ -840,11 +855,23 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
     ChunkPopulateRequest request;
     request.chunkCoord = glm::ivec3(entry.Cx, 0, entry.Cz);
     request.settings = settings;
-    request.token.coord = request.chunkCoord;
-    request.token.sequence = 1;
+    if (tokens)
+    {
+      request.token = tokens->Current(request.chunkCoord);
+      const uint64_t start_sequence = request.token.sequence;
+      const glm::ivec3 coord = request.chunkCoord;
+      request.shouldCancel = [tokens, coord, start_sequence]()
+      { return tokens->Current(coord).sequence != start_sequence; };
+    }
+    else
+    {
+      request.token.coord = request.chunkCoord;
+      request.token.sequence = 1;
+    }
     request.columnOrigin = glm::ivec2(GenCenterX, GenCenterZ);
     request.hasColumnOrigin = true;
     request.objects = world.ObjectLibrary;
+    request.content = CaptureWorldGenContentSnapshot();
     ++ParallelGen->InFlight;
     ++scheduled;
     UPipelineChunkPopulator *populator = ParallelGen->Populator.get();
@@ -862,7 +889,14 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
       ParallelGen->Completed.Empty();
   if (queue_empty)
   {
-    ParallelGen->Pool.WaitIdle();
+    if (!ParallelGen->Pool.WaitIdleFor(std::chrono::milliseconds(2000)))
+    {
+      std::cerr << "CoopGeneration: WaitIdleFor timed out with pending workers"
+                << std::endl;
+      ParallelGen->Pool.CancelPendingJobs();
+      (void)ParallelGen->Completed.DrainAll();
+      ParallelGen->InFlight = 0;
+    }
     world.SetCooperativeBulkGenerating(false);
     return true;
   }

@@ -4,6 +4,7 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -78,11 +79,11 @@ class UObjectFeatureConfigStorage
 public:
   static bool LoadFromFile(const std::filesystem::path &path);
   static const ObjectFeatureConfig &Get();
+  static std::shared_ptr<const ObjectFeatureConfig> GetSnapshot();
   static bool IsLoaded();
 
 private:
-  static ObjectFeatureConfig Config;
-  static bool Loaded;
+  static std::shared_ptr<const ObjectFeatureConfig> Active;
 };
 
 SubBiomeId SubBiomeIdFromString(const std::string &name);

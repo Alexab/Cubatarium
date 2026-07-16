@@ -5,6 +5,7 @@
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Features/CaveCarver.h"
@@ -154,6 +155,11 @@ UPipelineChunkPopulator::UPipelineChunkPopulator(
 ChunkPopulateResult
 UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 {
+  WorldGenContentSnapshot content = request.content.Pack
+                                        ? request.content
+                                        : CaptureWorldGenContentSnapshot();
+  WorldGenContentPinScope pin(std::move(content));
+
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
 

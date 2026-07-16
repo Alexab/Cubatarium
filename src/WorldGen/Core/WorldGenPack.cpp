@@ -1,4 +1,8 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/WorldGenContentPinTls.h"
+#include <atomic>
+#include <memory>
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
@@ -12,7 +16,7 @@
 namespace cutum
 {
 
-WorldGenPack UWorldGenPack::ActivePack;
+std::shared_ptr<const WorldGenPack> UWorldGenPack::Active = std::make_shared<WorldGenPack>();
 std::string UWorldGenPack::ActivePackDir;
 
 namespace
@@ -600,7 +604,7 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
 
 bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
 {
-  ActivePack = WorldGenPack{};
+  WorldGenPack pack{};
   ActivePackDir = packDir;
   const std::filesystem::path root(packDir);
   const std::filesystem::path packJson = root / "pack.json";
@@ -614,35 +618,35 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   {
     std::ifstream file(packJson);
     const nlohmann::json rootJson = nlohmann::json::parse(file);
-    ActivePack.Id = rootJson.value("id", "default");
+    pack.Id = rootJson.value("id", "default");
     const std::string mode = rootJson.value("biome_mode", "procedural");
-    ActivePack.BiomeMode =
+    pack.BiomeMode =
         mode == "image" ? WorldGenBiomeMode::Image : WorldGenBiomeMode::Procedural;
-    ActivePack.BiomeMapBlockScale =
+    pack.BiomeMapBlockScale =
         std::max(1, rootJson.value("biome_map_block_scale", 4));
     if (rootJson.contains("biome_blend_radius"))
     {
-      ActivePack.BiomeBlendRadius = rootJson["biome_blend_radius"].get<float>();
+      pack.BiomeBlendRadius = rootJson["biome_blend_radius"].get<float>();
     }
     if (rootJson.contains("biome_map_image") &&
         rootJson["biome_map_image"].is_string())
     {
-      ActivePack.BiomeMapImagePath = rootJson["biome_map_image"].get<std::string>();
+      pack.BiomeMapImagePath = rootJson["biome_map_image"].get<std::string>();
     }
     if (rootJson.contains("pipeline") && rootJson["pipeline"].is_array())
     {
-      ActivePack.Pipeline = WorldGenPackPipeline{};
-      ActivePack.Pipeline.Loaded = true;
+      pack.Pipeline = WorldGenPackPipeline{};
+      pack.Pipeline.Loaded = true;
       for (const auto &stage : rootJson["pipeline"])
       {
         if (stage.is_string())
         {
           const std::string stage_name = stage.get<std::string>();
-          ParsePipelineStage(stage_name, ActivePack.Pipeline);
+          ParsePipelineStage(stage_name, pack.Pipeline);
           if (const std::optional<WorldGenStageId> stage_id =
                   WorldGenStageIdFromPipelineString(stage_name))
           {
-            ActivePack.Pipeline.StageOrder.push_back(*stage_id);
+            pack.Pipeline.StageOrder.push_back(*stage_id);
           }
         }
       }
@@ -654,13 +658,13 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     return false;
   }
 
-  LoadPipelineJson(root, ActivePack);
-  LoadHeightJson(root, ActivePack);
-  LoadClimateJson(root, ActivePack);
-  LoadOresJson(root, ActivePack);
-  LoadCavesJson(root, ActivePack);
-  LoadRavinesJson(root, ActivePack);
-  LoadValleysJson(root, ActivePack);
+  LoadPipelineJson(root, pack);
+  LoadHeightJson(root, pack);
+  LoadClimateJson(root, pack);
+  LoadOresJson(root, pack);
+  LoadCavesJson(root, pack);
+  LoadRavinesJson(root, pack);
+  LoadValleysJson(root, pack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -677,7 +681,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
         const nlohmann::json biomeJson = nlohmann::json::parse(biomeFile);
         const std::string biomeId =
             biomeJson.value("id", entry.path().stem().string());
-        ActivePack.Biomes[biomeId] = ParseBiomeJson(biomeJson, biomeId);
+        pack.Biomes[biomeId] = ParseBiomeJson(biomeJson, biomeId);
       }
       catch (const std::exception &e)
       {
@@ -687,22 +691,23 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     }
   }
 
-  if (ActivePack.BiomeMode == WorldGenBiomeMode::Image &&
-      !ActivePack.BiomeMapImagePath.empty())
+  if (pack.BiomeMode == WorldGenBiomeMode::Image &&
+      !pack.BiomeMapImagePath.empty())
   {
-    const std::filesystem::path imagePath = root / ActivePack.BiomeMapImagePath;
+    const std::filesystem::path imagePath = root / pack.BiomeMapImagePath;
     if (!LoadBiomeMapImage(imagePath.string()))
     {
       std::cerr << "WorldGenPack: failed to load biome map image "
                 << imagePath.string() << std::endl;
-      ActivePack.BiomeMode = WorldGenBiomeMode::Procedural;
+      pack.BiomeMode = WorldGenBiomeMode::Procedural;
     }
   }
 
-  std::cout << "WorldGenPack: loaded '" << ActivePack.Id << "' with "
-            << ActivePack.Biomes.size() << " biome profile(s)"
-            << (ActivePack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
-  GetActiveBiomeRegistry().LoadFromPack(ActivePack);
+  std::cout << "WorldGenPack: loaded '" << pack.Id << "' with "
+            << pack.Biomes.size() << " biome profile(s)"
+            << (pack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
+  GetActiveBiomeRegistry().LoadFromPack(pack);
+  Publish(std::make_shared<const WorldGenPack>(std::move(pack)));
   return true;
 }
 
@@ -710,7 +715,7 @@ bool UWorldGenPack::LoadPackId(const std::string &packId)
 {
   const std::string id = packId.empty() ? "default" : packId;
   const std::string dir = "content/worldgen_packs/" + id;
-  if (ActivePackDir == dir && ActivePack.Id == id && !ActivePack.Biomes.empty())
+  if (ActivePackDir == dir && Get().Id == id && !Get().Biomes.empty())
   {
     return true;
   }
@@ -789,29 +794,51 @@ std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
   return infos;
 }
 
-const WorldGenPack &UWorldGenPack::Get() { return ActivePack; }
+void UWorldGenPack::Publish(std::shared_ptr<const WorldGenPack> pack)
+{
+  std::atomic_store_explicit(&Active, std::move(pack), std::memory_order_release);
+}
 
-const PackHeightConfig &UWorldGenPack::HeightConfig() { return ActivePack.Height; }
+std::shared_ptr<const WorldGenPack> UWorldGenPack::GetSnapshot()
+{
+  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
+}
 
-const PackClimateConfig &UWorldGenPack::ClimateConfig() { return ActivePack.Climate; }
+const WorldGenPack &UWorldGenPack::Get()
+{
+  if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
+  {
+    if (pin->Pack)
+    {
+      return *pin->Pack;
+    }
+  }
+  thread_local std::shared_ptr<const WorldGenPack> keep;
+  keep = GetSnapshot();
+  return *keep;
+}
 
-const PackOresConfig &UWorldGenPack::OresConfig() { return ActivePack.Ores; }
+const PackHeightConfig &UWorldGenPack::HeightConfig() { return Get().Height; }
 
-const PackCavesConfig &UWorldGenPack::CavesConfig() { return ActivePack.Caves; }
+const PackClimateConfig &UWorldGenPack::ClimateConfig() { return Get().Climate; }
+
+const PackOresConfig &UWorldGenPack::OresConfig() { return Get().Ores; }
+
+const PackCavesConfig &UWorldGenPack::CavesConfig() { return Get().Caves; }
 
 const PackRavinesConfig &UWorldGenPack::RavinesConfig()
 {
-  return ActivePack.Ravines;
+  return Get().Ravines;
 }
 
 const PackValleysConfig &UWorldGenPack::ValleysConfig()
 {
-  return ActivePack.Valleys;
+  return Get().Valleys;
 }
 
 void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
 {
-  const PackCavesConfig &caves = ActivePack.Caves;
+  const PackCavesConfig &caves = Get().Caves;
   if (!caves.Loaded)
   {
     return;
@@ -831,7 +858,7 @@ void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
 
 void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
 {
-  const PackRavinesConfig &ravines = ActivePack.Ravines;
+  const PackRavinesConfig &ravines = Get().Ravines;
   if (!ravines.Loaded)
   {
     return;
@@ -859,8 +886,9 @@ const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
 const BiomePackDefinition *UWorldGenPack::BiomeDefinitionFor(
     const std::string &biomeId)
 {
-  const auto it = ActivePack.Biomes.find(biomeId);
-  if (it == ActivePack.Biomes.end())
+  const WorldGenPack &pack = Get();
+  const auto it = pack.Biomes.find(biomeId);
+  if (it == pack.Biomes.end())
   {
     return nullptr;
   }
@@ -920,7 +948,7 @@ BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)
   {
     return BiomeId::Plains;
   }
-  const int scale = std::max(1, ActivePack.BiomeMapBlockScale);
+  const int scale = std::max(1, Get().BiomeMapBlockScale);
   const int px = ((worldX / scale) % gBiomeMapW + gBiomeMapW) % gBiomeMapW;
   const int pz = ((worldZ / scale) % gBiomeMapH + gBiomeMapH) % gBiomeMapH;
   const size_t idx =

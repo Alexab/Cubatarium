@@ -37,9 +37,13 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
     InFlight[job_id] = job_id;
   }
 
+  auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+
   Pool.Enqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
-                job_id, submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id,
+                submit_epoch]() mutable
                {
+                 (void)catalogKeep;
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
@@ -68,9 +72,13 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     InFlight[job_id] = job_id;
   }
 
+  auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                job_id, submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id,
+                submit_epoch]() mutable
                {
+                 (void)catalogKeep;
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;

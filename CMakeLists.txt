@@ -289,6 +289,8 @@ set(SOURCES
     src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Stages/MudflowErosion.cpp
@@ -1223,6 +1225,13 @@ add_executable(fluid_worldgen_seal_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/FluidWorldGenSealTest.cpp)
 target_include_directories(fluid_worldgen_seal_test PRIVATE
@@ -1237,6 +1246,13 @@ add_executable(ravine_carver_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/Test/RavineCarverTest.cpp)
@@ -1253,6 +1269,8 @@ add_executable(valley_carver_test
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -1275,6 +1293,13 @@ add_executable(mudflow_erosion_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Stages/MudflowErosion.cpp
     src/Test/MudflowErosionTest.cpp)
 target_include_directories(mudflow_erosion_test PRIVATE
@@ -1284,7 +1309,11 @@ target_compile_definitions(mudflow_erosion_test PRIVATE
 target_link_libraries(mudflow_erosion_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(density_refine_parity_test
+    src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
@@ -1310,6 +1339,8 @@ add_executable(worldgen_smoothness_test
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
@@ -1341,6 +1372,13 @@ add_executable(worldgen_vegetation_placement_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/WorldGenVegetationPlacementTest.cpp)
 target_include_directories(worldgen_vegetation_placement_test PRIVATE
@@ -1370,6 +1408,13 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp)
 
 add_executable(worldgen_fluid_vegetation_pipeline_test
@@ -1396,7 +1441,10 @@ target_include_directories(chunk_generation_registry_test PRIVATE
 target_link_libraries(chunk_generation_registry_test glm::glm)
 
 add_executable(worldgen_biome_features_test
+    src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
@@ -1446,6 +1494,13 @@ add_executable(worldgen_scatter_block_resolve_test
     src/ThirdParty/stb_image.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/Test/WorldGenScatterBlockResolveTest.cpp)
 target_include_directories(worldgen_scatter_block_resolve_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1600,6 +1655,8 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Core/BlockWorldColumnWriter.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
     src/WorldGen/Stages/MudflowErosion.cpp
