@@ -49,6 +49,8 @@ struct ChunkPopulateResult
   glm::ivec3 coord;
   ChunkGenerationToken token;
   UChunkBuffer buffer;
+  /// True when populate aborted mid-chunk (cancel); must not ApplyTo/seal.
+  bool discarded{false};
 };
 
 class IUChunkPopulator

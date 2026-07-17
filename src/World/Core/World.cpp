@@ -2026,6 +2026,11 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
             ground, BlockWorld, world_folder_path, *BlockRegistry,
             ProceduralTemplate.MaxHeight);
       }
+      else
+      {
+        GetChunkStorage().RemoveTerrainColumnFromDisk(
+            world_folder_path, ground, ProceduralTemplate.MaxHeight);
+      }
     }
   }
 

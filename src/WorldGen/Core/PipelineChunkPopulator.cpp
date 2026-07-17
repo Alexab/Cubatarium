@@ -226,11 +226,13 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   std::array<std::array<bool, CHUNK_SIZE>, CHUNK_SIZE> sample_valid{};
 
   auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
+  bool cancelled = false;
   const auto terrain_start = std::chrono::steady_clock::now();
   for (size_t i = 0; i < column_count; ++i)
   {
     if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
     {
+      cancelled = true;
       break;
     }
     const int lx = columns[i].first;
@@ -262,6 +264,14 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   timing.terrainMs = ElapsedMs(terrain_start);
   // Terrain includes BuildColumnSample; expose as sample+terrain together for HUD.
   timing.sampleMs = timing.terrainMs;
+
+  if (cancelled || (request.shouldCancel && request.shouldCancel()))
+  {
+    result.discarded = true;
+    timing.totalMs = ElapsedMs(populate_start);
+    ChunkPopulateDiagnostics::Record(timing);
+    return result;
+  }
 
   if (composable)
   {
@@ -324,6 +334,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       {
         if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
         {
+          cancelled = true;
           break;
         }
         const int lx = columns[i].first;
@@ -340,6 +351,14 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             samples[lz][lx]);
       }
       timing.postMs = ElapsedMs(post_start);
+    }
+
+    if (cancelled || (request.shouldCancel && request.shouldCancel()))
+    {
+      result.discarded = true;
+      timing.totalMs = ElapsedMs(populate_start);
+      ChunkPopulateDiagnostics::Record(timing);
+      return result;
     }
 
     const auto seal_start = std::chrono::steady_clock::now();

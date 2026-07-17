@@ -295,6 +295,24 @@ void UChunkStorageService::RemoveChunkSliceFromDisk(
   }
 }
 
+void UChunkStorageService::RemoveTerrainColumnFromDisk(
+    const std::string &worldFolder, glm::ivec3 groundCoord,
+    int maxWorldY) const
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
+  const int toCy = std::max(maxCy, highestOnDisk);
+  for (int cy = 0; cy <= toCy; ++cy)
+  {
+    RemoveChunkSliceFromDisk(worldFolder,
+                             glm::ivec3(groundCoord.x, cy, groundCoord.z));
+  }
+}
+
 void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              const UBlockWorld &world,
                                              const std::string &worldFolder,

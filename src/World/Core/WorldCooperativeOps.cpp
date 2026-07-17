@@ -830,6 +830,14 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
   for (ChunkPopulateResult &result :
        ParallelGen->Completed.DrainUpTo(static_cast<std::size_t>(budget) * 2))
   {
+    if (result.discarded)
+    {
+      if (ParallelGen->InFlight > 0)
+      {
+        --ParallelGen->InFlight;
+      }
+      continue;
+    }
     if (tokens)
     {
       const uint64_t current = tokens->Current(result.coord).sequence;
@@ -1184,11 +1192,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       if (world.BlockRegistry)
       {
+        const glm::ivec3 ground(SpatialCenter.x + SpatialDx, 0,
+                                SpatialCenter.z + SpatialDz);
         world.GetChunkStorage().LoadTerrainColumn(
-            glm::ivec3(SpatialCenter.x + SpatialDx, 0,
-                       SpatialCenter.z + SpatialDz),
-            world.BlockWorld, FolderPath, *world.BlockRegistry,
+            ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
             world.ProceduralTemplate.MaxHeight);
+        if (!IsTerrainChunkComplete(world.BlockWorld, ground,
+                                    world.ProceduralTemplate.MaxHeight))
+        {
+          // Stale/torn column: drop disk + RAM so streaming regenerates.
+          ClearTerrainColumnChunks(world.BlockWorld, ground,
+                                   world.ProceduralTemplate.MaxHeight);
+          world.GetChunkStorage().RemoveTerrainColumnFromDisk(
+              FolderPath, ground, world.ProceduralTemplate.MaxHeight);
+        }
       }
       ++loaded;
       ++SpatialDz;
@@ -1775,6 +1792,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           world.GetChunkStorage().SaveTerrainColumn(
               coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
               world.ProceduralTemplate.MaxHeight);
+        }
+        else
+        {
+          world.GetChunkStorage().RemoveTerrainColumnFromDisk(
+              FolderPath, coord, world.ProceduralTemplate.MaxHeight);
         }
       }
       else

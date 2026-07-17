@@ -75,6 +75,12 @@ public:
                         UBlockRegistry &registry, int max_height);
   void SaveTerrainColumn(glm::ivec3 ground_coord, UBlockWorld &block_world,
                          UBlockRegistry &registry, int max_height);
+  /// Remove all disk slices for a ground column (used when incomplete in RAM
+  /// must not leave a stale complete ocean/land file behind).
+  void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height);
+  /// Clear in-memory column and delete its disk slices (load repair).
+  void PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
+                                    glm::ivec3 ground_coord, int max_height);
   void LoadInitialTerrainColumns(UWorld &world, glm::vec3 spawn_point,
                                  int render_distance_chunks);
 

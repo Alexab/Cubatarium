@@ -44,6 +44,10 @@ public:
                                  glm::ivec3 groundCoord) const;
   void RemoveChunkSliceFromDisk(const std::string &worldFolder,
                                 glm::ivec3 chunkCoord) const;
+  /// Delete all Y-slices for a ground column (stale/incomplete purge).
+  void RemoveTerrainColumnFromDisk(const std::string &worldFolder,
+                                   glm::ivec3 groundCoord,
+                                   int maxWorldY) const;
 
   void SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,

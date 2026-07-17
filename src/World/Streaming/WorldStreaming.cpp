@@ -670,6 +670,17 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                           settings.MaxHeight) > 0;
         if (loaded)
         {
+          if (!IsTerrainChunkComplete(world.BlockWorld, coord,
+                                      settings.MaxHeight))
+          {
+            persistence.PurgeIncompleteTerrainColumn(world.BlockWorld, coord,
+                                                     settings.MaxHeight);
+            FrameStreamingIoMs +=
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            return false;
+          }
           persistence.EnqueueTerrainColumnRelight(coord.x * CHUNK_SIZE,
                                                   coord.z * CHUNK_SIZE);
         }

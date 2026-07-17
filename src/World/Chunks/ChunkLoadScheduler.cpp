@@ -194,7 +194,8 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     const auto tokenIt = ActiveTokens.find(pending.result.coord);
     if (tokenIt == ActiveTokens.end() ||
         !pending.result.token.IsValidFor(pending.result.coord,
-                                         tokenIt->second.sequence))
+                                         tokenIt->second.sequence) ||
+        pending.result.discarded)
     {
       States.erase(pending.result.coord);
       RequestPriorities.erase(pending.result.coord);

@@ -107,7 +107,14 @@ void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
 {
   glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   InvalidateTerrainCompleteCache(ground);
-  ProcedurallyGenerated.insert(ground);
+  if (IsTerrainChunkCompleteCached(ground))
+  {
+    ProcedurallyGenerated.insert(ground);
+  }
+  else
+  {
+    ProcedurallyGenerated.erase(ground);
+  }
 }
 
 bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
